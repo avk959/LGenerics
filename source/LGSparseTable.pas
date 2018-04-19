@@ -49,8 +49,7 @@ type
       specialize TGCustomSparseTable<TRow, TCol, TValue>)
   protected
   type
-    TCustomHashSparseTable = TGCustomHashSparseTable;
-    TRowHashTable          = specialize TGHashTableLP<TRow, TRowEntry, TRowEqRel>;
+    TRowHashTable = specialize TGHashTableLP<TRow, TRowEntry, TRowEqRel>;
 
     TColEnumerable = class(TCustomColDataEnumerable)
     protected
@@ -164,12 +163,12 @@ type
       LOAD_FACTOR    = 0.65; //todo: why ???
 
     var
-      FTable: TCustomHashSparseTable;
+      FTable: TCustomSparseTable;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
     public
-      constructor Create(aTable: TCustomHashSparseTable);
+      constructor Create(aTable: TCustomSparseTable);
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; inline;
@@ -238,7 +237,7 @@ type
       end;
 
     var
-      FTable: TCustomHashSparseTable;
+      FTable: TCustomSparseTable;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
@@ -317,12 +316,12 @@ type
       INITIAL_CAPACITY = 8;
 
     var
-      FTable: TCustomHashSparseTable;
+      FTable: TCustomSparseTable;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
     public
-      constructor Create(aTable: TCustomHashSparseTable);
+      constructor Create(aTable: TCustomSparseTable);
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; inline;
@@ -624,7 +623,7 @@ begin
   Result := FMap.Count;
 end;
 
-constructor TGHashSparseTable.TRowMap.Create(aTable: TCustomHashSparseTable);
+constructor TGHashSparseTable.TRowMap.Create(aTable: TCustomSparseTable);
 begin
   FMap := TRowMapTable.Create(INITIAL_CAPACITY, LOAD_FACTOR);
   FTable := aTable;
@@ -906,7 +905,7 @@ begin
   Result := FMap.Count;
 end;
 
-constructor TGListSparseTable.TRowMap.Create(aTable: TCustomHashSparseTable);
+constructor TGListSparseTable.TRowMap.Create(aTable: TCustomSparseTable);
 begin
   FMap := TRowMapTable.Create(INITIAL_CAPACITY);
   FTable := aTable;

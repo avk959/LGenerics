@@ -8,19 +8,19 @@ uses
   LGSparseTable;
 
 type
-  TTable     = specialize TGListSparseTable2<string, string, Integer>;
-  TCellEntry = TTable.TCellEntry;
-  TRowEntry  = TTable.TRowEntry;
-  TColEntry  = TTable.TColEntry;
+  TTable    = specialize TGListSparseTable2<string, string, Integer>;
+  TCellData = TTable.TCellData;
+  TRowData  = TTable.TRowData;
+  TColData  = TTable.TColData;
 
 const
-  Data: array[0..99] of TCellEntry = {$I data.inc};
+  Data: array[0..99] of TCellData = {$I data.inc};
 
 var
   UserInput: string;
   Table: TTable;
-  RowEntry: TRowEntry;
-  ColEntry: TColEntry;
+  RowEntry: TRowData;
+  ColEntry: TColData;
 
 
   {$R *.res}
