@@ -204,7 +204,7 @@ var
   Elapsed: Extended;
   ChankSize: Integer;
 begin
-  TExecutionQueue.EnsureThreadCount(4);
+  TTaskExecutor.EnsureThreadCount(4);
   Data := CreateBigArray;
   ChankSize := Length(Data) div 4;
   FTimer.Clear;

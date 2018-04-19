@@ -1,5 +1,5 @@
 {
-  Inspired by HANTAO ZHANG, BAOLUO MENG, YIWEN LIANG, "Sort Race";
+  Inspired by HANTAO ZHANG, BAOLUO MENG, YIWEN LIANG, "Sort Race"
 
   It would be useful to compare performance of different sorting algorithms
   on different samples of input data.
