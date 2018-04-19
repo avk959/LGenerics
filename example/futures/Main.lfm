@@ -1,0 +1,111 @@
+object frmMain: TfrmMain
+  Left = 348
+  Height = 268
+  Top = 250
+  Width = 346
+  Caption = 'frmMain'
+  ClientHeight = 268
+  ClientWidth = 346
+  DesignTimePPI = 115
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  LCLVersion = '1.9.0.0'
+  object PageControl1: TPageControl
+    Left = 0
+    Height = 268
+    Top = 0
+    Width = 346
+    ActivePage = TabSheet1
+    Align = alClient
+    TabIndex = 0
+    TabOrder = 0
+    object TabSheet1: TTabSheet
+      Caption = 'Pieces'
+      ClientHeight = 236
+      ClientWidth = 338
+      object btSequential: TButton
+        Left = 32
+        Height = 30
+        Top = 192
+        Width = 90
+        Anchors = [akLeft, akBottom]
+        Caption = 'Sequential'
+        OnClick = btSequentialClick
+        TabOrder = 0
+      end
+      object btFutures: TButton
+        Left = 212
+        Height = 30
+        Top = 192
+        Width = 90
+        Anchors = [akRight, akBottom]
+        Caption = 'Futures'
+        OnClick = btFuturesClick
+        TabOrder = 1
+      end
+      object Label1: TLabel
+        Left = 80
+        Height = 19
+        Top = 60
+        Width = 75
+        Caption = 'Result time: '
+        ParentColor = False
+      end
+      object lbResultTime: TLabel
+        AnchorSideRight.Side = asrBottom
+        Left = 183
+        Height = 19
+        Top = 60
+        Width = 119
+        Anchors = [akTop, akRight]
+        AutoSize = False
+        Caption = '0.0'
+        ParentColor = False
+      end
+    end
+    object TabSheet2: TTabSheet
+      Caption = 'Big array'
+      ClientHeight = 236
+      ClientWidth = 338
+      object btSequential1: TButton
+        Left = 32
+        Height = 30
+        Top = 192
+        Width = 90
+        Anchors = [akLeft, akBottom]
+        Caption = 'Sequential'
+        OnClick = btSequential1Click
+        TabOrder = 0
+      end
+      object btFutures1: TButton
+        Left = 212
+        Height = 30
+        Top = 192
+        Width = 90
+        Anchors = [akRight, akBottom]
+        Caption = 'Futures'
+        OnClick = btFutures1Click
+        TabOrder = 1
+      end
+      object Label2: TLabel
+        Left = 80
+        Height = 19
+        Top = 60
+        Width = 75
+        Caption = 'Result time: '
+        ParentColor = False
+      end
+      object lbParallelResult: TLabel
+        AnchorSideRight.Side = asrBottom
+        Left = 183
+        Height = 19
+        Top = 60
+        Width = 119
+        Anchors = [akTop, akRight]
+        AutoSize = False
+        Caption = '0.0'
+        ParentColor = False
+      end
+    end
+  end
+end

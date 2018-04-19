@@ -1,0 +1,62 @@
+{****************************************************************************
+*         _     ____ _____ _   _ _____ ____  ___ ____ ____                  *
+*        | |   / ___| ____| \ | | ____|  _ \|_ _/ ___/ ___|                 *
+*        | |  | |  _|  _| |  \| |  _| | |_) || | |   \___ \                 *
+*        | |__| |_| | |___| |\  | |___|  _ < | | |___ ___) |                *
+*        |_____\____|_____|_| \_|_____|_| \_\___\____|____/                 *
+*                                                                           *
+*   This file is part of the LGenerics package.                             *
+*   Common string resources.                                                *
+*                                                                           *
+*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*                                                                           *
+*   This code is free software; you can redistribute it and/or modify it    *
+*   under the terms of the Apache License, Version 2.0;                     *
+*   You may obtain a copy of the License at                                 *
+*     http://www.apache.org/licenses/LICENSE-2.0.                           *
+*                                                                           *
+*  Unless required by applicable law or agreed to in writing, software      *
+*  distributed under the License is distributed on an "AS IS" BASIS,        *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+*  See the License for the specific language governing permissions and      *
+*  limitations under the License.                                           *
+*                   _         __     ___           __                       *
+*            /\  /\/_\/\   /\/__\   / __\/\ /\  /\ \ \                      *
+*           / /_/ //_\\ \ / /_\    / _\ / / \ \/  \/ /                      *
+*          / __  /  _  \ V //__   / /   \ \_/ / /\  /                       *
+*          \/ /_/\_/ \_/\_/\__/   \/     \___/\_\ \/                        *
+*****************************************************************************}
+unit LGStrConst;
+
+{$mode objfpc}{$H+}
+
+interface
+
+
+resourcestring
+
+  SEOptionalValueEmpty     = 'Optional value is empty';
+  SEArgumentTooBigFmt      = 'Argument of %s is too big(%d)';
+  SEClassAccessEmptyFmt    = 'Can not access element of empty %s';
+  SECantAccessEmpty        = 'Can not access element of empty container';
+  SEClassCapacityExceedFmt = '%s maximum capacity exceeded(%d)';
+  SECapacityExceedFmt      = 'Maximum capacity exceeded(%d)';
+  SECantUpdDuringIterFmt   = 'Can not update %s during enumeration';
+  SEArrIndexOutOfBoundsFmt = 'Array index out of bounds(%d)';
+  SEClassIdxOutOfBoundsFmt = '%s index out of bounds(%d)';
+  SEIndexOutOfBoundsFmt    = 'Index out of bounds(%d)';
+  SEKeyNotFound            = 'Key not found';
+  SEValueNotFound          = 'Value not found';
+  SEUnknownSortAlgoFmt     = 'Unknown sort algprithm(%u)';
+  SECantAcceptNegValueFmt  = 'The %s''s %s can not accept negative value';
+  SEInternalDataInconsist  = 'Internal data inconsistency';
+  SEValueAlreadyExist      = 'Value already exists';
+  SEKeyAlreadyExist        = 'Key already exists';
+  SEThreadTimeOut          = 'Thread timeout exceeded';
+  SEResultUnknown          = 'Result is unknown';
+  SECellNotFoundFmt        = 'Specified cell of %s not found';
+
+implementation
+
+end.
+

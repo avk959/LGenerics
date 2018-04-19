@@ -1,0 +1,240 @@
+object frmMain: TfrmMain
+  Left = 489
+  Height = 425
+  Top = 250
+  Width = 985
+  ActiveControl = btRunSelected
+  Caption = 'frmMain'
+  ClientHeight = 425
+  ClientWidth = 985
+  DesignTimePPI = 115
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  ShowHint = True
+  object MainStatus: TStatusBar
+    Left = 0
+    Height = 28
+    Top = 397
+    Width = 985
+    Panels = <    
+      item
+        Width = 250
+      end    
+      item
+        Width = 220
+      end    
+      item
+        Width = 220
+      end    
+      item
+        Width = 220
+      end>
+    SimplePanel = False
+  end
+  object pnMain: TPanel
+    Left = 0
+    Height = 397
+    Top = 0
+    Width = 985
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 397
+    ClientWidth = 985
+    TabOrder = 1
+    object pnRight: TPanel
+      Left = 832
+      Height = 397
+      Top = 0
+      Width = 153
+      Align = alRight
+      Anchors = []
+      BevelOuter = bvNone
+      ClientHeight = 397
+      ClientWidth = 153
+      TabOrder = 0
+      object Label1: TLabel
+        Left = 8
+        Height = 19
+        Top = 12
+        Width = 77
+        Caption = 'Sample size :'
+        ParentColor = False
+      end
+      object btRunSelected: TButton
+        Left = 4
+        Height = 29
+        Hint = '|Start single test for selected sample class'
+        Top = 290
+        Width = 144
+        Anchors = [akBottom]
+        Caption = 'Run selected'
+        OnClick = btRunSelectedClick
+        TabOrder = 4
+      end
+      object cbSampleSize: TComboBox
+        Left = 8
+        Height = 27
+        Hint = '|Select data array size'
+        Top = 36
+        Width = 136
+        Anchors = [akTop, akLeft, akRight]
+        AutoSize = False
+        DropDownCount = 12
+        ItemHeight = 19
+        Style = csDropDownList
+        TabOrder = 0
+      end
+      object Label2: TLabel
+        Left = 8
+        Height = 19
+        Top = 80
+        Width = 83
+        Caption = 'Sample class :'
+        ParentColor = False
+      end
+      object cbSampleClass: TComboBox
+        Left = 8
+        Height = 27
+        Hint = '|Select data sample class'
+        Top = 104
+        Width = 136
+        Anchors = [akTop, akLeft, akRight]
+        AutoSize = False
+        DropDownCount = 12
+        ItemHeight = 19
+        Style = csDropDownList
+        TabOrder = 1
+      end
+      object Label3: TLabel
+        Left = 8
+        Height = 19
+        Top = 220
+        Width = 98
+        Caption = 'Iteration count :'
+        ParentColor = False
+      end
+      object seKValue: TSpinEdit
+        Left = 8
+        Height = 27
+        Hint = '|Set parameter K value'
+        Top = 172
+        Width = 136
+        Anchors = [akTop, akLeft, akRight]
+        AutoSize = False
+        MaxValue = 1000000000
+        MinValue = 1
+        TabOrder = 2
+        Value = 1
+      end
+      object Label4: TLabel
+        Left = 11
+        Height = 19
+        Top = 148
+        Width = 51
+        Caption = 'K value :'
+        ParentColor = False
+      end
+      object seIterationCount: TSpinEdit
+        Left = 8
+        Height = 27
+        Hint = '|Set count of iterations'
+        Top = 244
+        Width = 136
+        Anchors = [akTop, akLeft, akRight]
+        AutoSize = False
+        MaxValue = 10000
+        MinValue = 1
+        TabOrder = 3
+        Value = 10
+      end
+      object btCancel: TButton
+        AnchorSideLeft.Control = btRunSelected
+        AnchorSideRight.Control = btRunSelected
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 29
+        Hint = 'Cancel running test'
+        Top = 362
+        Width = 144
+        Anchors = [akBottom]
+        Caption = 'Cancel'
+        Enabled = False
+        OnClick = btCancelClick
+        TabOrder = 6
+      end
+      object btRunAll: TButton
+        AnchorSideLeft.Control = btRunSelected
+        AnchorSideRight.Control = btRunSelected
+        AnchorSideRight.Side = asrBottom
+        Left = 4
+        Height = 29
+        Hint = '|Start tests for all data classes with selected size and K'
+        Top = 322
+        Width = 144
+        Anchors = [akBottom]
+        Caption = 'Run all '
+        OnClick = btRunAllClick
+        TabOrder = 5
+      end
+    end
+    object Splitter1: TSplitter
+      Left = 827
+      Height = 397
+      Top = 0
+      Width = 5
+      Align = alRight
+      ResizeAnchor = akRight
+    end
+    object pnLeft: TPanel
+      Left = 0
+      Height = 397
+      Top = 0
+      Width = 827
+      Align = alClient
+      Anchors = []
+      BevelOuter = bvNone
+      ClientHeight = 397
+      ClientWidth = 827
+      TabOrder = 2
+      object pnGrid: TPanel
+        Left = 0
+        Height = 397
+        Top = 0
+        Width = 827
+        Align = alClient
+        BevelOuter = bvNone
+        ClientHeight = 397
+        ClientWidth = 827
+        TabOrder = 0
+        object Label5: TLabel
+          Left = 4
+          Height = 19
+          Top = 378
+          Width = 215
+          Anchors = [akLeft, akBottom]
+          Caption = '  *average time / best average time'
+          ParentColor = False
+        end
+        object sgResultView: TStringGrid
+          Left = 0
+          Height = 374
+          Top = 0
+          Width = 827
+          AlternateColor = 14869218
+          Anchors = [akTop, akLeft, akRight, akBottom]
+          AutoEdit = False
+          Flat = True
+          Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goSmoothScroll, goFixedColSizing]
+          TabOrder = 0
+          ColWidths = (
+            64
+            237
+            237
+            237
+            240
+          )
+        end
+      end
+    end
+  end
+end

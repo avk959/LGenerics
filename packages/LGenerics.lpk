@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="4">
+    <PathDelim Value="\"/>
+    <Name Value="LGenerics"/>
+    <Type Value="RunTimeOnly"/>
+    <Author Value="avk"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <PathDelim Value="\"/>
+      <SearchPaths>
+        <IncludeFiles Value="..\source"/>
+        <OtherUnitFiles Value="..\source"/>
+        <UnitOutputDirectory Value="..\lib\$(TargetCPU)-$(TargetOS)"/>
+      </SearchPaths>
+      <CodeGeneration>
+        <SmartLinkUnit Value="True"/>
+        <Optimizations>
+          <OptimizationLevel Value="3"/>
+        </Optimizations>
+      </CodeGeneration>
+      <Linking>
+        <Debugging>
+          <GenerateDebugInfo Value="False"/>
+          <UseLineInfoUnit Value="False"/>
+        </Debugging>
+      </Linking>
+      <Other>
+        <CustomOptions Value="-dUseCThreads"/>
+      </Other>
+    </CompilerOptions>
+    <Description Value="Generics algorithms and data structures"/>
+    <License Value="Apache License, Version 2.0"/>
+    <Version Minor="4" Release="1"/>
+    <Files Count="27">
+      <Item1>
+        <Filename Value="..\source\LGUtils.pas"/>
+        <UnitName Value="LGUtils"/>
+      </Item1>
+      <Item2>
+        <Filename Value="..\source\LGCustomContainer.pas"/>
+        <UnitName Value="LGCustomContainer"/>
+      </Item2>
+      <Item3>
+        <Filename Value="..\source\LGHash.pas"/>
+        <UnitName Value="LGHash"/>
+      </Item3>
+      <Item4>
+        <Filename Value="..\source\LGFunction.pas"/>
+        <UnitName Value="LGFunction"/>
+      </Item4>
+      <Item5>
+        <Filename Value="..\source\LGArrayHelpers.pas"/>
+        <UnitName Value="LGArrayHelpers"/>
+      </Item5>
+      <Item6>
+        <Filename Value="..\source\LGHelpers.pas"/>
+        <UnitName Value="LGHelpers"/>
+      </Item6>
+      <Item7>
+        <Filename Value="..\source\LGMiscUtils.pas"/>
+        <UnitName Value="LGMiscUtils"/>
+      </Item7>
+      <Item8>
+        <Filename Value="..\source\LGStack.pas"/>
+        <UnitName Value="LGStack"/>
+      </Item8>
+      <Item9>
+        <Filename Value="..\source\LGStrConst.pas"/>
+        <UnitName Value="LGStrConst"/>
+      </Item9>
+      <Item10>
+        <Filename Value="..\source\LGPriorityQueue.pas"/>
+        <UnitName Value="LGPriorityQueue"/>
+      </Item10>
+      <Item11>
+        <Filename Value="..\source\LGDeque.pas"/>
+        <UnitName Value="LGDeque"/>
+      </Item11>
+      <Item12>
+        <Filename Value="..\source\LGHashSet.pas"/>
+        <UnitName Value="LGHashSet"/>
+      </Item12>
+      <Item13>
+        <Filename Value="..\source\LGHashMultiSet.pas"/>
+        <UnitName Value="LGHashMultiSet"/>
+      </Item13>
+      <Item14>
+        <Filename Value="..\source\LGHashMap.pas"/>
+        <UnitName Value="LGHashMap"/>
+      </Item14>
+      <Item15>
+        <Filename Value="..\source\LGTreeSet.pas"/>
+        <UnitName Value="LGTreeSet"/>
+      </Item15>
+      <Item16>
+        <Filename Value="..\source\LGTreeMultiSet.pas"/>
+        <UnitName Value="LGTreeMultiSet"/>
+      </Item16>
+      <Item17>
+        <Filename Value="..\source\LGTreeMap.pas"/>
+        <UnitName Value="LGTreeMap"/>
+      </Item17>
+      <Item18>
+        <Filename Value="..\source\LGAvlTree.pas"/>
+        <UnitName Value="LGAvlTree"/>
+      </Item18>
+      <Item19>
+        <Filename Value="..\source\LGStrHelpers.pas"/>
+        <UnitName Value="LGStrHelpers"/>
+      </Item19>
+      <Item20>
+        <Filename Value="..\source\LGHashTable.pas"/>
+        <UnitName Value="LGHashTable"/>
+      </Item20>
+      <Item21>
+        <Filename Value="..\source\LGVector.pas"/>
+        <UnitName Value="LGVector"/>
+      </Item21>
+      <Item22>
+        <Filename Value="..\source\LGMultiMap.pas"/>
+        <UnitName Value="LGMultiMap"/>
+      </Item22>
+      <Item23>
+        <Filename Value="..\source\LGBiMap.pas"/>
+        <UnitName Value="LGBiMap"/>
+      </Item23>
+      <Item24>
+        <Filename Value="..\source\LGSortedList.pas"/>
+        <UnitName Value="LGSortedList"/>
+      </Item24>
+      <Item25>
+        <Filename Value="..\source\LGAsync.pas"/>
+        <UnitName Value="LGAsync"/>
+      </Item25>
+      <Item26>
+        <Filename Value="..\source\LGQueue.pas"/>
+        <UnitName Value="LGQueue"/>
+      </Item26>
+      <Item27>
+        <Filename Value="..\source\LGSparseTable.pas"/>
+        <UnitName Value="LGSparseTable"/>
+      </Item27>
+    </Files>
+    <RequiredPkgs Count="1">
+      <Item1>
+        <PackageName Value="LCLBase"/>
+      </Item1>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+  </Package>
+</CONFIG>

@@ -1,0 +1,90 @@
+object frmMain: TfrmMain
+  Left = 348
+  Height = 230
+  Top = 250
+  Width = 275
+  Caption = 'frmMain'
+  ClientHeight = 230
+  ClientWidth = 275
+  DesignTimePPI = 115
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  Position = poScreenCenter
+  LCLVersion = '1.9.0.0'
+  object btStartSender: TButton
+    Left = 16
+    Height = 29
+    Top = 130
+    Width = 106
+    Anchors = [akLeft, akBottom]
+    Caption = 'Start sender'
+    OnClick = btStartSenderClick
+    TabOrder = 0
+  end
+  object btStopSender: TButton
+    Left = 16
+    Height = 30
+    Top = 178
+    Width = 106
+    Anchors = [akLeft, akBottom]
+    Caption = 'Stop sender'
+    OnClick = btStopSenderClick
+    TabOrder = 1
+  end
+  object btStartReceiver: TButton
+    Left = 150
+    Height = 30
+    Top = 130
+    Width = 106
+    Anchors = [akRight, akBottom]
+    Caption = 'Start receiver'
+    OnClick = btStartReceiverClick
+    TabOrder = 2
+  end
+  object btStopReceiver: TButton
+    Left = 150
+    Height = 30
+    Top = 178
+    Width = 106
+    Anchors = [akRight, akBottom]
+    Caption = 'Stop receiver'
+    OnClick = btStopReceiverClick
+    TabOrder = 3
+  end
+  object lbSendedData: TLabel
+    Left = 150
+    Height = 19
+    Top = 36
+    Width = 106
+    Anchors = [akTop, akRight]
+    AutoSize = False
+    Caption = 'empty'
+    ParentColor = False
+  end
+  object lbReceivedData: TLabel
+    Left = 150
+    Height = 19
+    Top = 72
+    Width = 106
+    Anchors = [akTop, akRight]
+    AutoSize = False
+    Caption = 'empty'
+    ParentColor = False
+  end
+  object Label1: TLabel
+    Left = 36
+    Height = 19
+    Top = 36
+    Width = 48
+    Caption = 'Sended:'
+    ParentColor = False
+  end
+  object Label2: TLabel
+    Left = 36
+    Height = 19
+    Top = 72
+    Width = 56
+    Caption = 'Received:'
+    ParentColor = False
+  end
+end

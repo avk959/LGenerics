@@ -1,0 +1,488 @@
+object frmMain: TfrmMain
+  Left = 349
+  Height = 612
+  Top = 251
+  Width = 1072
+  Caption = 'frmMaim'
+  ClientHeight = 612
+  ClientWidth = 1072
+  DesignTimePPI = 115
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  Position = poScreenCenter
+  object Panel1: TPanel
+    Left = 0
+    Height = 566
+    Top = 0
+    Width = 1072
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    Caption = 'Panel1'
+    ClientHeight = 566
+    ClientWidth = 1072
+    TabOrder = 0
+    object mmResult: TMemo
+      Left = 1
+      Height = 564
+      Top = 1
+      Width = 804
+      Align = alLeft
+      ParentFont = False
+      PopupMenu = PopupMenu1
+      ReadOnly = True
+      ScrollBars = ssAutoBoth
+      TabOrder = 0
+      WantReturns = False
+      WordWrap = False
+    end
+    object Splitter1: TSplitter
+      Left = 805
+      Height = 564
+      Top = 1
+      Width = 7
+    end
+    object pcQueries: TPageControl
+      Left = 812
+      Height = 564
+      Top = 1
+      Width = 259
+      ActivePage = TabSheet1
+      Align = alClient
+      TabIndex = 0
+      TabOrder = 2
+      object TabSheet1: TTabSheet
+        Caption = 'Page 1'
+        ClientHeight = 532
+        ClientWidth = 251
+        object GroupBox1: TGroupBox
+          Left = 0
+          Height = 200
+          Top = 0
+          Width = 268
+          Anchors = [akTop, akLeft, akRight]
+          ClientHeight = 176
+          ClientWidth = 264
+          TabOrder = 0
+          object StaticText1: TStaticText
+            Left = 0
+            Height = 40
+            Top = 0
+            Width = 264
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Find First, Last, Min, Max, Skip and Limit '
+            TabOrder = 0
+          end
+          object btExecSimple: TButton
+            Left = 172
+            Height = 29
+            Top = 140
+            Width = 72
+            Anchors = [akTop, akRight]
+            AutoSize = True
+            Caption = 'Execute'
+            OnClick = btExecSimpleClick
+            TabOrder = 1
+          end
+          object seSkip: TSpinEdit
+            Left = 148
+            Height = 27
+            Top = 104
+            Width = 96
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MaxValue = 220
+            TabOrder = 2
+            Value = 10
+          end
+          object seLimit: TSpinEdit
+            Left = 148
+            Height = 27
+            Top = 64
+            Width = 96
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MaxValue = 220
+            TabOrder = 3
+            Value = 10
+          end
+          object Label3: TLabel
+            Left = 4
+            Height = 19
+            Top = 68
+            Width = 107
+            Caption = 'Select limit count:'
+            ParentColor = False
+          end
+          object Label4: TLabel
+            Left = 4
+            Height = 19
+            Top = 108
+            Width = 105
+            Caption = 'Select skip count:'
+            ParentColor = False
+          end
+        end
+        object GroupBox2: TGroupBox
+          Left = 4
+          Height = 198
+          Top = 200
+          Width = 254
+          Anchors = [akTop, akLeft, akRight]
+          ClientHeight = 174
+          ClientWidth = 250
+          TabOrder = 1
+          object StaticText2: TStaticText
+            Left = 0
+            Height = 48
+            Top = 0
+            Width = 250
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Find First, Last, Min, Max from skipped and limited'
+            TabOrder = 0
+          end
+          object btExec2: TButton
+            Left = 172
+            Height = 29
+            Top = 137
+            Width = 72
+            Anchors = [akTop, akRight]
+            AutoSize = True
+            Caption = 'Execute'
+            OnClick = btExec2Click
+            TabOrder = 1
+          end
+          object seSkip2: TSpinEdit
+            Left = 148
+            Height = 26
+            Top = 102
+            Width = 96
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MaxValue = 220
+            TabOrder = 2
+            Value = 10
+          end
+          object seLimit2: TSpinEdit
+            Left = 148
+            Height = 26
+            Top = 64
+            Width = 96
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MaxValue = 220
+            TabOrder = 3
+            Value = 10
+          end
+          object Label5: TLabel
+            Left = 4
+            Height = 19
+            Top = 68
+            Width = 107
+            Caption = 'Select limit count:'
+            ParentColor = False
+          end
+          object Label6: TLabel
+            Left = 4
+            Height = 19
+            Top = 106
+            Width = 105
+            Caption = 'Select skip count:'
+            ParentColor = False
+          end
+        end
+        object GroupBox7: TGroupBox
+          Left = 4
+          Height = 142
+          Top = 400
+          Width = 254
+          Anchors = [akTop, akLeft, akRight]
+          ClientHeight = 118
+          ClientWidth = 250
+          TabOrder = 2
+          object StaticText7: TStaticText
+            Left = 0
+            Height = 48
+            Top = 0
+            Width = 250
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Find number of employees by locations'
+            TabOrder = 0
+          end
+          object btFindNumbers: TButton
+            Left = 168
+            Height = 29
+            Top = 68
+            Width = 72
+            Anchors = [akTop, akRight]
+            AutoSize = True
+            Caption = 'Execute'
+            OnClick = btFindNumbersClick
+            TabOrder = 1
+          end
+        end
+      end
+      object TabSheet2: TTabSheet
+        Caption = 'Page 2'
+        ClientHeight = 532
+        ClientWidth = 251
+        object GroupBox3: TGroupBox
+          Left = 0
+          Height = 100
+          Top = 0
+          Width = 251
+          Anchors = [akTop, akLeft, akRight]
+          ClientHeight = 76
+          ClientWidth = 247
+          TabOrder = 0
+          object StaticText3: TStaticText
+            Left = 0
+            Height = 30
+            Top = 0
+            Width = 247
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Select by location (combobox below)'
+            TabOrder = 0
+          end
+          object btSelectByLocation: TButton
+            Left = 172
+            Height = 29
+            Top = 40
+            Width = 72
+            Anchors = [akTop, akRight]
+            AutoSize = True
+            Caption = 'Execute'
+            OnClick = btSelectByLocationClick
+            TabOrder = 1
+          end
+        end
+        object GroupBox4: TGroupBox
+          Left = 0
+          Height = 114
+          Top = 108
+          Width = 251
+          Anchors = [akTop, akLeft, akRight]
+          ClientHeight = 90
+          ClientWidth = 247
+          TabOrder = 1
+          object StaticText4: TStaticText
+            Left = 0
+            Height = 44
+            Top = 0
+            Width = 247
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Find Min, Max in selection by location (comboboxes below)'
+            TabOrder = 0
+          end
+          object btMinMaxSelected: TButton
+            Left = 172
+            Height = 29
+            Top = 52
+            Width = 72
+            Anchors = [akTop, akRight]
+            AutoSize = True
+            Caption = 'Execute'
+            OnClick = btMinMaxSelectedClick
+            TabOrder = 1
+          end
+        end
+        object GroupBox5: TGroupBox
+          Left = 0
+          Height = 116
+          Top = 228
+          Width = 251
+          Anchors = [akTop, akLeft, akRight]
+          ClientHeight = 92
+          ClientWidth = 247
+          TabOrder = 2
+          object StaticText5: TStaticText
+            Left = 0
+            Height = 42
+            Top = 0
+            Width = 247
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Sorting, depend on comparator selection '
+            TabOrder = 0
+          end
+          object btSort: TButton
+            Left = 172
+            Height = 29
+            Top = 52
+            Width = 72
+            Anchors = [akTop, akRight]
+            AutoSize = True
+            Caption = 'Execute'
+            OnClick = btSortClick
+            TabOrder = 1
+          end
+        end
+        object GroupBox6: TGroupBox
+          Left = 0
+          Height = 116
+          Top = 352
+          Width = 251
+          Anchors = [akTop, akLeft, akRight]
+          ClientHeight = 92
+          ClientWidth = 247
+          TabOrder = 3
+          object StaticText6: TStaticText
+            Left = 0
+            Height = 40
+            Top = 0
+            Width = 247
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Find Max, depend on comparator, grouping by location'
+            TabOrder = 0
+          end
+          object btMaxByLocation: TButton
+            Left = 172
+            Height = 29
+            Top = 52
+            Width = 72
+            Anchors = [akTop, akRight]
+            AutoSize = True
+            Caption = 'Execute'
+            OnClick = btMaxByLocationClick
+            TabOrder = 1
+          end
+        end
+      end
+      object TabSheet3: TTabSheet
+        Caption = 'Page 3'
+        ClientHeight = 532
+        ClientWidth = 251
+        object GroupBox8: TGroupBox
+          Left = 0
+          Height = 252
+          Top = 0
+          Width = 268
+          Anchors = [akTop, akLeft, akRight]
+          ClientHeight = 228
+          ClientWidth = 264
+          TabOrder = 0
+          object StaticText8: TStaticText
+            Left = 0
+            Height = 60
+            Top = 0
+            Width = 264
+            Anchors = [akTop, akLeft, akRight]
+            Caption = 'Find employees of selected gender, '#13#10'whose age is in selected range, '#13#10'grouping by location  '
+            TabOrder = 0
+          end
+          object cbSelectByGenderAge: TButton
+            Left = 172
+            Height = 29
+            Top = 188
+            Width = 72
+            Anchors = [akTop, akRight]
+            AutoSize = True
+            Caption = 'Execute'
+            OnClick = cbSelectByGenderAgeClick
+            TabOrder = 1
+          end
+          object seHiAge: TSpinEdit
+            Left = 152
+            Height = 27
+            Top = 144
+            Width = 92
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MinValue = 15
+            TabOrder = 2
+            Value = 18
+          end
+          object seLoAge: TSpinEdit
+            Left = 152
+            Height = 27
+            Top = 104
+            Width = 92
+            Anchors = [akTop, akRight]
+            AutoSize = False
+            MinValue = 15
+            TabOrder = 3
+            Value = 18
+          end
+          object Label7: TLabel
+            Left = 6
+            Height = 19
+            Top = 108
+            Width = 133
+            Caption = 'Select low age bound:'
+            ParentColor = False
+          end
+          object Label8: TLabel
+            Left = 6
+            Height = 19
+            Top = 148
+            Width = 139
+            Caption = 'Select high age bound:'
+            ParentColor = False
+          end
+          object Label9: TLabel
+            Left = 6
+            Height = 19
+            Top = 68
+            Width = 85
+            Caption = 'Select gender:'
+            ParentColor = False
+          end
+          object cbGender: TComboBox
+            Left = 152
+            Height = 27
+            Top = 64
+            Width = 92
+            Anchors = [akTop, akRight]
+            ItemHeight = 19
+            Style = csDropDownList
+            TabOrder = 4
+          end
+        end
+      end
+    end
+  end
+  object cbCmpKind: TComboBox
+    Left = 132
+    Height = 27
+    Top = 574
+    Width = 120
+    Anchors = [akLeft, akBottom]
+    ItemHeight = 19
+    Style = csDropDownList
+    TabOrder = 1
+  end
+  object cbLocation: TComboBox
+    Left = 416
+    Height = 27
+    Top = 574
+    Width = 132
+    Anchors = [akLeft, akBottom]
+    DropDownCount = 16
+    ItemHeight = 19
+    Style = csDropDownList
+    TabOrder = 2
+  end
+  object Label1: TLabel
+    Left = 8
+    Height = 19
+    Top = 578
+    Width = 113
+    Anchors = [akLeft, akBottom]
+    Caption = 'Select comparator:'
+    ParentColor = False
+  end
+  object Label2: TLabel
+    Left = 316
+    Height = 19
+    Top = 578
+    Width = 90
+    Anchors = [akLeft, akBottom]
+    Caption = 'Select location:'
+    ParentColor = False
+  end
+  object PopupMenu1: TPopupMenu
+    Left = 784
+    Top = 572
+    object miShowAll: TMenuItem
+      Caption = 'Show all records'
+      OnClick = miShowAllClick
+    end
+  end
+end
