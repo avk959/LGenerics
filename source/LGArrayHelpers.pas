@@ -69,11 +69,11 @@ type
 
   protected
   const
-    HEAP_INSERT_CUTOFF     = 63;
-    QUICK_INSERT_CUTOFF    = 31;
-    MEDIAN_OF9_CUTOFF      = 511;
-    DPQ_INSERT_CUTOFF      = 47;
-    INTRO_LOG_FACTOR       = 2;
+    HEAP_INSERT_CUTOFF  = 63;
+    QUICK_INSERT_CUTOFF = 31;
+    MEDIAN_OF9_CUTOFF   = 511;
+    DPQ_INSERT_CUTOFF   = 47;
+    INTRO_LOG_FACTOR    = 2;
   type
     //to supress unnecessary refcounting
     TFake      = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
