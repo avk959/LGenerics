@@ -209,7 +209,7 @@ begin
   ChankSize := Length(Data) div 4;
   FTimer.Clear;
   FTimer.Start;
-  ///////////////////////////////
+  ////////////////////////////////////////////////////////////////
   p1 := TFunc.Call(@SortLeft, Data, 0, Pred(ChankSize));
   p2 := TFunc.Call(@SortRight, Data, ChankSize, Pred(ChankSize*2));
   p3 := TFunc.Call(@SortLeft, Data, ChankSize*2, Pred(ChankSize*3));
@@ -219,7 +219,7 @@ begin
   p6 := TFunc.Call(@MergeSortRight, Data, p3.Value, p4.Value);
 
   TFunc.Call(@MergeSortLeft, Data, p5.Value, p6.Value).Value;
-  ///////////////////////////////
+  ////////////////////////////////////////////////////////////////
   FTimer.Stop;
   Elapsed := FTimer.Elapsed;
   lbParallelResult.Caption := FloatToStr(Round(Elapsed*100000)/100000) + ' s';
