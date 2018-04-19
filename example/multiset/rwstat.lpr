@@ -83,7 +83,7 @@ begin
     Dict.Instance.AddAll([{$I modifiers.inc}]);
 
   for FileName in InFileNames do
-    if InputText.Instance.Open(FileName) then //LoadText
+    if InputText.Instance.Open(FileName) then //LoadText ???
       for CurrLine in InputText.Instance do
         Counter.Instance.AddAll(CurrLine.SplitSB.Map(@ToLower).Select(@IsReservedWord))
     else
