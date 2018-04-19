@@ -717,37 +717,36 @@ type
   generic TGCustomSparseTable<TRow, TCol, TValue> = class abstract
   public
   type
-    TCellEntry = record
+    TCellData = record
       Row:    TRow;
       Column: TCol;
       Value:  TValue;
     end;
 
-    TColEntry = record
+    TColData = record
       Row:   TRow;
       Value: TValue;
     end;
 
-    TRowEntry = record
+    TRowData = record
       Column: TCol;
       Value:  TValue;
     end;
-    PRowEntry = ^TRowEntry;
 
-    TCustomSparseTable   = TGCustomSparseTable;
-    TValueArray          = array of TValue;
-    IValueEnumerable     = specialize IGEnumerable<TValue>;
-    IColEnumerable       = specialize IGEnumerable<TCol>;
-    IRowEnumerable       = specialize IGEnumerable<TRow>;
-    IRowEntryEnumerable  = specialize IGEnumerable<TRowEntry>;
-    IColEntryEnumerable  = specialize IGEnumerable<TColEntry>;
-    ICellEntryEnumerable = specialize IGEnumerable<TCellEntry>;
-    TRowEntryEnumerator  = class abstract(specialize TGCustomEnumerator<TRowEntry>);
+    TCustomSparseTable  = TGCustomSparseTable;
+    TValueArray         = array of TValue;
+    IValueEnumerable    = specialize IGEnumerable<TValue>;
+    IColEnumerable      = specialize IGEnumerable<TCol>;
+    IRowEnumerable      = specialize IGEnumerable<TRow>;
+    IRowDataEnumerable  = specialize IGEnumerable<TRowData>;
+    IColDataEnumerable  = specialize IGEnumerable<TColData>;
+    ICellDataEnumerable = specialize IGEnumerable<TCellData>;
+    TRowDataEnumerator  = class abstract(specialize TGCustomEnumerator<TRowData>);
 
 {$PUSH}{$INTERFACES CORBA}
     IRowMap = interface
       function  GetCount: SizeInt;
-      function  GetEnumerator: TRowEntryEnumerator;
+      function  GetEnumerator: TRowDataEnumerator;
       function  IsEmpty: Boolean;
       function  Contains(constref aCol: TCol): Boolean;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean;
@@ -769,7 +768,7 @@ type
     protected
       function  GetCount: SizeInt; virtual; abstract;
     public
-      function  GetEnumerator: TRowEntryEnumerator; virtual; abstract;
+      function  GetEnumerator: TRowDataEnumerator; virtual; abstract;
       function  IsEmpty: Boolean;
       function  Contains(constref aCol: TCol): Boolean; virtual; abstract;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; virtual; abstract;
@@ -782,28 +781,28 @@ type
       property  Cells[const aCol: TCol]: TValue read GetValueOrDefault write AddOrSetValue; default;
     end;
 
-    TTableEntry = record
+    TRowEntry = record
       Key: TRow;
       Columns: TCustomRowMap;
     end;
-    PTableEntry = ^TTableEntry;
+    PRowEntry = ^TRowEntry;
 
-    TCustomValueEnumerable     = class abstract(specialize TGAutoEnumerable<TValue>);
-    TCustomRowEntryEnumerable  = class abstract(specialize TGAutoEnumerable<TRowEntry>);
-    TCustomColEntryEnumerable  = class abstract(specialize TGAutoEnumerable<TColEntry>);
-    TCustomCellEntryEnumerable = class abstract(specialize TGAutoEnumerable<TCellEntry>);
+    TCustomValueEnumerable    = class abstract(specialize TGAutoEnumerable<TValue>);
+    TCustomRowDataEnumerable  = class abstract(specialize TGAutoEnumerable<TRowData>);
+    TCustomColDataEnumerable  = class abstract(specialize TGAutoEnumerable<TColData>);
+    TCustomCellDataEnumerable = class abstract(specialize TGAutoEnumerable<TCellData>);
 
   var
     FCellCount: SizeInt;
     function  GetRowCount: SizeInt; virtual; abstract;
-    function  DoFindRow(constref aRow: TRow): PTableEntry; virtual; abstract;
+    function  DoFindRow(constref aRow: TRow): PRowEntry; virtual; abstract;
   { returns True if row found, False otherwise }
-    function  DoFindOrAddRow(constref aRow: TRow; out p: PTableEntry): Boolean; virtual; abstract;
+    function  DoFindOrAddRow(constref aRow: TRow; out p: PRowEntry): Boolean; virtual; abstract;
     function  DoRemoveRow(constref aRow: TRow): SizeInt; virtual; abstract;
-    function  GetColumn(const aCol: TCol): IColEntryEnumerable; virtual; abstract;
-    function  GetCellEntries: ICellEntryEnumerable; virtual; abstract;
+    function  GetColumn(const aCol: TCol): IColDataEnumerable; virtual; abstract;
+    function  GetCellData: ICellDataEnumerable; virtual; abstract;
     function  GetColCount(const aRow: TRow): SizeInt;
-  { aRow will added if it is missed }
+  { aRow will be added if it is missed }
     function  GetRow(const aRow: TRow): IRowMap;
   public
     function  IsEmpty: Boolean;
@@ -828,8 +827,8 @@ type
     function  GetCellOrDefault(const aRow: TRow; const aCol: TCol): TValue;
     procedure AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
     function  AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
-    function  AddCell(constref e: TCellEntry): Boolean; inline;
-    function  AddAll(constref a: array of TCellEntry): SizeInt;
+    function  AddCell(constref e: TCellData): Boolean; inline;
+    function  AddAll(constref a: array of TCellData): SizeInt;
     function  RemoveCell(const aRow: TRow; const aCol: TCol): Boolean;
 
     function  RowEnum: IRowEnumerable; virtual; abstract;
@@ -838,8 +837,8 @@ type
     property  ColCount[const aRow: TRow]: SizeInt read GetColCount;
     property  CellCount: SizeInt read FCellCount;
     property  Rows[const aRow: TRow]: IRowMap read GetRow;
-    property  Columns[const aCol: TCol]: IColEntryEnumerable read GetColumn;
-    property  CellEntries: ICellEntryEnumerable read GetCellEntries;
+    property  Columns[const aCol: TCol]: IColDataEnumerable read GetColumn;
+    property  CellData: ICellDataEnumerable read GetCellData;
     property  Cells[const aRow: TRow; const aCol: TCol]: TValue read GetCellOrDefault write AddOrSetCell; default;
   end;
 
@@ -3116,7 +3115,7 @@ end;
 
 function TGCustomSparseTable.GetColCount(const aRow: TRow): SizeInt;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   p := DoFindRow(aRow);
   if p <> nil then
@@ -3127,7 +3126,7 @@ end;
 
 function TGCustomSparseTable.GetRow(const aRow: TRow): IRowMap;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   DoFindOrAddRow(aRow, p);
   Result := p^.Columns;
@@ -3150,7 +3149,7 @@ end;
 
 function TGCustomSparseTable.FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   p := DoFindRow(aRow);
   Result := p <> nil;
@@ -3160,7 +3159,7 @@ end;
 
 function TGCustomSparseTable.FindOrAddRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   Result := DoFindOrAddRow(aRow, p);
   aMap := p^.Columns;
@@ -3168,7 +3167,7 @@ end;
 
 function TGCustomSparseTable.AddRow(constref aRow: TRow): Boolean;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   Result := not DoFindOrAddRow(aRow, p);
 end;
@@ -3180,7 +3179,7 @@ end;
 
 function TGCustomSparseTable.ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   p := DoFindRow(aRow);
   if p <> nil then
@@ -3197,7 +3196,7 @@ end;
 
 function TGCustomSparseTable.TryGetCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   p := DoFindRow(aRow);
   if p <> nil then
@@ -3220,7 +3219,7 @@ end;
 
 procedure TGCustomSparseTable.AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   DoFindOrAddRow(aRow, p);
   p^.Columns[aCol] := aValue;
@@ -3233,14 +3232,14 @@ begin
     AddOrSetCell(aRow, aCol, aValue);
 end;
 
-function TGCustomSparseTable.AddCell(constref e: TCellEntry): Boolean;
+function TGCustomSparseTable.AddCell(constref e: TCellData): Boolean;
 begin
   Result := AddCell(e.Row, e.Column, e.Value);
 end;
 
-function TGCustomSparseTable.AddAll(constref a: array of TCellEntry): SizeInt;
+function TGCustomSparseTable.AddAll(constref a: array of TCellData): SizeInt;
 var
-  e: TCellEntry;
+  e: TCellData;
 begin
   Result := 0;
   for e in a do
@@ -3249,7 +3248,7 @@ end;
 
 function TGCustomSparseTable.RemoveCell(const aRow: TRow; const aCol: TCol): Boolean;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
   p := DoFindRow(aRow);
   if p <> nil then

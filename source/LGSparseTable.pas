@@ -49,26 +49,27 @@ type
       specialize TGCustomSparseTable<TRow, TCol, TValue>)
   protected
   type
-    THashTable = specialize TGHashTableLP<TRow, TTableEntry, TRowEqRel>;
+    TCustomHashSparseTable = TGCustomHashSparseTable;
+    TRowHashTable          = specialize TGHashTableLP<TRow, TRowEntry, TRowEqRel>;
 
-    TColEnumerable = class(TCustomColEntryEnumerable)
+    TColEnumerable = class(TCustomColDataEnumerable)
     protected
-      FEnum: THashTable.TEnumerator;
+      FEnum: TRowHashTable.TEnumerator;
       FCurrValue: TValue;
       FCol: TCol;
-      function GetCurrent: TColEntry; override;
+      function GetCurrent: TColData; override;
     public
       constructor Create(aTable: TGCustomHashSparseTable; constref ACol: TCol);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
-    TCellEnumerable = class(TCustomCellEntryEnumerable)
+    TCellEnumerable = class(TCustomCellDataEnumerable)
     protected
-      FEnum: THashTable.TEnumerator;
-      FRowEnum: TRowEntryEnumerator;
-      FCurrRowEntry: TRowEntry;
-      function GetCurrent: TCellEntry; override;
+      FEnum: TRowHashTable.TEnumerator;
+      FRowEnum: TRowDataEnumerator;
+      FCurrRowEntry: TRowData;
+      function GetCurrent: TCellData; override;
     public
       constructor Create(aTable: TGCustomHashSparseTable);
       destructor Destroy; override;
@@ -78,7 +79,7 @@ type
 
     TRowEnumerable = class(specialize TGAutoEnumerable<TRow>)
     protected
-      FEnum: THashTable.TEnumerator;
+      FEnum: TRowHashTable.TEnumerator;
       function GetCurrent: TRow; override;
     public
       constructor Create(aTable: TGCustomHashSparseTable);
@@ -88,7 +89,7 @@ type
 
     TRowMapEnumerable = class(specialize TGAutoEnumerable<IRowMap>)
     protected
-      FEnum: THashTable.TEnumerator;
+      FEnum: TRowHashTable.TEnumerator;
       function GetCurrent: IRowMap; override;
     public
       constructor Create(aTable: TGCustomHashSparseTable);
@@ -97,19 +98,19 @@ type
     end;
 
   var
-    FTable: THashTable;
+    FRowTable: TRowHashTable;
     function  CreateRowMap: TCustomRowMap; virtual; abstract;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
     procedure ClearItems;
     function  GetRowCount: SizeInt; override;
-    function  DoFindRow(constref aRow: TRow): PTableEntry; override;
+    function  DoFindRow(constref aRow: TRow): PRowEntry; override;
   { returns True if row found, False otherwise }
-    function  DoFindOrAddRow(constref aRow: TRow; out p: PTableEntry): Boolean; override;
+    function  DoFindOrAddRow(constref aRow: TRow; out p: PRowEntry): Boolean; override;
     function  DoRemoveRow(constref aRow: TRow): SizeInt; override;
-    function  GetColumn(const aCol: TCol): IColEntryEnumerable; override;
-    function  GetCellEntries: ICellEntryEnumerable; override;
+    function  GetColumn(const aCol: TCol): IColDataEnumerable; override;
+    function  GetCellData: ICellDataEnumerable; override;
   public
     constructor Create;
     constructor Create(aRowCapacity: SizeInt);
@@ -136,6 +137,7 @@ type
     specialize TGCustomHashSparseTable<TRow, TCol, TValue, TRowEqRel>)
   protected
   type
+
     TRowMap = class(TCustomRowMap)
     private
     type
@@ -147,10 +149,10 @@ type
 
       TRowMapTable = specialize TGHashTableLP<TCol, TEntry, TColEqRel>;
 
-      TEnumerator = class(TRowEntryEnumerator)
+      TEnumerator = class(TRowDataEnumerator)
       protected
         FEnum: TRowMapTable.TEnumerator;
-        function GetCurrent: TRowEntry; override;
+        function GetCurrent: TRowData; override;
       public
         constructor Create(aMap: TRowMapTable);
         function  MoveNext: Boolean; override;
@@ -162,14 +164,14 @@ type
       LOAD_FACTOR    = 0.65; //todo: why ???
 
     var
-      FTable: TCustomSparseTable;
+      FTable: TCustomHashSparseTable;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
     public
-      constructor Create(aTable: TCustomSparseTable);
+      constructor Create(aTable: TCustomHashSparseTable);
       destructor Destroy; override;
-      function  GetEnumerator: TRowEntryEnumerator; override;
+      function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; inline;
       function  Contains(constref aCol: TCol): Boolean; override;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
@@ -220,17 +222,15 @@ type
     TNodeManager = specialize TGPageNodeManager<TNode>;
     PNodeManager = ^TNodeManager;
 
-    { TRowMap }
-
     TRowMap = class(TCustomRowMap)
     private
     type
       TRowMapTable = specialize TGAvlTree2<TCol, TEntry, TNodeManager, TColCmpRel>;
 
-      TEnumerator = class(TRowEntryEnumerator)
+      TEnumerator = class(TRowDataEnumerator)
       protected
         FEnum: TRowMapTable.TEnumerator;
-        function GetCurrent: TRowEntry; override;
+        function GetCurrent: TRowData; override;
       public
         constructor Create(aMap: TRowMapTable);
         function  MoveNext: Boolean; override;
@@ -238,14 +238,14 @@ type
       end;
 
     var
-      FTable: TCustomSparseTable;
+      FTable: TCustomHashSparseTable;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
     public
       constructor Create(aTable: TGTreeSparseTable);
       destructor Destroy; override;
-      function  GetEnumerator: TRowEntryEnumerator; override;
+      function  GetEnumerator: TRowDataEnumerator; override;
       function  Contains(constref aCol: TCol): Boolean; override;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
     { returns True if not contains aCol was added, False otherwise }
@@ -303,10 +303,10 @@ type
     type
       TRowMapTable = specialize TGSortedListTable<TCol, TEntry, TColCmpRel>;
 
-      TEnumerator = class(TRowEntryEnumerator)
+      TEnumerator = class(TRowDataEnumerator)
       protected
         FEnum: TRowMapTable.TEnumerator;
-        function GetCurrent: TRowEntry; override;
+        function GetCurrent: TRowData; override;
       public
         constructor Create(aMap: TRowMapTable);
         function  MoveNext: Boolean; override;
@@ -317,14 +317,14 @@ type
       INITIAL_CAPACITY = 8;
 
     var
-      FTable: TCustomSparseTable;
+      FTable: TCustomHashSparseTable;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
     public
-      constructor Create(aTable: TCustomSparseTable);
+      constructor Create(aTable: TCustomHashSparseTable);
       destructor Destroy; override;
-      function  GetEnumerator: TRowEntryEnumerator; override;
+      function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; inline;
       function  Contains(constref aCol: TCol): Boolean; override;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
@@ -357,7 +357,7 @@ implementation
 
 { TGCustomHashSparseTable.TColEnumerable }
 
-function TGCustomHashSparseTable.TColEnumerable.GetCurrent: TColEntry;
+function TGCustomHashSparseTable.TColEnumerable.GetCurrent: TColData;
 begin
   Result.Row := FEnum.Current^.Key;
   Result.Value := FCurrValue;
@@ -366,7 +366,7 @@ end;
 constructor TGCustomHashSparseTable.TColEnumerable.Create(aTable: TGCustomHashSparseTable; constref ACol: TCol);
 begin
   inherited Create;
-  FEnum := aTable.FTable.GetEnumerator;
+  FEnum := aTable.FRowTable.GetEnumerator;
   FCol := aCol;
   FCurrValue := Default(TValue);
 end;
@@ -388,7 +388,7 @@ end;
 
 { TGCustomHashSparseTable.TCellEnumerable }
 
-function TGCustomHashSparseTable.TCellEnumerable.GetCurrent: TCellEntry;
+function TGCustomHashSparseTable.TCellEnumerable.GetCurrent: TCellData;
 begin
   Result.Row := FEnum.Current^.Key;
   Result.Column := FCurrRowEntry.Column;
@@ -398,8 +398,8 @@ end;
 constructor TGCustomHashSparseTable.TCellEnumerable.Create(aTable: TGCustomHashSparseTable);
 begin
   inherited Create;
-  FEnum :=  aTable.FTable.GetEnumerator;
-  FCurrRowEntry := Default(TRowEntry);
+  FEnum :=  aTable.FRowTable.GetEnumerator;
+  FCurrRowEntry := Default(TRowData);
 end;
 
 destructor TGCustomHashSparseTable.TCellEnumerable.Destroy;
@@ -429,7 +429,7 @@ procedure TGCustomHashSparseTable.TCellEnumerable.Reset;
 begin
   FEnum.Reset;
   FreeAndNil(FRowEnum);
-  FCurrRowEntry := Default(TRowEntry);
+  FCurrRowEntry := Default(TRowData);
 end;
 
 { TGCustomHashSparseTable.TRowEnumerable }
@@ -442,7 +442,7 @@ end;
 constructor TGCustomHashSparseTable.TRowEnumerable.Create(aTable: TGCustomHashSparseTable);
 begin
   inherited Create;
-  FEnum := aTable.FTable.GetEnumerator;
+  FEnum := aTable.FRowTable.GetEnumerator;
 end;
 
 function TGCustomHashSparseTable.TRowEnumerable.MoveNext: Boolean;
@@ -465,7 +465,7 @@ end;
 constructor TGCustomHashSparseTable.TRowMapEnumerable.Create(aTable: TGCustomHashSparseTable);
 begin
   inherited Create;
-  FEnum := aTable.FTable.GetEnumerator;
+  FEnum := aTable.FRowTable.GetEnumerator;
 end;
 
 function TGCustomHashSparseTable.TRowMapEnumerable.MoveNext: Boolean;
@@ -482,44 +482,44 @@ end;
 
 function TGCustomHashSparseTable.GetFillRatio: Single;
 begin
-  Result := FTable.FillRatio;
+  Result := FRowTable.FillRatio;
 end;
 
 function TGCustomHashSparseTable.GetLoadFactor: Single;
 begin
-  Result := FTable.LoadFactor;
+  Result := FRowTable.LoadFactor;
 end;
 
 procedure TGCustomHashSparseTable.SetLoadFactor(aValue: Single);
 begin
-  FTable.LoadFactor := aValue;
+  FRowTable.LoadFactor := aValue;
 end;
 
 procedure TGCustomHashSparseTable.ClearItems;
 var
-  p: THashTable.PEntry;
+  p: TRowHashTable.PEntry;
 begin
-  for p in FTable do
+  for p in FRowTable do
     p^.Columns.Free;
 end;
 
 function TGCustomHashSparseTable.GetRowCount: SizeInt;
 begin
-  Result := FTable.Count;
+  Result := FRowTable.Count;
 end;
 
-function TGCustomHashSparseTable.DoFindRow(constref aRow: TRow): PTableEntry;
+function TGCustomHashSparseTable.DoFindRow(constref aRow: TRow): PRowEntry;
 var
   Pos: SizeInt;
 begin
-  Result := FTable.Find(aRow, Pos);
+  Result := FRowTable.Find(aRow, Pos);
 end;
 
-function TGCustomHashSparseTable.DoFindOrAddRow(constref aRow: TRow; out p: PTableEntry): Boolean;
+function TGCustomHashSparseTable.DoFindOrAddRow(constref aRow: TRow; out p: PRowEntry): Boolean;
 var
   Pos: SizeInt;
 begin
-  Result := FTable.FindOrAdd(aRow, p, Pos);
+  Result := FRowTable.FindOrAdd(aRow, p, Pos);
   if not Result then
     begin
       p^.Key := aRow;
@@ -530,58 +530,58 @@ end;
 function TGCustomHashSparseTable.DoRemoveRow(constref aRow: TRow): SizeInt;
 var
   Pos: SizeInt;
-  p: PTableEntry;
+  p: PRowEntry;
 begin
-  p := FTable.Find(aRow, Pos);
+  p := FRowTable.Find(aRow, Pos);
   if p <> nil then
     begin
       Result := p^.Columns.Count;
       p^.Columns.Free;
-      FTable.RemoveAt(Pos);
+      FRowTable.RemoveAt(Pos);
     end
   else
     Result := 0;
 end;
 
-function TGCustomHashSparseTable.GetColumn(const aCol: TCol): IColEntryEnumerable;
+function TGCustomHashSparseTable.GetColumn(const aCol: TCol): IColDataEnumerable;
 begin
   Result := TColEnumerable.Create(Self, aCol);
 end;
 
-function TGCustomHashSparseTable.GetCellEntries: ICellEntryEnumerable;
+function TGCustomHashSparseTable.GetCellData: ICellDataEnumerable;
 begin
   Result := TCellEnumerable.Create(Self);
 end;
 
 constructor TGCustomHashSparseTable.Create;
 begin
-  FTable := THashTable.Create;
+  FRowTable := TRowHashTable.Create;
 end;
 
 constructor TGCustomHashSparseTable.Create(aRowCapacity: SizeInt);
 begin
-  FTable := THashTable.Create(aRowCapacity);
+  FRowTable := TRowHashTable.Create(aRowCapacity);
 end;
 
 constructor TGCustomHashSparseTable.Create(aLoadFactor: Single);
 begin
-  FTable := THashTable.Create(aLoadFactor);
+  FRowTable := TRowHashTable.Create(aLoadFactor);
 end;
 
 constructor TGCustomHashSparseTable.Create(aRowCapacity: SizeInt; aLoadFactor: Single);
 begin
-  FTable := THashTable.Create(aRowCapacity, aLoadFactor);
+  FRowTable := TRowHashTable.Create(aRowCapacity, aLoadFactor);
 end;
 
 procedure TGCustomHashSparseTable.Clear;
 begin
   ClearItems;
-  FTable.Clear;
+  FRowTable.Clear;
 end;
 
 procedure TGCustomHashSparseTable.EnsureRowCapacity(aValue: SizeInt);
 begin
-  FTable.EnsureCapacity(aValue);
+  FRowTable.EnsureCapacity(aValue);
 end;
 
 function TGCustomHashSparseTable.RowEnum: IRowEnumerable;
@@ -596,7 +596,7 @@ end;
 
 { TGHashSparseTable.TRowMap.TEnumerator }
 
-function TGHashSparseTable.TRowMap.TEnumerator.GetCurrent: TRowEntry;
+function TGHashSparseTable.TRowMap.TEnumerator.GetCurrent: TRowData;
 begin
   Result.Column := FEnum.Current^.Key;
   Result.Value := FEnum.Current^.Value;
@@ -624,7 +624,7 @@ begin
   Result := FMap.Count;
 end;
 
-constructor TGHashSparseTable.TRowMap.Create(aTable: TCustomSparseTable);
+constructor TGHashSparseTable.TRowMap.Create(aTable: TCustomHashSparseTable);
 begin
   FMap := TRowMapTable.Create(INITIAL_CAPACITY, LOAD_FACTOR);
   FTable := aTable;
@@ -637,7 +637,7 @@ begin
   inherited;
 end;
 
-function TGHashSparseTable.TRowMap.GetEnumerator: TRowEntryEnumerator;
+function TGHashSparseTable.TRowMap.GetEnumerator: TRowDataEnumerator;
 begin
   Result := TEnumerator.Create(Self.FMap);
 end;
@@ -710,22 +710,25 @@ end;
 destructor TGHashSparseTable.Destroy;
 begin
   Clear;
-  FTable.Free;
+  FRowTable.Free;
   inherited;
 end;
 
 procedure TGHashSparseTable.TrimToFit;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
-  FTable.TrimToFit;
-  for p in FTable do
-    TRowMap(p^.Columns).TrimToFit;
+  for p in FRowTable do
+    if p^.Columns.IsEmpty then
+      FRowTable.Remove(p^.Key)
+    else
+      TRowMap(p^.Columns).TrimToFit;
+  FRowTable.TrimToFit;
 end;
 
 { TGTreeSparseTable.TRowMap.TEnumerator }
 
-function TGTreeSparseTable.TRowMap.TEnumerator.GetCurrent: TRowEntry;
+function TGTreeSparseTable.TRowMap.TEnumerator.GetCurrent: TRowData;
 begin
   Result.Column := FEnum.Current^.Key;
   Result.Value := FEnum.Current^.Value;
@@ -766,7 +769,7 @@ begin
   inherited;
 end;
 
-function TGTreeSparseTable.TRowMap.GetEnumerator: TRowEntryEnumerator;
+function TGTreeSparseTable.TRowMap.GetEnumerator: TRowDataEnumerator;
 begin
   Result := TEnumerator.Create(Self.FMap);
 end;
@@ -850,7 +853,7 @@ end;
 destructor TGTreeSparseTable.Destroy;
 begin
   Clear;
-  FTable.Free;
+  FRowTable.Free;
   FNodeManager.Free;
   inherited;
 end;
@@ -862,15 +865,20 @@ begin
 end;
 
 procedure TGTreeSparseTable.TrimToFit;
+var
+  p: PRowEntry;
 begin
-  FTable.TrimToFit;
+  for p in FRowTable do
+    if p^.Columns.IsEmpty then
+      FRowTable.Remove(p^.Key);
+  FRowTable.TrimToFit;
   if CellCount = 0 then
     FNodeManager.Clear;
 end;
 
 { TGListSparseTable.TRowMap.TEnumerator }
 
-function TGListSparseTable.TRowMap.TEnumerator.GetCurrent: TRowEntry;
+function TGListSparseTable.TRowMap.TEnumerator.GetCurrent: TRowData;
 begin
   Result.Column := FEnum.Current^.Key;
   Result.Value := FEnum.Current^.Value;
@@ -898,7 +906,7 @@ begin
   Result := FMap.Count;
 end;
 
-constructor TGListSparseTable.TRowMap.Create(aTable: TCustomSparseTable);
+constructor TGListSparseTable.TRowMap.Create(aTable: TCustomHashSparseTable);
 begin
   FMap := TRowMapTable.Create(INITIAL_CAPACITY);
   FTable := aTable;
@@ -911,7 +919,7 @@ begin
   inherited;
 end;
 
-function TGListSparseTable.TRowMap.GetEnumerator: TRowEntryEnumerator;
+function TGListSparseTable.TRowMap.GetEnumerator: TRowDataEnumerator;
 begin
   Result := TEnumerator.Create(Self.FMap);
 end;
@@ -978,17 +986,20 @@ end;
 destructor TGListSparseTable.Destroy;
 begin
   Clear;
-  FTable.Free;
+  FRowTable.Free;
   inherited;
 end;
 
 procedure TGListSparseTable.TrimToFit;
 var
-  p: PTableEntry;
+  p: PRowEntry;
 begin
-  FTable.TrimToFit;
-  for p in FTable do
-    TRowMap(p^.Columns).TrimToFit;
+  for p in FRowTable do
+    if p^.Columns.IsEmpty then
+      FRowTable.Remove(p^.Key)
+    else
+      TRowMap(p^.Columns).TrimToFit;
+  FRowTable.TrimToFit;
 end;
 
 end.

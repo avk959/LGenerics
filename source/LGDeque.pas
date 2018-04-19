@@ -2301,7 +2301,7 @@ end;
 
 class function TGBaseDequeHelper.QSplitMo9(var d: TLiteDeque; L, R: SizeInt): TSortSplit;
 var
-  v, Pivot: T;
+  Pivot: T;
 begin
   Pivot := GetMo9Pivot(d, L, R);
   Dec(L);
