@@ -1,1 +1,1 @@
-# LazGenerics
+# LGenerics
