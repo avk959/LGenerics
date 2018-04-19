@@ -5,10 +5,10 @@ test/
 *.lps
 *.exe
 *.res
-*.or
-*.o
+*.[oa]
 *.ppu
 *.compiled
+*~
 ppas.sh
 ppas.bat
 link.res
