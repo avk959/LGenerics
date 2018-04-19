@@ -16,14 +16,14 @@ uses
 type
   TCounter    = specialize TGHashMultiSetLP<string>;
   TDictionary = specialize TGHashSetLP<string>;
-  TEntry = TCounter.TEntry;
+  TCountItem  = TCounter.TEntry;
 
 const
 
   UsageString =
-  'Usage: rwstat [OPTIONS] [FILES]'                 + LineEnding + //pascal source files
-  'Options:'                                        + LineEnding +
-  '  -o --output:NAME   set output file name' + LineEnding +
+  'Usage: rwstat [OPTIONS] [FILES]'           + LineEnding + //pascal source files
+  'Options:'                                  + LineEnding +
+  '  -o --output:NAME   set output file name' + LineEnding + //by default stdout
   '  -m --modifiers     including modifiers'  + LineEnding +
   '  -h --help          print this help menu';
 
@@ -55,7 +55,7 @@ begin
   Result := Length(InFileNames) > 0;
 end;
 
-procedure ParseFiles(aModifiers: Boolean);
+procedure ProcessFiles;
 var
   TotalCount: SizeInt = 0;
   function ToLower(constref aValue: string): string;
@@ -63,7 +63,7 @@ var
     Result := LowerCase(aValue);
     Inc(TotalCount);
   end;
-  function CompareItem(constref L, R: TEntry): SizeInt;
+  function CompareItem(constref L, R: TCountItem): SizeInt;
   begin
     Result := -SizeInt.Compare(L.Count, R.Count);
   end;
@@ -72,14 +72,14 @@ var
   Counter: specialize TGAutoRef<TCounter>;
   Dict: specialize TGAutoRef<TDictionary>;
   FileName, CurrLine: string;
-  Item: TEntry;
+  Item: TCountItem;
   function IsReservedWord(constref aValue: string): Boolean;
   begin
     Result := Dict.Instance.Contains(aValue);
   end;
 begin
   Dict.Instance.AddAll([{$I reswords.inc}]);
-  if aModifiers then
+  if AllowModifiers then
     Dict.Instance.AddAll([{$I modifiers.inc}]);
 
   for FileName in InFileNames do
@@ -107,7 +107,7 @@ end;
 
 begin
   if ParamsFound then
-    ParseFiles(AllowModifiers)
+    ProcessFiles
   else
     Writeln(UsageString);
 end.
