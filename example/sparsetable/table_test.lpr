@@ -19,15 +19,17 @@ const
 var
   UserInput: string;
   Table: TTable;
-  RowEntry: TRowData;
-  ColEntry: TColData;
+  RowData: TRowData;
+  ColData: TColData;
 
 
   {$R *.res}
 
 begin
+
   Table := TTable.Create;
   Table.AddAll(Data);
+
   repeat
     WriteLn;
     WriteLn('print q<quite> to exit');
@@ -41,19 +43,20 @@ begin
         begin
           UserInput := Copy(UserInput, 3, Length(UserInput));
           WriteLn('-->');
-          for RowEntry in Table.Rows[UserInput] do
-            WriteLn('Location: ', RowEntry.Column, '', ', employees: ', RowEntry.Value);
+          for RowData in Table.Rows[UserInput] do
+            WriteLn('Location: ', RowData.Column, '', ', employees: ', RowData.Value);
         end;
       '2':
         begin
           UserInput := Copy(UserInput, 3, Length(UserInput));
           WriteLn('-->');
-          for ColEntry in Table.Columns[UserInput] do
-            WriteLn('Company: ', ColEntry.Row, '', ', employees: ', ColEntry.Value);
+          for ColData in Table.Columns[UserInput] do
+            WriteLn('Company: ', ColData.Row, '', ', employees: ', ColData.Value);
         end;
     end;
-
   until False;
+
   Table.Free;
+
 end.
 
