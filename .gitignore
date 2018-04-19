@@ -4,6 +4,12 @@ bin/
 test/
 *.lps
 *.exe
+*.out
+*.app
+*.dll
+*.so
+*.so.*
+*.dylib
 *.res
 *.[oa]
 *.ppu
@@ -12,3 +18,8 @@ test/
 ppas.sh
 ppas.bat
 link.res
+*.ilk
+*.map
+*.exp
+*.dbg
+
