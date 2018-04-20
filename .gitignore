@@ -12,6 +12,7 @@ test/
 *.dylib
 *.res
 *.[oa]
+*.obj
 *.ppu
 *.compiled
 *~
