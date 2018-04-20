@@ -1,9 +1,4 @@
 {****************************************************************************
-*         _     ____ _____ _   _ _____ ____  ___ ____ ____                  *
-*        | |   / ___| ____| \ | | ____|  _ \|_ _/ ___/ ___|                 *
-*        | |  | |  _|  _| |  \| |  _| | |_) || | |   \___ \                 *
-*        | |__| |_| | |___| |\  | |___|  _ < | | |___ ___) |                *
-*        |_____\____|_____|_| \_|_____|_| \_\___\____|____/                 *
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *   Generic AVL tree implementations for internal use.                      *
@@ -21,11 +16,7 @@
 *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
 *  See the License for the specific language governing permissions and      *
 *  limitations under the License.                                           *
-*                   _         __     ___           __                       *
-*            /\  /\/_\/\   /\/__\   / __\/\ /\  /\ \ \                      *
-*           / /_/ //_\\ \ / /_\    / _\ / / \ \/  \/ /                      *
-*          / __  /  _  \ V //__   / /   \ \_/ / /\  /                       *
-*          \/ /_/\_/ \_/\_/\__/   \/     \___/\_\ \/                        *
+*                                                                           *
 *****************************************************************************}
 unit LGAvlTree;
 

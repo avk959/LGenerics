@@ -1,9 +1,4 @@
 {****************************************************************************
-*         _     ____ _____ _   _ _____ ____  ___ ____ ____                  *
-*        | |   / ___| ____| \ | | ____|  _ \|_ _/ ___/ ___|                 *
-*        | |  | |  _|  _| |  \| |  _| | |_) || | |   \___ \                 *
-*        | |__| |_| | |___| |\  | |___|  _ < | | |___ ___) |                *
-*        |_____\____|_____|_| \_|_____|_| \_\___\____|____/                 *
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *   Generic queue implementations.                                          *
@@ -20,10 +15,6 @@
 *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
 *  See the License for the specific language governing permissions and      *
 *  limitations under the License.                                           *
-*                   ___ _  _    _  _____   __ _                             *
-*                  | __| \| |_ | |/ _ \ \ / /| |                            *
-*                  | _|| .` | || | (_) \ V / |_|                            *
-*                  |___|_|\_|\__/ \___/ |_|  (_)                            *
 *                                                                           *
 *****************************************************************************}
 unit LGQueue;
