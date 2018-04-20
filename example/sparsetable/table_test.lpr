@@ -4,7 +4,6 @@ program table_test;
 
 uses
   SysUtils,
-  LGUtils,
   LGSparseTable;
 
 type
