@@ -469,6 +469,7 @@ type
     function  RightmostLE(constref aValue: T): SizeInt;
     function  NearestGT(constref aValue: T): SizeInt;
     function  LeftmostGE(constref aValue: T): SizeInt;
+    function  SelectDistinctArray(constref a: array of T): TArray;
     function  IndexInRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
@@ -486,6 +487,8 @@ type
     procedure TrimToFit; inline;
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
+    function  Add(constref aValue: T): Boolean;
+    function  AddAll(constref a: array of T): SizeInt;
   { returns insert index, -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
@@ -2368,6 +2371,26 @@ begin
       Dec(Result);
 end;
 
+function TGLiteSortedList.SelectDistinctArray(constref a: array of T): TArray;
+var
+  I, J, Hi: SizeInt;
+begin
+  Result := THelper.SelectDistinct(a);
+  if IsEmpty then
+    exit;
+  Hi := System.High(Result);
+  I := -1;
+  for J := 0 to Hi do
+    begin
+      if IndexOf(Result[J]) > -1 then
+        continue;
+      Inc(I);
+      if J > I then
+        Result[I] := Result[J];
+    end;
+  System.SetLength(Result, Succ(I));
+end;
+
 function TGLiteSortedList.IndexInRange(aIndex: SizeInt): Boolean;
 begin
   Result := (aIndex >= 0) and (aIndex < Count);
@@ -2451,6 +2474,53 @@ begin
   Result := NonEmpty;
   if Result then
     aValue := FBuffer.FItems[Pred(FBuffer.Count)];
+end;
+
+function TGLiteSortedList.Add(constref aValue: T): Boolean;
+var
+  sr: THelper.TSearchResult;
+begin
+  if NonEmpty then
+    begin
+      sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
+      if (sr.FoundIndex > -1) and RejectDuplicates then
+        exit(False);
+      InsertItem(sr.InsertIndex, aValue);
+    end
+  else
+    InsertItem(Count, aValue);
+  Result := True;
+end;
+
+function TGLiteSortedList.AddAll(constref a: array of T): SizeInt;
+var
+  OldCount: SizeInt;
+  PSrc: PItem;
+  da: TArray;
+begin
+  OldCount := Count;
+  if RejectDuplicates then
+    begin
+      da := SelectDistinctArray(a);
+      Result := System.Length(da);
+      if Result = 0 then
+        exit;
+      PSrc := @da[0];
+    end
+  else
+    begin
+      Result := System.Length(a);
+      if Result = 0 then
+        exit;
+      PSrc := @a[0];
+    end;
+  EnsureCapacity(OldCount + Result);
+  THelper.CopyItems(PSrc, @FBuffer.FItems[OldCount], Result);
+  FBuffer.FCount += Result;
+  if RejectDuplicates or (OldCount >= Result) then
+    THelper.MergeSort(FBuffer.FItems[0..Pred(Count)])
+  else
+    THelper.Sort(FBuffer.FItems[0..Pred(Count)])
 end;
 
 function TGLiteSortedList.Insert(constref aValue: T): SizeInt;
@@ -2539,7 +2609,7 @@ end;
 
 function TGLiteSortedList.Head(constref aHighBound: T; aInclusive: Boolean): THead;
 begin
-  Result.Init(@Self, IndexOfFloor(aHighBound, aInclusive));
+  Result{%H-}.Init(@Self, IndexOfFloor(aHighBound, aInclusive));
 end;
 
 function TGLiteSortedList.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
@@ -2549,7 +2619,7 @@ begin
   StartIdx := IndexOfCeil(ALowBound, aInclusive);
   if StartIdx < 0 then
     StartIdx := Count;
-  Result.Init(@Self, StartIdx);
+  Result{%H-}.Init(@Self, StartIdx);
 end;
 
 function TGLiteSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
@@ -2559,7 +2629,7 @@ begin
   StartIdx := IndexOfCeil(ALowBound, rbLow in aIncludeBounds);
   if StartIdx < 0 then
     StartIdx := Count;
-  Result.Init(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
+  Result{%H-}.Init(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
 end;
 
 function TGLiteSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TGLiteSortedList;
