@@ -2366,7 +2366,7 @@ begin
     repeat
       Inc(Result)
     until TCmpRel.Compare(FBuffer.FItems[Result], aValue) >= 0
-  else // >=
+  else
     while TCmpRel.Compare(FBuffer.FItems[Pred(Result)], aValue) >= 0 do
       Dec(Result);
 end;
