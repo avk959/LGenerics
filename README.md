@@ -1,8 +1,7 @@
 # LGenerics
 
 LGenerics package for FPC and Lazarus, 
-    contains generic algorithms and data structures
-    (explosive growing mixture of generics with virtual methods :). 
+    contains generic algorithms and data structures. 
 
 System requirements: FPC 3.1.1 and higher, Lazarus 1.9.0 and higher.
    
