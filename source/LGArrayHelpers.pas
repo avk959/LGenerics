@@ -8991,7 +8991,7 @@ class procedure TGOrdinalArrayHelper.Sort(var A: array of T; aOrder: TSortOrder)
 var
   R, vMin, vMax: SizeInt;
 begin
-  R := System.High(A);
+  R := System.High(A);  //todo: also need to test array range
   if R > 0 then
     begin
       if CountRun2Asc(A, 0, R) < R then
