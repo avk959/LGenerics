@@ -7,7 +7,6 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls, EditBtn,
-  //LGUtils,
   LGAsync,
   LGArrayHelpers,
   EpikTimer;
