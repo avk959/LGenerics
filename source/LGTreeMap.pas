@@ -646,8 +646,7 @@ end;
 
 procedure TGCustomTreeMap.DoEnsureCapacity(aValue: SizeInt);
 begin
-  if not FTree.EnsureCapacity(aValue) then
-    CapacityExceedError(aValue);
+  FTree.EnsureCapacity(aValue);
 end;
 
 procedure TGCustomTreeMap.DoTrimToFit;

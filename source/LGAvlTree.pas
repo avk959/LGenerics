@@ -134,7 +134,7 @@ type
     constructor Create(aCapacity: SizeInt);
     destructor Destroy; override;
     procedure Clear; inline;
-    function  EnsureCapacity(aValue: SizeInt): Boolean;
+    procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
     function  FindOrAdd(constref aKey: TKey; out aNode: PNode): Boolean;
     function  Add(constref aData: TEntry): PNode; inline;
@@ -910,15 +910,10 @@ begin
   FNodeManager.Clear;
 end;
 
-function TGCustomAvlTree.EnsureCapacity(aValue: SizeInt): Boolean;
+procedure TGCustomAvlTree.EnsureCapacity(aValue: SizeInt);
 begin
-  Result := True;
   if aValue > Capacity then
-    try
-      FNodeManager.EnsureFreeCount(aValue - Count);
-    except
-      Result := False;
-    end;
+    FNodeManager.EnsureFreeCount(aValue - Count);
 end;
 
 procedure TGCustomAvlTree.TrimToFit;

@@ -494,8 +494,8 @@ end;
 
 procedure TGHashBiMap.DoEnsureCapacity(aValue: SizeInt);
 begin
-  if not (FKeySet.EnsureCapacity(aValue) and FValueSet.EnsureCapacity(aValue)) then
-    CapacityExceedError(aValue);
+  FKeySet.EnsureCapacity(aValue);
+  FValueSet.EnsureCapacity(aValue);
 end;
 
 procedure TGHashBiMap.DoTrimToFit;

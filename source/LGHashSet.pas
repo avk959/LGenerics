@@ -456,8 +456,7 @@ end;
 
 procedure TGCustomHashSet.DoEnsureCapacity(aValue: SizeInt);
 begin
-  if not FTable.EnsureCapacity(aValue) then
-    CapacityExceedError(aValue);
+  FTable.EnsureCapacity(aValue);
 end;
 
 function TGCustomHashSet.DoAdd(constref aValue: T): Boolean;

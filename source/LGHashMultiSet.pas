@@ -448,8 +448,7 @@ end;
 
 procedure TGCustomHashMultiSet.DoEnsureCapacity(aValue: SizeInt);
 begin
-  if not FTable.EnsureCapacity(aValue) then
-    CapacityExceedError(aValue);
+  FTable.EnsureCapacity(aValue);
 end;
 
 function TGCustomHashMultiSet.FindEntry(constref aKey: T): PEntry;

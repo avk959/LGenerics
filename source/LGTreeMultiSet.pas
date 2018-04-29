@@ -586,8 +586,7 @@ end;
 
 procedure TGCustomTreeMultiSet.DoEnsureCapacity(aValue: SizeInt);
 begin
-  if not FTree.EnsureCapacity(aValue) then
-    CapacityExceedError(aValue);
+  FTree.EnsureCapacity(aValue);
 end;
 
 function TGCustomTreeMultiSet.FindEntry(constref aKey: T): PEntry;

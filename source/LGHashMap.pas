@@ -496,8 +496,7 @@ end;
 
 procedure TGCustomHashMap.DoEnsureCapacity(aValue: SizeInt);
 begin
-  if not FTable.EnsureCapacity(aValue) then
-    CapacityExceedError(aValue);
+  FTable.EnsureCapacity(aValue);
 end;
 
 procedure TGCustomHashMap.DoTrimToFit;
