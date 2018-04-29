@@ -95,7 +95,7 @@ type
     function  GetEnumerator: TEntryEnumerator; virtual; abstract;
     function  Clone: TCustomHashTable; virtual; abstract;
     procedure Clear; virtual; abstract;
-    function  EnsureCapacity(aValue: SizeInt): Boolean; virtual; abstract;
+    procedure EnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure TrimToFit; virtual; abstract;
     //return True if aKey found, otherwise insert garbage entry and return False;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; virtual;abstract; overload;
@@ -173,7 +173,7 @@ type
     class function MaxLoadFactor: Single; override;
     function  GetEnumerator: TEntryEnumerator; override;
     procedure Clear; override;
-    function  EnsureCapacity(aValue: SizeInt): Boolean; override;
+    procedure EnsureCapacity(aValue: SizeInt); override;
     procedure TrimToFit; override;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
     function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry; override;
@@ -343,7 +343,7 @@ type
     destructor Destroy; override;
     procedure Clear; override;
     function  Clone: TCustomHashTable; override;
-    function  EnsureCapacity(aValue: SizeInt): Boolean; override;
+    procedure EnsureCapacity(aValue: SizeInt); override;
     procedure TrimToFit; override;
     function  GetEnumerator: TEntryEnumerator; override;
     function  GetReverseEnumerator: TReverseEnumerator;
@@ -435,7 +435,7 @@ type
     destructor Destroy; override;
     procedure Clear; override;
     function  Clone: TCustomHashTable; override;
-    function  EnsureCapacity(aValue: SizeInt): Boolean; override;
+    procedure EnsureCapacity(aValue: SizeInt); override;
     procedure TrimToFit; override;
     function  GetEnumerator: TEntryEnumerator; override;
     //return True if aKey found, otherwise insert empty Entry and return False;
@@ -816,7 +816,7 @@ begin
   FExpandTreshold := 0;
 end;
 
-function TGOpenAddressing.EnsureCapacity(aValue: SizeInt): Boolean;
+procedure TGOpenAddressing.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
@@ -824,15 +824,8 @@ begin
     begin
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
       if NewCapacity <> ListCapacity then
-        try
-          Resize(NewCapacity);
-          Result := True;
-        except
-          Result := False;
-        end;
-    end
-  else
-    Result := True;
+        Resize(NewCapacity);
+    end;
 end;
 
 procedure TGOpenAddressing.TrimToFit;
@@ -1607,31 +1600,17 @@ begin
     end;
 end;
 
-function TGOrderedHashTable.EnsureCapacity(aValue: SizeInt): Boolean;
+procedure TGOrderedHashTable.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
   if aValue > ExpandTreshold then
     begin
-      try
-        FNodeManager.EnsureFreeCount(aValue - Count);
-        Result := True;
-      except
-        Result := False;
-      end;
-      if Result then
-        begin
-          NewCapacity := EstimateCapacity(aValue, LoadFactor);
-          if NewCapacity <> ListCapacity then
-            try
-              Resize(NewCapacity);
-            except
-              Result := False;
-            end;
-        end;
-    end
-  else
-    Result := True;
+      FNodeManager.EnsureFreeCount(aValue - Count);
+      NewCapacity := EstimateCapacity(aValue, LoadFactor);
+      if NewCapacity <> ListCapacity then
+        Resize(NewCapacity);
+    end;
 end;
 
 procedure TGOrderedHashTable.TrimToFit;
@@ -2122,31 +2101,17 @@ begin
     end;
 end;
 
-function TGChainHashTable.EnsureCapacity(aValue: SizeInt): Boolean;
+procedure TGChainHashTable.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
   if aValue > ExpandTreshold then
     begin
-      try
-        FNodeManager.EnsureFreeCount(aValue - Count);
-        Result := True;
-      except
-        Result := False;
-      end;
-      if Result then
-        begin
-          NewCapacity := EstimateCapacity(aValue, LoadFactor);
-          if NewCapacity <> ListCapacity then
-            try
-              Resize(NewCapacity);
-            except
-              Result := False;
-            end;
-        end;
-    end
-  else
-    Result := True;
+      FNodeManager.EnsureFreeCount(aValue - Count);
+      NewCapacity := EstimateCapacity(aValue, LoadFactor);
+      if NewCapacity <> ListCapacity then
+        Resize(NewCapacity);
+    end;
 end;
 
 procedure TGChainHashTable.TrimToFit;
