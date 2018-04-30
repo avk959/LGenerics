@@ -32,8 +32,7 @@ type
   end;
 
   TEmployeeCompare = specialize TGOnCompare<TEmployee>;
-
-  TEmployeeVector  = specialize TGVector<TEmployee>;
+  TEmployees       = specialize TGVector<TEmployee>;
 
   { TfrmMain }
 
@@ -103,8 +102,8 @@ type
     procedure btMaxByLocationClick(Sender: TObject);
     procedure cbSelectByGenderAgeClick(Sender: TObject);
   private
-    FEmployees: TEmployeeVector;
-    FComparators: array[0..5] of TEmployeeCompare;
+    FEmployees: TEmployees;
+    Comparators: array[0..5] of TEmployeeCompare;
     function  StringCmp(constref L, R: string): SizeInt;
     function  CmpByFirst(constref L, R: TEmployee): SizeInt;
     function  CmpByLast(constref L, R: TEmployee): SizeInt;
@@ -133,7 +132,7 @@ type
 
 var
   frmMain: TfrmMain;
-  EmployeeArray: array[0..199] of TEmployee = ({$I data.inc});
+  Employees: array[0..199] of TEmployee = ({$I data.inc});
 
 implementation
 
@@ -153,7 +152,7 @@ end;
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
-  FEmployees := TEmployeeVector.Create(EmployeeArray);
+  FEmployees := TEmployees.Create(Employees);
   FillcbCmpKind;
   FillcbLocation;
   FillcbGender;
@@ -172,12 +171,12 @@ end;
 
 procedure TfrmMain.btExecSimpleClick(Sender: TObject);
 begin
-  ExecSimpleQuery(seSkip.Value, seLimit.Value, FComparators[cbCmpKind.ItemIndex]);
+  ExecSimpleQuery(seSkip.Value, seLimit.Value, Comparators[cbCmpKind.ItemIndex]);
 end;
 
 procedure TfrmMain.btExec2Click(Sender: TObject);
 begin
-  ExecQuery2(seSkip2.Value, seLimit2.Value, FComparators[cbCmpKind.ItemIndex]);
+  ExecQuery2(seSkip2.Value, seLimit2.Value, Comparators[cbCmpKind.ItemIndex]);
 end;
 
 procedure TfrmMain.btFindNumbersClick(Sender: TObject);
@@ -192,17 +191,17 @@ end;
 
 procedure TfrmMain.btMinMaxSelectedClick(Sender: TObject);
 begin
-  SelectMinMaxByLocation(cbLocation.Text, FComparators[cbCmpKind.ItemIndex]);
+  SelectMinMaxByLocation(cbLocation.Text, Comparators[cbCmpKind.ItemIndex]);
 end;
 
 procedure TfrmMain.btSortClick(Sender: TObject);
 begin
-  Sort(cbCmpKind.Text, FComparators[cbCmpKind.ItemIndex]);
+  Sort(cbCmpKind.Text, Comparators[cbCmpKind.ItemIndex]);
 end;
 
 procedure TfrmMain.btMaxByLocationClick(Sender: TObject);
 begin
-  SelectMaxByLocation(Copy(cbCmpKind.Text, 4, Length(cbCmpKind.Text)), FComparators[cbCmpKind.ItemIndex]);
+  SelectMaxByLocation(Copy(cbCmpKind.Text, 4, Length(cbCmpKind.Text)), Comparators[cbCmpKind.ItemIndex]);
 end;
 
 procedure TfrmMain.cbSelectByGenderAgeClick(Sender: TObject);
@@ -248,17 +247,17 @@ end;
 procedure TfrmMain.FillcbCmpKind;
 begin
   cbCmpKind.Clear;
-  FComparators[0] := @CmpByFirst;
+  Comparators[0] := @CmpByFirst;
   cbCmpKind.Items.Add('by first name');
-  FComparators[1] := @CmpByLast;
+  Comparators[1] := @CmpByLast;
   cbCmpKind.Items.Add('by last name');
-  FComparators[2] := @CmpByAge;
+  Comparators[2] := @CmpByAge;
   cbCmpKind.Items.Add('by age');
-  FComparators[3] := @CmpByLocation;
+  Comparators[3] := @CmpByLocation;
   cbCmpKind.Items.Add('by location');
-  FComparators[4] := @CmpByPhone;
+  Comparators[4] := @CmpByPhone;
   cbCmpKind.Items.Add('by phone number');
-  FComparators[5] := @CmpBySalary;
+  Comparators[5] := @CmpBySalary;
   cbCmpKind.Items.Add('by salary');
   cbCmpKind.ItemIndex := 0;
 end;
