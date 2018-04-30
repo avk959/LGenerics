@@ -515,7 +515,6 @@ type
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
     property  ExpandTreshold: SizeInt read FExpandTreshold;
-    class function NodeUsed(constref aNode: TNode): Boolean; static; inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
@@ -641,7 +640,6 @@ type
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
     property  ExpandTreshold: SizeInt read FExpandTreshold;
-    class function NodeUsed(constref aNode: TNode): Boolean; static; inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
@@ -2463,7 +2461,7 @@ begin
     if FCurrIndex >= FLastIndex then
       exit(False);
     Inc(FCurrIndex);
-    Result := NodeUsed(FList[FCurrIndex]);
+    Result := FList[FCurrIndex].Hash <> 0;
   until Result;
 end;
 
@@ -2548,7 +2546,7 @@ begin
       Mask := System.High(aTarget);
       for I := 0 to System.High(FList) do
         begin
-          if NodeUsed(FList[I]) then
+          if FList[I].Hash <> 0 then
             begin
               h := FList[I].Hash and Mask;
               for J := 0 to Mask do
@@ -2638,11 +2636,6 @@ begin
       else
         break;
     end;
-end;
-
-class function TGHashTableLP.NodeUsed(constref aNode: TNode): Boolean;
-begin
-  Result := (aNode.Hash and USED_FLAG) <> 0;
 end;
 
 class function TGHashTableLP.NewList(aCapacity: SizeInt): TNodeList;
@@ -2840,7 +2833,7 @@ begin
     if FCurrIndex >= FLastIndex then
       exit(False);
     Inc(FCurrIndex);
-    Result := FNodes[FCurrIndex].Hash and USED_FLAG <> 0;
+    Result := FNodes[FCurrIndex].Hash <> 0;
   until Result;
 end;
 
@@ -2870,7 +2863,7 @@ begin
     if FCurrIndex >= FLastIndex then
       exit(False);
     Inc(FCurrIndex);
-    Result := FNodes[FCurrIndex].Hash and USED_FLAG <> 0;
+    Result := FNodes[FCurrIndex].Hash <> 0;
   until Result;
 end;
 
@@ -2960,7 +2953,7 @@ begin
       Mask := System.High(aTarget);
       for I := 0 to System.High(FList) do
         begin
-          if NodeUsed(FList[I]) then
+          if FList[I].Hash <> 0 then
             begin
               h := FList[I].Hash and Mask;
               for J := 0 to Mask do
@@ -3050,11 +3043,6 @@ begin
       else
         break;
     end;
-end;
-
-class function TGLiteHashTableLP.NodeUsed(constref aNode: TNode): Boolean;
-begin
-  Result := (aNode.Hash and USED_FLAG) <> 0;
 end;
 
 class function TGLiteHashTableLP.NewList(aCapacity: SizeInt): TNodeList;
