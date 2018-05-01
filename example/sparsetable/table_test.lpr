@@ -4,7 +4,7 @@ program table_test;
 
 uses
   SysUtils,
-  LGTable;
+  LGTable2D;
 
 type
   TTable    = specialize TGListTable2D2<string, string, Integer>;
@@ -41,16 +41,16 @@ begin
       '1':
         begin
           UserInput := Copy(UserInput, 3, Length(UserInput));
-          WriteLn('-->');
+          WriteLn('>>>');
           for RowData in Table.Rows[UserInput] do
-            WriteLn('Location: ', RowData.Column, '', ', employees: ', RowData.Value);
+            WriteLn('Location: ', RowData.Column, ', employees: ', RowData.Value);
         end;
       '2':
         begin
           UserInput := Copy(UserInput, 3, Length(UserInput));
-          WriteLn('-->');
+          WriteLn('>>>');
           for ColData in Table.Columns[UserInput] do
-            WriteLn('Company: ', ColData.Row, '', ', employees: ', ColData.Value);
+            WriteLn('Company: ', ColData.Row, ', employees: ', ColData.Value);
         end;
     end;
   until False;

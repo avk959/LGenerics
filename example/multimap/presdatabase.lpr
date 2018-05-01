@@ -36,7 +36,7 @@ begin
     Readln(UserInput);
     if LowerCase(UserInput) = 'q' then
       break;
-    Writeln('-->');
+    Writeln('>>>');
     for LastName in Database[LowerCase(UserInput)] do
       Writeln(LastName);
     Writeln('');
