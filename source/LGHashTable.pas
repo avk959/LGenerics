@@ -627,12 +627,11 @@ type
     FExpandTreshold: SizeInt;
     FLoadFactor: Single;
     function  RestrictLoadFactor(aValue: Single): Single; inline;
-    function  ListCapacity: SizeInt; inline;
     procedure UpdateExpandTreshold; inline;
     procedure SetLoadFactor(aValue: Single);
     function  GetCapacity: SizeInt; inline;
     function  GetFillRatio: Single; inline;
-    function  GetTableSize: SizeInt; inline;
+    function  GetSize: SizeInt; inline;
     procedure AllocList(aCapacity: SizeInt);
     procedure Rehash(var aTarget: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
@@ -641,7 +640,7 @@ type
     procedure DoRemove(aIndex: SizeInt);
     property  ExpandTreshold: SizeInt read FExpandTreshold;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
-    class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
+    class function EstimateSize(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteHashTableLP);
     class operator Finalize(var ht: TGLiteHashTableLP);
@@ -668,7 +667,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  Size: SizeInt read GetSize;
   end;
 
 implementation
@@ -2884,15 +2883,10 @@ begin
   Result := Math.Min(Math.Max(aValue, MIN_LOAD_FACTOR), MAX_LOAD_FACTOR);
 end;
 
-function TGLiteHashTableLP.ListCapacity: SizeInt;
-begin
-  Result := System.Length(FList);
-end;
-
 procedure TGLiteHashTableLP.UpdateExpandTreshold;
 begin
-  if ListCapacity < MAX_CAPACITY then
-    FExpandTreshold := Trunc(ListCapacity * LoadFactor)
+  if Size < MAX_CAPACITY then
+    FExpandTreshold := Trunc(Size * LoadFactor)
   else
     FExpandTreshold := MAX_CAPACITY;
 end;
@@ -2911,23 +2905,23 @@ end;
 
 function TGLiteHashTableLP.GetCapacity: SizeInt;
 begin
-  Result := Trunc(ListCapacity * LoadFactor);
+  Result := ExpandTreshold;
 end;
 
 function TGLiteHashTableLP.GetFillRatio: Single;
 var
-  c: SizeInt;
+  sz: SizeInt;
 begin
-  c := ListCapacity;
-  if c > 0 then
-    Result := Count / c
+  sz := Size;
+  if sz > 0 then
+    Result := Count / sz
   else
     Result := 0.0;
 end;
 
-function TGLiteHashTableLP.GetTableSize: SizeInt;
+function TGLiteHashTableLP.GetSize: SizeInt;
 begin
-  Result := ListCapacity;
+  Result := System.Length(FList);
 end;
 
 procedure TGLiteHashTableLP.AllocList(aCapacity: SizeInt);
@@ -2983,14 +2977,14 @@ end;
 
 procedure TGLiteHashTableLP.Expand;
 var
-  NewCapacity, OldCapacity: SizeInt;
+  NewSize, OldSize: SizeInt;
 begin
-  OldCapacity := ListCapacity;
-  if OldCapacity > 0 then
+  OldSize := Size;
+  if OldSize > 0 then
     begin
-      NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
-      if NewCapacity > OldCapacity then
-        Resize(NewCapacity);
+      NewSize := Math.Min(MAX_CAPACITY, OldSize shl 1);
+      if NewSize > OldSize then
+        Resize(NewSize);
     end
   else
     AllocList(DEFAULT_CONTAINER_CAPACITY);
@@ -3051,7 +3045,7 @@ begin
   System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
 end;
 
-class function TGLiteHashTableLP.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
+class function TGLiteHashTableLP.EstimateSize(aCount: SizeInt; aLoadFactor: Single): SizeInt;
 begin
   if aCount > 0 then
     Result := LGUtils.RoundUpTwoPower(Math.Min(Ceil64(Double(aCount) / aLoadFactor), MAX_CAPACITY))
@@ -3103,25 +3097,25 @@ end;
 
 procedure TGLiteHashTableLP.EnsureCapacity(aValue: SizeInt);
 var
-  NewCapacity: SizeInt;
+  NewSize: SizeInt;
 begin
   if aValue > ExpandTreshold then
     begin
-      NewCapacity := EstimateCapacity(aValue, LoadFactor);
-      if NewCapacity <> ListCapacity then
-        Resize(NewCapacity);
+      NewSize := EstimateSize(aValue, LoadFactor);
+      if NewSize <> Size then
+        Resize(NewSize);
     end;
 end;
 
 procedure TGLiteHashTableLP.TrimToFit;
 var
-  NewCapacity: SizeInt;
+  NewSize: SizeInt;
 begin
   if Count > 0 then
     begin
-      NewCapacity := EstimateCapacity(Count, LoadFactor);
-      if NewCapacity < ListCapacity then
-        Resize(NewCapacity);
+      NewSize := EstimateSize(Count, LoadFactor);
+      if NewSize < Size then
+        Resize(NewSize);
     end
   else
     Clear;
