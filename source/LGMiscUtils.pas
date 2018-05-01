@@ -607,9 +607,9 @@ begin
   with Result do
     begin
       FMax := aTo;
-      FStep := Step;
-      FCurrent := From;
-      FCycle := False;	
+      FStep := aStep;
+      FCurrent := aFrom;
+      FInCycle := False;
     end;
 end;
 
@@ -618,9 +618,9 @@ begin
   with Result do
     begin
       FMin := aDownTo;
-      FStep := Step;
-      FCurrent := From;
-      FCycle := False;
+      FStep := aStep;
+      FCurrent := aFrom;
+      FInCycle := False;
     end;
 end;
 
