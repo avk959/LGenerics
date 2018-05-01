@@ -73,7 +73,6 @@ type
   generic TGCustomTimSort<T> = class
   public
   type
-
     TItem      = T;
     PItem      = ^T;
 
@@ -88,7 +87,6 @@ type
     TTimSortBase = object
     protected
     const
-
       MERGE_STACK_INIT_SIZE  = 16;
       MERGE_BUFFER_INIT_SIZE = 64;
       MIN_MERGE_POW          = 5;
@@ -96,7 +94,6 @@ type
       MIN_GALLOP             = 7;
 
     type
-
       TRun = record
         Base,
         Count: SizeInt;
@@ -125,7 +122,6 @@ type
   generic TGTimSortBase<T, TCmpRel> = class(specialize TGCustomTimSort<T>)
   protected
   type
-
     TTimSort = object(TTimSortBase)
     protected
       procedure CollapseA;
@@ -162,7 +158,6 @@ type
   generic TGComparableTimSort<T> = class(specialize TGCustomTimSort<T>)
   protected
   type
-
     TTimSort = object(TTimSortBase)
     protected
       procedure CollapseA;
@@ -200,7 +195,6 @@ type
 
   protected
   type
-
     TTimSort = object(TTimSortBase)
     protected
       FCompare: TCompare;
@@ -240,7 +234,6 @@ type
 
   protected
   type
-
     TTimSort = object(TTimSortBase)
     protected
       FCompare: TOnCompare;
@@ -280,7 +273,6 @@ type
 
   protected
   type
-
     TTimSort = object(TTimSortBase)
     protected
       FCompare: TNestCompare;
@@ -362,6 +354,7 @@ type
     sOutput = 'output';
     sStdOut = 'stdout';
     sStdErr = 'stderr';
+
   var
     FFile: TextFile;
     FFileName,
@@ -413,7 +406,7 @@ type
   const
     EQ        = '=';
     COLON     = ':';
-    SEP_CHARS = [Eq, Colon];
+    SEP_CHARS = [EQ, COLON];
     OPT_CHAR  = '-';
     INIT_SIZE = 4;
   class var
