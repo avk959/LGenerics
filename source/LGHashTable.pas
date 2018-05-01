@@ -588,7 +588,7 @@ type
 
     TEnumerator = record
     private
-      FNodes: TNodeList;
+      FList: TNodeList;
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
@@ -601,13 +601,11 @@ type
 
     TRemovableEnumerator = record
     private
+      FEnum: TEnumerator;
       FTable: PLiteHashTableLP;
-      FNodes: TNodeList;
-      FCurrIndex,
-      FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-    public
       procedure Init(aTable: PLiteHashTableLP); inline;
+    public
       function  MoveNext: Boolean;
       procedure RemoveCurrent; inline;
       procedure Reset; inline;
@@ -1065,17 +1063,19 @@ begin
   c.FExpandTreshold := ExpandTreshold;
   Result := c;
 end;
-
+{$PUSH}{$MACRO ON}
 function TGOpenAddrLP.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
+{$DEFINE TestMacro := aTest(FList[I].Data.Key)}
+{$DEFINE RemoveIfMacro :=
   Result := 0;
   if Count > 0 then
     begin
       I := 0;
       while I <= Pred(ListCapacity) do
-        if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
+        if (FList[I].Hash <> 0) and TestMacro then
           begin
             if aOnRemove <> nil then
               aOnRemove(@FList[I].Data);
@@ -1084,71 +1084,32 @@ begin
           end
         else
           Inc(I);
-    end;
+    end}
+  RemoveIfMacro;
 end;
 
 function TGOpenAddrLP.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    begin
-      I := 0;
-      while I <= Pred(ListCapacity) do
-        if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
-          begin
-            if aOnRemove <> nil then
-              aOnRemove(@FList[I].Data);
-            DoRemove(I);
-            Inc(Result);
-          end
-        else
-          Inc(I);
-    end;
+  RemoveIfMacro;
 end;
 
 function TGOpenAddrLP.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    begin
-      I := 0;
-      while I <= Pred(ListCapacity) do
-        if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
-          begin
-            if aOnRemove <> nil then
-              aOnRemove(@FList[I].Data);
-            DoRemove(I);
-            Inc(Result);
-          end
-        else
-          Inc(I);
-    end;
+  RemoveIfMacro;
 end;
 
 function TGOpenAddrLP.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    begin
-      I := 0;
-      while I <= Pred(ListCapacity) do
-        if NodeUsed(FList[I]) and aTest(@FList[I].Data) then
-          begin
-            if aOnRemove <> nil then
-              aOnRemove(@FList[I].Data);
-            DoRemove(I);
-            Inc(Result);
-          end
-        else
-          Inc(I);
-    end;
+  {$DEFINE TestMacro := aTest(@FList[I].Data)}
+  RemoveIfMacro;
 end;
+{$POP}
 
 { TGOpenAddrTombstones }
 
@@ -1191,11 +1152,11 @@ begin
   h := TEqRel.HashCode(aKey);
   aRes := DoFind(aKey, h);
   Result := aRes.FoundIndex >= 0; // key found?
-  if not Result then           // key not found
+  if not Result then              // key not found
     begin
       if BusyCount >= ExpandTreshold then
         begin
-          if TombstonesCount >= Count shr 1 then  //todo: Count shr 1 ???
+          if TombstonesCount >= Count shr 1 then  //todo: Count shr 1 ??? why ???
             ClearTombstones
           else
             Expand;
@@ -1214,18 +1175,20 @@ begin
     end;
   e := @FList[aRes.FoundIndex].Data;
 end;
-
+{$PUSH}{$MACRO ON}
 function TGOpenAddrTombstones.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
+{$DEFINE TestMacro := aTest(FList[I].Data.Key)}
+{$DEFINE RemoveIfMacro :=
   Result := 0;
   if Count > 0 then
     begin
       I := 0;
       while I <= Pred(ListCapacity) do
         begin
-          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
+          if NodeUsed(FList[I]) and TestMacro then
             begin
               if aOnRemove <> nil then
                 aOnRemove(@FList[I].Data);
@@ -1234,74 +1197,32 @@ begin
             end;
           Inc(I);
         end;
-    end;
+    end}
+  RemoveIfMacro;
 end;
 
 function TGOpenAddrTombstones.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    begin
-      I := 0;
-      while I <= Pred(ListCapacity) do
-        begin
-          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
-            begin
-              if aOnRemove <> nil then
-                aOnRemove(@FList[I].Data);
-              DoRemove(I);
-              Inc(Result);
-            end;
-          Inc(I);
-        end;
-    end;
+  RemoveIfMacro;
 end;
 
 function TGOpenAddrTombstones.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    begin
-      I := 0;
-      while I <= Pred(ListCapacity) do
-        begin
-          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
-            begin
-              if aOnRemove <> nil then
-                aOnRemove(@FList[I].Data);
-              DoRemove(I);
-              Inc(Result);
-            end;
-          Inc(I);
-        end;
-    end;
+  RemoveIfMacro;
 end;
 
 function TGOpenAddrTombstones.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    begin
-      I := 0;
-      while I <= Pred(ListCapacity) do
-        begin
-          if NodeUsed(FList[I]) and aTest(@FList[I].Data) then
-            begin
-              if aOnRemove <> nil then
-                aOnRemove(@FList[I].Data);
-              DoRemove(I);
-              Inc(Result);
-            end;
-          Inc(I);
-        end;
-    end;
+  {$DEFINE TestMacro := aTest(@FList[I].Data)}
+  RemoveIfMacro;
 end;
+{$POP}
 
 function TGOpenAddrTombstones.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
 var
@@ -1315,7 +1236,7 @@ begin
   for I := 0 to Mask do
     begin
       h := FList[Pos].Hash;
-      if h = 0 then                                     // node empty => key not found
+      if h = 0 then                                    // node empty => key not found
         begin
           if Result.InsertIndex = SLOT_NOT_FOUND then  // if none tombstone found, remember first empty
             Result.InsertIndex := Pos;
@@ -1330,10 +1251,10 @@ begin
         else
           if (h = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
             begin
-              Result.FoundIndex := Pos;                 // key found
+              Result.FoundIndex := Pos;                // key found
               exit;
             end;
-      Pos := TProbeSeq.NextProbe(Pos, I) and Mask;      // probe sequence
+      Pos := TProbeSeq.NextProbe(Pos, I) and Mask;     // probe sequence
     end;
 end;
 
@@ -1819,17 +1740,19 @@ begin
       DisposeNode(aPos.Node);
     end;
 end;
-
+{$PUSH}{$MACRO ON}
 function TGOrderedHashTable.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
+{$DEFINE TestMacro := aTest(CurrNode^.Data.Key)}
+{$DEFINE RemoveIfMacro :=
   Result := 0;
   CurrNode := FHead;
   while CurrNode <> nil do
     begin
       NextNode := CurrNode^.Next;
-      if aTest(CurrNode^.Data.Key) then
+      if TestMacro then
         begin
           if aOnRemove <> nil then
             aOnRemove(@CurrNode^.Data);
@@ -1837,68 +1760,32 @@ begin
           Inc(Result);
         end;
       CurrNode := NextNode;
-    end;
+    end}
+  RemoveIfMacro;
 end;
 
 function TGOrderedHashTable.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
-  Result := 0;
-  CurrNode := FHead;
-  while CurrNode <> nil do
-    begin
-      NextNode := CurrNode^.Next;
-      if aTest(CurrNode^.Data.Key) then
-        begin
-          if aOnRemove <> nil then
-            aOnRemove(@CurrNode^.Data);
-          RemoveNode(CurrNode);
-          Inc(Result);
-        end;
-      CurrNode := NextNode;
-    end;
+  RemoveIfMacro;
 end;
 
 function TGOrderedHashTable.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
-  Result := 0;
-  CurrNode := FHead;
-  while CurrNode <> nil do
-    begin
-      NextNode := CurrNode^.Next;
-      if aTest(CurrNode^.Data.Key) then
-        begin
-          if aOnRemove <> nil then
-            aOnRemove(@CurrNode^.Data);
-          RemoveNode(CurrNode);
-          Inc(Result);
-        end;
-      CurrNode := NextNode;
-    end;
+  RemoveIfMacro;
 end;
 
 function TGOrderedHashTable.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
-  Result := 0;
-  CurrNode := FHead;
-  while CurrNode <> nil do
-    begin
-      NextNode := CurrNode^.Next;
-      if aTest(@CurrNode^.Data) then
-        begin
-          if aOnRemove <> nil then
-            aOnRemove(@CurrNode^.Data);
-          RemoveNode(CurrNode);
-          Inc(Result);
-        end;
-      CurrNode := NextNode;
-    end;
+  {$DEFINE TestMacro := aTest(@CurrNode^.Data)}
+  RemoveIfMacro;
 end;
+{$POP}
 
 function TGOrderedHashTable.GetFirst: PEntry;
 begin
@@ -2304,12 +2191,14 @@ procedure TGChainHashTable.RemoveAt(constref aPos: TSearchResult);
 begin
   DoRemove(aPos);
 end;
-
+{$PUSH}{$MACRO ON}
 function TGChainHashTable.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
 var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
 begin
+{$DEFINE TestMacro := aTest(CurrNode^.Data.Key)}
+{$DEFINE RemoveIfMacro :=
   Result := 0;
   if Count > 0 then
     for I := 0 to Pred(ListCapacity) do
@@ -2319,7 +2208,7 @@ begin
         while CurrNode <> nil do
           begin
             NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data.Key) then
+            if TestMacro then
               begin
                 if PrevNode <> nil then
                   PrevNode^.Next := NextNode
@@ -2334,7 +2223,8 @@ begin
               PrevNode := CurrNode;
             CurrNode := NextNode;
           end;
-      end;
+      end}
+  RemoveIfMacro;
 end;
 
 function TGChainHashTable.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
@@ -2342,31 +2232,7 @@ var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(ListCapacity) do
-      begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data.Key) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+  RemoveIfMacro;
 end;
 
 function TGChainHashTable.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
@@ -2374,31 +2240,7 @@ var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(ListCapacity) do
-      begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(CurrNode^.Data.Key) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+  RemoveIfMacro;
 end;
 
 function TGChainHashTable.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
@@ -2406,32 +2248,10 @@ var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
 begin
-  Result := 0;
-  if Count > 0 then
-    for I := 0 to Pred(ListCapacity) do
-      begin
-        CurrNode := FList[I];
-        PrevNode := nil;
-        while CurrNode <> nil do
-          begin
-            NextNode := CurrNode^.Next;
-            if aTest(@CurrNode^.Data) then
-              begin
-                if PrevNode <> nil then
-                  PrevNode^.Next := NextNode
-                else
-                  FList[I] := NextNode;
-                if aOnRemove <> nil then
-                  aOnRemove(@CurrNode^.Data);
-                DisposeNode(CurrNode);
-                Inc(Result);
-              end
-            else
-              PrevNode := CurrNode;
-            CurrNode := NextNode;
-          end;
-      end;
+  {$DEFINE TestMacro := aTest(@CurrNode^.Data)}
+  RemoveIfMacro;
 end;
+{$POP}
 
 { TGHashTableLP.TEnumerator }
 
@@ -2809,12 +2629,12 @@ end;
 
 function TGLiteHashTableLP.TEnumerator.GetCurrent: PEntry;
 begin
-  Result := @FNodes[FCurrIndex].Data;
+  Result := @FList[FCurrIndex].Data;
 end;
 
 procedure TGLiteHashTableLP.TEnumerator.Init(aList: TNodeList);
 begin
-  FNodes := aList;
+  FList := aList;
   FLastIndex := System.High(aList);
   FCurrIndex := -1;
 end;
@@ -2825,7 +2645,7 @@ begin
     if FCurrIndex >= FLastIndex then
       exit(False);
     Inc(FCurrIndex);
-    Result := FNodes[FCurrIndex].Hash <> 0;
+    Result := FList[FCurrIndex].Hash <> 0;
   until Result;
 end;
 
@@ -2838,36 +2658,29 @@ end;
 
 function TGLiteHashTableLP.TRemovableEnumerator.GetCurrent: PEntry;
 begin
-  Result := @FNodes[FCurrIndex].Data;
+  Result := FEnum.Current;
 end;
 
 procedure TGLiteHashTableLP.TRemovableEnumerator.Init(aTable: PLiteHashTableLP);
 begin
   FTable := aTable;
-  FNodes := aTable^.FList;
-  FLastIndex := System.High(FNodes);
-  FCurrIndex := -1;
+  FEnum := aTable^.GetEnumerator;
 end;
 
 function TGLiteHashTableLP.TRemovableEnumerator.MoveNext: Boolean;
 begin
-  repeat
-    if FCurrIndex >= FLastIndex then
-      exit(False);
-    Inc(FCurrIndex);
-    Result := FNodes[FCurrIndex].Hash <> 0;
-  until Result;
+  Result := FEnum.MoveNext;
 end;
 
 procedure TGLiteHashTableLP.TRemovableEnumerator.RemoveCurrent;
 begin
-  FTable^.RemoveAt(FCurrIndex);
-  Dec(FCurrIndex);
+  FTable^.RemoveAt(FEnum.FCurrIndex);
+  Dec(FEnum.FCurrIndex);
 end;
 
 procedure TGLiteHashTableLP.TRemovableEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FEnum.Reset;
 end;
 
 { TGLiteHashTableLP }
