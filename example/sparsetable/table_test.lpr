@@ -4,10 +4,10 @@ program table_test;
 
 uses
   SysUtils,
-  LGSparseTable;
+  LGTable;
 
 type
-  TTable    = specialize TGListSparseTable2<string, string, Integer>;
+  TTable    = specialize TGListTable2<string, string, Integer>;
   TCellData = TTable.TCellData;
   TRowData  = TTable.TRowData;
   TColData  = TTable.TColData;
