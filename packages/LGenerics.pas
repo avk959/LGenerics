@@ -10,8 +10,7 @@ interface
 uses
   LGUtils, LGCustomContainer, LGHash, LGFunction, LGArrayHelpers, LGHelpers, LGMiscUtils, LGStack, LGStrConst, 
   LGPriorityQueue, LGDeque, LGHashSet, LGHashMultiSet, LGHashMap, LGTreeSet, LGTreeMultiSet, LGTreeMap, 
-  LGAvlTree, LGStrHelpers, LGHashTable, LGVector, LGMultiMap, LGBiMap, LGSortedList, LGAsync, LGQueue, 
-  LGSparseTable;
+  LGAvlTree, LGStrHelpers, LGHashTable, LGVector, LGMultiMap, LGBiMap, LGSortedList, LGAsync, LGQueue, LGTable;
 
 implementation
 
