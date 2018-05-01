@@ -704,8 +704,8 @@ type
     property  Items[const aKey: TKey]: IValueEnumerable read ViewValues; default;
   end;
 
-  { TGCustomSparseTable: abstract ancestor class }
-  generic TGCustomSparseTable<TRow, TCol, TValue> = class abstract
+  { TGCustomTable: abstract ancestor class }
+  generic TGCustomTable<TRow, TCol, TValue> = class abstract
   public
   type
     TCellData = record
@@ -724,7 +724,7 @@ type
       Value:  TValue;
     end;
 
-    TCustomSparseTable  = TGCustomSparseTable;
+    TCustomTable        = TGCustomTable;
     TValueArray         = array of TValue;
     IValueEnumerable    = specialize IGEnumerable<TValue>;
     IColEnumerable      = specialize IGEnumerable<TCol>;
@@ -3089,22 +3089,22 @@ begin
     Result := 0;
 end;
 
-{ TGCustomSparseTable.TCustomRowMap }
+{ TGCustomTable.TCustomRowMap }
 
-function TGCustomSparseTable.TCustomRowMap.IsEmpty: Boolean;
+function TGCustomTable.TCustomRowMap.IsEmpty: Boolean;
 begin
   Result := Count = 0;
 end;
 
-function TGCustomSparseTable.TCustomRowMap.GetValueOrDefault(const aCol: TCol): TValue;
+function TGCustomTable.TCustomRowMap.GetValueOrDefault(const aCol: TCol): TValue;
 begin
   if not TryGetValue(aCol, Result) then
     Result := Default(TValue);
 end;
 
-{ TGCustomSparseTable }
+{ TGCustomTable }
 
-function TGCustomSparseTable.GetColCount(const aRow: TRow): SizeInt;
+function TGCustomTable.GetColCount(const aRow: TRow): SizeInt;
 var
   p: PRowEntry;
 begin
@@ -3115,7 +3115,7 @@ begin
     Result := 0;
 end;
 
-function TGCustomSparseTable.GetRow(const aRow: TRow): IRowMap;
+function TGCustomTable.GetRow(const aRow: TRow): IRowMap;
 var
   p: PRowEntry;
 begin
@@ -3123,22 +3123,22 @@ begin
   Result := p^.Columns;
 end;
 
-function TGCustomSparseTable.IsEmpty: Boolean;
+function TGCustomTable.IsEmpty: Boolean;
 begin
   Result := CellCount = 0;
 end;
 
-function TGCustomSparseTable.NonEmpty: Boolean;
+function TGCustomTable.NonEmpty: Boolean;
 begin
   Result := CellCount <> 0;
 end;
 
-function TGCustomSparseTable.ContainsRow(constref aRow: TRow): Boolean;
+function TGCustomTable.ContainsRow(constref aRow: TRow): Boolean;
 begin
   Result := DoFindRow(aRow) <> nil;
 end;
 
-function TGCustomSparseTable.FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
+function TGCustomTable.FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3148,7 +3148,7 @@ begin
     aMap := p^.Columns;
 end;
 
-function TGCustomSparseTable.FindOrAddRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
+function TGCustomTable.FindOrAddRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3156,19 +3156,19 @@ begin
   aMap := p^.Columns;
 end;
 
-function TGCustomSparseTable.AddRow(constref aRow: TRow): Boolean;
+function TGCustomTable.AddRow(constref aRow: TRow): Boolean;
 var
   p: PRowEntry;
 begin
   Result := not DoFindOrAddRow(aRow, p);
 end;
 
-function TGCustomSparseTable.RemoveRow(constref aRow: TRow): SizeInt;
+function TGCustomTable.RemoveRow(constref aRow: TRow): SizeInt;
 begin
   Result := DoRemoveRow(aRow);
 end;
 
-function TGCustomSparseTable.ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
+function TGCustomTable.ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3179,13 +3179,13 @@ begin
     Result := False;
 end;
 
-function TGCustomSparseTable.GetCell(constref aRow: TRow; constref aCol: TCol): TValue;
+function TGCustomTable.GetCell(constref aRow: TRow; constref aCol: TCol): TValue;
 begin
   if not TryGetCell(aRow, aCol, Result) then
     raise ELGTableError.CreateFmt(SECellNotFoundFmt, [ClassName]);
 end;
 
-function TGCustomSparseTable.TryGetCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
+function TGCustomTable.TryGetCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3196,19 +3196,19 @@ begin
     Result := False;
 end;
 
-function TGCustomSparseTable.GetCellOrDefault(const aRow: TRow; const aCol: TCol): TValue;
+function TGCustomTable.GetCellOrDefault(const aRow: TRow; const aCol: TCol): TValue;
 begin
   if not TryGetCell(aRow, aCol, Result) then
     Result := Default(TValue);
 end;
 
-function TGCustomSparseTable.TryGetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue): TValue;
+function TGCustomTable.TryGetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue): TValue;
 begin
   if not TryGetCell(aRow, aCol, Result) then
     Result := aDef;
 end;
 
-procedure TGCustomSparseTable.AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
+procedure TGCustomTable.AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
 var
   p: PRowEntry;
 begin
@@ -3216,19 +3216,19 @@ begin
   p^.Columns[aCol] := aValue;
 end;
 
-function TGCustomSparseTable.AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
+function TGCustomTable.AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
 begin
   Result := not ContainsCell(aRow, aCol);
   if Result then
     AddOrSetCell(aRow, aCol, aValue);
 end;
 
-function TGCustomSparseTable.AddCell(constref e: TCellData): Boolean;
+function TGCustomTable.AddCell(constref e: TCellData): Boolean;
 begin
   Result := AddCell(e.Row, e.Column, e.Value);
 end;
 
-function TGCustomSparseTable.AddAll(constref a: array of TCellData): SizeInt;
+function TGCustomTable.AddAll(constref a: array of TCellData): SizeInt;
 var
   e: TCellData;
 begin
@@ -3237,7 +3237,7 @@ begin
     Result += Ord(AddCell(e));
 end;
 
-function TGCustomSparseTable.RemoveCell(const aRow: TRow; const aCol: TCol): Boolean;
+function TGCustomTable.RemoveCell(const aRow: TRow; const aCol: TCol): Boolean;
 var
   p: PRowEntry;
 begin
