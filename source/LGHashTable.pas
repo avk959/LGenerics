@@ -489,8 +489,8 @@ type
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-    public
       procedure Init(aList: TNodeList); inline;
+    public
       function  MoveNext: Boolean;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
@@ -550,15 +550,6 @@ type
   { TGLiteHashTableLP }
 
   generic TGLiteHashTableLP<TKey, TEntry, TEqRel> = record
-  public
-  type
-    PEntry = ^TEntry;
-
-    TSearchResult = record
-      case Integer of
-        0: (FoundIndex, InsertIndex: SizeInt);
-        1: (Node, PrevNode: Pointer);
-    end;
   private
   const
 
@@ -593,14 +584,16 @@ type
 
   public
   type
+    PEntry = ^TEntry;
+
     TEnumerator = record
     private
       FNodes: TNodeList;
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-    public
       procedure Init(aList: TNodeList); inline;
+    public
       function  MoveNext: Boolean;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
@@ -3177,7 +3170,7 @@ end;
 
 procedure TGLiteHashTableLP.RemoveAt(constref aPos: SizeInt);
 begin
-  if (aPos >= 0) and (aPos <= System.High(FList)) then
+  if (aPos >= 0) and (aPos <= System.High(FList)) and (FList[aPos].Hash <> 0) then
     DoRemove(aPos);
 end;
 

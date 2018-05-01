@@ -1655,7 +1655,7 @@ var
   v: T;
 begin
   for v in a do
-    if not Contains(v) then
+    if NonContains(v) then
       exit(False);
   Result := True;
 end;
@@ -1666,7 +1666,7 @@ var
 begin
   if e._GetRef <> Self then
     for v in e do
-      if not Contains(v) then
+      if NonContains(v) then
         exit(False);
   Result := True;
 end;
