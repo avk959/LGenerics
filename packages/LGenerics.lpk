@@ -138,8 +138,8 @@
         <UnitName Value="LGQueue"/>
       </Item26>
       <Item27>
-        <Filename Value="..\source\lgtable.pas"/>
-        <UnitName Value="lgtable"/>
+        <Filename Value="..\source\LGTable2D.pas"/>
+        <UnitName Value="LGTable"/>
       </Item27>
     </Files>
     <RequiredPkgs Count="1">
