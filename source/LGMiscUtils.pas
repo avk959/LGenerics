@@ -40,7 +40,6 @@ uses
 type
 
   generic TGNumRange<T> = class
-  private
   type
     TRange = record
     private
@@ -66,9 +65,8 @@ type
       property Current: T read FCurrent;
     end;
 
-  public
-    class function Range(const aFrom, aTo: T; const aStep: T = 1): TRange; static; inline;
-    class function DownRange(const aFrom, aDownTo: T; const aStep: T = 1): TDownRange; static; inline;
+    class function Up(const aFrom, aTo: T; const aStep: T = 1): TRange; static; inline;
+    class function Down(const aFrom, aDownTo: T; const aStep: T = 1): TDownRange; static; inline;
   end;
 
   { TGCustomTimSort:  base ancestor class }
@@ -602,7 +600,7 @@ begin
     end;
 end;
 
-class function TGNumRange.Range(const aFrom, aTo: T; const aStep: T): TRange;
+class function TGNumRange.Up(const aFrom, aTo: T; const aStep: T): TRange;
 begin
   with Result do
     begin
@@ -613,7 +611,7 @@ begin
     end;
 end;
 
-class function TGNumRange.DownRange(const aFrom, aDownTo: T; const aStep: T): TDownRange;
+class function TGNumRange.Down(const aFrom, aDownTo: T; const aStep: T): TDownRange;
 begin
   with Result do
     begin
