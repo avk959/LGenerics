@@ -1437,9 +1437,10 @@ begin
   for v in e do
     Result += Ord(Remove(v));
 end;
-
+{$PUSH}{$MACRO ON}
 function TGLiteHashSetLP.RemoveIf(aTest: TTest): SizeInt;
 begin
+{$DEFINE RemoveIfMacro :=
   Result := 0;
   with FTable.GetRemovable do
     while MoveNext do
@@ -1447,31 +1448,19 @@ begin
         begin
           RemoveCurrent;
           Inc(Result);
-        end;
+        end}
+  RemoveIfMacro;
 end;
 
 function TGLiteHashSetLP.RemoveIf(aTest: TOnTest): SizeInt;
 begin
-  Result := 0;
-  with FTable.GetRemovable do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          RemoveCurrent;
-          Inc(Result);
-        end;
+  RemoveIfMacro;
 end;
 
 function TGLiteHashSetLP.RemoveIf(aTest: TNestTest): SizeInt;
 begin
-  Result := 0;
-  with FTable.GetRemovable do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          RemoveCurrent;
-          Inc(Result);
-        end;
+  RemoveIfMacro;
+  {$UNDEF RemoveIfMacro}
 end;
 
 function TGLiteHashSetLP.Extract(constref aValue: T): Boolean;
@@ -1484,6 +1473,7 @@ var
   I: SizeInt = 0;
   v: T;
 begin
+{$DEFINE ExtractIfMacro :=
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   with FTable.GetRemovable do
     while MoveNext do
@@ -1498,7 +1488,8 @@ begin
             Inc(I);
           end;
       end;
-  System.SetLength(Result, I);
+  System.SetLength(Result, I)}
+  ExtractIfMacro;
 end;
 
 function TGLiteHashSetLP.ExtractIf(aTest: TOnTest): TArray;
@@ -1506,21 +1497,7 @@ var
   I: SizeInt = 0;
   v: T;
 begin
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovable do
-    while MoveNext do
-      begin
-        v := Current^.Key;
-        if aTest(v) then
-          begin
-            RemoveCurrent;
-            if I = System.Length(Result) then
-              System.SetLength(Result, I shl 1);
-            Result[I] := v;
-            Inc(I);
-          end;
-      end;
-  System.SetLength(Result, I);
+  ExtractIfMacro;
 end;
 
 function TGLiteHashSetLP.ExtractIf(aTest: TNestTest): TArray;
@@ -1528,22 +1505,10 @@ var
   I: SizeInt = 0;
   v: T;
 begin
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovable do
-    while MoveNext do
-      begin
-        v := Current^.Key;
-        if aTest(v) then
-          begin
-            RemoveCurrent;
-            if I = System.Length(Result) then
-              System.SetLength(Result, I shl 1);
-            Result[I] := v;
-            Inc(I);
-          end;
-      end;
-  System.SetLength(Result, I);
+  ExtractIfMacro;
+  {$UNDEF ExtractIfMacro}
 end;
+{$POP}
 
 function TGLiteHashSetLP.IsSuperset(constref aSet: TGLiteHashSetLP): Boolean;
 var
