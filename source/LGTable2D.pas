@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGTable;
+unit LGTable2D;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
