@@ -41,7 +41,7 @@ Contains:
     - tree multimap(unit LGMultiMap)
     - list miltimap(unit LGMultiMap)
     - bijective map(unit LGBiMap)
-    - sparse table(unit LGSparseTable)
+    - table(unit LGTable)
   
   3. Others:
     - simply command line parser (unit LGMiscUtils)
