@@ -7,7 +7,7 @@ uses
   LGTable;
 
 type
-  TTable    = specialize TGListTable2<string, string, Integer>;
+  TTable    = specialize TGListTable2D2<string, string, Integer>;
   TCellData = TTable.TCellData;
   TRowData  = TTable.TRowData;
   TColData  = TTable.TColData;
@@ -32,7 +32,7 @@ begin
   repeat
     WriteLn;
     WriteLn('print q<quite> to exit');
-    WriteLn('print 1=Company name to see list of branch offices location');
+    WriteLn('print 1=Company name to see list of branch offices locations');
     WriteLn('print 2=Country name to see list of branch offices');
     ReadLn(UserInput);
     if Length(UserInput) > 0 then
