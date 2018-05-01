@@ -1443,7 +1443,7 @@ begin
   Result := 0;
   with FTable.GetRemovable do
     while MoveNext do
-      if aTest(Current^) then
+      if aTest(Current^.Key) then
         begin
           RemoveCurrent;
           Inc(Result);
@@ -1455,7 +1455,7 @@ begin
   Result := 0;
   with FTable.GetRemovable do
     while MoveNext do
-      if aTest(Current^) then
+      if aTest(Current^.Key) then
         begin
           RemoveCurrent;
           Inc(Result);
@@ -1467,7 +1467,7 @@ begin
   Result := 0;
   with FTable.GetRemovable do
     while MoveNext do
-      if aTest(Current^) then
+      if aTest(Current^.Key) then
         begin
           RemoveCurrent;
           Inc(Result);
@@ -1483,23 +1483,19 @@ function TGLiteHashSetLP.ExtractIf(aTest: TTest): TArray;
 var
   I: SizeInt = 0;
   v: T;
-  procedure Add2Result(constref aValue: T);
-  begin
-    if I = System.Length(Result) then
-      System.SetLength(Result, I shl 1);
-    Result[I] := aValue;
-    Inc(I);
-  end;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   with FTable.GetRemovable do
     while MoveNext do
       begin
-        v := Current^;
+        v := Current^.Key;
         if aTest(v) then
           begin
             RemoveCurrent;
-            Add2Result(v);
+            if I = System.Length(Result) then
+              System.SetLength(Result, I shl 1);
+            Result[I] := v;
+            Inc(I);
           end;
       end;
   System.SetLength(Result, I);
@@ -1509,23 +1505,19 @@ function TGLiteHashSetLP.ExtractIf(aTest: TOnTest): TArray;
 var
   I: SizeInt = 0;
   v: T;
-  procedure Add2Result(constref aValue: T);
-  begin
-    if I = System.Length(Result) then
-      System.SetLength(Result, I shl 1);
-    Result[I] := aValue;
-    Inc(I);
-  end;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   with FTable.GetRemovable do
     while MoveNext do
       begin
-        v := Current^;
+        v := Current^.Key;
         if aTest(v) then
           begin
             RemoveCurrent;
-            Add2Result(v);
+            if I = System.Length(Result) then
+              System.SetLength(Result, I shl 1);
+            Result[I] := v;
+            Inc(I);
           end;
       end;
   System.SetLength(Result, I);
@@ -1535,23 +1527,19 @@ function TGLiteHashSetLP.ExtractIf(aTest: TNestTest): TArray;
 var
   I: SizeInt = 0;
   v: T;
-  procedure Add2Result(constref aValue: T);
-  begin
-    if I = System.Length(Result) then
-      System.SetLength(Result, I shl 1);
-    Result[I] := aValue;
-    Inc(I);
-  end;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   with FTable.GetRemovable do
     while MoveNext do
       begin
-        v := Current^;
+        v := Current^.Key;
         if aTest(v) then
           begin
             RemoveCurrent;
-            Add2Result(v);
+            if I = System.Length(Result) then
+              System.SetLength(Result, I shl 1);
+            Result[I] := v;
+            Inc(I);
           end;
       end;
   System.SetLength(Result, I);
@@ -1618,7 +1606,7 @@ procedure TGLiteHashSetLP.Intersect(constref aSet: TGLiteHashSetLP);
 begin
   with FTable.GetRemovable do
     while MoveNext do
-      if aSet.NonContains(Current^) then
+      if aSet.NonContains(Current^.Key) then
         RemoveCurrent;
 end;
 
