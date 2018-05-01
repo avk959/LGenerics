@@ -2862,6 +2862,7 @@ end;
 procedure TGLiteHashTableLP.TRemovableEnumerator.RemoveCurrent;
 begin
   FTable^.RemoveAt(FCurrIndex);
+  Dec(FCurrIndex);
 end;
 
 procedure TGLiteHashTableLP.TRemovableEnumerator.Reset;
@@ -3170,7 +3171,7 @@ end;
 
 procedure TGLiteHashTableLP.RemoveAt(constref aPos: SizeInt);
 begin
-  if (aPos >= 0) and (aPos <= System.High(FList)) and (FList[aPos].Hash <> 0) then
+  if (aPos >= 0) and (aPos <= System.High(FList)) then
     DoRemove(aPos);
 end;
 
