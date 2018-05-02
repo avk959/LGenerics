@@ -643,7 +643,7 @@ type
     MIN_LOAD_FACTOR: Single     = 0.25;
 
     function  GetEnumerator: TEnumerator; inline;
-    function  GetRemovable: TRemovableEnumerator; inline;
+    function  RemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
@@ -2674,7 +2674,7 @@ end;
 
 procedure TGLiteHashTableLP.TRemovableEnumerator.RemoveCurrent;
 begin
-  FTable^.RemoveAt(FEnum.FCurrIndex);
+  FTable^.DoRemove(FEnum.FCurrIndex);
   Dec(FEnum.FCurrIndex);
 end;
 
@@ -2890,7 +2890,7 @@ begin
   Result.Init(FList);
 end;
 
-function TGLiteHashTableLP.GetRemovable: TRemovableEnumerator;
+function TGLiteHashTableLP.RemovableEnumerator: TRemovableEnumerator;
 begin
   Result.Init(@Self);
 end;
