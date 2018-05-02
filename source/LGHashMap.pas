@@ -307,7 +307,10 @@ type
 
   generic TGObjChainHashMap<TKey, TValue> = class(specialize TGObjectChainHashMap<TKey, TValue, TKey>);
 
-  { TGLiteHashMapLP }
+  { TGLiteHashMapLP implements open addressing hashmap with linear probing;
+      TKeyEqRel must provide:
+        class function HashCode([const[ref]] aValue: TKey): SizeInt;
+        class function Equal([const[ref]] L, R: TKey): Boolean; }
   generic TGLiteHashMapLP<TKey, TValue, TKeyEqRel> = record
   public
   type
@@ -387,11 +390,18 @@ type
     function  Find(constref aKey: TKey): PEntry; inline;
     //returns True if aKey found, otherwise inserts (garbage) entry and returns False;
     function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
+    function  GetFillRatio: Single; inline;
+    function  GetLoadFactor: Single; inline;
+    function  GetTableSize: SizeInt; inline;
     function  GetValue(const aKey: TKey): TValue; inline;
+    procedure SetLoadFactor(aValue: Single); inline;
     function  SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
     function  GetKeyEnumerator: TKeyEnumerator; inline;
     function  GetValueEnumerator: TValueEnumerator; inline;
   public
+    function  DefaultLoadFactor: Single; inline;
+    function  MaxLoadFactor: Single; inline;
+    function  MinLoadFactor: Single; inline;
     function  GetEnumerator: TEntryEnumerator; inline;
     function  ToArray: TEntryArray;
     function  IsEmpty: Boolean; inline;
@@ -438,6 +448,9 @@ type
     property  Capacity: SizeInt read GetCapacity;
   { reading will raise ELGMapError if an aKey is not present in map }
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
+    property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
+    property  FillRatio: Single read GetFillRatio;
+    property  TableSize: SizeInt read GetTableSize;
   end;
 
 implementation
@@ -1222,10 +1235,30 @@ begin
     p^.Key := aKey;
 end;
 
+function TGLiteHashMapLP.GetFillRatio: Single;
+begin
+  Result := FTable.FillRatio;
+end;
+
+function TGLiteHashMapLP.GetLoadFactor: Single;
+begin
+  Result := FTable.LoadFactor;
+end;
+
+function TGLiteHashMapLP.GetTableSize: SizeInt;
+begin
+  Result := FTable.Size;
+end;
+
 function TGLiteHashMapLP.GetValue(const aKey: TKey): TValue;
 begin
   if not TryGetValue(aKey, Result) then
     raise ELGMapError.Create(SEKeyNotFound);
+end;
+
+procedure TGLiteHashMapLP.SetLoadFactor(aValue: Single);
+begin
+  FTable.LoadFactor := aValue;
 end;
 
 function TGLiteHashMapLP.SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
@@ -1246,6 +1279,21 @@ end;
 function TGLiteHashMapLP.GetValueEnumerator: TValueEnumerator;
 begin
   Result.Init(Self);
+end;
+
+function TGLiteHashMapLP.DefaultLoadFactor: Single;
+begin
+  Result := FTable.DEFAULT_LOAD_FACTOR;
+end;
+
+function TGLiteHashMapLP.MaxLoadFactor: Single;
+begin
+  Result := FTable.MAX_LOAD_FACTOR;
+end;
+
+function TGLiteHashMapLP.MinLoadFactor: Single;
+begin
+  Result := FTable.MIN_LOAD_FACTOR;
 end;
 
 function TGLiteHashMapLP.GetEnumerator: TEntryEnumerator;
