@@ -746,7 +746,7 @@ constructor TGCustomHashMultiSet.CreateCopy(aMultiSet: TCustomHashMultiSet);
 var
   e: TEntry;
 begin
-  if aMultiSet.ClassType = ClassType then
+  if aMultiSet.GetClass = GetClass then
     begin
       FTable := aMultiSet.FTable.Clone;
       FCount := aMultiSet.Count;
