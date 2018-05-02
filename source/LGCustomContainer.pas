@@ -829,8 +829,8 @@ type
     property  CellCount: SizeInt read FCellCount;
     property  Rows[const aRow: TRow]: IRowMap read GetRow;
     property  Columns[const aCol: TCol]: IColDataEnumerable read GetColumn;
-    property  CellData: ICellDataEnumerable read GetCellData;
-    property  Cells[const aRow: TRow; const aCol: TCol]: TValue read GetCellOrDefault write AddOrSetCell; default;
+    property  Cells: ICellDataEnumerable read GetCellData;
+    property  Items[const aRow: TRow; const aCol: TCol]: TValue read GetCellOrDefault write AddOrSetCell; default;
   end;
 
 implementation
