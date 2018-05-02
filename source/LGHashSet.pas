@@ -364,6 +364,7 @@ type
   public
   type
     IEnumerable = specialize IGEnumerable<T>;
+    ICollection = specialize IGCollection<T>;
     TTest       = specialize TGTest<T>;
     TOnTest     = specialize TGOnTest<T>;
     TNestTest   = specialize TGNestTest<T>;
@@ -424,6 +425,8 @@ type
     function  ExtractIf(aTest: TTest): TArray;
     function  ExtractIf(aTest: TOnTest): TArray;
     function  ExtractIf(aTest: TNestTest): TArray;
+  { will contain only those elements that are simultaneously contained in self and aCollection }
+    procedure RetainAll(aCollection: ICollection);
     function  IsSuperset(constref aSet: TGLiteHashSetLP): Boolean;
     function  IsSubset(constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  IsEqual(constref aSet: TGLiteHashSetLP): Boolean;
@@ -721,7 +724,7 @@ end;
 
 constructor TGCustomHashSet.CreateCopy(aSet: TCustomHashSet);
 begin
-  if aSet.ClassType = ClassType then
+  if aSet.GetClass = GetClass then
     FTable := aSet.FTable.Clone
   else
     begin
@@ -1442,7 +1445,7 @@ function TGLiteHashSetLP.RemoveIf(aTest: TTest): SizeInt;
 begin
 {$DEFINE RemoveIfMacro :=
   Result := 0;
-  with FTable.GetRemovable do
+  with FTable.RemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1475,7 +1478,7 @@ var
 begin
 {$DEFINE ExtractIfMacro :=
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovable do
+  with FTable.RemovableEnumerator do
     while MoveNext do
       begin
         v := Current^.Key;
@@ -1509,6 +1512,14 @@ begin
   {$UNDEF ExtractIfMacro}
 end;
 {$POP}
+
+procedure TGLiteHashSetLP.RetainAll(aCollection: ICollection);
+begin
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aCollection.NonContains(Current^.Key) then
+        RemoveCurrent;
+end;
 
 function TGLiteHashSetLP.IsSuperset(constref aSet: TGLiteHashSetLP): Boolean;
 var
@@ -1569,7 +1580,7 @@ end;
 
 procedure TGLiteHashSetLP.Intersect(constref aSet: TGLiteHashSetLP);
 begin
-  with FTable.GetRemovable do
+  with FTable.RemovableEnumerator do
     while MoveNext do
       if aSet.NonContains(Current^.Key) then
         RemoveCurrent;
