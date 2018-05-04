@@ -134,20 +134,20 @@ type
   public
   type
     IXEnumerable = specialize IGEnumerable<X>;
-    TFoldFunc    = specialize TGFoldFunc<X, Y>;
+    TFold        = specialize TGFold<X, Y>;
     TOnFold      = specialize TGOnFold<X, Y>;
     TNestFold    = specialize TGNestFold<X, Y>;
 
-    class function Left(constref a: array of X; f: TFoldFunc; constref y0: Y): Y; static;
+    class function Left(constref a: array of X; f: TFold; constref y0: Y): Y; static;
     class function Left(constref a: array of X; f: TOnFold; constref y0: Y): Y; static;
     class function Left(constref a: array of X; f: TNestFold; constref y0: Y): Y; static;
-    class function Left(e: IXEnumerable; f: TFoldFunc; constref y0: Y): Y; static;
+    class function Left(e: IXEnumerable; f: TFold; constref y0: Y): Y; static;
     class function Left(e: IXEnumerable; f: TOnFold; constref y0: Y): Y; static;
     class function Left(e: IXEnumerable; f: TNestFold; constref y0: Y): Y; static;
-    class function Right(constref a: array of X; f: TFoldFunc; constref y0: Y): Y; static;
+    class function Right(constref a: array of X; f: TFold; constref y0: Y): Y; static;
     class function Right(constref a: array of X; f: TOnFold; constref y0: Y): Y; static;
     class function Right(constref a: array of X; f: TNestFold; constref y0: Y): Y; static;
-    class function Right(e: IXEnumerable; f: TFoldFunc; constref y0: Y): Y; static;
+    class function Right(e: IXEnumerable; f: TFold; constref y0: Y): Y; static;
     class function Right(e: IXEnumerable; f: TOnFold; constref y0: Y): Y; static;
     class function Right(e: IXEnumerable; f: TNestFold; constref y0: Y): Y; static;
   end;
@@ -357,7 +357,7 @@ end;
 
 { TGFolding }
 
-class function TGFolding.Left(constref a: array of X; f: TFoldFunc; constref y0: Y): Y;
+class function TGFolding.Left(constref a: array of X; f: TFold; constref y0: Y): Y;
 var
   v: X;
 begin
@@ -384,7 +384,7 @@ begin
     Result := f(v, Result);
 end;
 
-class function TGFolding.Left(e: IXEnumerable; f: TFoldFunc; constref y0: Y): Y;
+class function TGFolding.Left(e: IXEnumerable; f: TFold; constref y0: Y): Y;
 var
   v: X;
 begin
@@ -411,7 +411,7 @@ begin
     Result := f(v, Result);
 end;
 
-class function TGFolding.Right(constref a: array of X; f: TFoldFunc; constref y0: Y): Y;
+class function TGFolding.Right(constref a: array of X; f: TFold; constref y0: Y): Y;
 var
   v: X;
   I: SizeInt;
@@ -441,7 +441,7 @@ begin
     Result := f(a[I], Result);
 end;
 
-class function TGFolding.Right(e: IXEnumerable; f: TFoldFunc; constref y0: Y): Y;
+class function TGFolding.Right(e: IXEnumerable; f: TFold; constref y0: Y): Y;
 var
   v: X;
 begin

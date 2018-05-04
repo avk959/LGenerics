@@ -33,35 +33,38 @@ uses
 
 type
 
-  TSortOrder          = (soAsc, soDesc);
-  TRangeBound         = (rbLow, rbHigh);
-  TRangeBounds        = set of TRangeBound;
-  TGArray<T>          = array of T;
-  TGCompare<T>        = function(constref L, R: T): SizeInt;
-  TGOnCompare<T>      = function(constref L, R: T): SizeInt of object;
-  TGNestCompare<T>    = function(constref L, R: T): SizeInt is nested;
-  TGEqualCompare<T>   = function(constref L, R: T): Boolean;
-  TGOnEqualCompare<T> = function(constref L, R: T): Boolean of object;
-  TGTest<T>           = function(constref aValue: T): Boolean;
-  TGOnTest<T>         = function(constref aValue: T): Boolean of object;
-  TGNestTest<T>       = function(constref aValue: T): Boolean is nested;
-  TGMapFunc<X, Y>     = function(constref aValue: X): Y;
-  TGOnMap<X, Y>       = function(constref aValue: X): Y of object;
-  TGNestMap<X, Y>     = function(constref aValue: X): Y is nested;
-{ note: accumulator on second position }
-  TGFoldFunc<X, Y>    = function(constref L: X; constref R: Y): Y;
-  TGOnFold<X, Y>      = function(constref L: X; constref R: Y): Y of object;
-  TGNestFold<X, Y>    = function(constref L: X; constref R: Y): Y is nested;
+  TSortOrder            = (soAsc, soDesc);
+  TRangeBound           = (rbLow, rbHigh);
+  TRangeBounds          = set of TRangeBound;
+  TGArray<T>            = array of T;
+  TGCompare<T>          = function(constref L, R: T): SizeInt;
+  TGOnCompare<T>        = function(constref L, R: T): SizeInt of object;
+  TGNestCompare<T>      = function(constref L, R: T): SizeInt is nested;
+  TGEqualCompare<T>     = function(constref L, R: T): Boolean;
+  TGOnEqualCompare<T>   = function(constref L, R: T): Boolean of object;
+  TGNestEqualCompare<T> = function(constref L, R: T): Boolean is nested;
+{ predicates }
+  TGTest<T>             = function(constref aValue: T): Boolean;
+  TGOnTest<T>           = function(constref aValue: T): Boolean of object;
+  TGNestTest<T>         = function(constref aValue: T): Boolean is nested;
+{ mappings }
+  TGMapFunc<X, Y>       = function(constref aValue: X): Y;
+  TGOnMap<X, Y>         = function(constref aValue: X): Y of object;
+  TGNestMap<X, Y>       = function(constref aValue: X): Y is nested;
+{ foldings; note: accumulator on second position }
+  TGFold<X, Y>          = function(constref L: X; constref R: Y): Y;
+  TGOnFold<X, Y>        = function(constref L: X; constref R: Y): Y of object;
+  TGNestFold<X, Y>      = function(constref L: X; constref R: Y): Y is nested;
 
-  ELGPanic            = class(Exception);
-  ELGCapacityExceed   = class(Exception);
-  ELGAccessEmpty      = class(Exception);
-  ELGOptional         = class(Exception);
-  ELGFuture           = class(Exception);
-  ELGUpdateLock       = class(Exception);
-  ELGListError        = class(Exception);
-  ELGMapError         = class(Exception);
-  ELGTableError       = class(Exception);
+  ELGPanic              = class(Exception);
+  ELGCapacityExceed     = class(Exception);
+  ELGAccessEmpty        = class(Exception);
+  ELGOptional           = class(Exception);
+  ELGFuture             = class(Exception);
+  ELGUpdateLock         = class(Exception);
+  ELGListError          = class(Exception);
+  ELGMapError           = class(Exception);
+  ELGTableError         = class(Exception);
 
 const
   MAX_CONTAINER_SIZE         = Succ(SizeInt.MaxValue shr 2);
@@ -194,8 +197,8 @@ type
     function Map(f: TGOnMap<T, T>): IGEnumerable<T>; overload;
     function Map(f: TGNestMap<T, T>): IGEnumerable<T>; overload;
   { left-associative linear fold }
-    function Fold(f: TGFoldFunc<T, T>; constref v0: T): T; overload;
-    function Fold(f: TGFoldFunc<T, T>): TGOptional<T>; overload;
+    function Fold(f: TGFold<T, T>; constref v0: T): T; overload;
+    function Fold(f: TGFold<T, T>): TGOptional<T>; overload;
     function Fold(f: TGOnFold<T, T>; constref v0: T): T; overload;
     function Fold(f: TGOnFold<T, T>): TGOptional<T>; overload;
     function Fold(f: TGNestFold<T, T>; constref v0: T): T; overload;

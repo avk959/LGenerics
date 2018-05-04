@@ -43,16 +43,20 @@ type
   generic TGArrayHelpUtil<T> = class
   public
   type
-    TItem         = T;
-    PItem         = ^T;
-    TArray        = specialize TGArray<T>;
-    TOptional     = specialize TGOptional<T>;
-    TTest         = specialize TGTest<T>;
-    TOnTest       = specialize TGOnTest<T>;
-    TNestTest     = specialize TGNestTest<T>;
-    TFoldFunc     = specialize TGFoldFunc<T, T>;
-    TOnFold       = specialize TGOnFold<T, T>;
-    TNestFold     = specialize TGNestFold<T, T>;
+    TItem             = T;
+    PItem             = ^T;
+    TArray            = specialize TGArray<T>;
+    TOptional         = specialize TGOptional<T>;
+    TEqualCompare     = specialize TGEqualCompare<T>;
+    TOnEqualCompare   = specialize TGOnEqualCompare<T>;
+    TNestEqualCompare = specialize TGNestEqualCompare<T>;
+    TTest             = specialize TGTest<T>;
+    TOnTest           = specialize TGOnTest<T>;
+    TNestTest         = specialize TGNestTest<T>;
+    TFold             = specialize TGFold<T, T>;
+    TOnFold           = specialize TGOnFold<T, T>;
+    TNestFold         = specialize TGNestFold<T, T>;
+
     TSearchResult = record
       FoundIndex,
       InsertIndex: SizeInt;
@@ -102,8 +106,6 @@ type
     class procedure DoReverse(p: PItem; R: SizeInt); static;
     class procedure DoSwap(p: PItem; L, R: SizeInt); static; inline;
   public
-  type
-    TEqualityCompare = specialize TGEqualCompare<T>;
     class function  CreateCopy(constref A: array of T): TArray; static;
     class function  CreateReverseCopy(constref A: array of T): TArray; static;
     class function  CreateMerge(constref L, R: array of T): TArray; static;
@@ -123,22 +125,29 @@ type
     class procedure Reverse(var A: array of T); static;
     class procedure RandomShuffle(var A: array of T); static;//TGEqualCompare
   { returns 0-based position of aValue in array A, -1 if not found }
-    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TEqualityCompare): SizeInt; static;
+    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TEqualCompare): SizeInt;
+                    static;
+    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TOnEqualCompare): SizeInt;
+                    static;
+    class function  SequentSearch(constref A: array of T; constref aValue: T; c: TNestEqualCompare): SizeInt;
+                    static;
   { returns True if both A and B are identical sequence of elements }
-    class function  Same(constref A, B: array of T; c: TEqualityCompare): Boolean; static;
+    class function  Same(constref A, B: array of T; c: TEqualCompare): Boolean; static;
+    class function  Same(constref A, B: array of T; c: TOnEqualCompare): Boolean; static;
+    class function  Same(constref A, B: array of T; c: TNestEqualCompare): Boolean; static;
     class function  Select(constref A: array of T; aTest: TTest): TArray;
     class function  Select(constref A: array of T; aTest: TOnTest): TArray;
     class function  Select(constref A: array of T; aTest: TNestTest): TArray;
     { left-associative linear fold }
-    class function  FoldL(constref A: array of T; aFold: TFoldFunc; constref v0: T): T; static;
-    class function  FoldL(constref A: array of T; aFold: TFoldFunc): TOptional; static;
+    class function  FoldL(constref A: array of T; aFold: TFold; constref v0: T): T; static;
+    class function  FoldL(constref A: array of T; aFold: TFold): TOptional; static;
     class function  FoldL(constref A: array of T; aFold: TOnFold; constref v0: T): T; static;
     class function  FoldL(constref A: array of T; aFold: TOnFold): TOptional; static;
     class function  FoldL(constref A: array of T; aFold: TNestFold; constref v0: T): T; static;
     class function  FoldL(constref A: array of T; aFold: TNestFold): TOptional; static;
   { right-associative linear fold }
-    class function  FoldR(constref A: array of T; aFold: TFoldFunc; constref v0: T): T; static;
-    class function  FoldR(constref A: array of T; aFold: TFoldFunc): TOptional; static;
+    class function  FoldR(constref A: array of T; aFold: TFold; constref v0: T): T; static;
+    class function  FoldR(constref A: array of T; aFold: TFold): TOptional; static;
     class function  FoldR(constref A: array of T; aFold: TOnFold; constref v0: T): T; static;
     class function  FoldR(constref A: array of T; aFold: TOnFold): TOptional; static;
     class function  FoldR(constref A: array of T; aFold: TNestFold; constref v0: T): T; static;
@@ -1183,7 +1192,7 @@ begin
 end;
 
 class function TGArrayHelpUtil.SequentSearch(constref A: array of T; constref aValue: T;
-  c: TEqualityCompare): SizeInt;
+  c: TEqualCompare): SizeInt;
 begin
   for Result := 0 to System.High(A) do
     if c(aValue, A[Result]) then
@@ -1191,7 +1200,51 @@ begin
   Result := -1;
 end;
 
-class function TGArrayHelpUtil.Same(constref A, B: array of T; c: TEqualityCompare): Boolean;
+class function TGArrayHelpUtil.SequentSearch(constref A: array of T; constref aValue: T;
+  c: TOnEqualCompare): SizeInt;
+begin
+  for Result := 0 to System.High(A) do
+    if c(aValue, A[Result]) then
+      exit;
+  Result := -1;
+end;
+
+class function TGArrayHelpUtil.SequentSearch(constref A: array of T; constref aValue: T;
+  c: TNestEqualCompare): SizeInt;
+begin
+  for Result := 0 to System.High(A) do
+    if c(aValue, A[Result]) then
+      exit;
+  Result := -1;
+end;
+
+class function TGArrayHelpUtil.Same(constref A, B: array of T; c: TEqualCompare): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := System.High(A);
+  if System.High(B) <> R then
+    exit(False);
+  for I := 0 to R do
+    if not c(A[I], B[I]) then
+      exit(False);
+  Result := True;
+end;
+
+class function TGArrayHelpUtil.Same(constref A, B: array of T; c: TOnEqualCompare): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := System.High(A);
+  if System.High(B) <> R then
+    exit(False);
+  for I := 0 to R do
+    if not c(A[I], B[I]) then
+      exit(False);
+  Result := True;
+end;
+
+class function TGArrayHelpUtil.Same(constref A, B: array of T; c: TNestEqualCompare): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -1270,7 +1323,7 @@ begin
   SetLength(Result, I);
 end;
 
-class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TFoldFunc; constref v0: T): T;
+class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TFold; constref v0: T): T;
 var
   v: T;
 begin
@@ -1279,7 +1332,7 @@ begin
     Result := aFold(v, Result);
 end;
 
-class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TFoldFunc): TOptional;
+class function TGArrayHelpUtil.FoldL(constref A: array of T; aFold: TFold): TOptional;
 var
   I, Last: SizeInt;
   v: T;
@@ -1342,7 +1395,7 @@ begin
     end;
 end;
 
-class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TFoldFunc; constref v0: T): T;
+class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TFold; constref v0: T): T;
 var
   I: SizeInt;
 begin
@@ -1351,7 +1404,7 @@ begin
     Result := aFold(A[I], Result);
 end;
 
-class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TFoldFunc): TOptional;
+class function TGArrayHelpUtil.FoldR(constref A: array of T; aFold: TFold): TOptional;
 var
   I, Last: SizeInt;
   v: T;

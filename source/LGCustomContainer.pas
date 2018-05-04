@@ -56,7 +56,7 @@ type
     TMapFunc          = specialize TGMapFunc<T, T>;
     TOnMap            = specialize TGOnMap<T, T>;
     TNestMap          = specialize TGNestMap<T, T>;
-    TFoldFunc         = specialize TGFoldFunc<T, T>;
+    TFold             = specialize TGFold<T, T>;
     TOnFold           = specialize TGOnFold<T, T>;
     TNestFold         = specialize TGNestFold<T, T>;
     TDefaults         = specialize TGDefaults<T>;
@@ -118,8 +118,8 @@ type
     function Map(aMap: TOnMap): IEnumerable; inline;
     function Map(aMap: TNestMap): IEnumerable; inline;
   { left-associative linear fold }
-    function Fold(aFold: TFoldFunc; constref v0: T): T;
-    function Fold(aFold: TFoldFunc): TOptional;
+    function Fold(aFold: TFold; constref v0: T): T;
+    function Fold(aFold: TFold): TOptional;
     function Fold(aFold: TOnFold; constref v0: T): T;
     function Fold(aFold: TOnFold): TOptional;
     function Fold(aFold: TNestFold; constref v0: T): T;
@@ -1341,7 +1341,7 @@ begin
   Result := specialize TGEnumNestedMap<T>.Create(GetEnumerator, aMap);
 end;
 
-function TGEnumerable.Fold(aFold: TFoldFunc; constref v0: T): T;
+function TGEnumerable.Fold(aFold: TFold; constref v0: T): T;
 begin
   Result := v0;
   with GetEnumerator do
@@ -1353,7 +1353,7 @@ begin
     end;
 end;
 
-function TGEnumerable.Fold(aFold: TFoldFunc): TOptional;
+function TGEnumerable.Fold(aFold: TFold): TOptional;
 var
   v: T;
 begin

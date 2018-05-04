@@ -320,7 +320,7 @@ type
     THelper = specialize TGArrayHelpUtil<T>;
   public
   type
-    TEqualityCompare = THelper.TEqualityCompare;
+    TEqualityCompare = THelper.TEqualCompare;
     TVector          = class(specialize TGVector<T>);
     TLiteVector      = specialize TGLiteVector<T>;
     class procedure Reverse(v: TVector); static; inline;

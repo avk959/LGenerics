@@ -22,6 +22,7 @@ unit LGHashMultiSet;
 {$mode objfpc}{$H+}
 {$INLINE ON}
 {$MODESWITCH NESTEDPROCVARS}
+{$MODESWITCH ADVANCEDRECORDS}
 
 interface
 
@@ -297,6 +298,15 @@ type
   end;
 
   generic TGObjChainHashMultiSet<T: class> = class(specialize TGObjectChainHashMultiSet<T, T>);
+
+  generic TGLiteHashMultiSetLP<T, TEqRel> = record
+  public
+
+  private
+
+  public
+
+  end;
 
 implementation
 {$B-}{$COPERATORS ON}
