@@ -307,11 +307,7 @@ type
   generic TGLiteHashMultiSetLP<T, TEqRel> = record
   public
   type
-    TEntry = record
-      Key: T;
-      Count: SizeInt;
-    end;
-
+    TEntry      = specialize TGMultiSetEntry<T>;
     IEnumerable = specialize IGEnumerable<T>;
     ICollection = specialize IGCollection<T>;
     TTest       = specialize TGTest<T>;
@@ -323,8 +319,7 @@ type
   private
   type
     TTableLP  = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
-    TMultiSet = TGLiteHashMultiSetLP;
-    PMultiSet = ^TMultiSet;
+    PMultiSet = ^TGLiteHashMultiSetLP;
     PEntry    = ^TEntry;
 
   public
@@ -360,7 +355,7 @@ type
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
-      property  Current: T read GetCurrent;
+      property  Current: TEntry read GetCurrent;
     end;
 
     TDistinct = record
@@ -458,8 +453,8 @@ type
     of that key in aSet; the multiplicity of a key will become equal to absolute value of difference
     of the multiplicities of a key in self and aSet }
     procedure SymmetricSubtract(aSet: TGLiteHashMultiSetLP);
-    function  Distinct: TDistinct; inline;
-    function  Entries: TEntries; inline;
+    //function  Distinct: TDistinct; inline;
+    //function  Entries: TEntries; inline;
     property  Count: SizeInt read FCount;
   { returs number of distinct keys }
     property  EntryCount: SizeInt read GetEntryCount; //dimension, Count - cardinality
@@ -1801,12 +1796,12 @@ end;
 
 function TGLiteHashMultiSetLP.Intersecting(aSet: TGLiteHashMultiSetLP): Boolean;
 var
-  v: T;
+  p: PEntry;
 begin
   if @aSet <> @Self then
     begin
-      for v in aSet.Distinct do
-        if Contains(v) then
+      for p in FTable do
+        if aSet.Contains(p^.Key) then
           exit(True);
       Result := False;
     end
@@ -1957,15 +1952,15 @@ begin
     Clear;
 end;
 
-function TGLiteHashMultiSetLP.Distinct: TDistinct;
-begin
-  Result.Init(@Self);
-end;
-
-function TGLiteHashMultiSetLP.Entries: TEntries;
-begin
-  Result.Init(@Self);
-end;
+//function TGLiteHashMultiSetLP.Distinct: TDistinct;
+//begin
+//  Result.Init(@Self);
+//end;
+//
+//function TGLiteHashMultiSetLP.Entries: TEntries;
+//begin
+//  Result.Init(@Self);
+//end;
 
 end.
 
