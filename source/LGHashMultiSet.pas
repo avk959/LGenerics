@@ -307,7 +307,11 @@ type
   generic TGLiteHashMultiSetLP<T, TEqRel> = record
   public
   type
-    TEntry      = specialize TGMultiSetEntry<T>;
+    TEntry = record
+      Key: T;
+      Count: SizeInt;
+    end;
+
     IEnumerable = specialize IGEnumerable<T>;
     ICollection = specialize IGCollection<T>;
     TTest       = specialize TGTest<T>;
@@ -318,9 +322,10 @@ type
 
   private
   type
-    TTableLP            = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
-    PLiteHashMultiSetLP = ^TGLiteHashMultiSetLP;
-    PEntry              = ^TEntry;
+    TTableLP  = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
+    TMultiSet = TGLiteHashMultiSetLP;
+    PMultiSet = ^TMultiSet;
+    PEntry    = ^TEntry;
 
   public
   type
@@ -360,16 +365,16 @@ type
 
     TDistinct = record
     private
-      FMultiset: PLiteHashMultiSetLP;
-      procedure Init(aSet: PLiteHashMultiSetLP); inline;
+      FMultiset: PMultiSet;
+      procedure Init(aSet: PMultiSet); inline;
     public
       function GetEnumerator: TDistinctEnumerator;
     end;
 
     TEntries = record
     private
-      FMultiset: PLiteHashMultiSetLP;
-      procedure Init(aSet: PLiteHashMultiSetLP); inline;
+      FMultiset: PMultiSet;
+      procedure Init(aSet: PMultiSet); inline;
     public
       function GetEnumerator: TEntryEnumerator;
     end;
@@ -1336,7 +1341,7 @@ end;
 
 { TGLiteHashMultiSetLP.TDistinct }
 
-procedure TGLiteHashMultiSetLP.TDistinct.Init(aSet: PLiteHashMultiSetLP);
+procedure TGLiteHashMultiSetLP.TDistinct.Init(aSet: PMultiSet);
 begin
   FMultiset := aSet;
 end;
@@ -1348,7 +1353,7 @@ end;
 
 { TGLiteHashMultiSetLP.TEntries }
 
-procedure TGLiteHashMultiSetLP.TEntries.Init(aSet: PLiteHashMultiSetLP);
+procedure TGLiteHashMultiSetLP.TEntries.Init(aSet: PMultiSet);
 begin
   FMultiset := aSet;
 end;
