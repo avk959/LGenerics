@@ -303,7 +303,7 @@ type
     procedure SymmetricSubtract(aSet: TCustomSet);
   end;
 
-  generic TGMultisetEntry<T> = record
+  generic TGMultiSetEntry<T> = record
     Key: T;
     Count: SizeInt; //multiplicity(count of occurrences)
   end;
@@ -312,7 +312,7 @@ type
   generic TGCustomMultiSet<T> = class abstract(specialize TGCustomCollection<T>)
   public
   type
-    TEntry           = specialize TGMultisetEntry<T>;
+    TEntry           = specialize TGMultiSetEntry<T>;
     TCustomMultiSet  = specialize TGCustomMultiSet<T>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
 
@@ -339,7 +339,7 @@ type
   var
     FCount: SizeInt;
     function  FindEntry(constref aKey: T): PEntry; virtual; abstract;
-    //return True if aKey found, otherwise insert entry with garbage item and return False;
+    //return True if aKey found, otherwise inserts entry (garbage) and return False;
     function  FindOrAdd(constref aKey: T; out p: PEntry): Boolean; virtual; abstract;
     //returns True only if e removed
     function  DoSubEntry(constref e: TEntry): Boolean; virtual; abstract;
@@ -365,7 +365,7 @@ type
     function  DoRemoveAll(e: IEnumerable): SizeInt; override;
     property  ElemCount: SizeInt read FCount;
   public
-    function  Contains(constref aKey: T): Boolean; override;
+    function  Contains(constref aValue: T): Boolean; override;
   { returns True if multiplicity of an any key in self is greater then or equal to
     the multiplicity of that key in aSet }
     function  IsSuperMultiSet(aSet: TCustomMultiSet): Boolean;
@@ -385,7 +385,7 @@ type
   { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the SUM of the multiplicities of a key in self and aSet }
     procedure ArithmeticAdd(aSet: TCustomMultiSet);
-  { will contain only those keys whose multiplicity is greater then or equal to the multiplicity
+  { will contain only those keys whose multiplicity is greater then the multiplicity
     of that key in aSet; the multiplicity of a key will become equal to the difference of multiplicities
     of a key in self and aSet }
     procedure ArithmeticSubtract(aSet: TCustomMultiSet);
@@ -398,9 +398,9 @@ type
     function  Entries: IEntryEnumerable;
   { returs number of distinct keys }
     property  EntryCount: SizeInt read GetEntryCount; //dimension, Count - cardinality
-  { will always return 0 if an element not in the multiset;
-    will raise EArgumentOutOfRangeException if one try to set negative multiplicity of a key }
-    property  Counts[const aKey: T]: SizeInt read GetKeyCount write SetKeyCount; default;
+  { will return 0 if not contains an element aValue;
+    will raise EArgumentException if one try to set negative multiplicity of a aValue }
+    property  Counts[const aValue: T]: SizeInt read GetKeyCount write SetKeyCount; default;
   end;
 
   { TCustomIterable }
@@ -1871,9 +1871,14 @@ procedure TGCustomSet.DoSymmetricSubtract(aSet: TCustomSet);
 var
   v: T;
 begin
-  for v in aSet do
-    if not DoRemove(v) then
-      DoAdd(v);
+  if aSet <> Self then
+    begin
+      for v in aSet do
+        if not DoRemove(v) then
+          DoAdd(v);
+    end
+  else
+    Clear;
 end;
 
 function TGCustomSet.IsSuperset(aSet: TCustomSet): Boolean;
@@ -1998,7 +2003,7 @@ begin
     if e.Count > p^.Count then
       begin
         FCount += e.Count - p^.Count;
-        p^.Count += e.Count - p^.Count;
+        p^.Count := e.Count;
       end;
 {$POP}
 end;
@@ -2033,9 +2038,8 @@ var
   e: TEntry;
 begin
   if aValue < 0 then
-    raise EArgumentException.CreateFmt(SECantAcceptNegValueFmt, [ClassName, 'TEntry.Count']);
+    raise EArgumentException.CreateFmt(SECantAcceptNegCountFmt, [ClassName]);
   CheckInIteration;
-  p := FindEntry(aKey);
   if aValue > 0 then
     begin
 {$PUSH}{$Q+}
@@ -2143,16 +2147,16 @@ begin
     end;
 end;
 
-function TGCustomMultiSet.Contains(constref aKey: T): Boolean;
+function TGCustomMultiSet.Contains(constref aValue: T): Boolean;
 begin
-  Result := FindEntry(aKey) <> nil;
+  Result := FindEntry(aValue) <> nil;
 end;
 
 function TGCustomMultiSet.IsSuperMultiSet(aSet: TCustomMultiSet): Boolean;
 var
   e: TEntry;
 begin
-  if aSet._GetRef <> Self then
+  if aSet <> Self then
     begin
       if (Count >= aSet.Count) and (EntryCount >= aSet.EntryCount) then
         begin
@@ -2172,7 +2176,7 @@ function TGCustomMultiSet.IsSubMultiSet(aSet: TCustomMultiSet): Boolean;
 var
   e: TEntry;
 begin
-  if aSet._GetRef <> Self then
+  if aSet <> Self then
     begin
       if (aSet.Count >= Count) and (aSet.EntryCount >= EntryCount) then
         begin
@@ -2192,7 +2196,7 @@ function TGCustomMultiSet.IsEqual(aSet: TCustomMultiSet): Boolean;
 var
   e: TEntry;
 begin
-  if aSet._GetRef <> Self then
+  if aSet <> Self then
     begin
       if (aSet.Count = Count) and (aSet.EntryCount = EntryCount) then
         begin
@@ -2226,7 +2230,7 @@ procedure TGCustomMultiSet.Join(aSet: TCustomMultiSet);
 var
   e: TEntry;
 begin
-  if aSet._GetRef <> Self then
+  if aSet <> Self then
     begin
       CheckInIteration;
       for e in aSet.Entries do

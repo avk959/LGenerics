@@ -1,8 +1,9 @@
 { pascal reserved words usage statistics }
-program rwstat;
+program rwstat_lite;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH NESTEDPROCVARS}
+{$MODESWITCH ADVANCEDRECORDS}
 
 uses
   SysUtils,
@@ -14,8 +15,8 @@ uses
   LGStrHelpers;
 
 type
-  TCounter    = specialize TGHashMultiSetLP<string>;
-  TDictionary = specialize TGHashSetLP<string>;
+  TCounter    = specialize TGLiteHashMultiSetLP<string, string>;
+  TDictionary = specialize TGLiteHashSetLP<string, string>;
   TCountItem  = TCounter.TEntry;
 
 const
@@ -69,10 +70,14 @@ var
   end;
 var
   InputText: specialize TGAutoRef<TTextFileReader>;
-  Counter: specialize TGAutoRef<TCounter>;
-  Dict: specialize TGAutoRef<TDictionary>;
+  Counter: TCounter;
+  Dict: TDictionary;
   FileName, CurrLine: string;
   Item: TCountItem;
+  function IsReservedWord(constref aValue: string): Boolean;
+  begin
+    Result := Dict.Contains(aValue);
+  end;
 begin
   Dict.Instance.AddAll([{$I reswords.inc}]);
   if AllowModifiers then
@@ -81,7 +86,7 @@ begin
   for FileName in InFileNames do
     if InputText.Instance.Open(FileName) then //LoadText ???
       for CurrLine in InputText.Instance do
-        Counter.Instance.AddAll(CurrLine.SplitSB.Map(@ToLower).Select(@Dict.Instance.Contains))
+        Counter.Instance.AddAll(CurrLine.SplitSB.Map(@ToLower).Select(@IsReservedWord))
     else
       WriteLn(Format(sFailedOpenFmt, [FileName]));
 

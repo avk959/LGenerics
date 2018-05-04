@@ -659,6 +659,7 @@ type
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
     property  Size: SizeInt read GetSize;
+    //todo: Split(predicate): TGLiteHashTableLP; ???
   end;
 
 implementation

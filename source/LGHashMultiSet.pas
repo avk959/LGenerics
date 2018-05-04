@@ -32,7 +32,8 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGCustomContainer,
-  LGHashTable;
+  LGHashTable,
+  LGStrConst;
 
 type
 
@@ -299,13 +300,171 @@ type
 
   generic TGObjChainHashMultiSet<T: class> = class(specialize TGObjectChainHashMultiSet<T, T>);
 
+  { TGLiteHashMultiSetLP implements open addressing hash multiset with linear probing;
+      functor TEqRel(equality relation) must provide:
+        class function HashCode([const[ref]] aValue: T): SizeInt;
+        class function Equal([const[ref]] L, R: T): Boolean; }
   generic TGLiteHashMultiSetLP<T, TEqRel> = record
   public
+  type
+    TEntry      = specialize TGMultiSetEntry<T>;
+    IEnumerable = specialize IGEnumerable<T>;
+    ICollection = specialize IGCollection<T>;
+    TTest       = specialize TGTest<T>;
+    TOnTest     = specialize TGOnTest<T>;
+    TNestTest   = specialize TGNestTest<T>;
+    TArray      = array of T;
+    TEntryArray = array of TEntry;
 
   private
+  type
+    TTableLP            = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
+    PLiteHashMultiSetLP = ^TGLiteHashMultiSetLP;
+    PEntry              = ^TEntry;
 
   public
+  type
+    TEnumerator = record
+    private
+      FEnum: TTableLP.TEnumerator;
+      FCurrKeyCount: SizeInt;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteHashMultiSetLP); inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
 
+    TDistinctEnumerator = record
+    private
+      FEnum: TTableLP.TEnumerator;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteHashMultiSetLP); inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TEntryEnumerator = record
+    private
+      FEnum: TTableLP.TEnumerator;
+      function  GetCurrent: TEntry; inline;
+      procedure Init(constref aSet: TGLiteHashMultiSetLP); inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TDistinct = record
+    private
+      FMultiset: PLiteHashMultiSetLP;
+      procedure Init(aSet: PLiteHashMultiSetLP); inline;
+    public
+      function GetEnumerator: TDistinctEnumerator;
+    end;
+
+    TEntries = record
+    private
+      FMultiset: PLiteHashMultiSetLP;
+      procedure Init(aSet: PLiteHashMultiSetLP); inline;
+    public
+      function GetEnumerator: TEntryEnumerator;
+    end;
+
+  private
+    FTable: TTableLP;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    function  GetEntryCount: SizeInt; inline;
+    function  GetFillRatio: Single; inline;
+    function  GetLoadFactor: Single; inline;
+    function  GetTableSize: SizeInt; inline;
+    procedure SetLoadFactor(aValue: Single); inline;
+    function  GetDistinctEnumerator: TDistinctEnumerator; inline;
+    function  GetEntryEnumerator: TEntryEnumerator; inline;
+    function  Find(constref aKey: T): PEntry; inline;
+    //return True if aKey found, otherwise inserts entry (garbage) and return False;
+    function  FindOrAdd(constref aKey: T; out p: PEntry): Boolean;
+    function  GetKeyCount(const aKey: T): SizeInt;
+    procedure SetKeyCount(const aKey: T; aValue: SizeInt);
+    class operator Initialize(var ms: TGLiteHashMultiSetLP);
+  public
+    function  DefaultLoadFactor: Single; inline;
+    function  MaxLoadFactor: Single; inline;
+    function  MinLoadFactor: Single; inline;
+    function  GetEnumerator: TEnumerator; inline;
+    function  ToArray: TArray;
+    function  ToEntryArray: TEntryArray;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear;
+    procedure TrimToFit; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    function  Contains(constref aValue: T): Boolean; inline;
+    function  NonContains(constref aValue: T): Boolean; inline;
+    function  ContainsAny(constref a: array of T): Boolean;
+    function  ContainsAny(e: IEnumerable): Boolean;
+    function  ContainsAll(constref a: array of T): Boolean;
+    function  ContainsAll(e: IEnumerable): Boolean;
+    procedure Add(constref aValue: T);
+  { returns count of added elements }
+    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(e: IEnumerable): SizeInt;
+  { returns True if element removed }
+    function  Remove(constref aValue: T): Boolean; inline;
+  { returns count of removed elements }
+    function  RemoveIf(aTest: TTest): SizeInt;
+    function  RemoveIf(aTest: TOnTest): SizeInt;
+    function  RemoveIf(aTest: TNestTest): SizeInt;
+  { returns True if element extracted }
+    function  Extract(constref aValue: T): Boolean;
+    function  ExtractIf(aTest: TTest): TArray;
+    function  ExtractIf(aTest: TOnTest): TArray;
+    function  ExtractIf(aTest: TNestTest): TArray;
+  { will contain only those elements that are simultaneously contained in self and aCollection }
+    procedure RetainAll(aCollection: ICollection);
+  { returns True if multiplicity of an any key in self is greater then or equal to
+    the multiplicity of that key in aSet }
+    function  IsSuperMultiSet(aSet: TGLiteHashMultiSetLP): Boolean;
+  { returns True if multiplicity of an any key in aSet is greater then or equal to
+    the multiplicity of that key in self }
+    function  IsSubMultiSet(aSet: TGLiteHashMultiSetLP): Boolean;
+  { returns True if the multiplicity of an any key in self is equal to the multiplicity of that key in aSet }
+    function  IsEqual(aSet: TGLiteHashMultiSetLP): Boolean;
+    function  Intersecting(aSet: TGLiteHashMultiSetLP): Boolean;
+  { will contain only those keys that are simultaneously contained in self and in aSet;
+    the multiplicity of a key becomes equal to the MINIMUM of the multiplicities of a key in self and aSet }
+    procedure Intersect(aSet: TGLiteHashMultiSetLP);
+  { will contain all keys that are contained in self and in aSet;
+    the multiplicity of a key will become equal to the MAXIMUM of the multiplicities of
+    a key in self and aSet }
+    procedure Join(aSet: TGLiteHashMultiSetLP);
+  { will contain all keys that are contained in self or in aSet;
+    the multiplicity of a key will become equal to the SUM of the multiplicities of a key in self and aSet }
+    procedure ArithmeticAdd(aSet: TGLiteHashMultiSetLP);
+  { will contain only those keys whose multiplicity is greater then the multiplicity
+    of that key in aSet; the multiplicity of a key will become equal to the difference of multiplicities
+    of a key in self and aSet }
+    procedure ArithmeticSubtract(aSet: TGLiteHashMultiSetLP);
+  { will contain only those keys whose multiplicity is not equal to the multiplicity
+    of that key in aSet; the multiplicity of a key will become equal to absolute value of difference
+    of the multiplicities of a key in self and aSet }
+    procedure SymmetricSubtract(aSet: TGLiteHashMultiSetLP);
+    function  Distinct: TDistinct; inline;
+    function  Entries: TEntries; inline;
+    property  Count: SizeInt read FCount;
+  { returs number of distinct keys }
+    property  EntryCount: SizeInt read GetEntryCount; //dimension, Count - cardinality
+    property  Capacity: SizeInt read GetCapacity;
+    property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
+    property  FillRatio: Single read GetFillRatio;
+    property  TableSize: SizeInt read GetTableSize;
+  { will return 0 if not contains an element aValue;
+    will raise EArgumentException if one try to set negative multiplicity of a aValue }
+    property  Counts[const aValue: T]: SizeInt read GetKeyCount write SetKeyCount; default;
   end;
 
 implementation
@@ -1098,6 +1257,709 @@ end;
 function TGObjectChainHashMultiSet.Clone: TGObjectChainHashMultiSet;
 begin
   Result := TGObjectChainHashMultiSet.CreateCopy(Self);
+end;
+
+{ TGLiteHashMultiSetLP.TEnumerator }
+
+function TGLiteHashMultiSetLP.TEnumerator.GetCurrent: T;
+begin
+  Result := FEnum.Current^.Key;
+end;
+
+procedure TGLiteHashMultiSetLP.TEnumerator.Init(constref aSet: TGLiteHashMultiSetLP);
+begin
+  FEnum := aSet.FTable.GetEnumerator;
+  FCurrKeyCount := 0;
+end;
+
+function TGLiteHashMultiSetLP.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrKeyCount > 0;
+  FCurrKeyCount -= Ord(Result);
+  if not Result then
+    begin
+      Result := FEnum.MoveNext;
+      if Result then
+        FCurrKeyCount := Pred(FEnum.Current^.Count);
+    end;
+end;
+
+procedure TGLiteHashMultiSetLP.TEnumerator.Reset;
+begin
+  FEnum.Reset;
+  FCurrKeyCount := 0;
+end;
+
+{ TGLiteHashMultiSetLP.TDistinctEnumerator }
+
+function TGLiteHashMultiSetLP.TDistinctEnumerator.GetCurrent: T;
+begin
+  Result := FEnum.Current^.Key;
+end;
+
+procedure TGLiteHashMultiSetLP.TDistinctEnumerator.Init(constref aSet: TGLiteHashMultiSetLP);
+begin
+  FEnum := aSet.FTable.GetEnumerator;
+end;
+
+function TGLiteHashMultiSetLP.TDistinctEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGLiteHashMultiSetLP.TDistinctEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TGLiteHashMultiSetLP.TEntryEnumerator }
+
+function TGLiteHashMultiSetLP.TEntryEnumerator.GetCurrent: TEntry;
+begin
+  Result := FEnum.Current^;
+end;
+
+procedure TGLiteHashMultiSetLP.TEntryEnumerator.Init(constref aSet: TGLiteHashMultiSetLP);
+begin
+  FEnum := aSet.FTable.GetEnumerator;
+end;
+
+function TGLiteHashMultiSetLP.TEntryEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGLiteHashMultiSetLP.TEntryEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TGLiteHashMultiSetLP.TDistinct }
+
+procedure TGLiteHashMultiSetLP.TDistinct.Init(aSet: PLiteHashMultiSetLP);
+begin
+  FMultiset := aSet;
+end;
+
+function TGLiteHashMultiSetLP.TDistinct.GetEnumerator: TDistinctEnumerator;
+begin
+  FMultiset^.GetDistinctEnumerator;
+end;
+
+{ TGLiteHashMultiSetLP.TEntries }
+
+procedure TGLiteHashMultiSetLP.TEntries.Init(aSet: PLiteHashMultiSetLP);
+begin
+  FMultiset := aSet;
+end;
+
+function TGLiteHashMultiSetLP.TEntries.GetEnumerator: TEntryEnumerator;
+begin
+  FMultiset^.GetEntryEnumerator;
+end;
+
+{ TGLiteHashMultiSetLP }
+
+function TGLiteHashMultiSetLP.GetEntryCount: SizeInt;
+begin
+  Result := FTable.Count;
+end;
+
+function TGLiteHashMultiSetLP.GetCapacity: SizeInt;
+begin
+  Result := FTable.Capacity;
+end;
+
+function TGLiteHashMultiSetLP.GetFillRatio: Single;
+begin
+  Result := FTable.FillRatio;
+end;
+
+function TGLiteHashMultiSetLP.GetLoadFactor: Single;
+begin
+  Result := FTable.LoadFactor;
+end;
+
+function TGLiteHashMultiSetLP.GetTableSize: SizeInt;
+begin
+  Result := FTable.Size;
+end;
+
+procedure TGLiteHashMultiSetLP.SetLoadFactor(aValue: Single);
+begin
+  FTable.LoadFactor := aValue;
+end;
+
+function TGLiteHashMultiSetLP.GetDistinctEnumerator: TDistinctEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashMultiSetLP.GetEntryEnumerator: TEntryEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashMultiSetLP.Find(constref aKey: T): PEntry;
+var
+  Pos: SizeInt;
+begin
+  Result := FTable.Find(aKey, Pos);
+end;
+
+function TGLiteHashMultiSetLP.FindOrAdd(constref aKey: T; out p: PEntry): Boolean;
+var
+  Pos: SizeInt;
+begin
+  Result := FTable.FindOrAdd(aKey, p, Pos);
+  if not Result then
+    begin
+      p^.Key := aKey;
+      p^.Count := 1;
+    end;
+end;
+
+function TGLiteHashMultiSetLP.GetKeyCount(const aKey: T): SizeInt;
+var
+  p: PEntry;
+begin
+  p := Find(aKey);
+  if p <> nil then
+    Result := p^.Count
+  else
+    Result := 0;
+end;
+
+procedure TGLiteHashMultiSetLP.SetKeyCount(const aKey: T; aValue: SizeInt);
+var
+  p: PEntry;
+  Pos: SizeInt;
+begin
+  if aValue < 0 then
+    raise EArgumentException.Create(SECantAcceptNegCount);
+  if aValue > 0 then
+    begin
+{$PUSH}{$Q+}
+      if FindOrAdd(aKey, p) then
+        begin
+          FCount += aValue - p^.Count;
+          p^.Count := aValue;
+        end
+      else
+        begin
+          FCount += aValue;
+          p^.Count := aValue;
+        end;
+{$POP}
+    end
+  else
+    begin  // aValue = 0;
+      p := FTable.Find(aKey, Pos);
+      if p <> nil then
+        begin
+          FCount -= p^.Count;
+          FTable.RemoveAt(Pos);
+        end;
+    end;
+end;
+
+class operator TGLiteHashMultiSetLP.Initialize(var ms: TGLiteHashMultiSetLP);
+begin
+  ms.FCount := 0;
+end;
+
+function TGLiteHashMultiSetLP.DefaultLoadFactor: Single;
+begin
+  Result := FTable.DEFAULT_LOAD_FACTOR;
+end;
+
+function TGLiteHashMultiSetLP.MaxLoadFactor: Single;
+begin
+  Result := FTable.MAX_LOAD_FACTOR;
+end;
+
+function TGLiteHashMultiSetLP.MinLoadFactor: Single;
+begin
+  Result := FTable.MIN_LOAD_FACTOR;
+end;
+
+function TGLiteHashMultiSetLP.GetEnumerator: TEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashMultiSetLP.ToArray: TArray;
+var
+  I: SizeInt = 0;
+  v: T;
+begin
+  System.SetLength(Result, Count);
+  for v in Self do
+    begin
+      Result[I] := v;
+      Inc(I);
+    end;
+end;
+
+function TGLiteHashMultiSetLP.ToEntryArray: TEntryArray;
+var
+  I: SizeInt = 0;
+  p: PEntry;
+begin
+  System.SetLength(Result, EntryCount);
+  for p in FTable do
+    begin
+      Result[I] := p^;
+      Inc(I);
+    end;
+end;
+
+function TGLiteHashMultiSetLP.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGLiteHashMultiSetLP.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGLiteHashMultiSetLP.Clear;
+begin
+  FTable.Clear;
+  FCount := 0;
+end;
+
+procedure TGLiteHashMultiSetLP.TrimToFit;
+begin
+  FTable.TrimToFit;
+end;
+
+procedure TGLiteHashMultiSetLP.EnsureCapacity(aValue: SizeInt);
+begin
+  FTable.EnsureCapacity(aValue);
+end;
+
+function TGLiteHashMultiSetLP.Contains(constref aValue: T): Boolean;
+begin
+  Result := Find(aValue) <> nil;
+end;
+
+function TGLiteHashMultiSetLP.NonContains(constref aValue: T): Boolean;
+begin
+  Result := Find(aValue) = nil;
+end;
+
+function TGLiteHashMultiSetLP.ContainsAny(constref a: array of T): Boolean;
+var
+  v: T;
+begin
+  for v in a do
+    if Contains(v) then
+      exit(True);
+  Result := False;
+end;
+
+function TGLiteHashMultiSetLP.ContainsAny(e: IEnumerable): Boolean;
+var
+  v: T;
+begin
+  for v in e do
+    if Contains(v) then
+      exit(True);
+  Result := False;
+end;
+
+function TGLiteHashMultiSetLP.ContainsAll(constref a: array of T): Boolean;
+var
+  v: T;
+begin
+  for v in a do
+    if NonContains(v) then
+      exit(False);
+  Result := True;
+end;
+
+function TGLiteHashMultiSetLP.ContainsAll(e: IEnumerable): Boolean;
+var
+  v: T;
+begin
+  for v in e do
+    if NonContains(v) then
+      exit(False);
+  Result := True;
+end;
+
+procedure TGLiteHashMultiSetLP.Add(constref aValue: T);
+var
+  p: PEntry;
+begin
+{$PUSH}{$Q+}
+  Inc(FCount);
+{$POP}
+  if FindOrAdd(aValue, p) then
+    Inc(p^.Count);
+end;
+
+function TGLiteHashMultiSetLP.AddAll(constref a: array of T): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in a do
+    begin
+      Add(v);
+      Inc(Result);
+    end;
+end;
+
+function TGLiteHashMultiSetLP.AddAll(e: IEnumerable): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in e do
+    begin
+      Add(v);
+      Inc(Result);
+    end;
+end;
+
+function TGLiteHashMultiSetLP.Remove(constref aValue: T): Boolean;
+begin
+  Result := Extract(aValue);
+end;
+{$PUSH}{$MACRO ON}
+function TGLiteHashMultiSetLP.RemoveIf(aTest: TTest): SizeInt;
+var
+  p: PEntry;
+begin
+{$DEFINE RemoveIfMacro :=
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            FCount -= p^.Count;
+            Result += p^.Count;
+            RemoveCurrent;
+          end
+      end}
+  RemoveIfMacro;
+end;
+
+function TGLiteHashMultiSetLP.RemoveIf(aTest: TOnTest): SizeInt;
+var
+  p: PEntry;
+begin
+  RemoveIfMacro;
+end;
+
+function TGLiteHashMultiSetLP.RemoveIf(aTest: TNestTest): SizeInt;
+var
+  p: PEntry;
+begin
+  RemoveIfMacro;
+end;
+
+function TGLiteHashMultiSetLP.Extract(constref aValue: T): Boolean;
+var
+  p: PEntry;
+  Pos: SizeInt;
+begin
+  p := FTable.Find(aValue, Pos);
+  Result := p <> nil;
+  if Result then
+    begin
+      Dec(p^.Count);
+      Dec(FCount);
+      if p^.Count = 0 then
+        FTable.RemoveAt(Pos);
+    end;
+end;
+
+function TGLiteHashMultiSetLP.ExtractIf(aTest: TTest): TArray;
+var
+  I, Last: SizeInt;
+  p: PEntry;
+  v: T;
+begin
+{$DEFINE ExtractIfMacro :=
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  I := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            Last := Pred(I + p^.Count);
+            FCount -= p^.Count;
+            v := p^.Key;
+            if Last >= System.Length(Result) then
+                System.SetLength(Result, RoundUpTwoPower(Succ(Last)));
+            for I := I to Last do
+              Result[I] := v;
+            RemoveCurrent;
+            I := Succ(Last);
+          end;
+      end;
+  System.SetLength(Result, I)}
+  ExtractIfMacro;
+end;
+
+function TGLiteHashMultiSetLP.ExtractIf(aTest: TOnTest): TArray;
+var
+  I, Last: SizeInt;
+  p: PEntry;
+  v: T;
+begin
+  ExtractIfMacro;
+end;
+
+function TGLiteHashMultiSetLP.ExtractIf(aTest: TNestTest): TArray;
+var
+  I, Last: SizeInt;
+  p: PEntry;
+  v: T;
+begin
+  ExtractIfMacro;
+end;
+{$POP}
+
+procedure TGLiteHashMultiSetLP.RetainAll(aCollection: ICollection);
+begin
+  RemoveIf(@aCollection.NonContains);
+end;
+
+function TGLiteHashMultiSetLP.IsSuperMultiSet(aSet: TGLiteHashMultiSetLP): Boolean;
+var
+  p: PEntry;
+begin
+  if @aSet <> @Self then
+    begin
+      if (Count >= aSet.Count) and (EntryCount >= aSet.EntryCount) then
+        begin
+          for p in aSet.FTable do
+            if GetKeyCount(p^.Key) < p^.Count then
+              exit(False);
+          Result := True;
+        end
+      else
+        Result := False;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteHashMultiSetLP.IsSubMultiSet(aSet: TGLiteHashMultiSetLP): Boolean;
+var
+  p: PEntry;
+begin
+  if @aSet <> @Self then
+    begin
+      if (aSet.Count >= Count) and (aSet.EntryCount >= EntryCount) then
+        begin
+          for p in FTable do
+            if aSet[p^.Key] < p^.Count then
+              exit(False);
+          Result := True;
+        end
+      else
+        Result := False;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteHashMultiSetLP.IsEqual(aSet: TGLiteHashMultiSetLP): Boolean;
+var
+  p: PEntry;
+begin
+  if @aSet <> @Self then
+    begin
+      if (aSet.Count = Count) and (aSet.EntryCount = EntryCount) then
+        begin
+          for p in FTable do
+            if aSet[p^.Key] <> p^.Count then
+              exit(False);
+          Result := True;
+        end
+      else
+        Result := False;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteHashMultiSetLP.Intersecting(aSet: TGLiteHashMultiSetLP): Boolean;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      for v in aSet.Distinct do
+        if Contains(v) then
+          exit(True);
+      Result := False;
+    end
+  else
+    Result := True;
+end;
+
+procedure TGLiteHashMultiSetLP.Intersect(aSet: TGLiteHashMultiSetLP);
+var
+  cnt: SizeInt;
+  p: PEntry;
+begin
+  if @aSet <> @Self then
+    with FTable.RemovableEnumerator do
+      while MoveNext do
+        begin
+          p := Current;
+          cnt := aSet[p^.Key];
+          if cnt <> 0 then
+            begin
+              if cnt < p^.Count then
+                begin
+                  FCount -= p^.Count - cnt;
+                  p^.Count := cnt;
+                end;
+            end
+          else
+            begin
+              FCount -= p^.Count;
+              RemoveCurrent;
+            end;
+        end;
+end;
+
+procedure TGLiteHashMultiSetLP.Join(aSet: TGLiteHashMultiSetLP);
+var
+  p, ps: PEntry;
+begin
+{$PUSH}{$Q+}
+  if @aSet <> @Self then
+    for ps in aSet.FTable do
+      if not FindOrAdd(ps^.Key, p) then
+        begin
+          p^.Count := ps^.Count;
+          FCount += ps^.Count;
+        end
+      else
+        if ps^.Count > p^.Count then
+          begin
+            FCount += ps^.Count - p^.Count;
+            p^.Count := ps^.Count;
+          end;
+{$POP}
+end;
+
+procedure TGLiteHashMultiSetLP.ArithmeticAdd(aSet: TGLiteHashMultiSetLP);
+var
+  p, ps: PEntry;
+begin
+{$PUSH}{$Q+}
+  if @aSet <> @Self then
+    for ps in aSet.FTable do
+      begin
+        FCount += ps^.Count;
+        if FindOrAdd(ps^.Key, p) then
+          p^.Count += ps^.Count
+        else
+          begin
+            p^.Key := ps^.Key;
+            p^.Count := ps^.Count;
+          end;
+      end
+  else
+    begin
+      FCount += FCount;
+      for p in FTable do
+        p^.Count += p^.Count;
+    end;
+{$POP}
+end;
+
+procedure TGLiteHashMultiSetLP.ArithmeticSubtract(aSet: TGLiteHashMultiSetLP);
+var
+  p, ps: PEntry;
+  Pos: SizeInt;
+begin
+  if @aSet <> @Self then
+    for ps in aSet.FTable do
+      begin
+        p := FTable.Find(ps^.Key, Pos);
+        if p <> nil then
+          begin
+            if ps^.Count < p^.Count then
+              begin
+                FCount -= ps^.Count;
+                p^.Count -= ps^.Count;
+              end
+            else
+              begin
+                FCount -= p^.Count;
+                FTable.RemoveAt(Pos);
+              end;
+          end;
+      end
+  else
+    Clear;
+end;
+
+procedure TGLiteHashMultiSetLP.SymmetricSubtract(aSet: TGLiteHashMultiSetLP);
+var
+  p, ps: PEntry;
+  Pos: SizeInt;
+begin
+  if @aSet <> @Self then
+    for ps in aSet.FTable do
+      begin
+        if FTable.FindOrAdd(ps^.Key, p, Pos) then
+          begin
+            if p^.Count > ps^.Count then
+              begin
+                FCount -= ps^.Count;
+                p^.Count -= ps^.Count;
+              end
+            else
+              if p^.Count < ps^.Count then
+                begin
+                 {$PUSH}{$Q+}
+                  FCount -= p^.Count shl 1 - ps^.Count;
+                 {$POP}
+                  p^.Count := ps^.Count - p^.Count;
+                end
+              else  // counts equals
+                begin
+                  FCount -= p^.Count;
+                  FTable.RemoveAt(Pos);
+                end;
+          end
+        else
+          begin
+            p^.Key := ps^.Key;
+            p^.Count := ps^.Count;
+            {$PUSH}{$Q+}
+            FCount += ps^.Count;
+            {$POP}
+          end;
+      end
+  else
+    Clear;
+end;
+
+function TGLiteHashMultiSetLP.Distinct: TDistinct;
+begin
+  Result.Init(@Self);
+end;
+
+function TGLiteHashMultiSetLP.Entries: TEntries;
+begin
+  Result.Init(@Self);
 end;
 
 end.

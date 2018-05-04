@@ -374,8 +374,8 @@ type
     private
       FEnum: TTableLP.TEnumerator;
       function  GetCurrent: T; inline;
-    public
       procedure Init(constref aSet: TGLiteHashSetLP); inline;
+    public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -1463,7 +1463,6 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TNestTest): SizeInt;
 begin
   RemoveIfMacro;
-  {$UNDEF RemoveIfMacro}
 end;
 
 function TGLiteHashSetLP.Extract(constref aValue: T): Boolean;
@@ -1509,7 +1508,6 @@ var
   v: T;
 begin
   ExtractIfMacro;
-  {$UNDEF ExtractIfMacro}
 end;
 {$POP}
 

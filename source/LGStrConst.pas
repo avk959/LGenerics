@@ -39,7 +39,8 @@ resourcestring
   SEKeyNotFound            = 'Key not found';
   SEValueNotFound          = 'Value not found';
   SEUnknownSortAlgoFmt     = 'Unknown sort algprithm(%u)';
-  SECantAcceptNegValueFmt  = 'The %s''s %s can not accept negative value';
+  SECantAcceptNegCountFmt  = 'The %s''s TEntry.Count can not accept negative value';
+  SECantAcceptNegCount     = 'Can not accept negative TEntry.Count value';
   SEInternalDataInconsist  = 'Internal data inconsistency';
   SEValueAlreadyExist      = 'Value already exists';
   SEKeyAlreadyExist        = 'Key already exists';

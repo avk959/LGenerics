@@ -431,6 +431,7 @@ type
     function  ContainsAny(e: IKeyEnumerable): Boolean;
     function  ContainsAll(constref a: array of TKey): Boolean;
     function  ContainsAll(e: IKeyEnumerable): Boolean;
+  { returns True if entry removed }
     function  Remove(constref aKey: TKey): Boolean; inline;
     function  RemoveAll(constref a: array of TKey): SizeInt;
     function  RemoveAll(e: IKeyEnumerable): SizeInt;
