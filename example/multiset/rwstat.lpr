@@ -35,6 +35,9 @@ var
   OutFileName: string = 'stdout';
   InFileNames: TStringArray = nil;
   AllowModifiers: Boolean = False;
+  InputText: specialize TGAutoRef<TTextFileReader>;
+  Counter: specialize TGAutoRef<TCounter>;
+  Dict: specialize TGAutoRef<TDictionary>;
 
 function ParamsFound: Boolean;
 var
@@ -68,9 +71,6 @@ var
     Result := -SizeInt.Compare(L.Count, R.Count);
   end;
 var
-  InputText: specialize TGAutoRef<TTextFileReader>;
-  Counter: specialize TGAutoRef<TCounter>;
-  Dict: specialize TGAutoRef<TDictionary>;
   FileName, CurrLine: string;
   Item: TCountItem;
 begin
