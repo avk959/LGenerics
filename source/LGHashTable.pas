@@ -674,8 +674,9 @@ type
       Data: T;
     end;
 
-    TNodeList = array of TNode;
-    THashList = array of SizeInt;
+    TNodeList     = array of TNode;
+    THashList     = array of SizeInt;
+    PLiteHashList = ^TGLiteHashList;
 
   const
     NULL_INDEX  = SizeInt(-1);
@@ -683,7 +684,46 @@ type
     NODE_SIZE   = SizeOf(TNode);
     MAX_CAPACITY: SizeInt  = MAX_SIZE div NODE_SIZE;
 
-  var
+  public
+  type
+    IEnumerable = specialize IGEnumerable<T>;
+    TArray      = array of T;
+
+    TEnumerator = record
+    private
+      FList: TNodeList;
+      FLastIndex,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aList: TGLiteHashList);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FList: TNodeList;
+      FCount,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aList: TGLiteHashList);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TReverse = record
+    private
+      FList: PLiteHashList;
+      procedure Init(aList: PLiteHashList); inline;
+    public
+      function  GetEnumerator: TReverseEnumerator; inline;
+    end;
+
+  private
     FNodeList: TNodeList;
     FHashList: THashList;
     FCount: SizeInt;
@@ -699,7 +739,9 @@ type
     function  DoAdd(constref aValue: T): SizeInt;
     procedure DoInsert(aIndex: SizeInt; constref aValue: T);
     procedure DoDelete(aIndex: SizeInt);
+    procedure RemoveFromChain(aIndex: SizeInt);
     function  DoRemove(constref aValue: T): Boolean;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  IndexInRange(aIndex: SizeInt): Boolean; inline;
     function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
@@ -712,9 +754,9 @@ type
     class operator Finalize(var hl: TGLiteHashList);
     class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
   public
-  type
-    IEnumerable = specialize IGEnumerable<T>;
-
+    function  GetEnumerator: TEnumerator;
+    function  ToArray: TArray;
+    function  Reverse: TReverse;
     procedure Clear;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -3062,6 +3104,68 @@ begin
     DoRemove(aPos);
 end;
 
+{ TGLiteHashList.TEnumerator }
+
+function TGLiteHashList.TEnumerator.GetCurrent: T;
+begin
+  Result := FList[FCurrIndex].Data;
+end;
+
+procedure TGLiteHashList.TEnumerator.Init(constref aList: TGLiteHashList);
+begin
+  FList := aList.FNodeList;
+  FLastIndex := System.High(FList);
+  FCurrIndex := -1;
+end;
+
+function TGLiteHashList.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteHashList.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGLiteHashList.TReverseEnumerator }
+
+function TGLiteHashList.TReverseEnumerator.GetCurrent: T;
+begin
+  Result := FList[FCurrIndex].Data;
+end;
+
+procedure TGLiteHashList.TReverseEnumerator.Init(constref aList: TGLiteHashList);
+begin
+  FList := aList.FNodeList;
+  FCount := aList.Count;
+  FCurrIndex := FCount;
+end;
+
+function TGLiteHashList.TReverseEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex > 0;
+  FCurrIndex -= Ord(Result);
+end;
+
+procedure TGLiteHashList.TReverseEnumerator.Reset;
+begin
+  FCurrIndex := FCount;
+end;
+
+{ TGLiteHashList.TReverse }
+
+procedure TGLiteHashList.TReverse.Init(aList: PLiteHashList);
+begin
+  FList := aList;
+end;
+
+function TGLiteHashList.TReverse.GetEnumerator: TReverseEnumerator;
+begin
+  Result := FList^.GetReverseEnumerator;
+end;
+
 { TGLiteHashList }
 
 function TGLiteHashList.GetCapacity: SizeInt;
@@ -3076,9 +3180,19 @@ begin
 end;
 
 procedure TGLiteHashList.SetItem(aIndex: SizeInt; const aValue: T);
+var
+  I: SizeInt;
 begin
   CheckIndexRange(aIndex);
-
+  if TEqRel.Equal(aValue, FNodeList[aIndex].Data) then
+    exit;
+  RemoveFromChain(aIndex);
+  //add to new chain
+  FNodeList[aIndex].Data := aValue;
+  FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
+  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  FNodeList[aIndex].Next := FHashList[I];
+  FHashList[I] := aIndex;
 end;
 
 procedure TGLiteHashList.InitialAlloc;
@@ -3086,7 +3200,7 @@ begin
   if Capacity = 0 then
     begin
       System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
-      FHashList:= NewHashList(DEFAULT_CONTAINER_CAPACITY);
+      FHashList := NewHashList(DEFAULT_CONTAINER_CAPACITY);
     end;
 end;
 
@@ -3104,8 +3218,6 @@ begin
 end;
 
 procedure TGLiteHashList.Resize(aNewCapacity: SizeInt);
-var
-  NewList: THashList;
 begin
   System.SetLength(FNodeList, aNewCapacity);
   FHashList := NewHashList(aNewCapacity);
@@ -3190,6 +3302,28 @@ begin
   Rehash;
 end;
 
+procedure TGLiteHashList.RemoveFromChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  Curr := FHashList[I];
+  Prev := NULL_INDEX;
+  while Curr <> aIndex do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev <> NULL_INDEX then
+            FNodeList[Prev].Next := FNodeList[Curr].Next
+          else
+            FHashList[I] := FNodeList[Curr].Next;
+        end
+      else
+        Prev := Curr;
+      Curr := FNodeList[Curr].Next;
+    end;
+end;
+
 function TGLiteHashList.DoRemove(constref aValue: T): Boolean;
 var
   Removed: SizeInt;
@@ -3198,6 +3332,11 @@ begin
   Result := Removed >= 0;
   if Result then
     DoDelete(Removed);
+end;
+
+function TGLiteHashList.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result.Init(Self);
 end;
 
 function TGLiteHashList.IndexInRange(aIndex: SizeInt): Boolean;
@@ -3259,6 +3398,21 @@ class operator TGLiteHashList.Copy(constref aSrc: TGLiteHashList; var aDst: TGLi
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList);
   aDst.FHashList := System.Copy(aSrc.FHashList);
+end;
+
+function TGLiteHashList.GetEnumerator: TEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashList.ToArray: TArray;
+begin
+
+end;
+
+function TGLiteHashList.Reverse: TReverse;
+begin
+  Result.Init(@Self);
 end;
 
 procedure TGLiteHashList.Clear;
