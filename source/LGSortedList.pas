@@ -193,6 +193,7 @@ type
   { returns insert index, -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; override;
+    function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
@@ -492,6 +493,7 @@ type
   { returns insert index, -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
+    function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  IndexOf(constref aValue: T): SizeInt; inline;
@@ -1320,7 +1322,12 @@ end;
 
 function TGBaseSortedList.Contains(constref aValue: T): Boolean;
 begin
-  Result := IndexOf(aValue) > -1;
+  Result := IndexOf(aValue) >= 0;
+end;
+
+function TGBaseSortedList.NonContains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) < 0;
 end;
 
 procedure TGBaseSortedList.Delete(aIndex: SizeInt);
@@ -2023,7 +2030,7 @@ end;
 
 function TGSortedListTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
-  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  //sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
   Entry: TEntry;
 begin
   Entry.Key := aKey;
@@ -2064,7 +2071,7 @@ end;
 
 function TGSortedListTable.Add(constref aKey: TKey): PEntry;
 var
-  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  //sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
   Entry: TEntry;
 begin
   Result := nil;
@@ -2542,6 +2549,11 @@ end;
 function TGLiteSortedList.Contains(constref aValue: T): Boolean;
 begin
   Result := IndexOf(aValue) >= 0;
+end;
+
+function TGLiteSortedList.NonContains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) < 0;
 end;
 
 procedure TGLiteSortedList.Delete(aIndex: SizeInt);
