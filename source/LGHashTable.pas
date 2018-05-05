@@ -3309,7 +3309,7 @@ begin
   I := FNodeList[aIndex].Hash and Pred(Capacity);
   Curr := FHashList[I];
   Prev := NULL_INDEX;
-  while Curr <> aIndex do
+  while Curr <> NULL_INDEX do
     begin
       if Curr = aIndex then
         begin
@@ -3317,9 +3317,9 @@ begin
             FNodeList[Prev].Next := FNodeList[Curr].Next
           else
             FHashList[I] := FNodeList[Curr].Next;
-        end
-      else
-        Prev := Curr;
+          exit;
+        end;
+      Prev := Curr;
       Curr := FNodeList[Curr].Next;
     end;
 end;
@@ -3398,6 +3398,7 @@ class operator TGLiteHashList.Copy(constref aSrc: TGLiteHashList; var aDst: TGLi
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList);
   aDst.FHashList := System.Copy(aSrc.FHashList);
+  aDst.FCount := aSrc.FCount;
 end;
 
 function TGLiteHashList.GetEnumerator: TEnumerator;
@@ -3406,8 +3407,12 @@ begin
 end;
 
 function TGLiteHashList.ToArray: TArray;
+var
+  I: SizeInt;
 begin
-
+  System.SetLength(Result, Count);
+  for I := 0 to Pred(Count) do
+    Result[I] := FNodeList[I].Data;
 end;
 
 function TGLiteHashList.Reverse: TReverse;
