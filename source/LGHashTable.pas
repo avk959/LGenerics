@@ -3133,7 +3133,7 @@ end;
 
 function TGLiteHashList.TReverseEnumerator.GetCurrent: T;
 begin
-  Result := FList[FCurrIndex].Data;
+  Result := FList[FCurrIndex].Data;//
 end;
 
 procedure TGLiteHashList.TReverseEnumerator.Init(constref aList: TGLiteHashList);
