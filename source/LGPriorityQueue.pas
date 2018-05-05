@@ -160,10 +160,10 @@ type
     function Comparator: TOnCompare; inline;
   end;
 
-  { TGBaseLiteBinHeap implements maximizing priority queue with queue interface;
+  { TGLiteBinHeap implements maximizing priority queue with queue interface;
       functor TCmpRel (comparision relation) must provide
         class function Compare([const[ref]] L, R: T): SizeInt; }
-  generic TGBaseLiteBinHeap<T, TCmpRel> = record
+  generic TGLiteBinHeap<T, TCmpRel> = record
   public
   type
     TBuffer     = specialize TGLiteDynBuffer<T>;
@@ -212,7 +212,7 @@ type
   generic TGLiteThreadBinHeap<T, TCmpRel> = class
   public
   type
-    TQueue = specialize TGBaseLiteBinHeap<T, TCmpRel>;
+    TQueue = specialize TGLiteBinHeap<T, TCmpRel>;
     PQueue = ^TQueue;
 
   strict private
@@ -1411,14 +1411,14 @@ begin
   Result := FCompare;
 end;
 
-{ TGBaseLiteBinHeap }
+{ TGLiteBinHeap }
 
-function TGBaseLiteBinHeap.GetCapacity: SizeInt;
+function TGLiteBinHeap.GetCapacity: SizeInt;
 begin
   Result := FBuffer.Capacity;
 end;
 
-procedure TGBaseLiteBinHeap.BuildHeap;
+procedure TGLiteBinHeap.BuildHeap;
 var
   I, CurrIdx, NextIdx, HighIdx: SizeInt;
   v: TFake;
@@ -1447,7 +1447,7 @@ begin
     end;
 end;
 
-procedure TGBaseLiteBinHeap.SiftDown;
+procedure TGLiteBinHeap.SiftDown;
 var
   CurrIdx, NextIdx, HighIdx: SizeInt;
   v: TFake;
@@ -1478,7 +1478,7 @@ begin
     end;
 end;
 
-procedure TGBaseLiteBinHeap.FloatUp(aIndex: SizeInt);
+procedure TGLiteBinHeap.FloatUp(aIndex: SizeInt);
 var
   ParentIdx: SizeInt;
   v: TFake;
@@ -1497,7 +1497,7 @@ begin
     end;
 end;
 
-function TGBaseLiteBinHeap.DequeueItem: T;
+function TGLiteBinHeap.DequeueItem: T;
 begin
   Result :=  FBuffer.FItems[0];
   Dec(FBuffer.FCount);
@@ -1511,91 +1511,91 @@ begin
     FBuffer.FItems[0] := Default(T);
 end;
 
-class function TGBaseLiteBinHeap.DoCompare(constref L, R: T): SizeInt;
+class function TGLiteBinHeap.DoCompare(constref L, R: T): SizeInt;
 begin
   Result := TCmpRel.Compare(L, R);
 end;
 
-function TGBaseLiteBinHeap.Comparator: TComparator;
+function TGLiteBinHeap.Comparator: TComparator;
 begin
   Result := @DoCompare;
 end;
 
-function TGBaseLiteBinHeap.GetEnumerator: TEnumerator;
+function TGLiteBinHeap.GetEnumerator: TEnumerator;
 begin
   Result := FBuffer.GetEnumerator;
 end;
 
-function TGBaseLiteBinHeap.Mutable: TMutable;
+function TGLiteBinHeap.Mutable: TMutable;
 begin
   Result := FBuffer.Mutable;
 end;
 
-function TGBaseLiteBinHeap.Reverse: TReverse;
+function TGLiteBinHeap.Reverse: TReverse;
 begin
   Result := FBuffer.Reverse;
 end;
 
-function TGBaseLiteBinHeap.ToArray: TArray;
+function TGLiteBinHeap.ToArray: TArray;
 begin
   Result := FBuffer.ToArray;
 end;
 
-procedure TGBaseLiteBinHeap.Clear;
+procedure TGLiteBinHeap.Clear;
 begin
   FBuffer.Clear;
 end;
 
-procedure TGBaseLiteBinHeap.Modified;
+procedure TGLiteBinHeap.Modified;
 begin
   BuildHeap;
 end;
 
-function TGBaseLiteBinHeap.IsEmpty: Boolean;
+function TGLiteBinHeap.IsEmpty: Boolean;
 begin
   Result := FBuffer.Count = 0;
 end;
 
-function TGBaseLiteBinHeap.NonEmpty: Boolean;
+function TGLiteBinHeap.NonEmpty: Boolean;
 begin
   Result := FBuffer.Count <> 0;
 end;
 
-procedure TGBaseLiteBinHeap.EnsureCapacity(aValue: SizeInt);
+procedure TGLiteBinHeap.EnsureCapacity(aValue: SizeInt);
 begin
   FBuffer.EnsureCapacity(aValue);
 end;
 
-procedure TGBaseLiteBinHeap.TrimToFit;
+procedure TGLiteBinHeap.TrimToFit;
 begin
   FBuffer.TrimToFit;
 end;
 
-procedure TGBaseLiteBinHeap.Enqueue(constref aValue: T);
+procedure TGLiteBinHeap.Enqueue(constref aValue: T);
 begin
   FloatUp(FBuffer.PushLast(aValue));
 end;
 
-function TGBaseLiteBinHeap.Dequeue: T;
+function TGLiteBinHeap.Dequeue: T;
 begin
   FBuffer.CheckEmpty;
   Result := DequeueItem;
 end;
 
-function TGBaseLiteBinHeap.TryDequeue(out aValue: T): Boolean;
+function TGLiteBinHeap.TryDequeue(out aValue: T): Boolean;
 begin
   Result := NonEmpty;
   if Result then
     aValue := DequeueItem;
 end;
 
-function TGBaseLiteBinHeap.Peek: T;
+function TGLiteBinHeap.Peek: T;
 begin
   FBuffer.CheckEmpty;
   Result := FBuffer.FItems[0];
 end;
 
-function TGBaseLiteBinHeap.TryPeek(out aValue: T): Boolean;
+function TGLiteBinHeap.TryPeek(out aValue: T): Boolean;
 begin
   Result := NonEmpty;
   if Result then
