@@ -38,7 +38,9 @@ uses
 
 type
 
-  { TGBaseSortedList is always sorted ascending }
+  { TGBaseSortedList is always sorted ascending;
+      functor TCmpRel(column equality relation) must provide:
+        class function Compare([const[ref]] L, R: TCol): SizeInt; }
   generic TGBaseSortedList<T, TCmpRel> = class(specialize TGCustomCollection<T>)
   protected
   const
@@ -255,7 +257,7 @@ type
     property OwnsObjects: Boolean read FOwnsObects write FOwnsObects;
   end;
 
-  { TGObjSortedList assumes that TObject type T implements TCmpRel}
+  { TGObjSortedList uses comparator from LGHelpers }
   generic TGObjSortedList<T> = class(specialize TGObjectSortedList<T, T>);
 
   { TGSortedList2: minimalistic sorted list }
@@ -382,8 +384,9 @@ type
     property  AllowDuplicates: Boolean read FAllowDuplicates;
   end;
 
-  { TGLiteSortedList }
-
+  { TGLiteSortedList is always sorted ascending;
+      functor TCmpRel(column equality relation) must provide:
+        class function Compare([const[ref]] L, R: TCol): SizeInt; }
   generic TGLiteSortedList<T, TCmpRel> = record
   private
   type
@@ -522,8 +525,8 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
   end;
 
-  { TGLiteComparableSortedList }
-
+  { TGLiteComparableSortedList is always sorted ascending;
+    it assumes that type T has implemented comparision operators }
   generic TGLiteComparableSortedList<T> = record
   private
   type
