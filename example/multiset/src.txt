@@ -23814,11 +23814,7 @@ type
   generic TGLiteHashMultiSetLP<T, TEqRel> = record
   public
   type
-    TEntry = record
-      Key: T;
-      Count: SizeInt;
-    end;
-
+    TEntry      = specialize TGMultiSetEntry<T>;
     IEnumerable = specialize IGEnumerable<T>;
     ICollection = specialize IGCollection<T>;
     TTest       = specialize TGTest<T>;
@@ -23830,8 +23826,7 @@ type
   private
   type
     TTableLP  = specialize TGLiteHashTableLP<T, TEntry, TEqRel>;
-    TMultiSet = TGLiteHashMultiSetLP;
-    PMultiSet = ^TMultiSet;
+    PMultiSet = ^TGLiteHashMultiSetLP;
     PEntry    = ^TEntry;
 
   public
@@ -23867,7 +23862,7 @@ type
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
-      property  Current: T read GetCurrent;
+      property  Current: TEntry read GetCurrent;
     end;
 
     TDistinct = record
@@ -23965,8 +23960,8 @@ type
     of that key in aSet; the multiplicity of a key will become equal to absolute value of difference
     of the multiplicities of a key in self and aSet }
     procedure SymmetricSubtract(aSet: TGLiteHashMultiSetLP);
-    function  Distinct: TDistinct; inline;
-    function  Entries: TEntries; inline;
+    //function  Distinct: TDistinct; inline;
+    //function  Entries: TEntries; inline;
     property  Count: SizeInt read FCount;
   { returs number of distinct keys }
     property  EntryCount: SizeInt read GetEntryCount; //dimension, Count - cardinality
@@ -25308,12 +25303,12 @@ end;
 
 function TGLiteHashMultiSetLP.Intersecting(aSet: TGLiteHashMultiSetLP): Boolean;
 var
-  v: T;
+  p: PEntry;
 begin
   if @aSet <> @Self then
     begin
-      for v in aSet.Distinct do
-        if Contains(v) then
+      for p in FTable do
+        if aSet.Contains(p^.Key) then
           exit(True);
       Result := False;
     end
@@ -25464,15 +25459,15 @@ begin
     Clear;
 end;
 
-function TGLiteHashMultiSetLP.Distinct: TDistinct;
-begin
-  Result.Init(@Self);
-end;
-
-function TGLiteHashMultiSetLP.Entries: TEntries;
-begin
-  Result.Init(@Self);
-end;
+//function TGLiteHashMultiSetLP.Distinct: TDistinct;
+//begin
+//  Result.Init(@Self);
+//end;
+//
+//function TGLiteHashMultiSetLP.Entries: TEntries;
+//begin
+//  Result.Init(@Self);
+//end;
 
 end.
 
@@ -27749,10 +27744,126 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  Size: SizeInt read GetSize;
+    property  Size: SizeInt read GetSize; //todo: Split(predicate): TGLiteHashTableLP; ???
   end;
 
-implementation  //todo: Split(predicate): TGLiteHashTableLP; ???
+  { TGLiteHashList: node based hash table with alter access by index(or vice versa);
+      functor TEqRel(equality relation) must provide:
+        class function HashCode([const[ref]] aValue: T): SizeInt;
+        class function Equal([const[ref]] L, R: T): Boolean; }
+  generic TGLiteHashList<T, TEqRel> = record
+  private
+  type
+    TNode = record
+      Hash,
+      Next: SizeInt;
+      Data: T;
+    end;
+
+    TNodeList     = array of TNode;
+    THashList     = array of SizeInt;
+    PLiteHashList = ^TGLiteHashList;
+
+  const
+    NULL_INDEX  = SizeInt(-1);
+    MAX_SIZE    = Succ(High(SizeInt) shr 1);
+    NODE_SIZE   = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = MAX_SIZE div NODE_SIZE;
+
+  public
+  type
+    IEnumerable = specialize IGEnumerable<T>;
+    TArray      = array of T;
+
+    TEnumerator = record
+    private
+      FList: TNodeList;
+      FLastIndex,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aList: TGLiteHashList);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FList: TNodeList;
+      FCount,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aList: TGLiteHashList);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TReverse = record
+    private
+      FList: PLiteHashList;
+      procedure Init(aList: PLiteHashList); inline;
+    public
+      function  GetEnumerator: TReverseEnumerator; inline;
+    end;
+
+  private
+    FNodeList: TNodeList;
+    FHashList: THashList;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    function  GetItem(aIndex: SizeInt): T;
+    procedure SetItem(aIndex: SizeInt; const aValue: T);
+    procedure InitialAlloc; inline;
+    procedure Rehash;
+    procedure Resize(aNewCapacity: SizeInt);
+    procedure Expand;
+    function  Find(constref aValue: T): SizeInt;
+    function  GetCount(constref aValue: T): SizeInt;
+    function  DoAdd(constref aValue: T): SizeInt;
+    procedure DoInsert(aIndex: SizeInt; constref aValue: T);
+    procedure DoDelete(aIndex: SizeInt);
+    procedure RemoveFromChain(aIndex: SizeInt);
+    function  DoRemove(constref aValue: T): Boolean;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
+    function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
+    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
+    class constructor Init;
+    class function  NewHashList(aCapacity: SizeInt): THashList; static; inline;
+    class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
+    class procedure CapacityExceedError(aValue: SizeInt); static; inline;
+    class operator Initialize(var hl: TGLiteHashList);
+    class operator Finalize(var hl: TGLiteHashList);
+    class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
+  public
+    function  GetEnumerator: TEnumerator;
+    function  ToArray: TArray;
+    function  Reverse: TReverse;
+    procedure Clear;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure TrimToFit;
+    function  Contains(constref aValue: T): Boolean; inline;
+    function  NonContains(constref aValue: T): Boolean; inline;
+    function  IndexOf(constref aValue: T): SizeInt; inline;
+    function  CountOf(constref aValue: T): SizeInt; inline;
+    function  Add(constref aValue: T): SizeInt; inline;
+    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(e: IEnumerable): SizeInt;
+    procedure Insert(aIndex: SizeInt; constref aValue: T); inline;
+    procedure Delete(aIndex: SizeInt); inline;
+    function  Remove(constref aValue: T): Boolean; inline;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+  end;
+
+implementation
 {$Q-}{$B-}{$COPERATORS ON}
 
 { TGCustomHashTable }
@@ -30077,6 +30188,439 @@ procedure TGLiteHashTableLP.RemoveAt(constref aPos: SizeInt);
 begin
   if (aPos >= 0) and (aPos <= System.High(FList)) then
     DoRemove(aPos);
+end;
+
+{ TGLiteHashList.TEnumerator }
+
+function TGLiteHashList.TEnumerator.GetCurrent: T;
+begin
+  Result := FList[FCurrIndex].Data;
+end;
+
+procedure TGLiteHashList.TEnumerator.Init(constref aList: TGLiteHashList);
+begin
+  FList := aList.FNodeList;
+  FLastIndex := System.High(FList);
+  FCurrIndex := -1;
+end;
+
+function TGLiteHashList.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteHashList.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGLiteHashList.TReverseEnumerator }
+
+function TGLiteHashList.TReverseEnumerator.GetCurrent: T;
+begin
+  Result := FList[FCurrIndex].Data;
+end;
+
+procedure TGLiteHashList.TReverseEnumerator.Init(constref aList: TGLiteHashList);
+begin
+  FList := aList.FNodeList;
+  FCount := aList.Count;
+  FCurrIndex := FCount;
+end;
+
+function TGLiteHashList.TReverseEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex > 0;
+  FCurrIndex -= Ord(Result);
+end;
+
+procedure TGLiteHashList.TReverseEnumerator.Reset;
+begin
+  FCurrIndex := FCount;
+end;
+
+{ TGLiteHashList.TReverse }
+
+procedure TGLiteHashList.TReverse.Init(aList: PLiteHashList);
+begin
+  FList := aList;
+end;
+
+function TGLiteHashList.TReverse.GetEnumerator: TReverseEnumerator;
+begin
+  Result := FList^.GetReverseEnumerator;
+end;
+
+{ TGLiteHashList }
+
+function TGLiteHashList.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+function TGLiteHashList.GetItem(aIndex: SizeInt): T;
+begin
+  CheckIndexRange(aIndex);
+  Result := FNodeList[aIndex].Data;
+end;
+
+procedure TGLiteHashList.SetItem(aIndex: SizeInt; const aValue: T);
+var
+  I: SizeInt;
+begin
+  CheckIndexRange(aIndex);
+  if TEqRel.Equal(aValue, FNodeList[aIndex].Data) then
+    exit;
+  RemoveFromChain(aIndex);
+  //add to new chain
+  FNodeList[aIndex].Data := aValue;
+  FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
+  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  FNodeList[aIndex].Next := FHashList[I];
+  FHashList[I] := aIndex;
+end;
+
+procedure TGLiteHashList.InitialAlloc;
+begin
+  if Capacity = 0 then
+    begin
+      System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
+      FHashList := NewHashList(DEFAULT_CONTAINER_CAPACITY);
+    end;
+end;
+
+procedure TGLiteHashList.Rehash;
+var
+  I, J, Mask: SizeInt;
+begin
+  Mask := Pred(Capacity);
+  for I := 0 to Pred(Count) do
+    begin
+      J := FNodeList[I].Hash and Mask;
+      FNodeList[I].Next := FHashList[J];
+      FHashList[J] := I;
+    end;
+end;
+
+procedure TGLiteHashList.Resize(aNewCapacity: SizeInt);
+begin
+  System.SetLength(FNodeList, aNewCapacity);
+  FHashList := NewHashList(aNewCapacity);
+  Rehash;
+end;
+
+procedure TGLiteHashList.Expand;
+var
+  NewSize, OldSize: SizeInt;
+begin
+  OldSize := Capacity;
+  if OldSize > 0 then
+    begin
+      NewSize := Math.Min(MAX_CAPACITY, OldSize shl 1);
+      if NewSize > OldSize then
+        Resize(NewSize);
+    end
+  else
+    InitialAlloc;
+end;
+
+function TGLiteHashList.Find(constref aValue: T): SizeInt;
+var
+  h, I: SizeInt;
+begin
+  h := TEqRel.HashCode(aValue);
+  I := FHashList[h and Pred(Capacity)];
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = h) and TEqRel.Equal(FNodeList[I].Data, aValue) then
+        exit(I);
+      I := FNodeList[I].Next;
+    end;
+  Result := NULL_INDEX;
+end;
+
+function TGLiteHashList.GetCount(constref aValue: T): SizeInt;
+var
+  h, I: SizeInt;
+begin
+  h := TEqRel.HashCode(aValue);
+  I := FHashList[h and Pred(Capacity)];
+  Result := 0;
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = h) and TEqRel.Equal(FNodeList[I].Data, aValue) then
+        Inc(Result);
+      I := FNodeList[I].Next;
+    end;
+end;
+
+function TGLiteHashList.DoAdd(constref aValue: T): SizeInt;
+var
+  I: SizeInt;
+begin
+  FNodeList[Count].Hash := TEqRel.HashCode(aValue);
+  I := FNodeList[Count].Hash and Pred(Capacity);
+  FNodeList[Count].Data := aValue;
+  FNodeList[Count].Next := FHashList[I];
+  FHashList[I] := Count;
+  Inc(FCount);
+end;
+
+procedure TGLiteHashList.DoInsert(aIndex: SizeInt; constref aValue: T);
+begin
+  System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * NODE_SIZE);
+  System.FillChar(FNodeList[aIndex].Data, SizeOf(T), 0);
+  FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
+  FNodeList[aIndex].Data := aValue;
+  Inc(FCount);
+  System.FillChar(FHashList[0], Capacity * SizeOf(SizeInt), $ff);
+  Rehash;
+end;
+
+procedure TGLiteHashList.DoDelete(aIndex: SizeInt);
+begin
+  Dec(FCount);
+  FNodeList[aIndex].Data := Default(T);
+  System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * NODE_SIZE);
+  System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
+  System.FillChar(FHashList[0], Capacity * SizeOf(SizeInt), $ff);
+  Rehash;
+end;
+
+procedure TGLiteHashList.RemoveFromChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  Curr := FHashList[I];
+  Prev := NULL_INDEX;
+  while Curr <> aIndex do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev <> NULL_INDEX then
+            FNodeList[Prev].Next := FNodeList[Curr].Next
+          else
+            FHashList[I] := FNodeList[Curr].Next;
+        end
+      else
+        Prev := Curr;
+      Curr := FNodeList[Curr].Next;
+    end;
+end;
+
+function TGLiteHashList.DoRemove(constref aValue: T): Boolean;
+var
+  Removed: SizeInt;
+begin
+  Removed := Find(aValue);
+  Result := Removed >= 0;
+  if Result then
+    DoDelete(Removed);
+end;
+
+function TGLiteHashList.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashList.IndexInRange(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex < Count);
+end;
+
+function TGLiteHashList.IndexInInsertRange(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex <= Count);
+end;
+
+procedure TGLiteHashList.CheckIndexRange(aIndex: SizeInt);
+begin
+  if not IndexInRange(aIndex) then
+    IndexOutOfBoundError(aIndex);
+end;
+
+procedure TGLiteHashList.CheckInsertIndexRange(aIndex: SizeInt);
+begin
+  if not IndexInInsertRange(aIndex) then
+    IndexOutOfBoundError(aIndex);
+end;
+
+class constructor TGLiteHashList.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
+class function TGLiteHashList.NewHashList(aCapacity: SizeInt): THashList;
+begin
+  System.SetLength(Result, aCapacity);
+  System.FillChar(Result[0], aCapacity * SizeOf(SizeInt), $ff);
+end;
+
+class procedure TGLiteHashList.IndexOutOfBoundError(aIndex: SizeInt);
+begin
+  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+class procedure TGLiteHashList.CapacityExceedError(aValue: SizeInt);
+begin
+  raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+end;
+
+class operator TGLiteHashList.Initialize(var hl: TGLiteHashList);
+begin
+  hl.FCount := 0;
+end;
+
+class operator TGLiteHashList.Finalize(var hl: TGLiteHashList);
+begin
+  hl.Clear;
+end;
+
+class operator TGLiteHashList.Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
+begin
+  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FHashList := System.Copy(aSrc.FHashList);
+end;
+
+function TGLiteHashList.GetEnumerator: TEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashList.ToArray: TArray;
+begin
+
+end;
+
+function TGLiteHashList.Reverse: TReverse;
+begin
+  Result.Init(@Self);
+end;
+
+procedure TGLiteHashList.Clear;
+begin
+  FNodeList := nil;
+  FHashList := nil;
+  FCount := 0;
+end;
+
+function TGLiteHashList.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGLiteHashList.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGLiteHashList.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue <= Capacity then
+    exit;
+  if aValue <= DEFAULT_CONTAINER_CAPACITY then
+    aValue := DEFAULT_CONTAINER_CAPACITY
+  else
+    if aValue < MAX_CAPACITY then
+      aValue := LGUtils.RoundUpTwoPower(aValue)
+    else
+      CapacityExceedError(aValue);
+  Resize(aValue);
+end;
+
+procedure TGLiteHashList.TrimToFit;
+var
+  NewSize: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      NewSize := LGUtils.RoundUpTwoPower(Count);
+      if NewSize < Capacity then
+        Resize(NewSize);
+    end
+  else
+    Clear;
+end;
+
+function TGLiteHashList.Contains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) >= 0;
+end;
+
+function TGLiteHashList.NonContains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) < 0;
+end;
+
+function TGLiteHashList.IndexOf(constref aValue: T): SizeInt;
+begin
+  if NonEmpty then
+    Result := Find(aValue)
+  else
+    Result := NULL_INDEX;
+end;
+
+function TGLiteHashList.CountOf(constref aValue: T): SizeInt;
+begin
+  if NonEmpty then
+    Result := GetCount(aValue)
+  else
+    Result := 0;
+end;
+
+function TGLiteHashList.Add(constref aValue: T): SizeInt;
+begin
+  if Count = Capacity then
+    Expand;
+  Result := DoAdd(aValue);
+end;
+
+function TGLiteHashList.AddAll(constref a: array of T): SizeInt;
+var
+  v: T;
+begin
+  Result := System.Length(a);
+  EnsureCapacity(Count + Result);
+  for v in a do
+    DoAdd(v);
+end;
+
+function TGLiteHashList.AddAll(e: IEnumerable): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in e do
+    begin
+      Add(v);
+      Inc(Result);
+    end;
+end;
+
+procedure TGLiteHashList.Insert(aIndex: SizeInt; constref aValue: T);
+begin
+  CheckInsertIndexRange(aIndex);
+  if Count = Capacity then
+    Expand;
+  DoInsert(aIndex, aValue);
+end;
+
+procedure TGLiteHashList.Delete(aIndex: SizeInt);
+begin
+  CheckIndexRange(aIndex);
+  DoDelete(aIndex);
+end;
+
+function TGLiteHashList.Remove(constref aValue: T): Boolean;
+begin
+  if NonEmpty then
+    Result := DoRemove(aValue)
+  else
+    Result := False;
 end;
 
 end.
@@ -43466,7 +44010,9 @@ uses
 
 type
 
-  { TGBaseSortedList is always sorted ascending }
+  { TGBaseSortedList is always sorted ascending;
+      functor TCmpRel(column equality relation) must provide:
+        class function Compare([const[ref]] L, R: TCol): SizeInt; }
   generic TGBaseSortedList<T, TCmpRel> = class(specialize TGCustomCollection<T>)
   protected
   const
@@ -43621,6 +44167,7 @@ type
   { returns insert index, -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; override;
+    function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
@@ -43682,7 +44229,7 @@ type
     property OwnsObjects: Boolean read FOwnsObects write FOwnsObects;
   end;
 
-  { TGObjSortedList assumes that TObject type T implements TCmpRel}
+  { TGObjSortedList uses comparator from LGHelpers }
   generic TGObjSortedList<T> = class(specialize TGObjectSortedList<T, T>);
 
   { TGSortedList2: minimalistic sorted list }
@@ -43809,8 +44356,9 @@ type
     property  AllowDuplicates: Boolean read FAllowDuplicates;
   end;
 
-  { TGLiteSortedList }
-
+  { TGLiteSortedList is always sorted ascending;
+      functor TCmpRel(column equality relation) must provide:
+        class function Compare([const[ref]] L, R: TCol): SizeInt; }
   generic TGLiteSortedList<T, TCmpRel> = record
   private
   type
@@ -43920,6 +44468,7 @@ type
   { returns insert index, -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
+    function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  IndexOf(constref aValue: T): SizeInt; inline;
@@ -43942,6 +44491,148 @@ type
     function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGLiteSortedList;
     function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGLiteSortedList;
     function  SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteSortedList;
+    property  Count: SizeInt read FBuffer.FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  RejectDuplicates: Boolean read FRejectDuplicates write SetRejectDuplicates;
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+  end;
+
+  { TGLiteComparableSortedList is always sorted ascending;
+    it assumes that type T has implemented comparision operators }
+  generic TGLiteComparableSortedList<T> = record
+  private
+  type
+    TBuffer     = specialize TGLiteDynBuffer<T>;
+    THelper     = specialize TGComparableArrayHelper<T>;
+    TSortedList = TGLiteComparableSortedList;
+    PSortedList = ^TSortedList;
+
+  public
+  type
+    TEnumerator = TBuffer.TEnumerator;
+    TReverse    = TBuffer.TReverse;
+    PItem       = TBuffer.PItem;
+    TArray      = TBuffer.TArray;
+
+    THeadEnumerator = record
+    private
+      FItems: TArray;
+      FCurrIndex,
+      FLast: SizeInt;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aList: TSortedList; aLastIndex: SizeInt); inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    THead = record
+    private
+      FList: PSortedList;
+      FHighBound: SizeInt;
+      procedure Init(aList: PSortedList; aHighBound: SizeInt); inline;
+    public
+      function GetEnumerator: THeadEnumerator; inline;
+    end;
+
+    TTailEnumerator = record
+    private
+      FItems: TArray;
+      FCurrIndex,
+      FStart,
+      FLast: SizeInt;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aList: TSortedList; aStartIndex: SizeInt);
+      procedure Init(constref aList: TSortedList; aStartIndex, aLastIndex: SizeInt);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TTail = record
+    private
+      FList: PSortedList;
+      FLowBound: SizeInt;
+      procedure Init(aList: PSortedList; aLowBound: SizeInt); inline;
+    public
+      function GetEnumerator: TTailEnumerator;
+    end;
+
+    TRange = record
+    private
+      FList: PSortedList;
+      FLowBound,
+      FHighBound: SizeInt;
+      procedure Init(aList: PSortedList; aLowBound, aHighBound: SizeInt); inline;
+    public
+      function GetEnumerator: TTailEnumerator;
+    end;
+
+  private
+    FBuffer: TBuffer;
+    FRejectDuplicates: Boolean;
+    function  GetCapacity: SizeInt; inline;
+    function  GetItem(aIndex: SizeInt): T; inline;
+    procedure SetItem(aIndex: SizeInt; aValue: T);
+    procedure DoSetItem(aIndex: SizeInt; const aValue: T);
+    procedure InsertItem(aIndex: SizeInt; constref aValue: T);
+    function  ExtractItem(aIndex: SizeInt): T;
+    function  DeleteItem(aIndex: SizeInt): T; inline;
+    procedure RemoveDuplicates;
+    procedure SetRejectDuplicates(aValue: Boolean);
+    function  NearestLT(constref aValue: T): SizeInt;
+    function  RightmostLE(constref aValue: T): SizeInt;
+    function  NearestGT(constref aValue: T): SizeInt;
+    function  LeftmostGE(constref aValue: T): SizeInt;
+    function  SelectDistinctArray(constref a: array of T): TArray;
+    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
+    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
+    function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator; inline;
+    function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator; inline;
+    function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator; inline;
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    function  Reverse: TReverse; inline;
+    function  ToArray: TArray; inline;
+    procedure Clear; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit; inline;
+    function  FindMin(out aValue: T): Boolean;
+    function  FindMax(out aValue: T): Boolean;
+    function  Add(constref aValue: T): Boolean;
+    function  AddAll(constref a: array of T): SizeInt;
+  { returns insert index, -1 if element is not inserted }
+    function  Insert(constref aValue: T): SizeInt;
+    function  Contains(constref aValue: T): Boolean; inline;
+    function  NonContains(constref aValue: T): Boolean; inline;
+    procedure Delete(aIndex: SizeInt);
+    function  TryDelete(aIndex: SizeInt): Boolean;
+    function  IndexOf(constref aValue: T): SizeInt; inline;
+  { returns index of leftest occurrence of aValue, -1 if there are no such element }
+    function  FirstIndexOf(constref aValue: T): SizeInt;
+  { returns count of occurrences of aValue, 0 if there are no such element }
+    function  CountOf(constref aValue: T): SizeInt;
+  { returns index of element whose value greater then or equal to aValue (depend on aInclusive);
+    returns -1 if there are no such element }
+    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean): SizeInt; inline;
+  { returns index of element whose value less then aBound (or equal to aValue depend on aInclusive);
+    returns -1 if there are no such element }
+    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt; inline;
+  { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
+    function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
+  { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
+    function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail;
+  { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
+    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
+    function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGLiteComparableSortedList;
+    function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGLiteComparableSortedList;
+    function  SubList(constref aLowBound, aHighBound: T;
+              aIncludeBounds: TRangeBounds = [rbLow]): TGLiteComparableSortedList;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  RejectDuplicates: Boolean read FRejectDuplicates write SetRejectDuplicates;
@@ -44748,7 +45439,12 @@ end;
 
 function TGBaseSortedList.Contains(constref aValue: T): Boolean;
 begin
-  Result := IndexOf(aValue) > -1;
+  Result := IndexOf(aValue) >= 0;
+end;
+
+function TGBaseSortedList.NonContains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) < 0;
 end;
 
 procedure TGBaseSortedList.Delete(aIndex: SizeInt);
@@ -45972,6 +46668,11 @@ begin
   Result := IndexOf(aValue) >= 0;
 end;
 
+function TGLiteSortedList.NonContains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) < 0;
+end;
+
 procedure TGLiteSortedList.Delete(aIndex: SizeInt);
 begin
   CheckIndexRange(aIndex);
@@ -46089,6 +46790,583 @@ end;
 
 function TGLiteSortedList.SubList(constref aLowBound, aHighBound: T;
   aIncludeBounds: TRangeBounds): TGLiteSortedList;
+var
+  StartIdx, LastIdx, RangeCount: SizeInt;
+begin
+  Result.RejectDuplicates := RejectDuplicates;
+  StartIdx := IndexOfCeil(ALowBound, rbLow in aIncludeBounds);
+  if StartIdx < 0 then
+    exit;
+  LastIdx := IndexOfFloor(aHighBound, rbHigh in aIncludeBounds);
+  if LastIdx < StartIdx then
+    exit;
+  RangeCount := Succ(LastIdx - StartIdx);
+  Result.EnsureCapacity(RangeCount);
+  Result.FBuffer.FCount := RangeCount;
+  THelper.CopyItems(@FBuffer.FItems[StartIdx], @Result.FBuffer.FItems[0], RangeCount);
+end;
+
+{ TGLiteComparableSortedList.THeadEnumerator }
+
+function TGLiteComparableSortedList.THeadEnumerator.GetCurrent: T;
+begin
+  Result := FItems[FCurrIndex];
+end;
+
+procedure TGLiteComparableSortedList.THeadEnumerator.Init(constref aList: TSortedList; aLastIndex: SizeInt);
+begin
+  FItems := aList.FBuffer.FItems;
+  FLast := aLastIndex;
+  FCurrIndex := -1;
+end;
+
+function TGLiteComparableSortedList.THeadEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLast;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteComparableSortedList.THeadEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGLiteComparableSortedList.THead }
+
+procedure TGLiteComparableSortedList.THead.Init(aList: PSortedList; aHighBound: SizeInt);
+begin
+  FList := aList;
+  FHighBound := aHighBound;
+end;
+
+function TGLiteComparableSortedList.THead.GetEnumerator: THeadEnumerator;
+begin
+  Result := FList^.GetHeadEnumerator(FHighBound);
+end;
+
+{ TGLiteComparableSortedList.TTailEnumerator }
+
+function TGLiteComparableSortedList.TTailEnumerator.GetCurrent: T;
+begin
+  Result := FItems[FCurrIndex];
+end;
+
+procedure TGLiteComparableSortedList.TTailEnumerator.Init(constref aList: TSortedList; aStartIndex: SizeInt);
+begin
+  FItems := aList.FBuffer.FItems;
+  FLast := Pred(aList.Count);
+  FStart := Pred(aStartIndex);
+  FCurrIndex := FStart;
+end;
+
+procedure TGLiteComparableSortedList.TTailEnumerator.Init(constref aList: TSortedList; aStartIndex,
+  aLastIndex: SizeInt);
+begin
+  FItems := aList.FBuffer.FItems;
+  FLast := aLastIndex;
+  FStart := Pred(aStartIndex);
+  FCurrIndex := FStart;
+end;
+
+function TGLiteComparableSortedList.TTailEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLast;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteComparableSortedList.TTailEnumerator.Reset;
+begin
+  FCurrIndex := FStart;
+end;
+
+{ TGLiteComparableSortedList.TTail }
+
+procedure TGLiteComparableSortedList.TTail.Init(aList: PSortedList; aLowBound: SizeInt);
+begin
+  FList := aList;
+  FLowBound := aLowBound;
+end;
+
+function TGLiteComparableSortedList.TTail.GetEnumerator: TTailEnumerator;
+begin
+  Result := FList^.GetTailEnumerator(FLowBound);
+end;
+
+{ TGLiteComparableSortedList.TRange }
+
+procedure TGLiteComparableSortedList.TRange.Init(aList: PSortedList; aLowBound, aHighBound: SizeInt);
+begin
+  FList := aList;
+  FLowBound := aLowBound;
+  FHighBound := aHighBound;
+end;
+
+function TGLiteComparableSortedList.TRange.GetEnumerator: TTailEnumerator;
+begin
+  Result := FList^.GetRangeEnumerator(FLowBound, FHighBound);
+end;
+
+{ TGLiteComparableSortedList }
+
+function TGLiteComparableSortedList.GetCapacity: SizeInt;
+begin
+  Result := FBuffer.Capacity;
+end;
+
+function TGLiteComparableSortedList.GetItem(aIndex: SizeInt): T;
+begin
+  CheckIndexRange(aIndex);
+  Result := FBuffer.FItems[aIndex];
+end;
+
+procedure TGLiteComparableSortedList.SetItem(aIndex: SizeInt; aValue: T);
+begin
+  CheckIndexRange(aIndex);
+  DoSetItem(aIndex, aValue);
+end;
+
+procedure TGLiteComparableSortedList.DoSetItem(aIndex: SizeInt; const aValue: T);
+var
+  sr: THelper.TSearchResult;
+begin
+  if aValue <> FBuffer.FItems[aIndex] then
+    begin
+      if Count > 1 then
+        begin
+          sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
+          if (sr.FoundIndex >= 0) and RejectDuplicates then
+            exit;
+          FBuffer.FItems[aIndex] := Default(T);  ///////////////
+          if sr.InsertIndex > aIndex then
+            System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], sr.InsertIndex - aIndex)
+          else
+            System.Move(FBuffer.FItems[sr.InsertIndex], FBuffer.FItems[Succ(sr.InsertIndex)], aIndex - sr.InsertIndex);
+          System.FillChar(FBuffer.FItems[sr.InsertIndex], SizeOf(T), 0);
+          FBuffer.FItems[sr.InsertIndex] := aValue;
+        end;
+    end;
+end;
+
+procedure TGLiteComparableSortedList.InsertItem(aIndex: SizeInt; constref aValue: T);
+begin
+  FBuffer.ItemAdding;
+  if aIndex < Count then
+    begin
+      System.Move(FBuffer.FItems[aIndex], FBuffer.FItems[Succ(aIndex)], SizeOf(T) * (Count - aIndex));
+      System.FillChar(FBuffer.FItems[aIndex], SizeOf(T), 0);
+    end;
+  FBuffer.FItems[aIndex] := aValue;
+  Inc(FBuffer.FCount);
+end;
+
+function TGLiteComparableSortedList.ExtractItem(aIndex: SizeInt): T;
+begin
+  Result := FBuffer.FItems[aIndex];
+  FBuffer.FItems[aIndex] := Default(T);
+  Dec(FBuffer.FCount);
+  System.Move(FBuffer.FItems[Succ(aIndex)], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
+  System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
+end;
+
+function TGLiteComparableSortedList.DeleteItem(aIndex: SizeInt): T;
+begin
+  Result := ExtractItem(aIndex);
+end;
+
+procedure TGLiteComparableSortedList.RemoveDuplicates;
+var
+  I, J, Hi: SizeInt;
+begin
+  Hi := Pred(Count);
+  if Hi < 1 then
+    exit;
+  I := 0;
+  for J := 1 to Hi do
+    begin
+      if FBuffer.FItems[I] = FBuffer.FItems[J] then
+        continue;
+      Inc(I);
+      if J > I then
+        FBuffer.FItems[I] := FBuffer.FItems[J];
+    end;
+  FBuffer.FCount := Succ(I);
+  for I := Count to Hi do
+    FBuffer.FItems[I] := Default(T);
+end;
+
+procedure TGLiteComparableSortedList.SetRejectDuplicates(aValue: Boolean);
+begin
+  if RejectDuplicates <> aValue then
+    begin
+      FRejectDuplicates := aValue;
+      if RejectDuplicates then
+        RemoveDuplicates;
+    end;
+end;
+
+function TGLiteComparableSortedList.NearestLT(constref aValue: T): SizeInt;
+begin
+  if IsEmpty or (aValue <= FBuffer.FItems[0]) then
+    exit(-1);
+  if aValue > FBuffer.FItems[Pred(Count)] then
+     exit(Pred(Count));
+  //here such element exist in FBuffer.FItems and not first nor last
+  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
+  if FBuffer.FItems[Result] >= aValue then
+    repeat
+      Dec(Result)
+    until FBuffer.FItems[Result] < aValue
+  else // < 0
+    while FBuffer.FItems[Succ(Result)] < aValue do
+      Inc(Result);
+end;
+
+function TGLiteComparableSortedList.RightmostLE(constref aValue: T): SizeInt;
+begin
+  if IsEmpty or (aValue < FBuffer.FItems[0]) then
+    exit(-1);
+  if aValue >= FBuffer.FItems[Pred(Count)] then
+    exit(Pred(Count));
+  //here such element exist in FBuffer.FItems and not first nor last
+  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
+  if FBuffer.FItems[Result] > aValue then
+    repeat
+      Dec(Result)
+    until FBuffer.FItems[Result] <= aValue
+  else // <= 0
+    while FBuffer.FItems[Succ(Result)] <= aValue do
+      Inc(Result);
+end;
+
+function TGLiteComparableSortedList.NearestGT(constref aValue: T): SizeInt;
+begin
+  if IsEmpty or (aValue >= FBuffer.FItems[Pred(Count)]) then
+    exit(-1);
+  if aValue < FBuffer.FItems[0] then
+    exit(0);
+  //here such element exist in FBuffer.FItems and not first nor last
+  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
+  if FBuffer.FItems[Result] <= aValue then
+    repeat
+      Inc(Result)
+    until FBuffer.FItems[Result] > aValue
+  else // > 0
+    while FBuffer.FItems[Pred(Result)] > aValue do
+      Dec(Result);
+end;
+
+function TGLiteComparableSortedList.LeftmostGE(constref aValue: T): SizeInt;
+begin
+  if IsEmpty or (aValue > FBuffer.FItems[Pred(Count)]) then
+    exit(-1);
+  if aValue <= FBuffer.FItems[0] then
+    exit(0);
+  //here such element exist in FBuffer.FItems and not first nor last
+  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
+  if FBuffer.FItems[Result] < aValue then
+    repeat
+      Inc(Result)
+    until FBuffer.FItems[Result] >= aValue
+  else //>=
+    while FBuffer.FItems[Pred(Result)] >= aValue do
+      Dec(Result);
+end;
+
+function TGLiteComparableSortedList.SelectDistinctArray(constref a: array of T): TArray;
+var
+  I, J, Hi: SizeInt;
+begin
+  Result := THelper.SelectDistinct(a);
+  if IsEmpty then
+    exit;
+  Hi := System.High(Result);
+  I := -1;
+  for J := 0 to Hi do
+    begin
+      if IndexOf(Result[J]) > -1 then
+        continue;
+      Inc(I);
+      if J > I then
+        Result[I] := Result[J];
+    end;
+  System.SetLength(Result, Succ(I));
+end;
+
+function TGLiteComparableSortedList.IndexInRange(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex < Count);
+end;
+
+procedure TGLiteComparableSortedList.CheckIndexRange(aIndex: SizeInt);
+begin
+  if not IndexInRange(aIndex) then
+    IndexOutOfBoundError(aIndex);
+end;
+
+procedure TGLiteComparableSortedList.IndexOutOfBoundError(aIndex: SizeInt);
+begin
+  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TGLiteComparableSortedList.GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
+begin
+  Result.Init(Self, aHighBound);
+end;
+
+function TGLiteComparableSortedList.GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator;
+begin
+  Result.Init(Self, aLowBound);
+end;
+
+function TGLiteComparableSortedList.GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator;
+begin
+  Result.Init(Self, aLowBound, aHighBound);
+end;
+
+function TGLiteComparableSortedList.GetEnumerator: TEnumerator;
+begin
+  Result := FBuffer.GetEnumerator;
+end;
+
+function TGLiteComparableSortedList.Reverse: TReverse;
+begin
+  Result := FBuffer.Reverse;
+end;
+
+function TGLiteComparableSortedList.ToArray: TArray;
+begin
+  Result := FBuffer.ToArray;
+end;
+
+procedure TGLiteComparableSortedList.Clear;
+begin
+  FBuffer.Clear;
+end;
+
+function TGLiteComparableSortedList.IsEmpty: Boolean;
+begin
+  Result := FBuffer.Count = 0;
+end;
+
+function TGLiteComparableSortedList.NonEmpty: Boolean;
+begin
+  Result := FBuffer.Count <> 0;
+end;
+
+procedure TGLiteComparableSortedList.EnsureCapacity(aValue: SizeInt);
+begin
+  FBuffer.EnsureCapacity(aValue);
+end;
+
+procedure TGLiteComparableSortedList.TrimToFit;
+begin
+  FBuffer.TrimToFit;
+end;
+
+function TGLiteComparableSortedList.FindMin(out aValue: T): Boolean;
+begin
+  Result := NonEmpty;
+  if Result then
+    aValue := FBuffer.FItems[0];
+end;
+
+function TGLiteComparableSortedList.FindMax(out aValue: T): Boolean;
+begin
+  Result := NonEmpty;
+  if Result then
+    aValue := FBuffer.FItems[Pred(FBuffer.Count)];
+end;
+
+function TGLiteComparableSortedList.Add(constref aValue: T): Boolean;
+var
+  sr: THelper.TSearchResult;
+begin
+  if NonEmpty then
+    begin
+      sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
+      if (sr.FoundIndex > -1) and RejectDuplicates then
+        exit(False);
+      InsertItem(sr.InsertIndex, aValue);
+    end
+  else
+    InsertItem(Count, aValue);
+  Result := True;
+end;
+
+function TGLiteComparableSortedList.AddAll(constref a: array of T): SizeInt;
+var
+  OldCount: SizeInt;
+  PSrc: PItem;
+  da: TArray;
+begin
+  OldCount := Count;
+  if RejectDuplicates then
+    begin
+      da := SelectDistinctArray(a);
+      Result := System.Length(da);
+      if Result = 0 then
+        exit;
+      PSrc := @da[0];
+    end
+  else
+    begin
+      Result := System.Length(a);
+      if Result = 0 then
+        exit;
+      PSrc := @a[0];
+    end;
+  EnsureCapacity(OldCount + Result);
+  THelper.CopyItems(PSrc, @FBuffer.FItems[OldCount], Result);
+  FBuffer.FCount += Result;
+  if RejectDuplicates or (OldCount >= Result) then
+    THelper.MergeSort(FBuffer.FItems[0..Pred(Count)])
+  else
+    THelper.Sort(FBuffer.FItems[0..Pred(Count)])
+end;
+
+function TGLiteComparableSortedList.Insert(constref aValue: T): SizeInt;
+var
+  sr: THelper.TSearchResult;
+begin
+  if NonEmpty then
+    begin
+      sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
+      if (sr.FoundIndex > -1) and RejectDuplicates then
+        exit(-1);
+      Result := sr.InsertIndex;
+    end
+  else
+    Result := 0;
+  InsertItem(Result, aValue);
+end;
+
+function TGLiteComparableSortedList.Contains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) >= 0;
+end;
+
+function TGLiteComparableSortedList.NonContains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) < 0;
+end;
+
+procedure TGLiteComparableSortedList.Delete(aIndex: SizeInt);
+begin
+  CheckIndexRange(aIndex);
+  DeleteItem(aIndex);
+end;
+
+function TGLiteComparableSortedList.TryDelete(aIndex: SizeInt): Boolean;
+begin
+  Result := IndexInRange(aIndex);
+  if Result then
+    DeleteItem(aIndex);
+end;
+
+function TGLiteComparableSortedList.IndexOf(constref aValue: T): SizeInt;
+begin
+  if NonEmpty then
+    Result := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue)
+  else
+    Result := -1;
+end;
+
+function TGLiteComparableSortedList.FirstIndexOf(constref aValue: T): SizeInt;
+begin
+  if IsEmpty then
+    exit(-1);
+  Result := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
+  while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)]) do
+    Dec(Result);
+end;
+
+function TGLiteComparableSortedList.CountOf(constref aValue: T): SizeInt;
+var
+  LastIdx, FirstIdx: SizeInt;
+begin
+  if IsEmpty then
+    exit(0);
+  LastIdx := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
+  if LastIdx < 0 then
+    exit(0);
+  FirstIdx := LastIdx;
+  while (FirstIdx > 0) and (aValue = FBuffer.FItems[Pred(FirstIdx)]) do
+    Dec(FirstIdx);
+  while (LastIdx < Pred(Count)) and (aValue = FBuffer.FItems[Succ(LastIdx)]) do
+    Inc(LastIdx);
+  Result := Succ(LastIdx - FirstIdx);
+end;
+
+function TGLiteComparableSortedList.IndexOfCeil(constref aValue: T; aInclusive: Boolean): SizeInt;
+begin
+  if aInclusive then
+    Result := LeftmostGE(aValue)
+  else
+    Result := NearestGT(aValue);
+end;
+
+function TGLiteComparableSortedList.IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt;
+begin
+  if aInclusive then
+    Result := RightmostLE(aValue)
+  else
+    Result := NearestLT(aValue);
+end;
+
+function TGLiteComparableSortedList.Head(constref aHighBound: T; aInclusive: Boolean): THead;
+begin
+  Result{%H-}.Init(@Self, IndexOfFloor(aHighBound, aInclusive));
+end;
+
+function TGLiteComparableSortedList.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
+var
+  StartIdx: SizeInt;
+begin
+  StartIdx := IndexOfCeil(ALowBound, aInclusive);
+  if StartIdx < 0 then
+    StartIdx := Count;
+  Result{%H-}.Init(@Self, StartIdx);
+end;
+
+function TGLiteComparableSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
+var
+  StartIdx: SizeInt;
+begin
+  StartIdx := IndexOfCeil(ALowBound, rbLow in aIncludeBounds);
+  if StartIdx < 0 then
+    StartIdx := Count;
+  Result{%H-}.Init(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
+end;
+
+function TGLiteComparableSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TGLiteComparableSortedList;
+var
+  HeadCount: SizeInt;
+begin
+  Result.RejectDuplicates := RejectDuplicates;
+  HeadCount := Succ(IndexOfFloor(aHighBound, aInclusive));
+  if HeadCount = 0 then
+    exit;
+  Result.EnsureCapacity(HeadCount);
+  Result.FBuffer.FCount := HeadCount;
+  THelper.CopyItems(@FBuffer.FItems[0], @Result.FBuffer.FItems[0], HeadCount);
+end;
+
+function TGLiteComparableSortedList.TailList(constref aLowBound: T; aInclusive: Boolean): TGLiteComparableSortedList;
+var
+  StartIdx, TailCount: SizeInt;
+begin
+  Result.RejectDuplicates := RejectDuplicates;
+  StartIdx := IndexOfCeil(ALowBound, aInclusive);
+  if StartIdx < 0 then
+    exit;
+  TailCount := Count - StartIdx;
+  Result.EnsureCapacity(TailCount);
+  Result.FBuffer.FCount := TailCount;
+  THelper.CopyItems(@FBuffer.FItems[StartIdx], @Result.FBuffer.FItems[0], TailCount);
+end;
+
+function TGLiteComparableSortedList.SubList(constref aLowBound, aHighBound: T;
+  aIncludeBounds: TRangeBounds): TGLiteComparableSortedList;
 var
   StartIdx, LastIdx, RangeCount: SizeInt;
 begin
