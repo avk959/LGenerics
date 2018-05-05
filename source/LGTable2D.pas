@@ -270,7 +270,7 @@ type
     specialize TGTreeTable2D<TRow, TCol, TValue, TRow, TCol>);
 
 
-  { TGListTable2D implements table with row map as listmap ;
+  { TGListTable2D implements table with row map as listmap;
 
       functor TRowEqRel(row equality relation) must provide:
         class function HashCode([const[ref]] r: TRow): SizeInt;
