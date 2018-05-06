@@ -839,7 +839,6 @@ type
     class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList);
-    class operator Finalize(var hl: TGLiteHashList);
     class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
   public
     function  GetEnumerator: TEnumerator; inline;
@@ -3404,7 +3403,7 @@ end;
 
 class operator TGLiteChainHashTable.Initialize(var ht: TGLiteChainHashTable);
 begin
-  ht.FCount := 0;
+  ht.Clear;
 end;
 
 class operator TGLiteChainHashTable.Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
@@ -3776,11 +3775,6 @@ begin
 end;
 
 class operator TGLiteHashList.Initialize(var hl: TGLiteHashList);
-begin
-  hl.Clear;
-end;
-
-class operator TGLiteHashList.Finalize(var hl: TGLiteHashList);
 begin
   hl.Clear;
 end;
