@@ -3072,7 +3072,6 @@ end;
 
 class operator TGLiteHashTableLP.Initialize(var ht: TGLiteHashTableLP);
 begin
-  ht.FList := nil;
   ht.FCount := 0;
   ht.FExpandTreshold := 0;
   ht.FLoadFactor := DEFAULT_LOAD_FACTOR;
@@ -3403,7 +3402,7 @@ end;
 
 class operator TGLiteChainHashTable.Initialize(var ht: TGLiteChainHashTable);
 begin
-  ht.Clear;
+  ht.FCount := 0;
 end;
 
 class operator TGLiteChainHashTable.Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
@@ -3776,7 +3775,7 @@ end;
 
 class operator TGLiteHashList.Initialize(var hl: TGLiteHashList);
 begin
-  hl.Clear;
+  hl.FCount := 0;
 end;
 
 class operator TGLiteHashList.Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
