@@ -3079,7 +3079,7 @@ end;
 
 class operator TGLiteHashTableLP.Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP);
 begin
-  aDst.FList := System.Copy(aSrc.FList);
+  aDst.FList := System.Copy(aSrc.FList, 0, System.Length(aSrc.FList));
   aDst.FCount := aSrc.Count;
   aDst.FExpandTreshold := aSrc.ExpandTreshold;
   aDst.FLoadFactor := aSrc.LoadFactor;
@@ -3364,7 +3364,7 @@ begin
       I := FNodeList[Last].Hash and Pred(Capacity);
       System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[Last].Next := FHashList[I];
+      FNodeList[aPos.Index].Next := FHashList[I];
       FHashList[I] := aPos.Index;
     end;
 end;
@@ -3383,7 +3383,7 @@ begin
       I := FNodeList[Last].Hash and Pred(Capacity);
       System.Move(FNodeList[Last], FNodeList[aIndex], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[Last].Next := FHashList[I];
+      FNodeList[aIndex].Next := FHashList[I];
       FHashList[I] := aIndex;
     end;
 end;
@@ -3407,8 +3407,8 @@ end;
 
 class operator TGLiteChainHashTable.Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
 begin
-  aDst.FNodeList := System.Copy(aSrc.FNodeList);
-  aDst.FHashList := System.Copy(aSrc.FHashList);
+  aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
+  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
   aDst.FCount := aSrc.Count;
 end;
 
@@ -3780,8 +3780,8 @@ end;
 
 class operator TGLiteHashList.Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
 begin
-  aDst.FNodeList := System.Copy(aSrc.FNodeList);
-  aDst.FHashList := System.Copy(aSrc.FHashList);
+  aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
+  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
   aDst.FCount := aSrc.FCount;
 end;
 
