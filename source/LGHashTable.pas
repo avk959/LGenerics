@@ -696,7 +696,6 @@ type
     TEnumerator = record
     private
       FNodeList: TNodeList;
-      FHashList: THashList;
       FLastIndex,
       FCurrIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
@@ -712,9 +711,9 @@ type
       FEnum: TEnumerator;
       FTable: PHashTable;
       function  GetCurrent: PEntry; inline;
-      procedure Init(aTable: PHashTable); inline;
+      procedure Init(aTable: PHashTable);
     public
-      function  MoveNext: Boolean;
+      function  MoveNext: Boolean; inline;
       procedure RemoveCurrent; inline;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
@@ -733,6 +732,7 @@ type
     function  DoFind(constref aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
     function  DoAdd(aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(constref aPos: TSearchResult);
+    procedure DoRemove(aPos: SizeInt);
     class constructor Init;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var ht: TGLiteChainHashTable);
@@ -3198,49 +3198,54 @@ end;
 
 function TGLiteChainHashTable.TEnumerator.GetCurrent: PEntry;
 begin
-
+  Result := @FNodeList[FCurrIndex].Data;
 end;
 
 procedure TGLiteChainHashTable.TEnumerator.Init(constref aTable: TGLiteChainHashTable);
 begin
-
+  FNodeList := aTable.FNodeList;
+  FLastIndex := Pred(aTable.Count);
+  FCurrIndex := -1;
 end;
 
 function TGLiteChainHashTable.TEnumerator.MoveNext: Boolean;
 begin
-
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
 end;
 
 procedure TGLiteChainHashTable.TEnumerator.Reset;
 begin
-
+  FCurrIndex := -1;
 end;
 
 { TGLiteChainHashTable.TRemovableEnumerator }
 
 function TGLiteChainHashTable.TRemovableEnumerator.GetCurrent: PEntry;
 begin
-
+  Result := FEnum.Current;
 end;
 
 procedure TGLiteChainHashTable.TRemovableEnumerator.Init(aTable: PHashTable);
 begin
-
+  FEnum := aTable^.GetEnumerator;
+  FTable := aTable;
 end;
 
 function TGLiteChainHashTable.TRemovableEnumerator.MoveNext: Boolean;
 begin
-
+  Result := FEnum.MoveNext;
 end;
 
 procedure TGLiteChainHashTable.TRemovableEnumerator.RemoveCurrent;
 begin
-
+  FTable^.DoRemove(FEnum.FCurrIndex);
+  Dec(FEnum.FLastIndex);
 end;
 
 procedure TGLiteChainHashTable.TRemovableEnumerator.Reset;
 begin
-
+  FEnum.Reset;
 end;
 
 { TGLiteChainHashTable }
@@ -3351,24 +3356,40 @@ procedure TGLiteChainHashTable.DoRemove(constref aPos: TSearchResult);
 var
   I, Last: SizeInt;
 begin
-  if aPos.Index <> NULL_INDEX then
+  if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
+    FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
+  else
+    FHashList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
+  FNodeList[aPos.Index].Data := Default(TEntry);
+  Dec(FCount);
+  if aPos.Index < Count then
     begin
-      if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
-        FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
-      else
-        FHashList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
-      FNodeList[aPos.Index].Data := Default(TEntry);
-      Dec(FCount);
-      if aPos.Index < Count then
-        begin
-          Last := Count;
-          RemoveFromChain(Last);
-          I := FNodeList[Last].Hash and Pred(Capacity);
-          System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
-          System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-          FNodeList[Last].Next := FHashList[I];
-          FHashList[I] := aPos.Index;
-        end;
+      Last := Count;
+      RemoveFromChain(Last);
+      I := FNodeList[Last].Hash and Pred(Capacity);
+      System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
+      System.FillChar(FNodeList[Last], NODE_SIZE, 0);
+      FNodeList[Last].Next := FHashList[I];
+      FHashList[I] := aPos.Index;
+    end;
+end;
+
+procedure TGLiteChainHashTable.DoRemove(aPos: SizeInt);
+var
+  I, Last: SizeInt;
+begin
+  RemoveFromChain(aPos);
+  FNodeList[aPos.Index].Data := Default(TEntry);
+  Dec(FCount);
+  if aPos < Count then
+    begin
+      Last := Count;
+      RemoveFromChain(Last);
+      I := FNodeList[Last].Hash and Pred(Capacity);
+      System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
+      System.FillChar(FNodeList[Last], NODE_SIZE, 0);
+      FNodeList[Last].Next := FHashList[I];
+      FHashList[I] := aPos.Index;
     end;
 end;
 
