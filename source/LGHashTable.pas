@@ -3240,6 +3240,7 @@ end;
 procedure TGLiteChainHashTable.TRemovableEnumerator.RemoveCurrent;
 begin
   FTable^.DoRemove(FEnum.FCurrIndex);
+  Dec(FEnum.FCurrIndex);
   Dec(FEnum.FLastIndex);
 end;
 
