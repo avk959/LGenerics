@@ -634,7 +634,6 @@ type
     class function EstimateSize(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteHashTableLP);
-    class operator Finalize(var ht: TGLiteHashTableLP);
     class operator Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP); inline;
   public
   const
@@ -732,11 +731,10 @@ type
     function  DoFind(constref aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
     function  DoAdd(aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(constref aPos: TSearchResult);
-    procedure DoRemove(aPos: SizeInt);
+    procedure RemoveByIndex(aIndex: SizeInt);
     class constructor Init;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var ht: TGLiteChainHashTable);
-    class operator Finalize(var ht: TGLiteChainHashTable);
     class operator Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
   public
     function  GetEnumerator: TEnumerator; inline;
@@ -3081,14 +3079,12 @@ begin
   ht.FLoadFactor := DEFAULT_LOAD_FACTOR;
 end;
 
-class operator TGLiteHashTableLP.Finalize(var ht: TGLiteHashTableLP);
-begin
-  ht.Clear;
-end;
-
 class operator TGLiteHashTableLP.Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP);
 begin
   aDst.FList := System.Copy(aSrc.FList);
+  aDst.FCount := aSrc.Count;
+  aDst.FExpandTreshold := aSrc.ExpandTreshold;
+  aDst.FLoadFactor := aSrc.LoadFactor;
 end;
 
 function TGLiteHashTableLP.GetEnumerator: TEnumerator;
@@ -3239,7 +3235,7 @@ end;
 
 procedure TGLiteChainHashTable.TRemovableEnumerator.RemoveCurrent;
 begin
-  FTable^.DoRemove(FEnum.FCurrIndex);
+  FTable^.RemoveByIndex(FEnum.FCurrIndex);
   Dec(FEnum.FCurrIndex);
   Dec(FEnum.FLastIndex);
 end;
@@ -3375,22 +3371,22 @@ begin
     end;
 end;
 
-procedure TGLiteChainHashTable.DoRemove(aPos: SizeInt);
+procedure TGLiteChainHashTable.RemoveByIndex(aIndex: SizeInt);
 var
   I, Last: SizeInt;
 begin
-  RemoveFromChain(aPos);
-  FNodeList[aPos].Data := Default(TEntry);
+  RemoveFromChain(aIndex);
+  FNodeList[aIndex].Data := Default(TEntry);
   Dec(FCount);
-  if aPos < Count then
+  if aIndex < Count then
     begin
       Last := Count;
       RemoveFromChain(Last);
       I := FNodeList[Last].Hash and Pred(Capacity);
-      System.Move(FNodeList[Last], FNodeList[aPos], NODE_SIZE);
+      System.Move(FNodeList[Last], FNodeList[aIndex], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
       FNodeList[Last].Next := FHashList[I];
-      FHashList[I] := aPos;
+      FHashList[I] := aIndex;
     end;
 end;
 
@@ -3408,19 +3404,14 @@ end;
 
 class operator TGLiteChainHashTable.Initialize(var ht: TGLiteChainHashTable);
 begin
-  ht.Clear;
-end;
-
-class operator TGLiteChainHashTable.Finalize(var ht: TGLiteChainHashTable);
-begin
-  ht.Clear;
+  ht.FCount := 0;
 end;
 
 class operator TGLiteChainHashTable.Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList);
   aDst.FHashList := System.Copy(aSrc.FHashList);
-  aDst.FCount := aSrc.FCount;
+  aDst.FCount := aSrc.Count;
 end;
 
 function TGLiteChainHashTable.GetEnumerator: TEnumerator;
@@ -3472,23 +3463,16 @@ function TGLiteChainHashTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out 
 var
   h: SizeInt;
 begin
-  if Capacity > 0 then
+  if Capacity = 0 then
+    InitialAlloc;
+  aPos.PrevIndex := NULL_INDEX;
+  h := TKeyEqRel.HashCode(aKey);
+  Result := DoFind(aKey, h, aPos);
+  if not Result then          // key not found
     begin
-      h := TKeyEqRel.HashCode(aKey);
-      Result := DoFind(aKey, h, aPos);
-      if not Result then          // key not found
-        begin
-          if Count = Capacity then
-            Expand;
-          aPos.PrevIndex := NULL_INDEX;
-          aPos.Index := DoAdd(h);
-        end;
-    end
-  else
-    begin
-      InitialAlloc;
-      aPos.PrevIndex := NULL_INDEX;
-      aPos.Index := DoAdd(TKeyEqRel.HashCode(aKey));
+      if Count = Capacity then
+        Expand;
+      aPos.Index := DoAdd(h);
     end;
   e := @FNodeList[aPos.Index].Data;
 end;
