@@ -3379,17 +3379,17 @@ var
   I, Last: SizeInt;
 begin
   RemoveFromChain(aPos);
-  FNodeList[aPos.Index].Data := Default(TEntry);
+  FNodeList[aPos].Data := Default(TEntry);
   Dec(FCount);
   if aPos < Count then
     begin
       Last := Count;
       RemoveFromChain(Last);
       I := FNodeList[Last].Hash and Pred(Capacity);
-      System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
+      System.Move(FNodeList[Last], FNodeList[aPos], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
       FNodeList[Last].Next := FHashList[I];
-      FHashList[I] := aPos.Index;
+      FHashList[I] := aPos;
     end;
 end;
 
