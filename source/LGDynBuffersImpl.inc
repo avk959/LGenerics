@@ -371,6 +371,7 @@ end;
 class operator TGLiteDynBuffer.Copy(constref aSrc: TGLiteDynBuffer; var aDst: TGLiteDynBuffer);
 begin
   aDst.FItems := System.Copy(aSrc.FItems, 0, aSrc.Capacity);
+  aDst.FCount := aSrc.Count;
 end;
 
 procedure TGLiteDynBuffer.CheckEmpty;
@@ -1038,6 +1039,8 @@ end;
 class operator TGLiteRingDynBuffer.Copy(constref aSrc: TGLiteRingDynBuffer; var aDst: TGLiteRingDynBuffer);
 begin
   aDst.FItems := System.Copy(aSrc.FItems, 0, aSrc.Capacity);
+  aDst.FCount := aSrc.Count;
+  aDst.FHead := aSrc.Head;
 end;
 
 function TGLiteRingDynBuffer.InternalIndex(aIndex: SizeInt): SizeInt;
