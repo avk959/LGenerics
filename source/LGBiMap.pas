@@ -338,6 +338,8 @@ type
   { TGObjHashBiMap2 assumes that TKey implements TKeyEqRel and TValue implements TValueEqRel }
   generic TGObjHashBiMap2<TKey, TValue> = class(specialize TGObjectHashBiMap<TKey, TValue, TKey, TValue>);
 
+  //todo: bimap on base of TGLiteChainHashTable ???
+
 implementation
 {$B-}{$COPERATORS ON}
 
