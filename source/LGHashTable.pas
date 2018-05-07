@@ -656,7 +656,7 @@ type
     property  Size: SizeInt read GetSize; //todo: Split(predicate): TGLiteHashTableLP; ???
   end;
 
-  { TGLiteChainHashTable: node based hash table with with load factor 1;
+  { TGLiteChainHashTable: node based hash table with load factor 1.0;
       functor TKeyEqRel(equality relation) must provide:
         class function HashCode([const[ref]] aValue: TKey): SizeInt;
         class function Equal([const[ref]] L, R: TKey): Boolean; }
