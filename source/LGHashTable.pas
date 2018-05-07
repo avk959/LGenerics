@@ -42,7 +42,6 @@ type
   strict protected
   const
     MIN_LOAD_FACTOR  = 0.25;
-    MAX_SIZE         = Succ(High(SizeInt) shr 1);
     //ENTRY_SIZE       = SizeOf(TEntry); - does not compiles with TMapEntry
     //workaround :
     /////////////////////////////////////////////
@@ -147,7 +146,7 @@ type
 
   const
     NODE_SIZE             = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt = MAX_SIZE div NODE_SIZE;
+    MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   type
     TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
@@ -309,7 +308,7 @@ type
   const
     DEFAULT_LOAD_FACTOR: Single = 0.75;
     MAX_LOAD_FACTOR: Single     = 4.0;
-    MAX_CAPACITY                = (MAX_SIZE shr 2) div SizeOf(Pointer);
+    MAX_CAPACITY                = (MAX_CONTAINER_SIZE shr 2) div SizeOf(Pointer);
 
   var
     FList: TChainList;
@@ -403,7 +402,7 @@ type
   const
     DEFAULT_LOAD_FACTOR: Single = 0.75;
     MAX_LOAD_FACTOR: Single     = 4.0;
-    MAX_CAPACITY                = (MAX_SIZE shr 1) div SizeOf(Pointer);
+    MAX_CAPACITY                = (MAX_CONTAINER_SIZE shr 1) div SizeOf(Pointer);
 
   var
     FList: TChainList;
@@ -454,7 +453,6 @@ type
   generic TGHashTableLP<TKey, TEntry, TEqRel> = class
   strict protected
   const
-    MAX_SIZE         = Succ(High(SizeInt) shr 1);
     //ENTRY_SIZE       = SizeOf(TEntry); does not compiles with TMapEntry
     //workaround :
     /////////////////////////////////////////////
@@ -474,7 +472,7 @@ type
     NODE_SIZE               = SizeOf(TNode);
     SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
     USED_FLAG: SizeInt      = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
-    MAX_CAPACITY: SizeInt   = MAX_SIZE div NODE_SIZE;
+    MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   type
     TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
@@ -552,8 +550,6 @@ type
   generic TGLiteHashTableLP<TKey, TEntry, TEqRel> = record
   private
   const
-
-    MAX_SIZE         = Succ(High(SizeInt) shr 1);
     //ENTRY_SIZE       = SizeOf(TEntry); - does not compiles with TMapEntry
     //workaround :
     /////////////////////////////////////////////
@@ -576,7 +572,7 @@ type
     NODE_SIZE               = SizeOf(TNode);
     SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
     USED_FLAG: SizeInt      = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
-    MAX_CAPACITY: SizeInt   = MAX_SIZE div NODE_SIZE;
+    MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   type
     TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
@@ -679,9 +675,8 @@ type
 
   const
     NULL_INDEX  = SizeInt(-1);
-    MAX_SIZE    = Succ(High(SizeInt) shr 1);
     NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = MAX_SIZE div NODE_SIZE;
+    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   public
   type
@@ -769,9 +764,8 @@ type
 
   const
     NULL_INDEX  = SizeInt(-1);
-    MAX_SIZE    = Succ(High(SizeInt) shr 1);
     NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = MAX_SIZE div NODE_SIZE;
+    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   public
   type
