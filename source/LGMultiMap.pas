@@ -391,8 +391,8 @@ type
     end;
 
     TValueViewEnumerator = record
-      FNodeList: TNodeList;
       FMap: PMultiMap;
+      FKey: TKey;
       FData: TSearchData;
       FInCycle: Boolean;
       function  GetCurrent: TValue; inline;
@@ -1126,14 +1126,13 @@ end;
 
 function TGLiteHashMultiMap.TValueViewEnumerator.GetCurrent: TValue;
 begin
-  Result := FNodeList[FData.Index];
+  Result := FMap^.FNodeList[FData.Index].Data.Value;
 end;
 
 procedure TGLiteHashMultiMap.TValueViewEnumerator.Init(aMap: PMultiMap; constref aKey: TKey);
 begin
-  FNodeList := aMap^.FNodeList;
-  FData.Key := aKey;
   FMap := aMap;
+  FKey := aKey;
   FInCycle := False;
 end;
 
@@ -1143,7 +1142,7 @@ begin
     Result := FMap^.FindNext(FData)
   else
     begin
-      Result := FMap^.FindFirst(FData.Key, FData);
+      Result := FMap^.FindFirst(FKey, FData);
       FInCycle := True;
     end;
 end;
@@ -1182,7 +1181,7 @@ end;
 procedure TGLiteHashMultiMap.TValuesView.Init(aMap: PMultiMap; constref aKey: TKey);
 begin
   FMap := aMap;
-  FKey := TKey;
+  FKey := aKey;
 end;
 
 function TGLiteHashMultiMap.TValuesView.GetEnumerator: TValueViewEnumerator;
@@ -1299,7 +1298,7 @@ begin
   Result := 0;
   while I <> NULL_INDEX do
     begin
-      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data, aKey) then
+      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
         Inc(Result);
       I := FNodeList[I].Next;
     end;
@@ -1359,7 +1358,7 @@ begin
   if Result then
     begin
       aData.Index := Pos.Index;
-      aData.Next :=  FNodeList[aData.Index].Next;
+      aData.Next :=  FNodeList[Pos.Index].Next;
     end
   else
     begin
