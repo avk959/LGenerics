@@ -2298,7 +2298,7 @@ end;
 
 function TGSortedListTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
-  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  //sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
   Entry: TEntry;
 begin
   Entry.Key := aKey;
@@ -2339,7 +2339,7 @@ end;
 
 function TGSortedListTable.Add(constref aKey: TKey): PEntry;
 var
-  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  //sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
   Entry: TEntry;
 begin
   Result := nil;
@@ -3941,12 +3941,14 @@ end;
 
 function TGLiteHashList.FindNext(var aData: TSearchData): Boolean;
 begin
-  Result := aData.Next >= 0;
-  if Result then
+  while aData.Next >= 0 do
     begin
       aData.Index := aData.Next;
       aData.Next := FNodeList[aData.Index].Next;
+      if (FNodeList[aData.Index].Hash = aData.Hash) and TEqRel.Equal(FNodeList[aData.Index].Data, aData.Key) then
+        exit(True);
     end;
+  Result := False;
 end;
 
 function TGLiteHashList.Add(constref aValue: T): SizeInt;
