@@ -666,9 +666,9 @@ type
 
     function  Contains(constref aKey: TKey): Boolean; inline;
     function  ContainsValue(constref aKey: TKey; constref aValue: TValue): Boolean;
-  { returns True and add TEntry(aKey, aValue) only if value-collection of an aKey does not contains aValue }
+  { returns True and add TEntry(aKey, aValue) only if value-collection of an aKey adds aValue }
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-  { returns True and add e only if value-collection of an e.Key does not contains e.Value }
+  { returns True and add e only if value-collection of an e.Key adds e.Value }
     function  Add(constref e: TEntry): Boolean;
   { returns count of added values }
     function  AddAll(constref a: array of TEntry): SizeInt;
