@@ -847,6 +847,7 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
     function  IndexOf(constref aValue: T): SizeInt; inline;
     function  CountOf(constref aValue: T): SizeInt; inline;
+    //FindFirst, FindNext
     function  Add(constref aValue: T): SizeInt; inline;
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
@@ -3455,11 +3456,12 @@ function TGLiteChainHashTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out 
 var
   h: SizeInt;
 begin
-  if Capacity = 0 then
-    InitialAlloc;
   aPos.PrevIndex := NULL_INDEX;
   h := TKeyEqRel.HashCode(aKey);
-  Result := DoFind(aKey, h, aPos);
+  if Count > 0 then
+    Result := DoFind(aKey, h, aPos)
+  else
+    Result := False;
   if not Result then          // key not found
     begin
       if Count = Capacity then
