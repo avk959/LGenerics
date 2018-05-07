@@ -19,7 +19,7 @@ var
   Database: TNameList;
   UserInput,
   LastName: string;
-  d: TName;
+  Name: TName;
   Names: array[0..44] of TName = {$I presidents.inc};
 
 {$R *.res}
@@ -27,8 +27,8 @@ var
 begin
 
   Database := TNameList.Create;
-  for d in Names do
-    Database.Add(LowerCase(d.FirstName), d.LastName);
+  for Name in Names do
+    Database.Add(LowerCase(Name.FirstName), Name.LastName);
 
   repeat
     Writeln('Print q to exit');
@@ -39,7 +39,7 @@ begin
     Writeln('>>>');
     for LastName in Database[LowerCase(UserInput)] do
       Writeln(LastName);
-    Writeln('');
+    Writeln;
   until False;
 
   Database.Free;
