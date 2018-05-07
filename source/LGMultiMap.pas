@@ -426,6 +426,7 @@ type
       procedure Init(aMap: PMultiMap; constref aKey: TKey); inline;
     public
       function GetEnumerator: TValueViewEnumerator; inline;
+      function ToArray: TValueArray;
     end;
 
 
@@ -1187,6 +1188,22 @@ end;
 function TGLiteHashMultiMap.TValuesView.GetEnumerator: TValueViewEnumerator;
 begin
   Result := FMap^.GetValueViewEnumerator(FKey);
+end;
+
+function TGLiteHashMultiMap.TValuesView.ToArray: TValueArray;
+var
+  I: SizeInt = 0;
+begin
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with GetEnumerator do
+    while MoveNext do
+      begin
+        if I = System.Length(Result) then
+          System.SetLength(Result, I shl 1);
+        Result[I] := Current;
+        Inc(I);
+      end;
+  System.SetLength(Result, I);
 end;
 
 { TGLiteHashMultiMap }
