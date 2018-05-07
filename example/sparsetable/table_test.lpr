@@ -31,9 +31,9 @@ begin
 
   repeat
     WriteLn;
-    WriteLn('print q<uite> to exit');
-    WriteLn('print 1=Company name to see list of branch offices locations');
-    WriteLn('print 2=Country name to see list of branch offices');
+    WriteLn('Enter q[uite] to exit');
+    WriteLn('Enter 1=Company name to get list of branch offices locations');
+    WriteLn('Enter 2=Country name to get list of branch offices');
     ReadLn(UserInput);
     if Length(UserInput) > 0 then
     case LowerCase(UserInput[1]) of

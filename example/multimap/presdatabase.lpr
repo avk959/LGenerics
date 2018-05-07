@@ -31,8 +31,8 @@ begin
     Database.Add(LowerCase(Name.FirstName), Name.LastName);
 
   repeat
-    Writeln('Print q to exit');
-    Writeln('Print president first name to get list');
+    Writeln('Enter q to exit');
+    Writeln('Enter president first name to get list');
     Readln(UserInput);
     if LowerCase(UserInput) = 'q' then
       break;
