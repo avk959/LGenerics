@@ -21,6 +21,7 @@ unit LGMultiMap;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
+{$MODESWITCH ADVANCEDRECORDS}
 
 interface
 
@@ -32,7 +33,8 @@ uses
   LGCustomContainer,
   LGHashTable,
   LGAvlTree,
-  LGList;
+  LGList,
+  LGStrConst;
 
 type
 
@@ -306,6 +308,179 @@ type
 
   { TGListMultiMap2 assumes that TKey implements TKeyEqRel and TValue implements TValueCmpRel }
   generic TGListMultiMap2<TKey, TValue> = class(specialize TGListMultiMap<TKey, TValue, TKey, TValue>);
+
+  { TGLiteHashMultiMap }
+
+  generic TGLiteHashMultiMap<TKey, TValue, TKeyEqRel> = record
+  public
+  type
+    TEntry           = specialize TGMapEntry<TKey, TValue>;
+    TEntryArray      = specialize TGArray<TEntry>;
+    IValueEnumerable = specialize IGEnumerable<TValue>;
+    IKeyEnumerable   = specialize IGEnumerable<TKey>;
+    IEntryEnumerable = specialize IGEnumerable<TEntry>;
+    TValueArray      = specialize TGArray<TKey>;
+
+  private
+  type
+    PEntry = ^TEntry;
+
+    TNode = record
+      Hash,
+      Next: SizeInt;
+      Data: TEntry;
+    end;
+
+    TSearchResult = record
+      Index,
+      PrevIndex: SizeInt;
+    end;
+
+    TSearchData = record
+      Key: TKey;
+      Hash,
+      Index,
+      Next: SizeInt;
+    end;
+
+    TNodeList = array of TNode;
+    THashList = array of SizeInt;
+    PMultiMap = ^TGLiteHashMultiMap;
+
+  const
+    NULL_INDEX  = SizeInt(-1);
+    NODE_SIZE   = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
+
+  public
+  type
+    TEntryEnumerator = record
+      FNodeList: TNodeList;
+      FLastIndex,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: TEntry; inline;
+      procedure Init(constref aMap: TGLiteHashMultiMap);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TEntry read GetCurrent;
+    end;
+
+    TKeyEnumerator = record
+      FNodeList: TNodeList;
+      FLastIndex,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: TKey; inline;
+      procedure Init(constref aMap: TGLiteHashMultiMap);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TKey read GetCurrent;
+    end;
+
+    TValueEnumerator = record
+      FNodeList: TNodeList;
+      FLastIndex,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: TValue; inline;
+      procedure Init(constref aMap: TGLiteHashMultiMap);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TValue read GetCurrent;
+    end;
+
+    TValueViewEnumerator = record
+      FNodeList: TNodeList;
+      FMap: PMultiMap;
+      FData: TSearchData;
+      FInCycle: Boolean;
+      function  GetCurrent: TValue; inline;
+      procedure Init(aMap: PMultiMap;  constref aKey: TKey);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TValue read GetCurrent;
+    end;
+
+    TKeys = record
+    private
+      FMap: PMultiMap;
+      procedure Init(aMap: PMultiMap); inline;
+    public
+      function GetEnumerator: TKeyEnumerator; inline;
+    end;
+
+    TValues = record
+    private
+      FMap: PMultiMap;
+      procedure Init(aMap: PMultiMap); inline;
+    public
+      function GetEnumerator: TValueEnumerator; inline;
+    end;
+
+    TValuesView = record
+    private
+      FMap: PMultiMap;
+      FKey: TKey;
+      procedure Init(aMap: PMultiMap; constref aKey: TKey); inline;
+    public
+      function GetEnumerator: TValueViewEnumerator; inline;
+    end;
+
+
+  private
+    FNodeList: TNodeList;
+    FHashList: THashList;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    procedure InitialAlloc;
+    procedure Rehash;
+    procedure Resize(aNewCapacity: SizeInt);
+    procedure Expand;
+    function  DoFind(constref aKey: TKey; aHash: SizeInt; out sr: TSearchResult): Boolean;
+    function  Find(constref aKey: TKey): PEntry; inline;
+    procedure DoAdd(constref aKey: TKey; constref aValue: TValue);
+    function  CountOf(constref aKey: TKey): SizeInt;
+    procedure RemoveFromChain(aIndex: SizeInt);
+    procedure DoRemove(constref aPos: TSearchResult);
+    function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
+    function  FindNext(var aData: TSearchData): Boolean;
+    function  GetValuesView(const aKey: TKey): TValuesView;
+    function  GetKeyEnumerator: TKeyEnumerator; inline;
+    function  GetValueEnumerator: TValueEnumerator; inline;
+    function  GetValueViewEnumerator(constref aKey: TKey): TValueViewEnumerator; inline;
+    class constructor Init;
+    class operator Initialize(var m: TGLiteHashMultiMap);
+    class operator Copy(constref aSrc: TGLiteHashMultiMap; var aDst: TGLiteHashMultiMap);
+    class procedure CapacityExceedError(aValue: SizeInt); static; inline;
+  public
+    function  GetEnumerator: TEntryEnumerator; inline;
+    function  ToArray: TEntryArray;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure TrimToFit;
+    procedure Add(constref aKey: TKey; constref aValue: TValue);
+    procedure Add(constref e: TEntry); inline;
+  { returns count of added values }
+    function  AddAll(constref a: array of TEntry): SizeInt;
+    function  AddAll(e: IEntryEnumerable): SizeInt;
+    function  AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+    function  AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+    function  Contains(constref aKey: TKey): Boolean; inline;
+    function  NonContains(constref aKey: TKey): Boolean; inline;
+  { returns count of values mapped to aKey (similar as multiset)}
+    function  ValueCount(constref aKey: TKey): SizeInt;
+    function  Remove(constref aKey: TKey): Boolean;
+
+    function  Keys: TKeys; inline;
+    function  Values: TValues; inline;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Items[const aKey: TKey]: TValuesView read GetValuesView; default;
+  end;
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -870,6 +1045,532 @@ destructor TGListMultiMap.Destroy;
 begin
   DoClear;
   inherited;
+end;
+
+{ TGLiteHashMultiMap.TEntryEnumerator }
+
+function TGLiteHashMultiMap.TEntryEnumerator.GetCurrent: TEntry;
+begin
+  Result := FNodeList[FCurrIndex].Data;
+end;
+
+procedure TGLiteHashMultiMap.TEntryEnumerator.Init(constref aMap: TGLiteHashMultiMap);
+begin
+  FNodeList := aMap.FNodeList;
+  FLastIndex := Pred(aMap.Count);
+  FCurrIndex := -1;
+end;
+
+function TGLiteHashMultiMap.TEntryEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteHashMultiMap.TEntryEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGLiteHashMultiMap.TKeyEnumerator }
+
+function TGLiteHashMultiMap.TKeyEnumerator.GetCurrent: TKey;
+begin
+  Result := FNodeList[FCurrIndex].Data.Key;
+end;
+
+procedure TGLiteHashMultiMap.TKeyEnumerator.Init(constref aMap: TGLiteHashMultiMap);
+begin
+  FNodeList := aMap.FNodeList;
+  FLastIndex := Pred(aMap.Count);
+  FCurrIndex := -1;
+end;
+
+function TGLiteHashMultiMap.TKeyEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteHashMultiMap.TKeyEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGLiteHashMultiMap.TValueEnumerator }
+
+function TGLiteHashMultiMap.TValueEnumerator.GetCurrent: TValue;
+begin
+  Result := FNodeList[FCurrIndex].Data.Value;
+end;
+
+procedure TGLiteHashMultiMap.TValueEnumerator.Init(constref aMap: TGLiteHashMultiMap);
+begin
+  FNodeList := aMap.FNodeList;
+  FLastIndex := Pred(aMap.Count);
+  FCurrIndex := -1;
+end;
+
+function TGLiteHashMultiMap.TValueEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteHashMultiMap.TValueEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGLiteHashMultiMap.TValueViewEnumerator }
+
+function TGLiteHashMultiMap.TValueViewEnumerator.GetCurrent: TValue;
+begin
+  Result := FNodeList[FData.Index];
+end;
+
+procedure TGLiteHashMultiMap.TValueViewEnumerator.Init(aMap: PMultiMap; constref aKey: TKey);
+begin
+  FNodeList := aMap^.FNodeList;
+  FData.Key := aKey;
+  FMap := aMap;
+  FInCycle := False;
+end;
+
+function TGLiteHashMultiMap.TValueViewEnumerator.MoveNext: Boolean;
+begin
+  if FInCycle then
+    Result := FMap^.FindNext(FData)
+  else
+    begin
+      Result := FMap^.FindFirst(FData.Key, FData);
+      FInCycle := True;
+    end;
+end;
+
+procedure TGLiteHashMultiMap.TValueViewEnumerator.Reset;
+begin
+  FInCycle := False;
+end;
+
+{ TGLiteHashMultiMap.TKeys }
+
+procedure TGLiteHashMultiMap.TKeys.Init(aMap: PMultiMap);
+begin
+  FMap := aMap;
+end;
+
+function TGLiteHashMultiMap.TKeys.GetEnumerator: TKeyEnumerator;
+begin
+  Result := FMap^.GetKeyEnumerator;
+end;
+
+{ TGLiteHashMultiMap.TValues }
+
+procedure TGLiteHashMultiMap.TValues.Init(aMap: PMultiMap);
+begin
+  FMap := aMap;
+end;
+
+function TGLiteHashMultiMap.TValues.GetEnumerator: TValueEnumerator;
+begin
+  Result := FMap^.GetValueEnumerator;
+end;
+
+{ TGLiteHashMultiMap.TValuesView }
+
+procedure TGLiteHashMultiMap.TValuesView.Init(aMap: PMultiMap; constref aKey: TKey);
+begin
+  FMap := aMap;
+  FKey := TKey;
+end;
+
+function TGLiteHashMultiMap.TValuesView.GetEnumerator: TValueViewEnumerator;
+begin
+  Result := FMap^.GetValueViewEnumerator(FKey);
+end;
+
+{ TGLiteHashMultiMap }
+
+function TGLiteHashMultiMap.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+function TGLiteHashMultiMap.GetValuesView(const aKey: TKey): TValuesView;
+begin
+  Result.Init(@Self, aKey);
+end;
+
+procedure TGLiteHashMultiMap.InitialAlloc;
+begin
+  System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
+  System.SetLength(FHashList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FHashList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+end;
+
+procedure TGLiteHashMultiMap.Rehash;
+var
+  I, J, Mask: SizeInt;
+begin
+  Mask := Pred(Capacity);
+  System.FillChar(FHashList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  for I := 0 to Pred(Count) do
+    begin
+      J := FNodeList[I].Hash and Mask;
+      FNodeList[I].Next := FHashList[J];
+      FHashList[J] := I;
+    end;
+end;
+
+procedure TGLiteHashMultiMap.Resize(aNewCapacity: SizeInt);
+begin
+  System.SetLength(FNodeList, aNewCapacity);
+  System.SetLength(FHashList, aNewCapacity);
+  Rehash;
+end;
+
+procedure TGLiteHashMultiMap.Expand;
+var
+  OldCapacity: SizeInt;
+begin
+  OldCapacity := Capacity;
+  if OldCapacity > 0 then
+    begin
+      if OldCapacity < MAX_CAPACITY then
+        Resize(OldCapacity shl 1)
+      else
+        CapacityExceedError(OldCapacity shl 1);
+    end
+  else
+    InitialAlloc;
+end;
+
+function TGLiteHashMultiMap.DoFind(constref aKey: TKey; aHash: SizeInt; out sr: TSearchResult): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FHashList[aHash and Pred(Capacity)];
+  sr.PrevIndex := NULL_INDEX;
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = aHash) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
+        begin
+          sr.Index := I;
+          exit(True);
+        end;
+      sr.PrevIndex := I;
+      I := FNodeList[I].Next;
+    end;
+  Result := False;
+end;
+
+function TGLiteHashMultiMap.Find(constref aKey: TKey): PEntry;
+var
+  Pos: TSearchResult;
+begin
+  if (Count > 0) and DoFind(aKey, TKeyEqRel.HashCode(aKey), Pos) then
+    Result := @FNodeList[Pos.Index].Data
+  else
+    Result := nil;
+end;
+
+procedure TGLiteHashMultiMap.DoAdd(constref aKey: TKey; constref aValue: TValue);
+var
+  h, I, Pos: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  Pos := Count;
+  I := h and Pred(Capacity);
+  FNodeList[Pos].Data.Key := aKey;
+  FNodeList[Pos].Data.Value := aValue;
+  FNodeList[Pos].Hash := h;
+  FNodeList[Pos].Next := FHashList[I];
+  FHashList[I] := Pos;
+  Inc(FCount);
+end;
+
+function TGLiteHashMultiMap.CountOf(constref aKey: TKey): SizeInt;
+var
+  h, I: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  I := FHashList[h and Pred(Capacity)];
+  Result := 0;
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data, aKey) then
+        Inc(Result);
+      I := FNodeList[I].Next;
+    end;
+end;
+
+procedure TGLiteHashMultiMap.RemoveFromChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  Curr := FHashList[I];
+  Prev := NULL_INDEX;
+  while Curr <> NULL_INDEX do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev <> NULL_INDEX then
+            FNodeList[Prev].Next := FNodeList[Curr].Next
+          else
+            FHashList[I] := FNodeList[Curr].Next;
+          exit;
+        end;
+      Prev := Curr;
+      Curr := FNodeList[Curr].Next;
+    end;
+end;
+
+procedure TGLiteHashMultiMap.DoRemove(constref aPos: TSearchResult);
+var
+  I, Last: SizeInt;
+begin
+  if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
+    FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
+  else
+    FHashList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
+  FNodeList[aPos.Index].Data := Default(TEntry);
+  Dec(FCount);
+  if aPos.Index < Count then
+    begin
+      Last := Count;
+      RemoveFromChain(Last);
+      I := FNodeList[Last].Hash and Pred(Capacity);
+      System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
+      System.FillChar(FNodeList[Last], NODE_SIZE, 0);
+      FNodeList[aPos.Index].Next := FHashList[I];
+      FHashList[I] := aPos.Index;
+    end;
+end;
+
+function TGLiteHashMultiMap.FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
+var
+  Pos: TSearchResult;
+begin
+  aData.Key := aKey;
+  aData.Hash := TKeyEqRel.HashCode(aKey);
+  Result := DoFind(aKey, aData.Hash, Pos);
+  if Result then
+    begin
+      aData.Index := Pos.Index;
+      aData.Next :=  FNodeList[aData.Index].Next;
+    end
+  else
+    begin
+      aData.Index := NULL_INDEX;
+      aData.Next :=  NULL_INDEX;
+    end;
+end;
+
+function TGLiteHashMultiMap.FindNext(var aData: TSearchData): Boolean;
+begin
+  while aData.Next >= 0 do
+    begin
+      aData.Index := aData.Next;
+      aData.Next := FNodeList[aData.Index].Next;
+      if (FNodeList[aData.Index].Hash = aData.Hash) and
+          TKeyEqRel.Equal(FNodeList[aData.Index].Data.Key, aData.Key) then
+        exit(True);
+    end;
+  Result := False;
+end;
+
+function TGLiteHashMultiMap.GetKeyEnumerator: TKeyEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashMultiMap.GetValueEnumerator: TValueEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashMultiMap.GetValueViewEnumerator(constref aKey: TKey): TValueViewEnumerator;
+begin
+  Result.Init(@Self, aKey);
+end;
+
+class constructor TGLiteHashMultiMap.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
+class operator TGLiteHashMultiMap.Initialize(var m: TGLiteHashMultiMap);
+begin
+  m.FCount := 0;
+end;
+
+class operator TGLiteHashMultiMap.Copy(constref aSrc: TGLiteHashMultiMap; var aDst: TGLiteHashMultiMap);
+begin
+  aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
+  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
+  aDst.FCount := aSrc.Count;
+end;
+
+class procedure TGLiteHashMultiMap.CapacityExceedError(aValue: SizeInt);
+begin
+  raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+end;
+
+function TGLiteHashMultiMap.GetEnumerator: TEntryEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashMultiMap.ToArray: TEntryArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, Count);
+  for I := 0 to Pred(Count) do
+    Result[I] := FNodeList[I].Data;
+end;
+
+function TGLiteHashMultiMap.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGLiteHashMultiMap.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGLiteHashMultiMap.Clear;
+begin
+  FNodeList := nil;
+  FHashList := nil;
+  FCount := 0;
+end;
+
+procedure TGLiteHashMultiMap.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue <= Capacity then
+    exit;
+  if aValue <= DEFAULT_CONTAINER_CAPACITY then
+    aValue := DEFAULT_CONTAINER_CAPACITY
+  else
+    if aValue <= MAX_CAPACITY then
+      aValue := LGUtils.RoundUpTwoPower(aValue)
+    else
+      CapacityExceedError(aValue);
+  Resize(aValue);
+end;
+
+procedure TGLiteHashMultiMap.TrimToFit;
+var
+  NewCapacity: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      NewCapacity := LGUtils.RoundUpTwoPower(Count);
+      if NewCapacity < Capacity then
+        Resize(NewCapacity);
+    end
+  else
+    Clear;
+end;
+
+procedure TGLiteHashMultiMap.Add(constref aKey: TKey; constref aValue: TValue);
+var
+  h: SizeInt;
+begin
+  if Count = Capacity then
+    Expand;
+  DoAdd(aKey, aValue);
+end;
+
+procedure TGLiteHashMultiMap.Add(constref e: TEntry);
+begin
+  Add(e.Key, e.Value);
+end;
+
+function TGLiteHashMultiMap.AddAll(constref a: array of TEntry): SizeInt;
+var
+  e: TEntry;
+begin
+  Result := System.Length(a);
+  for e in a do
+    Add(e);
+end;
+
+function TGLiteHashMultiMap.AddAll(e: IEntryEnumerable): SizeInt;
+var
+  Entry: TEntry;
+begin
+  Result := Count;
+  for Entry in e do
+    Add(Entry);
+  Result := Count - Result;
+end;
+
+function TGLiteHashMultiMap.AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+var
+  v: TValue;
+begin
+  Result := System.Length(a);
+  for v in a do
+    Add(aKey, v);
+end;
+
+function TGLiteHashMultiMap.AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+var
+  v: TValue;
+begin
+  Result := Count;
+  for v in e do
+    Add(aKey, v);
+  Result := Count - Result;
+end;
+
+function TGLiteHashMultiMap.Contains(constref aKey: TKey): Boolean;
+begin
+  Result := Find(aKey) <> nil;
+end;
+
+function TGLiteHashMultiMap.NonContains(constref aKey: TKey): Boolean;
+begin
+  Result := Find(aKey) = nil;
+end;
+
+function TGLiteHashMultiMap.ValueCount(constref aKey: TKey): SizeInt;
+begin
+  if NonEmpty then
+    Result := CountOf(aKey)
+  else
+    Result := 0;
+end;
+
+function TGLiteHashMultiMap.Remove(constref aKey: TKey): Boolean;
+var
+  p: TSearchResult;
+begin
+  if Count > 0 then
+    begin
+      Result := DoFind(aKey, TKeyEqRel.HashCode(aKey), p);
+      if Result then
+        DoRemove(p);
+    end
+  else
+    Result := False;
+end;
+
+function TGLiteHashMultiMap.Keys: TKeys;
+begin
+  Result.Init(@Self);
+end;
+
+function TGLiteHashMultiMap.Values: TValues;
+begin
+  Result.Init(@Self);
 end;
 
 end.
