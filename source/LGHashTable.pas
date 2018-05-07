@@ -3369,9 +3369,14 @@ function TGLiteChainHashTable.Remove(constref aKey: TKey): Boolean;
 var
   p: TSearchResult;
 begin
-  Result := DoFind(aKey, TKeyEqRel.HashCode(aKey), p);
-  if Result then
-    DoRemove(p);
+  if Count > 0 then
+    begin
+      Result := DoFind(aKey, TKeyEqRel.HashCode(aKey), p);
+      if Result then
+        DoRemove(p);
+    end
+  else
+    Result := False;
 end;
 
 procedure TGLiteChainHashTable.RemoveAt(constref aPos: TSearchResult);
