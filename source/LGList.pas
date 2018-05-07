@@ -667,7 +667,8 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
   end;
 
-  { TGLiteHashList: node based hash table with alter access by index(or vice versa);
+  { TGLiteHashList: array based list with fast searching by key or
+      node based hash table with alter access by index;
       functor TEqRel(equality relation) must provide:
         class function HashCode([const[ref]] aValue: T): SizeInt;
         class function Equal([const[ref]] L, R: T): Boolean; }
@@ -728,6 +729,13 @@ type
       function  GetEnumerator: TReverseEnumerator; inline;
     end;
 
+    TSearchData = record
+      Key: T;
+      Hash,
+      Index,
+      Next: SizeInt;
+    end;
+
   private
     FNodeList: TNodeList;
     FHashList: THashList;
@@ -769,7 +777,8 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
     function  IndexOf(constref aValue: T): SizeInt; inline;
     function  CountOf(constref aValue: T): SizeInt; inline;
-    //FindFirst, FindNext
+    function  FindFirst(constref aValue: T; out aData: TSearchData): Boolean;
+    function  FindNext(var aData: TSearchData): Boolean;
     function  Add(constref aValue: T): SizeInt; inline;
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
@@ -3911,6 +3920,33 @@ begin
     Result := GetCountOf(aValue)
   else
     Result := 0;
+end;
+
+function TGLiteHashList.FindFirst(constref aValue: T; out aData: TSearchData): Boolean;
+begin
+  aData.Key := aValue;
+  aData.Index := IndexOf(aValue);
+  Result := aData.Index >= 0;
+  if Result then
+    begin
+      aData.Hash := FNodeList[aData.Index].Hash;
+      aData.Next :=  FNodeList[aData.Index].Next;
+    end
+  else
+    begin
+      aData.Hash := 0;
+      aData.Next :=  NULL_INDEX;
+    end;
+end;
+
+function TGLiteHashList.FindNext(var aData: TSearchData): Boolean;
+begin
+  Result := aData.Next >= 0;
+  if Result then
+    begin
+      aData.Index := aData.Next;
+      aData.Next := FNodeList[aData.Index].Next;
+    end;
 end;
 
 function TGLiteHashList.Add(constref aValue: T): SizeInt;
