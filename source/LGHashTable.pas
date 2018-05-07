@@ -3672,23 +3672,34 @@ end;
 
 procedure TGLiteHashList.DoInsert(aIndex: SizeInt; constref aValue: T);
 begin
-  System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * NODE_SIZE);
-  System.FillChar(FNodeList[aIndex].Data, SizeOf(T), 0);
-  FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
-  FNodeList[aIndex].Data := aValue;
-  Inc(FCount);
-  System.FillChar(FHashList[0], Capacity * SizeOf(SizeInt), $ff);
-  Rehash;
+  if aIndex < Count then
+    begin
+      System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * NODE_SIZE);
+      System.FillChar(FNodeList[aIndex].Data, SizeOf(T), 0);
+      FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
+      FNodeList[aIndex].Data := aValue;
+      Inc(FCount);
+      Rehash;
+    end
+  else
+    DoAdd(aValue);
 end;
 
 procedure TGLiteHashList.DoDelete(aIndex: SizeInt);
 begin
   Dec(FCount);
-  FNodeList[aIndex].Data := Default(T);
-  System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * NODE_SIZE);
-  System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
-  System.FillChar(FHashList[0], Capacity * SizeOf(SizeInt), $ff);
-  Rehash;
+  if aIndex < Count then
+    begin
+      FNodeList[aIndex].Data := Default(T);
+      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * NODE_SIZE);
+      System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
+      Rehash;
+    end
+  else   // last element
+    begin
+      RemoveFromChain(aIndex);
+      System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
+    end;
 end;
 
 procedure TGLiteHashList.RemoveFromChain(aIndex: SizeInt);
