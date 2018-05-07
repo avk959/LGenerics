@@ -688,10 +688,8 @@ type
     function  RemoveKeys(constref a: array of TKey): SizeInt;
   { returns count of removed values }
     function  RemoveKeys(e: IKeyEnumerable): SizeInt;
-  { returns copy of values mapped to aKey(empty if aKey is missing) }
-    function  CopyValues(const aKey: TKey): TValueArray;
   { enumerates values mapped to aKey(empty if aKey is missing) }
-    function  ViewValues(const aKey: TKey): IValueEnumerable;
+    function  ValuesView(const aKey: TKey): IValueEnumerable;
     function  Keys: IKeyEnumerable;
     function  Values: IValueEnumerable;
     function  Entries: IEntryEnumerable;
@@ -701,7 +699,7 @@ type
     property  Count: SizeInt read FCount;
     property  KeyCount: SizeInt read GetKeyCount;
     property  Capacity: SizeInt read GetCapacity;
-    property  Items[const aKey: TKey]: IValueEnumerable read ViewValues; default;
+    property  Items[const aKey: TKey]: IValueEnumerable read ValuesView; default;
   end;
 
   { TGCustomTable2D: abstract ancestor class }
@@ -3039,18 +3037,7 @@ begin
   Result := DoRemoveKeys(e);
 end;
 
-function TGCustomMultiMap.CopyValues(const aKey: TKey): TValueArray;
-var
-  p: PMMEntry;
-begin
-  p := Find(aKey);
-  if p <> nil then
-    Result := p^.Values.ToArray
-  else
-    Result := nil;
-end;
-
-function TGCustomMultiMap.ViewValues(const aKey: TKey): IValueEnumerable;
+function TGCustomMultiMap.ValuesView(const aKey: TKey): IValueEnumerable;
 var
   p: PMMEntry;
 begin
