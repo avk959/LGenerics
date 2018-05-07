@@ -126,20 +126,20 @@
         <UnitName Value="LGBiMap"/>
       </Item23>
       <Item24>
-        <Filename Value="..\source\LGSortedList.pas"/>
-        <UnitName Value="LGSortedList"/>
-      </Item24>
-      <Item25>
         <Filename Value="..\source\LGAsync.pas"/>
         <UnitName Value="LGAsync"/>
-      </Item25>
-      <Item26>
+      </Item24>
+      <Item25>
         <Filename Value="..\source\LGQueue.pas"/>
         <UnitName Value="LGQueue"/>
+      </Item25>
+      <Item26>
+        <Filename Value="..\source\LGTable2D.pas"/>
+        <UnitName Value="LGTable2D"/>
       </Item26>
       <Item27>
-        <Filename Value="..\source\LGTable2D.pas"/>
-        <UnitName Value="LGTable"/>
+        <Filename Value="..\source\LGList.pas"/>
+        <UnitName Value="LGList"/>
       </Item27>
     </Files>
     <RequiredPkgs Count="1">

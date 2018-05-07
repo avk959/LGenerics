@@ -31,7 +31,7 @@ uses
   LGCustomContainer,
   LGHashTable,
   LGAvlTree,
-  LGSortedList;
+  LGList;
 
 type
 
