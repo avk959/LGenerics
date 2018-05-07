@@ -2298,7 +2298,7 @@ end;
 
 function TGSortedListTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
-  //sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
   Entry: TEntry;
 begin
   Entry.Key := aKey;
@@ -2339,7 +2339,7 @@ end;
 
 function TGSortedListTable.Add(constref aKey: TKey): PEntry;
 var
-  //sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
   Entry: TEntry;
 begin
   Result := nil;
