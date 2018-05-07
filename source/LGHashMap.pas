@@ -427,6 +427,7 @@ type
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean; inline;
     function  Contains(constref aKey: TKey): Boolean; inline;
+    function  NonContains(constref aKey: TKey): Boolean; inline;
     function  ContainsAny(constref a: array of TKey): Boolean;
     function  ContainsAny(e: IKeyEnumerable): Boolean;
     function  ContainsAll(constref a: array of TKey): Boolean;
@@ -567,6 +568,7 @@ type
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean; inline;
     function  Contains(constref aKey: TKey): Boolean; inline;
+    function  NonContains(constref aKey: TKey): Boolean; inline;
     function  ContainsAny(constref a: array of TKey): Boolean;
     function  ContainsAny(e: IKeyEnumerable): Boolean;
     function  ContainsAll(constref a: array of TKey): Boolean;
@@ -1551,6 +1553,11 @@ begin
   Result := Find(aKey) <> nil;
 end;
 
+function TGLiteHashMapLP.NonContains(constref aKey: TKey): Boolean;
+begin
+  Result := Find(aKey) = nil;
+end;
+
 function TGLiteHashMapLP.ContainsAny(constref a: array of TKey): Boolean;
 var
   k: TKey;
@@ -1970,6 +1977,11 @@ end;
 function TGLiteChainHashMap.Contains(constref aKey: TKey): Boolean;
 begin
   Result := Find(aKey) <> nil;
+end;
+
+function TGLiteChainHashMap.NonContains(constref aKey: TKey): Boolean;
+begin
+  Result := Find(aKey) = nil;
 end;
 
 function TGLiteChainHashMap.ContainsAny(constref a: array of TKey): Boolean;
