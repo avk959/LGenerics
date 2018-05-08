@@ -588,6 +588,8 @@ begin
   I := Count;
   kInd := aKeyHash and Mask;
   vInd := aValHash and Mask;
+  FNodeList[I].Data.Key := aKey;
+  FNodeList[I].Data.Value := aValue;
   FNodeList[I].KeyHash := aKeyHash;
   FNodeList[I].ValueHash := aValHash;
   FNodeList[I].NextKey := FKeyChains[kInd];
@@ -671,12 +673,12 @@ function TGHashBiMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolea
 var
   kh, vh: SizeInt;
 begin
+  kh := TKeyEqRel.HashCode(aKey);
+  vh := TValueEqRel.HashCode(aValue);
   if Count > 0 then
     begin
-      kh := TKeyEqRel.HashCode(aKey);
       if DoFindKey(aKey, kh) <> NULL_INDEX then
         exit(False);
-      vh := TValueEqRel.HashCode(aValue);
       if DoFindValue(aValue, vh) <> NULL_INDEX then
         exit(False);
     end;
