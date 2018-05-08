@@ -680,17 +680,17 @@ type
 
   private
   type
-    THashList  = array of SizeInt;
+    TChainList = array of SizeInt;
     PHashTable = ^TGLiteChainHashTable;
 
   const
     NULL_INDEX  = SizeInt(-1);
     NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 1) div NODE_SIZE;
+    MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 2) div NODE_SIZE;
 
   var
     FNodeList: TNodeList;
-    FHashList: THashList;
+    FChainList: TChainList;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     procedure InitialAlloc; inline;
@@ -3232,8 +3232,8 @@ end;
 procedure TGLiteChainHashTable.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
-  System.SetLength(FHashList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(FHashList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteChainHashTable.Rehash;
@@ -3241,19 +3241,19 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := Pred(Capacity);
-  System.FillChar(FHashList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
-      FNodeList[I].Next := FHashList[J];
-      FHashList[J] := I;
+      FNodeList[I].Next := FChainList[J];
+      FChainList[J] := I;
     end;
 end;
 
 procedure TGLiteChainHashTable.Resize(aNewCapacity: SizeInt);
 begin
   System.SetLength(FNodeList, aNewCapacity);
-  System.SetLength(FHashList, aNewCapacity);
+  System.SetLength(FChainList, aNewCapacity);
   Rehash;
 end;
 
@@ -3278,7 +3278,7 @@ var
   I, Curr, Prev: SizeInt;
 begin
   I := FNodeList[aIndex].Hash and Pred(Capacity);
-  Curr := FHashList[I];
+  Curr := FChainList[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
     begin
@@ -3287,7 +3287,7 @@ begin
           if Prev <> NULL_INDEX then
             FNodeList[Prev].Next := FNodeList[Curr].Next
           else
-            FHashList[I] := FNodeList[Curr].Next;
+            FChainList[I] := FNodeList[Curr].Next;
           exit;
         end;
       Prev := Curr;
@@ -3299,7 +3299,7 @@ function TGLiteChainHashTable.DoFind(constref aKey: TKey; aHash: SizeInt; out aP
 var
   I: SizeInt;
 begin
-  I := FHashList[aHash and Pred(Capacity)];
+  I := FChainList[aHash and Pred(Capacity)];
   aPos.PrevIndex := NULL_INDEX;
   while I <> NULL_INDEX do
     begin
@@ -3321,8 +3321,8 @@ begin
   Result := Count;
   I := aKeyHash and Pred(Capacity);
   FNodeList[Result].Hash := aKeyHash;
-  FNodeList[Result].Next := FHashList[I];
-  FHashList[I] := Result;
+  FNodeList[Result].Next := FChainList[I];
+  FChainList[I] := Result;
   Inc(FCount);
 end;
 
@@ -3333,7 +3333,7 @@ begin
   if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
     FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
   else
-    FHashList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
+    FChainList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
   FNodeList[aPos.Index].Data := Default(TEntry);
   Dec(FCount);
   if aPos.Index < Count then
@@ -3343,8 +3343,8 @@ begin
       I := FNodeList[Last].Hash and Pred(Capacity);
       System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[aPos.Index].Next := FHashList[I];
-      FHashList[I] := aPos.Index;
+      FNodeList[aPos.Index].Next := FChainList[I];
+      FChainList[I] := aPos.Index;
     end;
 end;
 
@@ -3362,8 +3362,8 @@ begin
       I := FNodeList[Last].Hash and Pred(Capacity);
       System.Move(FNodeList[Last], FNodeList[aIndex], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[aIndex].Next := FHashList[I];
-      FHashList[I] := aIndex;
+      FNodeList[aIndex].Next := FChainList[I];
+      FChainList[I] := aIndex;
     end;
 end;
 
@@ -3387,14 +3387,14 @@ end;
 class operator TGLiteChainHashTable.Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
-  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
+  aDst.FChainList := System.Copy(aSrc.FChainList, 0, System.Length(aSrc.FChainList));
   aDst.FCount := aSrc.Count;
 end;
 
 procedure TGLiteChainHashTable.Clear;
 begin
   FNodeList := nil;
-  FHashList := nil;
+  FChainList := nil;
   FCount := 0;
 end;
 
