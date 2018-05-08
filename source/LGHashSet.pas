@@ -98,7 +98,7 @@ type
     class function DefaultLoadFactor: Single; inline;
     class function MaxLoadFactor: Single; inline;
     class function MinLoadFactor: Single; inline;
-    class function Distinct(a: TArray): IEnumerable; inline;
+    class function Distinct(constref a: TArray): IEnumerable; inline;
     class function Distinct(e: IEnumerable): IEnumerable; inline;
     constructor Create;
     constructor Create(constref a: array of T);
@@ -627,7 +627,7 @@ begin
   Result := GetTableClass.MinLoadFactor;
 end;
 
-class function TGCustomHashSet.Distinct(a: TArray): IEnumerable;
+class function TGCustomHashSet.Distinct(constref a: TArray): IEnumerable;
 begin
   Result := TDistinctEnumerable.Create(specialize TGArrayEnumerator<T>.Create(a), GetClass);
 end;
