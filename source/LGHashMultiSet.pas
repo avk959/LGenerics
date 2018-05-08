@@ -1629,12 +1629,11 @@ function TGLiteHashMultiSetLP.Remove(constref aValue: T): Boolean;
 begin
   Result := Extract(aValue);
 end;
-{$PUSH}{$MACRO ON}
+
 function TGLiteHashMultiSetLP.RemoveIf(aTest: TTest): SizeInt;
 var
   p: PEntry;
 begin
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   with FTable.RemovableEnumerator do
     while MoveNext do
@@ -1646,22 +1645,43 @@ begin
             Result += p^.Count;
             RemoveCurrent;
           end
-      end}
-  RemoveIfMacro;
+      end;
 end;
 
 function TGLiteHashMultiSetLP.RemoveIf(aTest: TOnTest): SizeInt;
 var
   p: PEntry;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            FCount -= p^.Count;
+            Result += p^.Count;
+            RemoveCurrent;
+          end
+      end;
 end;
 
 function TGLiteHashMultiSetLP.RemoveIf(aTest: TNestTest): SizeInt;
 var
   p: PEntry;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            FCount -= p^.Count;
+            Result += p^.Count;
+            RemoveCurrent;
+          end
+      end;
 end;
 
 function TGLiteHashMultiSetLP.Extract(constref aValue: T): Boolean;
@@ -1686,7 +1706,6 @@ var
   p: PEntry;
   v: T;
 begin
-{$DEFINE ExtractIfMacro :=
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
   with FTable.RemovableEnumerator do
@@ -1706,8 +1725,7 @@ begin
             I := Succ(Last);
           end;
       end;
-  System.SetLength(Result, I)}
-  ExtractIfMacro;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashMultiSetLP.ExtractIf(aTest: TOnTest): TArray;
@@ -1716,7 +1734,26 @@ var
   p: PEntry;
   v: T;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  I := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            Last := Pred(I + p^.Count);
+            FCount -= p^.Count;
+            v := p^.Key;
+            if Last >= System.Length(Result) then
+                System.SetLength(Result, RoundUpTwoPower(Succ(Last)));
+            for I := I to Last do
+              Result[I] := v;
+            RemoveCurrent;
+            I := Succ(Last);
+          end;
+      end;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashMultiSetLP.ExtractIf(aTest: TNestTest): TArray;
@@ -1725,9 +1762,27 @@ var
   p: PEntry;
   v: T;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  I := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            Last := Pred(I + p^.Count);
+            FCount -= p^.Count;
+            v := p^.Key;
+            if Last >= System.Length(Result) then
+                System.SetLength(Result, RoundUpTwoPower(Succ(Last)));
+            for I := I to Last do
+              Result[I] := v;
+            RemoveCurrent;
+            I := Succ(Last);
+          end;
+      end;
+  System.SetLength(Result, I);
 end;
-{$POP}
 
 procedure TGLiteHashMultiSetLP.RetainAll(aCollection: ICollection);
 begin
