@@ -320,8 +320,6 @@ type
     TKeyTest         = specialize TGTest<TKey>;
     TOnKeyTest       = specialize TGOnTest<TKey>;
     TNestKeyTest     = specialize TGNestTest<TKey>;
-    TValueOptional   = specialize TGOptional<TValue>;
-    TKeyCollection   = specialize TGCustomCollection<TKey>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     IKeyCollection   = specialize IGCollection<TKey>;
@@ -453,144 +451,6 @@ type
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
     property  TableSize: SizeInt read GetTableSize;
-  end;
-
-  { TGLiteChainHashMap implements node based hashmap with singly linked list chains;
-      TKeyEqRel must provide:
-        class function HashCode([const[ref]] aValue: TKey): SizeInt;
-        class function Equal([const[ref]] L, R: TKey): Boolean; }
-  generic TGLiteChainHashMap<TKey, TValue, TKeyEqRel> = record
-  public
-  type
-    TEntry           = specialize TGMapEntry<TKey, TValue>;
-    TEntryArray      = specialize TGArray<TEntry>;
-    TKeyArray        = specialize TGArray<TKey>;
-    TKeyTest         = specialize TGTest<TKey>;
-    TOnKeyTest       = specialize TGOnTest<TKey>;
-    TNestKeyTest     = specialize TGNestTest<TKey>;
-    TValueOptional   = specialize TGOptional<TValue>;
-    TKeyCollection   = specialize TGCustomCollection<TKey>;
-    IKeyEnumerable   = specialize IGEnumerable<TKey>;
-    IEntryEnumerable = specialize IGEnumerable<TEntry>;
-    IKeyCollection   = specialize IGCollection<TKey>;
-
-  private
-  type
-    PEntry        = ^TEntry;
-    TChainTable   = specialize TGLiteChainHashTable<TKey, TEntry, TKeyEqRel>;
-    PChainHashMap = ^TGLiteChainHashMap;
-
-  public
-  type
-    TKeyEnumerator = record
-    private
-      FEnum: TChainTable.TEnumerator;
-      function  GetCurrent: TKey; inline;
-      procedure Init(constref aMap: TGLiteChainHashMap); inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: TKey read GetCurrent;
-    end;
-
-    TValueEnumerator = record
-    private
-      FEnum: TChainTable.TEnumerator;
-      function  GetCurrent: TValue; inline;
-      procedure Init(constref aMap: TGLiteChainHashMap); inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: TValue read GetCurrent;
-    end;
-
-    TEntryEnumerator = record
-    private
-      FEnum: TChainTable.TEnumerator;
-      function  GetCurrent: TEntry; inline;
-      procedure Init(constref aMap: TGLiteChainHashMap); inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: TEntry read GetCurrent;
-    end;
-
-    TKeys = record
-    private
-      FMap: PChainHashMap;
-      procedure Init(aMap: PChainHashMap); inline;
-    public
-      function GetEnumerator: TKeyEnumerator; inline;
-    end;
-
-    TValues = record
-    private
-      FMap: PChainHashMap;
-      procedure Init(aMap: PChainHashMap); inline;
-    public
-      function GetEnumerator: TValueEnumerator; inline;
-    end;
-
-  private
-    FTable: TChainTable;
-    function  GetCount: SizeInt; inline;
-    function  GetCapacity: SizeInt; inline;
-    function  Find(constref aKey: TKey): PEntry; inline;
-    //returns True if aKey found, otherwise inserts (garbage) entry and returns False;
-    function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
-    function  GetValue(const aKey: TKey): TValue; inline;
-    function  SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-    function  GetKeyEnumerator: TKeyEnumerator; inline;
-    function  GetValueEnumerator: TValueEnumerator; inline;
-  public
-    function  GetEnumerator: TEntryEnumerator; inline;
-    function  ToArray: TEntryArray;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
-    procedure Clear; inline;
-    procedure EnsureCapacity(aValue: SizeInt); inline;
-  { free unused memory if possible }
-    procedure TrimToFit; inline;
-  { returns True and aValue mapped to aKey if contains aKey, False otherwise }
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-  { returns Value mapped to aKey or aDefault }
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
-  { returns True and add TEntry(aKey, aValue) only if not contains aKey }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-  { returns True and add e only if not contains e.Key }
-    function  Add(constref e: TEntry): Boolean; inline;
-    procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
-  { returns True if e.Key added, False otherwise }
-    function  AddOrSetValue(constref e: TEntry): Boolean; inline;
-  { will add only entries which keys are absent in map }
-    function  AddAll(constref a: array of TEntry): SizeInt;
-    function  AddAll(e: IEntryEnumerable): SizeInt;
-  { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
-    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean; inline;
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  NonContains(constref aKey: TKey): Boolean; inline;
-    function  ContainsAny(constref a: array of TKey): Boolean;
-    function  ContainsAny(e: IKeyEnumerable): Boolean;
-    function  ContainsAll(constref a: array of TKey): Boolean;
-    function  ContainsAll(e: IKeyEnumerable): Boolean;
-  { returns True if entry removed }
-    function  Remove(constref aKey: TKey): Boolean; inline;
-    function  RemoveAll(constref a: array of TKey): SizeInt;
-    function  RemoveAll(e: IKeyEnumerable): SizeInt;
-    function  RemoveIf(aTest: TKeyTest): SizeInt;
-    function  RemoveIf(aTest: TOnKeyTest): SizeInt;
-    function  RemoveIf(aTest: TNestKeyTest): SizeInt;
-    function  Extract(constref aKey: TKey; out v: TValue): Boolean;
-    function  ExtractIf(aTest: TKeyTest): TEntryArray;
-    function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
-    function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
-    procedure RetainAll(aCollection: IKeyCollection);
-    function  Keys: TKeys; inline;
-    function  Values: TValues; inline;
-    property  Count: SizeInt read GetCount;
-    property  Capacity: SizeInt read GetCapacity;
-  { reading will raise ELGMapError if an aKey is not present in map }
-    property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
 
 implementation
@@ -1620,10 +1480,9 @@ begin
   for k in e do
     Result += Ord(Remove(k));
 end;
-{$PUSH}{$MACRO ON}
+
 function TGLiteHashMapLP.RemoveIf(aTest: TKeyTest): SizeInt;
 begin
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   with FTable.RemovableEnumerator do
     while MoveNext do
@@ -1631,18 +1490,31 @@ begin
         begin
           RemoveCurrent;
           Inc(Result);
-        end}
-  RemoveIfMacro;
+        end;
 end;
 
 function TGLiteHashMapLP.RemoveIf(aTest: TOnKeyTest): SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aTest(Current^.Key) then
+        begin
+          RemoveCurrent;
+          Inc(Result);
+        end;
 end;
 
 function TGLiteHashMapLP.RemoveIf(aTest: TNestKeyTest): SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aTest(Current^.Key) then
+        begin
+          RemoveCurrent;
+          Inc(Result);
+        end;
 end;
 
 function TGLiteHashMapLP.Extract(constref aKey: TKey; out v: TValue): Boolean;
@@ -1664,7 +1536,6 @@ var
   I: SizeInt = 0;
   e: TEntry;
 begin
-{$DEFINE ExtractIfMacro :=
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   with FTable.RemovableEnumerator do
     while MoveNext do
@@ -1679,8 +1550,7 @@ begin
             Inc(I);
           end;
       end;
-  System.SetLength(Result, I)}
-  ExtractIfMacro;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashMapLP.ExtractIf(aTest: TOnKeyTest): TEntryArray;
@@ -1688,7 +1558,21 @@ var
   I: SizeInt = 0;
   e: TEntry;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        e := Current^;
+        if aTest(e.Key) then
+          begin
+            RemoveCurrent;
+            if I = System.Length(Result) then
+              System.SetLength(Result, I shl 1);
+            Result[I] := e;
+            Inc(I);
+          end;
+      end;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashMapLP.ExtractIf(aTest: TNestKeyTest): TEntryArray;
@@ -1696,9 +1580,22 @@ var
   I: SizeInt = 0;
   e: TEntry;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        e := Current^;
+        if aTest(e.Key) then
+          begin
+            RemoveCurrent;
+            if I = System.Length(Result) then
+              System.SetLength(Result, I shl 1);
+            Result[I] := e;
+            Inc(I);
+          end;
+      end;
+  System.SetLength(Result, I);
 end;
-{$POP}
 
 procedure TGLiteHashMapLP.RetainAll(aCollection: IKeyCollection);
 begin
@@ -1716,433 +1613,6 @@ end;
 function TGLiteHashMapLP.Values: TValues;
 begin
   Result{%H-}.Init(@Self);
-end;
-
-{ TGLiteChainHashMap.TKeyEnumerator }
-
-function TGLiteChainHashMap.TKeyEnumerator.GetCurrent: TKey;
-begin
-  Result := FEnum.Current^.Key;
-end;
-
-procedure TGLiteChainHashMap.TKeyEnumerator.Init(constref aMap: TGLiteChainHashMap);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
-end;
-
-function TGLiteChainHashMap.TKeyEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGLiteChainHashMap.TKeyEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGLiteChainHashMap.TValueEnumerator }
-
-function TGLiteChainHashMap.TValueEnumerator.GetCurrent: TValue;
-begin
-  Result := FEnum.Current^.Value;
-end;
-
-procedure TGLiteChainHashMap.TValueEnumerator.Init(constref aMap: TGLiteChainHashMap);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
-end;
-
-function TGLiteChainHashMap.TValueEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGLiteChainHashMap.TValueEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGLiteChainHashMap.TEntryEnumerator }
-
-function TGLiteChainHashMap.TEntryEnumerator.GetCurrent: TEntry;
-begin
-  Result := FEnum.Current^;
-end;
-
-procedure TGLiteChainHashMap.TEntryEnumerator.Init(constref aMap: TGLiteChainHashMap);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
-end;
-
-function TGLiteChainHashMap.TEntryEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGLiteChainHashMap.TEntryEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGLiteChainHashMap.TKeys }
-
-procedure TGLiteChainHashMap.TKeys.Init(aMap: PChainHashMap);
-begin
-  FMap := aMap;
-end;
-
-function TGLiteChainHashMap.TKeys.GetEnumerator: TKeyEnumerator;
-begin
-  Result := FMap^.GetKeyEnumerator;
-end;
-
-{ TGLiteChainHashMap.TValues }
-
-procedure TGLiteChainHashMap.TValues.Init(aMap: PChainHashMap);
-begin
-  FMap := aMap;
-end;
-
-function TGLiteChainHashMap.TValues.GetEnumerator: TValueEnumerator;
-begin
-  Result := FMap^.GetValueEnumerator;
-end;
-
-{ TGLiteChainHashMap }
-
-function TGLiteChainHashMap.GetCount: SizeInt;
-begin
-  Result := FTable.Count;
-end;
-
-function TGLiteChainHashMap.GetCapacity: SizeInt;
-begin
-  Result := FTable.Capacity;
-end;
-
-function TGLiteChainHashMap.Find(constref aKey: TKey): PEntry;
-var
-  Pos: TChainTable.TSearchResult;
-begin
-  Result := FTable.Find(aKey, Pos);
-end;
-
-function TGLiteChainHashMap.FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
-var
-  Pos: TChainTable.TSearchResult;
-begin
-  Result := FTable.FindOrAdd(aKey, p, Pos);
-  if not Result then
-    p^.Key := aKey;
-end;
-
-function TGLiteChainHashMap.GetValue(const aKey: TKey): TValue;
-begin
-  if not TryGetValue(aKey, Result) then
-    raise ELGMapError.Create(SEKeyNotFound);
-end;
-
-function TGLiteChainHashMap.SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-var
-  p: PEntry;
-begin
-  p := Find(aKey);
-  Result := p <> nil;
-  if Result then
-    p^.Value := aNewValue;
-end;
-
-function TGLiteChainHashMap.GetKeyEnumerator: TKeyEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteChainHashMap.GetValueEnumerator: TValueEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteChainHashMap.GetEnumerator: TEntryEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteChainHashMap.ToArray: TEntryArray;
-var
-  I: SizeInt = 0;
-  p: PEntry;
-begin
-  System.SetLength(Result, Count);
-  for p in FTable do
-    begin
-      Result[I] := p^;
-      Inc(I);
-    end;
-end;
-
-function TGLiteChainHashMap.IsEmpty: Boolean;
-begin
-  Result := FTable.Count = 0;
-end;
-
-function TGLiteChainHashMap.NonEmpty: Boolean;
-begin
-  Result := FTable.Count <> 0;
-end;
-
-procedure TGLiteChainHashMap.Clear;
-begin
-  FTable.Clear;
-end;
-
-procedure TGLiteChainHashMap.EnsureCapacity(aValue: SizeInt);
-begin
-  FTable.EnsureCapacity(aValue);
-end;
-
-procedure TGLiteChainHashMap.TrimToFit;
-begin
-  FTable.TrimToFit;
-end;
-
-function TGLiteChainHashMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-var
-  p: PEntry;
-begin
-  p := Find(aKey);
-  Result := p <> nil;
-  if Result then
-    aValue := p^.Value;
-end;
-
-function TGLiteChainHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
-begin
-  if not TryGetValue(aKey, Result) then
-    Result := aDefault;
-end;
-
-function TGLiteChainHashMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-var
-  p: PEntry;
-begin
-  Result := not FindOrAdd(aKey, p);
-  if Result then
-    p^.Value := aValue;
-end;
-
-function TGLiteChainHashMap.Add(constref e: TEntry): Boolean;
-begin
-  Result := Add(e.Key, e.Value);
-end;
-
-procedure TGLiteChainHashMap.AddOrSetValue(const aKey: TKey; const aValue: TValue);
-var
-  p: PEntry;
-begin
-  FindOrAdd(aKey, p);
-  p^.Value := aValue;
-end;
-
-function TGLiteChainHashMap.AddOrSetValue(constref e: TEntry): Boolean;
-var
-  p: PEntry;
-begin
-  Result := not FindOrAdd(e.Key, p);
-  p^.Value := e.Value;
-end;
-
-function TGLiteChainHashMap.AddAll(constref a: array of TEntry): SizeInt;
-var
-  e: TEntry;
-begin
-  Result := 0;
-  for e in a do
-    Result += Ord(Add(e));
-end;
-
-function TGLiteChainHashMap.AddAll(e: IEntryEnumerable): SizeInt;
-var
-  Entry: TEntry;
-begin
-  Result := 0;
-  for Entry in e do
-    Result += Ord(Add(Entry));
-end;
-
-function TGLiteChainHashMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-begin
-  Result := SetValue(aKey, aNewValue);
-end;
-
-function TGLiteChainHashMap.Contains(constref aKey: TKey): Boolean;
-begin
-  Result := Find(aKey) <> nil;
-end;
-
-function TGLiteChainHashMap.NonContains(constref aKey: TKey): Boolean;
-begin
-  Result := Find(aKey) = nil;
-end;
-
-function TGLiteChainHashMap.ContainsAny(constref a: array of TKey): Boolean;
-var
-  k: TKey;
-begin
-  for k in a do
-  if Contains(k) then
-    exit(True);
-  Result := False;
-end;
-
-function TGLiteChainHashMap.ContainsAny(e: IKeyEnumerable): Boolean;
-var
-  k: TKey;
-begin
-  for k in e do
-  if Contains(k) then
-    exit(True);
-  Result := False;
-end;
-
-function TGLiteChainHashMap.ContainsAll(constref a: array of TKey): Boolean;
-var
-  k: TKey;
-begin
-  for k in a do
-  if not Contains(k) then
-    exit(False);
-  Result := True;
-end;
-
-function TGLiteChainHashMap.ContainsAll(e: IKeyEnumerable): Boolean;
-var
-  k: TKey;
-begin
-  for k in e do
-  if not Contains(k) then
-    exit(False);
-  Result := True;
-end;
-
-function TGLiteChainHashMap.Remove(constref aKey: TKey): Boolean;
-begin
-  Result := FTable.Remove(aKey);
-end;
-
-function TGLiteChainHashMap.RemoveAll(constref a: array of TKey): SizeInt;
-var
-  k: TKey;
-begin
-  Result := 0;
-  for k in a do
-    Result += Ord(Remove(k));
-end;
-
-function TGLiteChainHashMap.RemoveAll(e: IKeyEnumerable): SizeInt;
-var
-  k: TKey;
-begin
-  Result := 0;
-  for k in e do
-    Result += Ord(Remove(k));
-end;
-
-{$PUSH}{$MACRO ON}
-function TGLiteChainHashMap.RemoveIf(aTest: TKeyTest): SizeInt;
-begin
-{$DEFINE RemoveIfMacro :=
-  Result := 0;
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          RemoveCurrent;
-          Inc(Result);
-        end}
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashMap.RemoveIf(aTest: TOnKeyTest): SizeInt;
-begin
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashMap.RemoveIf(aTest: TNestKeyTest): SizeInt;
-begin
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashMap.Extract(constref aKey: TKey; out v: TValue): Boolean;
-var
-  p: PEntry;
-  Pos: TChainTable.TSearchResult;
-begin
-  p := FTable.Find(aKey, Pos);
-  Result := p <> nil;
-  if Result then
-    begin
-      v := p^.Value;
-      FTable.RemoveAt(Pos);
-    end;
-end;
-
-function TGLiteChainHashMap.ExtractIf(aTest: TKeyTest): TEntryArray;
-var
-  I: SizeInt = 0;
-  e: TEntry;
-begin
-{$DEFINE ExtractIfMacro :=
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      begin
-        e := Current^;
-        if aTest(e.Key) then
-          begin
-            RemoveCurrent;
-            if I = System.Length(Result) then
-              System.SetLength(Result, I shl 1);
-            Result[I] := e;
-            Inc(I);
-          end;
-      end;
-  System.SetLength(Result, I)}
-  ExtractIfMacro;
-end;
-
-function TGLiteChainHashMap.ExtractIf(aTest: TOnKeyTest): TEntryArray;
-var
-  I: SizeInt = 0;
-  e: TEntry;
-begin
-  ExtractIfMacro;
-end;
-
-function TGLiteChainHashMap.ExtractIf(aTest: TNestKeyTest): TEntryArray;
-var
-  I: SizeInt = 0;
-  e: TEntry;
-begin
-  ExtractIfMacro;
-end;
-{$POP}
-
-procedure TGLiteChainHashMap.RetainAll(aCollection: IKeyCollection);
-begin
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      if aCollection.NonContains(Current^.Key) then
-        RemoveCurrent;
-end;
-
-function TGLiteChainHashMap.Keys: TKeys;
-begin
-  Result.Init(@Self);
-end;
-
-function TGLiteChainHashMap.Values: TValues;
-begin
-  Result.Init(@Self);
 end;
 
 end.
