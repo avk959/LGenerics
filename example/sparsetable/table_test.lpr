@@ -8,18 +8,15 @@ uses
 
 type
   TTable    = specialize TGListTable2D2<string, string, Integer>;
-  TCellData = TTable.TCellData;
-  TRowData  = TTable.TRowData;
-  TColData  = TTable.TColData;
 
 const
-  Data: array[0..99] of TCellData = {$I data.inc};
+  Data: array[0..99] of TTable.TCellData = {$I data.inc};
 
 var
   UserInput: string;
   Table: TTable;
-  RowData: TRowData;
-  ColData: TColData;
+  RowData: TTable.TRowData;
+  ColData: TTable.TColData;
 
 
   {$R *.res}
@@ -32,8 +29,8 @@ begin
   repeat
     WriteLn;
     WriteLn('Enter q[uite] to exit');
-    WriteLn('Enter 1=Company name to get list of branch offices locations');
-    WriteLn('Enter 2=Country name to get list of branch offices');
+    WriteLn('Enter 1=company name to get list of branch offices locations');
+    WriteLn('Enter 2=country to get list of branch offices');
     ReadLn(UserInput);
     if Length(UserInput) > 0 then
     case LowerCase(UserInput[1]) of
