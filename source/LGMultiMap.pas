@@ -345,9 +345,9 @@ type
       Next: SizeInt;
     end;
 
-    TNodeList = array of TNode;
-    THashList = array of SizeInt;
-    PMultiMap = ^TGLiteHashMultiMap;
+    TNodeList  = array of TNode;
+    TChainList = array of SizeInt;
+    PMultiMap  = ^TGLiteHashMultiMap;
 
   const
     NULL_INDEX  = SizeInt(-1);
@@ -434,7 +434,7 @@ type
 
   private
     FNodeList: TNodeList;
-    FHashList: THashList;
+    FChainList: TChainList;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     procedure InitialAlloc;
@@ -1223,8 +1223,8 @@ end;
 procedure TGLiteHashMultiMap.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
-  System.SetLength(FHashList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(FHashList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteHashMultiMap.Rehash;
@@ -1232,19 +1232,19 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := Pred(Capacity);
-  System.FillChar(FHashList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
-      FNodeList[I].Next := FHashList[J];
-      FHashList[J] := I;
+      FNodeList[I].Next := FChainList[J];
+      FChainList[J] := I;
     end;
 end;
 
 procedure TGLiteHashMultiMap.Resize(aNewCapacity: SizeInt);
 begin
   System.SetLength(FNodeList, aNewCapacity);
-  System.SetLength(FHashList, aNewCapacity);
+  System.SetLength(FChainList, aNewCapacity);
   Rehash;
 end;
 
@@ -1268,7 +1268,7 @@ function TGLiteHashMultiMap.DoFind(constref aKey: TKey; aHash: SizeInt; out sr: 
 var
   I: SizeInt;
 begin
-  I := FHashList[aHash and Pred(Capacity)];
+  I := FChainList[aHash and Pred(Capacity)];
   sr.PrevIndex := NULL_INDEX;
   while I <> NULL_INDEX do
     begin
@@ -1303,8 +1303,8 @@ begin
   FNodeList[Pos].Data.Key := aKey;
   FNodeList[Pos].Data.Value := aValue;
   FNodeList[Pos].Hash := h;
-  FNodeList[Pos].Next := FHashList[I];
-  FHashList[I] := Pos;
+  FNodeList[Pos].Next := FChainList[I];
+  FChainList[I] := Pos;
   Inc(FCount);
 end;
 
@@ -1313,7 +1313,7 @@ var
   h, I: SizeInt;
 begin
   h := TKeyEqRel.HashCode(aKey);
-  I := FHashList[h and Pred(Capacity)];
+  I := FChainList[h and Pred(Capacity)];
   Result := 0;
   while I <> NULL_INDEX do
     begin
@@ -1328,7 +1328,7 @@ var
   I, Curr, Prev: SizeInt;
 begin
   I := FNodeList[aIndex].Hash and Pred(Capacity);
-  Curr := FHashList[I];
+  Curr := FChainList[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
     begin
@@ -1337,7 +1337,7 @@ begin
           if Prev <> NULL_INDEX then
             FNodeList[Prev].Next := FNodeList[Curr].Next
           else
-            FHashList[I] := FNodeList[Curr].Next;
+            FChainList[I] := FNodeList[Curr].Next;
           exit;
         end;
       Prev := Curr;
@@ -1352,7 +1352,7 @@ begin
   if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
     FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
   else
-    FHashList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
+    FChainList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
   FNodeList[aPos.Index].Data := Default(TEntry);
   Dec(FCount);
   if aPos.Index < Count then
@@ -1362,8 +1362,8 @@ begin
       I := FNodeList[Last].Hash and Pred(Capacity);
       System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[aPos.Index].Next := FHashList[I];
-      FHashList[I] := aPos.Index;
+      FNodeList[aPos.Index].Next := FChainList[I];
+      FChainList[I] := aPos.Index;
     end;
 end;
 
@@ -1429,7 +1429,7 @@ end;
 class operator TGLiteHashMultiMap.Copy(constref aSrc: TGLiteHashMultiMap; var aDst: TGLiteHashMultiMap);
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
-  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
+  aDst.FChainList := System.Copy(aSrc.FChainList, 0, System.Length(aSrc.FChainList));
   aDst.FCount := aSrc.Count;
 end;
 
@@ -1465,7 +1465,7 @@ end;
 procedure TGLiteHashMultiMap.Clear;
 begin
   FNodeList := nil;
-  FHashList := nil;
+  FChainList := nil;
   FCount := 0;
 end;
 
