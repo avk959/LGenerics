@@ -333,6 +333,8 @@ type
     property  Highest: PNode read GetHighest;
   end;
 
+  //todo: array based avl-tree ???
+
 implementation
 {$B-}{$COPERATORS ON}
 
