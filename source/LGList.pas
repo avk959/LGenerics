@@ -682,7 +682,7 @@ type
     end;
 
     TNodeList     = array of TNode;
-    THashList     = array of SizeInt;
+    TChainList    = array of SizeInt;
     PLiteHashList = ^TGLiteHashList;
 
   const
@@ -738,7 +738,7 @@ type
 
   private
     FNodeList: TNodeList;
-    FHashList: THashList;
+    FChainList: TChainList;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): T; inline;
@@ -3621,15 +3621,15 @@ begin
   FNodeList[aIndex].Data := aValue;
   FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
   I := FNodeList[aIndex].Hash and Pred(Capacity);
-  FNodeList[aIndex].Next := FHashList[I];
-  FHashList[I] := aIndex;
+  FNodeList[aIndex].Next := FChainList[I];
+  FChainList[I] := aIndex;
 end;
 
 procedure TGLiteHashList.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
-  System.SetLength(FHashList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(FHashList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteHashList.Rehash;
@@ -3637,19 +3637,19 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := Pred(Capacity);
-  System.FillChar(FHashList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
-      FNodeList[I].Next := FHashList[J];
-      FHashList[J] := I;
+      FNodeList[I].Next := FChainList[J];
+      FChainList[J] := I;
     end;
 end;
 
 procedure TGLiteHashList.Resize(aNewCapacity: SizeInt);
 begin
   System.SetLength(FNodeList, aNewCapacity);
-  System.SetLength(FHashList, aNewCapacity);
+  System.SetLength(FChainList, aNewCapacity);
   Rehash;
 end;
 
@@ -3674,7 +3674,7 @@ var
   h, I: SizeInt;
 begin
   h := TEqRel.HashCode(aValue);
-  I := FHashList[h and Pred(Capacity)];
+  I := FChainList[h and Pred(Capacity)];
   while I <> NULL_INDEX do
     begin
       if (FNodeList[I].Hash = h) and TEqRel.Equal(FNodeList[I].Data, aValue) then
@@ -3689,7 +3689,7 @@ var
   h, I: SizeInt;
 begin
   h := TEqRel.HashCode(aValue);
-  I := FHashList[h and Pred(Capacity)];
+  I := FChainList[h and Pred(Capacity)];
   Result := 0;
   while I <> NULL_INDEX do
     begin
@@ -3707,8 +3707,8 @@ begin
   FNodeList[Result].Hash := TEqRel.HashCode(aValue);
   I := FNodeList[Result].Hash and Pred(Capacity);
   FNodeList[Result].Data := aValue;
-  FNodeList[Result].Next := FHashList[I];
-  FHashList[I] := Result;
+  FNodeList[Result].Next := FChainList[I];
+  FChainList[I] := Result;
   Inc(FCount);
 end;
 
@@ -3749,7 +3749,7 @@ var
   I, Curr, Prev: SizeInt;
 begin
   I := FNodeList[aIndex].Hash and Pred(Capacity);
-  Curr := FHashList[I];
+  Curr := FChainList[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
     begin
@@ -3758,7 +3758,7 @@ begin
           if Prev <> NULL_INDEX then
             FNodeList[Prev].Next := FNodeList[Curr].Next
           else
-            FHashList[I] := FNodeList[Curr].Next;
+            FChainList[I] := FNodeList[Curr].Next;
           exit;
         end;
       Prev := Curr;
@@ -3828,7 +3828,7 @@ end;
 class operator TGLiteHashList.Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
-  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
+  aDst.FChainList := System.Copy(aSrc.FChainList, 0, System.Length(aSrc.FChainList));
   aDst.FCount := aSrc.FCount;
 end;
 
@@ -3854,7 +3854,7 @@ end;
 procedure TGLiteHashList.Clear;
 begin
   FNodeList := nil;
-  FHashList := nil;
+  FChainList := nil;
   FCount := 0;
 end;
 
