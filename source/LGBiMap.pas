@@ -202,8 +202,9 @@ type
     function  GetKeys: IKeyEnumerable;
     function  GetValues: IValueEnumerable;
     function  GetEntries: IEntryEnumerable;
+  { returns True and add aValue and aKey only if keys do not contain aKey and values do not contain aValue }
     function  AddInverse(constref aValue: TValue; constref aKey: TKey): Boolean;
-  { returns True and add e only if keys do not contain e.Key and values do not contain e.Value }
+    class constructor Init;
   public
     constructor Create;
     constructor Create(constref a: array of TEntry);
@@ -905,6 +906,13 @@ function TGHashBiMap.AddInverse(constref aValue: TValue; constref aKey: TKey): B
 begin
   CheckInIteration;
   Result := DoAdd(aKey, aValue);
+end;
+
+class constructor TGHashBiMap.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
 end;
 
 constructor TGHashBiMap.Create;
