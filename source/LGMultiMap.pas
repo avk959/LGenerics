@@ -309,7 +309,7 @@ type
   { TGListMultiMap2 assumes that TKey implements TKeyEqRel and TValue implements TValueCmpRel }
   generic TGListMultiMap2<TKey, TValue> = class(specialize TGListMultiMap<TKey, TValue, TKey, TValue>);
 
-  { TGLiteHashMultiMap implements minimalistic multimap on top of node based hash table;
+  { TGLiteHashMultiMap: minimalistic pseudo-multimap on top of node based hash table;
       functor TKeyEqRel(equality relation) must provide:
         class function HashCode([const[ref]] aValue: TKey): SizeInt;
         class function Equal([const[ref]] L, R: TKey): Boolean; }
@@ -474,7 +474,7 @@ type
     function  AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
     function  Contains(constref aKey: TKey): Boolean; inline;
     function  NonContains(constref aKey: TKey): Boolean; inline;
-  { returns count of values mapped to aKey (similar as multiset)}
+  { returns count of values mapped to aKey }
     function  ValueCount(constref aKey: TKey): SizeInt;
   { returns True and remove first found entry, False otherwise }
     function  Remove(constref aKey: TKey): Boolean;
