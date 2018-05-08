@@ -681,7 +681,6 @@ type
   private
   type
     TChainList = array of SizeInt;
-    PHashTable = ^TGLiteChainHashTable;
 
   const
     NULL_INDEX  = SizeInt(-1);
