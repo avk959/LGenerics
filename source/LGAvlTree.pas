@@ -337,18 +337,25 @@ type
   { TGLiteAvlTree }
 
   generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
-  private
+  public
   type
+    PEntry = ^TEntry;
+
     TNode = record
+    private
+      procedure ClearLinks;
+    public
       Left,
       Right,
       Parent: SizeInt;
       Data: TEntry;
       Balance: ShortInt;
-      procedure ClearLinks;
     end;
 
     TNodeList = array of TNode;
+
+  private
+  type
     PAvlTree  = ^TGLiteAvlTree;
 
   const
@@ -358,8 +365,6 @@ type
 
   public
   type
-    PEntry = ^TEntry;
-
     TEnumerator = record
     private
       FTree: PAvlTree;
@@ -373,11 +378,10 @@ type
       property  Current: PEntry read GetCurrent;
     end;
 
-  var
+  private
     FNodeList: TNodeList;
     FRoot,
     FCount: SizeInt;
-    function  GetEnumerator: TEnumerator;
     function  GetCapacity: SizeInt; inline;
     procedure Expand(aValue: SizeInt); inline;
     function  NewNode: SizeInt;
@@ -404,6 +408,7 @@ type
     class operator Initialize(var t: TGLiteAvlTree);
     class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree); inline;
   public
+    function  GetEnumerator: TEnumerator;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
@@ -415,6 +420,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  Lowest: SizeInt read GetLowest;
     property  Highest: SizeInt read GetHighest;
+    property  NodeList: TNodeList read FNodeList;
   end;
 
 implementation
@@ -2548,11 +2554,6 @@ end;
 
 { TGLiteAvlTree }
 
-function TGLiteAvlTree.GetEnumerator: TEnumerator;
-begin
-  Result.Init(@Self);
-end;
-
 function TGLiteAvlTree.GetCapacity: SizeInt;
 begin
   Result := System.Length(FNodeList);
@@ -3146,6 +3147,11 @@ begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList);
   aDst.FRoot := aSrc.Root;
   aDst.FCount := aSrc.Count;
+end;
+
+function TGLiteAvlTree.GetEnumerator: TEnumerator;
+begin
+  Result.Init(@Self);
 end;
 
 procedure TGLiteAvlTree.Clear;
