@@ -1892,12 +1892,19 @@ begin
 end;
 
 procedure TGLiteTreeSet.RetainAll(aCollection: ICollection);
-  function CollNonCoontains(constref aValue: T): Boolean;
-  begin
-    Result := aCollection.NonContains(aValue);
-  end;
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
 begin
-  RemoveIf(@CollNonCoontains);
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aCollection.NonContains(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
 end;
 
 function TGLiteTreeSet.IsSuperset(constref aSet: TGLiteTreeSet): Boolean;
