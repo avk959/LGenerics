@@ -22,6 +22,7 @@ unit LGTreeSet;
 {$mode objfpc}{$H+}
 {$INLINE ON}
 {$MODESWITCH NESTEDPROCVARS}
+{$MODESWITCH ADVANCEDRECORDS}
 
 interface
 
@@ -379,6 +380,90 @@ type
     constructor CreateCopy(aSet: TGObjectDelegatedTreeSet);
     function  Clone: TGObjectDelegatedTreeSet; override;
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
+  end;
+
+  { TGLiteTreeSet implements sorted set;
+            functor TCmpRel (comparision relation) must provide:
+        class function Compare([const[ref]] L, R: T): SizeInt; }
+  generic TGLiteTreeSet<T, TCmpRel> = record
+  private
+  type
+    TEntry = record
+      Key: T;
+    end;
+    PEntry = ^TEntry;
+
+    TTree = specialize TGLiteAvlTree<T, TEntry, TCmpRel>;
+
+  public
+  type
+    IEnumerable = specialize IGEnumerable<T>;
+    ICollection = specialize IGCollection<T>;
+    TTest       = specialize TGTest<T>;
+    TOnTest     = specialize TGOnTest<T>;
+    TNestTest   = specialize TGNestTest<T>;
+    TArray      = array of T;
+
+    TEnumerator = record
+    private
+      FEnum: TTree.TEnumerator;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet); inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+  private
+    FTree: TTree;
+    function  GetCapacity: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    function  ToArray: TArray;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear; inline;
+    procedure TrimToFit; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+  { returns True if element added }
+    function  Add(constref aValue: T): Boolean; inline;
+  { returns count of added elements }
+    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(e: IEnumerable): SizeInt;
+    function  Contains(constref aValue: T): Boolean; inline;
+    function  NonContains(constref aValue: T): Boolean; inline;
+    function  ContainsAny(constref a: array of T): Boolean;
+    function  ContainsAny(e: IEnumerable): Boolean;
+    function  ContainsAll(constref a: array of T): Boolean;
+    function  ContainsAll(e: IEnumerable): Boolean;
+  { returns True if element removed }
+    function  Remove(constref aValue: T): Boolean; inline;
+  { returns count of removed elements }
+    function  RemoveAll(constref a: array of T): SizeInt;
+    function  RemoveAll(e: IEnumerable): SizeInt;
+  { returns count of removed elements }
+    function  RemoveIf(aTest: TTest): SizeInt;
+    function  RemoveIf(aTest: TOnTest): SizeInt;
+    function  RemoveIf(aTest: TNestTest): SizeInt;
+  { returns True if element extracted }
+    function  Extract(constref aValue: T): Boolean; inline;
+    function  ExtractIf(aTest: TTest): TArray;
+    function  ExtractIf(aTest: TOnTest): TArray;
+    function  ExtractIf(aTest: TNestTest): TArray;
+  { will contain only those elements that are simultaneously contained in self and aCollection }
+    procedure RetainAll(aCollection: ICollection);
+    function  IsSuperset(constref aSet: TGLiteTreeSet): Boolean;
+    function  IsSubset(constref aSet: TGLiteTreeSet): Boolean; inline;
+    function  IsEqual(constref aSet: TGLiteTreeSet): Boolean;
+    function  Intersecting(constref aSet: TGLiteTreeSet): Boolean; inline;
+    procedure Intersect(constref aSet: TGLiteTreeSet);
+    procedure Join(constref aSet: TGLiteTreeSet);
+    procedure Subtract(constref aSet: TGLiteTreeSet);
+    procedure SymmetricSubtract(constref aSet: TGLiteTreeSet);
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -1486,6 +1571,308 @@ end;
 function TGObjectDelegatedTreeSet.Clone: TGObjectDelegatedTreeSet;
 begin
   Result := TGObjectDelegatedTreeSet.CreateCopy(Self);
+end;
+
+{ TGLiteTreeSet.TEnumerator }
+
+function TGLiteTreeSet.TEnumerator.GetCurrent: T;
+begin
+  Result := FEnum.Current^.Key;
+end;
+
+procedure TGLiteTreeSet.TEnumerator.Init(constref aSet: TGLiteTreeSet);
+begin
+  FEnum := aSet.FTree.GetEnumerator;
+end;
+
+function TGLiteTreeSet.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGLiteTreeSet.TEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TGLiteTreeSet }
+
+function TGLiteTreeSet.GetCapacity: SizeInt;
+begin
+  Result := FTree.Capacity;
+end;
+
+function TGLiteTreeSet.GetCount: SizeInt;
+begin
+  Result := FTree.Count;
+end;
+
+function TGLiteTreeSet.GetEnumerator: TEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteTreeSet.ToArray: TArray;
+var
+  I: SizeInt = 0;
+  p: PEntry;
+begin
+  System.SetLength(Result, Count);
+  for p in FTree do
+    begin
+      Result[I] := p^.Key;
+      Inc(I);
+    end;
+end;
+
+function TGLiteTreeSet.IsEmpty: Boolean;
+begin
+  Result := FTree.Count = 0;
+end;
+
+function TGLiteTreeSet.NonEmpty: Boolean;
+begin
+  Result := FTree.Count <> 0;
+end;
+
+procedure TGLiteTreeSet.Clear;
+begin
+  FTree.Clear;
+end;
+
+procedure TGLiteTreeSet.TrimToFit;
+begin
+  FTree.TrimToFit;
+end;
+
+procedure TGLiteTreeSet.EnsureCapacity(aValue: SizeInt);
+begin
+  FTree.EnsureCapacity(aValue);
+end;
+
+function TGLiteTreeSet.Add(constref aValue: T): Boolean;
+var
+  p: PEntry;
+begin
+  Result := not FTree.FindOrAdd(aValue, p);
+end;
+
+function TGLiteTreeSet.AddAll(constref a: array of T): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in a do
+    Result += Ord(Add(v));
+end;
+
+function TGLiteTreeSet.AddAll(e: IEnumerable): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in e do
+    Result += Ord(Add(v));
+end;
+
+function TGLiteTreeSet.Contains(constref aValue: T): Boolean;
+begin
+  Result := FTree.Find(aValue) <> nil;
+end;
+
+function TGLiteTreeSet.NonContains(constref aValue: T): Boolean;
+begin
+  Result := FTree.Find(aValue) = nil;
+end;
+
+function TGLiteTreeSet.ContainsAny(constref a: array of T): Boolean;
+var
+  v: T;
+begin
+  for v in a do
+    if Contains(v) then
+      exit(True);
+  Result := False;
+end;
+
+function TGLiteTreeSet.ContainsAny(e: IEnumerable): Boolean;
+var
+  v: T;
+begin
+  for v in e do
+    if Contains(v) then
+      exit(True);
+  Result := False;
+end;
+
+function TGLiteTreeSet.ContainsAll(constref a: array of T): Boolean;
+var
+  v: T;
+begin
+  for v in a do
+    if NonContains(v) then
+      exit(False);
+  Result := True;
+end;
+
+function TGLiteTreeSet.ContainsAll(e: IEnumerable): Boolean;
+var
+  v: T;
+begin
+  for v in e do
+    if NonContains(v) then
+      exit(False);
+  Result := True;
+end;
+
+function TGLiteTreeSet.Remove(constref aValue: T): Boolean;
+begin
+  Result := FTree.Remove(aValue);
+end;
+
+function TGLiteTreeSet.RemoveAll(constref a: array of T): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in a do
+    Result += Ord(Remove(v));
+end;
+
+function TGLiteTreeSet.RemoveAll(e: IEnumerable): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in e do
+    Result += Ord(Remove(v));
+end;
+
+function TGLiteTreeSet.RemoveIf(aTest: TTest): SizeInt;
+begin
+
+end;
+
+function TGLiteTreeSet.RemoveIf(aTest: TOnTest): SizeInt;
+begin
+
+end;
+
+function TGLiteTreeSet.RemoveIf(aTest: TNestTest): SizeInt;
+begin
+
+end;
+
+function TGLiteTreeSet.Extract(constref aValue: T): Boolean;
+begin
+  Result := FTree.Remove(aValue);
+end;
+
+function TGLiteTreeSet.ExtractIf(aTest: TTest): TArray;
+begin
+
+end;
+
+function TGLiteTreeSet.ExtractIf(aTest: TOnTest): TArray;
+begin
+
+end;
+
+function TGLiteTreeSet.ExtractIf(aTest: TNestTest): TArray;
+begin
+
+end;
+
+procedure TGLiteTreeSet.RetainAll(aCollection: ICollection);
+begin
+
+end;
+
+function TGLiteTreeSet.IsSuperset(constref aSet: TGLiteTreeSet): Boolean;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      if Count >= aSet.Count then
+        begin
+          for v in aSet do
+            if NonContains(v) then
+              exit(False);
+          Result := True;
+        end
+      else
+        Result := False;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteTreeSet.IsSubset(constref aSet: TGLiteTreeSet): Boolean;
+begin
+  Result := aSet.IsSuperset(Self);
+end;
+
+function TGLiteTreeSet.IsEqual(constref aSet: TGLiteTreeSet): Boolean;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      if Count <> aSet.Count then
+        exit(False);
+      for v in aSet do
+        if NonContains(v) then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteTreeSet.Intersecting(constref aSet: TGLiteTreeSet): Boolean;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      for v in aSet do
+        if Contains(v) then
+          exit(True);
+      Result := False;
+    end
+  else
+    Result := True;
+end;
+
+procedure TGLiteTreeSet.Intersect(constref aSet: TGLiteTreeSet);
+begin
+
+end;
+
+procedure TGLiteTreeSet.Join(constref aSet: TGLiteTreeSet);
+var
+  v: T;
+begin
+  for v in aSet do
+    Add(v);
+end;
+
+procedure TGLiteTreeSet.Subtract(constref aSet: TGLiteTreeSet);
+var
+  v: T;
+begin
+  for v in aSet do
+    Remove(v);
+end;
+
+procedure TGLiteTreeSet.SymmetricSubtract(constref aSet: TGLiteTreeSet);
+var
+  v: T;
+begin
+  for v in aSet do
+    if not Remove(v) then
+      Add(v);
 end;
 
 end.
