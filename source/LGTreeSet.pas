@@ -1749,18 +1749,57 @@ begin
 end;
 
 function TGLiteTreeSet.RemoveIf(aTest: TTest): SizeInt;
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
 begin
-
+  Result := Count;
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
+  Result := Result - Count;
 end;
 
 function TGLiteTreeSet.RemoveIf(aTest: TOnTest): SizeInt;
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
 begin
-
+  Result := Count;
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
+  Result := Result - Count;
 end;
 
 function TGLiteTreeSet.RemoveIf(aTest: TNestTest): SizeInt;
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
 begin
-
+  Result := Count;
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
+  Result := Result - Count;
 end;
 
 function TGLiteTreeSet.Extract(constref aValue: T): Boolean;
@@ -1769,18 +1808,87 @@ begin
 end;
 
 function TGLiteTreeSet.ExtractIf(aTest: TTest): TArray;
+var
+  List: TTree.TNodeList;
+  I, J: SizeInt;
 begin
-
+  if NonEmpty then
+    begin
+      System.SetLength(Result, ARRAY_INITIAL_SIZE);
+      List := FTree.NodeList;
+      I := 0;
+      J := 0;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          begin
+            if J = System.Length(Result) then
+              System.SetLength(Result, J shl 1);
+            Result[J] := List[I].Data.Key;
+            FTree.RemoveAt(I);
+            Inc(J);
+          end
+        else
+          Inc(I);
+      System.SetLength(Result, J);
+    end
+  else
+    Result := nil;
 end;
 
 function TGLiteTreeSet.ExtractIf(aTest: TOnTest): TArray;
+var
+  List: TTree.TNodeList;
+  I, J: SizeInt;
 begin
-
+  if NonEmpty then
+    begin
+      System.SetLength(Result, ARRAY_INITIAL_SIZE);
+      List := FTree.NodeList;
+      I := 0;
+      J := 0;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          begin
+            if J = System.Length(Result) then
+              System.SetLength(Result, J shl 1);
+            Result[J] := List[I].Data.Key;
+            FTree.RemoveAt(I);
+            Inc(J);
+          end
+        else
+          Inc(I);
+      System.SetLength(Result, J);
+    end
+  else
+    Result := nil;
 end;
 
 function TGLiteTreeSet.ExtractIf(aTest: TNestTest): TArray;
+var
+  List: TTree.TNodeList;
+  I, J: SizeInt;
 begin
-
+  if NonEmpty then
+    begin
+      System.SetLength(Result, ARRAY_INITIAL_SIZE);
+      List := FTree.NodeList;
+      I := 0;
+      J := 0;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          begin
+            if J = System.Length(Result) then
+              System.SetLength(Result, J shl 1);
+            Result[J] := List[I].Data.Key;
+            FTree.RemoveAt(I);
+            Inc(J);
+          end
+        else
+          Inc(I);
+      System.SetLength(Result, J);
+    end
+  else
+    Result := nil;
 end;
 
 procedure TGLiteTreeSet.RetainAll(aCollection: ICollection);
