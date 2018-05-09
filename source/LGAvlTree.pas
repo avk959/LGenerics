@@ -32,7 +32,8 @@ uses
 
   SysUtils,
   LGUtils,
-  {%H-}LGHelpers;
+  {%H-}LGHelpers,
+  LGStrConst;
 
 {.$DEFINE AVLTREE_ENABLE_PAGEDNODEMANAGER}//if uncomment define, will use TGPageNodeManager
 type
@@ -287,9 +288,9 @@ type
       FCurrNode: PNode;
       FInCycle: Boolean;
       FTree: TGAvlTree2;
-      function GetCurrent: PEntry; inline;
-    public
+      function  GetCurrent: PEntry; inline;
       procedure Init(aTree: TGAvlTree2);
+    public
       function  MoveNext: Boolean;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
@@ -315,7 +316,7 @@ type
     procedure ReplaceWithSuccessor(aNode: PNode);
     procedure DoRemoveNode(aNode: PNode);
     procedure BalanceAfterInsert(aNode: PNode);
-    procedure BalanceAfterRemove(aNode: PNode; aNodeBalance: SizeInt);
+    procedure BalanceAfterRemove(aNode: PNode; aNewBalance: SizeInt);
     procedure RotateLeft(aNode: PNode);
     procedure RotateRight(aNode: PNode);
     procedure RemoveNodeWithChilds(aNode: PNode);
@@ -333,7 +334,88 @@ type
     property  Highest: PNode read GetHighest;
   end;
 
-  //todo: array based avl-tree ???
+  { TGLiteAvlTree }
+
+  generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
+  private
+  type
+    TNode = record
+      Left,
+      Right,
+      Parent: SizeInt;
+      Data: TEntry;
+      Balance: ShortInt;
+      procedure ClearLinks;
+    end;
+
+    TNodeList = array of TNode;
+    PAvlTree  = ^TGLiteAvlTree;
+
+  const
+    NULL_INDEX  = SizeInt(-1);
+    NODE_SIZE   = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
+
+  public
+  type
+    PEntry = ^TEntry;
+
+    TEnumerator = record
+    private
+      FTree: PAvlTree;
+      FCurrNode: SizeInt;
+      FInCycle: Boolean;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(aTree: PAvlTree);
+    public
+      function  MoveNext: Boolean;
+      procedure Reset; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
+  var
+    FNodeList: TNodeList;
+    FRoot,
+    FCount: SizeInt;
+    function  GetEnumerator: TEnumerator;
+    function  GetCapacity: SizeInt; inline;
+    procedure Expand(aValue: SizeInt); inline;
+    function  NewNode: SizeInt;
+    procedure FreeNode(aNode: SizeInt);
+    function  Successor(aNode: SizeInt): SizeInt;
+    function  Predecessor(aNode: SizeInt): SizeInt;
+    procedure SwapBalance(L, R: SizeInt); inline;
+    function  GetHighest: SizeInt;
+    function  GetLowest: SizeInt;
+    function  FindInsertPos(constref aKey: TKey): SizeInt;
+    function  FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+    procedure ReplaceWithSuccessor(aNode: SizeInt);
+    procedure RotateLeft(aNode: SizeInt);
+    procedure RotateRight(aNode: SizeInt);
+    procedure InsertNode(aNode: SizeInt);
+    procedure InsertNodeAt(aNode, aParent: SizeInt);
+    procedure BalanceAfterInsert(aNode: SizeInt);
+    procedure RemoveNode(aNode: SizeInt);
+    procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
+
+    property  Root: SizeInt read FRoot;
+    class procedure CapacityExceedError(aValue: SizeInt); static; inline;
+    class constructor Init;
+    class operator Initialize(var t: TGLiteAvlTree);
+    class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree); inline;
+  public
+    procedure Clear;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit; inline;
+    function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+    function  Find(constref aKey: TKey): PEntry;
+    function  Remove(constref aKey: TKey): Boolean;
+    procedure RemoveAt(aIndex: SizeInt); inline;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Lowest: SizeInt read GetLowest;
+    property  Highest: SizeInt read GetHighest;
+  end;
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -2182,14 +2264,14 @@ begin
       end;
 end;
 
-procedure TGAvlTree2.BalanceAfterRemove(aNode: PNode; aNodeBalance: SizeInt);
+procedure TGAvlTree2.BalanceAfterRemove(aNode: PNode; aNewBalance: SizeInt);
 var
   OldParent, Child, ChildOfChild: PNode;
 begin
   while aNode <> nil do
     begin
       OldParent := aNode^.Parent;
-      case aNodeBalance of
+      case aNewBalance of
         -2:
           begin
             Child := aNode^.Left;
@@ -2197,9 +2279,9 @@ begin
               begin
                 RotateRight(aNode);
                 aNode^.Balance := -Succ(Child^.Balance);
-                aNodeBalance := Succ(Child^.Balance);
+                aNewBalance := Succ(Child^.Balance);
                 aNode := Child;
-                Child^.Balance := aNodeBalance;
+                Child^.Balance := aNewBalance;
               end
             else
               begin
@@ -2222,24 +2304,24 @@ begin
                   Child^.Balance := -1;
                 end;
                 aNode := ChildOfChild;
-                aNodeBalance := 0;
+                aNewBalance := 0;
                 ChildOfChild^.Balance := 0;
               end;
           end;
         -1:
           begin
-            aNode^.Balance := aNodeBalance;
+            aNode^.Balance := aNewBalance;
             break;
           end;
          0:
            begin
-             aNode^.Balance := aNodeBalance;
+             aNode^.Balance := aNewBalance;
              if OldParent <> nil then
                begin
                  if OldParent^.Left = aNode then
-                   aNodeBalance := Succ(OldParent^.Balance)
+                   aNewBalance := Succ(OldParent^.Balance)
                  else
-                   aNodeBalance := Pred(OldParent^.Balance);
+                   aNewBalance := Pred(OldParent^.Balance);
                  aNode := OldParent;
                end
              else
@@ -2247,7 +2329,7 @@ begin
            end;
          1:
            begin
-             aNode^.Balance := aNodeBalance;
+             aNode^.Balance := aNewBalance;
              break;
            end;
          2:
@@ -2257,9 +2339,9 @@ begin
                begin
                  RotateLeft(aNode);
                  aNode^.Balance := SizeInt(1) - Child^.Balance;
-                 aNodeBalance := Pred(Child^.Balance);
+                 aNewBalance := Pred(Child^.Balance);
                  aNode := Child;
-                 Child^.Balance := aNodeBalance;
+                 Child^.Balance := aNewBalance;
                end
              else
                begin
@@ -2283,7 +2365,7 @@ begin
                  end;
                  ChildOfChild^.Balance := 0;
                  aNode := ChildOfChild;
-                 aNodeBalance := 0;
+                 aNewBalance := 0;
                end;
            end;
       end;
@@ -2416,6 +2498,714 @@ procedure TGAvlTree2.RemoveNode(aNode: PNode);
 begin
   if aNode <> nil then
     DoRemoveNode(aNode);
+end;
+
+{ TGLiteAvlTree.TNode }
+
+procedure TGLiteAvlTree.TNode.ClearLinks;
+begin
+  Left := NULL_INDEX;
+  Right := NULL_INDEX;
+  Parent := NULL_INDEX;
+  Balance := 0;
+end;
+
+{ TGLiteAvlTree.TEnumerator }
+
+function TGLiteAvlTree.TEnumerator.GetCurrent: PEntry;
+begin
+  Result := @FTree^.FNodeList[FCurrNode].Data;
+end;
+
+procedure TGLiteAvlTree.TEnumerator.Init(aTree: PAvlTree);
+begin
+  FTree := aTree;
+  Reset;
+end;
+
+function TGLiteAvlTree.TEnumerator.MoveNext: Boolean;
+var
+  NextNode: SizeInt = NULL_INDEX;
+begin
+  if FCurrNode <> NULL_INDEX then
+    NextNode := FTree^.Successor(FCurrNode)
+  else
+    if not FInCycle then
+      begin
+        NextNode := FTree^.Lowest;
+        FInCycle := True;
+      end;
+  Result := NextNode <> NULL_INDEX;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteAvlTree.TEnumerator.Reset;
+begin
+  FCurrNode := NULL_INDEX;
+  FInCycle := False;
+end;
+
+{ TGLiteAvlTree }
+
+function TGLiteAvlTree.GetEnumerator: TEnumerator;
+begin
+  Result.Init(@Self);
+end;
+
+function TGLiteAvlTree.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+procedure TGLiteAvlTree.Expand(aValue: SizeInt);
+begin
+  //there aValue > Capacity
+  if aValue <= DEFAULT_CONTAINER_CAPACITY then
+    System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY)
+  else
+    if aValue <= MAX_CAPACITY then
+      begin
+        aValue := LGUtils.RoundUpTwoPower(aValue);
+        System.SetLength(FNodeList, aValue);
+      end
+    else
+      CapacityExceedError(aValue);
+end;
+
+function TGLiteAvlTree.NewNode: SizeInt;
+begin
+  if Count = Capacity then
+    Expand(Succ(Count));
+  Result := Count;
+  FNodeList[Result].ClearLinks;
+  Inc(FCount);
+end;
+
+procedure TGLiteAvlTree.FreeNode(aNode: SizeInt);
+var
+  Last, Parent, Child: SizeInt;
+begin
+  Last := Pred(Count);
+  FNodeList[aNode].Data := Default(TEntry);
+  if aNode < Last then
+    begin
+      System.Move(FNodeList[Last], FNodeList[aNode], NODE_SIZE);
+      System.FillChar(FNodeList[Last].Data , SizeOf(TEntry), 0); //////////////
+      if Root = Last then
+        FRoot := aNode;
+      Parent := FNodeList[aNode].Parent;
+      if Parent <> NULL_INDEX then
+        begin
+          if FNodeList[Parent].Left = Last then
+            FNodeList[Parent].Left := aNode
+          else
+            FNodeList[Parent].Right := aNode;
+        end;
+      Child := FNodeList[aNode].Left;
+      if Child <> NULL_INDEX then
+        FNodeList[Child].Parent := aNode;
+      Child := FNodeList[aNode].Right;
+      if Child <> NULL_INDEX then
+        FNodeList[Child].Parent := aNode;
+    end;
+  Dec(FCount);
+end;
+
+function TGLiteAvlTree.Successor(aNode: SizeInt): SizeInt;
+var
+  Parent: SizeInt;
+begin
+  if aNode = NULL_INDEX then
+    exit(aNode);
+  Result := FNodeList[aNode].Right;
+  if Result <> NULL_INDEX then
+    while FNodeList[Result].Left <> NULL_INDEX do
+      Result := FNodeList[Result].Left
+  else
+    begin
+      Result := aNode;
+      Parent := FNodeList[aNode].Parent;
+      while (Parent <> NULL_INDEX) and (FNodeList[Parent].Right = Result) do
+        begin
+          Result := FNodeList[Result].Parent;
+          Parent := FNodeList[Result].Parent;
+        end;
+      Result := Parent;
+    end;
+end;
+
+function TGLiteAvlTree.Predecessor(aNode: SizeInt): SizeInt;
+var
+  Parent: SizeInt;
+begin
+  if aNode = NULL_INDEX then
+    exit(aNode);
+  Result := FNodeList[aNode].Left;
+  if Result <> NULL_INDEX then
+    while FNodeList[Result].Right <> NULL_INDEX do
+      Result := FNodeList[Result].Right
+  else
+    begin
+      Result := aNode;
+      Parent := FNodeList[aNode].Parent;
+      while (Parent <> NULL_INDEX) and (FNodeList[Parent].Left = Result) do
+        begin
+          Result := FNodeList[Result].Parent;
+          Parent := FNodeList[Result].Parent;
+        end;
+      Result := Parent;
+    end;
+end;
+
+procedure TGLiteAvlTree.SwapBalance(L, R: SizeInt);
+var
+  b: ShortInt;
+begin
+  b := FNodeList[L].Balance;
+  FNodeList[L].Balance := FNodeList[R].Balance;
+  FNodeList[R].Balance := b;
+end;
+
+function TGLiteAvlTree.GetHighest: SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  if Result <> NULL_INDEX then
+    begin
+      Curr := FNodeList[Result].Right;
+      while Curr <> NULL_INDEX do
+        begin
+          Result := Curr;
+          Curr := FNodeList[Curr].Right;
+        end;
+    end;
+end;
+
+function TGLiteAvlTree.GetLowest: SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  if Result <> NULL_INDEX then
+    begin
+      Curr := FNodeList[Result].Left;
+      while Curr <> NULL_INDEX do
+        begin
+          Result := Curr;
+          Curr := FNodeList[Curr].Left;
+        end;
+    end;
+    while FNodeList[Result].Left <> NULL_INDEX do
+      Result := FNodeList[Result].Left;
+end;
+
+function TGLiteAvlTree.FindInsertPos(constref aKey: TKey): SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  while Result <> NULL_INDEX do
+    if TKeyCmpRel.Compare(aKey, FNodeList[Result].Data.Key) < 0 then
+      begin
+        Curr := FNodeList[Result].Left;
+        if Curr <> NULL_INDEX then
+          Result := Curr
+        else
+          break;
+      end
+    else
+      begin
+        Curr := FNodeList[Result].Right;
+        if Curr <> NULL_INDEX then
+          Result := Curr
+        else
+          break;
+      end;
+end;
+
+function TGLiteAvlTree.FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+var
+  Cmp: SizeInt;
+begin
+  Result := Root;
+  aInsertPos := NULL_INDEX;
+  while Result <> NULL_INDEX do
+    begin
+      Cmp := TKeyCmpRel.Compare(aKey, FNodeList[Result].Data.Key);
+      aInsertPos := Result;
+      if Cmp < 0 then
+        Result := FNodeList[Result].Left
+      else
+        if Cmp > 0 then
+          Result := FNodeList[Result].Right
+        else
+          break;
+    end;
+end;
+
+procedure TGLiteAvlTree.ReplaceWithSuccessor(aNode: SizeInt);
+var
+  SuccNode, OldParent, OldLeft, OldRight,
+  OldSuccParent, OldSuccLeft, OldSuccRight: SizeInt;
+begin
+  SuccNode := Successor(aNode);
+  SwapBalance(aNode, SuccNode);
+
+  OldParent := FNodeList[aNode].Parent;
+  OldLeft := FNodeList[aNode].Left;
+  OldRight := FNodeList[aNode].Right;
+  OldSuccParent := FNodeList[SuccNode].Parent;
+  OldSuccLeft := FNodeList[SuccNode].Left;
+  OldSuccRight := FNodeList[SuccNode].Right;
+
+  if OldParent <> NULL_INDEX then
+    begin
+      if FNodeList[OldParent].Left = aNode then
+        FNodeList[OldParent].Left := SuccNode
+      else
+        FNodeList[OldParent].Right := SuccNode;
+    end
+  else
+    FRoot := SuccNode;
+
+  FNodeList[SuccNode].Parent := OldParent;
+
+  if OldSuccParent <> aNode then
+    begin
+      if FNodeList[OldSuccParent].Left = SuccNode then
+        FNodeList[OldSuccParent].Left := aNode
+      else
+        FNodeList[OldSuccParent].Right := aNode;
+      FNodeList[SuccNode].Right := OldRight;
+      FNodeList[aNode].Parent := OldSuccParent;
+      if OldRight <> NULL_INDEX then
+        FNodeList[OldRight].Parent := SuccNode;
+    end
+  else
+    begin
+      FNodeList[SuccNode].Right := aNode;
+      FNodeList[aNode].Parent := SuccNode;
+    end;
+
+  FNodeList[aNode].Left := OldSuccLeft;
+  if OldSuccLeft <> NULL_INDEX then
+    FNodeList[OldSuccLeft].Parent := aNode;
+  FNodeList[aNode].Right := OldSuccRight;
+  if OldSuccRight <> NULL_INDEX then
+    FNodeList[OldSuccRight].Parent := aNode;
+  FNodeList[SuccNode].Left := OldLeft;
+  if OldLeft <> NULL_INDEX then
+    FNodeList[OldLeft].Parent := SuccNode;
+end;
+
+procedure TGLiteAvlTree.RotateLeft(aNode: SizeInt);
+var
+  OldParent, OldRight, OldRightLeft: SizeInt;
+begin
+  OldRight := FNodeList[aNode].Right;
+  OldRightLeft := FNodeList[OldRight].Left;
+  OldParent := FNodeList[aNode].Parent;
+  if OldParent <> NULL_INDEX then
+    begin
+      if FNodeList[OldParent].Left = aNode then
+        FNodeList[OldParent].Left := OldRight
+      else
+        FNodeList[OldParent].Right := OldRight;
+    end
+  else
+    FRoot := OldRight;
+  FNodeList[OldRight].Parent := OldParent;
+  FNodeList[aNode].Parent := OldRight;
+  FNodeList[aNode].Right := OldRightLeft;
+  if OldRightLeft <> NULL_INDEX then
+    FNodeList[OldRightLeft].Parent := aNode;
+  FNodeList[OldRight].Left := aNode;
+end;
+
+procedure TGLiteAvlTree.RotateRight(aNode: SizeInt);
+var
+  OldParent, OldLeft, OldLeftRight: SizeInt;
+begin
+  OldLeft := FNodeList[aNode].Left;
+  OldLeftRight := FNodeList[OldLeft].Right;
+  OldParent := FNodeList[aNode].Parent;
+  if OldParent <> NULL_INDEX then
+    begin
+      if FNodeList[OldParent].Left = aNode then
+        FNodeList[OldParent].Left := OldLeft
+      else
+        FNodeList[OldParent].Right := OldLeft;
+    end
+  else
+    FRoot := OldLeft;
+  FNodeList[OldLeft].Parent := OldParent;
+  FNodeList[aNode].Parent := OldLeft;
+  FNodeList[aNode].Left := OldLeftRight;
+  if OldLeftRight <> NULL_INDEX then
+    FNodeList[OldLeftRight].Parent := aNode;
+  FNodeList[OldLeft].Right := aNode;
+end;
+
+procedure TGLiteAvlTree.InsertNode(aNode: SizeInt);
+var
+  Parent: SizeInt;
+begin
+  if FRoot <> NULL_INDEX then
+    begin
+      Parent := FindInsertPos(FNodeList[aNode].Data.Key);
+      FNodeList[aNode].Parent := Parent;
+      if TKeyCmpRel.Compare(FNodeList[aNode].Data.Key, FNodeList[Parent].Data.Key) < 0 then
+        FNodeList[Parent].Left := aNode
+      else
+        FNodeList[Parent].Right := aNode;
+      BalanceAfterInsert(aNode);
+    end
+  else
+    begin
+      FRoot := aNode;
+      FNodeList[aNode].Parent := NULL_INDEX;
+    end;
+end;
+
+procedure TGLiteAvlTree.InsertNodeAt(aNode, aParent: SizeInt);
+begin
+  if aParent <> NULL_INDEX then
+    begin
+      FNodeList[aNode].Parent := aParent;
+      if TKeyCmpRel.Compare(FNodeList[aNode].Data.Key, FNodeList[aParent].Data.Key) < 0 then
+        FNodeList[aParent].Left := aNode
+      else
+        FNodeList[aParent].Right := aNode;
+      BalanceAfterInsert(aNode);
+    end
+  else
+    begin
+      FRoot := aNode;
+      FNodeList[aNode].Parent := NULL_INDEX;
+    end;
+end;
+
+procedure TGLiteAvlTree.BalanceAfterInsert(aNode: SizeInt);
+var
+  OldParent, OldChild: SizeInt;
+begin
+  OldParent := FNodeList[aNode].Parent;
+  while OldParent <> NULL_INDEX do
+    if FNodeList[OldParent].Left = aNode then //aNode is left child => we must decrease OldParent.Balance
+      case FNodeList[OldParent].Balance of
+        -1:
+          begin
+            if FNodeList[aNode].Balance = -1 then
+              begin
+                RotateRight(OldParent);
+                FNodeList[aNode].Balance := 0;
+                FNodeList[OldParent].Balance := 0;
+              end
+            else
+              begin
+                OldChild := FNodeList[aNode].Right;
+                RotateLeft(aNode);
+                RotateRight(OldParent);
+                case FNodeList[OldChild].Balance of
+                  -1:
+                    begin
+                      FNodeList[aNode].Balance := 0;
+                      FNodeList[OldParent].Balance := 1;
+                    end;
+                  0:
+                    begin
+                      FNodeList[aNode].Balance := 0;
+                      FNodeList[OldParent].Balance := 0
+                    end;
+                else //1
+                  FNodeList[aNode].Balance := -1;
+                  FNodeList[OldParent].Balance := 0;
+                end;
+                FNodeList[OldChild].Balance := 0;
+              end;
+            break;
+          end;
+        0:
+          begin
+            FNodeList[OldParent].Balance := -1;
+            aNode := OldParent;
+            OldParent := FNodeList[aNode].Parent;
+          end;
+      else //1
+        FNodeList[OldParent].Balance := 0;
+        break;
+      end
+    else  // aNode is right child => we must increase OldParent.Balance
+      case FNodeList[OldParent].Balance of
+       -1:
+         begin
+           FNodeList[OldParent].Balance := 0;
+           break;
+         end;
+        0:
+          begin
+            FNodeList[OldParent].Balance := 1;
+            aNode := OldParent;
+            OldParent := FNodeList[aNode].Parent;
+          end;
+      else // 1
+        if FNodeList[aNode].Balance = 1 then
+          begin
+            RotateLeft(OldParent);
+            FNodeList[aNode].Balance := 0;
+            FNodeList[OldParent].Balance := 0;
+          end
+        else
+          begin
+            OldChild := FNodeList[aNode].Left;
+            RotateRight(aNode);
+            RotateLeft(OldParent);
+            case FNodeList[OldChild].Balance of
+              -1:
+                begin
+                  FNodeList[aNode].Balance := 1;
+                  FNodeList[OldParent].Balance := 0;
+                end;
+              0:
+                begin
+                  FNodeList[aNode].Balance := 0;
+                  FNodeList[OldParent].Balance := 0;
+                end;
+            else  //1
+              FNodeList[aNode].Balance := 0;
+              FNodeList[OldParent].Balance := -1
+            end;
+            FNodeList[OldChild].Balance := 0;
+          end;
+        break;
+      end;
+end;
+
+procedure TGLiteAvlTree.RemoveNode(aNode: SizeInt);
+var
+  OldParent, Child: SizeInt;
+begin
+  if (FNodeList[aNode].Left <> NULL_INDEX) and (FNodeList[aNode].Right <> NULL_INDEX) then
+    ReplaceWithSuccessor(aNode);
+  OldParent := FNodeList[aNode].Parent;
+  FNodeList[aNode].Parent := NULL_INDEX;
+  if FNodeList[aNode].Left <> NULL_INDEX then
+    Child := FNodeList[aNode].Left
+  else
+    Child := FNodeList[aNode].Right;
+  if Child <> NULL_INDEX then
+    FNodeList[Child].Parent := OldParent;
+  if OldParent <> NULL_INDEX then
+    begin
+      if FNodeList[OldParent].Left = aNode then
+        begin
+          FNodeList[OldParent].Left := Child;
+          BalanceAfterRemove(OldParent, Succ(FNodeList[OldParent].Balance));
+        end
+      else
+        begin
+          FNodeList[OldParent].Right := Child;
+          BalanceAfterRemove(OldParent, Pred(FNodeList[OldParent].Balance));
+        end;
+    end
+  else
+    FRoot := Child;
+  FreeNode(aNode);
+end;
+
+procedure TGLiteAvlTree.BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
+var
+  OldParent, Child, ChildOfChild: SizeInt;
+begin
+  while aNode <> NULL_INDEX do
+    begin
+      OldParent := FNodeList[aNode].Parent;
+      case aNewBalance of
+        -2:
+          begin
+            Child := FNodeList[aNode].Left;
+            if FNodeList[Child].Balance <= 0 then
+              begin
+                RotateRight(aNode);
+                FNodeList[aNode].Balance := -Succ(FNodeList[Child].Balance);
+                aNewBalance := Succ(FNodeList[Child].Balance);
+                aNode := Child;
+                FNodeList[Child].Balance := aNewBalance;
+              end
+            else
+              begin
+                ChildOfChild := FNodeList[Child].Right;
+                RotateLeft(Child);
+                RotateRight(aNode);
+                case FNodeList[ChildOfChild].Balance of
+                  -1:
+                    begin
+                      FNodeList[aNode].Balance := 1;
+                      FNodeList[Child].Balance := 0;
+                    end;
+                   0:
+                     begin
+                       FNodeList[aNode].Balance := 0;
+                       FNodeList[Child].Balance := 0;
+                     end;
+                else // 1
+                  FNodeList[aNode].Balance := 0;
+                  FNodeList[Child].Balance := -1;
+                end;
+                aNode := ChildOfChild;
+                aNewBalance := 0;
+                FNodeList[ChildOfChild].Balance := 0;
+              end;
+          end;
+        -1:
+          begin
+            FNodeList[aNode].Balance := aNewBalance;
+            break;
+          end;
+         0:
+           begin
+             FNodeList[aNode].Balance := aNewBalance;
+             if OldParent <> NULL_INDEX then
+               begin
+                 if FNodeList[OldParent].Left = aNode then
+                   aNewBalance := Succ(FNodeList[OldParent].Balance)
+                 else
+                   aNewBalance := Pred(FNodeList[OldParent].Balance);
+                 aNode := OldParent;
+               end
+             else
+               break;
+           end;
+         1:
+           begin
+             FNodeList[aNode].Balance := aNewBalance;
+             break;
+           end;
+         2:
+           begin
+             Child := FNodeList[aNode].Right;
+             if FNodeList[Child].Balance >= 0 then
+               begin
+                 RotateLeft(aNode);
+                 FNodeList[aNode].Balance := ShortInt(1) - FNodeList[Child].Balance;
+                 aNewBalance := Pred(FNodeList[Child].Balance);
+                 aNode := Child;
+                 FNodeList[Child].Balance := aNewBalance;
+               end
+             else
+               begin
+                 ChildOfChild := FNodeList[Child].Left;
+                 RotateRight(Child);
+                 RotateLeft(aNode);
+                 case FNodeList[ChildOfChild].Balance of
+                   -1:
+                     begin
+                       FNodeList[aNode].Balance := 0;
+                       FNodeList[Child].Balance := 1;
+                     end;
+                    0:
+                      begin
+                        FNodeList[aNode].Balance := 0;
+                        FNodeList[Child].Balance := 0;
+                      end;
+                 else // 1
+                   FNodeList[aNode].Balance := -1;
+                   FNodeList[Child].Balance := 0;
+                 end;
+                 FNodeList[ChildOfChild].Balance := 0;
+                 aNode := ChildOfChild;
+                 aNewBalance := 0;
+               end;
+           end;
+      end;
+    end;
+end;
+
+class procedure TGLiteAvlTree.CapacityExceedError(aValue: SizeInt);
+begin
+  raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+end;
+
+class constructor TGLiteAvlTree.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
+class operator TGLiteAvlTree.Initialize(var t: TGLiteAvlTree);
+begin
+  t.FRoot := NULL_INDEX;
+  t.FCount := 0;
+end;
+
+class operator TGLiteAvlTree.Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
+begin
+  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FRoot := aSrc.Root;
+  aDst.FCount := aSrc.Count;
+end;
+
+procedure TGLiteAvlTree.Clear;
+begin
+  FNodeList := nil;;
+  FRoot := NULL_INDEX;
+  FCount := 0;
+end;
+
+procedure TGLiteAvlTree.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue > Capacity then
+    Expand(aValue);
+end;
+
+procedure TGLiteAvlTree.TrimToFit;
+begin
+  System.SetLength(FNodeList, Count);
+end;
+
+function TGLiteAvlTree.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  Result := Node <> NULL_INDEX;
+  if not Result then
+    begin
+      Node := NewNode;
+      FNodeList[Node].Data.Key := aKey;
+      InsertNodeAt(Node, ParentNode);
+    end;
+  e := @FNodeList[Node].Data;
+end;
+
+function TGLiteAvlTree.Find(constref aKey: TKey): PEntry;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  if Node <> NULL_INDEX then
+    Result :=  @FNodeList[Node].Data
+  else
+    Result := nil;
+end;
+
+function TGLiteAvlTree.Remove(constref aKey: TKey): Boolean;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  Result := Node <> NULL_INDEX;
+  if Result then
+    RemoveNode(Node);
+end;
+
+procedure TGLiteAvlTree.RemoveAt(aIndex: SizeInt);
+begin
+  if aIndex <> NULL_INDEX then
+    RemoveNode(aIndex);
 end;
 
 end.
