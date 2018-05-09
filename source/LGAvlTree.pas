@@ -3151,7 +3151,7 @@ end;
 
 function TGLiteAvlTree.GetEnumerator: TEnumerator;
 begin
-  Result.Init(@Self);// todo: ???
+  Result.Init(@Self);
 end;
 
 procedure TGLiteAvlTree.Clear;
