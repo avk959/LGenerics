@@ -390,6 +390,12 @@ type
     function  GetTableSize: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
   public
+    class operator +(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator -(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator *(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
     function  MinLoadFactor: Single; inline;
@@ -1278,6 +1284,78 @@ end;
 procedure TGLiteHashSetLP.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
+end;
+
+class operator TGLiteHashSetLP. + (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  if @Result = @L then
+    Result.Join(R)
+  else
+    if @Result = @R then
+      Result.Join(L)
+    else
+      begin
+        Result := L;
+        Result.Join(R);
+      end;
+end;
+
+class operator TGLiteHashSetLP. - (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+var
+  Tmp: TGLiteHashSetLP;
+begin
+  if @Result = @L then
+    Result.Subtract(R)
+  else
+    if @Result = @R then
+      begin
+        Tmp := R;
+        Result := L;
+        Result.Subtract(Tmp)
+      end
+    else
+      begin
+        Result := L;
+        Result.Subtract(R);
+      end;
+end;
+
+class operator TGLiteHashSetLP. * (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  if @Result = @L then
+    Result.Intersect(R)
+  else
+    if @Result = @R then
+      Result.Intersect(L)
+    else
+      begin
+        Result := L;
+        Result.Intersect(R);
+      end;
+end;
+
+class operator TGLiteHashSetLP.><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  if @Result = @L then
+    Result.SymmetricSubtract(R)
+  else
+    if @Result = @R then
+      Result.SymmetricSubtract(L)
+    else
+      begin
+        Result := L;
+        Result.SymmetricSubtract(R);
+      end;
+end;
+
+class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
+begin
+  Result := L.IsSubset(R);
+end;
+
+class operator TGLiteHashSetLP.in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean;
+begin
+  Result := aSet.Contains(aValue);
 end;
 
 function TGLiteHashSetLP.DefaultLoadFactor: Single;
