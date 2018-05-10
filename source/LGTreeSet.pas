@@ -527,6 +527,12 @@ type
     function  GetTailEnumerator(constref aLowBound: T; aInclusive: Boolean): TTailEnumerator; inline;
     function  GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds): TRangeEnumerator; inline;
   public
+    class operator +(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator -(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator *(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator ><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator <=(constref L, R: TGLiteTreeSet): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean; inline;
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray;
@@ -1993,7 +1999,79 @@ end;
 function TGLiteTreeSet.GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds
   ): TRangeEnumerator;
 begin
+  Result.Init(Self, aLowBound, aHighBound, aBounds);
+end;
 
+class operator TGLiteTreeSet. + (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  if @Result = @L then
+    Result.Join(R)
+  else
+    if @Result = @R then
+      Result.Join(L)
+    else
+      begin
+        Result := L;
+        Result.Join(R);
+      end;
+end;
+
+class operator TGLiteTreeSet. - (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+var
+  Tmp: TGLiteTreeSet;
+begin
+  if @Result = @L then
+    Result.Subtract(R)
+  else
+    if @Result = @R then
+      begin
+        Tmp := R;
+        Result := L;
+        Result.Subtract(Tmp)
+      end
+    else
+      begin
+        Result := L;
+        Result.Subtract(R);
+      end;
+end;
+
+class operator TGLiteTreeSet. * (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  if @Result = @L then
+    Result.Intersect(R)
+  else
+    if @Result = @R then
+      Result.Intersect(L)
+    else
+      begin
+        Result := L;
+        Result.Intersect(R);
+      end;
+end;
+
+class operator TGLiteTreeSet.><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  if @Result = @L then
+    Result.SymmetricSubtract(R)
+  else
+    if @Result = @R then
+      Result.SymmetricSubtract(L)
+    else
+      begin
+        Result := L;
+        Result.SymmetricSubtract(R);
+      end;
+end;
+
+class operator TGLiteTreeSet.<=(constref L, R: TGLiteTreeSet): Boolean;
+begin
+  Result := L.IsSubset(R);
+end;
+
+class operator TGLiteTreeSet.in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean;
+begin
+  Result := aSet.Contains(aValue);
 end;
 
 function TGLiteTreeSet.GetEnumerator: TEnumerator;
@@ -2003,7 +2081,7 @@ end;
 
 function TGLiteTreeSet.Reverse: TReverse;
 begin
-
+  Result.Init(@Self);
 end;
 
 function TGLiteTreeSet.ToArray: TArray;
