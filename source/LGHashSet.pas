@@ -394,6 +394,7 @@ type
     class operator -(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
     class operator *(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
     class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator =(constref L, R: TGLiteHashSetLP): Boolean; inline;
     class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
     class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  DefaultLoadFactor: Single; inline;
@@ -1346,6 +1347,11 @@ begin
         Result := L;
         Result.SymmetricSubtract(R);
       end;
+end;
+
+class operator TGLiteHashSetLP. = (constref L, R: TGLiteHashSetLP): Boolean;
+begin
+  Result := L.IsEqual(R);
 end;
 
 class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
