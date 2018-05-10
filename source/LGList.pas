@@ -785,9 +785,9 @@ type
     function  Add(constref aValue: T): SizeInt; inline;
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
-    function  AddUnique(constref aValue: T): Boolean; inline;
-    function  AddAllUnique(constref a: array of T): SizeInt;
-    function  AddAllUnique(e: IEnumerable): SizeInt;
+    function  AddUniq(constref aValue: T): Boolean; inline;
+    function  AddAllUniq(constref a: array of T): SizeInt;
+    function  AddAllUniq(e: IEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; constref aValue: T);
     procedure Delete(aIndex: SizeInt); inline;
     function  Remove(constref aValue: T): Boolean; inline;
@@ -916,9 +916,9 @@ type
     function  Add(constref e: TEntry): SizeInt; inline;
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
-    function  AddUnique(constref e: TEntry): Boolean; inline;
-    function  AddAllUnique(constref a: array of TEntry): SizeInt;
-    function  AddAllUnique(e: IEntryEnumerable): SizeInt;
+    function  AddUniq(constref e: TEntry): Boolean; inline;
+    function  AddAllUniq(constref a: array of TEntry): SizeInt;
+    function  AddAllUniq(e: IEntryEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; constref e: TEntry);
     procedure Delete(aIndex: SizeInt); inline;
     function  Remove(constref aKey: TKey): Boolean; inline;
@@ -4157,28 +4157,28 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashList.AddUnique(constref aValue: T): Boolean;
+function TGLiteHashList.AddUniq(constref aValue: T): Boolean;
 begin
   Result := not FindOrAdd(aValue);
 end;
 
-function TGLiteHashList.AddAllUnique(constref a: array of T): SizeInt;
+function TGLiteHashList.AddAllUniq(constref a: array of T): SizeInt;
 var
   v: T;
 begin
   Result := Count;
   for v in a do
-    AddUnique(v);
+    AddUniq(v);
   Result := Count - Result;
 end;
 
-function TGLiteHashList.AddAllUnique(e: IEnumerable): SizeInt;
+function TGLiteHashList.AddAllUniq(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
   Result := Count;
   for v in e do
-    AddUnique(v);
+    AddUniq(v);
   Result := Count - Result;
 end;
 
@@ -4699,28 +4699,28 @@ begin
   Result := Count - Result;
 end;
 
-function TGLiteHashList2.AddUnique(constref e: TEntry): Boolean;
+function TGLiteHashList2.AddUniq(constref e: TEntry): Boolean;
 begin
   Result := not FindOrAdd(e);
 end;
 
-function TGLiteHashList2.AddAllUnique(constref a: array of TEntry): SizeInt;
+function TGLiteHashList2.AddAllUniq(constref a: array of TEntry): SizeInt;
 var
   e: TEntry;
 begin
   Result := Count;
   for e in a do
-    AddUnique(e);
+    AddUniq(e);
   Result := Count - Result;
 end;
 
-function TGLiteHashList2.AddAllUnique(e: IEntryEnumerable): SizeInt;
+function TGLiteHashList2.AddAllUniq(e: IEntryEnumerable): SizeInt;
 var
   Entry: TEntry;
 begin
   Result := Count;
   for Entry in e do
-    AddUnique(Entry);
+    AddUniq(Entry);
   Result := Count - Result;
 end;
 
