@@ -10305,7 +10305,8 @@ uses
 
   SysUtils,
   LGUtils,
-  {%H-}LGHelpers;
+  {%H-}LGHelpers,
+  LGStrConst;
 
 {.$DEFINE AVLTREE_ENABLE_PAGEDNODEMANAGER}//if uncomment define, will use TGPageNodeManager
 type
@@ -10560,9 +10561,9 @@ type
       FCurrNode: PNode;
       FInCycle: Boolean;
       FTree: TGAvlTree2;
-      function GetCurrent: PEntry; inline;
-    public
+      function  GetCurrent: PEntry; inline;
       procedure Init(aTree: TGAvlTree2);
+    public
       function  MoveNext: Boolean;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
@@ -10588,7 +10589,7 @@ type
     procedure ReplaceWithSuccessor(aNode: PNode);
     procedure DoRemoveNode(aNode: PNode);
     procedure BalanceAfterInsert(aNode: PNode);
-    procedure BalanceAfterRemove(aNode: PNode; aNodeBalance: SizeInt);
+    procedure BalanceAfterRemove(aNode: PNode; aNewBalance: SizeInt);
     procedure RotateLeft(aNode: PNode);
     procedure RotateRight(aNode: PNode);
     procedure RemoveNodeWithChilds(aNode: PNode);
@@ -10604,6 +10605,100 @@ type
     property  Count: SizeInt read FCount;
     property  Lowest: PNode read GetLowest;
     property  Highest: PNode read GetHighest;
+  end;
+
+  { TGLiteAvlTree }
+
+  generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
+  public
+  type
+    PEntry = ^TEntry;
+
+    TNode = record
+    private
+      procedure ClearLinks;
+    public
+      Left,
+      Right,
+      Parent: SizeInt;
+      Data: TEntry;
+      Balance: ShortInt;
+    end;
+
+    TNodeList = array of TNode;
+
+  private
+  type
+    PAvlTree  = ^TGLiteAvlTree;
+
+  const
+    NULL_INDEX  = SizeInt(-1);
+    NODE_SIZE   = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
+
+  public
+  type
+    TEnumerator = record
+    private
+      FTree: PAvlTree;
+      FCurrNode,
+      FFirstNode: SizeInt;
+      FInCycle: Boolean;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(aTree: PAvlTree);
+    public
+      function  MoveNext: Boolean;
+      procedure Reset; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
+  private
+    FNodeList: TNodeList;
+    FRoot,
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    procedure Expand(aValue: SizeInt); inline;
+    function  NewNode: SizeInt;
+    procedure FreeNode(aNode: SizeInt);
+    function  Successor(aNode: SizeInt): SizeInt;
+    function  Predecessor(aNode: SizeInt): SizeInt;
+    procedure SwapBalance(L, R: SizeInt); inline;
+    function  GetHighest: SizeInt;
+    function  GetLowest: SizeInt;
+    function  FindInsertPos(constref aKey: TKey): SizeInt;
+    function  FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+    procedure ReplaceWithSuccessor(aNode: SizeInt);
+    procedure RotateLeft(aNode: SizeInt);
+    procedure RotateRight(aNode: SizeInt);
+    procedure InsertNode(aNode: SizeInt);
+    procedure InsertNodeAt(aNode, aParent: SizeInt);
+    procedure BalanceAfterInsert(aNode: SizeInt);
+    procedure RemoveNode(aNode: SizeInt);
+    procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
+
+    property  Root: SizeInt read FRoot;
+    class procedure CapacityExceedError(aValue: SizeInt); static; inline;
+    class constructor Init;
+    class operator Initialize(var t: TGLiteAvlTree);
+    class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree); inline;
+  public
+    function  GetEnumerator: TEnumerator;
+    procedure Clear;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit; inline;
+    function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+    function  Find(constref aKey: TKey): PEntry;
+    function  Remove(constref aKey: TKey): Boolean;
+    procedure RemoveAt(aIndex: SizeInt); inline;
+    function  FindLess(constref aKey: TKey): SizeInt;
+    function  FindLessOrEqual(constref aKey: TKey): SizeInt;
+    function  FindGreater(constref aKey: TKey): SizeInt;
+    function  FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Lowest: SizeInt read GetLowest;
+    property  Highest: SizeInt read GetHighest;
+    property  NodeList: TNodeList read FNodeList;
   end;
 
 implementation
@@ -12453,14 +12548,14 @@ begin
       end;
 end;
 
-procedure TGAvlTree2.BalanceAfterRemove(aNode: PNode; aNodeBalance: SizeInt);
+procedure TGAvlTree2.BalanceAfterRemove(aNode: PNode; aNewBalance: SizeInt);
 var
   OldParent, Child, ChildOfChild: PNode;
 begin
   while aNode <> nil do
     begin
       OldParent := aNode^.Parent;
-      case aNodeBalance of
+      case aNewBalance of
         -2:
           begin
             Child := aNode^.Left;
@@ -12468,9 +12563,9 @@ begin
               begin
                 RotateRight(aNode);
                 aNode^.Balance := -Succ(Child^.Balance);
-                aNodeBalance := Succ(Child^.Balance);
+                aNewBalance := Succ(Child^.Balance);
                 aNode := Child;
-                Child^.Balance := aNodeBalance;
+                Child^.Balance := aNewBalance;
               end
             else
               begin
@@ -12493,24 +12588,24 @@ begin
                   Child^.Balance := -1;
                 end;
                 aNode := ChildOfChild;
-                aNodeBalance := 0;
+                aNewBalance := 0;
                 ChildOfChild^.Balance := 0;
               end;
           end;
         -1:
           begin
-            aNode^.Balance := aNodeBalance;
+            aNode^.Balance := aNewBalance;
             break;
           end;
          0:
            begin
-             aNode^.Balance := aNodeBalance;
+             aNode^.Balance := aNewBalance;
              if OldParent <> nil then
                begin
                  if OldParent^.Left = aNode then
-                   aNodeBalance := Succ(OldParent^.Balance)
+                   aNewBalance := Succ(OldParent^.Balance)
                  else
-                   aNodeBalance := Pred(OldParent^.Balance);
+                   aNewBalance := Pred(OldParent^.Balance);
                  aNode := OldParent;
                end
              else
@@ -12518,7 +12613,7 @@ begin
            end;
          1:
            begin
-             aNode^.Balance := aNodeBalance;
+             aNode^.Balance := aNewBalance;
              break;
            end;
          2:
@@ -12528,9 +12623,9 @@ begin
                begin
                  RotateLeft(aNode);
                  aNode^.Balance := SizeInt(1) - Child^.Balance;
-                 aNodeBalance := Pred(Child^.Balance);
+                 aNewBalance := Pred(Child^.Balance);
                  aNode := Child;
-                 Child^.Balance := aNodeBalance;
+                 Child^.Balance := aNewBalance;
                end
              else
                begin
@@ -12554,7 +12649,7 @@ begin
                  end;
                  ChildOfChild^.Balance := 0;
                  aNode := ChildOfChild;
-                 aNodeBalance := 0;
+                 aNewBalance := 0;
                end;
            end;
       end;
@@ -12689,6 +12784,779 @@ begin
     DoRemoveNode(aNode);
 end;
 
+{ TGLiteAvlTree.TNode }
+
+procedure TGLiteAvlTree.TNode.ClearLinks;
+begin
+  Left := NULL_INDEX;
+  Right := NULL_INDEX;
+  Parent := NULL_INDEX;
+  Balance := 0;
+end;
+
+{ TGLiteAvlTree.TEnumerator }
+
+function TGLiteAvlTree.TEnumerator.GetCurrent: PEntry;
+begin
+  Result := @FTree^.FNodeList[FCurrNode].Data;
+end;
+
+procedure TGLiteAvlTree.TEnumerator.Init(aTree: PAvlTree);
+begin
+  FTree := aTree;
+  FFirstNode := aTree^.Lowest;
+  Reset;
+end;
+
+function TGLiteAvlTree.TEnumerator.MoveNext: Boolean;
+var
+  NextNode: SizeInt = NULL_INDEX;
+begin
+  if FCurrNode <> NULL_INDEX then
+    NextNode := FTree^.Successor(FCurrNode)
+  else
+    if not FInCycle then
+      begin
+        NextNode := FFirstNode;
+        FInCycle := True;
+      end;
+  Result := NextNode <> NULL_INDEX;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteAvlTree.TEnumerator.Reset;
+begin
+  FCurrNode := NULL_INDEX;
+  FInCycle := False;
+end;
+
+{ TGLiteAvlTree }
+
+function TGLiteAvlTree.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+procedure TGLiteAvlTree.Expand(aValue: SizeInt);
+begin
+  //there aValue > Capacity
+  if aValue <= DEFAULT_CONTAINER_CAPACITY then
+    System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY)
+  else
+    if aValue <= MAX_CAPACITY then
+      begin
+        aValue := LGUtils.RoundUpTwoPower(aValue);
+        System.SetLength(FNodeList, aValue);
+      end
+    else
+      CapacityExceedError(aValue);
+end;
+
+function TGLiteAvlTree.NewNode: SizeInt;
+begin
+  if Count = Capacity then
+    Expand(Succ(Count));
+  Result := Count;
+  FNodeList[Result].ClearLinks;
+  Inc(FCount);
+end;
+
+procedure TGLiteAvlTree.FreeNode(aNode: SizeInt);
+var
+  Last, Parent, Child: SizeInt;
+begin
+  Last := Pred(Count);
+  FNodeList[aNode].Data := Default(TEntry);
+  if aNode < Last then
+    begin
+      System.Move(FNodeList[Last], FNodeList[aNode], NODE_SIZE);
+      System.FillChar(FNodeList[Last].Data , SizeOf(TEntry), 0); //////////////
+      if Root = Last then
+        FRoot := aNode;
+      Parent := FNodeList[aNode].Parent;
+      if Parent <> NULL_INDEX then
+        begin
+          if FNodeList[Parent].Left = Last then
+            FNodeList[Parent].Left := aNode
+          else
+            FNodeList[Parent].Right := aNode;
+        end;
+      Child := FNodeList[aNode].Left;
+      if Child <> NULL_INDEX then
+        FNodeList[Child].Parent := aNode;
+      Child := FNodeList[aNode].Right;
+      if Child <> NULL_INDEX then
+        FNodeList[Child].Parent := aNode;
+    end;
+  Dec(FCount);
+end;
+
+function TGLiteAvlTree.Successor(aNode: SizeInt): SizeInt;
+var
+  Parent: SizeInt;
+begin
+  if aNode = NULL_INDEX then
+    exit(aNode);
+  Result := FNodeList[aNode].Right;
+  if Result <> NULL_INDEX then
+    while FNodeList[Result].Left <> NULL_INDEX do
+      Result := FNodeList[Result].Left
+  else
+    begin
+      Result := aNode;
+      Parent := FNodeList[aNode].Parent;
+      while (Parent <> NULL_INDEX) and (FNodeList[Parent].Right = Result) do
+        begin
+          Result := FNodeList[Result].Parent;
+          Parent := FNodeList[Result].Parent;
+        end;
+      Result := Parent;
+    end;
+end;
+
+function TGLiteAvlTree.Predecessor(aNode: SizeInt): SizeInt;
+var
+  Parent: SizeInt;
+begin
+  if aNode = NULL_INDEX then
+    exit(aNode);
+  Result := FNodeList[aNode].Left;
+  if Result <> NULL_INDEX then
+    while FNodeList[Result].Right <> NULL_INDEX do
+      Result := FNodeList[Result].Right
+  else
+    begin
+      Result := aNode;
+      Parent := FNodeList[aNode].Parent;
+      while (Parent <> NULL_INDEX) and (FNodeList[Parent].Left = Result) do
+        begin
+          Result := FNodeList[Result].Parent;
+          Parent := FNodeList[Result].Parent;
+        end;
+      Result := Parent;
+    end;
+end;
+
+procedure TGLiteAvlTree.SwapBalance(L, R: SizeInt);
+var
+  b: ShortInt;
+begin
+  b := FNodeList[L].Balance;
+  FNodeList[L].Balance := FNodeList[R].Balance;
+  FNodeList[R].Balance := b;
+end;
+
+function TGLiteAvlTree.GetHighest: SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  if Result <> NULL_INDEX then
+    begin
+      Curr := FNodeList[Result].Right;
+      while Curr <> NULL_INDEX do
+        begin
+          Result := Curr;
+          Curr := FNodeList[Curr].Right;
+        end;
+    end;
+end;
+
+function TGLiteAvlTree.GetLowest: SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  if Result <> NULL_INDEX then
+    begin
+      Curr := FNodeList[Result].Left;
+      while Curr <> NULL_INDEX do
+        begin
+          Result := Curr;
+          Curr := FNodeList[Curr].Left;
+        end;
+    end;
+    while FNodeList[Result].Left <> NULL_INDEX do
+      Result := FNodeList[Result].Left;
+end;
+
+function TGLiteAvlTree.FindInsertPos(constref aKey: TKey): SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  while Result <> NULL_INDEX do
+    if TKeyCmpRel.Compare(aKey, FNodeList[Result].Data.Key) < 0 then
+      begin
+        Curr := FNodeList[Result].Left;
+        if Curr <> NULL_INDEX then
+          Result := Curr
+        else
+          break;
+      end
+    else
+      begin
+        Curr := FNodeList[Result].Right;
+        if Curr <> NULL_INDEX then
+          Result := Curr
+        else
+          break;
+      end;
+end;
+
+function TGLiteAvlTree.FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+var
+  Cmp: SizeInt;
+begin
+  Result := Root;
+  aInsertPos := NULL_INDEX;
+  while Result <> NULL_INDEX do
+    begin
+      Cmp := TKeyCmpRel.Compare(aKey, FNodeList[Result].Data.Key);
+      aInsertPos := Result;
+      if Cmp < 0 then
+        Result := FNodeList[Result].Left
+      else
+        if Cmp > 0 then
+          Result := FNodeList[Result].Right
+        else
+          break;
+    end;
+end;
+
+procedure TGLiteAvlTree.ReplaceWithSuccessor(aNode: SizeInt);
+var
+  SuccNode, OldParent, OldLeft, OldRight,
+  OldSuccParent, OldSuccLeft, OldSuccRight: SizeInt;
+begin
+  SuccNode := Successor(aNode);
+  SwapBalance(aNode, SuccNode);
+
+  OldParent := FNodeList[aNode].Parent;
+  OldLeft := FNodeList[aNode].Left;
+  OldRight := FNodeList[aNode].Right;
+  OldSuccParent := FNodeList[SuccNode].Parent;
+  OldSuccLeft := FNodeList[SuccNode].Left;
+  OldSuccRight := FNodeList[SuccNode].Right;
+
+  if OldParent <> NULL_INDEX then
+    begin
+      if FNodeList[OldParent].Left = aNode then
+        FNodeList[OldParent].Left := SuccNode
+      else
+        FNodeList[OldParent].Right := SuccNode;
+    end
+  else
+    FRoot := SuccNode;
+
+  FNodeList[SuccNode].Parent := OldParent;
+
+  if OldSuccParent <> aNode then
+    begin
+      if FNodeList[OldSuccParent].Left = SuccNode then
+        FNodeList[OldSuccParent].Left := aNode
+      else
+        FNodeList[OldSuccParent].Right := aNode;
+      FNodeList[SuccNode].Right := OldRight;
+      FNodeList[aNode].Parent := OldSuccParent;
+      if OldRight <> NULL_INDEX then
+        FNodeList[OldRight].Parent := SuccNode;
+    end
+  else
+    begin
+      FNodeList[SuccNode].Right := aNode;
+      FNodeList[aNode].Parent := SuccNode;
+    end;
+
+  FNodeList[aNode].Left := OldSuccLeft;
+  if OldSuccLeft <> NULL_INDEX then
+    FNodeList[OldSuccLeft].Parent := aNode;
+  FNodeList[aNode].Right := OldSuccRight;
+  if OldSuccRight <> NULL_INDEX then
+    FNodeList[OldSuccRight].Parent := aNode;
+  FNodeList[SuccNode].Left := OldLeft;
+  if OldLeft <> NULL_INDEX then
+    FNodeList[OldLeft].Parent := SuccNode;
+end;
+
+procedure TGLiteAvlTree.RotateLeft(aNode: SizeInt);
+var
+  OldParent, OldRight, OldRightLeft: SizeInt;
+begin
+  OldRight := FNodeList[aNode].Right;
+  OldRightLeft := FNodeList[OldRight].Left;
+  OldParent := FNodeList[aNode].Parent;
+  if OldParent <> NULL_INDEX then
+    begin
+      if FNodeList[OldParent].Left = aNode then
+        FNodeList[OldParent].Left := OldRight
+      else
+        FNodeList[OldParent].Right := OldRight;
+    end
+  else
+    FRoot := OldRight;
+  FNodeList[OldRight].Parent := OldParent;
+  FNodeList[aNode].Parent := OldRight;
+  FNodeList[aNode].Right := OldRightLeft;
+  if OldRightLeft <> NULL_INDEX then
+    FNodeList[OldRightLeft].Parent := aNode;
+  FNodeList[OldRight].Left := aNode;
+end;
+
+procedure TGLiteAvlTree.RotateRight(aNode: SizeInt);
+var
+  OldParent, OldLeft, OldLeftRight: SizeInt;
+begin
+  OldLeft := FNodeList[aNode].Left;
+  OldLeftRight := FNodeList[OldLeft].Right;
+  OldParent := FNodeList[aNode].Parent;
+  if OldParent <> NULL_INDEX then
+    begin
+      if FNodeList[OldParent].Left = aNode then
+        FNodeList[OldParent].Left := OldLeft
+      else
+        FNodeList[OldParent].Right := OldLeft;
+    end
+  else
+    FRoot := OldLeft;
+  FNodeList[OldLeft].Parent := OldParent;
+  FNodeList[aNode].Parent := OldLeft;
+  FNodeList[aNode].Left := OldLeftRight;
+  if OldLeftRight <> NULL_INDEX then
+    FNodeList[OldLeftRight].Parent := aNode;
+  FNodeList[OldLeft].Right := aNode;
+end;
+
+procedure TGLiteAvlTree.InsertNode(aNode: SizeInt);
+var
+  Parent: SizeInt;
+begin
+  if FRoot <> NULL_INDEX then
+    begin
+      Parent := FindInsertPos(FNodeList[aNode].Data.Key);
+      FNodeList[aNode].Parent := Parent;
+      if TKeyCmpRel.Compare(FNodeList[aNode].Data.Key, FNodeList[Parent].Data.Key) < 0 then
+        FNodeList[Parent].Left := aNode
+      else
+        FNodeList[Parent].Right := aNode;
+      BalanceAfterInsert(aNode);
+    end
+  else
+    begin
+      FRoot := aNode;
+      FNodeList[aNode].Parent := NULL_INDEX;
+    end;
+end;
+
+procedure TGLiteAvlTree.InsertNodeAt(aNode, aParent: SizeInt);
+begin
+  if aParent <> NULL_INDEX then
+    begin
+      FNodeList[aNode].Parent := aParent;
+      if TKeyCmpRel.Compare(FNodeList[aNode].Data.Key, FNodeList[aParent].Data.Key) < 0 then
+        FNodeList[aParent].Left := aNode
+      else
+        FNodeList[aParent].Right := aNode;
+      BalanceAfterInsert(aNode);
+    end
+  else
+    begin
+      FRoot := aNode;
+      FNodeList[aNode].Parent := NULL_INDEX;
+    end;
+end;
+
+procedure TGLiteAvlTree.BalanceAfterInsert(aNode: SizeInt);
+var
+  OldParent, OldChild: SizeInt;
+begin
+  OldParent := FNodeList[aNode].Parent;
+  while OldParent <> NULL_INDEX do
+    if FNodeList[OldParent].Left = aNode then //aNode is left child => we must decrease OldParent.Balance
+      case FNodeList[OldParent].Balance of
+        -1:
+          begin
+            if FNodeList[aNode].Balance = -1 then
+              begin
+                RotateRight(OldParent);
+                FNodeList[aNode].Balance := 0;
+                FNodeList[OldParent].Balance := 0;
+              end
+            else
+              begin
+                OldChild := FNodeList[aNode].Right;
+                RotateLeft(aNode);
+                RotateRight(OldParent);
+                case FNodeList[OldChild].Balance of
+                  -1:
+                    begin
+                      FNodeList[aNode].Balance := 0;
+                      FNodeList[OldParent].Balance := 1;
+                    end;
+                  0:
+                    begin
+                      FNodeList[aNode].Balance := 0;
+                      FNodeList[OldParent].Balance := 0
+                    end;
+                else //1
+                  FNodeList[aNode].Balance := -1;
+                  FNodeList[OldParent].Balance := 0;
+                end;
+                FNodeList[OldChild].Balance := 0;
+              end;
+            break;
+          end;
+        0:
+          begin
+            FNodeList[OldParent].Balance := -1;
+            aNode := OldParent;
+            OldParent := FNodeList[aNode].Parent;
+          end;
+      else //1
+        FNodeList[OldParent].Balance := 0;
+        break;
+      end
+    else  // aNode is right child => we must increase OldParent.Balance
+      case FNodeList[OldParent].Balance of
+       -1:
+         begin
+           FNodeList[OldParent].Balance := 0;
+           break;
+         end;
+        0:
+          begin
+            FNodeList[OldParent].Balance := 1;
+            aNode := OldParent;
+            OldParent := FNodeList[aNode].Parent;
+          end;
+      else // 1
+        if FNodeList[aNode].Balance = 1 then
+          begin
+            RotateLeft(OldParent);
+            FNodeList[aNode].Balance := 0;
+            FNodeList[OldParent].Balance := 0;
+          end
+        else
+          begin
+            OldChild := FNodeList[aNode].Left;
+            RotateRight(aNode);
+            RotateLeft(OldParent);
+            case FNodeList[OldChild].Balance of
+              -1:
+                begin
+                  FNodeList[aNode].Balance := 1;
+                  FNodeList[OldParent].Balance := 0;
+                end;
+              0:
+                begin
+                  FNodeList[aNode].Balance := 0;
+                  FNodeList[OldParent].Balance := 0;
+                end;
+            else  //1
+              FNodeList[aNode].Balance := 0;
+              FNodeList[OldParent].Balance := -1
+            end;
+            FNodeList[OldChild].Balance := 0;
+          end;
+        break;
+      end;
+end;
+
+procedure TGLiteAvlTree.RemoveNode(aNode: SizeInt);
+var
+  OldParent, Child: SizeInt;
+begin
+  if (FNodeList[aNode].Left <> NULL_INDEX) and (FNodeList[aNode].Right <> NULL_INDEX) then
+    ReplaceWithSuccessor(aNode);
+  OldParent := FNodeList[aNode].Parent;
+  FNodeList[aNode].Parent := NULL_INDEX;
+  if FNodeList[aNode].Left <> NULL_INDEX then
+    Child := FNodeList[aNode].Left
+  else
+    Child := FNodeList[aNode].Right;
+  if Child <> NULL_INDEX then
+    FNodeList[Child].Parent := OldParent;
+  if OldParent <> NULL_INDEX then
+    begin
+      if FNodeList[OldParent].Left = aNode then
+        begin
+          FNodeList[OldParent].Left := Child;
+          BalanceAfterRemove(OldParent, Succ(FNodeList[OldParent].Balance));
+        end
+      else
+        begin
+          FNodeList[OldParent].Right := Child;
+          BalanceAfterRemove(OldParent, Pred(FNodeList[OldParent].Balance));
+        end;
+    end
+  else
+    FRoot := Child;
+  FreeNode(aNode);
+end;
+
+procedure TGLiteAvlTree.BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
+var
+  OldParent, Child, ChildOfChild: SizeInt;
+begin
+  while aNode <> NULL_INDEX do
+    begin
+      OldParent := FNodeList[aNode].Parent;
+      case aNewBalance of
+        -2:
+          begin
+            Child := FNodeList[aNode].Left;
+            if FNodeList[Child].Balance <= 0 then
+              begin
+                RotateRight(aNode);
+                FNodeList[aNode].Balance := -Succ(FNodeList[Child].Balance);
+                aNewBalance := Succ(FNodeList[Child].Balance);
+                aNode := Child;
+                FNodeList[Child].Balance := aNewBalance;
+              end
+            else
+              begin
+                ChildOfChild := FNodeList[Child].Right;
+                RotateLeft(Child);
+                RotateRight(aNode);
+                case FNodeList[ChildOfChild].Balance of
+                  -1:
+                    begin
+                      FNodeList[aNode].Balance := 1;
+                      FNodeList[Child].Balance := 0;
+                    end;
+                   0:
+                     begin
+                       FNodeList[aNode].Balance := 0;
+                       FNodeList[Child].Balance := 0;
+                     end;
+                else // 1
+                  FNodeList[aNode].Balance := 0;
+                  FNodeList[Child].Balance := -1;
+                end;
+                aNode := ChildOfChild;
+                aNewBalance := 0;
+                FNodeList[ChildOfChild].Balance := 0;
+              end;
+          end;
+        -1:
+          begin
+            FNodeList[aNode].Balance := aNewBalance;
+            break;
+          end;
+         0:
+           begin
+             FNodeList[aNode].Balance := aNewBalance;
+             if OldParent <> NULL_INDEX then
+               begin
+                 if FNodeList[OldParent].Left = aNode then
+                   aNewBalance := Succ(FNodeList[OldParent].Balance)
+                 else
+                   aNewBalance := Pred(FNodeList[OldParent].Balance);
+                 aNode := OldParent;
+               end
+             else
+               break;
+           end;
+         1:
+           begin
+             FNodeList[aNode].Balance := aNewBalance;
+             break;
+           end;
+         2:
+           begin
+             Child := FNodeList[aNode].Right;
+             if FNodeList[Child].Balance >= 0 then
+               begin
+                 RotateLeft(aNode);
+                 FNodeList[aNode].Balance := ShortInt(1) - FNodeList[Child].Balance;
+                 aNewBalance := Pred(FNodeList[Child].Balance);
+                 aNode := Child;
+                 FNodeList[Child].Balance := aNewBalance;
+               end
+             else
+               begin
+                 ChildOfChild := FNodeList[Child].Left;
+                 RotateRight(Child);
+                 RotateLeft(aNode);
+                 case FNodeList[ChildOfChild].Balance of
+                   -1:
+                     begin
+                       FNodeList[aNode].Balance := 0;
+                       FNodeList[Child].Balance := 1;
+                     end;
+                    0:
+                      begin
+                        FNodeList[aNode].Balance := 0;
+                        FNodeList[Child].Balance := 0;
+                      end;
+                 else // 1
+                   FNodeList[aNode].Balance := -1;
+                   FNodeList[Child].Balance := 0;
+                 end;
+                 FNodeList[ChildOfChild].Balance := 0;
+                 aNode := ChildOfChild;
+                 aNewBalance := 0;
+               end;
+           end;
+      end;
+    end;
+end;
+
+class procedure TGLiteAvlTree.CapacityExceedError(aValue: SizeInt);
+begin
+  raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+end;
+
+class constructor TGLiteAvlTree.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
+class operator TGLiteAvlTree.Initialize(var t: TGLiteAvlTree);
+begin
+  t.FRoot := NULL_INDEX;
+  t.FCount := 0;
+end;
+
+class operator TGLiteAvlTree.Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
+begin
+  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FRoot := aSrc.Root;
+  aDst.FCount := aSrc.Count;
+end;
+
+function TGLiteAvlTree.GetEnumerator: TEnumerator;
+begin
+  Result.Init(@Self);
+end;
+
+procedure TGLiteAvlTree.Clear;
+begin
+  FNodeList := nil;;
+  FRoot := NULL_INDEX;
+  FCount := 0;
+end;
+
+procedure TGLiteAvlTree.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue > Capacity then
+    Expand(aValue);
+end;
+
+procedure TGLiteAvlTree.TrimToFit;
+begin
+  System.SetLength(FNodeList, Count);
+end;
+
+function TGLiteAvlTree.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  Result := Node <> NULL_INDEX;
+  if not Result then
+    begin
+      Node := NewNode;
+      FNodeList[Node].Data.Key := aKey;
+      InsertNodeAt(Node, ParentNode);
+    end;
+  e := @FNodeList[Node].Data;
+end;
+
+function TGLiteAvlTree.Find(constref aKey: TKey): PEntry;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  if Node <> NULL_INDEX then
+    Result :=  @FNodeList[Node].Data
+  else
+    Result := nil;
+end;
+
+function TGLiteAvlTree.Remove(constref aKey: TKey): Boolean;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  Result := Node <> NULL_INDEX;
+  if Result then
+    RemoveNode(Node);
+end;
+
+procedure TGLiteAvlTree.RemoveAt(aIndex: SizeInt);
+begin
+  if aIndex <> NULL_INDEX then
+    RemoveNode(aIndex);
+end;
+
+function TGLiteAvlTree.FindLess(constref aKey: TKey): SizeInt;
+var
+  CurrNode: SizeInt;
+begin
+  CurrNode := Root;
+  Result := NULL_INDEX;
+  while CurrNode <> NULL_INDEX do
+    if TKeyCmpRel.Compare(aKey, FNodeList[CurrNode].Data.Key) > 0 then
+      begin
+        Result := CurrNode;
+        CurrNode := FNodeList[CurrNode].Right;
+      end
+    else
+      CurrNode := FNodeList[CurrNode].Left;
+end;
+
+function TGLiteAvlTree.FindLessOrEqual(constref aKey: TKey): SizeInt;
+var
+  CurrNode: SizeInt;
+begin
+  CurrNode := Root;
+  Result := NULL_INDEX;
+  while CurrNode <> NULL_INDEX do
+    if TKeyCmpRel.Compare(aKey, FNodeList[CurrNode].Data.Key) >= 0 then
+      begin
+        Result := CurrNode;
+        CurrNode := FNodeList[CurrNode].Right;
+      end
+    else
+      CurrNode := FNodeList[CurrNode].Left;
+end;
+
+function TGLiteAvlTree.FindGreater(constref aKey: TKey): SizeInt;
+var
+  CurrNode: SizeInt;
+begin
+  CurrNode := Root;
+  Result := NULL_INDEX;
+  while CurrNode <> NULL_INDEX do
+    if TKeyCmpRel.Compare(aKey, FNodeList[CurrNode].Data.Key) < 0 then
+      begin
+        Result := CurrNode;
+        CurrNode := FNodeList[CurrNode].Left;
+      end
+    else
+      CurrNode := FNodeList[CurrNode].Right;
+end;
+
+function TGLiteAvlTree.FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+var
+  CurrNode: SizeInt;
+begin
+  CurrNode := Root;
+  Result := NULL_INDEX;
+  while CurrNode <> NULL_INDEX do
+    if TKeyCmpRel.Compare(aKey, FNodeList[CurrNode].Data.Key) <= 0 then
+      begin
+        Result := CurrNode;
+        CurrNode := FNodeList[CurrNode].Left;
+      end
+    else
+      CurrNode := FNodeList[CurrNode].Right;
+end;
+
 end.
 
 {****************************************************************************
@@ -12722,7 +13590,6 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGCustomContainer,
-  LGHashTable,
   LGStrConst;
 
 type
@@ -12788,36 +13655,33 @@ type
     IKeyCollection   = specialize IGCollection<TKey>;
     IValueCollection = specialize IGCollection<TValue>;
     IInverseMap      = specialize IGInverseMap<TKey, TValue>;
-    EBiMapError      = class(Exception);
 
   protected
   type
-    PKeyNode   = ^TKeyNode;
-    PValueNode = ^TValueNode;
 
-    TKeyEntry  = record
-      Key: TKey;
-      ValueNode: PValueNode;
+    TNode  = record
+      KeyHash,
+      ValueHash,
+      NextKey,
+      NextValue: SizeInt;
+      Data: TEntry;
     end;
-    PKeyEntry = ^TKeyEntry;
 
-    TValEntry = record
-      Key: TValue;
-      KeyNode: PKeyNode;
-    end;
-    PValEntry = ^TValEntry;
+    TNodeList  = array of TNode;
+    TChainList = array of SizeInt;
 
-    TKeySet            = specialize TGChainHashTable<TKey, TKeyEntry, TKeyEqRel>;
-    TKeySearchResult   = TKeySet.TSearchResult;
-    TKeyNode           = TKeySet.TNode;
-    TValueSet          = specialize TGChainHashTable<TValue, TValEntry, TValueEqRel>;
-    TValueSearchResult = TValueSet.TSearchResult;
-    TValueNode         = TValueSet.TNode;
+  const
+    NULL_INDEX  = SizeInt(-1);
+    NODE_SIZE   = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 2) div NODE_SIZE;
 
+  type
     TKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
     protected
       FOwner: TGHashBiMap;
-      FEnum:  TKeySet.TEntryEnumerator;
+      FList:  TNodeList;
+      FCurrIndex,
+      FLastIndex: SizeInt;
       function GetCurrent: TKey; override;
     public
       constructor Create(aMap: TGHashBiMap);
@@ -12829,7 +13693,9 @@ type
     TValueEnumerable = class(specialize TGAutoEnumerable<TValue>)
     protected
       FOwner: TGHashBiMap;
-      FEnum:  TValueSet.TEntryEnumerator;
+      FList:  TNodeList;
+      FCurrIndex,
+      FLastIndex: SizeInt;
       function GetCurrent: TValue; override;
     public
       constructor Create(aMap: TGHashBiMap);
@@ -12841,7 +13707,9 @@ type
     TEntryEnumerable = class(specialize TGAutoEnumerable<TEntry>)
     protected
       FOwner: TGHashBiMap;
-      FEnum:  TKeySet.TEntryEnumerator;
+      FList:  TNodeList;
+      FCurrIndex,
+      FLastIndex: SizeInt;
       function GetCurrent: TEntry; override;
     public
       constructor Create(aMap: TGHashBiMap);
@@ -12851,17 +13719,25 @@ type
     end;
 
   var
-    FKeySet: TKeySet;
-    FValueSet: TValueSet;
+    FNodeList: TNodeList;
+    FKeyChains,
+    FValueChains: TChainList;
+    FCount: SizeInt;
     function  _GetRef: TObject;
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
-    function  GetFillRatio: Single; inline;
-    function  GetLoadFactor: Single; inline;
-    function  GetTableSize: SizeInt; inline;
-    procedure SetLoadFactor(aValue: Single);
-    procedure KeyRemoving(p: PKeyEntry);
-    procedure ValueRemoving(p: PValEntry);
+    procedure InitialAlloc; inline;
+    procedure Rehash;
+    procedure Resize(aNewCapacity: SizeInt);
+    procedure Expand;
+    procedure RemoveFromKeyChain(aIndex: SizeInt);
+    procedure RemoveFromValueChain(aIndex: SizeInt);
+    function  DoFindKey(constref aKey: TKey; aHash: SizeInt): SizeInt;
+    function  DoFindValue(constref aValue: TValue; aHash: SizeInt): SizeInt;
+    function  FindKey(constref aKey: TKey): SizeInt; inline;
+    function  FindValue(constref aValue: TValue): SizeInt; inline;
+    procedure DoAddData(constref aKey: TKey; constref aValue: TValue; aKeyHash, aValHash: SizeInt);
+    procedure DoRemove(aIndex: SizeInt);
     procedure DoClear; virtual;
     procedure DoEnsureCapacity(aValue: SizeInt);
     procedure DoTrimToFit;
@@ -12887,12 +13763,10 @@ type
     function  GetKeys: IKeyEnumerable;
     function  GetValues: IValueEnumerable;
     function  GetEntries: IEntryEnumerable;
+  { returns True and add aValue and aKey only if keys do not contain aKey and values do not contain aValue }
     function  AddInverse(constref aValue: TValue; constref aKey: TKey): Boolean;
-  { returns True and add e only if keys do not contain e.Key and values do not contain e.Value }
+    class constructor Init;
   public
-    class function DefaultLoadFactor: Single; static; inline;
-    class function MaxLoadFactor: Single; static; inline;
-    class function MinLoadFactor: Single; static; inline;
     constructor Create;
     constructor Create(constref a: array of TEntry);
     constructor Create(e: IEntryEnumerable);
@@ -12969,11 +13843,8 @@ type
     function  IInverseMap.Keys          = Values;
     function  IInverseMap.Values        = Keys;
   public
-    property  Count: SizeInt read GetCount;
+    property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
-    property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
-    property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
   { will raise ELGMapError if not contains aKey or contains aValue }
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
@@ -12998,8 +13869,6 @@ type
     FOwnsValues: Boolean;
   protected
     procedure SetOwnership(aOwns: TMapObjOwnership); inline;
-    procedure KeyRemoving(p: PKeyEntry);
-    procedure ValueRemoving(p: PValEntry);
     procedure DoClear; override;
     function  DoRemoveKey(constref aKey: TKey): Boolean; override;
     function  DoRemoveValue(constref aValue: TValue): Boolean; override;
@@ -13031,8 +13900,6 @@ type
   { TGObjHashBiMap2 assumes that TKey implements TKeyEqRel and TValue implements TValueEqRel }
   generic TGObjHashBiMap2<TKey, TValue> = class(specialize TGObjectHashBiMap<TKey, TValue, TKey, TValue>);
 
-  //todo: bimap on base of TGLiteChainHashTable ???
-
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -13040,97 +13907,99 @@ implementation
 
 function TGHashBiMap.TKeyEnumerable.GetCurrent: TKey;
 begin
-  Result := FEnum.Current^.Key;
+  Result := FList[FCurrIndex].Data.Key;
 end;
 
 constructor TGHashBiMap.TKeyEnumerable.Create(aMap: TGHashBiMap);
 begin
   inherited Create;
   FOwner := aMap;
-  FEnum := aMap.FKeySet.GetEnumerator;
+  FList := aMap.FNodeList;
+  FLastIndex := Pred(aMap.Count);
+  FCurrIndex := -1;
 end;
 
 destructor TGHashBiMap.TKeyEnumerable.Destroy;
 begin
   FOwner.EndIteration;
-  FEnum.Free;
   inherited;
 end;
 
 function TGHashBiMap.TKeyEnumerable.MoveNext: Boolean;
 begin
-  Result := FEnum.MoveNext;
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
 end;
 
 procedure TGHashBiMap.TKeyEnumerable.Reset;
 begin
-  FEnum.Reset;
+  FCurrIndex := -1;
 end;
 
 { TGHashBiMap.TValueEnumerable }
 
 function TGHashBiMap.TValueEnumerable.GetCurrent: TValue;
 begin
-  Result := FEnum.Current^.Key;
+  Result := FList[FCurrIndex].Data.Value;
 end;
 
 constructor TGHashBiMap.TValueEnumerable.Create(aMap: TGHashBiMap);
 begin
   inherited Create;
   FOwner := aMap;
-  FEnum := aMap.FValueSet.GetEnumerator;
+  FList := aMap.FNodeList;
+  FLastIndex := Pred(aMap.Count);
+  FCurrIndex := -1;
 end;
 
 destructor TGHashBiMap.TValueEnumerable.Destroy;
 begin
   FOwner.EndIteration;
-  FEnum.Free;
   inherited;
 end;
 
 function TGHashBiMap.TValueEnumerable.MoveNext: Boolean;
 begin
-  Result := FEnum.MoveNext;
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
 end;
 
 procedure TGHashBiMap.TValueEnumerable.Reset;
 begin
-  FEnum.Reset;
+  FCurrIndex := -1;
 end;
 
 { TGHashBiMap.TEntryEnumerable }
 
 function TGHashBiMap.TEntryEnumerable.GetCurrent: TEntry;
-var
-  p: PKeyEntry;
 begin
-  p := FEnum.Current;
-  Result.Key := p^.Key;
-  Result.Value := p^.ValueNode^.Data.Key;
+  Result := FList[FCurrIndex].Data;
 end;
 
 constructor TGHashBiMap.TEntryEnumerable.Create(aMap: TGHashBiMap);
 begin
   inherited Create;
   FOwner := aMap;
-  FEnum := aMap.FKeySet.GetEnumerator;
+  FList := aMap.FNodeList;
+  FLastIndex := Pred(aMap.Count);
+  FCurrIndex := -1;
 end;
 
 destructor TGHashBiMap.TEntryEnumerable.Destroy;
 begin
   FOwner.EndIteration;
-  FEnum.Free;
   inherited;
 end;
 
 function TGHashBiMap.TEntryEnumerable.MoveNext: Boolean;
 begin
-  Result := FEnum.MoveNext;
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
 end;
 
 procedure TGHashBiMap.TEntryEnumerable.Reset;
 begin
-  FEnum.Reset;
+  FCurrIndex := -1;
 end;
 
 { TGBiMap }
@@ -13140,80 +14009,244 @@ begin
   Result := Self;
 end;
 
-function TGHashBiMap.GetCount: SizeInt;
+procedure TGHashBiMap.InitialAlloc;
 begin
-  Result := FKeySet.Count;
+  System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
+  System.SetLength(FKeyChains, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FKeyChains[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.SetLength(FValueChains, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FValueChains[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
-procedure TGHashBiMap.DoClear;
+procedure TGHashBiMap.Rehash;
+var
+  I, kInd, vInd, Mask: SizeInt;
 begin
-  FKeySet.Clear;
-  FValueSet.Clear;
+  Mask := Pred(Capacity);
+  System.FillChar(FKeyChains[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(FValueChains[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  for I := 0 to Pred(Count) do
+    begin
+      kInd := FNodeList[I].KeyHash and Mask;
+      vInd := FNodeList[I].ValueHash and Mask;
+      FNodeList[I].NextKey := FKeyChains[kInd];
+      FKeyChains[kInd] := I;
+      FNodeList[I].NextValue := FValueChains[vInd];
+      FValueChains[vInd] := I;
+    end;
+end;
+
+procedure TGHashBiMap.Resize(aNewCapacity: SizeInt);
+begin
+  System.SetLength(FNodeList, aNewCapacity);
+  System.SetLength(FKeyChains, aNewCapacity);
+  System.SetLength(FValueChains, aNewCapacity);
+  Rehash;
+end;
+
+procedure TGHashBiMap.Expand;
+var
+  OldCapacity: SizeInt;
+begin
+  OldCapacity := Capacity;
+  if OldCapacity > 0 then
+    begin
+      if OldCapacity < MAX_CAPACITY then
+        Resize(OldCapacity shl 1)
+      else
+        CapacityExceedError(OldCapacity shl 1);
+    end
+  else
+    InitialAlloc;
+end;
+
+procedure TGHashBiMap.RemoveFromKeyChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodeList[aIndex].KeyHash and Pred(Capacity);
+  Curr := FKeyChains[I];
+  Prev := NULL_INDEX;
+  while Curr <> NULL_INDEX do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev <> NULL_INDEX then
+            FNodeList[Prev].NextKey := FNodeList[Curr].NextKey
+          else
+            FKeyChains[I] := FNodeList[Curr].NextKey;
+          exit;
+        end;
+      Prev := Curr;
+      Curr := FNodeList[Curr].NextKey;
+    end;
+end;
+
+procedure TGHashBiMap.RemoveFromValueChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodeList[aIndex].ValueHash and Pred(Capacity);
+  Curr := FValueChains[I];
+  Prev := NULL_INDEX;
+  while Curr <> NULL_INDEX do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev <> NULL_INDEX then
+            FNodeList[Prev].NextValue := FNodeList[Curr].NextValue
+          else
+            FValueChains[I] := FNodeList[Curr].NextValue;
+          exit;
+        end;
+      Prev := Curr;
+      Curr := FNodeList[Curr].NextValue;
+    end;
+end;
+
+function TGHashBiMap.DoFindKey(constref aKey: TKey; aHash: SizeInt): SizeInt;
+begin
+  Result := FKeyChains[aHash and Pred(Capacity)];
+  while Result <> NULL_INDEX do
+    begin
+      if (FNodeList[Result].KeyHash = aHash) and TKeyEqRel.Equal(FNodeList[Result].Data.Key, aKey) then
+        exit;
+      Result := FNodeList[Result].NextKey;
+    end;
+end;
+
+function TGHashBiMap.DoFindValue(constref aValue: TValue; aHash: SizeInt): SizeInt;
+begin
+  Result := FValueChains[aHash and Pred(Capacity)];
+  while Result <> NULL_INDEX do
+    begin
+      if (FNodeList[Result].ValueHash = aHash) and TValueEqRel.Equal(FNodeList[Result].Data.Value, aValue) then
+        exit;
+      Result := FNodeList[Result].NextValue;
+    end;
+end;
+
+function TGHashBiMap.FindKey(constref aKey: TKey): SizeInt;
+begin
+  if Count > 0 then
+    Result:= DoFindKey(aKey, TKeyEqRel.HashCode(aKey))
+  else
+    Result := NULL_INDEX;
+end;
+
+function TGHashBiMap.FindValue(constref aValue: TValue): SizeInt;
+begin
+  if Count > 0 then
+    Result := DoFindValue(aValue, TValueEqRel.HashCode(aValue))
+  else
+    Result := NULL_INDEX;
+end;
+
+procedure TGHashBiMap.DoAddData(constref aKey: TKey; constref aValue: TValue; aKeyHash, aValHash: SizeInt);
+var
+  kInd, vInd, Mask, I: SizeInt;
+begin
+  Mask := Pred(Capacity);
+  I := Count;
+  kInd := aKeyHash and Mask;
+  vInd := aValHash and Mask;
+  FNodeList[I].Data.Key := aKey;
+  FNodeList[I].Data.Value := aValue;
+  FNodeList[I].KeyHash := aKeyHash;
+  FNodeList[I].ValueHash := aValHash;
+  FNodeList[I].NextKey := FKeyChains[kInd];
+  FKeyChains[kInd] := I;
+  FNodeList[I].NextValue := FValueChains[vInd];
+  FValueChains[vInd] := I;
+  Inc(FCount);
+end;
+
+procedure TGHashBiMap.DoRemove(aIndex: SizeInt);
+var
+  kInd, vInd, Last: SizeInt;
+begin
+  RemoveFromKeyChain(aIndex);
+  RemoveFromValueChain(aIndex);
+  FNodeList[aIndex].Data := Default(TEntry);
+  Dec(FCount);
+  if aIndex < Count then
+    begin
+      Last := Count;
+      RemoveFromKeyChain(Last);
+      RemoveFromValueChain(Last);
+      kInd := FNodeList[Last].KeyHash and Pred(Capacity);
+      vInd := FNodeList[Last].ValueHash and Pred(Capacity);
+      System.Move(FNodeList[Last], FNodeList[aIndex], NODE_SIZE);
+      System.FillChar(FNodeList[Last], NODE_SIZE, 0);
+      FNodeList[aIndex].NextKey := FKeyChains[kInd];
+      FKeyChains[kInd] := aIndex;
+      FNodeList[aIndex].NextValue := FValueChains[vInd];
+      FValueChains[kInd] := aIndex;
+    end;
+end;
+
+function TGHashBiMap.GetCount: SizeInt;
+begin
+  Result := FCount;
 end;
 
 function TGHashBiMap.GetCapacity: SizeInt;
 begin
-  Result := FKeySet.Capacity;
+  Result := System.Length(FNodeList);
 end;
 
-function TGHashBiMap.GetFillRatio: Single;
+procedure TGHashBiMap.DoClear;
 begin
-  Result := FKeySet.FillRatio;
-end;
-
-function TGHashBiMap.GetLoadFactor: Single;
-begin
-  Result := FKeySet.LoadFactor;
-end;
-
-function TGHashBiMap.GetTableSize: SizeInt;
-begin
-  Result := FKeySet.TableSize;
-end;
-
-procedure TGHashBiMap.SetLoadFactor(aValue: Single);
-begin
-  FKeySet.LoadFactor := aValue;
-  FValueSet.LoadFactor := aValue;
-end;
-
-procedure TGHashBiMap.KeyRemoving(p: PKeyEntry);
-begin
-  FValueSet.Remove(p^.ValueNode^.Data.Key);
-end;
-
-procedure TGHashBiMap.ValueRemoving(p: PValEntry);
-begin
-  FKeySet.Remove(p^.KeyNode^.Data.Key);
+  FNodeList := nil;
+  FKeyChains := nil;
+  FValueChains := nil;
+  FCount := 0;
 end;
 
 procedure TGHashBiMap.DoEnsureCapacity(aValue: SizeInt);
 begin
-  FKeySet.EnsureCapacity(aValue);
-  FValueSet.EnsureCapacity(aValue);
+  if aValue <= Capacity then
+    exit;
+  if aValue <= DEFAULT_CONTAINER_CAPACITY then
+    aValue := DEFAULT_CONTAINER_CAPACITY
+  else
+    if aValue <= MAX_CAPACITY then
+      aValue := LGUtils.RoundUpTwoPower(aValue)
+    else
+      CapacityExceedError(aValue);
+  Resize(aValue);
 end;
 
 procedure TGHashBiMap.DoTrimToFit;
+var
+  NewCapacity: SizeInt;
 begin
-  FKeySet.TrimToFit;
-  FValueSet.TrimToFit;
+  if Count > 0 then
+    begin
+      NewCapacity := LGUtils.RoundUpTwoPower(Count);
+      if NewCapacity < Capacity then
+        Resize(NewCapacity);
+    end
+  else
+    Clear;
 end;
 
 function TGHashBiMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
 var
-  pk: PKeyNode;
-  pv: PValueNode;
+  kh, vh: SizeInt;
 begin
-  if Contains(aKey) or ContainsValue(aValue) then
-    exit(False);
-
-  pk := FKeySet.Add(aKey);
-  pv := FValueSet.Add(aValue);
-
-  pk^.Data.Key := aKey;
-  pk^.Data.ValueNode := pv;
-  pv^.Data.Key := aValue;
-  pv^.Data.KeyNode := pk;
+  kh := TKeyEqRel.HashCode(aKey);
+  vh := TValueEqRel.HashCode(aValue);
+  if Count > 0 then
+    begin
+      if DoFindKey(aKey, kh) <> NULL_INDEX then
+        exit(False);
+      if DoFindValue(aValue, vh) <> NULL_INDEX then
+        exit(False);
+    end;
+  if Count = Capacity then
+    Expand;
+  DoAddData(aKey, aValue, kh, vh);
   Result := True;
 end;
 
@@ -13271,17 +14304,14 @@ end;
 
 function TGHashBiMap.DoExtractKey(constref aKey: TKey; out v: TValue): Boolean;
 var
-  srk: TKeySearchResult;
-  pk: PKeyEntry;
+  I: SizeInt;
 begin
-  pk := FKeySet.Find(aKey, srk);
-  Result := pk <> nil;
+  I := FindKey(aKey);
+  Result := I <> NULL_INDEX;
   if Result then
     begin
-      v := pk^.ValueNode^.Data.Key;
-      if not FValueSet.Remove(pk^.ValueNode^.Data.Key) then
-        raise EBiMapError.Create(SEInternalDataInconsist);
-      FKeySet.RemoveAt(srk);
+      v := FNodeList[I].Data.Value;
+      DoRemove(I);
     end;
 end;
 
@@ -13314,17 +14344,14 @@ end;
 
 function TGHashBiMap.DoExtractValue(constref aValue: TValue; out k: TKey): Boolean;
 var
-  srv: TValueSearchResult;
-  pv: PValEntry;
+  I: SizeInt;
 begin
-  pv := FValueSet.Find(aValue, srv);
-  Result := pv <> nil;
+  I := FindValue(aValue);
+  Result := I <> NULL_INDEX;
   if Result then
     begin
-      k := pv^.KeyNode^.Data.Key;
-      if not FKeySet.Remove(pv^.KeyNode^.Data.Key) then
-        raise EBiMapError.Create(SEInternalDataInconsist);
-      FValueSet.RemoveAt(srv);
+      k := FNodeList[I].Data.Key;
+      DoRemove(I);
     end;
 end;
 
@@ -13357,62 +14384,68 @@ end;
 
 function TGHashBiMap.DoReplaceValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
 var
-  srk: TKeySearchResult;
-  srv: TValueSearchResult;
-  pk: PKeyEntry;
-  pv: PValEntry;
+  I, J, h: SizeInt;
 begin
-  pk := FKeySet.Find(aKey, srk);
-  Result := pk <> nil;
-  if Result then
+  I := FindKey(aKey);
+  if I = NULL_INDEX then
+    exit(False);
+  if FindValue(aNewValue) <> NULL_INDEX then
+    exit(False);
+  if not TValueEqRel.Equal(aNewValue, FNodeList[I].Data.Value) then
     begin
-      Result := not TValueEqRel.Equal(pk^.ValueNode^.Data.Key, aNewValue);
-      if Result then
-        begin
-          Result := not FValueSet.FindOrAdd(aNewValue, pv, srv);
-          if Result then
-            begin
-              if not FValueSet.Remove(pk^.ValueNode^.Data.Key) then
-                raise EBiMapError.Create(SEInternalDataInconsist);
-              pk^.ValueNode := srv.Node;
-            end;
-        end;
+      h := TValueEqRel.HashCode(aNewValue);
+      RemoveFromValueChain(I);
+      J := h and Pred(Capacity);
+      FNodeList[I].ValueHash := h;
+      FNodeList[I].Data.Value := aNewValue;
+      FNodeList[I].NextValue := FValueChains[J];
+      FValueChains[J] := I;
     end;
+  Result := True;
 end;
 
 function TGHashBiMap.DoReplaceKey(constref aValue: TValue; constref aNewKey: TKey): Boolean;
 var
-  srk: TKeySearchResult;
-  srv: TValueSearchResult;
-  pk: PKeyEntry;
-  pv: PValEntry;
+  I, J, h: SizeInt;
 begin
-  pv := FValueSet.Find(aValue, srv);
-  Result := pv <> nil;
-  if Result then
+  I := FindValue(aValue);
+  if I = NULL_INDEX then
+    exit(False);
+  if FindKey(aNewKey) <> NULL_INDEX then
+    exit(False);
+  if not TKeyEqRel.Equal(aNewKey, FNodeList[I].Data.Key) then
     begin
-      Result := not TKeyEqRel.Equal(pv^.KeyNode^.Data.Key, aNewKey);
-      if Result then
-        begin
-          Result := not FKeySet.FindOrAdd(aNewKey, pk, srk);
-          if Result then
-            begin
-              if not FKeySet.Remove(pv^.KeyNode^.Data.Key) then
-                raise EBiMapError.Create(SEInternalDataInconsist);
-              pv^.KeyNode := srk.Node;
-            end;
-        end;
+      h := TKeyEqRel.HashCode(aNewKey);
+      RemoveFromKeyChain(I);
+      J := h and Pred(Capacity);
+      FNodeList[I].KeyHash := h;
+      FNodeList[I].Data.Key := aNewKey;
+      FNodeList[I].NextKey := FKeyChains[J];
+      FKeyChains[J] := I;
     end;
+  Result := True;
 end;
 
 procedure TGHashBiMap.DoRetainAll(c: IKeyCollection);
+var
+  I: SizeInt = 0;
 begin
-  FKeySet.RemoveIf(@c.NonContains, @KeyRemoving);
+  while I < Count do
+    if c.NonContains(FNodeList[I].Data.Key) then
+      DoRemove(I)
+    else
+      Inc(I);
 end;
 
 procedure TGHashBiMap.DoRetainAllVal(c: IValueCollection);
+var
+  I: SizeInt = 0;
 begin
-  FValueSet.RemoveIf(@c.NonContains, @ValueRemoving);
+  while I < Count do
+    if c.NonContains(FNodeList[I].Data.Value) then
+      DoRemove(I)
+    else
+      Inc(I);
 end;
 
 function TGHashBiMap.GetKeys: IKeyEnumerable;
@@ -13436,25 +14469,16 @@ begin
   Result := DoAdd(aKey, aValue);
 end;
 
-class function TGHashBiMap.DefaultLoadFactor: Single;
+class constructor TGHashBiMap.Init;
 begin
-  Result := TKeySet.DefaultLoadFactor;
-end;
-
-class function TGHashBiMap.MaxLoadFactor: Single;
-begin
-  Result := TKeySet.MaxLoadFactor;
-end;
-
-class function TGHashBiMap.MinLoadFactor: Single;
-begin
-  Result := TKeySet.MinLoadFactor;
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
 end;
 
 constructor TGHashBiMap.Create;
 begin
-  FKeySet := TKeySet.Create;
-  FValueSet := TValueSet.Create;
+  InitialAlloc;
 end;
 
 constructor TGHashBiMap.Create(constref a: array of TEntry);
@@ -13471,8 +14495,7 @@ end;
 
 constructor TGHashBiMap.Create(aCapacity: SizeInt);
 begin
-  FKeySet := TKeySet.Create(aCapacity);
-  FValueSet := TValueSet.Create(aCapacity);
+  EnsureCapacity(aCapacity);
 end;
 
 constructor TGHashBiMap.Create(aCapacity: SizeInt; constref a: array of TEntry);
@@ -13489,15 +14512,15 @@ end;
 
 constructor TGHashBiMap.CreateCopy(aMap: TGHashBiMap);
 begin
-  Create(aMap.Count);
-  DoAddAll(aMap.Entries);
+  FNodeList := System.Copy(aMap.FNodeList);
+  FKeyChains := System.Copy(aMap.FKeyChains);
+  FValueChains := System.Copy(aMap.FValueChains);
+  FCount := aMap.Count;
 end;
 
 destructor TGHashBiMap.Destroy;
 begin
   DoClear;
-  FKeySet.Free;
-  FValueSet.Free;
   inherited;
 end;
 
@@ -13530,27 +14553,23 @@ begin
 end;
 
 function TGHashBiMap.Contains(constref aKey: TKey): Boolean;
-var
-  p: TKeySearchResult;
 begin
-  Result := FKeySet.Find(aKey, p) <> nil;
+  Result := FindKey(aKey) <> NULL_INDEX;
 end;
 
 function TGHashBiMap.NonContains(constref aKey: TKey): Boolean;
 begin
-  Result := not Contains(aKey);
+  Result := FindKey(aKey) = NULL_INDEX;
 end;
 
 function TGHashBiMap.ContainsValue(constref aValue: TValue): Boolean;
-var
-  p: TValueSearchResult;
 begin
-  Result := FValueSet.Find(aValue, p) <> nil;
+  Result := FindValue(aValue) <> NULL_INDEX;
 end;
 
 function TGHashBiMap.NonContainsValue(constref aValue: TValue): Boolean;
 begin
-  Result := not ContainsValue(aValue);
+  Result := FindValue(aValue) = NULL_INDEX;
 end;
 
 function TGHashBiMap.GetValue(const aKey: TKey): TValue;
@@ -13567,24 +14586,22 @@ end;
 
 function TGHashBiMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
 var
-  p: PKeyEntry;
-  sr: TKeySearchResult;
+  I: SizeInt;
 begin
-  p := FKeySet.Find(aKey, sr);
-  Result := p <> nil;
+  I := FindKey(aKey);
+  Result := I <> NULL_INDEX;
   if Result then
-    aValue := p^.ValueNode^.Data.Key;
+    aValue := FNodeList[I].Data.Value;
 end;
 
 function TGHashBiMap.TryGetKey(constref aValue: TValue; out aKey: TKey): Boolean;
 var
-  p: PValEntry;
-  sr: TValueSearchResult;
+  I: SizeInt;
 begin
-  p := FValueSet.Find(aValue, sr);
-  Result := p <> nil;
+  I := FindValue(aValue);
+  Result := I <> NULL_INDEX;
   if Result then
-    aKey := p^.KeyNode^.Data.Key;
+    aKey := FNodeList[I].Data.Key;
 end;
 
 function TGHashBiMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
@@ -13750,41 +14767,17 @@ begin
   OwnsValues := moOwnsValues in aOwns;
 end;
 
-procedure TGObjectHashBiMap.KeyRemoving(p: PKeyEntry);
-var
-  v: TValue;
-begin
-  v := p^.ValueNode^.Data.Key;
-  if OwnsKeys then
-    TObject(p^.Key).Free;
-  FValueSet.Remove(v);
-  if OwnsValues then
-    TObject(v).Free;
-end;
-
-procedure TGObjectHashBiMap.ValueRemoving(p: PValEntry);
-var
-  k: TKey;
-begin
-  k := p^.KeyNode^.Data.Key;
-  if OwnsKeys then
-    TObject(p^.Key).Free;
-  FKeySet.Remove(k);
-  if OwnsValues then
-    TObject(k).Free;
-end;
-
 procedure TGObjectHashBiMap.DoClear;
 var
-  e: PKeyEntry;
+  I: SizeInt;
 begin
   if OwnsKeys or OwnsValues then
-    for e in FKeySet do
+    for I := 0 to Pred(Count) do
       begin
         if OwnsKeys then
-          TObject(e^.Key).Free;
+          TObject(FNodeList[I].Data.Key).Free;
         if OwnsValues then
-          TObject(e^.ValueNode^.Data.Key).Free;
+          TObject(FNodeList[I].Data.Value).Free;
       end;
   inherited;
 end;
@@ -13819,70 +14812,84 @@ end;
 
 function TGObjectHashBiMap.DoReplaceValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
 var
-  srk: TKeySearchResult;
-  srv: TValueSearchResult;
-  pk: PKeyEntry;
-  pv: PValEntry;
-  v: TValue;
+  I, J, h: SizeInt;
 begin
-  pk := FKeySet.Find(aKey, srk);
-  Result := pk <> nil;
-  if Result then
+  I := FindKey(aKey);
+  if I = NULL_INDEX then
+    exit(False);
+  if FindValue(aNewValue) <> NULL_INDEX then
+    exit(False);
+  if not TValueEqRel.Equal(aNewValue, FNodeList[I].Data.Value) then
     begin
-      Result := not TValueEqRel.Equal(pk^.ValueNode^.Data.Key, aNewValue);
-      if Result then
-        begin
-          Result := not FValueSet.FindOrAdd(aNewValue, pv, srv);
-          if Result then
-            begin
-              v := pk^.ValueNode^.Data.Key;
-              if not FValueSet.Remove(v) then
-                raise EBiMapError.Create(SEInternalDataInconsist);
-              pk^.ValueNode := srv.Node;
-              if OwnsValues then
-                TObject(v).Free;
-            end;
-        end;
+      h := TValueEqRel.HashCode(aNewValue);
+      RemoveFromValueChain(I);
+      J := h and Pred(Capacity);
+      FNodeList[I].ValueHash := h;
+      if OwnsValues then
+        TObject(FNodeList[I].Data.Value).Free;
+      FNodeList[I].Data.Value := aNewValue;
+      FNodeList[I].NextValue := FValueChains[J];
+      FValueChains[J] := I;
     end;
+  Result := True;
 end;
 
 function TGObjectHashBiMap.DoReplaceKey(constref aValue: TValue; constref aNewKey: TKey): Boolean;
 var
-  srk: TKeySearchResult;
-  srv: TValueSearchResult;
-  pk: PKeyEntry;
-  pv: PValEntry;
-  k: TKey;
+  I, J, h: SizeInt;
 begin
-  pv := FValueSet.Find(aValue, srv);
-  Result := pv <> nil;
-  if Result then
+  I := FindValue(aValue);
+  if I = NULL_INDEX then
+    exit(False);
+  if FindKey(aNewKey) <> NULL_INDEX then
+    exit(False);
+  if not TKeyEqRel.Equal(aNewKey, FNodeList[I].Data.Key) then
     begin
-      Result := not TKeyEqRel.Equal(pv^.KeyNode^.Data.Key, aNewKey);
-      if Result then
-        begin
-          Result := not FKeySet.FindOrAdd(aNewKey, pk, srk);
-          if Result then
-            begin
-              k := pv^.KeyNode^.Data.Key;
-              if not FKeySet.Remove(k) then
-                raise EBiMapError.Create(SEInternalDataInconsist);
-              pv^.KeyNode := srk.Node;
-              if OwnsKeys then
-                TObject(k).Free;
-            end;
-        end;
+      h := TKeyEqRel.HashCode(aNewKey);
+      RemoveFromKeyChain(I);
+      J := h and Pred(Capacity);
+      FNodeList[I].KeyHash := h;
+      if OwnsKeys then
+        TObject(FNodeList[I].Data.Key).Free;
+      FNodeList[I].Data.Key := aNewKey;
+      FNodeList[I].NextKey := FKeyChains[J];
+      FKeyChains[J] := I;
     end;
+  Result := True;
 end;
 
 procedure TGObjectHashBiMap.DoRetainAll(c: IKeyCollection);
+var
+  I: SizeInt = 0;
 begin
-  FKeySet.RemoveIf(@c.NonContains, @KeyRemoving);
+  while I < Count do
+    if c.NonContains(FNodeList[I].Data.Key) then
+      begin
+        if OwnsKeys then
+          TObject(FNodeList[I].Data.Key).Free;
+        if OwnsValues then
+          TObject(FNodeList[I].Data.Value).Free;
+        DoRemove(I);
+      end
+    else
+      Inc(I);
 end;
 
 procedure TGObjectHashBiMap.DoRetainAllVal(c: IValueCollection);
+var
+  I: SizeInt = 0;
 begin
-  FValueSet.RemoveIf(@c.NonContains, @ValueRemoving);
+  while I < Count do
+    if c.NonContains(FNodeList[I].Data.Value) then
+      begin
+        if OwnsKeys then
+          TObject(FNodeList[I].Data.Key).Free;
+        if OwnsValues then
+          TObject(FNodeList[I].Data.Value).Free;
+        DoRemove(I);
+      end
+    else
+      Inc(I);
 end;
 
 constructor TGObjectHashBiMap.Create(aOwns: TMapObjOwnership);
@@ -22238,8 +23245,6 @@ type
     TKeyTest         = specialize TGTest<TKey>;
     TOnKeyTest       = specialize TGOnTest<TKey>;
     TNestKeyTest     = specialize TGNestTest<TKey>;
-    TValueOptional   = specialize TGOptional<TValue>;
-    TKeyCollection   = specialize TGCustomCollection<TKey>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     IKeyCollection   = specialize IGCollection<TKey>;
@@ -22371,144 +23376,6 @@ type
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
     property  TableSize: SizeInt read GetTableSize;
-  end;
-
-  { TGLiteChainHashMap implements node based hashmap with singly linked list chains;
-      TKeyEqRel must provide:
-        class function HashCode([const[ref]] aValue: TKey): SizeInt;
-        class function Equal([const[ref]] L, R: TKey): Boolean; }
-  generic TGLiteChainHashMap<TKey, TValue, TKeyEqRel> = record
-  public
-  type
-    TEntry           = specialize TGMapEntry<TKey, TValue>;
-    TEntryArray      = specialize TGArray<TEntry>;
-    TKeyArray        = specialize TGArray<TKey>;
-    TKeyTest         = specialize TGTest<TKey>;
-    TOnKeyTest       = specialize TGOnTest<TKey>;
-    TNestKeyTest     = specialize TGNestTest<TKey>;
-    TValueOptional   = specialize TGOptional<TValue>;
-    TKeyCollection   = specialize TGCustomCollection<TKey>;
-    IKeyEnumerable   = specialize IGEnumerable<TKey>;
-    IEntryEnumerable = specialize IGEnumerable<TEntry>;
-    IKeyCollection   = specialize IGCollection<TKey>;
-
-  private
-  type
-    PEntry        = ^TEntry;
-    TChainTable   = specialize TGLiteChainHashTable<TKey, TEntry, TKeyEqRel>;
-    PChainHashMap = ^TGLiteChainHashMap;
-
-  public
-  type
-    TKeyEnumerator = record
-    private
-      FEnum: TChainTable.TEnumerator;
-      function  GetCurrent: TKey; inline;
-      procedure Init(constref aMap: TGLiteChainHashMap); inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: TKey read GetCurrent;
-    end;
-
-    TValueEnumerator = record
-    private
-      FEnum: TChainTable.TEnumerator;
-      function  GetCurrent: TValue; inline;
-      procedure Init(constref aMap: TGLiteChainHashMap); inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: TValue read GetCurrent;
-    end;
-
-    TEntryEnumerator = record
-    private
-      FEnum: TChainTable.TEnumerator;
-      function  GetCurrent: TEntry; inline;
-      procedure Init(constref aMap: TGLiteChainHashMap); inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: TEntry read GetCurrent;
-    end;
-
-    TKeys = record
-    private
-      FMap: PChainHashMap;
-      procedure Init(aMap: PChainHashMap); inline;
-    public
-      function GetEnumerator: TKeyEnumerator; inline;
-    end;
-
-    TValues = record
-    private
-      FMap: PChainHashMap;
-      procedure Init(aMap: PChainHashMap); inline;
-    public
-      function GetEnumerator: TValueEnumerator; inline;
-    end;
-
-  private
-    FTable: TChainTable;
-    function  GetCount: SizeInt; inline;
-    function  GetCapacity: SizeInt; inline;
-    function  Find(constref aKey: TKey): PEntry; inline;
-    //returns True if aKey found, otherwise inserts (garbage) entry and returns False;
-    function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
-    function  GetValue(const aKey: TKey): TValue; inline;
-    function  SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-    function  GetKeyEnumerator: TKeyEnumerator; inline;
-    function  GetValueEnumerator: TValueEnumerator; inline;
-  public
-    function  GetEnumerator: TEntryEnumerator; inline;
-    function  ToArray: TEntryArray;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
-    procedure Clear; inline;
-    procedure EnsureCapacity(aValue: SizeInt); inline;
-  { free unused memory if possible }
-    procedure TrimToFit; inline;
-  { returns True and aValue mapped to aKey if contains aKey, False otherwise }
-    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-  { returns Value mapped to aKey or aDefault }
-    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
-  { returns True and add TEntry(aKey, aValue) only if not contains aKey }
-    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-  { returns True and add e only if not contains e.Key }
-    function  Add(constref e: TEntry): Boolean; inline;
-    procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
-  { returns True if e.Key added, False otherwise }
-    function  AddOrSetValue(constref e: TEntry): Boolean; inline;
-  { will add only entries which keys are absent in map }
-    function  AddAll(constref a: array of TEntry): SizeInt;
-    function  AddAll(e: IEntryEnumerable): SizeInt;
-  { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
-    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean; inline;
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  NonContains(constref aKey: TKey): Boolean; inline;
-    function  ContainsAny(constref a: array of TKey): Boolean;
-    function  ContainsAny(e: IKeyEnumerable): Boolean;
-    function  ContainsAll(constref a: array of TKey): Boolean;
-    function  ContainsAll(e: IKeyEnumerable): Boolean;
-  { returns True if entry removed }
-    function  Remove(constref aKey: TKey): Boolean; inline;
-    function  RemoveAll(constref a: array of TKey): SizeInt;
-    function  RemoveAll(e: IKeyEnumerable): SizeInt;
-    function  RemoveIf(aTest: TKeyTest): SizeInt;
-    function  RemoveIf(aTest: TOnKeyTest): SizeInt;
-    function  RemoveIf(aTest: TNestKeyTest): SizeInt;
-    function  Extract(constref aKey: TKey; out v: TValue): Boolean;
-    function  ExtractIf(aTest: TKeyTest): TEntryArray;
-    function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
-    function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
-    procedure RetainAll(aCollection: IKeyCollection);
-    function  Keys: TKeys; inline;
-    function  Values: TValues; inline;
-    property  Count: SizeInt read GetCount;
-    property  Capacity: SizeInt read GetCapacity;
-  { reading will raise ELGMapError if an aKey is not present in map }
-    property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
 
 implementation
@@ -23538,10 +24405,9 @@ begin
   for k in e do
     Result += Ord(Remove(k));
 end;
-{$PUSH}{$MACRO ON}
+
 function TGLiteHashMapLP.RemoveIf(aTest: TKeyTest): SizeInt;
 begin
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   with FTable.RemovableEnumerator do
     while MoveNext do
@@ -23549,18 +24415,31 @@ begin
         begin
           RemoveCurrent;
           Inc(Result);
-        end}
-  RemoveIfMacro;
+        end;
 end;
 
 function TGLiteHashMapLP.RemoveIf(aTest: TOnKeyTest): SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aTest(Current^.Key) then
+        begin
+          RemoveCurrent;
+          Inc(Result);
+        end;
 end;
 
 function TGLiteHashMapLP.RemoveIf(aTest: TNestKeyTest): SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aTest(Current^.Key) then
+        begin
+          RemoveCurrent;
+          Inc(Result);
+        end;
 end;
 
 function TGLiteHashMapLP.Extract(constref aKey: TKey; out v: TValue): Boolean;
@@ -23582,7 +24461,6 @@ var
   I: SizeInt = 0;
   e: TEntry;
 begin
-{$DEFINE ExtractIfMacro :=
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   with FTable.RemovableEnumerator do
     while MoveNext do
@@ -23597,8 +24475,7 @@ begin
             Inc(I);
           end;
       end;
-  System.SetLength(Result, I)}
-  ExtractIfMacro;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashMapLP.ExtractIf(aTest: TOnKeyTest): TEntryArray;
@@ -23606,7 +24483,21 @@ var
   I: SizeInt = 0;
   e: TEntry;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        e := Current^;
+        if aTest(e.Key) then
+          begin
+            RemoveCurrent;
+            if I = System.Length(Result) then
+              System.SetLength(Result, I shl 1);
+            Result[I] := e;
+            Inc(I);
+          end;
+      end;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashMapLP.ExtractIf(aTest: TNestKeyTest): TEntryArray;
@@ -23614,9 +24505,22 @@ var
   I: SizeInt = 0;
   e: TEntry;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        e := Current^;
+        if aTest(e.Key) then
+          begin
+            RemoveCurrent;
+            if I = System.Length(Result) then
+              System.SetLength(Result, I shl 1);
+            Result[I] := e;
+            Inc(I);
+          end;
+      end;
+  System.SetLength(Result, I);
 end;
-{$POP}
 
 procedure TGLiteHashMapLP.RetainAll(aCollection: IKeyCollection);
 begin
@@ -23634,433 +24538,6 @@ end;
 function TGLiteHashMapLP.Values: TValues;
 begin
   Result{%H-}.Init(@Self);
-end;
-
-{ TGLiteChainHashMap.TKeyEnumerator }
-
-function TGLiteChainHashMap.TKeyEnumerator.GetCurrent: TKey;
-begin
-  Result := FEnum.Current^.Key;
-end;
-
-procedure TGLiteChainHashMap.TKeyEnumerator.Init(constref aMap: TGLiteChainHashMap);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
-end;
-
-function TGLiteChainHashMap.TKeyEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGLiteChainHashMap.TKeyEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGLiteChainHashMap.TValueEnumerator }
-
-function TGLiteChainHashMap.TValueEnumerator.GetCurrent: TValue;
-begin
-  Result := FEnum.Current^.Value;
-end;
-
-procedure TGLiteChainHashMap.TValueEnumerator.Init(constref aMap: TGLiteChainHashMap);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
-end;
-
-function TGLiteChainHashMap.TValueEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGLiteChainHashMap.TValueEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGLiteChainHashMap.TEntryEnumerator }
-
-function TGLiteChainHashMap.TEntryEnumerator.GetCurrent: TEntry;
-begin
-  Result := FEnum.Current^;
-end;
-
-procedure TGLiteChainHashMap.TEntryEnumerator.Init(constref aMap: TGLiteChainHashMap);
-begin
-  FEnum := aMap.FTable.GetEnumerator;
-end;
-
-function TGLiteChainHashMap.TEntryEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGLiteChainHashMap.TEntryEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGLiteChainHashMap.TKeys }
-
-procedure TGLiteChainHashMap.TKeys.Init(aMap: PChainHashMap);
-begin
-  FMap := aMap;
-end;
-
-function TGLiteChainHashMap.TKeys.GetEnumerator: TKeyEnumerator;
-begin
-  Result := FMap^.GetKeyEnumerator;
-end;
-
-{ TGLiteChainHashMap.TValues }
-
-procedure TGLiteChainHashMap.TValues.Init(aMap: PChainHashMap);
-begin
-  FMap := aMap;
-end;
-
-function TGLiteChainHashMap.TValues.GetEnumerator: TValueEnumerator;
-begin
-  Result := FMap^.GetValueEnumerator;
-end;
-
-{ TGLiteChainHashMap }
-
-function TGLiteChainHashMap.GetCount: SizeInt;
-begin
-  Result := FTable.Count;
-end;
-
-function TGLiteChainHashMap.GetCapacity: SizeInt;
-begin
-  Result := FTable.Capacity;
-end;
-
-function TGLiteChainHashMap.Find(constref aKey: TKey): PEntry;
-var
-  Pos: TChainTable.TSearchResult;
-begin
-  Result := FTable.Find(aKey, Pos);
-end;
-
-function TGLiteChainHashMap.FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
-var
-  Pos: TChainTable.TSearchResult;
-begin
-  Result := FTable.FindOrAdd(aKey, p, Pos);
-  if not Result then
-    p^.Key := aKey;
-end;
-
-function TGLiteChainHashMap.GetValue(const aKey: TKey): TValue;
-begin
-  if not TryGetValue(aKey, Result) then
-    raise ELGMapError.Create(SEKeyNotFound);
-end;
-
-function TGLiteChainHashMap.SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-var
-  p: PEntry;
-begin
-  p := Find(aKey);
-  Result := p <> nil;
-  if Result then
-    p^.Value := aNewValue;
-end;
-
-function TGLiteChainHashMap.GetKeyEnumerator: TKeyEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteChainHashMap.GetValueEnumerator: TValueEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteChainHashMap.GetEnumerator: TEntryEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteChainHashMap.ToArray: TEntryArray;
-var
-  I: SizeInt = 0;
-  p: PEntry;
-begin
-  System.SetLength(Result, Count);
-  for p in FTable do
-    begin
-      Result[I] := p^;
-      Inc(I);
-    end;
-end;
-
-function TGLiteChainHashMap.IsEmpty: Boolean;
-begin
-  Result := FTable.Count = 0;
-end;
-
-function TGLiteChainHashMap.NonEmpty: Boolean;
-begin
-  Result := FTable.Count <> 0;
-end;
-
-procedure TGLiteChainHashMap.Clear;
-begin
-  FTable.Clear;
-end;
-
-procedure TGLiteChainHashMap.EnsureCapacity(aValue: SizeInt);
-begin
-  FTable.EnsureCapacity(aValue);
-end;
-
-procedure TGLiteChainHashMap.TrimToFit;
-begin
-  FTable.TrimToFit;
-end;
-
-function TGLiteChainHashMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
-var
-  p: PEntry;
-begin
-  p := Find(aKey);
-  Result := p <> nil;
-  if Result then
-    aValue := p^.Value;
-end;
-
-function TGLiteChainHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
-begin
-  if not TryGetValue(aKey, Result) then
-    Result := aDefault;
-end;
-
-function TGLiteChainHashMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-var
-  p: PEntry;
-begin
-  Result := not FindOrAdd(aKey, p);
-  if Result then
-    p^.Value := aValue;
-end;
-
-function TGLiteChainHashMap.Add(constref e: TEntry): Boolean;
-begin
-  Result := Add(e.Key, e.Value);
-end;
-
-procedure TGLiteChainHashMap.AddOrSetValue(const aKey: TKey; const aValue: TValue);
-var
-  p: PEntry;
-begin
-  FindOrAdd(aKey, p);
-  p^.Value := aValue;
-end;
-
-function TGLiteChainHashMap.AddOrSetValue(constref e: TEntry): Boolean;
-var
-  p: PEntry;
-begin
-  Result := not FindOrAdd(e.Key, p);
-  p^.Value := e.Value;
-end;
-
-function TGLiteChainHashMap.AddAll(constref a: array of TEntry): SizeInt;
-var
-  e: TEntry;
-begin
-  Result := 0;
-  for e in a do
-    Result += Ord(Add(e));
-end;
-
-function TGLiteChainHashMap.AddAll(e: IEntryEnumerable): SizeInt;
-var
-  Entry: TEntry;
-begin
-  Result := 0;
-  for Entry in e do
-    Result += Ord(Add(Entry));
-end;
-
-function TGLiteChainHashMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-begin
-  Result := SetValue(aKey, aNewValue);
-end;
-
-function TGLiteChainHashMap.Contains(constref aKey: TKey): Boolean;
-begin
-  Result := Find(aKey) <> nil;
-end;
-
-function TGLiteChainHashMap.NonContains(constref aKey: TKey): Boolean;
-begin
-  Result := Find(aKey) = nil;
-end;
-
-function TGLiteChainHashMap.ContainsAny(constref a: array of TKey): Boolean;
-var
-  k: TKey;
-begin
-  for k in a do
-  if Contains(k) then
-    exit(True);
-  Result := False;
-end;
-
-function TGLiteChainHashMap.ContainsAny(e: IKeyEnumerable): Boolean;
-var
-  k: TKey;
-begin
-  for k in e do
-  if Contains(k) then
-    exit(True);
-  Result := False;
-end;
-
-function TGLiteChainHashMap.ContainsAll(constref a: array of TKey): Boolean;
-var
-  k: TKey;
-begin
-  for k in a do
-  if not Contains(k) then
-    exit(False);
-  Result := True;
-end;
-
-function TGLiteChainHashMap.ContainsAll(e: IKeyEnumerable): Boolean;
-var
-  k: TKey;
-begin
-  for k in e do
-  if not Contains(k) then
-    exit(False);
-  Result := True;
-end;
-
-function TGLiteChainHashMap.Remove(constref aKey: TKey): Boolean;
-begin
-  Result := FTable.Remove(aKey);
-end;
-
-function TGLiteChainHashMap.RemoveAll(constref a: array of TKey): SizeInt;
-var
-  k: TKey;
-begin
-  Result := 0;
-  for k in a do
-    Result += Ord(Remove(k));
-end;
-
-function TGLiteChainHashMap.RemoveAll(e: IKeyEnumerable): SizeInt;
-var
-  k: TKey;
-begin
-  Result := 0;
-  for k in e do
-    Result += Ord(Remove(k));
-end;
-
-{$PUSH}{$MACRO ON}
-function TGLiteChainHashMap.RemoveIf(aTest: TKeyTest): SizeInt;
-begin
-{$DEFINE RemoveIfMacro :=
-  Result := 0;
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          RemoveCurrent;
-          Inc(Result);
-        end}
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashMap.RemoveIf(aTest: TOnKeyTest): SizeInt;
-begin
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashMap.RemoveIf(aTest: TNestKeyTest): SizeInt;
-begin
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashMap.Extract(constref aKey: TKey; out v: TValue): Boolean;
-var
-  p: PEntry;
-  Pos: TChainTable.TSearchResult;
-begin
-  p := FTable.Find(aKey, Pos);
-  Result := p <> nil;
-  if Result then
-    begin
-      v := p^.Value;
-      FTable.RemoveAt(Pos);
-    end;
-end;
-
-function TGLiteChainHashMap.ExtractIf(aTest: TKeyTest): TEntryArray;
-var
-  I: SizeInt = 0;
-  e: TEntry;
-begin
-{$DEFINE ExtractIfMacro :=
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      begin
-        e := Current^;
-        if aTest(e.Key) then
-          begin
-            RemoveCurrent;
-            if I = System.Length(Result) then
-              System.SetLength(Result, I shl 1);
-            Result[I] := e;
-            Inc(I);
-          end;
-      end;
-  System.SetLength(Result, I)}
-  ExtractIfMacro;
-end;
-
-function TGLiteChainHashMap.ExtractIf(aTest: TOnKeyTest): TEntryArray;
-var
-  I: SizeInt = 0;
-  e: TEntry;
-begin
-  ExtractIfMacro;
-end;
-
-function TGLiteChainHashMap.ExtractIf(aTest: TNestKeyTest): TEntryArray;
-var
-  I: SizeInt = 0;
-  e: TEntry;
-begin
-  ExtractIfMacro;
-end;
-{$POP}
-
-procedure TGLiteChainHashMap.RetainAll(aCollection: IKeyCollection);
-begin
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      if aCollection.NonContains(Current^.Key) then
-        RemoveCurrent;
-end;
-
-function TGLiteChainHashMap.Keys: TKeys;
-begin
-  Result.Init(@Self);
-end;
-
-function TGLiteChainHashMap.Values: TValues;
-begin
-  Result.Init(@Self);
 end;
 
 end.
@@ -25696,12 +26173,11 @@ function TGLiteHashMultiSetLP.Remove(constref aValue: T): Boolean;
 begin
   Result := Extract(aValue);
 end;
-{$PUSH}{$MACRO ON}
+
 function TGLiteHashMultiSetLP.RemoveIf(aTest: TTest): SizeInt;
 var
   p: PEntry;
 begin
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   with FTable.RemovableEnumerator do
     while MoveNext do
@@ -25713,22 +26189,43 @@ begin
             Result += p^.Count;
             RemoveCurrent;
           end
-      end}
-  RemoveIfMacro;
+      end;
 end;
 
 function TGLiteHashMultiSetLP.RemoveIf(aTest: TOnTest): SizeInt;
 var
   p: PEntry;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            FCount -= p^.Count;
+            Result += p^.Count;
+            RemoveCurrent;
+          end
+      end;
 end;
 
 function TGLiteHashMultiSetLP.RemoveIf(aTest: TNestTest): SizeInt;
 var
   p: PEntry;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            FCount -= p^.Count;
+            Result += p^.Count;
+            RemoveCurrent;
+          end
+      end;
 end;
 
 function TGLiteHashMultiSetLP.Extract(constref aValue: T): Boolean;
@@ -25753,7 +26250,6 @@ var
   p: PEntry;
   v: T;
 begin
-{$DEFINE ExtractIfMacro :=
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
   with FTable.RemovableEnumerator do
@@ -25773,8 +26269,7 @@ begin
             I := Succ(Last);
           end;
       end;
-  System.SetLength(Result, I)}
-  ExtractIfMacro;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashMultiSetLP.ExtractIf(aTest: TOnTest): TArray;
@@ -25783,7 +26278,26 @@ var
   p: PEntry;
   v: T;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  I := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            Last := Pred(I + p^.Count);
+            FCount -= p^.Count;
+            v := p^.Key;
+            if Last >= System.Length(Result) then
+                System.SetLength(Result, RoundUpTwoPower(Succ(Last)));
+            for I := I to Last do
+              Result[I] := v;
+            RemoveCurrent;
+            I := Succ(Last);
+          end;
+      end;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashMultiSetLP.ExtractIf(aTest: TNestTest): TArray;
@@ -25792,9 +26306,27 @@ var
   p: PEntry;
   v: T;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  I := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if aTest(p^.Key) then
+          begin
+            Last := Pred(I + p^.Count);
+            FCount -= p^.Count;
+            v := p^.Key;
+            if Last >= System.Length(Result) then
+                System.SetLength(Result, RoundUpTwoPower(Succ(Last)));
+            for I := I to Last do
+              Result[I] := v;
+            RemoveCurrent;
+            I := Succ(Last);
+          end;
+      end;
+  System.SetLength(Result, I);
 end;
-{$POP}
 
 procedure TGLiteHashMultiSetLP.RetainAll(aCollection: ICollection);
 begin
@@ -26131,7 +26663,7 @@ type
     class function DefaultLoadFactor: Single; inline;
     class function MaxLoadFactor: Single; inline;
     class function MinLoadFactor: Single; inline;
-    class function Distinct(a: TArray): IEnumerable; inline;
+    class function Distinct(constref a: TArray): IEnumerable; inline;
     class function Distinct(e: IEnumerable): IEnumerable; inline;
     constructor Create;
     constructor Create(constref a: array of T);
@@ -26423,6 +26955,13 @@ type
     function  GetTableSize: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
   public
+    class operator +(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator -(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator *(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+    class operator =(constref L, R: TGLiteHashSetLP): Boolean; inline;
+    class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
     function  MinLoadFactor: Single; inline;
@@ -26473,91 +27012,6 @@ type
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
     property  TableSize: SizeInt read GetTableSize;
-  end;
-
-  { TGLiteChainHashSet implements node based hashset with singly linked list chains;
-      functor TEqRel(equality relation) must provide:
-        class function HashCode([const[ref]] aValue: T): SizeInt;
-        class function Equal([const[ref]] L, R: T): Boolean; }
-  generic TGLiteChainHashSet<T, TEqRel> = record
-  private
-  type
-    TEntry = record
-      Key: T;
-    end;
-    PEntry = ^TEntry;
-
-    TChainTable = specialize TGLiteChainHashTable<T, TEntry, TEqRel>;
-
-  public
-  type
-    IEnumerable = specialize IGEnumerable<T>;
-    ICollection = specialize IGCollection<T>;
-    TTest       = specialize TGTest<T>;
-    TOnTest     = specialize TGOnTest<T>;
-    TNestTest   = specialize TGNestTest<T>;
-    TArray      = array of T;
-
-    TEnumerator = record
-    private
-      FEnum: TChainTable.TEnumerator;
-      function  GetCurrent: T; inline;
-      procedure Init(constref aSet: TGLiteChainHashSet); inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: T read GetCurrent;
-    end;
-
-  private
-    FTable: TChainTable;
-    function  GetCapacity: SizeInt; inline;
-    function  GetCount: SizeInt; inline;
-  public
-    function  GetEnumerator: TEnumerator; inline;
-    function  ToArray: TArray;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
-    procedure Clear; inline;
-    procedure TrimToFit; inline;
-    procedure EnsureCapacity(aValue: SizeInt); inline;
-  { returns True if element added }
-    function  Add(constref aValue: T): Boolean;
-  { returns count of added elements }
-    function  AddAll(constref a: array of T): SizeInt;
-    function  AddAll(e: IEnumerable): SizeInt;
-    function  Contains(constref aValue: T): Boolean; inline;
-    function  NonContains(constref aValue: T): Boolean; inline;
-    function  ContainsAny(constref a: array of T): Boolean;
-    function  ContainsAny(e: IEnumerable): Boolean;
-    function  ContainsAll(constref a: array of T): Boolean;
-    function  ContainsAll(e: IEnumerable): Boolean;
-  { returns True if element removed }
-    function  Remove(constref aValue: T): Boolean; inline;
-  { returns count of removed elements }
-    function  RemoveAll(constref a: array of T): SizeInt;
-    function  RemoveAll(e: IEnumerable): SizeInt;
-  { returns count of removed elements }
-    function  RemoveIf(aTest: TTest): SizeInt;
-    function  RemoveIf(aTest: TOnTest): SizeInt;
-    function  RemoveIf(aTest: TNestTest): SizeInt;
-  { returns True if element extracted }
-    function  Extract(constref aValue: T): Boolean; inline;
-    function  ExtractIf(aTest: TTest): TArray;
-    function  ExtractIf(aTest: TOnTest): TArray;
-    function  ExtractIf(aTest: TNestTest): TArray;
-  { will contain only those elements that are simultaneously contained in self and aCollection }
-    procedure RetainAll(aCollection: ICollection);
-    function  IsSuperset(constref aSet: TGLiteChainHashSet): Boolean;
-    function  IsSubset(constref aSet: TGLiteChainHashSet): Boolean; inline;
-    function  IsEqual(constref aSet: TGLiteChainHashSet): Boolean;
-    function  Intersecting(constref aSet: TGLiteChainHashSet): Boolean; inline;
-    procedure Intersect(constref aSet: TGLiteChainHashSet);
-    procedure Join(constref aSet: TGLiteChainHashSet);
-    procedure Subtract(constref aSet: TGLiteChainHashSet);
-    procedure SymmetricSubtract(constref aSet: TGLiteChainHashSet);
-    property  Count: SizeInt read GetCount;
-    property  Capacity: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -26745,7 +27199,7 @@ begin
   Result := GetTableClass.MinLoadFactor;
 end;
 
-class function TGCustomHashSet.Distinct(a: TArray): IEnumerable;
+class function TGCustomHashSet.Distinct(constref a: TArray): IEnumerable;
 begin
   Result := TDistinctEnumerable.Create(specialize TGArrayEnumerator<T>.Create(a), GetClass);
 end;
@@ -27398,6 +27852,83 @@ begin
   FTable.LoadFactor := aValue;
 end;
 
+class operator TGLiteHashSetLP. + (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  if @Result = @L then
+    Result.Join(R)
+  else
+    if @Result = @R then
+      Result.Join(L)
+    else
+      begin
+        Result := L;
+        Result.Join(R);
+      end;
+end;
+
+class operator TGLiteHashSetLP. - (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+var
+  Tmp: TGLiteHashSetLP;
+begin
+  if @Result = @L then
+    Result.Subtract(R)
+  else
+    if @Result = @R then
+      begin
+        Tmp := R;
+        Result := L;
+        Result.Subtract(Tmp)
+      end
+    else
+      begin
+        Result := L;
+        Result.Subtract(R);
+      end;
+end;
+
+class operator TGLiteHashSetLP. * (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  if @Result = @L then
+    Result.Intersect(R)
+  else
+    if @Result = @R then
+      Result.Intersect(L)
+    else
+      begin
+        Result := L;
+        Result.Intersect(R);
+      end;
+end;
+
+class operator TGLiteHashSetLP.><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
+begin
+  if @Result = @L then
+    Result.SymmetricSubtract(R)
+  else
+    if @Result = @R then
+      Result.SymmetricSubtract(L)
+    else
+      begin
+        Result := L;
+        Result.SymmetricSubtract(R);
+      end;
+end;
+
+class operator TGLiteHashSetLP. = (constref L, R: TGLiteHashSetLP): Boolean;
+begin
+  Result := L.IsEqual(R);
+end;
+
+class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
+begin
+  Result := L.IsSubset(R);
+end;
+
+class operator TGLiteHashSetLP.in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean;
+begin
+  Result := aSet.Contains(aValue);
+end;
+
 function TGLiteHashSetLP.DefaultLoadFactor: Single;
 begin
   Result := FTable.DEFAULT_LOAD_FACTOR;
@@ -27558,10 +28089,8 @@ begin
   for v in e do
     Result += Ord(Remove(v));
 end;
-{$PUSH}{$MACRO ON}
 function TGLiteHashSetLP.RemoveIf(aTest: TTest): SizeInt;
 begin
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   with FTable.RemovableEnumerator do
     while MoveNext do
@@ -27569,18 +28098,31 @@ begin
         begin
           RemoveCurrent;
           Inc(Result);
-        end}
-  RemoveIfMacro;
+        end;
 end;
 
 function TGLiteHashSetLP.RemoveIf(aTest: TOnTest): SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aTest(Current^.Key) then
+        begin
+          RemoveCurrent;
+          Inc(Result);
+        end;
 end;
 
 function TGLiteHashSetLP.RemoveIf(aTest: TNestTest): SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aTest(Current^.Key) then
+        begin
+          RemoveCurrent;
+          Inc(Result);
+        end;
 end;
 
 function TGLiteHashSetLP.Extract(constref aValue: T): Boolean;
@@ -27591,43 +28133,56 @@ end;
 function TGLiteHashSetLP.ExtractIf(aTest: TTest): TArray;
 var
   I: SizeInt = 0;
-  v: T;
 begin
-{$DEFINE ExtractIfMacro :=
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   with FTable.RemovableEnumerator do
     while MoveNext do
-      begin
-        v := Current^.Key;
-        if aTest(v) then
-          begin
-            RemoveCurrent;
-            if I = System.Length(Result) then
-              System.SetLength(Result, I shl 1);
-            Result[I] := v;
-            Inc(I);
-          end;
-      end;
-  System.SetLength(Result, I)}
-  ExtractIfMacro;
+      if aTest(Current^.Key) then
+        begin
+          if I = System.Length(Result) then
+            System.SetLength(Result, I shl 1);
+          Result[I] := Current^.Key;
+          RemoveCurrent;
+          Inc(I);
+        end;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashSetLP.ExtractIf(aTest: TOnTest): TArray;
 var
   I: SizeInt = 0;
-  v: T;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aTest(Current^.Key) then
+        begin
+          if I = System.Length(Result) then
+            System.SetLength(Result, I shl 1);
+          Result[I] := Current^.Key;
+          RemoveCurrent;
+          Inc(I);
+        end;
+  System.SetLength(Result, I);
 end;
 
 function TGLiteHashSetLP.ExtractIf(aTest: TNestTest): TArray;
 var
   I: SizeInt = 0;
-  v: T;
 begin
-  ExtractIfMacro;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with FTable.RemovableEnumerator do
+    while MoveNext do
+      if aTest(Current^.Key) then
+        begin
+          if I = System.Length(Result) then
+            System.SetLength(Result, I shl 1);
+          Result[I] := Current^.Key;
+          RemoveCurrent;
+          Inc(I);
+        end;
+  System.SetLength(Result, I);
 end;
-{$POP}
 
 procedure TGLiteHashSetLP.RetainAll(aCollection: ICollection);
 begin
@@ -27719,354 +28274,6 @@ begin
 end;
 
 procedure TGLiteHashSetLP.SymmetricSubtract(constref aSet: TGLiteHashSetLP);
-var
-  v: T;
-begin
-  for v in aSet do
-    if not Remove(v) then
-      Add(v);
-end;
-
-{ TGLiteChainHashSet.TEnumerator }
-
-function TGLiteChainHashSet.TEnumerator.GetCurrent: T;
-begin
-  Result := FEnum.Current^.Key;
-end;
-
-procedure TGLiteChainHashSet.TEnumerator.Init(constref aSet: TGLiteChainHashSet);
-begin
-  FEnum := aSet.FTable.GetEnumerator;
-end;
-
-function TGLiteChainHashSet.TEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext
-end;
-
-procedure TGLiteChainHashSet.TEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGLiteChainHashSet }
-
-function TGLiteChainHashSet.GetCapacity: SizeInt;
-begin
-  Result := FTable.Capacity;
-end;
-
-function TGLiteChainHashSet.GetCount: SizeInt;
-begin
-  Result := FTable.Count;
-end;
-
-function TGLiteChainHashSet.GetEnumerator: TEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteChainHashSet.ToArray: TArray;
-var
-  I: SizeInt = 0;
-  p: PEntry;
-begin
-  System.SetLength(Result, Count);
-  for p in FTable do
-    begin
-      Result[I] := p^.Key;
-      Inc(I);
-    end;
-end;
-
-function TGLiteChainHashSet.IsEmpty: Boolean;
-begin
-  Result := FTable.Count = 0;
-end;
-
-function TGLiteChainHashSet.NonEmpty: Boolean;
-begin
-  Result := FTable.Count <> 0;
-end;
-
-procedure TGLiteChainHashSet.Clear;
-begin
-  FTable.Clear;
-end;
-
-procedure TGLiteChainHashSet.TrimToFit;
-begin
-  FTable.TrimToFit;
-end;
-
-procedure TGLiteChainHashSet.EnsureCapacity(aValue: SizeInt);
-begin
-  FTable.EnsureCapacity(aValue)
-end;
-
-function TGLiteChainHashSet.Add(constref aValue: T): Boolean;
-var
-  p: PEntry;
-  Pos: TChainTable.TSearchResult;
-begin
-  Result := not FTable.FindOrAdd(aValue, p, Pos);
-  if Result then
-    p^.Key := aValue;
-end;
-
-function TGLiteChainHashSet.AddAll(constref a: array of T): SizeInt;
-var
-  v: T;
-begin
-  Result := 0;
-  for v in a do
-    Result += Ord(Add(v));
-end;
-
-function TGLiteChainHashSet.AddAll(e: IEnumerable): SizeInt;
-var
-  v: T;
-begin
-  Result := 0;
-  for v in e do
-    Result += Ord(Add(v));
-end;
-
-function TGLiteChainHashSet.Contains(constref aValue: T): Boolean;
-var
-  p: TChainTable.TSearchResult;
-begin
-  Result := FTable.Find(aValue, p) <> nil;
-end;
-
-function TGLiteChainHashSet.NonContains(constref aValue: T): Boolean;
-begin
-  Result := not Contains(aValue);
-end;
-
-function TGLiteChainHashSet.ContainsAny(constref a: array of T): Boolean;
-var
-  v: T;
-begin
-  for v in a do
-    if Contains(v) then
-      exit(True);
-  Result := False;
-end;
-
-function TGLiteChainHashSet.ContainsAny(e: IEnumerable): Boolean;
-var
-  v: T;
-begin
-  for v in e do
-    if Contains(v) then
-      exit(True);
-  Result := False;
-end;
-
-function TGLiteChainHashSet.ContainsAll(constref a: array of T): Boolean;
-var
-  v: T;
-begin
-  for v in a do
-    if NonContains(v) then
-      exit(False);
-  Result := True;
-end;
-
-function TGLiteChainHashSet.ContainsAll(e: IEnumerable): Boolean;
-var
-  v: T;
-begin
-  for v in e do
-    if NonContains(v) then
-      exit(False);
-  Result := True;
-end;
-
-function TGLiteChainHashSet.Remove(constref aValue: T): Boolean;
-begin
-  Result := FTable.Remove(aValue);
-end;
-
-function TGLiteChainHashSet.RemoveAll(constref a: array of T): SizeInt;
-var
-  v: T;
-begin
-  Result := 0;
-  for v in a do
-    Result += Ord(Remove(v));
-end;
-
-function TGLiteChainHashSet.RemoveAll(e: IEnumerable): SizeInt;
-var
-  v: T;
-begin
-  Result := 0;
-  for v in e do
-    Result += Ord(Remove(v));
-end;
-{$PUSH}{$MACRO ON}
-function TGLiteChainHashSet.RemoveIf(aTest: TTest): SizeInt;
-begin
-{$DEFINE RemoveIfMacro :=
-  Result := 0;
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      if aTest(Current^.Key) then
-        begin
-          RemoveCurrent;
-          Inc(Result);
-        end}
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashSet.RemoveIf(aTest: TOnTest): SizeInt;
-begin
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashSet.RemoveIf(aTest: TNestTest): SizeInt;
-begin
-  RemoveIfMacro;
-end;
-
-function TGLiteChainHashSet.Extract(constref aValue: T): Boolean;
-begin
-  Result := FTable.Remove(aValue);
-end;
-
-function TGLiteChainHashSet.ExtractIf(aTest: TTest): TArray;
-var
-  I: SizeInt = 0;
-  v: T;
-begin
-{$DEFINE ExtractIfMacro :=
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      begin
-        v := Current^.Key;
-        if aTest(v) then
-          begin
-            RemoveCurrent;
-            if I = System.Length(Result) then
-              System.SetLength(Result, I shl 1);
-            Result[I] := v;
-            Inc(I);
-          end;
-      end;
-  System.SetLength(Result, I)}
-  ExtractIfMacro;
-end;
-
-function TGLiteChainHashSet.ExtractIf(aTest: TOnTest): TArray;
-var
-  I: SizeInt = 0;
-  v: T;
-begin
-  ExtractIfMacro;
-end;
-
-function TGLiteChainHashSet.ExtractIf(aTest: TNestTest): TArray;
-var
-  I: SizeInt = 0;
-  v: T;
-begin
-  ExtractIfMacro;
-end;
-{$POP}
-
-procedure TGLiteChainHashSet.RetainAll(aCollection: ICollection);
-begin
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      if aCollection.NonContains(Current^.Key) then
-        RemoveCurrent;
-end;
-
-function TGLiteChainHashSet.IsSuperset(constref aSet: TGLiteChainHashSet): Boolean;
-var
-  v: T;
-begin
-  if @aSet <> @Self then
-    begin
-      if Count >= aSet.Count then
-        begin
-          for v in aSet do
-            if NonContains(v) then
-              exit(False);
-          Result := True;
-        end
-      else
-        Result := False;
-    end
-  else
-    Result := True;
-end;
-
-function TGLiteChainHashSet.IsSubset(constref aSet: TGLiteChainHashSet): Boolean;
-begin
-  Result := aSet.IsSuperset(Self);
-end;
-
-function TGLiteChainHashSet.IsEqual(constref aSet: TGLiteChainHashSet): Boolean;
-var
-  v: T;
-begin
-  if @aSet <> @Self then
-    begin
-      if Count <> aSet.Count then
-        exit(False);
-      for v in aSet do
-        if NonContains(v) then
-          exit(False);
-      Result := True;
-    end
-  else
-    Result := True;
-end;
-
-function TGLiteChainHashSet.Intersecting(constref aSet: TGLiteChainHashSet): Boolean;
-var
-  v: T;
-begin
-  if @aSet <> @Self then
-    begin
-      for v in aSet do
-        if Contains(v) then
-          exit(True);
-      Result := False;
-    end
-  else
-    Result := True;
-end;
-
-procedure TGLiteChainHashSet.Intersect(constref aSet: TGLiteChainHashSet);
-begin
-  with FTable.RemovableEnumerator do
-    while MoveNext do
-      if aSet.NonContains(Current^.Key) then
-        RemoveCurrent;
-end;
-
-procedure TGLiteChainHashSet.Join(constref aSet: TGLiteChainHashSet);
-var
-  v: T;
-begin
-  for v in aSet do
-    Add(v);
-end;
-
-procedure TGLiteChainHashSet.Subtract(constref aSet: TGLiteChainHashSet);
-var
-  v: T;
-begin
-  for v in aSet do
-    Remove(v);
-end;
-
-procedure TGLiteChainHashSet.SymmetricSubtract(constref aSet: TGLiteChainHashSet);
 var
   v: T;
 begin
@@ -28456,7 +28663,7 @@ type
       property  NextLink: PNode read Next write Next;
     end;
 
-  strict protected
+  protected
   type
     TChainList = array of PNode;
 
@@ -28481,7 +28688,7 @@ type
   const
     DEFAULT_LOAD_FACTOR: Single = 0.75;
     MAX_LOAD_FACTOR: Single     = 4.0;
-    MAX_CAPACITY                = (MAX_CONTAINER_SIZE shr 1) div SizeOf(Pointer);
+    MAX_CAPACITY                = (MAX_CONTAINER_SIZE shr 2) div SizeOf(Pointer);
 
   var
     FList: TChainList;
@@ -28740,8 +28947,10 @@ type
         class function HashCode([const[ref]] aValue: TKey): SizeInt;
         class function Equal([const[ref]] L, R: TKey): Boolean; }
   generic TGLiteChainHashTable<TKey, TEntry, TKeyEqRel> = record
-  private
+  public
   type
+    PEntry = ^TEntry;
+
     TNode = record
       Hash,
       Next: SizeInt;
@@ -28749,52 +28958,24 @@ type
     end;
 
     TNodeList  = array of TNode;
-    THashList  = array of SizeInt;
-    PHashTable = ^TGLiteChainHashTable;
-
-  const
-    NULL_INDEX  = SizeInt(-1);
-    NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
-
-  public
-  type
-    PEntry = ^TEntry;
 
     TSearchResult = record
       Index,
       PrevIndex: SizeInt;
     end;
 
-    TEnumerator = record
-    private
-      FNodeList: TNodeList;
-      FLastIndex,
-      FCurrIndex: SizeInt;
-      function  GetCurrent: PEntry; inline;
-      procedure Init(constref aTable: TGLiteChainHashTable);
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: PEntry read GetCurrent;
-    end;
-
-    TRemovableEnumerator = record
-    private
-      FEnum: TEnumerator;
-      FTable: PHashTable;
-      function  GetCurrent: PEntry; inline;
-      procedure Init(aTable: PHashTable);
-    public
-      function  MoveNext: Boolean; inline;
-      procedure RemoveCurrent; inline;
-      procedure Reset; inline;
-      property  Current: PEntry read GetCurrent;
-    end;
-
   private
+  type
+    TChainList = array of SizeInt;
+
+  const
+    NULL_INDEX  = SizeInt(-1);
+    NODE_SIZE   = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 2) div NODE_SIZE;
+
+  var
     FNodeList: TNodeList;
-    FHashList: THashList;
+    FChainList: TChainList;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     procedure InitialAlloc; inline;
@@ -28805,23 +28986,23 @@ type
     function  DoFind(constref aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
     function  DoAdd(aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(constref aPos: TSearchResult);
-    procedure RemoveByIndex(aIndex: SizeInt);
+    procedure DoRemoveIndex(aIndex: SizeInt);
     class constructor Init;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var ht: TGLiteChainHashTable);
     class operator Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
   public
-    function  GetEnumerator: TEnumerator; inline;
-    function  RemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: TSearchResult): Boolean;
     function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry;
     function  Remove(constref aKey: TKey): Boolean;
-    procedure RemoveAt(constref aPos: TSearchResult);
+    procedure RemoveAt(constref aPos: TSearchResult); inline;
+    procedure RemoveIndex(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
+    property  NodeList: TNodeList read FNodeList;
   end;
 
 implementation
@@ -29226,19 +29407,17 @@ begin
   c.FExpandTreshold := ExpandTreshold;
   Result := c;
 end;
-{$PUSH}{$MACRO ON}
+
 function TGOpenAddrLP.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-{$DEFINE TestMacro := aTest(FList[I].Data.Key)}
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   if Count > 0 then
     begin
       I := 0;
       while I <= Pred(ListCapacity) do
-        if (FList[I].Hash <> 0) and TestMacro then
+        if (FList[I].Hash <> 0) and aTest(FList[I].Data.Key) then
           begin
             if aOnRemove <> nil then
               aOnRemove(@FList[I].Data);
@@ -29247,32 +29426,71 @@ begin
           end
         else
           Inc(I);
-    end}
-  RemoveIfMacro;
+    end;
 end;
 
 function TGOpenAddrLP.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(ListCapacity) do
+        if (FList[I].Hash <> 0) and aTest(FList[I].Data.Key) then
+          begin
+            if aOnRemove <> nil then
+              aOnRemove(@FList[I].Data);
+            DoRemove(I);
+            Inc(Result);
+          end
+        else
+          Inc(I);
+    end;
 end;
 
 function TGOpenAddrLP.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(ListCapacity) do
+        if (FList[I].Hash <> 0) and aTest(FList[I].Data.Key) then
+          begin
+            if aOnRemove <> nil then
+              aOnRemove(@FList[I].Data);
+            DoRemove(I);
+            Inc(Result);
+          end
+        else
+          Inc(I);
+    end;
 end;
 
 function TGOpenAddrLP.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  {$DEFINE TestMacro := aTest(@FList[I].Data)}
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(ListCapacity) do
+        if (FList[I].Hash <> 0) and aTest(@FList[I].Data) then
+          begin
+            if aOnRemove <> nil then
+              aOnRemove(@FList[I].Data);
+            DoRemove(I);
+            Inc(Result);
+          end
+        else
+          Inc(I);
+    end;
 end;
-{$POP}
 
 { TGOpenAddrTombstones }
 
@@ -29338,20 +29556,18 @@ begin
     end;
   e := @FList[aRes.FoundIndex].Data;
 end;
-{$PUSH}{$MACRO ON}
+
 function TGOpenAddrTombstones.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-{$DEFINE TestMacro := aTest(FList[I].Data.Key)}
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   if Count > 0 then
     begin
       I := 0;
       while I <= Pred(ListCapacity) do
         begin
-          if NodeUsed(FList[I]) and TestMacro then
+          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
             begin
               if aOnRemove <> nil then
                 aOnRemove(@FList[I].Data);
@@ -29360,32 +29576,74 @@ begin
             end;
           Inc(I);
         end;
-    end}
-  RemoveIfMacro;
+    end;
 end;
 
 function TGOpenAddrTombstones.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(ListCapacity) do
+        begin
+          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
+            begin
+              if aOnRemove <> nil then
+                aOnRemove(@FList[I].Data);
+              DoRemove(I);
+              Inc(Result);
+            end;
+          Inc(I);
+        end;
+    end;
 end;
 
 function TGOpenAddrTombstones.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(ListCapacity) do
+        begin
+          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
+            begin
+              if aOnRemove <> nil then
+                aOnRemove(@FList[I].Data);
+              DoRemove(I);
+              Inc(Result);
+            end;
+          Inc(I);
+        end;
+    end;
 end;
 
 function TGOpenAddrTombstones.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   I: SizeInt;
 begin
-  {$DEFINE TestMacro := aTest(@FList[I].Data)}
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    begin
+      I := 0;
+      while I <= Pred(ListCapacity) do
+        begin
+          if NodeUsed(FList[I]) and aTest(@FList[I].Data) then
+            begin
+              if aOnRemove <> nil then
+                aOnRemove(@FList[I].Data);
+              DoRemove(I);
+              Inc(Result);
+            end;
+          Inc(I);
+        end;
+    end;
 end;
-{$POP}
 
 function TGOpenAddrTombstones.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
 var
@@ -29903,19 +30161,17 @@ begin
       DisposeNode(aPos.Node);
     end;
 end;
-{$PUSH}{$MACRO ON}
+
 function TGOrderedHashTable.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
-{$DEFINE TestMacro := aTest(CurrNode^.Data.Key)}
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   CurrNode := FHead;
   while CurrNode <> nil do
     begin
       NextNode := CurrNode^.Next;
-      if TestMacro then
+      if aTest(CurrNode^.Data.Key) then
         begin
           if aOnRemove <> nil then
             aOnRemove(@CurrNode^.Data);
@@ -29923,32 +30179,68 @@ begin
           Inc(Result);
         end;
       CurrNode := NextNode;
-    end}
-  RemoveIfMacro;
+    end;
 end;
 
 function TGOrderedHashTable.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  CurrNode := FHead;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Next;
+      if aTest(CurrNode^.Data.Key) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          RemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
 end;
 
 function TGOrderedHashTable.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  CurrNode := FHead;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Next;
+      if aTest(CurrNode^.Data.Key) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          RemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
 end;
 
 function TGOrderedHashTable.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
 var
   CurrNode, NextNode: PNode;
 begin
-  {$DEFINE TestMacro := aTest(@CurrNode^.Data)}
-  RemoveIfMacro;
+  Result := 0;
+  CurrNode := FHead;
+  while CurrNode <> nil do
+    begin
+      NextNode := CurrNode^.Next;
+      if aTest(@CurrNode^.Data) then
+        begin
+          if aOnRemove <> nil then
+            aOnRemove(@CurrNode^.Data);
+          RemoveNode(CurrNode);
+          Inc(Result);
+        end;
+      CurrNode := NextNode;
+    end;
 end;
-{$POP}
 
 function TGOrderedHashTable.GetFirst: PEntry;
 begin
@@ -30354,14 +30646,12 @@ procedure TGChainHashTable.RemoveAt(constref aPos: TSearchResult);
 begin
   DoRemove(aPos);
 end;
-{$PUSH}{$MACRO ON}
+
 function TGChainHashTable.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
 var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
 begin
-{$DEFINE TestMacro := aTest(CurrNode^.Data.Key)}
-{$DEFINE RemoveIfMacro :=
   Result := 0;
   if Count > 0 then
     for I := 0 to Pred(ListCapacity) do
@@ -30371,7 +30661,7 @@ begin
         while CurrNode <> nil do
           begin
             NextNode := CurrNode^.Next;
-            if TestMacro then
+            if aTest(CurrNode^.Data.Key) then
               begin
                 if PrevNode <> nil then
                   PrevNode^.Next := NextNode
@@ -30386,8 +30676,7 @@ begin
               PrevNode := CurrNode;
             CurrNode := NextNode;
           end;
-      end}
-  RemoveIfMacro;
+      end;
 end;
 
 function TGChainHashTable.RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent): SizeInt;
@@ -30395,7 +30684,31 @@ var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    for I := 0 to Pred(ListCapacity) do
+      begin
+        CurrNode := FList[I];
+        PrevNode := nil;
+        while CurrNode <> nil do
+          begin
+            NextNode := CurrNode^.Next;
+            if aTest(CurrNode^.Data.Key) then
+              begin
+                if PrevNode <> nil then
+                  PrevNode^.Next := NextNode
+                else
+                  FList[I] := NextNode;
+                if aOnRemove <> nil then
+                  aOnRemove(@CurrNode^.Data);
+                DisposeNode(CurrNode);
+                Inc(Result);
+              end
+            else
+              PrevNode := CurrNode;
+            CurrNode := NextNode;
+          end;
+      end;
 end;
 
 function TGChainHashTable.RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent): SizeInt;
@@ -30403,7 +30716,31 @@ var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
 begin
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    for I := 0 to Pred(ListCapacity) do
+      begin
+        CurrNode := FList[I];
+        PrevNode := nil;
+        while CurrNode <> nil do
+          begin
+            NextNode := CurrNode^.Next;
+            if aTest(CurrNode^.Data.Key) then
+              begin
+                if PrevNode <> nil then
+                  PrevNode^.Next := NextNode
+                else
+                  FList[I] := NextNode;
+                if aOnRemove <> nil then
+                  aOnRemove(@CurrNode^.Data);
+                DisposeNode(CurrNode);
+                Inc(Result);
+              end
+            else
+              PrevNode := CurrNode;
+            CurrNode := NextNode;
+          end;
+      end;
 end;
 
 function TGChainHashTable.RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent): SizeInt;
@@ -30411,10 +30748,32 @@ var
   PrevNode, CurrNode, NextNode: PNode;
   I: SizeInt;
 begin
-  {$DEFINE TestMacro := aTest(@CurrNode^.Data)}
-  RemoveIfMacro;
+  Result := 0;
+  if Count > 0 then
+    for I := 0 to Pred(ListCapacity) do
+      begin
+        CurrNode := FList[I];
+        PrevNode := nil;
+        while CurrNode <> nil do
+          begin
+            NextNode := CurrNode^.Next;
+            if aTest(@CurrNode^.Data) then
+              begin
+                if PrevNode <> nil then
+                  PrevNode^.Next := NextNode
+                else
+                  FList[I] := NextNode;
+                if aOnRemove <> nil then
+                  aOnRemove(@CurrNode^.Data);
+                DisposeNode(CurrNode);
+                Inc(Result);
+              end
+            else
+              PrevNode := CurrNode;
+            CurrNode := NextNode;
+          end;
+      end;
 end;
-{$POP}
 
 { TGHashTableLP.TEnumerator }
 
@@ -31148,61 +31507,6 @@ begin
     DoRemove(aPos);
 end;
 
-{ TGLiteChainHashTable.TEnumerator }
-
-function TGLiteChainHashTable.TEnumerator.GetCurrent: PEntry;
-begin
-  Result := @FNodeList[FCurrIndex].Data;
-end;
-
-procedure TGLiteChainHashTable.TEnumerator.Init(constref aTable: TGLiteChainHashTable);
-begin
-  FNodeList := aTable.FNodeList;
-  FLastIndex := Pred(aTable.Count);
-  FCurrIndex := -1;
-end;
-
-function TGLiteChainHashTable.TEnumerator.MoveNext: Boolean;
-begin
-  Result := FCurrIndex < FLastIndex;
-  FCurrIndex += Ord(Result);
-end;
-
-procedure TGLiteChainHashTable.TEnumerator.Reset;
-begin
-  FCurrIndex := -1;
-end;
-
-{ TGLiteChainHashTable.TRemovableEnumerator }
-
-function TGLiteChainHashTable.TRemovableEnumerator.GetCurrent: PEntry;
-begin
-  Result := FEnum.Current;
-end;
-
-procedure TGLiteChainHashTable.TRemovableEnumerator.Init(aTable: PHashTable);
-begin
-  FEnum := aTable^.GetEnumerator;
-  FTable := aTable;
-end;
-
-function TGLiteChainHashTable.TRemovableEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGLiteChainHashTable.TRemovableEnumerator.RemoveCurrent;
-begin
-  FTable^.RemoveByIndex(FEnum.FCurrIndex);
-  Dec(FEnum.FCurrIndex);
-  Dec(FEnum.FLastIndex);
-end;
-
-procedure TGLiteChainHashTable.TRemovableEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
 { TGLiteChainHashTable }
 
 function TGLiteChainHashTable.GetCapacity: SizeInt;
@@ -31213,8 +31517,8 @@ end;
 procedure TGLiteChainHashTable.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
-  System.SetLength(FHashList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(FHashList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteChainHashTable.Rehash;
@@ -31222,19 +31526,19 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := Pred(Capacity);
-  System.FillChar(FHashList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
-      FNodeList[I].Next := FHashList[J];
-      FHashList[J] := I;
+      FNodeList[I].Next := FChainList[J];
+      FChainList[J] := I;
     end;
 end;
 
 procedure TGLiteChainHashTable.Resize(aNewCapacity: SizeInt);
 begin
   System.SetLength(FNodeList, aNewCapacity);
-  System.SetLength(FHashList, aNewCapacity);
+  System.SetLength(FChainList, aNewCapacity);
   Rehash;
 end;
 
@@ -31259,7 +31563,7 @@ var
   I, Curr, Prev: SizeInt;
 begin
   I := FNodeList[aIndex].Hash and Pred(Capacity);
-  Curr := FHashList[I];
+  Curr := FChainList[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
     begin
@@ -31268,7 +31572,7 @@ begin
           if Prev <> NULL_INDEX then
             FNodeList[Prev].Next := FNodeList[Curr].Next
           else
-            FHashList[I] := FNodeList[Curr].Next;
+            FChainList[I] := FNodeList[Curr].Next;
           exit;
         end;
       Prev := Curr;
@@ -31280,7 +31584,7 @@ function TGLiteChainHashTable.DoFind(constref aKey: TKey; aHash: SizeInt; out aP
 var
   I: SizeInt;
 begin
-  I := FHashList[aHash and Pred(Capacity)];
+  I := FChainList[aHash and Pred(Capacity)];
   aPos.PrevIndex := NULL_INDEX;
   while I <> NULL_INDEX do
     begin
@@ -31302,8 +31606,8 @@ begin
   Result := Count;
   I := aKeyHash and Pred(Capacity);
   FNodeList[Result].Hash := aKeyHash;
-  FNodeList[Result].Next := FHashList[I];
-  FHashList[I] := Result;
+  FNodeList[Result].Next := FChainList[I];
+  FChainList[I] := Result;
   Inc(FCount);
 end;
 
@@ -31314,7 +31618,7 @@ begin
   if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
     FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
   else
-    FHashList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
+    FChainList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
   FNodeList[aPos.Index].Data := Default(TEntry);
   Dec(FCount);
   if aPos.Index < Count then
@@ -31324,12 +31628,12 @@ begin
       I := FNodeList[Last].Hash and Pred(Capacity);
       System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[aPos.Index].Next := FHashList[I];
-      FHashList[I] := aPos.Index;
+      FNodeList[aPos.Index].Next := FChainList[I];
+      FChainList[I] := aPos.Index;
     end;
 end;
 
-procedure TGLiteChainHashTable.RemoveByIndex(aIndex: SizeInt);
+procedure TGLiteChainHashTable.DoRemoveIndex(aIndex: SizeInt);
 var
   I, Last: SizeInt;
 begin
@@ -31343,8 +31647,8 @@ begin
       I := FNodeList[Last].Hash and Pred(Capacity);
       System.Move(FNodeList[Last], FNodeList[aIndex], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[aIndex].Next := FHashList[I];
-      FHashList[I] := aIndex;
+      FNodeList[aIndex].Next := FChainList[I];
+      FChainList[I] := aIndex;
     end;
 end;
 
@@ -31368,24 +31672,14 @@ end;
 class operator TGLiteChainHashTable.Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
-  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
+  aDst.FChainList := System.Copy(aSrc.FChainList, 0, System.Length(aSrc.FChainList));
   aDst.FCount := aSrc.Count;
-end;
-
-function TGLiteChainHashTable.GetEnumerator: TEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteChainHashTable.RemovableEnumerator: TRemovableEnumerator;
-begin
-  Result.Init(@Self);
 end;
 
 procedure TGLiteChainHashTable.Clear;
 begin
   FNodeList := nil;
-  FHashList := nil;
+  FChainList := nil;
   FCount := 0;
 end;
 
@@ -31462,6 +31756,12 @@ procedure TGLiteChainHashTable.RemoveAt(constref aPos: TSearchResult);
 begin
   if (aPos.Index >= 0) and (aPos.Index < Count) then
     DoRemove(aPos);
+end;
+
+procedure TGLiteChainHashTable.RemoveIndex(aIndex: SizeInt);
+begin
+  if (aIndex >= 0) and (aIndex < Count) then
+    DoRemoveIndex(aIndex);
 end;
 
 end.
@@ -33781,7 +34081,7 @@ type
     end;
 
     TNodeList     = array of TNode;
-    THashList     = array of SizeInt;
+    TChainList    = array of SizeInt;
     PLiteHashList = ^TGLiteHashList;
 
   const
@@ -33837,7 +34137,7 @@ type
 
   private
     FNodeList: TNodeList;
-    FHashList: THashList;
+    FChainList: TChainList;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): T; inline;
@@ -33881,12 +34181,138 @@ type
     function  Add(constref aValue: T): SizeInt; inline;
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
-    procedure Insert(aIndex: SizeInt; constref aValue: T); inline;
+    procedure Insert(aIndex: SizeInt; constref aValue: T);
     procedure Delete(aIndex: SizeInt); inline;
     function  Remove(constref aValue: T): Boolean; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+  end;
+
+  { TGLiteHashList2: array based list with fast searching by key or
+      node based hash table with alter access by index;
+      TEntry must have field Key: TKey;
+      functor TKeyEqRel(equality relation) must provide:
+        class function HashCode([const[ref]] aValue: TKey): SizeInt;
+        class function Equal([const[ref]] L, R: TKey): Boolean; }
+  generic TGLiteHashList2<TKey, TEntry, TKeyEqRel> = record
+  private
+  type
+    TNode = record
+      Hash,
+      Next: SizeInt;
+      Data: TEntry;
+    end;
+
+    TNodeList     = array of TNode;
+    TChainList    = array of SizeInt;
+    PLiteHashList = ^TGLiteHashList2;
+
+  const
+    NULL_INDEX  = SizeInt(-1);
+    NODE_SIZE   = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
+
+  public
+  type
+    IEntryEnumerable = specialize IGEnumerable<TEntry>;
+    TEntryArray = array of TEntry;
+
+    TEnumerator = record
+    private
+      FList: TNodeList;
+      FLastIndex,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: TEntry; inline;
+      procedure Init(constref aList: TGLiteHashList2);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TEntry read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FList: TNodeList;
+      FCount,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: TEntry; inline;
+      procedure Init(constref aList: TGLiteHashList2);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TEntry read GetCurrent;
+    end;
+
+    TReverse = record
+    private
+      FList: PLiteHashList;
+      procedure Init(aList: PLiteHashList); inline;
+    public
+      function  GetEnumerator: TReverseEnumerator; inline;
+    end;
+
+    TSearchData = record
+      Key: TKey;
+      Hash,
+      Index,
+      Next: SizeInt;
+    end;
+
+  private
+    FNodeList: TNodeList;
+    FChainList: TChainList;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    function  GetItem(aIndex: SizeInt): TEntry; inline;
+    function  GetKey(aIndex: SizeInt): TKey; inline;
+    procedure SetItem(aIndex: SizeInt; const e: TEntry);
+    procedure InitialAlloc;
+    procedure Rehash;
+    procedure Resize(aNewCapacity: SizeInt);
+    procedure Expand;
+    function  Find(constref aKey: TKey): SizeInt;
+    function  GetCountOf(constref aKey: TKey): SizeInt;
+    function  DoAdd(constref e: TEntry): SizeInt;
+    procedure DoInsert(aIndex: SizeInt; constref e: TEntry);
+    procedure DoDelete(aIndex: SizeInt);
+    procedure RemoveFromChain(aIndex: SizeInt);
+    function  DoRemove(constref aKey: TKey): Boolean;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
+    function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
+    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
+    class constructor Init;
+    class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
+    class procedure CapacityExceedError(aValue: SizeInt); static; inline;
+    class operator Initialize(var hl: TGLiteHashList2);
+    class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    function  ToArray: TEntryArray;
+    function  Reverse: TReverse; inline;
+    procedure Clear;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure TrimToFit;
+    function  Contains(constref aKey: TKey): Boolean; inline;
+    function  NonContains(constref aKey: TKey): Boolean; inline;
+    function  IndexOf(constref aKey: TKey): SizeInt; inline;
+    function  CountOf(constref aKey: TKey): SizeInt; inline;
+    function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
+    function  FindNext(var aData: TSearchData): Boolean;
+    function  Add(constref e: TEntry): SizeInt; inline;
+    function  AddAll(constref a: array of TEntry): SizeInt;
+    function  AddAll(e: IEntryEnumerable): SizeInt;
+    procedure Insert(aIndex: SizeInt; constref e: TEntry);
+    procedure Delete(aIndex: SizeInt); inline;
+    function  Remove(constref aKey: TKey): Boolean; inline;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Keys[aIndex: SizeInt]: TKey read GetKey;
+    property  Items[aIndex: SizeInt]: TEntry read GetItem write SetItem; default;
   end;
 
 implementation
@@ -36662,7 +37088,7 @@ end;
 
 function TGLiteHashList.TReverseEnumerator.GetCurrent: T;
 begin
-  Result := FList[FCurrIndex].Data;//
+  Result := FList[FCurrIndex].Data;
 end;
 
 procedure TGLiteHashList.TReverseEnumerator.Init(constref aList: TGLiteHashList);
@@ -36720,15 +37146,15 @@ begin
   FNodeList[aIndex].Data := aValue;
   FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
   I := FNodeList[aIndex].Hash and Pred(Capacity);
-  FNodeList[aIndex].Next := FHashList[I];
-  FHashList[I] := aIndex;
+  FNodeList[aIndex].Next := FChainList[I];
+  FChainList[I] := aIndex;
 end;
 
 procedure TGLiteHashList.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
-  System.SetLength(FHashList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(FHashList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteHashList.Rehash;
@@ -36736,19 +37162,19 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := Pred(Capacity);
-  System.FillChar(FHashList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
-      FNodeList[I].Next := FHashList[J];
-      FHashList[J] := I;
+      FNodeList[I].Next := FChainList[J];
+      FChainList[J] := I;
     end;
 end;
 
 procedure TGLiteHashList.Resize(aNewCapacity: SizeInt);
 begin
   System.SetLength(FNodeList, aNewCapacity);
-  System.SetLength(FHashList, aNewCapacity);
+  System.SetLength(FChainList, aNewCapacity);
   Rehash;
 end;
 
@@ -36773,14 +37199,13 @@ var
   h, I: SizeInt;
 begin
   h := TEqRel.HashCode(aValue);
-  I := FHashList[h and Pred(Capacity)];
+  I := FChainList[h and Pred(Capacity)];
   while I <> NULL_INDEX do
     begin
       if (FNodeList[I].Hash = h) and TEqRel.Equal(FNodeList[I].Data, aValue) then
         exit(I);
       I := FNodeList[I].Next;
     end;
-  Result := NULL_INDEX;
 end;
 
 function TGLiteHashList.GetCountOf(constref aValue: T): SizeInt;
@@ -36788,7 +37213,7 @@ var
   h, I: SizeInt;
 begin
   h := TEqRel.HashCode(aValue);
-  I := FHashList[h and Pred(Capacity)];
+  I := FChainList[h and Pred(Capacity)];
   Result := 0;
   while I <> NULL_INDEX do
     begin
@@ -36806,8 +37231,8 @@ begin
   FNodeList[Result].Hash := TEqRel.HashCode(aValue);
   I := FNodeList[Result].Hash and Pred(Capacity);
   FNodeList[Result].Data := aValue;
-  FNodeList[Result].Next := FHashList[I];
-  FHashList[I] := Result;
+  FNodeList[Result].Next := FChainList[I];
+  FChainList[I] := Result;
   Inc(FCount);
 end;
 
@@ -36848,7 +37273,7 @@ var
   I, Curr, Prev: SizeInt;
 begin
   I := FNodeList[aIndex].Hash and Pred(Capacity);
-  Curr := FHashList[I];
+  Curr := FChainList[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
     begin
@@ -36857,7 +37282,7 @@ begin
           if Prev <> NULL_INDEX then
             FNodeList[Prev].Next := FNodeList[Curr].Next
           else
-            FHashList[I] := FNodeList[Curr].Next;
+            FChainList[I] := FNodeList[Curr].Next;
           exit;
         end;
       Prev := Curr;
@@ -36926,8 +37351,8 @@ end;
 
 class operator TGLiteHashList.Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
 begin
-  aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
-  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
+  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FChainList := System.Copy(aSrc.FChainList);
   aDst.FCount := aSrc.FCount;
 end;
 
@@ -36953,7 +37378,7 @@ end;
 procedure TGLiteHashList.Clear;
 begin
   FNodeList := nil;
-  FHashList := nil;
+  FChainList := nil;
   FCount := 0;
 end;
 
@@ -36983,13 +37408,13 @@ end;
 
 procedure TGLiteHashList.TrimToFit;
 var
-  NewSize: SizeInt;
+  NewCapacity: SizeInt;
 begin
   if NonEmpty then
     begin
-      NewSize := LGUtils.RoundUpTwoPower(Count);
-      if NewSize < Capacity then
-        Resize(NewSize);
+      NewCapacity := LGUtils.RoundUpTwoPower(Count);
+      if NewCapacity < Capacity then
+        Resize(NewCapacity);
     end
   else
     Clear;
@@ -37071,12 +37496,10 @@ function TGLiteHashList.AddAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
+  Result := Count;
   for v in e do
-    begin
-      Add(v);
-      Inc(Result);
-    end;
+    Add(v);
+  Result := Count - Result;
 end;
 
 procedure TGLiteHashList.Insert(aIndex: SizeInt; constref aValue: T);
@@ -37097,6 +37520,481 @@ function TGLiteHashList.Remove(constref aValue: T): Boolean;
 begin
   if NonEmpty then
     Result := DoRemove(aValue)
+  else
+    Result := False;
+end;
+
+{ TGLiteHashList2.TEnumerator }
+
+function TGLiteHashList2.TEnumerator.GetCurrent: TEntry;
+begin
+  Result := FList[FCurrIndex].Data;
+end;
+
+procedure TGLiteHashList2.TEnumerator.Init(constref aList: TGLiteHashList2);
+begin
+  FList := aList.FNodeList;
+  FLastIndex := System.High(FList);
+  FCurrIndex := -1;
+end;
+
+function TGLiteHashList2.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteHashList2.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGLiteHashList2.TReverseEnumerator }
+
+function TGLiteHashList2.TReverseEnumerator.GetCurrent: TEntry;
+begin
+  Result := FList[FCurrIndex].Data;
+end;
+
+procedure TGLiteHashList2.TReverseEnumerator.Init(constref aList: TGLiteHashList2);
+begin
+  FList := aList.FNodeList;
+  FCount := aList.Count;
+  FCurrIndex := FCount;
+end;
+
+function TGLiteHashList2.TReverseEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex > 0;
+  FCurrIndex -= Ord(Result);
+end;
+
+procedure TGLiteHashList2.TReverseEnumerator.Reset;
+begin
+  FCurrIndex := FCount;
+end;
+
+{ TGLiteHashList2.TReverse }
+
+procedure TGLiteHashList2.TReverse.Init(aList: PLiteHashList);
+begin
+  FList := aList;
+end;
+
+function TGLiteHashList2.TReverse.GetEnumerator: TReverseEnumerator;
+begin
+  Result := FList^.GetReverseEnumerator;
+end;
+
+{ TGLiteHashList2 }
+
+function TGLiteHashList2.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+function TGLiteHashList2.GetItem(aIndex: SizeInt): TEntry;
+begin
+  CheckIndexRange(aIndex);
+  Result := FNodeList[aIndex].Data;
+end;
+
+function TGLiteHashList2.GetKey(aIndex: SizeInt): TKey;
+begin
+  CheckIndexRange(aIndex);
+  Result := FNodeList[aIndex].Data.Key;
+end;
+
+procedure TGLiteHashList2.SetItem(aIndex: SizeInt; const e: TEntry);
+var
+  I: SizeInt;
+begin
+  CheckIndexRange(aIndex);
+  if TKeyEqRel.Equal(e.Key, FNodeList[aIndex].Data.Key) then
+    begin
+      FNodeList[aIndex].Data := e;
+      exit;
+    end;
+  RemoveFromChain(aIndex);
+  //add to new chain
+  FNodeList[aIndex].Data := e;
+  FNodeList[aIndex].Hash := TKeyEqRel.HashCode(e.Key);
+  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  FNodeList[aIndex].Next := FChainList[I];
+  FChainList[I] := aIndex;
+end;
+
+procedure TGLiteHashList2.InitialAlloc;
+begin
+  System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+end;
+
+procedure TGLiteHashList2.Rehash;
+var
+  I, J, Mask: SizeInt;
+begin
+  Mask := Pred(Capacity);
+  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  for I := 0 to Pred(Count) do
+    begin
+      J := FNodeList[I].Hash and Mask;
+      FNodeList[I].Next := FChainList[J];
+      FChainList[J] := I;
+    end;
+end;
+
+procedure TGLiteHashList2.Resize(aNewCapacity: SizeInt);
+begin
+  System.SetLength(FNodeList, aNewCapacity);
+  System.SetLength(FChainList, aNewCapacity);
+  Rehash;
+end;
+
+procedure TGLiteHashList2.Expand;
+var
+  OldCapacity: SizeInt;
+begin
+  OldCapacity := Capacity;
+  if OldCapacity > 0 then
+    begin
+      if OldCapacity < MAX_CAPACITY then
+        Resize(OldCapacity shl 1)
+      else
+        CapacityExceedError(OldCapacity shl 1);
+    end
+  else
+    InitialAlloc;
+end;
+
+function TGLiteHashList2.Find(constref aKey: TKey): SizeInt;
+var
+  h, I: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  I := FChainList[h and Pred(Capacity)];
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
+        exit(I);
+      I := FNodeList[I].Next;
+    end;
+end;
+
+function TGLiteHashList2.GetCountOf(constref aKey: TKey): SizeInt;
+var
+  h, I: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  I := FChainList[h and Pred(Capacity)];
+  Result := 0;
+  while I <> NULL_INDEX do
+    begin
+      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
+        Inc(Result);
+      I := FNodeList[I].Next;
+    end;
+end;
+
+function TGLiteHashList2.DoAdd(constref e: TEntry): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := Count;
+  FNodeList[Result].Hash := TKeyEqRel.HashCode(e.Key);
+  I := FNodeList[Result].Hash and Pred(Capacity);
+  FNodeList[Result].Data := e;
+  FNodeList[Result].Next := FChainList[I];
+  FChainList[I] := Result;
+  Inc(FCount);
+end;
+
+procedure TGLiteHashList2.DoInsert(aIndex: SizeInt; constref e: TEntry);
+begin
+  if aIndex < Count then
+    begin
+      System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * NODE_SIZE);
+      System.FillChar(FNodeList[aIndex].Data, SizeOf(TEntry), 0);
+      FNodeList[aIndex].Hash := TKeyEqRel.HashCode(e.Key);
+      FNodeList[aIndex].Data := e;
+      Inc(FCount);
+      Rehash;
+    end
+  else
+    DoAdd(e);
+end;
+
+procedure TGLiteHashList2.DoDelete(aIndex: SizeInt);
+begin
+  Dec(FCount);
+  if aIndex < Count then
+    begin
+      FNodeList[aIndex].Data := Default(TEntry);
+      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * NODE_SIZE);
+      System.FillChar(FNodeList[Count].Data, SizeOf(TEntry), 0);
+      Rehash;
+    end
+  else   // last element
+    begin
+      RemoveFromChain(aIndex);
+      System.FillChar(FNodeList[Count].Data, SizeOf(TEntry), 0);
+    end;
+end;
+
+procedure TGLiteHashList2.RemoveFromChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  Curr := FChainList[I];
+  Prev := NULL_INDEX;
+  while Curr <> NULL_INDEX do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev <> NULL_INDEX then
+            FNodeList[Prev].Next := FNodeList[Curr].Next
+          else
+            FChainList[I] := FNodeList[Curr].Next;
+          exit;
+        end;
+      Prev := Curr;
+      Curr := FNodeList[Curr].Next;
+    end;
+end;
+
+function TGLiteHashList2.DoRemove(constref aKey: TKey): Boolean;
+var
+  Removed: SizeInt;
+begin
+  Removed := Find(aKey);
+  Result := Removed >= 0;
+  if Result then
+    DoDelete(Removed);
+end;
+
+function TGLiteHashList2.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashList2.IndexInRange(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex < Count);
+end;
+
+function TGLiteHashList2.IndexInInsertRange(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex <= Count);
+end;
+
+procedure TGLiteHashList2.CheckIndexRange(aIndex: SizeInt);
+begin
+  if not IndexInRange(aIndex) then
+    IndexOutOfBoundError(aIndex);
+end;
+
+procedure TGLiteHashList2.CheckInsertIndexRange(aIndex: SizeInt);
+begin
+  if not IndexInInsertRange(aIndex) then
+    IndexOutOfBoundError(aIndex);
+end;
+
+class constructor TGLiteHashList2.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
+class procedure TGLiteHashList2.IndexOutOfBoundError(aIndex: SizeInt);
+begin
+  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+class procedure TGLiteHashList2.CapacityExceedError(aValue: SizeInt);
+begin
+  raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+end;
+
+class operator TGLiteHashList2.Initialize(var hl: TGLiteHashList2);
+begin
+  hl.FCount := 0;
+end;
+
+class operator TGLiteHashList2.Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
+begin
+  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FChainList := System.Copy(aSrc.FChainList);
+  aDst.FCount := aSrc.FCount;
+end;
+
+function TGLiteHashList2.GetEnumerator: TEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteHashList2.ToArray: TEntryArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, Count);
+  for I := 0 to Pred(Count) do
+    Result[I] := FNodeList[I].Data;
+end;
+
+function TGLiteHashList2.Reverse: TReverse;
+begin
+  Result{%H-}.Init(@Self);
+end;
+
+procedure TGLiteHashList2.Clear;
+begin
+  FNodeList := nil;
+  FChainList := nil;
+  FCount := 0;
+end;
+
+function TGLiteHashList2.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGLiteHashList2.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGLiteHashList2.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue <= Capacity then
+    exit;
+  if aValue <= DEFAULT_CONTAINER_CAPACITY then
+    aValue := DEFAULT_CONTAINER_CAPACITY
+  else
+    if aValue <= MAX_CAPACITY then
+      aValue := LGUtils.RoundUpTwoPower(aValue)
+    else
+      CapacityExceedError(aValue);
+  Resize(aValue);
+end;
+
+procedure TGLiteHashList2.TrimToFit;
+var
+  NewCapacity: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      NewCapacity := LGUtils.RoundUpTwoPower(Count);
+      if NewCapacity < Capacity then
+        Resize(NewCapacity);
+    end
+  else
+    Clear;
+end;
+
+function TGLiteHashList2.Contains(constref aKey: TKey): Boolean;
+begin
+  Result := IndexOf(aKey) >= 0;
+end;
+
+function TGLiteHashList2.NonContains(constref aKey: TKey): Boolean;
+begin
+  Result := IndexOf(aKey) < 0;
+end;
+
+function TGLiteHashList2.IndexOf(constref aKey: TKey): SizeInt;
+begin
+  if NonEmpty then
+    Result := Find(aKey)
+  else
+    Result := NULL_INDEX;
+end;
+
+function TGLiteHashList2.CountOf(constref aKey: TKey): SizeInt;
+begin
+  if NonEmpty then
+    Result := GetCountOf(aKey)
+  else
+    Result := 0;
+end;
+
+function TGLiteHashList2.FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
+begin
+  aData.Key := aKey;
+  aData.Index := IndexOf(aKey);
+  Result := aData.Index >= 0;
+  if Result then
+    begin
+      aData.Hash := FNodeList[aData.Index].Hash;
+      aData.Next :=  FNodeList[aData.Index].Next;
+    end
+  else
+    begin
+      aData.Hash := 0;
+      aData.Next :=  NULL_INDEX;
+    end;
+end;
+
+function TGLiteHashList2.FindNext(var aData: TSearchData): Boolean;
+begin
+  while aData.Next >= 0 do
+    begin
+      aData.Index := aData.Next;
+      aData.Next := FNodeList[aData.Index].Next;
+      if (FNodeList[aData.Index].Hash = aData.Hash) and
+          TKeyEqRel.Equal(FNodeList[aData.Index].Data.Key, aData.Key) then
+        exit(True);
+    end;
+  Result := False;
+end;
+
+function TGLiteHashList2.Add(constref e: TEntry): SizeInt;
+begin
+  if Count = Capacity then
+    Expand;
+  Result := DoAdd(e);
+end;
+
+function TGLiteHashList2.AddAll(constref a: array of TEntry): SizeInt;
+var
+  e: TEntry;
+begin
+  Result := System.Length(a);
+  EnsureCapacity(Count + Result);
+  for e in a do
+    DoAdd(e);
+end;
+
+function TGLiteHashList2.AddAll(e: IEntryEnumerable): SizeInt;
+var
+  Entry: TEntry;
+begin
+  Result := Count;
+  for Entry in e do
+    Add(Entry);
+  Result := Count - Result;
+end;
+
+procedure TGLiteHashList2.Insert(aIndex: SizeInt; constref e: TEntry);
+begin
+  CheckInsertIndexRange(aIndex);
+  if Count = Capacity then
+    Expand;
+  DoInsert(aIndex, e);
+end;
+
+procedure TGLiteHashList2.Delete(aIndex: SizeInt);
+begin
+  CheckIndexRange(aIndex);
+  DoDelete(aIndex);
+end;
+
+function TGLiteHashList2.Remove(constref aKey: TKey): Boolean;
+begin
+  if NonEmpty then
+    Result := DoRemove(aKey)
   else
     Result := False;
 end;
@@ -42694,8 +43592,10 @@ type
   { TGListMultiMap2 assumes that TKey implements TKeyEqRel and TValue implements TValueCmpRel }
   generic TGListMultiMap2<TKey, TValue> = class(specialize TGListMultiMap<TKey, TValue, TKey, TValue>);
 
-  { TGLiteHashMultiMap }
-
+  { TGLiteHashMultiMap: minimalistic pseudo-multimap on top of node based hash table;
+      functor TKeyEqRel(equality relation) must provide:
+        class function HashCode([const[ref]] aValue: TKey): SizeInt;
+        class function Equal([const[ref]] L, R: TKey): Boolean; }
   generic TGLiteHashMultiMap<TKey, TValue, TKeyEqRel> = record
   public
   type
@@ -42728,9 +43628,9 @@ type
       Next: SizeInt;
     end;
 
-    TNodeList = array of TNode;
-    THashList = array of SizeInt;
-    PMultiMap = ^TGLiteHashMultiMap;
+    TNodeList  = array of TNode;
+    TChainList = array of SizeInt;
+    PMultiMap  = ^TGLiteHashMultiMap;
 
   const
     NULL_INDEX  = SizeInt(-1);
@@ -42811,12 +43711,13 @@ type
       procedure Init(aMap: PMultiMap; constref aKey: TKey); inline;
     public
       function GetEnumerator: TValueViewEnumerator; inline;
+      function ToArray: TValueArray;
     end;
 
 
   private
     FNodeList: TNodeList;
-    FHashList: THashList;
+    FChainList: TChainList;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     procedure InitialAlloc;
@@ -42856,10 +43757,10 @@ type
     function  AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
     function  Contains(constref aKey: TKey): Boolean; inline;
     function  NonContains(constref aKey: TKey): Boolean; inline;
-  { returns count of values mapped to aKey (similar as multiset)}
+  { returns count of values mapped to aKey }
     function  ValueCount(constref aKey: TKey): SizeInt;
+  { returns True and remove first found entry, False otherwise }
     function  Remove(constref aKey: TKey): Boolean;
-
     function  Keys: TKeys; inline;
     function  Values: TValues; inline;
     property  Count: SizeInt read FCount;
@@ -43574,6 +44475,22 @@ begin
   Result := FMap^.GetValueViewEnumerator(FKey);
 end;
 
+function TGLiteHashMultiMap.TValuesView.ToArray: TValueArray;
+var
+  I: SizeInt = 0;
+begin
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  with GetEnumerator do
+    while MoveNext do
+      begin
+        if I = System.Length(Result) then
+          System.SetLength(Result, I shl 1);
+        Result[I] := Current;
+        Inc(I);
+      end;
+  System.SetLength(Result, I);
+end;
+
 { TGLiteHashMultiMap }
 
 function TGLiteHashMultiMap.GetCapacity: SizeInt;
@@ -43589,8 +44506,8 @@ end;
 procedure TGLiteHashMultiMap.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
-  System.SetLength(FHashList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(FHashList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteHashMultiMap.Rehash;
@@ -43598,19 +44515,19 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := Pred(Capacity);
-  System.FillChar(FHashList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
-      FNodeList[I].Next := FHashList[J];
-      FHashList[J] := I;
+      FNodeList[I].Next := FChainList[J];
+      FChainList[J] := I;
     end;
 end;
 
 procedure TGLiteHashMultiMap.Resize(aNewCapacity: SizeInt);
 begin
   System.SetLength(FNodeList, aNewCapacity);
-  System.SetLength(FHashList, aNewCapacity);
+  System.SetLength(FChainList, aNewCapacity);
   Rehash;
 end;
 
@@ -43634,7 +44551,7 @@ function TGLiteHashMultiMap.DoFind(constref aKey: TKey; aHash: SizeInt; out sr: 
 var
   I: SizeInt;
 begin
-  I := FHashList[aHash and Pred(Capacity)];
+  I := FChainList[aHash and Pred(Capacity)];
   sr.PrevIndex := NULL_INDEX;
   while I <> NULL_INDEX do
     begin
@@ -43669,8 +44586,8 @@ begin
   FNodeList[Pos].Data.Key := aKey;
   FNodeList[Pos].Data.Value := aValue;
   FNodeList[Pos].Hash := h;
-  FNodeList[Pos].Next := FHashList[I];
-  FHashList[I] := Pos;
+  FNodeList[Pos].Next := FChainList[I];
+  FChainList[I] := Pos;
   Inc(FCount);
 end;
 
@@ -43679,7 +44596,7 @@ var
   h, I: SizeInt;
 begin
   h := TKeyEqRel.HashCode(aKey);
-  I := FHashList[h and Pred(Capacity)];
+  I := FChainList[h and Pred(Capacity)];
   Result := 0;
   while I <> NULL_INDEX do
     begin
@@ -43694,7 +44611,7 @@ var
   I, Curr, Prev: SizeInt;
 begin
   I := FNodeList[aIndex].Hash and Pred(Capacity);
-  Curr := FHashList[I];
+  Curr := FChainList[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
     begin
@@ -43703,7 +44620,7 @@ begin
           if Prev <> NULL_INDEX then
             FNodeList[Prev].Next := FNodeList[Curr].Next
           else
-            FHashList[I] := FNodeList[Curr].Next;
+            FChainList[I] := FNodeList[Curr].Next;
           exit;
         end;
       Prev := Curr;
@@ -43718,7 +44635,7 @@ begin
   if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
     FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
   else
-    FHashList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
+    FChainList[FNodeList[aPos.Index].Hash and Pred(Capacity)] := FNodeList[aPos.Index].Next;
   FNodeList[aPos.Index].Data := Default(TEntry);
   Dec(FCount);
   if aPos.Index < Count then
@@ -43728,8 +44645,8 @@ begin
       I := FNodeList[Last].Hash and Pred(Capacity);
       System.Move(FNodeList[Last], FNodeList[aPos.Index], NODE_SIZE);
       System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[aPos.Index].Next := FHashList[I];
-      FHashList[I] := aPos.Index;
+      FNodeList[aPos.Index].Next := FChainList[I];
+      FChainList[I] := aPos.Index;
     end;
 end;
 
@@ -43795,7 +44712,7 @@ end;
 class operator TGLiteHashMultiMap.Copy(constref aSrc: TGLiteHashMultiMap; var aDst: TGLiteHashMultiMap);
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
-  aDst.FHashList := System.Copy(aSrc.FHashList, 0, System.Length(aSrc.FHashList));
+  aDst.FChainList := System.Copy(aSrc.FChainList, 0, System.Length(aSrc.FChainList));
   aDst.FCount := aSrc.Count;
 end;
 
@@ -43831,7 +44748,7 @@ end;
 procedure TGLiteHashMultiMap.Clear;
 begin
   FNodeList := nil;
-  FHashList := nil;
+  FChainList := nil;
   FCount := 0;
 end;
 
@@ -55172,6 +56089,7 @@ unit LGTreeSet;
 {$mode objfpc}{$H+}
 {$INLINE ON}
 {$MODESWITCH NESTEDPROCVARS}
+{$MODESWITCH ADVANCEDRECORDS}
 
 interface
 
@@ -55529,6 +56447,224 @@ type
     constructor CreateCopy(aSet: TGObjectDelegatedTreeSet);
     function  Clone: TGObjectDelegatedTreeSet; override;
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
+  end;
+
+  { TGLiteTreeSet implements sorted set;
+            functor TCmpRel (comparision relation) must provide:
+        class function Compare([const[ref]] L, R: T): SizeInt; }
+  generic TGLiteTreeSet<T, TCmpRel> = record
+  private
+  type
+    TEntry = record
+      Key: T;
+    end;
+    PEntry = ^TEntry;
+    PSet   = ^TGLiteTreeSet;
+
+    TTree = specialize TGLiteAvlTree<T, TEntry, TCmpRel>;
+    PTree = ^TTree;
+
+  public
+  type
+    IEnumerable = specialize IGEnumerable<T>;
+    ICollection = specialize IGCollection<T>;
+    TTest       = specialize TGTest<T>;
+    TOnTest     = specialize TGOnTest<T>;
+    TNestTest   = specialize TGNestTest<T>;
+    TArray      = array of T;
+
+    TEnumerator = record
+    private
+      FEnum: TTree.TEnumerator;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet); inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FTree: PTree;
+      FNodeList: TTree.TNodeList;
+      FCurrNode,
+      FFirstNode: SizeInt;
+      FInCycle: Boolean;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet); inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    THeadEnumerator = record
+    private
+      FEnum: TTree.TEnumerator;
+      FHighBound: T;
+      FInclusive,
+      FDone: Boolean;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet; constref aHighBound: T; aInclusive: Boolean);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TTailEnumerator = record
+    private
+      FTree: PTree;
+      FNodeList: TTree.TNodeList;
+      FCurrNode,
+      FFirstNode: SizeInt;
+      FInCycle: Boolean;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet; constref aLowBound: T; aInclusive: Boolean);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TRangeEnumerator = record
+    private
+      FEnum: TTailEnumerator;
+      FHighBound: T;
+      FInclusive,
+      FDone: Boolean;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TReverse = record
+    private
+      FSet: PSet;
+      procedure Init(aSet: PSet); inline;
+    public
+      function GetEnumerator: TReverseEnumerator; inline;
+    end;
+
+    THead = record
+    private
+      FSet: PSet;
+      FHighBound: T;
+      FInclusive: Boolean;
+      procedure Init(aSet: PSet; constref aHighBound: T; aInclusive: Boolean); inline;
+    public
+      function GetEnumerator: THeadEnumerator; inline;
+    end;
+
+    TTail = record
+    private
+      FSet: PSet;
+      FLowBound: T;
+      FInclusive: Boolean;
+      procedure Init(aSet: PSet; constref aLowBound: T; aInclusive: Boolean); inline;
+    public
+      function GetEnumerator: TTailEnumerator; inline;
+    end;
+
+    TRange = record
+    private
+      FSet: PSet;
+      FLowBound,
+      FHighBound: T;
+      FBounds: TRangeBounds;
+      procedure Init(aSet: PSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds); inline;
+    public
+      function GetEnumerator: TRangeEnumerator; inline;
+    end;
+
+  private
+    FTree: TTree;
+    function  GetCapacity: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
+    function  FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
+    function  FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
+    function  FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
+    function  FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetHeadEnumerator(constref aHighBound: T; aInclusive: Boolean): THeadEnumerator; inline;
+    function  GetTailEnumerator(constref aLowBound: T; aInclusive: Boolean): TTailEnumerator; inline;
+    function  GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds): TRangeEnumerator; inline;
+  public
+    class operator +(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator -(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator *(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator ><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+    class operator =(constref L, R: TGLiteTreeSet): Boolean; inline;
+    class operator <=(constref L, R: TGLiteTreeSet): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean; inline;
+    function  GetEnumerator: TEnumerator; inline;
+    function  Reverse: TReverse; inline;
+    function  ToArray: TArray;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear; inline;
+    procedure TrimToFit; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+  { returns True if element added }
+    function  Add(constref aValue: T): Boolean; inline;
+  { returns count of added elements }
+    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(e: IEnumerable): SizeInt;
+    function  Contains(constref aValue: T): Boolean; inline;
+    function  NonContains(constref aValue: T): Boolean; inline;
+    function  ContainsAny(constref a: array of T): Boolean;
+    function  ContainsAny(e: IEnumerable): Boolean;
+    function  ContainsAll(constref a: array of T): Boolean;
+    function  ContainsAll(e: IEnumerable): Boolean;
+  { returns True if element removed }
+    function  Remove(constref aValue: T): Boolean; inline;
+  { returns count of removed elements }
+    function  RemoveAll(constref a: array of T): SizeInt;
+    function  RemoveAll(e: IEnumerable): SizeInt;
+  { returns count of removed elements }
+    function  RemoveIf(aTest: TTest): SizeInt;
+    function  RemoveIf(aTest: TOnTest): SizeInt;
+    function  RemoveIf(aTest: TNestTest): SizeInt;
+  { returns True if element extracted }
+    function  Extract(constref aValue: T): Boolean; inline;
+    function  ExtractIf(aTest: TTest): TArray;
+    function  ExtractIf(aTest: TOnTest): TArray;
+    function  ExtractIf(aTest: TNestTest): TArray;
+  { will contain only those elements that are simultaneously contained in self and aCollection }
+    procedure RetainAll(aCollection: ICollection);
+    function  IsSuperset(constref aSet: TGLiteTreeSet): Boolean;
+    function  IsSubset(constref aSet: TGLiteTreeSet): Boolean; inline;
+    function  IsEqual(constref aSet: TGLiteTreeSet): Boolean;
+    function  Intersecting(constref aSet: TGLiteTreeSet): Boolean; inline;
+    procedure Intersect(constref aSet: TGLiteTreeSet);
+    procedure Join(constref aSet: TGLiteTreeSet);
+    procedure Subtract(constref aSet: TGLiteTreeSet);
+    procedure SymmetricSubtract(constref aSet: TGLiteTreeSet);
+    function  FindMin(out aValue: T): Boolean;
+    function  FindMax(out aValue: T): Boolean;
+  { returns True if exists element whose value greater then or equal to aValue (depend on aInclusive) }
+    function  FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean; inline;
+  { returns True if exists element whose value less then aBound (or equal to aValue depend on aInclusive) }
+    function  FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean; inline;
+  { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
+    function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
+  { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
+    function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail; inline;
+  { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
+    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
+  { returns sorted set whose items are strictly less than(if not aInclusive) aHighBound }
+    function  HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TGLiteTreeSet;
+  { returns sorted set whose items are greater than or equal(if aInclusive) to aLowBound}
+    function  TailSet(constref aLowBound: T; aInclusive: Boolean = True): TGLiteTreeSet;
+  { returns sorted set whose items are greater than or equal to aLowBound and strictly less than
+    aHighBound(by default) }
+    function  SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteTreeSet;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -56636,6 +57772,846 @@ end;
 function TGObjectDelegatedTreeSet.Clone: TGObjectDelegatedTreeSet;
 begin
   Result := TGObjectDelegatedTreeSet.CreateCopy(Self);
+end;
+
+{ TGLiteTreeSet.TEnumerator }
+
+function TGLiteTreeSet.TEnumerator.GetCurrent: T;
+begin
+  Result := FEnum.Current^.Key;
+end;
+
+procedure TGLiteTreeSet.TEnumerator.Init(constref aSet: TGLiteTreeSet);
+begin
+  FEnum := aSet.FTree.GetEnumerator;
+end;
+
+function TGLiteTreeSet.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGLiteTreeSet.TEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TGLiteTreeSet.TReverseEnumerator }
+
+function TGLiteTreeSet.TReverseEnumerator.GetCurrent: T;
+begin
+  Result := FNodeList[FCurrNode].Data.Key;
+end;
+
+procedure TGLiteTreeSet.TReverseEnumerator.Init(constref aSet: TGLiteTreeSet);
+begin
+  FTree := @aSet.FTree;
+  FNodeList := FTree^.NodeList;
+  FFirstNode := FTree^.Highest;
+  Reset;
+end;
+
+function TGLiteTreeSet.TReverseEnumerator.MoveNext: Boolean;
+var
+  NextNode: SizeInt = -1;
+begin
+  if FCurrNode <> -1 then
+    NextNode := FTree^.Predecessor(FCurrNode)
+  else
+    if not FInCycle then
+      begin
+        NextNode := FFirstNode;
+        FInCycle := True;
+      end;
+  Result := NextNode >= 0;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteTreeSet.TReverseEnumerator.Reset;
+begin
+  FInCycle := False;
+  FCurrNode := -1;
+end;
+
+{ TGLiteTreeSet.THeadEnumerator }
+
+function TGLiteTreeSet.THeadEnumerator.GetCurrent: T;
+begin
+  Result := FEnum.Current^.Key;
+end;
+
+procedure TGLiteTreeSet.THeadEnumerator.Init(constref aSet: TGLiteTreeSet; constref aHighBound: T;
+  aInclusive: Boolean);
+begin
+  FEnum := aSet.FTree.GetEnumerator;
+  FHighBound := aHighBound;
+  FInclusive := aInclusive;
+  FDone := False;
+end;
+
+function TGLiteTreeSet.THeadEnumerator.MoveNext: Boolean;
+begin
+  if FDone or not FEnum.MoveNext then
+    exit(False);
+  if FInclusive then
+    Result := TCmpRel.Compare(FEnum.Current^.Key, FHighBound) <= 0
+  else
+    Result := TCmpRel.Compare(FEnum.Current^.Key, FHighBound) < 0;
+  FDone := not Result;
+end;
+
+procedure TGLiteTreeSet.THeadEnumerator.Reset;
+begin
+  FEnum.Reset;
+  FDone := False;
+end;
+
+{ TGLiteTreeSet.TTailEnumerator }
+
+function TGLiteTreeSet.TTailEnumerator.GetCurrent: T;
+begin
+  Result := FNodeList[FCurrNode].Data.Key;
+end;
+
+procedure TGLiteTreeSet.TTailEnumerator.Init(constref aSet: TGLiteTreeSet; constref aLowBound: T;
+  aInclusive: Boolean);
+begin
+  FTree := @aSet.FTree;
+  FNodeList := FTree^.NodeList;
+  if aInclusive then
+    FFirstNode := FTree^.FindGreaterOrEqual(aLowBound)
+  else
+    FFirstNode := FTree^.FindGreater(aLowBound);
+  Reset;
+end;
+
+function TGLiteTreeSet.TTailEnumerator.MoveNext: Boolean;
+var
+  NextNode: SizeInt = -1;
+begin
+  if FCurrNode <> -1 then
+    NextNode := FTree^.Successor(FCurrNode)
+  else
+    if not FInCycle then
+      begin
+        NextNode := FFirstNode;
+        FInCycle := True;
+      end;
+  Result := NextNode >= 0;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteTreeSet.TTailEnumerator.Reset;
+begin
+  FInCycle := False;
+  FCurrNode := -1;
+end;
+
+{ TGLiteTreeSet.TRangeEnumerator }
+
+function TGLiteTreeSet.TRangeEnumerator.GetCurrent: T;
+begin
+  Result := FEnum.Current;
+end;
+
+procedure TGLiteTreeSet.TRangeEnumerator.Init(constref aSet: TGLiteTreeSet; constref aLowBound, aHighBound: T;
+  aBounds: TRangeBounds);
+begin
+  FEnum := aSet.GetTailEnumerator(aLowBound, rbLow in aBounds);
+  FHighBound := aHighBound;
+  FInclusive := rbHigh in aBounds;
+  FDone := False;
+end;
+
+function TGLiteTreeSet.TRangeEnumerator.MoveNext: Boolean;
+begin
+  if FDone or not FEnum.MoveNext then
+    exit(False);
+  if FInclusive then
+    Result := TCmpRel.Compare(FEnum.Current, FHighBound) <= 0
+  else
+    Result := TCmpRel.Compare(FEnum.Current, FHighBound) < 0;
+  FDone := not Result;
+end;
+
+procedure TGLiteTreeSet.TRangeEnumerator.Reset;
+begin
+  FEnum.Reset;
+  FDone := False;
+end;
+
+{ TGLiteTreeSet.TReverse }
+
+procedure TGLiteTreeSet.TReverse.Init(aSet: PSet);
+begin
+  FSet := aSet
+end;
+
+function TGLiteTreeSet.TReverse.GetEnumerator: TReverseEnumerator;
+begin
+  Result := FSet^.GetReverseEnumerator;
+end;
+
+{ TGLiteTreeSet.THead }
+
+procedure TGLiteTreeSet.THead.Init(aSet: PSet; constref aHighBound: T; aInclusive: Boolean);
+begin
+  FSet := aSet;
+  FHighBound := aHighBound;
+  FInclusive := aInclusive;
+end;
+
+function TGLiteTreeSet.THead.GetEnumerator: THeadEnumerator;
+begin
+  Result := FSet^.GetHeadEnumerator(FHighBound, FInclusive);
+end;
+
+{ TGLiteTreeSet.TTail }
+
+procedure TGLiteTreeSet.TTail.Init(aSet: PSet; constref aLowBound: T; aInclusive: Boolean);
+begin
+  FSet := aSet;
+  FLowBound := aLowBound;
+  FInclusive := aInclusive;
+end;
+
+function TGLiteTreeSet.TTail.GetEnumerator: TTailEnumerator;
+begin
+  Result := FSet^.GetTailEnumerator(FLowBound, FInclusive);
+end;
+
+{ TGLiteTreeSet.TRange }
+
+procedure TGLiteTreeSet.TRange.Init(aSet: PSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds);
+begin
+  FSet := aSet;
+  FLowBound := aLowBound;
+  FHighBound := aHighBound;
+  FBounds := aBounds;
+end;
+
+function TGLiteTreeSet.TRange.GetEnumerator: TRangeEnumerator;
+begin
+  Result := FSet^.GetRangeEnumerator(FLowBound, FHighBound, FBounds);
+end;
+
+{ TGLiteTreeSet }
+
+function TGLiteTreeSet.GetCapacity: SizeInt;
+begin
+  Result := FTree.Capacity;
+end;
+
+function TGLiteTreeSet.GetCount: SizeInt;
+begin
+  Result := FTree.Count;
+end;
+
+function TGLiteTreeSet.FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.FindLess(aPattern);
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.FindLessOrEqual(aPattern);
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.FindGreaterOrEqual(aPattern);
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.FindGreater(aPattern);
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteTreeSet.GetHeadEnumerator(constref aHighBound: T; aInclusive: Boolean): THeadEnumerator;
+begin
+  Result.Init(Self, aHighBound, aInclusive);
+end;
+
+function TGLiteTreeSet.GetTailEnumerator(constref aLowBound: T; aInclusive: Boolean): TTailEnumerator;
+begin
+  Result.Init(Self, aLowBound, aInclusive);
+end;
+
+function TGLiteTreeSet.GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds
+  ): TRangeEnumerator;
+begin
+  Result.Init(Self, aLowBound, aHighBound, aBounds);
+end;
+
+class operator TGLiteTreeSet. + (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  if @Result = @L then
+    Result.Join(R)
+  else
+    if @Result = @R then
+      Result.Join(L)
+    else
+      begin
+        Result := L;
+        Result.Join(R);
+      end;
+end;
+
+class operator TGLiteTreeSet. - (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+var
+  Tmp: TGLiteTreeSet;
+begin
+  if @Result = @L then
+    Result.Subtract(R)
+  else
+    if @Result = @R then
+      begin
+        Tmp := R;
+        Result := L;
+        Result.Subtract(Tmp)
+      end
+    else
+      begin
+        Result := L;
+        Result.Subtract(R);
+      end;
+end;
+
+class operator TGLiteTreeSet. * (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  if @Result = @L then
+    Result.Intersect(R)
+  else
+    if @Result = @R then
+      Result.Intersect(L)
+    else
+      begin
+        Result := L;
+        Result.Intersect(R);
+      end;
+end;
+
+class operator TGLiteTreeSet.><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
+begin
+  if @Result = @L then
+    Result.SymmetricSubtract(R)
+  else
+    if @Result = @R then
+      Result.SymmetricSubtract(L)
+    else
+      begin
+        Result := L;
+        Result.SymmetricSubtract(R);
+      end;
+end;
+
+class operator TGLiteTreeSet. = (constref L, R: TGLiteTreeSet): Boolean;
+begin
+  Result := L.IsEqual(R);
+end;
+
+class operator TGLiteTreeSet.<=(constref L, R: TGLiteTreeSet): Boolean;
+begin
+  Result := L.IsSubset(R);
+end;
+
+class operator TGLiteTreeSet.in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean;
+begin
+  Result := aSet.Contains(aValue);
+end;
+
+function TGLiteTreeSet.GetEnumerator: TEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteTreeSet.Reverse: TReverse;
+begin
+  Result.Init(@Self);
+end;
+
+function TGLiteTreeSet.ToArray: TArray;
+var
+  I: SizeInt = 0;
+  p: PEntry;
+begin
+  System.SetLength(Result, Count);
+  for p in FTree do
+    begin
+      Result[I] := p^.Key;
+      Inc(I);
+    end;
+end;
+
+function TGLiteTreeSet.IsEmpty: Boolean;
+begin
+  Result := FTree.Count = 0;
+end;
+
+function TGLiteTreeSet.NonEmpty: Boolean;
+begin
+  Result := FTree.Count <> 0;
+end;
+
+procedure TGLiteTreeSet.Clear;
+begin
+  FTree.Clear;
+end;
+
+procedure TGLiteTreeSet.TrimToFit;
+begin
+  FTree.TrimToFit;
+end;
+
+procedure TGLiteTreeSet.EnsureCapacity(aValue: SizeInt);
+begin
+  FTree.EnsureCapacity(aValue);
+end;
+
+function TGLiteTreeSet.Add(constref aValue: T): Boolean;
+var
+  p: PEntry;
+begin
+  Result := not FTree.FindOrAdd(aValue, p);
+end;
+
+function TGLiteTreeSet.AddAll(constref a: array of T): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in a do
+    Result += Ord(Add(v));
+end;
+
+function TGLiteTreeSet.AddAll(e: IEnumerable): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in e do
+    Result += Ord(Add(v));
+end;
+
+function TGLiteTreeSet.Contains(constref aValue: T): Boolean;
+begin
+  Result := FTree.Find(aValue) <> nil;
+end;
+
+function TGLiteTreeSet.NonContains(constref aValue: T): Boolean;
+begin
+  Result := FTree.Find(aValue) = nil;
+end;
+
+function TGLiteTreeSet.ContainsAny(constref a: array of T): Boolean;
+var
+  v: T;
+begin
+  for v in a do
+    if Contains(v) then
+      exit(True);
+  Result := False;
+end;
+
+function TGLiteTreeSet.ContainsAny(e: IEnumerable): Boolean;
+var
+  v: T;
+begin
+  for v in e do
+    if Contains(v) then
+      exit(True);
+  Result := False;
+end;
+
+function TGLiteTreeSet.ContainsAll(constref a: array of T): Boolean;
+var
+  v: T;
+begin
+  for v in a do
+    if NonContains(v) then
+      exit(False);
+  Result := True;
+end;
+
+function TGLiteTreeSet.ContainsAll(e: IEnumerable): Boolean;
+var
+  v: T;
+begin
+  for v in e do
+    if NonContains(v) then
+      exit(False);
+  Result := True;
+end;
+
+function TGLiteTreeSet.Remove(constref aValue: T): Boolean;
+begin
+  Result := FTree.Remove(aValue);
+end;
+
+function TGLiteTreeSet.RemoveAll(constref a: array of T): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in a do
+    Result += Ord(Remove(v));
+end;
+
+function TGLiteTreeSet.RemoveAll(e: IEnumerable): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in e do
+    Result += Ord(Remove(v));
+end;
+
+function TGLiteTreeSet.RemoveIf(aTest: TTest): SizeInt;
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
+begin
+  Result := Count;
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
+  Result := Result - Count;
+end;
+
+function TGLiteTreeSet.RemoveIf(aTest: TOnTest): SizeInt;
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
+begin
+  Result := Count;
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
+  Result := Result - Count;
+end;
+
+function TGLiteTreeSet.RemoveIf(aTest: TNestTest): SizeInt;
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
+begin
+  Result := Count;
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
+  Result := Result - Count;
+end;
+
+function TGLiteTreeSet.Extract(constref aValue: T): Boolean;
+begin
+  Result := FTree.Remove(aValue);
+end;
+
+function TGLiteTreeSet.ExtractIf(aTest: TTest): TArray;
+var
+  List: TTree.TNodeList;
+  I, J: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      System.SetLength(Result, ARRAY_INITIAL_SIZE);
+      List := FTree.NodeList;
+      I := 0;
+      J := 0;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          begin
+            if J = System.Length(Result) then
+              System.SetLength(Result, J shl 1);
+            Result[J] := List[I].Data.Key;
+            FTree.RemoveAt(I);
+            Inc(J);
+          end
+        else
+          Inc(I);
+      System.SetLength(Result, J);
+    end
+  else
+    Result := nil;
+end;
+
+function TGLiteTreeSet.ExtractIf(aTest: TOnTest): TArray;
+var
+  List: TTree.TNodeList;
+  I, J: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      System.SetLength(Result, ARRAY_INITIAL_SIZE);
+      List := FTree.NodeList;
+      I := 0;
+      J := 0;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          begin
+            if J = System.Length(Result) then
+              System.SetLength(Result, J shl 1);
+            Result[J] := List[I].Data.Key;
+            FTree.RemoveAt(I);
+            Inc(J);
+          end
+        else
+          Inc(I);
+      System.SetLength(Result, J);
+    end
+  else
+    Result := nil;
+end;
+
+function TGLiteTreeSet.ExtractIf(aTest: TNestTest): TArray;
+var
+  List: TTree.TNodeList;
+  I, J: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      System.SetLength(Result, ARRAY_INITIAL_SIZE);
+      List := FTree.NodeList;
+      I := 0;
+      J := 0;
+      while I < FTree.Count do
+        if aTest(List[I].Data.Key) then
+          begin
+            if J = System.Length(Result) then
+              System.SetLength(Result, J shl 1);
+            Result[J] := List[I].Data.Key;
+            FTree.RemoveAt(I);
+            Inc(J);
+          end
+        else
+          Inc(I);
+      System.SetLength(Result, J);
+    end
+  else
+    Result := nil;
+end;
+
+procedure TGLiteTreeSet.RetainAll(aCollection: ICollection);
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
+begin
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aCollection.NonContains(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
+end;
+
+function TGLiteTreeSet.IsSuperset(constref aSet: TGLiteTreeSet): Boolean;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      if Count >= aSet.Count then
+        begin
+          for v in aSet do
+            if NonContains(v) then
+              exit(False);
+          Result := True;
+        end
+      else
+        Result := False;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteTreeSet.IsSubset(constref aSet: TGLiteTreeSet): Boolean;
+begin
+  Result := aSet.IsSuperset(Self);
+end;
+
+function TGLiteTreeSet.IsEqual(constref aSet: TGLiteTreeSet): Boolean;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      if Count <> aSet.Count then
+        exit(False);
+      for v in aSet do
+        if NonContains(v) then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := True;
+end;
+
+function TGLiteTreeSet.Intersecting(constref aSet: TGLiteTreeSet): Boolean;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      for v in aSet do
+        if Contains(v) then
+          exit(True);
+      Result := False;
+    end
+  else
+    Result := True;
+end;
+
+procedure TGLiteTreeSet.Intersect(constref aSet: TGLiteTreeSet);
+begin
+
+end;
+
+procedure TGLiteTreeSet.Join(constref aSet: TGLiteTreeSet);
+var
+  v: T;
+begin
+  for v in aSet do
+    Add(v);
+end;
+
+procedure TGLiteTreeSet.Subtract(constref aSet: TGLiteTreeSet);
+var
+  v: T;
+begin
+  for v in aSet do
+    Remove(v);
+end;
+
+procedure TGLiteTreeSet.SymmetricSubtract(constref aSet: TGLiteTreeSet);
+var
+  v: T;
+begin
+  for v in aSet do
+    if not Remove(v) then
+      Add(v);
+end;
+
+function TGLiteTreeSet.FindMin(out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.Lowest;
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindMax(out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.Highest;
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean): Boolean;
+begin
+  if aInclusive then
+    Result := FindNearestGE(aValue, aCeil)
+  else
+    Result := FindNearestGT(aValue, aCeil);
+end;
+
+function TGLiteTreeSet.FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean): Boolean;
+begin
+  if aInclusive then
+    Result := FindNearestLE(aValue, aFloor)
+  else
+    Result := FindNearestLT(aValue, aFloor);
+end;
+
+function TGLiteTreeSet.Head(constref aHighBound: T; aInclusive: Boolean): THead;
+begin
+  Result.Init(@Self, aHighBound, aInclusive);
+end;
+
+function TGLiteTreeSet.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
+begin
+   Result.Init(@Self, aLowBound, aInclusive);
+end;
+
+function TGLiteTreeSet.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
+begin
+  Result.Init(@Self, aLowBound, aHighBound, aIncludeBounds);
+end;
+
+function TGLiteTreeSet.HeadSet(constref aHighBound: T; aInclusive: Boolean): TGLiteTreeSet;
+var
+  v: T;
+begin
+  for v in Head(aHighBound, aInclusive) do
+    Result.Add(v);
+end;
+
+function TGLiteTreeSet.TailSet(constref aLowBound: T; aInclusive: Boolean): TGLiteTreeSet;
+var
+  v: T;
+begin
+  for v in Tail(aLowBound, aInclusive) do
+    Result.Add(v);
+end;
+
+function TGLiteTreeSet.SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGLiteTreeSet;
+var
+  v: T;
+begin
+  for v in Range(aLowBound, aHighBound, aIncludeBounds) do
+    Result.Add(v);
 end;
 
 end.
