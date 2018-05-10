@@ -392,8 +392,10 @@ type
       Key: T;
     end;
     PEntry = ^TEntry;
+    PSet   = ^TGLiteTreeSet;
 
     TTree = specialize TGLiteAvlTree<T, TEntry, TCmpRel>;
+    PTree = ^TTree;
 
   public
   type
@@ -415,12 +417,118 @@ type
       property  Current: T read GetCurrent;
     end;
 
+    TReverseEnumerator = record
+    private
+      FTree: PTree;
+      FNodeList: TTree.TNodeList;
+      FCurrNode,
+      FFirstNode: SizeInt;
+      FInCycle: Boolean;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet); inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    THeadEnumerator = record
+    private
+      FEnum: TTree.TEnumerator;
+      FHighBound: T;
+      FInclusive,
+      FDone: Boolean;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet; constref aHighBound: T; aInclusive: Boolean);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TTailEnumerator = record
+    private
+      FTree: PTree;
+      FNodeList: TTree.TNodeList;
+      FCurrNode,
+      FFirstNode: SizeInt;
+      FInCycle: Boolean;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet; constref aLowBound: T; aInclusive: Boolean);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TRangeEnumerator = record
+    private
+      FEnum: TTailEnumerator;
+      FHighBound: T;
+      FInclusive,
+      FDone: Boolean;
+      function  GetCurrent: T; inline;
+      procedure Init(constref aSet: TGLiteTreeSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TReverse = record
+    private
+      FSet: PSet;
+      procedure Init(aSet: PSet); inline;
+    public
+      function GetEnumerator: TReverseEnumerator; inline;
+    end;
+
+    THead = record
+    private
+      FSet: PSet;
+      FHighBound: T;
+      FInclusive: Boolean;
+      procedure Init(aSet: PSet; constref aHighBound: T; aInclusive: Boolean); inline;
+    public
+      function GetEnumerator: THeadEnumerator; inline;
+    end;
+
+    TTail = record
+    private
+      FSet: PSet;
+      FLowBound: T;
+      FInclusive: Boolean;
+      procedure Init(aSet: PSet; constref aLowBound: T; aInclusive: Boolean); inline;
+    public
+      function GetEnumerator: TTailEnumerator; inline;
+    end;
+
+    TRange = record
+    private
+      FSet: PSet;
+      FLowBound,
+      FHighBound: T;
+      FBounds: TRangeBounds;
+      procedure Init(aSet: PSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds); inline;
+    public
+      function GetEnumerator: TRangeEnumerator; inline;
+    end;
+
   private
     FTree: TTree;
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
+    function  FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
+    function  FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
+    function  FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
+    function  FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetHeadEnumerator(constref aHighBound: T; aInclusive: Boolean): THeadEnumerator; inline;
+    function  GetTailEnumerator(constref aLowBound: T; aInclusive: Boolean): TTailEnumerator; inline;
+    function  GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds): TRangeEnumerator; inline;
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  Reverse: TReverse; inline;
     function  ToArray: TArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -462,6 +570,25 @@ type
     procedure Join(constref aSet: TGLiteTreeSet);
     procedure Subtract(constref aSet: TGLiteTreeSet);
     procedure SymmetricSubtract(constref aSet: TGLiteTreeSet);
+    function  FindMin(out aValue: T): Boolean;
+    function  FindMax(out aValue: T): Boolean;
+  { returns True if exists element whose value greater then or equal to aValue (depend on aInclusive) }
+    function  FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean; inline;
+  { returns True if exists element whose value less then aBound (or equal to aValue depend on aInclusive) }
+    function  FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean; inline;
+  { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
+    function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
+  { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
+    function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail; inline;
+  { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
+    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
+  { returns sorted set whose items are strictly less than(if not aInclusive) aHighBound }
+    function  HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TGLiteTreeSet;
+  { returns sorted set whose items are greater than or equal(if aInclusive) to aLowBound}
+    function  TailSet(constref aLowBound: T; aInclusive: Boolean = True): TGLiteTreeSet;
+  { returns sorted set whose items are greater than or equal to aLowBound and strictly less than
+    aHighBound(by default) }
+    function  SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteTreeSet;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -1595,6 +1722,207 @@ begin
   FEnum.Reset;
 end;
 
+{ TGLiteTreeSet.TReverseEnumerator }
+
+function TGLiteTreeSet.TReverseEnumerator.GetCurrent: T;
+begin
+  Result := FNodeList[FCurrNode].Data.Key;
+end;
+
+procedure TGLiteTreeSet.TReverseEnumerator.Init(constref aSet: TGLiteTreeSet);
+begin
+  FTree := @aSet.FTree;
+  FNodeList := FTree^.NodeList;
+  FFirstNode := FTree^.Highest;
+  Reset;
+end;
+
+function TGLiteTreeSet.TReverseEnumerator.MoveNext: Boolean;
+var
+  NextNode: SizeInt = -1;
+begin
+  if FCurrNode <> -1 then
+    NextNode := FTree^.Predecessor(FCurrNode)
+  else
+    if not FInCycle then
+      begin
+        NextNode := FFirstNode;
+        FInCycle := True;
+      end;
+  Result := NextNode >= 0;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteTreeSet.TReverseEnumerator.Reset;
+begin
+  FInCycle := False;
+  FCurrNode := -1;
+end;
+
+{ TGLiteTreeSet.THeadEnumerator }
+
+function TGLiteTreeSet.THeadEnumerator.GetCurrent: T;
+begin
+  Result := FEnum.Current^.Key;
+end;
+
+procedure TGLiteTreeSet.THeadEnumerator.Init(constref aSet: TGLiteTreeSet; constref aHighBound: T;
+  aInclusive: Boolean);
+begin
+  FEnum := aSet.FTree.GetEnumerator;
+  FHighBound := aHighBound;
+  FInclusive := aInclusive;
+  FDone := False;
+end;
+
+function TGLiteTreeSet.THeadEnumerator.MoveNext: Boolean;
+begin
+  if FDone or not FEnum.MoveNext then
+    exit(False);
+  if FInclusive then
+    Result := TCmpRel.Compare(FEnum.Current^.Key, FHighBound) <= 0
+  else
+    Result := TCmpRel.Compare(FEnum.Current^.Key, FHighBound) < 0;
+  FDone := not Result;
+end;
+
+procedure TGLiteTreeSet.THeadEnumerator.Reset;
+begin
+  FEnum.Reset;
+  FDone := False;
+end;
+
+{ TGLiteTreeSet.TTailEnumerator }
+
+function TGLiteTreeSet.TTailEnumerator.GetCurrent: T;
+begin
+  Result := FNodeList[FCurrNode].Data.Key;
+end;
+
+procedure TGLiteTreeSet.TTailEnumerator.Init(constref aSet: TGLiteTreeSet; constref aLowBound: T;
+  aInclusive: Boolean);
+begin
+  FTree := @aSet.FTree;
+  FNodeList := FTree^.NodeList;
+  if aInclusive then
+    FFirstNode := FTree^.FindGreaterOrEqual(aLowBound)
+  else
+    FFirstNode := FTree^.FindGreater(aLowBound);
+  Reset;
+end;
+
+function TGLiteTreeSet.TTailEnumerator.MoveNext: Boolean;
+var
+  NextNode: SizeInt = -1;
+begin
+  if FCurrNode <> -1 then
+    NextNode := FTree^.Successor(FCurrNode)
+  else
+    if not FInCycle then
+      begin
+        NextNode := FFirstNode;
+        FInCycle := True;
+      end;
+  Result := NextNode >= 0;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteTreeSet.TTailEnumerator.Reset;
+begin
+  FInCycle := False;
+  FCurrNode := -1;
+end;
+
+{ TGLiteTreeSet.TRangeEnumerator }
+
+function TGLiteTreeSet.TRangeEnumerator.GetCurrent: T;
+begin
+  Result := FEnum.Current;
+end;
+
+procedure TGLiteTreeSet.TRangeEnumerator.Init(constref aSet: TGLiteTreeSet; constref aLowBound, aHighBound: T;
+  aBounds: TRangeBounds);
+begin
+  FEnum := aSet.GetTailEnumerator(aLowBound, rbLow in aBounds);
+  FHighBound := aHighBound;
+  FInclusive := rbHigh in aBounds;
+  FDone := False;
+end;
+
+function TGLiteTreeSet.TRangeEnumerator.MoveNext: Boolean;
+begin
+  if FDone or not FEnum.MoveNext then
+    exit(False);
+  if FInclusive then
+    Result := TCmpRel.Compare(FEnum.Current, FHighBound) <= 0
+  else
+    Result := TCmpRel.Compare(FEnum.Current, FHighBound) < 0;
+  FDone := not Result;
+end;
+
+procedure TGLiteTreeSet.TRangeEnumerator.Reset;
+begin
+  FEnum.Reset;
+  FDone := False;
+end;
+
+{ TGLiteTreeSet.TReverse }
+
+procedure TGLiteTreeSet.TReverse.Init(aSet: PSet);
+begin
+  FSet := aSet
+end;
+
+function TGLiteTreeSet.TReverse.GetEnumerator: TReverseEnumerator;
+begin
+  Result := FSet^.GetReverseEnumerator;
+end;
+
+{ TGLiteTreeSet.THead }
+
+procedure TGLiteTreeSet.THead.Init(aSet: PSet; constref aHighBound: T; aInclusive: Boolean);
+begin
+  FSet := aSet;
+  FHighBound := aHighBound;
+  FInclusive := aInclusive;
+end;
+
+function TGLiteTreeSet.THead.GetEnumerator: THeadEnumerator;
+begin
+  Result := FSet^.GetHeadEnumerator(FHighBound, FInclusive);
+end;
+
+{ TGLiteTreeSet.TTail }
+
+procedure TGLiteTreeSet.TTail.Init(aSet: PSet; constref aLowBound: T; aInclusive: Boolean);
+begin
+  FSet := aSet;
+  FLowBound := aLowBound;
+  FInclusive := aInclusive;
+end;
+
+function TGLiteTreeSet.TTail.GetEnumerator: TTailEnumerator;
+begin
+  Result := FSet^.GetTailEnumerator(FLowBound, FInclusive);
+end;
+
+{ TGLiteTreeSet.TRange }
+
+procedure TGLiteTreeSet.TRange.Init(aSet: PSet; constref aLowBound, aHighBound: T; aBounds: TRangeBounds);
+begin
+  FSet := aSet;
+  FLowBound := aLowBound;
+  FHighBound := aHighBound;
+  FBounds := aBounds;
+end;
+
+function TGLiteTreeSet.TRange.GetEnumerator: TRangeEnumerator;
+begin
+  Result := FSet^.GetRangeEnumerator(FLowBound, FHighBound, FBounds);
+end;
+
 { TGLiteTreeSet }
 
 function TGLiteTreeSet.GetCapacity: SizeInt;
@@ -1607,9 +1935,75 @@ begin
   Result := FTree.Count;
 end;
 
+function TGLiteTreeSet.FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.FindLess(aPattern);
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.FindLessOrEqual(aPattern);
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.FindGreaterOrEqual(aPattern);
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.FindGreater(aPattern);
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+function TGLiteTreeSet.GetHeadEnumerator(constref aHighBound: T; aInclusive: Boolean): THeadEnumerator;
+begin
+  Result.Init(Self, aHighBound, aInclusive);
+end;
+
+function TGLiteTreeSet.GetTailEnumerator(constref aLowBound: T; aInclusive: Boolean): TTailEnumerator;
+begin
+  Result.Init(Self, aLowBound, aInclusive);
+end;
+
+function TGLiteTreeSet.GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds
+  ): TRangeEnumerator;
+begin
+
+end;
+
 function TGLiteTreeSet.GetEnumerator: TEnumerator;
 begin
   Result.Init(Self);
+end;
+
+function TGLiteTreeSet.Reverse: TReverse;
+begin
+
 end;
 
 function TGLiteTreeSet.ToArray: TArray;
@@ -1992,6 +2386,81 @@ begin
   for v in aSet do
     if not Remove(v) then
       Add(v);
+end;
+
+function TGLiteTreeSet.FindMin(out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.Lowest;
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindMax(out aValue: T): Boolean;
+var
+  I: SizeInt;
+begin
+  I := FTree.Highest;
+  Result := I >= 0;
+  if Result then
+    aValue := FTree.NodeList[I].Data.Key;
+end;
+
+function TGLiteTreeSet.FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean): Boolean;
+begin
+  if aInclusive then
+    Result := FindNearestGE(aValue, aCeil)
+  else
+    Result := FindNearestGT(aValue, aCeil);
+end;
+
+function TGLiteTreeSet.FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean): Boolean;
+begin
+  if aInclusive then
+    Result := FindNearestLE(aValue, aFloor)
+  else
+    Result := FindNearestLT(aValue, aFloor);
+end;
+
+function TGLiteTreeSet.Head(constref aHighBound: T; aInclusive: Boolean): THead;
+begin
+  Result.Init(@Self, aHighBound, aInclusive);
+end;
+
+function TGLiteTreeSet.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
+begin
+   Result.Init(@Self, aLowBound, aInclusive);
+end;
+
+function TGLiteTreeSet.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
+begin
+  Result.Init(@Self, aLowBound, aHighBound, aIncludeBounds);
+end;
+
+function TGLiteTreeSet.HeadSet(constref aHighBound: T; aInclusive: Boolean): TGLiteTreeSet;
+var
+  v: T;
+begin
+  for v in Head(aHighBound, aInclusive) do
+    Result.Add(v);
+end;
+
+function TGLiteTreeSet.TailSet(constref aLowBound: T; aInclusive: Boolean): TGLiteTreeSet;
+var
+  v: T;
+begin
+  for v in Tail(aLowBound, aInclusive) do
+    Result.Add(v);
+end;
+
+function TGLiteTreeSet.SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TGLiteTreeSet;
+var
+  v: T;
+begin
+  for v in Range(aLowBound, aHighBound, aIncludeBounds) do
+    Result.Add(v);
 end;
 
 end.
