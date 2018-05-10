@@ -748,8 +748,11 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  Find(constref aValue: T): SizeInt;
+    function  Find(constref aValue: T; aHash: SizeInt): SizeInt;
+    function  FindOrAdd(constref aValue: T): Boolean;
     function  GetCountOf(constref aValue: T): SizeInt;
     function  DoAdd(constref aValue: T): SizeInt;
+    function  DoAdd(constref aValue: T; aHash: SizeInt): SizeInt;
     procedure DoInsert(aIndex: SizeInt; constref aValue: T);
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
@@ -782,6 +785,9 @@ type
     function  Add(constref aValue: T): SizeInt; inline;
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
+    function  AddUnique(constref aValue: T): Boolean; inline;
+    function  AddAllUnique(constref a: array of T): SizeInt;
+    function  AddAllUnique(e: IEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; constref aValue: T);
     procedure Delete(aIndex: SizeInt); inline;
     function  Remove(constref aValue: T): Boolean; inline;
@@ -873,8 +879,11 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  Find(constref aKey: TKey): SizeInt;
+    function  Find(constref aKey: TKey; aHash: SizeInt): SizeInt;
+    function  FindOrAdd(constref e: TEntry): Boolean;
     function  GetCountOf(constref aKey: TKey): SizeInt;
     function  DoAdd(constref e: TEntry): SizeInt;
+    function  DoAdd(constref e: TEntry; aHash: SizeInt): SizeInt;
     procedure DoInsert(aIndex: SizeInt; constref e: TEntry);
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
@@ -907,6 +916,9 @@ type
     function  Add(constref e: TEntry): SizeInt; inline;
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
+    function  AddUnique(constref e: TEntry): Boolean; inline;
+    function  AddAllUnique(constref a: array of TEntry): SizeInt;
+    function  AddAllUnique(e: IEntryEnumerable): SizeInt;
     procedure Insert(aIndex: SizeInt; constref e: TEntry);
     procedure Delete(aIndex: SizeInt); inline;
     function  Remove(constref aKey: TKey): Boolean; inline;
@@ -3797,15 +3809,44 @@ end;
 
 function TGLiteHashList.Find(constref aValue: T): SizeInt;
 var
+  h: SizeInt;
+begin
+  h := TEqRel.HashCode(aValue);
+  Result := FChainList[h and Pred(Capacity)];
+  while Result <> NULL_INDEX do
+    begin
+      if (FNodeList[Result].Hash = h) and TEqRel.Equal(FNodeList[Result].Data, aValue) then
+        exit;
+      Result := FNodeList[Result].Next;
+    end;
+end;
+
+function TGLiteHashList.Find(constref aValue: T; aHash: SizeInt): SizeInt;
+begin
+  Result := FChainList[aHash and Pred(Capacity)];
+  while Result <> NULL_INDEX do
+    begin
+      if (FNodeList[Result].Hash = aHash) and TEqRel.Equal(FNodeList[Result].Data, aValue) then
+        exit;
+      Result := FNodeList[Result].Next;
+    end;
+end;
+
+function TGLiteHashList.FindOrAdd(constref aValue: T): Boolean;
+var
   h, I: SizeInt;
 begin
   h := TEqRel.HashCode(aValue);
-  I := FChainList[h and Pred(Capacity)];
-  while I <> NULL_INDEX do
+  if Count > 0 then
+    I := Find(aValue, h)
+  else
+    I := NULL_INDEX;
+  Result := I >= 0;
+  if not Result then
     begin
-      if (FNodeList[I].Hash = h) and TEqRel.Equal(FNodeList[I].Data, aValue) then
-        exit(I);
-      I := FNodeList[I].Next;
+      if Count = Capacity then
+        Expand;
+      DoAdd(aValue, h);
     end;
 end;
 
@@ -3831,6 +3872,19 @@ begin
   Result := Count;
   FNodeList[Result].Hash := TEqRel.HashCode(aValue);
   I := FNodeList[Result].Hash and Pred(Capacity);
+  FNodeList[Result].Data := aValue;
+  FNodeList[Result].Next := FChainList[I];
+  FChainList[I] := Result;
+  Inc(FCount);
+end;
+
+function TGLiteHashList.DoAdd(constref aValue: T; aHash: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := Count;
+  FNodeList[Result].Hash := aHash;
+  I := aHash and Pred(Capacity);
   FNodeList[Result].Data := aValue;
   FNodeList[Result].Next := FChainList[I];
   FChainList[I] := Result;
@@ -4103,6 +4157,31 @@ begin
   Result := Count - Result;
 end;
 
+function TGLiteHashList.AddUnique(constref aValue: T): Boolean;
+begin
+  Result := not FindOrAdd(aValue);
+end;
+
+function TGLiteHashList.AddAllUnique(constref a: array of T): SizeInt;
+var
+  v: T;
+begin
+  Result := Count;
+  for v in a do
+    AddUnique(v);
+  Result := Count - Result;
+end;
+
+function TGLiteHashList.AddAllUnique(e: IEnumerable): SizeInt;
+var
+  v: T;
+begin
+  Result := Count;
+  for v in e do
+    AddUnique(v);
+  Result := Count - Result;
+end;
+
 procedure TGLiteHashList.Insert(aIndex: SizeInt; constref aValue: T);
 begin
   CheckInsertIndexRange(aIndex);
@@ -4271,15 +4350,44 @@ end;
 
 function TGLiteHashList2.Find(constref aKey: TKey): SizeInt;
 var
-  h, I: SizeInt;
+  h: SizeInt;
 begin
   h := TKeyEqRel.HashCode(aKey);
-  I := FChainList[h and Pred(Capacity)];
-  while I <> NULL_INDEX do
+  Result := FChainList[h and Pred(Capacity)];
+  while Result <> NULL_INDEX do
     begin
-      if (FNodeList[I].Hash = h) and TKeyEqRel.Equal(FNodeList[I].Data.Key, aKey) then
-        exit(I);
-      I := FNodeList[I].Next;
+      if (FNodeList[Result].Hash = h) and TKeyEqRel.Equal(FNodeList[Result].Data.Key, aKey) then
+        exit;
+      Result := FNodeList[Result].Next;
+    end;
+end;
+
+function TGLiteHashList2.Find(constref aKey: TKey; aHash: SizeInt): SizeInt;
+begin
+  Result := FChainList[aHash and Pred(Capacity)];
+  while Result <> NULL_INDEX do
+    begin
+      if (FNodeList[Result].Hash = aHash) and TKeyEqRel.Equal(FNodeList[Result].Data.Key, aKey) then
+        exit;
+      Result := FNodeList[Result].Next;
+    end;
+end;
+
+function TGLiteHashList2.FindOrAdd(constref e: TEntry): Boolean;
+var
+  h, I: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(e.Key);
+  if Count > 0 then
+    I := Find(e.Key, h)
+  else
+    I := NULL_INDEX;
+  Result := I >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      DoAdd(e, h);
     end;
 end;
 
@@ -4305,6 +4413,19 @@ begin
   Result := Count;
   FNodeList[Result].Hash := TKeyEqRel.HashCode(e.Key);
   I := FNodeList[Result].Hash and Pred(Capacity);
+  FNodeList[Result].Data := e;
+  FNodeList[Result].Next := FChainList[I];
+  FChainList[I] := Result;
+  Inc(FCount);
+end;
+
+function TGLiteHashList2.DoAdd(constref e: TEntry; aHash: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := Count;
+  FNodeList[Result].Hash := aHash;
+  I := aHash and Pred(Capacity);
   FNodeList[Result].Data := e;
   FNodeList[Result].Next := FChainList[I];
   FChainList[I] := Result;
@@ -4575,6 +4696,31 @@ begin
   Result := Count;
   for Entry in e do
     Add(Entry);
+  Result := Count - Result;
+end;
+
+function TGLiteHashList2.AddUnique(constref e: TEntry): Boolean;
+begin
+  Result := not FindOrAdd(e);
+end;
+
+function TGLiteHashList2.AddAllUnique(constref a: array of TEntry): SizeInt;
+var
+  e: TEntry;
+begin
+  Result := Count;
+  for e in a do
+    AddUnique(e);
+  Result := Count - Result;
+end;
+
+function TGLiteHashList2.AddAllUnique(e: IEntryEnumerable): SizeInt;
+var
+  Entry: TEntry;
+begin
+  Result := Count;
+  for Entry in e do
+    AddUnique(Entry);
   Result := Count - Result;
 end;
 
