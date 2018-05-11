@@ -719,6 +719,8 @@ type
     property  NodeList: TNodeList read FNodeList;
   end;
 
+  //todo: lite table for integer keys ???
+
 implementation
 {$Q-}{$B-}{$COPERATORS ON}
 
