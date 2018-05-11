@@ -491,6 +491,7 @@ type
     procedure TrimToFit; inline;
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
+    function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
     function  Add(constref aValue: T): Boolean;
     function  AddAll(constref a: array of T): SizeInt;
   { returns insert index, -1 if element is not inserted }
@@ -632,6 +633,7 @@ type
     procedure TrimToFit; inline;
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
+    function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
     function  Add(constref aValue: T): Boolean;
     function  AddAll(constref a: array of T): SizeInt;
   { returns insert index, -1 if element is not inserted }
@@ -2465,10 +2467,10 @@ function TGSortedListTable.Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
 var
   e: TEntry;
 begin
-  e.Key := aKey;
   Result := nil;
   if Count > 0 then
     begin
+      e.Key := aKey;
       aPos := specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.BinarySearch(FItems[0..Pred(Count)], e);
       if aPos >= 0 then
         Result := @FItems[aPos];
@@ -2887,6 +2889,29 @@ begin
   Result := NonEmpty;
   if Result then
     aValue := FBuffer.FItems[Pred(FBuffer.Count)];
+end;
+
+function TGLiteSortedList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+var
+  sr: THelper.TSearchResult;
+begin
+  if NonEmpty then
+    begin
+      sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
+      Result := sr.FoundIndex > -1;
+      if Result then
+        aIndex := sr.FoundIndex;
+    end
+  else
+    begin
+      sr.InsertIndex := 0;
+      Result := False;
+    end;
+  if not Result then
+    begin
+      aIndex := sr.InsertIndex;
+      InsertItem(aIndex, aValue);
+    end;
 end;
 
 function TGLiteSortedList.Add(constref aValue: T): Boolean;
@@ -3464,6 +3489,29 @@ begin
   Result := NonEmpty;
   if Result then
     aValue := FBuffer.FItems[Pred(FBuffer.Count)];
+end;
+
+function TGLiteComparableSortedList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+var
+  sr: THelper.TSearchResult;
+begin
+  if NonEmpty then
+    begin
+      sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
+      Result := sr.FoundIndex > -1;
+      if Result then
+        aIndex := sr.FoundIndex;
+    end
+  else
+    begin
+      sr.InsertIndex := 0;
+      Result := False;
+    end;
+  if not Result then
+    begin
+      aIndex := sr.InsertIndex;
+      InsertItem(aIndex, aValue);
+    end;
 end;
 
 function TGLiteComparableSortedList.Add(constref aValue: T): Boolean;
