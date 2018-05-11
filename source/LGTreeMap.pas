@@ -133,7 +133,7 @@ type
     function Max: TKeyOptional; inline;
   { returns True if exists key whose value greater then or equal to aKey (depend on aInclusive) }
     function FindCeilKey(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean = True): Boolean;
-  { returns True if exists key whose value less then aBound (or equal to aKey depend on aInclusive) }
+  { returns True if exists key whose value less then aKey (or equal to aKey depend on aInclusive) }
     function FindFloorKey(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean = False): Boolean;
   { enumerates keys which are strictly less than(if not aInclusive) aHighBound }
     function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; virtual; abstract;
