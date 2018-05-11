@@ -749,7 +749,6 @@ type
     procedure Expand;
     function  Find(constref aValue: T): SizeInt;
     function  Find(constref aValue: T; aHash: SizeInt): SizeInt;
-    function  FindOrAdd(constref aValue: T): Boolean;
     function  GetCountOf(constref aValue: T): SizeInt;
     function  DoAdd(constref aValue: T): SizeInt;
     function  DoAdd(constref aValue: T; aHash: SizeInt): SizeInt;
@@ -782,6 +781,7 @@ type
     function  CountOf(constref aValue: T): SizeInt; inline;
     function  FindFirst(constref aValue: T; out aData: TSearchData): Boolean;
     function  FindNext(var aData: TSearchData): Boolean;
+    function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
     function  Add(constref aValue: T): SizeInt; inline;
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
@@ -880,7 +880,6 @@ type
     procedure Expand;
     function  Find(constref aKey: TKey): SizeInt;
     function  Find(constref aKey: TKey; aHash: SizeInt): SizeInt;
-    function  FindOrAdd(constref e: TEntry): Boolean;
     function  GetCountOf(constref aKey: TKey): SizeInt;
     function  DoAdd(constref e: TEntry): SizeInt;
     function  DoAdd(constref e: TEntry; aHash: SizeInt): SizeInt;
@@ -913,6 +912,7 @@ type
     function  CountOf(constref aKey: TKey): SizeInt; inline;
     function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
     function  FindNext(var aData: TSearchData): Boolean;
+    function  FindOrAdd(constref e: TEntry; out aIndex: SizeInt): Boolean;
     function  Add(constref e: TEntry): SizeInt; inline;
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
@@ -3832,24 +3832,6 @@ begin
     end;
 end;
 
-function TGLiteHashList.FindOrAdd(constref aValue: T): Boolean;
-var
-  h, I: SizeInt;
-begin
-  h := TEqRel.HashCode(aValue);
-  if Count > 0 then
-    I := Find(aValue, h)
-  else
-    I := NULL_INDEX;
-  Result := I >= 0;
-  if not Result then
-    begin
-      if Count = Capacity then
-        Expand;
-      DoAdd(aValue, h);
-    end;
-end;
-
 function TGLiteHashList.GetCountOf(constref aValue: T): SizeInt;
 var
   h, I: SizeInt;
@@ -4130,6 +4112,24 @@ begin
   Result := False;
 end;
 
+function TGLiteHashList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+var
+  h: SizeInt;
+begin
+  h := TEqRel.HashCode(aValue);
+  if Count > 0 then
+    aIndex := Find(aValue, h)
+  else
+    aIndex := NULL_INDEX;
+  Result := aIndex >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      aIndex := DoAdd(aValue, h);
+    end;
+end;
+
 function TGLiteHashList.Add(constref aValue: T): SizeInt;
 begin
   if Count = Capacity then
@@ -4158,8 +4158,10 @@ begin
 end;
 
 function TGLiteHashList.AddUniq(constref aValue: T): Boolean;
+var
+  Dummy: SizeInt;
 begin
-  Result := not FindOrAdd(aValue);
+  Result := not FindOrAdd(aValue, Dummy);
 end;
 
 function TGLiteHashList.AddAllUniq(constref a: array of T): SizeInt;
@@ -4370,24 +4372,6 @@ begin
       if (FNodeList[Result].Hash = aHash) and TKeyEqRel.Equal(FNodeList[Result].Data.Key, aKey) then
         exit;
       Result := FNodeList[Result].Next;
-    end;
-end;
-
-function TGLiteHashList2.FindOrAdd(constref e: TEntry): Boolean;
-var
-  h, I: SizeInt;
-begin
-  h := TKeyEqRel.HashCode(e.Key);
-  if Count > 0 then
-    I := Find(e.Key, h)
-  else
-    I := NULL_INDEX;
-  Result := I >= 0;
-  if not Result then
-    begin
-      if Count = Capacity then
-        Expand;
-      DoAdd(e, h);
     end;
 end;
 
@@ -4672,6 +4656,24 @@ begin
   Result := False;
 end;
 
+function TGLiteHashList2.FindOrAdd(constref e: TEntry; out aIndex: SizeInt): Boolean;
+var
+  h: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(e.Key);
+  if Count > 0 then
+    aIndex := Find(e.Key, h)
+  else
+    aIndex := NULL_INDEX;
+  Result := aIndex >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      aIndex := DoAdd(e, h);
+    end;
+end;
+
 function TGLiteHashList2.Add(constref e: TEntry): SizeInt;
 begin
   if Count = Capacity then
@@ -4700,8 +4702,10 @@ begin
 end;
 
 function TGLiteHashList2.AddUniq(constref e: TEntry): Boolean;
+var
+  Dummy: SizeInt;
 begin
-  Result := not FindOrAdd(e);
+  Result := not FindOrAdd(e, Dummy);
 end;
 
 function TGLiteHashList2.AddAllUniq(constref a: array of TEntry): SizeInt;
