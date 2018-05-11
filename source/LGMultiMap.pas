@@ -338,13 +338,6 @@ type
       PrevIndex: SizeInt;
     end;
 
-    TSearchData = record
-      Key: TKey;
-      Hash,
-      Index,
-      Next: SizeInt;
-    end;
-
     TNodeList  = array of TNode;
     TChainList = array of SizeInt;
     PMultiMap  = ^TGLiteHashMultiMap;
@@ -356,6 +349,13 @@ type
 
   public
   type
+    TSearchData = record
+      Key: TKey;
+      Hash,
+      Index,
+      Next: SizeInt;
+    end;
+
     TEntryEnumerator = record
       FNodeList: TNodeList;
       FLastIndex,
@@ -447,8 +447,6 @@ type
     function  CountOf(constref aKey: TKey): SizeInt;
     procedure RemoveFromChain(aIndex: SizeInt);
     procedure DoRemove(constref aPos: TSearchResult);
-    function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
-    function  FindNext(var aData: TSearchData): Boolean;
     function  GetValuesView(const aKey: TKey): TValuesView;
     function  GetKeyEnumerator: TKeyEnumerator; inline;
     function  GetValueEnumerator: TValueEnumerator; inline;
@@ -465,6 +463,10 @@ type
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
+    function  Contains(constref aKey: TKey): Boolean; inline;
+    function  NonContains(constref aKey: TKey): Boolean; inline;
+    function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
+    function  FindNext(var aData: TSearchData): Boolean;
     procedure Add(constref aKey: TKey; constref aValue: TValue);
     procedure Add(constref e: TEntry); inline;
   { returns count of added values }
@@ -472,8 +474,6 @@ type
     function  AddAll(e: IEntryEnumerable): SizeInt;
     function  AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
     function  AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  NonContains(constref aKey: TKey): Boolean; inline;
   { returns count of values mapped to aKey }
     function  ValueCount(constref aKey: TKey): SizeInt;
   { returns True and remove first found entry, False otherwise }
@@ -1367,38 +1367,6 @@ begin
     end;
 end;
 
-function TGLiteHashMultiMap.FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
-var
-  Pos: TSearchResult;
-begin
-  aData.Key := aKey;
-  aData.Hash := TKeyEqRel.HashCode(aKey);
-  Result := DoFind(aKey, aData.Hash, Pos);
-  if Result then
-    begin
-      aData.Index := Pos.Index;
-      aData.Next :=  FNodeList[Pos.Index].Next;
-    end
-  else
-    begin
-      aData.Index := NULL_INDEX;
-      aData.Next :=  NULL_INDEX;
-    end;
-end;
-
-function TGLiteHashMultiMap.FindNext(var aData: TSearchData): Boolean;
-begin
-  while aData.Next >= 0 do
-    begin
-      aData.Index := aData.Next;
-      aData.Next := FNodeList[aData.Index].Next;
-      if (FNodeList[aData.Index].Hash = aData.Hash) and
-          TKeyEqRel.Equal(FNodeList[aData.Index].Data.Key, aData.Key) then
-        exit(True);
-    end;
-  Result := False;
-end;
-
 function TGLiteHashMultiMap.GetKeyEnumerator: TKeyEnumerator;
 begin
   Result.Init(Self);
@@ -1497,6 +1465,56 @@ begin
     Clear;
 end;
 
+function TGLiteHashMultiMap.Contains(constref aKey: TKey): Boolean;
+begin
+  Result := Find(aKey) <> nil;
+end;
+
+function TGLiteHashMultiMap.NonContains(constref aKey: TKey): Boolean;
+begin
+  Result := Find(aKey) = nil;
+end;
+
+function TGLiteHashMultiMap.FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
+var
+  Pos: TSearchResult;
+begin
+  aData.Key := aKey;
+  aData.Hash := TKeyEqRel.HashCode(aKey);
+  Result := DoFind(aKey, aData.Hash, Pos);
+  if Result then
+    begin
+      aData.Index := Pos.Index;
+      aData.Next :=  FNodeList[Pos.Index].Next;
+    end
+  else
+    begin
+      aData.Index := NULL_INDEX;
+      aData.Next :=  NULL_INDEX;
+    end;
+end;
+
+function TGLiteHashMultiMap.FindNext(var aData: TSearchData): Boolean;
+begin
+  while aData.Next >= 0 do
+    begin
+      aData.Index := aData.Next;
+      aData.Next := FNodeList[aData.Index].Next;
+      if (FNodeList[aData.Index].Hash = aData.Hash) and
+          TKeyEqRel.Equal(FNodeList[aData.Index].Data.Key, aData.Key) then
+        exit(True);
+    end;
+  Result := False;
+end;
+
+function TGLiteHashMultiMap.ValueCount(constref aKey: TKey): SizeInt;
+begin
+  if NonEmpty then
+    Result := CountOf(aKey)
+  else
+    Result := 0;
+end;
+
 procedure TGLiteHashMultiMap.Add(constref aKey: TKey; constref aValue: TValue);
 var
   h: SizeInt;
@@ -1547,24 +1565,6 @@ begin
   for v in e do
     Add(aKey, v);
   Result := Count - Result;
-end;
-
-function TGLiteHashMultiMap.Contains(constref aKey: TKey): Boolean;
-begin
-  Result := Find(aKey) <> nil;
-end;
-
-function TGLiteHashMultiMap.NonContains(constref aKey: TKey): Boolean;
-begin
-  Result := Find(aKey) = nil;
-end;
-
-function TGLiteHashMultiMap.ValueCount(constref aKey: TKey): SizeInt;
-begin
-  if NonEmpty then
-    Result := CountOf(aKey)
-  else
-    Result := 0;
 end;
 
 function TGLiteHashMultiMap.Remove(constref aKey: TKey): Boolean;
