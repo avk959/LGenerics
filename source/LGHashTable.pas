@@ -139,7 +139,7 @@ type
     protected
       function  GetCurrent: PEntry; override;
     public
-      constructor Create(aList: TNodeList);
+      constructor Create(constref aList: TNodeList);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -390,7 +390,7 @@ type
     protected
       function  GetCurrent: PEntry; override;
     public
-      constructor Create(aList: TChainList);
+      constructor Create(constref aList: TChainList);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -487,7 +487,7 @@ type
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-      procedure Init(aList: TNodeList); inline;
+      procedure Init(constref aList: TNodeList); inline;
     public
       function  MoveNext: Boolean;
       procedure Reset; inline;
@@ -588,7 +588,7 @@ type
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-      procedure Init(aList: TNodeList); inline;
+      procedure Init(constref aList: TNodeList); inline;
     public
       function  MoveNext: Boolean;
       procedure Reset; inline;
@@ -719,7 +719,92 @@ type
     property  NodeList: TNodeList read FNodeList;
   end;
 
-  //todo: lite table for integer keys ???
+  { TGLiteIntHashTable: for integer keys only}
+  generic TGLiteIntHashTable<TKey, TEntry> = record
+  private
+  const
+    //ENTRY_SIZE       = SizeOf(TEntry); - does not compiles with TMapEntry
+    //workaround :
+    /////////////////////////////////////////////
+    E_SIZE           = SizeOf(TEntry);
+    ENTRY_SIZE       = E_SIZE or Ord(E_SIZE = 0);
+    /////////////////////////////////////////////
+
+  type
+    //to supress unnecessary refcounting:
+    TFakeEntry = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(ENTRY_SIZE)] of Byte{$ELSE}TEntry{$ENDIF};
+
+    TNode = record
+      Hash: SizeInt;
+      Data: TEntry;
+    end;
+
+    TNodeList = array of TNode;
+
+  const
+    NODE_SIZE               = SizeOf(TNode);
+    SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
+    USED_FLAG: SizeInt      = SizeInt(1);
+    MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
+    BITNESS                 = BitSizeOf(SizeInt);
+    INITIAL_SIZE            = 16;
+
+  type
+    TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
+
+  public
+  type
+    PEntry = ^TEntry;
+
+    TEnumerator = record
+    private
+      FList: TNodeList;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(constref aList: TNodeList); inline;
+    public
+      function  MoveNext: Boolean;
+      procedure Reset; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
+  private
+    FList: TNodeList;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    function  ListCapacity: SizeInt; inline;
+    function  CalcShift(aListSize: SizeInt): SizeInt; inline;
+    function  ListIndex(aHash: SizeInt): SizeInt; inline;
+    procedure AllocList(aCapacity: SizeInt);
+    procedure Rehash(var aTarget: TNodeList);
+    procedure Resize(aNewCapacity: SizeInt);
+    procedure Expand;
+    function  DoFind(aKey: TKey; aKeyHash, Shift: SizeInt): SizeInt;
+    procedure DoRemove(aIndex, Shift: SizeInt);
+    class function Bsr(aValue: SizeInt): SizeInt; static; inline;
+    class function HashCode(aValue: TKey): SizeInt; static; inline;
+    class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
+    class constructor Init;
+    class operator Initialize(var ht: TGLiteIntHashTable);
+    class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable); inline;
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    procedure Clear;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure TrimToFit;
+    function  Contains(aKey: TKey): Boolean;
+    //return True if aKey found, otherwise insert garbage entry and return False;
+    function  FindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+    function  Find(aKey: TKey; out aPos: SizeInt): PEntry;
+    function  Remove(aKey: TKey): Boolean;
+    procedure RemoveAt(aPos: SizeInt);
+    property  Count: SizeInt read FCount;
+  { The capacity of the table is the number of elements that can be written without rehashing,
+    so real capacity is ExpandTreshold }
+    property  Capacity: SizeInt read GetCapacity;
+    property  Size: SizeInt read ListCapacity;
+  end;
 
 implementation
 {$Q-}{$B-}{$COPERATORS ON}
@@ -793,7 +878,7 @@ begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-constructor TGOpenAddressing.TEnumerator.Create(aList: TNodeList);
+constructor TGOpenAddressing.TEnumerator.Create(constref aList: TNodeList);
 begin
   FList := aList;
   FLastIndex := System.High(aList);
@@ -1981,7 +2066,7 @@ begin
   Result := @FCurrNode^.Data;
 end;
 
-constructor TGChainHashTable.TEnumerator.Create(aList: TChainList);
+constructor TGChainHashTable.TEnumerator.Create(constref aList: TChainList);
 begin
   FList := aList;
   FLastIndex := High(aList);
@@ -2498,7 +2583,7 @@ begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-procedure TGHashTableLP.TEnumerator.Init(aList: TNodeList);
+procedure TGHashTableLP.TEnumerator.Init(constref aList: TNodeList);
 begin
   FList := aList;
   FLastIndex := System.High(aList);
@@ -2870,7 +2955,7 @@ begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-procedure TGLiteHashTableLP.TEnumerator.Init(aList: TNodeList);
+procedure TGLiteHashTableLP.TEnumerator.Init(constref aList: TNodeList);
 begin
   FList := aList;
   FLastIndex := System.High(aList);
@@ -2974,7 +3059,7 @@ begin
   if aCapacity > 0 then
     begin
       aCapacity := Math.Min(aCapacity, MAX_CAPACITY);
-      if not IsTwoPower(aCapacity) then
+      if not LGUtils.IsTwoPower(aCapacity) then
         aCapacity := LGUtils.RoundUpTwoPower(aCapacity);
     end
   else
@@ -3478,6 +3563,320 @@ procedure TGLiteChainHashTable.RemoveIndex(aIndex: SizeInt);
 begin
   if (aIndex >= 0) and (aIndex < Count) then
     DoRemoveIndex(aIndex);
+end;
+
+{ TGLiteIntHashTable.TEnumerator }
+
+function TGLiteIntHashTable.TEnumerator.GetCurrent: PEntry;
+begin
+  Result := @FList[FCurrIndex].Data;
+end;
+
+procedure TGLiteIntHashTable.TEnumerator.Init(constref aList: TNodeList);
+begin
+  FList := aList;
+  FLastIndex := System.High(aList);
+  FCurrIndex := -1;
+end;
+
+function TGLiteIntHashTable.TEnumerator.MoveNext: Boolean;
+begin
+  repeat
+    if FCurrIndex >= FLastIndex then
+      exit(False);
+    Inc(FCurrIndex);
+    Result := FList[FCurrIndex].Hash <> 0;
+  until Result;
+end;
+
+procedure TGLiteIntHashTable.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGLiteIntHashTable }
+
+function TGLiteIntHashTable.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FList) shr 1;
+end;
+
+function TGLiteIntHashTable.ListCapacity: SizeInt;
+begin
+  Result := System.Length(FList);
+end;
+
+function TGLiteIntHashTable.CalcShift(aListSize: SizeInt): SizeInt;
+begin
+  Result := (BITNESS - Bsr(aListSize));
+end;
+
+function TGLiteIntHashTable.ListIndex(aHash: SizeInt): SizeInt;
+begin
+  Result := aHash shr CalcShift(ListCapacity);
+end;
+
+procedure TGLiteIntHashTable.AllocList(aCapacity: SizeInt);
+begin
+  if aCapacity > 0 then
+    begin
+      aCapacity := Math.Min(aCapacity, MAX_CAPACITY);
+      if not LGUtils.IsTwoPower(aCapacity) then
+        aCapacity := LGUtils.RoundUpTwoPower(aCapacity);
+    end
+  else
+    aCapacity := INITIAL_SIZE;
+  FList := NewList(aCapacity);
+end;
+
+procedure TGLiteIntHashTable.Rehash(var aTarget: TNodeList);
+var
+  h, I, J, Shift, Mask: SizeInt;
+begin
+  if Count > 0 then
+    begin
+      Mask := System.High(aTarget);
+      Shift := CalcShift(Succ(Mask));
+      for I := 0 to System.High(FList) do
+        begin
+          if FList[I].Hash <> 0 then
+            begin
+              h := FList[I].Hash shr Shift;
+              for J := 0 to Mask do
+                begin
+                  if aTarget[h].Hash = 0 then // -> target node is empty
+                    begin
+                      TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
+                      TFakeEntry(FList[I].Data) := Default(TFakeEntry);
+                      break;
+                    end;
+                  h := Succ(h) and Mask;     // probe sequence
+                end;
+            end;
+        end;
+    end;
+end;
+
+procedure TGLiteIntHashTable.Resize(aNewCapacity: SizeInt);
+var
+  List: TNodeList;
+begin
+  List := NewList(aNewCapacity);
+  Rehash(List);
+  FList := List;
+end;
+
+procedure TGLiteIntHashTable.Expand;
+var
+  NewCapacity, OldCapacity: SizeInt;
+begin
+  OldCapacity := ListCapacity;
+  if OldCapacity > 0 then
+    begin
+      NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
+      if NewCapacity > OldCapacity then
+        Resize(NewCapacity);
+    end
+  else
+    AllocList(INITIAL_SIZE);
+end;
+
+function TGLiteIntHashTable.DoFind(aKey: TKey; aKeyHash, Shift: SizeInt): SizeInt;
+var
+  I, Pos, Mask: SizeInt;
+begin
+  Mask := System.High(FList);
+  Result := SLOT_NOT_FOUND;
+  Pos := aKeyHash shr Shift;
+  for I := 0 to Mask do
+    begin
+      if FList[Pos].Hash = 0 then // node empty => key not found
+        exit(not Pos)
+      else
+        if FList[Pos].Data.Key = aKey then
+          exit(Pos);              // key found
+      Pos := Succ(Pos) and Mask;  // probe sequence
+    end;
+end;
+
+procedure TGLiteIntHashTable.DoRemove(aIndex, Shift: SizeInt);
+var
+  I, h, Gap, Mask: SizeInt;
+begin
+  Mask := System.High(FList);
+  FList[aIndex].Hash := 0;
+  FList[aIndex].Data := Default(TEntry);
+  Gap := aIndex;
+  aIndex := Succ(aIndex) and Mask;
+  Dec(FCount);
+  for I := 0 to Mask do
+    begin
+      h := FList[aIndex].Hash;
+      if h <> 0 then
+        begin
+          h := h shr Shift;
+          if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+            begin
+              TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+              TFakeNode(FList[aIndex]) := Default(TFakeNode);
+              Gap := aIndex;
+            end;
+          aIndex := Succ(aIndex) and Mask;
+        end
+      else
+        break;
+    end;
+end;
+
+class function TGLiteIntHashTable.Bsr(aValue: SizeInt): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := BsrQWord(QWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  Result := BsrDWord(DWord(aValue));
+{$ELSE}
+  Result := BsrWord(Word(aValue));
+{$ENDIF}
+end;
+
+class function TGLiteIntHashTable.HashCode(aValue: TKey): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := SizeInt(aValue) * SizeInt($9e3779b97f4a7c15);
+{$ELSEIF DEFINED(CPU32)}
+  Result := SizeInt(aValue) * SizeInt($9e3779b9);
+{$ELSE}
+  Result := SizeInt(aValue) * SizeInt($9e37);
+{$ENDIF}
+end;
+
+class function TGLiteIntHashTable.NewList(aCapacity: SizeInt): TNodeList;
+begin
+  System.SetLength(Result, aCapacity);
+  System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
+end;
+
+class constructor TGLiteIntHashTable.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
+class operator TGLiteIntHashTable.Initialize(var ht: TGLiteIntHashTable);
+begin
+  ht.FCount := 0;
+end;
+
+class operator TGLiteIntHashTable.Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable);
+begin
+  aDst.FList := System.Copy(aSrc.FList);
+  aDst.FCount := aSrc.Count;
+end;
+
+function TGLiteIntHashTable.GetEnumerator: TEnumerator;
+begin
+  Result.Init(FList);
+end;
+
+procedure TGLiteIntHashTable.Clear;
+begin
+  FList := nil;
+  FCount := 0;
+end;
+
+procedure TGLiteIntHashTable.EnsureCapacity(aValue: SizeInt);
+var
+  NewCapacity: SizeInt;
+begin
+  if aValue > Capacity then
+    begin
+      NewCapacity :=  Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue shl 1));
+      if NewCapacity <> ListCapacity then
+        Resize(NewCapacity);
+    end;
+end;
+
+procedure TGLiteIntHashTable.TrimToFit;
+var
+  NewCapacity: SizeInt;
+begin
+  if Count = 0 then
+    begin
+      NewCapacity := LGUtils.RoundUpTwoPower(Count shl 1);
+      if NewCapacity < ListCapacity then
+        Resize(NewCapacity);
+    end
+  else
+    Clear;
+end;
+
+function TGLiteIntHashTable.Contains(aKey: TKey): Boolean;
+var
+  p: SizeInt;
+begin
+  Result := Find(aKey, p) <> nil;
+end;
+
+function TGLiteIntHashTable.FindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+var
+  h: SizeInt;
+begin
+  if FList = nil then
+    AllocList(INITIAL_SIZE);
+  h := HashCode(aKey) or USED_FLAG;
+  aPos := DoFind(aKey, h, CalcShift(ListCapacity));
+  Result := aPos >= 0; // key found?
+  if not Result then   // key not found, will add new slot
+    begin
+      if Count >= Capacity then
+        begin
+          Expand;
+          aPos := DoFind(aKey, h, CalcShift(ListCapacity));
+        end;
+      if aPos <> SLOT_NOT_FOUND then
+        begin
+          aPos := not aPos;
+          FList[aPos].Hash := h;
+          Inc(FCount);
+        end
+      else
+        raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [Succ(Count)]);
+    end;
+  e := @FList[aPos].Data;
+end;
+
+function TGLiteIntHashTable.Find(aKey: TKey; out aPos: SizeInt): PEntry;
+begin
+  Result := nil;
+  if Count > 0 then
+    begin
+      aPos := DoFind(aKey, HashCode(aKey), CalcShift(ListCapacity));
+      if aPos >= 0 then
+        Result := @FList[aPos].Data;
+    end;
+end;
+
+function TGLiteIntHashTable.Remove(aKey: TKey): Boolean;
+var
+  Pos, Shift: SizeInt;
+begin
+  if Count > 0 then
+    begin
+      Shift := CalcShift(ListCapacity);
+      Pos := DoFind(aKey, HashCode(aKey), Shift);
+      Result := Pos >= 0;
+      if Result then
+        DoRemove(Pos, Shift);
+    end
+  else
+    Result := False;
+end;
+
+procedure TGLiteIntHashTable.RemoveAt(aPos: SizeInt);
+begin
+  if (aPos >= 0) and (aPos <= System.High(FList)) then
+    DoRemove(aPos, CalcShift(ListCapacity));
 end;
 
 end.
