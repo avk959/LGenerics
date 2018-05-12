@@ -104,6 +104,7 @@ type
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     property  Count: SizeInt read FCount;
+  { The number of elements that can be written without rehashing }
     property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
@@ -526,7 +527,7 @@ type
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
     function  GetEnumerator: TEnumerator;
     procedure Clear;
-    function  EnsureCapacity(aValue: SizeInt): Boolean;
+    procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
     function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
@@ -534,6 +535,7 @@ type
     procedure RemoveAt(aPos: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
+  { The number of entries that can be written without rehashing }
     property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
@@ -619,7 +621,7 @@ type
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
-    class function EstimateSize(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
+    class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteHashTableLP);
     class operator Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP); inline;
@@ -643,6 +645,7 @@ type
   { The capacity of the table is the number of elements that can be written without rehashing,
     so real capacity is ExpandTreshold }
     property  Capacity: SizeInt read GetCapacity;
+  { The number of entries that can be written without rehashing }
     property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
@@ -792,9 +795,8 @@ type
     function  Remove(aKey: TKey): Boolean;
     procedure RemoveAt(aPos: SizeInt);
     property  Count: SizeInt read FCount;
-  { The capacity of the table is the number of elements that can be written without rehashing,
-    so real capacity is ExpandTreshold }
     property  Capacity: SizeInt read GetCapacity;
+  { The number of entries that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
     property  Size: SizeInt read GetCapacity;
   end;
@@ -1065,12 +1067,16 @@ procedure TGOpenAddressing.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
-  if aValue > ExpandTreshold then
+  if aValue <= ExpandTreshold then
+    exit;
+  if aValue <= MAX_CAPACITY then
     begin
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
       if NewCapacity <> ListCapacity then
         Resize(NewCapacity);
-    end;
+    end
+  else
+    raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
 end;
 
 procedure TGOpenAddressing.TrimToFit;
@@ -2837,23 +2843,20 @@ begin
   FExpandTreshold := 0;
 end;
 
-function TGHashTableLP.EnsureCapacity(aValue: SizeInt): Boolean;
+procedure TGHashTableLP.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
-  if aValue > ExpandTreshold then
+  if aValue <= ExpandTreshold then
+    exit;
+  if aValue <= MAX_CAPACITY then
     begin
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
-      if NewCapacity <> GetCapacity then
-        try
-          Resize(NewCapacity);
-          Result := True;
-        except
-          Result := False;
-        end;
+      if NewCapacity <> Capacity then
+        Resize(NewCapacity);
     end
   else
-    Result := True;
+    raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
 end;
 
 procedure TGHashTableLP.TrimToFit;
@@ -3152,7 +3155,7 @@ begin
   System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
 end;
 
-class function TGLiteHashTableLP.EstimateSize(aCount: SizeInt; aLoadFactor: Single): SizeInt;
+class function TGLiteHashTableLP.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
 begin
   if aCount > 0 then
     Result := LGUtils.RoundUpTwoPower(Math.Min(Ceil64(Double(aCount) / aLoadFactor), MAX_CAPACITY))
@@ -3203,12 +3206,16 @@ procedure TGLiteHashTableLP.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
-  if aValue > ExpandTreshold then
+  if aValue <= ExpandTreshold then
+    exit;
+  if aValue <= MAX_CAPACITY then
     begin
-      NewCapacity := EstimateSize(aValue, LoadFactor);
+      NewCapacity := EstimateCapacity(aValue, LoadFactor);
       if NewCapacity <> Capacity then
         Resize(NewCapacity);
-    end;
+    end
+  else
+    raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
 procedure TGLiteHashTableLP.TrimToFit;
@@ -3217,7 +3224,7 @@ var
 begin
   if Count > 0 then
     begin
-      NewCapacity := EstimateSize(Count, LoadFactor);
+      NewCapacity := EstimateCapacity(Count, LoadFactor);
       if NewCapacity < Capacity then
         Resize(NewCapacity);
     end
@@ -3766,12 +3773,16 @@ procedure TGLiteIntHashTable.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
-  if aValue > Capacity then
+  if aValue <= ExpandTreshold then
+    exit;
+  if aValue <= MAX_CAPACITY then
     begin
-      NewCapacity :=  Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue shl 1));
-      if NewCapacity <> GetCapacity then
+      NewCapacity := LGUtils.RoundUpTwoPower(aValue shl 1);
+      if NewCapacity <> Capacity then
         Resize(NewCapacity);
-    end;
+    end
+  else
+    raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
 procedure TGLiteIntHashTable.TrimToFit;
