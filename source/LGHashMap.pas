@@ -84,7 +84,6 @@ type
     FTable: THashTable;
     function  GetExpandTreshold: SizeInt; inline;
     function  GetCount: SizeInt; override;
-  { The capacity of the hashmap is treated as the number of entries that can be written without rehashing }
     function  GetCapacity: SizeInt; override;
     function  GetFillRatio: Single;
     function  GetLoadFactor: Single;
@@ -128,6 +127,7 @@ type
     function  Clone: TCustomHashMap; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+  { The number of entries that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
@@ -450,6 +450,7 @@ type
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+  { The number of entries that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
