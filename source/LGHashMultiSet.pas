@@ -92,7 +92,6 @@ type
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
     function  GetExpandTreshold: SizeInt; inline;
-  { The capacity of the hash multiset is treated as the number of entries that can be written without rehashing }
     function  GetCapacity: SizeInt; override;
     function  DoGetEnumerator: TCustomEnumerator; override;
     procedure DoClear; override;
@@ -137,6 +136,7 @@ type
     function  Clone: TCustomHashMultiSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+  { The number of entries that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
@@ -461,6 +461,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+  { The number of entries that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   { will return 0 if not contains an element aValue;
     will raise EArgumentException if one try to set negative multiplicity of a aValue }
