@@ -107,6 +107,7 @@ type
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+  { The number of keys that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
