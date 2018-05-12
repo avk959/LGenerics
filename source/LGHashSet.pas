@@ -74,7 +74,6 @@ type
   var
     FTable: THashTable;
     function  GetCount: SizeInt; override;
-  { The capacity of the hashset is treated as the number of elements that can be written without rehashing }
     function  GetCapacity: SizeInt; override;
     function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
@@ -118,6 +117,7 @@ type
     function  Clone: TCustomHashSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+  { The number of elements that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
