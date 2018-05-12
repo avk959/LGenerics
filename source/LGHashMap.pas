@@ -1485,7 +1485,7 @@ end;
 function TGLiteHashMapLP.RemoveIf(aTest: TKeyTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1497,7 +1497,7 @@ end;
 function TGLiteHashMapLP.RemoveIf(aTest: TOnKeyTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1509,7 +1509,7 @@ end;
 function TGLiteHashMapLP.RemoveIf(aTest: TNestKeyTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1538,7 +1538,7 @@ var
   e: TEntry;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         e := Current^;
@@ -1560,7 +1560,7 @@ var
   e: TEntry;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         e := Current^;
@@ -1582,7 +1582,7 @@ var
   e: TEntry;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         e := Current^;
@@ -1600,7 +1600,7 @@ end;
 
 procedure TGLiteHashMapLP.RetainAll(aCollection: IKeyCollection);
 begin
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aCollection.NonContains(Current^.Key) then
         RemoveCurrent;

@@ -1527,7 +1527,7 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1539,7 +1539,7 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TOnTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1551,7 +1551,7 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TNestTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1570,7 +1570,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1588,7 +1588,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1606,7 +1606,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1621,7 +1621,7 @@ end;
 
 procedure TGLiteHashSetLP.RetainAll(aCollection: ICollection);
 begin
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aCollection.NonContains(Current^.Key) then
         RemoveCurrent;
@@ -1686,7 +1686,7 @@ end;
 
 procedure TGLiteHashSetLP.Intersect(constref aSet: TGLiteHashSetLP);
 begin
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aSet.NonContains(Current^.Key) then
         RemoveCurrent;

@@ -1636,7 +1636,7 @@ var
   p: PEntry;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -1654,7 +1654,7 @@ var
   p: PEntry;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -1672,7 +1672,7 @@ var
   p: PEntry;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -1709,7 +1709,7 @@ var
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -1737,7 +1737,7 @@ var
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -1765,7 +1765,7 @@ var
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -1871,7 +1871,7 @@ var
   p: PEntry;
 begin
   if @aSet <> @Self then
-    with FTable.RemovableEnumerator do
+    with FTable.GetRemovableEnumerator do
       while MoveNext do
         begin
           p := Current;
