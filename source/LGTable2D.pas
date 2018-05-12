@@ -90,6 +90,7 @@ type
   var
     FRowTable: TRowHashTable;
     function  CreateRowMap: TCustomRowMap; virtual; abstract;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
@@ -112,6 +113,7 @@ type
     function  RowMapEnum: IRowMapEnumerable; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGHashTable2D implements table with row map as linear probing hashmap;
@@ -469,6 +471,11 @@ begin
 end;
 
 { TGCustomHashTable2D }
+
+function TGCustomHashTable2D.GetExpandTreshold: SizeInt;
+begin
+  Result := FRowTable.ExpandTreshold;
+end;
 
 function TGCustomHashTable2D.GetFillRatio: Single;
 begin

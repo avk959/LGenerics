@@ -79,9 +79,9 @@ type
 
   var
     FTable: THashTable;
-    function  GetFillRatio: Single;
-    function  GetLoadFactor: Single;
-    function  GetTableSize: SizeInt;
+    function  GetExpandTreshold: SizeInt; inline;
+    function  GetFillRatio: Single; inline;
+    function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single);
     function  GetKeyCount: SizeInt; override;
     function  GetCapacity: SizeInt; override;
@@ -107,7 +107,7 @@ type
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGHashMultiMap implements multimap with value collections as linear probing hashset;
@@ -582,6 +582,11 @@ end;
 
 { TGCustomHashMultiMap }
 
+function TGCustomHashMultiMap.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGCustomHashMultiMap.GetFillRatio: Single;
 begin
   Result := FTable.FillRatio;
@@ -590,11 +595,6 @@ end;
 function TGCustomHashMultiMap.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
-end;
-
-function TGCustomHashMultiMap.GetTableSize: SizeInt;
-begin
-  Result := FTable.TableSize;
 end;
 
 procedure TGCustomHashMultiMap.SetLoadFactor(aValue: Single);

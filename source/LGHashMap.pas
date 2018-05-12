@@ -82,13 +82,13 @@ type
 
   var
     FTable: THashTable;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetCount: SizeInt; override;
   { The capacity of the hashmap is treated as the number of entries that can be written without rehashing }
     function  GetCapacity: SizeInt; override;
     function  GetFillRatio: Single;
     function  GetLoadFactor: Single;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  GetTableSize: SizeInt; inline;
     function  Find(constref aKey: TKey): PEntry; override;
     //return True if aKey found, otherwise insert (garbage) pair and return False;
     function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean; override;
@@ -128,7 +128,7 @@ type
     function  Clone: TCustomHashMap; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGBaseHashMapLP implements open addressing hashmap with linear probing;
@@ -388,9 +388,9 @@ type
     function  Find(constref aKey: TKey): PEntry; inline;
     //returns True if aKey found, otherwise inserts (garbage) entry and returns False;
     function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
-    function  GetTableSize: SizeInt; inline;
     function  GetValue(const aKey: TKey): TValue; inline;
     procedure SetLoadFactor(aValue: Single); inline;
     function  SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
@@ -450,7 +450,7 @@ type
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
 implementation
@@ -545,6 +545,11 @@ end;
 
 { TGCustomHashMap }
 
+function TGCustomHashMap.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGCustomHashMap.GetCount: SizeInt;
 begin
   Result := FTable.Count;
@@ -568,11 +573,6 @@ end;
 procedure TGCustomHashMap.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
-end;
-
-function TGCustomHashMap.GetTableSize: SizeInt;
-begin
-  Result := FTable.TableSize;
 end;
 
 function TGCustomHashMap.Find(constref aKey: TKey): PEntry;
@@ -1235,6 +1235,11 @@ begin
     p^.Key := aKey;
 end;
 
+function TGLiteHashMapLP.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGLiteHashMapLP.GetFillRatio: Single;
 begin
   Result := FTable.FillRatio;
@@ -1243,11 +1248,6 @@ end;
 function TGLiteHashMapLP.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
-end;
-
-function TGLiteHashMapLP.GetTableSize: SizeInt;
-begin
-  Result := FTable.Size;
 end;
 
 function TGLiteHashMapLP.GetValue(const aKey: TKey): TValue;

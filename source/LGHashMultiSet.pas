@@ -91,7 +91,7 @@ type
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  GetTableSize: SizeInt; inline;
+    function  GetExpandTreshold: SizeInt; inline;
   { The capacity of the hash multiset is treated as the number of entries that can be written without rehashing }
     function  GetCapacity: SizeInt; override;
     function  DoGetEnumerator: TCustomEnumerator; override;
@@ -137,7 +137,7 @@ type
     function  Clone: TCustomHashMultiSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGBaseHashMultiSetLP implements open addressing hash multiset with linear probing;
@@ -379,9 +379,9 @@ type
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetEntryCount: SizeInt; inline;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
-    function  GetTableSize: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
     function  GetDistinctEnumerator: TDistinctEnumerator; inline;
     function  GetEntryEnumerator: TEntryEnumerator; inline;
@@ -461,7 +461,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   { will return 0 if not contains an element aValue;
     will raise EArgumentException if one try to set negative multiplicity of a aValue }
     property  Counts[const aValue: T]: SizeInt read GetKeyCount write SetKeyCount; default;
@@ -569,6 +569,11 @@ end;
 
 { TGCustomHashMultiSet }
 
+function TGCustomHashMultiSet.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 procedure TGCustomHashMultiSet.EntryRemoved(p: PEntry);
 begin
   FCount -= p^.Count;
@@ -587,11 +592,6 @@ end;
 procedure TGCustomHashMultiSet.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
-end;
-
-function TGCustomHashMultiSet.GetTableSize: SizeInt;
-begin
-  Result := FTable.TableSize;
 end;
 
 function TGCustomHashMultiSet.GetCapacity: SizeInt;
@@ -1365,6 +1365,11 @@ begin
   Result := FTable.Count;
 end;
 
+function TGLiteHashMultiSetLP.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGLiteHashMultiSetLP.GetCapacity: SizeInt;
 begin
   Result := FTable.Capacity;
@@ -1378,11 +1383,6 @@ end;
 function TGLiteHashMultiSetLP.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
-end;
-
-function TGLiteHashMultiSetLP.GetTableSize: SizeInt;
-begin
-  Result := FTable.Size;
 end;
 
 procedure TGLiteHashMultiSetLP.SetLoadFactor(aValue: Single);

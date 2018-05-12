@@ -59,12 +59,10 @@ type
     FExpandTreshold: SizeInt;
     FLoadFactor: Single;
     procedure AllocList(aCapacity: SizeInt); virtual; abstract;
+    function  GetCapacity: SizeInt; virtual; abstract;
     procedure SetLoadFactor(aValue: Single); virtual; abstract;
-    function  GetTableSize: SizeInt;  virtual; abstract;
     function  GetFillRatio: Single;
     function  RestrictLoadFactor(aValue: Single): Single; inline;
-    function  GetCapacity: SizeInt; inline;
-    property  ExpandTreshold: SizeInt read FExpandTreshold;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; virtual; abstract;
   public
   type
@@ -106,12 +104,10 @@ type
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     property  Count: SizeInt read FCount;
-  { The capacity of the table is the number of elements that can be written without rehashing,
-    so real capacity is ExpandTreshold, isn't it? }
+    property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
   end;
 
   { TGOpenAddressing }
@@ -156,7 +152,7 @@ type
     class function NodeUsed(constref aNode: TNode): Boolean; static; inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
     procedure AllocList(aCapacity: SizeInt); override;
-    function  GetTableSize: SizeInt; override;
+    function  GetCapacity: SizeInt; override;
     function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
     procedure UpdateExpandTreshold; inline;
@@ -316,7 +312,7 @@ type
     FTail: PNode;
     FNodeManager: TNodeManager;
     procedure AllocList(aCapacity: SizeInt); override;
-    function  GetTableSize: SizeInt; override;
+    function  GetCapacity: SizeInt; override;
     function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
     function  NewNode: PNode; inline;
@@ -408,7 +404,7 @@ type
     FList: TChainList;
     FNodeManager: TNodeManager;
     procedure AllocList(aCapacity: SizeInt); override;
-    function  GetTableSize: SizeInt; override;
+    function  GetCapacity: SizeInt; override;
     function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
     function  NewNode: PNode; inline;
@@ -500,10 +496,9 @@ type
     FExpandTreshold: SizeInt;
     FLoadFactor: Single;
     function  RestrictLoadFactor(aValue: Single): Single; inline;
-    function  ListCapacity: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
     procedure UpdateExpandTreshold; inline;
     procedure SetLoadFactor(aValue: Single);
-    function  GetCapacity: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetTableSize: SizeInt; inline;
     procedure AllocList(aCapacity: SizeInt);
@@ -512,7 +507,6 @@ type
     procedure Expand;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    property  ExpandTreshold: SizeInt read FExpandTreshold;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
@@ -540,9 +534,9 @@ type
     procedure RemoveAt(aPos: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
+    property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
   end;
 
   { TGLiteHashTableLP }
@@ -618,14 +612,12 @@ type
     procedure SetLoadFactor(aValue: Single);
     function  GetCapacity: SizeInt; inline;
     function  GetFillRatio: Single; inline;
-    function  GetSize: SizeInt; inline;
     procedure AllocList(aCapacity: SizeInt);
     procedure Rehash(var aTarget: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    property  ExpandTreshold: SizeInt read FExpandTreshold;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
     class function EstimateSize(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
@@ -651,9 +643,9 @@ type
   { The capacity of the table is the number of elements that can be written without rehashing,
     so real capacity is ExpandTreshold }
     property  Capacity: SizeInt read GetCapacity;
+    property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  Size: SizeInt read GetSize; //todo: Split(predicate): TGLiteHashTableLP; ???
   end;
 
   { TGLiteChainHashTable: node based hash table with load factor 1.0;
@@ -772,8 +764,8 @@ type
   private
     FList: TNodeList;
     FCount: SizeInt;
+    function  GetExpandTreshold: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    function  ListCapacity: SizeInt; inline;
     function  CalcShift(aListSize: SizeInt): SizeInt; inline;
     function  ListIndex(aHash: SizeInt): SizeInt; inline;
     procedure AllocList(aCapacity: SizeInt);
@@ -803,7 +795,8 @@ type
   { The capacity of the table is the number of elements that can be written without rehashing,
     so real capacity is ExpandTreshold }
     property  Capacity: SizeInt read GetCapacity;
-    property  Size: SizeInt read ListCapacity;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
+    property  Size: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -815,7 +808,7 @@ function TGCustomHashTable.GetFillRatio: Single;
 var
   c: SizeInt;
 begin
-  c := GetTableSize;
+  c := Capacity;
   if c > 0 then
     Result := Count / c
   else
@@ -825,11 +818,6 @@ end;
 function TGCustomHashTable.RestrictLoadFactor(aValue: Single): Single;
 begin
   Result := Math.Min(Math.Max(aValue, MinLoadFactor), MaxLoadFactor);
-end;
-
-function TGCustomHashTable.GetCapacity: SizeInt;
-begin
-  Result := Trunc(TableSize * LoadFactor);
 end;
 
 class function TGCustomHashTable.MinLoadFactor: Single;
@@ -927,7 +915,7 @@ begin
   UpdateExpandTreshold;
 end;
 
-function TGOpenAddressing.GetTableSize: SizeInt;
+function TGOpenAddressing.GetCapacity: SizeInt;
 begin
   Result := ListCapacity;
 end;
@@ -1038,7 +1026,6 @@ end;
 
 class function TGOpenAddressing.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
 begin
-  //aCount := Math.Min(Math.Max(aCount, 0), MaxCapacity);
   if aCount > 0 then
     Result := LGUtils.RoundUpTwoPower(Math.Min(Ceil64(Double(aCount) / aLoadFactor), MAX_CAPACITY))
   else
@@ -1604,7 +1591,7 @@ begin
   UpdateExpandTreshold;
 end;
 
-function TGOrderedHashTable.GetTableSize: SizeInt;
+function TGOrderedHashTable.GetCapacity: SizeInt;
 begin
   Result := ListCapacity;
 end;
@@ -2112,7 +2099,7 @@ begin
   UpdateExpandTreshold;
 end;
 
-function TGChainHashTable.GetTableSize: SizeInt;
+function TGChainHashTable.GetCapacity: SizeInt;
 begin
   Result := ListCapacity;
 end;
@@ -2612,15 +2599,15 @@ begin
   Result := Math.Min(Math.Max(aValue, MIN_LOAD_FACTOR), MAX_LOAD_FACTOR);
 end;
 
-function TGHashTableLP.ListCapacity: SizeInt;
+function TGHashTableLP.GetCapacity: SizeInt;
 begin
   Result := System.Length(FList);
 end;
 
 procedure TGHashTableLP.UpdateExpandTreshold;
 begin
-  if ListCapacity < MAX_CAPACITY then
-    FExpandTreshold := Trunc(ListCapacity * LoadFactor)
+  if GetCapacity < MAX_CAPACITY then
+    FExpandTreshold := Trunc(GetCapacity * LoadFactor)
   else
     FExpandTreshold := MAX_CAPACITY;
 end;
@@ -2637,16 +2624,11 @@ begin
     end;
 end;
 
-function TGHashTableLP.GetCapacity: SizeInt;
-begin
-  Result := Trunc(ListCapacity * LoadFactor);
-end;
-
 function TGHashTableLP.GetFillRatio: Single;
 var
   c: SizeInt;
 begin
-  c := ListCapacity;
+  c := GetCapacity;
   if c > 0 then
     Result := Count / c
   else
@@ -2655,7 +2637,7 @@ end;
 
 function TGHashTableLP.GetTableSize: SizeInt;
 begin
-  Result := ListCapacity;
+  Result := GetCapacity;
 end;
 
 procedure TGHashTableLP.AllocList(aCapacity: SizeInt);
@@ -2713,7 +2695,7 @@ procedure TGHashTableLP.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := ListCapacity;
+  OldCapacity := GetCapacity;
   if OldCapacity > 0 then
     begin
       NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
@@ -2862,7 +2844,7 @@ begin
   if aValue > ExpandTreshold then
     begin
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
-      if NewCapacity <> ListCapacity then
+      if NewCapacity <> GetCapacity then
         try
           Resize(NewCapacity);
           Result := True;
@@ -2881,7 +2863,7 @@ begin
   if Count > 0 then
     begin
       NewCapacity := EstimateCapacity(Count, LoadFactor);
-      if NewCapacity < ListCapacity then
+      if NewCapacity < GetCapacity then
         Resize(NewCapacity);
     end
   else
@@ -3015,8 +2997,8 @@ end;
 
 procedure TGLiteHashTableLP.UpdateExpandTreshold;
 begin
-  if Size < MAX_CAPACITY then
-    FExpandTreshold := Trunc(Size * LoadFactor)
+  if Capacity < MAX_CAPACITY then
+    FExpandTreshold := Trunc(Capacity * LoadFactor)
   else
     FExpandTreshold := MAX_CAPACITY;
 end;
@@ -3035,23 +3017,18 @@ end;
 
 function TGLiteHashTableLP.GetCapacity: SizeInt;
 begin
-  Result := ExpandTreshold;
+  Result := System.Length(FList);
 end;
 
 function TGLiteHashTableLP.GetFillRatio: Single;
 var
   sz: SizeInt;
 begin
-  sz := Size;
+  sz := Capacity;
   if sz > 0 then
     Result := Count / sz
   else
     Result := 0.0;
-end;
-
-function TGLiteHashTableLP.GetSize: SizeInt;
-begin
-  Result := System.Length(FList);
 end;
 
 procedure TGLiteHashTableLP.AllocList(aCapacity: SizeInt);
@@ -3107,14 +3084,14 @@ end;
 
 procedure TGLiteHashTableLP.Expand;
 var
-  NewSize, OldSize: SizeInt;
+  NewCapacity, OldCapacity: SizeInt;
 begin
-  OldSize := Size;
-  if OldSize > 0 then
+  OldCapacity := Capacity;
+  if OldCapacity > 0 then
     begin
-      NewSize := Math.Min(MAX_CAPACITY, OldSize shl 1);
-      if NewSize > OldSize then
-        Resize(NewSize);
+      NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
+      if NewCapacity > OldCapacity then
+        Resize(NewCapacity);
     end
   else
     AllocList(DEFAULT_CONTAINER_CAPACITY);
@@ -3224,25 +3201,25 @@ end;
 
 procedure TGLiteHashTableLP.EnsureCapacity(aValue: SizeInt);
 var
-  NewSize: SizeInt;
+  NewCapacity: SizeInt;
 begin
   if aValue > ExpandTreshold then
     begin
-      NewSize := EstimateSize(aValue, LoadFactor);
-      if NewSize <> Size then
-        Resize(NewSize);
+      NewCapacity := EstimateSize(aValue, LoadFactor);
+      if NewCapacity <> Capacity then
+        Resize(NewCapacity);
     end;
 end;
 
 procedure TGLiteHashTableLP.TrimToFit;
 var
-  NewSize: SizeInt;
+  NewCapacity: SizeInt;
 begin
   if Count > 0 then
     begin
-      NewSize := EstimateSize(Count, LoadFactor);
-      if NewSize < Size then
-        Resize(NewSize);
+      NewCapacity := EstimateSize(Count, LoadFactor);
+      if NewCapacity < Capacity then
+        Resize(NewCapacity);
     end
   else
     Clear;
@@ -3596,12 +3573,12 @@ end;
 
 { TGLiteIntHashTable }
 
-function TGLiteIntHashTable.GetCapacity: SizeInt;
+function TGLiteIntHashTable.GetExpandTreshold: SizeInt;
 begin
   Result := System.Length(FList) shr 1;
 end;
 
-function TGLiteIntHashTable.ListCapacity: SizeInt;
+function TGLiteIntHashTable.GetCapacity: SizeInt;
 begin
   Result := System.Length(FList);
 end;
@@ -3613,7 +3590,7 @@ end;
 
 function TGLiteIntHashTable.ListIndex(aHash: SizeInt): SizeInt;
 begin
-  Result := aHash shr CalcShift(ListCapacity);
+  Result := aHash shr CalcShift(GetCapacity);
 end;
 
 procedure TGLiteIntHashTable.AllocList(aCapacity: SizeInt);
@@ -3670,7 +3647,7 @@ procedure TGLiteIntHashTable.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := ListCapacity;
+  OldCapacity := GetCapacity;
   if OldCapacity > 0 then
     begin
       NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
@@ -3792,7 +3769,7 @@ begin
   if aValue > Capacity then
     begin
       NewCapacity :=  Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue shl 1));
-      if NewCapacity <> ListCapacity then
+      if NewCapacity <> GetCapacity then
         Resize(NewCapacity);
     end;
 end;
@@ -3804,7 +3781,7 @@ begin
   if Count = 0 then
     begin
       NewCapacity := LGUtils.RoundUpTwoPower(Count shl 1);
-      if NewCapacity < ListCapacity then
+      if NewCapacity < GetCapacity then
         Resize(NewCapacity);
     end
   else
@@ -3825,14 +3802,14 @@ begin
   if FList = nil then
     AllocList(INITIAL_SIZE);
   h := HashCode(aKey) or USED_FLAG;
-  aPos := DoFind(aKey, h, CalcShift(ListCapacity));
+  aPos := DoFind(aKey, h, CalcShift(GetCapacity));
   Result := aPos >= 0; // key found?
   if not Result then   // key not found, will add new slot
     begin
-      if Count >= Capacity then
+      if Count >= ExpandTreshold then
         begin
           Expand;
-          aPos := DoFind(aKey, h, CalcShift(ListCapacity));
+          aPos := DoFind(aKey, h, CalcShift(GetCapacity));
         end;
       if aPos <> SLOT_NOT_FOUND then
         begin
@@ -3851,7 +3828,7 @@ begin
   Result := nil;
   if Count > 0 then
     begin
-      aPos := DoFind(aKey, HashCode(aKey), CalcShift(ListCapacity));
+      aPos := DoFind(aKey, HashCode(aKey), CalcShift(GetCapacity));
       if aPos >= 0 then
         Result := @FList[aPos].Data;
     end;
@@ -3863,7 +3840,7 @@ var
 begin
   if Count > 0 then
     begin
-      Shift := CalcShift(ListCapacity);
+      Shift := CalcShift(GetCapacity);
       Pos := DoFind(aKey, HashCode(aKey), Shift);
       Result := Pos >= 0;
       if Result then
@@ -3876,7 +3853,7 @@ end;
 procedure TGLiteIntHashTable.RemoveAt(aPos: SizeInt);
 begin
   if (aPos >= 0) and (aPos <= System.High(FList)) then
-    DoRemove(aPos, CalcShift(ListCapacity));
+    DoRemove(aPos, CalcShift(GetCapacity));
 end;
 
 end.

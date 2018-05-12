@@ -76,10 +76,10 @@ type
     function  GetCount: SizeInt; override;
   { The capacity of the hashset is treated as the number of elements that can be written without rehashing }
     function  GetCapacity: SizeInt; override;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  GetTableSize: SizeInt; inline;
     function  DoGetEnumerator: TCustomEnumerator; override;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
@@ -118,7 +118,7 @@ type
     function  Clone: TCustomHashSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGBaseHashSetLP implements open addressing hashset with linear probing;
@@ -387,7 +387,7 @@ type
     function  GetCount: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
-    function  GetTableSize: SizeInt; inline;
+    function  GetExpandTreshold: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
   public
     class operator +(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
@@ -446,7 +446,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
 implementation
@@ -512,6 +512,11 @@ end;
 
 { TGCustomHashSet }
 
+function TGCustomHashSet.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGCustomHashSet.GetCount: SizeInt;
 begin
   Result := FTable.Count;
@@ -535,11 +540,6 @@ end;
 procedure TGCustomHashSet.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
-end;
-
-function TGCustomHashSet.GetTableSize: SizeInt;
-begin
-  Result := FTable.TableSize;
 end;
 
 function TGCustomHashSet.DoGetEnumerator: TCustomEnumerator;
@@ -1277,9 +1277,9 @@ begin
   Result := FTable.LoadFactor;
 end;
 
-function TGLiteHashSetLP.GetTableSize: SizeInt;
+function TGLiteHashSetLP.GetExpandTreshold: SizeInt;
 begin
-  Result := FTable.Size;
+  Result := FTable.ExpandTreshold;
 end;
 
 procedure TGLiteHashSetLP.SetLoadFactor(aValue: Single);
