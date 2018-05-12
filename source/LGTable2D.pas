@@ -113,6 +113,7 @@ type
     function  RowMapEnum: IRowMapEnumerable; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+  { The number of rows that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
