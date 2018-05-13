@@ -825,7 +825,8 @@ type
   public
   type
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
-    TEntryArray = array of TEntry;
+    TEntryArray      = array of TEntry;
+    PEntry           = ^TEntry;
 
     TEnumerator = record
     private
@@ -884,7 +885,7 @@ type
     function  Find(constref aKey: TKey; aHash: SizeInt): SizeInt;
     function  GetCountOf(constref aKey: TKey): SizeInt;
     function  DoAdd(constref e: TEntry): SizeInt;
-    function  DoAdd(constref e: TEntry; aHash: SizeInt): SizeInt;
+    function  DoAddHash(aHash: SizeInt): SizeInt;
     procedure DoInsert(aIndex: SizeInt; constref e: TEntry);
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
@@ -894,6 +895,7 @@ type
     function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
+    function  GetItemRef(aIndex: SizeInt): PEntry;
     class constructor Init;
     class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
@@ -914,7 +916,7 @@ type
     function  CountOf(constref aKey: TKey): SizeInt; inline;
     function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
     function  FindNext(var aData: TSearchData): Boolean;
-    function  FindOrAdd(constref e: TEntry; out aIndex: SizeInt): Boolean;
+    function  FindOrAdd(constref aKey: TKey; out aIndex: SizeInt): Boolean;
     function  Add(constref e: TEntry): SizeInt; inline;
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
@@ -928,6 +930,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  Keys[aIndex: SizeInt]: TKey read GetKey;
     property  Items[aIndex: SizeInt]: TEntry read GetItem write SetItem; default;
+    property  ItemRefs[aIndex: SizeInt]: PEntry read GetItemRef;
   end;
 
 implementation
@@ -4451,14 +4454,13 @@ begin
   Inc(FCount);
 end;
 
-function TGLiteHashList2.DoAdd(constref e: TEntry; aHash: SizeInt): SizeInt;
+function TGLiteHashList2.DoAddHash(aHash: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
   Result := Count;
   FNodeList[Result].Hash := aHash;
   I := aHash and Pred(Capacity);
-  FNodeList[Result].Data := e;
   FNodeList[Result].Next := FChainList[I];
   FChainList[I] := Result;
   Inc(FCount);
@@ -4553,6 +4555,12 @@ procedure TGLiteHashList2.CheckInsertIndexRange(aIndex: SizeInt);
 begin
   if not IndexInInsertRange(aIndex) then
     IndexOutOfBoundError(aIndex);
+end;
+
+function TGLiteHashList2.GetItemRef(aIndex: SizeInt): PEntry;
+begin
+  CheckIndexRange(aIndex);
+  Result := @FNodeList[aIndex].Data;
 end;
 
 class constructor TGLiteHashList2.Init;
@@ -4704,13 +4712,13 @@ begin
   Result := False;
 end;
 
-function TGLiteHashList2.FindOrAdd(constref e: TEntry; out aIndex: SizeInt): Boolean;
+function TGLiteHashList2.FindOrAdd(constref aKey: TKey; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
-  h := TKeyEqRel.HashCode(e.Key);
+  h := TKeyEqRel.HashCode(aKey);
   if Count > 0 then
-    aIndex := Find(e.Key, h)
+    aIndex := Find(aKey, h)
   else
     aIndex := NULL_INDEX;
   Result := aIndex >= 0;
@@ -4718,7 +4726,7 @@ begin
     begin
       if Count = Capacity then
         Expand;
-      aIndex := DoAdd(e, h);
+      aIndex := DoAddHash(h);
     end;
 end;
 
@@ -4751,9 +4759,11 @@ end;
 
 function TGLiteHashList2.AddUniq(constref e: TEntry): Boolean;
 var
-  Dummy: SizeInt;
+  I: SizeInt;
 begin
-  Result := not FindOrAdd(e, Dummy);
+  Result := not FindOrAdd(e.Key, I);
+  if Result then
+    FNodeList[I].Data := e;
 end;
 
 function TGLiteHashList2.AddAllUniq(constref a: array of TEntry): SizeInt;
