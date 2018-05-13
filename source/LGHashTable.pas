@@ -758,7 +758,7 @@ type
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-      procedure Init(constref aList: TNodeList); inline;
+      procedure Init(aTable: PHashTable); inline;
     public
       function  MoveNext: Boolean;
       procedure Reset; inline;
@@ -799,7 +799,7 @@ type
     class operator Initialize(var ht: TGLiteIntHashTable);
     class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable); inline;
   public
-    function  GetEnumerator: TEnumerator; inline;
+    function  GetEnumerator: TEnumerator; //inline;
     function  GetRemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
@@ -3572,10 +3572,10 @@ begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-procedure TGLiteIntHashTable.TEnumerator.Init(constref aList: TNodeList);
+procedure TGLiteIntHashTable.TEnumerator.Init(aTable: PHashTable);
 begin
-  FList := aList;
-  FLastIndex := System.High(aList);
+  FList := aTable^.FList;
+  FLastIndex := System.High(FList);
   FCurrIndex := -1;
 end;
 
@@ -3818,7 +3818,7 @@ end;
 
 function TGLiteIntHashTable.GetEnumerator: TEnumerator;
 begin
-  Result.Init(FList);
+  Result.Init(@Self);
 end;
 
 function TGLiteIntHashTable.GetRemovableEnumerator: TRemovableEnumerator;
