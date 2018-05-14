@@ -159,8 +159,8 @@ type
   var
     FOwnsObjects: Boolean;
     FStack: TStack;
-    function GetCapacity: SizeInt; inline;
-    function GetCount: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
     procedure CheckFreeItems;
   private
     class operator Initialize(var s: TGLiteObjectStack);
