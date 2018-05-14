@@ -331,18 +331,19 @@ type
 {$ENDIF}
   var
     FBits: TBits;
-    FSize: SizeInt;
     function  GetBit(aIndex: SizeInt): Boolean;
+    function  GetSize: SizeInt; inline;
     procedure SetBit(aIndex: SizeInt; aValue: Boolean);
+    procedure SetSize(aValue: SizeInt);
     function  TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean; inline;
     function  SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
     function  ClearUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
     procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
     function  IndexInRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
+    class operator Copy(constref aSrc: TBitVector; var aDst: TBitVector);
   public
-    class function NewVector(aSize: SizeInt): TBitVector; static;
-    property Size: SizeInt read FSize;
+    property Size: SizeInt read GetSize write SetSize;
     property Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
@@ -1694,6 +1695,11 @@ begin
   Result := TestBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
 end;
 
+function TBitVector.GetSize: SizeInt;
+begin
+  Result := System.Length(FBits) shl SIZE_SHIFT;
+end;
+
 procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
   CheckIndexRange(aIndex);
@@ -1701,6 +1707,19 @@ begin
     FBits[aIndex shr SIZE_SHIFT] := SetUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK)
   else
     FBits[aIndex shr SIZE_SHIFT] := ClearUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+end;
+
+procedure TBitVector.SetSize(aValue: SizeInt);
+var
+  OldSize, NewSize: SizeInt;
+begin
+  OldSize := Size;
+  if aValue > OldSize then
+    begin
+      NewSize := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
+      System.SetLength(Result.FBits, NewSize);
+      System.FillChar(Result.FBits[OldSize], (NewSize - OldSize) * SizeOf(SizeUInt), 0);
+    end;
 end;
 
 function TBitVector.TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean;
@@ -1734,19 +1753,9 @@ begin
     IndexOutOfBoundError(aIndex);
 end;
 
-class function TBitVector.NewVector(aSize: SizeInt): TBitVector;
-var
-  Len: SizeInt;
+class operator TBitVector.Copy(constref aSrc: TBitVector; var aDst: TBitVector);
 begin
-  if aSize > 0 then
-    begin
-      Result.FSize := aSize;
-      Len := aSize shr SIZE_SHIFT + Ord(aSize and SIZE_MASK <> 0);
-      System.SetLength(Result.FBits, Len);
-      System.FillChar(Result.FBits[0], Len * SizeOf(SizeUInt), 0);
-    end
-  else
-    Result.FSize := 0;
+  aDst.FBits := System.Copy(aSrc.FBits);
 end;
 
 { TGVectorHelpUtil }
