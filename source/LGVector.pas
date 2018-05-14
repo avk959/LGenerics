@@ -1717,8 +1717,8 @@ begin
   if aValue > OldSize then
     begin
       NewSize := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
-      System.SetLength(Result.FBits, NewSize);
-      System.FillChar(Result.FBits[OldSize], (NewSize - OldSize) * SizeOf(SizeUInt), 0);
+      System.SetLength(FBits, NewSize);
+      System.FillChar(FBits[OldSize], (NewSize - OldSize) * SizeOf(SizeUInt), 0);
     end;
 end;
 
