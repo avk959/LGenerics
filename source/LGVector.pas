@@ -336,6 +336,7 @@ type
     procedure SetBit(aIndex: SizeInt; aValue: Boolean);
     function  TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean; inline;
     function  SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
+    function  ClearUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
     procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
     function  IndexInRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
@@ -1696,7 +1697,10 @@ end;
 procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
   CheckIndexRange(aIndex);
-  FBits[aIndex shr SIZE_SHIFT] := SetUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+  if aValue then
+    FBits[aIndex shr SIZE_SHIFT] := SetUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK)
+  else
+    FBits[aIndex shr SIZE_SHIFT] := ClearUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
 end;
 
 function TBitVector.TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean;
@@ -1707,6 +1711,11 @@ end;
 function TBitVector.SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
 begin
   Result := aValue or SizeUInt(SizeUInt(1) shl aIndex);
+end;
+
+function TBitVector.ClearUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
+begin
+  Result := aValue and not SizeUInt(SizeUInt(1) shl aIndex);
 end;
 
 procedure TBitVector.IndexOutOfBoundError(aIndex: SizeInt);
