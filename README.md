@@ -28,6 +28,7 @@ Contains:
     - queue(unit LGQueue)
     - deque(unit LGDeque)
     - vector(unit LGVector)
+    - vector of bits(unit LGVector)
     - priority queue(unit LGPriorityQueue)
     - full featured priority queue with key update and melding (unit LGPriorityQueue)
     - sorted list(unit LGList)
