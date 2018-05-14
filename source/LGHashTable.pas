@@ -802,6 +802,7 @@ type
     function  GetEnumerator: TEnumerator; //inline;
     function  GetRemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
+    procedure ClearItems;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
     function  Contains(aKey: TKey): Boolean;
@@ -3829,6 +3830,12 @@ end;
 procedure TGLiteIntHashTable.Clear;
 begin
   FList := nil;
+  FCount := 0;
+end;
+
+procedure TGLiteIntHashTable.ClearItems;
+begin
+  System.FillChar(FList[0], Capacity * NODE_SIZE, 0);
   FCount := 0;
 end;
 
