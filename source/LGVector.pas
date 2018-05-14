@@ -312,6 +312,39 @@ type
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
 
+  { TBitVector }
+
+  TBitVector = record
+  private
+  type
+    TBits = array of SizeUInt;
+  const
+{$IF DEFINED(CPU64)}
+    SIZE_SHIFT = 6;
+    SIZE_MASK  = 63;
+{$ELSEIF DEFINED(CPU32)}
+    SIZE_SHIFT = 5;
+    SIZE_MASK  = 31;
+{$ELSE}
+    SIZE_SHIFT = 4;
+    SIZE_MASK  = 15;
+{$ENDIF}
+  var
+    FBits: TBits;
+    FSize: SizeInt;
+    function  GetBit(aIndex: SizeInt): Boolean;
+    procedure SetBit(aIndex: SizeInt; aValue: Boolean);
+    function  TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean; inline;
+    function  SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
+    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
+    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
+    procedure CheckIndexRange(aIndex: SizeInt); inline;
+  public
+    class function NewVector(aSize: SizeInt): TBitVector; static;
+    property Size: SizeInt read FSize;
+    property Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
+  end;
+
   { TGVectorHelpUtil }
 
   generic TGVectorHelpUtil<T> = class
@@ -1650,6 +1683,61 @@ begin
   finally
     UnLock;
   end;
+end;
+
+{ TBitVector }
+
+function TBitVector.GetBit(aIndex: SizeInt): Boolean;
+begin
+  CheckIndexRange(aIndex);
+  Result := TestBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+end;
+
+procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+begin
+  CheckIndexRange(aIndex);
+  FBits[aIndex shr SIZE_SHIFT] := SetUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+end;
+
+function TBitVector.TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean;
+begin
+  Result := (aValue and (SizeUInt(1) shl aIndex)) <> 0;
+end;
+
+function TBitVector.SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
+begin
+  Result := aValue or SizeUInt(SizeUInt(1) shl aIndex);
+end;
+
+procedure TBitVector.IndexOutOfBoundError(aIndex: SizeInt);
+begin
+  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TBitVector.IndexInRange(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex < Size);
+end;
+
+procedure TBitVector.CheckIndexRange(aIndex: SizeInt);
+begin
+  if not IndexInRange(aIndex) then
+    IndexOutOfBoundError(aIndex);
+end;
+
+class function TBitVector.NewVector(aSize: SizeInt): TBitVector;
+var
+  Len: SizeInt;
+begin
+  if aSize > 0 then
+    begin
+      Result.FSize := aSize;
+      Len := aSize shr SIZE_SHIFT + Ord(aSize and SIZE_MASK <> 0);
+      System.SetLength(Result.FBits, Len);
+      System.FillChar(Result.FBits[0], Len * SizeOf(SizeUInt), 0);
+    end
+  else
+    Result.FSize := 0;
 end;
 
 { TGVectorHelpUtil }
