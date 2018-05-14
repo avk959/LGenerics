@@ -916,7 +916,7 @@ type
     function  CountOf(constref aKey: TKey): SizeInt; inline;
     function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
     function  FindNext(var aData: TSearchData): Boolean;
-    function  FindOrAdd(constref aKey: TKey; out aIndex: SizeInt): Boolean;
+    function  FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     function  Add(constref e: TEntry): SizeInt; inline;
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
@@ -4712,7 +4712,7 @@ begin
   Result := False;
 end;
 
-function TGLiteHashList2.FindOrAdd(constref aKey: TKey; out aIndex: SizeInt): Boolean;
+function TGLiteHashList2.FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
@@ -4728,6 +4728,7 @@ begin
         Expand;
       aIndex := DoAddHash(h);
     end;
+  p := @FNodeList[aIndex].Data;
 end;
 
 function TGLiteHashList2.Add(constref e: TEntry): SizeInt;
@@ -4760,10 +4761,11 @@ end;
 function TGLiteHashList2.AddUniq(constref e: TEntry): Boolean;
 var
   I: SizeInt;
+  p: PEntry;
 begin
-  Result := not FindOrAdd(e.Key, I);
+  Result := not FindOrAdd(e.Key, p, I);
   if Result then
-    FNodeList[I].Data := e;
+    p^ := e;
 end;
 
 function TGLiteHashList2.AddAllUniq(constref a: array of TEntry): SizeInt;
