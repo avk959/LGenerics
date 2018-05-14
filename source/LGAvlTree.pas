@@ -407,7 +407,7 @@ type
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class constructor Init;
     class operator Initialize(var t: TGLiteAvlTree);
-    class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree); inline;
+    class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
   public
     function  GetEnumerator: TEnumerator;
     procedure Clear;
