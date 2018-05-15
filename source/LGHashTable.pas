@@ -799,7 +799,7 @@ type
     class operator Initialize(var ht: TGLiteIntHashTable);
     class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable); inline;
   public
-    function  GetEnumerator: TEnumerator; //inline;
+    function  GetEnumerator: TEnumerator; inline;
     function  GetRemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
     procedure ClearItems;
@@ -809,6 +809,7 @@ type
     //return True if aKey found, otherwise insert garbage entry and return False;
     function  FindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
     function  Find(aKey: TKey; out aPos: SizeInt): PEntry;
+    function  FindFirstKey(out aKey: TKey): Boolean;
     function  Remove(aKey: TKey): Boolean;
     procedure RemoveAt(aPos: SizeInt);
     property  Count: SizeInt read FCount;
@@ -3896,6 +3897,20 @@ begin
       if aPos >= 0 then
         Result := @FList[aPos].Data;
     end;
+end;
+
+function TGLiteIntHashTable.FindFirstKey(out aKey: TKey): Boolean;
+var
+  I: SizeInt;
+begin
+  if Count > 0 then
+    for I := 0 to Pred(Capacity) do
+      if FList[I].Hash <> 0 then
+        begin
+          aKey := FList[I].Data.Key;
+          exit(True);
+        end;
+  Result := False;
 end;
 
 function TGLiteIntHashTable.Remove(aKey: TKey): Boolean;
