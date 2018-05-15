@@ -3727,7 +3727,7 @@ end;
 
 procedure TGLiteIntHashTable.DoRemove(aIndex, aShift: SizeInt);
 var
-  {I, }h, Gap, Mask: SizeInt;
+  h, Gap, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   FList[aIndex].Hash := 0;
@@ -3747,23 +3747,6 @@ begin
       end;
     aIndex := Succ(aIndex) and Mask;
   until False;
-  //for I := 0 to Mask do
-  //  begin
-  //    h := FList[aIndex].Hash;
-  //    if h <> 0 then
-  //      begin
-  //        h := h shr aShift;
-  //        if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-  //          begin
-  //            TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-  //            TFakeNode(FList[aIndex]) := Default(TFakeNode);
-  //            Gap := aIndex;
-  //          end;
-  //        aIndex := Succ(aIndex) and Mask;
-  //      end
-  //    else
-  //      break;
-  //  end;
 end;
 
 class function TGLiteIntHashTable.Bsr(aValue: SizeInt): SizeInt;
