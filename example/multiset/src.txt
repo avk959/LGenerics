@@ -10680,7 +10680,7 @@ type
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class constructor Init;
     class operator Initialize(var t: TGLiteAvlTree);
-    class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree); inline;
+    class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
   public
     function  GetEnumerator: TEnumerator;
     procedure Clear;
@@ -23007,13 +23007,12 @@ type
 
   var
     FTable: THashTable;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetCount: SizeInt; override;
-  { The capacity of the hashmap is treated as the number of entries that can be written without rehashing }
     function  GetCapacity: SizeInt; override;
     function  GetFillRatio: Single;
     function  GetLoadFactor: Single;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  GetTableSize: SizeInt; inline;
     function  Find(constref aKey: TKey): PEntry; override;
     //return True if aKey found, otherwise insert (garbage) pair and return False;
     function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean; override;
@@ -23053,7 +23052,8 @@ type
     function  Clone: TCustomHashMap; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+  { The number of entries that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGBaseHashMapLP implements open addressing hashmap with linear probing;
@@ -23313,9 +23313,9 @@ type
     function  Find(constref aKey: TKey): PEntry; inline;
     //returns True if aKey found, otherwise inserts (garbage) entry and returns False;
     function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
-    function  GetTableSize: SizeInt; inline;
     function  GetValue(const aKey: TKey): TValue; inline;
     procedure SetLoadFactor(aValue: Single); inline;
     function  SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
@@ -23375,7 +23375,8 @@ type
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+  { The number of entries that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
 implementation
@@ -23470,6 +23471,11 @@ end;
 
 { TGCustomHashMap }
 
+function TGCustomHashMap.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGCustomHashMap.GetCount: SizeInt;
 begin
   Result := FTable.Count;
@@ -23493,11 +23499,6 @@ end;
 procedure TGCustomHashMap.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
-end;
-
-function TGCustomHashMap.GetTableSize: SizeInt;
-begin
-  Result := FTable.TableSize;
 end;
 
 function TGCustomHashMap.Find(constref aKey: TKey): PEntry;
@@ -24160,6 +24161,11 @@ begin
     p^.Key := aKey;
 end;
 
+function TGLiteHashMapLP.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGLiteHashMapLP.GetFillRatio: Single;
 begin
   Result := FTable.FillRatio;
@@ -24168,11 +24174,6 @@ end;
 function TGLiteHashMapLP.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
-end;
-
-function TGLiteHashMapLP.GetTableSize: SizeInt;
-begin
-  Result := FTable.Size;
 end;
 
 function TGLiteHashMapLP.GetValue(const aKey: TKey): TValue;
@@ -24409,7 +24410,7 @@ end;
 function TGLiteHashMapLP.RemoveIf(aTest: TKeyTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -24421,7 +24422,7 @@ end;
 function TGLiteHashMapLP.RemoveIf(aTest: TOnKeyTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -24433,7 +24434,7 @@ end;
 function TGLiteHashMapLP.RemoveIf(aTest: TNestKeyTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -24462,7 +24463,7 @@ var
   e: TEntry;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         e := Current^;
@@ -24484,7 +24485,7 @@ var
   e: TEntry;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         e := Current^;
@@ -24506,7 +24507,7 @@ var
   e: TEntry;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         e := Current^;
@@ -24524,7 +24525,7 @@ end;
 
 procedure TGLiteHashMapLP.RetainAll(aCollection: IKeyCollection);
 begin
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aCollection.NonContains(Current^.Key) then
         RemoveCurrent;
@@ -24635,8 +24636,7 @@ type
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  GetTableSize: SizeInt; inline;
-  { The capacity of the hash multiset is treated as the number of entries that can be written without rehashing }
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetCapacity: SizeInt; override;
     function  DoGetEnumerator: TCustomEnumerator; override;
     procedure DoClear; override;
@@ -24681,7 +24681,8 @@ type
     function  Clone: TCustomHashMultiSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+  { The number of entries that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGBaseHashMultiSetLP implements open addressing hash multiset with linear probing;
@@ -24923,9 +24924,9 @@ type
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetEntryCount: SizeInt; inline;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
-    function  GetTableSize: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
     function  GetDistinctEnumerator: TDistinctEnumerator; inline;
     function  GetEntryEnumerator: TEntryEnumerator; inline;
@@ -25005,7 +25006,8 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+  { The number of entries that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   { will return 0 if not contains an element aValue;
     will raise EArgumentException if one try to set negative multiplicity of a aValue }
     property  Counts[const aValue: T]: SizeInt read GetKeyCount write SetKeyCount; default;
@@ -25113,6 +25115,11 @@ end;
 
 { TGCustomHashMultiSet }
 
+function TGCustomHashMultiSet.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 procedure TGCustomHashMultiSet.EntryRemoved(p: PEntry);
 begin
   FCount -= p^.Count;
@@ -25131,11 +25138,6 @@ end;
 procedure TGCustomHashMultiSet.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
-end;
-
-function TGCustomHashMultiSet.GetTableSize: SizeInt;
-begin
-  Result := FTable.TableSize;
 end;
 
 function TGCustomHashMultiSet.GetCapacity: SizeInt;
@@ -25909,6 +25911,11 @@ begin
   Result := FTable.Count;
 end;
 
+function TGLiteHashMultiSetLP.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGLiteHashMultiSetLP.GetCapacity: SizeInt;
 begin
   Result := FTable.Capacity;
@@ -25922,11 +25929,6 @@ end;
 function TGLiteHashMultiSetLP.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
-end;
-
-function TGLiteHashMultiSetLP.GetTableSize: SizeInt;
-begin
-  Result := FTable.Size;
 end;
 
 procedure TGLiteHashMultiSetLP.SetLoadFactor(aValue: Single);
@@ -26179,7 +26181,7 @@ var
   p: PEntry;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -26197,7 +26199,7 @@ var
   p: PEntry;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -26215,7 +26217,7 @@ var
   p: PEntry;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -26252,7 +26254,7 @@ var
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -26280,7 +26282,7 @@ var
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -26308,7 +26310,7 @@ var
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       begin
         p := Current;
@@ -26414,7 +26416,7 @@ var
   p: PEntry;
 begin
   if @aSet <> @Self then
-    with FTable.RemovableEnumerator do
+    with FTable.GetRemovableEnumerator do
       while MoveNext do
         begin
           p := Current;
@@ -26639,12 +26641,11 @@ type
   var
     FTable: THashTable;
     function  GetCount: SizeInt; override;
-  { The capacity of the hashset is treated as the number of elements that can be written without rehashing }
     function  GetCapacity: SizeInt; override;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  GetTableSize: SizeInt; inline;
     function  DoGetEnumerator: TCustomEnumerator; override;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
@@ -26683,7 +26684,8 @@ type
     function  Clone: TCustomHashSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+  { The number of elements that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGBaseHashSetLP implements open addressing hashset with linear probing;
@@ -26952,7 +26954,7 @@ type
     function  GetCount: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
-    function  GetTableSize: SizeInt; inline;
+    function  GetExpandTreshold: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); inline;
   public
     class operator +(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
@@ -27011,7 +27013,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
 implementation
@@ -27077,6 +27079,11 @@ end;
 
 { TGCustomHashSet }
 
+function TGCustomHashSet.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGCustomHashSet.GetCount: SizeInt;
 begin
   Result := FTable.Count;
@@ -27100,11 +27107,6 @@ end;
 procedure TGCustomHashSet.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
-end;
-
-function TGCustomHashSet.GetTableSize: SizeInt;
-begin
-  Result := FTable.TableSize;
 end;
 
 function TGCustomHashSet.DoGetEnumerator: TCustomEnumerator;
@@ -27842,9 +27844,9 @@ begin
   Result := FTable.LoadFactor;
 end;
 
-function TGLiteHashSetLP.GetTableSize: SizeInt;
+function TGLiteHashSetLP.GetExpandTreshold: SizeInt;
 begin
-  Result := FTable.Size;
+  Result := FTable.ExpandTreshold;
 end;
 
 procedure TGLiteHashSetLP.SetLoadFactor(aValue: Single);
@@ -28092,7 +28094,7 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -28104,7 +28106,7 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TOnTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -28116,7 +28118,7 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TNestTest): SizeInt;
 begin
   Result := 0;
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -28135,7 +28137,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -28153,7 +28155,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -28171,7 +28173,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -28186,7 +28188,7 @@ end;
 
 procedure TGLiteHashSetLP.RetainAll(aCollection: ICollection);
 begin
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aCollection.NonContains(Current^.Key) then
         RemoveCurrent;
@@ -28251,7 +28253,7 @@ end;
 
 procedure TGLiteHashSetLP.Intersect(constref aSet: TGLiteHashSetLP);
 begin
-  with FTable.RemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aSet.NonContains(Current^.Key) then
         RemoveCurrent;
@@ -28345,12 +28347,10 @@ type
     FExpandTreshold: SizeInt;
     FLoadFactor: Single;
     procedure AllocList(aCapacity: SizeInt); virtual; abstract;
+    function  GetCapacity: SizeInt; virtual; abstract;
     procedure SetLoadFactor(aValue: Single); virtual; abstract;
-    function  GetTableSize: SizeInt;  virtual; abstract;
     function  GetFillRatio: Single;
     function  RestrictLoadFactor(aValue: Single): Single; inline;
-    function  GetCapacity: SizeInt; inline;
-    property  ExpandTreshold: SizeInt read FExpandTreshold;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; virtual; abstract;
   public
   type
@@ -28392,12 +28392,11 @@ type
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     function  RemoveIf(aTest: TEntryTest; aOnRemove: TEntryEvent = nil): SizeInt; virtual; abstract;
     property  Count: SizeInt read FCount;
-  { The capacity of the table is the number of elements that can be written without rehashing,
-    so real capacity is ExpandTreshold, isn't it? }
+  { The number of elements that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
   end;
 
   { TGOpenAddressing }
@@ -28442,7 +28441,7 @@ type
     class function NodeUsed(constref aNode: TNode): Boolean; static; inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
     procedure AllocList(aCapacity: SizeInt); override;
-    function  GetTableSize: SizeInt; override;
+    function  GetCapacity: SizeInt; override;
     function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
     procedure UpdateExpandTreshold; inline;
@@ -28602,7 +28601,7 @@ type
     FTail: PNode;
     FNodeManager: TNodeManager;
     procedure AllocList(aCapacity: SizeInt); override;
-    function  GetTableSize: SizeInt; override;
+    function  GetCapacity: SizeInt; override;
     function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
     function  NewNode: PNode; inline;
@@ -28694,7 +28693,7 @@ type
     FList: TChainList;
     FNodeManager: TNodeManager;
     procedure AllocList(aCapacity: SizeInt); override;
-    function  GetTableSize: SizeInt; override;
+    function  GetCapacity: SizeInt; override;
     function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
     function  NewNode: PNode; inline;
@@ -28786,10 +28785,9 @@ type
     FExpandTreshold: SizeInt;
     FLoadFactor: Single;
     function  RestrictLoadFactor(aValue: Single): Single; inline;
-    function  ListCapacity: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
     procedure UpdateExpandTreshold; inline;
     procedure SetLoadFactor(aValue: Single);
-    function  GetCapacity: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetTableSize: SizeInt; inline;
     procedure AllocList(aCapacity: SizeInt);
@@ -28798,7 +28796,6 @@ type
     procedure Expand;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    property  ExpandTreshold: SizeInt read FExpandTreshold;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
@@ -28818,7 +28815,7 @@ type
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
     function  GetEnumerator: TEnumerator;
     procedure Clear;
-    function  EnsureCapacity(aValue: SizeInt): Boolean;
+    procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
     function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
@@ -28826,9 +28823,10 @@ type
     procedure RemoveAt(aPos: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
+  { The number of entries that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
   end;
 
   { TGLiteHashTableLP }
@@ -28904,16 +28902,14 @@ type
     procedure SetLoadFactor(aValue: Single);
     function  GetCapacity: SizeInt; inline;
     function  GetFillRatio: Single; inline;
-    function  GetSize: SizeInt; inline;
     procedure AllocList(aCapacity: SizeInt);
     procedure Rehash(var aTarget: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    property  ExpandTreshold: SizeInt read FExpandTreshold;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
-    class function EstimateSize(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
+    class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteHashTableLP);
     class operator Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP); inline;
@@ -28924,7 +28920,7 @@ type
     MIN_LOAD_FACTOR: Single     = 0.25;
 
     function  GetEnumerator: TEnumerator; inline;
-    function  RemovableEnumerator: TRemovableEnumerator; inline;
+    function  GetRemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
@@ -28937,9 +28933,10 @@ type
   { The capacity of the table is the number of elements that can be written without rehashing,
     so real capacity is ExpandTreshold }
     property  Capacity: SizeInt read GetCapacity;
+  { The number of entries that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read FExpandTreshold;
     property  LoadFactor: Single read FLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  Size: SizeInt read GetSize; //todo: Split(predicate): TGLiteHashTableLP; ???
   end;
 
   { TGLiteChainHashTable: node based hash table with load factor 1.0;
@@ -29036,7 +29033,8 @@ type
     INITIAL_SIZE            = 16;
 
   type
-    TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
+    TFakeNode  = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
+    PHashTable = ^TGLiteIntHashTable;
 
   public
   type
@@ -29048,9 +29046,23 @@ type
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-      procedure Init(constref aList: TNodeList); inline;
+      procedure Init(aTable: PHashTable); inline;
     public
       function  MoveNext: Boolean;
+      procedure Reset; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
+    TRemovableEnumerator = record
+    private
+      FEnum: TEnumerator;
+      FTable: PHashTable;
+      FShift: SizeInt;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(aTable: PHashTable); inline;
+    public
+      function  MoveNext: Boolean;
+      procedure RemoveCurrent; inline;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
     end;
@@ -29058,38 +29070,41 @@ type
   private
     FList: TNodeList;
     FCount: SizeInt;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
-    function  ListCapacity: SizeInt; inline;
-    function  CalcShift(aListSize: SizeInt): SizeInt; inline;
-    function  ListIndex(aHash: SizeInt): SizeInt; inline;
+    function  CurrShift: SizeInt; inline;
     procedure AllocList(aCapacity: SizeInt);
     procedure Rehash(var aTarget: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoFind(aKey: TKey; aKeyHash, Shift: SizeInt): SizeInt;
-    procedure DoRemove(aIndex, Shift: SizeInt);
+    function  DoFind(aKey: TKey; aKeyHash, aShift: SizeInt): SizeInt;
+    procedure DoRemove(aIndex, aShift: SizeInt);
     class function Bsr(aValue: SizeInt): SizeInt; static; inline;
     class function HashCode(aValue: TKey): SizeInt; static; inline;
+    class function CalcShift(aListSize: SizeInt): SizeInt; static; inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteIntHashTable);
     class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable); inline;
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetRemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
+    procedure ClearItems;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
     function  Contains(aKey: TKey): Boolean;
     //return True if aKey found, otherwise insert garbage entry and return False;
     function  FindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
     function  Find(aKey: TKey; out aPos: SizeInt): PEntry;
+    function  FindFirstKey(out aKey: TKey): Boolean;
     function  Remove(aKey: TKey): Boolean;
     procedure RemoveAt(aPos: SizeInt);
     property  Count: SizeInt read FCount;
-  { The capacity of the table is the number of elements that can be written without rehashing,
-    so real capacity is ExpandTreshold }
     property  Capacity: SizeInt read GetCapacity;
-    property  Size: SizeInt read ListCapacity;
+  { The number of entries that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
+    property  Size: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -29101,7 +29116,7 @@ function TGCustomHashTable.GetFillRatio: Single;
 var
   c: SizeInt;
 begin
-  c := GetTableSize;
+  c := Capacity;
   if c > 0 then
     Result := Count / c
   else
@@ -29111,11 +29126,6 @@ end;
 function TGCustomHashTable.RestrictLoadFactor(aValue: Single): Single;
 begin
   Result := Math.Min(Math.Max(aValue, MinLoadFactor), MaxLoadFactor);
-end;
-
-function TGCustomHashTable.GetCapacity: SizeInt;
-begin
-  Result := Trunc(TableSize * LoadFactor);
 end;
 
 class function TGCustomHashTable.MinLoadFactor: Single;
@@ -29213,7 +29223,7 @@ begin
   UpdateExpandTreshold;
 end;
 
-function TGOpenAddressing.GetTableSize: SizeInt;
+function TGOpenAddressing.GetCapacity: SizeInt;
 begin
   Result := ListCapacity;
 end;
@@ -29324,7 +29334,6 @@ end;
 
 class function TGOpenAddressing.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
 begin
-  //aCount := Math.Min(Math.Max(aCount, 0), MaxCapacity);
   if aCount > 0 then
     Result := LGUtils.RoundUpTwoPower(Math.Min(Ceil64(Double(aCount) / aLoadFactor), MAX_CAPACITY))
   else
@@ -29364,12 +29373,16 @@ procedure TGOpenAddressing.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
-  if aValue > ExpandTreshold then
+  if aValue <= ExpandTreshold then
+    exit;
+  if aValue <= MAX_CAPACITY then
     begin
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
       if NewCapacity <> ListCapacity then
         Resize(NewCapacity);
-    end;
+    end
+  else
+    raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
 end;
 
 procedure TGOpenAddressing.TrimToFit;
@@ -29890,7 +29903,7 @@ begin
   UpdateExpandTreshold;
 end;
 
-function TGOrderedHashTable.GetTableSize: SizeInt;
+function TGOrderedHashTable.GetCapacity: SizeInt;
 begin
   Result := ListCapacity;
 end;
@@ -30398,7 +30411,7 @@ begin
   UpdateExpandTreshold;
 end;
 
-function TGChainHashTable.GetTableSize: SizeInt;
+function TGChainHashTable.GetCapacity: SizeInt;
 begin
   Result := ListCapacity;
 end;
@@ -30898,15 +30911,15 @@ begin
   Result := Math.Min(Math.Max(aValue, MIN_LOAD_FACTOR), MAX_LOAD_FACTOR);
 end;
 
-function TGHashTableLP.ListCapacity: SizeInt;
+function TGHashTableLP.GetCapacity: SizeInt;
 begin
   Result := System.Length(FList);
 end;
 
 procedure TGHashTableLP.UpdateExpandTreshold;
 begin
-  if ListCapacity < MAX_CAPACITY then
-    FExpandTreshold := Trunc(ListCapacity * LoadFactor)
+  if GetCapacity < MAX_CAPACITY then
+    FExpandTreshold := Trunc(GetCapacity * LoadFactor)
   else
     FExpandTreshold := MAX_CAPACITY;
 end;
@@ -30923,16 +30936,11 @@ begin
     end;
 end;
 
-function TGHashTableLP.GetCapacity: SizeInt;
-begin
-  Result := Trunc(ListCapacity * LoadFactor);
-end;
-
 function TGHashTableLP.GetFillRatio: Single;
 var
   c: SizeInt;
 begin
-  c := ListCapacity;
+  c := GetCapacity;
   if c > 0 then
     Result := Count / c
   else
@@ -30941,7 +30949,7 @@ end;
 
 function TGHashTableLP.GetTableSize: SizeInt;
 begin
-  Result := ListCapacity;
+  Result := GetCapacity;
 end;
 
 procedure TGHashTableLP.AllocList(aCapacity: SizeInt);
@@ -30999,7 +31007,7 @@ procedure TGHashTableLP.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := ListCapacity;
+  OldCapacity := GetCapacity;
   if OldCapacity > 0 then
     begin
       NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
@@ -31141,23 +31149,20 @@ begin
   FExpandTreshold := 0;
 end;
 
-function TGHashTableLP.EnsureCapacity(aValue: SizeInt): Boolean;
+procedure TGHashTableLP.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
-  if aValue > ExpandTreshold then
+  if aValue <= ExpandTreshold then
+    exit;
+  if aValue <= MAX_CAPACITY then
     begin
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
-      if NewCapacity <> ListCapacity then
-        try
-          Resize(NewCapacity);
-          Result := True;
-        except
-          Result := False;
-        end;
+      if NewCapacity <> Capacity then
+        Resize(NewCapacity);
     end
   else
-    Result := True;
+    raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
 end;
 
 procedure TGHashTableLP.TrimToFit;
@@ -31167,7 +31172,7 @@ begin
   if Count > 0 then
     begin
       NewCapacity := EstimateCapacity(Count, LoadFactor);
-      if NewCapacity < ListCapacity then
+      if NewCapacity < GetCapacity then
         Resize(NewCapacity);
     end
   else
@@ -31190,7 +31195,7 @@ begin
           Expand;
           aPos := DoFind(aKey, h);
         end;
-      if aPos > SLOT_NOT_FOUND then
+      if aPos <> SLOT_NOT_FOUND then
         begin
           aPos := not aPos;
           FList[aPos].Hash := h or USED_FLAG;
@@ -31301,8 +31306,8 @@ end;
 
 procedure TGLiteHashTableLP.UpdateExpandTreshold;
 begin
-  if Size < MAX_CAPACITY then
-    FExpandTreshold := Trunc(Size * LoadFactor)
+  if Capacity < MAX_CAPACITY then
+    FExpandTreshold := Trunc(Capacity * LoadFactor)
   else
     FExpandTreshold := MAX_CAPACITY;
 end;
@@ -31321,23 +31326,18 @@ end;
 
 function TGLiteHashTableLP.GetCapacity: SizeInt;
 begin
-  Result := ExpandTreshold;
+  Result := System.Length(FList);
 end;
 
 function TGLiteHashTableLP.GetFillRatio: Single;
 var
   sz: SizeInt;
 begin
-  sz := Size;
+  sz := Capacity;
   if sz > 0 then
     Result := Count / sz
   else
     Result := 0.0;
-end;
-
-function TGLiteHashTableLP.GetSize: SizeInt;
-begin
-  Result := System.Length(FList);
 end;
 
 procedure TGLiteHashTableLP.AllocList(aCapacity: SizeInt);
@@ -31393,14 +31393,14 @@ end;
 
 procedure TGLiteHashTableLP.Expand;
 var
-  NewSize, OldSize: SizeInt;
+  NewCapacity, OldCapacity: SizeInt;
 begin
-  OldSize := Size;
-  if OldSize > 0 then
+  OldCapacity := Capacity;
+  if OldCapacity > 0 then
     begin
-      NewSize := Math.Min(MAX_CAPACITY, OldSize shl 1);
-      if NewSize > OldSize then
-        Resize(NewSize);
+      NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
+      if NewCapacity > OldCapacity then
+        Resize(NewCapacity);
     end
   else
     AllocList(DEFAULT_CONTAINER_CAPACITY);
@@ -31461,7 +31461,7 @@ begin
   System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
 end;
 
-class function TGLiteHashTableLP.EstimateSize(aCount: SizeInt; aLoadFactor: Single): SizeInt;
+class function TGLiteHashTableLP.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
 begin
   if aCount > 0 then
     Result := LGUtils.RoundUpTwoPower(Math.Min(Ceil64(Double(aCount) / aLoadFactor), MAX_CAPACITY))
@@ -31496,7 +31496,7 @@ begin
   Result.Init(FList);
 end;
 
-function TGLiteHashTableLP.RemovableEnumerator: TRemovableEnumerator;
+function TGLiteHashTableLP.GetRemovableEnumerator: TRemovableEnumerator;
 begin
   Result.Init(@Self);
 end;
@@ -31510,25 +31510,29 @@ end;
 
 procedure TGLiteHashTableLP.EnsureCapacity(aValue: SizeInt);
 var
-  NewSize: SizeInt;
+  NewCapacity: SizeInt;
 begin
-  if aValue > ExpandTreshold then
+  if aValue <= ExpandTreshold then
+    exit;
+  if aValue <= MAX_CAPACITY then
     begin
-      NewSize := EstimateSize(aValue, LoadFactor);
-      if NewSize <> Size then
-        Resize(NewSize);
-    end;
+      NewCapacity := EstimateCapacity(aValue, LoadFactor);
+      if NewCapacity <> Capacity then
+        Resize(NewCapacity);
+    end
+  else
+    raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
 procedure TGLiteHashTableLP.TrimToFit;
 var
-  NewSize: SizeInt;
+  NewCapacity: SizeInt;
 begin
   if Count > 0 then
     begin
-      NewSize := EstimateSize(Count, LoadFactor);
-      if NewSize < Size then
-        Resize(NewSize);
+      NewCapacity := EstimateCapacity(Count, LoadFactor);
+      if NewCapacity < Capacity then
+        Resize(NewCapacity);
     end
   else
     Clear;
@@ -31550,7 +31554,7 @@ begin
           Expand;
           aPos := DoFind(aKey, h);
         end;
-      if aPos > SLOT_NOT_FOUND then
+      if aPos <> SLOT_NOT_FOUND then
         begin
           aPos := not aPos;
           FList[aPos].Hash := h or USED_FLAG;
@@ -31858,10 +31862,10 @@ begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-procedure TGLiteIntHashTable.TEnumerator.Init(constref aList: TNodeList);
+procedure TGLiteIntHashTable.TEnumerator.Init(aTable: PHashTable);
 begin
-  FList := aList;
-  FLastIndex := System.High(aList);
+  FList := aTable^.FList;
+  FLastIndex := System.High(FList);
   FCurrIndex := -1;
 end;
 
@@ -31880,26 +31884,51 @@ begin
   FCurrIndex := -1;
 end;
 
+{ TGLiteIntHashTable.TRemovableEnumerator }
+
+function TGLiteIntHashTable.TRemovableEnumerator.GetCurrent: PEntry;
+begin
+  Result := FEnum.Current;
+end;
+
+procedure TGLiteIntHashTable.TRemovableEnumerator.Init(aTable: PHashTable);
+begin
+  FTable := aTable;
+  FEnum := aTable^.GetEnumerator;
+  FShift := aTable^.CurrShift;
+end;
+
+function TGLiteIntHashTable.TRemovableEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGLiteIntHashTable.TRemovableEnumerator.RemoveCurrent;
+begin
+  FTable^.DoRemove(FEnum.FCurrIndex, FShift);
+  Dec(FEnum.FCurrIndex);
+end;
+
+procedure TGLiteIntHashTable.TRemovableEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
 { TGLiteIntHashTable }
 
-function TGLiteIntHashTable.GetCapacity: SizeInt;
+function TGLiteIntHashTable.GetExpandTreshold: SizeInt;
 begin
   Result := System.Length(FList) shr 1;
 end;
 
-function TGLiteIntHashTable.ListCapacity: SizeInt;
+function TGLiteIntHashTable.GetCapacity: SizeInt;
 begin
   Result := System.Length(FList);
 end;
 
-function TGLiteIntHashTable.CalcShift(aListSize: SizeInt): SizeInt;
+function TGLiteIntHashTable.CurrShift: SizeInt;
 begin
-  Result := (BITNESS - Bsr(aListSize));
-end;
-
-function TGLiteIntHashTable.ListIndex(aHash: SizeInt): SizeInt;
-begin
-  Result := aHash shr CalcShift(ListCapacity);
+  Result := CalcShift(Capacity);
 end;
 
 procedure TGLiteIntHashTable.AllocList(aCapacity: SizeInt);
@@ -31956,7 +31985,7 @@ procedure TGLiteIntHashTable.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := ListCapacity;
+  OldCapacity := GetCapacity;
   if OldCapacity > 0 then
     begin
       NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
@@ -31967,13 +31996,13 @@ begin
     AllocList(INITIAL_SIZE);
 end;
 
-function TGLiteIntHashTable.DoFind(aKey: TKey; aKeyHash, Shift: SizeInt): SizeInt;
+function TGLiteIntHashTable.DoFind(aKey: TKey; aKeyHash, aShift: SizeInt): SizeInt;
 var
   I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   Result := SLOT_NOT_FOUND;
-  Pos := aKeyHash shr Shift;
+  Pos := aKeyHash shr aShift;
   for I := 0 to Mask do
     begin
       if FList[Pos].Hash = 0 then // node empty => key not found
@@ -31985,9 +32014,9 @@ begin
     end;
 end;
 
-procedure TGLiteIntHashTable.DoRemove(aIndex, Shift: SizeInt);
+procedure TGLiteIntHashTable.DoRemove(aIndex, aShift: SizeInt);
 var
-  I, h, Gap, Mask: SizeInt;
+  h, Gap, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   FList[aIndex].Hash := 0;
@@ -31995,23 +32024,18 @@ begin
   Gap := aIndex;
   aIndex := Succ(aIndex) and Mask;
   Dec(FCount);
-  for I := 0 to Mask do
-    begin
-      h := FList[aIndex].Hash;
-      if h <> 0 then
-        begin
-          h := h shr Shift;
-          if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-            begin
-              TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
-              TFakeNode(FList[aIndex]) := Default(TFakeNode);
-              Gap := aIndex;
-            end;
-          aIndex := Succ(aIndex) and Mask;
-        end
-      else
-        break;
-    end;
+  repeat
+    if FList[aIndex].Hash = 0 then
+      break;
+    h := FList[aIndex].Hash shr aShift;
+    if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+      begin
+        TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
+        TFakeNode(FList[aIndex]) := Default(TFakeNode);
+        Gap := aIndex;
+      end;
+    aIndex := Succ(aIndex) and Mask;
+  until False;
 end;
 
 class function TGLiteIntHashTable.Bsr(aValue: SizeInt): SizeInt;
@@ -32034,6 +32058,11 @@ begin
 {$ELSE}
   Result := SizeInt(aValue) * SizeInt($9e37);
 {$ENDIF}
+end;
+
+class function TGLiteIntHashTable.CalcShift(aListSize: SizeInt): SizeInt;
+begin
+  Result := (BITNESS - Bsr(aListSize));
 end;
 
 class function TGLiteIntHashTable.NewList(aCapacity: SizeInt): TNodeList;
@@ -32062,7 +32091,12 @@ end;
 
 function TGLiteIntHashTable.GetEnumerator: TEnumerator;
 begin
-  Result.Init(FList);
+  Result.Init(@Self);
+end;
+
+function TGLiteIntHashTable.GetRemovableEnumerator: TRemovableEnumerator;
+begin
+  Result.Init(@Self);
 end;
 
 procedure TGLiteIntHashTable.Clear;
@@ -32071,16 +32105,26 @@ begin
   FCount := 0;
 end;
 
+procedure TGLiteIntHashTable.ClearItems;
+begin
+  System.FillChar(FList[0], Capacity * NODE_SIZE, 0);
+  FCount := 0;
+end;
+
 procedure TGLiteIntHashTable.EnsureCapacity(aValue: SizeInt);
 var
   NewCapacity: SizeInt;
 begin
-  if aValue > Capacity then
+  if aValue <= ExpandTreshold then
+    exit;
+  if aValue <= MAX_CAPACITY then
     begin
-      NewCapacity :=  Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue shl 1));
-      if NewCapacity <> ListCapacity then
+      NewCapacity := LGUtils.RoundUpTwoPower(aValue shl 1);
+      if NewCapacity <> Capacity then
         Resize(NewCapacity);
-    end;
+    end
+  else
+    raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
 procedure TGLiteIntHashTable.TrimToFit;
@@ -32090,7 +32134,7 @@ begin
   if Count = 0 then
     begin
       NewCapacity := LGUtils.RoundUpTwoPower(Count shl 1);
-      if NewCapacity < ListCapacity then
+      if NewCapacity < GetCapacity then
         Resize(NewCapacity);
     end
   else
@@ -32106,24 +32150,24 @@ end;
 
 function TGLiteIntHashTable.FindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
-  h: SizeInt;
+  Hash: SizeInt;
 begin
   if FList = nil then
     AllocList(INITIAL_SIZE);
-  h := HashCode(aKey) or USED_FLAG;
-  aPos := DoFind(aKey, h, CalcShift(ListCapacity));
+  Hash := HashCode(aKey) or USED_FLAG;
+  aPos := DoFind(aKey, Hash, CalcShift(GetCapacity));
   Result := aPos >= 0; // key found?
   if not Result then   // key not found, will add new slot
     begin
-      if Count >= Capacity then
+      if Count >= ExpandTreshold then
         begin
           Expand;
-          aPos := DoFind(aKey, h, CalcShift(ListCapacity));
+          aPos := DoFind(aKey, Hash, CalcShift(GetCapacity));
         end;
       if aPos <> SLOT_NOT_FOUND then
         begin
           aPos := not aPos;
-          FList[aPos].Hash := h;
+          FList[aPos].Hash := Hash;
           Inc(FCount);
         end
       else
@@ -32137,10 +32181,24 @@ begin
   Result := nil;
   if Count > 0 then
     begin
-      aPos := DoFind(aKey, HashCode(aKey), CalcShift(ListCapacity));
+      aPos := DoFind(aKey, HashCode(aKey), CalcShift(GetCapacity));
       if aPos >= 0 then
         Result := @FList[aPos].Data;
     end;
+end;
+
+function TGLiteIntHashTable.FindFirstKey(out aKey: TKey): Boolean;
+var
+  I: SizeInt;
+begin
+  if Count > 0 then
+    for I := 0 to Pred(Capacity) do
+      if FList[I].Hash <> 0 then
+        begin
+          aKey := FList[I].Data.Key;
+          exit(True);
+        end;
+  Result := False;
 end;
 
 function TGLiteIntHashTable.Remove(aKey: TKey): Boolean;
@@ -32149,7 +32207,7 @@ var
 begin
   if Count > 0 then
     begin
-      Shift := CalcShift(ListCapacity);
+      Shift := CalcShift(GetCapacity);
       Pos := DoFind(aKey, HashCode(aKey), Shift);
       Result := Pos >= 0;
       if Result then
@@ -32162,7 +32220,7 @@ end;
 procedure TGLiteIntHashTable.RemoveAt(aPos: SizeInt);
 begin
   if (aPos >= 0) and (aPos <= System.High(FList)) then
-    DoRemove(aPos, CalcShift(ListCapacity));
+    DoRemove(aPos, CalcShift(GetCapacity));
 end;
 
 end.
@@ -34625,7 +34683,8 @@ type
   public
   type
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
-    TEntryArray = array of TEntry;
+    TEntryArray      = array of TEntry;
+    PEntry           = ^TEntry;
 
     TEnumerator = record
     private
@@ -34684,7 +34743,7 @@ type
     function  Find(constref aKey: TKey; aHash: SizeInt): SizeInt;
     function  GetCountOf(constref aKey: TKey): SizeInt;
     function  DoAdd(constref e: TEntry): SizeInt;
-    function  DoAdd(constref e: TEntry; aHash: SizeInt): SizeInt;
+    function  DoAddHash(aHash: SizeInt): SizeInt;
     procedure DoInsert(aIndex: SizeInt; constref e: TEntry);
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
@@ -34694,6 +34753,7 @@ type
     function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
+    function  GetItemRef(aIndex: SizeInt): PEntry;
     class constructor Init;
     class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
@@ -34714,7 +34774,7 @@ type
     function  CountOf(constref aKey: TKey): SizeInt; inline;
     function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
     function  FindNext(var aData: TSearchData): Boolean;
-    function  FindOrAdd(constref e: TEntry; out aIndex: SizeInt): Boolean;
+    function  FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     function  Add(constref e: TEntry): SizeInt; inline;
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
@@ -34728,6 +34788,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  Keys[aIndex: SizeInt]: TKey read GetKey;
     property  Items[aIndex: SizeInt]: TEntry read GetItem write SetItem; default;
+    property  ItemRefs[aIndex: SizeInt]: PEntry read GetItemRef;
   end;
 
 implementation
@@ -38251,14 +38312,13 @@ begin
   Inc(FCount);
 end;
 
-function TGLiteHashList2.DoAdd(constref e: TEntry; aHash: SizeInt): SizeInt;
+function TGLiteHashList2.DoAddHash(aHash: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
   Result := Count;
   FNodeList[Result].Hash := aHash;
   I := aHash and Pred(Capacity);
-  FNodeList[Result].Data := e;
   FNodeList[Result].Next := FChainList[I];
   FChainList[I] := Result;
   Inc(FCount);
@@ -38353,6 +38413,12 @@ procedure TGLiteHashList2.CheckInsertIndexRange(aIndex: SizeInt);
 begin
   if not IndexInInsertRange(aIndex) then
     IndexOutOfBoundError(aIndex);
+end;
+
+function TGLiteHashList2.GetItemRef(aIndex: SizeInt): PEntry;
+begin
+  CheckIndexRange(aIndex);
+  Result := @FNodeList[aIndex].Data;
 end;
 
 class constructor TGLiteHashList2.Init;
@@ -38504,13 +38570,13 @@ begin
   Result := False;
 end;
 
-function TGLiteHashList2.FindOrAdd(constref e: TEntry; out aIndex: SizeInt): Boolean;
+function TGLiteHashList2.FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
-  h := TKeyEqRel.HashCode(e.Key);
+  h := TKeyEqRel.HashCode(aKey);
   if Count > 0 then
-    aIndex := Find(e.Key, h)
+    aIndex := Find(aKey, h)
   else
     aIndex := NULL_INDEX;
   Result := aIndex >= 0;
@@ -38518,8 +38584,9 @@ begin
     begin
       if Count = Capacity then
         Expand;
-      aIndex := DoAdd(e, h);
+      aIndex := DoAddHash(h);
     end;
+  p := @FNodeList[aIndex].Data;
 end;
 
 function TGLiteHashList2.Add(constref e: TEntry): SizeInt;
@@ -38551,9 +38618,12 @@ end;
 
 function TGLiteHashList2.AddUniq(constref e: TEntry): Boolean;
 var
-  Dummy: SizeInt;
+  I: SizeInt;
+  p: PEntry;
 begin
-  Result := not FindOrAdd(e, Dummy);
+  Result := not FindOrAdd(e.Key, p, I);
+  if Result then
+    p^ := e;
 end;
 
 function TGLiteHashList2.AddAllUniq(constref a: array of TEntry): SizeInt;
@@ -43961,9 +44031,9 @@ type
 
   var
     FTable: THashTable;
-    function  GetFillRatio: Single;
-    function  GetLoadFactor: Single;
-    function  GetTableSize: SizeInt;
+    function  GetExpandTreshold: SizeInt; inline;
+    function  GetFillRatio: Single; inline;
+    function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single);
     function  GetKeyCount: SizeInt; override;
     function  GetCapacity: SizeInt; override;
@@ -43989,7 +44059,8 @@ type
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-    property  TableSize: SizeInt read GetTableSize;
+  { The number of keys that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGHashMultiMap implements multimap with value collections as linear probing hashset;
@@ -44464,6 +44535,11 @@ end;
 
 { TGCustomHashMultiMap }
 
+function TGCustomHashMultiMap.GetExpandTreshold: SizeInt;
+begin
+  Result := FTable.ExpandTreshold;
+end;
+
 function TGCustomHashMultiMap.GetFillRatio: Single;
 begin
   Result := FTable.FillRatio;
@@ -44472,11 +44548,6 @@ end;
 function TGCustomHashMultiMap.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
-end;
-
-function TGCustomHashMultiMap.GetTableSize: SizeInt;
-begin
-  Result := FTable.TableSize;
 end;
 
 procedure TGCustomHashMultiMap.SetLoadFactor(aValue: Single);
@@ -44505,8 +44576,7 @@ end;
 
 procedure TGCustomHashMultiMap.DoEnsureCapacity(aValue: SizeInt);
 begin
-  if not FTable.EnsureCapacity(aValue) then
-    CapacityExceedError(aValue);
+  FTable.EnsureCapacity(aValue);
 end;
 
 procedure TGCustomHashMultiMap.DoTrimToFit;
@@ -51036,6 +51106,957 @@ end.
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
+*   Generic simple graph implementations.                                   *
+*                                                                           *
+*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*                                                                           *
+*   This code is free software; you can redistribute it and/or modify it    *
+*   under the terms of the Apache License, Version 2.0;                     *
+*   You may obtain a copy of the License at                                 *
+*     http://www.apache.org/licenses/LICENSE-2.0.                           *
+*                                                                           *
+*  Unless required by applicable law or agreed to in writing, software      *
+*  distributed under the License is distributed on an "AS IS" BASIS,        *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+*  See the License for the specific language governing permissions and      *
+*  limitations under the License.                                           *
+*                                                                           *
+*****************************************************************************}
+unit LGSimpleGraph;
+
+{$mode objfpc}{$H+}
+{$INLINE ON}
+{$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH NESTEDPROCVARS}
+
+interface
+
+uses
+  Classes, SysUtils,
+  LGUtils,
+  {%H-}LGHelpers,
+  LGArrayHelpers,
+  LGHashTable,
+  LGList,
+  LGStack,
+  LGQueue,
+  LGVector,
+  LGStrConst;
+
+type
+
+  ELGGraphError = class(Exception);
+  TEmptyRec     = record end;
+
+
+  { TGSimpleSparseGraphAL simple sparse graph prototype based on adjacency lists;
+      functor TVertexEqRel must provide:
+        class function HashCode([const[ref]] aValue: TVertex): SizeInt;
+        class function Equal([const[ref]] L, R: TVertex): Boolean; }
+  generic TGSimpleSparseGraphAL<TVertex, TEdgeData, TVertexEqRel> = class
+  public
+  type
+    PVertex        = ^TVertex;
+    TStrToVertex   = function(constref aValue: string): TVertex of object;
+    TVertexToStr   = function(constref aValue: TVertex): string of object;
+    TSaveVertex    = procedure(constref aValue: TVertex; aStream: TStream) of object;
+    TIntArray      = array of SizeInt;
+    TVertexArray   = array of TVertex;
+    TOnVertexVisit = function (aIndex: SizeInt): Boolean of object;
+
+    TEdge = record
+      Source,
+      Destination: SizeInt;
+      Data:  TEdgeData;
+    end;
+
+    TAdjItem = record
+    public
+      Destination: SizeInt;
+      Data:  TEdgeData;
+      property Key: SizeInt read Destination write Destination;
+    private
+
+    end;
+    PAdjItem = ^TAdjItem;
+
+  private
+  type
+    TAdjList      = specialize TGLiteIntHashTable<SizeInt, TAdjItem>;
+    TAdjItemArray = array of TAdjItem;
+    TIntHelper    = specialize TGNumArrayHelper<SizeInt>;
+    TIntStack     = specialize TGLiteStack<SizeInt>;
+    TIntQueue     = specialize TGLiteQueue<SizeInt>;
+    PVertexItem   = ^TVertexItem;
+
+    { TVertexItem }
+    TVertexItem = record
+      Vertex: TVertex;
+      InDegree: SizeInt;
+      AdjList: TAdjList;
+      function  GetEnumerator: TAdjList.TEnumerator; inline;
+      function  ToArray: TAdjItemArray;
+      function  IsEmpty: Boolean; inline;
+      procedure ClearItems; inline;
+      procedure TrimToFit; inline;
+      function  Contains(aKey: SizeInt): Boolean; inline;
+      function  FindOrAdd(aKey: SizeInt; out e: PAdjItem): Boolean; inline;
+      function  Find(aKey: SizeInt): PAdjItem; inline;
+      function  FindFirst(out aKey: SizeInt): Boolean; inline;
+      function  Add(constref aItem: TAdjItem): Boolean; inline;
+      function  Remove(aKey: SizeInt): Boolean; inline;
+      function  Count: SizeInt;
+      property  Key: TVertex read Vertex;
+    end;
+
+    TVertexList = specialize TGLiteHashList2<TVertex, TVertexItem, TVertexEqRel>;
+
+  public
+  type
+    TAdjEnumerator = record
+    private
+      FEnum: TAdjList.TEnumerator;
+      function  GetCurrent: SizeInt; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: SizeInt read GetCurrent;
+    end;
+
+    TAdjVertices = record
+    private
+      FGraph: TGSimpleSparseGraphAL;
+      FSource: SizeInt;
+      procedure Init(aGraph: TGSimpleSparseGraphAL; aIndex: SizeInt); inline;
+    public
+      function GetEnumerator: TAdjEnumerator; inline;
+    end;
+
+    TIncidentEnumerator = record
+    private
+      FEnum: TAdjList.TEnumerator;
+      FSource: SizeInt;
+      function  GetCurrent: TEdge;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TEdge read GetCurrent;
+    end;
+
+    TIncidentEdges = record
+    private
+      FGraph: TGSimpleSparseGraphAL;
+      FSource: SizeInt;
+      procedure Init(aGraph: TGSimpleSparseGraphAL; aIndex: SizeInt); inline;
+    public
+      function GetEnumerator: TIncidentEnumerator; inline;
+    end;
+
+    TEdgeEnumerator = record
+    private
+      FGraph: TGSimpleSparseGraphAL;
+      FEnum: TAdjList.TEnumerator;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      FEnumDone: Boolean;
+      function  GetCurrent: TEdge;
+      procedure Init(aGraph: TGSimpleSparseGraphAL);
+    public
+      function  MoveNext: Boolean;
+      procedure Reset; inline;
+      property  Current: TEdge read GetCurrent;
+    end;
+
+    TEdges = record
+    private
+      FGraph: TGSimpleSparseGraphAL;
+      procedure Init(aGraph: TGSimpleSparseGraphAL); inline;
+    public
+      function GetEnumerator: TEdgeEnumerator; inline;
+    end;
+
+  private
+    FVertexList: TVertexList;
+    FEdgeCount: SizeInt;
+    FLabel: string;
+    FDirected: Boolean;
+    function  GetVertexCount: SizeInt; inline;
+    function  GetVertex(aIndex: SizeInt): TVertex; inline;
+    function  GetVertexRef(aIndex: SizeInt): PVertexItem; inline;
+    function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+    function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+    procedure DoRemoveVertex(aIndex: SizeInt);
+    function  GetAdjEnumerator(aIndex: SizeInt): TAdjEnumerator; inline;
+    function  GetIncidentEnumerator(aIndex: SizeInt): TIncidentEnumerator; inline;
+    function  GetEdgeEnumerator: TEdgeEnumerator; inline;
+    property  VertexRefs[aIndex: SizeInt]: PVertexItem read GetVertexRef;
+  public
+    constructor Create(aDirected: Boolean = False);
+    destructor Destroy; override;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit;
+    function  ContainsVertex(constref v: TVertex): Boolean; inline;
+    function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function  IndexOf(constref v: TVertex): SizeInt; inline;
+    function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
+    function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+    function  RemoveVertex(constref v: TVertex): Boolean;
+    function  RemoveVertexI(aIndex: SizeInt): Boolean;
+    function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+    function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function  InDegree(constref v: TVertex): SizeInt; inline;
+    function  InDegreeI(aIndex: SizeInt): SizeInt;
+    function  OutDegree(constref v: TVertex): SizeInt; inline;
+    function  OutDegreeI(aIndex: SizeInt): SizeInt; inline;
+    function  Degree(constref v: TVertex): SizeInt; inline;
+    function  DegreeI(aIndex: SizeInt): SizeInt;
+    function  Isolated(constref v: TVertex): Boolean; inline;
+    function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  AdjacentI(aSrc, aDst: SizeInt): Boolean; inline;
+  { enumerates indices of adjacent vertices }
+    function  AdjVertices(constref v: TVertex): TAdjVertices; inline;
+    function  AdjVerticesI(aIndex: SizeInt): TAdjVertices; inline;
+  { enumerates incident edges }
+    function  IncidentEdges(constref v: TVertex): TIncidentEdges; inline;
+    function  IncidentEdgesI(aIndex: SizeInt): TIncidentEdges; inline;
+  { enumerates all edges }
+    function  Edges: TEdges; inline;
+    function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+    function  SimplePathRec(constref aSrc, aDst: TVertex): TIntArray; inline;
+    function  SimplePathRecI(aSrc, aDst: SizeInt): TIntArray;
+    function  EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
+    function  EulerPathI(aSrc, aDst: SizeInt): TIntArray;
+  { returns count of visited vertices; if the aOnVisit call returns False, the traversal will be stopped }
+    function  DSFTraversal(constref aFrom: TVertex; aOnVisit: TOnVertexVisit = nil): SizeInt; inline;
+    function  DSFTraversalI(aFrom: SizeInt; aOnVisit: TOnVertexVisit = nil): SizeInt;
+  { returns count of visited vertices; if the aOnVisit call returns False, the traversal will be stopped }
+    function  BSFTraversal(constref aFrom: TVertex; aOnVisit: TOnVertexVisit = nil): SizeInt; inline;
+    function  BSFTraversalI(aFrom: SizeInt; aOnVisit: TOnVertexVisit = nil): SizeInt;
+
+    function  Clone: TGSimpleSparseGraphAL;
+    property  GraphLabel: string read FLabel write FLabel;
+    property  Directed: Boolean read FDirected;
+    property  VertexCount: SizeInt read GetVertexCount;
+    property  EdgeCount: SizeInt read FEdgeCount;
+    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
+  end;
+
+implementation
+{$B-}{$COPERATORS ON}
+
+{ TGSimpleSparseGraphAL.TVertexItem }
+
+function TGSimpleSparseGraphAL.TVertexItem.GetEnumerator: TAdjList.TEnumerator;
+begin
+  Result := AdjList.GetEnumerator;
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.ToArray: TAdjItemArray;
+var
+  Item: PAdjItem;
+  I: SizeInt = 0;
+begin
+  System.SetLength(Result, AdjList.Count);
+  for Item in AdjList do
+    begin
+      Result[I] := Item^;
+      Inc(I);
+    end;
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.IsEmpty: Boolean;
+begin
+  Result := AdjList.Count = 0;
+end;
+
+procedure TGSimpleSparseGraphAL.TVertexItem.ClearItems;
+begin
+  AdjList.ClearItems;
+end;
+
+procedure TGSimpleSparseGraphAL.TVertexItem.TrimToFit;
+begin
+  AdjList.TrimToFit;
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.Contains(aKey: SizeInt): Boolean;
+begin
+  Result := AdjList.Contains(aKey);
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.FindOrAdd(aKey: SizeInt; out e: PAdjItem): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := AdjList.FindOrAdd(aKey, e, Dummy);
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.Find(aKey: SizeInt): PAdjItem;
+var
+  Dummy: SizeInt;
+begin
+  Result := AdjList.Find(aKey, Dummy);
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.FindFirst(out aKey: SizeInt): Boolean;
+begin
+  Result := AdjList.FindFirstKey(aKey);
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.Add(constref aItem: TAdjItem): Boolean;
+var
+  p: PAdjItem;
+begin
+  Result := not FindOrAdd(aItem.Key, p);
+  if Result then
+    p^ := aItem;
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.Remove(aKey: SizeInt): Boolean;
+begin
+  Result := AdjList.Remove(aKey);
+end;
+
+function TGSimpleSparseGraphAL.TVertexItem.Count: SizeInt;
+begin
+  Result := AdjList.Count;
+end;
+
+{ TGSimpleSparseGraphAL.TAdjEnumerator }
+
+function TGSimpleSparseGraphAL.TAdjEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FEnum.Current^.Destination;
+end;
+
+function TGSimpleSparseGraphAL.TAdjEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGSimpleSparseGraphAL.TAdjEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TGSimpleSparseGraphAL.TAdjVertices }
+
+procedure TGSimpleSparseGraphAL.TAdjVertices.Init(aGraph: TGSimpleSparseGraphAL; aIndex: SizeInt);
+begin
+  FGraph := aGraph;
+  FSource := aIndex;
+end;
+
+function TGSimpleSparseGraphAL.TAdjVertices.GetEnumerator: TAdjEnumerator;
+begin
+  Result := FGraph.GetAdjEnumerator(FSource);
+end;
+
+{ TGSimpleSparseGraphAL.TIncidentEnumerator }
+
+function TGSimpleSparseGraphAL.TIncidentEnumerator.GetCurrent: TEdge;
+var
+  p: PAdjItem;
+begin
+  p := FEnum.Current;
+  Result.Source := FSource;
+  Result.Destination := p^.Destination;
+  Result.Data := p^.Data;
+end;
+
+function TGSimpleSparseGraphAL.TIncidentEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGSimpleSparseGraphAL.TIncidentEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TGSimpleSparseGraphAL.TIncidentEdges }
+
+procedure TGSimpleSparseGraphAL.TIncidentEdges.Init(aGraph: TGSimpleSparseGraphAL; aIndex: SizeInt);
+begin
+  FGraph := aGraph;
+  FSource := aIndex;
+end;
+
+function TGSimpleSparseGraphAL.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
+begin
+  Result := FGraph.GetIncidentEnumerator(FSource);
+end;
+
+{ TGSimpleSparseGraphAL.TEdgeEnumerator }
+
+function TGSimpleSparseGraphAL.TEdgeEnumerator.GetCurrent: TEdge;
+var
+  p: PAdjItem;
+begin
+  p := FEnum.Current;
+  Result.Source := FCurrIndex;
+  Result.Destination := p^.Destination;
+  Result.Data := p^.Data;
+end;
+
+procedure TGSimpleSparseGraphAL.TEdgeEnumerator.Init(aGraph: TGSimpleSparseGraphAL);
+begin
+  FGraph := aGraph;
+  FLastIndex := Pred(aGraph.VertexCount);
+  Reset;
+end;
+
+function TGSimpleSparseGraphAL.TEdgeEnumerator.MoveNext: Boolean;
+begin
+  repeat
+    if FEnumDone then
+      begin
+        if FCurrIndex >= FLastIndex then
+          exit(False);
+        Inc(FCurrIndex);
+        FEnum := FGraph.VertexRefs[FCurrIndex]^.GetEnumerator;
+      end;
+    Result := FEnum.MoveNext;
+    FEnumDone := not Result;
+  until Result;
+end;
+
+procedure TGSimpleSparseGraphAL.TEdgeEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+  FEnumDone := True;
+end;
+
+{ TGSimpleSparseGraphAL.TEdges }
+
+procedure TGSimpleSparseGraphAL.TEdges.Init(aGraph: TGSimpleSparseGraphAL);
+begin
+  FGraph := aGraph;
+end;
+
+function TGSimpleSparseGraphAL.TEdges.GetEnumerator: TEdgeEnumerator;
+begin
+  Result := FGraph.GetEdgeEnumerator;
+end;
+
+{ TGSimpleSparseGraphAL }
+
+function TGSimpleSparseGraphAL.GetVertexCount: SizeInt;
+begin
+  Result := FVertexList.Count;
+end;
+
+function TGSimpleSparseGraphAL.GetVertex(aIndex: SizeInt): TVertex;
+begin
+  Result := VertexRefs[aIndex]^.Vertex;
+end;
+
+function TGSimpleSparseGraphAL.GetVertexRef(aIndex: SizeInt): PVertexItem;
+begin
+  Result := FVertexList.ItemRefs[aIndex];
+end;
+
+function TGSimpleSparseGraphAL.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+var
+  p: PAdjItem;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Result := not VertexRefs[aSrc]^.FindOrAdd(aDst, p);
+  if Result then
+    begin
+      p^.Key := aDst;
+      p^.Data := aData;
+      if Directed then
+        Inc(VertexRefs[aDst]^.InDegree)
+      else
+        begin
+          VertexRefs[aDst]^.FindOrAdd(aSrc, p);
+          p^.Key := aSrc;
+          p^.Data := aData;
+        end;
+      Inc(FEdgeCount);
+    end;
+end;
+
+function TGSimpleSparseGraphAL.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Result := VertexRefs[aSrc]^.Remove(aDst);
+  if Result then
+    begin
+      if Directed then
+        Dec(VertexRefs[aDst]^.InDegree)
+      else
+        FVertexList.ItemRefs[aDst]^.Remove(aSrc);
+      Dec(FEdgeCount);
+    end;
+end;
+
+procedure TGSimpleSparseGraphAL.DoRemoveVertex(aIndex: SizeInt);
+var
+  I, J: SizeInt;
+  pV: PVertexItem;
+  p: PAdjItem;
+  CurrEdges: TAdjItemArray;
+begin
+  FEdgeCount -= VertexRefs[aIndex]^.Count;
+  if Directed then
+    for p in VertexRefs[aIndex]^.AdjList do
+      Dec(VertexRefs[p^.Destination]^.InDegree);
+  FVertexList.Delete(aIndex);
+  for I := 0 to Pred(FVertexList.Count) do
+    begin
+      pV := VertexRefs[I];
+      CurrEdges := pV^.ToArray;
+      pV^.ClearItems;
+      for J := 0 to System.High(CurrEdges) do
+        begin
+          if CurrEdges[J].Destination <> aIndex then
+            begin
+              if CurrEdges[J].Destination > aIndex then
+                Dec(CurrEdges[J].Destination);
+              pV^.Add(CurrEdges[J]);
+            end;
+        end;
+    end;
+end;
+
+function TGSimpleSparseGraphAL.GetAdjEnumerator(aIndex: SizeInt): TAdjEnumerator;
+begin
+  Result.FEnum := VertexRefs[aIndex]^.GetEnumerator;
+end;
+
+function TGSimpleSparseGraphAL.GetIncidentEnumerator(aIndex: SizeInt): TIncidentEnumerator;
+begin
+  Result.FEnum := VertexRefs[aIndex]^.GetEnumerator;
+  Result.FSource := aIndex;
+end;
+
+function TGSimpleSparseGraphAL.GetEdgeEnumerator: TEdgeEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+constructor TGSimpleSparseGraphAL.Create(aDirected: Boolean);
+begin
+  FDirected := aDirected;
+end;
+
+destructor TGSimpleSparseGraphAL.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+
+function TGSimpleSparseGraphAL.IsEmpty: Boolean;
+begin
+  Result := FVertexList.IsEmpty;
+end;
+
+function TGSimpleSparseGraphAL.NonEmpty: Boolean;
+begin
+  Result := FVertexList.NonEmpty;
+end;
+
+procedure TGSimpleSparseGraphAL.Clear;
+begin
+  FVertexList.Clear;
+end;
+
+procedure TGSimpleSparseGraphAL.EnsureCapacity(aValue: SizeInt);
+begin
+  FVertexList.EnsureCapacity(aValue);
+end;
+
+procedure TGSimpleSparseGraphAL.TrimToFit;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(FVertexList.Count) do
+    VertexRefs[I]^.TrimToFit;
+  FVertexList.TrimToFit;
+end;
+
+function TGSimpleSparseGraphAL.ContainsVertex(constref v: TVertex): Boolean;
+begin
+  Result := FVertexList.Contains(v);
+end;
+
+function TGSimpleSparseGraphAL.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := ContainsEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGSimpleSparseGraphAL.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+begin
+  if aSrc = aDst then
+    exit(False);
+  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
+    exit(False);
+  if (aDst < 0) or (aDst >= FVertexList.Count) then
+    exit(False);
+  Result := VertexRefs[aSrc]^.Contains(aDst);
+end;
+
+function TGSimpleSparseGraphAL.IndexOf(constref v: TVertex): SizeInt;
+begin
+  Result := FVertexList.IndexOf(v);
+end;
+
+function TGSimpleSparseGraphAL.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+var
+  p: PVertexItem;
+begin
+  Result := not FVertexList.FindOrAdd(v, p, aIndex);
+  if Result then
+    begin
+      p^.Vertex := v;
+      p^.InDegree := 0;
+    end;
+end;
+
+function TGSimpleSparseGraphAL.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+var
+  SrcIdx, DstIdx: SizeInt;
+begin
+  AddVertex(aSrc, SrcIdx);
+  AddVertex(aDst, DstIdx);
+  Result := DoAddEdge(SrcIdx, DstIdx, aData);
+end;
+
+function TGSimpleSparseGraphAL.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+begin
+  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
+    exit(False);
+  if (aDst < 0) or (aDst >= FVertexList.Count) then
+    exit(False);
+  Result := DoAddEdge(aSrc, aDst, aData);
+end;
+
+function TGSimpleSparseGraphAL.RemoveVertex(constref v: TVertex): Boolean;
+var
+  ToRemove: SizeInt;
+begin
+  ToRemove := FVertexList.IndexOf(v);
+  Result := ToRemove >= 0;
+  if Result then
+    DoRemoveVertex(ToRemove);
+end;
+
+function TGSimpleSparseGraphAL.RemoveVertexI(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
+  if Result then
+    DoRemoveVertex(aIndex);
+end;
+
+function TGSimpleSparseGraphAL.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+var
+  SrcIdx, DstIdx: SizeInt;
+begin
+  SrcIdx := FVertexList.IndexOf(aSrc);
+  if SrcIdx < 0 then
+    exit(False);
+  DstIdx := FVertexList.IndexOf(aDst);
+  if DstIdx < 0 then
+    exit(False);
+  Result := DoRemoveEdge(SrcIdx, DstIdx);
+end;
+
+function TGSimpleSparseGraphAL.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+begin
+  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
+    exit(False);
+  if (aDst < 0) or (aDst >= FVertexList.Count) then
+    exit(False);
+ Result := DoRemoveEdge(aSrc, aDst);
+end;
+
+function TGSimpleSparseGraphAL.InDegree(constref v: TVertex): SizeInt;
+begin
+  Result := InDegreeI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseGraphAL.InDegreeI(aIndex: SizeInt): SizeInt;
+begin
+  if Directed then
+    Result := VertexRefs[aIndex]^.InDegree
+  else
+    Result := VertexRefs[aIndex]^.Count;
+end;
+
+function TGSimpleSparseGraphAL.OutDegree(constref v: TVertex): SizeInt;
+begin
+  Result := OutDegreeI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseGraphAL.OutDegreeI(aIndex: SizeInt): SizeInt;
+begin
+  Result := VertexRefs[aIndex]^.Count;
+end;
+
+function TGSimpleSparseGraphAL.Degree(constref v: TVertex): SizeInt;
+begin
+  Result := DegreeI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseGraphAL.DegreeI(aIndex: SizeInt): SizeInt;
+var
+  p: PVertexItem;
+begin
+  if Directed then
+    begin
+      p := VertexRefs[aIndex];
+      Result := p^.InDegree + p^.Count;
+    end
+  else
+    Result := OutDegreeI(aIndex);
+end;
+
+function TGSimpleSparseGraphAL.Isolated(constref v: TVertex): Boolean;
+begin
+  Result := Degree(v) = 0;
+end;
+
+function TGSimpleSparseGraphAL.IsolatedI(aIndex: SizeInt): Boolean;
+begin
+  Result := DegreeI(aIndex) = 0;
+end;
+
+function TGSimpleSparseGraphAL.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := AdjacentI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGSimpleSparseGraphAL.AdjacentI(aSrc, aDst: SizeInt): Boolean;
+begin
+  Result := VertexRefs[aSrc]^.Contains(aDst) or VertexRefs[aDst]^.Contains(aSrc);
+end;
+
+function TGSimpleSparseGraphAL.AdjVertices(constref v: TVertex): TAdjVertices;
+begin
+  Result{%H-}.Init(Self, FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseGraphAL.AdjVerticesI(aIndex: SizeInt): TAdjVertices;
+begin
+  Result{%H-}.Init(Self, aIndex);
+end;
+
+function TGSimpleSparseGraphAL.IncidentEdges(constref v: TVertex): TIncidentEdges;
+begin
+  Result{%H-}.Init(Self, FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseGraphAL.IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
+begin
+  Result{%H-}.Init(Self, aIndex);
+end;
+
+function TGSimpleSparseGraphAL.Edges: TEdges;
+begin
+  Result{%H-}.Init(Self);
+end;
+
+function TGSimpleSparseGraphAL.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := SimplePathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGSimpleSparseGraphAL.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Visited.Size := VertexCount;
+  Stack.Push(aSrc);
+  while Stack.TryPop(aSrc) do
+    if not Visited[aSrc] then
+      begin
+        if AdjacentI(aSrc, aDst) then
+           exit(True);
+        Visited[aSrc] := True;
+        for aSrc in AdjVerticesI(aSrc) do
+          if not Visited[aSrc] then
+            Stack.Push(aSrc);
+      end;
+  Result := False;
+end;
+
+function TGSimpleSparseGraphAL.SimplePathRec(constref aSrc, aDst: TVertex): TIntArray;
+begin
+  Result := SimplePathRecI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGSimpleSparseGraphAL.SimplePathRecI(aSrc, aDst: SizeInt): TIntArray;
+var
+  Visited: TBitVector;
+  Path: TIntArray;
+  I: SizeInt = 1;
+  J: SizeInt;
+  function Search: Boolean;
+  begin
+    if AdjacentI(J, aDst) then
+       exit(True);
+    Visited[J] := True;
+    for J in AdjVerticesI(J) do
+      if not Visited[J] then
+        if Search then
+          begin
+            if System.Length(Path) = I then
+              System.SetLength(Path, I shl 1);
+            Path[I] := J;
+            Inc(I);
+            exit(True);
+          end;
+    Result := False;
+  end;
+begin
+  if aSrc = aDst then
+    exit(nil);
+  Visited.Size := VertexCount;
+  System.SetLength(Path, ARRAY_INITIAL_SIZE);
+  J := aSrc;
+  if Search then
+    begin
+      Path[0] := aDst;
+      System.SetLength(Path, Succ(I));
+      Path[I] := aSrc;
+      TIntHelper.Reverse(Path);
+      Result := Path;
+    end
+  else
+    Result := nil;
+end;
+
+function TGSimpleSparseGraphAL.EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
+var
+  I: SizeInt;
+begin
+  if Odd(DegreeI(aSrc) + DegreeI(aDst)) then
+    exit(False);
+  for I := 0 to Pred(VertexCount) do
+    if (I <> aSrc) and (I <> aDst) then
+      if Odd(DegreeI(I)) then
+        exit(False);
+  Result := True;
+end;
+
+function TGSimpleSparseGraphAL.EulerPathI(aSrc, aDst: SizeInt): TIntArray;
+var
+  I: SizeInt;
+  g: TGSimpleSparseGraphAL = nil;
+  Stack: TIntStack;
+  function Tour(s: SizeInt): SizeInt;
+  var
+    d: SizeInt;
+  begin
+    repeat
+      if not g.VertexRefs[s]^.FindFirst(d) then
+        break;
+      Stack.Push(s);
+      g.RemoveEdgeI(s, d);
+      s := d;
+    until False;
+    Result := s;
+  end;
+begin
+  if not EulerPathExistsI(aSrc, aDst) then
+    exit(nil);
+  g := Clone;
+  try
+    I := 1;
+    System.SetLength(Result, ARRAY_INITIAL_SIZE);
+    Result[0] := aSrc;
+    while (Tour(aSrc) <> aDst) and Stack.NonEmpty do
+      begin
+        aSrc := Stack.Pop;
+        if System.Length(Result) = I then
+          System.SetLength(Result, I shl 1);
+        Result[I] := aSrc;
+        Inc(I);
+      end;
+     System.SetLength(Result, I);
+  finally
+    g.Free;
+  end;
+end;
+
+function TGSimpleSparseGraphAL.DSFTraversal(constref aFrom: TVertex; aOnVisit: TOnVertexVisit): SizeInt;
+begin
+  Result := DSFTraversalI(FVertexList.IndexOf(aFrom), aOnVisit);
+end;
+
+function TGSimpleSparseGraphAL.DSFTraversalI(aFrom: SizeInt; aOnVisit: TOnVertexVisit): SizeInt;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+begin
+  Result := 0;
+  Visited.Size := VertexCount;
+  Stack.Push(aFrom);
+  while Stack.TryPop(aFrom) do
+    if not Visited[aFrom] then
+      begin
+        Inc(Result);
+        Visited[aFrom] := True;
+        if (aOnVisit <> nil) and not aOnVisit(aFrom) then
+          exit;
+        for aFrom in AdjVerticesI(aFrom) do
+          if not Visited[aFrom] then
+            Stack.Push(aFrom);
+      end;
+end;
+
+function TGSimpleSparseGraphAL.BSFTraversal(constref aFrom: TVertex; aOnVisit: TOnVertexVisit): SizeInt;
+begin
+  Result := BSFTraversalI(FVertexList.IndexOf(aFrom), aOnVisit);
+end;
+
+function TGSimpleSparseGraphAL.BSFTraversalI(aFrom: SizeInt; aOnVisit: TOnVertexVisit): SizeInt;
+var
+  Visited: TBitVector;
+  Queue: TIntQueue;
+begin
+  Result := 0;
+  Visited.Size := VertexCount;
+  Queue.Enqueue(aFrom);
+  while Queue.TryDequeue(aFrom) do
+    begin
+      Inc(Result);
+      Visited[aFrom] := True;
+      if (aOnVisit <> nil) and not aOnVisit(aFrom) then
+        exit;
+      for aFrom in AdjVerticesI(aFrom) do
+        if not Visited[aFrom] then
+          Queue.Enqueue(aFrom);
+    end;
+end;
+
+function TGSimpleSparseGraphAL.Clone: TGSimpleSparseGraphAL;
+begin
+  Result := TGSimpleSparseGraphAL.Create(FDirected);
+  Result.FVertexList := FVertexList;
+  Result.FEdgeCount := EdgeCount;
+  Result.FLabel := GraphLabel;
+end;
+
+end.
+
+{****************************************************************************
+*                                                                           *
+*   This file is part of the LGenerics package.                             *
 *   Generic stack implementations.                                          *
 *                                                                           *
 *   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
@@ -51194,8 +52215,8 @@ type
   var
     FOwnsObjects: Boolean;
     FStack: TStack;
-    function GetCapacity: SizeInt; inline;
-    function GetCount: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
     procedure CheckFreeItems;
   private
     class operator Initialize(var s: TGLiteObjectStack);
@@ -51811,6 +52832,7 @@ resourcestring
   SEThreadTimeOut          = 'Thread timeout exceeded';
   SEResultUnknown          = 'Result is unknown';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
+  SEVertexNotFound         = 'Vertex not found';
 
 implementation
 
@@ -52220,6 +53242,7 @@ type
   var
     FRowTable: TRowHashTable;
     function  CreateRowMap: TCustomRowMap; virtual; abstract;
+    function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
@@ -52242,6 +53265,8 @@ type
     function  RowMapEnum: IRowMapEnumerable; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
+  { The number of rows that can be written without rehashing }
+    property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
   { TGHashTable2D implements table with row map as linear probing hashmap;
@@ -52599,6 +53624,11 @@ begin
 end;
 
 { TGCustomHashTable2D }
+
+function TGCustomHashTable2D.GetExpandTreshold: SizeInt;
+begin
+  Result := FRowTable.ExpandTreshold;
+end;
 
 function TGCustomHashTable2D.GetFillRatio: Single;
 begin
@@ -60556,6 +61586,41 @@ type
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
 
+  { TBitVector }
+
+  TBitVector = record
+  private
+  type
+    TBits = array of SizeUInt;
+  const
+{$IF DEFINED(CPU64)}
+    SIZE_SHIFT = 6;
+    SIZE_MASK  = 63;
+{$ELSEIF DEFINED(CPU32)}
+    SIZE_SHIFT = 5;
+    SIZE_MASK  = 31;
+{$ELSE}
+    SIZE_SHIFT = 4;
+    SIZE_MASK  = 15;
+{$ENDIF}
+  var
+    FBits: TBits;
+    function  GetBit(aIndex: SizeInt): Boolean;
+    function  GetSize: SizeInt; inline;
+    procedure SetBit(aIndex: SizeInt; aValue: Boolean);
+    procedure SetSize(aValue: SizeInt);
+    function  TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean; inline;
+    function  SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
+    function  ClearUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
+    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
+    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
+    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    class operator Copy(constref aSrc: TBitVector; var aDst: TBitVector);
+  public
+    property Size: SizeInt read GetSize write SetSize;
+    property Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
+  end;
+
   { TGVectorHelpUtil }
 
   generic TGVectorHelpUtil<T> = class
@@ -61894,6 +62959,77 @@ begin
   finally
     UnLock;
   end;
+end;
+
+{ TBitVector }
+
+function TBitVector.GetBit(aIndex: SizeInt): Boolean;
+begin
+  CheckIndexRange(aIndex);
+  Result := TestBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+end;
+
+function TBitVector.GetSize: SizeInt;
+begin
+  Result := System.Length(FBits) shl SIZE_SHIFT;
+end;
+
+procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+begin
+  CheckIndexRange(aIndex);
+  if aValue then
+    FBits[aIndex shr SIZE_SHIFT] := SetUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK)
+  else
+    FBits[aIndex shr SIZE_SHIFT] := ClearUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+end;
+
+procedure TBitVector.SetSize(aValue: SizeInt);
+var
+  OldSize, NewSize: SizeInt;
+begin
+  OldSize := Size;
+  if aValue > OldSize then
+    begin
+      NewSize := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
+      System.SetLength(FBits, NewSize);
+      System.FillChar(FBits[OldSize], (NewSize - OldSize) * SizeOf(SizeUInt), 0);
+    end;
+end;
+
+function TBitVector.TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean;
+begin
+  Result := (aValue and (SizeUInt(1) shl aIndex)) <> 0;
+end;
+
+function TBitVector.SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
+begin
+  Result := aValue or SizeUInt(SizeUInt(1) shl aIndex);
+end;
+
+function TBitVector.ClearUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
+begin
+  Result := aValue and not SizeUInt(SizeUInt(1) shl aIndex);
+end;
+
+procedure TBitVector.IndexOutOfBoundError(aIndex: SizeInt);
+begin
+  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TBitVector.IndexInRange(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex < Size);
+end;
+
+procedure TBitVector.CheckIndexRange(aIndex: SizeInt);
+begin
+  if not IndexInRange(aIndex) then
+    IndexOutOfBoundError(aIndex);
+end;
+
+class operator TBitVector.Copy(constref aSrc: TBitVector; var aDst: TBitVector);
+begin
+  aDst.FBits := System.Copy(aSrc.FBits);
 end;
 
 { TGVectorHelpUtil }
