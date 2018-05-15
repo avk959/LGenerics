@@ -375,13 +375,13 @@ type
     constructor Create(const aFileName: string = ''; Append: Boolean = False);
     destructor Destroy; override;
     procedure AfterConstruction; override;
-    function IsOpen: Boolean; inline;
-    function FileName: string; inline;
     function Add(const aValue: string): Boolean;
     function AddAll(constref a: array of string): SizeInt;
     function AddAll(e: IStringEnumerable): SizeInt;
-    function ExceptionClass: string; inline;
-    function ExceptionMessage: string; inline;
+    property FileName: string read FFileName;
+    property IsOpen: Boolean read FIsOpen;
+    property ExceptionClass: string read FExceptClass;
+    property ExceptionMessage: string read FExceptMsg;
   end;
 
   TParamKind = (pkOption, pkLongOption, pkArgument);
@@ -5231,16 +5231,6 @@ begin
     Open;
 end;
 
-function TTextFileWriter.IsOpen: Boolean;
-begin
-  Result := FIsOpen;
-end;
-
-function TTextFileWriter.FileName: string;
-begin
-  Result := FFileName;
-end;
-
 function TTextFileWriter.Add(const aValue: string): Boolean;
 begin
   Result := IsOpen;
@@ -5264,16 +5254,6 @@ begin
   Result := 0;
   for s in e do
     Result += Ord(Add(s));
-end;
-
-function TTextFileWriter.ExceptionClass: string;
-begin
-  Result := FExceptClass;
-end;
-
-function TTextFileWriter.ExceptionMessage: string;
-begin
-  Result := FExceptMsg;
 end;
 
 end.
