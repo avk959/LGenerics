@@ -143,7 +143,7 @@
 
   private
     function  GetCapacity: SizeInt; inline;
-    procedure Expand(aValue: SizeInt); inline;
+    procedure Expand(aValue: SizeInt); //inline;
     procedure CapacityExceedError(aValue: SizeInt); inline;
     procedure AccessEmptyError; inline;
     class operator Initialize(var b: TGLiteDynBuffer);
@@ -309,7 +309,7 @@
     FCount,
     FHead: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    procedure Expand(aValue: SizeInt); inline;
+    procedure Expand(aValue: SizeInt); //inline;
     procedure Grow(aValue: SizeInt);
     procedure Shrink;
     // do not check count !!!
