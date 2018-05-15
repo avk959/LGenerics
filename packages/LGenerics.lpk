@@ -32,7 +32,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="4" Release="1"/>
-    <Files Count="27">
+    <Files Count="28">
       <Item1>
         <Filename Value="..\source\LGUtils.pas"/>
         <UnitName Value="LGUtils"/>
@@ -141,6 +141,10 @@
         <Filename Value="..\source\LGList.pas"/>
         <UnitName Value="LGList"/>
       </Item27>
+      <Item28>
+        <Filename Value="..\source\LGSimpleGraph.pas"/>
+        <UnitName Value="LGSimpleGraph"/>
+      </Item28>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>
