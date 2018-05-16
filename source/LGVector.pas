@@ -1713,10 +1713,10 @@ procedure TBitVector.SetSize(aValue: SizeInt);
 var
   OldLen: SizeInt;
 begin
-  OldLen := System.Length(FBits);
-  aValue := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
+  OldLen := Size;
   if aValue > OldLen then
     begin
+      aValue := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
       System.SetLength(FBits, aValue);
       System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
