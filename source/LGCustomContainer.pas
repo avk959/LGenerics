@@ -187,7 +187,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-{$I LGDynBuffersH.inc}
+{$I LGDynBufferH.inc}
 
   { TGCustomCollection: collection abstract ancestor class}
   generic TGCustomCollection<T> = class abstract(specialize TGCustomContainer<T>, specialize IGCollection<T>)
@@ -1554,7 +1554,7 @@ begin
   DoEnsureCapacity(aValue);
 end;
 
-{$I LGDynBuffersImpl.inc}
+{$I LGDynBufferImpl.inc}
 
 { TGCustomCollection }
 
