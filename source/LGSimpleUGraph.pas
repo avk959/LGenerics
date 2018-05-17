@@ -1,4 +1,22 @@
-
+{****************************************************************************
+*                                                                           *
+*   This file is part of the LGenerics package.                             *
+*   Generic simple undirected graph implementation.                         *
+*                                                                           *
+*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*                                                                           *
+*   This code is free software; you can redistribute it and/or modify it    *
+*   under the terms of the Apache License, Version 2.0;                     *
+*   You may obtain a copy of the License at                                 *
+*     http://www.apache.org/licenses/LICENSE-2.0.                           *
+*                                                                           *
+*  Unless required by applicable law or agreed to in writing, software      *
+*  distributed under the License is distributed on an "AS IS" BASIS,        *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+*  See the License for the specific language governing permissions and      *
+*  limitations under the License.                                           *
+*                                                                           *
+*****************************************************************************}
 unit LGSimpleUGraph;
 
 {$mode objfpc}{$H+}
@@ -46,10 +64,25 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  EulerPathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
+  { checks whether the graph is connected; a graph without vertices is considered disconnected }
+    function  Connected: Boolean;
   { returns the vector of the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected) }
+    function  SpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  SpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+  { returns count of connected components }
+    function  ComponentCount: SizeInt;
+  { returns number of vertices in the connected component that contains aRoot }
+    function  ComponentPop(constref aRoot: TVertex): SizeInt; inline;
+    function  ComponentPopI(aRoot: SizeInt): SizeInt; inline;
+  { returns a vector whose elements contain the component index of the corresponding vertex }
+    function  ComponentVector: TIntArray;
+  { checks whether the graph is a regular graph (that is, the degree of all its
+     vertices coincide); an empty graph is considered regular }
+    function  IsRegular: Boolean;
+    function  IsTree: Boolean; inline;
   end;
 
 implementation
@@ -187,6 +220,11 @@ begin
   Result := DegreeI(aIndex) = 0;
 end;
 
+function TGSimpleSparseUGraph.EulerPathExists(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := EulerPathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
 function TGSimpleSparseUGraph.EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
 var
   I: SizeInt;
@@ -198,6 +236,24 @@ begin
       if Odd(DegreeI(I)) then
         exit(False);
   Result := True;
+end;
+
+function TGSimpleSparseUGraph.Connected: Boolean;
+begin
+  if VertexCount > 1 then
+    begin
+      if EdgeCount >= Pred(VertexCount) then
+        Result := DSFTraversalI(0) = VertexCount
+      else
+        Result := False;
+    end
+  else
+    Result := VertexCount = 1;
+end;
+
+function TGSimpleSparseUGraph.SpanningTree(constref aRoot: TVertex): TIntArray;
+begin
+  Result := SpanningTreeI(FVertexList.IndexOf(aRoot));
 end;
 
 function TGSimpleSparseUGraph.SpanningTreeI(aRoot: SizeInt): TIntArray;
@@ -225,6 +281,89 @@ begin
             end;
       end;
   until not Stack.TryPop(aRoot);
+end;
+
+function TGSimpleSparseUGraph.ComponentCount: SizeInt;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  I, Curr: SizeInt;
+begin
+  Visited.Size := VertexCount;
+  Result := 0;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        {%H-}Stack.Push(Curr);
+        repeat
+          if not Visited[Curr] then
+            begin
+              Visited[Curr] := True;
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  Stack.Push(Curr);
+            end;
+        until not Stack.TryPop(Curr);
+        Inc(Result);
+      end;
+end;
+
+function TGSimpleSparseUGraph.ComponentPop(constref aRoot: TVertex): SizeInt;
+begin
+  Result := DSFTraversalI(FVertexList.IndexOf(aRoot));
+end;
+
+function TGSimpleSparseUGraph.ComponentPopI(aRoot: SizeInt): SizeInt;
+begin
+  Result := DSFTraversalI(aRoot);
+end;
+
+function TGSimpleSparseUGraph.ComponentVector: TIntArray;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  I, Curr, Group: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  Visited.Size := VertexCount;
+  Group := 0;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        Stack.Push(I);
+        repeat
+          if not Visited[Curr] then
+            begin
+              Visited[Curr] := True;
+              Result[Curr] := Group;
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  Stack.Push(Curr);
+            end;
+        until not Stack.TryPop(Curr);
+        Inc(Group);
+      end;
+end;
+
+function TGSimpleSparseUGraph.IsRegular: Boolean;
+var
+  I, d: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      d := DegreeI(0);
+      for I := 1 to Pred(VertexCount) do
+        if DegreeI(I) <> d then
+          exit(False);
+    end;
+  Result := True;
+end;
+
+function TGSimpleSparseUGraph.IsTree: Boolean;
+begin
+  Result := (EdgeCount = Pred(VertexCount)) and Connected;
 end;
 
 end.
