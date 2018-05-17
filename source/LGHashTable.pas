@@ -741,7 +741,6 @@ type
     SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
     USED_FLAG: SizeInt      = SizeInt(1);
     MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
-    BITNESS                 = BitSizeOf(SizeInt);
     INITIAL_SIZE            = 16;
 
   type
@@ -769,7 +768,6 @@ type
     private
       FEnum: TEnumerator;
       FTable: PHashTable;
-      FShift: SizeInt;
       function  GetCurrent: PEntry; inline;
       procedure Init(aTable: PHashTable); inline;
     public
@@ -781,17 +779,15 @@ type
 
   private
     FList: TNodeList;
-    FCount: SizeInt;
+    FCount,
+    FShift: SizeInt;
     function  GetExpandTreshold: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
-    function  CurrShift: SizeInt; inline;
-    procedure AllocList(aCapacity: SizeInt);
     procedure Rehash(var aTarget: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoFind(aKey: TKey; aKeyHash, aShift: SizeInt): SizeInt;
-    procedure DoRemove(aIndex, aShift: SizeInt);
-    class function Bsr(aValue: SizeInt): SizeInt; static; inline;
+    function  DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
+    procedure DoRemove(aIndex: SizeInt);
     class function HashCode(aValue: TKey): SizeInt; static; inline;
     class function CalcShift(aListSize: SizeInt): SizeInt; static; inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
@@ -3607,7 +3603,6 @@ procedure TGLiteIntHashTable.TRemovableEnumerator.Init(aTable: PHashTable);
 begin
   FTable := aTable;
   FEnum := aTable^.GetEnumerator;
-  FShift := aTable^.CurrShift;
 end;
 
 function TGLiteIntHashTable.TRemovableEnumerator.MoveNext: Boolean;
@@ -3617,7 +3612,7 @@ end;
 
 procedure TGLiteIntHashTable.TRemovableEnumerator.RemoveCurrent;
 begin
-  FTable^.DoRemove(FEnum.FCurrIndex, FShift);
+  FTable^.DoRemove(FEnum.FCurrIndex);
   Dec(FEnum.FCurrIndex);
 end;
 
@@ -3638,37 +3633,18 @@ begin
   Result := System.Length(FList);
 end;
 
-function TGLiteIntHashTable.CurrShift: SizeInt;
-begin
-  Result := CalcShift(Capacity);
-end;
-
-procedure TGLiteIntHashTable.AllocList(aCapacity: SizeInt);
-begin
-  if aCapacity > 0 then
-    begin
-      aCapacity := Math.Min(aCapacity, MAX_CAPACITY);
-      if not LGUtils.IsTwoPower(aCapacity) then
-        aCapacity := LGUtils.RoundUpTwoPower(aCapacity);
-    end
-  else
-    aCapacity := INITIAL_SIZE;
-  FList := NewList(aCapacity);
-end;
-
 procedure TGLiteIntHashTable.Rehash(var aTarget: TNodeList);
 var
-  h, I, J, Shift, Mask: SizeInt;
+  h, I, J, Mask: SizeInt;
 begin
   if Count > 0 then
     begin
       Mask := System.High(aTarget);
-      Shift := CalcShift(Succ(Mask));
       for I := 0 to System.High(FList) do
         begin
           if FList[I].Hash <> 0 then
             begin
-              h := FList[I].Hash shr Shift;
+              h := FList[I].Hash shr FShift;
               for J := 0 to Mask do
                 begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
@@ -3689,6 +3665,7 @@ var
   List: TNodeList;
 begin
   List := NewList(aNewCapacity);
+  FShift := CalcShift(aNewCapacity);
   Rehash(List);
   FList := List;
 end;
@@ -3705,16 +3682,16 @@ begin
         Resize(NewCapacity);
     end
   else
-    AllocList(INITIAL_SIZE);
+    Resize(INITIAL_SIZE);
 end;
 
-function TGLiteIntHashTable.DoFind(aKey: TKey; aKeyHash, aShift: SizeInt): SizeInt;
+function TGLiteIntHashTable.DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
 var
   I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   Result := SLOT_NOT_FOUND;
-  Pos := aKeyHash shr aShift;
+  Pos := aKeyHash shr FShift;
   for I := 0 to Mask do
     begin
       if FList[Pos].Hash = 0 then // node empty => key not found
@@ -3726,7 +3703,7 @@ begin
     end;
 end;
 
-procedure TGLiteIntHashTable.DoRemove(aIndex, aShift: SizeInt);
+procedure TGLiteIntHashTable.DoRemove(aIndex: SizeInt);
 var
   h, Gap, Mask: SizeInt;
 begin
@@ -3739,7 +3716,7 @@ begin
   repeat
     if FList[aIndex].Hash = 0 then
       break;
-    h := FList[aIndex].Hash shr aShift;
+    h := FList[aIndex].Hash shr FShift;
     if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
       begin
         TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
@@ -3748,17 +3725,6 @@ begin
       end;
     aIndex := Succ(aIndex) and Mask;
   until False;
-end;
-
-class function TGLiteIntHashTable.Bsr(aValue: SizeInt): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := BsrQWord(QWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  Result := BsrDWord(DWord(aValue));
-{$ELSE}
-  Result := BsrWord(Word(aValue));
-{$ENDIF}
 end;
 
 class function TGLiteIntHashTable.HashCode(aValue: TKey): SizeInt;
@@ -3774,7 +3740,13 @@ end;
 
 class function TGLiteIntHashTable.CalcShift(aListSize: SizeInt): SizeInt;
 begin
-  Result := (BITNESS - Bsr(aListSize));
+{$IF DEFINED(CPU64)}
+  Result := 64 - BsrQWord(QWord(aListSize));
+{$ELSEIF DEFINED(CPU32)}
+  Result := 32 - BsrDWord(DWord(aListSize));
+{$ELSE}
+  Result := 16 - BsrWord(Word(aListSize));
+{$ENDIF}
 end;
 
 class function TGLiteIntHashTable.NewList(aCapacity: SizeInt): TNodeList;
@@ -3808,7 +3780,7 @@ end;
 
 function TGLiteIntHashTable.GetRemovableEnumerator: TRemovableEnumerator;
 begin
-  Result.Init(@Self);
+  {%H-}Result.Init(@Self);
 end;
 
 procedure TGLiteIntHashTable.Clear;
@@ -3865,16 +3837,16 @@ var
   Hash: SizeInt;
 begin
   if FList = nil then
-    AllocList(INITIAL_SIZE);
+    Resize(INITIAL_SIZE);
   Hash := HashCode(aKey) or USED_FLAG;
-  aPos := DoFind(aKey, Hash, CalcShift(GetCapacity));
+  aPos := DoFind(aKey, Hash);
   Result := aPos >= 0; // key found?
   if not Result then   // key not found, will add new slot
     begin
       if Count >= ExpandTreshold then
         begin
           Expand;
-          aPos := DoFind(aKey, Hash, CalcShift(GetCapacity));
+          aPos := DoFind(aKey, Hash);
         end;
       if aPos <> SLOT_NOT_FOUND then
         begin
@@ -3893,7 +3865,7 @@ begin
   Result := nil;
   if Count > 0 then
     begin
-      aPos := DoFind(aKey, HashCode(aKey), CalcShift(GetCapacity));
+      aPos := DoFind(aKey, HashCode(aKey));
       if aPos >= 0 then
         Result := @FList[aPos].Data;
     end;
@@ -3915,15 +3887,14 @@ end;
 
 function TGLiteIntHashTable.Remove(aKey: TKey): Boolean;
 var
-  Pos, Shift: SizeInt;
+  Pos: SizeInt;
 begin
   if Count > 0 then
     begin
-      Shift := CalcShift(GetCapacity);
-      Pos := DoFind(aKey, HashCode(aKey), Shift);
+      Pos := DoFind(aKey, HashCode(aKey));
       Result := Pos >= 0;
       if Result then
-        DoRemove(Pos, Shift);
+        DoRemove(Pos);
     end
   else
     Result := False;
@@ -3932,7 +3903,7 @@ end;
 procedure TGLiteIntHashTable.RemoveAt(aPos: SizeInt);
 begin
   if (aPos >= 0) and (aPos <= System.High(FList)) then
-    DoRemove(aPos, CalcShift(GetCapacity));
+    DoRemove(aPos);
 end;
 
 end.
