@@ -3771,16 +3771,17 @@ class operator TGLiteIntHashTable.Copy(constref aSrc: TGLiteIntHashTable; var aD
 begin
   aDst.FList := System.Copy(aSrc.FList);
   aDst.FCount := aSrc.Count;
+  aDst.FShift := aSrc.FShift;
 end;
 
 function TGLiteIntHashTable.GetEnumerator: TEnumerator;
 begin
-  Result.Init(@Self);
+  Result{%H-}.Init(@Self);
 end;
 
 function TGLiteIntHashTable.GetRemovableEnumerator: TRemovableEnumerator;
 begin
-  {%H-}Result.Init(@Self);
+  Result{%H-}.Init(@Self);
 end;
 
 procedure TGLiteIntHashTable.Clear;
@@ -3815,10 +3816,10 @@ procedure TGLiteIntHashTable.TrimToFit;
 var
   NewCapacity: SizeInt;
 begin
-  if Count = 0 then
+  if Count > 0 then
     begin
       NewCapacity := LGUtils.RoundUpTwoPower(Count shl 1);
-      if NewCapacity < GetCapacity then
+      if NewCapacity < Capacity then
         Resize(NewCapacity);
     end
   else
