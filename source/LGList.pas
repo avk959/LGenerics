@@ -377,7 +377,7 @@ type
     function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
     function  Add(constref aKey: TKey): PEntry;
     function  Remove(constref aKey: TKey): Boolean;
-    procedure RemoveAt(constref aPos: SizeInt); inline;
+    procedure RemoveAt(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   { by default False }
@@ -2515,10 +2515,10 @@ begin
     RemoveItem(RemoveIdx);
 end;
 
-procedure TGSortedListTable.RemoveAt(constref aPos: SizeInt);
+procedure TGSortedListTable.RemoveAt(aIndex: SizeInt);
 begin
-  if (aPos >= 0) and (aPos < Count) then
-    RemoveItem(aPos);
+  if (aIndex >= 0) and (aIndex < Count) then
+    RemoveItem(aIndex);
 end;
 
 { TGLiteSortedList.THeadEnumerator }
