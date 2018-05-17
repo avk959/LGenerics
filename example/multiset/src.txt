@@ -15131,7 +15131,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-{$I LGDynBuffersH.inc}
+{$I LGDynBufferH.inc}
 
   { TGCustomCollection: collection abstract ancestor class}
   generic TGCustomCollection<T> = class abstract(specialize TGCustomContainer<T>, specialize IGCollection<T>)
@@ -16498,7 +16498,7 @@ begin
   DoEnsureCapacity(aValue);
 end;
 
-{$I LGDynBuffersImpl.inc}
+{$I LGDynBufferImpl.inc}
 
 { TGCustomCollection }
 
@@ -29029,7 +29029,6 @@ type
     SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
     USED_FLAG: SizeInt      = SizeInt(1);
     MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
-    BITNESS                 = BitSizeOf(SizeInt);
     INITIAL_SIZE            = 16;
 
   type
@@ -29057,7 +29056,6 @@ type
     private
       FEnum: TEnumerator;
       FTable: PHashTable;
-      FShift: SizeInt;
       function  GetCurrent: PEntry; inline;
       procedure Init(aTable: PHashTable); inline;
     public
@@ -29069,17 +29067,15 @@ type
 
   private
     FList: TNodeList;
-    FCount: SizeInt;
+    FCount,
+    FShift: SizeInt;
     function  GetExpandTreshold: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
-    function  CurrShift: SizeInt; inline;
-    procedure AllocList(aCapacity: SizeInt);
     procedure Rehash(var aTarget: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoFind(aKey: TKey; aKeyHash, aShift: SizeInt): SizeInt;
-    procedure DoRemove(aIndex, aShift: SizeInt);
-    class function Bsr(aValue: SizeInt): SizeInt; static; inline;
+    function  DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
+    procedure DoRemove(aIndex: SizeInt);
     class function HashCode(aValue: TKey): SizeInt; static; inline;
     class function CalcShift(aListSize: SizeInt): SizeInt; static; inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
@@ -31895,7 +31891,6 @@ procedure TGLiteIntHashTable.TRemovableEnumerator.Init(aTable: PHashTable);
 begin
   FTable := aTable;
   FEnum := aTable^.GetEnumerator;
-  FShift := aTable^.CurrShift;
 end;
 
 function TGLiteIntHashTable.TRemovableEnumerator.MoveNext: Boolean;
@@ -31905,7 +31900,7 @@ end;
 
 procedure TGLiteIntHashTable.TRemovableEnumerator.RemoveCurrent;
 begin
-  FTable^.DoRemove(FEnum.FCurrIndex, FShift);
+  FTable^.DoRemove(FEnum.FCurrIndex);
   Dec(FEnum.FCurrIndex);
 end;
 
@@ -31926,37 +31921,18 @@ begin
   Result := System.Length(FList);
 end;
 
-function TGLiteIntHashTable.CurrShift: SizeInt;
-begin
-  Result := CalcShift(Capacity);
-end;
-
-procedure TGLiteIntHashTable.AllocList(aCapacity: SizeInt);
-begin
-  if aCapacity > 0 then
-    begin
-      aCapacity := Math.Min(aCapacity, MAX_CAPACITY);
-      if not LGUtils.IsTwoPower(aCapacity) then
-        aCapacity := LGUtils.RoundUpTwoPower(aCapacity);
-    end
-  else
-    aCapacity := INITIAL_SIZE;
-  FList := NewList(aCapacity);
-end;
-
 procedure TGLiteIntHashTable.Rehash(var aTarget: TNodeList);
 var
-  h, I, J, Shift, Mask: SizeInt;
+  h, I, J, Mask: SizeInt;
 begin
   if Count > 0 then
     begin
       Mask := System.High(aTarget);
-      Shift := CalcShift(Succ(Mask));
       for I := 0 to System.High(FList) do
         begin
           if FList[I].Hash <> 0 then
             begin
-              h := FList[I].Hash shr Shift;
+              h := FList[I].Hash shr FShift;
               for J := 0 to Mask do
                 begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
@@ -31977,6 +31953,7 @@ var
   List: TNodeList;
 begin
   List := NewList(aNewCapacity);
+  FShift := CalcShift(aNewCapacity);
   Rehash(List);
   FList := List;
 end;
@@ -31993,16 +31970,16 @@ begin
         Resize(NewCapacity);
     end
   else
-    AllocList(INITIAL_SIZE);
+    Resize(INITIAL_SIZE);
 end;
 
-function TGLiteIntHashTable.DoFind(aKey: TKey; aKeyHash, aShift: SizeInt): SizeInt;
+function TGLiteIntHashTable.DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
 var
   I, Pos, Mask: SizeInt;
 begin
   Mask := System.High(FList);
   Result := SLOT_NOT_FOUND;
-  Pos := aKeyHash shr aShift;
+  Pos := aKeyHash shr FShift;
   for I := 0 to Mask do
     begin
       if FList[Pos].Hash = 0 then // node empty => key not found
@@ -32014,7 +31991,7 @@ begin
     end;
 end;
 
-procedure TGLiteIntHashTable.DoRemove(aIndex, aShift: SizeInt);
+procedure TGLiteIntHashTable.DoRemove(aIndex: SizeInt);
 var
   h, Gap, Mask: SizeInt;
 begin
@@ -32027,7 +32004,7 @@ begin
   repeat
     if FList[aIndex].Hash = 0 then
       break;
-    h := FList[aIndex].Hash shr aShift;
+    h := FList[aIndex].Hash shr FShift;
     if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
       begin
         TFakeNode(FList[Gap]) := TFakeNode(FList[aIndex]);
@@ -32036,17 +32013,6 @@ begin
       end;
     aIndex := Succ(aIndex) and Mask;
   until False;
-end;
-
-class function TGLiteIntHashTable.Bsr(aValue: SizeInt): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := BsrQWord(QWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  Result := BsrDWord(DWord(aValue));
-{$ELSE}
-  Result := BsrWord(Word(aValue));
-{$ENDIF}
 end;
 
 class function TGLiteIntHashTable.HashCode(aValue: TKey): SizeInt;
@@ -32062,7 +32028,13 @@ end;
 
 class function TGLiteIntHashTable.CalcShift(aListSize: SizeInt): SizeInt;
 begin
-  Result := (BITNESS - Bsr(aListSize));
+{$IF DEFINED(CPU64)}
+  Result := 64 - BsrQWord(QWord(aListSize));
+{$ELSEIF DEFINED(CPU32)}
+  Result := 32 - BsrDWord(DWord(aListSize));
+{$ELSE}
+  Result := 16 - BsrWord(Word(aListSize));
+{$ENDIF}
 end;
 
 class function TGLiteIntHashTable.NewList(aCapacity: SizeInt): TNodeList;
@@ -32087,16 +32059,17 @@ class operator TGLiteIntHashTable.Copy(constref aSrc: TGLiteIntHashTable; var aD
 begin
   aDst.FList := System.Copy(aSrc.FList);
   aDst.FCount := aSrc.Count;
+  aDst.FShift := aSrc.FShift;
 end;
 
 function TGLiteIntHashTable.GetEnumerator: TEnumerator;
 begin
-  Result.Init(@Self);
+  Result{%H-}.Init(@Self);
 end;
 
 function TGLiteIntHashTable.GetRemovableEnumerator: TRemovableEnumerator;
 begin
-  Result.Init(@Self);
+  Result{%H-}.Init(@Self);
 end;
 
 procedure TGLiteIntHashTable.Clear;
@@ -32131,10 +32104,10 @@ procedure TGLiteIntHashTable.TrimToFit;
 var
   NewCapacity: SizeInt;
 begin
-  if Count = 0 then
+  if Count > 0 then
     begin
       NewCapacity := LGUtils.RoundUpTwoPower(Count shl 1);
-      if NewCapacity < GetCapacity then
+      if NewCapacity < Capacity then
         Resize(NewCapacity);
     end
   else
@@ -32153,16 +32126,16 @@ var
   Hash: SizeInt;
 begin
   if FList = nil then
-    AllocList(INITIAL_SIZE);
+    Resize(INITIAL_SIZE);
   Hash := HashCode(aKey) or USED_FLAG;
-  aPos := DoFind(aKey, Hash, CalcShift(GetCapacity));
+  aPos := DoFind(aKey, Hash);
   Result := aPos >= 0; // key found?
   if not Result then   // key not found, will add new slot
     begin
       if Count >= ExpandTreshold then
         begin
           Expand;
-          aPos := DoFind(aKey, Hash, CalcShift(GetCapacity));
+          aPos := DoFind(aKey, Hash);
         end;
       if aPos <> SLOT_NOT_FOUND then
         begin
@@ -32181,7 +32154,7 @@ begin
   Result := nil;
   if Count > 0 then
     begin
-      aPos := DoFind(aKey, HashCode(aKey), CalcShift(GetCapacity));
+      aPos := DoFind(aKey, HashCode(aKey));
       if aPos >= 0 then
         Result := @FList[aPos].Data;
     end;
@@ -32203,15 +32176,14 @@ end;
 
 function TGLiteIntHashTable.Remove(aKey: TKey): Boolean;
 var
-  Pos, Shift: SizeInt;
+  Pos: SizeInt;
 begin
   if Count > 0 then
     begin
-      Shift := CalcShift(GetCapacity);
-      Pos := DoFind(aKey, HashCode(aKey), Shift);
+      Pos := DoFind(aKey, HashCode(aKey));
       Result := Pos >= 0;
       if Result then
-        DoRemove(Pos, Shift);
+        DoRemove(Pos);
     end
   else
     Result := False;
@@ -32220,7 +32192,7 @@ end;
 procedure TGLiteIntHashTable.RemoveAt(aPos: SizeInt);
 begin
   if (aPos >= 0) and (aPos <= System.High(FList)) then
-    DoRemove(aPos, CalcShift(GetCapacity));
+    DoRemove(aPos);
 end;
 
 end.
@@ -34235,7 +34207,7 @@ type
     function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
     function  Add(constref aKey: TKey): PEntry;
     function  Remove(constref aKey: TKey): Boolean;
-    procedure RemoveAt(constref aPos: SizeInt); inline;
+    procedure RemoveAt(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   { by default False }
@@ -36373,10 +36345,10 @@ begin
     RemoveItem(RemoveIdx);
 end;
 
-procedure TGSortedListTable.RemoveAt(constref aPos: SizeInt);
+procedure TGSortedListTable.RemoveAt(aIndex: SizeInt);
 begin
-  if (aPos >= 0) and (aPos < Count) then
-    RemoveItem(aPos);
+  if (aIndex >= 0) and (aIndex < Count) then
+    RemoveItem(aIndex);
 end;
 
 { TGLiteSortedList.THeadEnumerator }
@@ -39047,13 +39019,13 @@ type
     constructor Create(const aFileName: string = ''; Append: Boolean = False);
     destructor Destroy; override;
     procedure AfterConstruction; override;
-    function IsOpen: Boolean; inline;
-    function FileName: string; inline;
     function Add(const aValue: string): Boolean;
     function AddAll(constref a: array of string): SizeInt;
     function AddAll(e: IStringEnumerable): SizeInt;
-    function ExceptionClass: string; inline;
-    function ExceptionMessage: string; inline;
+    property FileName: string read FFileName;
+    property IsOpen: Boolean read FIsOpen;
+    property ExceptionClass: string read FExceptClass;
+    property ExceptionMessage: string read FExceptMsg;
   end;
 
   TParamKind = (pkOption, pkLongOption, pkArgument);
@@ -43903,16 +43875,6 @@ begin
     Open;
 end;
 
-function TTextFileWriter.IsOpen: Boolean;
-begin
-  Result := FIsOpen;
-end;
-
-function TTextFileWriter.FileName: string;
-begin
-  Result := FFileName;
-end;
-
 function TTextFileWriter.Add(const aValue: string): Boolean;
 begin
   Result := IsOpen;
@@ -43936,16 +43898,6 @@ begin
   Result := 0;
   for s in e do
     Result += Ord(Add(s));
-end;
-
-function TTextFileWriter.ExceptionClass: string;
-begin
-  Result := FExceptClass;
-end;
-
-function TTextFileWriter.ExceptionMessage: string;
-begin
-  Result := FExceptMsg;
 end;
 
 end.
@@ -51106,7 +51058,7 @@ end.
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Generic simple graph implementations.                                   *
+*   Generic simple sparse graph abstract ancestor.                          *
 *                                                                           *
 *   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
 *                                                                           *
@@ -51122,7 +51074,1396 @@ end.
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGSimpleGraph;
+unit LGraphType;
+
+{$mode objfpc}{$H+}
+{$INLINE ON}
+{$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH NESTEDPROCVARS}
+
+interface
+
+uses
+  Classes,
+  SysUtils,
+  math,
+  LGUtils,
+  {%H-}LGHelpers,
+  LGraphUtils,
+  LGVector,
+  LGStrConst;
+
+type
+
+  generic TGAdjItem<TData> = record
+    Destination: SizeInt;
+    Data: TData;
+    property Key: SizeInt read Destination;
+  end;
+
+  { TGVertexItem }
+
+  generic TGVertexItem<TVertex, TData> = record
+  public
+  type
+    TAdjItem      = specialize TGAdjItem<TData>;
+    TAdjItemArray = array of TAdjItem;
+    PAdjItem      = ^TAdjItem;
+
+  private
+  type
+    TNode = record
+      Hash: SizeInt;
+      Item: TAdjItem;
+    end;
+
+    PNode     = ^TNode;
+    TNodeList = array of TNode;
+
+  const
+    NODE_SIZE               = SizeOf(TNode);
+    SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
+    USED_FLAG: SizeInt      = SizeInt(1);
+    MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
+    INITIAL_SIZE            = 8;
+
+  public
+  type
+    TEnumerator = record
+    private
+      FList: PNode;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      function  GetCurrent: PAdjItem; inline;
+    public
+      function  MoveNext: Boolean;
+      procedure Reset; inline;
+      property  Current: PAdjItem read GetCurrent;
+    end;
+
+  var
+    Vertex: TVertex;
+  private
+    FNodeList: TNodeList;
+    FShift,
+    FCount,
+    FTag: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    procedure Rehash(var aNewList: TNodeList);
+    procedure Resize(aNewCapacity: SizeInt);
+    procedure Expand;
+    function  DoFind(aValue, aHash: SizeInt): SizeInt;
+    procedure DoRemove(aIndex: SizeInt);
+    class function HashCode(aValue: SizeInt): SizeInt; static; inline;
+    class function NewList(aCapacity: SizeInt): TNodeList; static; //inline;
+    property Shift: SizeInt read FShift;
+    class constructor Init;
+    class operator Initialize(var Item: TGVertexItem);
+    class operator Copy(constref aSrc: TGVertexItem; var aDst: TGVertexItem);
+  public
+    function  GetEnumerator: TEnumerator;
+    function  ToArray: TAdjItemArray;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear;
+    procedure ClearItems;
+    procedure TrimToFit; inline;
+    function  Contains(aDst: SizeInt): Boolean; inline;
+    function  FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean; inline;
+    function  Find(aDst: SizeInt): PAdjItem;
+    function  FindFirst(out aDst: SizeInt): Boolean; inline;
+    function  Add(constref aItem: TAdjItem): Boolean; //inline;
+    function  Remove(aDst: SizeInt): Boolean; inline;
+    property  Key: TVertex read Vertex;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Tag: SizeInt read FTag write FTag;
+  end;
+
+  { TGVertexHashList }
+
+  generic TGVertexHashList<TVertex, TEdgeData, TEqRel> = record
+  public
+  type
+    TVertexItem = specialize TGVertexItem<TVertex, TEdgeData>;
+    PVertexItem = ^TVertexItem;
+
+  private
+  type
+    TNode = record
+      Hash,
+      Next: SizeInt;
+      Item: TVertexItem;
+    end;
+
+    TNodeList   = array of TNode;
+    TChainList  = array of SizeInt;
+    //PVertexList = ^TGVertexHashList;
+
+  const
+    NULL_INDEX  = SizeInt(-1);
+    NODE_SIZE   = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
+
+  var
+    FNodeList: TNodeList;
+    FChainList: TChainList;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    function  GetItem(aIndex: SizeInt): TVertex; inline;
+    function  GetItemRef(aIndex: SizeInt): PVertexItem;
+    procedure InitialAlloc;
+    procedure Rehash;
+    procedure Resize(aNewCapacity: SizeInt);
+    procedure Expand;
+    function  Find(constref v: TVertex): SizeInt;
+    function  Find(constref v: TVertex; aHash: SizeInt): SizeInt;
+    function  DoAdd(constref v: TVertex; aHash: SizeInt): SizeInt;
+    procedure RemoveFromChain(aIndex: SizeInt);
+    procedure DoDelete(aIndex: SizeInt);
+    function  DoRemove(constref v: TVertex): Boolean;
+    procedure CheckIndexRange(aIndex: SizeInt); //inline;
+    class constructor Init;
+    class operator Initialize(var vl: TGVertexHashList);
+    class operator Copy(constref aSrc: TGVertexHashList; var aDst: TGVertexHashList);
+  public
+    procedure Clear;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure TrimToFit;
+    function  IndexOf(constref v: TVertex): SizeInt; inline;
+    function  FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
+    function  Remove(constref v: TVertex): Boolean; inline;
+    procedure Delete(aIndex: SizeInt); inline;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Items[aIndex: SizeInt]: TVertex read GetItem; default;
+    property  ItemRefs[aIndex: SizeInt]: PVertexItem read GetItemRef;
+  end;
+
+  { TGCustomSimpleSparseGraph simple sparse graph abstract ancestor class based on adjacency lists;
+      functor TVertexEqRel must provide:
+        class function HashCode([const[ref]] aValue: TVertex): SizeInt;
+        class function Equal([const[ref]] L, R: TVertex): Boolean; }
+  generic TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel> = class abstract
+  protected
+  type
+    TVertexList = specialize TGVertexHashList<TVertex, TEdgeData, TVertexEqRel>;
+    TVertexItem = TVertexList.TVertexItem;
+
+  var
+    FVertexList: TVertexList;
+    FEdgeCount: SizeInt;
+    FTitle: string;
+    function  GetVertexCount: SizeInt; inline;
+    function  GetVertex(aIndex: SizeInt): TVertex; inline;
+    function  GetEdgeData(aSrc, aDst: SizeInt): TEdgeData; inline;
+  public
+  type
+    TAdjItem = TVertexItem.TAdjItem;
+
+    TEdge = record
+      Source,
+      Destination: SizeInt;
+      Data:  TEdgeData;
+    end;
+
+    TIncidentEdge = record
+      Destination: SizeInt;
+      Data:  TEdgeData;
+    end;
+
+    TAdjEnumerator = record
+    private
+      FEnum: TVertexItem.TEnumerator;
+      function  GetCurrent: SizeInt; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: SizeInt read GetCurrent;
+    end;
+
+    TAdjVertices = record
+    private
+      FGraph: TGCustomSimpleSparseGraph;
+      FSource: SizeInt;
+    public
+      function GetEnumerator: TAdjEnumerator; inline;
+    end;
+
+    TIncidentEnumerator = record
+    private
+      FEnum: TVertexItem.TEnumerator;
+      function  GetCurrent: TIncidentEdge;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TIncidentEdge read GetCurrent;
+    end;
+
+    TIncidentEdges = record
+    private
+      FGraph: TGCustomSimpleSparseGraph;
+      FSource: SizeInt;
+    public
+      function GetEnumerator: TIncidentEnumerator; inline;
+    end;
+
+    TEdgeEnumerator = record
+    private
+      FList: TVertexList.TNodeList;
+      FEnum: TVertexItem.TEnumerator;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      FEnumDone: Boolean;
+      function  GetCurrent: TEdge;
+    public
+      function  MoveNext: Boolean;
+      procedure Reset;
+      property  Current: TEdge read GetCurrent;
+    end;
+
+    TEdges = record
+    private
+      FGraph: TGCustomSimpleSparseGraph;
+    public
+      function GetEnumerator: TEdgeEnumerator; inline;
+    end;
+
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit; inline;
+    function  ContainsVertex(constref v: TVertex): Boolean; inline;
+    function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function  ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
+    function  IndexOf(constref v: TVertex): SizeInt; inline;
+  { returns True and vertex index, if it was added, False otherwise }
+    function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
+    function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  AdjacentI(aSrc, aDst: SizeInt): Boolean; //inline;
+  { enumerates indices of adjacent vertices }
+    function  AdjVertices(constref aSrc: TVertex): TAdjVertices; inline;
+    function  AdjVerticesI(aSrc: SizeInt): TAdjVertices;
+  { enumerates incident edges }
+    function  IncidentEdges(constref aSrc: TVertex): TIncidentEdges; inline;
+    function  IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+  { enumerates all edges }
+    function  Edges: TEdges;
+  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found }
+    function  DSFTraversal(constref aRoot: TVertex; aOnGray: TOnVertexVisit = nil;
+                           aOnWhite: TOnVertexVisit = nil): SizeInt; inline;
+    function  DSFTraversalI(aRoot: SizeInt; aOnGray: TOnVertexVisit = nil;
+                            aOnWhite: TOnVertexVisit = nil): SizeInt;
+    function  DSFTraversal(constref aRoot: TVertex; aOnGray, aOnWhite: TNestVertexVisit): SizeInt; inline;
+    function  DSFTraversalI(aRoot: SizeInt; aOnGray, aOnWhite: TNestVertexVisit): SizeInt;
+  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found }
+    function  BSFTraversal(constref aRoot: TVertex; aOnGray: TOnVertexVisit = nil;
+                           aOnWhite: TOnVertexVisit = nil): SizeInt; inline;
+    function  BSFTraversalI(aRoot: SizeInt; aOnGray: TOnVertexVisit = nil;
+                            aOnWhite: TOnVertexVisit = nil): SizeInt;
+    function  BSFTraversal(constref aRoot: TVertex; aOnGray, aOnWhite: TNestVertexVisit): SizeInt; inline;
+    function  BSFTraversalI(aRoot: SizeInt; aOnGray, aOnWhite: TNestVertexVisit): SizeInt;
+
+    function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+
+    property  Title: string read FTitle write FTitle;
+    property  VertexCount: SizeInt read GetVertexCount;
+    property  EdgeCount: SizeInt read FEdgeCount;
+    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
+  end;
+
+implementation
+{$B-}{$COPERATORS ON}
+
+{ TGVertexItem.TEnumerator }
+
+function TGVertexItem.TEnumerator.GetCurrent: PAdjItem;
+begin
+  Result := @FList[FCurrIndex].Item;
+end;
+
+function TGVertexItem.TEnumerator.MoveNext: Boolean;
+begin
+  repeat
+    if FCurrIndex >= FLastIndex then
+      exit(False);
+    Inc(FCurrIndex);
+    Result := FList[FCurrIndex].Hash <> 0;
+  until Result;
+end;
+
+procedure TGVertexItem.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGVertexItem }
+
+function TGVertexItem.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+procedure TGVertexItem.Rehash(var aNewList: TNodeList);
+var
+  h, I, J, Mask: SizeInt;
+begin
+  if Count > 0 then
+    begin
+      Mask := System.High(aNewList);
+      for I := 0 to System.High(FNodeList) do
+        begin
+          if FNodeList[I].Hash <> 0 then
+            begin
+              h := FNodeList[I].Hash shr Shift;
+              for J := 0 to Mask do
+                begin
+                  if aNewList[h].Hash = 0 then // -> target node is empty
+                    begin
+                      aNewList[h] := FNodeList[I];
+                      break;
+                    end;
+                  h := Succ(h) and Mask;       // probe sequence
+                end;
+            end;
+        end;
+    end;
+end;
+
+procedure TGVertexItem.Resize(aNewCapacity: SizeInt);
+var
+  List: TNodeList;
+begin
+  List := NewList(aNewCapacity);
+{$IF DEFINED(CPU64)}
+  FShift := 64 - BsrQWord(QWord(aNewCapacity));
+{$ELSEIF DEFINED(CPU32)}
+  FShift := 32 - BsrDWord(DWord(aNewCapacity));
+{$ELSE}
+  FShift := 16 - BsrWord(Word(aNewCapacity));
+{$ENDIF}
+  Rehash(List);
+  FNodeList := List;
+end;
+
+procedure TGVertexItem.Expand;
+var
+  NewCapacity, OldCapacity: SizeInt;
+begin
+  OldCapacity := GetCapacity;
+  if OldCapacity > 0 then
+    begin
+      NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
+      if NewCapacity > OldCapacity then
+        Resize(NewCapacity);
+    end
+  else
+    Resize(INITIAL_SIZE);
+end;
+
+function TGVertexItem.DoFind(aValue, aHash: SizeInt): SizeInt;
+var
+  I, Pos, Mask: SizeInt;
+begin
+  Mask := System.High(FNodeList);
+  Result := SLOT_NOT_FOUND;
+  Pos := aHash shr Shift;
+  for I := 0 to Mask do
+    begin
+      if FNodeList[Pos].Hash = 0 then // node empty => key not found
+        exit(not Pos)
+      else
+        if FNodeList[Pos].Item.Key = aValue then
+          exit(Pos);                // key found
+      Pos := Succ(Pos) and Mask;    // probe sequence
+    end;
+end;
+
+procedure TGVertexItem.DoRemove(aIndex: SizeInt);
+var
+  h, Gap, Mask: SizeInt;
+begin
+  Mask := System.High(FNodeList);
+  FNodeList[aIndex].Hash := 0;
+  Gap := aIndex;
+  aIndex := Succ(aIndex) and Mask;
+  Dec(FCount);
+  repeat
+    if FNodeList[aIndex].Hash = 0 then
+      break;
+    h := FNodeList[aIndex].Hash shr Shift;
+    if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
+      begin
+        FNodeList[Gap] := FNodeList[aIndex];
+        FNodeList[aIndex].Hash := 0;
+        Gap := aIndex;
+      end;
+    aIndex := Succ(aIndex) and Mask;
+  until False;
+end;
+
+class function TGVertexItem.HashCode(aValue: SizeInt): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := aValue * SizeInt($9e3779b97f4a7c15);
+{$ELSEIF DEFINED(CPU32)}
+  Result := aValue * SizeInt($9e3779b9);
+{$ELSE}
+  Result := aValue * SizeInt($9e37);
+{$ENDIF}
+end;
+
+class function TGVertexItem.NewList(aCapacity: SizeInt): TNodeList;
+begin
+  System.SetLength(Result, aCapacity);
+  System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
+end;
+
+class constructor TGVertexItem.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
+class operator TGVertexItem.Initialize(var Item: TGVertexItem);
+begin
+  Item.FCount := 0;
+end;
+
+class operator TGVertexItem.Copy(constref aSrc: TGVertexItem; var aDst: TGVertexItem);
+begin
+  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FCount := aSrc.Count;
+  aDst.FShift := aSrc.FShift;
+end;
+
+function TGVertexItem.GetEnumerator: TEnumerator;
+begin
+  Result.FLastIndex := System.High(FNodeList);
+  if Result.FLastIndex >= 0 then
+    Result.FList := @FNodeList[0]
+  else
+    Result.FList := nil;
+  Result.FCurrIndex := -1;
+end;
+
+function TGVertexItem.ToArray: TAdjItemArray;
+var
+  I, J: SizeInt;
+begin
+  System.SetLength(Result, Count);
+  if Count > 0 then
+    begin
+      I := 0;
+      J := 0;
+      repeat
+        if FNodeList[J].Hash <> 0 then
+          begin
+            Result[I] := FNodeList[J].Item;
+            Inc(I);
+          end;
+        Inc(J);
+      until J >= Capacity;
+    end;
+end;
+
+function TGVertexItem.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGVertexItem.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGVertexItem.Clear;
+begin
+  FNodeList := nil;
+  FCount := 0;
+end;
+
+procedure TGVertexItem.ClearItems;
+begin
+  System.FillChar(FNodeList[0], Capacity * NODE_SIZE, 0);
+  FCount := 0;
+end;
+
+procedure TGVertexItem.TrimToFit;
+var
+  NewCapacity: SizeInt;
+begin
+  if Count = 0 then
+    begin
+      NewCapacity := LGUtils.RoundUpTwoPower(Count shl 1);
+      if NewCapacity < GetCapacity then
+        Resize(NewCapacity);
+    end
+  else
+    Clear;
+end;
+
+function TGVertexItem.Contains(aDst: SizeInt): Boolean;
+begin
+  Result := Find(aDst) <> nil;
+end;
+
+function TGVertexItem.FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean;
+var
+  Hash, Pos: SizeInt;
+begin
+  if FNodeList = nil then
+    Expand;
+  Hash := HashCode(aDst) or USED_FLAG;
+  Pos := DoFind(aDst, Hash);
+  Result := Pos >= 0; // key found?
+  if not Result then   // key not found, will add new slot
+    begin
+      if Count >= Capacity shr 1 then
+        begin
+          Expand;
+          Pos := DoFind(aDst, Hash);
+        end;
+      if Pos <> SLOT_NOT_FOUND then
+        begin
+          Pos := not Pos;
+          FNodeList[Pos].Hash := Hash;
+          Inc(FCount);
+        end
+      else
+        raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [Succ(Count)]);
+    end;
+  e := @FNodeList[Pos].Item;
+end;
+
+function TGVertexItem.Find(aDst: SizeInt): PAdjItem;
+var
+  Pos: SizeInt;
+begin
+  Result := nil;
+  if Count > 0 then
+    begin
+      Pos := DoFind(aDst, HashCode(aDst));
+      if Pos >= 0 then
+        Result := @FNodeList[Pos].Item;
+    end;
+end;
+
+function TGVertexItem.FindFirst(out aDst: SizeInt): Boolean;
+var
+  I: SizeInt;
+begin
+  if Count > 0 then
+    for I := 0 to Pred(Capacity) do
+      if FNodeList[I].Hash <> 0 then
+        begin
+          aDst := FNodeList[I].Item.Key;
+          exit(True);
+        end;
+  Result := False;
+end;
+
+function TGVertexItem.Add(constref aItem: TAdjItem): Boolean;
+var
+  p: PAdjItem;
+begin
+  Result := not FindOrAdd(aItem.Key, p);
+  if Result then
+    p^ := aItem;
+end;
+
+function TGVertexItem.Remove(aDst: SizeInt): Boolean;
+var
+  Pos: SizeInt;
+begin
+  if Count > 0 then
+    begin
+      Pos := DoFind(aDst, HashCode(aDst));
+      Result := Pos >= 0;
+      if Result then
+        DoRemove(Pos);
+    end
+  else
+    Result := False;
+end;
+
+{ TGVertexHashList }
+
+function TGVertexHashList.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+function TGVertexHashList.GetItem(aIndex: SizeInt): TVertex;
+begin
+  CheckIndexRange(aIndex);
+  Result := FNodeList[aIndex].Item.Vertex;
+end;
+
+function TGVertexHashList.GetItemRef(aIndex: SizeInt): PVertexItem;
+begin
+  CheckIndexRange(aIndex);
+  Result := @FNodeList[aIndex].Item;
+end;
+
+procedure TGVertexHashList.InitialAlloc;
+begin
+  System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
+  System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
+  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+end;
+
+procedure TGVertexHashList.Rehash;
+var
+  I, J, Mask: SizeInt;
+begin
+  Mask := Pred(Capacity);
+  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  for I := 0 to Pred(Count) do
+    begin
+      J := FNodeList[I].Hash and Mask;
+      FNodeList[I].Next := FChainList[J];
+      FChainList[J] := I;
+    end;
+end;
+
+procedure TGVertexHashList.Resize(aNewCapacity: SizeInt);
+begin
+  System.SetLength(FNodeList, aNewCapacity);
+  System.SetLength(FChainList, aNewCapacity);
+  Rehash;
+end;
+
+procedure TGVertexHashList.Expand;
+var
+  OldCapacity: SizeInt;
+begin
+  OldCapacity := Capacity;
+  if OldCapacity > 0 then
+    begin
+      if OldCapacity < MAX_CAPACITY then
+        Resize(OldCapacity shl 1)
+      else
+        raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [OldCapacity shl 1]);
+    end
+  else
+    InitialAlloc;
+end;
+
+function TGVertexHashList.Find(constref v: TVertex): SizeInt;
+var
+  h: SizeInt;
+begin
+  h := TEqRel.HashCode(v);
+  Result := FChainList[h and Pred(Capacity)];
+  while Result <> NULL_INDEX do
+    begin
+      if (FNodeList[Result].Hash = h) and TEqRel.Equal(FNodeList[Result].Item.Vertex, v) then
+        exit;
+      Result := FNodeList[Result].Next;
+    end;
+end;
+
+function TGVertexHashList.Find(constref v: TVertex; aHash: SizeInt): SizeInt;
+begin
+  Result := FChainList[aHash and Pred(Capacity)];
+  while Result <> NULL_INDEX do
+    begin
+      if (FNodeList[Result].Hash = aHash) and TEqRel.Equal(FNodeList[Result].Item.Vertex, v) then
+        exit;
+      Result := FNodeList[Result].Next;
+    end;
+end;
+
+function TGVertexHashList.DoAdd(constref v: TVertex; aHash: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := Count;
+  FNodeList[Result].Hash := aHash;
+  I := aHash and Pred(Capacity);
+  FNodeList[Result].Next := FChainList[I];
+  FNodeList[Result].Item.Vertex := v;
+  FChainList[I] := Result;
+  Inc(FCount);
+end;
+
+procedure TGVertexHashList.RemoveFromChain(aIndex: SizeInt);
+var
+  I, Curr, Prev: SizeInt;
+begin
+  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  Curr := FChainList[I];
+  Prev := NULL_INDEX;
+  while Curr <> NULL_INDEX do
+    begin
+      if Curr = aIndex then
+        begin
+          if Prev <> NULL_INDEX then
+            FNodeList[Prev].Next := FNodeList[Curr].Next
+          else
+            FChainList[I] := FNodeList[Curr].Next;
+          exit;
+        end;
+      Prev := Curr;
+      Curr := FNodeList[Curr].Next;
+    end;
+end;
+
+procedure TGVertexHashList.DoDelete(aIndex: SizeInt);
+begin
+  Dec(FCount);
+  if aIndex < Count then
+    begin
+      FNodeList[aIndex].Item := Default(TVertexItem);
+      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * NODE_SIZE);
+      System.FillChar(FNodeList[Count].Item, SizeOf(TVertexItem), 0);
+      Rehash;
+    end
+  else   // last element
+    begin
+      RemoveFromChain(aIndex);
+      System.FillChar(FNodeList[Count].Item, SizeOf(TVertexItem), 0);
+    end;
+end;
+
+function TGVertexHashList.DoRemove(constref v: TVertex): Boolean;
+var
+  RemoveIdx: SizeInt;
+begin
+  RemoveIdx := Find(v);
+  Result := RemoveIdx >= 0;
+  if Result then
+    DoDelete(RemoveIdx);
+end;
+
+procedure TGVertexHashList.CheckIndexRange(aIndex: SizeInt);
+begin
+  if (aIndex < 0) or (aIndex >= Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+class constructor TGVertexHashList.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
+class operator TGVertexHashList.Initialize(var vl: TGVertexHashList);
+begin
+  vl.FCount := 0;
+end;
+
+class operator TGVertexHashList.Copy(constref aSrc: TGVertexHashList; var aDst: TGVertexHashList);
+begin
+  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FChainList := System.Copy(aSrc.FChainList);
+  aDst.FCount := aSrc.FCount;
+end;
+
+procedure TGVertexHashList.Clear;
+begin
+  FNodeList := nil;
+  FChainList := nil;
+  FCount := 0;
+end;
+
+procedure TGVertexHashList.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue <= Capacity then
+    exit;
+  if aValue <= DEFAULT_CONTAINER_CAPACITY then
+    aValue := DEFAULT_CONTAINER_CAPACITY
+  else
+    if aValue <= MAX_CAPACITY then
+      aValue := LGUtils.RoundUpTwoPower(aValue)
+    else
+      raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+  Resize(aValue);
+end;
+
+procedure TGVertexHashList.TrimToFit;
+var
+  I, NewCapacity: SizeInt;
+begin
+  if Count > 0 then
+    begin
+      NewCapacity := LGUtils.RoundUpTwoPower(Count shl 1);
+      if NewCapacity < Capacity then
+        begin
+          for I := 0 to Pred(Count) do
+            FNodeList[I].Item.TrimToFit;
+          Resize(NewCapacity);
+        end;
+    end
+  else
+    Clear;
+end;
+
+function TGVertexHashList.IndexOf(constref v: TVertex): SizeInt;
+begin
+  if Count > 0 then
+    Result := Find(v)
+  else
+    Result := NULL_INDEX;
+end;
+
+function TGVertexHashList.FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
+var
+  h: SizeInt;
+begin
+  h := TEqRel.HashCode(v);
+  if Count > 0 then
+    aIndex := Find(v, h)
+  else
+    aIndex := NULL_INDEX;
+  Result := aIndex >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      aIndex := DoAdd(v, h);
+    end;
+end;
+
+function TGVertexHashList.Remove(constref v: TVertex): Boolean;
+begin
+  if Count > 0 then
+    Result := DoRemove(v)
+  else
+    Result := False;
+end;
+
+procedure TGVertexHashList.Delete(aIndex: SizeInt);
+begin
+  CheckIndexRange(aIndex);
+  DoDelete(aIndex);
+end;
+
+{ TGCustomSimpleSparseGraph.TAdjEnumerator }
+
+function TGCustomSimpleSparseGraph.TAdjEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FEnum.Current^.Destination;
+end;
+
+function TGCustomSimpleSparseGraph.TAdjEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGCustomSimpleSparseGraph.TAdjEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TGCustomSimpleSparseGraph.TAdjVertices }
+
+function TGCustomSimpleSparseGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
+begin
+  Result.FEnum := FGraph.FVertexList.FNodeList[FSource].Item.GetEnumerator;
+end;
+
+{ TGCustomSimpleSparseGraph.TIncidentEnumerator }
+
+function TGCustomSimpleSparseGraph.TIncidentEnumerator.GetCurrent: TIncidentEdge;
+var
+  p: ^TAdjItem;
+begin
+  p := FEnum.Current;
+  Result.Destination := p^.Destination;
+  Result.Data := p^.Data;
+end;
+
+function TGCustomSimpleSparseGraph.TIncidentEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGCustomSimpleSparseGraph.TIncidentEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TGCustomSimpleSparseGraph.TIncidentEdges }
+
+function TGCustomSimpleSparseGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
+begin
+  Result.FEnum := FGraph.FVertexList.FNodeList[FSource].Item.GetEnumerator;
+end;
+
+{ TGCustomSimpleSparseGraph.TEdgeEnumerator }
+
+function TGCustomSimpleSparseGraph.TEdgeEnumerator.GetCurrent: TEdge;
+var
+  p: ^TAdjItem;
+begin
+  p := FEnum.Current;
+  Result.Source := FCurrIndex;
+  Result.Destination := p^.Destination;
+  Result.Data := p^.Data;
+end;
+
+function TGCustomSimpleSparseGraph.TEdgeEnumerator.MoveNext: Boolean;
+begin
+  repeat
+    if FEnumDone then
+      begin
+        if FCurrIndex >= FLastIndex then
+          exit(False);
+        Inc(FCurrIndex);
+        FEnum := FList[FCurrIndex].Item.GetEnumerator;
+      end;
+    Result := FEnum.MoveNext;
+    FEnumDone := not Result;
+  until Result;
+end;
+
+procedure TGCustomSimpleSparseGraph.TEdgeEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+  FEnumDone := True;
+end;
+
+{ TGCustomSimpleSparseGraph.TEdges }
+
+function TGCustomSimpleSparseGraph.TEdges.GetEnumerator: TEdgeEnumerator;
+begin
+  Result.FList := FGraph.FVertexList.FNodeList;
+  Result.FLastIndex := Pred(FGraph.FVertexList.Count);
+  Result.FCurrIndex := -1;
+  Result.FEnumDone := True;
+end;
+
+{ TGCustomSimpleSparseGraph }
+
+function TGCustomSimpleSparseGraph.GetVertexCount: SizeInt;
+begin
+  Result := FVertexList.Count;
+end;
+
+function TGCustomSimpleSparseGraph.GetVertex(aIndex: SizeInt): TVertex;
+begin
+  Result := FVertexList[aIndex];
+end;
+
+function TGCustomSimpleSparseGraph.GetEdgeData(aSrc, aDst: SizeInt): TEdgeData;
+begin
+  Result := FVertexList.FNodeList[aSrc].Item.Find(aDst)^.Data;
+end;
+
+function TGCustomSimpleSparseGraph.IsEmpty: Boolean;
+begin
+  Result := FVertexList.Count = 0;
+end;
+
+function TGCustomSimpleSparseGraph.NonEmpty: Boolean;
+begin
+  Result := FVertexList.Count <> 0;
+end;
+
+procedure TGCustomSimpleSparseGraph.Clear;
+begin
+  FVertexList.Clear;
+  FEdgeCount := 0;
+  FTitle := '';
+end;
+
+procedure TGCustomSimpleSparseGraph.EnsureCapacity(aValue: SizeInt);
+begin
+  FVertexList.EnsureCapacity(aValue);
+end;
+
+procedure TGCustomSimpleSparseGraph.TrimToFit;
+begin
+  FVertexList.TrimToFit;
+end;
+
+function TGCustomSimpleSparseGraph.ContainsVertex(constref v: TVertex): Boolean;
+begin
+  Result := FVertexList.IndexOf(v) >= 0;
+end;
+
+function TGCustomSimpleSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := ContainsEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGCustomSimpleSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+begin
+  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
+    exit(False);
+  if (aDst < 0) or (aDst >= FVertexList.Count) then
+    exit(False);
+  Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst);
+end;
+
+function TGCustomSimpleSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
+var
+  p: ^TAdjItem;
+begin
+  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
+    exit(False);
+  if (aDst < 0) or (aDst >= FVertexList.Count) then
+    exit(False);
+  p := FVertexList.FNodeList[aSrc].Item.Find(aDst);
+  Result := p <> nil;
+  if Result then
+    aData := p^.Data;
+end;
+
+function TGCustomSimpleSparseGraph.IndexOf(constref v: TVertex): SizeInt;
+begin
+  Result := FVertexList.IndexOf(v);
+end;
+
+function TGCustomSimpleSparseGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+begin
+  Result := not FVertexList.FindOrAdd(v, aIndex);
+  if Result then
+    FVertexList.FNodeList[aIndex].Item.Tag := 0;
+end;
+
+function TGCustomSimpleSparseGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := AdjacentI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGCustomSimpleSparseGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
+begin
+  Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst) or
+            FVertexList.FNodeList[aDst].Item.Contains(aSrc);
+end;
+
+function TGCustomSimpleSparseGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
+begin
+  Result := AdjVerticesI(FVertexList.IndexOf(aSrc));
+end;
+
+function TGCustomSimpleSparseGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  Result.FGraph := Self;
+  Result.FSource := aSrc;
+end;
+
+function TGCustomSimpleSparseGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
+begin
+  Result := IncidentEdgesI(FVertexList.IndexOf(aSrc));
+end;
+
+function TGCustomSimpleSparseGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  Result.FGraph := Self;
+  Result.FSource := aSrc;
+end;
+
+function TGCustomSimpleSparseGraph.Edges: TEdges;
+begin
+  Result.FGraph := Self;
+end;
+
+function TGCustomSimpleSparseGraph.DSFTraversal(constref aRoot: TVertex; aOnGray: TOnVertexVisit;
+  aOnWhite: TOnVertexVisit): SizeInt;
+begin
+  Result := DSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
+end;
+
+function TGCustomSimpleSparseGraph.DSFTraversalI(aRoot: SizeInt; aOnGray: TOnVertexVisit;
+  aOnWhite: TOnVertexVisit): SizeInt;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+begin
+  Result := 0;
+  FVertexList.CheckIndexRange(aRoot);
+  Visited.Size := VertexCount;
+  {%H-}Stack.Push(aRoot);
+  repeat
+    if not Visited[aRoot] then
+      begin
+        Inc(Result);
+        Visited[aRoot] := True;
+        if aOnGray <> nil then
+          aOnGray(aRoot);
+        for aRoot in AdjVerticesI(aRoot) do
+          if not Visited[aRoot] then
+            begin
+              Stack.Push(aRoot);
+              if aOnWhite <> nil then
+                aOnWhite(aRoot);
+            end;
+      end;
+  until not Stack.TryPop(aRoot);
+end;
+
+function TGCustomSimpleSparseGraph.DSFTraversal(constref aRoot: TVertex; aOnGray,
+  aOnWhite: TNestVertexVisit): SizeInt;
+begin
+  Result := DSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
+end;
+
+function TGCustomSimpleSparseGraph.DSFTraversalI(aRoot: SizeInt; aOnGray,
+  aOnWhite: TNestVertexVisit): SizeInt;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+begin
+  Result := 0;
+  FVertexList.CheckIndexRange(aRoot);
+  Visited.Size := VertexCount;
+  {%H-}Stack.Push(aRoot);
+  repeat
+    if not Visited[aRoot] then
+      begin
+        Inc(Result);
+        Visited[aRoot] := True;
+        if aOnGray <> nil then
+          aOnGray(aRoot);
+        for aRoot in AdjVerticesI(aRoot) do
+          if not Visited[aRoot] then
+            begin
+              Stack.Push(aRoot);
+              if aOnWhite <> nil then
+                aOnWhite(aRoot);
+            end;
+      end;
+  until not Stack.TryPop(aRoot);
+end;
+
+function TGCustomSimpleSparseGraph.BSFTraversal(constref aRoot: TVertex; aOnGray: TOnVertexVisit;
+  aOnWhite: TOnVertexVisit): SizeInt;
+begin
+  Result := BSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
+end;
+
+function TGCustomSimpleSparseGraph.BSFTraversalI(aRoot: SizeInt; aOnGray: TOnVertexVisit;
+  aOnWhite: TOnVertexVisit): SizeInt;
+var
+  Visited: TBitVector;
+  Queue: TIntQueue;
+begin
+  Result := 0;
+  FVertexList.CheckIndexRange(aRoot);
+  Visited.Size := VertexCount;
+  Queue.Enqueue(aRoot);
+  while Queue.TryDequeue(aRoot) do
+    if not Visited[aRoot] then
+      begin
+        Inc(Result);
+        Visited[aRoot] := True;
+        if aOnGray <> nil then
+          aOnGray(aRoot);
+        for aRoot in AdjVerticesI(aRoot) do
+          if not Visited[aRoot] then
+            begin
+              Queue.Enqueue(aRoot);
+              if aOnWhite <> nil then
+                aOnWhite(aRoot);
+            end;
+      end;
+end;
+
+function TGCustomSimpleSparseGraph.BSFTraversal(constref aRoot: TVertex; aOnGray,
+  aOnWhite: TNestVertexVisit): SizeInt;
+begin
+  Result := BSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
+end;
+
+function TGCustomSimpleSparseGraph.BSFTraversalI(aRoot: SizeInt; aOnGray, aOnWhite: TNestVertexVisit): SizeInt;
+var
+  Visited: TBitVector;
+  Queue: TIntQueue;
+begin
+  Result := 0;
+  FVertexList.CheckIndexRange(aRoot);
+  Visited.Size := VertexCount;
+  Queue.Enqueue(aRoot);
+  while Queue.TryDequeue(aRoot) do
+    if not Visited[aRoot] then
+      begin
+        Inc(Result);
+        Visited[aRoot] := True;
+        if aOnGray <> nil then
+          aOnGray(aRoot);
+        for aRoot in AdjVerticesI(aRoot) do
+          if not Visited[aRoot] then
+            begin
+              Queue.Enqueue(aRoot);
+              if aOnWhite <> nil then
+                aOnWhite(aRoot);
+            end;
+      end;
+end;
+
+function TGCustomSimpleSparseGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := SimplePathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGCustomSimpleSparseGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+begin
+  if (aSrc = aDst) or (VertexCount < 2) then
+    exit(False);
+  Visited.Size := VertexCount;
+  {%H-}Stack.Push(aSrc);
+  repeat
+    if not Visited[aSrc] then
+      begin
+        if AdjacentI(aSrc, aDst) then
+           exit(True);
+        Visited[aSrc] := True;
+        for aSrc in AdjVerticesI(aSrc) do
+          if not Visited[aSrc] then
+            Stack.Push(aSrc);
+      end;
+  until not Stack.TryPop(aSrc);
+  Result := False;
+end;
+
+end.
+
+{****************************************************************************
+*                                                                           *
+*   This file is part of the LGraphs package.                               *
+*   Most common graph types and utils.                                      *
+*                                                                           *
+*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*                                                                           *
+*   This code is free software; you can redistribute it and/or modify it    *
+*   under the terms of the Apache License, Version 2.0;                     *
+*   You may obtain a copy of the License at                                 *
+*     http://www.apache.org/licenses/LICENSE-2.0.                           *
+*                                                                           *
+*  Unless required by applicable law or agreed to in writing, software      *
+*  distributed under the License is distributed on an "AS IS" BASIS,        *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+*  See the License for the specific language governing permissions and      *
+*  limitations under the License.                                           *
+*                                                                           *
+*****************************************************************************}
+unit LGraphUtils;
+
+{$mode objfpc}{$H+}
+{$INLINE ON}
+{$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH NESTEDPROCVARS}
+
+interface
+
+uses
+  Classes,
+  SysUtils,
+  math,
+  LGUtils,
+  {%H-}LGHelpers,
+  LGArrayHelpers,
+  LGStack,
+  LGQueue,
+  LGStrConst;
+
+type
+
+  ELGGraphError    = class(Exception); //???
+  TEmptyRec        = record end;
+  TIntArray        = array of SizeInt;
+  TIntHelper       = specialize TGNumArrayHelper<SizeInt>;
+  TIntStack        = specialize TGLiteStack<SizeInt>;
+  TIntQueue        = specialize TGLiteQueue<SizeInt>;
+  TOnVertexVisit   = procedure (aIndex: SizeInt) of object;
+  TNestVertexVisit = procedure (aIndex: SizeInt) is nested;
+
+  { TDisjointSetUnion }
+
+  TDisjointSetUnion = record
+  private
+    FTree: array of SizeInt;
+    function  GetSize: SizeInt; inline;
+    procedure SetSize(aValue: SizeInt);
+  public
+    procedure Clear; inline;
+    function  FindSet(aValue: SizeInt): SizeInt;
+    procedure Union(L, R: SizeInt);
+    property  Size: SizeInt read GetSize write SetSize;
+  end;
+
+implementation
+{$B-}{$COPERATORS ON}
+
+{ TDisjointSetUnion }
+
+function TDisjointSetUnion.GetSize: SizeInt;
+begin
+  Result := System.Length(FTree);
+end;
+
+procedure TDisjointSetUnion.SetSize(aValue: SizeInt);
+var
+  OldSize, I: SizeInt;
+begin
+  OldSize := Size;
+  if aValue > OldSize then
+    begin
+      System.SetLength(FTree, aValue);
+      for I := OldSize to Pred(aValue) do
+        FTree[I] := I;
+    end;
+end;
+
+procedure TDisjointSetUnion.Clear;
+begin
+  FTree := nil;
+end;
+
+function TDisjointSetUnion.FindSet(aValue: SizeInt): SizeInt;
+begin
+  if FTree[aValue] = aValue then
+    exit(aValue);
+  Result := FindSet(FTree[aValue]);
+  FTree[aValue] := Result;
+end;
+
+procedure TDisjointSetUnion.Union(L, R: SizeInt);
+begin
+  L := FindSet(L);
+  R := FindSet(R);
+  if Odd(Random(1000000)) then // random selection ???
+    FTree[L] := R
+  else
+    FTree[R] := L;
+end;
+
+end.
+
+{****************************************************************************
+*                                                                           *
+*   This file is part of the LGenerics package.                             *
+*   Generic simple undirected graph implementation.                         *
+*                                                                           *
+*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*                                                                           *
+*   This code is free software; you can redistribute it and/or modify it    *
+*   under the terms of the Apache License, Version 2.0;                     *
+*   You may obtain a copy of the License at                                 *
+*     http://www.apache.org/licenses/LICENSE-2.0.                           *
+*                                                                           *
+*  Unless required by applicable law or agreed to in writing, software      *
+*  distributed under the License is distributed on an "AS IS" BASIS,        *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+*  See the License for the specific language governing permissions and      *
+*  limitations under the License.                                           *
+*                                                                           *
+*****************************************************************************}
+unit LGSimpleUGraph;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -51136,486 +52477,90 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
-  LGHashTable,
-  LGList,
   LGStack,
   LGQueue,
   LGVector,
-  LGStrConst;
+  LGraphUtils,
+  LGraphType;
 
 type
 
-  ELGGraphError = class(Exception);
-  TEmptyRec     = record end;
-
-
-  { TGSimpleSparseGraphAL simple sparse graph prototype based on adjacency lists;
+  { TGSimpleSparseUGraph simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleSparseGraphAL<TVertex, TEdgeData, TVertexEqRel> = class
-  public
-  type
-    PVertex        = ^TVertex;
-    TStrToVertex   = function(constref aValue: string): TVertex of object;
-    TVertexToStr   = function(constref aValue: TVertex): string of object;
-    TSaveVertex    = procedure(constref aValue: TVertex; aStream: TStream) of object;
-    TIntArray      = array of SizeInt;
-    TVertexArray   = array of TVertex;
-    TOnVertexVisit = function (aIndex: SizeInt): Boolean of object;
-
-    TEdge = record
-      Source,
-      Destination: SizeInt;
-      Data:  TEdgeData;
-    end;
-
-    TAdjItem = record
-    public
-      Destination: SizeInt;
-      Data:  TEdgeData;
-      property Key: SizeInt read Destination write Destination;
-    private
-
-    end;
-    PAdjItem = ^TAdjItem;
-
-  private
-  type
-    TAdjList      = specialize TGLiteIntHashTable<SizeInt, TAdjItem>;
-    TAdjItemArray = array of TAdjItem;
-    TIntHelper    = specialize TGNumArrayHelper<SizeInt>;
-    TIntStack     = specialize TGLiteStack<SizeInt>;
-    TIntQueue     = specialize TGLiteQueue<SizeInt>;
-    PVertexItem   = ^TVertexItem;
-
-    { TVertexItem }
-    TVertexItem = record
-      Vertex: TVertex;
-      InDegree: SizeInt;
-      AdjList: TAdjList;
-      function  GetEnumerator: TAdjList.TEnumerator; inline;
-      function  ToArray: TAdjItemArray;
-      function  IsEmpty: Boolean; inline;
-      procedure ClearItems; inline;
-      procedure TrimToFit; inline;
-      function  Contains(aKey: SizeInt): Boolean; inline;
-      function  FindOrAdd(aKey: SizeInt; out e: PAdjItem): Boolean; inline;
-      function  Find(aKey: SizeInt): PAdjItem; inline;
-      function  FindFirst(out aKey: SizeInt): Boolean; inline;
-      function  Add(constref aItem: TAdjItem): Boolean; inline;
-      function  Remove(aKey: SizeInt): Boolean; inline;
-      function  Count: SizeInt;
-      property  Key: TVertex read Vertex;
-    end;
-
-    TVertexList = specialize TGLiteHashList2<TVertex, TVertexItem, TVertexEqRel>;
-
-  public
-  type
-    TAdjEnumerator = record
-    private
-      FEnum: TAdjList.TEnumerator;
-      function  GetCurrent: SizeInt; inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: SizeInt read GetCurrent;
-    end;
-
-    TAdjVertices = record
-    private
-      FGraph: TGSimpleSparseGraphAL;
-      FSource: SizeInt;
-      procedure Init(aGraph: TGSimpleSparseGraphAL; aIndex: SizeInt); inline;
-    public
-      function GetEnumerator: TAdjEnumerator; inline;
-    end;
-
-    TIncidentEnumerator = record
-    private
-      FEnum: TAdjList.TEnumerator;
-      FSource: SizeInt;
-      function  GetCurrent: TEdge;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: TEdge read GetCurrent;
-    end;
-
-    TIncidentEdges = record
-    private
-      FGraph: TGSimpleSparseGraphAL;
-      FSource: SizeInt;
-      procedure Init(aGraph: TGSimpleSparseGraphAL; aIndex: SizeInt); inline;
-    public
-      function GetEnumerator: TIncidentEnumerator; inline;
-    end;
-
-    TEdgeEnumerator = record
-    private
-      FGraph: TGSimpleSparseGraphAL;
-      FEnum: TAdjList.TEnumerator;
-      FCurrIndex,
-      FLastIndex: SizeInt;
-      FEnumDone: Boolean;
-      function  GetCurrent: TEdge;
-      procedure Init(aGraph: TGSimpleSparseGraphAL);
-    public
-      function  MoveNext: Boolean;
-      procedure Reset; inline;
-      property  Current: TEdge read GetCurrent;
-    end;
-
-    TEdges = record
-    private
-      FGraph: TGSimpleSparseGraphAL;
-      procedure Init(aGraph: TGSimpleSparseGraphAL); inline;
-    public
-      function GetEnumerator: TEdgeEnumerator; inline;
-    end;
-
-  private
-    FVertexList: TVertexList;
-    FEdgeCount: SizeInt;
-    FLabel: string;
-    FDirected: Boolean;
-    function  GetVertexCount: SizeInt; inline;
-    function  GetVertex(aIndex: SizeInt): TVertex; inline;
-    function  GetVertexRef(aIndex: SizeInt): PVertexItem; inline;
+  generic TGSimpleSparseUGraph<TVertex, TEdgeData, TVertexEqRel> = class(
+    specialize TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel>)
+  protected
+  class var
+    CFData: TEdgeData;
+    procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
-    procedure DoRemoveVertex(aIndex: SizeInt);
-    function  GetAdjEnumerator(aIndex: SizeInt): TAdjEnumerator; inline;
-    function  GetIncidentEnumerator(aIndex: SizeInt): TIncidentEnumerator; inline;
-    function  GetEdgeEnumerator: TEdgeEnumerator; inline;
-    property  VertexRefs[aIndex: SizeInt]: PVertexItem read GetVertexRef;
   public
-    constructor Create(aDirected: Boolean = False);
-    destructor Destroy; override;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
-    procedure Clear; inline;
-    procedure EnsureCapacity(aValue: SizeInt); inline;
-    procedure TrimToFit;
-    function  ContainsVertex(constref v: TVertex): Boolean; inline;
-    function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function  IndexOf(constref v: TVertex): SizeInt; inline;
-    function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
-    function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
-    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-    function  RemoveVertex(constref v: TVertex): Boolean;
+    function  RemoveVertex(constref v: TVertex): Boolean; inline;
     function  RemoveVertexI(aIndex: SizeInt): Boolean;
-    function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+    function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+    function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function  InDegree(constref v: TVertex): SizeInt; inline;
-    function  InDegreeI(aIndex: SizeInt): SizeInt;
-    function  OutDegree(constref v: TVertex): SizeInt; inline;
-    function  OutDegreeI(aIndex: SizeInt): SizeInt; inline;
     function  Degree(constref v: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
-    function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  AdjacentI(aSrc, aDst: SizeInt): Boolean; inline;
-  { enumerates indices of adjacent vertices }
-    function  AdjVertices(constref v: TVertex): TAdjVertices; inline;
-    function  AdjVerticesI(aIndex: SizeInt): TAdjVertices; inline;
-  { enumerates incident edges }
-    function  IncidentEdges(constref v: TVertex): TIncidentEdges; inline;
-    function  IncidentEdgesI(aIndex: SizeInt): TIncidentEdges; inline;
-  { enumerates all edges }
-    function  Edges: TEdges; inline;
-    function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
-    function  SimplePathRec(constref aSrc, aDst: TVertex): TIntArray; inline;
-    function  SimplePathRecI(aSrc, aDst: SizeInt): TIntArray;
+    function  EulerPathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
-    function  EulerPathI(aSrc, aDst: SizeInt): TIntArray;
-  { returns count of visited vertices; if the aOnVisit call returns False, the traversal will be stopped }
-    function  DSFTraversal(constref aFrom: TVertex; aOnVisit: TOnVertexVisit = nil): SizeInt; inline;
-    function  DSFTraversalI(aFrom: SizeInt; aOnVisit: TOnVertexVisit = nil): SizeInt;
-  { returns count of visited vertices; if the aOnVisit call returns False, the traversal will be stopped }
-    function  BSFTraversal(constref aFrom: TVertex; aOnVisit: TOnVertexVisit = nil): SizeInt; inline;
-    function  BSFTraversalI(aFrom: SizeInt; aOnVisit: TOnVertexVisit = nil): SizeInt;
+  { checks whether the graph is connected; a graph without vertices is considered disconnected }
+    function  Connected: Boolean;
+  { returns the vector of the spanning tree, which is constructed starting from aRoot;
+    each element contains the index of its parent (or -1 if it is root or not connected) }
+    function  SpanningTree(constref aRoot: TVertex): TIntArray; inline;
+    function  SpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+    function  CreateSpanningTree(constref aRoot: TVertex): TGSimpleSparseUGraph; inline;
+    function  CreateSpanningTreeI(aRoot: SizeInt = 0): TGSimpleSparseUGraph;
+  { returns count of connected components }
+    function  ComponentCount: SizeInt;
+  { returns number of vertices in the connected component that contains aRoot }
+    function  ComponentPop(constref aRoot: TVertex): SizeInt; inline;
+    function  ComponentPopI(aRoot: SizeInt): SizeInt; inline;
+  { returns a vector whose elements contain the component index of the corresponding vertex }
+    function  ComponentVector: TIntArray;
+  { returns a vector whose elements contain the component index of the corresponding vertex;
+    aCompCount returns count of connected components }
+    function  ComponentVector(out aCompCount: SizeInt): TIntArray;
+  { checks whether the graph is a regular graph (that is, the degree of all its
+В В В В  vertices coincide); an empty graph is considered regular }
+    function  IsRegular: Boolean;
+    function  IsTree: Boolean; inline;
+  { returns the length of the shortest path between the vertices aSrc and aDst,
+    -1 if the path does not exist }
+    function  FindMinPath(constref aSrc, aDst: TVertex): SizeInt; inline;
+    function  FindMinPathI(aSrc, aDst: SizeInt): SizeInt;
+  { returns a vector containing in the corresponding components the shortest distances from aRoot }
+    function  FindMinPathVector(constref aRoot: TVertex): TIntArray; inline;
+    function  FindMinPathVectorI(aRoot: SizeInt = 0): TIntArray;
 
-    function  Clone: TGSimpleSparseGraphAL;
-    property  GraphLabel: string read FLabel write FLabel;
-    property  Directed: Boolean read FDirected;
-    property  VertexCount: SizeInt read GetVertexCount;
-    property  EdgeCount: SizeInt read FEdgeCount;
-    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
+    function  Clone: TGSimpleSparseUGraph;
   end;
 
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGSimpleSparseGraphAL.TVertexItem }
+{ TGSimpleSparseUGraph }
 
-function TGSimpleSparseGraphAL.TVertexItem.GetEnumerator: TAdjList.TEnumerator;
-begin
-  Result := AdjList.GetEnumerator;
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.ToArray: TAdjItemArray;
-var
-  Item: PAdjItem;
-  I: SizeInt = 0;
-begin
-  System.SetLength(Result, AdjList.Count);
-  for Item in AdjList do
-    begin
-      Result[I] := Item^;
-      Inc(I);
-    end;
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.IsEmpty: Boolean;
-begin
-  Result := AdjList.Count = 0;
-end;
-
-procedure TGSimpleSparseGraphAL.TVertexItem.ClearItems;
-begin
-  AdjList.ClearItems;
-end;
-
-procedure TGSimpleSparseGraphAL.TVertexItem.TrimToFit;
-begin
-  AdjList.TrimToFit;
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.Contains(aKey: SizeInt): Boolean;
-begin
-  Result := AdjList.Contains(aKey);
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.FindOrAdd(aKey: SizeInt; out e: PAdjItem): Boolean;
-var
-  Dummy: SizeInt;
-begin
-  Result := AdjList.FindOrAdd(aKey, e, Dummy);
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.Find(aKey: SizeInt): PAdjItem;
-var
-  Dummy: SizeInt;
-begin
-  Result := AdjList.Find(aKey, Dummy);
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.FindFirst(out aKey: SizeInt): Boolean;
-begin
-  Result := AdjList.FindFirstKey(aKey);
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.Add(constref aItem: TAdjItem): Boolean;
-var
-  p: PAdjItem;
-begin
-  Result := not FindOrAdd(aItem.Key, p);
-  if Result then
-    p^ := aItem;
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.Remove(aKey: SizeInt): Boolean;
-begin
-  Result := AdjList.Remove(aKey);
-end;
-
-function TGSimpleSparseGraphAL.TVertexItem.Count: SizeInt;
-begin
-  Result := AdjList.Count;
-end;
-
-{ TGSimpleSparseGraphAL.TAdjEnumerator }
-
-function TGSimpleSparseGraphAL.TAdjEnumerator.GetCurrent: SizeInt;
-begin
-  Result := FEnum.Current^.Destination;
-end;
-
-function TGSimpleSparseGraphAL.TAdjEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGSimpleSparseGraphAL.TAdjEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGSimpleSparseGraphAL.TAdjVertices }
-
-procedure TGSimpleSparseGraphAL.TAdjVertices.Init(aGraph: TGSimpleSparseGraphAL; aIndex: SizeInt);
-begin
-  FGraph := aGraph;
-  FSource := aIndex;
-end;
-
-function TGSimpleSparseGraphAL.TAdjVertices.GetEnumerator: TAdjEnumerator;
-begin
-  Result := FGraph.GetAdjEnumerator(FSource);
-end;
-
-{ TGSimpleSparseGraphAL.TIncidentEnumerator }
-
-function TGSimpleSparseGraphAL.TIncidentEnumerator.GetCurrent: TEdge;
-var
-  p: PAdjItem;
-begin
-  p := FEnum.Current;
-  Result.Source := FSource;
-  Result.Destination := p^.Destination;
-  Result.Data := p^.Data;
-end;
-
-function TGSimpleSparseGraphAL.TIncidentEnumerator.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGSimpleSparseGraphAL.TIncidentEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
-{ TGSimpleSparseGraphAL.TIncidentEdges }
-
-procedure TGSimpleSparseGraphAL.TIncidentEdges.Init(aGraph: TGSimpleSparseGraphAL; aIndex: SizeInt);
-begin
-  FGraph := aGraph;
-  FSource := aIndex;
-end;
-
-function TGSimpleSparseGraphAL.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
-begin
-  Result := FGraph.GetIncidentEnumerator(FSource);
-end;
-
-{ TGSimpleSparseGraphAL.TEdgeEnumerator }
-
-function TGSimpleSparseGraphAL.TEdgeEnumerator.GetCurrent: TEdge;
-var
-  p: PAdjItem;
-begin
-  p := FEnum.Current;
-  Result.Source := FCurrIndex;
-  Result.Destination := p^.Destination;
-  Result.Data := p^.Data;
-end;
-
-procedure TGSimpleSparseGraphAL.TEdgeEnumerator.Init(aGraph: TGSimpleSparseGraphAL);
-begin
-  FGraph := aGraph;
-  FLastIndex := Pred(aGraph.VertexCount);
-  Reset;
-end;
-
-function TGSimpleSparseGraphAL.TEdgeEnumerator.MoveNext: Boolean;
-begin
-  repeat
-    if FEnumDone then
-      begin
-        if FCurrIndex >= FLastIndex then
-          exit(False);
-        Inc(FCurrIndex);
-        FEnum := FGraph.VertexRefs[FCurrIndex]^.GetEnumerator;
-      end;
-    Result := FEnum.MoveNext;
-    FEnumDone := not Result;
-  until Result;
-end;
-
-procedure TGSimpleSparseGraphAL.TEdgeEnumerator.Reset;
-begin
-  FCurrIndex := -1;
-  FEnumDone := True;
-end;
-
-{ TGSimpleSparseGraphAL.TEdges }
-
-procedure TGSimpleSparseGraphAL.TEdges.Init(aGraph: TGSimpleSparseGraphAL);
-begin
-  FGraph := aGraph;
-end;
-
-function TGSimpleSparseGraphAL.TEdges.GetEnumerator: TEdgeEnumerator;
-begin
-  Result := FGraph.GetEdgeEnumerator;
-end;
-
-{ TGSimpleSparseGraphAL }
-
-function TGSimpleSparseGraphAL.GetVertexCount: SizeInt;
-begin
-  Result := FVertexList.Count;
-end;
-
-function TGSimpleSparseGraphAL.GetVertex(aIndex: SizeInt): TVertex;
-begin
-  Result := VertexRefs[aIndex]^.Vertex;
-end;
-
-function TGSimpleSparseGraphAL.GetVertexRef(aIndex: SizeInt): PVertexItem;
-begin
-  Result := FVertexList.ItemRefs[aIndex];
-end;
-
-function TGSimpleSparseGraphAL.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-var
-  p: PAdjItem;
-begin
-  if aSrc = aDst then
-    exit(False);
-  Result := not VertexRefs[aSrc]^.FindOrAdd(aDst, p);
-  if Result then
-    begin
-      p^.Key := aDst;
-      p^.Data := aData;
-      if Directed then
-        Inc(VertexRefs[aDst]^.InDegree)
-      else
-        begin
-          VertexRefs[aDst]^.FindOrAdd(aSrc, p);
-          p^.Key := aSrc;
-          p^.Data := aData;
-        end;
-      Inc(FEdgeCount);
-    end;
-end;
-
-function TGSimpleSparseGraphAL.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
-begin
-  if aSrc = aDst then
-    exit(False);
-  Result := VertexRefs[aSrc]^.Remove(aDst);
-  if Result then
-    begin
-      if Directed then
-        Dec(VertexRefs[aDst]^.InDegree)
-      else
-        FVertexList.ItemRefs[aDst]^.Remove(aSrc);
-      Dec(FEdgeCount);
-    end;
-end;
-
-procedure TGSimpleSparseGraphAL.DoRemoveVertex(aIndex: SizeInt);
+procedure TGSimpleSparseUGraph.DoRemoveVertex(aIndex: SizeInt);
 var
   I, J: SizeInt;
-  pV: PVertexItem;
-  p: PAdjItem;
-  CurrEdges: TAdjItemArray;
+  pV: ^TVertexItem;
+  CurrEdges: TVertexItem.TAdjItemArray;
 begin
-  FEdgeCount -= VertexRefs[aIndex]^.Count;
-  if Directed then
-    for p in VertexRefs[aIndex]^.AdjList do
-      Dec(VertexRefs[p^.Destination]^.InDegree);
+  FEdgeCount -= FVertexList.FNodeList[aIndex].Item.Count;
   FVertexList.Delete(aIndex);
   for I := 0 to Pred(FVertexList.Count) do
     begin
-      pV := VertexRefs[I];
+      pV := @FVertexList.FNodeList[I].Item;
       CurrEdges := pV^.ToArray;
       pV^.ClearItems;
       for J := 0 to System.High(CurrEdges) do
@@ -51630,101 +52575,49 @@ begin
     end;
 end;
 
-function TGSimpleSparseGraphAL.GetAdjEnumerator(aIndex: SizeInt): TAdjEnumerator;
-begin
-  Result.FEnum := VertexRefs[aIndex]^.GetEnumerator;
-end;
-
-function TGSimpleSparseGraphAL.GetIncidentEnumerator(aIndex: SizeInt): TIncidentEnumerator;
-begin
-  Result.FEnum := VertexRefs[aIndex]^.GetEnumerator;
-  Result.FSource := aIndex;
-end;
-
-function TGSimpleSparseGraphAL.GetEdgeEnumerator: TEdgeEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-constructor TGSimpleSparseGraphAL.Create(aDirected: Boolean);
-begin
-  FDirected := aDirected;
-end;
-
-destructor TGSimpleSparseGraphAL.Destroy;
-begin
-  Clear;
-  inherited;
-end;
-
-function TGSimpleSparseGraphAL.IsEmpty: Boolean;
-begin
-  Result := FVertexList.IsEmpty;
-end;
-
-function TGSimpleSparseGraphAL.NonEmpty: Boolean;
-begin
-  Result := FVertexList.NonEmpty;
-end;
-
-procedure TGSimpleSparseGraphAL.Clear;
-begin
-  FVertexList.Clear;
-end;
-
-procedure TGSimpleSparseGraphAL.EnsureCapacity(aValue: SizeInt);
-begin
-  FVertexList.EnsureCapacity(aValue);
-end;
-
-procedure TGSimpleSparseGraphAL.TrimToFit;
+function TGSimpleSparseUGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(FVertexList.Count) do
-    VertexRefs[I]^.TrimToFit;
-  FVertexList.TrimToFit;
-end;
-
-function TGSimpleSparseGraphAL.ContainsVertex(constref v: TVertex): Boolean;
-begin
-  Result := FVertexList.Contains(v);
-end;
-
-function TGSimpleSparseGraphAL.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := ContainsEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
-end;
-
-function TGSimpleSparseGraphAL.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+  p: ^TAdjItem;
 begin
   if aSrc = aDst then
     exit(False);
-  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
-    exit(False);
-  if (aDst < 0) or (aDst >= FVertexList.Count) then
-    exit(False);
-  Result := VertexRefs[aSrc]^.Contains(aDst);
-end;
-
-function TGSimpleSparseGraphAL.IndexOf(constref v: TVertex): SizeInt;
-begin
-  Result := FVertexList.IndexOf(v);
-end;
-
-function TGSimpleSparseGraphAL.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
-var
-  p: PVertexItem;
-begin
-  Result := not FVertexList.FindOrAdd(v, p, aIndex);
+  Result := not FVertexList.FNodeList[aSrc].Item.FindOrAdd(aDst, p);
   if Result then
     begin
-      p^.Vertex := v;
-      p^.InDegree := 0;
+      p^.Destination := aDst;
+      p^.Data := aData;
+      FVertexList.FNodeList[aDst].Item.FindOrAdd(aSrc, p);
+      p^.Destination := aSrc;
+      p^.Data := aData;
+      Inc(FEdgeCount);
     end;
 end;
 
-function TGSimpleSparseGraphAL.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+function TGSimpleSparseUGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Result := FVertexList.FNodeList[aSrc].Item.Remove(aDst);
+  if Result then
+    begin
+      FVertexList.FNodeList[aSrc].Item.Remove(aSrc);
+      Dec(FEdgeCount);
+    end;
+end;
+
+function TGSimpleSparseUGraph.RemoveVertex(constref v: TVertex): Boolean;
+begin
+  Result := RemoveVertexI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
+begin
+  Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
+  if Result then
+    DoRemoveVertex(aIndex);
+end;
+
+function TGSimpleSparseUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
 var
   SrcIdx, DstIdx: SizeInt;
 begin
@@ -51733,7 +52626,12 @@ begin
   Result := DoAddEdge(SrcIdx, DstIdx, aData);
 end;
 
-function TGSimpleSparseGraphAL.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleSparseUGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := AddEdge(aSrc, aDst, CFData);
+end;
+
+function TGSimpleSparseUGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
@@ -51742,205 +52640,51 @@ begin
   Result := DoAddEdge(aSrc, aDst, aData);
 end;
 
-function TGSimpleSparseGraphAL.RemoveVertex(constref v: TVertex): Boolean;
-var
-  ToRemove: SizeInt;
+function TGSimpleSparseUGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  ToRemove := FVertexList.IndexOf(v);
-  Result := ToRemove >= 0;
-  if Result then
-    DoRemoveVertex(ToRemove);
+  Result := AddEdgeI(aSrc, aDst, CFData);
 end;
 
-function TGSimpleSparseGraphAL.RemoveVertexI(aIndex: SizeInt): Boolean;
+function TGSimpleSparseUGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
-  if Result then
-    DoRemoveVertex(aIndex);
+  Result := RemoveEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGSimpleSparseGraphAL.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
-var
-  SrcIdx, DstIdx: SizeInt;
-begin
-  SrcIdx := FVertexList.IndexOf(aSrc);
-  if SrcIdx < 0 then
-    exit(False);
-  DstIdx := FVertexList.IndexOf(aDst);
-  if DstIdx < 0 then
-    exit(False);
-  Result := DoRemoveEdge(SrcIdx, DstIdx);
-end;
-
-function TGSimpleSparseGraphAL.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleSparseUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
   if (aDst < 0) or (aDst >= FVertexList.Count) then
     exit(False);
- Result := DoRemoveEdge(aSrc, aDst);
+  Result := DoRemoveEdge(aSrc, aDst);
 end;
 
-function TGSimpleSparseGraphAL.InDegree(constref v: TVertex): SizeInt;
-begin
-  Result := InDegreeI(FVertexList.IndexOf(v));
-end;
-
-function TGSimpleSparseGraphAL.InDegreeI(aIndex: SizeInt): SizeInt;
-begin
-  if Directed then
-    Result := VertexRefs[aIndex]^.InDegree
-  else
-    Result := VertexRefs[aIndex]^.Count;
-end;
-
-function TGSimpleSparseGraphAL.OutDegree(constref v: TVertex): SizeInt;
-begin
-  Result := OutDegreeI(FVertexList.IndexOf(v));
-end;
-
-function TGSimpleSparseGraphAL.OutDegreeI(aIndex: SizeInt): SizeInt;
-begin
-  Result := VertexRefs[aIndex]^.Count;
-end;
-
-function TGSimpleSparseGraphAL.Degree(constref v: TVertex): SizeInt;
+function TGSimpleSparseUGraph.Degree(constref v: TVertex): SizeInt;
 begin
   Result := DegreeI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseGraphAL.DegreeI(aIndex: SizeInt): SizeInt;
-var
-  p: PVertexItem;
+function TGSimpleSparseUGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
-  if Directed then
-    begin
-      p := VertexRefs[aIndex];
-      Result := p^.InDegree + p^.Count;
-    end
-  else
-    Result := OutDegreeI(aIndex);
+  Result := FVertexList.FNodeList[aIndex].Item.Count;
 end;
 
-function TGSimpleSparseGraphAL.Isolated(constref v: TVertex): Boolean;
+function TGSimpleSparseUGraph.Isolated(constref v: TVertex): Boolean;
 begin
   Result := Degree(v) = 0;
 end;
 
-function TGSimpleSparseGraphAL.IsolatedI(aIndex: SizeInt): Boolean;
+function TGSimpleSparseUGraph.IsolatedI(aIndex: SizeInt): Boolean;
 begin
   Result := DegreeI(aIndex) = 0;
 end;
 
-function TGSimpleSparseGraphAL.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleSparseUGraph.EulerPathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := AdjacentI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+  Result := EulerPathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGSimpleSparseGraphAL.AdjacentI(aSrc, aDst: SizeInt): Boolean;
-begin
-  Result := VertexRefs[aSrc]^.Contains(aDst) or VertexRefs[aDst]^.Contains(aSrc);
-end;
-
-function TGSimpleSparseGraphAL.AdjVertices(constref v: TVertex): TAdjVertices;
-begin
-  Result{%H-}.Init(Self, FVertexList.IndexOf(v));
-end;
-
-function TGSimpleSparseGraphAL.AdjVerticesI(aIndex: SizeInt): TAdjVertices;
-begin
-  Result{%H-}.Init(Self, aIndex);
-end;
-
-function TGSimpleSparseGraphAL.IncidentEdges(constref v: TVertex): TIncidentEdges;
-begin
-  Result{%H-}.Init(Self, FVertexList.IndexOf(v));
-end;
-
-function TGSimpleSparseGraphAL.IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
-begin
-  Result{%H-}.Init(Self, aIndex);
-end;
-
-function TGSimpleSparseGraphAL.Edges: TEdges;
-begin
-  Result{%H-}.Init(Self);
-end;
-
-function TGSimpleSparseGraphAL.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := SimplePathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
-end;
-
-function TGSimpleSparseGraphAL.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
-var
-  Visited: TBitVector;
-  Stack: TIntStack;
-begin
-  if aSrc = aDst then
-    exit(False);
-  Visited.Size := VertexCount;
-  Stack.Push(aSrc);
-  while Stack.TryPop(aSrc) do
-    if not Visited[aSrc] then
-      begin
-        if AdjacentI(aSrc, aDst) then
-           exit(True);
-        Visited[aSrc] := True;
-        for aSrc in AdjVerticesI(aSrc) do
-          if not Visited[aSrc] then
-            Stack.Push(aSrc);
-      end;
-  Result := False;
-end;
-
-function TGSimpleSparseGraphAL.SimplePathRec(constref aSrc, aDst: TVertex): TIntArray;
-begin
-  Result := SimplePathRecI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
-end;
-
-function TGSimpleSparseGraphAL.SimplePathRecI(aSrc, aDst: SizeInt): TIntArray;
-var
-  Visited: TBitVector;
-  Path: TIntArray;
-  I: SizeInt = 1;
-  J: SizeInt;
-  function Search: Boolean;
-  begin
-    if AdjacentI(J, aDst) then
-       exit(True);
-    Visited[J] := True;
-    for J in AdjVerticesI(J) do
-      if not Visited[J] then
-        if Search then
-          begin
-            if System.Length(Path) = I then
-              System.SetLength(Path, I shl 1);
-            Path[I] := J;
-            Inc(I);
-            exit(True);
-          end;
-    Result := False;
-  end;
-begin
-  if aSrc = aDst then
-    exit(nil);
-  Visited.Size := VertexCount;
-  System.SetLength(Path, ARRAY_INITIAL_SIZE);
-  J := aSrc;
-  if Search then
-    begin
-      Path[0] := aDst;
-      System.SetLength(Path, Succ(I));
-      Path[I] := aSrc;
-      TIntHelper.Reverse(Path);
-      Result := Path;
-    end
-  else
-    Result := nil;
-end;
-
-function TGSimpleSparseGraphAL.EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleSparseUGraph.EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
 var
   I: SizeInt;
 begin
@@ -51953,103 +52697,239 @@ begin
   Result := True;
 end;
 
-function TGSimpleSparseGraphAL.EulerPathI(aSrc, aDst: SizeInt): TIntArray;
-var
-  I: SizeInt;
-  g: TGSimpleSparseGraphAL = nil;
-  Stack: TIntStack;
-  function Tour(s: SizeInt): SizeInt;
-  var
-    d: SizeInt;
-  begin
-    repeat
-      if not g.VertexRefs[s]^.FindFirst(d) then
-        break;
-      Stack.Push(s);
-      g.RemoveEdgeI(s, d);
-      s := d;
-    until False;
-    Result := s;
-  end;
+function TGSimpleSparseUGraph.Connected: Boolean;
 begin
-  if not EulerPathExistsI(aSrc, aDst) then
-    exit(nil);
-  g := Clone;
-  try
-    I := 1;
-    System.SetLength(Result, ARRAY_INITIAL_SIZE);
-    Result[0] := aSrc;
-    while (Tour(aSrc) <> aDst) and Stack.NonEmpty do
-      begin
-        aSrc := Stack.Pop;
-        if System.Length(Result) = I then
-          System.SetLength(Result, I shl 1);
-        Result[I] := aSrc;
-        Inc(I);
-      end;
-     System.SetLength(Result, I);
-  finally
-    g.Free;
-  end;
-end;
-
-function TGSimpleSparseGraphAL.DSFTraversal(constref aFrom: TVertex; aOnVisit: TOnVertexVisit): SizeInt;
-begin
-  Result := DSFTraversalI(FVertexList.IndexOf(aFrom), aOnVisit);
-end;
-
-function TGSimpleSparseGraphAL.DSFTraversalI(aFrom: SizeInt; aOnVisit: TOnVertexVisit): SizeInt;
-var
-  Visited: TBitVector;
-  Stack: TIntStack;
-begin
-  Result := 0;
-  Visited.Size := VertexCount;
-  Stack.Push(aFrom);
-  while Stack.TryPop(aFrom) do
-    if not Visited[aFrom] then
-      begin
-        Inc(Result);
-        Visited[aFrom] := True;
-        if (aOnVisit <> nil) and not aOnVisit(aFrom) then
-          exit;
-        for aFrom in AdjVerticesI(aFrom) do
-          if not Visited[aFrom] then
-            Stack.Push(aFrom);
-      end;
-end;
-
-function TGSimpleSparseGraphAL.BSFTraversal(constref aFrom: TVertex; aOnVisit: TOnVertexVisit): SizeInt;
-begin
-  Result := BSFTraversalI(FVertexList.IndexOf(aFrom), aOnVisit);
-end;
-
-function TGSimpleSparseGraphAL.BSFTraversalI(aFrom: SizeInt; aOnVisit: TOnVertexVisit): SizeInt;
-var
-  Visited: TBitVector;
-  Queue: TIntQueue;
-begin
-  Result := 0;
-  Visited.Size := VertexCount;
-  Queue.Enqueue(aFrom);
-  while Queue.TryDequeue(aFrom) do
+  if VertexCount > 1 then
     begin
-      Inc(Result);
-      Visited[aFrom] := True;
-      if (aOnVisit <> nil) and not aOnVisit(aFrom) then
-        exit;
-      for aFrom in AdjVerticesI(aFrom) do
-        if not Visited[aFrom] then
-          Queue.Enqueue(aFrom);
-    end;
+      if EdgeCount >= Pred(VertexCount) then
+        Result := DSFTraversalI(0) = VertexCount
+      else
+        Result := False;
+    end
+  else
+    Result := VertexCount = 1;
 end;
 
-function TGSimpleSparseGraphAL.Clone: TGSimpleSparseGraphAL;
+function TGSimpleSparseUGraph.SpanningTree(constref aRoot: TVertex): TIntArray;
 begin
-  Result := TGSimpleSparseGraphAL.Create(FDirected);
+  Result := SpanningTreeI(FVertexList.IndexOf(aRoot));
+end;
+
+function TGSimpleSparseUGraph.SpanningTreeI(aRoot: SizeInt): TIntArray;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  Parent: SizeInt;
+begin
+  if IsEmpty then
+    exit(nil);
+  Visited.Size := VertexCount;
+  System.SetLength(Result, VertexCount);
+  System.FillChar(Result[0], System.Length(Result) * SizeOf(SizeInt), $ff);
+  {%H-}Stack.Push(aRoot);
+  repeat
+    if not Visited[aRoot] then
+      begin
+        Parent := aRoot;
+        Visited[aRoot] := True;
+        for aRoot in AdjVerticesI(aRoot) do
+          if not Visited[aRoot] then
+            begin
+              Result[aRoot] := Parent;
+              Stack.Push(aRoot);
+            end;
+      end;
+  until not Stack.TryPop(aRoot);
+end;
+
+function TGSimpleSparseUGraph.CreateSpanningTree(constref aRoot: TVertex): TGSimpleSparseUGraph;
+begin
+  Result := CreateSpanningTreeI(FVertexList.IndexOf(aRoot));
+end;
+
+function TGSimpleSparseUGraph.CreateSpanningTreeI(aRoot: SizeInt): TGSimpleSparseUGraph;
+var
+  Tree: TIntArray;
+  I, Src: SizeInt;
+begin
+  Result := TGSimpleSparseUGraph.Create;
+  Tree := SpanningTreeI(aRoot);
+  for I := 0 to Pred(Length(Tree)) do
+    if Tree[I] <> -1 then
+      begin
+        Src := Tree[I];
+        Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeData(Src, I));
+      end;
+end;
+
+function TGSimpleSparseUGraph.ComponentCount: SizeInt;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  I, Curr: SizeInt;
+begin
+  Visited.Size := VertexCount;
+  Result := 0;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        {%H-}Stack.Push(Curr);
+        repeat
+          if not Visited[Curr] then
+            begin
+              Visited[Curr] := True;
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  Stack.Push(Curr);
+            end;
+        until not Stack.TryPop(Curr);
+        Inc(Result);
+      end;
+end;
+
+function TGSimpleSparseUGraph.ComponentPop(constref aRoot: TVertex): SizeInt;
+begin
+  Result := DSFTraversalI(FVertexList.IndexOf(aRoot));
+end;
+
+function TGSimpleSparseUGraph.ComponentPopI(aRoot: SizeInt): SizeInt;
+begin
+  Result := DSFTraversalI(aRoot);
+end;
+
+function TGSimpleSparseUGraph.ComponentVector: TIntArray;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  I, Curr, Group: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  Visited.Size := VertexCount;
+  Group := 0;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        {%H-}Stack.Push(I);
+        repeat
+          if not Visited[Curr] then
+            begin
+              Visited[Curr] := True;
+              Result[Curr] := Group;
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  Stack.Push(Curr);
+            end;
+        until not Stack.TryPop(Curr);
+        Inc(Group);
+      end;
+end;
+
+function TGSimpleSparseUGraph.ComponentVector(out aCompCount: SizeInt): TIntArray;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  I, Curr: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  Visited.Size := VertexCount;
+  aCompCount := 0;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        {%H-}Stack.Push(I);
+        repeat
+          if not Visited[Curr] then
+            begin
+              Visited[Curr] := True;
+              Result[Curr] := aCompCount;
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  Stack.Push(Curr);
+            end;
+        until not Stack.TryPop(Curr);
+        Inc(aCompCount);
+      end;
+end;
+
+function TGSimpleSparseUGraph.IsRegular: Boolean;
+var
+  I, d: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      d := DegreeI(0);
+      for I := 1 to Pred(VertexCount) do
+        if DegreeI(I) <> d then
+          exit(False);
+    end;
+  Result := True;
+end;
+
+function TGSimpleSparseUGraph.IsTree: Boolean;
+begin
+  Result := (EdgeCount = Pred(VertexCount)) and Connected;
+end;
+
+function TGSimpleSparseUGraph.FindMinPath(constref aSrc, aDst: TVertex): SizeInt;
+begin
+  Result := FindMinPathI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aSrc));
+end;
+
+function TGSimpleSparseUGraph.FindMinPathI(aSrc, aDst: SizeInt): SizeInt;
+var
+  Queue: TIntQueue;
+  v: TIntArray;
+  d: SizeInt;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
+  System.SetLength(v, VertexCount);
+  System.FillChar(v[0], System.Length(v) * SizeOf(SizeInt), $ff);
+  v[aSrc] := 0;
+  Queue.Enqueue(aSrc);
+  while Queue.TryDequeue(aSrc) do
+    for d in AdjVerticesI(aSrc) do
+      if v[d] = -1 then
+        begin
+          Queue.Enqueue(d);
+          v[d] := Succ(v[aSrc]);
+        end;
+  Result := v[aDst];
+end;
+
+function TGSimpleSparseUGraph.FindMinPathVector(constref aRoot: TVertex): TIntArray;
+begin
+  Result := FindMinPathVectorI(FVertexList.IndexOf(aRoot));
+end;
+
+function TGSimpleSparseUGraph.FindMinPathVectorI(aRoot: SizeInt): TIntArray;
+var
+  Queue: TIntQueue;
+  d: SizeInt;
+begin
+  FVertexList.CheckIndexRange(aRoot);
+  System.SetLength(Result, VertexCount);
+  System.FillChar(Result[0], System.Length(Result) * SizeOf(SizeInt), $ff);
+  Result[aRoot] := 0;
+  Queue.Enqueue(aRoot);
+  while Queue.TryDequeue(aRoot) do
+    for d in AdjVerticesI(aRoot) do
+      if Result[d] = -1 then
+        begin
+          Queue.Enqueue(d);
+          Result[d] := Succ(Result[aRoot]);
+        end;
+end;
+
+function TGSimpleSparseUGraph.Clone: TGSimpleSparseUGraph;
+begin
+  Result := TGSimpleSparseUGraph.Create;
   Result.FVertexList := FVertexList;
   Result.FEdgeCount := EdgeCount;
-  Result.FLabel := GraphLabel;
+  Result.FTitle := Title;
 end;
 
 end.
@@ -62985,14 +63865,14 @@ end;
 
 procedure TBitVector.SetSize(aValue: SizeInt);
 var
-  OldSize, NewSize: SizeInt;
+  OldLen: SizeInt;
 begin
-  OldSize := Size;
-  if aValue > OldSize then
+  OldLen := Size;
+  if aValue > OldLen then
     begin
-      NewSize := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
-      System.SetLength(FBits, NewSize);
-      System.FillChar(FBits[OldSize], (NewSize - OldSize) * SizeOf(SizeUInt), 0);
+      aValue := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
+      System.SetLength(FBits, aValue);
+      System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
 end;
 
