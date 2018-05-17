@@ -72,6 +72,8 @@ type
     each element contains the index of its parent (or -1 if it is root or not connected) }
     function  SpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  SpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+    function  CreateSpanningTree(constref aRoot: TVertex): TGSimpleSparseUGraph; inline;
+    function  CreateSpanningTreeI(aRoot: SizeInt = 0): TGSimpleSparseUGraph;
   { returns count of connected components }
     function  ComponentCount: SizeInt;
   { returns number of vertices in the connected component that contains aRoot }
@@ -79,10 +81,22 @@ type
     function  ComponentPopI(aRoot: SizeInt): SizeInt; inline;
   { returns a vector whose elements contain the component index of the corresponding vertex }
     function  ComponentVector: TIntArray;
+  { returns a vector whose elements contain the component index of the corresponding vertex;
+    aCompCount returns count of connected components }
+    function  ComponentVector(out aCompCount: SizeInt): TIntArray;
   { checks whether the graph is a regular graph (that is, the degree of all its
      vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean;
     function  IsTree: Boolean; inline;
+  { returns the length of the shortest path between the vertices aSrc and aDst,
+    -1 if the path does not exist }
+    function  FindMinPath(constref aSrc, aDst: TVertex): SizeInt; inline;
+    function  FindMinPathI(aSrc, aDst: SizeInt): SizeInt;
+  { returns a vector containing in the corresponding components the shortest distances from aRoot }
+    function  FindMinPathVector(constref aRoot: TVertex): TIntArray; inline;
+    function  FindMinPathVectorI(aRoot: SizeInt = 0): TIntArray;
+
+    function  Clone: TGSimpleSparseUGraph;
   end;
 
 implementation
@@ -94,7 +108,6 @@ procedure TGSimpleSparseUGraph.DoRemoveVertex(aIndex: SizeInt);
 var
   I, J: SizeInt;
   pV: ^TVertexItem;
-  p: ^TAdjItem;
   CurrEdges: TVertexItem.TAdjItemArray;
 begin
   FEdgeCount -= FVertexList.FNodeList[aIndex].Item.Count;
@@ -283,6 +296,26 @@ begin
   until not Stack.TryPop(aRoot);
 end;
 
+function TGSimpleSparseUGraph.CreateSpanningTree(constref aRoot: TVertex): TGSimpleSparseUGraph;
+begin
+  Result := CreateSpanningTreeI(FVertexList.IndexOf(aRoot));
+end;
+
+function TGSimpleSparseUGraph.CreateSpanningTreeI(aRoot: SizeInt): TGSimpleSparseUGraph;
+var
+  Tree: TIntArray;
+  I, Src: SizeInt;
+begin
+  Result := TGSimpleSparseUGraph.Create;
+  Tree := SpanningTreeI(aRoot);
+  for I := 0 to Pred(Length(Tree)) do
+    if Tree[I] <> -1 then
+      begin
+        Src := Tree[I];
+        Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeData(Src, I));
+      end;
+end;
+
 function TGSimpleSparseUGraph.ComponentCount: SizeInt;
 var
   Visited: TBitVector;
@@ -332,7 +365,7 @@ begin
     if not Visited[I] then
       begin
         Curr := I;
-        Stack.Push(I);
+        {%H-}Stack.Push(I);
         repeat
           if not Visited[Curr] then
             begin
@@ -344,6 +377,34 @@ begin
             end;
         until not Stack.TryPop(Curr);
         Inc(Group);
+      end;
+end;
+
+function TGSimpleSparseUGraph.ComponentVector(out aCompCount: SizeInt): TIntArray;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  I, Curr: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  Visited.Size := VertexCount;
+  aCompCount := 0;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        {%H-}Stack.Push(I);
+        repeat
+          if not Visited[Curr] then
+            begin
+              Visited[Curr] := True;
+              Result[Curr] := aCompCount;
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  Stack.Push(Curr);
+            end;
+        until not Stack.TryPop(Curr);
+        Inc(aCompCount);
       end;
 end;
 
@@ -364,6 +425,65 @@ end;
 function TGSimpleSparseUGraph.IsTree: Boolean;
 begin
   Result := (EdgeCount = Pred(VertexCount)) and Connected;
+end;
+
+function TGSimpleSparseUGraph.FindMinPath(constref aSrc, aDst: TVertex): SizeInt;
+begin
+  Result := FindMinPathI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aSrc));
+end;
+
+function TGSimpleSparseUGraph.FindMinPathI(aSrc, aDst: SizeInt): SizeInt;
+var
+  Queue: TIntQueue;
+  v: TIntArray;
+  d: SizeInt;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
+  System.SetLength(v, VertexCount);
+  System.FillChar(v[0], System.Length(v) * SizeOf(SizeInt), $ff);
+  v[aSrc] := 0;
+  Queue.Enqueue(aSrc);
+  while Queue.TryDequeue(aSrc) do
+    for d in AdjVerticesI(aSrc) do
+      if v[d] = -1 then
+        begin
+          Queue.Enqueue(d);
+          v[d] := Succ(v[aSrc]);
+        end;
+  Result := v[aDst];
+end;
+
+function TGSimpleSparseUGraph.FindMinPathVector(constref aRoot: TVertex): TIntArray;
+begin
+  Result := FindMinPathVectorI(FVertexList.IndexOf(aRoot));
+end;
+
+function TGSimpleSparseUGraph.FindMinPathVectorI(aRoot: SizeInt): TIntArray;
+var
+  Queue: TIntQueue;
+  d: SizeInt;
+begin
+  FVertexList.CheckIndexRange(aRoot);
+  System.SetLength(Result, VertexCount);
+  System.FillChar(Result[0], System.Length(Result) * SizeOf(SizeInt), $ff);
+  Result[aRoot] := 0;
+  Queue.Enqueue(aRoot);
+  while Queue.TryDequeue(aRoot) do
+    for d in AdjVerticesI(aRoot) do
+      if Result[d] = -1 then
+        begin
+          Queue.Enqueue(d);
+          Result[d] := Succ(Result[aRoot]);
+        end;
+end;
+
+function TGSimpleSparseUGraph.Clone: TGSimpleSparseUGraph;
+begin
+  Result := TGSimpleSparseUGraph.Create;
+  Result.FVertexList := FVertexList;
+  Result.FEdgeCount := EdgeCount;
+  Result.FTitle := Title;
 end;
 
 end.

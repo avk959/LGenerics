@@ -115,7 +115,7 @@ type
     function  FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean; inline;
     function  Find(aDst: SizeInt): PAdjItem;
     function  FindFirst(out aDst: SizeInt): Boolean; inline;
-    function  Add(constref aItem: TAdjItem): Boolean; inline;
+    function  Add(constref aItem: TAdjItem): Boolean; //inline;
     function  Remove(aDst: SizeInt): Boolean; inline;
     property  Key: TVertex read Vertex;
     property  Count: SizeInt read FCount;
@@ -154,6 +154,7 @@ type
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
+    function  GetItemRef(aIndex: SizeInt): PVertexItem;
     procedure InitialAlloc;
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
@@ -179,6 +180,7 @@ type
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: TVertex read GetItem; default;
+    property  ItemRefs[aIndex: SizeInt]: PVertexItem read GetItemRef;
   end;
 
   { TGCustomSimpleSparseGraph simple sparse graph abstract ancestor class based on adjacency lists;
@@ -194,9 +196,10 @@ type
   var
     FVertexList: TVertexList;
     FEdgeCount: SizeInt;
-    FLabel: string;
+    FTitle: string;
     function  GetVertexCount: SizeInt; inline;
     function  GetVertex(aIndex: SizeInt): TVertex; inline;
+    function  GetEdgeData(aSrc, aDst: SizeInt): TEdgeData; inline;
   public
   type
     TAdjItem = TVertexItem.TAdjItem;
@@ -277,6 +280,7 @@ type
     function  ContainsVertex(constref v: TVertex): Boolean; inline;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function  ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
     function  IndexOf(constref v: TVertex): SizeInt; inline;
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
@@ -308,7 +312,7 @@ type
     function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
 
-    property  GraphLabel: string read FLabel write FLabel;
+    property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read GetVertexCount;
     property  EdgeCount: SizeInt read FEdgeCount;
     property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
@@ -641,6 +645,12 @@ function TGVertexHashList.GetItem(aIndex: SizeInt): TVertex;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].Item.Vertex;
+end;
+
+function TGVertexHashList.GetItemRef(aIndex: SizeInt): PVertexItem;
+begin
+  CheckIndexRange(aIndex);
+  Result := @FNodeList[aIndex].Item;
 end;
 
 procedure TGVertexHashList.InitialAlloc;
@@ -985,6 +995,11 @@ begin
   Result := FVertexList[aIndex];
 end;
 
+function TGCustomSimpleSparseGraph.GetEdgeData(aSrc, aDst: SizeInt): TEdgeData;
+begin
+  Result := FVertexList.FNodeList[aSrc].Item.Find(aDst)^.Data;
+end;
+
 function TGCustomSimpleSparseGraph.IsEmpty: Boolean;
 begin
   Result := FVertexList.Count = 0;
@@ -999,7 +1014,7 @@ procedure TGCustomSimpleSparseGraph.Clear;
 begin
   FVertexList.Clear;
   FEdgeCount := 0;
-  FLabel := '';
+  FTitle := '';
 end;
 
 procedure TGCustomSimpleSparseGraph.EnsureCapacity(aValue: SizeInt);
@@ -1029,6 +1044,20 @@ begin
   if (aDst < 0) or (aDst >= FVertexList.Count) then
     exit(False);
   Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst);
+end;
+
+function TGCustomSimpleSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
+var
+  p: ^TAdjItem;
+begin
+  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
+    exit(False);
+  if (aDst < 0) or (aDst >= FVertexList.Count) then
+    exit(False);
+  p := FVertexList.FNodeList[aSrc].Item.Find(aDst);
+  Result := p <> nil;
+  if Result then
+    aData := p^.Data;
 end;
 
 function TGCustomSimpleSparseGraph.IndexOf(constref v: TVertex): SizeInt;
