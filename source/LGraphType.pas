@@ -200,9 +200,11 @@ type
     function  GetVertexCount: SizeInt; inline;
     function  GetVertex(aIndex: SizeInt): TVertex; inline;
     function  GetEdgeData(aSrc, aDst: SizeInt): TEdgeData; inline;
+    function  CreateIndexVector: TIntArray;
   public
   type
-    TAdjItem = TVertexItem.TAdjItem;
+    TOnAddEdge   = specialize TGOnAddEdge<TEdgeData>;
+    TAdjItem     = TVertexItem.TAdjItem;
 
     TEdge = record
       Source,
@@ -285,7 +287,7 @@ type
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
     function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  AdjacentI(aSrc, aDst: SizeInt): Boolean; //inline;
+    function  AdjacentI(aSrc, aDst: SizeInt): Boolean;
   { enumerates indices of adjacent vertices }
     function  AdjVertices(constref aSrc: TVertex): TAdjVertices; inline;
     function  AdjVerticesI(aSrc: SizeInt): TAdjVertices;
@@ -294,23 +296,27 @@ type
     function  IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
   { enumerates all edges }
     function  Edges: TEdges;
-  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found }
-    function  DSFTraversal(constref aRoot: TVertex; aOnGray: TOnVertexVisit = nil;
-                           aOnWhite: TOnVertexVisit = nil): SizeInt; inline;
-    function  DSFTraversalI(aRoot: SizeInt; aOnGray: TOnVertexVisit = nil;
-                            aOnWhite: TOnVertexVisit = nil): SizeInt;
-    function  DSFTraversal(constref aRoot: TVertex; aOnGray, aOnWhite: TNestVertexVisit): SizeInt; inline;
-    function  DSFTraversalI(aRoot: SizeInt; aOnGray, aOnWhite: TNestVertexVisit): SizeInt;
-  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found }
-    function  BSFTraversal(constref aRoot: TVertex; aOnGray: TOnVertexVisit = nil;
-                           aOnWhite: TOnVertexVisit = nil): SizeInt; inline;
-    function  BSFTraversalI(aRoot: SizeInt; aOnGray: TOnVertexVisit = nil;
-                            aOnWhite: TOnVertexVisit = nil): SizeInt;
-    function  BSFTraversal(constref aRoot: TVertex; aOnGray, aOnWhite: TNestVertexVisit): SizeInt; inline;
-    function  BSFTraversalI(aRoot: SizeInt; aOnGray, aOnWhite: TNestVertexVisit): SizeInt;
+  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
+    if aOnGray returns True then traversal stops }
+    function  DSFTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
+    function  DSFTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
+  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
+    if aOnGray returns True then traversal stops}
+    function  BSFTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
+    function  BSFTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
 
     function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+  { returns the length of the shortest path between the vertices aSrc and aDst,
+    -1 if the path does not exist }
+    function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
+    function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
+  { returns a vector containing in the corresponding components the shortest paths from aRoot }
+    function  FindMinPathLenVector(constref aRoot: TVertex): TIntArray; inline;
+    function  FindMinPathLenVectorI(aRoot: SizeInt = 0): TIntArray;
+  { returns a vector containing indices any found shortest path }
+    function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
+    function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read GetVertexCount;
@@ -531,8 +537,11 @@ begin
 end;
 
 procedure TGVertexItem.ClearItems;
+var
+  I: SizeInt;
 begin
-  System.FillChar(FNodeList[0], Capacity * NODE_SIZE, 0);
+  for I := 0 to System.High(FNodeList) do
+    FNodeList[I] := Default(TNode);
   FCount := 0;
 end;
 
@@ -1000,6 +1009,16 @@ begin
   Result := FVertexList.FNodeList[aSrc].Item.Find(aDst)^.Data;
 end;
 
+function TGCustomSimpleSparseGraph.CreateIndexVector: TIntArray;
+var
+  c: SizeInt;
+begin
+  c := VertexCount;
+  System.SetLength(Result, c);
+  if c > 0 then
+    System.FillChar(Result[0], c * SizeOf(SizeInt), $ff);
+end;
+
 function TGCustomSimpleSparseGraph.IsEmpty: Boolean;
 begin
   Result := FVertexList.Count = 0;
@@ -1079,6 +1098,8 @@ end;
 
 function TGCustomSimpleSparseGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
   Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst) or
             FVertexList.FNodeList[aDst].Item.Contains(aSrc);
 end;
@@ -1112,14 +1133,14 @@ begin
   Result.FGraph := Self;
 end;
 
-function TGCustomSimpleSparseGraph.DSFTraversal(constref aRoot: TVertex; aOnGray: TOnVertexVisit;
-  aOnWhite: TOnVertexVisit): SizeInt;
+function TGCustomSimpleSparseGraph.DSFTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+  aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := DSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.DSFTraversalI(aRoot: SizeInt; aOnGray: TOnVertexVisit;
-  aOnWhite: TOnVertexVisit): SizeInt;
+function TGCustomSimpleSparseGraph.DSFTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+  aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -1132,62 +1153,28 @@ begin
     if not Visited[aRoot] then
       begin
         Inc(Result);
+        if Assigned(aOnGray) and aOnGray(aRoot) then
+          exit;
         Visited[aRoot] := True;
-        if aOnGray <> nil then
-          aOnGray(aRoot);
         for aRoot in AdjVerticesI(aRoot) do
           if not Visited[aRoot] then
             begin
               Stack.Push(aRoot);
-              if aOnWhite <> nil then
+              if Assigned(aOnWhite) then
                 aOnWhite(aRoot);
             end;
       end;
   until not Stack.TryPop(aRoot);
 end;
 
-function TGCustomSimpleSparseGraph.DSFTraversal(constref aRoot: TVertex; aOnGray,
-  aOnWhite: TNestVertexVisit): SizeInt;
-begin
-  Result := DSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
-end;
-
-function TGCustomSimpleSparseGraph.DSFTraversalI(aRoot: SizeInt; aOnGray,
-  aOnWhite: TNestVertexVisit): SizeInt;
-var
-  Visited: TBitVector;
-  Stack: TIntStack;
-begin
-  Result := 0;
-  FVertexList.CheckIndexRange(aRoot);
-  Visited.Size := VertexCount;
-  {%H-}Stack.Push(aRoot);
-  repeat
-    if not Visited[aRoot] then
-      begin
-        Inc(Result);
-        Visited[aRoot] := True;
-        if aOnGray <> nil then
-          aOnGray(aRoot);
-        for aRoot in AdjVerticesI(aRoot) do
-          if not Visited[aRoot] then
-            begin
-              Stack.Push(aRoot);
-              if aOnWhite <> nil then
-                aOnWhite(aRoot);
-            end;
-      end;
-  until not Stack.TryPop(aRoot);
-end;
-
-function TGCustomSimpleSparseGraph.BSFTraversal(constref aRoot: TVertex; aOnGray: TOnVertexVisit;
-  aOnWhite: TOnVertexVisit): SizeInt;
+function TGCustomSimpleSparseGraph.BSFTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+  aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := BSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.BSFTraversalI(aRoot: SizeInt; aOnGray: TOnVertexVisit;
-  aOnWhite: TOnVertexVisit): SizeInt;
+function TGCustomSimpleSparseGraph.BSFTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+  aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
   Queue: TIntQueue;
@@ -1200,41 +1187,9 @@ begin
     if not Visited[aRoot] then
       begin
         Inc(Result);
+        if Assigned(aOnGray) and aOnGray(aRoot) then
+          exit;
         Visited[aRoot] := True;
-        if aOnGray <> nil then
-          aOnGray(aRoot);
-        for aRoot in AdjVerticesI(aRoot) do
-          if not Visited[aRoot] then
-            begin
-              Queue.Enqueue(aRoot);
-              if aOnWhite <> nil then
-                aOnWhite(aRoot);
-            end;
-      end;
-end;
-
-function TGCustomSimpleSparseGraph.BSFTraversal(constref aRoot: TVertex; aOnGray,
-  aOnWhite: TNestVertexVisit): SizeInt;
-begin
-  Result := BSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
-end;
-
-function TGCustomSimpleSparseGraph.BSFTraversalI(aRoot: SizeInt; aOnGray, aOnWhite: TNestVertexVisit): SizeInt;
-var
-  Visited: TBitVector;
-  Queue: TIntQueue;
-begin
-  Result := 0;
-  FVertexList.CheckIndexRange(aRoot);
-  Visited.Size := VertexCount;
-  Queue.Enqueue(aRoot);
-  while Queue.TryDequeue(aRoot) do
-    if not Visited[aRoot] then
-      begin
-        Inc(Result);
-        Visited[aRoot] := True;
-        if aOnGray <> nil then
-          aOnGray(aRoot);
         for aRoot in AdjVerticesI(aRoot) do
           if not Visited[aRoot] then
             begin
@@ -1255,7 +1210,9 @@ var
   Visited: TBitVector;
   Stack: TIntStack;
 begin
-  if (aSrc = aDst) or (VertexCount < 2) then
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
+  if aSrc = aDst then
     exit(False);
   Visited.Size := VertexCount;
   {%H-}Stack.Push(aSrc);
@@ -1271,6 +1228,105 @@ begin
       end;
   until not Stack.TryPop(aSrc);
   Result := False;
+end;
+
+function TGCustomSimpleSparseGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
+begin
+  Result := FindMinPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aSrc));
+end;
+
+function TGCustomSimpleSparseGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
+var
+  Queue: TIntQueue;
+  v: TIntArray;
+  d: SizeInt;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
+  v := CreateIndexVector;
+  v[aSrc] := 0;
+  Queue.Enqueue(aSrc);
+  while Queue.TryDequeue(aSrc) do
+    for d in AdjVerticesI(aSrc) do
+      if v[d] = -1 then
+        begin
+          Queue.Enqueue(d);
+          v[d] := Succ(v[aSrc]);
+        end;
+  Result := v[aDst];
+end;
+
+function TGCustomSimpleSparseGraph.FindMinPathLenVector(constref aRoot: TVertex): TIntArray;
+begin
+  Result := FindMinPathLenVectorI(FVertexList.IndexOf(aRoot));
+end;
+
+function TGCustomSimpleSparseGraph.FindMinPathLenVectorI(aRoot: SizeInt): TIntArray;
+var
+  Queue: TIntQueue;
+  d: SizeInt;
+begin
+  FVertexList.CheckIndexRange(aRoot);
+  Result := CreateIndexVector;
+  Result[aRoot] := 0;
+  Queue.Enqueue(aRoot);
+  while Queue.TryDequeue(aRoot) do
+    for d in AdjVerticesI(aRoot) do
+      if Result[d] = -1 then
+        begin
+          Queue.Enqueue(d);
+          Result[d] := Succ(Result[aRoot]);
+        end;
+end;
+
+function TGCustomSimpleSparseGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
+begin
+  Result := FindMinPathI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGCustomSimpleSparseGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+var
+  v: TIntArray;
+  Queue: TIntQueue;
+  Parent, Curr: SizeInt;
+  Found: Boolean = False;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
+  if aSrc = aDst then
+    exit(nil);
+  v := CreateIndexVector;
+  {%H-}Queue.Enqueue(aSrc);
+  while Queue.TryDequeue(Curr) do
+    begin
+      if Curr = aDst then
+        begin
+          Found := True;
+          break;
+        end;
+      Parent := Curr;
+      for Curr in AdjVerticesI(Curr) do
+        if v[Curr] = -1 then
+          begin
+            Queue.Enqueue(Curr);
+            v[Curr] := Parent;
+          end;
+    end;
+
+  if not Found then
+    exit(nil);
+
+  v[aSrc] := -1;
+  while Queue.TryDequeue(Curr) do;
+  Queue.Enqueue(aDst);
+  Parent := v[aDst];
+  while Parent <> -1 do
+    begin
+      Queue.Enqueue(Parent);
+      Parent := v[Parent];
+    end;
+  Result := Queue.ToArray;
+  TIntHelper.Reverse(Result);
 end;
 
 end.

@@ -39,14 +39,19 @@ uses
 
 type
 
-  ELGGraphError    = class(Exception); //???
-  TEmptyRec        = record end;
-  TIntArray        = array of SizeInt;
-  TIntHelper       = specialize TGNumArrayHelper<SizeInt>;
-  TIntStack        = specialize TGLiteStack<SizeInt>;
-  TIntQueue        = specialize TGLiteQueue<SizeInt>;
-  TOnVertexVisit   = procedure (aIndex: SizeInt) of object;
-  TNestVertexVisit = procedure (aIndex: SizeInt) is nested;
+  ELGGraphError = class(Exception); //???
+
+  TEmptyRec     = record end;
+
+  TIntArray     = array of SizeInt;
+  TIntHelper    = specialize TGNumArrayHelper<SizeInt>;
+  TIntStack     = specialize TGLiteStack<SizeInt>;
+  TIntQueue     = specialize TGLiteQueue<SizeInt>;
+
+  TOnIntVisit   = procedure (aValue: SizeInt) of object;
+  TOnIntTest    = function (aValue: SizeInt): Boolean of object;
+
+  generic TGOnAddEdge<T> = procedure(aSrc, aDst: SizeInt; aData: Pointer) of object;
 
   { TDisjointSetUnion }
 
