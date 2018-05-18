@@ -798,7 +798,7 @@ type
     function  GetEnumerator: TEnumerator; inline;
     function  GetRemovableEnumerator: TRemovableEnumerator; inline;
     procedure Clear;
-    procedure ClearItems;
+    procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
     function  Contains(aKey: TKey): Boolean;
@@ -3790,7 +3790,7 @@ begin
   FCount := 0;
 end;
 
-procedure TGLiteIntHashTable.ClearItems;
+procedure TGLiteIntHashTable.MakeEmpty;
 var
   I: SizeInt;
 begin
