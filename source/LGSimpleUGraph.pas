@@ -113,7 +113,7 @@ begin
     begin
       pV := @FVertexList.FNodeList[I].Item;
       CurrEdges := pV^.ToArray;
-      pV^.ClearItems;
+      pV^.MakeEmpty;
       for J := 0 to System.High(CurrEdges) do
         begin
           if CurrEdges[J].Destination <> aIndex then

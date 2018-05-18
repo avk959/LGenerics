@@ -109,7 +109,8 @@ type
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear;
-    procedure ClearItems;
+
+    procedure MakeEmpty;
     procedure TrimToFit; inline;
     function  Contains(aDst: SizeInt): Boolean; inline;
     function  FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean; inline;
@@ -307,6 +308,8 @@ type
 
     function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+  { test whether the graph is bipartite }
+    function  IsBipartite: Boolean;
   { returns the length of the shortest path between the vertices aSrc and aDst,
     -1 if the path does not exist }
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
@@ -314,7 +317,7 @@ type
   { returns a vector containing in the corresponding components the shortest paths from aRoot }
     function  FindMinPathLenVector(constref aRoot: TVertex): TIntArray; inline;
     function  FindMinPathLenVectorI(aRoot: SizeInt = 0): TIntArray;
-  { returns a vector containing indices any found shortest path }
+  { returns a vector containing indices of found shortest path }
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 
@@ -536,7 +539,7 @@ begin
   FCount := 0;
 end;
 
-procedure TGVertexItem.ClearItems;
+procedure TGVertexItem.MakeEmpty;
 var
   I: SizeInt;
 begin
@@ -1230,6 +1233,35 @@ begin
   Result := False;
 end;
 
+function TGCustomSimpleSparseGraph.IsBipartite: Boolean;
+var
+  Stack: TIntStack;
+  v: TIntArray;
+  Curr: SizeInt;
+begin
+  if VertexCount < 2 then
+    exit(False);
+  v := CreateIndexVector;
+  Curr := 0;
+  {%H-}Stack.Push(Curr);
+  repeat
+    if v[Curr] = -1 then
+      begin
+        v[Curr] := 0;
+        for Curr in AdjVerticesI(Curr) do
+          if v[Curr] = -1 then
+            begin
+              Stack.Push(Curr);
+              v[Curr] := 1;
+            end
+          else
+            if v[Curr] <> 0 then
+              exit(False);
+      end;
+  until not Stack.TryPop(Curr);
+  Result := True;
+end;
+
 function TGCustomSimpleSparseGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
   Result := FindMinPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aSrc));
@@ -1299,7 +1331,7 @@ begin
   {%H-}Queue.Enqueue(aSrc);
   while Queue.TryDequeue(Curr) do
     begin
-      if Curr = aDst then
+      if {%H-}Curr = aDst then
         begin
           Found := True;
           break;
@@ -1316,8 +1348,8 @@ begin
   if not Found then
     exit(nil);
 
+  Queue.MakeEmpty;
   v[aSrc] := -1;
-  while Queue.TryDequeue(Curr) do;
   Queue.Enqueue(aDst);
   Parent := v[aDst];
   while Parent <> -1 do
