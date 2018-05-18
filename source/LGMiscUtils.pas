@@ -342,8 +342,8 @@ type
     function GetEnumerator: TEnumerator; override;
     function Open(const aFileName: string): Boolean;
     function LoadText(const aFileName: string; out aText: string): Boolean;
-    function ExceptionClass: string; inline;
-    function ExceptionMessage: string; inline;
+    property ExceptionClass: string read FExceptClass;
+    property ExceptionMessage: string read FExceptMsg;
   end;
 
   { TTextFileWrite is small wrapper around TextFile with buffered write as a bonus;
@@ -5134,16 +5134,6 @@ begin
         FExceptMsg := e.Message;
       end;
   end;
-end;
-
-function TTextFileReader.ExceptionClass: string;
-begin
-  Result := FExceptClass;
-end;
-
-function TTextFileReader.ExceptionMessage: string;
-begin
-  Result := FExceptMsg;
 end;
 
 function TTextFileWriter.IsStandardFile: Boolean;
