@@ -334,6 +334,7 @@
     // do not check bounds !!!
     procedure FastSetItem(aIndex: SizeInt; constref aValue: T); inline;
     procedure Clear; inline;
+    procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  GetEnumerator: TEnumerator; inline;
