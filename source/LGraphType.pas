@@ -202,6 +202,7 @@ type
     function  GetVertex(aIndex: SizeInt): TVertex; inline;
     function  GetEdgeData(aSrc, aDst: SizeInt): TEdgeData; inline;
     function  CreateIndexVector: TIntArray;
+    function  CreateShortVector: TShortArray;
   public
   type
     TOnAddEdge   = specialize TGOnAddEdge<TEdgeData>;
@@ -310,6 +311,7 @@ type
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
   { test whether the graph is bipartite }
     function  IsBipartite: Boolean;
+    function  IsBipartite(out v: TShortArray): Boolean;
   { returns the length of the shortest path between the vertices aSrc and aDst,
     -1 if the path does not exist }
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
@@ -1022,6 +1024,16 @@ begin
     System.FillChar(Result[0], c * SizeOf(SizeInt), $ff);
 end;
 
+function TGCustomSimpleSparseGraph.CreateShortVector: TShortArray;
+var
+  c: SizeInt;
+begin
+  c := VertexCount;
+  System.SetLength(Result, c);
+  if c > 0 then
+    System.FillChar(Result[0], c, $ff);
+end;
+
 function TGCustomSimpleSparseGraph.IsEmpty: Boolean;
 begin
   Result := FVertexList.Count = 0;
@@ -1236,12 +1248,12 @@ end;
 function TGCustomSimpleSparseGraph.IsBipartite: Boolean;
 var
   Stack: TIntStack;
-  v: TIntArray;
+  v: TShortArray;
   Curr: SizeInt;
 begin
   if VertexCount < 2 then
     exit(False);
-  v := CreateIndexVector;
+  v := CreateShortVector;
   Curr := 0;
   {%H-}Stack.Push(Curr);
   repeat
@@ -1255,7 +1267,35 @@ begin
               v[Curr] := 1;
             end
           else
-            if v[Curr] <> 0 then
+            if v[Curr] <> 1 then
+              exit(False);
+      end;
+  until not Stack.TryPop(Curr);
+  Result := True;
+end;
+
+function TGCustomSimpleSparseGraph.IsBipartite(out v: TShortArray): Boolean;
+var
+  Stack: TIntStack;
+  Curr: SizeInt;
+begin
+  if VertexCount < 2 then
+    exit(False);
+  v := CreateShortVector;
+  Curr := 0;
+  {%H-}Stack.Push(Curr);
+  repeat
+    if v[Curr] = -1 then
+      begin
+        v[Curr] := 0;
+        for Curr in AdjVerticesI(Curr) do
+          if v[Curr] = -1 then
+            begin
+              Stack.Push(Curr);
+              v[Curr] := 1;
+            end
+          else
+            if v[Curr] <> 1 then
               exit(False);
       end;
   until not Stack.TryPop(Curr);

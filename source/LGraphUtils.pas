@@ -44,6 +44,7 @@ type
   TEmptyRec     = record end;
 
   TIntArray     = array of SizeInt;
+  TShortArray   = array of ShortInt;
   TIntHelper    = specialize TGNumArrayHelper<SizeInt>;
   TIntStack     = specialize TGLiteStack<SizeInt>;
   TIntQueue     = specialize TGLiteQueue<SizeInt>;
