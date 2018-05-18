@@ -1067,6 +1067,26 @@ begin
   FHead := 0;
 end;
 
+procedure TGLiteRingDynBuffer.MakeEmpty;
+var
+  I, h, c: SizeInt;
+begin
+  if Count > 0 then
+    begin
+      c := Capacity;
+      h := Head;
+      for I := 0 to Pred(Count) do
+        begin
+          FItems[h] := Default(T);
+          Inc(h);
+          if h = c then
+            h := 0;
+        end;
+    end;
+  FCount := 0;
+  FHead := 0;
+end;
+
 procedure TGLiteRingDynBuffer.EnsureCapacity(aValue: SizeInt);
 begin
   if aValue > Capacity then
