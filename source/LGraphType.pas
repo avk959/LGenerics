@@ -273,7 +273,7 @@ type
     private
       FGraph: TGCustomSimpleSparseGraph;
     public
-      function GetEnumerator: TEdgeEnumerator; inline;
+      function GetEnumerator: TEdgeEnumerator;
     end;
 
     function  IsEmpty: Boolean; inline;
@@ -297,20 +297,22 @@ type
     function  IncidentEdges(constref aSrc: TVertex): TIncidentEdges; inline;
     function  IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
   { enumerates all edges }
-    function  Edges: TEdges;
+    function  Edges: TEdges; inline;
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops }
-    function  DSFTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-    function  DSFTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
+    function  DFSTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
+    function  DFSTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops}
-    function  BSFTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-    function  BSFTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
+    function  BFSTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
+    function  BFSTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
 
     function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
   { test whether the graph is bipartite }
     function  IsBipartite: Boolean;
+  { test whether the graph is bipartite; if returns True then information about the vertex
+    belonging to the fractions is returned in v(0 or 1) }
     function  IsBipartite(out v: TShortArray): Boolean;
   { returns the length of the shortest path between the vertices aSrc and aDst,
     -1 if the path does not exist }
@@ -319,7 +321,7 @@ type
   { returns a vector containing in the corresponding components the shortest paths from aRoot }
     function  FindMinPathLenVector(constref aRoot: TVertex): TIntArray; inline;
     function  FindMinPathLenVectorI(aRoot: SizeInt = 0): TIntArray;
-  { returns a vector containing indices of found shortest path }
+  { returns a vector containing indices of found shortest path(empty if path does not exists) }
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 
@@ -1148,13 +1150,13 @@ begin
   Result.FGraph := Self;
 end;
 
-function TGCustomSimpleSparseGraph.DSFTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGCustomSimpleSparseGraph.DFSTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
-  Result := DSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
+  Result := DFSTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.DSFTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGCustomSimpleSparseGraph.DFSTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
@@ -1182,13 +1184,13 @@ begin
   until not Stack.TryPop(aRoot);
 end;
 
-function TGCustomSimpleSparseGraph.BSFTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGCustomSimpleSparseGraph.BFSTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
-  Result := BSFTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
+  Result := BFSTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.BSFTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGCustomSimpleSparseGraph.BFSTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
@@ -1198,7 +1200,7 @@ begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   Queue.Enqueue(aRoot);
-  while Queue.TryDequeue(aRoot) do
+  while Queue{%H-}.TryDequeue(aRoot) do
     if not Visited[aRoot] then
       begin
         Inc(Result);
@@ -1249,17 +1251,19 @@ function TGCustomSimpleSparseGraph.IsBipartite: Boolean;
 var
   Stack: TIntStack;
   v: TShortArray;
-  Curr: SizeInt;
+  Curr, Total: SizeInt;
 begin
   if VertexCount < 2 then
     exit(False);
   v := CreateShortVector;
   Curr := 0;
+  Total := 0;
   {%H-}Stack.Push(Curr);
   repeat
     if v[Curr] = -1 then
       begin
         v[Curr] := 0;
+        Inc(Total);
         for Curr in AdjVerticesI(Curr) do
           if v[Curr] = -1 then
             begin
@@ -1271,23 +1275,25 @@ begin
               exit(False);
       end;
   until not Stack.TryPop(Curr);
-  Result := True;
+  Result := Total = VertexCount;
 end;
 
 function TGCustomSimpleSparseGraph.IsBipartite(out v: TShortArray): Boolean;
 var
   Stack: TIntStack;
-  Curr: SizeInt;
+  Curr, Total: SizeInt;
 begin
   if VertexCount < 2 then
     exit(False);
   v := CreateShortVector;
   Curr := 0;
+  Total := 0;
   {%H-}Stack.Push(Curr);
   repeat
     if v[Curr] = -1 then
       begin
         v[Curr] := 0;
+        Inc(Total);
         for Curr in AdjVerticesI(Curr) do
           if v[Curr] = -1 then
             begin
@@ -1299,7 +1305,7 @@ begin
               exit(False);
       end;
   until not Stack.TryPop(Curr);
-  Result := True;
+  Result := Total = VertexCount;
 end;
 
 function TGCustomSimpleSparseGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
@@ -1318,7 +1324,7 @@ begin
   v := CreateIndexVector;
   v[aSrc] := 0;
   Queue.Enqueue(aSrc);
-  while Queue.TryDequeue(aSrc) do
+  while Queue{%H-}.TryDequeue(aSrc) do
     for d in AdjVerticesI(aSrc) do
       if v[d] = -1 then
         begin
@@ -1342,7 +1348,7 @@ begin
   Result := CreateIndexVector;
   Result[aRoot] := 0;
   Queue.Enqueue(aRoot);
-  while Queue.TryDequeue(aRoot) do
+  while Queue{%H-}.TryDequeue(aRoot) do
     for d in AdjVerticesI(aRoot) do
       if Result[d] = -1 then
         begin
@@ -1369,7 +1375,7 @@ begin
     exit(nil);
   v := CreateIndexVector;
   {%H-}Queue.Enqueue(aSrc);
-  while Queue.TryDequeue(Curr) do
+  while Queue{%H-}.TryDequeue(Curr) do
     begin
       if {%H-}Curr = aDst then
         begin
