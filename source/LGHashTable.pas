@@ -3791,8 +3791,11 @@ begin
 end;
 
 procedure TGLiteIntHashTable.ClearItems;
+var
+  I: SizeInt;
 begin
-  System.FillChar(FList[0], Capacity * NODE_SIZE, 0);
+  for I := 0 to Pred(Capacity) do
+    FList[I] := Default(TNode);
   FCount := 0;
 end;
 
