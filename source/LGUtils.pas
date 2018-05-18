@@ -91,7 +91,6 @@ type
     class function ValueIsNil(constref aValue): Boolean; static;
     class operator Initialize(var o: TGOptional<T>); inline;
   public
-    class function Construct(constref aValue: T): TGOptional<T>; overload; static; inline;
     procedure Assign(constref aValue: T); inline;
     function  OrElseDefault: T; inline;
     function  OrElse(constref aValue: T): T; inline;
@@ -569,11 +568,6 @@ end;
 class operator TGOptional<T>.Initialize(var o: TGOptional<T>);
 begin
   o.FAssigned := False;
-end;
-
-class function TGOptional<T>.Construct(constref aValue: T): TGOptional<T>;
-begin
-  Result.Assign(aValue);
 end;
 
 procedure TGOptional<T>.Assign(constref aValue: T);
