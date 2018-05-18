@@ -72,6 +72,7 @@ type
     each element contains the index of its parent (or -1 if it is root or not connected) }
     function  SpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  SpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+  { returns the spanning tree, which is constructed starting from aRoot }
     function  CreateSpanningTree(constref aRoot: TVertex): TGSimpleSparseUGraph; inline;
     function  CreateSpanningTreeI(aRoot: SizeInt = 0): TGSimpleSparseUGraph;
   { returns count of connected components }
