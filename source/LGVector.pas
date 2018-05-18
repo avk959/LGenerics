@@ -312,8 +312,7 @@ type
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
 
-  { TBitVector }
-
+  { TBitVector: size is always a multiple of the bitness }
   TBitVector = record
   private
   type
@@ -335,15 +334,16 @@ type
     function  GetSize: SizeInt; inline;
     procedure SetBit(aIndex: SizeInt; aValue: Boolean);
     procedure SetSize(aValue: SizeInt);
-    function  TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean; inline;
-    function  SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
-    function  ClearUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
+    function  TestLimbBit(aValue: SizeUInt; aIndex: SizeInt): Boolean; inline;
+    function  SetLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
+    function  ClearLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
     procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
     function  IndexInRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     class operator Copy(constref aSrc: TBitVector; var aDst: TBitVector);
   public
     property Size: SizeInt read GetSize write SetSize;
+  { read/write bit with (index < 0) or (index >= Size) will raise exception }
     property Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
@@ -1692,7 +1692,7 @@ end;
 function TBitVector.GetBit(aIndex: SizeInt): Boolean;
 begin
   CheckIndexRange(aIndex);
-  Result := TestBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+  Result := TestLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
 end;
 
 function TBitVector.GetSize: SizeInt;
@@ -1704,9 +1704,9 @@ procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
   CheckIndexRange(aIndex);
   if aValue then
-    FBits[aIndex shr SIZE_SHIFT] := SetUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK)
+    FBits[aIndex shr SIZE_SHIFT] := SetLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK)
   else
-    FBits[aIndex shr SIZE_SHIFT] := ClearUIntBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+    FBits[aIndex shr SIZE_SHIFT] := ClearLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
 end;
 
 procedure TBitVector.SetSize(aValue: SizeInt);
@@ -1722,17 +1722,17 @@ begin
     end;
 end;
 
-function TBitVector.TestBit(aValue: SizeUInt; aIndex: SizeInt): Boolean;
+function TBitVector.TestLimbBit(aValue: SizeUInt; aIndex: SizeInt): Boolean;
 begin
   Result := (aValue and (SizeUInt(1) shl aIndex)) <> 0;
 end;
 
-function TBitVector.SetUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
+function TBitVector.SetLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
 begin
   Result := aValue or SizeUInt(SizeUInt(1) shl aIndex);
 end;
 
-function TBitVector.ClearUIntBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
+function TBitVector.ClearLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
 begin
   Result := aValue and not SizeUInt(SizeUInt(1) shl aIndex);
 end;
