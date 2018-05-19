@@ -63,6 +63,7 @@ type
     procedure SetSize(aValue: SizeInt);
   public
     procedure Clear; inline;
+    procedure Reset;
     function  FindSet(aValue: SizeInt): SizeInt;
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
@@ -94,6 +95,14 @@ end;
 procedure TDisjointSetUnion.Clear;
 begin
   FTree := nil;
+end;
+
+procedure TDisjointSetUnion.Reset;
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(FTree) do
+    FTree[I] := I;
 end;
 
 function TDisjointSetUnion.FindSet(aValue: SizeInt): SizeInt;
