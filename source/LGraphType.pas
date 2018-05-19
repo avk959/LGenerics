@@ -1396,8 +1396,8 @@ begin
 
   Queue.MakeEmpty;
   v[aSrc] := -1;
-  Queue.Enqueue(aDst);
   Parent := v[aDst];
+  Queue.Enqueue(aDst);
   while Parent <> -1 do
     begin
       Queue.Enqueue(Parent);
