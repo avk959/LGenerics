@@ -64,10 +64,10 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
-    function  EulerPathExists(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
+    function  EulerCycleExists: Boolean;
+    function  FindEulerCycle: TIntArray;
   { checks whether the graph is connected; a graph without vertices is considered disconnected }
-    function  Connected: Boolean;
+    function  IsConnected: Boolean;
   { if the graph is not empty, then the graph is connected, adding, if necessary, new edges
     from the vertex with the index 0}
     function  MakeConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
@@ -92,6 +92,7 @@ type
      vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean;
     function  IsTree: Boolean; inline;
+    //edge-connected
 
     function  Clone: TGSimpleSparseUGraph;
   end;
@@ -103,24 +104,22 @@ implementation
 
 procedure TGSimpleSparseUGraph.DoRemoveVertex(aIndex: SizeInt);
 var
-  I, J: SizeInt;
-  pV: ^TVertexItem;
   CurrEdges: TVertexItem.TAdjItemArray;
+  I, J: SizeInt;
 begin
-  FEdgeCount -= FVertexList.FNodeList[aIndex].Item.Count;
+  FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
   FVertexList.Delete(aIndex);
   for I := 0 to Pred(FVertexList.Count) do
     begin
-      pV := @FVertexList.FNodeList[I].Item;
-      CurrEdges := pV^.ToArray;
-      pV^.MakeEmpty;
+      CurrEdges := FVertexList.ItemRefs[I]^.ToArray;
+      FVertexList.FNodeList[I].Item.MakeEmpty;
       for J := 0 to System.High(CurrEdges) do
         begin
           if CurrEdges[J].Destination <> aIndex then
             begin
               if CurrEdges[J].Destination > aIndex then
                 Dec(CurrEdges[J].Destination);
-              pV^.Add(CurrEdges[J]);
+              FVertexList.ItemRefs[I]^.Add(CurrEdges[J]);
             end;
         end;
     end;
@@ -132,15 +131,16 @@ var
 begin
   if aSrc = aDst then
     exit(False);
-  Result := not FVertexList.FNodeList[aSrc].Item.FindOrAdd(aDst, p);
+  Result := not FVertexList.ItemRefs[aSrc]^.FindOrAdd(aDst, p);
   if Result then
     begin
       p^.Destination := aDst;
       p^.Data := aData;
-      FVertexList.FNodeList[aDst].Item.FindOrAdd(aSrc, p);
-      p^.Destination := aSrc;
-      p^.Data := aData;
+        FVertexList.ItemRefs[aDst]^.FindOrAdd(aSrc, p);
+        p^.Destination := aSrc;
+        p^.Data := aData;
       Inc(FEdgeCount);
+      FConnectedValid := False;
     end;
 end;
 
@@ -148,11 +148,12 @@ function TGSimpleSparseUGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
-  Result := FVertexList.FNodeList[aSrc].Item.Remove(aDst);
+  Result := FVertexList.ItemRefs[aSrc]^.Remove(aDst);
   if Result then
     begin
-      FVertexList.FNodeList[aSrc].Item.Remove(aSrc);
+      FVertexList.ItemRefs[aDst]^.Remove(aSrc);
       Dec(FEdgeCount);
+      FConnectedValid := False;
     end;
 end;
 
@@ -165,7 +166,10 @@ function TGSimpleSparseUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
 begin
   Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
   if Result then
-    DoRemoveVertex(aIndex);
+    begin
+      DoRemoveVertex(aIndex);
+      FConnectedValid := False;
+    end;
 end;
 
 function TGSimpleSparseUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
@@ -218,7 +222,7 @@ end;
 function TGSimpleSparseUGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
-  Result := FVertexList.FNodeList[aIndex].Item.Count;
+  Result := FVertexList.ItemRefs[aIndex]^.Count;
 end;
 
 function TGSimpleSparseUGraph.Isolated(constref v: TVertex): Boolean;
@@ -231,37 +235,79 @@ begin
   Result := DegreeI(aIndex) = 0;
 end;
 
-function TGSimpleSparseUGraph.EulerPathExists(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := EulerPathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
-end;
-
-function TGSimpleSparseUGraph.EulerPathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleSparseUGraph.EulerCycleExists: Boolean;
 var
-  I: SizeInt;
+  I, d, cd: SizeInt;
 begin
-  FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
-  if Odd(DegreeI(aSrc) + DegreeI(aDst)) then
+  if VertexCount < 3 then
     exit(False);
+  d := 0;
   for I := 0 to Pred(VertexCount) do
-    if (I <> aSrc) and (I <> aDst) then
-      if Odd(DegreeI(I)) then
+    begin
+      cd := DegreeI(I);
+      if Odd(cd) then
         exit(False);
-  Result := True;
+      d += cd;
+    end;
+  Result := d > 0;
 end;
 
-function TGSimpleSparseUGraph.Connected: Boolean;
+function TGSimpleSparseUGraph.FindEulerCycle: TIntArray;
+var
+  g: TGSimpleSparseUGraph = nil;
+  Stack: TIntStack;
+  I, s, d, From: SizeInt;
 begin
-  if VertexCount > 1 then
+  if not EulerCycleExists then
+    exit(nil);
+  g := Clone;
+  try
+    I := 1;
+    System.SetLength(Result, ARRAY_INITIAL_SIZE);
+    s := 0;
+    while g.DegreeI(s) = 0 do
+      Inc(s);
+    From := s;
+    Result[0] := From;
+    repeat
+      repeat
+        if not g.FVertexList.ItemRefs[s]^.FindFirst(d) then
+          break;
+        Stack.Push(s);
+        g.RemoveEdgeI(s, d);
+        s := d;
+      until False;
+      if not Stack.TryPop(s) then
+        break;
+      if System.Length(Result) = I then
+        System.SetLength(Result, I shl 1);
+      Result[I] := s;
+      Inc(I);
+      //if s = From then
+      //  break;
+    until False;
+     System.SetLength(Result, I);
+  finally
+    g.Free;
+  end;
+end;
+
+function TGSimpleSparseUGraph.IsConnected: Boolean;
+begin
+  if not ConnectedValid then
     begin
-      if EdgeCount >= Pred(VertexCount) then
-        Result := DSFTraversalI(0) = VertexCount
+      if VertexCount > 1 then
+        begin
+          if EdgeCount >= Pred(VertexCount) then
+            FConnected := DFSTraversalI(0) = VertexCount
+          else
+            FConnected := False;
+        end
       else
-        Result := False;
-    end
-  else
-    Result := VertexCount = 1;
+        Result := VertexCount = 1;
+      FConnectedValid := True;
+    end;
+  Result := Connected;
 end;
 
 function TGSimpleSparseUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -271,10 +317,12 @@ var
   I, Curr: SizeInt;
   d: TEdgeData;
 begin
+  Result := 0;
   if VertexCount < 2 then
     exit;
+  if ConnectedValid and Connected then
+    exit;
   Visited.Size := VertexCount;
-  Result := 0;
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
@@ -301,6 +349,8 @@ begin
               AddEdgeI(0, Curr);
           end;
       end;
+  FConnectedValid := True;
+  FConnected := True;
 end;
 
 function TGSimpleSparseUGraph.SpanningTree(constref aRoot: TVertex): TIntArray;
@@ -345,7 +395,7 @@ var
 begin
   Tree := SpanningTreeI(aRoot);
   Result := TGSimpleSparseUGraph.Create;
-  for I := 0 to Pred(Length(Tree)) do
+  for I := 0 to Pred(System.Length(Tree)) do
     if Tree[I] <> -1 then
       begin
         Src := Tree[I];
@@ -381,12 +431,12 @@ end;
 
 function TGSimpleSparseUGraph.ComponentPop(constref aRoot: TVertex): SizeInt;
 begin
-  Result := DSFTraversalI(FVertexList.IndexOf(aRoot));
+  Result := DFSTraversalI(FVertexList.IndexOf(aRoot));
 end;
 
 function TGSimpleSparseUGraph.ComponentPopI(aRoot: SizeInt): SizeInt;
 begin
-  Result := DSFTraversalI(aRoot);
+  Result := DFSTraversalI(aRoot);
 end;
 
 function TGSimpleSparseUGraph.ComponentVector: TIntArray;
@@ -461,7 +511,7 @@ end;
 
 function TGSimpleSparseUGraph.IsTree: Boolean;
 begin
-  Result := (EdgeCount = Pred(VertexCount)) and Connected;
+  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
 end;
 
 function TGSimpleSparseUGraph.Clone: TGSimpleSparseUGraph;
@@ -470,6 +520,8 @@ begin
   Result.FVertexList := FVertexList;
   Result.FEdgeCount := EdgeCount;
   Result.FTitle := Title;
+  Result.FConnected := Connected;
+  Result.FConnectedValid := ConnectedValid;
 end;
 
 end.

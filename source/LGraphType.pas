@@ -102,8 +102,8 @@ type
     property Shift: SizeInt read FShift;
     class constructor Init;
     class operator Initialize(var Item: TGVertexItem);
-    class operator Copy(constref aSrc: TGVertexItem; var aDst: TGVertexItem);
   public
+    procedure Assign(constref aSrc: TGVertexItem);
     function  GetEnumerator: TEnumerator;
     function  ToArray: TAdjItemArray;
     function  IsEmpty: Boolean; inline;
@@ -115,8 +115,8 @@ type
     function  Contains(aDst: SizeInt): Boolean; inline;
     function  FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean; inline;
     function  Find(aDst: SizeInt): PAdjItem;
-    function  FindFirst(out aDst: SizeInt): Boolean; inline;
-    function  Add(constref aItem: TAdjItem): Boolean; //inline;
+    function  FindFirst(out aDst: SizeInt): Boolean;
+    function  Add(constref aItem: TAdjItem): Boolean;
     function  Remove(aDst: SizeInt): Boolean; inline;
     property  Key: TVertex read Vertex;
     property  Count: SizeInt read FCount;
@@ -138,6 +138,7 @@ type
       Hash,
       Next: SizeInt;
       Item: TVertexItem;
+      procedure Assign(constref aSrc: TNode);
     end;
 
     TNodeList   = array of TNode;
@@ -198,11 +199,15 @@ type
     FVertexList: TVertexList;
     FEdgeCount: SizeInt;
     FTitle: string;
-    function  GetVertexCount: SizeInt; inline;
-    function  GetVertex(aIndex: SizeInt): TVertex; inline;
-    function  GetEdgeData(aSrc, aDst: SizeInt): TEdgeData; inline;
-    function  CreateIndexVector: TIntArray;
-    function  CreateShortVector: TShortArray;
+    FConnected,
+    FConnectedValid: Boolean;
+    function GetVertexCount: SizeInt; inline;
+    function GetVertex(aIndex: SizeInt): TVertex; inline;
+    function GetEdgeData(aSrc, aDst: SizeInt): TEdgeData; inline;
+    function CreateIndexVector: TIntArray;
+    function CreateShortVector: TShortArray;
+    property Connected: Boolean read FConnected;
+    property ConnectedValid: Boolean read FConnectedValid;
   public
   type
     TOnAddEdge   = specialize TGOnAddEdge<TEdgeData>;
@@ -309,7 +314,9 @@ type
 
     function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
-  { test whether the graph is bipartite }
+  { test whether the graph is bipartite;
+    the graph can be disconnected (in this case it consists of a number of connected
+    bipartite components and / or several isolated vertices)}
     function  IsBipartite: Boolean;
   { test whether the graph is bipartite; if returns True then information about the vertex
     belonging to the fractions is returned in v(0 or 1) }
@@ -443,7 +450,7 @@ var
   h, Gap, Mask: SizeInt;
 begin
   Mask := System.High(FNodeList);
-  FNodeList[aIndex].Hash := 0;
+  FNodeList[aIndex] := Default(TNode);;
   Gap := aIndex;
   aIndex := Succ(aIndex) and Mask;
   Dec(FCount);
@@ -490,11 +497,11 @@ begin
   Item.FCount := 0;
 end;
 
-class operator TGVertexItem.Copy(constref aSrc: TGVertexItem; var aDst: TGVertexItem);
+procedure TGVertexItem.Assign(constref aSrc: TGVertexItem);
 begin
-  aDst.FNodeList := System.Copy(aSrc.FNodeList);
-  aDst.FCount := aSrc.Count;
-  aDst.FShift := aSrc.FShift;
+  FNodeList := System.Copy(aSrc.FNodeList);
+  FCount := aSrc.Count;
+  FShift := aSrc.Shift;
 end;
 
 function TGVertexItem.GetEnumerator: TEnumerator;
@@ -617,7 +624,7 @@ var
   I: SizeInt;
 begin
   if Count > 0 then
-    for I := 0 to Pred(Capacity) do
+    for I := 0 to System.High(FNodeList) do
       if FNodeList[I].Hash <> 0 then
         begin
           aDst := FNodeList[I].Item.Key;
@@ -650,6 +657,15 @@ begin
     Result := False;
 end;
 
+{ TGVertexHashList.TNode }
+
+procedure TGVertexHashList.TNode.Assign(constref aSrc: TNode);
+begin
+  Hash := aSrc.Hash;
+  Next := aSrc.Next;
+  Item.Assign(aSrc.Item);
+end;
+
 { TGVertexHashList }
 
 function TGVertexHashList.GetCapacity: SizeInt;
@@ -665,7 +681,7 @@ end;
 
 function TGVertexHashList.GetItemRef(aIndex: SizeInt): PVertexItem;
 begin
-  CheckIndexRange(aIndex);
+  //CheckIndexRange(aIndex);
   Result := @FNodeList[aIndex].Item;
 end;
 
@@ -680,7 +696,7 @@ procedure TGVertexHashList.Rehash;
 var
   I, J, Mask: SizeInt;
 begin
-  Mask := Pred(Capacity);
+  Mask := System.High(FChainList);
   System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
@@ -718,7 +734,7 @@ var
   h: SizeInt;
 begin
   h := TEqRel.HashCode(v);
-  Result := FChainList[h and Pred(Capacity)];
+  Result := FChainList[h and System.High(FChainList)];
   while Result <> NULL_INDEX do
     begin
       if (FNodeList[Result].Hash = h) and TEqRel.Equal(FNodeList[Result].Item.Vertex, v) then
@@ -729,7 +745,7 @@ end;
 
 function TGVertexHashList.Find(constref v: TVertex; aHash: SizeInt): SizeInt;
 begin
-  Result := FChainList[aHash and Pred(Capacity)];
+  Result := FChainList[aHash and System.High(FChainList)];
   while Result <> NULL_INDEX do
     begin
       if (FNodeList[Result].Hash = aHash) and TEqRel.Equal(FNodeList[Result].Item.Vertex, v) then
@@ -744,7 +760,7 @@ var
 begin
   Result := Count;
   FNodeList[Result].Hash := aHash;
-  I := aHash and Pred(Capacity);
+  I := aHash and System.High(FNodeList);
   FNodeList[Result].Next := FChainList[I];
   FNodeList[Result].Item.Vertex := v;
   FChainList[I] := Result;
@@ -755,7 +771,7 @@ procedure TGVertexHashList.RemoveFromChain(aIndex: SizeInt);
 var
   I, Curr, Prev: SizeInt;
 begin
-  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  I := FNodeList[aIndex].Hash and System.High(FNodeList);
   Curr := FChainList[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
@@ -819,10 +835,18 @@ begin
 end;
 
 class operator TGVertexHashList.Copy(constref aSrc: TGVertexHashList; var aDst: TGVertexHashList);
+var
+  I: SizeInt;
 begin
-  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FCount := aSrc.Count;
+  if aSrc.Count = 0 then
+    exit;
   aDst.FChainList := System.Copy(aSrc.FChainList);
-  aDst.FCount := aSrc.FCount;
+  System.SetLength(aDst.FNodeList, System.Length(aSrc.FNodeList));
+  for I := 0 to Pred(aSrc.Count) do
+    aDst.FNodeList[I].Assign(aSrc.FNodeList[I]);
+  //for I := aSrc.Count do System.High(aDst.FNodeList) do
+  //  aDst.FNodeList[I] := Default(TNode);
 end;
 
 procedure TGVertexHashList.Clear;
@@ -1105,7 +1129,10 @@ function TGCustomSimpleSparseGraph.AddVertex(constref v: TVertex; out aIndex: Si
 begin
   Result := not FVertexList.FindOrAdd(v, aIndex);
   if Result then
-    FVertexList.FNodeList[aIndex].Item.Tag := 0;
+    begin
+      FVertexList.FNodeList[aIndex].Item.Tag := 0;
+      FConnectedValid := False;
+    end;
 end;
 
 function TGCustomSimpleSparseGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
@@ -1249,63 +1276,51 @@ end;
 
 function TGCustomSimpleSparseGraph.IsBipartite: Boolean;
 var
-  Stack: TIntStack;
   v: TShortArray;
-  Curr, Total: SizeInt;
 begin
-  if VertexCount < 2 then
-    exit(False);
-  v := CreateShortVector;
-  Curr := 0;
-  Total := 0;
-  {%H-}Stack.Push(Curr);
-  repeat
-    if v[Curr] = -1 then
-      begin
-        v[Curr] := 0;
-        Inc(Total);
-        for Curr in AdjVerticesI(Curr) do
-          if v[Curr] = -1 then
-            begin
-              Stack.Push(Curr);
-              v[Curr] := 1;
-            end
-          else
-            if v[Curr] <> 1 then
-              exit(False);
-      end;
-  until not Stack.TryPop(Curr);
-  Result := Total = VertexCount;
+  Result := IsBipartite(v);
 end;
 
 function TGCustomSimpleSparseGraph.IsBipartite(out v: TShortArray): Boolean;
 var
+  Visited: TBitVector;
   Stack: TIntStack;
-  Curr, Total: SizeInt;
+  Curr, I: SizeInt;
+  Color: Boolean;
 begin
+  v := CreateShortVector;
   if VertexCount < 2 then
     exit(False);
-  v := CreateShortVector;
-  Curr := 0;
-  Total := 0;
-  {%H-}Stack.Push(Curr);
-  repeat
-    if v[Curr] = -1 then
+  Visited.Size := VertexCount;
+  for I := 0 to Pred(System.Length(v)) do
+    if not Visited[I] then
       begin
-        v[Curr] := 0;
-        Inc(Total);
-        for Curr in AdjVerticesI(Curr) do
-          if v[Curr] = -1 then
+        Curr := I;
+        {%H-}Stack.Push(Curr);
+        repeat
+          if not Visited[Curr] then
             begin
-              Stack.Push(Curr);
-              v[Curr] := 1;
-            end
-          else
-            if v[Curr] <> 1 then
-              exit(False);
+              Visited[Curr] := True;
+              if v[Curr] = -1 then
+                begin
+                  v[Curr] := 0;
+                  Color := False;
+                end
+              else
+                Color := Boolean(v[Curr]);
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  begin
+                    Stack.Push(Curr);
+                    v[Curr] := Ord(not Color);
+                  end
+                else
+                  if v[Curr] = Ord(Color) then
+                    exit(False);
+            end;
+        until not Stack.TryPop(Curr);
       end;
-  until not Stack.TryPop(Curr);
-  Result := Total = VertexCount;
+  Result := True;
 end;
 
 function TGCustomSimpleSparseGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
@@ -1403,8 +1418,10 @@ begin
       Queue.Enqueue(Parent);
       Parent := v[Parent];
     end;
-  Result := Queue.ToArray;
-  TIntHelper.Reverse(Result);
+  System.SetLength(v, Queue.Count);
+  for Curr := Pred(System.Length(v)) downto 0 do
+    v[Curr] := Queue.Dequeue;
+  Result := v;
 end;
 
 end.
