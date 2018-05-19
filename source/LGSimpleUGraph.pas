@@ -108,6 +108,7 @@ var
   I, J: SizeInt;
 begin
   FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
+  FConnectedValid := False;
   FVertexList.Delete(aIndex);
   for I := 0 to Pred(FVertexList.Count) do
     begin
@@ -166,10 +167,7 @@ function TGSimpleSparseUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
 begin
   Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
   if Result then
-    begin
-      DoRemoveVertex(aIndex);
-      FConnectedValid := False;
-    end;
+    DoRemoveVertex(aIndex);
 end;
 
 function TGSimpleSparseUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
