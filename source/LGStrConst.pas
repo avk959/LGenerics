@@ -47,7 +47,7 @@ resourcestring
   SEThreadTimeOut          = 'Thread timeout exceeded';
   SEResultUnknown          = 'Result is unknown';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
-  SEVertexNotFound         = 'Vertex not found';
+  SENegValuesNotAllowed    = 'Negative values are not allowed';
 
 implementation
 
