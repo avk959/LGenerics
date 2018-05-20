@@ -230,6 +230,50 @@ type
     procedure Unlock; inline;
   end;
 
+  generic TGLiteComparableBinHeapMin<T> = record
+  public
+  type
+    TBuffer     = specialize TGLiteDynBuffer<T>;
+    TEnumerator = TBuffer.TEnumerator;
+    TMutable    = TBuffer.TMutable;
+    TReverse    = TBuffer.TReverse;
+    TArray      = TBuffer.TArray;
+  strict private
+  type
+    TFake = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
+
+  private
+    FBuffer: TBuffer;
+    function  GetCapacity: SizeInt; inline;
+    procedure BuildHeap;
+    procedure SiftDown;
+    procedure FloatUp(aIndex: SizeInt);
+    function  DequeueItem: T;
+    class function DoCompare(constref L, R: T): SizeInt; static;
+  public
+  type
+    TComparator = specialize TGCompare<T>;
+    function  Comparator: TComparator; inline;
+    function  GetEnumerator: TEnumerator; inline;
+    function  Mutable: TMutable; inline;
+    function  Reverse: TReverse; inline;
+    function  ToArray: TArray; inline;
+    procedure Clear; inline;
+    procedure Modified; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit; inline;
+    procedure Enqueue(constref aValue: T); inline;
+  { EXTRACTS element from the head of queue }
+    function  Dequeue: T; inline;
+    function  TryDequeue(out aValue: T): Boolean; inline;
+    function  Peek: T; inline;
+    function  TryPeek(out aValue: T): Boolean; inline;
+    property  Count: SizeInt read FBuffer.FCount;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
+
   THandle = SysUtils.THandle;
 
   { TGCustomBinHeapPQ: abstract ancestor class to implement priority queue on top of binary heap(array based) }
@@ -793,6 +837,125 @@ type
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
   { note: after Merge all handles from aHeap will remain valid }
     function  Merge(aHeap: TGLitePairingHeap): SizeInt;     // O(1)
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
+
+  { TGLitePairingHeap implements maximizing priority queue;
+      functor TCmpRel (comparision relation) must provide
+        class function Compare([const[ref]] L, R: T): SizeInt; }
+  generic TGLiteComparablePairHeapMin<T> = record
+  private
+  type
+    PGLitePairingHeap = ^TGLiteComparablePairHeapMin;
+
+    PNode = ^TNode;
+    TNode = record
+      Child,
+      Sibling,
+      Prev: PNode;
+      Data: T;
+      procedure AddChild(aNode: PNode); inline;
+      procedure ClearLinks; inline;
+      function  Successor: PNode;
+      function  Predecessor: PNode;
+      //for node manager
+      property  NextLink: PNode read Child write Child;
+    end;
+
+{$IFDEF PAIRHEAP_ENABLE_PAGEDNODEMANAGER}
+    TNodeManager = specialize TGJoinablePageNodeManager<TNode>;
+{$ELSE PAIRHEAP_ENABLE_PAGEDNODEMANAGER}
+    TNodeManager = specialize TGJoinableNodeManager<TNode>;
+{$ENDIF PAIRHEAP_ENABLE_PAGEDNODEMANAGER}
+
+  public
+  type
+    TArray = array of T;
+    PItem  = ^T;
+
+    TEnumerator = record
+    private
+      FCurrNode,
+      FLeftmost: PNode;
+      FInCycle: Boolean;
+      function  GetCurrent: T; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FCurrNode,
+      FRightmost: PNode;
+      FInCycle: Boolean;
+      function  GetCurrent: T; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+    end;
+
+    TReverse = record
+    private
+      FHeap: PGLitePairingHeap;
+    public
+      function GetEnumerator: TReverseEnumerator; inline;
+    end;
+
+  private
+    FRoot: PNode;
+    FNodeManager: TNodeManager;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  FindLeftmost: PNode;
+    function  FindRightmost: PNode;
+    procedure RemoveNodeWithChilds(aNode: PNode);
+    procedure ClearTree;
+    function  NewNode(constref aValue: T): PNode;
+    procedure DisposeNode(aNode: PNode); inline;
+    procedure RootMerge(aNode: PNode); inline;
+    function  DequeueItem: T;
+    procedure UpdateNode(aNode: PNode; constref aValue: T);
+    procedure ExtractNode(aNode: PNode);
+    function  RemoveNode(aNode: PNode): T;
+    procedure CheckEmpty; inline;
+    procedure AccessEmptyError; inline;
+    class operator  Initialize(var h: TGLiteComparablePairHeapMin);
+    class operator  Finalize(var h: TGLiteComparablePairHeapMin);
+    class operator  Copy(constref aSrc: TGLiteComparablePairHeapMin; var aDst: TGLiteComparablePairHeapMin);
+    class function  NodeMerge(L, R: PNode): PNode; static; inline; //inline ???
+    class function  TwoPassMerge(aNode: PNode): PNode; static;
+    class procedure CutNode(aNode: PNode); static;
+    class function  DoCompare(constref L, R: T): SizeInt; static;
+  public
+  type
+    TComparator = specialize TGCompare<T>;
+    function  Comparator: TComparator;
+    function  GetEnumerator: TEnumerator; inline;
+    function  Reverse: TReverse; inline;
+    function  ToArray: TArray;
+    procedure Clear; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit; inline;
+    procedure Enqueue(constref aValue: T); inline;          // O(1)
+    function  Dequeue: T;                                   // amortized O(logN)
+    function  TryDequeue(out aValue: T): Boolean;
+    function  Peek: T;                                      // O(1)
+    function  TryPeek(out aValue: T): Boolean;
+    function  Insert(constref aValue: T): THandle; inline;  // O(1)
+    function  PeekHead: THandle; inline;                    // O(1)
+    function  TryPeekHead(out aValue: THandle): Boolean; inline;
+    function  Value(aHandle: THandle): T; inline;
+    procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              IncreaseKey
+                                                                    //amortized O(logN) DecreaseKey
+    function  Remove(aHandle: THandle): T;                  // amortized O(logN)
+  { note: after Merge all handles from aHeap will remain valid }
+    function  Merge(aHeap: TGLiteComparablePairHeapMin): SizeInt;// O(1)
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -1675,6 +1838,201 @@ end;
 procedure TGLiteThreadBinHeap.Unlock;
 begin
   System.LeaveCriticalSection(FLock);
+end;
+
+{ TGLiteComparableBinHeapMin }
+
+function TGLiteComparableBinHeapMin.GetCapacity: SizeInt;
+begin
+  Result := FBuffer.Capacity;
+end;
+
+procedure TGLiteComparableBinHeapMin.BuildHeap;
+var
+  I, CurrIdx, NextIdx, HighIdx: SizeInt;
+  v: TFake;
+begin
+  if Count > 1 then
+    begin
+      HighIdx := Pred(Count);
+      for I := Pred(Count shr 1) downto 0 do
+        begin
+          CurrIdx := I;
+          NextIdx := Succ(I shl 1);
+          v := TFake(FBuffer.FItems[CurrIdx]);
+          while NextIdx <= HighIdx do
+            begin
+              if(Succ(NextIdx) <= HighIdx) and (FBuffer.FItems[NextIdx] > FBuffer.FItems[Succ(NextIdx)])then
+                Inc(NextIdx);
+              if T(v) <= FBuffer.FItems[NextIdx] then
+                break;
+              TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+              CurrIdx := NextIdx;
+              NextIdx := Succ(NextIdx shl 1);
+            end;
+          TFake(FBuffer.FItems[CurrIdx]) := v;
+        end;
+    end;
+end;
+
+procedure TGLiteComparableBinHeapMin.SiftDown;
+var
+  CurrIdx, NextIdx, HighIdx: SizeInt;
+  v: TFake;
+begin
+  HighIdx := Pred(Count);
+  if HighIdx > 0 then
+    begin
+      CurrIdx := 0;
+      NextIdx := 1;
+      v := TFake(FBuffer.FItems[0]);
+      while NextIdx <= HighIdx do
+        begin
+          if(Succ(NextIdx) <= HighIdx) and (FBuffer.FItems[NextIdx] > FBuffer.FItems[Succ(NextIdx)]) then
+            Inc(NextIdx);
+          TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+          CurrIdx := NextIdx;
+          NextIdx := Succ(NextIdx shl 1);
+        end;
+      NextIdx := Pred(CurrIdx) shr 1;
+      while (CurrIdx > 0) and (T(v) < FBuffer.FItems[NextIdx]) do
+        begin
+          TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+          CurrIdx := NextIdx;
+          NextIdx := Pred(NextIdx) shr 1;
+        end;
+      TFake(FBuffer.FItems[CurrIdx]) := v;
+    end;
+end;
+
+procedure TGLiteComparableBinHeapMin.FloatUp(aIndex: SizeInt);
+var
+  ParentIdx: SizeInt;
+  v: TFake;
+begin
+  if aIndex > 0 then
+    begin
+      ParentIdx := Pred(aIndex) shr 1;
+      v := TFake(FBuffer.FItems[aIndex]);
+      while(aIndex > 0) and (T(v) < FBuffer.FItems[ParentIdx]) do
+        begin
+          TFake(FBuffer.FItems[aIndex]) := TFake(FBuffer.FItems[ParentIdx]);
+          aIndex := ParentIdx;
+          ParentIdx := Pred(ParentIdx) shr 1;
+        end;
+      TFake(FBuffer.FItems[aIndex]) := v;
+    end;
+end;
+
+function TGLiteComparableBinHeapMin.DequeueItem: T;
+begin
+  Result :=  FBuffer.FItems[0];
+  Dec(FBuffer.FCount);
+  if Count > 0 then
+    begin
+      FBuffer.FItems[0] := FBuffer.FItems[Count];
+      FBuffer.FItems[Count] := Default(T);
+      SiftDown;
+    end
+  else
+    FBuffer.FItems[0] := Default(T);
+end;
+
+class function TGLiteComparableBinHeapMin.DoCompare(constref L, R: T): SizeInt;
+begin
+  if L > R then
+    Result := 1
+  else
+    if R > L then
+      Result := -1
+    else
+      Result := 0;
+end;
+
+function TGLiteComparableBinHeapMin.Comparator: TComparator;
+begin
+  Result := @DoCompare;
+end;
+
+function TGLiteComparableBinHeapMin.GetEnumerator: TEnumerator;
+begin
+  Result := FBuffer.GetEnumerator;
+end;
+
+function TGLiteComparableBinHeapMin.Mutable: TMutable;
+begin
+  Result := FBuffer.Mutable;
+end;
+
+function TGLiteComparableBinHeapMin.Reverse: TReverse;
+begin
+  Result := FBuffer.Reverse;
+end;
+
+function TGLiteComparableBinHeapMin.ToArray: TArray;
+begin
+  Result := FBuffer.ToArray;
+end;
+
+procedure TGLiteComparableBinHeapMin.Clear;
+begin
+  FBuffer.Clear;
+end;
+
+procedure TGLiteComparableBinHeapMin.Modified;
+begin
+  BuildHeap;
+end;
+
+function TGLiteComparableBinHeapMin.IsEmpty: Boolean;
+begin
+  Result := FBuffer.Count = 0;
+end;
+
+function TGLiteComparableBinHeapMin.NonEmpty: Boolean;
+begin
+  Result := FBuffer.Count <> 0;
+end;
+
+procedure TGLiteComparableBinHeapMin.EnsureCapacity(aValue: SizeInt);
+begin
+  FBuffer.EnsureCapacity(aValue);
+end;
+
+procedure TGLiteComparableBinHeapMin.TrimToFit;
+begin
+  FBuffer.TrimToFit;
+end;
+
+procedure TGLiteComparableBinHeapMin.Enqueue(constref aValue: T);
+begin
+  FloatUp(FBuffer.PushLast(aValue));
+end;
+
+function TGLiteComparableBinHeapMin.Dequeue: T;
+begin
+  FBuffer.CheckEmpty;
+  Result := DequeueItem;
+end;
+
+function TGLiteComparableBinHeapMin.TryDequeue(out aValue: T): Boolean;
+begin
+  Result := NonEmpty;
+  if Result then
+    aValue := DequeueItem;
+end;
+
+function TGLiteComparableBinHeapMin.Peek: T;
+begin
+  FBuffer.CheckEmpty;
+  Result := FBuffer.FItems[0];
+end;
+
+function TGLiteComparableBinHeapMin.TryPeek(out aValue: T): Boolean;
+begin
+  Result := NonEmpty;
+  if Result then
+    aValue := FBuffer.FItems[0];
 end;
 
 { TGCustomBinHeapPQ.TEnumerator }
@@ -4697,6 +5055,530 @@ begin
 end;
 
 function TGLitePairingHeap.Merge(aHeap: TGLitePairingHeap): SizeInt;
+begin
+  Result := aHeap.Count;
+  if Result > 0 then
+    begin
+      FNodeManager.Join(aHeap.FNodeManager);
+      RootMerge(aHeap.FRoot);
+      FCount += Result;
+      aHeap.FCount := 0;
+      aHeap.FRoot := nil;
+    end;
+end;
+
+{ TGLiteComparablePairHeapMin.TNode }
+
+procedure TGLiteComparablePairHeapMin.TNode.AddChild(aNode: PNode);
+begin
+  if aNode <> nil then
+    begin
+      aNode^.Prev := @Self;
+      Sibling :=  aNode^.Sibling;
+      if Sibling <> nil then
+        Sibling^.Prev := @Self;
+      aNode^.Sibling := Child;
+      if aNode^.Sibling <> nil then
+        aNode^.Sibling^.Prev := aNode;
+      Child := aNode;
+    end;
+end;
+
+procedure TGLiteComparablePairHeapMin.TNode.ClearLinks;
+begin
+  Sibling := nil;
+  Child := nil;
+  Prev := nil;
+end;
+
+function TGLiteComparablePairHeapMin.TNode.Successor: PNode;
+begin
+  Result := Sibling;
+  if Result <> nil then
+    while Result^.Child <> nil do
+      Result := Result^.Child
+  else
+    begin
+      Result := @Self;
+      while (Result^.Prev <> nil) and (Result^.Prev^.Sibling = Result) do
+        Result := Result^.Prev;
+      Result := Result^.Prev;
+    end;
+end;
+
+function TGLiteComparablePairHeapMin.TNode.Predecessor: PNode;
+begin
+  Result := Child;
+  if Result <> nil then
+    while Result^.Sibling <> nil do
+      Result := Result^.Sibling
+  else
+    begin
+      Result := @Self;
+      while (Result^.Prev <> nil) and (Result^.Prev^.Child = Result) do
+        Result := Result^.Prev;
+      Result := Result^.Prev;
+    end;
+end;
+
+{ TGLiteComparablePairHeapMin.TEnumerator }
+
+function TGLiteComparablePairHeapMin.TEnumerator.GetCurrent: T;
+begin
+  Result := FCurrNode^.Data;
+end;
+
+function TGLiteComparablePairHeapMin.TEnumerator.MoveNext: Boolean;
+var
+  NextNode: PNode = nil;
+begin
+  if FCurrNode <> nil then
+    NextNode := FCurrNode^.Successor
+  else
+    if not FInCycle then
+      begin
+        NextNode := FLeftmost;
+        FInCycle := True;
+      end;
+  Result := NextNode <> nil;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteComparablePairHeapMin.TEnumerator.Reset;
+begin
+  FCurrNode := nil;
+  FInCycle := False;
+end;
+
+{ TGLiteComparablePairHeapMin.TReverseEnumerator }
+
+function TGLiteComparablePairHeapMin.TReverseEnumerator.GetCurrent: T;
+begin
+  Result := FCurrNode^.Data;
+end;
+
+function TGLiteComparablePairHeapMin.TReverseEnumerator.MoveNext: Boolean;
+var
+  NextNode: PNode = nil;
+begin
+  if FCurrNode <> nil then
+    NextNode := FCurrNode^.Predecessor
+  else
+    if not FInCycle then
+      begin
+        NextNode := FRightmost;
+        FInCycle := True;
+      end;
+  Result := NextNode <> nil;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteComparablePairHeapMin.TReverseEnumerator.Reset;
+begin
+  FCurrNode := nil;
+  FInCycle := False;
+end;
+
+{ TGLiteComparablePairHeapMin.TReverse }
+
+function TGLiteComparablePairHeapMin.TReverse.GetEnumerator: TReverseEnumerator;
+begin
+  Result := FHeap^.GetReverseEnumerator;
+end;
+
+{ TGLiteComparablePairHeapMin }
+
+function TGLiteComparablePairHeapMin.GetCapacity: SizeInt;
+begin
+  Result := Count + FNodeManager.FreeCount;
+end;
+
+function TGLiteComparablePairHeapMin.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result.FCurrNode := nil;
+  Result.FRightmost := FindRightmost;
+  Result.FInCycle := False;
+end;
+
+function TGLiteComparablePairHeapMin.FindLeftmost: PNode;
+begin
+  Result := FRoot;
+  if Result <> nil then
+    while Result^.Child <> nil do
+      Result := Result^.Child;
+end;
+
+function TGLiteComparablePairHeapMin.FindRightmost: PNode;
+begin
+  Result := FRoot;
+  if Result <> nil then
+    while Result^.Sibling <> nil do
+      Result := Result^.Sibling;
+end;
+
+procedure TGLiteComparablePairHeapMin.RemoveNodeWithChilds(aNode: PNode);
+var
+  OldPrev, OldNode, CurrNode: PNode;
+  FromSibling: Boolean = False;
+begin
+  if aNode <> nil then
+    begin
+      CurrNode := aNode;
+      repeat  //postorder traverse
+        while FromSibling do
+          begin
+            OldPrev := CurrNode^.Prev;
+            OldNode := CurrNode;
+            /////////////////////////////////
+            CurrNode^.Data := Default(T);
+            FNodeManager.DisposeNode(CurrNode);
+            Dec(FCount);
+            ////////////////////////////////
+            if CurrNode = aNode then
+              exit;
+            CurrNode := OldPrev;
+            FromSibling := CurrNode^.Sibling = OldNode;
+            if not FromSibling and (CurrNode^.Sibling <> nil) then
+              CurrNode := CurrNode^.Sibling
+            else
+              FromSibling := True;
+          end;
+        while CurrNode^.Child <> nil do
+          CurrNode := CurrNode^.Child;
+        if CurrNode^.Sibling <> nil then
+          CurrNode := CurrNode^.Sibling
+        else
+          FromSibling := True;
+      until False;
+    end;
+end;
+
+procedure TGLiteComparablePairHeapMin.ClearTree;
+begin
+  RemoveNodeWithChilds(FRoot);
+  FRoot := nil;
+end;
+
+function TGLiteComparablePairHeapMin.NewNode(constref aValue: T): PNode;
+begin
+  Result := FNodeManager.NewNode;
+  Result^.Data := aValue;
+  Inc(FCount);
+end;
+
+procedure TGLiteComparablePairHeapMin.DisposeNode(aNode: PNode);
+begin
+  if aNode <> nil then
+    begin
+      aNode^ := Default(TNode);
+      FNodeManager.FreeNode(aNode);
+      Dec(FCount);
+    end;
+end;
+
+procedure TGLiteComparablePairHeapMin.RootMerge(aNode: PNode);
+begin
+  FRoot := NodeMerge(FRoot, aNode);
+  if FRoot <> nil then
+    FRoot^.Prev := nil;
+end;
+
+function TGLiteComparablePairHeapMin.DequeueItem: T;
+var
+  OldRoot: PNode;
+begin
+  OldRoot := FRoot;
+  Result := FRoot^.Data;
+  FRoot := TwoPassMerge(FRoot^.Child);
+  if FRoot <> nil then
+    FRoot^.Prev := nil;
+  DisposeNode(OldRoot);
+end;
+
+procedure TGLiteComparablePairHeapMin.UpdateNode(aNode: PNode; constref aValue: T);
+begin
+  if aValue < aNode^.Data then
+    begin
+      aNode^.Data := aValue;
+      if aNode <> FRoot then
+        begin
+          CutNode(aNode);
+          RootMerge(aNode);
+        end;
+    end
+  else
+    if aValue > aNode^.Data then
+      begin
+        aNode^.Data := aValue;
+        ExtractNode(aNode);
+        RootMerge(aNode);
+      end;
+end;
+
+procedure TGLiteComparablePairHeapMin.ExtractNode(aNode: PNode);
+begin
+  if aNode <> FRoot then
+    begin
+      CutNode(aNode);
+      RootMerge(TwoPassMerge(aNode^.Child));
+    end
+  else
+    begin
+      FRoot := TwoPassMerge(FRoot^.Child);
+      if FRoot <> nil then
+        FRoot^.Prev := nil;
+    end;
+  aNode^.ClearLinks;
+end;
+
+function TGLiteComparablePairHeapMin.RemoveNode(aNode: PNode): T;
+begin
+  ExtractNode(aNode);
+  Result := aNode^.Data;
+  DisposeNode(aNode);
+end;
+
+procedure TGLiteComparablePairHeapMin.CheckEmpty;
+begin
+  if Count = 0 then
+    AccessEmptyError;
+end;
+
+procedure TGLiteComparablePairHeapMin.AccessEmptyError;
+begin
+  raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+class operator TGLiteComparablePairHeapMin.Initialize(var h: TGLiteComparablePairHeapMin);
+begin
+  h := Default(TGLiteComparablePairHeapMin);
+end;
+
+class operator TGLiteComparablePairHeapMin.Finalize(var h: TGLiteComparablePairHeapMin);
+begin
+  h.Clear;
+end;
+
+class operator TGLiteComparablePairHeapMin.Copy(constref aSrc: TGLiteComparablePairHeapMin;
+  var aDst: TGLiteComparablePairHeapMin);
+var
+  v: T;
+begin
+  System.FillChar(aDst, SizeOf(aDst), 0);
+  aDst.EnsureCapacity(aSrc.Count);
+  for v in aSrc do
+    aDst.Enqueue(v);
+end;
+
+class function TGLiteComparablePairHeapMin.NodeMerge(L, R: PNode): PNode;
+begin
+  if L <> nil then
+    if R <> nil then
+      if L^.Data <= R^.Data then
+        begin
+          L^.AddChild(R);
+          Result := L;
+        end
+      else
+        begin
+          R^.AddChild(L);
+          Result := R;
+        end
+    else
+      Result := L
+  else
+    Result := R;
+end;
+
+{$IFDEF ENABLE_TWOPASSMERGE_RECURSION}
+class function TGLiteComparablePairHeapMin.TwoPassMerge(aNode: PNode): PNode; // recursive
+var
+  Sibling, NextSibling: PNode;
+begin
+  if (aNode <> nil) and (aNode^.Sibling <> nil) then
+    begin
+      Sibling := aNode^.Sibling;
+      NextSibling := Sibling^.Sibling;
+      aNode^.Sibling := nil;
+      Sibling^.Sibling := nil;
+      Result := NodeMerge(NodeMerge(aNode, Sibling), TwoPassMerge(NextSibling));
+    end
+  else
+    Result := aNode;
+end;
+{$ELSE ENABLE_TWOPASSMERGE_RECURSION}
+class function TGLiteComparablePairHeapMin.TwoPassMerge(aNode: PNode): PNode;
+var
+  CurrNode, NextNode: PNode;
+begin
+  Result := nil;
+  while (aNode <> nil) and (aNode^.Sibling <> nil) do
+    begin
+      CurrNode := aNode;
+      NextNode := aNode^.Sibling;
+      aNode := NextNode^.Sibling;
+      CurrNode^.Sibling := nil;
+      NextNode^.Sibling := nil;
+      Result := NodeMerge(Result, NodeMerge(CurrNode, NextNode));
+    end;
+  Result := NodeMerge(Result, aNode);
+end;
+{$ENDIF ENABLE_TWOPASSMERGE_RECURSION}
+
+class procedure TGLiteComparablePairHeapMin.CutNode(aNode: PNode);
+begin
+  if aNode^.Sibling <> nil then
+    aNode^.Sibling^.Prev := aNode^.Prev;
+  if aNode^.Prev^.Child = aNode then
+    aNode^.Prev^.Child := aNode^.Sibling
+  else
+    aNode^.Prev^.Sibling := aNode^.Sibling;
+  aNode^.Sibling := nil;
+end;
+
+class function TGLiteComparablePairHeapMin.DoCompare(constref L, R: T): SizeInt;
+begin
+  if L > R then
+    Result := 1
+  else
+    if R > L then
+      Result := -1
+    else
+      Result := 0;
+end;
+
+function TGLiteComparablePairHeapMin.Comparator: TComparator;
+begin
+  Result := @DoCompare;
+end;
+
+function TGLiteComparablePairHeapMin.GetEnumerator: TEnumerator;
+begin
+  Result.FCurrNode := nil;
+  Result.FLeftmost := FindLeftmost;
+  Result.FInCycle := False;
+end;
+
+function TGLiteComparablePairHeapMin.Reverse: TReverse;
+begin
+  Result.FHeap := @Self;
+end;
+
+function TGLiteComparablePairHeapMin.ToArray: TArray;
+var
+  I: SizeInt = 0;
+  v: T;
+begin
+  System.SetLength(Result, Count);
+  for v in Self do
+    begin
+      Result[I] := v;
+      Inc(I);
+    end;
+end;
+
+procedure TGLiteComparablePairHeapMin.Clear;
+begin
+  ClearTree;
+  FNodeManager.Clear;
+end;
+
+function TGLiteComparablePairHeapMin.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGLiteComparablePairHeapMin.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGLiteComparablePairHeapMin.EnsureCapacity(aValue: SizeInt);
+begin
+  FNodeManager.EnsureFreeCount(aValue - Capacity);
+end;
+
+procedure TGLiteComparablePairHeapMin.TrimToFit;
+begin
+  if Count > 0 then
+    FNodeManager.ClearFreeList
+  else
+    FNodeManager.Clear;
+end;
+
+procedure TGLiteComparablePairHeapMin.Enqueue(constref aValue: T);
+begin
+  RootMerge(NewNode(aValue));
+end;
+
+function TGLiteComparablePairHeapMin.Dequeue: T;
+begin
+  CheckEmpty;
+  Result := DequeueItem;
+end;
+
+function TGLiteComparablePairHeapMin.TryDequeue(out aValue: T): Boolean;
+begin
+  Result := NonEmpty;
+  if Result then
+    aValue := DequeueItem;
+end;
+
+function TGLiteComparablePairHeapMin.Peek: T;
+begin
+  CheckEmpty;
+  Result := FRoot^.Data;
+end;
+
+function TGLiteComparablePairHeapMin.TryPeek(out aValue: T): Boolean;
+begin
+  Result := NonEmpty;
+  if Result then
+    aValue := FRoot^.Data;
+end;
+
+function TGLiteComparablePairHeapMin.Insert(constref aValue: T): THandle;
+var
+  p: PNode;
+begin
+  p := NewNode(aValue);
+  RootMerge(p);
+  Result := {%H-}THandle(p);
+end;
+
+function TGLiteComparablePairHeapMin.PeekHead: THandle;
+begin
+  CheckEmpty;
+  Result := {%H-}THandle(FRoot);
+end;
+
+function TGLiteComparablePairHeapMin.TryPeekHead(out aValue: THandle): Boolean;
+begin
+  Result := NonEmpty;
+  if Result then
+    aValue := {%H-}THandle(FRoot);
+end;
+
+function TGLiteComparablePairHeapMin.Value(aHandle: THandle): T;
+begin
+  Result := {%H-}PNode(aHandle)^.Data;
+end;
+
+procedure TGLiteComparablePairHeapMin.Update(aHandle: THandle; constref aValue: T);
+begin
+  CheckEmpty;
+  UpdateNode({%H-}PNode(aHandle), aValue);
+end;
+
+function TGLiteComparablePairHeapMin.Remove(aHandle: THandle): T;
+begin
+  CheckEmpty;
+  Result := RemoveNode({%H-}PNode(aHandle));
+end;
+
+function TGLiteComparablePairHeapMin.Merge(aHeap: TGLiteComparablePairHeapMin): SizeInt;
 begin
   Result := aHeap.Count;
   if Result > 0 then
