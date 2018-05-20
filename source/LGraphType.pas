@@ -89,8 +89,7 @@ type
   private
     FNodeList: TNodeList;
     FShift,
-    FCount,
-    FTag: SizeInt;
+    FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     procedure Rehash(var aNewList: TNodeList);
     procedure Resize(aNewCapacity: SizeInt);
@@ -103,13 +102,13 @@ type
     class constructor Init;
     class operator Initialize(var Item: TGVertexItem);
   public
+    Tag: SizeInt;
     procedure Assign(constref aSrc: TGVertexItem);
     function  GetEnumerator: TEnumerator;
     function  ToArray: TAdjItemArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear;
-
     procedure MakeEmpty;
     procedure TrimToFit; inline;
     function  Contains(aDst: SizeInt): Boolean; inline;
@@ -121,7 +120,6 @@ type
     property  Key: TVertex read Vertex;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
-    property  Tag: SizeInt read FTag write FTag;
   end;
 
   { TGVertexHashList }
@@ -143,7 +141,6 @@ type
 
     TNodeList   = array of TNode;
     TChainList  = array of SizeInt;
-    //PVertexList = ^TGVertexHashList;
 
   const
     NULL_INDEX  = SizeInt(-1);
@@ -156,7 +153,7 @@ type
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
-    function  GetItemRef(aIndex: SizeInt): PVertexItem;
+    function  GetItemRef(aIndex: SizeInt): PVertexItem; inline;
     procedure InitialAlloc;
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
@@ -185,7 +182,7 @@ type
     property  ItemRefs[aIndex: SizeInt]: PVertexItem read GetItemRef;
   end;
 
-  { TGCustomSimpleSparseGraph simple sparse graph abstract ancestor class based on adjacency lists;
+  { TGCustomSimpleSparseGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
@@ -194,24 +191,32 @@ type
   type
     TVertexList = specialize TGVertexHashList<TVertex, TEdgeData, TVertexEqRel>;
     TVertexItem = TVertexList.TVertexItem;
+    PEdgeData   = ^TEdgeData;
+
+    TAdjVerticesPtr = record
+    private
+      FGraph: TGCustomSimpleSparseGraph;
+      FSource: SizeInt;
+    public
+      function GetEnumerator: TVertexItem.TEnumerator; inline;
+    end;
+
+  class var
+    CFData: TEdgeData;
 
   var
     FVertexList: TVertexList;
     FEdgeCount: SizeInt;
     FTitle: string;
-    FConnected,
-    FConnectedValid: Boolean;
     function GetVertexCount: SizeInt; inline;
     function GetVertex(aIndex: SizeInt): TVertex; inline;
-    function GetEdgeData(aSrc, aDst: SizeInt): TEdgeData; inline;
-    function CreateIndexVector: TIntArray;
-    function CreateShortVector: TShortArray;
-    property Connected: Boolean read FConnected;
-    property ConnectedValid: Boolean read FConnectedValid;
+    function GetEdgeData(aSrc, aDst: SizeInt): PEdgeData; inline;
+    function AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
   public
   type
     TOnAddEdge   = specialize TGOnAddEdge<TEdgeData>;
     TAdjItem     = TVertexItem.TAdjItem;
+    PAdjItem     = ^TAdjItem;
 
     TEdge = record
       Source,
@@ -281,6 +286,9 @@ type
       function GetEnumerator: TEdgeEnumerator;
     end;
 
+    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    function  CreateIndexVector: TIntArray;
+    function  CreateShortVector: TShortArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear; inline;
@@ -291,8 +299,6 @@ type
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
     function  IndexOf(constref v: TVertex): SizeInt; inline;
-  { returns True and vertex index, if it was added, False otherwise }
-    function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
     function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AdjacentI(aSrc, aDst: SizeInt): Boolean;
   { enumerates indices of adjacent vertices }
@@ -305,12 +311,12 @@ type
     function  Edges: TEdges; inline;
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops }
-    function  DFSTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-    function  DFSTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
+    function  DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
+    function  DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops}
-    function  BFSTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-    function  BFSTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
+    function  BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
+    function  BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
 
     function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
@@ -681,7 +687,6 @@ end;
 
 function TGVertexHashList.GetItemRef(aIndex: SizeInt): PVertexItem;
 begin
-  //CheckIndexRange(aIndex);
   Result := @FNodeList[aIndex].Item;
 end;
 
@@ -928,6 +933,13 @@ begin
   DoDelete(aIndex);
 end;
 
+{ TGCustomSimpleSparseGraph.TAdjVerticesPtr }
+
+function TGCustomSimpleSparseGraph.TAdjVerticesPtr.GetEnumerator: TVertexItem.TEnumerator;
+begin
+  Result := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
+end;
+
 { TGCustomSimpleSparseGraph.TAdjEnumerator }
 
 function TGCustomSimpleSparseGraph.TAdjEnumerator.GetCurrent: SizeInt;
@@ -949,7 +961,7 @@ end;
 
 function TGCustomSimpleSparseGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
 begin
-  Result.FEnum := FGraph.FVertexList.FNodeList[FSource].Item.GetEnumerator;
+  Result.FEnum := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
 { TGCustomSimpleSparseGraph.TIncidentEnumerator }
@@ -977,7 +989,7 @@ end;
 
 function TGCustomSimpleSparseGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
 begin
-  Result.FEnum := FGraph.FVertexList.FNodeList[FSource].Item.GetEnumerator;
+  Result.FEnum := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
 { TGCustomSimpleSparseGraph.TEdgeEnumerator }
@@ -1035,9 +1047,21 @@ begin
   Result := FVertexList[aIndex];
 end;
 
-function TGCustomSimpleSparseGraph.GetEdgeData(aSrc, aDst: SizeInt): TEdgeData;
+function TGCustomSimpleSparseGraph.GetEdgeData(aSrc, aDst: SizeInt): PEdgeData;
 begin
-  Result := FVertexList.FNodeList[aSrc].Item.Find(aDst)^.Data;
+  Result := @FVertexList.ItemRefs[aSrc]^.Find(aDst)^.Data;
+end;
+
+function TGCustomSimpleSparseGraph.AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  Result.FGraph := Self;
+  Result.FSource := aSrc;
+end;
+
+procedure TGCustomSimpleSparseGraph.CheckIndexRange(aIndex: SizeInt);
+begin
+  FVertexList.CheckIndexRange(aIndex);
 end;
 
 function TGCustomSimpleSparseGraph.CreateIndexVector: TIntArray;
@@ -1125,16 +1149,6 @@ begin
   Result := FVertexList.IndexOf(v);
 end;
 
-function TGCustomSimpleSparseGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
-begin
-  Result := not FVertexList.FindOrAdd(v, aIndex);
-  if Result then
-    begin
-      FVertexList.FNodeList[aIndex].Item.Tag := 0;
-      FConnectedValid := False;
-    end;
-end;
-
 function TGCustomSimpleSparseGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := AdjacentI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
@@ -1177,13 +1191,13 @@ begin
   Result.FGraph := Self;
 end;
 
-function TGCustomSimpleSparseGraph.DFSTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGCustomSimpleSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
-  Result := DFSTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
+  Result := DfsTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.DFSTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGCustomSimpleSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
@@ -1211,13 +1225,13 @@ begin
   until not Stack.TryPop(aRoot);
 end;
 
-function TGCustomSimpleSparseGraph.BFSTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGCustomSimpleSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
-  Result := BFSTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
+  Result := BfsTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.BFSTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGCustomSimpleSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;

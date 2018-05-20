@@ -39,19 +39,19 @@ uses
 
 type
 
-  { TGSimpleSparseDGraph simple sparse directed graph based on adjacency lists;
+  { TGSimpleSparseDGraph is simple sparse directed graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
   generic TGSimpleSparseDGraph<TVertex, TEdgeData, TVertexEqRel> = class(
     specialize TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
-  class var
-    CFData: TEdgeData;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
   public
+  { returns True and vertex index, if it was added, False otherwise }
+    function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
     function  RemoveVertex(constref v: TVertex): Boolean; inline;
     function  RemoveVertexI(aIndex: SizeInt): Boolean;
     function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
@@ -60,6 +60,19 @@ type
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function  InDegree(constref v: TVertex): SizeInt; inline;
+    function  InDegreeI(aIndex: SizeInt): SizeInt;
+    function  OutDegree(constref v: TVertex): SizeInt; inline;
+    function  OutDegreeI(aIndex: SizeInt): SizeInt;
+    function  Degree(constref v: TVertex): SizeInt; inline;
+    function  DegreeI(aIndex: SizeInt): SizeInt;
+    function  Isolated(constref v: TVertex): Boolean; inline;
+    function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  EulerCycleExists: Boolean;
+    function  FindEulerCycle: TIntArray;
+
+    function  Clone: TGSimpleSparseDGraph;
+    function  Reverse: TGSimpleSparseDGraph;
   end;
 
 implementation
@@ -70,12 +83,11 @@ implementation
 procedure TGSimpleSparseDGraph.DoRemoveVertex(aIndex: SizeInt);
 var
   I, J: SizeInt;
-  pV: ^TVertexItem;
   p: ^TAdjItem;
   CurrEdges: TVertexItem.TAdjItemArray;
 begin
   FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
-  FConnectedValid := False;
+  //FConnectedValid := False;
   for p in FVertexList.ItemRefs[aIndex]^ do
     Dec(FVertexList.ItemRefs[p^.Destination]^.Tag);
   FVertexList.Delete(aIndex);
@@ -108,7 +120,7 @@ begin
       p^.Data := aData;
       Inc(FVertexList.ItemRefs[aDst]^.Tag);
       Inc(FEdgeCount);
-      FConnectedValid := False;
+      //FConnectedValid := False;
     end;
 end;
 
@@ -121,7 +133,17 @@ begin
     begin
       Dec(FVertexList.ItemRefs[aDst]^.Tag);
       Dec(FEdgeCount);
-      FConnectedValid := False;
+      //FConnectedValid := False;
+    end;
+end;
+
+function TGSimpleSparseDGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+begin
+  Result := not FVertexList.FindOrAdd(v, aIndex);
+  if Result then
+    begin
+      FVertexList.ItemRefs[aIndex]^.Tag := 0;
+      //FConnectedValid := False;
     end;
 end;
 
@@ -177,6 +199,126 @@ begin
   if (aDst < 0) or (aDst >= FVertexList.Count) then
     exit(False);
   Result := DoRemoveEdge(aSrc, aDst);
+end;
+
+function TGSimpleSparseDGraph.InDegree(constref v: TVertex): SizeInt;
+begin
+  Result := InDegreeI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseDGraph.InDegreeI(aIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aIndex);
+  Result := FVertexList.ItemRefs[aIndex]^.Tag;
+end;
+
+function TGSimpleSparseDGraph.OutDegree(constref v: TVertex): SizeInt;
+begin
+  Result := OutDegreeI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseDGraph.OutDegreeI(aIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aIndex);
+  Result := FVertexList.ItemRefs[aIndex]^.Count;
+end;
+
+function TGSimpleSparseDGraph.Degree(constref v: TVertex): SizeInt;
+begin
+  Result := DegreeI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseDGraph.DegreeI(aIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aIndex);
+  Result := FVertexList.ItemRefs[aIndex]^.Count + FVertexList.ItemRefs[aIndex]^.Tag;
+end;
+
+function TGSimpleSparseDGraph.Isolated(constref v: TVertex): Boolean;
+begin
+  Result := Degree(v) = 0;
+end;
+
+function TGSimpleSparseDGraph.IsolatedI(aIndex: SizeInt): Boolean;
+begin
+  Result := DegreeI(aIndex) = 0;
+end;
+
+function TGSimpleSparseDGraph.EulerCycleExists: Boolean;
+var
+  I, d: SizeInt;
+begin
+  if VertexCount < 2 then
+    exit(False);
+  d := 0;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      if InDegreeI(I) <> OutDegreeI(I) then
+        exit(False);
+      d += DegreeI(I);
+    end;
+  Result := d > 0;
+end;
+
+function TGSimpleSparseDGraph.FindEulerCycle: TIntArray;
+var
+  g: TGSimpleSparseDGraph = nil;
+  Stack: TIntStack;
+  I, s, d, From: SizeInt;
+begin
+  if not EulerCycleExists then
+    exit(nil);
+  g := Clone;
+  try
+    I := 1;
+    System.SetLength(Result, ARRAY_INITIAL_SIZE);
+    s := 0;
+    while g.DegreeI(s) = 0 do
+      Inc(s);
+    From := s;
+    Result[0] := From;
+    repeat
+      repeat
+        if not g.FVertexList.ItemRefs[s]^.FindFirst(d) then
+          break;
+        Stack.Push(s);
+        g.RemoveEdgeI(s, d);
+        s := d;
+      until False;
+      if not Stack.TryPop(s) then
+        break;
+      if System.Length(Result) = I then
+        System.SetLength(Result, I shl 1);
+      Result[I] := s;
+      Inc(I);
+    until False;
+     System.SetLength(Result, I);
+     TIntHelper.Reverse(Result);
+  finally
+    g.Free;
+  end;
+end;
+
+function TGSimpleSparseDGraph.Clone: TGSimpleSparseDGraph;
+begin
+  Result := TGSimpleSparseDGraph.Create;
+  Result.FVertexList := FVertexList;
+  Result.FEdgeCount := EdgeCount;
+  Result.FTitle := Title;
+  //Result.FConnected := Connected;
+  //Result.FConnectedValid := ConnectedValid;
+end;
+
+function TGSimpleSparseDGraph.Reverse: TGSimpleSparseDGraph;
+var
+  I,Dummy: SizeInt;
+  e: TEdge;
+begin
+  Result := TGSimpleSparseDGraph.Create;
+  for I := 0 to Pred(VertexCount) do
+    Result.AddVertex(Vertices[I], Dummy);
+  for e in Edges do
+    Result.AddEdgeI(e.Destination, e.Source, e.Data);
 end;
 
 end.
