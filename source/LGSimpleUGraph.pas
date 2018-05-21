@@ -48,9 +48,10 @@ type
     specialize TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
   type
+
     TDistinctEdgeEnumerator = record
     private
-      FVisitedEdges: TBitVector;
+      FVisitedEdges: TIntPairHashSet;
       FList: TVertexList.TNodeList;
       FEnum: TVertexItem.TEnumerator;
       FCurrIndex,
@@ -164,7 +165,7 @@ type
       class operator < (constref L, R: TWeightItem): Boolean; inline;
       class operator >=(constref L, R: TWeightItem): Boolean; inline;
       class operator <=(constref L, R: TWeightItem): Boolean; inline;
-      class function Construct(w: TWeight; i: SizeInt): TWeightItem; static; inline;
+      class function Construct(w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
     end;
 
     TPriorityQueue = specialize TGLiteComparablePairHeapMin<TWeightItem>;
@@ -189,6 +190,7 @@ type
   type
     TEdge          = TGraph.TEdge;
     TEdges         = TGraph.TEdges;
+    TDistinctEdges = TGraph.TDistinctEdges;
     TAdjVertices   = TGraph.TAdjVertices;
     TIncidentEdges = TGraph.TIncidentEdges;
     TOnAddEdge     = TGraph.TOnAddEdge;
@@ -214,8 +216,10 @@ type
   { enumerates incident edges }
     function  IncidentEdges(constref aSrc: TVertex): TIncidentEdges; inline;
     function  IncidentEdgesI(aSrc: SizeInt): TIncidentEdges; inline;
-  { enumerates all edges }
+  { enumerates all edges(including the reverse ones) }
     function  Edges: TEdges; inline;
+  { enumerates all edges(only once) }
+    function  DistinctEdges: TDistinctEdges; inline;
     function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
     function  RemoveVertex(constref v: TVertex): Boolean; inline;
     function  RemoveVertexI(aIndex: SizeInt): Boolean; inline;
@@ -302,7 +306,7 @@ type
     is unreachable; used Dijkstra's algorithm  }
     function  FindMinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
     function  FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight; inline;
-  { same as above and in aPathTree returns path }
+  { same as above and in aPath returns path }
     function  FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight; inline;
     function  FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight; inline;
 
@@ -318,18 +322,38 @@ implementation
 { TGSimpleSparseUGraph.TDistinctEdgeEnumerator }
 
 function TGSimpleSparseUGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
+var
+  p: ^TAdjItem;
 begin
-
+  p := FEnum.Current;
+  Result.Source := FCurrIndex;
+  Result.Destination := p^.Destination;
+  Result.Data := p^.Data;
 end;
 
 function TGSimpleSparseUGraph.TDistinctEdgeEnumerator.MoveNext: Boolean;
 begin
-
+  repeat
+    if FEnumDone then
+      begin
+        if FCurrIndex >= FLastIndex then
+          exit(False);
+        Inc(FCurrIndex);
+        FEnum := FList[FCurrIndex].Item.GetEnumerator;
+      end;
+    Result := FEnum.MoveNext;
+    FEnumDone := not Result;
+    if Result then
+      Result := FVisitedEdges.Add(TIntPair.Construct(FCurrIndex, FEnum.GetCurrent^.Key)) and
+                FVisitedEdges.Add(TIntPair.Construct(FEnum.GetCurrent^.Key, FCurrIndex));
+  until Result;
 end;
 
 procedure TGSimpleSparseUGraph.TDistinctEdgeEnumerator.Reset;
 begin
-
+  FCurrIndex := -1;
+  FEnumDone := True;
+  FVisitedEdges.Clear;
 end;
 
 { TGSimpleSparseUGraph.TDistinctEdges }
@@ -337,7 +361,6 @@ end;
 function TGSimpleSparseUGraph.TDistinctEdges.GetEnumerator: TDistinctEdgeEnumerator;
 begin
   Result.FList := FGraph.FVertexList.FNodeList;
-  Result.FVisitedEdges.Size := FGraph.FVertexList.Count;
   Result.FLastIndex := Pred(FGraph.FVertexList.Count);
   Result.FCurrIndex := -1;
   Result.FEnumDone := True;
@@ -835,10 +858,10 @@ begin
   Result := L.Weight <= R.Weight;
 end;
 
-class function TGSimpleSparseWeighedUGraph.TWeightItem.Construct(w: TWeight; i: SizeInt): TWeightItem;
+class function TGSimpleSparseWeighedUGraph.TWeightItem.Construct(w: TWeight; aIndex: SizeInt): TWeightItem;
 begin
   Result.Weight := w;
-  Result.Index := I;
+  Result.Index := aIndex;
 end;
 
 { TGSimpleSparseWeighedUGraph }
@@ -1143,6 +1166,11 @@ end;
 function TGSimpleSparseWeighedUGraph.Edges: TEdges;
 begin
   Result := FGraph.Edges;
+end;
+
+function TGSimpleSparseWeighedUGraph.DistinctEdges: TDistinctEdges;
+begin
+  Result := FGraph.DistinctEdges;
 end;
 
 function TGSimpleSparseWeighedUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;

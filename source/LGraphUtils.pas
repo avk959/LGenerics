@@ -36,6 +36,8 @@ uses
   LGStack,
   LGQueue,
   LGVector,
+  LGHash,
+  LGHashTable,
   LGStrConst;
 
 type
@@ -68,6 +70,31 @@ type
     function  FindSet(aValue: SizeInt): SizeInt;
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
+  end;
+
+  { TIntPair }
+
+  TIntPair = record
+    Source,
+    Destination: SizeInt;
+    function Key: TIntPair; inline;
+    class function Equal(constref L, R: TIntPair): Boolean; static; inline;
+    class function HashCode(constref aValue: TIntPair): SizeInt; static; inline;
+    class function Construct(aSrc, aDst: SizeInt): TIntPair; static; inline;
+  end;
+
+  { TIntPairHashSet }
+
+  TIntPairHashSet = record
+  private
+  type
+    TTable = specialize TGLiteHashTableLP<TIntPair, TIntPair, TIntPair>;
+  var
+    FTable: TTable;
+  public
+    procedure Clear;
+    function  Contains(constref aPair: TIntPair): Boolean; inline;
+    function  Add(constref aPair: TIntPair): Boolean; inline;
   end;
 
   generic TGAdjItem<TData> = record
@@ -430,6 +457,59 @@ begin
     FTree[L] := R
   else
     FTree[R] := L;
+end;
+
+{ TIntPair }
+
+function TIntPair.Key: TIntPair;
+begin
+  Result := Self;
+end;
+
+class function TIntPair.Equal(constref L, R: TIntPair): Boolean;
+begin
+  Result := (L.Source = R.Source) and (L.Destination = R.Destination);
+end;
+
+class function TIntPair.HashCode(constref aValue: TIntPair): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := TxxHash32LE.HashQWord(QWord(aValue.Source), QWord(aValue.Destination));
+{$ELSEIF DEFINED(CPU32)}
+  Result := TxxHash32LE.HashDWord(DWord(aValue.Source), DWord(aValue.Destination));
+{$ELSE}
+  Result := TxxHash32LE.HasWord(Word(aValue.Source), Word(aValue.Destination));
+{$ENDIF}
+end;
+
+class function TIntPair.Construct(aSrc, aDst: SizeInt): TIntPair;
+begin
+  Result.Source := aSrc;
+  Result.Destination := aDst;
+end;
+
+{ TIntPairHashSet }
+
+procedure TIntPairHashSet.Clear;
+begin
+  FTable.Clear;
+end;
+
+function TIntPairHashSet.Contains(constref aPair: TIntPair): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := FTable.Find(aPair, Dummy) <> nil;
+end;
+
+function TIntPairHashSet.Add(constref aPair: TIntPair): Boolean;
+var
+  Dummy: SizeInt;
+  p: TTable.PEntry;
+begin
+  Result := not FTable.FindOrAdd(aPair, p, Dummy);
+  if Result then
+    p^ := aPair;
 end;
 
 { TGVertexItem.TEnumerator }
