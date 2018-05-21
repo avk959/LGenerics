@@ -36,7 +36,6 @@ uses
   LGVector,
   LGPriorityQueue,
   LGraphUtils,
-  LGraphType,
   LGStrConst;
 
 type
@@ -48,6 +47,30 @@ type
   generic TGSimpleSparseUGraph<TVertex, TEdgeData, TVertexEqRel> = class(
     specialize TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
+  type
+    TDistinctEdgeEnumerator = record
+    private
+      FVisitedEdges: TBitVector;
+      FList: TVertexList.TNodeList;
+      FEnum: TVertexItem.TEnumerator;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      FEnumDone: Boolean;
+      function  GetCurrent: TEdge;
+    public
+      function  MoveNext: Boolean;
+      procedure Reset;
+      property  Current: TEdge read GetCurrent;
+    end;
+
+    TDistinctEdges = record
+      private
+        FGraph: TGSimpleSparseUGraph;
+      public
+        function GetEnumerator: TDistinctEdgeEnumerator;
+    end;
+
+  var
     FConnected,
     FConnectedValid: Boolean;
     procedure DoRemoveVertex(aIndex: SizeInt);
@@ -101,6 +124,7 @@ type
      vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean;
     function  IsTree: Boolean; inline;
+    function  DistinctEdges: TDistinctEdges; inline;
     //edge-connected
 
     function  Clone: TGSimpleSparseUGraph;
@@ -290,6 +314,34 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
+
+{ TGSimpleSparseUGraph.TDistinctEdgeEnumerator }
+
+function TGSimpleSparseUGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
+begin
+
+end;
+
+function TGSimpleSparseUGraph.TDistinctEdgeEnumerator.MoveNext: Boolean;
+begin
+
+end;
+
+procedure TGSimpleSparseUGraph.TDistinctEdgeEnumerator.Reset;
+begin
+
+end;
+
+{ TGSimpleSparseUGraph.TDistinctEdges }
+
+function TGSimpleSparseUGraph.TDistinctEdges.GetEnumerator: TDistinctEdgeEnumerator;
+begin
+  Result.FList := FGraph.FVertexList.FNodeList;
+  Result.FVisitedEdges.Size := FGraph.FVertexList.Count;
+  Result.FLastIndex := Pred(FGraph.FVertexList.Count);
+  Result.FCurrIndex := -1;
+  Result.FEnumDone := True;
+end;
 
 { TGSimpleSparseUGraph }
 
@@ -734,6 +786,11 @@ end;
 function TGSimpleSparseUGraph.IsTree: Boolean;
 begin
   Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
+end;
+
+function TGSimpleSparseUGraph.DistinctEdges: TDistinctEdges;
+begin
+  Result.FGraph := Self;
 end;
 
 function TGSimpleSparseUGraph.Clone: TGSimpleSparseUGraph;

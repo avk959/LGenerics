@@ -34,8 +34,7 @@ uses
   LGStack,
   LGQueue,
   LGVector,
-  LGraphUtils,
-  LGraphType;
+  LGraphUtils;
 
 type
 
