@@ -286,6 +286,7 @@ type
       function GetEnumerator: TEdgeEnumerator;
     end;
 
+    class function PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     function  CreateIndexVector: TIntArray;
     function  CreateShortVector: TShortArray;
@@ -327,11 +328,11 @@ type
   { test whether the graph is bipartite; if returns True then information about the vertex
     belonging to the fractions is returned in v(0 or 1) }
     function  IsBipartite(out v: TShortArray): Boolean;
-  { returns the length of the shortest path between the vertices aSrc and aDst,
+  { returns the length of the shortest path between the aSrc and aDst,
     -1 if the path does not exist }
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
-  { returns a vector containing in the corresponding components the shortest paths from aRoot }
+  { returns a vector containing in the corresponding components the length of shortest path from aRoot }
     function  FindMinPathLenVector(constref aRoot: TVertex): TIntArray; inline;
     function  FindMinPathLenVectorI(aRoot: SizeInt = 0): TIntArray;
   { returns a vector containing indices of found shortest path(empty if path does not exists) }
@@ -1059,6 +1060,22 @@ begin
   Result.FSource := aSrc;
 end;
 
+class function TGCustomSimpleSparseGraph.PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
+var
+  Stack: TIntStack;
+begin
+  while aIndex >= 0 do
+    begin
+      if aIndex < System.Length(aTree) then
+        Stack.Push(aIndex)
+      else
+        raise ELGGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
+      aIndex := aTree[aIndex];
+    end;
+  Result := Stack.ToArray;
+  TIntHelper.Reverse(Result);
+end;
+
 procedure TGCustomSimpleSparseGraph.CheckIndexRange(aIndex: SizeInt);
 begin
   FVertexList.CheckIndexRange(aIndex);
@@ -1419,23 +1436,9 @@ begin
             v[Curr] := Parent;
           end;
     end;
-
   if not Found then
     exit(nil);
-
-  Queue.MakeEmpty;
-  v[aSrc] := -1;
-  Parent := v[aDst];
-  Queue.Enqueue(aDst);
-  while Parent <> -1 do
-    begin
-      Queue.Enqueue(Parent);
-      Parent := v[Parent];
-    end;
-  System.SetLength(v, Queue.Count);
-  for Curr := Pred(System.Length(v)) downto 0 do
-    v[Curr] := Queue.Dequeue;
-  Result := v;
+  Result := PathFromTree(v, aDst);
 end;
 
 end.
