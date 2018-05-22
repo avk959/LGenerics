@@ -27,9 +27,7 @@ unit LGraphUtils;
 interface
 
 uses
-  Classes,
-  SysUtils,
-  math,
+  Classes, SysUtils, math,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -67,7 +65,10 @@ type
   public
     procedure Clear; inline;
     procedure Reset;
-    function  FindSet(aValue: SizeInt): SizeInt;
+  { values lying in the same set will have the same Marker }
+    function  Marker(aValue: SizeInt): SizeInt;
+    function  InSameSet(L, R: SizeInt): Boolean; inline;
+  { if L and R lie in different sets, these sets merge into one with a single marker }
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
   end;
@@ -441,19 +442,24 @@ begin
     FTree[I] := I;
 end;
 
-function TDisjointSetUnion.FindSet(aValue: SizeInt): SizeInt;
+function TDisjointSetUnion.Marker(aValue: SizeInt): SizeInt;
 begin
   if FTree[aValue] = aValue then
     exit(aValue);
-  Result := FindSet(FTree[aValue]);
+  Result := Marker(FTree[aValue]);
   FTree[aValue] := Result;
+end;
+
+function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
+begin
+  Result := Marker(L) = Marker(R);
 end;
 
 procedure TDisjointSetUnion.Union(L, R: SizeInt);
 begin
-  L := FindSet(L);
-  R := FindSet(R);
-  if Odd(Random(1000000)) then // random selection ???
+  L := Marker(L);
+  R := Marker(R);
+  if Odd(Random(4)) then // random selection ???
     FTree[L] := R
   else
     FTree[R] := L;

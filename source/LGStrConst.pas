@@ -48,6 +48,7 @@ resourcestring
   SEResultUnknown          = 'Result is unknown';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
   SENegValuesNotAllowed    = 'Negative values are not allowed';
+  SEGraphIsNotConnected    = 'Graph is not connected';
 
 implementation
 
