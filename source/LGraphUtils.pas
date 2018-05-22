@@ -282,6 +282,7 @@ type
       Source,
       Destination: SizeInt;
       Data:  TEdgeData;
+      procedure Init(aSrc: SizeInt; p: PAdjItem); inline;
     end;
 
     TIncidentEdge = record
@@ -1111,6 +1112,15 @@ begin
   Result := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
+{ TGCustomSimpleSparseGraph.TEdge }
+
+procedure TGCustomSimpleSparseGraph.TEdge.Init(aSrc: SizeInt; p: PAdjItem);
+begin
+  Source := aSrc;
+  Destination := p^.Destination;
+  Data := p^.Data;
+end;
+
 { TGCustomSimpleSparseGraph.TAdjEnumerator }
 
 function TGCustomSimpleSparseGraph.TAdjEnumerator.GetCurrent: SizeInt;
@@ -1166,13 +1176,8 @@ end;
 { TGCustomSimpleSparseGraph.TEdgeEnumerator }
 
 function TGCustomSimpleSparseGraph.TEdgeEnumerator.GetCurrent: TEdge;
-var
-  p: ^TAdjItem;
 begin
-  p := FEnum.Current;
-  Result.Source := FCurrIndex;
-  Result.Destination := p^.Destination;
-  Result.Data := p^.Data;
+  Result.Init(FCurrIndex, FEnum.Current);
 end;
 
 function TGCustomSimpleSparseGraph.TEdgeEnumerator.MoveNext: Boolean;
