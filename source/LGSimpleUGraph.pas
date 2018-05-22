@@ -79,8 +79,9 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CheckConnected: Boolean; inline;
-    function  FindComponentCount: SizeInt;
-    function  GetComponentCount: SizeInt;
+    function  FindSeparateCount: SizeInt;
+    function  GetSeparateCount: SizeInt;
+    function  CountPop(aCompIndex: SizeInt): SizeInt;
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
@@ -115,21 +116,24 @@ type
   { returns a graph constructed from the pairs provided by the vector,
     i.e. each element treates as pair of source - destination }
     function  CreateFromVector(constref aVector: TIntArray): TGSimpleSparseUGraph;
-    function  ComponentIndex(constref v: TVertex): SizeInt; inline;
-    function  ComponentIndexI(aVertex: SizeInt): SizeInt; inline;
-  { returns number of vertices(population) in the connected component that contains aRoot }
-    function  ComponentPop(constref aRoot: TVertex): SizeInt; inline;
-    function  ComponentPopI(aRoot: SizeInt): SizeInt; inline;
+  { returns index of the connected component that contains v }
+    function  SeparateIndex(constref v: TVertex): SizeInt; inline;
+    function  SeparateIndexI(aVtxIndex: SizeInt): SizeInt; inline;
+  { returns number of vertices(population) in the connected component that contains v }
+    function  SeparatePop(constref v: TVertex): SizeInt; inline;
+    function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
+  { returns list of vertices of connected component that contains v }
+    function  SeparateList(constref v: TVertex): TIntArray; inline;
+    function  SeparateListI(aVtxIndex: SizeInt): TIntArray;
   { checks whether the graph is a regular graph (that is, the degree of all its
      vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean;
     function  IsTree: Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
-    //edge-connected
 
     function  Clone: TGSimpleSparseUGraph;
   { count of connected components }
-    property  ComponentCount: SizeInt read GetComponentCount;
+    property  SeparateCount: SizeInt read GetSeparateCount;
   end;
 
   generic TGWeighedEdgeData<TWeight, TEdgeData> = record
@@ -191,14 +195,15 @@ type
     function  GetTitle: string; inline;
     function  GetVertex(aIndex: SizeInt): TVertex; inline;
     function  GetVertexCount: SizeInt; inline;
+    function  GetSeparateCount: SizeInt; inline;
     procedure SetTitle(const aValue: string); inline;
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     function  DijkstraMap(aSrc: SizeInt): TWeightArray;
     function  DijkstraMap(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
     function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
-    function  KruskalMinTree(out aTotalWeight: TWeight): TEdgeArray;
-    function  PrimMinTree(out aTotalWeight: TWeight): TIntArray;
+    function  KruskalMst(out aTotalWeight: TWeight): TEdgeArray;
+    function  PrimMst(out aTotalWeight: TWeight): TIntArray;
     function  CreateEdgeArray: TEdgeArray;
     function  EdgeCompare(constref L, R: TEdge): SizeInt; inline;
     class function Min(const L, R: TWeight): TWeight; static; inline;
@@ -286,11 +291,15 @@ type
   { returns a graph constructed from the pairs provided by the vector,
     i.e. each element treates as pair of source - destination }
     function  CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
-  { returns count of connected components }
-    function  ComponentCount: SizeInt; inline;
+  { returns index of the connected component that contains v }
+    function  SeparateIndex(constref v: TVertex): SizeInt; inline;
+    function  SeparateIndexI(aVertex: SizeInt): SizeInt; inline;
   { returns number of vertices(population) in the connected component that contains aRoot }
-    function  ComponentPop(constref aRoot: TVertex): SizeInt; inline;
-    function  ComponentPopI(aRoot: SizeInt): SizeInt; inline;
+    function  SeparatePop(constref v: TVertex): SizeInt; inline;
+    function  SeparatePopI(aVertex: SizeInt): SizeInt; inline;
+  { returns list of vertices of connected component that contains v }
+    function  SeparateList(constref v: TVertex): TIntArray; inline;
+    function  SeparateListI(aVtxIndex: SizeInt): TIntArray; inline;
   { checks whether the graph is a regular graph (that is, the degree of all its
      vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean; inline;
@@ -317,12 +326,14 @@ type
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
     function  FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TEdgeArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
-    function  FindMinSpanningTreePrimI(out aTotalWeight: TWeight): TIntArray;
+    function  FindMinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 
     function  Clone: TWeighedGraph;
     property  Title: string read GetTitle write SetTitle;
     property  VertexCount: SizeInt read GetVertexCount;
     property  EdgeCount: SizeInt read GetEdgeCount;
+  { count of connected components }
+    property  SeparateCount: SizeInt read GetSeparateCount;
     property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
   end;
 
@@ -379,8 +390,8 @@ var
   I, J: SizeInt;
 begin
   FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
-  FConnectedValid := False;
   FVertexList.Delete(aIndex);
+  FConnectedValid := False;
   for I := 0 to Pred(FVertexList.Count) do
     begin
       CurrEdges := FVertexList.ItemRefs[I]^.ToArray;
@@ -431,10 +442,10 @@ end;
 
 function TGSimpleSparseUGraph.CheckConnected: Boolean;
 begin
-  Result := ComponentCount = 1;
+  Result := SeparateCount = 1;
 end;
 
-function TGSimpleSparseUGraph.FindComponentCount: SizeInt;
+function TGSimpleSparseUGraph.FindSeparateCount: SizeInt;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -463,15 +474,24 @@ begin
       end;
 end;
 
-function TGSimpleSparseUGraph.GetComponentCount: SizeInt;
+function TGSimpleSparseUGraph.GetSeparateCount: SizeInt;
 begin
-  if ConnectedValid then
-    Result := FCompoCount
-  else
+  if not ConnectedValid then
     begin
-      FCompoCount := FindComponentCount;
+      FCompoCount := FindSeparateCount;
       FConnectedValid := True;
+      FConnected := FCompoCount = 1;
     end;
+  Result := FCompoCount;
+end;
+
+function TGSimpleSparseUGraph.CountPop(aCompIndex: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  for I := 0 to Pred(VertexCount) do
+    Result += Ord(FVertexList.ItemRefs[I]^.Tag = aCompIndex);
 end;
 
 function TGSimpleSparseUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
@@ -736,30 +756,53 @@ begin
     end;
 end;
 
-function TGSimpleSparseUGraph.ComponentIndex(constref v: TVertex): SizeInt;
+function TGSimpleSparseUGraph.SeparateIndex(constref v: TVertex): SizeInt;
 begin
-   Result := ComponentIndexI(FVertexList.IndexOf(v));
+   Result := SeparateIndexI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseUGraph.ComponentIndexI(aVertex: SizeInt): SizeInt;
+function TGSimpleSparseUGraph.SeparateIndexI(aVtxIndex: SizeInt): SizeInt;
 begin
-  if ComponentCount > 1 then
-    Result := FVertexList.ItemRefs[aVertex]^.Tag
+  FVertexList.CheckIndexRange(aVtxIndex);
+  if SeparateCount > 1 then
+    Result := FVertexList.ItemRefs[aVtxIndex]^.Tag
   else
     Result := 0;
 end;
 
-function TGSimpleSparseUGraph.ComponentPop(constref aRoot: TVertex): SizeInt;
+function TGSimpleSparseUGraph.SeparatePop(constref v: TVertex): SizeInt;
 begin
-  Result := DfsTraversalI(FVertexList.IndexOf(aRoot));
+  Result := SeparatePopI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseUGraph.ComponentPopI(aRoot: SizeInt): SizeInt;
+function TGSimpleSparseUGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
 begin
-  if not ConnectedValid or (ComponentCount > 1) then  //todo: need to be rewritted !!!
-    Result := DfsTraversalI(aRoot)
+  FVertexList.CheckIndexRange(aVtxIndex);
+  if SeparateCount > 1 then
+    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.Tag)
   else
     Result := VertexCount;
+end;
+
+function TGSimpleSparseUGraph.SeparateList(constref v: TVertex): TIntArray;
+begin
+  Result := SeparateListI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleSparseUGraph.SeparateListI(aVtxIndex: SizeInt): TIntArray;
+var
+  I, J, sIdx: SizeInt;
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  System.SetLength(Result, SeparatePopI(aVtxIndex));
+  sIdx := SeparateIndexI(aVtxIndex);
+  J := 0;
+  for I := 0 to Pred(VertexCount) do
+    if FVertexList.ItemRefs[I]^.Tag = sIdx then
+      begin
+        Result[J] := I;
+        Inc(J)
+      end;
 end;
 
 function TGSimpleSparseUGraph.IsRegular: Boolean;
@@ -862,6 +905,11 @@ end;
 function TGSimpleSparseWeighedUGraph.GetVertexCount: SizeInt;
 begin
   Result := FGraph.VertexCount;
+end;
+
+function TGSimpleSparseWeighedUGraph.GetSeparateCount: SizeInt;
+begin
+  Result := FGraph.SeparateCount;
 end;
 
 procedure TGSimpleSparseWeighedUGraph.SetTitle(const aValue: string);
@@ -1029,7 +1077,7 @@ begin
       end;
 end;
 
-function TGSimpleSparseWeighedUGraph.KruskalMinTree(out aTotalWeight: TWeight): TEdgeArray;
+function TGSimpleSparseWeighedUGraph.KruskalMst(out aTotalWeight: TWeight): TEdgeArray;
 var
   e: TEdgeArray;
   ResIdx, EdgeIdx, s, d, VxCount: SizeInt;
@@ -1058,7 +1106,7 @@ begin
     end;
 end;
 
-function TGSimpleSparseWeighedUGraph.PrimMinTree(out aTotalWeight: TWeight): TIntArray;
+function TGSimpleSparseWeighedUGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
   Queue: TPriorityQueue;
@@ -1415,19 +1463,34 @@ begin
   Result := TGSimpleSparseWeighedUGraph.Create(FGraph.CreateFromVector(aVector));
 end;
 
-function TGSimpleSparseWeighedUGraph.ComponentCount: SizeInt;
+function TGSimpleSparseWeighedUGraph.SeparateIndex(constref v: TVertex): SizeInt;
 begin
-  Result := FGraph.ComponentCount;
+  Result := FGraph.SeparateIndex(v);
 end;
 
-function TGSimpleSparseWeighedUGraph.ComponentPop(constref aRoot: TVertex): SizeInt;
+function TGSimpleSparseWeighedUGraph.SeparateIndexI(aVertex: SizeInt): SizeInt;
 begin
-  Result := FGraph.ComponentPop(aRoot);
+  Result := FGraph.SeparateIndexI(aVertex);
 end;
 
-function TGSimpleSparseWeighedUGraph.ComponentPopI(aRoot: SizeInt): SizeInt;
+function TGSimpleSparseWeighedUGraph.SeparatePop(constref v: TVertex): SizeInt;
 begin
-  Result := FGraph.ComponentPopI(aRoot);
+  Result := FGraph.SeparatePop(v);
+end;
+
+function TGSimpleSparseWeighedUGraph.SeparatePopI(aVertex: SizeInt): SizeInt;
+begin
+  Result := FGraph.SeparatePopI(aVertex);
+end;
+
+function TGSimpleSparseWeighedUGraph.SeparateList(constref v: TVertex): TIntArray;
+begin
+  Result := FGraph.SeparateList(v);
+end;
+
+function TGSimpleSparseWeighedUGraph.SeparateListI(aVtxIndex: SizeInt): TIntArray;
+begin
+  Result := FGraph.SeparateListI(aVtxIndex);
 end;
 
 function TGSimpleSparseWeighedUGraph.IsRegular: Boolean;
@@ -1492,15 +1555,15 @@ end;
 function TGSimpleSparseWeighedUGraph.FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TEdgeArray;
 begin
   if IsConnected then
-    Result := KruskalMinTree(aTotalWeight)
+    Result := KruskalMst(aTotalWeight)
   else
     raise ELGGraphError.Create(SEGraphIsNotConnected);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinSpanningTreePrimI(out aTotalWeight: TWeight): TIntArray;
+function TGSimpleSparseWeighedUGraph.FindMinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 begin
   if IsConnected then
-    Result := PrimMinTree(aTotalWeight)
+    Result := PrimMst(aTotalWeight)
   else
     raise ELGGraphError.Create(SEGraphIsNotConnected);
 end;
