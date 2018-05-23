@@ -342,6 +342,7 @@ type
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     class operator Copy(constref aSrc: TBitVector; var aDst: TBitVector);
   public
+    procedure Reset;
     property Size: SizeInt read GetSize write SetSize;
   { read/write bit with (index < 0) or (index >= Size) will raise exception }
     property Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
@@ -1756,6 +1757,12 @@ end;
 class operator TBitVector.Copy(constref aSrc: TBitVector; var aDst: TBitVector);
 begin
   aDst.FBits := System.Copy(aSrc.FBits);
+end;
+
+procedure TBitVector.Reset;
+begin
+  if FBits <> nil then
+    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
 { TGVectorHelpUtil }
