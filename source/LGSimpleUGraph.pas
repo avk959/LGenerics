@@ -1131,13 +1131,8 @@ var
 begin
   Result := FGraph.CreateIndexVector;
   System.SetLength(Result, VertexCount);
-  //System.SetLength(Handles, VertexCount);
   Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  //Queue.EnsureCapacity(VertexCount);
-  //for Curr := 0 to Pred(VertexCount) do
-  //  Handles[Curr] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, Curr));
-  //Queue.Update(Handles[0], TWeightItem.Construct(Default(TWeight), 0));
   Handles[0] := Queue.Insert(TWeightItem.Construct(Default(TWeight), 0));
   aTotalWeight := 0;
   while Queue.TryDequeue(Item) do
@@ -1149,11 +1144,11 @@ begin
         for p in FGraph.AdjVerticesPtr(Curr) do
           begin
             if Handles[p^.Key] = INVALID_HANDLE then
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight, p^.Key));
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
             if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
               begin
-                Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
-                Result[p^.Key] := Curr;
+                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
+                  Result[p^.Key] := Curr;
               end;
           end;
       end;
