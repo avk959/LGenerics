@@ -351,7 +351,7 @@ type
 
     class function PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
-    function  CreateIndexVector: TIntArray;
+    function  CreateIntVector: TIntArray;
     function  CreateShortVector: TShortArray;
     function  CreateHandleVector: THandleArray;
     function  IsEmpty: Boolean; inline;
@@ -1259,7 +1259,7 @@ begin
   FVertexList.CheckIndexRange(aIndex);
 end;
 
-function TGCustomSimpleSparseGraph.CreateIndexVector: TIntArray;
+function TGCustomSimpleSparseGraph.CreateIntVector: TIntArray;
 var
   c: SizeInt;
 begin
@@ -1555,7 +1555,7 @@ var
 begin
   FVertexList.CheckIndexRange(aSrc);
   FVertexList.CheckIndexRange(aDst);
-  v := CreateIndexVector;
+  v := CreateIntVector;
   v[aSrc] := 0;
   Queue.Enqueue(aSrc);
   while Queue{%H-}.TryDequeue(aSrc) do
@@ -1579,7 +1579,7 @@ var
   d: SizeInt;
 begin
   FVertexList.CheckIndexRange(aRoot);
-  Result := CreateIndexVector;
+  Result := CreateIntVector;
   Result[aRoot] := 0;
   Queue.Enqueue(aRoot);
   while Queue{%H-}.TryDequeue(aRoot) do
@@ -1607,7 +1607,7 @@ begin
   FVertexList.CheckIndexRange(aDst);
   if aSrc = aDst then
     exit(nil);
-  v := CreateIndexVector;
+  v := CreateIntVector;
   {%H-}Queue.Enqueue(aSrc);
   while Queue{%H-}.TryDequeue(Curr) do
     begin
