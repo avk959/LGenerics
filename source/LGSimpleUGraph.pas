@@ -165,7 +165,6 @@ type
 
   protected
   type
-    THandleArray = array of THandle;
     TEdgeArray   = array of TEdge;
     TAdjItem     = TGraph.TAdjItem;
     PAdjItem     = TGraph.PAdjItem;
@@ -185,6 +184,20 @@ type
     TEdgeHelper  = specialize TGDelegatedArrayHelper<TEdge>;
 
     TPriorityQueue = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+
+    //TKruskalMST = record
+    //private
+    //const
+    //  TRESHOLD = 128;
+    //var
+    //  FDsu: TDisjointSetUnion;
+    //  FEdges: TEdgeArray;
+    //  FTotalWeight: TWeight;
+    //  FDone: Boolean;
+    //  procedure Kruskal();
+    //public
+    //  function Execute(aGraph: TWeighedGraph; out aTotalWeight: TWeight): TIntArray;
+    //end;
 
   class var
     CFData: TEdgeData;
@@ -1103,8 +1116,6 @@ begin
           Result[ResIdx] := e[EdgeIdx];
           Inc(ResIdx);
           Dsu.Union(s, d);
-          if ResIdx = VtxCount then //???
-            break;
         end;
     end;
 end;
@@ -1120,12 +1131,14 @@ var
 begin
   Result := FGraph.CreateIndexVector;
   System.SetLength(Result, VertexCount);
-  System.SetLength(Handles, VertexCount);
+  //System.SetLength(Handles, VertexCount);
+  Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Queue.EnsureCapacity(VertexCount);
-  for Curr := 0 to Pred(VertexCount) do
-    Handles[Curr] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, Curr));
-  Queue.Update(Handles[0], TWeightItem.Construct(Default(TWeight), 0));
+  //Queue.EnsureCapacity(VertexCount);
+  //for Curr := 0 to Pred(VertexCount) do
+  //  Handles[Curr] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, Curr));
+  //Queue.Update(Handles[0], TWeightItem.Construct(Default(TWeight), 0));
+  Handles[0] := Queue.Insert(TWeightItem.Construct(Default(TWeight), 0));
   aTotalWeight := 0;
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
@@ -1134,11 +1147,15 @@ begin
         aTotalWeight += Item.Weight;
         Visited[Curr] := True;
         for p in FGraph.AdjVerticesPtr(Curr) do
-          if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
-            begin
-              Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
-              Result[p^.Key] := Curr;
-            end;
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight, p^.Key));
+            if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
+              begin
+                Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
+                Result[p^.Key] := Curr;
+              end;
+          end;
       end;
 end;
 

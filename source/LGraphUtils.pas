@@ -43,9 +43,11 @@ type
   ELGGraphError = class(Exception); //???
 
   TEmptyRec     = record end;
+  THandle       = LGUtils.THandle;
 
   TIntArray     = array of SizeInt;
   TShortArray   = array of ShortInt;
+  THandleArray  = array of THandle;
   TIntHelper    = specialize TGNumArrayHelper<SizeInt>;
   TIntStack     = specialize TGLiteStack<SizeInt>;
   TIntQueue     = specialize TGLiteQueue<SizeInt>;
@@ -351,6 +353,7 @@ type
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     function  CreateIndexVector: TIntArray;
     function  CreateShortVector: TShortArray;
+    function  CreateHandleVector: THandleArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear; inline;
@@ -1274,6 +1277,16 @@ begin
   System.SetLength(Result, c);
   if c > 0 then
     System.FillChar(Result[0], c, $ff);
+end;
+
+function TGCustomSimpleSparseGraph.CreateHandleVector: THandleArray;
+var
+  c: SizeInt;
+begin
+  c := VertexCount;
+  System.SetLength(Result, c);
+  if c > 0 then
+    System.FillChar(Result[0], c * SizeOf(THandle), $ff);
 end;
 
 function TGCustomSimpleSparseGraph.IsEmpty: Boolean;
