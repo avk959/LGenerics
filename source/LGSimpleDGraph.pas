@@ -38,12 +38,12 @@ uses
 
 type
 
-  { TGSimpleSparseDiGraph is simple sparse directed graph based on adjacency lists;
+  { TGSimpleDiGraph is simple sparse directed graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleSparseDiGraph<TVertex, TEdgeData, TVertexEqRel> = class(
-    specialize TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel>)
+  generic TGSimpleDiGraph<TVertex, TEdgeData, TVertexEqRel> = class(
+    specialize TGCustomSimpleGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -70,16 +70,16 @@ type
     function  EulerCycleExists: Boolean;
     function  FindEulerCycle: TIntArray;
 
-    function  Clone: TGSimpleSparseDiGraph;
-    function  Reverse: TGSimpleSparseDiGraph;
+    function  Clone: TGSimpleDiGraph;
+    function  Reverse: TGSimpleDiGraph;
   end;
 
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGSimpleSparseDiGraph }
+{ TGSimpleDiGraph }
 
-procedure TGSimpleSparseDiGraph.DoRemoveVertex(aIndex: SizeInt);
+procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
 var
   I, J: SizeInt;
   p: ^TAdjItem;
@@ -106,7 +106,7 @@ begin
     end;
 end;
 
-function TGSimpleSparseDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 var
   p: ^TAdjItem;
 begin
@@ -123,7 +123,7 @@ begin
     end;
 end;
 
-function TGSimpleSparseDiGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDiGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
@@ -136,7 +136,7 @@ begin
     end;
 end;
 
-function TGSimpleSparseDiGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGSimpleDiGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FVertexList.FindOrAdd(v, aIndex);
   if Result then
@@ -146,19 +146,19 @@ begin
     end;
 end;
 
-function TGSimpleSparseDiGraph.RemoveVertex(constref v: TVertex): Boolean;
+function TGSimpleDiGraph.RemoveVertex(constref v: TVertex): Boolean;
 begin
   Result := RemoveVertexI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseDiGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
+function TGSimpleDiGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
 begin
   Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
   if Result then
     DoRemoveVertex(aIndex);
 end;
 
-function TGSimpleSparseDiGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+function TGSimpleDiGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
 var
   SrcIdx, DstIdx: SizeInt;
 begin
@@ -167,12 +167,12 @@ begin
   Result := DoAddEdge(SrcIdx, DstIdx, aData);
 end;
 
-function TGSimpleSparseDiGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleDiGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := AddEdge(aSrc, aDst, CFData);
 end;
 
-function TGSimpleSparseDiGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
@@ -181,17 +181,17 @@ begin
   Result := DoAddEdge(aSrc, aDst, aData);
 end;
 
-function TGSimpleSparseDiGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := AddEdgeI(aSrc, aDst, CFData);
 end;
 
-function TGSimpleSparseDiGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleDiGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := RemoveEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGSimpleSparseDiGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDiGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
@@ -200,50 +200,50 @@ begin
   Result := DoRemoveEdge(aSrc, aDst);
 end;
 
-function TGSimpleSparseDiGraph.InDegree(constref v: TVertex): SizeInt;
+function TGSimpleDiGraph.InDegree(constref v: TVertex): SizeInt;
 begin
   Result := InDegreeI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseDiGraph.InDegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDiGraph.InDegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
   Result := FVertexList.ItemRefs[aIndex]^.Tag;
 end;
 
-function TGSimpleSparseDiGraph.OutDegree(constref v: TVertex): SizeInt;
+function TGSimpleDiGraph.OutDegree(constref v: TVertex): SizeInt;
 begin
   Result := OutDegreeI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseDiGraph.OutDegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDiGraph.OutDegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
   Result := FVertexList.ItemRefs[aIndex]^.Count;
 end;
 
-function TGSimpleSparseDiGraph.Degree(constref v: TVertex): SizeInt;
+function TGSimpleDiGraph.Degree(constref v: TVertex): SizeInt;
 begin
   Result := DegreeI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseDiGraph.DegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDiGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
   Result := FVertexList.ItemRefs[aIndex]^.Count + FVertexList.ItemRefs[aIndex]^.Tag;
 end;
 
-function TGSimpleSparseDiGraph.Isolated(constref v: TVertex): Boolean;
+function TGSimpleDiGraph.Isolated(constref v: TVertex): Boolean;
 begin
   Result := Degree(v) = 0;
 end;
 
-function TGSimpleSparseDiGraph.IsolatedI(aIndex: SizeInt): Boolean;
+function TGSimpleDiGraph.IsolatedI(aIndex: SizeInt): Boolean;
 begin
   Result := DegreeI(aIndex) = 0;
 end;
 
-function TGSimpleSparseDiGraph.EulerCycleExists: Boolean;
+function TGSimpleDiGraph.EulerCycleExists: Boolean;
 var
   I, d: SizeInt;
 begin
@@ -259,9 +259,9 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleSparseDiGraph.FindEulerCycle: TIntArray;
+function TGSimpleDiGraph.FindEulerCycle: TIntArray;
 var
-  g: TGSimpleSparseDiGraph = nil;
+  g: TGSimpleDiGraph = nil;
   Stack: TIntStack;
   I, s, d, From: SizeInt;
 begin
@@ -298,9 +298,9 @@ begin
   end;
 end;
 
-function TGSimpleSparseDiGraph.Clone: TGSimpleSparseDiGraph;
+function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
 begin
-  Result := TGSimpleSparseDiGraph.Create;
+  Result := TGSimpleDiGraph.Create;
   Result.FVertexList := FVertexList;
   Result.FEdgeCount := EdgeCount;
   Result.FTitle := Title;
@@ -308,12 +308,12 @@ begin
   //Result.FConnectedValid := ConnectedValid;
 end;
 
-function TGSimpleSparseDiGraph.Reverse: TGSimpleSparseDiGraph;
+function TGSimpleDiGraph.Reverse: TGSimpleDiGraph;
 var
   I,Dummy: SizeInt;
   e: TEdge;
 begin
-  Result := TGSimpleSparseDiGraph.Create;
+  Result := TGSimpleDiGraph.Create;
   for I := 0 to Pred(VertexCount) do
     Result.AddVertex(Vertices[I], Dummy);
   for e in Edges do

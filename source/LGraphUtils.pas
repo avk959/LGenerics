@@ -70,6 +70,7 @@ type
   { values related to the same set will have the same Marker }
     function  Marker(aValue: SizeInt): SizeInt;
     function  InSameSet(L, R: SizeInt): Boolean; inline;
+    function  InDifferentSets(L, R: SizeInt): Boolean; inline;
   { if L and R related to the different sets, these sets will be merged into one with a single Marker }
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
@@ -244,11 +245,11 @@ type
     property  ItemRefs[aIndex: SizeInt]: PVertexItem read GetItemRef;
   end;
 
-  { TGCustomSimpleSparseGraph: simple sparse graph abstract ancestor class based on adjacency lists;
+  { TGCustomSimpleGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel> = class abstract
+  generic TGCustomSimpleGraph<TVertex, TEdgeData, TVertexEqRel> = class abstract
   protected
   type
     TVertexList = specialize TGVertexHashList<TVertex, TEdgeData, TVertexEqRel>;
@@ -257,7 +258,7 @@ type
 
     TAdjVerticesPtr = record
     private
-      FGraph: TGCustomSimpleSparseGraph;
+      FGraph: TGCustomSimpleGraph;
       FSource: SizeInt;
     public
       function GetEnumerator: TVertexItem.TEnumerator; inline;
@@ -304,7 +305,7 @@ type
 
     TAdjVertices = record
     private
-      FGraph: TGCustomSimpleSparseGraph;
+      FGraph: TGCustomSimpleGraph;
       FSource: SizeInt;
     public
       function GetEnumerator: TAdjEnumerator; inline;
@@ -322,7 +323,7 @@ type
 
     TIncidentEdges = record
     private
-      FGraph: TGCustomSimpleSparseGraph;
+      FGraph: TGCustomSimpleGraph;
       FSource: SizeInt;
     public
       function GetEnumerator: TIncidentEnumerator; inline;
@@ -344,7 +345,7 @@ type
 
     TEdges = record
     private
-      FGraph: TGCustomSimpleSparseGraph;
+      FGraph: TGCustomSimpleGraph;
     public
       function GetEnumerator: TEdgeEnumerator;
     end;
@@ -397,8 +398,8 @@ type
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns a vector containing in the corresponding components the length of shortest path from aRoot }
-    function  FindMinPathLenVector(constref aRoot: TVertex): TIntArray; inline;
-    function  FindMinPathLenVectorI(aRoot: SizeInt = 0): TIntArray;
+    function  FindMinPathLenMap(constref aRoot: TVertex): TIntArray; inline;
+    function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray;
   { returns a vector containing indices of found shortest path(empty if path does not exists) }
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
@@ -457,6 +458,11 @@ end;
 function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
 begin
   Result := Marker(L) = Marker(R);
+end;
+
+function TDisjointSetUnion.InDifferentSets(L, R: SizeInt): Boolean;
+begin
+  Result := Marker(L) <> Marker(R);
 end;
 
 procedure TDisjointSetUnion.Union(L, R: SizeInt);
@@ -1108,49 +1114,49 @@ begin
   DoDelete(aIndex);
 end;
 
-{ TGCustomSimpleSparseGraph.TAdjVerticesPtr }
+{ TGCustomSimpleGraph.TAdjVerticesPtr }
 
-function TGCustomSimpleSparseGraph.TAdjVerticesPtr.GetEnumerator: TVertexItem.TEnumerator;
+function TGCustomSimpleGraph.TAdjVerticesPtr.GetEnumerator: TVertexItem.TEnumerator;
 begin
   Result := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
-{ TGCustomSimpleSparseGraph.TEdge }
+{ TGCustomSimpleGraph.TEdge }
 
-procedure TGCustomSimpleSparseGraph.TEdge.Init(aSrc: SizeInt; p: PAdjItem);
+procedure TGCustomSimpleGraph.TEdge.Init(aSrc: SizeInt; p: PAdjItem);
 begin
   Source := aSrc;
   Destination := p^.Destination;
   Data := p^.Data;
 end;
 
-{ TGCustomSimpleSparseGraph.TAdjEnumerator }
+{ TGCustomSimpleGraph.TAdjEnumerator }
 
-function TGCustomSimpleSparseGraph.TAdjEnumerator.GetCurrent: SizeInt;
+function TGCustomSimpleGraph.TAdjEnumerator.GetCurrent: SizeInt;
 begin
   Result := FEnum.Current^.Destination;
 end;
 
-function TGCustomSimpleSparseGraph.TAdjEnumerator.MoveNext: Boolean;
+function TGCustomSimpleGraph.TAdjEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomSimpleSparseGraph.TAdjEnumerator.Reset;
+procedure TGCustomSimpleGraph.TAdjEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomSimpleSparseGraph.TAdjVertices }
+{ TGCustomSimpleGraph.TAdjVertices }
 
-function TGCustomSimpleSparseGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
+function TGCustomSimpleGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
 begin
   Result.FEnum := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
-{ TGCustomSimpleSparseGraph.TIncidentEnumerator }
+{ TGCustomSimpleGraph.TIncidentEnumerator }
 
-function TGCustomSimpleSparseGraph.TIncidentEnumerator.GetCurrent: TIncidentEdge;
+function TGCustomSimpleGraph.TIncidentEnumerator.GetCurrent: TIncidentEdge;
 var
   p: ^TAdjItem;
 begin
@@ -1159,31 +1165,31 @@ begin
   Result.Data := p^.Data;
 end;
 
-function TGCustomSimpleSparseGraph.TIncidentEnumerator.MoveNext: Boolean;
+function TGCustomSimpleGraph.TIncidentEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomSimpleSparseGraph.TIncidentEnumerator.Reset;
+procedure TGCustomSimpleGraph.TIncidentEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomSimpleSparseGraph.TIncidentEdges }
+{ TGCustomSimpleGraph.TIncidentEdges }
 
-function TGCustomSimpleSparseGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
+function TGCustomSimpleGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
 begin
   Result.FEnum := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
-{ TGCustomSimpleSparseGraph.TEdgeEnumerator }
+{ TGCustomSimpleGraph.TEdgeEnumerator }
 
-function TGCustomSimpleSparseGraph.TEdgeEnumerator.GetCurrent: TEdge;
+function TGCustomSimpleGraph.TEdgeEnumerator.GetCurrent: TEdge;
 begin
   Result.Init(FCurrIndex, FEnum.Current);
 end;
 
-function TGCustomSimpleSparseGraph.TEdgeEnumerator.MoveNext: Boolean;
+function TGCustomSimpleGraph.TEdgeEnumerator.MoveNext: Boolean;
 begin
   repeat
     if FEnumDone then
@@ -1198,15 +1204,15 @@ begin
   until Result;
 end;
 
-procedure TGCustomSimpleSparseGraph.TEdgeEnumerator.Reset;
+procedure TGCustomSimpleGraph.TEdgeEnumerator.Reset;
 begin
   FCurrIndex := -1;
   FEnumDone := True;
 end;
 
-{ TGCustomSimpleSparseGraph.TEdges }
+{ TGCustomSimpleGraph.TEdges }
 
-function TGCustomSimpleSparseGraph.TEdges.GetEnumerator: TEdgeEnumerator;
+function TGCustomSimpleGraph.TEdges.GetEnumerator: TEdgeEnumerator;
 begin
   Result.FList := FGraph.FVertexList.FNodeList;
   Result.FLastIndex := Pred(FGraph.FVertexList.Count);
@@ -1214,31 +1220,31 @@ begin
   Result.FEnumDone := True;
 end;
 
-{ TGCustomSimpleSparseGraph }
+{ TGCustomSimpleGraph }
 
-function TGCustomSimpleSparseGraph.GetVertexCount: SizeInt;
+function TGCustomSimpleGraph.GetVertexCount: SizeInt;
 begin
   Result := FVertexList.Count;
 end;
 
-function TGCustomSimpleSparseGraph.GetVertex(aIndex: SizeInt): TVertex;
+function TGCustomSimpleGraph.GetVertex(aIndex: SizeInt): TVertex;
 begin
   Result := FVertexList[aIndex];
 end;
 
-function TGCustomSimpleSparseGraph.GetEdgeData(aSrc, aDst: SizeInt): PEdgeData;
+function TGCustomSimpleGraph.GetEdgeData(aSrc, aDst: SizeInt): PEdgeData;
 begin
   Result := @FVertexList.ItemRefs[aSrc]^.Find(aDst)^.Data;
 end;
 
-function TGCustomSimpleSparseGraph.AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
+function TGCustomSimpleGraph.AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
 begin
   FVertexList.CheckIndexRange(aSrc);
   Result.FGraph := Self;
   Result.FSource := aSrc;
 end;
 
-class function TGCustomSimpleSparseGraph.PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
+class function TGCustomSimpleGraph.PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
 var
   Stack: TIntStack;
 begin
@@ -1254,12 +1260,12 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-procedure TGCustomSimpleSparseGraph.CheckIndexRange(aIndex: SizeInt);
+procedure TGCustomSimpleGraph.CheckIndexRange(aIndex: SizeInt);
 begin
   FVertexList.CheckIndexRange(aIndex);
 end;
 
-function TGCustomSimpleSparseGraph.CreateIntVector: TIntArray;
+function TGCustomSimpleGraph.CreateIntVector: TIntArray;
 var
   c: SizeInt;
 begin
@@ -1269,7 +1275,7 @@ begin
     System.FillChar(Result[0], c * SizeOf(SizeInt), $ff);
 end;
 
-function TGCustomSimpleSparseGraph.CreateShortVector: TShortArray;
+function TGCustomSimpleGraph.CreateShortVector: TShortArray;
 var
   c: SizeInt;
 begin
@@ -1279,7 +1285,7 @@ begin
     System.FillChar(Result[0], c, $ff);
 end;
 
-function TGCustomSimpleSparseGraph.CreateHandleVector: THandleArray;
+function TGCustomSimpleGraph.CreateHandleVector: THandleArray;
 var
   c: SizeInt;
 begin
@@ -1289,44 +1295,44 @@ begin
     System.FillChar(Result[0], c * SizeOf(THandle), $ff);
 end;
 
-function TGCustomSimpleSparseGraph.IsEmpty: Boolean;
+function TGCustomSimpleGraph.IsEmpty: Boolean;
 begin
   Result := FVertexList.Count = 0;
 end;
 
-function TGCustomSimpleSparseGraph.NonEmpty: Boolean;
+function TGCustomSimpleGraph.NonEmpty: Boolean;
 begin
   Result := FVertexList.Count <> 0;
 end;
 
-procedure TGCustomSimpleSparseGraph.Clear;
+procedure TGCustomSimpleGraph.Clear;
 begin
   FVertexList.Clear;
   FEdgeCount := 0;
   FTitle := '';
 end;
 
-procedure TGCustomSimpleSparseGraph.EnsureCapacity(aValue: SizeInt);
+procedure TGCustomSimpleGraph.EnsureCapacity(aValue: SizeInt);
 begin
   FVertexList.EnsureCapacity(aValue);
 end;
 
-procedure TGCustomSimpleSparseGraph.TrimToFit;
+procedure TGCustomSimpleGraph.TrimToFit;
 begin
   FVertexList.TrimToFit;
 end;
 
-function TGCustomSimpleSparseGraph.ContainsVertex(constref v: TVertex): Boolean;
+function TGCustomSimpleGraph.ContainsVertex(constref v: TVertex): Boolean;
 begin
   Result := FVertexList.IndexOf(v) >= 0;
 end;
 
-function TGCustomSimpleSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGCustomSimpleGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := ContainsEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGCustomSimpleGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
@@ -1335,7 +1341,7 @@ begin
   Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst);
 end;
 
-function TGCustomSimpleSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
+function TGCustomSimpleGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
 var
   p: ^TAdjItem;
 begin
@@ -1349,17 +1355,17 @@ begin
     aData := p^.Data;
 end;
 
-function TGCustomSimpleSparseGraph.IndexOf(constref v: TVertex): SizeInt;
+function TGCustomSimpleGraph.IndexOf(constref v: TVertex): SizeInt;
 begin
   Result := FVertexList.IndexOf(v);
 end;
 
-function TGCustomSimpleSparseGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+function TGCustomSimpleGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := AdjacentI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
+function TGCustomSimpleGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
   FVertexList.CheckIndexRange(aSrc);
   FVertexList.CheckIndexRange(aDst);
@@ -1367,42 +1373,42 @@ begin
             FVertexList.FNodeList[aDst].Item.Contains(aSrc);
 end;
 
-function TGCustomSimpleSparseGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
+function TGCustomSimpleGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
 begin
   Result := AdjVerticesI(FVertexList.IndexOf(aSrc));
 end;
 
-function TGCustomSimpleSparseGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
+function TGCustomSimpleGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
 begin
   FVertexList.CheckIndexRange(aSrc);
   Result.FGraph := Self;
   Result.FSource := aSrc;
 end;
 
-function TGCustomSimpleSparseGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
+function TGCustomSimpleGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
 begin
   Result := IncidentEdgesI(FVertexList.IndexOf(aSrc));
 end;
 
-function TGCustomSimpleSparseGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+function TGCustomSimpleGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
 begin
   FVertexList.CheckIndexRange(aSrc);
   Result.FGraph := Self;
   Result.FSource := aSrc;
 end;
 
-function TGCustomSimpleSparseGraph.Edges: TEdges;
+function TGCustomSimpleGraph.Edges: TEdges;
 begin
   Result.FGraph := Self;
 end;
 
-function TGCustomSimpleSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGCustomSimpleGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := DfsTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGCustomSimpleGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
@@ -1422,21 +1428,21 @@ begin
         for aRoot in AdjVerticesI(aRoot) do
           if not Visited[aRoot] then
             begin
-              Stack.Push(aRoot);
               if Assigned(aOnWhite) then
                 aOnWhite(aRoot);
+              Stack.Push(aRoot);
             end;
       end;
   until not Stack.TryPop(aRoot);
 end;
 
-function TGCustomSimpleSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGCustomSimpleGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := BfsTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGCustomSimpleGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
@@ -1456,19 +1462,19 @@ begin
         for aRoot in AdjVerticesI(aRoot) do
           if not Visited[aRoot] then
             begin
-              Queue.Enqueue(aRoot);
               if aOnWhite <> nil then
                 aOnWhite(aRoot);
+              Queue.Enqueue(aRoot);
             end;
       end;
 end;
 
-function TGCustomSimpleSparseGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
+function TGCustomSimpleGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := SimplePathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGCustomSimpleGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -1493,14 +1499,14 @@ begin
   Result := False;
 end;
 
-function TGCustomSimpleSparseGraph.IsBipartite: Boolean;
+function TGCustomSimpleGraph.IsBipartite: Boolean;
 var
   v: TShortArray;
 begin
   Result := IsBipartite(v);
 end;
 
-function TGCustomSimpleSparseGraph.IsBipartite(out v: TShortArray): Boolean;
+function TGCustomSimpleGraph.IsBipartite(out v: TShortArray): Boolean;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -1542,12 +1548,12 @@ begin
   Result := True;
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
+function TGCustomSimpleGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
   Result := FindMinPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aSrc));
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
+function TGCustomSimpleGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
 var
   Queue: TIntQueue;
   v: TIntArray;
@@ -1568,12 +1574,12 @@ begin
   Result := v[aDst];
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathLenVector(constref aRoot: TVertex): TIntArray;
+function TGCustomSimpleGraph.FindMinPathLenMap(constref aRoot: TVertex): TIntArray;
 begin
-  Result := FindMinPathLenVectorI(FVertexList.IndexOf(aRoot));
+  Result := FindMinPathLenMapI(FVertexList.IndexOf(aRoot));
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathLenVectorI(aRoot: SizeInt): TIntArray;
+function TGCustomSimpleGraph.FindMinPathLenMapI(aRoot: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
   d: SizeInt;
@@ -1591,16 +1597,16 @@ begin
         end;
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
+function TGCustomSimpleGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
 begin
   Result := FindMinPathI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+function TGCustomSimpleGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 var
   v: TIntArray;
   Queue: TIntQueue;
-  Parent, Curr: SizeInt;
+  d: SizeInt;
   Found: Boolean = False;
 begin
   FVertexList.CheckIndexRange(aSrc);
@@ -1609,19 +1615,18 @@ begin
     exit(nil);
   v := CreateIntVector;
   {%H-}Queue.Enqueue(aSrc);
-  while Queue{%H-}.TryDequeue(Curr) do
+  while Queue{%H-}.TryDequeue(aSrc) do
     begin
-      if {%H-}Curr = aDst then
+      if {%H-}aSrc = aDst then
         begin
           Found := True;
           break;
         end;
-      Parent := Curr;
-      for Curr in AdjVerticesI(Curr) do
-        if v[Curr] = -1 then
+      for d in AdjVerticesI(aSrc) do
+        if v[d] = -1 then
           begin
-            Queue.Enqueue(Curr);
-            v[Curr] := Parent;
+            Queue.Enqueue(d);
+            v[d] := aSrc;
           end;
     end;
   if not Found then
