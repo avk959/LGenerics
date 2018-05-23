@@ -1006,6 +1006,7 @@ begin
   FGraph.CheckIndexRange(aSrc);
   FGraph.CheckIndexRange(aDst);
   System.SetLength(Handles, VertexCount);
+  Queue.EnsureCapacity(VertexCount);
   Visited.Size := VertexCount;
   for I := 0 to Pred(VertexCount) do
     Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
@@ -1045,6 +1046,7 @@ begin
   FGraph.CheckIndexRange(aDst);
   System.SetLength(Handles, VertexCount);
   Tree := FGraph.CreateIndexVector;
+  Queue.EnsureCapacity(VertexCount);
   Visited.Size := VertexCount;
   for I := 0 to Pred(VertexCount) do
     Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
@@ -1080,14 +1082,14 @@ end;
 function TGSimpleSparseWeighedUGraph.KruskalMst(out aTotalWeight: TWeight): TEdgeArray;
 var
   e: TEdgeArray;
-  ResIdx, EdgeIdx, s, d, VxCount: SizeInt;
+  ResIdx, EdgeIdx, s, d, VtxCount: SizeInt;
   Dsu: TDisjointSetUnion;
 begin
   e := CreateEdgeArray;
-  VxCount := VertexCount;
+  VtxCount := VertexCount;
   TEdgeHelper.Sort(e, @EdgeCompare);
-  System.SetLength(Result, VxCount);
-  Dsu.Size := VxCount;
+  System.SetLength(Result, VtxCount);
+  Dsu.Size := VtxCount;
   aTotalWeight := 0;
   ResIdx := 0;
   for EdgeIdx := 0 to System.High(e) do
@@ -1100,7 +1102,7 @@ begin
           Result[ResIdx] := e[EdgeIdx];
           Inc(ResIdx);
           Dsu.Union(s, d);
-          if ResIdx = VxCount then //???
+          if ResIdx = VtxCount then //???
             break;
         end;
     end;
@@ -1131,12 +1133,11 @@ begin
         aTotalWeight += Item.Weight;
         Visited[Curr] := True;
         for p in FGraph.AdjVerticesPtr(Curr) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight then
-              begin
-                Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
-                Result[p^.Key] := Curr;
-              end;
+          if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
+            begin
+              Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
+              Result[p^.Key] := Curr;
+            end;
       end;
 end;
 

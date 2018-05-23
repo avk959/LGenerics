@@ -59,16 +59,16 @@ type
 
   TDisjointSetUnion = record
   private
-    FTree: array of SizeInt;
+    FList: array of SizeInt;
     function  GetSize: SizeInt; inline;
     procedure SetSize(aValue: SizeInt);
   public
     procedure Clear; inline;
     procedure Reset;
-  { values lying in the same set will have the same Marker }
+  { values related to the same set will have the same Marker }
     function  Marker(aValue: SizeInt): SizeInt;
     function  InSameSet(L, R: SizeInt): Boolean; inline;
-  { if L and R lie in different sets, these sets merge into one with a single marker }
+  { if L and R related to the different sets, these sets will be merged into one with a single Marker }
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
   end;
@@ -414,7 +414,7 @@ implementation
 
 function TDisjointSetUnion.GetSize: SizeInt;
 begin
-  Result := System.Length(FTree);
+  Result := System.Length(FList);
 end;
 
 procedure TDisjointSetUnion.SetSize(aValue: SizeInt);
@@ -424,31 +424,31 @@ begin
   OldSize := Size;
   if aValue > OldSize then
     begin
-      System.SetLength(FTree, aValue);
+      System.SetLength(FList, aValue);
       for I := OldSize to Pred(aValue) do
-        FTree[I] := I;
+        FList[I] := I;
     end;
 end;
 
 procedure TDisjointSetUnion.Clear;
 begin
-  FTree := nil;
+  FList := nil;
 end;
 
 procedure TDisjointSetUnion.Reset;
 var
   I: SizeInt;
 begin
-  for I := 0 to System.High(FTree) do
-    FTree[I] := I;
+  for I := 0 to System.High(FList) do
+    FList[I] := I;
 end;
 
 function TDisjointSetUnion.Marker(aValue: SizeInt): SizeInt;
 begin
-  if FTree[aValue] = aValue then
+  if FList[aValue] = aValue then
     exit(aValue);
-  Result := Marker(FTree[aValue]);
-  FTree[aValue] := Result;
+  Result := Marker(FList[aValue]);
+  FList[aValue] := Result;
 end;
 
 function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
@@ -461,9 +461,9 @@ begin
   L := Marker(L);
   R := Marker(R);
   if Odd(Random(4)) then // random selection ???
-    FTree[L] := R
+    FList[L] := R
   else
-    FTree[R] := L;
+    FList[R] := L;
 end;
 
 { TIntPair }
