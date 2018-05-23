@@ -165,7 +165,13 @@ type
 
   protected
   type
-    TEdgeArray   = array of TEdge;
+    TWeightEdge = record
+      Source,
+      Destination: SizeInt;
+      Weight:  TWeight;
+    end;
+
+    TEdgeArray   = array of TWeightEdge;
     TAdjItem     = TGraph.TAdjItem;
     PAdjItem     = TGraph.PAdjItem;
 
@@ -181,23 +187,27 @@ type
       class function Construct(w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
     end;
 
-    TEdgeHelper  = specialize TGDelegatedArrayHelper<TEdge>;
+    TEdgeHelper  = specialize TGDelegatedArrayHelper<TWeightEdge>;
 
     TPriorityQueue = specialize TGLiteComparablePairHeapMin<TWeightItem>;
 
-    //TKruskalMST = record
-    //private
-    //const
-    //  TRESHOLD = 128;
-    //var
-    //  FDsu: TDisjointSetUnion;
-    //  FEdges: TEdgeArray;
-    //  FTotalWeight: TWeight;
-    //  FDone: Boolean;
-    //  procedure Kruskal();
-    //public
-    //  function Execute(aGraph: TWeighedGraph; out aTotalWeight: TWeight): TIntArray;
-    //end;
+    TFilterKruskal = record
+    private
+    const
+      TRESHOLD = $ffff;
+    var
+      FDsu: TDisjointSetUnion;
+      FEdges: TEdgeArray;
+      FTree: TIntArray;
+      FWeight: TWeight;
+      FCount,
+      FFound: SizeInt;
+      procedure Kruskal(L, R: SizeInt);
+      function  Split(L, R: SizeInt): SizeInt;
+      procedure FilterKruskal(L, R: SizeInt);
+    public
+      function FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
+    end;
 
   class var
     CFData: TEdgeData;
@@ -215,11 +225,12 @@ type
     function  DijkstraMap(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
     function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
-    function  KruskalMst(out aTotalWeight: TWeight): TEdgeArray;
+    function  FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
+    function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
     function  CreateWeightVector: TWeightArray;
     function  CreateEdgeVector: TEdgeArray;
-    function  EdgeCompare(constref L, R: TEdge): SizeInt; inline;
+    function  EdgeCompare(constref L, R: TWeightEdge): SizeInt; inline;
     class function Min(const L, R: TWeight): TWeight; static; inline;
   public
     constructor Create;
@@ -335,10 +346,8 @@ type
   { same as above and in aPath returns path }
     function  FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight; inline;
     function  FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight; inline;
-  { returns a graph constructed from the edges provided by the array }
-    function  CreateFromEdgeArray(constref aEdgeArray: TEdgeArray): TWeighedGraph;
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
-    function  FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TEdgeArray;
+    function  FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
     function  FindMinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 
@@ -714,7 +723,7 @@ var
 begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  Result := CreateIndexVector;
+  Result := CreateIntVector;
   {%H-}Stack.Push(aRoot);
   repeat
     if not Visited[aRoot] then
@@ -743,7 +752,7 @@ var
 begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  Result := CreateIndexVector;
+  Result := CreateIntVector;
   Queue.Enqueue(aRoot);
   while Queue{%H-}.TryDequeue(aRoot) do
     if not Visited[aRoot] then
@@ -900,6 +909,77 @@ begin
   Result.Index := aIndex;
 end;
 
+{ TGSimpleSparseWeighedUGraph.TFilterKruskal }
+
+procedure TGSimpleSparseWeighedUGraph.TFilterKruskal.Kruskal(L, R: SizeInt);
+var
+  s, d: SizeInt;
+begin
+  TEdgeHelper.IntroSort(FEdges[L..R], @EdgeCompare);
+  while L <= R do
+    begin
+      s := FEdges[L].Source;
+      d := FEdges[L].Destination;
+      if not FDsu.InSameSet(s, d)  then
+        begin
+          FWeight += FEdges[L].Weight;
+          FTree[d] := s;
+          FDsu.Union(s, d);
+          Inc(FFound);
+        end;
+      Inc(L);
+    end;
+end;
+
+function TGSimpleSparseWeighedUGraph.TFilterKruskal.Split(L, R: SizeInt): SizeInt;
+var
+  v: TWeightEdge;
+  Pivot: TWeight;
+begin
+  Pivot := FEdges[Succ(L + Random(Pred(R - L)))].Weight; //shouldn't be first or last
+  Dec(L);
+  Inc(R);
+  repeat
+    repeat Inc(L) until FEdges[L].Weight >= Pivot;
+    repeat Dec(R) until FEdges[R].Weight <= Pivot;
+    if L >= R then
+      exit(R);
+    v := FEdges[L];
+    FEdges[L] := FEdges[R];
+    FEdges[R] := v;
+  until False;
+end;
+
+procedure TGSimpleSparseWeighedUGraph.TFilterKruskal.FilterKruskal(L, R: SizeInt);
+var
+  p: SizeInt;
+begin
+  if FFound = FCount then
+    exit;
+  if R - L > TRESHOLD then
+    begin
+      p := Split(L, R);
+      FilterKruskal(L, p);
+      if FFound <> FCount then
+        FilterKruskal(Succ(p), R);
+    end
+  else
+    Kruskal(L, R);
+end;
+
+function TGSimpleSparseWeighedUGraph.TFilterKruskal.FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
+begin
+  FEdges := aGraph.CreateEdgeVector;
+  FTree := aGraph.FGraph.CreateIntVector;
+  FCount := aGraph.VertexCount;
+  FDsu.Size := FCount;
+  FWeight := 0;
+  FFound := 0;
+  FilterKruskal(0, System.High(FEdges));
+  aWeight := FWeight;
+  Result := FTree;
+end;
+
 { TGSimpleSparseWeighedUGraph }
 
 function TGSimpleSparseWeighedUGraph.GetEdgeCount: SizeInt;
@@ -979,7 +1059,7 @@ var
 begin
   FGraph.CheckIndexRange(aSrc);
   Result := CreateWeightVector;
-  aPathTree := FGraph.CreateIndexVector;
+  aPathTree := FGraph.CreateIntVector;
   Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
@@ -1057,7 +1137,7 @@ begin
   FGraph.CheckIndexRange(aSrc);
   FGraph.CheckIndexRange(aDst);
   Handles := FGraph.CreateHandleVector;
-  Tree := FGraph.CreateIndexVector;
+  Tree := FGraph.CreateIntVector;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
   while Queue.TryDequeue(Item) do
@@ -1091,28 +1171,34 @@ begin
   aPath := nil;
 end;
 
-function TGSimpleSparseWeighedUGraph.KruskalMst(out aTotalWeight: TWeight): TEdgeArray;
+function TGSimpleSparseWeighedUGraph.FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
+var
+  FilterKruskal: TFilterKruskal;
+begin
+  Result := FilterKruskal.FindMst(Self, aTotalWeight);
+end;
+
+function TGSimpleSparseWeighedUGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
   e: TEdgeArray;
-  ResIdx, EdgeIdx, s, d, VtxCount: SizeInt;
+  I, s, d, VtxCount: SizeInt;
   Dsu: TDisjointSetUnion;
 begin
   e := CreateEdgeVector;
+  Result := FGraph.CreateIntVector;
   VtxCount := VertexCount;
   TEdgeHelper.Sort(e, @EdgeCompare);
   System.SetLength(Result, VtxCount);
   Dsu.Size := VtxCount;
   aTotalWeight := 0;
-  ResIdx := 0;
-  for EdgeIdx := 0 to System.High(e) do
+  for I := 0 to System.High(e) do
     begin
-      s := e[EdgeIdx].Source;
-      d := e[EdgeIdx].Destination;
+      s := e[I].Source;
+      d := e[I].Destination;
       if not Dsu.InSameSet(s, d)  then
         begin
-          aTotalWeight += e[EdgeIdx].Data.Weight;
-          Result[ResIdx] := e[EdgeIdx];
-          Inc(ResIdx);
+          aTotalWeight += e[I].Weight;
+          Result[d] := s;
           Dsu.Union(s, d);
         end;
     end;
@@ -1127,7 +1213,7 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  Result := FGraph.CreateIndexVector;
+  Result := FGraph.CreateIntVector;
   System.SetLength(Result, VertexCount);
   Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
@@ -1169,17 +1255,19 @@ begin
   System.SetLength(Result, EdgeCount);
   for e in DistinctEdges do
     begin
-      Result[I] := e;
+      Result[I].Source := e.Source;
+      Result[I].Destination := e.Destination;
+      Result[I].Weight := e.Data.Weight;
       Inc(I);
     end;
 end;
 
-function TGSimpleSparseWeighedUGraph.EdgeCompare(constref L, R: TEdge): SizeInt;
+function TGSimpleSparseWeighedUGraph.EdgeCompare(constref L, R: TWeightEdge): SizeInt;
 begin
-  if L.Data.Weight > R.Data.Weight then
+  if L.Weight > R.Weight then
     Result := 1
   else
-    if R.Data.Weight > L.Data.Weight then
+    if R.Weight > L.Weight then
       Result := -1
     else
       Result := 0;
@@ -1564,19 +1652,11 @@ begin
   Result := DijkstraPath(aSrc, aDst, aPath);
 end;
 
-function TGSimpleSparseWeighedUGraph.CreateFromEdgeArray(constref aEdgeArray: TEdgeArray): TWeighedGraph;
-var
-  e: TEdge;
-begin
-  Result := TWeighedGraph.Create;
-  for e in aEdgeArray do
-    Result.AddEdge(Vertices[e.Source], Vertices[e.Destination], e.Data.Weight, e.Data.Data);
-end;
-
-function TGSimpleSparseWeighedUGraph.FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TEdgeArray;
+function TGSimpleSparseWeighedUGraph.FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
 begin
   if IsConnected then
-    Result := KruskalMst(aTotalWeight)
+    //Result := KruskalMst(aTotalWeight)
+    Result := FilterKruskalMst(aTotalWeight)
   else
     raise ELGGraphError.Create(SEGraphIsNotConnected);
 end;
