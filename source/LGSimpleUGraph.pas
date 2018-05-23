@@ -51,7 +51,7 @@ type
 
     TDistinctEdgeEnumerator = record
     private
-      FVisitedEdges: TIntPairHashSet;
+      FVisited: TBitVector;
       FList: TVertexList.TNodeList;
       FEnum: TVertexItem.TEnumerator;
       FCurrIndex,
@@ -355,13 +355,13 @@ begin
         if FCurrIndex >= FLastIndex then
           exit(False);
         Inc(FCurrIndex);
+        FVisited[FCurrIndex] := True;
         FEnum := FList[FCurrIndex].Item.GetEnumerator;
       end;
     Result := FEnum.MoveNext;
     FEnumDone := not Result;
     if Result then
-      Result := FVisitedEdges.Add(TIntPair.Construct(FCurrIndex, FEnum.GetCurrent^.Key)) and
-                FVisitedEdges.Add(TIntPair.Construct(FEnum.GetCurrent^.Key, FCurrIndex));
+      Result := not FVisited[FEnum.GetCurrent^.Key];
   until Result;
 end;
 
@@ -369,7 +369,7 @@ procedure TGSimpleSparseUGraph.TDistinctEdgeEnumerator.Reset;
 begin
   FCurrIndex := -1;
   FEnumDone := True;
-  FVisitedEdges.Clear;
+  FVisited.Reset;
 end;
 
 { TGSimpleSparseUGraph.TDistinctEdges }
@@ -378,6 +378,7 @@ function TGSimpleSparseUGraph.TDistinctEdges.GetEnumerator: TDistinctEdgeEnumera
 begin
   Result.FList := FGraph.FVertexList.FNodeList;
   Result.FLastIndex := Pred(FGraph.FVertexList.Count);
+  Result.FVisited.Size := Succ(Result.FLastIndex);
   Result.FCurrIndex := -1;
   Result.FEnumDone := True;
 end;
@@ -1146,8 +1147,8 @@ var
   I: SizeInt = 0;
   e: TEdge;
 begin
-  System.SetLength(Result, EdgeCount shl 1);
-  for e in Edges do
+  System.SetLength(Result, EdgeCount);
+  for e in DistinctEdges do
     begin
       Result[I] := e;
       Inc(I);
