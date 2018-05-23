@@ -217,7 +217,8 @@ type
     function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
     function  KruskalMst(out aTotalWeight: TWeight): TEdgeArray;
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
-    function  CreateEdgeArray: TEdgeArray;
+    function  CreateWeightVector: TWeightArray;
+    function  CreateEdgeVector: TEdgeArray;
     function  EdgeCompare(constref L, R: TEdge): SizeInt; inline;
     class function Min(const L, R: TWeight): TWeight; static; inline;
   public
@@ -938,32 +939,32 @@ var
   Handles: THandleArray;
   NewWeight: TWeight;
   Item: TWeightItem;
-  I: SizeInt;
   p: PAdjItem;
 begin
   FGraph.CheckIndexRange(aSrc);
-  System.SetLength(Result, VertexCount);
-  System.SetLength(Handles, VertexCount);
+  Result := CreateWeightVector;
+  Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Queue.EnsureCapacity(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
-  Queue.Update(Handles[aSrc], TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
         Visited[Item.Index] := True;
         Result[Item.Index] := Item.Weight;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight >= 0 then
-              begin
-                NewWeight := p^.Data.Weight + Item.Weight;
-                if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-              end
-            else
-              raise ELGGraphError.Create(SENegValuesNotAllowed);
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
+            if not Visited[p^.Key] then
+              if p^.Data.Weight >= 0 then
+                begin
+                  NewWeight := p^.Data.Weight + Item.Weight;
+                  if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
+                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
+                end
+              else
+                raise ELGGraphError.Create(SENegValuesNotAllowed);
+          end;
       end;
 end;
 
@@ -974,36 +975,36 @@ var
   Handles: THandleArray;
   NewWeight: TWeight;
   Item: TWeightItem;
-  I: SizeInt;
   p: PAdjItem;
 begin
   FGraph.CheckIndexRange(aSrc);
-  System.SetLength(Result, VertexCount);
-  System.SetLength(Handles, VertexCount);
+  Result := CreateWeightVector;
   aPathTree := FGraph.CreateIndexVector;
+  Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Queue.EnsureCapacity(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
-  Queue.Update(Handles[aSrc], TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
         Visited[Item.Index] := True;
         Result[Item.Index] := Item.Weight;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight >= 0 then
-              begin
-                NewWeight := p^.Data.Weight + Item.Weight;
-                if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                  begin
-                    aPathTree[p^.Key] := Item.Index;
-                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-                  end;
-              end
-            else
-              raise ELGGraphError.Create(SENegValuesNotAllowed);
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
+            if not Visited[p^.Key] then
+              if p^.Data.Weight >= 0 then
+                begin
+                  NewWeight := p^.Data.Weight + Item.Weight;
+                  if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
+                    begin
+                      aPathTree[p^.Key] := Item.Index;
+                      Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
+                    end;
+                end
+              else
+                raise ELGGraphError.Create(SENegValuesNotAllowed);
+          end;
       end;
 end;
 
@@ -1014,17 +1015,11 @@ var
   Handles: THandleArray;
   NewWeight: TWeight;
   Item: TWeightItem;
-  I: SizeInt;
   p: PAdjItem;
 begin
-  FGraph.CheckIndexRange(aSrc);
-  FGraph.CheckIndexRange(aDst);
-  System.SetLength(Handles, VertexCount);
-  Queue.EnsureCapacity(VertexCount);
+  Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
-  Queue.Update(Handles[aSrc], TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1032,15 +1027,19 @@ begin
           exit(Item.Weight);
         Visited[Item.Index] := True;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight >= 0 then
-              begin
-                NewWeight := p^.Data.Weight + Item.Weight;
-                if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-              end
-            else
-              raise ELGGraphError.Create(SENegValuesNotAllowed);
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
+            if not Visited[p^.Key] then
+              if p^.Data.Weight >= 0 then
+                begin
+                  NewWeight := p^.Data.Weight + Item.Weight;
+                  if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
+                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
+                end
+              else
+                raise ELGGraphError.Create(SENegValuesNotAllowed);
+          end;
       end;
   Result := TWeight.MaxValue;
 end;
@@ -1053,44 +1052,43 @@ var
   Tree: TIntArray;
   NewWeight: TWeight;
   Item: TWeightItem;
-  I: SizeInt;
   p: PAdjItem;
 begin
   FGraph.CheckIndexRange(aSrc);
   FGraph.CheckIndexRange(aDst);
-  System.SetLength(Handles, VertexCount);
+  Handles := FGraph.CreateHandleVector;
   Tree := FGraph.CreateIndexVector;
-  Queue.EnsureCapacity(VertexCount);
   Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
-  Queue.Update(Handles[aSrc], TWeightItem.Construct(Default(TWeight), aSrc));
-  Result := TWeight.MaxValue;
-  aPath := nil;
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
         if Item.Index = aDst then
           begin
-            Result := Item.Weight;
             aPath := FGraph.PathFromTree(Tree, aDst);
-            break;
+            exit(Item.Weight);
           end;
         Visited[Item.Index] := True;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight >= 0 then
-              begin
-                NewWeight := p^.Data.Weight + Item.Weight;
-                if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                  begin
-                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-                    Tree[p^.Key] := Item.Index;
-                  end;
-              end
-            else
-              raise ELGGraphError.Create(SENegValuesNotAllowed);
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
+            if not Visited[p^.Key] then
+              if p^.Data.Weight >= 0 then
+                begin
+                  NewWeight := p^.Data.Weight + Item.Weight;
+                  if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
+                    begin
+                      Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
+                      Tree[p^.Key] := Item.Index;
+                    end;
+                end
+              else
+                raise ELGGraphError.Create(SENegValuesNotAllowed);
+          end;
       end;
+  Result := TWeight.MaxValue;
+  aPath := nil;
 end;
 
 function TGSimpleSparseWeighedUGraph.KruskalMst(out aTotalWeight: TWeight): TEdgeArray;
@@ -1099,7 +1097,7 @@ var
   ResIdx, EdgeIdx, s, d, VtxCount: SizeInt;
   Dsu: TDisjointSetUnion;
 begin
-  e := CreateEdgeArray;
+  e := CreateEdgeVector;
   VtxCount := VertexCount;
   TEdgeHelper.Sort(e, @EdgeCompare);
   System.SetLength(Result, VtxCount);
@@ -1154,7 +1152,16 @@ begin
       end;
 end;
 
-function TGSimpleSparseWeighedUGraph.CreateEdgeArray: TEdgeArray;
+function TGSimpleSparseWeighedUGraph.CreateWeightVector: TWeightArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := TWeight.MaxValue;
+end;
+
+function TGSimpleSparseWeighedUGraph.CreateEdgeVector: TEdgeArray;
 var
   I: SizeInt = 0;
   e: TEdge;
