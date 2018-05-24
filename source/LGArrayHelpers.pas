@@ -123,7 +123,7 @@ type
     if aCount > length A then Result is truncated }
     class function  Extract(var A: TArray; aIndex, aCount: SizeInt): TArray; static;
     class procedure Reverse(var A: array of T); static;
-    class procedure RandomShuffle(var A: array of T); static;//TGEqualCompare
+    class procedure RandomShuffle(var A: array of T); static;
   { returns 0-based position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TEqualCompare): SizeInt;
                     static;
