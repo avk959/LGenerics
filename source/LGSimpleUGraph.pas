@@ -71,6 +71,12 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
 
+    TUHeader = packed record
+      ComponentCount: SizeInt;
+      Connected,
+      ConnectedValid: Boolean;
+    end;
+
   var
     FCompoCount: SizeInt;
     FConnected,
@@ -86,6 +92,7 @@ type
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
+    procedure Clear; override;
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
     function  RemoveVertex(constref v: TVertex): Boolean; inline;
@@ -96,6 +103,10 @@ type
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+    procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+    procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+    procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+    procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
     function  Degree(constref v: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref v: TVertex): Boolean; inline;
@@ -163,6 +174,10 @@ type
     TAdjVertices   = TGraph.TAdjVertices;
     TIncidentEdges = TGraph.TIncidentEdges;
     TOnAddEdge     = TGraph.TOnAddEdge;
+    TOnReadVertex  = TGraph.TOnReadVertex;
+    TOnWriteVertex = TGraph.TOnWriteVertex;
+    TOnReadData    = TGraph.TOnReadData;
+    TOnWriteData   = TGraph.TOnWriteData;
 
   protected
   type
@@ -217,6 +232,7 @@ type
     function  GetEdgeCount: SizeInt; inline;
     function  GetTitle: string; inline;
     function  GetVertex(aIndex: SizeInt): TVertex; inline;
+    procedure SetVertex(aIndex: SizeInt; const aValue: TVertex); inline;
     function  GetVertexCount: SizeInt; inline;
     function  GetSeparateCount: SizeInt; inline;
     procedure SetTitle(const aValue: string); inline;
@@ -263,10 +279,20 @@ type
     function  RemoveVertexI(aIndex: SizeInt): Boolean; inline;
     function  AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight; aData: TEdgeData): Boolean; inline;
     function  AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight): Boolean; inline;
+    function  AddEdge(constref aSrc, aDst: TVertex; aData: TWeEdgeData): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight; aData: TEdgeData): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight): Boolean; inline;
+    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TWeEdgeData): Boolean; inline;
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  GetEdgeData(constref aSrc, aDst: TVertex): TWeEdgeData; inline;
+    function  GetEdgeDataI(aSrc, aDst: SizeInt): TWeEdgeData; inline;
+    procedure SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TWeEdgeData); inline;
+    procedure SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TWeEdgeData); inline;
+    procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData); inline;
+    procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData); inline;
+    procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData); inline;
+    procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData); inline;
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
@@ -359,7 +385,7 @@ type
     property  EdgeCount: SizeInt read GetEdgeCount;
   { count of connected components }
     property  SeparateCount: SizeInt read GetSeparateCount;
-    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
+    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
   end;
 
 implementation
@@ -535,11 +561,19 @@ begin
         for Dst in AdjVerticesI(Src) do
           if not Visited[Dst] then
             begin
-              Result.AddEdge(Vertices[Src], Vertices[Dst], GetEdgeData(Src, Dst)^);
+              Result.AddEdge(Vertices[Src], Vertices[Dst], GetEdgeDataPtr(Src, Dst)^);
               Stack.Push(Dst);
             end;
       end;
   until not Stack.TryPop(Src);
+end;
+
+procedure TGSimpleUGraph.Clear;
+begin
+  inherited;
+  FCompoCount := 0;
+  FConnected := False;
+  FConnectedValid := False;
 end;
 
 function TGSimpleUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
@@ -604,6 +638,100 @@ begin
   if (aDst < 0) or (aDst >= FVertexList.Count) then
     exit(False);
   Result := DoRemoveEdge(aSrc, aDst);
+end;
+
+procedure TGSimpleUGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+var
+  h: TStreamHeader;
+  uh: TUHeader;
+  I: SizeInt;
+  e: TEdge;
+begin
+  if not (Assigned(aWriteVertex) and Assigned(aWriteData)) then
+    raise ELGraphError.Create(SEWriteCallbackMissed);
+  //write header
+  h.Magic := LGRAPH_MAGIC;
+  h.Version := CURRENT_VERSION;
+  h.TitleSize := System.Length(Title);
+  h.VertexCount := VertexCount;
+  h.EdgeCount := EdgeCount;
+  aStream.WriteBuffer(h, SizeOf(h));
+  //write title
+  aStream.WriteBuffer(FTitle[1], h.TitleSize);
+  //write vertices, but does not save any info about connected
+  //this should allow transfer data between directed/undirected graphs
+  for I := 0 to Pred(h.VertexCount) do
+    aWriteVertex(aStream, FVertexList.ItemRefs[I]^.Vertex);
+  //write edges
+  for e in DistinctEdges do
+    begin
+      aStream.WriteBuffer(e.Source, SizeOf(e.Source));
+      aStream.WriteBuffer(e.Destination, SizeOf(e.Destination));
+      aWriteData(aStream, e.Data);
+    end;
+end;
+
+procedure TGSimpleUGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+var
+  h: TStreamHeader;
+  I, vInd: SizeInt;
+  e: TEdge;
+  v: TVertex;
+begin
+  if not (Assigned(aReadVertex) and Assigned(aReadData)) then
+    raise ELGraphError.Create(SEReadCallbackMissed);
+  //read header
+  aStream.ReadBuffer(h, SizeOf(h));
+  if h.Magic <> LGRAPH_MAGIC then
+    raise ELGraphError.Create(SEUnknownGraphStreamFmt);
+  if h.Version > CURRENT_VERSION then
+    raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
+  Clear;
+  //read title
+  System.SetLength(FTitle, h.TitleSize);
+  aStream.ReadBuffer(FTitle[1], h.TitleSize);
+  //read vertices
+  for I := 0 to Pred(h.VertexCount) do
+    begin
+      v := aReadVertex(aStream);
+      if not AddVertex(v, vInd) then
+        raise ELGraphError.Create(SEGraphStreamCorrupt);
+      if vInd <> I then
+        raise ELGraphError.Create(SEGraphStreamReadIntern);
+    end;
+  //read edges
+  for I := 0 to Pred(h.EdgeCount) do
+    begin
+      aStream.ReadBuffer(e.Source, SizeOf(e.Source));
+      aStream.ReadBuffer(e.Destination, SizeOf(e.Destination));
+      e.Data := aReadData(aStream);
+      AddEdgeI(e.Source, e.Destination, e.Data);
+    end;
+end;
+
+procedure TGSimpleUGraph.SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex;
+  aWriteData: TOnWriteData);
+var
+  fs: TStream;
+begin
+  fs := TFileStream.Create(aFileName, fmCreate);
+  try
+    SaveToStream(fs, aWriteVertex, aWriteData);
+  finally
+    fs.Free;
+  end;
+end;
+
+procedure TGSimpleUGraph.LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+var
+  fs: TStream;
+begin
+  fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadFromStream(fs, aReadVertex, aReadData);
+  finally
+    fs.Free;
+  end;
 end;
 
 function TGSimpleUGraph.Degree(constref v: TVertex): SizeInt;
@@ -800,7 +928,7 @@ begin
     begin
       Src := aVector[I];
       if Src <> -1 then
-        Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeData(Src, I)^);
+        Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeDataPtr(Src, I)^);
     end;
 end;
 
@@ -1013,6 +1141,11 @@ end;
 function TGSimpleWeighedUGraph.GetVertex(aIndex: SizeInt): TVertex;
 begin
   Result := FGraph[aIndex];
+end;
+
+procedure TGSimpleWeighedUGraph.SetVertex(aIndex: SizeInt; const aValue: TVertex);
+begin
+  FGraph[aIndex] := aValue;
 end;
 
 function TGSimpleWeighedUGraph.GetVertexCount: SizeInt;
@@ -1427,6 +1560,11 @@ begin
   Result := FGraph.AddEdge(aSrc, aDst, TWeEdgeData.Construct(aWeight, CFData));
 end;
 
+function TGSimpleWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TWeEdgeData): Boolean;
+begin
+  Result := FGraph.AddEdge(aSrc, aDst, aData);
+end;
+
 function TGSimpleWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight; aData: TEdgeData): Boolean;
 begin
   Result := FGraph.AddEdgeI(aSrc, aDst, TWeEdgeData.Construct(aWeight, aData));
@@ -1437,6 +1575,11 @@ begin
   Result := FGraph.AddEdgeI(aSrc, aDst, TWeEdgeData.Construct(aWeight, CFData));
 end;
 
+function TGSimpleWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TWeEdgeData): Boolean;
+begin
+  Result := FGraph.AddEdgeI(aSrc, aDst, aData);
+end;
+
 function TGSimpleWeighedUGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.RemoveEdge(aSrc, aDst);
@@ -1445,6 +1588,50 @@ end;
 function TGSimpleWeighedUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.RemoveEdgeI(aSrc, aDst);
+end;
+
+function TGSimpleWeighedUGraph.GetEdgeData(constref aSrc, aDst: TVertex): TWeEdgeData;
+begin
+  Result := FGraph.GetEdgeData(aSrc, aDst);
+end;
+
+function TGSimpleWeighedUGraph.GetEdgeDataI(aSrc, aDst: SizeInt): TWeEdgeData;
+begin
+  Result := FGraph.GetEdgeDataI(aSrc, aDst);
+end;
+
+procedure TGSimpleWeighedUGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TWeEdgeData);
+begin
+  FGraph.SetEdgeData(aSrc, aDst, aValue);
+end;
+
+procedure TGSimpleWeighedUGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TWeEdgeData);
+begin
+  FGraph.SetEdgeDataI(aSrc, aDst, aValue);
+end;
+
+procedure TGSimpleWeighedUGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex;
+  aWriteData: TOnWriteData);
+begin
+  FGraph.SaveToStream(aStream, aWriteVertex, aWriteData);
+end;
+
+procedure TGSimpleWeighedUGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex;
+  aReadData: TOnReadData);
+begin
+  FGraph.LoadFromStream(aStream, aReadVertex, aReadData);
+end;
+
+procedure TGSimpleWeighedUGraph.SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex;
+  aWriteData: TOnWriteData);
+begin
+  FGraph.SaveToFile(aFileName, aWriteVertex, aWriteData)
+end;
+
+procedure TGSimpleWeighedUGraph.LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex;
+  aReadData: TOnReadData);
+begin
+  FGraph.LoadFromFile(aFileName, aReadVertex, aReadData);
 end;
 
 function TGSimpleWeighedUGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
@@ -1682,7 +1869,7 @@ begin
     //Result := KruskalMst(aTotalWeight)
     Result := FilterKruskalMst(aTotalWeight)
   else
-    raise ELGGraphError.Create(SEGraphIsNotConnected);
+    raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
 function TGSimpleWeighedUGraph.FindMinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
@@ -1690,7 +1877,7 @@ begin
   if IsConnected then
     Result := PrimMst(aTotalWeight)
   else
-    raise ELGGraphError.Create(SEGraphIsNotConnected);
+    raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
 function TGSimpleWeighedUGraph.Clone: TWeighedGraph;

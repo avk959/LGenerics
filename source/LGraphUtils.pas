@@ -40,22 +40,28 @@ uses
 
 type
 
-  ELGGraphError = class(Exception); //???
+  ELGraphError = class(Exception); //???
 
-  TEmptyRec     = record end;
-  THandle       = LGUtils.THandle;
+  TEmptyRec    = record end;
+  THandle      = LGUtils.THandle;
 
-  TIntArray     = array of SizeInt;
-  TShortArray   = array of ShortInt;
-  THandleArray  = array of THandle;
-  TIntHelper    = specialize TGNumArrayHelper<SizeInt>;
-  TIntStack     = specialize TGLiteStack<SizeInt>;
-  TIntQueue     = specialize TGLiteQueue<SizeInt>;
+  TIntArray    = array of SizeInt;
+  TShortArray  = array of ShortInt;
+  THandleArray = array of THandle;
+  TIntHelper   = specialize TGNumArrayHelper<SizeInt>;
+  TIntStack    = specialize TGLiteStack<SizeInt>;
+  TIntQueue    = specialize TGLiteQueue<SizeInt>;
 
-  TOnIntVisit   = procedure (aValue: SizeInt) of object;
-  TOnIntTest    = function (aValue: SizeInt): Boolean of object;
+  TOnIntVisit  = procedure (aValue: SizeInt) of object;
+  TOnIntTest   = function (aValue: SizeInt): Boolean of object;
 
-  generic TGOnAddEdge<T> = procedure(aSrc, aDst: SizeInt; aData: Pointer) of object;
+  generic TGOnAddEdge<T>       = procedure(aSrc, aDst: SizeInt; aData: Pointer) of object;
+  generic TGOnReadStream<T>    = function(aStream: TStream): T of object;
+  generic TGOnWriteStream<T>   = procedure(aStream: TStream; constref aValue: T) of object;
+  generic TGReadStream<T>      = function(aStream: TStream): T;
+  generic TGWriteStream<T>     = procedure(aStream: TStream; constref aValue: T);
+  generic TGNestReadStream<T>  = function(aStream: TStream): T is nested;
+  generic TGNestWriteStream<T> = procedure(aStream: TStream; constref aValue: T) is nested;
 
   { TDisjointSetUnion }
 
@@ -165,6 +171,7 @@ type
     class constructor Init;
     class operator Initialize(var Item: TGVertexItem);
   public
+    InDeg,
     Tag: SizeInt;
     procedure Assign(constref aSrc: TGVertexItem);
     function  GetEnumerator: TEnumerator;
@@ -216,6 +223,7 @@ type
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
+    procedure SetItem(aIndex: SizeInt; const aValue: TVertex);
     function  GetItemRef(aIndex: SizeInt): PVertexItem; inline;
     procedure InitialAlloc;
     procedure Rehash;
@@ -241,7 +249,7 @@ type
     procedure Delete(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
-    property  Items[aIndex: SizeInt]: TVertex read GetItem; default;
+    property  Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
     property  ItemRefs[aIndex: SizeInt]: PVertexItem read GetItemRef;
   end;
 
@@ -264,6 +272,23 @@ type
       function GetEnumerator: TVertexItem.TEnumerator; inline;
     end;
 
+    TMagic = string[8];
+
+    TStreamHeader = packed record
+      Magic: TMagic;
+      Version: Byte;
+      TitleSize: Word;
+      VertexCount,
+      EdgeCount: LongInt;
+      //title
+      //vertices
+      //edges
+    end;
+
+  const
+    LGRAPH_MAGIC: TMagic = 'LGraphTyp';
+    CURRENT_VERSION = 1;
+
   class var
     CFData: TEdgeData;
 
@@ -271,15 +296,31 @@ type
     FVertexList: TVertexList;
     FEdgeCount: SizeInt;
     FTitle: string;
-    function GetVertexCount: SizeInt; inline;
-    function GetVertex(aIndex: SizeInt): TVertex; inline;
-    function GetEdgeData(aSrc, aDst: SizeInt): PEdgeData; inline;
-    function AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
+    function  GetVertexCount: SizeInt; inline;
+    function  GetVertex(aIndex: SizeInt): TVertex; inline;
+    procedure SetVertex(aIndex: SizeInt; const aValue: TVertex); inline;
+    function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
+    function  AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
   public
   type
-    TOnAddEdge   = specialize TGOnAddEdge<TEdgeData>;
-    TAdjItem     = TVertexItem.TAdjItem;
-    PAdjItem     = ^TAdjItem;
+    TAdjItem         = TVertexItem.TAdjItem;
+    PAdjItem         = ^TAdjItem;
+
+    TOnReadVertex    = specialize TGOnReadStream<TVertex>;
+    TOnWriteVertex   = specialize TGOnWriteStream<TVertex>;
+    TReadVertex      = specialize TGReadStream<TVertex>;
+    TWriteVertex     = specialize TGWriteStream<TVertex>;
+    TNestReadVertex  = specialize TGNestReadStream<TVertex>;
+    TNestWriteVertex = specialize TGNestWriteStream<TVertex>;
+
+    TOnAddEdge       = specialize TGOnAddEdge<TEdgeData>;
+
+    TOnReadData      = specialize TGOnReadStream<TEdgeData>;
+    TOnWriteData     = specialize TGOnWriteStream<TEdgeData>;
+    TReadData        = specialize TGReadStream<TEdgeData>;
+    TWriteData       = specialize TGWriteStream<TEdgeData>;
+    TNestReadData    = specialize TGNestReadStream<TEdgeData>;
+    TNestWriteData   = specialize TGNestWriteStream<TEdgeData>;
 
     TEdge = record
       Source,
@@ -350,14 +391,16 @@ type
       function GetEnumerator: TEdgeEnumerator;
     end;
 
+  public
     class function ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
+    constructor Create;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     function  CreateIntVector: TIntArray;
     function  CreateShortVector: TShortArray;
     function  CreateHandleVector: THandleArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure Clear; inline;
+    procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  ContainsVertex(constref v: TVertex): Boolean; inline;
@@ -375,6 +418,10 @@ type
     function  IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
   { enumerates all edges }
     function  Edges: TEdges; inline;
+    function  GetEdgeData(constref aSrc, aDst: TVertex): TEdgeData; inline;
+    function  GetEdgeDataI(aSrc, aDst: SizeInt): TEdgeData; inline;
+    procedure SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData); inline;
+    procedure SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData);
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
@@ -407,7 +454,7 @@ type
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read GetVertexCount;
     property  EdgeCount: SizeInt read FEdgeCount;
-    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
+    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
   end;
 
 
@@ -866,6 +913,22 @@ begin
   Result := FNodeList[aIndex].Item.Vertex;
 end;
 
+procedure TGVertexHashList.SetItem(aIndex: SizeInt; const aValue: TVertex);
+var
+  I: SizeInt;
+begin
+  CheckIndexRange(aIndex);
+  if TEqRel.Equal(aValue, FNodeList[aIndex].Item.Vertex) then
+    exit;
+  RemoveFromChain(aIndex);
+  //add to new chain
+  FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
+  FNodeList[aIndex].Item.Vertex := aValue;
+  I := FNodeList[aIndex].Hash and System.High(FNodeList);
+  FNodeList[aIndex].Next := FChainList[I];
+  FChainList[I] := aIndex;
+end;
+
 function TGVertexHashList.GetItemRef(aIndex: SizeInt): PVertexItem;
 begin
   Result := @FNodeList[aIndex].Item;
@@ -1232,7 +1295,12 @@ begin
   Result := FVertexList[aIndex];
 end;
 
-function TGCustomSimpleGraph.GetEdgeData(aSrc, aDst: SizeInt): PEdgeData;
+procedure TGCustomSimpleGraph.SetVertex(aIndex: SizeInt; const aValue: TVertex);
+begin
+  FVertexList[aIndex] := aValue;
+end;
+
+function TGCustomSimpleGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
 begin
   Result := @FVertexList.ItemRefs[aSrc]^.Find(aDst)^.Data;
 end;
@@ -1253,11 +1321,16 @@ begin
       if aIndex < System.Length(aTree) then
         Stack.Push(aIndex)
       else
-        raise ELGGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
       aIndex := aTree[aIndex];
     end;
   Result := Stack.ToArray;
   TIntHelper.Reverse(Result);
+end;
+
+constructor TGCustomSimpleGraph.Create;
+begin
+  Title := 'Untitled';
 end;
 
 procedure TGCustomSimpleGraph.CheckIndexRange(aIndex: SizeInt);
@@ -1336,20 +1409,16 @@ function TGCustomSimpleGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
-  if (aDst < 0) or (aDst >= FVertexList.Count) then
-    exit(False);
-  Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst);
+  Result := FVertexList.ItemRefs[aSrc]^.Contains(aDst);
 end;
 
 function TGCustomSimpleGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
 var
-  p: ^TAdjItem;
+  p: PAdjItem;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
-  if (aDst < 0) or (aDst >= FVertexList.Count) then
-    exit(False);
-  p := FVertexList.FNodeList[aSrc].Item.Find(aDst);
+  p := FVertexList.ItemRefs[aSrc]^.Find(aDst);
   Result := p <> nil;
   if Result then
     aData := p^.Data;
@@ -1368,9 +1437,7 @@ end;
 function TGCustomSimpleGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
   FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
-  Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst) or
-            FVertexList.FNodeList[aDst].Item.Contains(aSrc);
+  Result := FVertexList.ItemRefs[aSrc]^.Contains(aDst);
 end;
 
 function TGCustomSimpleGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
@@ -1400,6 +1467,34 @@ end;
 function TGCustomSimpleGraph.Edges: TEdges;
 begin
   Result.FGraph := Self;
+end;
+
+function TGCustomSimpleGraph.GetEdgeData(constref aSrc, aDst: TVertex): TEdgeData;
+begin
+  Result := GetEdgeDataI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGCustomSimpleGraph.GetEdgeDataI(aSrc, aDst: SizeInt): TEdgeData;
+begin
+  if not ContainsEdgeI(aSrc, aDst, Result) then
+    raise ELGraphError.CreateFmt(SEEdgeNotFoundFmt, [aSrc, aDst]);
+end;
+
+procedure TGCustomSimpleGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData);
+begin
+  SetEdgeDataI( aSrc, aDst, aValue);
+end;
+
+procedure TGCustomSimpleGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData);
+var
+  p: PAdjItem;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  p := FVertexList.ItemRefs[aSrc]^.Find(aDst);
+  if p <> nil then
+    p^.Data := aValue
+  else
+    raise ELGraphError.CreateFmt(SEEdgeNotFoundFmt, [aSrc, aDst]);
 end;
 
 function TGCustomSimpleGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
