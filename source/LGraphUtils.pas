@@ -70,7 +70,7 @@ type
   { values related to the same set will have the same Marker }
     function  Marker(aValue: SizeInt): SizeInt;
     function  InSameSet(L, R: SizeInt): Boolean; inline;
-    function  InDifferentSets(L, R: SizeInt): Boolean; inline;
+    function  InDiffSets(L, R: SizeInt): Boolean; inline;
   { if L and R related to the different sets, these sets will be merged into one with a single Marker }
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
@@ -350,7 +350,7 @@ type
       function GetEnumerator: TEdgeEnumerator;
     end;
 
-    class function PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
+    class function ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     function  CreateIntVector: TIntArray;
     function  CreateShortVector: TShortArray;
@@ -400,7 +400,7 @@ type
   { returns a vector containing in the corresponding components the length of shortest path from aRoot }
     function  FindMinPathLenMap(constref aRoot: TVertex): TIntArray; inline;
     function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray;
-  { returns a vector containing indices of found shortest path(empty if path does not exists) }
+  { returns a vector containing chain of indices of found shortest path(empty if path does not exists) }
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 
@@ -460,7 +460,7 @@ begin
   Result := Marker(L) = Marker(R);
 end;
 
-function TDisjointSetUnion.InDifferentSets(L, R: SizeInt): Boolean;
+function TDisjointSetUnion.InDiffSets(L, R: SizeInt): Boolean;
 begin
   Result := Marker(L) <> Marker(R);
 end;
@@ -1244,7 +1244,7 @@ begin
   Result.FSource := aSrc;
 end;
 
-class function TGCustomSimpleGraph.PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
+class function TGCustomSimpleGraph.ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
 var
   Stack: TIntStack;
 begin
@@ -1631,7 +1631,7 @@ begin
     end;
   if not Found then
     exit(nil);
-  Result := PathFromTree(v, aDst);
+  Result := ChainFromTree(v, aDst);
 end;
 
 end.
