@@ -329,6 +329,8 @@ type
      vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean; inline;
     function  IsTree: Boolean; inline;
+  { returns True if exists edge with negative weight }
+    function  NegWeighedEdgeExists: Boolean;
   { finds the shortest paths from a given vertex to the remaining vertices in same connected component,
     the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the minimum path to the vertex or
@@ -1622,6 +1624,16 @@ end;
 function TGSimpleWeighedUGraph.IsTree: Boolean;
 begin
   Result := FGraph.IsTree;
+end;
+
+function TGSimpleWeighedUGraph.NegWeighedEdgeExists: Boolean;
+var
+  e: TEdge;
+begin
+  for e in DistinctEdges do
+    if e.Data.Weight < 0 then
+      exit(True);
+  Result := False;
 end;
 
 function TGSimpleWeighedUGraph.FindMinPaths(constref aSrc: TVertex): TWeightArray;
