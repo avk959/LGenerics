@@ -189,8 +189,7 @@ type
     end;
 
     TEdgeHelper  = specialize TGDelegatedArrayHelper<TWeightEdge>;
-
-    TPriorityQueue = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+    TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
 
   { Filter-Kruskal minimum spanning tree algorithm}
     TFilterKruskal = record
@@ -935,7 +934,7 @@ begin
     begin
       s := FEdges[L].Source;
       d := FEdges[L].Destination;
-      if FDsu.InDifferentSets(s, d)  then
+      if FDsu.InDiffSets(s, d)  then
         begin
           FWeight += FEdges[L].Weight;
           FTree[d] := s;
@@ -969,14 +968,15 @@ procedure TGSimpleWeighedUGraph.TFilterKruskal.FilterKruskal(L, R: SizeInt);
 var
   p: SizeInt;
 begin
-  if FFound = FCount then
-    exit;
   if R - L > FTreshold then
     begin
-      p := Split(L, R);
-      FilterKruskal(L, p);
-      if FFound <> FCount then
-        FilterKruskal(Succ(p), R);
+      if FFound < FCount then
+        begin
+          p := Split(L, R);
+          FilterKruskal(L, p);
+          if FFound < FCount then
+            FilterKruskal(Succ(p), R);
+        end;
     end
   else
     Kruskal(L, R);
@@ -1031,9 +1031,9 @@ end;
 function TGSimpleWeighedUGraph.DijkstraMap(aSrc: SizeInt): TWeightArray;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
-  NewWeight: TWeight;
+  Relaxed: TWeight;
   Item: TWeightItem;
   p: PAdjItem;
 begin
@@ -1048,28 +1048,24 @@ begin
         Visited[Item.Index] := True;
         Result[Item.Index] := Item.Weight;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          begin
-            if Handles[p^.Key] = INVALID_HANDLE then
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
+          if Handles[p^.Key] = INVALID_HANDLE then
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key))
+          else
             if not Visited[p^.Key] then
-              if p^.Data.Weight >= 0 then
-                begin
-                  NewWeight := p^.Data.Weight + Item.Weight;
-                  if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-                end
-              else
-                raise ELGGraphError.Create(SENegValuesNotAllowed);
-          end;
+              begin
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+              end;
       end;
 end;
 
 function TGSimpleWeighedUGraph.DijkstraMap(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
-  NewWeight: TWeight;
+  Relaxed: TWeight;
   Item: TWeightItem;
   p: PAdjItem;
 begin
@@ -1085,31 +1081,30 @@ begin
         Visited[Item.Index] := True;
         Result[Item.Index] := Item.Weight;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          begin
-            if Handles[p^.Key] = INVALID_HANDLE then
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
+          if Handles[p^.Key] = INVALID_HANDLE then
+            begin
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key));
+              aPathTree[p^.Key] := Item.Index;
+            end
+          else
             if not Visited[p^.Key] then
-              if p^.Data.Weight >= 0 then
-                begin
-                  NewWeight := p^.Data.Weight + Item.Weight;
-                  if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                    begin
-                      aPathTree[p^.Key] := Item.Index;
-                      Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-                    end;
-                end
-              else
-                raise ELGGraphError.Create(SENegValuesNotAllowed);
-          end;
+              begin
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  begin
+                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+                    aPathTree[p^.Key] := Item.Index;
+                  end;
+              end;
       end;
 end;
 
 function TGSimpleWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
-  NewWeight: TWeight;
+  Relaxed: TWeight;
   Item: TWeightItem;
   p: PAdjItem;
 begin
@@ -1123,19 +1118,15 @@ begin
           exit(Item.Weight);
         Visited[Item.Index] := True;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          begin
-            if Handles[p^.Key] = INVALID_HANDLE then
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
+          if Handles[p^.Key] = INVALID_HANDLE then
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key))
+          else
             if not Visited[p^.Key] then
-              if p^.Data.Weight >= 0 then
-                begin
-                  NewWeight := p^.Data.Weight + Item.Weight;
-                  if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-                end
-              else
-                raise ELGGraphError.Create(SENegValuesNotAllowed);
-          end;
+              begin
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+              end
       end;
   Result := TWeight.MaxValue;
 end;
@@ -1143,10 +1134,10 @@ end;
 function TGSimpleWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
   Tree: TIntArray;
-  NewWeight: TWeight;
+  Relaxed: TWeight;
   Item: TWeightItem;
   p: PAdjItem;
 begin
@@ -1161,26 +1152,27 @@ begin
       begin
         if Item.Index = aDst then
           begin
-            aPath := FGraph.PathFromTree(Tree, aDst);
+            aPath := FGraph.ChainFromTree(Tree, aDst);
             exit(Item.Weight);
           end;
         Visited[Item.Index] := True;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
           begin
-            if Handles[p^.Key] = INVALID_HANDLE then
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
-            if not Visited[p^.Key] then
-              if p^.Data.Weight >= 0 then
+            if Handles[p^.Key] <> INVALID_HANDLE then
+              begin
+                Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key));
+                Tree[p^.Key] := Item.Index;
+              end
+            else
+              if not Visited[p^.Key] then
                 begin
-                  NewWeight := p^.Data.Weight + Item.Weight;
-                  if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
+                  Relaxed := p^.Data.Weight + Item.Weight;
+                  if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
                     begin
-                      Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
+                      Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
-                end
-              else
-                raise ELGGraphError.Create(SENegValuesNotAllowed);
+                end;
           end;
       end;
   Result := TWeight.MaxValue;
@@ -1211,7 +1203,7 @@ begin
     begin
       s := e[I].Source;
       d := e[I].Destination;
-      if Dsu.InDifferentSets(s, d)  then
+      if Dsu.InDiffSets(s, d)  then
         begin
           aTotalWeight += e[I].Weight;
           Result[d] := s;
@@ -1223,7 +1215,7 @@ end;
 function TGSimpleWeighedUGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
   Curr: SizeInt;
   Item: TWeightItem;
@@ -1244,12 +1236,16 @@ begin
         for p in FGraph.AdjVerticesPtr(Curr) do
           begin
             if Handles[p^.Key] = INVALID_HANDLE then
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, p^.Key));
-            if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
               begin
+                Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight, p^.Key));
+                Result[p^.Key] := Curr;
+              end
+            else
+              if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
+                begin
                   Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
                   Result[p^.Key] := Curr;
-              end;
+                end;
           end;
       end;
 end;
