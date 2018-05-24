@@ -71,12 +71,6 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
 
-    TUHeader = packed record
-      ComponentCount: SizeInt;
-      Connected,
-      ConnectedValid: Boolean;
-    end;
-
   var
     FCompoCount: SizeInt;
     FConnected,
@@ -390,12 +384,14 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
+uses
+  bufstream;
 
 { TGSimpleUGraph.TDistinctEdgeEnumerator }
 
 function TGSimpleUGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
 begin
-  Result.Init(FCurrIndex, FEnum.Current);
+  Result{%H-}.Init(FCurrIndex, FEnum.Current);
 end;
 
 function TGSimpleUGraph.TDistinctEdgeEnumerator.MoveNext: Boolean;
@@ -643,32 +639,37 @@ end;
 procedure TGSimpleUGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
 var
   h: TStreamHeader;
-  uh: TUHeader;
   I: SizeInt;
   e: TEdge;
+  bs: TWriteBufStream;
 begin
   if not (Assigned(aWriteVertex) and Assigned(aWriteData)) then
     raise ELGraphError.Create(SEWriteCallbackMissed);
-  //write header
-  h.Magic := LGRAPH_MAGIC;
-  h.Version := CURRENT_VERSION;
-  h.TitleSize := System.Length(Title);
-  h.VertexCount := VertexCount;
-  h.EdgeCount := EdgeCount;
-  aStream.WriteBuffer(h, SizeOf(h));
-  //write title
-  aStream.WriteBuffer(FTitle[1], h.TitleSize);
-  //write vertices, but does not save any info about connected
-  //this should allow transfer data between directed/undirected graphs
-  for I := 0 to Pred(h.VertexCount) do
-    aWriteVertex(aStream, FVertexList.ItemRefs[I]^.Vertex);
-  //write edges
-  for e in DistinctEdges do
-    begin
-      aStream.WriteBuffer(e.Source, SizeOf(e.Source));
-      aStream.WriteBuffer(e.Destination, SizeOf(e.Destination));
-      aWriteData(aStream, e.Data);
-    end;
+  bs := TWriteBufStream.Create(aStream);
+  try
+    //write header
+    h.Magic := LGRAPH_MAGIC;
+    h.Version := CURRENT_VERSION;
+    h.TitleSize := System.Length(Title);
+    h.VertexCount := VertexCount;
+    h.EdgeCount := EdgeCount;
+    bs.WriteBuffer(h, SizeOf(h));
+    //write title
+    bs.WriteBuffer(FTitle[1], h.TitleSize);
+    //write vertices, but does not save any info about connected
+    //this should allow transfer data between directed/undirected graphs
+    for I := 0 to Pred(h.VertexCount) do
+      aWriteVertex(bs, FVertexList.ItemRefs[I]^.Vertex);
+    //write edges
+    for e in DistinctEdges do
+      begin
+        bs.WriteBuffer(e.Source, SizeOf(e.Source));
+        bs.WriteBuffer(e.Destination, SizeOf(e.Destination));
+        aWriteData(bs, e.Data);
+      end;
+  finally
+    bs.Free;
+  end;
 end;
 
 procedure TGSimpleUGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
@@ -677,36 +678,42 @@ var
   I, vInd: SizeInt;
   e: TEdge;
   v: TVertex;
+  bs: TReadBufStream;
 begin
   if not (Assigned(aReadVertex) and Assigned(aReadData)) then
     raise ELGraphError.Create(SEReadCallbackMissed);
-  //read header
-  aStream.ReadBuffer(h, SizeOf(h));
-  if h.Magic <> LGRAPH_MAGIC then
-    raise ELGraphError.Create(SEUnknownGraphStreamFmt);
-  if h.Version > CURRENT_VERSION then
-    raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
-  Clear;
-  //read title
-  System.SetLength(FTitle, h.TitleSize);
-  aStream.ReadBuffer(FTitle[1], h.TitleSize);
-  //read vertices
-  for I := 0 to Pred(h.VertexCount) do
-    begin
-      v := aReadVertex(aStream);
-      if not AddVertex(v, vInd) then
-        raise ELGraphError.Create(SEGraphStreamCorrupt);
-      if vInd <> I then
-        raise ELGraphError.Create(SEGraphStreamReadIntern);
-    end;
-  //read edges
-  for I := 0 to Pred(h.EdgeCount) do
-    begin
-      aStream.ReadBuffer(e.Source, SizeOf(e.Source));
-      aStream.ReadBuffer(e.Destination, SizeOf(e.Destination));
-      e.Data := aReadData(aStream);
-      AddEdgeI(e.Source, e.Destination, e.Data);
-    end;
+  bs := TReadBufStream.Create(aStream);
+  try
+    //read header
+    bs.ReadBuffer(h, SizeOf(h));
+    if h.Magic <> LGRAPH_MAGIC then
+      raise ELGraphError.Create(SEUnknownGraphStreamFmt);
+    if h.Version > CURRENT_VERSION then
+      raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
+    Clear;
+    //read title
+    System.SetLength(FTitle, h.TitleSize);
+    bs.ReadBuffer(FTitle[1], h.TitleSize);
+    //read vertices
+    for I := 0 to Pred(h.VertexCount) do
+      begin
+        v := aReadVertex(bs);
+        if not AddVertex(v, vInd) then
+          raise ELGraphError.Create(SEGraphStreamCorrupt);
+        if vInd <> I then
+          raise ELGraphError.Create(SEGraphStreamReadIntern);
+      end;
+    //read edges
+    for I := 0 to Pred(h.EdgeCount) do
+      begin
+        bs.ReadBuffer(e.Source, SizeOf(e.Source));
+        bs.ReadBuffer(e.Destination, SizeOf(e.Destination));
+        e.Data := aReadData(bs);
+        AddEdgeI(e.Source, e.Destination, e.Data);
+      end;
+  finally
+    bs.Free;
+  end;
 end;
 
 procedure TGSimpleUGraph.SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex;
