@@ -286,7 +286,7 @@ type
     end;
 
   const
-    LGRAPH_MAGIC: TMagic = 'LGraphTyp';
+    LGRAPH_MAGIC: TMagic = 'LGrphTyp';
     CURRENT_VERSION = 1;
 
   class var
