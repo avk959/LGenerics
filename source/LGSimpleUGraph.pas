@@ -416,7 +416,7 @@ procedure TGSimpleUGraph.TDistinctEdgeEnumerator.Reset;
 begin
   FCurrIndex := -1;
   FEnumDone := True;
-  FVisited.Reset;
+  FVisited.ClearBits;
 end;
 
 { TGSimpleUGraph.TDistinctEdges }
