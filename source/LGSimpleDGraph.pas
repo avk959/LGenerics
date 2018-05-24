@@ -88,7 +88,7 @@ begin
   FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
   //FConnectedValid := False;
   for p in FVertexList.ItemRefs[aIndex]^ do
-    Dec(FVertexList.ItemRefs[p^.Destination]^.Tag);
+    Dec(FVertexList.ItemRefs[p^.Destination]^.InDeg);
   FVertexList.Delete(aIndex);
   for I := 0 to Pred(FVertexList.Count) do
     begin
@@ -117,7 +117,7 @@ begin
     begin
       p^.Destination := aDst;
       p^.Data := aData;
-      Inc(FVertexList.ItemRefs[aDst]^.Tag);
+      Inc(FVertexList.ItemRefs[aDst]^.InDeg);
       Inc(FEdgeCount);
       //FConnectedValid := False;
     end;
@@ -130,7 +130,7 @@ begin
   Result := FVertexList.ItemRefs[aSrc]^.Remove(aDst);
   if Result then
     begin
-      Dec(FVertexList.ItemRefs[aDst]^.Tag);
+      Dec(FVertexList.ItemRefs[aDst]^.InDeg);
       Dec(FEdgeCount);
       //FConnectedValid := False;
     end;
@@ -208,7 +208,7 @@ end;
 function TGSimpleDiGraph.InDegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
-  Result := FVertexList.ItemRefs[aIndex]^.Tag;
+  Result := FVertexList.ItemRefs[aIndex]^.InDeg;
 end;
 
 function TGSimpleDiGraph.OutDegree(constref v: TVertex): SizeInt;
@@ -230,7 +230,7 @@ end;
 function TGSimpleDiGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
-  Result := FVertexList.ItemRefs[aIndex]^.Count + FVertexList.ItemRefs[aIndex]^.Tag;
+  Result := FVertexList.ItemRefs[aIndex]^.Count + FVertexList.ItemRefs[aIndex]^.InDeg;
 end;
 
 function TGSimpleDiGraph.Isolated(constref v: TVertex): Boolean;
