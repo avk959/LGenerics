@@ -396,7 +396,8 @@ type
 
     TTree = specialize TGLiteAvlTree<T, TEntry, TCmpRel>;
     PTree = ^TTree;
-
+  const
+    NULL_INDEX = TTree.NULL_INDEX;
   public
   type
     IEnumerable = specialize IGEnumerable<T>;
@@ -1746,9 +1747,9 @@ end;
 
 function TGLiteTreeSet.TReverseEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = -1;
+  NextNode: SizeInt = NULL_INDEX;
 begin
-  if FCurrNode <> -1 then
+  if FCurrNode <> NULL_INDEX then
     NextNode := FTree^.Predecessor(FCurrNode)
   else
     if not FInCycle then
@@ -1756,7 +1757,7 @@ begin
         NextNode := FFirstNode;
         FInCycle := True;
       end;
-  Result := NextNode >= 0;
+  Result := NextNode <> NULL_INDEX;
   if Result then
     FCurrNode := NextNode;
 end;
@@ -1764,7 +1765,7 @@ end;
 procedure TGLiteTreeSet.TReverseEnumerator.Reset;
 begin
   FInCycle := False;
-  FCurrNode := -1;
+  FCurrNode := NULL_INDEX;
 end;
 
 { TGLiteTreeSet.THeadEnumerator }
@@ -1821,9 +1822,9 @@ end;
 
 function TGLiteTreeSet.TTailEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = -1;
+  NextNode: SizeInt = NULL_INDEX;
 begin
-  if FCurrNode <> -1 then
+  if FCurrNode <> NULL_INDEX then
     NextNode := FTree^.Successor(FCurrNode)
   else
     if not FInCycle then
@@ -1831,7 +1832,7 @@ begin
         NextNode := FFirstNode;
         FInCycle := True;
       end;
-  Result := NextNode >= 0;
+  Result := NextNode <> NULL_INDEX;
   if Result then
     FCurrNode := NextNode;
 end;
@@ -1839,7 +1840,7 @@ end;
 procedure TGLiteTreeSet.TTailEnumerator.Reset;
 begin
   FInCycle := False;
-  FCurrNode := -1;
+  FCurrNode := NULL_INDEX;
 end;
 
 { TGLiteTreeSet.TRangeEnumerator }
@@ -1997,8 +1998,8 @@ begin
   Result.Init(Self, aLowBound, aInclusive);
 end;
 
-function TGLiteTreeSet.GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds
-  ): TRangeEnumerator;
+function TGLiteTreeSet.GetRangeEnumerator(constref aLowBound, aHighBound: T;
+  aBounds: TRangeBounds): TRangeEnumerator;
 begin
   Result.Init(Self, aLowBound, aHighBound, aBounds);
 end;
@@ -2443,8 +2444,19 @@ begin
 end;
 
 procedure TGLiteTreeSet.Intersect(constref aSet: TGLiteTreeSet);
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 0;
 begin
-
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I < FTree.Count do
+        if aSet.NonContains(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
 end;
 
 procedure TGLiteTreeSet.Join(constref aSet: TGLiteTreeSet);
