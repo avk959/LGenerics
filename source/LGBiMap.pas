@@ -79,7 +79,7 @@ type
   generic TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(TCustomIterable,
     specialize IGMap<TKey, TValue>, specialize IGInverseMap<TKey, TValue>)
   {must be  generic TGHashBiMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... }
+              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
     THashBiMap       = specialize TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel>;
