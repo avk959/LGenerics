@@ -72,7 +72,7 @@ type
     end;
 
   var
-    FCompoCount: SizeInt;
+    FCompCount: SizeInt;
     FConnected,
     FConnectedValid: Boolean;
     procedure DoRemoveVertex(aIndex: SizeInt);
@@ -106,6 +106,7 @@ type
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
     function  EulerCycleExists: Boolean;
+  { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntArray;
   { checks whether the graph is connected; a graph without vertices is considered disconnected }
     function  IsConnected: Boolean; inline;
@@ -132,7 +133,7 @@ type
     function  SeparateGraph(constref v: TVertex): TGSimpleUGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
   { checks whether the graph is a regular graph (that is, the degree of all its
-     vertices coincide); an empty graph is considered regular }
+     vertices equal); an empty graph is considered regular }
     function  IsRegular: Boolean;
     function  IsTree: Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
@@ -156,6 +157,7 @@ type
         class function Equal([const[ref]] L, R: TVertex): Boolean;
       TWeight must have defined comparision operators and MaxValue }
   generic TGSimpleWeighedUGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class
+// must be class(specialize TGSimpleUGraph<TVertex, specialize TGWeighedEdgeData<TWeight, TEdgeData>, TVertexEqRel>)
   public
   type
     TWeighedGraph  = TGSimpleWeighedUGraph;
@@ -179,6 +181,12 @@ type
       Source,
       Destination: SizeInt;
       Weight:  TWeight;
+      class operator = (constref L, R: TWeightEdge): Boolean; inline;
+      class operator <>(constref L, R: TWeightEdge): Boolean; inline;
+      class operator > (constref L, R: TWeightEdge): Boolean; inline;
+      class operator < (constref L, R: TWeightEdge): Boolean; inline;
+      class operator >=(constref L, R: TWeightEdge): Boolean; inline;
+      class operator <=(constref L, R: TWeightEdge): Boolean; inline;
     end;
 
     TEdgeArray   = array of TWeightEdge;
@@ -197,7 +205,7 @@ type
       class function Construct(w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
     end;
 
-    TEdgeHelper  = specialize TGDelegatedArrayHelper<TWeightEdge>;
+    TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
 
   { Filter-Kruskal minimum spanning tree algorithm}
@@ -240,7 +248,6 @@ type
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
     function  CreateWeightVector: TWeightArray;
     function  CreateEdgeVector: TEdgeArray;
-    function  EdgeCompare(constref L, R: TWeightEdge): SizeInt; inline;
     class function Min(const L, R: TWeight): TWeight; static; inline;
   public
     constructor Create;
@@ -510,7 +517,7 @@ begin
           if not Visited[Curr] then
             begin
               Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.Tag := Result;
+              FVertexList.ItemRefs[Curr]^.CompIdx := Result;
               for Curr in AdjVerticesI(Curr) do
                 if not Visited[Curr] then
                   Stack.Push(Curr);
@@ -524,11 +531,11 @@ function TGSimpleUGraph.GetSeparateCount: SizeInt;
 begin
   if not ConnectedValid then
     begin
-      FCompoCount := FindSeparateCount;
+      FCompCount := FindSeparateCount;
       FConnectedValid := True;
-      FConnected := FCompoCount = 1;
+      FConnected := FCompCount = 1;
     end;
-  Result := FCompoCount;
+  Result := FCompCount;
 end;
 
 function TGSimpleUGraph.CountPop(aCompIndex: SizeInt): SizeInt;
@@ -537,7 +544,7 @@ var
 begin
   Result := 0;
   for I := 0 to Pred(VertexCount) do
-    Result += Ord(FVertexList.ItemRefs[I]^.Tag = aCompIndex);
+    Result += Ord(FVertexList.ItemRefs[I]^.CompIdx = aCompIndex);
 end;
 
 function TGSimpleUGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleUGraph;
@@ -567,7 +574,7 @@ end;
 procedure TGSimpleUGraph.Clear;
 begin
   inherited;
-  FCompoCount := 0;
+  FCompCount := 0;
   FConnected := False;
   FConnectedValid := False;
 end;
@@ -577,7 +584,7 @@ begin
   Result := not FVertexList.FindOrAdd(v, aIndex);
   if Result then
     begin
-      FVertexList.ItemRefs[aIndex]^.Tag := -1;
+      FVertexList.ItemRefs[aIndex]^.CompIdx := -1;
       FConnectedValid := False;
     end;
 end;
@@ -657,7 +664,8 @@ begin
     //write title
     bs.WriteBuffer(FTitle[1], h.TitleSize);
     //write vertices, but does not save any info about connected
-    //this should allow transfer data between directed/undirected graphs
+    //this should allow transfer data between directed/undirected graphs ???
+    //or need save edges from dfs ???
     for I := 0 to Pred(h.VertexCount) do
       aWriteVertex(bs, FVertexList.ItemRefs[I]^.Vertex);
     //write edges
@@ -846,7 +854,7 @@ begin
           if not Visited[Curr] then
             begin
               Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.Tag := 0;
+              FVertexList.ItemRefs[Curr]^.CompIdx := 0;
               for Curr in AdjVerticesI(Curr) do
                 if not Visited[Curr] then
                   Stack.Push(Curr);
@@ -864,7 +872,7 @@ begin
               AddEdgeI(0, Curr);
           end;
       end;
-  FCompoCount := 1;
+  FCompCount := 1;
   FConnectedValid := True;
   FConnected := True;
 end;
@@ -948,7 +956,7 @@ function TGSimpleUGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aVtxIndex);
   if SeparateCount > 1 then
-    Result := FVertexList.ItemRefs[aVtxIndex]^.Tag
+    Result := FVertexList.ItemRefs[aVtxIndex]^.CompIdx
   else
     Result := 0;
 end;
@@ -962,7 +970,7 @@ function TGSimpleUGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aVtxIndex);
   if SeparateCount > 1 then
-    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.Tag)
+    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.CompIdx)
   else
     Result := VertexCount;
 end;
@@ -1022,6 +1030,38 @@ begin
   Result.Data := d;
 end;
 
+{ TGSimpleWeighedUGraph.TWeightEdge }
+
+class operator TGSimpleWeighedUGraph.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
+begin
+  Result := L.Weight = R.Weight;
+end;
+
+class operator TGSimpleWeighedUGraph.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
+begin
+  Result := L.Weight <> R.Weight;
+end;
+
+class operator TGSimpleWeighedUGraph.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
+begin
+  Result := L.Weight > R.Weight;
+end;
+
+class operator TGSimpleWeighedUGraph.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
+begin
+  Result := L.Weight < R.Weight;
+end;
+
+class operator TGSimpleWeighedUGraph.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
+begin
+  Result := L.Weight >= R.Weight;
+end;
+
+class operator TGSimpleWeighedUGraph.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
+begin
+  Result := L.Weight <= R.Weight;
+end;
+
 { TGSimpleWeighedUGraph.TWeightItem }
 
 class operator TGSimpleWeighedUGraph.TWeightItem. = (constref L, R: TWeightItem): Boolean;
@@ -1066,7 +1106,7 @@ procedure TGSimpleWeighedUGraph.TFilterKruskal.Kruskal(L, R: SizeInt);
 var
   s, d: SizeInt;
 begin
-  TEdgeHelper.IntroSort(FEdges[L..R], @EdgeCompare);
+  TEdgeHelper.IntroSort(FEdges[L..R]);
   while L <= R do
     begin
       s := FEdges[L].Source;
@@ -1337,7 +1377,7 @@ begin
   e := CreateEdgeVector;
   Result := FGraph.CreateIntVector;
   VtxCount := VertexCount;
-  TEdgeHelper.Sort(e, @EdgeCompare);
+  TEdgeHelper.Sort(e);
   System.SetLength(Result, VtxCount);
   Dsu.Size := VtxCount;
   aTotalWeight := 0;
@@ -1414,17 +1454,6 @@ begin
       Result[I].Weight := e.Data.Weight;
       Inc(I);
     end;
-end;
-
-function TGSimpleWeighedUGraph.EdgeCompare(constref L, R: TWeightEdge): SizeInt;
-begin
-  if L.Weight > R.Weight then
-    Result := 1
-  else
-    if R.Weight > L.Weight then
-      Result := -1
-    else
-      Result := 0;
 end;
 
 class function TGSimpleWeighedUGraph.Min(const L, R: TWeight): TWeight;
@@ -1873,8 +1902,8 @@ end;
 function TGSimpleWeighedUGraph.FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
 begin
   if IsConnected then
-    //Result := KruskalMst(aTotalWeight)
-    Result := FilterKruskalMst(aTotalWeight)
+    Result := KruskalMst(aTotalWeight)
+    //Result := FilterKruskalMst(aTotalWeight)
   else
     raise ELGraphError.Create(SEGraphIsNotConnected);
 end;

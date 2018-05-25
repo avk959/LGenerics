@@ -172,6 +172,7 @@ type
     class operator Initialize(var Item: TGVertexItem);
   public
     InDeg,
+    CompIdx,
     Tag: SizeInt;
     procedure Assign(constref aSrc: TGVertexItem);
     function  GetEnumerator: TEnumerator;
@@ -440,11 +441,12 @@ type
   { test whether the graph is bipartite; if returns True then information about the vertex
     belonging to the fractions is returned in v(0 or 1) }
     function  IsBipartite(out v: TShortArray): Boolean;
-  { returns the length of the shortest path between the aSrc and aDst,
+  { returns the length of the shortest path between the aSrc and aDst(in the sense of the number of edges),
     -1 if the path does not exist }
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
-  { returns a vector containing in the corresponding components the length of shortest path from aRoot }
+  { returns a vector containing in the corresponding components the length of shortest path from aRoot
+    (in the sense of the number of edges)}
     function  FindMinPathLenMap(constref aRoot: TVertex): TIntArray; inline;
     function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray;
   { returns a vector containing chain of indices of found shortest path(empty if path does not exists) }
@@ -1645,7 +1647,7 @@ end;
 
 function TGCustomSimpleGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
-  Result := FindMinPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aSrc));
+  Result := FindMinPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
 function TGCustomSimpleGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
@@ -1660,13 +1662,17 @@ begin
   v[aSrc] := 0;
   Queue.Enqueue(aSrc);
   while Queue{%H-}.TryDequeue(aSrc) do
-    for d in AdjVerticesI(aSrc) do
-      if v[d] = -1 then
-        begin
-          Queue.Enqueue(d);
-          v[d] := Succ(v[aSrc]);
-        end;
-  Result := v[aDst];
+    begin
+      if aSrc = aDst then
+        exit(v[aSrc]);
+      for d in AdjVerticesI(aSrc) do
+        if v[d] = -1 then
+          begin
+            Queue.Enqueue(d);
+            v[d] := Succ(v[aSrc]);
+          end;
+    end;
+  Result := -1;
 end;
 
 function TGCustomSimpleGraph.FindMinPathLenMap(constref aRoot: TVertex): TIntArray;

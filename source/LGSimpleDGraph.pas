@@ -141,7 +141,7 @@ begin
   Result := not FVertexList.FindOrAdd(v, aIndex);
   if Result then
     begin
-      FVertexList.ItemRefs[aIndex]^.Tag := 0;
+      FVertexList.ItemRefs[aIndex]^.InDeg := 0;
       //FConnectedValid := False;
     end;
 end;
