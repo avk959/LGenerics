@@ -319,27 +319,21 @@ type
     TBits = array of SizeUInt;
   const
 {$IF DEFINED(CPU64)}
-    SIZE_SHIFT = 6;
-    SIZE_MASK  = 63;
+    SIZE_LOG  = 6;
+    SIZE_MASK = 63;
 {$ELSEIF DEFINED(CPU32)}
-    SIZE_SHIFT = 5;
-    SIZE_MASK  = 31;
+    SIZE_LOG  = 5;
+    SIZE_MASK = 31;
 {$ELSE}
-    SIZE_SHIFT = 4;
-    SIZE_MASK  = 15;
+    SIZE_LOG  = 4;
+    SIZE_MASK = 15;
 {$ENDIF}
   var
     FBits: TBits;
-    function  GetBit(aIndex: SizeInt): Boolean;
+    function  GetBit(aIndex: SizeInt): Boolean; inline;
     function  GetSize: SizeInt; inline;
-    procedure SetBit(aIndex: SizeInt; aValue: Boolean);
+    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
     procedure SetSize(aValue: SizeInt);
-    function  TestLimbBit(aValue: SizeUInt; aIndex: SizeInt): Boolean; inline;
-    function  SetLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
-    function  ClearLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
-    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
-    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
     class operator Copy(constref aSrc: TBitVector; var aDst: TBitVector);
   public
     procedure ClearBits; inline;
@@ -1692,22 +1686,28 @@ end;
 
 function TBitVector.GetBit(aIndex: SizeInt): Boolean;
 begin
-  CheckIndexRange(aIndex);
-  Result := TestLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+  if (aIndex >= 0) and (aIndex < (System.Length(FBits) shl SIZE_LOG)) then
+    Result := (FBits[aIndex shr SIZE_LOG] and (SizeUInt(1) shl (aIndex and SIZE_MASK))) <> 0
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TBitVector.GetSize: SizeInt;
 begin
-  Result := System.Length(FBits) shl SIZE_SHIFT;
+  Result := System.Length(FBits) shl SIZE_LOG;
 end;
 
 procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
-  CheckIndexRange(aIndex);
-  if aValue then
-    FBits[aIndex shr SIZE_SHIFT] := SetLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK)
+  if (aIndex >= 0) and (aIndex < (System.Length(FBits) shl SIZE_LOG)) then
+    begin
+      if aValue then
+        FBits[aIndex shr SIZE_LOG] := FBits[aIndex shr SIZE_LOG] or (SizeUInt(1) shl (aIndex and SIZE_MASK))
+      else
+        FBits[aIndex shr SIZE_LOG] := FBits[aIndex shr SIZE_LOG] and not (SizeUInt(1) shl (aIndex and SIZE_MASK));
+    end
   else
-    FBits[aIndex shr SIZE_SHIFT] := ClearLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TBitVector.SetSize(aValue: SizeInt);
@@ -1717,41 +1717,10 @@ begin
   OldLen := Size;
   if aValue > OldLen then
     begin
-      aValue := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
+      aValue := aValue shr SIZE_LOG + Ord(aValue and SIZE_MASK <> 0);
       System.SetLength(FBits, aValue);
       System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
-end;
-
-function TBitVector.TestLimbBit(aValue: SizeUInt; aIndex: SizeInt): Boolean;
-begin
-  Result := (aValue and (SizeUInt(1) shl aIndex)) <> 0;
-end;
-
-function TBitVector.SetLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
-begin
-  Result := aValue or SizeUInt(SizeUInt(1) shl aIndex);
-end;
-
-function TBitVector.ClearLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
-begin
-  Result := aValue and not SizeUInt(SizeUInt(1) shl aIndex);
-end;
-
-procedure TBitVector.IndexOutOfBoundError(aIndex: SizeInt);
-begin
-  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-end;
-
-function TBitVector.IndexInRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex < Size);
-end;
-
-procedure TBitVector.CheckIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
 end;
 
 class operator TBitVector.Copy(constref aSrc: TBitVector; var aDst: TBitVector);
