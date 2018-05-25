@@ -108,7 +108,7 @@ type
     function  EulerCycleExists: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntArray;
-  { checks whether the graph is connected; a graph without vertices is considered disconnected }
+  { checks whether the graph is connected; a graph without Items is considered disconnected }
     function  IsConnected: Boolean; inline;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0}
@@ -126,14 +126,14 @@ type
   { returns index of the connected component that contains v }
     function  SeparateIndexOf(constref v: TVertex): SizeInt; inline;
     function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt; inline;
-  { returns number of vertices(population) in the connected component that contains v }
+  { returns number of Items(population) in the connected component that contains v }
     function  SeparatePop(constref v: TVertex): SizeInt; inline;
     function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
   { returns graph of connected component that contains v }
     function  SeparateGraph(constref v: TVertex): TGSimpleUGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
   { checks whether the graph is a regular graph (that is, the degree of all its
-     vertices equal); an empty graph is considered regular }
+     Items equal); an empty graph is considered regular }
     function  IsRegular: Boolean;
     function  IsTree: Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
@@ -157,7 +157,8 @@ type
         class function Equal([const[ref]] L, R: TVertex): Boolean;
       TWeight must have defined comparision operators and MaxValue }
   generic TGSimpleWeighedUGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class
-// must be class(specialize TGSimpleUGraph<TVertex, specialize TGWeighedEdgeData<TWeight, TEdgeData>, TVertexEqRel>)
+  // must be class(specialize TGSimpleUGraph<TVertex, specialize TGWeighedEdgeData<TWeight, TEdgeData>, TVertexEqRel>)
+  // but is impossible: #0033788
   public
   type
     TWeighedGraph  = TGSimpleWeighedUGraph;
@@ -386,7 +387,7 @@ type
     property  EdgeCount: SizeInt read GetEdgeCount;
   { count of connected components }
     property  SeparateCount: SizeInt read GetSeparateCount;
-    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
+    property  Items[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
   end;
 
 implementation
@@ -564,7 +565,7 @@ begin
         for Dst in AdjVerticesI(Src) do
           if not Visited[Dst] then
             begin
-              Result.AddEdge(Vertices[Src], Vertices[Dst], GetEdgeDataPtr(Src, Dst)^);
+              Result.AddEdge(Items[Src], Items[Dst], GetEdgeDataPtr(Src, Dst)^);
               Stack.Push(Dst);
             end;
       end;
@@ -663,7 +664,7 @@ begin
     bs.WriteBuffer(h, SizeOf(h));
     //write title
     bs.WriteBuffer(FTitle[1], h.TitleSize);
-    //write vertices, but does not save any info about connected
+    //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
     //or need save edges from dfs ???
     for I := 0 to Pred(h.VertexCount) do
@@ -702,7 +703,7 @@ begin
     //read title
     System.SetLength(FTitle, h.TitleSize);
     bs.ReadBuffer(FTitle[1], h.TitleSize);
-    //read vertices
+    //read Items
     for I := 0 to Pred(h.VertexCount) do
       begin
         v := aReadVertex(bs);

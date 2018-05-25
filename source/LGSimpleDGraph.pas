@@ -315,7 +315,7 @@ var
 begin
   Result := TGSimpleDiGraph.Create;
   for I := 0 to Pred(VertexCount) do
-    Result.AddVertex(Vertices[I], Dummy);
+    Result.AddVertex(Items[I], Dummy);
   for e in Edges do
     Result.AddEdgeI(e.Destination, e.Source, e.Data);
 end;

@@ -82,6 +82,47 @@ type
     property  Size: SizeInt read GetSize write SetSize;
   end;
 
+  TVertexColor = 0..3;
+
+const
+  vclWhite: TVertexColor = 0;
+  vclGray:  TVertexColor = 1;
+  vclBlack: TVertexColor = 2;
+  vclRed:   TVertexColor = 3;
+
+type
+
+  { TColorVector }
+
+  TColorVector = record
+  private
+  type
+    TColorList = array of SizeUInt;
+  const
+{$IF DEFINED(CPU64)}
+    SHIFT = 5;
+    MASK  = 31;
+{$ELSEIF DEFINED(CPU32)}
+    SHIFT = 4;
+    MASK  = 15;
+{$ELSE}
+    SHIFT = 3;
+    MASK  = 7;
+{$ENDIF}
+  var
+    FList: TColorList;
+    function  GetItem(aIndex: SizeInt): TVertexColor; inline;
+    function  GetSize: SizeInt; inline;
+    procedure SetItem(aIndex: SizeInt; aValue: TVertexColor); inline;
+    procedure SetSize(aValue: SizeInt);
+    class operator Copy(constref aSrc: TColorVector; var aDst: TColorVector); inline;
+  public
+    procedure ClearItems; inline;
+    property  Size: SizeInt read GetSize write SetSize;
+  { read/write item with (index < 0) or (index >= Size) will raise exception }
+    property  Items[aIndex: SizeInt]: TVertexColor read GetItem write SetItem; default;
+  end;
+
   { TIntPair }
 
   TIntPair = record
@@ -456,7 +497,7 @@ type
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read GetVertexCount;
     property  EdgeCount: SizeInt read FEdgeCount;
-    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
+    property  Items[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
   end;
 
 
@@ -522,6 +563,54 @@ begin
     FList[L] := R
   else
     FList[R] := L;
+end;
+
+{ TColorVector }
+
+function TColorVector.GetItem(aIndex: SizeInt): TVertexColor;
+begin
+  if (aIndex >= 0) and (aIndex < (System.Length(FList) shl SHIFT)) then
+    Result := FList[aIndex shr SHIFT] shr ((aIndex and MASK) shl 1) and SizeUInt(3)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TColorVector.GetSize: SizeInt;
+begin
+  Result := System.Length(FList) shl SHIFT;
+end;
+
+procedure TColorVector.SetItem(aIndex: SizeInt; aValue: TVertexColor);
+begin
+  if (aIndex >= 0) and (aIndex < (System.Length(FList) shl SHIFT)) then
+    FList[aIndex shr SHIFT] := (FList[aIndex shr SHIFT] and not (SizeUInt(3) shl ((aIndex and MASK) shl 1))) or
+                               (SizeUInt(aValue) shl ((aIndex and MASK) shl 1))
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+procedure TColorVector.SetSize(aValue: SizeInt);
+var
+  OldLen: SizeInt;
+begin
+  OldLen := Size;
+  if aValue > OldLen then
+    begin
+      aValue := aValue shr SHIFT + Ord(aValue and MASK <> 0);
+      System.SetLength(FList, aValue);
+      System.FillChar(FList[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
+    end;
+end;
+
+class operator TColorVector.Copy(constref aSrc: TColorVector; var aDst: TColorVector);
+begin
+  aDst.FList := System.Copy(aSrc.FList);
+end;
+
+procedure TColorVector.ClearItems;
+begin
+  if FList <> nil then
+    System.FillChar(FList[0], System.Length(FList) * SizeOf(SizeUInt), 0);
 end;
 
 { TIntPair }
