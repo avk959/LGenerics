@@ -354,12 +354,14 @@ type
 
     TNodeList = array of TNode;
 
+  const
+    NULL_INDEX  = SizeInt(-1);
+
   private
   type
     PAvlTree  = ^TGLiteAvlTree;
 
   const
-    NULL_INDEX  = SizeInt(-1);
     NODE_SIZE   = SizeOf(TNode);
     MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
 
