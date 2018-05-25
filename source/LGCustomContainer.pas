@@ -427,7 +427,7 @@ type
   { TGCustomMap: map abstract ancestor class  }
   generic TGCustomMap<TKey, TValue> = class abstract(TCustomIterable, specialize IGMap<TKey, TValue>)
   {must be  generic TGCustomMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... }
+              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
     TCustomMap       = specialize TGCustomMap<TKey, TValue>;
@@ -566,7 +566,7 @@ type
   { TGCustomMultiMap: multimap abstract ancestor class }
   generic TGCustomMultiMap<TKey, TValue> = class abstract(TCustomIterable)
   {must be  generic TGCustomMultiMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... }
+              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
     TCustomMultiMap  = specialize TGCustomMultiMap<TKey, TValue>;
