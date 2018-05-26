@@ -396,8 +396,7 @@ type
 
     TTree = specialize TGLiteAvlTree<T, TEntry, TCmpRel>;
     PTree = ^TTree;
-  const
-    NULL_INDEX = TTree.NULL_INDEX;
+
   public
   type
     IEnumerable = specialize IGEnumerable<T>;
@@ -1747,9 +1746,9 @@ end;
 
 function TGLiteTreeSet.TReverseEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = NULL_INDEX;
+  NextNode: SizeInt = 0;
 begin
-  if FCurrNode <> NULL_INDEX then
+  if FCurrNode <> 0 then
     NextNode := FTree^.Predecessor(FCurrNode)
   else
     if not FInCycle then
@@ -1757,7 +1756,7 @@ begin
         NextNode := FFirstNode;
         FInCycle := True;
       end;
-  Result := NextNode <> NULL_INDEX;
+  Result := NextNode <> 0;
   if Result then
     FCurrNode := NextNode;
 end;
@@ -1765,7 +1764,7 @@ end;
 procedure TGLiteTreeSet.TReverseEnumerator.Reset;
 begin
   FInCycle := False;
-  FCurrNode := NULL_INDEX;
+  FCurrNode := 0;
 end;
 
 { TGLiteTreeSet.THeadEnumerator }
@@ -1822,9 +1821,9 @@ end;
 
 function TGLiteTreeSet.TTailEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = NULL_INDEX;
+  NextNode: SizeInt = 0;
 begin
-  if FCurrNode <> NULL_INDEX then
+  if FCurrNode <> 0 then
     NextNode := FTree^.Successor(FCurrNode)
   else
     if not FInCycle then
@@ -1832,7 +1831,7 @@ begin
         NextNode := FFirstNode;
         FInCycle := True;
       end;
-  Result := NextNode <> NULL_INDEX;
+  Result := NextNode <> 0;
   if Result then
     FCurrNode := NextNode;
 end;
@@ -1840,7 +1839,7 @@ end;
 procedure TGLiteTreeSet.TTailEnumerator.Reset;
 begin
   FInCycle := False;
-  FCurrNode := NULL_INDEX;
+  FCurrNode := 0;
 end;
 
 { TGLiteTreeSet.TRangeEnumerator }
@@ -2230,13 +2229,13 @@ end;
 function TGLiteTreeSet.RemoveIf(aTest: TTest): SizeInt;
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   Result := Count;
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
@@ -2248,13 +2247,13 @@ end;
 function TGLiteTreeSet.RemoveIf(aTest: TOnTest): SizeInt;
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   Result := Count;
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
@@ -2266,13 +2265,13 @@ end;
 function TGLiteTreeSet.RemoveIf(aTest: TNestTest): SizeInt;
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   Result := Count;
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
@@ -2295,9 +2294,9 @@ begin
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
       List := FTree.NodeList;
-      I := 0;
+      I := 1;
       J := 0;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           begin
             if J = System.Length(Result) then
@@ -2323,9 +2322,9 @@ begin
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
       List := FTree.NodeList;
-      I := 0;
+      I := 1;
       J := 0;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           begin
             if J = System.Length(Result) then
@@ -2351,9 +2350,9 @@ begin
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
       List := FTree.NodeList;
-      I := 0;
+      I := 1;
       J := 0;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           begin
             if J = System.Length(Result) then
@@ -2373,12 +2372,12 @@ end;
 procedure TGLiteTreeSet.RetainAll(aCollection: ICollection);
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aCollection.NonContains(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
@@ -2446,12 +2445,12 @@ end;
 procedure TGLiteTreeSet.Intersect(constref aSet: TGLiteTreeSet);
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aSet.NonContains(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
