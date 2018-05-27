@@ -44,7 +44,7 @@ type
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleUGraph<TVertex, TEdgeData, TVertexEqRel> = class(specialize TGCustomSimpleGraph
+  generic TGSimpleUGraph<TVertex, TEdgeData, TVertexEqRel> = class(specialize TGCustomGraph
     <TVertex, TEdgeData, TVertexEqRel>)
   protected
   type
@@ -71,20 +71,10 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
 
-  var
-    FCompCount: SizeInt;
-    FConnected,
-    FConnectedValid: Boolean;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
-    function  CheckConnected: Boolean; inline;
-    function  FindSeparateCount: SizeInt;
-    function  GetSeparateCount: SizeInt;
-    function  CountPop(aCompIndex: SizeInt): SizeInt;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleUGraph;
-    property  Connected: Boolean read FConnected;
-    property  ConnectedValid: Boolean read FConnectedValid;
   public
     procedure Clear; override;
   { returns True and vertex index, if it was added, False otherwise }
@@ -105,11 +95,12 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  CycleExists(out aCycle: TIntArray): Boolean;
+    function  CycleExistsI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
     function  EulerCycleExists: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntArray;
-  { checks whether the graph is connected; a graph without Items is considered disconnected }
-    function  IsConnected: Boolean; inline;
+
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0}
     function  MakeConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
@@ -123,24 +114,15 @@ type
   { returns a graph constructed from the pairs provided by the vector,
     i.e. each element treates as pair of source - destination }
     function  CreateFromVector(constref aVector: TIntArray): TGSimpleUGraph;
-  { returns index of the connected component that contains v }
-    function  SeparateIndexOf(constref v: TVertex): SizeInt; inline;
-    function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt; inline;
-  { returns number of Items(population) in the connected component that contains v }
-    function  SeparatePop(constref v: TVertex): SizeInt; inline;
-    function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
   { returns graph of connected component that contains v }
     function  SeparateGraph(constref v: TVertex): TGSimpleUGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
   { checks whether the graph is a regular graph (that is, the degree of all its
      Items equal); an empty graph is considered regular }
     function  IsRegular: Boolean;
-    function  IsTree: Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
 
     function  Clone: TGSimpleUGraph;
-  { count of connected components }
-    property  SeparateCount: SizeInt read GetSeparateCount;
   end;
 
   generic TGWeighedEdgeData<TWeight, TEdgeData> = record
@@ -178,6 +160,9 @@ type
 
   protected
   type
+
+    { TWeightEdge }
+
     TWeightEdge = record
       Source,
       Destination: SizeInt;
@@ -188,6 +173,7 @@ type
       class operator < (constref L, R: TWeightEdge): Boolean; inline;
       class operator >=(constref L, R: TWeightEdge): Boolean; inline;
       class operator <=(constref L, R: TWeightEdge): Boolean; inline;
+      class function Construct(s, d: SizeInt; w: TWeight): TWeightEdge; static; inline;
     end;
 
     TEdgeArray   = array of TWeightEdge;
@@ -208,7 +194,6 @@ type
 
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
-
   { Filter-Kruskal minimum spanning tree algorithm}
     TFilterKruskal = record
     private
@@ -496,58 +481,6 @@ begin
     end;
 end;
 
-function TGSimpleUGraph.CheckConnected: Boolean;
-begin
-  Result := SeparateCount = 1;
-end;
-
-function TGSimpleUGraph.FindSeparateCount: SizeInt;
-var
-  Visited: TBitVector;
-  Stack: TIntStack;
-  I, Curr: SizeInt;
-begin
-  Result := 0;
-  Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
-      begin
-        Curr := I;
-        {%H-}Stack.Push(Curr);
-        repeat
-          if not Visited[Curr] then
-            begin
-              Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.CompIdx := Result;
-              for Curr in AdjVerticesI(Curr) do
-                if not Visited[Curr] then
-                  Stack.Push(Curr);
-            end;
-        until not Stack.TryPop(Curr);
-        Inc(Result);
-      end;
-end;
-
-function TGSimpleUGraph.GetSeparateCount: SizeInt;
-begin
-  if not ConnectedValid then
-    begin
-      FCompCount := FindSeparateCount;
-      FConnectedValid := True;
-      FConnected := FCompCount = 1;
-    end;
-  Result := FCompCount;
-end;
-
-function TGSimpleUGraph.CountPop(aCompIndex: SizeInt): SizeInt;
-var
-  I: SizeInt;
-begin
-  Result := 0;
-  for I := 0 to Pred(VertexCount) do
-    Result += Ord(FVertexList.ItemRefs[I]^.CompIdx = aCompIndex);
-end;
-
 function TGSimpleUGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleUGraph;
 var
   Visited: TBitVector;
@@ -771,6 +704,76 @@ begin
   Result := DegreeI(aIndex) = 0;
 end;
 
+function TGSimpleUGraph.CycleExists(out aCycle: TIntArray): Boolean;
+var
+  Stack: TIntStack;
+  Visited: TBitVector;
+  v: TIntArray;
+  Curr, Next: SizeInt;
+begin
+  if IsEmpty then
+    exit(False);
+  Visited.Size := VertexCount;
+  v := CreateIntVector;
+  Curr := 0;
+  repeat
+    if not Visited[Curr] then
+      begin
+        Visited[Curr] := True;
+        for Next in AdjVerticesI(Curr) do
+          if not Visited[Next] then
+            begin
+              Stack.Push(Next);
+              v[Next] := Curr;
+            end
+          else
+            if v[Curr] <> Next then
+              begin
+                aCycle := ChainFromTree(v, Curr);   //////////////
+                System.SetLength(aCycle, Succ(System.Length(aCycle)));
+                aCycle[System.High(aCycle)] := Next;
+                exit(True);
+              end;
+      end;
+  until not Stack.TryPop(Curr);
+  Result := False;
+end;
+
+function TGSimpleUGraph.CycleExistsI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
+var
+  Stack: TIntStack;
+  Visited: TBitVector;
+  v: TIntArray;
+  Curr, Next: SizeInt;
+begin
+  if IsEmpty then
+    exit(False);
+  Visited.Size := VertexCount;
+  v := CreateIntVector;
+  Curr := aIndex;
+  repeat
+    if not Visited[Curr] then
+      begin
+        Visited[Curr] := True;
+        for Next in AdjVerticesI(Curr) do
+          if not Visited[Next] then
+            begin
+              Stack.Push(Next);
+              v[Next] := Curr;
+            end
+          else
+            if (Next = aIndex) and (v[Curr] <> Next) then
+              begin
+                aCycle := ChainFromTree(v, Curr);   //////////////
+                System.SetLength(aCycle, Succ(System.Length(aCycle)));
+                aCycle[System.High(aCycle)] := Next;
+                exit(True);
+              end;
+      end;
+  until not Stack.TryPop(Curr);
+  Result := False;
+end;
+
 function TGSimpleUGraph.EulerCycleExists: Boolean;
 var
   I, d, cd: SizeInt;
@@ -826,13 +829,6 @@ begin
   end;
 end;
 
-function TGSimpleUGraph.IsConnected: Boolean;
-begin
-  if not ConnectedValid then
-    FConnected := CheckConnected;
-  Result := Connected;
-end;
-
 function TGSimpleUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 var
   Visited: TBitVector;
@@ -850,7 +846,6 @@ begin
     if not Visited[I] then
       begin
         Curr := I;
-        {%H-}Stack.Push(Curr);
         repeat
           if not Visited[Curr] then
             begin
@@ -892,7 +887,6 @@ begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   Result := CreateIntVector;
-  {%H-}Stack.Push(aRoot);
   repeat
     if not Visited[aRoot] then
       begin
@@ -921,18 +915,15 @@ begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   Result := CreateIntVector;
-  Queue.Enqueue(aRoot);
-  while Queue{%H-}.TryDequeue(aRoot) do
-    if not Visited[aRoot] then
-      begin
-        Visited[aRoot] := True;
-        for I in AdjVerticesI(aRoot) do
-          if not Visited[I] then
-            begin
-              Result[I] := aRoot;
-              Queue.Enqueue(I);
-            end;
-      end;
+  repeat
+    for I in AdjVerticesI(aRoot) do
+      if not Visited[I] then
+        begin
+          Visited[I] := True;
+          Result[I] := aRoot;
+          Queue.Enqueue(I);
+        end;
+  until not Queue.TryDequeue(aRoot);
 end;
 
 function TGSimpleUGraph.CreateFromVector(constref aVector: TIntArray): TGSimpleUGraph;
@@ -946,34 +937,6 @@ begin
       if Src <> -1 then
         Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeDataPtr(Src, I)^);
     end;
-end;
-
-function TGSimpleUGraph.SeparateIndexOf(constref v: TVertex): SizeInt;
-begin
-   Result := SeparateIndexOfI(FVertexList.IndexOf(v));
-end;
-
-function TGSimpleUGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
-begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  if SeparateCount > 1 then
-    Result := FVertexList.ItemRefs[aVtxIndex]^.CompIdx
-  else
-    Result := 0;
-end;
-
-function TGSimpleUGraph.SeparatePop(constref v: TVertex): SizeInt;
-begin
-  Result := SeparatePopI(FVertexList.IndexOf(v));
-end;
-
-function TGSimpleUGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
-begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  if SeparateCount > 1 then
-    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.CompIdx)
-  else
-    Result := VertexCount;
 end;
 
 function TGSimpleUGraph.SeparateGraph(constref v: TVertex): TGSimpleUGraph;
@@ -1001,11 +964,6 @@ begin
           exit(False);
     end;
   Result := True;
-end;
-
-function TGSimpleUGraph.IsTree: Boolean;
-begin
-  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
 end;
 
 function TGSimpleUGraph.DistinctEdges: TDistinctEdges;
@@ -1061,6 +1019,13 @@ end;
 class operator TGSimpleWeighedUGraph.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <= R.Weight;
+end;
+
+class function TGSimpleWeighedUGraph.TWeightEdge.Construct(s, d: SizeInt; w: TWeight): TWeightEdge;
+begin
+  Result.Source := s;
+  Result.Destination := d;
+  Result.Weight := w;
 end;
 
 { TGSimpleWeighedUGraph.TWeightItem }
@@ -1450,9 +1415,7 @@ begin
   System.SetLength(Result, EdgeCount);
   for e in DistinctEdges do
     begin
-      Result[I].Source := e.Source;
-      Result[I].Destination := e.Destination;
-      Result[I].Weight := e.Data.Weight;
+      Result[I] := TWeightEdge.Construct(e.Source, e.Destination, e.Data.Weight);
       Inc(I);
     end;
 end;

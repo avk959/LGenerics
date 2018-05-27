@@ -43,7 +43,7 @@ type
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
   generic TGSimpleDiGraph<TVertex, TEdgeData, TVertexEqRel> = class(
-    specialize TGCustomSimpleGraph<TVertex, TEdgeData, TVertexEqRel>)
+    specialize TGCustomGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
