@@ -40,7 +40,7 @@ uses
 
 type
 
-  { TGSimpleUGraph is simple sparse undirected graph based on adjacency lists;
+  { TGSimpleUGraph: simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
@@ -151,7 +151,7 @@ type
 
   THandle = LGUtils.THandle;
 
-  { TGSimpleWeighedUGraph simple sparse undirected graph based on adjacency lists;
+  { TGSimpleWeighedUGraph: simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
