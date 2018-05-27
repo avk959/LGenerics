@@ -364,21 +364,26 @@ type
   private
   const
 {$IF DEFINED(CPU64)}
-    SHIFT  = 62;
+    SHIFT: SizeInt    = 62;
+    MASK: SizeInt     = SizeInt($c000000000000000);
+    NOT_MASK: SizeInt = not SizeInt($c000000000000000);
 {$ELSEIF DEFINED(CPU32)}
-    SHIFT  = 30;
+    SHIFT             = 30;
+    MASK: SizeInt     = SizeInt($c0000000);
+    NOT_MASK: SizeInt = not SizeInt($c0000000);
 {$ELSE}
-    SHIFT  = 14;
+    SHIFT: SizeInt    = 14;
+    MASK: SizeInt     = SizeInt($c000);
+    NOT_MASK: SizeInt = not SizeInt($c000);
 {$ENDIF}
-    MASK         = SizeInt(3) shl SHIFT;
-    NOT_MASK     = not MASK;
     ZERO_BALANCE = Low(SizeInt);
+
   type
     PAvlTree  = ^TGLiteAvlTree;
 
   const
-    NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = (SizeInt.MaxValue shr 1) div NODE_SIZE;
+    NODE_SIZE              = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = (SizeInt.MaxValue shr 2) div NODE_SIZE;
 
   public
   type
@@ -421,8 +426,8 @@ type
     procedure BalanceAfterInsert(aNode: SizeInt);
     procedure RemoveNode(aNode: SizeInt);
     procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
-
     property  Root: SizeInt read GetRoot write SetRoot;
+    class constructor Init;
     class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
   public
     function  GetEnumerator: TEnumerator;
@@ -2548,12 +2553,12 @@ end;
 
 procedure TGLiteAvlTree.TNode.SetBalance(aValue: SizeInt);
 begin
-  FParent := (FParent and SizeInt(NOT_MASK)) or ((aValue + 2) shl SHIFT);
+  FParent := (FParent and NOT_MASK) or ((aValue + 2) shl SHIFT);
 end;
 
 procedure TGLiteAvlTree.TNode.SetParent(aValue: SizeInt);
 begin
-  FParent := (FParent and SizeInt(MASK)) or aValue;
+  FParent := (FParent and MASK) or aValue;
 end;
 
 { TGLiteAvlTree.TEnumerator }
@@ -2567,7 +2572,8 @@ procedure TGLiteAvlTree.TEnumerator.Init(aTree: PAvlTree);
 begin
   FTree := aTree;
   FFirstNode := aTree^.Lowest;
-  Reset;
+  FCurrNode := 0;
+  FInCycle := False;
 end;
 
 function TGLiteAvlTree.TEnumerator.MoveNext: Boolean;
@@ -2736,10 +2742,9 @@ procedure TGLiteAvlTree.SwapBalance(L, R: SizeInt);
 var
   b: SizeInt;
 begin
-  b := FNodeList[L].FParent and SizeInt(MASK);
-  FNodeList[L].FParent :=
-    (FNodeList[L].FParent and SizeInt(NOT_MASK)) or (FNodeList[R].FParent and SizeInt(MASK));
-  FNodeList[R].FParent := (FNodeList[R].FParent and SizeInt(NOT_MASK)) or b;
+  b := FNodeList[L].FParent and MASK;
+  FNodeList[L].FParent := (FNodeList[L].FParent and NOT_MASK) or (FNodeList[R].FParent and MASK);
+  FNodeList[R].FParent := (FNodeList[R].FParent and NOT_MASK) or b;
 end;
 
 function TGLiteAvlTree.GetHighest: SizeInt;
@@ -3192,6 +3197,13 @@ begin
     end;
 end;
 
+class constructor TGLiteAvlTree.Init;
+begin
+{$PUSH}{$J+}
+  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
+{$POP}
+end;
+
 class operator TGLiteAvlTree.Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
 begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList);
@@ -3215,7 +3227,10 @@ end;
 
 procedure TGLiteAvlTree.TrimToFit;
 begin
-  System.SetLength(FNodeList, Succ(Count));
+  if Count > 0 then
+    System.SetLength(FNodeList, Succ(Count))
+  else
+    Clear;
 end;
 
 function TGLiteAvlTree.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
