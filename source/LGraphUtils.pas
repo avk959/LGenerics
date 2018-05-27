@@ -445,6 +445,7 @@ type
 
   public
     class function ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
+    class function CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
     constructor Create;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     function  CreateIntVector: TIntArray;
@@ -1491,6 +1492,27 @@ begin
         raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
       aIndex := aTree[aIndex];
     end;
+  Result := Stack.ToArray;
+  TIntHelper.Reverse(Result);
+end;
+
+class function TGCustomGraph.CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray;
+var
+  Stack: TIntStack;
+  I: SizeInt;
+begin
+  I := aLast;
+  while I >= 0 do
+    begin
+      if I < System.Length(aTree) then
+        Stack.Push(I)
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+      if I = aFirst then
+        break;
+      I := aTree[I];
+    end;
+  Stack.Push(aLast);
   Result := Stack.ToArray;
   TIntHelper.Reverse(Result);
 end;

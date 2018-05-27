@@ -96,7 +96,7 @@ type
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
     function  CycleExists(out aCycle: TIntArray): Boolean;
-    function  CycleExistsI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
+    //function  CycleExistsI(aSrc: SizeInt; out aCycle: TIntArray): Boolean;
     function  EulerCycleExists: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntArray;
@@ -729,9 +729,7 @@ begin
           else
             if v[Curr] <> Next then
               begin
-                aCycle := ChainFromTree(v, Curr);   //////////////
-                System.SetLength(aCycle, Succ(System.Length(aCycle)));
-                aCycle[System.High(aCycle)] := Next;
+                aCycle := CycleChainFromTree(v, Next, Curr);
                 exit(True);
               end;
       end;
@@ -739,40 +737,38 @@ begin
   Result := False;
 end;
 
-function TGSimpleUGraph.CycleExistsI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
-var
-  Stack: TIntStack;
-  Visited: TBitVector;
-  v: TIntArray;
-  Curr, Next: SizeInt;
-begin
-  if IsEmpty then
-    exit(False);
-  Visited.Size := VertexCount;
-  v := CreateIntVector;
-  Curr := aIndex;
-  repeat
-    if not Visited[Curr] then
-      begin
-        Visited[Curr] := True;
-        for Next in AdjVerticesI(Curr) do
-          if not Visited[Next] then
-            begin
-              Stack.Push(Next);
-              v[Next] := Curr;
-            end
-          else
-            if (Next = aIndex) and (v[Curr] <> Next) then
-              begin
-                aCycle := ChainFromTree(v, Curr);   //////////////
-                System.SetLength(aCycle, Succ(System.Length(aCycle)));
-                aCycle[System.High(aCycle)] := Next;
-                exit(True);
-              end;
-      end;
-  until not Stack.TryPop(Curr);
-  Result := False;
-end;
+//function TGSimpleUGraph.CycleExistsI(aSrc: SizeInt; out aCycle: TIntArray): Boolean;
+//var
+//  Stack: TIntStack;
+//  Visited: TBitVector;
+//  v: TIntArray;
+//  Curr, Next: SizeInt;
+//begin
+//  if IsEmpty then
+//    exit(False);
+//  Visited.Size := VertexCount;
+//  v := CreateIntVector;
+//  Curr := aSrc;
+//  repeat
+//    if not Visited[Curr] then
+//      begin
+//        Visited[Curr] := True;
+//        for Next in AdjVerticesI(Curr) do
+//          if not Visited[Next] then
+//            begin
+//              Stack.Push(Next);
+//              v[Next] := Curr;
+//            end
+//          else
+//            if (v[Curr] <> Next) and (Next = aSrc) then
+//              begin
+//                aCycle := CycleChainFromTree(v, Next, Curr);
+//                exit(True);
+//              end;
+//      end;
+//  until not Stack.TryPop(Curr);
+//  Result := False;
+//end;
 
 function TGSimpleUGraph.EulerCycleExists: Boolean;
 var
