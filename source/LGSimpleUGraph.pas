@@ -226,6 +226,10 @@ type
     function  DijkstraMap(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
     function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+
+    function  FordBellMap(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+    function  FordBellMap(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
+
     function  FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
@@ -347,6 +351,14 @@ type
     TWeight.MaxValue if the vertex is unreachable; used Dijkstra's algorithm  }
     function  FindMinPaths(constref aSrc: TVertex): TWeightArray; inline;
     function  FindMinPathsI(aSrc: SizeInt): TWeightArray; inline;
+  { finds the shortest paths from a given vertex to the remaining vertices in same connected component;
+    the weights of edges may be negative;
+    returns False if there is a negative weight cycle;
+    aWeights contains in the corresponding component the weight of the minimum path to the vertex or
+    TWeight.MaxValue if the vertex is unreachable; used Bellman–Ford algorithm's algorithm  }
+    function  FindMinPathsFord(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsFordI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean; inline;
+
   { same as above and in aPathTree returns paths }
     function  FindMinPaths(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function  FindMinPathsI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; inline;
@@ -1320,6 +1332,71 @@ begin
   aPath := nil;
 end;
 
+function TGSimpleWeighedUGraph.FordBellMap(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+var
+  e: TEdge;
+  Relax: TWeight;
+  Relaxed: Boolean;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  aWeights := CreateWeightVector;
+  aWeights[aSrc] := 0;
+  while True do
+    begin
+      Relaxed := False;
+      for e in DistinctEdges do
+        if aWeights[e.Source] < TWeight.MaxValue then
+          begin
+            Relax := aWeights[e.Source] + e.Data.Weight;
+            if aWeights[e.Destination] > Relax then
+              begin
+                aWeights[e.Destination] := Relax;
+                Relaxed := True;
+              end;
+          end;
+      if not Relaxed then
+        break;
+    end;
+  for e in DistinctEdges do
+    if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
+      exit(False);
+  Result := True;
+end;
+
+function TGSimpleWeighedUGraph.FordBellMap(aSrc: SizeInt; out aPathTree: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+var
+  e: TEdge;
+  Relax: TWeight;
+  Relaxed: Boolean;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  aWeights := CreateWeightVector;
+  aPathTree := FGraph.CreateIntVector;
+  aWeights[aSrc] := 0;
+  while True do
+    begin
+      Relaxed := False;
+      for e in DistinctEdges do
+        if aWeights[e.Source] < TWeight.MaxValue then
+          begin
+            Relax := aWeights[e.Source] + e.Data.Weight;
+            if aWeights[e.Destination] > Relax then
+              begin
+                aWeights[e.Destination] := Relax;
+                aPathTree[e.Destination] := e.Source;
+                Relaxed := True;
+              end;
+          end;
+      if not Relaxed then
+        break;
+    end;
+  for e in DistinctEdges do
+    if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
+      exit(False);
+  Result := True;
+end;
+
 function TGSimpleWeighedUGraph.FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
   FilterKruskal: TFilterKruskal;
@@ -1826,6 +1903,16 @@ end;
 function TGSimpleWeighedUGraph.FindMinPathsI(aSrc: SizeInt): TWeightArray;
 begin
   Result := DijkstraMap(aSrc);
+end;
+
+function TGSimpleWeighedUGraph.FindMinPathsFord(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+begin
+  Result := FordBellMap(FGraph.IndexOf(aSrc), aWeights);
+end;
+
+function TGSimpleWeighedUGraph.FindMinPathsFordI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+begin
+  Result := FordBellMap(aSrc, aWeights);
 end;
 
 function TGSimpleWeighedUGraph.FindMinPaths(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
