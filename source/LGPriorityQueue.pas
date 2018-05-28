@@ -951,8 +951,8 @@ type
     function  PeekHead: THandle; inline;                    // O(1)
     function  TryPeekHead(out aValue: THandle): Boolean; inline;
     function  Value(aHandle: THandle): T; inline;
-    procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              IncreaseKey
-                                                                    //amortized O(logN) DecreaseKey
+    procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              DecreaseKey
+                                                                    //amortized O(logN) IncreaseKey
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
   { note: after Merge all handles from aHeap will remain valid }
     function  Merge(aHeap: TGLiteComparablePairHeapMin): SizeInt;// O(1)
