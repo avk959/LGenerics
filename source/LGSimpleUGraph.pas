@@ -143,20 +143,21 @@ type
   // but is impossible: #0033788
   public
   type
-    TWeighedGraph  = TGSimpleWeighedUGraph;
-    TWeightArray   = array of TWeight;
-    TWeEdgeData    = specialize TGWeighedEdgeData<TWeight, TEdgeData>;
-    TGraph         = specialize TGSimpleUGraph<TVertex, TWeEdgeData, TVertexEqRel>;
-    TEdge          = TGraph.TEdge;
-    TEdges         = TGraph.TEdges;
-    TDistinctEdges = TGraph.TDistinctEdges;
-    TAdjVertices   = TGraph.TAdjVertices;
-    TIncidentEdges = TGraph.TIncidentEdges;
-    TOnAddEdge     = TGraph.TOnAddEdge;
-    TOnReadVertex  = TGraph.TOnReadVertex;
-    TOnWriteVertex = TGraph.TOnWriteVertex;
-    TOnReadData    = TGraph.TOnReadData;
-    TOnWriteData   = TGraph.TOnWriteData;
+    TWeighedGraph   = TGSimpleWeighedUGraph;
+    TWeightArray    = array of TWeight;
+    TWeEdgeData     = specialize TGWeighedEdgeData<TWeight, TEdgeData>;
+    TGraph          = specialize TGSimpleUGraph<TVertex, TWeEdgeData, TVertexEqRel>;
+    TEdge           = TGraph.TEdge;
+    TEdges          = TGraph.TEdges;
+    TDistinctEdges  = TGraph.TDistinctEdges;
+    TEdgeEnumerator = TGraph.TEdgeEnumerator;
+    TAdjVertices    = TGraph.TAdjVertices;
+    TIncidentEdges  = TGraph.TIncidentEdges;
+    TOnAddEdge      = TGraph.TOnAddEdge;
+    TOnReadVertex   = TGraph.TOnReadVertex;
+    TOnWriteVertex  = TGraph.TOnWriteVertex;
+    TOnReadData     = TGraph.TOnReadData;
+    TOnWriteData    = TGraph.TOnWriteData;
 
   protected
   type
@@ -355,7 +356,7 @@ type
     the weights of edges may be negative;
     returns False if there is a negative weight cycle;
     aWeights contains in the corresponding component the weight of the minimum path to the vertex or
-    TWeight.MaxValue if the vertex is unreachable; used Bellman–Ford algorithm's algorithm  }
+    TWeight.MaxValue if the vertex is unreachable; used Bellman–Ford algorithm  }
     function  FindMinPathsFord(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function  FindMinPathsFordI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean; inline;
 
@@ -1335,31 +1336,41 @@ end;
 function TGSimpleWeighedUGraph.FordBellMap(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 var
   e: TEdge;
+  Enum: TEdgeEnumerator;
   Relax: TWeight;
+  I: SizeInt;
   Relaxed: Boolean;
 begin
   FGraph.CheckIndexRange(aSrc);
   aWeights := CreateWeightVector;
+  Enum := Edges.GetEnumerator;
   aWeights[aSrc] := 0;
   while True do
     begin
       Relaxed := False;
-      for e in DistinctEdges do
-        if aWeights[e.Source] < TWeight.MaxValue then
-          begin
-            Relax := aWeights[e.Source] + e.Data.Weight;
-            if aWeights[e.Destination] > Relax then
-              begin
-                aWeights[e.Destination] := Relax;
-                Relaxed := True;
-              end;
-          end;
+      while Enum.MoveNext do
+        begin
+          e := Enum.Current;
+          if aWeights[e.Source] < TWeight.MaxValue then
+            begin
+              Relax := aWeights[e.Source] + e.Data.Weight;
+              if aWeights[e.Destination] > Relax then
+                begin
+                  aWeights[e.Destination] := Relax;
+                  Relaxed := True;
+                end;
+            end;
+        end;
+      Enum.Reset;
       if not Relaxed then
         break;
     end;
-  for e in DistinctEdges do
-    if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
-      exit(False);
+  while Enum.MoveNext do
+    begin
+      e := Enum.Current;
+      if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
+        exit(False);
+    end;
   Result := True;
 end;
 
@@ -1367,33 +1378,42 @@ function TGSimpleWeighedUGraph.FordBellMap(aSrc: SizeInt; out aPathTree: TIntArr
   out aWeights: TWeightArray): Boolean;
 var
   e: TEdge;
+  Enum: TEdgeEnumerator;
   Relax: TWeight;
   Relaxed: Boolean;
 begin
   FGraph.CheckIndexRange(aSrc);
   aWeights := CreateWeightVector;
   aPathTree := FGraph.CreateIntVector;
+  Enum := Edges.GetEnumerator;
   aWeights[aSrc] := 0;
   while True do
     begin
       Relaxed := False;
-      for e in DistinctEdges do
-        if aWeights[e.Source] < TWeight.MaxValue then
-          begin
-            Relax := aWeights[e.Source] + e.Data.Weight;
-            if aWeights[e.Destination] > Relax then
-              begin
-                aWeights[e.Destination] := Relax;
-                aPathTree[e.Destination] := e.Source;
-                Relaxed := True;
-              end;
-          end;
+      while Enum.MoveNext do
+        begin
+          e := Enum.Current;
+          if aWeights[e.Source] < TWeight.MaxValue then
+            begin
+              Relax := aWeights[e.Source] + e.Data.Weight;
+              if aWeights[e.Destination] > Relax then
+                begin
+                  aWeights[e.Destination] := Relax;
+                  aPathTree[e.Destination] := e.Source;
+                  Relaxed := True;
+                end;
+            end;
+        end;
       if not Relaxed then
         break;
+      Enum.Reset;
     end;
-  for e in DistinctEdges do
-    if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
-      exit(False);
+  while Enum.MoveNext do
+    begin
+      e := Enum.Current;
+      if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
+        exit(False);
+    end;
   Result := True;
 end;
 
