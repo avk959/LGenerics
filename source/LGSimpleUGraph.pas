@@ -160,9 +160,6 @@ type
 
   protected
   type
-
-    { TWeightEdge }
-
     TWeightEdge = record
       Source,
       Destination: SizeInt;
@@ -209,7 +206,7 @@ type
       function  Split(L, R: SizeInt): SizeInt;
       procedure FilterKruskal(L, R: SizeInt);
     public
-      function FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
+      function  FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
     end;
 
   class var
@@ -1127,7 +1124,7 @@ begin
   FTree := aGraph.FGraph.CreateIntVector;
   FCount := aGraph.VertexCount;
   FDsu.Size := FCount;
-  FTreshold := Succ(FCount); // ??? FCount shr 1
+  FTreshold := Pred(FCount); // ??? FCount shr 1
   FWeight := 0;
   FFound := 0;
   FilterKruskal(0, System.High(FEdges));
@@ -1411,7 +1408,9 @@ begin
   System.SetLength(Result, EdgeCount);
   for e in DistinctEdges do
     begin
-      Result[I] := TWeightEdge.Construct(e.Source, e.Destination, e.Data.Weight);
+      Result[I].Source := e.Source;
+      Result[I].Destination := e.Destination;
+      Result[I].Weight := e.Data.Weight;
       Inc(I);
     end;
 end;
