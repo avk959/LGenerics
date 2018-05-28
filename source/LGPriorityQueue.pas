@@ -182,6 +182,7 @@ type
     procedure SiftDown;
     procedure FloatUp(aIndex: SizeInt);
     function  DequeueItem: T;
+    property  Items: TBuffer.TArray read FBuffer.FItems;
     class function DoCompare(constref L, R: T): SizeInt; static;
   public
   type
@@ -841,7 +842,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TGLitePairingHeap implements maximizing priority queue;
+  { TGLiteComparablePairHeapMin implements minimizing priority queue;
       functor TCmpRel (comparision relation) must provide
         class function Compare([const[ref]] L, R: T): SizeInt; }
   generic TGLiteComparablePairHeapMin<T> = record
@@ -1593,19 +1594,18 @@ begin
         begin
           CurrIdx := I;
           NextIdx := Succ(I shl 1);
-          v := TFake(FBuffer.FItems[CurrIdx]);
+          v := TFake(Items[CurrIdx]);
           while NextIdx <= HighIdx do
             begin
-              if(Succ(NextIdx) <= HighIdx) and
-                (TCmpRel.Compare(FBuffer.FItems[NextIdx], FBuffer.FItems[Succ(NextIdx)]) < 0)then
+              if (Succ(NextIdx) <= HighIdx) and (TCmpRel.Compare(Items[NextIdx], Items[Succ(NextIdx)]) < 0)then
                 Inc(NextIdx);
-              if TCmpRel.Compare(T(v), FBuffer.FItems[NextIdx]) >= 0 then
+              if TCmpRel.Compare(T(v), Items[NextIdx]) >= 0 then
                 break;
-              TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+              TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
               CurrIdx := NextIdx;
               NextIdx := Succ(NextIdx shl 1);
             end;
-          TFake(FBuffer.FItems[CurrIdx]) := v;
+          TFake(Items[CurrIdx]) := v;
         end;
     end;
 end;
@@ -1620,20 +1620,19 @@ begin
     begin
       CurrIdx := 0;
       NextIdx := 1;
-      v := TFake(FBuffer.FItems[0]);
+      v := TFake(Items[0]);
       while NextIdx <= HighIdx do
         begin
-          if(Succ(NextIdx) <= HighIdx) and
-            (TCmpRel.Compare(FBuffer.FItems[NextIdx], FBuffer.FItems[Succ(NextIdx)]) < 0) then
+          if (Succ(NextIdx) <= HighIdx) and (TCmpRel.Compare(Items[NextIdx], Items[Succ(NextIdx)]) < 0) then
             Inc(NextIdx);
-          TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+          TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
           CurrIdx := NextIdx;
           NextIdx := Succ(NextIdx shl 1);
         end;
       NextIdx := Pred(CurrIdx) shr 1;
-      while (CurrIdx > 0) and (TCmpRel.Compare(T(v), FBuffer.FItems[NextIdx]) > 0) do
+      while (CurrIdx > 0) and (TCmpRel.Compare(T(v), Items[NextIdx]) > 0) do
         begin
-          TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+          TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
           CurrIdx := NextIdx;
           NextIdx := Pred(NextIdx) shr 1;
         end;
@@ -1650,13 +1649,13 @@ begin
     begin
       ParentIdx := Pred(aIndex) shr 1;
       v := TFake(FBuffer.FItems[aIndex]);
-      while(aIndex > 0) and (TCmpRel.Compare(T(v), FBuffer.FItems[ParentIdx]) > 0) do
+      while(aIndex > 0) and (TCmpRel.Compare(T(v), Items[ParentIdx]) > 0) do
         begin
-          TFake(FBuffer.FItems[aIndex]) := TFake(FBuffer.FItems[ParentIdx]);
+          TFake(Items[aIndex]) := TFake(Items[ParentIdx]);
           aIndex := ParentIdx;
           ParentIdx := Pred(ParentIdx) shr 1;
         end;
-      TFake(FBuffer.FItems[aIndex]) := v;
+      TFake(Items[aIndex]) := v;
     end;
 end;
 
@@ -1666,8 +1665,8 @@ begin
   Dec(FBuffer.FCount);
   if Count > 0 then
     begin
-      FBuffer.FItems[0] := FBuffer.FItems[Count];
-      FBuffer.FItems[Count] := Default(T);
+      Items[0] := Items[Count];
+      Items[Count] := Default(T);
       SiftDown;
     end
   else
