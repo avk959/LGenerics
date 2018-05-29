@@ -2675,7 +2675,7 @@ begin
       if Root = Last then
         Root := aNode;
       Parent := FNodes[aNode].Parent;
-      if Parent > 0 then
+      if Parent <> 0 then
         begin
           if FNodes[Parent].Left = Last then
             FNodes[Parent].Left := aNode
