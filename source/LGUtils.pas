@@ -91,6 +91,7 @@ type
     class function ValueIsNil(constref aValue): Boolean; static;
     class operator Initialize(var o: TGOptional<T>); inline;
   public
+    class operator Implicit(constref aValue: T): TGOptional<T>; inline;
     procedure Assign(constref aValue: T); inline;
     function  OrElseDefault: T; inline;
     function  OrElse(constref aValue: T): T; inline;
@@ -322,6 +323,8 @@ type
     Key: TKey;
     Value: TValue;
   end;
+
+  //todo: -> IGSet
 
   IGMap<TKey, TValue> = interface{(IGContainer<TGMapEntry<TKey, TValue>>)}
   ['{67DBDBD2-D54C-4E6E-9BE6-ACDA0A40B63F}']
@@ -568,6 +571,11 @@ begin
     end
   else
     Result := False;
+end;
+
+class operator TGOptional<T>.Implicit(constref aValue: T): TGOptional<T>;
+begin
+  Result.Assign(aValue);
 end;
 
 class operator TGOptional<T>.Initialize(var o: TGOptional<T>);
