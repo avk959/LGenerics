@@ -396,7 +396,6 @@ type
     class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
     class operator =(constref L, R: TGLiteHashSetLP): Boolean; inline;
     class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
-    class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
     function  MinLoadFactor: Single; inline;
@@ -1303,22 +1302,23 @@ end;
 
 class operator TGLiteHashSetLP. - (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
 var
-  Tmp: TGLiteHashSetLP;
+  tmp: TGLiteHashSetLP;
+  v: T;
 begin
   if @Result = @L then
     Result.Subtract(R)
   else
     if @Result = @R then
       begin
-        Tmp := R;
-        Result := L;
-        Result.Subtract(Tmp)
+        for v in L do
+          if R.NonContains(v) then
+            tmp.Add(v);
+        Result := tmp;
       end
     else
-      begin
-        Result := L;
-        Result.Subtract(R);
-      end;
+      for v in L do
+        if R.NonContains(v) then
+          Result.Add(v);
 end;
 
 class operator TGLiteHashSetLP. * (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
@@ -1357,11 +1357,6 @@ end;
 class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
 begin
   Result := L.IsSubset(R);
-end;
-
-class operator TGLiteHashSetLP.in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean;
-begin
-  Result := aSet.Contains(aValue);
 end;
 
 function TGLiteHashSetLP.DefaultLoadFactor: Single;
