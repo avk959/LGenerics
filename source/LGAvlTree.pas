@@ -2777,8 +2777,6 @@ begin
           Curr := FNodes[Curr].Left;
         end;
     end;
-    while FNodes[Result].Left <> 0 do
-      Result := FNodes[Result].Left;
 end;
 
 function TGLiteAvlTree.FindInsertPos(constref aKey: TKey): SizeInt;
