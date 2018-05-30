@@ -1439,7 +1439,7 @@ begin
               begin
                 Relaxed := p^.Data.Weight + Item.Weight;
                 Handles[p^.Key] := Queue.Insert(TAStarItem.Construct(
-                  Relaxed + aHeur(FGraph[aSrc], FGraph[aDst]), Relaxed, p^.Key));
+                  Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
                 Tree[p^.Key] := Item.Index;
               end
             else
@@ -1449,7 +1449,7 @@ begin
                   if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
                     begin
                       Queue.Update(Handles[p^.Key], TAStarItem.Construct(
-                        Relaxed + aHeur(FGraph[aSrc], FGraph[aDst]), Relaxed, p^.Key));
+                        Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
                 end;
