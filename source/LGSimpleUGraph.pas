@@ -1768,7 +1768,7 @@ end;
 
 function TGWeighedUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
 begin
-  Result := FGraph.RemoveVertex(aIndex);
+  Result := FGraph.RemoveVertexI(aIndex);
 end;
 
 function TGWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight;
