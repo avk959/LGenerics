@@ -1672,7 +1672,7 @@ end;
 
 procedure TGCustomGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData);
 begin
-  SetEdgeDataI( aSrc, aDst, aValue);
+  SetEdgeDataI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst), aValue);
 end;
 
 procedure TGCustomGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData);
