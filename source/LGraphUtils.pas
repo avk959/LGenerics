@@ -494,15 +494,16 @@ type
     belonging to the fractions is returned in v(0 or 1) }
     function  IsBipartite(out v: TShortArray): Boolean;
 
-  { returns the length of the shortest path between the aSrc and aDst(in the sense of the number of edges),
+  { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns a vector containing in the corresponding components the length of shortest path from aRoot
-    (in the sense of the number of edges)}
+    (in sense 'edges count')}
     function  FindMinPathLenMap(constref aRoot: TVertex): TIntArray; inline;
     function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray;
-  { returns a vector containing chain of indices of found shortest path(empty if path does not exists) }
+  { returns a vector containing chain of indices of found shortest path(in sense 'edges count'),
+   (empty if path does not exists) }
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 
@@ -1366,7 +1367,7 @@ end;
 
 function TGCustomGraph.TEdgeEnumerator.GetCurrent: TEdge;
 begin
-  Result.Init(FCurrIndex, FEnum.Current);
+  Result{%H-}.Init(FCurrIndex, FEnum.Current);
 end;
 
 function TGCustomGraph.TEdgeEnumerator.MoveNext: Boolean;
