@@ -63,6 +63,32 @@ type
   generic TGNestReadStream<T>  = function(aStream: TStream): T is nested;
   generic TGNestWriteStream<T> = procedure(aStream: TStream; constref aValue: T) is nested;
 
+  { TGSinglePoint: labeled point with single coordinates;
+    functor TEqRel must provide:
+      class function HashCode([const[ref]] aValue: T): SizeInt;
+      class function Equal([const[ref]] L, R: T): Boolean; }
+  generic TGSinglePoint<T, TEqRel> = record
+    Tag: T;
+    X, Y: Single;
+    class function Construct(aTag: T; aX, aY: Single): TGSinglePoint; static; inline;
+    class function Distance(constref aSrc, aDst: TGSinglePoint): Single; static;inline;
+    class function HashCode(constref aValue: TGSinglePoint): SizeInt; static; inline;
+    class function Equal(constref L, R: TGSinglePoint): Boolean; static; inline;
+  end;
+
+  { TGDoublePoint: labeled point with double coordinates;
+    functor TEqRel must provide:
+      class function HashCode([const[ref]] aValue: T): SizeInt;
+      class function Equal([const[ref]] L, R: T): Boolean; }
+  generic TGDoublePoint<T, TEqRel> = record
+    Tag: T;
+    X, Y: Double;
+    class function Construct(aTag: T; aX, aY: Double): TGDoublePoint; static; inline;
+    class function Distance(constref aSrc, aDst: TGDoublePoint): Double; static; inline;
+    class function HashCode(constref aValue: TGDoublePoint): SizeInt; static; inline;
+    class function Equal(constref L, R: TGDoublePoint): Boolean; static; inline;
+  end;
+
   { TDisjointSetUnion }
 
   TDisjointSetUnion = record
@@ -530,6 +556,54 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
+
+{ TGSinglePoint }
+
+class function TGSinglePoint.Construct(aTag: T; aX, aY: Single): TGSinglePoint;
+begin
+  Result.Tag := aTag;
+  Result.X := aX;
+  Result.Y := aY;
+end;
+
+class function TGSinglePoint.Distance(constref aSrc, aDst: TGSinglePoint): Single;
+begin
+  Result := Sqrt((aDst.X - aSrc.X)*(aDst.X - aSrc.X) + (aDst.Y - aSrc.Y)*(aDst.Y - aSrc.Y));
+end;
+
+class function TGSinglePoint.HashCode(constref aValue: TGSinglePoint): SizeInt;
+begin
+  Result := TEqRel.HashCode(aValue.Tag);
+end;
+
+class function TGSinglePoint.Equal(constref L, R: TGSinglePoint): Boolean;
+begin
+  Result := TEqRel.Equal(L.Tag, R.Tag);
+end;
+
+{ TGDoublePoint }
+
+class function TGDoublePoint.Construct(aTag: T; aX, aY: Double): TGDoublePoint;
+begin
+  Result.Tag := aTag;
+  Result.X := aX;
+  Result.Y := aY;
+end;
+
+class function TGDoublePoint.Distance(constref aSrc, aDst: TGDoublePoint): Double;
+begin
+  Result := Sqrt((aDst.X - aSrc.X)*(aDst.X - aSrc.X) + (aDst.Y - aSrc.Y)*(aDst.Y - aSrc.Y));
+end;
+
+class function TGDoublePoint.HashCode(constref aValue: TGDoublePoint): SizeInt;
+begin
+  Result := TEqRel.HashCode(aValue.Tag);
+end;
+
+class function TGDoublePoint.Equal(constref L, R: TGDoublePoint): Boolean;
+begin
+  Result := TEqRel.Equal(L.Tag, R.Tag);
+end;
 
 { TDisjointSetUnion }
 
