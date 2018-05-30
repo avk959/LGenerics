@@ -55,7 +55,7 @@ type
   TOnIntVisit  = procedure (aValue: SizeInt) of object;
   TOnIntTest   = function (aValue: SizeInt): Boolean of object;
 
-  generic TGOnAddEdge<T>       = procedure(aSrc, aDst: SizeInt; aData: Pointer) of object;
+  generic TGOnAddEdge<T>       = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
   generic TGOnReadStream<T>    = function(aStream: TStream): T of object;
   generic TGOnWriteStream<T>   = procedure(aStream: TStream; constref aValue: T) of object;
   generic TGReadStream<T>      = function(aStream: TStream): T;
@@ -365,7 +365,7 @@ type
     TNestReadVertex  = specialize TGNestReadStream<TVertex>;
     TNestWriteVertex = specialize TGNestWriteStream<TVertex>;
 
-    TOnAddEdge       = specialize TGOnAddEdge<TEdgeData>;
+    TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
 
     TOnReadData      = specialize TGOnReadStream<TEdgeData>;
     TOnWriteData     = specialize TGOnWriteStream<TEdgeData>;
