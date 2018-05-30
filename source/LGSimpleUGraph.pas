@@ -231,9 +231,11 @@ type
   class var
     CFInfiniteWeight: TWeight;
     CFZeroWeight: TWeight;
+  protected
+  class var
     CFData: TEdgeData;
 
-  protected
+  var
     FGraph: TGraph;
     function  GetEdgeCount: SizeInt; inline;
     function  GetTitle: string; inline;
@@ -262,7 +264,6 @@ type
     class function Min(const L, R: TWeight): TWeight; static; inline;
     class constructor Init;
   public
-
     class property InfiniteWeight: TWeight read CFInfiniteWeight;
     class property ZeroWeight: TWeight read CFZeroWeight;
 
@@ -1415,7 +1416,7 @@ var
   Queue: TAStarHeap;
   Handles: THandleArray;
   Tree: TIntArray;
-  Actual, Implied: TWeight;
+  CurrWeight: TWeight;
   Item: TRankItem;
   p: PAdjItem;
 begin
@@ -1436,19 +1437,19 @@ begin
           begin
             if Handles[p^.Key] = INVALID_HANDLE then
               begin
-                Actual := p^.Data.Weight + Item.Weight;
+                CurrWeight := p^.Data.Weight + Item.Weight;
                 Handles[p^.Key] := Queue.Insert(TRankItem.Construct(
-                  Actual + aHeur(FGraph[p^.Key], FGraph[aDst]), Actual, p^.Key));
+                  CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]), CurrWeight, p^.Key));
                 Tree[p^.Key] := Item.Index;
               end
             else
               if not Visited[p^.Key] then
                 begin
-                  Actual := Item.Weight + p^.Data.Weight;
-                  Implied := aHeur(FGraph[p^.Key], FGraph[aDst]) + Actual;
-                  if Implied < Queue.Value(Handles[p^.Key]).Rank then
+                  CurrWeight := Item.Weight + p^.Data.Weight;
+                  if CurrWeight < Queue.Value(Handles[p^.Key]).Weight then
                     begin
-                      Queue.Update(Handles[p^.Key], TRankItem.Construct(Implied, Actual, p^.Key));
+                      Queue.Update(Handles[p^.Key], TRankItem.Construct(
+                        CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]), CurrWeight, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
                 end;
