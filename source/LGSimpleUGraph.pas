@@ -133,17 +133,19 @@ type
 
   THandle = LGUtils.THandle;
 
-  { TGSimpleWeighedUGraph: simple sparse undirected graph based on adjacency lists;
+  { TGWeighedUGraph: simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
-      TWeight must have defined comparision operators and MaxValue }
-  generic TGSimpleWeighedUGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class
+      TWeight must have defined comparision operators and property MaxValue,
+      which used as infinity weight value;
+      Default(TWeight) used as zero weight value }
+  generic TGWeighedUGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class
   // must be class(specialize TGSimpleUGraph<TVertex, specialize TGWeighedEdgeData<TWeight, TEdgeData>, TVertexEqRel>)
-  // but is impossible: #0033788
+  // but it is impossible: see #0033788
   public
   type
-    TWeighedGraph   = TGSimpleWeighedUGraph;
+    TWeighedGraph   = TGWeighedUGraph;
     TWeightArray    = array of TWeight;
     TWeEdgeData     = specialize TGWeighedEdgeData<TWeight, TEdgeData>;
     TGraph          = specialize TGSimpleUGraph<TVertex, TWeEdgeData, TVertexEqRel>;
@@ -158,6 +160,7 @@ type
     TOnWriteVertex  = TGraph.TOnWriteVertex;
     TOnReadData     = TGraph.TOnReadData;
     TOnWriteData    = TGraph.TOnWriteData;
+    TOnHeuristic    = function(constref aSrc, aDst: TVertex): TWeight of object;
 
   protected
   type
@@ -187,12 +190,27 @@ type
       class operator < (constref L, R: TWeightItem): Boolean; inline;
       class operator >=(constref L, R: TWeightItem): Boolean; inline;
       class operator <=(constref L, R: TWeightItem): Boolean; inline;
-      class function Construct(w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
+      class function Construct(constref w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
+    end;
+
+    TAStarItem = record
+      Score,
+      Weight: TWeight;
+      Index: SizeInt;
+      class operator = (constref L, R: TAStarItem): Boolean; inline;
+      class operator <>(constref L, R: TAStarItem): Boolean; inline;
+      class operator > (constref L, R: TAStarItem): Boolean; inline;
+      class operator < (constref L, R: TAStarItem): Boolean; inline;
+      class operator >=(constref L, R: TAStarItem): Boolean; inline;
+      class operator <=(constref L, R: TAStarItem): Boolean; inline;
+      class function Construct(constref aScore, aWeight: TWeight; aIndex: SizeInt): TAStarItem; static; inline;
     end;
 
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
-  { Filter-Kruskal minimum spanning tree algorithm}
+    TAStarHeap   = specialize TGLiteComparablePairHeapMin<TAStarItem>;
+
+  { todo: Filter-Kruskal minimum spanning tree algorithm }
     TFilterKruskal = record
     private
     var
@@ -209,11 +227,13 @@ type
     public
       function  FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
     end;
-
+  strict private
   class var
+    CFInfiniteWeight: TWeight;
+    CFZeroWeight: TWeight;
     CFData: TEdgeData;
 
-  var
+  protected
     FGraph: TGraph;
     function  GetEdgeCount: SizeInt; inline;
     function  GetTitle: string; inline;
@@ -223,13 +243,16 @@ type
     function  GetSeparateCount: SizeInt; inline;
     procedure SetTitle(const aValue: string); inline;
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
-    function  DijkstraMap(aSrc: SizeInt): TWeightArray;
-    function  DijkstraMap(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+    function  DijkstraSssp(aSrc: SizeInt): TWeightArray;
+    function  DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+  { Dijkstra's pathfinding algorithm }
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
     function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
-
-    function  FordBellMap(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-    function  FordBellMap(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
+  { A* pathfinding algorithm }
+    function  AStarPath(aSrc, aDst: SizeInt; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight;
+  { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
+    function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+    function  FordBellman(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
 
     function  FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
@@ -237,7 +260,12 @@ type
     function  CreateWeightVector: TWeightArray;
     function  CreateEdgeVector: TEdgeArray;
     class function Min(const L, R: TWeight): TWeight; static; inline;
+    class constructor Init;
   public
+
+    class property InfiniteWeight: TWeight read CFInfiniteWeight;
+    class property ZeroWeight: TWeight read CFZeroWeight;
+
     constructor Create;
     constructor Create(g: TGraph);
     destructor Destroy; override;
@@ -300,20 +328,23 @@ type
   { test whether the graph is bipartite; if returns True then information about the vertex
     belonging to the fractions is returned in v(0 or 1) }
     function  IsBipartite(out v: TShortArray): Boolean; inline;
-  { returns the length of the shortest path between the vertices aSrc and aDst,
+  { returns the length of the shortest path(in sense 'edges count') between the vertices aSrc and aDst,
     -1 if the path does not exist }
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt; inline;
-  { returns a vector containing in the corresponding components the shortest paths from aRoot }
+  { returns a vector containing in the corresponding components the shortest paths from aRoot,
+    (in sense 'edges count')}
     function  FindMinPathLenMap(constref aRoot: TVertex): TIntArray; inline;
     function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray; inline;
-  { returns a vector containing indices of found shortest path(empty if path does not exists) }
+  { returns a vector containing indices of found shortest path(in sense 'edges count'),
+    empty if path does not exists }
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray; inline;
     function  Degree(constref v: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt; inline;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  CycleExists(out aCycle: TIntArray): Boolean; inline;
     function  EulerCycleExists: Boolean; inline;
     function  FindEulerCycle: TIntArray; inline;
   { checks whether the graph is connected; a graph without vertices is considered disconnected }
@@ -346,31 +377,40 @@ type
     function  IsTree: Boolean; inline;
   { returns True if exists edge with negative weight }
     function  NegWeighedEdgeExists: Boolean;
-  { finds the shortest paths from a given vertex to the remaining vertices in same connected component,
+  { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP),
     the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the minimum path to the vertex or
-    TWeight.MaxValue if the vertex is unreachable; used Dijkstra's algorithm  }
+    InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function  FindMinPaths(constref aSrc: TVertex): TWeightArray; inline;
-    function  FindMinPathsI(aSrc: SizeInt): TWeightArray; inline;
-  { finds the shortest paths from a given vertex to the remaining vertices in same connected component;
-    the weights of edges may be negative;
-    returns False if there is a negative weight cycle;
-    aWeights contains in the corresponding component the weight of the minimum path to the vertex or
-    TWeight.MaxValue if the vertex is unreachable; used Bellman–Ford algorithm  }
-    function  FindMinPathsFord(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
-    function  FindMinPathsFordI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean; inline;
-
+    function  FindMinPathsI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
     function  FindMinPaths(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function  FindMinPathsI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; inline;
-  { finds the shortest path weight from a aSrc to aDst if it exists; the weights of all edges
-    must be nonnegative; the result contains shortest path weight or TWeight.MaxValue if the vertex
-    is unreachable; used Dijkstra's algorithm  }
+  { finds the shortest path weight from a aSrc to aDst if it exists(pathfinding);
+    the weights of all edges must be nonnegative;
+    the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
+    used Dijkstra's algorithm  }
     function  FindMinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
-    function  FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight; inline;
+    function  FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight;
   { same as above and in aPath returns path }
     function  FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight; inline;
-    function  FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight; inline;
+    function  FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+  { finds the shortest path weight from a aSrc to aDst if it exists(pathfinding);
+    the weights of all edges must be nonnegative;
+    the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
+    used A* algorithm  }
+    function  FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight; inline;
+    function  FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight;
+  { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP);
+    the weights of edges may be negative;
+    returns False if there is a negative weight cycle;
+    aWeights contains in the corresponding component the weight of the minimum path to the vertex or
+    InfiniteWeight if the vertex is unreachable; used Bellman–Ford algorithm  }
+    function  FindMinPathsFordB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsFordBI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+  { same as above and in aPaths returns paths }
+    function  FindMinPathsFordB(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsFordBI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
     function  FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
@@ -995,86 +1035,126 @@ begin
   Result.Data := d;
 end;
 
-{ TGSimpleWeighedUGraph.TWeightEdge }
+{ TGWeighedUGraph.TWeightEdge }
 
-class operator TGSimpleWeighedUGraph.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
+class operator TGWeighedUGraph.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-class function TGSimpleWeighedUGraph.TWeightEdge.Construct(s, d: SizeInt; w: TWeight): TWeightEdge;
+class function TGWeighedUGraph.TWeightEdge.Construct(s, d: SizeInt; w: TWeight): TWeightEdge;
 begin
   Result.Source := s;
   Result.Destination := d;
   Result.Weight := w;
 end;
 
-{ TGSimpleWeighedUGraph.TWeightItem }
+{ TGWeighedUGraph.TWeightItem }
 
-class operator TGSimpleWeighedUGraph.TWeightItem. = (constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightItem. = (constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightItem.>(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightItem.>(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightItem.<(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightItem.<(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGSimpleWeighedUGraph.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-class function TGSimpleWeighedUGraph.TWeightItem.Construct(w: TWeight; aIndex: SizeInt): TWeightItem;
+class function TGWeighedUGraph.TWeightItem.Construct(constref w: TWeight; aIndex: SizeInt): TWeightItem;
 begin
   Result.Weight := w;
   Result.Index := aIndex;
 end;
 
-{ TGSimpleWeighedUGraph.TFilterKruskal }
+{ TGWeighedUGraph.TWeightItem }
 
-procedure TGSimpleWeighedUGraph.TFilterKruskal.Kruskal(L, R: SizeInt);
+class operator TGWeighedUGraph.TAStarItem. = (constref L, R: TAStarItem): Boolean;
+begin
+  Result := L.Score = R.Score;
+end;
+
+class operator TGWeighedUGraph.TAStarItem.<>(constref L, R: TAStarItem): Boolean;
+begin
+  Result := L.Score <> R.Score;
+end;
+
+class operator TGWeighedUGraph.TAStarItem.>(constref L, R: TAStarItem): Boolean;
+begin
+  Result := L.Score > R.Score;
+end;
+
+class operator TGWeighedUGraph.TAStarItem.<(constref L, R: TAStarItem): Boolean;
+begin
+  Result := L.Score < R.Score;
+end;
+
+class operator TGWeighedUGraph.TAStarItem.>=(constref L, R: TAStarItem): Boolean;
+begin
+  Result := L.Score >= R.Score;
+end;
+
+class operator TGWeighedUGraph.TAStarItem.<=(constref L, R: TAStarItem): Boolean;
+begin
+  Result := L.Score <= R.Score;
+end;
+
+class function TGWeighedUGraph.TAStarItem.Construct(constref aScore, aWeight: TWeight;
+  aIndex: SizeInt): TAStarItem;
+begin
+  Result.Score := aScore;
+  Result.Weight := aWeight;
+  Result.Index := aIndex;
+end;
+
+{ TGWeighedUGraph.TFilterKruskal }
+
+procedure TGWeighedUGraph.TFilterKruskal.Kruskal(L, R: SizeInt);
 var
   s, d: SizeInt;
 begin
@@ -1094,7 +1174,7 @@ begin
     end;
 end;
 
-function TGSimpleWeighedUGraph.TFilterKruskal.Split(L, R: SizeInt): SizeInt;
+function TGWeighedUGraph.TFilterKruskal.Split(L, R: SizeInt): SizeInt;
 var
   Pivot: TWeight;
   v: TWeightEdge;
@@ -1113,7 +1193,7 @@ begin
   until False;
 end;
 
-procedure TGSimpleWeighedUGraph.TFilterKruskal.FilterKruskal(L, R: SizeInt);
+procedure TGWeighedUGraph.TFilterKruskal.FilterKruskal(L, R: SizeInt);
 var
   p: SizeInt;
 begin
@@ -1131,58 +1211,58 @@ begin
     Kruskal(L, R);
 end;
 
-function TGSimpleWeighedUGraph.TFilterKruskal.FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
+function TGWeighedUGraph.TFilterKruskal.FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
 begin
   FEdges := aGraph.CreateEdgeVector;
   FTree := aGraph.FGraph.CreateIntVector;
   FCount := aGraph.VertexCount;
   FDsu.Size := FCount;
   FTreshold := Pred(FCount); // ??? FCount shr 1
-  FWeight := 0;
+  FWeight := ZeroWeight;
   FFound := 0;
   FilterKruskal(0, System.High(FEdges));
   aWeight := FWeight;
   Result := FTree;
 end;
 
-{ TGSimpleWeighedUGraph }
+{ TGWeighedUGraph }
 
-function TGSimpleWeighedUGraph.GetEdgeCount: SizeInt;
+function TGWeighedUGraph.GetEdgeCount: SizeInt;
 begin
   Result := FGraph.EdgeCount;
 end;
 
-function TGSimpleWeighedUGraph.GetTitle: string;
+function TGWeighedUGraph.GetTitle: string;
 begin
   Result := FGraph.Title;
 end;
 
-function TGSimpleWeighedUGraph.GetVertex(aIndex: SizeInt): TVertex;
+function TGWeighedUGraph.GetVertex(aIndex: SizeInt): TVertex;
 begin
   Result := FGraph[aIndex];
 end;
 
-procedure TGSimpleWeighedUGraph.SetVertex(aIndex: SizeInt; const aValue: TVertex);
+procedure TGWeighedUGraph.SetVertex(aIndex: SizeInt; const aValue: TVertex);
 begin
   FGraph[aIndex] := aValue;
 end;
 
-function TGSimpleWeighedUGraph.GetVertexCount: SizeInt;
+function TGWeighedUGraph.GetVertexCount: SizeInt;
 begin
   Result := FGraph.VertexCount;
 end;
 
-function TGSimpleWeighedUGraph.GetSeparateCount: SizeInt;
+function TGWeighedUGraph.GetSeparateCount: SizeInt;
 begin
   Result := FGraph.SeparateCount;
 end;
 
-procedure TGSimpleWeighedUGraph.SetTitle(const aValue: string);
+procedure TGWeighedUGraph.SetTitle(const aValue: string);
 begin
   FGraph.Title := aValue;
 end;
 
-function TGSimpleWeighedUGraph.DijkstraMap(aSrc: SizeInt): TWeightArray;
+function TGWeighedUGraph.DijkstraSssp(aSrc: SizeInt): TWeightArray;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -1195,7 +1275,7 @@ begin
   Result := CreateWeightVector;
   Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1214,7 +1294,7 @@ begin
       end;
 end;
 
-function TGSimpleWeighedUGraph.DijkstraMap(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeighedUGraph.DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -1223,12 +1303,11 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  FGraph.CheckIndexRange(aSrc);
   Result := CreateWeightVector;
   aPathTree := FGraph.CreateIntVector;
   Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1253,7 +1332,7 @@ begin
       end;
 end;
 
-function TGSimpleWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
+function TGWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -1264,7 +1343,7 @@ var
 begin
   Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1282,10 +1361,10 @@ begin
                   Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
               end
       end;
-  Result := TWeight.MaxValue;
+  Result := InfiniteWeight;
 end;
 
-function TGSimpleWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -1295,12 +1374,10 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  FGraph.CheckIndexRange(aSrc);
-  FGraph.CheckIndexRange(aDst);
   Handles := FGraph.CreateHandleVector;
   Tree := FGraph.CreateIntVector;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1312,7 +1389,7 @@ begin
         Visited[Item.Index] := True;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
           begin
-            if Handles[p^.Key] <> INVALID_HANDLE then
+            if Handles[p^.Key] = INVALID_HANDLE then
               begin
                 Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key));
                 Tree[p^.Key] := Item.Index;
@@ -1329,34 +1406,82 @@ begin
                 end;
           end;
       end;
-  Result := TWeight.MaxValue;
+  Result := InfiniteWeight;
   aPath := nil;
 end;
 
-function TGSimpleWeighedUGraph.FordBellMap(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+function TGWeighedUGraph.AStarPath(aSrc, aDst: SizeInt; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight;
+var
+  Visited: TBitVector;
+  Queue: TAStarHeap;
+  Handles: THandleArray;
+  Tree: TIntArray;
+  Relaxed: TWeight;
+  Item: TAStarItem;
+  p: PAdjItem;
+begin
+  Handles := FGraph.CreateHandleVector;
+  Tree := FGraph.CreateIntVector;
+  Visited.Size := VertexCount;
+  Handles[aSrc] := Queue.Insert(TAStarItem.Construct(aHeur(FGraph[aSrc], FGraph[aDst]), ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    if not Visited[Item.Index] then
+      begin
+        if Item.Index = aDst then
+          begin
+            aPath := FGraph.ChainFromTree(Tree, aDst);
+            exit(Item.Weight);
+          end;
+        Visited[Item.Index] := True;
+        for p in FGraph.AdjVerticesPtr(Item.Index) do
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
+              begin
+                Relaxed := p^.Data.Weight + Item.Weight;
+                Handles[p^.Key] := Queue.Insert(TAStarItem.Construct(
+                  Relaxed + aHeur(FGraph[aSrc], FGraph[aDst]), Relaxed, p^.Key));
+                Tree[p^.Key] := Item.Index;
+              end
+            else
+              if not Visited[p^.Key] then
+                begin
+                  Relaxed := p^.Data.Weight + Item.Weight;
+                  if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                    begin
+                      Queue.Update(Handles[p^.Key], TAStarItem.Construct(
+                        Relaxed + aHeur(FGraph[aSrc], FGraph[aDst]), Relaxed, p^.Key));
+                      Tree[p^.Key] := Item.Index;
+                    end;
+                end;
+          end;
+      end;
+  Result := InfiniteWeight;
+  aPath := nil;
+end;
+
+function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 var
   e: TEdge;
   Enum: TEdgeEnumerator;
-  Relax: TWeight;
-  I: SizeInt;
+  RelaxValue: TWeight;
   Relaxed: Boolean;
 begin
   FGraph.CheckIndexRange(aSrc);
   aWeights := CreateWeightVector;
   Enum := Edges.GetEnumerator;
-  aWeights[aSrc] := 0;
+  aWeights[aSrc] := ZeroWeight;
   while True do
     begin
       Relaxed := False;
       while Enum.MoveNext do
         begin
           e := Enum.Current;
-          if aWeights[e.Source] < TWeight.MaxValue then
+          if aWeights[e.Source] < InfiniteWeight then
             begin
-              Relax := aWeights[e.Source] + e.Data.Weight;
-              if aWeights[e.Destination] > Relax then
+              RelaxValue := aWeights[e.Source] + e.Data.Weight;
+              if aWeights[e.Destination] > RelaxValue then
                 begin
-                  aWeights[e.Destination] := Relax;
+                  aWeights[e.Destination] := RelaxValue;
                   Relaxed := True;
                 end;
             end;
@@ -1374,39 +1499,38 @@ begin
   Result := True;
 end;
 
-function TGSimpleWeighedUGraph.FordBellMap(aSrc: SizeInt; out aPathTree: TIntArray;
+function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aPathTree: TIntArray;
   out aWeights: TWeightArray): Boolean;
 var
   e: TEdge;
   Enum: TEdgeEnumerator;
-  Relax: TWeight;
+  RelaxValue: TWeight;
   Relaxed: Boolean;
 begin
-  FGraph.CheckIndexRange(aSrc);
   aWeights := CreateWeightVector;
   aPathTree := FGraph.CreateIntVector;
   Enum := Edges.GetEnumerator;
-  aWeights[aSrc] := 0;
+  aWeights[aSrc] := ZeroWeight;
   while True do
     begin
       Relaxed := False;
       while Enum.MoveNext do
         begin
           e := Enum.Current;
-          if aWeights[e.Source] < TWeight.MaxValue then
+          if aWeights[e.Source] < InfiniteWeight then
             begin
-              Relax := aWeights[e.Source] + e.Data.Weight;
-              if aWeights[e.Destination] > Relax then
+              RelaxValue := aWeights[e.Source] + e.Data.Weight;
+              if aWeights[e.Destination] > RelaxValue then
                 begin
-                  aWeights[e.Destination] := Relax;
+                  aWeights[e.Destination] := RelaxValue;
                   aPathTree[e.Destination] := e.Source;
                   Relaxed := True;
                 end;
             end;
         end;
+      Enum.Reset;
       if not Relaxed then
         break;
-      Enum.Reset;
     end;
   while Enum.MoveNext do
     begin
@@ -1417,14 +1541,14 @@ begin
   Result := True;
 end;
 
-function TGSimpleWeighedUGraph.FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
+function TGWeighedUGraph.FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
-  FilterKruskal: TFilterKruskal;
+  fk: TFilterKruskal;
 begin
-  Result := FilterKruskal.FindMst(Self, aTotalWeight);
+  Result := fk.FindMst(Self, aTotalWeight);
 end;
 
-function TGSimpleWeighedUGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
+function TGWeighedUGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
   e: TEdgeArray;
   I, s, d, VtxCount: SizeInt;
@@ -1436,7 +1560,7 @@ begin
   TEdgeHelper.Sort(e);
   System.SetLength(Result, VtxCount);
   Dsu.Size := VtxCount;
-  aTotalWeight := 0;
+  aTotalWeight := ZeroWeight;
   for I := 0 to System.High(e) do
     begin
       s := e[I].Source;
@@ -1450,7 +1574,7 @@ begin
     end;
 end;
 
-function TGSimpleWeighedUGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
+function TGWeighedUGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -1463,7 +1587,7 @@ begin
   System.SetLength(Result, VertexCount);
   Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Handles[0] := Queue.Insert(TWeightItem.Construct(Default(TWeight), 0));
+  Handles[0] := Queue.Insert(TWeightItem.Construct(ZeroWeight, 0));
   aTotalWeight := 0;
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
@@ -1488,16 +1612,16 @@ begin
       end;
 end;
 
-function TGSimpleWeighedUGraph.CreateWeightVector: TWeightArray;
+function TGWeighedUGraph.CreateWeightVector: TWeightArray;
 var
   I: SizeInt;
 begin
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Result[I] := TWeight.MaxValue;
+    Result[I] := InfiniteWeight;
 end;
 
-function TGSimpleWeighedUGraph.CreateEdgeVector: TEdgeArray;
+function TGWeighedUGraph.CreateEdgeVector: TEdgeArray;
 var
   I: SizeInt = 0;
   e: TEdge;
@@ -1512,7 +1636,7 @@ begin
     end;
 end;
 
-class function TGSimpleWeighedUGraph.Min(const L, R: TWeight): TWeight;
+class function TGWeighedUGraph.Min(const L, R: TWeight): TWeight;
 begin
   if L <= R then
     Result := L
@@ -1520,392 +1644,403 @@ begin
     Result := R;
 end;
 
-constructor TGSimpleWeighedUGraph.Create;
+class constructor TGWeighedUGraph.Init;
+begin
+  CFInfiniteWeight := TWeight.MaxValue;
+  CFZeroWeight := Default(TWeight);
+end;
+
+constructor TGWeighedUGraph.Create;
 begin
   FGraph := TGraph.Create;
 end;
 
-constructor TGSimpleWeighedUGraph.Create(g: TGraph);
+constructor TGWeighedUGraph.Create(g: TGraph);
 begin
   FGraph := g;
 end;
 
-destructor TGSimpleWeighedUGraph.Destroy;
+destructor TGWeighedUGraph.Destroy;
 begin
   FGraph.Free;
   inherited;
 end;
 
-function TGSimpleWeighedUGraph.IsEmpty: Boolean;
+function TGWeighedUGraph.IsEmpty: Boolean;
 begin
   Result := FGraph.IsEmpty;
 end;
 
-function TGSimpleWeighedUGraph.NonEmpty: Boolean;
+function TGWeighedUGraph.NonEmpty: Boolean;
 begin
   Result := FGraph.NonEmpty;
 end;
 
-procedure TGSimpleWeighedUGraph.Clear;
+procedure TGWeighedUGraph.Clear;
 begin
   FGraph.Clear;
 end;
 
-procedure TGSimpleWeighedUGraph.EnsureCapacity(aValue: SizeInt);
+procedure TGWeighedUGraph.EnsureCapacity(aValue: SizeInt);
 begin
   FGraph.EnsureCapacity(aValue);
 end;
 
-procedure TGSimpleWeighedUGraph.TrimToFit;
+procedure TGWeighedUGraph.TrimToFit;
 begin
   FGraph.TrimToFit;
 end;
 
-function TGSimpleWeighedUGraph.ContainsVertex(constref v: TVertex): Boolean;
+function TGWeighedUGraph.ContainsVertex(constref v: TVertex): Boolean;
 begin
   Result := FGraph.ContainsVertex(v);
 end;
 
-function TGSimpleWeighedUGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGWeighedUGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.ContainsEdge(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGWeighedUGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.ContainsEdgeI(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TWeEdgeData): Boolean;
+function TGWeighedUGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TWeEdgeData): Boolean;
 begin
   Result := FGraph.ContainsEdgeI(aSrc, aDst, aData);
 end;
 
-function TGSimpleWeighedUGraph.IndexOf(constref v: TVertex): SizeInt;
+function TGWeighedUGraph.IndexOf(constref v: TVertex): SizeInt;
 begin
   Result := FGraph.IndexOf(v);
 end;
 
-function TGSimpleWeighedUGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+function TGWeighedUGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.Adjacent(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
+function TGWeighedUGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.AdjacentI(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
+function TGWeighedUGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
 begin
   Result := FGraph.AdjVertices(aSrc);
 end;
 
-function TGSimpleWeighedUGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
+function TGWeighedUGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
 begin
   Result := FGraph.AdjVerticesI(aSrc);
 end;
 
-function TGSimpleWeighedUGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
+function TGWeighedUGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
 begin
   Result := FGraph.IncidentEdges(aSrc);
 end;
 
-function TGSimpleWeighedUGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+function TGWeighedUGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
 begin
   Result := FGraph.IncidentEdgesI(aSrc);
 end;
 
-function TGSimpleWeighedUGraph.Edges: TEdges;
+function TGWeighedUGraph.Edges: TEdges;
 begin
   Result := FGraph.Edges;
 end;
 
-function TGSimpleWeighedUGraph.DistinctEdges: TDistinctEdges;
+function TGWeighedUGraph.DistinctEdges: TDistinctEdges;
 begin
   Result := FGraph.DistinctEdges;
 end;
 
-function TGSimpleWeighedUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGWeighedUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := FGraph.AddVertex(v, aIndex);
 end;
 
-function TGSimpleWeighedUGraph.RemoveVertex(constref v: TVertex): Boolean;
+function TGWeighedUGraph.RemoveVertex(constref v: TVertex): Boolean;
 begin
   Result := FGraph.RemoveVertex(v);
 end;
 
-function TGSimpleWeighedUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
+function TGWeighedUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
 begin
   Result := FGraph.RemoveVertex(aIndex);
 end;
 
-function TGSimpleWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight;
+function TGWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight;
   aData: TEdgeData): Boolean;
 begin
   Result := FGraph.AddEdge(aSrc, aDst, TWeEdgeData.Construct(aWeight, aData));
 end;
 
-function TGSimpleWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight): Boolean;
+function TGWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight): Boolean;
 begin
   Result := FGraph.AddEdge(aSrc, aDst, TWeEdgeData.Construct(aWeight, CFData));
 end;
 
-function TGSimpleWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TWeEdgeData): Boolean;
+function TGWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TWeEdgeData): Boolean;
 begin
   Result := FGraph.AddEdge(aSrc, aDst, aData);
 end;
 
-function TGSimpleWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight; aData: TEdgeData): Boolean;
+function TGWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight; aData: TEdgeData): Boolean;
 begin
   Result := FGraph.AddEdgeI(aSrc, aDst, TWeEdgeData.Construct(aWeight, aData));
 end;
 
-function TGSimpleWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight): Boolean;
+function TGWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight): Boolean;
 begin
   Result := FGraph.AddEdgeI(aSrc, aDst, TWeEdgeData.Construct(aWeight, CFData));
 end;
 
-function TGSimpleWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TWeEdgeData): Boolean;
+function TGWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TWeEdgeData): Boolean;
 begin
   Result := FGraph.AddEdgeI(aSrc, aDst, aData);
 end;
 
-function TGSimpleWeighedUGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGWeighedUGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.RemoveEdge(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGWeighedUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.RemoveEdgeI(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.GetEdgeData(constref aSrc, aDst: TVertex): TWeEdgeData;
+function TGWeighedUGraph.GetEdgeData(constref aSrc, aDst: TVertex): TWeEdgeData;
 begin
   Result := FGraph.GetEdgeData(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.GetEdgeDataI(aSrc, aDst: SizeInt): TWeEdgeData;
+function TGWeighedUGraph.GetEdgeDataI(aSrc, aDst: SizeInt): TWeEdgeData;
 begin
   Result := FGraph.GetEdgeDataI(aSrc, aDst);
 end;
 
-procedure TGSimpleWeighedUGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TWeEdgeData);
+procedure TGWeighedUGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TWeEdgeData);
 begin
   FGraph.SetEdgeData(aSrc, aDst, aValue);
 end;
 
-procedure TGSimpleWeighedUGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TWeEdgeData);
+procedure TGWeighedUGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TWeEdgeData);
 begin
   FGraph.SetEdgeDataI(aSrc, aDst, aValue);
 end;
 
-procedure TGSimpleWeighedUGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex;
+procedure TGWeighedUGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex;
   aWriteData: TOnWriteData);
 begin
   FGraph.SaveToStream(aStream, aWriteVertex, aWriteData);
 end;
 
-procedure TGSimpleWeighedUGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex;
+procedure TGWeighedUGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex;
   aReadData: TOnReadData);
 begin
   FGraph.LoadFromStream(aStream, aReadVertex, aReadData);
 end;
 
-procedure TGSimpleWeighedUGraph.SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex;
+procedure TGWeighedUGraph.SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex;
   aWriteData: TOnWriteData);
 begin
   FGraph.SaveToFile(aFileName, aWriteVertex, aWriteData)
 end;
 
-procedure TGSimpleWeighedUGraph.LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex;
+procedure TGWeighedUGraph.LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex;
   aReadData: TOnReadData);
 begin
   FGraph.LoadFromFile(aFileName, aReadVertex, aReadData);
 end;
 
-function TGSimpleWeighedUGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGWeighedUGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := FGraph.DfsTraversal(aRoot, aOnGray, aOnWhite);
 end;
 
-function TGSimpleWeighedUGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGWeighedUGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := FGraph.DfsTraversalI(aRoot, aOnGray, aOnWhite);
 end;
 
-function TGSimpleWeighedUGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGWeighedUGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := FGraph.BfsTraversal(aRoot, aOnGray, aOnWhite);
 end;
 
-function TGSimpleWeighedUGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGWeighedUGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := FGraph.BfsTraversalI(aRoot, aOnGray, aOnWhite);
 end;
 
-function TGSimpleWeighedUGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
+function TGWeighedUGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.SimplePathExists(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGWeighedUGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.SimplePathExistsI(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.IsBipartite: Boolean;
+function TGWeighedUGraph.IsBipartite: Boolean;
 begin
   Result := FGraph.IsBipartite;
 end;
 
-function TGSimpleWeighedUGraph.IsBipartite(out v: TShortArray): Boolean;
+function TGWeighedUGraph.IsBipartite(out v: TShortArray): Boolean;
 begin
   Result := FGraph.IsBipartite(v)
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
+function TGWeighedUGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
   Result := FGraph.FindMinPathLen(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
+function TGWeighedUGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
 begin
   Result := FGraph.FindMinPathLenI(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathLenMap(constref aRoot: TVertex): TIntArray;
+function TGWeighedUGraph.FindMinPathLenMap(constref aRoot: TVertex): TIntArray;
 begin
   Result := FGraph.FindMinPathLenMap(aRoot);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathLenMapI(aRoot: SizeInt): TIntArray;
+function TGWeighedUGraph.FindMinPathLenMapI(aRoot: SizeInt): TIntArray;
 begin
   Result := FGraph.FindMinPathLenMapI(aRoot);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
+function TGWeighedUGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
 begin
   Result := FGraph.FindMinPath(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+function TGWeighedUGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 begin
   Result := FGraph.FindMinPathI(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.Degree(constref v: TVertex): SizeInt;
+function TGWeighedUGraph.Degree(constref v: TVertex): SizeInt;
 begin
   Result := FGraph.Degree(v);
 end;
 
-function TGSimpleWeighedUGraph.DegreeI(aIndex: SizeInt): SizeInt;
+function TGWeighedUGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   Result := FGraph.DegreeI(aIndex);
 end;
 
-function TGSimpleWeighedUGraph.Isolated(constref v: TVertex): Boolean;
+function TGWeighedUGraph.Isolated(constref v: TVertex): Boolean;
 begin
   Result := FGraph.Isolated(v);
 end;
 
-function TGSimpleWeighedUGraph.IsolatedI(aIndex: SizeInt): Boolean;
+function TGWeighedUGraph.IsolatedI(aIndex: SizeInt): Boolean;
 begin
   Result := FGraph.IsolatedI(aIndex);
 end;
 
-function TGSimpleWeighedUGraph.EulerCycleExists: Boolean;
+function TGWeighedUGraph.CycleExists(out aCycle: TIntArray): Boolean;
+begin
+  Result := FGraph.CycleExists(aCycle);
+end;
+
+function TGWeighedUGraph.EulerCycleExists: Boolean;
 begin
   Result := FGraph.EulerCycleExists;
 end;
 
-function TGSimpleWeighedUGraph.FindEulerCycle: TIntArray;
+function TGWeighedUGraph.FindEulerCycle: TIntArray;
 begin
   Result := FGraph.FindEulerCycle;
 end;
 
-function TGSimpleWeighedUGraph.IsConnected: Boolean;
+function TGWeighedUGraph.IsConnected: Boolean;
 begin
   Result := FGraph.IsConnected;
 end;
 
-function TGSimpleWeighedUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+function TGWeighedUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   Result := FGraph.MakeConnected(aOnAddEdge);
 end;
 
-function TGSimpleWeighedUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
+function TGWeighedUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := FGraph.DfsSpanningTree(aRoot);
 end;
 
-function TGSimpleWeighedUGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
+function TGWeighedUGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
 begin
   Result := FGraph.DfsSpanningTreeI(aRoot);
 end;
 
-function TGSimpleWeighedUGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
+function TGWeighedUGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := FGraph.BfsSpanningTree(aRoot);
 end;
 
-function TGSimpleWeighedUGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
+function TGWeighedUGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
 begin
   Result := FGraph.BfsSpanningTreeI(aRoot);
 end;
 
-function TGSimpleWeighedUGraph.CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
+function TGWeighedUGraph.CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
 begin
-  Result := TGSimpleWeighedUGraph.Create(FGraph.CreateFromVector(aVector));
+  Result := TGWeighedUGraph.Create(FGraph.CreateFromVector(aVector));
 end;
 
-function TGSimpleWeighedUGraph.SeparateIndex(constref v: TVertex): SizeInt;
+function TGWeighedUGraph.SeparateIndex(constref v: TVertex): SizeInt;
 begin
   Result := FGraph.SeparateIndexOf(v);
 end;
 
-function TGSimpleWeighedUGraph.SeparateIndexI(aVertex: SizeInt): SizeInt;
+function TGWeighedUGraph.SeparateIndexI(aVertex: SizeInt): SizeInt;
 begin
   Result := FGraph.SeparateIndexOfI(aVertex);
 end;
 
-function TGSimpleWeighedUGraph.SeparatePop(constref v: TVertex): SizeInt;
+function TGWeighedUGraph.SeparatePop(constref v: TVertex): SizeInt;
 begin
   Result := FGraph.SeparatePop(v);
 end;
 
-function TGSimpleWeighedUGraph.SeparatePopI(aVertex: SizeInt): SizeInt;
+function TGWeighedUGraph.SeparatePopI(aVertex: SizeInt): SizeInt;
 begin
   Result := FGraph.SeparatePopI(aVertex);
 end;
 
-function TGSimpleWeighedUGraph.SeparateGraph(constref v: TVertex): TWeighedGraph;
+function TGWeighedUGraph.SeparateGraph(constref v: TVertex): TWeighedGraph;
 begin
   Result := SeparateGraphI(IndexOf(v));
 end;
 
-function TGSimpleWeighedUGraph.SeparateGraphI(aVtxIndex: SizeInt): TWeighedGraph;
+function TGWeighedUGraph.SeparateGraphI(aVtxIndex: SizeInt): TWeighedGraph;
 begin
   Result := TWeighedGraph.Create(FGraph.SeparateGraphI(aVtxIndex));
 end;
 
-function TGSimpleWeighedUGraph.IsRegular: Boolean;
+function TGWeighedUGraph.IsRegular: Boolean;
 begin
   Result := FGraph.IsRegular;
 end;
 
-function TGSimpleWeighedUGraph.IsTree: Boolean;
+function TGWeighedUGraph.IsTree: Boolean;
 begin
   Result := FGraph.IsTree;
 end;
 
-function TGSimpleWeighedUGraph.NegWeighedEdgeExists: Boolean;
+function TGWeighedUGraph.NegWeighedEdgeExists: Boolean;
 var
   e: TEdge;
 begin
@@ -1915,57 +2050,90 @@ begin
   Result := False;
 end;
 
-function TGSimpleWeighedUGraph.FindMinPaths(constref aSrc: TVertex): TWeightArray;
+function TGWeighedUGraph.FindMinPaths(constref aSrc: TVertex): TWeightArray;
 begin
   Result := FindMinPathsI(FGraph.IndexOf(aSrc));
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathsI(aSrc: SizeInt): TWeightArray;
+function TGWeighedUGraph.FindMinPathsI(aSrc: SizeInt): TWeightArray;
 begin
-  Result := DijkstraMap(aSrc);
+  FGraph.CheckIndexRange(aSrc);
+  Result := DijkstraSssp(aSrc);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathsFord(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
-begin
-  Result := FordBellMap(FGraph.IndexOf(aSrc), aWeights);
-end;
-
-function TGSimpleWeighedUGraph.FindMinPathsFordI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-begin
-  Result := FordBellMap(aSrc, aWeights);
-end;
-
-function TGSimpleWeighedUGraph.FindMinPaths(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeighedUGraph.FindMinPaths(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := FindMinPathsI(FGraph.IndexOf(aSrc), aPathTree);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathsI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeighedUGraph.FindMinPathsI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
-  Result := DijkstraMap(aSrc, aPathTree);
+  FGraph.CheckIndexRange(aSrc);
+  Result := DijkstraSssp(aSrc, aPathTree);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex): TWeight;
+function TGWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex): TWeight;
 begin
   Result := FindMinPathWeightI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aDst));
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight;
+function TGWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight;
 begin
+  FGraph.CheckIndexRange(aSrc);
+  FGraph.CheckIndexRange(aDst);
   Result := DijkstraPath(aSrc, aDst);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight;
 begin
   Result := FindMinPathWeightI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aDst), aPath);
 end;
 
-function TGSimpleWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
 begin
+  FGraph.CheckIndexRange(aSrc);
+  FGraph.CheckIndexRange(aDst);
   Result := DijkstraPath(aSrc, aDst, aPath);
 end;
 
-function TGSimpleWeighedUGraph.FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
+function TGWeighedUGraph.FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: TOnHeuristic;
+  out aPath: TIntArray): TWeight;
+begin
+  Result := FindMinPathAStarI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aSrc), aHeur, aPath);
+end;
+
+function TGWeighedUGraph.FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  FGraph.CheckIndexRange(aDst);
+  Result := AStarPath(aSrc, aDst, aHeur, aPath);
+end;
+
+function TGWeighedUGraph.FindMinPathsFordB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+begin
+  Result := FindMinPathsFordBI(FGraph.IndexOf(aSrc), aWeights);
+end;
+
+function TGWeighedUGraph.FindMinPathsFordBI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  Result := FordBellman(aSrc, aWeights);
+end;
+
+function TGWeighedUGraph.FindMinPathsFordB(constref aSrc: TVertex; out aPaths: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+begin
+  Result := FindMinPathsFordBI(FGraph.IndexOf(aSrc), aPaths, aWeights);
+end;
+
+function TGWeighedUGraph.FindMinPathsFordBI(aSrc: SizeInt; out aPaths: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  Result := FordBellman(aSrc, aPaths, aWeights);
+end;
+
+function TGWeighedUGraph.FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
 begin
   if IsConnected then
     Result := KruskalMst(aTotalWeight)
@@ -1974,15 +2142,15 @@ begin
     raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
-function TGSimpleWeighedUGraph.FindMinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+function TGWeighedUGraph.FindMinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 begin
-  if IsConnected then
+  if IsConnected then   //todo: is it required ???
     Result := PrimMst(aTotalWeight)
   else
     raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
-function TGSimpleWeighedUGraph.Clone: TWeighedGraph;
+function TGWeighedUGraph.Clone: TWeighedGraph;
 begin
   Result := TWeighedGraph.Create(FGraph.Clone);
 end;
