@@ -193,22 +193,22 @@ type
       class function Construct(constref w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
     end;
 
-    TAStarItem = record
-      Score,
+    TRankItem = record
+      Rank,
       Weight: TWeight;
       Index: SizeInt;
-      class operator = (constref L, R: TAStarItem): Boolean; inline;
-      class operator <>(constref L, R: TAStarItem): Boolean; inline;
-      class operator > (constref L, R: TAStarItem): Boolean; inline;
-      class operator < (constref L, R: TAStarItem): Boolean; inline;
-      class operator >=(constref L, R: TAStarItem): Boolean; inline;
-      class operator <=(constref L, R: TAStarItem): Boolean; inline;
-      class function Construct(constref aScore, aWeight: TWeight; aIndex: SizeInt): TAStarItem; static; inline;
+      class operator = (constref L, R: TRankItem): Boolean; inline;
+      class operator <>(constref L, R: TRankItem): Boolean; inline;
+      class operator > (constref L, R: TRankItem): Boolean; inline;
+      class operator < (constref L, R: TRankItem): Boolean; inline;
+      class operator >=(constref L, R: TRankItem): Boolean; inline;
+      class operator <=(constref L, R: TRankItem): Boolean; inline;
+      class function Construct(constref aRank, aWeight: TWeight; aIndex: SizeInt): TRankItem; static; inline;
     end;
 
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
-    TAStarHeap   = specialize TGLiteComparablePairHeapMin<TAStarItem>;
+    TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
 
   { todo: Filter-Kruskal minimum spanning tree algorithm }
     TFilterKruskal = record
@@ -1114,40 +1114,39 @@ end;
 
 { TGWeighedUGraph.TWeightItem }
 
-class operator TGWeighedUGraph.TAStarItem. = (constref L, R: TAStarItem): Boolean;
+class operator TGWeighedUGraph.TRankItem. = (constref L, R: TRankItem): Boolean;
 begin
-  Result := L.Score = R.Score;
+  Result := L.Rank = R.Rank;
 end;
 
-class operator TGWeighedUGraph.TAStarItem.<>(constref L, R: TAStarItem): Boolean;
+class operator TGWeighedUGraph.TRankItem.<>(constref L, R: TRankItem): Boolean;
 begin
-  Result := L.Score <> R.Score;
+  Result := L.Rank <> R.Rank;
 end;
 
-class operator TGWeighedUGraph.TAStarItem.>(constref L, R: TAStarItem): Boolean;
+class operator TGWeighedUGraph.TRankItem.>(constref L, R: TRankItem): Boolean;
 begin
-  Result := L.Score > R.Score;
+  Result := L.Rank > R.Rank;
 end;
 
-class operator TGWeighedUGraph.TAStarItem.<(constref L, R: TAStarItem): Boolean;
+class operator TGWeighedUGraph.TRankItem.<(constref L, R: TRankItem): Boolean;
 begin
-  Result := L.Score < R.Score;
+  Result := L.Rank < R.Rank;
 end;
 
-class operator TGWeighedUGraph.TAStarItem.>=(constref L, R: TAStarItem): Boolean;
+class operator TGWeighedUGraph.TRankItem.>=(constref L, R: TRankItem): Boolean;
 begin
-  Result := L.Score >= R.Score;
+  Result := L.Rank >= R.Rank;
 end;
 
-class operator TGWeighedUGraph.TAStarItem.<=(constref L, R: TAStarItem): Boolean;
+class operator TGWeighedUGraph.TRankItem.<=(constref L, R: TRankItem): Boolean;
 begin
-  Result := L.Score <= R.Score;
+  Result := L.Rank <= R.Rank;
 end;
 
-class function TGWeighedUGraph.TAStarItem.Construct(constref aScore, aWeight: TWeight;
-  aIndex: SizeInt): TAStarItem;
+class function TGWeighedUGraph.TRankItem.Construct(constref aRank, aWeight: TWeight; aIndex: SizeInt): TRankItem;
 begin
-  Result.Score := aScore;
+  Result.Rank := aRank;
   Result.Weight := aWeight;
   Result.Index := aIndex;
 end;
@@ -1416,14 +1415,14 @@ var
   Queue: TAStarHeap;
   Handles: THandleArray;
   Tree: TIntArray;
-  CurrWeight, EstimWeight: TWeight;
-  Item: TAStarItem;
+  CurrWeight, ImpliedWeight: TWeight;
+  Item: TRankItem;
   p: PAdjItem;
 begin
   Handles := FGraph.CreateHandleVector;
   Tree := FGraph.CreateIntVector;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TAStarItem.Construct(aHeur(FGraph[aSrc], FGraph[aDst]), ZeroWeight, aSrc));
+  Handles[aSrc] := Queue.Insert(TRankItem.Construct(aHeur(FGraph[aSrc], FGraph[aDst]), ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1438,19 +1437,18 @@ begin
             if Handles[p^.Key] = INVALID_HANDLE then
               begin
                 CurrWeight := p^.Data.Weight + Item.Weight;
-                Handles[p^.Key] := Queue.Insert(TAStarItem.Construct(
+                Handles[p^.Key] := Queue.Insert(TRankItem.Construct(
                   CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]), CurrWeight, p^.Key));
                 Tree[p^.Key] := Item.Index;
               end
             else
               if not Visited[p^.Key] then
                 begin
-                  EstimWeight := aHeur(FGraph[p^.Key], FGraph[aDst]);
                   CurrWeight := Item.Weight + p^.Data.Weight;
-                  if CurrWeight + EstimWeight < Queue.Value(Handles[p^.Key]).Score then
+                  ImpliedWeight := CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]);
+                  if ImpliedWeight < Queue.Value(Handles[p^.Key]).Rank then
                     begin
-                      Queue.Update(
-                        Handles[p^.Key], TAStarItem.Construct(CurrWeight + EstimWeight, CurrWeight, p^.Key));
+                      Queue.Update(Handles[p^.Key], TRankItem.Construct(ImpliedWeight, CurrWeight, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
                 end;
