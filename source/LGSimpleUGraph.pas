@@ -907,7 +907,7 @@ begin
           begin
             if Assigned(aOnAddEdge) then
               begin
-                aOnAddEdge(0, Curr, @d);
+                aOnAddEdge(Items[0], Items[Curr], @d);
                 AddEdgeI(0, Curr, d);
               end
             else
@@ -1416,7 +1416,7 @@ var
   Queue: TAStarHeap;
   Handles: THandleArray;
   Tree: TIntArray;
-  Relaxed: TWeight;
+  CurrWeight, EstimWeight: TWeight;
   Item: TAStarItem;
   p: PAdjItem;
 begin
@@ -1437,19 +1437,20 @@ begin
           begin
             if Handles[p^.Key] = INVALID_HANDLE then
               begin
-                Relaxed := p^.Data.Weight + Item.Weight;
+                CurrWeight := p^.Data.Weight + Item.Weight;
                 Handles[p^.Key] := Queue.Insert(TAStarItem.Construct(
-                  Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
+                  CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]), CurrWeight, p^.Key));
                 Tree[p^.Key] := Item.Index;
               end
             else
               if not Visited[p^.Key] then
                 begin
-                  Relaxed := p^.Data.Weight + Item.Weight;
-                  if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  EstimWeight := aHeur(FGraph[p^.Key], FGraph[aDst]);
+                  CurrWeight := Item.Weight + p^.Data.Weight;
+                  if CurrWeight + EstimWeight < Queue.Value(Handles[p^.Key]).Score then
                     begin
-                      Queue.Update(Handles[p^.Key], TAStarItem.Construct(
-                        Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
+                      Queue.Update(
+                        Handles[p^.Key], TAStarItem.Construct(CurrWeight + EstimWeight, CurrWeight, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
                 end;
