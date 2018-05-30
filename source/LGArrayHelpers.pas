@@ -849,6 +849,7 @@ type
     class function  CountSortAvailable(out aMinValue, aMaxValue: SizeInt): Boolean; static; inline;
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: SizeInt); static;
   public
+  { will use counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
