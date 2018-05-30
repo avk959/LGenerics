@@ -160,7 +160,7 @@ type
     TOnWriteVertex  = TGraph.TOnWriteVertex;
     TOnReadData     = TGraph.TOnReadData;
     TOnWriteData    = TGraph.TOnWriteData;
-    TOnHeuristic    = function(constref aSrc, aDst: TVertex): TWeight of object;
+    THeuristic      = function(constref aSrc, aDst: TVertex): TWeight;
 
   protected
   type
@@ -249,7 +249,7 @@ type
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
     function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
   { A* pathfinding algorithm }
-    function  AStarPath(aSrc, aDst: SizeInt; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight;
+    function  AStarPath(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
     function  FordBellman(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
@@ -399,8 +399,8 @@ type
     the weights of all edges must be nonnegative;
     the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
     used A* algorithm  }
-    function  FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight; inline;
-    function  FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight;
+    function  FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aPath: TIntArray): TWeight; inline;
+    function  FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
   { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP);
     the weights of edges may be negative;
     returns False if there is a negative weight cycle;
@@ -1409,13 +1409,13 @@ begin
   aPath := nil;
 end;
 
-function TGWeighedUGraph.AStarPath(aSrc, aDst: SizeInt; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.AStarPath(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
 var
   Visited: TBitVector;
   Queue: TAStarHeap;
   Handles: THandleArray;
   Tree: TIntArray;
-  CurrWeight, ImpliedWeight: TWeight;
+  Actual, Implied: TWeight;
   Item: TRankItem;
   p: PAdjItem;
 begin
@@ -1436,19 +1436,19 @@ begin
           begin
             if Handles[p^.Key] = INVALID_HANDLE then
               begin
-                CurrWeight := p^.Data.Weight + Item.Weight;
+                Actual := p^.Data.Weight + Item.Weight;
                 Handles[p^.Key] := Queue.Insert(TRankItem.Construct(
-                  CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]), CurrWeight, p^.Key));
+                  Actual + aHeur(FGraph[p^.Key], FGraph[aDst]), Actual, p^.Key));
                 Tree[p^.Key] := Item.Index;
               end
             else
               if not Visited[p^.Key] then
                 begin
-                  CurrWeight := Item.Weight + p^.Data.Weight;
-                  ImpliedWeight := CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]);
-                  if ImpliedWeight < Queue.Value(Handles[p^.Key]).Rank then
+                  Actual := Item.Weight + p^.Data.Weight;
+                  Implied := aHeur(FGraph[p^.Key], FGraph[aDst]) + Actual;
+                  if Implied < Queue.Value(Handles[p^.Key]).Rank then
                     begin
-                      Queue.Update(Handles[p^.Key], TRankItem.Construct(ImpliedWeight, CurrWeight, p^.Key));
+                      Queue.Update(Handles[p^.Key], TRankItem.Construct(Implied, Actual, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
                 end;
@@ -2095,13 +2095,13 @@ begin
   Result := DijkstraPath(aSrc, aDst, aPath);
 end;
 
-function TGWeighedUGraph.FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: TOnHeuristic;
+function TGWeighedUGraph.FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic;
   out aPath: TIntArray): TWeight;
 begin
   Result := FindMinPathAStarI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aSrc), aHeur, aPath);
 end;
 
-function TGWeighedUGraph.FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: TOnHeuristic; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
 begin
   FGraph.CheckIndexRange(aSrc);
   FGraph.CheckIndexRange(aDst);
