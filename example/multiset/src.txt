@@ -123,7 +123,7 @@ type
     if aCount > length A then Result is truncated }
     class function  Extract(var A: TArray; aIndex, aCount: SizeInt): TArray; static;
     class procedure Reverse(var A: array of T); static;
-    class procedure RandomShuffle(var A: array of T); static;//TGEqualCompare
+    class procedure RandomShuffle(var A: array of T); static;
   { returns 0-based position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TEqualCompare): SizeInt;
                     static;
@@ -849,6 +849,7 @@ type
     class function  CountSortAvailable(out aMinValue, aMaxValue: SizeInt): Boolean; static; inline;
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: SizeInt); static;
   public
+  { will use counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
@@ -10518,9 +10519,11 @@ type
   private
   type
     TAvlTreeNode = specialize TGAvlTreeNode<T>;
+
   public
   type
     PNode = ^TAvlTreeNode;
+
   private
   {$IFNDEF CPU16}
     Left,
@@ -10616,28 +10619,49 @@ type
 
     TNode = record
     private
-      procedure ClearLinks;
+      FParent: SizeInt;
+      procedure ClearLinks; inline;
+      function  GetBalance: SizeInt; inline;
+      function  GetParent: SizeInt; inline;
+      procedure SetBalance(aValue: SizeInt); inline;
+      procedure SetParent(aValue: SizeInt); inline;
     public
       Left,
-      Right,
-      Parent: SizeInt;
+      Right: SizeInt;
       Data: TEntry;
-      Balance: ShortInt;
+      property Parent: SizeInt read GetParent write SetParent;
+      property Balance: SizeInt read GetBalance write SetBalance;
     end;
 
     TNodeList = array of TNode;
 
   private
+  const
+{$IF DEFINED(CPU64)}
+    SHIFT: SizeInt    = 62;
+    MASK: SizeInt     = SizeInt($c000000000000000);
+    NOT_MASK: SizeInt = not SizeInt($c000000000000000);
+{$ELSEIF DEFINED(CPU32)}
+    SHIFT             = 30;
+    MASK: SizeInt     = SizeInt($c0000000);
+    NOT_MASK: SizeInt = not SizeInt($c0000000);
+{$ELSE}
+    SHIFT: SizeInt    = 14;
+    MASK: SizeInt     = SizeInt($c000);
+    NOT_MASK: SizeInt = not SizeInt($c000);
+{$ENDIF}
+    ZERO_BALANCE = Low(SizeInt);
+
   type
     PAvlTree  = ^TGLiteAvlTree;
 
   const
-    NULL_INDEX  = SizeInt(-1);
-    NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
+    NODE_SIZE              = SizeOf(TNode);
+    MAX_CAPACITY: SizeInt  = (SizeInt.MaxValue shr 2) div NODE_SIZE;
 
   public
   type
+
     TEnumerator = record
     private
       FTree: PAvlTree;
@@ -10653,11 +10677,12 @@ type
     end;
 
   private
-    FNodeList: TNodeList;
-    FRoot,
-    FCount: SizeInt;
+    FNodes: TNodeList;
     function  GetCapacity: SizeInt; inline;
-    procedure Expand(aValue: SizeInt); inline;
+    function  GetCount: SizeInt; inline;
+    function  GetRoot: SizeInt; inline;
+    procedure SetRoot(aValue: SizeInt); inline;
+    procedure Expand(aValue: SizeInt);
     function  NewNode: SizeInt;
     procedure FreeNode(aNode: SizeInt);
     function  Successor(aNode: SizeInt): SizeInt;
@@ -10675,15 +10700,12 @@ type
     procedure BalanceAfterInsert(aNode: SizeInt);
     procedure RemoveNode(aNode: SizeInt);
     procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
-
-    property  Root: SizeInt read FRoot;
-    class procedure CapacityExceedError(aValue: SizeInt); static; inline;
+    property  Root: SizeInt read GetRoot write SetRoot;
     class constructor Init;
-    class operator Initialize(var t: TGLiteAvlTree);
     class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
   public
     function  GetEnumerator: TEnumerator;
-    procedure Clear;
+    procedure Clear; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
@@ -10694,11 +10716,11 @@ type
     function  FindLessOrEqual(constref aKey: TKey): SizeInt;
     function  FindGreater(constref aKey: TKey): SizeInt;
     function  FindGreaterOrEqual(constref aKey: TKey): SizeInt;
-    property  Count: SizeInt read FCount;
+    property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Lowest: SizeInt read GetLowest;
     property  Highest: SizeInt read GetHighest;
-    property  NodeList: TNodeList read FNodeList;
+    property  NodeList: TNodeList read FNodes;
   end;
 
 implementation
@@ -12788,31 +12810,51 @@ end;
 
 procedure TGLiteAvlTree.TNode.ClearLinks;
 begin
-  Left := NULL_INDEX;
-  Right := NULL_INDEX;
-  Parent := NULL_INDEX;
-  Balance := 0;
+  Left := 0;
+  Right := 0;
+  FParent := ZERO_BALANCE;
+end;
+
+function TGLiteAvlTree.TNode.GetBalance: SizeInt;
+begin
+  Result := (FParent shr SHIFT) - 2;
+end;
+
+function TGLiteAvlTree.TNode.GetParent: SizeInt;
+begin
+  Result := FParent and NOT_MASK;
+end;
+
+procedure TGLiteAvlTree.TNode.SetBalance(aValue: SizeInt);
+begin
+  FParent := (FParent and NOT_MASK) or ((aValue + 2) shl SHIFT);
+end;
+
+procedure TGLiteAvlTree.TNode.SetParent(aValue: SizeInt);
+begin
+  FParent := (FParent and MASK) or aValue;
 end;
 
 { TGLiteAvlTree.TEnumerator }
 
 function TGLiteAvlTree.TEnumerator.GetCurrent: PEntry;
 begin
-  Result := @FTree^.FNodeList[FCurrNode].Data;
+  Result := @FTree^.FNodes[FCurrNode].Data;
 end;
 
 procedure TGLiteAvlTree.TEnumerator.Init(aTree: PAvlTree);
 begin
   FTree := aTree;
   FFirstNode := aTree^.Lowest;
-  Reset;
+  FCurrNode := 0;
+  FInCycle := False;
 end;
 
 function TGLiteAvlTree.TEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = NULL_INDEX;
+  NextNode: SizeInt = 0;
 begin
-  if FCurrNode <> NULL_INDEX then
+  if FCurrNode <> 0 then
     NextNode := FTree^.Successor(FCurrNode)
   else
     if not FInCycle then
@@ -12820,14 +12862,14 @@ begin
         NextNode := FFirstNode;
         FInCycle := True;
       end;
-  Result := NextNode <> NULL_INDEX;
+  Result := NextNode <> 0;
   if Result then
     FCurrNode := NextNode;
 end;
 
 procedure TGLiteAvlTree.TEnumerator.Reset;
 begin
-  FCurrNode := NULL_INDEX;
+  FCurrNode := 0;
   FInCycle := False;
 end;
 
@@ -12835,81 +12877,113 @@ end;
 
 function TGLiteAvlTree.GetCapacity: SizeInt;
 begin
-  Result := System.Length(FNodeList);
+  if FNodes <> nil then
+    Result := System.High(FNodes)
+  else
+    Result := 0;
+end;
+
+function TGLiteAvlTree.GetCount: SizeInt;
+begin
+  if FNodes <> nil then
+    Result := FNodes[0].Left
+  else
+    Result := 0;
+end;
+
+function TGLiteAvlTree.GetRoot: SizeInt;
+begin
+  if FNodes <> nil then
+    Result := FNodes[0].Right
+  else
+    Result := 0;
+end;
+
+procedure TGLiteAvlTree.SetRoot(aValue: SizeInt);
+begin
+  FNodes[0].Right := aValue;
 end;
 
 procedure TGLiteAvlTree.Expand(aValue: SizeInt);
+var
+  OldCapacity: SizeInt;
 begin
   //there aValue > Capacity
-  if aValue <= DEFAULT_CONTAINER_CAPACITY then
-    System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY)
+  OldCapacity := Capacity;
+  if aValue < DEFAULT_CONTAINER_CAPACITY then
+    System.SetLength(FNodes, DEFAULT_CONTAINER_CAPACITY)
   else
-    if aValue <= MAX_CAPACITY then
+    if aValue < MAX_CAPACITY then
       begin
         aValue := LGUtils.RoundUpTwoPower(aValue);
-        System.SetLength(FNodeList, aValue);
+        System.SetLength(FNodes, aValue);
       end
     else
-      CapacityExceedError(aValue);
+      raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+  if OldCapacity = 0 then
+    begin
+      FNodes[0].Left := 0;
+      FNodes[0].Right := 0;
+    end;
 end;
 
 function TGLiteAvlTree.NewNode: SizeInt;
 begin
   if Count = Capacity then
-    Expand(Succ(Count));
-  Result := Count;
-  FNodeList[Result].ClearLinks;
-  Inc(FCount);
+    Expand(Count + 2);
+  Result := Succ(Count);
+  FNodes[Result].ClearLinks;
+  Inc(FNodes[0].Left);
 end;
 
 procedure TGLiteAvlTree.FreeNode(aNode: SizeInt);
 var
   Last, Parent, Child: SizeInt;
 begin
-  Last := Pred(Count);
-  FNodeList[aNode].Data := Default(TEntry);
+  Last := Count;
+  FNodes[aNode].Data := Default(TEntry);
   if aNode < Last then
     begin
-      System.Move(FNodeList[Last], FNodeList[aNode], NODE_SIZE);
-      System.FillChar(FNodeList[Last].Data , SizeOf(TEntry), 0); //////////////
+      System.Move(FNodes[Last], FNodes[aNode], NODE_SIZE);
+      System.FillChar(FNodes[Last].Data , SizeOf(TEntry), 0); //////////////
       if Root = Last then
-        FRoot := aNode;
-      Parent := FNodeList[aNode].Parent;
-      if Parent <> NULL_INDEX then
+        Root := aNode;
+      Parent := FNodes[aNode].Parent;
+      if Parent <> 0 then
         begin
-          if FNodeList[Parent].Left = Last then
-            FNodeList[Parent].Left := aNode
+          if FNodes[Parent].Left = Last then
+            FNodes[Parent].Left := aNode
           else
-            FNodeList[Parent].Right := aNode;
+            FNodes[Parent].Right := aNode;
         end;
-      Child := FNodeList[aNode].Left;
-      if Child <> NULL_INDEX then
-        FNodeList[Child].Parent := aNode;
-      Child := FNodeList[aNode].Right;
-      if Child <> NULL_INDEX then
-        FNodeList[Child].Parent := aNode;
+      Child := FNodes[aNode].Left;
+      if Child <> 0 then
+        FNodes[Child].Parent := aNode;
+      Child := FNodes[aNode].Right;
+      if Child <> 0 then
+        FNodes[Child].Parent := aNode;
     end;
-  Dec(FCount);
+  Dec(FNodes[0].Left);
 end;
 
 function TGLiteAvlTree.Successor(aNode: SizeInt): SizeInt;
 var
   Parent: SizeInt;
 begin
-  if aNode = NULL_INDEX then
+  if aNode = 0 then
     exit(aNode);
-  Result := FNodeList[aNode].Right;
-  if Result <> NULL_INDEX then
-    while FNodeList[Result].Left <> NULL_INDEX do
-      Result := FNodeList[Result].Left
+  Result := FNodes[aNode].Right;
+  if Result <> 0 then
+    while FNodes[Result].Left <> 0 do
+      Result := FNodes[Result].Left
   else
     begin
       Result := aNode;
-      Parent := FNodeList[aNode].Parent;
-      while (Parent <> NULL_INDEX) and (FNodeList[Parent].Right = Result) do
+      Parent := FNodes[aNode].Parent;
+      while (Parent <> 0) and (FNodes[Parent].Right = Result) do
         begin
-          Result := FNodeList[Result].Parent;
-          Parent := FNodeList[Result].Parent;
+          Result := FNodes[Result].Parent;
+          Parent := FNodes[Result].Parent;
         end;
       Result := Parent;
     end;
@@ -12919,20 +12993,20 @@ function TGLiteAvlTree.Predecessor(aNode: SizeInt): SizeInt;
 var
   Parent: SizeInt;
 begin
-  if aNode = NULL_INDEX then
+  if aNode = 0 then
     exit(aNode);
-  Result := FNodeList[aNode].Left;
-  if Result <> NULL_INDEX then
-    while FNodeList[Result].Right <> NULL_INDEX do
-      Result := FNodeList[Result].Right
+  Result := FNodes[aNode].Left;
+  if Result <> 0 then
+    while FNodes[Result].Right <> 0 do
+      Result := FNodes[Result].Right
   else
     begin
       Result := aNode;
-      Parent := FNodeList[aNode].Parent;
-      while (Parent <> NULL_INDEX) and (FNodeList[Parent].Left = Result) do
+      Parent := FNodes[aNode].Parent;
+      while (Parent <> 0) and (FNodes[Parent].Left = Result) do
         begin
-          Result := FNodeList[Result].Parent;
-          Parent := FNodeList[Result].Parent;
+          Result := FNodes[Result].Parent;
+          Parent := FNodes[Result].Parent;
         end;
       Result := Parent;
     end;
@@ -12940,11 +13014,11 @@ end;
 
 procedure TGLiteAvlTree.SwapBalance(L, R: SizeInt);
 var
-  b: ShortInt;
+  b: SizeInt;
 begin
-  b := FNodeList[L].Balance;
-  FNodeList[L].Balance := FNodeList[R].Balance;
-  FNodeList[R].Balance := b;
+  b := FNodes[L].FParent and MASK;
+  FNodes[L].FParent := (FNodes[L].FParent and NOT_MASK) or (FNodes[R].FParent and MASK);
+  FNodes[R].FParent := (FNodes[R].FParent and NOT_MASK) or b;
 end;
 
 function TGLiteAvlTree.GetHighest: SizeInt;
@@ -12952,13 +13026,13 @@ var
   Curr: SizeInt;
 begin
   Result := Root;
-  if Result <> NULL_INDEX then
+  if Result <> 0 then
     begin
-      Curr := FNodeList[Result].Right;
-      while Curr <> NULL_INDEX do
+      Curr := FNodes[Result].Right;
+      while Curr <> 0 do
         begin
           Result := Curr;
-          Curr := FNodeList[Curr].Right;
+          Curr := FNodes[Curr].Right;
         end;
     end;
 end;
@@ -12968,17 +13042,15 @@ var
   Curr: SizeInt;
 begin
   Result := Root;
-  if Result <> NULL_INDEX then
+  if Result <> 0 then
     begin
-      Curr := FNodeList[Result].Left;
-      while Curr <> NULL_INDEX do
+      Curr := FNodes[Result].Left;
+      while Curr <> 0 do
         begin
           Result := Curr;
-          Curr := FNodeList[Curr].Left;
+          Curr := FNodes[Curr].Left;
         end;
     end;
-    while FNodeList[Result].Left <> NULL_INDEX do
-      Result := FNodeList[Result].Left;
 end;
 
 function TGLiteAvlTree.FindInsertPos(constref aKey: TKey): SizeInt;
@@ -12986,19 +13058,19 @@ var
   Curr: SizeInt;
 begin
   Result := Root;
-  while Result <> NULL_INDEX do
-    if TKeyCmpRel.Compare(aKey, FNodeList[Result].Data.Key) < 0 then
+  while Result <> 0 do
+    if TKeyCmpRel.Compare(aKey, FNodes[Result].Data.Key) < 0 then
       begin
-        Curr := FNodeList[Result].Left;
-        if Curr <> NULL_INDEX then
+        Curr := FNodes[Result].Left;
+        if Curr <> 0 then
           Result := Curr
         else
           break;
       end
     else
       begin
-        Curr := FNodeList[Result].Right;
-        if Curr <> NULL_INDEX then
+        Curr := FNodes[Result].Right;
+        if Curr <> 0 then
           Result := Curr
         else
           break;
@@ -13010,16 +13082,16 @@ var
   Cmp: SizeInt;
 begin
   Result := Root;
-  aInsertPos := NULL_INDEX;
-  while Result <> NULL_INDEX do
+  aInsertPos := 0;
+  while Result <> 0 do
     begin
-      Cmp := TKeyCmpRel.Compare(aKey, FNodeList[Result].Data.Key);
+      Cmp := TKeyCmpRel.Compare(aKey, FNodes[Result].Data.Key);
       aInsertPos := Result;
       if Cmp < 0 then
-        Result := FNodeList[Result].Left
+        Result := FNodes[Result].Left
       else
         if Cmp > 0 then
-          Result := FNodeList[Result].Right
+          Result := FNodes[Result].Right
         else
           break;
     end;
@@ -13033,231 +13105,225 @@ begin
   SuccNode := Successor(aNode);
   SwapBalance(aNode, SuccNode);
 
-  OldParent := FNodeList[aNode].Parent;
-  OldLeft := FNodeList[aNode].Left;
-  OldRight := FNodeList[aNode].Right;
-  OldSuccParent := FNodeList[SuccNode].Parent;
-  OldSuccLeft := FNodeList[SuccNode].Left;
-  OldSuccRight := FNodeList[SuccNode].Right;
+  OldParent := FNodes[aNode].Parent;
+  OldLeft := FNodes[aNode].Left;
+  OldRight := FNodes[aNode].Right;
+  OldSuccParent := FNodes[SuccNode].Parent;
+  OldSuccLeft := FNodes[SuccNode].Left;
+  OldSuccRight := FNodes[SuccNode].Right;
 
-  if OldParent <> NULL_INDEX then
+  if OldParent <> 0 then
     begin
-      if FNodeList[OldParent].Left = aNode then
-        FNodeList[OldParent].Left := SuccNode
+      if FNodes[OldParent].Left = aNode then
+        FNodes[OldParent].Left := SuccNode
       else
-        FNodeList[OldParent].Right := SuccNode;
+        FNodes[OldParent].Right := SuccNode;
     end
   else
-    FRoot := SuccNode;
+    Root := SuccNode;
 
-  FNodeList[SuccNode].Parent := OldParent;
+  FNodes[SuccNode].Parent := OldParent;
 
   if OldSuccParent <> aNode then
     begin
-      if FNodeList[OldSuccParent].Left = SuccNode then
-        FNodeList[OldSuccParent].Left := aNode
+      if FNodes[OldSuccParent].Left = SuccNode then
+        FNodes[OldSuccParent].Left := aNode
       else
-        FNodeList[OldSuccParent].Right := aNode;
-      FNodeList[SuccNode].Right := OldRight;
-      FNodeList[aNode].Parent := OldSuccParent;
-      if OldRight <> NULL_INDEX then
-        FNodeList[OldRight].Parent := SuccNode;
+        FNodes[OldSuccParent].Right := aNode;
+      FNodes[SuccNode].Right := OldRight;
+      FNodes[aNode].Parent := OldSuccParent;
+      if OldRight <> 0 then
+        FNodes[OldRight].Parent := SuccNode;
     end
   else
     begin
-      FNodeList[SuccNode].Right := aNode;
-      FNodeList[aNode].Parent := SuccNode;
+      FNodes[SuccNode].Right := aNode;
+      FNodes[aNode].Parent := SuccNode;
     end;
 
-  FNodeList[aNode].Left := OldSuccLeft;
-  if OldSuccLeft <> NULL_INDEX then
-    FNodeList[OldSuccLeft].Parent := aNode;
-  FNodeList[aNode].Right := OldSuccRight;
-  if OldSuccRight <> NULL_INDEX then
-    FNodeList[OldSuccRight].Parent := aNode;
-  FNodeList[SuccNode].Left := OldLeft;
-  if OldLeft <> NULL_INDEX then
-    FNodeList[OldLeft].Parent := SuccNode;
+  FNodes[aNode].Left := OldSuccLeft;
+  if OldSuccLeft <> 0 then
+    FNodes[OldSuccLeft].Parent := aNode;
+  FNodes[aNode].Right := OldSuccRight;
+  if OldSuccRight <> 0 then
+    FNodes[OldSuccRight].Parent := aNode;
+  FNodes[SuccNode].Left := OldLeft;
+  if OldLeft <> 0 then
+    FNodes[OldLeft].Parent := SuccNode;
 end;
 
 procedure TGLiteAvlTree.RotateLeft(aNode: SizeInt);
 var
   OldParent, OldRight, OldRightLeft: SizeInt;
 begin
-  OldRight := FNodeList[aNode].Right;
-  OldRightLeft := FNodeList[OldRight].Left;
-  OldParent := FNodeList[aNode].Parent;
-  if OldParent <> NULL_INDEX then
+  OldRight := FNodes[aNode].Right;
+  OldRightLeft := FNodes[OldRight].Left;
+  OldParent := FNodes[aNode].Parent;
+  if OldParent <> 0 then
     begin
-      if FNodeList[OldParent].Left = aNode then
-        FNodeList[OldParent].Left := OldRight
+      if FNodes[OldParent].Left = aNode then
+        FNodes[OldParent].Left := OldRight
       else
-        FNodeList[OldParent].Right := OldRight;
+        FNodes[OldParent].Right := OldRight;
     end
   else
-    FRoot := OldRight;
-  FNodeList[OldRight].Parent := OldParent;
-  FNodeList[aNode].Parent := OldRight;
-  FNodeList[aNode].Right := OldRightLeft;
-  if OldRightLeft <> NULL_INDEX then
-    FNodeList[OldRightLeft].Parent := aNode;
-  FNodeList[OldRight].Left := aNode;
+    Root := OldRight;
+  FNodes[OldRight].Parent := OldParent;
+  FNodes[aNode].Parent := OldRight;
+  FNodes[aNode].Right := OldRightLeft;
+  if OldRightLeft <> 0 then
+    FNodes[OldRightLeft].Parent := aNode;
+  FNodes[OldRight].Left := aNode;
 end;
 
 procedure TGLiteAvlTree.RotateRight(aNode: SizeInt);
 var
   OldParent, OldLeft, OldLeftRight: SizeInt;
 begin
-  OldLeft := FNodeList[aNode].Left;
-  OldLeftRight := FNodeList[OldLeft].Right;
-  OldParent := FNodeList[aNode].Parent;
-  if OldParent <> NULL_INDEX then
+  OldLeft := FNodes[aNode].Left;
+  OldLeftRight := FNodes[OldLeft].Right;
+  OldParent := FNodes[aNode].Parent;
+  if OldParent <> 0 then
     begin
-      if FNodeList[OldParent].Left = aNode then
-        FNodeList[OldParent].Left := OldLeft
+      if FNodes[OldParent].Left = aNode then
+        FNodes[OldParent].Left := OldLeft
       else
-        FNodeList[OldParent].Right := OldLeft;
+        FNodes[OldParent].Right := OldLeft;
     end
   else
-    FRoot := OldLeft;
-  FNodeList[OldLeft].Parent := OldParent;
-  FNodeList[aNode].Parent := OldLeft;
-  FNodeList[aNode].Left := OldLeftRight;
-  if OldLeftRight <> NULL_INDEX then
-    FNodeList[OldLeftRight].Parent := aNode;
-  FNodeList[OldLeft].Right := aNode;
+    Root := OldLeft;
+  FNodes[OldLeft].Parent := OldParent;
+  FNodes[aNode].Parent := OldLeft;
+  FNodes[aNode].Left := OldLeftRight;
+  if OldLeftRight <> 0 then
+    FNodes[OldLeftRight].Parent := aNode;
+  FNodes[OldLeft].Right := aNode;
 end;
 
 procedure TGLiteAvlTree.InsertNode(aNode: SizeInt);
 var
-  Parent: SizeInt;
+  ParentNode: SizeInt;
 begin
-  if FRoot <> NULL_INDEX then
+  if Root <> 0 then
     begin
-      Parent := FindInsertPos(FNodeList[aNode].Data.Key);
-      FNodeList[aNode].Parent := Parent;
-      if TKeyCmpRel.Compare(FNodeList[aNode].Data.Key, FNodeList[Parent].Data.Key) < 0 then
-        FNodeList[Parent].Left := aNode
+      ParentNode := FindInsertPos(FNodes[aNode].Data.Key);
+      FNodes[aNode].Parent := ParentNode;
+      if TKeyCmpRel.Compare(FNodes[aNode].Data.Key, FNodes[ParentNode].Data.Key) < 0 then
+        FNodes[ParentNode].Left := aNode
       else
-        FNodeList[Parent].Right := aNode;
+        FNodes[ParentNode].Right := aNode;
       BalanceAfterInsert(aNode);
     end
   else
-    begin
-      FRoot := aNode;
-      FNodeList[aNode].Parent := NULL_INDEX;
-    end;
+    Root := aNode;
 end;
 
 procedure TGLiteAvlTree.InsertNodeAt(aNode, aParent: SizeInt);
 begin
-  if aParent <> NULL_INDEX then
+  if aParent <> 0 then
     begin
-      FNodeList[aNode].Parent := aParent;
-      if TKeyCmpRel.Compare(FNodeList[aNode].Data.Key, FNodeList[aParent].Data.Key) < 0 then
-        FNodeList[aParent].Left := aNode
+      FNodes[aNode].Parent := aParent;
+      if TKeyCmpRel.Compare(FNodes[aNode].Data.Key, FNodes[aParent].Data.Key) < 0 then
+        FNodes[aParent].Left := aNode
       else
-        FNodeList[aParent].Right := aNode;
+        FNodes[aParent].Right := aNode;
       BalanceAfterInsert(aNode);
     end
   else
-    begin
-      FRoot := aNode;
-      FNodeList[aNode].Parent := NULL_INDEX;
-    end;
+    Root := aNode;
 end;
 
 procedure TGLiteAvlTree.BalanceAfterInsert(aNode: SizeInt);
 var
   OldParent, OldChild: SizeInt;
 begin
-  OldParent := FNodeList[aNode].Parent;
-  while OldParent <> NULL_INDEX do
-    if FNodeList[OldParent].Left = aNode then //aNode is left child => we must decrease OldParent.Balance
-      case FNodeList[OldParent].Balance of
+  OldParent := FNodes[aNode].Parent;
+  while OldParent <> 0 do
+    if FNodes[OldParent].Left = aNode then //aNode is left child => we must decrease OldParent.Balance
+      case FNodes[OldParent].Balance of
         -1:
           begin
-            if FNodeList[aNode].Balance = -1 then
+            if FNodes[aNode].Balance = -1 then
               begin
                 RotateRight(OldParent);
-                FNodeList[aNode].Balance := 0;
-                FNodeList[OldParent].Balance := 0;
+                FNodes[aNode].Balance := 0;
+                FNodes[OldParent].Balance := 0;
               end
             else
               begin
-                OldChild := FNodeList[aNode].Right;
+                OldChild := FNodes[aNode].Right;
                 RotateLeft(aNode);
                 RotateRight(OldParent);
-                case FNodeList[OldChild].Balance of
+                case FNodes[OldChild].Balance of
                   -1:
                     begin
-                      FNodeList[aNode].Balance := 0;
-                      FNodeList[OldParent].Balance := 1;
+                      FNodes[aNode].Balance := 0;
+                      FNodes[OldParent].Balance := 1;
                     end;
                   0:
                     begin
-                      FNodeList[aNode].Balance := 0;
-                      FNodeList[OldParent].Balance := 0
+                      FNodes[aNode].Balance := 0;
+                      FNodes[OldParent].Balance := 0
                     end;
                 else //1
-                  FNodeList[aNode].Balance := -1;
-                  FNodeList[OldParent].Balance := 0;
+                  FNodes[aNode].Balance := -1;
+                  FNodes[OldParent].Balance := 0;
                 end;
-                FNodeList[OldChild].Balance := 0;
+                FNodes[OldChild].Balance := 0;
               end;
             break;
           end;
         0:
           begin
-            FNodeList[OldParent].Balance := -1;
+            FNodes[OldParent].Balance := -1;
             aNode := OldParent;
-            OldParent := FNodeList[aNode].Parent;
+            OldParent := FNodes[aNode].Parent;
           end;
       else //1
-        FNodeList[OldParent].Balance := 0;
+        FNodes[OldParent].Balance := 0;
         break;
       end
     else  // aNode is right child => we must increase OldParent.Balance
-      case FNodeList[OldParent].Balance of
+      case FNodes[OldParent].Balance of
        -1:
          begin
-           FNodeList[OldParent].Balance := 0;
+           FNodes[OldParent].Balance := 0;
            break;
          end;
         0:
           begin
-            FNodeList[OldParent].Balance := 1;
+            FNodes[OldParent].Balance := 1;
             aNode := OldParent;
-            OldParent := FNodeList[aNode].Parent;
+            OldParent := FNodes[aNode].Parent;
           end;
       else // 1
-        if FNodeList[aNode].Balance = 1 then
+        if FNodes[aNode].Balance = 1 then
           begin
             RotateLeft(OldParent);
-            FNodeList[aNode].Balance := 0;
-            FNodeList[OldParent].Balance := 0;
+            FNodes[aNode].Balance := 0;
+            FNodes[OldParent].Balance := 0;
           end
         else
           begin
-            OldChild := FNodeList[aNode].Left;
+            OldChild := FNodes[aNode].Left;
             RotateRight(aNode);
             RotateLeft(OldParent);
-            case FNodeList[OldChild].Balance of
+            case FNodes[OldChild].Balance of
               -1:
                 begin
-                  FNodeList[aNode].Balance := 1;
-                  FNodeList[OldParent].Balance := 0;
+                  FNodes[aNode].Balance := 1;
+                  FNodes[OldParent].Balance := 0;
                 end;
               0:
                 begin
-                  FNodeList[aNode].Balance := 0;
-                  FNodeList[OldParent].Balance := 0;
+                  FNodes[aNode].Balance := 0;
+                  FNodes[OldParent].Balance := 0;
                 end;
             else  //1
-              FNodeList[aNode].Balance := 0;
-              FNodeList[OldParent].Balance := -1
+              FNodes[aNode].Balance := 0;
+              FNodes[OldParent].Balance := -1
             end;
-            FNodeList[OldChild].Balance := 0;
+            FNodes[OldChild].Balance := 0;
           end;
         break;
       end;
@@ -13267,31 +13333,31 @@ procedure TGLiteAvlTree.RemoveNode(aNode: SizeInt);
 var
   OldParent, Child: SizeInt;
 begin
-  if (FNodeList[aNode].Left <> NULL_INDEX) and (FNodeList[aNode].Right <> NULL_INDEX) then
+  if (FNodes[aNode].Left <> 0) and (FNodes[aNode].Right <> 0) then
     ReplaceWithSuccessor(aNode);
-  OldParent := FNodeList[aNode].Parent;
-  FNodeList[aNode].Parent := NULL_INDEX;
-  if FNodeList[aNode].Left <> NULL_INDEX then
-    Child := FNodeList[aNode].Left
+  OldParent := FNodes[aNode].Parent;
+  FNodes[aNode].Parent := 0;
+  if FNodes[aNode].Left <> 0 then
+    Child := FNodes[aNode].Left
   else
-    Child := FNodeList[aNode].Right;
-  if Child <> NULL_INDEX then
-    FNodeList[Child].Parent := OldParent;
-  if OldParent <> NULL_INDEX then
+    Child := FNodes[aNode].Right;
+  if Child <> 0 then
+    FNodes[Child].Parent := OldParent;
+  if OldParent <> 0 then
     begin
-      if FNodeList[OldParent].Left = aNode then
+      if FNodes[OldParent].Left = aNode then
         begin
-          FNodeList[OldParent].Left := Child;
-          BalanceAfterRemove(OldParent, Succ(FNodeList[OldParent].Balance));
+          FNodes[OldParent].Left := Child;
+          BalanceAfterRemove(OldParent, Succ(FNodes[OldParent].Balance));
         end
       else
         begin
-          FNodeList[OldParent].Right := Child;
-          BalanceAfterRemove(OldParent, Pred(FNodeList[OldParent].Balance));
+          FNodes[OldParent].Right := Child;
+          BalanceAfterRemove(OldParent, Pred(FNodes[OldParent].Balance));
         end;
     end
   else
-    FRoot := Child;
+    Root := Child;
   FreeNode(aNode);
 end;
 
@@ -13299,60 +13365,60 @@ procedure TGLiteAvlTree.BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt
 var
   OldParent, Child, ChildOfChild: SizeInt;
 begin
-  while aNode <> NULL_INDEX do
+  while aNode <> 0 do
     begin
-      OldParent := FNodeList[aNode].Parent;
+      OldParent := FNodes[aNode].Parent;
       case aNewBalance of
         -2:
           begin
-            Child := FNodeList[aNode].Left;
-            if FNodeList[Child].Balance <= 0 then
+            Child := FNodes[aNode].Left;
+            if FNodes[Child].Balance <= 0 then
               begin
                 RotateRight(aNode);
-                FNodeList[aNode].Balance := -Succ(FNodeList[Child].Balance);
-                aNewBalance := Succ(FNodeList[Child].Balance);
+                FNodes[aNode].Balance := -Succ(FNodes[Child].Balance);
+                aNewBalance := Succ(FNodes[Child].Balance);
                 aNode := Child;
-                FNodeList[Child].Balance := aNewBalance;
+                FNodes[Child].Balance := aNewBalance;
               end
             else
               begin
-                ChildOfChild := FNodeList[Child].Right;
+                ChildOfChild := FNodes[Child].Right;
                 RotateLeft(Child);
                 RotateRight(aNode);
-                case FNodeList[ChildOfChild].Balance of
+                case FNodes[ChildOfChild].Balance of
                   -1:
                     begin
-                      FNodeList[aNode].Balance := 1;
-                      FNodeList[Child].Balance := 0;
+                      FNodes[aNode].Balance := 1;
+                      FNodes[Child].Balance := 0;
                     end;
                    0:
                      begin
-                       FNodeList[aNode].Balance := 0;
-                       FNodeList[Child].Balance := 0;
+                       FNodes[aNode].Balance := 0;
+                       FNodes[Child].Balance := 0;
                      end;
                 else // 1
-                  FNodeList[aNode].Balance := 0;
-                  FNodeList[Child].Balance := -1;
+                  FNodes[aNode].Balance := 0;
+                  FNodes[Child].Balance := -1;
                 end;
                 aNode := ChildOfChild;
                 aNewBalance := 0;
-                FNodeList[ChildOfChild].Balance := 0;
+                FNodes[ChildOfChild].Balance := 0;
               end;
           end;
         -1:
           begin
-            FNodeList[aNode].Balance := aNewBalance;
+            FNodes[aNode].Balance := aNewBalance;
             break;
           end;
          0:
            begin
-             FNodeList[aNode].Balance := aNewBalance;
-             if OldParent <> NULL_INDEX then
+             FNodes[aNode].Balance := aNewBalance;
+             if OldParent <> 0 then
                begin
-                 if FNodeList[OldParent].Left = aNode then
-                   aNewBalance := Succ(FNodeList[OldParent].Balance)
+                 if FNodes[OldParent].Left = aNode then
+                   aNewBalance := Succ(FNodes[OldParent].Balance)
                  else
-                   aNewBalance := Pred(FNodeList[OldParent].Balance);
+                   aNewBalance := Pred(FNodes[OldParent].Balance);
                  aNode := OldParent;
                end
              else
@@ -13360,52 +13426,47 @@ begin
            end;
          1:
            begin
-             FNodeList[aNode].Balance := aNewBalance;
+             FNodes[aNode].Balance := aNewBalance;
              break;
            end;
          2:
            begin
-             Child := FNodeList[aNode].Right;
-             if FNodeList[Child].Balance >= 0 then
+             Child := FNodes[aNode].Right;
+             if FNodes[Child].Balance >= 0 then
                begin
                  RotateLeft(aNode);
-                 FNodeList[aNode].Balance := ShortInt(1) - FNodeList[Child].Balance;
-                 aNewBalance := Pred(FNodeList[Child].Balance);
+                 FNodes[aNode].Balance := ShortInt(1) - FNodes[Child].Balance;
+                 aNewBalance := Pred(FNodes[Child].Balance);
                  aNode := Child;
-                 FNodeList[Child].Balance := aNewBalance;
+                 FNodes[Child].Balance := aNewBalance;
                end
              else
                begin
-                 ChildOfChild := FNodeList[Child].Left;
+                 ChildOfChild := FNodes[Child].Left;
                  RotateRight(Child);
                  RotateLeft(aNode);
-                 case FNodeList[ChildOfChild].Balance of
+                 case FNodes[ChildOfChild].Balance of
                    -1:
                      begin
-                       FNodeList[aNode].Balance := 0;
-                       FNodeList[Child].Balance := 1;
+                       FNodes[aNode].Balance := 0;
+                       FNodes[Child].Balance := 1;
                      end;
                     0:
                       begin
-                        FNodeList[aNode].Balance := 0;
-                        FNodeList[Child].Balance := 0;
+                        FNodes[aNode].Balance := 0;
+                        FNodes[Child].Balance := 0;
                       end;
                  else // 1
-                   FNodeList[aNode].Balance := -1;
-                   FNodeList[Child].Balance := 0;
+                   FNodes[aNode].Balance := -1;
+                   FNodes[Child].Balance := 0;
                  end;
-                 FNodeList[ChildOfChild].Balance := 0;
+                 FNodes[ChildOfChild].Balance := 0;
                  aNode := ChildOfChild;
                  aNewBalance := 0;
                end;
            end;
       end;
     end;
-end;
-
-class procedure TGLiteAvlTree.CapacityExceedError(aValue: SizeInt);
-begin
-  raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
 class constructor TGLiteAvlTree.Init;
@@ -13415,17 +13476,9 @@ begin
 {$POP}
 end;
 
-class operator TGLiteAvlTree.Initialize(var t: TGLiteAvlTree);
-begin
-  t.FRoot := NULL_INDEX;
-  t.FCount := 0;
-end;
-
 class operator TGLiteAvlTree.Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
 begin
-  aDst.FNodeList := System.Copy(aSrc.FNodeList);
-  aDst.FRoot := aSrc.Root;
-  aDst.FCount := aSrc.Count;
+  aDst.FNodes := System.Copy(aSrc.FNodes);
 end;
 
 function TGLiteAvlTree.GetEnumerator: TEnumerator;
@@ -13435,9 +13488,7 @@ end;
 
 procedure TGLiteAvlTree.Clear;
 begin
-  FNodeList := nil;;
-  FRoot := NULL_INDEX;
-  FCount := 0;
+  FNodes := nil;
 end;
 
 procedure TGLiteAvlTree.EnsureCapacity(aValue: SizeInt);
@@ -13448,7 +13499,10 @@ end;
 
 procedure TGLiteAvlTree.TrimToFit;
 begin
-  System.SetLength(FNodeList, Count);
+  if Count > 0 then
+    System.SetLength(FNodes, Succ(Count))
+  else
+    Clear;
 end;
 
 function TGLiteAvlTree.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
@@ -13456,14 +13510,14 @@ var
   Node, ParentNode: SizeInt;
 begin
   Node := FindNode(aKey, ParentNode);
-  Result := Node <> NULL_INDEX;
+  Result := Node <> 0;
   if not Result then
     begin
       Node := NewNode;
-      FNodeList[Node].Data.Key := aKey;
+      FNodes[Node].Data.Key := aKey;
       InsertNodeAt(Node, ParentNode);
     end;
-  e := @FNodeList[Node].Data;
+  e := @FNodes[Node].Data;
 end;
 
 function TGLiteAvlTree.Find(constref aKey: TKey): PEntry;
@@ -13471,8 +13525,8 @@ var
   Node, ParentNode: SizeInt;
 begin
   Node := FindNode(aKey, ParentNode);
-  if Node <> NULL_INDEX then
-    Result :=  @FNodeList[Node].Data
+  if Node <> 0 then
+    Result :=  @FNodes[Node].Data
   else
     Result := nil;
 end;
@@ -13482,14 +13536,14 @@ var
   Node, ParentNode: SizeInt;
 begin
   Node := FindNode(aKey, ParentNode);
-  Result := Node <> NULL_INDEX;
+  Result := Node <> 0;
   if Result then
     RemoveNode(Node);
 end;
 
 procedure TGLiteAvlTree.RemoveAt(aIndex: SizeInt);
 begin
-  if aIndex <> NULL_INDEX then
+  if aIndex <> 0 then
     RemoveNode(aIndex);
 end;
 
@@ -13498,15 +13552,15 @@ var
   CurrNode: SizeInt;
 begin
   CurrNode := Root;
-  Result := NULL_INDEX;
-  while CurrNode <> NULL_INDEX do
-    if TKeyCmpRel.Compare(aKey, FNodeList[CurrNode].Data.Key) > 0 then
+  Result := 0;
+  while CurrNode <> 0 do
+    if TKeyCmpRel.Compare(aKey, FNodes[CurrNode].Data.Key) > 0 then
       begin
         Result := CurrNode;
-        CurrNode := FNodeList[CurrNode].Right;
+        CurrNode := FNodes[CurrNode].Right;
       end
     else
-      CurrNode := FNodeList[CurrNode].Left;
+      CurrNode := FNodes[CurrNode].Left;
 end;
 
 function TGLiteAvlTree.FindLessOrEqual(constref aKey: TKey): SizeInt;
@@ -13514,15 +13568,15 @@ var
   CurrNode: SizeInt;
 begin
   CurrNode := Root;
-  Result := NULL_INDEX;
-  while CurrNode <> NULL_INDEX do
-    if TKeyCmpRel.Compare(aKey, FNodeList[CurrNode].Data.Key) >= 0 then
+  Result := 0;
+  while CurrNode <> 0 do
+    if TKeyCmpRel.Compare(aKey, FNodes[CurrNode].Data.Key) >= 0 then
       begin
         Result := CurrNode;
-        CurrNode := FNodeList[CurrNode].Right;
+        CurrNode := FNodes[CurrNode].Right;
       end
     else
-      CurrNode := FNodeList[CurrNode].Left;
+      CurrNode := FNodes[CurrNode].Left;
 end;
 
 function TGLiteAvlTree.FindGreater(constref aKey: TKey): SizeInt;
@@ -13530,15 +13584,15 @@ var
   CurrNode: SizeInt;
 begin
   CurrNode := Root;
-  Result := NULL_INDEX;
-  while CurrNode <> NULL_INDEX do
-    if TKeyCmpRel.Compare(aKey, FNodeList[CurrNode].Data.Key) < 0 then
+  Result := 0;
+  while CurrNode <> 0 do
+    if TKeyCmpRel.Compare(aKey, FNodes[CurrNode].Data.Key) < 0 then
       begin
         Result := CurrNode;
-        CurrNode := FNodeList[CurrNode].Left;
+        CurrNode := FNodes[CurrNode].Left;
       end
     else
-      CurrNode := FNodeList[CurrNode].Right;
+      CurrNode := FNodes[CurrNode].Right;
 end;
 
 function TGLiteAvlTree.FindGreaterOrEqual(constref aKey: TKey): SizeInt;
@@ -13546,15 +13600,15 @@ var
   CurrNode: SizeInt;
 begin
   CurrNode := Root;
-  Result := NULL_INDEX;
-  while CurrNode <> NULL_INDEX do
-    if TKeyCmpRel.Compare(aKey, FNodeList[CurrNode].Data.Key) <= 0 then
+  Result := 0;
+  while CurrNode <> 0 do
+    if TKeyCmpRel.Compare(aKey, FNodes[CurrNode].Data.Key) <= 0 then
       begin
         Result := CurrNode;
-        CurrNode := FNodeList[CurrNode].Left;
+        CurrNode := FNodes[CurrNode].Left;
       end
     else
-      CurrNode := FNodeList[CurrNode].Right;
+      CurrNode := FNodes[CurrNode].Right;
 end;
 
 end.
@@ -13640,7 +13694,7 @@ type
   generic TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(TCustomIterable,
     specialize IGMap<TKey, TValue>, specialize IGInverseMap<TKey, TValue>)
   {must be  generic TGHashBiMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... }
+              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
     THashBiMap       = specialize TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel>;
@@ -15371,7 +15425,7 @@ type
   { TGCustomMap: map abstract ancestor class  }
   generic TGCustomMap<TKey, TValue> = class abstract(TCustomIterable, specialize IGMap<TKey, TValue>)
   {must be  generic TGCustomMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... }
+              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
     TCustomMap       = specialize TGCustomMap<TKey, TValue>;
@@ -15510,7 +15564,7 @@ type
   { TGCustomMultiMap: multimap abstract ancestor class }
   generic TGCustomMultiMap<TKey, TValue> = class abstract(TCustomIterable)
   {must be  generic TGCustomMultiMap<TKey, TValue> = class abstract(
-              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... }
+              specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
     TCustomMultiMap  = specialize TGCustomMultiMap<TKey, TValue>;
@@ -26963,7 +27017,6 @@ type
     class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
     class operator =(constref L, R: TGLiteHashSetLP): Boolean; inline;
     class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
-    class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
     function  MinLoadFactor: Single; inline;
@@ -27870,22 +27923,23 @@ end;
 
 class operator TGLiteHashSetLP. - (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
 var
-  Tmp: TGLiteHashSetLP;
+  tmp: TGLiteHashSetLP;
+  v: T;
 begin
   if @Result = @L then
     Result.Subtract(R)
   else
     if @Result = @R then
       begin
-        Tmp := R;
-        Result := L;
-        Result.Subtract(Tmp)
+        for v in L do
+          if R.NonContains(v) then
+            tmp.Add(v);
+        Result := tmp;
       end
     else
-      begin
-        Result := L;
-        Result.Subtract(R);
-      end;
+      for v in L do
+        if R.NonContains(v) then
+          Result.Add(v);
 end;
 
 class operator TGLiteHashSetLP. * (constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
@@ -27924,11 +27978,6 @@ end;
 class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
 begin
   Result := L.IsSubset(R);
-end;
-
-class operator TGLiteHashSetLP.in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean;
-begin
-  Result := aSet.Contains(aValue);
 end;
 
 function TGLiteHashSetLP.DefaultLoadFactor: Single;
@@ -45674,6 +45723,7 @@ type
     procedure SiftDown;
     procedure FloatUp(aIndex: SizeInt);
     function  DequeueItem: T;
+    property  Items: TBuffer.TArray read FBuffer.FItems;
     class function DoCompare(constref L, R: T): SizeInt; static;
   public
   type
@@ -46333,7 +46383,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TGLitePairingHeap implements maximizing priority queue;
+  { TGLiteComparablePairHeapMin implements minimizing priority queue;
       functor TCmpRel (comparision relation) must provide
         class function Compare([const[ref]] L, R: T): SizeInt; }
   generic TGLiteComparablePairHeapMin<T> = record
@@ -46443,8 +46493,8 @@ type
     function  PeekHead: THandle; inline;                    // O(1)
     function  TryPeekHead(out aValue: THandle): Boolean; inline;
     function  Value(aHandle: THandle): T; inline;
-    procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              IncreaseKey
-                                                                    //amortized O(logN) DecreaseKey
+    procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              DecreaseKey
+                                                                    //amortized O(logN) IncreaseKey
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
   { note: after Merge all handles from aHeap will remain valid }
     function  Merge(aHeap: TGLiteComparablePairHeapMin): SizeInt;// O(1)
@@ -47085,19 +47135,18 @@ begin
         begin
           CurrIdx := I;
           NextIdx := Succ(I shl 1);
-          v := TFake(FBuffer.FItems[CurrIdx]);
+          v := TFake(Items[CurrIdx]);
           while NextIdx <= HighIdx do
             begin
-              if(Succ(NextIdx) <= HighIdx) and
-                (TCmpRel.Compare(FBuffer.FItems[NextIdx], FBuffer.FItems[Succ(NextIdx)]) < 0)then
+              if (Succ(NextIdx) <= HighIdx) and (TCmpRel.Compare(Items[NextIdx], Items[Succ(NextIdx)]) < 0)then
                 Inc(NextIdx);
-              if TCmpRel.Compare(T(v), FBuffer.FItems[NextIdx]) >= 0 then
+              if TCmpRel.Compare(T(v), Items[NextIdx]) >= 0 then
                 break;
-              TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+              TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
               CurrIdx := NextIdx;
               NextIdx := Succ(NextIdx shl 1);
             end;
-          TFake(FBuffer.FItems[CurrIdx]) := v;
+          TFake(Items[CurrIdx]) := v;
         end;
     end;
 end;
@@ -47112,20 +47161,19 @@ begin
     begin
       CurrIdx := 0;
       NextIdx := 1;
-      v := TFake(FBuffer.FItems[0]);
+      v := TFake(Items[0]);
       while NextIdx <= HighIdx do
         begin
-          if(Succ(NextIdx) <= HighIdx) and
-            (TCmpRel.Compare(FBuffer.FItems[NextIdx], FBuffer.FItems[Succ(NextIdx)]) < 0) then
+          if (Succ(NextIdx) <= HighIdx) and (TCmpRel.Compare(Items[NextIdx], Items[Succ(NextIdx)]) < 0) then
             Inc(NextIdx);
-          TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+          TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
           CurrIdx := NextIdx;
           NextIdx := Succ(NextIdx shl 1);
         end;
       NextIdx := Pred(CurrIdx) shr 1;
-      while (CurrIdx > 0) and (TCmpRel.Compare(T(v), FBuffer.FItems[NextIdx]) > 0) do
+      while (CurrIdx > 0) and (TCmpRel.Compare(T(v), Items[NextIdx]) > 0) do
         begin
-          TFake(FBuffer.FItems[CurrIdx]) := TFake(FBuffer.FItems[NextIdx]);
+          TFake(Items[CurrIdx]) := TFake(Items[NextIdx]);
           CurrIdx := NextIdx;
           NextIdx := Pred(NextIdx) shr 1;
         end;
@@ -47142,13 +47190,13 @@ begin
     begin
       ParentIdx := Pred(aIndex) shr 1;
       v := TFake(FBuffer.FItems[aIndex]);
-      while(aIndex > 0) and (TCmpRel.Compare(T(v), FBuffer.FItems[ParentIdx]) > 0) do
+      while(aIndex > 0) and (TCmpRel.Compare(T(v), Items[ParentIdx]) > 0) do
         begin
-          TFake(FBuffer.FItems[aIndex]) := TFake(FBuffer.FItems[ParentIdx]);
+          TFake(Items[aIndex]) := TFake(Items[ParentIdx]);
           aIndex := ParentIdx;
           ParentIdx := Pred(ParentIdx) shr 1;
         end;
-      TFake(FBuffer.FItems[aIndex]) := v;
+      TFake(Items[aIndex]) := v;
     end;
 end;
 
@@ -47158,8 +47206,8 @@ begin
   Dec(FBuffer.FCount);
   if Count > 0 then
     begin
-      FBuffer.FItems[0] := FBuffer.FItems[Count];
-      FBuffer.FItems[Count] := Default(T);
+      Items[0] := Items[Count];
+      Items[Count] := Default(T);
       SiftDown;
     end
   else
@@ -51978,37 +52026,113 @@ uses
 
 type
 
-  ELGGraphError = class(Exception); //???
+  ELGraphError = class(Exception); //???
 
-  TEmptyRec     = record end;
+  TEmptyRec    = record end;
+  THandle      = LGUtils.THandle;
 
-  TIntArray     = array of SizeInt;
-  TShortArray   = array of ShortInt;
-  TIntHelper    = specialize TGNumArrayHelper<SizeInt>;
-  TIntStack     = specialize TGLiteStack<SizeInt>;
-  TIntQueue     = specialize TGLiteQueue<SizeInt>;
+  TIntArray    = array of SizeInt;
+  TShortArray  = array of ShortInt;
+  THandleArray = array of THandle;
+  TIntHelper   = specialize TGNumArrayHelper<SizeInt>;
+  TIntStack    = specialize TGLiteStack<SizeInt>;
+  TIntQueue    = specialize TGLiteQueue<SizeInt>;
 
-  TOnIntVisit   = procedure (aValue: SizeInt) of object;
-  TOnIntTest    = function (aValue: SizeInt): Boolean of object;
+  TOnIntVisit  = procedure (aValue: SizeInt) of object;
+  TOnIntTest   = function (aValue: SizeInt): Boolean of object;
 
-  generic TGOnAddEdge<T> = procedure(aSrc, aDst: SizeInt; aData: Pointer) of object;
+  generic TGOnAddEdge<T>       = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
+  generic TGOnReadStream<T>    = function(aStream: TStream): T of object;
+  generic TGOnWriteStream<T>   = procedure(aStream: TStream; constref aValue: T) of object;
+  generic TGReadStream<T>      = function(aStream: TStream): T;
+  generic TGWriteStream<T>     = procedure(aStream: TStream; constref aValue: T);
+  generic TGNestReadStream<T>  = function(aStream: TStream): T is nested;
+  generic TGNestWriteStream<T> = procedure(aStream: TStream; constref aValue: T) is nested;
+
+  { TGSinglePoint: labeled point with single coordinates;
+    functor TEqRel must provide:
+      class function HashCode([const[ref]] aValue: T): SizeInt;
+      class function Equal([const[ref]] L, R: T): Boolean; }
+  generic TGSinglePoint<T, TEqRel> = record
+    Tag: T;
+    X, Y: Single;
+    class function Construct(aTag: T; aX, aY: Single): TGSinglePoint; static; inline;
+    class function Distance(constref aSrc, aDst: TGSinglePoint): Single; static;inline;
+    class function HashCode(constref aValue: TGSinglePoint): SizeInt; static; inline;
+    class function Equal(constref L, R: TGSinglePoint): Boolean; static; inline;
+  end;
+
+  { TGDoublePoint: labeled point with double coordinates;
+    functor TEqRel must provide:
+      class function HashCode([const[ref]] aValue: T): SizeInt;
+      class function Equal([const[ref]] L, R: T): Boolean; }
+  generic TGDoublePoint<T, TEqRel> = record
+    Tag: T;
+    X, Y: Double;
+    class function Construct(aTag: T; aX, aY: Double): TGDoublePoint; static; inline;
+    class function Distance(constref aSrc, aDst: TGDoublePoint): Double; static; inline;
+    class function HashCode(constref aValue: TGDoublePoint): SizeInt; static; inline;
+    class function Equal(constref L, R: TGDoublePoint): Boolean; static; inline;
+  end;
 
   { TDisjointSetUnion }
 
   TDisjointSetUnion = record
   private
-    FTree: array of SizeInt;
+    FList: array of SizeInt;
     function  GetSize: SizeInt; inline;
     procedure SetSize(aValue: SizeInt);
   public
     procedure Clear; inline;
     procedure Reset;
-  { values lying in the same set will have the same Marker }
+  { values related to the same set will have the same Marker }
     function  Marker(aValue: SizeInt): SizeInt;
     function  InSameSet(L, R: SizeInt): Boolean; inline;
-  { if L and R lie in different sets, these sets merge into one with a single marker }
+    function  InDiffSets(L, R: SizeInt): Boolean; inline;
+  { if L and R related to the different sets, these sets will be merged into one with a single Marker }
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
+  end;
+
+  TVertexColor = 0..3;
+
+const
+  vclWhite: TVertexColor = 0;
+  vclGray:  TVertexColor = 1;
+  vclBlack: TVertexColor = 2;
+  vclRed:   TVertexColor = 3;
+
+type
+
+  { TColorVector }
+
+  TColorVector = record
+  private
+  type
+    TColorList = array of SizeUInt;
+  const
+{$IF DEFINED(CPU64)}
+    SHIFT = 5;
+    MASK  = 31;
+{$ELSEIF DEFINED(CPU32)}
+    SHIFT = 4;
+    MASK  = 15;
+{$ELSE}
+    SHIFT = 3;
+    MASK  = 7;
+{$ENDIF}
+  var
+    FList: TColorList;
+    function  GetItem(aIndex: SizeInt): TVertexColor; inline;
+    function  GetSize: SizeInt; inline;
+    procedure SetItem(aIndex: SizeInt; aValue: TVertexColor); inline;
+    procedure SetSize(aValue: SizeInt);
+    class operator Copy(constref aSrc: TColorVector; var aDst: TColorVector); inline;
+  public
+    procedure ClearItems; inline;
+    property  Size: SizeInt read GetSize write SetSize;
+  { read/write item with (index < 0) or (index >= Size) will raise exception }
+    property  Items[aIndex: SizeInt]: TVertexColor read GetItem write SetItem; default;
   end;
 
   { TIntPair }
@@ -52100,6 +52224,8 @@ type
     class constructor Init;
     class operator Initialize(var Item: TGVertexItem);
   public
+    InDeg,
+    CompIdx,
     Tag: SizeInt;
     procedure Assign(constref aSrc: TGVertexItem);
     function  GetEnumerator: TEnumerator;
@@ -52151,6 +52277,7 @@ type
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
+    procedure SetItem(aIndex: SizeInt; const aValue: TVertex);
     function  GetItemRef(aIndex: SizeInt): PVertexItem; inline;
     procedure InitialAlloc;
     procedure Rehash;
@@ -52176,15 +52303,15 @@ type
     procedure Delete(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
-    property  Items[aIndex: SizeInt]: TVertex read GetItem; default;
+    property  Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
     property  ItemRefs[aIndex: SizeInt]: PVertexItem read GetItemRef;
   end;
 
-  { TGCustomSimpleSparseGraph: simple sparse graph abstract ancestor class based on adjacency lists;
+  { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel> = class abstract
+  generic TGCustomGraph<TVertex, TEdgeData, TVertexEqRel> = class abstract
   protected
   type
     TVertexList = specialize TGVertexHashList<TVertex, TEdgeData, TVertexEqRel>;
@@ -52193,11 +52320,28 @@ type
 
     TAdjVerticesPtr = record
     private
-      FGraph: TGCustomSimpleSparseGraph;
+      FGraph: TGCustomGraph;
       FSource: SizeInt;
     public
       function GetEnumerator: TVertexItem.TEnumerator; inline;
     end;
+
+    TMagic = string[8];
+
+    TStreamHeader = packed record
+      Magic: TMagic;
+      Version: Byte;
+      TitleSize: Word;
+      VertexCount,
+      EdgeCount: LongInt;
+      //title
+      //vertices
+      //edges: src index, dst index, data
+    end;
+
+  const
+    LGRAPH_MAGIC: TMagic = 'LGrphTyp';
+    CURRENT_VERSION = 1;
 
   class var
     CFData: TEdgeData;
@@ -52206,15 +52350,41 @@ type
     FVertexList: TVertexList;
     FEdgeCount: SizeInt;
     FTitle: string;
-    function GetVertexCount: SizeInt; inline;
-    function GetVertex(aIndex: SizeInt): TVertex; inline;
-    function GetEdgeData(aSrc, aDst: SizeInt): PEdgeData; inline;
-    function AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
+    FCompCount: SizeInt;
+    FConnected,
+    FConnectedValid: Boolean;
+    function  GetVertexCount: SizeInt; inline;
+    function  GetVertex(aIndex: SizeInt): TVertex; inline;
+    procedure SetVertex(aIndex: SizeInt; const aValue: TVertex); inline;
+    function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
+    function  AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
+
+    function  CheckConnected: Boolean; inline;
+    function  FindSeparateCount: SizeInt;
+    function  GetSeparateCount: SizeInt;
+    function  CountPop(aCompIndex: SizeInt): SizeInt;
+    property  Connected: Boolean read FConnected;
+    property  ConnectedValid: Boolean read FConnectedValid;
   public
   type
-    TOnAddEdge   = specialize TGOnAddEdge<TEdgeData>;
-    TAdjItem     = TVertexItem.TAdjItem;
-    PAdjItem     = ^TAdjItem;
+    TAdjItem         = TVertexItem.TAdjItem;
+    PAdjItem         = ^TAdjItem;
+
+    TOnReadVertex    = specialize TGOnReadStream<TVertex>;
+    TOnWriteVertex   = specialize TGOnWriteStream<TVertex>;
+    TReadVertex      = specialize TGReadStream<TVertex>;
+    TWriteVertex     = specialize TGWriteStream<TVertex>;
+    TNestReadVertex  = specialize TGNestReadStream<TVertex>;
+    TNestWriteVertex = specialize TGNestWriteStream<TVertex>;
+
+    TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
+
+    TOnReadData      = specialize TGOnReadStream<TEdgeData>;
+    TOnWriteData     = specialize TGOnWriteStream<TEdgeData>;
+    TReadData        = specialize TGReadStream<TEdgeData>;
+    TWriteData       = specialize TGWriteStream<TEdgeData>;
+    TNestReadData    = specialize TGNestReadStream<TEdgeData>;
+    TNestWriteData   = specialize TGNestWriteStream<TEdgeData>;
 
     TEdge = record
       Source,
@@ -52240,7 +52410,7 @@ type
 
     TAdjVertices = record
     private
-      FGraph: TGCustomSimpleSparseGraph;
+      FGraph: TGCustomGraph;
       FSource: SizeInt;
     public
       function GetEnumerator: TAdjEnumerator; inline;
@@ -52258,7 +52428,7 @@ type
 
     TIncidentEdges = record
     private
-      FGraph: TGCustomSimpleSparseGraph;
+      FGraph: TGCustomGraph;
       FSource: SizeInt;
     public
       function GetEnumerator: TIncidentEnumerator; inline;
@@ -52280,18 +52450,22 @@ type
 
     TEdges = record
     private
-      FGraph: TGCustomSimpleSparseGraph;
+      FGraph: TGCustomGraph;
     public
       function GetEnumerator: TEdgeEnumerator;
     end;
 
-    class function PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
+  public
+    class function ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
+    class function CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
+    constructor Create;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
-    function  CreateIndexVector: TIntArray;
+    function  CreateIntVector: TIntArray;
     function  CreateShortVector: TShortArray;
+    function  CreateHandleVector: THandleArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure Clear; inline;
+    procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  ContainsVertex(constref v: TVertex): Boolean; inline;
@@ -52309,6 +52483,10 @@ type
     function  IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
   { enumerates all edges }
     function  Edges: TEdges; inline;
+    function  GetEdgeData(constref aSrc, aDst: TVertex): TEdgeData; inline;
+    function  GetEdgeDataI(aSrc, aDst: SizeInt): TEdgeData; inline;
+    procedure SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData); inline;
+    procedure SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData);
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
@@ -52327,32 +52505,97 @@ type
   { test whether the graph is bipartite; if returns True then information about the vertex
     belonging to the fractions is returned in v(0 or 1) }
     function  IsBipartite(out v: TShortArray): Boolean;
-  { returns the length of the shortest path between the aSrc and aDst,
+
+  { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
-  { returns a vector containing in the corresponding components the length of shortest path from aRoot }
-    function  FindMinPathLenVector(constref aRoot: TVertex): TIntArray; inline;
-    function  FindMinPathLenVectorI(aRoot: SizeInt = 0): TIntArray;
-  { returns a vector containing indices of found shortest path(empty if path does not exists) }
+  { returns a vector containing in the corresponding components the length of shortest path from aRoot
+    (in sense 'edges count')}
+    function  FindMinPathLenMap(constref aRoot: TVertex): TIntArray; inline;
+    function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray;
+  { returns a vector containing chain of indices of found shortest path(in sense 'edges count'),
+   (empty if path does not exists) }
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+
+  { checks whether the graph is connected; a graph without Items is considered disconnected }
+    function  IsConnected: Boolean; inline;
+  { returns index of the connected component that contains v }
+    function  SeparateIndexOf(constref v: TVertex): SizeInt; inline;
+    function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt; inline;
+  { returns number of Items(population) in the connected component that contains v }
+    function  SeparatePop(constref v: TVertex): SizeInt; inline;
+    function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
+    function  IsTree: Boolean; inline;
+
+
 
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read GetVertexCount;
     property  EdgeCount: SizeInt read FEdgeCount;
-    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
+  { count of connected components }
+    property  SeparateCount: SizeInt read GetSeparateCount;
+    property  Items[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
   end;
 
 
 implementation
 {$B-}{$COPERATORS ON}
 
+{ TGSinglePoint }
+
+class function TGSinglePoint.Construct(aTag: T; aX, aY: Single): TGSinglePoint;
+begin
+  Result.Tag := aTag;
+  Result.X := aX;
+  Result.Y := aY;
+end;
+
+class function TGSinglePoint.Distance(constref aSrc, aDst: TGSinglePoint): Single;
+begin
+  Result := Sqrt((aDst.X - aSrc.X)*(aDst.X - aSrc.X) + (aDst.Y - aSrc.Y)*(aDst.Y - aSrc.Y));
+end;
+
+class function TGSinglePoint.HashCode(constref aValue: TGSinglePoint): SizeInt;
+begin
+  Result := TEqRel.HashCode(aValue.Tag);
+end;
+
+class function TGSinglePoint.Equal(constref L, R: TGSinglePoint): Boolean;
+begin
+  Result := TEqRel.Equal(L.Tag, R.Tag);
+end;
+
+{ TGDoublePoint }
+
+class function TGDoublePoint.Construct(aTag: T; aX, aY: Double): TGDoublePoint;
+begin
+  Result.Tag := aTag;
+  Result.X := aX;
+  Result.Y := aY;
+end;
+
+class function TGDoublePoint.Distance(constref aSrc, aDst: TGDoublePoint): Double;
+begin
+  Result := Sqrt((aDst.X - aSrc.X)*(aDst.X - aSrc.X) + (aDst.Y - aSrc.Y)*(aDst.Y - aSrc.Y));
+end;
+
+class function TGDoublePoint.HashCode(constref aValue: TGDoublePoint): SizeInt;
+begin
+  Result := TEqRel.HashCode(aValue.Tag);
+end;
+
+class function TGDoublePoint.Equal(constref L, R: TGDoublePoint): Boolean;
+begin
+  Result := TEqRel.Equal(L.Tag, R.Tag);
+end;
+
 { TDisjointSetUnion }
 
 function TDisjointSetUnion.GetSize: SizeInt;
 begin
-  Result := System.Length(FTree);
+  Result := System.Length(FList);
 end;
 
 procedure TDisjointSetUnion.SetSize(aValue: SizeInt);
@@ -52362,31 +52605,31 @@ begin
   OldSize := Size;
   if aValue > OldSize then
     begin
-      System.SetLength(FTree, aValue);
+      System.SetLength(FList, aValue);
       for I := OldSize to Pred(aValue) do
-        FTree[I] := I;
+        FList[I] := I;
     end;
 end;
 
 procedure TDisjointSetUnion.Clear;
 begin
-  FTree := nil;
+  FList := nil;
 end;
 
 procedure TDisjointSetUnion.Reset;
 var
   I: SizeInt;
 begin
-  for I := 0 to System.High(FTree) do
-    FTree[I] := I;
+  for I := 0 to System.High(FList) do
+    FList[I] := I;
 end;
 
 function TDisjointSetUnion.Marker(aValue: SizeInt): SizeInt;
 begin
-  if FTree[aValue] = aValue then
+  if FList[aValue] = aValue then
     exit(aValue);
-  Result := Marker(FTree[aValue]);
-  FTree[aValue] := Result;
+  Result := Marker(FList[aValue]);
+  FList[aValue] := Result;
 end;
 
 function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
@@ -52394,14 +52637,67 @@ begin
   Result := Marker(L) = Marker(R);
 end;
 
+function TDisjointSetUnion.InDiffSets(L, R: SizeInt): Boolean;
+begin
+  Result := Marker(L) <> Marker(R);
+end;
+
 procedure TDisjointSetUnion.Union(L, R: SizeInt);
 begin
   L := Marker(L);
   R := Marker(R);
   if Odd(Random(4)) then // random selection ???
-    FTree[L] := R
+    FList[L] := R
   else
-    FTree[R] := L;
+    FList[R] := L;
+end;
+
+{ TColorVector }
+
+function TColorVector.GetItem(aIndex: SizeInt): TVertexColor;
+begin
+  if (aIndex >= 0) and (aIndex < (System.Length(FList) shl SHIFT)) then
+    Result := FList[aIndex shr SHIFT] shr ((aIndex and MASK) shl 1) and SizeUInt(3)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TColorVector.GetSize: SizeInt;
+begin
+  Result := System.Length(FList) shl SHIFT;
+end;
+
+procedure TColorVector.SetItem(aIndex: SizeInt; aValue: TVertexColor);
+begin
+  if (aIndex >= 0) and (aIndex < (System.Length(FList) shl SHIFT)) then
+    FList[aIndex shr SHIFT] := (FList[aIndex shr SHIFT] and not (SizeUInt(3) shl ((aIndex and MASK) shl 1))) or
+                               (SizeUInt(aValue) shl ((aIndex and MASK) shl 1))
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+procedure TColorVector.SetSize(aValue: SizeInt);
+var
+  OldLen: SizeInt;
+begin
+  OldLen := Size;
+  if aValue > OldLen then
+    begin
+      aValue := aValue shr SHIFT + Ord(aValue and MASK <> 0);
+      System.SetLength(FList, aValue);
+      System.FillChar(FList[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
+    end;
+end;
+
+class operator TColorVector.Copy(constref aSrc: TColorVector; var aDst: TColorVector);
+begin
+  aDst.FList := System.Copy(aSrc.FList);
+end;
+
+procedure TColorVector.ClearItems;
+begin
+  if FList <> nil then
+    System.FillChar(FList[0], System.Length(FList) * SizeOf(SizeUInt), 0);
 end;
 
 { TIntPair }
@@ -52702,8 +52998,8 @@ begin
     Expand;
   Hash := HashCode(aDst) or USED_FLAG;
   Pos := DoFind(aDst, Hash);
-  Result := Pos >= 0; // key found?
-  if not Result then   // key not found, will add new slot
+  Result := Pos >= 0;
+  if not Result then
     begin
       if Count >= Capacity shr 1 then
         begin
@@ -52793,6 +53089,22 @@ function TGVertexHashList.GetItem(aIndex: SizeInt): TVertex;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].Item.Vertex;
+end;
+
+procedure TGVertexHashList.SetItem(aIndex: SizeInt; const aValue: TVertex);
+var
+  I: SizeInt;
+begin
+  CheckIndexRange(aIndex);
+  if TEqRel.Equal(aValue, FNodeList[aIndex].Item.Vertex) then
+    exit;
+  RemoveFromChain(aIndex);
+  //add to new chain
+  FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
+  FNodeList[aIndex].Item.Vertex := aValue;
+  I := FNodeList[aIndex].Hash and System.High(FNodeList);
+  FNodeList[aIndex].Next := FChainList[I];
+  FChainList[I] := aIndex;
 end;
 
 function TGVertexHashList.GetItemRef(aIndex: SizeInt): PVertexItem;
@@ -53043,49 +53355,49 @@ begin
   DoDelete(aIndex);
 end;
 
-{ TGCustomSimpleSparseGraph.TAdjVerticesPtr }
+{ TGCustomGraph.TAdjVerticesPtr }
 
-function TGCustomSimpleSparseGraph.TAdjVerticesPtr.GetEnumerator: TVertexItem.TEnumerator;
+function TGCustomGraph.TAdjVerticesPtr.GetEnumerator: TVertexItem.TEnumerator;
 begin
   Result := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
-{ TGCustomSimpleSparseGraph.TEdge }
+{ TGCustomGraph.TEdge }
 
-procedure TGCustomSimpleSparseGraph.TEdge.Init(aSrc: SizeInt; p: PAdjItem);
+procedure TGCustomGraph.TEdge.Init(aSrc: SizeInt; p: PAdjItem);
 begin
   Source := aSrc;
   Destination := p^.Destination;
   Data := p^.Data;
 end;
 
-{ TGCustomSimpleSparseGraph.TAdjEnumerator }
+{ TGCustomGraph.TAdjEnumerator }
 
-function TGCustomSimpleSparseGraph.TAdjEnumerator.GetCurrent: SizeInt;
+function TGCustomGraph.TAdjEnumerator.GetCurrent: SizeInt;
 begin
   Result := FEnum.Current^.Destination;
 end;
 
-function TGCustomSimpleSparseGraph.TAdjEnumerator.MoveNext: Boolean;
+function TGCustomGraph.TAdjEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomSimpleSparseGraph.TAdjEnumerator.Reset;
+procedure TGCustomGraph.TAdjEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomSimpleSparseGraph.TAdjVertices }
+{ TGCustomGraph.TAdjVertices }
 
-function TGCustomSimpleSparseGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
+function TGCustomGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
 begin
   Result.FEnum := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
-{ TGCustomSimpleSparseGraph.TIncidentEnumerator }
+{ TGCustomGraph.TIncidentEnumerator }
 
-function TGCustomSimpleSparseGraph.TIncidentEnumerator.GetCurrent: TIncidentEdge;
+function TGCustomGraph.TIncidentEnumerator.GetCurrent: TIncidentEdge;
 var
   p: ^TAdjItem;
 begin
@@ -53094,31 +53406,31 @@ begin
   Result.Data := p^.Data;
 end;
 
-function TGCustomSimpleSparseGraph.TIncidentEnumerator.MoveNext: Boolean;
+function TGCustomGraph.TIncidentEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomSimpleSparseGraph.TIncidentEnumerator.Reset;
+procedure TGCustomGraph.TIncidentEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomSimpleSparseGraph.TIncidentEdges }
+{ TGCustomGraph.TIncidentEdges }
 
-function TGCustomSimpleSparseGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
+function TGCustomGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
 begin
   Result.FEnum := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
-{ TGCustomSimpleSparseGraph.TEdgeEnumerator }
+{ TGCustomGraph.TEdgeEnumerator }
 
-function TGCustomSimpleSparseGraph.TEdgeEnumerator.GetCurrent: TEdge;
+function TGCustomGraph.TEdgeEnumerator.GetCurrent: TEdge;
 begin
-  Result.Init(FCurrIndex, FEnum.Current);
+  Result{%H-}.Init(FCurrIndex, FEnum.Current);
 end;
 
-function TGCustomSimpleSparseGraph.TEdgeEnumerator.MoveNext: Boolean;
+function TGCustomGraph.TEdgeEnumerator.MoveNext: Boolean;
 begin
   repeat
     if FEnumDone then
@@ -53133,15 +53445,15 @@ begin
   until Result;
 end;
 
-procedure TGCustomSimpleSparseGraph.TEdgeEnumerator.Reset;
+procedure TGCustomGraph.TEdgeEnumerator.Reset;
 begin
   FCurrIndex := -1;
   FEnumDone := True;
 end;
 
-{ TGCustomSimpleSparseGraph.TEdges }
+{ TGCustomGraph.TEdges }
 
-function TGCustomSimpleSparseGraph.TEdges.GetEnumerator: TEdgeEnumerator;
+function TGCustomGraph.TEdges.GetEnumerator: TEdgeEnumerator;
 begin
   Result.FList := FGraph.FVertexList.FNodeList;
   Result.FLastIndex := Pred(FGraph.FVertexList.Count);
@@ -53149,31 +53461,87 @@ begin
   Result.FEnumDone := True;
 end;
 
-{ TGCustomSimpleSparseGraph }
+{ TGCustomGraph }
 
-function TGCustomSimpleSparseGraph.GetVertexCount: SizeInt;
+function TGCustomGraph.GetVertexCount: SizeInt;
 begin
   Result := FVertexList.Count;
 end;
 
-function TGCustomSimpleSparseGraph.GetVertex(aIndex: SizeInt): TVertex;
+function TGCustomGraph.GetVertex(aIndex: SizeInt): TVertex;
 begin
   Result := FVertexList[aIndex];
 end;
 
-function TGCustomSimpleSparseGraph.GetEdgeData(aSrc, aDst: SizeInt): PEdgeData;
+procedure TGCustomGraph.SetVertex(aIndex: SizeInt; const aValue: TVertex);
+begin
+  FVertexList[aIndex] := aValue;
+end;
+
+function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
 begin
   Result := @FVertexList.ItemRefs[aSrc]^.Find(aDst)^.Data;
 end;
 
-function TGCustomSimpleSparseGraph.AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
+function TGCustomGraph.AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
 begin
   FVertexList.CheckIndexRange(aSrc);
   Result.FGraph := Self;
   Result.FSource := aSrc;
 end;
 
-class function TGCustomSimpleSparseGraph.PathFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
+function TGCustomGraph.CheckConnected: Boolean;
+begin
+  Result := SeparateCount = 1;
+end;
+
+function TGCustomGraph.FindSeparateCount: SizeInt;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  I, Curr: SizeInt;
+begin
+  Result := 0;
+  Visited.Size := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        repeat
+          if not Visited[Curr] then
+            begin
+              Visited[Curr] := True;
+              FVertexList.ItemRefs[Curr]^.CompIdx := Result;
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  Stack.Push(Curr);
+            end;
+        until not Stack.TryPop(Curr);
+        Inc(Result);
+      end;
+end;
+
+function TGCustomGraph.GetSeparateCount: SizeInt;
+begin
+  if not ConnectedValid then
+    begin
+      FCompCount := FindSeparateCount;
+      FConnectedValid := True;
+      FConnected := FCompCount = 1;
+    end;
+  Result := FCompCount;
+end;
+
+function TGCustomGraph.CountPop(aCompIndex: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  for I := 0 to Pred(VertexCount) do
+    Result += Ord(FVertexList.ItemRefs[I]^.CompIdx = aCompIndex);
+end;
+
+class function TGCustomGraph.ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
 var
   Stack: TIntStack;
 begin
@@ -53182,19 +53550,45 @@ begin
       if aIndex < System.Length(aTree) then
         Stack.Push(aIndex)
       else
-        raise ELGGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
       aIndex := aTree[aIndex];
     end;
   Result := Stack.ToArray;
   TIntHelper.Reverse(Result);
 end;
 
-procedure TGCustomSimpleSparseGraph.CheckIndexRange(aIndex: SizeInt);
+class function TGCustomGraph.CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray;
+var
+  Stack: TIntStack;
+  I: SizeInt;
+begin
+  I := aLast;
+  while I >= 0 do
+    begin
+      if I < System.Length(aTree) then
+        Stack.Push(I)
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+      if I = aFirst then
+        break;
+      I := aTree[I];
+    end;
+  Stack.Push(aLast);
+  Result := Stack.ToArray;
+  TIntHelper.Reverse(Result);
+end;
+
+constructor TGCustomGraph.Create;
+begin
+  Title := 'Untitled';
+end;
+
+procedure TGCustomGraph.CheckIndexRange(aIndex: SizeInt);
 begin
   FVertexList.CheckIndexRange(aIndex);
 end;
 
-function TGCustomSimpleSparseGraph.CreateIndexVector: TIntArray;
+function TGCustomGraph.CreateIntVector: TIntArray;
 var
   c: SizeInt;
 begin
@@ -53204,7 +53598,7 @@ begin
     System.FillChar(Result[0], c * SizeOf(SizeInt), $ff);
 end;
 
-function TGCustomSimpleSparseGraph.CreateShortVector: TShortArray;
+function TGCustomGraph.CreateShortVector: TShortArray;
 var
   c: SizeInt;
 begin
@@ -53214,121 +53608,152 @@ begin
     System.FillChar(Result[0], c, $ff);
 end;
 
-function TGCustomSimpleSparseGraph.IsEmpty: Boolean;
+function TGCustomGraph.CreateHandleVector: THandleArray;
+var
+  c: SizeInt;
+begin
+  c := VertexCount;
+  System.SetLength(Result, c);
+  if c > 0 then
+    System.FillChar(Result[0], c * SizeOf(THandle), $ff);
+end;
+
+function TGCustomGraph.IsEmpty: Boolean;
 begin
   Result := FVertexList.Count = 0;
 end;
 
-function TGCustomSimpleSparseGraph.NonEmpty: Boolean;
+function TGCustomGraph.NonEmpty: Boolean;
 begin
   Result := FVertexList.Count <> 0;
 end;
 
-procedure TGCustomSimpleSparseGraph.Clear;
+procedure TGCustomGraph.Clear;
 begin
   FVertexList.Clear;
   FEdgeCount := 0;
   FTitle := '';
 end;
 
-procedure TGCustomSimpleSparseGraph.EnsureCapacity(aValue: SizeInt);
+procedure TGCustomGraph.EnsureCapacity(aValue: SizeInt);
 begin
   FVertexList.EnsureCapacity(aValue);
 end;
 
-procedure TGCustomSimpleSparseGraph.TrimToFit;
+procedure TGCustomGraph.TrimToFit;
 begin
   FVertexList.TrimToFit;
 end;
 
-function TGCustomSimpleSparseGraph.ContainsVertex(constref v: TVertex): Boolean;
+function TGCustomGraph.ContainsVertex(constref v: TVertex): Boolean;
 begin
   Result := FVertexList.IndexOf(v) >= 0;
 end;
 
-function TGCustomSimpleSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGCustomGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := ContainsEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGCustomGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
-  if (aDst < 0) or (aDst >= FVertexList.Count) then
-    exit(False);
-  Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst);
+  Result := FVertexList.ItemRefs[aSrc]^.Contains(aDst);
 end;
 
-function TGCustomSimpleSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
+function TGCustomGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
 var
-  p: ^TAdjItem;
+  p: PAdjItem;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
-  if (aDst < 0) or (aDst >= FVertexList.Count) then
-    exit(False);
-  p := FVertexList.FNodeList[aSrc].Item.Find(aDst);
+  p := FVertexList.ItemRefs[aSrc]^.Find(aDst);
   Result := p <> nil;
   if Result then
     aData := p^.Data;
 end;
 
-function TGCustomSimpleSparseGraph.IndexOf(constref v: TVertex): SizeInt;
+function TGCustomGraph.IndexOf(constref v: TVertex): SizeInt;
 begin
   Result := FVertexList.IndexOf(v);
 end;
 
-function TGCustomSimpleSparseGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+function TGCustomGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := AdjacentI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
+function TGCustomGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
   FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
-  Result := FVertexList.FNodeList[aSrc].Item.Contains(aDst) or
-            FVertexList.FNodeList[aDst].Item.Contains(aSrc);
+  Result := FVertexList.ItemRefs[aSrc]^.Contains(aDst);
 end;
 
-function TGCustomSimpleSparseGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
+function TGCustomGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
 begin
   Result := AdjVerticesI(FVertexList.IndexOf(aSrc));
 end;
 
-function TGCustomSimpleSparseGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
+function TGCustomGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
 begin
   FVertexList.CheckIndexRange(aSrc);
   Result.FGraph := Self;
   Result.FSource := aSrc;
 end;
 
-function TGCustomSimpleSparseGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
+function TGCustomGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
 begin
   Result := IncidentEdgesI(FVertexList.IndexOf(aSrc));
 end;
 
-function TGCustomSimpleSparseGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+function TGCustomGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
 begin
   FVertexList.CheckIndexRange(aSrc);
   Result.FGraph := Self;
   Result.FSource := aSrc;
 end;
 
-function TGCustomSimpleSparseGraph.Edges: TEdges;
+function TGCustomGraph.Edges: TEdges;
 begin
   Result.FGraph := Self;
 end;
 
-function TGCustomSimpleSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGCustomGraph.GetEdgeData(constref aSrc, aDst: TVertex): TEdgeData;
+begin
+  Result := GetEdgeDataI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+end;
+
+function TGCustomGraph.GetEdgeDataI(aSrc, aDst: SizeInt): TEdgeData;
+begin
+  if not ContainsEdgeI(aSrc, aDst, Result) then
+    raise ELGraphError.CreateFmt(SEEdgeNotFoundFmt, [aSrc, aDst]);
+end;
+
+procedure TGCustomGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData);
+begin
+  SetEdgeDataI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst), aValue);
+end;
+
+procedure TGCustomGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData);
+var
+  p: PAdjItem;
+begin
+  FVertexList.CheckIndexRange(aSrc);
+  p := FVertexList.ItemRefs[aSrc]^.Find(aDst);
+  if p <> nil then
+    p^.Data := aValue
+  else
+    raise ELGraphError.CreateFmt(SEEdgeNotFoundFmt, [aSrc, aDst]);
+end;
+
+function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := DfsTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
-  aOnWhite: TOnIntVisit): SizeInt;
+function TGCustomGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest; aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -53336,7 +53761,8 @@ begin
   Result := 0;
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  {%H-}Stack.Push(aRoot);
+  if Assigned(aOnWhite) then
+    aOnWhite(aRoot);
   repeat
     if not Visited[aRoot] then
       begin
@@ -53347,22 +53773,21 @@ begin
         for aRoot in AdjVerticesI(aRoot) do
           if not Visited[aRoot] then
             begin
-              Stack.Push(aRoot);
               if Assigned(aOnWhite) then
                 aOnWhite(aRoot);
+              Stack.Push(aRoot);
             end;
       end;
   until not Stack.TryPop(aRoot);
 end;
 
-function TGCustomSimpleSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGCustomGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := BfsTraversalI(FVertexList.IndexOf(aRoot), aOnGray, aOnWhite);
 end;
 
-function TGCustomSimpleSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
-  aOnWhite: TOnIntVisit): SizeInt;
+function TGCustomGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest; aOnWhite: TOnIntVisit): SizeInt;
 var
   Visited: TBitVector;
   Queue: TIntQueue;
@@ -53370,30 +53795,29 @@ begin
   Result := 0;
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  Queue.Enqueue(aRoot);
-  while Queue{%H-}.TryDequeue(aRoot) do
-    if not Visited[aRoot] then
-      begin
-        Inc(Result);
-        if Assigned(aOnGray) and aOnGray(aRoot) then
-          exit;
-        Visited[aRoot] := True;
-        for aRoot in AdjVerticesI(aRoot) do
-          if not Visited[aRoot] then
-            begin
-              Queue.Enqueue(aRoot);
-              if aOnWhite <> nil then
-                aOnWhite(aRoot);
-            end;
-      end;
+  if aOnWhite <> nil then
+    aOnWhite(aRoot);
+  repeat
+    if Assigned(aOnGray) and aOnGray(aRoot) then
+      exit;
+    for aRoot in AdjVerticesI(aRoot) do
+      if not Visited[aRoot] then
+        begin
+          if aOnWhite <> nil then
+            aOnWhite(aRoot);
+          Visited[aRoot] := True;
+          Queue.Enqueue(aRoot);
+          Inc(Result);
+        end;
+  until not Queue.TryDequeue(aRoot);
 end;
 
-function TGCustomSimpleSparseGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
+function TGCustomGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := SimplePathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGCustomGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -53403,7 +53827,6 @@ begin
   if aSrc = aDst then
     exit(False);
   Visited.Size := VertexCount;
-  {%H-}Stack.Push(aSrc);
   repeat
     if not Visited[aSrc] then
       begin
@@ -53418,14 +53841,14 @@ begin
   Result := False;
 end;
 
-function TGCustomSimpleSparseGraph.IsBipartite: Boolean;
+function TGCustomGraph.IsBipartite: Boolean;
 var
   v: TShortArray;
 begin
   Result := IsBipartite(v);
 end;
 
-function TGCustomSimpleSparseGraph.IsBipartite(out v: TShortArray): Boolean;
+function TGCustomGraph.IsBipartite(out v: TShortArray): Boolean;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -53440,7 +53863,6 @@ begin
     if not Visited[I] then
       begin
         Curr := I;
-        {%H-}Stack.Push(Curr);
         repeat
           if not Visited[Curr] then
             begin
@@ -53467,12 +53889,12 @@ begin
   Result := True;
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
+function TGCustomGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
-  Result := FindMinPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aSrc));
+  Result := FindMinPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
+function TGCustomGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
 var
   Queue: TIntQueue;
   v: TIntArray;
@@ -53480,78 +53902,113 @@ var
 begin
   FVertexList.CheckIndexRange(aSrc);
   FVertexList.CheckIndexRange(aDst);
-  v := CreateIndexVector;
+  v := CreateIntVector;
   v[aSrc] := 0;
-  Queue.Enqueue(aSrc);
-  while Queue{%H-}.TryDequeue(aSrc) do
+  repeat
+    if aSrc = aDst then
+      exit(v[aSrc]);
     for d in AdjVerticesI(aSrc) do
       if v[d] = -1 then
         begin
           Queue.Enqueue(d);
           v[d] := Succ(v[aSrc]);
         end;
-  Result := v[aDst];
+  until not Queue.TryDequeue(aSrc);
+  Result := -1;
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathLenVector(constref aRoot: TVertex): TIntArray;
+function TGCustomGraph.FindMinPathLenMap(constref aRoot: TVertex): TIntArray;
 begin
-  Result := FindMinPathLenVectorI(FVertexList.IndexOf(aRoot));
+  Result := FindMinPathLenMapI(FVertexList.IndexOf(aRoot));
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathLenVectorI(aRoot: SizeInt): TIntArray;
+function TGCustomGraph.FindMinPathLenMapI(aRoot: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
   d: SizeInt;
 begin
   FVertexList.CheckIndexRange(aRoot);
-  Result := CreateIndexVector;
+  Result := CreateIntVector;
   Result[aRoot] := 0;
-  Queue.Enqueue(aRoot);
-  while Queue{%H-}.TryDequeue(aRoot) do
+  repeat
     for d in AdjVerticesI(aRoot) do
       if Result[d] = -1 then
         begin
           Queue.Enqueue(d);
           Result[d] := Succ(Result[aRoot]);
         end;
+  until not Queue.TryDequeue(aRoot);
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
+function TGCustomGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
 begin
   Result := FindMinPathI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomSimpleSparseGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+function TGCustomGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 var
-  v: TIntArray;
   Queue: TIntQueue;
-  Parent, Curr: SizeInt;
-  Found: Boolean = False;
+  Visited: TBitVector;
+  v: TIntArray;
+  d: SizeInt;
 begin
   FVertexList.CheckIndexRange(aSrc);
   FVertexList.CheckIndexRange(aDst);
-  if aSrc = aDst then
-    exit(nil);
-  v := CreateIndexVector;
-  {%H-}Queue.Enqueue(aSrc);
-  while Queue{%H-}.TryDequeue(Curr) do
-    begin
-      if {%H-}Curr = aDst then
+  v := CreateIntVector;
+  Visited.Size := VertexCount;
+  Visited[aSrc] := True;
+  repeat
+    if aSrc = aDst then
+      exit(ChainFromTree(v, aDst));
+    for d in AdjVerticesI(aSrc) do
+      if not Visited[d] then
         begin
-          Found := True;
-          break;
+          Visited[d] := True;
+          Queue.Enqueue(d);
+          v[d] := aSrc;
         end;
-      Parent := Curr;
-      for Curr in AdjVerticesI(Curr) do
-        if v[Curr] = -1 then
-          begin
-            Queue.Enqueue(Curr);
-            v[Curr] := Parent;
-          end;
-    end;
-  if not Found then
-    exit(nil);
-  Result := PathFromTree(v, aDst);
+  until not Queue.TryDequeue(aSrc);
+  Result := nil;
+end;
+
+function TGCustomGraph.IsConnected: Boolean;
+begin
+  if not ConnectedValid then
+    FConnected := CheckConnected;
+  Result := Connected;
+end;
+
+function TGCustomGraph.SeparateIndexOf(constref v: TVertex): SizeInt;
+begin
+   Result := SeparateIndexOfI(FVertexList.IndexOf(v));
+end;
+
+function TGCustomGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  if SeparateCount > 1 then
+    Result := FVertexList.ItemRefs[aVtxIndex]^.CompIdx
+  else
+    Result := 0;
+end;
+
+function TGCustomGraph.SeparatePop(constref v: TVertex): SizeInt;
+begin
+  Result := SeparatePopI(FVertexList.IndexOf(v));
+end;
+
+function TGCustomGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  if SeparateCount > 1 then
+    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.CompIdx)
+  else
+    Result := VertexCount;
+end;
+
+function TGCustomGraph.IsTree: Boolean;
+begin
+  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
 end;
 
 end.
@@ -53596,12 +54053,12 @@ uses
 
 type
 
-  { TGSimpleSparseDGraph is simple sparse directed graph based on adjacency lists;
+  { TGSimpleDiGraph is simple sparse directed graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleSparseDGraph<TVertex, TEdgeData, TVertexEqRel> = class(
-    specialize TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel>)
+  generic TGSimpleDiGraph<TVertex, TEdgeData, TVertexEqRel> = class(
+    specialize TGCustomGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -53628,16 +54085,16 @@ type
     function  EulerCycleExists: Boolean;
     function  FindEulerCycle: TIntArray;
 
-    function  Clone: TGSimpleSparseDGraph;
-    function  Reverse: TGSimpleSparseDGraph;
+    function  Clone: TGSimpleDiGraph;
+    function  Reverse: TGSimpleDiGraph;
   end;
 
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGSimpleSparseDGraph }
+{ TGSimpleDiGraph }
 
-procedure TGSimpleSparseDGraph.DoRemoveVertex(aIndex: SizeInt);
+procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
 var
   I, J: SizeInt;
   p: ^TAdjItem;
@@ -53646,7 +54103,7 @@ begin
   FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
   //FConnectedValid := False;
   for p in FVertexList.ItemRefs[aIndex]^ do
-    Dec(FVertexList.ItemRefs[p^.Destination]^.Tag);
+    Dec(FVertexList.ItemRefs[p^.Destination]^.InDeg);
   FVertexList.Delete(aIndex);
   for I := 0 to Pred(FVertexList.Count) do
     begin
@@ -53664,7 +54121,7 @@ begin
     end;
 end;
 
-function TGSimpleSparseDGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 var
   p: ^TAdjItem;
 begin
@@ -53675,48 +54132,48 @@ begin
     begin
       p^.Destination := aDst;
       p^.Data := aData;
-      Inc(FVertexList.ItemRefs[aDst]^.Tag);
+      Inc(FVertexList.ItemRefs[aDst]^.InDeg);
       Inc(FEdgeCount);
       //FConnectedValid := False;
     end;
 end;
 
-function TGSimpleSparseDGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDiGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
   Result := FVertexList.ItemRefs[aSrc]^.Remove(aDst);
   if Result then
     begin
-      Dec(FVertexList.ItemRefs[aDst]^.Tag);
+      Dec(FVertexList.ItemRefs[aDst]^.InDeg);
       Dec(FEdgeCount);
       //FConnectedValid := False;
     end;
 end;
 
-function TGSimpleSparseDGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGSimpleDiGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FVertexList.FindOrAdd(v, aIndex);
   if Result then
     begin
-      FVertexList.ItemRefs[aIndex]^.Tag := 0;
+      FVertexList.ItemRefs[aIndex]^.InDeg := 0;
       //FConnectedValid := False;
     end;
 end;
 
-function TGSimpleSparseDGraph.RemoveVertex(constref v: TVertex): Boolean;
+function TGSimpleDiGraph.RemoveVertex(constref v: TVertex): Boolean;
 begin
   Result := RemoveVertexI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseDGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
+function TGSimpleDiGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
 begin
   Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
   if Result then
     DoRemoveVertex(aIndex);
 end;
 
-function TGSimpleSparseDGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+function TGSimpleDiGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
 var
   SrcIdx, DstIdx: SizeInt;
 begin
@@ -53725,12 +54182,12 @@ begin
   Result := DoAddEdge(SrcIdx, DstIdx, aData);
 end;
 
-function TGSimpleSparseDGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleDiGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := AddEdge(aSrc, aDst, CFData);
 end;
 
-function TGSimpleSparseDGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
@@ -53739,17 +54196,17 @@ begin
   Result := DoAddEdge(aSrc, aDst, aData);
 end;
 
-function TGSimpleSparseDGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := AddEdgeI(aSrc, aDst, CFData);
 end;
 
-function TGSimpleSparseDGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleDiGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := RemoveEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGSimpleSparseDGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDiGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
@@ -53758,50 +54215,50 @@ begin
   Result := DoRemoveEdge(aSrc, aDst);
 end;
 
-function TGSimpleSparseDGraph.InDegree(constref v: TVertex): SizeInt;
+function TGSimpleDiGraph.InDegree(constref v: TVertex): SizeInt;
 begin
   Result := InDegreeI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseDGraph.InDegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDiGraph.InDegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
-  Result := FVertexList.ItemRefs[aIndex]^.Tag;
+  Result := FVertexList.ItemRefs[aIndex]^.InDeg;
 end;
 
-function TGSimpleSparseDGraph.OutDegree(constref v: TVertex): SizeInt;
+function TGSimpleDiGraph.OutDegree(constref v: TVertex): SizeInt;
 begin
   Result := OutDegreeI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseDGraph.OutDegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDiGraph.OutDegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
   Result := FVertexList.ItemRefs[aIndex]^.Count;
 end;
 
-function TGSimpleSparseDGraph.Degree(constref v: TVertex): SizeInt;
+function TGSimpleDiGraph.Degree(constref v: TVertex): SizeInt;
 begin
   Result := DegreeI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseDGraph.DegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDiGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
-  Result := FVertexList.ItemRefs[aIndex]^.Count + FVertexList.ItemRefs[aIndex]^.Tag;
+  Result := FVertexList.ItemRefs[aIndex]^.Count + FVertexList.ItemRefs[aIndex]^.InDeg;
 end;
 
-function TGSimpleSparseDGraph.Isolated(constref v: TVertex): Boolean;
+function TGSimpleDiGraph.Isolated(constref v: TVertex): Boolean;
 begin
   Result := Degree(v) = 0;
 end;
 
-function TGSimpleSparseDGraph.IsolatedI(aIndex: SizeInt): Boolean;
+function TGSimpleDiGraph.IsolatedI(aIndex: SizeInt): Boolean;
 begin
   Result := DegreeI(aIndex) = 0;
 end;
 
-function TGSimpleSparseDGraph.EulerCycleExists: Boolean;
+function TGSimpleDiGraph.EulerCycleExists: Boolean;
 var
   I, d: SizeInt;
 begin
@@ -53817,9 +54274,9 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleSparseDGraph.FindEulerCycle: TIntArray;
+function TGSimpleDiGraph.FindEulerCycle: TIntArray;
 var
-  g: TGSimpleSparseDGraph = nil;
+  g: TGSimpleDiGraph = nil;
   Stack: TIntStack;
   I, s, d, From: SizeInt;
 begin
@@ -53856,9 +54313,9 @@ begin
   end;
 end;
 
-function TGSimpleSparseDGraph.Clone: TGSimpleSparseDGraph;
+function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
 begin
-  Result := TGSimpleSparseDGraph.Create;
+  Result := TGSimpleDiGraph.Create;
   Result.FVertexList := FVertexList;
   Result.FEdgeCount := EdgeCount;
   Result.FTitle := Title;
@@ -53866,14 +54323,14 @@ begin
   //Result.FConnectedValid := ConnectedValid;
 end;
 
-function TGSimpleSparseDGraph.Reverse: TGSimpleSparseDGraph;
+function TGSimpleDiGraph.Reverse: TGSimpleDiGraph;
 var
   I,Dummy: SizeInt;
   e: TEdge;
 begin
-  Result := TGSimpleSparseDGraph.Create;
+  Result := TGSimpleDiGraph.Create;
   for I := 0 to Pred(VertexCount) do
-    Result.AddVertex(Vertices[I], Dummy);
+    Result.AddVertex(Items[I], Dummy);
   for e in Edges do
     Result.AddEdgeI(e.Destination, e.Source, e.Data);
 end;
@@ -53883,7 +54340,7 @@ end.
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Generic simple undirected graph implementation.                         *
+*   Generic simple undirected graphs implementation.                        *
 *                                                                           *
 *   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
 *                                                                           *
@@ -53922,18 +54379,18 @@ uses
 
 type
 
-  { TGSimpleSparseUGraph is simple sparse undirected graph based on adjacency lists;
+  { TGSimpleUGraph: simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleSparseUGraph<TVertex, TEdgeData, TVertexEqRel> = class(
-    specialize TGCustomSimpleSparseGraph<TVertex, TEdgeData, TVertexEqRel>)
+  generic TGSimpleUGraph<TVertex, TEdgeData, TVertexEqRel> = class(specialize TGCustomGraph
+    <TVertex, TEdgeData, TVertexEqRel>)
   protected
   type
 
     TDistinctEdgeEnumerator = record
     private
-      FVisitedEdges: TIntPairHashSet;
+      FVisited: TBitVector;
       FList: TVertexList.TNodeList;
       FEnum: TVertexItem.TEnumerator;
       FCurrIndex,
@@ -53948,24 +54405,17 @@ type
 
     TDistinctEdges = record
       private
-        FGraph: TGSimpleSparseUGraph;
+        FGraph: TGSimpleUGraph;
       public
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
 
-  var
-    FCompoCount: SizeInt;
-    FConnected,
-    FConnectedValid: Boolean;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
-    function  CheckConnected: Boolean; inline;
-    function  FindComponentCount: SizeInt;
-    function  GetComponentCount: SizeInt;
-    property  Connected: Boolean read FConnected;
-    property  ConnectedValid: Boolean read FConnectedValid;
+    function  GetSeparateGraph(aIndex: SizeInt): TGSimpleUGraph;
   public
+    procedure Clear; override;
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
     function  RemoveVertex(constref v: TVertex): Boolean; inline;
@@ -53976,14 +54426,20 @@ type
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+    procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+    procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+    procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+    procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
     function  Degree(constref v: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  CycleExists(out aCycle: TIntArray): Boolean;
+    //function  CycleExistsI(aSrc: SizeInt; out aCycle: TIntArray): Boolean;
     function  EulerCycleExists: Boolean;
+  { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntArray;
-  { checks whether the graph is connected; a graph without vertices is considered disconnected }
-    function  IsConnected: Boolean; inline;
+
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0}
     function  MakeConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
@@ -53996,22 +54452,16 @@ type
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
   { returns a graph constructed from the pairs provided by the vector,
     i.e. each element treates as pair of source - destination }
-    function  CreateFromVector(constref aVector: TIntArray): TGSimpleSparseUGraph;
-    function  ComponentIndex(constref v: TVertex): SizeInt; inline;
-    function  ComponentIndexI(aVertex: SizeInt): SizeInt; inline;
-  { returns number of vertices(population) in the connected component that contains aRoot }
-    function  ComponentPop(constref aRoot: TVertex): SizeInt; inline;
-    function  ComponentPopI(aRoot: SizeInt): SizeInt; inline;
+    function  CreateFromVector(constref aVector: TIntArray): TGSimpleUGraph;
+  { returns graph of connected component that contains v }
+    function  SeparateGraph(constref v: TVertex): TGSimpleUGraph; inline;
+    function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
   { checks whether the graph is a regular graph (that is, the degree of all its
-В В В В  vertices coincide); an empty graph is considered regular }
+В В В В  Items equal); an empty graph is considered regular }
     function  IsRegular: Boolean;
-    function  IsTree: Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
-    //edge-connected
 
-    function  Clone: TGSimpleSparseUGraph;
-  { count of connected components }
-    property  ComponentCount: SizeInt read GetComponentCount;
+    function  Clone: TGSimpleUGraph;
   end;
 
   generic TGWeighedEdgeData<TWeight, TEdgeData> = record
@@ -54022,29 +54472,51 @@ type
 
   THandle = LGUtils.THandle;
 
-  { TGSimpleSparseWeighedUGraph simple sparse undirected graph based on adjacency lists;
+  { TGWeighedUGraph: simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
-      TWeight must have defined comparision operators and MaxValue }
-  generic TGSimpleSparseWeighedUGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class
+      TWeight must have defined comparision operators and property MaxValue,
+      which used as infinity weight value;
+      Default(TWeight) used as zero weight value }
+  generic TGWeighedUGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class
+  // must be class(specialize TGSimpleUGraph<TVertex, specialize TGWeighedEdgeData<TWeight, TEdgeData>, TVertexEqRel>)
+  // but it is impossible: see #0033788
   public
   type
-    TWeighedGraph  = TGSimpleSparseWeighedUGraph;
-    TWeightArray   = array of TWeight;
-    TWeEdgeData    = specialize TGWeighedEdgeData<TWeight, TEdgeData>;
-    TGraph         = specialize TGSimpleSparseUGraph<TVertex, TWeEdgeData, TVertexEqRel>;
-    TEdge          = TGraph.TEdge;
-    TEdges         = TGraph.TEdges;
-    TDistinctEdges = TGraph.TDistinctEdges;
-    TAdjVertices   = TGraph.TAdjVertices;
-    TIncidentEdges = TGraph.TIncidentEdges;
-    TOnAddEdge     = TGraph.TOnAddEdge;
+    TWeighedGraph   = TGWeighedUGraph;
+    TWeightArray    = array of TWeight;
+    TWeEdgeData     = specialize TGWeighedEdgeData<TWeight, TEdgeData>;
+    TGraph          = specialize TGSimpleUGraph<TVertex, TWeEdgeData, TVertexEqRel>;
+    TEdge           = TGraph.TEdge;
+    TEdges          = TGraph.TEdges;
+    TDistinctEdges  = TGraph.TDistinctEdges;
+    TEdgeEnumerator = TGraph.TEdgeEnumerator;
+    TAdjVertices    = TGraph.TAdjVertices;
+    TIncidentEdges  = TGraph.TIncidentEdges;
+    TOnAddEdge      = TGraph.TOnAddEdge;
+    TOnReadVertex   = TGraph.TOnReadVertex;
+    TOnWriteVertex  = TGraph.TOnWriteVertex;
+    TOnReadData     = TGraph.TOnReadData;
+    TOnWriteData    = TGraph.TOnWriteData;
+    THeuristic      = function(constref aSrc, aDst: TVertex): TWeight;
 
   protected
   type
-    THandleArray = array of THandle;
-    TEdgeArray   = array of TEdge;
+    TWeightEdge = record
+      Source,
+      Destination: SizeInt;
+      Weight:  TWeight;
+      class operator = (constref L, R: TWeightEdge): Boolean; inline;
+      class operator <>(constref L, R: TWeightEdge): Boolean; inline;
+      class operator > (constref L, R: TWeightEdge): Boolean; inline;
+      class operator < (constref L, R: TWeightEdge): Boolean; inline;
+      class operator >=(constref L, R: TWeightEdge): Boolean; inline;
+      class operator <=(constref L, R: TWeightEdge): Boolean; inline;
+      class function Construct(s, d: SizeInt; w: TWeight): TWeightEdge; static; inline;
+    end;
+
+    TEdgeArray   = array of TWeightEdge;
     TAdjItem     = TGraph.TAdjItem;
     PAdjItem     = TGraph.PAdjItem;
 
@@ -54057,13 +54529,48 @@ type
       class operator < (constref L, R: TWeightItem): Boolean; inline;
       class operator >=(constref L, R: TWeightItem): Boolean; inline;
       class operator <=(constref L, R: TWeightItem): Boolean; inline;
-      class function Construct(w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
+      class function Construct(constref w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
     end;
 
-    TEdgeHelper  = specialize TGDelegatedArrayHelper<TEdge>;
+    TRankItem = record
+      Rank,
+      Weight: TWeight;
+      Index: SizeInt;
+      class operator = (constref L, R: TRankItem): Boolean; inline;
+      class operator <>(constref L, R: TRankItem): Boolean; inline;
+      class operator > (constref L, R: TRankItem): Boolean; inline;
+      class operator < (constref L, R: TRankItem): Boolean; inline;
+      class operator >=(constref L, R: TRankItem): Boolean; inline;
+      class operator <=(constref L, R: TRankItem): Boolean; inline;
+      class function Construct(constref aRank, aWeight: TWeight; aIndex: SizeInt): TRankItem; static; inline;
+    end;
 
-    TPriorityQueue = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+    TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
+    TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+    TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
 
+  { todo: Filter-Kruskal minimum spanning tree algorithm }
+    TFilterKruskal = record
+    private
+    var
+      FEdges: TEdgeArray;
+      FTree: TIntArray;
+      FDsu: TDisjointSetUnion;
+      FTreshold,
+      FCount,
+      FFound: SizeInt;
+      FWeight: TWeight;
+      procedure Kruskal(L, R: SizeInt);
+      function  Split(L, R: SizeInt): SizeInt;
+      procedure FilterKruskal(L, R: SizeInt);
+    public
+      function  FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
+    end;
+  strict private
+  class var
+    CFInfiniteWeight: TWeight;
+    CFZeroWeight: TWeight;
+  protected
   class var
     CFData: TEdgeData;
 
@@ -54072,19 +54579,33 @@ type
     function  GetEdgeCount: SizeInt; inline;
     function  GetTitle: string; inline;
     function  GetVertex(aIndex: SizeInt): TVertex; inline;
+    procedure SetVertex(aIndex: SizeInt; const aValue: TVertex); inline;
     function  GetVertexCount: SizeInt; inline;
+    function  GetSeparateCount: SizeInt; inline;
     procedure SetTitle(const aValue: string); inline;
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
-    function  DijkstraMap(aSrc: SizeInt): TWeightArray;
-    function  DijkstraMap(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+    function  DijkstraSssp(aSrc: SizeInt): TWeightArray;
+    function  DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+  { Dijkstra's pathfinding algorithm }
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
     function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
-    function  KruskalMinTree(out aTotalWeight: TWeight): TEdgeArray;
-    function  PrimMinTree(out aTotalWeight: TWeight): TIntArray;
-    function  CreateEdgeArray: TEdgeArray;
-    function  EdgeCompare(constref L, R: TEdge): SizeInt; inline;
+  { A* pathfinding algorithm }
+    function  AStarPath(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+  { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
+    function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+    function  FordBellman(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
+
+    function  FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
+    function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
+    function  PrimMst(out aTotalWeight: TWeight): TIntArray;
+    function  CreateWeightVector: TWeightArray;
+    function  CreateEdgeVector: TEdgeArray;
     class function Min(const L, R: TWeight): TWeight; static; inline;
+    class constructor Init;
   public
+    class property InfiniteWeight: TWeight read CFInfiniteWeight;
+    class property ZeroWeight: TWeight read CFZeroWeight;
+
     constructor Create;
     constructor Create(g: TGraph);
     destructor Destroy; override;
@@ -54115,10 +54636,20 @@ type
     function  RemoveVertexI(aIndex: SizeInt): Boolean; inline;
     function  AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight; aData: TEdgeData): Boolean; inline;
     function  AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight): Boolean; inline;
+    function  AddEdge(constref aSrc, aDst: TVertex; aData: TWeEdgeData): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight; aData: TEdgeData): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight): Boolean; inline;
+    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TWeEdgeData): Boolean; inline;
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  GetEdgeData(constref aSrc, aDst: TVertex): TWeEdgeData; inline;
+    function  GetEdgeDataI(aSrc, aDst: SizeInt): TWeEdgeData; inline;
+    procedure SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TWeEdgeData); inline;
+    procedure SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TWeEdgeData); inline;
+    procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData); inline;
+    procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData); inline;
+    procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData); inline;
+    procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData); inline;
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
@@ -54137,20 +54668,23 @@ type
   { test whether the graph is bipartite; if returns True then information about the vertex
     belonging to the fractions is returned in v(0 or 1) }
     function  IsBipartite(out v: TShortArray): Boolean; inline;
-  { returns the length of the shortest path between the vertices aSrc and aDst,
+  { returns the length of the shortest path(in sense 'edges count') between the vertices aSrc and aDst,
     -1 if the path does not exist }
     function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt; inline;
-  { returns a vector containing in the corresponding components the shortest paths from aRoot }
-    function  FindMinPathLenVector(constref aRoot: TVertex): TIntArray; inline;
-    function  FindMinPathLenVectorI(aRoot: SizeInt = 0): TIntArray; inline;
-  { returns a vector containing indices of found shortest path(empty if path does not exists) }
+  { returns a vector containing in the corresponding components the shortest paths from aRoot,
+    (in sense 'edges count')}
+    function  FindMinPathLenMap(constref aRoot: TVertex): TIntArray; inline;
+    function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray; inline;
+  { returns a vector containing indices of found shortest path(in sense 'edges count'),
+    empty if path does not exists }
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray; inline;
     function  Degree(constref v: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt; inline;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  CycleExists(out aCycle: TIntArray): Boolean; inline;
     function  EulerCycleExists: Boolean; inline;
     function  FindEulerCycle: TIntArray; inline;
   { checks whether the graph is connected; a graph without vertices is considered disconnected }
@@ -54168,57 +54702,82 @@ type
   { returns a graph constructed from the pairs provided by the vector,
     i.e. each element treates as pair of source - destination }
     function  CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
-  { returns count of connected components }
-    function  ComponentCount: SizeInt; inline;
+  { returns index of the connected component that contains v }
+    function  SeparateIndex(constref v: TVertex): SizeInt; inline;
+    function  SeparateIndexI(aVertex: SizeInt): SizeInt; inline;
   { returns number of vertices(population) in the connected component that contains aRoot }
-    function  ComponentPop(constref aRoot: TVertex): SizeInt; inline;
-    function  ComponentPopI(aRoot: SizeInt): SizeInt; inline;
+    function  SeparatePop(constref v: TVertex): SizeInt; inline;
+    function  SeparatePopI(aVertex: SizeInt): SizeInt; inline;
+  { returns graph of connected component that contains v }
+    function  SeparateGraph(constref v: TVertex): TWeighedGraph; inline;
+    function  SeparateGraphI(aVtxIndex: SizeInt): TWeighedGraph; inline;
   { checks whether the graph is a regular graph (that is, the degree of all its
 В В В В  vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean; inline;
     function  IsTree: Boolean; inline;
-  { finds the shortest paths from a given vertex to the remaining vertices in same connected component,
+  { returns True if exists edge with negative weight }
+    function  NegWeighedEdgeExists: Boolean;
+  { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP),
     the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the minimum path to the vertex or
-    TWeight.MaxValue if the vertex is unreachable; used Dijkstra's algorithm  }
+    InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function  FindMinPaths(constref aSrc: TVertex): TWeightArray; inline;
-    function  FindMinPathsI(aSrc: SizeInt): TWeightArray; inline;
+    function  FindMinPathsI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
     function  FindMinPaths(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function  FindMinPathsI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; inline;
-  { finds the shortest path weight from a aSrc to aDst if it exists; the weights of all edges
-    must be nonnegative; the result contains shortest path weight or TWeight.MaxValue if the vertex
-    is unreachable; used Dijkstra's algorithm  }
+  { finds the shortest path weight from a aSrc to aDst if it exists(pathfinding);
+    the weights of all edges must be nonnegative;
+    the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
+    used Dijkstra's algorithm  }
     function  FindMinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
-    function  FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight; inline;
+    function  FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight;
   { same as above and in aPath returns path }
     function  FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight; inline;
-    function  FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight; inline;
-  { returns a graph constructed from the edges provided by the array }
-    function  CreateFromEdgeArray(constref aEdgeArray: TEdgeArray): TWeighedGraph;
+    function  FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+  { finds the shortest path weight from a aSrc to aDst if it exists(pathfinding);
+    the weights of all edges must be nonnegative;
+    the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
+    used A* algorithm  }
+    function  FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aPath: TIntArray): TWeight; inline;
+    function  FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+  { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP);
+    the weights of edges may be negative;
+    returns False if there is a negative weight cycle;
+    aWeights contains in the corresponding component the weight of the minimum path to the vertex or
+    InfiniteWeight if the vertex is unreachable; used BellmanвЂ“Ford algorithm  }
+    function  FindMinPathsFordB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsFordBI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+  { same as above and in aPaths returns paths }
+    function  FindMinPathsFordB(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsFordBI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
-    function  FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TEdgeArray;
+    function  FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
-    function  FindMinSpanningTreePrimI(out aTotalWeight: TWeight): TIntArray;
+    function  FindMinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 
     function  Clone: TWeighedGraph;
     property  Title: string read GetTitle write SetTitle;
     property  VertexCount: SizeInt read GetVertexCount;
     property  EdgeCount: SizeInt read GetEdgeCount;
-    property  Vertices[aIndex: SizeInt]: TVertex read GetVertex; default;
+  { count of connected components }
+    property  SeparateCount: SizeInt read GetSeparateCount;
+    property  Items[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
   end;
 
 implementation
 {$B-}{$COPERATORS ON}
+uses
+  bufstream;
 
-{ TGSimpleSparseUGraph.TDistinctEdgeEnumerator }
+{ TGSimpleUGraph.TDistinctEdgeEnumerator }
 
-function TGSimpleSparseUGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
+function TGSimpleUGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
 begin
-  Result.Init(FCurrIndex, FEnum.Current);
+  Result{%H-}.Init(FCurrIndex, FEnum.Current);
 end;
 
-function TGSimpleSparseUGraph.TDistinctEdgeEnumerator.MoveNext: Boolean;
+function TGSimpleUGraph.TDistinctEdgeEnumerator.MoveNext: Boolean;
 begin
   repeat
     if FEnumDone then
@@ -54226,43 +54785,44 @@ begin
         if FCurrIndex >= FLastIndex then
           exit(False);
         Inc(FCurrIndex);
+        FVisited[FCurrIndex] := True;
         FEnum := FList[FCurrIndex].Item.GetEnumerator;
       end;
     Result := FEnum.MoveNext;
     FEnumDone := not Result;
     if Result then
-      Result := FVisitedEdges.Add(TIntPair.Construct(FCurrIndex, FEnum.GetCurrent^.Key)) and
-                FVisitedEdges.Add(TIntPair.Construct(FEnum.GetCurrent^.Key, FCurrIndex));
+      Result := not FVisited[FEnum.GetCurrent^.Key];
   until Result;
 end;
 
-procedure TGSimpleSparseUGraph.TDistinctEdgeEnumerator.Reset;
+procedure TGSimpleUGraph.TDistinctEdgeEnumerator.Reset;
 begin
   FCurrIndex := -1;
   FEnumDone := True;
-  FVisitedEdges.Clear;
+  FVisited.ClearBits;
 end;
 
-{ TGSimpleSparseUGraph.TDistinctEdges }
+{ TGSimpleUGraph.TDistinctEdges }
 
-function TGSimpleSparseUGraph.TDistinctEdges.GetEnumerator: TDistinctEdgeEnumerator;
+function TGSimpleUGraph.TDistinctEdges.GetEnumerator: TDistinctEdgeEnumerator;
 begin
   Result.FList := FGraph.FVertexList.FNodeList;
   Result.FLastIndex := Pred(FGraph.FVertexList.Count);
+  Result.FVisited.Size := Succ(Result.FLastIndex);
   Result.FCurrIndex := -1;
   Result.FEnumDone := True;
 end;
 
-{ TGSimpleSparseUGraph }
+{ TGSimpleUGraph }
 
-procedure TGSimpleSparseUGraph.DoRemoveVertex(aIndex: SizeInt);
+procedure TGSimpleUGraph.DoRemoveVertex(aIndex: SizeInt);
 var
   CurrEdges: TVertexItem.TAdjItemArray;
   I, J: SizeInt;
 begin
   FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
-  FConnectedValid := False;
   FVertexList.Delete(aIndex);
+  FConnectedValid := False;
   for I := 0 to Pred(FVertexList.Count) do
     begin
       CurrEdges := FVertexList.ItemRefs[I]^.ToArray;
@@ -54279,7 +54839,7 @@ begin
     end;
 end;
 
-function TGSimpleSparseUGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleUGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 var
   p: ^TAdjItem;
 begin
@@ -54298,7 +54858,7 @@ begin
     end;
 end;
 
-function TGSimpleSparseUGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleUGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
@@ -54311,74 +54871,61 @@ begin
     end;
 end;
 
-function TGSimpleSparseUGraph.CheckConnected: Boolean;
-begin
-  Result := ComponentCount = 1;
-end;
-
-function TGSimpleSparseUGraph.FindComponentCount: SizeInt;
+function TGSimpleUGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleUGraph;
 var
   Visited: TBitVector;
   Stack: TIntStack;
-  I, Curr: SizeInt;
+  Dst, Src: SizeInt;
 begin
-  Result := 0;
-  if IsEmpty then
-    exit;
+  Result := TGSimpleUGraph.Create;
   Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+  Src := aIndex;
+  {%H-}Stack.Push(aIndex);
+  repeat
+    if not Visited[Src] then
       begin
-        Curr := I;
-        {%H-}Stack.Push(Curr);
-        repeat
-          if not Visited[Curr] then
+        Visited[Src] := True;
+        for Dst in AdjVerticesI(Src) do
+          if not Visited[Dst] then
             begin
-              Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.Tag := Result;
-              for Curr in AdjVerticesI(Curr) do
-                if not Visited[Curr] then
-                  Stack.Push(Curr);
+              Result.AddEdge(Items[Src], Items[Dst], GetEdgeDataPtr(Src, Dst)^);
+              Stack.Push(Dst);
             end;
-        until not Stack.TryPop(Curr);
-        Inc(Result);
       end;
+  until not Stack.TryPop(Src);
 end;
 
-function TGSimpleSparseUGraph.GetComponentCount: SizeInt;
+procedure TGSimpleUGraph.Clear;
 begin
-  if ConnectedValid then
-    Result := FCompoCount
-  else
-    begin
-      FCompoCount := FindComponentCount;
-      FConnectedValid := True;
-    end;
+  inherited;
+  FCompCount := 0;
+  FConnected := False;
+  FConnectedValid := False;
 end;
 
-function TGSimpleSparseUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGSimpleUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FVertexList.FindOrAdd(v, aIndex);
   if Result then
     begin
-      FVertexList.ItemRefs[aIndex]^.Tag := -1;
+      FVertexList.ItemRefs[aIndex]^.CompIdx := -1;
       FConnectedValid := False;
     end;
 end;
 
-function TGSimpleSparseUGraph.RemoveVertex(constref v: TVertex): Boolean;
+function TGSimpleUGraph.RemoveVertex(constref v: TVertex): Boolean;
 begin
   Result := RemoveVertexI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
+function TGSimpleUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
 begin
   Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
   if Result then
     DoRemoveVertex(aIndex);
 end;
 
-function TGSimpleSparseUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+function TGSimpleUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
 var
   SrcIdx, DstIdx: SizeInt;
 begin
@@ -54387,12 +54934,12 @@ begin
   Result := DoAddEdge(SrcIdx, DstIdx, aData);
 end;
 
-function TGSimpleSparseUGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleUGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := AddEdge(aSrc, aDst, CFData);
 end;
 
-function TGSimpleSparseUGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleUGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
@@ -54401,17 +54948,17 @@ begin
   Result := DoAddEdge(aSrc, aDst, aData);
 end;
 
-function TGSimpleSparseUGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleUGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := AddEdgeI(aSrc, aDst, CFData);
 end;
 
-function TGSimpleSparseUGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleUGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := RemoveEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGSimpleSparseUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= FVertexList.Count) then
     exit(False);
@@ -54420,28 +54967,200 @@ begin
   Result := DoRemoveEdge(aSrc, aDst);
 end;
 
-function TGSimpleSparseUGraph.Degree(constref v: TVertex): SizeInt;
+procedure TGSimpleUGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+var
+  h: TStreamHeader;
+  I: SizeInt;
+  e: TEdge;
+  bs: TWriteBufStream;
+begin
+  if not (Assigned(aWriteVertex) and Assigned(aWriteData)) then
+    raise ELGraphError.Create(SEWriteCallbackMissed);
+  bs := TWriteBufStream.Create(aStream);
+  try
+    //write header
+    h.Magic := LGRAPH_MAGIC;
+    h.Version := CURRENT_VERSION;
+    h.TitleSize := System.Length(Title);
+    h.VertexCount := VertexCount;
+    h.EdgeCount := EdgeCount;
+    bs.WriteBuffer(h, SizeOf(h));
+    //write title
+    bs.WriteBuffer(FTitle[1], h.TitleSize);
+    //write Items, but does not save any info about connected
+    //this should allow transfer data between directed/undirected graphs ???
+    //or need save edges from dfs ???
+    for I := 0 to Pred(h.VertexCount) do
+      aWriteVertex(bs, FVertexList.ItemRefs[I]^.Vertex);
+    //write edges
+    for e in DistinctEdges do
+      begin
+        bs.WriteBuffer(e.Source, SizeOf(e.Source));
+        bs.WriteBuffer(e.Destination, SizeOf(e.Destination));
+        aWriteData(bs, e.Data);
+      end;
+  finally
+    bs.Free;
+  end;
+end;
+
+procedure TGSimpleUGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+var
+  h: TStreamHeader;
+  I, vInd: SizeInt;
+  e: TEdge;
+  v: TVertex;
+  bs: TReadBufStream;
+begin
+  if not (Assigned(aReadVertex) and Assigned(aReadData)) then
+    raise ELGraphError.Create(SEReadCallbackMissed);
+  bs := TReadBufStream.Create(aStream);
+  try
+    //read header
+    bs.ReadBuffer(h, SizeOf(h));
+    if h.Magic <> LGRAPH_MAGIC then
+      raise ELGraphError.Create(SEUnknownGraphStreamFmt);
+    if h.Version > CURRENT_VERSION then
+      raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
+    Clear;
+    //read title
+    System.SetLength(FTitle, h.TitleSize);
+    bs.ReadBuffer(FTitle[1], h.TitleSize);
+    //read Items
+    for I := 0 to Pred(h.VertexCount) do
+      begin
+        v := aReadVertex(bs);
+        if not AddVertex(v, vInd) then
+          raise ELGraphError.Create(SEGraphStreamCorrupt);
+        if vInd <> I then
+          raise ELGraphError.Create(SEGraphStreamReadIntern);
+      end;
+    //read edges
+    for I := 0 to Pred(h.EdgeCount) do
+      begin
+        bs.ReadBuffer(e.Source, SizeOf(e.Source));
+        bs.ReadBuffer(e.Destination, SizeOf(e.Destination));
+        e.Data := aReadData(bs);
+        AddEdgeI(e.Source, e.Destination, e.Data);
+      end;
+  finally
+    bs.Free;
+  end;
+end;
+
+procedure TGSimpleUGraph.SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex;
+  aWriteData: TOnWriteData);
+var
+  fs: TStream;
+begin
+  fs := TFileStream.Create(aFileName, fmCreate);
+  try
+    SaveToStream(fs, aWriteVertex, aWriteData);
+  finally
+    fs.Free;
+  end;
+end;
+
+procedure TGSimpleUGraph.LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+var
+  fs: TStream;
+begin
+  fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadFromStream(fs, aReadVertex, aReadData);
+  finally
+    fs.Free;
+  end;
+end;
+
+function TGSimpleUGraph.Degree(constref v: TVertex): SizeInt;
 begin
   Result := DegreeI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseUGraph.DegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleUGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   FVertexList.CheckIndexRange(aIndex);
   Result := FVertexList.ItemRefs[aIndex]^.Count;
 end;
 
-function TGSimpleSparseUGraph.Isolated(constref v: TVertex): Boolean;
+function TGSimpleUGraph.Isolated(constref v: TVertex): Boolean;
 begin
   Result := Degree(v) = 0;
 end;
 
-function TGSimpleSparseUGraph.IsolatedI(aIndex: SizeInt): Boolean;
+function TGSimpleUGraph.IsolatedI(aIndex: SizeInt): Boolean;
 begin
   Result := DegreeI(aIndex) = 0;
 end;
 
-function TGSimpleSparseUGraph.EulerCycleExists: Boolean;
+function TGSimpleUGraph.CycleExists(out aCycle: TIntArray): Boolean;
+var
+  Stack: TIntStack;
+  Visited: TBitVector;
+  v: TIntArray;
+  Curr, Next: SizeInt;
+begin
+  if IsEmpty then
+    exit(False);
+  Visited.Size := VertexCount;
+  v := CreateIntVector;
+  Curr := 0;
+  repeat
+    if not Visited[Curr] then
+      begin
+        Visited[Curr] := True;
+        for Next in AdjVerticesI(Curr) do
+          if not Visited[Next] then
+            begin
+              Stack.Push(Next);
+              v[Next] := Curr;
+            end
+          else
+            if v[Curr] <> Next then
+              begin
+                aCycle := CycleChainFromTree(v, Next, Curr);
+                exit(True);
+              end;
+      end;
+  until not Stack.TryPop(Curr);
+  Result := False;
+end;
+
+//function TGSimpleUGraph.CycleExistsI(aSrc: SizeInt; out aCycle: TIntArray): Boolean;
+//var
+//  Stack: TIntStack;
+//  Visited: TBitVector;
+//  v: TIntArray;
+//  Curr, Next: SizeInt;
+//begin
+//  if IsEmpty then
+//    exit(False);
+//  Visited.Size := VertexCount;
+//  v := CreateIntVector;
+//  Curr := aSrc;
+//  repeat
+//    if not Visited[Curr] then
+//      begin
+//        Visited[Curr] := True;
+//        for Next in AdjVerticesI(Curr) do
+//          if not Visited[Next] then
+//            begin
+//              Stack.Push(Next);
+//              v[Next] := Curr;
+//            end
+//          else
+//            if (v[Curr] <> Next) and (Next = aSrc) then
+//              begin
+//                aCycle := CycleChainFromTree(v, Next, Curr);
+//                exit(True);
+//              end;
+//      end;
+//  until not Stack.TryPop(Curr);
+//  Result := False;
+//end;
+
+function TGSimpleUGraph.EulerCycleExists: Boolean;
 var
   I, d, cd: SizeInt;
 begin
@@ -54458,9 +55177,9 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleSparseUGraph.FindEulerCycle: TIntArray;
+function TGSimpleUGraph.FindEulerCycle: TIntArray;
 var
-  g: TGSimpleSparseUGraph = nil;
+  g: TGSimpleUGraph = nil;
   Stack: TIntStack;
   I, s, d, From: SizeInt;
 begin
@@ -54496,14 +55215,7 @@ begin
   end;
 end;
 
-function TGSimpleSparseUGraph.IsConnected: Boolean;
-begin
-  if not ConnectedValid then
-    FConnected := CheckConnected;
-  Result := Connected;
-end;
-
-function TGSimpleSparseUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+function TGSimpleUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -54520,12 +55232,11 @@ begin
     if not Visited[I] then
       begin
         Curr := I;
-        {%H-}Stack.Push(Curr);
         repeat
           if not Visited[Curr] then
             begin
               Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.Tag := 0;
+              FVertexList.ItemRefs[Curr]^.CompIdx := 0;
               for Curr in AdjVerticesI(Curr) do
                 if not Visited[Curr] then
                   Stack.Push(Curr);
@@ -54536,24 +55247,24 @@ begin
           begin
             if Assigned(aOnAddEdge) then
               begin
-                aOnAddEdge(0, Curr, @d);
+                aOnAddEdge(Items[0], Items[Curr], @d);
                 AddEdgeI(0, Curr, d);
               end
             else
               AddEdgeI(0, Curr);
           end;
       end;
-  FCompoCount := 1;
+  FCompCount := 1;
   FConnectedValid := True;
   FConnected := True;
 end;
 
-function TGSimpleSparseUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
+function TGSimpleUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := DfsSpanningTreeI(FVertexList.IndexOf(aRoot));
 end;
 
-function TGSimpleSparseUGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
+function TGSimpleUGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -54561,8 +55272,7 @@ var
 begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  Result := CreateIndexVector;
-  {%H-}Stack.Push(aRoot);
+  Result := CreateIntVector;
   repeat
     if not Visited[aRoot] then
       begin
@@ -54577,12 +55287,12 @@ begin
   until not Stack.TryPop(aRoot);
 end;
 
-function TGSimpleSparseUGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
+function TGSimpleUGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := BfsSpanningTreeI(FVertexList.IndexOf(aRoot));
 end;
 
-function TGSimpleSparseUGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
+function TGSimpleUGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
 var
   Visited: TBitVector;
   Queue: TIntQueue;
@@ -54590,61 +55300,45 @@ var
 begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  Result := CreateIndexVector;
-  Queue.Enqueue(aRoot);
-  while Queue{%H-}.TryDequeue(aRoot) do
-    if not Visited[aRoot] then
-      begin
-        Visited[aRoot] := True;
-        for I in AdjVerticesI(aRoot) do
-          if not Visited[I] then
-            begin
-              Result[I] := aRoot;
-              Queue.Enqueue(I);
-            end;
-      end;
+  Result := CreateIntVector;
+  repeat
+    for I in AdjVerticesI(aRoot) do
+      if not Visited[I] then
+        begin
+          Visited[I] := True;
+          Result[I] := aRoot;
+          Queue.Enqueue(I);
+        end;
+  until not Queue.TryDequeue(aRoot);
 end;
 
-function TGSimpleSparseUGraph.CreateFromVector(constref aVector: TIntArray): TGSimpleSparseUGraph;
+function TGSimpleUGraph.CreateFromVector(constref aVector: TIntArray): TGSimpleUGraph;
 var
   I, Src: SizeInt;
 begin
-  Result := TGSimpleSparseUGraph.Create;
+  Result := TGSimpleUGraph.Create;
   for I := 0 to Pred(System.Length(aVector)) do
     begin
       Src := aVector[I];
       if Src <> -1 then
-        Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeData(Src, I)^);
+        Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeDataPtr(Src, I)^);
     end;
 end;
 
-function TGSimpleSparseUGraph.ComponentIndex(constref v: TVertex): SizeInt;
+function TGSimpleUGraph.SeparateGraph(constref v: TVertex): TGSimpleUGraph;
 begin
-   Result := ComponentIndexI(FVertexList.IndexOf(v));
+  Result := SeparateGraphI(FVertexList.IndexOf(v));
 end;
 
-function TGSimpleSparseUGraph.ComponentIndexI(aVertex: SizeInt): SizeInt;
+function TGSimpleUGraph.SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
 begin
-  if ComponentCount > 1 then
-    Result := FVertexList.ItemRefs[aVertex]^.Tag
+  if SeparateCount > 1 then
+    Result := GetSeparateGraph(aVtxIndex)
   else
-    Result := 0;
+    Result := Clone;
 end;
 
-function TGSimpleSparseUGraph.ComponentPop(constref aRoot: TVertex): SizeInt;
-begin
-  Result := DfsTraversalI(FVertexList.IndexOf(aRoot));
-end;
-
-function TGSimpleSparseUGraph.ComponentPopI(aRoot: SizeInt): SizeInt;
-begin
-  if not ConnectedValid or (ComponentCount > 1) then  //todo: need to be rewritted !!!
-    Result := DfsTraversalI(aRoot)
-  else
-    Result := VertexCount;
-end;
-
-function TGSimpleSparseUGraph.IsRegular: Boolean;
+function TGSimpleUGraph.IsRegular: Boolean;
 var
   I, d: SizeInt;
 begin
@@ -54658,19 +55352,14 @@ begin
   Result := True;
 end;
 
-function TGSimpleSparseUGraph.IsTree: Boolean;
-begin
-  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
-end;
-
-function TGSimpleSparseUGraph.DistinctEdges: TDistinctEdges;
+function TGSimpleUGraph.DistinctEdges: TDistinctEdges;
 begin
   Result.FGraph := Self;
 end;
 
-function TGSimpleSparseUGraph.Clone: TGSimpleSparseUGraph;
+function TGSimpleUGraph.Clone: TGSimpleUGraph;
 begin
-  Result := TGSimpleSparseUGraph.Create;
+  Result := TGSimpleUGraph.Create;
   Result.FVertexList := FVertexList;
   Result.FEdgeCount := EdgeCount;
   Result.FTitle := Title;
@@ -54686,164 +55375,314 @@ begin
   Result.Data := d;
 end;
 
-{ TGSimpleSparseWeighedUGraph.TWeightItem }
+{ TGWeighedUGraph.TWeightEdge }
 
-class operator TGSimpleSparseWeighedUGraph.TWeightItem. = (constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGSimpleSparseWeighedUGraph.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGSimpleSparseWeighedUGraph.TWeightItem.>(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGSimpleSparseWeighedUGraph.TWeightItem.<(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGSimpleSparseWeighedUGraph.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGSimpleSparseWeighedUGraph.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
+class operator TGWeighedUGraph.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-class function TGSimpleSparseWeighedUGraph.TWeightItem.Construct(w: TWeight; aIndex: SizeInt): TWeightItem;
+class function TGWeighedUGraph.TWeightEdge.Construct(s, d: SizeInt; w: TWeight): TWeightEdge;
+begin
+  Result.Source := s;
+  Result.Destination := d;
+  Result.Weight := w;
+end;
+
+{ TGWeighedUGraph.TWeightItem }
+
+class operator TGWeighedUGraph.TWeightItem. = (constref L, R: TWeightItem): Boolean;
+begin
+  Result := L.Weight = R.Weight;
+end;
+
+class operator TGWeighedUGraph.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
+begin
+  Result := L.Weight <> R.Weight;
+end;
+
+class operator TGWeighedUGraph.TWeightItem.>(constref L, R: TWeightItem): Boolean;
+begin
+  Result := L.Weight > R.Weight;
+end;
+
+class operator TGWeighedUGraph.TWeightItem.<(constref L, R: TWeightItem): Boolean;
+begin
+  Result := L.Weight < R.Weight;
+end;
+
+class operator TGWeighedUGraph.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
+begin
+  Result := L.Weight >= R.Weight;
+end;
+
+class operator TGWeighedUGraph.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
+begin
+  Result := L.Weight <= R.Weight;
+end;
+
+class function TGWeighedUGraph.TWeightItem.Construct(constref w: TWeight; aIndex: SizeInt): TWeightItem;
 begin
   Result.Weight := w;
   Result.Index := aIndex;
 end;
 
-{ TGSimpleSparseWeighedUGraph }
+{ TGWeighedUGraph.TWeightItem }
 
-function TGSimpleSparseWeighedUGraph.GetEdgeCount: SizeInt;
+class operator TGWeighedUGraph.TRankItem. = (constref L, R: TRankItem): Boolean;
+begin
+  Result := L.Rank = R.Rank;
+end;
+
+class operator TGWeighedUGraph.TRankItem.<>(constref L, R: TRankItem): Boolean;
+begin
+  Result := L.Rank <> R.Rank;
+end;
+
+class operator TGWeighedUGraph.TRankItem.>(constref L, R: TRankItem): Boolean;
+begin
+  Result := L.Rank > R.Rank;
+end;
+
+class operator TGWeighedUGraph.TRankItem.<(constref L, R: TRankItem): Boolean;
+begin
+  Result := L.Rank < R.Rank;
+end;
+
+class operator TGWeighedUGraph.TRankItem.>=(constref L, R: TRankItem): Boolean;
+begin
+  Result := L.Rank >= R.Rank;
+end;
+
+class operator TGWeighedUGraph.TRankItem.<=(constref L, R: TRankItem): Boolean;
+begin
+  Result := L.Rank <= R.Rank;
+end;
+
+class function TGWeighedUGraph.TRankItem.Construct(constref aRank, aWeight: TWeight; aIndex: SizeInt): TRankItem;
+begin
+  Result.Rank := aRank;
+  Result.Weight := aWeight;
+  Result.Index := aIndex;
+end;
+
+{ TGWeighedUGraph.TFilterKruskal }
+
+procedure TGWeighedUGraph.TFilterKruskal.Kruskal(L, R: SizeInt);
+var
+  s, d: SizeInt;
+begin
+  TEdgeHelper.IntroSort(FEdges[L..R]);
+  while L <= R do
+    begin
+      s := FEdges[L].Source;
+      d := FEdges[L].Destination;
+      if FDsu.InDiffSets(s, d)  then
+        begin
+          FWeight += FEdges[L].Weight;
+          FTree[d] := s;
+          FDsu.Union(s, d);
+          Inc(FFound);
+        end;
+      Inc(L);
+    end;
+end;
+
+function TGWeighedUGraph.TFilterKruskal.Split(L, R: SizeInt): SizeInt;
+var
+  Pivot: TWeight;
+  v: TWeightEdge;
+begin
+  Pivot := FEdges[Succ(L + Random(Pred(R - L)))].Weight; //shouldn't be first or last
+  Dec(L);
+  Inc(R);
+  repeat
+    repeat Inc(L) until FEdges[L].Weight >= Pivot;
+    repeat Dec(R) until FEdges[R].Weight <= Pivot;
+    if L >= R then
+      exit(R);
+    v := FEdges[L];
+    FEdges[L] := FEdges[R];
+    FEdges[R] := v;
+  until False;
+end;
+
+procedure TGWeighedUGraph.TFilterKruskal.FilterKruskal(L, R: SizeInt);
+var
+  p: SizeInt;
+begin
+  if R - L > FTreshold then
+    begin
+      if FFound < FCount then
+        begin
+          p := Split(L, R);
+          FilterKruskal(L, p);
+          if FFound < FCount then
+            FilterKruskal(Succ(p), R);
+        end;
+    end
+  else
+    Kruskal(L, R);
+end;
+
+function TGWeighedUGraph.TFilterKruskal.FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
+begin
+  FEdges := aGraph.CreateEdgeVector;
+  FTree := aGraph.FGraph.CreateIntVector;
+  FCount := aGraph.VertexCount;
+  FDsu.Size := FCount;
+  FTreshold := Pred(FCount); // ??? FCount shr 1
+  FWeight := ZeroWeight;
+  FFound := 0;
+  FilterKruskal(0, System.High(FEdges));
+  aWeight := FWeight;
+  Result := FTree;
+end;
+
+{ TGWeighedUGraph }
+
+function TGWeighedUGraph.GetEdgeCount: SizeInt;
 begin
   Result := FGraph.EdgeCount;
 end;
 
-function TGSimpleSparseWeighedUGraph.GetTitle: string;
+function TGWeighedUGraph.GetTitle: string;
 begin
   Result := FGraph.Title;
 end;
 
-function TGSimpleSparseWeighedUGraph.GetVertex(aIndex: SizeInt): TVertex;
+function TGWeighedUGraph.GetVertex(aIndex: SizeInt): TVertex;
 begin
   Result := FGraph[aIndex];
 end;
 
-function TGSimpleSparseWeighedUGraph.GetVertexCount: SizeInt;
+procedure TGWeighedUGraph.SetVertex(aIndex: SizeInt; const aValue: TVertex);
+begin
+  FGraph[aIndex] := aValue;
+end;
+
+function TGWeighedUGraph.GetVertexCount: SizeInt;
 begin
   Result := FGraph.VertexCount;
 end;
 
-procedure TGSimpleSparseWeighedUGraph.SetTitle(const aValue: string);
+function TGWeighedUGraph.GetSeparateCount: SizeInt;
+begin
+  Result := FGraph.SeparateCount;
+end;
+
+procedure TGWeighedUGraph.SetTitle(const aValue: string);
 begin
   FGraph.Title := aValue;
 end;
 
-function TGSimpleSparseWeighedUGraph.DijkstraMap(aSrc: SizeInt): TWeightArray;
+function TGWeighedUGraph.DijkstraSssp(aSrc: SizeInt): TWeightArray;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
-  NewWeight: TWeight;
+  Relaxed: TWeight;
   Item: TWeightItem;
-  I: SizeInt;
   p: PAdjItem;
 begin
   FGraph.CheckIndexRange(aSrc);
-  System.SetLength(Result, VertexCount);
-  System.SetLength(Handles, VertexCount);
+  Result := CreateWeightVector;
+  Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Queue.EnsureCapacity(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
-  Queue.Update(Handles[aSrc], TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
         Visited[Item.Index] := True;
         Result[Item.Index] := Item.Weight;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight >= 0 then
+          if Handles[p^.Key] = INVALID_HANDLE then
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key))
+          else
+            if not Visited[p^.Key] then
               begin
-                NewWeight := p^.Data.Weight + Item.Weight;
-                if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-              end
-            else
-              raise ELGGraphError.Create(SENegValuesNotAllowed);
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+              end;
       end;
 end;
 
-function TGSimpleSparseWeighedUGraph.DijkstraMap(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeighedUGraph.DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
-  NewWeight: TWeight;
+  Relaxed: TWeight;
   Item: TWeightItem;
-  I: SizeInt;
   p: PAdjItem;
 begin
-  FGraph.CheckIndexRange(aSrc);
-  System.SetLength(Result, VertexCount);
-  System.SetLength(Handles, VertexCount);
-  aPathTree := FGraph.CreateIndexVector;
+  Result := CreateWeightVector;
+  aPathTree := FGraph.CreateIntVector;
+  Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Queue.EnsureCapacity(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
-  Queue.Update(Handles[aSrc], TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
         Visited[Item.Index] := True;
         Result[Item.Index] := Item.Weight;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight >= 0 then
+          if Handles[p^.Key] = INVALID_HANDLE then
+            begin
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key));
+              aPathTree[p^.Key] := Item.Index;
+            end
+          else
+            if not Visited[p^.Key] then
               begin
-                NewWeight := p^.Data.Weight + Item.Weight;
-                if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
                   begin
+                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
                     aPathTree[p^.Key] := Item.Index;
-                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
                   end;
-              end
-            else
-              raise ELGGraphError.Create(SENegValuesNotAllowed);
+              end;
       end;
 end;
 
-function TGSimpleSparseWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
+function TGWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
-  NewWeight: TWeight;
+  Relaxed: TWeight;
   Item: TWeightItem;
-  I: SizeInt;
   p: PAdjItem;
 begin
-  FGraph.CheckIndexRange(aSrc);
-  FGraph.CheckIndexRange(aDst);
-  System.SetLength(Handles, VertexCount);
+  Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
-  Queue.Update(Handles[aSrc], TWeightItem.Construct(Default(TWeight), aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -54851,112 +55690,243 @@ begin
           exit(Item.Weight);
         Visited[Item.Index] := True;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight >= 0 then
+          if Handles[p^.Key] = INVALID_HANDLE then
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key))
+          else
+            if not Visited[p^.Key] then
               begin
-                NewWeight := p^.Data.Weight + Item.Weight;
-                if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
               end
-            else
-              raise ELGGraphError.Create(SENegValuesNotAllowed);
       end;
-  Result := TWeight.MaxValue;
+  Result := InfiniteWeight;
 end;
 
-function TGSimpleSparseWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
   Tree: TIntArray;
-  NewWeight: TWeight;
+  Relaxed: TWeight;
   Item: TWeightItem;
-  I: SizeInt;
   p: PAdjItem;
 begin
-  FGraph.CheckIndexRange(aSrc);
-  FGraph.CheckIndexRange(aDst);
-  System.SetLength(Handles, VertexCount);
-  Tree := FGraph.CreateIndexVector;
+  Handles := FGraph.CreateHandleVector;
+  Tree := FGraph.CreateIntVector;
   Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    Handles[I] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, I));
-  Queue.Update(Handles[aSrc], TWeightItem.Construct(Default(TWeight), aSrc));
-  Result := TWeight.MaxValue;
-  aPath := nil;
+  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
         if Item.Index = aDst then
           begin
-            Result := Item.Weight;
-            aPath := FGraph.PathFromTree(Tree, aDst);
-            break;
+            aPath := FGraph.ChainFromTree(Tree, aDst);
+            exit(Item.Weight);
           end;
         Visited[Item.Index] := True;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight >= 0 then
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
               begin
-                NewWeight := p^.Data.Weight + Item.Weight;
-                if NewWeight < Queue.Value(Handles[p^.Key]).Weight then
-                  begin
-                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(NewWeight, p^.Key));
-                    Tree[p^.Key] := Item.Index;
-                  end;
+                Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key));
+                Tree[p^.Key] := Item.Index;
               end
             else
-              raise ELGGraphError.Create(SENegValuesNotAllowed);
+              if not Visited[p^.Key] then
+                begin
+                  Relaxed := p^.Data.Weight + Item.Weight;
+                  if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                    begin
+                      Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+                      Tree[p^.Key] := Item.Index;
+                    end;
+                end;
+          end;
       end;
+  Result := InfiniteWeight;
+  aPath := nil;
 end;
 
-function TGSimpleSparseWeighedUGraph.KruskalMinTree(out aTotalWeight: TWeight): TEdgeArray;
+function TGWeighedUGraph.AStarPath(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+var
+  Visited: TBitVector;
+  Queue: TAStarHeap;
+  Handles: THandleArray;
+  Tree: TIntArray;
+  Actual, Implied: TWeight;
+  Item: TRankItem;
+  p: PAdjItem;
+begin
+  Handles := FGraph.CreateHandleVector;
+  Tree := FGraph.CreateIntVector;
+  Visited.Size := VertexCount;
+  Handles[aSrc] := Queue.Insert(TRankItem.Construct(aHeur(FGraph[aSrc], FGraph[aDst]), ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    if not Visited[Item.Index] then
+      begin
+        if Item.Index = aDst then
+          begin
+            aPath := FGraph.ChainFromTree(Tree, aDst);
+            exit(Item.Weight);
+          end;
+        Visited[Item.Index] := True;
+        for p in FGraph.AdjVerticesPtr(Item.Index) do
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
+              begin
+                Actual := p^.Data.Weight + Item.Weight;
+                Handles[p^.Key] := Queue.Insert(TRankItem.Construct(
+                  Actual + aHeur(FGraph[p^.Key], FGraph[aDst]), Actual, p^.Key));
+                Tree[p^.Key] := Item.Index;
+              end
+            else
+              if not Visited[p^.Key] then
+                begin
+                  Actual := Item.Weight + p^.Data.Weight;
+                  Implied := aHeur(FGraph[p^.Key], FGraph[aDst]) + Actual;
+                  if Implied < Queue.Value(Handles[p^.Key]).Rank then
+                    begin
+                      Queue.Update(Handles[p^.Key], TRankItem.Construct(Implied, Actual, p^.Key));
+                      Tree[p^.Key] := Item.Index;
+                    end;
+                end;
+          end;
+      end;
+  Result := InfiniteWeight;
+  aPath := nil;
+end;
+
+function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+var
+  e: TEdge;
+  Enum: TEdgeEnumerator;
+  RelaxValue: TWeight;
+  Relaxed: Boolean;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  aWeights := CreateWeightVector;
+  Enum := Edges.GetEnumerator;
+  aWeights[aSrc] := ZeroWeight;
+  while True do
+    begin
+      Relaxed := False;
+      while Enum.MoveNext do
+        begin
+          e := Enum.Current;
+          if aWeights[e.Source] < InfiniteWeight then
+            begin
+              RelaxValue := aWeights[e.Source] + e.Data.Weight;
+              if aWeights[e.Destination] > RelaxValue then
+                begin
+                  aWeights[e.Destination] := RelaxValue;
+                  Relaxed := True;
+                end;
+            end;
+        end;
+      Enum.Reset;
+      if not Relaxed then
+        break;
+    end;
+  while Enum.MoveNext do
+    begin
+      e := Enum.Current;
+      if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
+        exit(False);
+    end;
+  Result := True;
+end;
+
+function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aPathTree: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+var
+  e: TEdge;
+  Enum: TEdgeEnumerator;
+  RelaxValue: TWeight;
+  Relaxed: Boolean;
+begin
+  aWeights := CreateWeightVector;
+  aPathTree := FGraph.CreateIntVector;
+  Enum := Edges.GetEnumerator;
+  aWeights[aSrc] := ZeroWeight;
+  while True do
+    begin
+      Relaxed := False;
+      while Enum.MoveNext do
+        begin
+          e := Enum.Current;
+          if aWeights[e.Source] < InfiniteWeight then
+            begin
+              RelaxValue := aWeights[e.Source] + e.Data.Weight;
+              if aWeights[e.Destination] > RelaxValue then
+                begin
+                  aWeights[e.Destination] := RelaxValue;
+                  aPathTree[e.Destination] := e.Source;
+                  Relaxed := True;
+                end;
+            end;
+        end;
+      Enum.Reset;
+      if not Relaxed then
+        break;
+    end;
+  while Enum.MoveNext do
+    begin
+      e := Enum.Current;
+      if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
+        exit(False);
+    end;
+  Result := True;
+end;
+
+function TGWeighedUGraph.FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
+var
+  fk: TFilterKruskal;
+begin
+  Result := fk.FindMst(Self, aTotalWeight);
+end;
+
+function TGWeighedUGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
   e: TEdgeArray;
-  ResIdx, EdgeIdx, s, d, VxCount: SizeInt;
+  I, s, d, VtxCount: SizeInt;
   Dsu: TDisjointSetUnion;
 begin
-  e := CreateEdgeArray;
-  VxCount := VertexCount;
-  TEdgeHelper.Sort(e, @EdgeCompare);
-  System.SetLength(Result, VxCount);
-  Dsu.Size := VxCount;
-  aTotalWeight := 0;
-  ResIdx := 0;
-  for EdgeIdx := 0 to System.High(e) do
+  e := CreateEdgeVector;
+  Result := FGraph.CreateIntVector;
+  VtxCount := VertexCount;
+  TEdgeHelper.Sort(e);
+  System.SetLength(Result, VtxCount);
+  Dsu.Size := VtxCount;
+  aTotalWeight := ZeroWeight;
+  for I := 0 to System.High(e) do
     begin
-      s := e[EdgeIdx].Source;
-      d := e[EdgeIdx].Destination;
-      if not Dsu.InSameSet(s, d)  then
+      s := e[I].Source;
+      d := e[I].Destination;
+      if Dsu.InDiffSets(s, d)  then
         begin
-          aTotalWeight += e[EdgeIdx].Data.Weight;
-          Result[ResIdx] := e[EdgeIdx];
-          Inc(ResIdx);
+          aTotalWeight += e[I].Weight;
+          Result[d] := s;
           Dsu.Union(s, d);
-          if ResIdx = VxCount then //???
-            break;
         end;
     end;
 end;
 
-function TGSimpleSparseWeighedUGraph.PrimMinTree(out aTotalWeight: TWeight): TIntArray;
+function TGWeighedUGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
-  Queue: TPriorityQueue;
+  Queue: TPairingHeap;
   Handles: THandleArray;
   Curr: SizeInt;
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  Result := FGraph.CreateIndexVector;
+  Result := FGraph.CreateIntVector;
   System.SetLength(Result, VertexCount);
-  System.SetLength(Handles, VertexCount);
+  Handles := FGraph.CreateHandleVector;
   Visited.Size := VertexCount;
-  Queue.EnsureCapacity(VertexCount);
-  for Curr := 0 to Pred(VertexCount) do
-    Handles[Curr] := Queue.Insert(TWeightItem.Construct(TWeight.MaxValue, Curr));
-  Queue.Update(Handles[0], TWeightItem.Construct(Default(TWeight), 0));
+  Handles[0] := Queue.Insert(TWeightItem.Construct(ZeroWeight, 0));
   aTotalWeight := 0;
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
@@ -54965,40 +55935,47 @@ begin
         aTotalWeight += Item.Weight;
         Visited[Curr] := True;
         for p in FGraph.AdjVerticesPtr(Curr) do
-          if not Visited[p^.Key] then
-            if p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight then
+          begin
+            if Handles[p^.Key] = INVALID_HANDLE then
               begin
-                Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
+                Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight, p^.Key));
                 Result[p^.Key] := Curr;
-              end;
+              end
+            else
+              if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
+                begin
+                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
+                  Result[p^.Key] := Curr;
+                end;
+          end;
       end;
 end;
 
-function TGSimpleSparseWeighedUGraph.CreateEdgeArray: TEdgeArray;
+function TGWeighedUGraph.CreateWeightVector: TWeightArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := InfiniteWeight;
+end;
+
+function TGWeighedUGraph.CreateEdgeVector: TEdgeArray;
 var
   I: SizeInt = 0;
   e: TEdge;
 begin
-  System.SetLength(Result, EdgeCount shl 1);
-  for e in Edges do
+  System.SetLength(Result, EdgeCount);
+  for e in DistinctEdges do
     begin
-      Result[I] := e;
+      Result[I].Source := e.Source;
+      Result[I].Destination := e.Destination;
+      Result[I].Weight := e.Data.Weight;
       Inc(I);
     end;
 end;
 
-function TGSimpleSparseWeighedUGraph.EdgeCompare(constref L, R: TEdge): SizeInt;
-begin
-  if L.Data.Weight > R.Data.Weight then
-    Result := 1
-  else
-    if R.Data.Weight > L.Data.Weight then
-      Result := -1
-    else
-      Result := 0;
-end;
-
-class function TGSimpleSparseWeighedUGraph.Min(const L, R: TWeight): TWeight;
+class function TGWeighedUGraph.Min(const L, R: TWeight): TWeight;
 begin
   if L <= R then
     Result := L
@@ -55006,388 +55983,513 @@ begin
     Result := R;
 end;
 
-constructor TGSimpleSparseWeighedUGraph.Create;
+class constructor TGWeighedUGraph.Init;
+begin
+  CFInfiniteWeight := TWeight.MaxValue;
+  CFZeroWeight := Default(TWeight);
+end;
+
+constructor TGWeighedUGraph.Create;
 begin
   FGraph := TGraph.Create;
 end;
 
-constructor TGSimpleSparseWeighedUGraph.Create(g: TGraph);
+constructor TGWeighedUGraph.Create(g: TGraph);
 begin
   FGraph := g;
 end;
 
-destructor TGSimpleSparseWeighedUGraph.Destroy;
+destructor TGWeighedUGraph.Destroy;
 begin
   FGraph.Free;
   inherited;
 end;
 
-function TGSimpleSparseWeighedUGraph.IsEmpty: Boolean;
+function TGWeighedUGraph.IsEmpty: Boolean;
 begin
   Result := FGraph.IsEmpty;
 end;
 
-function TGSimpleSparseWeighedUGraph.NonEmpty: Boolean;
+function TGWeighedUGraph.NonEmpty: Boolean;
 begin
   Result := FGraph.NonEmpty;
 end;
 
-procedure TGSimpleSparseWeighedUGraph.Clear;
+procedure TGWeighedUGraph.Clear;
 begin
   FGraph.Clear;
 end;
 
-procedure TGSimpleSparseWeighedUGraph.EnsureCapacity(aValue: SizeInt);
+procedure TGWeighedUGraph.EnsureCapacity(aValue: SizeInt);
 begin
   FGraph.EnsureCapacity(aValue);
 end;
 
-procedure TGSimpleSparseWeighedUGraph.TrimToFit;
+procedure TGWeighedUGraph.TrimToFit;
 begin
   FGraph.TrimToFit;
 end;
 
-function TGSimpleSparseWeighedUGraph.ContainsVertex(constref v: TVertex): Boolean;
+function TGWeighedUGraph.ContainsVertex(constref v: TVertex): Boolean;
 begin
   Result := FGraph.ContainsVertex(v);
 end;
 
-function TGSimpleSparseWeighedUGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGWeighedUGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.ContainsEdge(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGWeighedUGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.ContainsEdgeI(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TWeEdgeData): Boolean;
+function TGWeighedUGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TWeEdgeData): Boolean;
 begin
   Result := FGraph.ContainsEdgeI(aSrc, aDst, aData);
 end;
 
-function TGSimpleSparseWeighedUGraph.IndexOf(constref v: TVertex): SizeInt;
+function TGWeighedUGraph.IndexOf(constref v: TVertex): SizeInt;
 begin
   Result := FGraph.IndexOf(v);
 end;
 
-function TGSimpleSparseWeighedUGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+function TGWeighedUGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.Adjacent(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
+function TGWeighedUGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.AdjacentI(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
+function TGWeighedUGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
 begin
   Result := FGraph.AdjVertices(aSrc);
 end;
 
-function TGSimpleSparseWeighedUGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
+function TGWeighedUGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
 begin
   Result := FGraph.AdjVerticesI(aSrc);
 end;
 
-function TGSimpleSparseWeighedUGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
+function TGWeighedUGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
 begin
   Result := FGraph.IncidentEdges(aSrc);
 end;
 
-function TGSimpleSparseWeighedUGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+function TGWeighedUGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
 begin
   Result := FGraph.IncidentEdgesI(aSrc);
 end;
 
-function TGSimpleSparseWeighedUGraph.Edges: TEdges;
+function TGWeighedUGraph.Edges: TEdges;
 begin
   Result := FGraph.Edges;
 end;
 
-function TGSimpleSparseWeighedUGraph.DistinctEdges: TDistinctEdges;
+function TGWeighedUGraph.DistinctEdges: TDistinctEdges;
 begin
   Result := FGraph.DistinctEdges;
 end;
 
-function TGSimpleSparseWeighedUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGWeighedUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := FGraph.AddVertex(v, aIndex);
 end;
 
-function TGSimpleSparseWeighedUGraph.RemoveVertex(constref v: TVertex): Boolean;
+function TGWeighedUGraph.RemoveVertex(constref v: TVertex): Boolean;
 begin
   Result := FGraph.RemoveVertex(v);
 end;
 
-function TGSimpleSparseWeighedUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
+function TGWeighedUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
 begin
-  Result := FGraph.RemoveVertex(aIndex);
+  Result := FGraph.RemoveVertexI(aIndex);
 end;
 
-function TGSimpleSparseWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight;
+function TGWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight;
   aData: TEdgeData): Boolean;
 begin
   Result := FGraph.AddEdge(aSrc, aDst, TWeEdgeData.Construct(aWeight, aData));
 end;
 
-function TGSimpleSparseWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight): Boolean;
+function TGWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight): Boolean;
 begin
   Result := FGraph.AddEdge(aSrc, aDst, TWeEdgeData.Construct(aWeight, CFData));
 end;
 
-function TGSimpleSparseWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight; aData: TEdgeData): Boolean;
+function TGWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TWeEdgeData): Boolean;
+begin
+  Result := FGraph.AddEdge(aSrc, aDst, aData);
+end;
+
+function TGWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight; aData: TEdgeData): Boolean;
 begin
   Result := FGraph.AddEdgeI(aSrc, aDst, TWeEdgeData.Construct(aWeight, aData));
 end;
 
-function TGSimpleSparseWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight): Boolean;
+function TGWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aWeight: TWeight): Boolean;
 begin
   Result := FGraph.AddEdgeI(aSrc, aDst, TWeEdgeData.Construct(aWeight, CFData));
 end;
 
-function TGSimpleSparseWeighedUGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGWeighedUGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TWeEdgeData): Boolean;
+begin
+  Result := FGraph.AddEdgeI(aSrc, aDst, aData);
+end;
+
+function TGWeighedUGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.RemoveEdge(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGWeighedUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.RemoveEdgeI(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGWeighedUGraph.GetEdgeData(constref aSrc, aDst: TVertex): TWeEdgeData;
+begin
+  Result := FGraph.GetEdgeData(aSrc, aDst);
+end;
+
+function TGWeighedUGraph.GetEdgeDataI(aSrc, aDst: SizeInt): TWeEdgeData;
+begin
+  Result := FGraph.GetEdgeDataI(aSrc, aDst);
+end;
+
+procedure TGWeighedUGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TWeEdgeData);
+begin
+  FGraph.SetEdgeData(aSrc, aDst, aValue);
+end;
+
+procedure TGWeighedUGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TWeEdgeData);
+begin
+  FGraph.SetEdgeDataI(aSrc, aDst, aValue);
+end;
+
+procedure TGWeighedUGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex;
+  aWriteData: TOnWriteData);
+begin
+  FGraph.SaveToStream(aStream, aWriteVertex, aWriteData);
+end;
+
+procedure TGWeighedUGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex;
+  aReadData: TOnReadData);
+begin
+  FGraph.LoadFromStream(aStream, aReadVertex, aReadData);
+end;
+
+procedure TGWeighedUGraph.SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex;
+  aWriteData: TOnWriteData);
+begin
+  FGraph.SaveToFile(aFileName, aWriteVertex, aWriteData)
+end;
+
+procedure TGWeighedUGraph.LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex;
+  aReadData: TOnReadData);
+begin
+  FGraph.LoadFromFile(aFileName, aReadVertex, aReadData);
+end;
+
+function TGWeighedUGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := FGraph.DfsTraversal(aRoot, aOnGray, aOnWhite);
 end;
 
-function TGSimpleSparseWeighedUGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGWeighedUGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := FGraph.DfsTraversalI(aRoot, aOnGray, aOnWhite);
 end;
 
-function TGSimpleSparseWeighedUGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
+function TGWeighedUGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := FGraph.BfsTraversal(aRoot, aOnGray, aOnWhite);
 end;
 
-function TGSimpleSparseWeighedUGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
+function TGWeighedUGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
   aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := FGraph.BfsTraversalI(aRoot, aOnGray, aOnWhite);
 end;
 
-function TGSimpleSparseWeighedUGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
+function TGWeighedUGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := FGraph.SimplePathExists(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGWeighedUGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FGraph.SimplePathExistsI(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.IsBipartite: Boolean;
+function TGWeighedUGraph.IsBipartite: Boolean;
 begin
   Result := FGraph.IsBipartite;
 end;
 
-function TGSimpleSparseWeighedUGraph.IsBipartite(out v: TShortArray): Boolean;
+function TGWeighedUGraph.IsBipartite(out v: TShortArray): Boolean;
 begin
   Result := FGraph.IsBipartite(v)
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
+function TGWeighedUGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
   Result := FGraph.FindMinPathLen(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
+function TGWeighedUGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
 begin
   Result := FGraph.FindMinPathLenI(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathLenVector(constref aRoot: TVertex): TIntArray;
+function TGWeighedUGraph.FindMinPathLenMap(constref aRoot: TVertex): TIntArray;
 begin
-  Result := FGraph.FindMinPathLenVector(aRoot);
+  Result := FGraph.FindMinPathLenMap(aRoot);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathLenVectorI(aRoot: SizeInt): TIntArray;
+function TGWeighedUGraph.FindMinPathLenMapI(aRoot: SizeInt): TIntArray;
 begin
-  Result := FGraph.FindMinPathLenVectorI(aRoot);
+  Result := FGraph.FindMinPathLenMapI(aRoot);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
+function TGWeighedUGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
 begin
   Result := FGraph.FindMinPath(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+function TGWeighedUGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 begin
   Result := FGraph.FindMinPathI(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.Degree(constref v: TVertex): SizeInt;
+function TGWeighedUGraph.Degree(constref v: TVertex): SizeInt;
 begin
   Result := FGraph.Degree(v);
 end;
 
-function TGSimpleSparseWeighedUGraph.DegreeI(aIndex: SizeInt): SizeInt;
+function TGWeighedUGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   Result := FGraph.DegreeI(aIndex);
 end;
 
-function TGSimpleSparseWeighedUGraph.Isolated(constref v: TVertex): Boolean;
+function TGWeighedUGraph.Isolated(constref v: TVertex): Boolean;
 begin
   Result := FGraph.Isolated(v);
 end;
 
-function TGSimpleSparseWeighedUGraph.IsolatedI(aIndex: SizeInt): Boolean;
+function TGWeighedUGraph.IsolatedI(aIndex: SizeInt): Boolean;
 begin
   Result := FGraph.IsolatedI(aIndex);
 end;
 
-function TGSimpleSparseWeighedUGraph.EulerCycleExists: Boolean;
+function TGWeighedUGraph.CycleExists(out aCycle: TIntArray): Boolean;
+begin
+  Result := FGraph.CycleExists(aCycle);
+end;
+
+function TGWeighedUGraph.EulerCycleExists: Boolean;
 begin
   Result := FGraph.EulerCycleExists;
 end;
 
-function TGSimpleSparseWeighedUGraph.FindEulerCycle: TIntArray;
+function TGWeighedUGraph.FindEulerCycle: TIntArray;
 begin
   Result := FGraph.FindEulerCycle;
 end;
 
-function TGSimpleSparseWeighedUGraph.IsConnected: Boolean;
+function TGWeighedUGraph.IsConnected: Boolean;
 begin
   Result := FGraph.IsConnected;
 end;
 
-function TGSimpleSparseWeighedUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+function TGWeighedUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   Result := FGraph.MakeConnected(aOnAddEdge);
 end;
 
-function TGSimpleSparseWeighedUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
+function TGWeighedUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := FGraph.DfsSpanningTree(aRoot);
 end;
 
-function TGSimpleSparseWeighedUGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
+function TGWeighedUGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
 begin
   Result := FGraph.DfsSpanningTreeI(aRoot);
 end;
 
-function TGSimpleSparseWeighedUGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
+function TGWeighedUGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := FGraph.BfsSpanningTree(aRoot);
 end;
 
-function TGSimpleSparseWeighedUGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
+function TGWeighedUGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
 begin
   Result := FGraph.BfsSpanningTreeI(aRoot);
 end;
 
-function TGSimpleSparseWeighedUGraph.CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
+function TGWeighedUGraph.CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
 begin
-  Result := TGSimpleSparseWeighedUGraph.Create(FGraph.CreateFromVector(aVector));
+  Result := TGWeighedUGraph.Create(FGraph.CreateFromVector(aVector));
 end;
 
-function TGSimpleSparseWeighedUGraph.ComponentCount: SizeInt;
+function TGWeighedUGraph.SeparateIndex(constref v: TVertex): SizeInt;
 begin
-  Result := FGraph.ComponentCount;
+  Result := FGraph.SeparateIndexOf(v);
 end;
 
-function TGSimpleSparseWeighedUGraph.ComponentPop(constref aRoot: TVertex): SizeInt;
+function TGWeighedUGraph.SeparateIndexI(aVertex: SizeInt): SizeInt;
 begin
-  Result := FGraph.ComponentPop(aRoot);
+  Result := FGraph.SeparateIndexOfI(aVertex);
 end;
 
-function TGSimpleSparseWeighedUGraph.ComponentPopI(aRoot: SizeInt): SizeInt;
+function TGWeighedUGraph.SeparatePop(constref v: TVertex): SizeInt;
 begin
-  Result := FGraph.ComponentPopI(aRoot);
+  Result := FGraph.SeparatePop(v);
 end;
 
-function TGSimpleSparseWeighedUGraph.IsRegular: Boolean;
+function TGWeighedUGraph.SeparatePopI(aVertex: SizeInt): SizeInt;
+begin
+  Result := FGraph.SeparatePopI(aVertex);
+end;
+
+function TGWeighedUGraph.SeparateGraph(constref v: TVertex): TWeighedGraph;
+begin
+  Result := SeparateGraphI(IndexOf(v));
+end;
+
+function TGWeighedUGraph.SeparateGraphI(aVtxIndex: SizeInt): TWeighedGraph;
+begin
+  Result := TWeighedGraph.Create(FGraph.SeparateGraphI(aVtxIndex));
+end;
+
+function TGWeighedUGraph.IsRegular: Boolean;
 begin
   Result := FGraph.IsRegular;
 end;
 
-function TGSimpleSparseWeighedUGraph.IsTree: Boolean;
+function TGWeighedUGraph.IsTree: Boolean;
 begin
   Result := FGraph.IsTree;
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPaths(constref aSrc: TVertex): TWeightArray;
+function TGWeighedUGraph.NegWeighedEdgeExists: Boolean;
+var
+  e: TEdge;
+begin
+  for e in DistinctEdges do
+    if e.Data.Weight < 0 then
+      exit(True);
+  Result := False;
+end;
+
+function TGWeighedUGraph.FindMinPaths(constref aSrc: TVertex): TWeightArray;
 begin
   Result := FindMinPathsI(FGraph.IndexOf(aSrc));
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathsI(aSrc: SizeInt): TWeightArray;
+function TGWeighedUGraph.FindMinPathsI(aSrc: SizeInt): TWeightArray;
 begin
-  Result := DijkstraMap(aSrc);
+  FGraph.CheckIndexRange(aSrc);
+  Result := DijkstraSssp(aSrc);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPaths(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeighedUGraph.FindMinPaths(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := FindMinPathsI(FGraph.IndexOf(aSrc), aPathTree);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathsI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeighedUGraph.FindMinPathsI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
-  Result := DijkstraMap(aSrc, aPathTree);
+  FGraph.CheckIndexRange(aSrc);
+  Result := DijkstraSssp(aSrc, aPathTree);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex): TWeight;
+function TGWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex): TWeight;
 begin
   Result := FindMinPathWeightI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aDst));
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight;
+function TGWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight;
 begin
+  FGraph.CheckIndexRange(aSrc);
+  FGraph.CheckIndexRange(aDst);
   Result := DijkstraPath(aSrc, aDst);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight;
 begin
   Result := FindMinPathWeightI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aDst), aPath);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
 begin
+  FGraph.CheckIndexRange(aSrc);
+  FGraph.CheckIndexRange(aDst);
   Result := DijkstraPath(aSrc, aDst, aPath);
 end;
 
-function TGSimpleSparseWeighedUGraph.CreateFromEdgeArray(constref aEdgeArray: TEdgeArray): TWeighedGraph;
-var
-  e: TEdge;
+function TGWeighedUGraph.FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic;
+  out aPath: TIntArray): TWeight;
 begin
-  Result := TWeighedGraph.Create;
-  for e in aEdgeArray do
-    Result.AddEdge(Vertices[e.Source], Vertices[e.Destination], e.Data.Weight, e.Data.Data);
+  Result := FindMinPathAStarI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aSrc), aHeur, aPath);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TEdgeArray;
+function TGWeighedUGraph.FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  FGraph.CheckIndexRange(aDst);
+  Result := AStarPath(aSrc, aDst, aHeur, aPath);
+end;
+
+function TGWeighedUGraph.FindMinPathsFordB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+begin
+  Result := FindMinPathsFordBI(FGraph.IndexOf(aSrc), aWeights);
+end;
+
+function TGWeighedUGraph.FindMinPathsFordBI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  Result := FordBellman(aSrc, aWeights);
+end;
+
+function TGWeighedUGraph.FindMinPathsFordB(constref aSrc: TVertex; out aPaths: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+begin
+  Result := FindMinPathsFordBI(FGraph.IndexOf(aSrc), aPaths, aWeights);
+end;
+
+function TGWeighedUGraph.FindMinPathsFordBI(aSrc: SizeInt; out aPaths: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+begin
+  FGraph.CheckIndexRange(aSrc);
+  Result := FordBellman(aSrc, aPaths, aWeights);
+end;
+
+function TGWeighedUGraph.FindMinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
 begin
   if IsConnected then
-    Result := KruskalMinTree(aTotalWeight)
+    Result := KruskalMst(aTotalWeight)
+    //Result := FilterKruskalMst(aTotalWeight)
   else
-    raise ELGGraphError.Create(SEGraphIsNotConnected);
+    raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
-function TGSimpleSparseWeighedUGraph.FindMinSpanningTreePrimI(out aTotalWeight: TWeight): TIntArray;
+function TGWeighedUGraph.FindMinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 begin
-  if IsConnected then
-    Result := PrimMinTree(aTotalWeight)
+  if IsConnected then   //todo: is it required ???
+    Result := PrimMst(aTotalWeight)
   else
-    raise ELGGraphError.Create(SEGraphIsNotConnected);
+    raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
-function TGSimpleSparseWeighedUGraph.Clone: TWeighedGraph;
+function TGWeighedUGraph.Clone: TWeighedGraph;
 begin
   Result := TWeighedGraph.Create(FGraph.Clone);
 end;
@@ -56172,8 +57274,14 @@ resourcestring
   SEThreadTimeOut          = 'Thread timeout exceeded';
   SEResultUnknown          = 'Result is unknown';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
-  SENegValuesNotAllowed    = 'Negative values are not allowed';
   SEGraphIsNotConnected    = 'Graph is not connected';
+  SEEdgeNotFoundFmt        = 'Edge (%d, %d) not found';
+  SEWriteCallbackMissed    = 'Write callback function missed';
+  SEReadCallbackMissed     = 'Read callback function missed';
+  SEUnknownGraphStreamFmt  = 'Unknown graph stream format';
+  SEUnsuppGraphFmtVersion  = 'Unsupported graph stream format version';
+  SEGraphStreamCorrupt     = 'Graph stream data corrupted';
+  SEGraphStreamReadIntern  = 'Graph stream read intenal error';
 
 implementation
 
@@ -61570,7 +62678,6 @@ type
     class operator ><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
     class operator =(constref L, R: TGLiteTreeSet): Boolean; inline;
     class operator <=(constref L, R: TGLiteTreeSet): Boolean; inline;
-    class operator in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean; inline;
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray;
@@ -62783,9 +63890,9 @@ end;
 
 function TGLiteTreeSet.TReverseEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = -1;
+  NextNode: SizeInt = 0;
 begin
-  if FCurrNode <> -1 then
+  if FCurrNode <> 0 then
     NextNode := FTree^.Predecessor(FCurrNode)
   else
     if not FInCycle then
@@ -62793,7 +63900,7 @@ begin
         NextNode := FFirstNode;
         FInCycle := True;
       end;
-  Result := NextNode >= 0;
+  Result := NextNode <> 0;
   if Result then
     FCurrNode := NextNode;
 end;
@@ -62801,7 +63908,7 @@ end;
 procedure TGLiteTreeSet.TReverseEnumerator.Reset;
 begin
   FInCycle := False;
-  FCurrNode := -1;
+  FCurrNode := 0;
 end;
 
 { TGLiteTreeSet.THeadEnumerator }
@@ -62858,9 +63965,9 @@ end;
 
 function TGLiteTreeSet.TTailEnumerator.MoveNext: Boolean;
 var
-  NextNode: SizeInt = -1;
+  NextNode: SizeInt = 0;
 begin
-  if FCurrNode <> -1 then
+  if FCurrNode <> 0 then
     NextNode := FTree^.Successor(FCurrNode)
   else
     if not FInCycle then
@@ -62868,7 +63975,7 @@ begin
         NextNode := FFirstNode;
         FInCycle := True;
       end;
-  Result := NextNode >= 0;
+  Result := NextNode <> 0;
   if Result then
     FCurrNode := NextNode;
 end;
@@ -62876,7 +63983,7 @@ end;
 procedure TGLiteTreeSet.TTailEnumerator.Reset;
 begin
   FInCycle := False;
-  FCurrNode := -1;
+  FCurrNode := 0;
 end;
 
 { TGLiteTreeSet.TRangeEnumerator }
@@ -63034,8 +64141,8 @@ begin
   Result.Init(Self, aLowBound, aInclusive);
 end;
 
-function TGLiteTreeSet.GetRangeEnumerator(constref aLowBound, aHighBound: T; aBounds: TRangeBounds
-  ): TRangeEnumerator;
+function TGLiteTreeSet.GetRangeEnumerator(constref aLowBound, aHighBound: T;
+  aBounds: TRangeBounds): TRangeEnumerator;
 begin
   Result.Init(Self, aLowBound, aHighBound, aBounds);
 end;
@@ -63056,22 +64163,23 @@ end;
 
 class operator TGLiteTreeSet. - (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
 var
-  Tmp: TGLiteTreeSet;
+  tmp: TGLiteTreeSet;
+  v: T;
 begin
   if @Result = @L then
     Result.Subtract(R)
   else
     if @Result = @R then
       begin
-        Tmp := R;
-        Result := L;
-        Result.Subtract(Tmp)
+        for v in L do
+          if R.NonContains(v) then
+            tmp.Add(v);
+        Result := tmp;
       end
     else
-      begin
-        Result := L;
-        Result.Subtract(R);
-      end;
+      for v in L do
+        if R.NonContains(v) then
+          Result.Add(v);
 end;
 
 class operator TGLiteTreeSet. * (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
@@ -63110,11 +64218,6 @@ end;
 class operator TGLiteTreeSet.<=(constref L, R: TGLiteTreeSet): Boolean;
 begin
   Result := L.IsSubset(R);
-end;
-
-class operator TGLiteTreeSet.in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean;
-begin
-  Result := aSet.Contains(aValue);
 end;
 
 function TGLiteTreeSet.GetEnumerator: TEnumerator;
@@ -63266,13 +64369,13 @@ end;
 function TGLiteTreeSet.RemoveIf(aTest: TTest): SizeInt;
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   Result := Count;
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
@@ -63284,13 +64387,13 @@ end;
 function TGLiteTreeSet.RemoveIf(aTest: TOnTest): SizeInt;
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   Result := Count;
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
@@ -63302,13 +64405,13 @@ end;
 function TGLiteTreeSet.RemoveIf(aTest: TNestTest): SizeInt;
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   Result := Count;
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
@@ -63331,9 +64434,9 @@ begin
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
       List := FTree.NodeList;
-      I := 0;
+      I := 1;
       J := 0;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           begin
             if J = System.Length(Result) then
@@ -63359,9 +64462,9 @@ begin
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
       List := FTree.NodeList;
-      I := 0;
+      I := 1;
       J := 0;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           begin
             if J = System.Length(Result) then
@@ -63387,9 +64490,9 @@ begin
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
       List := FTree.NodeList;
-      I := 0;
+      I := 1;
       J := 0;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aTest(List[I].Data.Key) then
           begin
             if J = System.Length(Result) then
@@ -63409,12 +64512,12 @@ end;
 procedure TGLiteTreeSet.RetainAll(aCollection: ICollection);
 var
   List: TTree.TNodeList;
-  I: SizeInt = 0;
+  I: SizeInt = 1;
 begin
   if NonEmpty then
     begin
       List := FTree.NodeList;
-      while I < FTree.Count do
+      while I <= FTree.Count do
         if aCollection.NonContains(List[I].Data.Key) then
           FTree.RemoveAt(I)
         else
@@ -63480,8 +64583,19 @@ begin
 end;
 
 procedure TGLiteTreeSet.Intersect(constref aSet: TGLiteTreeSet);
+var
+  List: TTree.TNodeList;
+  I: SizeInt = 1;
 begin
-
+  if NonEmpty then
+    begin
+      List := FTree.NodeList;
+      while I <= FTree.Count do
+        if aSet.NonContains(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
 end;
 
 procedure TGLiteTreeSet.Join(constref aSet: TGLiteTreeSet);
@@ -63679,6 +64793,7 @@ type
     class function ValueIsNil(constref aValue): Boolean; static;
     class operator Initialize(var o: TGOptional<T>); inline;
   public
+    class operator Implicit(constref aValue: T): TGOptional<T>; inline;
     procedure Assign(constref aValue: T); inline;
     function  OrElseDefault: T; inline;
     function  OrElse(constref aValue: T): T; inline;
@@ -63910,6 +65025,8 @@ type
     Key: TKey;
     Value: TValue;
   end;
+
+  //todo: -> IGSet
 
   IGMap<TKey, TValue> = interface{(IGContainer<TGMapEntry<TKey, TValue>>)}
   ['{67DBDBD2-D54C-4E6E-9BE6-ACDA0A40B63F}']
@@ -64156,6 +65273,11 @@ begin
     end
   else
     Result := False;
+end;
+
+class operator TGOptional<T>.Implicit(constref aValue: T): TGOptional<T>;
+begin
+  Result.Assign(aValue);
 end;
 
 class operator TGOptional<T>.Initialize(var o: TGOptional<T>);
@@ -64933,32 +66055,27 @@ type
     TBits = array of SizeUInt;
   const
 {$IF DEFINED(CPU64)}
-    SIZE_SHIFT = 6;
-    SIZE_MASK  = 63;
+    SIZE_LOG  = 6;
+    SIZE_MASK = 63;
 {$ELSEIF DEFINED(CPU32)}
-    SIZE_SHIFT = 5;
-    SIZE_MASK  = 31;
+    SIZE_LOG  = 5;
+    SIZE_MASK = 31;
 {$ELSE}
-    SIZE_SHIFT = 4;
-    SIZE_MASK  = 15;
+    SIZE_LOG  = 4;
+    SIZE_MASK = 15;
 {$ENDIF}
   var
     FBits: TBits;
-    function  GetBit(aIndex: SizeInt): Boolean;
+    function  GetBit(aIndex: SizeInt): Boolean; inline;
     function  GetSize: SizeInt; inline;
-    procedure SetBit(aIndex: SizeInt; aValue: Boolean);
+    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
     procedure SetSize(aValue: SizeInt);
-    function  TestLimbBit(aValue: SizeUInt; aIndex: SizeInt): Boolean; inline;
-    function  SetLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
-    function  ClearLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt; inline;
-    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
-    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
     class operator Copy(constref aSrc: TBitVector; var aDst: TBitVector);
   public
-    property Size: SizeInt read GetSize write SetSize;
+    procedure ClearBits; inline;
+    property  Size: SizeInt read GetSize write SetSize;
   { read/write bit with (index < 0) or (index >= Size) will raise exception }
-    property Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
+    property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
   { TGVectorHelpUtil }
@@ -66305,22 +67422,28 @@ end;
 
 function TBitVector.GetBit(aIndex: SizeInt): Boolean;
 begin
-  CheckIndexRange(aIndex);
-  Result := TestLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+  if (aIndex >= 0) and (aIndex < (System.Length(FBits) shl SIZE_LOG)) then
+    Result := (FBits[aIndex shr SIZE_LOG] and (SizeUInt(1) shl (aIndex and SIZE_MASK))) <> 0
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TBitVector.GetSize: SizeInt;
 begin
-  Result := System.Length(FBits) shl SIZE_SHIFT;
+  Result := System.Length(FBits) shl SIZE_LOG;
 end;
 
 procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
-  CheckIndexRange(aIndex);
-  if aValue then
-    FBits[aIndex shr SIZE_SHIFT] := SetLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK)
+  if (aIndex >= 0) and (aIndex < (System.Length(FBits) shl SIZE_LOG)) then
+    begin
+      if aValue then
+        FBits[aIndex shr SIZE_LOG] := FBits[aIndex shr SIZE_LOG] or (SizeUInt(1) shl (aIndex and SIZE_MASK))
+      else
+        FBits[aIndex shr SIZE_LOG] := FBits[aIndex shr SIZE_LOG] and not (SizeUInt(1) shl (aIndex and SIZE_MASK));
+    end
   else
-    FBits[aIndex shr SIZE_SHIFT] := ClearLimbBit(FBits[aIndex shr SIZE_SHIFT], aIndex and SIZE_MASK);
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TBitVector.SetSize(aValue: SizeInt);
@@ -66330,46 +67453,21 @@ begin
   OldLen := Size;
   if aValue > OldLen then
     begin
-      aValue := aValue shr SIZE_SHIFT + Ord(aValue and SIZE_MASK <> 0);
+      aValue := aValue shr SIZE_LOG + Ord(aValue and SIZE_MASK <> 0);
       System.SetLength(FBits, aValue);
       System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
 end;
 
-function TBitVector.TestLimbBit(aValue: SizeUInt; aIndex: SizeInt): Boolean;
-begin
-  Result := (aValue and (SizeUInt(1) shl aIndex)) <> 0;
-end;
-
-function TBitVector.SetLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
-begin
-  Result := aValue or SizeUInt(SizeUInt(1) shl aIndex);
-end;
-
-function TBitVector.ClearLimbBit(aValue: SizeUInt; aIndex: SizeInt): SizeUInt;
-begin
-  Result := aValue and not SizeUInt(SizeUInt(1) shl aIndex);
-end;
-
-procedure TBitVector.IndexOutOfBoundError(aIndex: SizeInt);
-begin
-  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-end;
-
-function TBitVector.IndexInRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex < Size);
-end;
-
-procedure TBitVector.CheckIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
-end;
-
 class operator TBitVector.Copy(constref aSrc: TBitVector; var aDst: TBitVector);
 begin
   aDst.FBits := System.Copy(aSrc.FBits);
+end;
+
+procedure TBitVector.ClearBits;
+begin
+  if FBits <> nil then
+    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
 { TGVectorHelpUtil }
