@@ -56,38 +56,12 @@ type
   TOnIntTest   = function (aValue: SizeInt): Boolean of object;
 
   generic TGOnAddEdge<T>       = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
-  generic TGOnReadStream<T>    = function(aStream: TStream): T of object;
-  generic TGOnWriteStream<T>   = procedure(aStream: TStream; constref aValue: T) of object;
-  generic TGReadStream<T>      = function(aStream: TStream): T;
-  generic TGWriteStream<T>     = procedure(aStream: TStream; constref aValue: T);
-  generic TGNestReadStream<T>  = function(aStream: TStream): T is nested;
-  generic TGNestWriteStream<T> = procedure(aStream: TStream; constref aValue: T) is nested;
-
-  { TGSinglePoint: labeled point with single coordinates;
-    functor TEqRel must provide:
-      class function HashCode([const[ref]] aValue: T): SizeInt;
-      class function Equal([const[ref]] L, R: T): Boolean; }
-  generic TGSinglePoint<T, TEqRel> = record
-    Tag: T;
-    X, Y: Single;
-    class function Construct(aTag: T; aX, aY: Single): TGSinglePoint; static; inline;
-    class function Distance(constref aSrc, aDst: TGSinglePoint): Single; static;inline;
-    class function HashCode(constref aValue: TGSinglePoint): SizeInt; static; inline;
-    class function Equal(constref L, R: TGSinglePoint): Boolean; static; inline;
-  end;
-
-  { TGDoublePoint: labeled point with double coordinates;
-    functor TEqRel must provide:
-      class function HashCode([const[ref]] aValue: T): SizeInt;
-      class function Equal([const[ref]] L, R: T): Boolean; }
-  generic TGDoublePoint<T, TEqRel> = record
-    Tag: T;
-    X, Y: Double;
-    class function Construct(aTag: T; aX, aY: Double): TGDoublePoint; static; inline;
-    class function Distance(constref aSrc, aDst: TGDoublePoint): Double; static; inline;
-    class function HashCode(constref aValue: TGDoublePoint): SizeInt; static; inline;
-    class function Equal(constref L, R: TGDoublePoint): Boolean; static; inline;
-  end;
+  generic TGOnStreamRead<T>    = function(aStream: TStream): T of object;
+  generic TGOnStreamWrite<T>   = procedure(aStream: TStream; constref aValue: T) of object;
+  generic TGStreamRead<T>      = function(aStream: TStream): T;
+  generic TGStreamWrite<T>     = procedure(aStream: TStream; constref aValue: T);
+  generic TGNestStreamRead<T>  = function(aStream: TStream): T is nested;
+  generic TGNestStreamWrite<T> = procedure(aStream: TStream; constref aValue: T) is nested;
 
   { TDisjointSetUnion }
 
@@ -118,8 +92,6 @@ const
 
 type
 
-  { TColorVector }
-
   TColorVector = record
   private
   type
@@ -149,38 +121,11 @@ type
     property  Items[aIndex: SizeInt]: TVertexColor read GetItem write SetItem; default;
   end;
 
-  { TIntPair }
-
-  TIntPair = record
-    Source,
-    Destination: SizeInt;
-    function Key: TIntPair; inline;
-    class function Equal(constref L, R: TIntPair): Boolean; static; inline;
-    class function HashCode(constref aValue: TIntPair): SizeInt; static; inline;
-    class function Construct(aSrc, aDst: SizeInt): TIntPair; static; inline;
-  end;
-
-  { TIntPairHashSet }
-
-  TIntPairHashSet = record
-  private
-  type
-    TTable = specialize TGLiteHashTableLP<TIntPair, TIntPair, TIntPair>;
-  var
-    FTable: TTable;
-  public
-    procedure Clear;
-    function  Contains(constref aPair: TIntPair): Boolean; inline;
-    function  Add(constref aPair: TIntPair): Boolean; inline;
-  end;
-
   generic TGAdjItem<TData> = record
     Destination: SizeInt;
     Data: TData;
     property Key: SizeInt read Destination;
   end;
-
-  { TGVertexItem }
 
   generic TGVertexItem<TVertex, TData> = record
   public
@@ -259,8 +204,6 @@ type
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
-
-  { TGVertexHashList }
 
   generic TGVertexHashList<TVertex, TEdgeData, TEqRel> = record
   public
@@ -384,21 +327,21 @@ type
     TAdjItem         = TVertexItem.TAdjItem;
     PAdjItem         = ^TAdjItem;
 
-    TOnReadVertex    = specialize TGOnReadStream<TVertex>;
-    TOnWriteVertex   = specialize TGOnWriteStream<TVertex>;
-    TReadVertex      = specialize TGReadStream<TVertex>;
-    TWriteVertex     = specialize TGWriteStream<TVertex>;
-    TNestReadVertex  = specialize TGNestReadStream<TVertex>;
-    TNestWriteVertex = specialize TGNestWriteStream<TVertex>;
+    TOnReadVertex    = specialize TGOnStreamRead<TVertex>;
+    TOnWriteVertex   = specialize TGOnStreamWrite<TVertex>;
+    TReadVertex      = specialize TGStreamRead<TVertex>;
+    TWriteVertex     = specialize TGStreamWrite<TVertex>;
+    TNestReadVertex  = specialize TGNestStreamRead<TVertex>;
+    TNestWriteVertex = specialize TGNestStreamWrite<TVertex>;
 
     TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
 
-    TOnReadData      = specialize TGOnReadStream<TEdgeData>;
-    TOnWriteData     = specialize TGOnWriteStream<TEdgeData>;
-    TReadData        = specialize TGReadStream<TEdgeData>;
-    TWriteData       = specialize TGWriteStream<TEdgeData>;
-    TNestReadData    = specialize TGNestReadStream<TEdgeData>;
-    TNestWriteData   = specialize TGNestWriteStream<TEdgeData>;
+    TOnReadData      = specialize TGOnStreamRead<TEdgeData>;
+    TOnWriteData     = specialize TGOnStreamWrite<TEdgeData>;
+    TReadData        = specialize TGStreamRead<TEdgeData>;
+    TWriteData       = specialize TGStreamWrite<TEdgeData>;
+    TNestReadData    = specialize TGNestStreamRead<TEdgeData>;
+    TNestWriteData   = specialize TGNestStreamWrite<TEdgeData>;
 
     TEdge = record
       Source,
@@ -427,6 +370,7 @@ type
       FGraph: TGCustomGraph;
       FSource: SizeInt;
     public
+      constructor Create(aGraph: TGCustomGraph; aSource: SizeInt);
       function GetEnumerator: TAdjEnumerator; inline;
     end;
 
@@ -445,6 +389,7 @@ type
       FGraph: TGCustomGraph;
       FSource: SizeInt;
     public
+      constructor Create(aGraph: TGCustomGraph; aSource: SizeInt);
       function GetEnumerator: TIncidentEnumerator; inline;
     end;
 
@@ -533,18 +478,6 @@ type
     function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
 
-  { checks whether the graph is connected; a graph without Items is considered disconnected }
-    function  IsConnected: Boolean; inline;
-  { returns index of the connected component that contains v }
-    function  SeparateIndexOf(constref v: TVertex): SizeInt; inline;
-    function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt; inline;
-  { returns number of Items(population) in the connected component that contains v }
-    function  SeparatePop(constref v: TVertex): SizeInt; inline;
-    function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
-    function  IsTree: Boolean; inline;
-
-
-
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read GetVertexCount;
     property  EdgeCount: SizeInt read FEdgeCount;
@@ -556,54 +489,6 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
-
-{ TGSinglePoint }
-
-class function TGSinglePoint.Construct(aTag: T; aX, aY: Single): TGSinglePoint;
-begin
-  Result.Tag := aTag;
-  Result.X := aX;
-  Result.Y := aY;
-end;
-
-class function TGSinglePoint.Distance(constref aSrc, aDst: TGSinglePoint): Single;
-begin
-  Result := Sqrt((aDst.X - aSrc.X)*(aDst.X - aSrc.X) + (aDst.Y - aSrc.Y)*(aDst.Y - aSrc.Y));
-end;
-
-class function TGSinglePoint.HashCode(constref aValue: TGSinglePoint): SizeInt;
-begin
-  Result := TEqRel.HashCode(aValue.Tag);
-end;
-
-class function TGSinglePoint.Equal(constref L, R: TGSinglePoint): Boolean;
-begin
-  Result := TEqRel.Equal(L.Tag, R.Tag);
-end;
-
-{ TGDoublePoint }
-
-class function TGDoublePoint.Construct(aTag: T; aX, aY: Double): TGDoublePoint;
-begin
-  Result.Tag := aTag;
-  Result.X := aX;
-  Result.Y := aY;
-end;
-
-class function TGDoublePoint.Distance(constref aSrc, aDst: TGDoublePoint): Double;
-begin
-  Result := Sqrt((aDst.X - aSrc.X)*(aDst.X - aSrc.X) + (aDst.Y - aSrc.Y)*(aDst.Y - aSrc.Y));
-end;
-
-class function TGDoublePoint.HashCode(constref aValue: TGDoublePoint): SizeInt;
-begin
-  Result := TEqRel.HashCode(aValue.Tag);
-end;
-
-class function TGDoublePoint.Equal(constref L, R: TGDoublePoint): Boolean;
-begin
-  Result := TEqRel.Equal(L.Tag, R.Tag);
-end;
 
 { TDisjointSetUnion }
 
@@ -712,59 +597,6 @@ procedure TColorVector.ClearItems;
 begin
   if FList <> nil then
     System.FillChar(FList[0], System.Length(FList) * SizeOf(SizeUInt), 0);
-end;
-
-{ TIntPair }
-
-function TIntPair.Key: TIntPair;
-begin
-  Result := Self;
-end;
-
-class function TIntPair.Equal(constref L, R: TIntPair): Boolean;
-begin
-  Result := (L.Source = R.Source) and (L.Destination = R.Destination);
-end;
-
-class function TIntPair.HashCode(constref aValue: TIntPair): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := TxxHash32LE.HashQWord(QWord(aValue.Source), QWord(aValue.Destination));
-{$ELSEIF DEFINED(CPU32)}
-  Result := TxxHash32LE.HashDWord(DWord(aValue.Source), DWord(aValue.Destination));
-{$ELSE}
-  Result := TxxHash32LE.HasWord(Word(aValue.Source), Word(aValue.Destination));
-{$ENDIF}
-end;
-
-class function TIntPair.Construct(aSrc, aDst: SizeInt): TIntPair;
-begin
-  Result.Source := aSrc;
-  Result.Destination := aDst;
-end;
-
-{ TIntPairHashSet }
-
-procedure TIntPairHashSet.Clear;
-begin
-  FTable.Clear;
-end;
-
-function TIntPairHashSet.Contains(constref aPair: TIntPair): Boolean;
-var
-  Dummy: SizeInt;
-begin
-  Result := FTable.Find(aPair, Dummy) <> nil;
-end;
-
-function TIntPairHashSet.Add(constref aPair: TIntPair): Boolean;
-var
-  Dummy: SizeInt;
-  p: TTable.PEntry;
-begin
-  Result := not FTable.FindOrAdd(aPair, p, Dummy);
-  if Result then
-    p^ := aPair;
 end;
 
 { TGVertexItem.TEnumerator }
@@ -1404,6 +1236,12 @@ end;
 
 { TGCustomGraph.TAdjVertices }
 
+constructor TGCustomGraph.TAdjVertices.Create(aGraph: TGCustomGraph; aSource: SizeInt);
+begin
+  FGraph := aGraph;
+  FSource := aSource;
+end;
+
 function TGCustomGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
 begin
   Result.FEnum := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
@@ -1431,6 +1269,12 @@ begin
 end;
 
 { TGCustomGraph.TIncidentEdges }
+
+constructor TGCustomGraph.TIncidentEdges.Create(aGraph: TGCustomGraph; aSource: SizeInt);
+begin
+  FGraph := aGraph;
+  FSource := aSource;
+end;
 
 function TGCustomGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
 begin
@@ -1712,8 +1556,7 @@ end;
 function TGCustomGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
 begin
   FVertexList.CheckIndexRange(aSrc);
-  Result.FGraph := Self;
-  Result.FSource := aSrc;
+  Result := TAdjVertices.Create(Self, aSrc);
 end;
 
 function TGCustomGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
@@ -1724,8 +1567,7 @@ end;
 function TGCustomGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
 begin
   FVertexList.CheckIndexRange(aSrc);
-  Result.FGraph := Self;
-  Result.FSource := aSrc;
+  Result := TIncidentEdges.Create(Self, aSrc);
 end;
 
 function TGCustomGraph.Edges: TEdges;
@@ -1983,46 +1825,6 @@ begin
         end;
   until not Queue.TryDequeue(aSrc);
   Result := nil;
-end;
-
-function TGCustomGraph.IsConnected: Boolean;
-begin
-  if not ConnectedValid then
-    FConnected := CheckConnected;
-  Result := Connected;
-end;
-
-function TGCustomGraph.SeparateIndexOf(constref v: TVertex): SizeInt;
-begin
-   Result := SeparateIndexOfI(FVertexList.IndexOf(v));
-end;
-
-function TGCustomGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
-begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  if SeparateCount > 1 then
-    Result := FVertexList.ItemRefs[aVtxIndex]^.CompIdx
-  else
-    Result := 0;
-end;
-
-function TGCustomGraph.SeparatePop(constref v: TVertex): SizeInt;
-begin
-  Result := SeparatePopI(FVertexList.IndexOf(v));
-end;
-
-function TGCustomGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
-begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  if SeparateCount > 1 then
-    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.CompIdx)
-  else
-    Result := VertexCount;
-end;
-
-function TGCustomGraph.IsTree: Boolean;
-begin
-  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
 end;
 
 end.
