@@ -71,6 +71,16 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
 
+    TCutPointHelper = record
+      FGraph: TGSimpleUGraph;
+      CutPoints,
+      Visited: TBitVector;
+      Low, Ord: TIntArray;
+      Counter,
+      CutCount: SizeInt;
+      procedure Dfs(Curr: SizeInt; Prev: SizeInt = -1);
+    end;
+
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
@@ -95,30 +105,15 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
-    function  CycleExists(out aCycle: TIntArray): Boolean;
-    //function  CycleExistsI(aSrc: SizeInt; out aCycle: TIntArray): Boolean;
-    function  EulerCycleExists: Boolean;
-  { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
-    function  FindEulerCycle: TIntArray;
-
+  { checks whether the graph is connected; a graph without Items is considered disconnected }
+    function  IsConnected: Boolean; inline;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0}
     function  MakeConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
-  { returns the vector of the spanning tree, which is constructed starting from aRoot;
-    each element contains the index of its parent (or -1 if it is root or not connected),
-    i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
-    function  DfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
-    function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
-    function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
-    function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
-  { returns a graph constructed from the pairs provided by the vector,
-    i.e. each element treates as pair of source - destination }
-    function  CreateFromVector(constref aVector: TIntArray): TGSimpleUGraph;
   { returns graph of connected component that contains v }
     function  SeparateGraph(constref v: TVertex): TGSimpleUGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
-  { checks whether the graph is connected; a graph without Items is considered disconnected }
-    function  IsConnected: Boolean; inline;
+
   { returns index of the connected component that contains v }
     function  SeparateIndexOf(constref v: TVertex): SizeInt; inline;
     function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt; inline;
@@ -130,6 +125,27 @@ type
   { checks whether the graph is a regular graph (that is, the degree of all its
      Items equal); an empty graph is considered regular }
     function  IsRegular: Boolean;
+  { checks whether the exists any cycle in graph; if True then aCycle will contain indices of cycle }
+    function  CycleExists(out aCycle: TIntArray): Boolean;
+  { checks whether the exists any cycle in graph that contains v;
+    if True then aCycle will contain indices of cycle }
+    function  CycleExists(constref v: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function  CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntArray): Boolean;
+    function  EulerCycleExists: Boolean;
+  { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
+    function  FindEulerCycle: TIntArray;
+  { returns indices of the articulation points in the result vector, if any, otherwise the empty vector}
+    function  FindCutPoints: TIntArray;
+  { returns the vector of the spanning tree, which is constructed starting from aRoot;
+    each element contains the index of its parent (or -1 if it is root or not connected),
+    i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
+    function  DfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
+    function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+    function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
+    function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+  { returns a graph constructed from the pairs provided by the vector,
+    i.e. each element treates as pair of source - destination }
+    function  CreateFromVector(constref aVector: TIntArray): TGSimpleUGraph;
     function  DistinctEdges: TDistinctEdges; inline;
 
     function  Clone: TGSimpleUGraph;
@@ -355,24 +371,11 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt; inline;
     function  Isolated(constref v: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
-    function  CycleExists(out aCycle: TIntArray): Boolean; inline;
-    function  EulerCycleExists: Boolean; inline;
-    function  FindEulerCycle: TIntArray; inline;
   { checks whether the graph is connected; a graph without vertices is considered disconnected }
     function  IsConnected: Boolean; inline;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0}
     function  MakeConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
-  { returns the vector of the spanning tree, which is constructed starting from aRoot;
-    each element contains the index of its parent (or -1 if it is root or not connected),
-    that is, it is a source-destination pair }
-    function  DfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
-    function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
-    function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
-    function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
-  { returns a graph constructed from the pairs provided by the vector,
-    i.e. each element treates as pair of source - destination }
-    function  CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
   { returns index of the connected component that contains v }
     function  SeparateIndex(constref v: TVertex): SizeInt; inline;
     function  SeparateIndexI(aVertex: SizeInt): SizeInt; inline;
@@ -386,6 +389,25 @@ type
      vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean; inline;
     function  IsTree: Boolean; inline;
+    function  CycleExists(out aCycle: TIntArray): Boolean; inline;
+  { checks whether the exists any cycle in graph that contains v;
+    if True then aCycle will contain indices of cycle }
+    function  CycleExists(constref v: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function  CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntArray): Boolean; inline;
+  { returns indices of the articulation points in the result vector, if any, otherwise the empty vector}
+    function  FindCutPoints: TIntArray; inline;
+    function  EulerCycleExists: Boolean; inline;
+    function  FindEulerCycle: TIntArray; inline;
+  { returns the vector of the spanning tree, which is constructed starting from aRoot;
+    each element contains the index of its parent (or -1 if it is root or not connected),
+    that is, it is a source-destination pair }
+    function  DfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
+    function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
+    function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
+    function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
+  { returns a graph constructed from the pairs provided by the vector,
+    i.e. each element treates as pair of source - destination }
+    function  CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
   { returns True if exists edge with negative weight }
     function  NegWeighedEdgeExists: Boolean;
   { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP),
@@ -484,6 +506,44 @@ begin
   Result.FVisited.Size := Succ(Result.FLastIndex);
   Result.FCurrIndex := -1;
   Result.FEnumDone := True;
+end;
+
+{ TGSimpleUGraph.TCutPointHelper }
+
+procedure TGSimpleUGraph.TCutPointHelper.Dfs(Curr: SizeInt; Prev: SizeInt);
+var
+  Next, ChildCount: SizeInt;
+begin
+  Visited[Curr] := True;
+  Ord[Curr] := Counter;
+  Low[Curr] := Counter;
+  Inc(Counter);
+  ChildCount := 0;
+  for Next in FGraph.AdjVerticesI(Curr) do
+    begin
+      if Next = Prev then
+        continue;
+      if not Visited[Next] then
+        begin
+          Dfs(Next, Curr);
+          if Low[Next] < Low[Curr] then
+            Low[Curr] := Low[Next];
+          if (Low[Next] >= Ord[Curr]) and (Prev <> -1) then
+            begin
+              CutPoints[Curr] := True;
+              Inc(CutCount);
+            end;
+          Inc(ChildCount);
+        end
+      else
+        if Ord[Next] < Low[Curr] then
+          Low[Curr] := Ord[Next];
+    end;
+  if (Prev = -1) and (ChildCount > 1) then
+    begin
+      CutPoints[Curr] := True;
+      Inc(CutCount);
+    end;
 end;
 
 { TGSimpleUGraph }
@@ -767,6 +827,108 @@ begin
   Result := DegreeI(aIndex) = 0;
 end;
 
+function TGSimpleUGraph.IsConnected: Boolean;
+begin
+  if not ConnectedValid then
+    FConnected := CheckConnected;
+  Result := Connected;
+end;
+
+function TGSimpleUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+var
+  Visited: TBitVector;
+  Stack: TIntStack;
+  I, Curr: SizeInt;
+  d: TEdgeData;
+begin
+  Result := 0;
+  if VertexCount < 2 then
+    exit;
+  if ConnectedValid and Connected then
+    exit;
+  Visited.Size := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        repeat
+          if not Visited[Curr] then
+            begin
+              Visited[Curr] := True;
+              FVertexList.ItemRefs[Curr]^.CompIdx := 0;
+              for Curr in AdjVerticesI(Curr) do
+                if not Visited[Curr] then
+                  Stack.Push(Curr);
+            end;
+        until not Stack.TryPop(Curr);
+        Inc(Result);
+        if Result > 1 then
+          begin
+            if Assigned(aOnAddEdge) then
+              begin
+                aOnAddEdge(Items[0], Items[Curr], @d);
+                AddEdgeI(0, Curr, d);
+              end
+            else
+              AddEdgeI(0, Curr);
+          end;
+      end;
+  FCompCount := 1;
+  FConnectedValid := True;
+  FConnected := True;
+end;
+
+function TGSimpleUGraph.SeparateGraph(constref v: TVertex): TGSimpleUGraph;
+begin
+  Result := SeparateGraphI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleUGraph.SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
+begin
+  if SeparateCount > 1 then
+    Result := GetSeparateGraph(aVtxIndex)
+  else
+    Result := Clone;
+end;
+
+function TGSimpleUGraph.SeparateIndexOf(constref v: TVertex): SizeInt;
+begin
+   Result := SeparateIndexOfI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleUGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  if SeparateCount > 1 then
+    Result := FVertexList.ItemRefs[aVtxIndex]^.CompIdx
+  else
+    Result := 0;
+end;
+
+function TGSimpleUGraph.SeparatePop(constref v: TVertex): SizeInt;
+begin
+  Result := SeparatePopI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleUGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  if SeparateCount > 1 then
+    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.CompIdx)
+  else
+    Result := VertexCount;
+end;
+
+function TGSimpleUGraph.IsTree: Boolean;
+begin
+  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
+end;
+
+function TGSimpleUGraph.CyclomaticNumber: SizeInt;
+begin
+  Result := EdgeCount - VertexCount + SeparateCount;
+end;
+
 function TGSimpleUGraph.CycleExists(out aCycle: TIntArray): Boolean;
 var
   Stack: TIntStack;
@@ -800,38 +962,42 @@ begin
   Result := False;
 end;
 
-//function TGSimpleUGraph.CycleExistsI(aSrc: SizeInt; out aCycle: TIntArray): Boolean;
-//var
-//  Stack: TIntStack;
-//  Visited: TBitVector;
-//  v: TIntArray;
-//  Curr, Next: SizeInt;
-//begin
-//  if IsEmpty then
-//    exit(False);
-//  Visited.Size := VertexCount;
-//  v := CreateIntVector;
-//  Curr := aSrc;
-//  repeat
-//    if not Visited[Curr] then
-//      begin
-//        Visited[Curr] := True;
-//        for Next in AdjVerticesI(Curr) do
-//          if not Visited[Next] then
-//            begin
-//              Stack.Push(Next);
-//              v[Next] := Curr;
-//            end
-//          else
-//            if (v[Curr] <> Next) and (Next = aSrc) then
-//              begin
-//                aCycle := CycleChainFromTree(v, Next, Curr);
-//                exit(True);
-//              end;
-//      end;
-//  until not Stack.TryPop(Curr);
-//  Result := False;
-//end;
+function TGSimpleUGraph.CycleExists(constref v: TVertex; out aCycle: TIntArray): Boolean;
+begin
+  Result := CycleExistsI(IndexOf(v), aCycle);
+end;
+
+function TGSimpleUGraph.CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntArray): Boolean;
+var
+  Stack: TIntStack;
+  Visited: TBitVector;
+  v: TIntArray;
+  Curr, Next: SizeInt;
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  Visited.Size := VertexCount;
+  v := CreateIntVector;
+  Curr := 0;
+  repeat
+    if not Visited[Curr] then
+      begin
+        Visited[Curr] := True;
+        for Next in AdjVerticesI(Curr) do
+          if not Visited[Next] then
+            begin
+              Stack.Push(Next);
+              v[Next] := Curr;
+            end
+          else
+            if (v[Curr] <> Next) and (Curr = aVtxIndex) then
+              begin
+                aCycle := CycleChainFromTree(v, Next, Curr);
+                exit(True);
+              end;
+      end;
+  until not Stack.TryPop(Curr);
+  Result := False;
+end;
 
 function TGSimpleUGraph.EulerCycleExists: Boolean;
 var
@@ -888,48 +1054,38 @@ begin
   end;
 end;
 
-function TGSimpleUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+function TGSimpleUGraph.FindCutPoints: TIntArray;
 var
-  Visited: TBitVector;
-  Stack: TIntStack;
-  I, Curr: SizeInt;
-  d: TEdgeData;
+  d: TCutPointHelper;
+  I, J: SizeInt;
 begin
-  Result := 0;
-  if VertexCount < 2 then
-    exit;
-  if ConnectedValid and Connected then
-    exit;
-  Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
-      begin
-        Curr := I;
-        repeat
-          if not Visited[Curr] then
-            begin
-              Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.CompIdx := 0;
-              for Curr in AdjVerticesI(Curr) do
-                if not Visited[Curr] then
-                  Stack.Push(Curr);
-            end;
-        until not Stack.TryPop(Curr);
-        Inc(Result);
-        if Result > 1 then
+  if IsEmpty then
+    exit(nil);
+  d.Counter := 0;
+  d.CutCount := 0;
+  d.FGraph := Self;
+  d.Visited.Size := VertexCount;
+  d.CutPoints.Size := VertexCount;
+  System.SetLength(d.Low, VertexCount);
+  for I := 0 to System.High(d.Low) do
+    d.Low[I] := VertexCount;
+  System.SetLength(d.Ord, VertexCount);
+  for I := 0 to System.High(d.Ord) do
+    d.Ord[I] := VertexCount;
+
+  d.Dfs(0);
+
+  System.SetLength(Result, d.CutCount);
+  if d.CutCount > 0 then
+    begin
+      J := 0;
+      for I := 0 to Pred(VertexCount) do
+        if d.CutPoints[I] then
           begin
-            if Assigned(aOnAddEdge) then
-              begin
-                aOnAddEdge(Items[0], Items[Curr], @d);
-                AddEdgeI(0, Curr, d);
-              end
-            else
-              AddEdgeI(0, Curr);
+            Result[J] := I;
+            Inc(J);
           end;
-      end;
-  FCompCount := 1;
-  FConnectedValid := True;
-  FConnected := True;
+    end;
 end;
 
 function TGSimpleUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
@@ -996,64 +1152,6 @@ begin
       if Src <> -1 then
         Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeDataPtr(Src, I)^);
     end;
-end;
-
-function TGSimpleUGraph.SeparateGraph(constref v: TVertex): TGSimpleUGraph;
-begin
-  Result := SeparateGraphI(FVertexList.IndexOf(v));
-end;
-
-function TGSimpleUGraph.SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
-begin
-  if SeparateCount > 1 then
-    Result := GetSeparateGraph(aVtxIndex)
-  else
-    Result := Clone;
-end;
-
-function TGSimpleUGraph.IsConnected: Boolean;
-begin
-  if not ConnectedValid then
-    FConnected := CheckConnected;
-  Result := Connected;
-end;
-
-function TGSimpleUGraph.SeparateIndexOf(constref v: TVertex): SizeInt;
-begin
-   Result := SeparateIndexOfI(FVertexList.IndexOf(v));
-end;
-
-function TGSimpleUGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
-begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  if SeparateCount > 1 then
-    Result := FVertexList.ItemRefs[aVtxIndex]^.CompIdx
-  else
-    Result := 0;
-end;
-
-function TGSimpleUGraph.SeparatePop(constref v: TVertex): SizeInt;
-begin
-  Result := SeparatePopI(FVertexList.IndexOf(v));
-end;
-
-function TGSimpleUGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
-begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  if SeparateCount > 1 then
-    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.CompIdx)
-  else
-    Result := VertexCount;
-end;
-
-function TGSimpleUGraph.IsTree: Boolean;
-begin
-  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
-end;
-
-function TGSimpleUGraph.CyclomaticNumber: SizeInt;
-begin
-  Result := EdgeCount - VertexCount + SeparateCount;
 end;
 
 function TGSimpleUGraph.IsRegular: Boolean;
@@ -1522,7 +1620,7 @@ var
   Enum: TEdgeEnumerator;
   RelaxValue: TWeight;
   I: SizeInt;
-  Relaxed: Boolean;
+  Relaxed: Boolean = False;
 begin
   aWeights := CreateWeightVector;
   Enum := Edges.GetEnumerator;
@@ -1558,7 +1656,7 @@ var
   Enum: TEdgeEnumerator;
   RelaxValue: TWeight;
   I, J: SizeInt;
-  Relaxed: Boolean;
+  Relaxed: Boolean = False;
 begin
   aWeights := CreateWeightVector;
   aPathTree := FGraph.CreateIntVector;
@@ -2004,21 +2102,6 @@ begin
   Result := FGraph.IsolatedI(aIndex);
 end;
 
-function TGWeighedUGraph.CycleExists(out aCycle: TIntArray): Boolean;
-begin
-  Result := FGraph.CycleExists(aCycle);
-end;
-
-function TGWeighedUGraph.EulerCycleExists: Boolean;
-begin
-  Result := FGraph.EulerCycleExists;
-end;
-
-function TGWeighedUGraph.FindEulerCycle: TIntArray;
-begin
-  Result := FGraph.FindEulerCycle;
-end;
-
 function TGWeighedUGraph.IsConnected: Boolean;
 begin
   Result := FGraph.IsConnected;
@@ -2027,31 +2110,6 @@ end;
 function TGWeighedUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   Result := FGraph.MakeConnected(aOnAddEdge);
-end;
-
-function TGWeighedUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
-begin
-  Result := FGraph.DfsSpanningTree(aRoot);
-end;
-
-function TGWeighedUGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
-begin
-  Result := FGraph.DfsSpanningTreeI(aRoot);
-end;
-
-function TGWeighedUGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
-begin
-  Result := FGraph.BfsSpanningTree(aRoot);
-end;
-
-function TGWeighedUGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
-begin
-  Result := FGraph.BfsSpanningTreeI(aRoot);
-end;
-
-function TGWeighedUGraph.CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
-begin
-  Result := TGWeighedUGraph.Create(FGraph.CreateFromVector(aVector));
 end;
 
 function TGWeighedUGraph.SeparateIndex(constref v: TVertex): SizeInt;
@@ -2092,6 +2150,61 @@ end;
 function TGWeighedUGraph.IsTree: Boolean;
 begin
   Result := FGraph.IsTree;
+end;
+
+function TGWeighedUGraph.CycleExists(out aCycle: TIntArray): Boolean;
+begin
+  Result := FGraph.CycleExists(aCycle);
+end;
+
+function TGWeighedUGraph.CycleExists(constref v: TVertex; out aCycle: TIntArray): Boolean;
+begin
+  Result := FGraph.CycleExists(v, aCycle);
+end;
+
+function TGWeighedUGraph.CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntArray): Boolean;
+begin
+  Result := FGraph.CycleExistsI(aVtxIndex, aCycle);
+end;
+
+function TGWeighedUGraph.FindCutPoints: TIntArray;
+begin
+  Result := FGraph.FindCutPoints;
+end;
+
+function TGWeighedUGraph.EulerCycleExists: Boolean;
+begin
+  Result := FGraph.EulerCycleExists;
+end;
+
+function TGWeighedUGraph.FindEulerCycle: TIntArray;
+begin
+  Result := FGraph.FindEulerCycle;
+end;
+
+function TGWeighedUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
+begin
+  Result := FGraph.DfsSpanningTree(aRoot);
+end;
+
+function TGWeighedUGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
+begin
+  Result := FGraph.DfsSpanningTreeI(aRoot);
+end;
+
+function TGWeighedUGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
+begin
+  Result := FGraph.BfsSpanningTree(aRoot);
+end;
+
+function TGWeighedUGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
+begin
+  Result := FGraph.BfsSpanningTreeI(aRoot);
+end;
+
+function TGWeighedUGraph.CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
+begin
+  Result := TGWeighedUGraph.Create(FGraph.CreateFromVector(aVector));
 end;
 
 function TGWeighedUGraph.NegWeighedEdgeExists: Boolean;
