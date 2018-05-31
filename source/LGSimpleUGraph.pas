@@ -117,6 +117,16 @@ type
   { returns graph of connected component that contains v }
     function  SeparateGraph(constref v: TVertex): TGSimpleUGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
+  { checks whether the graph is connected; a graph without Items is considered disconnected }
+    function  IsConnected: Boolean; inline;
+  { returns index of the connected component that contains v }
+    function  SeparateIndexOf(constref v: TVertex): SizeInt; inline;
+    function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt; inline;
+  { returns number of Items(population) in the connected component that contains v }
+    function  SeparatePop(constref v: TVertex): SizeInt; inline;
+    function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
+    function  IsTree: Boolean; inline;
+    function  CyclomaticNumber: SizeInt; inline;
   { checks whether the graph is a regular graph (that is, the degree of all its
      Items equal); an empty graph is considered regular }
     function  IsRegular: Boolean;
@@ -251,7 +261,7 @@ type
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
     function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
   { A* pathfinding algorithm }
-    function  AStarPath(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+    function  AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
     function  FordBellman(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
@@ -404,12 +414,14 @@ type
     function  FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
   { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP);
     the weights of edges may be negative;
-    returns False if there is a negative weight cycle;
-    aWeights contains in the corresponding component the weight of the minimum path to the vertex or
+    returns False and empty aWeights if there is a negative weight cycle, otherwise
+    aWeights will contain in the corresponding component the weight of the minimum path to the vertex or
     InfiniteWeight if the vertex is unreachable; used Bellman–Ford algorithm  }
     function  FindMinPathsFordB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function  FindMinPathsFordBI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-  { same as above and in aPaths returns paths }
+  { same as above and in aPaths returns paths,
+    if there is a negative weight cycle, then aPaths will contain one vertex index that exactly
+    lies on the cycle }
     function  FindMinPathsFordB(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function  FindMinPathsFordBI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
@@ -999,6 +1011,51 @@ begin
     Result := Clone;
 end;
 
+function TGSimpleUGraph.IsConnected: Boolean;
+begin
+  if not ConnectedValid then
+    FConnected := CheckConnected;
+  Result := Connected;
+end;
+
+function TGSimpleUGraph.SeparateIndexOf(constref v: TVertex): SizeInt;
+begin
+   Result := SeparateIndexOfI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleUGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  if SeparateCount > 1 then
+    Result := FVertexList.ItemRefs[aVtxIndex]^.CompIdx
+  else
+    Result := 0;
+end;
+
+function TGSimpleUGraph.SeparatePop(constref v: TVertex): SizeInt;
+begin
+  Result := SeparatePopI(FVertexList.IndexOf(v));
+end;
+
+function TGSimpleUGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  if SeparateCount > 1 then
+    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.CompIdx)
+  else
+    Result := VertexCount;
+end;
+
+function TGSimpleUGraph.IsTree: Boolean;
+begin
+  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
+end;
+
+function TGSimpleUGraph.CyclomaticNumber: SizeInt;
+begin
+  Result := EdgeCount - VertexCount + SeparateCount;
+end;
+
 function TGSimpleUGraph.IsRegular: Boolean;
 var
   I, d: SizeInt;
@@ -1410,13 +1467,13 @@ begin
   aPath := nil;
 end;
 
-function TGWeighedUGraph.AStarPath(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
 var
   Visited: TBitVector;
   Queue: TAStarHeap;
   Handles: THandleArray;
   Tree: TIntArray;
-  CurrWeight: TWeight;
+  Relaxed: TWeight;
   Item: TRankItem;
   p: PAdjItem;
 begin
@@ -1437,19 +1494,19 @@ begin
           begin
             if Handles[p^.Key] = INVALID_HANDLE then
               begin
-                CurrWeight := p^.Data.Weight + Item.Weight;
+                Relaxed := p^.Data.Weight + Item.Weight;
                 Handles[p^.Key] := Queue.Insert(TRankItem.Construct(
-                  CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]), CurrWeight, p^.Key));
+                  Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
                 Tree[p^.Key] := Item.Index;
               end
             else
               if not Visited[p^.Key] then
                 begin
-                  CurrWeight := Item.Weight + p^.Data.Weight;
-                  if CurrWeight < Queue.Value(Handles[p^.Key]).Weight then
+                  Relaxed := Item.Weight + p^.Data.Weight;
+                  if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
                     begin
                       Queue.Update(Handles[p^.Key], TRankItem.Construct(
-                        CurrWeight + aHeur(FGraph[p^.Key], FGraph[aDst]), CurrWeight, p^.Key));
+                        Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
                 end;
@@ -1464,13 +1521,13 @@ var
   e: TEdge;
   Enum: TEdgeEnumerator;
   RelaxValue: TWeight;
+  I: SizeInt;
   Relaxed: Boolean;
 begin
-  FGraph.CheckIndexRange(aSrc);
   aWeights := CreateWeightVector;
   Enum := Edges.GetEnumerator;
   aWeights[aSrc] := ZeroWeight;
-  while True do
+  for I := 1 to VertexCount do
     begin
       Relaxed := False;
       while Enum.MoveNext do
@@ -1479,39 +1536,35 @@ begin
           if aWeights[e.Source] < InfiniteWeight then
             begin
               RelaxValue := aWeights[e.Source] + e.Data.Weight;
-              if aWeights[e.Destination] > RelaxValue then
+              if RelaxValue < aWeights[e.Destination] then
                 begin
                   aWeights[e.Destination] := RelaxValue;
                   Relaxed := True;
                 end;
             end;
         end;
-      Enum.Reset;
       if not Relaxed then
         break;
+      Enum.Reset;
     end;
-  while Enum.MoveNext do
-    begin
-      e := Enum.Current;
-      if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
-        exit(False);
-    end;
-  Result := True;
+  Result := not Relaxed;
+  if not Result then
+    aWeights := nil;
 end;
 
-function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aPathTree: TIntArray;
-  out aWeights: TWeightArray): Boolean;
+function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
 var
   e: TEdge;
   Enum: TEdgeEnumerator;
   RelaxValue: TWeight;
+  I, J: SizeInt;
   Relaxed: Boolean;
 begin
   aWeights := CreateWeightVector;
   aPathTree := FGraph.CreateIntVector;
   Enum := Edges.GetEnumerator;
   aWeights[aSrc] := ZeroWeight;
-  while True do
+  for I := 1 to VertexCount do
     begin
       Relaxed := False;
       while Enum.MoveNext do
@@ -1520,25 +1573,26 @@ begin
           if aWeights[e.Source] < InfiniteWeight then
             begin
               RelaxValue := aWeights[e.Source] + e.Data.Weight;
-              if aWeights[e.Destination] > RelaxValue then
+              if RelaxValue < aWeights[e.Destination] then
                 begin
                   aWeights[e.Destination] := RelaxValue;
-                  aPathTree[e.Destination] := e.Source;
+                  J := e.Destination;
+                  aPathTree[J] := e.Source;
                   Relaxed := True;
                 end;
             end;
         end;
-      Enum.Reset;
       if not Relaxed then
         break;
+      Enum.Reset;
     end;
-  while Enum.MoveNext do
+  Result := not Relaxed;
+  if not Result then
     begin
-      e := Enum.Current;
-      if aWeights[e.Destination] > aWeights[e.Source] + e.Data.Weight then
-        exit(False);
+      aWeights := nil;
+      System.SetLength(aPathTree, 1);
+      aPathTree[0] := J;
     end;
-  Result := True;
 end;
 
 function TGWeighedUGraph.FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
@@ -2106,7 +2160,7 @@ function TGWeighedUGraph.FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristi
 begin
   FGraph.CheckIndexRange(aSrc);
   FGraph.CheckIndexRange(aDst);
-  Result := AStarPath(aSrc, aDst, aHeur, aPath);
+  Result := AStar(aSrc, aDst, aHeur, aPath);
 end;
 
 function TGWeighedUGraph.FindMinPathsFordB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
