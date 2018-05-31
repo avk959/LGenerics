@@ -27,7 +27,7 @@ unit LGHelpers;
 interface
 
 uses
-
+  Classes,
   SysUtils,
   typinfo,
   variants,
@@ -43,15 +43,11 @@ type
     class function Compare(constref L, R: TGUID): SizeInt; static; inline;
   end;
 
-  { TStrHelper }
-
   TStrHelper = type helper for string
     class function HashCode(constref aValue: string): SizeInt; static; inline;
     class function Equal(constref L, R: string): Boolean; static; inline;
     class function Compare(constref L, R: string): SizeInt; static; inline;
   end;
-
-  { TAStrHelper }
 
   TAStrHelper = type helper(TStringHelper) for ansistring
     class function HashCode(constref aValue: ansistring): SizeInt; static; inline;
@@ -59,23 +55,17 @@ type
     class function Compare(constref L, R: ansistring): SizeInt; static; inline;
   end;
 
-  { TWStrHelper }
-
   TWStrHelper = type helper for widestring
     class function HashCode(constref aValue: widestring): SizeInt; static; inline;
     class function Equal(constref L, R: widestring): Boolean; static; inline;
     class function Compare(constref L, R: widestring): SizeInt; static; inline;
   end;
 
-  { TUStrHelper }
-
   TUStrHelper = type helper for unicodestring
     class function HashCode(constref aValue: unicodestring): SizeInt; static; inline;
     class function Equal(constref L, R: unicodestring): Boolean; static; inline;
     class function Compare(constref L, R: unicodestring): SizeInt; static; inline;
   end;
-
-  { TShortStrHelper }
 
   TShortStrHelper = type helper for shortstring
     class function HashCode(constref aValue: shortstring): SizeInt; static; inline;
@@ -237,6 +227,11 @@ type
     function  NonEmpty: Boolean;
     procedure Add(constref aValue: string);
     property  Length: SizeInt read GetLength write SetLen;
+  end;
+
+  TPointHelper = type helper for TPoint
+    class function HashCode(constref aValue: TPoint): SizeInt; static; inline;
+    class function Equal(constref L, R: TPoint): Boolean; static; inline;
   end;
 
   PTypeInfo = TypInfo.PTypeInfo;
@@ -1032,6 +1027,18 @@ begin
   len := System.Length(Self);
   System.SetLength(Self, len + 1);
   Self[len] := aValue;
+end;
+
+{ TPointHelper }
+
+class function TPointHelper.HashCode(constref aValue: TPoint): SizeInt;
+begin
+  Result := HashFunc.HashBuf(@aValue, SizeOf(aValue));
+end;
+
+class function TPointHelper.Equal(constref L, R: TPoint): Boolean;
+begin
+  Result := L = R;;
 end;
 
 function CompareShortInt(constref L, R: ShortInt): SizeInt;
