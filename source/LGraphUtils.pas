@@ -40,20 +40,23 @@ uses
 
 type
 
-  ELGraphError = class(Exception); //???
+  ELGraphError     = class(Exception); //???
 
-  TEmptyRec    = record end;
-  THandle      = LGUtils.THandle;
+  TEmptyRec        = record end;
+  THandle          = LGUtils.THandle;
 
-  TIntArray    = array of SizeInt;
-  TShortArray  = array of ShortInt;
-  THandleArray = array of THandle;
-  TIntHelper   = specialize TGNumArrayHelper<SizeInt>;
-  TIntStack    = specialize TGLiteStack<SizeInt>;
-  TIntQueue    = specialize TGLiteQueue<SizeInt>;
+  TIntArray        = array of SizeInt;
+  TShortArray      = array of ShortInt;
+  THandleArray     = array of THandle;
+  TIntHelper       = specialize TGNumArrayHelper<SizeInt>;
+  TIntVectorHelper = specialize TGComparableVectorHelper<SizeInt>;
+  TIntStack        = specialize TGLiteStack<SizeInt>;
+  TIntQueue        = specialize TGLiteQueue<SizeInt>;
+  TIntVector       = specialize TGLiteVector<SizeInt>;
+  PIntVector       = ^TIntVector;
 
-  TOnIntVisit  = procedure (aValue: SizeInt) of object;
-  TOnIntTest   = function (aValue: SizeInt): Boolean of object;
+  TOnIntVisit      = procedure (aValue: SizeInt) of object;
+  TOnIntTest       = function (aValue: SizeInt): Boolean of object;
 
   generic TGOnAddEdge<T>       = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
   generic TGOnStreamRead<T>    = function(aStream: TStream): T of object;
@@ -376,13 +379,13 @@ type
     end;
 
   public
-    class function ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
-    class function CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
+    class function ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntVector; static;
+    class function CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntVector; static;
     constructor Create;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
-    function  CreateIntVector: TIntArray;
-    function  CreateShortVector: TShortArray;
-    function  CreateHandleVector: THandleArray;
+    function  CreateIntArray: TIntArray;
+    function  CreateShortArray: TShortArray;
+    function  CreateHandleArray: THandleArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear; virtual;
@@ -436,8 +439,8 @@ type
     function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray;
   { returns a vector containing chain of indices of found shortest path(in sense 'edges count'),
    (empty if path does not exists) }
-    function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
-    function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+    function FindMinPath(constref aSrc, aDst: TVertex): TIntVector; inline;
+    function FindMinPathI(aSrc, aDst: SizeInt): TIntVector;
 
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read GetVertexCount;
@@ -1312,41 +1315,36 @@ begin
     Result += Ord(FVertexList.ItemRefs[I]^.CompIdx = aCompIndex);
 end;
 
-class function TGCustomGraph.ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
-var
-  Stack: TIntStack;
+class function TGCustomGraph.ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntVector;
 begin
   while aIndex >= 0 do
     begin
       if aIndex < System.Length(aTree) then
-        Stack.Push(aIndex)
+        Result.Add(aIndex)
       else
         raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
       aIndex := aTree[aIndex];
     end;
-  Result := Stack.ToArray;
-  TIntHelper.Reverse(Result);
+  TIntVectorHelper.Reverse(Result);
 end;
 
-class function TGCustomGraph.CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray;
+class function TGCustomGraph.CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntVector;
 var
-  Stack: TIntStack;
   I: SizeInt;
 begin
   I := aLast;
   while I >= 0 do
     begin
       if I < System.Length(aTree) then
-        Stack.Push(I)
+        Result.Add(I)
       else
         raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
       if I = aFirst then
         break;
       I := aTree[I];
     end;
-  Stack.Push(aLast);
-  Result := Stack.ToArray;
-  TIntHelper.Reverse(Result);
+  Result.Add(aLast);
+  TIntVectorHelper.Reverse(Result);
 end;
 
 constructor TGCustomGraph.Create;
@@ -1359,7 +1357,7 @@ begin
   FVertexList.CheckIndexRange(aIndex);
 end;
 
-function TGCustomGraph.CreateIntVector: TIntArray;
+function TGCustomGraph.CreateIntArray: TIntArray;
 var
   c: SizeInt;
 begin
@@ -1369,7 +1367,7 @@ begin
     System.FillChar(Result[0], c * SizeOf(SizeInt), $ff);
 end;
 
-function TGCustomGraph.CreateShortVector: TShortArray;
+function TGCustomGraph.CreateShortArray: TShortArray;
 var
   c: SizeInt;
 begin
@@ -1379,7 +1377,7 @@ begin
     System.FillChar(Result[0], c, $ff);
 end;
 
-function TGCustomGraph.CreateHandleVector: THandleArray;
+function TGCustomGraph.CreateHandleArray: THandleArray;
 var
   c: SizeInt;
 begin
@@ -1624,7 +1622,7 @@ var
   Curr, I: SizeInt;
   Color: Boolean;
 begin
-  v := CreateShortVector;
+  v := CreateShortArray;
   if VertexCount < 2 then
     exit(False);
   Visited.Size := VertexCount;
@@ -1671,7 +1669,7 @@ var
 begin
   FVertexList.CheckIndexRange(aSrc);
   FVertexList.CheckIndexRange(aDst);
-  v := CreateIntVector;
+  v := CreateIntArray;
   v[aSrc] := 0;
   repeat
     if aSrc = aDst then
@@ -1697,7 +1695,7 @@ var
   d: SizeInt;
 begin
   FVertexList.CheckIndexRange(aRoot);
-  Result := CreateIntVector;
+  Result := CreateIntArray;
   Result[aRoot] := 0;
   repeat
     for d in AdjVerticesI(aRoot) do
@@ -1709,12 +1707,12 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
-function TGCustomGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
+function TGCustomGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntVector;
 begin
   Result := FindMinPathI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+function TGCustomGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntVector;
 var
   Queue: TIntQueue;
   Visited: TBitVector;
@@ -1723,7 +1721,7 @@ var
 begin
   FVertexList.CheckIndexRange(aSrc);
   FVertexList.CheckIndexRange(aDst);
-  v := CreateIntVector;
+  v := CreateIntArray;
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
   repeat
@@ -1737,7 +1735,6 @@ begin
           v[d] := aSrc;
         end;
   until not Queue.TryDequeue(aSrc);
-  Result := nil;
 end;
 
 end.
