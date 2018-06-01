@@ -307,11 +307,20 @@ type
     TNestReadData    = specialize TGNestStreamRead<TEdgeData>;
     TNestWriteData   = specialize TGNestStreamWrite<TEdgeData>;
 
+    TIntEdge = record
+      Source,
+      Destination: SizeInt;
+      constructor Create(s, d: SizeInt);
+    end;
+
+    TIntEdgeVector = specialize TGLiteVector<TIntEdge>;
+    PIntEdgeVector = ^TIntEdgeVector;
+
     TEdge = record
       Source,
       Destination: SizeInt;
       Data:  TEdgeData;
-      procedure Init(aSrc: SizeInt; p: PAdjItem); inline;
+      constructor Create(aSrc: SizeInt; p: PAdjItem);
     end;
 
     TIncidentEdge = record
@@ -1124,9 +1133,17 @@ begin
   Result := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
+{ TGCustomGraph.TIntEdge }
+
+constructor TGCustomGraph.TIntEdge.Create(s, d: SizeInt);
+begin
+  Source := s;
+  Destination := d;
+end;
+
 { TGCustomGraph.TEdge }
 
-procedure TGCustomGraph.TEdge.Init(aSrc: SizeInt; p: PAdjItem);
+constructor TGCustomGraph.TEdge.Create(aSrc: SizeInt; p: PAdjItem);
 begin
   Source := aSrc;
   Destination := p^.Destination;
@@ -1201,7 +1218,7 @@ end;
 
 function TGCustomGraph.TEdgeEnumerator.GetCurrent: TEdge;
 begin
-  Result{%H-}.Init(FCurrIndex, FEnum.Current);
+  Result := TEdge.Create(FCurrIndex, FEnum.Current);
 end;
 
 function TGCustomGraph.TEdgeEnumerator.MoveNext: Boolean;
