@@ -124,25 +124,25 @@ type
     function  DegreeI(aVtxIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aVtxIndex: SizeInt): Boolean; inline;
-  { checks whether the graph is connected; a graph without Items is considered disconnected }
+  { checks whether the graph is connected; an empty graph is considered disconnected }
     function  IsConnected: Boolean; inline;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
-    from the vertex with the index 0}
-    function  MakeConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
-  { returns graph of connected component that contains v }
+    from the vertex with the index 0; returns count of added edges}
+    function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
+  { returns graph of connected component that contains aVertex }
     function  SeparateGraph(constref aVertex: TVertex): TGSimpleUGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
 
-  { returns index of the connected component that contains v }
+  { returns index of the connected component that contains aVertex }
     function  SeparateIndexOf(constref aVertex: TVertex): SizeInt; inline;
     function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt; inline;
-  { returns number of Items(population) in the connected component that contains v }
-    function  SeparatePop(constref v: TVertex): SizeInt; inline;
+  { returns number of Items(population) in the connected component that contains aVertex }
+    function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
     function  IsTree: Boolean; inline;
     function  CyclomaticNumber: SizeInt; inline;
-  { checks whether the graph is a regular graph (that is, the degree of all its
-     Items equal); an empty graph is considered regular }
+  { checks whether the graph is a regular graph (that is, the degree of all its vertices equal);
+    an empty graph is considered regular }
     function  IsRegular: Boolean;
   { checks whether exists any cycle in graph; if True then aCycle will contain indices of cycle }
     function  ContainsCycle(out aCycle: TIntVector): Boolean;
@@ -169,6 +169,8 @@ type
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
     function  FindBridges: TIntEdgeVector;
+  { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
+    function  IsBiconnected: Boolean; inline;
   { returns the vector of the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
@@ -408,19 +410,19 @@ type
   { checks whether the graph is connected; a graph without vertices is considered disconnected }
     function  IsConnected: Boolean; inline;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
-    from the vertex with the index 0}
-    function  MakeConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
+    from the vertex with the index 0; returns count of added edges }
+    function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
   { returns index of the connected component that contains v }
     function  SeparateIndex(constref aVertex: TVertex): SizeInt; inline;
     function  SeparateIndexI(aVtxIndex: SizeInt): SizeInt; inline;
-  { returns number of vertices(population) in the connected component that contains aRoot }
+  { returns number of vertices(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aVtxIndex: SizeInt): SizeInt; inline;
-  { returns graph of connected component that contains v }
+  { returns graph of connected component that contains aVertex }
     function  SeparateGraph(constref aVertex: TVertex): TWeighedGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TWeighedGraph; inline;
-  { checks whether the graph is a regular graph (that is, the degree of all its
-     vertices coincide); an empty graph is considered regular }
+  { checks whether the graph is a regular graph (that is, the degree of all its vertices equal);
+    an empty graph is considered regular }
     function  IsRegular: Boolean; inline;
     function  IsTree: Boolean; inline;
     function  ContainsCycle(out aCycle: TIntVector): Boolean; inline;
@@ -444,6 +446,8 @@ type
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
     function  FindBridges: TIntEdgeVector; inline;
+  { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
+    function  IsBiconnected: Boolean; inline;
     function  ContainsEulerCycle: Boolean; inline;
     function  FindEulerCycle: TIntArray; inline;
   { returns the vector of the spanning tree, which is constructed starting from aRoot;
@@ -650,14 +654,15 @@ var
   I: SizeInt;
 begin
   Graph := aGraph;
-  Counter := 0;
-  Visited.Size := aGraph.VertexCount;
-  System.SetLength(Low, aGraph.VertexCount);
+  Counter := aGraph.VertexCount;
+  Visited.Size := Counter;
+  System.SetLength(Low, Counter);
   for I := 0 to System.High(Low) do
-    Low[I] := aGraph.VertexCount;
-  System.SetLength(Ord, aGraph.VertexCount);
+    Low[I] := Counter;
+  System.SetLength(Ord, Counter);
   for I := 0 to System.High(Ord) do
-    Ord[I] := aGraph.VertexCount;
+    Ord[I] := Counter;
+  Counter := 0;
   Bridges := aVector;
 end;
 
@@ -1019,7 +1024,7 @@ begin
   Result := Connected;
 end;
 
-function TGSimpleUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+function TGSimpleUGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 var
   Visited: TBitVector;
   Stack: TIntStack;
@@ -1090,9 +1095,9 @@ begin
     Result := 0;
 end;
 
-function TGSimpleUGraph.SeparatePop(constref v: TVertex): SizeInt;
+function TGSimpleUGraph.SeparatePop(constref aVertex: TVertex): SizeInt;
 begin
-  Result := SeparatePopI(FVertexList.IndexOf(v));
+  Result := SeparatePopI(FVertexList.IndexOf(aVertex));
 end;
 
 function TGSimpleUGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
@@ -1277,6 +1282,14 @@ var
   d: TBridgeHelper;
 begin
   d.Search(Self, @Result);
+end;
+
+function TGSimpleUGraph.IsBiconnected: Boolean;
+begin
+  if Connected then
+    Result := not ContainsCutPointI
+  else
+    Result := False;
 end;
 
 function TGSimpleUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
@@ -2296,9 +2309,9 @@ begin
   Result := FGraph.IsConnected;
 end;
 
-function TGWeighedUGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+function TGWeighedUGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
-  Result := FGraph.MakeConnected(aOnAddEdge);
+  Result := FGraph.EnsureConnected(aOnAddEdge);
 end;
 
 function TGWeighedUGraph.SeparateIndex(constref aVertex: TVertex): SizeInt;
@@ -2384,6 +2397,11 @@ end;
 function TGWeighedUGraph.FindBridges: TIntEdgeVector;
 begin
   Result := FGraph.FindBridges;
+end;
+
+function TGWeighedUGraph.IsBiconnected: Boolean;
+begin
+  Result := FGraph.IsBiconnected;
 end;
 
 function TGWeighedUGraph.ContainsEulerCycle: Boolean;
