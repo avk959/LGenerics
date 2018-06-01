@@ -72,12 +72,14 @@ type
     end;
 
     TCutPointHelper = record
-      FGraph: TGSimpleUGraph;
-      CutPoints,
+    private
+      Graph: TGSimpleUGraph;
       Visited: TBitVector;
       Low, Ord: TIntArray;
-      Counter,
-      CutCount: SizeInt;
+      Counter: SizeInt;
+      Points: ^TIntVector;
+    public
+      constructor Create(aGraph: TGSimpleUGraph; aVector: PIntVector);
       procedure Dfs(Curr: SizeInt; Prev: SizeInt = -1);
     end;
 
@@ -126,16 +128,17 @@ type
      Items equal); an empty graph is considered regular }
     function  IsRegular: Boolean;
   { checks whether the exists any cycle in graph; if True then aCycle will contain indices of cycle }
-    function  CycleExists(out aCycle: TIntArray): Boolean;
+    function  CycleExists(out aCycle: TIntVector): Boolean;
   { checks whether the exists any cycle in graph that contains v;
     if True then aCycle will contain indices of cycle }
-    function  CycleExists(constref v: TVertex; out aCycle: TIntArray): Boolean; inline;
-    function  CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntArray): Boolean;
+    function  CycleExists(constref v: TVertex; out aCycle: TIntVector): Boolean; inline;
+    function  CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
     function  EulerCycleExists: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntArray;
-  { returns indices of the articulation points in the result vector, if any, otherwise the empty vector}
-    function  FindCutPoints: TIntArray;
+  { returns indices of the articulation points in the result vector, if any, otherwise the empty vector;
+    note: crashes with stack overflow on size ~ 400000*3 because of recursive DFS}
+    function  FindCutPoints: TIntVector;
   { returns the vector of the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
@@ -275,9 +278,9 @@ type
     function  DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { Dijkstra's pathfinding algorithm }
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
-    function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+    function  DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntVector): TWeight;
   { A* pathfinding algorithm }
-    function  AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+    function  AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntVector): TWeight;
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
     function  FordBellman(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
@@ -286,7 +289,7 @@ type
     function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
     function  CreateWeightVector: TWeightArray;
-    function  CreateEdgeVector: TEdgeArray;
+    function  CreateEdgeArray: TEdgeArray;
     class function Min(const L, R: TWeight): TWeight; static; inline;
     class constructor Init;
   public
@@ -365,8 +368,8 @@ type
     function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray; inline;
   { returns a vector containing indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
-    function  FindMinPath(constref aSrc, aDst: TVertex): TIntArray; inline;
-    function  FindMinPathI(aSrc, aDst: SizeInt): TIntArray; inline;
+    function  FindMinPath(constref aSrc, aDst: TVertex): TIntVector; inline;
+    function  FindMinPathI(aSrc, aDst: SizeInt): TIntVector; inline;
     function  Degree(constref v: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt; inline;
     function  Isolated(constref v: TVertex): Boolean; inline;
@@ -389,13 +392,13 @@ type
      vertices coincide); an empty graph is considered regular }
     function  IsRegular: Boolean; inline;
     function  IsTree: Boolean; inline;
-    function  CycleExists(out aCycle: TIntArray): Boolean; inline;
-  { checks whether the exists any cycle in graph that contains v;
+    function  CycleExists(out aCycle: TIntVector): Boolean; inline;
+  { checks whether exists any cycle in graph that contains v;
     if True then aCycle will contain indices of cycle }
-    function  CycleExists(constref v: TVertex; out aCycle: TIntArray): Boolean; inline;
-    function  CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntArray): Boolean; inline;
+    function  CycleExists(constref v: TVertex; out aCycle: TIntVector): Boolean; inline;
+    function  CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean; inline;
   { returns indices of the articulation points in the result vector, if any, otherwise the empty vector}
-    function  FindCutPoints: TIntArray; inline;
+    function FindCutPoints: TIntVector; inline;
     function  EulerCycleExists: Boolean; inline;
     function  FindEulerCycle: TIntArray; inline;
   { returns the vector of the spanning tree, which is constructed starting from aRoot;
@@ -405,9 +408,9 @@ type
     function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
-  { returns a graph constructed from the pairs provided by the vector,
+  { returns a graph constructed from the edges provided by the vector,
     i.e. each element treates as pair of source - destination }
-    function  CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
+    function  CreateFromArray(constref aArray: TIntArray): TWeighedGraph;
   { returns True if exists edge with negative weight }
     function  NegWeighedEdgeExists: Boolean;
   { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP),
@@ -426,14 +429,14 @@ type
     function  FindMinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
     function  FindMinPathWeightI(aSrc, aDst: SizeInt): TWeight;
   { same as above and in aPath returns path }
-    function  FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight; inline;
-    function  FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+    function  FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntVector): TWeight; inline;
+    function  FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntVector): TWeight;
   { finds the shortest path weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
     the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
     used A* algorithm  }
-    function  FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aPath: TIntArray): TWeight; inline;
-    function  FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+    function  FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aPath: TIntVector): TWeight; inline;
+    function  FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntVector): TWeight;
   { finds the shortest paths from a given vertex to the remaining vertices in same connected component(SSSP);
     the weights of edges may be negative;
     returns False and empty aWeights if there is a negative weight cycle, otherwise
@@ -510,6 +513,22 @@ end;
 
 { TGSimpleUGraph.TCutPointHelper }
 
+constructor TGSimpleUGraph.TCutPointHelper.Create(aGraph: TGSimpleUGraph; aVector: PIntVector);
+var
+  I: SizeInt;
+begin
+  Graph := aGraph;
+  Counter := 0;
+  Visited.Size := aGraph.VertexCount;
+  System.SetLength(Low, aGraph.VertexCount);
+  for I := 0 to System.High(Low) do
+    Low[I] := aGraph.VertexCount;
+  System.SetLength(Ord, aGraph.VertexCount);
+  for I := 0 to System.High(Ord) do
+    Ord[I] := aGraph.VertexCount;
+  Points := aVector;
+end;
+
 procedure TGSimpleUGraph.TCutPointHelper.Dfs(Curr: SizeInt; Prev: SizeInt);
 var
   Next, ChildCount: SizeInt;
@@ -519,31 +538,22 @@ begin
   Low[Curr] := Counter;
   Inc(Counter);
   ChildCount := 0;
-  for Next in FGraph.AdjVerticesI(Curr) do
-    begin
-      if Next = Prev then
-        continue;
+  for Next in Graph.AdjVerticesI(Curr) do
+    if Next <> Prev then
       if not Visited[Next] then
         begin
           Dfs(Next, Curr);
           if Low[Next] < Low[Curr] then
             Low[Curr] := Low[Next];
           if (Low[Next] >= Ord[Curr]) and (Prev <> -1) then
-            begin
-              CutPoints[Curr] := True;
-              Inc(CutCount);
-            end;
+            Points^.Add(Curr);
           Inc(ChildCount);
         end
       else
         if Ord[Next] < Low[Curr] then
           Low[Curr] := Ord[Next];
-    end;
   if (Prev = -1) and (ChildCount > 1) then
-    begin
-      CutPoints[Curr] := True;
-      Inc(CutCount);
-    end;
+    Points^.Add(Curr);
 end;
 
 { TGSimpleUGraph }
@@ -929,7 +939,7 @@ begin
   Result := EdgeCount - VertexCount + SeparateCount;
 end;
 
-function TGSimpleUGraph.CycleExists(out aCycle: TIntArray): Boolean;
+function TGSimpleUGraph.CycleExists(out aCycle: TIntVector): Boolean;
 var
   Stack: TIntStack;
   Visited: TBitVector;
@@ -939,7 +949,7 @@ begin
   if IsEmpty then
     exit(False);
   Visited.Size := VertexCount;
-  v := CreateIntVector;
+  v := CreateIntArray;
   Curr := 0;
   repeat
     if not Visited[Curr] then
@@ -962,12 +972,12 @@ begin
   Result := False;
 end;
 
-function TGSimpleUGraph.CycleExists(constref v: TVertex; out aCycle: TIntArray): Boolean;
+function TGSimpleUGraph.CycleExists(constref v: TVertex; out aCycle: TIntVector): Boolean;
 begin
   Result := CycleExistsI(IndexOf(v), aCycle);
 end;
 
-function TGSimpleUGraph.CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntArray): Boolean;
+function TGSimpleUGraph.CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
 var
   Stack: TIntStack;
   Visited: TBitVector;
@@ -976,7 +986,7 @@ var
 begin
   FVertexList.CheckIndexRange(aVtxIndex);
   Visited.Size := VertexCount;
-  v := CreateIntVector;
+  v := CreateIntArray;
   Curr := 0;
   repeat
     if not Visited[Curr] then
@@ -1054,38 +1064,15 @@ begin
   end;
 end;
 
-function TGSimpleUGraph.FindCutPoints: TIntArray;
+function TGSimpleUGraph.FindCutPoints: TIntVector;
 var
   d: TCutPointHelper;
-  I, J: SizeInt;
 begin
   if IsEmpty then
-    exit(nil);
-  d.Counter := 0;
-  d.CutCount := 0;
-  d.FGraph := Self;
-  d.Visited.Size := VertexCount;
-  d.CutPoints.Size := VertexCount;
-  System.SetLength(d.Low, VertexCount);
-  for I := 0 to System.High(d.Low) do
-    d.Low[I] := VertexCount;
-  System.SetLength(d.Ord, VertexCount);
-  for I := 0 to System.High(d.Ord) do
-    d.Ord[I] := VertexCount;
+    exit;
+  d := TCutPointHelper.Create(Self, @Result);
 
   d.Dfs(0);
-
-  System.SetLength(Result, d.CutCount);
-  if d.CutCount > 0 then
-    begin
-      J := 0;
-      for I := 0 to Pred(VertexCount) do
-        if d.CutPoints[I] then
-          begin
-            Result[J] := I;
-            Inc(J);
-          end;
-    end;
 end;
 
 function TGSimpleUGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
@@ -1101,7 +1088,7 @@ var
 begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  Result := CreateIntVector;
+  Result := CreateIntArray;
   repeat
     if not Visited[aRoot] then
       begin
@@ -1129,7 +1116,7 @@ var
 begin
   FVertexList.CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  Result := CreateIntVector;
+  Result := CreateIntArray;
   repeat
     for I in AdjVerticesI(aRoot) do
       if not Visited[I] then
@@ -1368,8 +1355,8 @@ end;
 
 function TGWeighedUGraph.TFilterKruskal.FindMst(aGraph: TWeighedGraph; out aWeight: TWeight): TIntArray;
 begin
-  FEdges := aGraph.CreateEdgeVector;
-  FTree := aGraph.FGraph.CreateIntVector;
+  FEdges := aGraph.CreateEdgeArray;
+  FTree := aGraph.FGraph.CreateIntArray;
   FCount := aGraph.VertexCount;
   FDsu.Size := FCount;
   FTreshold := Pred(FCount); // ??? FCount shr 1
@@ -1428,7 +1415,7 @@ var
 begin
   FGraph.CheckIndexRange(aSrc);
   Result := CreateWeightVector;
-  Handles := FGraph.CreateHandleVector;
+  Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
@@ -1459,8 +1446,8 @@ var
   p: PAdjItem;
 begin
   Result := CreateWeightVector;
-  aPathTree := FGraph.CreateIntVector;
-  Handles := FGraph.CreateHandleVector;
+  aPathTree := FGraph.CreateIntArray;
+  Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
@@ -1496,7 +1483,7 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  Handles := FGraph.CreateHandleVector;
+  Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
@@ -1519,7 +1506,7 @@ begin
   Result := InfiniteWeight;
 end;
 
-function TGWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.DijkstraPath(aSrc, aDst: SizeInt; out aPath: TIntVector): TWeight;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -1529,8 +1516,8 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  Handles := FGraph.CreateHandleVector;
-  Tree := FGraph.CreateIntVector;
+  Handles := FGraph.CreateHandleArray;
+  Tree := FGraph.CreateIntArray;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
@@ -1562,10 +1549,9 @@ begin
           end;
       end;
   Result := InfiniteWeight;
-  aPath := nil;
 end;
 
-function TGWeighedUGraph.AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntVector): TWeight;
 var
   Visited: TBitVector;
   Queue: TAStarHeap;
@@ -1575,8 +1561,8 @@ var
   Item: TRankItem;
   p: PAdjItem;
 begin
-  Handles := FGraph.CreateHandleVector;
-  Tree := FGraph.CreateIntVector;
+  Handles := FGraph.CreateHandleArray;
+  Tree := FGraph.CreateIntArray;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TRankItem.Construct(aHeur(FGraph[aSrc], FGraph[aDst]), ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
@@ -1611,7 +1597,6 @@ begin
           end;
       end;
   Result := InfiniteWeight;
-  aPath := nil;
 end;
 
 function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
@@ -1659,7 +1644,7 @@ var
   Relaxed: Boolean = False;
 begin
   aWeights := CreateWeightVector;
-  aPathTree := FGraph.CreateIntVector;
+  aPathTree := FGraph.CreateIntArray;
   Enum := Edges.GetEnumerator;
   aWeights[aSrc] := ZeroWeight;
   for I := 1 to VertexCount do
@@ -1706,8 +1691,8 @@ var
   I, s, d, VtxCount: SizeInt;
   Dsu: TDisjointSetUnion;
 begin
-  e := CreateEdgeVector;
-  Result := FGraph.CreateIntVector;
+  e := CreateEdgeArray;
+  Result := FGraph.CreateIntArray;
   VtxCount := VertexCount;
   TEdgeHelper.Sort(e);
   System.SetLength(Result, VtxCount);
@@ -1735,9 +1720,9 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  Result := FGraph.CreateIntVector;
+  Result := FGraph.CreateIntArray;
   System.SetLength(Result, VertexCount);
-  Handles := FGraph.CreateHandleVector;
+  Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
   Handles[0] := Queue.Insert(TWeightItem.Construct(ZeroWeight, 0));
   aTotalWeight := 0;
@@ -1773,7 +1758,7 @@ begin
     Result[I] := InfiniteWeight;
 end;
 
-function TGWeighedUGraph.CreateEdgeVector: TEdgeArray;
+function TGWeighedUGraph.CreateEdgeArray: TEdgeArray;
 var
   I: SizeInt = 0;
   e: TEdge;
@@ -2072,12 +2057,12 @@ begin
   Result := FGraph.FindMinPathLenMapI(aRoot);
 end;
 
-function TGWeighedUGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntArray;
+function TGWeighedUGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntVector;
 begin
   Result := FGraph.FindMinPath(aSrc, aDst);
 end;
 
-function TGWeighedUGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntArray;
+function TGWeighedUGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntVector;
 begin
   Result := FGraph.FindMinPathI(aSrc, aDst);
 end;
@@ -2152,22 +2137,22 @@ begin
   Result := FGraph.IsTree;
 end;
 
-function TGWeighedUGraph.CycleExists(out aCycle: TIntArray): Boolean;
+function TGWeighedUGraph.CycleExists(out aCycle: TIntVector): Boolean;
 begin
   Result := FGraph.CycleExists(aCycle);
 end;
 
-function TGWeighedUGraph.CycleExists(constref v: TVertex; out aCycle: TIntArray): Boolean;
+function TGWeighedUGraph.CycleExists(constref v: TVertex; out aCycle: TIntVector): Boolean;
 begin
   Result := FGraph.CycleExists(v, aCycle);
 end;
 
-function TGWeighedUGraph.CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntArray): Boolean;
+function TGWeighedUGraph.CycleExistsI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
 begin
   Result := FGraph.CycleExistsI(aVtxIndex, aCycle);
 end;
 
-function TGWeighedUGraph.FindCutPoints: TIntArray;
+function TGWeighedUGraph.FindCutPoints: TIntVector;
 begin
   Result := FGraph.FindCutPoints;
 end;
@@ -2202,9 +2187,9 @@ begin
   Result := FGraph.BfsSpanningTreeI(aRoot);
 end;
 
-function TGWeighedUGraph.CreateFromVector(constref aVector: TIntArray): TWeighedGraph;
+function TGWeighedUGraph.CreateFromArray(constref aArray: TIntArray): TWeighedGraph;
 begin
-  Result := TGWeighedUGraph.Create(FGraph.CreateFromVector(aVector));
+  Result := TGWeighedUGraph.Create(FGraph.CreateFromVector(aArray));
 end;
 
 function TGWeighedUGraph.NegWeighedEdgeExists: Boolean;
@@ -2251,25 +2236,25 @@ begin
   Result := DijkstraPath(aSrc, aDst);
 end;
 
-function TGWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathWeight(constref aSrc, aDst: TVertex; out aPath: TIntVector): TWeight;
 begin
   Result := FindMinPathWeightI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aDst), aPath);
 end;
 
-function TGWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathWeightI(aSrc, aDst: SizeInt; out aPath: TIntVector): TWeight;
 begin
   FGraph.CheckIndexRange(aSrc);
   FGraph.CheckIndexRange(aDst);
   Result := DijkstraPath(aSrc, aDst, aPath);
 end;
 
-function TGWeighedUGraph.FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic;
-  out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aPath: TIntVector
+  ): TWeight;
 begin
   Result := FindMinPathAStarI(FGraph.IndexOf(aSrc), FGraph.IndexOf(aSrc), aHeur, aPath);
 end;
 
-function TGWeighedUGraph.FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntArray): TWeight;
+function TGWeighedUGraph.FindMinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aPath: TIntVector): TWeight;
 begin
   FGraph.CheckIndexRange(aSrc);
   FGraph.CheckIndexRange(aDst);
