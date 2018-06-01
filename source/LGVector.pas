@@ -463,6 +463,10 @@ type
     TVector     = specialize TGVector<T>;
     TLiteVector = specialize TGLiteVector<T>;
     TOptional   = specialize TGOptional<T>;
+    class procedure Reverse(v: TVector); static; inline;
+    class procedure Reverse(var v: TLiteVector); static; inline;
+    class procedure RandomShuffle(v: TVector); static; inline;
+    class procedure RandomShuffle(var v: TLiteVector); static; inline;
   { returns position of aValue in vector V, -1 if not found }
     class function  SequentSearch(v: TVector; constref aValue: T): SizeInt; static; inline;
     class function  SequentSearch(constref v: TLiteVector; constref aValue: T): SizeInt; static; inline;
@@ -2135,6 +2139,32 @@ begin
 end;
 
 { TGComparableVectorHelper }
+
+class procedure TGComparableVectorHelper.Reverse(v: TVector);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.Reverse(v.FItems[0..Pred(v.ElemCount)]);
+end;
+
+class procedure TGComparableVectorHelper.Reverse(var v: TLiteVector);
+begin
+  if v.Count > 1 then
+    THelper.Reverse(v.FBuffer.FItems[0..Pred(v.Count)]);
+end;
+
+class procedure TGComparableVectorHelper.RandomShuffle(v: TVector);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.RandomShuffle(v.FItems[0..Pred(v.ElemCount)]);
+end;
+
+class procedure TGComparableVectorHelper.RandomShuffle(var v: TLiteVector);
+begin
+  if v.Count > 1 then
+    THelper.RandomShuffle(v.FBuffer.FItems[0..Pred(v.Count)]);
+end;
 
 class function TGComparableVectorHelper.SequentSearch(v: TVector; constref aValue: T): SizeInt;
 begin
