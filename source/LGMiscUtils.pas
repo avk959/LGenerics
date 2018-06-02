@@ -330,9 +330,9 @@ type
     FIsOpen: Boolean;
     procedure Close;
   protected
-    function  GetCurrent: string; inline;
-    function  MoveNext: Boolean; inline;
-    procedure Reset; inline;
+    function  GetCurrent: string; //inline;
+    function  MoveNext: Boolean; //inline;
+    procedure Reset; //inline;
     property  IsOpen: Boolean read FIsOpen;
   public
     class function FileExists(const aFileName: string): Boolean; static;
