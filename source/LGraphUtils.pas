@@ -269,9 +269,9 @@ type
 
   var
     FVertexList: TVertexList;
-    FEdgeCount: SizeInt;
-    FTitle: string;
+    FEdgeCount,
     FCompCount: SizeInt;
+    FTitle: string;
     FConnected,
     FConnectedValid: Boolean;
     function  GetVertexCount: SizeInt; inline;
@@ -400,11 +400,11 @@ type
     procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    function  ContainsVertex(constref v: TVertex): Boolean; inline;
+    function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
-    function  IndexOf(constref v: TVertex): SizeInt; inline;
+    function  IndexOf(constref aVertex: TVertex): SizeInt; inline;
     function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AdjacentI(aSrc, aDst: SizeInt): Boolean;
   { enumerates indices of adjacent vertices }
@@ -1431,9 +1431,9 @@ begin
   FVertexList.TrimToFit;
 end;
 
-function TGCustomGraph.ContainsVertex(constref v: TVertex): Boolean;
+function TGCustomGraph.ContainsVertex(constref aVertex: TVertex): Boolean;
 begin
-  Result := FVertexList.IndexOf(v) >= 0;
+  Result := FVertexList.IndexOf(aVertex) >= 0;
 end;
 
 function TGCustomGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
@@ -1460,9 +1460,9 @@ begin
     aData := p^.Data;
 end;
 
-function TGCustomGraph.IndexOf(constref v: TVertex): SizeInt;
+function TGCustomGraph.IndexOf(constref aVertex: TVertex): SizeInt;
 begin
-  Result := FVertexList.IndexOf(v);
+  Result := FVertexList.IndexOf(aVertex);
 end;
 
 function TGCustomGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
@@ -1550,9 +1550,9 @@ begin
   repeat
     if not Visited[aRoot] then
       begin
-        Inc(Result);
         if Assigned(aOnGray) and aOnGray(aRoot) then
           exit;
+        Inc(Result);
         Visited[aRoot] := True;
         for aRoot in AdjVerticesI(aRoot) do
           if not Visited[aRoot] then
@@ -1589,9 +1589,9 @@ begin
         begin
           if aOnWhite <> nil then
             aOnWhite(aRoot);
+          Inc(Result);
           Visited[aRoot] := True;
           Queue.Enqueue(aRoot);
-          Inc(Result);
         end;
   until not Queue.TryDequeue(aRoot);
 end;
