@@ -107,9 +107,10 @@ type
   public
     procedure Clear; override;
   { returns True and vertex index, if it was added, False otherwise }
-    function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
-    function  RemoveVertex(constref v: TVertex): Boolean; inline;
-    function  RemoveVertexI(aIndex: SizeInt): Boolean;
+    function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+    function  AddVertex(constref aVertex: TVertex): Boolean; inline;
+    procedure RemoveVertex(constref aVertex: TVertex); inline;
+    procedure RemoveVertexI(aVtxIndex: SizeInt);
     function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
     function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -132,7 +133,6 @@ type
   { returns graph of connected component that contains aVertex }
     function  SeparateGraph(constref aVertex: TVertex): TGSimpleUGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
-
   { returns index of the connected component that contains aVertex }
     function  SeparateIndexOf(constref aVertex: TVertex): SizeInt; inline;
     function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt; inline;
@@ -159,7 +159,7 @@ type
     function  ContainsCutPointI(aVtxIndex: SizeInt = 0): Boolean;
   { returns the articulation points that belong to the same connection component as aVertex, if any,
     otherwise the empty vector;
-    note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
+    note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS }
     function  FindCutPoints(constref aVertex: TVertex): TIntVector; inline;
     function  FindCutPointsI(aVtxIndex: SizeInt = 0): TIntVector;
   { checks whether exists any bridge in graph;
@@ -337,11 +337,11 @@ type
     procedure Clear; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    function  ContainsVertex(constref v: TVertex): Boolean; inline;
+    function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TWeEdgeData): Boolean;
-    function  IndexOf(constref v: TVertex): SizeInt; inline;
+    function  IndexOf(constref aVertex: TVertex): SizeInt; inline;
     function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AdjacentI(aSrc, aDst: SizeInt): Boolean; inline;
   { enumerates indices of adjacent vertices }
@@ -354,9 +354,10 @@ type
     function  Edges: TEdges; inline;
   { enumerates all edges(only once) }
     function  DistinctEdges: TDistinctEdges; inline;
-    function  AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean; inline;
-    function  RemoveVertex(constref v: TVertex): Boolean; inline;
-    function  RemoveVertexI(aIndex: SizeInt): Boolean; inline;
+    function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; inline;
+    function  AddVertex(constref aVertex: TVertex): Boolean; inline;
+    procedure RemoveVertex(constref aVertex: TVertex); inline;
+    procedure RemoveVertexI(aVtxIndex: SizeInt); inline;
     function  AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight; aData: TEdgeData): Boolean; inline;
     function  AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight): Boolean; inline;
     function  AddEdge(constref aSrc, aDst: TVertex; aData: TWeEdgeData): Boolean; inline;
@@ -826,9 +827,9 @@ begin
   FConnectedValid := False;
 end;
 
-function TGSimpleUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGSimpleUGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
-  Result := not FVertexList.FindOrAdd(v, aIndex);
+  Result := not FVertexList.FindOrAdd(aVertex, aIndex);
   if Result then
     begin
       FVertexList.ItemRefs[aIndex]^.CompIdx := -1;
@@ -836,16 +837,22 @@ begin
     end;
 end;
 
-function TGSimpleUGraph.RemoveVertex(constref v: TVertex): Boolean;
+function TGSimpleUGraph.AddVertex(constref aVertex: TVertex): Boolean;
+var
+  Dummy: SizeInt;
 begin
-  Result := RemoveVertexI(FVertexList.IndexOf(v));
+  Result := AddVertex(aVertex, Dummy);
 end;
 
-function TGSimpleUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
+procedure TGSimpleUGraph.RemoveVertex(constref aVertex: TVertex);
 begin
-  Result := (aIndex >= 0) and (aIndex < FVertexList.Count);
-  if Result then
-    DoRemoveVertex(aIndex);
+  RemoveVertexI(FVertexList.IndexOf(aVertex));
+end;
+
+procedure TGSimpleUGraph.RemoveVertexI(aVtxIndex: SizeInt);
+begin
+  FVertexList.CheckIndexRange(aVtxIndex);
+  DoRemoveVertex(aVtxIndex);
 end;
 
 function TGSimpleUGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
@@ -864,10 +871,8 @@ end;
 
 function TGSimpleUGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 begin
-  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
-    exit(False);
-  if (aDst < 0) or (aDst >= FVertexList.Count) then
-    exit(False);
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
   Result := DoAddEdge(aSrc, aDst, aData);
 end;
 
@@ -883,10 +888,8 @@ end;
 
 function TGSimpleUGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
-    exit(False);
-  if (aDst < 0) or (aDst >= FVertexList.Count) then
-    exit(False);
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
   Result := DoRemoveEdge(aSrc, aDst);
 end;
 
@@ -2045,9 +2048,9 @@ begin
   FGraph.TrimToFit;
 end;
 
-function TGWeighedUGraph.ContainsVertex(constref v: TVertex): Boolean;
+function TGWeighedUGraph.ContainsVertex(constref aVertex: TVertex): Boolean;
 begin
-  Result := FGraph.ContainsVertex(v);
+  Result := FGraph.ContainsVertex(aVertex);
 end;
 
 function TGWeighedUGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
@@ -2065,9 +2068,9 @@ begin
   Result := FGraph.ContainsEdgeI(aSrc, aDst, aData);
 end;
 
-function TGWeighedUGraph.IndexOf(constref v: TVertex): SizeInt;
+function TGWeighedUGraph.IndexOf(constref aVertex: TVertex): SizeInt;
 begin
-  Result := FGraph.IndexOf(v);
+  Result := FGraph.IndexOf(aVertex);
 end;
 
 function TGWeighedUGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
@@ -2110,19 +2113,24 @@ begin
   Result := FGraph.DistinctEdges;
 end;
 
-function TGWeighedUGraph.AddVertex(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGWeighedUGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
-  Result := FGraph.AddVertex(v, aIndex);
+  Result := FGraph.AddVertex(aVertex, aIndex);
 end;
 
-function TGWeighedUGraph.RemoveVertex(constref v: TVertex): Boolean;
+function TGWeighedUGraph.AddVertex(constref aVertex: TVertex): Boolean;
 begin
-  Result := FGraph.RemoveVertex(v);
+  Result := FGraph.AddVertex(aVertex);
 end;
 
-function TGWeighedUGraph.RemoveVertexI(aIndex: SizeInt): Boolean;
+procedure TGWeighedUGraph.RemoveVertex(constref aVertex: TVertex);
 begin
-  Result := FGraph.RemoveVertexI(aIndex);
+  FGraph.RemoveVertex(aVertex);
+end;
+
+procedure TGWeighedUGraph.RemoveVertexI(aVtxIndex: SizeInt);
+begin
+  FGraph.RemoveVertexI(aVtxIndex);
 end;
 
 function TGWeighedUGraph.AddEdge(constref aSrc, aDst: TVertex; aWeight: TWeight;
