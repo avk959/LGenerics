@@ -82,7 +82,8 @@
   { TGLiteDynBuffer: for internal use ONLY }
   generic TGLiteDynBuffer<T> = record
   const
-    MAX_CAPACITY: SizeInt = SizeInt(MAX_CONTAINER_SIZE div SizeOf(T));
+    ITEM_SIZE = SizeOf(T);
+    MAX_CAPACITY = SizeInt(MAX_CONTAINER_SIZE div ITEM_SIZE);
 
   type
     PGLiteDynBuffer = ^TGLiteDynBuffer;
@@ -237,7 +238,8 @@
   { TGLiteRingDynBuffer: for internal use ONLY }
   generic TGLiteRingDynBuffer<T> = record
   const
-    MAX_CAPACITY: SizeInt = SizeInt(MAX_CONTAINER_SIZE div SizeOf(T));
+    ITEM_SIZE = SizeOf(T);
+    MAX_CAPACITY = SizeInt(MAX_CONTAINER_SIZE div ITEM_SIZE);
 
   type
     PGLiteRingDynBuffer = ^TGLiteRingDynBuffer;
