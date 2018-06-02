@@ -35,7 +35,7 @@ uses
   LGQueue,
   LGVector,
   LGHash,
-  LGHashTable,
+  //LGHashTable,
   LGStrConst;
 
 type
@@ -147,9 +147,8 @@ type
     class constructor Init;
     class operator Initialize(var Item: TGVertexItem);
   public
-    InDeg,
-    CompIdx,
-    Tag: SizeInt;
+    FInDegree,
+    FCompIndex: SizeInt;
     procedure Assign(constref aSrc: TGVertexItem);
     function  GetEnumerator: TEnumerator;
     function  ToArray: TAdjItemArray;
@@ -236,7 +235,9 @@ type
   protected
   type
     TVertexList = specialize TGVertexHashList<TVertex, TEdgeData, TVertexEqRel>;
+    PVertexList = ^TVertexList;
     TVertexItem = TVertexList.TVertexItem;
+    PVertexItem = TVertexList.PVertexItem;
     PEdgeData   = ^TEdgeData;
 
     TAdjVerticesPtr = record
@@ -269,23 +270,13 @@ type
 
   var
     FVertexList: TVertexList;
-    FEdgeCount,
-    FCompCount: SizeInt;
+    FEdgeCount: SizeInt;
     FTitle: string;
-    FConnected,
-    FConnectedValid: Boolean;
     function  GetVertexCount: SizeInt; inline;
     function  GetVertex(aIndex: SizeInt): TVertex; inline;
     procedure SetVertex(aIndex: SizeInt; const aValue: TVertex); inline;
     function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
     function  AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
-
-    function  CheckConnected: Boolean; inline;
-    function  FindSeparateCount: SizeInt;
-    function  GetSeparateCount: SizeInt;
-    function  CountPop(aCompIndex: SizeInt): SizeInt;
-    property  Connected: Boolean read FConnected;
-    property  ConnectedValid: Boolean read FConnectedValid;
   public
   type
     TAdjItem         = TVertexItem.TAdjItem;
@@ -315,6 +306,7 @@ type
 
     TIntEdgeVector = specialize TGLiteVector<TIntEdge>;
     PIntEdgeVector = ^TIntEdgeVector;
+    TIntEdgeStack  = specialize TGLiteStack<TIntEdge>;
 
     TEdge = record
       Source,
@@ -366,6 +358,27 @@ type
       function GetEnumerator: TIncidentEnumerator; inline;
     end;
 
+    TVertexEnumerator = record
+    private
+      FList: PVertexList;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      function  GetCurrent: TVertex;
+    public
+      constructor Create(aGraph: TGCustomGraph);
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: TVertex read GetCurrent;
+    end;
+
+    TVertices = record
+    private
+      FGraph: TGCustomGraph;
+    public
+      constructor Create(aGraph: TGCustomGraph);
+      function GetEnumerator: TVertexEnumerator; inline;
+    end;
+
     TEdgeEnumerator = record
     private
       FList: TVertexList.TNodeList;
@@ -413,6 +426,8 @@ type
   { enumerates incident edges }
     function  IncidentEdges(constref aSrc: TVertex): TIncidentEdges; inline;
     function  IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+  { enumerates all vertices }
+    function  Vertices: TVertices; inline;
   { enumerates all edges }
     function  Edges: TEdges; inline;
     function  GetEdgeData(constref aSrc, aDst: TVertex): TEdgeData; inline;
@@ -427,9 +442,6 @@ type
     if aOnGray returns True then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
     function  BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
-
-    function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
   { test whether the graph is bipartite;
     the graph can be disconnected (in this case it consists of a number of connected
     bipartite components and / or several isolated vertices)}
@@ -440,22 +452,20 @@ type
 
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
-    function  FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
-    function  FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
+    function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
+    function  ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns a vector containing in the corresponding components the length of shortest path from aRoot
     (in sense 'edges count')}
-    function  FindMinPathLenMap(constref aRoot: TVertex): TIntArray; inline;
-    function  FindMinPathLenMapI(aRoot: SizeInt = 0): TIntArray;
+    function  ShortestPathsMap(constref aRoot: TVertex): TIntArray; inline;
+    function  ShortestPathsMapI(aRoot: SizeInt = 0): TIntArray;
   { returns a vector containing chain of indices of found shortest path(in sense 'edges count'),
    (empty if path does not exists) }
-    function FindMinPath(constref aSrc, aDst: TVertex): TIntVector; inline;
-    function FindMinPathI(aSrc, aDst: SizeInt): TIntVector;
+    function  ShortestPath(constref aSrc, aDst: TVertex): TIntVector; inline;
+    function  ShortestPathI(aSrc, aDst: SizeInt): TIntVector;
 
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read GetVertexCount;
     property  EdgeCount: SizeInt read FEdgeCount;
-  { count of connected components }
-    property  SeparateCount: SizeInt read GetSeparateCount;
     property  Items[aIndex: SizeInt]: TVertex read GetVertex write SetVertex; default;
   end;
 
@@ -1214,6 +1224,45 @@ begin
   Result.FEnum := FGraph.FVertexList.ItemRefs[FSource]^.GetEnumerator;
 end;
 
+{ TGCustomGraph.TVertexEnumerator }
+
+function TGCustomGraph.TVertexEnumerator.GetCurrent: TVertex;
+begin
+  Result := FList^.ItemRefs[FCurrIndex]^.Vertex;
+end;
+
+constructor TGCustomGraph.TVertexEnumerator.Create(aGraph: TGCustomGraph);
+begin
+  FList := @aGraph.FVertexList;
+  FCurrIndex := -1;
+  FLastIndex := Pred(FList^.Count);
+end;
+
+function TGCustomGraph.TVertexEnumerator.MoveNext: Boolean;
+begin
+  if FCurrIndex >= FLastIndex then
+    exit(False);
+  Inc(FCurrIndex);
+  Result := True;
+end;
+
+procedure TGCustomGraph.TVertexEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGCustomGraph.TVertices }
+
+constructor TGCustomGraph.TVertices.Create(aGraph: TGCustomGraph);
+begin
+  FGraph := aGraph;
+end;
+
+function TGCustomGraph.TVertices.GetEnumerator: TVertexEnumerator;
+begin
+  Result := TVertexEnumerator.Create(FGraph);
+end;
+
 { TGCustomGraph.TEdgeEnumerator }
 
 function TGCustomGraph.TEdgeEnumerator.GetCurrent: TEdge;
@@ -1279,57 +1328,6 @@ begin
   FVertexList.CheckIndexRange(aSrc);
   Result.FGraph := Self;
   Result.FSource := aSrc;
-end;
-
-function TGCustomGraph.CheckConnected: Boolean;
-begin
-  Result := SeparateCount = 1;
-end;
-
-function TGCustomGraph.FindSeparateCount: SizeInt;
-var
-  Visited: TBitVector;
-  Stack: TIntStack;
-  I, Curr: SizeInt;
-begin
-  Result := 0;
-  Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
-      begin
-        Curr := I;
-        repeat
-          if not Visited[Curr] then
-            begin
-              Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.CompIdx := Result;
-              for Curr in AdjVerticesI(Curr) do
-                if not Visited[Curr] then
-                  Stack.Push(Curr);
-            end;
-        until not Stack.TryPop(Curr);
-        Inc(Result);
-      end;
-end;
-
-function TGCustomGraph.GetSeparateCount: SizeInt;
-begin
-  if not ConnectedValid then
-    begin
-      FCompCount := FindSeparateCount;
-      FConnectedValid := True;
-      FConnected := FCompCount = 1;
-    end;
-  Result := FCompCount;
-end;
-
-function TGCustomGraph.CountPop(aCompIndex: SizeInt): SizeInt;
-var
-  I: SizeInt;
-begin
-  Result := 0;
-  for I := 0 to Pred(VertexCount) do
-    Result += Ord(FVertexList.ItemRefs[I]^.CompIdx = aCompIndex);
 end;
 
 class function TGCustomGraph.ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntVector;
@@ -1443,8 +1441,8 @@ end;
 
 function TGCustomGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
-    exit(False);
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
   Result := FVertexList.ItemRefs[aSrc]^.Contains(aDst);
 end;
 
@@ -1452,8 +1450,8 @@ function TGCustomGraph.ContainsEdgeI(aSrc, aDst: SizeInt; out aData: TEdgeData):
 var
   p: PAdjItem;
 begin
-  if (aSrc < 0) or (aSrc >= FVertexList.Count) then
-    exit(False);
+  FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
   p := FVertexList.ItemRefs[aSrc]^.Find(aDst);
   Result := p <> nil;
   if Result then
@@ -1473,6 +1471,7 @@ end;
 function TGCustomGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
   FVertexList.CheckIndexRange(aSrc);
+  FVertexList.CheckIndexRange(aDst);
   Result := FVertexList.ItemRefs[aSrc]^.Contains(aDst);
 end;
 
@@ -1496,6 +1495,11 @@ function TGCustomGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
 begin
   FVertexList.CheckIndexRange(aSrc);
   Result := TIncidentEdges.Create(Self, aSrc);
+end;
+
+function TGCustomGraph.Vertices: TVertices;
+begin
+  Result := TVertices.Create(Self);
 end;
 
 function TGCustomGraph.Edges: TEdges;
@@ -1596,35 +1600,6 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
-function TGCustomGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := SimplePathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
-end;
-
-function TGCustomGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
-var
-  Visited: TBitVector;
-  Stack: TIntStack;
-begin
-  FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
-  if aSrc = aDst then
-    exit(False);
-  Visited.Size := VertexCount;
-  repeat
-    if not Visited[aSrc] then
-      begin
-        if AdjacentI(aSrc, aDst) then
-           exit(True);
-        Visited[aSrc] := True;
-        for aSrc in AdjVerticesI(aSrc) do
-          if not Visited[aSrc] then
-            Stack.Push(aSrc);
-      end;
-  until not Stack.TryPop(aSrc);
-  Result := False;
-end;
-
 function TGCustomGraph.IsBipartite: Boolean;
 var
   v: TShortArray;
@@ -1673,12 +1648,12 @@ begin
   Result := True;
 end;
 
-function TGCustomGraph.FindMinPathLen(constref aSrc, aDst: TVertex): SizeInt;
+function TGCustomGraph.ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
-  Result := FindMinPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+  Result := ShortestPathLenI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomGraph.FindMinPathLenI(aSrc, aDst: SizeInt): SizeInt;
+function TGCustomGraph.ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
 var
   Queue: TIntQueue;
   v: TIntArray;
@@ -1701,12 +1676,12 @@ begin
   Result := -1;
 end;
 
-function TGCustomGraph.FindMinPathLenMap(constref aRoot: TVertex): TIntArray;
+function TGCustomGraph.ShortestPathsMap(constref aRoot: TVertex): TIntArray;
 begin
-  Result := FindMinPathLenMapI(FVertexList.IndexOf(aRoot));
+  Result := ShortestPathsMapI(FVertexList.IndexOf(aRoot));
 end;
 
-function TGCustomGraph.FindMinPathLenMapI(aRoot: SizeInt): TIntArray;
+function TGCustomGraph.ShortestPathsMapI(aRoot: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
   d: SizeInt;
@@ -1724,12 +1699,12 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
-function TGCustomGraph.FindMinPath(constref aSrc, aDst: TVertex): TIntVector;
+function TGCustomGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntVector;
 begin
-  Result := FindMinPathI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+  Result := ShortestPathI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
 end;
 
-function TGCustomGraph.FindMinPathI(aSrc, aDst: SizeInt): TIntVector;
+function TGCustomGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntVector;
 var
   Queue: TIntQueue;
   Visited: TBitVector;
