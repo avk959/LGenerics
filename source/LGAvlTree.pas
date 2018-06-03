@@ -383,7 +383,7 @@ type
 
   const
     NODE_SIZE              = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = (SizeInt.MaxValue shr 2) div NODE_SIZE;
+    MAX_CAPACITY: SizeInt  = (High(SizeInt) shr 2) div NODE_SIZE;
 
   public
   type
@@ -2632,10 +2632,10 @@ end;
 
 procedure TGLiteAvlTree.Expand(aValue: SizeInt);
 var
-  OldCapacity: SizeInt;
+  OldLen: SizeInt;
 begin
   //there aValue > Capacity
-  OldCapacity := Capacity;
+  OldLen := System.Length(FNodes);
   if aValue < DEFAULT_CONTAINER_CAPACITY then
     System.SetLength(FNodes, DEFAULT_CONTAINER_CAPACITY)
   else
@@ -2646,7 +2646,7 @@ begin
       end
     else
       raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
-  if OldCapacity = 0 then
+  if OldLen = 0 then
     begin
       FNodes[0].Left := 0;
       FNodes[0].Right := 0;
