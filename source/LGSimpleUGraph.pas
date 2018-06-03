@@ -253,12 +253,14 @@ type
       class operator < (constref L, R: TWeightEdge): Boolean; inline;
       class operator >=(constref L, R: TWeightEdge): Boolean; inline;
       class operator <=(constref L, R: TWeightEdge): Boolean; inline;
-      class function Construct(s, d: SizeInt; w: TWeight): TWeightEdge; static; inline;
+      constructor Create(s, d: SizeInt; w: TWeight);
     end;
 
     TEdgeArray   = array of TWeightEdge;
     TAdjItem     = TGraph.TAdjItem;
     PAdjItem     = TGraph.PAdjItem;
+
+    { TWeightItem }
 
     TWeightItem = record
       Weight: TWeight;
@@ -269,8 +271,10 @@ type
       class operator < (constref L, R: TWeightItem): Boolean; inline;
       class operator >=(constref L, R: TWeightItem): Boolean; inline;
       class operator <=(constref L, R: TWeightItem): Boolean; inline;
-      class function Construct(constref w: TWeight; aIndex: SizeInt): TWeightItem; static; inline;
+      constructor Create(constref w: TWeight; aIndex: SizeInt);
     end;
+
+    { TRankItem }
 
     TRankItem = record
       Rank,
@@ -282,7 +286,7 @@ type
       class operator < (constref L, R: TRankItem): Boolean; inline;
       class operator >=(constref L, R: TRankItem): Boolean; inline;
       class operator <=(constref L, R: TRankItem): Boolean; inline;
-      class function Construct(constref aRank, aWeight: TWeight; aIndex: SizeInt): TRankItem; static; inline;
+      constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
     end;
 
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
@@ -1142,6 +1146,7 @@ begin
     if h.Version > CURRENT_VERSION then
       raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
     Clear;
+    EnsureCapacity(h.VertexCount);
     //read title
     System.SetLength(FTitle, h.TitleSize);
     bs.ReadBuffer(FTitle[1], h.TitleSize);
@@ -1559,11 +1564,11 @@ begin
   Result := L.Weight <= R.Weight;
 end;
 
-class function TGWeighedUGraph.TWeightEdge.Construct(s, d: SizeInt; w: TWeight): TWeightEdge;
+constructor TGWeighedUGraph.TWeightEdge.Create(s, d: SizeInt; w: TWeight);
 begin
-  Result.Source := s;
-  Result.Destination := d;
-  Result.Weight := w;
+  Source := s;
+  Destination := d;
+  Weight := w;
 end;
 
 { TGWeighedUGraph.TWeightItem }
@@ -1598,10 +1603,10 @@ begin
   Result := L.Weight <= R.Weight;
 end;
 
-class function TGWeighedUGraph.TWeightItem.Construct(constref w: TWeight; aIndex: SizeInt): TWeightItem;
+constructor TGWeighedUGraph.TWeightItem.Create(constref w: TWeight; aIndex: SizeInt);
 begin
-  Result.Weight := w;
-  Result.Index := aIndex;
+  Weight := w;
+  Index := aIndex;
 end;
 
 { TGWeighedUGraph.TWeightItem }
@@ -1636,11 +1641,11 @@ begin
   Result := L.Rank <= R.Rank;
 end;
 
-class function TGWeighedUGraph.TRankItem.Construct(constref aRank, aWeight: TWeight; aIndex: SizeInt): TRankItem;
+constructor TGWeighedUGraph.TRankItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
 begin
-  Result.Rank := aRank;
-  Result.Weight := aWeight;
-  Result.Index := aIndex;
+  Rank := aRank;
+  Weight := aWeight;
+  Index := aIndex;
 end;
 
 { TGWeighedUGraph.TFilterKruskal }
@@ -1766,7 +1771,7 @@ begin
   Result := CreateWeightVector;
   Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1774,13 +1779,13 @@ begin
         Result[Item.Index] := Item.Weight;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
           if Handles[p^.Key] = INVALID_HANDLE then
-            Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key))
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
           else
             if not Visited[p^.Key] then
               begin
                 Relaxed := p^.Data.Weight + Item.Weight;
                 if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
               end;
       end;
 end;
@@ -1798,7 +1803,7 @@ begin
   aPathTree := FGraph.CreateIntArray;
   Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1807,7 +1812,7 @@ begin
         for p in FGraph.AdjVerticesPtr(Item.Index) do
           if Handles[p^.Key] = INVALID_HANDLE then
             begin
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key));
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
               aPathTree[p^.Key] := Item.Index;
             end
           else
@@ -1816,7 +1821,7 @@ begin
                 Relaxed := p^.Data.Weight + Item.Weight;
                 if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
                   begin
-                    Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+                    Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
                     aPathTree[p^.Key] := Item.Index;
                   end;
               end;
@@ -1834,7 +1839,7 @@ var
 begin
   Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1843,13 +1848,13 @@ begin
         Visited[Item.Index] := True;
         for p in FGraph.AdjVerticesPtr(Item.Index) do
           if Handles[p^.Key] = INVALID_HANDLE then
-            Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key))
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
           else
             if not Visited[p^.Key] then
               begin
                 Relaxed := p^.Data.Weight + Item.Weight;
                 if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
               end
       end;
   Result := InfiniteWeight;
@@ -1868,7 +1873,7 @@ begin
   Handles := FGraph.CreateHandleArray;
   Tree := FGraph.CreateIntArray;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Construct(ZeroWeight, aSrc));
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1882,7 +1887,7 @@ begin
           begin
             if Handles[p^.Key] = INVALID_HANDLE then
               begin
-                Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight + Item.Weight, p^.Key));
+                Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
                 Tree[p^.Key] := Item.Index;
               end
             else
@@ -1891,7 +1896,7 @@ begin
                   Relaxed := p^.Data.Weight + Item.Weight;
                   if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
                     begin
-                      Queue.Update(Handles[p^.Key], TWeightItem.Construct(Relaxed, p^.Key));
+                      Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
                 end;
@@ -1913,7 +1918,7 @@ begin
   Handles := FGraph.CreateHandleArray;
   Tree := FGraph.CreateIntArray;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TRankItem.Construct(aHeur(FGraph[aSrc], FGraph[aDst]), ZeroWeight, aSrc));
+  Handles[aSrc] := Queue.Insert(TRankItem.Create(aHeur(FGraph[aSrc], FGraph[aDst]), ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
       begin
@@ -1928,7 +1933,7 @@ begin
             if Handles[p^.Key] = INVALID_HANDLE then
               begin
                 Relaxed := p^.Data.Weight + Item.Weight;
-                Handles[p^.Key] := Queue.Insert(TRankItem.Construct(
+                Handles[p^.Key] := Queue.Insert(TRankItem.Create(
                   Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
                 Tree[p^.Key] := Item.Index;
               end
@@ -1938,7 +1943,7 @@ begin
                   Relaxed := Item.Weight + p^.Data.Weight;
                   if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
                     begin
-                      Queue.Update(Handles[p^.Key], TRankItem.Construct(
+                      Queue.Update(Handles[p^.Key], TRankItem.Create(
                         Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
                       Tree[p^.Key] := Item.Index;
                     end;
@@ -2074,7 +2079,7 @@ begin
   System.SetLength(Result, VertexCount);
   Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
-  Handles[0] := Queue.Insert(TWeightItem.Construct(ZeroWeight, 0));
+  Handles[0] := Queue.Insert(TWeightItem.Create(ZeroWeight, 0));
   aTotalWeight := 0;
   while Queue.TryDequeue(Item) do
     if not Visited[Item.Index] then
@@ -2086,13 +2091,13 @@ begin
           begin
             if Handles[p^.Key] = INVALID_HANDLE then
               begin
-                Handles[p^.Key] := Queue.Insert(TWeightItem.Construct(p^.Data.Weight, p^.Key));
+                Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight, p^.Key));
                 Result[p^.Key] := Curr;
               end
             else
               if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
                 begin
-                  Queue.Update(Handles[p^.Key], TWeightItem.Construct(p^.Data.Weight, p^.Key));
+                  Queue.Update(Handles[p^.Key], TWeightItem.Create(p^.Data.Weight, p^.Key));
                   Result[p^.Key] := Curr;
                 end;
           end;
@@ -2116,9 +2121,7 @@ begin
   System.SetLength(Result, EdgeCount);
   for e in DistinctEdges do
     begin
-      Result[I].Source := e.Source;
-      Result[I].Destination := e.Destination;
-      Result[I].Weight := e.Data.Weight;
+      Result[I] := TWeightEdge.Create(e.Source, e.Destination, e.Data.Weight);
       Inc(I);
     end;
 end;
@@ -2648,7 +2651,10 @@ function TGWeighedUGraph.MinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; o
 begin
   FGraph.CheckIndexRange(aSrc);
   FGraph.CheckIndexRange(aDst);
-  Result := AStar(aSrc, aDst, aHeur, aWeight);
+  if aHeur <> nil then
+    Result := AStar(aSrc, aDst, aHeur, aWeight)
+  else
+    Result := DijkstraPath(aSrc, aDst, aWeight);
 end;
 
 function TGWeighedUGraph.MinPathsMapFB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
