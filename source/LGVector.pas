@@ -176,13 +176,9 @@ type
     function  GetItem(aIndex: SizeInt): T; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
-    function  DeleteItem(aIndex: SizeInt): T; inline;
-
-    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
-    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
-    function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
-    procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
+    function  DeleteItem(aIndex: SizeInt): T; //inline;
+    procedure CheckIndexRange(aIndex: SizeInt); //inline;
+    procedure CheckInsertIndexRange(aIndex: SizeInt); //inline;
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Mutable: TMutable; inline;
@@ -1289,31 +1285,16 @@ begin
   System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
 end;
 
-procedure TGLiteVector.IndexOutOfBoundError(aIndex: SizeInt);
-begin
-  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-end;
-
-function TGLiteVector.IndexInRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex < Count);
-end;
-
-function TGLiteVector.IndexInInsertRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex <= Count);
-end;
-
 procedure TGLiteVector.CheckIndexRange(aIndex: SizeInt);
 begin
-  if not IndexInRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
+  if (aIndex < 0) or (aIndex >= Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteVector.CheckInsertIndexRange(aIndex: SizeInt);
 begin
-  if not IndexInInsertRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
+  if (aIndex < 0) or (aIndex > Count) then
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteVector.GetEnumerator: TEnumerator;
@@ -1374,7 +1355,7 @@ end;
 
 function TGLiteVector.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
 begin
-  Result := IndexInInsertRange(aIndex);
+  Result := (aIndex >= 0) and (aIndex <= Count);
   if Result then
     InsertItem(aIndex, aValue);
 end;
@@ -1387,7 +1368,7 @@ end;
 
 function TGLiteVector.TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
 begin
-  Result := IndexInRange(aIndex);
+  Result := (aIndex >= 0) and (aIndex < Count);
   if Result then
     aValue := DeleteItem(aIndex);
 end;
@@ -2231,25 +2212,25 @@ begin
 end;
 
 class function TGComparableVectorHelper.GetMin(v: TVector): TOptional;
-begin
+{%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.GetMin(v.FItems[0..Pred(v.ElemCount)]);
 end;
 
 class function TGComparableVectorHelper.GetMin(constref v: TLiteVector): TOptional;
-begin
+{%H-}begin
   if v.Count > 0 then
     Result := THelper.GetMin(v.FBuffer.FItems[0..Pred(v.Count)]);
 end;
 
 class function TGComparableVectorHelper.GetMax(v: TVector): TOptional;
-begin
+{%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.GetMax(v.FItems[0..Pred(v.ElemCount)]);
 end;
 
 class function TGComparableVectorHelper.GetMax(constref v: TLiteVector): TOptional;
-begin
+{%H-}begin
   if v.Count > 0 then
     Result := THelper.GetMax(v.FBuffer.FItems[0..Pred(v.Count)]);
 end;
