@@ -55,6 +55,7 @@ resourcestring
   SEUnsuppGraphFmtVersion  = 'Unsupported graph stream format version';
   SEGraphStreamCorrupt     = 'Graph stream data corrupted';
   SEGraphStreamReadIntern  = 'Graph stream read intenal error';
+  SEGrapInconsist          = 'Graph data inconsistency';
 
 implementation
 
