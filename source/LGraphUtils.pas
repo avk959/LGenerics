@@ -66,8 +66,6 @@ type
   generic TGNestStreamRead<T>  = function(aStream: TStream): T is nested;
   generic TGNestStreamWrite<T> = procedure(aStream: TStream; constref aValue: T) is nested;
 
-  { TDisjointSetUnion }
-
   TDisjointSetUnion = record
   private
     FList: array of SizeInt;
@@ -88,6 +86,7 @@ type
   generic TGAdjItem<TData> = record
     Destination: SizeInt;
     Data: TData;
+    constructor Create(aDst: SizeInt; constref aData: TData);
     property Key: SizeInt read Destination;
   end;
 
@@ -112,7 +111,7 @@ type
     NODE_SIZE               = SizeOf(TNode);
     SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
     USED_FLAG: SizeInt      = SizeInt(1);
-    MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
+    MAX_CAPACITY: SizeInt   = SizeInt(MAX_CONTAINER_SIZE div NODE_SIZE);
     INITIAL_SIZE            = 8;
 
   public
@@ -129,8 +128,6 @@ type
       property  Current: PAdjItem read GetCurrent;
     end;
 
-  var
-    Vertex: TVertex;
   private
     FNodeList: TNodeList;
     FShift,
@@ -142,11 +139,12 @@ type
     function  DoFind(aValue, aHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
     class function HashCode(aValue: SizeInt): SizeInt; static; inline;
-    class function NewList(aCapacity: SizeInt): TNodeList; static; //inline;
+    class function NewList(aCapacity: SizeInt): TNodeList; static;
     property Shift: SizeInt read FShift;
     class constructor Init;
     class operator Initialize(var Item: TGVertexItem);
   public
+    Vertex: TVertex;
     FInDegree,
     FCompIndex: SizeInt;
     procedure Assign(constref aSrc: TGVertexItem);
@@ -168,10 +166,69 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
+  generic TGVertexItem1<TVertex, TData> = record
+  public
+  type
+    TAdjItem      = specialize TGAdjItem<TData>;
+    TAdjItemArray = array of TAdjItem;
+    PAdjItem      = ^TAdjItem;
+
+  private
+  type
+    TItemList = array of TAdjItem;
+
+  const
+    EXPAND_SIZE = 8;
+
+  public
+  type
+    TEnumerator = record
+    private
+      FList: PAdjItem;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      function  GetCurrent: PAdjItem; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: PAdjItem read GetCurrent;
+    end;
+
+  private
+    FItems: TItemList;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    procedure Expand; inline;
+    function  DoFind(aValue: SizeInt): SizeInt;
+    procedure DoRemove(aIndex: SizeInt);
+    class operator Initialize(var Item: TGVertexItem1);
+  public
+    Vertex: TVertex;
+    FInDegree,
+    FCompIndex: SizeInt;
+    procedure Assign(constref aSrc: TGVertexItem1);
+    function  GetEnumerator: TEnumerator; inline;
+    function  ToArray: TAdjItemArray; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear;
+    procedure MakeEmpty;
+    procedure TrimToFit; inline;
+    function  Contains(aDst: SizeInt): Boolean; inline;
+    function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean; inline;
+    function  Find(aDst: SizeInt): PAdjItem;
+    function  FindFirst(out aDst: SizeInt): Boolean;
+    function  Add(constref aItem: TAdjItem): Boolean;
+    function  Remove(aDst: SizeInt): Boolean; inline;
+    property  Key: TVertex read Vertex;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
+
   generic TGVertexHashList<TVertex, TEdgeData, TEqRel> = record
   public
   type
-    TVertexItem = specialize TGVertexItem<TVertex, TEdgeData>;
+    TVertexItem = specialize TGVertexItem1<TVertex, TEdgeData>;
     PVertexItem = ^TVertexItem;
 
   private
@@ -534,6 +591,14 @@ begin
     FList[R] := L;
 end;
 
+{ TGAdjItem }
+
+constructor TGAdjItem.Create(aDst: SizeInt; constref aData: TData);
+begin
+  Destination := aDst;
+  Data := aData;
+end;
+
 { TGVertexItem.TEnumerator }
 
 function TGVertexItem.TEnumerator.GetCurrent: PAdjItem;
@@ -609,7 +674,7 @@ procedure TGVertexItem.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := GetCapacity;
+  OldCapacity := Capacity;
   if OldCapacity > 0 then
     begin
       NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
@@ -695,6 +760,9 @@ begin
   FNodeList := System.Copy(aSrc.FNodeList);
   FCount := aSrc.Count;
   FShift := aSrc.Shift;
+  Vertex := aSrc.Vertex;
+  FInDegree := aSrc.FInDegree;
+  FCompIndex := aSrc.FCompIndex;
 end;
 
 function TGVertexItem.GetEnumerator: TEnumerator;
@@ -848,6 +916,171 @@ begin
     end
   else
     Result := False;
+end;
+
+{ TGVertexItem1.TEnumerator }
+
+function TGVertexItem1.TEnumerator.GetCurrent: PAdjItem;
+begin
+  Result := @FList[FCurrIndex];
+end;
+
+function TGVertexItem1.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGVertexItem1.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGVertexItem1 }
+
+function TGVertexItem1.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FItems);
+end;
+
+procedure TGVertexItem1.Expand;
+begin
+  System.SetLength(FItems, Capacity + EXPAND_SIZE);
+end;
+
+function TGVertexItem1.DoFind(aValue: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    if FItems[I].Destination = aValue then
+      exit(I);
+  Result := -1;
+end;
+
+procedure TGVertexItem1.DoRemove(aIndex: SizeInt);
+begin
+  FItems[aIndex] := Default(TAdjItem);
+  Dec(FCount);
+  System.Move(FItems[Succ(aIndex)], FItems[aIndex], SizeOf(TAdjItem) * (Count - aIndex));
+  System.FillChar(FItems[Count], SizeOf(TAdjItem), 0);
+end;
+
+class operator TGVertexItem1.Initialize(var Item: TGVertexItem1);
+begin
+  Item.Clear;
+end;
+
+procedure TGVertexItem1.Assign(constref aSrc: TGVertexItem1);
+begin
+  FItems := System.Copy(aSrc.FItems);
+  FCount := aSrc.Count;
+  Vertex := aSrc.Vertex;
+  FInDegree := aSrc.FInDegree;
+  FCompIndex := aSrc.FCompIndex;
+end;
+
+function TGVertexItem1.GetEnumerator: TEnumerator;
+begin
+  Result.FList := Pointer(FItems);
+  Result.FLastIndex := Pred(Count);
+  Result.FCurrIndex := -1;
+end;
+
+function TGVertexItem1.ToArray: TAdjItemArray;
+begin
+  Result := System.Copy(FItems, 0, Count);
+end;
+
+function TGVertexItem1.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGVertexItem1.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGVertexItem1.Clear;
+begin
+  FItems := nil;
+  FCount := 0;
+end;
+
+procedure TGVertexItem1.MakeEmpty;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    FItems[I] := Default(TAdjItem);
+  FCount := 0;
+end;
+
+procedure TGVertexItem1.TrimToFit;
+begin
+  System.SetLength(FItems, Count);
+end;
+
+function TGVertexItem1.Contains(aDst: SizeInt): Boolean;
+begin
+  Result := DoFind(aDst) >= 0;
+end;
+
+function TGVertexItem1.FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
+var
+  Pos: SizeInt;
+begin
+  Pos := DoFind(aDst);
+  Result := Pos >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      Pos := Count;
+      Inc(FCount);
+    end;
+  p := @FItems[Pos];
+end;
+
+function TGVertexItem1.Find(aDst: SizeInt): PAdjItem;
+var
+  Pos: SizeInt;
+begin
+  Pos := DoFind(aDst);
+  if Pos >= 0 then
+    Result := @FItems[Pos]
+  else
+    Result := nil;
+end;
+
+function TGVertexItem1.FindFirst(out aDst: SizeInt): Boolean;
+begin
+  Result := Count <> 0;
+  if Result then
+    aDst := FItems[0].Destination;
+end;
+
+function TGVertexItem1.Add(constref aItem: TAdjItem): Boolean;
+begin
+  Result := DoFind(aItem.Destination) < 0;
+  if Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      FItems[Count] := aItem;
+      Inc(FCount);
+    end;
+end;
+
+function TGVertexItem1.Remove(aDst: SizeInt): Boolean;
+var
+  Pos: SizeInt;
+begin
+  Pos := DoFind(aDst);
+  Result := Pos >= 0;
+  if Result then
+    DoRemove(Pos);
 end;
 
 { TGVertexHashList.TNode }
@@ -1053,8 +1286,6 @@ begin
   System.SetLength(aDst.FNodeList, System.Length(aSrc.FNodeList));
   for I := 0 to Pred(aSrc.Count) do
     aDst.FNodeList[I].Assign(aSrc.FNodeList[I]);
-  //for I := aSrc.Count do System.High(aDst.FNodeList) do
-  //  aDst.FNodeList[I] := Default(TNode);
 end;
 
 procedure TGVertexHashList.Clear;
