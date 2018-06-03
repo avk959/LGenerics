@@ -345,12 +345,7 @@ begin
           System.SetLength(FItems, MAX_CAPACITY);
       end
     else
-      CapacityExceedError(aValue);
-end;
-
-procedure TGLiteDynBuffer.CapacityExceedError(aValue: SizeInt);
-begin
-  raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+      raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
 procedure TGLiteDynBuffer.AccessEmptyError;
