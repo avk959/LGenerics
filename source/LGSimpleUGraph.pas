@@ -27,7 +27,7 @@ unit LGSimpleUGraph;
 interface
 
 uses
-  Classes, SysUtils,
+  Classes, SysUtils, math,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -73,7 +73,7 @@ type
     private
       Graph: TGSimpleUGraph;
       Visited: TBitVector;
-      Low, Ord: TIntArray;
+      Lowest, InOrder: TIntArray;
       Counter,
       TotalCount: SizeInt;
       Points: PIntVector;
@@ -81,14 +81,14 @@ type
       procedure DfsR(Curr: SizeInt; Prev: SizeInt = -1);
       function  DfsRFind(Curr: SizeInt; Prev: SizeInt = -1): Boolean;
     public
-      procedure Find(aGraph: TGSimpleUGraph; aVector: PIntVector; aFrom: SizeInt);
-      function  FindAny(aGraph: TGSimpleUGraph; aFrom: SizeInt): Boolean;
+      procedure Search(aGraph: TGSimpleUGraph; aVector: PIntVector; aFrom: SizeInt);
+      function  ContainsAny(aGraph: TGSimpleUGraph; aFrom: SizeInt): Boolean;
     end;
 
     TBridgeHelper = record
       Graph: TGSimpleUGraph;
       Visited: TBitVector;
-      Low, Ord: TIntArray;
+      Lowest, InOrder: TIntArray;
       Counter: SizeInt;
       Bridges: PIntEdgeVector;
       procedure Init(aGraph: TGSimpleUGraph; aVector: PIntEdgeVector);
@@ -107,7 +107,7 @@ type
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleUGraph;
     function  CheckPathExistsI(aSrc, aDst: SizeInt): Boolean;
-    function  CheckConnected: Boolean; inline;
+    procedure CheckSeparateCount;
     function  FindSeparateCount: SizeInt;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aCompIndex: SizeInt): SizeInt;
@@ -139,11 +139,11 @@ type
     function  IsolatedI(aVtxIndex: SizeInt): Boolean; inline;
   { checks whether the graph is connected; an empty graph is considered disconnected }
     function  IsConnected: Boolean; inline;
-    function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges}
     function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
+    function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
   { returns graph of connected component that contains aVertex }
     function  SeparateGraph(constref aVertex: TVertex): TGSimpleUGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleUGraph;
@@ -175,7 +175,7 @@ type
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS }
     function  CutPoints(constref aVertex: TVertex): TIntVector; inline;
-    function  CutPointsI(aVtxIndex: SizeInt = 0): TIntVector; inline;
+    function  CutPointsI(aVtxIndex: SizeInt = 0): TIntVector;
   { checks whether exists any bridge in graph;
     note: may crash with stack overflow on size ~ 300000*3 because of recursive DFS }
     function  ContainsBridge: Boolean;
@@ -593,12 +593,12 @@ begin
   TotalCount := Graph.VertexCount;
   Counter := 0;
   Visited.Size := TotalCount;
-  System.SetLength(Low, TotalCount);
-  for I := 0 to System.High(Low) do
-    Low[I] := TotalCount;
-  System.SetLength(Ord, TotalCount);
-  for I := 0 to System.High(Ord) do
-    Ord[I] := TotalCount;
+  System.SetLength(Lowest, TotalCount);
+  for I := 0 to System.High(Lowest) do
+    Lowest[I] := TotalCount;
+  System.SetLength(InOrder, TotalCount);
+  for I := 0 to System.High(InOrder) do
+    InOrder[I] := TotalCount;
   Points := aVector;
 end;
 
@@ -607,24 +607,22 @@ var
   Next, ChildCount: SizeInt;
 begin
   Visited[Curr] := True;
-  Ord[Curr] := Counter;
-  Low[Curr] := Counter;
+  InOrder[Curr] := Counter;
+  Lowest[Curr] := Counter;
   Inc(Counter);
   ChildCount := 0;
   for Next in Graph.AdjVerticesI(Curr) do
-    if Next <> Prev then //todo: need it ???
+    if Next <> Prev then
       if not Visited[Next] then
         begin
           DfsR(Next, Curr);
-          if Low[Next] < Low[Curr] then
-            Low[Curr] := Low[Next];
-          if (Low[Next] >= Ord[Curr]) and (Prev <> -1) then
+          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
             Points^.Add(Curr);
           Inc(ChildCount);
         end
       else
-        if Ord[Next] < Low[Curr] then
-          Low[Curr] := Ord[Next];
+        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
   if (Prev = -1) and (ChildCount > 1) then
     Points^.Add(Curr);
 end;
@@ -634,8 +632,8 @@ var
   Next, ChildCount: SizeInt;
 begin
   Visited[Curr] := True;
-  Ord[Curr] := Counter;
-  Low[Curr] := Counter;
+  InOrder[Curr] := Counter;
+  Lowest[Curr] := Counter;
   Inc(Counter);
   ChildCount := 0;
   for Next in Graph.AdjVerticesI(Curr) do
@@ -644,29 +642,25 @@ begin
         begin
           if DfsRFind(Next, Curr) then
             exit(True);
-          if Low[Next] < Low[Curr] then
-            Low[Curr] := Low[Next];
-          if (Low[Next] >= Ord[Curr]) and (Prev <> -1) then
+          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
             exit(True);
           Inc(ChildCount);
         end
       else
-        if Ord[Next] < Low[Curr] then
-          Low[Curr] := Ord[Next];
+        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
   if (Prev = -1) and (ChildCount > 1) then
     exit(True);
   Result := False;
 end;
 
-procedure TGSimpleUGraph.TCutPointHelper.Find(aGraph: TGSimpleUGraph; aVector: PIntVector; aFrom: SizeInt);
-var
-  I: SizeInt;
+procedure TGSimpleUGraph.TCutPointHelper.Search(aGraph: TGSimpleUGraph; aVector: PIntVector; aFrom: SizeInt);
 begin
   Init(aGraph, aVector);
   DfsR(aFrom);
 end;
 
-function TGSimpleUGraph.TCutPointHelper.FindAny(aGraph: TGSimpleUGraph; aFrom: SizeInt): Boolean;
+function TGSimpleUGraph.TCutPointHelper.ContainsAny(aGraph: TGSimpleUGraph; aFrom: SizeInt): Boolean;
 begin
   Init(aGraph, nil);
   Result := DfsRFind(aFrom);
@@ -681,12 +675,12 @@ begin
   Graph := aGraph;
   Counter := aGraph.VertexCount;
   Visited.Size := Counter;
-  System.SetLength(Low, Counter);
-  for I := 0 to System.High(Low) do
-    Low[I] := Counter;
-  System.SetLength(Ord, Counter);
-  for I := 0 to System.High(Ord) do
-    Ord[I] := Counter;
+  System.SetLength(Lowest, Counter);
+  for I := 0 to System.High(Lowest) do
+    Lowest[I] := Counter;
+  System.SetLength(InOrder, Counter);
+  for I := 0 to System.High(InOrder) do
+    InOrder[I] := Counter;
   Counter := 0;
   Bridges := aVector;
 end;
@@ -696,22 +690,20 @@ var
   Next: SizeInt;
 begin
   Visited[Curr] := True;
-  Ord[Curr] := Counter;
-  Low[Curr] := Counter;
+  InOrder[Curr] := Counter;
+  Lowest[Curr] := Counter;
   Inc(Counter);
   for Next in Graph.AdjVerticesI(Curr) do
     if Next <> Prev then
       if not Visited[Next] then
         begin
           DfsR(Next, Curr);
-          if Low[Next] < Low[Curr] then
-            Low[Curr] := Low[Next];
-          if Low[Next] > Ord[Curr] then
+          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if Lowest[Next] > InOrder[Curr] then
             Bridges^.Add(TIntEdge.Create(Curr, Next));
         end
       else
-        if Ord[Next] < Low[Curr] then
-          Low[Curr] := Ord[Next];
+        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
 end;
 
 function TGSimpleUGraph.TBridgeHelper.DfsRFind(Curr: SizeInt; Prev: SizeInt): Boolean;
@@ -719,8 +711,8 @@ var
   Next: SizeInt;
 begin
   Visited[Curr] := True;
-  Ord[Curr] := Counter;
-  Low[Curr] := Counter;
+  InOrder[Curr] := Counter;
+  Lowest[Curr] := Counter;
   Inc(Counter);
   for Next in Graph.AdjVerticesI(Curr) do
     if Next <> Prev then
@@ -728,14 +720,12 @@ begin
         begin
           if DfsRFind(Next, Curr) then
             exit(True);
-          if Low[Next] < Low[Curr] then
-            Low[Curr] := Low[Next];
-          if Low[Next] > Ord[Curr] then
+          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if Lowest[Next] > InOrder[Curr] then
             exit(True);
         end
       else
-        if Ord[Next] < Low[Curr] then
-          Low[Curr] := Ord[Next];
+        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
   Result := False;
 end;
 
@@ -788,19 +778,14 @@ begin
 end;
 
 function TGSimpleUGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-var
-  p: ^TAdjItem;
 begin
   if aSrc = aDst then
     exit(False);
-  Result := not FVertexList.ItemRefs[aSrc]^.FindOrAdd(aDst, p);
+  Result := FVertexList.ItemRefs[aSrc]^.Add(TAdjItem.Create(aDst, aData));
   if Result then
     begin
-      p^.Destination := aDst;
-      p^.Data := aData;
-        FVertexList.ItemRefs[aDst]^.FindOrAdd(aSrc, p);
-        p^.Destination := aSrc;
-        p^.Data := aData;
+      if not FVertexList.ItemRefs[aDst]^.Add(TAdjItem.Create(aSrc, aData)) then
+        raise ELGraphError.Create(SEGrapInconsist);
       Inc(FEdgeCount);
       FConnectedValid := False;
     end;
@@ -852,8 +837,7 @@ begin
   repeat
     if not Visited[aSrc] then
       begin
-        if AdjacentI(aSrc, aDst) then
-           exit(True);
+        if aSrc = aDst then
         Visited[aSrc] := True;
         for aSrc in AdjVerticesI(aSrc) do
           if not Visited[aSrc] then
@@ -863,9 +847,11 @@ begin
   Result := False;
 end;
 
-function TGSimpleUGraph.CheckConnected: Boolean;
+procedure TGSimpleUGraph.CheckSeparateCount;
 begin
-  Result := SeparateCount = 1;
+  FCompCount := FindSeparateCount;
+  FConnectedValid := True;
+  FConnected := FCompCount = 1;
 end;
 
 function TGSimpleUGraph.FindSeparateCount: SizeInt;
@@ -897,11 +883,7 @@ end;
 function TGSimpleUGraph.GetSeparateCount: SizeInt;
 begin
   if not ConnectedValid then
-    begin
-      FCompCount := FindSeparateCount;
-      FConnectedValid := True;
-      FConnected := FCompCount = 1;
-    end;
+    CheckSeparateCount;
   Result := FCompCount;
 end;
 
@@ -1221,8 +1203,18 @@ end;
 function TGSimpleUGraph.IsConnected: Boolean;
 begin
   if not ConnectedValid then
-    FConnected := CheckConnected;
+    CheckSeparateCount;
   Result := Connected;
+end;
+
+function TGSimpleUGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+begin
+  Result := 0;
+  if VertexCount < 2 then
+    exit;
+  if ConnectedValid and Connected then
+    exit;
+  Result += MakeConnected(aOnAddEdge);
 end;
 
 function TGSimpleUGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
@@ -1241,18 +1233,8 @@ begin
   //else
   //  Result := CheckPathExistsI(aSrc, aDst);
   if not ConnectedValid then
-    FConnected := CheckConnected;
+    CheckSeparateCount;
   Result := FVertexList.ItemRefs[aSrc]^.FCompIndex = FVertexList.ItemRefs[aDst]^.FCompIndex;
-end;
-
-function TGSimpleUGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
-begin
-  Result := 0;
-  if VertexCount < 2 then
-    exit;
-  if ConnectedValid and Connected then
-    exit;
-  Result += MakeConnected(aOnAddEdge);
 end;
 
 function TGSimpleUGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleUGraph;
@@ -1388,10 +1370,10 @@ end;
 
 function TGSimpleUGraph.ContainsCutPointI(aVtxIndex: SizeInt): Boolean;
 var
-  d: TCutPointHelper;
+  Helper: TCutPointHelper;
 begin
   FVertexList.CheckIndexRange(aVtxIndex);
-  Result := d.FindAny(Self, aVtxIndex);
+  Result := Helper.ContainsAny(Self, aVtxIndex);
 end;
 
 function TGSimpleUGraph.CutPoints(constref aVertex: TVertex): TIntVector;
@@ -1401,24 +1383,24 @@ end;
 
 function TGSimpleUGraph.CutPointsI(aVtxIndex: SizeInt): TIntVector;
 var
-  d: TCutPointHelper;
+  Helper: TCutPointHelper;
 begin
   FVertexList.CheckIndexRange(aVtxIndex);
-  d.Find(Self, @Result, aVtxIndex);
+  Helper.Search(Self, @Result, aVtxIndex);
 end;
 
 function TGSimpleUGraph.ContainsBridge: Boolean;
 var
-  d: TBridgeHelper;
+  Helper: TBridgeHelper;
 begin
-  Result := d.ContainsAny(Self);
+  Result := Helper.ContainsAny(Self);
 end;
 
 function TGSimpleUGraph.Bridges: TIntEdgeVector;
 var
-  d: TBridgeHelper;
+  Helper: TBridgeHelper;
 begin
-  d.Search(Self, @Result);
+  Helper.Search(Self, @Result);
 end;
 
 function TGSimpleUGraph.IsBiconnected: Boolean;
