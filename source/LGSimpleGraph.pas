@@ -105,14 +105,13 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
-    function  CheckPathExistsI(aSrc, aDst: SizeInt): Boolean;
+    function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
     procedure CheckSeparateCount;
     function  FindSeparateCount: SizeInt;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aCompIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(out aCycle: TIntVector): Boolean;
-    function  FindCycle(aIndex: SizeInt; out aCycle: TIntVector): Boolean;
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
@@ -160,10 +159,6 @@ type
   { checks whether exists any cycle in graph;
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(out aCycle: TIntVector): Boolean;
-  { checks whether exists any cycle in graph that contains aVertex;
-    if True then aCycle will contain indices of the vertices of the cycle }
-    function  ContainsCycle(constref aVertex: TVertex; out aCycle: TIntVector): Boolean; inline;
-    function  ContainsCycleI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
     function  ContainsEulerCycle: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntArray;
@@ -192,9 +187,9 @@ type
     function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
-  { returns a graph constructed from the pairs provided by the vector,
+  { returns a graph constructed from the pairs provided by the array,
     i.e. each element treates as pair of source - destination }
-    function  CreateFromVector(constref aVector: TIntArray): TGSimpleGraph;
+    function  CreateFromArray(constref aVector: TIntArray): TGSimpleGraph;
     function  DistinctEdges: TDistinctEdges; inline;
 
     function  Clone: TGSimpleGraph;
@@ -447,10 +442,6 @@ type
     function  IsRegular: Boolean; inline;
     function  IsTree: Boolean; inline;
     function  ContainsCycle(out aCycle: TIntVector): Boolean; inline;
-  { checks whether exists any cycle in graph that contains v;
-    if True then aCycle will contain indices of cycle }
-    function  ContainsCycle(constref aVertex: TVertex; out aCycle: TIntVector): Boolean; inline;
-    function  ContainsCycleI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean; inline;
   { checks whether exists any articulation point that belong to the same connection component as aVertex;
     note: may crash with stack overflow on size ~ 300000*3 because of recursive DFS }
     function  ContainsCutPoint(constref aVertex: TVertex): Boolean; inline;
@@ -812,21 +803,19 @@ begin
   until not Stack.TryPop(Src);
 end;
 
-function TGSimpleGraph.CheckPathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleGraph.CheckPathExists(aSrc, aDst: SizeInt): Boolean;
 var
   Visited: TBitVector;
   Stack: TIntStack;
 begin
   Visited.Size := VertexCount;
   repeat
-    if not Visited[aSrc] then
-      begin
-        if aSrc = aDst then
-        Visited[aSrc] := True;
-        for aSrc in AdjVerticesI(aSrc) do
-          if not Visited[aSrc] then
-            Stack.Push(aSrc);
-      end;
+    if aSrc = aDst then
+      exit(True);
+    Visited[aSrc] := True;
+    for aSrc in AdjVerticesI(aSrc) do
+      if not Visited[aSrc] then
+        Stack.Push(aSrc);
   until not Stack.TryPop(aSrc);
   Result := False;
 end;
@@ -851,14 +840,11 @@ begin
       begin
         Curr := I;
         repeat
-          if not Visited[Curr] then
-            begin
-              Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.FCompIndex := Result;
-              for Curr in AdjVerticesI(Curr) do
-                if not Visited[Curr] then
-                  Stack.Push(Curr);
-            end;
+          Visited[Curr] := True;
+          FVertexList.ItemRefs[Curr]^.FCompIndex := Result;
+          for Curr in AdjVerticesI(Curr) do
+            if not Visited[Curr] then
+              Stack.Push(Curr);
         until not Stack.TryPop(Curr);
         Inc(Result);
       end;
@@ -894,14 +880,11 @@ begin
       begin
         Curr := I;
         repeat
-          if not Visited[Curr] then
-            begin
-              Visited[Curr] := True;
-              FVertexList.ItemRefs[Curr]^.FCompIndex := 0;
-              for Curr in AdjVerticesI(Curr) do
-                if not Visited[Curr] then
-                  Stack.Push(Curr);
-            end;
+          Visited[Curr] := True;
+          FVertexList.ItemRefs[Curr]^.FCompIndex := 0;
+          for Curr in AdjVerticesI(Curr) do
+            if not Visited[Curr] then
+              Stack.Push(Curr);
         until not Stack.TryPop(Curr);
         Inc(Result);
         if Result > 1 then
@@ -931,53 +914,19 @@ begin
   v := CreateIntArray;
   Curr := 0;
   repeat
-    if not Visited[Curr] then
-      begin
-        Visited[Curr] := True;
-        for Next in AdjVerticesI(Curr) do
-          if not Visited[Next] then
-            begin
-              Stack.Push(Next);
-              v[Next] := Curr;
-            end
-          else
-            if v[Curr] <> Next then
-              begin
-                aCycle := CycleChainFromTree(v, Next, Curr);
-                exit(True);
-              end;
-      end;
-  until not Stack.TryPop(Curr);
-  Result := False;
-end;
-
-function TGSimpleGraph.FindCycle(aIndex: SizeInt; out aCycle: TIntVector): Boolean;
-var
-  Stack: TIntStack;
-  Visited: TBitVector;
-  v: TIntArray;
-  Curr, Next: SizeInt;
-begin
-  Visited.Size := VertexCount;
-  v := CreateIntArray;
-  Curr := 0;
-  repeat
-    if not Visited[Curr] then
-      begin
-        Visited[Curr] := True;
-        for Next in AdjVerticesI(Curr) do
-          if not Visited[Next] then
-            begin
-              Stack.Push(Next);
-              v[Next] := Curr;
-            end
-          else
-            if (v[Curr] <> Next) and (Curr = aIndex) then
-              begin
-                aCycle := CycleChainFromTree(v, Next, Curr);
-                exit(True);
-              end;
-      end;
+    Visited[Curr] := True;
+    for Next in AdjVerticesI(Curr) do
+      if not Visited[Next] then
+        begin
+          Stack.Push(Next);
+          v[Next] := Curr;
+        end
+      else
+        if v[Curr] <> Next then
+          begin
+            aCycle := CycleChainFromTree(v, Next, Curr);
+            exit(True);
+          end;
   until not Stack.TryPop(Curr);
   Result := False;
 end;
@@ -1217,7 +1166,7 @@ begin
   //if ConnectedValid then
   //  Result := FVertexList.ItemRefs[aSrc]^.FCompIndex = FVertexList.ItemRefs[aDst]^.FCompIndex
   //else
-  //  Result := CheckPathExistsI(aSrc, aDst);
+  //  Result := CheckPathExists(aSrc, aDst);
   if not ConnectedValid then
     CheckSeparateCount;
   Result := FVertexList.ItemRefs[aSrc]^.FCompIndex = FVertexList.ItemRefs[aDst]^.FCompIndex;
@@ -1281,17 +1230,6 @@ begin
   if IsTree then
     exit(False);
   Result := CycleExists(aCycle);
-end;
-
-function TGSimpleGraph.ContainsCycle(constref aVertex: TVertex; out aCycle: TIntVector): Boolean;
-begin
-  Result := ContainsCycleI(IndexOf(aVertex), aCycle);
-end;
-
-function TGSimpleGraph.ContainsCycleI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
-begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  Result := FindCycle(aVtxIndex, aCycle);
 end;
 
 function TGSimpleGraph.ContainsEulerCycle: Boolean;
@@ -1412,16 +1350,13 @@ begin
   Visited.Size := VertexCount;
   Result := CreateIntArray;
   repeat
-    if not Visited[aRoot] then
-      begin
-        Visited[aRoot] := True;
-        for I in AdjVerticesI(aRoot) do
-          if not Visited[I] then
-            begin
-              Result[I] := aRoot;
-              Stack.Push(I);
-            end;
-      end;
+    Visited[aRoot] := True;
+    for I in AdjVerticesI(aRoot) do
+      if not Visited[I] then
+        begin
+          Result[I] := aRoot;
+          Stack.Push(I);
+        end;
   until not Stack.TryPop(aRoot);
 end;
 
@@ -1450,7 +1385,7 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
-function TGSimpleGraph.CreateFromVector(constref aVector: TIntArray): TGSimpleGraph;
+function TGSimpleGraph.CreateFromArray(constref aVector: TIntArray): TGSimpleGraph;
 var
   I, Src: SizeInt;
 begin
@@ -1741,21 +1676,20 @@ begin
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
-    if not Visited[Item.Index] then
-      begin
-        Visited[Item.Index] := True;
-        Result[Item.Index] := Item.Weight;
-        for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if Handles[p^.Key] = INVALID_HANDLE then
-            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
-          else
-            if not Visited[p^.Key] then
-              begin
-                Relaxed := p^.Data.Weight + Item.Weight;
-                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
-              end;
-      end;
+    begin
+      Visited[Item.Index] := True;
+      Result[Item.Index] := Item.Weight;
+      for p in FGraph.AdjVerticesPtr(Item.Index) do
+        if Handles[p^.Key] = INVALID_HANDLE then
+          Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
+        else
+          if not Visited[p^.Key] then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+            end;
+    end;
 end;
 
 function TGWeighedGraph.DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
@@ -1773,27 +1707,26 @@ begin
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
-    if not Visited[Item.Index] then
-      begin
-        Visited[Item.Index] := True;
-        Result[Item.Index] := Item.Weight;
-        for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if Handles[p^.Key] = INVALID_HANDLE then
+    begin
+      Visited[Item.Index] := True;
+      Result[Item.Index] := Item.Weight;
+      for p in FGraph.AdjVerticesPtr(Item.Index) do
+        if Handles[p^.Key] = INVALID_HANDLE then
+          begin
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
+            aPathTree[p^.Key] := Item.Index;
+          end
+        else
+          if not Visited[p^.Key] then
             begin
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
-              aPathTree[p^.Key] := Item.Index;
-            end
-          else
-            if not Visited[p^.Key] then
-              begin
-                Relaxed := p^.Data.Weight + Item.Weight;
-                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                  begin
-                    Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
-                    aPathTree[p^.Key] := Item.Index;
-                  end;
-              end;
-      end;
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                begin
+                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+                  aPathTree[p^.Key] := Item.Index;
+                end;
+            end;
+    end;
 end;
 
 function TGWeighedGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
@@ -1809,22 +1742,21 @@ begin
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
-    if not Visited[Item.Index] then
-      begin
-        if Item.Index = aDst then
-          exit(Item.Weight);
-        Visited[Item.Index] := True;
-        for p in FGraph.AdjVerticesPtr(Item.Index) do
-          if Handles[p^.Key] = INVALID_HANDLE then
-            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
-          else
-            if not Visited[p^.Key] then
-              begin
-                Relaxed := p^.Data.Weight + Item.Weight;
-                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
-              end
-      end;
+    begin
+      if Item.Index = aDst then
+        exit(Item.Weight);
+      Visited[Item.Index] := True;
+      for p in FGraph.AdjVerticesPtr(Item.Index) do
+        if Handles[p^.Key] = INVALID_HANDLE then
+          Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
+        else
+          if not Visited[p^.Key] then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+            end
+    end;
   Result := InfiniteWeight;
 end;
 
@@ -1843,33 +1775,32 @@ begin
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
-    if not Visited[Item.Index] then
-      begin
-        if Item.Index = aDst then
-          begin
-            aWeight := Item.Weight;
-            exit(FGraph.ChainFromTree(Tree, aDst));
-          end;
-        Visited[Item.Index] := True;
-        for p in FGraph.AdjVerticesPtr(Item.Index) do
-          begin
-            if Handles[p^.Key] = INVALID_HANDLE then
+    begin
+      if Item.Index = aDst then
+        begin
+          aWeight := Item.Weight;
+          exit(FGraph.ChainFromTree(Tree, aDst));
+        end;
+      Visited[Item.Index] := True;
+      for p in FGraph.AdjVerticesPtr(Item.Index) do
+        begin
+          if Handles[p^.Key] = INVALID_HANDLE then
+            begin
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
+              Tree[p^.Key] := Item.Index;
+            end
+          else
+            if not Visited[p^.Key] then
               begin
-                Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
-                Tree[p^.Key] := Item.Index;
-              end
-            else
-              if not Visited[p^.Key] then
-                begin
-                  Relaxed := p^.Data.Weight + Item.Weight;
-                  if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                    begin
-                      Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
-                      Tree[p^.Key] := Item.Index;
-                    end;
-                end;
-          end;
-      end;
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  begin
+                    Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+                    Tree[p^.Key] := Item.Index;
+                  end;
+              end;
+        end;
+    end;
   aWeight := InfiniteWeight;
 end;
 
@@ -1888,36 +1819,35 @@ begin
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TRankItem.Create(aHeur(FGraph[aSrc], FGraph[aDst]), ZeroWeight, aSrc));
   while Queue.TryDequeue(Item) do
-    if not Visited[Item.Index] then
-      begin
-        if Item.Index = aDst then
-          begin
-            aWeight := Item.Weight;
-            exit(FGraph.ChainFromTree(Tree, aDst));
-          end;
-        Visited[Item.Index] := True;
-        for p in FGraph.AdjVerticesPtr(Item.Index) do
-          begin
-            if Handles[p^.Key] = INVALID_HANDLE then
+    begin
+      if Item.Index = aDst then
+        begin
+          aWeight := Item.Weight;
+          exit(FGraph.ChainFromTree(Tree, aDst));
+        end;
+      Visited[Item.Index] := True;
+      for p in FGraph.AdjVerticesPtr(Item.Index) do
+        begin
+          if Handles[p^.Key] = INVALID_HANDLE then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              Handles[p^.Key] := Queue.Insert(TRankItem.Create(
+                Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
+              Tree[p^.Key] := Item.Index;
+            end
+          else
+            if not Visited[p^.Key] then
               begin
-                Relaxed := p^.Data.Weight + Item.Weight;
-                Handles[p^.Key] := Queue.Insert(TRankItem.Create(
-                  Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
-                Tree[p^.Key] := Item.Index;
-              end
-            else
-              if not Visited[p^.Key] then
-                begin
-                  Relaxed := Item.Weight + p^.Data.Weight;
-                  if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                    begin
-                      Queue.Update(Handles[p^.Key], TRankItem.Create(
-                        Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
-                      Tree[p^.Key] := Item.Index;
-                    end;
-                end;
-          end;
-      end;
+                Relaxed := Item.Weight + p^.Data.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  begin
+                    Queue.Update(Handles[p^.Key], TRankItem.Create(
+                      Relaxed + aHeur(FGraph[p^.Key], FGraph[aDst]), Relaxed, p^.Key));
+                    Tree[p^.Key] := Item.Index;
+                  end;
+              end;
+        end;
+    end;
   aWeight := InfiniteWeight;
 end;
 
@@ -2482,16 +2412,6 @@ begin
   Result := FGraph.ContainsCycle(aCycle);
 end;
 
-function TGWeighedGraph.ContainsCycle(constref aVertex: TVertex; out aCycle: TIntVector): Boolean;
-begin
-  Result := FGraph.ContainsCycle(aVertex, aCycle);
-end;
-
-function TGWeighedGraph.ContainsCycleI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
-begin
-  Result := FGraph.ContainsCycleI(aVtxIndex, aCycle);
-end;
-
 function TGWeighedGraph.ContainsCutPoint(constref aVertex: TVertex): Boolean;
 begin
   Result := FGraph.ContainsCutPoint(aVertex);
@@ -2559,7 +2479,7 @@ end;
 
 function TGWeighedGraph.CreateFromArray(constref aArray: TIntArray): TWeighedGraph;
 begin
-  Result := TGWeighedGraph.Create(FGraph.CreateFromVector(aArray));
+  Result := TGWeighedGraph.Create(FGraph.CreateFromArray(aArray));
 end;
 
 function TGWeighedGraph.ContainsNegWeighedEdge: Boolean;
