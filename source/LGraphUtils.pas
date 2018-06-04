@@ -35,7 +35,6 @@ uses
   LGQueue,
   LGVector,
   LGHash,
-  //LGHashTable,
   LGStrConst;
 
 type
@@ -90,7 +89,7 @@ type
     property Key: SizeInt read Destination;
   end;
 
-  generic TGVertexItem<TVertex, TData> = record
+  generic TGHashVertexItem<TVertex, TData> = record
   public
   type
     TAdjItem      = specialize TGAdjItem<TData>;
@@ -142,12 +141,12 @@ type
     class function NewList(aCapacity: SizeInt): TNodeList; static;
     property Shift: SizeInt read FShift;
     class constructor Init;
-    class operator Initialize(var Item: TGVertexItem);
+    class operator Initialize(var Item: TGHashVertexItem);
   public
     Vertex: TVertex;
     FInDegree,
     FCompIndex: SizeInt;
-    procedure Assign(constref aSrc: TGVertexItem);
+    procedure Assign(constref aSrc: TGHashVertexItem);
     function  GetEnumerator: TEnumerator;
     function  ToArray: TAdjItemArray;
     function  IsEmpty: Boolean; inline;
@@ -599,14 +598,14 @@ begin
   Data := aData;
 end;
 
-{ TGVertexItem.TEnumerator }
+{ TGHashVertexItem.TEnumerator }
 
-function TGVertexItem.TEnumerator.GetCurrent: PAdjItem;
+function TGHashVertexItem.TEnumerator.GetCurrent: PAdjItem;
 begin
   Result := @FList[FCurrIndex].Item;
 end;
 
-function TGVertexItem.TEnumerator.MoveNext: Boolean;
+function TGHashVertexItem.TEnumerator.MoveNext: Boolean;
 begin
   repeat
     if FCurrIndex >= FLastIndex then
@@ -616,19 +615,19 @@ begin
   until Result;
 end;
 
-procedure TGVertexItem.TEnumerator.Reset;
+procedure TGHashVertexItem.TEnumerator.Reset;
 begin
   FCurrIndex := -1;
 end;
 
-{ TGVertexItem }
+{ TGHashVertexItem }
 
-function TGVertexItem.GetCapacity: SizeInt;
+function TGHashVertexItem.GetCapacity: SizeInt;
 begin
   Result := System.Length(FNodeList);
 end;
 
-procedure TGVertexItem.Rehash(var aNewList: TNodeList);
+procedure TGHashVertexItem.Rehash(var aNewList: TNodeList);
 var
   h, I, J, Mask: SizeInt;
 begin
@@ -654,7 +653,7 @@ begin
     end;
 end;
 
-procedure TGVertexItem.Resize(aNewCapacity: SizeInt);
+procedure TGHashVertexItem.Resize(aNewCapacity: SizeInt);
 var
   List: TNodeList;
 begin
@@ -670,7 +669,7 @@ begin
   FNodeList := List;
 end;
 
-procedure TGVertexItem.Expand;
+procedure TGHashVertexItem.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
@@ -685,7 +684,7 @@ begin
     Resize(INITIAL_SIZE);
 end;
 
-function TGVertexItem.DoFind(aValue, aHash: SizeInt): SizeInt;
+function TGHashVertexItem.DoFind(aValue, aHash: SizeInt): SizeInt;
 var
   I, Pos, Mask: SizeInt;
 begin
@@ -703,7 +702,7 @@ begin
     end;
 end;
 
-procedure TGVertexItem.DoRemove(aIndex: SizeInt);
+procedure TGHashVertexItem.DoRemove(aIndex: SizeInt);
 var
   h, Gap, Mask: SizeInt;
 begin
@@ -726,7 +725,7 @@ begin
   until False;
 end;
 
-class function TGVertexItem.HashCode(aValue: SizeInt): SizeInt;
+class function TGHashVertexItem.HashCode(aValue: SizeInt): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
   Result := aValue * SizeInt($9e3779b97f4a7c15);
@@ -737,25 +736,25 @@ begin
 {$ENDIF}
 end;
 
-class function TGVertexItem.NewList(aCapacity: SizeInt): TNodeList;
+class function TGHashVertexItem.NewList(aCapacity: SizeInt): TNodeList;
 begin
   System.SetLength(Result, aCapacity);
   System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
 end;
 
-class constructor TGVertexItem.Init;
+class constructor TGHashVertexItem.Init;
 begin
 {$PUSH}{$J+}
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
 {$POP}
 end;
 
-class operator TGVertexItem.Initialize(var Item: TGVertexItem);
+class operator TGHashVertexItem.Initialize(var Item: TGHashVertexItem);
 begin
   Item.FCount := 0;
 end;
 
-procedure TGVertexItem.Assign(constref aSrc: TGVertexItem);
+procedure TGHashVertexItem.Assign(constref aSrc: TGHashVertexItem);
 begin
   FNodeList := System.Copy(aSrc.FNodeList);
   FCount := aSrc.Count;
@@ -765,7 +764,7 @@ begin
   FCompIndex := aSrc.FCompIndex;
 end;
 
-function TGVertexItem.GetEnumerator: TEnumerator;
+function TGHashVertexItem.GetEnumerator: TEnumerator;
 begin
   Result.FLastIndex := System.High(FNodeList);
   if Result.FLastIndex >= 0 then
@@ -775,7 +774,7 @@ begin
   Result.FCurrIndex := -1;
 end;
 
-function TGVertexItem.ToArray: TAdjItemArray;
+function TGHashVertexItem.ToArray: TAdjItemArray;
 var
   I, J: SizeInt;
 begin
@@ -795,23 +794,23 @@ begin
     end;
 end;
 
-function TGVertexItem.IsEmpty: Boolean;
+function TGHashVertexItem.IsEmpty: Boolean;
 begin
   Result := Count = 0;
 end;
 
-function TGVertexItem.NonEmpty: Boolean;
+function TGHashVertexItem.NonEmpty: Boolean;
 begin
   Result := Count <> 0;
 end;
 
-procedure TGVertexItem.Clear;
+procedure TGHashVertexItem.Clear;
 begin
   FNodeList := nil;
   FCount := 0;
 end;
 
-procedure TGVertexItem.MakeEmpty;
+procedure TGHashVertexItem.MakeEmpty;
 var
   I: SizeInt;
 begin
@@ -820,7 +819,7 @@ begin
   FCount := 0;
 end;
 
-procedure TGVertexItem.TrimToFit;
+procedure TGHashVertexItem.TrimToFit;
 var
   NewCapacity: SizeInt;
 begin
@@ -834,12 +833,12 @@ begin
     Clear;
 end;
 
-function TGVertexItem.Contains(aDst: SizeInt): Boolean;
+function TGHashVertexItem.Contains(aDst: SizeInt): Boolean;
 begin
   Result := Find(aDst) <> nil;
 end;
 
-function TGVertexItem.FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean;
+function TGHashVertexItem.FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean;
 var
   Hash, Pos: SizeInt;
 begin
@@ -867,7 +866,7 @@ begin
   e := @FNodeList[Pos].Item;
 end;
 
-function TGVertexItem.Find(aDst: SizeInt): PAdjItem;
+function TGHashVertexItem.Find(aDst: SizeInt): PAdjItem;
 var
   Pos: SizeInt;
 begin
@@ -880,7 +879,7 @@ begin
     end;
 end;
 
-function TGVertexItem.FindFirst(out aDst: SizeInt): Boolean;
+function TGHashVertexItem.FindFirst(out aDst: SizeInt): Boolean;
 var
   I: SizeInt;
 begin
@@ -894,7 +893,7 @@ begin
   Result := False;
 end;
 
-function TGVertexItem.Add(constref aItem: TAdjItem): Boolean;
+function TGHashVertexItem.Add(constref aItem: TAdjItem): Boolean;
 var
   p: PAdjItem;
 begin
@@ -903,7 +902,7 @@ begin
     p^ := aItem;
 end;
 
-function TGVertexItem.Remove(aDst: SizeInt): Boolean;
+function TGHashVertexItem.Remove(aDst: SizeInt): Boolean;
 var
   Pos: SizeInt;
 begin
