@@ -462,7 +462,7 @@ type
     class function CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntVector; static;
     constructor Create;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
-    function  CreateIntArray: TIntArray;
+    function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateShortArray: TShortArray;
     function  CreateHandleArray: THandleArray;
     function  IsEmpty: Boolean; inline;
@@ -1603,14 +1603,20 @@ begin
   FVertexList.CheckIndexRange(aIndex);
 end;
 
-function TGCustomGraph.CreateIntArray: TIntArray;
+function TGCustomGraph.CreateIntArray(aValue: SizeInt): TIntArray;
 var
   c: SizeInt;
 begin
   c := VertexCount;
   System.SetLength(Result, c);
   if c > 0 then
-    System.FillChar(Result[0], c * SizeOf(SizeInt), $ff);
+{$IF DEFINED(CPU64)}
+  System.FillQWord(Result[0], c, QWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(Result[0], c, DWord(aValue));
+{$ELSE}
+  System.FillWord(Result[0], c, Word(aValue));
+{$ENDIF}
 end;
 
 function TGCustomGraph.CreateShortArray: TShortArray;
@@ -1887,21 +1893,21 @@ end;
 function TGCustomGraph.ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
 var
   Queue: TIntQueue;
-  v: TIntArray;
-  d: SizeInt;
+  Dist: TIntArray;
+  Next: SizeInt;
 begin
   FVertexList.CheckIndexRange(aSrc);
   FVertexList.CheckIndexRange(aDst);
-  v := CreateIntArray;
-  v[aSrc] := 0;
+  Dist := CreateIntArray;
+  Dist[aSrc] := 0;
   repeat
     if aSrc = aDst then
-      exit(v[aSrc]);
-    for d in AdjVerticesI(aSrc) do
-      if v[d] = -1 then
+      exit(Dist[aSrc]);
+    for Next in AdjVerticesI(aSrc) do
+      if Dist[Next] = -1 then
         begin
-          Queue.Enqueue(d);
-          v[d] := Succ(v[aSrc]);
+          Queue.Enqueue(Next);
+          Dist[Next] := Succ(Dist[aSrc]);
         end;
   until not Queue.TryDequeue(aSrc);
   Result := -1;
@@ -1915,17 +1921,17 @@ end;
 function TGCustomGraph.ShortestPathsMapI(aRoot: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
-  d: SizeInt;
+  Next: SizeInt;
 begin
   FVertexList.CheckIndexRange(aRoot);
   Result := CreateIntArray;
   Result[aRoot] := 0;
   repeat
-    for d in AdjVerticesI(aRoot) do
-      if Result[d] = -1 then
+    for Next in AdjVerticesI(aRoot) do
+      if Result[Next] = -1 then
         begin
-          Queue.Enqueue(d);
-          Result[d] := Succ(Result[aRoot]);
+          Queue.Enqueue(Next);
+          Result[Next] := Succ(Result[aRoot]);
         end;
   until not Queue.TryDequeue(aRoot);
 end;
@@ -1939,23 +1945,23 @@ function TGCustomGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntVector;
 var
   Queue: TIntQueue;
   Visited: TBitVector;
-  v: TIntArray;
-  d: SizeInt;
+  Parents: TIntArray;
+  Next: SizeInt;
 begin
   FVertexList.CheckIndexRange(aSrc);
   FVertexList.CheckIndexRange(aDst);
-  v := CreateIntArray;
+  Parents := CreateIntArray;
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
   repeat
     if aSrc = aDst then
-      exit(ChainFromTree(v, aDst));
-    for d in AdjVerticesI(aSrc) do
-      if not Visited[d] then
+      exit(ChainFromTree(Parents, aDst));
+    for Next in AdjVerticesI(aSrc) do
+      if not Visited[Next] then
         begin
-          Visited[d] := True;
-          Queue.Enqueue(d);
-          v[d] := aSrc;
+          Visited[Next] := True;
+          Queue.Enqueue(Next);
+          Parents[Next] := aSrc;
         end;
   until not Queue.TryDequeue(aSrc);
 end;

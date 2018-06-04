@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGSimpleUGraph;
+unit LGSimpleGraph;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}
@@ -74,8 +74,7 @@ type
       Graph: TGSimpleUGraph;
       Visited: TBitVector;
       Lowest, InOrder: TIntArray;
-      Counter,
-      TotalCount: SizeInt;
+      Counter: SizeInt;
       Points: PIntVector;
       procedure Init(aGraph: TGSimpleUGraph; aVector: PIntVector);
       procedure DfsR(Curr: SizeInt; Prev: SizeInt = -1);
@@ -158,10 +157,11 @@ type
   { checks whether the graph is a regular graph (that is, the degree of all its vertices equal);
     an empty graph is considered regular }
     function  IsRegular: Boolean;
-  { checks whether exists any cycle in graph; if True then aCycle will contain indices of cycle }
+  { checks whether exists any cycle in graph;
+    if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(out aCycle: TIntVector): Boolean;
   { checks whether exists any cycle in graph that contains aVertex;
-    if True then aCycle will contain indices of cycle }
+    if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aVertex: TVertex; out aCycle: TIntVector): Boolean; inline;
     function  ContainsCycleI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
     function  ContainsEulerCycle: Boolean;
@@ -174,15 +174,15 @@ type
   { returns the articulation points that belong to the same connection component as aVertex, if any,
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS }
-    function  CutPoints(constref aVertex: TVertex): TIntVector; inline;
-    function  CutPointsI(aVtxIndex: SizeInt = 0): TIntVector;
+    function  FindCutPoints(constref aVertex: TVertex): TIntVector; inline;
+    function  FindCutPointsI(aVtxIndex: SizeInt = 0): TIntVector;
   { checks whether exists any bridge in graph;
     note: may crash with stack overflow on size ~ 300000*3 because of recursive DFS }
     function  ContainsBridge: Boolean;
   { returns all bridges in the form of source-destinatin pairs in the result vector, if any,
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
-    function  Bridges: TIntEdgeVector;
+    function  FindBridges: TIntEdgeVector;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
   { returns the vector of the spanning tree, which is constructed starting from aRoot;
@@ -214,8 +214,8 @@ type
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
-      TWeight must have defined comparision operators and property MaxValue,
-      which used as infinity weight value;
+      TWeight must have defined comparision operators and properties MinValue, MaxValue,
+      which used as infinity weight values;
       Default(TWeight) used as zero weight value }
   generic TGWeighedUGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class
   // must be class(specialize TGSimpleUGraph<TVertex, specialize TGWeighedEdgeData<TWeight, TEdgeData>, TVertexEqRel>)
@@ -260,8 +260,6 @@ type
     TAdjItem     = TGraph.TAdjItem;
     PAdjItem     = TGraph.PAdjItem;
 
-    { TWeightItem }
-
     TWeightItem = record
       Weight: TWeight;
       Index: SizeInt;
@@ -273,8 +271,6 @@ type
       class operator <=(constref L, R: TWeightItem): Boolean; inline;
       constructor Create(constref w: TWeight; aIndex: SizeInt);
     end;
-
-    { TRankItem }
 
     TRankItem = record
       Rank,
@@ -312,7 +308,8 @@ type
     end;
   strict private
   class var
-    CFInfiniteWeight: TWeight;
+    CFInfiniteWeight,
+    CFNegInfiniteWeight,
     CFZeroWeight: TWeight;
   protected
   class var
@@ -337,8 +334,7 @@ type
     function  AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntVector;
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-    function  FordBellman(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
-
+    function  FordBellman(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
     function  FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
@@ -348,6 +344,7 @@ type
     class constructor Init;
   public
     class property InfiniteWeight: TWeight read CFInfiniteWeight;
+    class property NegInfiniteWeight: TWeight read CFNegInfiniteWeight;
     class property ZeroWeight: TWeight read CFZeroWeight;
 
     constructor Create;
@@ -461,15 +458,15 @@ type
   { returns the articulation points that belong to the same connection component as aVertex, if any,
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
-    function  CutPoints(constref aVertex: TVertex): TIntVector;
-    function  CutPointsI(aVtxIndex: SizeInt = 0): TIntVector;
+    function  FindCutPoints(constref aVertex: TVertex): TIntVector;
+    function  FindCutPointsI(aVtxIndex: SizeInt = 0): TIntVector;
   { checks whether exists any bridge in graph;
     note: may crash with stack overflow on size ~ 300000*3 because of recursive DFS }
     function  ContainsBridge: Boolean; inline;
   { returns bridges in the form of source-destinatin pairs in the result vector, if any,
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
-    function  Bridges: TIntEdgeVector; inline;
+    function  FindBridges: TIntEdgeVector; inline;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
     function  ContainsEulerCycle: Boolean; inline;
@@ -510,17 +507,16 @@ type
     function  MinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aWeight: TWeight): TIntVector; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntVector;
   { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
-    connected component(SSSP), the weights of the edges can be negative;
+    connected component(SSSP), the weights of the edges can be negative; NO IT IS NOT FOR UNDIRECTED GRAPHS !!!
     returns False and empty aWeights if there is a negative weight cycle, otherwise
     aWeights will contain in the corresponding component the weight of the minimum path to the vertex or
     InfiniteWeight if the vertex is unreachable; used Bellman–Ford algorithm  }
-    function  MinPathsMapFB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
-    function  MinPathsMapFbI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+    function  FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPaths returns paths,
-    if there is a negative weight cycle, then aPaths will contain one vertex index that exactly
-    lies on the cycle }
-    function  MinPathsMapFB(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
-    function  MinPathsMapFbI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+    if there is a negative weight cycle, then aPaths will contain that cycle }
+    function  FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
@@ -586,20 +582,14 @@ end;
 { TGSimpleUGraph.TCutPointHelper }
 
 procedure TGSimpleUGraph.TCutPointHelper.Init(aGraph: TGSimpleUGraph; aVector: PIntVector);
-var
-  I: SizeInt;
 begin
   Graph := aGraph;
-  TotalCount := Graph.VertexCount;
-  Counter := 0;
-  Visited.Size := TotalCount;
-  System.SetLength(Lowest, TotalCount);
-  for I := 0 to System.High(Lowest) do
-    Lowest[I] := TotalCount;
-  System.SetLength(InOrder, TotalCount);
-  for I := 0 to System.High(InOrder) do
-    InOrder[I] := TotalCount;
+  Counter := Graph.VertexCount;
+  Visited.Size := Counter;
+  Lowest := CreateIntArray(Counter);
+  InOrder := CreateIntArray(Counter);
   Points := aVector;
+  Counter := 0;
 end;
 
 procedure TGSimpleUGraph.TCutPointHelper.DfsR(Curr: SizeInt; Prev: SizeInt);
@@ -669,20 +659,14 @@ end;
 { TGSimpleUGraph.TBridgeHelper }
 
 procedure TGSimpleUGraph.TBridgeHelper.Init(aGraph: TGSimpleUGraph; aVector: PIntEdgeVector);
-var
-  I: SizeInt;
 begin
   Graph := aGraph;
   Counter := aGraph.VertexCount;
   Visited.Size := Counter;
-  System.SetLength(Lowest, Counter);
-  for I := 0 to System.High(Lowest) do
-    Lowest[I] := Counter;
-  System.SetLength(InOrder, Counter);
-  for I := 0 to System.High(InOrder) do
-    InOrder[I] := Counter;
-  Counter := 0;
+  Lowest := CreateIntArray(Counter);
+  InOrder := CreateIntArray(Counter);
   Bridges := aVector;
+  Counter := 0;
 end;
 
 procedure TGSimpleUGraph.TBridgeHelper.DfsR(Curr: SizeInt; Prev: SizeInt);
@@ -1074,83 +1058,85 @@ end;
 
 procedure TGSimpleUGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
 var
-  h: TStreamHeader;
+  Header: TStreamHeader;
   I: SizeInt;
-  e: TEdge;
-  bs: TWriteBufStream;
+  Edge: TEdge;
+  wbs: TWriteBufStream;
 begin
   if not (Assigned(aWriteVertex) and Assigned(aWriteData)) then
     raise ELGraphError.Create(SEWriteCallbackMissed);
-  bs := TWriteBufStream.Create(aStream);
+  wbs := TWriteBufStream.Create(aStream);
   try
     //write header
-    h.Magic := LGRAPH_MAGIC;
-    h.Version := CURRENT_VERSION;
-    h.TitleSize := System.Length(Title);
-    h.VertexCount := VertexCount;
-    h.EdgeCount := EdgeCount;
-    bs.WriteBuffer(h, SizeOf(h));
+    Header.Magic := LGRAPH_MAGIC;
+    Header.Version := CURRENT_VERSION;
+    Header.TitleSize := System.Length(Title);
+    Header.VertexCount := VertexCount;
+    Header.EdgeCount := EdgeCount;
+    wbs.WriteBuffer(Header, SizeOf(Header));
     //write title
-    bs.WriteBuffer(FTitle[1], h.TitleSize);
+    if Header.TitleSize > 0 then
+      wbs.WriteBuffer(FTitle[1], Header.TitleSize);
     //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
     //or need save edges from dfs ???
-    for I := 0 to Pred(h.VertexCount) do
-      aWriteVertex(bs, FVertexList.ItemRefs[I]^.Vertex);
+    for I := 0 to Pred(Header.VertexCount) do
+      aWriteVertex(wbs, FVertexList.ItemRefs[I]^.Vertex);
     //write edges
-    for e in DistinctEdges do
+    for Edge in DistinctEdges do
       begin
-        bs.WriteBuffer(e.Source, SizeOf(e.Source));
-        bs.WriteBuffer(e.Destination, SizeOf(e.Destination));
-        aWriteData(bs, e.Data);
+        wbs.WriteBuffer(Edge.Source, SizeOf(Edge.Source));
+        wbs.WriteBuffer(Edge.Destination, SizeOf(Edge.Destination));
+        aWriteData(wbs, Edge.Data);
       end;
   finally
-    bs.Free;
+    wbs.Free;
   end;
 end;
 
 procedure TGSimpleUGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
 var
-  h: TStreamHeader;
+  Header: TStreamHeader;
   I, vInd: SizeInt;
-  e: TEdge;
-  v: TVertex;
-  bs: TReadBufStream;
+  Edge: TEdge;
+  Vertex: TVertex;
+  rbs: TReadBufStream;
 begin
   if not (Assigned(aReadVertex) and Assigned(aReadData)) then
     raise ELGraphError.Create(SEReadCallbackMissed);
-  bs := TReadBufStream.Create(aStream);
+  rbs := TReadBufStream.Create(aStream);
   try
     //read header
-    bs.ReadBuffer(h, SizeOf(h));
-    if h.Magic <> LGRAPH_MAGIC then
+    rbs.ReadBuffer(Header, SizeOf(Header));
+    if Header.Magic <> LGRAPH_MAGIC then
       raise ELGraphError.Create(SEUnknownGraphStreamFmt);
-    if h.Version > CURRENT_VERSION then
+    if Header.Version > CURRENT_VERSION then
       raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
     Clear;
-    EnsureCapacity(h.VertexCount);
+    EnsureCapacity(Header.VertexCount);
     //read title
-    System.SetLength(FTitle, h.TitleSize);
-    bs.ReadBuffer(FTitle[1], h.TitleSize);
+    System.SetLength(FTitle, Header.TitleSize);
+    if Header.TitleSize > 0 then
+      rbs.ReadBuffer(FTitle[1], Header.TitleSize);
     //read Items
-    for I := 0 to Pred(h.VertexCount) do
+    for I := 0 to Pred(Header.VertexCount) do
       begin
-        v := aReadVertex(bs);
-        if not AddVertex(v, vInd) then
+        Vertex := aReadVertex(rbs);
+        if not AddVertex(Vertex, vInd) then
           raise ELGraphError.Create(SEGraphStreamCorrupt);
         if vInd <> I then
           raise ELGraphError.Create(SEGraphStreamReadIntern);
       end;
     //read edges
-    for I := 0 to Pred(h.EdgeCount) do
+    for I := 0 to Pred(Header.EdgeCount) do
       begin
-        bs.ReadBuffer(e.Source, SizeOf(e.Source));
-        bs.ReadBuffer(e.Destination, SizeOf(e.Destination));
-        e.Data := aReadData(bs);
-        AddEdgeI(e.Source, e.Destination, e.Data);
+        rbs.ReadBuffer(Edge.Source, SizeOf(Edge.Source));
+        rbs.ReadBuffer(Edge.Destination, SizeOf(Edge.Destination));
+        Edge.Data := aReadData(rbs);
+        AddEdgeI(Edge.Source, Edge.Destination, Edge.Data);
       end;
   finally
-    bs.Free;
+    rbs.Free;
   end;
 end;
 
@@ -1376,12 +1362,12 @@ begin
   Result := Helper.ContainsAny(Self, aVtxIndex);
 end;
 
-function TGSimpleUGraph.CutPoints(constref aVertex: TVertex): TIntVector;
+function TGSimpleUGraph.FindCutPoints(constref aVertex: TVertex): TIntVector;
 begin
-  Result := CutPointsI(IndexOf(aVertex));
+  Result := FindCutPointsI(IndexOf(aVertex));
 end;
 
-function TGSimpleUGraph.CutPointsI(aVtxIndex: SizeInt): TIntVector;
+function TGSimpleUGraph.FindCutPointsI(aVtxIndex: SizeInt): TIntVector;
 var
   Helper: TCutPointHelper;
 begin
@@ -1396,7 +1382,7 @@ begin
   Result := Helper.ContainsAny(Self);
 end;
 
-function TGSimpleUGraph.Bridges: TIntEdgeVector;
+function TGSimpleUGraph.FindBridges: TIntEdgeVector;
 var
   Helper: TBridgeHelper;
 begin
@@ -1937,7 +1923,7 @@ end;
 
 function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 var
-  e: TEdge;
+  Edge: TEdge;
   Enum: TEdgeEnumerator;
   RelaxValue: TWeight;
   I: SizeInt;
@@ -1951,13 +1937,13 @@ begin
       Relaxed := False;
       while Enum.MoveNext do
         begin
-          e := Enum.Current;
-          if aWeights[e.Source] < InfiniteWeight then
+          Edge := Enum.Current;
+          if aWeights[Edge.Source] < InfiniteWeight then
             begin
-              RelaxValue := aWeights[e.Source] + e.Data.Weight;
-              if RelaxValue < aWeights[e.Destination] then
+              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
+              if RelaxValue < aWeights[Edge.Destination] then
                 begin
-                  aWeights[e.Destination] := RelaxValue;
+                  aWeights[Edge.Destination] := RelaxValue;
                   Relaxed := True;
                 end;
             end;
@@ -1971,47 +1957,55 @@ begin
     aWeights := nil;
 end;
 
-function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
+function TGWeighedUGraph.FordBellman(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
 var
-  e: TEdge;
+  Edge: TEdge;
   Enum: TEdgeEnumerator;
+  v: TIntVector;
   RelaxValue: TWeight;
   I: SizeInt;
   J: SizeInt = -1;
-  Relaxed: Boolean = False;
 begin
   aWeights := CreateWeightVector;
-  aPathTree := FGraph.CreateIntArray;
+  aPaths := FGraph.CreateIntArray;
   Enum := Edges.GetEnumerator;
   aWeights[aSrc] := ZeroWeight;
   for I := 1 to VertexCount do
     begin
-      Relaxed := False;
+      J := -1;
       while Enum.MoveNext do
         begin
-          e := Enum.Current;
-          if aWeights[e.Source] < InfiniteWeight then
+          Edge := Enum.Current;
+          if aWeights[Edge.Source] < InfiniteWeight then
             begin
-              RelaxValue := aWeights[e.Source] + e.Data.Weight;
-              if RelaxValue < aWeights[e.Destination] then
+              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
+              if RelaxValue < aWeights[Edge.Destination] then
                 begin
-                  aWeights[e.Destination] := RelaxValue;
-                  J := e.Destination;
-                  aPathTree[J] := e.Source;
-                  Relaxed := True;
+                  aWeights[Edge.Destination] := RelaxValue;
+                  aPaths[Edge.Destination] := Edge.Source;
+                  J := Edge.Destination;
                 end;
             end;
         end;
-      if not Relaxed then
+      if J = -1 then
         break;
       Enum.Reset;
     end;
-  Result := not Relaxed;
+
+  Result := J = -1;
+
   if not Result then
     begin
+      for I := 1 to VertexCount do
+        J := aPaths[J];
+      I := J;
+      v.Add(J);
+      repeat
+        I := aPaths[I];
+        v.Add(I);
+      until I = J;
+      aPaths := v.ToArray;
       aWeights := nil;
-      System.SetLength(aPathTree, 1);
-      aPathTree[0] := J;
     end;
 end;
 
@@ -2119,6 +2113,7 @@ end;
 class constructor TGWeighedUGraph.Init;
 begin
   CFInfiniteWeight := TWeight.MaxValue;
+  CFNegInfiniteWeight := TWeight.MinValue;
   CFZeroWeight := Default(TWeight);
 end;
 
@@ -2507,14 +2502,14 @@ begin
   Result := FGraph.ContainsCutPointI(aVtxIndex);
 end;
 
-function TGWeighedUGraph.CutPoints(constref aVertex: TVertex): TIntVector;
+function TGWeighedUGraph.FindCutPoints(constref aVertex: TVertex): TIntVector;
 begin
-  Result := FGraph.CutPoints(aVertex);
+  Result := FGraph.FindCutPoints(aVertex);
 end;
 
-function TGWeighedUGraph.CutPointsI(aVtxIndex: SizeInt): TIntVector;
+function TGWeighedUGraph.FindCutPointsI(aVtxIndex: SizeInt): TIntVector;
 begin
-  Result := FGraph.CutPointsI(aVtxIndex);
+  Result := FGraph.FindCutPointsI(aVtxIndex);
 end;
 
 function TGWeighedUGraph.ContainsBridge: Boolean;
@@ -2522,9 +2517,9 @@ begin
   Result := FGraph.ContainsBridge;
 end;
 
-function TGWeighedUGraph.Bridges: TIntEdgeVector;
+function TGWeighedUGraph.FindBridges: TIntEdgeVector;
 begin
-  Result := FGraph.Bridges;
+  Result := FGraph.FindBridges;
 end;
 
 function TGWeighedUGraph.IsBiconnected: Boolean;
@@ -2639,24 +2634,24 @@ begin
     Result := DijkstraPath(aSrc, aDst, aWeight);
 end;
 
-function TGWeighedUGraph.MinPathsMapFB(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+function TGWeighedUGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
 begin
-  Result := MinPathsMapFbI(FGraph.IndexOf(aSrc), aWeights);
+  Result := FindMinPathsMapI(FGraph.IndexOf(aSrc), aWeights);
 end;
 
-function TGWeighedUGraph.MinPathsMapFbI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+function TGWeighedUGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 begin
   FGraph.CheckIndexRange(aSrc);
   Result := FordBellman(aSrc, aWeights);
 end;
 
-function TGWeighedUGraph.MinPathsMapFB(constref aSrc: TVertex; out aPaths: TIntArray;
+function TGWeighedUGraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 begin
-  Result := MinPathsMapFbI(FGraph.IndexOf(aSrc), aPaths, aWeights);
+  Result := FindMinPathsMapI(FGraph.IndexOf(aSrc), aPaths, aWeights);
 end;
 
-function TGWeighedUGraph.MinPathsMapFbI(aSrc: SizeInt; out aPaths: TIntArray;
+function TGWeighedUGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 begin
   FGraph.CheckIndexRange(aSrc);

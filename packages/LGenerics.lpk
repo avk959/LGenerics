@@ -146,12 +146,12 @@
         <UnitName Value="LGraphUtils"/>
       </Item28>
       <Item29>
-        <Filename Value="..\source\LGSimpleUGraph.pas"/>
-        <UnitName Value="LGSimpleUGraph"/>
+        <Filename Value="..\source\LGSimpleGraph.pas"/>
+        <UnitName Value="LGSimpleGraph"/>
       </Item29>
       <Item30>
-        <Filename Value="..\source\LGSimpleDGraph.pas"/>
-        <UnitName Value="LGSimpleDGraph"/>
+        <Filename Value="..\source\LGSimpleDigraph.pas"/>
+        <UnitName Value="LGSimpleDigraph"/>
       </Item30>
     </Files>
     <RequiredPkgs Count="1">
