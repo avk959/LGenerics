@@ -33,6 +33,7 @@ uses
   LGArrayHelpers,
   LGStack,
   LGQueue,
+  LGDeque,
   LGVector,
   LGHash,
   LGStrConst;
@@ -51,6 +52,7 @@ type
   TIntVectorHelper = specialize TGComparableVectorHelper<SizeInt>;
   TIntStack        = specialize TGLiteStack<SizeInt>;
   TIntQueue        = specialize TGLiteQueue<SizeInt>;
+  TIntDeque        = specialize TGLiteDeque<SizeInt>;
   TIntVector       = specialize TGLiteVector<SizeInt>;
   PIntVector       = ^TIntVector;
 
