@@ -49,6 +49,7 @@ type
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+    function  FindCycle(out aCycle: TIntVector): Boolean;
   public
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -73,10 +74,9 @@ type
     function  DegreeI(aVtxIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aVtxIndex: SizeInt): Boolean; inline;
-  { checks whether exists any cycle in graph that contains aVertex;
+  { checks whether exists any cycle in graph;
     if True then aCycle will contain indices of the vertices of the cycle }
-    function  ContainsCycle(constref aVertex: TVertex; out aCycle: TIntVector): Boolean; inline;
-    function  ContainsCycleI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
+    function  ContainsCycle(out aCycle: TIntVector): Boolean;
     function  ContainsEulerCycle: Boolean;
     function  FindEulerCycle: TIntArray;
 
@@ -95,23 +95,23 @@ procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
 var
   I, J: SizeInt;
   p: ^TAdjItem;
-  CurrEdges: TVertexItem.TAdjItemArray;
+  CurrEdges: TAdjList.TAdjItemArray;
 begin
-  FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
-  for p in FVertexList.ItemRefs[aIndex]^ do
-    Dec(FVertexList.ItemRefs[p^.Destination]^.FInDegree);
-  FVertexList.Delete(aIndex);
-  for I := 0 to Pred(FVertexList.Count) do
+  FEdgeCount -= AdjList[aIndex]^.Count;
+  for p in AdjList[aIndex]^ do
+    Dec(AdjList[p^.Destination]^.FInDegree);
+  Delete(aIndex);
+  for I := 0 to Pred(VertexCount) do
     begin
-      CurrEdges := FVertexList.ItemRefs[I]^.ToArray;
-      FVertexList.FNodeList[I].Item.MakeEmpty;
+      CurrEdges := AdjList[I]^.ToArray;
+      AdjList[I]^.MakeEmpty;
       for J := 0 to System.High(CurrEdges) do
         begin
           if CurrEdges[J].Destination <> aIndex then
             begin
               if CurrEdges[J].Destination > aIndex then
                 Dec(CurrEdges[J].Destination);
-              FVertexList.ItemRefs[I]^.Add(CurrEdges[J]);
+              AdjList[I]^.Add(CurrEdges[J]);
             end;
         end;
     end;
@@ -124,12 +124,13 @@ var
 begin
   if aSrc = aDst then
     exit(False);
-  Result := not FVertexList.ItemRefs[aSrc]^.FindOrAdd(aDst, p);
+  //Result := not AdjList[aSrc]^.FindOrAdd(aDst, p);
+  Result := AdjList[aSrc]^.Add(TAdjItem.Create(aDst, aData));
   if Result then
     begin
-      p^.Destination := aDst;
-      p^.Data := aData;
-      Inc(FVertexList.ItemRefs[aDst]^.FInDegree);
+      //p^.Destination := aDst;
+      //p^.Data := aData;
+      Inc(AdjList[aDst]^.FInDegree);
       Inc(FEdgeCount);
       //FConnectedValid := False;
     end;
@@ -139,23 +140,52 @@ function TGSimpleDiGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
-  Result := FVertexList.ItemRefs[aSrc]^.Remove(aDst);
+  Result := AdjList[aSrc]^.Remove(aDst);
   if Result then
     begin
-      Dec(FVertexList.ItemRefs[aDst]^.FInDegree);
+      Dec(AdjList[aDst]^.FInDegree);
       Dec(FEdgeCount);
       //FConnectedValid := False;
     end;
 end;
 
+function TGSimpleDiGraph.FindCycle(out aCycle: TIntVector): Boolean;
+var
+  Stack: TIntStack;
+  Visited: TColorVector;
+  v: TIntArray;
+  Curr, Next: SizeInt;
+begin
+  Visited.Size := VertexCount;
+  v := CreateIntArray;
+  Curr := 0;
+  repeat
+    Visited[Curr] := vclGray;
+    for Next in AdjVerticesI(Curr) do
+      if Visited[Next] = vclWhite then
+        begin
+          Stack.Push(Next);
+          v[Next] := Curr;
+        end
+      else
+        if Visited[Curr] = vclGray then
+          begin
+            aCycle := CycleChainFromTree(v, Next, Curr);
+            exit(True);
+          end;
+      Visited[Curr] := vclBlack;
+  until not Stack.TryPop(Curr);
+  Result := False;
+end;
+
 function TGSimpleDiGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
 var
-  p: PVertexItem;
+  p: PAdjList;
 begin
-  Result := not FVertexList.FindOrAdd(aVertex, aIndex);
+  Result := not FindOrAdd(aVertex, aIndex);
   if Result then
     begin
-      p := FVertexList.ItemRefs[aIndex];
+      p := AdjList[aIndex];
       p^.FInDegree := 0;
       p^.FCompIndex := -1;
       //FConnectedValid := False;
@@ -171,12 +201,12 @@ end;
 
 procedure TGSimpleDiGraph.RemoveVertex(constref aVertex: TVertex);
 begin
-  RemoveVertexI(FVertexList.IndexOf(aVertex));
+  RemoveVertexI(IndexOf(aVertex));
 end;
 
 procedure TGSimpleDiGraph.RemoveVertexI(aVtxIndex: SizeInt);
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
+  CheckIndexRange(aVtxIndex);
   DoRemoveVertex(aVtxIndex);
 end;
 
@@ -196,8 +226,8 @@ end;
 
 function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 begin
-  FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
   Result := DoAddEdge(aSrc, aDst, aData);
 end;
 
@@ -208,13 +238,13 @@ end;
 
 function TGSimpleDiGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := RemoveEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+  Result := RemoveEdgeI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
 function TGSimpleDiGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
   Result := DoRemoveEdge(aSrc, aDst);
 end;
 
@@ -243,7 +273,7 @@ begin
     //this should allow transfer data between directed/undirected graphs ???
     //or need save edges from dfs ???
     for I := 0 to Pred(Header.VertexCount) do
-      aWriteVertex(wbs, FVertexList.ItemRefs[I]^.Vertex);
+      aWriteVertex(wbs, AdjList[I]^.Vertex);
     //write edges
     for Edge in Edges do
       begin
@@ -329,37 +359,37 @@ end;
 
 function TGSimpleDiGraph.InDegree(constref v: TVertex): SizeInt;
 begin
-  Result := InDegreeI(FVertexList.IndexOf(v));
+  Result := InDegreeI(IndexOf(v));
 end;
 
 function TGSimpleDiGraph.InDegreeI(aVtxIndex: SizeInt): SizeInt;
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  Result := FVertexList.ItemRefs[aVtxIndex]^.FInDegree;
+  CheckIndexRange(aVtxIndex);
+  Result := AdjList[aVtxIndex]^.FInDegree;
 end;
 
 function TGSimpleDiGraph.OutDegree(constref aVertex: TVertex): SizeInt;
 begin
-  Result := OutDegreeI(FVertexList.IndexOf(aVertex));
+  Result := OutDegreeI(IndexOf(aVertex));
 end;
 
 function TGSimpleDiGraph.OutDegreeI(aVtxIndex: SizeInt): SizeInt;
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  Result := FVertexList.ItemRefs[aVtxIndex]^.Count;
+  CheckIndexRange(aVtxIndex);
+  Result := AdjList[aVtxIndex]^.Count;
 end;
 
 function TGSimpleDiGraph.Degree(constref aVertex: TVertex): SizeInt;
 begin
-  Result := DegreeI(FVertexList.IndexOf(aVertex));
+  Result := DegreeI(IndexOf(aVertex));
 end;
 
 function TGSimpleDiGraph.DegreeI(aVtxIndex: SizeInt): SizeInt;
 var
-  p: PVertexItem;
+  p: PAdjList;
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  p := FVertexList.ItemRefs[aVtxIndex];
+  CheckIndexRange(aVtxIndex);
+  p := AdjList[aVtxIndex];
   Result := p^.Count + p^.FInDegree;
 end;
 
@@ -373,41 +403,11 @@ begin
   Result := DegreeI(aVtxIndex) = 0;
 end;
 
-function TGSimpleDiGraph.ContainsCycle(constref aVertex: TVertex; out aCycle: TIntVector): Boolean;
+function TGSimpleDiGraph.ContainsCycle(out aCycle: TIntVector): Boolean;
 begin
-  Result := ContainsCycleI(IndexOf(aVertex), aCycle);
-end;
-
-function TGSimpleDiGraph.ContainsCycleI(aVtxIndex: SizeInt; out aCycle: TIntVector): Boolean;
-var
-  Stack: TIntStack;
-  Visited: TBitVector;
-  v: TIntArray;
-  Curr, Next: SizeInt;
-begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  Visited.Size := VertexCount;
-  v := CreateIntArray;
-  Curr := 0;
-  repeat
-    if not Visited[Curr] then
-      begin
-        Visited[Curr] := True;
-        for Next in AdjVerticesI(Curr) do
-          if not Visited[Next] then
-            begin
-              Stack.Push(Next);
-              v[Next] := Curr;
-            end
-          else
-            if Curr = aVtxIndex then
-              begin
-                aCycle := CycleChainFromTree(v, Next, Curr);
-                exit(True);
-              end;
-      end;
-  until not Stack.TryPop(Curr);
-  Result := False;
+  if VertexCount < 2 then
+    exit(False);
+  Result := FindCycle(aCycle);
 end;
 
 function TGSimpleDiGraph.ContainsEulerCycle: Boolean;
@@ -445,7 +445,7 @@ begin
     Result[0] := From;
     repeat
       repeat
-        if not g.FVertexList.ItemRefs[s]^.FindFirst(d) then
+        if not g.AdjList[s]^.FindFirst(d) then
           break;
         Stack.Push(s);
         g.RemoveEdgeI(s, d);
@@ -466,11 +466,20 @@ begin
 end;
 
 function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
+var
+  I: SizeInt;
 begin
   Result := TGSimpleDiGraph.Create;
-  Result.FVertexList := FVertexList;
+  Result.FCount := VertexCount;
   Result.FEdgeCount := EdgeCount;
   Result.FTitle := Title;
+  if NonEmpty then
+    begin
+      Result.FChainList := System.Copy(FChainList);
+      System.SetLength(Result.FNodeList, System.Length(FNodeList));
+      for I := 0 to Pred(VertexCount) do
+        Result.FNodeList[I].Assign(FNodeList[I]);
+    end;
   //Result.FConnected := Connected;
   //Result.FConnectedValid := ConnectedValid;
 end;

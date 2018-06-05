@@ -50,8 +50,8 @@ type
     TDistinctEdgeEnumerator = record
     private
       FVisited: TBitVector;
-      FList: TVertexList.TNodeList;
-      FEnum: TVertexItem.TEnumerator;
+      FList: TNodeList;
+      FEnum: TAdjList.TEnumerator;
       FCurrIndex,
       FLastIndex: SizeInt;
       FEnumDone: Boolean;
@@ -223,7 +223,6 @@ type
     TGraph          = specialize TGSimpleGraph<TVertex, TWeEdgeData, TVertexEqRel>;
     TEdge           = TGraph.TEdge;
     TEdges          = TGraph.TEdges;
-    TIntEdgeVector  = TGraph.TIntEdgeVector;
     TDistinctEdges  = TGraph.TDistinctEdges;
     TEdgeEnumerator = TGraph.TEdgeEnumerator;
     TAdjVertices    = TGraph.TAdjVertices;
@@ -563,8 +562,8 @@ end;
 
 function TGSimpleGraph.TDistinctEdges.GetEnumerator: TDistinctEdgeEnumerator;
 begin
-  Result.FList := FGraph.FVertexList.FNodeList;
-  Result.FLastIndex := Pred(FGraph.FVertexList.Count);
+  Result.FList := FGraph.FNodeList;
+  Result.FLastIndex := Pred(FGraph.VertexCount);
   Result.FVisited.Size := Succ(Result.FLastIndex);
   Result.FCurrIndex := -1;
   Result.FEnumDone := True;
@@ -730,23 +729,23 @@ end;
 
 procedure TGSimpleGraph.DoRemoveVertex(aIndex: SizeInt);
 var
-  CurrEdges: TVertexItem.TAdjItemArray;
+  CurrEdges: TAdjList.TAdjItemArray;
   I, J: SizeInt;
 begin
-  FEdgeCount -= FVertexList.ItemRefs[aIndex]^.Count;
-  FVertexList.Delete(aIndex);
+  FEdgeCount -= AdjList[aIndex]^.Count;
+  Delete(aIndex);
   FConnectedValid := False;
-  for I := 0 to Pred(FVertexList.Count) do
+  for I := 0 to Pred(VertexCount) do
     begin
-      CurrEdges := FVertexList.ItemRefs[I]^.ToArray;
-      FVertexList.FNodeList[I].Item.MakeEmpty;
+      CurrEdges := AdjList[I]^.ToArray;
+      AdjList[I]^.MakeEmpty;
       for J := 0 to System.High(CurrEdges) do
         begin
           if CurrEdges[J].Destination <> aIndex then
             begin
               if CurrEdges[J].Destination > aIndex then
                 Dec(CurrEdges[J].Destination);
-              FVertexList.ItemRefs[I]^.Add(CurrEdges[J]);
+              AdjList[I]^.Add(CurrEdges[J]);
             end;
         end;
     end;
@@ -756,10 +755,10 @@ function TGSimpleGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean
 begin
   if aSrc = aDst then
     exit(False);
-  Result := FVertexList.ItemRefs[aSrc]^.Add(TAdjItem.Create(aDst, aData));
+  Result := AdjList[aSrc]^.Add(TAdjItem.Create(aDst, aData));
   if Result then
     begin
-      if not FVertexList.ItemRefs[aDst]^.Add(TAdjItem.Create(aSrc, aData)) then
+      if not AdjList[aDst]^.Add(TAdjItem.Create(aSrc, aData)) then
         raise ELGraphError.Create(SEGrapInconsist);
       Inc(FEdgeCount);
       FConnectedValid := False;
@@ -770,10 +769,10 @@ function TGSimpleGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
-  Result := FVertexList.ItemRefs[aSrc]^.Remove(aDst);
+  Result := AdjList[aSrc]^.Remove(aDst);
   if Result then
     begin
-      FVertexList.ItemRefs[aDst]^.Remove(aSrc);
+      AdjList[aDst]^.Remove(aSrc);
       Dec(FEdgeCount);
       FConnectedValid := False;
     end;
@@ -841,7 +840,7 @@ begin
         Curr := I;
         repeat
           Visited[Curr] := True;
-          FVertexList.ItemRefs[Curr]^.FCompIndex := Result;
+          AdjList[Curr]^.FCompIndex := Result;
           for Curr in AdjVerticesI(Curr) do
             if not Visited[Curr] then
               Stack.Push(Curr);
@@ -863,7 +862,7 @@ var
 begin
   Result := 0;
   for I := 0 to Pred(VertexCount) do
-    Result += Ord(FVertexList.ItemRefs[I]^.FCompIndex = aCompIndex);
+    Result += Ord(AdjList[I]^.FCompIndex = aCompIndex);
 end;
 
 function TGSimpleGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -881,7 +880,7 @@ begin
         Curr := I;
         repeat
           Visited[Curr] := True;
-          FVertexList.ItemRefs[Curr]^.FCompIndex := 0;
+          AdjList[Curr]^.FCompIndex := 0;
           for Curr in AdjVerticesI(Curr) do
             if not Visited[Curr] then
               Stack.Push(Curr);
@@ -941,10 +940,10 @@ end;
 
 function TGSimpleGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
-  Result := not FVertexList.FindOrAdd(aVertex, aIndex);
+  Result := not FindOrAdd(aVertex, aIndex);
   if Result then
     begin
-      FVertexList.ItemRefs[aIndex]^.FCompIndex := -1;
+      AdjList[aIndex]^.FCompIndex := -1;
       FConnectedValid := False;
     end;
 end;
@@ -958,12 +957,12 @@ end;
 
 procedure TGSimpleGraph.RemoveVertex(constref aVertex: TVertex);
 begin
-  RemoveVertexI(FVertexList.IndexOf(aVertex));
+  RemoveVertexI(IndexOf(aVertex));
 end;
 
 procedure TGSimpleGraph.RemoveVertexI(aVtxIndex: SizeInt);
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
+  CheckIndexRange(aVtxIndex);
   DoRemoveVertex(aVtxIndex);
 end;
 
@@ -983,8 +982,8 @@ end;
 
 function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 begin
-  FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
   Result := DoAddEdge(aSrc, aDst, aData);
 end;
 
@@ -995,13 +994,13 @@ end;
 
 function TGSimpleGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := RemoveEdgeI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+  Result := RemoveEdgeI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
 function TGSimpleGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
   Result := DoRemoveEdge(aSrc, aDst);
 end;
 
@@ -1030,7 +1029,7 @@ begin
     //this should allow transfer data between directed/undirected graphs ???
     //or need save edges from dfs ???
     for I := 0 to Pred(Header.VertexCount) do
-      aWriteVertex(wbs, FVertexList.ItemRefs[I]^.Vertex);
+      aWriteVertex(wbs, AdjList[I]^.Vertex);
     //write edges
     for Edge in DistinctEdges do
       begin
@@ -1116,13 +1115,13 @@ end;
 
 function TGSimpleGraph.Degree(constref aVertex: TVertex): SizeInt;
 begin
-  Result := DegreeI(FVertexList.IndexOf(aVertex));
+  Result := DegreeI(IndexOf(aVertex));
 end;
 
 function TGSimpleGraph.DegreeI(aVtxIndex: SizeInt): SizeInt;
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
-  Result := FVertexList.ItemRefs[aVtxIndex]^.Count;
+  CheckIndexRange(aVtxIndex);
+  Result := AdjList[aVtxIndex]^.Count;
 end;
 
 function TGSimpleGraph.Isolated(constref aVertex: TVertex): Boolean;
@@ -1154,13 +1153,13 @@ end;
 
 function TGSimpleGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := SimplePathExistsI(FVertexList.IndexOf(aSrc), FVertexList.IndexOf(aDst));
+  Result := SimplePathExistsI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
 function TGSimpleGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
 begin
-  FVertexList.CheckIndexRange(aSrc);
-  FVertexList.CheckIndexRange(aDst);
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
   if aSrc = aDst then
     exit(False);
   //if ConnectedValid then
@@ -1169,12 +1168,12 @@ begin
   //  Result := CheckPathExists(aSrc, aDst);
   if not ConnectedValid then
     CheckSeparateCount;
-  Result := FVertexList.ItemRefs[aSrc]^.FCompIndex = FVertexList.ItemRefs[aDst]^.FCompIndex;
+  Result := AdjList[aSrc]^.FCompIndex = AdjList[aDst]^.FCompIndex;
 end;
 
 function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
 begin
-  Result := SeparateGraphI(FVertexList.IndexOf(aVertex));
+  Result := SeparateGraphI(IndexOf(aVertex));
 end;
 
 function TGSimpleGraph.SeparateGraphI(aVtxIndex: SizeInt): TGSimpleGraph;
@@ -1187,28 +1186,28 @@ end;
 
 function TGSimpleGraph.SeparateIndexOf(constref aVertex: TVertex): SizeInt;
 begin
-   Result := SeparateIndexOfI(FVertexList.IndexOf(aVertex));
+   Result := SeparateIndexOfI(IndexOf(aVertex));
 end;
 
 function TGSimpleGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
+  CheckIndexRange(aVtxIndex);
   if SeparateCount > 1 then
-    Result := FVertexList.ItemRefs[aVtxIndex]^.FCompIndex
+    Result := AdjList[aVtxIndex]^.FCompIndex
   else
     Result := 0;
 end;
 
 function TGSimpleGraph.SeparatePop(constref aVertex: TVertex): SizeInt;
 begin
-  Result := SeparatePopI(FVertexList.IndexOf(aVertex));
+  Result := SeparatePopI(IndexOf(aVertex));
 end;
 
 function TGSimpleGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
+  CheckIndexRange(aVtxIndex);
   if SeparateCount > 1 then
-    Result := CountPop(FVertexList.ItemRefs[aVtxIndex]^.FCompIndex)
+    Result := CountPop(AdjList[aVtxIndex]^.FCompIndex)
   else
     Result := VertexCount;
 end;
@@ -1268,7 +1267,7 @@ begin
     Result[0] := From;
     repeat
       repeat
-        if not g.FVertexList.ItemRefs[s]^.FindFirst(d) then
+        if not g.AdjList[s]^.FindFirst(d) then
           break;
         Stack.Push(s);
         g.RemoveEdgeI(s, d);
@@ -1296,7 +1295,7 @@ function TGSimpleGraph.ContainsCutPointI(aVtxIndex: SizeInt): Boolean;
 var
   Helper: TCutPointHelper;
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
+  CheckIndexRange(aVtxIndex);
   Result := Helper.ContainsAny(Self, aVtxIndex);
 end;
 
@@ -1309,7 +1308,7 @@ function TGSimpleGraph.FindCutPointsI(aVtxIndex: SizeInt): TIntVector;
 var
   Helper: TCutPointHelper;
 begin
-  FVertexList.CheckIndexRange(aVtxIndex);
+  CheckIndexRange(aVtxIndex);
   Helper.Search(Self, @Result, aVtxIndex);
 end;
 
@@ -1337,7 +1336,7 @@ end;
 
 function TGSimpleGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
-  Result := DfsSpanningTreeI(FVertexList.IndexOf(aRoot));
+  Result := DfsSpanningTreeI(IndexOf(aRoot));
 end;
 
 function TGSimpleGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
@@ -1346,7 +1345,7 @@ var
   Stack: TIntStack;
   I: SizeInt;
 begin
-  FVertexList.CheckIndexRange(aRoot);
+  CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   Result := CreateIntArray;
   repeat
@@ -1362,7 +1361,7 @@ end;
 
 function TGSimpleGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
-  Result := BfsSpanningTreeI(FVertexList.IndexOf(aRoot));
+  Result := BfsSpanningTreeI(IndexOf(aRoot));
 end;
 
 function TGSimpleGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
@@ -1371,7 +1370,7 @@ var
   Queue: TIntQueue;
   I: SizeInt;
 begin
-  FVertexList.CheckIndexRange(aRoot);
+  CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   Result := CreateIntArray;
   repeat
@@ -1394,7 +1393,7 @@ begin
     begin
       Src := aVector[I];
       if Src <> -1 then
-        Result.AddEdge(FVertexList[Src], FVertexList[I], GetEdgeDataPtr(Src, I)^);
+        Result.AddEdge(Items[Src], Items[I], GetEdgeDataPtr(Src, I)^);
     end;
 end;
 
@@ -1418,13 +1417,22 @@ begin
 end;
 
 function TGSimpleGraph.Clone: TGSimpleGraph;
+var
+  I: SizeInt;
 begin
   Result := TGSimpleGraph.Create;
-  Result.FVertexList := FVertexList;
+  Result.FCount := VertexCount;
   Result.FEdgeCount := EdgeCount;
   Result.FTitle := Title;
   Result.FConnected := Connected;
   Result.FConnectedValid := ConnectedValid;
+  if NonEmpty then
+    begin
+      Result.FChainList := System.Copy(FChainList);
+      System.SetLength(Result.FNodeList, System.Length(FNodeList));
+      for I := 0 to Pred(VertexCount) do
+        Result.FNodeList[I].Assign(FNodeList[I]);
+    end;
 end;
 
 { TGWeighedEdgeData }
