@@ -31,8 +31,6 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
-  LGStack,
-  LGQueue,
   LGVector,
   LGPriorityQueue,
   LGraphUtils,
@@ -1252,19 +1250,17 @@ function TGSimpleGraph.FindEulerCycle: TIntArray;
 var
   g: TGSimpleGraph = nil;
   Stack: TIntStack;
-  I, s, d, From: SizeInt;
+  CurrPath: TIntVector;
+  s, d: SizeInt;
 begin
   if not ContainsEulerCycle then
     exit(nil);
   g := Clone;
   try
-    I := 1;
-    System.SetLength(Result, ARRAY_INITIAL_SIZE);
     s := 0;
     while g.DegreeI(s) = 0 do
       Inc(s);
-    From := s;
-    Result[0] := From;
+    CurrPath.Add(s);
     repeat
       repeat
         if not g.AdjList[s]^.FindFirst(d) then
@@ -1275,12 +1271,9 @@ begin
       until False;
       if not Stack.TryPop(s) then
         break;
-      if System.Length(Result) = I then
-        System.SetLength(Result, I shl 1);
-      Result[I] := s;
-      Inc(I);
+      CurrPath.Add(s);
     until False;
-     System.SetLength(Result, I);
+     Result := CurrPath.ToArray;
   finally
     g.Free;
   end;

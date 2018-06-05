@@ -31,8 +31,6 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
-  LGStack,
-  LGQueue,
   LGVector,
   LGraphUtils,
   LGStrConst;
@@ -152,28 +150,29 @@ end;
 function TGSimpleDiGraph.FindCycle(out aCycle: TIntVector): Boolean;
 var
   Stack: TIntStack;
-  Visited: TColorVector;
+  Colors: TColorVector;
   v: TIntArray;
   Curr, Next: SizeInt;
 begin
-  Visited.Size := VertexCount;
+  Colors.Size := VertexCount;
   v := CreateIntArray;
   Curr := 0;
   repeat
-    Visited[Curr] := vclGray;
+    Colors[Curr] := vclGray;
     for Next in AdjVerticesI(Curr) do
-      if Visited[Next] = vclWhite then
+      if Colors[Next] = vclNone then
         begin
+          Colors[Next] := vclWhite;
           Stack.Push(Next);
           v[Next] := Curr;
         end
       else
-        if Visited[Curr] = vclGray then
+        if Colors[Curr] = vclGray then
           begin
             aCycle := CycleChainFromTree(v, Next, Curr);
             exit(True);
           end;
-      Visited[Curr] := vclBlack;
+      Colors[Curr] := vclBlack;
   until not Stack.TryPop(Curr);
   Result := False;
 end;
@@ -430,19 +429,17 @@ function TGSimpleDiGraph.FindEulerCycle: TIntArray;
 var
   g: TGSimpleDiGraph = nil;
   Stack: TIntStack;
-  I, s, d, From: SizeInt;
+  CurrPath: TIntDeque;
+  s, d: SizeInt;
 begin
   if not ContainsEulerCycle then
     exit(nil);
   g := Clone;
   try
-    I := 1;
-    System.SetLength(Result, ARRAY_INITIAL_SIZE);
     s := 0;
     while g.DegreeI(s) = 0 do
       Inc(s);
-    From := s;
-    Result[0] := From;
+    CurrPath.PushLast(s);
     repeat
       repeat
         if not g.AdjList[s]^.FindFirst(d) then
@@ -453,13 +450,9 @@ begin
       until False;
       if not Stack.TryPop(s) then
         break;
-      if System.Length(Result) = I then
-        System.SetLength(Result, I shl 1);
-      Result[I] := s;
-      Inc(I);
+      CurrPath.PushFirst(s);
     until False;
-     System.SetLength(Result, I);
-     TIntHelper.Reverse(Result);
+     Result := CurrPath.ToArray;
   finally
     g.Free;
   end;
