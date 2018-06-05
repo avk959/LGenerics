@@ -85,12 +85,13 @@ type
   TVertexColor = 0..3;
 
 const
-  vclWhite: TVertexColor = 0;
-  vclGray:  TVertexColor = 1;
-  vclBlack: TVertexColor = 2;
-  vclRed:   TVertexColor = 3;
+  vclNone:  TVertexColor = 0;
+  vclWhite: TVertexColor = 1;
+  vclGray:  TVertexColor = 2;
+  vclBlack: TVertexColor = 3;
 
 type
+  TColorArray = array of TVertexColor;
 
   TColorVector = record
   private
@@ -474,7 +475,7 @@ type
     class function CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntVector; static;
     constructor Create;
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
-    function  CreateShortArray: TShortArray;
+    function  CreateColorArray: TColorArray;
     function  CreateHandleArray: THandleArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -515,8 +516,8 @@ type
     bipartite components and / or several isolated vertices)}
     function  IsBipartite: Boolean;
   { test whether the graph is bipartite; if returns True then information about the vertex
-    belonging to the fractions is returned in v(0 or 1) }
-    function  IsBipartite(out v: TShortArray): Boolean;
+    belonging to the fractions is returned in aColors(vclWhite or vclGray) }
+    function  IsBipartite(out aColors: TColorArray): Boolean;
 
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
@@ -1605,14 +1606,14 @@ begin
 {$ENDIF}
 end;
 
-function TGCustomGraph.CreateShortArray: TShortArray;
+function TGCustomGraph.CreateColorArray: TColorArray;
 var
   c: SizeInt;
 begin
   c := VertexCount;
   System.SetLength(Result, c);
   if c > 0 then
-    System.FillChar(Result[0], c, $ff);
+    System.FillChar(Result[0], c, 0);
 end;
 
 function TGCustomGraph.CreateHandleArray: THandleArray;
@@ -1849,43 +1850,39 @@ end;
 
 function TGCustomGraph.IsBipartite: Boolean;
 var
-  v: TShortArray;
+  Colors: TColorArray;
 begin
-  Result := IsBipartite(v);
+  Result := IsBipartite(Colors);
 end;
 
-function TGCustomGraph.IsBipartite(out v: TShortArray): Boolean;
+function TGCustomGraph.IsBipartite(out aColors: TColorArray): Boolean;
 var
   Visited: TBitVector;
   Stack: TIntStack;
   Curr, I: SizeInt;
-  Color: Boolean;
+  CurrColor: TVertexColor;
 begin
-  v := CreateShortArray;
+  aColors := CreateColorArray;
   if VertexCount < 2 then
     exit(False);
   Visited.Size := VertexCount;
-  for I := 0 to Pred(System.Length(v)) do
+  for I := 0 to Pred(System.Length(aColors)) do
     if not Visited[I] then
       begin
         Curr := I;
         repeat
           Visited[Curr] := True;
-          if v[Curr] = -1 then
-            begin
-              v[Curr] := 0;
-              Color := False;
-            end
-          else
-            Color := Boolean(v[Curr]);
+          if aColors[Curr] = vclNone then
+            aColors[Curr] := vclWhite;
+          CurrColor := aColors[Curr];
           for Curr in AdjVerticesI(Curr) do
             if not Visited[Curr] then
               begin
                 Stack.Push(Curr);
-                v[Curr] := Ord(not Color);
+                aColors[Curr] := vclBlack - CurrColor;
               end
             else
-              if v[Curr] = Ord(Color) then
+              if aColors[Curr] = CurrColor then
                 exit(False);
         until not Stack.TryPop(Curr);
       end;
