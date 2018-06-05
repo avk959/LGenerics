@@ -404,8 +404,8 @@ type
     bipartite components and / or several isolated vertices)}
     function  IsBipartite: Boolean; inline;
   { test whether the graph is bipartite; if returns True then information about the vertex
-    belonging to the fractions is returned in v(0 or 1) }
-    function  IsBipartite(out v: TShortArray): Boolean; inline;
+    belonging to the fractions is returned in aColors(vclWhite or vclGray }
+    function  IsBipartite(out aColors: TColorArray): Boolean; inline;
   { returns the length of the shortest path(in sense 'edges count') between the vertices aSrc and aDst,
     -1 if the path does not exist }
     function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
@@ -1996,26 +1996,25 @@ begin
   Handles[0] := Queue.Insert(TWeightItem.Create(ZeroWeight, 0));
   aTotalWeight := 0;
   while Queue.TryDequeue(Item) do
-    if not Visited[Item.Index] then
-      begin
-        Curr := Item.Index;
-        aTotalWeight += Item.Weight;
-        Visited[Curr] := True;
-        for p in FGraph.AdjVerticesPtr(Curr) do
-          begin
-            if Handles[p^.Key] = INVALID_HANDLE then
+    begin
+      Curr := Item.Index;
+      aTotalWeight += Item.Weight;
+      Visited[Curr] := True;
+      for p in FGraph.AdjVerticesPtr(Curr) do
+        begin
+          if Handles[p^.Key] = INVALID_HANDLE then
+            begin
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight, p^.Key));
+              Result[p^.Key] := Curr;
+            end
+          else
+            if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
               begin
-                Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight, p^.Key));
+                Queue.Update(Handles[p^.Key], TWeightItem.Create(p^.Data.Weight, p^.Key));
                 Result[p^.Key] := Curr;
-              end
-            else
-              if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
-                begin
-                  Queue.Update(Handles[p^.Key], TWeightItem.Create(p^.Data.Weight, p^.Key));
-                  Result[p^.Key] := Curr;
-                end;
-          end;
-      end;
+              end;
+        end;
+    end;
 end;
 
 function TGWeighedGraph.CreateWeightVector: TWeightArray;
@@ -2310,9 +2309,9 @@ begin
   Result := FGraph.IsBipartite;
 end;
 
-function TGWeighedGraph.IsBipartite(out v: TShortArray): Boolean;
+function TGWeighedGraph.IsBipartite(out aColors: TColorArray): Boolean;
 begin
-  Result := FGraph.IsBipartite(v)
+  Result := FGraph.IsBipartite(aColors)
 end;
 
 function TGWeighedGraph.ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt;
