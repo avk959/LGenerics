@@ -44,10 +44,24 @@ type
   generic TGSimpleDiGraph<TVertex, TEdgeData, TVertexEqRel> = class(
     specialize TGCustomGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
+  type
+
+    TCycleHelper = record
+      Visited: TBitVector;
+      Graph: TGSimpleDiGraph;
+      First, Last: SizeInt;
+      Parents: TIntArray;
+      procedure Init(aGraph: TGSimpleDiGraph);
+      function  DfsRFind(From: SizeInt): Boolean;
+    public
+      function Search(aGraph: TGSimpleDiGraph): Boolean;
+    end;
+
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  FindCycle(out aCycle: TIntVector): Boolean;
+    function  FindCycleR(out aCycle: TIntVector): Boolean;
   public
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -76,7 +90,7 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(out aCycle: TIntVector): Boolean;
     function  ContainsEulerCycle: Boolean;
-    function  FindEulerCycle: TIntArray;
+    function  FindEulerCycle: TIntVector;
 
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
@@ -86,6 +100,44 @@ implementation
 {$B-}{$COPERATORS ON}
 uses
   bufstream;
+
+{ TGSimpleDiGraph.TCycleHelper }
+
+procedure TGSimpleDiGraph.TCycleHelper.Init(aGraph: TGSimpleDiGraph);
+begin
+  Graph := aGraph;
+  Visited.Size := aGraph.VertexCount;
+  Parents := aGraph.CreateIntArray;
+  First := -1;
+  Last := -1;
+end;
+
+function TGSimpleDiGraph.TCycleHelper.DfsRFind(From: SizeInt): Boolean;
+var
+  Next, Found: SizeInt;
+begin
+  Visited[From] := True;
+  for Next in Graph.AdjVerticesI(From) do
+    if not Visited[Next] then
+      begin
+        Parents[Next] := From;
+        if DfsRFind(Next) then
+          exit(True);
+      end
+  else
+    begin
+      First := Next;
+      Last := From;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGSimpleDiGraph.TCycleHelper.Search(aGraph: TGSimpleDiGraph): Boolean;
+begin
+  Init(aGraph);
+  Result := DfsRFind(0);
+end;
 
 { TGSimpleDiGraph }
 
@@ -117,17 +169,12 @@ begin
 end;
 
 function TGSimpleDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-var
-  p: ^TAdjItem;
 begin
   if aSrc = aDst then
     exit(False);
-  //Result := not AdjList[aSrc]^.FindOrAdd(aDst, p);
   Result := AdjList[aSrc]^.Add(TAdjItem.Create(aDst, aData));
   if Result then
     begin
-      //p^.Destination := aDst;
-      //p^.Data := aData;
       Inc(AdjList[aDst]^.FInDegree);
       Inc(FEdgeCount);
       //FConnectedValid := False;
@@ -150,31 +197,40 @@ end;
 function TGSimpleDiGraph.FindCycle(out aCycle: TIntVector): Boolean;
 var
   Stack: TIntStack;
-  Colors: TColorVector;
-  v: TIntArray;
+  Visited: TBitVector;
+  Parents: TIntArray;
   Curr, Next: SizeInt;
 begin
-  Colors.Size := VertexCount;
-  v := CreateIntArray;
+  Visited.Size := VertexCount;
+  Parents := CreateIntArray;
   Curr := 0;
   repeat
-    Colors[Curr] := vclGray;
-    for Next in AdjVerticesI(Curr) do
-      if Colors[Next] = vclNone then
-        begin
-          Colors[Next] := vclWhite;
-          Stack.Push(Next);
-          v[Next] := Curr;
-        end
-      else
-        if Colors[Curr] = vclGray then
-          begin
-            aCycle := CycleChainFromTree(v, Next, Curr);
-            exit(True);
-          end;
-      Colors[Curr] := vclBlack;
+    if not Visited[Curr] then
+      begin
+        Visited[Curr] := True;
+        for Next in AdjVerticesI(Curr) do
+          if not Visited[Next] then
+            begin
+              Parents[Next] := Curr;
+              Stack.Push(Next);
+            end
+          else
+            begin
+              aCycle := CycleChainFromTree(Parents, Next, Curr);
+              exit(True);
+            end;
+      end;
   until not Stack.TryPop(Curr);
   Result := False;
+end;
+
+function TGSimpleDiGraph.FindCycleR(out aCycle: TIntVector): Boolean;
+var
+  h: TCycleHelper;
+begin
+  Result := h.Search(Self);
+  if Result then
+    aCycle := CycleChainFromTree(h.Parents, h.First, h.Last);
 end;
 
 function TGSimpleDiGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -407,6 +463,7 @@ begin
   if VertexCount < 2 then
     exit(False);
   Result := FindCycle(aCycle);
+  //Result := FindCycleR(aCycle);
 end;
 
 function TGSimpleDiGraph.ContainsEulerCycle: Boolean;
@@ -425,7 +482,7 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleDiGraph.FindEulerCycle: TIntArray;
+function TGSimpleDiGraph.FindEulerCycle: TIntVector;
 var
   g: TGSimpleDiGraph = nil;
   Stack: TIntStack;
@@ -433,7 +490,7 @@ var
   s, d: SizeInt;
 begin
   if not ContainsEulerCycle then
-    exit(nil);
+    exit;
   g := Clone;
   try
     s := 0;
@@ -452,7 +509,8 @@ begin
         break;
       CurrPath.PushFirst(s);
     until False;
-     Result := CurrPath.ToArray;
+      for s in CurrPath do
+       Result.Add(s);
   finally
     g.Free;
   end;
