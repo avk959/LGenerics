@@ -114,6 +114,7 @@ type
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
     procedure SearchCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
+    procedure MakeBiconnected(var aEdges: TIntEdgeVector);
     function  BridgeExists: Boolean;
     procedure SearchBridges(var aBridges: TIntEdgeVector);
     property  Connected: Boolean read FConnected;
@@ -142,7 +143,7 @@ type
   { checks whether the graph is connected; an empty graph is considered disconnected }
     function  IsConnected: Boolean; inline;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
-    from the vertex with the index 0; returns count of added edges}
+    from the vertex with the index 0; returns count of added edges }
     function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
     function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
@@ -183,6 +184,8 @@ type
     function  FindBridges: TIntEdgeVector;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
+  { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
+    function  EnsureBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { returns the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
@@ -203,10 +206,13 @@ type
   THandle = LGUtils.THandle;
 
   { TGWeighedGraph: simple sparse undirected graph based on adjacency lists;
+
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
+
       TEdgeData MUST have field/property/function Weight: TWeight;
+
       TWeight must have defined comparision operators and properties MinValue, MaxValue,
       which used as infinity weight values;
       Default(TWeight) used as zero weight value }
@@ -860,12 +866,66 @@ begin
   Result := ChildCount > 1;
 end;
 
+procedure TGSimpleGraph.MakeBiconnected(var aEdges: TIntEdgeVector);
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Lowest, InOrder, Parents, FirstChild: TIntArray;
+  Counter, Total, Curr, Next: SizeInt;
+begin
+  Total := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Lowest := CreateIntArray(Total);
+  InOrder := CreateIntArray(Total);
+  Parents := CreateIntArray;
+  FirstChild := CreateIntArray;
+  InOrder[0] := 0;
+  Lowest[0] := 0;
+  {%H-}Stack.Push(0);
+  Counter := 1;
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[{%H-}Curr].MoveNext then
+      begin
+        Next := AdjEnums[Curr].Current;
+        if Next <> Parents[Curr] then
+          if InOrder[Next] = Total then
+            begin
+              if FirstChild[Curr] = -1 then
+                FirstChild[Curr] := Next;
+              Parents[Next] := Curr;
+              InOrder[Next] := Counter;
+              Lowest[Next] := Counter;
+              Inc(Counter);
+              Stack.Push(Next);
+            end
+          else
+            Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+      end
+    else
+      begin
+        Stack.Pop;
+        Next := Curr;
+        Curr := Parents[Curr];
+        Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+        if Lowest[Next] >= InOrder[Curr] then
+          begin
+            if Next = FirstChild[Curr] then
+              begin
+                if Parents[Curr] <> -1 then
+                  aEdges.Add(TIntEdge.Create(Parents[Curr], Next));
+              end
+            else
+              aEdges.Add(TIntEdge.Create(FirstChild[Curr], Next));
+          end;
+      end;
+end;
+
 function TGSimpleGraph.BridgeExists: Boolean;
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Lowest, InOrder, Parents: TIntArray;
-  Counter, Total, Prev, Curr, Next, I: SizeInt;
+  Counter, Total, Curr, Next, I: SizeInt;
 begin
   Total := VertexCount;
   AdjEnums := CreateAdjEnumArray;
@@ -882,9 +942,8 @@ begin
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
-              Prev := Parents[Curr];
               Next := AdjEnums[Curr].Current;
-              if Next <> Prev then
+              if Next <> Parents[Curr] then
                 if InOrder[Next] = Total then
                   begin
                     Parents[Next] := Curr;
@@ -914,7 +973,7 @@ var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Lowest, InOrder, Parents: TIntArray;
-  Counter, Total, Prev, Curr, Next, I: SizeInt;
+  Counter, Total, Curr, Next, I: SizeInt;
 begin
   Total := VertexCount;
   AdjEnums := CreateAdjEnumArray;
@@ -931,9 +990,8 @@ begin
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
-              Prev := Parents[Curr];
               Next := AdjEnums[Curr].Current;
-              if Next <> Prev then
+              if Next <> Parents[Curr] then
                 if InOrder[Next] = Total then
                   begin
                     Parents[Next] := Curr;
@@ -1173,7 +1231,7 @@ begin
     exit;
   if ConnectedValid and Connected then
     exit;
-  Result += MakeConnected(aOnAddEdge);
+  Result := MakeConnected(aOnAddEdge);
 end;
 
 function TGSimpleGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
@@ -1366,6 +1424,26 @@ begin
     Result := not ContainsCutPointI
   else
     Result := False;
+end;
+
+function TGSimpleGraph.EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+var
+  NewEdges: TIntEdgeVector;
+  e: TIntEdge;
+  d: TEdgeData;
+begin
+  Result := 0;
+  if VertexCount < 3 then
+    exit;
+  Result += EnsureConnected(aOnAddEdge);
+  MakeBiconnected(NewEdges);
+  d := CFData;
+  for e in NewEdges do
+    begin
+      if Assigned(aOnAddEdge) then
+        aOnAddEdge(Items[e.Source], Items[e.Destination], @d);
+      Result += Ord(AddEdgeI(e.Source, e.Destination, d));
+    end;
 end;
 
 function TGSimpleGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
