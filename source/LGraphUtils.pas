@@ -56,8 +56,8 @@ type
   TIntVector       = specialize TGLiteVector<SizeInt>;
   PIntVector       = ^TIntVector;
 
-  TOnIntVisit      = procedure (aValue: SizeInt) of object;
-  TOnIntTest       = function (aValue: SizeInt): Boolean of object;
+  TOnVisit         = procedure (aValue: SizeInt) of object;
+  OnAccept        = function (aValue: SizeInt): Boolean of object;
 
   generic TGOnAddEdge<T>       = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
   generic TGOnStreamRead<T>    = function(aStream: TStream): T of object;
@@ -508,17 +508,17 @@ type
     function  GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
     function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
-  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
-    if aOnGray returns True then traversal stops }
-    function  DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-    function  DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
+  { returns count of visited vertices; OnAccept calls after vertex visite, OnNext calls after next vertex found;
+    if OnAccept returns False then traversal stops }
+    function  DfsTraversal(constref aRoot: TVertex; OnAccept: OnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
+    function  DfsTraversalI(aRoot: SizeInt; OnAccept: OnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
   { returns the vector containig indices of DFS path from aSrc to aDst, empty if no such path }
     function  DfsPath(constref aSrc, aDst: TVertex): TIntVector; inline;
     function  DfsPathI(aSrc, aDst: SizeInt): TIntVector;
-  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
-    if aOnGray returns True then traversal stops}
-    function  BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-    function  BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
+  { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
+    if OnAccept returns False then traversal stops}
+    function  BfsTraversal(constref aRoot: TVertex; OnAccept: OnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
+    function  BfsTraversalI(aRoot: SizeInt; OnAccept: OnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
   { test whether the graph is bipartite;
     the graph can be disconnected (in this case it consists of a number of connected
     bipartite components and / or several isolated vertices)}
@@ -1849,13 +1849,13 @@ begin
     p^.Data := aValue;
 end;
 
-function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
-  aOnWhite: TOnIntVisit): SizeInt;
+function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: OnAccept;
+  OnFound: TOnVisit): SizeInt;
 begin
-  Result := DfsTraversalI(IndexOf(aRoot), aOnGray, aOnWhite);
+  Result := DfsTraversalI(IndexOf(aRoot), OnAccept, OnFound);
 end;
 
-function TGCustomGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest; aOnWhite: TOnIntVisit): SizeInt;
+function TGCustomGraph.DfsTraversalI(aRoot: SizeInt; OnAccept: OnAccept; OnFound: TOnVisit): SizeInt;
 var
   Stack: TIntStack;
   Visited: TBitVector;
@@ -1866,26 +1866,26 @@ begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  if aOnWhite <> nil then
-    aOnWhite(aRoot);
+  if OnFound <> nil then
+    OnFound(aRoot);
   Visited[aRoot] := True;
   {%H-}Stack.Push(aRoot);
   Result := 1;
-  if aOnGray <> nil then
-    aOnGray(aRoot);
+  if OnAccept <> nil then
+    OnAccept(aRoot);
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
       begin
         Next := AdjEnums[aRoot].Current;
         if not Visited[Next] then
           begin
-            if aOnWhite <> nil then
-              aOnWhite(Next);
+            if OnFound <> nil then
+              OnFound(Next);
             Visited[Next] := True;
             Stack.Push(Next);
             Inc(Result);
-            if aOnGray <> nil then
-              aOnGray(Next);
+            if (OnAccept <> nil) and not OnAccept(Next) then
+              break;
           end;
       end
     else
@@ -1929,12 +1929,12 @@ var
       Stack.Pop;
 end;
 
-function TGCustomGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest; aOnWhite: TOnIntVisit): SizeInt;
+function TGCustomGraph.BfsTraversal(constref aRoot: TVertex; OnAccept: OnAccept; OnFound: TOnVisit): SizeInt;
 begin
-  Result := BfsTraversalI(IndexOf(aRoot), aOnGray, aOnWhite);
+  Result := BfsTraversalI(IndexOf(aRoot), OnAccept, OnFound);
 end;
 
-function TGCustomGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest; aOnWhite: TOnIntVisit): SizeInt;
+function TGCustomGraph.BfsTraversalI(aRoot: SizeInt; OnAccept: OnAccept; OnFound: TOnVisit): SizeInt;
 var
   Visited: TBitVector;
   Queue: TIntQueue;
@@ -1943,16 +1943,16 @@ begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   {%H-}Queue.EnsureCapacity(VertexCount);
-  if aOnWhite <> nil then
-    aOnWhite(aRoot);
+  if OnFound <> nil then
+    OnFound(aRoot);
   repeat
-    if Assigned(aOnGray) and aOnGray(aRoot) then
+    if Assigned(OnAccept) and not OnAccept(aRoot) then
       exit;
     for aRoot in AdjVerticesI(aRoot) do
       if not Visited[aRoot] then
         begin
-          if aOnWhite <> nil then
-            aOnWhite(aRoot);
+          if OnFound <> nil then
+            OnFound(aRoot);
           Visited[aRoot] := True;
           Inc(Result);
           Queue.Enqueue(aRoot);
