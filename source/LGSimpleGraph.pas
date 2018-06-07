@@ -112,6 +112,10 @@ type
     function  CountPop(aCompIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+    procedure SearchCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
+    function  CutPointExists(aRoot: SizeInt): Boolean;
+    function  BridgeExists: Boolean;
+    procedure SearchBridges(var aBridges: TIntEdgeVector);
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
@@ -163,15 +167,13 @@ type
     function  ContainsEulerCycle: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntVector;
-  { checks whether exists any articulation point that belong to the same connection component as aVertex;
-    note: may crash with stack overflow on size ~ 300000*3 because of recursive DFS }
-    function  ContainsCutPoint(constref aVertex: TVertex): Boolean; inline;
-    function  ContainsCutPointI(aVtxIndex: SizeInt = 0): Boolean;
-  { returns the articulation points that belong to the same connection component as aVertex, if any,
-    otherwise the empty vector;
-    note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS }
-    function  FindCutPoints(constref aVertex: TVertex): TIntVector; inline;
-    function  FindCutPointsI(aVtxIndex: SizeInt = 0): TIntVector;
+  { checks whether exists any articulation point that belong to the same connection component as aRoot }
+    function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
+    function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
+  { returns the articulation points that belong to the same connection component as aRoot, if any,
+    otherwise the empty vector }
+    function  FindCutPoints(constref aRoot: TVertex): TIntVector; inline;
+    function  FindCutPointsI(aRoot: SizeInt = 0): TIntVector;
   { checks whether exists any bridge in graph;
     note: may crash with stack overflow on size ~ 300000*3 because of recursive DFS }
     function  ContainsBridge: Boolean;
@@ -759,6 +761,202 @@ begin
   Result := False;
 end;
 
+procedure TGSimpleGraph.SearchCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Lowest, InOrder, Parents: TIntArray;
+  Counter, Total, Prev, Curr, Next, ChildCount: SizeInt;
+begin
+  Total := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Lowest := CreateIntArray(Total);
+  InOrder := CreateIntArray(Total);
+  Parents := CreateIntArray;
+  InOrder[aRoot] := 0;
+  Lowest[aRoot] := 0;
+  {%H-}Stack.Push(aRoot);
+  Counter := 1;
+  ChildCount := 0;
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[{%H-}Curr].MoveNext then
+      begin
+        Prev := Parents[Curr];
+        Next := AdjEnums[Curr].Current;
+        if Next <> Prev then
+          if InOrder[Next] = Total then
+            begin
+              Parents[Next] := Curr;
+              InOrder[Next] := Counter;
+              Lowest[Next] := Counter;
+              Inc(Counter);
+              if Prev = -1 then
+                Inc(ChildCount);
+              Stack.Push(Next);
+            end
+          else
+            Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+      end
+    else
+      begin
+        Stack.Pop;
+        Next := Curr;
+        Curr := Parents[Curr];
+        Prev := Parents[Curr];
+        Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+        if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
+          aPoints.Add(Curr);
+      end;
+  if ChildCount > 1 then
+    aPoints.Add(aRoot);
+end;
+
+function TGSimpleGraph.CutPointExists(aRoot: SizeInt): Boolean;
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Lowest, InOrder, Parents: TIntArray;
+  Counter, Total, Prev, Curr, Next, ChildCount: SizeInt;
+begin
+  Total := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Lowest := CreateIntArray(Total);
+  InOrder := CreateIntArray(Total);
+  Parents := CreateIntArray;
+  InOrder[aRoot] := 0;
+  Lowest[aRoot] := 0;
+  {%H-}Stack.Push(aRoot);
+  Counter := 1;
+  ChildCount := 0;
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[{%H-}Curr].MoveNext then
+      begin
+        Prev := Parents[Curr];
+        Next := AdjEnums[Curr].Current;
+        if Next <> Prev then
+          if InOrder[Next] = Total then
+            begin
+              Parents[Next] := Curr;
+              InOrder[Next] := Counter;
+              Lowest[Next] := Counter;
+              Inc(Counter);
+              if Prev = -1 then
+                Inc(ChildCount);
+              Stack.Push(Next);
+            end
+          else
+            Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+      end
+    else
+      begin
+        Stack.Pop;
+        Next := Curr;
+        Curr := Parents[Curr];
+        Prev := Parents[Curr];
+        Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+        if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
+          exit(True);
+      end;
+  Result := ChildCount > 1;
+end;
+
+function TGSimpleGraph.BridgeExists: Boolean;
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Lowest, InOrder, Parents: TIntArray;
+  Counter, Total, Prev, Curr, Next, I: SizeInt;
+begin
+  Total := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Lowest := CreateIntArray(Total);
+  InOrder := CreateIntArray(Total);
+  Parents := CreateIntArray;
+  Counter := 0;
+  for I := 0 to Pred(Total) do
+    if InOrder[I] = Total then
+      begin
+        InOrder[I] := Counter;
+        Lowest[I] := Counter;
+        {%H-}Stack.Push(I);
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[{%H-}Curr].MoveNext then
+            begin
+              Prev := Parents[Curr];
+              Next := AdjEnums[Curr].Current;
+              if Next <> Prev then
+                if InOrder[Next] = Total then
+                  begin
+                    Parents[Next] := Curr;
+                    InOrder[Next] := Counter;
+                    Lowest[Next] := Counter;
+                    Inc(Counter);
+                    Stack.Push(Next);
+                  end
+                else
+                  Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+            end
+          else
+            begin
+              Stack.Pop;
+              Next := Curr;
+              Curr := Parents[Curr];
+              Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+              if Lowest[Next] > InOrder[Curr] then
+                exit(True);
+            end;
+      end;
+  Result := False;
+end;
+
+procedure TGSimpleGraph.SearchBridges(var aBridges: TIntEdgeVector);
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Lowest, InOrder, Parents: TIntArray;
+  Counter, Total, Prev, Curr, Next, I: SizeInt;
+begin
+  Total := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Lowest := CreateIntArray(Total);
+  InOrder := CreateIntArray(Total);
+  Parents := CreateIntArray;
+  Counter := 0;
+  for I := 0 to Pred(Total) do
+    if InOrder[I] = Total then
+      begin
+        InOrder[I] := Counter;
+        Lowest[I] := Counter;
+        {%H-}Stack.Push(I);
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[{%H-}Curr].MoveNext then
+            begin
+              Prev := Parents[Curr];
+              Next := AdjEnums[Curr].Current;
+              if Next <> Prev then
+                if InOrder[Next] = Total then
+                  begin
+                    Parents[Next] := Curr;
+                    InOrder[Next] := Counter;
+                    Lowest[Next] := Counter;
+                    Inc(Counter);
+                    Stack.Push(Next);
+                  end
+                else
+                  Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+            end
+          else
+            begin
+              Stack.Pop;
+              Next := Curr;
+              Curr := Parents[Curr];
+              Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+              if Lowest[Next] > InOrder[Curr] then
+                aBridges.Add(TIntEdge.Create(Curr, Next));
+            end;
+      end;
+end;
+
 procedure TGSimpleGraph.Clear;
 begin
   inherited;
@@ -1123,44 +1321,43 @@ begin
   end;
 end;
 
-function TGSimpleGraph.ContainsCutPoint(constref aVertex: TVertex): Boolean;
+function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
 begin
-  Result := ContainsCutPointI(IndexOf(aVertex));
+  Result := ContainsCutPointI(IndexOf(aRoot));
 end;
 
-function TGSimpleGraph.ContainsCutPointI(aVtxIndex: SizeInt): Boolean;
-var
-  Helper: TCutPointHelper;
+function TGSimpleGraph.ContainsCutPointI(aRoot: SizeInt): Boolean;
 begin
-  CheckIndexRange(aVtxIndex);
-  Result := Helper.ContainsAny(Self, aVtxIndex);
+  CheckIndexRange(aRoot);
+  if VertexCount < 3 then
+    exit(False);
+  Result := CutPointExists(aRoot);
 end;
 
-function TGSimpleGraph.FindCutPoints(constref aVertex: TVertex): TIntVector;
+function TGSimpleGraph.FindCutPoints(constref aRoot: TVertex): TIntVector;
 begin
-  Result := FindCutPointsI(IndexOf(aVertex));
+  Result := FindCutPointsI(IndexOf(aRoot));
 end;
 
-function TGSimpleGraph.FindCutPointsI(aVtxIndex: SizeInt): TIntVector;
-var
-  Helper: TCutPointHelper;
+function TGSimpleGraph.FindCutPointsI(aRoot: SizeInt): TIntVector;
 begin
-  CheckIndexRange(aVtxIndex);
-  Helper.Search(Self, @Result, aVtxIndex);
+  CheckIndexRange(aRoot);
+  if VertexCount > 2 then
+    SearchCutPoints(aRoot, Result);
 end;
 
 function TGSimpleGraph.ContainsBridge: Boolean;
-var
-  Helper: TBridgeHelper;
 begin
-  Result := Helper.ContainsAny(Self);
+  if VertexCount > 1 then
+    Result := BridgeExists
+  else
+    Result := False;
 end;
 
 function TGSimpleGraph.FindBridges: TIntEdgeVector;
-var
-  Helper: TBridgeHelper;
 begin
-  Helper.Search(Self, @Result);
+  if VertexCount > 1 then
+    SearchBridges(Result);
 end;
 
 function TGSimpleGraph.IsBiconnected: Boolean;
