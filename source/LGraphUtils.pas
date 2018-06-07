@@ -1597,25 +1597,23 @@ begin
   {%H-}Stack.Push(aRoot);
   Result := 1;
   while Stack.TryPeek(aRoot) do
-    begin
-      if AdjEnums[aRoot].MoveNext then
-        begin
-          Next := AdjEnums[aRoot].Current;
-          if not Visited[Next] then
-            begin
-              //on white
-              Visited[Next] := True;
-              Stack.Push(Next);
-              Inc(Result);
-              //on gray
-            end;
-        end
-      else
-        begin
-          Stack.Pop;
-          //on black
-        end;
-    end;
+    if AdjEnums[aRoot].MoveNext then
+      begin
+        Next := AdjEnums[aRoot].Current;
+        if not Visited[Next] then
+          begin
+            //on white
+            Visited[Next] := True;
+            Stack.Push(Next);
+            Inc(Result);
+            //on gray
+          end;
+      end
+    else
+      begin
+        Stack.Pop;
+        //on black
+      end;
 end;
 
 class function TGCustomGraph.ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntVector;
@@ -1647,7 +1645,7 @@ begin
       I := aTree[I];
     end;
   Result.Add(aLast);
-  //TIntVectorHelper.Reverse(Result);
+  TIntVectorHelper.Reverse(Result);
 end;
 
 constructor TGCustomGraph.Create;
