@@ -1067,9 +1067,10 @@ end;
 
 function TGSimpleGraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
 begin
+  CheckIndexRange(aRoot);
   if VertexCount < 3 then
     exit(False);
-  if IsTree then
+  if ConnectedValid and IsTree then
     exit(False);
   Result := CycleExists(aRoot, aCycle);
 end;
