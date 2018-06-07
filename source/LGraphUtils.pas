@@ -1868,12 +1868,12 @@ begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  if OnFound <> nil then
+  if Assigned(OnFound) then
     OnFound(aRoot);
   Visited[aRoot] := True;
   {%H-}Stack.Push(aRoot);
   Result := 1;
-  if OnAccept <> nil then
+  if Assigned(OnAccept) then
     OnAccept(aRoot);
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
@@ -1881,7 +1881,7 @@ begin
         Next := AdjEnums[aRoot].Current;
         if not Visited[Next] then
           begin
-            if OnFound <> nil then
+            if Assigned(OnFound) then
               OnFound(Next);
             Visited[Next] := True;
             Stack.Push(Next);
@@ -1945,7 +1945,7 @@ begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   {%H-}Queue.EnsureCapacity(VertexCount);
-  if OnFound <> nil then
+  if Assigned(OnFound) then
     OnFound(aRoot);
   repeat
     if Assigned(OnAccept) and not OnAccept(aRoot) then
@@ -1953,7 +1953,7 @@ begin
     for aRoot in AdjVerticesI(aRoot) do
       if not Visited[aRoot] then
         begin
-          if OnFound <> nil then
+          if Assigned(OnFound) then
             OnFound(aRoot);
           Visited[aRoot] := True;
           Inc(Result);
