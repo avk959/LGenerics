@@ -146,19 +146,18 @@ end;
 function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
 var
   Stack: TIntStack;
+  InStack: TBitVector;
   AdjEnums: TAdjEnumArray;
   InOrder,
-  PostOrder,
   Parents: TIntArray;
-  InCounter, PostCounter, Next: SizeInt;
+  Counter, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   InOrder := CreateIntArray;
-  PostOrder := CreateIntArray;
   Parents := CreateIntArray;
+  InStack.Size := VertexCount;
   InOrder[aRoot] := 0;
-  InCounter := 1;
-  PostCounter := 0;
+  Counter := 1;
   {%H-}Stack.Push(aRoot);
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
@@ -166,23 +165,21 @@ begin
         Next := AdjEnums[aRoot].Current;
         if InOrder[Next] = -1 then
           begin
-            InOrder[Next] := InCounter;
-            Inc(InCounter);
+            InOrder[Next] := Counter;
+            Inc(Counter);
             Parents[Next] := aRoot;
             Stack.Push(Next);
+            InStack[Next] := True;
           end
         else
-          if PostOrder[Next] = -1 then
+          if (InOrder[aRoot] >= InOrder[Next]) and InStack[Next] then
             begin
               aCycle := CycleChainFromTree(Parents, Next, aRoot);
               exit(True);
             end;
       end
     else
-      begin
-        PostOrder[Stack.Pop] := PostCounter;
-        Inc(PostCounter);
-      end;
+      InStack[Stack.Pop] := False;
   Result := False;
 end;
 
