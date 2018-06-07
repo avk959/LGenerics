@@ -1884,7 +1884,7 @@ begin
             Visited[Next] := True;
             Stack.Push(Next);
             Inc(Result);
-            if (OnAccept <> nil) and not OnAccept(Next) then
+            if Assigned(OnAccept) and not OnAccept(Next) then
               break;
           end;
       end
