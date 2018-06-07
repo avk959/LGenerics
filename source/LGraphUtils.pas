@@ -357,7 +357,7 @@ type
   protected
     function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
     function  AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
-    function  UnrecDfs(aRoot: SizeInt): SizeInt;
+    function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
     property  AdjList[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
@@ -403,7 +403,7 @@ type
       property  Current: SizeInt read GetCurrent;
     end;
 
-    TAdjEnumList = array of TAdjEnumerator;
+    TAdjEnumArray = array of TAdjEnumerator;
 
     TAdjVertices = record
     private
@@ -482,7 +482,7 @@ type
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateColorArray: TColorArray;
     function  CreateHandleArray: THandleArray;
-    function  CreateAdjEnumList: TAdjEnumList;
+    function  CreateAdjEnumArray: TAdjEnumArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear; virtual;
@@ -512,6 +512,9 @@ type
     if aOnGray returns True then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
     function  DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt;
+  { returns the vector containig indices of DFS path from aSrc to aDst, empty if no such path }
+    function  DfsPath(constref aSrc, aDst: TVertex): TIntVector; inline;
+    function  DfsPathI(aSrc, aDst: SizeInt): TIntVector;
   { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
     if aOnGray returns True then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
@@ -528,11 +531,11 @@ type
     -1 if the path does not exist }
     function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
-  { returns a vector containing in the corresponding components the length of shortest path from aRoot
+  { returns an array containing in the corresponding components the length of shortest path from aRoot
     (in sense 'edges count')}
     function  ShortestPathsMap(constref aRoot: TVertex): TIntArray; inline;
     function  ShortestPathsMapI(aRoot: SizeInt = 0): TIntArray;
-  { returns a vector containing chain of indices of found shortest path(in sense 'edges count'),
+  { returns an array containing chain of indices of found shortest path(in sense 'edges count'),
    (empty if path does not exists) }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntVector; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntVector;
@@ -1577,32 +1580,36 @@ begin
   Result.FSource := aSrc;
 end;
 
-function TGCustomGraph.UnrecDfs(aRoot: SizeInt): SizeInt;
+function TGCustomGraph.NonRecDfs(aRoot: SizeInt): SizeInt;
 var
   Stack: TIntStack;
   Visited: TBitVector;
-  AdjEnumList: TAdjEnumList;
-  Curr, Next: SizeInt;
+  AdjEnums: TAdjEnumArray;
+  Next: SizeInt;
 begin
   Visited.Size := VertexCount;
-  AdjEnumList := CreateAdjEnumList;
-  Stack.Push(aRoot);
+  AdjEnums := CreateAdjEnumArray;
   Visited[aRoot] := True;
-  while Stack.NonEmpty do
+  {%H-}Stack.Push(aRoot);
+  Result := 1;
+  while Stack.TryPeek(aRoot) do
     begin
-      Curr := Stack.Peek;
-      if AdjEnumList[Curr].MoveNext then
+      if AdjEnums[aRoot].MoveNext then
         begin
-          Next := AdjEnumList[Curr].Current;
+          Next := AdjEnums[aRoot].Current;
           if not Visited[Next] then
             begin
+              //on white
               Visited[Next] := True;
               Stack.Push(Next);
+              Inc(Result);
+              //on gray
             end;
         end
       else
         begin
           Stack.Pop;
+          //on black
         end;
     end;
 end;
@@ -1680,7 +1687,7 @@ begin
     System.FillChar(Result[0], c * SizeOf(THandle), $ff);
 end;
 
-function TGCustomGraph.CreateAdjEnumList: TAdjEnumList;
+function TGCustomGraph.CreateAdjEnumArray: TAdjEnumArray;
 var
   I: SizeInt;
 begin
@@ -1828,7 +1835,7 @@ end;
 
 function TGCustomGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean;
 begin
-  SetEdgeDataI(IndexOf(aSrc), IndexOf(aDst), aValue);
+  Result := SetEdgeDataI(IndexOf(aSrc), IndexOf(aDst), aValue);
 end;
 
 function TGCustomGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
@@ -1850,35 +1857,79 @@ end;
 
 function TGCustomGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest; aOnWhite: TOnIntVisit): SizeInt;
 var
-  Visited: TBitVector;
   Stack: TIntStack;
+  Visited: TBitVector;
+  AdjEnums: TAdjEnumArray;
   Next: SizeInt;
 begin
   Result := 0;
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  if Assigned(aOnWhite) then
+  AdjEnums := CreateAdjEnumArray;
+  if aOnWhite <> nil then
     aOnWhite(aRoot);
-  repeat
-    if not Visited[aRoot] then
+  Visited[aRoot] := True;
+  {%H-}Stack.Push(aRoot);
+  Result := 1;
+  if aOnGray <> nil then
+    aOnGray(aRoot);
+  while Stack.TryPeek(aRoot) do
+    if AdjEnums[aRoot].MoveNext then
       begin
-        Visited[aRoot] := True;
-        Inc(Result);
-        if Assigned(aOnGray) and aOnGray(aRoot) then
-          exit;
-        for Next in AdjVerticesI(aRoot) do
-          if not Visited[Next] then
-            begin
-              if Assigned(aOnWhite) then
-                aOnWhite(Next);
-              Stack.Push(Next);
-            end;
-      end;
-  until not Stack.TryPop(aRoot);
+        Next := AdjEnums[aRoot].Current;
+        if not Visited[Next] then
+          begin
+            if aOnWhite <> nil then
+              aOnWhite(Next);
+            Visited[Next] := True;
+            Stack.Push(Next);
+            Inc(Result);
+            if aOnGray <> nil then
+              aOnGray(Next);
+          end;
+      end
+    else
+      Stack.Pop;
 end;
 
-function TGCustomGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
-  aOnWhite: TOnIntVisit): SizeInt;
+function TGCustomGraph.DfsPath(constref aSrc, aDst: TVertex): TIntVector;
+begin
+  Result := DfsPathI(IndexOf(aSrc), IndexOf(aDst));
+end;
+
+function TGCustomGraph.DfsPathI(aSrc, aDst: SizeInt): TIntVector;
+var
+  Stack: TIntStack;
+  Visited: TBitVector;
+  AdjEnums: TAdjEnumArray;
+  Parents: TIntArray;
+  Next: SizeInt;
+{%H-}begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Visited.Size := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Parents := CreateIntArray;
+  Visited[aSrc] := True;
+  {%H-}Stack.Push(aSrc);
+  while Stack.TryPeek(aSrc) do
+    if AdjEnums[aSrc].MoveNext then
+      begin
+        Next := AdjEnums[aSrc].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Stack.Push(Next);
+            Parents[Next] := aSrc;
+            if aSrc = aDst then
+              exit(ChainFromTree(Parents, aDst));
+          end;
+      end
+    else
+      Stack.Pop;
+end;
+
+function TGCustomGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest; aOnWhite: TOnIntVisit): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnGray, aOnWhite);
 end;
@@ -1891,6 +1942,7 @@ begin
   Result := 0;
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
+  {%H-}Queue.EnsureCapacity(VertexCount);
   if aOnWhite <> nil then
     aOnWhite(aRoot);
   repeat
@@ -1926,6 +1978,7 @@ begin
   if VertexCount < 2 then
     exit(False);
   Visited.Size := VertexCount;
+  {%H-}Queue.EnsureCapacity(VertexCount);
   for I := 0 to Pred(System.Length(aColors)) do
     if not Visited[I] then
       begin
@@ -1993,6 +2046,7 @@ begin
   CheckIndexRange(aRoot);
   Result := CreateIntArray;
   Result[aRoot] := 0;
+  Queue.EnsureCapacity(VertexCount);
   repeat
     for Next in AdjVerticesI(aRoot) do
       if Result[Next] = -1 then
