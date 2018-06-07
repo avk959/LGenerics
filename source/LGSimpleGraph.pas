@@ -920,7 +920,6 @@ begin
             Visited[Next] := True;
             Parents[Next] := aRoot;
             Stack.Push(Next);
-            Inc(Result);
           end
         else
           if Parents[aRoot] <> Next then
