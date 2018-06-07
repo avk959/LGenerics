@@ -280,11 +280,15 @@ type
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
   generic TGCustomGraph<TVertex, TEdgeData, TVertexEqRel> = class abstract
+  public
+  type
+    TEdgeDataType = TEdgeData;
+    PEdgeData     = ^TEdgeData;
+
   protected
   type
     TAdjList  = specialize TGAdjList<TVertex, TEdgeData>;
     PAdjList  = ^TAdjList;
-    PEdgeData = ^TEdgeData;
 
     TNode = record
       Hash,
