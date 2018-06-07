@@ -70,7 +70,8 @@ type
     TCutPointHelper = record
     private
       Graph: TGSimpleGraph;
-      Lowest, InOrder: TIntArray;
+      Lowest,
+      InOrder: TIntArray;
       Counter,
       Total: SizeInt;
       Points: PIntVector;
@@ -84,7 +85,8 @@ type
 
     TBridgeHelper = record
       Graph: TGSimpleGraph;
-      Lowest, InOrder: TIntArray;
+      Lowest,
+      InOrder: TIntArray;
       Counter,
       Total: SizeInt;
       Bridges: PIntEdgeVector;
@@ -109,7 +111,7 @@ type
     function  GetSeparateCount: SizeInt;
     function  CountPop(aCompIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
-    function  CycleExists(out aCycle: TIntVector): Boolean;
+    function  CycleExists(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
@@ -154,9 +156,10 @@ type
   { checks whether the graph is a regular graph (that is, the degree of all its vertices equal);
     an empty graph is considered regular }
     function  IsRegular: Boolean;
-  { checks whether exists any cycle in graph;
+  { checks whether exists any cycle in theh same connected component as aRoot;
     if True then aCycle will contain indices of the vertices of the cycle }
-    function  ContainsCycle(out aCycle: TIntVector): Boolean;
+    function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntVector): Boolean; inline;
+    function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
     function  ContainsEulerCycle: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerCycle: TIntVector;
@@ -178,7 +181,7 @@ type
     function  FindBridges: TIntEdgeVector;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
-  { returns the vector of the spanning tree, which is constructed starting from aRoot;
+  { returns the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
     function  DfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
@@ -330,7 +333,7 @@ type
     function  FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
-    function  CreateWeightVector: TWeightArray;
+    function  CreateWeighArray: TWeightArray;
     function  CreateEdgeArray: TEdgeArray;
     class function Min(const L, R: TWeight): TWeight; static; inline;
     class constructor Init;
@@ -385,14 +388,17 @@ type
     procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData); inline;
     procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData); inline;
     procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData); inline;
-  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
-    if aOnGray returns True then traversal stops }
-    function  DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-    function  DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-  { returns count of visited vertices; aOnGray calls after vertex visite, aOnWhite calls after vertex found;
-    if aOnGray returns True then traversal stops}
-    function  BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
-    function  BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest = nil; aOnWhite: TOnIntVisit = nil): SizeInt; inline;
+  { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
+    if OnAccept returns False then traversal stops }
+    function  DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
+    function  DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
+  { returns the vector containig indices of DFS path from aSrc to aDst, empty if no such path }
+    function  DfsPath(constref aSrc, aDst: TVertex): TIntVector; inline;
+    function  DfsPathI(aSrc, aDst: SizeInt): TIntVector; inline;
+    { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
+    if OnAccept returns False then traversal stops}
+    function  BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
+    function  BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
 
     function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean; inline;
@@ -407,11 +413,11 @@ type
     -1 if the path does not exist }
     function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt; inline;
-  { returns a vector containing in the corresponding components the length of shortest path from aRoot,
+  { returns an array containing in the corresponding components the length of shortest path from aRoot,
     (in sense 'edges count')}
     function  ShortestPathsMap(constref aRoot: TVertex): TIntArray; inline;
     function  ShortestPathsMapI(aRoot: SizeInt = 0): TIntArray; inline;
-  { returns a vector containing indices of found shortest path(in sense 'edges count'),
+  { returns an array containing indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntVector; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntVector; inline;
@@ -458,7 +464,7 @@ type
     function  IsBiconnected: Boolean; inline;
     function  ContainsEulerCycle: Boolean; inline;
     function  FindEulerCycle: TIntVector; inline;
-  { returns the vector of the spanning tree, which is constructed starting from aRoot;
+  { returns an array of the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     that is, it is a source-destination pair }
     function  DfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
@@ -818,6 +824,7 @@ var
 begin
   Result := 0;
   Visited.Size := VertexCount;
+  Queue.EnsureCapacity(VertexCount);
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
@@ -891,34 +898,39 @@ begin
   FConnected := True;
 end;
 
-function TGSimpleGraph.CycleExists(out aCycle: TIntVector): Boolean;
+function TGSimpleGraph.CycleExists(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
 var
   Stack: TIntStack;
   Visited: TBitVector;
+  AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
-  Curr, Next: SizeInt;
+  Next: SizeInt;
 begin
   Visited.Size := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
-  Curr := 0;
-  repeat
-    if not Visited[Curr] then
+  Visited[aRoot] := True;
+  {%H-}Stack.Push(aRoot);
+  while Stack.TryPeek(aRoot) do
+    if AdjEnums[aRoot].MoveNext then
       begin
-        Visited[Curr] := True;
-        for Next in AdjVerticesI(Curr) do
-          if not Visited[Next] then
+        Next := AdjEnums[aRoot].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Parents[Next] := aRoot;
+            Stack.Push(Next);
+            Inc(Result);
+          end
+        else
+          if Parents[aRoot] <> Next then
             begin
-              Parents[Next] := Curr;
-              Stack.Push(Next);
-            end
-          else
-            if Parents[Curr] <> Next then
-              begin
-                aCycle := CycleChainFromTree(Parents, Next, Curr);
-                exit(True);
-              end;
-      end;
-  until not Stack.TryPop(Curr);
+              aCycle := CycleChainFromTree(Parents, Next, aRoot);
+              exit(True);
+            end;
+      end
+    else
+      Stack.Pop;
   Result := False;
 end;
 
@@ -1209,13 +1221,32 @@ begin
   Result := EdgeCount - VertexCount + SeparateCount;
 end;
 
-function TGSimpleGraph.ContainsCycle(out aCycle: TIntVector): Boolean;
+function TGSimpleGraph.IsRegular: Boolean;
+var
+  I, d: SizeInt;
+begin
+  if NonEmpty then
+    begin
+      d := DegreeI(0);
+      for I := 1 to Pred(VertexCount) do
+        if DegreeI(I) <> d then
+          exit(False);
+    end;
+  Result := True;
+end;
+
+function TGSimpleGraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntVector): Boolean;
+begin
+  Result := ContainsCycleI(IndexOf(aRoot), aCycle);
+end;
+
+function TGSimpleGraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
 begin
   if VertexCount < 3 then
     exit(False);
   if IsTree then
     exit(False);
-  Result := CycleExists(aCycle);
+  Result := CycleExists(aRoot, aCycle);
 end;
 
 function TGSimpleGraph.ContainsEulerCycle: Boolean;
@@ -1323,23 +1354,28 @@ function TGSimpleGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
 var
   Visited: TBitVector;
   Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
   Next: SizeInt;
 begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   Result := CreateIntArray;
-  repeat
-    if not Visited[aRoot] then
+  AdjEnums := CreateAdjEnumArray;
+  Visited[aRoot] := True;
+  {%H-}Stack.Push(aRoot);
+  while Stack.TryPeek(aRoot) do
+    if AdjEnums[aRoot].MoveNext then
       begin
-        Visited[aRoot] := True;
-        for Next in AdjVerticesI(aRoot) do
-          if not Visited[Next] then
-            begin
-              Result[Next] := aRoot;
-              Stack.Push(Next);
-            end;
-      end;
-  until not Stack.TryPop(aRoot);
+        Next := AdjEnums[aRoot].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Result[Next] := aRoot;
+            Stack.Push(Next);
+          end;
+      end
+    else
+      Stack.Pop;
 end;
 
 function TGSimpleGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
@@ -1355,6 +1391,7 @@ var
 begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
+  {%H-}Queue.EnsureCapacity(VertexCount);
   Result := CreateIntArray;
   repeat
     for Next in AdjVerticesI(aRoot) do
@@ -1378,20 +1415,6 @@ begin
       if Src <> -1 then
         Result.AddEdge(Items[Src], Items[I], GetEdgeDataPtr(Src, I)^);
     end;
-end;
-
-function TGSimpleGraph.IsRegular: Boolean;
-var
-  I, d: SizeInt;
-begin
-  if NonEmpty then
-    begin
-      d := DegreeI(0);
-      for I := 1 to Pred(VertexCount) do
-        if DegreeI(I) <> d then
-          exit(False);
-    end;
-  Result := True;
 end;
 
 function TGSimpleGraph.DistinctEdges: TDistinctEdges;
@@ -1662,7 +1685,7 @@ var
   p: PAdjItem;
 begin
   FGraph.CheckIndexRange(aSrc);
-  Result := CreateWeightVector;
+  Result := CreateWeighArray;
   Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
@@ -1692,7 +1715,7 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  Result := CreateWeightVector;
+  Result := CreateWeighArray;
   aPathTree := FGraph.CreateIntArray;
   Handles := FGraph.CreateHandleArray;
   Visited.Size := VertexCount;
@@ -1850,7 +1873,7 @@ var
   I: SizeInt;
   Relaxed: Boolean = False;
 begin
-  aWeights := CreateWeightVector;
+  aWeights := CreateWeighArray;
   Enum := Edges.GetEnumerator;
   aWeights[aSrc] := ZeroWeight;
   for I := 1 to VertexCount do
@@ -1887,7 +1910,7 @@ var
   I: SizeInt;
   J: SizeInt = -1;
 begin
-  aWeights := CreateWeightVector;
+  aWeights := CreateWeighArray;
   aPaths := FGraph.CreateIntArray;
   Enum := Edges.GetEnumerator;
   aWeights[aSrc] := ZeroWeight;
@@ -2000,7 +2023,7 @@ begin
     end;
 end;
 
-function TGWeighedGraph.CreateWeightVector: TWeightArray;
+function TGWeighedGraph.CreateWeighArray: TWeightArray;
 var
   I: SizeInt;
 begin
@@ -2248,28 +2271,38 @@ begin
   FGraph.LoadFromFile(aFileName, aReadVertex, aReadData);
 end;
 
-function TGWeighedGraph.DfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
-  aOnWhite: TOnIntVisit): SizeInt;
+function TGWeighedGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept;
+  OnFound: TOnVisit): SizeInt;
 begin
-  Result := FGraph.DfsTraversal(aRoot, aOnGray, aOnWhite);
+  Result := FGraph.DfsTraversal(aRoot, OnAccept, OnFound);
 end;
 
-function TGWeighedGraph.DfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
-  aOnWhite: TOnIntVisit): SizeInt;
+function TGWeighedGraph.DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept;
+  OnFound: TOnVisit): SizeInt;
 begin
-  Result := FGraph.DfsTraversalI(aRoot, aOnGray, aOnWhite);
+  Result := FGraph.DfsTraversalI(aRoot, OnAccept, OnFound);
 end;
 
-function TGWeighedGraph.BfsTraversal(constref aRoot: TVertex; aOnGray: TOnIntTest;
-  aOnWhite: TOnIntVisit): SizeInt;
+function TGWeighedGraph.DfsPath(constref aSrc, aDst: TVertex): TIntVector;
 begin
-  Result := FGraph.BfsTraversal(aRoot, aOnGray, aOnWhite);
+  Result := FGraph.DfsPath(aSrc, aDst);
 end;
 
-function TGWeighedGraph.BfsTraversalI(aRoot: SizeInt; aOnGray: TOnIntTest;
-  aOnWhite: TOnIntVisit): SizeInt;
+function TGWeighedGraph.DfsPathI(aSrc, aDst: SizeInt): TIntVector;
 begin
-  Result := FGraph.BfsTraversalI(aRoot, aOnGray, aOnWhite);
+  Result := FGraph.DfsPathI(aSrc, aDst);
+end;
+
+function TGWeighedGraph.BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept;
+  OnFound: TOnVisit): SizeInt;
+begin
+  Result := FGraph.BfsTraversal(aRoot, OnAccept, OnFound);
+end;
+
+function TGWeighedGraph.BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept;
+  OnFound: TOnVisit): SizeInt;
+begin
+  Result := FGraph.BfsTraversalI(aRoot, OnAccept, OnFound);
 end;
 
 function TGWeighedGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
@@ -2394,7 +2427,7 @@ end;
 
 function TGWeighedGraph.ContainsCycle(out aCycle: TIntVector): Boolean;
 begin
-  Result := FGraph.ContainsCycle(aCycle);
+  Result := FGraph.ContainsCycleI(0, aCycle);
 end;
 
 function TGWeighedGraph.ContainsCutPoint(constref aVertex: TVertex): Boolean;
