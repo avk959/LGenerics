@@ -328,8 +328,8 @@ type
     end;
 
   const
-    LGRAPH_MAGIC: TMagic = 'LGrphTyp';
-    CURRENT_VERSION = 1;
+    GRAPH_MAGIC: TMagic = 'LGrphTyp';
+    CURRENT_VERSION     = 1;
 
   class var
     CFData: TEdgeData;
@@ -482,6 +482,7 @@ type
   public
     class function ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntVector; static;
     class function CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntVector; static;
+    class property DefaultEdgeData: TEdgeData read CFData;
     constructor Create;
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateColorArray: TColorArray;
