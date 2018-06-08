@@ -60,12 +60,8 @@ type
   TOnAccept        = function (aValue: SizeInt): Boolean of object;
 
   generic TGOnAddEdge<T>       = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
-  generic TGOnStreamRead<T>    = function(aStream: TStream): T of object;
+  generic TGOnStreamRead<T>    = procedure(aStream: TStream; out aValue: T) of object;
   generic TGOnStreamWrite<T>   = procedure(aStream: TStream; constref aValue: T) of object;
-  generic TGStreamRead<T>      = function(aStream: TStream): T;
-  generic TGStreamWrite<T>     = procedure(aStream: TStream; constref aValue: T);
-  generic TGNestStreamRead<T>  = function(aStream: TStream): T is nested;
-  generic TGNestStreamWrite<T> = procedure(aStream: TStream; constref aValue: T) is nested;
 
   TDisjointSetUnion = record
   private
@@ -369,21 +365,13 @@ type
     TAdjItem         = TAdjList.TAdjItem;
     PAdjItem         = ^TAdjItem;
 
+    TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
+
     TOnReadVertex    = specialize TGOnStreamRead<TVertex>;
     TOnWriteVertex   = specialize TGOnStreamWrite<TVertex>;
-    TReadVertex      = specialize TGStreamRead<TVertex>;
-    TWriteVertex     = specialize TGStreamWrite<TVertex>;
-    TNestReadVertex  = specialize TGNestStreamRead<TVertex>;
-    TNestWriteVertex = specialize TGNestStreamWrite<TVertex>;
-
-    TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
 
     TOnReadData      = specialize TGOnStreamRead<TEdgeData>;
     TOnWriteData     = specialize TGOnStreamWrite<TEdgeData>;
-    TReadData        = specialize TGStreamRead<TEdgeData>;
-    TWriteData       = specialize TGStreamWrite<TEdgeData>;
-    TNestReadData    = specialize TGNestStreamRead<TEdgeData>;
-    TNestWriteData   = specialize TGNestStreamWrite<TEdgeData>;
 
     TEdge = record
       Source,
@@ -555,6 +543,8 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
+var
+  EmptyRec: TEmptyRec;
 
 { TDisjointSetUnion }
 
@@ -1565,6 +1555,7 @@ begin
 {$PUSH}{$J+}
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
 {$POP}
+  CFData := Default(TEdgeData);
 end;
 
 procedure TGCustomGraph.CheckIndexRange(aIndex: SizeInt);
