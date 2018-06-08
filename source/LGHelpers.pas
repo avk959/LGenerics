@@ -1033,7 +1033,7 @@ end;
 
 class function TPointHelper.HashCode(constref aValue: TPoint): SizeInt;
 begin
-  Result := HashFunc.HashBuf(@aValue, SizeOf(aValue));
+  Result := HashFunc.HashQWord(QWord(aValue));
 end;
 
 class function TPointHelper.Equal(constref L, R: TPoint): Boolean;
