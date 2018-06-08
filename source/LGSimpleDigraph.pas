@@ -318,7 +318,7 @@ begin
     //read Items
     for I := 0 to Pred(h.VertexCount) do
       begin
-        Vertex := aReadVertex(rbs);
+        aReadVertex(rbs, Vertex);
         if not AddVertex(Vertex, vInd) then
           raise ELGraphError.Create(SEGraphStreamCorrupt);
         if vInd <> I then
@@ -329,7 +329,7 @@ begin
       begin
         rbs.ReadBuffer(e.Source, SizeOf(e.Source));
         rbs.ReadBuffer(e.Destination, SizeOf(e.Destination));
-        e.Data := aReadData(rbs);
+        aReadData(rbs, e.Data);
         AddEdgeI(e.Source, e.Destination, e.Data);
       end;
   finally
