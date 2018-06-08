@@ -76,8 +76,8 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntVector): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
-    function  ContainsEulerCycle: Boolean;
-    function  FindEulerCycle: TIntVector;
+    function  ContainsEulerianCycle: Boolean;
+    function  FindEulerianCycle: TIntVector;
 
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
@@ -226,7 +226,7 @@ end;
 
 function TGSimpleDiGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := AddEdge(aSrc, aDst, CFData);
+  Result := AddEdge(aSrc, aDst, DefaultEdgeData);
 end;
 
 function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -238,7 +238,7 @@ end;
 
 function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := AddEdgeI(aSrc, aDst, CFData);
+  Result := AddEdgeI(aSrc, aDst, DefaultEdgeData);
 end;
 
 function TGSimpleDiGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
@@ -265,7 +265,7 @@ begin
   wbs := TWriteBufStream.Create(aStream);
   try
     //write header
-    Header.Magic := LGRAPH_MAGIC;
+    Header.Magic := GRAPH_MAGIC;
     Header.Version := CURRENT_VERSION;
     Header.TitleSize := System.Length(Title);
     Header.VertexCount := VertexCount;
@@ -305,7 +305,7 @@ begin
   try
     //read header
     rbs.ReadBuffer(h, SizeOf(h));
-    if h.Magic <> LGRAPH_MAGIC then
+    if h.Magic <> GRAPH_MAGIC then
       raise ELGraphError.Create(SEUnknownGraphStreamFmt);
     if h.Version > CURRENT_VERSION then
       raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
@@ -421,7 +421,7 @@ begin
   Result := FindCycle(aRoot, aCycle);
 end;
 
-function TGSimpleDiGraph.ContainsEulerCycle: Boolean;
+function TGSimpleDiGraph.ContainsEulerianCycle: Boolean;
 var
   I, d: SizeInt;
 begin
@@ -437,14 +437,14 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleDiGraph.FindEulerCycle: TIntVector;
+function TGSimpleDiGraph.FindEulerianCycle: TIntVector;
 var
   g: TGSimpleDiGraph = nil;
   Stack: TIntStack;
   CurrPath: TIntDeque;
   s, d: SizeInt;
 begin
-  if not ContainsEulerCycle then
+  if not ContainsEulerianCycle then  //todo: ???
     exit;
   g := Clone;
   try
