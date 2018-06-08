@@ -212,6 +212,27 @@ type
     property  SeparateCount: SizeInt read GetSeparateCount;
   end;
 
+  { TGOutline: simple outline;
+      functor TVertexEqRel must provide:
+        class function HashCode([const[ref]] aValue: TVertex): SizeInt;
+        class function Equal([const[ref]] L, R: TVertex): Boolean; }
+  generic TGOutline<TVertex, TVertexEqRel> = class(specialize TGSimpleGraph<TVertex, TEmptyRec, TVertexEqRel>)
+  protected
+    procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
+    procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
+  public
+    function  AddLine(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  AddLineI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  EnsureConnected: SizeInt; inline; overload;
+    function  RemoveCutPoints(constref aRoot: TVertex): SizeInt; inline; overload;
+    function  RemoveCutPointsI(aRoot: SizeInt): SizeInt; inline; overload;
+    function  EnsureBiconnected: SizeInt; inline; overload;
+    procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex); overload;
+    procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex); overload;
+    procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex); overload;
+    procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex); overload;
+  end;
+
   THandle = LGUtils.THandle;
 
   { TGWeighedGraph: simple sparse undirected graph based on adjacency lists;
@@ -365,6 +386,32 @@ type
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
     function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+  end;
+
+  TRealPointEdge = record
+    Weight: ValReal;
+    constructor Create(const aWeight: ValReal);
+  end;
+
+  { TPointsOutline }
+  TPointsOutline = class(specialize TGWeighedGraph<TPoint, ValReal, TRealPointEdge, TPoint>)
+  protected
+    procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
+    procedure WritePoint(aStream: TStream; constref aValue: TPoint);
+    procedure WriteWeight(aStream: TStream; constref aValue: TRealPointEdge);
+    procedure ReadPoint(aStream: TStream; out aValue: TPoint);
+    procedure ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
+  public
+    function  AddLine(constref aSrc, aDst: TPoint): Boolean; inline;
+    function  AddLine(aSrc, aDst: SizeInt): Boolean; inline;
+    function  EnsureConnected: SizeInt; inline; overload;
+    function  RemoveCutPoints(constref aRoot: TPoint): SizeInt; overload;
+    function  RemoveCutPointsI(aRoot: SizeInt): SizeInt; overload;
+    function  EnsureBiconnected: SizeInt; inline; overload;
+    procedure SaveToStream(aStream: TStream); overload;
+    procedure LoadFromStream(aStream: TStream); overload;
+    procedure SaveToFile(const aFileName: string); overload;
+    procedure LoadFromFile(const aFileName: string); overload;
   end;
 
 implementation
@@ -1214,7 +1261,7 @@ begin
     //read Items
     for I := 0 to Pred(Header.VertexCount) do
       begin
-        Vertex := aReadVertex(rbs);
+        aReadVertex(rbs, Vertex);
         if not AddVertex(Vertex, vInd) then
           raise ELGraphError.Create(SEGraphStreamCorrupt);
         if vInd <> I then
@@ -1225,7 +1272,7 @@ begin
       begin
         rbs.ReadBuffer(Edge.Source, SizeOf(Edge.Source));
         rbs.ReadBuffer(Edge.Destination, SizeOf(Edge.Destination));
-        Edge.Data := aReadData(rbs);
+        aReadData(rbs, Edge.Data);
         AddEdgeI(Edge.Source, Edge.Destination, Edge.Data);
       end;
   finally
@@ -1624,6 +1671,68 @@ begin
       for I := 0 to Pred(VertexCount) do
         Result.FNodeList[I].Assign(FNodeList[I]);
     end;
+end;
+
+{ TGOutline }
+
+procedure TGOutline.WriteData(aStream: TStream; constref aValue: TEmptyRec);
+begin
+  //do nothing
+end;
+
+procedure TGOutline.ReadData(aStream: TStream; out aValue: TEmptyRec);
+begin
+  //do nothing
+end;
+
+function TGOutline.AddLine(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := AddEdge(aSrc, aDst);
+end;
+
+function TGOutline.AddLineI(aSrc, aDst: SizeInt): Boolean;
+begin
+  Result := AddEdgeI(aSrc, aDst);
+end;
+
+function TGOutline.EnsureConnected: SizeInt;
+begin
+  Result := EnsureConnected(nil);
+end;
+
+function TGOutline.RemoveCutPoints(constref aRoot: TVertex): SizeInt;
+begin
+  Result := RemoveCutPoints(aRoot, nil);
+end;
+
+function TGOutline.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
+begin
+  Result := RemoveCutPointsI(aRoot, nil);
+end;
+
+function TGOutline.EnsureBiconnected: SizeInt;
+begin
+  Result := EnsureBiconnected(nil);
+end;
+
+procedure TGOutline.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
+begin
+  SaveToStream(aStream, aOnWriteVertex, @WriteData);
+end;
+
+procedure TGOutline.LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
+begin
+  LoadFromStream(aStream, aOnReadVertex, @ReadData);
+end;
+
+procedure TGOutline.SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
+begin
+  SaveToFile(aFileName, aOnWriteVertex, @WriteData);
+end;
+
+procedure TGOutline.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
+begin
+
 end;
 
 { TGWeighedGraph.TWeightEdge }
@@ -2313,6 +2422,90 @@ begin
     Result := PrimMst(aTotalWeight)
   else
     raise ELGraphError.Create(SEGraphIsNotConnected);
+end;
+
+{ TRealPointEdge }
+
+constructor TRealPointEdge.Create(const aWeight: ValReal);
+begin
+  Weight := aWeight;
+end;
+
+{ TPointsOutline }
+
+procedure TPointsOutline.OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
+begin
+  PEdgeData(aData)^.Weight := aSrc.Distance(aDst);
+end;
+
+procedure TPointsOutline.WritePoint(aStream: TStream; constref aValue: TPoint);
+begin
+  aStream.WriteBuffer(aValue, SizeOf(aValue));
+end;
+
+procedure TPointsOutline.WriteWeight(aStream: TStream; constref aValue: TRealPointEdge);
+begin
+  aStream.WriteBuffer(aValue, SizeOf(aValue));
+end;
+
+procedure TPointsOutline.ReadPoint(aStream: TStream; out aValue: TPoint);
+begin
+  aStream.ReadBuffer(aValue, SizeOf(aValue));
+end;
+
+procedure TPointsOutline.ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
+begin
+  aStream.ReadBuffer(aValue, SizeOf(aValue));
+end;
+
+function TPointsOutline.AddLine(constref aSrc, aDst: TPoint): Boolean;
+begin
+  Result := AddEdge(aSrc, aDst, TRealPointEdge.Create(aSrc.Distance(aDst)));
+end;
+
+function TPointsOutline.AddLine(aSrc, aDst: SizeInt): Boolean;
+begin
+  Result := AddEdgeI(aSrc, aDst, TRealPointEdge.Create(Items[aSrc].Distance(Items[aDst])));
+end;
+
+function TPointsOutline.EnsureConnected: SizeInt;
+begin
+  Result := EnsureConnected(@OnAddEdge);
+end;
+
+function TPointsOutline.RemoveCutPoints(constref aRoot: TPoint): SizeInt;
+begin
+  Result := RemoveCutPoints(aRoot, @OnAddEdge);
+end;
+
+function TPointsOutline.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
+begin
+  Result := RemoveCutPointsI(aRoot, @OnAddEdge);
+end;
+
+function TPointsOutline.EnsureBiconnected: SizeInt;
+begin
+  Result := EnsureBiconnected(@OnAddEdge);
+end;
+
+procedure TPointsOutline.SaveToStream(aStream: TStream);
+begin
+  SaveToStream(aStream, @WritePoint, @WriteWeight);
+end;
+
+procedure TPointsOutline.LoadFromStream(aStream: TStream);
+begin
+  LoadFromStream(aStream, @ReadPoint, @ReadWeight);
+end;
+
+procedure TPointsOutline.SaveToFile(const aFileName: string);
+begin
+   SaveToFile(aFileName, @WritePoint, @WriteWeight);
+end;
+
+procedure TPointsOutline.LoadFromFile(const aFileName: string);
+begin
+  LoadFromFile(aFileName, @ReadPoint, @ReadWeight);
 end;
 
 end.
