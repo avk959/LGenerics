@@ -221,16 +221,16 @@ type
     procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
     procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
   public
-    function  AddLine(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  AddLineI(aSrc, aDst: SizeInt): Boolean; inline;
-    function  EnsureConnected: SizeInt; inline; overload;
-    function  RemoveCutPoints(constref aRoot: TVertex): SizeInt; inline; overload;
-    function  RemoveCutPointsI(aRoot: SizeInt): SizeInt; inline; overload;
-    function  EnsureBiconnected: SizeInt; inline; overload;
-    procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex); overload;
-    procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex); overload;
-    procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex); overload;
-    procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex); overload;
+    function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  EnsureConnected: SizeInt;
+    function  RemoveCutPoints(constref aRoot: TVertex): SizeInt;
+    function  RemoveCutPointsI(aRoot: SizeInt): SizeInt;
+    function  EnsureBiconnected: SizeInt;
+    procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
+    procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
+    procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
+    procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
   end;
 
   THandle = LGUtils.THandle;
@@ -402,16 +402,16 @@ type
     procedure ReadPoint(aStream: TStream; out aValue: TPoint);
     procedure ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
   public
-    function  AddLine(constref aSrc, aDst: TPoint): Boolean; inline;
-    function  AddLine(aSrc, aDst: SizeInt): Boolean; inline;
-    function  EnsureConnected: SizeInt; inline; overload;
-    function  RemoveCutPoints(constref aRoot: TPoint): SizeInt; overload;
-    function  RemoveCutPointsI(aRoot: SizeInt): SizeInt; overload;
-    function  EnsureBiconnected: SizeInt; inline; overload;
-    procedure SaveToStream(aStream: TStream); overload;
-    procedure LoadFromStream(aStream: TStream); overload;
-    procedure SaveToFile(const aFileName: string); overload;
-    procedure LoadFromFile(const aFileName: string); overload;
+    function  AddEdge(constref aSrc, aDst: TPoint): Boolean; inline;
+    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  EnsureConnected: SizeInt;
+    function  RemoveCutPoints(constref aRoot: TPoint): SizeInt;
+    function  RemoveCutPointsI(aRoot: SizeInt): SizeInt;
+    function  EnsureBiconnected: SizeInt;
+    procedure SaveToStream(aStream: TStream);
+    procedure LoadFromStream(aStream: TStream);
+    procedure SaveToFile(const aFileName: string);
+    procedure LoadFromFile(const aFileName: string);
   end;
 
 implementation
@@ -1685,54 +1685,54 @@ begin
   //do nothing
 end;
 
-function TGOutline.AddLine(constref aSrc, aDst: TVertex): Boolean;
+function TGOutline.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := AddEdge(aSrc, aDst);
+  Result := inherited AddEdge(aSrc, aDst);
 end;
 
-function TGOutline.AddLineI(aSrc, aDst: SizeInt): Boolean;
+function TGOutline.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := AddEdgeI(aSrc, aDst);
+  Result := inherited AddEdgeI(aSrc, aDst);
 end;
 
 function TGOutline.EnsureConnected: SizeInt;
 begin
-  Result := EnsureConnected(nil);
+  Result := inherited EnsureConnected(nil);
 end;
 
 function TGOutline.RemoveCutPoints(constref aRoot: TVertex): SizeInt;
 begin
-  Result := RemoveCutPoints(aRoot, nil);
+  Result := inherited RemoveCutPoints(aRoot, nil);
 end;
 
 function TGOutline.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
 begin
-  Result := RemoveCutPointsI(aRoot, nil);
+  Result := inherited RemoveCutPointsI(aRoot, nil);
 end;
 
 function TGOutline.EnsureBiconnected: SizeInt;
 begin
-  Result := EnsureBiconnected(nil);
+  Result := inherited EnsureBiconnected(nil);
 end;
 
 procedure TGOutline.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
 begin
-  SaveToStream(aStream, aOnWriteVertex, @WriteData);
+  inherited SaveToStream(aStream, aOnWriteVertex, @WriteData);
 end;
 
 procedure TGOutline.LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
 begin
-  LoadFromStream(aStream, aOnReadVertex, @ReadData);
+  inherited LoadFromStream(aStream, aOnReadVertex, @ReadData);
 end;
 
 procedure TGOutline.SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
 begin
-  SaveToFile(aFileName, aOnWriteVertex, @WriteData);
+  inherited SaveToFile(aFileName, aOnWriteVertex, @WriteData);
 end;
 
 procedure TGOutline.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
 begin
-
+  inherited LoadFromFile(aFileName, aOnReadVertex, @ReadData);
 end;
 
 { TGWeighedGraph.TWeightEdge }
@@ -2458,54 +2458,54 @@ begin
   aStream.ReadBuffer(aValue, SizeOf(aValue));
 end;
 
-function TPointsOutline.AddLine(constref aSrc, aDst: TPoint): Boolean;
+function TPointsOutline.AddEdge(constref aSrc, aDst: TPoint): Boolean;
 begin
-  Result := AddEdge(aSrc, aDst, TRealPointEdge.Create(aSrc.Distance(aDst)));
+  Result := inherited AddEdge(aSrc, aDst, TRealPointEdge.Create(aSrc.Distance(aDst)));
 end;
 
-function TPointsOutline.AddLine(aSrc, aDst: SizeInt): Boolean;
+function TPointsOutline.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := AddEdgeI(aSrc, aDst, TRealPointEdge.Create(Items[aSrc].Distance(Items[aDst])));
+  Result := inherited AddEdgeI(aSrc, aDst, TRealPointEdge.Create(Items[aSrc].Distance(Items[aDst])));
 end;
 
 function TPointsOutline.EnsureConnected: SizeInt;
 begin
-  Result := EnsureConnected(@OnAddEdge);
+  Result := inherited EnsureConnected(@OnAddEdge);
 end;
 
 function TPointsOutline.RemoveCutPoints(constref aRoot: TPoint): SizeInt;
 begin
-  Result := RemoveCutPoints(aRoot, @OnAddEdge);
+  Result := inherited RemoveCutPoints(aRoot, @OnAddEdge);
 end;
 
 function TPointsOutline.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
 begin
-  Result := RemoveCutPointsI(aRoot, @OnAddEdge);
+  Result := inherited RemoveCutPointsI(aRoot, @OnAddEdge);
 end;
 
 function TPointsOutline.EnsureBiconnected: SizeInt;
 begin
-  Result := EnsureBiconnected(@OnAddEdge);
+  Result := inherited EnsureBiconnected(@OnAddEdge);
 end;
 
 procedure TPointsOutline.SaveToStream(aStream: TStream);
 begin
-  SaveToStream(aStream, @WritePoint, @WriteWeight);
+  inherited SaveToStream(aStream, @WritePoint, @WriteWeight);
 end;
 
 procedure TPointsOutline.LoadFromStream(aStream: TStream);
 begin
-  LoadFromStream(aStream, @ReadPoint, @ReadWeight);
+  inherited LoadFromStream(aStream, @ReadPoint, @ReadWeight);
 end;
 
 procedure TPointsOutline.SaveToFile(const aFileName: string);
 begin
-   SaveToFile(aFileName, @WritePoint, @WriteWeight);
+   inherited SaveToFile(aFileName, @WritePoint, @WriteWeight);
 end;
 
 procedure TPointsOutline.LoadFromFile(const aFileName: string);
 begin
-  LoadFromFile(aFileName, @ReadPoint, @ReadWeight);
+  inherited LoadFromFile(aFileName, @ReadPoint, @ReadWeight);
 end;
 
 end.
