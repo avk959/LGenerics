@@ -75,12 +75,16 @@ type
       Counter,
       Total: SizeInt;
       Points: PIntVector;
+      NewEdges: PIntEdgeVector;
       procedure Init(aGraph: TGSimpleGraph; aVector: PIntVector);
-      procedure DfsR(Curr: SizeInt; Prev: SizeInt = -1);
-      function  DfsRFind(Curr: SizeInt; Prev: SizeInt = -1): Boolean;
+      procedure InitRemove(aGraph: TGSimpleGraph; aNewEdges: PIntEdgeVector);
+      procedure Dfs(Curr: SizeInt; Prev: SizeInt = -1);
+      function  DfsFind(Curr: SizeInt; Prev: SizeInt = -1): Boolean;
+      procedure DfsRemove(Curr: SizeInt; Prev: SizeInt = -1);
     public
       procedure Search(aGraph: TGSimpleGraph; aVector: PIntVector; aFrom: SizeInt);
       function  ContainsAny(aGraph: TGSimpleGraph; aFrom: SizeInt): Boolean;
+      procedure Remove(aGraph: TGSimpleGraph; aNewEdges: PIntEdgeVector);
     end;
 
     TBridgeHelper = record
@@ -91,8 +95,8 @@ type
       Total: SizeInt;
       Bridges: PIntEdgeVector;
       procedure Init(aGraph: TGSimpleGraph; aVector: PIntEdgeVector);
-      procedure DfsR(Curr: SizeInt; Prev: SizeInt = -1);
-      function  DfsRFind(Curr: SizeInt; Prev: SizeInt = -1): Boolean;
+      procedure Dfs(Curr: SizeInt; Prev: SizeInt = -1);
+      function  DfsFind(Curr: SizeInt; Prev: SizeInt = -1): Boolean;
     public
       procedure Search(aGraph: TGSimpleGraph; aVector: PIntEdgeVector);
       function  ContainsAny(aGraph: TGSimpleGraph): Boolean;
@@ -112,11 +116,11 @@ type
     function  CountPop(aCompIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
-    procedure SearchCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
+    procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
-    procedure MakeBiconnected(var aEdges: TIntEdgeVector);
+    procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
     function  BridgeExists: Boolean;
-    procedure SearchBridges(var aBridges: TIntEdgeVector);
+    procedure SearchForBridges(var aBridges: TIntEdgeVector);
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
@@ -144,9 +148,10 @@ type
     function  IsConnected: Boolean; inline;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges }
-    function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
-    function  SimplePathExists(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+    function  EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+  { checks whether the aDst reachable from the aSrc; each vertex reachable from itself  }
+    function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
   { returns graph of connected component that contains aVertex }
     function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; inline;
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleGraph;
@@ -165,9 +170,9 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntVector): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
-    function  ContainsEulerCycle: Boolean;
+    function  ContainsEulerianCycle: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
-    function  FindEulerCycle: TIntVector;
+    function  FindEulerianCycle: TIntVector;
   { checks whether exists any articulation point that belong to the same connection component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -175,6 +180,10 @@ type
     otherwise the empty vector }
     function  FindCutPoints(constref aRoot: TVertex): TIntVector; inline;
     function  FindCutPointsI(aRoot: SizeInt = 0): TIntVector;
+  { removes the articulation points that belong to the same connection component as aRoot,
+    adding, if necessary, new edges; returns count of added edges }
+    function  RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge): SizeInt; inline;
+    function  RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
   { checks whether exists any bridge in graph;
     note: may crash with stack overflow on size ~ 300000*3 because of recursive DFS }
     function  ContainsBridge: Boolean;
@@ -185,7 +194,7 @@ type
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
-    function  EnsureBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
+    function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
@@ -326,7 +335,7 @@ type
     function  MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
     function  MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
-    function  MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; inline;
+    function  MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
     returns path weight or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
@@ -418,7 +427,17 @@ begin
   Counter := 0;
 end;
 
-procedure TGSimpleGraph.TCutPointHelper.DfsR(Curr: SizeInt; Prev: SizeInt);
+procedure TGSimpleGraph.TCutPointHelper.InitRemove(aGraph: TGSimpleGraph; aNewEdges: PIntEdgeVector);
+begin
+  Graph := aGraph;
+  Total := Graph.VertexCount;
+  Lowest := Graph.CreateIntArray(Total);
+  InOrder := Graph.CreateIntArray(Total);
+  NewEdges := aNewEdges;
+  Counter := 0;
+end;
+
+procedure TGSimpleGraph.TCutPointHelper.Dfs(Curr: SizeInt; Prev: SizeInt);
 var
   Next, ChildCount: SizeInt;
 begin
@@ -430,7 +449,7 @@ begin
     if Next <> Prev then
       if InOrder[Next] = Total then
         begin
-          DfsR(Next, Curr);
+          Dfs(Next, Curr);
           Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
           if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
             Points^.Add(Curr);
@@ -442,7 +461,7 @@ begin
     Points^.Add(Curr);
 end;
 
-function TGSimpleGraph.TCutPointHelper.DfsRFind(Curr: SizeInt; Prev: SizeInt): Boolean;
+function TGSimpleGraph.TCutPointHelper.DfsFind(Curr: SizeInt; Prev: SizeInt): Boolean;
 var
   Next, ChildCount: SizeInt;
 begin
@@ -454,7 +473,7 @@ begin
     if Next <> Prev then
       if InOrder[Next] = Total then
         begin
-          if DfsRFind(Next, Curr) then
+          if DfsFind(Next, Curr) then
             exit(True);
           Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
           if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
@@ -468,16 +487,57 @@ begin
   Result := False;
 end;
 
+procedure TGSimpleGraph.TCutPointHelper.DfsRemove(Curr: SizeInt; Prev: SizeInt);
+var
+  Next, Child: SizeInt;
+begin
+  InOrder[Curr] := Counter;
+  Lowest[Curr] := Counter;
+  Inc(Counter);
+  Child := -1;
+  for Next in Graph.AdjVerticesI(Curr) do
+    if Next <> Prev then
+      if InOrder[Next] = Total then
+        begin
+          if Child = -1 then
+            Child := Next;
+          DfsRemove(Next, Curr);
+          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if Lowest[Next] >= InOrder[Curr] then
+            begin
+              if Next = Child then
+                begin
+                  if Prev <> -1 then
+                    NewEdges^.Add(TIntEdge.Create(Prev, Next));
+                end
+              else
+                NewEdges^.Add(TIntEdge.Create(Child, Next));
+            end;
+        end
+      else
+        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+end;
+
 procedure TGSimpleGraph.TCutPointHelper.Search(aGraph: TGSimpleGraph; aVector: PIntVector; aFrom: SizeInt);
 begin
   Init(aGraph, aVector);
-  DfsR(aFrom);
+  Dfs(aFrom);
 end;
 
 function TGSimpleGraph.TCutPointHelper.ContainsAny(aGraph: TGSimpleGraph; aFrom: SizeInt): Boolean;
 begin
-  Init(aGraph, nil);
-  Result := DfsRFind(aFrom);
+  InitRemove(aGraph, nil);
+  Result := DfsFind(aFrom);
+end;
+
+procedure TGSimpleGraph.TCutPointHelper.Remove(aGraph: TGSimpleGraph; aNewEdges: PIntEdgeVector);
+var
+  I: SizeInt;
+begin
+  InitRemove(aGraph, aNewEdges);
+  for I := 0 to Pred(Total) do
+    if InOrder[I] = Total then
+      DfsRemove(I);
 end;
 
 { TGSimpleGraph.TBridgeHelper }
@@ -492,7 +552,7 @@ begin
   Counter := 0;
 end;
 
-procedure TGSimpleGraph.TBridgeHelper.DfsR(Curr: SizeInt; Prev: SizeInt);
+procedure TGSimpleGraph.TBridgeHelper.Dfs(Curr: SizeInt; Prev: SizeInt);
 var
   Next: SizeInt;
 begin
@@ -503,7 +563,7 @@ begin
     if Next <> Prev then
       if InOrder[Next] = Total then
         begin
-          DfsR(Next, Curr);
+          Dfs(Next, Curr);
           Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
           if Lowest[Next] > InOrder[Curr] then
             Bridges^.Add(TIntEdge.Create(Curr, Next));
@@ -512,7 +572,7 @@ begin
         Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
 end;
 
-function TGSimpleGraph.TBridgeHelper.DfsRFind(Curr: SizeInt; Prev: SizeInt): Boolean;
+function TGSimpleGraph.TBridgeHelper.DfsFind(Curr: SizeInt; Prev: SizeInt): Boolean;
 var
   Next: SizeInt;
 begin
@@ -523,7 +583,7 @@ begin
     if Next <> Prev then
       if InOrder[Next] = Total then
         begin
-          if DfsRFind(Next, Curr) then
+          if DfsFind(Next, Curr) then
             exit(True);
           Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
           if Lowest[Next] > InOrder[Curr] then
@@ -541,7 +601,7 @@ begin
   Init(aGraph, aVector);
   for I := 0 to Pred(Total) do
     if InOrder[I] = Total then
-      DfsR(I);
+      Dfs(I);
 end;
 
 function TGSimpleGraph.TBridgeHelper.ContainsAny(aGraph: TGSimpleGraph): Boolean;
@@ -551,7 +611,7 @@ begin
   Init(aGraph, nil);
   for I := 0 to Pred(Total) do
     if InOrder[I] = Total then
-      if DfsRFind(I) then
+      if DfsFind(I) then
         exit(True);
   Result := False;
 end;
@@ -658,7 +718,7 @@ var
 begin
   Result := 0;
   Visited.Size := VertexCount;
-  Queue.EnsureCapacity(VertexCount);
+  {%H-}Queue.EnsureCapacity(VertexCount);
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
@@ -705,7 +765,7 @@ var
 begin
   Result := 0;
   Visited.Size := VertexCount;
-  d := CFData;
+  d := DefaultEdgeData;
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
@@ -767,7 +827,7 @@ begin
   Result := False;
 end;
 
-procedure TGSimpleGraph.SearchCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
+procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
@@ -866,11 +926,11 @@ begin
   Result := ChildCount > 1;
 end;
 
-procedure TGSimpleGraph.MakeBiconnected(var aEdges: TIntEdgeVector);
+procedure TGSimpleGraph.SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
-  Lowest, InOrder, Parents, FirstChild: TIntArray;
+  Lowest, InOrder, Parents, Childs: TIntArray;
   Counter, Total, Curr, Next: SizeInt;
 begin
   Total := VertexCount;
@@ -878,10 +938,10 @@ begin
   Lowest := CreateIntArray(Total);
   InOrder := CreateIntArray(Total);
   Parents := CreateIntArray;
-  FirstChild := CreateIntArray;
-  InOrder[0] := 0;
-  Lowest[0] := 0;
-  {%H-}Stack.Push(0);
+  Childs := CreateIntArray;
+  InOrder[aRoot] := 0;
+  Lowest[aRoot] := 0;
+  {%H-}Stack.Push(aRoot);
   Counter := 1;
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
@@ -890,8 +950,8 @@ begin
         if Next <> Parents[Curr] then
           if InOrder[Next] = Total then
             begin
-              if FirstChild[Curr] = -1 then
-                FirstChild[Curr] := Next;
+              if Childs[Curr] = -1 then
+                Childs[Curr] := Next;
               Parents[Next] := Curr;
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
@@ -909,13 +969,13 @@ begin
         Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
         if Lowest[Next] >= InOrder[Curr] then
           begin
-            if Next = FirstChild[Curr] then
+            if Next = Childs[Curr] then
               begin
                 if Parents[Curr] <> -1 then
                   aEdges.Add(TIntEdge.Create(Parents[Curr], Next));
               end
             else
-              aEdges.Add(TIntEdge.Create(FirstChild[Curr], Next));
+              aEdges.Add(TIntEdge.Create(Childs[Curr], Next));
           end;
       end;
 end;
@@ -968,7 +1028,7 @@ begin
   Result := False;
 end;
 
-procedure TGSimpleGraph.SearchBridges(var aBridges: TIntEdgeVector);
+procedure TGSimpleGraph.SearchForBridges(var aBridges: TIntEdgeVector);
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
@@ -1062,7 +1122,7 @@ end;
 
 function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := AddEdge(aSrc, aDst, CFData);
+  Result := AddEdge(aSrc, aDst, DefaultEdgeData);
 end;
 
 function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -1074,7 +1134,7 @@ end;
 
 function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := AddEdgeI(aSrc, aDst, CFData);
+  Result := AddEdgeI(aSrc, aDst, DefaultEdgeData);
 end;
 
 function TGSimpleGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
@@ -1101,7 +1161,7 @@ begin
   wbs := TWriteBufStream.Create(aStream);
   try
     //write header
-    Header.Magic := LGRAPH_MAGIC;
+    Header.Magic := GRAPH_MAGIC;
     Header.Version := CURRENT_VERSION;
     Header.TitleSize := System.Length(Title);
     Header.VertexCount := VertexCount;
@@ -1141,7 +1201,7 @@ begin
   try
     //read header
     rbs.ReadBuffer(Header, SizeOf(Header));
-    if Header.Magic <> LGRAPH_MAGIC then
+    if Header.Magic <> GRAPH_MAGIC then
       raise ELGraphError.Create(SEUnknownGraphStreamFmt);
     if Header.Version > CURRENT_VERSION then
       raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
@@ -1234,21 +1294,20 @@ begin
   Result := MakeConnected(aOnAddEdge);
 end;
 
-function TGSimpleGraph.SimplePathExists(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleGraph.PathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := SimplePathExistsI(IndexOf(aSrc), IndexOf(aDst));
+  Result := PathExistsI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
-function TGSimpleGraph.SimplePathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleGraph.PathExistsI(aSrc, aDst: SizeInt): Boolean;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   if aSrc = aDst then
-    exit(False);
-  if IsConnected then
-    Result := True
-  else
-    Result := AdjList[aSrc]^.FCompIndex = AdjList[aDst]^.FCompIndex;
+    exit(True);
+  if ConnectedValid then
+    exit(AdjList[aSrc]^.FCompIndex = AdjList[aDst]^.FCompIndex);
+  Result := CheckPathExists(aSrc, aDst);
 end;
 
 function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
@@ -1331,7 +1390,7 @@ begin
   Result := CycleExists(aRoot, aCycle);
 end;
 
-function TGSimpleGraph.ContainsEulerCycle: Boolean;
+function TGSimpleGraph.ContainsEulerianCycle: Boolean;
 var
   I, d, cd: SizeInt;
 begin
@@ -1348,13 +1407,13 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleGraph.FindEulerCycle: TIntVector;
+function TGSimpleGraph.FindEulerianCycle: TIntVector;
 var
   g: TGSimpleGraph = nil;
   Stack: TIntStack;
   s, d: SizeInt;
 begin
-  if not ContainsEulerCycle then
+  if not ContainsEulerianCycle then
     exit;
   g := Clone;
   try
@@ -1401,7 +1460,32 @@ function TGSimpleGraph.FindCutPointsI(aRoot: SizeInt): TIntVector;
 begin
   CheckIndexRange(aRoot);
   if VertexCount > 2 then
-    SearchCutPoints(aRoot, Result);
+    SearchForCutPoints(aRoot, Result{%H-});
+end;
+
+function TGSimpleGraph.RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge): SizeInt;
+begin
+  Result := RemoveCutPointsI(IndexOf(aRoot), aOnAddEdge);
+end;
+
+function TGSimpleGraph.RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
+var
+  NewEdges: TIntEdgeVector;
+  e: TIntEdge;
+  d: TEdgeData;
+begin
+  Result := 0;
+  if VertexCount < 3 then
+    exit;
+  Result += EnsureConnected(aOnAddEdge);
+  SearchForBiconnect(aRoot, NewEdges{%H-});
+  d := DefaultEdgeData;
+  for e in NewEdges do
+    begin
+      if Assigned(aOnAddEdge) then
+        aOnAddEdge(Items[e.Source], Items[e.Destination], @d);
+      Result += Ord(AddEdgeI(e.Source, e.Destination, d));
+    end;
 end;
 
 function TGSimpleGraph.ContainsBridge: Boolean;
@@ -1415,7 +1499,7 @@ end;
 function TGSimpleGraph.FindBridges: TIntEdgeVector;
 begin
   if VertexCount > 1 then
-    SearchBridges(Result);
+    SearchForBridges(Result{%H-});
 end;
 
 function TGSimpleGraph.IsBiconnected: Boolean;
@@ -1436,8 +1520,8 @@ begin
   if VertexCount < 3 then
     exit;
   Result += EnsureConnected(aOnAddEdge);
-  MakeBiconnected(NewEdges);
-  d := CFData;
+  SearchForBiconnect(0, NewEdges{%H-});
+  d := DefaultEdgeData;
   for e in NewEdges do
     begin
       if Assigned(aOnAddEdge) then
