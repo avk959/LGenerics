@@ -1635,6 +1635,7 @@ begin
         raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
       aIndex := aTree[aIndex];
     end;
+  v.TrimToFit;
   TIntVectorHelper.Reverse(v);
 end;
 
@@ -1675,6 +1676,7 @@ begin
       I := aTree[I];
     end;
   v.Add(aLast);
+  v.TrimToFit;
   TIntVectorHelper.Reverse(v);
 end;
 
