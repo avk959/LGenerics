@@ -113,8 +113,8 @@ end;
 
 function TfrmMain.SingleLetterDiff(constref L, R: string): Boolean;
 var
-  I, Diff: SizeInt;  //graph is built with 62327 vertices and 32193 edges in 92802 milliseconds
-begin                //graph is built with 62327 vertices and 32193 edges in 214566 milliseconds
+  I, Diff: SizeInt;
+begin
   Diff := 0;
   for I := 1 to Length(L) do
     if L[I] <> R[I] then
