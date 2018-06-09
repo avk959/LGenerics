@@ -473,6 +473,7 @@ type
     class procedure Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; var v: TIntVector); static;
     class function  TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
     class procedure Tree2Cycle(constref aTree: TIntArray;  aFirst, aLast: SizeInt; var v: TIntVector); static;
+    class function  TreeToCycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt; static;
     class property  DefaultEdgeData: TEdgeData read CFData;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
@@ -1675,6 +1676,24 @@ begin
     end;
   v.Add(aLast);
   TIntVectorHelper.Reverse(v);
+end;
+
+class function TGCustomGraph.TreeToCycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  I := aLast;
+  while I >= 0 do
+    begin
+      if I < System.Length(aTree) then
+        Inc(Result)
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+      if I = aFirst then
+        break;
+      I := aTree[I];
+    end;
 end;
 
 constructor TGCustomGraph.Create;
