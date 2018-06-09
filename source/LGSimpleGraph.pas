@@ -182,7 +182,7 @@ type
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerianCycle(out aCycle: TIntVector): Boolean;
   { finds a certain system of fundamental cycles of the graph;
-    note: extremely time-consuming and memory-consuming operation }
+    note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TCycleVector): Boolean;
   { checks whether exists any articulation point that belong to the same connection component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
