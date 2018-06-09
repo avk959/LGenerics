@@ -191,6 +191,8 @@ type
     procedure TrimToFit; inline;
   { appends aValue and returns it index }
     function  Add(constref aValue: T): SizeInt;
+    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(constref aVector: TGLiteVector): SizeInt;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
     procedure Insert(aIndex: SizeInt; constref aValue: T); inline;
@@ -265,7 +267,9 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
   { appends aValue and returns it index }
-    function  Add(constref aValue: T): SizeInt;
+    function  Add(constref aValue: T): SizeInt;inline;
+    function  AddAll(constref a: array of T): SizeInt;inline;
+    function  AddAll(constref aVector: TGLiteObjectVector): SizeInt;inline;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
     procedure Insert(aIndex: SizeInt; constref aValue: T); inline;
@@ -1347,6 +1351,44 @@ begin
   Result := FBuffer.PushLast(aValue);
 end;
 
+function TGLiteVector.AddAll(constref a: array of T): SizeInt;
+var
+  v: T;
+  I: SizeInt;
+begin
+  Result := System.Length(a);
+  EnsureCapacity(Count + Result);
+  I := Count;
+  with FBuffer do
+    begin
+      for v in a do
+        begin
+          FItems[I] := v;
+          Inc(I);
+        end;
+      FCount += Result;
+    end;
+end;
+
+function TGLiteVector.AddAll(constref aVector: TGLiteVector): SizeInt;
+var
+  v: T;
+  I: SizeInt;
+begin
+  Result := aVector.Count;
+  EnsureCapacity(Count + Result);
+  I := Count;
+  with FBuffer do
+    begin
+      for v in aVector do
+        begin
+          FItems[I] := v;
+          Inc(I);
+        end;
+      FCount += Result;
+    end;
+end;
+
 procedure TGLiteVector.Insert(aIndex: SizeInt; constref aValue: T);
 begin
   CheckInsertIndexRange(aIndex);
@@ -1542,6 +1584,16 @@ end;
 function TGLiteObjectVector.Add(constref aValue: T): SizeInt;
 begin
   Result := FVector.Add(aValue);
+end;
+
+function TGLiteObjectVector.AddAll(constref a: array of T): SizeInt;
+begin
+  Result := FVector.AddAll(a);
+end;
+
+function TGLiteObjectVector.AddAll(constref aVector: TGLiteObjectVector): SizeInt;
+begin
+  Result := FVector.AddAll(aVector.FVector);
 end;
 
 procedure TGLiteObjectVector.Insert(aIndex: SizeInt; constref aValue: T);

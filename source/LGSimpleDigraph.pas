@@ -47,7 +47,7 @@ type
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
-    function  FindCycle(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+    function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
   public
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -74,8 +74,8 @@ type
     function  IsolatedI(aVtxIndex: SizeInt): Boolean; inline;
   { checks whether exists any cycle in graph that reachable from a Root;
     if True then aCycle will contain indices of the vertices of the cycle }
-    function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntVector): Boolean; inline;
-    function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+    function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCycle: Boolean;
     function  FindEulerianCycle: TIntVector;
 
@@ -143,7 +143,7 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 var
   Stack: TIntStack;
   InStack: TBitVector;
@@ -174,7 +174,7 @@ begin
         else
           if (InOrder[aRoot] >= InOrder[Next]) and InStack[Next] then
             begin
-              aCycle := CycleChainFromTree(Parents, Next, aRoot);
+              aCycle := TreeToCycle(Parents, Next, aRoot);
               exit(True);
             end;
       end
@@ -408,12 +408,12 @@ begin
   Result := DegreeI(aVtxIndex) = 0;
 end;
 
-function TGSimpleDiGraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntVector): Boolean;
+function TGSimpleDiGraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
 begin
   Result := ContainsCycleI(IndexOf(aRoot), aCycle);
 end;
 
-function TGSimpleDiGraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+function TGSimpleDiGraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 begin
   CheckIndexRange(aRoot);
   if VertexCount < 2 then

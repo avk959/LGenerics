@@ -128,6 +128,7 @@ type
 
   TIntEdgeVector = specialize TGLiteVector<TIntEdge>;
   PIntEdgeVector = ^TIntEdgeVector;
+  TIntEdgeArray  = array of TIntEdge;
 
   generic TGAdjItem<TData> = record
     Destination: SizeInt;
@@ -468,9 +469,11 @@ type
     end;
 
   public
-    class function ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntVector; static;
-    class function CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntVector; static;
-    class property DefaultEdgeData: TEdgeData read CFData;
+    class function  TreeToChain(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
+    class procedure Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; out v: TIntVector); static;
+    class function  TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
+    class procedure Tree2Cycle(constref aTree: TIntArray;  aFirst, aLast: SizeInt; out v: TIntVector); static;
+    class property  DefaultEdgeData: TEdgeData read CFData;
     constructor Create;
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateColorArray: TColorArray;
@@ -505,9 +508,6 @@ type
     if TOnAccept returns False then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
     function  DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
-  { returns the vector containig indices of DFS path from aSrc to aDst, empty if no such path }
-    function  DfsPath(constref aSrc, aDst: TVertex): TIntVector; inline;
-    function  DfsPathI(aSrc, aDst: SizeInt): TIntVector;
   { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
     if TOnAccept returns False then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
@@ -519,7 +519,6 @@ type
   { test whether the graph is bipartite; if returns True then information about the vertex
     belonging to the fractions is returned in aColors(vclWhite or vclGray) }
     function  IsBipartite(out aColors: TColorArray): Boolean;
-
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
     function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
@@ -530,8 +529,8 @@ type
     function  ShortestPathsMapI(aRoot: SizeInt = 0): TIntArray;
   { returns an array containing chain of indices of found shortest path(in sense 'edges count'),
    (empty if path does not exists) }
-    function  ShortestPath(constref aSrc, aDst: TVertex): TIntVector; inline;
-    function  ShortestPathI(aSrc, aDst: SizeInt): TIntVector;
+    function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
+    function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read FCount;
@@ -1608,20 +1607,57 @@ begin
       end;
 end;
 
-class function TGCustomGraph.ChainFromTree(constref aTree: TIntArray; aIndex: SizeInt): TIntVector;
+class function TGCustomGraph.TreeToChain(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
+var
+  v: TIntVector;
 begin
   while aIndex >= 0 do
     begin
       if aIndex < System.Length(aTree) then
-        Result.Add(aIndex)
+        v.Add(aIndex)
       else
         raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
       aIndex := aTree[aIndex];
     end;
-  TIntVectorHelper.Reverse(Result);
+  Result := v.ToArray;
+  TIntHelper.Reverse(Result);
 end;
 
-class function TGCustomGraph.CycleChainFromTree(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntVector;
+class procedure TGCustomGraph.Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; out v: TIntVector);
+begin
+  while aIndex >= 0 do
+    begin
+      if aIndex < System.Length(aTree) then
+        v.Add(aIndex)
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
+      aIndex := aTree[aIndex];
+    end;
+  TIntVectorHelper.Reverse(v);
+end;
+
+class function TGCustomGraph.TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray;
+var
+  I: SizeInt;
+  v: TIntVector;
+begin
+  I := aLast;
+  while I >= 0 do
+    begin
+      if I < System.Length(aTree) then
+        v.Add(I)
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+      if I = aFirst then
+        break;
+      I := aTree[I];
+    end;
+  v.Add(aLast);
+  Result := v.ToArray;
+  TIntHelper.Reverse(Result);
+end;
+
+class procedure TGCustomGraph.Tree2Cycle(constref aTree: TIntArray; aFirst, aLast: SizeInt; out v: TIntVector);
 var
   I: SizeInt;
 begin
@@ -1629,15 +1665,15 @@ begin
   while I >= 0 do
     begin
       if I < System.Length(aTree) then
-        Result.Add(I)
+        v.Add(I)
       else
         raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
       if I = aFirst then
         break;
       I := aTree[I];
     end;
-  Result.Add(aLast);
-  TIntVectorHelper.Reverse(Result);
+  v.Add(aLast);
+  TIntVectorHelper.Reverse(v);
 end;
 
 constructor TGCustomGraph.Create;
@@ -1886,43 +1922,6 @@ begin
       Stack.Pop;
 end;
 
-function TGCustomGraph.DfsPath(constref aSrc, aDst: TVertex): TIntVector;
-begin
-  Result := DfsPathI(IndexOf(aSrc), IndexOf(aDst));
-end;
-
-function TGCustomGraph.DfsPathI(aSrc, aDst: SizeInt): TIntVector;
-var
-  Stack: TIntStack;
-  Visited: TBitVector;
-  AdjEnums: TAdjEnumArray;
-  Parents: TIntArray;
-  Next: SizeInt;
-{%H-}begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Visited.Size := VertexCount;
-  AdjEnums := CreateAdjEnumArray;
-  Parents := CreateIntArray;
-  Visited[aSrc] := True;
-  {%H-}Stack.Push(aSrc);
-  while Stack.TryPeek(aSrc) do
-    if AdjEnums[aSrc].MoveNext then
-      begin
-        Next := AdjEnums[aSrc].Current;
-        if not Visited[Next] then
-          begin
-            Visited[Next] := True;
-            Stack.Push(Next);
-            Parents[Next] := aSrc;
-            if aSrc = aDst then
-              exit(ChainFromTree(Parents, aDst));
-          end;
-      end
-    else
-      Stack.Pop;
-end;
-
 function TGCustomGraph.BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), OnAccept, OnFound);
@@ -2051,12 +2050,12 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
-function TGCustomGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntVector;
+function TGCustomGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntArray;
 begin
   Result := ShortestPathI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
-function TGCustomGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntVector;
+function TGCustomGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
   Visited: TBitVector;
@@ -2070,7 +2069,7 @@ begin
   Visited[aSrc] := True;
   repeat
     if aSrc = aDst then
-      exit(ChainFromTree(Parents, aDst));
+      exit(TreeToChain(Parents, aDst));
     for Next in AdjVerticesI(aSrc) do
       if not Visited[Next] then
         begin

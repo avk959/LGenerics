@@ -115,7 +115,7 @@ type
     function  GetSeparateCount: SizeInt;
     function  CountPop(aCompIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
-    function  CycleExists(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+    function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -168,18 +168,18 @@ type
     function  IsRegular: Boolean;
   { checks whether exists any cycle in theh same connected component as aRoot;
     if True then aCycle will contain indices of the vertices of the cycle }
-    function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntVector): Boolean; inline;
-    function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+    function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCycle: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
-    function  FindEulerianCycle: TIntVector;
+    function  FindEulerianCycle(out aCycle: TIntVector): Boolean;
   { checks whether exists any articulation point that belong to the same connection component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
   { returns the articulation points that belong to the same connection component as aRoot, if any,
     otherwise the empty vector }
-    function  FindCutPoints(constref aRoot: TVertex): TIntVector; inline;
-    function  FindCutPointsI(aRoot: SizeInt = 0): TIntVector;
+    function  FindCutPoints(constref aRoot: TVertex): TIntArray; inline;
+    function  FindCutPointsI(aRoot: SizeInt = 0): TIntArray;
   { removes the articulation points that belong to the same connection component as aRoot,
     adding, if necessary, new edges; returns count of added edges }
     function  RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge): SizeInt; inline;
@@ -190,7 +190,7 @@ type
   { returns all bridges in the form of source-destinatin pairs in the result vector, if any,
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
-    function  FindBridges: TIntEdgeVector;
+    function  FindBridges: TIntEdgeArray;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
@@ -204,7 +204,7 @@ type
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
   { returns a graph constructed from the pairs provided by the array,
     i.e. each element treates as pair of source - destination }
-    function  CreateFromArray(constref aVector: TIntArray): TGSimpleGraph;
+    function  CreateFromArray(constref aValue: TIntArray): TGSimpleGraph;
     function  DistinctEdges: TDistinctEdges; inline;
 
     function  Clone: TGSimpleGraph;
@@ -221,8 +221,8 @@ type
     procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
     procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
   public
-    function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  AddEdge(constref aSrc, aDst: TVertex): Boolean;
+    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  EnsureConnected: SizeInt;
     function  RemoveCutPoints(constref aRoot: TVertex): SizeInt;
     function  RemoveCutPointsI(aRoot: SizeInt): SizeInt;
@@ -235,7 +235,7 @@ type
 
   THandle = LGUtils.THandle;
 
-  { TGWeighedGraph: simple sparse undirected graph based on adjacency lists;
+  { TGWeighedGraph: simple sparse undirected weighed graph based on adjacency lists;
 
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -328,9 +328,9 @@ type
     function  DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { Dijkstra's pathfinding algorithm }
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
-    function  DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntVector;
+    function  DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { A* pathfinding algorithm }
-    function  AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntVector;
+    function  AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntArray;
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
     function  FordBellman(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
@@ -363,14 +363,14 @@ type
     function  MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
     function  MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
   { returns the path of minimal weight from a aSrc to aDst, if exists, and it weight in aWeight }
-    function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntVector; inline;
-    function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntVector;
+    function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
+    function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
     the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
     used A* algorithm  }
-    function  MinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aWeight: TWeight): TIntVector; inline;
-    function  MinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntVector;
+    function  MinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aWeight: TWeight): TIntArray; inline;
+    function  MinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntArray;
   { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of the edges can be negative; NO IT IS NOT FOR UNDIRECTED GRAPHS !!!
     returns False and empty aWeights if there is a negative weight cycle, otherwise
@@ -402,8 +402,8 @@ type
     procedure ReadPoint(aStream: TStream; out aValue: TPoint);
     procedure ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
   public
-    function  AddEdge(constref aSrc, aDst: TPoint): Boolean; inline;
-    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  AddEdge(constref aSrc, aDst: TPoint): Boolean;
+    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  EnsureConnected: SizeInt;
     function  RemoveCutPoints(constref aRoot: TPoint): SizeInt;
     function  RemoveCutPointsI(aRoot: SizeInt): SizeInt;
@@ -839,7 +839,7 @@ begin
   FConnected := True;
 end;
 
-function TGSimpleGraph.CycleExists(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+function TGSimpleGraph.CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 var
   Stack: TIntStack;
   Visited: TBitVector;
@@ -865,7 +865,7 @@ begin
         else
           if Parents[aRoot] <> Next then
             begin
-              aCycle := CycleChainFromTree(Parents, Next, aRoot);
+              aCycle := TreeToCycle(Parents, Next, aRoot);
               exit(True);
             end;
       end
@@ -1422,12 +1422,12 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntVector): Boolean;
+function TGSimpleGraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
 begin
   Result := ContainsCycleI(IndexOf(aRoot), aCycle);
 end;
 
-function TGSimpleGraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntVector): Boolean;
+function TGSimpleGraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 begin
   CheckIndexRange(aRoot);
   if VertexCount < 3 then
@@ -1454,20 +1454,20 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleGraph.FindEulerianCycle: TIntVector;
+function TGSimpleGraph.FindEulerianCycle(out aCycle: TIntVector): Boolean;
 var
   g: TGSimpleGraph = nil;
   Stack: TIntStack;
   s, d: SizeInt;
 begin
   if not ContainsEulerianCycle then
-    exit;
+    exit(False);
   g := Clone;
   try
     s := 0;
     while g.DegreeI(s) = 0 do
       Inc(s);
-    Result.Add(s);
+    aCycle.Add(s);
     repeat
       repeat
         if not g.AdjList[s]^.FindFirst(d) then
@@ -1478,11 +1478,12 @@ begin
       until False;
       if not Stack.TryPop(s) then
         break;
-      Result.Add(s);
+      aCycle.Add(s);
     until False;
   finally
     g.Free;
   end;
+  Result := aCycle.Count > 0;
 end;
 
 function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
@@ -1498,16 +1499,23 @@ begin
   Result := CutPointExists(aRoot);
 end;
 
-function TGSimpleGraph.FindCutPoints(constref aRoot: TVertex): TIntVector;
+function TGSimpleGraph.FindCutPoints(constref aRoot: TVertex): TIntArray;
 begin
   Result := FindCutPointsI(IndexOf(aRoot));
 end;
 
-function TGSimpleGraph.FindCutPointsI(aRoot: SizeInt): TIntVector;
+function TGSimpleGraph.FindCutPointsI(aRoot: SizeInt): TIntArray;
+var
+  v: TIntVector;
 begin
   CheckIndexRange(aRoot);
   if VertexCount > 2 then
-    SearchForCutPoints(aRoot, Result{%H-});
+    begin
+      SearchForCutPoints(aRoot, v{%H-});
+      Result := v.ToArray;
+    end
+  else
+    Result := nil;
 end;
 
 function TGSimpleGraph.RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge): SizeInt;
@@ -1543,10 +1551,13 @@ begin
     Result := False;
 end;
 
-function TGSimpleGraph.FindBridges: TIntEdgeVector;
+function TGSimpleGraph.FindBridges: TIntEdgeArray;
+var
+  v: TIntEdgeVector;
 begin
   if VertexCount > 1 then
-    SearchForBridges(Result{%H-});
+    SearchForBridges(v{%H-});
+  Result := v.ToArray;
 end;
 
 function TGSimpleGraph.IsBiconnected: Boolean;
@@ -1636,14 +1647,14 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
-function TGSimpleGraph.CreateFromArray(constref aVector: TIntArray): TGSimpleGraph;
+function TGSimpleGraph.CreateFromArray(constref aValue: TIntArray): TGSimpleGraph;
 var
   I, Src: SizeInt;
 begin
   Result := TGSimpleGraph.Create;
-  for I := 0 to Pred(System.Length(aVector)) do
+  for I := 0 to Pred(System.Length(aValue)) do
     begin
-      Src := aVector[I];
+      Src := aValue[I];
       if Src <> -1 then
         Result.AddEdge(Items[Src], Items[I], GetEdgeDataPtr(Src, I)^);
     end;
@@ -2025,7 +2036,7 @@ begin
   Result := InfiniteWeight;
 end;
 
-function TGWeighedGraph.DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntVector;
+function TGWeighedGraph.DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -2044,7 +2055,7 @@ begin
       if Item.Index = aDst then
         begin
           aWeight := Item.Weight;
-          exit(ChainFromTree(Tree, aDst));
+          exit(TreeToChain(Tree, aDst));
         end;
       Visited[Item.Index] := True;
       for p in AdjVerticesPtr(Item.Index) do
@@ -2069,7 +2080,7 @@ begin
   aWeight := InfiniteWeight;
 end;
 
-function TGWeighedGraph.AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntVector;
+function TGWeighedGraph.AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
   Queue: TAStarHeap;
@@ -2088,7 +2099,7 @@ begin
       if Item.Index = aDst then
         begin
           aWeight := Item.Weight;
-          exit(ChainFromTree(Tree, aDst));
+          exit(TreeToChain(Tree, aDst));
         end;
       Visited[Item.Index] := True;
       for p in AdjVerticesPtr(Item.Index) do
@@ -2355,25 +2366,25 @@ begin
   Result := DijkstraPath(aSrc, aDst);
 end;
 
-function TGWeighedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntVector;
+function TGWeighedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
 begin
   Result := MinPathI(IndexOf(aSrc), IndexOf(aDst), aWeight);
 end;
 
-function TGWeighedGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntVector;
+function TGWeighedGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   Result := DijkstraPath(aSrc, aDst, aWeight);
 end;
 
-function TGWeighedGraph.MinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic;
-  out aWeight: TWeight): TIntVector;
+function TGWeighedGraph.MinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aWeight: TWeight
+  ): TIntArray;
 begin
   Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aHeur, aWeight);
 end;
 
-function TGWeighedGraph.MinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntVector;
+function TGWeighedGraph.MinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
