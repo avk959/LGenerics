@@ -125,6 +125,8 @@ type
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
     procedure SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TCycleVector);
+    procedure SearchForFundamentalsCyclesLen(aRoot: SizeInt; out aCycleLens: TIntVector);
+    function  FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
     function  CmpVectorsByCount(constref L, R: TIntVector): SizeInt;
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
@@ -151,7 +153,7 @@ type
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aVtxIndex: SizeInt): Boolean; inline;
   { checks whether the graph is connected; an empty graph is considered disconnected }
-    function  IsConnected: Boolean; inline;
+    function  IsConnected: Boolean;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges }
     function  EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -167,8 +169,8 @@ type
   { returns number of Items(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
-    function  IsTree: Boolean; inline;
-    function  CyclomaticNumber: SizeInt; inline;
+    function  IsTree: Boolean;
+    function  CyclomaticNumber: SizeInt;
   { checks whether the graph is a regular graph (that is, the degree of all its vertices equal);
     an empty graph is considered regular }
     function  IsRegular: Boolean;
@@ -1186,6 +1188,56 @@ begin
   end;
 end;
 
+procedure TGSimpleGraph.SearchForFundamentalsCyclesLen(aRoot: SizeInt; out aCycleLens: TIntVector);
+var
+  Stack: TIntStack;
+  Visited: TBitVector;
+  AdjEnums: TAdjEnumArray;
+  Parents: TIntArray;
+  g: TIntOutline;
+  Next: SizeInt;
+begin
+  Visited.Size := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Parents := CreateIntArray;
+  g := TIntOutline.Create(VertexCount);
+  try
+    Visited[aRoot] := True;
+    {%H-}Stack.Push(aRoot);
+    while Stack.TryPeek(aRoot) do
+      if AdjEnums[aRoot].MoveNext then
+        begin
+          Next := AdjEnums[aRoot].Current;
+          if not Visited[Next] then
+            begin
+              Visited[Next] := True;
+              Parents[Next] := aRoot;
+              Stack.Push(Next);
+            end
+          else
+            if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
+              aCycleLens.Add(TreeToCycleLen(Parents, Next, aRoot));
+        end
+      else
+        Stack.Pop;
+  finally
+    g.Free;
+  end;
+end;
+
+function TGSimpleGraph.FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
+begin
+  if not IsConnected then
+    exit(False);
+  if IsTree then
+    exit(False);
+  SearchForFundamentalsCyclesLen(0, aCycleLens);
+  if aCycleLens.Count <> CyclomaticNumber then
+    raise ELGraphError.Create(SEGrapInconsist);
+  TIntVectorHelper.Sort(aCycleLens);
+  Result := True;
+end;
+
 function TGSimpleGraph.CmpVectorsByCount(constref L, R: TIntVector): SizeInt;
 begin
   if L.Count > R.Count then
@@ -1199,23 +1251,25 @@ end;
 
 class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
 var
-  fcL, fcR: TCycleVector;
+  fcL, fcR: TIntVector;
   I: SizeInt;
 begin
   if L = R then
-    exit(True);  //
+    exit(True);
   if L.VertexCount <> R.VertexCount then
-    exit(False); //
-  if not L.FindFundamentalCycles(fcL) then
-    Result := not R.FindFundamentalCycles(fcR)
+    exit(False);
+  if L.EdgeCount <> R.EdgeCount then
+    exit(False);
+  if not L.FindFundamentalCyclesLen(fcL) then
+    Result := not R.FindFundamentalCyclesLen(fcR)
   else
     begin
-      if not R.FindFundamentalCycles(fcR) then
+      if not R.FindFundamentalCyclesLen(fcR) then
         exit(False);
       if fcL.Count <> fcR.Count then
         exit(False);
       for I := 0 to Pred(fcL.Count) do
-        if fcL.Mutable[I]^.Count <> fcR.Mutable[I]^.Count then
+        if fcL[I] <> fcR[I] then
           exit(False);
       Result := True;
     end
