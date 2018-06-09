@@ -156,9 +156,10 @@ type
   type
     TBuffer     = specialize TGLiteRingDynBuffer<T>;
     TEnumerator = TBuffer.TEnumerator;
-    TMutable    = TBuffer.TMutable;
+    TMutables   = TBuffer.TMutables;
     TReverse    = TBuffer.TReverse;
     TArray      = TBuffer.TArray;
+    PItem       = TBuffer.PItem;
 
   private
   const
@@ -175,6 +176,7 @@ type
     procedure FastSetItem(aIndex: SizeInt; constref aValue: T); inline;
     procedure FastSwap(L, R: SizeInt); inline;
     function  GetItem(aIndex: SizeInt): T; inline;
+    function  GetMutable(aIndex: SizeInt): PItem; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
     procedure ShiftHeadRight(aToIndex: SizeInt);
     procedure ShiftHeadLeft(aFromIndex: SizeInt);
@@ -189,7 +191,7 @@ type
     procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
   public
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutable: TMutable; inline;
+    function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -224,6 +226,7 @@ type
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+    property  Mutable[aIndex: SizeInt]: PItem read GetMutable;
   end;
 
   { TGLiteThreadDeque }
@@ -1077,6 +1080,12 @@ begin
   Result := FastGetItem(aIndex);
 end;
 
+function TGLiteDeque.GetMutable(aIndex: SizeInt): PItem;
+begin
+  CheckIndexRange(aIndex);
+  Result := @FBuffer.FItems[FBuffer.InternalIndex(aIndex)];
+end;
+
 procedure TGLiteDeque.SetItem(aIndex: SizeInt; const aValue: T);
 begin
   CheckIndexRange(aIndex);
@@ -1236,9 +1245,9 @@ begin
   Result := FBuffer.GetEnumerator;
 end;
 
-function TGLiteDeque.Mutable: TMutable;
+function TGLiteDeque.Mutables: TMutables;
 begin
-  Result := FBuffer.Mutable;
+  Result := FBuffer.Mutables;
 end;
 
 function TGLiteDeque.Reverse: TReverse;
