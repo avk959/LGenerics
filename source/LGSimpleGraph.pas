@@ -1202,9 +1202,9 @@ var
   I: SizeInt;
 begin
   if L = R then
-    exit(True);
+    exit(True);  //
   if L.VertexCount <> R.VertexCount then
-    exit(False);
+    exit(False); //
   if not L.FindFundamentalCycles(fcL) then
     Result := not R.FindFundamentalCycles(fcR)
   else
