@@ -434,6 +434,7 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
+    function  Clone: TPointsOutline;
     function  Complement: TPointsOutline;
   end;
 
@@ -1783,6 +1784,7 @@ begin
   Result := TGSimpleGraph.Create;
   Result.FCount := VertexCount;
   Result.FEdgeCount := EdgeCount;
+  Result.FCompCount := FCompCount;
   Result.FTitle := Title;
   Result.FConnected := Connected;
   Result.FConnectedValid := ConnectedValid;
@@ -2687,9 +2689,14 @@ begin
   inherited LoadFromFile(aFileName, @ReadPoint, @ReadWeight);
 end;
 
+function TPointsOutline.Clone: TPointsOutline;
+begin
+  Result := TPointsOutline(inherited Clone);
+end;
+
 function TPointsOutline.Complement: TPointsOutline;
 begin
-  Result := TPointsOutline(inherited Complement(@OnAddEdge))
+  Result := TPointsOutline(inherited Complement(@OnAddEdge));
 end;
 
 end.
