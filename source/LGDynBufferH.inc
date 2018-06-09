@@ -115,7 +115,7 @@
       property  Current: PItem read GetCurrent;
     end;
 
-    TMutable = record
+    TMutables = record
     private
       FBuffer: PGLiteDynBuffer;
     public
@@ -160,7 +160,7 @@
     function  GetEnumerator: TEnumerator; inline;
     function  GetMutableEnumerator: TMutableEnumerator; inline;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
-    function  Mutable: TMutable; inline;
+    function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     function  PushLast(constref aValue: T): SizeInt; inline;
@@ -276,7 +276,7 @@
       property  Current: PItem read GetCurrent;
     end;
 
-    TMutable = record
+    TMutables = record
     private
       FBuffer: PGLiteRingDynBuffer;
     public
@@ -341,7 +341,7 @@
     function  GetEnumerator: TEnumerator; inline;
     function  GetMutableEnumerator: TMutableEnumerator; inline;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
-    function  Mutable: TMutable; inline;
+    function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure PushLast(constref aValue: T);

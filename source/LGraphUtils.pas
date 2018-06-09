@@ -470,11 +470,12 @@ type
 
   public
     class function  TreeToChain(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
-    class procedure Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; out v: TIntVector); static;
+    class procedure Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; var v: TIntVector); static;
     class function  TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
-    class procedure Tree2Cycle(constref aTree: TIntArray;  aFirst, aLast: SizeInt; out v: TIntVector); static;
+    class procedure Tree2Cycle(constref aTree: TIntArray;  aFirst, aLast: SizeInt; var v: TIntVector); static;
     class property  DefaultEdgeData: TEdgeData read CFData;
     constructor Create;
+    constructor Create(aCapacity: SizeInt);
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateColorArray: TColorArray;
     function  CreateHandleArray: THandleArray;
@@ -482,7 +483,7 @@ type
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear; virtual;
-    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
     function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
@@ -1623,7 +1624,7 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-class procedure TGCustomGraph.Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; out v: TIntVector);
+class procedure TGCustomGraph.Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; var v: TIntVector);
 begin
   while aIndex >= 0 do
     begin
@@ -1657,7 +1658,7 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-class procedure TGCustomGraph.Tree2Cycle(constref aTree: TIntArray; aFirst, aLast: SizeInt; out v: TIntVector);
+class procedure TGCustomGraph.Tree2Cycle(constref aTree: TIntArray; aFirst, aLast: SizeInt; var v: TIntVector);
 var
   I: SizeInt;
 begin
@@ -1679,6 +1680,12 @@ end;
 constructor TGCustomGraph.Create;
 begin
   Title := 'Untitled';
+end;
+
+constructor TGCustomGraph.Create(aCapacity: SizeInt);
+begin
+  Title := 'Untitled';
+  EnsureCapacity(aCapacity);
 end;
 
 function TGCustomGraph.CreateIntArray(aValue: SizeInt): TIntArray;
@@ -1747,16 +1754,17 @@ end;
 
 procedure TGCustomGraph.EnsureCapacity(aValue: SizeInt);
 begin
-  if aValue <= Capacity then
-    exit;
-  if aValue <= DEFAULT_CONTAINER_CAPACITY then
-    aValue := DEFAULT_CONTAINER_CAPACITY
-  else
-    if aValue <= MAX_CAPACITY then
-      aValue := LGUtils.RoundUpTwoPower(aValue)
-    else
-      raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
-  Resize(aValue);
+  if aValue > Capacity then
+    begin
+      if aValue <= DEFAULT_CONTAINER_CAPACITY then
+        aValue := DEFAULT_CONTAINER_CAPACITY
+      else
+        if aValue <= MAX_CAPACITY then
+          aValue := LGUtils.RoundUpTwoPower(aValue)
+        else
+          raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+      Resize(aValue);
+    end;
 end;
 
 procedure TGCustomGraph.TrimToFit;

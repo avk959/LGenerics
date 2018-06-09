@@ -191,7 +191,7 @@ type
     procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
   public
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutables: TMutables; inline;
+    function  Mutables: TMutables; inline; //
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;

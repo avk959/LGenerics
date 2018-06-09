@@ -97,7 +97,7 @@ type
   public
   type
     TEnumerator = TBuffer.TEnumerator;
-    TMutable    = TBuffer.TMutable;
+    TMutables   = TBuffer.TMutables;
     TReverse    = TBuffer.TReverse;
     PItem       = TBuffer.PItem;
     TArray      = TBuffer.TArray;
@@ -108,7 +108,7 @@ type
     function  PopItem: T; inline;
   public
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutable: TMutable; inline;
+    function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -168,11 +168,9 @@ type
   public
   type
     TEnumerator = TStack.TEnumerator;
-    TMutable    = TStack.TMutable;
     TReverse    = TStack.TReverse;
 
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutable: TMutable; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -397,9 +395,9 @@ begin
   Result := FBuffer.GetEnumerator;
 end;
 
-function TGLiteStack.Mutable: TMutable;
+function TGLiteStack.Mutables: TMutables;
 begin
-  Result := FBuffer.Mutable;
+  Result := FBuffer.Mutables;
 end;
 
 function TGLiteStack.Reverse: TReverse;
@@ -582,11 +580,6 @@ end;
 function TGLiteObjectStack.GetEnumerator: TEnumerator;
 begin
   Result := FStack.GetEnumerator;
-end;
-
-function TGLiteObjectStack.Mutable: TMutable;
-begin
-  Result := FStack.Mutable;
 end;
 
 function TGLiteObjectStack.Reverse: TReverse;

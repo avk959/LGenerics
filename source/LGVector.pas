@@ -165,7 +165,7 @@ type
   public
   type
     TEnumerator = TBuffer.TEnumerator;
-    TMutable    = TBuffer.TMutable;
+    TMutables    = TBuffer.TMutables;
     TReverse    = TBuffer.TReverse;
     PItem       = TBuffer.PItem;
     TArray      = TBuffer.TArray;
@@ -174,6 +174,7 @@ type
     FBuffer: TBuffer;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): T; inline;
+    function  GetMutable(aIndex: SizeInt): PItem;
     procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
     function  DeleteItem(aIndex: SizeInt): T; //inline;
@@ -181,7 +182,7 @@ type
     procedure CheckInsertIndexRange(aIndex: SizeInt); //inline;
   public
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutable: TMutable; inline;
+    function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -206,6 +207,7 @@ type
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+    property  Mutable[aIndex: SizeInt]: PItem read GetMutable;
   end;
 
   { TGLiteThreadVector }
@@ -250,7 +252,7 @@ type
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): T; inline;
-    procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
+    procedure SetItem(aIndex: SizeInt; const aValue: T);
     procedure CheckFreeItems;
     class operator Initialize(var v: TGLiteObjectVector);
     class operator Finalize(var v: TGLiteObjectVector);
@@ -1260,6 +1262,12 @@ begin
   Result := FBuffer.FItems[aIndex];
 end;
 
+function TGLiteVector.GetMutable(aIndex: SizeInt): PItem;
+begin
+  CheckIndexRange(aIndex);
+  Result := @FBuffer.FItems[aIndex];
+end;
+
 procedure TGLiteVector.SetItem(aIndex: SizeInt; const aValue: T);
 begin
   CheckIndexRange(aIndex);
@@ -1306,9 +1314,9 @@ begin
   Result := FBuffer.GetEnumerator;
 end;
 
-function TGLiteVector.Mutable: TMutable;
+function TGLiteVector.Mutables: TMutables;
 begin
-  Result := FBuffer.Mutable;
+  Result := FBuffer.Mutables;
 end;
 
 function TGLiteVector.Reverse: TReverse;
@@ -1508,7 +1516,15 @@ begin
 end;
 
 procedure TGLiteObjectVector.SetItem(aIndex: SizeInt; const aValue: T);
+var
+  v: T;
 begin
+  if OwnsObjects then
+    begin
+      v := FVector[aIndex];
+      if not TObject.Equal(v, aValue) then
+        v.Free;
+    end;
   FVector.SetItem(aIndex, aValue);
 end;
 

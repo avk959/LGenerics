@@ -309,9 +309,9 @@ begin
   FCurrIndex := FCount;
 end;
 
-{ TGLiteDynBuffer.TMutable }
+{ TGLiteDynBuffer.TMutables }
 
-function TGLiteDynBuffer.TMutable.GetEnumerator: TMutableEnumerator;
+function TGLiteDynBuffer.TMutables.GetEnumerator: TMutableEnumerator;
 begin
   Result := FBuffer^.GetMutableEnumerator;
 end;
@@ -419,7 +419,7 @@ begin
   Result.FCurrIndex := FCount;
 end;
 
-function TGLiteDynBuffer.Mutable: TMutable;
+function TGLiteDynBuffer.Mutables: TMutables;
 begin
   Result.FBuffer := @Self;
 end;
@@ -844,9 +844,9 @@ begin
   FRest := FCount;
 end;
 
-{ TGLiteRingDynBuffer.TMutable }
+{ TGLiteRingDynBuffer.TMutables }
 
-function TGLiteRingDynBuffer.TMutable.GetEnumerator: TMutableEnumerator;
+function TGLiteRingDynBuffer.TMutables.GetEnumerator: TMutableEnumerator;
 begin
   Result := FBuffer^.GetMutableEnumerator;
 end;
@@ -1126,7 +1126,7 @@ begin
   Result.Reset;
 end;
 
-function TGLiteRingDynBuffer.Mutable: TMutable;
+function TGLiteRingDynBuffer.Mutables: TMutables;
 begin
   Result.FBuffer := @Self;
 end;

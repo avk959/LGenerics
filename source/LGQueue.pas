@@ -91,7 +91,7 @@ type
   type
     TBuffer     = specialize TGLiteRingDynBuffer<T>;
     TEnumerator = TBuffer.TEnumerator;
-    TMutable    = TBuffer.TMutable;
+    TMutables   = TBuffer.TMutables;
     TReverse    = TBuffer.TReverse;
     TArray      = TBuffer.TArray;
 
@@ -100,7 +100,7 @@ type
     function  GetCapacity: SizeInt; inline;
   public
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutable: TMutable; inline;
+    function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -175,7 +175,6 @@ type
   type
     TQueue      = specialize TGLiteQueue<T>;
     TEnumerator = TQueue.TEnumerator;
-    TMutable    = TQueue.TMutable;
     TReverse    = TQueue.TReverse;
     TArray      = TQueue.TArray;
 
@@ -189,7 +188,6 @@ type
     class operator Finalize(var q: TGLiteObjectQueue);
   public
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutable: TMutable; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -414,9 +412,9 @@ begin
   Result := FBuffer.GetEnumerator;
 end;
 
-function TGLiteQueue.Mutable: TMutable;
+function TGLiteQueue.Mutables: TMutables;
 begin
-  Result := FBuffer.Mutable;
+  Result := FBuffer.Mutables;
 end;
 
 function TGLiteQueue.Reverse: TReverse;
@@ -704,11 +702,6 @@ end;
 function TGLiteObjectQueue.GetEnumerator: TEnumerator;
 begin
   Result := FQueue.GetEnumerator;
-end;
-
-function TGLiteObjectQueue.Mutable: TMutable;
-begin
-  Result := FQueue.Mutable;
 end;
 
 function TGLiteObjectQueue.Reverse: TReverse;

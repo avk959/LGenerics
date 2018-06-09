@@ -37,6 +37,9 @@ uses
   LGStrConst;
 
 type
+  TCycleVector       = specialize TGLiteVector<TIntVector>;
+  TCycleVectorHelper = specialize TGDelegatedVectorHelper<TIntVector>;
+
   { TGSimpleGraph: simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -121,9 +124,12 @@ type
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
+    procedure SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TCycleVector);
+    function  CmpVectorsByCount(constref L, R: TIntVector): SizeInt;
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
+    class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
     procedure Clear; override;
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -173,6 +179,9 @@ type
     function  ContainsEulerianCycle: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
     function  FindEulerianCycle(out aCycle: TIntVector): Boolean;
+  { finds a certain system of fundamental cycles of the graph;
+    note: extremely time-consuming and memory-consuming operation }
+    function  FindFundamentalCycles(out aCycles: TCycleVector): Boolean;
   { checks whether exists any articulation point that belong to the same connection component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -208,6 +217,7 @@ type
     function  DistinctEdges: TDistinctEdges; inline;
 
     function  Clone: TGSimpleGraph;
+    function  Complement(aOnAddEdge: TOnAddEdge): TGSimpleGraph;
   { count of connected components }
     property  SeparateCount: SizeInt read GetSeparateCount;
   end;
@@ -231,6 +241,18 @@ type
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
     procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
     procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
+    function  Complement: TGOutline;
+  end;
+
+  TIntOutline = class(specialize TGOutline<SizeInt, SizeInt>)
+  protected
+    procedure WriteVertex(aStream: TStream; constref aValue: SizeInt);
+    procedure ReadVertex(aStream: TStream; out aValue: SizeInt);
+  public
+    procedure SaveToStream(aStream: TStream);
+    procedure LoadFromStream(aStream: TStream);
+    procedure SaveToFile(const aFileName: string);
+    procedure LoadFromFile(const aFileName: string);
   end;
 
   THandle = LGUtils.THandle;
@@ -412,6 +434,7 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
+    function  Complement: TPointsOutline;
   end;
 
 implementation
@@ -830,7 +853,7 @@ begin
         if Result > 1 then
           begin
             if Assigned(aOnAddEdge) then
-              aOnAddEdge(Items[0], Items[Curr], @d);
+              aOnAddEdge(AdjList[0]^.Vertex, AdjList[Curr]^.Vertex, @d);
             AddEdgeI(0, Curr, d);
           end;
       end;
@@ -1120,6 +1143,81 @@ begin
                 aBridges.Add(TIntEdge.Create(Curr, Next));
             end;
       end;
+end;
+
+procedure TGSimpleGraph.SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TCycleVector);
+var
+  Stack: TIntStack;
+  Visited: TBitVector;
+  AdjEnums: TAdjEnumArray;
+  Parents: TIntArray;
+  g: TIntOutline;
+  Next: SizeInt;
+begin
+  Visited.Size := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Parents := CreateIntArray;
+  g := TIntOutline.Create(VertexCount);
+  try
+    Visited[aRoot] := True;
+    {%H-}Stack.Push(aRoot);
+    while Stack.TryPeek(aRoot) do
+      if AdjEnums[aRoot].MoveNext then
+        begin
+          Next := AdjEnums[aRoot].Current;
+          if not Visited[Next] then
+            begin
+              Visited[Next] := True;
+              Parents[Next] := aRoot;
+              Stack.Push(Next);
+            end
+          else
+            if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
+              begin
+                aCycles.Add(Default(TIntVector));
+                Tree2Cycle(Parents, Next, aRoot, aCycles.Mutable[Pred(aCycles.Count)]^);
+              end;
+        end
+      else
+        Stack.Pop;
+  finally
+    g.Free;
+  end;
+end;
+
+function TGSimpleGraph.CmpVectorsByCount(constref L, R: TIntVector): SizeInt;
+begin
+  if L.Count > R.Count then
+    Result := 1
+  else
+    if L.Count < R.Count then
+      Result := -1
+    else
+      Result := 0;
+end;
+
+class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
+var
+  fcL, fcR: TCycleVector;
+  I: SizeInt;
+begin
+  if L = R then
+    exit(True);
+  if L.VertexCount <> R.VertexCount then
+    exit(False);
+  if not L.FindFundamentalCycles(fcL) then
+    Result := not R.FindFundamentalCycles(fcR)
+  else
+    begin
+      if not R.FindFundamentalCycles(fcR) then
+        exit(False);
+      if fcL.Count <> fcR.Count then
+        exit(False);
+      for I := 0 to Pred(fcL.Count) do
+        if fcL.Mutable[I]^.Count <> fcR.Mutable[I]^.Count then
+          exit(False);
+      Result := True;
+    end
 end;
 
 procedure TGSimpleGraph.Clear;
@@ -1486,6 +1584,19 @@ begin
   Result := aCycle.Count > 0;
 end;
 
+function TGSimpleGraph.FindFundamentalCycles(out aCycles: TCycleVector): Boolean;
+begin
+  if not IsConnected then
+    exit(False);
+  if IsTree then
+    exit(False);
+  SearchForFundamentalsCycles(0, aCycles);
+  if aCycles.Count <> CyclomaticNumber then
+    raise ELGraphError.Create(SEGrapInconsist);
+  TCycleVectorHelper.Sort(aCycles, @CmpVectorsByCount);
+  Result := True;
+end;
+
 function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
 begin
   Result := ContainsCutPointI(IndexOf(aRoot));
@@ -1538,7 +1649,7 @@ begin
   for e in NewEdges do
     begin
       if Assigned(aOnAddEdge) then
-        aOnAddEdge(Items[e.Source], Items[e.Destination], @d);
+        aOnAddEdge(AdjList[e.Source]^.Vertex, AdjList[e.Destination]^.Vertex, @d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
 end;
@@ -1684,6 +1795,26 @@ begin
     end;
 end;
 
+function TGSimpleGraph.Complement(aOnAddEdge: TOnAddEdge): TGSimpleGraph;
+var
+  v: TVertex;
+  I, J: SizeInt;
+  d: TEdgeData;
+begin
+  Result := TGSimpleGraph.Create(VertexCount);
+  for v in Vertices do
+    Result.AddVertex(v);
+  d := DefaultEdgeData;
+  for I := 0 to Pred(VertexCount) do
+    for J := Succ(I) to Pred(VertexCount) do
+      if not AdjacentI(I, J) then
+        begin
+          if Assigned(aOnAddEdge) then
+            aOnAddEdge(AdjList[I]^.Vertex, AdjList[J]^.Vertex, @d);
+          Result.AddEdgeI(I, J, d);
+        end;
+end;
+
 { TGOutline }
 
 procedure TGOutline.WriteData(aStream: TStream; constref aValue: TEmptyRec);
@@ -1744,6 +1875,43 @@ end;
 procedure TGOutline.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
 begin
   inherited LoadFromFile(aFileName, aOnReadVertex, @ReadData);
+end;
+
+function TGOutline.Complement: TGOutline;
+begin
+  Result := TGOutline(inherited Complement(nil));
+end;
+
+{ TIntOutline }
+
+procedure TIntOutline.WriteVertex(aStream: TStream; constref aValue: SizeInt);
+begin
+  aStream.WriteBuffer(aValue, SizeOf(aValue));
+end;
+
+procedure TIntOutline.ReadVertex(aStream: TStream; out aValue: SizeInt);
+begin
+  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+end;
+
+procedure TIntOutline.SaveToStream(aStream: TStream);
+begin
+  inherited SaveToStream(aStream, @WriteVertex);
+end;
+
+procedure TIntOutline.LoadFromStream(aStream: TStream);
+begin
+  inherited LoadFromStream(aStream, @ReadVertex);
+end;
+
+procedure TIntOutline.SaveToFile(const aFileName: string);
+begin
+  inherited SaveToFile(aFileName, @WriteVertex);
+end;
+
+procedure TIntOutline.LoadFromFile(const aFileName: string);
+begin
+  inherited LoadFromFile(aFileName, @ReadVertex);
 end;
 
 { TGWeighedGraph.TWeightEdge }
@@ -2461,7 +2629,7 @@ end;
 
 procedure TPointsOutline.ReadPoint(aStream: TStream; out aValue: TPoint);
 begin
-  aStream.ReadBuffer(aValue, SizeOf(aValue));
+  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
 procedure TPointsOutline.ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
@@ -2517,6 +2685,11 @@ end;
 procedure TPointsOutline.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadPoint, @ReadWeight);
+end;
+
+function TPointsOutline.Complement: TPointsOutline;
+begin
+  Result := TPointsOutline(inherited Complement(@OnAddEdge))
 end;
 
 end.

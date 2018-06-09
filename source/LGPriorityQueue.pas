@@ -168,7 +168,6 @@ type
   type
     TBuffer     = specialize TGLiteDynBuffer<T>;
     TEnumerator = TBuffer.TEnumerator;
-    TMutable    = TBuffer.TMutable;
     TReverse    = TBuffer.TReverse;
     TArray      = TBuffer.TArray;
   strict private
@@ -189,7 +188,6 @@ type
     TComparator = specialize TGCompare<T>;
     function  Comparator: TComparator; inline;
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutable: TMutable; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -236,7 +234,6 @@ type
   type
     TBuffer     = specialize TGLiteDynBuffer<T>;
     TEnumerator = TBuffer.TEnumerator;
-    TMutable    = TBuffer.TMutable;
     TReverse    = TBuffer.TReverse;
     TArray      = TBuffer.TArray;
   strict private
@@ -256,7 +253,6 @@ type
     TComparator = specialize TGCompare<T>;
     function  Comparator: TComparator; inline;
     function  GetEnumerator: TEnumerator; inline;
-    function  Mutable: TMutable; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -1688,11 +1684,6 @@ begin
   Result := FBuffer.GetEnumerator;
 end;
 
-function TGLiteBinHeap.Mutable: TMutable;
-begin
-  Result := FBuffer.Mutable;
-end;
-
 function TGLiteBinHeap.Reverse: TReverse;
 begin
   Result := FBuffer.Reverse;
@@ -1956,11 +1947,6 @@ end;
 function TGLiteComparableBinHeapMin.GetEnumerator: TEnumerator;
 begin
   Result := FBuffer.GetEnumerator;
-end;
-
-function TGLiteComparableBinHeapMin.Mutable: TMutable;
-begin
-  Result := FBuffer.Mutable;
 end;
 
 function TGLiteComparableBinHeapMin.Reverse: TReverse;
