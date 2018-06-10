@@ -37,8 +37,8 @@ uses
   LGStrConst;
 
 type
-  TCycleVector       = specialize TGLiteVector<TIntVector>;
-  TCycleVectorHelper = specialize TGDelegatedVectorHelper<TIntVector>;
+  TIntArrayVector       = specialize TGLiteVector<TIntArray>;
+  TIntArrayVectorHelper = specialize TGDelegatedVectorHelper<TIntArray>;
 
   { TGSimpleGraph: simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
@@ -124,10 +124,10 @@ type
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
-    procedure SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TCycleVector);
+    procedure SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TIntArrayVector);
     procedure SearchForFundamentalsCyclesLen(aRoot: SizeInt; out aCycleLens: TIntVector);
     function  FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
-    function  CmpVectorsByCount(constref L, R: TIntVector): SizeInt;
+    function  CmpVectorsByCount(constref L, R: TIntArray): SizeInt;
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
@@ -178,12 +178,12 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
-    function  ContainsEulerianCycle: Boolean;
+    function  ContainsEulerianCircuit: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
-    function  FindEulerianCycle(out aCycle: TIntVector): Boolean;
+    function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
-    function  FindFundamentalCycles(out aCycles: TCycleVector): Boolean;
+    function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
   { checks whether exists any articulation point that belong to the same connection component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -1148,7 +1148,7 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TCycleVector);
+procedure TGSimpleGraph.SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TIntArrayVector);
 var
   Stack: TIntStack;
   Visited: TBitVector;
@@ -1176,10 +1176,7 @@ begin
             end
           else
             if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
-              begin
-                aCycles.Add(Default(TIntVector));
-                Tree2Cycle(Parents, Next, aRoot, aCycles.Mutable[Pred(aCycles.Count)]^);
-              end;
+              aCycles.Add(TreeToCycle(Parents, Next, aRoot));
         end
       else
         Stack.Pop;
@@ -1238,12 +1235,12 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.CmpVectorsByCount(constref L, R: TIntVector): SizeInt;
+function TGSimpleGraph.CmpVectorsByCount(constref L, R: TIntArray): SizeInt;
 begin
-  if L.Count > R.Count then
+  if System.Length(L) > System.Length(R) then
     Result := 1
   else
-    if L.Count < R.Count then
+    if System.Length(L) < System.Length(R) then
       Result := -1
     else
       Result := 0;
@@ -1590,7 +1587,7 @@ begin
   Result := CycleExists(aRoot, aCycle);
 end;
 
-function TGSimpleGraph.ContainsEulerianCycle: Boolean;
+function TGSimpleGraph.ContainsEulerianCircuit: Boolean;
 var
   I, d, cd: SizeInt;
 begin
@@ -1607,20 +1604,20 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleGraph.FindEulerianCycle(out aCycle: TIntVector): Boolean;
+function TGSimpleGraph.FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
 var
   g: TGSimpleGraph = nil;
   Stack: TIntStack;
   s, d: SizeInt;
 begin
-  if not ContainsEulerianCycle then
+  if not ContainsEulerianCircuit then
     exit(False);
   g := Clone;
   try
     s := 0;
     while g.DegreeI(s) = 0 do
       Inc(s);
-    aCycle.Add(s);
+    aCircuit.Add(s);
     repeat
       repeat
         if not g.AdjList[s]^.FindFirst(d) then
@@ -1631,15 +1628,17 @@ begin
       until False;
       if not Stack.TryPop(s) then
         break;
-      aCycle.Add(s);
+      aCircuit.Add(s);
     until False;
   finally
     g.Free;
   end;
-  Result := aCycle.Count > 0;
+  Result := aCircuit.Count > 0;
+  if Result then
+    TIntVectorHelper.Reverse(aCircuit);
 end;
 
-function TGSimpleGraph.FindFundamentalCycles(out aCycles: TCycleVector): Boolean;
+function TGSimpleGraph.FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
 begin
   if not IsConnected then
     exit(False);
@@ -1648,7 +1647,7 @@ begin
   SearchForFundamentalsCycles(0, aCycles);
   if aCycles.Count <> CyclomaticNumber then
     raise ELGraphError.Create(SEGrapInconsist);
-  TCycleVectorHelper.Sort(aCycles, @CmpVectorsByCount);
+  TIntArrayVectorHelper.Sort(aCycles, @CmpVectorsByCount);
   Result := True;
 end;
 
@@ -2690,7 +2689,7 @@ end;
 
 procedure TPointsOutline.ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
 begin
-  aStream.ReadBuffer(aValue, SizeOf(aValue));
+  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
 function TPointsOutline.AddEdge(constref aSrc, aDst: TPoint): Boolean;
