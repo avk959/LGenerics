@@ -76,8 +76,8 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
-    function  ContainsEulerianCycle: Boolean;
-    function  FindEulerianCycle: TIntVector;
+    function  ContainsEulerianCircuit: Boolean;
+    function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
 
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
@@ -421,7 +421,7 @@ begin
   Result := FindCycle(aRoot, aCycle);
 end;
 
-function TGSimpleDiGraph.ContainsEulerianCycle: Boolean;
+function TGSimpleDiGraph.ContainsEulerianCircuit: Boolean;
 var
   I, d: SizeInt;
 begin
@@ -437,21 +437,20 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleDiGraph.FindEulerianCycle: TIntVector;
+function TGSimpleDiGraph.FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
 var
   g: TGSimpleDiGraph = nil;
   Stack: TIntStack;
-  CurrPath: TIntDeque;
   s, d: SizeInt;
 begin
-  if not ContainsEulerianCycle then  //todo: ???
-    exit;
+  if not ContainsEulerianCircuit then  //todo: ???
+    exit(False);
   g := Clone;
   try
     s := 0;
     while g.DegreeI(s) = 0 do
       Inc(s);
-    CurrPath.PushLast(s);
+    aCircuit.Add(s);
     repeat
       repeat
         if not g.AdjList[s]^.FindFirst(d) then
@@ -462,13 +461,14 @@ begin
       until False;
       if not Stack.TryPop(s) then
         break;
-      CurrPath.PushFirst(s);
+      aCircuit.Add(s);
     until False;
-      for s in CurrPath do
-       Result.Add(s);
   finally
     g.Free;
   end;
+  Result := aCircuit.Count > 0;
+  if Result then
+    TIntVectorHelper.Reverse(aCircuit);
 end;
 
 function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
