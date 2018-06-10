@@ -33,12 +33,47 @@ uses
   LGArrayHelpers,
   LGVector,
   LGPriorityQueue,
+  LGHashTable,
+  LGHash,
   LGraphUtils,
   LGStrConst;
 
 type
-  TIntArrayVector       = specialize TGLiteVector<TIntArray>;
-  TIntArrayVectorHelper = specialize TGDelegatedVectorHelper<TIntArray>;
+  TIntOutline = class;
+  TIntOutlineVector = specialize TGLiteObjectVector<TIntOutline>;
+
+  { TIntPair }
+
+  TIntPair = record
+  private
+    FLess,
+    FGreater: SizeInt;
+    function GetKey: TIntPair; inline;
+  public
+    class function HashCode(const aValue: TIntPair): SizeInt; static; inline;
+    class function Equal(const L, R: TIntPair): Boolean; static; inline;
+    constructor Create(L, R: SizeInt);
+    property First: SizeInt read FLess;
+    property Second: SizeInt read FGreater;
+    property Key: TIntPair read GetKey;
+  end;
+
+  PIntPair = ^TIntPair;
+
+  TIntPairSet = record
+  private
+  type
+    TTable = specialize TGLiteHashTableLP<TIntPair, TIntPair, TIntPair>;
+  var
+    FTable: TTable;
+    function GetCount: SizeInt; inline;
+  public
+    function Contains(L, R: SizeInt): Boolean; inline;
+    function Add(L, R: SizeInt): Boolean;
+    function Remove(L, R: SizeInt): Boolean; inline;
+    property Count: SizeInt read GetCount;
+  end;
+
 
   { TGSimpleGraph: simple sparse undirected graph based on adjacency lists;
       functor TVertexEqRel must provide:
@@ -122,6 +157,7 @@ type
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
+    procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TIntOutlineVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
     procedure SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TIntArrayVector);
@@ -202,6 +238,10 @@ type
     otherwise the empty vector;
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
     function  FindBridges: TIntEdgeArray;
+  { returns count of biconnected components in the same connection component as aRoot;
+    the corresponding elements of the aComponents will contain outline of this bicomponent }
+    function  FindBiComponents(constref aRoot: TVertex; out aComponents: TIntOutlineVector): SizeInt;
+    function  FindBiComponentsI(aRoot: SizeInt; out aComponents: TIntOutlineVector): SizeInt;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
@@ -444,6 +484,74 @@ implementation
 {$B-}{$COPERATORS ON}
 uses
   bufstream;
+
+{ TIntPairSet }
+
+function TIntPairSet.GetCount: SizeInt;
+begin
+  Result := FTable.Count;
+end;
+
+function TIntPairSet.Contains(L, R: SizeInt): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := FTable.Find(TIntPair.Create(L, R), Dummy) <> nil;
+end;
+
+function TIntPairSet.Add(L, R: SizeInt): Boolean;
+var
+  Dummy: SizeInt;
+  p: PIntPair;
+  v: TIntPair;
+begin
+  v := TIntPair.Create(L, R);
+  Result := not FTable.FindOrAdd(v, p, Dummy);
+  if Result then
+    p^ := v;
+end;
+
+function TIntPairSet.Remove(L, R: SizeInt): Boolean;
+begin
+  Result := FTable.Remove(TIntPair.Create(L, R));
+end;
+
+{ TIntPair }
+
+function TIntPair.GetKey: TIntPair;
+begin
+  Result := Self;
+end;
+
+class function TIntPair.HashCode(const aValue: TIntPair): SizeInt;
+begin
+{$IF DEFINED (CPU64)}
+    Result := TxxHash32LE.HashBuf(@aValue, SizeOf(aValue));
+{$ELSEIF DEFINED (CPU32)}
+   Result := TxxHash32LE.HashQWord(QWord(aValue));
+{$ELSE }
+   Result := TxxHash32LE.HashDWord(DWord(aValue));
+{$ENDIF}
+end;
+
+class function TIntPair.Equal(const L, R: TIntPair): Boolean;
+begin
+  Result := (L.First = R.First) and (L.Second = R.Second);
+end;
+
+constructor TIntPair.Create(L, R: SizeInt);
+begin
+  if L <= R then
+    begin
+      FLess := L;
+      FGreater := R;
+    end
+  else
+    begin
+      FLess := R;
+      FGreater := L;
+    end;
+end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
 
@@ -929,8 +1037,7 @@ begin
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
               Inc(Counter);
-              if Prev = -1 then
-                Inc(ChildCount);
+              Inc(ChildCount, Ord(Prev = -1));
               Stack.Push(Next);
             end
           else
@@ -979,8 +1086,7 @@ begin
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
               Inc(Counter);
-              if Prev = -1 then
-                Inc(ChildCount);
+              Inc(ChildCount, Ord(Prev = -1));
               Stack.Push(Next);
             end
           else
@@ -1051,6 +1157,58 @@ begin
               aEdges.Add(TIntEdge.Create(Childs[Curr], Next));
           end;
       end;
+end;
+
+procedure TGSimpleGraph.SearchForBicomponent(aRoot: SizeInt; var aComp: TIntOutlineVector);
+var
+  Stack: TIntStack;
+  vEdges: TIntEdgeVector;
+  AdjEnums: TAdjEnumArray;
+  Lowest, InOrder, Parents: TIntArray;
+  Counter, Total, Prev, Curr, Next, ChildCount: SizeInt;
+begin
+  Total := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Lowest := CreateIntArray(Total);
+  InOrder := CreateIntArray(Total);
+  Parents := CreateIntArray;
+  InOrder[aRoot] := 0;
+  Lowest[aRoot] := 0;
+  {%H-}Stack.Push(aRoot);
+  Counter := 1;
+  ChildCount := 0;
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[{%H-}Curr].MoveNext then
+      begin
+        Prev := Parents[Curr];
+        Next := AdjEnums[Curr].Current;
+        if Next <> Prev then
+          if InOrder[Next] = Total then
+            begin
+              vEdges.Add(TIntEdge.Create(Curr, Next));
+              Parents[Next] := Curr;
+              InOrder[Next] := Counter;
+              Lowest[Next] := Counter;
+              Inc(Counter);
+              if Prev = -1 then
+                Inc(ChildCount);
+              Stack.Push(Next);
+            end
+          else
+            Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+      end
+    else
+      begin
+        Stack.Pop;
+        Next := Curr;
+        Curr := Parents[Curr];
+        Prev := Parents[Curr];
+        Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+        if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
+          //aPoints.Add(Curr);
+      end;
+  if ChildCount > 1 then
+    //aPoints.Add(aRoot);
 end;
 
 function TGSimpleGraph.BridgeExists: Boolean;
@@ -1154,35 +1312,31 @@ var
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
-  g: TIntOutline;
+  g: TSkeleton;
   Next: SizeInt;
 begin
   Visited.Size := VertexCount;
+  g.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
-  g := TIntOutline.Create(VertexCount);
-  try
-    Visited[aRoot] := True;
-    {%H-}Stack.Push(aRoot);
-    while Stack.TryPeek(aRoot) do
-      if AdjEnums[aRoot].MoveNext then
-        begin
-          Next := AdjEnums[aRoot].Current;
-          if not Visited[Next] then
-            begin
-              Visited[Next] := True;
-              Parents[Next] := aRoot;
-              Stack.Push(Next);
-            end
-          else
-            if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
-              aCycles.Add(TreeToCycle(Parents, Next, aRoot));
-        end
-      else
-        Stack.Pop;
-  finally
-    g.Free;
-  end;
+  Visited[aRoot] := True;
+  {%H-}Stack.Push(aRoot);
+  while Stack.TryPeek(aRoot) do
+    if AdjEnums[aRoot].MoveNext then
+      begin
+        Next := AdjEnums[aRoot].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Parents[Next] := aRoot;
+            Stack.Push(Next);
+          end
+        else
+          if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
+            aCycles.Add(TreeToCycle(Parents, Next, aRoot));
+      end
+    else
+      Stack.Pop;
 end;
 
 procedure TGSimpleGraph.SearchForFundamentalsCyclesLen(aRoot: SizeInt; out aCycleLens: TIntVector);
@@ -1191,35 +1345,31 @@ var
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
-  g: TIntOutline;
+  g: TSkeleton;
   Next: SizeInt;
 begin
   Visited.Size := VertexCount;
+  g.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
-  g := TIntOutline.Create(VertexCount);
-  try
-    Visited[aRoot] := True;
-    {%H-}Stack.Push(aRoot);
-    while Stack.TryPeek(aRoot) do
-      if AdjEnums[aRoot].MoveNext then
-        begin
-          Next := AdjEnums[aRoot].Current;
-          if not Visited[Next] then
-            begin
-              Visited[Next] := True;
-              Parents[Next] := aRoot;
-              Stack.Push(Next);
-            end
-          else
-            if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
-              aCycleLens.Add(TreeToCycleLen(Parents, Next, aRoot));
-        end
-      else
-        Stack.Pop;
-  finally
-    g.Free;
-  end;
+  Visited[aRoot] := True;
+  {%H-}Stack.Push(aRoot);
+  while Stack.TryPeek(aRoot) do
+    if AdjEnums[aRoot].MoveNext then
+      begin
+        Next := AdjEnums[aRoot].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Parents[Next] := aRoot;
+            Stack.Push(Next);
+          end
+        else
+          if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
+            aCycleLens.Add(TreeToCycleLen(Parents, Next, aRoot));
+      end
+    else
+      Stack.Pop;
 end;
 
 function TGSimpleGraph.FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
@@ -1725,6 +1875,28 @@ begin
   Result := v.ToArray;
 end;
 
+function TGSimpleGraph.FindBiComponents(constref aRoot: TVertex; out aComponents: TIntOutlineVector): SizeInt;
+begin
+  Result := FindBiComponentsI(IndexOf(aRoot), aComponents);
+end;
+
+function TGSimpleGraph.FindBiComponentsI(aRoot: SizeInt; out aComponents: TIntOutlineVector): SizeInt;
+begin
+  CheckIndexRange(aRoot);
+  if VertexCount > 2 then
+    begin
+      SearchForBicomponent(aRoot, aComponents);
+      Result := aComponents.Count;
+    end
+  else
+    if (VertexCount = 2) and ContainsEdgeI(0, 1) then
+      begin
+        aComponents.Add(TIntOutline.Create);
+        aComponents[0].AddEdge(0, 1);
+        Result := 1;
+      end;
+end;
+
 function TGSimpleGraph.IsBiconnected: Boolean;
 begin
   if Connected then
@@ -1739,10 +1911,9 @@ var
   e: TIntEdge;
   d: TEdgeData;
 begin
-  Result := 0;
+  Result := EnsureConnected(aOnAddEdge);
   if VertexCount < 3 then
     exit;
-  Result += EnsureConnected(aOnAddEdge);
   SearchForBiconnect(0, NewEdges{%H-});
   d := DefaultEdgeData;
   for e in NewEdges do
