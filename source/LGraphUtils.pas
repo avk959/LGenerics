@@ -131,6 +131,7 @@ type
   TIntEdgeVector        = specialize TGLiteVector<TIntEdge>;
   PIntEdgeVector        = ^TIntEdgeVector;
   TIntEdgeArray         = array of TIntEdge;
+  TEdgeArrayVector      = specialize TGLiteVector<TIntEdgeArray>;
 
   generic TGAdjItem<TData> = record
     Destination: SizeInt;
@@ -554,11 +555,11 @@ type
     function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns an array containing in the corresponding components the length of shortest path from aRoot
-    (in sense 'edges count')}
+    (in sense 'edges count'), or -1 if it unreachable }
     function  ShortestPathsMap(constref aRoot: TVertex): TIntArray; inline;
     function  ShortestPathsMapI(aRoot: SizeInt = 0): TIntArray;
   { returns an array containing chain of indices of found shortest path(in sense 'edges count'),
-   (empty if path does not exists) }
+    empty if path does not exists }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 
