@@ -49,11 +49,12 @@ type
   TShortArray      = array of ShortInt;
   THandleArray     = array of THandle;
   TIntHelper       = specialize TGNumArrayHelper<SizeInt>;
+  TIntVector       = specialize TGLiteVector<SizeInt>;
   TIntVectorHelper = specialize TGComparableVectorHelper<SizeInt>;
+  TIntArrayVector  = specialize TGLiteVector<TIntArray>;
   TIntStack        = specialize TGLiteStack<SizeInt>;
   TIntQueue        = specialize TGLiteQueue<SizeInt>;
   TIntDeque        = specialize TGLiteDeque<SizeInt>;
-  TIntVector       = specialize TGLiteVector<SizeInt>;
   PIntVector       = ^TIntVector;
 
   TOnVisit         = procedure (aValue: SizeInt) of object;
@@ -126,9 +127,10 @@ type
     constructor Create(s, d: SizeInt);
   end;
 
-  TIntEdgeVector = specialize TGLiteVector<TIntEdge>;
-  PIntEdgeVector = ^TIntEdgeVector;
-  TIntEdgeArray  = array of TIntEdge;
+  TIntArrayVectorHelper = specialize TGDelegatedVectorHelper<TIntArray>;
+  TIntEdgeVector        = specialize TGLiteVector<TIntEdge>;
+  PIntEdgeVector        = ^TIntEdgeVector;
+  TIntEdgeArray         = array of TIntEdge;
 
   generic TGAdjItem<TData> = record
     Destination: SizeInt;
@@ -322,6 +324,32 @@ type
       //title
       //vertices
       //edges: src index, dst index, data
+    end;
+
+    TIntList = record
+    const
+      EXPAND_SIZE = 8;
+    var
+      Items: TIntArray;
+      Count: SizeInt;
+      procedure Expand; inline;
+      function  Contains(aValue: SizeInt): Boolean; inline;
+      function  Find(aValue: SizeInt): SizeInt;
+      function  Add(constref aValue: SizeInt): Boolean;
+      class operator Initialize(var aList: TIntList);
+    end;
+
+    TSkeleton = record
+    private
+      function  GetSize: SizeInt; inline;
+      procedure SetSize(aValue: SizeInt); inline;
+    public
+      AdjLists: array of TIntList;
+      EdgeCount: SizeInt;
+      function ContainsEdge(constref aSrc, aDst: SizeInt): Boolean; inline;
+      function AddEdge(constref aSrc, aDst: SizeInt): Boolean;
+      property Size: SizeInt read GetSize write SetSize;
+      class operator Initialize(var s: TSkeleton);
     end;
 
   const
@@ -1173,6 +1201,86 @@ begin
     end
   else
     Result := False;
+end;
+
+{ TGCustomGraph.TIntList }
+
+procedure TGCustomGraph.TIntList.Expand;
+begin
+  System.SetLength(Items, System.Length(Items) + EXPAND_SIZE);
+end;
+
+function TGCustomGraph.TIntList.Contains(aValue: SizeInt): Boolean;
+begin
+  Result := Find(aValue) >= 0;
+end;
+
+function TGCustomGraph.TIntList.Find(aValue: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    if Items[I] = aValue then
+      exit(I);
+  Result := -1;
+end;
+
+function TGCustomGraph.TIntList.Add(constref aValue: SizeInt): Boolean;
+begin
+  if Count <> 0 then
+    Result := Find(aValue) < 0
+  else
+    Result := True;
+  if Result then
+    begin
+      if Count = System.Length(Items) then
+        Expand;
+      Items[Count] := aValue;
+      Inc(Count);
+    end;
+end;
+
+class operator TGCustomGraph.TIntList.Initialize(var aList: TIntList);
+begin
+  aList.Count := 0;
+end;
+
+{ TGCustomGraph.TSkeleton }
+
+function TGCustomGraph.TSkeleton.GetSize: SizeInt;
+begin
+  Result := System.Length(AdjLists);
+end;
+
+procedure TGCustomGraph.TSkeleton.SetSize(aValue: SizeInt);
+begin
+  if aValue > Size then
+    System.SetLength(AdjLists, aValue);
+end;
+
+function TGCustomGraph.TSkeleton.ContainsEdge(constref aSrc, aDst: SizeInt): Boolean;
+begin
+  if (aSrc >= 0) and (aSrc < Size) then
+    Result := AdjLists[aSrc].Contains(aDst)
+  else
+    Result := False;
+end;
+
+function TGCustomGraph.TSkeleton.AddEdge(constref aSrc, aDst: SizeInt): Boolean;
+begin
+  if (aSrc < 0) or (aSrc >= Size) or (aDst < 0) or (aDst >= Size) then
+    exit(False);
+  Result := AdjLists[aSrc].Add(aDst);
+  if Result then
+    begin
+      AdjLists[aDst].Add(aSrc);
+      Inc(EdgeCount);
+    end;
+end;
+
+class operator TGCustomGraph.TSkeleton.Initialize(var s: TSkeleton);
+begin
+  s.EdgeCount := 0;
 end;
 
 { TGCustomGraph.TNode }
