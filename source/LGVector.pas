@@ -53,9 +53,9 @@ type
     function  InsertEnum(aIndex: SizeInt; e: IEnumerable): SizeInt;
     procedure FastSwap(L, R: SizeInt); inline;
     function  ExtractItem(aIndex: SizeInt): T;
-    function  DoExtractRange(aIndex, aCount: SizeInt): TArray;
+    function  ExtractRange(aIndex, aCount: SizeInt): TArray;
     function  DeleteItem(aIndex: SizeInt): T; virtual;
-    function  DoDeleteRange(aIndex, aCount: SizeInt): SizeInt; virtual;
+    function  DeleteRange(aIndex, aCount: SizeInt): SizeInt; virtual;
     function  DoSplit(aIndex: SizeInt): TVector;
   public
   { appends aValue and returns it index; will raise ELGUpdateLock if instance in iteration }
@@ -118,7 +118,7 @@ type
     procedure SetItem(aIndex: SizeInt; const aValue: T); override;
     procedure DoClear; override;
     function  DeleteItem(aIndex: SizeInt): T; override;
-    function  DoDeleteRange(aIndex, aCount: SizeInt): SizeInt; override;
+    function  DeleteRange(aIndex, aCount: SizeInt): SizeInt; override;
     function  DoSplit(aIndex: SizeInt): TObjectVector;
   public
     constructor Create(aOwnsObjects: Boolean = True);
@@ -178,6 +178,7 @@ type
     procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
     function  DeleteItem(aIndex: SizeInt): T; //inline;
+    function  ExtractRange(aIndex, aCount: SizeInt): TArray;
     procedure CheckIndexRange(aIndex: SizeInt); //inline;
     procedure CheckInsertIndexRange(aIndex: SizeInt); //inline;
   public
@@ -204,6 +205,10 @@ type
     function  Delete(aIndex: SizeInt): T; inline;
   { will return False if aIndex out of bounds }
     function  TryDelete(aIndex: SizeInt; out aValue: T): Boolean; inline;
+  { extracts aCount elements(if possible) starting from aIndex;
+    will raise ELGListError if aIndex out of bounds;
+    will raise ELGUpdateLock if instance in iteration}
+    function  ExtractAll(aIndex, aCount: SizeInt): TArray;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -286,6 +291,10 @@ type
     procedure Delete(aIndex: SizeInt); inline;
   { will return False if aIndex out of bounds }
     function  TryDelete(aIndex: SizeInt): Boolean; inline;
+  { extracts aCount elements(if possible) starting from aIndex;
+    will raise ELGListError if aIndex out of bounds;
+    will raise ELGUpdateLock if instance in iteration}
+    function  ExtractAll(aIndex, aCount: SizeInt): TArray; inline;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -920,7 +929,7 @@ begin
   System.FillChar(FItems[ElemCount], SizeOf(T), 0);
 end;
 
-function TGVector.DoExtractRange(aIndex, aCount: SizeInt): TArray;
+function TGVector.ExtractRange(aIndex, aCount: SizeInt): TArray;
 begin
   if aCount < 0 then
     aCount := 0;
@@ -940,7 +949,7 @@ begin
   Result := ExtractItem(aIndex);
 end;
 
-function TGVector.DoDeleteRange(aIndex, aCount: SizeInt): SizeInt;
+function TGVector.DeleteRange(aIndex, aCount: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1033,7 +1042,7 @@ function TGVector.ExtractAll(aIndex, aCount: SizeInt): TArray;
 begin
   CheckInIteration;
   CheckIndexRange(aIndex);
-  Result := DoExtractRange(aIndex, aCount);
+  Result := ExtractRange(aIndex, aCount);
 end;
 
 procedure TGVector.Delete(aIndex: SizeInt);
@@ -1054,7 +1063,7 @@ function TGVector.DeleteAll(aIndex, aCount: SizeInt): SizeInt;
 begin
   CheckInIteration;
   CheckIndexRange(aIndex);
-  Result := DoDeleteRange(aIndex, aCount);
+  Result := DeleteRange(aIndex, aCount);
 end;
 
 function TGVector.Split(aIndex: SizeInt): TVector;
@@ -1099,7 +1108,7 @@ begin
     Result.Free;
 end;
 
-function TGObjectVector.DoDeleteRange(aIndex, aCount: SizeInt): SizeInt;
+function TGObjectVector.DeleteRange(aIndex, aCount: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1297,6 +1306,21 @@ begin
   System.FillChar(FBuffer.FItems[Count], SizeOf(T), 0);
 end;
 
+function TGLiteVector.ExtractRange(aIndex, aCount: SizeInt): TArray;
+begin
+  if aCount < 0 then
+    aCount := 0;
+  aCount := Math.Min(aCount, Count - aIndex);
+  System.SetLength(Result, aCount);
+  if aCount > 0 then
+    begin
+      System.Move(FBuffer.FItems[aIndex], Result[0], SizeOf(T) * aCount);
+      FBuffer.FCount -= aCount;
+      System.Move(FBuffer.FItems[aIndex + aCount], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
+      System.FillChar(FBuffer.FItems[Count], SizeOf(T) * aCount, 0);
+    end;
+end;
+
 procedure TGLiteVector.CheckIndexRange(aIndex: SizeInt);
 begin
   if (aIndex < 0) or (aIndex >= Count) then
@@ -1421,6 +1445,12 @@ begin
   Result := (aIndex >= 0) and (aIndex < Count);
   if Result then
     aValue := DeleteItem(aIndex);
+end;
+
+function TGLiteVector.ExtractAll(aIndex, aCount: SizeInt): TArray;
+begin
+  CheckIndexRange(aIndex);
+  Result := ExtractRange(aIndex, aCount);
 end;
 
 { TGLiteThreadVector }
@@ -1648,6 +1678,11 @@ begin
   Result := FVector.TryDelete(aIndex, v);
   if Result and OwnsObjects then
     v.Free;
+end;
+
+function TGLiteObjectVector.ExtractAll(aIndex, aCount: SizeInt): TArray;
+begin
+  Result := FVector.ExtractAll(aIndex, aCount);
 end;
 
 { TGLiteThreadObjectVector }
