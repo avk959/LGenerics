@@ -3201,7 +3201,7 @@ end;
 
 function TGLiteHashTableLP.GetEnumerator: TEnumerator;
 begin
-  Result.Init(FList);
+  Result{%H-}.Init(FList);
 end;
 
 function TGLiteHashTableLP.GetRemovableEnumerator: TRemovableEnumerator;
