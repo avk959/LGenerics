@@ -227,12 +227,9 @@ type
     adding, if necessary, new edges; returns count of added edges }
     function  RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge): SizeInt; inline;
     function  RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
-  { checks whether exists any bridge in graph;
-    note: may crash with stack overflow on size ~ 300000*3 because of recursive DFS }
+  { checks whether exists any bridge in graph }
     function  ContainsBridge: Boolean;
-  { returns all bridges in the form of source-destinatin pairs in the result vector, if any,
-    otherwise the empty vector;
-    note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
+  { returns all bridges in the result vector, if any, otherwise the empty vector }
     function  FindBridges: TIntEdgeArray;
   { returns count of biconnected components in the same connection component as aRoot;
     the corresponding elements of the aComponents will contain  the edges of this bicomponent }
@@ -252,6 +249,8 @@ type
   { returns a graph constructed from the pairs provided by the array,
     i.e. each element treates as pair of source - destination }
     function  CreateFromArray(constref aValue: TIntArray): TGSimpleGraph;
+  { returns a graph constructed from the edges indices provided by the array }
+    function  CreateFromEdgeArray(constref aEdges: TIntEdgeArray): TGSimpleGraph;
     function  DistinctEdges: TDistinctEdges; inline;
 
     function  Clone: TGSimpleGraph;
@@ -2017,6 +2016,15 @@ begin
       if Src <> -1 then
         Result.AddEdge(Items[Src], Items[I], GetEdgeDataPtr(Src, I)^);
     end;
+end;
+
+function TGSimpleGraph.CreateFromEdgeArray(constref aEdges: TIntEdgeArray): TGSimpleGraph;
+var
+  e: TIntEdge;
+begin
+  Result := TGSimpleGraph.Create;
+  for e in aEdges do
+    Result.AddEdge(Items[e.Source], Items[e.Destination], GetEdgeDataPtr(e.Source, e.Destination)^);
 end;
 
 function TGSimpleGraph.DistinctEdges: TDistinctEdges;
