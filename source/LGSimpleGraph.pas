@@ -27,7 +27,7 @@ unit LGSimpleGraph;
 interface
 
 uses
-  Classes, SysUtils, math,
+  Classes, SysUtils,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -39,10 +39,6 @@ uses
   LGStrConst;
 
 type
-  TIntOutline = class;
-  TIntOutlineVector = specialize TGLiteObjectVector<TIntOutline>;
-
-  { TIntPair }
 
   TIntPair = record
   private
@@ -53,8 +49,8 @@ type
     class function HashCode(const aValue: TIntPair): SizeInt; static; inline;
     class function Equal(const L, R: TIntPair): Boolean; static; inline;
     constructor Create(L, R: SizeInt);
-    property First: SizeInt read FLess;
-    property Second: SizeInt read FGreater;
+    property Left: SizeInt read FLess;
+    property Right: SizeInt read FGreater;
     property Key: TIntPair read GetKey;
   end;
 
@@ -157,13 +153,13 @@ type
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
-    procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TIntOutlineVector);
+    procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
     procedure SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TIntArrayVector);
     procedure SearchForFundamentalsCyclesLen(aRoot: SizeInt; out aCycleLens: TIntVector);
     function  FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
-    function  CmpVectorsByCount(constref L, R: TIntArray): SizeInt;
+    function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     property  Connected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
@@ -201,7 +197,7 @@ type
     function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleGraph;
   { returns index of the connected component that contains aVertex }
     function  SeparateIndexOf(constref aVertex: TVertex): SizeInt; inline;
-    function  SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
+    function  SeparateIndexI(aVtxIndex: SizeInt): SizeInt;
   { returns number of Items(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
@@ -239,9 +235,9 @@ type
     note: crashes with stack overflow on size ~ 300000*3 because of recursive DFS}
     function  FindBridges: TIntEdgeArray;
   { returns count of biconnected components in the same connection component as aRoot;
-    the corresponding elements of the aComponents will contain outline of this bicomponent }
-    function  FindBiComponents(constref aRoot: TVertex; out aComponents: TIntOutlineVector): SizeInt;
-    function  FindBiComponentsI(aRoot: SizeInt; out aComponents: TIntOutlineVector): SizeInt;
+    the corresponding elements of the aComponents will contain  the edges of this bicomponent }
+    function  FindBicomponents(constref aRoot: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
+    function  FindBicomponentsI(aRoot: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
@@ -536,7 +532,7 @@ end;
 
 class function TIntPair.Equal(const L, R: TIntPair): Boolean;
 begin
-  Result := (L.First = R.First) and (L.Second = R.Second);
+  Result := (L.Left = R.Left) and (L.Right = R.Right);
 end;
 
 constructor TIntPair.Create(L, R: SizeInt);
@@ -631,13 +627,15 @@ begin
       if InOrder[Next] = Total then
         begin
           Dfs(Next, Curr);
-          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if Lowest[Curr] > Lowest[Next] then
+            Lowest[Curr] := Lowest[Next];
           if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
             Points^.Add(Curr);
           Inc(ChildCount);
         end
       else
-        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+        if Lowest[Curr] > InOrder[Next] then
+          Lowest[Curr] := InOrder[Next];
   if (Prev = -1) and (ChildCount > 1) then
     Points^.Add(Curr);
 end;
@@ -656,13 +654,15 @@ begin
         begin
           if DfsFind(Next, Curr) then
             exit(True);
-          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if Lowest[Curr] > Lowest[Next] then
+            Lowest[Curr] := Lowest[Next];
           if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
             exit(True);
           Inc(ChildCount);
         end
       else
-        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+        if Lowest[Curr] > InOrder[Next] then
+          Lowest[Curr] := InOrder[Next];
   if (Prev = -1) and (ChildCount > 1) then
     exit(True);
   Result := False;
@@ -683,7 +683,8 @@ begin
           if Child = -1 then
             Child := Next;
           DfsRemove(Next, Curr);
-          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if Lowest[Curr] > Lowest[Next] then
+            Lowest[Curr] := Lowest[Next];
           if Lowest[Next] >= InOrder[Curr] then
             begin
               if Next = Child then
@@ -696,7 +697,8 @@ begin
             end;
         end
       else
-        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+        if Lowest[Curr] > InOrder[Next] then
+          Lowest[Curr] := InOrder[Next];
 end;
 
 procedure TGSimpleGraph.TCutPointHelper.Search(aGraph: TGSimpleGraph; aVector: PIntVector; aFrom: SizeInt);
@@ -745,12 +747,14 @@ begin
       if InOrder[Next] = Total then
         begin
           Dfs(Next, Curr);
-          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if Lowest[Curr] > Lowest[Next] then
+            Lowest[Curr] := Lowest[Next];
           if Lowest[Next] > InOrder[Curr] then
             Bridges^.Add(TIntEdge.Create(Curr, Next));
         end
       else
-        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+        if Lowest[Curr] > InOrder[Next] then
+          Lowest[Curr] := InOrder[Next];
 end;
 
 function TGSimpleGraph.TBridgeHelper.DfsFind(Curr: SizeInt; Prev: SizeInt): Boolean;
@@ -766,12 +770,14 @@ begin
         begin
           if DfsFind(Next, Curr) then
             exit(True);
-          Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+          if Lowest[Curr] > Lowest[Next] then
+            Lowest[Curr] := Lowest[Next];
           if Lowest[Next] > InOrder[Curr] then
             exit(True);
         end
       else
-        Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+        if Lowest[Curr] > InOrder[Next] then
+          Lowest[Curr] := InOrder[Next];
   Result := False;
 end;
 
@@ -1013,12 +1019,11 @@ var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Lowest, InOrder, Parents: TIntArray;
-  Counter, Total, Prev, Curr, Next, ChildCount: SizeInt;
+  Counter, Curr, Next, ChildCount: SizeInt;
 begin
-  Total := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  Lowest := CreateIntArray(Total);
-  InOrder := CreateIntArray(Total);
+  Lowest := CreateIntArray;
+  InOrder := CreateIntArray;
   Parents := CreateIntArray;
   InOrder[aRoot] := 0;
   Lowest[aRoot] := 0;
@@ -1028,29 +1033,29 @@ begin
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
-        Prev := Parents[Curr];
         Next := AdjEnums[Curr].Current;
-        if Next <> Prev then
-          if InOrder[Next] = Total then
+        if Next <> Parents[Curr] then
+          if InOrder[Next] = -1 then
             begin
               Parents[Next] := Curr;
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
               Inc(Counter);
-              Inc(ChildCount, Ord(Prev = -1));
+              Inc(ChildCount, Ord(Parents[Curr] = -1));
               Stack.Push(Next);
             end
           else
-            Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+            if Lowest[Curr] > InOrder[Next] then
+              Lowest[Curr] := InOrder[Next];
       end
     else
       begin
         Stack.Pop;
         Next := Curr;
         Curr := Parents[Curr];
-        Prev := Parents[Curr];
-        Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
-        if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
+        if Lowest[Curr] > Lowest[Next] then
+          Lowest[Curr] := Lowest[Next];
+        if (Lowest[Next] >= InOrder[Curr]) and (InOrder[Curr] <> 0) then
           aPoints.Add(Curr);
       end;
   if ChildCount > 1 then
@@ -1062,12 +1067,11 @@ var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Lowest, InOrder, Parents: TIntArray;
-  Counter, Total, Prev, Curr, Next, ChildCount: SizeInt;
+  Counter, Curr, Next, ChildCount: SizeInt;
 begin
-  Total := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  Lowest := CreateIntArray(Total);
-  InOrder := CreateIntArray(Total);
+  Lowest := CreateIntArray;
+  InOrder := CreateIntArray;
   Parents := CreateIntArray;
   InOrder[aRoot] := 0;
   Lowest[aRoot] := 0;
@@ -1077,29 +1081,29 @@ begin
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
-        Prev := Parents[Curr];
         Next := AdjEnums[Curr].Current;
-        if Next <> Prev then
-          if InOrder[Next] = Total then
+        if Next <> Parents[Curr] then
+          if InOrder[Next] = -1 then
             begin
               Parents[Next] := Curr;
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
               Inc(Counter);
-              Inc(ChildCount, Ord(Prev = -1));
+              Inc(ChildCount, Ord(Parents[Curr] = -1));
               Stack.Push(Next);
             end
           else
-            Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+            if Lowest[Curr] > InOrder[Next] then
+              Lowest[Curr] := InOrder[Next];
       end
     else
       begin
         Stack.Pop;
         Next := Curr;
         Curr := Parents[Curr];
-        Prev := Parents[Curr];
-        Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
-        if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
+        if Lowest[Curr] > Lowest[Next] then
+          Lowest[Curr] := Lowest[Next];
+        if (Lowest[Next] >= InOrder[Curr]) and (InOrder[Curr] <> 0) then
           exit(True);
       end;
   Result := ChildCount > 1;
@@ -1110,12 +1114,11 @@ var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Lowest, InOrder, Parents, Childs: TIntArray;
-  Counter, Total, Curr, Next: SizeInt;
+  Counter, Curr, Next: SizeInt;
 begin
-  Total := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  Lowest := CreateIntArray(Total);
-  InOrder := CreateIntArray(Total);
+  Lowest := CreateIntArray;
+  InOrder := CreateIntArray;
   Parents := CreateIntArray;
   Childs := CreateIntArray;
   InOrder[aRoot] := 0;
@@ -1127,7 +1130,7 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if InOrder[Next] = Total then
+          if InOrder[Next] = -1 then
             begin
               if Childs[Curr] = -1 then
                 Childs[Curr] := Next;
@@ -1138,14 +1141,16 @@ begin
               Stack.Push(Next);
             end
           else
-            Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+            if Lowest[Curr] > InOrder[Next] then
+              Lowest[Curr] := InOrder[Next];
       end
     else
       begin
         Stack.Pop;
         Next := Curr;
         Curr := Parents[Curr];
-        Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+        if Lowest[Curr] > Lowest[Next] then
+          Lowest[Curr] := Lowest[Next];
         if Lowest[Next] >= InOrder[Curr] then
           begin
             if Next = Childs[Curr] then
@@ -1159,18 +1164,18 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.SearchForBicomponent(aRoot: SizeInt; var aComp: TIntOutlineVector);
+procedure TGSimpleGraph.SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
 var
   Stack: TIntStack;
-  vEdges: TIntEdgeVector;
+  EdgeStack: TIntEdgeVector;
   AdjEnums: TAdjEnumArray;
   Lowest, InOrder, Parents: TIntArray;
-  Counter, Total, Prev, Curr, Next, ChildCount: SizeInt;
+  Counter, Curr, Next, ChildCount, I: SizeInt;
+  e: TIntEdge;
 begin
-  Total := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  Lowest := CreateIntArray(Total);
-  InOrder := CreateIntArray(Total);
+  Lowest := CreateIntArray;
+  InOrder := CreateIntArray;
   Parents := CreateIntArray;
   InOrder[aRoot] := 0;
   Lowest[aRoot] := 0;
@@ -1180,35 +1185,53 @@ begin
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
-        Prev := Parents[Curr];
         Next := AdjEnums[Curr].Current;
-        if Next <> Prev then
-          if InOrder[Next] = Total then
+        if Next <> Parents[Curr] then
+          if InOrder[Next] = -1 then
             begin
-              vEdges.Add(TIntEdge.Create(Curr, Next));
               Parents[Next] := Curr;
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
               Inc(Counter);
-              if Prev = -1 then
-                Inc(ChildCount);
+              Inc(ChildCount, Ord(Parents[Curr] = -1));
               Stack.Push(Next);
+              EdgeStack.Add(TIntEdge.Create(Curr, Next));
             end
           else
-            Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+            if Lowest[Curr] > InOrder[Next] then
+              begin
+                Lowest[Curr] := InOrder[Next];
+                EdgeStack.Add(TIntEdge.Create(Curr, Next));
+              end;
       end
     else
       begin
         Stack.Pop;
         Next := Curr;
         Curr := Parents[Curr];
-        Prev := Parents[Curr];
-        Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
-        if (Lowest[Next] >= InOrder[Curr]) and (Prev <> -1) then
-          //aPoints.Add(Curr);
+        if Lowest[Curr] > Lowest[Next] then
+          Lowest[Curr] := Lowest[Next];
+        if (Lowest[Next] >= InOrder[Curr]) and (InOrder[Curr] <> 0) then
+          begin
+            I := EdgeStack.Count;
+            repeat
+              Dec(I);
+              e := EdgeStack[I];
+            until (e.Source = Curr) or (e.Destination = Next);
+            aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count - I));
+          end;
       end;
   if ChildCount > 1 then
-    //aPoints.Add(aRoot);
+    begin
+      I := EdgeStack.Count;
+      repeat
+        Dec(I);
+        e := EdgeStack[I];
+      until e.Source = aRoot;
+      aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count - I));
+    end;
+  if EdgeStack.NonEmpty then
+    aComp.Add(EdgeStack.ToArray);
 end;
 
 function TGSimpleGraph.BridgeExists: Boolean;
@@ -1216,16 +1239,15 @@ var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Lowest, InOrder, Parents: TIntArray;
-  Counter, Total, Curr, Next, I: SizeInt;
+  Counter, Curr, Next, I: SizeInt;
 begin
-  Total := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  Lowest := CreateIntArray(Total);
-  InOrder := CreateIntArray(Total);
+  Lowest := CreateIntArray;
+  InOrder := CreateIntArray;
   Parents := CreateIntArray;
   Counter := 0;
-  for I := 0 to Pred(Total) do
-    if InOrder[I] = Total then
+  for I := 0 to Pred(VertexCount) do
+    if InOrder[I] = -1 then
       begin
         InOrder[I] := Counter;
         Lowest[I] := Counter;
@@ -1235,7 +1257,7 @@ begin
             begin
               Next := AdjEnums[Curr].Current;
               if Next <> Parents[Curr] then
-                if InOrder[Next] = Total then
+                if InOrder[Next] = -1 then
                   begin
                     Parents[Next] := Curr;
                     InOrder[Next] := Counter;
@@ -1244,14 +1266,16 @@ begin
                     Stack.Push(Next);
                   end
                 else
-                  Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+                  if Lowest[Curr] > InOrder[Next] then
+                    Lowest[Curr] := InOrder[Next];
             end
           else
             begin
               Stack.Pop;
               Next := Curr;
               Curr := Parents[Curr];
-              Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+              if Lowest[Curr] > Lowest[Next] then
+                Lowest[Curr] := Lowest[Next];
               if Lowest[Next] > InOrder[Curr] then
                 exit(True);
             end;
@@ -1264,16 +1288,15 @@ var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Lowest, InOrder, Parents: TIntArray;
-  Counter, Total, Curr, Next, I: SizeInt;
+  Counter, Curr, Next, I: SizeInt;
 begin
-  Total := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  Lowest := CreateIntArray(Total);
-  InOrder := CreateIntArray(Total);
+  Lowest := CreateIntArray;
+  InOrder := CreateIntArray;
   Parents := CreateIntArray;
   Counter := 0;
-  for I := 0 to Pred(Total) do
-    if InOrder[I] = Total then
+  for I := 0 to Pred(VertexCount) do
+    if InOrder[I] = -1 then
       begin
         InOrder[I] := Counter;
         Lowest[I] := Counter;
@@ -1283,7 +1306,7 @@ begin
             begin
               Next := AdjEnums[Curr].Current;
               if Next <> Parents[Curr] then
-                if InOrder[Next] = Total then
+                if InOrder[Next] = -1 then
                   begin
                     Parents[Next] := Curr;
                     InOrder[Next] := Counter;
@@ -1292,14 +1315,16 @@ begin
                     Stack.Push(Next);
                   end
                 else
-                  Lowest[Curr] := Math.Min(Lowest[Curr], InOrder[Next]);
+                  if Lowest[Curr] > InOrder[Next] then
+                    Lowest[Curr] := InOrder[Next];
             end
           else
             begin
               Stack.Pop;
               Next := Curr;
               Curr := Parents[Curr];
-              Lowest[Curr] := Math.Min(Lowest[Curr], Lowest[Next]);
+              if Lowest[Curr] > Lowest[Next] then
+                Lowest[Curr] := Lowest[Next];
               if Lowest[Next] > InOrder[Curr] then
                 aBridges.Add(TIntEdge.Create(Curr, Next));
             end;
@@ -1312,11 +1337,10 @@ var
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
-  g: TSkeleton;
+  EdgeSet: TIntPairSet;
   Next: SizeInt;
 begin
   Visited.Size := VertexCount;
-  g.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
   Visited[aRoot] := True;
@@ -1332,7 +1356,7 @@ begin
             Stack.Push(Next);
           end
         else
-          if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
+          if (Parents[aRoot] <> Next) and EdgeSet.Add(aRoot, Next) then
             aCycles.Add(TreeToCycle(Parents, Next, aRoot));
       end
     else
@@ -1345,11 +1369,10 @@ var
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
-  g: TSkeleton;
+  EdgeSet: TIntPairSet;
   Next: SizeInt;
 begin
   Visited.Size := VertexCount;
-  g.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
   Visited[aRoot] := True;
@@ -1365,7 +1388,7 @@ begin
             Stack.Push(Next);
           end
         else
-          if (Parents[aRoot] <> Next) and g.AddEdge(aRoot, Next) then
+          if (Parents[aRoot] <> Next) and EdgeSet.Add(aRoot, Next) then
             aCycleLens.Add(TreeToCycleLen(Parents, Next, aRoot));
       end
     else
@@ -1385,7 +1408,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.CmpVectorsByCount(constref L, R: TIntArray): SizeInt;
+function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
 begin
   if System.Length(L) > System.Length(R) then
     Result := 1
@@ -1672,10 +1695,10 @@ end;
 
 function TGSimpleGraph.SeparateIndexOf(constref aVertex: TVertex): SizeInt;
 begin
-   Result := SeparateIndexOfI(IndexOf(aVertex));
+   Result := SeparateIndexI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.SeparateIndexOfI(aVtxIndex: SizeInt): SizeInt;
+function TGSimpleGraph.SeparateIndexI(aVtxIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aVtxIndex);
   if SeparateCount > 1 then
@@ -1797,7 +1820,7 @@ begin
   SearchForFundamentalsCycles(0, aCycles);
   if aCycles.Count <> CyclomaticNumber then
     raise ELGraphError.Create(SEGrapInconsist);
-  TIntArrayVectorHelper.Sort(aCycles, @CmpVectorsByCount);
+  TIntArrayVectorHelper.Sort(aCycles, @CmpIntArrayLen);
   Result := True;
 end;
 
@@ -1875,24 +1898,24 @@ begin
   Result := v.ToArray;
 end;
 
-function TGSimpleGraph.FindBiComponents(constref aRoot: TVertex; out aComponents: TIntOutlineVector): SizeInt;
+function TGSimpleGraph.FindBicomponents(constref aRoot: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
 begin
-  Result := FindBiComponentsI(IndexOf(aRoot), aComponents);
+  Result := FindBicomponentsI(IndexOf(aRoot), aComponents);
 end;
 
-function TGSimpleGraph.FindBiComponentsI(aRoot: SizeInt; out aComponents: TIntOutlineVector): SizeInt;
+function TGSimpleGraph.FindBicomponentsI(aRoot: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
 begin
+  Result := 0;
   CheckIndexRange(aRoot);
   if VertexCount > 2 then
     begin
-      SearchForBicomponent(aRoot, aComponents);
+      SearchForBicomponent(aRoot, aComponents{%H-});
       Result := aComponents.Count;
     end
   else
     if (VertexCount = 2) and ContainsEdgeI(0, 1) then
       begin
-        aComponents.Add(TIntOutline.Create);
-        aComponents[0].AddEdge(0, 1);
+        aComponents.Add([TIntEdge.Create(0, 1)]);
         Result := 1;
       end;
 end;
