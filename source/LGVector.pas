@@ -275,8 +275,8 @@ type
     procedure TrimToFit; inline;
   { appends aValue and returns it index }
     function  Add(constref aValue: T): SizeInt;inline;
-    function  AddAll(constref a: array of T): SizeInt;inline;
-    function  AddAll(constref aVector: TGLiteObjectVector): SizeInt;inline;
+    function  AddAll(constref a: array of T): SizeInt;
+    function  AddAll(constref aVector: TGLiteObjectVector): SizeInt; inline;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
     procedure Insert(aIndex: SizeInt; constref aValue: T); inline;
