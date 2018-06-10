@@ -364,19 +364,21 @@ type
   private
   const
 {$IF DEFINED(CPU64)}
-    SHIFT: SizeInt    = 62;
-    MASK: SizeInt     = SizeInt($c000000000000000);
-    NOT_MASK: SizeInt = not SizeInt($c000000000000000);
+    SHIFT: SizeInt        = 62;
+    MASK: SizeInt         = SizeInt($c000000000000000);
+    NOT_MASK: SizeInt     = not SizeInt($c000000000000000);
+    ZERO_BALANCE: SizeInt = SizeInt($8000000000000000);
 {$ELSEIF DEFINED(CPU32)}
-    SHIFT             = 30;
-    MASK: SizeInt     = SizeInt($c0000000);
-    NOT_MASK: SizeInt = not SizeInt($c0000000);
+    SHIFT                 = 30;
+    MASK: SizeInt         = SizeInt($c0000000);
+    NOT_MASK: SizeInt     = not SizeInt($c0000000);
+    ZERO_BALANCE: SizeInt = SizeInt($80000000);
 {$ELSE}
-    SHIFT: SizeInt    = 14;
-    MASK: SizeInt     = SizeInt($c000);
-    NOT_MASK: SizeInt = not SizeInt($c000);
+    SHIFT: SizeInt        = 14;
+    MASK: SizeInt         = SizeInt($c000);
+    NOT_MASK: SizeInt     = not SizeInt($c000);
+    ZERO_BALANCE: SizeInt = SizeInt($8000);
 {$ENDIF}
-    ZERO_BALANCE = Low(SizeInt);
 
   type
     PAvlTree  = ^TGLiteAvlTree;
