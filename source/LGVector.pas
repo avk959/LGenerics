@@ -3028,7 +3028,7 @@ class function TGDelegatedVectorHelper.GetMax(v: TVector; c: TOnCompare): TOptio
 end;
 
 class function TGDelegatedVectorHelper.GetMax(constref v: TLiteVector; c: TOnCompare): TOptional;
-begin
+{%H-}begin
   if v.Count > 0 then
     Result := THelper.GetMax(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
@@ -3101,14 +3101,14 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.NthSmallest(v: TVector; N: SizeInt; c: TOnCompare): TOptional;
-begin
+{%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.NthSmallestND(v.FItems[0..Pred(v.ElemCount)], N, c);
 end;
 
 class function TGDelegatedVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt;
   c: TOnCompare): TOptional;
-begin
+{%H-}begin
   if v.Count > 0 then
     Result := THelper.NthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N, c);
 end;
