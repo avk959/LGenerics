@@ -1,3 +1,20 @@
+{*******************************************************************************************
+*                                                                                          *
+*  Word ladder (also known as Doublets, word-links, change-the-word puzzles, paragrams,    *
+*  laddergrams, or Word golf) is a word game invented by Lewis Carroll. A word ladder      *
+*  puzzle begins with two words, and to solve the puzzle one must find a chain of other    *
+*  words to link the two, in which two adjacent words (that is, words in successive steps) *
+*  differ by one letter.                                                                   *
+*                                                                                          *
+*  Each step consists of a single letter substitution. For example, the following are      *
+*  solutions to the word ladder puzzle between words "cold" and "warm".                    *
+*     COLD → CORD → CARD → WARD → WARM                                                     *
+*     COLD → CORD → CORM → WORM → WARM                                                     *
+*     COLD → WOLD → WORD → WARD → WARM                                                     *
+*                                                                                          *
+*  from https://en.wikipedia.org/wiki/Word_ladder                                          *
+*                                                                                          *
+********************************************************************************************}
 unit main;
 
 {$mode objfpc}{$H+}
@@ -7,6 +24,7 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls,
   DateUtils,
+  LGUtils,
   LGraphUtils,
   LGSimpleGraph;
 
@@ -15,7 +33,7 @@ type
   { TfrmMain }
 
   TfrmMain = class(TForm)
-    btSearch: TButton;
+    btSolve: TButton;
     btClear: TButton;
     edTarget: TEdit;
     edSource: TEdit;
@@ -23,7 +41,7 @@ type
     Label2: TLabel;
     mmResult: TMemo;
     procedure btClearClick(Sender: TObject);
-    procedure btSearchClick(Sender: TObject);
+    procedure btSolveClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
@@ -32,7 +50,7 @@ type
     CurrWordLen: SizeInt;
     CurrSource,
     CurrTarget: string;
-    function  LoadWords: Boolean;
+    function  LoadDictionary: Boolean;
     procedure BuildOutline;
     procedure LoadOutline;
     function  InputValid: Boolean;
@@ -55,7 +73,7 @@ implementation
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
-  if not LoadWords then
+  if not LoadDictionary then
     begin
       ShowMessage(
       'To work properly you need a dictionary'+ LineEnding +'in the application folder named "words.txt"');
@@ -71,7 +89,7 @@ begin
   mmResult.Clear;
 end;
 
-procedure TfrmMain.btSearchClick(Sender: TObject);
+procedure TfrmMain.btSolveClick(Sender: TObject);
 begin
   SearchFor;
 end;
@@ -82,7 +100,7 @@ begin
   Graph.Free;
 end;
 
-function TfrmMain.LoadWords: Boolean;
+function TfrmMain.LoadDictionary: Boolean;
 begin
   if not FileExists('words.txt') then
     exit(False);
@@ -129,7 +147,7 @@ const
   IsBuiltFmt = 'graph is built with %d vertices and %d edges in %d milliseconds';
 begin
   mmResult.Append('');
-  mmResult.Append('start building new graph');
+  mmResult.Append('started to build the new graph, please wait...');
   StartTime := Time;
   BuildOutline;
   Elapsed := MilliSecondsBetween(Time, StartTime);
@@ -217,7 +235,7 @@ procedure TfrmMain.DisableControls;
 begin
   edSource.Enabled := False;
   edTarget.Enabled := False;
-  btSearch.Enabled := False;
+  btSolve.Enabled := False;
   btClear.Enabled := False;
   Screen.Cursor := crHourGlass;
 end;
@@ -226,14 +244,17 @@ procedure TfrmMain.EnableControls;
 begin
   edSource.Enabled := True;
   edTarget.Enabled := True;
-  btSearch.Enabled := True;
+  btSolve.Enabled := True;
   btClear.Enabled := True;
   Screen.Cursor := crDefault;
 end;
 
 procedure TfrmMain.PrintPath(aPath: TIntArray);
+type
+  TStringBuilderRef = specialize TGAutoRef<TStringBuilder>;
 var
   I, Len: SizeInt;
+  SbRef: TStringBuilderRef;
   sb: TStringBuilder;
 begin
   Len := Length(aPath);
@@ -248,18 +269,14 @@ begin
       mmResult.Append(Graph[aPath[0]]);
       exit;
     end;
-  sb := TStringBuilder.Create;
-  try
-    for I := 0 to Len - 2 do
-      begin
-        sb.Append(Graph[aPath[I]]);
-        sb.Append(' - ');
-      end;
-    sb.Append(Graph[aPath[High(aPath)]]);
-    mmResult.Append(sb.ToString);
-  finally
-    sb.Free;
-  end;
+  sb := {%H-}SbRef;
+  for I := 0 to Len - 2 do
+    begin
+      sb.Append(Graph[aPath[I]]);
+      sb.Append(' - ');
+    end;
+  sb.Append(Graph[aPath[High(aPath)]]);
+  mmResult.Append(sb.ToString);
 end;
 
 end.
