@@ -23,7 +23,6 @@ unit LGraphUtils;
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 {$INLINE ON}{$WARN 6058 off : }
-
 interface
 
 uses
@@ -574,8 +573,6 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
-var
-  EmptyRec: TEmptyRec;
 
 { TDisjointSetUnion }
 
