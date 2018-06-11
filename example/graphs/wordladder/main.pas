@@ -200,8 +200,8 @@ var
   StartTime: TTime;
   Elapsed: SizeInt;
 const
-  SearchFmt = 'start search for ladder from "%s" to "%s"';
-  FinishFmt = 'search for ladder from "%s" to "%s" finished, elapsed time: %d milliseconds';
+  SearchFmt = 'started searching for ladder from "%s" to "%s"';
+  FinishFmt = 'searching for ladder from "%s" to "%s" finished, elapsed time: %d milliseconds';
 begin
   if not InputValid then
     exit;
@@ -217,7 +217,7 @@ begin
     end;
   if not Graph.PathExists(CurrSource, CurrTarget) then
     begin
-      mmResult.Append('ladder not found');
+      mmResult.Append('ladder does not found');
       exit;
     end;
   mmResult.Append(Format(SearchFmt, [CurrSource, CurrTarget]));
@@ -228,7 +228,7 @@ begin
   if Length(Path) > 0 then
     PrintPath(Path)
   else
-    mmResult.Append('ladder not found');
+    mmResult.Append('ladder does not found');
 end;
 
 procedure TfrmMain.DisableControls;
