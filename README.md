@@ -10,21 +10,34 @@ Installation and usage:
   2. Add LGenerics to project dependencies.
 
 Contains:  
-  1. Algorithms
-    - vectors and arrays:
-      -- permutations
-      -- binary search
-      -- N-th order statistics
-      -- distinct values selection
-      -- quicksort
-      -- introsort
-      -- dual pivot quicksort
-      -- mergesort
-      -- timsort(unit LGMiscUtils)
-      -- counting sort
-      -- some non-cryptogarphic hashes(unit LGHash)
+  1. Algorithms on arrays and vectors(mostly unit LGArrayHelpers):
+      - permutations
+      - binary search
+      - N-th order statistics
+      - distinct values selection
+      - quicksort
+      - introsort
+      - dual pivot quicksort
+      - mergesort
+      - timsort(unit LGMiscUtils)
+      - counting sort
 
-  2. Data structures:
+  2. Algorithms on graphs:
+      - traversals
+      - connected component detection
+      - bipartite graph detection
+      - articulation points finding
+      - bridges finding
+      - biconnected component detection
+      - cycle detection
+      - fundamental cycle selection
+      - shortest path finding
+      - minimum spanning tree finding 
+
+  3. Other algorithms:
+      - some non-cryptogarphic hashes(unit LGHash)
+
+  4. Data structures:
     - stack(unit LGStack)
     - queue(unit LGQueue)
     - deque(unit LGDeque)
@@ -46,8 +59,11 @@ Contains:
     - bijective map(unit LGBiMap)
     - sparse 2d table(unit LGTable2D)
     - disjoint set(unit LGraphUtils)
+    - sparse undirected graph(unit LGSimpleGraph)
+    - sparse undirected weighed graph(unit LGSimpleGraph)
+
   
-  3. Others:
+  5. Others:
     - simply command line parser (unit LGMiscUtils)
     - brief and dirty implementation of futures concept(unit LGAsync)
     - simplest blocking channel impementation (unit LGAsync)
