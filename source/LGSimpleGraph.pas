@@ -684,30 +684,30 @@ end;
 
 procedure TGSimpleGraph.TCutPointHelper.DfsRemove(Curr: SizeInt; Prev: SizeInt);
 var
-  Next, Child: SizeInt;
+  Next, Across: SizeInt;
 begin
   InOrder[Curr] := Counter;
   Lowest[Curr] := Counter;
   Inc(Counter);
-  Child := -1;
+  Across := -1;
   for Next in Graph.AdjVerticesI(Curr) do
     if Next <> Prev then
       if InOrder[Next] = Total then
         begin
-          if Child = -1 then
-            Child := Next;
+          if Across = -1 then
+            Across := Next;
           DfsRemove(Next, Curr);
           if Lowest[Curr] > Lowest[Next] then
             Lowest[Curr] := Lowest[Next];
           if Lowest[Next] >= InOrder[Curr] then
             begin
-              if Next = Child then
+              if Next = Across then
                 begin
                   if Prev <> -1 then
                     NewEdges^.Add(TIntEdge.Create(Prev, Next));
                 end
               else
-                NewEdges^.Add(TIntEdge.Create(Child, Next));
+                NewEdges^.Add(TIntEdge.Create(Across, Next));
             end;
         end
       else
@@ -1127,14 +1127,14 @@ procedure TGSimpleGraph.SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeV
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
-  Lowest, InOrder, Parents, Childs: TIntArray;
+  Lowest, InOrder, Parents, Across: TIntArray;
   Counter, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Lowest := CreateIntArray;
   InOrder := CreateIntArray;
   Parents := CreateIntArray;
-  Childs := CreateIntArray;
+  Across := CreateIntArray;
   InOrder[aRoot] := 0;
   Lowest[aRoot] := 0;
   {%H-}Stack.Push(aRoot);
@@ -1146,8 +1146,8 @@ begin
         if Next <> Parents[Curr] then
           if InOrder[Next] = -1 then
             begin
-              if Childs[Curr] = -1 then
-                Childs[Curr] := Next;
+              if Across[Curr] = -1 then
+                Across[Curr] := Next;
               Parents[Next] := Curr;
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
@@ -1167,13 +1167,13 @@ begin
           Lowest[Curr] := Lowest[Next];
         if Lowest[Next] >= InOrder[Curr] then
           begin
-            if Next = Childs[Curr] then
+            if Next = Across[Curr] then
               begin
                 if Curr <> aRoot then
                   aEdges.Add(TIntEdge.Create(Parents[Curr], Next));
               end
             else
-              aEdges.Add(TIntEdge.Create(Childs[Curr], Next));
+              aEdges.Add(TIntEdge.Create(Across[Curr], Next));
           end;
       end;
 end;
