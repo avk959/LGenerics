@@ -21,6 +21,7 @@ unit LGSimpleGraph;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}{$WARN 6058 off : }
+{$WARN 5024 off : Parameter "$1" not used}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -1265,6 +1266,7 @@ begin
       begin
         InOrder[I] := Counter;
         Lowest[I] := Counter;
+        Inc(Counter);
         {%H-}Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
@@ -1314,6 +1316,7 @@ begin
       begin
         InOrder[I] := Counter;
         Lowest[I] := Counter;
+        Inc(Counter);
         {%H-}Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
@@ -2091,7 +2094,7 @@ end;
 
 procedure TGOutline.WriteData(aStream: TStream; constref aValue: TEmptyRec);
 begin
-  //do nothing
+//do nothing
 end;
 
 procedure TGOutline.ReadData(aStream: TStream; out aValue: TEmptyRec);
@@ -2204,7 +2207,7 @@ procedure TStrOutline.ReadVertex(aStream: TStream; out aValue: string);
 var
   Len: SmallInt;
 begin
-  aStream.ReadBuffer(Len, SizeOf(Len));
+  aStream.ReadBuffer(Len{%H-}, SizeOf(Len));
   System.SetLength(aValue, Len);
   if Len > 0 then
     aStream.ReadBuffer(aValue[1], Len);
