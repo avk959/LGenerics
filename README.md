@@ -24,13 +24,13 @@ Contains:
 
   2. Algorithms on graphs:
       - traversals
-      - connected component detection
+      - connected components finding
       - bipartite graph detection
       - articulation points finding
       - bridges finding
-      - biconnected component detection
+      - biconnected components finding
       - cycle detection
-      - fundamental cycle selection
+      - fundamental cycles selection
       - shortest path finding
       - minimum spanning tree finding 
 
