@@ -164,7 +164,7 @@ type
   { TGBaseTreeMultiSet implements sorted multiset;
       functor TCmpRel (comparision relation) must provide:
         class function Compare([const[ref]] L, R: T): SizeInt; }
-  generic TGBaseTreeMultiSet<T, TCmpRel> = class abstract(specialize TGCustomTreeMultiSet<T>)
+  generic TGBaseTreeMultiSet<T, TCmpRel> = class(specialize TGCustomTreeMultiSet<T>)
   protected
   type
     TBaseTree = specialize TGAvlTree<T, TEntry, TCmpRel>;
@@ -199,7 +199,7 @@ type
     constructor Create(constref a: array of T);
     constructor Create(e: IEnumerable);
     constructor CreateCopy(aMultiSet: TGBaseTreeMultiSet);
-    function Clone: TGBaseTreeMultiSet; override;
+    function Clone: TGBaseTreeMultiSet;  override;
     function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; override;
     function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
       override;
