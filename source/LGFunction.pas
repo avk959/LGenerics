@@ -19,7 +19,7 @@
 unit LGFunction;
 
 {$MODE OBJFPC}{$H+}
-{$INLINE ON}
+{$INLINE ON}{$WARN 6058 off : }
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -33,8 +33,6 @@ uses
   LGCustomContainer;
 
 type
-
-  { TGMapping }
 
   generic TGMapping<X, Y> = class
   public
@@ -127,8 +125,6 @@ type
     class function Apply(e: IEnumerableX; f: TOnMap): IEnumerableY; static; inline;
     class function Apply(e: IEnumerableX; f: TNestMap): IEnumerableY; static; inline;
   end;
-
-  { TGFolding }
 
   generic TGFolding<X, Y> = class
   public

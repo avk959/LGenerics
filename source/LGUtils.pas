@@ -20,7 +20,7 @@
 unit LGUtils;
 
 {$MODE DELPHI}
-{$INLINE ON}
+{$INLINE ON}{$WARN 6058 off : }
 {$MODESWITCH NESTEDPROCVARS}
 
 interface

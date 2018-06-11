@@ -20,7 +20,7 @@
 unit LGVector;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}
+{$INLINE ON}{$WARN 6058 off : }
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -2404,13 +2404,13 @@ begin
 end;
 
 class function TGComparableVectorHelper.NthSmallest(v: TVector; N: SizeInt): TOptional;
-begin
+{%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.NthSmallestND(v.FItems[0..Pred(v.ElemCount)], N);
 end;
 
 class function TGComparableVectorHelper.NthSmallest(constref v: TLiteVector; N: SizeInt): TOptional;
-begin
+{%H-}begin
   if v.Count > 0 then
     Result := THelper.NthSmallestND(v.FBuffer.FItems[0..Pred(v.Count)], N);
 end;
@@ -3010,19 +3010,19 @@ begin
 end;
 
 class function TGDelegatedVectorHelper.GetMin(v: TVector; c: TOnCompare): TOptional;
-begin
+{%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.GetMin(v.FItems[0..Pred(v.ElemCount)], c);
 end;
 
 class function TGDelegatedVectorHelper.GetMin(constref v: TLiteVector; c: TOnCompare): TOptional;
-begin
+{%H-}begin
   if v.Count > 0 then
     Result := THelper.GetMin(v.FBuffer.FItems[0..Pred(v.Count)], c);
 end;
 
 class function TGDelegatedVectorHelper.GetMax(v: TVector; c: TOnCompare): TOptional;
-begin
+{%H-}begin
   if v.ElemCount > 0 then
     Result := THelper.GetMax(v.FItems[0..Pred(v.ElemCount)], c);
 end;

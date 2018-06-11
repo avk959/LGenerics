@@ -20,9 +20,9 @@
 unit LGraphUtils;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
+{$INLINE ON}{$WARN 6058 off : }
 
 interface
 

@@ -27,7 +27,7 @@
 unit LGAsync;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}
+{$INLINE ON}{$WARN 6058 off : }
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -547,7 +547,7 @@ end;
 
 class function TGAsyncProc.Call(aProc: TProcedure): TFuture;
 begin
-  Result.Start(TGAsyncProc.Create(aProc));
+  Result{%H-}.Start(TGAsyncProc.Create(aProc));
 end;
 
 constructor TGAsyncProc.Create(aProc: TProcedure);
@@ -565,7 +565,7 @@ end;
 
 class function TAsyncExecutable.Call(aTask: IExecutable): TFuture;
 begin
-  Result.Start(TAsyncExecutable.Create(aTask));
+  Result{%H-}.Start(TAsyncExecutable.Create(aTask));
 end;
 
 constructor TAsyncExecutable.Create(aTask: IExecutable);

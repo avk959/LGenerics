@@ -20,7 +20,7 @@
 unit LGDeque;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}
+{$INLINE ON}{$WARN 6058 off : }
 {$MODESWITCH ADVANCEDRECORDS}
 
 interface

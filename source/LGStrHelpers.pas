@@ -20,10 +20,9 @@
 unit LGStrHelpers;
 
 {$mode objfpc}{$H+}
-{$INTERFACES CORBA}
 {$MODESWITCH TYPEHELPERS}
 {$MODESWITCH ADVANCEDRECORDS}
-{$INLINE ON}
+{$INLINE ON}{$WARN 6058 off : }
 
 interface
 
@@ -36,8 +35,6 @@ uses
   regexpr;
 
 type
-
-  { TAnsiStrHelper }
 
   TAnsiStrHelper = type helper(TAStrHelper) for ansistring
   private
@@ -70,8 +67,6 @@ type
     // only single byte delimiters allowed
     function SplitSB(constref aDelimiters: TSysCharSet = AsciiDelimiters): IStrEnumerable; inline;
   end;
-
-  { TRegexMatch }
 
   TRegexMatch = class
   protected
