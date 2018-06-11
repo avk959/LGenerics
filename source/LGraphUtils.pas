@@ -2178,7 +2178,7 @@ begin
   CheckIndexRange(aRoot);
   Result := CreateIntArray;
   Result[aRoot] := 0;
-  Queue.EnsureCapacity(VertexCount);
+  {%H-}Queue.EnsureCapacity(VertexCount);
   repeat
     for Next in AdjVerticesI(aRoot) do
       if Result[Next] = -1 then
