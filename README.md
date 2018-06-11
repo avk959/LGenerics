@@ -10,18 +10,19 @@ Installation and usage:
   2. Add LGenerics to project dependencies.
 
 Contains:  
-  1. Algorithms(mostly in unit LGArrayHelpers):
-    - permutations
-    - binary search
-    - N-th order statistics
-    - distinct values selection
-    - quicksort
-    - introsort
-    - dual pivot quicksort
-    - mergesort
-    - timsort(unit LGMiscUtils)
-    - counting sort
-    - some non-cryptogarphic hashes(unit LGHash)
+  1. Algorithms
+    - vectors and arrays:
+      -- permutations
+      -- binary search
+      -- N-th order statistics
+      -- distinct values selection
+      -- quicksort
+      -- introsort
+      -- dual pivot quicksort
+      -- mergesort
+      -- timsort(unit LGMiscUtils)
+      -- counting sort
+      -- some non-cryptogarphic hashes(unit LGHash)
 
   2. Data structures:
     - stack(unit LGStack)
@@ -44,6 +45,7 @@ Contains:
     - list miltimap(unit LGMultiMap)
     - bijective map(unit LGBiMap)
     - sparse 2d table(unit LGTable2D)
+    - disjoint set(unit LGraphUtils)
   
   3. Others:
     - simply command line parser (unit LGMiscUtils)
