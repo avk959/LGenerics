@@ -296,6 +296,7 @@ type
       Item: TAdjList;
       procedure Assign(constref aSrc: TNode);
     end;
+    PNode = ^TNode;
 
     TNodeList   = array of TNode;
     TChainList  = array of SizeInt;
@@ -457,7 +458,7 @@ type
 
     TVertexEnumerator = record
     private
-      FGraph: TGCustomGraph;
+      FNodeList: PNode;
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: TVertex;
@@ -1377,12 +1378,12 @@ end;
 
 function TGCustomGraph.TVertexEnumerator.GetCurrent: TVertex;
 begin
-  Result := FGraph.AdjList[FCurrIndex]^.Vertex;
+  Result := FNodeList[FCurrIndex].Item.Vertex;
 end;
 
 constructor TGCustomGraph.TVertexEnumerator.Create(aGraph: TGCustomGraph);
 begin
-  FGraph := aGraph;
+  FNodeList := Pointer(aGraph.FNodeList);
   FCurrIndex := -1;
   FLastIndex := Pred(aGraph.VertexCount);
 end;
