@@ -37,8 +37,8 @@ type
     procedure LoadOutline;
     function  InputValid: Boolean;
     procedure SearchFor;
-    procedure DisableInput;
-    procedure EnableInput;
+    procedure DisableControls;
+    procedure EnableControls;
     procedure PrintPath(aPath: TIntArray);
   public
 
@@ -166,11 +166,11 @@ begin
   if CurrWordLen <> CurrSource.Length then
     begin
       CurrWordLen := CurrSource.Length;
-      DisableInput;
+      DisableControls;
       OldCaption := Caption;
       Caption := 'Word ladder - building new graph...';
       LoadOutline;
-      EnableInput;
+      EnableControls;
       Caption := OldCaption;
     end;
   Result := True;
@@ -213,7 +213,7 @@ begin
     mmResult.Append('ladder not found');
 end;
 
-procedure TfrmMain.DisableInput;
+procedure TfrmMain.DisableControls;
 begin
   edSource.Enabled := False;
   edTarget.Enabled := False;
@@ -222,7 +222,7 @@ begin
   Screen.Cursor := crHourGlass;
 end;
 
-procedure TfrmMain.EnableInput;
+procedure TfrmMain.EnableControls;
 begin
   edSource.Enabled := True;
   edTarget.Enabled := True;
