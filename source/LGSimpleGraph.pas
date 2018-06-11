@@ -160,7 +160,7 @@ type
     procedure SearchForFundamentalsCyclesLen(aRoot: SizeInt; out aCycleLens: TIntVector);
     function  FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
-    property  Connected: Boolean read FConnected;
+    property  InnerConnected: Boolean read FConnected;
     property  ConnectedValid: Boolean read FConnectedValid;
   public
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
@@ -185,7 +185,7 @@ type
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aVtxIndex: SizeInt): Boolean; inline;
   { checks whether the graph is connected; an empty graph is considered disconnected }
-    function  IsConnected: Boolean;
+    function  Connected: Boolean;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges }
     function  EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -198,7 +198,7 @@ type
   { returns index of the connected component that contains aVertex }
     function  SeparateIndexOf(constref aVertex: TVertex): SizeInt; inline;
     function  SeparateIndexI(aVtxIndex: SizeInt): SizeInt;
-  { returns number of Items(population) in the connected component that contains aVertex }
+  { returns number of Items(population) in the InnerConnected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
     function  IsTree: Boolean;
@@ -216,14 +216,14 @@ type
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
-  { checks whether exists any articulation point that belong to the same connection component as aRoot }
+  { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
   { returns the articulation points that belong to the same connection component as aRoot, if any,
     otherwise the empty vector }
     function  FindCutPoints(constref aRoot: TVertex): TIntArray; inline;
     function  FindCutPointsI(aRoot: SizeInt = 0): TIntArray;
-  { removes the articulation points that belong to the same connection component as aRoot,
+  { removes the articulation points that belong to the same connected component as aRoot,
     adding, if necessary, new edges; returns count of added edges }
     function  RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge): SizeInt; inline;
     function  RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
@@ -231,7 +231,7 @@ type
     function  ContainsBridge: Boolean;
   { returns all bridges in the result vector, if any, otherwise the empty vector }
     function  FindBridges: TIntEdgeArray;
-  { returns count of biconnected components in the same connection component as aRoot;
+  { returns count of biconnected components in the same connected component as aRoot;
     the corresponding elements of the aComponents will contain  the edges of this bicomponent }
     function  FindBicomponents(constref aRoot: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
     function  FindBicomponentsI(aRoot: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
@@ -285,6 +285,19 @@ type
   protected
     procedure WriteVertex(aStream: TStream; constref aValue: SizeInt);
     procedure ReadVertex(aStream: TStream; out aValue: SizeInt);
+  public
+    procedure SaveToStream(aStream: TStream);
+    procedure LoadFromStream(aStream: TStream);
+    procedure SaveToFile(const aFileName: string);
+    procedure LoadFromFile(const aFileName: string);
+  end;
+
+  { TStrOutline
+    note: SaveToStream limitation for max string length = High(SmallInt) }
+  TStrOutline = class(specialize TGOutline<string, string>)
+  protected
+    procedure WriteVertex(aStream: TStream; constref aValue: string);
+    procedure ReadVertex(aStream: TStream; out aValue: string);
   public
     procedure SaveToStream(aStream: TStream);
     procedure LoadFromStream(aStream: TStream);
@@ -1040,7 +1053,7 @@ begin
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
               Inc(Counter);
-              Inc(ChildCount, Ord(Parents[Curr] = -1));
+              Inc(ChildCount, Ord(Curr = aRoot));
               Stack.Push(Next);
             end
           else
@@ -1054,7 +1067,7 @@ begin
         Curr := Parents[Curr];
         if Lowest[Curr] > Lowest[Next] then
           Lowest[Curr] := Lowest[Next];
-        if (Lowest[Next] >= InOrder[Curr]) and (InOrder[Curr] <> 0) then
+        if (Lowest[Next] >= InOrder[Curr]) and (Curr <> aRoot) then
           aPoints.Add(Curr);
       end;
   if ChildCount > 1 then
@@ -1088,7 +1101,7 @@ begin
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
               Inc(Counter);
-              Inc(ChildCount, Ord(Parents[Curr] = -1));
+              Inc(ChildCount, Ord(Curr = aRoot));
               Stack.Push(Next);
             end
           else
@@ -1102,7 +1115,7 @@ begin
         Curr := Parents[Curr];
         if Lowest[Curr] > Lowest[Next] then
           Lowest[Curr] := Lowest[Next];
-        if (Lowest[Next] >= InOrder[Curr]) and (InOrder[Curr] <> 0) then
+        if (Lowest[Next] >= InOrder[Curr]) and (Curr <> aRoot) then
           exit(True);
       end;
   Result := ChildCount > 1;
@@ -1154,7 +1167,7 @@ begin
           begin
             if Next = Childs[Curr] then
               begin
-                if Parents[Curr] <> -1 then
+                if Curr <> aRoot then
                   aEdges.Add(TIntEdge.Create(Parents[Curr], Next));
               end
             else
@@ -1192,7 +1205,7 @@ begin
               InOrder[Next] := Counter;
               Lowest[Next] := Counter;
               Inc(Counter);
-              Inc(ChildCount, Ord(Parents[Curr] = -1));
+              Inc(ChildCount, Ord(Curr = aRoot));
               Stack.Push(Next);
               EdgeStack.Add(TIntEdge.Create(Curr, Next));
             end
@@ -1210,7 +1223,7 @@ begin
         Curr := Parents[Curr];
         if Lowest[Curr] > Lowest[Next] then
           Lowest[Curr] := Lowest[Next];
-        if (Lowest[Next] >= InOrder[Curr]) and (InOrder[Curr] <> 0) then
+        if (Lowest[Next] >= InOrder[Curr]) and (Curr <> aRoot) then
           begin
             I := EdgeStack.Count;
             repeat
@@ -1396,7 +1409,7 @@ end;
 
 function TGSimpleGraph.FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
 begin
-  if not IsConnected then
+  if not Connected then
     exit(False);
   if IsTree then
     exit(False);
@@ -1648,7 +1661,7 @@ begin
   Result := DegreeI(aVtxIndex) = 0;
 end;
 
-function TGSimpleGraph.IsConnected: Boolean;
+function TGSimpleGraph.Connected: Boolean;
 begin
   Result := SeparateCount = 1;
 end;
@@ -1722,7 +1735,7 @@ end;
 
 function TGSimpleGraph.IsTree: Boolean;
 begin
-  Result := (EdgeCount = Pred(VertexCount)) and IsConnected;
+  Result := (EdgeCount = Pred(VertexCount)) and Connected;
 end;
 
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
@@ -1812,7 +1825,7 @@ end;
 
 function TGSimpleGraph.FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
 begin
-  if not IsConnected then
+  if not Connected then
     exit(False);
   if IsTree then
     exit(False);
@@ -1921,7 +1934,7 @@ end;
 
 function TGSimpleGraph.IsBiconnected: Boolean;
 begin
-  if Connected then
+  if InnerConnected then
     Result := not ContainsCutPointI
   else
     Result := False;
@@ -2167,6 +2180,50 @@ begin
 end;
 
 procedure TIntOutline.LoadFromFile(const aFileName: string);
+begin
+  inherited LoadFromFile(aFileName, @ReadVertex);
+end;
+
+{ TStrOutline }
+
+procedure TStrOutline.WriteVertex(aStream: TStream; constref aValue: string);
+var
+  Len: SizeInt;
+begin
+  Len := System.Length(aValue);
+  if Len > High(SmallInt) then
+    raise ELGraphError.CreateFmt(SEStrLenExceedFmt, [Len]);
+  aStream.WriteBuffer(Len, 2);
+  if Len > 0 then
+    aStream.WriteBuffer(aValue[1], Len);
+end;
+
+procedure TStrOutline.ReadVertex(aStream: TStream; out aValue: string);
+var
+  Len: SmallInt;
+begin
+  aStream.ReadBuffer(Len, SizeOf(Len));
+  System.SetLength(aValue, Len);
+  if Len > 0 then
+    aStream.ReadBuffer(aValue[1], Len);
+end;
+
+procedure TStrOutline.SaveToStream(aStream: TStream);
+begin
+  inherited SaveToStream(aStream, @WriteVertex);
+end;
+
+procedure TStrOutline.LoadFromStream(aStream: TStream);
+begin
+  inherited LoadFromStream(aStream, @ReadVertex);
+end;
+
+procedure TStrOutline.SaveToFile(const aFileName: string);
+begin
+  inherited SaveToFile(aFileName, @WriteVertex);
+end;
+
+procedure TStrOutline.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadVertex);
 end;
@@ -2845,7 +2902,7 @@ end;
 
 function TGWeighedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
 begin
-  if IsConnected then
+  if Connected then
     Result := KruskalMst(aTotalWeight)
     //Result := FilterKruskalMst(aTotalWeight)
   else
@@ -2854,7 +2911,7 @@ end;
 
 function TGWeighedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 begin
-  if IsConnected then   //todo: is it required ???
+  if Connected then   //todo: is it required ???
     Result := PrimMst(aTotalWeight)
   else
     raise ELGraphError.Create(SEGraphIsNotConnected);
