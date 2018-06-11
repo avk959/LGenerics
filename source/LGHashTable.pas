@@ -3206,7 +3206,7 @@ end;
 
 function TGLiteHashTableLP.GetRemovableEnumerator: TRemovableEnumerator;
 begin
-  Result.Init(@Self);
+  Result{%H-}.Init(@Self);
 end;
 
 procedure TGLiteHashTableLP.Clear;
