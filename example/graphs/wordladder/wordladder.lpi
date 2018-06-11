@@ -76,6 +76,7 @@
         <Filename Value="main.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="frmMain"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit1>
     </Units>
@@ -105,7 +106,6 @@
       <Debugging>
         <GenerateDebugInfo Value="False"/>
         <UseLineInfoUnit Value="False"/>
-        <UseHeaptrc Value="True"/>
         <StripSymbols Value="True"/>
       </Debugging>
       <LinkSmart Value="True"/>

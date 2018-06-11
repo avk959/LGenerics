@@ -27,17 +27,14 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
-  type
-    TOutline = specialize TGOutline<string, string>;
-  var
     slWords: TStringList;
-    gOutline: TOutline;
+    Graph: TStrOutline;
     CurrWordLen: SizeInt;
     CurrSource,
     CurrTarget: string;
-    procedure LoadWords;
+    function  LoadWords: Boolean;
+    procedure BuildOutline;
     procedure LoadOutline;
-    function  SingleLetterDiff(constref L, R: string): Boolean;
     function  InputValid: Boolean;
     procedure SearchFor;
     procedure DisableInput;
@@ -58,8 +55,14 @@ implementation
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
-  gOutline := TOutline.Create;
-  LoadWords;
+  if not LoadWords then
+    begin
+      ShowMessage(
+      'To work properly you need a dictionary'+ LineEnding +'in the application folder named "words.txt"');
+      Application.Terminate;
+      exit;
+    end;
+  Graph := TStrOutline.Create;
   Caption := 'Word ladder - ' + slWords.Count.ToString + ' words';
 end;
 
@@ -76,54 +79,62 @@ end;
 procedure TfrmMain.FormDestroy(Sender: TObject);
 begin
   slWords.Free;
-  gOutline.Free;
+  Graph.Free;
 end;
 
-procedure TfrmMain.LoadWords;
+function TfrmMain.LoadWords: Boolean;
 begin
+  if not FileExists('words.txt') then
+    exit(False);
   slWords := TStringList.Create;
   slWords.LoadFromFile('words.txt');
+  Result := True;
+end;
+
+procedure TfrmMain.BuildOutline;
+var
+  I, J, Pos, Diff: SizeInt;
+  s, d: string;
+begin
+  Graph.Clear;
+  for s in slWords do
+    if Length(s) = CurrWordLen then
+      Graph.AddVertex(s);
+  for I := 0 to Pred(Graph.VertexCount) do
+    begin
+      s := Graph[I];
+      for J := Succ(I) to Pred(Graph.VertexCount) do
+        begin
+          d := Graph[J];
+          Diff := 0;
+          for Pos := 1 to CurrWordLen do
+            if s[Pos] <> d[Pos] then
+              begin
+                Inc(Diff);
+                if Diff > 1 then
+                  break;
+              end;
+          if Diff = 1 then
+            Graph.AddEdgeI(I, J);
+        end;
+      Application.ProcessMessages;
+    end;
 end;
 
 procedure TfrmMain.LoadOutline;
 var
-  s: string;
   StartTime: TTime;
-  Elapsed, I, J: SizeInt;
+  Elapsed: SizeInt;
 const
   IsBuiltFmt = 'graph is built with %d vertices and %d edges in %d milliseconds';
 begin
-  gOutline.Clear;
   mmResult.Append('');
   mmResult.Append('start building new graph');
   StartTime := Time;
-  for s in slWords do
-    if Length(s) = CurrWordLen then
-      gOutline.AddVertex(s);
-  for I := 0 to Pred(gOutline.VertexCount) do
-    begin
-      for J := Succ(I) to Pred(gOutline.VertexCount) do
-        if SingleLetterDiff(gOutline[I], gOutline[J]) then
-          gOutline.AddEdgeI(I, J);
-      Application.ProcessMessages;
-    end;
+  BuildOutline;
   Elapsed := MilliSecondsBetween(Time, StartTime);
-  mmResult.Append(Format(IsBuiltFmt,[gOutline.VertexCount, gOutline.EdgeCount, Elapsed]));
-end;
-
-function TfrmMain.SingleLetterDiff(constref L, R: string): Boolean;
-var
-  I, Diff: SizeInt;
-begin
-  Diff := 0;
-  for I := 1 to Length(L) do
-    if L[I] <> R[I] then
-      begin
-        Inc(Diff);
-        if Diff > 1 then
-          exit(False);
-      end;
-  Result := True;
+  mmResult.Append(Format(IsBuiltFmt,[Graph.VertexCount, Graph.EdgeCount, Elapsed]));
+  mmResult.Append('separate component count = ' + Graph.SeparateCount.ToString);
 end;
 
 function TfrmMain.InputValid: Boolean;
@@ -176,19 +187,24 @@ const
 begin
   if not InputValid then
     exit;
-  if not gOutline.ContainsVertex(CurrSource) then
+  if not Graph.ContainsVertex(CurrSource) then
     begin
       mmResult.Append('sourse word does not found');
       exit;
     end;
-  if not gOutline.ContainsVertex(CurrTarget) then
+  if not Graph.ContainsVertex(CurrTarget) then
     begin
       mmResult.Append('target word does not found');
       exit;
     end;
+  if not Graph.PathExists(CurrSource, CurrTarget) then
+    begin
+      mmResult.Append('ladder not found');
+      exit;
+    end;
   mmResult.Append(Format(SearchFmt, [CurrSource, CurrTarget]));
   StartTime := Time;
-  Path := gOutline.ShortestPath(CurrSource, CurrTarget);
+  Path := Graph.ShortestPath(CurrSource, CurrTarget);
   Elapsed := MilliSecondsBetween(Time, StartTime);
   mmResult.Append(Format(FinishFmt, [CurrSource, CurrTarget, Elapsed]));
   if Length(Path) > 0 then
@@ -229,17 +245,17 @@ begin
     end;
   if Len < 2 then
     begin
-      mmResult.Append(gOutline[aPath[0]]);
+      mmResult.Append(Graph[aPath[0]]);
       exit;
     end;
   sb := TStringBuilder.Create;
   try
     for I := 0 to Len - 2 do
       begin
-        sb.Append(gOutline[aPath[I]]);
+        sb.Append(Graph[aPath[I]]);
         sb.Append(' - ');
       end;
-    sb.Append(gOutline[aPath[High(aPath)]]);
+    sb.Append(Graph[aPath[High(aPath)]]);
     mmResult.Append(sb.ToString);
   finally
     sb.Free;
