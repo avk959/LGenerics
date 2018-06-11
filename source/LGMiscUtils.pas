@@ -329,6 +329,7 @@ type
     FBuffer: array[0..511] of QWord; //????
     FIsOpen: Boolean;
     procedure Close;
+    function  GetFile: PText; inline;
   protected
     function  GetCurrent: string; //inline;
     function  MoveNext: Boolean; //inline;
@@ -344,6 +345,7 @@ type
     function LoadText(const aFileName: string; out aText: string): Boolean;
     property ExceptionClass: string read FExceptClass;
     property ExceptionMessage: string read FExceptMsg;
+    property InFile: PText read GetFile;
   end;
 
   { TTextFileWrite is small wrapper around TextFile with buffered write as a bonus;
@@ -5046,6 +5048,11 @@ begin
       FExceptMsg := '';
       FIsOpen := False;
     end;
+end;
+
+function TTextFileReader.GetFile: PText;
+begin
+  Result := @FFile;
 end;
 
 function TTextFileReader.GetCurrent: string;
