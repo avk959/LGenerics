@@ -252,8 +252,10 @@ type
   { returns a graph constructed from the edges indices provided by the array }
     function  CreateFromEdgeArray(constref aEdges: TIntEdgeArray): TGSimpleGraph;
     function  DistinctEdges: TDistinctEdges; inline;
-
+  { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
+  { returns complement of the source graph;
+    warning: if the source graph is sparse then complement is dense }
     function  Complement(aOnAddEdge: TOnAddEdge): TGSimpleGraph;
   { count of connected components }
     property  SeparateCount: SizeInt read GetSeparateCount;
