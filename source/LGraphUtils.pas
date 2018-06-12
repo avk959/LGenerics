@@ -291,8 +291,6 @@ type
 
   const
     NULL_INDEX  = SizeInt(-1);
-    NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   type
     TMagic = string[8];
@@ -1452,17 +1450,9 @@ begin
 end;
 
 procedure TGCustomGraph.Expand;
-var
-  OldCapacity: SizeInt;
 begin
-  OldCapacity := Capacity;
-  if OldCapacity > 0 then
-    begin
-      if OldCapacity < MAX_CAPACITY then
-        Resize(OldCapacity shl 1)
-      else
-        raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [OldCapacity shl 1]);
-    end
+  if Capacity > 0 then
+    Resize(Capacity shl 1)
   else
     InitialAlloc;
 end;
@@ -1508,7 +1498,7 @@ begin
   if aIndex < VertexCount then
     begin
       FNodeList[aIndex].AdjList := Default(TAdjList);
-      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (VertexCount - aIndex) * NODE_SIZE);
+      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (VertexCount - aIndex) * SizeOf(TNode));
       System.FillChar(FNodeList[VertexCount].AdjList, SizeOf(TAdjList), 0);
       Rehash;
     end
@@ -1579,9 +1569,6 @@ end;
 
 class constructor TGCustomGraph.Init;
 begin
-{$PUSH}{$J+}
-  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
   CFData := Default(TEdgeData);
 end;
 
@@ -1818,14 +1805,9 @@ procedure TGCustomGraph.EnsureCapacity(aValue: SizeInt);
 begin
   if aValue > Capacity then
     begin
-      if aValue <= DEFAULT_CONTAINER_CAPACITY then
-        aValue := DEFAULT_CONTAINER_CAPACITY
-      else
-        if aValue <= MAX_CAPACITY then
-          aValue := LGUtils.RoundUpTwoPower(aValue)
-        else
-          raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
-      Resize(aValue);
+      if aValue > LGUtils.RoundUpTwoPower(MAX_CONTAINER_SIZE div SizeOf(TNode)) then
+        raise ELGraphError.CreateFmt(SECapacityExceedFmt, [aValue]);
+      Resize(LGUtils.RoundUpTwoPower(aValue));
     end;
 end;
 
