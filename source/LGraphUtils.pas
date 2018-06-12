@@ -389,6 +389,7 @@ type
     function  AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
     function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
+    function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
     property  AdjList[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
@@ -521,12 +522,12 @@ type
     function  IndexOf(constref aVertex: TVertex): SizeInt; inline;
     function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AdjacentI(aSrc, aDst: SizeInt): Boolean;
-  { enumerates indices of adjacent vertices }
-    function  AdjVertices(constref aSrc: TVertex): TAdjVertices; inline;
-    function  AdjVerticesI(aSrc: SizeInt): TAdjVertices;
-  { enumerates incident edges }
-    function  IncidentEdges(constref aSrc: TVertex): TIncidentEdges; inline;
-    function  IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+  { enumerates indices of adjacent vertices of aVertex }
+    function  AdjVertices(constref aVertex: TVertex): TAdjVertices; inline;
+    function  AdjVerticesI(aIndex: SizeInt): TAdjVertices;
+  { enumerates incident edges of aVertex }
+    function  IncidentEdges(constref aVertex: TVertex): TIncidentEdges; inline;
+    function  IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
   { enumerates all vertices }
     function  Vertices: TVertices; inline;
   { enumerates all edges }
@@ -1672,6 +1673,28 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
+function TGCustomGraph.CheckPathExists(aSrc, aDst: SizeInt): Boolean;
+var
+  Queue: TIntQueue;
+  Visited: TBitVector;
+begin
+  if aSrc = aDst then
+    exit(True);
+  Visited.Size := VertexCount;
+  Visited[aSrc] := True;
+  repeat
+    for aSrc in AdjVerticesI(aSrc) do
+      if not Visited[aSrc] then
+        begin
+          if aSrc = aDst then
+            exit(True);
+          Visited[aSrc] := True;
+          Queue.Enqueue(aSrc);
+        end;
+  until not Queue.TryDequeue(aSrc);
+  Result := False;
+end;
+
 function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
 begin
   Result := @AdjList[aSrc]^.Find(aDst)^.Data;
@@ -1950,26 +1973,26 @@ begin
   Result := AdjList[aSrc]^.Contains(aDst);
 end;
 
-function TGCustomGraph.AdjVertices(constref aSrc: TVertex): TAdjVertices;
+function TGCustomGraph.AdjVertices(constref aVertex: TVertex): TAdjVertices;
 begin
-  Result := AdjVerticesI(IndexOf(aSrc));
+  Result := AdjVerticesI(IndexOf(aVertex));
 end;
 
-function TGCustomGraph.AdjVerticesI(aSrc: SizeInt): TAdjVertices;
+function TGCustomGraph.AdjVerticesI(aIndex: SizeInt): TAdjVertices;
 begin
-  CheckIndexRange(aSrc);
-  Result := TAdjVertices.Create(Self, aSrc);
+  CheckIndexRange(aIndex);
+  Result := TAdjVertices.Create(Self, aIndex);
 end;
 
-function TGCustomGraph.IncidentEdges(constref aSrc: TVertex): TIncidentEdges;
+function TGCustomGraph.IncidentEdges(constref aVertex: TVertex): TIncidentEdges;
 begin
-  Result := IncidentEdgesI(IndexOf(aSrc));
+  Result := IncidentEdgesI(IndexOf(aVertex));
 end;
 
-function TGCustomGraph.IncidentEdgesI(aSrc: SizeInt): TIncidentEdges;
+function TGCustomGraph.IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
 begin
-  CheckIndexRange(aSrc);
-  Result := TIncidentEdges.Create(Self, aSrc);
+  CheckIndexRange(aIndex);
+  Result := TIncidentEdges.Create(Self, aIndex);
 end;
 
 function TGCustomGraph.Vertices: TVertices;
