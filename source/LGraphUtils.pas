@@ -852,9 +852,9 @@ begin
           begin
             Result[J] := FNodeList[I].Item;
             Inc(J);
+            if J = Count then
+              break;
           end;
-      if J = Count then
-        break;
     end;
 end;
 
