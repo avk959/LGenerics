@@ -145,7 +145,6 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
-    function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
     function  FindSeparateCount: SizeInt;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aCompIndex: SizeInt): SizeInt;
@@ -170,7 +169,7 @@ type
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
     procedure RemoveVertex(constref aVertex: TVertex); inline;
-    procedure RemoveVertexI(aVtxIndex: SizeInt);
+    procedure RemoveVertexI(aIndex: SizeInt);
     function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
     function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -182,9 +181,9 @@ type
     procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
     procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
     function  Degree(constref aVertex: TVertex): SizeInt; inline;
-    function  DegreeI(aVtxIndex: SizeInt): SizeInt;
+    function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
-    function  IsolatedI(aVtxIndex: SizeInt): Boolean; inline;
+    function  IsolatedI(aIndex: SizeInt): Boolean; inline;
   { checks whether the graph is connected; an empty graph is considered disconnected }
     function  Connected: Boolean;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
@@ -195,13 +194,13 @@ type
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
   { returns graph of connected component that contains aVertex }
     function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; inline;
-    function  SeparateGraphI(aVtxIndex: SizeInt): TGSimpleGraph;
+    function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
   { returns index of the connected component that contains aVertex }
     function  SeparateIndexOf(constref aVertex: TVertex): SizeInt; inline;
-    function  SeparateIndexI(aVtxIndex: SizeInt): SizeInt;
+    function  SeparateIndexI(aIndex: SizeInt): SizeInt;
   { returns number of Items(population) in the InnerConnected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
-    function  SeparatePopI(aVtxIndex: SizeInt): SizeInt;
+    function  SeparatePopI(aIndex: SizeInt): SizeInt;
     function  IsTree: Boolean;
     function  CyclomaticNumber: SizeInt;
   { checks whether the graph is a regular graph (that is, the degree of all its vertices equal);
@@ -281,8 +280,13 @@ type
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
     procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
     procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
+    function  SeparateGraph(constref aVertex: TVertex): TGOutline;
+    function  SeparateGraphI(aIndex: SizeInt): TGOutline;
+    function  Clone: TGOutline;
     function  Complement: TGOutline;
   end;
+
+  { TIntOutline }
 
   TIntOutline = class(specialize TGOutline<SizeInt, SizeInt>)
   protected
@@ -293,6 +297,10 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
+    function  SeparateGraph(aVertex: SizeInt): TIntOutline;
+    function  SeparateGraphI(aIndex: SizeInt): TIntOutline;
+    function  Clone: TIntOutline;
+    function  Complement: TIntOutline;
   end;
 
   { TStrOutline
@@ -306,6 +314,10 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
+    function  SeparateGraph(const aVertex: string): TStrOutline;
+    function  SeparateGraphI(aIndex: SizeInt): TStrOutline;
+    function  Clone: TStrOutline;
+    function  Complement: TStrOutline;
   end;
 
   THandle = LGUtils.THandle;
@@ -461,6 +473,10 @@ type
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
     function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+    function  SeparateGraph(constref aVertex: TVertex): TGWeighedGraph;
+    function  SeparateGraphI(aIndex: SizeInt): TGWeighedGraph;
+    function  Clone: TGWeighedGraph;
+    function  Complement(aOnAddEdge: TOnAddEdge): TGWeighedGraph;
   end;
 
   TRealPointEdge = record
@@ -487,6 +503,8 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
+    function  SeparateGraph(aVertex: TPoint): TPointsOutline;
+    function  SeparateGraphI(aIndex: SizeInt): TPointsOutline;
     function  Clone: TPointsOutline;
     function  Complement: TPointsOutline;
   end;
@@ -873,43 +891,15 @@ end;
 
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
 var
-  Visited: TBitVector;
-  Stack: TIntStack;
-  Dst, Src: SizeInt;
+  cIdx, I: SizeInt;
+  p: PAdjItem;
 begin
   Result := TGSimpleGraph.Create;
-  Visited.Size := VertexCount;
-  Src := aIndex;
-  {%H-}Stack.Push(aIndex);
-  repeat
-    if not Visited[Src] then
-      begin
-        Visited[Src] := True;
-        for Dst in AdjVerticesI(Src) do
-          if not Visited[Dst] then
-            begin
-              Result.AddEdge(Items[Src], Items[Dst], GetEdgeDataPtr(Src, Dst)^);
-              Stack.Push(Dst);
-            end;
-      end;
-  until not Stack.TryPop(Src);
-end;
-
-function TGSimpleGraph.CheckPathExists(aSrc, aDst: SizeInt): Boolean;
-var
-  Visited: TBitVector;
-  Stack: TIntStack;
-begin
-  Visited.Size := VertexCount;
-  repeat
-    if aSrc = aDst then
-      exit(True);
-    Visited[aSrc] := True;
-    for aSrc in AdjVerticesI(aSrc) do
-      if not Visited[aSrc] then
-        Stack.Push(aSrc);
-  until not Stack.TryPop(aSrc);
-  Result := False;
+  cIdx := AdjList[aIndex]^.FCompIndex;
+  for I := 0 to Pred(VertexCount) do
+    if AdjList[I]^.FCompIndex = cIdx then
+      for p in AdjVerticesPtr(I) do
+        Result.AddEdge(Items[I], Items[p^.Destination], p^.Data);
 end;
 
 function TGSimpleGraph.FindSeparateCount: SizeInt;
@@ -1492,10 +1482,10 @@ begin
   RemoveVertexI(IndexOf(aVertex));
 end;
 
-procedure TGSimpleGraph.RemoveVertexI(aVtxIndex: SizeInt);
+procedure TGSimpleGraph.RemoveVertexI(aIndex: SizeInt);
 begin
-  CheckIndexRange(aVtxIndex);
-  DoRemoveVertex(aVtxIndex);
+  CheckIndexRange(aIndex);
+  DoRemoveVertex(aIndex);
 end;
 
 function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
@@ -1650,10 +1640,10 @@ begin
   Result := DegreeI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.DegreeI(aVtxIndex: SizeInt): SizeInt;
+function TGSimpleGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
-  CheckIndexRange(aVtxIndex);
-  Result := AdjList[aVtxIndex]^.Count;
+  CheckIndexRange(aIndex);
+  Result := AdjList[aIndex]^.Count;
 end;
 
 function TGSimpleGraph.Isolated(constref aVertex: TVertex): Boolean;
@@ -1661,9 +1651,9 @@ begin
   Result := Degree(aVertex) = 0;
 end;
 
-function TGSimpleGraph.IsolatedI(aVtxIndex: SizeInt): Boolean;
+function TGSimpleGraph.IsolatedI(aIndex: SizeInt): Boolean;
 begin
-  Result := DegreeI(aVtxIndex) = 0;
+  Result := DegreeI(aIndex) = 0;
 end;
 
 function TGSimpleGraph.Connected: Boolean;
@@ -1702,10 +1692,10 @@ begin
   Result := SeparateGraphI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.SeparateGraphI(aVtxIndex: SizeInt): TGSimpleGraph;
+function TGSimpleGraph.SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
 begin
   if SeparateCount > 1 then
-    Result := GetSeparateGraph(aVtxIndex)
+    Result := GetSeparateGraph(aIndex)
   else
     Result := Clone;
 end;
@@ -1715,11 +1705,11 @@ begin
    Result := SeparateIndexI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.SeparateIndexI(aVtxIndex: SizeInt): SizeInt;
+function TGSimpleGraph.SeparateIndexI(aIndex: SizeInt): SizeInt;
 begin
-  CheckIndexRange(aVtxIndex);
+  CheckIndexRange(aIndex);
   if SeparateCount > 1 then
-    Result := AdjList[aVtxIndex]^.FCompIndex
+    Result := AdjList[aIndex]^.FCompIndex
   else
     Result := 0;
 end;
@@ -1729,11 +1719,11 @@ begin
   Result := SeparatePopI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.SeparatePopI(aVtxIndex: SizeInt): SizeInt;
+function TGSimpleGraph.SeparatePopI(aIndex: SizeInt): SizeInt;
 begin
-  CheckIndexRange(aVtxIndex);
+  CheckIndexRange(aIndex);
   if SeparateCount > 1 then
-    Result := CountPop(AdjList[aVtxIndex]^.FCompIndex)
+    Result := CountPop(AdjList[aIndex]^.FCompIndex)
   else
     Result := VertexCount;
 end;
@@ -2152,9 +2142,24 @@ begin
   inherited LoadFromFile(aFileName, aOnReadVertex, @ReadData);
 end;
 
+function TGOutline.SeparateGraph(constref aVertex: TVertex): TGOutline;
+begin
+  Result := inherited SeparateGraph(aVertex) as TGOutline;
+end;
+
+function TGOutline.SeparateGraphI(aIndex: SizeInt): TGOutline;
+begin
+  Result := inherited SeparateGraphI(aIndex) as TGOutline;
+end;
+
+function TGOutline.Clone: TGOutline;
+begin
+  Result := inherited Clone as TGOutline;
+end;
+
 function TGOutline.Complement: TGOutline;
 begin
-  Result := TGOutline(inherited Complement(nil));
+  Result := inherited Complement(nil) as TGOutline;
 end;
 
 { TIntOutline }
@@ -2187,6 +2192,26 @@ end;
 procedure TIntOutline.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadVertex);
+end;
+
+function TIntOutline.SeparateGraph(aVertex: SizeInt): TIntOutline;
+begin
+  Result := inherited SeparateGraph(aVertex) as TIntOutline;
+end;
+
+function TIntOutline.SeparateGraphI(aIndex: SizeInt): TIntOutline;
+begin
+  Result := inherited SeparateGraphI(aIndex) as TIntOutline;
+end;
+
+function TIntOutline.Clone: TIntOutline;
+begin
+  Result := inherited Clone as TIntOutline;
+end;
+
+function TIntOutline.Complement: TIntOutline;
+begin
+  Result := inherited Complement as TIntOutline;
 end;
 
 { TStrOutline }
@@ -2231,6 +2256,26 @@ end;
 procedure TStrOutline.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadVertex);
+end;
+
+function TStrOutline.SeparateGraph(const aVertex: string): TStrOutline;
+begin
+  Result := inherited SeparateGraph(aVertex) as TStrOutline;
+end;
+
+function TStrOutline.SeparateGraphI(aIndex: SizeInt): TStrOutline;
+begin
+  Result := inherited SeparateGraphI(aIndex) as TStrOutline;
+end;
+
+function TStrOutline.Clone: TStrOutline;
+begin
+  Result := inherited Clone as TStrOutline;
+end;
+
+function TStrOutline.Complement: TStrOutline;
+begin
+  Result := inherited Complement as TStrOutline;
 end;
 
 { TGWeighedGraph.TWeightEdge }
@@ -2922,6 +2967,26 @@ begin
     raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
+function TGWeighedGraph.SeparateGraph(constref aVertex: TVertex): TGWeighedGraph;
+begin
+  Result := inherited SeparateGraph(aVertex) as TGWeighedGraph;
+end;
+
+function TGWeighedGraph.SeparateGraphI(aIndex: SizeInt): TGWeighedGraph;
+begin
+  Result := inherited SeparateGraphI(aIndex) as TGWeighedGraph;
+end;
+
+function TGWeighedGraph.Clone: TGWeighedGraph;
+begin
+  Result := inherited Clone as TGWeighedGraph;
+end;
+
+function TGWeighedGraph.Complement(aOnAddEdge: TOnAddEdge): TGWeighedGraph;
+begin
+  Result := inherited Complement(aOnAddEdge) as TGWeighedGraph;
+end;
+
 { TRealPointEdge }
 
 constructor TRealPointEdge.Create(const aWeight: ValReal);
@@ -3004,6 +3069,16 @@ end;
 procedure TPointsOutline.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadPoint, @ReadWeight);
+end;
+
+function TPointsOutline.SeparateGraph(aVertex: TPoint): TPointsOutline;
+begin
+  Result := inherited SeparateGraph(aVertex) as TPointsOutline;
+end;
+
+function TPointsOutline.SeparateGraphI(aIndex: SizeInt): TPointsOutline;
+begin
+  Result := inherited SeparateGraphI(aIndex) as TPointsOutline;
 end;
 
 function TPointsOutline.Clone: TPointsOutline;
