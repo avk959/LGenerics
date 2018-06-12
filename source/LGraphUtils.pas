@@ -362,15 +362,13 @@ type
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
-    function  DoAdd(constref v: TVertex; aHash: SizeInt): SizeInt;
+    function  Add(constref v: TVertex; aHash: SizeInt): SizeInt;
     procedure RemoveFromChain(aIndex: SizeInt);
-    procedure DoDelete(aIndex: SizeInt);
-    function  DoRemove(constref v: TVertex): Boolean;
+    procedure Delete(aIndex: SizeInt);
+    function  Remove(constref v: TVertex): Boolean;
     function  Find(constref v: TVertex): SizeInt;
     function  Find(constref v: TVertex; aHash: SizeInt): SizeInt;
     function  FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
-    function  Remove(constref v: TVertex): Boolean; inline;
-    procedure Delete(aIndex: SizeInt); inline;
     class constructor Init;
   protected
     function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
@@ -1505,7 +1503,7 @@ begin
     InitialAlloc;
 end;
 
-function TGCustomGraph.DoAdd(constref v: TVertex; aHash: SizeInt): SizeInt;
+function TGCustomGraph.Add(constref v: TVertex; aHash: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1540,7 +1538,7 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.DoDelete(aIndex: SizeInt);
+procedure TGCustomGraph.Delete(aIndex: SizeInt);
 begin
   Dec(FCount);
   if aIndex < VertexCount then
@@ -1557,14 +1555,19 @@ begin
     end;
 end;
 
-function TGCustomGraph.DoRemove(constref v: TVertex): Boolean;
+function TGCustomGraph.Remove(constref v: TVertex): Boolean;
 var
   ToRemove: SizeInt;
 begin
-  ToRemove := Find(v);
-  Result := ToRemove >= 0;
-  if Result then
-    DoDelete(ToRemove);
+  if NonEmpty then
+    begin
+      ToRemove := Find(v);
+      Result := ToRemove >= 0;
+      if Result then
+        Delete(ToRemove);
+    end
+  else
+    Result := False;
 end;
 
 function TGCustomGraph.Find(constref v: TVertex): SizeInt;
@@ -1606,22 +1609,8 @@ begin
     begin
       if VertexCount = Capacity then
         Expand;
-      aIndex := DoAdd(v, h);
+      aIndex := Add(v, h);
     end;
-end;
-
-function TGCustomGraph.Remove(constref v: TVertex): Boolean;
-begin
-  if VertexCount > 0 then
-    Result := DoRemove(v)
-  else
-    Result := False;
-end;
-
-procedure TGCustomGraph.Delete(aIndex: SizeInt);
-begin
-  CheckIndexRange(aIndex);
-  DoDelete(aIndex);
 end;
 
 class constructor TGCustomGraph.Init;
