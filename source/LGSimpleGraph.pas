@@ -598,12 +598,12 @@ begin
           exit(False);
         Inc(FCurrIndex);
         FVisited[FCurrIndex] := True;
-        FEnum := FList[FCurrIndex].Item.GetEnumerator;
+        FEnum := FList[FCurrIndex].AdjList.GetEnumerator;
       end;
     Result := FEnum.MoveNext;
     FEnumDone := not Result;
     if Result then
-      Result := not FVisited[FEnum.GetCurrent^.Key];
+      Result := not FVisited[FEnum.GetCurrent^.Destination];
   until Result;
 end;
 
@@ -843,20 +843,20 @@ var
   CurrEdges: TAdjList.TAdjItemArray;
   I, J: SizeInt;
 begin
-  FEdgeCount -= AdjList[aIndex]^.Count;
+  FEdgeCount -= FNodeList[aIndex].AdjList.Count;
   Delete(aIndex);
   FConnectedValid := False;
   for I := 0 to Pred(VertexCount) do
     begin
-      CurrEdges := AdjList[I]^.ToArray;
-      AdjList[I]^.MakeEmpty;
+      CurrEdges := FNodeList[I].AdjList.ToArray;
+      FNodeList[I].AdjList.MakeEmpty;
       for J := 0 to System.High(CurrEdges) do
         begin
           if CurrEdges[J].Destination <> aIndex then
             begin
               if CurrEdges[J].Destination > aIndex then
                 Dec(CurrEdges[J].Destination);
-              AdjList[I]^.Add(CurrEdges[J]);
+              FNodeList[I].AdjList.Add(CurrEdges[J]);
             end;
         end;
     end;
@@ -866,10 +866,10 @@ function TGSimpleGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean
 begin
   if aSrc = aDst then
     exit(False);
-  Result := AdjList[aSrc]^.Add(TAdjItem.Create(aDst, aData));
+  Result := FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
   if Result then
     begin
-      if not AdjList[aDst]^.Add(TAdjItem.Create(aSrc, aData)) then
+      if not FNodeList[aDst].AdjList.Add(TAdjItem.Create(aSrc, aData)) then
         raise ELGraphError.Create(SEGrapInconsist);
       Inc(FEdgeCount);
       FConnectedValid := False;
@@ -880,10 +880,10 @@ function TGSimpleGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
-  Result := AdjList[aSrc]^.Remove(aDst);
+  Result := FNodeList[aSrc].AdjList.Remove(aDst);
   if Result then
     begin
-      AdjList[aDst]^.Remove(aSrc);
+      FNodeList[aDst].AdjList.Remove(aSrc);
       Dec(FEdgeCount);
       FConnectedValid := False;
     end;
@@ -895,10 +895,10 @@ var
   p: PAdjItem;
 begin
   Result := TGSimpleGraph.Create;
-  cIdx := AdjList[aIndex]^.FCompIndex;
+  cIdx := FNodeList[aIndex].Tag;
   for I := 0 to Pred(VertexCount) do
-    if AdjList[I]^.FCompIndex = cIdx then
-      for p in AdjVerticesPtr(I) do
+    if FNodeList[I].Tag = cIdx then
+      for p in FNodeList[I].AdjList do
         Result.AddEdge(Items[I], Items[p^.Destination], p^.Data);
 end;
 
@@ -916,7 +916,7 @@ begin
       begin
         Curr := I;
         repeat
-          AdjList[Curr]^.FCompIndex := Result;
+          FNodeList[Curr].Tag := Result;
           for Next in AdjVerticesI(Curr) do
             if not Visited[Next] then
               begin
@@ -945,7 +945,7 @@ var
 begin
   Result := 0;
   for I := 0 to Pred(VertexCount) do
-    Result += Ord(AdjList[I]^.FCompIndex = aCompIndex);
+    Result += Ord(FNodeList[I].Tag = aCompIndex);
 end;
 
 function TGSimpleGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -963,7 +963,7 @@ begin
       begin
         Curr := I;
         repeat
-          AdjList[Curr]^.FCompIndex := 0;
+          FNodeList[Curr].Tag := 0;
           for Curr in AdjVerticesI(Curr) do
             if not Visited[Curr] then
               begin
@@ -975,7 +975,7 @@ begin
         if Result > 1 then
           begin
             if Assigned(aOnAddEdge) then
-              aOnAddEdge(AdjList[0]^.Vertex, AdjList[Curr]^.Vertex, @d);
+              aOnAddEdge(FNodeList[0].Vertex, FNodeList[Curr].Vertex, @d);
             AddEdgeI(0, Curr, d);
           end;
       end;
@@ -1465,7 +1465,7 @@ begin
   Result := not FindOrAdd(aVertex, aIndex);
   if Result then
     begin
-      AdjList[aIndex]^.FCompIndex := -1;
+      FNodeList[aIndex].Tag := -1;
       FConnectedValid := False;
     end;
 end;
@@ -1551,7 +1551,7 @@ begin
     //this should allow transfer data between directed/undirected graphs ???
     //or need save edges from dfs ???
     for I := 0 to Pred(Header.VertexCount) do
-      aWriteVertex(wbs, AdjList[I]^.Vertex);
+      aWriteVertex(wbs, FNodeList[I].Vertex);
     //write edges
     for Edge in DistinctEdges do
       begin
@@ -1643,7 +1643,7 @@ end;
 function TGSimpleGraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
-  Result := AdjList[aIndex]^.Count;
+  Result := FNodeList[aIndex].AdjList.Count;
 end;
 
 function TGSimpleGraph.Isolated(constref aVertex: TVertex): Boolean;
@@ -1683,7 +1683,7 @@ begin
   if aSrc = aDst then
     exit(True);
   if ConnectedValid then
-    exit(AdjList[aSrc]^.FCompIndex = AdjList[aDst]^.FCompIndex);
+    exit(FNodeList[aSrc].Tag = FNodeList[aDst].Tag);
   Result := CheckPathExists(aSrc, aDst);
 end;
 
@@ -1709,7 +1709,7 @@ function TGSimpleGraph.SeparateIndexI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   if SeparateCount > 1 then
-    Result := AdjList[aIndex]^.FCompIndex
+    Result := FNodeList[aIndex].Tag
   else
     Result := 0;
 end;
@@ -1723,7 +1723,7 @@ function TGSimpleGraph.SeparatePopI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   if SeparateCount > 1 then
-    Result := CountPop(AdjList[aIndex]^.FCompIndex)
+    Result := CountPop(FNodeList[aIndex].Tag)
   else
     Result := VertexCount;
 end;
@@ -1800,7 +1800,7 @@ begin
     aCircuit.Add(s);
     repeat
       repeat
-        if not g.AdjList[s]^.FindFirst(d) then
+        if not g.FNodeList[s].AdjList.FindFirst(d) then
           break;
         Stack.Push(s);
         g.RemoveEdgeI(s, d);
@@ -1883,7 +1883,7 @@ begin
   for e in NewEdges do
     begin
       if Assigned(aOnAddEdge) then
-        aOnAddEdge(AdjList[e.Source]^.Vertex, AdjList[e.Destination]^.Vertex, @d);
+        aOnAddEdge(FNodeList[e.Source].Vertex, FNodeList[e.Destination].Vertex, @d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
 end;
@@ -2075,7 +2075,7 @@ begin
       if not AdjacentI(I, J) then
         begin
           if Assigned(aOnAddEdge) then
-            aOnAddEdge(AdjList[I]^.Vertex, AdjList[J]^.Vertex, @d);
+            aOnAddEdge(FNodeList[I].Vertex, FNodeList[J].Vertex, @d);
           Result.AddEdgeI(I, J, d);
         end;
 end;
@@ -2487,7 +2487,7 @@ begin
     begin
       Visited[Item.Index] := True;
       Result[Item.Index] := Item.Weight;
-      for p in AdjVerticesPtr(Item.Index) do
+      for p in FNodeList[Item.Index].AdjList do
         if Handles[p^.Key] = INVALID_HANDLE then
           Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
         else
@@ -2518,7 +2518,7 @@ begin
     begin
       Visited[Item.Index] := True;
       Result[Item.Index] := Item.Weight;
-      for p in AdjVerticesPtr(Item.Index) do
+      for p in FNodeList[Item.Index].AdjList do
         if Handles[p^.Key] = INVALID_HANDLE then
           begin
             Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
@@ -2554,7 +2554,7 @@ begin
       if Item.Index = aDst then
         exit(Item.Weight);
       Visited[Item.Index] := True;
-      for p in AdjVerticesPtr(Item.Index) do
+      for p in FNodeList[Item.Index].AdjList do
         if Handles[p^.Key] = INVALID_HANDLE then
           Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
         else
@@ -2590,7 +2590,7 @@ begin
           exit(TreeToChain(Tree, aDst));
         end;
       Visited[Item.Index] := True;
-      for p in AdjVerticesPtr(Item.Index) do
+      for p in FNodeList[Item.Index].AdjList do
         begin
           if Handles[p^.Key] = INVALID_HANDLE then
             begin
@@ -2634,7 +2634,7 @@ begin
           exit(TreeToChain(Tree, aDst));
         end;
       Visited[Item.Index] := True;
-      for p in AdjVerticesPtr(Item.Index) do
+      for p in FNodeList[Item.Index].AdjList do
         begin
           if Handles[p^.Key] = INVALID_HANDLE then
             begin
@@ -2800,7 +2800,7 @@ begin
       Curr := Item.Index;
       aTotalWeight += Item.Weight;
       Visited[Curr] := True;
-      for p in AdjVerticesPtr(Curr) do
+      for p in FNodeList[Curr].AdjList do
         begin
           if Handles[p^.Key] = INVALID_HANDLE then
             begin

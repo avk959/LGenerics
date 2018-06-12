@@ -215,65 +215,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  generic TGAdjList<TVertex, TData> = record
-  public
-  type
-    TAdjItem      = specialize TGAdjItem<TData>;
-    TAdjItemArray = array of TAdjItem;
-    PAdjItem      = ^TAdjItem;
-
-  private
-  type
-    TAdjItemList = array of TAdjItem;
-
-  const
-    EXPAND_SIZE = 8;
-
-  public
-  type
-    TEnumerator = record
-    private
-      FList: PAdjItem;
-      FCurrIndex,
-      FLastIndex: SizeInt;
-      function  GetCurrent: PAdjItem; inline;
-    public
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: PAdjItem read GetCurrent;
-    end;
-
-  private
-    FList: TAdjItemList;
-    FCount: SizeInt;
-    function  GetCapacity: SizeInt; inline;
-    procedure Expand; inline;
-    function  DoFind(aValue: SizeInt): SizeInt;
-    procedure DoRemove(aIndex: SizeInt);
-    class operator Initialize(var aList: TGAdjList);
-  public
-    Vertex: TVertex;
-    FInDegree,
-    FCompIndex: SizeInt;
-    procedure Assign(constref aSrc: TGAdjList);
-    function  GetEnumerator: TEnumerator; inline;
-    function  ToArray: TAdjItemArray; inline;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
-    procedure Clear;
-    procedure MakeEmpty;
-    procedure TrimToFit; inline;
-    function  Contains(aDst: SizeInt): Boolean; inline;
-    function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean; inline;
-    function  Find(aDst: SizeInt): PAdjItem;
-    function  FindFirst(out aDst: SizeInt): Boolean;
-    function  Add(constref aItem: TAdjItem): Boolean;
-    function  Remove(aDst: SizeInt): Boolean; inline;
-    property  Key: TVertex read Vertex;
-    property  Count: SizeInt read FCount;
-    property  Capacity: SizeInt read GetCapacity;
-  end;
-
   { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -283,16 +224,72 @@ type
   type
     TEdgeDataType = TEdgeData;
     PEdgeData     = ^TEdgeData;
+    PAdjItem      = ^TAdjItem;
+
+    TAdjItem      = record
+      Destination: SizeInt;
+      Data: TEdgeData;
+      property Key: SizeInt read Destination;
+      constructor Create(aDst: SizeInt; constref aData: TEdgeData);
+    end;
 
   protected
   type
-    TAdjList  = specialize TGAdjList<TVertex, TEdgeData>;
-    PAdjList  = ^TAdjList;
+
+    TAdjList = record
+    public
+    type
+      TAdjItemArray = array of TAdjItem;
+
+      TEnumerator = record
+      private
+        FList: PAdjItem;
+        FCurrIndex,
+        FLastIndex: SizeInt;
+        function  GetCurrent: PAdjItem; inline;
+      public
+        function  MoveNext: Boolean; inline;
+        procedure Reset; inline;
+        property  Current: PAdjItem read GetCurrent;
+      end;
+
+    private
+    const
+      EXPAND_SIZE = 8;
+
+    var
+      FList: TAdjItemArray;
+      FCount: SizeInt;
+      function  GetCapacity: SizeInt; inline;
+      procedure Expand; inline;
+      function  DoFind(aValue: SizeInt): SizeInt;
+      procedure DoRemove(aIndex: SizeInt);
+      class operator Initialize(var aList: TAdjList);
+      class operator Copy(constref aSrc: TAdjList; var aDst: TAdjList);
+    public
+      function  GetEnumerator: TEnumerator; inline;
+      function  ToArray: TAdjItemArray; inline;
+      function  IsEmpty: Boolean; inline;
+      function  NonEmpty: Boolean; inline;
+      procedure Clear;
+      procedure MakeEmpty;
+      procedure TrimToFit; inline;
+      function  Contains(aDst: SizeInt): Boolean; inline;
+      function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean; inline;
+      function  Find(aDst: SizeInt): PAdjItem;
+      function  FindFirst(out aDst: SizeInt): Boolean;
+      function  Add(constref aItem: TAdjItem): Boolean;
+      function  Remove(aDst: SizeInt): Boolean; inline;
+      property  Count: SizeInt read FCount;
+      property  Capacity: SizeInt read GetCapacity;
+    end;
 
     TNode = record
       Hash,
       Next: SizeInt;
-      Item: TAdjList;
+      AdjList: TAdjList;
+      Vertex: TVertex;
+      Tag: SizeInt;
       procedure Assign(constref aSrc: TNode);
     end;
     PNode = ^TNode;
@@ -306,14 +303,6 @@ type
     MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   type
-    TAdjVerticesPtr = record
-    private
-      FGraph: TGCustomGraph;
-      FSource: SizeInt;
-    public
-      function GetEnumerator: TAdjList.TEnumerator; inline;
-    end;
-
     TMagic = string[8];
 
     TStreamHeader = packed record
@@ -369,7 +358,6 @@ type
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: TVertex);
-    function  GetAdjList(aIndex: SizeInt): PAdjList; inline;
     procedure InitialAlloc;
     procedure Rehash;
     procedure Resize(aNewCapacity: SizeInt);
@@ -386,16 +374,11 @@ type
     class constructor Init;
   protected
     function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
-    function  AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
     function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
-    property  AdjList[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
-    TAdjItem         = TAdjList.TAdjItem;
-    PAdjItem         = ^TAdjItem;
-
     TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
 
     TOnReadVertex    = specialize TGOnStreamRead<TVertex>;
@@ -1019,37 +1002,45 @@ begin
     Result := False;
 end;
 
-{ TGAdjList.TEnumerator }
+{ TGCustomGraph.TAdjItem }
 
-function TGAdjList.TEnumerator.GetCurrent: PAdjItem;
+constructor TGCustomGraph.TAdjItem.Create(aDst: SizeInt; constref aData: TEdgeData);
+begin
+  Destination := aDst;
+  Data := aData;
+end;
+
+{ TGCustomGraph.TAdjList.TEnumerator }
+
+function TGCustomGraph.TAdjList.TEnumerator.GetCurrent: PAdjItem;
 begin
   Result := @FList[FCurrIndex];
 end;
 
-function TGAdjList.TEnumerator.MoveNext: Boolean;
+function TGCustomGraph.TAdjList.TEnumerator.MoveNext: Boolean;
 begin
   Result := FCurrIndex < FLastIndex;
   FCurrIndex += Ord(Result);
 end;
 
-procedure TGAdjList.TEnumerator.Reset;
+procedure TGCustomGraph.TAdjList.TEnumerator.Reset;
 begin
   FCurrIndex := -1;
 end;
 
-{ TGAdjList }
+{ TGCustomGraph.TAdjList }
 
-function TGAdjList.GetCapacity: SizeInt;
+function TGCustomGraph.TAdjList.GetCapacity: SizeInt;
 begin
   Result := System.Length(FList);
 end;
 
-procedure TGAdjList.Expand;
+procedure TGCustomGraph.TAdjList.Expand;
 begin
   System.SetLength(FList, Capacity + EXPAND_SIZE);
 end;
 
-function TGAdjList.DoFind(aValue: SizeInt): SizeInt;
+function TGCustomGraph.TAdjList.DoFind(aValue: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1059,7 +1050,7 @@ begin
   Result := -1;
 end;
 
-procedure TGAdjList.DoRemove(aIndex: SizeInt);
+procedure TGCustomGraph.TAdjList.DoRemove(aIndex: SizeInt);
 begin
   FList[aIndex] := Default(TAdjItem);
   Dec(FCount);
@@ -1070,49 +1061,46 @@ begin
     end;
 end;
 
-class operator TGAdjList.Initialize(var aList: TGAdjList);
+class operator TGCustomGraph.TAdjList.Initialize(var aList: TAdjList);
 begin
-  aList.Clear;
+  aList.FCount := 0;
 end;
 
-procedure TGAdjList.Assign(constref aSrc: TGAdjList);
+class operator TGCustomGraph.TAdjList.Copy(constref aSrc: TAdjList; var aDst: TAdjList);
 begin
-  FList := System.Copy(aSrc.FList);
-  FCount := aSrc.Count;
-  Vertex := aSrc.Vertex;
-  FInDegree := aSrc.FInDegree;
-  FCompIndex := aSrc.FCompIndex;
+  aDst.FList := System.Copy(aSrc.FList);
+  aDst.FCount := aSrc.Count;
 end;
 
-function TGAdjList.GetEnumerator: TEnumerator;
+function TGCustomGraph.TAdjList.GetEnumerator: TEnumerator;
 begin
   Result.FList := Pointer(FList);
   Result.FLastIndex := Pred(Count);
   Result.FCurrIndex := -1;
 end;
 
-function TGAdjList.ToArray: TAdjItemArray;
+function TGCustomGraph.TAdjList.ToArray: TAdjItemArray;
 begin
   Result := System.Copy(FList, 0, Count);
 end;
 
-function TGAdjList.IsEmpty: Boolean;
+function TGCustomGraph.TAdjList.IsEmpty: Boolean;
 begin
   Result := Count = 0;
 end;
 
-function TGAdjList.NonEmpty: Boolean;
+function TGCustomGraph.TAdjList.NonEmpty: Boolean;
 begin
   Result := Count <> 0;
 end;
 
-procedure TGAdjList.Clear;
+procedure TGCustomGraph.TAdjList.Clear;
 begin
   FList := nil;
   FCount := 0;
 end;
 
-procedure TGAdjList.MakeEmpty;
+procedure TGCustomGraph.TAdjList.MakeEmpty;
 var
   I: SizeInt;
 begin
@@ -1121,12 +1109,12 @@ begin
   FCount := 0;
 end;
 
-procedure TGAdjList.TrimToFit;
+procedure TGCustomGraph.TAdjList.TrimToFit;
 begin
   System.SetLength(FList, Count);
 end;
 
-function TGAdjList.Contains(aDst: SizeInt): Boolean;
+function TGCustomGraph.TAdjList.Contains(aDst: SizeInt): Boolean;
 begin
   if Count <> 0 then
     Result := DoFind(aDst) >= 0
@@ -1134,7 +1122,7 @@ begin
     Result := False;
 end;
 
-function TGAdjList.FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
+function TGCustomGraph.TAdjList.FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
 var
   Pos: SizeInt;
 begin
@@ -1153,7 +1141,7 @@ begin
   p := @FList[Pos];
 end;
 
-function TGAdjList.Find(aDst: SizeInt): PAdjItem;
+function TGCustomGraph.TAdjList.Find(aDst: SizeInt): PAdjItem;
 var
   Pos: SizeInt;
 begin
@@ -1166,14 +1154,14 @@ begin
     end;
 end;
 
-function TGAdjList.FindFirst(out aDst: SizeInt): Boolean;
+function TGCustomGraph.TAdjList.FindFirst(out aDst: SizeInt): Boolean;
 begin
   Result := Count <> 0;
   if Result then
     aDst := FList[0].Destination;
 end;
 
-function TGAdjList.Add(constref aItem: TAdjItem): Boolean;
+function TGCustomGraph.TAdjList.Add(constref aItem: TAdjItem): Boolean;
 begin
   if Count <> 0 then
     Result := DoFind(aItem.Destination) < 0
@@ -1188,7 +1176,7 @@ begin
     end;
 end;
 
-function TGAdjList.Remove(aDst: SizeInt): Boolean;
+function TGCustomGraph.TAdjList.Remove(aDst: SizeInt): Boolean;
 var
   Pos: SizeInt;
 begin
@@ -1289,14 +1277,9 @@ procedure TGCustomGraph.TNode.Assign(constref aSrc: TNode);
 begin
   Hash := aSrc.Hash;
   Next := aSrc.Next;
-  Item.Assign(aSrc.Item);
-end;
-
-{ TGCustomGraph.TAdjVerticesPtr }
-
-function TGCustomGraph.TAdjVerticesPtr.GetEnumerator: TAdjList.TEnumerator;
-begin
-  Result := FGraph.AdjList[FSource]^.GetEnumerator;
+  AdjList := aSrc.AdjList;
+  Vertex := aSrc.Vertex;
+  Tag := aSrc.Tag;
 end;
 
 { TGCustomGraph.TEdge }
@@ -1335,7 +1318,7 @@ end;
 
 function TGCustomGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
 begin
-  Result.FEnum := FGraph.AdjList[FSource]^.GetEnumerator;
+  Result.FEnum := FGraph.FNodeList[FSource].AdjList.GetEnumerator;
 end;
 
 { TGCustomGraph.TIncidentEnumerator }
@@ -1369,21 +1352,21 @@ end;
 
 function TGCustomGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
 begin
-  Result.FEnum := FGraph.AdjList[FSource]^.GetEnumerator;
+  Result.FEnum := FGraph.FNodeList[FSource].AdjList.GetEnumerator;
 end;
 
 { TGCustomGraph.TVertexEnumerator }
 
 function TGCustomGraph.TVertexEnumerator.GetCurrent: TVertex;
 begin
-  Result := FNodeList[FCurrIndex].Item.Vertex;
+  Result := FNodeList[FCurrIndex].Vertex;
 end;
 
 constructor TGCustomGraph.TVertexEnumerator.Create(aGraph: TGCustomGraph);
 begin
   FNodeList := Pointer(aGraph.FNodeList);
-  FCurrIndex := -1;
   FLastIndex := Pred(aGraph.VertexCount);
+  FCurrIndex := -1;
 end;
 
 function TGCustomGraph.TVertexEnumerator.MoveNext: Boolean;
@@ -1426,7 +1409,7 @@ begin
         if FCurrIndex >= FLastIndex then
           exit(False);
         Inc(FCurrIndex);
-        FEnum := FList[FCurrIndex].Item.GetEnumerator;
+        FEnum := FList[FCurrIndex].AdjList.GetEnumerator;
       end;
     Result := FEnum.MoveNext;
     FEnumDone := not Result;
@@ -1459,7 +1442,7 @@ end;
 function TGCustomGraph.GetItem(aIndex: SizeInt): TVertex;
 begin
   CheckIndexRange(aIndex);
-  Result := FNodeList[aIndex].Item.Vertex;
+  Result := FNodeList[aIndex].Vertex;
 end;
 
 procedure TGCustomGraph.SetItem(aIndex: SizeInt; const aValue: TVertex);
@@ -1467,20 +1450,15 @@ var
   I: SizeInt;
 begin
   CheckIndexRange(aIndex);
-  if TVertexEqRel.Equal(aValue, FNodeList[aIndex].Item.Vertex) then
+  if TVertexEqRel.Equal(aValue, FNodeList[aIndex].Vertex) then
     exit;
   RemoveFromChain(aIndex);
   //add to new chain
   FNodeList[aIndex].Hash := TVertexEqRel.HashCode(aValue);
-  FNodeList[aIndex].Item.Vertex := aValue;
+  FNodeList[aIndex].Vertex := aValue;
   I := FNodeList[aIndex].Hash and System.High(FNodeList);
   FNodeList[aIndex].Next := FChainList[I];
   FChainList[I] := aIndex;
-end;
-
-function TGCustomGraph.GetAdjList(aIndex: SizeInt): PAdjList;
-begin
-  Result := @FNodeList[aIndex].Item;
 end;
 
 procedure TGCustomGraph.InitialAlloc;
@@ -1535,7 +1513,7 @@ begin
   FNodeList[Result].Hash := aHash;
   I := aHash and System.High(FNodeList);
   FNodeList[Result].Next := FChainList[I];
-  FNodeList[Result].Item.Vertex := v;
+  FNodeList[Result].Vertex := v;
   FChainList[I] := Result;
   Inc(FCount);
 end;
@@ -1567,15 +1545,15 @@ begin
   Dec(FCount);
   if aIndex < VertexCount then
     begin
-      FNodeList[aIndex].Item := Default(TAdjList);
+      FNodeList[aIndex].AdjList := Default(TAdjList);
       System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (VertexCount - aIndex) * NODE_SIZE);
-      System.FillChar(FNodeList[VertexCount].Item, SizeOf(TAdjList), 0);
+      System.FillChar(FNodeList[VertexCount].AdjList, SizeOf(TAdjList), 0);
       Rehash;
     end
   else   // last element
     begin
       RemoveFromChain(aIndex);
-      System.FillChar(FNodeList[VertexCount].Item, SizeOf(TAdjList), 0);
+      System.FillChar(FNodeList[VertexCount].AdjList, SizeOf(TAdjList), 0);
     end;
 end;
 
@@ -1589,19 +1567,6 @@ begin
     DoDelete(ToRemove);
 end;
 
-//class operator TGVertexHashList.Copy(constref aSrc: TGVertexHashList; var aDst: TGVertexHashList);
-//var
-//  I: SizeInt;
-//begin
-//  aDst.FCount := aSrc.Count;
-//  if aSrc.Count = 0 then
-//    exit;
-//  aDst.FChainList := System.Copy(aSrc.FChainList);
-//  System.SetLength(aDst.FNodeList, System.Length(aSrc.FNodeList));
-//  for I := 0 to Pred(aSrc.Count) do
-//    aDst.FNodeList[I].Assign(aSrc.FNodeList[I]);
-//end;
-
 function TGCustomGraph.Find(constref v: TVertex): SizeInt;
 var
   h: SizeInt;
@@ -1610,7 +1575,7 @@ begin
   Result := FChainList[h and System.High(FChainList)];
   while Result <> NULL_INDEX do
     begin
-      if (FNodeList[Result].Hash = h) and TVertexEqRel.Equal(FNodeList[Result].Item.Vertex, v) then
+      if (FNodeList[Result].Hash = h) and TVertexEqRel.Equal(FNodeList[Result].Vertex, v) then
         exit;
       Result := FNodeList[Result].Next;
     end;
@@ -1621,7 +1586,7 @@ begin
   Result := FChainList[aHash and System.High(FChainList)];
   while Result <> NULL_INDEX do
     begin
-      if (FNodeList[Result].Hash = aHash) and TVertexEqRel.Equal(FNodeList[Result].Item.Vertex, v) then
+      if (FNodeList[Result].Hash = aHash) and TVertexEqRel.Equal(FNodeList[Result].Vertex, v) then
         exit;
       Result := FNodeList[Result].Next;
     end;
@@ -1697,14 +1662,7 @@ end;
 
 function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
 begin
-  Result := @AdjList[aSrc]^.Find(aDst)^.Data;
-end;
-
-function TGCustomGraph.AdjVerticesPtr(aSrc: SizeInt): TAdjVerticesPtr;
-begin
-  CheckIndexRange(aSrc);
-  Result.FGraph := Self;
-  Result.FSource := aSrc;
+  Result := @FNodeList[aSrc].AdjList.Find(aDst)^.Data;
 end;
 
 function TGCustomGraph.NonRecDfs(aRoot: SizeInt): SizeInt;
@@ -1881,7 +1839,7 @@ var
 begin
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Result[I].FEnum := AdjList[I]^.GetEnumerator;
+    Result[I].FEnum := FNodeList[I].AdjList.GetEnumerator;
 end;
 
 function TGCustomGraph.IsEmpty: Boolean;
@@ -1928,7 +1886,7 @@ begin
       if NewCapacity < Capacity then
         begin
           for I := 0 to Pred(VertexCount) do
-            FNodeList[I].Item.TrimToFit;
+            FNodeList[I].AdjList.TrimToFit;
           Resize(NewCapacity);
         end;
     end
@@ -1948,9 +1906,10 @@ end;
 
 function TGCustomGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := AdjList[aSrc]^.Contains(aDst);
+  if (aSrc >= 0) and (aSrc < VertexCount) then
+    Result := FNodeList[aSrc].AdjList.Contains(aDst)
+  else
+    Result := False;
 end;
 
 function TGCustomGraph.IndexOf(constref aVertex: TVertex): SizeInt;
@@ -1968,9 +1927,10 @@ end;
 
 function TGCustomGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := AdjList[aSrc]^.Contains(aDst);
+  if (aSrc >= 0) and (aSrc < VertexCount) then
+    Result := FNodeList[aSrc].AdjList.Contains(aDst)
+  else
+    Result := False;
 end;
 
 function TGCustomGraph.AdjVertices(constref aVertex: TVertex): TAdjVertices;
@@ -2016,7 +1976,7 @@ var
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  p := AdjList[aSrc]^.Find(aDst);
+  p := FNodeList[aSrc].AdjList.Find(aDst);
   Result := p <> nil;
   if Result then
     aData := p^.Data;
@@ -2032,7 +1992,7 @@ var
   p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
-  p := AdjList[aSrc]^.Find(aDst);
+  p := FNodeList[aSrc].AdjList.Find(aDst);
   Result := p <> nil;
   if Result then
     p^.Data := aValue;
@@ -2143,8 +2103,8 @@ begin
             if not Visited[Curr] then
               begin
                 Visited[Curr] := True;
-                Queue.Enqueue(Curr);
                 aColors[Curr] := vclBlack - CurrColor;
+                Queue.Enqueue(Curr);
               end
             else
               if aColors[Curr] = CurrColor then
