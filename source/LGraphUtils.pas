@@ -139,7 +139,7 @@ type
     property Key: SizeInt read Destination;
   end;
 
-  generic TGHashAdjList<TVertex, TData> = record
+  generic TGHashAdjList<TData> = record
   public
   type
     TAdjItem      = specialize TGAdjItem<TData>;
@@ -161,7 +161,7 @@ type
     SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
     USED_FLAG: SizeInt      = SizeInt(1);
     MAX_CAPACITY: SizeInt   = SizeInt(MAX_CONTAINER_SIZE div NODE_SIZE);
-    INITIAL_SIZE            = 8;
+    INITIAL_SIZE            = 16;
 
   public
   type
@@ -193,10 +193,6 @@ type
     class constructor Init;
     class operator Initialize(var aList: TGHashAdjList);
   public
-    Vertex: TVertex;
-    FInDegree,
-    FCompIndex: SizeInt;
-    procedure Assign(constref aSrc: TGHashAdjList);
     function  GetEnumerator: TEnumerator;
     function  ToArray: TAdjItemArray;
     function  IsEmpty: Boolean; inline;
@@ -210,7 +206,6 @@ type
     function  FindFirst(out aDst: SizeInt): Boolean;
     function  Add(constref aItem: TAdjItem): Boolean;
     function  Remove(aDst: SizeInt): Boolean; inline;
-    property  Key: TVertex read Vertex;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -729,7 +724,7 @@ begin
                       aNewList[h] := FNodeList[I];
                       break;
                     end;
-                  h := Succ(h) and Mask;       // probe sequence
+                  h := Succ(h) and Mask;
                 end;
             end;
         end;
@@ -837,23 +832,10 @@ begin
   aList.FCount := 0;
 end;
 
-procedure TGHashAdjList.Assign(constref aSrc: TGHashAdjList);
-begin
-  FNodeList := System.Copy(aSrc.FNodeList);
-  FCount := aSrc.Count;
-  FShift := aSrc.Shift;
-  Vertex := aSrc.Vertex;
-  FInDegree := aSrc.FInDegree;
-  FCompIndex := aSrc.FCompIndex;
-end;
-
 function TGHashAdjList.GetEnumerator: TEnumerator;
 begin
   Result.FLastIndex := System.High(FNodeList);
-  if Result.FLastIndex >= 0 then
-    Result.FList := @FNodeList[0]
-  else
-    Result.FList := nil;
+  Result.FList := Pointer(FNodeList);
   Result.FCurrIndex := -1;
 end;
 
@@ -864,16 +846,15 @@ begin
   System.SetLength(Result, Count);
   if Count > 0 then
     begin
-      I := 0;
       J := 0;
-      repeat
-        if FNodeList[J].Hash <> 0 then
+      for I := 0 to System.High(FNodeList) do
+        if FNodeList[I].Hash <> 0 then
           begin
-            Result[I] := FNodeList[J].Item;
-            Inc(I);
+            Result[J] := FNodeList[I].Item;
+            Inc(J);
           end;
-        Inc(J);
-      until J >= Capacity;
+      if J = Count then
+        break;
     end;
 end;
 
