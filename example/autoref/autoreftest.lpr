@@ -27,7 +27,7 @@ var
   Ref: specialize TGAutoRef<TMyClass>;
   c: TMyClass;
 begin
-  c := Ref;
+  c := {%H-}Ref;
   c.IsHere;
 end;
 
@@ -35,7 +35,7 @@ procedure Test2;
 var
   Ref: specialize TGAutoRef<TMyClass>;
 begin
-  Ref.Instance.IsHere;
+  {%H-}Ref.Instance.IsHere;
 end;
 
 procedure TMyClass.IsHere;
