@@ -37,6 +37,8 @@ uses
 
 type
 
+  TSortOrder = LGUtils.TSortOrder;
+
   { TGSimpleDiGraph is simple sparse directed graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -44,6 +46,27 @@ type
   generic TGSimpleDiGraph<TVertex, TEdgeData, TVertexEqRel> = class(
     specialize TGCustomGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
+  type
+    TClosAdjList = specialize TGHashAdjList<TEmptyRec>;
+    TClosAdjItem = TClosAdjList.TAdjItem;
+    TClosData    = TClosAdjList.TData;
+
+    TClosureMatrix = record
+    private
+      function  GetSize: SizeInt; inline;
+      procedure SetSize(aValue: SizeInt); inline;
+    public
+      Items: array of TClosAdjList;
+      Count: SizeInt;
+      function  Contains(constref aSrc, aDst: SizeInt): Boolean; inline;
+      function  Add(constref aSrc, aDst: SizeInt): Boolean;
+      procedure Discard;
+      property  Size: SizeInt read GetSize write SetSize;
+      class operator Initialize(var tc: TClosureMatrix);
+    end;
+  var
+    FClosureMatrix: TClosureMatrix;
+    function  GetClosureValid: Boolean; inline;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
@@ -72,21 +95,30 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  IsSource(constref aVertex: TVertex): Boolean; inline;
+    function  IsSourceI(aIndex: SizeInt): Boolean;
+    function  IsSink(constref aVertex: TVertex): Boolean; inline;
+    function  IsSinkI(aIndex: SizeInt): Boolean;
     function  SourceCount: SizeInt;
     function  SinkCount: SizeInt;
-  { checks whether the aDst reachable from the aSrc; each vertex reachable from itself  }
+  { checks whether the aDst is reachable from the aSrc(each vertex is reachable from itself) }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
-  { checks whether exists any cycle in graph that reachable from a Root;
+  { checks whether exists any cycle in subgraph that reachable from a Root;
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCircuit: Boolean;
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
     function  IsDag: Boolean;
+  { creates transitive closure, time and memory cost O(V*E)}
+    procedure CreateClosureMatrix;
+  { returns array of vertex indices in topological order staring from index 0, without any checks }
+    function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
 
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
+    property  TransClosureValid: Boolean read GetClosureValid;
   end;
 
 implementation
@@ -94,7 +126,52 @@ implementation
 uses
   bufstream;
 
+{ TGSimpleDiGraph.TClosureMatrix }
+
+function TGSimpleDiGraph.TClosureMatrix.GetSize: SizeInt;
+begin
+  Result := System.Length(Items);
+end;
+
+procedure TGSimpleDiGraph.TClosureMatrix.SetSize(aValue: SizeInt);
+begin
+  if aValue > Size then
+    System.SetLength(Items, aValue);
+end;
+
+function TGSimpleDiGraph.TClosureMatrix.Contains(constref aSrc, aDst: SizeInt): Boolean;
+begin
+  if (aSrc >= 0) and (aSrc < Size) then
+    Result := Items[aSrc].Contains(aDst)
+  else
+    Result := False;
+end;
+
+function TGSimpleDiGraph.TClosureMatrix.Add(constref aSrc, aDst: SizeInt): Boolean;
+begin
+  if (aSrc < 0) or (aSrc >= Size) then
+    exit(False);
+  Result := Items[aSrc].Add(TClosAdjItem.Create(aDst, Default(TClosData)));
+  Inc(Count, Ord(Result));
+end;
+
+procedure TGSimpleDiGraph.TClosureMatrix.Discard;
+begin
+  Items := nil;
+  Count := 0;
+end;
+
+class operator TGSimpleDiGraph.TClosureMatrix.Initialize(var tc: TClosureMatrix);
+begin
+  tc.Count := 0;
+end;
+
 { TGSimpleDiGraph }
+
+function TGSimpleDiGraph.GetClosureValid: Boolean;
+begin
+  Result := FClosureMatrix.Items <> nil;
+end;
 
 procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
 var
@@ -120,7 +197,7 @@ begin
             end;
         end;
     end;
-  //FConnectedValid := False;
+  FClosureMatrix.Discard;
 end;
 
 function TGSimpleDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -132,7 +209,7 @@ begin
     begin
       Inc(FNodeList[aDst].Tag);
       Inc(FEdgeCount);
-      //FConnectedValid := False;
+      FClosureMatrix.Discard;
     end;
 end;
 
@@ -145,7 +222,7 @@ begin
     begin
       Dec(FNodeList[aDst].Tag);
       Dec(FEdgeCount);
-      //FConnectedValid := False;
+      FClosureMatrix.Discard;
     end;
 end;
 
@@ -195,7 +272,7 @@ begin
   if Result then
     begin
       FNodeList[aIndex].Tag := 0;
-      //FConnectedValid := False;
+      FClosureMatrix.Discard;
     end;
 end;
 
@@ -407,6 +484,28 @@ begin
   Result := DegreeI(aIndex) = 0;
 end;
 
+function TGSimpleDiGraph.IsSource(constref aVertex: TVertex): Boolean;
+begin
+  Result := IsSourceI(IndexOf(aVertex));
+end;
+
+function TGSimpleDiGraph.IsSourceI(aIndex: SizeInt): Boolean;
+begin
+  CheckIndexRange(aIndex);
+  Result := (FNodeList[aIndex].AdjList.Count <> 0) and (FNodeList[aIndex].Tag = 0);
+end;
+
+function TGSimpleDiGraph.IsSink(constref aVertex: TVertex): Boolean;
+begin
+  Result := IsSinkI(IndexOf(aVertex));
+end;
+
+function TGSimpleDiGraph.IsSinkI(aIndex: SizeInt): Boolean;
+begin
+  CheckIndexRange(aIndex);
+  Result := (FNodeList[aIndex].AdjList.Count = 0) and (FNodeList[aIndex].Tag <> 0);
+end;
+
 function TGSimpleDiGraph.SourceCount: SizeInt;
 var
   I: SizeInt;
@@ -438,8 +537,8 @@ begin
   CheckIndexRange(aDst);
   if aSrc = aDst then
     exit(True);
-  //if ConnectedValid then
-  //  exit(AdjListPtr[aSrc]^.FCompIndex = AdjListPtr[aDst]^.FCompIndex);
+  if TransClosureValid then
+    exit(FClosureMatrix.Contains(aSrc, aDst));
   Result := CheckPathExists(aSrc, aDst);
 end;
 
@@ -521,6 +620,73 @@ begin
   Result := (System.Length(Dummy) = 0) and (c = VertexCount);
 end;
 
+procedure TGSimpleDiGraph.CreateClosureMatrix;
+var
+  Queue: TIntQueue;
+  Visited: TBitVector;
+  I, Curr, Next: SizeInt;
+begin
+  if IsEmpty then
+    exit;
+  if TransClosureValid then
+    FClosureMatrix.Discard;
+  FClosureMatrix.Size := VertexCount;
+  Visited.Size := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Visited.ClearBits;
+      Curr := I;
+      Visited[Curr] := True;
+      repeat
+        for Next in AdjVerticesI(Curr) do
+          if not Visited[Next] then
+            begin
+              Visited[Next] := True;
+              FClosureMatrix.Add(I, Next);
+              Queue.Enqueue(Next);
+            end;
+      until not Queue.TryDequeue(Curr);
+    end;
+end;
+
+function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Visited: TBitVector;
+  Counter, Curr, Next: SizeInt;
+begin
+  if IsEmpty then
+    exit;
+  AdjEnums := CreateAdjEnumArray;
+  Result := CreateIntArray;
+  Visited.Size := VertexCount;
+  if aOrder = soAsc then
+    Counter := Pred(VertexCount)
+  else
+    Counter := 0;
+  Visited[0] := True;
+  {%H-}Stack.Push(0);
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[Curr].MoveNext then
+      begin
+        Next := AdjEnums[Curr].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Stack.Push(Next);
+          end;
+      end
+    else
+      begin
+        Result[Counter] := Stack.Pop;
+        if aOrder = soAsc then
+          Dec(Counter)
+        else
+          Inc(Counter);
+      end;
+end;
+
 function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
 var
   I: SizeInt;
@@ -536,8 +702,6 @@ begin
       for I := 0 to Pred(VertexCount) do
         Result.FNodeList[I].Assign(FNodeList[I]);
     end;
-  //Result.FConnected := Connected;
-  //Result.FConnectedValid := ConnectedValid;
 end;
 
 function TGSimpleDiGraph.Reverse: TGSimpleDiGraph;
