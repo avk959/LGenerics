@@ -141,6 +141,7 @@ type
     FCompCount: SizeInt;
     FConnected,
     FConnectedValid: Boolean;
+    function  GetConnected: Boolean; inline;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
@@ -161,7 +162,6 @@ type
     function  FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     property  InnerConnected: Boolean read FConnected;
-    property  ConnectedValid: Boolean read FConnectedValid;
   public
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
     procedure Clear; override;
@@ -184,8 +184,6 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
-  { checks whether the graph is connected; an empty graph is considered disconnected }
-    function  Connected: Boolean;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges }
     function  EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -257,6 +255,10 @@ type
   { returns complement of the source graph;
     warning: if the source graph is sparse then complement is dense }
     function  Complement(aOnAddEdge: TOnAddEdge): TGSimpleGraph;
+  { checks whether the cached info about connected is up-to-date }
+    property  ConnectedValid: Boolean read FConnectedValid;
+  { checks whether the graph is connected; an empty graph is considered disconnected }
+    property  Connected: Boolean read GetConnected;
   { count of connected components }
     property  SeparateCount: SizeInt read GetSeparateCount;
   end;
@@ -837,6 +839,11 @@ begin
 end;
 
 { TGSimpleGraph }
+
+function TGSimpleGraph.GetConnected: Boolean;
+begin
+  Result := GetSeparateCount = 1;
+end;
 
 procedure TGSimpleGraph.DoRemoveVertex(aIndex: SizeInt);
 var
@@ -1656,11 +1663,6 @@ begin
   Result := DegreeI(aIndex) = 0;
 end;
 
-function TGSimpleGraph.Connected: Boolean;
-begin
-  Result := SeparateCount = 1;
-end;
-
 function TGSimpleGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   Result := 0;
@@ -1682,9 +1684,13 @@ begin
   CheckIndexRange(aDst);
   if aSrc = aDst then
     exit(True);
-  if ConnectedValid then
-    exit(FNodeList[aSrc].Tag = FNodeList[aDst].Tag);
-  Result := CheckPathExists(aSrc, aDst);
+  //if ConnectedValid then
+  //  exit(FNodeList[aSrc].Tag = FNodeList[aDst].Tag);
+  //Result := CheckPathExists(aSrc, aDst);
+  if SeparateCount > 1 then
+    Result := FNodeList[aSrc].Tag = FNodeList[aDst].Tag
+  else
+    Result := True;
 end;
 
 function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
