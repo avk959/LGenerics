@@ -157,10 +157,8 @@ type
     TNodeList = array of TNode;
 
   const
-    NODE_SIZE               = SizeOf(TNode);
     SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
     USED_FLAG: SizeInt      = SizeInt(1);
-    MAX_CAPACITY: SizeInt   = SizeInt(MAX_CONTAINER_SIZE div NODE_SIZE);
     INITIAL_SIZE            = 16;
 
   public
@@ -190,7 +188,6 @@ type
     class function HashCode(aValue: SizeInt): SizeInt; static; inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static;
     property Shift: SizeInt read FShift;
-    class constructor Init;
     class operator Initialize(var aList: TGHashAdjList);
   public
     function  GetEnumerator: TEnumerator;
@@ -748,16 +745,9 @@ begin
 end;
 
 procedure TGHashAdjList.Expand;
-var
-  NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := Capacity;
-  if OldCapacity > 0 then
-    begin
-      NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
-      if NewCapacity > OldCapacity then
-        Resize(NewCapacity);
-    end
+  if Capacity > 0 then
+    Resize(Capacity shl 1)
   else
     Resize(INITIAL_SIZE);
 end;
@@ -817,14 +807,7 @@ end;
 class function TGHashAdjList.NewList(aCapacity: SizeInt): TNodeList;
 begin
   System.SetLength(Result, aCapacity);
-  System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
-end;
-
-class constructor TGHashAdjList.Init;
-begin
-{$PUSH}{$J+}
-  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
+  System.FillChar(Result[0], aCapacity * SizeOf(TNode), 0);
 end;
 
 class operator TGHashAdjList.Initialize(var aList: TGHashAdjList);
