@@ -23,7 +23,6 @@ unit LGStrConst;
 
 interface
 
-
 resourcestring
 
   SEOptionalValueEmpty     = 'Optional value is empty';
