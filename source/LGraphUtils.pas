@@ -1809,11 +1809,10 @@ end;
 procedure TGCustomGraph.EnsureCapacity(aValue: SizeInt);
 begin
   if aValue > Capacity then
-    begin
-      if aValue > LGUtils.RoundUpTwoPower(MAX_CONTAINER_SIZE div SizeOf(TNode)) then
-        raise ELGraphError.CreateFmt(SECapacityExceedFmt, [aValue]);
-      Resize(LGUtils.RoundUpTwoPower(aValue));
-    end;
+    if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
+      Resize(LGUtils.RoundUpTwoPower(aValue))
+    else
+      raise ELGraphError.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
 procedure TGCustomGraph.TrimToFit;
