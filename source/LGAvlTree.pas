@@ -464,7 +464,7 @@ end;
 
 procedure TGCustomAvlTree.TNode.SetBalance(aValue: SizeInt);
 begin
-  Assert((aValue + 2) in [1..3],
+  Assert(((aValue + 2) >= 1) and ((aValue + 2) <= 3),
     Format('Inconsistent input Balance value(%d) in '+{$I %CURRENTROUTINE%}, [aValue]));
   FParent := (FParent and not SizeInt(3)) or ((aValue + 2) and 3);
 end;
@@ -1893,7 +1893,7 @@ end;
 
 procedure TGAvlTreeNode.SetBalance(aValue: SizeInt);
 begin
-  Assert((aValue + 2) in [1..3],
+  Assert(((aValue + 2) >= 1) and ((aValue + 2) <= 3),
     Format('Inconsistent input Balance value(%d) in '+{$I %CURRENTROUTINE%}, [aValue]));
   FParent := (FParent and not SizeInt(3)) or ((aValue + 2) and 3);
 end;
