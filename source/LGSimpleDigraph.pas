@@ -111,7 +111,7 @@ type
     function  ContainsEulerianCircuit: Boolean;
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
     function  IsDag: Boolean;
-  { creates transitive closure, time and memory cost O(V*E)}
+  { creates transitive closure, time/memory cost O(V*E)??? }
     procedure CreateClosureMatrix;
   { returns array of vertex indices in topological order staring from index 0, without any checks }
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;

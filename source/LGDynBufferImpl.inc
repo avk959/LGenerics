@@ -111,9 +111,9 @@ begin
   if aValue <= DEFAULT_CONTAINER_CAPACITY then
     System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
   else
-    if aValue <= MAX_CAPACITY then
+    if aValue <= MAX_CONTAINER_SIZE div SizeOf(T) then
       begin
-        aValue := Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue));
+        aValue := Math.Min(MAX_CONTAINER_SIZE div SizeOf(T), LGUtils.RoundUpTwoPower(aValue));
         System.SetLength(FItems, aValue);
       end
     else
@@ -216,7 +216,7 @@ end;
 
 constructor TGCustomArrayContainer.Create(aCapacity: SizeInt);
 begin
-  if aCapacity <= MAX_CAPACITY then
+  if aCapacity <= MAX_CONTAINER_SIZE div SizeOf(T) then
     begin
       if aCapacity < 0 then
         aCapacity := 0;
@@ -336,13 +336,10 @@ begin
   if aValue <= DEFAULT_CONTAINER_CAPACITY then
     System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
   else
-    if aValue <= MAX_CAPACITY then
+    if aValue <= MAX_CONTAINER_SIZE div SizeOf(T) then
       begin
-        aValue := LGUtils.RoundUpTwoPower(aValue);
-        if aValue < MAX_CAPACITY then
-          System.SetLength(FItems, aValue)
-        else
-          System.SetLength(FItems, MAX_CAPACITY);
+        aValue := Math.Min(LGUtils.RoundUpTwoPower(aValue), MAX_CONTAINER_SIZE div SizeOf(T));
+        System.SetLength(FItems, aValue);
       end
     else
       raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
@@ -525,12 +522,12 @@ procedure TGCustomRingArrayBuffer.Expand(aValue: SizeInt);
 begin
   if aValue > System.Length(FItems) then
     begin
-      if aValue <= MAX_CAPACITY then
+      if aValue <= MAX_CONTAINER_SIZE div SizeOf(T) then
         begin
           if aValue <= DEFAULT_CONTAINER_CAPACITY then
             aValue :=  DEFAULT_CONTAINER_CAPACITY
           else
-            aValue := Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue));
+            aValue := Math.Min(MAX_CONTAINER_SIZE div SizeOf(T), LGUtils.RoundUpTwoPower(aValue));
           if (ElemCount > 0) and (FHead > 0) then
             Grow(aValue)
           else
@@ -761,7 +758,7 @@ end;
 
 constructor TGCustomRingArrayBuffer.Create(aCapacity: SizeInt);
 begin
-  if aCapacity <= MAX_CAPACITY then
+  if aCapacity <= MAX_CONTAINER_SIZE div SizeOf(T) then
     begin
       if aCapacity < 0 then
         aCapacity := 0;
@@ -895,16 +892,12 @@ end;
 procedure TGLiteRingDynBuffer.Expand(aValue: SizeInt);
 begin
   //there aValue > Capacity
-  if aValue <= MAX_CAPACITY then
+  if aValue <= MAX_CONTAINER_SIZE div SizeOf(T) then
     begin
       if aValue <= DEFAULT_CONTAINER_CAPACITY then
         aValue :=  DEFAULT_CONTAINER_CAPACITY
       else
-        begin
-          aValue := LGUtils.RoundUpTwoPower(aValue);
-          if aValue > MAX_CAPACITY then
-            aValue := MAX_CAPACITY;
-        end;
+        aValue := Math.Min(LGUtils.RoundUpTwoPower(aValue), MAX_CONTAINER_SIZE div SizeOf(T));
       if (Count > 0) and (Head > 0) then
         Grow(aValue)
       else

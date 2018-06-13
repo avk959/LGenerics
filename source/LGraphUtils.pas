@@ -1451,10 +1451,15 @@ end;
 
 procedure TGCustomGraph.Expand;
 begin
-  if Capacity > 0 then
+  if Capacity = 0 then
+    begin
+      InitialAlloc;
+      exit;
+    end;
+  if Capacity < MAX_POSITIVE_POW2 then
     Resize(Capacity shl 1)
   else
-    InitialAlloc;
+    raise ELGraphError.CreateFmt(SECapacityExceedFmt, [Capacity shl 1]);
 end;
 
 function TGCustomGraph.Add(constref v: TVertex; aHash: SizeInt): SizeInt;

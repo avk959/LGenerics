@@ -28,10 +28,6 @@
 
   generic TGCustomArrayContainer<T> = class abstract(specialize TGCustomArrayBuffer<T>)
   protected
-  const
-    // MAX_CAPACITY must be <= Succ(SizeInt.MaxValue div 2)
-    MAX_CAPACITY: SizeInt = SizeInt(MAX_CONTAINER_SIZE div SizeOf(TItem));
-
   type
     TEnumerator = class(TContainerEnumerator)
     private
@@ -81,10 +77,6 @@
 
   { TGLiteDynBuffer: for internal use ONLY }
   generic TGLiteDynBuffer<T> = record
-  const
-    ITEM_SIZE = SizeOf(T);
-    MAX_CAPACITY = SizeInt(MAX_CONTAINER_SIZE div ITEM_SIZE);
-
   type
     PGLiteDynBuffer = ^TGLiteDynBuffer;
     TArray = array of T;
@@ -144,7 +136,7 @@
 
   private
     function  GetCapacity: SizeInt; inline;
-    procedure Expand(aValue: SizeInt); //inline;
+    procedure Expand(aValue: SizeInt);
     procedure AccessEmptyError; inline;
     class operator Initialize(var b: TGLiteDynBuffer);
     class operator Finalize(var b: TGLiteDynBuffer);
@@ -172,9 +164,6 @@
 
   generic TGCustomRingArrayBuffer<T> = class abstract(specialize TGCustomArrayBuffer<T>)
   protected
-  const
-    // MAX_CAPACITY must be <= Succ(SizeInt.MaxValue div 2)
-    MAX_CAPACITY: SizeInt = SizeInt(MAX_CONTAINER_SIZE div SizeOf(TItem));
   type
 
     TEnumerator = class(TContainerEnumerator)
@@ -236,10 +225,6 @@
 
   { TGLiteRingDynBuffer: for internal use ONLY }
   generic TGLiteRingDynBuffer<T> = record
-  const
-    ITEM_SIZE = SizeOf(T);
-    MAX_CAPACITY = SizeInt(MAX_CONTAINER_SIZE div ITEM_SIZE);
-
   type
     PGLiteRingDynBuffer = ^TGLiteRingDynBuffer;
     TArray = array of T;
@@ -310,7 +295,7 @@
     FCount,
     FHead: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    procedure Expand(aValue: SizeInt); //inline;
+    procedure Expand(aValue: SizeInt);
     procedure Grow(aValue: SizeInt);
     procedure Shrink;
     // do not check count !!!
