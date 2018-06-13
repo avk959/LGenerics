@@ -39,6 +39,37 @@ type
 
   TSortOrder = LGUtils.TSortOrder;
 
+  TSquareBitMarix = record
+  private
+  type
+    TBits = array of SizeUInt;
+  const
+{$IF DEFINED(CPU64)}
+    SIZE_LOG  = 6;
+    SIZE_MASK = 63;
+{$ELSEIF DEFINED(CPU32)}
+    SIZE_LOG  = 5;
+    SIZE_MASK = 31;
+{$ELSE}
+    SIZE_LOG  = 4;
+    SIZE_MASK = 15;
+{$ENDIF}
+  var
+    FBits: TBits;
+    FLineBitSize,
+    FLineSize: SizeInt;
+    function  GetBit(I, J: SizeUInt): Boolean; inline;
+    function  GetSize: SizeInt;
+    procedure SetBit(I, J: SizeUInt; aValue: Boolean);
+  public
+    constructor Create(aLineSize: SizeInt);
+    procedure ClearBits; inline;
+    procedure Clear;
+    property  Size: SizeInt read GetSize;
+  { read/write bit with (index < 0) or (index >= Size) will raise exception }
+    property  Bits[I, J: SizeUInt]: Boolean read GetBit write SetBit; default;
+  end;
+
   { TGSimpleDiGraph is simple sparse directed graph based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -47,22 +78,18 @@ type
     specialize TGCustomGraph<TVertex, TEdgeData, TVertexEqRel>)
   protected
   type
-    TClosAdjList = specialize TGHashAdjList<TEmptyRec>;
-    TClosAdjItem = TClosAdjList.TAdjItem;
-    TClosData    = TClosAdjList.TData;
-
     TClosureMatrix = record
     private
       function  GetSize: SizeInt; inline;
-      procedure SetSize(aValue: SizeInt); inline;
+      function  GetValid: Boolean; inline;
+      procedure SetSize(aValue: SizeInt);
     public
-      Items: array of TClosAdjList;
-      Count: SizeInt;
-      function  Reachable(constref aSrc, aDst: SizeInt): Boolean; inline;
-      function  Add(constref aSrc, aDst: SizeInt): Boolean;
+      Matrix: TSquareBitMarix;
+      function  Reachable(aSrc, aDst: SizeInt): Boolean; inline;
+      procedure Add(aSrc, aDst: SizeInt); inline;
       procedure Discard;
       property  Size: SizeInt read GetSize write SetSize;
-      class operator Initialize(var tc: TClosureMatrix);
+      property  Valid: Boolean read GetValid;
     end;
   var
     FClosureMatrix: TClosureMatrix;
@@ -126,51 +153,100 @@ implementation
 uses
   bufstream;
 
+{ TSquareBitMarix }
+
+function TSquareBitMarix.GetBit(I, J: SizeUInt): Boolean;
+begin
+  if (I < SizeUInt(FLineBitSize)) and (J < SizeUInt(FLineBitSize)) then
+    Result := (FBits[SizeInt(I) * FLineSize + SizeInt(J shr SIZE_LOG)] and
+               (SizeUInt(1) shl (J and SIZE_MASK))) <> 0
+  else
+    Result := False;
+end;
+
+function TSquareBitMarix.GetSize: SizeInt;
+begin
+  Result := FLineBitSize;
+end;
+
+procedure TSquareBitMarix.SetBit(I, J: SizeUInt; aValue: Boolean);
+var
+  Pos: SizeInt;
+begin
+  if (I < SizeUInt(FLineBitSize)) and (J < SizeUInt(FLineBitSize)) then
+    begin
+      Pos := SizeInt(I)*FLineSize + SizeInt(J shr SIZE_LOG);
+      if aValue then
+        FBits[Pos] := FBits[Pos] or (SizeUInt(1) shl (J and SIZE_MASK))
+      else
+        FBits[Pos] := FBits[Pos] and not (SizeUInt(1) shl (J and SIZE_MASK));
+    end;
+end;
+
+constructor TSquareBitMarix.Create(aLineSize: SizeInt);
+var
+  s: SizeInt;
+begin
+  if aLineSize > 0 then
+    begin
+      FLineBitSize := aLineSize;
+      FLineSize := Succ(aLineSize shr SIZE_LOG);
+      s := FLineSize * FLineBitSize;
+      System.SetLength(FBits, s);
+      System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
+    end;
+end;
+
+procedure TSquareBitMarix.ClearBits;
+begin
+  System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
+procedure TSquareBitMarix.Clear;
+begin
+  FBits := nil;
+  FLineBitSize := 0;
+  FLineSize := 0;
+end;
+
 { TGSimpleDiGraph.TClosureMatrix }
 
 function TGSimpleDiGraph.TClosureMatrix.GetSize: SizeInt;
 begin
-  Result := System.Length(Items);
+  Result := Matrix.Size;
+end;
+
+function TGSimpleDiGraph.TClosureMatrix.GetValid: Boolean;
+begin
+  Result := Matrix.FBits <> nil;
 end;
 
 procedure TGSimpleDiGraph.TClosureMatrix.SetSize(aValue: SizeInt);
 begin
-  if aValue > Size then
-    System.SetLength(Items, aValue);
+  Matrix.Clear;
+  Matrix := TSquareBitMarix.Create(aValue);
 end;
 
-function TGSimpleDiGraph.TClosureMatrix.Reachable(constref aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDiGraph.TClosureMatrix.Reachable(aSrc, aDst: SizeInt): Boolean;
 begin
-  if aSrc <> aDst then
-    Result := Items[aSrc].Contains(aDst)
-  else
-    Result := True;
+  Result := Matrix[aSrc, aDst];
 end;
 
-function TGSimpleDiGraph.TClosureMatrix.Add(constref aSrc, aDst: SizeInt): Boolean;
+procedure TGSimpleDiGraph.TClosureMatrix.Add(aSrc, aDst: SizeInt);
 begin
-  if (aSrc < 0) or (aSrc >= Size) then
-    exit(False);
-  Result := Items[aSrc].Add(TClosAdjItem.Create(aDst, Default(TClosData)));
-  Inc(Count, Ord(Result));
+  Matrix[aSrc, aDst] := True;
 end;
 
 procedure TGSimpleDiGraph.TClosureMatrix.Discard;
 begin
-  Items := nil;
-  Count := 0;
-end;
-
-class operator TGSimpleDiGraph.TClosureMatrix.Initialize(var tc: TClosureMatrix);
-begin
-  tc.Count := 0;
+  Matrix.Clear;
 end;
 
 { TGSimpleDiGraph }
 
 function TGSimpleDiGraph.GetClosureValid: Boolean;
 begin
-  Result := FClosureMatrix.Items <> nil;
+  Result := FClosureMatrix.Valid;
 end;
 
 procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
@@ -636,7 +712,7 @@ begin
     begin
       Visited.ClearBits;
       Curr := I;
-      Visited[Curr] := True;
+      Visited[I] := True;
       repeat
         for Next in AdjVerticesI(Curr) do
           if not Visited[Next] then
