@@ -481,6 +481,9 @@ type
     property  PagesAllocated: SizeInt read FPageCount;
   end;
 
+const
+  MAX_POSITIVE_POW2 = Succ(High(SizeInt) shr 1);
+
   { returns number of significant bits of aValue }
   function NSB(aValue: SizeUInt): SizeInt; inline;
   function IsTwoPower(aValue: SizeUInt): Boolean; inline;
@@ -511,10 +514,8 @@ begin
 end;
 
 function RoundUpTwoPower(aValue: SizeInt): SizeInt;
-const
-  MAX_ROUND_VALUE = Succ(SizeInt.MaxValue shr 1);
 begin
-  Assert(aValue <= MAX_ROUND_VALUE, Format(SEArgumentTooBigFmt, [{$I %CURRENTROUTINE%}, aValue]));
+  Assert(aValue <= MAX_POSITIVE_POW2, Format(SEArgumentTooBigFmt, [{$I %CURRENTROUTINE%}, aValue]));
   if aValue > 1 then
     begin
       if not LGUtils.IsTwoPower(aValue) then
