@@ -642,11 +642,8 @@ begin
           if not Visited[Next] then
             begin
               Visited[Next] := True;
-              if not FClosureMatrix.Reachable(Curr, Next) then
-                begin
-                  FClosureMatrix.Add(I, Next);
-                  Queue.Enqueue(Next);
-                end;
+              FClosureMatrix.Add(I, Next);
+              Queue.Enqueue(Next);
             end;
       until not Queue.TryDequeue(Curr);
     end;
