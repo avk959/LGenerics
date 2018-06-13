@@ -43,10 +43,6 @@ type
         class function Compare([const[ref]] L, R: TCol): SizeInt; }
   generic TGBaseSortedList<T, TCmpRel> = class(specialize TGCustomCollection<T>)
   protected
-  const
-    // MAX_CAPACITY must be <= Succ(SizeInt.MaxValue div 2)
-    MAX_CAPACITY: SizeInt = SizeInt(MAX_CONTAINER_SIZE div SizeOf(TItem));
-
   type
     TSortedList = specialize TGBaseSortedList<T, TCmpRel>;
     THelper     = class(specialize TGBaseArrayHelper<T, TCmpRel>);
@@ -282,10 +278,6 @@ type
     end;
 
   private
-  const
-    ITEM_SIZE = SizeOf(T);
-    MAX_CAPACITY = MAX_CONTAINER_SIZE div ITEM_SIZE;
-
   type
     THelper = specialize TGBaseArrayHelper<T, TCmpRel>;
 
@@ -347,12 +339,6 @@ type
     end;
 
   private
-  const
-    E_SIZE       = SizeOf(TEntry);
-    ENTRY_SIZE   = E_SIZE or Ord(E_SIZE = 0);
-    MAX_CAPACITY = MAX_CONTAINER_SIZE div ENTRY_SIZE;
-
-  var
     FItems: TEntryList;
     FCount: SizeInt;
     FAllowDuplicates: Boolean;
@@ -689,8 +675,6 @@ type
 
   const
     NULL_INDEX  = SizeInt(-1);
-    NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   public
   type
@@ -763,7 +747,6 @@ type
     function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
-    class constructor Init;
     class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList);
@@ -819,8 +802,6 @@ type
 
   const
     NULL_INDEX  = SizeInt(-1);
-    NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   public
   type
@@ -896,7 +877,6 @@ type
     procedure CheckIndexRange(aIndex: SizeInt); inline;
     procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
     function  GetItemRef(aIndex: SizeInt): PEntry;
-    class constructor Init;
     class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList2);
@@ -1507,9 +1487,9 @@ begin
   if aValue <= DEFAULT_CONTAINER_CAPACITY then
     System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
   else
-    if aValue <= MAX_CAPACITY then
+    if aValue <= MAX_CONTAINER_SIZE div SizeOf(T) then
       begin
-        aValue := Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue));
+        aValue := Math.Min(MAX_CONTAINER_SIZE div SizeOf(T), LGUtils.RoundUpTwoPower(aValue));
         System.SetLength(FItems, aValue);
       end
     else
@@ -1638,7 +1618,7 @@ end;
 
 constructor TGBaseSortedList.Create(aCapacity: SizeInt);
 begin
-  if aCapacity <= MAX_CAPACITY then
+  if aCapacity <= MAX_CONTAINER_SIZE div SizeOf(T) then
     begin
       if aCapacity < 0 then
         aCapacity := 0;
@@ -2141,9 +2121,9 @@ begin
   if aValue <= DEFAULT_CONTAINER_CAPACITY then
     System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
   else
-    if aValue <= MAX_CAPACITY then
+    if aValue <= MAX_CONTAINER_SIZE div SizeOf(T) then
       begin
-        aValue := Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue));
+        aValue := Math.Min(MAX_CONTAINER_SIZE div SizeOf(T), LGUtils.RoundUpTwoPower(aValue));
         System.SetLength(FItems, aValue);
       end
     else
@@ -2199,7 +2179,7 @@ end;
 
 constructor TGSortedList2.Create(aCapacity: SizeInt);
 begin
-  if aCapacity <= MAX_CAPACITY then
+  if aCapacity <= MAX_CONTAINER_SIZE div SizeOf(T) then
     begin
       if aCapacity < 0 then
         aCapacity := 0;
@@ -2332,9 +2312,9 @@ begin
   if aValue <= DEFAULT_CONTAINER_CAPACITY then
     System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
   else
-    if aValue <= MAX_CAPACITY then
+    if aValue <= MAX_CONTAINER_SIZE div SizeOf(TEntry) then
       begin
-        aValue := Math.Min(MAX_CAPACITY, LGUtils.RoundUpTwoPower(aValue));
+        aValue := Math.Min(MAX_CONTAINER_SIZE div SizeOf(TEntry), LGUtils.RoundUpTwoPower(aValue));
         System.SetLength(FItems, aValue);
       end
     else
@@ -2390,7 +2370,7 @@ end;
 
 constructor TGSortedListTable.Create(aCapacity: SizeInt);
 begin
-  if aCapacity <= MAX_CAPACITY then
+  if aCapacity <= MAX_CONTAINER_SIZE div SizeOf(TEntry) then
     begin
       if aCapacity < 0 then
         aCapacity := 0;
@@ -3849,7 +3829,7 @@ begin
   OldCapacity := Capacity;
   if OldCapacity > 0 then
     begin
-      if OldCapacity < MAX_CAPACITY then
+      if OldCapacity < LGUtils.RoundUpTwoPower(MAX_CONTAINER_SIZE div SizeOf(TNode)) then
         Resize(OldCapacity shl 1)
       else
         CapacityExceedError(OldCapacity shl 1);
@@ -3928,7 +3908,7 @@ procedure TGLiteHashList.DoInsert(aIndex: SizeInt; constref aValue: T);
 begin
   if aIndex < Count then
     begin
-      System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * NODE_SIZE);
+      System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * SizeOf(TNode));
       System.FillChar(FNodeList[aIndex].Data, SizeOf(T), 0);
       FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
       FNodeList[aIndex].Data := aValue;
@@ -3945,7 +3925,7 @@ begin
   if aIndex < Count then
     begin
       FNodeList[aIndex].Data := Default(T);
-      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * NODE_SIZE);
+      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * SizeOf(TNode));
       System.FillChar(FNodeList[Count].Data, SizeOf(T), 0);
       Rehash;
     end
@@ -4015,13 +3995,6 @@ begin
     IndexOutOfBoundError(aIndex);
 end;
 
-class constructor TGLiteHashList.Init;
-begin
-{$PUSH}{$J+}
-  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
-end;
-
 class procedure TGLiteHashList.IndexOutOfBoundError(aIndex: SizeInt);
 begin
   raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
@@ -4087,11 +4060,10 @@ begin
   if aValue <= DEFAULT_CONTAINER_CAPACITY then
     aValue := DEFAULT_CONTAINER_CAPACITY
   else
-    if aValue <= MAX_CAPACITY then
-      aValue := LGUtils.RoundUpTwoPower(aValue)
+    if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
+      Resize(LGUtils.RoundUpTwoPower(aValue))
     else
       CapacityExceedError(aValue);
-  Resize(aValue);
 end;
 
 procedure TGLiteHashList.TrimToFit;
@@ -4392,7 +4364,7 @@ begin
   OldCapacity := Capacity;
   if OldCapacity > 0 then
     begin
-      if OldCapacity < MAX_CAPACITY then
+      if OldCapacity < MAX_CONTAINER_SIZE div SizeOf(TNode) then
         Resize(OldCapacity shl 1)
       else
         CapacityExceedError(OldCapacity shl 1);
@@ -4470,7 +4442,7 @@ procedure TGLiteHashList2.DoInsert(aIndex: SizeInt; constref e: TEntry);
 begin
   if aIndex < Count then
     begin
-      System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * NODE_SIZE);
+      System.Move(FNodeList[aIndex], FNodeList[Succ(aIndex)], (Count - aIndex) * SizeOf(TNode));
       System.FillChar(FNodeList[aIndex].Data, SizeOf(TEntry), 0);
       FNodeList[aIndex].Hash := TKeyEqRel.HashCode(e.Key);
       FNodeList[aIndex].Data := e;
@@ -4487,7 +4459,7 @@ begin
   if aIndex < Count then
     begin
       FNodeList[aIndex].Data := Default(TEntry);
-      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * NODE_SIZE);
+      System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (Count - aIndex) * SizeOf(TNode));
       System.FillChar(FNodeList[Count].Data, SizeOf(TEntry), 0);
       Rehash;
     end
@@ -4563,13 +4535,6 @@ begin
   Result := @FNodeList[aIndex].Data;
 end;
 
-class constructor TGLiteHashList2.Init;
-begin
-{$PUSH}{$J+}
-  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
-end;
-
 class procedure TGLiteHashList2.IndexOutOfBoundError(aIndex: SizeInt);
 begin
   raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
@@ -4635,7 +4600,7 @@ begin
   if aValue <= DEFAULT_CONTAINER_CAPACITY then
     aValue := DEFAULT_CONTAINER_CAPACITY
   else
-    if aValue <= MAX_CAPACITY then
+    if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
       aValue := LGUtils.RoundUpTwoPower(aValue)
     else
       CapacityExceedError(aValue);
