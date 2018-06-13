@@ -350,6 +350,9 @@ type
 
   { TTextFileWrite is small wrapper around TextFile with buffered write as a bonus;
      it understand 'Output', 'StdOut' and 'StdErr' as file names in case-insensitive manner }
+
+  { TTextFileWriter }
+
   TTextFileWriter = class sealed
   private
   const
@@ -366,6 +369,7 @@ type
     FIsOpen,
     FIsStandard,
     FAppend: Boolean;
+    function  GetFile: PText; inline;
     function  IsStandardFile: Boolean; inline;
     procedure Open;
     procedure AppendFile;
@@ -384,6 +388,7 @@ type
     property IsOpen: Boolean read FIsOpen;
     property ExceptionClass: string read FExceptClass;
     property ExceptionMessage: string read FExceptMsg;
+    property OutFile: PText read GetFile;
   end;
 
   TParamKind = (pkOption, pkLongOption, pkArgument);
@@ -5153,6 +5158,11 @@ begin
     Result := False;
   end;
   FIsStandard := Result;
+end;
+
+function TTextFileWriter.GetFile: PText;
+begin
+  Result := @FFile;
 end;
 
 {$PUSH}{$IOCHECKS ON}
