@@ -37,7 +37,7 @@ resourcestring
   SEIndexOutOfBoundsFmt    = 'Index out of bounds(%d)';
   SEKeyNotFound            = 'Key not found';
   SEValueNotFound          = 'Value not found';
-  SEUnknownSortAlgoFmt     = 'Unknown sort algprithm(%u)';
+  //SEUnknownSortAlgoFmt     = 'Unknown sort algorithm(%u)';
   SECantAcceptNegCountFmt  = 'The %s''s TEntry.Count can not accept negative value';
   SECantAcceptNegCount     = 'Can not accept negative TEntry.Count value';
   SEInternalDataInconsist  = 'Internal data inconsistency';
