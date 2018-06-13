@@ -58,7 +58,7 @@ type
     public
       Items: array of TClosAdjList;
       Count: SizeInt;
-      function  Contains(constref aSrc, aDst: SizeInt): Boolean; inline;
+      function  Reachable(constref aSrc, aDst: SizeInt): Boolean; inline;
       function  Add(constref aSrc, aDst: SizeInt): Boolean;
       procedure Discard;
       property  Size: SizeInt read GetSize write SetSize;
@@ -111,7 +111,7 @@ type
     function  ContainsEulerianCircuit: Boolean;
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
     function  IsDag: Boolean;
-  { creates transitive closure, time/memory cost O(V*E)??? }
+  { creates transitive closure, time cost O(V(V+E)), memory cost O(V^2) }
     procedure CreateClosureMatrix;
   { returns array of vertex indices in topological order staring from index 0, without any checks }
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
@@ -139,12 +139,12 @@ begin
     System.SetLength(Items, aValue);
 end;
 
-function TGSimpleDiGraph.TClosureMatrix.Contains(constref aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDiGraph.TClosureMatrix.Reachable(constref aSrc, aDst: SizeInt): Boolean;
 begin
-  if (aSrc >= 0) and (aSrc < Size) then
+  if aSrc <> aDst then
     Result := Items[aSrc].Contains(aDst)
   else
-    Result := False;
+    Result := True;
 end;
 
 function TGSimpleDiGraph.TClosureMatrix.Add(constref aSrc, aDst: SizeInt): Boolean;
@@ -538,7 +538,7 @@ begin
   if aSrc = aDst then
     exit(True);
   if TransClosureValid then
-    exit(FClosureMatrix.Contains(aSrc, aDst));
+    exit(FClosureMatrix.Reachable(aSrc, aDst));
   Result := CheckPathExists(aSrc, aDst);
 end;
 
@@ -642,8 +642,11 @@ begin
           if not Visited[Next] then
             begin
               Visited[Next] := True;
-              FClosureMatrix.Add(I, Next);
-              Queue.Enqueue(Next);
+              if not FClosureMatrix.Reachable(Curr, Next) then
+                begin
+                  FClosureMatrix.Add(I, Next);
+                  Queue.Enqueue(Next);
+                end;
             end;
       until not Queue.TryDequeue(Curr);
     end;
