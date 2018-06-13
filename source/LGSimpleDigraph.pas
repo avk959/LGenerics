@@ -98,6 +98,7 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): SizeInt;
+    procedure FillMartixR(aSrc, aDst: SizeInt);
   public
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -340,6 +341,16 @@ begin
     else
       InStack[Stack.Pop] := False;
   Result := Counter;
+end;
+
+procedure TGSimpleDiGraph.FillMartixR(aSrc, aDst: SizeInt);
+var
+  Next: SizeInt;
+begin
+  FClosureMatrix.Add(aSrc, aDst);
+  for Next in AdjVerticesI(aDst) do
+    if not FClosureMatrix.Reachable(aSrc, Next) then
+      FillMartixR(aSrc, Next);
 end;
 
 function TGSimpleDiGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -699,25 +710,21 @@ end;
 procedure TGSimpleDiGraph.CreateClosureMatrix;
 var
   Queue: TIntQueue;
-  Visited: TBitVector;
   I, Curr, Next: SizeInt;
 begin
   if IsEmpty then
     exit;
   if TransClosureValid then
-    FClosureMatrix.Discard;
+    exit;
   FClosureMatrix.Size := VertexCount;
-  Visited.Size := VertexCount;
   for I := 0 to Pred(VertexCount) do
     begin
-      Visited.ClearBits;
+      //FillMartixR(I, I);
       Curr := I;
-      Visited[I] := True;
       repeat
         for Next in AdjVerticesI(Curr) do
-          if not Visited[Next] then
+          if not FClosureMatrix.Reachable(I, Next) then
             begin
-              Visited[Next] := True;
               FClosureMatrix.Add(I, Next);
               Queue.Enqueue(Next);
             end;
