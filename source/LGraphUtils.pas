@@ -1630,9 +1630,9 @@ begin
           begin
             //on white
             Visited[Next] := True;
-            Stack.Push(Next);
             Inc(Result);
             //on gray
+            Stack.Push(Next);
           end;
       end
     else
