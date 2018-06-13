@@ -96,7 +96,7 @@ begin
     try
       if IsOpen then
         for Item in THelper.Sorted(Counter.ToEntryArray, @CompareItem) do
-          Add(IntToStr(Item.Count) + #9 + Item.Key)
+          WriteLn(OutFile^, Item.Count,  #9, Item.Key)
       else
         WriteLn(Format(sFailedCreateFmt, [OutFileName]));
     finally

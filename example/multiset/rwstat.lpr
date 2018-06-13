@@ -89,7 +89,7 @@ begin
     try
       if IsOpen then
         for Item in Counter.Instance.Entries.Sorted(@CompareItem) do
-          Add(IntToStr(Item.Count) + #9 + Item.Key)
+          Writeln(OutFile^, Item.Count, #9, Item.Key)
       else
         WriteLn(Format(sFailedCreateFmt, [OutFileName]));
     finally
