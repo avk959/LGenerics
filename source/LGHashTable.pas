@@ -42,18 +42,11 @@ type
   strict protected
   const
     MIN_LOAD_FACTOR  = 0.25;
-    //ENTRY_SIZE       = SizeOf(TEntry); - does not compiles with TMapEntry
-    //workaround :
-    /////////////////////////////////////////////
-    E_SIZE           = SizeOf(TEntry);
-    ENTRY_SIZE       = E_SIZE or Ord(E_SIZE = 0);
-    /////////////////////////////////////////////
 
   type
     TCustomHashTable = specialize TGCustomHashTable<TKey, TEntry>;
     THashTableClass  = class of TGCustomHashTable;
-    //to supress unnecessary refcounting:
-    TFakeEntry = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(ENTRY_SIZE)] of Byte{$ELSE}TEntry{$ENDIF};
+
   var
     FCount,
     FExpandTreshold: SizeInt;
@@ -449,15 +442,7 @@ type
   { TGHashTableLP: simplified version TGOpenAddrLP }
   generic TGHashTableLP<TKey, TEntry, TEqRel> = class
   strict protected
-  const
-    //ENTRY_SIZE       = SizeOf(TEntry); does not compiles with TMapEntry
-    //workaround :
-    /////////////////////////////////////////////
-    E_SIZE           = SizeOf(TEntry);
-    ENTRY_SIZE       = E_SIZE or Ord(E_SIZE = 0);
-    /////////////////////////////////////////////
   type
-    TFakeEntry = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(ENTRY_SIZE)] of Byte{$ELSE}TEntry{$ENDIF};
     TNode = record
       Hash: SizeInt;
       Data: TEntry;
@@ -978,7 +963,7 @@ begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
                       TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeEntry(FList[I].Data) := Default(TFakeEntry);
+                      TFakeNode(FList[I].Data) := Default(TFakeNode);
                       break;
                     end;
                   h := TProbeSeq.NextProbe(h, J) and Mask;// probe sequence
@@ -2691,7 +2676,7 @@ begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
                       TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeEntry(FList[I].Data) := Default(TFakeEntry);
+                      TFakeNode(FList[I].Data) := Default(TFakeNode);
                       break;
                     end;
                   h := Succ(h) and Mask;     // probe sequence
