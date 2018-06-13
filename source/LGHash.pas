@@ -303,8 +303,8 @@ class function TxxHash32LE.HashGuid(constref aValue: TGuid; aSeed: DWord): DWord
 var
   g: TDWords4 absolute aValue;
 begin
-  Result := RolDWord(RolDWord(DWord(aSeed + c1 + c2) + g.D1 * c2, 13) * c1, 1) +
-            RolDWord(RolDWord(DWord(aSeed      + c2) + g.D2 * c2, 13) * c1, 7) +
+  Result := RolDWord(RolDWord(DWord(aSeed + c1 + c2) {%H-}+ g.D1 * c2, 13) * c1, 1) +
+            RolDWord(RolDWord(DWord(aSeed      + c2) {%H-}+ g.D2 * c2, 13) * c1, 7) +
             RolDWord(RolDWord(DWord(aSeed          ) + g.D3 * c2, 13) * c1, 12) +
             RolDWord(RolDWord(DWord(aSeed      - c1) + g.D4 * c2, 13) * c1, 18) + SizeOf(TGuid);
   Result := (Result xor Result shr 15) * c2;
@@ -1051,9 +1051,9 @@ var
 begin
 
   Result :=  RolDWord((RolDWord(aSeed  xor DWord(RolDWord(g.D1 * c1, 15) * c2), 13) * 5 + c3)
-                                       xor DWord(RolDWord(g.D2 * c1, 15) * c2), 13) * 5 + c3;
+                                  {%H-}xor DWord(RolDWord(g.D2 * c1, 15) * c2), 13) * 5 + c3;
   Result := (RolDWord((RolDWord(Result xor DWord(RolDWord(g.D3 * c1, 15) * c2), 13) * 5 + c3)
-                                       xor DWord(RolDWord(g.D4 * c1, 15) * c2), 13) * 5 + c3)
+                                  {%H-}xor DWord(RolDWord(g.D4 * c1, 15) * c2), 13) * 5 + c3)
                                        xor DWord(SizeOf(aValue));
 
   Result := (Result xor Result shr 16) * c4;
