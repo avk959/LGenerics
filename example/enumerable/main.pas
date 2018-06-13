@@ -393,7 +393,7 @@ begin
 
     mmResult.Append('Executing FEmployees.Select.Total, grouping by location:');
     for s in TMapping.Apply(FEmployees, @GetLocation).Distinct(@StringCmp) do
-      mmResult.Append(s + #9 + FEmployees.Select(@RightLocation).Total.ToString);
+      mmResult.Append(s + #9 + IntToStr(FEmployees.Select(@RightLocation).Total));
   finally
     mmResult.Lines.EndUpdate;
   end;
