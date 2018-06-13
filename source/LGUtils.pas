@@ -67,7 +67,7 @@ type
   ELGTableError         = class(Exception);
 
 const
-  MAX_CONTAINER_SIZE         = Succ(SizeInt.MaxValue shr 2);
+  MAX_CONTAINER_SIZE         = Succ(High(SizeInt) shr 2);
   ARRAY_INITIAL_SIZE         = 32;// * must be power of 2 *
   DEFAULT_CONTAINER_CAPACITY = 32;// * must be power of 2 *
   BOUNDS_BOTH                = TRangeBounds([rbLow, rbHigh]);
