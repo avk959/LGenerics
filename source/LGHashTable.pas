@@ -530,18 +530,7 @@ type
 
   generic TGLiteHashTableLP<TKey, TEntry, TEqRel> = record
   private
-  const
-    //ENTRY_SIZE       = SizeOf(TEntry); - does not compiles with TMapEntry
-    //workaround :
-    /////////////////////////////////////////////
-    E_SIZE           = SizeOf(TEntry);
-    ENTRY_SIZE       = E_SIZE or Ord(E_SIZE = 0);
-    /////////////////////////////////////////////
-
   type
-    //to supress unnecessary refcounting:
-    TFakeEntry = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(ENTRY_SIZE)] of Byte{$ELSE}TEntry{$ENDIF};
-
     TNode = record
       Hash: SizeInt;
       Data: TEntry;
@@ -702,18 +691,7 @@ type
   { TGLiteIntHashTable: for integer keys only}
   generic TGLiteIntHashTable<TKey, TEntry> = record
   private
-  const
-    //ENTRY_SIZE       = SizeOf(TEntry); - does not compiles with TMapEntry
-    //workaround :
-    /////////////////////////////////////////////
-    E_SIZE           = SizeOf(TEntry);
-    ENTRY_SIZE       = E_SIZE or Ord(E_SIZE = 0);
-    /////////////////////////////////////////////
-
   type
-    //to supress unnecessary refcounting:
-    TFakeEntry = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(ENTRY_SIZE)] of Byte{$ELSE}TEntry{$ENDIF};
-
     TNode = record
       Hash: SizeInt;
       Data: TEntry;
@@ -963,7 +941,7 @@ begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
                       TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeNode(FList[I].Data) := Default(TFakeNode);
+                      TFakeNode(FList[I]) := Default(TFakeNode);
                       break;
                     end;
                   h := TProbeSeq.NextProbe(h, J) and Mask;// probe sequence
@@ -2676,7 +2654,7 @@ begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
                       TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeNode(FList[I].Data) := Default(TFakeNode);
+                      TFakeNode(FList[I]) := Default(TFakeNode);
                       break;
                     end;
                   h := Succ(h) and Mask;     // probe sequence
@@ -3064,7 +3042,7 @@ begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
                       TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeEntry(FList[I].Data) := Default(TFakeEntry);
+                      TFakeNode(FList[I]) := Default(TFakeNode);
                       break;
                     end;
                   h := Succ(h) and Mask;     // probe sequence
@@ -3635,7 +3613,7 @@ begin
                   if aTarget[h].Hash = 0 then // -> target node is empty
                     begin
                       TFakeNode(aTarget[h]) := TFakeNode(FList[I]);
-                      TFakeEntry(FList[I].Data) := Default(TFakeEntry);
+                      TFakeNode(FList[I]) := Default(TFakeNode);
                       break;
                     end;
                   h := Succ(h) and Mask;     // probe sequence

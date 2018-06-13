@@ -383,10 +383,6 @@ type
   type
     PAvlTree  = ^TGLiteAvlTree;
 
-  const
-    NODE_SIZE              = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = (High(SizeInt) shr 2) div NODE_SIZE;
-
   public
   type
 
@@ -429,7 +425,6 @@ type
     procedure RemoveNode(aNode: SizeInt);
     procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
     property  Root: SizeInt read GetRoot write SetRoot;
-    class constructor Init;
     class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
   public
     function  GetEnumerator: TEnumerator;
@@ -2641,11 +2636,8 @@ begin
   if aValue < DEFAULT_CONTAINER_CAPACITY then
     System.SetLength(FNodes, DEFAULT_CONTAINER_CAPACITY)
   else
-    if aValue < MAX_CAPACITY then
-      begin
-        aValue := LGUtils.RoundUpTwoPower(aValue);
-        System.SetLength(FNodes, aValue);
-      end
+    if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
+      System.SetLength(FNodes, LGUtils.RoundUpTwoPower(aValue))
     else
       raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
   if OldLen = 0 then
@@ -2672,7 +2664,7 @@ begin
   FNodes[aNode].Data := Default(TEntry);
   if aNode < Last then
     begin
-      System.Move(FNodes[Last], FNodes[aNode], NODE_SIZE);
+      System.Move(FNodes[Last], FNodes[aNode], SizeOf(TNode));
       System.FillChar(FNodes[Last].Data , SizeOf(TEntry), 0); //////////////
       if Root = Last then
         Root := aNode;
@@ -3195,13 +3187,6 @@ begin
            end;
       end;
     end;
-end;
-
-class constructor TGLiteAvlTree.Init;
-begin
-{$PUSH}{$J+}
-  MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
 end;
 
 class operator TGLiteAvlTree.Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
