@@ -1805,7 +1805,7 @@ begin
   OldLen := Size;
   if aValue > OldLen then
     begin
-      aValue := aValue shr SIZE_LOG + Ord(aValue and SIZE_MASK <> 0);
+      aValue := Succ(aValue shr SIZE_LOG);
       System.SetLength(FBits, aValue);
       System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
