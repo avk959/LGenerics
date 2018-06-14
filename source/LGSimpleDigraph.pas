@@ -56,11 +56,10 @@ type
 {$ENDIF}
   var
     FBits: TBits;
-    FLineBitSize,
-    FLineSize: SizeInt;
+    FSize: SizeUInt;
     function  GetBit(I, J: SizeUInt): Boolean; inline;
     function  GetSize: SizeInt;
-    procedure SetBit(I, J: SizeUInt; aValue: Boolean);
+    procedure SetBit(I, J: SizeUInt; aValue: Boolean); inline;
   public
     constructor Create(aLineSize: SizeInt);
     procedure ClearBits; inline;
@@ -87,7 +86,7 @@ type
       Matrix: TSquareBitMarix;
       function  Reachable(aSrc, aDst: SizeInt): Boolean; inline;
       procedure Add(aSrc, aDst: SizeInt); inline;
-      procedure Discard;
+      procedure Discard; inline;
       property  Size: SizeInt read GetSize write SetSize;
       property  Valid: Boolean read GetValid;
     end;
@@ -139,10 +138,12 @@ type
     function  ContainsEulerianCircuit: Boolean;
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
     function  IsDag: Boolean;
+    function  MaxTransClosureSize: SizeInt; inline;
   { creates transitive closure, time cost O(V(V+E)), memory cost O(V^2) }
-    procedure CreateClosureMatrix;
-  { returns array of vertex indices in topological order staring from index 0, without any checks }
-    function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
+    procedure CreateClosureMatrix; //todo: for dag ??
+  { returns array of vertex indices in topological order staring from aRoot, without any acyclic checks }
+    function  TopologicalSort(constref aRoot: TVertex; aOrder: TSortOrder = soAsc): TIntArray; inline;
+    function  TopologicalSortI(aRoot: SizeInt; aOrder: TSortOrder = soAsc): TIntArray;
 
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
@@ -158,30 +159,27 @@ uses
 
 function TSquareBitMarix.GetBit(I, J: SizeUInt): Boolean;
 begin
-  if (I < SizeUInt(FLineBitSize)) and (J < SizeUInt(FLineBitSize)) then
-    Result := (FBits[SizeInt(I) * FLineSize + SizeInt(J shr SIZE_LOG)] and
-               (SizeUInt(1) shl (J and SIZE_MASK))) <> 0
+  if (I < FSize) and (J < FSize) then
+    Result :=
+      (FBits[(I * FSize + J) shr SIZE_LOG] and (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK))) <> 0
   else
     Result := False;
 end;
 
 function TSquareBitMarix.GetSize: SizeInt;
 begin
-  Result := FLineBitSize;
+  Result := FSize;
 end;
 
 procedure TSquareBitMarix.SetBit(I, J: SizeUInt; aValue: Boolean);
-var
-  Pos: SizeInt;
 begin
-  if (I < SizeUInt(FLineBitSize)) and (J < SizeUInt(FLineBitSize)) then
-    begin
-      Pos := SizeInt(I)*FLineSize + SizeInt(J shr SIZE_LOG);
-      if aValue then
-        FBits[Pos] := FBits[Pos] or (SizeUInt(1) shl (J and SIZE_MASK))
-      else
-        FBits[Pos] := FBits[Pos] and not (SizeUInt(1) shl (J and SIZE_MASK));
-    end;
+  if (I < FSize) and (J < FSize) then
+    if aValue then
+      FBits[(I * FSize + J) shr SIZE_LOG] :=
+      FBits[(I * FSize + J) shr SIZE_LOG] or (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK))
+    else
+      FBits[(I * FSize + J) shr SIZE_LOG] :=
+      FBits[(I * FSize + J) shr SIZE_LOG] and not (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK));
 end;
 
 constructor TSquareBitMarix.Create(aLineSize: SizeInt);
@@ -190,9 +188,8 @@ var
 begin
   if aLineSize > 0 then
     begin
-      FLineBitSize := aLineSize;
-      FLineSize := Succ(aLineSize shr SIZE_LOG);
-      s := FLineSize * FLineBitSize;
+      FSize := aLineSize;
+      s := Succ((FSize * FSize) shr SIZE_LOG);
       System.SetLength(FBits, s);
       System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
     end;
@@ -206,8 +203,8 @@ end;
 procedure TSquareBitMarix.Clear;
 begin
   FBits := nil;
-  FLineBitSize := 0;
-  FLineSize := 0;
+  FSize := 0;
+  FSize := 0;
 end;
 
 { TGSimpleDiGraph.TClosureMatrix }
@@ -697,14 +694,24 @@ end;
 function TGSimpleDiGraph.IsDag: Boolean;
 var
   Dummy: TIntArray = nil;
-  c: SizeInt;
+  I: SizeInt;
 begin
   if IsEmpty then
     exit(False);
   if VertexCount = 1 then
     exit(True);
-  c := FindCycle(0, Dummy);
-  Result := (System.Length(Dummy) = 0) and (c = VertexCount);
+  I := -1;
+  repeat Inc(I);
+  until (I = VertexCount) or ((FNodeList[I].AdjList.Count <> 0) and (FNodeList[I].Tag = 0));
+  if I = VertexCount then
+    exit(False);
+  I := FindCycle(I, Dummy);
+  Result := (System.Length(Dummy) = 0) and (I = VertexCount);
+end;
+
+function TGSimpleDiGraph.MaxTransClosureSize: SizeInt;
+begin
+  Result := Trunc(Sqrt(High(SizeUInt)));
 end;
 
 procedure TGSimpleDiGraph.CreateClosureMatrix;
@@ -716,6 +723,8 @@ begin
     exit;
   if TransClosureValid then
     exit;
+  if VertexCount >= MaxTransClosureSize then
+    raise ELGraphError.CreateFmt(SETransClosExceedFmt, [VertexCount]);
   FClosureMatrix.Size := VertexCount;
   for I := 0 to Pred(VertexCount) do
     begin
@@ -732,28 +741,29 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
+function TGSimpleDiGraph.TopologicalSort(constref aRoot: TVertex; aOrder: TSortOrder): TIntArray;
+begin
+  Result := TopologicalSortI(IndexOf(aRoot), aOrder);
+end;
+
+function TGSimpleDiGraph.TopologicalSortI(aRoot: SizeInt; aOrder: TSortOrder): TIntArray;
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Visited: TBitVector;
-  Counter, Curr, Next: SizeInt;
+  Counter, Next: SizeInt;
 begin
-  if IsEmpty then
-    exit;
+  CheckIndexRange(aRoot);
   AdjEnums := CreateAdjEnumArray;
   Result := CreateIntArray;
   Visited.Size := VertexCount;
-  if aOrder = soAsc then
-    Counter := Pred(VertexCount)
-  else
-    Counter := 0;
-  Visited[0] := True;
-  {%H-}Stack.Push(0);
-  while Stack.TryPeek(Curr) do
-    if AdjEnums[Curr].MoveNext then
+  Counter := VertexCount;
+  Visited[aRoot] := True;
+  {%H-}Stack.Push(aRoot);
+  while Stack.TryPeek(aRoot) do
+    if AdjEnums[aRoot].MoveNext then
       begin
-        Next := AdjEnums[Curr].Current;
+        Next := AdjEnums[aRoot].Current;
         if not Visited[Next] then
           begin
             Visited[Next] := True;
@@ -762,12 +772,11 @@ begin
       end
     else
       begin
+        Dec(Counter);
         Result[Counter] := Stack.Pop;
-        if aOrder = soAsc then
-          Dec(Counter)
-        else
-          Inc(Counter);
       end;
+  if aOrder = soDesc then
+    TIntHelper.Reverse(Result);
 end;
 
 function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
