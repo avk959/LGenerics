@@ -348,6 +348,7 @@ type
     class operator Copy(constref aSrc: TBitVector; var aDst: TBitVector);
   public
     procedure ClearBits; inline;
+  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
     property  Size: SizeInt read GetSize write SetSize;
   { read/write bit with (index < 0) or (index >= Size) will raise exception }
     property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
