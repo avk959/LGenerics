@@ -263,11 +263,11 @@ type
     property  SeparateCount: SizeInt read GetSeparateCount;
   end;
 
-  { TGOutline: simple outline;
+  { TGChart: simple outline;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGOutline<TVertex, TVertexEqRel> = class(specialize TGSimpleGraph<TVertex, TEmptyRec, TVertexEqRel>)
+  generic TGChart<TVertex, TVertexEqRel> = class(specialize TGSimpleGraph<TVertex, TEmptyRec, TVertexEqRel>)
   protected
     procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
     procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
@@ -282,15 +282,15 @@ type
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
     procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
     procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
-    function  SeparateGraph(constref aVertex: TVertex): TGOutline;
-    function  SeparateGraphI(aIndex: SizeInt): TGOutline;
-    function  Clone: TGOutline;
-    function  Complement: TGOutline;
+    function  SeparateGraph(constref aVertex: TVertex): TGChart;
+    function  SeparateGraphI(aIndex: SizeInt): TGChart;
+    function  Clone: TGChart;
+    function  Complement: TGChart;
   end;
 
-  { TIntOutline }
+  { TIntChart }
 
-  TIntOutline = class(specialize TGOutline<SizeInt, SizeInt>)
+  TIntChart = class(specialize TGChart<SizeInt, SizeInt>)
   protected
     procedure WriteVertex(aStream: TStream; constref aValue: SizeInt);
     procedure ReadVertex(aStream: TStream; out aValue: SizeInt);
@@ -299,15 +299,15 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
-    function  SeparateGraph(aVertex: SizeInt): TIntOutline;
-    function  SeparateGraphI(aIndex: SizeInt): TIntOutline;
-    function  Clone: TIntOutline;
-    function  Complement: TIntOutline;
+    function  SeparateGraph(aVertex: SizeInt): TIntChart;
+    function  SeparateGraphI(aIndex: SizeInt): TIntChart;
+    function  Clone: TIntChart;
+    function  Complement: TIntChart;
   end;
 
-  { TStrOutline
+  { TStrChart
     note: SaveToStream limitation for max string length = High(SmallInt) }
-  TStrOutline = class(specialize TGOutline<string, string>)
+  TStrChart = class(specialize TGChart<string, string>)
   protected
     procedure WriteVertex(aStream: TStream; constref aValue: string);
     procedure ReadVertex(aStream: TStream; out aValue: string);
@@ -316,10 +316,10 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
-    function  SeparateGraph(const aVertex: string): TStrOutline;
-    function  SeparateGraphI(aIndex: SizeInt): TStrOutline;
-    function  Clone: TStrOutline;
-    function  Complement: TStrOutline;
+    function  SeparateGraph(const aVertex: string): TStrChart;
+    function  SeparateGraphI(aIndex: SizeInt): TStrChart;
+    function  Clone: TStrChart;
+    function  Complement: TStrChart;
   end;
 
   THandle = LGUtils.THandle;
@@ -486,8 +486,8 @@ type
     constructor Create(const aWeight: ValReal);
   end;
 
-  { TPointsOutline }
-  TPointsOutline = class(specialize TGWeighedGraph<TPoint, ValReal, TRealPointEdge, TPoint>)
+  { TPointsChart }
+  TPointsChart = class(specialize TGWeighedGraph<TPoint, ValReal, TRealPointEdge, TPoint>)
   protected
     procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
     procedure WritePoint(aStream: TStream; constref aValue: TPoint);
@@ -505,10 +505,10 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
-    function  SeparateGraph(aVertex: TPoint): TPointsOutline;
-    function  SeparateGraphI(aIndex: SizeInt): TPointsOutline;
-    function  Clone: TPointsOutline;
-    function  Complement: TPointsOutline;
+    function  SeparateGraph(aVertex: TPoint): TPointsChart;
+    function  SeparateGraphI(aIndex: SizeInt): TPointsChart;
+    function  Clone: TPointsChart;
+    function  Complement: TPointsChart;
   end;
 
 implementation
@@ -2086,143 +2086,143 @@ begin
         end;
 end;
 
-{ TGOutline }
+{ TGChart }
 
-procedure TGOutline.WriteData(aStream: TStream; constref aValue: TEmptyRec);
+procedure TGChart.WriteData(aStream: TStream; constref aValue: TEmptyRec);
 begin
 //do nothing
 end;
 
-procedure TGOutline.ReadData(aStream: TStream; out aValue: TEmptyRec);
+procedure TGChart.ReadData(aStream: TStream; out aValue: TEmptyRec);
 begin
   //do nothing
 end;
 
-function TGOutline.AddEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGChart.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := inherited AddEdge(aSrc, aDst);
 end;
 
-function TGOutline.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGChart.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := inherited AddEdgeI(aSrc, aDst);
 end;
 
-function TGOutline.EnsureConnected: SizeInt;
+function TGChart.EnsureConnected: SizeInt;
 begin
   Result := inherited EnsureConnected(nil);
 end;
 
-function TGOutline.RemoveCutPoints(constref aRoot: TVertex): SizeInt;
+function TGChart.RemoveCutPoints(constref aRoot: TVertex): SizeInt;
 begin
   Result := inherited RemoveCutPoints(aRoot, nil);
 end;
 
-function TGOutline.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
+function TGChart.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
 begin
   Result := inherited RemoveCutPointsI(aRoot, nil);
 end;
 
-function TGOutline.EnsureBiconnected: SizeInt;
+function TGChart.EnsureBiconnected: SizeInt;
 begin
   Result := inherited EnsureBiconnected(nil);
 end;
 
-procedure TGOutline.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
+procedure TGChart.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
 begin
   inherited SaveToStream(aStream, aOnWriteVertex, @WriteData);
 end;
 
-procedure TGOutline.LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
+procedure TGChart.LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
 begin
   inherited LoadFromStream(aStream, aOnReadVertex, @ReadData);
 end;
 
-procedure TGOutline.SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
+procedure TGChart.SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
 begin
   inherited SaveToFile(aFileName, aOnWriteVertex, @WriteData);
 end;
 
-procedure TGOutline.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
+procedure TGChart.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
 begin
   inherited LoadFromFile(aFileName, aOnReadVertex, @ReadData);
 end;
 
-function TGOutline.SeparateGraph(constref aVertex: TVertex): TGOutline;
+function TGChart.SeparateGraph(constref aVertex: TVertex): TGChart;
 begin
-  Result := inherited SeparateGraph(aVertex) as TGOutline;
+  Result := inherited SeparateGraph(aVertex) as TGChart;
 end;
 
-function TGOutline.SeparateGraphI(aIndex: SizeInt): TGOutline;
+function TGChart.SeparateGraphI(aIndex: SizeInt): TGChart;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TGOutline;
+  Result := inherited SeparateGraphI(aIndex) as TGChart;
 end;
 
-function TGOutline.Clone: TGOutline;
+function TGChart.Clone: TGChart;
 begin
-  Result := inherited Clone as TGOutline;
+  Result := inherited Clone as TGChart;
 end;
 
-function TGOutline.Complement: TGOutline;
+function TGChart.Complement: TGChart;
 begin
-  Result := inherited Complement(nil) as TGOutline;
+  Result := inherited Complement(nil) as TGChart;
 end;
 
-{ TIntOutline }
+{ TIntChart }
 
-procedure TIntOutline.WriteVertex(aStream: TStream; constref aValue: SizeInt);
+procedure TIntChart.WriteVertex(aStream: TStream; constref aValue: SizeInt);
 begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;
 
-procedure TIntOutline.ReadVertex(aStream: TStream; out aValue: SizeInt);
+procedure TIntChart.ReadVertex(aStream: TStream; out aValue: SizeInt);
 begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
-procedure TIntOutline.SaveToStream(aStream: TStream);
+procedure TIntChart.SaveToStream(aStream: TStream);
 begin
   inherited SaveToStream(aStream, @WriteVertex);
 end;
 
-procedure TIntOutline.LoadFromStream(aStream: TStream);
+procedure TIntChart.LoadFromStream(aStream: TStream);
 begin
   inherited LoadFromStream(aStream, @ReadVertex);
 end;
 
-procedure TIntOutline.SaveToFile(const aFileName: string);
+procedure TIntChart.SaveToFile(const aFileName: string);
 begin
   inherited SaveToFile(aFileName, @WriteVertex);
 end;
 
-procedure TIntOutline.LoadFromFile(const aFileName: string);
+procedure TIntChart.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadVertex);
 end;
 
-function TIntOutline.SeparateGraph(aVertex: SizeInt): TIntOutline;
+function TIntChart.SeparateGraph(aVertex: SizeInt): TIntChart;
 begin
-  Result := inherited SeparateGraph(aVertex) as TIntOutline;
+  Result := inherited SeparateGraph(aVertex) as TIntChart;
 end;
 
-function TIntOutline.SeparateGraphI(aIndex: SizeInt): TIntOutline;
+function TIntChart.SeparateGraphI(aIndex: SizeInt): TIntChart;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TIntOutline;
+  Result := inherited SeparateGraphI(aIndex) as TIntChart;
 end;
 
-function TIntOutline.Clone: TIntOutline;
+function TIntChart.Clone: TIntChart;
 begin
-  Result := inherited Clone as TIntOutline;
+  Result := inherited Clone as TIntChart;
 end;
 
-function TIntOutline.Complement: TIntOutline;
+function TIntChart.Complement: TIntChart;
 begin
-  Result := inherited Complement as TIntOutline;
+  Result := inherited Complement as TIntChart;
 end;
 
-{ TStrOutline }
+{ TStrChart }
 
-procedure TStrOutline.WriteVertex(aStream: TStream; constref aValue: string);
+procedure TStrChart.WriteVertex(aStream: TStream; constref aValue: string);
 var
   Len: SizeInt;
 begin
@@ -2234,7 +2234,7 @@ begin
     aStream.WriteBuffer(aValue[1], Len);
 end;
 
-procedure TStrOutline.ReadVertex(aStream: TStream; out aValue: string);
+procedure TStrChart.ReadVertex(aStream: TStream; out aValue: string);
 var
   Len: SmallInt;
 begin
@@ -2244,44 +2244,44 @@ begin
     aStream.ReadBuffer(aValue[1], Len);
 end;
 
-procedure TStrOutline.SaveToStream(aStream: TStream);
+procedure TStrChart.SaveToStream(aStream: TStream);
 begin
   inherited SaveToStream(aStream, @WriteVertex);
 end;
 
-procedure TStrOutline.LoadFromStream(aStream: TStream);
+procedure TStrChart.LoadFromStream(aStream: TStream);
 begin
   inherited LoadFromStream(aStream, @ReadVertex);
 end;
 
-procedure TStrOutline.SaveToFile(const aFileName: string);
+procedure TStrChart.SaveToFile(const aFileName: string);
 begin
   inherited SaveToFile(aFileName, @WriteVertex);
 end;
 
-procedure TStrOutline.LoadFromFile(const aFileName: string);
+procedure TStrChart.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadVertex);
 end;
 
-function TStrOutline.SeparateGraph(const aVertex: string): TStrOutline;
+function TStrChart.SeparateGraph(const aVertex: string): TStrChart;
 begin
-  Result := inherited SeparateGraph(aVertex) as TStrOutline;
+  Result := inherited SeparateGraph(aVertex) as TStrChart;
 end;
 
-function TStrOutline.SeparateGraphI(aIndex: SizeInt): TStrOutline;
+function TStrChart.SeparateGraphI(aIndex: SizeInt): TStrChart;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TStrOutline;
+  Result := inherited SeparateGraphI(aIndex) as TStrChart;
 end;
 
-function TStrOutline.Clone: TStrOutline;
+function TStrChart.Clone: TStrChart;
 begin
-  Result := inherited Clone as TStrOutline;
+  Result := inherited Clone as TStrChart;
 end;
 
-function TStrOutline.Complement: TStrOutline;
+function TStrChart.Complement: TStrChart;
 begin
-  Result := inherited Complement as TStrOutline;
+  Result := inherited Complement as TStrChart;
 end;
 
 { TGWeighedGraph.TWeightEdge }
@@ -3000,101 +3000,101 @@ begin
   Weight := aWeight;
 end;
 
-{ TPointsOutline }
+{ TPointsChart }
 
-procedure TPointsOutline.OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
+procedure TPointsChart.OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
 begin
   PEdgeData(aData)^.Weight := aSrc.Distance(aDst);
 end;
 
-procedure TPointsOutline.WritePoint(aStream: TStream; constref aValue: TPoint);
+procedure TPointsChart.WritePoint(aStream: TStream; constref aValue: TPoint);
 begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;
 
-procedure TPointsOutline.WriteWeight(aStream: TStream; constref aValue: TRealPointEdge);
+procedure TPointsChart.WriteWeight(aStream: TStream; constref aValue: TRealPointEdge);
 begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;
 
-procedure TPointsOutline.ReadPoint(aStream: TStream; out aValue: TPoint);
+procedure TPointsChart.ReadPoint(aStream: TStream; out aValue: TPoint);
 begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
-procedure TPointsOutline.ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
+procedure TPointsChart.ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
 begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
-function TPointsOutline.AddEdge(constref aSrc, aDst: TPoint): Boolean;
+function TPointsChart.AddEdge(constref aSrc, aDst: TPoint): Boolean;
 begin
   Result := inherited AddEdge(aSrc, aDst, TRealPointEdge.Create(aSrc.Distance(aDst)));
 end;
 
-function TPointsOutline.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TPointsChart.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := inherited AddEdgeI(aSrc, aDst, TRealPointEdge.Create(Items[aSrc].Distance(Items[aDst])));
 end;
 
-function TPointsOutline.EnsureConnected: SizeInt;
+function TPointsChart.EnsureConnected: SizeInt;
 begin
   Result := inherited EnsureConnected(@OnAddEdge);
 end;
 
-function TPointsOutline.RemoveCutPoints(constref aRoot: TPoint): SizeInt;
+function TPointsChart.RemoveCutPoints(constref aRoot: TPoint): SizeInt;
 begin
   Result := inherited RemoveCutPoints(aRoot, @OnAddEdge);
 end;
 
-function TPointsOutline.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
+function TPointsChart.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
 begin
   Result := inherited RemoveCutPointsI(aRoot, @OnAddEdge);
 end;
 
-function TPointsOutline.EnsureBiconnected: SizeInt;
+function TPointsChart.EnsureBiconnected: SizeInt;
 begin
   Result := inherited EnsureBiconnected(@OnAddEdge);
 end;
 
-procedure TPointsOutline.SaveToStream(aStream: TStream);
+procedure TPointsChart.SaveToStream(aStream: TStream);
 begin
   inherited SaveToStream(aStream, @WritePoint, @WriteWeight);
 end;
 
-procedure TPointsOutline.LoadFromStream(aStream: TStream);
+procedure TPointsChart.LoadFromStream(aStream: TStream);
 begin
   inherited LoadFromStream(aStream, @ReadPoint, @ReadWeight);
 end;
 
-procedure TPointsOutline.SaveToFile(const aFileName: string);
+procedure TPointsChart.SaveToFile(const aFileName: string);
 begin
    inherited SaveToFile(aFileName, @WritePoint, @WriteWeight);
 end;
 
-procedure TPointsOutline.LoadFromFile(const aFileName: string);
+procedure TPointsChart.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadPoint, @ReadWeight);
 end;
 
-function TPointsOutline.SeparateGraph(aVertex: TPoint): TPointsOutline;
+function TPointsChart.SeparateGraph(aVertex: TPoint): TPointsChart;
 begin
-  Result := inherited SeparateGraph(aVertex) as TPointsOutline;
+  Result := inherited SeparateGraph(aVertex) as TPointsChart;
 end;
 
-function TPointsOutline.SeparateGraphI(aIndex: SizeInt): TPointsOutline;
+function TPointsChart.SeparateGraphI(aIndex: SizeInt): TPointsChart;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TPointsOutline;
+  Result := inherited SeparateGraphI(aIndex) as TPointsChart;
 end;
 
-function TPointsOutline.Clone: TPointsOutline;
+function TPointsChart.Clone: TPointsChart;
 begin
-  Result := TPointsOutline(inherited Clone);
+  Result := TPointsChart(inherited Clone);
 end;
 
-function TPointsOutline.Complement: TPointsOutline;
+function TPointsChart.Complement: TPointsChart;
 begin
-  Result := TPointsOutline(inherited Complement(@OnAddEdge));
+  Result := TPointsChart(inherited Complement(@OnAddEdge));
 end;
 
 end.
