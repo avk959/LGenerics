@@ -80,6 +80,40 @@ type
     property  Size: SizeInt read GetSize write SetSize;
   end;
 
+  { TSquareBitMarix }
+
+  TSquareBitMarix = record
+  private
+  type
+    TBits = array of SizeUInt;
+  const
+{$IF DEFINED(CPU64)}
+    SIZE_LOG  = 6;
+    SIZE_MASK = 63;
+{$ELSEIF DEFINED(CPU32)}
+    SIZE_LOG  = 5;
+    SIZE_MASK = 31;
+{$ELSE}
+    SIZE_LOG  = 4;
+    SIZE_MASK = 15;
+{$ENDIF}
+  var
+    FBits: TBits;
+    FSize: SizeUInt;
+    function  GetBit(I, J: SizeUInt): Boolean; inline;
+    function  GetSize: SizeInt;
+    procedure SetBit(I, J: SizeUInt; aValue: Boolean); inline;
+    class operator Initialize(var aMarix: TSquareBitMarix);
+  public
+    class function MaxSize: SizeInt; static; inline;
+    constructor Create(aSize: SizeInt);
+    procedure ClearBits; inline;
+    procedure Clear; inline;
+    property  Size: SizeInt read GetSize;
+  { read/write bit with (index < 0) or (index >= Size) will raise exception }
+    property  Bits[I, J: SizeUInt]: Boolean read GetBit write SetBit; default;
+  end;
+
   TVertexColor = 0..3;
 
 const
@@ -605,6 +639,70 @@ begin
     FList[L] := R
   else
     FList[R] := L;
+end;
+
+{ TSquareBitMarix }
+
+function TSquareBitMarix.GetBit(I, J: SizeUInt): Boolean;
+begin
+  if (I < FSize) and (J < FSize) then
+    Result :=
+      (FBits[(I * FSize + J) shr SIZE_LOG] and (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK))) <> 0
+  else
+    Result := False;
+end;
+
+function TSquareBitMarix.GetSize: SizeInt;
+begin
+  Result := FSize;
+end;
+
+procedure TSquareBitMarix.SetBit(I, J: SizeUInt; aValue: Boolean);
+begin
+  if (I < FSize) and (J < FSize) then
+    if aValue then
+      FBits[(I * FSize + J) shr SIZE_LOG] :=
+      FBits[(I * FSize + J) shr SIZE_LOG] or (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK))
+    else
+      FBits[(I * FSize + J) shr SIZE_LOG] :=
+      FBits[(I * FSize + J) shr SIZE_LOG] and not (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK));
+end;
+
+class operator TSquareBitMarix.Initialize(var aMarix: TSquareBitMarix);
+begin
+  aMarix.Clear;
+end;
+
+class function TSquareBitMarix.MaxSize: SizeInt;
+begin
+  Result := Trunc(Sqrt(High(SizeUInt)));
+end;
+
+constructor TSquareBitMarix.Create(aSize: SizeInt);
+var
+  s: SizeInt;
+begin
+  if aSize > 0 then
+    if aSize <= MaxSize then
+      begin
+        FSize := aSize;
+        s := Succ((FSize * FSize) shr SIZE_LOG);
+        System.SetLength(FBits, s);
+        System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
+      end
+    else
+      raise ELGraphError.CreateFmt(SEMatrixSizeExceedFmt, [aSize]);
+end;
+
+procedure TSquareBitMarix.ClearBits;
+begin
+  System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
+procedure TSquareBitMarix.Clear;
+begin
+  FBits := nil;
+  FSize := 0;
 end;
 
 { TColorVector }
