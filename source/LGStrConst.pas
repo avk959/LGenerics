@@ -55,6 +55,7 @@ resourcestring
   SEGraphStreamReadIntern  = 'Graph stream read intenal error';
   SEGrapInconsist          = 'Graph data inconsistency';
   SEStrLenExceedFmt        = 'Maximum string length exceeded(%d)';
+  SETransClosExceedFmt     = 'Maximum transitive closure size exceeded(%d)';
 
 implementation
 
