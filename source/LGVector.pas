@@ -323,8 +323,8 @@ type
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
 
-  { TBitVector: size is always a multiple of the bitness }
-  TBitVector = record
+  { TBoolVector: size is always a multiple of the bitness }
+  TBoolVector = record
   private
   type
     TBits = array of SizeUInt;
@@ -345,7 +345,7 @@ type
     function  GetSize: SizeInt; inline;
     procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
     procedure SetSize(aValue: SizeInt);
-    class operator Copy(constref aSrc: TBitVector; var aDst: TBitVector);
+    class operator Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
   public
     procedure ClearBits; inline;
   { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
@@ -1771,9 +1771,9 @@ begin
   end;
 end;
 
-{ TBitVector }
+{ TBoolVector }
 
-function TBitVector.GetBit(aIndex: SizeInt): Boolean;
+function TBoolVector.GetBit(aIndex: SizeInt): Boolean;
 begin
   if (aIndex >= 0) and (aIndex < (System.Length(FBits) shl SIZE_LOG)) then
     Result := (FBits[aIndex shr SIZE_LOG] and (SizeUInt(1) shl (aIndex and SIZE_MASK))) <> 0
@@ -1781,12 +1781,12 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TBitVector.GetSize: SizeInt;
+function TBoolVector.GetSize: SizeInt;
 begin
   Result := System.Length(FBits) shl SIZE_LOG;
 end;
 
-procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+procedure TBoolVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
   if (aIndex >= 0) and (aIndex < (System.Length(FBits) shl SIZE_LOG)) then
     begin
@@ -1799,7 +1799,7 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-procedure TBitVector.SetSize(aValue: SizeInt);
+procedure TBoolVector.SetSize(aValue: SizeInt);
 var
   OldLen: SizeInt;
 begin
@@ -1812,12 +1812,12 @@ begin
     end;
 end;
 
-class operator TBitVector.Copy(constref aSrc: TBitVector; var aDst: TBitVector);
+class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
 begin
   aDst.FBits := System.Copy(aSrc.FBits);
 end;
 
-procedure TBitVector.ClearBits;
+procedure TBoolVector.ClearBits;
 begin
   if FBits <> nil then
     System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
