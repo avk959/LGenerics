@@ -110,7 +110,7 @@ type
     procedure ClearBits; inline;
     procedure Clear; inline;
     property  Size: SizeInt read GetSize;
-  { read/write bit with (index < 0) or (index >= Size) will raise exception }
+  { all bits outside the matrix are considered False }
     property  Bits[I, J: SizeUInt]: Boolean read GetBit write SetBit; default;
   end;
 
