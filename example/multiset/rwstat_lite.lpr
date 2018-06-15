@@ -1,4 +1,6 @@
-{ pascal reserved words usage statistics }
+{
+  pascal reserved words usage statistics
+}
 program rwstat_lite;
 
 {$mode objfpc}{$H+}
