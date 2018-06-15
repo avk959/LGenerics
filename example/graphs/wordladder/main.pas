@@ -46,13 +46,13 @@ type
     procedure FormDestroy(Sender: TObject);
   private
     slWords: TStringList;
-    Graph: TStrOutline;
+    Graph: TStrChart;
     CurrWordLen: SizeInt;
     CurrSource,
     CurrTarget: string;
     function  LoadDictionary: Boolean;
-    procedure BuildOutline;
-    procedure LoadOutline;
+    procedure BuildGraph;
+    procedure NewGraph;
     function  InputValid: Boolean;
     procedure SearchFor;
     procedure DisableControls;
@@ -80,7 +80,7 @@ begin
       Application.Terminate;
       exit;
     end;
-  Graph := TStrOutline.Create;
+  Graph := TStrChart.Create;
   Caption := 'Word ladder - ' + slWords.Count.ToString + ' words';
 end;
 
@@ -109,7 +109,7 @@ begin
   Result := True;
 end;
 
-procedure TfrmMain.BuildOutline;
+procedure TfrmMain.BuildGraph;
 var
   I, J, Pos, Diff: SizeInt;
   s, d: string;
@@ -139,7 +139,7 @@ begin
     end;
 end;
 
-procedure TfrmMain.LoadOutline;
+procedure TfrmMain.NewGraph;
 var
   StartTime: TTime;
   Elapsed: SizeInt;
@@ -149,7 +149,7 @@ begin
   mmResult.Append('');
   mmResult.Append('started to build the new graph, please wait...');
   StartTime := Time;
-  BuildOutline;
+  BuildGraph;
   Elapsed := MilliSecondsBetween(Time, StartTime);
   mmResult.Append(Format(IsBuiltFmt,[Graph.VertexCount, Graph.EdgeCount, Elapsed]));
   mmResult.Append('separate component count = ' + Graph.SeparateCount.ToString);
@@ -187,7 +187,7 @@ begin
       DisableControls;
       OldCaption := Caption;
       Caption := 'Word ladder - building new graph...';
-      LoadOutline;
+      NewGraph;
       EnableControls;
       Caption := OldCaption;
     end;
