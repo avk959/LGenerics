@@ -64,6 +64,7 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): SizeInt;
+    function  TopoSort(aIndex: SizeInt): TIntArray;
     function  SearchForStrongComponents(out aCompIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix: TReachabilityMatrix;
   public
@@ -105,16 +106,18 @@ type
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCircuit: Boolean;
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
-    function  IsDag: Boolean;
+    function  IsDag(constref aRoot: TVertex): Boolean; inline;
+    function  IsDagI(aRoot: SizeInt): Boolean;
     function  MaxBitMatrixSize: SizeInt; inline;
   { creates internal transitive closure }
     procedure FillReachabilityMatrix;
+  { returns internal transitive closure }
     function  CreateReachabilityMatrix: TReachabilityMatrix;
   { returns array of vertex indices in topological order staring from aRoot, without any acyclic checks }
     function  TopologicalSort(constref aRoot: TVertex; aOrder: TSortOrder = soAsc): TIntArray; inline;
     function  TopologicalSortI(aRoot: SizeInt; aOrder: TSortOrder = soAsc): TIntArray;
   { returns count of the strong connected components; the corresponding element of the
-    aCompIds will contain it component index(used Gabow's algotitm)  }
+    aCompIds will contain it component index(used Gabow's algotitm) }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
 
     function  Clone: TGSimpleDiGraph;
@@ -251,9 +254,39 @@ begin
   Result := Counter;
 end;
 
+function TGSimpleDiGraph.TopoSort(aIndex: SizeInt): TIntArray;
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Visited: TBitVector;
+  Counter, Next: SizeInt;
+begin
+  AdjEnums := CreateAdjEnumArray;
+  Result := CreateIntArray;
+  Visited.Size := VertexCount;
+  Counter := VertexCount;
+  Visited[aIndex] := True;
+  {%H-}Stack.Push(aIndex);
+  while Stack.TryPeek(aIndex) do
+    if AdjEnums[aIndex].MoveNext then
+      begin
+        Next := AdjEnums[aIndex].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Stack.Push(Next);
+          end;
+      end
+    else
+      begin
+        Dec(Counter);
+        Result[Counter] := Stack.Pop;
+      end;
+end;
+
 function TGSimpleDiGraph.SearchForStrongComponents(out aCompIds: TIntArray): SizeInt;
 var
-  Stack, S, Path: TIntStack;
+  Stack, VtxStack, PathStack: TIntStack;
   AdjEnums: TAdjEnumArray;
   InOrder: TIntArray;
   I, Counter, Curr, Next: SizeInt;
@@ -268,11 +301,11 @@ begin
       begin
         InOrder[I] := Counter;
         Inc(Counter);
-        Stack.Push(I);
-        S.Push(I);
-        Path.Push(I);
+        {%H-}Stack.Push(I);
+        VtxStack{%H-}.Push(I);
+        PathStack{%H-}.Push(I);
         while Stack.TryPeek(Curr) do
-          if AdjEnums[Curr].MoveNext then
+          if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if InOrder[Next] = -1 then
@@ -280,22 +313,22 @@ begin
                   InOrder[Next] := Counter;
                   Inc(Counter);
                   Stack.Push(Next);
-                  S.Push(Next);
-                  Path.Push(Next);
+                  VtxStack.Push(Next);
+                  PathStack.Push(Next);
                 end
               else
                 if aCompIds[Next] = -1 then
-                  while InOrder[Path.Peek] > InOrder[Next] do
-                    Path.Pop;
+                  while InOrder[PathStack.Peek] > InOrder[Next] do
+                    PathStack.Pop;
             end
           else
             begin
               Curr := Stack.Pop;
-              if Path.Peek = Curr then
+              if PathStack.Peek = Curr then
                 begin
-                  Path.Pop;
+                  PathStack.Pop;
                   repeat
-                    Next := S.Pop;
+                    Next := VtxStack.Pop;
                     aCompIds[Next] := Result;
                   until Next = Curr;
                   Inc(Result);
@@ -672,7 +705,7 @@ var
   Stack: TIntStack;
   s, d: SizeInt;
 begin
-  if not ContainsEulerianCircuit then  //todo: ???
+  if not ContainsEulerianCircuit then
     exit(False);
   g := Clone;
   try
@@ -700,22 +733,22 @@ begin
     TIntVectorHelper.Reverse(aCircuit);
 end;
 
-function TGSimpleDiGraph.IsDag: Boolean;
+function TGSimpleDiGraph.IsDag(constref aRoot: TVertex): Boolean;
+begin
+  Result := IsDagI(IndexOf(aRoot));
+end;
+
+function TGSimpleDiGraph.IsDagI(aRoot: SizeInt): Boolean;
 var
   Dummy: TIntArray = nil;
   I: SizeInt;
 begin
-  if IsEmpty then
-    exit(False);
+  CheckIndexRange(aRoot);
   if VertexCount = 1 then
     exit(True);
-  //search for source vertex
-  I := -1;
-  repeat Inc(I);
-  until (I = VertexCount) or ((FNodeList[I].AdjList.Count <> 0) and (FNodeList[I].Tag = 0));
-  if I = VertexCount then // source not found -> not dag
+  if (FNodeList[aRoot].AdjList.Count = 0) or (FNodeList[aRoot].Tag <> 0) then
     exit(False);
-  I := FindCycle(I, Dummy);
+  I := FindCycle(aRoot, Dummy);
   Result := (System.Length(Dummy) = 0) and (I = VertexCount);
 end;
 
@@ -744,34 +777,9 @@ begin
 end;
 
 function TGSimpleDiGraph.TopologicalSortI(aRoot: SizeInt; aOrder: TSortOrder): TIntArray;
-var
-  Stack: TIntStack;
-  AdjEnums: TAdjEnumArray;
-  Visited: TBitVector;
-  Counter, Next: SizeInt;
 begin
   CheckIndexRange(aRoot);
-  AdjEnums := CreateAdjEnumArray;
-  Result := CreateIntArray;
-  Visited.Size := VertexCount;
-  Counter := VertexCount;
-  Visited[aRoot] := True;
-  {%H-}Stack.Push(aRoot);
-  while Stack.TryPeek(aRoot) do
-    if AdjEnums[aRoot].MoveNext then
-      begin
-        Next := AdjEnums[aRoot].Current;
-        if not Visited[Next] then
-          begin
-            Visited[Next] := True;
-            Stack.Push(Next);
-          end;
-      end
-    else
-      begin
-        Dec(Counter);
-        Result[Counter] := Stack.Pop;
-      end;
+  Result := TopoSort(aRoot);
   if aOrder = soDesc then
     TIntHelper.Reverse(Result);
 end;
