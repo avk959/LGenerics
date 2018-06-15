@@ -80,29 +80,48 @@ type
     property  Size: SizeInt read GetSize write SetSize;
   end;
 
-  { TSquareBitMarix }
+const
+{$IF DEFINED(CPU64)}
+  INT_SIZE_LOG  = 6;
+  INT_SIZE_MASK = 63;
+{$ELSEIF DEFINED(CPU32)}
+  INT_SIZE_LOG  = 5;
+  INT_SIZE_MASK = 31;
+{$ELSE}
+  INT_SIZE_LOG  = 4;
+  INT_SIZE_MASK = 15;
+{$ENDIF}
+
+type
+
+  TBitVector = record
+  private
+  type
+    TBits = array of SizeUInt;
+  var
+    FBits: TBits;
+    function  GetBit(aIndex: SizeInt): Boolean; inline;
+    function  GetSize: SizeInt; inline;
+    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
+    procedure SetSize(aValue: SizeInt);
+  public
+    procedure ClearBits; inline;
+  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
+    property  Size: SizeInt read GetSize write SetSize;
+  { indices does not checks }
+    property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
+  end;
 
   TSquareBitMarix = record
   private
   type
     TBits = array of SizeUInt;
-  const
-{$IF DEFINED(CPU64)}
-    SIZE_LOG  = 6;
-    SIZE_MASK = 63;
-{$ELSEIF DEFINED(CPU32)}
-    SIZE_LOG  = 5;
-    SIZE_MASK = 31;
-{$ELSE}
-    SIZE_LOG  = 4;
-    SIZE_MASK = 15;
-{$ENDIF}
   var
     FBits: TBits;
     FSize: SizeUInt;
-    function  GetBit(I, J: SizeUInt): Boolean; inline;
+    function  GetBit(I, J: SizeInt): Boolean; inline;
     function  GetSize: SizeInt;
-    procedure SetBit(I, J: SizeUInt; aValue: Boolean); inline;
+    procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
     class operator Initialize(var aMarix: TSquareBitMarix);
   public
     class function MaxSize: SizeInt; static; inline;
@@ -110,8 +129,8 @@ type
     procedure ClearBits; inline;
     procedure Clear; inline;
     property  Size: SizeInt read GetSize;
-  { all bits outside the matrix are considered False }
-    property  Bits[I, J: SizeUInt]: Boolean read GetBit write SetBit; default;
+  { indices does not checks }
+    property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
   TVertexColor = 0..3;
@@ -124,35 +143,6 @@ const
 
 type
   TColorArray = array of TVertexColor;
-
-  TColorVector = record
-  private
-  type
-    TColorList = array of SizeUInt;
-  const
-{$IF DEFINED(CPU64)}
-    SHIFT = 5;
-    MASK  = 31;
-{$ELSEIF DEFINED(CPU32)}
-    SHIFT = 4;
-    MASK  = 15;
-{$ELSE}
-    SHIFT = 3;
-    MASK  = 7;
-{$ENDIF}
-  var
-    FList: TColorList;
-    function  GetItem(aIndex: SizeInt): TVertexColor; inline;
-    function  GetSize: SizeInt; inline;
-    procedure SetItem(aIndex: SizeInt; aValue: TVertexColor); inline;
-    procedure SetSize(aValue: SizeInt);
-    class operator Copy(constref aSrc: TColorVector; var aDst: TColorVector); inline;
-  public
-    procedure ClearItems; inline;
-    property  Size: SizeInt read GetSize write SetSize;
-  { read/write item with (index < 0) or (index >= Size) will raise exception }
-    property  Items[aIndex: SizeInt]: TVertexColor read GetItem write SetItem; default;
-  end;
 
   TIntEdge = record
     Source,
@@ -641,15 +631,53 @@ begin
     FList[R] := L;
 end;
 
+{ TBitVector }
+
+function TBitVector.GetBit(aIndex: SizeInt): Boolean;
+begin
+  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
+end;
+
+function TBitVector.GetSize: SizeInt;
+begin
+  Result := System.Length(FBits) shl INT_SIZE_LOG;
+end;
+
+procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+begin
+  if aValue then
+    FBits[aIndex shr INT_SIZE_LOG] :=
+    FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+  else
+    FBits[aIndex shr INT_SIZE_LOG] :=
+    FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
+end;
+
+procedure TBitVector.SetSize(aValue: SizeInt);
+var
+  OldLen: SizeInt;
+begin
+  OldLen := Size;
+  if aValue > OldLen then
+    begin
+      aValue := Succ(aValue shr INT_SIZE_LOG);
+      System.SetLength(FBits, aValue);
+      System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
+    end;
+end;
+
+procedure TBitVector.ClearBits;
+begin
+  if FBits <> nil then
+    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
 { TSquareBitMarix }
 
-function TSquareBitMarix.GetBit(I, J: SizeUInt): Boolean;
+function TSquareBitMarix.GetBit(I, J: SizeInt): Boolean;
 begin
-  if (I < FSize) and (J < FSize) then
-    Result :=
-      (FBits[(I * FSize + J) shr SIZE_LOG] and (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK))) <> 0
-  else
-    Result := False;
+  Result := (FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and
+            (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))) <> 0
 end;
 
 function TSquareBitMarix.GetSize: SizeInt;
@@ -657,15 +685,16 @@ begin
   Result := FSize;
 end;
 
-procedure TSquareBitMarix.SetBit(I, J: SizeUInt; aValue: Boolean);
+procedure TSquareBitMarix.SetBit(I, J: SizeInt; aValue: Boolean);
 begin
-  if (I < FSize) and (J < FSize) then
-    if aValue then
-      FBits[(I * FSize + J) shr SIZE_LOG] :=
-      FBits[(I * FSize + J) shr SIZE_LOG] or (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK))
-    else
-      FBits[(I * FSize + J) shr SIZE_LOG] :=
-      FBits[(I * FSize + J) shr SIZE_LOG] and not (SizeUInt(1) shl ((I * FSize + J) and SIZE_MASK));
+  if aValue then
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] or
+          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))
+  else
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and not
+          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
 end;
 
 class operator TSquareBitMarix.Initialize(var aMarix: TSquareBitMarix);
@@ -686,7 +715,7 @@ begin
     if aSize <= MaxSize then
       begin
         FSize := aSize;
-        s := Succ((FSize * FSize) shr SIZE_LOG);
+        s := Succ((FSize * FSize) shr INT_SIZE_LOG);
         System.SetLength(FBits, s);
         System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
       end
@@ -703,54 +732,6 @@ procedure TSquareBitMarix.Clear;
 begin
   FBits := nil;
   FSize := 0;
-end;
-
-{ TColorVector }
-
-function TColorVector.GetItem(aIndex: SizeInt): TVertexColor;
-begin
-  if (aIndex >= 0) and (aIndex < (System.Length(FList) shl SHIFT)) then
-    Result := FList[aIndex shr SHIFT] shr ((aIndex and MASK) shl 1) and SizeUInt(3)
-  else
-    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-end;
-
-function TColorVector.GetSize: SizeInt;
-begin
-  Result := System.Length(FList) shl SHIFT;
-end;
-
-procedure TColorVector.SetItem(aIndex: SizeInt; aValue: TVertexColor);
-begin
-  if (aIndex >= 0) and (aIndex < (System.Length(FList) shl SHIFT)) then
-    FList[aIndex shr SHIFT] := (FList[aIndex shr SHIFT] and not (SizeUInt(3) shl ((aIndex and MASK) shl 1))) or
-                               (SizeUInt(aValue) shl ((aIndex and MASK) shl 1))
-  else
-    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-end;
-
-procedure TColorVector.SetSize(aValue: SizeInt);
-var
-  OldLen: SizeInt;
-begin
-  OldLen := Size;
-  if aValue > OldLen then
-    begin
-      aValue := aValue shr SHIFT + Ord(aValue and MASK <> 0);
-      System.SetLength(FList, aValue);
-      System.FillChar(FList[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
-    end;
-end;
-
-class operator TColorVector.Copy(constref aSrc: TColorVector; var aDst: TColorVector);
-begin
-  aDst.FList := System.Copy(aSrc.FList);
-end;
-
-procedure TColorVector.ClearItems;
-begin
-  if FList <> nil then
-    System.FillChar(FList[0], System.Length(FList) * SizeOf(SizeUInt), 0);
 end;
 
 { TIntEdge }
