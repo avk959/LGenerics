@@ -246,7 +246,7 @@ type
   { returns a graph constructed from the pairs provided by the array,
     i.e. each element treates as pair of source - destination }
     function  CreateFromArray(constref aValue: TIntArray): TGSimpleGraph;
-  { returns a graph constructed from the edges indices provided by the array }
+  { returns a graph constructed from the edges provided by the array }
     function  CreateFromEdgeArray(constref aEdges: TIntEdgeArray): TGSimpleGraph;
     function  DistinctEdges: TDistinctEdges; inline;
   { returns copy of the source graph }
@@ -387,23 +387,6 @@ type
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
     TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
 
-  { todo: Filter-Kruskal minimum spanning tree algorithm }
-    TFilterKruskal = record
-    private
-    var
-      FEdges: TEdgeArray;
-      FTree: TIntArray;
-      FDsu: TDisjointSetUnion;
-      FTreshold,
-      FCount,
-      FFound: SizeInt;
-      FWeight: TWeight;
-      procedure Kruskal(L, R: SizeInt);
-      function  Split(L, R: SizeInt): SizeInt;
-      procedure FilterKruskal(L, R: SizeInt);
-    public
-      function  FindMst(aGraph: TGWeighedGraph; out aWeight: TWeight): TIntArray;
-    end;
   strict private
   class var
     CFInfiniteWeight,
@@ -422,7 +405,6 @@ type
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
     function  FordBellman(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
-    function  FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
     function  CreateWeighArray: TWeightArray;
@@ -2399,79 +2381,6 @@ begin
   Index := aIndex;
 end;
 
-{ TGWeighedGraph.TFilterKruskal }
-
-procedure TGWeighedGraph.TFilterKruskal.Kruskal(L, R: SizeInt);
-var
-  s, d: SizeInt;
-begin
-  TEdgeHelper.IntroSort(FEdges[L..R]);
-  while L <= R do
-    begin
-      s := FEdges[L].Source;
-      d := FEdges[L].Destination;
-      if FDsu.InDiffSets(s, d)  then
-        begin
-          FWeight += FEdges[L].Weight;
-          FTree[d] := s;
-          FDsu.Union(s, d);
-          Inc(FFound);
-        end;
-      Inc(L);
-    end;
-end;
-
-function TGWeighedGraph.TFilterKruskal.Split(L, R: SizeInt): SizeInt;
-var
-  Pivot: TWeight;
-  v: TWeightEdge;
-begin
-  Pivot := FEdges[Succ(L + Random(Pred(R - L)))].Weight; //shouldn't be first or last
-  Dec(L);
-  Inc(R);
-  repeat
-    repeat Inc(L) until FEdges[L].Weight >= Pivot;
-    repeat Dec(R) until FEdges[R].Weight <= Pivot;
-    if L >= R then
-      exit(R);
-    v := FEdges[L];
-    FEdges[L] := FEdges[R];
-    FEdges[R] := v;
-  until False;
-end;
-
-procedure TGWeighedGraph.TFilterKruskal.FilterKruskal(L, R: SizeInt);
-var
-  p: SizeInt;
-begin
-  if R - L > FTreshold then
-    begin
-      if FFound < FCount then
-        begin
-          p := Split(L, R);
-          FilterKruskal(L, p);
-          if FFound < FCount then
-            FilterKruskal(Succ(p), R);
-        end;
-    end
-  else
-    Kruskal(L, R);
-end;
-
-function TGWeighedGraph.TFilterKruskal.FindMst(aGraph: TGWeighedGraph; out aWeight: TWeight): TIntArray;
-begin
-  FEdges := aGraph.CreateEdgeArray;
-  FTree := aGraph.CreateIntArray;
-  FCount := aGraph.VertexCount;
-  FDsu.Size := FCount;
-  FTreshold := Pred(FCount); // ??? FCount shr 1
-  FWeight := ZeroWeight;
-  FFound := 0;
-  FilterKruskal(0, System.High(FEdges));
-  aWeight := FWeight;
-  Result := FTree;
-end;
-
 { TGWeighedGraph }
 
 function TGWeighedGraph.DijkstraSssp(aSrc: SizeInt): TWeightArray;
@@ -2752,13 +2661,6 @@ begin
     end;
 end;
 
-function TGWeighedGraph.FilterKruskalMst(out aTotalWeight: TWeight): TIntArray;
-var
-  fk: TFilterKruskal;
-begin
-  Result := fk.FindMst(Self, aTotalWeight);
-end;
-
 function TGWeighedGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
   e: TEdgeArray;
@@ -2959,7 +2861,6 @@ function TGWeighedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArra
 begin
   if Connected then
     Result := KruskalMst(aTotalWeight)
-    //Result := FilterKruskalMst(aTotalWeight)
   else
     raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
