@@ -112,7 +112,7 @@ type
     property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
-  TSquareBitMarix = record
+  TSquareBitMatrix = record
   private
   type
     TBits = array of SizeUInt;
@@ -122,7 +122,7 @@ type
     function  GetBit(I, J: SizeInt): Boolean; inline;
     function  GetSize: SizeInt;
     procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
-    class operator Initialize(var aMarix: TSquareBitMarix);
+    class operator Initialize(var aMarix: TSquareBitMatrix);
   public
     class function MaxSize: SizeInt; static; inline;
     constructor Create(aSize: SizeInt);
@@ -672,20 +672,20 @@ begin
     System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
-{ TSquareBitMarix }
+{ TSquareBitMatrix }
 
-function TSquareBitMarix.GetBit(I, J: SizeInt): Boolean;
+function TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
 begin
   Result := (FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and
             (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))) <> 0
 end;
 
-function TSquareBitMarix.GetSize: SizeInt;
+function TSquareBitMatrix.GetSize: SizeInt;
 begin
   Result := FSize;
 end;
 
-procedure TSquareBitMarix.SetBit(I, J: SizeInt; aValue: Boolean);
+procedure TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
 begin
   if aValue then
     FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
@@ -697,17 +697,17 @@ begin
           (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
 end;
 
-class operator TSquareBitMarix.Initialize(var aMarix: TSquareBitMarix);
+class operator TSquareBitMatrix.Initialize(var aMarix: TSquareBitMatrix);
 begin
   aMarix.Clear;
 end;
 
-class function TSquareBitMarix.MaxSize: SizeInt;
+class function TSquareBitMatrix.MaxSize: SizeInt;
 begin
   Result := Trunc(Sqrt(High(SizeUInt)));
 end;
 
-constructor TSquareBitMarix.Create(aSize: SizeInt);
+constructor TSquareBitMatrix.Create(aSize: SizeInt);
 var
   s: SizeInt;
 begin
@@ -723,12 +723,12 @@ begin
       raise ELGraphError.CreateFmt(SEMatrixSizeExceedFmt, [aSize]);
 end;
 
-procedure TSquareBitMarix.ClearBits;
+procedure TSquareBitMatrix.ClearBits;
 begin
   System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
-procedure TSquareBitMarix.Clear;
+procedure TSquareBitMatrix.Clear;
 begin
   FBits := nil;
   FSize := 0;
