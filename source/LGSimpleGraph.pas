@@ -32,7 +32,6 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
-  LGVector,
   LGPriorityQueue,
   LGHashTable,
   LGHash,
