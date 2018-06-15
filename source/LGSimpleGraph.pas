@@ -2664,15 +2664,15 @@ end;
 function TGWeighedGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
   e: TEdgeArray;
-  I, s, d, VtxCount: SizeInt;
+  I, s, d, Total: SizeInt;
   Dsu: TDisjointSetUnion;
 begin
   e := CreateEdgeArray;
   Result := CreateIntArray;
-  VtxCount := VertexCount;
+  Total := VertexCount;
   TEdgeHelper.Sort(e);
-  System.SetLength(Result, VtxCount);
-  Dsu.Size := VtxCount;
+  System.SetLength(Result, Total);
+  Dsu.Size := Total;
   aTotalWeight := ZeroWeight;
   for I := 0 to System.High(e) do
     begin
