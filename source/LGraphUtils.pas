@@ -71,11 +71,11 @@ type
   public
     procedure Clear; inline;
     procedure Reset;
-  { values related to the same set will have the same Marker }
-    function  Marker(aValue: SizeInt): SizeInt;
+  { values related to the same set will have the same Lead }
+    function  Lead(aValue: SizeInt): SizeInt;
     function  InSameSet(L, R: SizeInt): Boolean; inline;
     function  InDiffSets(L, R: SizeInt): Boolean; inline;
-  { if L and R related to the different sets, these sets will be merged into one with a single Marker }
+  { if L and R related to the different sets, these sets will be merged into one with a single Lead }
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
   end;
@@ -603,28 +603,28 @@ begin
     FList[I] := I;
 end;
 
-function TDisjointSetUnion.Marker(aValue: SizeInt): SizeInt;
+function TDisjointSetUnion.Lead(aValue: SizeInt): SizeInt;
 begin
   if FList[aValue] = aValue then
     exit(aValue);
-  Result := Marker(FList[aValue]);
+  Result := Lead(FList[aValue]);
   FList[aValue] := Result;
 end;
 
 function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
 begin
-  Result := Marker(L) = Marker(R);
+  Result := Lead(L) = Lead(R);
 end;
 
 function TDisjointSetUnion.InDiffSets(L, R: SizeInt): Boolean;
 begin
-  Result := Marker(L) <> Marker(R);
+  Result := Lead(L) <> Lead(R);
 end;
 
 procedure TDisjointSetUnion.Union(L, R: SizeInt);
 begin
-  L := Marker(L);
-  R := Marker(R);
+  L := Lead(L);
+  R := Lead(R);
   if Odd(Random(4)) then // random selection ???
     FList[L] := R
   else
