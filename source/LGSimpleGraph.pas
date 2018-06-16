@@ -352,10 +352,10 @@ type
     TWeightEdge  = specialize TGWeighedEdge<TWeight>;
     TWeightItem  = specialize TGWeighedItem<TWeight>;
     TRankItem    = specialize TGRankWeighedItem<TWeight>;
-    TEdgeArray   = array of TWeightEdge;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
     TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
+    TEdgeArray   = array of TWeightEdge;
 
   strict private
   class var
@@ -371,15 +371,11 @@ type
     function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
     function  DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { A* pathfinding algorithm }
-    function  AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntArray;
-  { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
-    function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-    function  FordBellman(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+    function  AStar(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
     function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
     function  PrimMst(out aTotalWeight: TWeight): TIntArray;
-    function  CreateWeighArray: TWeightArray;
+    function  CreateWeightArray: TWeightArray;
     function  CreateEdgeArray: TEdgeArray;
-    class function Min(const L, R: TWeight): TWeight; static; inline;
     class constructor Init;
   public
     class property InfiniteWeight: TWeight read CFInfiniteWeight;
@@ -408,19 +404,8 @@ type
     the weights of all edges must be nonnegative;
     the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
     used A* algorithm  }
-    function  MinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aWeight: TWeight): TIntArray; inline;
-    function  MinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntArray;
-  { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
-    connected component(SSSP), the weights of the edges can be negative; NO IT IS NOT FOR UNDIRECTED GRAPHS !!!
-    returns False and empty aWeights if there is a negative weight cycle, otherwise
-    aWeights will contain in the corresponding component the weight of the minimum path to the vertex or
-    InfiniteWeight if the vertex is unreachable; used Bellman–Ford algorithm  }
-    function  FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
-    function  FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-  { same as above and in aPaths returns paths,
-    if there is a negative weight cycle, then aPaths will contain that cycle }
-    function  FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
-    function  FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+    function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: THeuristic): TIntArray; inline;
+    function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
@@ -448,6 +433,7 @@ type
     procedure ReadPoint(aStream: TStream; out aValue: TPoint);
     procedure ReadWeight(aStream: TStream; out aValue: TRealPointEdge);
   public
+    class function Distance(constref aSrc, aDst: TPoint): ValReal; static;
     function  AddEdge(constref aSrc, aDst: TPoint): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  EnsureConnected: SizeInt;
@@ -464,6 +450,8 @@ type
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
     function  Complement: TPointsChart;
+    function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: THeuristic = nil): TIntArray; inline;
+    function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: THeuristic = nil): TIntArray;
   end;
 
 implementation
@@ -2281,7 +2269,7 @@ var
   p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
-  Result := CreateWeighArray;
+  Result := CreateWeightArray;
   Handles := CreateHandleArray;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
@@ -2311,7 +2299,7 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  Result := CreateWeighArray;
+  Result := CreateWeightArray;
   aPathTree := CreateIntArray;
   Handles := CreateHandleArray;
   Visited.Size := VertexCount;
@@ -2414,7 +2402,7 @@ begin
   aWeight := InfiniteWeight;
 end;
 
-function TGWeighedGraph.AStar(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntArray;
+function TGWeighedGraph.AStar(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
 var
   Visited: TBitVector;
   Queue: TAStarHeap;
@@ -2459,94 +2447,6 @@ begin
         end;
     end;
   aWeight := InfiniteWeight;
-end;
-
-function TGWeighedGraph.FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-var
-  Edge: TEdge;
-  Enum: TEdgeEnumerator;
-  RelaxValue: TWeight;
-  I: SizeInt;
-  Relaxed: Boolean = False;
-begin
-  aWeights := CreateWeighArray;
-  Enum := Edges.GetEnumerator;
-  aWeights[aSrc] := ZeroWeight;
-  for I := 1 to VertexCount do
-    begin
-      Relaxed := False;
-      while Enum.MoveNext do
-        begin
-          Edge := Enum.Current;
-          if aWeights[Edge.Source] < InfiniteWeight then
-            begin
-              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
-              if RelaxValue < aWeights[Edge.Destination] then
-                begin
-                  aWeights[Edge.Destination] := RelaxValue;
-                  Relaxed := True;
-                end;
-            end;
-        end;
-      if not Relaxed then
-        break;
-      Enum.Reset;
-    end;
-  Result := not Relaxed;
-  if not Result then
-    aWeights := nil;
-end;
-
-function TGWeighedGraph.FordBellman(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
-var
-  Edge: TEdge;
-  Enum: TEdgeEnumerator;
-  v: TIntVector;
-  RelaxValue: TWeight;
-  I: SizeInt;
-  J: SizeInt = -1;
-begin
-  aWeights := CreateWeighArray;
-  aPaths := CreateIntArray;
-  Enum := Edges.GetEnumerator;
-  aWeights[aSrc] := ZeroWeight;
-  for I := 1 to VertexCount do
-    begin
-      J := -1;
-      while Enum.MoveNext do
-        begin
-          Edge := Enum.Current;
-          if aWeights[Edge.Source] < InfiniteWeight then
-            begin
-              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
-              if RelaxValue < aWeights[Edge.Destination] then
-                begin
-                  aWeights[Edge.Destination] := RelaxValue;
-                  aPaths[Edge.Destination] := Edge.Source;
-                  J := Edge.Destination;
-                end;
-            end;
-        end;
-      if J = -1 then
-        break;
-      Enum.Reset;
-    end;
-
-  Result := J = -1;
-
-  if not Result then
-    begin
-      for I := 1 to VertexCount do
-        J := aPaths[J];
-      I := J;
-      v.Add(J);
-      repeat
-        I := aPaths[I];
-        v.Add(I);
-      until I = J;
-      aPaths := v.ToArray;
-      aWeights := nil;
-    end;
 end;
 
 function TGWeighedGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
@@ -2612,7 +2512,7 @@ begin
     end;
 end;
 
-function TGWeighedGraph.CreateWeighArray: TWeightArray;
+function TGWeighedGraph.CreateWeightArray: TWeightArray;
 var
   I: SizeInt;
 begin
@@ -2632,14 +2532,6 @@ begin
       Result[I] := TWeightEdge.Create(e.Source, e.Destination, e.Data.Weight);
       Inc(I);
     end;
-end;
-
-class function TGWeighedGraph.Min(const L, R: TWeight): TWeight;
-begin
-  if L <= R then
-    Result := L
-  else
-    Result := R;
 end;
 
 class constructor TGWeighedGraph.Init;
@@ -2705,44 +2597,20 @@ begin
   Result := DijkstraPath(aSrc, aDst, aWeight);
 end;
 
-function TGWeighedGraph.MinPathAStar(constref aSrc, aDst: TVertex; aHeur: THeuristic; out aWeight: TWeight
-  ): TIntArray;
+function TGWeighedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
+  aHeur: THeuristic): TIntArray;
 begin
-  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aHeur, aWeight);
+  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aHeur);
 end;
 
-function TGWeighedGraph.MinPathAStarI(aSrc, aDst: SizeInt; aHeur: THeuristic; out aWeight: TWeight): TIntArray;
+function TGWeighedGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   if aHeur <> nil then
-    Result := AStar(aSrc, aDst, aHeur, aWeight)
+    Result := AStar(aSrc, aDst, aWeight, aHeur)
   else
     Result := DijkstraPath(aSrc, aDst, aWeight);
-end;
-
-function TGWeighedGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
-begin
-  Result := FindMinPathsMapI(IndexOf(aSrc), aWeights);
-end;
-
-function TGWeighedGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-begin
-  CheckIndexRange(aSrc);
-  Result := FordBellman(aSrc, aWeights);
-end;
-
-function TGWeighedGraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
-  out aWeights: TWeightArray): Boolean;
-begin
-  Result := FindMinPathsMapI(IndexOf(aSrc), aPaths, aWeights);
-end;
-
-function TGWeighedGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray;
-  out aWeights: TWeightArray): Boolean;
-begin
-  CheckIndexRange(aSrc);
-  Result := FordBellman(aSrc, aPaths, aWeights);
 end;
 
 function TGWeighedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
@@ -2825,6 +2693,11 @@ begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
+class function TPointsChart.Distance(constref aSrc, aDst: TPoint): ValReal;
+begin
+  Result := aSrc.Distance(aDst);
+end;
+
 function TPointsChart.AddEdge(constref aSrc, aDst: TPoint): Boolean;
 begin
   Result := inherited AddEdge(aSrc, aDst, TRealPointEdge.Create(aSrc.Distance(aDst)));
@@ -2903,6 +2776,19 @@ end;
 function TPointsChart.Complement: TPointsChart;
 begin
   Result := TPointsChart(inherited Complement(@OnAddEdge));
+end;
+
+function TPointsChart.MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: THeuristic): TIntArray;
+begin
+  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aDst), aWeight, aHeur);
+end;
+
+function TPointsChart.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: THeuristic): TIntArray;
+begin
+  if aHeur = nil then
+    Result := inherited MinPathAStarI(aSrc, aDst, aWeight, @Distance)
+  else
+    Result := inherited MinPathAStarI(aSrc, aDst, aWeight, aHeur);
 end;
 
 end.
