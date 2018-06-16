@@ -31,8 +31,9 @@ Contains:
       - biconnected components finding
       - cycle detection
       - fundamental cycles selection
-      - shortest path finding
-      - minimum spanning tree finding 
+      - shortest paths finding
+      - minimum spanning tree finding
+      - strongly connected components finding 
 
   3. Other algorithms:
       - some non-cryptogarphic hashes(unit LGHash)
@@ -61,7 +62,8 @@ Contains:
      - disjoint set(unit LGraphUtils)
      - sparse undirected graph(unit LGSimpleGraph)
      - sparse undirected weighed graph(unit LGSimpleGraph)
-
+     - sparse directed graph(unit LGSimpleDiGraph)
+     - sparse directed weighed graph(unit LGSimpleDiGraph)
   
   5. Others:
      - simply command line parser (unit LGMiscUtils)
