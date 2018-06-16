@@ -1344,7 +1344,7 @@ begin
           Visited[aSrc] := True;
           Queue.Enqueue(aSrc);
         end;
-  until not Queue.TryDequeue(aSrc);
+  until not {%H-}Queue.TryDequeue(aSrc);
   Result := False;
 end;
 
