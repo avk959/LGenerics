@@ -118,12 +118,13 @@ type
       Hash: SizeInt;
       Data: TEntry;
     end;
+    PNode = ^TNode;
 
     TNodeList = array of TNode;
 
     TEnumerator = class(TEntryEnumerator)
     private
-      FList: TNodeList;
+      FList: PNode;
       FCurrIndex,
       FLastIndex: SizeInt;
     protected
@@ -447,6 +448,7 @@ type
       Hash: SizeInt;
       Data: TEntry;
     end;
+    PNode = ^TNode;
 
     TNodeList = array of TNode;
 
@@ -465,7 +467,7 @@ type
 
     TEnumerator = record
     private
-      FList: TNodeList;
+      FList: PNode;
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
@@ -535,6 +537,7 @@ type
       Hash: SizeInt;
       Data: TEntry;
     end;
+    PNode = ^TNode;
 
     TNodeList = array of TNode;
 
@@ -554,7 +557,7 @@ type
 
     TEnumerator = record
     private
-      FList: TNodeList;
+      FList: PNode;
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
@@ -696,6 +699,7 @@ type
       Hash: SizeInt;
       Data: TEntry;
     end;
+    PNode = ^TNode;
 
     TNodeList = array of TNode;
 
@@ -716,7 +720,7 @@ type
 
     TEnumerator = record
     private
-      FList: TNodeList;
+      FList: PNode;
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
@@ -847,7 +851,7 @@ end;
 
 constructor TGOpenAddressing.TEnumerator.Create(constref aList: TNodeList);
 begin
-  FList := aList;
+  FList := Pointer(aList);
   FLastIndex := System.High(aList);
   FCurrIndex := -1;
 end;
@@ -2555,7 +2559,7 @@ end;
 
 procedure TGHashTableLP.TEnumerator.Init(constref aList: TNodeList);
 begin
-  FList := aList;
+  FList := Pointer(aList);
   FLastIndex := System.High(aList);
   FCurrIndex := -1;
 end;
@@ -2919,7 +2923,7 @@ end;
 
 procedure TGLiteHashTableLP.TEnumerator.Init(constref aList: TNodeList);
 begin
-  FList := aList;
+  FList := Pointer(aList);
   FLastIndex := System.High(aList);
   FCurrIndex := -1;
 end;
@@ -3535,8 +3539,8 @@ end;
 
 procedure TGLiteIntHashTable.TEnumerator.Init(aTable: PHashTable);
 begin
-  FList := aTable^.FList;
-  FLastIndex := System.High(FList);
+  FList := Pointer(aTable^.FList);
+  FLastIndex := System.High(aTable^.FList);
   FCurrIndex := -1;
 end;
 
