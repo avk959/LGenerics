@@ -30,12 +30,14 @@ uses
   Classes, SysUtils,
   LGUtils,
   {%H-}LGHelpers,
+  LGArrayHelpers,
+  LGPriorityQueue,
   LGraphUtils,
   LGStrConst;
 
 type
 
-  TSortOrder      = LGUtils.TSortOrder;
+  TSortOrder = LGUtils.TSortOrder;
 
   { TGSimpleDiGraph is simple sparse directed graph based on adjacency lists;
       functor TVertexEqRel must provide:
@@ -123,6 +125,92 @@ type
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
     property  ReachabilityMatrixValid: Boolean read GetClosureValid;
+  end;
+
+  THandle = LGUtils.THandle;
+
+  { TGWeighedDiGraph: simple sparse directed weighed graph based on adjacency lists;
+
+      functor TVertexEqRel must provide:
+        class function HashCode([const[ref]] aValue: TVertex): SizeInt;
+        class function Equal([const[ref]] L, R: TVertex): Boolean;
+
+      TEdgeData MUST have field/property/function Weight: TWeight;
+
+      TWeight must have defined comparision operators and properties MinValue, MaxValue,
+      which used as infinity weight values;
+      Default(TWeight) used as zero weight value }
+  generic TGWeighedDiGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class(
+     specialize TGSimpleDiGraph<TVertex, TEdgeData, TVertexEqRel>)
+  public
+  type
+    TWeightArray = array of TWeight;
+
+  protected
+  type
+    TWeightEdge  = specialize TGWeighedEdge<TWeight>;
+    TWeightItem  = specialize TGWeighedItem<TWeight>;
+    TRankItem    = specialize TGRankWeighedItem<TWeight>;
+    TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
+    TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+    TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
+    TEdgeArray   = array of TWeightEdge;
+
+    strict private
+    class var
+      CFInfiniteWeight,
+      CFNegInfiniteWeight,
+      CFZeroWeight: TWeight;
+
+  protected
+  { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
+    function  DijkstraSssp(aSrc: SizeInt): TWeightArray;
+    function  DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+  { Dijkstra's pathfinding algorithm }
+    function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
+    function  DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+  { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
+    function  FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+    function  FordBellman(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+    function  CreateWeightArray: TWeightArray;
+    function  CreateEdgeArray: TEdgeArray;
+    class constructor Init;
+  public
+    class property InfiniteWeight: TWeight read CFInfiniteWeight;
+    class property NegInfiniteWeight: TWeight read CFNegInfiniteWeight;
+    class property ZeroWeight: TWeight read CFZeroWeight;
+  { returns True if exists edge with negative weight }
+    function  ContainsNegWeighedEdge: Boolean;
+  { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
+    connected component(SSSP), the weights of all edges must be nonnegative;
+    the result contains in the corresponding component the weight of the path to the vertex or
+    InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
+    function  MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function  MinPathsMapI(aSrc: SizeInt): TWeightArray;
+  { same as above and in aPathTree returns paths }
+    function  MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function  MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+  { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
+    the weights of all edges must be nonnegative;
+    returns path weight or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
+    function  MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
+    function  MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
+  { returns the path of minimal weight from a aSrc to aDst, if exists, and it weight in aWeight }
+    function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
+    function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+  { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
+    connected component(SSSP), the weights of the edges can be negative;
+    returns False and empty aWeights if there is a negative weight cycle, otherwise
+    aWeights will contain in the corresponding component the weight of the minimum path to the vertex or
+    InfiniteWeight if the vertex is unreachable; used Bellman–Ford algorithm  }
+    function  FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+  { same as above and in aPaths returns paths,
+    if there is a negative weight cycle, then aPaths will contain that cycle }
+    function  FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function  FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+    function  Clone: TGWeighedDiGraph;
+    function  Reverse: TGWeighedDiGraph;
   end;
 
 implementation
@@ -816,6 +904,358 @@ begin
     Result.AddVertex(v);
   for e in Edges do
     Result.AddEdgeI(e.Destination, e.Source, e.Data);
+end;
+
+{ TGWeighedDiGraph }
+
+function TGWeighedDiGraph.DijkstraSssp(aSrc: SizeInt): TWeightArray;
+var
+  Visited: TBitVector;
+  Queue: TPairingHeap;
+  Handles: THandleArray;
+  Relaxed: TWeight;
+  Item: TWeightItem;
+  p: PAdjItem;
+begin
+  CheckIndexRange(aSrc);
+  Result := CreateWeightArray;
+  Handles := CreateHandleArray;
+  Visited.Size := VertexCount;
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    begin
+      Visited[Item.Index] := True;
+      Result[Item.Index] := Item.Weight;
+      for p in FNodeList[Item.Index].AdjList do
+        if Handles[p^.Key] = INVALID_HANDLE then
+          Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
+        else
+          if not Visited[p^.Key] then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+            end;
+    end;
+end;
+
+function TGWeighedDiGraph.DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+var
+  Visited: TBitVector;
+  Queue: TPairingHeap;
+  Handles: THandleArray;
+  Relaxed: TWeight;
+  Item: TWeightItem;
+  p: PAdjItem;
+begin
+  Result := CreateWeightArray;
+  aPathTree := CreateIntArray;
+  Handles := CreateHandleArray;
+  Visited.Size := VertexCount;
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    begin
+      Visited[Item.Index] := True;
+      Result[Item.Index] := Item.Weight;
+      for p in FNodeList[Item.Index].AdjList do
+        if Handles[p^.Key] = INVALID_HANDLE then
+          begin
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
+            aPathTree[p^.Key] := Item.Index;
+          end
+        else
+          if not Visited[p^.Key] then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                begin
+                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+                  aPathTree[p^.Key] := Item.Index;
+                end;
+            end;
+    end;
+end;
+
+function TGWeighedDiGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
+var
+  Visited: TBitVector;
+  Queue: TPairingHeap;
+  Handles: THandleArray;
+  Relaxed: TWeight;
+  Item: TWeightItem;
+  p: PAdjItem;
+begin
+  Handles := CreateHandleArray;
+  Visited.Size := VertexCount;
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    begin
+      if Item.Index = aDst then
+        exit(Item.Weight);
+      Visited[Item.Index] := True;
+      for p in FNodeList[Item.Index].AdjList do
+        if Handles[p^.Key] = INVALID_HANDLE then
+          Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
+        else
+          if not Visited[p^.Key] then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+            end
+    end;
+  Result := InfiniteWeight;
+end;
+
+function TGWeighedDiGraph.DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+var
+  Visited: TBitVector;
+  Queue: TPairingHeap;
+  Handles: THandleArray;
+  Tree: TIntArray;
+  Relaxed: TWeight;
+  Item: TWeightItem;
+  p: PAdjItem;
+begin
+  Handles := CreateHandleArray;
+  Tree := CreateIntArray;
+  Visited.Size := VertexCount;
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    begin
+      if Item.Index = aDst then
+        begin
+          aWeight := Item.Weight;
+          exit(TreeToChain(Tree, aDst));
+        end;
+      Visited[Item.Index] := True;
+      for p in FNodeList[Item.Index].AdjList do
+        begin
+          if Handles[p^.Key] = INVALID_HANDLE then
+            begin
+              Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
+              Tree[p^.Key] := Item.Index;
+            end
+          else
+            if not Visited[p^.Key] then
+              begin
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  begin
+                    Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+                    Tree[p^.Key] := Item.Index;
+                  end;
+              end;
+        end;
+    end;
+  aWeight := InfiniteWeight;
+end;
+
+function TGWeighedDiGraph.FordBellman(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+var
+  Edge: TEdge;
+  Enum: TEdgeEnumerator;
+  RelaxValue: TWeight;
+  I: SizeInt;
+  Relaxed: Boolean = False;
+begin
+  aWeights := CreateWeightArray;
+  Enum := Edges.GetEnumerator;
+  aWeights[aSrc] := ZeroWeight;
+  for I := 1 to VertexCount do
+    begin
+      Relaxed := False;
+      while Enum.MoveNext do
+        begin
+          Edge := Enum.Current;
+          if aWeights[Edge.Source] < InfiniteWeight then
+            begin
+              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
+              if RelaxValue < aWeights[Edge.Destination] then
+                begin
+                  aWeights[Edge.Destination] := RelaxValue;
+                  Relaxed := True;
+                end;
+            end;
+        end;
+      if not Relaxed then
+        break;
+      Enum.Reset;
+    end;
+  Result := not Relaxed;
+  if not Result then
+    aWeights := nil;
+end;
+
+function TGWeighedDiGraph.FordBellman(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+var
+  Edge: TEdge;
+  Enum: TEdgeEnumerator;
+  v: TIntVector;
+  RelaxValue: TWeight;
+  I: SizeInt;
+  J: SizeInt = -1;
+begin
+  aWeights := CreateWeightArray;
+  aPaths := CreateIntArray;
+  Enum := Edges.GetEnumerator;
+  aWeights[aSrc] := ZeroWeight;
+  for I := 1 to VertexCount do
+    begin
+      J := -1;
+      while Enum.MoveNext do
+        begin
+          Edge := Enum.Current;
+          if aWeights[Edge.Source] < InfiniteWeight then
+            begin
+              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
+              if RelaxValue < aWeights[Edge.Destination] then
+                begin
+                  aWeights[Edge.Destination] := RelaxValue;
+                  aPaths[Edge.Destination] := Edge.Source;
+                  J := Edge.Destination;
+                end;
+            end;
+        end;
+      if J = -1 then
+        break;
+      Enum.Reset;
+    end;
+
+  Result := J = -1;
+
+  if not Result then
+    begin
+      for I := 1 to VertexCount do
+        J := aPaths[J];
+      I := J;
+      v.Add(J);
+      repeat
+        I := aPaths[I];
+        v.Add(I);
+      until I = J;
+      aPaths := v.ToArray;
+      aWeights := nil;
+    end;
+end;
+
+function TGWeighedDiGraph.CreateWeightArray: TWeightArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := InfiniteWeight;
+end;
+
+function TGWeighedDiGraph.CreateEdgeArray: TEdgeArray;
+var
+  I: SizeInt = 0;
+  e: TEdge;
+begin
+  System.SetLength(Result, EdgeCount);
+  for e in Edges do
+    begin
+      Result[I] := TWeightEdge.Create(e.Source, e.Destination, e.Data.Weight);
+      Inc(I);
+    end;
+end;
+
+class constructor TGWeighedDiGraph.Init;
+begin
+  CFInfiniteWeight := TWeight.MaxValue;
+  CFNegInfiniteWeight := TWeight.MinValue;
+  CFZeroWeight := Default(TWeight);
+end;
+
+function TGWeighedDiGraph.ContainsNegWeighedEdge: Boolean;
+var
+  e: TEdge;
+begin
+  for e in Edges do
+    if e.Data.Weight < ZeroWeight then
+      exit(True);
+  Result := False;
+end;
+
+function TGWeighedDiGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
+begin
+  Result := MinPathsMapI(IndexOf(aSrc));
+end;
+
+function TGWeighedDiGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
+begin
+  CheckIndexRange(aSrc);
+  Result := DijkstraSssp(aSrc);
+end;
+
+function TGWeighedDiGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+begin
+  Result := MinPathsMapI(IndexOf(aSrc), aPathTree);
+end;
+
+function TGWeighedDiGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+begin
+  CheckIndexRange(aSrc);
+  Result := DijkstraSssp(aSrc, aPathTree);
+end;
+
+function TGWeighedDiGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
+begin
+  Result := MinPathWeightI(IndexOf(aSrc), IndexOf(aDst));
+end;
+
+function TGWeighedDiGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := DijkstraPath(aSrc, aDst);
+end;
+
+function TGWeighedDiGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+begin
+  Result := MinPathI(IndexOf(aSrc), IndexOf(aDst), aWeight);
+end;
+
+function TGWeighedDiGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := DijkstraPath(aSrc, aDst, aWeight);
+end;
+
+function TGWeighedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+begin
+  Result := FindMinPathsMapI(IndexOf(aSrc), aWeights);
+end;
+
+function TGWeighedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  Result := FordBellman(aSrc, aWeights);
+end;
+
+function TGWeighedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+begin
+  Result := FindMinPathsMapI(IndexOf(aSrc), aPaths, aWeights);
+end;
+
+function TGWeighedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  Result := FordBellman(aSrc, aPaths, aWeights);
+end;
+
+function TGWeighedDiGraph.Clone: TGWeighedDiGraph;
+begin
+  Result := inherited Clone as TGWeighedDiGraph;
+end;
+
+function TGWeighedDiGraph.Reverse: TGWeighedDiGraph;
+begin
+  Result := inherited Reverse as TGWeighedDiGraph;
 end;
 
 end.
