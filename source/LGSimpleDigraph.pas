@@ -65,7 +65,7 @@ type
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): SizeInt;
     function  TopoSort(aIndex: SizeInt): TIntArray;
-    function  SearchForStrongComponents(out aCompIds: TIntArray): SizeInt;
+    function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix: TReachabilityMatrix;
   public
   { returns True and vertex index, if it was added, False otherwise }
@@ -106,8 +106,8 @@ type
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCircuit: Boolean;
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
-    function  IsDag(constref aRoot: TVertex): Boolean; inline;
-    function  IsDagI(aRoot: SizeInt): Boolean;
+    function  IsDag(constref aSource: TVertex): Boolean; inline;
+    function  IsDagI(aSource: SizeInt): Boolean;
     function  MaxBitMatrixSize: SizeInt; inline;
   { creates internal transitive closure }
     procedure FillReachabilityMatrix;
@@ -284,7 +284,7 @@ begin
       end;
 end;
 
-function TGSimpleDiGraph.SearchForStrongComponents(out aCompIds: TIntArray): SizeInt;
+function TGSimpleDiGraph.SearchForStrongComponents(out aIds: TIntArray): SizeInt;
 var
   Stack, VtxStack, PathStack: TIntStack;
   AdjEnums: TAdjEnumArray;
@@ -292,7 +292,7 @@ var
   I, Counter, Curr, Next: SizeInt;
 begin
   InOrder := CreateIntArray;
-  aCompIds := CreateIntArray;
+  aIds := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
   Counter := 0;
   Result := 0;
@@ -317,7 +317,7 @@ begin
                   PathStack.Push(Next);
                 end
               else
-                if aCompIds[Next] = -1 then
+                if aIds[Next] = -1 then
                   while InOrder[PathStack.Peek] > InOrder[Next] do
                     PathStack.Pop;
             end
@@ -329,7 +329,7 @@ begin
                   PathStack.Pop;
                   repeat
                     Next := VtxStack.Pop;
-                    aCompIds[Next] := Result;
+                    aIds[Next] := Result;
                   until Next = Curr;
                   Inc(Result);
                 end;
@@ -345,7 +345,7 @@ var
   AdjEnums: TAdjEnumArray;
   I, J, ScCount, Counter, Curr, Next: SizeInt;
 begin
-  ScCount := FindStrongComponents(Ids);
+  ScCount := SearchForStrongComponents(Ids);
   m := TSquareBitMatrix.Create(ScCount);
   if ScCount = 1 then
     begin
@@ -380,13 +380,9 @@ begin
               Next := Stack.Pop;
               Curr := Parents[Next];
               if (Curr <> -1) and (InOrder[Next] < InOrder[Curr]) then
-                begin
-                  Curr := Ids[Curr];
-                  Next := Ids[Next];
-                  for J := 0 to Pred(ScCount) do
-                    if m[Next, Ids[J]] then
-                      m[Curr, Ids[J]] := True;
-                end;
+                for J := 0 to Pred(ScCount) do
+                  if m[Ids[Next], Ids[J]] then
+                    m[Ids[Curr], Ids[J]] := True;
             end;
       end;
   Result := TReachabilityMatrix.Create(m, Ids);
@@ -733,22 +729,22 @@ begin
     TIntVectorHelper.Reverse(aCircuit);
 end;
 
-function TGSimpleDiGraph.IsDag(constref aRoot: TVertex): Boolean;
+function TGSimpleDiGraph.IsDag(constref aSource: TVertex): Boolean;
 begin
-  Result := IsDagI(IndexOf(aRoot));
+  Result := IsDagI(IndexOf(aSource));
 end;
 
-function TGSimpleDiGraph.IsDagI(aRoot: SizeInt): Boolean;
+function TGSimpleDiGraph.IsDagI(aSource: SizeInt): Boolean;
 var
   Dummy: TIntArray = nil;
   I: SizeInt;
 begin
-  CheckIndexRange(aRoot);
+  CheckIndexRange(aSource);
   if VertexCount = 1 then
     exit(True);
-  if (FNodeList[aRoot].AdjList.Count = 0) or (FNodeList[aRoot].Tag <> 0) then
+  if (FNodeList[aSource].AdjList.Count = 0) or (FNodeList[aSource].Tag <> 0) then
     exit(False);
-  I := FindCycle(aRoot, Dummy);
+  I := FindCycle(aSource, Dummy);
   Result := (System.Length(Dummy) = 0) and (I = VertexCount);
 end;
 

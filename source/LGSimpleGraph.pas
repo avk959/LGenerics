@@ -243,11 +243,11 @@ type
     function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
-  { returns a graph constructed from the pairs provided by the array,
-    i.e. each element treates as pair of source - destination }
-    function  CreateFromArray(constref aValue: TIntArray): TGSimpleGraph;
-  { returns a graph constructed from the edges provided by the array }
-    function  CreateFromEdgeArray(constref aEdges: TIntEdgeArray): TGSimpleGraph;
+  { returns a graph constructed from the pairs provided by the aPairs,
+    i.e. each element treates as pair of source - destination(value -> source, index -> destination ) }
+    function  SubgraphFromPairs(constref aPairs: TIntArray): TGSimpleGraph;
+  { returns a graph constructed from the edges provided by the aEdges }
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
     function  DistinctEdges: TDistinctEdges; inline;
   { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
@@ -283,6 +283,8 @@ type
     procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
     function  SeparateGraph(constref aVertex: TVertex): TGChart;
     function  SeparateGraphI(aIndex: SizeInt): TGChart;
+    function  SubgraphFromPairs(constref aPairs: TIntArray): TGChart;
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
     function  Clone: TGChart;
     function  Complement: TGChart;
   end;
@@ -300,6 +302,8 @@ type
     procedure LoadFromFile(const aFileName: string);
     function  SeparateGraph(aVertex: SizeInt): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
+    function  SubgraphFromPairs(constref aValue: TIntArray): TIntChart;
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
     function  Clone: TIntChart;
     function  Complement: TIntChart;
   end;
@@ -317,6 +321,8 @@ type
     procedure LoadFromFile(const aFileName: string);
     function  SeparateGraph(const aVertex: string): TStrChart;
     function  SeparateGraphI(aIndex: SizeInt): TStrChart;
+    function  SubgraphFromPairs(constref aPairs: TIntArray): TStrChart;
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
     function  Clone: TStrChart;
     function  Complement: TStrChart;
   end;
@@ -343,46 +349,10 @@ type
 
   protected
   type
-    TWeightEdge = record
-      Source,
-      Destination: SizeInt;
-      Weight:  TWeight;
-      class operator = (constref L, R: TWeightEdge): Boolean; inline;
-      class operator <>(constref L, R: TWeightEdge): Boolean; inline;
-      class operator > (constref L, R: TWeightEdge): Boolean; inline;
-      class operator < (constref L, R: TWeightEdge): Boolean; inline;
-      class operator >=(constref L, R: TWeightEdge): Boolean; inline;
-      class operator <=(constref L, R: TWeightEdge): Boolean; inline;
-      constructor Create(s, d: SizeInt; w: TWeight);
-    end;
-
+    TWeightEdge  = specialize TGWeighedEdge<TWeight>;
+    TWeightItem  = specialize TGWeighedItem<TWeight>;
+    TRankItem    = specialize TGRankWeighedItem<TWeight>;
     TEdgeArray   = array of TWeightEdge;
-
-    TWeightItem = record
-      Weight: TWeight;
-      Index: SizeInt;
-      class operator = (constref L, R: TWeightItem): Boolean; inline;
-      class operator <>(constref L, R: TWeightItem): Boolean; inline;
-      class operator > (constref L, R: TWeightItem): Boolean; inline;
-      class operator < (constref L, R: TWeightItem): Boolean; inline;
-      class operator >=(constref L, R: TWeightItem): Boolean; inline;
-      class operator <=(constref L, R: TWeightItem): Boolean; inline;
-      constructor Create(constref w: TWeight; aIndex: SizeInt);
-    end;
-
-    TRankItem = record
-      Rank,
-      Weight: TWeight;
-      Index: SizeInt;
-      class operator = (constref L, R: TRankItem): Boolean; inline;
-      class operator <>(constref L, R: TRankItem): Boolean; inline;
-      class operator > (constref L, R: TRankItem): Boolean; inline;
-      class operator < (constref L, R: TRankItem): Boolean; inline;
-      class operator >=(constref L, R: TRankItem): Boolean; inline;
-      class operator <=(constref L, R: TRankItem): Boolean; inline;
-      constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
-    end;
-
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
     TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
@@ -415,7 +385,6 @@ type
     class property InfiniteWeight: TWeight read CFInfiniteWeight;
     class property NegInfiniteWeight: TWeight read CFNegInfiniteWeight;
     class property ZeroWeight: TWeight read CFZeroWeight;
-
   { returns True if exists edge with negative weight }
     function  ContainsNegWeighedEdge: Boolean;
   { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
@@ -458,6 +427,8 @@ type
     function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
     function  SeparateGraph(constref aVertex: TVertex): TGWeighedGraph;
     function  SeparateGraphI(aIndex: SizeInt): TGWeighedGraph;
+    function  SubgraphFromPairs(constref aPairs: TIntArray): TGWeighedGraph;
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeighedGraph;
     function  Clone: TGWeighedGraph;
     function  Complement(aOnAddEdge: TOnAddEdge): TGWeighedGraph;
   end;
@@ -468,6 +439,7 @@ type
   end;
 
   { TPointsChart }
+
   TPointsChart = class(specialize TGWeighedGraph<TPoint, ValReal, TRealPointEdge, TPoint>)
   protected
     procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
@@ -488,6 +460,8 @@ type
     procedure LoadFromFile(const aFileName: string);
     function  SeparateGraph(aVertex: TPoint): TPointsChart;
     function  SeparateGraphI(aIndex: SizeInt): TPointsChart;
+    function  SubgraphFromPairs(constref aPairs: TIntArray): TPointsChart;
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
     function  Complement: TPointsChart;
   end;
@@ -2000,20 +1974,20 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
-function TGSimpleGraph.CreateFromArray(constref aValue: TIntArray): TGSimpleGraph;
+function TGSimpleGraph.SubgraphFromPairs(constref aPairs: TIntArray): TGSimpleGraph;
 var
   I, Src: SizeInt;
 begin
   Result := TGSimpleGraph.Create;
-  for I := 0 to Pred(System.Length(aValue)) do
+  for I := 0 to Pred(System.Length(aPairs)) do
     begin
-      Src := aValue[I];
+      Src := aPairs[I];
       if Src <> -1 then
         Result.AddEdge(Items[Src], Items[I], GetEdgeDataPtr(Src, I)^);
     end;
 end;
 
-function TGSimpleGraph.CreateFromEdgeArray(constref aEdges: TIntEdgeArray): TGSimpleGraph;
+function TGSimpleGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
 var
   e: TIntEdge;
 begin
@@ -2139,6 +2113,16 @@ begin
   Result := inherited SeparateGraphI(aIndex) as TGChart;
 end;
 
+function TGChart.SubgraphFromPairs(constref aPairs: TIntArray): TGChart;
+begin
+  Result := inherited SubgraphFromPairs(aPairs) as TGChart;
+end;
+
+function TGChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
+begin
+  Result := inherited SubgraphFromEdges(aEdges) as TGChart;
+end;
+
 function TGChart.Clone: TGChart;
 begin
   Result := inherited Clone as TGChart;
@@ -2189,6 +2173,16 @@ end;
 function TIntChart.SeparateGraphI(aIndex: SizeInt): TIntChart;
 begin
   Result := inherited SeparateGraphI(aIndex) as TIntChart;
+end;
+
+function TIntChart.SubgraphFromPairs(constref aValue: TIntArray): TIntChart;
+begin
+  Result := inherited SubgraphFromPairs(aValue) as TIntChart;
+end;
+
+function TIntChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
+begin
+  Result := inherited SubgraphFromEdges(aEdges) as TIntChart;
 end;
 
 function TIntChart.Clone: TIntChart;
@@ -2255,6 +2249,16 @@ begin
   Result := inherited SeparateGraphI(aIndex) as TStrChart;
 end;
 
+function TStrChart.SubgraphFromPairs(constref aPairs: TIntArray): TStrChart;
+begin
+  Result := inherited SubgraphFromPairs(aPairs) as TStrChart;
+end;
+
+function TStrChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
+begin
+  Result := inherited SubgraphFromEdges(aEdges) as TStrChart;
+end;
+
 function TStrChart.Clone: TStrChart;
 begin
   Result := inherited Clone as TStrChart;
@@ -2263,122 +2267,6 @@ end;
 function TStrChart.Complement: TStrChart;
 begin
   Result := inherited Complement as TStrChart;
-end;
-
-{ TGWeighedGraph.TWeightEdge }
-
-class operator TGWeighedGraph.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight = R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight <> R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight > R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight < R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight >= R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
-begin
-  Result := L.Weight <= R.Weight;
-end;
-
-constructor TGWeighedGraph.TWeightEdge.Create(s, d: SizeInt; w: TWeight);
-begin
-  Source := s;
-  Destination := d;
-  Weight := w;
-end;
-
-{ TGWeighedGraph.TWeightItem }
-
-class operator TGWeighedGraph.TWeightItem. = (constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight = R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight <> R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightItem.>(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight > R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightItem.<(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight < R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight >= R.Weight;
-end;
-
-class operator TGWeighedGraph.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
-begin
-  Result := L.Weight <= R.Weight;
-end;
-
-constructor TGWeighedGraph.TWeightItem.Create(constref w: TWeight; aIndex: SizeInt);
-begin
-  Weight := w;
-  Index := aIndex;
-end;
-
-{ TGWeighedGraph.TWeightItem }
-
-class operator TGWeighedGraph.TRankItem. = (constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank = R.Rank;
-end;
-
-class operator TGWeighedGraph.TRankItem.<>(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank <> R.Rank;
-end;
-
-class operator TGWeighedGraph.TRankItem.>(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank > R.Rank;
-end;
-
-class operator TGWeighedGraph.TRankItem.<(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank < R.Rank;
-end;
-
-class operator TGWeighedGraph.TRankItem.>=(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank >= R.Rank;
-end;
-
-class operator TGWeighedGraph.TRankItem.<=(constref L, R: TRankItem): Boolean;
-begin
-  Result := L.Rank <= R.Rank;
-end;
-
-constructor TGWeighedGraph.TRankItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
-begin
-  Rank := aRank;
-  Weight := aWeight;
-  Index := aIndex;
 end;
 
 { TGWeighedGraph }
@@ -2883,6 +2771,16 @@ begin
   Result := inherited SeparateGraphI(aIndex) as TGWeighedGraph;
 end;
 
+function TGWeighedGraph.SubgraphFromPairs(constref aPairs: TIntArray): TGWeighedGraph;
+begin
+  Result := inherited SubgraphFromPairs(aPairs) as TGWeighedGraph;
+end;
+
+function TGWeighedGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeighedGraph;
+begin
+  Result := inherited SubgraphFromEdges(aEdges) as TGWeighedGraph;
+end;
+
 function TGWeighedGraph.Clone: TGWeighedGraph;
 begin
   Result := inherited Clone as TGWeighedGraph;
@@ -2985,6 +2883,16 @@ end;
 function TPointsChart.SeparateGraphI(aIndex: SizeInt): TPointsChart;
 begin
   Result := inherited SeparateGraphI(aIndex) as TPointsChart;
+end;
+
+function TPointsChart.SubgraphFromPairs(constref aPairs: TIntArray): TPointsChart;
+begin
+  Result := inherited SubgraphFromPairs(aPairs) as TPointsChart;
+end;
+
+function TPointsChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
+begin
+  Result := inherited SubgraphFromEdges(aEdges) as TPointsChart;
 end;
 
 function TPointsChart.Clone: TPointsChart;

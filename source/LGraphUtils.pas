@@ -156,81 +156,6 @@ type
   TIntEdgeArray         = array of TIntEdge;
   TEdgeArrayVector      = specialize TGLiteVector<TIntEdgeArray>;
 
-  generic TGAdjItem<TData> = record
-    Destination: SizeInt;
-    Data: TData;
-    constructor Create(aDst: SizeInt; constref aData: TData);
-    property Key: SizeInt read Destination;
-  end;
-
-  generic TGHashAdjList<TData> = record
-  public
-  type
-    TAdjItem      = specialize TGAdjItem<TData>;
-    TAdjItemArray = array of TAdjItem;
-    PAdjItem      = ^TAdjItem;
-
-  private
-  type
-    TNode = record
-      Hash: SizeInt;
-      Item: TAdjItem;
-    end;
-
-    PNode     = ^TNode;
-    TNodeList = array of TNode;
-
-  const
-    SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
-    USED_FLAG: SizeInt      = SizeInt(1);
-    INITIAL_SIZE            = 16;
-
-  public
-  type
-    TEnumerator = record
-    private
-      FList: PNode;
-      FCurrIndex,
-      FLastIndex: SizeInt;
-      function  GetCurrent: PAdjItem; inline;
-    public
-      function  MoveNext: Boolean;
-      procedure Reset; inline;
-      property  Current: PAdjItem read GetCurrent;
-    end;
-
-  private
-    FNodeList: TNodeList;
-    FShift,
-    FCount: SizeInt;
-    function  GetCapacity: SizeInt; inline;
-    procedure Rehash(var aNewList: TNodeList);
-    procedure Resize(aNewCapacity: SizeInt);
-    procedure Expand;
-    function  DoFind(aValue, aHash: SizeInt): SizeInt;
-    procedure DoRemove(aIndex: SizeInt);
-    class function HashCode(aValue: SizeInt): SizeInt; static; inline;
-    class function NewList(aCapacity: SizeInt): TNodeList; static;
-    property Shift: SizeInt read FShift;
-    class operator Initialize(var aList: TGHashAdjList);
-  public
-    function  GetEnumerator: TEnumerator;
-    function  ToArray: TAdjItemArray;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
-    procedure Clear;
-    procedure MakeEmpty;
-    procedure TrimToFit; inline;
-    function  Contains(aDst: SizeInt): Boolean; inline;
-    function  FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean; inline;
-    function  Find(aDst: SizeInt): PAdjItem;
-    function  FindFirst(out aDst: SizeInt): Boolean;
-    function  Add(constref aItem: TAdjItem): Boolean;
-    function  Remove(aDst: SizeInt): Boolean; inline;
-    property  Count: SizeInt read FCount;
-    property  Capacity: SizeInt read GetCapacity;
-  end;
-
   { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -494,8 +419,8 @@ type
     end;
 
   public
-    class function  TreeToChain(constref aTree: TIntArray; aIndex: SizeInt): TIntArray; static;
-    class procedure Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; var v: TIntVector); static;
+    class function  TreeToChain(constref aTree: TIntArray; aRoot: SizeInt): TIntArray; static;
+    class procedure Tree2Chain(constref aTree: TIntArray; aRoot: SizeInt; var v: TIntVector); static;
     class function  TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
     class procedure Tree2Cycle(constref aTree: TIntArray;  aFirst, aLast: SizeInt; var v: TIntVector); static;
     class function  TreeToCycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt; static;
@@ -564,6 +489,44 @@ type
     property  EdgeCount: SizeInt read FEdgeCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
+  end;
+
+  generic TGWeighedEdge<TWeight> = record
+    Source,
+    Destination: SizeInt;
+    Weight:  TWeight;
+    class operator = (constref L, R: TGWeighedEdge): Boolean; inline;
+    class operator <>(constref L, R: TGWeighedEdge): Boolean; inline;
+    class operator > (constref L, R: TGWeighedEdge): Boolean; inline;
+    class operator < (constref L, R: TGWeighedEdge): Boolean; inline;
+    class operator >=(constref L, R: TGWeighedEdge): Boolean; inline;
+    class operator <=(constref L, R: TGWeighedEdge): Boolean; inline;
+    constructor Create(s, d: SizeInt; w: TWeight);
+  end;
+
+  generic TGWeighedItem<TWeight> = record
+    Weight: TWeight;
+    Index: SizeInt;
+    class operator = (constref L, R: TGWeighedItem): Boolean; inline;
+    class operator <>(constref L, R: TGWeighedItem): Boolean; inline;
+    class operator > (constref L, R: TGWeighedItem): Boolean; inline;
+    class operator < (constref L, R: TGWeighedItem): Boolean; inline;
+    class operator >=(constref L, R: TGWeighedItem): Boolean; inline;
+    class operator <=(constref L, R: TGWeighedItem): Boolean; inline;
+    constructor Create(constref w: TWeight; aIndex: SizeInt);
+  end;
+
+  generic TGRankWeighedItem<TWeight> = record
+    Rank,
+    Weight: TWeight;
+    Index: SizeInt;
+    class operator = (constref L, R: TGRankWeighedItem): Boolean; inline;
+    class operator <>(constref L, R: TGRankWeighedItem): Boolean; inline;
+    class operator > (constref L, R: TGRankWeighedItem): Boolean; inline;
+    class operator < (constref L, R: TGRankWeighedItem): Boolean; inline;
+    class operator >=(constref L, R: TGRankWeighedItem): Boolean; inline;
+    class operator <=(constref L, R: TGRankWeighedItem): Boolean; inline;
+    constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
   end;
 
 
@@ -740,305 +703,6 @@ constructor TIntEdge.Create(s, d: SizeInt);
 begin
   Source := s;
   Destination := d;
-end;
-
-{ TGAdjItem }
-
-constructor TGAdjItem.Create(aDst: SizeInt; constref aData: TData);
-begin
-  Destination := aDst;
-  Data := aData;
-end;
-
-{ TGHashAdjList.TEnumerator }
-
-function TGHashAdjList.TEnumerator.GetCurrent: PAdjItem;
-begin
-  Result := @FList[FCurrIndex].Item;
-end;
-
-function TGHashAdjList.TEnumerator.MoveNext: Boolean;
-begin
-  repeat
-    if FCurrIndex >= FLastIndex then
-      exit(False);
-    Inc(FCurrIndex);
-    Result := FList[FCurrIndex].Hash <> 0;
-  until Result;
-end;
-
-procedure TGHashAdjList.TEnumerator.Reset;
-begin
-  FCurrIndex := -1;
-end;
-
-{ TGHashAdjList }
-
-function TGHashAdjList.GetCapacity: SizeInt;
-begin
-  Result := System.Length(FNodeList);
-end;
-
-procedure TGHashAdjList.Rehash(var aNewList: TNodeList);
-var
-  h, I, J, Mask: SizeInt;
-begin
-  if Count > 0 then
-    begin
-      Mask := System.High(aNewList);
-      for I := 0 to System.High(FNodeList) do
-        begin
-          if FNodeList[I].Hash <> 0 then
-            begin
-              h := FNodeList[I].Hash shr Shift;
-              for J := 0 to Mask do
-                begin
-                  if aNewList[h].Hash = 0 then // -> target node is empty
-                    begin
-                      aNewList[h] := FNodeList[I];
-                      break;
-                    end;
-                  h := Succ(h) and Mask;
-                end;
-            end;
-        end;
-    end;
-end;
-
-procedure TGHashAdjList.Resize(aNewCapacity: SizeInt);
-var
-  List: TNodeList;
-begin
-  List := NewList(aNewCapacity);
-{$IF DEFINED(CPU64)}
-  FShift := 64 - BsrQWord(QWord(aNewCapacity));
-{$ELSEIF DEFINED(CPU32)}
-  FShift := 32 - BsrDWord(DWord(aNewCapacity));
-{$ELSE}
-  FShift := 16 - BsrWord(Word(aNewCapacity));
-{$ENDIF}
-  Rehash(List);
-  FNodeList := List;
-end;
-
-procedure TGHashAdjList.Expand;
-begin
-  if Capacity > 0 then
-    Resize(Capacity shl 1)
-  else
-    Resize(INITIAL_SIZE);
-end;
-
-function TGHashAdjList.DoFind(aValue, aHash: SizeInt): SizeInt;
-var
-  I, Pos, Mask: SizeInt;
-begin
-  Mask := System.High(FNodeList);
-  Result := SLOT_NOT_FOUND;
-  Pos := aHash shr Shift;
-  for I := 0 to Mask do
-    begin
-      if FNodeList[Pos].Hash = 0 then // node empty => key not found
-        exit(not Pos)
-      else
-        if FNodeList[Pos].Item.Key = aValue then
-          exit(Pos);                // key found
-      Pos := Succ(Pos) and Mask;    // probe sequence
-    end;
-end;
-
-procedure TGHashAdjList.DoRemove(aIndex: SizeInt);
-var
-  h, Gap, Mask: SizeInt;
-begin
-  Mask := System.High(FNodeList);
-  FNodeList[aIndex] := Default(TNode);;
-  Gap := aIndex;
-  aIndex := Succ(aIndex) and Mask;
-  Dec(FCount);
-  repeat
-    if FNodeList[aIndex].Hash = 0 then
-      break;
-    h := FNodeList[aIndex].Hash shr Shift;
-    if (h <> aIndex) and (Succ(aIndex - h + Mask) and Mask >= Succ(aIndex - Gap + Mask) and Mask) then
-      begin
-        FNodeList[Gap] := FNodeList[aIndex];
-        FNodeList[aIndex].Hash := 0;
-        Gap := aIndex;
-      end;
-    aIndex := Succ(aIndex) and Mask;
-  until False;
-end;
-
-class function TGHashAdjList.HashCode(aValue: SizeInt): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := aValue * SizeInt($9e3779b97f4a7c15);
-{$ELSEIF DEFINED(CPU32)}
-  Result := aValue * SizeInt($9e3779b9);
-{$ELSE}
-  Result := aValue * SizeInt($9e37);
-{$ENDIF}
-end;
-
-class function TGHashAdjList.NewList(aCapacity: SizeInt): TNodeList;
-begin
-  System.SetLength(Result, aCapacity);
-  System.FillChar(Result[0], aCapacity * SizeOf(TNode), 0);
-end;
-
-class operator TGHashAdjList.Initialize(var aList: TGHashAdjList);
-begin
-  aList.FCount := 0;
-end;
-
-function TGHashAdjList.GetEnumerator: TEnumerator;
-begin
-  Result.FLastIndex := System.High(FNodeList);
-  Result.FList := Pointer(FNodeList);
-  Result.FCurrIndex := -1;
-end;
-
-function TGHashAdjList.ToArray: TAdjItemArray;
-var
-  I, J: SizeInt;
-begin
-  System.SetLength(Result, Count);
-  if Count > 0 then
-    begin
-      J := 0;
-      for I := 0 to System.High(FNodeList) do
-        if FNodeList[I].Hash <> 0 then
-          begin
-            Result[J] := FNodeList[I].Item;
-            Inc(J);
-            if J = Count then
-              break;
-          end;
-    end;
-end;
-
-function TGHashAdjList.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TGHashAdjList.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TGHashAdjList.Clear;
-begin
-  FNodeList := nil;
-  FCount := 0;
-end;
-
-procedure TGHashAdjList.MakeEmpty;
-var
-  I: SizeInt;
-begin
-  for I := 0 to System.High(FNodeList) do
-    FNodeList[I] := Default(TNode);
-  FCount := 0;
-end;
-
-procedure TGHashAdjList.TrimToFit;
-var
-  NewCapacity: SizeInt;
-begin
-  if Count = 0 then
-    begin
-      NewCapacity := LGUtils.RoundUpTwoPower(Count shl 1);
-      if NewCapacity < GetCapacity then
-        Resize(NewCapacity);
-    end
-  else
-    Clear;
-end;
-
-function TGHashAdjList.Contains(aDst: SizeInt): Boolean;
-begin
-  Result := Find(aDst) <> nil;
-end;
-
-function TGHashAdjList.FindOrAdd(aDst: SizeInt; out e: PAdjItem): Boolean;
-var
-  Hash, Pos: SizeInt;
-begin
-  if FNodeList = nil then
-    Expand;
-  Hash := HashCode(aDst) or USED_FLAG;
-  Pos := DoFind(aDst, Hash);
-  Result := Pos >= 0;
-  if not Result then
-    begin
-      if Count >= Capacity shr 1 then
-        begin
-          Expand;
-          Pos := DoFind(aDst, Hash);
-        end;
-      if Pos <> SLOT_NOT_FOUND then
-        begin
-          Pos := not Pos;
-          FNodeList[Pos].Hash := Hash;
-          Inc(FCount);
-        end
-      else
-        raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [Succ(Count)]);
-    end;
-  e := @FNodeList[Pos].Item;
-end;
-
-function TGHashAdjList.Find(aDst: SizeInt): PAdjItem;
-var
-  Pos: SizeInt;
-begin
-  Result := nil;
-  if Count > 0 then
-    begin
-      Pos := DoFind(aDst, HashCode(aDst));
-      if Pos >= 0 then
-        Result := @FNodeList[Pos].Item;
-    end;
-end;
-
-function TGHashAdjList.FindFirst(out aDst: SizeInt): Boolean;
-var
-  I: SizeInt;
-begin
-  if Count > 0 then
-    for I := 0 to System.High(FNodeList) do
-      if FNodeList[I].Hash <> 0 then
-        begin
-          aDst := FNodeList[I].Item.Key;
-          exit(True);
-        end;
-  Result := False;
-end;
-
-function TGHashAdjList.Add(constref aItem: TAdjItem): Boolean;
-var
-  p: PAdjItem;
-begin
-  Result := not FindOrAdd(aItem.Key, p);
-  if Result then
-    p^ := aItem;
-end;
-
-function TGHashAdjList.Remove(aDst: SizeInt): Boolean;
-var
-  Pos: SizeInt;
-begin
-  if Count > 0 then
-    begin
-      Pos := DoFind(aDst, HashCode(aDst));
-      Result := Pos >= 0;
-      if Result then
-        DoRemove(Pos);
-    end
-  else
-    Result := False;
 end;
 
 { TGCustomGraph.TAdjItem }
@@ -1710,8 +1374,8 @@ begin
             //on white
             Visited[Next] := True;
             Inc(Result);
-            //on gray
             Stack.Push(Next);
+            //on gray
           end;
       end
     else
@@ -1721,31 +1385,31 @@ begin
       end;
 end;
 
-class function TGCustomGraph.TreeToChain(constref aTree: TIntArray; aIndex: SizeInt): TIntArray;
+class function TGCustomGraph.TreeToChain(constref aTree: TIntArray; aRoot: SizeInt): TIntArray;
 var
   v: TIntVector;
 begin
-  while aIndex >= 0 do
+  while aRoot >= 0 do
     begin
-      if aIndex < System.Length(aTree) then
-        v.Add(aIndex)
+      if aRoot < System.Length(aTree) then
+        v.Add(aRoot)
       else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
-      aIndex := aTree[aIndex];
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aRoot]);
+      aRoot := aTree[aRoot];
     end;
   Result := v.ToArray;
   TIntHelper.Reverse(Result);
 end;
 
-class procedure TGCustomGraph.Tree2Chain(constref aTree: TIntArray; aIndex: SizeInt; var v: TIntVector);
+class procedure TGCustomGraph.Tree2Chain(constref aTree: TIntArray; aRoot: SizeInt; var v: TIntVector);
 begin
-  while aIndex >= 0 do
+  while aRoot >= 0 do
     begin
-      if aIndex < System.Length(aTree) then
-        v.Add(aIndex)
+      if aRoot < System.Length(aTree) then
+        v.Add(aRoot)
       else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aIndex]);
-      aIndex := aTree[aIndex];
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aRoot]);
+      aRoot := aTree[aRoot];
     end;
   v.TrimToFit;
   TIntVectorHelper.Reverse(v);
@@ -2215,6 +1879,122 @@ begin
           Parents[Next] := aSrc;
         end;
   until not Queue.TryDequeue(aSrc);
+end;
+
+{ TGWeighedEdge }
+
+class operator TGWeighedEdge. = (constref L, R: TGWeighedEdge): Boolean;
+begin
+  Result := L.Weight = R.Weight;
+end;
+
+class operator TGWeighedEdge.<>(constref L, R: TGWeighedEdge): Boolean;
+begin
+  Result := L.Weight <> R.Weight;
+end;
+
+class operator TGWeighedEdge.>(constref L, R: TGWeighedEdge): Boolean;
+begin
+  Result := L.Weight > R.Weight;
+end;
+
+class operator TGWeighedEdge.<(constref L, R: TGWeighedEdge): Boolean;
+begin
+  Result := L.Weight < R.Weight;
+end;
+
+class operator TGWeighedEdge.>=(constref L, R: TGWeighedEdge): Boolean;
+begin
+  Result := L.Weight >= R.Weight;
+end;
+
+class operator TGWeighedEdge.<=(constref L, R: TGWeighedEdge): Boolean;
+begin
+  Result := L.Weight <= R.Weight;
+end;
+
+constructor TGWeighedEdge.Create(s, d: SizeInt; w: TWeight);
+begin
+  Source := s;
+  Destination := d;
+  Weight := w;
+end;
+
+{ TGWeighedItem }
+
+class operator TGWeighedItem. = (constref L, R: TGWeighedItem): Boolean;
+begin
+  Result := L.Weight = R.Weight;
+end;
+
+class operator TGWeighedItem.<>(constref L, R: TGWeighedItem): Boolean;
+begin
+  Result := L.Weight <> R.Weight;
+end;
+
+class operator TGWeighedItem.>(constref L, R: TGWeighedItem): Boolean;
+begin
+  Result := L.Weight > R.Weight;
+end;
+
+class operator TGWeighedItem.<(constref L, R: TGWeighedItem): Boolean;
+begin
+  Result := L.Weight < R.Weight;
+end;
+
+class operator TGWeighedItem.>=(constref L, R: TGWeighedItem): Boolean;
+begin
+  Result := L.Weight >= R.Weight;
+end;
+
+class operator TGWeighedItem.<=(constref L, R: TGWeighedItem): Boolean;
+begin
+  Result := L.Weight <= R.Weight;
+end;
+
+constructor TGWeighedItem.Create(constref w: TWeight; aIndex: SizeInt);
+begin
+  Weight := w;
+  Index := aIndex;
+end;
+
+{ TGRankWeighedItem }
+
+class operator TGRankWeighedItem. = (constref L, R: TGRankWeighedItem): Boolean;
+begin
+  Result := L.Rank = R.Rank;
+end;
+
+class operator TGRankWeighedItem.<>(constref L, R: TGRankWeighedItem): Boolean;
+begin
+  Result := L.Rank <> R.Rank;
+end;
+
+class operator TGRankWeighedItem.>(constref L, R: TGRankWeighedItem): Boolean;
+begin
+  Result := L.Rank > R.Rank;
+end;
+
+class operator TGRankWeighedItem.<(constref L, R: TGRankWeighedItem): Boolean;
+begin
+  Result := L.Rank < R.Rank;
+end;
+
+class operator TGRankWeighedItem.>=(constref L, R: TGRankWeighedItem): Boolean;
+begin
+  Result := L.Rank >= R.Rank;
+end;
+
+class operator TGRankWeighedItem.<=(constref L, R: TGRankWeighedItem): Boolean;
+begin
+  Result := L.Rank <= R.Rank;
+end;
+
+constructor TGRankWeighedItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
+begin
+  Rank := aRank;
+  Weight := aWeight;
+  Index := aIndex;
 end;
 
 end.
