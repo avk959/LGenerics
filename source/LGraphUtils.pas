@@ -1954,7 +1954,7 @@ procedure TDisjointSetUnion.Union(L, R: SizeInt);
 begin
   L := Lead(L);
   R := Lead(R);
-  if Odd(Random(4)) then // random selection ???
+  if Odd(Random(4)) then // random selection
     FList[L] := R
   else
     FList[R] := L;
