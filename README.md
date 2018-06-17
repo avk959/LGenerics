@@ -62,8 +62,8 @@ Contains:
      - disjoint set(unit LGHashSet)
      - sparse undirected graph(unit LGSimpleGraph)
      - sparse undirected weighed graph(unit LGSimpleGraph)
-     - sparse directed graph(unit LGSimpleDiGraph)
-     - sparse directed weighed graph(unit LGSimpleDiGraph)
+     - sparse directed graph(unit LGSimpleDigraph)
+     - sparse directed weighed graph(unit LGSimpleDgGraph)
   
   5. Others:
      - simply command line parser (unit LGMiscUtils)
