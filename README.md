@@ -59,7 +59,7 @@ Contains:
      - list miltimap(unit LGMultiMap)
      - bijective map(unit LGBiMap)
      - sparse 2d table(unit LGTable2D)
-     - disjoint set(unit LGraphUtils)
+     - disjoint set(unit LGHashSet)
      - sparse undirected graph(unit LGSimpleGraph)
      - sparse undirected weighed graph(unit LGSimpleGraph)
      - sparse directed graph(unit LGSimpleDiGraph)
