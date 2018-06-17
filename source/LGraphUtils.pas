@@ -34,10 +34,15 @@ uses
   LGQueue,
   LGDeque,
   LGVector,
+  LGHashTable,
   LGHash,
   LGStrConst;
 
 type
+
+  generic TGOnAddEdge<T>     = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
+  generic TGOnStreamRead<T>  = procedure(aStream: TStream; out aValue: T) of object;
+  generic TGOnStreamWrite<T> = procedure(aStream: TStream; constref aValue: T) of object;
 
   ELGraphError     = class(Exception); //???
 
@@ -58,82 +63,7 @@ type
 
   TOnVisit         = procedure (aValue: SizeInt) of object;
   TOnAccept        = function (aValue: SizeInt): Boolean of object;
-
-  generic TGOnAddEdge<T>       = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
-  generic TGOnStreamRead<T>    = procedure(aStream: TStream; out aValue: T) of object;
-  generic TGOnStreamWrite<T>   = procedure(aStream: TStream; constref aValue: T) of object;
-
-  TDisjointSetUnion = record
-  private
-    FList: array of SizeInt;
-    function  GetSize: SizeInt; inline;
-    procedure SetSize(aValue: SizeInt);
-  public
-    procedure Clear; inline;
-    procedure Reset;
-  { values related to the same set will have the same Lead }
-    function  Lead(aValue: SizeInt): SizeInt;
-    function  InSameSet(L, R: SizeInt): Boolean; inline;
-    function  InDiffSets(L, R: SizeInt): Boolean; inline;
-  { if L and R related to the different sets, these sets will be merged into one with a single Lead }
-    procedure Union(L, R: SizeInt);
-    property  Size: SizeInt read GetSize write SetSize;
-  end;
-
-const
-{$IF DEFINED(CPU64)}
-  INT_SIZE_LOG  = 6;
-  INT_SIZE_MASK = 63;
-{$ELSEIF DEFINED(CPU32)}
-  INT_SIZE_LOG  = 5;
-  INT_SIZE_MASK = 31;
-{$ELSE}
-  INT_SIZE_LOG  = 4;
-  INT_SIZE_MASK = 15;
-{$ENDIF}
-
-type
-
-  TBitVector = record
-  private
-  type
-    TBits = array of SizeUInt;
-  var
-    FBits: TBits;
-    function  GetBit(aIndex: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt; inline;
-    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
-    procedure SetSize(aValue: SizeInt);
-  public
-    procedure ClearBits; inline;
-  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
-    property  Size: SizeInt read GetSize write SetSize;
-  { indices does not checks }
-    property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
-  end;
-
-  TSquareBitMatrix = record
-  private
-  type
-    TBits = array of SizeUInt;
-  var
-    FBits: TBits;
-    FSize: SizeUInt;
-    function  GetBit(I, J: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt;
-    procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
-    class operator Initialize(var aMarix: TSquareBitMatrix);
-  public
-    class function MaxSize: SizeInt; static; inline;
-    constructor Create(aSize: SizeInt);
-    procedure ClearBits; inline;
-    procedure Clear; inline;
-    property  Size: SizeInt read GetSize;
-  { indices does not checks }
-    property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
-  end;
-
-  TVertexColor = 0..3;
+  TVertexColor     = 0..3;
 
 const
   vclNone:  TVertexColor = 0;
@@ -176,12 +106,9 @@ type
 
   protected
   type
-
     TAdjList = record
     public
     type
-      TAdjItemArray = array of TAdjItem;
-
       TEnumerator = record
       private
         FList: PAdjItem;
@@ -197,6 +124,9 @@ type
     private
     const
       EXPAND_SIZE = 8;
+
+    type
+      TAdjItemArray = array of TAdjItem;
 
     var
       FList: TAdjItemArray;
@@ -529,173 +459,145 @@ type
     constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
   end;
 
+  TDisjointSetUnion = record
+  private
+    FList: array of SizeInt;
+    function  GetSize: SizeInt; inline;
+    procedure SetSize(aValue: SizeInt);
+  public
+    procedure Clear; inline;
+    procedure Reset;
+  { values related to the same set will have the same Lead }
+    function  Lead(aValue: SizeInt): SizeInt;
+    function  InSameSet(L, R: SizeInt): Boolean; inline;
+    function  InDiffSets(L, R: SizeInt): Boolean; inline;
+  { if L and R related to the different sets, these sets will be merged into one with a single Lead }
+    procedure Union(L, R: SizeInt);
+    property  Size: SizeInt read GetSize write SetSize;
+  end;
+
+const
+{$IF DEFINED(CPU64)}
+  INT_SIZE_LOG  = 6;
+  INT_SIZE_MASK = 63;
+{$ELSEIF DEFINED(CPU32)}
+  INT_SIZE_LOG  = 5;
+  INT_SIZE_MASK = 31;
+{$ELSE}
+  INT_SIZE_LOG  = 4;
+  INT_SIZE_MASK = 15;
+{$ENDIF}
+
+type
+
+  TBitVector = record
+  private
+  type
+    TBits = array of SizeUInt;
+  var
+    FBits: TBits;
+    function  GetBit(aIndex: SizeInt): Boolean; inline;
+    function  GetSize: SizeInt; inline;
+    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
+    procedure SetSize(aValue: SizeInt);
+  public
+    procedure ClearBits; inline;
+  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
+    property  Size: SizeInt read GetSize write SetSize;
+  { indices does not checks }
+    property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
+  end;
+
+  TSquareBitMatrix = record
+  private
+  type
+    TBits = array of SizeUInt;
+  var
+    FBits: TBits;
+    FSize: SizeUInt;
+    function  GetBit(I, J: SizeInt): Boolean; inline;
+    function  GetSize: SizeInt;
+    procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
+    class operator Initialize(var aMarix: TSquareBitMatrix);
+  public
+    class function MaxSize: SizeInt; static; inline;
+    constructor Create(aSize: SizeInt);
+    procedure ClearBits; inline;
+    procedure Clear; inline;
+    property  Size: SizeInt read GetSize;
+  { indices does not checks }
+    property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
+  end;
+
+  TIntSet = record
+  private
+  type
+    TIntEntry = record
+      Key: SizeInt;
+    end;
+    TTable = specialize TGLiteIntHashTable<SizeInt, TIntEntry>;
+    PEntry = TTable.PEntry;
+  public
+  type
+    TEnumerator = record
+    private
+      FEnum: TTable.TEnumerator;
+      function  GetCurrent: SizeInt; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: SizeInt read GetCurrent;
+    end;
+
+  private
+    FTable: TTable;
+    function  GetCount: SizeInt; inline;
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    function  ToArray: TIntArray;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure MakeEmpty; inline;
+    function  Contains(aValue: SizeInt): Boolean; inline;
+    function  Add(aValue: SizeInt): Boolean;
+    function  AddAll(constref a: array of SizeInt): SizeInt;
+    function  AddAll(constref s: TIntSet): SizeInt;
+    function  Remove(aValue: SizeInt): Boolean; inline;
+    property  Count: SizeInt read GetCount;
+  end;
+
+  TIntPair = record
+  private
+    FLess,
+    FGreater: SizeInt;
+    function GetKey: TIntPair; inline;
+  public
+    class function HashCode(const aValue: TIntPair): SizeInt; static; inline;
+    class function Equal(const L, R: TIntPair): Boolean; static; inline;
+    constructor Create(L, R: SizeInt);
+    property Left: SizeInt read FLess;
+    property Right: SizeInt read FGreater;
+    property Key: TIntPair read GetKey;
+  end;
+
+  PIntPair = ^TIntPair;
+
+  TIntPairSet = record
+  private
+  type
+    TTable = specialize TGLiteHashTableLP<TIntPair, TIntPair, TIntPair>;
+  var
+    FTable: TTable;
+    function GetCount: SizeInt; inline;
+  public
+    function Contains(L, R: SizeInt): Boolean; inline;
+    function Add(L, R: SizeInt): Boolean;
+    function Remove(L, R: SizeInt): Boolean; inline;
+    property Count: SizeInt read GetCount;
+  end;
 
 implementation
 {$B-}{$COPERATORS ON}
-
-{ TDisjointSetUnion }
-
-function TDisjointSetUnion.GetSize: SizeInt;
-begin
-  Result := System.Length(FList);
-end;
-
-procedure TDisjointSetUnion.SetSize(aValue: SizeInt);
-var
-  OldSize, I: SizeInt;
-begin
-  OldSize := Size;
-  if aValue > OldSize then
-    begin
-      System.SetLength(FList, aValue);
-      for I := OldSize to Pred(aValue) do
-        FList[I] := I;
-    end;
-end;
-
-procedure TDisjointSetUnion.Clear;
-begin
-  FList := nil;
-end;
-
-procedure TDisjointSetUnion.Reset;
-var
-  I: SizeInt;
-begin
-  for I := 0 to System.High(FList) do
-    FList[I] := I;
-end;
-
-function TDisjointSetUnion.Lead(aValue: SizeInt): SizeInt;
-begin
-  if FList[aValue] = aValue then
-    exit(aValue);
-  Result := Lead(FList[aValue]);
-  FList[aValue] := Result;
-end;
-
-function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
-begin
-  Result := Lead(L) = Lead(R);
-end;
-
-function TDisjointSetUnion.InDiffSets(L, R: SizeInt): Boolean;
-begin
-  Result := Lead(L) <> Lead(R);
-end;
-
-procedure TDisjointSetUnion.Union(L, R: SizeInt);
-begin
-  L := Lead(L);
-  R := Lead(R);
-  if Odd(Random(4)) then // random selection ???
-    FList[L] := R
-  else
-    FList[R] := L;
-end;
-
-{ TBitVector }
-
-function TBitVector.GetBit(aIndex: SizeInt): Boolean;
-begin
-  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
-end;
-
-function TBitVector.GetSize: SizeInt;
-begin
-  Result := System.Length(FBits) shl INT_SIZE_LOG;
-end;
-
-procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
-begin
-  if aValue then
-    FBits[aIndex shr INT_SIZE_LOG] :=
-    FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
-  else
-    FBits[aIndex shr INT_SIZE_LOG] :=
-    FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
-end;
-
-procedure TBitVector.SetSize(aValue: SizeInt);
-var
-  OldLen: SizeInt;
-begin
-  OldLen := Size;
-  if aValue > OldLen then
-    begin
-      aValue := Succ(aValue shr INT_SIZE_LOG);
-      System.SetLength(FBits, aValue);
-      System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
-    end;
-end;
-
-procedure TBitVector.ClearBits;
-begin
-  if FBits <> nil then
-    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
-end;
-
-{ TSquareBitMatrix }
-
-function TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
-begin
-  Result := (FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and
-            (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))) <> 0
-end;
-
-function TSquareBitMatrix.GetSize: SizeInt;
-begin
-  Result := FSize;
-end;
-
-procedure TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
-begin
-  if aValue then
-    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
-    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] or
-          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))
-  else
-    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
-    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and not
-          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
-end;
-
-class operator TSquareBitMatrix.Initialize(var aMarix: TSquareBitMatrix);
-begin
-  aMarix.Clear;
-end;
-
-class function TSquareBitMatrix.MaxSize: SizeInt;
-begin
-  Result := Trunc(Sqrt(High(SizeUInt)));
-end;
-
-constructor TSquareBitMatrix.Create(aSize: SizeInt);
-var
-  s: SizeInt;
-begin
-  if aSize > 0 then
-    if aSize <= MaxSize then
-      begin
-        FSize := aSize;
-        s := Succ((FSize * FSize) shr INT_SIZE_LOG);
-        System.SetLength(FBits, s);
-        System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
-      end
-    else
-      raise ELGraphError.CreateFmt(SEMatrixSizeExceedFmt, [aSize]);
-end;
-
-procedure TSquareBitMatrix.ClearBits;
-begin
-  System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
-end;
-
-procedure TSquareBitMatrix.Clear;
-begin
-  FBits := nil;
-  FSize := 0;
-end;
 
 { TIntEdge }
 
@@ -1995,6 +1897,335 @@ begin
   Rank := aRank;
   Weight := aWeight;
   Index := aIndex;
+end;
+
+{ TDisjointSetUnion }
+
+function TDisjointSetUnion.GetSize: SizeInt;
+begin
+  Result := System.Length(FList);
+end;
+
+procedure TDisjointSetUnion.SetSize(aValue: SizeInt);
+var
+  OldSize, I: SizeInt;
+begin
+  OldSize := Size;
+  if aValue > OldSize then
+    begin
+      System.SetLength(FList, aValue);
+      for I := OldSize to Pred(aValue) do
+        FList[I] := I;
+    end;
+end;
+
+procedure TDisjointSetUnion.Clear;
+begin
+  FList := nil;
+end;
+
+procedure TDisjointSetUnion.Reset;
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(FList) do
+    FList[I] := I;
+end;
+
+function TDisjointSetUnion.Lead(aValue: SizeInt): SizeInt;
+begin
+  if FList[aValue] = aValue then
+    exit(aValue);
+  Result := Lead(FList[aValue]);
+  FList[aValue] := Result;
+end;
+
+function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
+begin
+  Result := Lead(L) = Lead(R);
+end;
+
+function TDisjointSetUnion.InDiffSets(L, R: SizeInt): Boolean;
+begin
+  Result := Lead(L) <> Lead(R);
+end;
+
+procedure TDisjointSetUnion.Union(L, R: SizeInt);
+begin
+  L := Lead(L);
+  R := Lead(R);
+  if Odd(Random(4)) then // random selection ???
+    FList[L] := R
+  else
+    FList[R] := L;
+end;
+
+{ TBitVector }
+
+function TBitVector.GetBit(aIndex: SizeInt): Boolean;
+begin
+  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
+end;
+
+function TBitVector.GetSize: SizeInt;
+begin
+  Result := System.Length(FBits) shl INT_SIZE_LOG;
+end;
+
+procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+begin
+  if aValue then
+    FBits[aIndex shr INT_SIZE_LOG] :=
+    FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+  else
+    FBits[aIndex shr INT_SIZE_LOG] :=
+    FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
+end;
+
+procedure TBitVector.SetSize(aValue: SizeInt);
+var
+  OldLen: SizeInt;
+begin
+  OldLen := Size;
+  if aValue > OldLen then
+    begin
+      aValue := Succ(aValue shr INT_SIZE_LOG);
+      System.SetLength(FBits, aValue);
+      System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
+    end;
+end;
+
+procedure TBitVector.ClearBits;
+begin
+  if FBits <> nil then
+    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
+{ TSquareBitMatrix }
+
+function TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
+begin
+  Result := (FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and
+            (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))) <> 0
+end;
+
+function TSquareBitMatrix.GetSize: SizeInt;
+begin
+  Result := FSize;
+end;
+
+procedure TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
+begin
+  if aValue then
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] or
+          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))
+  else
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and not
+          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
+end;
+
+class operator TSquareBitMatrix.Initialize(var aMarix: TSquareBitMatrix);
+begin
+  aMarix.Clear;
+end;
+
+class function TSquareBitMatrix.MaxSize: SizeInt;
+begin
+  Result := Trunc(Sqrt(High(SizeUInt)));
+end;
+
+constructor TSquareBitMatrix.Create(aSize: SizeInt);
+var
+  s: SizeInt;
+begin
+  if aSize > 0 then
+    if aSize <= MaxSize then
+      begin
+        FSize := aSize;
+        s := Succ((FSize * FSize) shr INT_SIZE_LOG);
+        System.SetLength(FBits, s);
+        System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
+      end
+    else
+      raise ELGraphError.CreateFmt(SEMatrixSizeExceedFmt, [aSize]);
+end;
+
+procedure TSquareBitMatrix.ClearBits;
+begin
+  System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
+procedure TSquareBitMatrix.Clear;
+begin
+  FBits := nil;
+  FSize := 0;
+end;
+
+{ TIntSet.TEnumerator }
+
+function TIntSet.TEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FEnum.Current^.Key;
+end;
+
+function TIntSet.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TIntSet.TEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
+{ TIntSet }
+
+function TIntSet.GetCount: SizeInt;
+begin
+  Result := FTable.Count;
+end;
+
+function TIntSet.GetEnumerator: TEnumerator;
+begin
+  Result.FEnum := FTable.GetEnumerator
+end;
+
+function TIntSet.ToArray: TIntArray;
+var
+  p: PEntry;
+  I: SizeInt = 0;
+begin
+  System.SetLength(Result, Count);
+  for p in FTable do
+    begin
+      Result[I] := p^.Key;
+      Inc(I);
+    end;
+end;
+
+function TIntSet.IsEmpty: Boolean;
+begin
+  Result := FTable.Count = 0;
+end;
+
+function TIntSet.NonEmpty: Boolean;
+begin
+  Result := FTable.Count <> 0;
+end;
+
+procedure TIntSet.MakeEmpty;
+begin
+  FTable.MakeEmpty;
+end;
+
+function TIntSet.Contains(aValue: SizeInt): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := FTable.Find(aValue, Dummy) <> nil;
+end;
+
+function TIntSet.Add(aValue: SizeInt): Boolean;
+var
+  Dummy: SizeInt;
+  p: PEntry;
+begin
+  Result := not FTable.FindOrAdd(aValue, p, Dummy);
+  if Result then
+    p^.Key := aValue;
+end;
+
+function TIntSet.AddAll(constref a: array of SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  for I in a do
+    Result += Ord(Add(I));
+end;
+
+function TIntSet.AddAll(constref s: TIntSet): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  for I in s do
+    Result += Ord(Add(I));
+end;
+
+function TIntSet.Remove(aValue: SizeInt): Boolean;
+begin
+  Result := FTable.Remove(aValue);
+end;
+
+{ TIntPair }
+
+function TIntPair.GetKey: TIntPair;
+begin
+  Result := Self;
+end;
+
+class function TIntPair.HashCode(const aValue: TIntPair): SizeInt;
+begin
+{$IF DEFINED (CPU64)}
+    Result := TxxHash32LE.HashBuf(@aValue, SizeOf(aValue));
+{$ELSEIF DEFINED (CPU32)}
+   Result := TxxHash32LE.HashQWord(QWord(aValue));
+{$ELSE }
+   Result := TxxHash32LE.HashDWord(DWord(aValue));
+{$ENDIF}
+end;
+
+class function TIntPair.Equal(const L, R: TIntPair): Boolean;
+begin
+  Result := (L.Left = R.Left) and (L.Right = R.Right);
+end;
+
+constructor TIntPair.Create(L, R: SizeInt);
+begin
+  if L <= R then
+    begin
+      FLess := L;
+      FGreater := R;
+    end
+  else
+    begin
+      FLess := R;
+      FGreater := L;
+    end;
+end;
+
+{ TIntPairSet }
+
+function TIntPairSet.GetCount: SizeInt;
+begin
+  Result := FTable.Count;
+end;
+
+function TIntPairSet.Contains(L, R: SizeInt): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := FTable.Find(TIntPair.Create(L, R), Dummy) <> nil;
+end;
+
+function TIntPairSet.Add(L, R: SizeInt): Boolean;
+var
+  Dummy: SizeInt;
+  p: PIntPair;
+  v: TIntPair;
+begin
+  v := TIntPair.Create(L, R);
+  Result := not FTable.FindOrAdd(v, p, Dummy);
+  if Result then
+    p^ := v;
+end;
+
+function TIntPairSet.Remove(L, R: SizeInt): Boolean;
+begin
+  Result := FTable.Remove(TIntPair.Create(L, R));
 end;
 
 end.

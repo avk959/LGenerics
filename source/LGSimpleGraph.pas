@@ -33,45 +33,12 @@ uses
   {%H-}LGHelpers,
   LGArrayHelpers,
   LGPriorityQueue,
-  LGHashTable,
-  LGHash,
   LGraphUtils,
   LGStrConst;
 
 type
-
-  TIntPair = record
-  private
-    FLess,
-    FGreater: SizeInt;
-    function GetKey: TIntPair; inline;
-  public
-    class function HashCode(const aValue: TIntPair): SizeInt; static; inline;
-    class function Equal(const L, R: TIntPair): Boolean; static; inline;
-    constructor Create(L, R: SizeInt);
-    property Left: SizeInt read FLess;
-    property Right: SizeInt read FGreater;
-    property Key: TIntPair read GetKey;
-  end;
-
-  PIntPair = ^TIntPair;
-
-  TIntPairSet = record
-  private
-  type
-    TTable = specialize TGLiteHashTableLP<TIntPair, TIntPair, TIntPair>;
-  var
-    FTable: TTable;
-    function GetCount: SizeInt; inline;
-  public
-    function Contains(L, R: SizeInt): Boolean; inline;
-    function Add(L, R: SizeInt): Boolean;
-    function Remove(L, R: SizeInt): Boolean; inline;
-    property Count: SizeInt read GetCount;
-  end;
-
-
   { TGSimpleGraph: simple sparse undirected graph based on adjacency lists;
+
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
@@ -183,15 +150,13 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
+    function  DistinctEdges: TDistinctEdges; inline;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges }
     function  EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { checks whether the aDst reachable from the aSrc; each vertex reachable from itself  }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
-  { returns graph of connected component that contains aVertex }
-    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; inline;
-    function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
   { returns index of the connected component that contains aVertex }
     function  SeparateIndexOf(constref aVertex: TVertex): SizeInt; inline;
     function  SeparateIndexI(aIndex: SizeInt): SizeInt;
@@ -243,12 +208,16 @@ type
     function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+  { returns graph of connected component that contains aVertex }
+    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; inline;
+    function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
+  { returns a graph consisting of vertices whose indices are contained in the array aList }
+    function  SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the pairs provided by the aPairs,
     i.e. each element treates as pair of source - destination(value -> source, index -> destination ) }
     function  SubgraphFromPairs(constref aPairs: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the edges provided by the aEdges }
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
-    function  DistinctEdges: TDistinctEdges; inline;
   { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
   { returns complement of the source graph;
@@ -283,6 +252,7 @@ type
     procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
     function  SeparateGraph(constref aVertex: TVertex): TGChart;
     function  SeparateGraphI(aIndex: SizeInt): TGChart;
+    function  SubgraphFromVertexList(constref aList: TIntArray): TGChart;
     function  SubgraphFromPairs(constref aPairs: TIntArray): TGChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
     function  Clone: TGChart;
@@ -302,6 +272,7 @@ type
     procedure LoadFromFile(const aFileName: string);
     function  SeparateGraph(aVertex: SizeInt): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
+    function  SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
     function  SubgraphFromPairs(constref aValue: TIntArray): TIntChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
     function  Clone: TIntChart;
@@ -321,6 +292,7 @@ type
     procedure LoadFromFile(const aFileName: string);
     function  SeparateGraph(const aVertex: string): TStrChart;
     function  SeparateGraphI(aIndex: SizeInt): TStrChart;
+    function  SubgraphFromVertexList(constref aList: TIntArray): TStrChart;
     function  SubgraphFromPairs(constref aPairs: TIntArray): TStrChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
     function  Clone: TStrChart;
@@ -412,6 +384,7 @@ type
     function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
     function  SeparateGraph(constref aVertex: TVertex): TGWeighedGraph;
     function  SeparateGraphI(aIndex: SizeInt): TGWeighedGraph;
+    function  SubgraphFromVertexList(constref aList: TIntArray): TGWeighedGraph;
     function  SubgraphFromPairs(constref aPairs: TIntArray): TGWeighedGraph;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeighedGraph;
     function  Clone: TGWeighedGraph;
@@ -446,6 +419,7 @@ type
     procedure LoadFromFile(const aFileName: string);
     function  SeparateGraph(aVertex: TPoint): TPointsChart;
     function  SeparateGraphI(aIndex: SizeInt): TPointsChart;
+    function  SubgraphFromVertexList(constref aList: TIntArray): TPointsChart;
     function  SubgraphFromPairs(constref aPairs: TIntArray): TPointsChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
@@ -458,74 +432,6 @@ implementation
 {$B-}{$COPERATORS ON}
 uses
   bufstream;
-
-{ TIntPairSet }
-
-function TIntPairSet.GetCount: SizeInt;
-begin
-  Result := FTable.Count;
-end;
-
-function TIntPairSet.Contains(L, R: SizeInt): Boolean;
-var
-  Dummy: SizeInt;
-begin
-  Result := FTable.Find(TIntPair.Create(L, R), Dummy) <> nil;
-end;
-
-function TIntPairSet.Add(L, R: SizeInt): Boolean;
-var
-  Dummy: SizeInt;
-  p: PIntPair;
-  v: TIntPair;
-begin
-  v := TIntPair.Create(L, R);
-  Result := not FTable.FindOrAdd(v, p, Dummy);
-  if Result then
-    p^ := v;
-end;
-
-function TIntPairSet.Remove(L, R: SizeInt): Boolean;
-begin
-  Result := FTable.Remove(TIntPair.Create(L, R));
-end;
-
-{ TIntPair }
-
-function TIntPair.GetKey: TIntPair;
-begin
-  Result := Self;
-end;
-
-class function TIntPair.HashCode(const aValue: TIntPair): SizeInt;
-begin
-{$IF DEFINED (CPU64)}
-    Result := TxxHash32LE.HashBuf(@aValue, SizeOf(aValue));
-{$ELSEIF DEFINED (CPU32)}
-   Result := TxxHash32LE.HashQWord(QWord(aValue));
-{$ELSE }
-   Result := TxxHash32LE.HashDWord(DWord(aValue));
-{$ENDIF}
-end;
-
-class function TIntPair.Equal(const L, R: TIntPair): Boolean;
-begin
-  Result := (L.Left = R.Left) and (L.Right = R.Right);
-end;
-
-constructor TIntPair.Create(L, R: SizeInt);
-begin
-  if L <= R then
-    begin
-      FLess := L;
-      FGreater := R;
-    end
-  else
-    begin
-      FLess := R;
-      FGreater := L;
-    end;
-end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
 
@@ -1606,6 +1512,11 @@ begin
   Result := DegreeI(aIndex) = 0;
 end;
 
+function TGSimpleGraph.DistinctEdges: TDistinctEdges;
+begin
+  Result.FGraph := Self;
+end;
+
 function TGSimpleGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   Result := 0;
@@ -1634,19 +1545,6 @@ begin
     Result := FNodeList[aSrc].Tag = FNodeList[aDst].Tag
   else
     Result := True;
-end;
-
-function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
-begin
-  Result := SeparateGraphI(IndexOf(aVertex));
-end;
-
-function TGSimpleGraph.SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
-begin
-  if SeparateCount > 1 then
-    Result := GetSeparateGraph(aIndex)
-  else
-    Result := Clone;
 end;
 
 function TGSimpleGraph.SeparateIndexOf(constref aVertex: TVertex): SizeInt;
@@ -1962,6 +1860,32 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
+function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
+begin
+  Result := SeparateGraphI(IndexOf(aVertex));
+end;
+
+function TGSimpleGraph.SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
+begin
+  if SeparateCount > 1 then
+    Result := GetSeparateGraph(aIndex)
+  else
+    Result := Clone;
+end;
+
+function TGSimpleGraph.SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
+var
+  vSet: TIntSet;
+  I, J: SizeInt;
+begin
+  vSet.AddAll(aList);
+  Result := TGSimpleGraph.Create(vSet.Count);
+  for I in vSet do
+    for J in AdjVerticesI(I) do
+      if vSet.Contains(J) then
+        Result.AddEdge(Items[I], Items[J], GetEdgeDataPtr(I, J)^);
+end;
+
 function TGSimpleGraph.SubgraphFromPairs(constref aPairs: TIntArray): TGSimpleGraph;
 var
   I, Src: SizeInt;
@@ -1982,11 +1906,6 @@ begin
   Result := TGSimpleGraph.Create;
   for e in aEdges do
     Result.AddEdge(Items[e.Source], Items[e.Destination], GetEdgeDataPtr(e.Source, e.Destination)^);
-end;
-
-function TGSimpleGraph.DistinctEdges: TDistinctEdges;
-begin
-  Result.FGraph := Self;
 end;
 
 function TGSimpleGraph.Clone: TGSimpleGraph;
@@ -2101,6 +2020,11 @@ begin
   Result := inherited SeparateGraphI(aIndex) as TGChart;
 end;
 
+function TGChart.SubgraphFromVertexList(constref aList: TIntArray): TGChart;
+begin
+  Result := inherited SubgraphFromVertexList(aList) as TGChart;
+end;
+
 function TGChart.SubgraphFromPairs(constref aPairs: TIntArray): TGChart;
 begin
   Result := inherited SubgraphFromPairs(aPairs) as TGChart;
@@ -2161,6 +2085,11 @@ end;
 function TIntChart.SeparateGraphI(aIndex: SizeInt): TIntChart;
 begin
   Result := inherited SeparateGraphI(aIndex) as TIntChart;
+end;
+
+function TIntChart.SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
+begin
+  Result := inherited SubgraphFromVertexList(aList) as TIntChart;
 end;
 
 function TIntChart.SubgraphFromPairs(constref aValue: TIntArray): TIntChart;
@@ -2235,6 +2164,11 @@ end;
 function TStrChart.SeparateGraphI(aIndex: SizeInt): TStrChart;
 begin
   Result := inherited SeparateGraphI(aIndex) as TStrChart;
+end;
+
+function TStrChart.SubgraphFromVertexList(constref aList: TIntArray): TStrChart;
+begin
+  Result := inherited SubgraphFromVertexList(aList) as TStrChart;
 end;
 
 function TStrChart.SubgraphFromPairs(constref aPairs: TIntArray): TStrChart;
@@ -2639,6 +2573,11 @@ begin
   Result := inherited SeparateGraphI(aIndex) as TGWeighedGraph;
 end;
 
+function TGWeighedGraph.SubgraphFromVertexList(constref aList: TIntArray): TGWeighedGraph;
+begin
+  Result := inherited SubgraphFromVertexList(aList) as TGWeighedGraph;
+end;
+
 function TGWeighedGraph.SubgraphFromPairs(constref aPairs: TIntArray): TGWeighedGraph;
 begin
   Result := inherited SubgraphFromPairs(aPairs) as TGWeighedGraph;
@@ -2756,6 +2695,11 @@ end;
 function TPointsChart.SeparateGraphI(aIndex: SizeInt): TPointsChart;
 begin
   Result := inherited SeparateGraphI(aIndex) as TPointsChart;
+end;
+
+function TPointsChart.SubgraphFromVertexList(constref aList: TIntArray): TPointsChart;
+begin
+  Result := inherited SubgraphFromVertexList(aList) as TPointsChart;
 end;
 
 function TPointsChart.SubgraphFromPairs(constref aPairs: TIntArray): TPointsChart;
