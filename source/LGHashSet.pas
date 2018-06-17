@@ -482,7 +482,6 @@ type
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
     procedure ExpandDsu;
-    function  GetItem(aIndex: SizeInt): T;
     function  GetLead(aValue: SizeInt): SizeInt;
   public
     function  GetEnumerator: TEnumerator; inline;
@@ -505,7 +504,6 @@ type
     procedure UnionI(L, R: SizeInt);
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
-    property  Items[aIndex: SizeInt]: T read GetItem; default;
   end;
 
 implementation
@@ -1834,14 +1832,6 @@ begin
   System.SetLength(FDsu, NewCapacity);
   for I := I to Pred(NewCapacity) do
     FDsu[I] := I;
-end;
-
-function TGDisjointSetUnion.GetItem(aIndex: SizeInt): T;
-begin
-  if (aIndex >= 0) and (aIndex < Count) then
-    Result := FTable.NodeList[aIndex].Data.Key
-  else
-    raise Exception.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGDisjointSetUnion.GetLead(aValue: SizeInt): SizeInt;
