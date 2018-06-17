@@ -32,7 +32,8 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGCustomContainer,
-  LGHashTable;
+  LGHashTable,
+  LGStrConst;
 
 type
 
@@ -446,6 +447,65 @@ type
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
+  end;
+
+  { TGDisjointSetUnion }
+
+  generic TGDisjointSetUnion<T, TEqRel> = record
+  private
+  type
+    TEntry = record
+      Key: T;
+    end;
+    PEntry = ^TEntry;
+
+    TTable = specialize TGLiteChainHashTable<T, TEntry, TEqRel>;
+    PNode  = TTable.PNode;
+
+  public
+  type
+    TEnumerator = record
+    private
+      FList: PNode;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      function  GetCurrent: T; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: T read GetCurrent;
+    end;
+
+  private
+    FTable: TTable;
+    FDsu: array of SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
+    procedure ExpandDsu;
+    function  GetItem(aIndex: SizeInt): T;
+    function  GetLead(aValue: SizeInt): SizeInt;
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    function  IndexOf(constref aValue: T): SizeInt;
+    function  Contains(constref aValue: T): Boolean; inline;
+    function  NonContains(constref aValue: T): Boolean; inline;
+  { returns True if element added }
+    function  Add(constref aValue: T): Boolean;
+    procedure Reset;
+  { values related to the same set will have the same Lead }
+    function  Lead(constref aValue: T): SizeInt;
+    function  InSameSet(constref L, R: T): Boolean;
+    function  InDiffSets(constref L, R: T): Boolean; inline;
+  { if L and R related to the different sets, these sets will be merged into one with a single Lead }
+    procedure Union(constref L, R: T);
+    procedure UnionI(L, R: SizeInt);
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Items[aIndex: SizeInt]: T read GetItem; default;
   end;
 
 implementation
@@ -1710,6 +1770,176 @@ begin
   for v in aSet do
     if not Remove(v) then
       Add(v);
+end;
+
+{ TGDisjointSetUnion.TEnumerator }
+
+function TGDisjointSetUnion.TEnumerator.GetCurrent: T;
+begin
+  Result := FList[FCurrIndex].Data.Key;
+end;
+
+function TGDisjointSetUnion.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGDisjointSetUnion.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGDisjointSetUnion }
+
+function TGDisjointSetUnion.GetCapacity: SizeInt;
+begin
+  Result := FTable.Capacity;
+end;
+
+function TGDisjointSetUnion.GetCount: SizeInt;
+begin
+  Result := FTable.Count;
+end;
+
+function TGDisjointSetUnion.GetEnumerator: TEnumerator;
+begin
+  Result.FList := FTable.NodeList;
+  Result.FLastIndex := Pred(FTable.Count);
+  Result.FCurrIndex := -1;
+end;
+
+function TGDisjointSetUnion.IsEmpty: Boolean;
+begin
+  Result := FTable.Count = 0;
+end;
+
+function TGDisjointSetUnion.NonEmpty: Boolean;
+begin
+  Result := FTable.Count <> 0;
+end;
+
+procedure TGDisjointSetUnion.Clear;
+begin
+  FTable.Clear;
+  FDsu := nil;
+end;
+
+procedure TGDisjointSetUnion.ExpandDsu;
+var
+  I, NewCapacity: SizeInt;
+begin
+  I := System.Length(FDsu);
+  NewCapacity := Capacity;
+  System.SetLength(FDsu, NewCapacity);
+  for I := I to Pred(NewCapacity) do
+    FDsu[I] := I;
+end;
+
+function TGDisjointSetUnion.GetItem(aIndex: SizeInt): T;
+begin
+  if (aIndex >= 0) and (aIndex < Count) then
+    Result := FTable.NodeList[aIndex].Data.Key
+  else
+    raise Exception.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TGDisjointSetUnion.GetLead(aValue: SizeInt): SizeInt;
+begin
+  if FDsu[aValue] = aValue then
+    exit(aValue);
+  Result := GetLead(FDsu[aValue]);
+  FDsu[aValue] := Result;
+end;
+
+procedure TGDisjointSetUnion.EnsureCapacity(aValue: SizeInt);
+var
+  OldCapacity: SizeInt;
+begin
+  OldCapacity := Capacity;
+  FTable.EnsureCapacity(aValue);
+  ExpandDsu;
+end;
+
+function TGDisjointSetUnion.IndexOf(constref aValue: T): SizeInt;
+begin
+  FTable.Find(aValue, Result);
+end;
+
+function TGDisjointSetUnion.Contains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) >= 0;
+end;
+
+function TGDisjointSetUnion.NonContains(constref aValue: T): Boolean;
+begin
+  Result := IndexOf(aValue) < 0;
+end;
+
+function TGDisjointSetUnion.Add(constref aValue: T): Boolean;
+var
+  I, OldCapacity: SizeInt;
+  e: PEntry;
+begin
+  OldCapacity := Capacity;
+  Result := not FTable.FindOrAdd(aValue, e, I);
+  if Result then
+    begin
+      e^.Key := aValue;
+      if Capacity > OldCapacity then
+        ExpandDsu;
+    end;
+end;
+
+procedure TGDisjointSetUnion.Reset;
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(FDsu) do
+    FDsu[I] := I;
+end;
+
+function TGDisjointSetUnion.Lead(constref aValue: T): SizeInt;
+var
+  v: SizeInt;
+begin
+  v := IndexOf(aValue);
+  if v >= 0 then
+    Result := GetLead(v)
+  else
+    raise Exception.Create(SEKeyNotFound);
+end;
+
+function TGDisjointSetUnion.InSameSet(constref L, R: T): Boolean;
+begin
+  Result := Lead(L) = Lead(R);
+end;
+
+function TGDisjointSetUnion.InDiffSets(constref L, R: T): Boolean;
+begin
+  Result := Lead(L) <> Lead(R);
+end;
+
+procedure TGDisjointSetUnion.Union(constref L, R: T);
+var
+  vL, vR: SizeInt;
+begin
+  vL := IndexOf(L);
+  vR := IndexOf(R);
+  if (vL >= 0) and (vR >= 0) then
+    UnionI(vL, vR)
+  else
+    raise Exception.Create(SEKeyNotFound);
+end;
+
+procedure TGDisjointSetUnion.UnionI(L, R: SizeInt);
+begin
+  L := GetLead(L);
+  R := GetLead(R);
+  if Odd(Random(4)) then
+    FDsu[L] := R
+  else
+    FDsu[R] := L;
 end;
 
 end.
