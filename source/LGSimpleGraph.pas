@@ -80,6 +80,7 @@ type
     function  FindSeparateCount: SizeInt;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aCompIndex: SizeInt): SizeInt;
+    function  GetEccentricity(aIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -116,6 +117,12 @@ type
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
+  { returns the eccentricity of the aVertex within its connected component }
+    function  Eccentricity(constref aVertex: TVertex): SizeInt; inline;
+    function  EccentricityI(aIndex: SizeInt): SizeInt;
+  { returns local clustering coefficient of the aVertex - how close its neighbours are to being a clique }
+    function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
+    function  LocalClusteringI(aIndex: SizeInt): ValReal;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges }
     function  EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -556,6 +563,28 @@ begin
   Result := 0;
   for I := 0 to Pred(VertexCount) do
     Result += Ord(FNodeList[I].Tag = aCompIndex);
+end;
+
+function TGSimpleGraph.GetEccentricity(aIndex: SizeInt): SizeInt;
+var
+  Queue: TIntQueue;
+  Dist: TIntArray;
+  Next, d: SizeInt;
+begin
+  Dist := CreateIntArray;
+  Dist[aIndex] := 0;
+  Result := 0;
+  repeat
+    for Next in AdjVerticesI(aIndex) do
+      if Dist[Next] = -1 then
+        begin
+          Queue.Enqueue(Next);
+          d := Succ(Dist[aIndex]);
+          if Result < d then
+            Result := d;
+          Dist[Next] := d;
+        end;
+  until not Queue.TryDequeue(aIndex);
 end;
 
 function TGSimpleGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -1269,6 +1298,38 @@ end;
 function TGSimpleGraph.DistinctEdges: TDistinctEdges;
 begin
   Result.FGraph := Self;
+end;
+
+function TGSimpleGraph.Eccentricity(constref aVertex: TVertex): SizeInt;
+begin
+  Result := EccentricityI(IndexOf(aVertex));
+end;
+
+function TGSimpleGraph.EccentricityI(aIndex: SizeInt): SizeInt;
+begin
+  CheckIndexRange(aIndex);
+  Result := GetEccentricity(aIndex);
+end;
+
+function TGSimpleGraph.LocalClustering(constref aVertex: TVertex): ValReal;
+begin
+  Result := LocalClusteringI(IndexOf(aVertex));
+end;
+
+function TGSimpleGraph.LocalClusteringI(aIndex: SizeInt): ValReal;
+var
+  I, J, Counter, d: SizeInt;
+begin
+  CheckIndexRange(aIndex);
+  d := DegreeI(aIndex);
+  if d <= 1 then
+    exit(0.0);
+  Counter := 0;
+  for I in AdjVerticesI(aIndex) do
+    for J in AdjVerticesI(aIndex) do
+      if (I <> J) and AdjacentI(I, J) then
+        Inc(Counter);
+  Result := ValReal(Counter) / ValReal(d * Pred(d));
 end;
 
 function TGSimpleGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -2055,12 +2116,12 @@ var
   Relaxed: TWeight;
   Item: TWeightItem;
   p: PAdjItem;
-begin
+{%H-}begin
   Handles := CreateHandleArray;
   Tree := CreateIntArray;
   Visited.Size := VertexCount;
   Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
-  while Queue.TryDequeue(Item) do
+  while {%H-}Queue.TryDequeue(Item) do
     begin
       if Item.Index = aDst then
         begin
@@ -2099,7 +2160,7 @@ var
   Relaxed: TWeight;
   Item: TRankItem;
   p: PAdjItem;
-begin
+{%H-}begin
   Handles := CreateHandleArray;
   Tree := CreateIntArray;
   Visited.Size := VertexCount;

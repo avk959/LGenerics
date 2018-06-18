@@ -105,6 +105,9 @@ type
     end;
 
   protected
+  const
+    ADJ_EXPAND_SIZE = 8;
+
   type
 
     TAdjList = record
@@ -121,9 +124,6 @@ type
       end;
 
     private
-    const
-      EXPAND_SIZE = 8;
-
     type
       TAdjItemArray = array of TAdjItem;
 
@@ -186,30 +186,59 @@ type
     end;
 
     TIntList = record
-    const
-      EXPAND_SIZE = 8;
-    var
-      Items: TIntArray;
-      Count: SizeInt;
+    private
+      FItems: TIntArray;
+      FCount: SizeInt;
       procedure Expand; inline;
+      function  GetItem(aIndex: SizeInt): SizeInt; inline;
+      class operator Initialize(var aList: TIntList);
+    public
+    type
+      TEnumerator = record
+      private
+        pCurr,
+        pLast: PSizeInt;
+        function  GetCurrent: SizeInt; inline;
+      public
+        function  MoveNext: Boolean; inline;
+        property  Current: SizeInt read GetCurrent;
+      end;
+
+      procedure InitRange(aRange: SizeInt);
+      function  GetEnumerator: TEnumerator;
+      procedure Assign(constref aList: TIntList);
+      function  Copy: TIntList; inline;
+      function  IsEmpty: Boolean; inline;
+      function  NonEmpty: Boolean; inline;
+      procedure MakeEmpty; inline;
       function  Contains(aValue: SizeInt): Boolean; inline;
       function  ContainsAll(constref aList: TIntList): Boolean; inline;
       function  Find(aValue: SizeInt): SizeInt;
-      function  Add(constref aValue: SizeInt): Boolean;
-      class operator Initialize(var aList: TIntList);
+      function  Add(aValue: SizeInt): Boolean;
+      function  Remove(aValue: SizeInt): Boolean;
+      property  Count: SizeInt read FCount;
+      property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
     end;
+    PIntList = ^TIntList;
 
     TSkeleton = record
     private
-      function  GetSize: SizeInt; inline;
-      procedure SetSize(aValue: SizeInt); inline;
-      class operator Initialize(var s: TSkeleton);
+      FAdjLists: array of TIntList;
+      FEdgeCount: SizeInt;
+      FDirected: Boolean;
+      function  GetAdjList(aIndex: SizeInt): PIntList; inline;
+      function  GetDegree(aIndex: SizeInt): SizeInt; inline;
+      function  GetVertexCount: SizeInt; inline;
     public
-      AdjLists: array of TIntList;
-      EdgeCount: SizeInt;
+      constructor Create(aVertCount: SizeInt; aDirected: Boolean = False);
+      constructor Create(constref s: TSkeleton);
       function ContainsEdge(constref aSrc, aDst: SizeInt): Boolean; inline;
       function AddEdge(constref aSrc, aDst: SizeInt): Boolean;
-      property Size: SizeInt read GetSize write SetSize;
+      property VertexCount: SizeInt read GetVertexCount;
+      property Directed: Boolean read FDirected;
+      property EdgeCount: SizeInt read FEdgeCount;
+      property Degree[aIndex: SizeInt]: SizeInt read GetDegree;
+      property AdjLists[aIndex: SizeInt]: PIntList read GetAdjList; default;
     end;
 
   const
@@ -245,6 +274,7 @@ type
     function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
+    function  CreateSkeleton(aDirected: Boolean = False): TSkeleton;
   public
   type
     TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
@@ -501,6 +531,7 @@ type
     procedure SetSize(aValue: SizeInt);
   public
     procedure ClearBits; inline;
+    procedure ExpandTrue(aSize: SizeInt);
   { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
     property  Size: SizeInt read GetSize write SetSize;
   { indices does not checks }
@@ -557,6 +588,7 @@ type
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure MakeEmpty; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
     function  Contains(aValue: SizeInt): Boolean; inline;
     function  Add(aValue: SizeInt): Boolean;
     function  AddAll(constref a: array of SizeInt): SizeInt;
@@ -638,7 +670,7 @@ end;
 
 procedure TGCustomGraph.TAdjList.Expand;
 begin
-  System.SetLength(FList, Capacity + EXPAND_SIZE);
+  System.SetLength(FList, Capacity + ADJ_EXPAND_SIZE);
 end;
 
 function TGCustomGraph.TAdjList.DoFind(aValue: SizeInt): SizeInt;
@@ -812,11 +844,75 @@ begin
     Result := False;
 end;
 
+{ TGCustomGraph.TIntList.TEnumerator }
+
+function TGCustomGraph.TIntList.TEnumerator.GetCurrent: SizeInt;
+begin
+  Result := pCurr^;
+end;
+
+function TGCustomGraph.TIntList.TEnumerator.MoveNext: Boolean;
+begin
+  Result := pCurr < pLast;
+  Inc(pCurr, Ord(Result));
+end;
+
 { TGCustomGraph.TIntList }
 
 procedure TGCustomGraph.TIntList.Expand;
 begin
-  System.SetLength(Items, System.Length(Items) + EXPAND_SIZE);
+  System.SetLength(FItems, System.Length(FItems) + ADJ_EXPAND_SIZE);
+end;
+
+class operator TGCustomGraph.TIntList.Initialize(var aList: TIntList);
+begin
+  aList.FCount := 0;
+end;
+
+procedure TGCustomGraph.TIntList.InitRange(aRange: SizeInt);
+var
+  I: SizeInt;
+begin
+  System.SetLength(FItems, aRange);
+  for I := 0 to Pred(aRange) do
+    FItems[I] := I;
+end;
+
+function TGCustomGraph.TIntList.GetEnumerator: TEnumerator;
+begin
+  Result.pCurr := PSizeInt(Pointer(FItems)) - Ord(Count > 0);
+  Result.pLast := PSizeInt(Pointer(FItems)) + Pred(Count) and (-SizeInt(Count > 0));
+end;
+
+procedure TGCustomGraph.TIntList.Assign(constref aList: TIntList);
+begin
+  FItems := System.Copy(aList.FItems);
+  FCount := aList.Count;
+end;
+
+function TGCustomGraph.TIntList.Copy: TIntList;
+begin
+  Result.Assign(Self);
+end;
+
+function TGCustomGraph.TIntList.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGCustomGraph.TIntList.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGCustomGraph.TIntList.MakeEmpty;
+begin
+  FCount := 0;
+end;
+
+function TGCustomGraph.TIntList.GetItem(aIndex: SizeInt): SizeInt;
+begin
+  Result := FItems[aIndex];
 end;
 
 function TGCustomGraph.TIntList.Contains(aValue: SizeInt): Boolean;
@@ -832,9 +928,9 @@ begin
   for I := 0 to Pred(aList.Count) do
     begin
       Found := False;
-      v := aList.Items[I];
+      v := aList.FItems[I];
       for J := 0 to Pred(Count) do
-        if Items[J] = v then
+        if FItems[J] = v then
           begin
             Found := True;
             break;
@@ -850,12 +946,12 @@ var
   I: SizeInt;
 begin
   for I := 0 to Pred(Count) do
-    if Items[I] = aValue then
+    if FItems[I] = aValue then
       exit(I);
   Result := -1;
 end;
 
-function TGCustomGraph.TIntList.Add(constref aValue: SizeInt): Boolean;
+function TGCustomGraph.TIntList.Add(aValue: SizeInt): Boolean;
 begin
   if Count <> 0 then
     Result := Find(aValue) < 0
@@ -863,53 +959,80 @@ begin
     Result := True;
   if Result then
     begin
-      if Count = System.Length(Items) then
+      if Count = System.Length(FItems) then
         Expand;
-      Items[Count] := aValue;
-      Inc(Count);
+      FItems[Count] := aValue;
+      Inc(FCount);
     end;
 end;
 
-class operator TGCustomGraph.TIntList.Initialize(var aList: TIntList);
+function TGCustomGraph.TIntList.Remove(aValue: SizeInt): Boolean;
+var
+  I: SizeInt;
 begin
-  aList.Count := 0;
+  for I := 0 to Pred(Count) do
+    if FItems[I] = aValue then
+      begin
+        Dec(FCount);
+        FItems[I] := FItems[FCount];
+        exit(True);
+      end;
+  Result := False;
 end;
 
 { TGCustomGraph.TSkeleton }
 
-function TGCustomGraph.TSkeleton.GetSize: SizeInt;
+function TGCustomGraph.TSkeleton.GetVertexCount: SizeInt;
 begin
-  Result := System.Length(AdjLists);
+  Result := System.Length(FAdjLists);
 end;
 
-procedure TGCustomGraph.TSkeleton.SetSize(aValue: SizeInt);
+function TGCustomGraph.TSkeleton.GetAdjList(aIndex: SizeInt): PIntList;
 begin
-  if aValue > Size then
-    System.SetLength(AdjLists, aValue);
+  Result := @FAdjLists[aIndex];
 end;
 
-class operator TGCustomGraph.TSkeleton.Initialize(var s: TSkeleton);
+function TGCustomGraph.TSkeleton.GetDegree(aIndex: SizeInt): SizeInt;
 begin
-  s.EdgeCount := 0;
+  Result := FAdjLists[aIndex].Count;
+end;
+
+constructor TGCustomGraph.TSkeleton.Create(aVertCount: SizeInt; aDirected: Boolean);
+begin
+  System.SetLength(FAdjLists, aVertCount);
+  FEdgeCount := 0;
+  FDirected := aDirected;
+end;
+
+constructor TGCustomGraph.TSkeleton.Create(constref s: TSkeleton);
+var
+  I: SizeInt;
+begin
+  System.SetLength(FAdjLists, s.VertexCount);
+  FEdgeCount := s.EdgeCount;
+  FDirected := s.Directed;
+  for I := 0 to Pred(s.VertexCount) do
+    FAdjLists[I].Assign(s.FAdjLists[I]);
 end;
 
 function TGCustomGraph.TSkeleton.ContainsEdge(constref aSrc, aDst: SizeInt): Boolean;
 begin
-  if (aSrc >= 0) and (aSrc < Size) then
-    Result := AdjLists[aSrc].Contains(aDst)
+  if (aSrc >= 0) and (aSrc < VertexCount) then
+    Result := FAdjLists[aSrc].Contains(aDst)
   else
     Result := False;
 end;
 
 function TGCustomGraph.TSkeleton.AddEdge(constref aSrc, aDst: SizeInt): Boolean;
 begin
-  if (aSrc < 0) or (aSrc >= Size) or (aDst < 0) or (aDst >= Size) then
+  if (aSrc < 0) or (aSrc >= VertexCount) or (aDst < 0) or (aDst >= VertexCount) then
     exit(False);
-  Result := AdjLists[aSrc].Add(aDst);
+  Result := FAdjLists[aSrc].Add(aDst);
   if Result then
     begin
-      AdjLists[aDst].Add(aSrc);
-      Inc(EdgeCount);
+      if not Directed then
+        FAdjLists[aDst].Add(aSrc);
+      Inc(FEdgeCount);
     end;
 end;
 
@@ -1275,6 +1398,15 @@ begin
         end;
   until not {%H-}Queue.TryDequeue(aSrc);
   Result := False;
+end;
+
+function TGCustomGraph.CreateSkeleton(aDirected: Boolean): TSkeleton;
+var
+  e: TEdge;
+begin
+  Result := TSkeleton.Create(VertexCount, aDirected);
+  for e in Edges do
+    Result.AddEdge(e.Source, e.Destination);
 end;
 
 function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
@@ -2028,6 +2160,19 @@ begin
     System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
+procedure TBitVector.ExpandTrue(aSize: SizeInt);
+var
+  OldLen: SizeInt;
+begin
+  OldLen := Size;
+  if aSize > OldLen then
+    begin
+      aSize := Succ(aSize shr INT_SIZE_LOG);
+      System.SetLength(FBits, aSize);
+      System.FillChar(FBits[OldLen], (aSize - OldLen) * SizeOf(SizeUInt), $ff);
+    end;
+end;
+
 { TSquareBitMatrix }
 
 function TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
@@ -2145,6 +2290,11 @@ end;
 procedure TIntSet.MakeEmpty;
 begin
   FTable.MakeEmpty;
+end;
+
+procedure TIntSet.EnsureCapacity(aValue: SizeInt);
+begin
+  FTable.EnsureCapacity(aValue);
 end;
 
 function TIntSet.Contains(aValue: SizeInt): Boolean;
