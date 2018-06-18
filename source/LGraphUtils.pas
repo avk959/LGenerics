@@ -106,6 +106,7 @@ type
 
   protected
   type
+
     TAdjList = record
     public
     type
@@ -146,6 +147,7 @@ type
       procedure MakeEmpty;
       procedure TrimToFit; inline;
       function  Contains(aDst: SizeInt): Boolean; inline;
+      function  ContainsAll(constref aList: TAdjList): Boolean;
       function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean; inline;
       function  Find(aDst: SizeInt): PAdjItem;
       function  FindFirst(out aDst: SizeInt): Boolean;
@@ -193,6 +195,7 @@ type
       Count: SizeInt;
       procedure Expand; inline;
       function  Contains(aValue: SizeInt): Boolean; inline;
+      function  ContainsAll(constref aList: TIntList): Boolean; inline;
       function  Find(aValue: SizeInt): SizeInt;
       function  Add(constref aValue: SizeInt): Boolean;
       class operator Initialize(var aList: TIntList);
@@ -202,13 +205,13 @@ type
     private
       function  GetSize: SizeInt; inline;
       procedure SetSize(aValue: SizeInt); inline;
+      class operator Initialize(var s: TSkeleton);
     public
       AdjLists: array of TIntList;
       EdgeCount: SizeInt;
       function ContainsEdge(constref aSrc, aDst: SizeInt): Boolean; inline;
       function AddEdge(constref aSrc, aDst: SizeInt): Boolean;
       property Size: SizeInt read GetSize write SetSize;
-      class operator Initialize(var s: TSkeleton);
     end;
 
   const
@@ -596,6 +599,8 @@ type
     property Count: SizeInt read GetCount;
   end;
 
+
+
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -727,6 +732,27 @@ begin
     Result := False;
 end;
 
+function TGCustomGraph.TAdjList.ContainsAll(constref aList: TAdjList): Boolean;
+var
+  I, J, v: SizeInt;
+  Found: Boolean;
+begin
+  for I := 0 to Pred(aList.Count) do
+    begin
+      Found := False;
+      v := aList.FList[I].Key;
+      for J := 0 to Pred(Count) do
+        if FList[J].Key = v then
+          begin
+            Found := True;
+            break;
+          end;
+      if not Found then
+        exit(False);
+    end;
+  Result := True;
+end;
+
 function TGCustomGraph.TAdjList.FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
 var
   Pos: SizeInt;
@@ -808,6 +834,27 @@ begin
   Result := Find(aValue) >= 0;
 end;
 
+function TGCustomGraph.TIntList.ContainsAll(constref aList: TIntList): Boolean;
+var
+  I, J, v: SizeInt;
+  Found: Boolean;
+begin
+  for I := 0 to Pred(aList.Count) do
+    begin
+      Found := False;
+      v := aList.Items[I];
+      for J := 0 to Pred(Count) do
+        if Items[J] = v then
+          begin
+            Found := True;
+            break;
+          end;
+      if not Found then
+        exit(False);
+    end;
+  Result := True;
+end;
+
 function TGCustomGraph.TIntList.Find(aValue: SizeInt): SizeInt;
 var
   I: SizeInt;
@@ -851,6 +898,11 @@ begin
     System.SetLength(AdjLists, aValue);
 end;
 
+class operator TGCustomGraph.TSkeleton.Initialize(var s: TSkeleton);
+begin
+  s.EdgeCount := 0;
+end;
+
 function TGCustomGraph.TSkeleton.ContainsEdge(constref aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc >= 0) and (aSrc < Size) then
@@ -869,11 +921,6 @@ begin
       AdjLists[aDst].Add(aSrc);
       Inc(EdgeCount);
     end;
-end;
-
-class operator TGCustomGraph.TSkeleton.Initialize(var s: TSkeleton);
-begin
-  s.EdgeCount := 0;
 end;
 
 { TGCustomGraph.TNode }
