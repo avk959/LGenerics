@@ -112,13 +112,11 @@ type
     type
       TEnumerator = record
       private
-        FList: PAdjItem;
-        FCurrIndex,
-        FLastIndex: SizeInt;
+        pCurr,
+        pLast: PAdjItem;
         function  GetCurrent: PAdjItem; inline;
       public
         function  MoveNext: Boolean; inline;
-        procedure Reset; inline;
         property  Current: PAdjItem read GetCurrent;
       end;
 
@@ -275,7 +273,6 @@ type
       function  GetCurrent: SizeInt; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: SizeInt read GetCurrent;
     end;
 
@@ -296,7 +293,6 @@ type
       function  GetCurrent: TIncidentEdge;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: TIncidentEdge read GetCurrent;
     end;
 
@@ -624,18 +620,13 @@ end;
 
 function TGCustomGraph.TAdjList.TEnumerator.GetCurrent: PAdjItem;
 begin
-  Result := @FList[FCurrIndex];
+  Result := pCurr;
 end;
 
 function TGCustomGraph.TAdjList.TEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLastIndex;
-  FCurrIndex += Ord(Result);
-end;
-
-procedure TGCustomGraph.TAdjList.TEnumerator.Reset;
-begin
-  FCurrIndex := -1;
+  Result := pCurr < pLast;
+  Inc(pCurr, Ord(Result));
 end;
 
 { TGCustomGraph.TAdjList }
@@ -684,9 +675,8 @@ end;
 
 function TGCustomGraph.TAdjList.GetEnumerator: TEnumerator;
 begin
-  Result.FList := Pointer(FList);
-  Result.FLastIndex := Pred(Count);
-  Result.FCurrIndex := -1;
+  Result.pCurr := PAdjItem(Pointer(FList)) - Ord(Count > 0);
+  Result.pLast := PAdjItem(Pointer(FList)) + Pred(Count) and (-SizeInt(Count > 0));
 end;
 
 function TGCustomGraph.TAdjList.ToArray: TAdjItemArray;
@@ -955,11 +945,6 @@ begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomGraph.TAdjEnumerator.Reset;
-begin
-  FEnum.Reset;
-end;
-
 { TGCustomGraph.TAdjVertices }
 
 constructor TGCustomGraph.TAdjVertices.Create(aGraph: TGCustomGraph; aSource: SizeInt);
@@ -987,11 +972,6 @@ end;
 function TGCustomGraph.TIncidentEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
-end;
-
-procedure TGCustomGraph.TIncidentEnumerator.Reset;
-begin
-  FEnum.Reset;
 end;
 
 { TGCustomGraph.TIncidentEdges }
