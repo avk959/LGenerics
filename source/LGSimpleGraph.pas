@@ -76,6 +76,7 @@ type
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+    function  CreateSkeleton: TSkeleton;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  FindSeparateCount: SizeInt;
     function  GetSeparateCount: SizeInt;
@@ -120,7 +121,7 @@ type
   { returns the eccentricity of the aVertex within its connected component }
     function  Eccentricity(constref aVertex: TVertex): SizeInt; inline;
     function  EccentricityI(aIndex: SizeInt): SizeInt;
-  { returns local clustering coefficient of the aVertex - how close its neighbours are to being a clique }
+  { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
     function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
     function  LocalClusteringI(aIndex: SizeInt): ValReal;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
@@ -504,6 +505,16 @@ begin
       Dec(FEdgeCount);
       FConnectedValid := False;
     end;
+end;
+
+function TGSimpleGraph.CreateSkeleton: TSkeleton;
+var
+  I: SizeInt;
+begin
+  Result := TSkeleton.Create(VertexCount);
+  Result.FEdgeCount := EdgeCount;
+  for I := 0 to Pred(VertexCount) do
+    Result[I]^.Assign(FNodeList[I].AdjList);
 end;
 
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
@@ -1448,33 +1459,29 @@ end;
 
 function TGSimpleGraph.FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
 var
-  g: TGSimpleGraph = nil;
+  g: TSkeleton;
   Stack: TIntStack;
   s, d: SizeInt;
 begin
   if not ContainsEulerianCircuit then
     exit(False);
-  g := Clone;
-  try
-    s := 0;
-    while g.DegreeI(s) = 0 do
-      Inc(s);
-    aCircuit.Add(s);
+  g := CreateSkeleton;
+  s := 0;
+  while g.Degree[s] = 0 do
+    Inc(s);
+  aCircuit.Add(s);
+  repeat
     repeat
-      repeat
-        if not g.FNodeList[s].AdjList.FindFirst(d) then
-          break;
-        Stack.Push(s);
-        g.RemoveEdgeI(s, d);
-        s := d;
-      until False;
-      if not Stack.TryPop(s) then
+      if not g[s]^.FindFirst(d) then
         break;
-      aCircuit.Add(s);
+      Stack.Push(s);
+      g.RemoveEdge(s, d);
+      s := d;
     until False;
-  finally
-    g.Free;
-  end;
+    if not Stack.TryPop(s) then
+      break;
+    aCircuit.Add(s);
+  until False;
   Result := aCircuit.Count > 0;
   if Result then
     TIntVectorHelper.Reverse(aCircuit);
