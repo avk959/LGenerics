@@ -185,6 +185,8 @@ type
       //edges: src index, dst index, data
     end;
 
+    { TIntList }
+
     TIntList = record
     private
       FItems: TIntArray;
@@ -207,6 +209,7 @@ type
       procedure InitRange(aRange: SizeInt);
       function  GetEnumerator: TEnumerator;
       procedure Assign(constref aList: TIntList);
+      procedure Assign(constref aList: TAdjList);
       function  Copy: TIntList; inline;
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
@@ -214,6 +217,7 @@ type
       function  Contains(aValue: SizeInt): Boolean; inline;
       function  ContainsAll(constref aList: TIntList): Boolean; inline;
       function  Find(aValue: SizeInt): SizeInt;
+      function  FindFirst(out aDst: SizeInt): Boolean;
       function  Add(aValue: SizeInt): Boolean;
       function  Remove(aValue: SizeInt): Boolean;
       property  Count: SizeInt read FCount;
@@ -232,8 +236,9 @@ type
     public
       constructor Create(aVertCount: SizeInt; aDirected: Boolean = False);
       constructor Create(constref s: TSkeleton);
-      function ContainsEdge(constref aSrc, aDst: SizeInt): Boolean; inline;
-      function AddEdge(constref aSrc, aDst: SizeInt): Boolean;
+      function ContainsEdge(aSrc, aDst: SizeInt): Boolean; inline;
+      function AddEdge(aSrc, aDst: SizeInt): Boolean;
+      function RemoveEdge(aSrc, aDst: SizeInt): Boolean;
       property VertexCount: SizeInt read GetVertexCount;
       property Directed: Boolean read FDirected;
       property EdgeCount: SizeInt read FEdgeCount;
@@ -274,7 +279,6 @@ type
     function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
-    function  CreateSkeleton(aDirected: Boolean = False): TSkeleton;
   public
   type
     TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
@@ -890,6 +894,16 @@ begin
   FCount := aList.Count;
 end;
 
+procedure TGCustomGraph.TIntList.Assign(constref aList: TAdjList);
+var
+  I: SizeInt;
+begin
+  FCount := aList.Count;
+  System.SetLength(FItems, FCount);
+  for I := 0 to Pred(Count) do
+    FItems[I] := aList.FList[I].Destination;
+end;
+
 function TGCustomGraph.TIntList.Copy: TIntList;
 begin
   Result.Assign(Self);
@@ -951,6 +965,13 @@ begin
   Result := -1;
 end;
 
+function TGCustomGraph.TIntList.FindFirst(out aDst: SizeInt): Boolean;
+begin
+  Result := Count <> 0;
+  if Result then
+    aDst := FItems[0];
+end;
+
 function TGCustomGraph.TIntList.Add(aValue: SizeInt): Boolean;
 begin
   if Count <> 0 then
@@ -974,7 +995,8 @@ begin
     if FItems[I] = aValue then
       begin
         Dec(FCount);
-        FItems[I] := FItems[FCount];
+        if I < Count then
+          FItems[I] := FItems[Count];
         exit(True);
       end;
   Result := False;
@@ -1015,7 +1037,7 @@ begin
     FAdjLists[I].Assign(s.FAdjLists[I]);
 end;
 
-function TGCustomGraph.TSkeleton.ContainsEdge(constref aSrc, aDst: SizeInt): Boolean;
+function TGCustomGraph.TSkeleton.ContainsEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc >= 0) and (aSrc < VertexCount) then
     Result := FAdjLists[aSrc].Contains(aDst)
@@ -1023,7 +1045,7 @@ begin
     Result := False;
 end;
 
-function TGCustomGraph.TSkeleton.AddEdge(constref aSrc, aDst: SizeInt): Boolean;
+function TGCustomGraph.TSkeleton.AddEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= VertexCount) or (aDst < 0) or (aDst >= VertexCount) then
     exit(False);
@@ -1033,6 +1055,19 @@ begin
       if not Directed then
         FAdjLists[aDst].Add(aSrc);
       Inc(FEdgeCount);
+    end;
+end;
+
+function TGCustomGraph.TSkeleton.RemoveEdge(aSrc, aDst: SizeInt): Boolean;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Result := FAdjLists[aSrc].Remove(aDst);
+  if Result then
+    begin
+      if not Directed then
+        FAdjLists[aDst].Remove(aSrc);
+      Dec(FEdgeCount);
     end;
 end;
 
@@ -1398,15 +1433,6 @@ begin
         end;
   until not {%H-}Queue.TryDequeue(aSrc);
   Result := False;
-end;
-
-function TGCustomGraph.CreateSkeleton(aDirected: Boolean): TSkeleton;
-var
-  e: TEdge;
-begin
-  Result := TSkeleton.Create(VertexCount, aDirected);
-  for e in Edges do
-    Result.AddEdge(e.Source, e.Destination);
 end;
 
 function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
