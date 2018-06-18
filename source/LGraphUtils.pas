@@ -1,6 +1,6 @@
 {****************************************************************************
 *                                                                           *
-*   This file is part of the LGraphs package.                               *
+*   This file is part of the LGenerics package.                             *
 *   Most common graph types and utils.                                      *
 *                                                                           *
 *   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
