@@ -334,16 +334,14 @@ type
     function  MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
-    returns path weight or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
+    returns weight of the path or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function  MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
     function  MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
-  { returns the path of minimal weight from a aSrc to aDst, if exists, and it weight in aWeight }
+  { returns the path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
-    the weights of all edges must be nonnegative;
-    the result contains shortest path weight or InfiniteWeight if the vertex is unreachable;
-    used A* algorithm  }
+    the weights of all edges must be nonnegative; used A* algorithm if aHeur <> nil }
     function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: THeuristic): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
