@@ -471,7 +471,8 @@ type
     function  GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
     function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
-  { returns adjacency matrix }
+  { returns adjacency matrix;
+    warning: maximal matrix size limited, see MaxBitMatrixSize }
     function  CreateAdjacencyMatrix: TAdjacencyMatrix;
   { returns count of visited vertices; OnAccept calls after vertex visite, OnNext calls after next vertex found;
     if TOnAccept returns False then traversal stops }
@@ -500,8 +501,8 @@ type
     empty if path does not exists }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
-  { returns complement adjacency matrix of graph;
-    if the source graph is sparse then complement is dense }
+  { returns adjacency matrix of the complement graph;
+    warning: maximal matrix size limited, see MaxBitMatrixSize }
     function  Complement: TAdjacencyMatrix;
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read FCount;
