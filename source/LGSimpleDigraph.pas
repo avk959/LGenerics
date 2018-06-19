@@ -61,10 +61,11 @@ type
 
   protected
     FReachabilityMatrix: TReachabilityMatrix;
-    function  GetClosureValid: Boolean; inline;
+    function  ClosureValid: Boolean; inline;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+    function  CreateSkeleton: TSkeleton;
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): SizeInt;
     function  TopoSort(aIndex: SizeInt): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
@@ -75,6 +76,7 @@ type
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
     procedure RemoveVertex(constref aVertex: TVertex); inline;
     procedure RemoveVertexI(aIndex: SizeInt);
+  { returns True if the edge is added, False, if such an edge already exists }
     function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
     function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -124,7 +126,7 @@ type
 
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
-    property  ReachabilityMatrixValid: Boolean read GetClosureValid;
+    property  ReachabilityValid: Boolean read ClosureValid;
   end;
 
   THandle = LGUtils.THandle;
@@ -244,7 +246,7 @@ end;
 
 { TGSimpleDiGraph }
 
-function TGSimpleDiGraph.GetClosureValid: Boolean;
+function TGSimpleDiGraph.ClosureValid: Boolean;
 begin
   Result := FReachabilityMatrix.Size <> 0;
 end;
@@ -300,6 +302,16 @@ begin
       Dec(FEdgeCount);
       FReachabilityMatrix.Discard;
     end;
+end;
+
+function TGSimpleDiGraph.CreateSkeleton: TSkeleton;
+var
+  I: SizeInt;
+begin
+  Result := TSkeleton.Create(VertexCount, True);
+  Result.FEdgeCount := EdgeCount;
+  for I := 0 to Pred(VertexCount) do
+    Result[I]^.Assign(FNodeList[I].AdjList);
 end;
 
 function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): SizeInt;
@@ -747,7 +759,7 @@ begin
   CheckIndexRange(aDst);
   if aSrc = aDst then
     exit(True);
-  if ReachabilityMatrixValid then
+  if ReachabilityValid then
     exit(FReachabilityMatrix.Reachable(aSrc, aDst));
   Result := CheckPathExists(aSrc, aDst);
 end;
@@ -785,33 +797,28 @@ end;
 
 function TGSimpleDiGraph.FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
 var
-  g: TGSimpleDiGraph = nil;
+  g: TSkeleton;
   Stack: TIntStack;
   s, d: SizeInt;
 begin
   if not ContainsEulerianCircuit then
     exit(False);
-  g := Clone;
-  try
-    s := 0;
-    while g.DegreeI(s) = 0 do
-      Inc(s);
-    aCircuit.Add(s);
-    repeat
-      repeat
-        if not g.FNodeList[s].AdjList.FindFirst(d) then
-          break;
+  g := CreateSkeleton;
+  s := 0;
+  while g.Degree[s] = 0 do
+    Inc(s);
+  aCircuit.Add(s);
+  repeat
+    while g[s]^.FindFirst(d) do
+      begin
         Stack.Push(s);
-        g.RemoveEdgeI(s, d);
+        g.RemoveEdge(s, d);
         s := d;
-      until False;
-      if not Stack.TryPop(s) then
-        break;
-      aCircuit.Add(s);
-    until False;
-  finally
-    g.Free;
-  end;
+      end;
+    if not Stack.TryPop(s) then
+      break;
+    aCircuit.Add(s);
+  until False;
   Result := aCircuit.Count > 0;
   if Result then
     TIntVectorHelper.Reverse(aCircuit);
@@ -843,7 +850,7 @@ end;
 
 procedure TGSimpleDiGraph.FillReachabilityMatrix;
 begin
-  if IsEmpty or ReachabilityMatrixValid then
+  if IsEmpty or ReachabilityValid then
     exit;
   FReachabilityMatrix := GetReachabilityMatrix;
 end;

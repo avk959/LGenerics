@@ -98,11 +98,12 @@ type
   public
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
     procedure Clear; override;
-  { returns True and vertex index, if it was added, False otherwise }
+  { returns True and vertex index, if it is added, False if such a vertex already exists }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
     procedure RemoveVertex(constref aVertex: TVertex); inline;
     procedure RemoveVertexI(aIndex: SizeInt);
+  { returns True if the edge is added, False, if such an edge already exists }
     function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
     function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -1471,13 +1472,12 @@ begin
     Inc(s);
   aCircuit.Add(s);
   repeat
-    repeat
-      if not g[s]^.FindFirst(d) then
-        break;
-      Stack.Push(s);
-      g.RemoveEdge(s, d);
-      s := d;
-    until False;
+    while g[s]^.FindFirst(d) do
+      begin
+        Stack.Push(s);
+        g.RemoveEdge(s, d);
+        s := d;
+      end;
     if not Stack.TryPop(s) then
       break;
     aCircuit.Add(s);
