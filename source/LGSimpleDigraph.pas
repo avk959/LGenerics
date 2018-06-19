@@ -52,10 +52,11 @@ type
       FMatrix: TSquareBitMatrix;
       FIds: TIntArray;
       function  GetSize: SizeInt; inline;
+      procedure Clear; inline;
     public
       constructor Create(constref aMatrix: TSquareBitMatrix; constref aIds: TIntArray);
+      function  IsEmpty: Boolean; inline;
       function  Reachable(aSrc, aDst: SizeInt): Boolean; inline;
-      procedure Discard; inline;
       property  Size: SizeInt read GetSize;
     end;
 
@@ -69,9 +70,10 @@ type
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): SizeInt;
     function  TopoSort(aIndex: SizeInt): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
-    function  GetReachabilityMatrix: TReachabilityMatrix;
+    function  GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
   public
     class function MaxBitMatrixSize: SizeInt; static; inline;
+    procedure Clear; override;
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
@@ -114,12 +116,16 @@ type
     function  IsDag(constref aSource: TVertex): Boolean; inline;
     function  IsDagI(aSource: SizeInt): Boolean;
   { returns count of the strong connected components; the corresponding element of the
-    aCompIds will contain it component index(used Gabow's algotitm) }
+    aCompIds will contain its component index(used Gabow's algotitm) }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
   { creates internal reachability matrix }
     procedure FillReachabilityMatrix;
+  { creates internal reachability matrix using pre-calculated results of FindStrongComponents }
+    procedure FillReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt);
   { returns reachability matrix }
     function  CreateReachabilityMatrix: TReachabilityMatrix;
+  { returns reachability matrix using pre-calculated results of FindStrongComponents }
+    function  CreateReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
   { returns array of vertex indices in topological order staring from aRoot, without any acyclic checks }
     function  TopologicalSort(constref aRoot: TVertex; aOrder: TSortOrder = soAsc): TIntArray; inline;
     function  TopologicalSortI(aRoot: SizeInt; aOrder: TSortOrder = soAsc): TIntArray;
@@ -227,10 +233,24 @@ begin
   Result := FMatrix.Size;
 end;
 
+procedure TGSimpleDiGraph.TReachabilityMatrix.Clear;
+begin
+  if Size > 0 then
+    begin
+      FMatrix.Clear;
+      FIds := nil;
+    end;
+end;
+
 constructor TGSimpleDiGraph.TReachabilityMatrix.Create(constref aMatrix: TSquareBitMatrix; constref aIds: TIntArray);
 begin
   FMatrix := aMatrix;
   FIds := aIds;
+end;
+
+function TGSimpleDiGraph.TReachabilityMatrix.IsEmpty: Boolean;
+begin
+  Result := Size = 0;
 end;
 
 function TGSimpleDiGraph.TReachabilityMatrix.Reachable(aSrc, aDst: SizeInt): Boolean;
@@ -238,17 +258,11 @@ begin
   Result := FMatrix[FIds[aSrc], FIds[aDst]];
 end;
 
-procedure TGSimpleDiGraph.TReachabilityMatrix.Discard;
-begin
-  FMatrix.Clear;
-  FIds := nil;
-end;
-
 { TGSimpleDiGraph }
 
 function TGSimpleDiGraph.ClosureValid: Boolean;
 begin
-  Result := FReachabilityMatrix.Size <> 0;
+  Result := NonEmpty and not FReachabilityMatrix.IsEmpty;
 end;
 
 procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
@@ -275,7 +289,7 @@ begin
             end;
         end;
     end;
-  FReachabilityMatrix.Discard;
+  FReachabilityMatrix.Clear;
 end;
 
 function TGSimpleDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -287,7 +301,7 @@ begin
     begin
       Inc(FNodeList[aDst].Tag);
       Inc(FEdgeCount);
-      FReachabilityMatrix.Discard;
+      FReachabilityMatrix.Clear;
     end;
 end;
 
@@ -300,7 +314,7 @@ begin
     begin
       Dec(FNodeList[aDst].Tag);
       Dec(FEdgeCount);
-      FReachabilityMatrix.Discard;
+      FReachabilityMatrix.Clear;
     end;
 end;
 
@@ -437,26 +451,20 @@ begin
       end;
 end;
 
-function TGSimpleDiGraph.GetReachabilityMatrix: TReachabilityMatrix;
+function TGSimpleDiGraph.GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
 var
   Stack: TIntStack;
-  InOrder, Parents, Ids: TIntArray;
+  InOrder, Parents: TIntArray;
   m: TSquareBitMatrix;
   AdjEnums: TAdjEnumArray;
-  I, J, ScCount, Counter, Curr, Next: SizeInt;
+  I, J, Counter, Curr, Next: SizeInt;
 begin
-  ScCount := SearchForStrongComponents(Ids);
-  m := TSquareBitMatrix.Create(ScCount);
-  if ScCount = 1 then
-    begin
-      m[0, 0] := True;
-      exit(TReachabilityMatrix.Create(m, Ids));
-    end;
   InOrder := CreateIntArray;
   Parents := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
   Counter := 0;
-  for I := 0 to Pred(ScCount) do
+  m := TSquareBitMatrix.Create(aScCount);
+  for I := 0 to Pred(aScCount) do
     if InOrder[I] = -1 then
       begin
         InOrder[I] := Counter;
@@ -466,7 +474,7 @@ begin
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              m[Ids[Curr], Ids[Next]] := True;
+              m[aScIds[Curr], aScIds[Next]] := True;
               if InOrder[Next] = -1 then
                 begin
                   Parents[Next] := Curr;
@@ -480,17 +488,23 @@ begin
               Next := Stack.Pop;
               Curr := Parents[Next];
               if (Curr <> -1) and (InOrder[Next] < InOrder[Curr]) then
-                for J := 0 to Pred(ScCount) do
-                  if m[Ids[Next], Ids[J]] then
-                    m[Ids[Curr], Ids[J]] := True;
+                for J := 0 to Pred(aScCount) do
+                  if m[aScIds[Next], aScIds[J]] then
+                    m[aScIds[Curr], aScIds[J]] := True;
             end;
       end;
-  Result := TReachabilityMatrix.Create(m, Ids);
+  Result := TReachabilityMatrix.Create(m, aScIds);
 end;
 
 class function TGSimpleDiGraph.MaxBitMatrixSize: SizeInt;
 begin
   Result := TSquareBitMatrix.MaxSize;
+end;
+
+procedure TGSimpleDiGraph.Clear;
+begin
+  inherited;
+  FReachabilityMatrix.Clear;
 end;
 
 function TGSimpleDiGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -499,7 +513,7 @@ begin
   if Result then
     begin
       FNodeList[aIndex].Tag := 0;
-      FReachabilityMatrix.Discard;
+      FReachabilityMatrix.Clear;
     end;
 end;
 
@@ -858,17 +872,55 @@ begin
 end;
 
 procedure TGSimpleDiGraph.FillReachabilityMatrix;
+var
+  Ids: TIntArray;
+  ScCount: SizeInt;
 begin
   if IsEmpty or ReachabilityValid then
     exit;
-  FReachabilityMatrix := GetReachabilityMatrix;
+  ScCount := SearchForStrongComponents(Ids);
+  FillReachabilityMatrix(Ids, ScCount);
+end;
+
+procedure TGSimpleDiGraph.FillReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt);
+var
+  m: TSquareBitMatrix;
+begin
+  if aScCount = 1 then
+    begin
+      m := TSquareBitMatrix.Create(aScCount);
+      m[0, 0] := True;
+      FReachabilityMatrix := TReachabilityMatrix.Create(m, aScIds);
+      exit;
+    end;
+  FReachabilityMatrix := GetReachabilityMatrix(aScIds, aScCount);
 end;
 
 function TGSimpleDiGraph.CreateReachabilityMatrix: TReachabilityMatrix;
+var
+  Ids: TIntArray;
+  ScCount: SizeInt;
 begin
   if IsEmpty then
-    exit;
-  Result := GetReachabilityMatrix;
+    exit(Default(TReachabilityMatrix));
+  if ReachabilityValid then
+    exit(FReachabilityMatrix);
+  ScCount := SearchForStrongComponents(Ids);
+  Result := GetReachabilityMatrix(Ids, ScCount);
+end;
+
+function TGSimpleDiGraph.CreateReachabilityMatrix(constref aScIds: TIntArray;
+  aScCount: SizeInt): TReachabilityMatrix;
+var
+  m: TSquareBitMatrix;
+begin
+  if aScCount = 1 then
+    begin
+      m := TSquareBitMatrix.Create(aScCount);
+      m[0, 0] := True;
+      exit(TReachabilityMatrix.Create(m, aScIds));
+    end;
+  Result := GetReachabilityMatrix(aScIds, aScCount);
 end;
 
 function TGSimpleDiGraph.TopologicalSort(constref aRoot: TVertex; aOrder: TSortOrder): TIntArray;
