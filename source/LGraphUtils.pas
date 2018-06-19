@@ -438,7 +438,7 @@ type
     class procedure Tree2Chain(constref aTree: TIntArray; aRoot: SizeInt; var v: TIntVector); static;
     class function  TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
     class procedure Tree2Cycle(constref aTree: TIntArray;  aFirst, aLast: SizeInt; var v: TIntVector); static;
-    class function  TreeToCycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt; static;
+    class function  Tree2CycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt; static;
     class property  DefaultEdgeData: TEdgeData read CFData;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
@@ -497,7 +497,7 @@ type
     (in sense 'edges count'), or -1 if it unreachable }
     function  ShortestPathsMap(constref aRoot: TVertex): TIntArray; inline;
     function  ShortestPathsMapI(aRoot: SizeInt = 0): TIntArray;
-  { returns an array containing chain of indices of found shortest path(in sense 'edges count'),
+  { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
@@ -595,6 +595,7 @@ type
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure MakeEmpty; inline;
+    procedure Clear; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     function  Contains(aValue: SizeInt): Boolean; inline;
     function  Add(aValue: SizeInt): Boolean;
@@ -1591,7 +1592,7 @@ begin
   TIntVectorHelper.Reverse(v);
 end;
 
-class function TGCustomGraph.TreeToCycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt;
+class function TGCustomGraph.Tree2CycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2394,6 +2395,11 @@ end;
 procedure TIntSet.MakeEmpty;
 begin
   FTable.MakeEmpty;
+end;
+
+procedure TIntSet.Clear;
+begin
+  FTable.Clear;
 end;
 
 procedure TIntSet.EnsureCapacity(aValue: SizeInt);
