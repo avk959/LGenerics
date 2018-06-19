@@ -332,31 +332,30 @@ var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   InStack: TBitVector;
-  InOrder,
-  Parents: TIntArray;
+  PreOrd, Parents: TIntArray;
   Counter, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   InStack.Size := VertexCount;
-  InOrder[aRoot] := 0;
+  PreOrd[aRoot] := 0;
   Counter := 1;
   {%H-}Stack.Push(aRoot);
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
       begin
         Next := AdjEnums[aRoot].Current;
-        if InOrder[Next] = -1 then
+        if PreOrd[Next] = -1 then
           begin
             Parents[Next] := aRoot;
-            InOrder[Next] := Counter;
+            PreOrd[Next] := Counter;
             InStack[Next] := True;
             Inc(Counter);
             Stack.Push(Next);
           end
         else
-          if (InOrder[aRoot] >= InOrder[Next]) and InStack[Next] then
+          if (PreOrd[aRoot] >= PreOrd[Next]) and InStack[Next] then
             begin
               aCycle := TreeToCycle(Parents, Next, aRoot);
               exit(Counter);
@@ -377,7 +376,7 @@ begin
   AdjEnums := CreateAdjEnumArray;
   Result := CreateIntArray;
   Visited.Size := VertexCount;
-  Counter := VertexCount;
+  Counter := Pred(VertexCount);
   Visited[aIndex] := True;
   {%H-}Stack.Push(aIndex);
   while Stack.TryPeek(aIndex) do
@@ -392,8 +391,8 @@ begin
       end
     else
       begin
-        Dec(Counter);
         Result[Counter] := Stack.Pop;
+        Dec(Counter);
       end;
 end;
 
@@ -401,18 +400,18 @@ function TGSimpleDiGraph.SearchForStrongComponents(out aIds: TIntArray): SizeInt
 var
   Stack, VtxStack, PathStack: TIntStack;
   AdjEnums: TAdjEnumArray;
-  InOrder: TIntArray;
+  PreOrd: TIntArray;
   I, Counter, Curr, Next: SizeInt;
 begin
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   aIds := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
   Counter := 0;
   Result := 0;
   for I := 0 to Pred(VertexCount) do
-    if InOrder[I] = -1 then
+    if PreOrd[I] = -1 then
       begin
-        InOrder[I] := Counter;
+        PreOrd[I] := Counter;
         Inc(Counter);
         {%H-}Stack.Push(I);
         VtxStack{%H-}.Push(I);
@@ -421,9 +420,9 @@ begin
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if InOrder[Next] = -1 then
+              if PreOrd[Next] = -1 then
                 begin
-                  InOrder[Next] := Counter;
+                  PreOrd[Next] := Counter;
                   Inc(Counter);
                   Stack.Push(Next);
                   VtxStack.Push(Next);
@@ -431,7 +430,7 @@ begin
                 end
               else
                 if aIds[Next] = -1 then
-                  while InOrder[PathStack.Peek] > InOrder[Next] do
+                  while PreOrd[PathStack.Peek] > PreOrd[Next] do
                     PathStack.Pop;
             end
           else
@@ -453,20 +452,20 @@ end;
 function TGSimpleDiGraph.GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
 var
   Stack: TIntStack;
-  InOrder, Parents: TIntArray;
+  PreOrd, Parents: TIntArray;
   m: TSquareBitMatrix;
   AdjEnums: TAdjEnumArray;
   I, J, Counter, Curr, Next: SizeInt;
 begin
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
   Counter := 0;
   m := TSquareBitMatrix.Create(aScCount);
   for I := 0 to Pred(aScCount) do
-    if InOrder[I] = -1 then
+    if PreOrd[I] = -1 then
       begin
-        InOrder[I] := Counter;
+        PreOrd[I] := Counter;
         {%H-}Stack.Push(I);
         Inc(Counter);
         while Stack.TryPeek(Curr) do
@@ -474,10 +473,10 @@ begin
             begin
               Next := AdjEnums[Curr].Current;
               m[aScIds[Curr], aScIds[Next]] := True;
-              if InOrder[Next] = -1 then
+              if PreOrd[Next] = -1 then
                 begin
                   Parents[Next] := Curr;
-                  InOrder[Next] := Counter;
+                  PreOrd[Next] := Counter;
                   Inc(Counter);
                   Stack.Push(Next);
                 end;
@@ -486,7 +485,7 @@ begin
             begin
               Next := Stack.Pop;
               Curr := Parents[Next];
-              if (Curr <> -1) and (InOrder[Next] < InOrder[Curr]) then
+              if (Curr <> -1) and (PreOrd[Next] < PreOrd[Curr]) then
                 for J := 0 to Pred(aScCount) do
                   if m[aScIds[Next], aScIds[J]] then
                     m[aScIds[Curr], aScIds[J]] := True;

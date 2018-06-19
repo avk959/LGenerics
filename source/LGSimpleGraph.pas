@@ -666,14 +666,14 @@ procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVect
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
-  LowPt, InOrder, Parents: TIntArray;
+  LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, ChildCount: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   LowPt := CreateIntArray;
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
-  InOrder[aRoot] := 0;
+  PreOrd[aRoot] := 0;
   LowPt[aRoot] := 0;
   {%H-}Stack.Push(aRoot);
   Counter := 1;
@@ -683,18 +683,18 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if InOrder[Next] = -1 then
+          if PreOrd[Next] = -1 then
             begin
               Parents[Next] := Curr;
-              InOrder[Next] := Counter;
+              PreOrd[Next] := Counter;
               LowPt[Next] := Counter;
               Inc(Counter);
               Inc(ChildCount, Ord(Curr = aRoot));
               Stack.Push(Next);
             end
           else
-            if LowPt[Curr] > InOrder[Next] then
-              LowPt[Curr] := InOrder[Next];
+            if LowPt[Curr] > PreOrd[Next] then
+              LowPt[Curr] := PreOrd[Next];
       end
     else
       begin
@@ -703,7 +703,7 @@ begin
         Curr := Parents[Curr];
         if LowPt[Curr] > LowPt[Next] then
           LowPt[Curr] := LowPt[Next];
-        if (LowPt[Next] >= InOrder[Curr]) and (Curr <> aRoot) then
+        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
           aPoints.Add(Curr);
       end;
   if ChildCount > 1 then
@@ -714,14 +714,14 @@ function TGSimpleGraph.CutPointExists(aRoot: SizeInt): Boolean;
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
-  LowPt, InOrder, Parents: TIntArray;
+  LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, ChildCount: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   LowPt := CreateIntArray;
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
-  InOrder[aRoot] := 0;
+  PreOrd[aRoot] := 0;
   LowPt[aRoot] := 0;
   {%H-}Stack.Push(aRoot);
   Counter := 1;
@@ -731,18 +731,18 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if InOrder[Next] = -1 then
+          if PreOrd[Next] = -1 then
             begin
               Parents[Next] := Curr;
-              InOrder[Next] := Counter;
+              PreOrd[Next] := Counter;
               LowPt[Next] := Counter;
               Inc(Counter);
               Inc(ChildCount, Ord(Curr = aRoot));
               Stack.Push(Next);
             end
           else
-            if LowPt[Curr] > InOrder[Next] then
-              LowPt[Curr] := InOrder[Next];
+            if LowPt[Curr] > PreOrd[Next] then
+              LowPt[Curr] := PreOrd[Next];
       end
     else
       begin
@@ -751,7 +751,7 @@ begin
         Curr := Parents[Curr];
         if LowPt[Curr] > LowPt[Next] then
           LowPt[Curr] := LowPt[Next];
-        if (LowPt[Next] >= InOrder[Curr]) and (Curr <> aRoot) then
+        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
           exit(True);
       end;
   Result := ChildCount > 1;
@@ -761,15 +761,15 @@ procedure TGSimpleGraph.SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeV
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
-  LowPt, InOrder, Parents, Across: TIntArray;
+  LowPt, PreOrd, Parents, Across: TIntArray;
   Counter, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   LowPt := CreateIntArray;
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   Across := CreateIntArray;
-  InOrder[aRoot] := 0;
+  PreOrd[aRoot] := 0;
   LowPt[aRoot] := 0;
   {%H-}Stack.Push(aRoot);
   Counter := 1;
@@ -778,19 +778,19 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if InOrder[Next] = -1 then
+          if PreOrd[Next] = -1 then
             begin
               if Across[Curr] = -1 then
                 Across[Curr] := Next;
               Parents[Next] := Curr;
-              InOrder[Next] := Counter;
+              PreOrd[Next] := Counter;
               LowPt[Next] := Counter;
               Inc(Counter);
               Stack.Push(Next);
             end
           else
-            if LowPt[Curr] > InOrder[Next] then
-              LowPt[Curr] := InOrder[Next];
+            if LowPt[Curr] > PreOrd[Next] then
+              LowPt[Curr] := PreOrd[Next];
       end
     else
       begin
@@ -799,7 +799,7 @@ begin
         Curr := Parents[Curr];
         if LowPt[Curr] > LowPt[Next] then
           LowPt[Curr] := LowPt[Next];
-        if LowPt[Next] >= InOrder[Curr] then
+        if LowPt[Next] >= PreOrd[Curr] then
           begin
             if Next = Across[Curr] then
               begin
@@ -817,15 +817,15 @@ var
   Stack: TIntStack;
   EdgeStack: TIntEdgeVector;
   AdjEnums: TAdjEnumArray;
-  LowPt, InOrder, Parents: TIntArray;
+  LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, ChildCount, I: SizeInt;
   e: TIntEdge;
 begin
   AdjEnums := CreateAdjEnumArray;
   LowPt := CreateIntArray;
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
-  InOrder[aRoot] := 0;
+  PreOrd[aRoot] := 0;
   LowPt[aRoot] := 0;
   {%H-}Stack.Push(aRoot);
   Counter := 1;
@@ -835,10 +835,10 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if InOrder[Next] = -1 then
+          if PreOrd[Next] = -1 then
             begin
               Parents[Next] := Curr;
-              InOrder[Next] := Counter;
+              PreOrd[Next] := Counter;
               LowPt[Next] := Counter;
               Inc(Counter);
               Inc(ChildCount, Ord(Curr = aRoot));
@@ -846,9 +846,9 @@ begin
               EdgeStack.Add(TIntEdge.Create(Curr, Next));
             end
           else
-            if LowPt[Curr] > InOrder[Next] then
+            if LowPt[Curr] > PreOrd[Next] then
               begin
-                LowPt[Curr] := InOrder[Next];
+                LowPt[Curr] := PreOrd[Next];
                 EdgeStack.Add(TIntEdge.Create(Curr, Next));
               end;
       end
@@ -859,7 +859,7 @@ begin
         Curr := Parents[Curr];
         if LowPt[Curr] > LowPt[Next] then
           LowPt[Curr] := LowPt[Next];
-        if (LowPt[Next] >= InOrder[Curr]) and (Curr <> aRoot) then
+        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
           begin
             I := EdgeStack.Count;
             repeat
@@ -886,18 +886,18 @@ function TGSimpleGraph.BridgeExists: Boolean;
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
-  LowPt, InOrder, Parents: TIntArray;
+  LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, I: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   LowPt := CreateIntArray;
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   Counter := 0;
   for I := 0 to Pred(VertexCount) do
-    if InOrder[I] = -1 then
+    if PreOrd[I] = -1 then
       begin
-        InOrder[I] := Counter;
+        PreOrd[I] := Counter;
         LowPt[I] := Counter;
         Inc(Counter);
         {%H-}Stack.Push(I);
@@ -906,17 +906,17 @@ begin
             begin
               Next := AdjEnums[Curr].Current;
               if Next <> Parents[Curr] then
-                if InOrder[Next] = -1 then
+                if PreOrd[Next] = -1 then
                   begin
                     Parents[Next] := Curr;
-                    InOrder[Next] := Counter;
+                    PreOrd[Next] := Counter;
                     LowPt[Next] := Counter;
                     Inc(Counter);
                     Stack.Push(Next);
                   end
                 else
-                  if LowPt[Curr] > InOrder[Next] then
-                    LowPt[Curr] := InOrder[Next];
+                  if LowPt[Curr] > PreOrd[Next] then
+                    LowPt[Curr] := PreOrd[Next];
             end
           else
             begin
@@ -925,7 +925,7 @@ begin
               Curr := Parents[Curr];
               if LowPt[Curr] > LowPt[Next] then
                 LowPt[Curr] := LowPt[Next];
-              if LowPt[Next] > InOrder[Curr] then
+              if LowPt[Next] > PreOrd[Curr] then
                 exit(True);
             end;
       end;
@@ -936,18 +936,18 @@ procedure TGSimpleGraph.SearchForBridges(var aBridges: TIntEdgeVector);
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
-  LowPt, InOrder, Parents: TIntArray;
+  LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, I: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   LowPt := CreateIntArray;
-  InOrder := CreateIntArray;
+  PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   Counter := 0;
   for I := 0 to Pred(VertexCount) do
-    if InOrder[I] = -1 then
+    if PreOrd[I] = -1 then
       begin
-        InOrder[I] := Counter;
+        PreOrd[I] := Counter;
         LowPt[I] := Counter;
         Inc(Counter);
         {%H-}Stack.Push(I);
@@ -956,17 +956,17 @@ begin
             begin
               Next := AdjEnums[Curr].Current;
               if Next <> Parents[Curr] then
-                if InOrder[Next] = -1 then
+                if PreOrd[Next] = -1 then
                   begin
                     Parents[Next] := Curr;
-                    InOrder[Next] := Counter;
+                    PreOrd[Next] := Counter;
                     LowPt[Next] := Counter;
                     Inc(Counter);
                     Stack.Push(Next);
                   end
                 else
-                  if LowPt[Curr] > InOrder[Next] then
-                    LowPt[Curr] := InOrder[Next];
+                  if LowPt[Curr] > PreOrd[Next] then
+                    LowPt[Curr] := PreOrd[Next];
             end
           else
             begin
@@ -975,7 +975,7 @@ begin
               Curr := Parents[Curr];
               if LowPt[Curr] > LowPt[Next] then
                 LowPt[Curr] := LowPt[Next];
-              if LowPt[Next] > InOrder[Curr] then
+              if LowPt[Next] > PreOrd[Curr] then
                 aBridges.Add(TIntEdge.Create(Curr, Next));
             end;
       end;
