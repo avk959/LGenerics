@@ -323,7 +323,7 @@ type
     class property ZeroWeight: TWeight read CFZeroWeight;
   { returns True if exists edge with negative weight }
     function  ContainsNegWeighedEdge: Boolean;
-  { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
+  { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
     InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
@@ -337,14 +337,14 @@ type
     returns weight of the path or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function  MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
     function  MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
-  { returns the path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
+  { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative; used A* algorithm if aHeur <> nil }
     function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: THeuristic): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
-  { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used)}
+  { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used) }
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
     function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
@@ -1037,7 +1037,7 @@ begin
           end
         else
           if (Parents[aRoot] <> Next) and EdgeSet.Add(aRoot, Next) then
-            aCycleLens.Add(TreeToCycleLen(Parents, Next, aRoot));
+            aCycleLens.Add(Tree2CycleLen(Parents, Next, aRoot));
       end
     else
       Stack.Pop;
