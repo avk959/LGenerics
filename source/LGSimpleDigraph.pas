@@ -188,7 +188,7 @@ type
     class property ZeroWeight: TWeight read CFZeroWeight;
   { returns True if exists edge with negative weight }
     function  ContainsNegWeighedEdge: Boolean;
-  { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
+  { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
     InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
@@ -202,10 +202,10 @@ type
     returns path weight or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function  MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
     function  MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
-  { returns the path of minimal weight from a aSrc to aDst, if exists, and it weight in aWeight }
+  { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-  { finds the paths of minimal weight from a given vertex to the remaining vertices in the same
+  { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of the edges can be negative;
     returns False and empty aWeights if there is a negative weight cycle, otherwise
     aWeights will contain in the corresponding component the weight of the minimum path to the vertex or
