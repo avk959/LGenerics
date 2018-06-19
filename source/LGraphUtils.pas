@@ -550,7 +550,7 @@ type
     FBits: TBits;
     FSize: SizeUInt;
     function  GetBit(I, J: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt;
+    function  GetSize: SizeInt; inline;
     procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
     class operator Initialize(var aMatrix: TSquareBitMatrix);
   public
