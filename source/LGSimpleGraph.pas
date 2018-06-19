@@ -194,9 +194,6 @@ type
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
   { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
-  { returns complement of the source graph;
-    warning: if the source graph is sparse then complement is dense }
-    function  Complement(aOnAddEdge: TOnAddEdge): TGSimpleGraph;
   { checks whether the cached info about connected is up-to-date }
     property  ConnectedValid: Boolean read FConnectedValid;
   { checks whether the graph is connected; an empty graph is considered disconnected }
@@ -230,7 +227,6 @@ type
     function  SubgraphFromPairs(constref aPairs: TIntArray): TGChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
     function  Clone: TGChart;
-    function  Complement: TGChart;
   end;
 
   { TIntChart }
@@ -250,7 +246,6 @@ type
     function  SubgraphFromPairs(constref aValue: TIntArray): TIntChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
     function  Clone: TIntChart;
-    function  Complement: TIntChart;
   end;
 
   { TStrChart
@@ -270,7 +265,6 @@ type
     function  SubgraphFromPairs(constref aPairs: TIntArray): TStrChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
     function  Clone: TStrChart;
-    function  Complement: TStrChart;
   end;
 
   THandle = LGUtils.THandle;
@@ -362,7 +356,6 @@ type
     function  SubgraphFromPairs(constref aPairs: TIntArray): TGWeighedGraph;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeighedGraph;
     function  Clone: TGWeighedGraph;
-    function  Complement(aOnAddEdge: TOnAddEdge): TGWeighedGraph;
   end;
 
   TRealPointEdge = record
@@ -397,7 +390,6 @@ type
     function  SubgraphFromPairs(constref aPairs: TIntArray): TPointsChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
-    function  Complement: TPointsChart;
     function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: THeuristic = nil): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: THeuristic = nil): TIntArray;
   end;
@@ -1339,7 +1331,7 @@ begin
   Counter := 0;
   for I in AdjVerticesI(aIndex) do
     for J in AdjVerticesI(aIndex) do
-      if (I <> J) and AdjacentI(I, J) then
+      if (I <> J) and FNodeList[I].AdjList.Contains(J) then
         Inc(Counter);
   Result := ValReal(Counter) / ValReal(d * Pred(d));
 end;
@@ -1750,26 +1742,6 @@ begin
     end;
 end;
 
-function TGSimpleGraph.Complement(aOnAddEdge: TOnAddEdge): TGSimpleGraph;
-var
-  v: TVertex;
-  I, J: SizeInt;
-  d: TEdgeData;
-begin
-  Result := TGSimpleGraph.Create(VertexCount);
-  for v in Vertices do
-    Result.AddVertex(v);
-  d := DefaultEdgeData;
-  for I := 0 to Pred(VertexCount) do
-    for J := Succ(I) to Pred(VertexCount) do
-      if not AdjacentI(I, J) then
-        begin
-          if Assigned(aOnAddEdge) then
-            aOnAddEdge(FNodeList[I].Vertex, FNodeList[J].Vertex, @d);
-          Result.AddEdgeI(I, J, d);
-        end;
-end;
-
 { TGChart }
 
 procedure TGChart.WriteData(aStream: TStream; constref aValue: TEmptyRec);
@@ -1862,11 +1834,6 @@ begin
   Result := inherited Clone as TGChart;
 end;
 
-function TGChart.Complement: TGChart;
-begin
-  Result := inherited Complement(nil) as TGChart;
-end;
-
 { TIntChart }
 
 procedure TIntChart.WriteVertex(aStream: TStream; constref aValue: SizeInt);
@@ -1927,11 +1894,6 @@ end;
 function TIntChart.Clone: TIntChart;
 begin
   Result := inherited Clone as TIntChart;
-end;
-
-function TIntChart.Complement: TIntChart;
-begin
-  Result := inherited Complement as TIntChart;
 end;
 
 { TStrChart }
@@ -2006,11 +1968,6 @@ end;
 function TStrChart.Clone: TStrChart;
 begin
   Result := inherited Clone as TStrChart;
-end;
-
-function TStrChart.Complement: TStrChart;
-begin
-  Result := inherited Complement as TStrChart;
 end;
 
 { TGWeighedGraph }
@@ -2415,11 +2372,6 @@ begin
   Result := inherited Clone as TGWeighedGraph;
 end;
 
-function TGWeighedGraph.Complement(aOnAddEdge: TOnAddEdge): TGWeighedGraph;
-begin
-  Result := inherited Complement(aOnAddEdge) as TGWeighedGraph;
-end;
-
 { TRealPointEdge }
 
 constructor TRealPointEdge.Create(const aWeight: ValReal);
@@ -2537,11 +2489,6 @@ end;
 function TPointsChart.Clone: TPointsChart;
 begin
   Result := TPointsChart(inherited Clone);
-end;
-
-function TPointsChart.Complement: TPointsChart;
-begin
-  Result := TPointsChart(inherited Complement(@OnAddEdge));
 end;
 
 function TPointsChart.MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: THeuristic): TIntArray;

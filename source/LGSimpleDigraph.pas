@@ -72,7 +72,6 @@ type
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
   public
-    class function MaxBitMatrixSize: SizeInt; static; inline;
     procedure Clear; override;
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -235,7 +234,7 @@ end;
 
 procedure TGSimpleDiGraph.TReachabilityMatrix.Clear;
 begin
-  if Size > 0 then
+  if FMatrix.Size > 0 then
     begin
       FMatrix.Clear;
       FIds := nil;
@@ -250,7 +249,7 @@ end;
 
 function TGSimpleDiGraph.TReachabilityMatrix.IsEmpty: Boolean;
 begin
-  Result := Size = 0;
+  Result := FMatrix.Size = 0;
 end;
 
 function TGSimpleDiGraph.TReachabilityMatrix.Reachable(aSrc, aDst: SizeInt): Boolean;
@@ -494,11 +493,6 @@ begin
             end;
       end;
   Result := TReachabilityMatrix.Create(m, aScIds);
-end;
-
-class function TGSimpleDiGraph.MaxBitMatrixSize: SizeInt;
-begin
-  Result := TSquareBitMatrix.MaxSize;
 end;
 
 procedure TGSimpleDiGraph.Clear;

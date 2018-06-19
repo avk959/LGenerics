@@ -86,6 +86,47 @@ type
   TIntEdgeArray         = array of TIntEdge;
   TEdgeArrayVector      = specialize TGLiteVector<TIntEdgeArray>;
 
+  TBitVector = record
+  private
+  type
+    TBits = array of SizeUInt;
+  var
+    FBits: TBits;
+    function  GetBit(aIndex: SizeInt): Boolean; inline;
+    function  GetSize: SizeInt; inline;
+    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
+    procedure SetSize(aValue: SizeInt);
+  public
+    procedure ClearBits; inline;
+    procedure ExpandTrue(aSize: SizeInt);
+  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
+    property  Size: SizeInt read GetSize write SetSize;
+  { indices does not checks }
+    property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
+  end;
+
+  TSquareBitMatrix = record
+  private
+  type
+    TBits = array of SizeUInt;
+  var
+    FBits: TBits;
+    FSize: SizeUInt;
+    function  GetBit(I, J: SizeInt): Boolean; inline;
+    function  GetSize: SizeInt; inline;
+    procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
+    class operator Initialize(var aMatrix: TSquareBitMatrix);
+  public
+    class function MaxSize: SizeInt; static; inline;
+    constructor Create(aSize: SizeInt);
+    procedure ClearBits; inline;
+    procedure Clear; inline;
+    property  Size: SizeInt read GetSize;
+  { indices does not checks }
+    property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
+  end;
+
+
   { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -102,6 +143,18 @@ type
       Data: TEdgeData;
       property Key: SizeInt read Destination;
       constructor Create(aDst: SizeInt; constref aData: TEdgeData);
+    end;
+
+    TAdjacencyMatrix = record
+    private
+      FMatrix: TSquareBitMatrix;
+      function  GetSize: SizeInt; inline;
+      procedure Clear; inline;
+    public
+      constructor Create(constref aMatrix: TSquareBitMatrix);
+      function  IsEmpty: Boolean; inline;
+      function  Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
+      property  Size: SizeInt read GetSize;
     end;
 
   protected
@@ -184,8 +237,6 @@ type
       //vertices
       //edges: src index, dst index, data
     end;
-
-    { TIntList }
 
     TIntList = record
     private
@@ -281,13 +332,13 @@ type
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
   public
   type
-    TOnAddEdge       = specialize TGOnAddEdge<TVertex>;
+    TOnAddEdge     = specialize TGOnAddEdge<TVertex>;
 
-    TOnReadVertex    = specialize TGOnStreamRead<TVertex>;
-    TOnWriteVertex   = specialize TGOnStreamWrite<TVertex>;
+    TOnReadVertex  = specialize TGOnStreamRead<TVertex>;
+    TOnWriteVertex = specialize TGOnStreamWrite<TVertex>;
 
-    TOnReadData      = specialize TGOnStreamRead<TEdgeData>;
-    TOnWriteData     = specialize TGOnStreamWrite<TEdgeData>;
+    TOnReadData    = specialize TGOnStreamRead<TEdgeData>;
+    TOnWriteData   = specialize TGOnStreamWrite<TEdgeData>;
 
     TEdge = record
       Source,
@@ -382,6 +433,7 @@ type
     end;
 
   public
+    class function  MaxBitMatrixSize: SizeInt; static; inline;
     class function  TreeToChain(constref aTree: TIntArray; aRoot: SizeInt): TIntArray; static;
     class procedure Tree2Chain(constref aTree: TIntArray; aRoot: SizeInt; var v: TIntVector); static;
     class function  TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
@@ -419,6 +471,8 @@ type
     function  GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
     function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+  { returns adjacency matrix }
+    function  CreateAdjacencyMatrix: TAdjacencyMatrix;
   { returns count of visited vertices; OnAccept calls after vertex visite, OnNext calls after next vertex found;
     if TOnAccept returns False then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
@@ -446,7 +500,9 @@ type
     empty if path does not exists }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
-
+  { returns complement adjacency matrix of graph;
+    if the source graph is sparse then complement is dense }
+    function  Complement: TAdjacencyMatrix;
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read FCount;
     property  EdgeCount: SizeInt read FEdgeCount;
@@ -507,60 +563,6 @@ type
   { if L and R related to the different sets, these sets will be merged into one with a single Lead }
     procedure Union(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
-  end;
-
-const
-{$IF DEFINED(CPU64)}
-  INT_SIZE_LOG  = 6;
-  INT_SIZE_MASK = 63;
-{$ELSEIF DEFINED(CPU32)}
-  INT_SIZE_LOG  = 5;
-  INT_SIZE_MASK = 31;
-{$ELSE}
-  INT_SIZE_LOG  = 4;
-  INT_SIZE_MASK = 15;
-{$ENDIF}
-
-type
-
-  TBitVector = record
-  private
-  type
-    TBits = array of SizeUInt;
-  var
-    FBits: TBits;
-    function  GetBit(aIndex: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt; inline;
-    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
-    procedure SetSize(aValue: SizeInt);
-  public
-    procedure ClearBits; inline;
-    procedure ExpandTrue(aSize: SizeInt);
-  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
-    property  Size: SizeInt read GetSize write SetSize;
-  { indices does not checks }
-    property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
-  end;
-
-  TSquareBitMatrix = record
-  private
-  type
-    TBits = array of SizeUInt;
-  var
-    FBits: TBits;
-    FSize: SizeUInt;
-    function  GetBit(I, J: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt; inline;
-    procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
-    class operator Initialize(var aMatrix: TSquareBitMatrix);
-  public
-    class function MaxSize: SizeInt; static; inline;
-    constructor Create(aSize: SizeInt);
-    procedure ClearBits; inline;
-    procedure Clear; inline;
-    property  Size: SizeInt read GetSize;
-  { indices does not checks }
-    property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
   TIntSet = record
@@ -636,6 +638,18 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
+const
+{$IF DEFINED(CPU64)}
+  INT_SIZE_LOG  = 6;
+  INT_SIZE_MASK = 63;
+{$ELSEIF DEFINED(CPU32)}
+  INT_SIZE_LOG  = 5;
+  INT_SIZE_MASK = 31;
+{$ELSE}
+  INT_SIZE_LOG  = 4;
+  INT_SIZE_MASK = 15;
+{$ENDIF}
+
 { TIntEdge }
 
 constructor TIntEdge.Create(s, d: SizeInt);
@@ -650,6 +664,34 @@ constructor TGCustomGraph.TAdjItem.Create(aDst: SizeInt; constref aData: TEdgeDa
 begin
   Destination := aDst;
   Data := aData;
+end;
+
+{ TGCustomGraph.TAdjacencyMatrix }
+
+function TGCustomGraph.TAdjacencyMatrix.GetSize: SizeInt;
+begin
+  Result := FMatrix.Size;
+end;
+
+procedure TGCustomGraph.TAdjacencyMatrix.Clear;
+begin
+  if FMatrix.Size > 0 then
+    FMatrix.Clear;
+end;
+
+constructor TGCustomGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
+begin
+  FMatrix := aMatrix;
+end;
+
+function TGCustomGraph.TAdjacencyMatrix.IsEmpty: Boolean;
+begin
+  Result := FMatrix.Size = 0;
+end;
+
+function TGCustomGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
+begin
+  Result := FMatrix[aSrc, aDst];
 end;
 
 { TGCustomGraph.TAdjList.TEnumerator }
@@ -1431,7 +1473,7 @@ begin
           Visited[aSrc] := True;
           Queue.Enqueue(aSrc);
         end;
-  until not {%H-}Queue.TryDequeue(aSrc);
+  until not Queue{%H-}.TryDequeue(aSrc);
   Result := False;
 end;
 
@@ -1470,6 +1512,11 @@ begin
         Stack.Pop;
         //on black
       end;
+end;
+
+class function TGCustomGraph.MaxBitMatrixSize: SizeInt;
+begin
+  Result := TSquareBitMatrix.MaxSize;
 end;
 
 class function TGCustomGraph.TreeToChain(constref aTree: TIntArray; aRoot: SizeInt): TIntArray;
@@ -1767,6 +1814,21 @@ begin
     p^.Data := aValue;
 end;
 
+function TGCustomGraph.CreateAdjacencyMatrix: TAdjacencyMatrix;
+var
+  m: TSquareBitMatrix;
+  s, d: SizeInt;
+begin
+  if IsEmpty then
+    exit(Default(TAdjacencyMatrix));
+  m := TSquareBitMatrix.Create(VertexCount);
+  for s := 0 to Pred(VertexCount) do
+    for d := 0 to Pred(VertexCount) do
+      if (s <> d) and FNodeList[s].AdjList.Contains(d) then
+        m[s, d] := True;
+  Result := TAdjacencyMatrix.Create(m);
+end;
+
 function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept;
   OnFound: TOnVisit): SizeInt;
 begin
@@ -1838,7 +1900,7 @@ begin
           Inc(Result);
           Queue.Enqueue(aRoot);
         end;
-  until not Queue.TryDequeue(aRoot);
+  until not Queue{%H-}.TryDequeue(aRoot);
 end;
 
 function TGCustomGraph.IsBipartite: Boolean;
@@ -1881,7 +1943,7 @@ begin
                   aColors := nil;
                   exit(False);
                 end;
-        until not Queue.TryDequeue(Curr);
+        until not Queue{%H-}.TryDequeue(Curr);
       end;
   Result := True;
 end;
@@ -1966,6 +2028,21 @@ begin
           Parents[Next] := aSrc;
         end;
   until not Queue.TryDequeue(aSrc);
+end;
+
+function TGCustomGraph.Complement: TAdjacencyMatrix;
+var
+  m: TSquareBitMatrix;
+  s, d: SizeInt;
+begin
+  if IsEmpty then
+    exit(Default(TAdjacencyMatrix));
+  m := TSquareBitMatrix.Create(VertexCount);
+  for s := 0 to Pred(VertexCount) do
+    for d := 0 to Pred(VertexCount) do
+      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
+        m[s, d] := True;
+  Result := TAdjacencyMatrix.Create(m);
 end;
 
 { TGWeighedEdge }
