@@ -552,7 +552,7 @@ type
     function  GetBit(I, J: SizeInt): Boolean; inline;
     function  GetSize: SizeInt;
     procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
-    class operator Initialize(var aMarix: TSquareBitMatrix);
+    class operator Initialize(var aMatrix: TSquareBitMatrix);
   public
     class function MaxSize: SizeInt; static; inline;
     constructor Create(aSize: SizeInt);
@@ -2224,9 +2224,9 @@ begin
           (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
 end;
 
-class operator TSquareBitMatrix.Initialize(var aMarix: TSquareBitMatrix);
+class operator TSquareBitMatrix.Initialize(var aMatrix: TSquareBitMatrix);
 begin
-  aMarix.Clear;
+  aMatrix.Clear;
 end;
 
 class function TSquareBitMatrix.MaxSize: SizeInt;

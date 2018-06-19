@@ -71,6 +71,7 @@ type
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix: TReachabilityMatrix;
   public
+    class function MaxBitMatrixSize: SizeInt; static; inline;
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
@@ -112,17 +113,16 @@ type
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
     function  IsDag(constref aSource: TVertex): Boolean; inline;
     function  IsDagI(aSource: SizeInt): Boolean;
-    function  MaxBitMatrixSize: SizeInt; inline;
-  { creates internal transitive closure }
+  { returns count of the strong connected components; the corresponding element of the
+    aCompIds will contain it component index(used Gabow's algotitm) }
+    function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
+  { creates internal reachability matrix }
     procedure FillReachabilityMatrix;
-  { returns internal transitive closure }
+  { returns reachability matrix }
     function  CreateReachabilityMatrix: TReachabilityMatrix;
   { returns array of vertex indices in topological order staring from aRoot, without any acyclic checks }
     function  TopologicalSort(constref aRoot: TVertex; aOrder: TSortOrder = soAsc): TIntArray; inline;
     function  TopologicalSortI(aRoot: SizeInt; aOrder: TSortOrder = soAsc): TIntArray;
-  { returns count of the strong connected components; the corresponding element of the
-    aCompIds will contain it component index(used Gabow's algotitm) }
-    function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
 
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
@@ -488,6 +488,11 @@ begin
   Result := TReachabilityMatrix.Create(m, Ids);
 end;
 
+class function TGSimpleDiGraph.MaxBitMatrixSize: SizeInt;
+begin
+  Result := TSquareBitMatrix.MaxSize;
+end;
+
 function TGSimpleDiGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FindOrAdd(aVertex, aIndex);
@@ -843,9 +848,13 @@ begin
   Result := (System.Length(Dummy) = 0) and (I = VertexCount);
 end;
 
-function TGSimpleDiGraph.MaxBitMatrixSize: SizeInt;
+function TGSimpleDiGraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
 begin
-  Result := TSquareBitMatrix.MaxSize;
+  if IsEmpty then
+    exit(0);
+  if VertexCount = 1 then
+    exit(1);
+  Result := SearchForStrongComponents(aCompIds);
 end;
 
 procedure TGSimpleDiGraph.FillReachabilityMatrix;
@@ -873,15 +882,6 @@ begin
   Result := TopoSort(aRoot);
   if aOrder = soDesc then
     TIntHelper.Reverse(Result);
-end;
-
-function TGSimpleDiGraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
-begin
-  if IsEmpty then
-    exit(0);
-  if VertexCount = 1 then
-    exit(1);
-  Result := SearchForStrongComponents(aCompIds);
 end;
 
 function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
