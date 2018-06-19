@@ -1474,7 +1474,7 @@ begin
   repeat
     while g[s]^.FindFirst(d) do
       begin
-        Stack.Push(s);
+        {%H-}Stack.Push(s);
         g.RemoveEdge(s, d);
         s := d;
       end;
