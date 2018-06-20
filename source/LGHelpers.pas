@@ -1033,7 +1033,11 @@ end;
 
 class function TPointHelper.HashCode(constref aValue: TPoint): SizeInt;
 begin
+{$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
   Result := HashFunc.HashQWord(QWord(aValue));
+{$ELSE }
+  Result := HashFunc.HashBuf(@aValue, SizeOf(aValue));
+{$ENDIF }
 end;
 
 class function TPointHelper.Equal(constref L, R: TPoint): Boolean;
