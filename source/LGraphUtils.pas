@@ -511,41 +511,41 @@ type
     property  Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
   end;
 
-  generic TGWeighedEdge<TWeight> = record
+  generic TGWeightedEdge<TWeight> = record
     Source,
     Destination: SizeInt;
     Weight:  TWeight;
-    class operator = (constref L, R: TGWeighedEdge): Boolean; inline;
-    class operator <>(constref L, R: TGWeighedEdge): Boolean; inline;
-    class operator > (constref L, R: TGWeighedEdge): Boolean; inline;
-    class operator < (constref L, R: TGWeighedEdge): Boolean; inline;
-    class operator >=(constref L, R: TGWeighedEdge): Boolean; inline;
-    class operator <=(constref L, R: TGWeighedEdge): Boolean; inline;
+    class operator = (constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator <>(constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator > (constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator < (constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator >=(constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator <=(constref L, R: TGWeightedEdge): Boolean; inline;
     constructor Create(s, d: SizeInt; w: TWeight);
   end;
 
-  generic TGWeighedItem<TWeight> = record
+  generic TGWeightedItem<TWeight> = record
     Weight: TWeight;
     Index: SizeInt;
-    class operator = (constref L, R: TGWeighedItem): Boolean; inline;
-    class operator <>(constref L, R: TGWeighedItem): Boolean; inline;
-    class operator > (constref L, R: TGWeighedItem): Boolean; inline;
-    class operator < (constref L, R: TGWeighedItem): Boolean; inline;
-    class operator >=(constref L, R: TGWeighedItem): Boolean; inline;
-    class operator <=(constref L, R: TGWeighedItem): Boolean; inline;
+    class operator = (constref L, R: TGWeightedItem): Boolean; inline;
+    class operator <>(constref L, R: TGWeightedItem): Boolean; inline;
+    class operator > (constref L, R: TGWeightedItem): Boolean; inline;
+    class operator < (constref L, R: TGWeightedItem): Boolean; inline;
+    class operator >=(constref L, R: TGWeightedItem): Boolean; inline;
+    class operator <=(constref L, R: TGWeightedItem): Boolean; inline;
     constructor Create(constref w: TWeight; aIndex: SizeInt);
   end;
 
-  generic TGRankWeighedItem<TWeight> = record
+  generic TGRankWeightedItem<TWeight> = record
     Rank,
     Weight: TWeight;
     Index: SizeInt;
-    class operator = (constref L, R: TGRankWeighedItem): Boolean; inline;
-    class operator <>(constref L, R: TGRankWeighedItem): Boolean; inline;
-    class operator > (constref L, R: TGRankWeighedItem): Boolean; inline;
-    class operator < (constref L, R: TGRankWeighedItem): Boolean; inline;
-    class operator >=(constref L, R: TGRankWeighedItem): Boolean; inline;
-    class operator <=(constref L, R: TGRankWeighedItem): Boolean; inline;
+    class operator = (constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator <>(constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator > (constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator < (constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator >=(constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator <=(constref L, R: TGRankWeightedItem): Boolean; inline;
     constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
   end;
 
@@ -659,8 +659,6 @@ type
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
-
-
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -2072,116 +2070,116 @@ begin
   Result := TAdjacencyMatrix.Create(m);
 end;
 
-{ TGWeighedEdge }
+{ TGWeightedEdge }
 
-class operator TGWeighedEdge. = (constref L, R: TGWeighedEdge): Boolean;
+class operator TGWeightedEdge. = (constref L, R: TGWeightedEdge): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGWeighedEdge.<>(constref L, R: TGWeighedEdge): Boolean;
+class operator TGWeightedEdge.<>(constref L, R: TGWeightedEdge): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGWeighedEdge.>(constref L, R: TGWeighedEdge): Boolean;
+class operator TGWeightedEdge.>(constref L, R: TGWeightedEdge): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGWeighedEdge.<(constref L, R: TGWeighedEdge): Boolean;
+class operator TGWeightedEdge.<(constref L, R: TGWeightedEdge): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGWeighedEdge.>=(constref L, R: TGWeighedEdge): Boolean;
+class operator TGWeightedEdge.>=(constref L, R: TGWeightedEdge): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGWeighedEdge.<=(constref L, R: TGWeighedEdge): Boolean;
+class operator TGWeightedEdge.<=(constref L, R: TGWeightedEdge): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeighedEdge.Create(s, d: SizeInt; w: TWeight);
+constructor TGWeightedEdge.Create(s, d: SizeInt; w: TWeight);
 begin
   Source := s;
   Destination := d;
   Weight := w;
 end;
 
-{ TGWeighedItem }
+{ TGWeightedItem }
 
-class operator TGWeighedItem. = (constref L, R: TGWeighedItem): Boolean;
+class operator TGWeightedItem. = (constref L, R: TGWeightedItem): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGWeighedItem.<>(constref L, R: TGWeighedItem): Boolean;
+class operator TGWeightedItem.<>(constref L, R: TGWeightedItem): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGWeighedItem.>(constref L, R: TGWeighedItem): Boolean;
+class operator TGWeightedItem.>(constref L, R: TGWeightedItem): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGWeighedItem.<(constref L, R: TGWeighedItem): Boolean;
+class operator TGWeightedItem.<(constref L, R: TGWeightedItem): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGWeighedItem.>=(constref L, R: TGWeighedItem): Boolean;
+class operator TGWeightedItem.>=(constref L, R: TGWeightedItem): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGWeighedItem.<=(constref L, R: TGWeighedItem): Boolean;
+class operator TGWeightedItem.<=(constref L, R: TGWeightedItem): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeighedItem.Create(constref w: TWeight; aIndex: SizeInt);
+constructor TGWeightedItem.Create(constref w: TWeight; aIndex: SizeInt);
 begin
   Weight := w;
   Index := aIndex;
 end;
 
-{ TGRankWeighedItem }
+{ TGRankWeightedItem }
 
-class operator TGRankWeighedItem. = (constref L, R: TGRankWeighedItem): Boolean;
+class operator TGRankWeightedItem. = (constref L, R: TGRankWeightedItem): Boolean;
 begin
   Result := L.Rank = R.Rank;
 end;
 
-class operator TGRankWeighedItem.<>(constref L, R: TGRankWeighedItem): Boolean;
+class operator TGRankWeightedItem.<>(constref L, R: TGRankWeightedItem): Boolean;
 begin
   Result := L.Rank <> R.Rank;
 end;
 
-class operator TGRankWeighedItem.>(constref L, R: TGRankWeighedItem): Boolean;
+class operator TGRankWeightedItem.>(constref L, R: TGRankWeightedItem): Boolean;
 begin
   Result := L.Rank > R.Rank;
 end;
 
-class operator TGRankWeighedItem.<(constref L, R: TGRankWeighedItem): Boolean;
+class operator TGRankWeightedItem.<(constref L, R: TGRankWeightedItem): Boolean;
 begin
   Result := L.Rank < R.Rank;
 end;
 
-class operator TGRankWeighedItem.>=(constref L, R: TGRankWeighedItem): Boolean;
+class operator TGRankWeightedItem.>=(constref L, R: TGRankWeightedItem): Boolean;
 begin
   Result := L.Rank >= R.Rank;
 end;
 
-class operator TGRankWeighedItem.<=(constref L, R: TGRankWeighedItem): Boolean;
+class operator TGRankWeightedItem.<=(constref L, R: TGRankWeightedItem): Boolean;
 begin
   Result := L.Rank <= R.Rank;
 end;
 
-constructor TGRankWeighedItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
+constructor TGRankWeightedItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
 begin
   Rank := aRank;
   Weight := aWeight;

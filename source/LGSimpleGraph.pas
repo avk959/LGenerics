@@ -269,7 +269,7 @@ type
 
   THandle = LGUtils.THandle;
 
-  { TGWeighedGraph: simple sparse undirected weighed graph based on adjacency lists;
+  { TGWeightedGraph: simple sparse undirected weighed graph based on adjacency lists;
 
       functor TVertexEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -280,7 +280,7 @@ type
       TWeight must have defined comparision operators and properties MinValue, MaxValue,
       which used as infinity weight values;
       Default(TWeight) used as zero weight value }
-  generic TGWeighedGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class(
+  generic TGWeightedGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class(
      specialize TGSimpleGraph<TVertex, TEdgeData, TVertexEqRel>)
   public
   type
@@ -289,9 +289,9 @@ type
 
   protected
   type
-    TWeightEdge  = specialize TGWeighedEdge<TWeight>;
-    TWeightItem  = specialize TGWeighedItem<TWeight>;
-    TRankItem    = specialize TGRankWeighedItem<TWeight>;
+    TWeightEdge  = specialize TGWeightedEdge<TWeight>;
+    TWeightItem  = specialize TGWeightedItem<TWeight>;
+    TRankItem    = specialize TGRankWeightedItem<TWeight>;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
     TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
@@ -349,12 +349,12 @@ type
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
     function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
-    function  SeparateGraph(constref aVertex: TVertex): TGWeighedGraph;
-    function  SeparateGraphI(aIndex: SizeInt): TGWeighedGraph;
-    function  SubgraphFromVertexList(constref aList: TIntArray): TGWeighedGraph;
-    function  SubgraphFromPairs(constref aPairs: TIntArray): TGWeighedGraph;
-    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeighedGraph;
-    function  Clone: TGWeighedGraph;
+    function  SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
+    function  SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
+    function  SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
+    function  SubgraphFromPairs(constref aPairs: TIntArray): TGWeightedGraph;
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
+    function  Clone: TGWeightedGraph;
   end;
 
   TRealPointEdge = record
@@ -364,7 +364,7 @@ type
 
   { TPointsChart }
 
-  TPointsChart = class(specialize TGWeighedGraph<TPoint, ValReal, TRealPointEdge, TPoint>)
+  TPointsChart = class(specialize TGWeightedGraph<TPoint, ValReal, TRealPointEdge, TPoint>)
   protected
     procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
     procedure WritePoint(aStream: TStream; constref aValue: TPoint);
@@ -1969,9 +1969,9 @@ begin
   Result := inherited Clone as TStrChart;
 end;
 
-{ TGWeighedGraph }
+{ TGWeightedGraph }
 
-function TGWeighedGraph.DijkstraSssp(aSrc: SizeInt): TWeightArray;
+function TGWeightedGraph.DijkstraSssp(aSrc: SizeInt): TWeightArray;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -2001,7 +2001,7 @@ begin
     end;
 end;
 
-function TGWeighedGraph.DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedGraph.DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -2038,7 +2038,7 @@ begin
     end;
 end;
 
-function TGWeighedGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
+function TGWeightedGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
 var
   Visited: TBitVector;
   Queue: TBinHeap;
@@ -2068,7 +2068,7 @@ begin
   Result := InfiniteWeight;
 end;
 
-function TGWeighedGraph.DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+function TGWeightedGraph.DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
   Queue: TBinHeap;
@@ -2111,7 +2111,7 @@ var
   aWeight := InfiniteWeight;
 end;
 
-function TGWeighedGraph.AStar(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
+function TGWeightedGraph.AStar(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
 var
   Visited: TBitVector;
   Queue: TAStarHeap;
@@ -2158,7 +2158,7 @@ var
   aWeight := InfiniteWeight;
 end;
 
-function TGWeighedGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
+function TGWeightedGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
   e: TEdgeArray;
   I, s, d, Total: SizeInt;
@@ -2184,7 +2184,7 @@ begin
     end;
 end;
 
-function TGWeighedGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
+function TGWeightedGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
@@ -2220,7 +2220,7 @@ begin
     end;
 end;
 
-function TGWeighedGraph.CreateWeightArray: TWeightArray;
+function TGWeightedGraph.CreateWeightArray: TWeightArray;
 var
   I: SizeInt;
 begin
@@ -2229,7 +2229,7 @@ begin
     Result[I] := InfiniteWeight;
 end;
 
-function TGWeighedGraph.CreateEdgeArray: TEdgeArray;
+function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
 var
   I: SizeInt = 0;
   e: TEdge;
@@ -2242,14 +2242,14 @@ begin
     end;
 end;
 
-class constructor TGWeighedGraph.Init;
+class constructor TGWeightedGraph.Init;
 begin
   CFInfiniteWeight := TWeight.MaxValue;
   CFNegInfiniteWeight := TWeight.MinValue;
   CFZeroWeight := Default(TWeight);
 end;
 
-function TGWeighedGraph.ContainsNegWeighedEdge: Boolean;
+function TGWeightedGraph.ContainsNegWeighedEdge: Boolean;
 var
   e: TEdge;
 begin
@@ -2259,59 +2259,59 @@ begin
   Result := False;
 end;
 
-function TGWeighedGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
+function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
 begin
   Result := MinPathsMapI(IndexOf(aSrc));
 end;
 
-function TGWeighedGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
+function TGWeightedGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
   Result := DijkstraSssp(aSrc);
 end;
 
-function TGWeighedGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := MinPathsMapI(IndexOf(aSrc), aPathTree);
 end;
 
-function TGWeighedGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
   Result := DijkstraSssp(aSrc, aPathTree);
 end;
 
-function TGWeighedGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
+function TGWeightedGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
 begin
   Result := MinPathWeightI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
-function TGWeighedGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
+function TGWeightedGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   Result := DijkstraPath(aSrc, aDst);
 end;
 
-function TGWeighedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+function TGWeightedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
 begin
   Result := MinPathI(IndexOf(aSrc), IndexOf(aDst), aWeight);
 end;
 
-function TGWeighedGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+function TGWeightedGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   Result := DijkstraPath(aSrc, aDst, aWeight);
 end;
 
-function TGWeighedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
+function TGWeightedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
   aHeur: THeuristic): TIntArray;
 begin
   Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aHeur);
 end;
 
-function TGWeighedGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
+function TGWeightedGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -2321,7 +2321,7 @@ begin
     Result := DijkstraPath(aSrc, aDst, aWeight);
 end;
 
-function TGWeighedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
+function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
 begin
   if Connected then
     Result := KruskalMst(aTotalWeight)
@@ -2329,7 +2329,7 @@ begin
     raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
-function TGWeighedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 begin
   if Connected then   //todo: is it required ???
     Result := PrimMst(aTotalWeight)
@@ -2337,34 +2337,34 @@ begin
     raise ELGraphError.Create(SEGraphIsNotConnected);
 end;
 
-function TGWeighedGraph.SeparateGraph(constref aVertex: TVertex): TGWeighedGraph;
+function TGWeightedGraph.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
 begin
-  Result := inherited SeparateGraph(aVertex) as TGWeighedGraph;
+  Result := inherited SeparateGraph(aVertex) as TGWeightedGraph;
 end;
 
-function TGWeighedGraph.SeparateGraphI(aIndex: SizeInt): TGWeighedGraph;
+function TGWeightedGraph.SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TGWeighedGraph;
+  Result := inherited SeparateGraphI(aIndex) as TGWeightedGraph;
 end;
 
-function TGWeighedGraph.SubgraphFromVertexList(constref aList: TIntArray): TGWeighedGraph;
+function TGWeightedGraph.SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
 begin
-  Result := inherited SubgraphFromVertexList(aList) as TGWeighedGraph;
+  Result := inherited SubgraphFromVertexList(aList) as TGWeightedGraph;
 end;
 
-function TGWeighedGraph.SubgraphFromPairs(constref aPairs: TIntArray): TGWeighedGraph;
+function TGWeightedGraph.SubgraphFromPairs(constref aPairs: TIntArray): TGWeightedGraph;
 begin
-  Result := inherited SubgraphFromPairs(aPairs) as TGWeighedGraph;
+  Result := inherited SubgraphFromPairs(aPairs) as TGWeightedGraph;
 end;
 
-function TGWeighedGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeighedGraph;
+function TGWeightedGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
 begin
-  Result := inherited SubgraphFromEdges(aEdges) as TGWeighedGraph;
+  Result := inherited SubgraphFromEdges(aEdges) as TGWeightedGraph;
 end;
 
-function TGWeighedGraph.Clone: TGWeighedGraph;
+function TGWeightedGraph.Clone: TGWeightedGraph;
 begin
-  Result := inherited Clone as TGWeighedGraph;
+  Result := inherited Clone as TGWeightedGraph;
 end;
 
 { TRealPointEdge }
