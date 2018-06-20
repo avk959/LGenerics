@@ -61,9 +61,9 @@ Contains:
      - sparse 2d table(unit LGTable2D)
      - disjoint set(unit LGHashSet)
      - sparse undirected graph(unit LGSimpleGraph)
-     - sparse undirected weighed graph(unit LGSimpleGraph)
+     - sparse undirected weighted graph(unit LGSimpleGraph)
      - sparse directed graph(unit LGSimpleDigraph)
-     - sparse directed weighed graph(unit LGSimpleDgGraph)
+     - sparse directed weighted graph(unit LGSimpleDigraph)
   
   5. Others:
      - simply command line parser (unit LGMiscUtils)
