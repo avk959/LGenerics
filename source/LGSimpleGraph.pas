@@ -294,6 +294,7 @@ type
     TRankItem    = specialize TGRankWeighedItem<TWeight>;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+    TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
     TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
     TEdgeArray   = array of TWeightEdge;
 
@@ -1979,7 +1980,6 @@ var
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  CheckIndexRange(aSrc);
   Result := CreateWeightArray;
   Handles := CreateHandleArray;
   Visited.Size := VertexCount;
@@ -2041,29 +2041,28 @@ end;
 function TGWeighedGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
 var
   Visited: TBitVector;
-  Queue: TPairingHeap;
-  Handles: THandleArray;
+  Queue: TBinHeap;
   Relaxed: TWeight;
   Item: TWeightItem;
   p: PAdjItem;
 begin
-  Handles := CreateHandleArray;
+  Queue := TBinHeap.Create(VertexCount);
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
   while Queue.TryDequeue(Item) do
     begin
       if Item.Index = aDst then
         exit(Item.Weight);
       Visited[Item.Index] := True;
       for p in FNodeList[Item.Index].AdjList do
-        if Handles[p^.Key] = INVALID_HANDLE then
-          Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
+        if Queue.NotUsed(p^.Key) then
+          Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key)
         else
           if not Visited[p^.Key] then
             begin
               Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+              if Relaxed < Queue.Peek(p^.Key).Weight then
+                Queue.Update(p^.Key, TWeightItem.Create(Relaxed, p^.Key));
             end
     end;
   Result := InfiniteWeight;
@@ -2072,17 +2071,16 @@ end;
 function TGWeighedGraph.DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
   Visited: TBitVector;
-  Queue: TPairingHeap;
-  Handles: THandleArray;
+  Queue: TBinHeap;
   Tree: TIntArray;
   Relaxed: TWeight;
   Item: TWeightItem;
   p: PAdjItem;
 {%H-}begin
-  Handles := CreateHandleArray;
+  Queue := TBinHeap.Create(VertexCount);
   Tree := CreateIntArray;
   Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
   while {%H-}Queue.TryDequeue(Item) do
     begin
       if Item.Index = aDst then
@@ -2093,18 +2091,18 @@ var
       Visited[Item.Index] := True;
       for p in FNodeList[Item.Index].AdjList do
         begin
-          if Handles[p^.Key] = INVALID_HANDLE then
+          if Queue.NotUsed(p^.Key) then
             begin
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
+              Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key);
               Tree[p^.Key] := Item.Index;
             end
           else
             if not Visited[p^.Key] then
               begin
                 Relaxed := p^.Data.Weight + Item.Weight;
-                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                if Relaxed < Queue.Peek(p^.Key).Weight then
                   begin
-                    Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+                    Queue.Update(p^.Key, TWeightItem.Create(Relaxed, p^.Key));
                     Tree[p^.Key] := Item.Index;
                   end;
               end;
@@ -2196,7 +2194,6 @@ var
   p: PAdjItem;
 begin
   Result := CreateIntArray;
-  System.SetLength(Result, VertexCount);
   Handles := CreateHandleArray;
   Visited.Size := VertexCount;
   Handles[0] := Queue.Insert(TWeightItem.Create(ZeroWeight, 0));
