@@ -28,7 +28,6 @@ interface
 uses
 
   SysUtils,
-  math,
   LGUtils,
   LGHelpers,
   LGCustomContainer,
@@ -682,11 +681,11 @@ type
     function  FindRightmost: PNode;
     procedure RemoveNodeWithChilds(aNode: PNode);
     procedure ClearTree;
-    function  NewNode(constref aValue: T): PNode;
+    function  NewNode(constref aValue: T): PNode; inline;
     procedure DisposeNode(aNode: PNode); inline;
     procedure RootMerge(aNode: PNode); inline;
     function  DequeueItem: T;
-    procedure UpdateNode(aNode: PNode; constref aValue: T);
+    procedure UpdateNode(aNode: PNode; constref aValue: T); inline;
     procedure ExtractNode(aNode: PNode);
     function  RemoveNode(aNode: PNode): T;
     procedure CheckEmpty; inline;
@@ -694,7 +693,7 @@ type
     class operator  Initialize(var h: TGLiteComparablePairHeapMin);
     class operator  Finalize(var h: TGLiteComparablePairHeapMin);
     class operator  Copy(constref aSrc: TGLiteComparablePairHeapMin; var aDst: TGLiteComparablePairHeapMin);
-    class function  NodeMerge(L, R: PNode): PNode; static; inline; //inline ???
+    class function  NodeMerge(L, R: PNode): PNode; static; inline;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
     class function  DoCompare(constref L, R: T): SizeInt; static;
@@ -3573,8 +3572,8 @@ begin
       if Sibling <> nil then
         Sibling^.Prev := @Self;
       aNode^.Sibling := Child;
-      if aNode^.Sibling <> nil then
-        aNode^.Sibling^.Prev := aNode;
+      if Child <> nil then
+        Child^.Prev := aNode;
       Child := aNode;
     end;
 end;
@@ -3871,7 +3870,7 @@ class function TGLiteComparablePairHeapMin.NodeMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
     if R <> nil then
-      if L^.Data <= R^.Data then
+      if L^.Data < R^.Data then
         begin
           L^.AddChild(R);
           Result := L;
@@ -3894,11 +3893,11 @@ begin
   Result := nil;
   while (aNode <> nil) and (aNode^.Sibling <> nil) do
     begin
-      CurrNode := aNode;
       NextNode := aNode^.Sibling;
+      CurrNode := aNode;
       aNode := NextNode^.Sibling;
-      CurrNode^.Sibling := nil;
       NextNode^.Sibling := nil;
+      CurrNode^.Sibling := nil;
       Result := NodeMerge(Result, NodeMerge(CurrNode, NextNode));
     end;
   Result := NodeMerge(Result, aNode);
