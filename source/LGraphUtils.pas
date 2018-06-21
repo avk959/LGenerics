@@ -557,12 +557,12 @@ type
   public
     procedure Clear; inline;
     procedure Reset;
-  { values related to the same set will have the same Lead }
-    function  Lead(aValue: SizeInt): SizeInt;
+  { values related to the same set will have the same Tag }
+    function  Tag(aValue: SizeInt): SizeInt;
     function  InSameSet(L, R: SizeInt): Boolean; inline;
     function  InDiffSets(L, R: SizeInt): Boolean; inline;
-  { if L and R related to the different sets, these sets will be merged into one with a single Lead }
-    procedure Union(L, R: SizeInt);
+  { if L and R related to the different sets, these sets will be merged into one with a single Tag }
+    procedure Merge(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
   end;
 
@@ -2219,28 +2219,28 @@ begin
     FList[I] := I;
 end;
 
-function TDisjointSetUnion.Lead(aValue: SizeInt): SizeInt;
+function TDisjointSetUnion.Tag(aValue: SizeInt): SizeInt;
 begin
   if FList[aValue] = aValue then
     exit(aValue);
-  Result := Lead(FList[aValue]);
+  Result := Tag(FList[aValue]);
   FList[aValue] := Result;
 end;
 
 function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
 begin
-  Result := Lead(L) = Lead(R);
+  Result := Tag(L) = Tag(R);
 end;
 
 function TDisjointSetUnion.InDiffSets(L, R: SizeInt): Boolean;
 begin
-  Result := Lead(L) <> Lead(R);
+  Result := Tag(L) <> Tag(R);
 end;
 
-procedure TDisjointSetUnion.Union(L, R: SizeInt);
+procedure TDisjointSetUnion.Merge(L, R: SizeInt);
 begin
-  L := Lead(L);
-  R := Lead(R);
+  L := Tag(L);
+  R := Tag(R);
   if Odd(Random(4)) then // random selection
     FList[L] := R
   else

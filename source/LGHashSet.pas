@@ -482,7 +482,7 @@ type
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
     procedure ExpandDsu;
-    function  GetLead(aValue: SizeInt): SizeInt;
+    function  GetTag(aValue: SizeInt): SizeInt;
   public
     function  GetEnumerator: TEnumerator; inline;
     function  IsEmpty: Boolean; inline;
@@ -494,14 +494,15 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
   { returns True if element added }
     function  Add(constref aValue: T): Boolean;
+  { destroys subsets }
     procedure Reset;
-  { values related to the same set will have the same Lead }
-    function  Lead(constref aValue: T): SizeInt;
+  { values related to the same set will have the same Tag }
+    function  Tag(constref aValue: T): SizeInt;
     function  InSameSet(constref L, R: T): Boolean;
     function  InDiffSets(constref L, R: T): Boolean; inline;
-  { if L and R related to the different sets, these sets will be merged into one with a single Lead }
-    procedure Union(constref L, R: T);
-    procedure UnionI(L, R: SizeInt);
+  { if L and R related to the different sets, these sets will be merged into one with a single Tag }
+    procedure Merge(constref L, R: T);
+    procedure MergeI(L, R: SizeInt);
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -1834,11 +1835,11 @@ begin
     FDsu[I] := I;
 end;
 
-function TGDisjointSetUnion.GetLead(aValue: SizeInt): SizeInt;
+function TGDisjointSetUnion.GetTag(aValue: SizeInt): SizeInt;
 begin
   if FDsu[aValue] = aValue then
     exit(aValue);
-  Result := GetLead(FDsu[aValue]);
+  Result := GetTag(FDsu[aValue]);
   FDsu[aValue] := Result;
 end;
 
@@ -1889,43 +1890,43 @@ begin
     FDsu[I] := I;
 end;
 
-function TGDisjointSetUnion.Lead(constref aValue: T): SizeInt;
+function TGDisjointSetUnion.Tag(constref aValue: T): SizeInt;
 var
   v: SizeInt;
 begin
   v := IndexOf(aValue);
   if v >= 0 then
-    Result := GetLead(v)
+    Result := GetTag(v)
   else
     raise Exception.Create(SEKeyNotFound);
 end;
 
 function TGDisjointSetUnion.InSameSet(constref L, R: T): Boolean;
 begin
-  Result := Lead(L) = Lead(R);
+  Result := Tag(L) = Tag(R);
 end;
 
 function TGDisjointSetUnion.InDiffSets(constref L, R: T): Boolean;
 begin
-  Result := Lead(L) <> Lead(R);
+  Result := Tag(L) <> Tag(R);
 end;
 
-procedure TGDisjointSetUnion.Union(constref L, R: T);
+procedure TGDisjointSetUnion.Merge(constref L, R: T);
 var
   vL, vR: SizeInt;
 begin
   vL := IndexOf(L);
   vR := IndexOf(R);
   if (vL >= 0) and (vR >= 0) then
-    UnionI(vL, vR)
+    MergeI(vL, vR)
   else
     raise Exception.Create(SEKeyNotFound);
 end;
 
-procedure TGDisjointSetUnion.UnionI(L, R: SizeInt);
+procedure TGDisjointSetUnion.MergeI(L, R: SizeInt);
 begin
-  L := GetLead(L);
-  R := GetLead(R);
+  L := GetTag(L);
+  R := GetTag(R);
   if Odd(Random(4)) then
     FDsu[L] := R
   else

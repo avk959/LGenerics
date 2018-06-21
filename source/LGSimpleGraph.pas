@@ -2179,7 +2179,7 @@ begin
         begin
           aTotalWeight += e[I].Weight;
           Result[d] := s;
-          Dsu.Union(s, d);
+          Dsu.Merge(s, d);
         end;
     end;
 end;
