@@ -503,8 +503,11 @@ type
     function  InDiffSets(constref L, R: T): Boolean; inline;
     function  InDiffSetsI(L, R: SizeInt): Boolean; inline;
   { if L and R related to the different subsets, these subsets will be merged into one with a single Tag }
-    procedure Merge(constref L, R: T);
+    procedure Merge(constref L, R: T); inline;
     procedure MergeI(L, R: SizeInt);
+  { returns True and merges L and R, if L and R related to the different subsets, False otherwise }
+    function  Merged(constref L, R: T): Boolean; inline;
+    function  MergedI(L, R: SizeInt): Boolean;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -1928,25 +1931,36 @@ begin
 end;
 
 procedure TGDisjointSetUnion.Merge(constref L, R: T);
-var
-  vL, vR: SizeInt;
 begin
-  vL := IndexOf(L);
-  vR := IndexOf(R);
-  if (vL >= 0) and (vR >= 0) then
-    MergeI(vL, vR)
-  else
-    raise Exception.Create(SEKeyNotFound);
+  MergeI(IndexOf(L), IndexOf(R));
 end;
 
 procedure TGDisjointSetUnion.MergeI(L, R: SizeInt);
 begin
   L := TagI(L);
   R := TagI(R);
-  if Odd(Random(4)) then
+  if NextRandomBoolean then
     FDsu[L] := R
   else
     FDsu[R] := L;
+end;
+
+function TGDisjointSetUnion.Merged(constref L, R: T): Boolean;
+begin
+  Result := MergedI(IndexOf(L), IndexOf(R));
+end;
+
+function TGDisjointSetUnion.MergedI(L, R: SizeInt): Boolean;
+begin
+  L := TagI(L);
+  R := TagI(R);
+  if L = R then
+    exit(False);
+  if NextRandomBoolean then
+    FDsu[L] := R
+  else
+    FDsu[R] := L;
+  Result := True;
 end;
 
 end.
