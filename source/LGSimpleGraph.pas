@@ -32,7 +32,6 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
-  LGPriorityQueue,
   LGraphUtils,
   LGStrConst;
 
@@ -288,46 +287,25 @@ type
       Default(TWeight) used as zero weight value }
   generic TGWeightedGraph<TVertex, TWeight, TEdgeData, TEqRel> = class(
     specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>)
+  private
+  type
+    THelper = specialize TGWeightedHelper<TVertex, TWeight, TEdgeData, TEqRel>;
+
   public
   type
-    TWeightArray = array of TWeight;
-    THeuristic   = function(constref aSrc, aDst: TVertex): TWeight;
+    TWeightArray = THelper.TWeightArray;
+    TEstimate    = THelper.TEstimate;
 
   protected
   type
-    TWeightEdge  = specialize TGWeightedEdge<TWeight>;
-    TWeightItem  = specialize TGWeightedItem<TWeight>;
-    TRankItem    = specialize TGRankWeightedItem<TWeight>;
-    TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
-    TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
-    TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
+    TWeightEdge  = THelper.TWeightEdge;
     TEdgeArray   = array of TWeightEdge;
 
-  strict private
-  class var
-    CFInfiniteWeight,
-    CFNegInfiniteWeight,
-    CFZeroWeight: TWeight;
-
-  protected
-  { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
-    function  DijkstraSssp(aSrc: SizeInt): TWeightArray;
-    function  DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-  { Dijkstra's pathfinding algorithm }
-    function  DijkstraPath(aSrc, aDst: SizeInt): TWeight;
-    function  DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-  { A* pathfinding algorithm }
-    function  AStar(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
-    function  KruskalMst(out aTotalWeight: TWeight): TIntArray;
-    function  PrimMst(out aTotalWeight: TWeight): TIntArray;
-    function  CreateWeightArray: TWeightArray;
     function  CreateEdgeArray: TEdgeArray;
-    class constructor Init;
   public
-    class property InfiniteWeight: TWeight read CFInfiniteWeight;
-    class property NegInfiniteWeight: TWeight read CFNegInfiniteWeight;
-    class property ZeroWeight: TWeight read CFZeroWeight;
+    class function InfiniteWeight: TWeight; static; inline;
+    class function NegInfiniteWeight: TWeight; static; inline;
+    class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
     function  ContainsNegWeighedEdge: Boolean;
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
@@ -347,10 +325,10 @@ type
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-  { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
+  { finds the path of minimal weight from a aSrc to aDst if it exists;
     the weights of all edges must be nonnegative; used A* algorithm if aHeur <> nil }
-    function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: THeuristic): TIntArray; inline;
-    function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
+    function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: TEstimate): TIntArray; inline;
+    function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used) }
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
@@ -395,8 +373,8 @@ type
     function  SubgraphFromPairs(constref aPairs: TIntArray): TPointsChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
-    function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: THeuristic = nil): TIntArray; inline;
-    function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: THeuristic = nil): TIntArray;
+    function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
+    function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
   end;
 
 implementation
@@ -1224,7 +1202,7 @@ begin
   try
     //write header
     Header.Magic := GRAPH_MAGIC;
-    Header.Version := CURRENT_VERSION;
+    Header.Version := GRAPH_HEADER_VERSION;
     Header.TitleSize := System.Length(Title);
     Header.VertexCount := VertexCount;
     Header.EdgeCount := EdgeCount;
@@ -1265,7 +1243,7 @@ begin
     rbs.ReadBuffer(Header, SizeOf(Header));
     if Header.Magic <> GRAPH_MAGIC then
       raise ELGraphError.Create(SEUnknownGraphStreamFmt);
-    if Header.Version > CURRENT_VERSION then
+    if Header.Version > GRAPH_HEADER_VERSION then
       raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
     Clear;
     EnsureCapacity(Header.VertexCount);
@@ -1413,6 +1391,8 @@ end;
 function TGSimpleGraph.SeparateIndexI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
+  if not ConnectedValid then
+    ValidateConnected;
   Result := SeparateTag(aIndex);
 end;
 
@@ -1624,7 +1604,7 @@ end;
 
 function TGSimpleGraph.IsBiconnected: Boolean;
 begin
-  if InnerConnected then
+  if Connected then
     Result := not ContainsCutPointI
   else
     Result := False;
@@ -2006,262 +1986,6 @@ end;
 
 { TGWeightedGraph }
 
-function TGWeightedGraph.DijkstraSssp(aSrc: SizeInt): TWeightArray;
-var
-  Visited: TBitVector;
-  Queue: TPairingHeap;
-  Handles: THandleArray;
-  Relaxed: TWeight;
-  Item: TWeightItem;
-  p: PAdjItem;
-begin
-  Result := CreateWeightArray;
-  Handles := CreateHandleArray;
-  Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
-  while Queue.TryDequeue(Item) do
-    begin
-      Visited[Item.Index] := True;
-      Result[Item.Index] := Item.Weight;
-      for p in FNodeList[Item.Index].AdjList do
-        if Handles[p^.Key] = INVALID_HANDLE then
-          Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
-        else
-          if not Visited[p^.Key] then
-            begin
-              Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
-            end;
-    end;
-end;
-
-function TGWeightedGraph.DijkstraSssp(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-var
-  Visited: TBitVector;
-  Queue: TPairingHeap;
-  Handles: THandleArray;
-  Relaxed: TWeight;
-  Item: TWeightItem;
-  p: PAdjItem;
-begin
-  Result := CreateWeightArray;
-  aPathTree := CreateIntArray;
-  Handles := CreateHandleArray;
-  Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
-  while Queue.TryDequeue(Item) do
-    begin
-      Visited[Item.Index] := True;
-      Result[Item.Index] := Item.Weight;
-      for p in FNodeList[Item.Index].AdjList do
-        if Handles[p^.Key] = INVALID_HANDLE then
-          begin
-            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
-            aPathTree[p^.Key] := Item.Index;
-          end
-        else
-          if not Visited[p^.Key] then
-            begin
-              Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                begin
-                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
-                  aPathTree[p^.Key] := Item.Index;
-                end;
-            end;
-    end;
-end;
-
-function TGWeightedGraph.DijkstraPath(aSrc, aDst: SizeInt): TWeight;
-var
-  Visited: TBitVector;
-  Queue: TBinHeap;
-  Relaxed: TWeight;
-  Item: TWeightItem;
-  p: PAdjItem;
-begin
-  Queue := TBinHeap.Create(VertexCount);
-  Visited.Size := VertexCount;
-  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
-  while Queue.TryDequeue(Item) do
-    begin
-      if Item.Index = aDst then
-        exit(Item.Weight);
-      Visited[Item.Index] := True;
-      for p in FNodeList[Item.Index].AdjList do
-        if Queue.NotUsed(p^.Key) then
-          Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key)
-        else
-          if not Visited[p^.Key] then
-            begin
-              Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Peek(p^.Key).Weight then
-                Queue.Update(p^.Key, TWeightItem.Create(Relaxed, p^.Key));
-            end
-    end;
-  Result := InfiniteWeight;
-end;
-
-function TGWeightedGraph.DijkstraPath(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-var
-  Visited: TBitVector;
-  Queue: TBinHeap;
-  Tree: TIntArray;
-  Relaxed: TWeight;
-  Item: TWeightItem;
-  p: PAdjItem;
-{%H-}begin
-  Queue := TBinHeap.Create(VertexCount);
-  Tree := CreateIntArray;
-  Visited.Size := VertexCount;
-  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
-  while {%H-}Queue.TryDequeue(Item) do
-    begin
-      if Item.Index = aDst then
-        begin
-          aWeight := Item.Weight;
-          exit(TreeToChain(Tree, aDst));
-        end;
-      Visited[Item.Index] := True;
-      for p in FNodeList[Item.Index].AdjList do
-        begin
-          if Queue.NotUsed(p^.Key) then
-            begin
-              Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key);
-              Tree[p^.Key] := Item.Index;
-            end
-          else
-            if not Visited[p^.Key] then
-              begin
-                Relaxed := p^.Data.Weight + Item.Weight;
-                if Relaxed < Queue.Peek(p^.Key).Weight then
-                  begin
-                    Queue.Update(p^.Key, TWeightItem.Create(Relaxed, p^.Key));
-                    Tree[p^.Key] := Item.Index;
-                  end;
-              end;
-        end;
-    end;
-  aWeight := InfiniteWeight;
-end;
-
-function TGWeightedGraph.AStar(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
-var
-  Visited: TBitVector;
-  Queue: TAStarHeap;
-  Handles: THandleArray;
-  Tree: TIntArray;
-  Relaxed: TWeight;
-  Item: TRankItem;
-  p: PAdjItem;
-{%H-}begin
-  Handles := CreateHandleArray;
-  Tree := CreateIntArray;
-  Visited.Size := VertexCount;
-  Handles[aSrc] := Queue.Insert(TRankItem.Create(aHeur(Items[aSrc], Items[aDst]), ZeroWeight, aSrc));
-  while Queue.TryDequeue(Item) do
-    begin
-      if Item.Index = aDst then
-        begin
-          aWeight := Item.Weight;
-          exit(TreeToChain(Tree, aDst));
-        end;
-      Visited[Item.Index] := True;
-      for p in FNodeList[Item.Index].AdjList do
-        begin
-          if Handles[p^.Key] = INVALID_HANDLE then
-            begin
-              Relaxed := p^.Data.Weight + Item.Weight;
-              Handles[p^.Key] := Queue.Insert(TRankItem.Create(
-                Relaxed + aHeur(Items[p^.Key], Items[aDst]), Relaxed, p^.Key));
-              Tree[p^.Key] := Item.Index;
-            end
-          else
-            if not Visited[p^.Key] then
-              begin
-                Relaxed := Item.Weight + p^.Data.Weight;
-                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                  begin
-                    Queue.Update(Handles[p^.Key], TRankItem.Create(
-                      Relaxed + aHeur(Items[p^.Key], Items[aDst]), Relaxed, p^.Key));
-                    Tree[p^.Key] := Item.Index;
-                  end;
-              end;
-        end;
-    end;
-  aWeight := InfiniteWeight;
-end;
-
-function TGWeightedGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
-var
-  e: TEdgeArray;
-  I, Total: SizeInt;
-  Dsu: TDisjointSetUnion;
-begin
-  e := CreateEdgeArray;
-  Result := CreateIntArray;
-  Total := VertexCount;
-  TEdgeHelper.Sort(e);
-  System.SetLength(Result, Total);
-  Dsu.Size := Total;
-  aTotalWeight := ZeroWeight;
-  for I := 0 to System.High(e) do
-    if Dsu.Merged(e[I].Source, e[I].Destination)  then
-      begin
-        Dec(Total);
-        aTotalWeight += e[I].Weight;
-        Result[e[I].Destination] := e[I].Source;
-        if Total = 0 then
-          break;
-      end;
-end;
-
-function TGWeightedGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
-var
-  Visited: TBitVector;
-  Queue: TPairingHeap;
-  Handles: THandleArray;
-  Curr: SizeInt;
-  Item: TWeightItem;
-  p: PAdjItem;
-begin
-  Result := CreateIntArray;
-  Handles := CreateHandleArray;
-  Visited.Size := VertexCount;
-  Handles[0] := Queue.Insert(TWeightItem.Create(ZeroWeight, 0));
-  aTotalWeight := 0;
-  while Queue.TryDequeue(Item) do
-    begin
-      Curr := Item.Index;
-      aTotalWeight += Item.Weight;
-      Visited[Curr] := True;
-      for p in FNodeList[Curr].AdjList do
-        begin
-          if Handles[p^.Key] = INVALID_HANDLE then
-            begin
-              Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight, p^.Key));
-              Result[p^.Key] := Curr;
-            end
-          else
-            if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
-              begin
-                Queue.Update(Handles[p^.Key], TWeightItem.Create(p^.Data.Weight, p^.Key));
-                Result[p^.Key] := Curr;
-              end;
-        end;
-    end;
-end;
-
-function TGWeightedGraph.CreateWeightArray: TWeightArray;
-var
-  I: SizeInt;
-begin
-  System.SetLength(Result, VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Result[I] := InfiniteWeight;
-end;
-
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
 var
   I: SizeInt = 0;
@@ -2275,11 +1999,19 @@ begin
     end;
 end;
 
-class constructor TGWeightedGraph.Init;
+class function TGWeightedGraph.InfiniteWeight: TWeight;
 begin
-  CFInfiniteWeight := TWeight.MaxValue;
-  CFNegInfiniteWeight := TWeight.MinValue;
-  CFZeroWeight := Default(TWeight);
+  Result := THelper.InfiniteWeight;
+end;
+
+class function TGWeightedGraph.NegInfiniteWeight: TWeight;
+begin
+  Result := THelper.NegInfiniteWeight;
+end;
+
+class function TGWeightedGraph.ZeroWeight: TWeight;
+begin
+  Result := THelper.ZeroWeight;
 end;
 
 function TGWeightedGraph.ContainsNegWeighedEdge: Boolean;
@@ -2300,7 +2032,7 @@ end;
 function TGWeightedGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := DijkstraSssp(aSrc);
+  Result := THelper.DijkstraSssp(Self, aSrc);
 end;
 
 function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -2311,7 +2043,7 @@ end;
 function TGWeightedGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := DijkstraSssp(aSrc, aPathTree);
+  Result := THelper.DijkstraSssp(Self, aSrc, aPathTree);
 end;
 
 function TGWeightedGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
@@ -2323,7 +2055,7 @@ function TGWeightedGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := DijkstraPath(aSrc, aDst);
+  Result := THelper.DijkstraPath(Self, aSrc, aDst);
 end;
 
 function TGWeightedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
@@ -2335,39 +2067,33 @@ function TGWeightedGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TI
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := DijkstraPath(aSrc, aDst, aWeight);
+  Result := THelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
-  aHeur: THeuristic): TIntArray;
+  aHeur: TEstimate): TIntArray;
 begin
   Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aHeur);
 end;
 
-function TGWeightedGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: THeuristic): TIntArray;
+function TGWeightedGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   if aHeur <> nil then
-    Result := AStar(aSrc, aDst, aWeight, aHeur)
+    Result := THelper.AStar(Self, aSrc, aDst, aWeight, aHeur)
   else
-    Result := DijkstraPath(aSrc, aDst, aWeight);
+    Result := THelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
 begin
-  if Connected then
-    Result := KruskalMst(aTotalWeight)
-  else
-    raise ELGraphError.Create(SEGraphIsNotConnected);
+  Result := THelper.KruskalMst(Self, CreateEdgeArray, aTotalWeight);
 end;
 
 function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 begin
-  if Connected then   //todo: is it required ???
-    Result := PrimMst(aTotalWeight)
-  else
-    raise ELGraphError.Create(SEGraphIsNotConnected);
+  Result := THelper.PrimMst(Self, aTotalWeight);
 end;
 
 function TGWeightedGraph.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
@@ -2519,12 +2245,12 @@ begin
   Result := TPointsChart(inherited Clone);
 end;
 
-function TPointsChart.MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: THeuristic): TIntArray;
+function TPointsChart.MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
 begin
   Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aDst), aWeight, aHeur);
 end;
 
-function TPointsChart.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: THeuristic): TIntArray;
+function TPointsChart.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
 begin
   if aHeur = nil then
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, @Distance)

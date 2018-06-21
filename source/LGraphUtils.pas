@@ -34,6 +34,7 @@ uses
   LGQueue,
   LGDeque,
   LGVector,
+  LGPriorityQueue,
   LGHashTable,
   LGHash,
   LGStrConst;
@@ -126,6 +127,13 @@ type
     property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
+  TGraphMagic = string[8];
+
+const
+  GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';
+  GRAPH_HEADER_VERSION     = 1;
+
+type
 
   { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TEqRel must provide:
@@ -208,6 +216,8 @@ type
       property  Capacity: SizeInt read GetCapacity;
     end;
 
+    PAdjList = ^TAdjList;
+
     TNode = record
       Hash,
       Next: SizeInt;
@@ -225,10 +235,8 @@ type
     NULL_INDEX  = SizeInt(-1);
 
   type
-    TMagic = string[8];
-
     TStreamHeader = packed record
-      Magic: TMagic;
+      Magic: TGraphMagic;
       Version: Byte;
       TitleSize: Word;
       VertexCount,
@@ -297,10 +305,6 @@ type
       property AdjLists[aIndex: SizeInt]: PIntList read GetAdjList; default;
     end;
 
-  const
-    GRAPH_MAGIC: TMagic = 'LGrphTyp';
-    CURRENT_VERSION     = 1;
-
   class var
     CFData: TEdgeData;
 
@@ -312,6 +316,7 @@ type
     FTitle: string;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
+    function  GetAdjList(aIndex: SizeInt): PAdjList; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: TVertex);
     procedure InitialAlloc;
     procedure Rehash;
@@ -330,6 +335,7 @@ type
     function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
+    property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
     TOnAddEdge     = specialize TGOnAddEdge<TVertex>;
@@ -345,6 +351,7 @@ type
       Destination: SizeInt;
       Data:  TEdgeData;
       constructor Create(aSrc: SizeInt; p: PAdjItem);
+      constructor Create(aSrc, aDst: SizeInt; constref d: TEdgeData);
     end;
 
     TIncidentEdge = record
@@ -511,44 +518,6 @@ type
     property  Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
   end;
 
-  generic TGWeightedEdge<TWeight> = record
-    Source,
-    Destination: SizeInt;
-    Weight:  TWeight;
-    class operator = (constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator <>(constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator > (constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator < (constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator >=(constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator <=(constref L, R: TGWeightedEdge): Boolean; inline;
-    constructor Create(s, d: SizeInt; w: TWeight);
-  end;
-
-  generic TGWeightedItem<TWeight> = record
-    Weight: TWeight;
-    Index: SizeInt;
-    class operator = (constref L, R: TGWeightedItem): Boolean; inline;
-    class operator <>(constref L, R: TGWeightedItem): Boolean; inline;
-    class operator > (constref L, R: TGWeightedItem): Boolean; inline;
-    class operator < (constref L, R: TGWeightedItem): Boolean; inline;
-    class operator >=(constref L, R: TGWeightedItem): Boolean; inline;
-    class operator <=(constref L, R: TGWeightedItem): Boolean; inline;
-    constructor Create(constref w: TWeight; aIndex: SizeInt);
-  end;
-
-  generic TGRankWeightedItem<TWeight> = record
-    Rank,
-    Weight: TWeight;
-    Index: SizeInt;
-    class operator = (constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator <>(constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator > (constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator < (constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator >=(constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator <=(constref L, R: TGRankWeightedItem): Boolean; inline;
-    constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
-  end;
-
   TDisjointSetUnion = record
   private
     FList: array of SizeInt;
@@ -660,6 +629,91 @@ type
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
+  end;
+
+  generic TGWeightedEdge<TWeight> = record
+    Source,
+    Destination: SizeInt;
+    Weight:  TWeight;
+    class operator = (constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator <>(constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator > (constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator < (constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator >=(constref L, R: TGWeightedEdge): Boolean; inline;
+    class operator <=(constref L, R: TGWeightedEdge): Boolean; inline;
+    constructor Create(s, d: SizeInt; w: TWeight);
+  end;
+
+  generic TGWeightedItem<TWeight> = record
+    Weight: TWeight;
+    Index: SizeInt;
+    class operator = (constref L, R: TGWeightedItem): Boolean; inline;
+    class operator <>(constref L, R: TGWeightedItem): Boolean; inline;
+    class operator > (constref L, R: TGWeightedItem): Boolean; inline;
+    class operator < (constref L, R: TGWeightedItem): Boolean; inline;
+    class operator >=(constref L, R: TGWeightedItem): Boolean; inline;
+    class operator <=(constref L, R: TGWeightedItem): Boolean; inline;
+    constructor Create(constref w: TWeight; aIndex: SizeInt);
+  end;
+
+  generic TGRankWeightedItem<TWeight> = record
+    Rank,
+    Weight: TWeight;
+    Index: SizeInt;
+    class operator = (constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator <>(constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator > (constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator < (constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator >=(constref L, R: TGRankWeightedItem): Boolean; inline;
+    class operator <=(constref L, R: TGRankWeightedItem): Boolean; inline;
+    constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
+  end;
+
+  { TGWeightedHelper }
+
+  generic TGWeightedHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
+  strict private
+  class var
+    CFInfiniteWeight,
+    CFNegInfiniteWeight,
+    CFZeroWeight: TWeight;
+
+    class constructor Init;
+  public
+  type
+    TGraph       = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TWeightArray = array of TWeight;
+    TEstimate    = function(constref aSrc, aDst: TVertex): TWeight;
+    TWeightEdge  = specialize TGWeightedEdge<TWeight>;
+    TWeightItem  = specialize TGWeightedItem<TWeight>;
+    TRankItem    = specialize TGRankWeightedItem<TWeight>;
+    TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
+    TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+    TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
+    TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
+    TEdgeArray   = array of TWeightEdge;
+
+  protected
+  { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
+    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
+    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
+  { Dijkstra's pathfinding algorithm }
+    class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight; static;
+    class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
+  { A* pathfinding algorithm }
+    class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray; static;
+    class function  KruskalMst(g: TGraph; wea: TEdgeArray; out aTotalWeight: TWeight): TIntArray; static;
+    class function  PrimMst(g: TGraph; out aTotalWeight: TWeight): TIntArray; static;
+  { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
+    class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
+    class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+                    static;
+    class function  CreateWeightArrayPI(aLen: SizeInt): TWeightArray; static;
+    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static;
+  public
+    class property InfiniteWeight: TWeight read CFInfiniteWeight;
+    class property NegInfiniteWeight: TWeight read CFNegInfiniteWeight;
+    class property ZeroWeight: TWeight read CFZeroWeight;
   end;
 
 implementation
@@ -1160,6 +1214,13 @@ begin
   Data := p^.Data;
 end;
 
+constructor TGCustomGraph.TEdge.Create(aSrc, aDst: SizeInt; constref d: TEdgeData);
+begin
+  Source := aSrc;
+  Destination := aDst;
+  Data := d;
+end;
+
 { TGCustomGraph.TAdjEnumerator }
 
 function TGCustomGraph.TAdjEnumerator.GetCurrent: SizeInt;
@@ -1182,7 +1243,7 @@ end;
 
 function TGCustomGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
 begin
-  Result.FEnum := FGraph.FNodeList[FSource].AdjList.GetEnumerator;
+  Result.FEnum := FGraph.AdjLists[FSource]^.GetEnumerator;
 end;
 
 { TGCustomGraph.TIncidentEnumerator }
@@ -1211,7 +1272,7 @@ end;
 
 function TGCustomGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
 begin
-  Result.FEnum := FGraph.FNodeList[FSource].AdjList.GetEnumerator;
+  Result.FEnum := FGraph.AdjLists[FSource]^.GetEnumerator;
 end;
 
 { TGCustomGraph.TVertexEnumerator }
@@ -1302,6 +1363,11 @@ function TGCustomGraph.GetItem(aIndex: SizeInt): TVertex;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].Vertex;
+end;
+
+function TGCustomGraph.GetAdjList(aIndex: SizeInt): PAdjList;
+begin
+  Result := @FNodeList[aIndex].AdjList;
 end;
 
 procedure TGCustomGraph.SetItem(aIndex: SizeInt; const aValue: TVertex);
@@ -1688,7 +1754,7 @@ var
 begin
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Result[I].FEnum := FNodeList[I].AdjList.GetEnumerator;
+    Result[I].FEnum := AdjLists[I]^.GetEnumerator;
 end;
 
 function TGCustomGraph.IsEmpty: Boolean;
@@ -1750,7 +1816,7 @@ end;
 function TGCustomGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc >= 0) and (aSrc < VertexCount) then
-    Result := FNodeList[aSrc].AdjList.Contains(aDst)
+    Result := AdjLists[aSrc]^.Contains(aDst)
   else
     Result := False;
 end;
@@ -1771,7 +1837,7 @@ end;
 function TGCustomGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc >= 0) and (aSrc < VertexCount) then
-    Result := FNodeList[aSrc].AdjList.Contains(aDst)
+    Result := AdjLists[aSrc]^.Contains(aDst)
   else
     Result := False;
 end;
@@ -1819,7 +1885,7 @@ var
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  p := FNodeList[aSrc].AdjList.Find(aDst);
+  p := AdjLists[aSrc]^.Find(aDst);
   Result := p <> nil;
   if Result then
     aData := p^.Data;
@@ -1835,7 +1901,7 @@ var
   p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
-  p := FNodeList[aSrc].AdjList.Find(aDst);
+  p := AdjLists[aSrc]^.Find(aDst);
   Result := p <> nil;
   if Result then
     p^.Data := aValue;
@@ -1851,7 +1917,7 @@ begin
   m := TSquareBitMatrix.Create(VertexCount);
   for s := 0 to Pred(VertexCount) do
     for d := 0 to Pred(VertexCount) do
-      if (s <> d) and FNodeList[s].AdjList.Contains(d) then
+      if (s <> d) and AdjLists[s]^.Contains(d) then
         m[s, d] := True;
   Result := TAdjacencyMatrix.Create(m);
 end;
@@ -2072,197 +2138,6 @@ begin
   Result := TAdjacencyMatrix.Create(m);
 end;
 
-{ TGWeightedEdge }
-
-class operator TGWeightedEdge. = (constref L, R: TGWeightedEdge): Boolean;
-begin
-  Result := L.Weight = R.Weight;
-end;
-
-class operator TGWeightedEdge.<>(constref L, R: TGWeightedEdge): Boolean;
-begin
-  Result := L.Weight <> R.Weight;
-end;
-
-class operator TGWeightedEdge.>(constref L, R: TGWeightedEdge): Boolean;
-begin
-  Result := L.Weight > R.Weight;
-end;
-
-class operator TGWeightedEdge.<(constref L, R: TGWeightedEdge): Boolean;
-begin
-  Result := L.Weight < R.Weight;
-end;
-
-class operator TGWeightedEdge.>=(constref L, R: TGWeightedEdge): Boolean;
-begin
-  Result := L.Weight >= R.Weight;
-end;
-
-class operator TGWeightedEdge.<=(constref L, R: TGWeightedEdge): Boolean;
-begin
-  Result := L.Weight <= R.Weight;
-end;
-
-constructor TGWeightedEdge.Create(s, d: SizeInt; w: TWeight);
-begin
-  Source := s;
-  Destination := d;
-  Weight := w;
-end;
-
-{ TGWeightedItem }
-
-class operator TGWeightedItem. = (constref L, R: TGWeightedItem): Boolean;
-begin
-  Result := L.Weight = R.Weight;
-end;
-
-class operator TGWeightedItem.<>(constref L, R: TGWeightedItem): Boolean;
-begin
-  Result := L.Weight <> R.Weight;
-end;
-
-class operator TGWeightedItem.>(constref L, R: TGWeightedItem): Boolean;
-begin
-  Result := L.Weight > R.Weight;
-end;
-
-class operator TGWeightedItem.<(constref L, R: TGWeightedItem): Boolean;
-begin
-  Result := L.Weight < R.Weight;
-end;
-
-class operator TGWeightedItem.>=(constref L, R: TGWeightedItem): Boolean;
-begin
-  Result := L.Weight >= R.Weight;
-end;
-
-class operator TGWeightedItem.<=(constref L, R: TGWeightedItem): Boolean;
-begin
-  Result := L.Weight <= R.Weight;
-end;
-
-constructor TGWeightedItem.Create(constref w: TWeight; aIndex: SizeInt);
-begin
-  Weight := w;
-  Index := aIndex;
-end;
-
-{ TGRankWeightedItem }
-
-class operator TGRankWeightedItem. = (constref L, R: TGRankWeightedItem): Boolean;
-begin
-  Result := L.Rank = R.Rank;
-end;
-
-class operator TGRankWeightedItem.<>(constref L, R: TGRankWeightedItem): Boolean;
-begin
-  Result := L.Rank <> R.Rank;
-end;
-
-class operator TGRankWeightedItem.>(constref L, R: TGRankWeightedItem): Boolean;
-begin
-  Result := L.Rank > R.Rank;
-end;
-
-class operator TGRankWeightedItem.<(constref L, R: TGRankWeightedItem): Boolean;
-begin
-  Result := L.Rank < R.Rank;
-end;
-
-class operator TGRankWeightedItem.>=(constref L, R: TGRankWeightedItem): Boolean;
-begin
-  Result := L.Rank >= R.Rank;
-end;
-
-class operator TGRankWeightedItem.<=(constref L, R: TGRankWeightedItem): Boolean;
-begin
-  Result := L.Rank <= R.Rank;
-end;
-
-constructor TGRankWeightedItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
-begin
-  Rank := aRank;
-  Weight := aWeight;
-  Index := aIndex;
-end;
-
-{ TDisjointSetUnion }
-
-function TDisjointSetUnion.GetSize: SizeInt;
-begin
-  Result := System.Length(FList);
-end;
-
-procedure TDisjointSetUnion.SetSize(aValue: SizeInt);
-var
-  OldSize, I: SizeInt;
-begin
-  OldSize := Size;
-  if aValue > OldSize then
-    begin
-      System.SetLength(FList, aValue);
-      for I := OldSize to Pred(aValue) do
-        FList[I] := I;
-    end;
-end;
-
-procedure TDisjointSetUnion.Clear;
-begin
-  FList := nil;
-end;
-
-procedure TDisjointSetUnion.Reset;
-var
-  I: SizeInt;
-begin
-  for I := 0 to System.High(FList) do
-    FList[I] := I;
-end;
-
-function TDisjointSetUnion.Tag(aValue: SizeInt): SizeInt;
-begin
-  if FList[aValue] = aValue then
-    exit(aValue);
-  Result := Tag(FList[aValue]);
-  FList[aValue] := Result;
-end;
-
-function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
-begin
-  Result := Tag(L) = Tag(R);
-end;
-
-function TDisjointSetUnion.InDiffSets(L, R: SizeInt): Boolean;
-begin
-  Result := Tag(L) <> Tag(R);
-end;
-
-procedure TDisjointSetUnion.Merge(L, R: SizeInt);
-begin
-  L := Tag(L);
-  R := Tag(R);
-  if NextRandomBoolean then // random selection
-    FList[L] := R
-  else
-    FList[R] := L;
-end;
-
-function TDisjointSetUnion.Merged(L, R: SizeInt): Boolean;
-begin
-  L := Tag(L);
-  R := Tag(R);
-  if L = R then
-    exit(False);
-  if NextRandomBoolean then
-    FList[L] := R
-  else
-    FList[R] := L;
-  Result := True;
-end;
-
-
 { TBitVector }
 
 function TBitVector.GetBit(aIndex: SizeInt): Boolean;
@@ -2377,6 +2252,80 @@ procedure TSquareBitMatrix.Clear;
 begin
   FBits := nil;
   FSize := 0;
+end;
+
+{ TDisjointSetUnion }
+
+function TDisjointSetUnion.GetSize: SizeInt;
+begin
+  Result := System.Length(FList);
+end;
+
+procedure TDisjointSetUnion.SetSize(aValue: SizeInt);
+var
+  OldSize, I: SizeInt;
+begin
+  OldSize := Size;
+  if aValue > OldSize then
+    begin
+      System.SetLength(FList, aValue);
+      for I := OldSize to Pred(aValue) do
+        FList[I] := I;
+    end;
+end;
+
+procedure TDisjointSetUnion.Clear;
+begin
+  FList := nil;
+end;
+
+procedure TDisjointSetUnion.Reset;
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(FList) do
+    FList[I] := I;
+end;
+
+function TDisjointSetUnion.Tag(aValue: SizeInt): SizeInt;
+begin
+  if FList[aValue] = aValue then
+    exit(aValue);
+  Result := Tag(FList[aValue]);
+  FList[aValue] := Result;
+end;
+
+function TDisjointSetUnion.InSameSet(L, R: SizeInt): Boolean;
+begin
+  Result := Tag(L) = Tag(R);
+end;
+
+function TDisjointSetUnion.InDiffSets(L, R: SizeInt): Boolean;
+begin
+  Result := Tag(L) <> Tag(R);
+end;
+
+procedure TDisjointSetUnion.Merge(L, R: SizeInt);
+begin
+  L := Tag(L);
+  R := Tag(R);
+  if NextRandomBoolean then // random selection
+    FList[L] := R
+  else
+    FList[R] := L;
+end;
+
+function TDisjointSetUnion.Merged(L, R: SizeInt): Boolean;
+begin
+  L := Tag(L);
+  R := Tag(R);
+  if L = R then
+    exit(False);
+  if NextRandomBoolean then
+    FList[L] := R
+  else
+    FList[R] := L;
+  Result := True;
 end;
 
 { TIntSet.TEnumerator }
@@ -2700,6 +2649,488 @@ end;
 function TGBinHeapMin.Peek(aHandle: SizeInt): T;
 begin
   Result := FHeap[FHandle2Index[aHandle]];
+end;
+
+{ TGWeightedEdge }
+
+class operator TGWeightedEdge. = (constref L, R: TGWeightedEdge): Boolean;
+begin
+  Result := L.Weight = R.Weight;
+end;
+
+class operator TGWeightedEdge.<>(constref L, R: TGWeightedEdge): Boolean;
+begin
+  Result := L.Weight <> R.Weight;
+end;
+
+class operator TGWeightedEdge.>(constref L, R: TGWeightedEdge): Boolean;
+begin
+  Result := L.Weight > R.Weight;
+end;
+
+class operator TGWeightedEdge.<(constref L, R: TGWeightedEdge): Boolean;
+begin
+  Result := L.Weight < R.Weight;
+end;
+
+class operator TGWeightedEdge.>=(constref L, R: TGWeightedEdge): Boolean;
+begin
+  Result := L.Weight >= R.Weight;
+end;
+
+class operator TGWeightedEdge.<=(constref L, R: TGWeightedEdge): Boolean;
+begin
+  Result := L.Weight <= R.Weight;
+end;
+
+constructor TGWeightedEdge.Create(s, d: SizeInt; w: TWeight);
+begin
+  Source := s;
+  Destination := d;
+  Weight := w;
+end;
+
+{ TGWeightedItem }
+
+class operator TGWeightedItem. = (constref L, R: TGWeightedItem): Boolean;
+begin
+  Result := L.Weight = R.Weight;
+end;
+
+class operator TGWeightedItem.<>(constref L, R: TGWeightedItem): Boolean;
+begin
+  Result := L.Weight <> R.Weight;
+end;
+
+class operator TGWeightedItem.>(constref L, R: TGWeightedItem): Boolean;
+begin
+  Result := L.Weight > R.Weight;
+end;
+
+class operator TGWeightedItem.<(constref L, R: TGWeightedItem): Boolean;
+begin
+  Result := L.Weight < R.Weight;
+end;
+
+class operator TGWeightedItem.>=(constref L, R: TGWeightedItem): Boolean;
+begin
+  Result := L.Weight >= R.Weight;
+end;
+
+class operator TGWeightedItem.<=(constref L, R: TGWeightedItem): Boolean;
+begin
+  Result := L.Weight <= R.Weight;
+end;
+
+constructor TGWeightedItem.Create(constref w: TWeight; aIndex: SizeInt);
+begin
+  Weight := w;
+  Index := aIndex;
+end;
+
+{ TGRankWeightedItem }
+
+class operator TGRankWeightedItem. = (constref L, R: TGRankWeightedItem): Boolean;
+begin
+  Result := L.Rank = R.Rank;
+end;
+
+class operator TGRankWeightedItem.<>(constref L, R: TGRankWeightedItem): Boolean;
+begin
+  Result := L.Rank <> R.Rank;
+end;
+
+class operator TGRankWeightedItem.>(constref L, R: TGRankWeightedItem): Boolean;
+begin
+  Result := L.Rank > R.Rank;
+end;
+
+class operator TGRankWeightedItem.<(constref L, R: TGRankWeightedItem): Boolean;
+begin
+  Result := L.Rank < R.Rank;
+end;
+
+class operator TGRankWeightedItem.>=(constref L, R: TGRankWeightedItem): Boolean;
+begin
+  Result := L.Rank >= R.Rank;
+end;
+
+class operator TGRankWeightedItem.<=(constref L, R: TGRankWeightedItem): Boolean;
+begin
+  Result := L.Rank <= R.Rank;
+end;
+
+constructor TGRankWeightedItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
+begin
+  Rank := aRank;
+  Weight := aWeight;
+  Index := aIndex;
+end;
+
+{ TGWeightedHelper }
+
+class constructor TGWeightedHelper.Init;
+begin
+  CFInfiniteWeight := TWeight.MaxValue;
+  CFNegInfiniteWeight := TWeight.MinValue;
+  CFZeroWeight := Default(TWeight);
+end;
+
+class function TGWeightedHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
+var
+  Visited: TBitVector;
+  Queue: TPairingHeap;
+  Handles: THandleArray;
+  Relaxed: TWeight;
+  Item: TWeightItem;
+  p: TGraph.PAdjItem;
+begin
+  Result := CreateWeightArrayPI(g.VertexCount);
+  Handles := g.CreateHandleArray;
+  Visited.Size := g.VertexCount;
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    begin
+      Visited[Item.Index] := True;
+      Result[Item.Index] := Item.Weight;
+      for p in g.AdjLists[Item.Index]^ do
+        if Handles[p^.Key] = INVALID_HANDLE then
+          Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
+        else
+          if not Visited[p^.Key] then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+            end;
+    end;
+end;
+
+class function TGWeightedHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+var
+  Visited: TBitVector;
+  Queue: TPairingHeap;
+  Handles: THandleArray;
+  Relaxed: TWeight;
+  Item: TWeightItem;
+  p: TGraph.PAdjItem;
+begin
+  Result := CreateWeightArrayPI(g.VertexCount);
+  aPathTree := g.CreateIntArray;
+  Handles := g.CreateHandleArray;
+  Visited.Size := g.VertexCount;
+  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    begin
+      Visited[Item.Index] := True;
+      Result[Item.Index] := Item.Weight;
+      for p in g.AdjLists[Item.Index]^ do
+        if Handles[p^.Key] = INVALID_HANDLE then
+          begin
+            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
+            aPathTree[p^.Key] := Item.Index;
+          end
+        else
+          if not Visited[p^.Key] then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                begin
+                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+                  aPathTree[p^.Key] := Item.Index;
+                end;
+            end;
+    end;
+end;
+
+class function TGWeightedHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
+var
+  Visited: TBitVector;
+  Queue: TBinHeap;
+  Relaxed: TWeight;
+  Item: TWeightItem;
+  p: TGraph.PAdjItem;
+begin
+  Queue := TBinHeap.Create(g.VertexCount);
+  Visited.Size := g.VertexCount;
+  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
+  while Queue.TryDequeue(Item) do
+    begin
+      if Item.Index = aDst then
+        exit(Item.Weight);
+      Visited[Item.Index] := True;
+      for p in g.AdjLists[Item.Index]^ do
+        if Queue.NotUsed(p^.Key) then
+          Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key)
+        else
+          if not Visited[p^.Key] then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              if Relaxed < Queue.Peek(p^.Key).Weight then
+                Queue.Update(p^.Key, TWeightItem.Create(Relaxed, p^.Key));
+            end
+    end;
+  Result := InfiniteWeight;
+end;
+
+class function TGWeightedHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+var
+  Visited: TBitVector;
+  Queue: TBinHeap;
+  Tree: TIntArray;
+  Relaxed: TWeight;
+  Item: TWeightItem;
+  p: TGraph.PAdjItem;
+{%H-}begin
+  Queue := TBinHeap.Create(g.VertexCount);
+  Tree := g.CreateIntArray;
+  Visited.Size := g.VertexCount;
+  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
+  while {%H-}Queue.TryDequeue(Item) do
+    begin
+      if Item.Index = aDst then
+        begin
+          aWeight := Item.Weight;
+          exit(g.TreeToChain(Tree, aDst));
+        end;
+      Visited[Item.Index] := True;
+      for p in g.AdjLists[Item.Index]^ do
+        begin
+          if Queue.NotUsed(p^.Key) then
+            begin
+              Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key);
+              Tree[p^.Key] := Item.Index;
+            end
+          else
+            if not Visited[p^.Key] then
+              begin
+                Relaxed := p^.Data.Weight + Item.Weight;
+                if Relaxed < Queue.Peek(p^.Key).Weight then
+                  begin
+                    Queue.Update(p^.Key, TWeightItem.Create(Relaxed, p^.Key));
+                    Tree[p^.Key] := Item.Index;
+                  end;
+              end;
+        end;
+    end;
+  aWeight := InfiniteWeight;
+end;
+
+class function TGWeightedHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate
+  ): TIntArray;
+var
+  Visited: TBitVector;
+  Queue: TAStarHeap;
+  Handles: THandleArray;
+  Tree: TIntArray;
+  Relaxed: TWeight;
+  Item: TRankItem;
+  p: TGraph.PAdjItem;
+{%H-}begin
+  Handles := g.CreateHandleArray;
+  Tree := g.CreateIntArray;
+  Visited.Size := g.VertexCount;
+  Handles[aSrc] := Queue.Insert(TRankItem.Create(aHeur(g.Items[aSrc], g.Items[aDst]), ZeroWeight, aSrc));
+  while Queue.TryDequeue(Item) do
+    begin
+      if Item.Index = aDst then
+        begin
+          aWeight := Item.Weight;
+          exit(g.TreeToChain(Tree, aDst));
+        end;
+      Visited[Item.Index] := True;
+      for p in g.AdjLists[Item.Index]^ do
+        begin
+          if Handles[p^.Key] = INVALID_HANDLE then
+            begin
+              Relaxed := p^.Data.Weight + Item.Weight;
+              Handles[p^.Key] := Queue.Insert(TRankItem.Create(
+                Relaxed + aHeur(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key));
+              Tree[p^.Key] := Item.Index;
+            end
+          else
+            if not Visited[p^.Key] then
+              begin
+                Relaxed := Item.Weight + p^.Data.Weight;
+                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                  begin
+                    Queue.Update(Handles[p^.Key], TRankItem.Create(
+                      Relaxed + aHeur(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key));
+                    Tree[p^.Key] := Item.Index;
+                  end;
+              end;
+        end;
+    end;
+  aWeight := InfiniteWeight;
+end;
+
+class function TGWeightedHelper.KruskalMst(g: TGraph; wea: TEdgeArray; out aTotalWeight: TWeight): TIntArray;
+var
+  I, Total: SizeInt;
+  Dsu: TDisjointSetUnion;
+begin
+  Result := g.CreateIntArray;
+  Total := g.VertexCount;
+  TEdgeHelper.Sort(wea);
+  System.SetLength(Result, Total);
+  Dsu.Size := Total;
+  aTotalWeight := ZeroWeight;
+  for I := 0 to System.High(wea) do
+    if Dsu.Merged(wea[I].Source, wea[I].Destination)  then
+      begin
+        Dec(Total);
+        aTotalWeight += wea[I].Weight;
+        Result[wea[I].Destination] := wea[I].Source;
+        if Total = 0 then
+          break;
+      end;
+end;
+
+class function TGWeightedHelper.PrimMst(g: TGraph; out aTotalWeight: TWeight): TIntArray;
+var
+  Visited: TBitVector;
+  Queue: TPairingHeap;
+  Handles: THandleArray;
+  I, Curr: SizeInt;
+  Item: TWeightItem;
+  p: TGraph.PAdjItem;
+begin
+  Result := g.CreateIntArray;
+  Handles := g.CreateHandleArray;
+  Visited.Size := g.VertexCount;
+  aTotalWeight := 0;
+  for I := 0 to Pred(g.VertexCount) do
+    if not Visited[I] then
+      begin
+        Handles[I] := Queue.Insert(TWeightItem.Create(ZeroWeight, 0));
+        while Queue.TryDequeue(Item) do
+          begin
+            Curr := Item.Index;
+            aTotalWeight += Item.Weight;
+            Visited[Curr] := True;
+            for p in g.AdjLists[Curr]^ do
+              begin
+                if Handles[p^.Key] = INVALID_HANDLE then
+                  begin
+                    Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight, p^.Key));
+                    Result[p^.Key] := Curr;
+                  end
+                else
+                  if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
+                    begin
+                      Queue.Update(Handles[p^.Key], TWeightItem.Create(p^.Data.Weight, p^.Key));
+                      Result[p^.Key] := Curr;
+                    end;
+              end;
+          end;
+      end;
+end;
+
+class function TGWeightedHelper.FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+var
+  Edge: TGraph.TEdge;
+  Enum: TGraph.TEdgeEnumerator;
+  RelaxValue: TWeight;
+  I: SizeInt;
+  Relaxed: Boolean = False;
+begin
+  aWeights := CreateWeightArrayPI(g.VertexCount);
+  Enum := g.Edges.GetEnumerator;
+  aWeights[aSrc] := ZeroWeight;
+  for I := 1 to g.VertexCount do
+    begin
+      Relaxed := False;
+      while Enum.MoveNext do
+        begin
+          Edge := Enum.Current;
+          if aWeights[Edge.Source] < InfiniteWeight then
+            begin
+              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
+              if RelaxValue < aWeights[Edge.Destination] then
+                begin
+                  aWeights[Edge.Destination] := RelaxValue;
+                  Relaxed := True;
+                end;
+            end;
+        end;
+      if not Relaxed then
+        break;
+      Enum.Reset;
+    end;
+  Result := not Relaxed;
+  if not Result then
+    aWeights := nil;
+end;
+
+class function TGWeightedHelper.FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out
+  aWeights: TWeightArray): Boolean;
+var
+  Edge: TGraph.TEdge;
+  Enum: TGraph.TEdgeEnumerator;
+  v: TIntVector;
+  RelaxValue: TWeight;
+  I: SizeInt;
+  J: SizeInt = -1;
+begin
+  aWeights := CreateWeightArrayPI(g.VertexCount);
+  aPaths := g.CreateIntArray;
+  Enum := g.Edges.GetEnumerator;
+  aWeights[aSrc] := ZeroWeight;
+  for I := 1 to g.VertexCount do
+    begin
+      J := -1;
+      while Enum.MoveNext do
+        begin
+          Edge := Enum.Current;
+          if aWeights[Edge.Source] < InfiniteWeight then
+            begin
+              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
+              if RelaxValue < aWeights[Edge.Destination] then
+                begin
+                  aWeights[Edge.Destination] := RelaxValue;
+                  aPaths[Edge.Destination] := Edge.Source;
+                  J := Edge.Destination;
+                end;
+            end;
+        end;
+      if J = -1 then
+        break;
+      Enum.Reset;
+    end;
+
+  Result := J = -1;
+
+  if not Result then
+    begin
+      for I := 1 to g.VertexCount do
+        J := aPaths[J];
+      I := J;
+      v.Add(J);
+      repeat
+        I := aPaths[I];
+        v.Add(I);
+      until I = J;
+      aPaths := v.ToArray;
+      aWeights := nil;
+    end;
+end;
+
+class function TGWeightedHelper.CreateWeightArrayPI(aLen: SizeInt): TWeightArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, aLen);
+  for I := 0 to Pred(aLen) do
+    Result[I] := InfiniteWeight;
+end;
+
+class function TGWeightedHelper.CreateWeightArrayNI(aLen: SizeInt): TWeightArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, aLen);
+  for I := 0 to Pred(aLen) do
+    Result[I] := NegInfiniteWeight;
 end;
 
 end.
