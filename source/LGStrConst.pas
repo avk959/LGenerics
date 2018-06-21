@@ -45,7 +45,6 @@ resourcestring
   SEThreadTimeOut          = 'Thread timeout exceeded';
   SEResultUnknown          = 'Result is unknown';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
-  SEGraphIsNotConnected    = 'Graph is not connected';
   SEEdgeNotFoundFmt        = 'Edge (%d, %d) not found';
   SEWriteCallbackMissed    = 'Write callback function missed';
   SEReadCallbackMissed     = 'Read callback function missed';
