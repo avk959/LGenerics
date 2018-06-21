@@ -449,8 +449,7 @@ type
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
-  { TGDisjointSetUnion }
-
+  { TGDisjointSetUnion: see https://en.wikipedia.org/wiki/Disjoint-set_data_structure }
   generic TGDisjointSetUnion<T, TEqRel> = record
   private
   type
