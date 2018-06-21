@@ -71,15 +71,18 @@ type
     FCompCount: SizeInt;
     FConnected,
     FConnectedValid: Boolean;
+    procedure ResetTags;
+    function  SeparateTag(aIndex: SizeInt): SizeInt;
+    function  SeparateMerged(L, R: SizeInt): Boolean;
+    procedure ValidateConnected;
     function  GetConnected: Boolean; inline;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
-    function  FindSeparateCount: SizeInt;
     function  GetSeparateCount: SizeInt;
-    function  CountPop(aCompIndex: SizeInt): SizeInt;
+    function  CountPop(aTag: SizeInt): SizeInt;
     function  GetEccentricity(aIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
@@ -89,17 +92,20 @@ type
     procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
-    procedure SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TIntArrayVector);
-    procedure SearchForFundamentalsCyclesLen(aRoot: SizeInt; out aCycleLens: TIntVector);
-    function  FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
+    procedure SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
+    procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
+    procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     property  InnerConnected: Boolean read FConnected;
   public
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
+    constructor Create;
+    constructor Create(aCapacity: SizeInt);
     procedure Clear; override;
   { returns True and vertex index, if it is added, False if such a vertex already exists }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
+  { note: removing destroys validity of connected }
     procedure RemoveVertex(constref aVertex: TVertex); inline;
     procedure RemoveVertexI(aIndex: SizeInt);
   { returns True if the edge is added, False, if such an edge already exists }
@@ -107,6 +113,7 @@ type
     function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+  { returns False if there is no such edge; note: removing destroys validity of connected }
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
     procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
@@ -442,9 +449,69 @@ end;
 
 { TGSimpleGraph }
 
+procedure TGSimpleGraph.ResetTags;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(VertexCount) do
+    FNodeList[I].Tag := I;
+end;
+
+function TGSimpleGraph.SeparateTag(aIndex: SizeInt): SizeInt;
+begin
+  if FNodeList[aIndex].Tag = aIndex then
+    exit(aIndex);
+  Result := SeparateTag(FNodeList[aIndex].Tag);
+  FNodeList[aIndex].Tag := Result;
+end;
+
+function TGSimpleGraph.SeparateMerged(L, R: SizeInt): Boolean;
+begin
+  L := SeparateTag(L);
+  R := SeparateTag(R);
+  if L = R then
+    exit(False);
+  if NextRandomBoolean then
+    FNodeList[L].Tag := R
+  else
+    FNodeList[R].Tag := L;
+  Result := True;
+end;
+
+procedure TGSimpleGraph.ValidateConnected;
+var
+  Visited: TBitVector;
+  Queue: TIntQueue;
+  I, Curr, Next: SizeInt;
+begin
+  if ConnectedValid then
+    exit;
+  Visited.Size := VertexCount;
+  FCompCount := VertexCount;
+  {%H-}Queue.EnsureCapacity(VertexCount);
+  ResetTags;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        repeat
+          for Next in AdjVerticesI(Curr) do
+            if not Visited[Next] then
+              begin
+                Visited[Next] := True;
+                Queue.Enqueue(Next);
+                if SeparateMerged(Curr, Next) then
+                  Dec(FCompCount);
+              end;
+        until not Queue.TryDequeue(Curr);
+      end;
+  FConnected := FCompCount = 1;
+  FConnectedValid := True;
+end;
+
 function TGSimpleGraph.GetConnected: Boolean;
 begin
-  Result := GetSeparateCount = 1;
+  Result := SeparateCount = 1;
 end;
 
 procedure TGSimpleGraph.DoRemoveVertex(aIndex: SizeInt);
@@ -481,7 +548,11 @@ begin
       if not FNodeList[aDst].AdjList.Add(TAdjItem.Create(aSrc, aData)) then
         raise ELGraphError.Create(SEGrapInconsist);
       Inc(FEdgeCount);
-      FConnectedValid := False;
+      if ConnectedValid and SeparateMerged(aSrc, aDst) then
+        begin
+          Dec(FCompCount);
+          FConnected := FCompCount = 1;
+        end;
     end;
 end;
 
@@ -514,57 +585,27 @@ var
   p: PAdjItem;
 begin
   Result := TGSimpleGraph.Create;
-  cIdx := FNodeList[aIndex].Tag;
+  cIdx := SeparateTag(aIndex);
   for I := 0 to Pred(VertexCount) do
-    if FNodeList[I].Tag = cIdx then
+    if SeparateTag(I) = cIdx then
       for p in FNodeList[I].AdjList do
         Result.AddEdge(Items[I], Items[p^.Destination], p^.Data);
-end;
-
-function TGSimpleGraph.FindSeparateCount: SizeInt;
-var
-  Visited: TBitVector;
-  Queue: TIntQueue;
-  I, Curr, Next: SizeInt;
-begin
-  Result := 0;
-  Visited.Size := VertexCount;
-  {%H-}Queue.EnsureCapacity(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
-      begin
-        Curr := I;
-        repeat
-          FNodeList[Curr].Tag := Result;
-          for Next in AdjVerticesI(Curr) do
-            if not Visited[Next] then
-              begin
-                Visited[Next] := True;
-                Queue.Enqueue(Next);
-              end;
-        until not Queue.TryDequeue(Curr);
-        Inc(Result);
-      end;
 end;
 
 function TGSimpleGraph.GetSeparateCount: SizeInt;
 begin
   if not ConnectedValid then
-    begin
-      FCompCount := FindSeparateCount;
-      FConnectedValid := True;
-      FConnected := FCompCount = 1;
-    end;
+    ValidateConnected;
   Result := FCompCount;
 end;
 
-function TGSimpleGraph.CountPop(aCompIndex: SizeInt): SizeInt;
+function TGSimpleGraph.CountPop(aTag: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
   Result := 0;
   for I := 0 to Pred(VertexCount) do
-    Result += Ord(FNodeList[I].Tag = aCompIndex);
+    Result += Ord(SeparateTag(I) = aTag);
 end;
 
 function TGSimpleGraph.GetEccentricity(aIndex: SizeInt): SizeInt;
@@ -591,38 +632,19 @@ end;
 
 function TGSimpleGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 var
-  Visited: TBitVector;
-  Queue: TIntQueue;
-  I, Curr: SizeInt;
+  I: SizeInt;
   d: TEdgeData;
 begin
   Result := 0;
-  Visited.Size := VertexCount;
   d := DefaultEdgeData;
-  for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+  for I := 1 to Pred(VertexCount) do
+    if SeparateTag(0) <> SeparateTag(I) then
       begin
-        Curr := I;
-        repeat
-          FNodeList[Curr].Tag := 0;
-          for Curr in AdjVerticesI(Curr) do
-            if not Visited[Curr] then
-              begin
-                Visited[Curr] := True;
-                Queue.Enqueue(Curr);
-              end;
-        until not Queue.TryDequeue(Curr);
+        if Assigned(aOnAddEdge) then
+          aOnAddEdge(FNodeList[0].Vertex, FNodeList[I].Vertex, @d);
+        AddEdgeI(0, I, d);
         Inc(Result);
-        if Result > 1 then
-          begin
-            if Assigned(aOnAddEdge) then
-              aOnAddEdge(FNodeList[0].Vertex, FNodeList[Curr].Vertex, @d);
-            AddEdgeI(0, Curr, d);
-          end;
       end;
-  FCompCount := 1;
-  FConnectedValid := True;
-  FConnected := True;
 end;
 
 function TGSimpleGraph.CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
@@ -979,81 +1001,86 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.SearchForFundamentalsCycles(aRoot: SizeInt; out aCycles: TIntArrayVector);
+procedure TGSimpleGraph.SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
 var
   Stack: TIntStack;
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
   EdgeSet: TIntPairSet;
-  Next: SizeInt;
+  I, Curr, Next: SizeInt;
 begin
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
-  Visited[aRoot] := True;
-  {%H-}Stack.Push(aRoot);
-  while Stack.TryPeek(aRoot) do
-    if AdjEnums[aRoot].MoveNext then
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
       begin
-        Next := AdjEnums[aRoot].Current;
-        if not Visited[Next] then
-          begin
-            Visited[Next] := True;
-            Parents[Next] := aRoot;
-            Stack.Push(Next);
-          end
-        else
-          if (Parents[aRoot] <> Next) and EdgeSet.Add(aRoot, Next) then
-            aCycles.Add(TreeToCycle(Parents, Next, aRoot));
-      end
-    else
-      Stack.Pop;
+        Visited[I] := True;
+        {%H-}Stack.Push(I);
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[{%H-}Curr].MoveNext then
+            begin
+              Next := AdjEnums[Curr].Current;
+              if not Visited[Next] then
+                begin
+                  Visited[Next] := True;
+                  Parents[Next] := Curr;
+                  Stack.Push(Next);
+                end
+              else
+                if (Parents[Curr] <> Next) and EdgeSet.Add(Curr, Next) then
+                  aCycles.Add(TreeToCycle(Parents, Next, Curr));
+            end
+          else
+            Stack.Pop;
+      end;
 end;
 
-procedure TGSimpleGraph.SearchForFundamentalsCyclesLen(aRoot: SizeInt; out aCycleLens: TIntVector);
+procedure TGSimpleGraph.SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
 var
   Stack: TIntStack;
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
   EdgeSet: TIntPairSet;
-  Next: SizeInt;
+  I, Curr, Next: SizeInt;
 begin
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
-  Visited[aRoot] := True;
-  {%H-}Stack.Push(aRoot);
-  while Stack.TryPeek(aRoot) do
-    if AdjEnums[aRoot].MoveNext then
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
       begin
-        Next := AdjEnums[aRoot].Current;
-        if not Visited[Next] then
-          begin
-            Visited[Next] := True;
-            Parents[Next] := aRoot;
-            Stack.Push(Next);
-          end
-        else
-          if (Parents[aRoot] <> Next) and EdgeSet.Add(aRoot, Next) then
-            aCycleLens.Add(Tree2CycleLen(Parents, Next, aRoot));
-      end
-    else
-      Stack.Pop;
+        Visited[I] := True;
+        {%H-}Stack.Push(I);
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[{%H-}Curr].MoveNext then
+            begin
+              Next := AdjEnums[Curr].Current;
+              if not Visited[Next] then
+                begin
+                  Visited[Next] := True;
+                  Parents[Next] := Curr;
+                  Stack.Push(Next);
+                end
+              else
+                if (Parents[Curr] <> Next) and EdgeSet.Add(Curr, Next) then
+                  aCycleLens.Add(Tree2CycleLen(Parents, Next, Curr));
+            end
+          else
+            Stack.Pop;
+      end;
 end;
 
-function TGSimpleGraph.FindFundamentalCyclesLen(out aCycleLens: TIntVector): Boolean;
+procedure TGSimpleGraph.FindFundamentalCyclesLen(out aCycleLens: TIntVector);
 begin
-  if not Connected then
-    exit(False);
   if IsTree then
-    exit(False);
-  SearchForFundamentalsCyclesLen(0, aCycleLens);
+    exit;
+  SearchForFundamentalsCyclesLen(aCycleLens);
   if aCycleLens.Count <> CyclomaticNumber then
     raise ELGraphError.Create(SEGrapInconsist);
   TIntVectorHelper.Sort(aCycleLens);
-  Result := True;
 end;
 
 function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
@@ -1074,23 +1101,35 @@ var
 begin
   if L = R then
     exit(True);
+  if L.IsEmpty then
+    exit(L.IsEmpty)
+  else
+    if R.IsEmpty then
+      exit(False);
   if L.VertexCount <> R.VertexCount then
     exit(False);
   if L.EdgeCount <> R.EdgeCount then
     exit(False);
-  if not L.FindFundamentalCyclesLen(fcL) then
-    Result := not R.FindFundamentalCyclesLen(fcR)
-  else
-    begin
-      if not R.FindFundamentalCyclesLen(fcR) then
-        exit(False);
-      if fcL.Count <> fcR.Count then
-        exit(False);
-      for I := 0 to Pred(fcL.Count) do
-        if fcL[I] <> fcR[I] then
-          exit(False);
-      Result := True;
-    end
+  L.FindFundamentalCyclesLen(fcL);
+  R.FindFundamentalCyclesLen(fcR);
+  if fcL.Count <> fcR.Count then
+    exit(False);
+  for I := 0 to Pred(fcL.Count) do
+    if fcL[I] <> fcR[I] then
+      exit(False);
+  Result := True;
+end;
+
+constructor TGSimpleGraph.Create;
+begin
+  inherited;
+  FConnectedValid := True;
+end;
+
+constructor TGSimpleGraph.Create(aCapacity: SizeInt);
+begin
+  inherited Create(aCapacity);
+  FConnectedValid := True;
 end;
 
 procedure TGSimpleGraph.Clear;
@@ -1098,17 +1137,22 @@ begin
   inherited;
   FCompCount := 0;
   FConnected := False;
-  FConnectedValid := False;
+  FConnectedValid := True;
 end;
 
 function TGSimpleGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FindOrAdd(aVertex, aIndex);
-  if Result then
+  if not Result then
+    exit;
+  if ConnectedValid then
     begin
-      FNodeList[aIndex].Tag := -1;
-      FConnectedValid := False;
-    end;
+      FNodeList[aIndex].Tag := FCompCount;
+      Inc(FCompCount);
+      FConnected := FCompCount = 1;
+    end
+  else
+    FNodeList[aIndex].Tag := FCompCount;
 end;
 
 function TGSimpleGraph.AddVertex(constref aVertex: TVertex): Boolean;
@@ -1339,7 +1383,7 @@ begin
   Result := 0;
   if VertexCount < 2 then
     exit;
-  if ConnectedValid and Connected then
+  if SeparateCount < 2 then
     exit;
   Result := MakeConnected(aOnAddEdge);
 end;
@@ -1355,11 +1399,8 @@ begin
   CheckIndexRange(aDst);
   if aSrc = aDst then
     exit(True);
-  //if ConnectedValid then
-  //  exit(FNodeList[aSrc].Tag = FNodeList[aDst].Tag);
-  //Result := CheckPathExists(aSrc, aDst);
   if SeparateCount > 1 then
-    Result := FNodeList[aSrc].Tag = FNodeList[aDst].Tag
+    Result := SeparateTag(aSrc) = SeparateTag(aDst)
   else
     Result := True;
 end;
@@ -1372,10 +1413,7 @@ end;
 function TGSimpleGraph.SeparateIndexI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
-  if SeparateCount > 1 then
-    Result := FNodeList[aIndex].Tag
-  else
-    Result := 0;
+  Result := SeparateTag(aIndex);
 end;
 
 function TGSimpleGraph.SeparatePop(constref aVertex: TVertex): SizeInt;
@@ -1387,7 +1425,7 @@ function TGSimpleGraph.SeparatePopI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   if SeparateCount > 1 then
-    Result := CountPop(FNodeList[aIndex].Tag)
+    Result := CountPop(SeparateTag(aIndex))
   else
     Result := VertexCount;
 end;
@@ -1479,11 +1517,9 @@ end;
 
 function TGSimpleGraph.FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
 begin
-  if not Connected then
-    exit(False);
   if IsTree then
     exit(False);
-  SearchForFundamentalsCycles(0, aCycles);
+  SearchForFundamentalsCycles(aCycles);
   if aCycles.Count <> CyclomaticNumber then
     raise ELGraphError.Create(SEGrapInconsist);
   TIntArrayVectorHelper.Sort(aCycles, @CmpIntArrayLen);
