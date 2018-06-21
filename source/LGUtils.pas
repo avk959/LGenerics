@@ -103,7 +103,7 @@ type
 
   { TGAutoRef: the simplest way to get a class instance with limited lifetime;
       instance will be destroyed automatically when it leaves the scope;
-      class T must have default constructor without parameters }
+      class T must provide default constructor without parameters }
   TGAutoRef<T: class> = record
   private
     FInstance: T;
@@ -485,11 +485,12 @@ const
   MAX_POSITIVE_POW2 = Succ(High(SizeInt) shr 1);
 
   { returns number of significant bits of aValue }
-  function NSB(aValue: SizeUInt): SizeInt; inline;
-  function IsTwoPower(aValue: SizeUInt): Boolean; inline;
+  function  NSB(aValue: SizeUInt): SizeInt; inline;
+  function  IsTwoPower(aValue: SizeUInt): Boolean; inline;
   { warning: if aValue > MAX_POSITIVE_POW2 then function will return wrong result }
-  function RoundUpTwoPower(aValue: SizeInt): SizeInt;
-  function NextRandomBoolean: Boolean; inline;
+  function  RoundUpTwoPower(aValue: SizeInt): SizeInt;
+  function  NextRandomBoolean: Boolean; inline;
+  procedure RandomizeBoolean; inline;
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -529,9 +530,18 @@ begin
 end;
 {$POP}
 
+var
+  BooleanSeed: DWord = 0;
+
 function NextRandomBoolean: Boolean;
 begin
-  Result := Odd(Random(Pred(High(Integer))));
+  BooleanSeed := BooleanSeed * DWord(1103515245) + DWord(12345);
+  Result := Odd(BooleanSeed shr 16);
+end;
+
+procedure RandomizeBoolean;
+begin
+  BooleanSeed := DWord(GetTickCount64);
 end;
 
 { TGOptional }
