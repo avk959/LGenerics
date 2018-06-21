@@ -3509,13 +3509,17 @@ end;
 procedure TGLiteChainHashTable.RemoveAt(constref aPos: TSearchResult);
 begin
   if (aPos.Index >= 0) and (aPos.Index < Count) then
-    DoRemove(aPos);
+    DoRemove(aPos)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aPos.Index]);
 end;
 
 procedure TGLiteChainHashTable.RemoveIndex(aIndex: SizeInt);
 begin
   if (aIndex >= 0) and (aIndex < Count) then
-    DoRemoveIndex(aIndex);
+    DoRemoveIndex(aIndex)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 { TGLiteIntHashTable.TEnumerator }
