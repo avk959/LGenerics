@@ -39,12 +39,12 @@ type
 
   TSortOrder = LGUtils.TSortOrder;
 
-  { TGSimpleDiGraph is simple sparse directed graph based on adjacency lists;
-      functor TVertexEqRel must provide:
+  { TGSimpleDiGraph implements simple sparse directed graph based on adjacency lists;
+
+      functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleDiGraph<TVertex, TEdgeData, TVertexEqRel> = class(
-    specialize TGCustomGraph<TVertex, TEdgeData, TVertexEqRel>)
+  generic TGSimpleDiGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   public
   type
     TReachabilityMatrix = record
@@ -136,19 +136,19 @@ type
 
   THandle = LGUtils.THandle;
 
-  { TGWeightedDiGraph: simple sparse directed weighed graph based on adjacency lists;
+  { TGWeightedDiGraph implements simple sparse directed weighted graph based on adjacency lists;
 
-      functor TVertexEqRel must provide:
+      functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
 
-      TEdgeData MUST have field/property/function Weight: TWeight;
+      TEdgeData must provide field/property/function Weight: TWeight;
 
       TWeight must have defined comparision operators and properties MinValue, MaxValue,
       which used as infinity weight values;
       Default(TWeight) used as zero weight value }
-  generic TGWeightedDiGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class(
-     specialize TGSimpleDiGraph<TVertex, TEdgeData, TVertexEqRel>)
+  generic TGWeightedDiGraph<TVertex, TWeight, TEdgeData, TEqRel> = class(
+     specialize TGSimpleDiGraph<TVertex, TEdgeData, TEqRel>)
   public
   type
     TWeightArray = array of TWeight;

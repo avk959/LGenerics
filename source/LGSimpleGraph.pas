@@ -37,7 +37,7 @@ uses
   LGStrConst;
 
 type
-  { TGSimpleGraph: simple sparse undirected graph based on adjacency lists;
+  { TGSimpleGraph implements simple sparse undirected graph based on adjacency lists;
 
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -268,13 +268,13 @@ type
 
   THandle = LGUtils.THandle;
 
-  { TGWeightedGraph: simple sparse undirected weighed graph based on adjacency lists;
+  { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
 
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
 
-      TEdgeData MUST provide field/property/function Weight: TWeight;
+      TEdgeData must provide field/property/function Weight: TWeight;
 
       TWeight must have defined comparision operators and properties MinValue, MaxValue,
       which used as infinity weight values;
