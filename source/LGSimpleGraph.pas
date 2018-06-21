@@ -2161,7 +2161,7 @@ end;
 function TGWeightedGraph.KruskalMst(out aTotalWeight: TWeight): TIntArray;
 var
   e: TEdgeArray;
-  I, s, d, Total: SizeInt;
+  I, Total: SizeInt;
   Dsu: TDisjointSetUnion;
 begin
   e := CreateEdgeArray;
@@ -2172,16 +2172,14 @@ begin
   Dsu.Size := Total;
   aTotalWeight := ZeroWeight;
   for I := 0 to System.High(e) do
-    begin
-      s := e[I].Source;
-      d := e[I].Destination;
-      if Dsu.InDiffSets(s, d)  then
-        begin
-          aTotalWeight += e[I].Weight;
-          Result[d] := s;
-          Dsu.Merge(s, d);
-        end;
-    end;
+    if Dsu.Merged(e[I].Source, e[I].Destination)  then
+      begin
+        Dec(Total);
+        aTotalWeight += e[I].Weight;
+        Result[e[I].Destination] := e[I].Source;
+        if Total = 0 then
+          break;
+      end;
 end;
 
 function TGWeightedGraph.PrimMst(out aTotalWeight: TWeight): TIntArray;
