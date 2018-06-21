@@ -39,11 +39,10 @@ uses
 type
   { TGSimpleGraph: simple sparse undirected graph based on adjacency lists;
 
-      functor TVertexEqRel must provide:
+      functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleGraph<TVertex, TEdgeData, TVertexEqRel> = class(specialize TGCustomGraph
-    <TVertex, TEdgeData, TVertexEqRel>)
+  generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
     TDistinctEdgeEnumerator = record
@@ -203,10 +202,10 @@ type
   end;
 
   { TGChart: simple outline;
-      functor TVertexEqRel must provide:
+      functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGChart<TVertex, TVertexEqRel> = class(specialize TGSimpleGraph<TVertex, TEmptyRec, TVertexEqRel>)
+  generic TGChart<TVertex, TEqRel> = class(specialize TGSimpleGraph<TVertex, TEmptyRec, TEqRel>)
   protected
     procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
     procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
@@ -271,17 +270,17 @@ type
 
   { TGWeightedGraph: simple sparse undirected weighed graph based on adjacency lists;
 
-      functor TVertexEqRel must provide:
+      functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
 
-      TEdgeData MUST have field/property/function Weight: TWeight;
+      TEdgeData MUST provide field/property/function Weight: TWeight;
 
       TWeight must have defined comparision operators and properties MinValue, MaxValue,
       which used as infinity weight values;
       Default(TWeight) used as zero weight value }
-  generic TGWeightedGraph<TVertex, TWeight, TEdgeData, TVertexEqRel> = class(
-     specialize TGSimpleGraph<TVertex, TEdgeData, TVertexEqRel>)
+  generic TGWeightedGraph<TVertex, TWeight, TEdgeData, TEqRel> = class(
+    specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>)
   public
   type
     TWeightArray = array of TWeight;
