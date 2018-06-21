@@ -128,10 +128,10 @@ type
 
 
   { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
-      functor TVertexEqRel must provide:
+      functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGCustomGraph<TVertex, TEdgeData, TVertexEqRel> = class abstract
+  generic TGCustomGraph<TVertex, TEdgeData, TEqRel> = class abstract
   public
   type
     TEdgeDataType = TEdgeData;
@@ -563,6 +563,8 @@ type
     function  InDiffSets(L, R: SizeInt): Boolean; inline;
   { if L and R related to the different subsets, these subsets will be merged into one with a single Tag }
     procedure Merge(L, R: SizeInt);
+  { returns True and merges L and R, if L and R related to the different subsets, False otherwise }
+    function  Merged(L, R: SizeInt): Boolean;
     property  Size: SizeInt read GetSize write SetSize;
   end;
 
@@ -1307,11 +1309,11 @@ var
   I: SizeInt;
 begin
   CheckIndexRange(aIndex);
-  if TVertexEqRel.Equal(aValue, FNodeList[aIndex].Vertex) then
+  if TEqRel.Equal(aValue, FNodeList[aIndex].Vertex) then
     exit;
   RemoveFromChain(aIndex);
   //add to new chain
-  FNodeList[aIndex].Hash := TVertexEqRel.HashCode(aValue);
+  FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
   FNodeList[aIndex].Vertex := aValue;
   I := FNodeList[aIndex].Hash and System.High(FNodeList);
   FNodeList[aIndex].Next := FChainList[I];
@@ -1430,11 +1432,11 @@ function TGCustomGraph.Find(constref v: TVertex): SizeInt;
 var
   h: SizeInt;
 begin
-  h := TVertexEqRel.HashCode(v);
+  h := TEqRel.HashCode(v);
   Result := FChainList[h and System.High(FChainList)];
   while Result <> NULL_INDEX do
     begin
-      if (FNodeList[Result].Hash = h) and TVertexEqRel.Equal(FNodeList[Result].Vertex, v) then
+      if (FNodeList[Result].Hash = h) and TEqRel.Equal(FNodeList[Result].Vertex, v) then
         exit;
       Result := FNodeList[Result].Next;
     end;
@@ -1445,7 +1447,7 @@ begin
   Result := FChainList[aHash and System.High(FChainList)];
   while Result <> NULL_INDEX do
     begin
-      if (FNodeList[Result].Hash = aHash) and TVertexEqRel.Equal(FNodeList[Result].Vertex, v) then
+      if (FNodeList[Result].Hash = aHash) and TEqRel.Equal(FNodeList[Result].Vertex, v) then
         exit;
       Result := FNodeList[Result].Next;
     end;
@@ -1455,7 +1457,7 @@ function TGCustomGraph.FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Bool
 var
   h: SizeInt;
 begin
-  h := TVertexEqRel.HashCode(v);
+  h := TEqRel.HashCode(v);
   if VertexCount > 0 then
     aIndex := Find(v, h)
   else
@@ -2241,11 +2243,25 @@ procedure TDisjointSetUnion.Merge(L, R: SizeInt);
 begin
   L := Tag(L);
   R := Tag(R);
-  if Odd(Random(4)) then // random selection
+  if NextRandomBoolean then // random selection
     FList[L] := R
   else
     FList[R] := L;
 end;
+
+function TDisjointSetUnion.Merged(L, R: SizeInt): Boolean;
+begin
+  L := Tag(L);
+  R := Tag(R);
+  if L = R then
+    exit(False);
+  if NextRandomBoolean then // random selection
+    FList[L] := R
+  else
+    FList[R] := L;
+  Result := True;
+end;
+
 
 { TBitVector }
 
