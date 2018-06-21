@@ -69,7 +69,8 @@ type
     class function Down(const aFrom, aDownTo: T; const aStep: T = 1): TDownRange; static; inline;
   end;
 
-  { TGCustomTimSort:  base ancestor class }
+  { TGCustomTimSort: base ancestor class;
+    Free Pascal port of java timsort implementation }
   generic TGCustomTimSort<T> = class
   public
   type
@@ -81,8 +82,6 @@ type
     //to supress unnecessary refcounting
     TFake      = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
     TFakeArray = array of TFake;
-
-    { TTimSortBase }
 
     TTimSortBase = object
     protected
