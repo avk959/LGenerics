@@ -487,8 +487,9 @@ const
   { returns number of significant bits of aValue }
   function NSB(aValue: SizeUInt): SizeInt; inline;
   function IsTwoPower(aValue: SizeUInt): Boolean; inline;
-  { note: if aValue > Succ(SizeInt.MaxValue shr 1) then function will return wrong result }
+  { warning: if aValue > MAX_POSITIVE_POW2 then function will return wrong result }
   function RoundUpTwoPower(aValue: SizeInt): SizeInt;
+  function NextRandomBoolean: Boolean; inline;
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -527,6 +528,11 @@ begin
     Result := 2;
 end;
 {$POP}
+
+function NextRandomBoolean: Boolean;
+begin
+  Result := Odd(Random(Pred(High(Integer))));
+end;
 
 { TGOptional }
 
