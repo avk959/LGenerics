@@ -2255,7 +2255,7 @@ begin
   R := Tag(R);
   if L = R then
     exit(False);
-  if NextRandomBoolean then // random selection
+  if NextRandomBoolean then
     FList[L] := R
   else
     FList[R] := L;
