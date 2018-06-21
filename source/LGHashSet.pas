@@ -492,15 +492,18 @@ type
     function  IndexOf(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
     function  NonContains(constref aValue: T): Boolean; inline;
-  { returns True if element added }
-    function  Add(constref aValue: T): Boolean;
+  { returns index of the added element, -1 if such element already exists }
+    function  Add(constref aValue: T): SizeInt;
   { destroys subsets }
     procedure Reset;
-  { values related to the same set will have the same Tag }
-    function  Tag(constref aValue: T): SizeInt;
-    function  InSameSet(constref L, R: T): Boolean;
+  { values related to the same subset will have the same Tag }
+    function  Tag(constref aValue: T): SizeInt; inline;
+    function  TagI(aIndex: SizeInt): SizeInt; inline;
+    function  InSameSet(constref L, R: T): Boolean; inline;
+    function  InSameSetI(L, R: SizeInt): Boolean; inline;
     function  InDiffSets(constref L, R: T): Boolean; inline;
-  { if L and R related to the different sets, these sets will be merged into one with a single Tag }
+    function  InDiffSetsI(L, R: SizeInt): Boolean; inline;
+  { if L and R related to the different subsets, these subsets will be merged into one with a single Tag }
     procedure Merge(constref L, R: T);
     procedure MergeI(L, R: SizeInt);
     property  Count: SizeInt read GetCount;
@@ -1849,7 +1852,8 @@ var
 begin
   OldCapacity := Capacity;
   FTable.EnsureCapacity(aValue);
-  ExpandDsu;
+  if Capacity > OldCapacity then
+    ExpandDsu;
 end;
 
 function TGDisjointSetUnion.IndexOf(constref aValue: T): SizeInt;
@@ -1867,19 +1871,20 @@ begin
   Result := IndexOf(aValue) < 0;
 end;
 
-function TGDisjointSetUnion.Add(constref aValue: T): Boolean;
+function TGDisjointSetUnion.Add(constref aValue: T): SizeInt;
 var
-  I, OldCapacity: SizeInt;
+  OldCapacity: SizeInt;
   e: PEntry;
 begin
   OldCapacity := Capacity;
-  Result := not FTable.FindOrAdd(aValue, e, I);
-  if Result then
+  if not FTable.FindOrAdd(aValue, e, Result) then
     begin
       e^.Key := aValue;
       if Capacity > OldCapacity then
         ExpandDsu;
-    end;
+    end
+  else
+    Result := -1;
 end;
 
 procedure TGDisjointSetUnion.Reset;
@@ -1891,24 +1896,36 @@ begin
 end;
 
 function TGDisjointSetUnion.Tag(constref aValue: T): SizeInt;
-var
-  v: SizeInt;
 begin
-  v := IndexOf(aValue);
-  if v >= 0 then
-    Result := GetTag(v)
+  Result := TagI(IndexOf(aValue));
+end;
+
+function TGDisjointSetUnion.TagI(aIndex: SizeInt): SizeInt;
+begin
+  if (aIndex >= 0) and (aIndex < Count) then
+    Result := GetTag(aIndex)
   else
-    raise Exception.Create(SEKeyNotFound);
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGDisjointSetUnion.InSameSet(constref L, R: T): Boolean;
 begin
-  Result := Tag(L) = Tag(R);
+  Result := InSameSetI(IndexOf(L), IndexOf(R));
+end;
+
+function TGDisjointSetUnion.InSameSetI(L, R: SizeInt): Boolean;
+begin
+  Result := TagI(L) = TagI(R);
 end;
 
 function TGDisjointSetUnion.InDiffSets(constref L, R: T): Boolean;
 begin
-  Result := Tag(L) <> Tag(R);
+  Result := InDiffSetsI(IndexOf(L), IndexOf(R));
+end;
+
+function TGDisjointSetUnion.InDiffSetsI(L, R: SizeInt): Boolean;
+begin
+  Result := TagI(L) <> TagI(R);
 end;
 
 procedure TGDisjointSetUnion.Merge(constref L, R: T);
@@ -1925,8 +1942,8 @@ end;
 
 procedure TGDisjointSetUnion.MergeI(L, R: SizeInt);
 begin
-  L := GetTag(L);
-  R := GetTag(R);
+  L := TagI(L);
+  R := TagI(R);
   if Odd(Random(4)) then
     FDsu[L] := R
   else
