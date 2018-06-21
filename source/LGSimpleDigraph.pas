@@ -861,7 +861,15 @@ begin
   if IsEmpty then
     exit(0);
   if VertexCount = 1 then
-    exit(1);
+    begin
+      aCompIds := [0];
+      exit(1);
+    end;
+  if ReachabilityValid then
+    begin
+      aCompIds := System.Copy(FReachabilityMatrix.FIds);
+      exit(FReachabilityMatrix.Size);
+    end;
   Result := SearchForStrongComponents(aCompIds);
 end;
 
