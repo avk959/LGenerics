@@ -3870,7 +3870,7 @@ class function TGLiteComparablePairHeapMin.NodeMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
     if R <> nil then
-      if L^.Data < R^.Data then
+      if L^.Data <= R^.Data then
         begin
           L^.AddChild(R);
           Result := L;
