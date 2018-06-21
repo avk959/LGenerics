@@ -557,11 +557,11 @@ type
   public
     procedure Clear; inline;
     procedure Reset;
-  { values related to the same set will have the same Tag }
+  { values related to the same subset will have the same Tag }
     function  Tag(aValue: SizeInt): SizeInt;
     function  InSameSet(L, R: SizeInt): Boolean; inline;
     function  InDiffSets(L, R: SizeInt): Boolean; inline;
-  { if L and R related to the different sets, these sets will be merged into one with a single Tag }
+  { if L and R related to the different subsets, these subsets will be merged into one with a single Tag }
     procedure Merge(L, R: SizeInt);
     property  Size: SizeInt read GetSize write SetSize;
   end;

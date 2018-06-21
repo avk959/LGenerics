@@ -249,7 +249,7 @@ type
   end;
 
   { TStrChart
-    note: SaveToStream limitation for max string length = High(SmallInt) }
+    warning: SaveToStream limitation for max string length = High(SmallInt) }
   TStrChart = class(specialize TGChart<string, string>)
   protected
     procedure WriteVertex(aStream: TStream; constref aValue: string);
