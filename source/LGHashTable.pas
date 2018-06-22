@@ -87,7 +87,7 @@ type
     procedure Clear; virtual; abstract;
     procedure EnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure TrimToFit; virtual; abstract;
-    //return True if aKey found, otherwise insert garbage entry and return False;
+  { return True if aKey found, otherwise insert garbage entry and return False }
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; virtual;abstract; overload;
     function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry; virtual; abstract;
     function  Remove(constref aKey: TKey): Boolean; virtual; abstract;
@@ -337,7 +337,7 @@ type
     procedure TrimToFit; override;
     function  GetEnumerator: TEntryEnumerator; override;
     function  GetReverseEnumerator: TReverseEnumerator;
-    //return True if aKey found, otherwise insert empty Entry and return False;
+  { return True if aKey found, otherwise insert empty Entry and return False }
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
     function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry; override;
     function  Remove(constref aKey: TKey): Boolean; override;
@@ -428,7 +428,7 @@ type
     procedure EnsureCapacity(aValue: SizeInt); override;
     procedure TrimToFit; override;
     function  GetEnumerator: TEntryEnumerator; override;
-    //return True if aKey found, otherwise insert empty Entry and return False;
+  { returns True if aKey found, otherwise insert empty Entry and return False }
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean; override;
     function  Find(constref aKey: TKey; out aPos: TSearchResult): PEntry; override;
     function  Add(constref aKey: TKey): PNode; inline;
@@ -613,7 +613,7 @@ type
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    //return True if aKey found, otherwise insert garbage entry and return False;
+  { returns True if aKey found, otherwise insert garbage entry and return False }
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
     function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
     function  Remove(constref aKey: TKey): Boolean;
@@ -766,7 +766,7 @@ type
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
     function  Contains(aKey: TKey): Boolean;
-    //return True if aKey found, otherwise insert garbage entry and return False;
+  { returns True if aKey found, otherwise insert garbage entry and return False }
     function  FindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
     function  Find(aKey: TKey; out aPos: SizeInt): PEntry;
     function  FindFirstKey(out aKey: TKey): Boolean;
