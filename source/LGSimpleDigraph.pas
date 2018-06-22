@@ -1083,7 +1083,7 @@ end;
 
 function TGWeightedDiGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
 begin
-  Result := THelper.KruskalMst(Self, CreateEdgeArray, aTotalWeight);
+  Result := THelper.KruskalMst(Self, @CreateEdgeArray, aTotalWeight);
 end;
 
 function TGWeightedDiGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;

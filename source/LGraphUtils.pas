@@ -679,14 +679,15 @@ type
       constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
     end;
 
-    TGraph       = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
-    TEstimate    = function(constref aSrc, aDst: TVertex): TWeight;
-    TWeightArray = array of TWeight;
-    TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
-    TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
-    TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
-    TEdgeArray   = array of TWeightEdge;
+    TGraph        = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TEstimate     = function(constref aSrc, aDst: TVertex): TWeight;
+    TWeightArray  = array of TWeight;
+    TEdgeHelper   = specialize TGComparableArrayHelper<TWeightEdge>;
+    TPairingHeap  = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+    TBinHeap      = specialize TGBinHeapMin<TWeightItem>;
+    TAStarHeap    = specialize TGLiteComparablePairHeapMin<TRankItem>;
+    TEdgeArray    = array of TWeightEdge;
+    TGetEdgeArray = function: TEdgeArray of object;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
@@ -696,7 +697,7 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray; static;
-    class function  KruskalMst(g: TGraph; wea: TEdgeArray; out aTotalWeight: TWeight): TIntArray; static;
+    class function  KruskalMst(g: TGraph; f: TGetEdgeArray; out aTotalWeight: TWeight): TIntArray; static;
     class function  PrimMst(g: TGraph; out aTotalWeight: TWeight): TIntArray; static;
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
@@ -2958,25 +2959,22 @@ var
   aWeight := InfiniteWeight;
 end;
 
-class function TGWeightedHelper.KruskalMst(g: TGraph; wea: TEdgeArray; out aTotalWeight: TWeight): TIntArray;
+class function TGWeightedHelper.KruskalMst(g: TGraph; f: TGetEdgeArray; out aTotalWeight: TWeight): TIntArray;
 var
-  I, Total: SizeInt;
+  e: TWeightEdge;
+  Edges: TEdgeArray;
   Dsu: TDisjointSetUnion;
 begin
+  Edges := f();
+  TEdgeHelper.Sort(Edges);
   Result := g.CreateIntArray;
-  Total := g.VertexCount;
-  TEdgeHelper.Sort(wea);
-  System.SetLength(Result, Total);
-  Dsu.Size := Total;
+  Dsu.Size := g.VertexCount;
   aTotalWeight := ZeroWeight;
-  for I := 0 to System.High(wea) do
-    if Dsu.Merged(wea[I].Source, wea[I].Destination)  then
+  for e in Edges do
+    if Dsu.Merged(e.Source, e.Destination)  then
       begin
-        Dec(Total);
-        aTotalWeight += wea[I].Weight;
-        Result[wea[I].Destination] := wea[I].Source;
-        if Total = 0 then
-          break;
+        Result[e.Destination] := e.Source;
+        aTotalWeight += e.Weight;
       end;
 end;
 
