@@ -40,7 +40,7 @@ end;
 
 procedure TMyClass.IsHere;
 begin
-  if FCreated then
+  if (Self <> nil) and FCreated then
     WriteLn(' yes')
   else
     WriteLn(' no');
