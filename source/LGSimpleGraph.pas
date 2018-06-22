@@ -272,8 +272,6 @@ type
     function  Clone: TStrChart;
   end;
 
-  THandle = LGUtils.THandle;
-
   { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
 
       functor TEqRel must provide:
