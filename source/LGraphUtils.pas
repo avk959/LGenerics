@@ -479,7 +479,7 @@ type
     function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
   { returns adjacency matrix;
-    warning: maximal matrix size limited, see MaxBitMatrixSize }
+    warning: maximum matrix size limited, see MaxBitMatrixSize }
     function  CreateAdjacencyMatrix: TAdjacencyMatrix;
   { returns count of visited vertices; OnAccept calls after vertex visite, OnNext calls after next vertex found;
     if TOnAccept returns False then traversal stops }
