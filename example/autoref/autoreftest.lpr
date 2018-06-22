@@ -13,6 +13,7 @@ type
     FCreated: Boolean;
   public
     constructor Create;
+    destructor Destroy; override;
     procedure IsHere;
   end;
 
@@ -20,6 +21,12 @@ type
 constructor TMyClass.Create;
 begin
   FCreated := True;
+end;
+
+destructor TMyClass.Destroy;
+begin
+  WriteLn(' destroyed');
+  inherited;
 end;
 
 procedure Test1;
@@ -41,9 +48,9 @@ end;
 procedure TMyClass.IsHere;
 begin
   if (Self <> nil) and FCreated then
-    WriteLn(' yes')
+    WriteLn(' created')
   else
-    WriteLn(' no');
+    WriteLn(' error!');
 end;
 
 begin

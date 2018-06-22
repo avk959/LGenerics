@@ -464,7 +464,6 @@ begin
     exit;
   Visited.Size := VertexCount;
   FCompCount := VertexCount;
-  {%H-}Queue.EnsureCapacity(VertexCount);
   ResetTags;
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then

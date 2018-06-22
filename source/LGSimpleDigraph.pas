@@ -1009,7 +1009,7 @@ var
   TopoOrd: TIntArray;
   I, J, d: SizeInt;
 begin
-  TopoOrd := TopologicalSort(soDesc);
+  TopoOrd := TopologicalSort(soDesc); //todo: it is possible to do it in one pass
   Result := CreateIntArray(0);
   for I := 1 to Pred(VertexCount) do
     for J := 0 to Pred(I) do
