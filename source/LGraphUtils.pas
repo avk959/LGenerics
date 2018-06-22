@@ -500,10 +500,10 @@ type
     -1 if the path does not exist }
     function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
     function  ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
-  { returns an array containing in the corresponding components the length of shortest path from aRoot
+  { returns an array containing in the corresponding components the length of the shortest path from aSrc
     (in sense 'edges count'), or -1 if it unreachable }
-    function  ShortestPathsMap(constref aRoot: TVertex): TIntArray; inline;
-    function  ShortestPathsMapI(aRoot: SizeInt = 0): TIntArray;
+    function  ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
+    function  ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
   { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
@@ -767,7 +767,7 @@ end;
 
 function TGCustomGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := FMatrix[aSrc, aDst];
+  Result := FMatrix{%H-}[aSrc, aDst];
 end;
 
 { TGCustomGraph.TAdjList.TEnumerator }
@@ -1478,7 +1478,7 @@ function TGCustomGraph.Remove(constref v: TVertex): Boolean;
 var
   ToRemove: SizeInt;
 begin
-  if NonEmpty then
+  if {%H-}NonEmpty then
     begin
       ToRemove := Find(v);
       Result := ToRemove >= 0;
@@ -2064,28 +2064,28 @@ begin
   Result := -1;
 end;
 
-function TGCustomGraph.ShortestPathsMap(constref aRoot: TVertex): TIntArray;
+function TGCustomGraph.ShortestPathsMap(constref aSrc: TVertex): TIntArray;
 begin
-  Result := ShortestPathsMapI(IndexOf(aRoot));
+  Result := ShortestPathsMapI(IndexOf(aSrc));
 end;
 
-function TGCustomGraph.ShortestPathsMapI(aRoot: SizeInt): TIntArray;
+function TGCustomGraph.ShortestPathsMapI(aSrc: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
   Next: SizeInt;
 begin
-  CheckIndexRange(aRoot);
+  CheckIndexRange(aSrc);
   Result := CreateIntArray;
-  Result[aRoot] := 0;
+  Result[aSrc] := 0;
   {%H-}Queue.EnsureCapacity(VertexCount);
   repeat
-    for Next in AdjVerticesI(aRoot) do
+    for Next in AdjVerticesI(aSrc) do
       if Result[Next] = -1 then
         begin
           Queue.Enqueue(Next);
-          Result[Next] := Succ(Result[aRoot]);
+          Result[Next] := Succ(Result[aSrc]);
         end;
-  until not Queue.TryDequeue(aRoot);
+  until not Queue.TryDequeue(aSrc);
 end;
 
 function TGCustomGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntArray;
