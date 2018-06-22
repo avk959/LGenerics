@@ -66,8 +66,9 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
-    function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): SizeInt;
-    function  TopoSort(aIndex: SizeInt): TIntArray;
+    function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+    function  CycleExists: Boolean;
+    function  TopoSort: TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
   public
@@ -111,8 +112,6 @@ type
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCircuit: Boolean;
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
-    function  IsDag(constref aSource: TVertex): Boolean; inline;
-    function  IsDagI(aSource: SizeInt): Boolean;
   { returns count of the strong connected components; the corresponding element of the
     aCompIds will contain its component index(used Gabow's algotitm) }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
@@ -124,16 +123,21 @@ type
     function  CreateReachabilityMatrix: TReachabilityMatrix;
   { returns reachability matrix using pre-calculated results of FindStrongComponents }
     function  CreateReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
-  { returns array of vertex indices in topological order staring from aRoot, without any acyclic checks }
-    function  TopologicalSort(constref aRoot: TVertex; aOrder: TSortOrder = soAsc): TIntArray; inline;
-    function  TopologicalSortI(aRoot: SizeInt; aOrder: TSortOrder = soAsc): TIntArray;
+  { returns array of vertex indices in topological order, without any acyclic checks }
+    function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
+    function  IsDag: Boolean;
+  { for an acyclic graph returns an array containing in the corresponding components the length of
+    the longest path from aSrc to it (in sense 'edges count'), or -1 if it unreachable from aSrc }
+    function  DagLongestPathsMap(constref aSrc: TVertex): TIntArray; inline;
+    function  DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
+  { for an acyclic graph returns an array containing in the corresponding components the length of
+    the longest path starting with aSrc(in sense 'edges count') }
+    function  DagLongesPaths: TIntArray;
 
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
     property  ReachabilityValid: Boolean read ClosureValid;
   end;
-
-  THandle = LGUtils.THandle;
 
   { TGWeightedDiGraph implements simple sparse directed weighted graph based on adjacency lists;
 
@@ -316,7 +320,7 @@ begin
     Result[I]^.Assign(FNodeList[I].AdjList);
 end;
 
-function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): SizeInt;
+function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
@@ -347,41 +351,84 @@ begin
           if (PreOrd[aRoot] >= PreOrd[Next]) and InStack[Next] then
             begin
               aCycle := TreeToCycle(Parents, Next, aRoot);
-              exit(Counter);
+              exit(True);
             end;
       end
     else
       InStack[Stack.Pop] := False;
-  Result := Counter;
+  Result := False;
 end;
 
-function TGSimpleDiGraph.TopoSort(aIndex: SizeInt): TIntArray;
+function TGSimpleDiGraph.CycleExists: Boolean;
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  InStack: TBitVector;
+  PreOrd: TIntArray;
+  Counter, I, Curr, Next: SizeInt;
+begin
+  AdjEnums := CreateAdjEnumArray;
+  PreOrd := CreateIntArray;
+  InStack.Size := VertexCount;
+  Counter := 0;
+  for I := 0 to Pred(VertexCount) do
+    if PreOrd[I] = -1 then
+      begin
+        PreOrd[I] := Counter;
+        Inc(Counter);
+        {%H-}Stack.Push(I);
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[Curr].MoveNext then
+            begin
+              Next := AdjEnums[Curr].Current;
+              if PreOrd[Next] = -1 then
+                begin
+                  PreOrd[Next] := Counter;
+                  InStack[Next] := True;
+                  Inc(Counter);
+                  Stack.Push(Next);
+                end
+              else
+                if (PreOrd[Curr] >= PreOrd[Next]) and InStack[Next] then
+                  exit(True);
+            end
+          else
+            InStack[Stack.Pop] := False;
+      end;
+  Result := False;
+end;
+
+function TGSimpleDiGraph.TopoSort: TIntArray;
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
   Visited: TBitVector;
-  Counter, Next: SizeInt;
+  Counter, I, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Result := CreateIntArray;
   Visited.Size := VertexCount;
   Counter := Pred(VertexCount);
-  Visited[aIndex] := True;
-  {%H-}Stack.Push(aIndex);
-  while Stack.TryPeek(aIndex) do
-    if AdjEnums[aIndex].MoveNext then
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
       begin
-        Next := AdjEnums[aIndex].Current;
-        if not Visited[Next] then
-          begin
-            Visited[Next] := True;
-            Stack.Push(Next);
-          end;
-      end
-    else
-      begin
-        Result[Counter] := Stack.Pop;
-        Dec(Counter);
+        Visited[I] := True;
+        {%H-}Stack.Push(I);
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[Curr].MoveNext then
+            begin
+              Next := AdjEnums[Curr].Current;
+              if not Visited[Next] then
+                begin
+                  Visited[Next] := True;
+                  Stack.Push(Next);
+                end;
+            end
+          else
+            begin
+              Result[Counter] := Stack.Pop;
+              Dec(Counter);
+            end;
       end;
 end;
 
@@ -825,25 +872,6 @@ begin
     TIntVectorHelper.Reverse(aCircuit);
 end;
 
-function TGSimpleDiGraph.IsDag(constref aSource: TVertex): Boolean;
-begin
-  Result := IsDagI(IndexOf(aSource));
-end;
-
-function TGSimpleDiGraph.IsDagI(aSource: SizeInt): Boolean;
-var
-  Dummy: TIntArray = nil;
-  I: SizeInt;
-begin
-  CheckIndexRange(aSource);
-  if VertexCount = 1 then
-    exit(True);
-  if (FNodeList[aSource].AdjList.Count = 0) or (FNodeList[aSource].Tag <> 0) then
-    exit(False);
-  I := FindCycle(aSource, Dummy);
-  Result := (System.Length(Dummy) = 0) and (I = VertexCount);
-end;
-
 function TGSimpleDiGraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
 begin
   if IsEmpty then
@@ -913,17 +941,66 @@ begin
   Result := GetReachabilityMatrix(aScIds, aScCount);
 end;
 
-function TGSimpleDiGraph.TopologicalSort(constref aRoot: TVertex; aOrder: TSortOrder): TIntArray;
+function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
 begin
-  Result := TopologicalSortI(IndexOf(aRoot), aOrder);
-end;
-
-function TGSimpleDiGraph.TopologicalSortI(aRoot: SizeInt; aOrder: TSortOrder): TIntArray;
-begin
-  CheckIndexRange(aRoot);
-  Result := TopoSort(aRoot);
+  if IsEmpty then
+    exit(nil);
+  Result := TopoSort;
   if aOrder = soDesc then
     TIntHelper.Reverse(Result);
+end;
+
+function TGSimpleDiGraph.IsDag: Boolean;
+var
+  Dummy: TIntArray = nil;
+  I: SizeInt;
+begin
+  if IsEmpty then
+    exit(False);
+  if VertexCount = 1 then
+    exit(True);
+  Result := not CycleExists;
+end;
+
+function TGSimpleDiGraph.DagLongestPathsMap(constref aSrc: TVertex): TIntArray;
+begin
+  Result := DagLongestPathsMapI(IndexOf(aSrc));
+end;
+
+function TGSimpleDiGraph.DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
+var
+  TopoOrd: TIntArray;
+  I, J, d: SizeInt;
+begin
+  CheckIndexRange(aSrc);
+  TopoOrd := TopologicalSort;
+  Result := CreateIntArray;
+  Result[aSrc] := 0;
+  for I := 1 to Pred(VertexCount) do
+    for J := 0 to Pred(I) do
+      if AdjacentI(TopoOrd[J], TopoOrd[I]) then
+        begin
+          d := Succ(Result[TopoOrd[J]]);
+          if (d > 0) and (d > Result[TopoOrd[I]]) then
+            Result[TopoOrd[I]] := d;
+        end;
+end;
+
+function TGSimpleDiGraph.DagLongesPaths: TIntArray;
+var
+  TopoOrd: TIntArray;
+  I, J, d: SizeInt;
+begin
+  TopoOrd := TopologicalSort(soDesc);
+  Result := CreateIntArray(0);
+  for I := 1 to Pred(VertexCount) do
+    for J := 0 to Pred(I) do
+      if AdjacentI(TopoOrd[I], TopoOrd[J]) then
+        begin
+          d := Succ(Result[TopoOrd[J]]);
+          if d > Result[TopoOrd[I]] then
+            Result[TopoOrd[I]] := d;
+        end;
 end;
 
 function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
