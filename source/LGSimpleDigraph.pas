@@ -69,7 +69,7 @@ type
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
     function  TopoSort: TIntArray;
-    function  GetLongestPaths(aSrc: SizeInt): TIntArray;
+    function  GetDagLongestPaths(aSrc: SizeInt): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
   public
@@ -433,7 +433,7 @@ begin
       end;
 end;
 
-function TGSimpleDiGraph.GetLongestPaths(aSrc: SizeInt): TIntArray;
+function TGSimpleDiGraph.GetDagLongestPaths(aSrc: SizeInt): TIntArray;
 var
   Stack: TIntStack;
   AdjEnums: TAdjEnumArray;
@@ -1001,7 +1001,7 @@ end;
 function TGSimpleDiGraph.DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
 begin
   CheckIndexRange(aSrc);
-  Result := GetLongestPaths(aSrc);
+  Result := GetDagLongestPaths(aSrc);
 end;
 
 function TGSimpleDiGraph.DagLongesPaths: TIntArray;
