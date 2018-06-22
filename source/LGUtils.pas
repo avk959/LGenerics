@@ -481,6 +481,9 @@ type
     property  PagesAllocated: SizeInt read FPageCount;
   end;
 
+var
+  BoolRandSeed: DWord = 0;
+
 const
   MAX_POSITIVE_POW2 = Succ(High(SizeInt) shr 1);
 
@@ -490,7 +493,7 @@ const
   { warning: if aValue > MAX_POSITIVE_POW2 then function will return wrong result }
   function  RoundUpTwoPower(aValue: SizeInt): SizeInt;
   function  NextRandomBoolean: Boolean; inline;
-  procedure RandomizeBoolean; inline;
+  procedure RandomizeBoolean;
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -528,21 +531,18 @@ begin
   else
     Result := 2;
 end;
-{$POP}
-
-var
-  BooleanSeed: DWord = 0;
 
 function NextRandomBoolean: Boolean;
 begin
-  BooleanSeed := BooleanSeed * DWord(1103515245) + DWord(12345);
-  Result := Odd(BooleanSeed shr 16);
+  BoolRandSeed := BoolRandSeed * DWord(1103515245) + DWord(12345);
+  Result := Odd(BoolRandSeed shr 16);
 end;
 
 procedure RandomizeBoolean;
 begin
-  BooleanSeed := DWord(GetTickCount64);
+  BoolRandSeed := DWord(GetTickCount64);
 end;
+{$POP}
 
 { TGOptional }
 
