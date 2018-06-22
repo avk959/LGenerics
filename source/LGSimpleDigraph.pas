@@ -69,6 +69,7 @@ type
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
     function  TopoSort: TIntArray;
+    function  GetLongestPaths(aSrc: SizeInt): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
   public
@@ -430,6 +431,36 @@ begin
               Dec(Counter);
             end;
       end;
+end;
+
+function TGSimpleDiGraph.GetLongestPaths(aSrc: SizeInt): TIntArray;
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Visited: TBitVector;
+  d, Curr, Next: SizeInt;
+begin
+  AdjEnums := CreateAdjEnumArray;
+  Result := CreateIntArray;
+  Visited.Size := VertexCount;
+  Visited[aSrc] := True;
+  Result[aSrc] := 0;
+  {%H-}Stack.Push(aSrc);
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[Curr].MoveNext then
+      begin
+        Next := AdjEnums[Curr].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            d := Succ(Result[Curr]);
+            if d > Result[Next] then
+              Result[Next] := d;
+            Stack.Push(Next);
+          end;
+      end
+    else
+      Stack.Pop;
 end;
 
 function TGSimpleDiGraph.SearchForStrongComponents(out aIds: TIntArray): SizeInt;
@@ -968,22 +999,9 @@ begin
 end;
 
 function TGSimpleDiGraph.DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
-var
-  TopoOrd: TIntArray;
-  I, J, d: SizeInt;
 begin
   CheckIndexRange(aSrc);
-  TopoOrd := TopologicalSort;
-  Result := CreateIntArray;
-  Result[aSrc] := 0;
-  for I := 1 to Pred(VertexCount) do
-    for J := 0 to Pred(I) do
-      if AdjacentI(TopoOrd[J], TopoOrd[I]) then
-        begin
-          d := Succ(Result[TopoOrd[J]]);
-          if (d > 0) and (d > Result[TopoOrd[I]]) then
-            Result[TopoOrd[I]] := d;
-        end;
+  Result := GetLongestPaths(aSrc);
 end;
 
 function TGSimpleDiGraph.DagLongesPaths: TIntArray;
