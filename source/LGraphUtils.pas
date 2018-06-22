@@ -631,46 +631,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  generic TGWeightedEdge<TWeight> = record
-    Source,
-    Destination: SizeInt;
-    Weight:  TWeight;
-    class operator = (constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator <>(constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator > (constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator < (constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator >=(constref L, R: TGWeightedEdge): Boolean; inline;
-    class operator <=(constref L, R: TGWeightedEdge): Boolean; inline;
-    constructor Create(s, d: SizeInt; w: TWeight);
-  end;
-
-  generic TGWeightedItem<TWeight> = record
-    Weight: TWeight;
-    Index: SizeInt;
-    class operator = (constref L, R: TGWeightedItem): Boolean; inline;
-    class operator <>(constref L, R: TGWeightedItem): Boolean; inline;
-    class operator > (constref L, R: TGWeightedItem): Boolean; inline;
-    class operator < (constref L, R: TGWeightedItem): Boolean; inline;
-    class operator >=(constref L, R: TGWeightedItem): Boolean; inline;
-    class operator <=(constref L, R: TGWeightedItem): Boolean; inline;
-    constructor Create(constref w: TWeight; aIndex: SizeInt);
-  end;
-
-  generic TGRankWeightedItem<TWeight> = record
-    Rank,
-    Weight: TWeight;
-    Index: SizeInt;
-    class operator = (constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator <>(constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator > (constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator < (constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator >=(constref L, R: TGRankWeightedItem): Boolean; inline;
-    class operator <=(constref L, R: TGRankWeightedItem): Boolean; inline;
-    constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
-  end;
-
-  { TGWeightedHelper }
-
   generic TGWeightedHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   strict private
   class var
@@ -679,21 +639,55 @@ type
     CFZeroWeight: TWeight;
 
     class constructor Init;
-  public
+  protected
   type
+    TWeightEdge = record
+      Source,
+      Destination: SizeInt;
+      Weight:  TWeight;
+      class operator = (constref L, R: TWeightEdge): Boolean; inline;
+      class operator <>(constref L, R: TWeightEdge): Boolean; inline;
+      class operator > (constref L, R: TWeightEdge): Boolean; inline;
+      class operator < (constref L, R: TWeightEdge): Boolean; inline;
+      class operator >=(constref L, R: TWeightEdge): Boolean; inline;
+      class operator <=(constref L, R: TWeightEdge): Boolean; inline;
+      constructor Create(s, d: SizeInt; w: TWeight);
+    end;
+
+    TWeightItem = record
+      Weight: TWeight;
+      Index: SizeInt;
+      class operator = (constref L, R: TWeightItem): Boolean; inline;
+      class operator <>(constref L, R: TWeightItem): Boolean; inline;
+      class operator > (constref L, R: TWeightItem): Boolean; inline;
+      class operator < (constref L, R: TWeightItem): Boolean; inline;
+      class operator >=(constref L, R: TWeightItem): Boolean; inline;
+      class operator <=(constref L, R: TWeightItem): Boolean; inline;
+      constructor Create(constref w: TWeight; aIndex: SizeInt);
+    end;
+
+    TRankItem = record
+      Rank,
+      Weight: TWeight;
+      Index: SizeInt;
+      class operator = (constref L, R: TRankItem): Boolean; inline;
+      class operator <>(constref L, R: TRankItem): Boolean; inline;
+      class operator > (constref L, R: TRankItem): Boolean; inline;
+      class operator < (constref L, R: TRankItem): Boolean; inline;
+      class operator >=(constref L, R: TRankItem): Boolean; inline;
+      class operator <=(constref L, R: TRankItem): Boolean; inline;
+      constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
+    end;
+
     TGraph       = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
-    TWeightArray = array of TWeight;
     TEstimate    = function(constref aSrc, aDst: TVertex): TWeight;
-    TWeightEdge  = specialize TGWeightedEdge<TWeight>;
-    TWeightItem  = specialize TGWeightedItem<TWeight>;
-    TRankItem    = specialize TGRankWeightedItem<TWeight>;
+    TWeightArray = array of TWeight;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap = specialize TGLiteComparablePairHeapMin<TWeightItem>;
     TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
     TAStarHeap   = specialize TGLiteComparablePairHeapMin<TRankItem>;
     TEdgeArray   = array of TWeightEdge;
 
-  protected
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
@@ -710,7 +704,7 @@ type
                     static;
     class function  CreateWeightArrayPI(aLen: SizeInt): TWeightArray; static;
     class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static;
-  public
+
     class property InfiniteWeight: TWeight read CFInfiniteWeight;
     class property NegInfiniteWeight: TWeight read CFNegInfiniteWeight;
     class property ZeroWeight: TWeight read CFZeroWeight;
@@ -2651,116 +2645,116 @@ begin
   Result := FHeap[FHandle2Index[aHandle]];
 end;
 
-{ TGWeightedEdge }
+{ TGWeightedHelper.TWeightEdge }
 
-class operator TGWeightedEdge. = (constref L, R: TGWeightedEdge): Boolean;
+class operator TGWeightedHelper.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGWeightedEdge.<>(constref L, R: TGWeightedEdge): Boolean;
+class operator TGWeightedHelper.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGWeightedEdge.>(constref L, R: TGWeightedEdge): Boolean;
+class operator TGWeightedHelper.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGWeightedEdge.<(constref L, R: TGWeightedEdge): Boolean;
+class operator TGWeightedHelper.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGWeightedEdge.>=(constref L, R: TGWeightedEdge): Boolean;
+class operator TGWeightedHelper.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGWeightedEdge.<=(constref L, R: TGWeightedEdge): Boolean;
+class operator TGWeightedHelper.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeightedEdge.Create(s, d: SizeInt; w: TWeight);
+constructor TGWeightedHelper.TWeightEdge.Create(s, d: SizeInt; w: TWeight);
 begin
   Source := s;
   Destination := d;
   Weight := w;
 end;
 
-{ TGWeightedItem }
+{ TGWeightedHelper.TWeightItem }
 
-class operator TGWeightedItem. = (constref L, R: TGWeightedItem): Boolean;
+class operator TGWeightedHelper.TWeightItem. = (constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGWeightedItem.<>(constref L, R: TGWeightedItem): Boolean;
+class operator TGWeightedHelper.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGWeightedItem.>(constref L, R: TGWeightedItem): Boolean;
+class operator TGWeightedHelper.TWeightItem.>(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGWeightedItem.<(constref L, R: TGWeightedItem): Boolean;
+class operator TGWeightedHelper.TWeightItem.<(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGWeightedItem.>=(constref L, R: TGWeightedItem): Boolean;
+class operator TGWeightedHelper.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGWeightedItem.<=(constref L, R: TGWeightedItem): Boolean;
+class operator TGWeightedHelper.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeightedItem.Create(constref w: TWeight; aIndex: SizeInt);
+constructor TGWeightedHelper.TWeightItem.Create(constref w: TWeight; aIndex: SizeInt);
 begin
   Weight := w;
   Index := aIndex;
 end;
 
-{ TGRankWeightedItem }
+{ TGWeightedHelper.TRankItem }
 
-class operator TGRankWeightedItem. = (constref L, R: TGRankWeightedItem): Boolean;
+class operator TGWeightedHelper.TRankItem. = (constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank = R.Rank;
 end;
 
-class operator TGRankWeightedItem.<>(constref L, R: TGRankWeightedItem): Boolean;
+class operator TGWeightedHelper.TRankItem.<>(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank <> R.Rank;
 end;
 
-class operator TGRankWeightedItem.>(constref L, R: TGRankWeightedItem): Boolean;
+class operator TGWeightedHelper.TRankItem.>(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank > R.Rank;
 end;
 
-class operator TGRankWeightedItem.<(constref L, R: TGRankWeightedItem): Boolean;
+class operator TGWeightedHelper.TRankItem.<(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank < R.Rank;
 end;
 
-class operator TGRankWeightedItem.>=(constref L, R: TGRankWeightedItem): Boolean;
+class operator TGWeightedHelper.TRankItem.>=(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank >= R.Rank;
 end;
 
-class operator TGRankWeightedItem.<=(constref L, R: TGRankWeightedItem): Boolean;
+class operator TGWeightedHelper.TRankItem.<=(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank <= R.Rank;
 end;
 
-constructor TGRankWeightedItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
+constructor TGWeightedHelper.TRankItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
 begin
   Rank := aRank;
   Weight := aWeight;
@@ -2916,8 +2910,8 @@ var
   aWeight := InfiniteWeight;
 end;
 
-class function TGWeightedHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate
-  ): TIntArray;
+class function TGWeightedHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
+  aHeur: TEstimate): TIntArray;
 var
   Visited: TBitVector;
   Queue: TAStarHeap;
