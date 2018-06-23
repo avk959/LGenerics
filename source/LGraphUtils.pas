@@ -664,6 +664,10 @@ type
   end;
 
   generic TGWeightedHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
+  public
+  type
+    TWeightArray  = array of TWeight;
+
   strict private
   class var
     CFInfiniteWeight,
@@ -671,6 +675,7 @@ type
     CFZeroWeight: TWeight;
 
     class constructor Init;
+    class function CreateAndFill(constref aValue: TWeight; aSize: SizeInt): TWeightArray; static;
   protected
   type
     TWeightEdge = record
@@ -713,7 +718,6 @@ type
 
     TGraph        = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
     TEstimate     = function(constref aSrc, aDst: TVertex): TWeight;
-    TWeightArray  = array of TWeight;
     TPairingHeap  = specialize TGPairHeap<TWeightItem>;
     TBinHeap      = specialize TGBinHeapMin<TWeightItem>;
     TAStarHeap    = specialize TGPairHeap<TRankItem>;
@@ -731,8 +735,12 @@ type
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
-    class function  CreateWeightArrayPI(aLen: SizeInt): TWeightArray; static;
-    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static;
+  { fills array with InfiniteWeight }
+    class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
+  { fills array with InfiniteWeight NegInfiniteWeight }
+    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static; inline;
+  { fills array with ZeroWeight }
+    class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
 
     class property InfiniteWeight: TWeight read CFInfiniteWeight;
     class property NegInfiniteWeight: TWeight read CFNegInfiniteWeight;
@@ -2931,6 +2939,15 @@ begin
   CFZeroWeight := Default(TWeight);
 end;
 
+class function TGWeightedHelper.CreateAndFill(constref aValue: TWeight; aSize: SizeInt): TWeightArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, aSize);
+  for I := 0 to Pred(aSize) do
+    Result[I] := aValue;
+end;
+
 class function TGWeightedHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
   Visited: TBitVector;
@@ -2939,7 +2956,7 @@ var
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
-  Result := CreateWeightArrayPI(g.VertexCount);
+  Result := CreateWeightArray(g.VertexCount);
   Queue := TPairingHeap.Create(g.VertexCount);
   Visited.Size := g.VertexCount;
   Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
@@ -2968,7 +2985,7 @@ var
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
-  Result := CreateWeightArrayPI(g.VertexCount);
+  Result := CreateWeightArray(g.VertexCount);
   Queue := TPairingHeap.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
   Visited.Size := g.VertexCount;
@@ -3124,7 +3141,7 @@ var
   I: SizeInt;
   Relaxed: Boolean = False;
 begin
-  aWeights := CreateWeightArrayPI(g.VertexCount);
+  aWeights := CreateWeightArray(g.VertexCount);
   Enum := g.Edges.GetEnumerator;
   aWeights[aSrc] := ZeroWeight;
   for I := 1 to g.VertexCount do
@@ -3162,7 +3179,7 @@ var
   I: SizeInt;
   J: SizeInt = -1;
 begin
-  aWeights := CreateWeightArrayPI(g.VertexCount);
+  aWeights := CreateWeightArray(g.VertexCount);
   aPaths := g.CreateIntArray;
   Enum := g.Edges.GetEnumerator;
   aWeights[aSrc] := ZeroWeight;
@@ -3205,22 +3222,19 @@ begin
     end;
 end;
 
-class function TGWeightedHelper.CreateWeightArrayPI(aLen: SizeInt): TWeightArray;
-var
-  I: SizeInt;
+class function TGWeightedHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
 begin
-  System.SetLength(Result, aLen);
-  for I := 0 to Pred(aLen) do
-    Result[I] := InfiniteWeight;
+  Result := CreateAndFill(InfiniteWeight, aLen);
 end;
 
 class function TGWeightedHelper.CreateWeightArrayNI(aLen: SizeInt): TWeightArray;
-var
-  I: SizeInt;
 begin
-  System.SetLength(Result, aLen);
-  for I := 0 to Pred(aLen) do
-    Result[I] := NegInfiniteWeight;
+  Result := CreateAndFill(NegInfiniteWeight, aLen);
+end;
+
+class function TGWeightedHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
+begin
+  Result := CreateAndFill(ZeroWeight, aLen);
 end;
 
 end.
