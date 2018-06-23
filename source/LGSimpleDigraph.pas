@@ -27,7 +27,7 @@ unit LGSimpleDigraph;
 interface
 
 uses
-  Classes, SysUtils, math,
+  Classes, SysUtils,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -129,7 +129,7 @@ type
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
     function  IsDag: Boolean;
   { for an acyclic graph returns an array containing in the corresponding components the length of
-    the longest path from aSrc to it (in sense 'edges count'), or -1 if it unreachable from aSrc }
+    the longest path from aSrc to it (in sense 'edges count'), or -1 if it is unreachable from aSrc }
     function  DagLongestPathsMap(constref aSrc: TVertex): TIntArray; inline;
     function  DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
   { same as above and in aPathTree returns paths }
@@ -173,6 +173,8 @@ type
 
     function  CreateEdgeArray: TEdgeArray;
     procedure ReverseWeights;
+    function  GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
+    function  GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
   public
     class function InfiniteWeight: TWeight; static; inline;
     class function NegInfiniteWeight: TWeight; static; inline;
@@ -212,7 +214,7 @@ type
     function  FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function  FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
   { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
-    the path from aSrc to it, or NegInfiniteWeight if it unreachable from aSrc }
+    the path from aSrc to it, or NegInfiniteWeight if it is unreachable from aSrc }
     function  DagMaxPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function  DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
@@ -391,7 +393,7 @@ begin
         Inc(Counter);
         {%H-}Stack.Push(I);
         while Stack.TryPeek(Curr) do
-          if AdjEnums[Curr].MoveNext then
+          if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if PreOrd[Next] = -1 then
@@ -428,7 +430,7 @@ begin
         Visited[I] := True;
         {%H-}Stack.Push(I);
         while Stack.TryPeek(Curr) do
-          if AdjEnums[Curr].MoveNext then
+          if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if not Visited[Next] then
@@ -459,7 +461,7 @@ begin
   Result[aSrc] := 0;
   {%H-}Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
-    if AdjEnums[Curr].MoveNext then
+    if AdjEnums[{%H-}Curr].MoveNext then
       begin
         Next := AdjEnums[Curr].Current;
         if not Visited[Next] then
@@ -490,7 +492,7 @@ begin
   Result[aSrc] := 0;
   {%H-}Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
-    if AdjEnums[Curr].MoveNext then
+    if AdjEnums[{%H-}Curr].MoveNext then
       begin
         Next := AdjEnums[Curr].Current;
         if not Visited[Next] then
@@ -1132,6 +1134,72 @@ begin
       p^.Data.Weight := -p^.Data.Weight;
 end;
 
+function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Visited: TBitVector;
+  Curr, Next: SizeInt;
+  w: TWeight;
+begin
+  AdjEnums := CreateAdjEnumArray;
+  Result := THelper.CreateWeightArrayNI(VertexCount);
+  Visited.Size := VertexCount;
+  Visited[aSrc] := True;
+  Result[aSrc] := ZeroWeight;
+  {%H-}Stack.Push(aSrc);
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[{%H-}Curr].MoveNext then
+      begin
+        Next := AdjEnums[Curr].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Stack.Push(Next);
+          end;
+        w := Result[Curr] + GetEdgeDataPtr(Curr, Next)^.Weight;
+        if w > Result[Next] then
+          Result[Next] := w;
+      end
+    else
+      Stack.Pop;
+end;
+
+function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
+var
+  Stack: TIntStack;
+  AdjEnums: TAdjEnumArray;
+  Visited: TBitVector;
+  Curr, Next: SizeInt;
+  w: TWeight;
+begin
+  AdjEnums := CreateAdjEnumArray;
+  Result := THelper.CreateWeightArrayNI(VertexCount);
+  aTree := CreateIntArray;
+  Visited.Size := VertexCount;
+  Visited[aSrc] := True;
+  Result[aSrc] := ZeroWeight;
+  {%H-}Stack.Push(aSrc);
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[{%H-}Curr].MoveNext then
+      begin
+        Next := AdjEnums[Curr].Current;
+        if not Visited[Next] then
+          begin
+            Visited[Next] := True;
+            Stack.Push(Next);
+          end;
+        w := Result[Curr] + GetEdgeDataPtr(Curr, Next)^.Weight;
+        if w > Result[Next] then
+          begin
+            Result[Next] := w;
+            aTree[Next] := Curr;
+          end;
+      end
+    else
+      Stack.Pop;
+end;
+
 class function TGWeightedDiGraph.InfiniteWeight: TWeight;
 begin
   Result := THelper.InfiniteWeight;
@@ -1249,18 +1317,9 @@ begin
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
-var
-  I: SizeInt;
 begin
   CheckIndexRange(aSrc);
-  ReverseWeights;
-  Result := THelper.DijkstraSssp(Self, aSrc);
-  ReverseWeights;
-  for I := 0 to Pred(VertexCount) do
-    if Result[I] = InfiniteWeight then
-      Result[I] := NegInfiniteWeight
-    else
-      Result[I] := -Result[I];
+  Result := GetDagMaxPaths(aSrc);
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -1273,14 +1332,7 @@ var
   I: SizeInt;
 begin
   CheckIndexRange(aSrc);
-  ReverseWeights;
-  Result := THelper.DijkstraSssp(Self, aSrc, aPathTree);
-  ReverseWeights;
-  for I := 0 to Pred(VertexCount) do
-    if Result[I] = InfiniteWeight then
-      Result[I] := NegInfiniteWeight
-    else
-      Result[I] := -Result[I];
+  Result := GetDagMaxPaths(aSrc, aPathTree);
 end;
 
 function TGWeightedDiGraph.DagMaxPaths: TWeightArray;

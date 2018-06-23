@@ -2962,7 +2962,7 @@ begin
   Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
   while Queue.TryDequeue(Item) do
     begin
-      Visited[Item.Index] := True;
+      Visited[{%H-}Item.Index] := True;
       Result[Item.Index] := Item.Weight;
       for p in g.AdjLists[Item.Index]^ do
         if Queue.NotUsed(p^.Key) then
@@ -2992,7 +2992,7 @@ begin
   Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
   while Queue.TryDequeue(Item) do
     begin
-      Visited[Item.Index] := True;
+      Visited[{%H-}Item.Index] := True;
       Result[Item.Index] := Item.Weight;
       for p in g.AdjLists[Item.Index]^ do
         if Queue.NotUsed(p^.Key) then
@@ -3102,7 +3102,7 @@ var
   Queue.Enqueue(TRankItem.Create(aHeur(g.Items[aSrc], g.Items[aDst]), ZeroWeight, aSrc), aSrc);
   while Queue.TryDequeue(Item) do
     begin
-      if Item.Index = aDst then
+      if {%H-}Item.Index = aDst then
         begin
           aWeight := Item.Weight;
           exit(g.TreeToChain(Tree, aDst));
