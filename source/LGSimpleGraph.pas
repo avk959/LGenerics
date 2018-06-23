@@ -2115,19 +2115,18 @@ function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArr
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
-  Handles: THandleArray;
   I, Curr: SizeInt;
   Item: TWeightItem;
   p: PAdjItem;
 begin
   Result := CreateIntArray;
-  Handles := CreateHandleArray;
+  Queue := TPairingHeap.Create(VertexCount);
   Visited.Size := VertexCount;
   aTotalWeight := 0;
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
-        Handles[I] := Queue.Insert(TWeightItem.Create(ZeroWeight, 0));
+        Queue.Enqueue(TWeightItem.Create(ZeroWeight, 0), I);
         while Queue.TryDequeue(Item) do
           begin
             Curr := Item.Index;
@@ -2135,15 +2134,15 @@ begin
             Visited[Curr] := True;
             for p in AdjLists[Curr]^ do
               begin
-                if Handles[p^.Key] = INVALID_HANDLE then
+                if Queue.NotUsed(p^.Key) then
                   begin
-                    Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight, p^.Key));
+                    Queue.Enqueue(TWeightItem.Create(p^.Data.Weight, p^.Key), p^.Key);
                     Result[p^.Key] := Curr;
                   end
                 else
-                  if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
+                  if not Visited[p^.Key] and (p^.Data.Weight < Queue.Peek(p^.Key).Weight) then
                     begin
-                      Queue.Update(Handles[p^.Key], TWeightItem.Create(p^.Data.Weight, p^.Key));
+                      Queue.Update(p^.Key, TWeightItem.Create(p^.Data.Weight, p^.Key));
                       Result[p^.Key] := Curr;
                     end;
               end;

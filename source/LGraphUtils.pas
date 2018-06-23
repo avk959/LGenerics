@@ -34,7 +34,6 @@ uses
   LGQueue,
   LGDeque,
   LGVector,
-  LGPriorityQueue,
   LGHashTable,
   LGHash,
   LGStrConst;
@@ -48,11 +47,9 @@ type
   ELGraphError     = class(Exception); //???
 
   TEmptyRec        = record end;
-  THandle          = LGUtils.THandle;
 
   TIntArray        = array of SizeInt;
   TShortArray      = array of ShortInt;
-  THandleArray     = array of THandle;
   TIntHelper       = specialize TGNumArrayHelper<SizeInt>;
   TIntVector       = specialize TGLiteVector<SizeInt>;
   TIntVectorHelper = specialize TGComparableVectorHelper<SizeInt>;
@@ -451,7 +448,6 @@ type
     constructor Create(aCapacity: SizeInt);
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateColorArray: TColorArray;
-    function  CreateHandleArray: THandleArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -606,7 +602,7 @@ type
     property Count: SizeInt read GetCount;
   end;
 
-  generic TGBinHeapMin<T> = record
+  generic TGBinHeapMin<T> = record // for internal use only
   private
   type
     THeap = array of T;
@@ -626,6 +622,42 @@ type
     function  TryDequeue(out aValue: T): Boolean;
     procedure Enqueue(constref aValue: T; aHandle: SizeInt);
     procedure Update(aHandle: SizeInt; constref aNewValue: T);
+    function  Peek(aHandle: SizeInt): T; inline;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
+
+  generic TGPairHeap<T> = record // for internal use only
+  private
+  type
+    PNode = ^TNode;
+    TNode = record
+      Prev,
+      Child,
+      Sibling: PNode;
+      Data: T;
+      procedure AddChild(aNode: PNode); inline;
+    end;
+
+    TNodeList = array of TNode;
+
+  var
+    FNodeList: TNodeList;
+    FRoot: PNode;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    function  NewNode(constref aValue: T; aHandle: SizeInt): PNode; inline;
+    function  DequeueItem: T;
+    procedure RootMerge(aNode: PNode); inline;
+    class function  NodeMerge(L, R: PNode): PNode; static; inline;
+    class function  TwoPassMerge(aNode: PNode): PNode; static;
+    class procedure CutNode(aNode: PNode); static;
+  public
+    constructor Create(aSize: SizeInt);
+    function  NotUsed(aHandle: SizeInt): Boolean; inline;
+    function  TryDequeue(out aValue: T): Boolean;
+    procedure Enqueue(constref aValue: T; aHandle: SizeInt);
+    procedure Update(aHandle: SizeInt; constref aNewValue: T); inline;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -682,9 +714,9 @@ type
     TGraph        = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
     TEstimate     = function(constref aSrc, aDst: TVertex): TWeight;
     TWeightArray  = array of TWeight;
-    TPairingHeap  = specialize TGLiteComparablePairHeapMin<TWeightItem>;
+    TPairingHeap  = specialize TGPairHeap<TWeightItem>;
     TBinHeap      = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap    = specialize TGLiteComparablePairHeapMin<TRankItem>;
+    TAStarHeap    = specialize TGPairHeap<TRankItem>;
     TEdgeArray    = array of TWeightEdge;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
@@ -1729,16 +1761,6 @@ begin
     System.FillChar(Result[0], c, 0);
 end;
 
-function TGCustomGraph.CreateHandleArray: THandleArray;
-var
-  c: SizeInt;
-begin
-  c := VertexCount;
-  System.SetLength(Result, c);
-  if c > 0 then
-    System.FillChar(Result[0], c * SizeOf(THandle), $ff);
-end;
-
 function TGCustomGraph.CreateAdjEnumArray: TAdjEnumArray;
 var
   I: SizeInt;
@@ -2642,6 +2664,153 @@ begin
   Result := FHeap[FHandle2Index[aHandle]];
 end;
 
+{ TGPairHeap.TNode }
+
+procedure TGPairHeap.TNode.AddChild(aNode: PNode);
+begin
+  aNode^.Prev := @Self;
+  Sibling :=  aNode^.Sibling;
+  if Sibling <> nil then
+    Sibling^.Prev := @Self;
+  aNode^.Sibling := Child;
+  if Child <> nil then
+    Child^.Prev := aNode;
+  Child := aNode;
+end;
+
+{ TGPairHeap }
+
+function TGPairHeap.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+function TGPairHeap.NewNode(constref aValue: T; aHandle: SizeInt): PNode;
+begin
+  Result := @FNodeList[aHandle];
+  Inc(FCount);
+  Result^.Data := aValue;
+  Result^.Prev := nil;
+  Result^.Child := nil;
+  Result^.Sibling := nil;
+end;
+
+function TGPairHeap.DequeueItem: T;
+begin
+  Result := FRoot^.Data;
+  FRoot := TwoPassMerge(FRoot^.Child);
+  if FRoot <> nil then
+    FRoot^.Prev := nil;
+  Dec(FCount);
+end;
+
+procedure TGPairHeap.RootMerge(aNode: PNode);
+begin
+  FRoot := NodeMerge(FRoot, aNode);
+  if FRoot <> nil then
+    FRoot^.Prev := nil;
+end;
+
+class function TGPairHeap.NodeMerge(L, R: PNode): PNode;
+begin
+  if L <> nil then
+    if R <> nil then
+      if L^.Data <= R^.Data then
+        begin
+          L^.AddChild(R);
+          Result := L;
+        end
+      else
+        begin
+          R^.AddChild(L);
+          Result := R;
+        end
+    else
+      Result := L
+  else
+    Result := R;
+end;
+
+class function TGPairHeap.TwoPassMerge(aNode: PNode): PNode;
+var
+  CurrNode, NextNode: PNode;
+begin
+  Result := nil;
+  while (aNode <> nil) and (aNode^.Sibling <> nil) do
+    begin
+      NextNode := aNode^.Sibling;
+      CurrNode := aNode;
+      aNode := NextNode^.Sibling;
+      NextNode^.Sibling := nil;
+      CurrNode^.Sibling := nil;
+      Result := NodeMerge(Result, NodeMerge(CurrNode, NextNode));
+    end;
+  Result := NodeMerge(Result, aNode);
+end;
+
+class procedure TGPairHeap.CutNode(aNode: PNode);
+begin
+  if aNode^.Sibling <> nil then
+    aNode^.Sibling^.Prev := aNode^.Prev;
+  if aNode^.Prev^.Child = aNode then
+    aNode^.Prev^.Child := aNode^.Sibling
+  else
+    aNode^.Prev^.Sibling := aNode^.Sibling;
+  aNode^.Sibling := nil;
+end;
+
+constructor TGPairHeap.Create(aSize: SizeInt);
+var
+  I: SizeInt;
+begin
+  if aSize > 0 then
+    begin
+      System.SetLength(FNodeList, aSize);
+      for I := 0 to Pred(aSize) do
+        FNodeList[I].Prev := PNode(SizeUInt(-1));
+    end;
+  FRoot := nil;
+  FCount := 0;
+end;
+
+function TGPairHeap.NotUsed(aHandle: SizeInt): Boolean;
+begin
+  Result := FNodeList[aHandle].Prev = PNode(SizeUInt(-1));
+end;
+
+function TGPairHeap.TryDequeue(out aValue: T): Boolean;
+begin
+  Result := Count <> 0;
+  if Result then
+    aValue := DequeueItem;
+end;
+
+procedure TGPairHeap.Enqueue(constref aValue: T; aHandle: SizeInt);
+begin
+  RootMerge(NewNode(aValue, aHandle));
+end;
+
+procedure TGPairHeap.Update(aHandle: SizeInt; constref aNewValue: T);
+var
+  Node: PNode;
+begin
+  Node := @FNodeList[aHandle];
+  if aNewValue < Node^.Data then
+    begin
+      Node^.Data := aNewValue;
+      if Node <> FRoot then
+        begin
+          CutNode(Node);
+          RootMerge(Node);
+        end;
+    end;
+end;
+
+function TGPairHeap.Peek(aHandle: SizeInt): T;
+begin
+  Result := FNodeList[aHandle].Data;
+end;
+
 { TGWeightedHelper.TWeightEdge }
 
 class operator TGWeightedHelper.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
@@ -2771,28 +2940,27 @@ class function TGWeightedHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightA
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
-  Handles: THandleArray;
   Relaxed: TWeight;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArrayPI(g.VertexCount);
-  Handles := g.CreateHandleArray;
+  Queue := TPairingHeap.Create(g.VertexCount);
   Visited.Size := g.VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
   while Queue.TryDequeue(Item) do
     begin
       Visited[Item.Index] := True;
       Result[Item.Index] := Item.Weight;
       for p in g.AdjLists[Item.Index]^ do
-        if Handles[p^.Key] = INVALID_HANDLE then
-          Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key))
+        if Queue.NotUsed(p^.Key) then
+          Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key)
         else
           if not Visited[p^.Key] then
             begin
               Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
-                Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+              if Relaxed < Queue.Peek(p^.Key).Weight then
+                Queue.Update(p^.Key, TWeightItem.Create(Relaxed, p^.Key));
             end;
     end;
 end;
@@ -2801,33 +2969,32 @@ class function TGWeightedHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPath
 var
   Visited: TBitVector;
   Queue: TPairingHeap;
-  Handles: THandleArray;
   Relaxed: TWeight;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArrayPI(g.VertexCount);
+  Queue := TPairingHeap.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
-  Handles := g.CreateHandleArray;
   Visited.Size := g.VertexCount;
-  Handles[aSrc] := Queue.Insert(TWeightItem.Create(ZeroWeight, aSrc));
+  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
   while Queue.TryDequeue(Item) do
     begin
       Visited[Item.Index] := True;
       Result[Item.Index] := Item.Weight;
       for p in g.AdjLists[Item.Index]^ do
-        if Handles[p^.Key] = INVALID_HANDLE then
+        if Queue.NotUsed(p^.Key) then
           begin
-            Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key));
+            Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key);
             aPathTree[p^.Key] := Item.Index;
           end
         else
           if not Visited[p^.Key] then
             begin
               Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+              if Relaxed < Queue.Peek(p^.Key).Weight then
                 begin
-                  Queue.Update(Handles[p^.Key], TWeightItem.Create(Relaxed, p^.Key));
+                  Queue.Update(p^.Key, TWeightItem.Create(Relaxed, p^.Key));
                   aPathTree[p^.Key] := Item.Index;
                 end;
             end;
@@ -2912,16 +3079,15 @@ class function TGWeightedHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeigh
 var
   Visited: TBitVector;
   Queue: TAStarHeap;
-  Handles: THandleArray;
   Tree: TIntArray;
   Relaxed: TWeight;
   Item: TRankItem;
   p: TGraph.PAdjItem;
 {%H-}begin
-  Handles := g.CreateHandleArray;
+  Queue := TAStarHeap.Create(g.VertexCount);
   Tree := g.CreateIntArray;
   Visited.Size := g.VertexCount;
-  Handles[aSrc] := Queue.Insert(TRankItem.Create(aHeur(g.Items[aSrc], g.Items[aDst]), ZeroWeight, aSrc));
+  Queue.Enqueue(TRankItem.Create(aHeur(g.Items[aSrc], g.Items[aDst]), ZeroWeight, aSrc), aSrc);
   while Queue.TryDequeue(Item) do
     begin
       if Item.Index = aDst then
@@ -2932,20 +3098,20 @@ var
       Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
         begin
-          if Handles[p^.Key] = INVALID_HANDLE then
+          if Queue.NotUsed(p^.Key) then
             begin
               Relaxed := p^.Data.Weight + Item.Weight;
-              Handles[p^.Key] := Queue.Insert(TRankItem.Create(
-                Relaxed + aHeur(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key));
+              Queue.Enqueue(TRankItem.Create(
+                Relaxed + aHeur(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key), p^.Key);
               Tree[p^.Key] := Item.Index;
             end
           else
             if not Visited[p^.Key] then
               begin
                 Relaxed := Item.Weight + p^.Data.Weight;
-                if Relaxed < Queue.Value(Handles[p^.Key]).Weight then
+                if Relaxed < Queue.Peek(p^.Key).Weight then
                   begin
-                    Queue.Update(Handles[p^.Key], TRankItem.Create(
+                    Queue.Update(p^.Key, TRankItem.Create(
                       Relaxed + aHeur(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key));
                     Tree[p^.Key] := Item.Index;
                   end;
