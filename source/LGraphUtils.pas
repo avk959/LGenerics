@@ -636,7 +636,7 @@ type
       Child,
       Sibling: PNode;
       Data: T;
-      procedure AddChild(aNode: PNode); inline;
+      function AddChild(aNode: PNode): PNode; inline;
     end;
 
     TNodeList = array of TNode;
@@ -649,14 +649,14 @@ type
     function  NewNode(constref aValue: T; aHandle: SizeInt): PNode; inline;
     function  DequeueItem: T;
     procedure RootMerge(aNode: PNode); inline;
-    class function  NodeMerge(L, R: PNode): PNode; static; inline;
+    class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
-    class procedure CutNode(aNode: PNode); static;
+    class procedure CutNode(aNode: PNode); static; inline;
   public
     constructor Create(aSize: SizeInt);
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
-    function  TryDequeue(out aValue: T): Boolean;
-    procedure Enqueue(constref aValue: T; aHandle: SizeInt);
+    function  TryDequeue(out aValue: T): Boolean; inline;
+    procedure Enqueue(constref aValue: T; aHandle: SizeInt); inline;
     procedure Update(aHandle: SizeInt; constref aNewValue: T); inline;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
@@ -2666,9 +2666,10 @@ end;
 
 { TGPairHeap.TNode }
 
-procedure TGPairHeap.TNode.AddChild(aNode: PNode);
+function TGPairHeap.TNode.AddChild(aNode: PNode): PNode;
 begin
-  aNode^.Prev := @Self;
+  Result := @Self;
+  aNode^.Prev := Result;
   Sibling :=  aNode^.Sibling;
   if Sibling <> nil then
     Sibling^.Prev := @Self;
@@ -2698,10 +2699,10 @@ end;
 function TGPairHeap.DequeueItem: T;
 begin
   Result := FRoot^.Data;
+  Dec(FCount);
   FRoot := TwoPassMerge(FRoot^.Child);
   if FRoot <> nil then
     FRoot^.Prev := nil;
-  Dec(FCount);
 end;
 
 procedure TGPairHeap.RootMerge(aNode: PNode);
@@ -2716,15 +2717,9 @@ begin
   if L <> nil then
     if R <> nil then
       if L^.Data <= R^.Data then
-        begin
-          L^.AddChild(R);
-          Result := L;
-        end
+        Result := L^.AddChild(R)
       else
-        begin
-          R^.AddChild(L);
-          Result := R;
-        end
+        Result := R^.AddChild(L)
     else
       Result := L
   else
