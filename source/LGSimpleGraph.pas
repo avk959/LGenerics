@@ -330,9 +330,9 @@ type
     the weights of all edges must be nonnegative; used A* algorithm if aHeur <> nil }
     function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: TEstimate): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
-  { finds a spanning tree(or spanning forest) of minimal weight, Kruskal's algorithm used }
+  { finds a spanning tree(or spanning forest if not connected) of minimal weight, Kruskal's algorithm used }
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
-  { finds a spanning tree(or spanning forest) of minimal weight, Prim's algorithm used }
+  { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
     function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
     function  SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
     function  SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
