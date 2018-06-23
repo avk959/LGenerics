@@ -206,10 +206,6 @@ type
     if there is a negative weight cycle, then aPaths will contain that cycle }
     function  FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function  FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
-  { finds a spanning tree of minimal weight, the graph must be connected(Kruskal's algorithm used) }
-    function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
-  { finds a spanning tree of minimal weight, the graph must be connected(Prim's algorithm used) }
-    function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
     function  Clone: TGWeightedDiGraph;
     function  Reverse: TGWeightedDiGraph;
   end;
@@ -1174,16 +1170,6 @@ function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray
 begin
   CheckIndexRange(aSrc);
   Result := THelper.FordBellman(Self, aSrc, aPaths, aWeights);
-end;
-
-function TGWeightedDiGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
-begin
-  Result := THelper.KruskalMst(Self, @CreateEdgeArray, aTotalWeight);
-end;
-
-function TGWeightedDiGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
-begin
-  Result := THelper.PrimMst(Self, aTotalWeight);
 end;
 
 function TGWeightedDiGraph.Clone: TGWeightedDiGraph;

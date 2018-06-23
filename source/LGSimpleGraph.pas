@@ -297,7 +297,10 @@ type
   protected
   type
     TWeightEdge  = THelper.TWeightEdge;
+    TPairingHeap = THelper.TPairingHeap;
+    TWeightItem  = THelper.TWeightItem;
     TEdgeArray   = array of TWeightEdge;
+    TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
 
     function  CreateEdgeArray: TEdgeArray;
   public
@@ -2090,13 +2093,62 @@ begin
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
+var
+  e: TWeightEdge;
+  LocEdges: TEdgeArray;
+  Dsu: TDisjointSetUnion;
 begin
-  Result := THelper.KruskalMst(Self, @CreateEdgeArray, aTotalWeight);
+  LocEdges := CreateEdgeArray;
+  TEdgeHelper.Sort(LocEdges);
+  Result := CreateIntArray;
+  Dsu.Size := VertexCount;
+  aTotalWeight := ZeroWeight;
+  for e in LocEdges do
+    if Dsu.Merged(e.Source, e.Destination)  then
+      begin
+        Result[e.Destination] := e.Source;
+        aTotalWeight += e.Weight;
+      end;
 end;
 
 function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+var
+  Visited: TBitVector;
+  Queue: TPairingHeap;
+  Handles: THandleArray;
+  I, Curr: SizeInt;
+  Item: TWeightItem;
+  p: PAdjItem;
 begin
-  Result := THelper.PrimMst(Self, aTotalWeight);
+  Result := CreateIntArray;
+  Handles := CreateHandleArray;
+  Visited.Size := VertexCount;
+  aTotalWeight := 0;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Handles[I] := Queue.Insert(TWeightItem.Create(ZeroWeight, 0));
+        while Queue.TryDequeue(Item) do
+          begin
+            Curr := Item.Index;
+            aTotalWeight += Item.Weight;
+            Visited[Curr] := True;
+            for p in AdjLists[Curr]^ do
+              begin
+                if Handles[p^.Key] = INVALID_HANDLE then
+                  begin
+                    Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight, p^.Key));
+                    Result[p^.Key] := Curr;
+                  end
+                else
+                  if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
+                    begin
+                      Queue.Update(Handles[p^.Key], TWeightItem.Create(p^.Data.Weight, p^.Key));
+                      Result[p^.Key] := Curr;
+                    end;
+              end;
+          end;
+      end;
 end;
 
 function TGWeightedGraph.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;

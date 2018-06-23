@@ -682,12 +682,10 @@ type
     TGraph        = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
     TEstimate     = function(constref aSrc, aDst: TVertex): TWeight;
     TWeightArray  = array of TWeight;
-    TEdgeHelper   = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairingHeap  = specialize TGLiteComparablePairHeapMin<TWeightItem>;
     TBinHeap      = specialize TGBinHeapMin<TWeightItem>;
     TAStarHeap    = specialize TGLiteComparablePairHeapMin<TRankItem>;
     TEdgeArray    = array of TWeightEdge;
-    TGetEdgeArray = function: TEdgeArray of object;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
@@ -697,8 +695,6 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray; static;
-    class function  KruskalMst(g: TGraph; f: TGetEdgeArray; out aTotalWeight: TWeight): TIntArray; static;
-    class function  PrimMst(g: TGraph; out aTotalWeight: TWeight): TIntArray; static;
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
@@ -2957,65 +2953,6 @@ var
         end;
     end;
   aWeight := InfiniteWeight;
-end;
-
-class function TGWeightedHelper.KruskalMst(g: TGraph; f: TGetEdgeArray; out aTotalWeight: TWeight): TIntArray;
-var
-  e: TWeightEdge;
-  Edges: TEdgeArray;
-  Dsu: TDisjointSetUnion;
-begin
-  Edges := f();
-  TEdgeHelper.Sort(Edges);
-  Result := g.CreateIntArray;
-  Dsu.Size := g.VertexCount;
-  aTotalWeight := ZeroWeight;
-  for e in Edges do
-    if Dsu.Merged(e.Source, e.Destination)  then
-      begin
-        Result[e.Destination] := e.Source;
-        aTotalWeight += e.Weight;
-      end;
-end;
-
-class function TGWeightedHelper.PrimMst(g: TGraph; out aTotalWeight: TWeight): TIntArray;
-var
-  Visited: TBitVector;
-  Queue: TPairingHeap;
-  Handles: THandleArray;
-  I, Curr: SizeInt;
-  Item: TWeightItem;
-  p: TGraph.PAdjItem;
-begin
-  Result := g.CreateIntArray;
-  Handles := g.CreateHandleArray;
-  Visited.Size := g.VertexCount;
-  aTotalWeight := 0;
-  for I := 0 to Pred(g.VertexCount) do
-    if not Visited[I] then
-      begin
-        Handles[I] := Queue.Insert(TWeightItem.Create(ZeroWeight, 0));
-        while Queue.TryDequeue(Item) do
-          begin
-            Curr := Item.Index;
-            aTotalWeight += Item.Weight;
-            Visited[Curr] := True;
-            for p in g.AdjLists[Curr]^ do
-              begin
-                if Handles[p^.Key] = INVALID_HANDLE then
-                  begin
-                    Handles[p^.Key] := Queue.Insert(TWeightItem.Create(p^.Data.Weight, p^.Key));
-                    Result[p^.Key] := Curr;
-                  end
-                else
-                  if not Visited[p^.Key] and (p^.Data.Weight < Queue.Value(Handles[p^.Key]).Weight) then
-                    begin
-                      Queue.Update(Handles[p^.Key], TWeightItem.Create(p^.Data.Weight, p^.Key));
-                      Result[p^.Key] := Curr;
-                    end;
-              end;
-          end;
-      end;
 end;
 
 class function TGWeightedHelper.FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
