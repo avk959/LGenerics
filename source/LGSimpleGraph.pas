@@ -462,6 +462,12 @@ var
 begin
   if ConnectedValid then
     exit;
+  if IsEmpty then
+    begin
+      FCompCount := 0;
+      FConnectedValid := True;
+      exit;
+    end;
   Visited.Size := VertexCount;
   FCompCount := VertexCount;
   ResetTags;
