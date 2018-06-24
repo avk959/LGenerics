@@ -447,6 +447,7 @@ type
     constructor Create;
     constructor Create(aCapacity: SizeInt);
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
+    function  CreateIntArray(aLen, aValue: SizeInt): TIntArray;
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  IsEmpty: Boolean; inline;
@@ -1756,6 +1757,19 @@ begin
   System.FillDWord(Result[0], c, DWord(aValue));
 {$ELSE}
   System.FillWord(Result[0], c, Word(aValue));
+{$ENDIF}
+end;
+
+function TGCustomGraph.CreateIntArray(aLen, aValue: SizeInt): TIntArray;
+begin
+  System.SetLength(Result, aLen);
+  if aLen > 0 then
+{$IF DEFINED(CPU64)}
+  System.FillQWord(Result[0], aLen, QWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(Result[0], aLen, DWord(aValue));
+{$ELSE}
+  System.FillWord(Result[0], aLen, Word(aValue));
 {$ENDIF}
 end;
 
