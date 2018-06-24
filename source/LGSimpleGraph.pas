@@ -199,6 +199,10 @@ type
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
   { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
+  { returns adjacency matrix of the complement graph;
+    warning: maximal matrix size limited, see MaxBitMatrixSize }
+    function  Complement: TAdjacencyMatrix;
+
   { checks whether the cached info about connected is up-to-date }
     property  ConnectedValid: Boolean read FConnectedValid;
   { checks whether the graph is connected; an empty graph is considered disconnected }
@@ -1760,6 +1764,21 @@ begin
       for I := 0 to Pred(VertexCount) do
         Result.FNodeList[I].Assign(FNodeList[I]);
     end;
+end;
+
+function TGSimpleGraph.Complement: TAdjacencyMatrix;
+var
+  m: TSquareBitMatrix;
+  s, d: SizeInt;
+begin
+  if IsEmpty then
+    exit(Default(TAdjacencyMatrix));
+  m := TSquareBitMatrix.Create(VertexCount);
+  for s := 0 to Pred(VertexCount) do
+    for d := 0 to Pred(VertexCount) do
+      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
+        m[s, d] := True;
+  Result := TAdjacencyMatrix.Create(m);
 end;
 
 { TGChart }

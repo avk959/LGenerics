@@ -505,9 +505,7 @@ type
     empty if path does not exists }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
-  { returns adjacency matrix of the complement graph;
-    warning: maximal matrix size limited, see MaxBitMatrixSize }
-    function  Complement: TAdjacencyMatrix;
+
     property  Title: string read FTitle write FTitle;
     property  VertexCount: SizeInt read FCount;
     property  EdgeCount: SizeInt read FEdgeCount;
@@ -2157,21 +2155,6 @@ begin
           Parents[Next] := aSrc;
         end;
   until not Queue.TryDequeue(aSrc);
-end;
-
-function TGCustomGraph.Complement: TAdjacencyMatrix;
-var
-  m: TSquareBitMatrix;
-  s, d: SizeInt;
-begin
-  if IsEmpty then
-    exit(Default(TAdjacencyMatrix));
-  m := TSquareBitMatrix.Create(VertexCount);
-  for s := 0 to Pred(VertexCount) do
-    for d := 0 to Pred(VertexCount) do
-      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
-        m[s, d] := True;
-  Result := TAdjacencyMatrix.Create(m);
 end;
 
 { TBitVector }
