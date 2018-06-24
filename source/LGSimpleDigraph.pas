@@ -570,6 +570,7 @@ var
   Visited, IdVisited: TBitVector;
   IdParents, IdOrd: TIntArray;
   m: TSquareBitMatrix;
+  Pairs: TIntPairSet;
   AdjEnums: TAdjEnumArray;
   I, J, Counter, Curr, Next, CurrId, NextId: SizeInt;
 begin
@@ -592,7 +593,7 @@ begin
           end;
         while Stack.TryPeek(Curr) do
           begin
-            CurrId := aScIds[Curr];
+            CurrId := aScIds[{%H-}Curr];
             if AdjEnums[{%H-}Curr].MoveNext then
               begin
                 Next := AdjEnums[Curr].Current;
@@ -610,10 +611,10 @@ begin
                     Inc(Counter);
                   end
                 else
-                if IdOrd[NextId] < IdOrd[CurrId] then
-                  for J := 0 to Pred(aScCount) do
-                    if m[NextId, J] then
-                      m[CurrId, J] := True;
+                  if (IdOrd[NextId] < IdOrd[CurrId]) and Pairs.Add(IdOrd[NextId], IdOrd[CurrId]) then
+                    for J := 0 to Pred(aScCount) do
+                      if m[NextId, J] then
+                        m[CurrId, J] := True;
               end
             else
               begin
