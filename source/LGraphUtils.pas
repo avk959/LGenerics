@@ -717,12 +717,13 @@ type
       constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
     end;
 
-    TGraph        = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
-    TEstimate     = function(constref aSrc, aDst: TVertex): TWeight;
-    TPairingHeap  = specialize TGPairHeap<TWeightItem>;
-    TBinHeap      = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap    = specialize TGPairHeap<TRankItem>;
-    TEdgeArray    = array of TWeightEdge;
+    TGraph       = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TEstimate    = function(constref aSrc, aDst: TVertex): TWeight;
+    TPairingHeap = specialize TGPairHeap<TWeightItem>;
+    TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
+    TAStarHeap   = specialize TGPairHeap<TRankItem>;
+    //TAStarHeap   = specialize TGBinHeapMin<TRankItem>;
+    TEdgeArray   = array of TWeightEdge;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
