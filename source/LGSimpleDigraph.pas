@@ -567,44 +567,68 @@ end;
 function TGSimpleDiGraph.GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
 var
   Stack: TIntStack;
-  PreOrd, Parents: TIntArray;
+  Visited, IdVisited: TBitVector;
+  IdParents, IdOrd: TIntArray;
   m: TSquareBitMatrix;
   AdjEnums: TAdjEnumArray;
-  I, J, Counter, Curr, Next: SizeInt;
+  I, J, Counter, Curr, Next, CurrId, NextId: SizeInt;
 begin
-  PreOrd := CreateIntArray;
-  Parents := CreateIntArray;
+  IdParents := CreateIntArray(aScCount, -1);
+  IdOrd := CreateIntArray(aScCount, -1);
+  Visited.Size := VertexCount;
+  IdVisited.Size := aScCount;
   AdjEnums := CreateAdjEnumArray;
   Counter := 0;
   m := TSquareBitMatrix.Create(aScCount);
-  for I := 0 to Pred(aScCount) do
-    if PreOrd[I] = -1 then
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
       begin
-        PreOrd[I] := Counter;
+        Visited[I] := True;
         {%H-}Stack.Push(I);
-        Inc(Counter);
+        if IdOrd[aScIds[I]] = -1 then
+          begin
+            IdOrd[aScIds[I]] := Counter;
+            Inc(Counter);
+          end;
         while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
-            begin
-              Next := AdjEnums[Curr].Current;
-              m[aScIds[Curr], aScIds[Next]] := True;
-              if PreOrd[Next] = -1 then
-                begin
-                  Parents[Next] := Curr;
-                  PreOrd[Next] := Counter;
-                  Inc(Counter);
-                  Stack.Push(Next);
-                end;
-            end
-          else
-            begin
-              Next := Stack.Pop;
-              Curr := Parents[Next];
-              if (Curr <> -1) and (PreOrd[Next] < PreOrd[Curr]) then
-                for J := 0 to Pred(aScCount) do
-                  if m[aScIds[Next], aScIds[J]] then
-                    m[aScIds[Curr], aScIds[J]] := True;
-            end;
+          begin
+            CurrId := aScIds[Curr];
+            if AdjEnums[{%H-}Curr].MoveNext then
+              begin
+                Next := AdjEnums[Curr].Current;
+                NextId := aScIds[Next];
+                if not Visited[Next] then
+                  begin
+                    Visited[Next] := True;
+                    Stack.Push(Next);
+                  end;
+                m[CurrId, NextId] := True;
+                if IdOrd[NextId] = -1 then
+                  begin
+                    IdOrd[NextId] := Counter;
+                    IdParents[NextId] := CurrId;
+                    Inc(Counter);
+                  end
+                else
+                if IdOrd[NextId] < IdOrd[CurrId] then
+                  for J := 0 to Pred(aScCount) do
+                    if m[NextId, J] then
+                      m[CurrId, J] := True;
+              end
+            else
+              begin
+                Next := aScIds[Stack.Pop];
+                if not IdVisited[Next] then
+                  begin
+                    IdVisited[Next] := True;
+                    Curr := IdParents[Next];
+                    if Curr <> -1 then
+                      for J := 0 to Pred(aScCount) do
+                        if m[Next, J] then
+                          m[Curr, J] := True;
+                  end;
+              end;
+          end;
       end;
   Result := TReachabilityMatrix.Create(m, aScIds);
 end;
