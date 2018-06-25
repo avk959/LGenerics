@@ -243,6 +243,8 @@ type
       //edges: src index, dst index, data
     end;
 
+    { TIntList }
+
     TIntList = record
     private
       FItems: TIntArray;
@@ -278,6 +280,7 @@ type
       function  FindFirst(out aDst: SizeInt): Boolean;
       function  Add(aValue: SizeInt): Boolean;
       function  AddAll(constref aList: TIntList): SizeInt;
+      procedure Intersect(constref aList: TIntList);
       function  Remove(aValue: SizeInt): Boolean;
       property  Count: SizeInt read FCount;
       property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
@@ -1167,6 +1170,20 @@ begin
   Result := 0;
   for I in aList do
     Result += Ord(Add(I));
+end;
+
+procedure TGCustomGraph.TIntList.Intersect(constref aList: TIntList);
+var
+  I: SizeInt = 0;
+begin
+  while I < Count do
+    if not aList.Contains(FItems[I]) then
+      begin
+        FItems[I] := FItems[Pred(Count)];
+        Dec(FCount);
+      end
+    else
+      Inc(I);
 end;
 
 function TGCustomGraph.TIntList.Remove(aValue: SizeInt): Boolean;
