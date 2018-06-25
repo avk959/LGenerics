@@ -44,6 +44,28 @@ type
   generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
+
+    { TBronKerbosch }
+
+    TBronKerbosch = record
+    private
+      FGraph: TSkeleton;
+      FRes: TIntList;
+      FResultVector: TIntArrayVector;
+      FResultList: TIntList;
+      function  TestIs(aCand, aTested: PIntList): Boolean;
+      function  TestClique(aCand, aTested: PIntList): Boolean;
+      procedure ExtendIsA(aCand, aTested: PIntList);
+      procedure ExtendIs(aCand, aTested: PIntList);
+      procedure ExtendCliqueA(aCand, aTested: PIntList);
+      procedure ExtendClique(aCand, aTested: PIntList);
+    public
+      function GetAllIntependentSets(aGraph: TGSimpleGraph): TIntArrayVector;
+      function GetMaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
+      function GetAllCliques(aGraph: TGSimpleGraph): TIntArrayVector;
+      function GetMaxClique(aGraph: TGSimpleGraph): TIntArray;
+    end;
+
     TDistinctEdgeEnumerator = record
     private
       FList: PNode;
@@ -156,6 +178,15 @@ type
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
+  { returns indices of the all independent sets of the vertices;
+    note: pretty costly time/memory operation }
+    function  FindIndependentSets: TIntArrayVector;
+  { returns indices of the max independent set of the vertices }
+    function  MaxIndependentSet: TIntArray;
+  { returns indices of the all cliques; note: pretty costly time/memory operation }
+    function  FindAllCliques: TIntArrayVector;
+  { returns indices of the maximal clique }
+    function  MaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -386,6 +417,184 @@ implementation
 uses
   bufstream;
 
+{ TGSimpleGraph.TBronKerbosch }
+
+function TGSimpleGraph.TBronKerbosch.TestIs(aCand, aTested: PIntList): Boolean;
+var
+  I: SizeInt;
+begin
+  for I in aTested^ do
+    if not FGraph[I]^.ContainsAny(aCand^) then
+      exit(True);
+  Result := False;
+end;
+
+function TGSimpleGraph.TBronKerbosch.TestClique(aCand, aTested: PIntList): Boolean;
+var
+  I: SizeInt;
+begin
+  for I in aTested^ do
+    if FGraph[I]^.ContainsAll(aCand^) then
+      exit(True);
+  Result := False;
+end;
+
+procedure TGSimpleGraph.TBronKerbosch.ExtendIsA(aCand, aTested: PIntList);
+var
+  NewCand,
+  NewTested: TIntList;
+  I, J: SizeInt;
+begin
+  while aCand^.NonEmpty and not TestIs(aCand, aTested) do
+    begin
+      aCand^.FindFirst(I);
+      FRes.Add(I);
+      NewCand.Assign(aCand^);
+      NewTested.Assign(aTested^);
+      NewCand.Remove(I);
+      for J in FGraph[I]^ do
+        begin
+          NewCand.Remove(J);
+          NewTested.Remove(J);
+        end;
+      if NewCand.IsEmpty and NewTested.IsEmpty then
+        FResultVector.Add(FRes.ToArray)
+      else
+        if NewCand.NonEmpty then
+          ExtendIsA(@NewCand, @NewTested);
+      FRes.Remove(I);
+      aCand^.Remove(I);
+      aTested^.Add(I);
+    end;
+end;
+
+procedure TGSimpleGraph.TBronKerbosch.ExtendIs(aCand, aTested: PIntList);
+var
+  NewCand,
+  NewTested: TIntList;
+  I, J: SizeInt;
+begin
+  while aCand^.NonEmpty and not TestIs(aCand, aTested) do
+    begin
+      aCand^.FindFirst(I);
+      FRes.Add(I);
+      NewCand.Assign(aCand^);
+      NewTested.Assign(aTested^);
+      NewCand.Remove(I);
+      for J in FGraph[I]^ do
+        begin
+          NewCand.Remove(J);
+          NewTested.Remove(J);
+        end;
+      if NewCand.IsEmpty and NewTested.IsEmpty then
+        begin
+          if FRes.Count > FResultList.Count then
+            FResultList.Assign(FRes);
+        end
+      else
+        if NewCand.NonEmpty then
+          ExtendIs(@NewCand, @NewTested);
+      FRes.Remove(I);
+      aCand^.Remove(I);
+      aTested^.Add(I);
+    end;
+end;
+
+procedure TGSimpleGraph.TBronKerbosch.ExtendCliqueA(aCand, aTested: PIntList);
+var
+  NewCand,
+  NewTested: TIntList;
+  I, J: SizeInt;
+begin
+  while aCand^.NonEmpty and not TestClique(aCand, aTested) do
+    begin
+      aCand^.FindFirst(I);
+      FRes.Add(I);
+      NewCand.Assign(aCand^);
+      NewTested.Assign(aTested^);
+      NewCand.Remove(I);
+      NewCand.Intersect(FGraph[I]^);
+      NewTested.Intersect(FGraph[I]^);
+      if NewCand.IsEmpty and NewTested.IsEmpty then
+        FResultVector.Add(FRes.ToArray)
+      else
+        if NewCand.NonEmpty then
+          ExtendCliqueA(@NewCand, @NewTested);
+      FRes.Remove(I);
+      aCand^.Remove(I);
+      aTested^.Add(I);
+    end;
+end;
+
+procedure TGSimpleGraph.TBronKerbosch.ExtendClique(aCand, aTested: PIntList);
+var
+  NewCand,
+  NewTested: TIntList;
+  I, J: SizeInt;
+begin
+  while aCand^.NonEmpty and not TestClique(aCand, aTested) do
+    begin
+      aCand^.FindFirst(I);
+      FRes.Add(I);
+      NewCand.Assign(aCand^);
+      NewTested.Assign(aTested^);
+      NewCand.Remove(I);
+      NewCand.Intersect(FGraph[I]^);
+      NewTested.Intersect(FGraph[I]^);
+      if NewCand.IsEmpty and NewTested.IsEmpty then
+        begin
+          if FRes.Count > FResultList.Count then
+            FResultList.Assign(FRes);
+        end
+      else
+        if NewCand.NonEmpty then
+          ExtendClique(@NewCand, @NewTested);
+      FRes.Remove(I);
+      aCand^.Remove(I);
+      aTested^.Add(I);
+    end;
+end;
+
+function TGSimpleGraph.TBronKerbosch.GetAllIntependentSets(aGraph: TGSimpleGraph): TIntArrayVector;
+var
+  Cand, Tested: TIntList;
+begin
+  FGraph := aGraph.CreateSkeleton;
+  Cand.InitRange(aGraph.VertexCount);
+  ExtendIsA(@Cand, @Tested);
+  Result := FResultVector;
+end;
+
+function TGSimpleGraph.TBronKerbosch.GetMaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
+var
+  Cand, Tested: TIntList;
+begin
+  FGraph := aGraph.CreateSkeleton;
+  Cand.InitRange(aGraph.VertexCount);
+  ExtendIs(@Cand, @Tested);
+  Result := FResultList.ToArray;
+end;
+
+function TGSimpleGraph.TBronKerbosch.GetAllCliques(aGraph: TGSimpleGraph): TIntArrayVector;
+var
+  Cand, Tested: TIntList;
+begin
+  FGraph := aGraph.CreateSkeleton;
+  Cand.InitRange(aGraph.VertexCount);
+  ExtendCliqueA(@Cand, @Tested);
+  Result := FResultVector;
+end;
+
+function TGSimpleGraph.TBronKerbosch.GetMaxClique(aGraph: TGSimpleGraph): TIntArray;
+var
+  Cand, Tested: TIntList;
+begin
+  FGraph := aGraph.CreateSkeleton;
+  Cand.InitRange(aGraph.VertexCount);
+  ExtendClique(@Cand, @Tested);
+  Result := FResultList.ToArray;
+end;
+
 { TGSimpleGraph.TDistinctEdgeEnumerator }
 
 function TGSimpleGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
@@ -561,7 +770,7 @@ begin
   Result := TSkeleton.Create(VertexCount);
   Result.FEdgeCount := EdgeCount;
   for I := 0 to Pred(VertexCount) do
-    Result[I]^.Assign(FNodeList[I].AdjList);
+    Result[I]^.AssignAdjList(FNodeList[I].AdjList);
 end;
 
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
@@ -1511,6 +1720,42 @@ begin
     raise ELGraphError.Create(SEGrapInconsist);
   TIntArrayVectorHelper.Sort(aCycles, @CmpIntArrayLen);
   Result := True;
+end;
+
+function TGSimpleGraph.FindIndependentSets: TIntArrayVector;
+var
+  Helper: TBronKerbosch;
+begin
+  if IsEmpty then
+    exit(Default(TIntArrayVector));
+  Result := Helper.GetAllIntependentSets(Self);
+end;
+
+function TGSimpleGraph.MaxIndependentSet: TIntArray;
+var
+  Helper: TBronKerbosch;
+begin
+  if IsEmpty then
+    exit(nil);
+  Result := Helper.GetMaxIntependentSet(Self);
+end;
+
+function TGSimpleGraph.FindAllCliques: TIntArrayVector;
+var
+  Helper: TBronKerbosch;
+begin
+  if IsEmpty then
+    exit(Default(TIntArrayVector));
+  Result := Helper.GetAllCliques(Self);
+end;
+
+function TGSimpleGraph.MaxClique: TIntArray;
+var
+  Helper: TBronKerbosch;
+begin
+  if IsEmpty then
+    exit(nil);
+  Result := Helper.GetMaxClique(Self);
 end;
 
 function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
