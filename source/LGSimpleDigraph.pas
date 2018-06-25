@@ -332,7 +332,7 @@ begin
   Result := TSkeleton.Create(VertexCount, True);
   Result.FEdgeCount := EdgeCount;
   for I := 0 to Pred(VertexCount) do
-    Result[I]^.Assign(FNodeList[I].AdjList);
+    Result[I]^.AssignAdjList(FNodeList[I].AdjList);
 end;
 
 function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
