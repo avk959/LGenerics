@@ -46,7 +46,6 @@ type
   type
     TDistinctEdgeEnumerator = record
     private
-      FVisited: TBitVector;
       FList: PNode;
       FEnum: TAdjList.TEnumerator;
       FCurrIndex,
@@ -402,13 +401,12 @@ begin
         if FCurrIndex >= FLastIndex then
           exit(False);
         Inc(FCurrIndex);
-        FVisited[FCurrIndex] := True;
         FEnum := FList[FCurrIndex].AdjList.GetEnumerator;
       end;
     Result := FEnum.MoveNext;
     FEnumDone := not Result;
     if Result then
-      Result := not FVisited[FEnum.Current^.Destination];
+      Result := FEnum.Current^.Destination > FCurrIndex;
   until Result;
 end;
 
@@ -416,7 +414,6 @@ procedure TGSimpleGraph.TDistinctEdgeEnumerator.Reset;
 begin
   FCurrIndex := -1;
   FEnumDone := True;
-  FVisited.ClearBits;
 end;
 
 { TGSimpleGraph.TDistinctEdges }
@@ -425,7 +422,6 @@ function TGSimpleGraph.TDistinctEdges.GetEnumerator: TDistinctEdgeEnumerator;
 begin
   Result.FList := Pointer(FGraph.FNodeList);
   Result.FLastIndex := Pred(FGraph.VertexCount);
-  Result.FVisited.Size := Succ(Result.FLastIndex);
   Result.FCurrIndex := -1;
   Result.FEnumDone := True;
 end;
