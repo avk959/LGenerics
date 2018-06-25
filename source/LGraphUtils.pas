@@ -417,7 +417,7 @@ type
 
     TEdgeEnumerator = record
     private
-      FList: TNodeList;
+      FList: PNode;
       FEnum: TAdjList.TEnumerator;
       FCurrIndex,
       FLastIndex: SizeInt;
@@ -1377,7 +1377,7 @@ end;
 
 function TGCustomGraph.TEdges.GetEnumerator: TEdgeEnumerator;
 begin
-  Result.FList := FGraph.FNodeList;
+  Result.FList := Pointer(FGraph.FNodeList);
   Result.FLastIndex := Pred(FGraph.VertexCount);
   Result.FCurrIndex := -1;
   Result.FEnumDone := True;
@@ -2012,9 +2012,9 @@ begin
   Result := 0;
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  {%H-}Queue.EnsureCapacity(VertexCount);
   if Assigned(OnFound) then
     OnFound(aRoot);
+  Visited[aRoot] := True;
   repeat
     if Assigned(OnAccept) and not OnAccept(aRoot) then
       exit;
@@ -2048,7 +2048,6 @@ begin
   if VertexCount < 2 then
     exit(False);
   Visited.Size := VertexCount;
-  {%H-}Queue.EnsureCapacity(VertexCount);
   for I := 0 to Pred(System.Length(aColors)) do
     if not Visited[I] then
       begin
@@ -2116,7 +2115,6 @@ begin
   CheckIndexRange(aSrc);
   Result := CreateIntArray;
   Result[aSrc] := 0;
-  {%H-}Queue.EnsureCapacity(VertexCount);
   repeat
     for Next in AdjVerticesI(aSrc) do
       if Result[Next] = -1 then
