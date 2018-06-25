@@ -47,7 +47,7 @@ type
     TDistinctEdgeEnumerator = record
     private
       FVisited: TBitVector;
-      FList: TNodeList;
+      FList: PNode;
       FEnum: TAdjList.TEnumerator;
       FCurrIndex,
       FLastIndex: SizeInt;
@@ -408,7 +408,7 @@ begin
     Result := FEnum.MoveNext;
     FEnumDone := not Result;
     if Result then
-      Result := not FVisited[FEnum.GetCurrent^.Destination];
+      Result := not FVisited[FEnum.Current^.Destination];
   until Result;
 end;
 
@@ -423,7 +423,7 @@ end;
 
 function TGSimpleGraph.TDistinctEdges.GetEnumerator: TDistinctEdgeEnumerator;
 begin
-  Result.FList := FGraph.FNodeList;
+  Result.FList := Pointer(FGraph.FNodeList);
   Result.FLastIndex := Pred(FGraph.VertexCount);
   Result.FVisited.Size := Succ(Result.FLastIndex);
   Result.FCurrIndex := -1;
@@ -482,6 +482,7 @@ begin
     if not Visited[I] then
       begin
         Curr := I;
+        Visited[Curr] := True;
         repeat
           for Next in AdjVerticesI(Curr) do
             if not Visited[Next] then
@@ -2013,15 +2014,18 @@ end;
 
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
 var
-  I: SizeInt = 0;
-  e: TEdge;
+  I, J: SizeInt;
+  p: PAdjItem;
 begin
   System.SetLength(Result, EdgeCount);
-  for e in DistinctEdges do
-    begin
-      Result[I] := TWeightEdge.Create(e.Source, e.Destination, e.Data.Weight);
-      Inc(I);
-    end;
+  J := 0;
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if p^.Destination > I then
+        begin
+          Result[J] := TWeightEdge.Create(I, p^.Destination, p^.Data.Weight);
+          Inc(J);
+        end;
 end;
 
 class function TGWeightedGraph.InfiniteWeight: TWeight;
@@ -2148,7 +2152,7 @@ begin
         Queue.Enqueue(TWeightItem.Create(ZeroWeight, 0), I);
         while Queue.TryDequeue(Item) do
           begin
-            Curr := Item.Index;
+            Curr := {%H-}Item.Index;
             aTotalWeight += Item.Weight;
             Visited[Curr] := True;
             for p in AdjLists[Curr]^ do
