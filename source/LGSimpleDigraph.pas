@@ -598,23 +598,25 @@ begin
               begin
                 Next := AdjEnums[Curr].Current;
                 NextId := aScIds[Next];
+                m[CurrId, NextId] := True;
+                if IdOrd[CurrId] < IdOrd[NextId] then
+                  continue;
                 if not Visited[Next] then
                   begin
                     Visited[Next] := True;
                     Stack.Push(Next);
-                  end;
-                m[CurrId, NextId] := True;
-                if IdOrd[NextId] = -1 then
-                  begin
-                    IdOrd[NextId] := Counter;
-                    IdParents[NextId] := CurrId;
-                    Inc(Counter);
+                    if IdOrd[NextId] = -1 then
+                      begin
+                        IdOrd[NextId] := Counter;
+                        IdParents[NextId] := CurrId;
+                        Inc(Counter);
+                      end
                   end
-                else
-                  if (IdOrd[NextId] < IdOrd[CurrId]) and Pairs.Add(IdOrd[NextId], IdOrd[CurrId]) then
-                    for J := 0 to Pred(aScCount) do
-                      if m[NextId, J] then
-                        m[CurrId, J] := True;
+                    else
+                      if Pairs.Add(IdOrd[CurrId], IdOrd[NextId]) then
+                        for J := 0 to Pred(aScCount) do
+                          if m[NextId, J] then
+                            m[CurrId, J] := True;
               end
             else
               begin
