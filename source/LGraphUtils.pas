@@ -266,7 +266,7 @@ type
       function  GetEnumerator: TEnumerator; inline;
       function  ToArray: TIntArray; inline;
       procedure Assign(constref aList: TIntList);
-      procedure Assign(constref aList: TAdjList);
+      procedure AssignAdjList(constref aList: TAdjList);
       function  Copy: TIntList; inline;
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
@@ -1054,7 +1054,7 @@ end;
 function TGCustomGraph.TIntList.ToArray: TIntArray;
 begin
   if Count > 0 then
-    Result := System.Copy(FItems, 0, Pred(Count))
+    Result := System.Copy(FItems, 0, Count)
   else
     Result := nil;
 end;
@@ -1065,7 +1065,7 @@ begin
   FItems := System.Copy(aList.FItems);
 end;
 
-procedure TGCustomGraph.TIntList.Assign(constref aList: TAdjList);
+procedure TGCustomGraph.TIntList.AssignAdjList(constref aList: TAdjList);
 var
   I: SizeInt;
 begin
