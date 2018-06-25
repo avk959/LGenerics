@@ -263,7 +263,8 @@ type
       end;
 
       procedure InitRange(aRange: SizeInt);
-      function  GetEnumerator: TEnumerator;
+      function  GetEnumerator: TEnumerator; inline;
+      function  ToArray: TIntArray; inline;
       procedure Assign(constref aList: TIntList);
       procedure Assign(constref aList: TAdjList);
       function  Copy: TIntList; inline;
@@ -271,10 +272,12 @@ type
       function  NonEmpty: Boolean; inline;
       procedure MakeEmpty; inline;
       function  Contains(aValue: SizeInt): Boolean; inline;
-      function  ContainsAll(constref aList: TIntList): Boolean; inline;
+      function  ContainsAny(constref aList: TIntList): Boolean; inline;
+      function  ContainsAll(constref aList: TIntList): Boolean;
       function  Find(aValue: SizeInt): SizeInt;
       function  FindFirst(out aDst: SizeInt): Boolean;
       function  Add(aValue: SizeInt): Boolean;
+      function  AddAll(constref aList: TIntList): SizeInt;
       function  Remove(aValue: SizeInt): Boolean;
       property  Count: SizeInt read FCount;
       property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
@@ -1032,8 +1035,14 @@ var
   I: SizeInt;
 begin
   System.SetLength(FItems, aRange);
-  for I := 0 to Pred(aRange) do
-    FItems[I] := I;
+  if aRange > 0 then
+    begin
+      for I := 0 to Pred(aRange) do
+        FItems[I] := I;
+      FCount := aRange;
+    end
+  else
+    FCount := 0;
 end;
 
 function TGCustomGraph.TIntList.GetEnumerator: TEnumerator;
@@ -1042,10 +1051,18 @@ begin
   Result.pLast := PSizeInt(Pointer(FItems)) + Pred(Count) and (-SizeInt(Count > 0));
 end;
 
+function TGCustomGraph.TIntList.ToArray: TIntArray;
+begin
+  if Count > 0 then
+    Result := System.Copy(FItems, 0, Pred(Count))
+  else
+    Result := nil;
+end;
+
 procedure TGCustomGraph.TIntList.Assign(constref aList: TIntList);
 begin
-  FItems := System.Copy(aList.FItems);
   FCount := aList.Count;
+  FItems := System.Copy(aList.FItems);
 end;
 
 procedure TGCustomGraph.TIntList.Assign(constref aList: TAdjList);
@@ -1053,7 +1070,7 @@ var
   I: SizeInt;
 begin
   FCount := aList.Count;
-  System.SetLength(FItems, FCount);
+  System.SetLength(FItems, aList.Count);
   for I := 0 to Pred(Count) do
     FItems[I] := aList.FList[I].Destination;
 end;
@@ -1088,25 +1105,31 @@ begin
   Result := Find(aValue) >= 0;
 end;
 
+function TGCustomGraph.TIntList.ContainsAny(constref aList: TIntList): Boolean;
+var
+  I: SizeInt;
+begin
+  if NonEmpty then
+    for I in aList do
+      if Contains(I) then
+        exit(True);
+  Result := False;
+end;
+
 function TGCustomGraph.TIntList.ContainsAll(constref aList: TIntList): Boolean;
 var
   I, J, v: SizeInt;
   Found: Boolean;
 begin
-  for I := 0 to Pred(aList.Count) do
+  if Count >= aList.Count then
     begin
-      Found := False;
-      v := aList.FItems[I];
-      for J := 0 to Pred(Count) do
-        if FItems[J] = v then
-          begin
-            Found := True;
-            break;
-          end;
-      if not Found then
-        exit(False);
-    end;
-  Result := True;
+      for I in aList do
+        if not Contains(I) then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := False;
 end;
 
 function TGCustomGraph.TIntList.Find(aValue: SizeInt): SizeInt;
@@ -1128,10 +1151,7 @@ end;
 
 function TGCustomGraph.TIntList.Add(aValue: SizeInt): Boolean;
 begin
-  if Count <> 0 then
-    Result := Find(aValue) < 0
-  else
-    Result := True;
+  Result := Find(aValue) < 0;
   if Result then
     begin
       if Count = System.Length(FItems) then
@@ -1139,6 +1159,15 @@ begin
       FItems[Count] := aValue;
       Inc(FCount);
     end;
+end;
+
+function TGCustomGraph.TIntList.AddAll(constref aList: TIntList): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  for I in aList do
+    Result += Ord(Add(I));
 end;
 
 function TGCustomGraph.TIntList.Remove(aValue: SizeInt): Boolean;
