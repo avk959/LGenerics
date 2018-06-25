@@ -1048,7 +1048,7 @@ end;
 function TGCustomGraph.TIntList.GetEnumerator: TEnumerator;
 begin
   Result.pCurr := PSizeInt(Pointer(FItems)) - Ord(Count > 0);
-  Result.pLast := PSizeInt(Pointer(FItems)) + Pred(Count) and (-SizeInt(Count > 0));
+  Result.pLast := PSizeInt(Pointer(FItems)) + (Pred(Count) and (-SizeInt(Count > 0)));
 end;
 
 function TGCustomGraph.TIntList.ToArray: TIntArray;
@@ -1118,8 +1118,7 @@ end;
 
 function TGCustomGraph.TIntList.ContainsAll(constref aList: TIntList): Boolean;
 var
-  I, J, v: SizeInt;
-  Found: Boolean;
+  I: SizeInt;
 begin
   if Count >= aList.Count then
     begin
@@ -1177,9 +1176,8 @@ begin
   for I := 0 to Pred(Count) do
     if FItems[I] = aValue then
       begin
+        FItems[I] := FItems[Pred(Count)];
         Dec(FCount);
-        if I < Count then
-          FItems[I] := FItems[Count];
         exit(True);
       end;
   Result := False;
