@@ -177,11 +177,11 @@ type
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
   { returns indices of the vertices of all found independent sets; worst time cost O(3^n/3) }
     function  FindIndependentSets: TIntArrayVector;
-  { returns indices of the vertices of the some found maximal independent set }
+  { returns indices of the vertices of the some found maximum independent set }
     function  MaxIndependentSet: TIntArray;
   { returns indices of the vertices of the all found cliques; worst time cost O(3^n/3) }
     function  FindAllCliques: TIntArrayVector;
-  { returns indices of the vertices of the some found maximal clique }
+  { returns indices of the vertices of the some found maximum clique }
     function  MaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
