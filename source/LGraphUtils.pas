@@ -243,8 +243,6 @@ type
       //edges: src index, dst index, data
     end;
 
-    { TIntList }
-
     TIntList = record
     private
       FItems: TIntArray;
@@ -268,23 +266,26 @@ type
       function  GetEnumerator: TEnumerator; inline;
       function  ToArray: TIntArray; inline;
       procedure Assign(constref aList: TIntList);
+      procedure AssignExcept(constref aList: TIntList; aExcept: SizeInt);
       procedure AssignAdjList(constref aList: TAdjList);
       function  Copy: TIntList; inline;
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
       procedure MakeEmpty; inline;
       function  Contains(aValue: SizeInt): Boolean; inline;
-      function  ContainsAny(constref aList: TIntList): Boolean; inline;
+      function  ContainsAny(constref aList: TIntList): Boolean;
       function  ContainsAll(constref aList: TIntList): Boolean;
       function  Find(aValue: SizeInt): SizeInt;
       function  FindFirst(out aDst: SizeInt): Boolean;
       function  Add(aValue: SizeInt): Boolean;
       function  AddAll(constref aList: TIntList): SizeInt;
+      procedure Subtract(constref aList: TIntList);
       procedure Intersect(constref aList: TIntList);
       function  Remove(aValue: SizeInt): Boolean;
       property  Count: SizeInt read FCount;
       property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
     end;
+
     PIntList = ^TIntList;
 
     TSkeleton = record
@@ -1068,6 +1069,26 @@ begin
   FItems := System.Copy(aList.FItems);
 end;
 
+procedure TGCustomGraph.TIntList.AssignExcept(constref aList: TIntList; aExcept: SizeInt);
+var
+  I, J: SizeInt;
+begin
+  FCount := 0;
+  I := 0;
+  J := 0;
+  System.SetLength(FItems, aList.Count);
+  while I < aList.Count do
+    begin
+      if aList.FItems[I] <> aExcept then
+        begin
+          FItems[J] := aList.FItems[I];
+          Inc(J);
+          Inc(FCount);
+        end;
+      Inc(I);
+    end;
+end;
+
 procedure TGCustomGraph.TIntList.AssignAdjList(constref aList: TAdjList);
 var
   I: SizeInt;
@@ -1172,6 +1193,21 @@ begin
     Result += Ord(Add(I));
 end;
 
+procedure TGCustomGraph.TIntList.Subtract(constref aList: TIntList);
+var
+  I, J: SizeInt;
+begin
+  for I in aList do
+    for J := 0 to Pred(Count) do
+      if FItems[J] = I then
+        begin
+          Dec(FCount);
+          if J < Count then
+            FItems[J] := FItems[Count];
+          break;
+        end;
+end;
+
 procedure TGCustomGraph.TIntList.Intersect(constref aList: TIntList);
 var
   I: SizeInt = 0;
@@ -1179,8 +1215,9 @@ begin
   while I < Count do
     if not aList.Contains(FItems[I]) then
       begin
-        FItems[I] := FItems[Pred(Count)];
         Dec(FCount);
+        if I < Count then
+          FItems[I] := FItems[Count];
       end
     else
       Inc(I);
@@ -1193,8 +1230,9 @@ begin
   for I := 0 to Pred(Count) do
     if FItems[I] = aValue then
       begin
-        FItems[I] := FItems[Pred(Count)];
         Dec(FCount);
+        if I < Count then
+          FItems[I] := FItems[Count];
         exit(True);
       end;
   Result := False;
