@@ -186,12 +186,12 @@ type
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
-  { returns indices of the vertices of all found independent sets; worst time cost O(3^n/3) }
+  { lists all found independent sets; worst time cost O(3^n/3) }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set }
     function  MaxIndependentSet: TIntArray;
     function  MinIndependentSet: TIntArray;
-  { returns indices of the vertices of the all found cliques; worst time cost O(3^n/3) }
+  { lists all found cliques; worst time cost O(3^n/3) }
     procedure ListAllCliques(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique }
     function  MaxClique: TIntArray;
