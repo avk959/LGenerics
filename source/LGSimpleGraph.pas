@@ -44,9 +44,6 @@ type
   generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
-
-    { TBronKerbosch }
-
     TBronKerbosch = record
     private
       FGraph: TSkeleton;
@@ -64,6 +61,10 @@ type
       function GetMaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
       function GetAllCliques(aGraph: TGSimpleGraph): TIntArrayVector;
       function GetMaxClique(aGraph: TGSimpleGraph): TIntArray;
+    end;
+
+    TGreedyISHelper = object
+
     end;
 
     TDistinctEdgeEnumerator = record
@@ -178,14 +179,13 @@ type
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
-  { returns indices of the all independent sets of the vertices;
-    note: pretty costly time/memory operation }
+  { returns indices of the vertices of all found independent sets; worst time cost O(3^n/3) }
     function  FindIndependentSets: TIntArrayVector;
-  { returns indices of the max independent set of the vertices }
+  { returns indices of the vertices of the some found maximal independent set }
     function  MaxIndependentSet: TIntArray;
-  { returns indices of the all cliques; note: pretty costly time/memory operation }
+  { returns indices of the vertices of the all found cliques; worst time cost - O(3^n/3) }
     function  FindAllCliques: TIntArrayVector;
-  { returns indices of the maximal clique }
+  { returns indices of the vertices of the some found maximal clique }
     function  MaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
