@@ -44,23 +44,34 @@ type
   generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
-    TBronKerbosch = record
+    TCliqueHelper = object
     private
       FGraph: TSkeleton;
-      FAccum: TIntList;
-      FResultVector: TIntArrayVector;
-      FResultList: TIntList;
-      function  TestIs(aCand, aTested: PIntList): Boolean;
-      function  TestClique(aCand, aTested: PIntList): Boolean;
-      procedure ExtendIsAll(aCand, aTested: PIntList);
-      procedure ExtendIs(aCand, aTested: PIntList);
-      procedure ExtendCliqueAll(aCand, aTested: PIntList);
-      procedure ExtendClique(aCand, aTested: PIntList);
+      FAccum: TIntSet;
+      FResultSet: TIntSet;
+      FOnFindSet: TOnFindSet;
+      function  Test(constref aCand, aTested: TIntSet): Boolean;
+      procedure Extend(var aCand, aTested: TIntSet);
+      procedure MaxSetFound(constref aSet: TIntSet);
     public
-      function GetAllIntependentSets(aGraph: TGSimpleGraph): TIntArrayVector;
-      function GetMaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
-      function GetAllCliques(aGraph: TGSimpleGraph): TIntArrayVector;
-      function GetMaxClique(aGraph: TGSimpleGraph): TIntArray;
+      procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+      function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
+    end;
+
+    TIsHelper = object
+    private
+      FGraph: TSkeleton;
+      FAccum: TIntSet;
+      FResultSet: TIntSet;
+      FOnFindSet: TOnFindSet;
+      function  Test(constref aCand, aTested: TIntSet): Boolean;
+      procedure Extend(var aCand, aTested: TIntSet);
+      procedure MaxSetFound(constref aSet: TIntSet);
+      procedure MinSetFound(constref aSet: TIntSet);
+    public
+      procedure ListIntependentSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+      function  MaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
+      function  MinIntependentSet(aGraph: TGSimpleGraph): TIntArray;
     end;
 
     TDistinctEdgeEnumerator = record
@@ -176,11 +187,12 @@ type
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
   { returns indices of the vertices of all found independent sets; worst time cost O(3^n/3) }
-    function  FindIndependentSets: TIntArrayVector;
+    procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set }
     function  MaxIndependentSet: TIntArray;
+    function  MinIndependentSet: TIntArray;
   { returns indices of the vertices of the all found cliques; worst time cost O(3^n/3) }
-    function  FindAllCliques: TIntArrayVector;
+    procedure ListAllCliques(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique }
     function  MaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
@@ -413,172 +425,154 @@ implementation
 uses
   bufstream;
 
-{ TGSimpleGraph.TBronKerbosch }
+{ TGSimpleGraph.TCliqueHelper }
 
-function TGSimpleGraph.TBronKerbosch.TestIs(aCand, aTested: PIntList): Boolean;
+function TGSimpleGraph.TCliqueHelper.Test(constref aCand, aTested: TIntSet): Boolean;
 var
   I: SizeInt;
 begin
-  for I in aTested^ do
-    if not FGraph[I]^.ContainsAny(aCand^) then
+  for I in aTested do
+    if FGraph[I]^.ContainsAll(aCand) then
       exit(True);
   Result := False;
 end;
 
-function TGSimpleGraph.TBronKerbosch.TestClique(aCand, aTested: PIntList): Boolean;
+procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand, aTested: TIntSet);
+var
+  NewCand,
+  NewTested: TIntSet;
+  I: SizeInt;
+begin
+  while aCand.NonEmpty and not Test(aCand, aTested) do
+    begin
+      aCand.FindFirst(I);
+      FAccum.Add(I);
+      NewCand.AssignExcept(aCand, I);
+      NewTested.Assign(aTested);
+      NewCand.Intersect(FGraph[I]^);
+      NewTested.Intersect(FGraph[I]^);
+      if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
+        FOnFindSet(FAccum)
+      else
+        if NewCand.NonEmpty then
+          Extend(NewCand, NewTested);
+      FAccum.Remove(I);
+      aCand.Remove(I);
+      aTested.Add(I);
+    end;
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.MaxSetFound(constref aSet: TIntSet);
+begin
+  if aSet.Count > FResultSet.Count then
+    FResultSet.Assign(aSet);
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Cand, Tested: TIntSet;
+begin
+  if aOnFind = nil then
+    exit;
+  FGraph := aGraph.CreateSkeleton;
+  FOnFindSet := aOnFind;
+  Cand.InitRange(aGraph.VertexCount);
+  Extend(Cand, Tested{%H-});
+end;
+
+function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+var
+  Cand, Tested: TIntSet;
+begin
+  FGraph := aGraph.CreateSkeleton;
+  FOnFindSet := @MaxSetFound;
+  Cand.InitRange(aGraph.VertexCount);
+  Extend(Cand, Tested{%H-});
+  Result := FResultSet.ToArray;
+end;
+
+{ TGSimpleGraph.TIsHelper }
+
+function TGSimpleGraph.TIsHelper.Test(constref aCand, aTested: TIntSet): Boolean;
 var
   I: SizeInt;
 begin
-  for I in aTested^ do
-    if FGraph[I]^.ContainsAll(aCand^) then
+  for I in aTested do
+    if not FGraph[I]^.ContainsAny(aCand) then
       exit(True);
   Result := False;
 end;
 
-procedure TGSimpleGraph.TBronKerbosch.ExtendIsAll(aCand, aTested: PIntList);
+procedure TGSimpleGraph.TIsHelper.Extend(var aCand, aTested: TIntSet);
 var
   NewCand,
-  NewTested: TIntList;
+  NewTested: TIntSet;
   I: SizeInt;
 begin
-  while aCand^.NonEmpty and not TestIs(aCand, aTested) do
+  while aCand.NonEmpty and not Test(aCand, aTested) do
     begin
-      aCand^.FindFirst(I);
+      aCand.FindFirst(I);
       FAccum.Add(I);
-      NewCand.AssignExcept(aCand^, I);
-      NewTested.Assign(aTested^);
+      NewCand.AssignExcept(aCand, I);
+      NewTested.Assign(aTested);
       NewCand.Subtract(FGraph[I]^);
       NewTested.Subtract(FGraph[I]^);
-      if NewCand.IsEmpty and NewTested.IsEmpty then
-        FResultVector.Add(FAccum.ToArray)
+      if NewCand.IsEmpty and NewTested.IsEmpty then // found IS
+        FOnFindSet(FAccum)
       else
         if NewCand.NonEmpty then
-          ExtendIsAll(@NewCand, @NewTested);
+          Extend(NewCand, NewTested);
       FAccum.Remove(I);
-      aCand^.Remove(I);
-      aTested^.Add(I);
+      aCand.Remove(I);
+      aTested.Add(I);
     end;
 end;
 
-procedure TGSimpleGraph.TBronKerbosch.ExtendIs(aCand, aTested: PIntList);
-var
-  NewCand,
-  NewTested: TIntList;
-  I: SizeInt;
+procedure TGSimpleGraph.TIsHelper.MaxSetFound(constref aSet: TIntSet);
 begin
-  while aCand^.NonEmpty and not TestIs(aCand, aTested) do
-    begin
-      aCand^.FindFirst(I);
-      FAccum.Add(I);
-      NewCand.AssignExcept(aCand^, I);
-      NewTested.Assign(aTested^);
-      NewCand.Subtract(FGraph[I]^);
-      NewTested.Subtract(FGraph[I]^);
-      if NewCand.IsEmpty and NewTested.IsEmpty then
-        begin
-          if FAccum.Count > FResultList.Count then
-            FResultList.Assign(FAccum);
-        end
-      else
-        if NewCand.NonEmpty then
-          ExtendIs(@NewCand, @NewTested);
-      FAccum.Remove(I);
-      aCand^.Remove(I);
-      aTested^.Add(I);
-    end;
+  if aSet.Count > FResultSet.Count then
+    FResultSet.Assign(aSet);
 end;
 
-procedure TGSimpleGraph.TBronKerbosch.ExtendCliqueAll(aCand, aTested: PIntList);
-var
-  NewCand,
-  NewTested: TIntList;
-  I: SizeInt;
+procedure TGSimpleGraph.TIsHelper.MinSetFound(constref aSet: TIntSet);
 begin
-  while aCand^.NonEmpty and not TestClique(aCand, aTested) do
-    begin
-      aCand^.FindFirst(I);
-      FAccum.Add(I);
-      NewCand.AssignExcept(aCand^, I);
-      NewTested.Assign(aTested^);
-      NewCand.Intersect(FGraph[I]^);
-      NewTested.Intersect(FGraph[I]^);
-      if NewCand.IsEmpty and NewTested.IsEmpty then
-        FResultVector.Add(FAccum.ToArray)
-      else
-        if NewCand.NonEmpty then
-          ExtendCliqueAll(@NewCand, @NewTested);
-      FAccum.Remove(I);
-      aCand^.Remove(I);
-      aTested^.Add(I);
-    end;
+  if aSet.Count < FResultSet.Count then
+    FResultSet.Assign(aSet);
 end;
 
-procedure TGSimpleGraph.TBronKerbosch.ExtendClique(aCand, aTested: PIntList);
+procedure TGSimpleGraph.TIsHelper.ListIntependentSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
-  NewCand,
-  NewTested: TIntList;
-  I: SizeInt;
+  Cand, Tested: TIntSet;
 begin
-  while aCand^.NonEmpty and not TestClique(aCand, aTested) do
-    begin
-      aCand^.FindFirst(I);
-      FAccum.Add(I);
-      NewCand.AssignExcept(aCand^, I);
-      NewTested.Assign(aTested^);
-      NewCand.Intersect(FGraph[I]^);
-      NewTested.Intersect(FGraph[I]^);
-      if NewCand.IsEmpty and NewTested.IsEmpty then
-        begin
-          if FAccum.Count > FResultList.Count then
-            FResultList.Assign(FAccum);
-        end
-      else
-        if NewCand.NonEmpty then
-          ExtendClique(@NewCand, @NewTested);
-      FAccum.Remove(I);
-      aCand^.Remove(I);
-      aTested^.Add(I);
-    end;
+  if aOnFind = nil then
+    exit;
+  FGraph := aGraph.CreateSkeleton;
+  FOnFindSet := aOnFind;
+  Cand.InitRange(aGraph.VertexCount);
+  Extend(Cand, Tested{%H-});
 end;
 
-function TGSimpleGraph.TBronKerbosch.GetAllIntependentSets(aGraph: TGSimpleGraph): TIntArrayVector;
+function TGSimpleGraph.TIsHelper.MaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
 var
-  Cand, Tested: TIntList;
+  Cand, Tested: TIntSet;
 begin
   FGraph := aGraph.CreateSkeleton;
+  FOnFindSet := @MaxSetFound;
   Cand.InitRange(aGraph.VertexCount);
-  ExtendIsAll(@Cand, @Tested);
-  Result := FResultVector;
+  Extend(Cand, Tested{%H-});
+  Result := FResultSet.ToArray;
 end;
 
-function TGSimpleGraph.TBronKerbosch.GetMaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TIsHelper.MinIntependentSet(aGraph: TGSimpleGraph): TIntArray;
 var
-  Cand, Tested: TIntList;
+  Cand, Tested: TIntSet;
 begin
   FGraph := aGraph.CreateSkeleton;
+  FOnFindSet := @MinSetFound;
   Cand.InitRange(aGraph.VertexCount);
-  ExtendIs(@Cand, @Tested);
-  Result := FResultList.ToArray;
-end;
-
-function TGSimpleGraph.TBronKerbosch.GetAllCliques(aGraph: TGSimpleGraph): TIntArrayVector;
-var
-  Cand, Tested: TIntList;
-begin
-  FGraph := aGraph.CreateSkeleton;
-  Cand.InitRange(aGraph.VertexCount);
-  ExtendCliqueAll(@Cand, @Tested);
-  Result := FResultVector;
-end;
-
-function TGSimpleGraph.TBronKerbosch.GetMaxClique(aGraph: TGSimpleGraph): TIntArray;
-var
-  Cand, Tested: TIntList;
-begin
-  FGraph := aGraph.CreateSkeleton;
-  Cand.InitRange(aGraph.VertexCount);
-  ExtendClique(@Cand, @Tested);
-  Result := FResultList.ToArray;
+  FResultSet.InitRange(aGraph.VertexCount);
+  Extend(Cand, Tested{%H-});
+  Result := FResultSet.ToArray;
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
@@ -725,14 +719,17 @@ begin
   Result := FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
   if Result then
     begin
-      if not FNodeList[aDst].AdjList.Add(TAdjItem.Create(aSrc, aData)) then
-        raise ELGraphError.Create(SEGrapInconsist);
-      Inc(FEdgeCount);
-      if ConnectedValid and SeparateMerged(aSrc, aDst) then
+      if FNodeList[aDst].AdjList.Add(TAdjItem.Create(aSrc, aData)) then
         begin
-          Dec(FCompCount);
-          FConnected := FCompCount = 1;
-        end;
+          Inc(FEdgeCount);
+          if ConnectedValid and SeparateMerged(aSrc, aDst) then
+            begin
+              Dec(FCompCount);
+              FConnected := FCompCount = 1;
+            end;
+        end
+      else
+        raise ELGraphError.Create(SEGrapInconsist);
     end;
 end;
 
@@ -756,7 +753,7 @@ begin
   Result := TSkeleton.Create(VertexCount);
   Result.FEdgeCount := EdgeCount;
   for I := 0 to Pred(VertexCount) do
-    Result[I]^.AssignAdjList(FNodeList[I].AdjList);
+    FNodeList[I].AdjList.CopyTo(Result[I]);
 end;
 
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
@@ -1708,40 +1705,49 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindIndependentSets: TIntArrayVector;
+procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
 var
-  Helper: TBronKerbosch;
+  Helper: TIsHelper;
 begin
   if IsEmpty then
-    exit(Default(TIntArrayVector));
-  Result := Helper.GetAllIntependentSets(Self);
+    exit;
+  Helper.ListIntependentSets(Self, aOnFindSet);
 end;
 
 function TGSimpleGraph.MaxIndependentSet: TIntArray;
 var
-  Helper: TBronKerbosch;
+  Helper: TIsHelper;
 begin
   if IsEmpty then
     exit(nil);
-  Result := Helper.GetMaxIntependentSet(Self);
+  Result := Helper.MaxIntependentSet(Self);
 end;
 
-function TGSimpleGraph.FindAllCliques: TIntArrayVector;
+function TGSimpleGraph.MinIndependentSet: TIntArray;
 var
-  Helper: TBronKerbosch;
+  Helper: TIsHelper;
 begin
   if IsEmpty then
-    exit(Default(TIntArrayVector));
-  Result := Helper.GetAllCliques(Self);
+    exit(nil);
+  Result := Helper.MinIntependentSet(Self);
+end;
+
+procedure TGSimpleGraph.ListAllCliques(aOnFindSet: TOnFindSet);
+var
+  Helper: TCliqueHelper;
+begin
+  if IsEmpty then
+    exit;
+  Helper.ListCliques(Self, aOnFindSet);
 end;
 
 function TGSimpleGraph.MaxClique: TIntArray;
 var
-  Helper: TBronKerbosch;
+  Helper: TCliqueHelper;
 begin
   if IsEmpty then
     exit(nil);
-  Result := Helper.GetMaxClique(Self);
+  Result := Helper.MaxClique(Self);
 end;
 
 function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
@@ -1941,7 +1947,7 @@ end;
 
 function TGSimpleGraph.SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
 var
-  vSet: TIntSet;
+  vSet: TIntHashSet;
   I, J: SizeInt;
 begin
   vSet.AddAll(aList);
