@@ -348,7 +348,7 @@ type
 
     TOnReadData    = specialize TGOnStreamRead<TEdgeData>;
     TOnWriteData   = specialize TGOnStreamWrite<TEdgeData>;
-    TOnFindSet     = function(constref aSet: TIntSet): Boolean of object;
+    TOnFindSet     = procedure(constref aSet: TIntSet) of object;
 
     TEdge = record
       Source,
