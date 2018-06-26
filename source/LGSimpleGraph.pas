@@ -47,24 +47,20 @@ type
     TBronKerbosch = record
     private
       FGraph: TSkeleton;
-      FRes: TIntList;
+      FAccum: TIntList;
       FResultVector: TIntArrayVector;
       FResultList: TIntList;
       function  TestIs(aCand, aTested: PIntList): Boolean;
       function  TestClique(aCand, aTested: PIntList): Boolean;
-      procedure ExtendIsA(aCand, aTested: PIntList);
+      procedure ExtendIsAll(aCand, aTested: PIntList);
       procedure ExtendIs(aCand, aTested: PIntList);
-      procedure ExtendCliqueA(aCand, aTested: PIntList);
+      procedure ExtendCliqueAll(aCand, aTested: PIntList);
       procedure ExtendClique(aCand, aTested: PIntList);
     public
       function GetAllIntependentSets(aGraph: TGSimpleGraph): TIntArrayVector;
       function GetMaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
       function GetAllCliques(aGraph: TGSimpleGraph): TIntArrayVector;
       function GetMaxClique(aGraph: TGSimpleGraph): TIntArray;
-    end;
-
-    TGreedyISHelper = object
-
     end;
 
     TDistinctEdgeEnumerator = record
@@ -183,7 +179,7 @@ type
     function  FindIndependentSets: TIntArrayVector;
   { returns indices of the vertices of the some found maximal independent set }
     function  MaxIndependentSet: TIntArray;
-  { returns indices of the vertices of the all found cliques; worst time cost - O(3^n/3) }
+  { returns indices of the vertices of the all found cliques; worst time cost O(3^n/3) }
     function  FindAllCliques: TIntArrayVector;
   { returns indices of the vertices of the some found maximal clique }
     function  MaxClique: TIntArray;
@@ -439,30 +435,26 @@ begin
   Result := False;
 end;
 
-procedure TGSimpleGraph.TBronKerbosch.ExtendIsA(aCand, aTested: PIntList);
+procedure TGSimpleGraph.TBronKerbosch.ExtendIsAll(aCand, aTested: PIntList);
 var
   NewCand,
   NewTested: TIntList;
-  I, J: SizeInt;
+  I: SizeInt;
 begin
   while aCand^.NonEmpty and not TestIs(aCand, aTested) do
     begin
       aCand^.FindFirst(I);
-      FRes.Add(I);
-      NewCand.Assign(aCand^);
+      FAccum.Add(I);
+      NewCand.AssignExcept(aCand^, I);
       NewTested.Assign(aTested^);
-      NewCand.Remove(I);
-      for J in FGraph[I]^ do
-        begin
-          NewCand.Remove(J);
-          NewTested.Remove(J);
-        end;
+      NewCand.Subtract(FGraph[I]^);
+      NewTested.Subtract(FGraph[I]^);
       if NewCand.IsEmpty and NewTested.IsEmpty then
-        FResultVector.Add(FRes.ToArray)
+        FResultVector.Add(FAccum.ToArray)
       else
         if NewCand.NonEmpty then
-          ExtendIsA(@NewCand, @NewTested);
-      FRes.Remove(I);
+          ExtendIsAll(@NewCand, @NewTested);
+      FAccum.Remove(I);
       aCand^.Remove(I);
       aTested^.Add(I);
     end;
@@ -472,55 +464,50 @@ procedure TGSimpleGraph.TBronKerbosch.ExtendIs(aCand, aTested: PIntList);
 var
   NewCand,
   NewTested: TIntList;
-  I, J: SizeInt;
+  I: SizeInt;
 begin
   while aCand^.NonEmpty and not TestIs(aCand, aTested) do
     begin
       aCand^.FindFirst(I);
-      FRes.Add(I);
-      NewCand.Assign(aCand^);
+      FAccum.Add(I);
+      NewCand.AssignExcept(aCand^, I);
       NewTested.Assign(aTested^);
-      NewCand.Remove(I);
-      for J in FGraph[I]^ do
-        begin
-          NewCand.Remove(J);
-          NewTested.Remove(J);
-        end;
+      NewCand.Subtract(FGraph[I]^);
+      NewTested.Subtract(FGraph[I]^);
       if NewCand.IsEmpty and NewTested.IsEmpty then
         begin
-          if FRes.Count > FResultList.Count then
-            FResultList.Assign(FRes);
+          if FAccum.Count > FResultList.Count then
+            FResultList.Assign(FAccum);
         end
       else
         if NewCand.NonEmpty then
           ExtendIs(@NewCand, @NewTested);
-      FRes.Remove(I);
+      FAccum.Remove(I);
       aCand^.Remove(I);
       aTested^.Add(I);
     end;
 end;
 
-procedure TGSimpleGraph.TBronKerbosch.ExtendCliqueA(aCand, aTested: PIntList);
+procedure TGSimpleGraph.TBronKerbosch.ExtendCliqueAll(aCand, aTested: PIntList);
 var
   NewCand,
   NewTested: TIntList;
-  I, J: SizeInt;
+  I: SizeInt;
 begin
   while aCand^.NonEmpty and not TestClique(aCand, aTested) do
     begin
       aCand^.FindFirst(I);
-      FRes.Add(I);
-      NewCand.Assign(aCand^);
+      FAccum.Add(I);
+      NewCand.AssignExcept(aCand^, I);
       NewTested.Assign(aTested^);
-      NewCand.Remove(I);
       NewCand.Intersect(FGraph[I]^);
       NewTested.Intersect(FGraph[I]^);
       if NewCand.IsEmpty and NewTested.IsEmpty then
-        FResultVector.Add(FRes.ToArray)
+        FResultVector.Add(FAccum.ToArray)
       else
         if NewCand.NonEmpty then
-          ExtendCliqueA(@NewCand, @NewTested);
-      FRes.Remove(I);
+          ExtendCliqueAll(@NewCand, @NewTested);
+      FAccum.Remove(I);
       aCand^.Remove(I);
       aTested^.Add(I);
     end;
@@ -530,26 +517,25 @@ procedure TGSimpleGraph.TBronKerbosch.ExtendClique(aCand, aTested: PIntList);
 var
   NewCand,
   NewTested: TIntList;
-  I, J: SizeInt;
+  I: SizeInt;
 begin
   while aCand^.NonEmpty and not TestClique(aCand, aTested) do
     begin
       aCand^.FindFirst(I);
-      FRes.Add(I);
-      NewCand.Assign(aCand^);
+      FAccum.Add(I);
+      NewCand.AssignExcept(aCand^, I);
       NewTested.Assign(aTested^);
-      NewCand.Remove(I);
       NewCand.Intersect(FGraph[I]^);
       NewTested.Intersect(FGraph[I]^);
       if NewCand.IsEmpty and NewTested.IsEmpty then
         begin
-          if FRes.Count > FResultList.Count then
-            FResultList.Assign(FRes);
+          if FAccum.Count > FResultList.Count then
+            FResultList.Assign(FAccum);
         end
       else
         if NewCand.NonEmpty then
           ExtendClique(@NewCand, @NewTested);
-      FRes.Remove(I);
+      FAccum.Remove(I);
       aCand^.Remove(I);
       aTested^.Add(I);
     end;
@@ -561,7 +547,7 @@ var
 begin
   FGraph := aGraph.CreateSkeleton;
   Cand.InitRange(aGraph.VertexCount);
-  ExtendIsA(@Cand, @Tested);
+  ExtendIsAll(@Cand, @Tested);
   Result := FResultVector;
 end;
 
@@ -581,7 +567,7 @@ var
 begin
   FGraph := aGraph.CreateSkeleton;
   Cand.InitRange(aGraph.VertexCount);
-  ExtendCliqueA(@Cand, @Tested);
+  ExtendCliqueAll(@Cand, @Tested);
   Result := FResultVector;
 end;
 
