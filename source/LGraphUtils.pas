@@ -124,6 +124,53 @@ type
     property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
+const
+  ADJ_EXPAND_SIZE = 8;
+
+type
+  TIntSet = record
+  private
+    FItems: TIntArray;
+    FCount: SizeInt;
+    procedure Expand; inline;
+    function  GetItem(aIndex: SizeInt): SizeInt; inline;
+    class operator Initialize(var aList: TIntSet);
+  public
+  type
+    TEnumerator = record
+    private
+      pCurr,
+      pLast: PSizeInt;
+      function  GetCurrent: SizeInt; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      property  Current: SizeInt read GetCurrent;
+    end;
+
+    procedure InitRange(aRange: SizeInt);
+    function  GetEnumerator: TEnumerator; inline;
+    function  ToArray: TIntArray; inline;
+    procedure Assign(constref aList: TIntSet);
+    procedure AssignExcept(constref aList: TIntSet; aExcept: SizeInt);
+    function  Copy: TIntSet; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure MakeEmpty; inline;
+    function  Contains(aValue: SizeInt): Boolean; inline;
+    function  ContainsAny(constref aList: TIntSet): Boolean;
+    function  ContainsAll(constref aList: TIntSet): Boolean;
+    function  Find(aValue: SizeInt): SizeInt;
+    function  FindFirst(out aDst: SizeInt): Boolean;
+    function  Add(aValue: SizeInt): Boolean;
+    function  AddAll(constref aList: TIntSet): SizeInt;
+    procedure Subtract(constref aList: TIntSet);
+    procedure Intersect(constref aList: TIntSet);
+    function  Remove(aValue: SizeInt): Boolean;
+    property  Count: SizeInt read FCount;
+    property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
+  end;
+  PIntSet = ^TIntSet;
+
   TGraphMagic = string[8];
 
 const
@@ -163,11 +210,7 @@ type
     end;
 
   protected
-  const
-    ADJ_EXPAND_SIZE = 8;
-
   type
-
     TAdjList = record
     public
     type
@@ -197,6 +240,7 @@ type
     public
       function  GetEnumerator: TEnumerator; inline;
       function  ToArray: TAdjItemArray; inline;
+      procedure CopyTo(aSet: PIntSet);
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
       procedure Clear;
@@ -243,57 +287,12 @@ type
       //edges: src index, dst index, data
     end;
 
-    TIntList = record
-    private
-      FItems: TIntArray;
-      FCount: SizeInt;
-      procedure Expand; inline;
-      function  GetItem(aIndex: SizeInt): SizeInt; inline;
-      class operator Initialize(var aList: TIntList);
-    public
-    type
-      TEnumerator = record
-      private
-        pCurr,
-        pLast: PSizeInt;
-        function  GetCurrent: SizeInt; inline;
-      public
-        function  MoveNext: Boolean; inline;
-        property  Current: SizeInt read GetCurrent;
-      end;
-
-      procedure InitRange(aRange: SizeInt);
-      function  GetEnumerator: TEnumerator; inline;
-      function  ToArray: TIntArray; inline;
-      procedure Assign(constref aList: TIntList);
-      procedure AssignExcept(constref aList: TIntList; aExcept: SizeInt);
-      procedure AssignAdjList(constref aList: TAdjList);
-      function  Copy: TIntList; inline;
-      function  IsEmpty: Boolean; inline;
-      function  NonEmpty: Boolean; inline;
-      procedure MakeEmpty; inline;
-      function  Contains(aValue: SizeInt): Boolean; inline;
-      function  ContainsAny(constref aList: TIntList): Boolean;
-      function  ContainsAll(constref aList: TIntList): Boolean;
-      function  Find(aValue: SizeInt): SizeInt;
-      function  FindFirst(out aDst: SizeInt): Boolean;
-      function  Add(aValue: SizeInt): Boolean;
-      function  AddAll(constref aList: TIntList): SizeInt;
-      procedure Subtract(constref aList: TIntList);
-      procedure Intersect(constref aList: TIntList);
-      function  Remove(aValue: SizeInt): Boolean;
-      property  Count: SizeInt read FCount;
-      property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
-    end;
-
-    PIntList = ^TIntList;
-
     TSkeleton = record
     private
-      FAdjLists: array of TIntList;
+      FAdjLists: array of TIntSet;
       FEdgeCount: SizeInt;
       FDirected: Boolean;
-      function  GetAdjList(aIndex: SizeInt): PIntList; inline;
+      function  GetAdjList(aIndex: SizeInt): PIntSet; inline;
       function  GetDegree(aIndex: SizeInt): SizeInt; inline;
       function  GetVertexCount: SizeInt; inline;
     public
@@ -306,7 +305,7 @@ type
       property Directed: Boolean read FDirected;
       property EdgeCount: SizeInt read FEdgeCount;
       property Degree[aIndex: SizeInt]: SizeInt read GetDegree;
-      property AdjLists[aIndex: SizeInt]: PIntList read GetAdjList; default;
+      property AdjLists[aIndex: SizeInt]: PIntSet read GetAdjList; default;
     end;
 
   class var
@@ -349,6 +348,7 @@ type
 
     TOnReadData    = specialize TGOnStreamRead<TEdgeData>;
     TOnWriteData   = specialize TGOnStreamWrite<TEdgeData>;
+    TOnFindSet     = function(constref aSet: TIntSet): Boolean of object;
 
     TEdge = record
       Source,
@@ -539,7 +539,7 @@ type
     property  Size: SizeInt read GetSize write SetSize;
   end;
 
-  TIntSet = record
+  TIntHashSet = record
   private
   type
     TIntEntry = record
@@ -547,6 +547,7 @@ type
     end;
     TTable = specialize TGLiteIntHashTable<SizeInt, TIntEntry>;
     PEntry = TTable.PEntry;
+
   public
   type
     TEnumerator = record
@@ -573,7 +574,7 @@ type
     function  Contains(aValue: SizeInt): Boolean; inline;
     function  Add(aValue: SizeInt): Boolean;
     function  AddAll(constref a: array of SizeInt): SizeInt;
-    function  AddAll(constref s: TIntSet): SizeInt;
+    function  AddAll(constref s: TIntHashSet): SizeInt;
     function  Remove(aValue: SizeInt): Boolean; inline;
     property  Count: SizeInt read GetCount;
   end;
@@ -777,6 +778,341 @@ begin
   Destination := d;
 end;
 
+{ TBitVector }
+
+function TBitVector.GetBit(aIndex: SizeInt): Boolean;
+begin
+  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
+end;
+
+function TBitVector.GetSize: SizeInt;
+begin
+  Result := System.Length(FBits) shl INT_SIZE_LOG;
+end;
+
+procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+begin
+  if aValue then
+    FBits[aIndex shr INT_SIZE_LOG] :=
+    FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+  else
+    FBits[aIndex shr INT_SIZE_LOG] :=
+    FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
+end;
+
+procedure TBitVector.SetSize(aValue: SizeInt);
+var
+  OldLen: SizeInt;
+begin
+  OldLen := Size;
+  if aValue > OldLen then
+    begin
+      aValue := Succ(aValue shr INT_SIZE_LOG);
+      System.SetLength(FBits, aValue);
+      System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
+    end;
+end;
+
+procedure TBitVector.ClearBits;
+begin
+  if FBits <> nil then
+    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
+procedure TBitVector.ExpandTrue(aSize: SizeInt);
+var
+  OldLen: SizeInt;
+begin
+  OldLen := Size;
+  if aSize > OldLen then
+    begin
+      aSize := Succ(aSize shr INT_SIZE_LOG);
+      System.SetLength(FBits, aSize);
+      System.FillChar(FBits[OldLen], (aSize - OldLen) * SizeOf(SizeUInt), $ff);
+    end;
+end;
+
+{ TSquareBitMatrix }
+
+function TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
+begin
+  Result := (FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and
+            (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))) <> 0
+end;
+
+function TSquareBitMatrix.GetSize: SizeInt;
+begin
+  Result := FSize;
+end;
+
+procedure TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
+begin
+  if aValue then
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] or
+          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))
+  else
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
+    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and not
+          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
+end;
+
+class operator TSquareBitMatrix.Initialize(var aMatrix: TSquareBitMatrix);
+begin
+  aMatrix.Clear;
+end;
+
+class function TSquareBitMatrix.MaxSize: SizeInt;
+begin
+  Result := Trunc(Sqrt(High(SizeUInt)));
+end;
+
+constructor TSquareBitMatrix.Create(aSize: SizeInt);
+var
+  s: SizeInt;
+begin
+  if aSize > 0 then
+    if aSize <= MaxSize then
+      begin
+        FSize := aSize;
+        s := Succ((FSize * FSize) shr INT_SIZE_LOG);
+        System.SetLength(FBits, s);
+        System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
+      end
+    else
+      raise ELGraphError.CreateFmt(SEMatrixSizeExceedFmt, [aSize]);
+end;
+
+procedure TSquareBitMatrix.ClearBits;
+begin
+  System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
+procedure TSquareBitMatrix.Clear;
+begin
+  FBits := nil;
+  FSize := 0;
+end;
+
+{ TIntSet.TEnumerator }
+
+function TIntSet.TEnumerator.GetCurrent: SizeInt;
+begin
+  Result := pCurr^;
+end;
+
+function TIntSet.TEnumerator.MoveNext: Boolean;
+begin
+  Result := pCurr < pLast;
+  Inc(pCurr, Ord(Result));
+end;
+
+{ TIntSet }
+
+procedure TIntSet.Expand;
+begin
+  System.SetLength(FItems, System.Length(FItems) + ADJ_EXPAND_SIZE);
+end;
+
+class operator TIntSet.Initialize(var aList: TIntSet);
+begin
+  aList.FCount := 0;
+end;
+
+procedure TIntSet.InitRange(aRange: SizeInt);
+var
+  I: SizeInt;
+begin
+  System.SetLength(FItems, aRange);
+  if aRange > 0 then
+    begin
+      for I := 0 to Pred(aRange) do
+        FItems[I] := I;
+      FCount := aRange;
+    end
+  else
+    FCount := 0;
+end;
+
+function TIntSet.GetEnumerator: TEnumerator;
+begin
+  Result.pCurr := PSizeInt(Pointer(FItems)) - Ord(Count > 0);
+  Result.pLast := PSizeInt(Pointer(FItems)) + (Pred(Count) and (-SizeInt(Count > 0)));
+end;
+
+function TIntSet.ToArray: TIntArray;
+begin
+  if Count > 0 then
+    Result := System.Copy(FItems, 0, Count)
+  else
+    Result := nil;
+end;
+
+procedure TIntSet.Assign(constref aList: TIntSet);
+begin
+  FCount := aList.Count;
+  FItems := System.Copy(aList.FItems);
+end;
+
+procedure TIntSet.AssignExcept(constref aList: TIntSet; aExcept: SizeInt);
+var
+  I, J: SizeInt;
+begin
+  FCount := 0;
+  I := 0;
+  J := 0;
+  System.SetLength(FItems, aList.Count);
+  while I < aList.Count do
+    begin
+      if aList.FItems[I] <> aExcept then
+        begin
+          FItems[J] := aList.FItems[I];
+          Inc(J);
+          Inc(FCount);
+        end;
+      Inc(I);
+    end;
+end;
+
+function TIntSet.Copy: TIntSet;
+begin
+  Result.Assign(Self);
+end;
+
+function TIntSet.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TIntSet.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TIntSet.MakeEmpty;
+begin
+  FCount := 0;
+end;
+
+function TIntSet.GetItem(aIndex: SizeInt): SizeInt;
+begin
+  Result := FItems[aIndex];
+end;
+
+function TIntSet.Contains(aValue: SizeInt): Boolean;
+begin
+  Result := Find(aValue) >= 0;
+end;
+
+function TIntSet.ContainsAny(constref aList: TIntSet): Boolean;
+var
+  I: SizeInt;
+begin
+  if NonEmpty then
+    for I in aList do
+      if Contains(I) then
+        exit(True);
+  Result := False;
+end;
+
+function TIntSet.ContainsAll(constref aList: TIntSet): Boolean;
+var
+  I: SizeInt;
+begin
+  if Count >= aList.Count then
+    begin
+      for I in aList do
+        if not Contains(I) then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := False;
+end;
+
+function TIntSet.Find(aValue: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    if FItems[I] = aValue then
+      exit(I);
+  Result := -1;
+end;
+
+function TIntSet.FindFirst(out aDst: SizeInt): Boolean;
+begin
+  Result := Count <> 0;
+  if Result then
+    aDst := FItems[0];
+end;
+
+function TIntSet.Add(aValue: SizeInt): Boolean;
+begin
+  Result := Find(aValue) < 0;
+  if Result then
+    begin
+      if Count = System.Length(FItems) then
+        Expand;
+      FItems[Count] := aValue;
+      Inc(FCount);
+    end;
+end;
+
+function TIntSet.AddAll(constref aList: TIntSet): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  for I in aList do
+    Result += Ord(Add(I));
+end;
+
+procedure TIntSet.Subtract(constref aList: TIntSet);
+var
+  I, J: SizeInt;
+begin
+  for I in aList do
+    for J := 0 to Pred(Count) do
+      if FItems[J] = I then
+        begin
+          Dec(FCount);
+          if J < Count then
+            FItems[J] := FItems[Count];
+          break;
+        end;
+end;
+
+procedure TIntSet.Intersect(constref aList: TIntSet);
+var
+  I: SizeInt = 0;
+begin
+  while I < Count do
+    if not aList.Contains(FItems[I]) then
+      begin
+        Dec(FCount);
+        if I < Count then
+          FItems[I] := FItems[Count];
+      end
+    else
+      Inc(I);
+end;
+
+function TIntSet.Remove(aValue: SizeInt): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    if FItems[I] = aValue then
+      begin
+        Dec(FCount);
+        if I < Count then
+          FItems[I] := FItems[Count];
+        exit(True);
+      end;
+  Result := False;
+end;
+
 { TGCustomGraph.TAdjItem }
 
 constructor TGCustomGraph.TAdjItem.Create(aDst: SizeInt; constref aData: TEdgeData);
@@ -879,6 +1215,16 @@ end;
 function TGCustomGraph.TAdjList.ToArray: TAdjItemArray;
 begin
   Result := System.Copy(FList, 0, Count);
+end;
+
+procedure TGCustomGraph.TAdjList.CopyTo(aSet: PIntSet);
+var
+  I: SizeInt;
+begin
+  aSet^.FCount := Count;
+  System.SetLength(aSet^.FItems, Count);
+  for I := 0 to Pred(Count) do
+    aSet^.FItems[I] := FList[I].Destination;
 end;
 
 function TGCustomGraph.TAdjList.IsEmpty: Boolean;
@@ -1009,235 +1355,6 @@ begin
     Result := False;
 end;
 
-{ TGCustomGraph.TIntList.TEnumerator }
-
-function TGCustomGraph.TIntList.TEnumerator.GetCurrent: SizeInt;
-begin
-  Result := pCurr^;
-end;
-
-function TGCustomGraph.TIntList.TEnumerator.MoveNext: Boolean;
-begin
-  Result := pCurr < pLast;
-  Inc(pCurr, Ord(Result));
-end;
-
-{ TGCustomGraph.TIntList }
-
-procedure TGCustomGraph.TIntList.Expand;
-begin
-  System.SetLength(FItems, System.Length(FItems) + ADJ_EXPAND_SIZE);
-end;
-
-class operator TGCustomGraph.TIntList.Initialize(var aList: TIntList);
-begin
-  aList.FCount := 0;
-end;
-
-procedure TGCustomGraph.TIntList.InitRange(aRange: SizeInt);
-var
-  I: SizeInt;
-begin
-  System.SetLength(FItems, aRange);
-  if aRange > 0 then
-    begin
-      for I := 0 to Pred(aRange) do
-        FItems[I] := I;
-      FCount := aRange;
-    end
-  else
-    FCount := 0;
-end;
-
-function TGCustomGraph.TIntList.GetEnumerator: TEnumerator;
-begin
-  Result.pCurr := PSizeInt(Pointer(FItems)) - Ord(Count > 0);
-  Result.pLast := PSizeInt(Pointer(FItems)) + (Pred(Count) and (-SizeInt(Count > 0)));
-end;
-
-function TGCustomGraph.TIntList.ToArray: TIntArray;
-begin
-  if Count > 0 then
-    Result := System.Copy(FItems, 0, Count)
-  else
-    Result := nil;
-end;
-
-procedure TGCustomGraph.TIntList.Assign(constref aList: TIntList);
-begin
-  FCount := aList.Count;
-  FItems := System.Copy(aList.FItems);
-end;
-
-procedure TGCustomGraph.TIntList.AssignExcept(constref aList: TIntList; aExcept: SizeInt);
-var
-  I, J: SizeInt;
-begin
-  FCount := 0;
-  I := 0;
-  J := 0;
-  System.SetLength(FItems, aList.Count);
-  while I < aList.Count do
-    begin
-      if aList.FItems[I] <> aExcept then
-        begin
-          FItems[J] := aList.FItems[I];
-          Inc(J);
-          Inc(FCount);
-        end;
-      Inc(I);
-    end;
-end;
-
-procedure TGCustomGraph.TIntList.AssignAdjList(constref aList: TAdjList);
-var
-  I: SizeInt;
-begin
-  FCount := aList.Count;
-  System.SetLength(FItems, aList.Count);
-  for I := 0 to Pred(Count) do
-    FItems[I] := aList.FList[I].Destination;
-end;
-
-function TGCustomGraph.TIntList.Copy: TIntList;
-begin
-  Result.Assign(Self);
-end;
-
-function TGCustomGraph.TIntList.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TGCustomGraph.TIntList.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TGCustomGraph.TIntList.MakeEmpty;
-begin
-  FCount := 0;
-end;
-
-function TGCustomGraph.TIntList.GetItem(aIndex: SizeInt): SizeInt;
-begin
-  Result := FItems[aIndex];
-end;
-
-function TGCustomGraph.TIntList.Contains(aValue: SizeInt): Boolean;
-begin
-  Result := Find(aValue) >= 0;
-end;
-
-function TGCustomGraph.TIntList.ContainsAny(constref aList: TIntList): Boolean;
-var
-  I: SizeInt;
-begin
-  if NonEmpty then
-    for I in aList do
-      if Contains(I) then
-        exit(True);
-  Result := False;
-end;
-
-function TGCustomGraph.TIntList.ContainsAll(constref aList: TIntList): Boolean;
-var
-  I: SizeInt;
-begin
-  if Count >= aList.Count then
-    begin
-      for I in aList do
-        if not Contains(I) then
-          exit(False);
-      Result := True;
-    end
-  else
-    Result := False;
-end;
-
-function TGCustomGraph.TIntList.Find(aValue: SizeInt): SizeInt;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(Count) do
-    if FItems[I] = aValue then
-      exit(I);
-  Result := -1;
-end;
-
-function TGCustomGraph.TIntList.FindFirst(out aDst: SizeInt): Boolean;
-begin
-  Result := Count <> 0;
-  if Result then
-    aDst := FItems[0];
-end;
-
-function TGCustomGraph.TIntList.Add(aValue: SizeInt): Boolean;
-begin
-  Result := Find(aValue) < 0;
-  if Result then
-    begin
-      if Count = System.Length(FItems) then
-        Expand;
-      FItems[Count] := aValue;
-      Inc(FCount);
-    end;
-end;
-
-function TGCustomGraph.TIntList.AddAll(constref aList: TIntList): SizeInt;
-var
-  I: SizeInt;
-begin
-  Result := 0;
-  for I in aList do
-    Result += Ord(Add(I));
-end;
-
-procedure TGCustomGraph.TIntList.Subtract(constref aList: TIntList);
-var
-  I, J: SizeInt;
-begin
-  for I in aList do
-    for J := 0 to Pred(Count) do
-      if FItems[J] = I then
-        begin
-          Dec(FCount);
-          if J < Count then
-            FItems[J] := FItems[Count];
-          break;
-        end;
-end;
-
-procedure TGCustomGraph.TIntList.Intersect(constref aList: TIntList);
-var
-  I: SizeInt = 0;
-begin
-  while I < Count do
-    if not aList.Contains(FItems[I]) then
-      begin
-        Dec(FCount);
-        if I < Count then
-          FItems[I] := FItems[Count];
-      end
-    else
-      Inc(I);
-end;
-
-function TGCustomGraph.TIntList.Remove(aValue: SizeInt): Boolean;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(Count) do
-    if FItems[I] = aValue then
-      begin
-        Dec(FCount);
-        if I < Count then
-          FItems[I] := FItems[Count];
-        exit(True);
-      end;
-  Result := False;
-end;
-
 { TGCustomGraph.TSkeleton }
 
 function TGCustomGraph.TSkeleton.GetVertexCount: SizeInt;
@@ -1245,7 +1362,7 @@ begin
   Result := System.Length(FAdjLists);
 end;
 
-function TGCustomGraph.TSkeleton.GetAdjList(aIndex: SizeInt): PIntList;
+function TGCustomGraph.TSkeleton.GetAdjList(aIndex: SizeInt): PIntSet;
 begin
   Result := @FAdjLists[aIndex];
 end;
@@ -2237,122 +2354,6 @@ begin
   until not Queue.TryDequeue(aSrc);
 end;
 
-{ TBitVector }
-
-function TBitVector.GetBit(aIndex: SizeInt): Boolean;
-begin
-  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
-end;
-
-function TBitVector.GetSize: SizeInt;
-begin
-  Result := System.Length(FBits) shl INT_SIZE_LOG;
-end;
-
-procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
-begin
-  if aValue then
-    FBits[aIndex shr INT_SIZE_LOG] :=
-    FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
-  else
-    FBits[aIndex shr INT_SIZE_LOG] :=
-    FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
-end;
-
-procedure TBitVector.SetSize(aValue: SizeInt);
-var
-  OldLen: SizeInt;
-begin
-  OldLen := Size;
-  if aValue > OldLen then
-    begin
-      aValue := Succ(aValue shr INT_SIZE_LOG);
-      System.SetLength(FBits, aValue);
-      System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
-    end;
-end;
-
-procedure TBitVector.ClearBits;
-begin
-  if FBits <> nil then
-    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
-end;
-
-procedure TBitVector.ExpandTrue(aSize: SizeInt);
-var
-  OldLen: SizeInt;
-begin
-  OldLen := Size;
-  if aSize > OldLen then
-    begin
-      aSize := Succ(aSize shr INT_SIZE_LOG);
-      System.SetLength(FBits, aSize);
-      System.FillChar(FBits[OldLen], (aSize - OldLen) * SizeOf(SizeUInt), $ff);
-    end;
-end;
-
-{ TSquareBitMatrix }
-
-function TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
-begin
-  Result := (FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and
-            (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))) <> 0
-end;
-
-function TSquareBitMatrix.GetSize: SizeInt;
-begin
-  Result := FSize;
-end;
-
-procedure TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
-begin
-  if aValue then
-    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
-    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] or
-          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))
-  else
-    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
-    FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and not
-          (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
-end;
-
-class operator TSquareBitMatrix.Initialize(var aMatrix: TSquareBitMatrix);
-begin
-  aMatrix.Clear;
-end;
-
-class function TSquareBitMatrix.MaxSize: SizeInt;
-begin
-  Result := Trunc(Sqrt(High(SizeUInt)));
-end;
-
-constructor TSquareBitMatrix.Create(aSize: SizeInt);
-var
-  s: SizeInt;
-begin
-  if aSize > 0 then
-    if aSize <= MaxSize then
-      begin
-        FSize := aSize;
-        s := Succ((FSize * FSize) shr INT_SIZE_LOG);
-        System.SetLength(FBits, s);
-        System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
-      end
-    else
-      raise ELGraphError.CreateFmt(SEMatrixSizeExceedFmt, [aSize]);
-end;
-
-procedure TSquareBitMatrix.ClearBits;
-begin
-  System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
-end;
-
-procedure TSquareBitMatrix.Clear;
-begin
-  FBits := nil;
-  FSize := 0;
-end;
-
 { TDisjointSetUnion }
 
 function TDisjointSetUnion.GetSize: SizeInt;
@@ -2427,36 +2428,36 @@ begin
   Result := True;
 end;
 
-{ TIntSet.TEnumerator }
+{ TIntHashSet.TEnumerator }
 
-function TIntSet.TEnumerator.GetCurrent: SizeInt;
+function TIntHashSet.TEnumerator.GetCurrent: SizeInt;
 begin
   Result := FEnum.Current^.Key;
 end;
 
-function TIntSet.TEnumerator.MoveNext: Boolean;
+function TIntHashSet.TEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TIntSet.TEnumerator.Reset;
+procedure TIntHashSet.TEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TIntSet }
+{ TIntHashSet }
 
-function TIntSet.GetCount: SizeInt;
+function TIntHashSet.GetCount: SizeInt;
 begin
   Result := FTable.Count;
 end;
 
-function TIntSet.GetEnumerator: TEnumerator;
+function TIntHashSet.GetEnumerator: TEnumerator;
 begin
   Result.FEnum := FTable.GetEnumerator
 end;
 
-function TIntSet.ToArray: TIntArray;
+function TIntHashSet.ToArray: TIntArray;
 var
   p: PEntry;
   I: SizeInt = 0;
@@ -2469,39 +2470,39 @@ begin
     end;
 end;
 
-function TIntSet.IsEmpty: Boolean;
+function TIntHashSet.IsEmpty: Boolean;
 begin
   Result := FTable.Count = 0;
 end;
 
-function TIntSet.NonEmpty: Boolean;
+function TIntHashSet.NonEmpty: Boolean;
 begin
   Result := FTable.Count <> 0;
 end;
 
-procedure TIntSet.MakeEmpty;
+procedure TIntHashSet.MakeEmpty;
 begin
   FTable.MakeEmpty;
 end;
 
-procedure TIntSet.Clear;
+procedure TIntHashSet.Clear;
 begin
   FTable.Clear;
 end;
 
-procedure TIntSet.EnsureCapacity(aValue: SizeInt);
+procedure TIntHashSet.EnsureCapacity(aValue: SizeInt);
 begin
   FTable.EnsureCapacity(aValue);
 end;
 
-function TIntSet.Contains(aValue: SizeInt): Boolean;
+function TIntHashSet.Contains(aValue: SizeInt): Boolean;
 var
   Dummy: SizeInt;
 begin
   Result := FTable.Find(aValue, Dummy) <> nil;
 end;
 
-function TIntSet.Add(aValue: SizeInt): Boolean;
+function TIntHashSet.Add(aValue: SizeInt): Boolean;
 var
   Dummy: SizeInt;
   p: PEntry;
@@ -2511,7 +2512,7 @@ begin
     p^.Key := aValue;
 end;
 
-function TIntSet.AddAll(constref a: array of SizeInt): SizeInt;
+function TIntHashSet.AddAll(constref a: array of SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2520,7 +2521,7 @@ begin
     Result += Ord(Add(I));
 end;
 
-function TIntSet.AddAll(constref s: TIntSet): SizeInt;
+function TIntHashSet.AddAll(constref s: TIntHashSet): SizeInt;
 var
   I: SizeInt;
 begin
@@ -2529,7 +2530,7 @@ begin
     Result += Ord(Add(I));
 end;
 
-function TIntSet.Remove(aValue: SizeInt): Boolean;
+function TIntHashSet.Remove(aValue: SizeInt): Boolean;
 begin
   Result := FTable.Remove(aValue);
 end;
