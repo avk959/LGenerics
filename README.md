@@ -33,7 +33,11 @@ Contains:
       - fundamental cycles selection
       - shortest paths finding
       - minimum spanning tree finding
-      - strongly connected components finding 
+      - strongly connected components finding
+      - maximum independent set finding
+      - listing all maximal independent sets
+      - maximum clique finding
+      - listing all maximal cliques
 
   3. Other algorithms:
       - some non-cryptogarphic hashes(unit LGHash)
