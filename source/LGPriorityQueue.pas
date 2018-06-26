@@ -1402,7 +1402,7 @@ begin
           CurrIdx := NextIdx;
           NextIdx := Pred(NextIdx) shr 1;
         end;
-      TFake(FBuffer.FItems[CurrIdx]) := v;
+      TFake(Items[CurrIdx]) := v;
     end;
 end;
 
