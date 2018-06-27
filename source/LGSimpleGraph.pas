@@ -32,6 +32,7 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
+  LGVector,
   LGraphUtils,
   LGStrConst;
 
@@ -44,15 +45,17 @@ type
   generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
+    TBoolMatrix = array of TBoolVector;
+
     TCliqueHelper = object
     private
-      FGraph: TSkeleton;
-      FAccum: TIntSet;
-      FResultSet: TIntSet;
+      FGraph: TBoolMatrix;
+      FAccum,
+      FResultSet: TBoolVector;
       FOnFindSet: TOnFindSet;
-      function  Test(constref aCand, aTested: TIntSet): Boolean;
-      procedure Extend(var aCand, aTested: TIntSet);
-      procedure MaxSetFound(constref aSet: TIntSet);
+      function  Test(constref aCand, aTested: TBoolVector): Boolean;
+      procedure Extend(var aCand, aTested: TBoolVector);
+      procedure MaxSetFound(constref aSet: TBoolVector);
     public
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -60,14 +63,14 @@ type
 
     TIsHelper = object
     private
-      FGraph: TSkeleton;
-      FAccum: TIntSet;
-      FResultSet: TIntSet;
+      FGraph: TBoolMatrix;
+      FAccum,
+      FResultSet: TBoolVector;
       FOnFindSet: TOnFindSet;
-      function  Test(constref aCand, aTested: TIntSet): Boolean;
-      procedure Extend(var aCand, aTested: TIntSet);
-      procedure MaxSetFound(constref aSet: TIntSet);
-      procedure MinSetFound(constref aSet: TIntSet);
+      function  Test(constref aCand, aTested: TBoolVector): Boolean;
+      procedure Extend(var aCand, aTested: TBoolVector);
+      procedure MaxSetFound(constref aSet: TBoolVector);
+      procedure MinSetFound(constref aSet: TBoolVector);
     public
       procedure ListIntependentSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
       function  MaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
@@ -108,6 +111,7 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
+    function  CreateBoolMatrix: TBoolMatrix;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aTag: SizeInt): SizeInt;
@@ -427,151 +431,163 @@ uses
 
 { TGSimpleGraph.TCliqueHelper }
 
-function TGSimpleGraph.TCliqueHelper.Test(constref aCand, aTested: TIntSet): Boolean;
+function TGSimpleGraph.TCliqueHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
   for I in aTested do
-    if FGraph[I]^.ContainsAll(aCand) then
+    if FGraph[I].ContainsAll(aCand) then
       exit(True);
   Result := False;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand, aTested: TIntSet);
+procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
-  NewTested: TIntSet;
+  NewTested: TBoolVector;
   I: SizeInt;
 begin
   while aCand.NonEmpty and not Test(aCand, aTested) do
     begin
       aCand.FindFirst(I);
-      FAccum.Add(I);
-      NewCand.AssignExcept(aCand, I);
-      NewTested.Assign(aTested);
-      NewCand.Intersect(FGraph[I]^);
-      NewTested.Intersect(FGraph[I]^);
+      FAccum[I] := True;
+      NewCand := aCand;
+      NewCand[I] := False;
+      NewTested := aTested;
+      NewCand.Intersect(FGraph[I]);
+      NewTested.Intersect(FGraph[I]);
       if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
         FOnFindSet(FAccum)
       else
         if NewCand.NonEmpty then
           Extend(NewCand, NewTested);
-      FAccum.Remove(I);
-      aCand.Remove(I);
-      aTested.Add(I);
+      FAccum[I] := False;
+      aCand[I] := False;
+      aTested[I] := True;;
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.MaxSetFound(constref aSet: TIntSet);
+procedure TGSimpleGraph.TCliqueHelper.MaxSetFound(constref aSet: TBoolVector);
 begin
-  if aSet.Count > FResultSet.Count then
-    FResultSet.Assign(aSet);
+  if aSet.PopCount > FResultSet.PopCount then
+    FResultSet := aSet;
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
-  Cand, Tested: TIntSet;
+  Cand, Tested: TBoolVector;
 begin
   if aOnFind = nil then
     exit;
-  FGraph := aGraph.CreateSkeleton;
+  FGraph := aGraph.CreateBoolMatrix;
   FOnFindSet := aOnFind;
   Cand.InitRange(aGraph.VertexCount);
-  Extend(Cand, Tested{%H-});
+  Tested.Size := aGraph.VertexCount;
+  FAccum.Size := aGraph.VertexCount;
+  Extend(Cand, Tested);
 end;
 
 function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
-  Cand, Tested: TIntSet;
+  Cand, Tested: TBoolVector;
 begin
-  FGraph := aGraph.CreateSkeleton;
+  FGraph := aGraph.CreateBoolMatrix;
   FOnFindSet := @MaxSetFound;
   Cand.InitRange(aGraph.VertexCount);
-  Extend(Cand, Tested{%H-});
+  Tested.Size := aGraph.VertexCount;
+  FAccum.Size := aGraph.VertexCount;
+  Extend(Cand, Tested);
   Result := FResultSet.ToArray;
 end;
 
 { TGSimpleGraph.TIsHelper }
 
-function TGSimpleGraph.TIsHelper.Test(constref aCand, aTested: TIntSet): Boolean;
+function TGSimpleGraph.TIsHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
   for I in aTested do
-    if not FGraph[I]^.ContainsAny(aCand) then
+    if not FGraph[I].Intersecting(aCand) then
       exit(True);
   Result := False;
 end;
 
-procedure TGSimpleGraph.TIsHelper.Extend(var aCand, aTested: TIntSet);
+procedure TGSimpleGraph.TIsHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
-  NewTested: TIntSet;
+  NewTested: TBoolVector;
   I: SizeInt;
 begin
   while aCand.NonEmpty and not Test(aCand, aTested) do
     begin
       aCand.FindFirst(I);
-      FAccum.Add(I);
-      NewCand.AssignExcept(aCand, I);
-      NewTested.Assign(aTested);
-      NewCand.Subtract(FGraph[I]^);
-      NewTested.Subtract(FGraph[I]^);
+      FAccum[I] := True;
+      NewCand := aCand;
+      NewCand[I] := False;
+      NewTested := aTested;
+      NewCand.Subtract(FGraph[I]);
+      NewTested.Subtract(FGraph[I]);
       if NewCand.IsEmpty and NewTested.IsEmpty then // found IS
         FOnFindSet(FAccum)
       else
         if NewCand.NonEmpty then
           Extend(NewCand, NewTested);
-      FAccum.Remove(I);
-      aCand.Remove(I);
-      aTested.Add(I);
+      FAccum[I] := False;
+      aCand[I] := False;
+      aTested[I] := True;
     end;
 end;
 
-procedure TGSimpleGraph.TIsHelper.MaxSetFound(constref aSet: TIntSet);
+procedure TGSimpleGraph.TIsHelper.MaxSetFound(constref aSet: TBoolVector);
 begin
-  if aSet.Count > FResultSet.Count then
-    FResultSet.Assign(aSet);
+  if aSet.PopCount > FResultSet.PopCount then
+    FResultSet := aSet;
 end;
 
-procedure TGSimpleGraph.TIsHelper.MinSetFound(constref aSet: TIntSet);
+procedure TGSimpleGraph.TIsHelper.MinSetFound(constref aSet: TBoolVector);
 begin
-  if aSet.Count < FResultSet.Count then
-    FResultSet.Assign(aSet);
+  if aSet.PopCount < FResultSet.PopCount then
+    FResultSet := aSet;
 end;
 
 procedure TGSimpleGraph.TIsHelper.ListIntependentSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
-  Cand, Tested: TIntSet;
+  Cand, Tested: TBoolVector;
 begin
   if aOnFind = nil then
     exit;
-  FGraph := aGraph.CreateSkeleton;
+  FGraph := aGraph.CreateBoolMatrix;
   FOnFindSet := aOnFind;
   Cand.InitRange(aGraph.VertexCount);
-  Extend(Cand, Tested{%H-});
+  Tested.Size := aGraph.VertexCount;
+  FAccum.Size := aGraph.VertexCount;
+  Extend(Cand, Tested);
 end;
 
 function TGSimpleGraph.TIsHelper.MaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
 var
-  Cand, Tested: TIntSet;
+  Cand, Tested: TBoolVector;
 begin
-  FGraph := aGraph.CreateSkeleton;
+  FGraph := aGraph.CreateBoolMatrix;
   FOnFindSet := @MaxSetFound;
   Cand.InitRange(aGraph.VertexCount);
-  Extend(Cand, Tested{%H-});
+  Tested.Size := aGraph.VertexCount;
+  FAccum.Size := aGraph.VertexCount;
+  Extend(Cand, Tested);
   Result := FResultSet.ToArray;
 end;
 
 function TGSimpleGraph.TIsHelper.MinIntependentSet(aGraph: TGSimpleGraph): TIntArray;
 var
-  Cand, Tested: TIntSet;
+  Cand, Tested: TBoolVector;
 begin
-  FGraph := aGraph.CreateSkeleton;
+  FGraph := aGraph.CreateBoolMatrix;
   FOnFindSet := @MinSetFound;
   Cand.InitRange(aGraph.VertexCount);
   FResultSet.InitRange(aGraph.VertexCount);
-  Extend(Cand, Tested{%H-});
+  Tested.Size := aGraph.VertexCount;
+  FAccum.Size := aGraph.VertexCount;
+  Extend(Cand, Tested);
   Result := FResultSet.ToArray;
 end;
 
@@ -754,6 +770,20 @@ begin
   Result.FEdgeCount := EdgeCount;
   for I := 0 to Pred(VertexCount) do
     FNodeList[I].AdjList.CopyTo(Result[I]);
+end;
+
+function TGSimpleGraph.CreateBoolMatrix: TBoolMatrix;
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(Result, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Result[I].Size := VertexCount;
+      for p in AdjLists[I]^ do
+        Result[I].Bits[p^.Key] := True;
+    end;
 end;
 
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
