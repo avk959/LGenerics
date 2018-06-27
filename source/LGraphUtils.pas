@@ -758,18 +758,6 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-const
-{$IF DEFINED(CPU64)}
-  INT_SIZE_LOG  = 6;
-  INT_SIZE_MASK = 63;
-{$ELSEIF DEFINED(CPU32)}
-  INT_SIZE_LOG  = 5;
-  INT_SIZE_MASK = 31;
-{$ELSE}
-  INT_SIZE_LOG  = 4;
-  INT_SIZE_MASK = 15;
-{$ENDIF}
-
 { TIntEdge }
 
 constructor TIntEdge.Create(s, d: SizeInt);
