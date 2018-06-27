@@ -50,14 +50,13 @@ type
     TCliqueHelper = object
     private
       FGraph: TBoolMatrix;
-      FAccum,
-      FResultSet: TBoolVector;
+      FAccum: TBoolVector;
+      FResult: TIntArray;
       FCurrSize: SizeInt;
       FOnFindSet: TOnFindSet;
       function  Test(constref aCand, aTested: TBoolVector): Boolean;
       procedure Extend(var aCand, aTested: TBoolVector);
       procedure ExtendM(var aCand, aTested: TBoolVector);
-      procedure MaxSetFound(constref aSet: TBoolVector);
     public
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -65,14 +64,17 @@ type
 
     TIsHelper = object
     private
+    type
+      TSearchTarget = (stAll, stMin, stMax);
+    var
       FGraph: TBoolMatrix;
-      FAccum,
-      FResultSet: TBoolVector;
+      FAccum: TBoolVector;
+      FResult: TIntArray;
+      FCurrSize: SizeInt;
       FOnFindSet: TOnFindSet;
+      FTarget: TSearchTarget;
       function  Test(constref aCand, aTested: TBoolVector): Boolean;
       procedure Extend(var aCand, aTested: TBoolVector);
-      procedure MaxSetFound(constref aSet: TBoolVector);
-      procedure MinSetFound(constref aSet: TBoolVector);
     public
       procedure ListIntependentSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
       function  MaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
@@ -576,7 +578,7 @@ begin
       NewCand.Intersect(FGraph[I]);
       NewTested.Intersect(FGraph[I]);
       if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
-        FOnFindSet(FAccum)
+        FOnFindSet(FAccum.ToArray)
       else
         if NewCand.NonEmpty then
           Extend(NewCand, NewTested);
@@ -606,7 +608,7 @@ begin
           if FAccum.PopCount > FCurrSize then
             begin
               FCurrSize := FAccum.PopCount;
-              FResultSet := FAccum;
+              FResult := FAccum.ToArray;
             end;
         end
       else
@@ -616,12 +618,6 @@ begin
       aCand[I] := False;
       aTested[I] := True;
     end;
-end;
-
-procedure TGSimpleGraph.TCliqueHelper.MaxSetFound(constref aSet: TBoolVector);
-begin
-  if aSet.PopCount > FResultSet.PopCount then
-    FResultSet := aSet;
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -648,7 +644,7 @@ begin
   FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
   ExtendM(Cand, Tested);
-  Result := FResultSet.ToArray;
+  Result := FResult;
 end;
 
 { TGSimpleGraph.TIsHelper }
@@ -679,7 +675,22 @@ begin
       NewCand.Subtract(FGraph[I]);
       NewTested.Subtract(FGraph[I]);
       if NewCand.IsEmpty and NewTested.IsEmpty then // found IS
-        FOnFindSet(FAccum)
+        case FTarget of
+          stAll: FOnFindSet(FAccum.ToArray);
+          stMin:
+            if FAccum.PopCount < FCurrSize then
+              begin
+                FCurrSize := FAccum.PopCount;
+                FResult := FAccum.ToArray;
+              end;
+          stMax:
+            if FAccum.PopCount > FCurrSize then
+              begin
+                FCurrSize := FAccum.PopCount;
+                FResult := FAccum.ToArray;
+              end;
+        else
+        end
       else
         if NewCand.NonEmpty then
           Extend(NewCand, NewTested);
@@ -687,18 +698,6 @@ begin
       aCand[I] := False;
       aTested[I] := True;
     end;
-end;
-
-procedure TGSimpleGraph.TIsHelper.MaxSetFound(constref aSet: TBoolVector);
-begin
-  if aSet.PopCount > FResultSet.PopCount then
-    FResultSet := aSet;
-end;
-
-procedure TGSimpleGraph.TIsHelper.MinSetFound(constref aSet: TBoolVector);
-begin
-  if aSet.PopCount < FResultSet.PopCount then
-    FResultSet := aSet;
 end;
 
 procedure TGSimpleGraph.TIsHelper.ListIntependentSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -712,6 +711,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
+  FTarget := stAll;
   Extend(Cand, Tested);
 end;
 
@@ -720,12 +720,13 @@ var
   Cand, Tested: TBoolVector;
 begin
   FGraph := aGraph.CreateBoolMatrix;
-  FOnFindSet := @MaxSetFound;
   Cand.InitRange(aGraph.VertexCount);
   Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
+  FCurrSize := 0;
+  FTarget := stMax;
   Extend(Cand, Tested);
-  Result := FResultSet.ToArray;
+  Result := FResult;
 end;
 
 function TGSimpleGraph.TIsHelper.MinIntependentSet(aGraph: TGSimpleGraph): TIntArray;
@@ -733,13 +734,13 @@ var
   Cand, Tested: TBoolVector;
 begin
   FGraph := aGraph.CreateBoolMatrix;
-  FOnFindSet := @MinSetFound;
   Cand.InitRange(aGraph.VertexCount);
-  FResultSet.InitRange(aGraph.VertexCount);
   Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
+  FCurrSize := aGraph.VertexCount;
+  FTarget := stMin;
   Extend(Cand, Tested);
-  Result := FResultSet.ToArray;
+  Result := FResult;
 end;
 
 { TGSimpleGraph.TUInt256.TEnumerator }
