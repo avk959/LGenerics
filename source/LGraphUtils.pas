@@ -95,7 +95,9 @@ type
     procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
     procedure SetSize(aValue: SizeInt);
   public
+  { clears all bits }
     procedure ClearBits; inline;
+  { sets all new bits }
     procedure ExpandTrue(aSize: SizeInt);
   { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
     property  Size: SizeInt read GetSize write SetSize;
@@ -807,7 +809,7 @@ begin
   OldLen := Size;
   if aValue > OldLen then
     begin
-      aValue := Succ(aValue shr INT_SIZE_LOG);
+      aValue := aValue shr INT_SIZE_LOG + Ord(aValue and INT_SIZE_MASK <> 0);
       System.SetLength(FBits, aValue);
       System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
