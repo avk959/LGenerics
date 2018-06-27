@@ -334,24 +334,14 @@ type
       FLastIndex: SizeInt;
       function GetCurrent: SizeInt; inline;
     public
-      function MoveNext: Boolean;
+      function MoveNext: Boolean; inline;
       property Current: SizeInt read GetCurrent;
     end;
 
   private
   type
     TBits = array of SizeUInt;
-  const
-{$IF DEFINED(CPU64)}
-    SIZE_LOG  = 6;
-    SIZE_MASK = 63;
-{$ELSEIF DEFINED(CPU32)}
-    SIZE_LOG  = 5;
-    SIZE_MASK = 31;
-{$ELSE}
-    SIZE_LOG  = 4;
-    SIZE_MASK = 15;
-{$ENDIF}
+
   var
     FBits: TBits;
     function  GetBit(aIndex: SizeInt): Boolean; inline;
@@ -1814,7 +1804,7 @@ begin
     if FCurrIndex >= FLastIndex then
       exit(False);
     Inc(FCurrIndex);
-    Result := (FBits[FCurrIndex shr SIZE_LOG] and (SizeUInt(1) shl (FCurrIndex and SIZE_MASK))) <> 0
+    Result := (FBits[FCurrIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (FCurrIndex and INT_SIZE_MASK))) <> 0;
   until Result;
 end;
 
@@ -1822,25 +1812,27 @@ end;
 
 function TBoolVector.GetBit(aIndex: SizeInt): Boolean;
 begin
-  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl SIZE_LOG) then
-    Result := (FBits[aIndex shr SIZE_LOG] and (SizeUInt(1) shl (aIndex and SIZE_MASK))) <> 0
+  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
+    Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TBoolVector.GetSize: SizeInt;
 begin
-  Result := System.Length(FBits) shl SIZE_LOG;
+  Result := System.Length(FBits) shl INT_SIZE_LOG;
 end;
 
 procedure TBoolVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
-  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl SIZE_LOG) then
+  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
     begin
       if aValue then
-        FBits[aIndex shr SIZE_LOG] := FBits[aIndex shr SIZE_LOG] or (SizeUInt(1) shl (aIndex and SIZE_MASK))
+        FBits[aIndex shr INT_SIZE_LOG] :=
+          FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
       else
-        FBits[aIndex shr SIZE_LOG] := FBits[aIndex shr SIZE_LOG] and not (SizeUInt(1) shl (aIndex and SIZE_MASK));
+        FBits[aIndex shr INT_SIZE_LOG] :=
+          FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
     end
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
@@ -1853,13 +1845,12 @@ begin
   OldLen := Size;
   if aValue > OldLen then
     begin
-      aValue := aValue shr SIZE_LOG + Ord(aValue and SIZE_MASK <> 0);
+      aValue := aValue shr INT_SIZE_LOG + Ord(aValue and INT_SIZE_MASK <> 0);
       System.SetLength(FBits, aValue);
       System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
 end;
 
-{$PUSH}{$Q-}{$R-}
 class function TBoolVector.BsfValue(aValue: SizeUInt): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
@@ -1870,7 +1861,7 @@ begin
   Result := ShortInt(BsfWord(aValue));
 {$ENDIF}
 end;
-{$POP}
+
 class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
 begin
   aDst.FBits := System.Copy(aSrc.FBits);
@@ -1883,8 +1874,8 @@ begin
   FBits := nil;
   if aRange > 0 then
     begin
-      msb := aRange and SIZE_MASK;
-      aRange := aRange shr SIZE_LOG  + Ord(msb <> 0);
+      msb := aRange and INT_SIZE_MASK;
+      aRange := aRange shr INT_SIZE_LOG  + Ord(msb <> 0);
       System.SetLength(FBits, aRange);
       System.FillChar(FBits[0], aRange * SizeOf(SizeUInt), $ff);
       if msb <> 0 then
@@ -1965,7 +1956,7 @@ var
   I: SizeInt;
 begin
   for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
-    if aVector.FBits[I] and FBits[I] <> aVector.FBits[I] then
+    if FBits[I] and aVector.FBits[I] <> aVector.FBits[I] then
       exit(False);
   for I := System.Length(FBits) to Pred(System.Length(aVector.FBits)) do
     if aVector.FBits[I] <> 0 then
