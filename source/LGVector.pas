@@ -325,6 +325,19 @@ type
 
   { TBoolVector: size is always a multiple of the bitness }
   TBoolVector = record
+  public
+  type
+    TEnumerator = record
+    private
+      FBits: PSizeUInt;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      function GetCurrent: SizeInt; inline;
+    public
+      function MoveNext: Boolean;
+      property Current: SizeInt read GetCurrent;
+    end;
+
   private
   type
     TBits = array of SizeUInt;
@@ -345,11 +358,28 @@ type
     function  GetSize: SizeInt; inline;
     procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
     procedure SetSize(aValue: SizeInt);
+    class function BsfValue(aValue: SizeUInt): SizeInt; static; inline;
     class operator Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
   public
+  type
+    TIntArray = array of SizeInt;
+
+    procedure InitRange(aRange: SizeInt);
+    function  GetEnumerator: TEnumerator; inline;
+  { returns an array containing the indices of the set bits }
+    function  ToArray: TIntArray;
     procedure ClearBits; inline;
-  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
+    function  IsEmpty: Boolean;
+    function  NonEmpty: Boolean; inline;
+    function  FindFirst(out aValue: SizeInt): Boolean; inline;
+    function  Intersecting(constref aVector: TBoolVector): Boolean;
+    function  ContainsAll(constref aVector: TBoolVector): Boolean;
+    procedure Subtract(constref aVector: TBoolVector); inline;
+    procedure Intersect(constref aVector: TBoolVector); inline;
+  { currently size can only grow and is always multiple of BitsizeOf(SizeUInt) }
     property  Size: SizeInt read GetSize write SetSize;
+  { returns count of set bits }
+    function  PopCount: SizeInt;
   { read/write bit with (index < 0) or (index >= Size) will raise exception }
     property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
@@ -1771,11 +1801,28 @@ begin
   end;
 end;
 
+{ TBoolVector.TEnumerator }
+
+function TBoolVector.TEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FCurrIndex;
+end;
+
+function TBoolVector.TEnumerator.MoveNext: Boolean;
+begin
+  repeat
+    if FCurrIndex >= FLastIndex then
+      exit(False);
+    Inc(FCurrIndex);
+    Result := (FBits[FCurrIndex shr SIZE_LOG] and (SizeUInt(1) shl (FCurrIndex and SIZE_MASK))) <> 0
+  until Result;
+end;
+
 { TBoolVector }
 
 function TBoolVector.GetBit(aIndex: SizeInt): Boolean;
 begin
-  if (aIndex >= 0) and (aIndex < (System.Length(FBits) shl SIZE_LOG)) then
+  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl SIZE_LOG) then
     Result := (FBits[aIndex shr SIZE_LOG] and (SizeUInt(1) shl (aIndex and SIZE_MASK))) <> 0
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
@@ -1788,7 +1835,7 @@ end;
 
 procedure TBoolVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
-  if (aIndex >= 0) and (aIndex < (System.Length(FBits) shl SIZE_LOG)) then
+  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl SIZE_LOG) then
     begin
       if aValue then
         FBits[aIndex shr SIZE_LOG] := FBits[aIndex shr SIZE_LOG] or (SizeUInt(1) shl (aIndex and SIZE_MASK))
@@ -1806,21 +1853,149 @@ begin
   OldLen := Size;
   if aValue > OldLen then
     begin
-      aValue := Succ(aValue shr SIZE_LOG);
+      aValue := aValue shr SIZE_LOG + Ord(aValue and SIZE_MASK <> 0);
       System.SetLength(FBits, aValue);
       System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
 end;
 
+{$PUSH}{$Q-}{$R-}
+class function TBoolVector.BsfValue(aValue: SizeUInt): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := ShortInt(BsfQWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  Result := ShortInt(BsfDWord(aValue));
+{$ELSE}
+  Result := ShortInt(BsfWord(aValue));
+{$ENDIF}
+end;
+{$POP}
 class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
 begin
   aDst.FBits := System.Copy(aSrc.FBits);
+end;
+
+procedure TBoolVector.InitRange(aRange: SizeInt);
+var
+  msb: SizeInt;
+begin
+  FBits := nil;
+  if aRange > 0 then
+    begin
+      msb := aRange and SIZE_MASK;
+      aRange := aRange shr SIZE_LOG  + Ord(msb <> 0);
+      System.SetLength(FBits, aRange);
+      System.FillChar(FBits[0], aRange * SizeOf(SizeUInt), $ff);
+      if msb <> 0 then
+        FBits[Pred(aRange)] := FBits[Pred(aRange)] shr (BitsizeOf(SizeUint) - msb);
+    end;
+end;
+
+function TBoolVector.GetEnumerator: TEnumerator;
+begin
+  Result.FBits := Pointer(FBits);
+  Result.FLastIndex := Pred(Size);
+  Result.FCurrIndex := -1;
+end;
+
+function TBoolVector.ToArray: TIntArray;
+var
+  I, Pos: SizeInt;
+begin
+  System.SetLength(Result, PopCount);
+  Pos := 0;
+  for I in Self do
+    begin
+      Result[Pos] := I;
+      Inc(Pos);
+    end;
 end;
 
 procedure TBoolVector.ClearBits;
 begin
   if FBits <> nil then
     System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
+function TBoolVector.IsEmpty: Boolean;
+var
+  I: SizeUInt;
+begin
+  for I in FBits do
+    if I <> 0 then
+      exit(False);
+  Result := True;
+end;
+
+function TBoolVector.NonEmpty: Boolean;
+begin
+  Result := not IsEmpty;
+end;
+
+function TBoolVector.FindFirst(out aValue: SizeInt): Boolean;
+var
+  I: SizeUInt;
+begin
+  aValue := 0;
+  for I in FBits do
+    begin
+      if I <> 0 then
+        begin
+          aValue += BsfValue(I);
+          exit(True);
+        end;
+      aValue += BitsizeOf(SizeUInt);
+    end;
+  Result := False;
+end;
+
+function TBoolVector.Intersecting(constref aVector: TBoolVector): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
+    if FBits[I] and aVector.FBits[I] <> 0 then
+      exit(True);
+  Result := False;
+end;
+
+function TBoolVector.ContainsAll(constref aVector: TBoolVector): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
+    if aVector.FBits[I] and FBits[I] <> aVector.FBits[I] then
+      exit(False);
+  for I := System.Length(FBits) to Pred(System.Length(aVector.FBits)) do
+    if aVector.FBits[I] <> 0 then
+      exit(False);
+  Result := True;
+end;
+
+procedure TBoolVector.Subtract(constref aVector: TBoolVector);
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
+    FBits[I] := FBits[I] and not aVector.FBits[I];
+end;
+
+procedure TBoolVector.Intersect(constref aVector: TBoolVector);
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
+    FBits[I] := FBits[I] and aVector.FBits[I];
+end;
+
+function TBoolVector.PopCount: SizeInt;
+var
+  I: SizeUInt;
+begin
+  Result := 0;
+  for I in FBits do
+    Result += SizeInt(PopCnt(I));
 end;
 
 { TGVectorHelpUtil }
