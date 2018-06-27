@@ -1987,6 +1987,8 @@ var
 begin
   for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
     FBits[I] := FBits[I] and aVector.FBits[I];
+  for I := System.Length(aVector.FBits) to Pred(System.Length(FBits)) do
+    FBits[I] := 0;
 end;
 
 function TBoolVector.PopCount: SizeInt;
