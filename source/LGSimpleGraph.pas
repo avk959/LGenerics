@@ -300,13 +300,14 @@ type
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
-  { lists all found independent sets; worst time cost O(3^n/3) }
+  { lists all found maximal independent sets }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
-  { returns indices of the vertices of the some found maximum independent set }
+  { returns indices of the vertices of the some found maximum independent set;
+    worst case time cost O(3^n/3)}
     function  MaxIndependentSet: TIntArray;
-  { lists all found cliques; worst time cost O(3^n/3) }
+  { lists all found maximal cliques }
     procedure ListAllCliques(aOnFindSet: TOnFindSet);
-  { returns indices of the vertices of the some found maximum clique }
+  { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
     function  MaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
@@ -545,7 +546,7 @@ var
   NewCand,
   NewTested: TBoolVector;
   I: SizeInt;
-begin
+begin // Bron-Kerbosch algorithm
   while aCand.NonEmpty do
     begin
       if aCand.PopCount + FAccum.PopCount <= FCurrSize then
