@@ -54,7 +54,6 @@ type
       FAccum: TBoolVector;
       FResult: TIntArray;
       FCurrSize: SizeInt;
-      function  Test(constref aCand, aTested: TBoolVector): Boolean;
       procedure Extend(var aCand, aTested: TBoolVector);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -88,7 +87,6 @@ type
       FAccum: TBoolVector;
       FResult: TIntArray;
       FCurrSize: SizeInt;
-      function  Test(constref aCand, aTested: TBoolVector): Boolean;
       procedure Extend(var aCand, aTested: TBoolVector);
     public
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
@@ -145,7 +143,6 @@ type
       FAccum,
       FResultSet: TBits256;
       FCurrSize: SizeInt;
-      function  Test(constref aCand, aTested: TBits256): Boolean;
       procedure Extend(var aCand, aTested: TBits256);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -179,7 +176,6 @@ type
       FAccum: TBits256;
       FResult: TIntArray;
       FCurrSize: SizeInt;
-      function  Test(constref aCand, aTested: TBits256): Boolean;
       procedure Extend(var aCand, aTested: TBits256);
     public
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
@@ -548,24 +544,19 @@ uses
 
 { TGSimpleGraph.TMaxCliqueHelper }
 
-function TGSimpleGraph.TMaxCliqueHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
-var
-  I: SizeInt;
-begin
-  for I in aTested do
-    if FMatrix[I].ContainsAll(aCand) then
-      exit(False);
-  Result := True;
-end;
-
 procedure TGSimpleGraph.TMaxCliqueHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
   NewTested: TBoolVector;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and Test(aCand, aTested) do
+  while aCand.NonEmpty do
     begin
+      if aCand.PopCount + FAccum.PopCount <= FCurrSize then
+        exit;
+      for I in aTested do
+        if FMatrix[I].ContainsAll(aCand) then
+          exit;
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
@@ -707,24 +698,19 @@ end;
 
 { TGSimpleGraph.TMaxIsHelper }
 
-function TGSimpleGraph.TMaxIsHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
-var
-  I: SizeInt;
-begin
-  for I in aTested do
-    if not FMatrix[I].Intersecting(aCand) then
-      exit(False);
-  Result := True;
-end;
-
 procedure TGSimpleGraph.TMaxIsHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
   NewTested: TBoolVector;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and Test(aCand, aTested) do
+  while aCand.NonEmpty do
     begin
+      if aCand.PopCount + FAccum.PopCount <= FCurrSize then
+        exit;
+      for I in aTested do
+        if not FMatrix[I].Intersecting(aCand) then
+          exit;
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
@@ -981,24 +967,19 @@ end;
 
 { TGSimpleGraph.TStaticMaxCliqueHelper }
 
-function TGSimpleGraph.TStaticMaxCliqueHelper.Test(constref aCand, aTested: TBits256): Boolean;
-var
-  I: SizeInt;
-begin
-  for I in aTested do
-    if FMatrix[I].ContainsAll(aCand) then
-      exit(False);
-  Result := True;
-end;
-
 procedure TGSimpleGraph.TStaticMaxCliqueHelper.Extend(var aCand, aTested: TBits256);
 var
   NewCand,
   NewTested: TBits256;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and Test(aCand, aTested) do
+  while aCand.NonEmpty do
     begin
+      if aCand.PopCount + FAccum.PopCount <= FCurrSize then
+        exit;
+      for I in aTested do
+        if FMatrix[I].ContainsAll(aCand) then
+          exit;
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
@@ -1088,24 +1069,19 @@ end;
 
 { TGSimpleGraph.TStaticMaxIsHelper }
 
-function TGSimpleGraph.TStaticMaxIsHelper.Test(constref aCand, aTested: TBits256): Boolean;
-var
-  I: SizeInt;
-begin
-  for I in aTested do
-    if not FMatrix[I].Intersecting(aCand) then
-      exit(False);
-  Result := True;
-end;
-
 procedure TGSimpleGraph.TStaticMaxIsHelper.Extend(var aCand, aTested: TBits256);
 var
   NewCand,
   NewTested: TBits256;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and Test(aCand, aTested) do
+  while aCand.NonEmpty do
     begin
+      if aCand.PopCount + FAccum.PopCount <= FCurrSize then
+        exit;
+      for I in aTested do
+        if not FMatrix[I].Intersecting(aCand) then
+          exit;
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
