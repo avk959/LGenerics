@@ -64,7 +64,6 @@ type
       FMatrix: TBoolMatrix;
       FAccum: TBoolVector;
       FOnFindSet: TOnFindSet;
-      function  Test(constref aCand, aTested: TBoolVector): Boolean;
       procedure Extend(var aCand, aTested: TBoolVector);
     public
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -75,7 +74,6 @@ type
       FMatrix: TBoolMatrix;
       FAccum: TBoolVector;
       FOnFindSet: TOnFindSet;
-      function  Test(constref aCand, aTested: TBoolVector): Boolean;
       procedure Extend(var aCand, aTested: TBoolVector);
     public
       procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -153,7 +151,6 @@ type
       FMatrix: TBits256Matrix;
       FAccum: TBits256;
       FOnFindSet: TOnFindSet;
-      function  Test(constref aCand, aTested: TBits256): Boolean;
       procedure Extend(var aCand, aTested: TBits256);
     public
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFindSet: TOnFindSet);
@@ -164,7 +161,6 @@ type
       FMatrix: TBits256Matrix;
       FAccum: TBits256;
       FOnFindSet: TOnFindSet;
-      function  Test(constref aCand, aTested: TBits256): Boolean;
       procedure Extend(var aCand, aTested: TBits256);
     public
       procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -596,24 +592,17 @@ end;
 
 { TGSimpleGraph.TListCliqueHelper }
 
-function TGSimpleGraph.TListCliqueHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
-var
-  I: SizeInt;
-begin
-  for I in aTested do
-    if FMatrix[I].ContainsAll(aCand) then
-      exit(False);
-  Result := True;
-end;
-
 procedure TGSimpleGraph.TListCliqueHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
   NewTested: TBoolVector;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and Test(aCand, aTested) do
+  while aCand.NonEmpty do
     begin
+      for I in aTested do
+        if FMatrix[I].ContainsAll(aCand) then
+          exit;
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
@@ -648,24 +637,17 @@ end;
 
 { TGSimpleGraph.TListIsHelper }
 
-function TGSimpleGraph.TListIsHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
-var
-  I: SizeInt;
-begin
-  for I in aTested do
-    if not FMatrix[I].Intersecting(aCand) then
-      exit(False);
-  Result := True;
-end;
-
 procedure TGSimpleGraph.TListIsHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
   NewTested: TBoolVector;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and Test(aCand, aTested) do
+  while aCand.NonEmpty do
     begin
+      for I in aTested do
+        if not FMatrix[I].Intersecting(aCand) then
+          exit;
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
@@ -917,24 +899,17 @@ end;
 
 { TGSimpleGraph.TStaticListCliqueHelper }
 
-function TGSimpleGraph.TStaticListCliqueHelper.Test(constref aCand, aTested: TBits256): Boolean;
-var
-  I: SizeInt;
-begin
-  for I in aTested do
-    if FMatrix[I].ContainsAll(aCand) then
-      exit(False);
-  Result := True;
-end;
-
 procedure TGSimpleGraph.TStaticListCliqueHelper.Extend(var aCand, aTested: TBits256);
 var
   NewCand,
   NewTested: TBits256;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and Test(aCand, aTested) do
+  while aCand.NonEmpty do
     begin
+      for I in aTested do
+        if FMatrix[I].ContainsAll(aCand) then
+          exit;
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
@@ -1007,6 +982,7 @@ end;
 function TGSimpleGraph.TStaticMaxCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand, Tested: TBits256;
+  I: SizeInt;
 begin
   FMatrix := aGraph.CreateBits256Matrix;
   Cand.InitRange(aGraph.VertexCount);
@@ -1019,24 +995,17 @@ end;
 
 { TGSimpleGraph.TStaticListIsHelper }
 
-function TGSimpleGraph.TStaticListIsHelper.Test(constref aCand, aTested: TBits256): Boolean;
-var
-  I: SizeInt;
-begin
-  for I in aTested do
-    if not FMatrix[I].Intersecting(aCand) then
-      exit(False);
-  Result := True;
-end;
-
 procedure TGSimpleGraph.TStaticListIsHelper.Extend(var aCand, aTested: TBits256);
 var
   NewCand,
   NewTested: TBits256;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and Test(aCand, aTested) do
+  while aCand.NonEmpty do
     begin
+      for I in aTested do
+        if not FMatrix[I].Intersecting(aCand) then
+          exit;
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
