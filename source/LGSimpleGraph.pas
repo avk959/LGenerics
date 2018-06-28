@@ -46,42 +46,55 @@ type
   protected
   type
     TBoolMatrix = array of TBoolVector;
+    TIntDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
-    TCliqueHelper = object
+    TMaxCliqueHelper = record
     private
-      FGraph: TBoolMatrix;
+      FMatrix: TBoolMatrix;
       FAccum: TBoolVector;
       FResult: TIntArray;
       FCurrSize: SizeInt;
-      FOnFindSet: TOnFindSet;
       function  Test(constref aCand, aTested: TBoolVector): Boolean;
       procedure Extend(var aCand, aTested: TBoolVector);
-      procedure ExtendM(var aCand, aTested: TBoolVector);
     public
-      procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
     end;
 
-    TIsHelper = object
+    TListCliqueHelper = record
     private
-    type
-      TSearchTarget = (stAll, stMin, stMax);
-    var
-      FGraph: TBoolMatrix;
+      FMatrix: TBoolMatrix;
       FAccum: TBoolVector;
-      FResult: TIntArray;
-      FCurrSize: SizeInt;
       FOnFindSet: TOnFindSet;
-      FTarget: TSearchTarget;
       function  Test(constref aCand, aTested: TBoolVector): Boolean;
       procedure Extend(var aCand, aTested: TBoolVector);
     public
-      procedure ListIntependentSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
-      function  MaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
-      function  MinIntependentSet(aGraph: TGSimpleGraph): TIntArray;
+      procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
-    TUInt256 = record
+    TListIsHelper = record
+    private
+      FMatrix: TBoolMatrix;
+      FAccum: TBoolVector;
+      FOnFindSet: TOnFindSet;
+      function  Test(constref aCand, aTested: TBoolVector): Boolean;
+      procedure Extend(var aCand, aTested: TBoolVector);
+    public
+      procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    end;
+
+    TMaxIsHelper = record
+    private
+      FMatrix: TBoolMatrix;
+      FAccum: TBoolVector;
+      FResult: TIntArray;
+      FCurrSize: SizeInt;
+      function  Test(constref aCand, aTested: TBoolVector): Boolean;
+      procedure Extend(var aCand, aTested: TBoolVector);
+    public
+      function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
+    end;
+
+    TBits256 = record
     public
     type
       TEnumerator = record
@@ -115,27 +128,61 @@ type
       function  IsEmpty: Boolean;
       function  NonEmpty: Boolean; inline;
       function  FindFirst(out aValue: SizeInt): Boolean; inline;
-      function  Intersecting(constref aVector: TUInt256): Boolean;
-      function  ContainsAll(constref aVector: TUInt256): Boolean;
-      procedure Subtract(constref aVector: TUInt256); inline;
-      procedure Intersect(constref aVector: TUInt256); inline;
+      function  Intersecting(constref aVector: TBits256): Boolean;
+      function  ContainsAll(constref aVector: TBits256): Boolean;
+      procedure Subtract(constref aVector: TBits256); inline;
+      procedure Intersect(constref aVector: TBits256); inline;
     { returns count of set bits }
       function  PopCount: SizeInt; inline;
       property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
     end;
 
-    TUInt256Matrix = array of TUInt256;
+    TBits256Matrix = array of TBits256;
 
-    TStaticCliqueHelper = object
+    TStaticMaxCliqueHelper = record
     private
-      FGraph: TUInt256Matrix;
+      FMatrix: TBits256Matrix;
       FAccum,
-      FResultSet: TUInt256;
+      FResultSet: TBits256;
       FCurrSize: SizeInt;
-      function  Test(constref aCand, aTested: TUInt256): Boolean;
-      procedure ExtendM(var aCand, aTested: TUInt256);
+      function  Test(constref aCand, aTested: TBits256): Boolean;
+      procedure Extend(var aCand, aTested: TBits256);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
+    end;
+
+    TStaticListCliqueHelper = record
+    private
+      FMatrix: TBits256Matrix;
+      FAccum: TBits256;
+      FOnFindSet: TOnFindSet;
+      function  Test(constref aCand, aTested: TBits256): Boolean;
+      procedure Extend(var aCand, aTested: TBits256);
+    public
+      procedure ListCliques(aGraph: TGSimpleGraph; aOnFindSet: TOnFindSet);
+    end;
+
+    TStaticListIsHelper = record
+    private
+      FMatrix: TBits256Matrix;
+      FAccum: TBits256;
+      FOnFindSet: TOnFindSet;
+      function  Test(constref aCand, aTested: TBits256): Boolean;
+      procedure Extend(var aCand, aTested: TBits256);
+    public
+      procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    end;
+
+    TStaticMaxIsHelper = record
+    private
+      FMatrix: TBits256Matrix;
+      FAccum: TBits256;
+      FResult: TIntArray;
+      FCurrSize: SizeInt;
+      function  Test(constref aCand, aTested: TBits256): Boolean;
+      procedure Extend(var aCand, aTested: TBits256);
+    public
+      function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
     end;
 
     TDistinctEdgeEnumerator = record
@@ -173,7 +220,7 @@ type
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
     function  CreateBoolMatrix: TBoolMatrix;
-    function  CreateUInt256Matrix: TUInt256Matrix;
+    function  CreateBits256Matrix: TBits256Matrix;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aTag: SizeInt): SizeInt;
@@ -182,6 +229,12 @@ type
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  GetMaxClique: TIntArray;
     function  GetMaxCliqueStatic: TIntArray;
+    procedure ListCliques(aOnFindSet: TOnFindSet);
+    procedure ListCliquesStatic(aOnFindSet: TOnFindSet);
+    function  GetMaxIS: TIntArray;
+    function  GetMaxISStatic: TIntArray;
+    procedure ListIS(aOnFindSet: TOnFindSet);
+    procedure ListISStatic(aOnFindSet: TOnFindSet);
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -192,6 +245,7 @@ type
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
+    function  CmpVertexDegree(constref L, R: SizeInt): SizeInt;
     property  InnerConnected: Boolean read FConnected;
   public
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
@@ -258,7 +312,6 @@ type
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set }
     function  MaxIndependentSet: TIntArray;
-    function  MinIndependentSet: TIntArray;
   { lists all found cliques; worst time cost O(3^n/3) }
     procedure ListAllCliques(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique }
@@ -493,90 +546,90 @@ implementation
 uses
   bufstream;
 
-{ TGSimpleGraph.TStaticCliqueHelper }
+{ TGSimpleGraph.TMaxCliqueHelper }
 
-function TGSimpleGraph.TStaticCliqueHelper.Test(constref aCand, aTested: TUInt256): Boolean;
+function TGSimpleGraph.TMaxCliqueHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
   for I in aTested do
-    if FGraph[I].ContainsAll(aCand) then
-      exit(True);
-  Result := False;
+    if FMatrix[I].ContainsAll(aCand) then
+      exit(False);
+  Result := True;
 end;
 
-procedure TGSimpleGraph.TStaticCliqueHelper.ExtendM(var aCand, aTested: TUInt256);
+procedure TGSimpleGraph.TMaxCliqueHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
-  NewTested: TUInt256;
+  NewTested: TBoolVector;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and not Test(aCand, aTested) do
+  while aCand.NonEmpty and Test(aCand, aTested) do
     begin
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
       NewTested := aTested;
-      NewCand.Intersect(FGraph[I]);
-      NewTested.Intersect(FGraph[I]);
+      NewCand.Intersect(FMatrix[I]);
+      NewTested.Intersect(FMatrix[I]);
       if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
         begin
           if FAccum.PopCount > FCurrSize then
             begin
               FCurrSize := FAccum.PopCount;
-              FResultSet := FAccum;
+              FResult := FAccum.ToArray;
             end;
         end
       else
         if NewCand.NonEmpty then
-          ExtendM(NewCand, NewTested);
+          Extend(NewCand, NewTested);
       FAccum[I] := False;
       aCand[I] := False;
       aTested[I] := True;
     end;
 end;
 
-function TGSimpleGraph.TStaticCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TMaxCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
-  Cand, Tested: TUInt256;
+  Cand, Tested: TBoolVector;
 begin
-  FGraph := aGraph.CreateUInt256Matrix;
+  FMatrix := aGraph.CreateBoolMatrix;
   Cand.InitRange(aGraph.VertexCount);
-  {%H-}Tested.InitZero;
-  FAccum.InitZero;
+  Tested.Size := aGraph.VertexCount;
+  FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
-  ExtendM(Cand, Tested);
-  Result := FResultSet.ToArray;
+  Extend(Cand, Tested);
+  Result := FResult;
 end;
 
-{ TGSimpleGraph.TCliqueHelper }
+{ TGSimpleGraph.TListCliqueHelper }
 
-function TGSimpleGraph.TCliqueHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
+function TGSimpleGraph.TListCliqueHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
   for I in aTested do
-    if FGraph[I].ContainsAll(aCand) then
-      exit(True);
-  Result := False;
+    if FMatrix[I].ContainsAll(aCand) then
+      exit(False);
+  Result := True;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand, aTested: TBoolVector);
+procedure TGSimpleGraph.TListCliqueHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
   NewTested: TBoolVector;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and not Test(aCand, aTested) do
+  while aCand.NonEmpty and Test(aCand, aTested) do
     begin
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
       NewTested := aTested;
-      NewCand.Intersect(FGraph[I]);
-      NewTested.Intersect(FGraph[I]);
+      NewCand.Intersect(FMatrix[I]);
+      NewTested.Intersect(FMatrix[I]);
       if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
         FOnFindSet(FAccum.ToArray)
       else
@@ -588,45 +641,13 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.ExtendM(var aCand, aTested: TBoolVector);
-var
-  NewCand,
-  NewTested: TBoolVector;
-  I: SizeInt;
-begin
-  while aCand.NonEmpty and not Test(aCand, aTested) do
-    begin
-      aCand.FindFirst(I);
-      FAccum[I] := True;
-      NewCand := aCand;
-      NewCand[I] := False;
-      NewTested := aTested;
-      NewCand.Intersect(FGraph[I]);
-      NewTested.Intersect(FGraph[I]);
-      if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
-        begin
-          if FAccum.PopCount > FCurrSize then
-            begin
-              FCurrSize := FAccum.PopCount;
-              FResult := FAccum.ToArray;
-            end;
-        end
-      else
-        if NewCand.NonEmpty then
-          ExtendM(NewCand, NewTested);
-      FAccum[I] := False;
-      aCand[I] := False;
-      aTested[I] := True;
-    end;
-end;
-
-procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TListCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Cand, Tested: TBoolVector;
 begin
   if aOnFind = nil then
     exit;
-  FGraph := aGraph.CreateBoolMatrix;
+  FMatrix := aGraph.CreateBoolMatrix;
   FOnFindSet := aOnFind;
   Cand.InitRange(aGraph.VertexCount);
   Tested.Size := aGraph.VertexCount;
@@ -634,62 +655,90 @@ begin
   Extend(Cand, Tested);
 end;
 
-function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
-var
-  Cand, Tested: TBoolVector;
-begin
-  FGraph := aGraph.CreateBoolMatrix;
-  Cand.InitRange(aGraph.VertexCount);
-  Tested.Size := aGraph.VertexCount;
-  FAccum.Size := aGraph.VertexCount;
-  FCurrSize := 0;
-  ExtendM(Cand, Tested);
-  Result := FResult;
-end;
+{ TGSimpleGraph.TListIsHelper }
 
-{ TGSimpleGraph.TIsHelper }
-
-function TGSimpleGraph.TIsHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
+function TGSimpleGraph.TListIsHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
   for I in aTested do
-    if not FGraph[I].Intersecting(aCand) then
-      exit(True);
-  Result := False;
+    if not FMatrix[I].Intersecting(aCand) then
+      exit(False);
+  Result := True;
 end;
 
-procedure TGSimpleGraph.TIsHelper.Extend(var aCand, aTested: TBoolVector);
+procedure TGSimpleGraph.TListIsHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand,
   NewTested: TBoolVector;
   I: SizeInt;
 begin
-  while aCand.NonEmpty and not Test(aCand, aTested) do
+  while aCand.NonEmpty and Test(aCand, aTested) do
     begin
       aCand.FindFirst(I);
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
       NewTested := aTested;
-      NewCand.Subtract(FGraph[I]);
-      NewTested.Subtract(FGraph[I]);
+      NewCand.Subtract(FMatrix[I]);
+      NewTested.Subtract(FMatrix[I]);
       if NewCand.IsEmpty and NewTested.IsEmpty then // found IS
-        case FTarget of
-          stAll: FOnFindSet(FAccum.ToArray);
-          stMin:
-            if FAccum.PopCount < FCurrSize then
-              begin
-                FCurrSize := FAccum.PopCount;
-                FResult := FAccum.ToArray;
-              end;
-          stMax:
-            if FAccum.PopCount > FCurrSize then
-              begin
-                FCurrSize := FAccum.PopCount;
-                FResult := FAccum.ToArray;
-              end;
-        else
+        FOnFindSet(FAccum.ToArray)
+      else
+        if NewCand.NonEmpty then
+          Extend(NewCand, NewTested);
+      FAccum[I] := False;
+      aCand[I] := False;
+      aTested[I] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TListIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Cand, Tested: TBoolVector;
+begin
+  FMatrix := aGraph.CreateBoolMatrix;
+  FOnFindSet := aOnFind;
+  Cand.InitRange(aGraph.VertexCount);
+  Tested.Size := aGraph.VertexCount;
+  FAccum.Size := aGraph.VertexCount;
+  Extend(Cand, Tested);
+end;
+
+{ TGSimpleGraph.TMaxIsHelper }
+
+function TGSimpleGraph.TMaxIsHelper.Test(constref aCand, aTested: TBoolVector): Boolean;
+var
+  I: SizeInt;
+begin
+  for I in aTested do
+    if not FMatrix[I].Intersecting(aCand) then
+      exit(False);
+  Result := True;
+end;
+
+procedure TGSimpleGraph.TMaxIsHelper.Extend(var aCand, aTested: TBoolVector);
+var
+  NewCand,
+  NewTested: TBoolVector;
+  I: SizeInt;
+begin
+  while aCand.NonEmpty and Test(aCand, aTested) do
+    begin
+      aCand.FindFirst(I);
+      FAccum[I] := True;
+      NewCand := aCand;
+      NewCand[I] := False;
+      NewTested := aTested;
+      NewCand.Subtract(FMatrix[I]);
+      NewTested.Subtract(FMatrix[I]);
+      if NewCand.IsEmpty and NewTested.IsEmpty then // found IS
+        begin
+          if FAccum.PopCount > FCurrSize then
+            begin
+              FCurrSize := FAccum.PopCount;
+              FResult := FAccum.ToArray;
+            end;
         end
       else
         if NewCand.NonEmpty then
@@ -700,57 +749,27 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TIsHelper.ListIntependentSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+function TGSimpleGraph.TMaxIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand, Tested: TBoolVector;
 begin
-  if aOnFind = nil then
-    exit;
-  FGraph := aGraph.CreateBoolMatrix;
-  FOnFindSet := aOnFind;
-  Cand.InitRange(aGraph.VertexCount);
-  Tested.Size := aGraph.VertexCount;
-  FAccum.Size := aGraph.VertexCount;
-  FTarget := stAll;
-  Extend(Cand, Tested);
-end;
-
-function TGSimpleGraph.TIsHelper.MaxIntependentSet(aGraph: TGSimpleGraph): TIntArray;
-var
-  Cand, Tested: TBoolVector;
-begin
-  FGraph := aGraph.CreateBoolMatrix;
+  FMatrix := aGraph.CreateBoolMatrix;
   Cand.InitRange(aGraph.VertexCount);
   Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
-  FTarget := stMax;
   Extend(Cand, Tested);
   Result := FResult;
 end;
 
-function TGSimpleGraph.TIsHelper.MinIntependentSet(aGraph: TGSimpleGraph): TIntArray;
-var
-  Cand, Tested: TBoolVector;
-begin
-  FGraph := aGraph.CreateBoolMatrix;
-  Cand.InitRange(aGraph.VertexCount);
-  Tested.Size := aGraph.VertexCount;
-  FAccum.Size := aGraph.VertexCount;
-  FCurrSize := aGraph.VertexCount;
-  FTarget := stMin;
-  Extend(Cand, Tested);
-  Result := FResult;
-end;
+{ TGSimpleGraph.TBits256.TEnumerator }
 
-{ TGSimpleGraph.TUInt256.TEnumerator }
-
-function TGSimpleGraph.TUInt256.TEnumerator.GetCurrent: SizeInt;
+function TGSimpleGraph.TBits256.TEnumerator.GetCurrent: SizeInt;
 begin
   Result := FCurrIndex;
 end;
 
-function TGSimpleGraph.TUInt256.TEnumerator.MoveNext: Boolean;
+function TGSimpleGraph.TBits256.TEnumerator.MoveNext: Boolean;
 begin
   repeat
     if FCurrIndex >= Pred(LIMB_COUNT shl INT_SIZE_LOG) then
@@ -760,14 +779,14 @@ begin
   until Result;
 end;
 
-{ TGSimpleGraph.TUInt256 }
+{ TGSimpleGraph.TBits256 }
 
-function TGSimpleGraph.TUInt256.GetBit(aIndex: SizeInt): Boolean;
+function TGSimpleGraph.TBits256.GetBit(aIndex: SizeInt): Boolean;
 begin
   Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
 end;
 
-procedure TGSimpleGraph.TUInt256.SetBit(aIndex: SizeInt; aValue: Boolean);
+procedure TGSimpleGraph.TBits256.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
   if aValue then
     FBits[aIndex shr INT_SIZE_LOG] :=
@@ -777,7 +796,7 @@ begin
       FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
-class function TGSimpleGraph.TUInt256.BsfValue(aValue: SizeUInt): SizeInt;
+class function TGSimpleGraph.TBits256.BsfValue(aValue: SizeUInt): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
   Result := ShortInt(BsfQWord(aValue));
@@ -788,7 +807,7 @@ begin
 {$ENDIF}
 end;
 
-procedure TGSimpleGraph.TUInt256.InitRange(aRange: SizeInt);
+procedure TGSimpleGraph.TBits256.InitRange(aRange: SizeInt);
 var
   msb: SizeInt;
 begin
@@ -803,7 +822,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TUInt256.InitZero;
+procedure TGSimpleGraph.TBits256.InitZero;
 begin
 {$IF DEFINED(CPU64)}
   System.FillQWord(FBits[0], LIMB_COUNT, 0);
@@ -814,13 +833,13 @@ begin
 {$ENDIF}
 end;
 
-function TGSimpleGraph.TUInt256.GetEnumerator: TEnumerator;
+function TGSimpleGraph.TBits256.GetEnumerator: TEnumerator;
 begin
   Result.FBits := @FBits;
   Result.FCurrIndex := -1;
 end;
 
-function TGSimpleGraph.TUInt256.ToArray: TIntArray;
+function TGSimpleGraph.TBits256.ToArray: TIntArray;
 var
   I, Pos: SizeInt;
 begin
@@ -833,7 +852,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.TUInt256.IsEmpty: Boolean;
+function TGSimpleGraph.TBits256.IsEmpty: Boolean;
 var
   I: SizeUInt;
 begin
@@ -843,12 +862,12 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.TUInt256.NonEmpty: Boolean;
+function TGSimpleGraph.TBits256.NonEmpty: Boolean;
 begin
   Result := not IsEmpty;
 end;
 
-function TGSimpleGraph.TUInt256.FindFirst(out aValue: SizeInt): Boolean;
+function TGSimpleGraph.TBits256.FindFirst(out aValue: SizeInt): Boolean;
 var
   I: SizeUInt;
 begin
@@ -865,7 +884,7 @@ begin
   Result := False;
 end;
 
-function TGSimpleGraph.TUInt256.Intersecting(constref aVector: TUInt256): Boolean;
+function TGSimpleGraph.TBits256.Intersecting(constref aVector: TBits256): Boolean;
 var
   I: SizeInt;
 begin
@@ -875,7 +894,7 @@ begin
   Result := False;
 end;
 
-function TGSimpleGraph.TUInt256.ContainsAll(constref aVector: TUInt256): Boolean;
+function TGSimpleGraph.TBits256.ContainsAll(constref aVector: TBits256): Boolean;
 var
   I: SizeInt;
 begin
@@ -885,7 +904,7 @@ begin
   Result := True;
 end;
 
-procedure TGSimpleGraph.TUInt256.Subtract(constref aVector: TUInt256);
+procedure TGSimpleGraph.TBits256.Subtract(constref aVector: TBits256);
 var
   I: SizeInt;
 begin
@@ -893,7 +912,7 @@ begin
     FBits[I] := FBits[I] and not aVector.FBits[I];
 end;
 
-procedure TGSimpleGraph.TUInt256.Intersect(constref aVector: TUInt256);
+procedure TGSimpleGraph.TBits256.Intersect(constref aVector: TBits256);
 var
   I: SizeInt;
 begin
@@ -901,13 +920,227 @@ begin
     FBits[I] := FBits[I] and aVector.FBits[I];
 end;
 
-function TGSimpleGraph.TUInt256.PopCount: SizeInt;
+function TGSimpleGraph.TBits256.PopCount: SizeInt;
 var
   I: SizeUInt;
 begin
   Result := 0;
   for I in FBits do
     Result += SizeInt(PopCnt(I));
+end;
+
+{ TGSimpleGraph.TStaticListCliqueHelper }
+
+function TGSimpleGraph.TStaticListCliqueHelper.Test(constref aCand, aTested: TBits256): Boolean;
+var
+  I: SizeInt;
+begin
+  for I in aTested do
+    if FMatrix[I].ContainsAll(aCand) then
+      exit(False);
+  Result := True;
+end;
+
+procedure TGSimpleGraph.TStaticListCliqueHelper.Extend(var aCand, aTested: TBits256);
+var
+  NewCand,
+  NewTested: TBits256;
+  I: SizeInt;
+begin
+  while aCand.NonEmpty and Test(aCand, aTested) do
+    begin
+      aCand.FindFirst(I);
+      FAccum[I] := True;
+      NewCand := aCand;
+      NewCand[I] := False;
+      NewTested := aTested;
+      NewCand.Intersect(FMatrix[I]);
+      NewTested.Intersect(FMatrix[I]);
+      if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
+        FOnFindSet(FAccum.ToArray)
+      else
+        if NewCand.NonEmpty then
+          Extend(NewCand, NewTested);
+      FAccum[I] := False;
+      aCand[I] := False;
+      aTested[I] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TStaticListCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFindSet: TOnFindSet);
+var
+  Cand, Tested: TBits256;
+begin
+  FMatrix := aGraph.CreateBits256Matrix;
+  Cand.InitRange(aGraph.VertexCount);
+  {%H-}Tested.InitZero;
+  FAccum.InitZero;
+  FOnFindSet := aOnFindSet;
+  Extend(Cand, Tested);
+end;
+
+{ TGSimpleGraph.TStaticMaxCliqueHelper }
+
+function TGSimpleGraph.TStaticMaxCliqueHelper.Test(constref aCand, aTested: TBits256): Boolean;
+var
+  I: SizeInt;
+begin
+  for I in aTested do
+    if FMatrix[I].ContainsAll(aCand) then
+      exit(False);
+  Result := True;
+end;
+
+procedure TGSimpleGraph.TStaticMaxCliqueHelper.Extend(var aCand, aTested: TBits256);
+var
+  NewCand,
+  NewTested: TBits256;
+  I: SizeInt;
+begin
+  while aCand.NonEmpty and Test(aCand, aTested) do
+    begin
+      aCand.FindFirst(I);
+      FAccum[I] := True;
+      NewCand := aCand;
+      NewCand[I] := False;
+      NewTested := aTested;
+      NewCand.Intersect(FMatrix[I]);
+      NewTested.Intersect(FMatrix[I]);
+      if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
+        begin
+          if FAccum.PopCount > FCurrSize then
+            begin
+              FCurrSize := FAccum.PopCount;
+              FResultSet := FAccum;
+            end;
+        end
+      else
+        if NewCand.NonEmpty then
+          Extend(NewCand, NewTested);
+      FAccum[I] := False;
+      aCand[I] := False;
+      aTested[I] := True;
+    end;
+end;
+
+function TGSimpleGraph.TStaticMaxCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+var
+  Cand, Tested: TBits256;
+begin
+  FMatrix := aGraph.CreateBits256Matrix;
+  Cand.InitRange(aGraph.VertexCount);
+  {%H-}Tested.InitZero;
+  FAccum.InitZero;
+  FCurrSize := 0;
+  Extend(Cand, Tested);
+  Result := FResultSet.ToArray;
+end;
+
+{ TGSimpleGraph.TStaticListIsHelper }
+
+function TGSimpleGraph.TStaticListIsHelper.Test(constref aCand, aTested: TBits256): Boolean;
+var
+  I: SizeInt;
+begin
+  for I in aTested do
+    if not FMatrix[I].Intersecting(aCand) then
+      exit(False);
+  Result := True;
+end;
+
+procedure TGSimpleGraph.TStaticListIsHelper.Extend(var aCand, aTested: TBits256);
+var
+  NewCand,
+  NewTested: TBits256;
+  I: SizeInt;
+begin
+  while aCand.NonEmpty and Test(aCand, aTested) do
+    begin
+      aCand.FindFirst(I);
+      FAccum[I] := True;
+      NewCand := aCand;
+      NewCand[I] := False;
+      NewTested := aTested;
+      NewCand.Subtract(FMatrix[I]);
+      NewTested.Subtract(FMatrix[I]);
+      if NewCand.IsEmpty and NewTested.IsEmpty then // found IS
+        FOnFindSet(FAccum.ToArray)
+      else
+        if NewCand.NonEmpty then
+          Extend(NewCand, NewTested);
+      FAccum[I] := False;
+      aCand[I] := False;
+      aTested[I] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TStaticListIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Cand, Tested: TBits256;
+begin
+  FMatrix := aGraph.CreateBits256Matrix;
+  FOnFindSet := aOnFind;
+  Cand.InitRange(aGraph.VertexCount);
+  Tested.InitZero;
+  FAccum.InitZero;
+  Extend(Cand, Tested);
+end;
+
+{ TGSimpleGraph.TStaticMaxIsHelper }
+
+function TGSimpleGraph.TStaticMaxIsHelper.Test(constref aCand, aTested: TBits256): Boolean;
+var
+  I: SizeInt;
+begin
+  for I in aTested do
+    if not FMatrix[I].Intersecting(aCand) then
+      exit(False);
+  Result := True;
+end;
+
+procedure TGSimpleGraph.TStaticMaxIsHelper.Extend(var aCand, aTested: TBits256);
+var
+  NewCand,
+  NewTested: TBits256;
+  I: SizeInt;
+begin
+  while aCand.NonEmpty and Test(aCand, aTested) do
+    begin
+      aCand.FindFirst(I);
+      FAccum[I] := True;
+      NewCand := aCand;
+      NewCand[I] := False;
+      NewTested := aTested;
+      NewCand.Subtract(FMatrix[I]);
+      NewTested.Subtract(FMatrix[I]);
+      if NewCand.IsEmpty and NewTested.IsEmpty then // found IS
+        begin
+          if FAccum.PopCount > FCurrSize then
+            begin
+              FCurrSize := FAccum.PopCount;
+              FResult := FAccum.ToArray;
+            end;
+        end
+      else
+        if NewCand.NonEmpty then
+          Extend(NewCand, NewTested);
+      FAccum[I] := False;
+      aCand[I] := False;
+      aTested[I] := True;
+    end;
+end;
+
+function TGSimpleGraph.TStaticMaxIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
+var
+  Cand, Tested: TBits256;
+begin
+  FMatrix := aGraph.CreateBits256Matrix;
+  Cand.InitRange(aGraph.VertexCount);
+  Tested.InitZero;
+  FAccum.InitZero;
+  FCurrSize := 0;
+  Extend(Cand, Tested);
+  Result := FResult;
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
@@ -1105,7 +1338,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.CreateUInt256Matrix: TUInt256Matrix;
+function TGSimpleGraph.CreateBits256Matrix: TBits256Matrix;
 var
   I: SizeInt;
   p: PAdjItem;
@@ -1224,16 +1457,60 @@ end;
 
 function TGSimpleGraph.GetMaxClique: TIntArray;
 var
-  Helper: TCliqueHelper;
+  Helper: TMaxCliqueHelper;
 begin
   Result := Helper.MaxClique(Self);
 end;
 
 function TGSimpleGraph.GetMaxCliqueStatic: TIntArray;
 var
-  Helper: TStaticCliqueHelper;
+  Helper: TStaticMaxCliqueHelper;
 begin
+  //Helper.FVertexOrder := CreateIntArrayRange;
+  //TIntDegreeHelper.Sort(Helper.FVertexOrder, @CmpVertexDegree);
   Result := Helper.MaxClique(Self);
+end;
+
+procedure TGSimpleGraph.ListCliques(aOnFindSet: TOnFindSet);
+var
+  Helper: TListCliqueHelper;
+begin
+  Helper.ListCliques(Self, aOnFindSet);
+end;
+
+procedure TGSimpleGraph.ListCliquesStatic(aOnFindSet: TOnFindSet);
+var
+  Helper: TStaticListCliqueHelper;
+begin
+  Helper.ListCliques(Self, aOnFindSet);
+end;
+
+function TGSimpleGraph.GetMaxIS: TIntArray;
+var
+  Helper: TMaxIsHelper;
+begin
+  Result := Helper.MaxIS(Self);
+end;
+
+function TGSimpleGraph.GetMaxISStatic: TIntArray;
+var
+  Helper: TStaticMaxIsHelper;
+begin
+  Result := Helper.MaxIS(Self);
+end;
+
+procedure TGSimpleGraph.ListIS(aOnFindSet: TOnFindSet);
+var
+  Helper: TListIsHelper;
+begin
+  Helper.ListIS(Self, aOnFindSet);
+end;
+
+procedure TGSimpleGraph.ListISStatic(aOnFindSet: TOnFindSet);
+var
+  Helper: TStaticListIsHelper;
+begin
+  Helper.ListIS(Self, aOnFindSet);
 end;
 
 procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -1646,6 +1923,11 @@ begin
       Result := -1
     else
       Result := 0;
+end;
+
+function TGSimpleGraph.CmpVertexDegree(constref L, R: SizeInt): SizeInt;
+begin
+  Result := SizeInt.Compare(AdjLists[L]^.Count, AdjLists[R]^.Count);
 end;
 
 class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
@@ -2083,39 +2365,39 @@ begin
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
-var
-  Helper: TIsHelper;
 begin
   if IsEmpty then
     exit;
-  Helper.ListIntependentSets(Self, aOnFindSet);
+  if aOnFindSet = nil then
+    raise ELGraphError.Create(SECallbackMissed);
+  if VertexCount > 256 then
+    ListIS(aOnFindSet)
+  else
+    ListISStatic(aOnFindSet)
 end;
 
 function TGSimpleGraph.MaxIndependentSet: TIntArray;
 var
-  Helper: TIsHelper;
+  Helper: TListIsHelper;
 begin
   if IsEmpty then
     exit(nil);
-  Result := Helper.MaxIntependentSet(Self);
-end;
-
-function TGSimpleGraph.MinIndependentSet: TIntArray;
-var
-  Helper: TIsHelper;
-begin
-  if IsEmpty then
-    exit(nil);
-  Result := Helper.MinIntependentSet(Self);
+  if VertexCount > 256 then
+    Result := GetMaxIS
+  else
+    Result := GetMaxISStatic;
 end;
 
 procedure TGSimpleGraph.ListAllCliques(aOnFindSet: TOnFindSet);
-var
-  Helper: TCliqueHelper;
 begin
   if IsEmpty then
     exit;
-  Helper.ListCliques(Self, aOnFindSet);
+  if aOnFindSet = nil then
+    raise ELGraphError.Create(SECallbackMissed);
+  if VertexCount > 256 then
+    ListCliques(aOnFindSet)
+  else
+    ListCliquesStatic(aOnFindSet);
 end;
 
 function TGSimpleGraph.MaxClique: TIntArray;
