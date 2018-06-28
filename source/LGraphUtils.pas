@@ -455,6 +455,7 @@ type
     constructor Create(aCapacity: SizeInt);
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateIntArray(aLen, aValue: SizeInt): TIntArray;
+    function  CreateIntArrayRange: TIntArray;
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  IsEmpty: Boolean; inline;
@@ -1957,6 +1958,15 @@ begin
 {$ELSE}
   System.FillWord(Result[0], aLen, Word(aValue));
 {$ENDIF}
+end;
+
+function TGCustomGraph.CreateIntArrayRange: TIntArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := I;
 end;
 
 function TGCustomGraph.CreateColorArray: TColorArray;
