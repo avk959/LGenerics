@@ -54,6 +54,7 @@ type
       FAccum: TBoolVector;
       FResult: TIntArray;
       FCurrSize: SizeInt;
+      FDegrees: TIntArray;
       procedure Extend(var aCand, aTested: TBoolVector);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -64,6 +65,7 @@ type
       FMatrix: TBoolMatrix;
       FAccum: TBoolVector;
       FOnFindSet: TOnFindSet;
+      FDegrees: TIntArray;
       procedure Extend(var aCand, aTested: TBoolVector);
     public
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -141,6 +143,7 @@ type
       FAccum,
       FResultSet: TBits256;
       FCurrSize: SizeInt;
+      FDegrees: TIntArray;
       procedure Extend(var aCand, aTested: TBits256);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -151,6 +154,7 @@ type
       FMatrix: TBits256Matrix;
       FAccum: TBits256;
       FOnFindSet: TOnFindSet;
+      FDegrees: TIntArray;
       procedure Extend(var aCand, aTested: TBits256);
     public
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFindSet: TOnFindSet);
@@ -172,6 +176,7 @@ type
       FAccum: TBits256;
       FResult: TIntArray;
       FCurrSize: SizeInt;
+      FDegrees: TIntArray;
       procedure Extend(var aCand, aTested: TBits256);
     public
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
@@ -236,6 +241,7 @@ type
     procedure SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
+    function  CreateDegreeArray(aOrder: TSortOrder = soAsc): TIntArray;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     function  CmpVertexDegree(constref L, R: SizeInt): SizeInt;
     property  InnerConnected: Boolean read FConnected;
@@ -545,8 +551,8 @@ procedure TGSimpleGraph.TMaxCliqueHelper.Extend(var aCand, aTested: TBoolVector)
 var
   NewCand,
   NewTested: TBoolVector;
-  I: SizeInt;
-begin // Bron-Kerbosch algorithm
+  I, J: SizeInt;
+begin
   while aCand.NonEmpty do
     begin
       if aCand.PopCount + FAccum.PopCount <= FCurrSize then
@@ -554,7 +560,12 @@ begin // Bron-Kerbosch algorithm
       for I in aTested do
         if FMatrix[I].ContainsAll(aCand) then
           exit;
-      aCand.FindFirst(I);
+      for J in FDegrees do
+        if aCand[J] then
+          begin
+            I := J;
+            break;
+          end;
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
@@ -587,6 +598,7 @@ begin
   Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
+  FDegrees := aGraph.CreateDegreeArray;
   Extend(Cand, Tested);
   Result := FResult;
 end;
@@ -597,14 +609,19 @@ procedure TGSimpleGraph.TListCliqueHelper.Extend(var aCand, aTested: TBoolVector
 var
   NewCand,
   NewTested: TBoolVector;
-  I: SizeInt;
+  I, J: SizeInt;
 begin
   while aCand.NonEmpty do
     begin
       for I in aTested do
         if FMatrix[I].ContainsAll(aCand) then
           exit;
-      aCand.FindFirst(I);
+      for J in FDegrees do
+        if aCand[J] then
+          begin
+            I := J;
+            break;
+          end;
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
@@ -633,6 +650,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
+  FDegrees := aGraph.CreateDegreeArray;
   Extend(Cand, Tested);
 end;
 
@@ -904,14 +922,19 @@ procedure TGSimpleGraph.TStaticListCliqueHelper.Extend(var aCand, aTested: TBits
 var
   NewCand,
   NewTested: TBits256;
-  I: SizeInt;
+  I, J: SizeInt;
 begin
   while aCand.NonEmpty do
     begin
       for I in aTested do
         if FMatrix[I].ContainsAll(aCand) then
           exit;
-      aCand.FindFirst(I);
+      for J in FDegrees do
+        if aCand[J] then
+          begin
+            I := J;
+            break;
+          end;
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
@@ -938,6 +961,7 @@ begin
   {%H-}Tested.InitZero;
   FAccum.InitZero;
   FOnFindSet := aOnFindSet;
+  FDegrees := aGraph.CreateDegreeArray;
   Extend(Cand, Tested);
 end;
 
@@ -947,7 +971,7 @@ procedure TGSimpleGraph.TStaticMaxCliqueHelper.Extend(var aCand, aTested: TBits2
 var
   NewCand,
   NewTested: TBits256;
-  I: SizeInt;
+  I, J: SizeInt;
 begin
   while aCand.NonEmpty do
     begin
@@ -956,7 +980,12 @@ begin
       for I in aTested do
         if FMatrix[I].ContainsAll(aCand) then
           exit;
-      aCand.FindFirst(I);
+      for J in FDegrees do
+        if aCand[J] then
+          begin
+            I := J;
+            break;
+          end;
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
@@ -983,13 +1012,13 @@ end;
 function TGSimpleGraph.TStaticMaxCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand, Tested: TBits256;
-  I: SizeInt;
 begin
   FMatrix := aGraph.CreateBits256Matrix;
   Cand.InitRange(aGraph.VertexCount);
   {%H-}Tested.InitZero;
   FAccum.InitZero;
   FCurrSize := 0;
+  FDegrees := aGraph.CreateDegreeArray;
   Extend(Cand, Tested);
   Result := FResultSet.ToArray;
 end;
@@ -1858,6 +1887,12 @@ begin
   if aCycleLens.Count <> CyclomaticNumber then
     raise ELGraphError.Create(SEGrapInconsist);
   TIntVectorHelper.Sort(aCycleLens);
+end;
+
+function TGSimpleGraph.CreateDegreeArray(aOrder: TSortOrder): TIntArray;
+begin
+  Result := CreateIntArrayRange;
+  TIntDegreeHelper.Sort(Result, @CmpVertexDegree, aOrder);
 end;
 
 function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
