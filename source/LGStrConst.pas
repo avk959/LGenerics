@@ -46,8 +46,9 @@ resourcestring
   SEResultUnknown          = 'Result is unknown';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
   SEEdgeNotFoundFmt        = 'Edge (%d, %d) not found';
-  SEWriteCallbackMissed    = 'Write callback function missed';
-  SEReadCallbackMissed     = 'Read callback function missed';
+  SECallbackMissed         = 'Callback missed';
+  SEWriteCallbackMissed    = 'Write callback missed';
+  SEReadCallbackMissed     = 'Read callback missed';
   SEUnknownGraphStreamFmt  = 'Unknown graph stream format';
   SEUnsuppGraphFmtVersion  = 'Unsupported graph stream format version';
   SEGraphStreamCorrupt     = 'Graph stream data corrupted';
