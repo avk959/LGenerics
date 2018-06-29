@@ -1887,7 +1887,10 @@ function TBoolVector.GetEnumerator: TEnumerator;
 begin
   Result.FBits := Pointer(FBits);
   Result.FLastIndex := Pred(Size);
-  Result.FCurrIndex := -1;
+  if FindFirst(Result.FCurrIndex) then
+    Dec(Result.FCurrIndex)
+  else
+    Result.FCurrIndex := Result.FLastIndex;
 end;
 
 function TBoolVector.ToArray: TIntArray;
