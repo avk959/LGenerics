@@ -84,49 +84,7 @@ type
   TIntEdgeArray         = array of TIntEdge;
   TEdgeArrayVector      = specialize TGLiteVector<TIntEdgeArray>;
 
-  TBitVector = record
-  private
-  type
-    TBits = array of SizeUInt;
-  var
-    FBits: TBits;
-    function  GetBit(aIndex: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt; inline;
-    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
-    procedure SetSize(aValue: SizeInt);
-  public
-  { clears all bits }
-    procedure ClearBits; inline;
-  { sets all new bits }
-    procedure ExpandTrue(aSize: SizeInt);
-  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
-    property  Size: SizeInt read GetSize write SetSize;
-  { indices does not checks }
-    property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
-  end;
-
-  TSquareBitMatrix = record
-  private
-  type
-    TBits = array of SizeUInt;
-  var
-    FBits: TBits;
-    FSize: SizeUInt;
-    function  GetBit(I, J: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt; inline;
-    procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
-    class operator Initialize(var aMatrix: TSquareBitMatrix);
-  public
-    class function MaxSize: SizeInt; static; inline;
-    constructor Create(aSize: SizeInt);
-    procedure ClearBits; inline;
-    procedure Clear; inline;
-    property  Size: SizeInt read GetSize;
-  { indices does not checks }
-    property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
-  end;
-
-  TGraphMagic = string[8];
+  TGraphMagic           = string[8];
 
 const
   GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';
@@ -139,6 +97,50 @@ type
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
   generic TGCustomGraph<TVertex, TEdgeData, TEqRel> = class abstract
+  protected
+  type
+    TBitVector = record
+    private
+    type
+      TBits = array of SizeUInt;
+    var
+      FBits: TBits;
+      function  GetBit(aIndex: SizeInt): Boolean; inline;
+      function  GetSize: SizeInt; inline;
+      procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
+      procedure SetSize(aValue: SizeInt);
+    public
+    { clears all bits }
+      procedure ClearBits; inline;
+    { sets all new bits }
+      procedure ExpandTrue(aSize: SizeInt);
+    { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
+      property  Size: SizeInt read GetSize write SetSize;
+    { indices does not checks }
+      property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
+    end;
+
+    TSquareBitMatrix = record
+    private
+    type
+      TBits = array of SizeUInt;
+    var
+      FBits: TBits;
+      FSize: SizeUInt;
+      function  GetBit(I, J: SizeInt): Boolean; inline;
+      function  GetSize: SizeInt; inline;
+      procedure SetBit(I, J: SizeInt; aValue: Boolean); inline;
+      class operator Initialize(var aMatrix: TSquareBitMatrix);
+    public
+      class function MaxSize: SizeInt; static; inline;
+      constructor Create(aSize: SizeInt);
+      procedure ClearBits; inline;
+      procedure Clear; inline;
+      property  Size: SizeInt read GetSize;
+    { indices does not checks }
+      property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
+    end;
+
   public
   type
     TEdgeDataType = TEdgeData;
@@ -166,7 +168,6 @@ type
 
   protected
   type
-
     TIntSet = record
     private
       FItems: TIntArray;
@@ -767,19 +768,19 @@ begin
   Destination := d;
 end;
 
-{ TBitVector }
+{ TGCustomGraph.TBitVector }
 
-function TBitVector.GetBit(aIndex: SizeInt): Boolean;
+function TGCustomGraph.TBitVector.GetBit(aIndex: SizeInt): Boolean;
 begin
   Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
 end;
 
-function TBitVector.GetSize: SizeInt;
+function TGCustomGraph.TBitVector.GetSize: SizeInt;
 begin
   Result := System.Length(FBits) shl INT_SIZE_LOG;
 end;
 
-procedure TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+procedure TGCustomGraph.TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
   if aValue then
     FBits[aIndex shr INT_SIZE_LOG] :=
@@ -789,7 +790,7 @@ begin
     FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
-procedure TBitVector.SetSize(aValue: SizeInt);
+procedure TGCustomGraph.TBitVector.SetSize(aValue: SizeInt);
 var
   OldLen: SizeInt;
 begin
@@ -802,13 +803,13 @@ begin
     end;
 end;
 
-procedure TBitVector.ClearBits;
+procedure TGCustomGraph.TBitVector.ClearBits;
 begin
   if FBits <> nil then
     System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
-procedure TBitVector.ExpandTrue(aSize: SizeInt);
+procedure TGCustomGraph.TBitVector.ExpandTrue(aSize: SizeInt);
 var
   OldLen: SizeInt;
 begin
@@ -821,20 +822,20 @@ begin
     end;
 end;
 
-{ TSquareBitMatrix }
+{ TGCustomGraph.TSquareBitMatrix }
 
-function TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
+function TGCustomGraph.TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
 begin
   Result := (FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and
             (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))) <> 0
 end;
 
-function TSquareBitMatrix.GetSize: SizeInt;
+function TGCustomGraph.TSquareBitMatrix.GetSize: SizeInt;
 begin
   Result := FSize;
 end;
 
-procedure TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
+procedure TGCustomGraph.TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
 begin
   if aValue then
     FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
@@ -846,17 +847,17 @@ begin
           (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
 end;
 
-class operator TSquareBitMatrix.Initialize(var aMatrix: TSquareBitMatrix);
+class operator TGCustomGraph.TSquareBitMatrix.Initialize(var aMatrix: TSquareBitMatrix);
 begin
   aMatrix.Clear;
 end;
 
-class function TSquareBitMatrix.MaxSize: SizeInt;
+class function TGCustomGraph.TSquareBitMatrix.MaxSize: SizeInt;
 begin
   Result := Trunc(Sqrt(High(SizeUInt)));
 end;
 
-constructor TSquareBitMatrix.Create(aSize: SizeInt);
+constructor TGCustomGraph.TSquareBitMatrix.Create(aSize: SizeInt);
 var
   s: SizeInt;
 begin
@@ -872,12 +873,12 @@ begin
       raise ELGraphError.CreateFmt(SEMatrixSizeExceedFmt, [aSize]);
 end;
 
-procedure TSquareBitMatrix.ClearBits;
+procedure TGCustomGraph.TSquareBitMatrix.ClearBits;
 begin
   System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
-procedure TSquareBitMatrix.Clear;
+procedure TGCustomGraph.TSquareBitMatrix.Clear;
 begin
   FBits := nil;
   FSize := 0;
@@ -3027,7 +3028,7 @@ end;
 
 class function TGWeightedHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
-  Visited: TBitVector;
+  Visited: TGraph.TBitVector;
   Queue: TPairingHeap;
   Relaxed: TWeight;
   Item: TWeightItem;
@@ -3056,7 +3057,7 @@ end;
 
 class function TGWeightedHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
-  Visited: TBitVector;
+  Visited: TGraph.TBitVector;
   Queue: TPairingHeap;
   Relaxed: TWeight;
   Item: TWeightItem;
@@ -3092,7 +3093,7 @@ end;
 
 class function TGWeightedHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
 var
-  Visited: TBitVector;
+  Visited: TGraph.TBitVector;
   Queue: TBinHeap;
   Relaxed: TWeight;
   Item: TWeightItem;
@@ -3122,7 +3123,7 @@ end;
 
 class function TGWeightedHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
-  Visited: TBitVector;
+  Visited: TGraph.TBitVector;
   Queue: TBinHeap;
   Tree: TIntArray;
   Relaxed: TWeight;
@@ -3166,7 +3167,7 @@ end;
 class function TGWeightedHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
   aHeur: TEstimate): TIntArray;
 var
-  Visited: TBitVector;
+  Visited: TGraph.TBitVector;
   Queue: TAStarHeap;
   Tree: TIntArray;
   Relaxed: TWeight;
