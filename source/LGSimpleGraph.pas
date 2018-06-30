@@ -45,7 +45,7 @@ type
   generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
-    TBoolMatrix = array of TBoolVector;
+    TBoolMatrix      = array of TBoolVector;
     TIntDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
     TMaxCliqueHelper = record
@@ -92,23 +92,33 @@ type
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
     end;
 
+    { TBits256 }
+
     TBits256 = record
     public
+    const
+      BITNESS      = 256;
+      BIT_PER_LIMB = BitsizeOf(SizeUInt);
+      LIMB_COUNT = BITNESS div BIT_PER_LIMB;
+
     type
+      PBits256 = ^TBits256;
+
       TEnumerator = record
       private
-        FBits: PSizeUInt;
-        FCurrIndex: SizeInt;
+        FValue: PBits256;
+        FBitIndex,
+        FLimbIndex: SizeInt;
+        FCurrLimb: SizeUInt;
+        FInCycle: Boolean;
         function GetCurrent: SizeInt; inline;
+        function FindFirst: Boolean;
       public
         function MoveNext: Boolean;
         property Current: SizeInt read GetCurrent;
       end;
 
     private
-    const
-      LIMB_COUNT = 256 div BitsizeOf(SizeUInt);
-
     type
       TBits = array[0..Pred(LIMB_COUNT)] of SizeUInt;
 
@@ -116,16 +126,19 @@ type
       FBits: TBits;
       function  GetBit(aIndex: SizeInt): Boolean; inline;
       procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
-      class function BsfValue(aValue: SizeUInt): SizeInt; static; inline;
+      class function  BsfValue(aValue: SizeUInt): SizeInt; static; inline;
+      class function  BsrValue(aValue: SizeUInt): SizeInt; static; inline;
+      class procedure ClearBit(aIndex: SizeInt; var aValue: SizeUInt); static; inline;
     public
+      function  GetEnumerator: TEnumerator; inline;
       procedure InitRange(aRange: SizeInt);
       procedure InitZero; inline;
-      function  GetEnumerator: TEnumerator; inline;
     { returns an array containing the indices of the set bits }
       function  ToArray: TIntArray;
       function  IsEmpty: Boolean;
       function  NonEmpty: Boolean; inline;
-      function  FindFirst(out aValue: SizeInt): Boolean; inline;
+      function  Bsf: SizeInt; inline;
+      function  Bsr: SizeInt; inline;
       function  Intersecting(constref aVector: TBits256): Boolean;
       function  ContainsAll(constref aVector: TBits256): Boolean;
       procedure Subtract(constref aVector: TBits256); inline;
@@ -141,9 +154,9 @@ type
     private
       FMatrix: TBits256Matrix;
       FAccum,
-      FResultSet: TBits256;
+      FResult: TBits256;
       FCurrSize: SizeInt;
-      FDegrees: TIntArray;
+      FVertices: TIntArray;
       procedure Extend(var aCand: TBits256);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -241,7 +254,8 @@ type
     procedure SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
-    function  CreateDegreeArray(aOrder: TSortOrder = soAsc): TIntArray;
+    function  CreateSortedByDegree(aOrder: TSortOrder = soAsc): TIntArray;
+    function  CreateDegreeArray: TIntArray;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     function  CmpVertexDegree(constref L, R: SizeInt): SizeInt;
     property  InnerConnected: Boolean read FConnected;
@@ -589,7 +603,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
-  FDegrees := aGraph.CreateDegreeArray;
+  FDegrees := aGraph.CreateSortedByDegree;
   Extend(Cand);
   Result := FResult;
 end;
@@ -602,7 +616,7 @@ var
   NewTested: TBoolVector;
   I, J: SizeInt;
 begin
-  while aCand.NonEmpty do
+  while aCand.NonEmpty do //Bron-Kerbosch algorithm
     begin
       for I in aTested do
         if FMatrix[I].ContainsAll(aCand) then
@@ -641,7 +655,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
-  FDegrees := aGraph.CreateDegreeArray;
+  FDegrees := aGraph.CreateSortedByDegree;
   Extend(Cand, Tested);
 end;
 
@@ -653,7 +667,7 @@ var
   NewTested: TBoolVector;
   I: SizeInt;
 begin
-  while aCand.NonEmpty do
+  while aCand.NonEmpty do  //Bron-Kerbosch algorithm
     begin
       for I in aTested do
         if not FMatrix[I].Intersecting(aCand) then
@@ -735,17 +749,51 @@ end;
 
 function TGSimpleGraph.TBits256.TEnumerator.GetCurrent: SizeInt;
 begin
-  Result := FCurrIndex;
+  Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
+end;
+
+function TGSimpleGraph.TBits256.TEnumerator.FindFirst: Boolean;
+var
+  I: SizeInt;
+begin
+  I := FValue^.Bsf;
+  if I >= 0 then
+    begin
+      FLimbIndex := I shr INT_SIZE_LOG;
+      FBitIndex := I and INT_SIZE_MASK;
+      FCurrLimb := FValue^.FBits[FLimbIndex];
+      TBits256.ClearBit(FBitIndex, FCurrLimb);
+      Result := True;
+    end
+  else
+    begin
+      FLimbIndex := LIMB_COUNT;
+      FBitIndex := BIT_PER_LIMB;
+      Result := False;
+    end;
 end;
 
 function TGSimpleGraph.TBits256.TEnumerator.MoveNext: Boolean;
 begin
-  repeat
-    if FCurrIndex >= Pred(LIMB_COUNT shl INT_SIZE_LOG) then
-      exit(False);
-    Inc(FCurrIndex);
-    Result := (FBits[FCurrIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (FCurrIndex and INT_SIZE_MASK))) <> 0;
-  until Result;
+  if FInCycle then
+    repeat
+      FBitIndex := TBits256.BsfValue(FCurrLimb);
+      Result := FBitIndex >= 0;
+      if Result then
+        TBits256.ClearBit(FBitIndex, FCurrLimb)
+      else
+        begin
+          if FLimbIndex = Pred(LIMB_COUNT) then
+            exit(False);
+          Inc(FLimbIndex);
+          FCurrLimb := FValue^.FBits[FLimbIndex];
+        end;
+    until Result
+  else
+    begin
+      Result := FindFirst;
+      FInCycle := True;
+    end;
 end;
 
 { TGSimpleGraph.TBits256 }
@@ -776,6 +824,28 @@ begin
 {$ENDIF}
 end;
 
+class function TGSimpleGraph.TBits256.BsrValue(aValue: SizeUInt): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := ShortInt(BsrQWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  Result := ShortInt(BsrDWord(aValue));
+{$ELSE}
+  Result := ShortInt(BsrWord(aValue));
+{$ENDIF}
+end;
+
+class procedure TGSimpleGraph.TBits256.ClearBit(aIndex: SizeInt; var aValue: SizeUInt);
+begin
+  aValue := aValue and not (SizeUInt(1) shl aIndex);
+end;
+
+function TGSimpleGraph.TBits256.GetEnumerator: TEnumerator;
+begin
+  Result.FValue := @Self;
+  Result.FInCycle := False;
+end;
+
 procedure TGSimpleGraph.TBits256.InitRange(aRange: SizeInt);
 var
   msb: SizeInt;
@@ -802,26 +872,18 @@ begin
 {$ENDIF}
 end;
 
-function TGSimpleGraph.TBits256.GetEnumerator: TEnumerator;
-begin
-  Result.FBits := @FBits;
-  if FindFirst(Result.FCurrIndex) then
-    Dec(Result.FCurrIndex)
-  else
-    Result.FCurrIndex := 256;
-end;
-
 function TGSimpleGraph.TBits256.ToArray: TIntArray;
 var
   I, Pos: SizeInt;
 begin
   System.SetLength(Result, PopCount);
   Pos := 0;
-  for I in Self do
-    begin
-      Result[Pos] := I;
-      Inc(Pos);
-    end;
+  for I := 0 to Pred(BITNESS) do
+    if GetBit(I) then
+      begin
+        Result[Pos] := I;
+        Inc(Pos);
+      end;
 end;
 
 function TGSimpleGraph.TBits256.IsEmpty: Boolean;
@@ -839,21 +901,24 @@ begin
   Result := not IsEmpty;
 end;
 
-function TGSimpleGraph.TBits256.FindFirst(out aValue: SizeInt): Boolean;
+function TGSimpleGraph.TBits256.Bsf: SizeInt;
 var
-  I: SizeUInt;
+  I: SizeInt;
 begin
-  aValue := 0;
-  for I in FBits do
-    begin
-      if I <> 0 then
-        begin
-          aValue += BsfValue(I);
-          exit(True);
-        end;
-      aValue += BitsizeOf(SizeUInt);
-    end;
-  Result := False;
+  for I := 0 to Pred(LIMB_COUNT) do
+    if FBits[I] <> 0 then
+      exit(I shl INT_SIZE_LOG + BsfValue(FBits[I]));
+  Result := -1;
+end;
+
+function TGSimpleGraph.TBits256.Bsr: SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := Pred(LIMB_COUNT) downto 0 do
+    if FBits[I] <> 0 then
+      exit(I shl INT_SIZE_LOG + BsrValue(FBits[I]));
+  Result := -1;
 end;
 
 function TGSimpleGraph.TBits256.Intersecting(constref aVector: TBits256): Boolean;
@@ -877,28 +942,82 @@ begin
 end;
 
 procedure TGSimpleGraph.TBits256.Subtract(constref aVector: TBits256);
+{$IF DEFINED(CPU64)}
+begin
+  FBits[0] := FBits[0] and not aVector.FBits[0];
+  FBits[1] := FBits[1] and not aVector.FBits[1];
+  FBits[2] := FBits[2] and not aVector.FBits[2];
+  FBits[3] := FBits[3] and not aVector.FBits[3];
+{$ELSEIF DEFINED(CPU32)}
+begin
+  FBits[0] := FBits[0] and not aVector.FBits[0];
+  FBits[1] := FBits[1] and not aVector.FBits[1];
+  FBits[2] := FBits[2] and not aVector.FBits[2];
+  FBits[3] := FBits[3] and not aVector.FBits[3];
+  FBits[4] := FBits[4] and not aVector.FBits[4];
+  FBits[5] := FBits[5] and not aVector.FBits[5];
+  FBits[6] := FBits[6] and not aVector.FBits[6];
+  FBits[7] := FBits[7] and not aVector.FBits[7];
+{$ELSE }
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(LIMB_COUNT) do
     FBits[I] := FBits[I] and not aVector.FBits[I];
+{$ENDIF }
 end;
 
 procedure TGSimpleGraph.TBits256.Intersect(constref aVector: TBits256);
+{$IF DEFINED(CPU64)}
+begin
+  FBits[0] := FBits[0] and aVector.FBits[0];
+  FBits[1] := FBits[1] and aVector.FBits[1];
+  FBits[2] := FBits[2] and aVector.FBits[2];
+  FBits[3] := FBits[3] and aVector.FBits[3];
+{$ELSEIF DEFINED(CPU32)}
+begin
+  FBits[0] := FBits[0] and aVector.FBits[0];
+  FBits[1] := FBits[1] and aVector.FBits[1];
+  FBits[2] := FBits[2] and aVector.FBits[2];
+  FBits[3] := FBits[3] and aVector.FBits[3];
+  FBits[4] := FBits[4] and aVector.FBits[4];
+  FBits[5] := FBits[5] and aVector.FBits[5];
+  FBits[6] := FBits[6] and aVector.FBits[6];
+  FBits[7] := FBits[7] and aVector.FBits[7];
+{$ELSE }
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(LIMB_COUNT) do
     FBits[I] := FBits[I] and aVector.FBits[I];
+{$ENDIF }
 end;
 
 function TGSimpleGraph.TBits256.PopCount: SizeInt;
+{$IF DEFINED(CPU64)}
+begin
+  Result := SizeInt(PopCnt(FBits[0]));
+  Result += SizeInt(PopCnt(FBits[1]));
+  Result += SizeInt(PopCnt(FBits[2]));
+  Result += SizeInt(PopCnt(FBits[3]));
+{$ELSEIF DEFINED(CPU32)}
+begin
+  Result := SizeInt(PopCnt(FBits[0]));
+  Result += SizeInt(PopCnt(FBits[1]));
+  Result += SizeInt(PopCnt(FBits[2]));
+  Result += SizeInt(PopCnt(FBits[3]));
+  Result += SizeInt(PopCnt(FBits[4]));
+  Result += SizeInt(PopCnt(FBits[5]));
+  Result += SizeInt(PopCnt(FBits[6]));
+  Result += SizeInt(PopCnt(FBits[7]));
+{$ELSE }
 var
   I: SizeUInt;
 begin
   Result := 0;
   for I in FBits do
     Result += SizeInt(PopCnt(I));
+{$ENDIF }
 end;
 
 { TGSimpleGraph.TStaticListCliqueHelper }
@@ -909,10 +1028,10 @@ var
   NewTested: TBits256;
   I, J: SizeInt;
 begin
-  while aCand.NonEmpty do
+  while aCand.NonEmpty do  //Bron-Kerbosch algorithm
     begin
-      for I in aTested do
-        if FMatrix[I].ContainsAll(aCand) then
+      for I := 0 to Pred(aTested.BITNESS) do
+        if aTested[I] and FMatrix[I].ContainsAll(aCand) then
           exit;
       for J in FDegrees do
         if aCand[J] then
@@ -946,7 +1065,7 @@ begin
   {%H-}Tested.InitZero;
   FAccum.InitZero;
   FOnFindSet := aOnFindSet;
-  FDegrees := aGraph.CreateDegreeArray;
+  FDegrees := aGraph.CreateSortedByDegree;
   Extend(Cand, Tested);
 end;
 
@@ -955,48 +1074,46 @@ end;
 procedure TGSimpleGraph.TStaticMaxCliqueHelper.Extend(var aCand: TBits256);
 var
   NewCand: TBits256;
-  I, J: SizeInt;
+  I: SizeInt;
 begin
-  while aCand.NonEmpty do
+  for I in aCand do
     begin
       if aCand.PopCount + FAccum.PopCount <= FCurrSize then
         exit;
-      for J in FDegrees do
-        if aCand[J] then
-          begin
-            I := J;
-            break;
-          end;
-      FAccum[I] := True;
+      aCand[I{%H-}] := False;
+      FAccum[FVertices[I]] := True;
       NewCand := aCand;
-      NewCand[I] := False;
       NewCand.Intersect(FMatrix[I]);
       if NewCand.IsEmpty then  // found clique
         begin
           if FAccum.PopCount > FCurrSize then
             begin
               FCurrSize := FAccum.PopCount;
-              FResultSet := FAccum;
+              FResult := FAccum;
             end;
         end
       else
         Extend(NewCand);
-      FAccum[I] := False;
-      aCand[I] := False;
+      FAccum[FVertices[I]] := False;
     end;
 end;
 
 function TGSimpleGraph.TStaticMaxCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBits256;
+  I, J: SizeInt;
 begin
-  FMatrix := aGraph.CreateBits256Matrix;
+  FVertices := aGraph.CreateSortedByDegree({soDesc});
+  System.SetLength(FMatrix, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    for J := 0 to Pred(aGraph.VertexCount) do
+      if (I <> J) and aGraph.AdjacentI(FVertices[I], FVertices[J]) then
+        FMatrix[I][J] := True;
+  FCurrSize := 0;
   Cand.InitRange(aGraph.VertexCount);
   FAccum.InitZero;
-  FCurrSize := 0;
-  FDegrees := aGraph.CreateDegreeArray;
   Extend(Cand);
-  Result := FResultSet.ToArray;
+  Result := FResult.ToArray;
 end;
 
 { TGSimpleGraph.TStaticListIsHelper }
@@ -1007,12 +1124,12 @@ var
   NewTested: TBits256;
   I: SizeInt;
 begin
-  while aCand.NonEmpty do
+  while aCand.NonEmpty do //Bron-Kerbosch algorithm
     begin
-      for I in aTested do
-        if not FMatrix[I].Intersecting(aCand) then
+      for I := 0 to Pred(aTested.BITNESS) do
+        if aTested[I] and FMatrix[I].ContainsAll(aCand) then
           exit;
-      aCand.FindFirst(I);
+      I := aCand.Bsf;
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
@@ -1049,11 +1166,11 @@ var
   NewCand: TBits256;
   I: SizeInt;
 begin
-  while aCand.NonEmpty do
+  for I in aCand do
     begin
       if aCand.PopCount + FAccum.PopCount <= FCurrSize then
         exit;
-      aCand.FindFirst(I);
+      aCand[I] := False;
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
@@ -1069,7 +1186,6 @@ begin
       else
          Extend(NewCand);
       FAccum[I] := False;
-      aCand[I] := False;
     end;
 end;
 
@@ -1856,10 +1972,19 @@ begin
   TIntVectorHelper.Sort(aCycleLens);
 end;
 
-function TGSimpleGraph.CreateDegreeArray(aOrder: TSortOrder): TIntArray;
+function TGSimpleGraph.CreateSortedByDegree(aOrder: TSortOrder): TIntArray;
 begin
   Result := CreateIntArrayRange;
   TIntDegreeHelper.Sort(Result, @CmpVertexDegree, aOrder);
+end;
+
+function TGSimpleGraph.CreateDegreeArray: TIntArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := AdjLists[I]^.Count;
 end;
 
 function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
@@ -2157,8 +2282,7 @@ begin
   Counter := 0;
   for I in AdjVerticesI(aIndex) do
     for J in AdjVerticesI(aIndex) do
-      if (I <> J) and FNodeList[I].AdjList.Contains(J) then
-        Inc(Counter);
+      Counter += Ord((I <> J) and FNodeList[I].AdjList.Contains(J));
   Result := ValReal(Counter) / ValReal(d * Pred(d));
 end;
 
