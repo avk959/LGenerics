@@ -48,6 +48,15 @@ type
     TBoolMatrix      = array of TBoolVector;
     TIntDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
+    TSortByNebDegrees = object
+    private
+      FGraph: TGSimpleGraph;
+      FNebDegrees: TIntArray;
+      function Cmp(constref L, R: SizeInt): SizeInt;
+    public
+      procedure Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph; o: TSortOrder);
+    end;
+
     TMaxCliqueHelper = record
     private
       FMatrix: TBoolMatrix;
@@ -92,8 +101,6 @@ type
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
     end;
 
-    { TBits256 }
-
     TBits256 = record
     public
     const
@@ -118,6 +125,27 @@ type
         property Current: SizeInt read GetCurrent;
       end;
 
+      TReverseEnumerator = record
+      private
+        FValue: PBits256;
+        FBitIndex,
+        FLimbIndex: SizeInt;
+        FCurrLimb: SizeUInt;
+        FInCycle: Boolean;
+        function GetCurrent: SizeInt; inline;
+        function FindFirst: Boolean;
+      public
+        function MoveNext: Boolean;
+        property Current: SizeInt read GetCurrent;
+      end;
+
+    TReverseOrder = record
+    private
+      FValue: PBits256;
+    public
+      function GetEnumerator: TReverseEnumerator; inline;
+    end;
+
     private
     type
       TBits = array[0..Pred(LIMB_COUNT)] of SizeUInt;
@@ -131,6 +159,7 @@ type
       class procedure ClearBit(aIndex: SizeInt; var aValue: SizeUInt); static; inline;
     public
       function  GetEnumerator: TEnumerator; inline;
+      function  ReverseOrder: TReverseOrder; inline;
       procedure InitRange(aRange: SizeInt);
       procedure InitZero; inline;
     { returns an array containing the indices of the set bits }
@@ -157,6 +186,7 @@ type
       FResult: TBits256;
       FCurrSize: SizeInt;
       FVertices: TIntArray;
+      procedure GetColors(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TBits256);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -255,6 +285,7 @@ type
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CreateSortedByDegree(aOrder: TSortOrder = soAsc): TIntArray;
+    procedure FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
     function  CreateDegreeArray: TIntArray;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     function  CmpVertexDegree(constref L, R: SizeInt): SizeInt;
@@ -559,6 +590,33 @@ implementation
 uses
   bufstream;
 
+{ TGSimpleGraph.TSortByNebDegrees }
+
+function TGSimpleGraph.TSortByNebDegrees.Cmp(constref L, R: SizeInt): SizeInt;
+begin
+  if FNebDegrees[L] < FNebDegrees[R] then
+    exit(-1)
+  else
+    if FNebDegrees[L] > FNebDegrees[R] then
+      exit(1);
+  if FGraph.DegreeI(L) < FGraph.DegreeI(R) then
+    exit(-1)
+  else
+     if FGraph.DegreeI(L) > FGraph.DegreeI(R) then
+       exit(1);
+  if L < R then
+    exit(-1);
+  Result := 1;
+end;
+
+procedure TGSimpleGraph.TSortByNebDegrees.Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph;
+  o: TSortOrder);
+begin
+  FGraph := g;
+  FNebDegrees := aDegrees;
+  TIntDegreeHelper.Sort(a, @Cmp, o);
+end;
+
 { TGSimpleGraph.TMaxCliqueHelper }
 
 procedure TGSimpleGraph.TMaxCliqueHelper.Extend(var aCand: TBoolVector);
@@ -783,7 +841,7 @@ begin
         TBits256.ClearBit(FBitIndex, FCurrLimb)
       else
         begin
-          if FLimbIndex = Pred(LIMB_COUNT) then
+          if FLimbIndex >= Pred(LIMB_COUNT) then
             exit(False);
           Inc(FLimbIndex);
           FCurrLimb := FValue^.FBits[FLimbIndex];
@@ -794,6 +852,65 @@ begin
       Result := FindFirst;
       FInCycle := True;
     end;
+end;
+
+{ TGSimpleGraph.TBits256.TReverseEnumerator }
+
+function TGSimpleGraph.TBits256.TReverseEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
+end;
+
+function TGSimpleGraph.TBits256.TReverseEnumerator.FindFirst: Boolean;
+var
+  I: SizeInt;
+begin
+  I := FValue^.Bsr;
+  if I >= 0 then
+    begin
+      FLimbIndex := I shr INT_SIZE_LOG;
+      FBitIndex := I and INT_SIZE_MASK;
+      FCurrLimb := FValue^.FBits[FLimbIndex];
+      TBits256.ClearBit(FBitIndex, FCurrLimb);
+      Result := True;
+    end
+  else
+    begin
+      FLimbIndex := -1;
+      FBitIndex := BIT_PER_LIMB;
+      Result := False;
+    end;
+end;
+
+function TGSimpleGraph.TBits256.TReverseEnumerator.MoveNext: Boolean;
+begin
+  if FInCycle then
+    repeat
+      FBitIndex := TBits256.BsrValue(FCurrLimb);
+      Result := FBitIndex >= 0;
+      if Result then
+        TBits256.ClearBit(FBitIndex, FCurrLimb)
+      else
+        begin
+          if FLimbIndex <= 0 then
+            exit(False);
+          Dec(FLimbIndex);
+          FCurrLimb := FValue^.FBits[FLimbIndex];
+        end;
+    until Result
+  else
+    begin
+      Result := FindFirst;
+      FInCycle := True;
+    end;
+end;
+
+{ TGSimpleGraph.TBits256.TReverseOrder }
+
+function TGSimpleGraph.TBits256.TReverseOrder.GetEnumerator: TReverseEnumerator;
+begin
+  Result.FValue := FValue;
+  Result.FInCycle := False;
 end;
 
 { TGSimpleGraph.TBits256 }
@@ -844,6 +961,11 @@ function TGSimpleGraph.TBits256.GetEnumerator: TEnumerator;
 begin
   Result.FValue := @Self;
   Result.FInCycle := False;
+end;
+
+function TGSimpleGraph.TBits256.ReverseOrder: TReverseOrder;
+begin
+  Result.FValue := @Self;
 end;
 
 procedure TGSimpleGraph.TBits256.InitRange(aRange: SizeInt);
@@ -1071,46 +1193,75 @@ end;
 
 { TGSimpleGraph.TStaticMaxCliqueHelper }
 
+procedure TGSimpleGraph.TStaticMaxCliqueHelper.GetColors(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+var
+  P, Q: TBits256;
+  I, J, ColorClass: SizeInt;
+begin
+  P := aCand;
+  ColorClass := 0;
+  I := 0;
+  while P.NonEmpty do
+    begin
+      Inc(ColorClass);
+      Q := P;
+      while Q.NonEmpty do
+        begin
+          J := Q.Bsf;
+          P[J] := False;
+          Q[J] := False;
+          Q.Subtract(FMatrix[J]);
+          aColOrd[I] := J;
+          aColors[I] := ColorClass;
+          Inc(I);
+        end;
+    end;
+end;
+
 procedure TGSimpleGraph.TStaticMaxCliqueHelper.Extend(var aCand: TBits256);
 var
   NewCand: TBits256;
-  I: SizeInt;
+  ColOrd, Colors: TIntArray;
+  I, J, Size: SizeInt;
 begin
-  for I in aCand do
+  Size := aCand.PopCount;
+  If Size > 0 then
     begin
-      if aCand.PopCount + FAccum.PopCount <= FCurrSize then
-        exit;
-      aCand[I{%H-}] := False;
-      FAccum[FVertices[I]] := True;
-      NewCand := aCand;
-      NewCand.Intersect(FMatrix[I]);
-      if NewCand.IsEmpty then  // found clique
+      System.SetLength(ColOrd, Size);
+      System.SetLength(Colors, Size);
+      GetColors(aCand, ColOrd, Colors);
+      for I := Pred(Size) downto 0 do
         begin
-          if FAccum.PopCount > FCurrSize then
+          if Colors[I] + FAccum.PopCount <= FCurrSize then
+            exit;
+          J := ColOrd[I];
+          aCand[J] := False;
+          FAccum[FVertices[J]] := True;
+          NewCand := aCand;
+          NewCand.Intersect(FMatrix[J]);
+          if NewCand.IsEmpty then  // found clique
             begin
-              FCurrSize := FAccum.PopCount;
-              FResult := FAccum;
-            end;
-        end
-      else
-        Extend(NewCand);
-      FAccum[FVertices[I]] := False;
+              Size := FAccum.PopCount;
+              if Size > FCurrSize then
+                begin
+                  FCurrSize := Size;
+                  FResult := FAccum;
+                end;
+            end
+          else
+            Extend(NewCand);
+          FAccum[FVertices[J]] := False;
+        end;
     end;
 end;
 
 function TGSimpleGraph.TStaticMaxCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBits256;
-  I, J: SizeInt;
 begin
-  FVertices := aGraph.CreateSortedByDegree({soDesc});
-  System.SetLength(FMatrix, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    for J := 0 to Pred(aGraph.VertexCount) do
-      if (I <> J) and aGraph.AdjacentI(FVertices[I], FVertices[J]) then
-        FMatrix[I][J] := True;
-  FCurrSize := 0;
+  aGraph.FillSortedMatrix256(FMatrix, FVertices, soDesc);
   Cand.InitRange(aGraph.VertexCount);
+  FCurrSize := 0;
   FAccum.InitZero;
   Extend(Cand);
   Result := FResult.ToArray;
@@ -1976,6 +2127,34 @@ function TGSimpleGraph.CreateSortedByDegree(aOrder: TSortOrder): TIntArray;
 begin
   Result := CreateIntArrayRange;
   TIntDegreeHelper.Sort(Result, @CmpVertexDegree, aOrder);
+end;
+
+procedure TGSimpleGraph.FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder);
+var
+  NebDegrees: TIntArray;
+  I, J, Sum: SizeInt;
+  Helper: TSortByNebDegrees;
+  p: PAdjList;
+begin
+  NebDegrees := CreateIntArray;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Sum := 0;
+      for J in AdjVerticesI(I) do
+        Sum += AdjLists[J]^.Count;
+      NebDegrees[I] := Sum;
+    end;
+  aVertices := CreateIntArrayRange;
+  Helper.Sort(aVertices, NebDegrees, Self, o);
+  System.SetLength(aMatrix, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      aMatrix[I].InitZero;
+      p := AdjLists[aVertices[I]];
+      for J := 0 to Pred(VertexCount) do
+        if (I <> J) and p^.Contains(aVertices[J]) then
+          aMatrix[I][J] := True;
+    end;
 end;
 
 function TGSimpleGraph.CreateDegreeArray: TIntArray;
