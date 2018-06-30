@@ -2091,7 +2091,7 @@ function TBoolVector.Intersecting(constref aVector: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
-  for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
+  for I := 0 to Math.Min(System.High(FBits), System.High(aVector.FBits)) do
     if FBits[I] and aVector.FBits[I] <> 0 then
       exit(True);
   Result := False;
@@ -2101,10 +2101,10 @@ function TBoolVector.ContainsAll(constref aVector: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
-  for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
+  for I := 0 to Math.Min(System.High(FBits), System.High(aVector.FBits)) do
     if FBits[I] and aVector.FBits[I] <> aVector.FBits[I] then
       exit(False);
-  for I := System.Length(FBits) to Pred(System.Length(aVector.FBits)) do
+  for I := System.Length(FBits) to System.High(aVector.FBits) do
     if aVector.FBits[I] <> 0 then
       exit(False);
   Result := True;
@@ -2112,29 +2112,57 @@ end;
 
 procedure TBoolVector.Subtract(constref aVector: TBoolVector);
 var
-  I: SizeInt;
+  I, Len: SizeInt;
 begin
-  for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
+  Len := Math.Min(System.High(FBits), System.High(aVector.FBits));
+  I := 0;
+  while I <= Len - 4 do
+    begin
+      FBits[I  ] := FBits[I  ] and not aVector.FBits[I  ];
+      FBits[I+1] := FBits[I+1] and not aVector.FBits[I+1];
+      FBits[I+2] := FBits[I+2] and not aVector.FBits[I+2];
+      FBits[I+3] := FBits[I+3] and not aVector.FBits[I+3];
+      Inc(I, 4);
+    end;
+  for I := I to Len do
     FBits[I] := FBits[I] and not aVector.FBits[I];
 end;
 
 procedure TBoolVector.Intersect(constref aVector: TBoolVector);
 var
-  I: SizeInt;
+  I, Len: SizeInt;
 begin
-  for I := 0 to Pred(Math.Min(System.Length(FBits), System.Length(aVector.FBits))) do
+  Len := Math.Min(System.High(FBits), System.High(aVector.FBits));
+  I := 0;
+  while I <= Len - 4 do
+    begin
+      FBits[I  ] := FBits[I  ] and aVector.FBits[I  ];
+      FBits[I+1] := FBits[I+1] and aVector.FBits[I+1];
+      FBits[I+2] := FBits[I+2] and aVector.FBits[I+2];
+      FBits[I+3] := FBits[I+3] and aVector.FBits[I+3];
+      Inc(I, 4);
+    end;
+  for I := I to Len do
     FBits[I] := FBits[I] and aVector.FBits[I];
-  for I := System.Length(aVector.FBits) to Pred(System.Length(FBits)) do
+  for I := Succ(Len) to System.High(FBits) do
     FBits[I] := 0;
 end;
 
 function TBoolVector.PopCount: SizeInt;
 var
-  I: SizeUInt;
+  I: SizeUInt = 0;
 begin
   Result := 0;
-  for I in FBits do
-    Result += SizeInt(PopCnt(I));
+  while I <= System.High(FBits) - 4 do
+    begin
+      Result += SizeInt(PopCnt(FBits[I  ]));
+      Result += SizeInt(PopCnt(FBits[I+1]));
+      Result += SizeInt(PopCnt(FBits[I+2]));
+      Result += SizeInt(PopCnt(FBits[I+3]));
+      Inc(I, 4);
+    end;
+  for I := I to  System.High(FBits) do
+    Result += SizeInt(PopCnt(FBits[I]));
 end;
 
 { TGVectorHelpUtil }
