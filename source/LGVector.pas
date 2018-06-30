@@ -327,15 +327,41 @@ type
   TBoolVector = record
   public
   type
+    PBoolVector = ^TBoolVector;
+
     TEnumerator = record
     private
-      FBits: PSizeUInt;
-      FCurrIndex,
-      FLastIndex: SizeInt;
+      FValue: PBoolVector;
+      FBitIndex,
+      FLimbIndex: SizeInt;
+      FCurrLimb: SizeUInt;
+      FInCycle: Boolean;
       function GetCurrent: SizeInt; inline;
+      function FindFirst: Boolean;
     public
       function MoveNext: Boolean; inline;
       property Current: SizeInt read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FValue: PBoolVector;
+      FBitIndex,
+      FLimbIndex: SizeInt;
+      FCurrLimb: SizeUInt;
+      FInCycle: Boolean;
+      function GetCurrent: SizeInt; inline;
+      function FindFirst: Boolean;
+    public
+      function MoveNext: Boolean;
+      property Current: SizeInt read GetCurrent;
+    end;
+
+    TReverseOrder = record
+    private
+      FValue: PBoolVector;
+    public
+      function GetEnumerator: TReverseEnumerator; inline;
     end;
 
   private
@@ -348,20 +374,24 @@ type
     function  GetSize: SizeInt; inline;
     procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
     procedure SetSize(aValue: SizeInt);
-    class function BsfValue(aValue: SizeUInt): SizeInt; static; inline;
-    class operator Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
+    class function  BsfValue(aValue: SizeUInt): SizeInt; static; inline;
+    class function  BsrValue(aValue: SizeUInt): SizeInt; static; inline;
+    class procedure ClearBit(aIndex: SizeInt; var aValue: SizeUInt); static; inline;
+    class operator  Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
   public
   type
     TIntArray = array of SizeInt;
 
     procedure InitRange(aRange: SizeInt);
     function  GetEnumerator: TEnumerator; inline;
+    function  ReverseOrder: TReverseOrder; inline;
   { returns an array containing the indices of the set bits }
     function  ToArray: TIntArray;
     procedure ClearBits; inline;
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
-    function  FindFirst(out aValue: SizeInt): Boolean; inline;
+    function  Bsf: SizeInt; inline;
+    function  Bsr: SizeInt; inline;
     function  Intersecting(constref aVector: TBoolVector): Boolean;
     function  ContainsAll(constref aVector: TBoolVector): Boolean;
     procedure Subtract(constref aVector: TBoolVector); inline;
@@ -1795,17 +1825,110 @@ end;
 
 function TBoolVector.TEnumerator.GetCurrent: SizeInt;
 begin
-  Result := FCurrIndex;
+  Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
+end;
+
+function TBoolVector.TEnumerator.FindFirst: Boolean;
+var
+  I: SizeInt;
+begin
+  I := FValue^.Bsf;
+  if I >= 0 then
+    begin
+      FLimbIndex := I shr INT_SIZE_LOG;
+      FBitIndex := I and INT_SIZE_MASK;
+      FCurrLimb := FValue^.FBits[FLimbIndex];
+      TBoolVector.ClearBit(FBitIndex, FCurrLimb);
+      Result := True;
+    end
+  else
+    begin
+      FLimbIndex := System.Length(FValue^.FBits);
+      FBitIndex := BitsizeOf(SizeUInt);
+      Result := False;
+    end;
 end;
 
 function TBoolVector.TEnumerator.MoveNext: Boolean;
 begin
-  repeat
-    if FCurrIndex >= FLastIndex then
-      exit(False);
-    Inc(FCurrIndex);
-    Result := (FBits[FCurrIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (FCurrIndex and INT_SIZE_MASK))) <> 0;
-  until Result;
+  if FInCycle then
+    repeat
+      FBitIndex := TBoolVector.BsfValue(FCurrLimb);
+      Result := FBitIndex >= 0;
+      if Result then
+        TBoolVector.ClearBit(FBitIndex, FCurrLimb)
+      else
+        begin
+          if FLimbIndex >= System.High(FValue^.FBits) then
+            exit(False);
+          Inc(FLimbIndex);
+          FCurrLimb := FValue^.FBits[FLimbIndex];
+        end;
+    until Result
+  else
+    begin
+      Result := FindFirst;
+      FInCycle := True;
+    end;
+end;
+
+{ TBoolVector.TReverseEnumerator }
+
+function TBoolVector.TReverseEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
+end;
+
+function TBoolVector.TReverseEnumerator.FindFirst: Boolean;
+var
+  I: SizeInt;
+begin
+  I := FValue^.Bsr;
+  if I >= 0 then
+    begin
+      FLimbIndex := I shr INT_SIZE_LOG;
+      FBitIndex := I and INT_SIZE_MASK;
+      FCurrLimb := FValue^.FBits[FLimbIndex];
+      TBoolVector.ClearBit(FBitIndex, FCurrLimb);
+      Result := True;
+    end
+  else
+    begin
+      FLimbIndex := -1;
+      FBitIndex := BitsizeOf(SizeUInt);
+      Result := False;
+    end;
+end;
+
+function TBoolVector.TReverseEnumerator.MoveNext: Boolean;
+begin
+  if FInCycle then
+    repeat
+      FBitIndex := TBoolVector.BsrValue(FCurrLimb);
+      Result := FBitIndex >= 0;
+      if Result then
+        TBoolVector.ClearBit(FBitIndex, FCurrLimb)
+      else
+        begin
+          if FLimbIndex <= 0 then
+            exit(False);
+          Dec(FLimbIndex);
+          FCurrLimb := FValue^.FBits[FLimbIndex];
+        end;
+    until Result
+  else
+    begin
+      Result := FindFirst;
+      FInCycle := True;
+    end;
+end;
+
+{ TBoolVector.TReverseOrder }
+
+function TBoolVector.TReverseOrder.GetEnumerator: TReverseEnumerator;
+begin
+  Result.FValue := FValue;
+  Result.FInCycle := False;
 end;
 
 { TBoolVector }
@@ -1862,6 +1985,22 @@ begin
 {$ENDIF}
 end;
 
+class function TBoolVector.BsrValue(aValue: SizeUInt): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := ShortInt(BsrQWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  Result := ShortInt(BsrDWord(aValue));
+{$ELSE}
+  Result := ShortInt(BsrWord(aValue));
+{$ENDIF}
+end;
+
+class procedure TBoolVector.ClearBit(aIndex: SizeInt; var aValue: SizeUInt);
+begin
+  aValue := aValue and not (SizeUInt(1) shl aIndex);
+end;
+
 class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
 begin
   aDst.FBits := System.Copy(aSrc.FBits);
@@ -1885,12 +2024,13 @@ end;
 
 function TBoolVector.GetEnumerator: TEnumerator;
 begin
-  Result.FBits := Pointer(FBits);
-  Result.FLastIndex := Pred(Size);
-  if FindFirst(Result.FCurrIndex) then
-    Dec(Result.FCurrIndex)
-  else
-    Result.FCurrIndex := Result.FLastIndex;
+  Result.FValue := @Self;
+  Result.FInCycle := False;
+end;
+
+function TBoolVector.ReverseOrder: TReverseOrder;
+begin
+  Result.FValue := @Self;
 end;
 
 function TBoolVector.ToArray: TIntArray;
@@ -1927,21 +2067,24 @@ begin
   Result := not IsEmpty;
 end;
 
-function TBoolVector.FindFirst(out aValue: SizeInt): Boolean;
+function TBoolVector.Bsf: SizeInt;
 var
-  I: SizeUInt;
+  I: SizeInt;
 begin
-  aValue := 0;
-  for I in FBits do
-    begin
-      if I <> 0 then
-        begin
-          aValue += BsfValue(I);
-          exit(True);
-        end;
-      aValue += BitsizeOf(SizeUInt);
-    end;
-  Result := False;
+  for I := 0 to System.High(FBits) do
+    if FBits[I] <> 0 then
+      exit(I shl INT_SIZE_LOG + BsfValue(FBits[I]));
+  Result := -1;
+end;
+
+function TBoolVector.Bsr: SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := System.High(FBits) downto 0 do
+    if FBits[I] <> 0 then
+      exit(I shl INT_SIZE_LOG + BsrValue(FBits[I]));
+  Result := -1;
 end;
 
 function TBoolVector.Intersecting(constref aVector: TBoolVector): Boolean;
