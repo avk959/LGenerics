@@ -57,6 +57,10 @@ type
       procedure Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph; o: TSortOrder);
     end;
 
+  { some variant of BB-MaxClique:
+      Pablo San Segundo, Fernando Matia, Diego Rodríguez-Losada, and Miguel Hernando.:
+        "An improved bit parallel exact maximum clique algorithm",
+        Patrick Prosser: "Exact Algorithms for Maximum Clique: a computational study." }
     TCliqueHelper = record
     private
       FMatrix: TBoolMatrix;
@@ -65,8 +69,8 @@ type
       FCurrSize: SizeInt;
       FVertices: TIntArray;
       FOnFind: TOnFindSet;
-      procedure GetColors(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
-      procedure Extend(var aCand: TBoolVector);
+      procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_ColorR
+      procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
       procedure Extend(var aCand, aTested: TBoolVector);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
@@ -180,7 +184,7 @@ type
       FCurrSize: SizeInt;
       FVertices: TIntArray;
       FOnFindSet: TOnFindSet;
-      procedure GetColors(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+      procedure Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TBits256);
       procedure Extend(var aCand, aTested: TBits256);
     public
@@ -607,15 +611,16 @@ end;
 
 { TGSimpleGraph.TCliqueHelper }
 
-procedure TGSimpleGraph.TCliqueHelper.GetColors(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TCliqueHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBoolVector;
-  I, J, ColorClass: SizeInt;
+  I, J, ColorClass, PCount: SizeInt;
 begin
   P := aCand;
   ColorClass := 0;
   I := 0;
-  while P.NonEmpty do
+  PCount := P.PopCount;
+  while PCount > 0 do
     begin
       Inc(ColorClass);
       Q := P;
@@ -628,6 +633,7 @@ begin
           aColOrd[I] := J;
           aColors[I] := ColorClass;
           Inc(I);
+          Dec(PCount);
         end;
     end;
 end;
@@ -636,15 +642,15 @@ procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand: TBoolVector);
 var
   NewCand: TBoolVector;
   ColOrd, Colors: TIntArray;
-  I, J, Size: SizeInt;
+  I, J, CandCount: SizeInt;
 begin
-  Size := aCand.PopCount;
-  If Size > 0 then
+  CandCount := aCand.PopCount;
+  If CandCount > 0 then
     begin
-      System.SetLength(ColOrd, Size);
-      System.SetLength(Colors, Size);
-      GetColors(aCand, ColOrd, Colors);
-      for I := Pred(Size) downto 0 do
+      System.SetLength(ColOrd, CandCount);
+      System.SetLength(Colors, CandCount);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(CandCount) downto 0 do
         begin
           if Colors[I] + FAccum.PopCount <= FCurrSize then
             exit;
@@ -655,10 +661,10 @@ begin
           NewCand.Intersect(FMatrix[J]);
           if NewCand.IsEmpty then  // found clique
             begin
-              Size := FAccum.PopCount;
-              if Size > FCurrSize then
+              CandCount := FAccum.PopCount;
+              if CandCount > FCurrSize then
                 begin
-                  FCurrSize := Size;
+                  FCurrSize := CandCount;
                   FResult := FAccum.ToArray;
                 end;
             end
@@ -673,15 +679,15 @@ procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand, NewTested: TBoolVector;
   ColOrd, Colors: TIntArray;
-  I, J, Size: SizeInt;
+  I, J, CandCount: SizeInt;
 begin
-  Size := aCand.PopCount;
-  If Size > 0 then
+  CandCount := aCand.PopCount;
+  If CandCount > 0 then
     begin
-      System.SetLength(ColOrd, Size);
-      System.SetLength(Colors, Size);
-      GetColors(aCand, ColOrd, Colors);
-      for I := Pred(Size) downto 0 do
+      System.SetLength(ColOrd, CandCount);
+      System.SetLength(Colors, CandCount);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(CandCount) downto 0 do
         begin
           for J in aTested do
             if FMatrix[J].ContainsAll(aCand) then
@@ -1153,15 +1159,16 @@ end;
 
 { TGSimpleGraph.TCliqueHelper256 }
 
-procedure TGSimpleGraph.TCliqueHelper256.GetColors(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TCliqueHelper256.Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBits256;
-  I, J, ColorClass: SizeInt;
+  I, J, ColorClass, PCount: SizeInt;
 begin
   P := aCand;
   ColorClass := 0;
   I := 0;
-  while P.NonEmpty do
+  PCount := P.PopCount;
+  while PCount > 0 do
     begin
       Inc(ColorClass);
       Q := P;
@@ -1174,6 +1181,7 @@ begin
           aColOrd[I] := J;
           aColors[I] := ColorClass;
           Inc(I);
+          Dec(PCount);
         end;
     end;
 end;
@@ -1182,15 +1190,15 @@ procedure TGSimpleGraph.TCliqueHelper256.Extend(var aCand: TBits256);
 var
   NewCand: TBits256;
   ColOrd, Colors: TIntArray;
-  I, J, Size: SizeInt;
+  I, J, CandCount: SizeInt;
 begin
-  Size := aCand.PopCount;
-  If Size > 0 then
+  CandCount := aCand.PopCount;
+  If CandCount > 0 then
     begin
-      System.SetLength(ColOrd, Size);
-      System.SetLength(Colors, Size);
-      GetColors(aCand, ColOrd, Colors);
-      for I := Pred(Size) downto 0 do
+      System.SetLength(ColOrd, CandCount);
+      System.SetLength(Colors, CandCount);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(CandCount) downto 0 do
         begin
           if Colors[I] + FAccum.PopCount <= FCurrSize then
             exit;
@@ -1201,10 +1209,10 @@ begin
           NewCand.Intersect(FMatrix[J]);
           if NewCand.IsEmpty then  // found clique
             begin
-              Size := FAccum.PopCount;
-              if Size > FCurrSize then
+              CandCount := FAccum.PopCount;
+              if CandCount > FCurrSize then
                 begin
-                  FCurrSize := Size;
+                  FCurrSize := CandCount;
                   FResult := FAccum;
                 end;
             end
@@ -1219,15 +1227,15 @@ procedure TGSimpleGraph.TCliqueHelper256.Extend(var aCand, aTested: TBits256);
 var
   NewCand, NewTested: TBits256;
   ColOrd, Colors: TIntArray;
-  I, J, Size: SizeInt;
+  I, J, CandCount: SizeInt;
 begin
-  Size := aCand.PopCount;
-  If Size > 0 then
+  CandCount := aCand.PopCount;
+  If CandCount > 0 then
     begin
-      System.SetLength(ColOrd, Size);
-      System.SetLength(Colors, Size);
-      GetColors(aCand, ColOrd, Colors);
-      for I := Pred(Size) downto 0 do
+      System.SetLength(ColOrd, CandCount);
+      System.SetLength(Colors, CandCount);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(CandCount) downto 0 do
         begin
           for J in aTested do
             if FMatrix[J].ContainsAll(aCand) then
