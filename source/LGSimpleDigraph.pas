@@ -87,6 +87,7 @@ type
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+  { warning: currently binary format is not portable }
     procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
     procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
     procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
@@ -731,7 +732,6 @@ begin
       wbs.WriteBuffer(FTitle[1], Header.TitleSize);
     //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
-    //or need save edges from dfs ???
     for I := 0 to Pred(Header.VertexCount) do
       aWriteVertex(wbs, FNodeList[I].Vertex);
     //write edges
