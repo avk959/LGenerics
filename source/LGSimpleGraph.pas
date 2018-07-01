@@ -57,26 +57,19 @@ type
       procedure Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph; o: TSortOrder);
     end;
 
-    TMaxCliqueHelper = record
+    TCliqueHelper = record
     private
       FMatrix: TBoolMatrix;
       FAccum: TBoolVector;
       FResult: TIntArray;
       FCurrSize: SizeInt;
-      FDegrees: TIntArray;
+      FVertices: TIntArray;
+      FOnFind: TOnFindSet;
+      procedure GetColors(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TBoolVector);
-    public
-      function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
-    end;
-
-    TListCliqueHelper = record
-    private
-      FMatrix: TBoolMatrix;
-      FAccum: TBoolVector;
-      FOnFindSet: TOnFindSet;
-      FDegrees: TIntArray;
       procedure Extend(var aCand, aTested: TBoolVector);
     public
+      function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
@@ -139,12 +132,12 @@ type
         property Current: SizeInt read GetCurrent;
       end;
 
-    TReverseOrder = record
-    private
-      FValue: PBits256;
-    public
-      function GetEnumerator: TReverseEnumerator; inline;
-    end;
+      TReverseOrder = record
+      private
+        FValue: PBits256;
+      public
+        function GetEnumerator: TReverseEnumerator; inline;
+      end;
 
     private
     type
@@ -277,6 +270,7 @@ type
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CreateSortedByDegree(aOrder: TSortOrder = soAsc): TIntArray;
+    procedure FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
     procedure FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
     function  CreateDegreeArray: TIntArray;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
@@ -301,6 +295,7 @@ type
   { returns False if there is no such edge; note: removing destroys validity of connected }
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+  { warning: currently binary format is not portable }
     procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
     procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
     procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
@@ -579,6 +574,7 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
+
 uses
   bufstream;
 
@@ -586,16 +582,16 @@ uses
 
 function TGSimpleGraph.TSortByNebDegrees.Cmp(constref L, R: SizeInt): SizeInt;
 begin
-  if FNebDegrees[L] < FNebDegrees[R] then
-    exit(-1)
-  else
-    if FNebDegrees[L] > FNebDegrees[R] then
-      exit(1);
   if FGraph.DegreeI(L) < FGraph.DegreeI(R) then
     exit(-1)
   else
      if FGraph.DegreeI(L) > FGraph.DegreeI(R) then
        exit(1);
+  if FNebDegrees[L] < FNebDegrees[R] then
+    exit(-1)
+  else
+    if FNebDegrees[L] > FNebDegrees[R] then
+      exit(1);
   if L < R then
     exit(-1);
   Result := 1;
@@ -609,103 +605,125 @@ begin
   TIntDegreeHelper.Sort(a, @Cmp, o);
 end;
 
-{ TGSimpleGraph.TMaxCliqueHelper }
+{ TGSimpleGraph.TCliqueHelper }
 
-procedure TGSimpleGraph.TMaxCliqueHelper.Extend(var aCand: TBoolVector);
+procedure TGSimpleGraph.TCliqueHelper.GetColors(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
-  NewCand: TBoolVector;
-  I, J: SizeInt;
+  P, Q: TBoolVector;
+  I, J, ColorClass: SizeInt;
 begin
-  while aCand.NonEmpty do
+  P := aCand;
+  ColorClass := 0;
+  I := 0;
+  while P.NonEmpty do
     begin
-      if aCand.PopCount + FAccum.PopCount <= FCurrSize then
-        exit;
-      for J in FDegrees do
-        if aCand[J] then
-          begin
-            I := J;
-            break;
-          end;
-      FAccum[I] := True;
-      NewCand := aCand;
-      NewCand[I] := False;
-      NewCand.Intersect(FMatrix[I]);
-      if NewCand.IsEmpty then  // found clique
+      Inc(ColorClass);
+      Q := P;
+      while Q.NonEmpty do
         begin
-          if FAccum.PopCount > FCurrSize then
-            begin
-              FCurrSize := FAccum.PopCount;
-              FResult := FAccum.ToArray;
-            end;
-        end
-      else
-        Extend(NewCand);
-      FAccum[I] := False;
-      aCand[I] := False;
+          J := Q.Bsf;
+          P[J] := False;
+          Q[J] := False;
+          Q.Subtract(FMatrix[J]);
+          aColOrd[I] := J;
+          aColors[I] := ColorClass;
+          Inc(I);
+        end;
     end;
 end;
 
-function TGSimpleGraph.TMaxCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand: TBoolVector);
+var
+  NewCand: TBoolVector;
+  ColOrd, Colors: TIntArray;
+  I, J, Size: SizeInt;
+begin
+  Size := aCand.PopCount;
+  If Size > 0 then
+    begin
+      System.SetLength(ColOrd, Size);
+      System.SetLength(Colors, Size);
+      GetColors(aCand, ColOrd, Colors);
+      for I := Pred(Size) downto 0 do
+        begin
+          if Colors[I] + FAccum.PopCount <= FCurrSize then
+            exit;
+          J := ColOrd[I];
+          aCand[J] := False;
+          FAccum[FVertices[J]] := True;
+          NewCand := aCand;
+          NewCand.Intersect(FMatrix[J]);
+          if NewCand.IsEmpty then  // found clique
+            begin
+              Size := FAccum.PopCount;
+              if Size > FCurrSize then
+                begin
+                  FCurrSize := Size;
+                  FResult := FAccum.ToArray;
+                end;
+            end
+          else
+            Extend(NewCand);
+          FAccum[FVertices[J]] := False;
+        end;
+    end;
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand, aTested: TBoolVector);
+var
+  NewCand, NewTested: TBoolVector;
+  ColOrd, Colors: TIntArray;
+  I, J, Size: SizeInt;
+begin
+  Size := aCand.PopCount;
+  If Size > 0 then
+    begin
+      System.SetLength(ColOrd, Size);
+      System.SetLength(Colors, Size);
+      GetColors(aCand, ColOrd, Colors);
+      for I := Pred(Size) downto 0 do
+        begin
+          for J in aTested do
+            if FMatrix[J].ContainsAll(aCand) then
+              exit;
+          J := ColOrd[I];
+          aCand[J] := False;
+          FAccum[FVertices[J]] := True;
+          NewCand := aCand;
+          NewTested := aTested;
+          NewCand.Intersect(FMatrix[J]);
+          NewTested.Intersect(FMatrix[J]);
+          if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
+            FOnFind(FAccum.ToArray)
+          else
+            Extend(NewCand, NewTested);
+          FAccum[FVertices[J]] := False;
+          aTested[J] := True;
+        end;
+    end;
+end;
+
+function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBoolVector;
 begin
-  FMatrix := aGraph.CreateBoolMatrix;
+  aGraph.FillSortedMatrix(FMatrix, FVertices, soDesc);
   Cand.InitRange(aGraph.VertexCount);
   FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
-  FDegrees := aGraph.CreateSortedByDegree;
   Extend(Cand);
   Result := FResult;
 end;
 
-{ TGSimpleGraph.TListCliqueHelper }
-
-procedure TGSimpleGraph.TListCliqueHelper.Extend(var aCand, aTested: TBoolVector);
-var
-  NewCand,
-  NewTested: TBoolVector;
-  I, J: SizeInt;
-begin
-  while aCand.NonEmpty do //Bron-Kerbosch algorithm
-    begin
-      for I in aTested do
-        if FMatrix[I].ContainsAll(aCand) then
-          exit;
-      for J in FDegrees do
-        if aCand[J] then
-          begin
-            I := J;
-            break;
-          end;
-      FAccum[I] := True;
-      NewCand := aCand;
-      NewCand[I] := False;
-      NewTested := aTested;
-      NewCand.Intersect(FMatrix[I]);
-      NewTested.Intersect(FMatrix[I]);
-      if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
-        FOnFindSet(FAccum.ToArray)
-      else
-        if NewCand.NonEmpty then
-          Extend(NewCand, NewTested);
-      FAccum[I] := False;
-      aCand[I] := False;
-      aTested[I] := True;
-    end;
-end;
-
-procedure TGSimpleGraph.TListCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Cand, Tested: TBoolVector;
 begin
-  if aOnFind = nil then
-    exit;
-  FMatrix := aGraph.CreateBoolMatrix;
-  FOnFindSet := aOnFind;
+  aGraph.FillSortedMatrix(FMatrix, FVertices);
   Cand.InitRange(aGraph.VertexCount);
-  Tested.Size := aGraph.VertexCount;
+  {%H-}Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
-  FDegrees := aGraph.CreateSortedByDegree;
+  FOnFind := aOnFind;
   Extend(Cand, Tested);
 end;
 
@@ -722,7 +740,7 @@ begin
       for I in aTested do
         if not FMatrix[I].Intersecting(aCand) then
           exit;
-      aCand.FindFirst(I);
+      I := aCand.Bsf;
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
@@ -763,7 +781,7 @@ begin
     begin
       if aCand.PopCount + FAccum.PopCount <= FCurrSize then
         exit;
-      aCand.FindFirst(I);
+      I := aCand.Bsf;
       FAccum[I] := True;
       NewCand := aCand;
       NewCand[I] := False;
@@ -992,12 +1010,11 @@ var
 begin
   System.SetLength(Result, PopCount);
   Pos := 0;
-  for I := 0 to Pred(BITNESS) do
-    if GetBit(I) then
-      begin
-        Result[Pos] := I;
-        Inc(Pos);
-      end;
+  for I in Self do
+    begin
+      Result[Pos] := I;
+      Inc(Pos);
+    end;
 end;
 
 function TGSimpleGraph.TBits256.IsEmpty: Boolean;
@@ -1655,7 +1672,7 @@ end;
 
 function TGSimpleGraph.GetMaxClique: TIntArray;
 var
-  Helper: TMaxCliqueHelper;
+  Helper: TCliqueHelper;
 begin
   Result := Helper.MaxClique(Self);
 end;
@@ -1671,7 +1688,7 @@ end;
 
 procedure TGSimpleGraph.ListCliques(aOnFindSet: TOnFindSet);
 var
-  Helper: TListCliqueHelper;
+  Helper: TCliqueHelper;
 begin
   Helper.ListCliques(Self, aOnFindSet);
 end;
@@ -2118,6 +2135,42 @@ begin
   TIntDegreeHelper.Sort(Result, @CmpVertexDegree, aOrder);
 end;
 
+procedure TGSimpleGraph.FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
+var
+  NebDegrees: TIntArray;
+  I, J, Sum: SizeInt;
+  List: TIntSet;
+  Stack: TIntStack;
+  p: PAdjList;
+begin
+  NebDegrees := CreateIntArray;
+  for I := 0 to Pred(VertexCount) do
+    NebDegrees[I] := AdjLists[I]^.Count;
+  List.InitRange(VertexCount);
+  while List.NonEmpty do
+    begin
+      I := List[0];
+      for J in List do
+        if NebDegrees[J] < NebDegrees[I] then
+          I := J;
+      Stack.Push(I);
+      List.Remove(I);
+      for J in List do
+        if AdjLists[J]^.Contains(I) then
+          Dec(NebDegrees[J]);
+    end;
+  aVertices := CreateIntArrayRange;
+  System.SetLength(aMatrix, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      aMatrix[I].Size := VertexCount;
+      p := AdjLists[aVertices[I]];
+      for J := 0 to Pred(VertexCount) do
+        if (I <> J) and p^.Contains(aVertices[J]) then
+          aMatrix[I][J] := True;
+    end;
+end;
+
 procedure TGSimpleGraph.FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder);
 var
   NebDegrees: TIntArray;
@@ -2311,7 +2364,6 @@ begin
       wbs.WriteBuffer(FTitle[1], Header.TitleSize);
     //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
-    //or need save edges from dfs ???
     for I := 0 to Pred(Header.VertexCount) do
       aWriteVertex(wbs, FNodeList[I].Vertex);
     //write edges
@@ -3009,12 +3061,15 @@ end;
 
 procedure TIntChart.WriteVertex(aStream: TStream; constref aValue: SizeInt);
 begin
-  aStream.WriteBuffer(aValue, SizeOf(aValue));
+  aStream.WriteBuffer(aValue, SizeOf(Integer));
 end;
 
 procedure TIntChart.ReadVertex(aStream: TStream; out aValue: SizeInt);
+var
+  v: Integer;
 begin
-  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+  aStream.ReadBuffer(v{%H-}, SizeOf(v));
+  aValue := v;
 end;
 
 procedure TIntChart.SaveToStream(aStream: TStream);
