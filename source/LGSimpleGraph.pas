@@ -48,10 +48,10 @@ type
     TBoolMatrix      = array of TBoolVector;
     TIntDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
-    TSortByNebDegrees = object
+    TSortByDegree = object
     private
       FGraph: TGSimpleGraph;
-      FNeibDegrees: TIntArray;
+      FDegrees: TIntArray;
       function Cmp(constref L, R: SizeInt): SizeInt;
     public
       procedure Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph; o: TSortOrder);
@@ -65,9 +65,9 @@ type
     private
       FMatrix: TBoolMatrix;
       FAccum: TBoolVector;
+      FVertices,
       FResult: TIntArray;
       FCurrSize: SizeInt;
-      FVertices: TIntArray;
       FOnFind: TOnFindSet;
       procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_ColorR
       procedure Recolor(constref aCand: TBoolVector; var aColOrd: TIntArray);
@@ -78,25 +78,22 @@ type
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
-    TListIsHelper = record
+  { TIsHelper - reversed BB-MaxClique }
+    TIsHelper = record
     private
       FMatrix: TBoolMatrix;
       FAccum: TBoolVector;
-      FOnFindSet: TOnFindSet;
-      procedure Extend(var aCand, aTested: TBoolVector);
-    public
-      procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
-    end;
-
-    TMaxIsHelper = record
-    private
-      FMatrix: TBoolMatrix;
-      FAccum: TBoolVector;
+      FVertices,
       FResult: TIntArray;
       FCurrSize: SizeInt;
+      FOnFindSet: TOnFindSet;
+      procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+      procedure Recolor(constref aCand: TBoolVector; var aColOrd: TIntArray);
       procedure Extend(var aCand: TBoolVector);
+      procedure Extend(var aCand, aTested: TBoolVector);
     public
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
+      procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
     TBits256 = record
@@ -245,8 +242,6 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
-    function  CreateBoolMatrix: TBoolMatrix;
-    function  CreateBits256Matrix: TBits256Matrix;
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aTag: SizeInt): SizeInt;
@@ -579,30 +574,30 @@ implementation
 uses
   bufstream;
 
-{ TGSimpleGraph.TSortByNebDegrees }
+{ TGSimpleGraph.TSortByDegree }
 
-function TGSimpleGraph.TSortByNebDegrees.Cmp(constref L, R: SizeInt): SizeInt;
+function TGSimpleGraph.TSortByDegree.Cmp(constref L, R: SizeInt): SizeInt;
 begin
   if FGraph.DegreeI(L) < FGraph.DegreeI(R) then
     exit(-1)
   else
      if FGraph.DegreeI(L) > FGraph.DegreeI(R) then
        exit(1);
-  if FNeibDegrees[L] < FNeibDegrees[R] then
+  if FDegrees[L] < FDegrees[R] then
     exit(-1)
   else
-    if FNeibDegrees[L] > FNeibDegrees[R] then
+    if FDegrees[L] > FDegrees[R] then
       exit(1);
   if L < R then
     exit(-1);
   Result := 1;
 end;
 
-procedure TGSimpleGraph.TSortByNebDegrees.Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph;
+procedure TGSimpleGraph.TSortByDegree.Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph;
   o: TSortOrder);
 begin
   FGraph := g;
-  FNeibDegrees := aDegrees;
+  FDegrees := aDegrees;
   TIntDegreeHelper.Sort(a, @Cmp, o);
 end;
 
@@ -753,90 +748,152 @@ begin
   Extend(Cand, Tested);
 end;
 
-{ TGSimpleGraph.TListIsHelper }
+{ TGSimpleGraph.TIsHelper }
 
-procedure TGSimpleGraph.TListIsHelper.Extend(var aCand, aTested: TBoolVector);
+procedure TGSimpleGraph.TIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
-  NewCand,
-  NewTested: TBoolVector;
-  I: SizeInt;
+  P, Q: TBoolVector;
+  I, J, ColorClass, PCount: SizeInt;
 begin
-  while aCand.NonEmpty do  //Bron-Kerbosch algorithm
+  P := aCand;
+  ColorClass := 0;
+  I := 0;
+  PCount := P.PopCount;
+  while PCount > 0 do
     begin
-      for I in aTested do
-        if not FMatrix[I].Intersecting(aCand) then
-          exit;
-      I := aCand.Bsf;
-      FAccum[I] := True;
-      NewCand := aCand;
-      NewCand[I] := False;
-      NewTested := aTested;
-      NewCand.Subtract(FMatrix[I]);
-      NewTested.Subtract(FMatrix[I]);
-      if NewCand.IsEmpty and NewTested.IsEmpty then // found IS
-        FOnFindSet(FAccum.ToArray)
-      else
-        if NewCand.NonEmpty then
-          Extend(NewCand, NewTested);
-      FAccum[I] := False;
-      aCand[I] := False;
-      aTested[I] := True;
+      Inc(ColorClass);
+      Q := P;
+      while Q.NonEmpty do
+        begin
+          J := Q.Bsf;
+          P[J] := False;
+          Q[J] := False;
+          Q.Intersect(FMatrix[J]);
+          aColOrd[I] := J;
+          aColors[I] := ColorClass;
+          Inc(I);
+          Dec(PCount);
+        end;
     end;
 end;
 
-procedure TGSimpleGraph.TListIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd: TIntArray);
 var
-  Cand, Tested: TBoolVector;
+  P, Q: TBoolVector;
+  I, J, PCount: SizeInt;
 begin
-  FMatrix := aGraph.CreateBoolMatrix;
-  FOnFindSet := aOnFind;
-  Cand.InitRange(aGraph.VertexCount);
-  Tested.Size := aGraph.VertexCount;
-  FAccum.Size := aGraph.VertexCount;
-  Extend(Cand, Tested);
+  P := aCand;
+  I := 0;
+  PCount := P.PopCount;
+  while PCount > 0 do
+    begin
+      Q := P;
+      while Q.NonEmpty do
+        begin
+          J := Q.Bsf;
+          P[J] := False;
+          Q[J] := False;
+          Q.Intersect(FMatrix[J]);
+          aColOrd[I] := J;
+          Inc(I);
+          Dec(PCount);
+        end;
+    end;
 end;
 
-{ TGSimpleGraph.TMaxIsHelper }
-
-procedure TGSimpleGraph.TMaxIsHelper.Extend(var aCand: TBoolVector);
+procedure TGSimpleGraph.TIsHelper.Extend(var aCand: TBoolVector);
 var
   NewCand: TBoolVector;
-  I: SizeInt;
+  ColOrd, Colors: TIntArray;
+  I, J, CandCount: SizeInt;
 begin
-  while aCand.NonEmpty do
+  CandCount := aCand.PopCount;
+  if CandCount > 0 then
     begin
-      if aCand.PopCount + FAccum.PopCount <= FCurrSize then
-        exit;
-      I := aCand.Bsf;
-      FAccum[I] := True;
-      NewCand := aCand;
-      NewCand[I] := False;
-      NewCand.Subtract(FMatrix[I]);
-      if NewCand.IsEmpty then // found IS
+      System.SetLength(ColOrd, CandCount);
+      System.SetLength(Colors, CandCount);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(CandCount) downto 0 do
         begin
-          if FAccum.PopCount > FCurrSize then
+          if Colors[I] + FAccum.PopCount <= FCurrSize then
+            exit;
+          J := ColOrd[I];
+          aCand[J] := False;
+          FAccum[FVertices[J]] := True;
+          NewCand := aCand;
+          NewCand.Subtract(FMatrix[J]);
+          if NewCand.IsEmpty then  // found is
             begin
-              FCurrSize := FAccum.PopCount;
-              FResult := FAccum.ToArray;
-            end;
-        end
-      else
-        Extend(NewCand);
-      FAccum[I] := False;
-      aCand[I] := False;
+              CandCount := FAccum.PopCount;
+              if CandCount > FCurrSize then
+                begin
+                  FCurrSize := CandCount;
+                  FResult := FAccum.ToArray;
+                end;
+            end
+          else
+            Extend(NewCand);
+          FAccum[FVertices[J]] := False;
+        end;
     end;
 end;
 
-function TGSimpleGraph.TMaxIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
+procedure TGSimpleGraph.TIsHelper.Extend(var aCand, aTested: TBoolVector);
+var
+  NewCand, NewTested: TBoolVector;
+  ColOrd: TIntArray;
+  I, J, CandCount: SizeInt;
+begin
+  CandCount := aCand.PopCount;
+  if CandCount > 0 then
+    begin
+      System.SetLength(ColOrd, CandCount);
+      Recolor(aCand, ColOrd);
+      for I := Pred(CandCount) downto 0 do
+        begin
+          for J in aTested do
+            if not FMatrix[J].Intersecting(aCand) then
+              exit;
+          J := ColOrd[I];
+          aCand[J] := False;
+          FAccum[FVertices[J]] := True;
+          NewCand := aCand;
+          NewTested := aTested;
+          NewCand.Subtract(FMatrix[J]);
+          NewTested.Subtract(FMatrix[J]);
+          if NewCand.IsEmpty and NewTested.IsEmpty then  // found is
+            FOnFindSet(FAccum.ToArray)
+          else
+            if NewCand.NonEmpty then
+              Extend(NewCand, NewTested);
+          FAccum[FVertices[J]] := False;
+          aTested[J] := True;
+        end;
+    end;
+end;
+
+function TGSimpleGraph.TIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBoolVector;
 begin
-  FMatrix := aGraph.CreateBoolMatrix;
+  aGraph.FillSortedMatrix(FMatrix, FVertices);
   Cand.InitRange(aGraph.VertexCount);
   FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
   Extend(Cand);
   Result := FResult;
+end;
+
+procedure TGSimpleGraph.TIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Cand, Tested: TBoolVector;
+begin
+  aGraph.FillSortedMatrix(FMatrix, FVertices);
+  Cand.InitRange(aGraph.VertexCount);
+  Tested.Size := aGraph.VertexCount;
+  FAccum.Size := aGraph.VertexCount;
+  FOnFindSet := aOnFind;
+  Extend(Cand, Tested);
 end;
 
 { TGSimpleGraph.TBits256.TEnumerator }
@@ -1653,34 +1710,6 @@ begin
     FNodeList[I].AdjList.CopyTo(Result[I]);
 end;
 
-function TGSimpleGraph.CreateBoolMatrix: TBoolMatrix;
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  System.SetLength(Result, VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    begin
-      Result[I].Size := VertexCount;
-      for p in AdjLists[I]^ do
-        Result[I].Bits[p^.Key] := True;
-    end;
-end;
-
-function TGSimpleGraph.CreateBits256Matrix: TBits256Matrix;
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  System.SetLength(Result, VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    begin
-      Result[I].InitZero;
-      for p in AdjLists[I]^ do
-        Result[I].Bits[p^.Key] := True;
-    end;
-end;
-
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
 var
   cIdx, I: SizeInt;
@@ -1816,7 +1845,7 @@ end;
 
 function TGSimpleGraph.GetMaxIS: TIntArray;
 var
-  Helper: TMaxIsHelper;
+  Helper: TIsHelper;
 begin
   Result := Helper.MaxIS(Self);
 end;
@@ -1830,7 +1859,7 @@ end;
 
 procedure TGSimpleGraph.ListIS(aOnFindSet: TOnFindSet);
 var
-  Helper: TListIsHelper;
+  Helper: TIsHelper;
 begin
   Helper.ListIS(Self, aOnFindSet);
 end;
@@ -2255,6 +2284,7 @@ var
   I, J: SizeInt;
   List: TIntSet;
   Stack: TIntStack;
+  Helper: TSortByDegree;
   p: PAdjList;
 begin
   Degrees := CreateIntArray;
@@ -2274,6 +2304,7 @@ begin
           Dec(Degrees[J]);
     end;
   aVertices := CreateIntArrayRange;
+  Helper.Sort(aVertices, Degrees, Self, o);
   System.SetLength(aMatrix, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
@@ -2285,11 +2316,39 @@ begin
     end;
 end;
 
+//procedure TGSimpleGraph.FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
+//var
+//  NeibDegrees: TIntArray;
+//  I, J, Sum: SizeInt;
+//  Helper: TSortByDegree;
+//  p: PAdjList;
+//begin
+//  NeibDegrees := CreateIntArray;
+//  for I := 0 to Pred(VertexCount) do
+//    begin
+//      Sum := 0;
+//      for J in AdjVerticesI(I) do
+//        Sum += AdjLists[J]^.Count;
+//      NeibDegrees[I] := Sum;
+//    end;
+//  aVertices := CreateIntArrayRange;
+//  Helper.Sort(aVertices, NeibDegrees, Self, o);
+//  System.SetLength(aMatrix, VertexCount);
+//  for I := 0 to Pred(VertexCount) do
+//    begin
+//      aMatrix[I].Size := VertexCount;
+//      p := AdjLists[aVertices[I]];
+//      for J := 0 to Pred(VertexCount) do
+//        if (I <> J) and p^.Contains(aVertices[J]) then
+//          aMatrix[I][J] := True;
+//    end;
+//end;
+
 procedure TGSimpleGraph.FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder);
 var
   NeibDegrees: TIntArray;
   I, J, Sum: SizeInt;
-  Helper: TSortByNebDegrees;
+  Helper: TSortByDegree;
   p: PAdjList;
 begin
   NeibDegrees := CreateIntArray;
@@ -2312,6 +2371,44 @@ begin
           aMatrix[I][J] := True;
     end;
 end;
+
+//procedure TGSimpleGraph.FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder);
+//var
+//  Degrees: TIntArray;
+//  I, J: SizeInt;
+//  List: TIntSet;
+//  Stack: TIntStack;
+//  Helper: TSortByDegree;
+//  p: PAdjList;
+//begin
+//  Degrees := CreateIntArray;
+//  for I := 0 to Pred(VertexCount) do
+//    Degrees[I] := AdjLists[I]^.Count;
+//  List.InitRange(VertexCount);
+//  while List.NonEmpty do
+//    begin
+//      I := List[0];
+//      for J in List do
+//        if Degrees[J] < Degrees[I] then
+//          I := J;
+//      {%H-}Stack.Push(I);
+//      List.Remove(I);
+//      for J in List do
+//        if AdjLists[J]^.Contains(I) then
+//          Dec(Degrees[J]);
+//    end;
+//  aVertices := CreateIntArrayRange;
+//  Helper.Sort(aVertices, Degrees, Self, o);
+//  System.SetLength(aMatrix, VertexCount);
+//  for I := 0 to Pred(VertexCount) do
+//    begin
+//      aMatrix[I].InitZero;
+//      p := AdjLists[aVertices[I]];
+//      for J := 0 to Pred(VertexCount) do
+//        if (I <> J) and p^.Contains(aVertices[J]) then
+//          aMatrix[I][J] := True;
+//    end;
+//end;
 
 function TGSimpleGraph.CreateDegreeArray: TIntArray;
 var
