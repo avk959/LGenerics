@@ -48,15 +48,6 @@ type
     TBoolMatrix      = array of TBoolVector;
     TIntDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
-    TSortByDegree = object
-    private
-      FGraph: TGSimpleGraph;
-      FDegrees: TIntArray;
-      function Cmp(constref L, R: SizeInt): SizeInt;
-    public
-      procedure Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph; o: TSortOrder);
-    end;
-
   { TCliqueHelper - some variant of BB-MaxClique:
       Pablo San Segundo, Fernando Matia, Diego Rodríguez-Losada, and Miguel Hernando.:
         "An improved bit parallel exact maximum clique algorithm",
@@ -229,9 +220,6 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
 
-  const
-    DEGENERACY_CUTOFF = 0.8;
-
   var
     FCompCount: SizeInt;
     FConnected,
@@ -269,9 +257,7 @@ type
     procedure SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
-  { creates auxilliary array to sort vertices for cliques finding depends on density }
-    function  CreateAuxSortArray: TIntArray;
-    function  CreateDegeneracy: TIntArray;
+    function  CreateSortedByDegeneracy(o: TSortOrder): TIntArray;
     function  CreateNeibDegreeSums: TIntArray;
     procedure FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
     procedure FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
@@ -580,33 +566,6 @@ implementation
 
 uses
   bufstream;
-
-{ TGSimpleGraph.TSortByDegree }
-
-function TGSimpleGraph.TSortByDegree.Cmp(constref L, R: SizeInt): SizeInt;
-begin
-  if FGraph.DegreeI(L) < FGraph.DegreeI(R) then
-    exit(-1)
-  else
-     if FGraph.DegreeI(L) > FGraph.DegreeI(R) then
-       exit(1);
-  if FDegrees[L] < FDegrees[R] then
-    exit(-1)
-  else
-    if FDegrees[L] > FDegrees[R] then
-      exit(1);
-  if L < R then
-    exit(-1);
-  Result := 1;
-end;
-
-procedure TGSimpleGraph.TSortByDegree.Sort(var a: TIntArray; constref aDegrees: TIntArray; g: TGSimpleGraph;
-  o: TSortOrder);
-begin
-  FGraph := g;
-  FDegrees := aDegrees;
-  TIntDegreeHelper.Sort(a, @Cmp, o);
-end;
 
 { TGSimpleGraph.TCliqueHelper }
 
@@ -2285,15 +2244,7 @@ begin
   TIntVectorHelper.Sort(aCycleLens);
 end;
 
-function TGSimpleGraph.CreateAuxSortArray: TIntArray;
-begin
-  if Density < DEGENERACY_CUTOFF then
-    Result := CreateDegeneracy
-  else
-    Result := CreateNeibDegreeSums;
-end;
-
-function TGSimpleGraph.CreateDegeneracy: TIntArray;
+function TGSimpleGraph.CreateSortedByDegeneracy(o: TSortOrder): TIntArray;
 var
   I, J: SizeInt;
   List: TIntSet;
@@ -2315,6 +2266,17 @@ begin
         if AdjLists[J]^.Contains(I) then
           Dec(Result[J]);
     end;
+  if o = soAsc then
+    Result := Stack.ToArray
+  else
+    begin
+      I := 0;
+      while Stack.NonEmpty do
+        begin
+          Result[I] := Stack.Pop;
+          Inc(I);
+        end;
+    end;
 end;
 
 function TGSimpleGraph.CreateNeibDegreeSums: TIntArray;
@@ -2333,14 +2295,10 @@ end;
 
 procedure TGSimpleGraph.FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
 var
-  AuxArray: TIntArray;
   I, J: SizeInt;
-  Helper: TSortByDegree;
   p: PAdjList;
 begin
-  aVertices := CreateIntArrayRange;
-  AuxArray := CreateAuxSortArray;
-  Helper.Sort(aVertices, AuxArray, Self, o);
+  aVertices := CreateSortedByDegeneracy(o);
   System.SetLength(aMatrix, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
@@ -2354,14 +2312,10 @@ end;
 
 procedure TGSimpleGraph.FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder);
 var
-  AuxArray: TIntArray;
   I, J: SizeInt;
-  Helper: TSortByDegree;
   p: PAdjList;
 begin
-  aVertices := CreateIntArrayRange;
-  AuxArray := CreateAuxSortArray;
-  Helper.Sort(aVertices, AuxArray, Self, o);
+  aVertices := CreateSortedByDegeneracy(o);
   System.SetLength(aMatrix, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
