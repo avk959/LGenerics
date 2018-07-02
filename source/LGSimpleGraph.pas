@@ -229,6 +229,9 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
 
+  const
+    DEGENERACY_CUTOFF = 0.8;
+
   var
     FCompCount: SizeInt;
     FConnected,
@@ -238,6 +241,7 @@ type
     function  SeparateMerged(L, R: SizeInt): Boolean;
     procedure ValidateConnected;
     function  GetConnected: Boolean; inline;
+    function  GetDensity: Double; inline;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
@@ -265,12 +269,14 @@ type
     procedure SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
-    function  CreateSortedByDegree(aOrder: TSortOrder = soAsc): TIntArray;
+  { creates auxilliary array to sort vertices for cliques finding depends on density }
+    function  CreateAuxSortArray: TIntArray;
+    function  CreateDegeneracy: TIntArray;
+    function  CreateNeibDegreeSums: TIntArray;
     procedure FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
     procedure FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
     function  CreateDegreeArray: TIntArray;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
-    function  CmpVertexDegree(constref L, R: SizeInt): SizeInt;
     property  InnerConnected: Boolean read FConnected;
   public
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
@@ -306,7 +312,7 @@ type
     function  EccentricityI(aIndex: SizeInt): SizeInt;
   { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
     function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
-    function  LocalClusteringI(aIndex: SizeInt): ValReal;
+    function  LocalClusteringI(aIndex: SizeInt): Double;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges }
     function  EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -395,6 +401,7 @@ type
     property  Connected: Boolean read GetConnected;
   { count of connected components }
     property  SeparateCount: SizeInt read GetSeparateCount;
+    property  Density: Double read GetDensity;
   end;
 
   { TGChart: simple outline;
@@ -1642,6 +1649,14 @@ begin
   Result := SeparateCount = 1;
 end;
 
+function TGSimpleGraph.GetDensity: Double;
+begin
+  if NonEmpty then
+    Result := (Double(EdgeCount) * 2)/(Double(VertexCount) * Double(Pred(VertexCount)))
+  else
+    Result := 0.0;
+end;
+
 procedure TGSimpleGraph.DoRemoveVertex(aIndex: SizeInt);
 var
   CurrEdges: TAdjList.TAdjItemArray;
@@ -1824,8 +1839,6 @@ function TGSimpleGraph.GetMaxCliqueStatic: TIntArray;
 var
   Helper: TCliqueHelper256;
 begin
-  //Helper.FVertexOrder := CreateIntArrayRange;
-  //TIntDegreeHelper.Sort(Helper.FVertexOrder, @CmpVertexDegree);
   Result := Helper.MaxClique(Self);
 end;
 
@@ -2272,39 +2285,62 @@ begin
   TIntVectorHelper.Sort(aCycleLens);
 end;
 
-function TGSimpleGraph.CreateSortedByDegree(aOrder: TSortOrder): TIntArray;
+function TGSimpleGraph.CreateAuxSortArray: TIntArray;
 begin
-  Result := CreateIntArrayRange;
-  TIntDegreeHelper.Sort(Result, @CmpVertexDegree, aOrder);
+  if Density < DEGENERACY_CUTOFF then
+    Result := CreateDegeneracy
+  else
+    Result := CreateNeibDegreeSums;
 end;
 
-procedure TGSimpleGraph.FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
+function TGSimpleGraph.CreateDegeneracy: TIntArray;
 var
-  Degrees: TIntArray;
   I, J: SizeInt;
   List: TIntSet;
   Stack: TIntStack;
-  Helper: TSortByDegree;
-  p: PAdjList;
 begin
-  Degrees := CreateIntArray;
+  Result := CreateIntArray;
   for I := 0 to Pred(VertexCount) do
-    Degrees[I] := AdjLists[I]^.Count;
+    Result[I] := AdjLists[I]^.Count;
   List.InitRange(VertexCount);
   while List.NonEmpty do
     begin
       I := List[0];
       for J in List do
-        if Degrees[J] < Degrees[I] then
+        if Result[J] < Result[I] then
           I := J;
       {%H-}Stack.Push(I);
       List.Remove(I);
       for J in List do
         if AdjLists[J]^.Contains(I) then
-          Dec(Degrees[J]);
+          Dec(Result[J]);
     end;
+end;
+
+function TGSimpleGraph.CreateNeibDegreeSums: TIntArray;
+var
+  I, J, Sum: SizeInt;
+begin
+  Result := CreateIntArray;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Sum := 0;
+      for J in AdjVerticesI(I) do
+        Sum += AdjLists[J]^.Count;
+      Result[I] := Sum;
+    end;
+end;
+
+procedure TGSimpleGraph.FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
+var
+  AuxArray: TIntArray;
+  I, J: SizeInt;
+  Helper: TSortByDegree;
+  p: PAdjList;
+begin
   aVertices := CreateIntArrayRange;
-  Helper.Sort(aVertices, Degrees, Self, o);
+  AuxArray := CreateAuxSortArray;
+  Helper.Sort(aVertices, AuxArray, Self, o);
   System.SetLength(aMatrix, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
@@ -2316,51 +2352,16 @@ begin
     end;
 end;
 
-//procedure TGSimpleGraph.FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
-//var
-//  NeibDegrees: TIntArray;
-//  I, J, Sum: SizeInt;
-//  Helper: TSortByDegree;
-//  p: PAdjList;
-//begin
-//  NeibDegrees := CreateIntArray;
-//  for I := 0 to Pred(VertexCount) do
-//    begin
-//      Sum := 0;
-//      for J in AdjVerticesI(I) do
-//        Sum += AdjLists[J]^.Count;
-//      NeibDegrees[I] := Sum;
-//    end;
-//  aVertices := CreateIntArrayRange;
-//  Helper.Sort(aVertices, NeibDegrees, Self, o);
-//  System.SetLength(aMatrix, VertexCount);
-//  for I := 0 to Pred(VertexCount) do
-//    begin
-//      aMatrix[I].Size := VertexCount;
-//      p := AdjLists[aVertices[I]];
-//      for J := 0 to Pred(VertexCount) do
-//        if (I <> J) and p^.Contains(aVertices[J]) then
-//          aMatrix[I][J] := True;
-//    end;
-//end;
-
 procedure TGSimpleGraph.FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder);
 var
-  NeibDegrees: TIntArray;
-  I, J, Sum: SizeInt;
+  AuxArray: TIntArray;
+  I, J: SizeInt;
   Helper: TSortByDegree;
   p: PAdjList;
 begin
-  NeibDegrees := CreateIntArray;
-  for I := 0 to Pred(VertexCount) do
-    begin
-      Sum := 0;
-      for J in AdjVerticesI(I) do
-        Sum += AdjLists[J]^.Count;
-      NeibDegrees[I] := Sum;
-    end;
   aVertices := CreateIntArrayRange;
-  Helper.Sort(aVertices, NeibDegrees, Self, o);
+  AuxArray := CreateAuxSortArray;
+  Helper.Sort(aVertices, AuxArray, Self, o);
   System.SetLength(aMatrix, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
@@ -2371,44 +2372,6 @@ begin
           aMatrix[I][J] := True;
     end;
 end;
-
-//procedure TGSimpleGraph.FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder);
-//var
-//  Degrees: TIntArray;
-//  I, J: SizeInt;
-//  List: TIntSet;
-//  Stack: TIntStack;
-//  Helper: TSortByDegree;
-//  p: PAdjList;
-//begin
-//  Degrees := CreateIntArray;
-//  for I := 0 to Pred(VertexCount) do
-//    Degrees[I] := AdjLists[I]^.Count;
-//  List.InitRange(VertexCount);
-//  while List.NonEmpty do
-//    begin
-//      I := List[0];
-//      for J in List do
-//        if Degrees[J] < Degrees[I] then
-//          I := J;
-//      {%H-}Stack.Push(I);
-//      List.Remove(I);
-//      for J in List do
-//        if AdjLists[J]^.Contains(I) then
-//          Dec(Degrees[J]);
-//    end;
-//  aVertices := CreateIntArrayRange;
-//  Helper.Sort(aVertices, Degrees, Self, o);
-//  System.SetLength(aMatrix, VertexCount);
-//  for I := 0 to Pred(VertexCount) do
-//    begin
-//      aMatrix[I].InitZero;
-//      p := AdjLists[aVertices[I]];
-//      for J := 0 to Pred(VertexCount) do
-//        if (I <> J) and p^.Contains(aVertices[J]) then
-//          aMatrix[I][J] := True;
-//    end;
-//end;
 
 function TGSimpleGraph.CreateDegreeArray: TIntArray;
 var
@@ -2428,11 +2391,6 @@ begin
       Result := -1
     else
       Result := 0;
-end;
-
-function TGSimpleGraph.CmpVertexDegree(constref L, R: SizeInt): SizeInt;
-begin
-  Result := SizeInt.Compare(AdjLists[L]^.Count, AdjLists[R]^.Count);
 end;
 
 class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
@@ -2702,7 +2660,7 @@ begin
   Result := LocalClusteringI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.LocalClusteringI(aIndex: SizeInt): ValReal;
+function TGSimpleGraph.LocalClusteringI(aIndex: SizeInt): Double;
 var
   I, J, Counter, d: SizeInt;
 begin
@@ -2714,7 +2672,7 @@ begin
   for I in AdjVerticesI(aIndex) do
     for J in AdjVerticesI(aIndex) do
       Counter += Ord((I <> J) and FNodeList[I].AdjList.Contains(J));
-  Result := ValReal(Counter) / ValReal(d * Pred(d));
+  Result := Double(Counter) / (Double(d) * Double(Pred(d)));
 end;
 
 function TGSimpleGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
