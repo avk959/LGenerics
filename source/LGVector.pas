@@ -2150,7 +2150,7 @@ end;
 
 function TBoolVector.PopCount: SizeInt;
 var
-  I: SizeUInt = 0;
+  I: SizeInt = 0;
 begin
   Result := 0;
   while I <= System.High(FBits) - 4 do
