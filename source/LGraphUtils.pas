@@ -211,7 +211,9 @@ type
       function  TryPop(out aValue: SizeInt): Boolean; inline;
       procedure Subtract(constref aList: TIntSet);
       procedure Intersect(constref aList: TIntSet);
+      procedure IntersectRange(aLow, aHigh: SizeInt);
       function  Remove(aValue: SizeInt): Boolean;
+      procedure Reverse; inline;
       property  Count: SizeInt read FCount;
       property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
     end;
@@ -1322,7 +1324,10 @@ begin
       Result := FItems[Count];
     end
   else
-    ELGraphError.Create(SECantAccessEmpty);
+    begin
+      ELGraphError.Create(SECantAccessEmpty);
+      Result := -1;
+    end;
 end;
 
 function TGCustomGraph.TIntSet.TryPop(out aValue: SizeInt): Boolean;
@@ -1344,8 +1349,7 @@ begin
       if FItems[J] = I then
         begin
           Dec(FCount);
-          if J < Count then
-            FItems[J] := FItems[Count];
+          FItems[J] := FItems[Count];
           break;
         end;
 end;
@@ -1358,8 +1362,21 @@ begin
     if not aList.Contains(FItems[I]) then
       begin
         Dec(FCount);
-        if I < Count then
-          FItems[I] := FItems[Count];
+        FItems[I] := FItems[Count];
+      end
+    else
+      Inc(I);
+end;
+
+procedure TGCustomGraph.TIntSet.IntersectRange(aLow, aHigh: SizeInt);
+var
+  I: SizeInt = 0;
+begin
+  while I < Count do
+    if (FItems[I] < aLow) or (FItems[I] > aHigh) then
+      begin
+        Dec(FCount);
+        FItems[I] := FItems[Count];
       end
     else
       Inc(I);
@@ -1373,11 +1390,16 @@ begin
     if FItems[I] = aValue then
       begin
         Dec(FCount);
-        if I < Count then
-          FItems[I] := FItems[Count];
+        FItems[I] := FItems[Count];
         exit(True);
       end;
   Result := False;
+end;
+
+procedure TGCustomGraph.TIntSet.Reverse;
+begin
+  if Count <> 0 then
+    TIntHelper.Reverse(FItems[0..Pred(Count)]);
 end;
 
 { TGCustomGraph.TSkeleton }
