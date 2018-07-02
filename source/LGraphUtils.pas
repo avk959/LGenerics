@@ -168,6 +168,9 @@ type
 
   protected
   type
+
+    { TIntSet }
+
     TIntSet = record
     private
       FItems: TIntArray;
@@ -200,9 +203,12 @@ type
       function  ContainsAny(constref aList: TIntSet): Boolean;
       function  ContainsAll(constref aList: TIntSet): Boolean;
       function  Find(aValue: SizeInt): SizeInt;
-      function  FindFirst(out aDst: SizeInt): Boolean;
+      function  FindFirst(out aValue: SizeInt): Boolean;
       function  Add(aValue: SizeInt): Boolean;
       function  AddAll(constref aList: TIntSet): SizeInt;
+      procedure Push(aValue: SizeInt); inline;
+      function  Pop: SizeInt; inline;
+      function  TryPop(out aValue: SizeInt): Boolean; inline;
       procedure Subtract(constref aList: TIntSet);
       procedure Intersect(constref aList: TIntSet);
       function  Remove(aValue: SizeInt): Boolean;
@@ -1272,11 +1278,11 @@ begin
   Result := -1;
 end;
 
-function TGCustomGraph.TIntSet.FindFirst(out aDst: SizeInt): Boolean;
+function TGCustomGraph.TIntSet.FindFirst(out aValue: SizeInt): Boolean;
 begin
   Result := Count <> 0;
   if Result then
-    aDst := FItems[0];
+    aValue := FItems[0];
 end;
 
 function TGCustomGraph.TIntSet.Add(aValue: SizeInt): Boolean;
@@ -1298,6 +1304,35 @@ begin
   Result := 0;
   for I in aList do
     Result += Ord(Add(I));
+end;
+
+procedure TGCustomGraph.TIntSet.Push(aValue: SizeInt);
+begin
+  if Count = System.Length(FItems) then
+    Expand;
+  FItems[Count] := aValue;
+  Inc(FCount);
+end;
+
+function TGCustomGraph.TIntSet.Pop: SizeInt;
+begin
+  if Count <> 0 then
+    begin
+      Dec(FCount);
+      Result := FItems[Count];
+    end
+  else
+    ELGraphError.Create(SECantAccessEmpty);
+end;
+
+function TGCustomGraph.TIntSet.TryPop(out aValue: SizeInt): Boolean;
+begin
+  Result := Count <> 0;
+  if Result then
+    begin
+      Dec(FCount);
+      aValue := FItems[Count];
+    end;
 end;
 
 procedure TGCustomGraph.TIntSet.Subtract(constref aList: TIntSet);
