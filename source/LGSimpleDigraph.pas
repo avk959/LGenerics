@@ -62,6 +62,7 @@ type
   protected
     FReachabilityMatrix: TReachabilityMatrix;
     function  ClosureValid: Boolean; inline;
+    function  GetDensity: Double; inline;
     procedure DoRemoveVertex(aIndex: SizeInt);
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
@@ -143,6 +144,7 @@ type
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
     property  ReachabilityValid: Boolean read ClosureValid;
+    property  Density: Double read GetDensity;
   end;
 
   { TGWeightedDiGraph implements simple sparse directed weighted graph based on adjacency lists;
@@ -267,6 +269,14 @@ begin
 end;
 
 { TGSimpleDiGraph }
+
+function TGSimpleDiGraph.GetDensity: Double;
+begin
+  if NonEmpty then
+    Result := Double(EdgeCount)/(Double(VertexCount) * Double(Pred(VertexCount)))
+  else
+    Result := 0.0;
+end;
 
 function TGSimpleDiGraph.ClosureValid: Boolean;
 begin
