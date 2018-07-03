@@ -209,10 +209,15 @@ type
       procedure Push(aValue: SizeInt); inline;
       function  Pop: SizeInt; inline;
       function  TryPop(out aValue: SizeInt): Boolean; inline;
+    { preserves the order of the elements }
       procedure Subtract(constref aList: TIntSet);
+    { preserves the order of the elements }
       procedure Intersect(constref aList: TIntSet);
-      procedure IntersectRange(aLow, aHigh: SizeInt);
+    { preserves the order of the elements }
+      procedure IntersectRange(constref aRange: TIntArray; L, R: SizeInt);
       function  Remove(aValue: SizeInt): Boolean;
+    { preserves the order of the elements }
+      procedure Delete(aValue: SizeInt);
       procedure Reverse; inline;
       property  Count: SizeInt read FCount;
       property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
@@ -774,6 +779,7 @@ constructor TIntEdge.Create(s, d: SizeInt);
 begin
   Source := s;
   Destination := d;
+
 end;
 
 { TGCustomGraph.TBitVector }
@@ -1342,44 +1348,70 @@ end;
 
 procedure TGCustomGraph.TIntSet.Subtract(constref aList: TIntSet);
 var
-  I, J: SizeInt;
+  I, Pos: SizeInt;
 begin
-  for I in aList do
-    for J := 0 to Pred(Count) do
-      if FItems[J] = I then
-        begin
-          Dec(FCount);
-          FItems[J] := FItems[Count];
-          break;
-        end;
+  if aList.NonEmpty then
+    begin
+      Pos := 0;
+      for I := 0 to Pred(Count) do
+        if aList.Contains(FItems[I]) then
+          Dec(FCount)
+        else
+          begin
+            FItems[Pos] := FItems[I];
+            Inc(Pos);
+          end;
+    end;
 end;
 
 procedure TGCustomGraph.TIntSet.Intersect(constref aList: TIntSet);
 var
-  I: SizeInt = 0;
+  I, Pos: SizeInt;
 begin
-  while I < Count do
-    if not aList.Contains(FItems[I]) then
-      begin
-        Dec(FCount);
-        FItems[I] := FItems[Count];
-      end
-    else
-      Inc(I);
+  if aList.NonEmpty then
+    begin
+      Pos := 0;
+      for I := 0 to Pred(Count) do
+        if aList.Contains(FItems[I]) then
+          begin
+            FItems[Pos] := FItems[I];
+            Inc(Pos);
+          end
+        else
+          Dec(FCount);
+    end
+  else
+    MakeEmpty;
 end;
 
-procedure TGCustomGraph.TIntSet.IntersectRange(aLow, aHigh: SizeInt);
+procedure TGCustomGraph.TIntSet.IntersectRange(constref aRange: TIntArray; L, R: SizeInt);
 var
-  I: SizeInt = 0;
+  I, J, Pos: SizeInt;
+  Found: Boolean;
 begin
-  while I < Count do
-    if (FItems[I] < aLow) or (FItems[I] > aHigh) then
-      begin
-        Dec(FCount);
-        FItems[I] := FItems[Count];
-      end
-    else
-      Inc(I);
+  if L <= R then
+    begin
+      Pos := 0;
+      for I := 0 to Pred(Count) do
+        begin
+          Found := False;
+          for J := L to R do
+            if FItems[I] = aRange[J] then
+              begin
+                Found := True;
+                break;
+              end;
+          if Found then
+            begin
+              FItems[Pos] := FItems[I];
+              Inc(Pos);
+            end
+          else
+            Dec(FCount)
+        end;
+    end
+  else
+    MakeEmpty;
 end;
 
 function TGCustomGraph.TIntSet.Remove(aValue: SizeInt): Boolean;
@@ -1394,6 +1426,19 @@ begin
         exit(True);
       end;
   Result := False;
+end;
+
+procedure TGCustomGraph.TIntSet.Delete(aValue: SizeInt);
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    if FItems[I] = aValue then
+      begin
+        Dec(FCount);
+        if I < Count then
+          System.Move(FItems[Succ(I)], FItems[I], (Count - I) * SizeOf(SizeInt));
+      end;
 end;
 
 procedure TGCustomGraph.TIntSet.Reverse;
