@@ -261,6 +261,7 @@ type
     function  CreateNeibDegreeSums: TIntArray;
     procedure FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
     procedure FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
+    procedure CreateSortedSkeleton(out s: TSkeleton; out aVertices: TIntArray; o: TSortOrder = soAsc);
     function  CreateDegreeArray: TIntArray;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     property  InnerConnected: Boolean read FConnected;
@@ -624,15 +625,25 @@ procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand: TBoolVector);
 var
   NewCand: TBoolVector;
   ColOrd, Colors: TIntArray;
-  I, J, CandCount: SizeInt;
+  I, J, ItemCount: SizeInt;
 begin
-  CandCount := aCand.PopCount;
-  if CandCount > 0 then
+  if aCand.IsEmpty then
     begin
-      System.SetLength(ColOrd, CandCount);
-      System.SetLength(Colors, CandCount);
+      ItemCount := FAccum.PopCount;
+      if ItemCount > FCurrSize then
+        begin
+          FCurrSize := ItemCount;
+          FResult := FAccum.ToArray;
+        end;
+      exit;
+    end;
+  ItemCount := aCand.PopCount;
+  if ItemCount > 0 then
+    begin
+      System.SetLength(ColOrd, ItemCount);
+      System.SetLength(Colors, ItemCount);
       Recolor(aCand, ColOrd, Colors);
-      for I := Pred(CandCount) downto 0 do
+      for I := Pred(ItemCount) downto 0 do
         begin
           if Colors[I] + FAccum.PopCount <= FCurrSize then
             exit;
@@ -641,17 +652,7 @@ begin
           FAccum[FVertices[J]] := True;
           NewCand := aCand;
           NewCand.Intersect(FMatrix[J]);
-          if NewCand.IsEmpty then  // found clique
-            begin
-              CandCount := FAccum.PopCount;
-              if CandCount > FCurrSize then
-                begin
-                  FCurrSize := CandCount;
-                  FResult := FAccum.ToArray;
-                end;
-            end
-          else
-            Extend(NewCand);
+          Extend(NewCand);
           FAccum[FVertices[J]] := False;
         end;
     end;
@@ -661,18 +662,18 @@ procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand, NewTested: TBoolVector;
   ColOrd: TIntArray;
-  I, J, CandCount: SizeInt;
+  I, J, ItemCount: SizeInt;
 begin
-  CandCount := aCand.PopCount;
-  if CandCount > 0 then
+  if aCand.NonEmpty then
     begin
-      System.SetLength(ColOrd, CandCount);
+      for J in aTested do
+        if FMatrix[J].ContainsAll(aCand) then
+          exit;
+      ItemCount := aCand.PopCount;
+      System.SetLength(ColOrd, ItemCount);
       Recolor(aCand, ColOrd);
-      for I := Pred(CandCount) downto 0 do
+      for I := Pred(ItemCount) downto 0 do
         begin
-          for J in aTested do
-            if FMatrix[J].ContainsAll(aCand) then
-              exit;
           J := ColOrd[I];
           aCand[J] := False;
           FAccum[FVertices[J]] := True;
@@ -683,7 +684,8 @@ begin
           if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
             FOnFind(FAccum.ToArray)
           else
-            Extend(NewCand, NewTested);
+            if NewCand.NonEmpty then
+              Extend(NewCand, NewTested);
           FAccum[FVertices[J]] := False;
           aTested[J] := True;
         end;
@@ -771,36 +773,33 @@ procedure TGSimpleGraph.TIsHelper.Extend(var aCand: TBoolVector);
 var
   NewCand: TBoolVector;
   ColOrd, Colors: TIntArray;
-  I, J, CandCount: SizeInt;
+  I, J, ItemCount: SizeInt;
 begin
-  CandCount := aCand.PopCount;
-  if CandCount > 0 then
+  if aCand.IsEmpty then
     begin
-      System.SetLength(ColOrd, CandCount);
-      System.SetLength(Colors, CandCount);
-      Recolor(aCand, ColOrd, Colors);
-      for I := Pred(CandCount) downto 0 do
+      ItemCount := FAccum.PopCount;
+      if ItemCount > FCurrSize then
         begin
-          if Colors[I] + FAccum.PopCount <= FCurrSize then
-            exit;
-          J := ColOrd[I];
-          aCand[J] := False;
-          FAccum[FVertices[J]] := True;
-          NewCand := aCand;
-          NewCand.Subtract(FMatrix[J]);
-          if NewCand.IsEmpty then  // found is
-            begin
-              CandCount := FAccum.PopCount;
-              if CandCount > FCurrSize then
-                begin
-                  FCurrSize := CandCount;
-                  FResult := FAccum.ToArray;
-                end;
-            end
-          else
-            Extend(NewCand);
-          FAccum[FVertices[J]] := False;
+          FCurrSize := ItemCount;
+          FResult := FAccum.ToArray;
         end;
+      exit;
+    end;
+  ItemCount := aCand.PopCount;
+  System.SetLength(ColOrd, ItemCount);
+  System.SetLength(Colors, ItemCount);
+  Recolor(aCand, ColOrd, Colors);
+  for I := Pred(ItemCount) downto 0 do
+    begin
+      if Colors[I] + FAccum.PopCount <= FCurrSize then
+        exit;
+      J := ColOrd[I];
+      aCand[J] := False;
+      FAccum[FVertices[J]] := True;
+      NewCand := aCand;
+      NewCand.Subtract(FMatrix[J]);
+      Extend(NewCand);
+      FAccum[FVertices[J]] := False;
     end;
 end;
 
@@ -808,18 +807,18 @@ procedure TGSimpleGraph.TIsHelper.Extend(var aCand, aTested: TBoolVector);
 var
   NewCand, NewTested: TBoolVector;
   ColOrd: TIntArray;
-  I, J, CandCount: SizeInt;
+  I, J, ItemCount: SizeInt;
 begin
-  CandCount := aCand.PopCount;
-  if CandCount > 0 then
+  if aCand.NonEmpty then
     begin
-      System.SetLength(ColOrd, CandCount);
+      for J in aTested do
+        if not FMatrix[J].Intersecting(aCand) then
+          exit;
+      ItemCount := aCand.PopCount;
+      System.SetLength(ColOrd, ItemCount);
       Recolor(aCand, ColOrd);
-      for I := Pred(CandCount) downto 0 do
+      for I := Pred(ItemCount) downto 0 do
         begin
-          for J in aTested do
-            if not FMatrix[J].Intersecting(aCand) then
-              exit;
           J := ColOrd[I];
           aCand[J] := False;
           FAccum[FVertices[J]] := True;
@@ -1257,36 +1256,33 @@ procedure TGSimpleGraph.TCliqueHelper256.Extend(var aCand: TBits256);
 var
   NewCand: TBits256;
   ColOrd, Colors: TIntArray;
-  I, J, CandCount: SizeInt;
+  I, J, ItemCount: SizeInt;
 begin
-  CandCount := aCand.PopCount;
-  if CandCount > 0 then
+  if aCand.IsEmpty then
     begin
-      System.SetLength(ColOrd, CandCount);
-      System.SetLength(Colors, CandCount);
-      Recolor(aCand, ColOrd, Colors);
-      for I := Pred(CandCount) downto 0 do
+      ItemCount := FAccum.PopCount;
+      if ItemCount > FCurrSize then
         begin
-          if Colors[I] + FAccum.PopCount <= FCurrSize then
-            exit;
-          J := ColOrd[I];
-          aCand[J] := False;
-          FAccum[FVertices[J]] := True;
-          NewCand := aCand;
-          NewCand.Intersect(FMatrix[J]);
-          if NewCand.IsEmpty then  // found clique
-            begin
-              CandCount := FAccum.PopCount;
-              if CandCount > FCurrSize then
-                begin
-                  FCurrSize := CandCount;
-                  FResult := FAccum;
-                end;
-            end
-          else
-            Extend(NewCand);
-          FAccum[FVertices[J]] := False;
+          FCurrSize := ItemCount;
+          FResult := FAccum;
         end;
+      exit;
+    end;
+  ItemCount := aCand.PopCount;
+  System.SetLength(ColOrd, ItemCount);
+  System.SetLength(Colors, ItemCount);
+  Recolor(aCand, ColOrd, Colors);
+  for I := Pred(ItemCount) downto 0 do
+    begin
+      if Colors[I] + FAccum.PopCount <= FCurrSize then
+        exit;
+      J := ColOrd[I];
+      aCand[J] := False;
+      FAccum[FVertices[J]] := True;
+      NewCand := aCand;
+      NewCand.Intersect(FMatrix[J]);
+      Extend(NewCand);
+      FAccum[FVertices[J]] := False;
     end;
 end;
 
@@ -1294,18 +1290,18 @@ procedure TGSimpleGraph.TCliqueHelper256.Extend(var aCand, aTested: TBits256);
 var
   NewCand, NewTested: TBits256;
   ColOrd: TIntArray;
-  I, J, CandCount: SizeInt;
+  I, J, ItemCount: SizeInt;
 begin
-  CandCount := aCand.PopCount;
-  if CandCount > 0 then
+  if aCand.NonEmpty then
     begin
-      System.SetLength(ColOrd, CandCount);
+      for J in aTested do
+        if FMatrix[J].ContainsAll(aCand) then
+          exit;
+      ItemCount := aCand.PopCount;
+      System.SetLength(ColOrd, ItemCount);
       Recolor(aCand, ColOrd);
-      for I := Pred(CandCount) downto 0 do
+      for I := Pred(ItemCount) downto 0 do
         begin
-          for J in aTested do
-            if FMatrix[J].ContainsAll(aCand) then
-              exit;
           J := ColOrd[I];
           aCand[J] := False;
           FAccum[FVertices[J]] := True;
@@ -1316,7 +1312,8 @@ begin
           if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
             FOnFindSet(FAccum.ToArray)
           else
-            Extend(NewCand, NewTested);
+            if NewCand.NonEmpty then
+              Extend(NewCand, NewTested);
           FAccum[FVertices[J]] := False;
           aTested[J] := True;
         end;
@@ -1404,36 +1401,33 @@ procedure TGSimpleGraph.TIsHelper256.Extend(var aCand: TBits256);
 var
   NewCand: TBits256;
   ColOrd, Colors: TIntArray;
-  I, J, CandCount: SizeInt;
+  I, J, ItemCount: SizeInt;
 begin
-  CandCount := aCand.PopCount;
-  if CandCount > 0 then
+  if aCand.IsEmpty then
     begin
-      System.SetLength(ColOrd, CandCount);
-      System.SetLength(Colors, CandCount);
-      Recolor(aCand, ColOrd, Colors);
-      for I := Pred(CandCount) downto 0 do
+      ItemCount := FAccum.PopCount;
+      if ItemCount > FCurrSize then  // found is
         begin
-          if Colors[I] + FAccum.PopCount <= FCurrSize then
-            exit;
-          J := ColOrd[I];
-          aCand[J] := False;
-          FAccum[FVertices[J]] := True;
-          NewCand := aCand;
-          NewCand.Subtract(FMatrix[J]);
-          if NewCand.IsEmpty then  // found is
-            begin
-              CandCount := FAccum.PopCount;
-              if CandCount > FCurrSize then
-                begin
-                  FCurrSize := CandCount;
-                  FResult := FAccum;
-                end;
-            end
-          else
-            Extend(NewCand);
-          FAccum[FVertices[J]] := False;
+          FCurrSize := ItemCount;
+          FResult := FAccum;
         end;
+      exit;
+    end;
+  ItemCount := aCand.PopCount;
+  System.SetLength(ColOrd, ItemCount);
+  System.SetLength(Colors, ItemCount);
+  Recolor(aCand, ColOrd, Colors);
+  for I := Pred(ItemCount) downto 0 do
+    begin
+      if Colors[I] + FAccum.PopCount <= FCurrSize then
+        exit;
+      J := ColOrd[I];
+      aCand[J] := False;
+      FAccum[FVertices[J]] := True;
+      NewCand := aCand;
+      NewCand.Subtract(FMatrix[J]);
+      Extend(NewCand);
+      FAccum[FVertices[J]] := False;
     end;
 end;
 
@@ -1441,18 +1435,18 @@ procedure TGSimpleGraph.TIsHelper256.Extend(var aCand, aTested: TBits256);
 var
   NewCand, NewTested: TBits256;
   ColOrd: TIntArray;
-  I, J, CandCount: SizeInt;
+  I, J, ItemCount: SizeInt;
 begin
-  CandCount := aCand.PopCount;
-  if CandCount > 0 then
+  if aCand.NonEmpty then
     begin
-      System.SetLength(ColOrd, CandCount);
+      for J in aTested do
+        if not FMatrix[J].Intersecting(aCand) then
+          exit;
+      ItemCount := aCand.PopCount;
+      System.SetLength(ColOrd, ItemCount);
       Recolor(aCand, ColOrd);
-      for I := Pred(CandCount) downto 0 do
+      for I := Pred(ItemCount) downto 0 do
         begin
-          for J in aTested do
-            if not FMatrix[J].Intersecting(aCand) then
-              exit;
           J := ColOrd[I];
           aCand[J] := False;
           FAccum[FVertices[J]] := True;
@@ -2324,6 +2318,22 @@ begin
       for J := 0 to Pred(VertexCount) do
         if (I <> J) and p^.Contains(aVertices[J]) then
           aMatrix[I][J] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.CreateSortedSkeleton(out s: TSkeleton; out aVertices: TIntArray; o: TSortOrder);
+var
+  I, J: SizeInt;
+  p: PAdjList;
+begin
+  aVertices := CreateSortedByDegeneracy(o);
+  s := TSkeleton.Create(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      p := AdjLists[aVertices[I]];
+      for J := 0 to Pred(VertexCount) do
+        if (I <> J) and p^.Contains(aVertices[J]) then
+          s[I]^.Push(J);
     end;
 end;
 
