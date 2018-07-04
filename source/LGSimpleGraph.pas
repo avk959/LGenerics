@@ -163,20 +163,19 @@ type
       property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
     end;
 
-    TBits256Matrix = array of TBits256;
+    TBitMatrix256 = array of TBits256;
 
     TCliqueHelper256 = record
     private
-      FMatrix: TBits256Matrix;
+      FMatrix: TBitMatrix256;
       FAccum,
       FResult: TBits256;
       FCurrSize: SizeInt;
       FVertices: TIntArray;
       FOnFindSet: TOnFindSet;
-      procedure Recolor(constref aCand: TBits256; var aColOrd: TIntArray);
       procedure Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TBits256);
-      procedure Extend(var aCand, aTested: TBits256);
+      procedure Extend(var aSub, aCand: TBits256);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFindSet: TOnFindSet);
@@ -184,7 +183,7 @@ type
 
     TIsHelper256 = record
     private
-      FMatrix: TBits256Matrix;
+      FMatrix: TBitMatrix256;
       FAccum,
       FResult: TBits256;
       FCurrSize: SizeInt;
@@ -259,10 +258,12 @@ type
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CreateSortedByDegeneracy(o: TSortOrder): TIntArray;
     function  CreateNeibDegreeSums: TIntArray;
-    procedure FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
-    procedure FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
+    procedure SortBoolMatrixByDegeneracy(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
+    procedure SortMatrix256ByDegree(out aMatrix: TBitMatrix256; out aVertices: TIntArray; o: TSortOrder = soAsc);
+    procedure SortMatrix256ByDegenracy(out aMatrix: TBitMatrix256; out aVertices: TIntArray; o: TSortOrder = soAsc);
     procedure CreateSortedSkeleton(out s: TSkeleton; out aVertices: TIntArray; o: TSortOrder = soAsc);
     function  CreateDegreeArray: TIntArray;
+    function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     property  InnerConnected: Boolean read FConnected;
   public
@@ -696,7 +697,7 @@ function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray
 var
   Cand: TBoolVector;
 begin
-  aGraph.FillSortedMatrix(FMatrix, FVertices, soDesc);
+  aGraph.SortBoolMatrixByDegeneracy(FMatrix, FVertices, soDesc);
   Cand.InitRange(aGraph.VertexCount);
   FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
@@ -708,7 +709,7 @@ procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind
 var
   Cand, Tested: TBoolVector;
 begin
-  aGraph.FillSortedMatrix(FMatrix, FVertices);
+  aGraph.SortBoolMatrixByDegeneracy(FMatrix, FVertices);
   Cand.InitRange(aGraph.VertexCount);
   {%H-}Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
@@ -841,7 +842,7 @@ function TGSimpleGraph.TIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBoolVector;
 begin
-  aGraph.FillSortedMatrix(FMatrix, FVertices);
+  aGraph.SortBoolMatrixByDegeneracy(FMatrix, FVertices);
   Cand.InitRange(aGraph.VertexCount);
   FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
@@ -853,7 +854,7 @@ procedure TGSimpleGraph.TIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFind
 var
   Cand, Tested: TBoolVector;
 begin
-  aGraph.FillSortedMatrix(FMatrix, FVertices);
+  aGraph.SortBoolMatrixByDegeneracy(FMatrix, FVertices);
   Cand.InitRange(aGraph.VertexCount);
   Tested.Size := aGraph.VertexCount;
   FAccum.Size := aGraph.VertexCount;
@@ -1175,20 +1176,14 @@ end;
 function TGSimpleGraph.TBits256.PopCount: SizeInt;
 {$IF DEFINED(CPU64)}
 begin
-  Result := SizeInt(PopCnt(FBits[0]));
-  Result += SizeInt(PopCnt(FBits[1]));
-  Result += SizeInt(PopCnt(FBits[2]));
-  Result += SizeInt(PopCnt(FBits[3]));
+  Result := SizeInt(PopCnt(FBits[0])) + SizeInt(PopCnt(FBits[1])) +
+            SizeInt(PopCnt(FBits[2])) + SizeInt(PopCnt(FBits[3]));
 {$ELSEIF DEFINED(CPU32)}
 begin
-  Result := SizeInt(PopCnt(FBits[0]));
-  Result += SizeInt(PopCnt(FBits[1]));
-  Result += SizeInt(PopCnt(FBits[2]));
-  Result += SizeInt(PopCnt(FBits[3]));
-  Result += SizeInt(PopCnt(FBits[4]));
-  Result += SizeInt(PopCnt(FBits[5]));
-  Result += SizeInt(PopCnt(FBits[6]));
-  Result += SizeInt(PopCnt(FBits[7]));
+  Result := SizeInt(PopCnt(FBits[0])) + SizeInt(PopCnt(FBits[1])) +
+            SizeInt(PopCnt(FBits[2])) + SizeInt(PopCnt(FBits[3])) +
+            SizeInt(PopCnt(FBits[4])) + SizeInt(PopCnt(FBits[5])) +
+            SizeInt(PopCnt(FBits[6])) + SizeInt(PopCnt(FBits[7]));
 {$ELSE }
 var
   I: SizeUInt;
@@ -1200,30 +1195,6 @@ begin
 end;
 
 { TGSimpleGraph.TCliqueHelper256 }
-
-procedure TGSimpleGraph.TCliqueHelper256.Recolor(constref aCand: TBits256; var aColOrd: TIntArray);
-var
-  P, Q: TBits256;
-  I, J, PCount: SizeInt;
-begin
-  P := aCand;
-  I := 0;
-  PCount := P.PopCount;
-  while PCount > 0 do
-    begin
-      Q := P;
-      while Q.NonEmpty do
-        begin
-          J := Q.Bsf;
-          P[J] := False;
-          Q[J] := False;
-          Q.Subtract(FMatrix[J]);
-          aColOrd[I] := J;
-          Inc(I);
-          Dec(PCount);
-        end;
-    end;
-end;
 
 procedure TGSimpleGraph.TCliqueHelper256.Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
 var
@@ -1286,45 +1257,39 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper256.Extend(var aCand, aTested: TBits256);
+procedure TGSimpleGraph.TCliqueHelper256.Extend(var aSub, aCand: TBits256);
 var
-  NewCand, NewTested: TBits256;
-  ColOrd: TIntArray;
-  I, J, ItemCount: SizeInt;
+  NewSub, NewCand, Diff: TBits256;
+  I: SizeInt;
 begin
-  if aCand.NonEmpty then
+  if aSub.NonEmpty then
     begin
-      for J in aTested do
-        if FMatrix[J].ContainsAll(aCand) then
-          exit;
-      ItemCount := aCand.PopCount;
-      System.SetLength(ColOrd, ItemCount);
-      Recolor(aCand, ColOrd);
-      for I := Pred(ItemCount) downto 0 do
+      if aCand.NonEmpty then
         begin
-          J := ColOrd[I];
-          aCand[J] := False;
-          FAccum[FVertices[J]] := True;
-          NewCand := aCand;
-          NewTested := aTested;
-          NewCand.Intersect(FMatrix[J]);
-          NewTested.Intersect(FMatrix[J]);
-          if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
-            FOnFindSet(FAccum.ToArray)
-          else
-            if NewCand.NonEmpty then
-              Extend(NewCand, NewTested);
-          FAccum[FVertices[J]] := False;
-          aTested[J] := True;
+          Diff := aCand;
+          Diff.Subtract(FMatrix[aSub.Bsf]);
+          for I in Diff do
+            begin
+              aCand[I] := False;
+              NewCand := aCand;
+              NewSub := aSub;
+              FAccum[FVertices[I]] := True;
+              NewCand.Intersect(FMatrix[I]);
+              NewSub.Intersect(FMatrix[I]);
+              Extend(NewSub, NewCand);
+              FAccum[FVertices[I]] := False;
+            end;
         end;
-    end;
+    end
+  else
+    FOnFindSet(FAccum.ToArray);
 end;
 
 function TGSimpleGraph.TCliqueHelper256.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBits256;
 begin
-  aGraph.FillSortedMatrix256(FMatrix, FVertices, soDesc);
+  aGraph.SortMatrix256ByDegenracy(FMatrix, FVertices, soDesc);
   Cand.InitRange(aGraph.VertexCount);
   FCurrSize := 0;
   FAccum.InitZero;
@@ -1334,14 +1299,14 @@ end;
 
 procedure TGSimpleGraph.TCliqueHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFindSet: TOnFindSet);
 var
-  Cand, Tested: TBits256;
+  Sub, Cand: TBits256;
 begin
-  aGraph.FillSortedMatrix256(FMatrix, FVertices);
+  aGraph.SortMatrix256ByDegree(FMatrix, FVertices, soDesc);
+  Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
-  {%H-}Tested.InitZero;
   FAccum.InitZero;
   FOnFindSet := aOnFindSet;
-  Extend(Cand, Tested);
+  Extend(Sub, Cand);
 end;
 
 { TGSimpleGraph.TIsHelper256 }
@@ -1469,7 +1434,7 @@ function TGSimpleGraph.TIsHelper256.MaxIS(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBits256;
 begin
-  aGraph.FillSortedMatrix256(FMatrix, FVertices);
+  aGraph.SortMatrix256ByDegenracy(FMatrix, FVertices);
   Cand.InitRange(aGraph.VertexCount);
   FCurrSize := 0;
   FAccum.InitZero;
@@ -1481,7 +1446,7 @@ procedure TGSimpleGraph.TIsHelper256.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnF
 var
   Cand, Tested: TBits256;
 begin
-  aGraph.FillSortedMatrix256(FMatrix, FVertices);
+  aGraph.SortMatrix256ByDegenracy(FMatrix, FVertices);
   Cand.InitRange(aGraph.VertexCount);
   {%H-}Tested.InitZero;
   FAccum.InitZero;
@@ -2287,7 +2252,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.FillSortedMatrix(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
+procedure TGSimpleGraph.SortBoolMatrixByDegeneracy(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
 var
   I, J: SizeInt;
   p: PAdjList;
@@ -2304,7 +2269,24 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.FillSortedMatrix256(out aMatrix: TBits256Matrix; out aVertices: TIntArray; o: TSortOrder);
+procedure TGSimpleGraph.SortMatrix256ByDegree(out aMatrix: TBitMatrix256; out aVertices: TIntArray; o: TSortOrder);
+var
+  I, J: SizeInt;
+  p: PAdjList;
+begin
+  aVertices := CreateIntArrayRange;
+  TIntDegreeHelper.Sort(aVertices, @CmpByDegree, o);
+  System.SetLength(aMatrix, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      p := AdjLists[aVertices[I]];
+      for J := 0 to Pred(VertexCount) do
+        if (I <> J) and p^.Contains(aVertices[J]) then
+          aMatrix[I][J] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.SortMatrix256ByDegenracy(out aMatrix: TBitMatrix256; out aVertices: TIntArray; o: TSortOrder);
 var
   I, J: SizeInt;
   p: PAdjList;
@@ -2344,6 +2326,11 @@ begin
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Result[I] := AdjLists[I]^.Count;
+end;
+
+function TGSimpleGraph.CmpByDegree(constref L, R: SizeInt): SizeInt;
+begin
+  Result := SizeInt.Compare(AdjLists[L]^.Count, AdjLists[R]^.Count);
 end;
 
 function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
