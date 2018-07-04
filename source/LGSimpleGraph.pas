@@ -48,42 +48,33 @@ type
     TBoolMatrix      = array of TBoolVector;
     TIntDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
-  { TCliqueHelper - some variant of BB-MaxClique:
-      Pablo San Segundo, Fernando Matia, Diego Rodríguez-Losada, and Miguel Hernando.:
-        "An improved bit parallel exact maximum clique algorithm",
-        Patrick Prosser: "Exact Algorithms for Maximum Clique: a computational study." }
-    TCliqueHelper = record
+    TCliqueIsHelper = record
     private
       FMatrix: TBoolMatrix;
-      FAccum: TBoolVector;
+      FCurrSet: TBoolVector;
       FVertices,
       FResult: TIntArray;
       FCurrSize: SizeInt;
       FOnFind: TOnFindSet;
       procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_ColorR
-      procedure Recolor(constref aCand: TBoolVector; var aColOrd: TIntArray);
       procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
-      procedure Extend(var aCand, aTested: TBoolVector);
+      procedure Extend(var aSub, aCand: TBoolVector);
+      procedure SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+      procedure SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
     public
+    { some variant of BB-MaxClique -
+        Pablo San Segundo, Fernando Matia, Diego Rodríguez-Losada, and Miguel Hernando.:
+          "An improved bit parallel exact maximum clique algorithm",
+        Patrick Prosser: "Exact Algorithms for Maximum Clique: a computational study." }
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
-      procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
-    end;
-
-  { TIsHelper - reversed BB-MaxClique }
-    TIsHelper = record
-    private
-      FMatrix: TBoolMatrix;
-      FAccum: TBoolVector;
-      FVertices,
-      FResult: TIntArray;
-      FCurrSize: SizeInt;
-      FOnFindSet: TOnFindSet;
-      procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
-      procedure Recolor(constref aCand: TBoolVector; var aColOrd: TIntArray);
-      procedure Extend(var aCand: TBoolVector);
-      procedure Extend(var aCand, aTested: TBoolVector);
-    public
+    { MaxClique over complement graph }
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
+    { something like Tomita's Cliques on bit strings -
+        Etsuji Tomitaa, Akira Tanakaa, Haruhisa Takahashi:
+          "The worst-case time complexity for generating all maximal cliques and
+           computational experiments. }
+      procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    { ListCliques over complement graph }
       procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
@@ -165,25 +156,23 @@ type
 
     TBitMatrix256 = array of TBits256;
 
-    { TCliqueIsHelper256 }
-
     TCliqueIsHelper256 = record
     private
       FMatrix: TBitMatrix256;
-      FAccum,
+      FCurrSet,
       FResult: TBits256;
       FCurrSize: SizeInt;
       FVertices: TIntArray;
-      FOnFindSet: TOnFindSet;
+      FOnFind: TOnFindSet;
       procedure Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TBits256);
       procedure Extend(var aSub, aCand: TBits256);
-      procedure SortMatrixByDegenracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+      procedure SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
       procedure SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
-      procedure ListCliques(aGraph: TGSimpleGraph; aOnFindSet: TOnFindSet);
+      procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
       procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
@@ -230,12 +219,12 @@ type
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  GetMaxClique: TIntArray;
     function  GetMaxCliqueStatic: TIntArray;
-    procedure ListCliques(aOnFindSet: TOnFindSet);
-    procedure ListCliquesStatic(aOnFindSet: TOnFindSet);
+    procedure ListCliques(aOnFind: TOnFindSet);
+    procedure ListCliquesStatic(aOnFind: TOnFindSet);
     function  GetMaxIS: TIntArray;
     function  GetMaxISStatic: TIntArray;
-    procedure ListIS(aOnFindSet: TOnFindSet);
-    procedure ListISStatic(aOnFindSet: TOnFindSet);
+    procedure ListIS(aOnFind: TOnFindSet);
+    procedure ListISStatic(aOnFind: TOnFindSet);
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -251,7 +240,6 @@ type
     function  SortComplementByDegeneracy: TIntArray;
     function  SortVerticesByDegree: TIntArray;
     function  SortComplementByDegree: TIntArray;
-    procedure SortBoolMatrixByDegeneracy(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder = soAsc);
     procedure CreateSortedSkeleton(out s: TSkeleton; out aVertices: TIntArray; o: TSortOrder = soAsc);
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
@@ -324,7 +312,7 @@ type
     worst case time cost O(3^n/3)}
     function  MaxIndependentSet: TIntArray;
   { lists all found maximal cliques }
-    procedure ListAllCliques(aOnFindSet: TOnFindSet);
+    procedure ListAllCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
     function  MaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
@@ -559,9 +547,9 @@ implementation
 uses
   bufstream;
 
-{ TGSimpleGraph.TCliqueHelper }
+{ TGSimpleGraph.TCliqueIsHelper }
 
-procedure TGSimpleGraph.TCliqueHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TCliqueIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBoolVector;
   I, J, ColorClass, PCount: SizeInt;
@@ -588,31 +576,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.Recolor(constref aCand: TBoolVector; var aColOrd: TIntArray);
-var
-  P, Q: TBoolVector;
-  I, J, PCount: SizeInt;
-begin
-  P := aCand;
-  I := 0;
-  PCount := P.PopCount;
-  while PCount > 0 do
-    begin
-      Q := P;
-      while Q.NonEmpty do
-        begin
-          J := Q.Bsf;
-          P[J] := False;
-          Q[J] := False;
-          Q.Subtract(FMatrix[J]);
-          aColOrd[I] := J;
-          Inc(I);
-          Dec(PCount);
-        end;
-    end;
-end;
-
-procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand: TBoolVector);
+procedure TGSimpleGraph.TCliqueIsHelper.Extend(var aCand: TBoolVector);
 var
   NewCand: TBoolVector;
   ColOrd, Colors: TIntArray;
@@ -620,11 +584,11 @@ var
 begin
   if aCand.IsEmpty then
     begin
-      ItemCount := FAccum.PopCount;
+      ItemCount := FCurrSet.PopCount;
       if ItemCount > FCurrSize then
         begin
           FCurrSize := ItemCount;
-          FResult := FAccum.ToArray;
+          FResult := FCurrSet.ToArray;
         end;
       exit;
     end;
@@ -636,220 +600,157 @@ begin
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
-          if Colors[I] + FAccum.PopCount <= FCurrSize then
+          if Colors[I] + FCurrSet.PopCount <= FCurrSize then
             exit;
           J := ColOrd[I];
           aCand[J] := False;
-          FAccum[FVertices[J]] := True;
+          FCurrSet[FVertices[J]] := True;
           NewCand := aCand;
           NewCand.Intersect(FMatrix[J]);
           Extend(NewCand);
-          FAccum[FVertices[J]] := False;
+          FCurrSet[FVertices[J]] := False;
         end;
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand, aTested: TBoolVector);
+procedure TGSimpleGraph.TCliqueIsHelper.Extend(var aSub, aCand: TBoolVector);
 var
-  NewCand, NewTested: TBoolVector;
-  ColOrd: TIntArray;
-  I, J, ItemCount: SizeInt;
+  NewSub, NewCand, Diff: TBoolVector;
+  I: SizeInt;
 begin
-  if aCand.NonEmpty then
+  if aSub.NonEmpty then
     begin
-      for J in aTested do
-        if FMatrix[J].ContainsAll(aCand) then
-          exit;
-      ItemCount := aCand.PopCount;
-      System.SetLength(ColOrd, ItemCount);
-      Recolor(aCand, ColOrd);
-      for I := Pred(ItemCount) downto 0 do
+      if aCand.NonEmpty then
         begin
-          J := ColOrd[I];
-          aCand[J] := False;
-          FAccum[FVertices[J]] := True;
-          NewCand := aCand;
-          NewTested := aTested;
-          NewCand.Intersect(FMatrix[J]);
-          NewTested.Intersect(FMatrix[J]);
-          if NewCand.IsEmpty and NewTested.IsEmpty then  // found clique
-            FOnFind(FAccum.ToArray)
-          else
-            if NewCand.NonEmpty then
-              Extend(NewCand, NewTested);
-          FAccum[FVertices[J]] := False;
-          aTested[J] := True;
+          Diff := aCand;
+          Diff.Subtract(FMatrix[aSub.Bsf]);
+          for I in Diff do
+            begin
+              aCand[I] := False;
+              NewCand := aCand;
+              NewSub := aSub;
+              FCurrSet[FVertices[I]] := True;
+              NewCand.Intersect(FMatrix[I]);
+              NewSub.Intersect(FMatrix[I]);
+              Extend(NewSub, NewCand);
+              FCurrSet[FVertices[I]] := False;
+            end;
+        end;
+    end
+  else
+    FOnFind(FCurrSet.ToArray);
+end;
+
+procedure TGSimpleGraph.TCliqueIsHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+var
+  I, J: SizeInt;
+  p: PAdjList;
+begin
+  System.SetLength(FMatrix, aGraph.VertexCount);
+  if aComplement then
+    begin
+      FVertices := aGraph.SortComplementByDegeneracy;
+      for I := 0 to Pred(aGraph.VertexCount) do
+        begin
+          FMatrix[I].Size := aGraph.VertexCount;
+          p := aGraph.AdjLists[FVertices[I]];
+          for J := 0 to Pred(aGraph.VertexCount) do
+            if (I <> J) and not p^.Contains(FVertices[J]) then
+              FMatrix[I][J] := True
+        end;
+    end
+  else
+    begin
+      FVertices := aGraph.SortVerticesByDegeneracy;
+      for I := 0 to Pred(aGraph.VertexCount) do
+        begin
+          FMatrix[I].Size := aGraph.VertexCount;
+          p := aGraph.AdjLists[FVertices[I]];
+          for J := 0 to Pred(aGraph.VertexCount) do
+            if (I <> J) and p^.Contains(FVertices[J]) then
+              FMatrix[I][J] := True;
         end;
     end;
 end;
 
-function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+procedure TGSimpleGraph.TCliqueIsHelper.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
+var
+  I, J: SizeInt;
+  p: PAdjList;
+begin
+  System.SetLength(FMatrix, aGraph.VertexCount);
+  if aComplement then
+    begin
+      FVertices := aGraph.SortComplementByDegree;
+      for I := 0 to Pred(aGraph.VertexCount) do
+        begin
+          FMatrix[I].Size := aGraph.VertexCount;
+          p := aGraph.AdjLists[FVertices[I]];
+          for J := 0 to Pred(aGraph.VertexCount) do
+            if (I <> J) and not p^.Contains(FVertices[J]) then
+              FMatrix[I][J] := True;
+        end;
+    end
+  else
+    begin
+      FVertices := aGraph.SortVerticesByDegree;
+      for I := 0 to Pred(aGraph.VertexCount) do
+        begin
+          FMatrix[I].Size := aGraph.VertexCount;
+          p := aGraph.AdjLists[FVertices[I]];
+          for J := 0 to Pred(aGraph.VertexCount) do
+            if (I <> J) and p^.Contains(FVertices[J]) then
+              FMatrix[I][J] := True;
+        end;
+    end;
+end;
+
+function TGSimpleGraph.TCliqueIsHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBoolVector;
 begin
-  aGraph.SortBoolMatrixByDegeneracy(FMatrix, FVertices, soDesc);
+  SortMatrixByDegeneracy(aGraph, False);
   Cand.InitRange(aGraph.VertexCount);
-  FAccum.Size := aGraph.VertexCount;
   FCurrSize := 0;
+  FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
   Result := FResult;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+function TGSimpleGraph.TCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
 var
-  Cand, Tested: TBoolVector;
+  Cand: TBoolVector;
 begin
-  aGraph.SortBoolMatrixByDegeneracy(FMatrix, FVertices);
+  SortMatrixByDegeneracy(aGraph, True);
   Cand.InitRange(aGraph.VertexCount);
-  {%H-}Tested.Size := aGraph.VertexCount;
-  FAccum.Size := aGraph.VertexCount;
+  FCurrSize := 0;
+  FCurrSet.Size := aGraph.VertexCount;
+  Extend(Cand);
+  Result := FResult;
+end;
+
+procedure TGSimpleGraph.TCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Sub, Cand: TBoolVector;
+begin
+  SortMatrixByDegree(aGraph, False);
+  Sub.InitRange(aGraph.VertexCount);
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.Size := aGraph.VertexCount;
   FOnFind := aOnFind;
-  Extend(Cand, Tested);
+  Extend(Sub, Cand);
 end;
 
-{ TGSimpleGraph.TIsHelper }
-
-procedure TGSimpleGraph.TIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TCliqueIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
-  P, Q: TBoolVector;
-  I, J, ColorClass, PCount: SizeInt;
+  Sub, Cand: TBoolVector;
 begin
-  P := aCand;
-  ColorClass := 0;
-  I := 0;
-  PCount := P.PopCount;
-  while PCount > 0 do
-    begin
-      Inc(ColorClass);
-      Q := P;
-      while Q.NonEmpty do
-        begin
-          J := Q.Bsf;
-          P[J] := False;
-          Q[J] := False;
-          Q.Intersect(FMatrix[J]);
-          aColOrd[I] := J;
-          aColors[I] := ColorClass;
-          Inc(I);
-          Dec(PCount);
-        end;
-    end;
-end;
-
-procedure TGSimpleGraph.TIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd: TIntArray);
-var
-  P, Q: TBoolVector;
-  I, J, PCount: SizeInt;
-begin
-  P := aCand;
-  I := 0;
-  PCount := P.PopCount;
-  while PCount > 0 do
-    begin
-      Q := P;
-      while Q.NonEmpty do
-        begin
-          J := Q.Bsf;
-          P[J] := False;
-          Q[J] := False;
-          Q.Intersect(FMatrix[J]);
-          aColOrd[I] := J;
-          Inc(I);
-          Dec(PCount);
-        end;
-    end;
-end;
-
-procedure TGSimpleGraph.TIsHelper.Extend(var aCand: TBoolVector);
-var
-  NewCand: TBoolVector;
-  ColOrd, Colors: TIntArray;
-  I, J, ItemCount: SizeInt;
-begin
-  if aCand.IsEmpty then
-    begin
-      ItemCount := FAccum.PopCount;
-      if ItemCount > FCurrSize then
-        begin
-          FCurrSize := ItemCount;
-          FResult := FAccum.ToArray;
-        end;
-      exit;
-    end;
-  ItemCount := aCand.PopCount;
-  System.SetLength(ColOrd, ItemCount);
-  System.SetLength(Colors, ItemCount);
-  Recolor(aCand, ColOrd, Colors);
-  for I := Pred(ItemCount) downto 0 do
-    begin
-      if Colors[I] + FAccum.PopCount <= FCurrSize then
-        exit;
-      J := ColOrd[I];
-      aCand[J] := False;
-      FAccum[FVertices[J]] := True;
-      NewCand := aCand;
-      NewCand.Subtract(FMatrix[J]);
-      Extend(NewCand);
-      FAccum[FVertices[J]] := False;
-    end;
-end;
-
-procedure TGSimpleGraph.TIsHelper.Extend(var aCand, aTested: TBoolVector);
-var
-  NewCand, NewTested: TBoolVector;
-  ColOrd: TIntArray;
-  I, J, ItemCount: SizeInt;
-begin
-  if aCand.NonEmpty then
-    begin
-      for J in aTested do
-        if not FMatrix[J].Intersecting(aCand) then
-          exit;
-      ItemCount := aCand.PopCount;
-      System.SetLength(ColOrd, ItemCount);
-      Recolor(aCand, ColOrd);
-      for I := Pred(ItemCount) downto 0 do
-        begin
-          J := ColOrd[I];
-          aCand[J] := False;
-          FAccum[FVertices[J]] := True;
-          NewCand := aCand;
-          NewTested := aTested;
-          NewCand.Subtract(FMatrix[J]);
-          NewTested.Subtract(FMatrix[J]);
-          if NewCand.IsEmpty and NewTested.IsEmpty then  // found is
-            FOnFindSet(FAccum.ToArray)
-          else
-            if NewCand.NonEmpty then
-              Extend(NewCand, NewTested);
-          FAccum[FVertices[J]] := False;
-          aTested[J] := True;
-        end;
-    end;
-end;
-
-function TGSimpleGraph.TIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
-var
-  Cand: TBoolVector;
-begin
-  aGraph.SortBoolMatrixByDegeneracy(FMatrix, FVertices);
+  SortMatrixByDegree(aGraph, True);
+  Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
-  FAccum.Size := aGraph.VertexCount;
-  FCurrSize := 0;
-  Extend(Cand);
-  Result := FResult;
-end;
-
-procedure TGSimpleGraph.TIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
-var
-  Cand, Tested: TBoolVector;
-begin
-  aGraph.SortBoolMatrixByDegeneracy(FMatrix, FVertices);
-  Cand.InitRange(aGraph.VertexCount);
-  Tested.Size := aGraph.VertexCount;
-  FAccum.Size := aGraph.VertexCount;
-  FOnFindSet := aOnFind;
-  Extend(Cand, Tested);
+  FCurrSet.Size := aGraph.VertexCount;
+  FOnFind := aOnFind;
+  Extend(Sub, Cand);
 end;
 
 { TGSimpleGraph.TBits256.TEnumerator }
@@ -1227,24 +1128,24 @@ begin
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
-          if Colors[I] + FAccum.PopCount <= FCurrSize then
+          if Colors[I] + FCurrSet.PopCount <= FCurrSize then
             exit;
           J := ColOrd[I];
           aCand[J] := False;
-          FAccum[FVertices[J]] := True;
+          FCurrSet[FVertices[J]] := True;
           NewCand := aCand;
           NewCand.Intersect(FMatrix[J]);
           Extend(NewCand);
-          FAccum[FVertices[J]] := False;
+          FCurrSet[FVertices[J]] := False;
         end;
     end
   else
     begin
-      ItemCount := FAccum.PopCount;
+      ItemCount := FCurrSet.PopCount;
       if ItemCount > FCurrSize then
         begin
           FCurrSize := ItemCount;
-          FResult := FAccum;
+          FResult := FCurrSet;
         end;
     end;
 end;
@@ -1265,19 +1166,19 @@ begin
               aCand[I] := False;
               NewCand := aCand;
               NewSub := aSub;
-              FAccum[FVertices[I]] := True;
+              FCurrSet[FVertices[I]] := True;
               NewCand.Intersect(FMatrix[I]);
               NewSub.Intersect(FMatrix[I]);
               Extend(NewSub, NewCand);
-              FAccum[FVertices[I]] := False;
+              FCurrSet[FVertices[I]] := False;
             end;
         end;
     end
   else
-    FOnFindSet(FAccum.ToArray);
+    FOnFind(FCurrSet.ToArray);
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.SortMatrixByDegenracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TCliqueIsHelper256.SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
 var
   I, J: SizeInt;
   p: PAdjList;
@@ -1320,6 +1221,7 @@ begin
       FVertices := aGraph.SortComplementByDegree;
       for I := 0 to Pred(aGraph.VertexCount) do
         begin
+          FMatrix[I].InitZero;
           p := aGraph.AdjLists[FVertices[I]];
           for J := 0 to Pred(aGraph.VertexCount) do
             if (I <> J) and not p^.Contains(FVertices[J]) then
@@ -1331,6 +1233,7 @@ begin
       FVertices := aGraph.SortVerticesByDegree;
       for I := 0 to Pred(aGraph.VertexCount) do
         begin
+          FMatrix[I].InitZero;
           p := aGraph.AdjLists[FVertices[I]];
           for J := 0 to Pred(aGraph.VertexCount) do
             if (I <> J) and p^.Contains(FVertices[J]) then
@@ -1343,10 +1246,10 @@ function TGSimpleGraph.TCliqueIsHelper256.MaxClique(aGraph: TGSimpleGraph): TInt
 var
   Cand: TBits256;
 begin
-  SortMatrixByDegenracy(aGraph, False);
+  SortMatrixByDegeneracy(aGraph, False);
   Cand.InitRange(aGraph.VertexCount);
   FCurrSize := 0;
-  FAccum.InitZero;
+  FCurrSet.InitZero;
   Extend(Cand);
   Result := FResult.ToArray;
 end;
@@ -1355,23 +1258,23 @@ function TGSimpleGraph.TCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph): TIntArra
 var
   Cand: TBits256;
 begin
-  SortMatrixByDegenracy(aGraph, True);
+  SortMatrixByDegeneracy(aGraph, True);
   Cand.InitRange(aGraph.VertexCount);
   FCurrSize := 0;
-  FAccum.InitZero;
+  FCurrSet.InitZero;
   Extend(Cand);
   Result := FResult.ToArray;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.TCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Sub, Cand: TBits256;
 begin
   SortMatrixByDegree(aGraph, False);
   Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
-  FAccum.InitZero;
-  FOnFindSet := aOnFindSet;
+  FCurrSet.InitZero;
+  FOnFind := aOnFind;
   Extend(Sub, Cand);
 end;
 
@@ -1382,8 +1285,8 @@ begin
   SortMatrixByDegree(aGraph, True);
   Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
-  FAccum.InitZero;
-  FOnFindSet := aOnFind;
+  FCurrSet.InitZero;
+  FOnFind := aOnFind;
   Extend(Sub, Cand);
 end;
 
@@ -1681,7 +1584,7 @@ end;
 
 function TGSimpleGraph.GetMaxClique: TIntArray;
 var
-  Helper: TCliqueHelper;
+  Helper: TCliqueIsHelper;
 begin
   Result := Helper.MaxClique(Self);
 end;
@@ -1693,23 +1596,23 @@ begin
   Result := Helper.MaxClique(Self);
 end;
 
-procedure TGSimpleGraph.ListCliques(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListCliques(aOnFind: TOnFindSet);
 var
-  Helper: TCliqueHelper;
+  Helper: TCliqueIsHelper;
 begin
-  Helper.ListCliques(Self, aOnFindSet);
+  Helper.ListCliques(Self, aOnFind);
 end;
 
-procedure TGSimpleGraph.ListCliquesStatic(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListCliquesStatic(aOnFind: TOnFindSet);
 var
   Helper: TCliqueIsHelper256;
 begin
-  Helper.ListCliques(Self, aOnFindSet);
+  Helper.ListCliques(Self, aOnFind);
 end;
 
 function TGSimpleGraph.GetMaxIS: TIntArray;
 var
-  Helper: TIsHelper;
+  Helper: TCliqueIsHelper;
 begin
   Result := Helper.MaxIS(Self);
 end;
@@ -1721,18 +1624,18 @@ begin
   Result := Helper.MaxIS(Self);
 end;
 
-procedure TGSimpleGraph.ListIS(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListIS(aOnFind: TOnFindSet);
 var
-  Helper: TIsHelper;
+  Helper: TCliqueIsHelper;
 begin
-  Helper.ListIS(Self, aOnFindSet);
+  Helper.ListIS(Self, aOnFind);
 end;
 
-procedure TGSimpleGraph.ListISStatic(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListISStatic(aOnFind: TOnFindSet);
 var
   Helper: TCliqueIsHelper256;
 begin
-  Helper.ListIS(Self, aOnFindSet);
+  Helper.ListIS(Self, aOnFind);
 end;
 
 procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -2167,7 +2070,7 @@ begin
       for J in List do
         if Result[J] < Result[I] then
           I := J;
-      Stack.Push(I);
+      {%H-}Stack.Push(I);
       List.Remove(I);
       for J in List do
         if AdjLists[J]^.Contains(I) then
@@ -2210,23 +2113,6 @@ function TGSimpleGraph.SortComplementByDegree: TIntArray;
 begin
   Result := CreateIntArrayRange;
   TIntDegreeHelper.Sort(Result, @CmpByDegree);
-end;
-
-procedure TGSimpleGraph.SortBoolMatrixByDegeneracy(out aMatrix: TBoolMatrix; out aVertices: TIntArray; o: TSortOrder);
-var
-  I, J: SizeInt;
-  p: PAdjList;
-begin
-  aVertices := SortVerticesByDegeneracy;
-  System.SetLength(aMatrix, VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    begin
-      aMatrix[I].Size := VertexCount;
-      p := AdjLists[aVertices[I]];
-      for J := 0 to Pred(VertexCount) do
-        if (I <> J) and p^.Contains(aVertices[J]) then
-          aMatrix[I][J] := True;
-    end;
 end;
 
 procedure TGSimpleGraph.CreateSortedSkeleton(out s: TSkeleton; out aVertices: TIntArray; o: TSortOrder);
@@ -2715,16 +2601,16 @@ begin
     Result := GetMaxISStatic;
 end;
 
-procedure TGSimpleGraph.ListAllCliques(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListAllCliques(aOnFindClique: TOnFindSet);
 begin
   if IsEmpty then
     exit;
-  if aOnFindSet = nil then
+  if aOnFindClique = nil then
     raise ELGraphError.Create(SECallbackMissed);
   if VertexCount > 256 then
-    ListCliques(aOnFindSet)
+    ListCliques(aOnFindClique)
   else
-    ListCliquesStatic(aOnFindSet);
+    ListCliquesStatic(aOnFindClique);
 end;
 
 function TGSimpleGraph.MaxClique: TIntArray;
