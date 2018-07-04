@@ -2155,10 +2155,8 @@ begin
   Result := 0;
   while I <= System.High(FBits) - 4 do
     begin
-      Result += SizeInt(PopCnt(FBits[I  ]));
-      Result += SizeInt(PopCnt(FBits[I+1]));
-      Result += SizeInt(PopCnt(FBits[I+2]));
-      Result += SizeInt(PopCnt(FBits[I+3]));
+      Result += SizeInt(PopCnt(FBits[I  ])) + SizeInt(PopCnt(FBits[I+1])) +
+                SizeInt(PopCnt(FBits[I+2])) + SizeInt(PopCnt(FBits[I+3]));
       Inc(I, 4);
     end;
   for I := I to  System.High(FBits) do
