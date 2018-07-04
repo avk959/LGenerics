@@ -331,7 +331,7 @@ type
   { returns all bridges in the result vector, if any, otherwise the empty vector }
     function  FindBridges: TIntEdgeArray;
   { returns count of biconnected components in the same connected component as aRoot;
-    the corresponding elements of the aComponents will contain  the edges of this bicomponent }
+    the corresponding elements of the aComponents will contain  the edges of those bicomponents }
     function  FindBicomponents(constref aRoot: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
     function  FindBicomponentsI(aRoot: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
