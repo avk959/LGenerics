@@ -34,6 +34,8 @@ uses
   LGArrayHelpers,
   LGVector,
   LGraphUtils,
+  LGStrHelpers,
+  LGMiscUtils,
   LGStrConst;
 
 type
@@ -67,14 +69,14 @@ type
           "An improved bit parallel exact maximum clique algorithm",
         Patrick Prosser: "Exact Algorithms for Maximum Clique: a computational study." }
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
-    { MaxClique over complement graph }
+    { executes MaxClique upon complement graph }
       function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
-    { something like Tomita's Cliques on bit strings -
+    { something like Tomita's Cliques on bit strings, except pivot maximizing -
         Etsuji Tomitaa, Akira Tanakaa, Haruhisa Takahashi:
           "The worst-case time complexity for generating all maximal cliques and
            computational experiments. }
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
-    { ListCliques over complement graph }
+    { executes ListCliques upon complement graph }
       procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
@@ -408,6 +410,7 @@ type
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
+    procedure LoadFromDIMACSAsciiFile(const aFileName: string);
     function  SeparateGraph(aVertex: SizeInt): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
     function  SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
@@ -3013,6 +3016,41 @@ end;
 procedure TIntChart.LoadFromFile(const aFileName: string);
 begin
   inherited LoadFromFile(aFileName, @ReadVertex);
+end;
+
+procedure TIntChart.LoadFromDIMACSAsciiFile(const aFileName: string);
+type
+  TReaderRef = specialize TGAutoRef<TTextFileReader>;
+var
+  ReaderRef: TReaderRef;
+  Reader: TTextFileReader;
+  Line, Elem: string;
+  I: SizeInt;
+  CurrEdge: array[0..1] of SizeInt;
+begin
+  Reader := ReaderRef;
+  if not Reader.Open(aFileName) then
+    raise ELGraphError.CreateFmt(SEUnableOpenFileFmt, [aFileName]);
+  Clear;
+  for Line in Reader do
+    begin
+      if LowerCase(Line)[1] <> 'e' then
+        continue;
+      I := 0;
+      for Elem in Line.SplitSB([' '])do
+        begin
+          if LowerCase(Elem) = 'e' then
+            continue;
+          if I > 1 then
+            begin
+              Clear;
+              raise ELGraphError.Create(SEUnexpectElem);
+            end;
+          CurrEdge[I] := StrToInt(Elem);
+          Inc(I);
+        end;
+      AddEdge(CurrEdge[0], CurrEdge[1]);
+    end;
 end;
 
 function TIntChart.SeparateGraph(aVertex: SizeInt): TIntChart;
