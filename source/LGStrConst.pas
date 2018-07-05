@@ -56,6 +56,8 @@ resourcestring
   SEGrapInconsist          = 'Graph data inconsistency';
   SEStrLenExceedFmt        = 'Maximum string length exceeded(%d)';
   SEMatrixSizeExceedFmt    = 'Maximum matrix size exceeded(%d)';
+  SEUnableOpenFileFmt      = 'Unable to open file "%s"';
+  SEUnexpectElem           = 'Unexpected graph element';
 
 implementation
 
