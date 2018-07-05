@@ -2736,13 +2736,13 @@ function TGSimpleGraph.MaxClique: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
-  //if VertexCount >= 50000 then //todo: const
+  if VertexCount >= 50000 then //todo: const
     Result := GetMaxCliqueSparse
-  //else
-  //  if VertexCount > 256 then
-  //    Result := GetMaxClique
-  //  else
-  //    Result := GetMaxCliqueStatic;
+  else
+    if VertexCount > 256 then
+      Result := GetMaxClique
+    else
+      Result := GetMaxCliqueStatic;
 end;
 
 function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
