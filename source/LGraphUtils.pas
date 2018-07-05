@@ -191,7 +191,6 @@ type
       function  GetEnumerator: TEnumerator; inline;
       function  ToArray: TIntArray; inline;
       procedure Assign(constref aList: TIntSet);
-      procedure AssignExcept(constref aList: TIntSet; aExcept: SizeInt);
       function  Copy: TIntSet; inline;
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
@@ -200,7 +199,6 @@ type
       function  ContainsAny(constref aList: TIntSet): Boolean;
       function  ContainsAll(constref aList: TIntSet): Boolean;
       function  Find(aValue: SizeInt): SizeInt;
-      function  FindFirst(out aValue: SizeInt): Boolean;
       function  Add(aValue: SizeInt): Boolean;
       function  AddAll(constref aList: TIntSet): SizeInt;
       procedure Push(aValue: SizeInt); inline;
@@ -210,8 +208,6 @@ type
       procedure Subtract(constref aList: TIntSet);
     { preserves the order of the elements }
       procedure Intersect(constref aList: TIntSet);
-    { preserves the order of the elements }
-      procedure IntersectRange(constref aRange: TIntArray; L, R: SizeInt);
       function  Remove(aValue: SizeInt): Boolean;
     { preserves the order of the elements }
       procedure Delete(aValue: SizeInt);
@@ -1194,27 +1190,8 @@ end;
 procedure TGCustomGraph.TIntSet.Assign(constref aList: TIntSet);
 begin
   FCount := aList.Count;
-  FItems := System.Copy(aList.FItems);
-end;
-
-procedure TGCustomGraph.TIntSet.AssignExcept(constref aList: TIntSet; aExcept: SizeInt);
-var
-  I, J: SizeInt;
-begin
-  FCount := 0;
-  I := 0;
-  J := 0;
-  System.SetLength(FItems, aList.Count);
-  while I < aList.Count do
-    begin
-      if aList.FItems[I] <> aExcept then
-        begin
-          FItems[J] := aList.FItems[I];
-          Inc(J);
-          Inc(FCount);
-        end;
-      Inc(I);
-    end;
+  if Count <> 0 then
+    FItems := System.Copy(aList.FItems, 0, Count);
 end;
 
 function TGCustomGraph.TIntSet.Copy: TIntSet;
@@ -1281,13 +1258,6 @@ begin
     if FItems[I] = aValue then
       exit(I);
   Result := -1;
-end;
-
-function TGCustomGraph.TIntSet.FindFirst(out aValue: SizeInt): Boolean;
-begin
-  Result := Count <> 0;
-  if Result then
-    aValue := FItems[0];
 end;
 
 function TGCustomGraph.TIntSet.Add(aValue: SizeInt): Boolean;
@@ -1376,36 +1346,6 @@ begin
           end
         else
           Dec(FCount);
-    end
-  else
-    MakeEmpty;
-end;
-
-procedure TGCustomGraph.TIntSet.IntersectRange(constref aRange: TIntArray; L, R: SizeInt);
-var
-  I, J, Pos: SizeInt;
-  Found: Boolean;
-begin
-  if L <= R then
-    begin
-      Pos := 0;
-      for I := 0 to Pred(Count) do
-        begin
-          Found := False;
-          for J := L to R do
-            if FItems[I] = aRange[J] then
-              begin
-                Found := True;
-                break;
-              end;
-          if Found then
-            begin
-              FItems[Pos] := FItems[I];
-              Inc(Pos);
-            end
-          else
-            Dec(FCount)
-        end;
     end
   else
     MakeEmpty;

@@ -973,7 +973,7 @@ begin
     Inc(s);
   aCircuit.Add(s);
   repeat
-    while g[s]^.FindFirst(d) do
+    while g[s]^.TryPop(d) do
       begin
         {%H-}Stack.Push(s);
         g.RemoveEdge(s, d);
