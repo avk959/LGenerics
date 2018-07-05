@@ -168,9 +168,6 @@ type
 
   protected
   type
-
-    { TIntSet }
-
     TIntSet = record
     private
       FItems: TIntArray;
