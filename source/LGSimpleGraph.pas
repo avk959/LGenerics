@@ -58,7 +58,7 @@ type
       FResult: TIntArray;
       FCurrSize: SizeInt;
       FOnFind: TOnFindSet;
-      procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_ColorR
+      procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
       procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
       procedure Extend(var aSub, aCand: TBoolVector);
       procedure FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -66,8 +66,8 @@ type
       procedure SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
     public
     { some variant of BB-MaxClique -
-        Pablo San Segundo, Fernando Matia, Diego Rodríguez-Losada, and Miguel Hernando.:
-          "An improved bit parallel exact maximum clique algorithm",
+        San Segundo, P, Rodriguez-Losada, D., Jimenez, A.:
+          "An exact bit-parallel algorithm for the maximum clique problem",
         Patrick Prosser: "Exact Algorithms for Maximum Clique: a computational study." }
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
     { executes MaxClique upon complement graph }
@@ -245,6 +245,7 @@ type
     function  GetMaxCliqueSparse: TIntArray;
     procedure ListCliques(aOnFind: TOnFindSet);
     procedure ListCliquesStatic(aOnFind: TOnFindSet);
+    procedure ListCliquesSparse(aOnFind: TOnFindSet);
     function  GetMaxIS: TIntArray;
     function  GetMaxISStatic: TIntArray;
     procedure ListIS(aOnFind: TOnFindSet);
@@ -1718,6 +1719,13 @@ begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
+procedure TGSimpleGraph.ListCliquesSparse(aOnFind: TOnFindSet);
+var
+  Helper: TSparseCliqueHelper;
+begin
+  Helper.ListCliques(Self, aOnFind);
+end;
+
 function TGSimpleGraph.GetMaxIS: TIntArray;
 var
   Helper: TCliqueIsHelper;
@@ -2715,21 +2723,26 @@ begin
     exit;
   if aOnFindClique = nil then
     raise ELGraphError.Create(SECallbackMissed);
-  if VertexCount > 256 then
-    ListCliques(aOnFindClique)
+  if VertexCount >= 70000 then //todo: const
+    ListCliquesSparse(aOnFindClique)
   else
-    ListCliquesStatic(aOnFindClique);
+    if VertexCount > 256 then
+      ListCliques(aOnFindClique)
+    else
+      ListCliquesStatic(aOnFindClique);
 end;
 
 function TGSimpleGraph.MaxClique: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
-  //Result := GetMaxCliqueSparse;
-  if VertexCount > 256 then
-    Result := GetMaxClique
-  else
-    Result := GetMaxCliqueStatic;
+  //if VertexCount >= 50000 then //todo: const
+    Result := GetMaxCliqueSparse
+  //else
+  //  if VertexCount > 256 then
+  //    Result := GetMaxClique
+  //  else
+  //    Result := GetMaxCliqueStatic;
 end;
 
 function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
