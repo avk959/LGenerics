@@ -146,7 +146,9 @@ type
       function  ToArray: TIntArray;
       function  IsEmpty: Boolean;
       function  NonEmpty: Boolean; inline;
+    { returns index of the least significant bit }
       function  Bsf: SizeInt; inline;
+    { returns index of the most significant bit }
       function  Bsr: SizeInt; inline;
       function  Intersecting(constref aVector: TBits256): Boolean;
       function  ContainsAll(constref aVector: TBits256): Boolean;
