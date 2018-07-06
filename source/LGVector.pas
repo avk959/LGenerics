@@ -388,6 +388,7 @@ type
   { returns an array containing the indices of the set bits }
     function  ToArray: TIntArray;
     procedure ClearBits; inline;
+    procedure SetBits; inline;
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
     function  Bsf: SizeInt; inline;
@@ -2050,6 +2051,12 @@ procedure TBoolVector.ClearBits;
 begin
   if FBits <> nil then
     System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+end;
+
+procedure TBoolVector.SetBits;
+begin
+  if FBits <> nil then
+    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), $ff);
 end;
 
 function TBoolVector.IsEmpty: Boolean;
