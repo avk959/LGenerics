@@ -333,15 +333,17 @@ type
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
-  { lists all found maximal independent sets }
+  { lists all maximal independent sets }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set;
     worst case time cost O(3^n/3)}
-    function  MaxIndependentSet: TIntArray;
-  { lists all found maximal cliques }
-    procedure ListAllCliques(aOnFindClique: TOnFindSet);
+    function  ExactMaxIndependentSet: TIntArray;
+    function  GreedyMaxIndependentSet: TIntArray;
+  { lists all maximal cliques }
+    procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
-    function  MaxClique: TIntArray;
+    function  ExactMaxClique: TIntArray;
+    function  GreedyMaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -1570,7 +1572,7 @@ begin
   Result := TSkeleton.Create(VertexCount);
   Result.FEdgeCount := EdgeCount;
   for I := 0 to Pred(VertexCount) do
-    FNodeList[I].AdjList.CopyTo(Result[I]);
+    FNodeList[I].AdjList.CopyTo(Result[I]^);
 end;
 
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
@@ -2242,6 +2244,11 @@ end;
 function TGSimpleGraph.CmpByDegree(constref L, R: SizeInt): SizeInt;
 begin
   Result := SizeInt.Compare(AdjLists[L]^.Count, AdjLists[R]^.Count);
+  if Result <> 0 then
+    exit;
+  if L < R then
+    exit(-1);
+  Result := 1;
 end;
 
 function TGSimpleGraph.CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
@@ -2727,7 +2734,7 @@ begin
     ListISStatic(aOnFindSet)
 end;
 
-function TGSimpleGraph.MaxIndependentSet: TIntArray;
+function TGSimpleGraph.ExactMaxIndependentSet: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
@@ -2737,7 +2744,25 @@ begin
     Result := GetMaxISStatic;
 end;
 
-procedure TGSimpleGraph.ListAllCliques(aOnFindClique: TOnFindSet);
+function TGSimpleGraph.GreedyMaxIndependentSet: TIntArray;
+var
+  Cand, Stack: TIntSet;
+  I, J: SizeInt;
+begin
+  if IsEmpty then
+    exit(nil);
+  Cand.AssignArray(SortVerticesByDegeneracy);
+  while Cand.NonEmpty do
+    begin
+      I := Cand.Pop;
+      {%H-}Stack.Push(I);
+      for J in AdjVerticesI(I) do
+        Cand.Delete(J);
+    end;
+  Result := Stack.ToArray;
+end;
+
+procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
 begin
   if IsEmpty then
     exit;
@@ -2752,7 +2777,7 @@ begin
       ListCliquesStatic(aOnFindClique);
 end;
 
-function TGSimpleGraph.MaxClique: TIntArray;
+function TGSimpleGraph.ExactMaxClique: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
@@ -2763,6 +2788,27 @@ begin
       Result := GetMaxClique
     else
       Result := GetMaxCliqueStatic;
+end;
+
+function TGSimpleGraph.GreedyMaxClique: TIntArray;
+var
+  Cand, Stack: TIntSet;
+  Q: TIntArray;
+  I, J: SizeInt;
+begin
+  if IsEmpty then
+    exit(nil);
+  Cand.AssignArray(SortComplementByDegeneracy);
+  while Cand.NonEmpty do
+    begin
+      I := Cand.Pop;
+      {%H-}Stack.Push(I);
+      Q := Cand.ToArray;
+      for J in Q do
+        if not AdjLists[I]^.Contains(J) then
+          Cand.Delete(J);
+    end;
+  Result := Stack.ToArray;
 end;
 
 function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
