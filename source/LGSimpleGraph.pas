@@ -220,7 +220,7 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
   const
-    LISTCLIQUES_SPARSE_CUTOFF = 70000;
+    LISTCLIQUES_SPARSE_CUTOFF = 60000;
     MAXCLIQUE_SPARSE_CUTOFF   = 50000;
   var
     FCompCount: SizeInt;
@@ -423,8 +423,6 @@ type
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
     function  Clone: TGChart;
   end;
-
-  { TIntChart }
 
   TIntChart = class(specialize TGChart<SizeInt, SizeInt>)
   protected
@@ -2387,22 +2385,28 @@ var
   Header: TStreamHeader;
   I: SizeInt;
   Edge: TEdge;
+  Descr: string;
   wbs: TWriteBufStream;
 begin
   if not (Assigned(aWriteVertex) and Assigned(aWriteData)) then
     raise ELGraphError.Create(SEWriteCallbackMissed);
   wbs := TWriteBufStream.Create(aStream);
   try
+    Descr := Description.Text;
     //write header
     Header.Magic := GRAPH_MAGIC;
     Header.Version := GRAPH_HEADER_VERSION;
-    Header.TitleSize := System.Length(Title);
+    Header.TitleLength := System.Length(Title);
+    Header.DescriptionLength := System.Length(Descr);
     Header.VertexCount := VertexCount;
     Header.EdgeCount := EdgeCount;
     wbs.WriteBuffer(Header, SizeOf(Header));
     //write title
-    if Header.TitleSize > 0 then
-      wbs.WriteBuffer(FTitle[1], Header.TitleSize);
+    if Header.TitleLength > 0 then
+      wbs.WriteBuffer(FTitle[1], Header.TitleLength);
+    //write description
+    if Header.DescriptionLength > 0 then
+      wbs.WriteBuffer(Descr[1], Header.DescriptionLength);
     //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
     for I := 0 to Pred(Header.VertexCount) do
@@ -2425,6 +2429,7 @@ var
   I, vInd: SizeInt;
   Edge: TEdge;
   Vertex: TVertex;
+  Descr: string;
   rbs: TReadBufStream;
 begin
   if not (Assigned(aReadVertex) and Assigned(aReadData)) then
@@ -2440,9 +2445,18 @@ begin
     Clear;
     EnsureCapacity(Header.VertexCount);
     //read title
-    System.SetLength(FTitle, Header.TitleSize);
-    if Header.TitleSize > 0 then
-      rbs.ReadBuffer(FTitle[1], Header.TitleSize);
+    if Header.TitleLength > 0 then
+      begin
+        System.SetLength(FTitle, Header.TitleLength);
+        rbs.ReadBuffer(FTitle[1], Header.TitleLength);
+      end;
+    //read description
+    if Header.DescriptionLength > 0 then
+      begin
+        System.SetLength(Descr, Header.DescriptionLength);
+        rbs.ReadBuffer(Descr[1], Header.DescriptionLength);
+        Description.Text := Descr;
+      end;
     //read Items
     for I := 0 to Pred(Header.VertexCount) do
       begin
@@ -3145,9 +3159,10 @@ type
 var
   ReaderRef: TReaderRef;
   Reader: TTextFileReader;
-  Line, Elem: string;
+  Line, ParseLine, Elem: string;
   I: SizeInt;
   CurrEdge: array[0..1] of SizeInt;
+  Symb: AnsiChar;
 begin
   Reader := ReaderRef;
   if not Reader.Open(aFileName) then
@@ -3155,22 +3170,32 @@ begin
   Clear;
   for Line in Reader do
     begin
-      if LowerCase(Line)[1] <> 'e' then
-        continue;
-      I := 0;
-      for Elem in Line.SplitSB([' '])do
-        begin
-          if LowerCase(Elem) = 'e' then
+      ParseLine := Trim(Line);
+      Symb := LowerCase(ParseLine)[1];
+      case Symb of
+        'c':
+          begin
+            Description.Add(System.Copy(ParseLine, 3, System.Length(ParseLine)));
             continue;
-          if I > 1 then
-            begin
-              Clear;
-              raise ELGraphError.Create(SEUnexpectElem);
-            end;
-          CurrEdge[I] := StrToInt(Elem);
-          Inc(I);
-        end;
-      AddEdge(CurrEdge[0], CurrEdge[1]);
+          end;
+        'e':
+          begin
+            I := 0;
+            for Elem in Line.SplitSB([' ']) do
+              begin
+                if LowerCase(Elem) = Symb then
+                  continue;
+                if I > 1 then
+                  begin
+                    Clear;
+                    raise ELGraphError.Create(SEUnexpectElem);
+                  end;
+                CurrEdge[I] := StrToInt(Elem);
+                Inc(I);
+              end;
+            AddEdge(CurrEdge[0], CurrEdge[1]);
+          end;
+      end;
     end;
 end;
 

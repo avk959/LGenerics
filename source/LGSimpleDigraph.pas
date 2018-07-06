@@ -724,22 +724,29 @@ var
   Header: TStreamHeader;
   I: SizeInt;
   Edge: TEdge;
+  Descr: string;
   wbs: TWriteBufStream;
 begin
   if not (Assigned(aWriteVertex) and Assigned(aWriteData)) then
     raise ELGraphError.Create(SEWriteCallbackMissed);
   wbs := TWriteBufStream.Create(aStream);
   try
+    Descr := Description.Text;
     //write header
     Header.Magic := GRAPH_MAGIC;
     Header.Version := GRAPH_HEADER_VERSION;
-    Header.TitleSize := System.Length(Title);
+    Header.TitleLength := System.Length(Title);
+    Header.DescriptionLength := System.Length(Descr);
     Header.VertexCount := VertexCount;
     Header.EdgeCount := EdgeCount;
     wbs.WriteBuffer(Header, SizeOf(Header));
     //write title
-    if Header.TitleSize > 0 then
-      wbs.WriteBuffer(FTitle[1], Header.TitleSize);
+    if Header.TitleLength > 0 then
+      wbs.WriteBuffer(FTitle[1], Header.TitleLength);
+    //write description
+    //write description
+    if Header.DescriptionLength > 0 then
+      wbs.WriteBuffer(Descr[1], Header.DescriptionLength);
     //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
     for I := 0 to Pred(Header.VertexCount) do
@@ -762,6 +769,7 @@ var
   I, vInd: SizeInt;
   e: TEdge;
   Vertex: TVertex;
+  Descr: string;
   rbs: TReadBufStream;
 begin
   if not (Assigned(aReadVertex) and Assigned(aReadData)) then
@@ -777,9 +785,16 @@ begin
     Clear;
     EnsureCapacity(h.VertexCount);
     //read title
-    System.SetLength(FTitle, h.TitleSize);
-    if h.TitleSize > 0 then
-      rbs.ReadBuffer(FTitle[1], h.TitleSize);
+    System.SetLength(FTitle, h.TitleLength);
+    if h.TitleLength > 0 then
+      rbs.ReadBuffer(FTitle[1], h.TitleLength);
+    //read description
+    if h.DescriptionLength > 0 then
+      begin
+        System.SetLength(Descr, h.DescriptionLength);
+        rbs.ReadBuffer(Descr[1], h.DescriptionLength);
+        Description.Text := Descr;
+      end;
     //read Items
     for I := 0 to Pred(h.VertexCount) do
       begin

@@ -88,7 +88,7 @@ type
 
 const
   GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';
-  GRAPH_HEADER_VERSION     = 1;
+  GRAPH_HEADER_VERSION     = 2;
 
 type
 
@@ -287,10 +287,12 @@ type
     TStreamHeader = packed record
       Magic: TGraphMagic;
       Version: Byte;
-      TitleSize: Word;
+      TitleLength,
+      DescriptionLength: Word;
       VertexCount,
       EdgeCount: LongInt;
       //title
+      //description
       //vertices
       //edges: src index, dst index, data
     end;
@@ -325,6 +327,7 @@ type
     FCount,
     FEdgeCount: SizeInt;
     FTitle: string;
+    FDescription: TStrings;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
     function  GetAdjList(aIndex: SizeInt): PAdjList; inline;
@@ -461,6 +464,7 @@ type
     class property  DefaultEdgeData: TEdgeData read CFData;
     constructor Create;
     constructor Create(aCapacity: SizeInt);
+    destructor Destroy; override;
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateIntArray(aLen, aValue: SizeInt): TIntArray;
     function  CreateIntArrayRange: TIntArray;
@@ -523,6 +527,7 @@ type
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 
     property  Title: string read FTitle write FTitle;
+    property  Description: TStrings read FDescription;
     property  VertexCount: SizeInt read FCount;
     property  EdgeCount: SizeInt read FEdgeCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -1970,13 +1975,20 @@ end;
 
 constructor TGCustomGraph.Create;
 begin
+  FDescription := TStringList.Create;
   Title := 'Untitled';
 end;
 
 constructor TGCustomGraph.Create(aCapacity: SizeInt);
 begin
-  Title := 'Untitled';
+  Create;
   EnsureCapacity(aCapacity);
+end;
+
+destructor TGCustomGraph.Destroy;
+begin
+  FDescription.Free;
+  inherited;
 end;
 
 function TGCustomGraph.CreateIntArray(aValue: SizeInt): TIntArray;
@@ -2053,6 +2065,7 @@ begin
   FCount := 0;
   FEdgeCount := 0;
   FTitle := '';
+  FDescription.Clear;
 end;
 
 procedure TGCustomGraph.EnsureCapacity(aValue: SizeInt);
