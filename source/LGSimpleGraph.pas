@@ -325,7 +325,7 @@ type
   { checks whether the graph is a regular graph (that is, the degree of all its vertices equal);
     an empty graph is considered regular }
     function  IsRegular: Boolean;
-  { checks whether exists any cycle in theh same connected component as aRoot;
+  { checks whether exists any cycle in the same connected component as aRoot;
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
