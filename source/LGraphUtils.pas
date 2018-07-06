@@ -195,6 +195,7 @@ type
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
       procedure MakeEmpty; inline;
+      function  FindFirst(out aValue: SizeInt): Boolean;
       function  Contains(aValue: SizeInt): Boolean; inline;
       function  ContainsAny(constref aList: TIntSet): Boolean;
       function  ContainsAll(constref aList: TIntSet): Boolean;
@@ -256,7 +257,7 @@ type
       function  ContainsAll(constref aList: TAdjList): Boolean;
       function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean; inline;
       function  Find(aDst: SizeInt): PAdjItem;
-      function  FindFirst(out aDst: SizeInt): Boolean;
+      function  FindFirst(out aValue: SizeInt): Boolean;
       function  Add(constref aItem: TAdjItem): Boolean;
       function  Remove(aDst: SizeInt): Boolean; inline;
       property  Count: SizeInt read FCount;
@@ -1096,11 +1097,11 @@ begin
     end;
 end;
 
-function TGCustomGraph.TAdjList.FindFirst(out aDst: SizeInt): Boolean;
+function TGCustomGraph.TAdjList.FindFirst(out aValue: SizeInt): Boolean;
 begin
   Result := Count <> 0;
   if Result then
-    aDst := FList[0].Destination;
+    aValue := FList[0].Destination;
 end;
 
 function TGCustomGraph.TAdjList.Add(constref aItem: TAdjItem): Boolean;
@@ -1212,6 +1213,13 @@ end;
 procedure TGCustomGraph.TIntSet.MakeEmpty;
 begin
   FCount := 0;
+end;
+
+function TGCustomGraph.TIntSet.FindFirst(out aValue: SizeInt): Boolean;
+begin
+  Result := Count <> 0;
+  if Result then
+    aValue := FItems[Pred(Count)]
 end;
 
 function TGCustomGraph.TIntSet.GetItem(aIndex: SizeInt): SizeInt;

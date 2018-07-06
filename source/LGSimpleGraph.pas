@@ -219,7 +219,9 @@ type
       public
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
-
+  const
+    LISTCLIQUES_SPARSE_CUTOFF = 70000;
+    MAXCLIQUE_SPARSE_CUTOFF   = 50000;
   var
     FCompCount: SizeInt;
     FConnected,
@@ -2669,7 +2671,7 @@ begin
     Inc(s);
   aCircuit.Add(s);
   repeat
-    while g[s]^.TryPop(d) do
+    while g[s]^.FindFirst(d) do
       begin
         {%H-}Stack.Push(s);
         g.RemoveEdge(s, d);
@@ -2723,7 +2725,7 @@ begin
     exit;
   if aOnFindClique = nil then
     raise ELGraphError.Create(SECallbackMissed);
-  if VertexCount >= 70000 then //todo: const
+  if VertexCount > LISTCLIQUES_SPARSE_CUTOFF then
     ListCliquesSparse(aOnFindClique)
   else
     if VertexCount > 256 then
@@ -2736,7 +2738,7 @@ function TGSimpleGraph.MaxClique: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
-  if VertexCount >= 50000 then //todo: const
+  if VertexCount > MAXCLIQUE_SPARSE_CUTOFF then
     Result := GetMaxCliqueSparse
   else
     if VertexCount > 256 then
