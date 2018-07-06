@@ -722,41 +722,48 @@ end;
 procedure TGSimpleDiGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
 var
   Header: TStreamHeader;
-  I: SizeInt;
+  s, d: Integer;
   Edge: TEdge;
-  Descr: string;
+  gTitle, Descr: utf8string;
   wbs: TWriteBufStream;
 begin
-  if not (Assigned(aWriteVertex) and Assigned(aWriteData)) then
+  if not Assigned(aWriteVertex) then
     raise ELGraphError.Create(SEWriteCallbackMissed);
+{$IFDEF CPU64}
+  if VertexCount > System.High(Integer) then
+    raise ELGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
+{$ENDIF CPU64}
   wbs := TWriteBufStream.Create(aStream);
   try
-    Descr := Description.Text;
     //write header
     Header.Magic := GRAPH_MAGIC;
     Header.Version := GRAPH_HEADER_VERSION;
-    Header.TitleLength := System.Length(Title);
-    Header.DescriptionLength := System.Length(Descr);
+    gTitle := Title;
+    Header.TitleLen := System.Length(gTitle);
+    Descr := Description.Text;
+    Header.DescriptionLen := System.Length(Descr);
     Header.VertexCount := VertexCount;
     Header.EdgeCount := EdgeCount;
     wbs.WriteBuffer(Header, SizeOf(Header));
     //write title
-    if Header.TitleLength > 0 then
-      wbs.WriteBuffer(FTitle[1], Header.TitleLength);
+    if Header.TitleLen > 0 then
+      wbs.WriteBuffer(Pointer(gTitle)^, Header.TitleLen);
     //write description
-    //write description
-    if Header.DescriptionLength > 0 then
-      wbs.WriteBuffer(Descr[1], Header.DescriptionLength);
+    if Header.DescriptionLen > 0 then
+      wbs.WriteBuffer(Pointer(Descr)^, Header.DescriptionLen);
     //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
-    for I := 0 to Pred(Header.VertexCount) do
-      aWriteVertex(wbs, FNodeList[I].Vertex);
+    for s := 0 to Pred(Header.VertexCount) do
+      aWriteVertex(wbs, FNodeList[s].Vertex);
     //write edges
     for Edge in Edges do
       begin
-        wbs.WriteBuffer(Edge.Source, SizeOf(Edge.Source));
-        wbs.WriteBuffer(Edge.Destination, SizeOf(Edge.Destination));
-        aWriteData(wbs, Edge.Data);
+        s := Edge.Source;
+        d := Edge.Destination;
+        wbs.WriteBuffer(NtoLE(s), SizeOf(s));
+        wbs.WriteBuffer(NtoLE(d), SizeOf(d));
+        if Assigned(aWriteData) then
+          aWriteData(wbs, Edge.Data);
       end;
   finally
     wbs.Free;
@@ -765,52 +772,58 @@ end;
 
 procedure TGSimpleDiGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
 var
-  h: TStreamHeader;
-  I, vInd: SizeInt;
-  e: TEdge;
+  Header: TStreamHeader;
+  s, d: Integer;
+  I, Ind: SizeInt;
+  Data: TEdgeData;
   Vertex: TVertex;
-  Descr: string;
+  gTitle, Descr: utf8string;
   rbs: TReadBufStream;
 begin
-  if not (Assigned(aReadVertex) and Assigned(aReadData)) then
+  if not Assigned(aReadVertex) then
     raise ELGraphError.Create(SEReadCallbackMissed);
   rbs := TReadBufStream.Create(aStream);
   try
     //read header
-    rbs.ReadBuffer(h, SizeOf(h));
-    if h.Magic <> GRAPH_MAGIC then
+    rbs.ReadBuffer(Header, SizeOf(Header));
+    if Header.Magic <> GRAPH_MAGIC then
       raise ELGraphError.Create(SEUnknownGraphStreamFmt);
-    if h.Version > GRAPH_HEADER_VERSION then
+    if Header.Version > GRAPH_HEADER_VERSION then
       raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
     Clear;
-    EnsureCapacity(h.VertexCount);
+    EnsureCapacity(Header.VertexCount);
     //read title
-    System.SetLength(FTitle, h.TitleLength);
-    if h.TitleLength > 0 then
-      rbs.ReadBuffer(FTitle[1], h.TitleLength);
-    //read description
-    if h.DescriptionLength > 0 then
+    if Header.TitleLen > 0 then
       begin
-        System.SetLength(Descr, h.DescriptionLength);
-        rbs.ReadBuffer(Descr[1], h.DescriptionLength);
+        System.SetLength(gTitle, Header.TitleLen);
+        rbs.ReadBuffer(Pointer(gTitle)^, Header.TitleLen);
+        FTitle := gTitle;
+      end;
+    //read description
+    if Header.DescriptionLen > 0 then
+      begin
+        System.SetLength(Descr, Header.DescriptionLen);
+        rbs.ReadBuffer(Pointer(Descr)^, Header.DescriptionLen);
         Description.Text := Descr;
       end;
     //read Items
-    for I := 0 to Pred(h.VertexCount) do
+    for I := 0 to Pred(Header.VertexCount) do
       begin
         aReadVertex(rbs, Vertex);
-        if not AddVertex(Vertex, vInd) then
+        if not AddVertex(Vertex, Ind) then
           raise ELGraphError.Create(SEGraphStreamCorrupt);
-        if vInd <> I then
+        if Ind <> I then
           raise ELGraphError.Create(SEGraphStreamReadIntern);
       end;
     //read edges
-    for I := 0 to Pred(h.EdgeCount) do
+    Data := DefaultEdgeData;
+    for I := 0 to Pred(Header.EdgeCount) do
       begin
-        rbs.ReadBuffer(e.Source, SizeOf(e.Source));
-        rbs.ReadBuffer(e.Destination, SizeOf(e.Destination));
-        aReadData(rbs, e.Data);
-        AddEdgeI(e.Source, e.Destination, e.Data);
+        rbs.ReadBuffer(s, SizeOf(s));
+        rbs.ReadBuffer(d, SizeOf(d));
+        if Assigned(aReadData) then
+          aReadData(rbs, Data);
+        AddEdgeI(LEToN(s), LEToN(d), Data);
       end;
   finally
     rbs.Free;

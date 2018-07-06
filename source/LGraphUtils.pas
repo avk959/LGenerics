@@ -287,14 +287,14 @@ type
     TStreamHeader = packed record
       Magic: TGraphMagic;
       Version: Byte;
-      TitleLength,
-      DescriptionLength: Word;
+      TitleLen,
+      DescriptionLen: Word;
       VertexCount,
       EdgeCount: LongInt;
-      //title
-      //description
+      //title as utf8string
+      //description as utf8string
       //vertices
-      //edges: src index, dst index, data
+      //edges: src index, dst index as little endian LongInt, data
     end;
 
     TSkeleton = record

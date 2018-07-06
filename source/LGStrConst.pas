@@ -58,6 +58,7 @@ resourcestring
   SEMatrixSizeExceedFmt    = 'Maximum matrix size exceeded(%d)';
   SEUnableOpenFileFmt      = 'Unable to open file "%s"';
   SEUnexpectElem           = 'Unexpected graph element';
+  SEStreamSizeExceedFmt    = 'Maximum stream size exceeded(%d)';
 
 implementation
 
