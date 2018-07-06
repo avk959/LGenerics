@@ -191,6 +191,7 @@ type
       function  GetEnumerator: TEnumerator; inline;
       function  ToArray: TIntArray; inline;
       procedure Assign(constref aList: TIntSet);
+      procedure AssignArray(constref a: TIntArray);
       function  Copy: TIntSet; inline;
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
@@ -217,6 +218,8 @@ type
       property  Items[aIndex: SizeInt]: SizeInt read GetItem; default;
     end;
     PIntSet = ^TIntSet;
+
+    { TAdjList }
 
     TAdjList = record
     public
@@ -247,7 +250,7 @@ type
     public
       function  GetEnumerator: TEnumerator; inline;
       function  ToArray: TAdjItemArray; inline;
-      procedure CopyTo(aSet: PIntSet);
+      procedure CopyTo(var aSet: TIntSet);
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
       procedure Clear;
@@ -1001,14 +1004,14 @@ begin
   Result := System.Copy(FList, 0, Count);
 end;
 
-procedure TGCustomGraph.TAdjList.CopyTo(aSet: PIntSet);
+procedure TGCustomGraph.TAdjList.CopyTo(var aSet: TIntSet);
 var
   I: SizeInt;
 begin
-  aSet^.FCount := Count;
-  System.SetLength(aSet^.FItems, Count);
+  aSet.FCount := Count;
+  System.SetLength(aSet.FItems, Count);
   for I := 0 to Pred(Count) do
-    aSet^.FItems[I] := FList[I].Destination;
+    aSet.FItems[I] := FList[I].Destination;
 end;
 
 function TGCustomGraph.TAdjList.IsEmpty: Boolean;
@@ -1198,6 +1201,12 @@ begin
   FCount := aList.Count;
   if Count <> 0 then
     FItems := System.Copy(aList.FItems, 0, Count);
+end;
+
+procedure TGCustomGraph.TIntSet.AssignArray(constref a: TIntArray);
+begin
+  FItems := System.Copy(a);
+  FCount := System.Length(FItems);
 end;
 
 function TGCustomGraph.TIntSet.Copy: TIntSet;
