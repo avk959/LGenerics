@@ -219,8 +219,6 @@ type
     end;
     PIntSet = ^TIntSet;
 
-    { TAdjList }
-
     TAdjList = record
     public
     type
