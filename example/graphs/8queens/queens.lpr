@@ -4,9 +4,9 @@
   requires that no two queens share the same row, column, or diagonal.
 
   This example finds all solutions of this puzzle;
-  The chessboard will be presented in the form of a graph. We will connect by
+  The chessboard will be presented in the form of a graph. We will connect with
   the edge each field with all other fields reachable by a queen from the given
-  field. The required solutions of the puzzle are exactly the maximal independent
+  field. The required solutions of the puzzle are exactly the maximum independent
   sets of the constructed graph.
 }
 program queens;
@@ -59,7 +59,7 @@ begin
         Brd[I, J] := Field;
         FBoard.AddVertex(Field);
       end;
-  //connect all the fields that beats the queen
+  //connect all the fields that are reachable by the queen
   //verticals
   for K in [1..8] do
     for I in [1..8] do
