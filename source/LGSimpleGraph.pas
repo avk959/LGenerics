@@ -339,12 +339,12 @@ type
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set;
     worst case time cost O(3^n/3)}
-    function  ExactMaxIndependentSet: TIntArray;
+    function  MaxIndependentSet: TIntArray;
     function  GreedyMaxIndependentSet: TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
-    function  ExactMaxClique: TIntArray;
+    function  MaxClique: TIntArray;
     function  GreedyMaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
@@ -2736,7 +2736,7 @@ begin
     ListISStatic(aOnFindSet)
 end;
 
-function TGSimpleGraph.ExactMaxIndependentSet: TIntArray;
+function TGSimpleGraph.MaxIndependentSet: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
@@ -2779,7 +2779,7 @@ begin
       ListCliquesStatic(aOnFindClique);
 end;
 
-function TGSimpleGraph.ExactMaxClique: TIntArray;
+function TGSimpleGraph.MaxClique: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
