@@ -1197,12 +1197,8 @@ end;
 procedure TGCustomGraph.TIntSet.Assign(constref aList: TIntSet);
 begin
   FCount := aList.Count;
-  if Count > 0 then
-    begin
-      if System.Length(FItems) < Count then
-        System.SetLength(FItems, Count);
-      System.Move(Pointer(aList.FItems)^, Pointer(FItems)^, Count * SizeOf(SizeInt));
-    end;
+  if Count <> 0 then
+    FItems := System.Copy(aList.FItems, 0, Count);
 end;
 
 procedure TGCustomGraph.TIntSet.AssignArray(constref a: TIntArray);

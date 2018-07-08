@@ -2801,11 +2801,12 @@ var
 begin
   if IsEmpty then
     exit(nil);
-  Cand.AssignArray(SortComplementByDegeneracy);
+  Cand.AssignArray(SortVerticesByDegeneracy);
+  Cand.Reverse;
   while Cand.NonEmpty do
     begin
       I := Cand.Pop;
-      {%H-}Stack.Push(I);
+      Stack.Push(I);
       {%H-}Q.MakeEmpty;
       for J in Cand do
         if AdjLists[I]^.Contains(J) then
