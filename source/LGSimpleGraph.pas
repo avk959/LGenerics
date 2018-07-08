@@ -224,6 +224,7 @@ type
   const
     LISTCLIQUES_SPARSE_CUTOFF = 60000;
     MAXCLIQUE_SPARSE_CUTOFF   = 50000;
+    MAXCLIQUE_DENSITY_CUTOFF  = 0.005;
   var
     FCompCount: SizeInt;
     FConnected,
@@ -346,6 +347,7 @@ type
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
     function  MaxClique: TIntArray;
     function  GreedyMaxClique: TIntArray;
+    //function  MinVertexCover: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -2783,7 +2785,7 @@ function TGSimpleGraph.MaxClique: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
-  if VertexCount > MAXCLIQUE_SPARSE_CUTOFF then
+  if (VertexCount > MAXCLIQUE_SPARSE_CUTOFF) or (Density <= MAXCLIQUE_DENSITY_CUTOFF) then
     Result := GetMaxCliqueSparse
   else
     if VertexCount > 256 then
@@ -2794,8 +2796,7 @@ end;
 
 function TGSimpleGraph.GreedyMaxClique: TIntArray;
 var
-  Cand, Stack: TIntSet;
-  Q: TIntArray;
+  Cand, Stack, Q: TIntSet;
   I, J: SizeInt;
 begin
   if IsEmpty then
@@ -2805,10 +2806,11 @@ begin
     begin
       I := Cand.Pop;
       {%H-}Stack.Push(I);
-      Q := Cand.ToArray;
-      for J in Q do
-        if not AdjLists[I]^.Contains(J) then
-          Cand.Delete(J);
+      {%H-}Q.MakeEmpty;
+      for J in Cand do
+        if AdjLists[I]^.Contains(J) then
+          Q.Push(J);
+      Cand.Assign(Q);
     end;
   Result := Stack.ToArray;
 end;
