@@ -186,11 +186,16 @@ type
     private
       FMatrix: TSkeleton;
       FCurrSet: TIntSet;
+      FVertices,
       FResult: TIntArray;
       FCurrSize: SizeInt;
       FOnFind: TOnFindSet;
+      procedure Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TIntSet);
       procedure Extend(var aSub, aCand: TIntSet);
+      procedure FillMatrix(aGraph: TGSimpleGraph);
+      procedure SortMatrixByDegeneracy(aGraph: TGSimpleGraph);
+      procedure SortMatrixByDegree(aGraph: TGSimpleGraph);
     public
       function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -1259,31 +1264,61 @@ begin
   Extend(Sub, Cand);
 end;
 
-{ TGSimpleGraph.TSparseCliqueHelper }
+procedure TGSimpleGraph.TSparseCliqueHelper.Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
+var
+  P, Q: TIntSet;
+  I, J, ColorClass: SizeInt;
+begin
+  P.Assign(aCand);
+  P.Reverse;
+  ColorClass := 0;
+  I := 0;
+  while P.NonEmpty do
+    begin
+      Inc(ColorClass);
+      Q.Assign(P);
+      while Q.NonEmpty do
+        begin
+          J := Q.Pop;
+          P.Delete(J);
+          Q.Subtract(FMatrix[J]^);
+          aColOrd[I] := J;
+          aColors[I] := ColorClass;
+          Inc(I);
+        end;
+    end;
+end;
 
 procedure TGSimpleGraph.TSparseCliqueHelper.Extend(var aCand: TIntSet);
 var
   NewCand: TIntSet;
-  I: SizeInt;
+  ColOrd, Colors: TIntArray;
+  I, J: SizeInt;
 begin
-  while aCand.NonEmpty do
+  if aCand.NonEmpty then
     begin
-      I := aCand.Pop;
-      if FMatrix[I]^.Count + FCurrSet.Count <= FCurrSize then
-        exit;
-      FCurrSet.Push(I);
-      NewCand.Assign(aCand);
-      NewCand.Intersect(FMatrix[I]^);
-      if NewCand.NonEmpty then
-        Extend(NewCand)
-      else
-        if FCurrSet.Count > FCurrSize then
-          begin
-            FCurrSize := FCurrSet.Count;
-            FResult := FCurrSet.ToArray;
-          end;
-      FCurrSet.Pop;
-    end;
+      System.SetLength(ColOrd, aCand.Count);
+      System.SetLength(Colors, aCand.Count);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(aCand.Count) downto 0 do
+        begin
+          if Colors[I] + FCurrSet.Count <= FCurrSize then
+            exit;
+          J := ColOrd[I];
+          aCand.Delete(J);
+          FCurrSet.Push(FVertices[J]);
+          NewCand.Assign(aCand);
+          NewCand.Intersect(FMatrix[J]^);
+          Extend(NewCand);
+          FCurrSet.Pop;
+        end;
+    end
+  else
+    if FCurrSet.Count > FCurrSize then
+      begin
+        FCurrSize := FCurrSet.Count;
+        FResult := FCurrSet.ToArray;
+      end;
 end;
 
 procedure TGSimpleGraph.TSparseCliqueHelper.Extend(var aSub, aCand: TIntSet);
@@ -1302,7 +1337,7 @@ begin
               aCand.Delete(I);
               NewCand.Assign(aCand);
               NewSub.Assign(aSub);
-              FCurrSet.Push(I);
+              FCurrSet.Push(FVertices[I]);
               NewCand.Intersect(FMatrix[I]^);
               NewSub.Intersect(FMatrix[I]^);
               Extend(NewSub, NewCand);
@@ -1314,12 +1349,39 @@ begin
     FOnFind(FCurrSet.ToArray);
 end;
 
+procedure TGSimpleGraph.TSparseCliqueHelper.FillMatrix(aGraph: TGSimpleGraph);
+var
+  I, J: SizeInt;
+  pA: PAdjList;
+begin
+  FMatrix := TSkeleton.Create(aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      pA := aGraph.AdjLists[FVertices[I]];
+      for J := 0 to Pred(aGraph.VertexCount) do
+        if (I <> J) and pA^.Contains(FVertices[J]) then
+          FMatrix[I]^.Push(J);
+    end;
+end;
+
+procedure TGSimpleGraph.TSparseCliqueHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph);
+begin
+  FVertices := aGraph.SortVerticesByDegeneracy;
+  FillMatrix(aGraph);
+end;
+
+procedure TGSimpleGraph.TSparseCliqueHelper.SortMatrixByDegree(aGraph: TGSimpleGraph);
+begin
+  FVertices := aGraph.SortVerticesByDegree(soDesc);
+  FillMatrix(aGraph);
+end;
+
 function TGSimpleGraph.TSparseCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TIntSet;
 begin
-  FMatrix := aGraph.CreateSkeleton;
-  Cand.AssignArray(aGraph.SortVerticesByDegeneracy);
+  SortMatrixByDegeneracy(aGraph);
+  Cand.InitRange(aGraph.VertexCount);
   FCurrSize := 0;
   Extend(Cand);
   Result := FResult;
@@ -1329,8 +1391,8 @@ procedure TGSimpleGraph.TSparseCliqueHelper.ListCliques(aGraph: TGSimpleGraph; a
 var
   Sub, Cand: TIntSet;
 begin
-  FMatrix := aGraph.CreateSkeleton;
-  Sub.AssignArray(aGraph.SortVerticesByDegree(soDesc));
+  SortMatrixByDegree(aGraph);
+  Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
   FOnFind := aOnFind;
   Extend(Sub, Cand);
@@ -2820,7 +2882,7 @@ begin
   while Cand.NonEmpty do
     begin
       I := Cand.Pop;
-      Stack.Push(I);
+      {%H-}Stack.Push(I);
       {%H-}Q.MakeEmpty;
       for J in Cand do
         if AdjLists[I]^.Contains(J) then
