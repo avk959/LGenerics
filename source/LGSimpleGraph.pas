@@ -1274,7 +1274,7 @@ begin
       FCurrSet.Push(I);
       NewCand.Assign(aCand);
       NewCand.Intersect(FMatrix[I]^);
-      if NewCand.IsEmpty then
+      if NewCand.NonEmpty then
         Extend(NewCand)
       else
         if FCurrSet.Count > FCurrSize then
