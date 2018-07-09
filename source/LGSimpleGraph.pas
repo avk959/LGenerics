@@ -47,8 +47,8 @@ type
   generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
-    TBoolMatrix      = array of TBoolVector;
-    TIntDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
+    TBoolMatrix         = array of TBoolVector;
+    TSortByDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
     TCliqueIsHelper = record
     private
@@ -196,6 +196,18 @@ type
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
+    TMvcHelper = record
+    private
+      FMatrix: TSkeleton;
+      FResult: TIntArray;
+      FCurrSize: SizeInt;
+      function  FindLessMvc(var  aSub, aCand: TIntSet): Boolean;
+      function  FindLessIs(var  aSub, aCand: TIntSet): Boolean;
+    public
+      function  MinMvc(aGraph: TGSimpleGraph): TIntArray;
+      function  MinIs(aGraph: TGSimpleGraph): TIntArray;
+    end;
+
     TDistinctEdgeEnumerator = record
     private
       FList: PNode;
@@ -264,9 +276,7 @@ type
     function  CreateComplementDegreeArray: TIntArray;
     function  SortVerticesByDegeneracy: TIntArray;
     function  SortComplementByDegeneracy: TIntArray;
-    function  SortVerticesByDegree: TIntArray;
-    function  SortComplementByDegree: TIntArray;
-    procedure CreateSortedSkeleton(out s: TSkeleton; out aVertices: TIntArray; o: TSortOrder = soAsc);
+    function  SortVerticesByDegree(o: TSortOrder): TIntArray;
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
     property  InnerConnected: Boolean read FConnected;
@@ -338,12 +348,13 @@ type
     worst case time cost O(3^n/3)}
     function  MaxIndependentSet: TIntArray;
     function  GreedyMaxIndependentSet: TIntArray;
+    function  MinIndependentSet: TIntArray;
+    function  GreedyMinIndependentSet: TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
     function  MaxClique: TIntArray;
     function  GreedyMaxClique: TIntArray;
-    //function  MinVertexCover: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -689,9 +700,9 @@ end;
 procedure TGSimpleGraph.TCliqueIsHelper.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
-    FVertices := aGraph.SortComplementByDegree
+    FVertices := aGraph.SortVerticesByDegree(soAsc)
   else
-    FVertices := aGraph.SortVerticesByDegree;
+    FVertices := aGraph.SortVerticesByDegree(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
@@ -1196,9 +1207,9 @@ end;
 procedure TGSimpleGraph.TCliqueIsHelper256.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
-    FVertices := aGraph.SortComplementByDegree
+    FVertices := aGraph.SortVerticesByDegree(soAsc)
   else
-    FVertices := aGraph.SortVerticesByDegree;
+    FVertices := aGraph.SortVerticesByDegree(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
@@ -1308,7 +1319,6 @@ end;
 function TGSimpleGraph.TSparseCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TIntSet;
-  I: SizeInt;
 begin
   FMatrix := aGraph.CreateSkeleton;
   Cand.AssignArray(aGraph.SortVerticesByDegeneracy);
@@ -1322,10 +1332,101 @@ var
   Sub, Cand: TIntSet;
 begin
   FMatrix := aGraph.CreateSkeleton;
-  Sub.AssignArray(aGraph.SortVerticesByDegree);
+  Sub.AssignArray(aGraph.SortVerticesByDegree(soDesc));
   Cand.InitRange(aGraph.VertexCount);
   FOnFind := aOnFind;
   Extend(Sub, Cand);
+end;
+
+{ TGSimpleGraph.TMvcHelper }
+
+function TGSimpleGraph.TMvcHelper.FindLessMvc(var aSub, aCand: TIntSet): Boolean;
+begin
+
+end;
+
+function TGSimpleGraph.TMvcHelper.FindLessIs(var aSub, aCand: TIntSet): Boolean;
+var
+  NewSub, NewCand: TIntSet;
+  I, J, dJ, v: SizeInt;
+  IOk, JOk: Boolean;
+begin
+  if aSub.IsEmpty then
+    exit(aCand.Count < FCurrSize)
+  else
+    if aCand.Count >= FCurrSize then
+      exit(False);
+
+  I := aSub.Pop;
+  dJ := 0;
+  J := FMatrix[I]^[0];
+  for v in FMatrix[I]^ do
+    if FMatrix[v]^.Count > dJ then
+      begin
+        dJ := FMatrix[v]^.Count;
+        J := v;
+      end;
+
+  NewCand.Assign(aCand);
+  aCand.Push(I);
+  NewSub.Assign(aSub);
+  NewSub.Subtract(FMatrix[I]^);
+  IOk := FindLessIs(NewSub, aCand);
+  NewCand.Push(J);
+  NewSub.Assign(aSub);
+  NewSub.Delete(J);
+  NewSub.Subtract(FMatrix[J]^);
+  JOk := FindLessIs(NewSub, NewCand);
+  Result := IOk or JOk;
+  if Result and ((IOk and JOk and (NewCand.Count < aCand.Count)) or not IOk) then
+    begin
+      aCand.Assign(NewCand);
+      FCurrSize := aCand.Count;
+    end;
+end;
+
+function TGSimpleGraph.TMvcHelper.MinMvc(aGraph: TGSimpleGraph): TIntArray;
+begin
+
+end;
+
+function TGSimpleGraph.TMvcHelper.MinIs(aGraph: TGSimpleGraph): TIntArray;
+var
+  Sub, Cand: TIntSet;
+  I, J, K: SizeInt;
+begin
+  Result := aGraph.GreedyMinIndependentSet;
+  FCurrSize := System.Length(Result);
+  if FCurrSize <= 1 then
+    exit;
+  FMatrix := aGraph.CreateSkeleton;
+  for I in aGraph.SortVerticesByDegree(soAsc) do
+    if FMatrix[I]^.Count > 1 then
+      {%H-}Sub.Push(I);
+  I := Pred(Sub.Count);
+  while I >= 0 do
+    begin
+      if FMatrix[Sub[I]]^.Count = 2 then
+        begin
+          J := FMatrix[Sub[I]]^[0];
+          K := FMatrix[Sub[I]]^[1];
+          if FMatrix[J]^.Contains(K) then
+            begin
+              Sub.Delete(J);
+              Sub.Delete(K);
+              I -= 3;
+            end
+          else
+            begin
+              Sub.Delete(I);
+              I -= 2;
+            end;
+        end
+      else
+        Dec(I);
+    end;
+  if FindLessIs(Sub, Cand{%H-}) then
+    Result := Cand.ToArray;
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
@@ -2155,32 +2256,10 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-function TGSimpleGraph.SortVerticesByDegree: TIntArray;
+function TGSimpleGraph.SortVerticesByDegree(o: TSortOrder): TIntArray;
 begin
   Result := CreateIntArrayRange;
-  TIntDegreeHelper.Sort(Result, @CmpByDegree, soDesc);
-end;
-
-function TGSimpleGraph.SortComplementByDegree: TIntArray;
-begin
-  Result := CreateIntArrayRange;
-  TIntDegreeHelper.Sort(Result, @CmpByDegree);
-end;
-
-procedure TGSimpleGraph.CreateSortedSkeleton(out s: TSkeleton; out aVertices: TIntArray; o: TSortOrder);
-var
-  I, J: SizeInt;
-  p: PAdjList;
-begin
-  aVertices := SortVerticesByDegeneracy;
-  s := TSkeleton.Create(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    begin
-      p := AdjLists[aVertices[I]];
-      for J := 0 to Pred(VertexCount) do
-        if (I <> J) and p^.Contains(aVertices[J]) then
-          s[I]^.Push(J);
-    end;
+  TSortByDegreeHelper.Sort(Result, @CmpByDegree, o);
 end;
 
 function TGSimpleGraph.CmpByDegree(constref L, R: SizeInt): SizeInt;
@@ -2693,10 +2772,41 @@ var
 begin
   if IsEmpty then
     exit(nil);
-  Cand.AssignArray(SortVerticesByDegeneracy);
+  Cand.AssignArray(SortVerticesByDegree(soDesc));
   while Cand.NonEmpty do
     begin
       I := Cand.Pop;
+      if DegreeI(I) = 0 then
+        continue;
+      {%H-}Stack.Push(I);
+      for J in AdjVerticesI(I) do
+        Cand.Delete(J);
+    end;
+  Result := Stack.ToArray;
+end;
+
+function TGSimpleGraph.MinIndependentSet: TIntArray;
+var
+  Helper: TMvcHelper;
+begin
+  if IsEmpty then
+    exit(nil);
+  Result := Helper.MinIs(Self);
+end;
+
+function TGSimpleGraph.GreedyMinIndependentSet: TIntArray;
+var
+  Cand, Stack: TIntSet;
+  I, J: SizeInt;
+begin
+  if IsEmpty then
+    exit(nil);
+  Cand.AssignArray(SortVerticesByDegree(soAsc));
+  while Cand.NonEmpty do
+    begin
+      I := Cand.Pop;
+      if DegreeI(I) = 0 then
+        continue;
       {%H-}Stack.Push(I);
       for J in AdjVerticesI(I) do
         Cand.Delete(J);
