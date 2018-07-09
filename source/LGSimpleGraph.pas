@@ -196,15 +196,13 @@ type
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
-    TMvcHelper = record
+    TMinIsHelper = record
     private
       FMatrix: TSkeleton;
       FResult: TIntArray;
       FCurrSize: SizeInt;
-      function  FindLessMvc(var  aSub, aCand: TIntSet): Boolean;
       function  FindLessIs(var  aSub, aCand: TIntSet): Boolean;
     public
-      function  MinMvc(aGraph: TGSimpleGraph): TIntArray;
       function  MinIs(aGraph: TGSimpleGraph): TIntArray;
     end;
 
@@ -1338,26 +1336,24 @@ begin
   Extend(Sub, Cand);
 end;
 
-{ TGSimpleGraph.TMvcHelper }
+{ TGSimpleGraph.TMinIsHelper }
 
-function TGSimpleGraph.TMvcHelper.FindLessMvc(var aSub, aCand: TIntSet): Boolean;
-begin
-
-end;
-
-function TGSimpleGraph.TMvcHelper.FindLessIs(var aSub, aCand: TIntSet): Boolean;
+function TGSimpleGraph.TMinIsHelper.FindLessIs(var aSub, aCand: TIntSet): Boolean;
 var
   NewSub, NewCand: TIntSet;
   I, J, dJ, v: SizeInt;
   IOk, JOk: Boolean;
 begin
-  if aSub.IsEmpty then
-    exit(aCand.Count < FCurrSize)
-  else
+  repeat
+    if not aSub.TryPop(I) then
+      exit(aCand.Count < FCurrSize);
     if aCand.Count >= FCurrSize then
       exit(False);
+    aCand.Push(I);
+    if FMatrix[I]^.Count > 1 then
+      break;
+  until False;
 
-  I := aSub.Pop;
   dJ := 0;
   J := FMatrix[I]^[0];
   for v in FMatrix[I]^ do
@@ -1368,7 +1364,7 @@ begin
       end;
 
   NewCand.Assign(aCand);
-  aCand.Push(I);
+  NewCand.Pop;
   NewSub.Assign(aSub);
   NewSub.Subtract(FMatrix[I]^);
   IOk := FindLessIs(NewSub, aCand);
@@ -1385,46 +1381,16 @@ begin
     end;
 end;
 
-function TGSimpleGraph.TMvcHelper.MinMvc(aGraph: TGSimpleGraph): TIntArray;
-begin
-
-end;
-
-function TGSimpleGraph.TMvcHelper.MinIs(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TMinIsHelper.MinIs(aGraph: TGSimpleGraph): TIntArray;
 var
   Sub, Cand: TIntSet;
-  I, J, K: SizeInt;
 begin
   Result := aGraph.GreedyMinIndependentSet;
   FCurrSize := System.Length(Result);
   if FCurrSize <= 1 then
     exit;
   FMatrix := aGraph.CreateSkeleton;
-  for I in aGraph.SortVerticesByDegree(soAsc) do
-    if FMatrix[I]^.Count > 1 then
-      {%H-}Sub.Push(I);
-  I := Pred(Sub.Count);
-  while I >= 0 do
-    begin
-      if FMatrix[Sub[I]]^.Count = 2 then
-        begin
-          J := FMatrix[Sub[I]]^[0];
-          K := FMatrix[Sub[I]]^[1];
-          if FMatrix[J]^.Contains(K) then
-            begin
-              Sub.Delete(J);
-              Sub.Delete(K);
-              I -= 3;
-            end
-          else
-            begin
-              Sub.Delete(I);
-              I -= 2;
-            end;
-        end
-      else
-        Dec(I);
-    end;
+  Sub.AssignArray(aGraph.SortVerticesByDegree(soAsc));
   if FindLessIs(Sub, Cand{%H-}) then
     Result := Cand.ToArray;
 end;
@@ -2787,7 +2753,7 @@ end;
 
 function TGSimpleGraph.MinIndependentSet: TIntArray;
 var
-  Helper: TMvcHelper;
+  Helper: TMinIsHelper;
 begin
   if IsEmpty then
     exit(nil);
