@@ -201,14 +201,13 @@ type
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
-    TMinIsHelper = record
+    TDomSetHelper = record
     private
       FMatrix: TSkeleton;
       FResult: TIntArray;
-      FCurrSize: SizeInt;
-      function  FindLessIs(var  aSub, aCand: TIntSet): Boolean;
+      procedure Extend(constref aSub, aCand: TIntSet);
     public
-      function  MinIs(aGraph: TGSimpleGraph): TIntArray;
+      function  MinDomSet(aGraph: TGSimpleGraph): TIntArray;
     end;
 
     TDistinctEdgeEnumerator = record
@@ -345,14 +344,16 @@ type
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
-  { lists all maximal independent sets }
-    procedure ListIndependentSets(aOnFindSet: TOnFindSet);
-  { returns indices of the vertices of the some found maximum independent set;
-    worst case time cost O(3^n/3)}
-    function  MaxIndependentSet: TIntArray;
-    function  GreedyMaxIndependentSet: TIntArray;
-    function  MinIndependentSet: TIntArray;
-    function  GreedyMinIndependentSet: TIntArray;
+  { lists all maximal independent sets of vertices }
+    procedure ListIndependentVertexSets(aOnFindSet: TOnFindSet);
+  { returns indices of the vertices of the some found maximum independent set of vertices;
+    worst case time cost O(3^n/3) }
+    function  MaxIndependentVertexSet: TIntArray;
+    function  GreedyMaxIndependentVertexSet: TIntArray;
+    function  GreedyMinIndependentVertexSet: TIntArray;
+  { returns indices of the vertices of the some found minimum dominating set of vertices;
+    worst case time cost O(2^n) }
+    function  MinDominatingVertexSet: TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
@@ -1398,63 +1399,72 @@ begin
   Extend(Sub, Cand);
 end;
 
-{ TGSimpleGraph.TMinIsHelper }
+{ TGSimpleGraph.TDomSetHelper }
 
-function TGSimpleGraph.TMinIsHelper.FindLessIs(var aSub, aCand: TIntSet): Boolean;
+procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TIntSet);
 var
-  NewSub, NewCand: TIntSet;
-  I, J, dJ, v: SizeInt;
-  IOk, JOk: Boolean;
+  NewSub, NewCand, Neib: TIntSet;
+  I, J: SizeInt;
 begin
-  repeat
-    if not aSub.TryPop(I) then
-      exit(aCand.Count < FCurrSize);
-    if aCand.Count >= FCurrSize then
-      exit(False);
-    aCand.Push(I);
-    if FMatrix[I]^.Count > 1 then
-      break;
-  until False;
-
-  dJ := 0;
-  J := FMatrix[I]^[0];
-  for v in FMatrix[I]^ do
-    if FMatrix[v]^.Count > dJ then
-      begin
-        dJ := FMatrix[v]^.Count;
-        J := v;
-      end;
-
-  NewCand.Assign(aCand);
-  NewCand.Pop;
-  NewSub.Assign(aSub);
-  NewSub.Subtract(FMatrix[I]^);
-  IOk := FindLessIs(NewSub, aCand);
-  NewCand.Push(J);
-  NewSub.Assign(aSub);
-  NewSub.Delete(J);
-  NewSub.Subtract(FMatrix[J]^);
-  JOk := FindLessIs(NewSub, NewCand);
-  Result := IOk or JOk;
-  if Result and ((IOk and JOk and (NewCand.Count < aCand.Count)) or not IOk) then
+  if aSub.NonEmpty then
     begin
-      aCand.Assign(NewCand);
-      FCurrSize := aCand.Count;
-    end;
+      if aCand.Count >= System.High(FResult) then
+        exit;
+      NewSub.Assign(aSub);
+      NewCand.Assign(aCand);
+      I := NewSub.Pop;
+      NewCand.Push(I);
+      NewSub.Subtract(FMatrix[I]^);
+      Extend(NewSub, NewCand);
+      if NewSub.IsEmpty or (aCand.Count >= System.High(FResult)) then
+        exit;
+      NewCand.Pop;
+      Neib.Assign(aSub);
+      Neib.Intersect(FMatrix[I]^);
+      while Neib.TryPop(J) do
+        begin
+          NewCand.Push(J);
+          NewSub.Assign(aSub);
+          NewSub.Delete(J);
+          NewSub.Subtract(FMatrix[J]^);
+          Extend(NewSub, NewCand);
+          if NewSub.IsEmpty then
+            exit;
+          if NewCand.Count < System.High(FResult) then
+            begin
+              NewCand.Push(I);
+              NewSub.Delete(I);
+              NewSub.Subtract(FMatrix[I]^);
+              Extend(NewSub, NewCand);
+              if NewSub.IsEmpty then
+                exit;
+              NewCand.Pop;
+            end;
+          if NewCand.Count >= System.High(FResult) then
+            exit;
+          NewCand.Pop;
+        end;
+    end
+  else
+    if aCand.Count < System.Length(FResult) then
+      FResult := aCand.ToArray;
 end;
 
-function TGSimpleGraph.TMinIsHelper.MinIs(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph): TIntArray;
 var
   Sub, Cand: TIntSet;
+  I: SizeInt;
 begin
-  Result := aGraph.GreedyMinIndependentSet;
-  FCurrSize := System.Length(Result);
-  if FCurrSize <= 1 then
-    exit;
   FMatrix := aGraph.CreateSkeleton;
-  Sub.AssignArray(aGraph.SortVerticesByDegree(soAsc));
-  if FindLessIs(Sub, Cand{%H-}) then
-    Result := Cand.ToArray;
+  FResult := aGraph.SortVerticesByDegree(soAsc);
+  for I := 0 to System.High(FResult) do
+    if FMatrix[FResult[I]]^.Count > 1 then
+      {%H-}Sub.Push(FResult[I]);
+  if Sub.Count < 2 then
+    exit(Sub.ToArray);
+  FResult := aGraph.GreedyMinIndependentVertexSet;
+  Extend(Sub, Cand{%H-});
+  Result := FResult;
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
@@ -2771,7 +2781,7 @@ begin
   Result := True;
 end;
 
-procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListIndependentVertexSets(aOnFindSet: TOnFindSet);
 begin
   if IsEmpty then
     exit;
@@ -2783,7 +2793,7 @@ begin
     ListISStatic(aOnFindSet)
 end;
 
-function TGSimpleGraph.MaxIndependentSet: TIntArray;
+function TGSimpleGraph.MaxIndependentVertexSet: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
@@ -2793,7 +2803,7 @@ begin
     Result := GetMaxISStatic;
 end;
 
-function TGSimpleGraph.GreedyMaxIndependentSet: TIntArray;
+function TGSimpleGraph.GreedyMaxIndependentVertexSet: TIntArray;
 var
   Cand, Stack: TIntSet;
   I, J: SizeInt;
@@ -2813,22 +2823,14 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.MinIndependentSet: TIntArray;
-var
-  Helper: TMinIsHelper;
-begin
-  if IsEmpty then
-    exit(nil);
-  Result := Helper.MinIs(Self);
-end;
-
-function TGSimpleGraph.GreedyMinIndependentSet: TIntArray;
+function TGSimpleGraph.GreedyMinIndependentVertexSet: TIntArray;
 var
   Cand, Stack: TIntSet;
   I, J: SizeInt;
 begin
   if IsEmpty then
     exit(nil);
+  Result := CreateIntArray;
   Cand.AssignArray(SortVerticesByDegree(soAsc));
   while Cand.NonEmpty do
     begin
@@ -2842,9 +2844,18 @@ begin
   Result := Stack.ToArray;
 end;
 
-procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
+function TGSimpleGraph.MinDominatingVertexSet: TIntArray;
+var
+  Helper: TDomSetHelper;
 begin
   if IsEmpty then
+    exit(nil);
+  Result := Helper.MinDomSet(Self);
+end;
+
+procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
+begin
+  if IsEmpty or (EdgeCount = 0) then
     exit;
   if aOnFindClique = nil then
     raise ELGraphError.Create(SECallbackMissed);
@@ -2859,7 +2870,7 @@ end;
 
 function TGSimpleGraph.MaxClique: TIntArray;
 begin
-  if IsEmpty then
+  if IsEmpty or (EdgeCount = 0) then
     exit(nil);
   if (VertexCount >= MAXCLIQUE_SPARSE_CUTOFF) or (Density <= MAXCLIQUE_DENSITY_CUTOFF) then
     Result := GetMaxCliqueSparse
@@ -2875,7 +2886,7 @@ var
   Cand, Stack, Q: TIntSet;
   I, J: SizeInt;
 begin
-  if IsEmpty then
+  if IsEmpty or (EdgeCount = 0) then
     exit(nil);
   Cand.AssignArray(SortVerticesByDegeneracy);
   Cand.Reverse;
