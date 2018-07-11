@@ -44,7 +44,7 @@ type
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
   generic TGSimpleDiGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
-  public
+  protected
   type
     TReachabilityMatrix = record
     private
@@ -123,10 +123,6 @@ type
     procedure FillReachabilityMatrix;
   { creates internal reachability matrix using pre-calculated results of FindStrongComponents }
     procedure FillReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt);
-  { returns reachability matrix }
-    function  CreateReachabilityMatrix: TReachabilityMatrix;
-  { returns reachability matrix using pre-calculated results of FindStrongComponents }
-    function  CreateReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
   { returns array of vertex indices in topological order, without any acyclic checks }
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
     function  IsDag: Boolean;
@@ -1056,33 +1052,6 @@ begin
       exit;
     end;
   FReachabilityMatrix := GetReachabilityMatrix(aScIds, aScCount);
-end;
-
-function TGSimpleDiGraph.CreateReachabilityMatrix: TReachabilityMatrix;
-var
-  Ids: TIntArray;
-  ScCount: SizeInt;
-begin
-  if IsEmpty then
-    exit(Default(TReachabilityMatrix));
-  if ReachabilityValid then
-    exit(FReachabilityMatrix);
-  ScCount := SearchForStrongComponents(Ids);
-  Result := GetReachabilityMatrix(Ids, ScCount);
-end;
-
-function TGSimpleDiGraph.CreateReachabilityMatrix(constref aScIds: TIntArray;
-  aScCount: SizeInt): TReachabilityMatrix;
-var
-  m: TSquareBitMatrix;
-begin
-  if aScCount = 1 then
-    begin
-      m := TSquareBitMatrix.Create(aScCount);
-      m[0, 0] := True;
-      exit(TReachabilityMatrix.Create(m, aScIds));
-    end;
-  Result := GetReachabilityMatrix(aScIds, aScCount);
 end;
 
 function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
