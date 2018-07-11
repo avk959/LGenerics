@@ -348,12 +348,12 @@ type
     procedure ListIndependentVertexSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set of vertices;
     worst case time cost O(3^n/3) }
-    function  MaxIndependentVertexSet: TIntArray;
-    function  GreedyMaxIndependentVertexSet: TIntArray;
-    function  GreedyMinIndependentVertexSet: TIntArray;
+    function  MaxIndependentSet: TIntArray;
+    function  GreedyMaxIndependentSet: TIntArray;
+    function  GreedyMinIndependentSet: TIntArray;
   { returns indices of the vertices of the some found minimum dominating set of vertices;
     worst case time cost O(2^n) }
-    function  MinDominatingVertexSet: TIntArray;
+    function  MinDominatingSet: TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
@@ -1406,53 +1406,60 @@ var
   NewSub, NewCand, Neib: TIntSet;
   I, J: SizeInt;
 begin
-  if aSub.NonEmpty then
+  if aCand.Count >= System.High(FResult) then
+    exit;
+  NewSub.Assign(aSub);
+  NewCand.Assign(aCand);
+  I := NewSub.Pop;
+  NewCand.Push(I);
+  NewSub.Subtract(FMatrix[I]^);
+  if NewSub.NonEmpty then
     begin
-      if aCand.Count >= System.High(FResult) then
-        exit;
-      NewSub.Assign(aSub);
-      NewCand.Assign(aCand);
-      I := NewSub.Pop;
-      NewCand.Push(I);
-      NewSub.Subtract(FMatrix[I]^);
       Extend(NewSub, NewCand);
-      if NewSub.IsEmpty or (aCand.Count >= System.High(FResult)) then
+      if aCand.Count >= System.High(FResult) then
         exit;
       NewCand.Pop;
       Neib.Assign(aSub);
       Neib.Intersect(FMatrix[I]^);
       while Neib.TryPop(J) do
         begin
-          NewCand.Push(J);
+          NewCand.Push(J{%H-});
           NewSub.Assign(aSub);
           NewSub.Delete(J);
           NewSub.Subtract(FMatrix[J]^);
-          Extend(NewSub, NewCand);
-          if NewSub.IsEmpty then
-            exit;
-          if NewCand.Count < System.High(FResult) then
+          if NewSub.NonEmpty then
             begin
-              NewCand.Push(I);
-              NewSub.Delete(I);
-              NewSub.Subtract(FMatrix[I]^);
               Extend(NewSub, NewCand);
-              if NewSub.IsEmpty then
+              if NewCand.Count < System.High(FResult) then
+                begin
+                  NewCand.Push(I);
+                  NewSub.Delete(I);
+                  NewSub.Subtract(FMatrix[I]^);
+                  Extend(NewSub, NewCand);
+                  if NewSub.IsEmpty then
+                    exit;
+                  NewCand.Pop;
+                end;
+              if NewCand.Count >= System.High(FResult) then
                 exit;
               NewCand.Pop;
+            end
+          else
+            begin
+              if NewCand.Count < System.Length(FResult) then
+                FResult := NewCand.ToArray;
+              exit;
             end;
-          if NewCand.Count >= System.High(FResult) then
-            exit;
-          NewCand.Pop;
         end;
     end
   else
-    if aCand.Count < System.Length(FResult) then
-      FResult := aCand.ToArray;
+    if NewCand.Count < System.Length(FResult) then
+      FResult := NewCand.ToArray;
 end;
 
 function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph): TIntArray;
 var
-  Sub, Cand: TIntSet;
+  Sub, Cand, U: TIntSet;
   I: SizeInt;
 begin
   FMatrix := aGraph.CreateSkeleton;
@@ -1462,7 +1469,7 @@ begin
       {%H-}Sub.Push(FResult[I]);
   if Sub.Count < 2 then
     exit(Sub.ToArray);
-  FResult := aGraph.GreedyMinIndependentVertexSet;
+  FResult := aGraph.GreedyMinIndependentSet;
   Extend(Sub, Cand{%H-});
   Result := FResult;
 end;
@@ -2793,7 +2800,7 @@ begin
     ListISStatic(aOnFindSet)
 end;
 
-function TGSimpleGraph.MaxIndependentVertexSet: TIntArray;
+function TGSimpleGraph.MaxIndependentSet: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
@@ -2803,48 +2810,83 @@ begin
     Result := GetMaxISStatic;
 end;
 
-function TGSimpleGraph.GreedyMaxIndependentVertexSet: TIntArray;
+function TGSimpleGraph.GreedyMaxIndependentSet: TIntArray;
 var
-  Cand, Stack: TIntSet;
-  I, J: SizeInt;
+  Cand, Stack, U: TIntSet;
+  I, J, v, w, Card: SizeInt;
 begin
   if IsEmpty then
     exit(nil);
   Cand.AssignArray(SortVerticesByDegree(soDesc));
   while Cand.NonEmpty do
     begin
-      I := Cand.Pop;
-      if DegreeI(I) = 0 then
-        continue;
-      {%H-}Stack.Push(I);
-      for J in AdjVerticesI(I) do
-        Cand.Delete(J);
+      J := 0;
+      Card := VertexCount;
+      for I in Cand do
+        begin
+          w := 0;
+          if not U.Contains(I) then
+            Inc(w);
+          for v in AdjVerticesI(I) do
+            if not U.Contains(v) then
+              Inc(w);
+          if w < Card then
+            begin
+              Card := w;
+              J := I;
+            end;
+        end;
+      Cand.Delete(J);
+      U.Add(J);
+      for I in AdjVerticesI(J) do
+        begin
+          Cand.Delete(I);
+          U.Add(I);
+        end;
+      {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.GreedyMinIndependentVertexSet: TIntArray;
+function TGSimpleGraph.GreedyMinIndependentSet: TIntArray;
 var
-  Cand, Stack: TIntSet;
-  I, J: SizeInt;
+  Cand, Stack, U: TIntSet;
+  I, J, v, w, Card: SizeInt;
 begin
   if IsEmpty then
     exit(nil);
-  Result := CreateIntArray;
-  Cand.AssignArray(SortVerticesByDegree(soAsc));
+  Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
-      I := Cand.Pop;
-      if DegreeI(I) = 0 then
-        continue;
-      {%H-}Stack.Push(I);
-      for J in AdjVerticesI(I) do
-        Cand.Delete(J);
+      J := 0;
+      Card := 0;
+      for I in Cand do
+        begin
+          w := 0;
+          if not U.Contains(I) then
+            Inc(w);
+          for v in AdjVerticesI(I) do
+            if not U.Contains(v) then
+              Inc(w);
+          if w > Card then
+            begin
+              Card := w;
+              J := I;
+            end;
+        end;
+      Cand.Delete(J);
+      U.Add(J);
+      for I in AdjVerticesI(J) do
+        begin
+          Cand.Delete(I);
+          U.Add(I);
+        end;
+      {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.MinDominatingVertexSet: TIntArray;
+function TGSimpleGraph.MinDominatingSet: TIntArray;
 var
   Helper: TDomSetHelper;
 begin
