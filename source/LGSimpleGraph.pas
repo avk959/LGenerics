@@ -203,9 +203,11 @@ type
 
     TDomSetHelper = record
     private
-      FMatrix: TSkeleton;
+      FMatrix: TBoolMatrix;
+      FVertices,
       FResult: TIntArray;
-      procedure Extend(constref aSub, aCand: TIntSet);
+      procedure FillMatrix(aGraph: TGSimpleGraph);
+      procedure Extend(constref aSub, aCand: TBoolVector);
     public
       function  MinDomSet(aGraph: TGSimpleGraph): TIntArray;
     end;
@@ -351,7 +353,7 @@ type
     function  MaxIndependentSet: TIntArray;
     function  GreedyMaxIndependentSet: TIntArray;
     function  GreedyMinIndependentSet: TIntArray;
-  { returns indices of the vertices of the some found minimum dominating set of vertices;
+  { returns indices of the vertices of the some found minimum dominating set;
     worst case time cost O(2^n) }
     function  MinDominatingSet: TIntArray;
   { lists all maximal cliques }
@@ -1401,64 +1403,83 @@ end;
 
 { TGSimpleGraph.TDomSetHelper }
 
-procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TIntSet);
+procedure TGSimpleGraph.TDomSetHelper.FillMatrix(aGraph: TGSimpleGraph);
 var
-  NewSub, NewCand, Neib: TIntSet;
+  I, J: SizeInt;
+  pA: PAdjList;
+begin
+  FVertices := aGraph.SortVerticesByDegree(soDesc);
+  System.SetLength(FMatrix, System.Length(FVertices));
+  for I := 0 to System.High(FVertices) do
+    begin
+      FMatrix[I].Size := System.Length(FVertices);
+      pA := aGraph.AdjLists[FVertices[I]];
+      for J := 0 to System.High(FVertices) do
+        if (I <> J) and pA^.Contains(FVertices[J]) then
+          FMatrix[I][J] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TBoolVector);
+var
+  NewSub, NewCand, Neib: TBoolVector;
   I, J: SizeInt;
 begin
   if aSub.NonEmpty then
     begin
-      if aCand.Count >= System.High(FResult) then
+      if aCand.PopCount >= System.High(FResult) then
         exit;
-      NewSub.Assign(aSub);
-      NewCand.Assign(aCand);
-      I := NewSub.Pop;
-      NewCand.Push(I);
-      NewSub.Subtract(FMatrix[I]^);
+      NewSub := aSub;
+      NewCand := aCand;
+      I := NewSub.Bsf;
+      NewCand[FVertices[I]] := True;
+      NewSub[I] := False;
+      NewSub.Subtract(FMatrix[I]);
       Extend(NewSub, NewCand);
-      if aCand.Count >= System.High(FResult) then
+      if aCand.PopCount >= System.High(FResult) then
         exit;
-      NewCand.Pop;
-      Neib.Assign(aSub);
-      Neib.Intersect(FMatrix[I]^);
-      while Neib.TryPop(J) do
+      NewCand[FVertices[I]] := False;
+      Neib := aSub;
+      Neib.Intersect(FMatrix[I]);
+      while Neib.NonEmpty do
         begin
-          NewCand.Push(J{%H-});
-          NewSub.Assign(aSub);
-          NewSub.Delete(J);
-          NewSub.Subtract(FMatrix[J]^);
+          J := Neib.Bsf;
+          Neib[J] := False;
+          NewCand[FVertices[J]] := True;
+          NewSub := aSub;
+          NewSub[J] := False;
+          NewSub.Subtract(FMatrix[J]);
           Extend(NewSub, NewCand);
-          if NewCand.Count >= System.High(FResult) then
+          if NewCand.PopCount >= System.High(FResult) then
             exit;
-          NewCand.Push(I);
-          NewSub.Delete(I);
-          NewSub.Subtract(FMatrix[I]^);
+          NewCand[FVertices[I]] := True;
+          NewSub[I] := False;
+          NewSub.Subtract(FMatrix[I]);
           Extend(NewSub, NewCand);
-          if NewCand.Count >= System.High(FResult) then
+          if NewCand.PopCount >= System.High(FResult) then
             exit;
-          NewCand.Pop;
-          NewCand.Pop;
+          NewCand[FVertices[I]] := False;
+          NewCand[FVertices[J]] := False;
         end;
     end
   else
-    if aCand.Count < System.Length(FResult) then
+    if aCand.PopCount < System.Length(FResult) then
       FResult := aCand.ToArray;
 end;
 
 function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph): TIntArray;
 var
-  Sub, Cand: TIntSet;
+  Sub, Cand: TBoolVector;
   I: SizeInt;
 begin
-  FMatrix := aGraph.CreateSkeleton;
-  FResult := aGraph.SortVerticesByDegree(soAsc);
-  for I := 0 to System.High(FResult) do
-    if FMatrix[FResult[I]]^.Count > 1 then
-      {%H-}Sub.Push(FResult[I]);
-  if Sub.Count < 2 then
-    exit(Sub.ToArray);
+  FillMatrix(aGraph);
   FResult := aGraph.GreedyMinIndependentSet;
-  Extend(Sub, Cand{%H-});
+  Cand.Size := aGraph.VertexCount;
+  Sub.Size := aGraph.VertexCount;
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if aGraph.DegreeI(I) > 0 then
+      Sub[I] := True;
+  Extend(Sub, Cand);
   Result := FResult;
 end;
 
@@ -1699,7 +1720,7 @@ begin
             Result := d;
           Dist[Next] := d;
         end;
-  until not Queue.TryDequeue(aIndex);
+  until not Queue{%H-}.TryDequeue(aIndex);
 end;
 
 function TGSimpleGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -2369,7 +2390,7 @@ begin
     exit;
   if ConnectedValid then
     begin
-      FNodeList[aIndex].Tag := FCompCount;
+      FNodeList[aIndex].Tag := aIndex;
       Inc(FCompCount);
       FConnected := FCompCount = 1;
     end
