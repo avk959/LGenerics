@@ -206,10 +206,13 @@ type
       FMatrix: TBoolMatrix;
       FVertices,
       FResult: TIntArray;
+      FOnFind: TOnFindSet;
       procedure FillMatrix(aGraph: TGSimpleGraph);
       procedure Extend(constref aSub, aCand: TBoolVector);
+      procedure Extend2(constref aSub, aCand: TBoolVector);
     public
       function  MinDomSet(aGraph: TGSimpleGraph): TIntArray;
+      procedure ListDomSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
     TDistinctEdgeEnumerator = record
@@ -347,20 +350,22 @@ type
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
   { lists all maximal independent sets of vertices }
-    procedure ListIndependentVertexSets(aOnFindSet: TOnFindSet);
+    procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set of vertices;
     worst case time cost O(3^n/3) }
     function  MaxIndependentSet: TIntArray;
-    function  GreedyMaxIndependentSet: TIntArray;
-    function  GreedyMinIndependentSet: TIntArray;
+    function  ApproxMaxIndependentSet: TIntArray;
+    function  ApproxMinIndependentSet: TIntArray;
   { returns indices of the vertices of the some found minimum dominating set;
-    worst case time cost O(2^n) }
+    worst case time cost O(2^n) ??? }
     function  MinDominatingSet: TIntArray;
+  { lists all dominating sets of vertices }
+    procedure ListDominatingSets(aOnFindSet: TOnFindSet);
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
     function  MaxClique: TIntArray;
-    function  GreedyMaxClique: TIntArray;
+    function  ApproxMaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -1467,13 +1472,51 @@ begin
       FResult := aCand.ToArray;
 end;
 
+procedure TGSimpleGraph.TDomSetHelper.Extend2(constref aSub, aCand: TBoolVector);
+var
+  NewSub, NewCand, Neib: TBoolVector;
+  I, J: SizeInt;
+begin
+  if aSub.NonEmpty then
+    begin
+      NewSub := aSub;
+      NewCand := aCand;
+      I := NewSub.Bsf;
+      NewCand[FVertices[I]] := True;
+      NewSub[I] := False;
+      NewSub.Subtract(FMatrix[I]);
+      Extend2(NewSub, NewCand);
+      NewCand[FVertices[I]] := False;
+      Neib := aSub;
+      Neib.Intersect(FMatrix[I]);
+      while Neib.NonEmpty do
+        begin
+          J := Neib.Bsf;
+          Neib[J] := False;
+          NewCand[FVertices[J]] := True;
+          NewSub := aSub;
+          NewSub[J] := False;
+          NewSub.Subtract(FMatrix[J]);
+          Extend2(NewSub, NewCand);
+          NewCand[FVertices[I]] := True;
+          NewSub[I] := False;
+          NewSub.Subtract(FMatrix[I]);
+          Extend2(NewSub, NewCand);
+          NewCand[FVertices[I]] := False;
+          NewCand[FVertices[J]] := False;
+        end;
+    end
+  else
+    FOnFind(aCand.ToArray);
+end;
+
 function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph): TIntArray;
 var
   Sub, Cand: TBoolVector;
   I: SizeInt;
 begin
   FillMatrix(aGraph);
-  FResult := aGraph.GreedyMinIndependentSet;
+  FResult := aGraph.ApproxMinIndependentSet;
   Cand.Size := aGraph.VertexCount;
   Sub.Size := aGraph.VertexCount;
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -1481,6 +1524,21 @@ begin
       Sub[I] := True;
   Extend(Sub, Cand);
   Result := FResult;
+end;
+
+procedure TGSimpleGraph.TDomSetHelper.ListDomSets(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Sub, Cand: TBoolVector;
+  I: SizeInt;
+begin
+  FOnFind := aOnFind;
+  FillMatrix(aGraph);
+  Cand.Size := aGraph.VertexCount;
+  Sub.Size := aGraph.VertexCount;
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if aGraph.DegreeI(I) > 0 then
+      Sub[I] := True;
+  Extend2(Sub, Cand);
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
@@ -2797,7 +2855,7 @@ begin
   Result := True;
 end;
 
-procedure TGSimpleGraph.ListIndependentVertexSets(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
 begin
   if IsEmpty then
     exit;
@@ -2819,7 +2877,7 @@ begin
     Result := GetMaxISStatic;
 end;
 
-function TGSimpleGraph.GreedyMaxIndependentSet: TIntArray;
+function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
 var
   Cand, Stack: TIntSet;
   I, J, v, w, Card: SizeInt;
@@ -2851,7 +2909,7 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.GreedyMinIndependentSet: TIntArray;
+function TGSimpleGraph.ApproxMinIndependentSet: TIntArray;
 var
   Cand, Stack: TIntSet;
   I, J, v, w, Card: SizeInt;
@@ -2892,6 +2950,17 @@ begin
   Result := Helper.MinDomSet(Self);
 end;
 
+procedure TGSimpleGraph.ListDominatingSets(aOnFindSet: TOnFindSet);
+var
+  Helper: TDomSetHelper;
+begin
+  if IsEmpty then
+    exit;
+  if aOnFindSet = nil then
+    raise ELGraphError.Create(SECallbackMissed);
+  Helper.ListDomSets(Self, aOnFindSet);
+end;
+
 procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
 begin
   if IsEmpty or (EdgeCount = 0) then
@@ -2920,7 +2989,7 @@ begin
       Result := GetMaxCliqueStatic;
 end;
 
-function TGSimpleGraph.GreedyMaxClique: TIntArray;
+function TGSimpleGraph.ApproxMaxClique: TIntArray;
 var
   Cand, Stack, Q: TIntSet;
   I, J: SizeInt;
