@@ -1406,15 +1406,15 @@ var
   NewSub, NewCand, Neib: TIntSet;
   I, J: SizeInt;
 begin
-  if aCand.Count >= System.High(FResult) then
-    exit;
-  NewSub.Assign(aSub);
-  NewCand.Assign(aCand);
-  I := NewSub.Pop;
-  NewCand.Push(I);
-  NewSub.Subtract(FMatrix[I]^);
-  if NewSub.NonEmpty then
+  if aSub.NonEmpty then
     begin
+      if aCand.Count >= System.High(FResult) then
+        exit;
+      NewSub.Assign(aSub);
+      NewCand.Assign(aCand);
+      I := NewSub.Pop;
+      NewCand.Push(I);
+      NewSub.Subtract(FMatrix[I]^);
       Extend(NewSub, NewCand);
       if aCand.Count >= System.High(FResult) then
         exit;
@@ -1427,39 +1427,27 @@ begin
           NewSub.Assign(aSub);
           NewSub.Delete(J);
           NewSub.Subtract(FMatrix[J]^);
-          if NewSub.NonEmpty then
-            begin
-              Extend(NewSub, NewCand);
-              if NewCand.Count < System.High(FResult) then
-                begin
-                  NewCand.Push(I);
-                  NewSub.Delete(I);
-                  NewSub.Subtract(FMatrix[I]^);
-                  Extend(NewSub, NewCand);
-                  if NewSub.IsEmpty then
-                    exit;
-                  NewCand.Pop;
-                end;
-              if NewCand.Count >= System.High(FResult) then
-                exit;
-              NewCand.Pop;
-            end
-          else
-            begin
-              if NewCand.Count < System.Length(FResult) then
-                FResult := NewCand.ToArray;
-              exit;
-            end;
+          Extend(NewSub, NewCand);
+          if NewCand.Count >= System.High(FResult) then
+            exit;
+          NewCand.Push(I);
+          NewSub.Delete(I);
+          NewSub.Subtract(FMatrix[I]^);
+          Extend(NewSub, NewCand);
+          if NewCand.Count >= System.High(FResult) then
+            exit;
+          NewCand.Pop;
+          NewCand.Pop;
         end;
     end
   else
-    if NewCand.Count < System.Length(FResult) then
-      FResult := NewCand.ToArray;
+    if aCand.Count < System.Length(FResult) then
+      FResult := aCand.ToArray;
 end;
 
 function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph): TIntArray;
 var
-  Sub, Cand, U: TIntSet;
+  Sub, Cand: TIntSet;
   I: SizeInt;
 begin
   FMatrix := aGraph.CreateSkeleton;
@@ -2812,23 +2800,21 @@ end;
 
 function TGSimpleGraph.GreedyMaxIndependentSet: TIntArray;
 var
-  Cand, Stack, U: TIntSet;
+  Cand, Stack: TIntSet;
   I, J, v, w, Card: SizeInt;
 begin
   if IsEmpty then
     exit(nil);
-  Cand.AssignArray(SortVerticesByDegree(soDesc));
+  Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
       J := 0;
       Card := VertexCount;
       for I in Cand do
         begin
-          w := 0;
-          if not U.Contains(I) then
-            Inc(w);
+          w := 1;
           for v in AdjVerticesI(I) do
-            if not U.Contains(v) then
+            if Cand.Contains(v) then
               Inc(w);
           if w < Card then
             begin
@@ -2837,12 +2823,8 @@ begin
             end;
         end;
       Cand.Delete(J);
-      U.Add(J);
       for I in AdjVerticesI(J) do
-        begin
-          Cand.Delete(I);
-          U.Add(I);
-        end;
+        Cand.Delete(I);
       {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
@@ -2850,7 +2832,7 @@ end;
 
 function TGSimpleGraph.GreedyMinIndependentSet: TIntArray;
 var
-  Cand, Stack, U: TIntSet;
+  Cand, Stack: TIntSet;
   I, J, v, w, Card: SizeInt;
 begin
   if IsEmpty then
@@ -2862,11 +2844,9 @@ begin
       Card := 0;
       for I in Cand do
         begin
-          w := 0;
-          if not U.Contains(I) then
-            Inc(w);
+          w := 1;
           for v in AdjVerticesI(I) do
-            if not U.Contains(v) then
+            if Cand.Contains(v) then
               Inc(w);
           if w > Card then
             begin
@@ -2875,12 +2855,8 @@ begin
             end;
         end;
       Cand.Delete(J);
-      U.Add(J);
       for I in AdjVerticesI(J) do
-        begin
-          Cand.Delete(I);
-          U.Add(I);
-        end;
+        Cand.Delete(I);
       {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
