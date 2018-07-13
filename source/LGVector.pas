@@ -392,13 +392,14 @@ type
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
   { returns index of the least significant bit }
-    function  Bsf: SizeInt; inline;
+    function  Bsf: SizeInt;
   { returns index of the most significant bit }
-    function  Bsr: SizeInt; inline;
+    function  Bsr: SizeInt;
     function  Intersecting(constref aVector: TBoolVector): Boolean;
-    function  ContainsAll(constref aVector: TBoolVector): Boolean;
-    procedure Subtract(constref aVector: TBoolVector); inline;
-    procedure Intersect(constref aVector: TBoolVector); inline;
+    function  Contains(constref aVector: TBoolVector): Boolean;
+    procedure Join(constref aVector: TBoolVector);
+    procedure Subtract(constref aVector: TBoolVector);
+    procedure Intersect(constref aVector: TBoolVector);
   { currently size can only grow and is always multiple of BitsizeOf(SizeUInt) }
     property  Size: SizeInt read GetSize write SetSize;
   { returns count of set bits }
@@ -2106,7 +2107,7 @@ begin
   Result := False;
 end;
 
-function TBoolVector.ContainsAll(constref aVector: TBoolVector): Boolean;
+function TBoolVector.Contains(constref aVector: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
@@ -2117,6 +2118,26 @@ begin
     if aVector.FBits[I] <> 0 then
       exit(False);
   Result := True;
+end;
+
+procedure TBoolVector.Join(constref aVector: TBoolVector);
+var
+  I, Len: SizeInt;
+begin
+  if aVector.Size > Size then
+    Size := aVector.Size;
+  Len := System.High(aVector.FBits);
+  I := 0;
+  while I <= Len - 4 do
+    begin
+      FBits[I  ] := FBits[I  ] or aVector.FBits[I  ];
+      FBits[I+1] := FBits[I+1] or aVector.FBits[I+1];
+      FBits[I+2] := FBits[I+2] or aVector.FBits[I+2];
+      FBits[I+3] := FBits[I+3] or aVector.FBits[I+3];
+      Inc(I, 4);
+    end;
+  for I := I to Len do
+    FBits[I] := FBits[I] or aVector.FBits[I];
 end;
 
 procedure TBoolVector.Subtract(constref aVector: TBoolVector);
