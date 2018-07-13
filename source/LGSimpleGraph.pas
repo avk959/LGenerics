@@ -1435,8 +1435,8 @@ begin
       if aCand.PopCount >= System.High(FResult) then
         exit;
       NewSub := aSub;
-      NewCand := aCand;
       I := NewSub.Bsf;
+      NewCand := aCand;
       NewCand[FVertices[I]] := True;
       NewSub[I] := False;
       NewSub.Subtract(FMatrix[I]);
@@ -1458,10 +1458,9 @@ begin
           if NewCand.PopCount >= System.High(FResult) then
             exit;
           NewCand[FVertices[I]] := True;
-          NewSub[I] := False;
           NewSub.Subtract(FMatrix[I]);
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.High(FResult) then
+          if NewCand.PopCount >= System.Length(FResult) then
             exit;
           NewCand[FVertices[I]] := False;
           NewCand[FVertices[J]] := False;
@@ -1480,8 +1479,8 @@ begin
   if aSub.NonEmpty then
     begin
       NewSub := aSub;
-      NewCand := aCand;
       I := NewSub.Bsf;
+      NewCand := aCand;
       NewCand[FVertices[I]] := True;
       NewSub[I] := False;
       NewSub.Subtract(FMatrix[I]);
@@ -1499,7 +1498,6 @@ begin
           NewSub.Subtract(FMatrix[J]);
           Extend2(NewSub, NewCand);
           NewCand[FVertices[I]] := True;
-          NewSub[I] := False;
           NewSub.Subtract(FMatrix[I]);
           Extend2(NewSub, NewCand);
           NewCand[FVertices[I]] := False;
@@ -1538,7 +1536,7 @@ begin
   for I := 0 to Pred(aGraph.VertexCount) do
     if aGraph.DegreeI(I) > 0 then
       Sub[I] := True;
-  Extend2(Sub, Cand);
+  Extend2(Sub, Cand);  //todo: generates repeated sets
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
