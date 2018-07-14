@@ -256,9 +256,8 @@ type
     end;
   const
     LISTCLIQUES_BP_CUTOFF       = 60000;
-    MAXCLIQUE_BP_CUTOFF         = 50000;
+    COMMON_BP_CUTOFF            = 50000;
     MAXCLIQUE_BP_DENSITY_CUTOFF = 0.005;
-    MINIS_BP_CUTOFF             = 50000;
 
   protected
     FCompCount: SizeInt;
@@ -290,8 +289,10 @@ type
     function  GetMaxIsBP256: TIntArray;
     procedure ListIsBP(aOnFind: TOnFindSet);
     procedure ListIsBP256(aOnFind: TOnFindSet);
-    function  GetMinIS: TIntArray;
-    function  GetMinIsBP: TIntArray;
+    function  GetApproxMaxIS: TIntArray;
+    function  GetApproxMaxIsBP: TIntArray;
+    function  GetApproxMinIS: TIntArray;
+    function  GetApproxMinIsBP: TIntArray;
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -2028,7 +2029,66 @@ begin
   Helper.ListIS(Self, aOnFind);
 end;
 
-function TGSimpleGraph.GetMinIS: TIntArray;
+function TGSimpleGraph.GetApproxMaxIS: TIntArray;
+var
+  Cand, Stack: TIntSet;
+  I, J, v, w, Card: SizeInt;
+begin
+  Cand.InitRange(VertexCount);
+  while Cand.NonEmpty do
+    begin
+      J := 0;
+      Card := VertexCount;
+      for I in Cand do
+        begin
+          w := 1;
+          for v in AdjVerticesI(I) do
+            if Cand.Contains(v) then
+              Inc(w);
+          if w < Card then
+            begin
+              Card := w;
+              J := I;
+            end;
+        end;
+      Cand.Delete(J);
+      for I in AdjVerticesI(J) do
+        Cand.Delete(I);
+      {%H-}Stack.Push(J);
+    end;
+  Result := Stack.ToArray;
+end;
+
+function TGSimpleGraph.GetApproxMaxIsBP: TIntArray;
+var
+  Matrix: TBoolMatrix;
+  Cand: TBoolVector;
+  Stack: TIntSet;
+  I, J, CurrIntersect, MinIntersect: SizeInt;
+begin
+  Matrix := CreateBoolMatrix;
+  Cand.InitRange(VertexCount);
+  while Cand.NonEmpty do
+    begin
+      J := 0;
+      MinIntersect := VertexCount;
+      for I in Cand do
+        begin
+          CurrIntersect := Succ(Cand.IntersectionCount(Matrix[I]));
+          if CurrIntersect < MinIntersect then
+            begin
+              MinIntersect := CurrIntersect;
+              J := I;
+            end;
+        end;
+      Cand[J] := False;
+      Cand.Subtract(Matrix[J]);
+      {%H-}Stack.Push(J);
+    end;
+  Result := Stack.ToArray;
+end;
+
+function TGSimpleGraph.GetApproxMinIS: TIntArray;
 var
   Cand, Stack: TIntSet;
   I, J, v, w, Card: SizeInt;
@@ -2058,25 +2118,25 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.GetMinIsBP: TIntArray;
+function TGSimpleGraph.GetApproxMinIsBP: TIntArray;
 var
   Matrix: TBoolMatrix;
   Cand: TBoolVector;
   Stack: TIntSet;
-  I, J, w, Card: SizeInt;
+  I, J, CurrIntersect, MaxIntersect: SizeInt;
 begin
   Matrix := CreateBoolMatrix;
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
       J := 0;
-      Card := 0;
+      MaxIntersect := 0;
       for I in Cand do
         begin
-          w := Succ(Cand.IntersectionCount(Matrix[I]));
-          if w > Card then
+          CurrIntersect := Succ(Cand.IntersectionCount(Matrix[I]));
+          if CurrIntersect > MaxIntersect then
             begin
-              Card := w;
+              MaxIntersect := CurrIntersect;
               J := I;
             end;
         end;
@@ -3076,45 +3136,23 @@ begin
 end;
 
 function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
-var
-  Cand, Stack: TIntSet;
-  I, J, v, w, Card: SizeInt;
 begin
   if IsEmpty then
     exit(nil);
-  Cand.InitRange(VertexCount);
-  while Cand.NonEmpty do
-    begin
-      J := 0;
-      Card := VertexCount;
-      for I in Cand do
-        begin
-          w := 1;
-          for v in AdjVerticesI(I) do
-            if Cand.Contains(v) then
-              Inc(w);
-          if w < Card then
-            begin
-              Card := w;
-              J := I;
-            end;
-        end;
-      Cand.Delete(J);
-      for I in AdjVerticesI(J) do
-        Cand.Delete(I);
-      {%H-}Stack.Push(J);
-    end;
-  Result := Stack.ToArray;
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetApproxMaxIS
+  else
+    Result := GetApproxMaxIsBP;
 end;
 
 function TGSimpleGraph.ApproxMinIndependentSet: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
-  if VertexCount > MINIS_BP_CUTOFF then
-    Result := GetMinIS
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetApproxMinIS
   else
-    Result := GetMinIsBP;
+    Result := GetApproxMinIsBP;
 end;
 
 function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
@@ -3146,7 +3184,7 @@ function TGSimpleGraph.MaxClique: TIntArray;
 begin
   if IsEmpty or (EdgeCount = 0) then
     exit(nil);
-  if (VertexCount >= MAXCLIQUE_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
+  if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
     Result := GetMaxClique
   else
     if VertexCount > 256 then
