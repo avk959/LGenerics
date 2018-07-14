@@ -396,8 +396,11 @@ type
   { returns index of the most significant bit }
     function  Bsr: SizeInt;
     function  Intersecting(constref aVector: TBoolVector): Boolean;
+  { returns the number of bits in the intersection with aVector }
     function  IntersectionCount(constref aVector: TBoolVector): SizeInt;
     function  Contains(constref aVector: TBoolVector): Boolean;
+  { returns the number of bits that will be added when union with aVector }
+    function  UnionCount(constref aVector: TBoolVector): SizeInt;
     procedure Join(constref aVector: TBoolVector);
     procedure Subtract(constref aVector: TBoolVector);
     procedure Intersect(constref aVector: TBoolVector);
@@ -2138,6 +2141,30 @@ begin
     if aVector.FBits[I] <> 0 then
       exit(False);
   Result := True;
+end;
+
+function TBoolVector.UnionCount(constref aVector: TBoolVector): SizeInt;
+var
+  I, Len: SizeInt;
+begin
+  Len := Math.Min(System.High(FBits), System.High(aVector.FBits));
+  I := 0;
+  Result := 0;
+  while I <= Len - 4 do
+    begin
+      Result += SizeInt(PopCnt(not FBits[I  ] and aVector.FBits[I  ])) +
+                SizeInt(PopCnt(not FBits[I+1] and aVector.FBits[I+1])) +
+                SizeInt(PopCnt(not FBits[I+2] and aVector.FBits[I+2])) +
+                SizeInt(PopCnt(not FBits[I+3] and aVector.FBits[I+3]));
+      Inc(I, 4);
+    end;
+  while I <= Len do
+    begin
+      Result += SizeInt(PopCnt(not FBits[I] and aVector.FBits[I]));
+      Inc(I);
+    end;
+  for I := I to System.High(aVector.FBits) do
+    Result += SizeInt(PopCnt(aVector.FBits[I]));
 end;
 
 procedure TBoolVector.Join(constref aVector: TBoolVector);
