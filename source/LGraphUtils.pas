@@ -169,6 +169,8 @@ type
 
   protected
   type
+    TBoolMatrix = array of TBoolVector;
+
     TIntSet = record
     private
       FItems: TIntArray;
@@ -351,6 +353,7 @@ type
     function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
+    function  CreateBoolMatrix: TBoolMatrix;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
@@ -1847,6 +1850,19 @@ begin
         end;
   until not Queue{%H-}.TryDequeue(aSrc);
   Result := False;
+end;
+
+function TGCustomGraph.CreateBoolMatrix: TBoolMatrix;
+var
+  I, J: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  for I := 0 to System.High(Result) do
+    begin
+      Result[I].Size := VertexCount;
+      for J in AdjVerticesI(I) do
+        Result[I][J] := True;
+    end;
 end;
 
 function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
