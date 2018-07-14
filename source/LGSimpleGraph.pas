@@ -54,7 +54,7 @@ type
       FMatrix: TBoolMatrix;
       FCurrSet: TBoolVector;
       FVertices,
-      FResult: TIntArray;
+      FRecentBest: TIntArray;
       FOnFind: TOnFindSet;
       FStartTime: TDateTime;
       FTimeOut: Integer;
@@ -169,7 +169,7 @@ type
       FMatrix: TBitMatrix256;
       FCurrSet: TBits256;
       FVertices,
-      FResult: TIntArray;
+      FRecentBest: TIntArray;
       FOnFind: TOnFindSet;
       FStartTime: TDateTime;
       FTimeOut: Integer;
@@ -193,7 +193,7 @@ type
       FMatrix: TSkeleton;
       FCurrSet: TIntSet;
       FVertices,
-      FResult: TIntArray;
+      FRecentBest: TIntArray;
       FOnFind: TOnFindSet;
       FStartTime: TDateTime;
       FTimeOut: Integer;
@@ -214,7 +214,7 @@ type
     private
       FMatrix: TBoolMatrix;
       FVertices,
-      FResult: TIntArray;
+      FRecentBest: TIntArray;
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCanceled: Boolean;
@@ -229,7 +229,7 @@ type
     private
       FMatrix: TBitMatrix256;
       FVertices,
-      FResult: TIntArray;
+      FRecentBest: TIntArray;
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCanceled: Boolean;
@@ -243,7 +243,7 @@ type
     TDomSetHelper = record
     private
       FMatrix: TSkeleton;
-      FResult: TIntArray;
+      FRecentBest: TIntArray;
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCancel: Boolean;
@@ -696,7 +696,7 @@ begin
           Recolor(aCand, ColOrd, Colors);
           for I := Pred(ItemCount) downto 0 do
             begin
-              if Colors[I] + FCurrSet.PopCount <= System.Length(FResult) then
+              if Colors[I] + FCurrSet.PopCount <= System.Length(FRecentBest) then
                 exit;
               J := ColOrd[I];
               aCand[J] := False;
@@ -709,8 +709,8 @@ begin
         end;
     end
   else
-    if FCurrSet.PopCount > System.Length(FResult) then
-      FResult := FCurrSet.ToArray;
+    if FCurrSet.PopCount > System.Length(FRecentBest) then
+      FRecentBest := FCurrSet.ToArray;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.Extend(var aSub, aCand: TBoolVector);
@@ -786,11 +786,11 @@ begin
   FTimeOut := aTimeOut;
   FCanceled := False;
   SortMatrixByDegeneracy(aGraph, False);
-  FResult := aGraph.ApproxMaxClique;
+  FRecentBest := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
-  Result := FResult;
+  Result := FRecentBest;
   aExact := not FCanceled;
 end;
 
@@ -803,11 +803,11 @@ begin
   FTimeOut := aTimeOut;
   FCanceled := False;
   SortMatrixByDegeneracy(aGraph, True);
-  FResult := aGraph.ApproxMaxIndependentSet;
+  FRecentBest := aGraph.ApproxMaxIndependentSet;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
-  Result := FResult;
+  Result := FRecentBest;
   aExact := not FCanceled;
 end;
 
@@ -1248,7 +1248,7 @@ begin
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
-          if Colors[I] + FCurrSet.PopCount <= System.Length(FResult) then
+          if Colors[I] + FCurrSet.PopCount <= System.Length(FRecentBest) then
             exit;
           J := ColOrd[I];
           aCand[J] := False;
@@ -1260,8 +1260,8 @@ begin
         end;
     end
   else
-    if FCurrSet.PopCount > System.Length(FResult) then
-      FResult := FCurrSet.ToArray;
+    if FCurrSet.PopCount > System.Length(FRecentBest) then
+      FRecentBest := FCurrSet.ToArray;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.Extend(var aSub, aCand: TBits256);
@@ -1337,11 +1337,11 @@ begin
   FTimeOut := aTimeOut;
   FCanceled := False;
   SortMatrixByDegeneracy(aGraph, False);
-  FResult := aGraph.ApproxMaxClique;
+  FRecentBest := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   Extend(Cand);
-  Result := FResult;
+  Result := FRecentBest;
   aExact := not FCanceled;
 end;
 
@@ -1354,11 +1354,11 @@ begin
   FTimeOut := aTimeOut;
   FCanceled := False;
   SortMatrixByDegeneracy(aGraph, True);
-  FResult := aGraph.ApproxMaxIndependentSet;
+  FRecentBest := aGraph.ApproxMaxIndependentSet;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   Extend(Cand);
-  Result := FResult;
+  Result := FRecentBest;
   aExact := not FCanceled;
 end;
 
@@ -1436,7 +1436,7 @@ begin
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(aCand.Count) downto 0 do
         begin
-          if Colors[I] + FCurrSet.Count <= System.Length(FResult) then
+          if Colors[I] + FCurrSet.Count <= System.Length(FRecentBest) then
             exit;
           J := ColOrd[I];
           aCand.Delete(J);
@@ -1448,8 +1448,8 @@ begin
         end;
     end
   else
-    if FCurrSet.Count > System.Length(FResult) then
-      FResult := FCurrSet.ToArray;
+    if FCurrSet.Count > System.Length(FRecentBest) then
+      FRecentBest := FCurrSet.ToArray;
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.Extend(var aSub, aCand: TIntSet);
@@ -1518,10 +1518,10 @@ begin
   FTimeOut := aTimeOut;
   FCanceled := False;
   SortMatrixByDegeneracy(aGraph);
-  FResult := aGraph.ApproxMaxClique;
+  FRecentBest := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   Extend(Cand);
-  Result := FResult;
+  Result := FRecentBest;
   aExact := not FCanceled;
 end;
 
@@ -1568,7 +1568,7 @@ var
 begin
   if aSub.NonEmpty then
     begin
-      if aCand.PopCount >= System.High(FResult) then
+      if aCand.PopCount >= System.High(FRecentBest) then
         exit;
       if TimeOut then
         begin
@@ -1582,7 +1582,7 @@ begin
       NewSub[I] := False;
       NewSub.Subtract(FMatrix[I]);
       Extend(NewSub, NewCand);
-      if aCand.PopCount >= System.High(FResult) then
+      if aCand.PopCount >= System.High(FRecentBest) then
         exit;
       NewCand[FVertices[I]] := False;
       Neib := aSub;
@@ -1596,20 +1596,20 @@ begin
           NewSub[J] := False;
           NewSub.Subtract(FMatrix[J]);
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.High(FResult) then
+          if NewCand.PopCount >= System.High(FRecentBest) then
             exit;
           NewCand[FVertices[I]] := True;
           NewSub.Subtract(FMatrix[I]);
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.Length(FResult) then
+          if NewCand.PopCount >= System.Length(FRecentBest) then
             exit;
           NewCand[FVertices[I]] := False;
           NewCand[FVertices[J]] := False;
         end;
     end
   else
-    if aCand.PopCount < System.Length(FResult) then
-      FResult := aCand.ToArray;
+    if aCand.PopCount < System.Length(FRecentBest) then
+      FRecentBest := aCand.ToArray;
 end;
 
 function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -1625,7 +1625,7 @@ begin
     FTimeOut := aTimeOut;
   FCanceled := False;
   FillMatrix(aGraph);
-  FResult := aGraph.ApproxMinIndependentSet;
+  FRecentBest := aGraph.ApproxMinIndependentSet;
   Cand.Size := aGraph.VertexCount;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -1633,7 +1633,7 @@ begin
       Sub[I] := False;
   Extend(Sub, Cand);
   aExact := not FCanceled;
-  Result := FResult;
+  Result := FRecentBest;
 end;
 
 { TGSimpleGraph.TBPDomSetHelper256 }
@@ -1667,7 +1667,7 @@ var
 begin
   if aSub.NonEmpty then
     begin
-      if aCand.PopCount >= System.High(FResult) then
+      if aCand.PopCount >= System.High(FRecentBest) then
         exit;
       if TimeOut then
         begin
@@ -1681,7 +1681,7 @@ begin
       NewSub[I] := False;
       NewSub.Subtract(FMatrix[I]);
       Extend(NewSub, NewCand);
-      if aCand.PopCount >= System.High(FResult) then
+      if aCand.PopCount >= System.High(FRecentBest) then
         exit;
       NewCand[FVertices[I]] := False;
       Neib := aSub;
@@ -1695,20 +1695,20 @@ begin
           NewSub[J] := False;
           NewSub.Subtract(FMatrix[J]);
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.High(FResult) then
+          if NewCand.PopCount >= System.High(FRecentBest) then
             exit;
           NewCand[FVertices[I]] := True;
           NewSub.Subtract(FMatrix[I]);
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.Length(FResult) then
+          if NewCand.PopCount >= System.Length(FRecentBest) then
             exit;
           NewCand[FVertices[I]] := False;
           NewCand[FVertices[J]] := False;
         end;
     end
   else
-    if aCand.PopCount < System.Length(FResult) then
-      FResult := aCand.ToArray;
+    if aCand.PopCount < System.Length(FRecentBest) then
+      FRecentBest := aCand.ToArray;
 end;
 
 function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -1724,7 +1724,7 @@ begin
     FTimeOut := aTimeOut;
   FCanceled := False;
   FillMatrix(aGraph);
-  FResult := aGraph.ApproxMinIndependentSet;
+  FRecentBest := aGraph.ApproxMinIndependentSet;
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -1732,7 +1732,7 @@ begin
       Sub[I] := False;
   Extend(Sub, Cand);
   aExact := not FCanceled;
-  Result := FResult;
+  Result := FRecentBest;
 end;
 
 { TGSimpleGraph.TDomSetHelper }
@@ -1749,7 +1749,7 @@ var
 begin
   if aSub.NonEmpty then
     begin
-      if aCand.Count >= System.High(FResult) then
+      if aCand.Count >= System.High(FRecentBest) then
         exit;
       if TimeOut then
         begin
@@ -1763,7 +1763,7 @@ begin
       NewSub.Delete(I);
       NewSub.Subtract(FMatrix[I]^);
       Extend(NewSub, NewCand);
-      if aCand.Count >= System.High(FResult) then
+      if aCand.Count >= System.High(FRecentBest) then
         exit;
       NewCand.Pop;
       Neib.Assign(aSub);
@@ -1776,20 +1776,20 @@ begin
           NewSub.Delete(J);
           NewSub.Subtract(FMatrix[J]^);
           Extend(NewSub, NewCand);
-          if NewCand.Count >= System.High(FResult) then
+          if NewCand.Count >= System.High(FRecentBest) then
             exit;
           NewCand.Push(I);
           NewSub.Subtract(FMatrix[I]^);
           Extend(NewSub, NewCand);
-          if NewCand.Count >= System.Length(FResult) then
+          if NewCand.Count >= System.Length(FRecentBest) then
             exit;
           NewCand.Pop;
           NewCand.Pop;
         end;
     end
   else
-    if aCand.Count < System.Length(FResult) then
-      FResult := aCand.ToArray;
+    if aCand.Count < System.Length(FRecentBest) then
+      FRecentBest := aCand.ToArray;
 end;
 
 function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -1804,7 +1804,7 @@ begin
   else
     FTimeOut := aTimeOut;
   FCancel := False;
-  FResult := aGraph.ApproxMinIndependentSet;
+  FRecentBest := aGraph.ApproxMinIndependentSet;
   FMatrix := aGraph.CreateSkeleton;
   Sub.AssignArray(aGraph.SortVerticesByDegree(soAsc));
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -1812,7 +1812,7 @@ begin
       Sub.Delete(I);
   Extend(Sub, Cand{%H-});
   aExact := not FCancel;
-  Result := FResult;
+  Result := FRecentBest;
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
