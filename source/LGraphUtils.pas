@@ -61,6 +61,7 @@ type
 
   TOnVisit         = procedure (aValue: SizeInt) of object;
   TOnAccept        = function (aValue: SizeInt): Boolean of object;
+  TOnFindSet       = procedure(constref aSet: TIntArray; var aCancel: Boolean) of object;
   TVertexColor     = 0..3;
 
 const
@@ -360,7 +361,6 @@ type
 
     TOnReadData    = specialize TGOnStreamRead<TEdgeData>;
     TOnWriteData   = specialize TGOnStreamWrite<TEdgeData>;
-    TOnFindSet     = procedure(constref aSet: TIntArray) of object;
 
     TEdge = record
       Source,

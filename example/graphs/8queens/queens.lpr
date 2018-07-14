@@ -29,7 +29,7 @@ type
     FSolutions: TStrArrayVector;
     procedure BuildBoard;
     function  CopySolution(constref s: TIntArray): TStringArray;
-    procedure OnFindSolution(constref s: TIntArray);
+    procedure OnFindSolution(constref s: TIntArray; var {%H-}aCancel: Boolean);
     procedure PrintSolutions;
   public
     constructor Create;
@@ -102,7 +102,7 @@ begin
     Result[I] := FBoard[s[I]];
 end;
 
-procedure TQueensSolver.OnFindSolution(constref s: TIntArray);
+procedure TQueensSolver.OnFindSolution(constref s: TIntArray; var aCancel: Boolean);
 begin
   if Length(s) = 8 then
     FSolutions.Add(CopySolution(s));

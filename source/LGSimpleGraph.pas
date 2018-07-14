@@ -58,6 +58,7 @@ type
       FResult: TIntArray;
       FCurrSize: SizeInt;
       FOnFind: TOnFindSet;
+      FCanceled: Boolean;
       procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
       procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
       procedure Extend(var aSub, aCand: TBoolVector);
@@ -170,6 +171,7 @@ type
       FVertices: TIntArray;
       FCurrSize: SizeInt;
       FOnFind: TOnFindSet;
+      FCanceled: Boolean;
       procedure Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TBits256);
       procedure Extend(var aSub, aCand: TBits256);
@@ -191,6 +193,7 @@ type
       FResult: TIntArray;
       FCurrSize: SizeInt;
       FOnFind: TOnFindSet;
+      FCanceled: Boolean;
       procedure Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TIntSet);
       procedure Extend(var aSub, aCand: TIntSet);
@@ -277,12 +280,12 @@ type
     function  GetEccentricity(aIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+    function  GetMaxCliqueBP: TIntArray;
+    function  GetMaxCliqueBP256: TIntArray;
     function  GetMaxClique: TIntArray;
-    function  GetMaxCliqueStatic: TIntArray;
-    function  GetMaxCliqueSparse: TIntArray;
+    procedure ListCliquesBP(aOnFind: TOnFindSet);
+    procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
-    procedure ListCliquesStatic(aOnFind: TOnFindSet);
-    procedure ListCliquesSparse(aOnFind: TOnFindSet);
     function  GetMaxIS: TIntArray;
     function  GetMaxISStatic: TIntArray;
     procedure ListIS(aOnFind: TOnFindSet);
@@ -376,8 +379,10 @@ type
     function  ApproxMaxIndependentSet: TIntArray;
     function  ApproxMinIndependentSet: TIntArray;
   { returns indices of the vertices of the some found minimum dominating set;
-    worst case time cost O(2^n); aTimeOut specifies the timeout in seconds;
-    at the end of the aTimeOut, the best solution found at that time will be returned }
+    worst case time cost O(2^n);
+    aTimeOut specifies the timeout in seconds;
+    at the end of the aTimeOut, the best solution found at that time will be returned
+    and aExact will set to False }
     function  MinDominatingSet(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
@@ -678,6 +683,8 @@ var
   NewSub, NewCand, Diff: TBoolVector;
   I: SizeInt;
 begin
+  if FCanceled then
+    exit;
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
@@ -698,7 +705,7 @@ begin
         end;
     end
   else
-    FOnFind(FCurrSet.ToArray);
+    FOnFind(FCurrSet.ToArray, FCanceled);
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -768,6 +775,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   FOnFind := aOnFind;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -780,6 +788,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   FOnFind := aOnFind;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -1211,6 +1220,8 @@ var
   NewSub, NewCand, Diff: TBits256;
   I: SizeInt;
 begin
+  if FCanceled then
+    exit;
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
@@ -1231,7 +1242,7 @@ begin
         end;
     end
   else
-    FOnFind(FCurrSet.ToArray);
+    FOnFind(FCurrSet.ToArray, FCanceled);
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -1301,6 +1312,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   FOnFind := aOnFind;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -1313,6 +1325,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   FOnFind := aOnFind;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -1378,6 +1391,8 @@ var
   NewSub, NewCand, Diff: TIntSet;
   I: SizeInt;
 begin
+  if FCanceled then
+    exit;
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
@@ -1398,7 +1413,7 @@ begin
         end;
     end
   else
-    FOnFind(FCurrSet.ToArray);
+    FOnFind(FCurrSet.ToArray, FCanceled);
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.FillMatrix(aGraph: TGSimpleGraph);
@@ -1447,6 +1462,7 @@ begin
   Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
   FOnFind := aOnFind;
+  FCanceled := False;
   Extend(Sub, Cand);
 end;
 
@@ -1638,7 +1654,7 @@ begin
   FCancel := False;
   FillMatrix(aGraph);
   FResult := aGraph.ApproxMinIndependentSet;
-  Cand.InitZero;
+  {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
     if aGraph.DegreeI(FVertices[I]) = 0 then
@@ -1940,42 +1956,42 @@ begin
   Result := False;
 end;
 
-function TGSimpleGraph.GetMaxClique: TIntArray;
+function TGSimpleGraph.GetMaxCliqueBP: TIntArray;
 var
   Helper: TBPCliqueIsHelper;
 begin
   Result := Helper.MaxClique(Self);
 end;
 
-function TGSimpleGraph.GetMaxCliqueStatic: TIntArray;
+function TGSimpleGraph.GetMaxCliqueBP256: TIntArray;
 var
   Helper: TBPCliqueIsHelper256;
 begin
   Result := Helper.MaxClique(Self);
 end;
 
-function TGSimpleGraph.GetMaxCliqueSparse: TIntArray;
+function TGSimpleGraph.GetMaxClique: TIntArray;
 var
   Helper: TCliqueHelper;
 begin
   Result := Helper.MaxClique(Self);
 end;
 
-procedure TGSimpleGraph.ListCliques(aOnFind: TOnFindSet);
+procedure TGSimpleGraph.ListCliquesBP(aOnFind: TOnFindSet);
 var
   Helper: TBPCliqueIsHelper;
 begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
-procedure TGSimpleGraph.ListCliquesStatic(aOnFind: TOnFindSet);
+procedure TGSimpleGraph.ListCliquesBP256(aOnFind: TOnFindSet);
 var
   Helper: TBPCliqueIsHelper256;
 begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
-procedure TGSimpleGraph.ListCliquesSparse(aOnFind: TOnFindSet);
+procedure TGSimpleGraph.ListCliques(aOnFind: TOnFindSet);
 var
   Helper: TCliqueHelper;
 begin
@@ -3079,12 +3095,12 @@ begin
   if aOnFindClique = nil then
     raise ELGraphError.Create(SECallbackMissed);
   if (VertexCount > LISTCLIQUES_SPARSE_CUTOFF) or (Density <= MAXCLIQUE_DENSITY_CUTOFF) then
-    ListCliquesSparse(aOnFindClique)
+    ListCliques(aOnFindClique)
   else
     if VertexCount > 256 then
-      ListCliques(aOnFindClique)
+      ListCliquesBP(aOnFindClique)
     else
-      ListCliquesStatic(aOnFindClique);
+      ListCliquesBP256(aOnFindClique);
 end;
 
 function TGSimpleGraph.MaxClique: TIntArray;
@@ -3092,12 +3108,12 @@ begin
   if IsEmpty or (EdgeCount = 0) then
     exit(nil);
   if (VertexCount >= MAXCLIQUE_SPARSE_CUTOFF) or (Density <= MAXCLIQUE_DENSITY_CUTOFF) then
-    Result := GetMaxCliqueSparse
+    Result := GetMaxClique
   else
     if VertexCount > 256 then
-      Result := GetMaxClique
+      Result := GetMaxCliqueBP
     else
-      Result := GetMaxCliqueStatic;
+      Result := GetMaxCliqueBP256;
 end;
 
 function TGSimpleGraph.ApproxMaxClique: TIntArray;
