@@ -47,7 +47,6 @@ type
   generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
-    TBoolMatrix         = array of TBoolVector;
     TSortByDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
     TBPCliqueIsHelper = record // BP -> bit-parallel
@@ -256,9 +255,10 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
   const
-    LISTCLIQUES_SPARSE_CUTOFF = 60000;
-    MAXCLIQUE_SPARSE_CUTOFF   = 50000;
-    MAXCLIQUE_DENSITY_CUTOFF  = 0.005;
+    LISTCLIQUES_BP_CUTOFF       = 60000;
+    MAXCLIQUE_BP_CUTOFF         = 50000;
+    MAXCLIQUE_BP_DENSITY_CUTOFF = 0.005;
+    MINIS_BP_CUTOFF             = 50000;
 
   protected
     FCompCount: SizeInt;
@@ -290,8 +290,10 @@ type
     function  GetMaxIsBP256: TIntArray;
     procedure ListIsBP(aOnFind: TOnFindSet);
     procedure ListIsBP256(aOnFind: TOnFindSet);
-    function  GetMinDomSet(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    function  GetMinDomSetStatic(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMinIS: TIntArray;
+    function  GetMinIsBP: TIntArray;
+    function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -381,9 +383,9 @@ type
   { returns indices of the vertices of the some found minimum dominating set;
     worst case time cost O(2^n);
     aTimeOut specifies the timeout in seconds;
-    at the end of the aTimeOut, the best solution found at that time will be returned
-    and aExact will set to False }
-    function  MinDominatingSet(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    at the end of the timeout, the best solution found by this time will be returned,
+    and aExactSolution will be set to False }
+    function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
@@ -2026,14 +2028,73 @@ begin
   Helper.ListIS(Self, aOnFind);
 end;
 
-function TGSimpleGraph.GetMinDomSet(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+function TGSimpleGraph.GetMinIS: TIntArray;
+var
+  Cand, Stack: TIntSet;
+  I, J, v, w, Card: SizeInt;
+begin
+  Cand.InitRange(VertexCount);
+  while Cand.NonEmpty do
+    begin
+      J := 0;
+      Card := 0;
+      for I in Cand do
+        begin
+          w := 1;
+          for v in AdjVerticesI(I) do
+            if Cand.Contains(v) then
+              Inc(w);
+          if w > Card then
+            begin
+              Card := w;
+              J := I;
+            end;
+        end;
+      Cand.Delete(J);
+      for I in AdjVerticesI(J) do
+        Cand.Delete(I);
+      {%H-}Stack.Push(J);
+    end;
+  Result := Stack.ToArray;
+end;
+
+function TGSimpleGraph.GetMinIsBP: TIntArray;
+var
+  Matrix: TBoolMatrix;
+  Cand: TBoolVector;
+  Stack: TIntSet;
+  I, J, w, Card: SizeInt;
+begin
+  Matrix := CreateBoolMatrix;
+  Cand.InitRange(VertexCount);
+  while Cand.NonEmpty do
+    begin
+      J := 0;
+      Card := 0;
+      for I in Cand do
+        begin
+          w := Succ(Cand.IntersectionCount(Matrix[I]));
+          if w > Card then
+            begin
+              Card := w;
+              J := I;
+            end;
+        end;
+      Cand[J] := False;
+      Cand.Subtract(Matrix[J]);
+      {%H-}Stack.Push(J);
+    end;
+  Result := Stack.ToArray;
+end;
+
+function TGSimpleGraph.GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPDomSetHelper;
 begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetMinDomSetStatic(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+function TGSimpleGraph.GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPDomSetHelper256;
 begin
@@ -3047,45 +3108,23 @@ begin
 end;
 
 function TGSimpleGraph.ApproxMinIndependentSet: TIntArray;
-var
-  Cand, Stack: TIntSet;
-  I, J, v, w, Card: SizeInt;
 begin
   if IsEmpty then
     exit(nil);
-  Cand.InitRange(VertexCount);
-  while Cand.NonEmpty do
-    begin
-      J := 0;
-      Card := 0;
-      for I in Cand do
-        begin
-          w := 1;
-          for v in AdjVerticesI(I) do
-            if Cand.Contains(v) then
-              Inc(w);
-          if w > Card then
-            begin
-              Card := w;
-              J := I;
-            end;
-        end;
-      Cand.Delete(J);
-      for I in AdjVerticesI(J) do
-        Cand.Delete(I);
-      {%H-}Stack.Push(J);
-    end;
-  Result := Stack.ToArray;
+  if VertexCount > MINIS_BP_CUTOFF then
+    Result := GetMinIS
+  else
+    Result := GetMinIsBP;
 end;
 
-function TGSimpleGraph.MinDominatingSet(out aExact: Boolean; aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if IsEmpty then
     exit(nil);
   if VertexCount > 256 then
-    Result := GetMinDomSet(aTimeOut, aExact)
+    Result := GetMdsBP(aTimeOut, aExactSolution)
   else
-    Result := GetMinDomSetStatic(aTimeOut, aExact);
+    Result := GetMdsBP256(aTimeOut, aExactSolution);
 end;
 
 procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
@@ -3094,7 +3133,7 @@ begin
     exit;
   if aOnFindClique = nil then
     raise ELGraphError.Create(SECallbackMissed);
-  if (VertexCount > LISTCLIQUES_SPARSE_CUTOFF) or (Density <= MAXCLIQUE_DENSITY_CUTOFF) then
+  if (VertexCount > LISTCLIQUES_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
     ListCliques(aOnFindClique)
   else
     if VertexCount > 256 then
@@ -3107,7 +3146,7 @@ function TGSimpleGraph.MaxClique: TIntArray;
 begin
   if IsEmpty or (EdgeCount = 0) then
     exit(nil);
-  if (VertexCount >= MAXCLIQUE_SPARSE_CUTOFF) or (Density <= MAXCLIQUE_DENSITY_CUTOFF) then
+  if (VertexCount >= MAXCLIQUE_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
     Result := GetMaxClique
   else
     if VertexCount > 256 then
