@@ -286,10 +286,10 @@ type
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
-    function  GetMaxIS: TIntArray;
-    function  GetMaxISStatic: TIntArray;
-    procedure ListIS(aOnFind: TOnFindSet);
-    procedure ListISStatic(aOnFind: TOnFindSet);
+    function  GetMaxIsBP: TIntArray;
+    function  GetMaxIsBP256: TIntArray;
+    procedure ListIsBP(aOnFind: TOnFindSet);
+    procedure ListIsBP256(aOnFind: TOnFindSet);
     function  GetMinDomSet(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMinDomSetStatic(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -1998,28 +1998,28 @@ begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
-function TGSimpleGraph.GetMaxIS: TIntArray;
+function TGSimpleGraph.GetMaxIsBP: TIntArray;
 var
   Helper: TBPCliqueIsHelper;
 begin
   Result := Helper.MaxIS(Self);
 end;
 
-function TGSimpleGraph.GetMaxISStatic: TIntArray;
+function TGSimpleGraph.GetMaxIsBP256: TIntArray;
 var
   Helper: TBPCliqueIsHelper256;
 begin
   Result := Helper.MaxIS(Self);
 end;
 
-procedure TGSimpleGraph.ListIS(aOnFind: TOnFindSet);
+procedure TGSimpleGraph.ListIsBP(aOnFind: TOnFindSet);
 var
   Helper: TBPCliqueIsHelper;
 begin
   Helper.ListIS(Self, aOnFind);
 end;
 
-procedure TGSimpleGraph.ListISStatic(aOnFind: TOnFindSet);
+procedure TGSimpleGraph.ListIsBP256(aOnFind: TOnFindSet);
 var
   Helper: TBPCliqueIsHelper256;
 begin
@@ -2999,9 +2999,9 @@ begin
   if aOnFindSet = nil then
     raise ELGraphError.Create(SECallbackMissed);
   if VertexCount > 256 then
-    ListIS(aOnFindSet)
+    ListIsBP(aOnFindSet)
   else
-    ListISStatic(aOnFindSet)
+    ListIsBP256(aOnFindSet)
 end;
 
 function TGSimpleGraph.MaxIndependentSet: TIntArray;
@@ -3009,9 +3009,9 @@ begin
   if IsEmpty then
     exit(nil);
   if VertexCount > 256 then
-    Result := GetMaxIS
+    Result := GetMaxIsBP
   else
-    Result := GetMaxISStatic;
+    Result := GetMaxIsBP256;
 end;
 
 function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
