@@ -50,7 +50,7 @@ type
     TBoolMatrix         = array of TBoolVector;
     TSortByDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
 
-    TCliqueIsHelper = record
+    TBPCliqueIsHelper = record // BP -> bit-parallel
     private
       FMatrix: TBoolMatrix;
       FCurrSet: TBoolVector;
@@ -80,8 +80,6 @@ type
     { executes ListCliques upon complement graph }
       procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
-
-    { TBits256 }
 
     TBits256 = record
     public
@@ -164,7 +162,7 @@ type
 
     TBitMatrix256 = array of TBits256;
 
-    TCliqueIsHelper256 = record
+    TBPCliqueIsHelper256 = record // BP -> bit-parallel
     private
       FMatrix: TBitMatrix256;
       FCurrSet,
@@ -185,7 +183,7 @@ type
       procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
-    TSparseCliqueHelper = record
+    TCliqueHelper = record
     private
       FMatrix: TSkeleton;
       FCurrSet: TIntSet;
@@ -204,7 +202,7 @@ type
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
-    TDomSetHelper = record
+    TBPDomSetHelper = record // BP -> bit-parallel
     private
       FMatrix: TBoolMatrix;
       FVertices,
@@ -219,7 +217,7 @@ type
       function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     end;
 
-    TDomSetHelper256 = record
+    TBPDomSetHelper256 = record // BP -> bit-parallel
     private
       FMatrix: TBitMatrix256;
       FVertices,
@@ -609,9 +607,9 @@ implementation
 uses
   bufstream;
 
-{ TGSimpleGraph.TCliqueIsHelper }
+{ TGSimpleGraph.TBPCliqueIsHelper }
 
-procedure TGSimpleGraph.TCliqueIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TBPCliqueIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBoolVector;
   I, J, ColorClass, PCount: SizeInt;
@@ -638,7 +636,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper.Extend(var aCand: TBoolVector);
+procedure TGSimpleGraph.TBPCliqueIsHelper.Extend(var aCand: TBoolVector);
 var
   NewCand: TBoolVector;
   ColOrd, Colors: TIntArray;
@@ -675,7 +673,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper.Extend(var aSub, aCand: TBoolVector);
+procedure TGSimpleGraph.TBPCliqueIsHelper.Extend(var aSub, aCand: TBoolVector);
 var
   NewSub, NewCand, Diff: TBoolVector;
   I: SizeInt;
@@ -703,7 +701,7 @@ begin
     FOnFind(FCurrSet.ToArray);
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TBPCliqueIsHelper.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
 var
   I, J: SizeInt;
   p: PAdjList;
@@ -719,7 +717,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
     FVertices := aGraph.SortComplementByDegeneracy
@@ -728,7 +726,7 @@ begin
   FillMatrix(aGraph, aComplement);
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
     FVertices := aGraph.SortVerticesByDegree(soAsc)
@@ -737,7 +735,7 @@ begin
   FillMatrix(aGraph, aComplement);
 end;
 
-function TGSimpleGraph.TCliqueIsHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TBPCliqueIsHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBoolVector;
 begin
@@ -749,7 +747,7 @@ begin
   Result := FResult;
 end;
 
-function TGSimpleGraph.TCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TBPCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBoolVector;
 begin
@@ -761,7 +759,7 @@ begin
   Result := FResult;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Sub, Cand: TBoolVector;
 begin
@@ -773,7 +771,7 @@ begin
   Extend(Sub, Cand);
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Sub, Cand: TBoolVector;
 begin
@@ -1143,9 +1141,9 @@ begin
 {$ENDIF }
 end;
 
-{ TGSimpleGraph.TCliqueIsHelper256 }
+{ TGSimpleGraph.TBPCliqueIsHelper256 }
 
-procedure TGSimpleGraph.TCliqueIsHelper256.Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBits256;
   I, J, ColorClass, PCount: SizeInt;
@@ -1172,7 +1170,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.Extend(var aCand: TBits256);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.Extend(var aCand: TBits256);
 var
   NewCand: TBits256;
   ColOrd, Colors: TIntArray;
@@ -1208,7 +1206,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.Extend(var aSub, aCand: TBits256);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.Extend(var aSub, aCand: TBits256);
 var
   NewSub, NewCand, Diff: TBits256;
   I: SizeInt;
@@ -1236,7 +1234,7 @@ begin
     FOnFind(FCurrSet.ToArray);
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
 var
   I, J: SizeInt;
   pA: PAdjList;
@@ -1252,7 +1250,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
     FVertices := aGraph.SortComplementByDegeneracy
@@ -1261,7 +1259,7 @@ begin
   FillMatrix(aGraph, aComplement);
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
     FVertices := aGraph.SortVerticesByDegree(soAsc)
@@ -1270,7 +1268,7 @@ begin
   FillMatrix(aGraph, aComplement);
 end;
 
-function TGSimpleGraph.TCliqueIsHelper256.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TBPCliqueIsHelper256.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBits256;
 begin
@@ -1282,7 +1280,7 @@ begin
   Result := FResult.ToArray;
 end;
 
-function TGSimpleGraph.TCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TBPCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TBits256;
 begin
@@ -1294,7 +1292,7 @@ begin
   Result := FResult.ToArray;
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Sub, Cand: TBits256;
 begin
@@ -1306,7 +1304,7 @@ begin
   Extend(Sub, Cand);
 end;
 
-procedure TGSimpleGraph.TCliqueIsHelper256.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Sub, Cand: TBits256;
 begin
@@ -1318,7 +1316,7 @@ begin
   Extend(Sub, Cand);
 end;
 
-procedure TGSimpleGraph.TSparseCliqueHelper.Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TCliqueHelper.Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
 var
   P, Q: TIntSet;
   I, J, ColorClass: SizeInt;
@@ -1343,7 +1341,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TSparseCliqueHelper.Extend(var aCand: TIntSet);
+procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand: TIntSet);
 var
   NewCand: TIntSet;
   ColOrd, Colors: TIntArray;
@@ -1375,7 +1373,7 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.TSparseCliqueHelper.Extend(var aSub, aCand: TIntSet);
+procedure TGSimpleGraph.TCliqueHelper.Extend(var aSub, aCand: TIntSet);
 var
   NewSub, NewCand, Diff: TIntSet;
   I: SizeInt;
@@ -1403,7 +1401,7 @@ begin
     FOnFind(FCurrSet.ToArray);
 end;
 
-procedure TGSimpleGraph.TSparseCliqueHelper.FillMatrix(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TCliqueHelper.FillMatrix(aGraph: TGSimpleGraph);
 var
   I, J: SizeInt;
   pA: PAdjList;
@@ -1418,19 +1416,19 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TSparseCliqueHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TCliqueHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph);
 begin
   FVertices := aGraph.SortVerticesByDegeneracy;
   FillMatrix(aGraph);
 end;
 
-procedure TGSimpleGraph.TSparseCliqueHelper.SortMatrixByDegree(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TCliqueHelper.SortMatrixByDegree(aGraph: TGSimpleGraph);
 begin
   FVertices := aGraph.SortVerticesByDegree(soDesc);
   FillMatrix(aGraph);
 end;
 
-function TGSimpleGraph.TSparseCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
 var
   Cand: TIntSet;
 begin
@@ -1441,7 +1439,7 @@ begin
   Result := FResult;
 end;
 
-procedure TGSimpleGraph.TSparseCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Sub, Cand: TIntSet;
 begin
@@ -1452,14 +1450,14 @@ begin
   Extend(Sub, Cand);
 end;
 
-{ TGSimpleGraph.TDomSetHelper }
+{ TGSimpleGraph.TBPDomSetHelper }
 
-function TGSimpleGraph.TDomSetHelper.TimeOut: Boolean;
+function TGSimpleGraph.TBPDomSetHelper.TimeOut: Boolean;
 begin
   Result := SecondsBetween(Now, FStartTime) > FTimeOut;
 end;
 
-procedure TGSimpleGraph.TDomSetHelper.FillMatrix(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TBPDomSetHelper.FillMatrix(aGraph: TGSimpleGraph);
 var
   I, J: SizeInt;
   pA: PAdjList;
@@ -1476,7 +1474,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TBoolVector);
+procedure TGSimpleGraph.TBPDomSetHelper.Extend(constref aSub, aCand: TBoolVector);
 var
   NewSub, NewCand, Neib: TBoolVector;
   I, J: SizeInt;
@@ -1527,7 +1525,7 @@ begin
       FResult := aCand.ToArray;
 end;
 
-function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
   Sub, Cand: TBoolVector;
@@ -1551,14 +1549,14 @@ begin
   Result := FResult;
 end;
 
-{ TGSimpleGraph.TDomSetHelper256 }
+{ TGSimpleGraph.TBPDomSetHelper256 }
 
-function TGSimpleGraph.TDomSetHelper256.TimeOut: Boolean;
+function TGSimpleGraph.TBPDomSetHelper256.TimeOut: Boolean;
 begin
   Result := SecondsBetween(Now, FStartTime) > FTimeOut;
 end;
 
-procedure TGSimpleGraph.TDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TBPDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph);
 var
   I, J: SizeInt;
   pA: PAdjList;
@@ -1575,7 +1573,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TDomSetHelper256.Extend(constref aSub, aCand: TBits256);
+procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aSub, aCand: TBits256);
 var
   NewSub, NewCand, Neib: TBits256;
   I, J: SizeInt;
@@ -1626,7 +1624,7 @@ begin
       FResult := aCand.ToArray;
 end;
 
-function TGSimpleGraph.TDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
   Sub, Cand: TBits256;
@@ -1944,84 +1942,84 @@ end;
 
 function TGSimpleGraph.GetMaxClique: TIntArray;
 var
-  Helper: TCliqueIsHelper;
+  Helper: TBPCliqueIsHelper;
 begin
   Result := Helper.MaxClique(Self);
 end;
 
 function TGSimpleGraph.GetMaxCliqueStatic: TIntArray;
 var
-  Helper: TCliqueIsHelper256;
+  Helper: TBPCliqueIsHelper256;
 begin
   Result := Helper.MaxClique(Self);
 end;
 
 function TGSimpleGraph.GetMaxCliqueSparse: TIntArray;
 var
-  Helper: TSparseCliqueHelper;
+  Helper: TCliqueHelper;
 begin
   Result := Helper.MaxClique(Self);
 end;
 
 procedure TGSimpleGraph.ListCliques(aOnFind: TOnFindSet);
 var
-  Helper: TCliqueIsHelper;
+  Helper: TBPCliqueIsHelper;
 begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
 procedure TGSimpleGraph.ListCliquesStatic(aOnFind: TOnFindSet);
 var
-  Helper: TCliqueIsHelper256;
+  Helper: TBPCliqueIsHelper256;
 begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
 procedure TGSimpleGraph.ListCliquesSparse(aOnFind: TOnFindSet);
 var
-  Helper: TSparseCliqueHelper;
+  Helper: TCliqueHelper;
 begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
 function TGSimpleGraph.GetMaxIS: TIntArray;
 var
-  Helper: TCliqueIsHelper;
+  Helper: TBPCliqueIsHelper;
 begin
   Result := Helper.MaxIS(Self);
 end;
 
 function TGSimpleGraph.GetMaxISStatic: TIntArray;
 var
-  Helper: TCliqueIsHelper256;
+  Helper: TBPCliqueIsHelper256;
 begin
   Result := Helper.MaxIS(Self);
 end;
 
 procedure TGSimpleGraph.ListIS(aOnFind: TOnFindSet);
 var
-  Helper: TCliqueIsHelper;
+  Helper: TBPCliqueIsHelper;
 begin
   Helper.ListIS(Self, aOnFind);
 end;
 
 procedure TGSimpleGraph.ListISStatic(aOnFind: TOnFindSet);
 var
-  Helper: TCliqueIsHelper256;
+  Helper: TBPCliqueIsHelper256;
 begin
   Helper.ListIS(Self, aOnFind);
 end;
 
 function TGSimpleGraph.GetMinDomSet(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
-  Helper: TDomSetHelper;
+  Helper: TBPDomSetHelper;
 begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
 end;
 
 function TGSimpleGraph.GetMinDomSetStatic(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
-  Helper: TDomSetHelper256;
+  Helper: TBPDomSetHelper256;
 begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
 end;
