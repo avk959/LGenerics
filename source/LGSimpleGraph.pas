@@ -55,9 +55,11 @@ type
       FCurrSet: TBoolVector;
       FVertices,
       FResult: TIntArray;
-      FCurrSize: SizeInt;
       FOnFind: TOnFindSet;
+      FStartTime: TDateTime;
+      FTimeOut: Integer;
       FCanceled: Boolean;
+      function  TimeOut: Boolean; inline;
       procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
       procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
       procedure Extend(var aSub, aCand: TBoolVector);
@@ -69,9 +71,9 @@ type
         San Segundo, P, Rodriguez-Losada, D., Jimenez, A.:
           "An exact bit-parallel algorithm for the maximum clique problem",
         Patrick Prosser: "Exact Algorithms for Maximum Clique: a computational study." }
-      function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
+      function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     { executes MaxClique upon complement graph }
-      function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
+      function  MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     { something like Tomita's Cliques on bit strings, except pivot maximizing -
         Etsuji Tomitaa, Akira Tanakaa, Haruhisa Takahashi:
           "The worst-case time complexity for generating all maximal cliques and
@@ -165,12 +167,14 @@ type
     TBPCliqueIsHelper256 = record // BP -> bit-parallel
     private
       FMatrix: TBitMatrix256;
-      FCurrSet,
-      FResult: TBits256;
-      FVertices: TIntArray;
-      FCurrSize: SizeInt;
+      FCurrSet: TBits256;
+      FVertices,
+      FResult: TIntArray;
       FOnFind: TOnFindSet;
+      FStartTime: TDateTime;
+      FTimeOut: Integer;
       FCanceled: Boolean;
+      function  TimeOut: Boolean; inline;
       procedure Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TBits256);
       procedure Extend(var aSub, aCand: TBits256);
@@ -178,8 +182,8 @@ type
       procedure SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
       procedure SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
     public
-      function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
-      function  MaxIS(aGraph: TGSimpleGraph): TIntArray;
+      function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
+      function  MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
       procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
@@ -190,9 +194,11 @@ type
       FCurrSet: TIntSet;
       FVertices,
       FResult: TIntArray;
-      FCurrSize: SizeInt;
       FOnFind: TOnFindSet;
+      FStartTime: TDateTime;
+      FTimeOut: Integer;
       FCanceled: Boolean;
+      function  TimeOut: Boolean; inline;
       procedure Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TIntSet);
       procedure Extend(var aSub, aCand: TIntSet);
@@ -200,7 +206,7 @@ type
       procedure SortMatrixByDegeneracy(aGraph: TGSimpleGraph);
       procedure SortMatrixByDegree(aGraph: TGSimpleGraph);
     public
-      function  MaxClique(aGraph: TGSimpleGraph): TIntArray;
+      function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
       procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
     end;
 
@@ -211,7 +217,7 @@ type
       FResult: TIntArray;
       FStartTime: TDateTime;
       FTimeOut: Integer;
-      FCancel: Boolean;
+      FCanceled: Boolean;
       function  TimeOut: Boolean; inline;
       procedure FillMatrix(aGraph: TGSimpleGraph);
       procedure Extend(constref aSub, aCand: TBoolVector);
@@ -226,7 +232,7 @@ type
       FResult: TIntArray;
       FStartTime: TDateTime;
       FTimeOut: Integer;
-      FCancel: Boolean;
+      FCanceled: Boolean;
       function  TimeOut: Boolean; inline;
       procedure FillMatrix(aGraph: TGSimpleGraph);
       procedure Extend(constref aSub, aCand: TBits256);
@@ -269,7 +275,7 @@ type
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
   const
-    LISTCLIQUES_BP_CUTOFF       = 60000;
+    LISTCLIQUES_BP_CUTOFF       = 60000; //BP: bit-parallel
     COMMON_BP_CUTOFF            = 50000;
     MAXCLIQUE_BP_DENSITY_CUTOFF = 0.005;
 
@@ -293,14 +299,14 @@ type
     function  GetEccentricity(aIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
-    function  GetMaxCliqueBP: TIntArray;
-    function  GetMaxCliqueBP256: TIntArray;
-    function  GetMaxClique: TIntArray;
+    function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
-    function  GetMaxIsBP: TIntArray;
-    function  GetMaxIsBP256: TIntArray;
+    function  GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMaxIsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure ListIsBP(aOnFind: TOnFindSet);
     procedure ListIsBP256(aOnFind: TOnFindSet);
     function  GetApproxMaxIS: TIntArray;
@@ -393,8 +399,11 @@ type
   { lists all maximal independent sets of vertices }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set of vertices;
-    worst case time cost O(3^n/3) }
-    function  MaxIndependentSet: TIntArray;
+    worst case time cost O(3^n/3)
+    aTimeOut specifies the timeout in seconds;
+    at the end of the timeout, the best solution found by this time will be returned,
+    and aExactSolution will be set to False }
+    function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  ApproxMaxIndependentSet: TIntArray;
   { returns indices of the vertices of the some found minimum dominating set;
     worst case time cost O(2^n);
@@ -404,8 +413,11 @@ type
     function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
-  { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
-    function  MaxClique: TIntArray;
+  { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3);
+    aTimeOut specifies the timeout in seconds;
+    at the end of the timeout, the best solution found by this time will be returned,
+    and aExactSolution will be set to False }
+    function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  ApproxMaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
@@ -632,6 +644,11 @@ uses
 
 { TGSimpleGraph.TBPCliqueIsHelper }
 
+function TGSimpleGraph.TBPCliqueIsHelper.TimeOut: Boolean;
+begin
+  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
+end;
+
 procedure TGSimpleGraph.TBPCliqueIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBoolVector;
@@ -665,35 +682,36 @@ var
   ColOrd, Colors: TIntArray;
   I, J, ItemCount: SizeInt;
 begin
-  if aCand.IsEmpty then
+  if aCand.NonEmpty then
     begin
-      ItemCount := FCurrSet.PopCount;
-      if ItemCount > FCurrSize then
+      if TimeOut then
         begin
-          FCurrSize := ItemCount;
-          FResult := FCurrSet.ToArray;
+          FCanceled := True;
+          exit;
         end;
-      exit;
-    end;
-  ItemCount := aCand.PopCount;
-  if ItemCount > 0 then
-    begin
-      System.SetLength(ColOrd, ItemCount);
-      System.SetLength(Colors, ItemCount);
-      Recolor(aCand, ColOrd, Colors);
-      for I := Pred(ItemCount) downto 0 do
+      ItemCount := aCand.PopCount;
+      if ItemCount > 0 then
         begin
-          if Colors[I] + FCurrSet.PopCount <= FCurrSize then
-            exit;
-          J := ColOrd[I];
-          aCand[J] := False;
-          FCurrSet[FVertices[J]] := True;
-          NewCand := aCand;
-          NewCand.Intersect(FMatrix[J]);
-          Extend(NewCand);
-          FCurrSet[FVertices[J]] := False;
+          System.SetLength(ColOrd, ItemCount);
+          System.SetLength(Colors, ItemCount);
+          Recolor(aCand, ColOrd, Colors);
+          for I := Pred(ItemCount) downto 0 do
+            begin
+              if Colors[I] + FCurrSet.PopCount <= System.Length(FResult) then
+                exit;
+              J := ColOrd[I];
+              aCand[J] := False;
+              FCurrSet[FVertices[J]] := True;
+              NewCand := aCand;
+              NewCand.Intersect(FMatrix[J]);
+              Extend(NewCand);
+              FCurrSet[FVertices[J]] := False;
+            end;
         end;
-    end;
+    end
+  else
+    if FCurrSet.PopCount > System.Length(FResult) then
+      FResult := FCurrSet.ToArray;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.Extend(var aSub, aCand: TBoolVector);
@@ -760,28 +778,38 @@ begin
   FillMatrix(aGraph, aComplement);
 end;
 
-function TGSimpleGraph.TBPCliqueIsHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TBPCliqueIsHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
 var
   Cand: TBoolVector;
 begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut;
+  FCanceled := False;
   SortMatrixByDegeneracy(aGraph, False);
+  FResult := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSize := 0;
   FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
   Result := FResult;
+  aExact := not FCanceled;
 end;
 
-function TGSimpleGraph.TBPCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TBPCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
 var
   Cand: TBoolVector;
 begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut;
+  FCanceled := False;
   SortMatrixByDegeneracy(aGraph, True);
+  FResult := aGraph.ApproxMaxIndependentSet;
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSize := 0;
   FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
   Result := FResult;
+  aExact := not FCanceled;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -1170,6 +1198,11 @@ end;
 
 { TGSimpleGraph.TBPCliqueIsHelper256 }
 
+function TGSimpleGraph.TBPCliqueIsHelper256.TimeOut: Boolean;
+begin
+  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
+end;
+
 procedure TGSimpleGraph.TBPCliqueIsHelper256.Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBits256;
@@ -1205,13 +1238,18 @@ var
 begin
   if aCand.NonEmpty then
     begin
+      if TimeOut then
+        begin
+          FCanceled := True;
+          exit;
+        end;
       ItemCount := aCand.PopCount;
       System.SetLength(ColOrd, ItemCount);
       System.SetLength(Colors, ItemCount);
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
-          if Colors[I] + FCurrSet.PopCount <= FCurrSize then
+          if Colors[I] + FCurrSet.PopCount <= System.Length(FResult) then
             exit;
           J := ColOrd[I];
           aCand[J] := False;
@@ -1223,14 +1261,8 @@ begin
         end;
     end
   else
-    begin
-      ItemCount := FCurrSet.PopCount;
-      if ItemCount > FCurrSize then
-        begin
-          FCurrSize := ItemCount;
-          FResult := FCurrSet;
-        end;
-    end;
+    if FCurrSet.PopCount > System.Length(FResult) then
+      FResult := FCurrSet.ToArray;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.Extend(var aSub, aCand: TBits256);
@@ -1297,28 +1329,38 @@ begin
   FillMatrix(aGraph, aComplement);
 end;
 
-function TGSimpleGraph.TBPCliqueIsHelper256.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TBPCliqueIsHelper256.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
 var
   Cand: TBits256;
 begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut;
+  FCanceled := False;
   SortMatrixByDegeneracy(aGraph, False);
+  FResult := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSize := 0;
   FCurrSet.InitZero;
   Extend(Cand);
-  Result := FResult.ToArray;
+  Result := FResult;
+  aExact := not FCanceled;
 end;
 
-function TGSimpleGraph.TBPCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TBPCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
 var
   Cand: TBits256;
 begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut;
+  FCanceled := False;
   SortMatrixByDegeneracy(aGraph, True);
+  FResult := aGraph.ApproxMaxIndependentSet;
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSize := 0;
   FCurrSet.InitZero;
   Extend(Cand);
-  Result := FResult.ToArray;
+  Result := FResult;
+  aExact := not FCanceled;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -1345,6 +1387,11 @@ begin
   FOnFind := aOnFind;
   FCanceled := False;
   Extend(Sub, Cand);
+end;
+
+function TGSimpleGraph.TCliqueHelper.TimeOut: Boolean;
+begin
+  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
@@ -1380,12 +1427,17 @@ var
 begin
   if aCand.NonEmpty then
     begin
+      if TimeOut then
+        begin
+          FCanceled := True;
+          exit;
+        end;
       System.SetLength(ColOrd, aCand.Count);
       System.SetLength(Colors, aCand.Count);
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(aCand.Count) downto 0 do
         begin
-          if Colors[I] + FCurrSet.Count <= FCurrSize then
+          if Colors[I] + FCurrSet.Count <= System.Length(FResult) then
             exit;
           J := ColOrd[I];
           aCand.Delete(J);
@@ -1397,11 +1449,8 @@ begin
         end;
     end
   else
-    if FCurrSet.Count > FCurrSize then
-      begin
-        FCurrSize := FCurrSet.Count;
-        FResult := FCurrSet.ToArray;
-      end;
+    if FCurrSet.Count > System.Length(FResult) then
+      FResult := FCurrSet.ToArray;
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.Extend(var aSub, aCand: TIntSet);
@@ -1461,15 +1510,20 @@ begin
   FillMatrix(aGraph);
 end;
 
-function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph): TIntArray;
+function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
 var
   Cand: TIntSet;
 begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut;
+  FCanceled := False;
   SortMatrixByDegeneracy(aGraph);
+  FResult := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSize := 0;
   Extend(Cand);
   Result := FResult;
+  aExact := not FCanceled;
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -1519,7 +1573,7 @@ begin
         exit;
       if TimeOut then
         begin
-          FCancel := True;
+          FCanceled := True;
           exit;
         end;
       NewSub := aSub;
@@ -1570,7 +1624,7 @@ begin
     aTimeOut := System.High(Integer)
   else
     FTimeOut := aTimeOut;
-  FCancel := False;
+  FCanceled := False;
   FillMatrix(aGraph);
   FResult := aGraph.ApproxMinIndependentSet;
   Cand.Size := aGraph.VertexCount;
@@ -1579,7 +1633,7 @@ begin
     if aGraph.DegreeI(FVertices[I]) = 0 then
       Sub[I] := False;
   Extend(Sub, Cand);
-  aExact := not FCancel;
+  aExact := not FCanceled;
   Result := FResult;
 end;
 
@@ -1618,7 +1672,7 @@ begin
         exit;
       if TimeOut then
         begin
-          FCancel := True;
+          FCanceled := True;
           exit;
         end;
       NewSub := aSub;
@@ -1669,7 +1723,7 @@ begin
     aTimeOut := System.High(Integer)
   else
     FTimeOut := aTimeOut;
-  FCancel := False;
+  FCanceled := False;
   FillMatrix(aGraph);
   FResult := aGraph.ApproxMinIndependentSet;
   {%H-}Cand.InitZero;
@@ -1678,7 +1732,7 @@ begin
     if aGraph.DegreeI(FVertices[I]) = 0 then
       Sub[I] := False;
   Extend(Sub, Cand);
-  aExact := not FCancel;
+  aExact := not FCanceled;
   Result := FResult;
 end;
 
@@ -2054,25 +2108,25 @@ begin
   Result := False;
 end;
 
-function TGSimpleGraph.GetMaxCliqueBP: TIntArray;
+function TGSimpleGraph.GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPCliqueIsHelper;
 begin
-  Result := Helper.MaxClique(Self);
+  Result := Helper.MaxClique(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetMaxCliqueBP256: TIntArray;
+function TGSimpleGraph.GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPCliqueIsHelper256;
 begin
-  Result := Helper.MaxClique(Self);
+  Result := Helper.MaxClique(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetMaxClique: TIntArray;
+function TGSimpleGraph.GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TCliqueHelper;
 begin
-  Result := Helper.MaxClique(Self);
+  Result := Helper.MaxClique(Self, aTimeOut, aExact);
 end;
 
 procedure TGSimpleGraph.ListCliquesBP(aOnFind: TOnFindSet);
@@ -2096,18 +2150,18 @@ begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
-function TGSimpleGraph.GetMaxIsBP: TIntArray;
+function TGSimpleGraph.GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPCliqueIsHelper;
 begin
-  Result := Helper.MaxIS(Self);
+  Result := Helper.MaxIS(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetMaxIsBP256: TIntArray;
+function TGSimpleGraph.GetMaxIsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPCliqueIsHelper256;
 begin
-  Result := Helper.MaxIS(Self);
+  Result := Helper.MaxIS(Self, aTimeOut, aExact);
 end;
 
 procedure TGSimpleGraph.ListIsBP(aOnFind: TOnFindSet);
@@ -3238,14 +3292,14 @@ begin
     ListIsBP256(aOnFindSet)
 end;
 
-function TGSimpleGraph.MaxIndependentSet: TIntArray;
+function TGSimpleGraph.MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if IsEmpty then
     exit(nil);
   if VertexCount > 256 then
-    Result := GetMaxIsBP
+    Result := GetMaxIsBP(aTimeOut, aExactSolution)
   else
-    Result := GetMaxIsBP256;
+    Result := GetMaxIsBP256(aTimeOut, aExactSolution);
 end;
 
 function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
@@ -3286,17 +3340,17 @@ begin
       ListCliquesBP256(aOnFindClique);
 end;
 
-function TGSimpleGraph.MaxClique: TIntArray;
+function TGSimpleGraph.MaxClique(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if IsEmpty or (EdgeCount = 0) then
     exit(nil);
   if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
-    Result := GetMaxClique
+    Result := GetMaxClique(aTimeOut, aExactSolution)
   else
     if VertexCount > 256 then
-      Result := GetMaxCliqueBP
+      Result := GetMaxCliqueBP(aTimeOut, aExactSolution)
     else
-      Result := GetMaxCliqueBP256;
+      Result := GetMaxCliqueBP256(aTimeOut, aExactSolution);
 end;
 
 function TGSimpleGraph.ApproxMaxClique: TIntArray;
