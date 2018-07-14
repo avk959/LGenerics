@@ -211,11 +211,12 @@ type
       FResult: TIntArray;
       FStartTime: TDateTime;
       FTimeOut: Integer;
+      FCancel: Boolean;
       function  TimeOut: Boolean; inline;
       procedure FillMatrix(aGraph: TGSimpleGraph);
       procedure Extend(constref aSub, aCand: TBoolVector);
     public
-      function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer): TIntArray;
+      function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     end;
 
     TDomSetHelper256 = record
@@ -225,11 +226,12 @@ type
       FResult: TIntArray;
       FStartTime: TDateTime;
       FTimeOut: Integer;
+      FCancel: Boolean;
       function  TimeOut: Boolean; inline;
       procedure FillMatrix(aGraph: TGSimpleGraph);
       procedure Extend(constref aSub, aCand: TBits256);
     public
-      function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer): TIntArray;
+      function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     end;
 
     TDistinctEdgeEnumerator = record
@@ -287,8 +289,8 @@ type
     function  GetMaxISStatic: TIntArray;
     procedure ListIS(aOnFind: TOnFindSet);
     procedure ListISStatic(aOnFind: TOnFindSet);
-    function  GetMinDomSet(aTimeOut: Integer): TIntArray;
-    function  GetMinDomSetStatic(aTimeOut: Integer): TIntArray;
+    function  GetMinDomSet(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMinDomSetStatic(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -378,7 +380,7 @@ type
   { returns indices of the vertices of the some found minimum dominating set;
     worst case time cost O(2^n); aTimeOut specifies the timeout in seconds;
     at the end of the aTimeOut, the best solution found at that time will be returned }
-    function  MinDominatingSet(aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  MinDominatingSet(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3) }
@@ -1481,8 +1483,13 @@ var
 begin
   if aSub.NonEmpty then
     begin
-      if (aCand.PopCount >= System.High(FResult)) or TimeOut then
+      if aCand.PopCount >= System.High(FResult) then
         exit;
+      if TimeOut then
+        begin
+          FCancel := True;
+          exit;
+        end;
       NewSub := aSub;
       I := NewSub.Bsf;
       NewCand := aCand;
@@ -1520,7 +1527,8 @@ begin
       FResult := aCand.ToArray;
 end;
 
-function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
 var
   Sub, Cand: TBoolVector;
   I: SizeInt;
@@ -1530,6 +1538,7 @@ begin
     aTimeOut := System.High(Integer)
   else
     FTimeOut := aTimeOut;
+  FCancel := False;
   FillMatrix(aGraph);
   FResult := aGraph.ApproxMinIndependentSet;
   Cand.Size := aGraph.VertexCount;
@@ -1538,6 +1547,7 @@ begin
     if aGraph.DegreeI(FVertices[I]) = 0 then
       Sub[I] := False;
   Extend(Sub, Cand);
+  aExact := not FCancel;
   Result := FResult;
 end;
 
@@ -1572,10 +1582,15 @@ var
 begin
   if aSub.NonEmpty then
     begin
-      if (aCand.PopCount >= System.High(FResult)) or TimeOut then
+      if aCand.PopCount >= System.High(FResult) then
         exit;
+      if TimeOut then
+        begin
+          FCancel := True;
+          exit;
+        end;
       NewSub := aSub;
-      I := NewSub.Bsf;
+      I := aSub.Bsf;
       NewCand := aCand;
       NewCand[FVertices[I]] := True;
       NewSub[I] := False;
@@ -1611,7 +1626,8 @@ begin
       FResult := aCand.ToArray;
 end;
 
-function TGSimpleGraph.TDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.TDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
 var
   Sub, Cand: TBits256;
   I: SizeInt;
@@ -1621,6 +1637,7 @@ begin
     aTimeOut := System.High(Integer)
   else
     FTimeOut := aTimeOut;
+  FCancel := False;
   FillMatrix(aGraph);
   FResult := aGraph.ApproxMinIndependentSet;
   Cand.InitZero;
@@ -1629,6 +1646,7 @@ begin
     if aGraph.DegreeI(FVertices[I]) = 0 then
       Sub[I] := False;
   Extend(Sub, Cand);
+  aExact := not FCancel;
   Result := FResult;
 end;
 
@@ -1994,18 +2012,18 @@ begin
   Helper.ListIS(Self, aOnFind);
 end;
 
-function TGSimpleGraph.GetMinDomSet(aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.GetMinDomSet(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TDomSetHelper;
 begin
-  Result := Helper.MinDomSet(Self, aTimeOut);
+  Result := Helper.MinDomSet(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetMinDomSetStatic(aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.GetMinDomSetStatic(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TDomSetHelper256;
 begin
-  Result := Helper.MinDomSet(Self, aTimeOut);
+  Result := Helper.MinDomSet(Self, aTimeOut, aExact);
 end;
 
 procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -3046,14 +3064,14 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.MinDominatingSet(aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.MinDominatingSet(out aExact: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if IsEmpty then
     exit(nil);
   if VertexCount > 256 then
-    Result := GetMinDomSet(aTimeOut)
+    Result := GetMinDomSet(aTimeOut, aExact)
   else
-    Result := GetMinDomSetStatic(aTimeOut);
+    Result := GetMinDomSetStatic(aTimeOut, aExact);
 end;
 
 procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
