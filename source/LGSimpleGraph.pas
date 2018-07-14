@@ -243,7 +243,6 @@ type
     TDomSetHelper = record
     private
       FMatrix: TSkeleton;
-      FVertices,
       FResult: TIntArray;
       FStartTime: TDateTime;
       FTimeOut: Integer;
@@ -1805,9 +1804,9 @@ begin
   else
     FTimeOut := aTimeOut;
   FCancel := False;
-  FMatrix := aGraph.CreateSkeleton;
   FResult := aGraph.ApproxMinIndependentSet;
-  Sub.InitRange(aGraph.VertexCount);
+  FMatrix := aGraph.CreateSkeleton;
+  Sub.AssignArray(aGraph.SortVerticesByDegree(soAsc));
   for I := 0 to Pred(aGraph.VertexCount) do
     if aGraph.DegreeI(I) = 0 then
       Sub.Delete(I);
