@@ -689,23 +689,20 @@ begin
           exit;
         end;
       ItemCount := aCand.PopCount;
-      if ItemCount > 0 then
+      System.SetLength(ColOrd, ItemCount);
+      System.SetLength(Colors, ItemCount);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(ItemCount) downto 0 do
         begin
-          System.SetLength(ColOrd, ItemCount);
-          System.SetLength(Colors, ItemCount);
-          Recolor(aCand, ColOrd, Colors);
-          for I := Pred(ItemCount) downto 0 do
-            begin
-              if Colors[I] + FCurrSet.PopCount <= System.Length(FRecentBest) then
-                exit;
-              J := ColOrd[I];
-              aCand[J] := False;
-              FCurrSet[FVertices[J]] := True;
-              NewCand := aCand;
-              NewCand.Intersect(FMatrix[J]);
-              Extend(NewCand);
-              FCurrSet[FVertices[J]] := False;
-            end;
+          if Colors[I] + FCurrSet.PopCount <= System.Length(FRecentBest) then
+            exit;
+          J := ColOrd[I];
+          aCand[J] := False;
+          FCurrSet[FVertices[J]] := True;
+          NewCand := aCand;
+          NewCand.Intersect(FMatrix[J]);
+          Extend(NewCand);
+          FCurrSet[FVertices[J]] := False;
         end;
     end
   else
@@ -2739,20 +2736,38 @@ function TGSimpleGraph.SortVerticesByDegeneracy(o: TSortOrder): TIntArray;
 var
   I, J: SizeInt;
   List, Stack: TIntSet;
+  m: TBoolMatrix;
 begin
   Result := CreateDegreeArray;
   List.InitRange(VertexCount);
-  while List.NonEmpty do
+  if VertexCount > COMMON_BP_CUTOFF then
+    while List.NonEmpty do
+      begin
+        I := List[0];
+        for J in List do
+          if Result[J] < Result[I] then
+            I := J;
+        {%H-}Stack.Push(I);
+        List.Remove(I);
+        for J in List do
+          if AdjLists[I]^.Contains(J) then
+            Dec(Result[J]);
+      end
+  else
     begin
-      I := List[0];
-      for J in List do
-        if Result[J] < Result[I] then
-          I := J;
-      {%H-}Stack.Push(I);
-      List.Remove(I);
-      for J in List do
-        if AdjLists[J]^.Contains(I) then
-          Dec(Result[J]);
+      m := CreateBoolMatrix;
+      while List.NonEmpty do
+        begin
+          I := List[0];
+          for J in List do
+            if Result[J] < Result[I] then
+              I := J;
+          {%H-}Stack.Push(I);
+          List.Remove(I);
+          for J in List do
+            if m[I][J] then
+              Dec(Result[J]);
+        end;
     end;
   Result := Stack.ToArray;
   if o = soDesc then
@@ -2763,20 +2778,38 @@ function TGSimpleGraph.SortComplementByDegeneracy: TIntArray;
 var
   I, J: SizeInt;
   List, Stack: TIntSet;
+  m: TBoolMatrix;
 begin
   Result := CreateComplementDegreeArray;
   List.InitRange(VertexCount);
-  while List.NonEmpty do
+  if VertexCount > COMMON_BP_CUTOFF then
+    while List.NonEmpty do
+      begin
+        I := List[0];
+        for J in List do
+          if Result[J] < Result[I] then
+            I := J;
+        {%H-}Stack.Push(I);
+        List.Remove(I);
+        for J in List do
+          if not AdjLists[I]^.Contains(J) then
+            Dec(Result[J]);
+      end
+  else
     begin
-      I := List[0];
-      for J in List do
-        if Result[J] < Result[I] then
-          I := J;
-      {%H-}Stack.Push(I);
-      List.Remove(I);
-      for J in List do
-        if not AdjLists[J]^.Contains(I) then
-          Dec(Result[J]);
+      m := CreateBoolMatrix;
+      while List.NonEmpty do
+        begin
+          I := List[0];
+          for J in List do
+            if Result[J] < Result[I] then
+              I := J;
+          {%H-}Stack.Push(I);
+          List.Remove(I);
+          for J in List do
+            if not m[I][J] then
+              Dec(Result[J]);
+        end
     end;
   Result := Stack.ToArray;
   TIntHelper.Reverse(Result);
