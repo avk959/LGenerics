@@ -64,7 +64,7 @@ type
       procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
       procedure Extend(var aSub, aCand: TBoolVector);
       procedure FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
-      procedure SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+      procedure SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
       procedure SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
     public
     { some variant of BB-MaxClique -
@@ -179,7 +179,7 @@ type
       procedure Extend(var aCand: TBits256);
       procedure Extend(var aSub, aCand: TBits256);
       procedure FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
-      procedure SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+      procedure SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
       procedure SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
     public
       function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -203,7 +203,7 @@ type
       procedure Extend(var aCand: TIntSet);
       procedure Extend(var aSub, aCand: TIntSet);
       procedure FillMatrix(aGraph: TGSimpleGraph);
-      procedure SortMatrixByDegeneracy(aGraph: TGSimpleGraph);
+      procedure SortMatrixByWidth(aGraph: TGSimpleGraph);
       procedure SortMatrixByDegree(aGraph: TGSimpleGraph);
     public
       function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -326,8 +326,8 @@ type
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CreateDegreeArray: TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
-    function  SortVerticesByDegeneracy(o: TSortOrder): TIntArray;
-    function  SortComplementByDegeneracy: TIntArray;
+    function  SortVerticesByWidth(o: TSortOrder): TIntArray;
+    function  SortComplementByWidth: TIntArray;
     function  SortVerticesByDegree(o: TSortOrder): TIntArray;
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
@@ -756,12 +756,12 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
-    FVertices := aGraph.SortComplementByDegeneracy
+    FVertices := aGraph.SortComplementByWidth
   else
-    FVertices := aGraph.SortVerticesByDegeneracy(soDesc);
+    FVertices := aGraph.SortVerticesByWidth(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
@@ -782,7 +782,7 @@ begin
   FStartTime := Now;
   FTimeOut := aTimeOut;
   FCanceled := False;
-  SortMatrixByDegeneracy(aGraph, False);
+  SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
@@ -799,7 +799,7 @@ begin
   FStartTime := Now;
   FTimeOut := aTimeOut;
   FCanceled := False;
-  SortMatrixByDegeneracy(aGraph, True);
+  SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.ApproxMaxIndependentSet;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
@@ -1307,12 +1307,12 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByDegeneracy(aGraph: TGSimpleGraph; aComplement: Boolean);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
-    FVertices := aGraph.SortComplementByDegeneracy
+    FVertices := aGraph.SortComplementByWidth
   else
-    FVertices := aGraph.SortVerticesByDegeneracy(soDesc);
+    FVertices := aGraph.SortVerticesByWidth(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
@@ -1333,7 +1333,7 @@ begin
   FStartTime := Now;
   FTimeOut := aTimeOut;
   FCanceled := False;
-  SortMatrixByDegeneracy(aGraph, False);
+  SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
@@ -1350,7 +1350,7 @@ begin
   FStartTime := Now;
   FTimeOut := aTimeOut;
   FCanceled := False;
-  SortMatrixByDegeneracy(aGraph, True);
+  SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.ApproxMaxIndependentSet;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
@@ -1494,9 +1494,9 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TCliqueHelper.SortMatrixByWidth(aGraph: TGSimpleGraph);
 begin
-  FVertices := aGraph.SortVerticesByDegeneracy(soDesc);
+  FVertices := aGraph.SortVerticesByWidth(soDesc);
   FillMatrix(aGraph);
 end;
 
@@ -1514,7 +1514,7 @@ begin
   FStartTime := Now;
   FTimeOut := aTimeOut;
   FCanceled := False;
-  SortMatrixByDegeneracy(aGraph);
+  SortMatrixByWidth(aGraph);
   FRecentBest := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   Extend(Cand);
@@ -2732,7 +2732,7 @@ begin
     Result[I] := VertexCount - AdjLists[I]^.Count;
 end;
 
-function TGSimpleGraph.SortVerticesByDegeneracy(o: TSortOrder): TIntArray;
+function TGSimpleGraph.SortVerticesByWidth(o: TSortOrder): TIntArray;
 var
   I, J: SizeInt;
   List, Stack: TIntSet;
@@ -2774,7 +2774,7 @@ begin
     TIntHelper.Reverse(Result);
 end;
 
-function TGSimpleGraph.SortComplementByDegeneracy: TIntArray;
+function TGSimpleGraph.SortComplementByWidth: TIntArray;
 var
   I, J: SizeInt;
   List, Stack: TIntSet;
@@ -3392,7 +3392,7 @@ var
 begin
   if IsEmpty or (EdgeCount = 0) then
     exit(nil);
-  Cand.AssignArray(SortVerticesByDegeneracy(soAsc));
+  Cand.AssignArray(SortVerticesByWidth(soAsc));
   while Cand.NonEmpty do
     begin
       I := Cand.Pop;
