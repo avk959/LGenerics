@@ -306,7 +306,7 @@ type
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CreateDegreeArray: TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
-    function  SortVerticesByDegeneracy: TIntArray;
+    function  SortVerticesByDegeneracy(o: TSortOrder): TIntArray;
     function  SortComplementByDegeneracy: TIntArray;
     function  SortVerticesByDegree(o: TSortOrder): TIntArray;
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
@@ -732,7 +732,7 @@ begin
   if aComplement then
     FVertices := aGraph.SortComplementByDegeneracy
   else
-    FVertices := aGraph.SortVerticesByDegeneracy;
+    FVertices := aGraph.SortVerticesByDegeneracy(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
@@ -1269,7 +1269,7 @@ begin
   if aComplement then
     FVertices := aGraph.SortComplementByDegeneracy
   else
-    FVertices := aGraph.SortVerticesByDegeneracy;
+    FVertices := aGraph.SortVerticesByDegeneracy(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
@@ -1436,7 +1436,7 @@ end;
 
 procedure TGSimpleGraph.TCliqueHelper.SortMatrixByDegeneracy(aGraph: TGSimpleGraph);
 begin
-  FVertices := aGraph.SortVerticesByDegeneracy;
+  FVertices := aGraph.SortVerticesByDegeneracy(soDesc);
   FillMatrix(aGraph);
 end;
 
@@ -2580,7 +2580,7 @@ begin
     Result[I] := VertexCount - AdjLists[I]^.Count;
 end;
 
-function TGSimpleGraph.SortVerticesByDegeneracy: TIntArray;
+function TGSimpleGraph.SortVerticesByDegeneracy(o: TSortOrder): TIntArray;
 var
   I, J: SizeInt;
   List, Stack: TIntSet;
@@ -2600,7 +2600,8 @@ begin
           Dec(Result[J]);
     end;
   Result := Stack.ToArray;
-  TIntHelper.Reverse(Result);
+  if o = soDesc then
+    TIntHelper.Reverse(Result);
 end;
 
 function TGSimpleGraph.SortComplementByDegeneracy: TIntArray;
@@ -3200,8 +3201,7 @@ var
 begin
   if IsEmpty or (EdgeCount = 0) then
     exit(nil);
-  Cand.AssignArray(SortVerticesByDegeneracy);
-  Cand.Reverse;
+  Cand.AssignArray(SortVerticesByDegeneracy(soAsc));
   while Cand.NonEmpty do
     begin
       I := Cand.Pop;
