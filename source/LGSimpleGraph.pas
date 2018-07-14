@@ -234,6 +234,20 @@ type
       function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     end;
 
+    TDomSetHelper = record
+    private
+      FMatrix: TSkeleton;
+      FVertices,
+      FResult: TIntArray;
+      FStartTime: TDateTime;
+      FTimeOut: Integer;
+      FCancel: Boolean;
+      function  TimeOut: Boolean; inline;
+      procedure Extend(constref aSub, aCand: TIntSet);
+    public
+      function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    end;
+
     TDistinctEdgeEnumerator = record
     private
       FList: PNode;
@@ -295,6 +309,7 @@ type
     function  GetApproxMinIsBP: TIntArray;
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -311,6 +326,7 @@ type
     function  SortVerticesByDegree(o: TSortOrder): TIntArray;
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
+    function  ApproxMinIndependentSet: TIntArray;
     property  InnerConnected: Boolean read FConnected;
   public
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
@@ -380,7 +396,6 @@ type
     worst case time cost O(3^n/3) }
     function  MaxIndependentSet: TIntArray;
     function  ApproxMaxIndependentSet: TIntArray;
-    function  ApproxMinIndependentSet: TIntArray;
   { returns indices of the vertices of the some found minimum dominating set;
     worst case time cost O(2^n);
     aTimeOut specifies the timeout in seconds;
@@ -1667,6 +1682,86 @@ begin
   Result := FResult;
 end;
 
+{ TGSimpleGraph.TDomSetHelper }
+
+function TGSimpleGraph.TDomSetHelper.TimeOut: Boolean;
+begin
+  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
+end;
+
+procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TIntSet);
+var
+  NewSub, NewCand, Neib: TIntSet;
+  I, J: SizeInt;
+begin
+  if aSub.NonEmpty then
+    begin
+      if aCand.Count >= System.High(FResult) then
+        exit;
+      if TimeOut then
+        begin
+          FCancel := True;
+          exit;
+        end;
+      NewSub.Assign(aSub);
+      I := NewSub.Pop;
+      NewCand.Assign(aCand);
+      NewCand.Push(I);
+      NewSub.Delete(I);
+      NewSub.Subtract(FMatrix[I]^);
+      Extend(NewSub, NewCand);
+      if aCand.Count >= System.High(FResult) then
+        exit;
+      NewCand.Pop;
+      Neib.Assign(aSub);
+      Neib.Intersect(FMatrix[I]^);
+      while Neib.NonEmpty do
+        begin
+          J := Neib.Pop;
+          NewCand.Push(J);
+          NewSub.Assign(aSub);
+          NewSub.Delete(J);
+          NewSub.Subtract(FMatrix[J]^);
+          Extend(NewSub, NewCand);
+          if NewCand.Count >= System.High(FResult) then
+            exit;
+          NewCand.Push(I);
+          NewSub.Subtract(FMatrix[I]^);
+          Extend(NewSub, NewCand);
+          if NewCand.Count >= System.Length(FResult) then
+            exit;
+          NewCand.Pop;
+          NewCand.Pop;
+        end;
+    end
+  else
+    if aCand.Count < System.Length(FResult) then
+      FResult := aCand.ToArray;
+end;
+
+function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Sub, Cand: TIntSet;
+  I: SizeInt;
+begin
+  FStartTime := Now;
+  if aTimeOut = WAIT_INFINITE then
+    aTimeOut := System.High(Integer)
+  else
+    FTimeOut := aTimeOut;
+  FCancel := False;
+  FMatrix := aGraph.CreateSkeleton;
+  FResult := aGraph.ApproxMinIndependentSet;
+  Sub.InitRange(aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if aGraph.DegreeI(I) = 0 then
+      Sub.Delete(I);
+  Extend(Sub, Cand{%H-});
+  aExact := not FCancel;
+  Result := FResult;
+end;
+
 { TGSimpleGraph.TDistinctEdgeEnumerator }
 
 function TGSimpleGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
@@ -2157,6 +2252,13 @@ end;
 function TGSimpleGraph.GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPDomSetHelper256;
+begin
+  Result := Helper.MinDomSet(Self, aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+var
+  Helper: TDomSetHelper;
 begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
 end;
@@ -2654,6 +2756,16 @@ begin
       Result := 0;
 end;
 
+function TGSimpleGraph.ApproxMinIndependentSet: TIntArray;
+begin
+  if IsEmpty then
+    exit(nil);
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetApproxMinIS
+  else
+    Result := GetApproxMinIsBP;
+end;
+
 class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
 var
   fcL, fcR: TIntVector;
@@ -3146,24 +3258,17 @@ begin
     Result := GetApproxMaxIsBP;
 end;
 
-function TGSimpleGraph.ApproxMinIndependentSet: TIntArray;
-begin
-  if IsEmpty then
-    exit(nil);
-  if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetApproxMinIS
-  else
-    Result := GetApproxMinIsBP;
-end;
-
 function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if IsEmpty then
     exit(nil);
-  if VertexCount > 256 then
-    Result := GetMdsBP(aTimeOut, aExactSolution)
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetMds(aTimeOut, aExactSolution)
   else
-    Result := GetMdsBP256(aTimeOut, aExactSolution);
+    if VertexCount > 256 then
+      Result := GetMdsBP(aTimeOut, aExactSolution)
+    else
+      Result := GetMdsBP256(aTimeOut, aExactSolution);
 end;
 
 procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
