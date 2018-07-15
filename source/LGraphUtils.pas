@@ -142,33 +142,87 @@ type
       property  Bits[I, J: SizeInt]: Boolean read GetBit write SetBit; default;
     end;
 
-  public
-  type
-    TEdgeDataType = TEdgeData;
-    PEdgeData     = ^TEdgeData;
-    PAdjItem      = ^TAdjItem;
-
-    TAdjItem      = record
-      Destination: SizeInt;
-      Data: TEdgeData;
-      property Key: SizeInt read Destination;
-      constructor Create(aDst: SizeInt; constref aData: TEdgeData);
-    end;
-
-    TAdjacencyMatrix = record
-    private
-      FMatrix: TSquareBitMatrix;
-      function  GetSize: SizeInt; inline;
+    TBits256 = record
     public
-      constructor Create(constref aMatrix: TSquareBitMatrix);
-      function  IsEmpty: Boolean; inline;
-      function  Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
-      property  Size: SizeInt read GetSize;
+    const
+      BITNESS      = 256;
+      BIT_PER_LIMB = BitsizeOf(SizeUInt);
+      LIMB_COUNT = BITNESS div BIT_PER_LIMB;
+
+    type
+      PBits256 = ^TBits256;
+
+      TEnumerator = record
+      private
+        FValue: PBits256;
+        FBitIndex,
+        FLimbIndex: SizeInt;
+        FCurrLimb: SizeUInt;
+        FInCycle: Boolean;
+        function GetCurrent: SizeInt; inline;
+        function FindFirst: Boolean;
+      public
+        function MoveNext: Boolean;
+        property Current: SizeInt read GetCurrent;
+      end;
+
+      TReverseEnumerator = record
+      private
+        FValue: PBits256;
+        FBitIndex,
+        FLimbIndex: SizeInt;
+        FCurrLimb: SizeUInt;
+        FInCycle: Boolean;
+        function GetCurrent: SizeInt; inline;
+        function FindFirst: Boolean;
+      public
+        function MoveNext: Boolean;
+        property Current: SizeInt read GetCurrent;
+      end;
+
+      TReverseOrder = record
+      private
+        FValue: PBits256;
+      public
+        function GetEnumerator: TReverseEnumerator; inline;
+      end;
+
+    private
+    type
+      TBits = array[0..Pred(LIMB_COUNT)] of SizeUInt;
+
+    var
+      FBits: TBits;
+      function  GetBit(aIndex: SizeInt): Boolean; inline;
+      procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
+      class function  BsfValue(aValue: SizeUInt): SizeInt; static; inline;
+      class function  BsrValue(aValue: SizeUInt): SizeInt; static; inline;
+      class procedure ClearBit(aIndex: SizeInt; var aValue: SizeUInt); static; inline;
+    public
+      function  GetEnumerator: TEnumerator; inline;
+      function  ReverseOrder: TReverseOrder; inline;
+      procedure InitRange(aRange: SizeInt);
+      procedure InitZero; inline;
+    { returns an array containing the indices of the set bits }
+      function  ToArray: TIntArray;
+      function  IsEmpty: Boolean;
+      function  NonEmpty: Boolean; inline;
+    { returns index of the least significant bit }
+      function  Bsf: SizeInt; inline;
+    { returns index of the most significant bit }
+      function  Bsr: SizeInt; inline;
+      function  Intersecting(constref aVector: TBits256): Boolean;
+      function  Contains(constref aVector: TBits256): Boolean;
+      procedure Join(constref aVector: TBits256);
+      procedure Subtract(constref aVector: TBits256); inline;
+      procedure Intersect(constref aVector: TBits256); inline;
+    { returns count of set bits }
+      function  PopCount: SizeInt; inline;
+      property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
     end;
 
-  protected
-  type
-    TBoolMatrix = array of TBoolVector;
+    TBitMatrix256 = array of TBits256;
+    TBoolMatrix   = array of TBoolVector;
 
     TIntSet = record
     private
@@ -221,6 +275,53 @@ type
     end;
     PIntSet = ^TIntSet;
 
+    TSkeleton = record
+    private
+      FAdjLists: array of TIntSet;
+      FEdgeCount: SizeInt;
+      FDirected: Boolean;
+      function  GetAdjList(aIndex: SizeInt): PIntSet; inline;
+      function  GetDegree(aIndex: SizeInt): SizeInt; inline;
+      function  GetVertexCount: SizeInt; inline;
+    public
+      constructor Create(aVertCount: SizeInt; aDirected: Boolean = False);
+      constructor Create(constref s: TSkeleton);
+      function ContainsEdge(aSrc, aDst: SizeInt): Boolean; inline;
+      function AddEdge(aSrc, aDst: SizeInt): Boolean;
+      function RemoveEdge(aSrc, aDst: SizeInt): Boolean;
+      property VertexCount: SizeInt read GetVertexCount;
+      property Directed: Boolean read FDirected;
+      property EdgeCount: SizeInt read FEdgeCount;
+      property Degree[aIndex: SizeInt]: SizeInt read GetDegree;
+      property AdjLists[aIndex: SizeInt]: PIntSet read GetAdjList; default;
+    end;
+
+  public
+  type
+    TEdgeDataType = TEdgeData;
+    PEdgeData     = ^TEdgeData;
+    PAdjItem      = ^TAdjItem;
+
+    TAdjItem      = record
+      Destination: SizeInt;
+      Data: TEdgeData;
+      property Key: SizeInt read Destination;
+      constructor Create(aDst: SizeInt; constref aData: TEdgeData);
+    end;
+
+    TAdjacencyMatrix = record
+    private
+      FMatrix: TSquareBitMatrix;
+      function  GetSize: SizeInt; inline;
+    public
+      constructor Create(constref aMatrix: TSquareBitMatrix);
+      function  IsEmpty: Boolean; inline;
+      function  Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
+      property  Size: SizeInt read GetSize;
+    end;
+
+  protected
+  type
     TAdjList = record
     public
     type
@@ -300,29 +401,9 @@ type
       //edges: src index, dst index as little endian LongInt, data
     end;
 
-    TSkeleton = record
-    private
-      FAdjLists: array of TIntSet;
-      FEdgeCount: SizeInt;
-      FDirected: Boolean;
-      function  GetAdjList(aIndex: SizeInt): PIntSet; inline;
-      function  GetDegree(aIndex: SizeInt): SizeInt; inline;
-      function  GetVertexCount: SizeInt; inline;
-    public
-      constructor Create(aVertCount: SizeInt; aDirected: Boolean = False);
-      constructor Create(constref s: TSkeleton);
-      function ContainsEdge(aSrc, aDst: SizeInt): Boolean; inline;
-      function AddEdge(aSrc, aDst: SizeInt): Boolean;
-      function RemoveEdge(aSrc, aDst: SizeInt): Boolean;
-      property VertexCount: SizeInt read GetVertexCount;
-      property Directed: Boolean read FDirected;
-      property EdgeCount: SizeInt read FEdgeCount;
-      property Degree[aIndex: SizeInt]: SizeInt read GetDegree;
-      property AdjLists[aIndex: SizeInt]: PIntSet read GetAdjList; default;
-    end;
-
   class var
     CFData: TEdgeData;
+
 
   private
     FNodeList: TNodeList;
@@ -347,12 +428,29 @@ type
     function  Find(constref v: TVertex; aHash: SizeInt): SizeInt;
     function  FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
     class constructor Init;
+  public
+  type
+    TAdjEnumerator = record
+    private
+      FEnum: TAdjList.TEnumerator;
+      function  GetCurrent: SizeInt; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      property  Current: SizeInt read GetCurrent;
+    end;
+
+    TAdjEnumArray = array of TAdjEnumerator;
   protected
     function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
     function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
     function  CreateBoolMatrix: TBoolMatrix;
+    function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
+    function  CreateIntArray(aLen, aValue: SizeInt): TIntArray;
+    function  CreateIntArrayRange: TIntArray;
+    function  CreateColorArray: TColorArray;
+    function  CreateAdjEnumArray: TAdjEnumArray;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
@@ -376,17 +474,6 @@ type
       Destination: SizeInt;
       Data:  TEdgeData;
     end;
-
-    TAdjEnumerator = record
-    private
-      FEnum: TAdjList.TEnumerator;
-      function  GetCurrent: SizeInt; inline;
-    public
-      function  MoveNext: Boolean; inline;
-      property  Current: SizeInt read GetCurrent;
-    end;
-
-    TAdjEnumArray = array of TAdjEnumerator;
 
     TAdjVertices = record
     private
@@ -458,26 +545,33 @@ type
     end;
 
   public
+{**********************************************************************************************************
+  some useful utilities
+***********************************************************************************************************}
+
     class function  MaxBitMatrixSize: SizeInt; static; inline;
-    class function  TreeToChain(constref aTree: TIntArray; aRoot: SizeInt): TIntArray; static;
-    class procedure Tree2Chain(constref aTree: TIntArray; aRoot: SizeInt; var v: TIntVector); static;
-    class function  TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray; static;
-    class procedure Tree2Cycle(constref aTree: TIntArray;  aFirst, aLast: SizeInt; var v: TIntVector); static;
-    class function  Tree2CycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt; static;
+    class function  TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray; static;
+    class function  TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
+    class function  TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
     class property  DefaultEdgeData: TEdgeData read CFData;
+
+{**********************************************************************************************************
+  class management utilities
+***********************************************************************************************************}
+
     constructor Create;
     constructor Create(aCapacity: SizeInt);
     destructor Destroy; override;
-    function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
-    function  CreateIntArray(aLen, aValue: SizeInt): TIntArray;
-    function  CreateIntArrayRange: TIntArray;
-    function  CreateColorArray: TColorArray;
-    function  CreateAdjEnumArray: TAdjEnumArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
+
+{**********************************************************************************************************
+  structural management utilities
+***********************************************************************************************************}
+
     function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
@@ -501,6 +595,18 @@ type
   { returns adjacency matrix;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
     function  CreateAdjacencyMatrix: TAdjacencyMatrix;
+  { test whether the graph is bipartite;
+    the graph can be disconnected (in this case it consists of a number of connected
+    bipartite components and / or several isolated vertices)}
+    function  IsBipartite: Boolean;
+  { test whether the graph is bipartite; if returns True then information about the vertex
+    belonging to the fractions is returned in aColors(vclWhite or vclGray) }
+    function  IsBipartite(out aColors: TColorArray): Boolean;
+
+{**********************************************************************************************************
+  traversal utilities
+***********************************************************************************************************}
+
   { returns count of visited vertices; OnAccept calls after vertex visite, OnNext calls after next vertex found;
     if TOnAccept returns False then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
@@ -509,13 +615,11 @@ type
     if TOnAccept returns False then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
     function  BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
-  { test whether the graph is bipartite;
-    the graph can be disconnected (in this case it consists of a number of connected
-    bipartite components and / or several isolated vertices)}
-    function  IsBipartite: Boolean;
-  { test whether the graph is bipartite; if returns True then information about the vertex
-    belonging to the fractions is returned in aColors(vclWhite or vclGray) }
-    function  IsBipartite(out aColors: TColorArray): Boolean;
+
+{**********************************************************************************************************
+  shortest paths utilities
+***********************************************************************************************************}
+
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
     function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
@@ -528,6 +632,10 @@ type
     empty if path does not exists }
     function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+
+{**********************************************************************************************************
+  properties
+***********************************************************************************************************}
 
     property  Title: string read FTitle write FTitle;
     property  Description: TStrings read FDescription;
@@ -900,246 +1008,362 @@ begin
   FSize := 0;
 end;
 
-{ TGCustomGraph.TAdjItem }
+{ TGCustomGraph.TBits256.TEnumerator }
 
-constructor TGCustomGraph.TAdjItem.Create(aDst: SizeInt; constref aData: TEdgeData);
+function TGCustomGraph.TBits256.TEnumerator.GetCurrent: SizeInt;
 begin
-  Destination := aDst;
-  Data := aData;
+  Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
 end;
 
-{ TGCustomGraph.TAdjacencyMatrix }
-
-function TGCustomGraph.TAdjacencyMatrix.GetSize: SizeInt;
+function TGCustomGraph.TBits256.TEnumerator.FindFirst: Boolean;
+var
+  I: SizeInt;
 begin
-  Result := FMatrix.FSize;
+  I := FValue^.Bsf;
+  if I >= 0 then
+    begin
+      FLimbIndex := I shr INT_SIZE_LOG;
+      FBitIndex := I and INT_SIZE_MASK;
+      FCurrLimb := FValue^.FBits[FLimbIndex];
+      TBits256.ClearBit(FBitIndex, FCurrLimb);
+      Result := True;
+    end
+  else
+    begin
+      FLimbIndex := LIMB_COUNT;
+      FBitIndex := BIT_PER_LIMB;
+      Result := False;
+    end;
 end;
 
-constructor TGCustomGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
+function TGCustomGraph.TBits256.TEnumerator.MoveNext: Boolean;
 begin
-  FMatrix := aMatrix;
-end;
-
-function TGCustomGraph.TAdjacencyMatrix.IsEmpty: Boolean;
-begin
-  Result := FMatrix.Size = 0;
-end;
-
-function TGCustomGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
-begin
-  if SizeUInt(aSrc) < SizeUInt(FMatrix.FSize) then
-      if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
-        Result := FMatrix{%H-}[aSrc, aDst]
+  if FInCycle then
+    repeat
+      FBitIndex := TBits256.BsfValue(FCurrLimb);
+      Result := FBitIndex >= 0;
+      if Result then
+        TBits256.ClearBit(FBitIndex, FCurrLimb)
       else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
+        begin
+          if FLimbIndex >= Pred(LIMB_COUNT) then
+            exit(False);
+          Inc(FLimbIndex);
+          FCurrLimb := FValue^.FBits[FLimbIndex];
+        end;
+    until Result
   else
-    raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
-end;
-
-{ TGCustomGraph.TAdjList.TEnumerator }
-
-function TGCustomGraph.TAdjList.TEnumerator.GetCurrent: PAdjItem;
-begin
-  Result := pCurr;
-end;
-
-function TGCustomGraph.TAdjList.TEnumerator.MoveNext: Boolean;
-begin
-  Result := pCurr < pLast;
-  Inc(pCurr, Ord(Result));
-end;
-
-{ TGCustomGraph.TAdjList }
-
-function TGCustomGraph.TAdjList.GetCapacity: SizeInt;
-begin
-  Result := System.Length(FList);
-end;
-
-procedure TGCustomGraph.TAdjList.Expand;
-begin
-  System.SetLength(FList, Capacity + ADJ_EXPAND_SIZE);
-end;
-
-function TGCustomGraph.TAdjList.DoFind(aValue: SizeInt): SizeInt;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(Count) do
-    if FList[I].Destination = aValue then
-      exit(I);
-  Result := -1;
-end;
-
-procedure TGCustomGraph.TAdjList.DoRemove(aIndex: SizeInt);
-begin
-  FList[aIndex] := Default(TAdjItem);
-  Dec(FCount);
-  if aIndex < Count then
     begin
-      FList[aIndex] := FList[Count];
-      FList[Count] := Default(TAdjItem);
+      Result := FindFirst;
+      FInCycle := True;
     end;
 end;
 
-class operator TGCustomGraph.TAdjList.Initialize(var aList: TAdjList);
+{ TGCustomGraph.TBits256.TReverseEnumerator }
+
+function TGCustomGraph.TBits256.TReverseEnumerator.GetCurrent: SizeInt;
 begin
-  aList.FCount := 0;
+  Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
 end;
 
-class operator TGCustomGraph.TAdjList.Copy(constref aSrc: TAdjList; var aDst: TAdjList);
-begin
-  aDst.FList := System.Copy(aSrc.FList);
-  aDst.FCount := aSrc.Count;
-end;
-
-function TGCustomGraph.TAdjList.GetEnumerator: TEnumerator;
-begin
-  Result.pCurr := PAdjItem(Pointer(FList)) - Ord(Count > 0);
-  Result.pLast := PAdjItem(Pointer(FList)) + Pred(Count) and (-SizeInt(Count > 0));
-end;
-
-function TGCustomGraph.TAdjList.ToArray: TAdjItemArray;
-begin
-  Result := System.Copy(FList, 0, Count);
-end;
-
-procedure TGCustomGraph.TAdjList.CopyTo(var aSet: TIntSet);
+function TGCustomGraph.TBits256.TReverseEnumerator.FindFirst: Boolean;
 var
   I: SizeInt;
 begin
-  aSet.FCount := Count;
-  System.SetLength(aSet.FItems, Count);
-  for I := 0 to Pred(Count) do
-    aSet.FItems[I] := FList[I].Destination;
-end;
-
-function TGCustomGraph.TAdjList.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TGCustomGraph.TAdjList.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TGCustomGraph.TAdjList.Clear;
-begin
-  FList := nil;
-  FCount := 0;
-end;
-
-procedure TGCustomGraph.TAdjList.MakeEmpty;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(Count) do
-    FList[I] := Default(TAdjItem);
-  FCount := 0;
-end;
-
-procedure TGCustomGraph.TAdjList.TrimToFit;
-begin
-  System.SetLength(FList, Count);
-end;
-
-function TGCustomGraph.TAdjList.Contains(aDst: SizeInt): Boolean;
-begin
-  if Count <> 0 then
-    Result := DoFind(aDst) >= 0
-  else
-    Result := False;
-end;
-
-function TGCustomGraph.TAdjList.ContainsAll(constref aList: TAdjList): Boolean;
-var
-  I, J, v: SizeInt;
-  Found: Boolean;
-begin
-  for I := 0 to Pred(aList.Count) do
+  I := FValue^.Bsr;
+  if I >= 0 then
     begin
-      Found := False;
-      v := aList.FList[I].Key;
-      for J := 0 to Pred(Count) do
-        if FList[J].Key = v then
-          begin
-            Found := True;
-            break;
-          end;
-      if not Found then
-        exit(False);
+      FLimbIndex := I shr INT_SIZE_LOG;
+      FBitIndex := I and INT_SIZE_MASK;
+      FCurrLimb := FValue^.FBits[FLimbIndex];
+      TBits256.ClearBit(FBitIndex, FCurrLimb);
+      Result := True;
+    end
+  else
+    begin
+      FLimbIndex := -1;
+      FBitIndex := BIT_PER_LIMB;
+      Result := False;
     end;
+end;
+
+function TGCustomGraph.TBits256.TReverseEnumerator.MoveNext: Boolean;
+begin
+  if FInCycle then
+    repeat
+      FBitIndex := TBits256.BsrValue(FCurrLimb);
+      Result := FBitIndex >= 0;
+      if Result then
+        TBits256.ClearBit(FBitIndex, FCurrLimb)
+      else
+        begin
+          if FLimbIndex <= 0 then
+            exit(False);
+          Dec(FLimbIndex);
+          FCurrLimb := FValue^.FBits[FLimbIndex];
+        end;
+    until Result
+  else
+    begin
+      Result := FindFirst;
+      FInCycle := True;
+    end;
+end;
+
+{ TGCustomGraph.TBits256.TReverseOrder }
+
+function TGCustomGraph.TBits256.TReverseOrder.GetEnumerator: TReverseEnumerator;
+begin
+  Result.FValue := FValue;
+  Result.FInCycle := False;
+end;
+
+{ TGCustomGraph.TBits256 }
+
+function TGCustomGraph.TBits256.GetBit(aIndex: SizeInt): Boolean;
+begin
+  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
+end;
+
+procedure TGCustomGraph.TBits256.SetBit(aIndex: SizeInt; aValue: Boolean);
+begin
+  if aValue then
+    FBits[aIndex shr INT_SIZE_LOG] :=
+      FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+  else
+    FBits[aIndex shr INT_SIZE_LOG] :=
+      FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
+end;
+
+class function TGCustomGraph.TBits256.BsfValue(aValue: SizeUInt): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := ShortInt(BsfQWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  Result := ShortInt(BsfDWord(aValue));
+{$ELSE}
+  Result := ShortInt(BsfWord(aValue));
+{$ENDIF}
+end;
+
+class function TGCustomGraph.TBits256.BsrValue(aValue: SizeUInt): SizeInt;
+begin
+{$IF DEFINED(CPU64)}
+  Result := ShortInt(BsrQWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  Result := ShortInt(BsrDWord(aValue));
+{$ELSE}
+  Result := ShortInt(BsrWord(aValue));
+{$ENDIF}
+end;
+
+class procedure TGCustomGraph.TBits256.ClearBit(aIndex: SizeInt; var aValue: SizeUInt);
+begin
+  aValue := aValue and not (SizeUInt(1) shl aIndex);
+end;
+
+function TGCustomGraph.TBits256.GetEnumerator: TEnumerator;
+begin
+  Result.FValue := @Self;
+  Result.FInCycle := False;
+end;
+
+function TGCustomGraph.TBits256.ReverseOrder: TReverseOrder;
+begin
+  Result.FValue := @Self;
+end;
+
+procedure TGCustomGraph.TBits256.InitRange(aRange: SizeInt);
+var
+  msb: SizeInt;
+begin
+  InitZero;
+  if aRange > 0 then
+    begin
+      msb := aRange and INT_SIZE_MASK;
+      aRange := aRange shr INT_SIZE_LOG  + Ord(msb <> 0);
+      System.FillChar(FBits[0], aRange * SizeOf(SizeUInt), $ff);
+      if msb <> 0 then
+        FBits[Pred(aRange)] := FBits[Pred(aRange)] shr (BitsizeOf(SizeUint) - msb);
+    end;
+end;
+
+procedure TGCustomGraph.TBits256.InitZero;
+begin
+{$IF DEFINED(CPU64)}
+  System.FillQWord(FBits[0], LIMB_COUNT, 0);
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(FBits[0], LIMB_COUNT, 0);
+{$ELSE}
+  System.FillWord(FBits[0], LIMB_COUNT, 0);
+{$ENDIF}
+end;
+
+function TGCustomGraph.TBits256.ToArray: TIntArray;
+var
+  I, Pos: SizeInt;
+begin
+  System.SetLength(Result, PopCount);
+  Pos := 0;
+  for I in Self do
+    begin
+      Result[Pos] := I;
+      Inc(Pos);
+    end;
+end;
+
+function TGCustomGraph.TBits256.IsEmpty: Boolean;
+var
+  I: SizeUInt;
+begin
+  for I in FBits do
+    if I <> 0 then
+      exit(False);
   Result := True;
 end;
 
-function TGCustomGraph.TAdjList.FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
+function TGCustomGraph.TBits256.NonEmpty: Boolean;
+begin
+  Result := not IsEmpty;
+end;
+
+function TGCustomGraph.TBits256.Bsf: SizeInt;
 var
-  Pos: SizeInt;
+  I: SizeInt;
 begin
-  if Count <> 0 then
-    Pos := DoFind(aDst)
-  else
-    Pos := -1;
-  Result := Pos >= 0;
-  if not Result then
-    begin
-      if Count = Capacity then
-        Expand;
-      Pos := Count;
-      Inc(FCount);
-    end;
-  p := @FList[Pos];
+  for I := 0 to Pred(LIMB_COUNT) do
+    if FBits[I] <> 0 then
+      exit(I shl INT_SIZE_LOG + BsfValue(FBits[I]));
+  Result := -1;
 end;
 
-function TGCustomGraph.TAdjList.Find(aDst: SizeInt): PAdjItem;
+function TGCustomGraph.TBits256.Bsr: SizeInt;
 var
-  Pos: SizeInt;
+  I: SizeInt;
 begin
-  Result := nil;
-  if Count <> 0 then
-    begin
-      Pos := DoFind(aDst);
-      if Pos >= 0 then
-        Result := @FList[Pos];
-    end;
+  for I := Pred(LIMB_COUNT) downto 0 do
+    if FBits[I] <> 0 then
+      exit(I shl INT_SIZE_LOG + BsrValue(FBits[I]));
+  Result := -1;
 end;
 
-function TGCustomGraph.TAdjList.FindFirst(out aValue: SizeInt): Boolean;
-begin
-  Result := Count <> 0;
-  if Result then
-    aValue := FList[0].Destination;
-end;
-
-function TGCustomGraph.TAdjList.Add(constref aItem: TAdjItem): Boolean;
-begin
-  if Count <> 0 then
-    Result := DoFind(aItem.Destination) < 0
-  else
-    Result := True;
-  if Result then
-    begin
-      if Count = Capacity then
-        Expand;
-      FList[Count] := aItem;
-      Inc(FCount);
-    end;
-end;
-
-function TGCustomGraph.TAdjList.Remove(aDst: SizeInt): Boolean;
+function TGCustomGraph.TBits256.Intersecting(constref aVector: TBits256): Boolean;
 var
-  Pos: SizeInt;
+  I: SizeInt;
 begin
-  if Count <> 0 then
-    begin
-      Pos := DoFind(aDst);
-      Result := Pos >= 0;
-      if Result then
-        DoRemove(Pos);
-    end
-  else
-    Result := False;
+  for I := 0 to Pred(LIMB_COUNT) do
+    if FBits[I] and aVector.FBits[I] <> 0 then
+      exit(True);
+  Result := False;
+end;
+
+function TGCustomGraph.TBits256.Contains(constref aVector: TBits256): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    if FBits[I] and aVector.FBits[I] <> aVector.FBits[I] then
+      exit(False);
+  Result := True;
+end;
+
+procedure TGCustomGraph.TBits256.Join(constref aVector: TBits256);
+{$IF DEFINED(CPU64)}
+begin
+  FBits[0] := FBits[0] or aVector.FBits[0];
+  FBits[1] := FBits[1] or aVector.FBits[1];
+  FBits[2] := FBits[2] or aVector.FBits[2];
+  FBits[3] := FBits[3] or aVector.FBits[3];
+{$ELSEIF DEFINED(CPU32)}
+begin
+  FBits[0] := FBits[0] or aVector.FBits[0];
+  FBits[1] := FBits[1] or aVector.FBits[1];
+  FBits[2] := FBits[2] or aVector.FBits[2];
+  FBits[3] := FBits[3] or aVector.FBits[3];
+  FBits[4] := FBits[4] or aVector.FBits[4];
+  FBits[5] := FBits[5] or aVector.FBits[5];
+  FBits[6] := FBits[6] or aVector.FBits[6];
+  FBits[7] := FBits[7] or aVector.FBits[7];
+{$ELSE }
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := FBits[I] or aVector.FBits[I];
+{$ENDIF }
+end;
+
+procedure TGCustomGraph.TBits256.Subtract(constref aVector: TBits256);
+{$IF DEFINED(CPU64)}
+begin
+  FBits[0] := FBits[0] and not aVector.FBits[0];
+  FBits[1] := FBits[1] and not aVector.FBits[1];
+  FBits[2] := FBits[2] and not aVector.FBits[2];
+  FBits[3] := FBits[3] and not aVector.FBits[3];
+{$ELSEIF DEFINED(CPU32)}
+begin
+  FBits[0] := FBits[0] and not aVector.FBits[0];
+  FBits[1] := FBits[1] and not aVector.FBits[1];
+  FBits[2] := FBits[2] and not aVector.FBits[2];
+  FBits[3] := FBits[3] and not aVector.FBits[3];
+  FBits[4] := FBits[4] and not aVector.FBits[4];
+  FBits[5] := FBits[5] and not aVector.FBits[5];
+  FBits[6] := FBits[6] and not aVector.FBits[6];
+  FBits[7] := FBits[7] and not aVector.FBits[7];
+{$ELSE }
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := FBits[I] and not aVector.FBits[I];
+{$ENDIF }
+end;
+
+procedure TGCustomGraph.TBits256.Intersect(constref aVector: TBits256);
+{$IF DEFINED(CPU64)}
+begin
+  FBits[0] := FBits[0] and aVector.FBits[0];
+  FBits[1] := FBits[1] and aVector.FBits[1];
+  FBits[2] := FBits[2] and aVector.FBits[2];
+  FBits[3] := FBits[3] and aVector.FBits[3];
+{$ELSEIF DEFINED(CPU32)}
+begin
+  FBits[0] := FBits[0] and aVector.FBits[0];
+  FBits[1] := FBits[1] and aVector.FBits[1];
+  FBits[2] := FBits[2] and aVector.FBits[2];
+  FBits[3] := FBits[3] and aVector.FBits[3];
+  FBits[4] := FBits[4] and aVector.FBits[4];
+  FBits[5] := FBits[5] and aVector.FBits[5];
+  FBits[6] := FBits[6] and aVector.FBits[6];
+  FBits[7] := FBits[7] and aVector.FBits[7];
+{$ELSE }
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := FBits[I] and aVector.FBits[I];
+{$ENDIF }
+end;
+
+function TGCustomGraph.TBits256.PopCount: SizeInt;
+{$IF DEFINED(CPU64)}
+begin
+  Result := SizeInt(PopCnt(FBits[0])) + SizeInt(PopCnt(FBits[1])) +
+            SizeInt(PopCnt(FBits[2])) + SizeInt(PopCnt(FBits[3]));
+{$ELSEIF DEFINED(CPU32)}
+begin
+  Result := SizeInt(PopCnt(FBits[0])) + SizeInt(PopCnt(FBits[1])) +
+            SizeInt(PopCnt(FBits[2])) + SizeInt(PopCnt(FBits[3])) +
+            SizeInt(PopCnt(FBits[4])) + SizeInt(PopCnt(FBits[5])) +
+            SizeInt(PopCnt(FBits[6])) + SizeInt(PopCnt(FBits[7]));
+{$ELSE }
+var
+  I: SizeUInt;
+begin
+  Result := 0;
+  for I in FBits do
+    Result += SizeInt(PopCnt(I));
+{$ENDIF }
 end;
 
 { TGCustomGraph.TIntSet.TEnumerator }
@@ -1473,6 +1697,248 @@ begin
         FAdjLists[aDst].Remove(aSrc);
       Dec(FEdgeCount);
     end;
+end;
+
+{ TGCustomGraph.TAdjItem }
+
+constructor TGCustomGraph.TAdjItem.Create(aDst: SizeInt; constref aData: TEdgeData);
+begin
+  Destination := aDst;
+  Data := aData;
+end;
+
+{ TGCustomGraph.TAdjacencyMatrix }
+
+function TGCustomGraph.TAdjacencyMatrix.GetSize: SizeInt;
+begin
+  Result := FMatrix.FSize;
+end;
+
+constructor TGCustomGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
+begin
+  FMatrix := aMatrix;
+end;
+
+function TGCustomGraph.TAdjacencyMatrix.IsEmpty: Boolean;
+begin
+  Result := FMatrix.Size = 0;
+end;
+
+function TGCustomGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
+begin
+  if SizeUInt(aSrc) < SizeUInt(FMatrix.FSize) then
+      if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
+        Result := FMatrix{%H-}[aSrc, aDst]
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
+  else
+    raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
+end;
+
+{ TGCustomGraph.TAdjList.TEnumerator }
+
+function TGCustomGraph.TAdjList.TEnumerator.GetCurrent: PAdjItem;
+begin
+  Result := pCurr;
+end;
+
+function TGCustomGraph.TAdjList.TEnumerator.MoveNext: Boolean;
+begin
+  Result := pCurr < pLast;
+  Inc(pCurr, Ord(Result));
+end;
+
+{ TGCustomGraph.TAdjList }
+
+function TGCustomGraph.TAdjList.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FList);
+end;
+
+procedure TGCustomGraph.TAdjList.Expand;
+begin
+  System.SetLength(FList, Capacity + ADJ_EXPAND_SIZE);
+end;
+
+function TGCustomGraph.TAdjList.DoFind(aValue: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    if FList[I].Destination = aValue then
+      exit(I);
+  Result := -1;
+end;
+
+procedure TGCustomGraph.TAdjList.DoRemove(aIndex: SizeInt);
+begin
+  FList[aIndex] := Default(TAdjItem);
+  Dec(FCount);
+  if aIndex < Count then
+    begin
+      FList[aIndex] := FList[Count];
+      FList[Count] := Default(TAdjItem);
+    end;
+end;
+
+class operator TGCustomGraph.TAdjList.Initialize(var aList: TAdjList);
+begin
+  aList.FCount := 0;
+end;
+
+class operator TGCustomGraph.TAdjList.Copy(constref aSrc: TAdjList; var aDst: TAdjList);
+begin
+  aDst.FList := System.Copy(aSrc.FList);
+  aDst.FCount := aSrc.Count;
+end;
+
+function TGCustomGraph.TAdjList.GetEnumerator: TEnumerator;
+begin
+  Result.pCurr := PAdjItem(Pointer(FList)) - Ord(Count > 0);
+  Result.pLast := PAdjItem(Pointer(FList)) + Pred(Count) and (-SizeInt(Count > 0));
+end;
+
+function TGCustomGraph.TAdjList.ToArray: TAdjItemArray;
+begin
+  Result := System.Copy(FList, 0, Count);
+end;
+
+procedure TGCustomGraph.TAdjList.CopyTo(var aSet: TIntSet);
+var
+  I: SizeInt;
+begin
+  aSet.FCount := Count;
+  System.SetLength(aSet.FItems, Count);
+  for I := 0 to Pred(Count) do
+    aSet.FItems[I] := FList[I].Destination;
+end;
+
+function TGCustomGraph.TAdjList.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGCustomGraph.TAdjList.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGCustomGraph.TAdjList.Clear;
+begin
+  FList := nil;
+  FCount := 0;
+end;
+
+procedure TGCustomGraph.TAdjList.MakeEmpty;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    FList[I] := Default(TAdjItem);
+  FCount := 0;
+end;
+
+procedure TGCustomGraph.TAdjList.TrimToFit;
+begin
+  System.SetLength(FList, Count);
+end;
+
+function TGCustomGraph.TAdjList.Contains(aDst: SizeInt): Boolean;
+begin
+  if Count <> 0 then
+    Result := DoFind(aDst) >= 0
+  else
+    Result := False;
+end;
+
+function TGCustomGraph.TAdjList.ContainsAll(constref aList: TAdjList): Boolean;
+var
+  I, J, v: SizeInt;
+  Found: Boolean;
+begin
+  for I := 0 to Pred(aList.Count) do
+    begin
+      Found := False;
+      v := aList.FList[I].Key;
+      for J := 0 to Pred(Count) do
+        if FList[J].Key = v then
+          begin
+            Found := True;
+            break;
+          end;
+      if not Found then
+        exit(False);
+    end;
+  Result := True;
+end;
+
+function TGCustomGraph.TAdjList.FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
+var
+  Pos: SizeInt;
+begin
+  if Count <> 0 then
+    Pos := DoFind(aDst)
+  else
+    Pos := -1;
+  Result := Pos >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      Pos := Count;
+      Inc(FCount);
+    end;
+  p := @FList[Pos];
+end;
+
+function TGCustomGraph.TAdjList.Find(aDst: SizeInt): PAdjItem;
+var
+  Pos: SizeInt;
+begin
+  Result := nil;
+  if Count <> 0 then
+    begin
+      Pos := DoFind(aDst);
+      if Pos >= 0 then
+        Result := @FList[Pos];
+    end;
+end;
+
+function TGCustomGraph.TAdjList.FindFirst(out aValue: SizeInt): Boolean;
+begin
+  Result := Count <> 0;
+  if Result then
+    aValue := FList[0].Destination;
+end;
+
+function TGCustomGraph.TAdjList.Add(constref aItem: TAdjItem): Boolean;
+begin
+  if Count <> 0 then
+    Result := DoFind(aItem.Destination) < 0
+  else
+    Result := True;
+  if Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      FList[Count] := aItem;
+      Inc(FCount);
+    end;
+end;
+
+function TGCustomGraph.TAdjList.Remove(aDst: SizeInt): Boolean;
+var
+  Pos: SizeInt;
+begin
+  if Count <> 0 then
+    begin
+      Pos := DoFind(aDst);
+      Result := Pos >= 0;
+      if Result then
+        DoRemove(Pos);
+    end
+  else
+    Result := False;
 end;
 
 { TGCustomGraph.TNode }
@@ -1823,6 +2289,43 @@ begin
   CFData := Default(TEdgeData);
 end;
 
+function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
+begin
+  Result := @FNodeList[aSrc].AdjList.Find(aDst)^.Data;
+end;
+
+function TGCustomGraph.NonRecDfs(aRoot: SizeInt): SizeInt;
+var
+  Stack: TIntStack;
+  Visited: TBitVector;
+  AdjEnums: TAdjEnumArray;
+  Next: SizeInt;
+begin
+  Visited.Size := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
+  Visited[aRoot] := True;
+  {%H-}Stack.Push(aRoot);
+  Result := 1;
+  while Stack.TryPeek(aRoot) do
+    if AdjEnums[aRoot].MoveNext then
+      begin
+        Next := AdjEnums[aRoot].Current;
+        if not Visited[Next] then
+          begin
+            //on white
+            Visited[Next] := True;
+            Inc(Result);
+            Stack.Push(Next);
+            //on gray
+          end;
+      end
+    else
+      begin
+        Stack.Pop;
+        //on black
+      end;
+end;
+
 procedure TGCustomGraph.CheckIndexRange(aIndex: SizeInt);
 begin
   if (aIndex < 0) or (aIndex >= VertexCount) then
@@ -1862,155 +2365,6 @@ begin
       for J in AdjVerticesI(I) do
         Result[I][J] := True;
     end;
-end;
-
-function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
-begin
-  Result := @FNodeList[aSrc].AdjList.Find(aDst)^.Data;
-end;
-
-function TGCustomGraph.NonRecDfs(aRoot: SizeInt): SizeInt;
-var
-  Stack: TIntStack;
-  Visited: TBitVector;
-  AdjEnums: TAdjEnumArray;
-  Next: SizeInt;
-begin
-  Visited.Size := VertexCount;
-  AdjEnums := CreateAdjEnumArray;
-  Visited[aRoot] := True;
-  {%H-}Stack.Push(aRoot);
-  Result := 1;
-  while Stack.TryPeek(aRoot) do
-    if AdjEnums[aRoot].MoveNext then
-      begin
-        Next := AdjEnums[aRoot].Current;
-        if not Visited[Next] then
-          begin
-            //on white
-            Visited[Next] := True;
-            Inc(Result);
-            Stack.Push(Next);
-            //on gray
-          end;
-      end
-    else
-      begin
-        Stack.Pop;
-        //on black
-      end;
-end;
-
-class function TGCustomGraph.MaxBitMatrixSize: SizeInt;
-begin
-  Result := TSquareBitMatrix.MaxSize;
-end;
-
-class function TGCustomGraph.TreeToChain(constref aTree: TIntArray; aRoot: SizeInt): TIntArray;
-var
-  v: TIntVector;
-begin
-  while aRoot >= 0 do
-    begin
-      if aRoot < System.Length(aTree) then
-        v.Add(aRoot)
-      else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aRoot]);
-      aRoot := aTree[aRoot];
-    end;
-  Result := v.ToArray;
-  TIntHelper.Reverse(Result);
-end;
-
-class procedure TGCustomGraph.Tree2Chain(constref aTree: TIntArray; aRoot: SizeInt; var v: TIntVector);
-begin
-  while aRoot >= 0 do
-    begin
-      if aRoot < System.Length(aTree) then
-        v.Add(aRoot)
-      else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aRoot]);
-      aRoot := aTree[aRoot];
-    end;
-  v.TrimToFit;
-  TIntVectorHelper.Reverse(v);
-end;
-
-class function TGCustomGraph.TreeToCycle(constref aTree: TIntArray; aFirst, aLast: SizeInt): TIntArray;
-var
-  I: SizeInt;
-  v: TIntVector;
-begin
-  I := aLast;
-  while I >= 0 do
-    begin
-      if I < System.Length(aTree) then
-        v.Add(I)
-      else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
-      if I = aFirst then
-        break;
-      I := aTree[I];
-    end;
-  v.Add(aLast);
-  Result := v.ToArray;
-  TIntHelper.Reverse(Result);
-end;
-
-class procedure TGCustomGraph.Tree2Cycle(constref aTree: TIntArray; aFirst, aLast: SizeInt; var v: TIntVector);
-var
-  I: SizeInt;
-begin
-  I := aLast;
-  while I >= 0 do
-    begin
-      if I < System.Length(aTree) then
-        v.Add(I)
-      else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
-      if I = aFirst then
-        break;
-      I := aTree[I];
-    end;
-  v.Add(aLast);
-  v.TrimToFit;
-  TIntVectorHelper.Reverse(v);
-end;
-
-class function TGCustomGraph.Tree2CycleLen(constref aTree: TIntArray; aFirst, aLast: SizeInt): SizeInt;
-var
-  I: SizeInt;
-begin
-  Result := 0;
-  I := aLast;
-  while I >= 0 do
-    begin
-      if I < System.Length(aTree) then
-        Inc(Result)
-      else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
-      if I = aFirst then
-        break;
-      I := aTree[I];
-    end;
-end;
-
-constructor TGCustomGraph.Create;
-begin
-  FDescription := TStringList.Create;
-  Title := 'Untitled';
-end;
-
-constructor TGCustomGraph.Create(aCapacity: SizeInt);
-begin
-  Create;
-  EnsureCapacity(aCapacity);
-end;
-
-destructor TGCustomGraph.Destroy;
-begin
-  FDescription.Free;
-  inherited;
 end;
 
 function TGCustomGraph.CreateIntArray(aValue: SizeInt): TIntArray;
@@ -2068,6 +2422,84 @@ begin
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Result[I].FEnum := AdjLists[I]^.GetEnumerator;
+end;
+
+class function TGCustomGraph.MaxBitMatrixSize: SizeInt;
+begin
+  Result := TSquareBitMatrix.MaxSize;
+end;
+
+class function TGCustomGraph.TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray;
+var
+  v: TIntVector;
+begin
+  while aValue >= 0 do
+    begin
+      if aValue < System.Length(aTree) then
+        v.Add(aValue)
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aValue]);
+      aValue := aTree[aValue];
+    end;
+  Result := v.ToArray;
+  TIntHelper.Reverse(Result);
+end;
+
+class function TGCustomGraph.TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
+var
+  I: SizeInt;
+  v: TIntVector;
+begin
+  I := aTo;
+  while I >= 0 do
+    begin
+      if I < System.Length(aTree) then
+        v.Add(I)
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+      if I = aFrom then
+        break;
+      I := aTree[I];
+    end;
+  v.Add(aTo);
+  Result := v.ToArray;
+  TIntHelper.Reverse(Result);
+end;
+
+class function TGCustomGraph.TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  I := aTo;
+  while I >= 0 do
+    begin
+      if I < System.Length(aTree) then
+        Inc(Result)
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+      if I = aFrom then
+        break;
+      I := aTree[I];
+    end;
+end;
+
+constructor TGCustomGraph.Create;
+begin
+  FDescription := TStringList.Create;
+  Title := 'Untitled';
+end;
+
+constructor TGCustomGraph.Create(aCapacity: SizeInt);
+begin
+  Create;
+  EnsureCapacity(aCapacity);
+end;
+
+destructor TGCustomGraph.Destroy;
+begin
+  FDescription.Free;
+  inherited;
 end;
 
 function TGCustomGraph.IsEmpty: Boolean;
@@ -2236,6 +2668,50 @@ begin
   Result := TAdjacencyMatrix.Create(m);
 end;
 
+function TGCustomGraph.IsBipartite: Boolean;
+var
+  Colors: TColorArray;
+begin
+  Result := IsBipartite(Colors);
+end;
+
+function TGCustomGraph.IsBipartite(out aColors: TColorArray): Boolean;
+var
+  Visited: TBitVector;
+  Queue: TIntQueue;
+  Curr, I: SizeInt;
+  CurrColor: TVertexColor;
+begin
+  aColors := CreateColorArray;
+  if VertexCount < 2 then
+    exit(False);
+  Visited.Size := VertexCount;
+  for I := 0 to Pred(System.Length(aColors)) do
+    if not Visited[I] then
+      begin
+        Curr := I;
+        repeat
+          if aColors[Curr] = vclNone then
+            aColors[Curr] := vclWhite;
+          CurrColor := aColors[Curr];
+          for Curr in AdjVerticesI(Curr) do
+            if not Visited[Curr] then
+              begin
+                Visited[Curr] := True;
+                aColors[Curr] := vclBlack - CurrColor;
+                Queue.Enqueue(Curr);
+              end
+            else
+              if aColors[Curr] = CurrColor then
+                begin
+                  aColors := nil;
+                  exit(False);
+                end;
+        until not Queue{%H-}.TryDequeue(Curr);
+      end;
+  Result := True;
+end;
+
 function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept;
   OnFound: TOnVisit): SizeInt;
 begin
@@ -2310,50 +2786,6 @@ begin
   until not Queue{%H-}.TryDequeue(aRoot);
 end;
 
-function TGCustomGraph.IsBipartite: Boolean;
-var
-  Colors: TColorArray;
-begin
-  Result := IsBipartite(Colors);
-end;
-
-function TGCustomGraph.IsBipartite(out aColors: TColorArray): Boolean;
-var
-  Visited: TBitVector;
-  Queue: TIntQueue;
-  Curr, I: SizeInt;
-  CurrColor: TVertexColor;
-begin
-  aColors := CreateColorArray;
-  if VertexCount < 2 then
-    exit(False);
-  Visited.Size := VertexCount;
-  for I := 0 to Pred(System.Length(aColors)) do
-    if not Visited[I] then
-      begin
-        Curr := I;
-        repeat
-          if aColors[Curr] = vclNone then
-            aColors[Curr] := vclWhite;
-          CurrColor := aColors[Curr];
-          for Curr in AdjVerticesI(Curr) do
-            if not Visited[Curr] then
-              begin
-                Visited[Curr] := True;
-                aColors[Curr] := vclBlack - CurrColor;
-                Queue.Enqueue(Curr);
-              end
-            else
-              if aColors[Curr] = CurrColor then
-                begin
-                  aColors := nil;
-                  exit(False);
-                end;
-        until not Queue{%H-}.TryDequeue(Curr);
-      end;
-  Result := True;
-end;
-
 function TGCustomGraph.ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
   Result := ShortestPathLenI(IndexOf(aSrc), IndexOf(aDst));
@@ -2378,7 +2810,7 @@ begin
           Queue.Enqueue(Next);
           Dist[Next] := Succ(Dist[aSrc]);
         end;
-  until not Queue.TryDequeue(aSrc);
+  until not Queue{%H-}.TryDequeue(aSrc);
   Result := -1;
 end;
 
@@ -2424,7 +2856,7 @@ begin
   Visited[aSrc] := True;
   repeat
     if aSrc = aDst then
-      exit(TreeToChain(Parents, aDst));
+      exit(TreePathTo(Parents, aDst));
     for Next in AdjVerticesI(aSrc) do
       if not Visited[Next] then
         begin
@@ -2432,7 +2864,7 @@ begin
           Queue.Enqueue(Next);
           Parents[Next] := aSrc;
         end;
-  until not Queue.TryDequeue(aSrc);
+  until not Queue{%H-}.TryDequeue(aSrc);
 end;
 
 { TDisjointSetUnion }
@@ -3221,7 +3653,7 @@ var
       if Item.Index = aDst then
         begin
           aWeight := Item.Weight;
-          exit(g.TreeToChain(Tree, aDst));
+          exit(g.TreePathTo(Tree, aDst));
         end;
       Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
@@ -3265,7 +3697,7 @@ var
       if {%H-}Item.Index = aDst then
         begin
           aWeight := Item.Weight;
-          exit(g.TreeToChain(Tree, aDst));
+          exit(g.TreePathTo(Tree, aDst));
         end;
       Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do

@@ -372,7 +372,7 @@ begin
         else
           if (PreOrd[aRoot] >= PreOrd[Next]) and InStack[Next] then
             begin
-              aCycle := TreeToCycle(Parents, Next, aRoot);
+              aCycle := TreePathFromTo(Parents, Next, aRoot);
               exit(True);
             end;
       end
