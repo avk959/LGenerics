@@ -38,8 +38,6 @@ uses
 {.$DEFINE AVLTREE_ENABLE_PAGEDNODEMANAGER}//if uncomment define, will use TGPageNodeManager
 type
 
-  { TGCustomAvlTree }
-
   generic TGCustomAvlTree<TKey, TEntry> = class abstract
   public
   type
@@ -161,7 +159,7 @@ type
 
   { TGAvlTree
       functor TKeyCmpRel (key comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TKey): SizeInt;  }
+        class function Compare([const[ref]] L, R: TKey): SizeInt; }
   generic TGAvlTree<TKey, TEntry, TKeyCmpRel> = class(specialize TGCustomAvlTree<TKey, TEntry>)
   protected
     function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; override;
@@ -336,8 +334,9 @@ type
     property  Highest: PNode read GetHighest;
   end;
 
-  { TGLiteAvlTree }
-
+  { TGLiteAvlTree
+      functor TKeyCmpRel (key comparision relation) must provide:
+        class function Compare([const[ref]] L, R: TKey): SizeInt; }
   generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
   public
   type
