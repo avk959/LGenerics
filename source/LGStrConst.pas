@@ -55,7 +55,7 @@ resourcestring
   SEGraphStreamReadIntern  = 'Graph stream read intenal error';
   SEGrapInconsist          = 'Graph data inconsistency';
   SEStrLenExceedFmt        = 'Maximum string length exceeded(%d)';
-  SEMatrixSizeExceedFmt    = 'Maximum matrix size exceeded(%d)';
+  SEBitMatrixSizeExceedFmt = 'Maximum bit matrix size exceeded(%d)';
   SEUnableOpenFileFmt      = 'Unable to open file "%s"';
   SEUnexpectElem           = 'Unexpected graph element';
   SEStreamSizeExceedFmt    = 'Maximum stream size exceeded(%d)';

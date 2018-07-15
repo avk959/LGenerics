@@ -331,7 +331,6 @@ type
     function  SortVerticesByDegree(o: TSortOrder): TIntArray;
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
-    function  ApproxMinIndependentSet: TIntArray;
     property  InnerConnected: Boolean read FConnected;
   public
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
@@ -410,6 +409,7 @@ type
     at the end of the timeout, the best solution found by this time will be returned,
     and aExactSolution will be set to False }
     function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  ApproxMinDominatingSet: TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3);
@@ -1622,7 +1622,7 @@ begin
     FTimeOut := aTimeOut;
   FCanceled := False;
   FillMatrix(aGraph);
-  FRecentBest := aGraph.ApproxMinIndependentSet;
+  FRecentBest := aGraph.ApproxMinDominatingSet;
   Cand.Size := aGraph.VertexCount;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -1721,7 +1721,7 @@ begin
     FTimeOut := aTimeOut;
   FCanceled := False;
   FillMatrix(aGraph);
-  FRecentBest := aGraph.ApproxMinIndependentSet;
+  FRecentBest := aGraph.ApproxMinDominatingSet;
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -1801,7 +1801,7 @@ begin
   else
     FTimeOut := aTimeOut;
   FCancel := False;
-  FRecentBest := aGraph.ApproxMinIndependentSet;
+  FRecentBest := aGraph.ApproxMinDominatingSet;
   FMatrix := aGraph.CreateSkeleton;
   Sub.AssignArray(aGraph.SortVerticesByDegree(soAsc));
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -2842,16 +2842,6 @@ begin
       Result := 0;
 end;
 
-function TGSimpleGraph.ApproxMinIndependentSet: TIntArray;
-begin
-  if IsEmpty then
-    exit(nil);
-  if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetApproxMinIS
-  else
-    Result := GetApproxMinIsBP;
-end;
-
 class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
 var
   fcL, fcR: TIntVector;
@@ -3355,6 +3345,16 @@ begin
       Result := GetMdsBP(aTimeOut, aExactSolution)
     else
       Result := GetMdsBP256(aTimeOut, aExactSolution);
+end;
+
+function TGSimpleGraph.ApproxMinDominatingSet: TIntArray;
+begin
+  if IsEmpty then
+    exit(nil);
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetApproxMinIS
+  else
+    Result := GetApproxMinIsBP;
 end;
 
 procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);

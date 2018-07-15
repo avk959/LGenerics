@@ -159,7 +159,6 @@ type
     private
       FMatrix: TSquareBitMatrix;
       function  GetSize: SizeInt; inline;
-      procedure Clear; inline;
     public
       constructor Create(constref aMatrix: TSquareBitMatrix);
       function  IsEmpty: Boolean; inline;
@@ -887,7 +886,7 @@ begin
         System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
       end
     else
-      raise ELGraphError.CreateFmt(SEMatrixSizeExceedFmt, [aSize]);
+      raise ELGraphError.CreateFmt(SEBitMatrixSizeExceedFmt, [aSize]);
 end;
 
 procedure TGCustomGraph.TSquareBitMatrix.ClearBits;
@@ -913,13 +912,7 @@ end;
 
 function TGCustomGraph.TAdjacencyMatrix.GetSize: SizeInt;
 begin
-  Result := FMatrix.Size;
-end;
-
-procedure TGCustomGraph.TAdjacencyMatrix.Clear;
-begin
-  if FMatrix.Size > 0 then
-    FMatrix.Clear;
+  Result := FMatrix.FSize;
 end;
 
 constructor TGCustomGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
@@ -934,7 +927,13 @@ end;
 
 function TGCustomGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := FMatrix{%H-}[aSrc, aDst];
+  if SizeUInt(aSrc) < SizeUInt(FMatrix.FSize) then
+      if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
+        Result := FMatrix{%H-}[aSrc, aDst]
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
+  else
+    raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
 end;
 
 { TGCustomGraph.TAdjList.TEnumerator }
