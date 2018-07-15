@@ -744,7 +744,7 @@ var
   Cand: TBoolVector;
 begin
   FStartTime := Now;
-  FTimeOut := aTimeOut;
+  FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.ApproxMaxClique;
@@ -761,7 +761,7 @@ var
   Cand: TBoolVector;
 begin
   FStartTime := Now;
-  FTimeOut := aTimeOut;
+  FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.ApproxMaxIndependentSet;
@@ -937,7 +937,7 @@ var
   Cand: TBits256;
 begin
   FStartTime := Now;
-  FTimeOut := aTimeOut;
+  FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.ApproxMaxClique;
@@ -954,7 +954,7 @@ var
   Cand: TBits256;
 begin
   FStartTime := Now;
-  FTimeOut := aTimeOut;
+  FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.ApproxMaxIndependentSet;
@@ -1118,7 +1118,7 @@ var
   Cand: TIntSet;
 begin
   FStartTime := Now;
-  FTimeOut := aTimeOut;
+  FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph);
   FRecentBest := aGraph.ApproxMaxClique;
@@ -1222,10 +1222,7 @@ var
   I: SizeInt;
 begin
   FStartTime := Now;
-  if aTimeOut = WAIT_INFINITE then
-    aTimeOut := System.High(Integer)
-  else
-    FTimeOut := aTimeOut;
+  FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   FillMatrix(aGraph);
   FRecentBest := aGraph.ApproxMinDominatingSet;
@@ -1321,10 +1318,7 @@ var
   I: SizeInt;
 begin
   FStartTime := Now;
-  if aTimeOut = WAIT_INFINITE then
-    aTimeOut := System.High(Integer)
-  else
-    FTimeOut := aTimeOut;
+  FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   FillMatrix(aGraph);
   FRecentBest := aGraph.ApproxMinDominatingSet;
@@ -1402,10 +1396,7 @@ var
   I: SizeInt;
 begin
   FStartTime := Now;
-  if aTimeOut = WAIT_INFINITE then
-    aTimeOut := System.High(Integer)
-  else
-    FTimeOut := aTimeOut;
+  FTimeOut := aTimeOut and System.High(Integer);
   FCancel := False;
   FRecentBest := aGraph.ApproxMinDominatingSet;
   FMatrix := aGraph.CreateSkeleton;
