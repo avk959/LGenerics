@@ -546,7 +546,7 @@ type
 
   public
 {**********************************************************************************************************
-  some useful utilities
+  auxiliary utilities
 ***********************************************************************************************************}
 
     class function  MaxBitMatrixSize: SizeInt; static; inline;
@@ -617,7 +617,7 @@ type
     function  BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
 
 {**********************************************************************************************************
-  shortest paths utilities
+  shortest path problem utilities
 ***********************************************************************************************************}
 
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),

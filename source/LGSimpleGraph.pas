@@ -250,12 +250,45 @@ type
     function  SortVerticesByDegree(o: TSortOrder): TIntArray;
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
-    property  InnerConnected: Boolean read FConnected;
   public
+{**********************************************************************************************************
+  auxiliary utilities
+***********************************************************************************************************}
+
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
+
+{**********************************************************************************************************
+  class management utilities
+***********************************************************************************************************}
+
     constructor Create;
     constructor Create(aCapacity: SizeInt);
     procedure Clear; override;
+  { saves graph in its own binary format }
+    procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+    procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+    procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+    procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+  { returns copy of the source graph }
+    function  Clone: TGSimpleGraph;
+  { returns graph of connected component that contains aVertex }
+    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; inline;
+    function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
+  { returns a graph consisting of vertices whose indices are contained in the array aList }
+    function  SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
+  { returns a graph constructed from the pairs provided by the aTree,
+    i.e. each element treates as pair of source - destination(value -> source, index -> destination ) }
+    function  SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
+  { returns a graph constructed from the edges provided by the aEdges }
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
+  { returns adjacency matrix of the complement graph;
+    warning: maximal matrix size limited, see MaxBitMatrixSize }
+    function  Complement: TAdjacencyMatrix;
+
+{**********************************************************************************************************
+  structural management utilities
+***********************************************************************************************************}
+
   { returns True and vertex index, if it is added, False if such a vertex already exists }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
@@ -270,11 +303,6 @@ type
   { returns False if there is no such edge; note: removing destroys validity of connected }
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
-  { saves graph in its own binary format }
-    procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
-    procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
-    procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
-    procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
     function  Degree(constref aVertex: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
@@ -313,30 +341,6 @@ type
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
-  { lists all maximal independent sets of vertices }
-    procedure ListIndependentSets(aOnFindSet: TOnFindSet);
-  { returns indices of the vertices of the some found maximum independent set of vertices;
-    worst case time cost O(3^n/3)
-    aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best solution found by this time will be returned,
-    and aExactSolution will be set to False }
-    function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
-    function  ApproxMaxIndependentSet: TIntArray;
-  { returns indices of the vertices of the some found minimum dominating set;
-    worst case time cost O(2^n);
-    aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best solution found by this time will be returned,
-    and aExactSolution will be set to False }
-    function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
-    function  ApproxMinDominatingSet: TIntArray;
-  { lists all maximal cliques }
-    procedure ListMaxCliques(aOnFindClique: TOnFindSet);
-  { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3);
-    aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best solution found by this time will be returned,
-    and aExactSolution will be set to False }
-    function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
-    function  ApproxMaxClique: TIntArray;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
     function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
@@ -360,6 +364,11 @@ type
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+
+{**********************************************************************************************************
+  spanning tree utilities
+***********************************************************************************************************}
+
   { returns the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
@@ -367,21 +376,39 @@ type
     function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
-  { returns graph of connected component that contains aVertex }
-    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; inline;
-    function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
-  { returns a graph consisting of vertices whose indices are contained in the array aList }
-    function  SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
-  { returns a graph constructed from the pairs provided by the aPairs,
-    i.e. each element treates as pair of source - destination(value -> source, index -> destination ) }
-    function  SubgraphFromPairs(constref aPairs: TIntArray): TGSimpleGraph;
-  { returns a graph constructed from the edges provided by the aEdges }
-    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
-  { returns copy of the source graph }
-    function  Clone: TGSimpleGraph;
-  { returns adjacency matrix of the complement graph;
-    warning: maximal matrix size limited, see MaxBitMatrixSize }
-    function  Complement: TAdjacencyMatrix;
+
+{**********************************************************************************************************
+  NP-hard problems utilities
+***********************************************************************************************************}
+
+  { lists all maximal independent sets of vertices }
+    procedure ListIndependentSets(aOnFindSet: TOnFindSet);
+  { returns indices of the vertices of the some found maximal independent set of maximal cardinality;
+    worst case time cost O(3^n/3)
+    aTimeOut specifies the timeout in seconds;
+    at the end of the timeout, the best solution found by this time will be returned,
+    and aExactSolution will be set to False }
+    function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  ApproxMaxIndependentSet: TIntArray;
+  { returns indices of the vertices of the some found minimum dominating set;
+    worst case time cost O*(2^n);
+    aTimeOut specifies the timeout in seconds;
+    at the end of the timeout, the best solution found by this time will be returned,
+    and aExactSolution will be set to False }
+    function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  ApproxMinDominatingSet: TIntArray;
+  { lists all maximal cliques }
+    procedure ListMaxCliques(aOnFindClique: TOnFindSet);
+  { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3);
+    aTimeOut specifies the timeout in seconds;
+    at the end of the timeout, the best solution found by this time will be returned,
+    and aExactSolution will be set to False }
+    function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  ApproxMaxClique: TIntArray;
+
+{**********************************************************************************************************
+  properties
+***********************************************************************************************************}
 
   { checks whether the cached info about connected is up-to-date }
     property  ConnectedValid: Boolean read FConnectedValid;
@@ -410,7 +437,7 @@ type
     function  SeparateGraph(constref aVertex: TVertex): TGChart;
     function  SeparateGraphI(aIndex: SizeInt): TGChart;
     function  SubgraphFromVertexList(constref aList: TIntArray): TGChart;
-    function  SubgraphFromPairs(constref aPairs: TIntArray): TGChart;
+    function  SubgraphFromTree(constref aTree: TIntArray): TGChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
     function  Clone: TGChart;
   end;
@@ -428,7 +455,7 @@ type
     function  SeparateGraph(aVertex: SizeInt): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
     function  SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
-    function  SubgraphFromPairs(constref aValue: TIntArray): TIntChart;
+    function  SubgraphFromTree(constref aTree: TIntArray): TIntChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
     function  Clone: TIntChart;
   end;
@@ -447,7 +474,7 @@ type
     function  SeparateGraph(const aVertex: string): TStrChart;
     function  SeparateGraphI(aIndex: SizeInt): TStrChart;
     function  SubgraphFromVertexList(constref aList: TIntArray): TStrChart;
-    function  SubgraphFromPairs(constref aPairs: TIntArray): TStrChart;
+    function  SubgraphFromTree(constref aTree: TIntArray): TStrChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
     function  Clone: TStrChart;
   end;
@@ -484,11 +511,30 @@ type
 
     function  CreateEdgeArray: TEdgeArray;
   public
+{**********************************************************************************************************
+  auxiliary utilities
+***********************************************************************************************************}
+
     class function InfiniteWeight: TWeight; static; inline;
     class function NegInfiniteWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
     function  ContainsNegWeighedEdge: Boolean;
+{**********************************************************************************************************
+  class management utilities
+***********************************************************************************************************}
+
+    function  SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
+    function  SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
+    function  SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
+    function  SubgraphFromTree(constref aTree: TIntArray): TGWeightedGraph;
+    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
+    function  Clone: TGWeightedGraph;
+
+{**********************************************************************************************************
+  shortest path problem utilities
+***********************************************************************************************************}
+
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
@@ -510,16 +556,15 @@ type
     the weights of all edges must be nonnegative; used A* algorithm if aHeur <> nil }
     function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: TEstimate): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
+
+{**********************************************************************************************************
+  minimum spanning tree utilities
+***********************************************************************************************************}
+
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Kruskal's algorithm used }
     function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
     function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
-    function  SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
-    function  SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
-    function  SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
-    function  SubgraphFromPairs(constref aPairs: TIntArray): TGWeightedGraph;
-    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
-    function  Clone: TGWeightedGraph;
   end;
 
   TRealPointEdge = record
@@ -547,7 +592,7 @@ type
     function  SeparateGraph(aVertex: TPoint): TPointsChart;
     function  SeparateGraphI(aIndex: SizeInt): TPointsChart;
     function  SubgraphFromVertexList(constref aList: TIntArray): TPointsChart;
-    function  SubgraphFromPairs(constref aPairs: TIntArray): TPointsChart;
+    function  SubgraphFromTree(constref aTree: TIntArray): TPointsChart;
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
     function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
@@ -1804,7 +1849,7 @@ begin
     begin
       J := 0;
       Card := 0;
-      for I in Cand do
+      for I in Cand do     //todo: is it possible to use a binary heap ?
         begin
           w := 1;
           for v in AdjVerticesI(I) do
@@ -1836,7 +1881,7 @@ begin
   while Cand.NonEmpty do
     begin
       J := 0;
-      MaxIntersect := 0;
+      MaxIntersect := 0;  //todo: is it possible to use a binary heap ?
       for I in Cand do
         begin
           CurrIntersect := Succ(Cand.IntersectionCount(Matrix[I]));
@@ -2449,77 +2494,6 @@ begin
   FConnectedValid := True;
 end;
 
-function TGSimpleGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
-begin
-  Result := not FindOrAdd(aVertex, aIndex);
-  if not Result then
-    exit;
-  if ConnectedValid then
-    begin
-      FNodeList[aIndex].Tag := aIndex;
-      Inc(FCompCount);
-      FConnected := FCompCount = 1;
-    end
-  else
-    FNodeList[aIndex].Tag := FCompCount;
-end;
-
-function TGSimpleGraph.AddVertex(constref aVertex: TVertex): Boolean;
-var
-  Dummy: SizeInt;
-begin
-  Result := AddVertex(aVertex, Dummy);
-end;
-
-procedure TGSimpleGraph.RemoveVertex(constref aVertex: TVertex);
-begin
-  RemoveVertexI(IndexOf(aVertex));
-end;
-
-procedure TGSimpleGraph.RemoveVertexI(aIndex: SizeInt);
-begin
-  CheckIndexRange(aIndex);
-  DoRemoveVertex(aIndex);
-end;
-
-function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
-var
-  SrcIdx, DstIdx: SizeInt;
-begin
-  AddVertex(aSrc, SrcIdx);
-  AddVertex(aDst, DstIdx);
-  Result := DoAddEdge(SrcIdx, DstIdx, aData);
-end;
-
-function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := AddEdge(aSrc, aDst, DefaultEdgeData);
-end;
-
-function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := DoAddEdge(aSrc, aDst, aData);
-end;
-
-function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
-begin
-  Result := AddEdgeI(aSrc, aDst, DefaultEdgeData);
-end;
-
-function TGSimpleGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := RemoveEdgeI(IndexOf(aSrc), IndexOf(aDst));
-end;
-
-function TGSimpleGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := DoRemoveEdge(aSrc, aDst);
-end;
-
 procedure TGSimpleGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
 var
   Header: TStreamHeader;
@@ -2654,6 +2628,160 @@ begin
   finally
     fs.Free;
   end;
+end;
+
+function TGSimpleGraph.Clone: TGSimpleGraph;
+var
+  I: SizeInt;
+begin
+  Result := TGSimpleGraph.Create;
+  Result.FCount := VertexCount;
+  Result.FEdgeCount := EdgeCount;
+  Result.FCompCount := FCompCount;
+  Result.FTitle := Title;
+  Result.FConnected := Connected;
+  Result.FConnectedValid := ConnectedValid;
+  if NonEmpty then
+    begin
+      Result.FChainList := System.Copy(FChainList);
+      System.SetLength(Result.FNodeList, System.Length(FNodeList));
+      for I := 0 to Pred(VertexCount) do
+        Result.FNodeList[I].Assign(FNodeList[I]);
+    end;
+end;
+
+function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
+begin
+  Result := SeparateGraphI(IndexOf(aVertex));
+end;
+
+function TGSimpleGraph.SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
+begin
+  if SeparateCount > 1 then
+    Result := GetSeparateGraph(aIndex)
+  else
+    Result := Clone;
+end;
+
+function TGSimpleGraph.SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
+var
+  vSet: TIntHashSet;
+  I, J: SizeInt;
+begin
+  vSet.AddAll(aList);
+  Result := TGSimpleGraph.Create(vSet.Count);
+  for I in vSet do
+    for J in AdjVerticesI(I) do
+      if vSet.Contains(J) then
+        Result.AddEdge(Items[I], Items[J], GetEdgeDataPtr(I, J)^);
+end;
+
+function TGSimpleGraph.SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
+var
+  I, Src: SizeInt;
+begin
+  Result := TGSimpleGraph.Create;
+  for I := 0 to Pred(System.Length(aTree)) do
+    begin
+      Src := aTree[I];
+      if Src <> -1 then
+        Result.AddEdge(Items[Src], Items[I], GetEdgeDataPtr(Src, I)^);
+    end;
+end;
+
+function TGSimpleGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
+var
+  e: TIntEdge;
+begin
+  Result := TGSimpleGraph.Create;
+  for e in aEdges do
+    Result.AddEdge(Items[e.Source], Items[e.Destination], GetEdgeDataPtr(e.Source, e.Destination)^);
+end;
+
+function TGSimpleGraph.Complement: TAdjacencyMatrix;
+var
+  m: TSquareBitMatrix;
+  s, d: SizeInt;
+begin
+  if IsEmpty then
+    exit(Default(TAdjacencyMatrix));
+  m := TSquareBitMatrix.Create(VertexCount);
+  for s := 0 to Pred(VertexCount) do
+    for d := 0 to Pred(VertexCount) do
+      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
+        m[s, d] := True;
+  Result := TAdjacencyMatrix.Create(m);
+end;
+
+function TGSimpleGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+begin
+  Result := not FindOrAdd(aVertex, aIndex);
+  if not Result then
+    exit;
+  if ConnectedValid then
+    begin
+      FNodeList[aIndex].Tag := aIndex;
+      Inc(FCompCount);
+      FConnected := FCompCount = 1;
+    end
+  else
+    FNodeList[aIndex].Tag := FCompCount;
+end;
+
+function TGSimpleGraph.AddVertex(constref aVertex: TVertex): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := AddVertex(aVertex, Dummy);
+end;
+
+procedure TGSimpleGraph.RemoveVertex(constref aVertex: TVertex);
+begin
+  RemoveVertexI(IndexOf(aVertex));
+end;
+
+procedure TGSimpleGraph.RemoveVertexI(aIndex: SizeInt);
+begin
+  CheckIndexRange(aIndex);
+  DoRemoveVertex(aIndex);
+end;
+
+function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+var
+  SrcIdx, DstIdx: SizeInt;
+begin
+  AddVertex(aSrc, SrcIdx);
+  AddVertex(aDst, DstIdx);
+  Result := DoAddEdge(SrcIdx, DstIdx, aData);
+end;
+
+function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := AddEdge(aSrc, aDst, DefaultEdgeData);
+end;
+
+function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := DoAddEdge(aSrc, aDst, aData);
+end;
+
+function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
+begin
+  Result := AddEdgeI(aSrc, aDst, DefaultEdgeData);
+end;
+
+function TGSimpleGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := RemoveEdgeI(IndexOf(aSrc), IndexOf(aDst));
+end;
+
+function TGSimpleGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := DoRemoveEdge(aSrc, aDst);
 end;
 
 function TGSimpleGraph.Degree(constref aVertex: TVertex): SizeInt;
@@ -2863,110 +2991,6 @@ begin
   Result := True;
 end;
 
-procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
-begin
-  if IsEmpty then
-    exit;
-  if aOnFindSet = nil then
-    raise ELGraphError.Create(SECallbackMissed);
-  if VertexCount > 256 then
-    ListIsBP(aOnFindSet)
-  else
-    ListIsBP256(aOnFindSet)
-end;
-
-function TGSimpleGraph.MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
-begin
-  if IsEmpty then
-    exit(nil);
-  if VertexCount > 256 then
-    Result := GetMaxIsBP(aTimeOut, aExactSolution)
-  else
-    Result := GetMaxIsBP256(aTimeOut, aExactSolution);
-end;
-
-function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
-begin
-  if IsEmpty then
-    exit(nil);
-  if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetApproxMaxIS
-  else
-    Result := GetApproxMaxIsBP;
-end;
-
-function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
-begin
-  if IsEmpty then
-    exit(nil);
-  if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetMds(aTimeOut, aExactSolution)
-  else
-    if VertexCount > 256 then
-      Result := GetMdsBP(aTimeOut, aExactSolution)
-    else
-      Result := GetMdsBP256(aTimeOut, aExactSolution);
-end;
-
-function TGSimpleGraph.ApproxMinDominatingSet: TIntArray;
-begin
-  if IsEmpty then
-    exit(nil);
-  if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetApproxMinIS
-  else
-    Result := GetApproxMinIsBP;
-end;
-
-procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
-begin
-  if IsEmpty or (EdgeCount = 0) then
-    exit;
-  if aOnFindClique = nil then
-    raise ELGraphError.Create(SECallbackMissed);
-  if (VertexCount > LISTCLIQUES_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
-    ListCliques(aOnFindClique)
-  else
-    if VertexCount > 256 then
-      ListCliquesBP(aOnFindClique)
-    else
-      ListCliquesBP256(aOnFindClique);
-end;
-
-function TGSimpleGraph.MaxClique(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
-begin
-  if IsEmpty or (EdgeCount = 0) then
-    exit(nil);
-  if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
-    Result := GetMaxClique(aTimeOut, aExactSolution)
-  else
-    if VertexCount > 256 then
-      Result := GetMaxCliqueBP(aTimeOut, aExactSolution)
-    else
-      Result := GetMaxCliqueBP256(aTimeOut, aExactSolution);
-end;
-
-function TGSimpleGraph.ApproxMaxClique: TIntArray;
-var
-  Cand, Stack, Q: TIntSet;
-  I, J: SizeInt;
-begin
-  if IsEmpty or (EdgeCount = 0) then
-    exit(nil);
-  Cand.AssignArray(SortVerticesByWidth(soAsc));
-  while Cand.NonEmpty do
-    begin
-      I := Cand.Pop;
-      {%H-}Stack.Push(I);
-      {%H-}Q.MakeEmpty;
-      for J in Cand do
-        if AdjLists[I]^.Contains(J) then
-          Q.Push(J);
-      Cand.Assign(Q);
-    end;
-  Result := Stack.ToArray;
-end;
-
 function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
 begin
   Result := ContainsCutPointI(IndexOf(aRoot));
@@ -3149,87 +3173,108 @@ begin
   until not Queue.TryDequeue(aRoot);
 end;
 
-function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
-begin
-  Result := SeparateGraphI(IndexOf(aVertex));
-end;
-
-function TGSimpleGraph.SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
-begin
-  if SeparateCount > 1 then
-    Result := GetSeparateGraph(aIndex)
-  else
-    Result := Clone;
-end;
-
-function TGSimpleGraph.SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
-var
-  vSet: TIntHashSet;
-  I, J: SizeInt;
-begin
-  vSet.AddAll(aList);
-  Result := TGSimpleGraph.Create(vSet.Count);
-  for I in vSet do
-    for J in AdjVerticesI(I) do
-      if vSet.Contains(J) then
-        Result.AddEdge(Items[I], Items[J], GetEdgeDataPtr(I, J)^);
-end;
-
-function TGSimpleGraph.SubgraphFromPairs(constref aPairs: TIntArray): TGSimpleGraph;
-var
-  I, Src: SizeInt;
-begin
-  Result := TGSimpleGraph.Create;
-  for I := 0 to Pred(System.Length(aPairs)) do
-    begin
-      Src := aPairs[I];
-      if Src <> -1 then
-        Result.AddEdge(Items[Src], Items[I], GetEdgeDataPtr(Src, I)^);
-    end;
-end;
-
-function TGSimpleGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
-var
-  e: TIntEdge;
-begin
-  Result := TGSimpleGraph.Create;
-  for e in aEdges do
-    Result.AddEdge(Items[e.Source], Items[e.Destination], GetEdgeDataPtr(e.Source, e.Destination)^);
-end;
-
-function TGSimpleGraph.Clone: TGSimpleGraph;
-var
-  I: SizeInt;
-begin
-  Result := TGSimpleGraph.Create;
-  Result.FCount := VertexCount;
-  Result.FEdgeCount := EdgeCount;
-  Result.FCompCount := FCompCount;
-  Result.FTitle := Title;
-  Result.FConnected := Connected;
-  Result.FConnectedValid := ConnectedValid;
-  if NonEmpty then
-    begin
-      Result.FChainList := System.Copy(FChainList);
-      System.SetLength(Result.FNodeList, System.Length(FNodeList));
-      for I := 0 to Pred(VertexCount) do
-        Result.FNodeList[I].Assign(FNodeList[I]);
-    end;
-end;
-
-function TGSimpleGraph.Complement: TAdjacencyMatrix;
-var
-  m: TSquareBitMatrix;
-  s, d: SizeInt;
+procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
 begin
   if IsEmpty then
-    exit(Default(TAdjacencyMatrix));
-  m := TSquareBitMatrix.Create(VertexCount);
-  for s := 0 to Pred(VertexCount) do
-    for d := 0 to Pred(VertexCount) do
-      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
-        m[s, d] := True;
-  Result := TAdjacencyMatrix.Create(m);
+    exit;
+  if aOnFindSet = nil then
+    raise ELGraphError.Create(SECallbackMissed);
+  if VertexCount > 256 then
+    ListIsBP(aOnFindSet)
+  else
+    ListIsBP256(aOnFindSet)
+end;
+
+function TGSimpleGraph.MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
+begin
+  if IsEmpty then
+    exit(nil);
+  if VertexCount > 256 then
+    Result := GetMaxIsBP(aTimeOut, aExactSolution)
+  else
+    Result := GetMaxIsBP256(aTimeOut, aExactSolution);
+end;
+
+function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
+begin
+  if IsEmpty then
+    exit(nil);
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetApproxMaxIS
+  else
+    Result := GetApproxMaxIsBP;
+end;
+
+function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
+begin
+  if IsEmpty then
+    exit(nil);
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetMds(aTimeOut, aExactSolution)
+  else
+    if VertexCount > 256 then
+      Result := GetMdsBP(aTimeOut, aExactSolution)
+    else
+      Result := GetMdsBP256(aTimeOut, aExactSolution);
+end;
+
+function TGSimpleGraph.ApproxMinDominatingSet: TIntArray;
+begin
+  if IsEmpty then
+    exit(nil);
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := GetApproxMinIS
+  else
+    Result := GetApproxMinIsBP;
+end;
+
+procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
+begin
+  if IsEmpty or (EdgeCount = 0) then
+    exit;
+  if aOnFindClique = nil then
+    raise ELGraphError.Create(SECallbackMissed);
+  if (VertexCount > LISTCLIQUES_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
+    ListCliques(aOnFindClique)
+  else
+    if VertexCount > 256 then
+      ListCliquesBP(aOnFindClique)
+    else
+      ListCliquesBP256(aOnFindClique);
+end;
+
+function TGSimpleGraph.MaxClique(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
+begin
+  if IsEmpty or (EdgeCount = 0) then
+    exit(nil);
+  if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
+    Result := GetMaxClique(aTimeOut, aExactSolution)
+  else
+    if VertexCount > 256 then
+      Result := GetMaxCliqueBP(aTimeOut, aExactSolution)
+    else
+      Result := GetMaxCliqueBP256(aTimeOut, aExactSolution);
+end;
+
+function TGSimpleGraph.ApproxMaxClique: TIntArray;
+var
+  Cand, Stack, Q: TIntSet;
+  I, J: SizeInt;
+begin
+  if IsEmpty or (EdgeCount = 0) then
+    exit(nil);
+  Cand.AssignArray(SortVerticesByWidth(soAsc));
+  while Cand.NonEmpty do
+    begin
+      I := Cand.Pop;
+      {%H-}Stack.Push(I);
+      {%H-}Q.MakeEmpty;
+      for J in Cand do
+        if AdjLists[I]^.Contains(J) then
+          Q.Push(J);
+      Cand.Assign(Q);
+    end;
+  Result := Stack.ToArray;
 end;
 
 { TGChart }
@@ -3299,9 +3344,9 @@ begin
   Result := inherited SubgraphFromVertexList(aList) as TGChart;
 end;
 
-function TGChart.SubgraphFromPairs(constref aPairs: TIntArray): TGChart;
+function TGChart.SubgraphFromTree(constref aTree: TIntArray): TGChart;
 begin
-  Result := inherited SubgraphFromPairs(aPairs) as TGChart;
+  Result := inherited SubgraphFromTree(aTree) as TGChart;
 end;
 
 function TGChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
@@ -3408,9 +3453,9 @@ begin
   Result := inherited SubgraphFromVertexList(aList) as TIntChart;
 end;
 
-function TIntChart.SubgraphFromPairs(constref aValue: TIntArray): TIntChart;
+function TIntChart.SubgraphFromTree(constref aTree: TIntArray): TIntChart;
 begin
-  Result := inherited SubgraphFromPairs(aValue) as TIntChart;
+  Result := inherited SubgraphFromTree(aTree) as TIntChart;
 end;
 
 function TIntChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
@@ -3482,9 +3527,9 @@ begin
   Result := inherited SubgraphFromVertexList(aList) as TStrChart;
 end;
 
-function TStrChart.SubgraphFromPairs(constref aPairs: TIntArray): TStrChart;
+function TStrChart.SubgraphFromTree(constref aTree: TIntArray): TStrChart;
 begin
-  Result := inherited SubgraphFromPairs(aPairs) as TStrChart;
+  Result := inherited SubgraphFromTree(aTree) as TStrChart;
 end;
 
 function TStrChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
@@ -3538,6 +3583,36 @@ begin
     if e.Data.Weight < ZeroWeight then
       exit(True);
   Result := False;
+end;
+
+function TGWeightedGraph.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
+begin
+  Result := inherited SeparateGraph(aVertex) as TGWeightedGraph;
+end;
+
+function TGWeightedGraph.SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
+begin
+  Result := inherited SeparateGraphI(aIndex) as TGWeightedGraph;
+end;
+
+function TGWeightedGraph.SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
+begin
+  Result := inherited SubgraphFromVertexList(aList) as TGWeightedGraph;
+end;
+
+function TGWeightedGraph.SubgraphFromTree(constref aTree: TIntArray): TGWeightedGraph;
+begin
+  Result := inherited SubgraphFromTree(aTree) as TGWeightedGraph;
+end;
+
+function TGWeightedGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
+begin
+  Result := inherited SubgraphFromEdges(aEdges) as TGWeightedGraph;
+end;
+
+function TGWeightedGraph.Clone: TGWeightedGraph;
+begin
+  Result := inherited Clone as TGWeightedGraph;
 end;
 
 function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
@@ -3660,36 +3735,6 @@ begin
       end;
 end;
 
-function TGWeightedGraph.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
-begin
-  Result := inherited SeparateGraph(aVertex) as TGWeightedGraph;
-end;
-
-function TGWeightedGraph.SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
-begin
-  Result := inherited SeparateGraphI(aIndex) as TGWeightedGraph;
-end;
-
-function TGWeightedGraph.SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
-begin
-  Result := inherited SubgraphFromVertexList(aList) as TGWeightedGraph;
-end;
-
-function TGWeightedGraph.SubgraphFromPairs(constref aPairs: TIntArray): TGWeightedGraph;
-begin
-  Result := inherited SubgraphFromPairs(aPairs) as TGWeightedGraph;
-end;
-
-function TGWeightedGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
-begin
-  Result := inherited SubgraphFromEdges(aEdges) as TGWeightedGraph;
-end;
-
-function TGWeightedGraph.Clone: TGWeightedGraph;
-begin
-  Result := inherited Clone as TGWeightedGraph;
-end;
-
 { TRealPointEdge }
 
 constructor TRealPointEdge.Create(const aWeight: ValReal);
@@ -3795,9 +3840,9 @@ begin
   Result := inherited SubgraphFromVertexList(aList) as TPointsChart;
 end;
 
-function TPointsChart.SubgraphFromPairs(constref aPairs: TIntArray): TPointsChart;
+function TPointsChart.SubgraphFromTree(constref aTree: TIntArray): TPointsChart;
 begin
-  Result := inherited SubgraphFromPairs(aPairs) as TPointsChart;
+  Result := inherited SubgraphFromTree(aTree) as TPointsChart;
 end;
 
 function TPointsChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
