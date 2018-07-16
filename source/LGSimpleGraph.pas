@@ -59,7 +59,6 @@ type
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCanceled: Boolean;
-      function  TimeOut: Boolean; inline;
       procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
       procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
       procedure Extend(var aSub, aCand: TBoolVector);
@@ -93,7 +92,6 @@ type
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCanceled: Boolean;
-      function  TimeOut: Boolean; inline;
       procedure Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TBits256);
       procedure Extend(var aSub, aCand: TBits256);
@@ -117,7 +115,6 @@ type
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCanceled: Boolean;
-      function  TimeOut: Boolean; inline;
       procedure Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
       procedure Extend(var aCand: TIntSet);
       procedure Extend(var aSub, aCand: TIntSet);
@@ -137,7 +134,6 @@ type
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCanceled: Boolean;
-      function  TimeOut: Boolean; inline;
       procedure FillMatrix(aGraph: TGSimpleGraph);
       procedure Extend(constref aSub, aCand: TBoolVector);
     public
@@ -152,7 +148,6 @@ type
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCanceled: Boolean;
-      function  TimeOut: Boolean; inline;
       procedure FillMatrix(aGraph: TGSimpleGraph);
       procedure Extend(constref aSub, aCand: TBits256);
     public
@@ -166,7 +161,6 @@ type
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCancel: Boolean;
-      function  TimeOut: Boolean; inline;
       procedure Extend(constref aSub, aCand: TIntSet);
     public
       function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -607,11 +601,6 @@ uses
 
 { TGSimpleGraph.TBPCliqueIsHelper }
 
-function TGSimpleGraph.TBPCliqueIsHelper.TimeOut: Boolean;
-begin
-  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
-end;
-
 procedure TGSimpleGraph.TBPCliqueIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBoolVector;
@@ -647,7 +636,7 @@ var
 begin
   if aCand.NonEmpty then
     begin
-      if TimeOut then
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
           FCanceled := True;
           exit;
@@ -800,11 +789,6 @@ end;
 
 { TGSimpleGraph.TBPCliqueIsHelper256 }
 
-function TGSimpleGraph.TBPCliqueIsHelper256.TimeOut: Boolean;
-begin
-  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
-end;
-
 procedure TGSimpleGraph.TBPCliqueIsHelper256.Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBits256;
@@ -840,7 +824,7 @@ var
 begin
   if aCand.NonEmpty then
     begin
-      if TimeOut then
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
           FCanceled := True;
           exit;
@@ -991,11 +975,6 @@ begin
   Extend(Sub, Cand);
 end;
 
-function TGSimpleGraph.TCliqueHelper.TimeOut: Boolean;
-begin
-  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
-end;
-
 procedure TGSimpleGraph.TCliqueHelper.Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
 var
   P, Q: TIntSet;
@@ -1029,7 +1008,7 @@ var
 begin
   if aCand.NonEmpty then
     begin
-      if TimeOut then
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
           FCanceled := True;
           exit;
@@ -1142,11 +1121,6 @@ end;
 
 { TGSimpleGraph.TBPDomSetHelper }
 
-function TGSimpleGraph.TBPDomSetHelper.TimeOut: Boolean;
-begin
-  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
-end;
-
 procedure TGSimpleGraph.TBPDomSetHelper.FillMatrix(aGraph: TGSimpleGraph);
 var
   I, J: SizeInt;
@@ -1173,7 +1147,7 @@ begin
     begin
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
-      if TimeOut then
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
           FCanceled := True;
           exit;
@@ -1238,11 +1212,6 @@ end;
 
 { TGSimpleGraph.TBPDomSetHelper256 }
 
-function TGSimpleGraph.TBPDomSetHelper256.TimeOut: Boolean;
-begin
-  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
-end;
-
 procedure TGSimpleGraph.TBPDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph);
 var
   I, J: SizeInt;
@@ -1263,19 +1232,19 @@ end;
 procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aSub, aCand: TBits256);
 var
   NewSub, NewCand, Neib: TBits256;
-  I, J: SizeInt;
+  I, J, Cnt: SizeInt;
 begin
   if aSub.NonEmpty then
     begin
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
-      if TimeOut then
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
           FCanceled := True;
           exit;
         end;
       NewSub := aSub;
-      I := aSub.Bsf;
+      I := NewSub.Bsf;
       NewCand := aCand;
       NewCand[FVertices[I]] := True;
       NewSub[I] := False;
@@ -1334,11 +1303,6 @@ end;
 
 { TGSimpleGraph.TDomSetHelper }
 
-function TGSimpleGraph.TDomSetHelper.TimeOut: Boolean;
-begin
-  Result := SecondsBetween(Now, FStartTime) > FTimeOut;
-end;
-
 procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TIntSet);
 var
   NewSub, NewCand, Neib: TIntSet;
@@ -1348,7 +1312,7 @@ begin
     begin
       if aCand.Count >= System.High(FRecentBest) then
         exit;
-      if TimeOut then
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
           FCancel := True;
           exit;
