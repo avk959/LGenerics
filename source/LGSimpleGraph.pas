@@ -275,9 +275,6 @@ type
     function  SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the edges provided by the aEdges }
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
-  { returns adjacency matrix of the complement graph;
-    warning: maximal matrix size limited, see MaxBitMatrixSize }
-    function  Complement: TAdjacencyMatrix;
 
 {**********************************************************************************************************
   structural management utilities
@@ -358,6 +355,9 @@ type
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+  { returns adjacency matrix of the complement graph;
+    warning: maximal matrix size limited, see MaxBitMatrixSize }
+    function  ComplementMatrix: TAdjacencyMatrix;
 
 {**********************************************************************************************************
   spanning tree utilities
@@ -2653,21 +2653,6 @@ begin
     Result.AddEdge(Items[e.Source], Items[e.Destination], GetEdgeDataPtr(e.Source, e.Destination)^);
 end;
 
-function TGSimpleGraph.Complement: TAdjacencyMatrix;
-var
-  m: TSquareBitMatrix;
-  s, d: SizeInt;
-begin
-  if IsEmpty then
-    exit(Default(TAdjacencyMatrix));
-  m := TSquareBitMatrix.Create(VertexCount);
-  for s := 0 to Pred(VertexCount) do
-    for d := 0 to Pred(VertexCount) do
-      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
-        m[s, d] := True;
-  Result := TAdjacencyMatrix.Create(m);
-end;
-
 function TGSimpleGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FindOrAdd(aVertex, aIndex);
@@ -3067,6 +3052,21 @@ begin
         aOnAddEdge(Items[e.Source], Items[e.Destination], @d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
+end;
+
+function TGSimpleGraph.ComplementMatrix: TAdjacencyMatrix;
+var
+  m: TSquareBitMatrix;
+  s, d: SizeInt;
+begin
+  if IsEmpty then
+    exit(Default(TAdjacencyMatrix));
+  m := TSquareBitMatrix.Create(VertexCount);
+  for s := 0 to Pred(VertexCount) do
+    for d := 0 to Pred(VertexCount) do
+      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
+        m[s, d] := True;
+  Result := TAdjacencyMatrix.Create(m);
 end;
 
 function TGSimpleGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
