@@ -395,15 +395,15 @@ type
     function  Bsf: SizeInt;
   { returns index of the most significant bit }
     function  Bsr: SizeInt;
-    function  Intersecting(constref aVector: TBoolVector): Boolean;
+    function  Intersecting(constref aValue: TBoolVector): Boolean;
   { returns the number of bits in the intersection with aVector }
-    function  IntersectionCount(constref aVector: TBoolVector): SizeInt;
-    function  Contains(constref aVector: TBoolVector): Boolean;
+    function  IntersectionCount(constref aValue: TBoolVector): SizeInt;
+    function  Contains(constref aValue: TBoolVector): Boolean;
   { returns the number of bits that will be added when union with aVector }
-    function  UnionCount(constref aVector: TBoolVector): SizeInt;
-    procedure Join(constref aVector: TBoolVector);
-    procedure Subtract(constref aVector: TBoolVector);
-    procedure Intersect(constref aVector: TBoolVector);
+    function  UnionCount(constref aValue: TBoolVector): SizeInt;
+    procedure Join(constref aValue: TBoolVector);
+    procedure Subtract(constref aValue: TBoolVector);
+    procedure Intersect(constref aValue: TBoolVector);
   { currently size can only grow and is always multiple of BitsizeOf(SizeUInt) }
     property  Size: SizeInt read GetSize write SetSize;
   { returns count of set bits }
@@ -2101,126 +2101,126 @@ begin
   Result := -1;
 end;
 
-function TBoolVector.Intersecting(constref aVector: TBoolVector): Boolean;
+function TBoolVector.Intersecting(constref aValue: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
-  for I := 0 to Math.Min(System.High(FBits), System.High(aVector.FBits)) do
-    if FBits[I] and aVector.FBits[I] <> 0 then
+  for I := 0 to Math.Min(System.High(FBits), System.High(aValue.FBits)) do
+    if FBits[I] and aValue.FBits[I] <> 0 then
       exit(True);
   Result := False;
 end;
 
-function TBoolVector.IntersectionCount(constref aVector: TBoolVector): SizeInt;
+function TBoolVector.IntersectionCount(constref aValue: TBoolVector): SizeInt;
 var
   I, Len: SizeInt;
 begin
-  Len := Math.Min(System.High(FBits), System.High(aVector.FBits));
+  Len := Math.Min(System.High(FBits), System.High(aValue.FBits));
   I := 0;
   Result := 0;
   while I <= Len - 4 do
     begin
-      Result += SizeInt(PopCnt(FBits[I  ] and aVector.FBits[I  ])) +
-                SizeInt(PopCnt(FBits[I+1] and aVector.FBits[I+1])) +
-                SizeInt(PopCnt(FBits[I+2] and aVector.FBits[I+2])) +
-                SizeInt(PopCnt(FBits[I+3] and aVector.FBits[I+3]));
+      Result += SizeInt(PopCnt(FBits[I  ] and aValue.FBits[I  ])) +
+                SizeInt(PopCnt(FBits[I+1] and aValue.FBits[I+1])) +
+                SizeInt(PopCnt(FBits[I+2] and aValue.FBits[I+2])) +
+                SizeInt(PopCnt(FBits[I+3] and aValue.FBits[I+3]));
       Inc(I, 4);
     end;
   for I := I to Len do
-    Result += SizeInt(PopCnt(FBits[I] and aVector.FBits[I]));
+    Result += SizeInt(PopCnt(FBits[I] and aValue.FBits[I]));
 end;
 
-function TBoolVector.Contains(constref aVector: TBoolVector): Boolean;
+function TBoolVector.Contains(constref aValue: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
-  for I := 0 to Math.Min(System.High(FBits), System.High(aVector.FBits)) do
-    if FBits[I] and aVector.FBits[I] <> aVector.FBits[I] then
+  for I := 0 to Math.Min(System.High(FBits), System.High(aValue.FBits)) do
+    if FBits[I] or aValue.FBits[I] <> FBits[I] then
       exit(False);
-  for I := System.Length(FBits) to System.High(aVector.FBits) do
-    if aVector.FBits[I] <> 0 then
+  for I := System.Length(FBits) to System.High(aValue.FBits) do
+    if aValue.FBits[I] <> 0 then
       exit(False);
   Result := True;
 end;
 
-function TBoolVector.UnionCount(constref aVector: TBoolVector): SizeInt;
+function TBoolVector.UnionCount(constref aValue: TBoolVector): SizeInt;
 var
   I, Len: SizeInt;
 begin
-  Len := Math.Min(System.High(FBits), System.High(aVector.FBits));
+  Len := Math.Min(System.High(FBits), System.High(aValue.FBits));
   I := 0;
   Result := 0;
   while I <= Len - 4 do
     begin
-      Result += SizeInt(PopCnt(not FBits[I  ] and aVector.FBits[I  ])) +
-                SizeInt(PopCnt(not FBits[I+1] and aVector.FBits[I+1])) +
-                SizeInt(PopCnt(not FBits[I+2] and aVector.FBits[I+2])) +
-                SizeInt(PopCnt(not FBits[I+3] and aVector.FBits[I+3]));
+      Result += SizeInt(PopCnt(not FBits[I  ] and aValue.FBits[I  ])) +
+                SizeInt(PopCnt(not FBits[I+1] and aValue.FBits[I+1])) +
+                SizeInt(PopCnt(not FBits[I+2] and aValue.FBits[I+2])) +
+                SizeInt(PopCnt(not FBits[I+3] and aValue.FBits[I+3]));
       Inc(I, 4);
     end;
   while I <= Len do
     begin
-      Result += SizeInt(PopCnt(not FBits[I] and aVector.FBits[I]));
+      Result += SizeInt(PopCnt(not FBits[I] and aValue.FBits[I]));
       Inc(I);
     end;
-  for I := I to System.High(aVector.FBits) do
-    Result += SizeInt(PopCnt(aVector.FBits[I]));
+  for I := I to System.High(aValue.FBits) do
+    Result += SizeInt(PopCnt(aValue.FBits[I]));
 end;
 
-procedure TBoolVector.Join(constref aVector: TBoolVector);
+procedure TBoolVector.Join(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
-  if aVector.Size > Size then
-    Size := aVector.Size;
-  Len := System.High(aVector.FBits);
+  if aValue.Size > Size then
+    Size := aValue.Size;
+  Len := System.High(aValue.FBits);
   I := 0;
   while I <= Len - 4 do
     begin
-      FBits[I  ] := FBits[I  ] or aVector.FBits[I  ];
-      FBits[I+1] := FBits[I+1] or aVector.FBits[I+1];
-      FBits[I+2] := FBits[I+2] or aVector.FBits[I+2];
-      FBits[I+3] := FBits[I+3] or aVector.FBits[I+3];
+      FBits[I  ] := FBits[I  ] or aValue.FBits[I  ];
+      FBits[I+1] := FBits[I+1] or aValue.FBits[I+1];
+      FBits[I+2] := FBits[I+2] or aValue.FBits[I+2];
+      FBits[I+3] := FBits[I+3] or aValue.FBits[I+3];
       Inc(I, 4);
     end;
   for I := I to Len do
-    FBits[I] := FBits[I] or aVector.FBits[I];
+    FBits[I] := FBits[I] or aValue.FBits[I];
 end;
 
-procedure TBoolVector.Subtract(constref aVector: TBoolVector);
+procedure TBoolVector.Subtract(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
-  Len := Math.Min(System.High(FBits), System.High(aVector.FBits));
+  Len := Math.Min(System.High(FBits), System.High(aValue.FBits));
   I := 0;
   while I <= Len - 4 do
     begin
-      FBits[I  ] := FBits[I  ] and not aVector.FBits[I  ];
-      FBits[I+1] := FBits[I+1] and not aVector.FBits[I+1];
-      FBits[I+2] := FBits[I+2] and not aVector.FBits[I+2];
-      FBits[I+3] := FBits[I+3] and not aVector.FBits[I+3];
+      FBits[I  ] := FBits[I  ] and not aValue.FBits[I  ];
+      FBits[I+1] := FBits[I+1] and not aValue.FBits[I+1];
+      FBits[I+2] := FBits[I+2] and not aValue.FBits[I+2];
+      FBits[I+3] := FBits[I+3] and not aValue.FBits[I+3];
       Inc(I, 4);
     end;
   for I := I to Len do
-    FBits[I] := FBits[I] and not aVector.FBits[I];
+    FBits[I] := FBits[I] and not aValue.FBits[I];
 end;
 
-procedure TBoolVector.Intersect(constref aVector: TBoolVector);
+procedure TBoolVector.Intersect(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
-  Len := Math.Min(System.High(FBits), System.High(aVector.FBits));
+  Len := Math.Min(System.High(FBits), System.High(aValue.FBits));
   I := 0;
   while I <= Len - 4 do
     begin
-      FBits[I  ] := FBits[I  ] and aVector.FBits[I  ];
-      FBits[I+1] := FBits[I+1] and aVector.FBits[I+1];
-      FBits[I+2] := FBits[I+2] and aVector.FBits[I+2];
-      FBits[I+3] := FBits[I+3] and aVector.FBits[I+3];
+      FBits[I  ] := FBits[I  ] and aValue.FBits[I  ];
+      FBits[I+1] := FBits[I+1] and aValue.FBits[I+1];
+      FBits[I+2] := FBits[I+2] and aValue.FBits[I+2];
+      FBits[I+3] := FBits[I+3] and aValue.FBits[I+3];
       Inc(I, 4);
     end;
   for I := I to Len do
-    FBits[I] := FBits[I] and aVector.FBits[I];
+    FBits[I] := FBits[I] and aValue.FBits[I];
   for I := Succ(Len) to System.High(FBits) do
     FBits[I] := 0;
 end;
