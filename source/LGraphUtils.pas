@@ -211,11 +211,15 @@ type
       function  Bsf: SizeInt; inline;
     { returns index of the most significant bit }
       function  Bsr: SizeInt; inline;
-      function  Intersecting(constref aVector: TBits256): Boolean;
-      function  Contains(constref aVector: TBits256): Boolean;
-      procedure Join(constref aVector: TBits256);
-      procedure Subtract(constref aVector: TBits256); inline;
-      procedure Intersect(constref aVector: TBits256); inline;
+      function  Intersecting(constref aValue: TBits256): Boolean;
+    { returns the number of bits in the intersection with aVector }
+      function  IntersectionCount(constref aValue: TBits256): SizeInt;
+      function  Contains(constref aValue: TBits256): Boolean;
+    { returns the number of bits that will be added when union with aVector }
+      function  UnionCount(constref aValue: TBits256): SizeInt;
+      procedure Join(constref aValue: TBits256);
+      procedure Subtract(constref aValue: TBits256); inline;
+      procedure Intersect(constref aValue: TBits256); inline;
     { returns count of set bits }
       function  PopCount: SizeInt; inline;
       property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
@@ -1247,101 +1251,155 @@ begin
   Result := -1;
 end;
 
-function TGCustomGraph.TBits256.Intersecting(constref aVector: TBits256): Boolean;
+function TGCustomGraph.TBits256.Intersecting(constref aValue: TBits256): Boolean;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(LIMB_COUNT) do
-    if FBits[I] and aVector.FBits[I] <> 0 then
+    if FBits[I] and aValue.FBits[I] <> 0 then
       exit(True);
   Result := False;
 end;
 
-function TGCustomGraph.TBits256.Contains(constref aVector: TBits256): Boolean;
+function TGCustomGraph.TBits256.IntersectionCount(constref aValue: TBits256): SizeInt;
+{$IF DEFINED(CPU64)}
+begin
+  Result := SizeInt(PopCnt(FBits[0] and aValue.FBits[0])) +
+            SizeInt(PopCnt(FBits[1] and aValue.FBits[1])) +
+            SizeInt(PopCnt(FBits[2] and aValue.FBits[2])) +
+            SizeInt(PopCnt(FBits[3] and aValue.FBits[3]));
+{$ELSEIF DEFINED(CPU32)}
+begin
+  Result := SizeInt(PopCnt(FBits[0] and aValue.FBits[0])) +
+            SizeInt(PopCnt(FBits[1] and aValue.FBits[1])) +
+            SizeInt(PopCnt(FBits[2] and aValue.FBits[2])) +
+            SizeInt(PopCnt(FBits[3] and aValue.FBits[3])) +
+            SizeInt(PopCnt(FBits[4] and aValue.FBits[4])) +
+            SizeInt(PopCnt(FBits[5] and aValue.FBits[5])) +
+            SizeInt(PopCnt(FBits[6] and aValue.FBits[6])) +
+            SizeInt(PopCnt(FBits[7] and aValue.FBits[7]));
+{$ELSE }
+var
+  I: SizeUInt;
+begin
+  Result := 0;
+  for I := 0 to Pred(LIMB_COUNT) do
+    Result += SizeInt(PopCnt(FBits[I] and aValue.FBits[I]));
+{$ENDIF }
+end;
+
+function TGCustomGraph.TBits256.Contains(constref aValue: TBits256): Boolean;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(LIMB_COUNT) do
-    if FBits[I] and aVector.FBits[I] <> aVector.FBits[I] then
+    if FBits[I] or aValue.FBits[I] <> FBits[I] then
       exit(False);
   Result := True;
 end;
 
-procedure TGCustomGraph.TBits256.Join(constref aVector: TBits256);
+function TGCustomGraph.TBits256.UnionCount(constref aValue: TBits256): SizeInt;
 {$IF DEFINED(CPU64)}
 begin
-  FBits[0] := FBits[0] or aVector.FBits[0];
-  FBits[1] := FBits[1] or aVector.FBits[1];
-  FBits[2] := FBits[2] or aVector.FBits[2];
-  FBits[3] := FBits[3] or aVector.FBits[3];
+  Result := SizeInt(PopCnt(not FBits[0] and aValue.FBits[0])) +
+            SizeInt(PopCnt(not FBits[1] and aValue.FBits[1])) +
+            SizeInt(PopCnt(not FBits[2] and aValue.FBits[2])) +
+            SizeInt(PopCnt(not FBits[3] and aValue.FBits[3]));
 {$ELSEIF DEFINED(CPU32)}
 begin
-  FBits[0] := FBits[0] or aVector.FBits[0];
-  FBits[1] := FBits[1] or aVector.FBits[1];
-  FBits[2] := FBits[2] or aVector.FBits[2];
-  FBits[3] := FBits[3] or aVector.FBits[3];
-  FBits[4] := FBits[4] or aVector.FBits[4];
-  FBits[5] := FBits[5] or aVector.FBits[5];
-  FBits[6] := FBits[6] or aVector.FBits[6];
-  FBits[7] := FBits[7] or aVector.FBits[7];
+  Result := SizeInt(PopCnt(not FBits[0] and aValue.FBits[0])) +
+            SizeInt(PopCnt(not FBits[1] and aValue.FBits[1])) +
+            SizeInt(PopCnt(not FBits[2] and aValue.FBits[2])) +
+            SizeInt(PopCnt(not FBits[3] and aValue.FBits[3])) +
+            SizeInt(PopCnt(not FBits[4] and aValue.FBits[4])) +
+            SizeInt(PopCnt(not FBits[5] and aValue.FBits[5])) +
+            SizeInt(PopCnt(not FBits[6] and aValue.FBits[6])) +
+            SizeInt(PopCnt(not FBits[7] and aValue.FBits[7]));
 {$ELSE }
 var
-  I: SizeInt;
+  I: SizeUInt;
 begin
+  Result := 0;
   for I := 0 to Pred(LIMB_COUNT) do
-    FBits[I] := FBits[I] or aVector.FBits[I];
+    Result += SizeInt(PopCnt(not FBits[I] and aValue.FBits[I]));
 {$ENDIF }
 end;
 
-procedure TGCustomGraph.TBits256.Subtract(constref aVector: TBits256);
+procedure TGCustomGraph.TBits256.Join(constref aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
-  FBits[0] := FBits[0] and not aVector.FBits[0];
-  FBits[1] := FBits[1] and not aVector.FBits[1];
-  FBits[2] := FBits[2] and not aVector.FBits[2];
-  FBits[3] := FBits[3] and not aVector.FBits[3];
+  FBits[0] := FBits[0] or aValue.FBits[0];
+  FBits[1] := FBits[1] or aValue.FBits[1];
+  FBits[2] := FBits[2] or aValue.FBits[2];
+  FBits[3] := FBits[3] or aValue.FBits[3];
 {$ELSEIF DEFINED(CPU32)}
 begin
-  FBits[0] := FBits[0] and not aVector.FBits[0];
-  FBits[1] := FBits[1] and not aVector.FBits[1];
-  FBits[2] := FBits[2] and not aVector.FBits[2];
-  FBits[3] := FBits[3] and not aVector.FBits[3];
-  FBits[4] := FBits[4] and not aVector.FBits[4];
-  FBits[5] := FBits[5] and not aVector.FBits[5];
-  FBits[6] := FBits[6] and not aVector.FBits[6];
-  FBits[7] := FBits[7] and not aVector.FBits[7];
+  FBits[0] := FBits[0] or aValue.FBits[0];
+  FBits[1] := FBits[1] or aValue.FBits[1];
+  FBits[2] := FBits[2] or aValue.FBits[2];
+  FBits[3] := FBits[3] or aValue.FBits[3];
+  FBits[4] := FBits[4] or aValue.FBits[4];
+  FBits[5] := FBits[5] or aValue.FBits[5];
+  FBits[6] := FBits[6] or aValue.FBits[6];
+  FBits[7] := FBits[7] or aValue.FBits[7];
 {$ELSE }
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(LIMB_COUNT) do
-    FBits[I] := FBits[I] and not aVector.FBits[I];
+    FBits[I] := FBits[I] or aValue.FBits[I];
 {$ENDIF }
 end;
 
-procedure TGCustomGraph.TBits256.Intersect(constref aVector: TBits256);
+procedure TGCustomGraph.TBits256.Subtract(constref aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
-  FBits[0] := FBits[0] and aVector.FBits[0];
-  FBits[1] := FBits[1] and aVector.FBits[1];
-  FBits[2] := FBits[2] and aVector.FBits[2];
-  FBits[3] := FBits[3] and aVector.FBits[3];
+  FBits[0] := FBits[0] and not aValue.FBits[0];
+  FBits[1] := FBits[1] and not aValue.FBits[1];
+  FBits[2] := FBits[2] and not aValue.FBits[2];
+  FBits[3] := FBits[3] and not aValue.FBits[3];
 {$ELSEIF DEFINED(CPU32)}
 begin
-  FBits[0] := FBits[0] and aVector.FBits[0];
-  FBits[1] := FBits[1] and aVector.FBits[1];
-  FBits[2] := FBits[2] and aVector.FBits[2];
-  FBits[3] := FBits[3] and aVector.FBits[3];
-  FBits[4] := FBits[4] and aVector.FBits[4];
-  FBits[5] := FBits[5] and aVector.FBits[5];
-  FBits[6] := FBits[6] and aVector.FBits[6];
-  FBits[7] := FBits[7] and aVector.FBits[7];
+  FBits[0] := FBits[0] and not aValue.FBits[0];
+  FBits[1] := FBits[1] and not aValue.FBits[1];
+  FBits[2] := FBits[2] and not aValue.FBits[2];
+  FBits[3] := FBits[3] and not aValue.FBits[3];
+  FBits[4] := FBits[4] and not aValue.FBits[4];
+  FBits[5] := FBits[5] and not aValue.FBits[5];
+  FBits[6] := FBits[6] and not aValue.FBits[6];
+  FBits[7] := FBits[7] and not aValue.FBits[7];
 {$ELSE }
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(LIMB_COUNT) do
-    FBits[I] := FBits[I] and aVector.FBits[I];
+    FBits[I] := FBits[I] and not aValue.FBits[I];
+{$ENDIF }
+end;
+
+procedure TGCustomGraph.TBits256.Intersect(constref aValue: TBits256);
+{$IF DEFINED(CPU64)}
+begin
+  FBits[0] := FBits[0] and aValue.FBits[0];
+  FBits[1] := FBits[1] and aValue.FBits[1];
+  FBits[2] := FBits[2] and aValue.FBits[2];
+  FBits[3] := FBits[3] and aValue.FBits[3];
+{$ELSEIF DEFINED(CPU32)}
+begin
+  FBits[0] := FBits[0] and aValue.FBits[0];
+  FBits[1] := FBits[1] and aValue.FBits[1];
+  FBits[2] := FBits[2] and aValue.FBits[2];
+  FBits[3] := FBits[3] and aValue.FBits[3];
+  FBits[4] := FBits[4] and aValue.FBits[4];
+  FBits[5] := FBits[5] and aValue.FBits[5];
+  FBits[6] := FBits[6] and aValue.FBits[6];
+  FBits[7] := FBits[7] and aValue.FBits[7];
+{$ELSE }
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(LIMB_COUNT) do
+    FBits[I] := FBits[I] and aValue.FBits[I];
 {$ENDIF }
 end;
 
