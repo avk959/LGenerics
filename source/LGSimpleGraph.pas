@@ -1156,8 +1156,8 @@ begin
       I := NewSub.Bsf;
       NewCand := aCand;
       NewCand[FVertices[I]] := True;
-      NewSub[I] := False;
       NewSub.Subtract(FMatrix[I]);
+      NewSub[I] := False;
       Extend(NewSub, NewCand);
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
@@ -1170,8 +1170,8 @@ begin
           Neib[J] := False;
           NewCand[FVertices[J]] := True;
           NewSub := aSub;
-          NewSub[J] := False;
           NewSub.Subtract(FMatrix[J]);
+          NewSub[J] := False;
           Extend(NewSub, NewCand);
           if NewCand.PopCount >= System.High(FRecentBest) then
             exit;
@@ -1219,7 +1219,7 @@ var
 begin
   FVertices := aGraph.SortVerticesByDegree(soDesc);
   System.SetLength(FMatrix, System.Length(FVertices));
-  for I := 0 to System.High(FVertices) do
+  for I := 0 to Pred(System.High(FVertices)) do
     begin
       FMatrix[I].InitZero;
       pA := aGraph.AdjLists[FVertices[I]];
@@ -1232,7 +1232,7 @@ end;
 procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aSub, aCand: TBits256);
 var
   NewSub, NewCand, Neib: TBits256;
-  I, J, Cnt: SizeInt;
+  I, J: SizeInt;
 begin
   if aSub.NonEmpty then
     begin
@@ -1247,8 +1247,8 @@ begin
       I := NewSub.Bsf;
       NewCand := aCand;
       NewCand[FVertices[I]] := True;
-      NewSub[I] := False;
       NewSub.Subtract(FMatrix[I]);
+      NewSub[I] := False;
       Extend(NewSub, NewCand);
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
@@ -1261,8 +1261,8 @@ begin
           Neib[J] := False;
           NewCand[FVertices[J]] := True;
           NewSub := aSub;
-          NewSub[J] := False;
           NewSub.Subtract(FMatrix[J]);
+          NewSub[J] := False;
           Extend(NewSub, NewCand);
           if NewCand.PopCount >= System.High(FRecentBest) then
             exit;
@@ -1321,8 +1321,8 @@ begin
       I := NewSub.Pop;
       NewCand.Assign(aCand);
       NewCand.Push(I);
-      NewSub.Delete(I);
       NewSub.Subtract(FMatrix[I]^);
+      NewSub.Delete(I);
       Extend(NewSub, NewCand);
       if aCand.Count >= System.High(FRecentBest) then
         exit;
@@ -1334,8 +1334,8 @@ begin
           J := Neib.Pop;
           NewCand.Push(J);
           NewSub.Assign(aSub);
-          NewSub.Delete(J);
           NewSub.Subtract(FMatrix[J]^);
+          NewSub.Delete(J);
           Extend(NewSub, NewCand);
           if NewCand.Count >= System.High(FRecentBest) then
             exit;
@@ -1804,7 +1804,7 @@ begin
     begin
       J := 0;
       Card := 0;
-      for I in Cand do     //todo: is it possible to use a binary heap ?
+      for I in Cand do
         begin
           w := 1;
           for v in AdjVerticesI(I) do
@@ -1836,7 +1836,7 @@ begin
   while Cand.NonEmpty do
     begin
       J := 0;
-      MaxIntersect := 0;  //todo: is it possible to use a binary heap ?
+      MaxIntersect := 0;
       for I in Cand do
         begin
           CurrIntersect := Succ(Cand.IntersectionCount(Matrix[I]));
