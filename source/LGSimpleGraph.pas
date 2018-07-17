@@ -652,8 +652,7 @@ begin
           J := ColOrd[I];
           aCand[J] := False;
           FCurrSet[FVertices[J]] := True;
-          NewCand := aCand;
-          NewCand.Intersect(FMatrix[J]);
+          NewCand := aCand.Intersection(FMatrix[J]);
           Extend(NewCand);
           FCurrSet[FVertices[J]] := False;
         end;
@@ -674,16 +673,13 @@ begin
     begin
       if aCand.NonEmpty then
         begin
-          Diff := aCand;
-          Diff.Subtract(FMatrix[aSub.Bsf]);
+          Diff := aCand.Difference(FMatrix[aSub.Bsf]);
           for I in Diff do
             begin
               aCand[I] := False;
-              NewCand := aCand;
-              NewSub := aSub;
+              NewCand := aCand.Intersection(FMatrix[I]);
+              NewSub := aSub.Intersection(FMatrix[I]);
               FCurrSet[FVertices[I]] := True;
-              NewCand.Intersect(FMatrix[I]);
-              NewSub.Intersect(FMatrix[I]);
               Extend(NewSub, NewCand);
               FCurrSet[FVertices[I]] := False;
             end;
@@ -840,8 +836,7 @@ begin
           J := ColOrd[I];
           aCand[J] := False;
           FCurrSet[FVertices[J]] := True;
-          NewCand := aCand;
-          NewCand.Intersect(FMatrix[J]);
+          NewCand := aCand.Intersection(FMatrix[J]);
           Extend(NewCand);
           FCurrSet[FVertices[J]] := False;
         end;
@@ -862,16 +857,13 @@ begin
     begin
       if aCand.NonEmpty then
         begin
-          Diff := aCand;
-          Diff.Subtract(FMatrix[aSub.Bsf]);
+          Diff := aCand.Difference(FMatrix[aSub.Bsf]);
           for I in Diff do
             begin
               aCand[I] := False;
-              NewCand := aCand;
-              NewSub := aSub;
+              NewCand := aCand.Intersection(FMatrix[I]);
+              NewSub := aSub.Intersection(FMatrix[I]);
               FCurrSet[FVertices[I]] := True;
-              NewCand.Intersect(FMatrix[I]);
-              NewSub.Intersect(FMatrix[I]);
               Extend(NewSub, NewCand);
               FCurrSet[FVertices[I]] := False;
             end;
@@ -1152,25 +1144,22 @@ begin
           FCanceled := True;
           exit;
         end;
-      NewSub := aSub;
-      I := NewSub.Bsf;
+      I := aSub.Bsf;
       NewCand := aCand;
       NewCand[FVertices[I]] := True;
-      NewSub.Subtract(FMatrix[I]);
+      NewSub := aSub.Difference(FMatrix[I]);
       NewSub[I] := False;
       Extend(NewSub, NewCand);
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
       NewCand[FVertices[I]] := False;
-      Neib := aSub;
-      Neib.Intersect(FMatrix[I]);
+      Neib := aSub.Intersection(FMatrix[I]);
       while Neib.NonEmpty do
         begin
           J := Neib.Bsf;
           Neib[J] := False;
           NewCand[FVertices[J]] := True;
-          NewSub := aSub;
-          NewSub.Subtract(FMatrix[J]);
+          NewSub := aSub.Difference(FMatrix[J]);
           NewSub[J] := False;
           Extend(NewSub, NewCand);
           if NewCand.PopCount >= System.High(FRecentBest) then
@@ -1243,25 +1232,22 @@ begin
           FCanceled := True;
           exit;
         end;
-      NewSub := aSub;
-      I := NewSub.Bsf;
+      I := aSub.Bsf;
       NewCand := aCand;
       NewCand[FVertices[I]] := True;
-      NewSub.Subtract(FMatrix[I]);
+      NewSub := aSub.Difference(FMatrix[I]);
       NewSub[I] := False;
       Extend(NewSub, NewCand);
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
       NewCand[FVertices[I]] := False;
-      Neib := aSub;
-      Neib.Intersect(FMatrix[I]);
+      Neib := aSub.Intersection(FMatrix[I]);
       while Neib.NonEmpty do
         begin
           J := Neib.Bsf;
           Neib[J] := False;
           NewCand[FVertices[J]] := True;
-          NewSub := aSub;
-          NewSub.Subtract(FMatrix[J]);
+          NewSub := aSub.Difference(FMatrix[J]);
           NewSub[J] := False;
           Extend(NewSub, NewCand);
           if NewCand.PopCount >= System.High(FRecentBest) then
