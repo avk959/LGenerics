@@ -664,7 +664,7 @@ end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.Extend(var aSub, aCand: TBoolVector);
 var
-  NewSub, NewCand, Diff: TBoolVector;
+  NewSub, NewCand: TBoolVector;
   I: SizeInt;
 begin
   if FCanceled then
@@ -672,18 +672,15 @@ begin
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
-        begin
-          Diff := aCand.Difference(FMatrix[aSub.Bsf]);
-          for I in Diff do
-            begin
-              aCand[I] := False;
-              NewCand := aCand.Intersection(FMatrix[I]);
-              NewSub := aSub.Intersection(FMatrix[I]);
-              FCurrSet[FVertices[I]] := True;
-              Extend(NewSub, NewCand);
-              FCurrSet[FVertices[I]] := False;
-            end;
-        end;
+        for I in aCand.Difference(FMatrix[aSub.Bsf]) do
+          begin
+            aCand[I] := False;
+            NewCand := aCand.Intersection(FMatrix[I]);
+            NewSub := aSub.Intersection(FMatrix[I]);
+            FCurrSet[FVertices[I]] := True;
+            Extend(NewSub, NewCand);
+            FCurrSet[FVertices[I]] := False;
+          end;
     end
   else
     FOnFind(FCurrSet.ToArray, FCanceled);
@@ -848,7 +845,7 @@ end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.Extend(var aSub, aCand: TBits256);
 var
-  NewSub, NewCand, Diff: TBits256;
+  NewSub, NewCand: TBits256;
   I: SizeInt;
 begin
   if FCanceled then
@@ -856,18 +853,15 @@ begin
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
-        begin
-          Diff := aCand.Difference(FMatrix[aSub.Bsf]);
-          for I in Diff do
-            begin
-              aCand[I] := False;
-              NewCand := aCand.Intersection(FMatrix[I]);
-              NewSub := aSub.Intersection(FMatrix[I]);
-              FCurrSet[FVertices[I]] := True;
-              Extend(NewSub, NewCand);
-              FCurrSet[FVertices[I]] := False;
-            end;
-        end;
+        for I in aCand.Difference(FMatrix[aSub.Bsf]) do
+          begin
+            aCand[I] := False;
+            NewCand := aCand.Intersection(FMatrix[I]);
+            NewSub := aSub.Intersection(FMatrix[I]);
+            FCurrSet[FVertices[I]] := True;
+            Extend(NewSub, NewCand);
+            FCurrSet[FVertices[I]] := False;
+          end;
     end
   else
     FOnFind(FCurrSet.ToArray, FCanceled);
@@ -1015,8 +1009,7 @@ begin
           J := ColOrd[I];
           aCand.Delete(J);
           FCurrSet.Push(FVertices[J]);
-          NewCand.Assign(aCand);
-          NewCand.Intersect(FMatrix[J]^);
+          NewCand := aCand.Intersection(FMatrix[J]^);
           Extend(NewCand);
           FCurrSet.Pop;
         end;
@@ -1028,7 +1021,7 @@ end;
 
 procedure TGSimpleGraph.TCliqueHelper.Extend(var aSub, aCand: TIntSet);
 var
-  NewSub, NewCand, Diff: TIntSet;
+  NewSub, NewCand: TIntSet;
   I: SizeInt;
 begin
   if FCanceled then
@@ -1036,21 +1029,15 @@ begin
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
-        begin
-          Diff.Assign(aCand);
-          Diff.Subtract(FMatrix[aSub[0]]^);
-          for I in Diff do
-            begin
-              aCand.Delete(I);
-              NewCand.Assign(aCand);
-              NewSub.Assign(aSub);
-              FCurrSet.Push(FVertices[I]);
-              NewCand.Intersect(FMatrix[I]^);
-              NewSub.Intersect(FMatrix[I]^);
-              Extend(NewSub, NewCand);
-              FCurrSet.Pop;
-            end;
-        end;
+        for I in aCand.Difference(FMatrix[aSub[0]]^) do
+          begin
+            aCand.Delete(I);
+            NewCand := aCand.Intersection(FMatrix[I]^);
+            NewSub := aSub.Intersection(FMatrix[I]^);
+            FCurrSet.Push(FVertices[I]);
+            Extend(NewSub, NewCand);
+            FCurrSet.Pop;
+          end;
     end
   else
     FOnFind(FCurrSet.ToArray, FCanceled);
@@ -1132,7 +1119,7 @@ end;
 
 procedure TGSimpleGraph.TBPDomSetHelper.Extend(constref aSub, aCand: TBoolVector);
 var
-  NewSub, NewCand, Neib: TBoolVector;
+  NewSub, NewCand: TBoolVector;
   I, J: SizeInt;
 begin
   if aSub.NonEmpty then
@@ -1153,11 +1140,8 @@ begin
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
       NewCand[FVertices[I]] := False;
-      Neib := aSub.Intersection(FMatrix[I]);
-      while Neib.NonEmpty do
+      for J in aSub.Intersection(FMatrix[I]) do
         begin
-          J := Neib.Bsf;
-          Neib[J] := False;
           NewCand[FVertices[J]] := True;
           NewSub := aSub.Difference(FMatrix[J]);
           NewSub[J] := False;
@@ -1220,7 +1204,7 @@ end;
 
 procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aSub, aCand: TBits256);
 var
-  NewSub, NewCand, Neib: TBits256;
+  NewSub, NewCand: TBits256;
   I, J: SizeInt;
 begin
   if aSub.NonEmpty then
@@ -1241,11 +1225,8 @@ begin
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
       NewCand[FVertices[I]] := False;
-      Neib := aSub.Intersection(FMatrix[I]);
-      while Neib.NonEmpty do
+      for J in aSub.Intersection(FMatrix[I]) do
         begin
-          J := Neib.Bsf;
-          Neib[J] := False;
           NewCand[FVertices[J]] := True;
           NewSub := aSub.Difference(FMatrix[J]);
           NewSub[J] := False;
@@ -1291,7 +1272,7 @@ end;
 
 procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TIntSet);
 var
-  NewSub, NewCand, Neib: TIntSet;
+  NewSub, NewCand: TIntSet;
   I, J: SizeInt;
 begin
   if aSub.NonEmpty then
@@ -1303,24 +1284,19 @@ begin
           FCancel := True;
           exit;
         end;
-      NewSub.Assign(aSub);
-      I := NewSub.Pop;
+      I := aSub.Last;
       NewCand.Assign(aCand);
       NewCand.Push(I);
-      NewSub.Subtract(FMatrix[I]^);
+      NewSub := aSub.Difference(FMatrix[I]^);
       NewSub.Delete(I);
       Extend(NewSub, NewCand);
       if aCand.Count >= System.High(FRecentBest) then
         exit;
       NewCand.Pop;
-      Neib.Assign(aSub);
-      Neib.Intersect(FMatrix[I]^);
-      while Neib.NonEmpty do
+      for J in aSub.Intersection(FMatrix[I]^) do
         begin
-          J := Neib.Pop;
           NewCand.Push(J);
-          NewSub.Assign(aSub);
-          NewSub.Subtract(FMatrix[J]^);
+          NewSub := aSub.Difference(FMatrix[J]^);
           NewSub.Delete(J);
           Extend(NewSub, NewCand);
           if NewCand.Count >= System.High(FRecentBest) then

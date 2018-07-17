@@ -297,6 +297,7 @@ type
       procedure Push(aValue: SizeInt); inline;
       function  Pop: SizeInt; inline;
       function  TryPop(out aValue: SizeInt): Boolean; inline;
+      function  Last: SizeInt; inline;
     { preserves the order of the elements }
       procedure Subtract(constref aValue: TIntSet);
       procedure Subtract(PList: PAdjList);
@@ -1678,6 +1679,17 @@ begin
     begin
       Dec(FCount);
       aValue := FItems[Count];
+    end;
+end;
+
+function TGCustomGraph.TIntSet.Last: SizeInt;
+begin
+  if Count <> 0 then
+    Result := FItems[Count]
+  else
+    begin
+      ELGraphError.Create(SECantAccessEmpty);
+      Result := -1;
     end;
 end;
 
