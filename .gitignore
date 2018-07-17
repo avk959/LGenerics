@@ -1,7 +1,6 @@
 backup/
 lib/
 bin/
-test/
 *.lps
 *.exe
 *.out
