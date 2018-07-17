@@ -253,7 +253,7 @@ type
       procedure InitRange(aRange: SizeInt);
       function  GetEnumerator: TEnumerator; inline;
       function  ToArray: TIntArray; inline;
-      procedure Assign(constref aList: TIntSet);
+      procedure Assign(constref aValue: TIntSet);
       procedure AssignArray(constref a: TIntArray);
       function  Copy: TIntSet; inline;
       function  IsEmpty: Boolean; inline;
@@ -261,18 +261,22 @@ type
       procedure MakeEmpty; inline;
       function  FindFirst(out aValue: SizeInt): Boolean;
       function  Contains(aValue: SizeInt): Boolean; inline;
-      function  ContainsAny(constref aList: TIntSet): Boolean;
-      function  ContainsAll(constref aList: TIntSet): Boolean;
+      function  ContainsAny(constref aValue: TIntSet): Boolean;
+      function  ContainsAll(constref aValue: TIntSet): Boolean;
       function  Find(aValue: SizeInt): SizeInt;
       function  Add(aValue: SizeInt): Boolean;
-      function  AddAll(constref aList: TIntSet): SizeInt;
+      function  Join(constref aValue: TIntSet): SizeInt;
       procedure Push(aValue: SizeInt); inline;
       function  Pop: SizeInt; inline;
       function  TryPop(out aValue: SizeInt): Boolean; inline;
     { preserves the order of the elements }
-      procedure Subtract(constref aList: TIntSet);
+      procedure Subtract(constref aValue: TIntSet);
+      function  Difference(constref aValue: TIntSet): TIntSet; inline;
     { preserves the order of the elements }
-      procedure Intersect(constref aList: TIntSet);
+      procedure Intersect(constref aValue: TIntSet);
+      function  Intersection(constref aValue: TIntSet): TIntSet; inline;
+    { returns the number of elements in the intersection with aValue }
+      function  IntersectionCount(constref aValue: TIntSet): SizeInt;
       function  Remove(aValue: SizeInt): Boolean;
     { preserves the order of the elements }
       procedure Delete(aValue: SizeInt);
@@ -1499,11 +1503,11 @@ begin
     Result := nil;
 end;
 
-procedure TGCustomGraph.TIntSet.Assign(constref aList: TIntSet);
+procedure TGCustomGraph.TIntSet.Assign(constref aValue: TIntSet);
 begin
-  FCount := aList.Count;
+  FCount := aValue.Count;
   if Count <> 0 then
-    FItems := System.Copy(aList.FItems, 0, Count);
+    FItems := System.Copy(aValue.FItems, 0, Count);
 end;
 
 procedure TGCustomGraph.TIntSet.AssignArray(constref a: TIntArray);
@@ -1549,24 +1553,24 @@ begin
   Result := Find(aValue) >= 0;
 end;
 
-function TGCustomGraph.TIntSet.ContainsAny(constref aList: TIntSet): Boolean;
+function TGCustomGraph.TIntSet.ContainsAny(constref aValue: TIntSet): Boolean;
 var
   I: SizeInt;
 begin
   if NonEmpty then
-    for I in aList do
+    for I in aValue do
       if Contains(I) then
         exit(True);
   Result := False;
 end;
 
-function TGCustomGraph.TIntSet.ContainsAll(constref aList: TIntSet): Boolean;
+function TGCustomGraph.TIntSet.ContainsAll(constref aValue: TIntSet): Boolean;
 var
   I: SizeInt;
 begin
-  if Count >= aList.Count then
+  if Count >= aValue.Count then
     begin
-      for I in aList do
+      for I in aValue do
         if not Contains(I) then
           exit(False);
       Result := True;
@@ -1597,12 +1601,12 @@ begin
     end;
 end;
 
-function TGCustomGraph.TIntSet.AddAll(constref aList: TIntSet): SizeInt;
+function TGCustomGraph.TIntSet.Join(constref aValue: TIntSet): SizeInt;
 var
   I: SizeInt;
 begin
   Result := 0;
-  for I in aList do
+  for I in aValue do
     Result += Ord(Add(I));
 end;
 
@@ -1638,15 +1642,15 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.TIntSet.Subtract(constref aList: TIntSet);
+procedure TGCustomGraph.TIntSet.Subtract(constref aValue: TIntSet);
 var
   I, Pos: SizeInt;
 begin
-  if aList.NonEmpty then
+  if aValue.NonEmpty then
     begin
       Pos := 0;
       for I := 0 to Pred(Count) do
-        if aList.Contains(FItems[I]) then
+        if aValue.Contains(FItems[I]) then
           Dec(FCount)
         else
           begin
@@ -1656,15 +1660,21 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.TIntSet.Intersect(constref aList: TIntSet);
+function TGCustomGraph.TIntSet.Difference(constref aValue: TIntSet): TIntSet;
+begin
+  Result.Assign(Self);
+  Result.Subtract(aValue);
+end;
+
+procedure TGCustomGraph.TIntSet.Intersect(constref aValue: TIntSet);
 var
   I, Pos: SizeInt;
 begin
-  if aList.NonEmpty then
+  if aValue.NonEmpty then
     begin
       Pos := 0;
       for I := 0 to Pred(Count) do
-        if aList.Contains(FItems[I]) then
+        if aValue.Contains(FItems[I]) then
           begin
             FItems[Pos] := FItems[I];
             Inc(Pos);
@@ -1674,6 +1684,21 @@ begin
     end
   else
     MakeEmpty;
+end;
+
+function TGCustomGraph.TIntSet.Intersection(constref aValue: TIntSet): TIntSet;
+begin
+  Result.Assign(Self);
+  Result.Intersect(aValue);
+end;
+
+function TGCustomGraph.TIntSet.IntersectionCount(constref aValue: TIntSet): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := 0;
+  for I in aValue do
+    Result += Ord(Contains(I));
 end;
 
 function TGCustomGraph.TIntSet.Remove(aValue: SizeInt): Boolean;

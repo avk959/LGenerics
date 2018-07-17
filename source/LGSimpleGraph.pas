@@ -225,6 +225,7 @@ type
     function  GetApproxMaxIsBP: TIntArray;
     function  GetApproxMinIS: TIntArray;
     function  GetApproxMinIsBP: TIntArray;
+    function  GetApproxMinIsBP_2: TIntArray;
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -1837,6 +1838,11 @@ begin
       {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
+end;
+
+function TGSimpleGraph.GetApproxMinIsBP_2: TIntArray;
+begin
+
 end;
 
 function TGSimpleGraph.GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
