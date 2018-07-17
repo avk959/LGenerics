@@ -378,7 +378,7 @@ type
   { lists all maximal independent sets of vertices }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximal independent set of maximal cardinality;
-    worst case time cost O(3^n/3)
+    worst case time cost O*(3^n/3)
     aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best solution found by this time will be returned,
     and aExactSolution will be set to False }
@@ -393,7 +393,7 @@ type
     function  ApproxMinDominatingSet: TIntArray;
   { lists all maximal cliques }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
-  { returns indices of the vertices of the some found maximum clique; worst case time cost O(3^n/3);
+  { returns indices of the vertices of the some found maximum clique; worst case time cost O*(3^n/3);
     aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best solution found by this time will be returned,
     and aExactSolution will be set to False }
@@ -2941,7 +2941,6 @@ begin
   Result := 0;
   if VertexCount < 3 then
     exit;
-  Result += EnsureConnected(aOnAddEdge);
   SearchForBiconnect(aRoot, NewEdges{%H-});
   d := DefaultEdgeData;
   for e in NewEdges do
