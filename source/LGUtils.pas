@@ -92,7 +92,7 @@ type
     class operator Initialize(var o: TGOptional<T>); inline;
   public
     class operator Implicit(constref aValue: T): TGOptional<T>; inline;
-    procedure Assign(constref aValue: T); //inline;
+    procedure Assign(constref aValue: T);
     function  OrElseDefault: T; inline;
     function  OrElse(constref aValue: T): T; inline;
     function  OrElseRaise(e: ExceptClass; const aMsg: string = ''): T; inline;
