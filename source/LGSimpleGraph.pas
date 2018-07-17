@@ -653,7 +653,7 @@ begin
           aCand[J] := False;
           FCurrSet[FVertices[J]] := True;
           NewCand := aCand;
-          NewCand.IntersectWith(FMatrix[J]);
+          NewCand.Intersect(FMatrix[J]);
           Extend(NewCand);
           FCurrSet[FVertices[J]] := False;
         end;
@@ -682,8 +682,8 @@ begin
               NewCand := aCand;
               NewSub := aSub;
               FCurrSet[FVertices[I]] := True;
-              NewCand.IntersectWith(FMatrix[I]);
-              NewSub.IntersectWith(FMatrix[I]);
+              NewCand.Intersect(FMatrix[I]);
+              NewSub.Intersect(FMatrix[I]);
               Extend(NewSub, NewCand);
               FCurrSet[FVertices[I]] := False;
             end;
@@ -841,7 +841,7 @@ begin
           aCand[J] := False;
           FCurrSet[FVertices[J]] := True;
           NewCand := aCand;
-          NewCand.IntersectWith(FMatrix[J]);
+          NewCand.Intersect(FMatrix[J]);
           Extend(NewCand);
           FCurrSet[FVertices[J]] := False;
         end;
@@ -870,8 +870,8 @@ begin
               NewCand := aCand;
               NewSub := aSub;
               FCurrSet[FVertices[I]] := True;
-              NewCand.IntersectWith(FMatrix[I]);
-              NewSub.IntersectWith(FMatrix[I]);
+              NewCand.Intersect(FMatrix[I]);
+              NewSub.Intersect(FMatrix[I]);
               Extend(NewSub, NewCand);
               FCurrSet[FVertices[I]] := False;
             end;
@@ -1163,7 +1163,7 @@ begin
         exit;
       NewCand[FVertices[I]] := False;
       Neib := aSub;
-      Neib.IntersectWith(FMatrix[I]);
+      Neib.Intersect(FMatrix[I]);
       while Neib.NonEmpty do
         begin
           J := Neib.Bsf;
@@ -1254,7 +1254,7 @@ begin
         exit;
       NewCand[FVertices[I]] := False;
       Neib := aSub;
-      Neib.IntersectWith(FMatrix[I]);
+      Neib.Intersect(FMatrix[I]);
       while Neib.NonEmpty do
         begin
           J := Neib.Bsf;

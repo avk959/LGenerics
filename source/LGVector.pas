@@ -402,8 +402,11 @@ type
   { returns the number of bits that will be added when union with aValue }
     function  JoinGain(constref aValue: TBoolVector): SizeInt;
     procedure Join(constref aValue: TBoolVector);
+    function  Union(constref aValue: TBoolVector): TBoolVector; inline;
     procedure Subtract(constref aValue: TBoolVector);
-    procedure IntersectWith(constref aValue: TBoolVector);
+    function  Difference(constref aValue: TBoolVector): TBoolVector; inline;
+    procedure Intersect(constref aValue: TBoolVector);
+    function  Intersection(constref aValue: TBoolVector): TBoolVector; inline;
   { currently size can only grow and is always multiple of BitsizeOf(SizeUInt) }
     property  Size: SizeInt read GetSize write SetSize;
   { returns count of set bits }
@@ -2187,6 +2190,12 @@ begin
     FBits[I] := FBits[I] or aValue.FBits[I];
 end;
 
+function TBoolVector.Union(constref aValue: TBoolVector): TBoolVector;
+begin
+  Result := Self;
+  Result.Join(aValue);
+end;
+
 procedure TBoolVector.Subtract(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
@@ -2205,7 +2214,13 @@ begin
     FBits[I] := FBits[I] and not aValue.FBits[I];
 end;
 
-procedure TBoolVector.IntersectWith(constref aValue: TBoolVector);
+function TBoolVector.Difference(constref aValue: TBoolVector): TBoolVector;
+begin
+  Result := Self;
+  Result.Subtract(aValue);
+end;
+
+procedure TBoolVector.Intersect(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
@@ -2223,6 +2238,12 @@ begin
     FBits[I] := FBits[I] and aValue.FBits[I];
   for I := Succ(Len) to System.High(FBits) do
     FBits[I] := 0;
+end;
+
+function TBoolVector.Intersection(constref aValue: TBoolVector): TBoolVector;
+begin
+  Result := Self;
+  Result.Intersect(aValue);
 end;
 
 function TBoolVector.PopCount: SizeInt;

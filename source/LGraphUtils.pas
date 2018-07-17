@@ -218,8 +218,11 @@ type
     { returns the number of bits that will be added when union with aValue }
       function  JoinGain(constref aValue: TBits256): SizeInt;
       procedure Join(constref aValue: TBits256);
+      function  Union(constref aValue: TBits256): TBits256; inline;
       procedure Subtract(constref aValue: TBits256); inline;
-      procedure IntersectWith(constref aValue: TBits256); inline;
+      function  Difference(constref aValue: TBits256): TBits256; inline;
+      procedure Intersect(constref aValue: TBits256); inline;
+      function  Intersection(constref aValue: TBits256): TBits256; inline;
     { returns count of set bits }
       function  PopCount: SizeInt; inline;
       property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
@@ -1351,6 +1354,12 @@ begin
 {$ENDIF }
 end;
 
+function TGCustomGraph.TBits256.Union(constref aValue: TBits256): TBits256;
+begin
+  Result := Self;
+  Result.Join(aValue);
+end;
+
 procedure TGCustomGraph.TBits256.Subtract(constref aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
@@ -1377,7 +1386,13 @@ begin
 {$ENDIF }
 end;
 
-procedure TGCustomGraph.TBits256.IntersectWith(constref aValue: TBits256);
+function TGCustomGraph.TBits256.Difference(constref aValue: TBits256): TBits256;
+begin
+  Result := Self;
+  Result.Subtract(aValue);
+end;
+
+procedure TGCustomGraph.TBits256.Intersect(constref aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
   FBits[0] := FBits[0] and aValue.FBits[0];
@@ -1401,6 +1416,12 @@ begin
   for I := 0 to Pred(LIMB_COUNT) do
     FBits[I] := FBits[I] and aValue.FBits[I];
 {$ENDIF }
+end;
+
+function TGCustomGraph.TBits256.Intersection(constref aValue: TBits256): TBits256;
+begin
+  Result := Self;
+  Result.Intersect(aValue);
 end;
 
 function TGCustomGraph.TBits256.PopCount: SizeInt;
