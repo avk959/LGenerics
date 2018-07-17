@@ -225,7 +225,6 @@ type
     function  GetApproxMaxIsBP: TIntArray;
     function  GetApproxMinIS: TIntArray;
     function  GetApproxMinIsBP: TIntArray;
-    function  GetApproxMinIsBP_2: TIntArray;
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -1784,28 +1783,24 @@ end;
 function TGSimpleGraph.GetApproxMinIS: TIntArray;
 var
   Cand, Stack: TIntSet;
-  I, J, v, w, Card: SizeInt;
+  I, J, CurrIsect, MaxIsect: SizeInt;
 begin
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
       J := 0;
-      Card := 0;
+      MaxIsect := 0;
       for I in Cand do
         begin
-          w := 1;
-          for v in AdjVerticesI(I) do
-            if Cand.Contains(v) then
-              Inc(w);
-          if w > Card then
+          CurrIsect := Succ(Cand.IntersectionCount(AdjLists[I]));
+          if CurrIsect > MaxIsect then
             begin
-              Card := w;
+              MaxIsect := CurrIsect;
               J := I;
             end;
         end;
+      Cand.Subtract(AdjLists[J]);
       Cand.Delete(J);
-      for I in AdjVerticesI(J) do
-        Cand.Delete(I);
       {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
@@ -1816,33 +1811,28 @@ var
   Matrix: TBoolMatrix;
   Cand: TBoolVector;
   Stack: TIntSet;
-  I, J, CurrIntersect, MaxIntersect: SizeInt;
+  I, J, CurrIsect, MaxIsect: SizeInt;
 begin
   Matrix := CreateBoolMatrix;
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
       J := 0;
-      MaxIntersect := 0;
+      MaxIsect := 0;
       for I in Cand do
         begin
-          CurrIntersect := Succ(Cand.IntersectionPop(Matrix[I]));
-          if CurrIntersect > MaxIntersect then
+          CurrIsect := Succ(Cand.IntersectionPop(Matrix[I]));
+          if CurrIsect > MaxIsect then
             begin
-              MaxIntersect := CurrIntersect;
+              MaxIsect := CurrIsect;
               J := I;
             end;
         end;
-      Cand[J] := False;
       Cand.Subtract(Matrix[J]);
+      Cand[J] := False;
       {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
-end;
-
-function TGSimpleGraph.GetApproxMinIsBP_2: TIntArray;
-begin
-
 end;
 
 function TGSimpleGraph.GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;

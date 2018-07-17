@@ -231,6 +231,34 @@ type
     TBitMatrix256 = array of TBits256;
     TBoolMatrix   = array of TBoolVector;
 
+  public
+  type
+    TEdgeDataType = TEdgeData;
+    PEdgeData     = ^TEdgeData;
+    PAdjItem      = ^TAdjItem;
+
+    TAdjItem      = record
+      Destination: SizeInt;
+      Data: TEdgeData;
+      property Key: SizeInt read Destination;
+      constructor Create(aDst: SizeInt; constref aData: TEdgeData);
+    end;
+
+    TAdjacencyMatrix = record
+    private
+      FMatrix: TSquareBitMatrix;
+      function  GetSize: SizeInt; inline;
+    public
+      constructor Create(constref aMatrix: TSquareBitMatrix);
+      function  IsEmpty: Boolean; inline;
+      function  Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
+      property  Size: SizeInt read GetSize;
+    end;
+
+  protected
+  type
+    PAdjList = ^TAdjList;
+
     TIntSet = record
     private
       FItems: TIntArray;
@@ -271,12 +299,15 @@ type
       function  TryPop(out aValue: SizeInt): Boolean; inline;
     { preserves the order of the elements }
       procedure Subtract(constref aValue: TIntSet);
+      procedure Subtract(PList: PAdjList);
       function  Difference(constref aValue: TIntSet): TIntSet; inline;
     { preserves the order of the elements }
       procedure Intersect(constref aValue: TIntSet);
       function  Intersection(constref aValue: TIntSet): TIntSet; inline;
     { returns the number of elements in the intersection with aValue }
       function  IntersectionCount(constref aValue: TIntSet): SizeInt;
+    { returns the number of elements in the intersection with PList }
+      function  IntersectionCount(PList: PAdjList): SizeInt;
       function  Remove(aValue: SizeInt): Boolean;
     { preserves the order of the elements }
       procedure Delete(aValue: SizeInt);
@@ -307,32 +338,6 @@ type
       property AdjLists[aIndex: SizeInt]: PIntSet read GetAdjList; default;
     end;
 
-  public
-  type
-    TEdgeDataType = TEdgeData;
-    PEdgeData     = ^TEdgeData;
-    PAdjItem      = ^TAdjItem;
-
-    TAdjItem      = record
-      Destination: SizeInt;
-      Data: TEdgeData;
-      property Key: SizeInt read Destination;
-      constructor Create(aDst: SizeInt; constref aData: TEdgeData);
-    end;
-
-    TAdjacencyMatrix = record
-    private
-      FMatrix: TSquareBitMatrix;
-      function  GetSize: SizeInt; inline;
-    public
-      constructor Create(constref aMatrix: TSquareBitMatrix);
-      function  IsEmpty: Boolean; inline;
-      function  Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
-      property  Size: SizeInt read GetSize;
-    end;
-
-  protected
-  type
     TAdjList = record
     public
     type
@@ -378,8 +383,6 @@ type
       property  Count: SizeInt read FCount;
       property  Capacity: SizeInt read GetCapacity;
     end;
-
-    PAdjList = ^TAdjList;
 
     TNode = record
       Hash,
@@ -1449,6 +1452,42 @@ begin
 {$ENDIF }
 end;
 
+{ TGCustomGraph.TAdjItem }
+
+constructor TGCustomGraph.TAdjItem.Create(aDst: SizeInt; constref aData: TEdgeData);
+begin
+  Destination := aDst;
+  Data := aData;
+end;
+
+{ TGCustomGraph.TAdjacencyMatrix }
+
+function TGCustomGraph.TAdjacencyMatrix.GetSize: SizeInt;
+begin
+  Result := FMatrix.FSize;
+end;
+
+constructor TGCustomGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
+begin
+  FMatrix := aMatrix;
+end;
+
+function TGCustomGraph.TAdjacencyMatrix.IsEmpty: Boolean;
+begin
+  Result := FMatrix.Size = 0;
+end;
+
+function TGCustomGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
+begin
+  if SizeUInt(aSrc) < SizeUInt(FMatrix.FSize) then
+      if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
+        Result := FMatrix{%H-}[aSrc, aDst]
+      else
+        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
+  else
+    raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
+end;
+
 { TGCustomGraph.TIntSet.TEnumerator }
 
 function TGCustomGraph.TIntSet.TEnumerator.GetCurrent: SizeInt;
@@ -1660,6 +1699,24 @@ begin
     end;
 end;
 
+procedure TGCustomGraph.TIntSet.Subtract(PList: PAdjList);
+var
+  I, Pos: SizeInt;
+begin
+  if PList^.NonEmpty then
+    begin
+      Pos := 0;
+      for I := 0 to Pred(Count) do
+        if PList^.Contains(FItems[I]) then
+          Dec(FCount)
+        else
+          begin
+            FItems[Pos] := FItems[I];
+            Inc(Pos);
+          end;
+    end;
+end;
+
 function TGCustomGraph.TIntSet.Difference(constref aValue: TIntSet): TIntSet;
 begin
   Result.Assign(Self);
@@ -1699,6 +1756,15 @@ begin
   Result := 0;
   for I in aValue do
     Result += Ord(Contains(I));
+end;
+
+function TGCustomGraph.TIntSet.IntersectionCount(PList: PAdjList): SizeInt;
+var
+  p: PAdjItem;
+begin
+  Result := 0;
+  for p in PList^ do
+    Result += Ord(Contains(p^.Destination));
 end;
 
 function TGCustomGraph.TIntSet.Remove(aValue: SizeInt): Boolean;
@@ -1801,42 +1867,6 @@ begin
         FAdjLists[aDst].Remove(aSrc);
       Dec(FEdgeCount);
     end;
-end;
-
-{ TGCustomGraph.TAdjItem }
-
-constructor TGCustomGraph.TAdjItem.Create(aDst: SizeInt; constref aData: TEdgeData);
-begin
-  Destination := aDst;
-  Data := aData;
-end;
-
-{ TGCustomGraph.TAdjacencyMatrix }
-
-function TGCustomGraph.TAdjacencyMatrix.GetSize: SizeInt;
-begin
-  Result := FMatrix.FSize;
-end;
-
-constructor TGCustomGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
-begin
-  FMatrix := aMatrix;
-end;
-
-function TGCustomGraph.TAdjacencyMatrix.IsEmpty: Boolean;
-begin
-  Result := FMatrix.Size = 0;
-end;
-
-function TGCustomGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
-begin
-  if SizeUInt(aSrc) < SizeUInt(FMatrix.FSize) then
-      if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
-        Result := FMatrix{%H-}[aSrc, aDst]
-      else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
-  else
-    raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
 end;
 
 { TGCustomGraph.TAdjList.TEnumerator }
