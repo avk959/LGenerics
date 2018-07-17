@@ -653,7 +653,7 @@ begin
           aCand[J] := False;
           FCurrSet[FVertices[J]] := True;
           NewCand := aCand;
-          NewCand.Intersect(FMatrix[J]);
+          NewCand.IntersectWith(FMatrix[J]);
           Extend(NewCand);
           FCurrSet[FVertices[J]] := False;
         end;
@@ -682,8 +682,8 @@ begin
               NewCand := aCand;
               NewSub := aSub;
               FCurrSet[FVertices[I]] := True;
-              NewCand.Intersect(FMatrix[I]);
-              NewSub.Intersect(FMatrix[I]);
+              NewCand.IntersectWith(FMatrix[I]);
+              NewSub.IntersectWith(FMatrix[I]);
               Extend(NewSub, NewCand);
               FCurrSet[FVertices[I]] := False;
             end;
@@ -841,7 +841,7 @@ begin
           aCand[J] := False;
           FCurrSet[FVertices[J]] := True;
           NewCand := aCand;
-          NewCand.Intersect(FMatrix[J]);
+          NewCand.IntersectWith(FMatrix[J]);
           Extend(NewCand);
           FCurrSet[FVertices[J]] := False;
         end;
@@ -870,8 +870,8 @@ begin
               NewCand := aCand;
               NewSub := aSub;
               FCurrSet[FVertices[I]] := True;
-              NewCand.Intersect(FMatrix[I]);
-              NewSub.Intersect(FMatrix[I]);
+              NewCand.IntersectWith(FMatrix[I]);
+              NewSub.IntersectWith(FMatrix[I]);
               Extend(NewSub, NewCand);
               FCurrSet[FVertices[I]] := False;
             end;
@@ -1163,7 +1163,7 @@ begin
         exit;
       NewCand[FVertices[I]] := False;
       Neib := aSub;
-      Neib.Intersect(FMatrix[I]);
+      Neib.IntersectWith(FMatrix[I]);
       while Neib.NonEmpty do
         begin
           J := Neib.Bsf;
@@ -1254,7 +1254,7 @@ begin
         exit;
       NewCand[FVertices[I]] := False;
       Neib := aSub;
-      Neib.Intersect(FMatrix[I]);
+      Neib.IntersectWith(FMatrix[I]);
       while Neib.NonEmpty do
         begin
           J := Neib.Bsf;
@@ -1780,7 +1780,7 @@ begin
       MinIntersect := VertexCount;
       for I in Cand do
         begin
-          CurrIntersect := Succ(Cand.IntersectionCount(Matrix[I]));
+          CurrIntersect := Succ(Cand.IntersectionPop(Matrix[I]));
           if CurrIntersect < MinIntersect then
             begin
               MinIntersect := CurrIntersect;
@@ -1839,7 +1839,7 @@ begin
       MaxIntersect := 0;
       for I in Cand do
         begin
-          CurrIntersect := Succ(Cand.IntersectionCount(Matrix[I]));
+          CurrIntersect := Succ(Cand.IntersectionPop(Matrix[I]));
           if CurrIntersect > MaxIntersect then
             begin
               MaxIntersect := CurrIntersect;

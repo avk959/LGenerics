@@ -212,14 +212,14 @@ type
     { returns index of the most significant bit }
       function  Bsr: SizeInt; inline;
       function  Intersecting(constref aValue: TBits256): Boolean;
-    { returns the number of bits in the intersection with aVector }
-      function  IntersectionCount(constref aValue: TBits256): SizeInt;
+    { returns the number of bits in the intersection with aValue }
+      function  IntersectionPop(constref aValue: TBits256): SizeInt;
       function  Contains(constref aValue: TBits256): Boolean;
-    { returns the number of bits that will be added when union with aVector }
-      function  UnionCount(constref aValue: TBits256): SizeInt;
+    { returns the number of bits that will be added when union with aValue }
+      function  JoinGain(constref aValue: TBits256): SizeInt;
       procedure Join(constref aValue: TBits256);
       procedure Subtract(constref aValue: TBits256); inline;
-      procedure Intersect(constref aValue: TBits256); inline;
+      procedure IntersectWith(constref aValue: TBits256); inline;
     { returns count of set bits }
       function  PopCount: SizeInt; inline;
       property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
@@ -1261,7 +1261,7 @@ begin
   Result := False;
 end;
 
-function TGCustomGraph.TBits256.IntersectionCount(constref aValue: TBits256): SizeInt;
+function TGCustomGraph.TBits256.IntersectionPop(constref aValue: TBits256): SizeInt;
 {$IF DEFINED(CPU64)}
 begin
   Result := SizeInt(PopCnt(FBits[0] and aValue.FBits[0])) +
@@ -1280,7 +1280,7 @@ begin
             SizeInt(PopCnt(FBits[7] and aValue.FBits[7]));
 {$ELSE }
 var
-  I: SizeUInt;
+  I: SizeInt;
 begin
   Result := 0;
   for I := 0 to Pred(LIMB_COUNT) do
@@ -1298,7 +1298,7 @@ begin
   Result := True;
 end;
 
-function TGCustomGraph.TBits256.UnionCount(constref aValue: TBits256): SizeInt;
+function TGCustomGraph.TBits256.JoinGain(constref aValue: TBits256): SizeInt;
 {$IF DEFINED(CPU64)}
 begin
   Result := SizeInt(PopCnt(not FBits[0] and aValue.FBits[0])) +
@@ -1317,7 +1317,7 @@ begin
             SizeInt(PopCnt(not FBits[7] and aValue.FBits[7]));
 {$ELSE }
 var
-  I: SizeUInt;
+  I: SizeInt;
 begin
   Result := 0;
   for I := 0 to Pred(LIMB_COUNT) do
@@ -1377,7 +1377,7 @@ begin
 {$ENDIF }
 end;
 
-procedure TGCustomGraph.TBits256.Intersect(constref aValue: TBits256);
+procedure TGCustomGraph.TBits256.IntersectWith(constref aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
   FBits[0] := FBits[0] and aValue.FBits[0];

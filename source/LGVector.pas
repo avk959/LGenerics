@@ -396,14 +396,14 @@ type
   { returns index of the most significant bit }
     function  Bsr: SizeInt;
     function  Intersecting(constref aValue: TBoolVector): Boolean;
-  { returns the number of bits in the intersection with aVector }
-    function  IntersectionCount(constref aValue: TBoolVector): SizeInt;
+  { returns the number of bits in the intersection with aValue }
+    function  IntersectionPop(constref aValue: TBoolVector): SizeInt;
     function  Contains(constref aValue: TBoolVector): Boolean;
-  { returns the number of bits that will be added when union with aVector }
-    function  UnionCount(constref aValue: TBoolVector): SizeInt;
+  { returns the number of bits that will be added when union with aValue }
+    function  JoinGain(constref aValue: TBoolVector): SizeInt;
     procedure Join(constref aValue: TBoolVector);
     procedure Subtract(constref aValue: TBoolVector);
-    procedure Intersect(constref aValue: TBoolVector);
+    procedure IntersectWith(constref aValue: TBoolVector);
   { currently size can only grow and is always multiple of BitsizeOf(SizeUInt) }
     property  Size: SizeInt read GetSize write SetSize;
   { returns count of set bits }
@@ -2111,7 +2111,7 @@ begin
   Result := False;
 end;
 
-function TBoolVector.IntersectionCount(constref aValue: TBoolVector): SizeInt;
+function TBoolVector.IntersectionPop(constref aValue: TBoolVector): SizeInt;
 var
   I, Len: SizeInt;
 begin
@@ -2143,7 +2143,7 @@ begin
   Result := True;
 end;
 
-function TBoolVector.UnionCount(constref aValue: TBoolVector): SizeInt;
+function TBoolVector.JoinGain(constref aValue: TBoolVector): SizeInt;
 var
   I, Len: SizeInt;
 begin
@@ -2205,7 +2205,7 @@ begin
     FBits[I] := FBits[I] and not aValue.FBits[I];
 end;
 
-procedure TBoolVector.Intersect(constref aValue: TBoolVector);
+procedure TBoolVector.IntersectWith(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
