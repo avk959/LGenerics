@@ -1132,6 +1132,8 @@ begin
           exit;
         end;
       I := aSub.Bsf;
+      if aCand[I] then
+        exit;
       NewCand := aCand;
       NewCand[FVertices[I]] := True;
       NewSub := aSub.Difference(FMatrix[I]);
@@ -1217,6 +1219,8 @@ begin
           exit;
         end;
       I := aSub.Bsf;
+      if aCand[I] then
+        exit;
       NewCand := aCand;
       NewCand[FVertices[I]] := True;
       NewSub := aSub.Difference(FMatrix[I]);
@@ -1285,6 +1289,8 @@ begin
           exit;
         end;
       I := aSub.Last;
+      if aCand.Contains(I) then
+        exit;
       NewCand.Assign(aCand);
       NewCand.Push(I);
       NewSub := aSub.Difference(FMatrix[I]^);
