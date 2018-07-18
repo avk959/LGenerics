@@ -200,8 +200,7 @@ type
   { will return False if aIndex out of bounds }
     function  TryDelete(aIndex: SizeInt; out aValue: T): Boolean; inline;
   { extracts aCount elements(if possible) starting from aIndex;
-    will raise ELGListError if aIndex out of bounds;
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGListError if aIndex out of bounds }
     function  ExtractAll(aIndex, aCount: SizeInt): TArray;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -282,8 +281,7 @@ type
   { will return False if aIndex out of bounds }
     function  TryDelete(aIndex: SizeInt): Boolean; inline;
   { extracts aCount elements(if possible) starting from aIndex;
-    will raise ELGListError if aIndex out of bounds;
-    will raise ELGUpdateLock if instance in iteration}
+    will raise ELGListError if aIndex out of bounds }
     function  ExtractAll(aIndex, aCount: SizeInt): TArray; inline;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
