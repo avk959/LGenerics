@@ -171,10 +171,8 @@ type
     function  GetMutable(aIndex: SizeInt): PItem;
     procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
-    function  DeleteItem(aIndex: SizeInt): T; //inline;
+    function  DeleteItem(aIndex: SizeInt): T;
     function  ExtractRange(aIndex, aCount: SizeInt): TArray;
-    procedure CheckIndexRange(aIndex: SizeInt); //inline;
-    procedure CheckInsertIndexRange(aIndex: SizeInt); //inline;
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Mutables: TMutables; inline;
@@ -1317,20 +1315,26 @@ end;
 
 function TGLiteVector.GetItem(aIndex: SizeInt): T;
 begin
-  CheckIndexRange(aIndex);
-  Result := FBuffer.FItems[aIndex];
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := FBuffer.FItems[aIndex]
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteVector.GetMutable(aIndex: SizeInt): PItem;
 begin
-  CheckIndexRange(aIndex);
-  Result := @FBuffer.FItems[aIndex];
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := @FBuffer.FItems[aIndex]
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteVector.SetItem(aIndex: SizeInt; const aValue: T);
 begin
-  CheckIndexRange(aIndex);
-  FBuffer.FItems[aIndex] := aValue;
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    FBuffer.FItems[aIndex] := aValue
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteVector.InsertItem(aIndex: SizeInt; constref aValue: T);
@@ -1369,18 +1373,6 @@ begin
       System.Move(FBuffer.FItems[aIndex + aCount], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
       System.FillChar(FBuffer.FItems[Count], SizeOf(T) * aCount, 0);
     end;
-end;
-
-procedure TGLiteVector.CheckIndexRange(aIndex: SizeInt);
-begin
-  if (aIndex < 0) or (aIndex >= Count) then
-    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-end;
-
-procedure TGLiteVector.CheckInsertIndexRange(aIndex: SizeInt);
-begin
-  if (aIndex < 0) or (aIndex > Count) then
-    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteVector.GetEnumerator: TEnumerator;
@@ -1473,34 +1465,40 @@ end;
 
 procedure TGLiteVector.Insert(aIndex: SizeInt; constref aValue: T);
 begin
-  CheckInsertIndexRange(aIndex);
-  InsertItem(aIndex, aValue);
+  if SizeUInt(aIndex) <= SizeUInt(Count) then
+    InsertItem(aIndex, aValue)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteVector.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
 begin
-  Result := (aIndex >= 0) and (aIndex <= Count);
+  Result := SizeUInt(aIndex) <= SizeUInt(Count);
   if Result then
     InsertItem(aIndex, aValue);
 end;
 
 function TGLiteVector.Delete(aIndex: SizeInt): T;
 begin
-  CheckIndexRange(aIndex);
-  Result := DeleteItem(aIndex);
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := DeleteItem(aIndex)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteVector.TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
 begin
-  Result := (aIndex >= 0) and (aIndex < Count);
+  Result := SizeUInt(aIndex) < SizeUInt(Count);
   if Result then
     aValue := DeleteItem(aIndex);
 end;
 
 function TGLiteVector.ExtractAll(aIndex, aCount: SizeInt): TArray;
 begin
-  CheckIndexRange(aIndex);
-  Result := ExtractRange(aIndex, aCount);
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := ExtractRange(aIndex, aCount)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 { TGLiteThreadVector }
