@@ -1803,6 +1803,7 @@ begin
         Dec(FCount);
         if I < Count then
           System.Move(FItems[Succ(I)], FItems[I], (Count - I) * SizeOf(SizeInt));
+        exit;
       end;
 end;
 

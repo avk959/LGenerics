@@ -1178,7 +1178,7 @@ begin
   Cand.Size := aGraph.VertexCount;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(FVertices[I]) = 0 then
+    if aGraph.DegreeI(FVertices[I]) < 2 then  //////////
       Sub[I] := False;
   Extend(Sub, Cand);
   aExact := not FCanceled;
@@ -1265,7 +1265,7 @@ begin
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(FVertices[I]) = 0 then
+    if aGraph.DegreeI(FVertices[I]) < 2 then  ///////////
       Sub[I] := False;
   Extend(Sub, Cand);
   aExact := not FCanceled;
@@ -1288,7 +1288,7 @@ begin
           FCancel := True;
           exit;
         end;
-      I := aSub.Last;
+      I := aSub[0];
       if aCand.Contains(I) then //////////
         exit;                   //////////
       NewCand.Assign(aCand);
@@ -1332,9 +1332,9 @@ begin
   FCancel := False;
   FRecentBest := aGraph.ApproxMinDominatingSet;
   FMatrix := aGraph.CreateSkeleton;
-  Sub.AssignArray(aGraph.SortVerticesByDegree(soAsc));
+  Sub.AssignArray(aGraph.SortVerticesByDegree(soDesc));
   for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(I) = 0 then
+    if aGraph.DegreeI(I) < 2 then        //////////
       Sub.Delete(I);
   Extend(Sub, Cand{%H-});
   aExact := not FCancel;
@@ -1443,7 +1443,7 @@ begin
                 if SeparateMerged(Curr, Next) then
                   Dec(FCompCount);
               end;
-        until not Queue.TryDequeue(Curr);
+        until not Queue{%H-}.TryDequeue(Curr);
       end;
   FConnected := FCompCount = 1;
   FConnectedValid := True;
