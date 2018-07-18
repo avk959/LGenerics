@@ -33,8 +33,6 @@ uses
 
 type
 
-  { TGStack }
-
   generic TGStack<T> = class(specialize TGCustomArrayContainer<T>, specialize IGStack<T>)
   strict private
     function  PopItem: T; inline;
@@ -65,8 +63,6 @@ type
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
-  { TGThreadStack }
-
   generic TGThreadStack<T> = class
   public
   type
@@ -86,8 +82,6 @@ type
     function  Lock: IStack;
     procedure Unlock; inline;
   end;
-
-  { TGLiteStack }
 
   generic TGLiteStack<T> = record
   private
@@ -125,8 +119,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TGLiteThreadStack }
-
   generic TGLiteThreadStack<T> = class
   public
   type
@@ -147,8 +139,6 @@ type
     function  Lock: PStack;
     procedure Unlock; inline;
   end;
-
-  { TGLiteObjectStack }
 
   generic TGLiteObjectStack<T: class> = record
   strict private
@@ -187,8 +177,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
-
-  { TGLiteThreadObjectStack }
 
   generic TGLiteThreadObjectStack<T: class> = class
   public
