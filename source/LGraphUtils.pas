@@ -180,7 +180,7 @@ type
         property Current: SizeInt read GetCurrent;
       end;
 
-      TReverseOrder = record
+      TReverse = record
       private
         FValue: PBits256;
       public
@@ -200,7 +200,7 @@ type
       class procedure ClearBit(aIndex: SizeInt; var aValue: SizeUInt); static; inline;
     public
       function  GetEnumerator: TEnumerator; inline;
-      function  ReverseOrder: TReverseOrder; inline;
+      function  Reverse: TReverse; inline;
       procedure InitRange(aRange: SizeInt);
       procedure InitZero; inline;
     { returns an array containing the indices of the set bits }
@@ -1125,9 +1125,9 @@ begin
     end;
 end;
 
-{ TGCustomGraph.TBits256.TReverseOrder }
+{ TGCustomGraph.TBits256.TReverse }
 
-function TGCustomGraph.TBits256.TReverseOrder.GetEnumerator: TReverseEnumerator;
+function TGCustomGraph.TBits256.TReverse.GetEnumerator: TReverseEnumerator;
 begin
   Result.FValue := FValue;
   Result.FInCycle := False;
@@ -1183,7 +1183,7 @@ begin
   Result.FInCycle := False;
 end;
 
-function TGCustomGraph.TBits256.ReverseOrder: TReverseOrder;
+function TGCustomGraph.TBits256.Reverse: TReverse;
 begin
   Result.FValue := @Self;
 end;

@@ -349,7 +349,7 @@ type
       property Current: SizeInt read GetCurrent;
     end;
 
-    TReverseOrder = record
+    TReverse = record
     private
       FValue: PBoolVector;
     public
@@ -376,7 +376,7 @@ type
 
     procedure InitRange(aRange: SizeInt);
     function  GetEnumerator: TEnumerator; inline;
-    function  ReverseOrder: TReverseOrder; inline;
+    function  Reverse: TReverse; inline;
   { returns an array containing the indices of the set bits }
     function  ToArray: TIntArray;
     procedure ClearBits; inline;
@@ -1938,9 +1938,9 @@ begin
     end;
 end;
 
-{ TBoolVector.TReverseOrder }
+{ TBoolVector.TReverse }
 
-function TBoolVector.TReverseOrder.GetEnumerator: TReverseEnumerator;
+function TBoolVector.TReverse.GetEnumerator: TReverseEnumerator;
 begin
   Result.FValue := FValue;
   Result.FInCycle := False;
@@ -2043,7 +2043,7 @@ begin
   Result.FInCycle := False;
 end;
 
-function TBoolVector.ReverseOrder: TReverseOrder;
+function TBoolVector.Reverse: TReverse;
 begin
   Result.FValue := @Self;
 end;
