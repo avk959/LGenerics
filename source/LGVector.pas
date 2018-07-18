@@ -194,9 +194,9 @@ type
     function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean; inline;
   { deletes and returns value from position aIndex;
     will raise ELGListError if aIndex out of bounds }
-    function  Delete(aIndex: SizeInt): T; inline;
+    function  Extract(aIndex: SizeInt): T; inline;
   { will return False if aIndex out of bounds }
-    function  TryDelete(aIndex: SizeInt; out aValue: T): Boolean; inline;
+    function  TryExtract(aIndex: SizeInt; out aValue: T): Boolean; inline;
   { extracts aCount elements(if possible) starting from aIndex;
     will raise ELGListError if aIndex out of bounds }
     function  ExtractAll(aIndex, aCount: SizeInt): TArray;
@@ -1478,7 +1478,7 @@ begin
     InsertItem(aIndex, aValue);
 end;
 
-function TGLiteVector.Delete(aIndex: SizeInt): T;
+function TGLiteVector.Extract(aIndex: SizeInt): T;
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
     Result := DeleteItem(aIndex)
@@ -1486,7 +1486,7 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TGLiteVector.TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
+function TGLiteVector.TryExtract(aIndex: SizeInt; out aValue: T): Boolean;
 begin
   Result := SizeUInt(aIndex) < SizeUInt(Count);
   if Result then
@@ -1570,7 +1570,7 @@ function TGLiteThreadVector.TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
 begin
   DoLock;
   try
-    Result := FVector.TryDelete(aIndex, aValue);
+    Result := FVector.TryExtract(aIndex, aValue);
   finally
     UnLock;
   end;
@@ -1702,19 +1702,19 @@ end;
 
 function TGLiteObjectVector.Extract(aIndex: SizeInt): T;
 begin
-  Result := FVector.Delete(aIndex);
+  Result := FVector.Extract(aIndex);
 end;
 
 function TGLiteObjectVector.TryExtract(aIndex: SizeInt; out aValue: T): Boolean;
 begin
-  Result := FVector.TryDelete(aIndex, aValue);
+  Result := FVector.TryExtract(aIndex, aValue);
 end;
 
 procedure TGLiteObjectVector.Delete(aIndex: SizeInt);
 var
   v: T;
 begin
-  v := FVector.Delete(aIndex);
+  v := FVector.Extract(aIndex);
   if OwnsObjects then
     v.Free;
 end;
@@ -1723,7 +1723,7 @@ function TGLiteObjectVector.TryDelete(aIndex: SizeInt): Boolean;
 var
   v: T;
 begin
-  Result := FVector.TryDelete(aIndex, v);
+  Result := FVector.TryExtract(aIndex, v);
   if Result and OwnsObjects then
     v.Free;
 end;
