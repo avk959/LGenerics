@@ -883,7 +883,7 @@ begin
   FTaskQueue.Close;
   while FThreadPool.Count > 0 do
     begin
-      Thread := FThreadPool.Delete(Pred(FThreadPool.Count));
+      Thread := FThreadPool.Extract(Pred(FThreadPool.Count));
       Thread.WaitFor;
       Thread.Free;
     end;
