@@ -1228,7 +1228,6 @@ begin
       Extend(NewSub, NewCand);
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
-
       NewCand[FVertices[I]] := False;
       for J in aSub.Intersection(FMatrix[I]) do
         begin
