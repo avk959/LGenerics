@@ -385,9 +385,9 @@ type
     procedure SetBits; inline;
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
-  { returns index of the least significant bit }
+  { returns the index of the least significant bit, -1, if no bit is set }
     function  Bsf: SizeInt;
-  { returns index of the most significant bit }
+  { returns the index of the most significant bit, -1, if no bit is set }
     function  Bsr: SizeInt;
     function  Intersecting(constref aValue: TBoolVector): Boolean;
   { returns the number of bits in the intersection with aValue }
