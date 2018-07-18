@@ -375,7 +375,9 @@ type
     TIntArray = array of SizeInt;
 
     procedure InitRange(aRange: SizeInt);
+  { enumerates indices of set bits from least significant to most significant }
     function  GetEnumerator: TEnumerator; inline;
+  { enumerates indices of set bits from most significant down to least significant }
     function  Reverse: TReverse; inline;
   { returns an array containing the indices of the set bits }
     function  ToArray: TIntArray;
