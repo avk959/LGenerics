@@ -1178,7 +1178,7 @@ begin
   Cand.Size := aGraph.VertexCount;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(FVertices[I]) < 2 then  //////////
+    if aGraph.DegreeI(FVertices[I]) = 0 then  //////////
       Sub[I] := False;
   Extend(Sub, Cand);
   aExact := not FCanceled;
@@ -1228,6 +1228,7 @@ begin
       Extend(NewSub, NewCand);
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
+
       NewCand[FVertices[I]] := False;
       for J in aSub.Intersection(FMatrix[I]) do
         begin
@@ -1265,7 +1266,7 @@ begin
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(FVertices[I]) < 2 then  ///////////
+    if aGraph.DegreeI(FVertices[I]) = 0 then
       Sub[I] := False;
   Extend(Sub, Cand);
   aExact := not FCanceled;
@@ -1334,7 +1335,7 @@ begin
   FMatrix := aGraph.CreateSkeleton;
   Sub.AssignArray(aGraph.SortVerticesByDegree(soDesc));
   for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(I) < 2 then        //////////
+    if aGraph.DegreeI(I) = 0 then        //////////
       Sub.Delete(I);
   Extend(Sub, Cand{%H-});
   aExact := not FCancel;
