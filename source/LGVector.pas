@@ -38,8 +38,6 @@ uses
 
 type
 
-  { TGVector }
-
   generic TGVector<T> = class(specialize TGCustomArrayContainer<T>)
   public
   type
@@ -132,8 +130,6 @@ type
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
-  { TGThreadVector }
-
   generic TGThreadVector<T> = class
   public
   type
@@ -154,8 +150,6 @@ type
     function  TryExtract(aIndex: SizeInt; out aValue: T): Boolean;
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
-
-  { TGLiteVector }
 
   generic TGLiteVector<T> = record
   private
@@ -215,8 +209,6 @@ type
     property  Mutable[aIndex: SizeInt]: PItem read GetMutable;
   end;
 
-  { TGLiteThreadVector }
-
   generic TGLiteThreadVector<T> = class
   public
   type
@@ -237,8 +229,6 @@ type
     function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
     function  TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
   end;
-
-  { TGLiteObjectVector }
 
   generic TGLiteObjectVector<T: class> = record
   private
