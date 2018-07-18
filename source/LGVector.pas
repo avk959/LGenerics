@@ -227,6 +227,8 @@ type
     function  TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
   end;
 
+  { TGLiteObjectVector }
+
   generic TGLiteObjectVector<T: class> = record
   private
   type
@@ -274,13 +276,17 @@ type
     function  Extract(aIndex: SizeInt): T; inline;
   { will return False if aIndex out of bounds }
     function  TryExtract(aIndex: SizeInt; out aValue: T): Boolean; inline;
+  { extracts aCount elements(if possible) starting from aIndex;
+    will raise ELGListError if aIndex out of bounds }
+    function  ExtractAll(aIndex, aCount: SizeInt): TArray; inline;
   { deletes value in position aIndex; will raise ELGListError if aIndex out of bounds}
     procedure Delete(aIndex: SizeInt); inline;
   { will return False if aIndex out of bounds }
     function  TryDelete(aIndex: SizeInt): Boolean; inline;
-  { extracts aCount elements(if possible) starting from aIndex;
+  { deletes aCount elements(if possible) starting from aIndex;
+    returns count of deleted elements;
     will raise ELGListError if aIndex out of bounds }
-    function  ExtractAll(aIndex, aCount: SizeInt): TArray; inline;
+    function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -1710,6 +1716,11 @@ begin
   Result := FVector.TryExtract(aIndex, aValue);
 end;
 
+function TGLiteObjectVector.ExtractAll(aIndex, aCount: SizeInt): TArray;
+begin
+  Result := FVector.ExtractAll(aIndex, aCount);
+end;
+
 procedure TGLiteObjectVector.Delete(aIndex: SizeInt);
 var
   v: T;
@@ -1728,9 +1739,16 @@ begin
     v.Free;
 end;
 
-function TGLiteObjectVector.ExtractAll(aIndex, aCount: SizeInt): TArray;
+function TGLiteObjectVector.DeleteAll(aIndex, aCount: SizeInt): SizeInt;
+var
+  a: TArray;
+  v: T;
 begin
-  Result := FVector.ExtractAll(aIndex, aCount);
+  a := FVector.ExtractAll(aIndex, aCount);
+  Result := System.Length(a);
+  if (Result > 0) and OwnsObjects then
+    for v in a do
+      v.Free;
 end;
 
 { TGLiteThreadObjectVector }
