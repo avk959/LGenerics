@@ -2475,7 +2475,7 @@ end;
 
 procedure TGCustomGraph.CheckIndexRange(aIndex: SizeInt);
 begin
-  if (aIndex < 0) or (aIndex >= VertexCount) then
+  if SizeUInt(aIndex) >= SizeUInt(VertexCount) then
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
