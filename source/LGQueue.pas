@@ -32,8 +32,6 @@ uses
 
 type
 
-  { TGQueue }
-
   generic TGQueue<T> = class(specialize TGCustomRingArrayBuffer<T>, specialize IGContainer<T>,
     specialize IGQueue<T>)
   public
@@ -63,8 +61,6 @@ type
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
-  { TGThreadQueue }
-
   generic TGThreadQueue<T> = class
   public
   type
@@ -84,8 +80,6 @@ type
     function  Lock: IQueue;
     procedure Unlock; inline;
   end;
-
-  { TGLiteQueue }
 
   generic TGLiteQueue<T> = record
   type
@@ -119,8 +113,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TGLiteThreadQueue }
-
   generic TGLiteThreadQueue<T> = class
   public
   type
@@ -141,8 +133,6 @@ type
     function  Lock: PQueue;
     procedure Unlock; inline;
   end;
-
-  { TGLiteWaitableQueue }
 
   generic TGLiteWaitableQueue<T> = class
   public
@@ -167,8 +157,6 @@ type
     function  TryPeek(out aValue: T): Boolean;
     function  TryWaitPeek(out aValue: T): Boolean;
   end;
-
-  { TGLiteObjectQueue }
 
   generic TGLiteObjectQueue<T: class> = record
   strict private
@@ -205,8 +193,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
-
-  { TGLiteThreadObjectQueue }
 
   generic TGLiteThreadObjectQueue<T: class> = class
   public
