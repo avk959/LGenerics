@@ -2212,9 +2212,10 @@ procedure TBoolVector.Join(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
-  if aValue.Size > Size then
-    Size := aValue.Size;
-  Len := System.High(aValue.FBits);
+  I := Succ(aValue.Bsr);
+  if I > Size then
+    Size := I;
+  Len := I shr INT_SIZE_LOG;
   I := 0;
   while I <= Len - 4 do
     begin
