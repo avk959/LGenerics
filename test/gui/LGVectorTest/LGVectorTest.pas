@@ -202,16 +202,51 @@ type
     procedure TryExtract;
 
     procedure ExtractAllFromEmpty;
-    procedure ExtractAllFail;
-    procedure ExtractAllFail_1;
+    procedure ExtractAllOutOfBounds;
+    procedure ExtractAllOutOfBounds_1;
     procedure ExtractAll;
     procedure ExtractAll_1;
     procedure ExtractAll_2;
     procedure ExtractAllStr;
 
+    procedure DeleteAllFromEmpty;
+    procedure DeleteAllOutOfBounds;
+    procedure DeleteAllOutOfBounds_1;
+    procedure DeleteAll;
+    procedure DeleteAll_1;
+    procedure DeleteAll_2;
+    procedure DeleteAllStr;
+
     procedure Mutables;
 
     procedure ObjectVector;
+  end;
+
+  TBoolVectorTest = class(TTestCase)
+  published
+    procedure Size;
+    procedure GetBitOutOfBounds;
+    procedure GetBit;
+    procedure SetBitOutOfBounds;
+    procedure SetBit;
+    procedure PopCount;
+    procedure InitRange;
+    procedure GetEnumerator;
+    procedure Reverse;
+    procedure ToArray;
+    procedure SetBits;
+    procedure ClearBits;
+    procedure IsEmpty;
+    procedure NonEmpty;
+    procedure Bsf;
+    procedure Bsr;
+    procedure Intersecting;
+    procedure IntersectionPop;
+    procedure Contains;
+    procedure JoinGain;
+    procedure Join;
+    procedure Subtract;
+    procedure Intersect;
   end;
 
 implementation
@@ -1589,7 +1624,7 @@ begin
   AssertTrue(Raised);
 end;
 
-procedure TGLiteVectorTest.ExtractAllFail;
+procedure TGLiteVectorTest.ExtractAllOutOfBounds;
 var
   v: TIntVector;
   Raised: Boolean = False;
@@ -1604,7 +1639,7 @@ begin
   AssertTrue(Raised);
 end;
 
-procedure TGLiteVectorTest.ExtractAllFail_1;
+procedure TGLiteVectorTest.ExtractAllOutOfBounds_1;
 var
   v: TIntVector;
   Raised: Boolean = False;
@@ -1682,6 +1717,101 @@ begin
     AssertTrue(a[I] = 'string ' + I.ToString);
 end;
 
+procedure TGLiteVectorTest.DeleteAllFromEmpty;
+var
+  v: TIntVector;
+  Raised: Boolean = False;
+begin
+  try
+    v.DeleteAll(0, 2);
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TGLiteVectorTest.DeleteAllOutOfBounds;
+var
+  v: TIntVector;
+  Raised: Boolean = False;
+begin
+  v.AddAll([0, 1, 2, 3, 4, 5, 6, 7]);
+  try
+    v.DeleteAll(8, 2);
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TGLiteVectorTest.DeleteAllOutOfBounds_1;
+var
+  v: TIntVector;
+  Raised: Boolean = False;
+begin
+  v.AddAll([0, 1, 2, 3, 4, 5, 6, 7]);
+  try
+    v.DeleteAll(-1, 2);
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TGLiteVectorTest.DeleteAll;
+var
+  v: TIntVector;
+  I: Integer;
+begin
+  {%H-}v.AddAll(IntArray21);
+  I := v.DeleteAll(11, 10);
+  AssertTrue(v.Count = 11);
+  AssertTrue(I = 10);
+  for I := 0 to 10 do
+    AssertTrue(v{%H-}[I] = I + 1);
+end;
+
+procedure TGLiteVectorTest.DeleteAll_1;
+var
+  v: TIntVector;
+  I: Integer;
+begin
+  {%H-}v.AddAll(IntArray21);
+  I := v.DeleteAll(15, 10);
+  AssertTrue(v.Count = 15);
+  AssertTrue(I = 6);
+  for I := 0 to 14 do
+    AssertTrue(v{%H-}[I] = I + 1);
+end;
+
+procedure TGLiteVectorTest.DeleteAll_2;
+var
+  v: TIntVector;
+  I: Integer;
+begin
+  {%H-}v.AddAll(IntArray21);
+  I := v.DeleteAll(0, 10);
+  AssertTrue(v.Count = 11);
+  AssertTrue(I = 10);
+  for I := 0 to 10 do
+    AssertTrue(v{%H-}[I] = I + 11);
+end;
+
+procedure TGLiteVectorTest.DeleteAllStr;
+var
+  v: TStrVector;
+  I: Integer;
+begin
+  for I := 0 to 31 do
+    {%H-}v.Add('string ' + I.ToString);
+  I := v.DeleteAll(2, 33);
+  AssertTrue(v.Count = 2);
+  AssertTrue(I = 30);
+end;
+
 procedure TGLiteVectorTest.Mutables;
 var
   v: TIntVector;
@@ -1707,6 +1837,8 @@ var
   end;
 var
   v: TObjVector;
+  a: array of TTestObj;
+  o: TTestObj;
   I: Integer;
 begin
   for I := 0 to 99 do
@@ -1717,14 +1849,446 @@ begin
   I := v.DeleteAll(60, 100);
   AssertTrue(I = 20);
   AssertTrue(Counter = 40);
+  a := v.ExtractAll(40, 100);
+  AssertTrue(Length(a) = 20);
+  AssertTrue(Counter = 40);
+  for o in a do
+    o.Free;
+  AssertTrue(Counter = 60);
   v.Clear;
   AssertTrue(Counter = 100);
+end;
+
+{ TBoolVectorTest }
+
+procedure TBoolVectorTest.Size;
+var
+  v: TBoolVector;
+begin
+  AssertTrue({%H-}v.Size = 0);
+  v.Size := 15;
+  AssertTrue(v.Size = BitSizeOf(SizeUInt));
+  v.Size := 1005;
+  AssertTrue(
+    v.Size = (1005 div BitSizeOf(SizeUInt) + Ord(1005 mod BitSizeOf(SizeUInt) <> 0)) * BitSizeOf(SizeUInt));
+end;
+
+procedure TBoolVectorTest.GetBitOutOfBounds;
+var
+  v: TBoolVector;
+  {%H-}Bit, Raised: Boolean;
+begin
+  Raised := False;
+  try
+    Bit := v[0];
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+
+  Raised := False;
+  v.Size := 64;
+  try
+    Bit := v[64];
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TBoolVectorTest.GetBit;
+var
+  v: TBoolVector;
+  I: SizeInt;
+begin
+  v.Size := 64;
+  for I := 0 to 63 do
+    AssertFalse(v[I]);
+end;
+
+procedure TBoolVectorTest.SetBitOutOfBounds;
+var
+  v: TBoolVector;
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    v[0] := True;
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+
+  Raised := False;
+  v.Size := 64;
+  try
+    v[64] := True;
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TBoolVectorTest.SetBit;
+var
+  v: TBoolVector;
+  I: SizeInt;
+begin
+  v.Size := 64;
+  for I := 0 to 63 do
+    begin
+      AssertFalse(v[I]);
+      v[I] := True;
+      AssertTrue(v[I]);
+    end;
+end;
+
+procedure TBoolVectorTest.PopCount;
+var
+  v: TBoolVector;
+  I: SizeInt;
+begin
+  AssertTrue(v.PopCount = 0);
+  v.Size := 64;
+  AssertTrue(v.PopCount = 0);
+  v[10] := True;
+  AssertTrue(v.PopCount = 1);
+  v[63] := True;
+  AssertTrue(v.PopCount = 2);
+  for I := 0 to 63 do
+    v[I] := True;
+  AssertTrue(v.PopCount = 64);
+end;
+
+procedure TBoolVectorTest.InitRange;
+var
+  v: TBoolVector;
+  I: SizeInt;
+begin
+  v.InitRange(-10);
+  AssertTrue(v.Size = 0);
+  v.InitRange(56);
+  AssertTrue(v.Size = 64);
+  for I := 0 to 55 do
+    AssertTrue(v[I]);
+  for I := 56 to 63 do
+    AssertFalse(v[I]);
+end;
+
+procedure TBoolVectorTest.GetEnumerator;
+var
+  v: TBoolVector;
+  I, Counter: SizeInt;
+begin
+  Counter := 0;
+  for I in {%H-}v do
+    Inc(Counter);
+  AssertTrue(Counter = 0);
+  v.Size := 64;
+  v[5] := True;
+  v[21] := True;
+  v[37] := True;
+  v[55] := True;
+  for I in v do
+    begin
+      case Counter of
+        0: AssertTrue(I = 5);
+        1: AssertTrue(I = 21);
+        2: AssertTrue(I = 37);
+        3: AssertTrue(I = 55);
+      end;
+      Inc(Counter);
+    end;
+end;
+
+procedure TBoolVectorTest.Reverse;
+var
+  v: TBoolVector;
+  I, Counter: SizeInt;
+begin
+  Counter := 0;
+  for I in {%H-}v.Reverse do
+    Inc(Counter);
+  AssertTrue(Counter = 0);
+  v.Size := 64;
+  v[5] := True;
+  v[21] := True;
+  v[37] := True;
+  v[55] := True;
+  for I in v.Reverse do
+    begin
+      case Counter of
+        0: AssertTrue(I = 55);
+        1: AssertTrue(I = 37);
+        2: AssertTrue(I = 21);
+        3: AssertTrue(I = 5);
+      end;
+      Inc(Counter);
+    end;
+end;
+
+procedure TBoolVectorTest.ToArray;
+var
+  v: TBoolVector;
+  I: SizeInt;
+  a, r: array of Integer;
+begin
+  a := [3, 17, 29, 44, 59];
+  v.Size := 64;
+  for I in a do
+    v[I] := True;
+  r := v.ToArray;
+  AssertTrue(specialize TGComparableArrayHelper<Integer>.Same(a, r));
+end;
+
+procedure TBoolVectorTest.SetBits;
+var
+  v: TBoolVector;
+  I: SizeInt;
+begin
+  {%H-}v.SetBits;
+  AssertTrue(v.Size = 0);
+  v.Size := 64;
+  v.SetBits;
+  for I := 0 to 63 do
+    AssertTrue(v[I]);
+end;
+
+procedure TBoolVectorTest.ClearBits;
+var
+  v: TBoolVector;
+  I: SizeInt;
+begin
+  v.InitRange(60);
+  v.SetBits;
+  for I := 0 to 59 do
+    AssertTrue(v[I]);
+  v.ClearBits;
+  for I := 0 to 59 do
+    AssertFalse(v[I]);
+end;
+
+procedure TBoolVectorTest.IsEmpty;
+var
+  v: TBoolVector;
+begin
+  AssertTrue(v.IsEmpty);
+  v.Size := 64;
+  AssertTrue(v.IsEmpty);
+  v[5] := True;
+  AssertFalse(v.IsEmpty);
+end;
+
+procedure TBoolVectorTest.NonEmpty;
+var
+  v: TBoolVector;
+begin
+  AssertFalse(v.NonEmpty);
+  v.Size := 64;
+  AssertFalse(v.NonEmpty);
+  v[5] := True;
+  AssertTrue(v.NonEmpty);
+end;
+
+procedure TBoolVectorTest.Bsf;
+var
+  v: TBoolVector;
+  I: Integer;
+begin
+  AssertTrue(v.Bsf = -1);
+  v.Size := 120;
+  AssertTrue(v.Bsf = -1);
+  v[5] := True;
+  v[55] := True;
+  AssertTrue(v.Bsf = 5);
+  for I := 0 to Pred(v.Size) do
+    begin
+      v[I] := True;
+      AssertTrue(v.Bsf = I);
+      v[I] := False;
+    end;
+end;
+
+procedure TBoolVectorTest.Bsr;
+var
+  v: TBoolVector;
+  I: Integer;
+begin
+  AssertTrue(v.Bsr = -1);
+  v.Size := 120;
+  AssertTrue(v.Bsr = -1);
+  v[25] := True;
+  v[75] := True;
+  AssertTrue(v.Bsr = 75);
+  v.ClearBits;
+  for I := 0 to Pred(v.Size) do
+    begin
+      v[I] := True;
+      AssertTrue(v.Bsr = I);
+      v[I] := False;
+    end;
+end;
+
+procedure TBoolVectorTest.Intersecting;
+var
+  v1, v2: TBoolVector;
+begin
+  AssertFalse(v1.Intersecting(v2{%H-}));
+  AssertFalse(v2.Intersecting(v1));
+  v1.Size := 120;
+  v2.Size := 250;
+  AssertFalse(v1.Intersecting(v2));
+  AssertFalse(v2.Intersecting(v1));
+  v1[10] := True;
+  v2[110] := True;
+  AssertFalse(v1.Intersecting(v2));
+  AssertFalse(v2.Intersecting(v1));
+  v1[110] := True;
+  AssertTrue(v1.Intersecting(v2));
+  AssertTrue(v2.Intersecting(v1));
+end;
+
+procedure TBoolVectorTest.IntersectionPop;
+var
+  v1, v2: TBoolVector;
+begin
+  AssertTrue(v1.IntersectionPop(v2{%H-}) = 0);
+  AssertTrue(v2.IntersectionPop(v1) = 0);
+  v1.Size := 120;
+  v2.Size := 250;
+  AssertTrue(v1.IntersectionPop(v2) = 0);
+  AssertTrue(v2.IntersectionPop(v1) = 0);
+  v1[10] := True;
+  v2[110] := True;
+  AssertTrue(v1.IntersectionPop(v2) = 0);
+  AssertTrue(v2.IntersectionPop(v1) = 0);
+  v1[110] := True;
+  v2[10] := True;
+  AssertTrue(v1.IntersectionPop(v2) = 2);
+  AssertTrue(v2.IntersectionPop(v1) = 2);
+end;
+
+procedure TBoolVectorTest.Contains;
+var
+  v1, v2: TBoolVector;
+begin
+  AssertTrue(v1.Contains(v2{%H-}));
+  AssertTrue(v2.Contains(v1));
+  v1.Size := 120;
+  v2.Size := 250;
+  AssertTrue(v1.Contains(v2{%H-}));
+  AssertTrue(v2.Contains(v1));
+  v1[10] := True;
+  AssertTrue(v1.Contains(v2{%H-}));
+  AssertFalse(v2.Contains(v1));
+  v2[10] := True;
+  AssertTrue(v1.Contains(v2{%H-}));
+  AssertTrue(v2.Contains(v1));
+  v2[110] := True;
+  AssertFalse(v1.Contains(v2{%H-}));
+  AssertTrue(v2.Contains(v1));
+end;
+
+procedure TBoolVectorTest.JoinGain;
+var
+  v1, v2: TBoolVector;
+begin
+  AssertTrue(v1.JoinGain(v2{%H-}) = 0);
+  AssertTrue(v2.JoinGain(v1) = 0);
+  v1.Size := 120;
+  v2.Size := 250;
+  AssertTrue(v1.JoinGain(v2) = 0);
+  AssertTrue(v2.JoinGain(v1) = 0);
+  v1[10] := True;
+  v2[110] := True;
+  AssertTrue(v1.JoinGain(v2) = 1);
+  AssertTrue(v2.JoinGain(v1) = 1);
+  v1[110] := True;
+  v2[10] := True;
+  AssertTrue(v1.JoinGain(v2) = 0);
+  AssertTrue(v2.JoinGain(v1) = 0);
+end;
+
+procedure TBoolVectorTest.Join;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.Size := 128;
+  v2.Size := 256;
+  v1.Join(v2);
+  AssertTrue(v1.Size = 128);
+  AssertTrue(v1.IsEmpty);
+  v2.Join(v1);
+  AssertTrue(v2.Size = 256);
+  AssertTrue(v2.IsEmpty);
+  v1[110] := True;
+  v2.Join(v1);
+  AssertTrue(v2.Size = 256);
+  AssertTrue(v2[110]);
+  v2[250] := True;
+  v1.Join(v2);
+  AssertTrue(v1.Size = 256);
+  AssertTrue(v1[110]);
+  AssertTrue(v1[250]);
+end;
+
+procedure TBoolVectorTest.Subtract;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.Size := 128;
+  v2.Size := 256;
+  v1.Subtract(v2);
+  AssertTrue(v1.Size = 128);
+  AssertTrue(v1.IsEmpty);
+  v2.Subtract(v1);
+  AssertTrue(v2.Size = 256);
+  AssertTrue(v2.IsEmpty);
+  v1[110] := True;
+  v2[250] := True;
+  v1.Subtract(v2);
+  AssertTrue(v1.PopCount = 1);
+  AssertTrue(v1[110]);
+  v2.Subtract(v1);
+  AssertTrue(v2.PopCount = 1);
+  AssertTrue(v2[250]);
+  v1[115] := True;
+  v2[115] := True;
+  AssertTrue(v1.PopCount = 2);
+  AssertTrue(v2.PopCount = 2);
+  v1.Subtract(v2);
+  AssertTrue(v1.PopCount = 1);
+  AssertFalse(v1[115]);
+end;
+
+procedure TBoolVectorTest.Intersect;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.Size := 128;
+  v2.Size := 256;
+  v1[110] := True;
+  v2[250] := True;
+  v1.Intersect(v2);
+  AssertTrue(v1.IsEmpty);
+  v1[110] := True;
+  v2.Intersect(v1);
+  AssertTrue(v2.IsEmpty);
+  v2.SetBits;
+  v2.Intersect(v1);
+  AssertTrue(v2.PopCount = 1);
+  AssertTrue(v2[110]);
 end;
 
 initialization
 
   RegisterTest(TGVectorTest);
   RegisterTest(TGLiteVectorTest);
+  RegisterTest(TBoolVectorTest);
 
 end.
 
