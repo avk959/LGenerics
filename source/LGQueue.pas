@@ -153,10 +153,10 @@ type
     procedure AfterConstruction; override;
     procedure Clear;
     procedure Enqueue(constref aValue: T);
+    function  Dequeue: T;
     function  TryDequeue(out aValue: T): Boolean;
-    function  TryWaitDequeue(out aValue: T): Boolean;
+    function  Peek: T;
     function  TryPeek(out aValue: T): Boolean;
-    function  TryWaitPeek(out aValue: T): Boolean;
   end;
 
   generic TGLiteObjectQueue<T: class> = record
@@ -607,6 +607,19 @@ begin
   end;
 end;
 
+function TGLiteWaitableQueue.Dequeue: T;
+begin
+  System.RtlEventWaitFor(FReadAwait);
+  Lock;
+  try
+    Result := FQueue.Dequeue;
+    if FQueue.NonEmpty then
+      Signaled;
+  finally
+    UnLock;
+  end;
+end;
+
 function TGLiteWaitableQueue.TryDequeue(out aValue: T): Boolean;
 begin
   Lock;
@@ -619,12 +632,12 @@ begin
   end;
 end;
 
-function TGLiteWaitableQueue.TryWaitDequeue(out aValue: T): Boolean;
+function TGLiteWaitableQueue.Peek: T;
 begin
   System.RtlEventWaitFor(FReadAwait);
   Lock;
   try
-    Result := FQueue.TryDequeue(aValue);
+    Result := FQueue.Peek;
     if FQueue.NonEmpty then
       Signaled;
   finally
@@ -637,19 +650,6 @@ begin
   Lock;
   try
     Result := FQueue.TryPeek(aValue);
-  finally
-    UnLock;
-  end;
-end;
-
-function TGLiteWaitableQueue.TryWaitPeek(out aValue: T): Boolean;
-begin
-  System.RtlEventWaitFor(FReadAwait);
-  Lock;
-  try
-    Result := FQueue.TryPeek(aValue);
-    if FQueue.NonEmpty then
-      Signaled;
   finally
     UnLock;
   end;
