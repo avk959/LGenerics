@@ -87,6 +87,7 @@ type
     TEnumerator = TBuffer.TEnumerator;
     TMutables   = TBuffer.TMutables;
     TReverse    = TBuffer.TReverse;
+    PItem       = TBuffer.PItem;
     TArray      = TBuffer.TArray;
 
   private
