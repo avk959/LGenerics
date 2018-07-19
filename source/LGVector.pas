@@ -2215,7 +2215,7 @@ begin
   I := Succ(aValue.Bsr);
   if I > Size then
     Size := I;
-  Len := I shr INT_SIZE_LOG;
+  Len := Pred(I shr INT_SIZE_LOG + Ord(I and INT_SIZE_MASK <> 0));
   I := 0;
   while I <= Len - 4 do
     begin

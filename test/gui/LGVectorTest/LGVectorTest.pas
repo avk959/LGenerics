@@ -2217,23 +2217,26 @@ procedure TBoolVectorTest.Join;
 var
   v1, v2: TBoolVector;
 begin
-  v1.Size := 128;
   v2.Size := 256;
   v1.Join(v2);
-  AssertTrue(v1.Size = 128);
+  AssertTrue(v1.Size = 0);
   AssertTrue(v1.IsEmpty);
   v2.Join(v1);
   AssertTrue(v2.Size = 256);
   AssertTrue(v2.IsEmpty);
+  v2[127] := True;
+  v1.Join(v2);
+  AssertTrue(v1.Size = 128);
+  AssertTrue(v1[127]);
   v1[110] := True;
   v2.Join(v1);
   AssertTrue(v2.Size = 256);
   AssertTrue(v2[110]);
-  v2[250] := True;
+  v2[255] := True;
   v1.Join(v2);
   AssertTrue(v1.Size = 256);
   AssertTrue(v1[110]);
-  AssertTrue(v1[250]);
+  AssertTrue(v1[255]);
 end;
 
 procedure TBoolVectorTest.Subtract;
