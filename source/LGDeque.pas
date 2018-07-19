@@ -36,8 +36,6 @@ uses
 
 type
 
-  { TGDeque }
-
   generic TGDeque<T> = class(specialize TGCustomRingArrayBuffer<T>, specialize IGDeque<T>)
   protected
   const
@@ -125,8 +123,6 @@ type
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
-  { TGThreadDeque }
-
   generic TGThreadDeque<T> = class
   public
   type
@@ -148,8 +144,6 @@ type
     function  Lock: IDeque;
     procedure Unlock; inline;
   end;
-
-  { TGLiteDeque }
 
   generic TGLiteDeque<T> = record
   public
@@ -228,8 +222,6 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
     property  Mutable[aIndex: SizeInt]: PItem read GetMutable;
   end;
-
-  { TGLiteThreadDeque }
 
   generic TGLiteThreadDeque<T> = class
   public
@@ -323,8 +315,6 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
-
-  { TGLiteThreadObjectDeque }
 
   generic TGLiteThreadObjectDeque<T: class> = class
   public
