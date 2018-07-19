@@ -173,6 +173,7 @@ type
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
     function  DeleteItem(aIndex: SizeInt): T;
     function  ExtractRange(aIndex, aCount: SizeInt): TArray;
+    function  DeleteRange(aIndex, aCount: SizeInt): SizeInt;
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Mutables: TMutables; inline;
@@ -199,7 +200,11 @@ type
     function  TryExtract(aIndex: SizeInt; out aValue: T): Boolean; inline;
   { extracts aCount elements(if possible) starting from aIndex;
     will raise ELGListError if aIndex out of bounds }
-    function  ExtractAll(aIndex, aCount: SizeInt): TArray;
+    function  ExtractAll(aIndex, aCount: SizeInt): TArray; inline;
+  { deletes aCount elements(if possible) starting from aIndex;
+    returns count of deleted elements;
+    will raise ELGListError if aIndex out of bounds }
+    function  DeleteAll(aIndex, aCount: SizeInt): SizeInt; inline;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -226,8 +231,6 @@ type
     function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
     function  TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
   end;
-
-  { TGLiteObjectVector }
 
   generic TGLiteObjectVector<T: class> = record
   private
@@ -375,9 +378,9 @@ type
     TIntArray = array of SizeInt;
 
     procedure InitRange(aRange: SizeInt);
-  { enumerates indices of set bits from least significant to most significant }
+  { enumerates indices of set bits from lowest to highest }
     function  GetEnumerator: TEnumerator; inline;
-  { enumerates indices of set bits from most significant down to least significant }
+  { enumerates indices of set bits from highest down to lowest }
     function  Reverse: TReverse; inline;
   { returns an array containing the indices of the set bits }
     function  ToArray: TIntArray;
@@ -385,9 +388,9 @@ type
     procedure SetBits; inline;
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
-  { returns the index of the least significant bit, -1, if no bit is set }
+  { returns the lowest index of the set bit, -1, if no bit is set }
     function  Bsf: SizeInt;
-  { returns the index of the most significant bit, -1, if no bit is set }
+  { returns the highest index of the set bit, -1, if no bit is set }
     function  Bsr: SizeInt;
     function  Intersecting(constref aValue: TBoolVector): Boolean;
   { returns the number of bits in the intersection with aValue }
@@ -1383,6 +1386,23 @@ begin
     end;
 end;
 
+function TGLiteVector.DeleteRange(aIndex, aCount: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  if aCount < 0 then
+    aCount := 0;
+  Result := Math.Min(aCount, Count - aIndex);
+  if Result > 0 then
+    begin
+      for I := aIndex to Pred(aIndex + Result) do
+        FBuffer.FItems[I] := Default(T);
+      FBuffer.FCount -= Result;
+      System.Move(FBuffer.FItems[aIndex + Result], FBuffer.FItems[aIndex], SizeOf(T) * (Count - aIndex));
+      System.FillChar(FBuffer.FItems[Count], SizeOf(T) * Result, 0);
+    end;
+end;
+
 function TGLiteVector.GetEnumerator: TEnumerator;
 begin
   Result := FBuffer.GetEnumerator;
@@ -1505,6 +1525,14 @@ function TGLiteVector.ExtractAll(aIndex, aCount: SizeInt): TArray;
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
     Result := ExtractRange(aIndex, aCount)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TGLiteVector.DeleteAll(aIndex, aCount: SizeInt): SizeInt;
+begin
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := DeleteRange(aIndex, aCount)
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
@@ -1746,11 +1774,15 @@ var
   a: TArray;
   v: T;
 begin
-  a := FVector.ExtractAll(aIndex, aCount);
-  Result := System.Length(a);
-  if (Result > 0) and OwnsObjects then
-    for v in a do
-      v.Free;
+  if OwnsObjects then
+    begin
+      a := FVector.ExtractAll(aIndex, aCount);
+      Result := System.Length(a);
+      for v in a do
+        v.Free;
+    end
+  else
+    Result := FVector.DeleteAll(aIndex, aCount);
 end;
 
 { TGLiteThreadObjectVector }
