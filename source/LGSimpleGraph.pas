@@ -205,6 +205,11 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
+    procedure AssignGraph(aGraph: TGSimpleGraph);
+    procedure AssignSeparate(aGraph: TGSimpleGraph; aIndex: SizeInt);
+    procedure AssignVertexList(aGraph: TGSimpleGraph; constref aList: TIntArray);
+    procedure AssignTree(aGraph: TGSimpleGraph; constref aTree: TIntArray);
+    procedure AssignEdges(aGraph: TGSimpleGraph; constref aEdges: TIntEdgeArray);
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aTag: SizeInt): SizeInt;
@@ -266,7 +271,7 @@ type
   { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
   { returns graph of connected component that contains aVertex }
-    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; inline;
+    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
     function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
   { returns a graph consisting of vertices whose indices are contained in the array aList }
     function  SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
@@ -446,7 +451,7 @@ type
     procedure SaveToFile(const aFileName: string);
     procedure LoadFromFile(const aFileName: string);
     procedure LoadFromDIMACSAsciiFile(const aFileName: string);
-    function  SeparateGraph(aVertex: SizeInt): TIntChart;
+    function  SeparateGraph(aVertex: Integer): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
     function  SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
     function  SubgraphFromTree(constref aTree: TIntArray): TIntChart;
@@ -1524,17 +1529,96 @@ begin
     FNodeList[I].AdjList.CopyTo(Result[I]^);
 end;
 
+procedure TGSimpleGraph.AssignGraph(aGraph: TGSimpleGraph);
+var
+  I: SizeInt;
+begin
+  Clear;
+  FCount := aGraph.VertexCount;
+  FEdgeCount := aGraph.EdgeCount;
+  FCompCount := aGraph.FCompCount;
+  FTitle := aGraph.Title;
+  FConnected := aGraph.Connected;
+  FConnectedValid := aGraph.ConnectedValid;
+  if aGraph.NonEmpty then
+    begin
+      FChainList := System.Copy(aGraph.FChainList);
+      System.SetLength(FNodeList, System.Length(aGraph.FNodeList));
+      for I := 0 to Pred(VertexCount) do
+        FNodeList[I].Assign(aGraph.FNodeList[I]);
+    end;
+end;
+
+procedure TGSimpleGraph.AssignSeparate(aGraph: TGSimpleGraph; aIndex: SizeInt);
+var
+  v: TIntArray;
+  I, J, Tag: SizeInt;
+begin
+  System.SetLength(v, aGraph.SeparatePopI(aIndex));
+  Tag := aGraph.SeparateTag(aIndex);
+  J := 0;
+  for I := 0 to Pred(aGraph.VertexCount) do
+    if aGraph.FNodeList[I].Tag = Tag then
+      begin
+        v[J] := I;
+        Inc(J);
+      end;
+  AssignVertexList(aGraph, v);
+end;
+
+procedure TGSimpleGraph.AssignVertexList(aGraph: TGSimpleGraph; constref aList: TIntArray);
+var
+  vSet: TIntHashSet;
+  I, J: SizeInt;
+begin
+  vSet.AddAll(aList);
+  Clear;
+  for I in vSet do
+    for J in aGraph.AdjVerticesI(I) do
+      if vSet.Contains(J) then
+        AddEdge(aGraph[I], aGraph[J], aGraph.GetEdgeDataPtr(I, J)^);
+end;
+
+procedure TGSimpleGraph.AssignTree(aGraph: TGSimpleGraph; constref aTree: TIntArray);
+var
+  I, Src: SizeInt;
+begin
+  Clear;
+  for I := 0 to Pred(System.Length(aTree)) do
+    begin
+      Src := aTree[I];
+      if Src <> -1 then
+        AddEdge(aGraph[Src], aGraph[I], aGraph.GetEdgeDataPtr(Src, I)^);
+    end;
+end;
+
+procedure TGSimpleGraph.AssignEdges(aGraph: TGSimpleGraph; constref aEdges: TIntEdgeArray);
+var
+  e: TIntEdge;
+begin
+  Clear;
+  for e in aEdges do
+    AddEdge(aGraph[e.Source], aGraph[e.Destination], aGraph.GetEdgeDataPtr(e.Source, e.Destination)^);
+end;
+
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
 var
-  cIdx, I: SizeInt;
-  p: PAdjItem;
+  I, J: SizeInt;
+  d: TEdgeData;
 begin
   Result := TGSimpleGraph.Create;
-  cIdx := SeparateTag(aIndex);
+  J := SeparateTag(aIndex);
   for I := 0 to Pred(VertexCount) do
-    if SeparateTag(I) = cIdx then
-      for p in FNodeList[I].AdjList do
-        Result.AddEdge(Items[I], Items[p^.Destination], p^.Data);
+    if SeparateTag(I) = J then
+       Result.AddVertex(Items[I]);
+  for I := 0 to Pred(Result.VertexCount) do
+    for J := Succ(I) to Pred(Result.VertexCount) do
+      if Adjacent(Result[I], Result[J]) then
+        begin
+          if not GetEdgeData(Result[I], Result[J], d) then
+            raise ELGraphError.Create(SEGrapInconsist);
+          Result.AddEdgeI(I, J, d);
+        end;
 end;
 
 function TGSimpleGraph.GetSeparateCount: SizeInt;
@@ -2540,23 +2624,9 @@ begin
 end;
 
 function TGSimpleGraph.Clone: TGSimpleGraph;
-var
-  I: SizeInt;
 begin
   Result := TGSimpleGraph.Create;
-  Result.FCount := VertexCount;
-  Result.FEdgeCount := EdgeCount;
-  Result.FCompCount := FCompCount;
-  Result.FTitle := Title;
-  Result.FConnected := Connected;
-  Result.FConnectedValid := ConnectedValid;
-  if NonEmpty then
-    begin
-      Result.FChainList := System.Copy(FChainList);
-      System.SetLength(Result.FNodeList, System.Length(FNodeList));
-      for I := 0 to Pred(VertexCount) do
-        Result.FNodeList[I].Assign(FNodeList[I]);
-    end;
+  Result.AssignGraph(Self);
 end;
 
 function TGSimpleGraph.SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
@@ -2566,45 +2636,29 @@ end;
 
 function TGSimpleGraph.SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
 begin
+  Result := TGSimpleGraph.Create;
   if SeparateCount > 1 then
-    Result := GetSeparateGraph(aIndex)
+    Result.AssignSeparate(Self, aIndex)
   else
-    Result := Clone;
+    Result.AssignGraph(Self)
 end;
 
 function TGSimpleGraph.SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
-var
-  vSet: TIntHashSet;
-  I, J: SizeInt;
 begin
-  vSet.AddAll(aList);
-  Result := TGSimpleGraph.Create(vSet.Count);
-  for I in vSet do
-    for J in AdjVerticesI(I) do
-      if vSet.Contains(J) then
-        Result.AddEdge(Items[I], Items[J], GetEdgeDataPtr(I, J)^);
+  Result := TGSimpleGraph.Create;
+  Result.AssignVertexList(Self, aList);
 end;
 
 function TGSimpleGraph.SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
-var
-  I, Src: SizeInt;
 begin
   Result := TGSimpleGraph.Create;
-  for I := 0 to Pred(System.Length(aTree)) do
-    begin
-      Src := aTree[I];
-      if Src <> -1 then
-        Result.AddEdge(Items[Src], Items[I], GetEdgeDataPtr(Src, I)^);
-    end;
+  Result.AssignTree(Self, aTree);
 end;
 
 function TGSimpleGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
-var
-  e: TIntEdge;
 begin
   Result := TGSimpleGraph.Create;
-  for e in aEdges do
-    Result.AddEdge(Items[e.Source], Items[e.Destination], GetEdgeDataPtr(e.Source, e.Destination)^);
+  Result.AssignEdges(Self, aEdges);
 end;
 
 function TGSimpleGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
@@ -3078,7 +3132,7 @@ begin
           Result[Next] := aRoot;
           Queue.Enqueue(Next);
         end;
-  until not Queue.TryDequeue(aRoot);
+  until not Queue{%H-}.TryDequeue(aRoot);
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
@@ -3239,32 +3293,40 @@ end;
 
 function TGChart.SeparateGraph(constref aVertex: TVertex): TGChart;
 begin
-  Result := inherited SeparateGraph(aVertex) as TGChart;
+  Result := SeparateGraphI(IndexOf(aVertex));
 end;
 
 function TGChart.SeparateGraphI(aIndex: SizeInt): TGChart;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TGChart;
+  Result := TGChart.Create;
+  if SeparateCount > 1 then
+    Result.AssignSeparate(Self, aIndex)
+  else
+    Result.AssignGraph(Self);
 end;
 
 function TGChart.SubgraphFromVertexList(constref aList: TIntArray): TGChart;
 begin
-  Result := inherited SubgraphFromVertexList(aList) as TGChart;
+  Result := TGChart.Create;
+  Result.AssignVertexList(Self, aList);
 end;
 
 function TGChart.SubgraphFromTree(constref aTree: TIntArray): TGChart;
 begin
-  Result := inherited SubgraphFromTree(aTree) as TGChart;
+  Result := TGChart.Create;
+  Result.AssignTree(Self, aTree);
 end;
 
 function TGChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
 begin
-  Result := inherited SubgraphFromEdges(aEdges) as TGChart;
+  Result := TGChart.Create;
+  Result.AssignEdges(Self, aEdges);
 end;
 
 function TGChart.Clone: TGChart;
 begin
-  Result := inherited Clone as TGChart;
+  Result := TGChart.Create;
+  Result.AssignGraph(Self);
 end;
 
 { TIntChart }
@@ -3346,34 +3408,42 @@ begin
     end;
 end;
 
-function TIntChart.SeparateGraph(aVertex: SizeInt): TIntChart;
+function TIntChart.SeparateGraph(aVertex: Integer): TIntChart;
 begin
-  Result := inherited SeparateGraph(aVertex) as TIntChart;
+  Result := SeparateGraphI(IndexOf(aVertex));
 end;
 
 function TIntChart.SeparateGraphI(aIndex: SizeInt): TIntChart;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TIntChart;
+  Result := TIntChart.Create;
+  if SeparateCount > 1 then
+    Result.AssignSeparate(Self, aIndex)
+  else
+    Result.AssignGraph(Self);
 end;
 
 function TIntChart.SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
 begin
-  Result := inherited SubgraphFromVertexList(aList) as TIntChart;
+  Result := TIntChart.Create;
+  Result.AssignVertexList(Self, aList);
 end;
 
 function TIntChart.SubgraphFromTree(constref aTree: TIntArray): TIntChart;
 begin
-  Result := inherited SubgraphFromTree(aTree) as TIntChart;
+  Result := TIntChart.Create;
+  Result.AssignTree(Self, aTree);
 end;
 
 function TIntChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
 begin
-  Result := inherited SubgraphFromEdges(aEdges) as TIntChart;
+  Result := TIntChart.Create;
+  Result.AssignEdges(Self, aEdges);
 end;
 
 function TIntChart.Clone: TIntChart;
 begin
-  Result := inherited Clone as TIntChart;
+  Result := TIntChart.Create;
+  Result.AssignGraph(Self);
 end;
 
 { TStrChart }
@@ -3422,32 +3492,40 @@ end;
 
 function TStrChart.SeparateGraph(const aVertex: string): TStrChart;
 begin
-  Result := inherited SeparateGraph(aVertex) as TStrChart;
+  Result := SeparateGraphI(IndexOf(aVertex));
 end;
 
 function TStrChart.SeparateGraphI(aIndex: SizeInt): TStrChart;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TStrChart;
+  Result := TStrChart.Create;
+  if SeparateCount > 1 then
+    Result.AssignSeparate(Self, aIndex)
+  else
+    Result.AssignGraph(Self);
 end;
 
 function TStrChart.SubgraphFromVertexList(constref aList: TIntArray): TStrChart;
 begin
-  Result := inherited SubgraphFromVertexList(aList) as TStrChart;
+  Result := TStrChart.Create;
+  Result.AssignVertexList(Self, aList);
 end;
 
 function TStrChart.SubgraphFromTree(constref aTree: TIntArray): TStrChart;
 begin
-  Result := inherited SubgraphFromTree(aTree) as TStrChart;
+  Result := TStrChart.Create;
+  Result.AssignTree(Self, aTree);
 end;
 
 function TStrChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
 begin
-  Result := inherited SubgraphFromEdges(aEdges) as TStrChart;
+  Result := TStrChart.Create;
+  Result.AssignEdges(Self, aEdges);
 end;
 
 function TStrChart.Clone: TStrChart;
 begin
-  Result := inherited Clone as TStrChart;
+  Result := TStrChart.Create;
+  Result.AssignGraph(Self);
 end;
 
 { TGWeightedGraph }
@@ -3495,32 +3573,40 @@ end;
 
 function TGWeightedGraph.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
 begin
-  Result := inherited SeparateGraph(aVertex) as TGWeightedGraph;
+  Result := SeparateGraphI(IndexOf(aVertex));
 end;
 
 function TGWeightedGraph.SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TGWeightedGraph;
+  Result := TGWeightedGraph.Create;
+  if SeparateCount > 1 then
+    Result.AssignSeparate(Self, aIndex)
+  else
+    Result.AssignGraph(Self);
 end;
 
 function TGWeightedGraph.SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
 begin
-  Result := inherited SubgraphFromVertexList(aList) as TGWeightedGraph;
+  Result := TGWeightedGraph.Create;
+  Result.AssignVertexList(Self, aList);
 end;
 
 function TGWeightedGraph.SubgraphFromTree(constref aTree: TIntArray): TGWeightedGraph;
 begin
-  Result := inherited SubgraphFromTree(aTree) as TGWeightedGraph;
+  Result := TGWeightedGraph.Create;
+  Result.AssignTree(Self, aTree);
 end;
 
 function TGWeightedGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
 begin
-  Result := inherited SubgraphFromEdges(aEdges) as TGWeightedGraph;
+  Result := TGWeightedGraph.Create;
+  Result.AssignEdges(Self, aEdges);
 end;
 
 function TGWeightedGraph.Clone: TGWeightedGraph;
 begin
-  Result := inherited Clone as TGWeightedGraph;
+  Result := TGWeightedGraph.Create;
+  Result.AssignGraph(Self);
 end;
 
 function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
@@ -3735,32 +3821,40 @@ end;
 
 function TPointsChart.SeparateGraph(aVertex: TPoint): TPointsChart;
 begin
-  Result := inherited SeparateGraph(aVertex) as TPointsChart;
+  Result := SeparateGraphI(IndexOf(aVertex));
 end;
 
 function TPointsChart.SeparateGraphI(aIndex: SizeInt): TPointsChart;
 begin
-  Result := inherited SeparateGraphI(aIndex) as TPointsChart;
+  Result := TPointsChart.Create;
+  if SeparateCount > 1 then
+    Result.AssignSeparate(Self, aIndex)
+  else
+    Result.AssignGraph(Self);
 end;
 
 function TPointsChart.SubgraphFromVertexList(constref aList: TIntArray): TPointsChart;
 begin
-  Result := inherited SubgraphFromVertexList(aList) as TPointsChart;
+  Result := TPointsChart.Create;
+  Result.AssignVertexList(Self, aList);
 end;
 
 function TPointsChart.SubgraphFromTree(constref aTree: TIntArray): TPointsChart;
 begin
-  Result := inherited SubgraphFromTree(aTree) as TPointsChart;
+  Result := TPointsChart.Create;
+  Result.AssignTree(Self, aTree);
 end;
 
 function TPointsChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
 begin
-  Result := inherited SubgraphFromEdges(aEdges) as TPointsChart;
+  Result := TPointsChart.Create;
+  Result.AssignEdges(Self, aEdges);
 end;
 
 function TPointsChart.Clone: TPointsChart;
 begin
-  Result := TPointsChart(inherited Clone);
+  Result := TPointsChart.Create;
+  Result.AssignGraph(Self);
 end;
 
 function TPointsChart.MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate): TIntArray;
