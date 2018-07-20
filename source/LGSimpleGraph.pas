@@ -314,7 +314,7 @@ type
   { returns index of the connected component that contains aVertex }
     function  SeparateIndexOf(constref aVertex: TVertex): SizeInt; inline;
     function  SeparateIndexI(aIndex: SizeInt): SizeInt;
-  { returns number of Items(population) in the InnerConnected component that contains aVertex }
+  { returns number of vertices(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
     function  IsTree: Boolean;
@@ -1700,28 +1700,24 @@ end;
 function TGSimpleGraph.GetApproxMaxIS: TIntArray;
 var
   Cand, Stack: TIntSet;
-  I, J, v, w, Card: SizeInt;
+  I, J, CurrPop, MinPop: SizeInt;
 begin
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
       J := 0;
-      Card := VertexCount;
+      MinPop := VertexCount;
       for I in Cand do
         begin
-          w := 1;
-          for v in AdjVerticesI(I) do
-            if Cand.Contains(v) then
-              Inc(w);
-          if w < Card then
+          CurrPop := Succ(Cand.IntersectionCount(AdjLists[I]));
+          if CurrPop < MinPop then
             begin
-              Card := w;
+              MinPop := CurrPop;
               J := I;
             end;
         end;
+      Cand.Subtract(AdjLists[J]);
       Cand.Delete(J);
-      for I in AdjVerticesI(J) do
-        Cand.Delete(I);
       {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
@@ -1732,20 +1728,20 @@ var
   Matrix: TBoolMatrix;
   Cand: TBoolVector;
   Stack: TIntSet;
-  I, J, CurrIntersect, MinIntersect: SizeInt;
+  I, J, CurrPop, MinPop: SizeInt;
 begin
   Matrix := CreateBoolMatrix;
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
       J := 0;
-      MinIntersect := VertexCount;
+      MinPop := VertexCount;
       for I in Cand do
         begin
-          CurrIntersect := Succ(Cand.IntersectionPop(Matrix[I]));
-          if CurrIntersect < MinIntersect then
+          CurrPop := Succ(Cand.IntersectionPop(Matrix[I]));
+          if CurrPop < MinPop then
             begin
-              MinIntersect := CurrIntersect;
+              MinPop := CurrPop;
               J := I;
             end;
         end;
@@ -1759,19 +1755,19 @@ end;
 function TGSimpleGraph.GetApproxMinIS: TIntArray;
 var
   Cand, Stack: TIntSet;
-  I, J, CurrIsect, MaxIsect: SizeInt;
+  I, J, CurrPop, MaxPop: SizeInt;
 begin
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
       J := 0;
-      MaxIsect := 0;
+      MaxPop := 0;
       for I in Cand do
         begin
-          CurrIsect := Succ(Cand.IntersectionCount(AdjLists[I]));
-          if CurrIsect > MaxIsect then
+          CurrPop := Succ(Cand.IntersectionCount(AdjLists[I]));
+          if CurrPop > MaxPop then
             begin
-              MaxIsect := CurrIsect;
+              MaxPop := CurrPop;
               J := I;
             end;
         end;
@@ -1787,20 +1783,20 @@ var
   Matrix: TBoolMatrix;
   Cand: TBoolVector;
   Stack: TIntSet;
-  I, J, CurrIsect, MaxIsect: SizeInt;
+  I, J, CurrPop, MaxPop: SizeInt;
 begin
   Matrix := CreateBoolMatrix;
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
       J := 0;
-      MaxIsect := 0;
+      MaxPop := 0;
       for I in Cand do
         begin
-          CurrIsect := Succ(Cand.IntersectionPop(Matrix[I]));
-          if CurrIsect > MaxIsect then
+          CurrPop := Succ(Cand.IntersectionPop(Matrix[I]));
+          if CurrPop > MaxPop then
             begin
-              MaxIsect := CurrIsect;
+              MaxPop := CurrPop;
               J := I;
             end;
         end;
