@@ -266,6 +266,7 @@ type
     procedure SetItem(aIndex: SizeInt; const aValue: T);
     class operator Initialize(var d: TGLiteObjectDeque);
     class operator Finalize(var d: TGLiteObjectDeque);
+    class operator Copy(constref aSrc: TGLiteObjectDeque; var aDst: TGLiteObjectDeque);
   public
     function  InnerDeque: PDeque;
     function  GetEnumerator: TEnumerator; inline;
@@ -1483,6 +1484,15 @@ end;
 class operator TGLiteObjectDeque.Finalize(var d: TGLiteObjectDeque);
 begin
   d.Clear;
+end;
+
+class operator TGLiteObjectDeque.Copy(constref aSrc: TGLiteObjectDeque; var aDst: TGLiteObjectDeque);
+begin
+  if @aDst = @aSrc then
+    exit;
+  aDst.CheckFreeItems;
+  aDst.FDeque := aSrc.FDeque;
+  aDst.FOwnsObjects := aSrc.OwnsObjects;
 end;
 
 function TGLiteObjectDeque.InnerDeque: PDeque;
