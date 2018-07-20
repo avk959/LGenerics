@@ -2,6 +2,7 @@ unit LGQueueTest;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH NESTEDPROCVARS}
+
 interface
 uses
   SysUtils, fpcunit, testregistry,
