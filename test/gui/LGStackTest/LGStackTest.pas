@@ -797,7 +797,7 @@ begin
   for I := 0 to 19 do
     s.Pop{%H-}.Free;
   AssertTrue(Counter = 20);
-  s.Clear;
+  s := Default(TObjStack);
   AssertTrue(Counter = 100);
 end;
 

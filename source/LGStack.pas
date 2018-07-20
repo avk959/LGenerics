@@ -147,14 +147,15 @@ type
     TArray = TStack.TArray;
 
   var
-    FOwnsObjects: Boolean;
     FStack: TStack;
+    FOwnsObjects: Boolean;
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
     procedure CheckFreeItems;
   private
     class operator Initialize(var s: TGLiteObjectStack);
     class operator Finalize(var s: TGLiteObjectStack);
+    class operator Copy(constref aSrc: TGLiteObjectStack; var aDst: TGLiteObjectStack);
   public
   type
     TEnumerator = TStack.TEnumerator;
@@ -563,6 +564,15 @@ end;
 class operator TGLiteObjectStack.Finalize(var s: TGLiteObjectStack);
 begin
   s.Clear;
+end;
+
+class operator TGLiteObjectStack.Copy(constref aSrc: TGLiteObjectStack; var aDst: TGLiteObjectStack);
+begin
+  if @aDst = @aSrc then
+    exit;
+  aDst.CheckFreeItems;
+  aDst.FStack := aSrc.FStack;
+  aDst.FOwnsObjects := aSrc.OwnsObjects;
 end;
 
 function TGLiteObjectStack.GetEnumerator: TEnumerator;
