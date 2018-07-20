@@ -178,11 +178,6 @@ type
     procedure ShiftTailLeft(aToIndex: SizeInt);
     procedure InsertItem(aIndex: SizeInt; aValue: T);
     function  DeleteItem(aIndex: SizeInt): T; inline;
-    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
-    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
-    function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
-    procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Mutables: TMutables; inline; //
@@ -1066,20 +1061,26 @@ end;
 
 function TGLiteDeque.GetItem(aIndex: SizeInt): T;
 begin
-  CheckIndexRange(aIndex);
-  Result := FastGetItem(aIndex);
+  if SizeUInt(aIndex) < SizeUInt(FBuffer.Count) then
+    Result := FastGetItem(aIndex)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteDeque.GetMutable(aIndex: SizeInt): PItem;
 begin
-  CheckIndexRange(aIndex);
-  Result := @FBuffer.FItems[FBuffer.InternalIndex(aIndex)];
+  if SizeUInt(aIndex) < SizeUInt(FBuffer.Count) then
+    Result := @FBuffer.FItems[FBuffer.InternalIndex(aIndex)]
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteDeque.SetItem(aIndex: SizeInt; const aValue: T);
 begin
-  CheckIndexRange(aIndex);
-  FastSetItem(aIndex, aValue);
+  if SizeUInt(aIndex) < SizeUInt(FBuffer.Count) then
+    FastSetItem(aIndex, aValue)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteDeque.ShiftHeadRight(aToIndex: SizeInt);
@@ -1203,33 +1204,6 @@ begin
       end;
 end;
 
-procedure TGLiteDeque.IndexOutOfBoundError(aIndex: SizeInt);
-begin
-  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-end;
-
-function TGLiteDeque.IndexInRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex < FBuffer.Count);
-end;
-
-function TGLiteDeque.IndexInInsertRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex <= FBuffer.Count);
-end;
-
-procedure TGLiteDeque.CheckIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
-end;
-
-procedure TGLiteDeque.CheckInsertIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInInsertRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
-end;
-
 function TGLiteDeque.GetEnumerator: TEnumerator;
 begin
   Result := FBuffer.GetEnumerator;
@@ -1327,26 +1301,30 @@ end;
 
 procedure TGLiteDeque.Insert(aIndex: SizeInt; constref aValue: T);
 begin
-  CheckInsertIndexRange(aIndex);
-  InsertItem(aIndex, aValue);
+  if SizeUInt(aIndex) <= SizeUInt(FBuffer.Count) then
+    InsertItem(aIndex, aValue)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteDeque.TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
 begin
-  Result := IndexInInsertRange(aIndex);
+  Result := SizeUInt(aIndex) <= SizeUInt(FBuffer.Count);
   if Result then
     InsertItem(aIndex, aValue);
 end;
 
 function TGLiteDeque.Delete(aIndex: SizeInt): T;
 begin
-  CheckIndexRange(aIndex);
-  Result := DeleteItem(aIndex);
+  if SizeUInt(aIndex) < SizeUInt(FBuffer.Count) then
+    Result := DeleteItem(aIndex)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteDeque.TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
 begin
-  Result := IndexInRange(aIndex);
+  Result := SizeUInt(aIndex) < SizeUInt(FBuffer.Count);
   if Result then
     aValue := DeleteItem(aIndex);
 end;
@@ -1488,8 +1466,7 @@ var
 begin
   if OwnsObjects then
     begin
-      FDeque.CheckIndexRange(aIndex);
-      v := FDeque.FastGetItem(aIndex);
+      v := FDeque.GetItem(aIndex);
       if not TObject.Equal(v, aValue) then
         v.Free;
       FDeque.FastSetItem(aIndex, aValue);
