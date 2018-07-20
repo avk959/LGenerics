@@ -1026,7 +1026,7 @@ end;
 
 class operator TGLiteRingDynBuffer.Copy(constref aSrc: TGLiteRingDynBuffer; var aDst: TGLiteRingDynBuffer);
 begin
-  if if @aDst = @aSrc then
+  if @aDst = @aSrc then
     exit;
   aDst.FItems := System.Copy(aSrc.FItems, 0, aSrc.Capacity);
   aDst.FCount := aSrc.Count;
