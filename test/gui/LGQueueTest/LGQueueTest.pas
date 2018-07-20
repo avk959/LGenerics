@@ -1267,7 +1267,7 @@ begin
   for I := 1 to 20 do
     q.Enqueue(TTestObj.Create(@IncCounter));
   AssertTrue(q.Count = 100);
-  q.Clear;
+  q := Default(TObjQueue);
   AssertTrue(Counter = 120);
 end;
 

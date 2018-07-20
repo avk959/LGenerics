@@ -168,13 +168,14 @@ type
     TArray      = TQueue.TArray;
 
   var
-    FOwnsObjects: Boolean;
     FQueue: TQueue;
+    FOwnsObjects: Boolean;
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
     procedure CheckFreeItems;
     class operator Initialize(var q: TGLiteObjectQueue);
     class operator Finalize(var q: TGLiteObjectQueue);
+    class operator Copy(constref aSrc: TGLiteObjectQueue; var aDst: TGLiteObjectQueue);
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
@@ -684,6 +685,15 @@ end;
 class operator TGLiteObjectQueue.Finalize(var q: TGLiteObjectQueue);
 begin
   q.Clear;
+end;
+
+class operator TGLiteObjectQueue.Copy(constref aSrc: TGLiteObjectQueue; var aDst: TGLiteObjectQueue);
+begin
+  if @aDst = @aSrc then
+    exit;
+  aDst.CheckFreeItems;
+  aDst.FQueue := aSrc.FQueue;
+  aDst.FOwnsObjects := aSrc.OwnsObjects;
 end;
 
 function TGLiteObjectQueue.GetEnumerator: TEnumerator;

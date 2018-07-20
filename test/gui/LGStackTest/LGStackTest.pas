@@ -802,9 +802,7 @@ begin
 end;
 
 initialization
-
   RegisterTest(TGStackTest);
   RegisterTest(TLiteStackTest);
-
 end.
 
