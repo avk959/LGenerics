@@ -253,6 +253,7 @@ type
     procedure CheckFreeItems;
     class operator Initialize(var v: TGLiteObjectVector);
     class operator Finalize(var v: TGLiteObjectVector);
+    class operator Copy(constref aSrc: TGLiteObjectVector; var aDst: TGLiteObjectVector);
   public
   type
     PVector = ^TVector;
@@ -1663,6 +1664,15 @@ end;
 class operator TGLiteObjectVector.Finalize(var v: TGLiteObjectVector);
 begin
   v.Clear;
+end;
+
+class operator TGLiteObjectVector.Copy(constref aSrc: TGLiteObjectVector; var aDst: TGLiteObjectVector);
+begin
+  if @aDst = @aSrc then
+    exit;
+  aDst.CheckFreeItems;
+  aDst.FVector := aSrc.FVector;
+  aDst.FOwnsObjects := aSrc.OwnsObjects;
 end;
 
 function TGLiteObjectVector.InnerVector: PVector;

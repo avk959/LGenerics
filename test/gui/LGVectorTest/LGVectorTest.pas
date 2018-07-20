@@ -1855,7 +1855,7 @@ begin
   for o in a do
     o.Free;
   AssertTrue(Counter = 60);
-  v.Clear;
+  v := Default(TObjVector);
   AssertTrue(Counter = 100);
 end;
 
