@@ -597,8 +597,8 @@ type
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
     function  Insert(constref aValue: T): THandle; inline;  // O(1)
-    function  PeekHead: THandle; inline;                    // O(1)
-    function  TryPeekHead(out aValue: THandle): Boolean; inline;
+    function  HPeek: THandle; inline;                       // O(1)
+    function  TryHPeek(out aValue: THandle): Boolean; inline;
     function  Value(aHandle: THandle): T; inline;
     procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              IncreaseKey
                                                                     //amortized O(logN) DecreaseKey
@@ -711,8 +711,8 @@ type
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
     function  Insert(constref aValue: T): THandle; inline;  // O(1)
-    function  PeekHead: THandle; inline;                    // O(1)
-    function  TryPeekHead(out aValue: THandle): Boolean; inline;
+    function  HPeek: THandle; inline;                       // O(1)
+    function  TryHPeek(out aValue: THandle): Boolean; inline;
     function  Value(aHandle: THandle): T; inline;
     procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              DecreaseKey
                                                                     //amortized O(logN) IncreaseKey
@@ -3514,13 +3514,13 @@ begin
   Result := {%H-}THandle(p);
 end;
 
-function TGLitePairingHeap.PeekHead: THandle;
+function TGLitePairingHeap.HPeek: THandle;
 begin
   CheckEmpty;
   Result := {%H-}THandle(FRoot);
 end;
 
-function TGLitePairingHeap.TryPeekHead(out aValue: THandle): Boolean;
+function TGLitePairingHeap.TryHPeek(out aValue: THandle): Boolean;
 begin
   Result := NonEmpty;
   if Result then
@@ -4020,13 +4020,13 @@ begin
   Result := {%H-}THandle(p);
 end;
 
-function TGLiteComparablePairHeapMin.PeekHead: THandle;
+function TGLiteComparablePairHeapMin.HPeek: THandle;
 begin
   CheckEmpty;
   Result := {%H-}THandle(FRoot);
 end;
 
-function TGLiteComparablePairHeapMin.TryPeekHead(out aValue: THandle): Boolean;
+function TGLiteComparablePairHeapMin.TryHPeek(out aValue: THandle): Boolean;
 begin
   Result := NonEmpty;
   if Result then
