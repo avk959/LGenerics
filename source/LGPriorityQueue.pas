@@ -602,9 +602,9 @@ type
     function  Value(aHandle: THandle): T; inline;
     procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              IncreaseKey
                                                                     //amortized O(logN) DecreaseKey
-    function  Remove(aHandle: THandle): T;                  // amortized O(logN)
+    function  Remove(aHandle: THandle): T;                      // amortized O(logN)
   { note: after Merge all handles from aHeap will remain valid }
-    function  Merge(aHeap: TGLitePairingHeap): SizeInt;     // O(1)
+    function  Merge(var aHeap: TGLitePairingHeap): SizeInt;// O(1)
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -3544,8 +3544,10 @@ begin
   Result := RemoveNode({%H-}PNode(aHandle));
 end;
 
-function TGLitePairingHeap.Merge(aHeap: TGLitePairingHeap): SizeInt;
+function TGLitePairingHeap.Merge(var aHeap: TGLitePairingHeap): SizeInt;
 begin
+  if @Self = @aHeap then
+    exit(0);
   Result := aHeap.Count;
   if Result > 0 then
     begin
