@@ -277,11 +277,10 @@ type
   type
     TCustomPairingHeap = specialize TGCustomPairingHeap<T>;
     IPriorityQueue     = specialize IGPriorityQueue<T>;
+
   protected
   type
-
     PNode = ^TNode;
-
     TNode = record
       Child,
       Sibling,
