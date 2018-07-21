@@ -718,7 +718,7 @@ type
                                                                     //amortized O(logN) IncreaseKey
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
   { note: after Merge all handles from aHeap will remain valid }
-    function  Merge(aHeap: TGLiteComparablePairHeapMin): SizeInt;// O(1)
+    function  Merge(var aHeap: TGLiteComparablePairHeapMin): SizeInt;// O(1)
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -4052,8 +4052,10 @@ begin
   Result := RemoveNode({%H-}PNode(aHandle));
 end;
 
-function TGLiteComparablePairHeapMin.Merge(aHeap: TGLiteComparablePairHeapMin): SizeInt;
+function TGLiteComparablePairHeapMin.Merge(var aHeap: TGLiteComparablePairHeapMin): SizeInt;
 begin
+  if @Self = @aHeap then
+    exit(0);
   Result := aHeap.Count;
   if Result > 0 then
     begin
