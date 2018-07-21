@@ -3122,8 +3122,8 @@ var
 begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  {%H-}Queue.EnsureCapacity(VertexCount);
   Result := CreateIntArray;
+  Visited[aRoot] := True;
   repeat
     for Next in AdjVerticesI(aRoot) do
       if not Visited[Next] then
