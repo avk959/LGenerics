@@ -360,8 +360,8 @@ type
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
     function  Insert(constref aValue: T): THandle; inline;  // O(1)
-    function  PeekHead: THandle; inline;                    // O(1)
-    function  TryPeekHead(out aHandle: THandle): Boolean; inline;
+    function  HPeek: THandle; inline;                       // O(1)
+    function  TryHPeek(out aHandle: THandle): Boolean; inline;
     function  Value(aHandle: THandle): T; inline;
     procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1) IncreaseKey
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
@@ -2163,13 +2163,13 @@ begin
   Result := {%H-}THandle(DoEnqueue(aValue));
 end;
 
-function TGCustomPairingHeap.PeekHead: THandle;
+function TGCustomPairingHeap.HPeek: THandle;
 begin
   CheckEmpty;
   Result := {%H-}THandle(FRoot);
 end;
 
-function TGCustomPairingHeap.TryPeekHead(out aHandle: THandle): Boolean;
+function TGCustomPairingHeap.TryHPeek(out aHandle: THandle): Boolean;
 begin
   Result := ElemCount > 0;
   if Result then

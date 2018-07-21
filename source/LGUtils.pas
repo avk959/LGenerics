@@ -255,8 +255,8 @@ type
   IGPriorityQueue<T> = interface(IGQueue<T>)
   ['{39ADFF1D-018D-423B-A16A-8942B06D0A76}']
     function  Insert(constref aValue: T): THandle;
-    function  PeekHead: THandle;
-    function  TryPeekHead(out aValue: THandle): Boolean;
+    function  HPeek: THandle;
+    function  TryHPeek(out aValue: THandle): Boolean;
     function  Value(h: THandle): T;
     procedure Update(h: THandle; constref aValue: T);
     function  Remove(h: THandle): T;
