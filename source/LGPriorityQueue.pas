@@ -544,6 +544,7 @@ type
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
+      property  Current: T read GetCurrent;
     end;
 
     TReverse = record
@@ -658,6 +659,7 @@ type
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
+      property  Current: T read GetCurrent;
     end;
 
     TReverse = record
