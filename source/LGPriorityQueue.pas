@@ -92,8 +92,6 @@ type
   { TGObjBinHeap assumes that class T implements TCmpRel}
   generic TGObjBinHeap<T: class> = class(specialize TGObjectBinHeap<T, T>);
 
-  { TGComparableBinHeap }
-
   generic TGComparableBinHeap<T> = class(specialize TGCustomBinHeap<T>)
   protected
     class function DoCompare(constref L, R: T): SizeInt; static;
@@ -104,7 +102,7 @@ type
   end;
 
   { TGComparableBinHeapMax: maximizing priority queue with queue interface,
-    it assumes that type T has defined comparision operators}
+    it assumes that type T has defined comparision operators }
   generic TGComparableBinHeapMax<T> = class(specialize TGComparableBinHeap<T>)
   protected
     procedure BuildHeap; override;
@@ -113,7 +111,7 @@ type
   end;
 
   { TGComparableBinHeapMin: minimizing priority queue with queue interface,
-    it assumes that type T has defined comparision operators}
+    it assumes that type T has defined comparision operators }
   generic TGComparableBinHeapMin<T> = class(specialize TGComparableBinHeap<T>)
   protected
     procedure BuildHeap; override;
@@ -205,8 +203,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TGLiteThreadBinHeap }
-
   generic TGLiteThreadBinHeap<T, TCmpRel> = class
   public
   type
@@ -228,6 +224,8 @@ type
     procedure Unlock; inline;
   end;
 
+  { TGLiteComparableBinHeapMin implements minimizing priority queue with queue interface;
+    it assumes that type T has defined comparision operators }
   generic TGLiteComparableBinHeapMin<T> = record
   public
   type
@@ -613,8 +611,7 @@ type
   end;
 
   { TGLiteComparablePairHeapMin implements minimizing priority queue;
-      functor TCmpRel (comparision relation) must provide
-        class function Compare([const[ref]] L, R: T): SizeInt; }
+    it assumes that type T has defined comparision operators }
   generic TGLiteComparablePairHeapMin<T> = record
   private
   type
