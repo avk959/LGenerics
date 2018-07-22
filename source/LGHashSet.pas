@@ -1970,7 +1970,7 @@ end;
 
 function TGDisjointSetUnion.TagI(aIndex: SizeInt): SizeInt;
 begin
-  if (aIndex >= 0) and (aIndex < Count) then
+  if SizeUInt(aIndex) < SizeUInt(Count) then
     Result := GetTag(aIndex)
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
