@@ -221,8 +221,6 @@ type
       override;
   end;
 
-  { TGObjectTreeSet }
-
   generic TGObjectTreeSet<T: class; TCmpRel> = class(specialize TGBaseTreeSet<T, TCmpRel>)
   private
     FOwnsObjects: Boolean;
@@ -292,8 +290,6 @@ type
       override;
   end;
 
-  { TGObjectRegularTreeSet }
-
   generic TGObjectRegularTreeSet<T: class> = class(specialize TGRegularTreeSet<T>)
   private
     FOwnsObjects: Boolean;
@@ -359,8 +355,6 @@ type
     function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGDelegatedTreeSet;
       override;
   end;
-
-  { TGObjectDelegatedTreeSet }
 
   generic TGObjectDelegatedTreeSet<T: class> = class(specialize TGDelegatedTreeSet<T>)
   protected
