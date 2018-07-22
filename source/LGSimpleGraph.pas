@@ -197,7 +197,7 @@ type
     FConnectedValid: Boolean;
     procedure ResetTags;
     function  SeparateTag(aIndex: SizeInt): SizeInt;
-    function  SeparateMerged(L, R: SizeInt): Boolean;
+    function  SeparateJoin(L, R: SizeInt): Boolean;
     procedure ValidateConnected;
     function  GetConnected: Boolean; inline;
     function  GetDensity: Double; inline;
@@ -1398,7 +1398,7 @@ begin
   FNodeList[aIndex].Tag := Result;
 end;
 
-function TGSimpleGraph.SeparateMerged(L, R: SizeInt): Boolean;
+function TGSimpleGraph.SeparateJoin(L, R: SizeInt): Boolean;
 begin
   L := SeparateTag(L);
   R := SeparateTag(R);
@@ -1439,7 +1439,7 @@ begin
               begin
                 Visited[Next] := True;
                 Queue.Enqueue(Next);
-                if SeparateMerged(Curr, Next) then
+                if SeparateJoin(Curr, Next) then
                   Dec(FCompCount);
               end;
         until not Queue{%H-}.TryDequeue(Curr);
@@ -1495,7 +1495,7 @@ begin
       if FNodeList[aDst].AdjList.Add(TAdjItem.Create(aSrc, aData)) then
         begin
           Inc(FEdgeCount);
-          if ConnectedValid and SeparateMerged(aSrc, aDst) then
+          if ConnectedValid and SeparateJoin(aSrc, aDst) then
             begin
               Dec(FCompCount);
               FConnected := FCompCount = 1;
@@ -3683,7 +3683,7 @@ begin
   Dsu.Size := VertexCount;
   aTotalWeight := ZeroWeight;
   for e in LocEdges do
-    if Dsu.Merged(e.Source, e.Destination)  then
+    if Dsu.Join(e.Source, e.Destination)  then
       begin
         Result[e.Destination] := e.Source;
         aTotalWeight += e.Weight;

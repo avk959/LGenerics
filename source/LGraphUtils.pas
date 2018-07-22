@@ -672,10 +672,8 @@ type
     function  Tag(aValue: SizeInt): SizeInt;
     function  InSameSet(L, R: SizeInt): Boolean; inline;
     function  InDiffSets(L, R: SizeInt): Boolean; inline;
-  { if L and R related to the different subsets, these subsets will be merged into one with a single Tag }
-    procedure Merge(L, R: SizeInt);
   { returns True and merges L and R, if L and R related to the different subsets, False otherwise }
-    function  Merged(L, R: SizeInt): Boolean;
+    function  Join(L, R: SizeInt): Boolean;
     property  Size: SizeInt read GetSize write SetSize;
   end;
 
@@ -3065,17 +3063,7 @@ begin
   Result := Tag(L) <> Tag(R);
 end;
 
-procedure TDisjointSetUnion.Merge(L, R: SizeInt);
-begin
-  L := Tag(L);
-  R := Tag(R);
-  if NextRandomBoolean then // random selection
-    FList[L] := R
-  else
-    FList[R] := L;
-end;
-
-function TDisjointSetUnion.Merged(L, R: SizeInt): Boolean;
+function TDisjointSetUnion.Join(L, R: SizeInt): Boolean;
 begin
   L := Tag(L);
   R := Tag(R);
