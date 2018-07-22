@@ -2990,7 +2990,7 @@ begin
   if aValue <> LoadFactor then
     begin
       FLoadFactor := aValue;
-      UpdateExpandTreshold;
+      {%H-}UpdateExpandTreshold;
       if Count >= ExpandTreshold then
         Expand;
     end;
