@@ -400,17 +400,21 @@ type
   { returns count of added elements }
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
+    function  AddAll(constref aSet: TGLiteHashSetLP): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
     function  NonContains(constref aValue: T): Boolean; inline;
     function  ContainsAny(constref a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
+    function  ContainsAny(constref aSet: TGLiteHashSetLP): Boolean;
     function  ContainsAll(constref a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
+    function  ContainsAll(constref aSet: TGLiteHashSetLP): Boolean;
   { returns True if element removed }
     function  Remove(constref aValue: T): Boolean; inline;
   { returns count of removed elements }
     function  RemoveAll(constref a: array of T): SizeInt;
     function  RemoveAll(e: IEnumerable): SizeInt;
+    function  RemoveAll(constref aSet: TGLiteHashSetLP): SizeInt;
   { returns count of removed elements }
     function  RemoveIf(aTest: TTest): SizeInt;
     function  RemoveIf(aTest: TOnTest): SizeInt;
@@ -420,8 +424,9 @@ type
     function  ExtractIf(aTest: TTest): TArray;
     function  ExtractIf(aTest: TOnTest): TArray;
     function  ExtractIf(aTest: TNestTest): TArray;
-  { will contain only those elements that are simultaneously contained in self and aCollection }
+  { will contain only those elements that are simultaneously contained in self and aCollection/aSet }
     procedure RetainAll(aCollection: ICollection);
+    procedure RetainAll(constref aSet: TGLiteHashSetLP);
     function  IsSuperset(constref aSet: TGLiteHashSetLP): Boolean;
     function  IsSubset(constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  IsEqual(constref aSet: TGLiteHashSetLP): Boolean;
@@ -1362,14 +1367,14 @@ begin
   else
     if @Result = @R then
       begin
-        for v in L do
-          if R.NonContains(v) then
+        for {%H-}v in L do
+          if R{%H-}.NonContains(v) then
             tmp.Add(v);
         Result := tmp;
       end
     else
-      for v in L do
-        if R.NonContains(v) then
+      for {%H-}v in L do
+        if R{%H-}.NonContains(v) then
           Result.Add(v);
 end;
 
@@ -1408,7 +1413,7 @@ end;
 
 class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
 begin
-  Result := L.IsSubset(R);
+  Result := L{%H-}.IsSubset(R);
 end;
 
 function TGLiteHashSetLP.DefaultLoadFactor: Single;
@@ -1497,6 +1502,20 @@ begin
     Result += Ord(Add(v));
 end;
 
+function TGLiteHashSetLP.AddAll(constref aSet: TGLiteHashSetLP): SizeInt;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      Result := 0;
+      for {%H-}v in aSet do
+        Result += Ord(Add(v));
+    end
+  else
+    Result := 0;
+end;
+
 function TGLiteHashSetLP.Contains(constref aValue: T): Boolean;
 var
   p: SizeInt;
@@ -1529,6 +1548,18 @@ begin
   Result := False;
 end;
 
+function TGLiteHashSetLP.ContainsAny(constref aSet: TGLiteHashSetLP): Boolean;
+var
+  v: T;
+begin
+  if @aSet = @Self then
+    exit(True);
+  for {%H-}v in aSet do
+    if Contains(v) then
+      exit(True);
+  Result := False;
+end;
+
 function TGLiteHashSetLP.ContainsAll(constref a: array of T): Boolean;
 var
   v: T;
@@ -1544,6 +1575,18 @@ var
   v: T;
 begin
   for v in e do
+    if NonContains(v) then
+      exit(False);
+  Result := True;
+end;
+
+function TGLiteHashSetLP.ContainsAll(constref aSet: TGLiteHashSetLP): Boolean;
+var
+  v: T;
+begin
+  if @aSet = @Self then
+    exit(True);
+  for {%H-}v in aSet do
     if NonContains(v) then
       exit(False);
   Result := True;
@@ -1571,10 +1614,28 @@ begin
   for v in e do
     Result += Ord(Remove(v));
 end;
+
+function TGLiteHashSetLP.RemoveAll(constref aSet: TGLiteHashSetLP): SizeInt;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      Result := 0;
+      for {%H-}v in aSet do
+        Result += Ord(Remove(v));
+    end
+  else
+    begin
+      Result := Count;
+      Clear;
+    end;
+end;
+
 function TGLiteHashSetLP.RemoveIf(aTest: TTest): SizeInt;
 begin
   Result := 0;
-  with FTable.GetRemovableEnumerator do
+  with FTable{%H-}.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1586,7 +1647,7 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TOnTest): SizeInt;
 begin
   Result := 0;
-  with FTable.GetRemovableEnumerator do
+  with FTable{%H-}.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1598,7 +1659,7 @@ end;
 function TGLiteHashSetLP.RemoveIf(aTest: TNestTest): SizeInt;
 begin
   Result := 0;
-  with FTable.GetRemovableEnumerator do
+  with FTable{%H-}.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1617,7 +1678,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovableEnumerator do
+  with FTable{%H-}.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1635,7 +1696,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovableEnumerator do
+  with FTable{%H-}.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1653,7 +1714,7 @@ var
   I: SizeInt = 0;
 begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  with FTable.GetRemovableEnumerator do
+  with FTable{%H-}.GetRemovableEnumerator do
     while MoveNext do
       if aTest(Current^.Key) then
         begin
@@ -1668,10 +1729,19 @@ end;
 
 procedure TGLiteHashSetLP.RetainAll(aCollection: ICollection);
 begin
-  with FTable.GetRemovableEnumerator do
+  with FTable{%H-}.GetRemovableEnumerator do
     while MoveNext do
       if aCollection.NonContains(Current^.Key) then
         RemoveCurrent;
+end;
+
+procedure TGLiteHashSetLP.RetainAll(constref aSet: TGLiteHashSetLP);
+begin
+  if @aSet <> @Self then
+    with FTable{%H-}.GetRemovableEnumerator do
+      while MoveNext do
+        if aSet.NonContains(Current^.Key) then
+          RemoveCurrent;
 end;
 
 function TGLiteHashSetLP.IsSuperset(constref aSet: TGLiteHashSetLP): Boolean;
@@ -1682,7 +1752,7 @@ begin
     begin
       if Count >= aSet.Count then
         begin
-          for v in aSet do
+          for {%H-}v in aSet do
             if NonContains(v) then
               exit(False);
           Result := True;
@@ -1707,7 +1777,7 @@ begin
     begin
       if Count <> aSet.Count then
         exit(False);
-      for v in aSet do
+      for {%H-}v in aSet do
         if NonContains(v) then
           exit(False);
       Result := True;
@@ -1722,7 +1792,7 @@ var
 begin
   if @aSet <> @Self then
     begin
-      for v in aSet do
+      for {%H-}v in aSet do
         if Contains(v) then
           exit(True);
       Result := False;
@@ -1733,35 +1803,43 @@ end;
 
 procedure TGLiteHashSetLP.Intersect(constref aSet: TGLiteHashSetLP);
 begin
-  with FTable.GetRemovableEnumerator do
-    while MoveNext do
-      if aSet.NonContains(Current^.Key) then
-        RemoveCurrent;
+  if @aSet <> @Self then
+    with FTable{%H-}.GetRemovableEnumerator do
+      while MoveNext do
+        if aSet.NonContains(Current^.Key) then
+          RemoveCurrent;
 end;
 
 procedure TGLiteHashSetLP.Join(constref aSet: TGLiteHashSetLP);
 var
   v: T;
 begin
-  for v in aSet do
-    Add(v);
+  if @aSet <> @Self then
+    for {%H-}v in aSet do
+      Add(v);
 end;
 
 procedure TGLiteHashSetLP.Subtract(constref aSet: TGLiteHashSetLP);
 var
   v: T;
 begin
-  for v in aSet do
-    Remove(v);
+  if @aSet <> @Self then
+    for {%H-}v in aSet do
+      Remove(v)
+  else
+    Clear;
 end;
 
 procedure TGLiteHashSetLP.SymmetricSubtract(constref aSet: TGLiteHashSetLP);
 var
   v: T;
 begin
-  for v in aSet do
-    if not Remove(v) then
-      Add(v);
+  if @aSet <> @Self then
+    for {%H-}v in aSet do
+      if not Remove(v) then
+        Add(v)
+  else
+    Clear;
 end;
 
 { TGDisjointSetUnion.TEnumerator }
