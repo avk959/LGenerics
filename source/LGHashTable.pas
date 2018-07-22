@@ -3464,7 +3464,6 @@ var
   h: SizeInt;
   sr: TSearchResult;
 begin
-  sr.PrevIndex := NULL_INDEX;
   h := TKeyEqRel.HashCode(aKey);
   if Count > 0 then
     Result := DoFind(aKey, h, sr)
