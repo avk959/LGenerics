@@ -475,7 +475,9 @@ type
     FDsu: array of SizeInt;
     function  GetCapacity: SizeInt; inline;
     function  GetCount: SizeInt; inline;
+    function  FindOrAdd(constref aValue: T): SizeInt;
     procedure ExpandDsu;
+    function  GetItem(aIndex: SizeInt): T; inline;
     function  GetTag(aValue: SizeInt): SizeInt;
   public
     function  GetEnumerator: TEnumerator; inline;
@@ -492,8 +494,8 @@ type
   { destroys subsets }
     procedure Reset;
   { values related to the same subset will have the same Tag }
-    function  Tag(constref aValue: T): SizeInt; inline;
-    function  TagI(aIndex: SizeInt): SizeInt; inline;
+    function  Tag(constref aValue: T): SizeInt;
+    function  TagI(aIndex: SizeInt): SizeInt;
     function  InSameSet(constref L, R: T): Boolean; inline;
     function  InSameSetI(L, R: SizeInt): Boolean; inline;
     function  InDiffSets(constref L, R: T): Boolean; inline;
@@ -503,6 +505,7 @@ type
     function  JoinI(L, R: SizeInt): Boolean;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
+    property  Items[aIndex: SizeInt]: T read GetItem; default;
   end;
 
 implementation
@@ -1859,6 +1862,20 @@ begin
   Result := FTable.Count;
 end;
 
+function TGDisjointSetUnion.FindOrAdd(constref aValue: T): SizeInt;
+var
+  OldCapacity: SizeInt;
+  e: PEntry;
+begin
+  OldCapacity := Capacity;
+  if not FTable.FindOrAdd(aValue, e, Result) then
+    begin
+      e^.Key := aValue;
+      if Capacity > OldCapacity then
+        ExpandDsu;
+    end;
+end;
+
 function TGDisjointSetUnion.GetEnumerator: TEnumerator;
 begin
   Result.FList := FTable.NodeList;
@@ -1904,6 +1921,14 @@ begin
   System.SetLength(FDsu, NewCapacity);
   for I := I to Pred(NewCapacity) do
     FDsu[I] := I;
+end;
+
+function TGDisjointSetUnion.GetItem(aIndex: SizeInt): T;
+begin
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := FTable.NodeList[aIndex].Data.Key
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGDisjointSetUnion.GetTag(aValue: SizeInt): SizeInt;
@@ -1964,8 +1989,11 @@ begin
 end;
 
 function TGDisjointSetUnion.Tag(constref aValue: T): SizeInt;
+var
+  I: SizeInt;
 begin
-  Result := TagI(IndexOf(aValue));
+  I := FindOrAdd(aValue);
+  Result := GetTag(I);
 end;
 
 function TGDisjointSetUnion.TagI(aIndex: SizeInt): SizeInt;
@@ -1977,8 +2005,12 @@ begin
 end;
 
 function TGDisjointSetUnion.InSameSet(constref L, R: T): Boolean;
+var
+  I, J: SizeInt;
 begin
-  Result := InSameSetI(IndexOf(L), IndexOf(R));
+  I := FindOrAdd(L);
+  J := FindOrAdd(R);
+  Result := GetTag(I) = GetTag(J);
 end;
 
 function TGDisjointSetUnion.InSameSetI(L, R: SizeInt): Boolean;
@@ -1987,8 +2019,12 @@ begin
 end;
 
 function TGDisjointSetUnion.InDiffSets(constref L, R: T): Boolean;
+var
+  I, J: SizeInt;
 begin
-  Result := InDiffSetsI(IndexOf(L), IndexOf(R));
+  I := FindOrAdd(L);
+  J := FindOrAdd(R);
+  Result := GetTag(I) <> GetTag(J);
 end;
 
 function TGDisjointSetUnion.InDiffSetsI(L, R: SizeInt): Boolean;
@@ -1997,8 +2033,18 @@ begin
 end;
 
 function TGDisjointSetUnion.Join(constref L, R: T): Boolean;
+var
+  I, J: SizeInt;
 begin
-  Result := JoinI(IndexOf(L), IndexOf(R));
+  I := GetTag(FindOrAdd(L));
+  J := GetTag(FindOrAdd(R));
+  if I = J then
+    exit(False);
+  if NextRandomBoolean then
+    FDsu[I] := J
+  else
+    FDsu[J] := I;
+  Result := True;
 end;
 
 function TGDisjointSetUnion.JoinI(L, R: SizeInt): Boolean;
