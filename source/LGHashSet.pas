@@ -215,8 +215,6 @@ type
     it assumes that type T implements TEqRel }
   generic TGChainHashSet<T> = class(specialize TGBaseChainHashSet<T, T>);
 
-  { TGCustomObjectHashSet }
-
   generic TGCustomObjectHashSet<T: class> = class abstract(specialize TGCustomHashSet<T>)
   private
     FOwnsObjects: Boolean;
@@ -244,8 +242,6 @@ type
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
-  { TGObjectHashSetLP }
-
   generic TGObjectHashSetLP<T: class; TEqRel> = class(specialize TGCustomObjectHashSet<T>)
   protected
     class function GetClass: THashSetClass; override;
@@ -256,8 +252,6 @@ type
 
  { TGObjHashSetLP assumes that type T implements TEqRel }
   generic TGObjHashSetLP<T: class> = class(specialize TGObjectHashSetLP<T, T>);
-
-  { TGObjectHashSetLPT }
 
   generic TGObjectHashSetLPT<T: class; TEqRel> = class(specialize TGCustomObjectHashSet<T>)
   private
@@ -277,8 +271,6 @@ type
   { TGObjHashSetLPT assumes that type T implements TEqRel }
   generic TGObjHashSetLPT<T: class> = class(specialize TGObjectHashSetLPT<T, T>);
 
-  { TGObjectHashSetQP }
-
   generic TGObjectHashSetQP<T: class; TEqRel> = class(specialize TGCustomObjectHashSet<T>)
   private
     function GetTombstonesCount: SizeInt; inline;
@@ -296,8 +288,6 @@ type
 
   { TGObjHashSetQP assumes that type T implements TEqRel }
   generic TGObjHashSetQP<T: class> = class(specialize TGObjectHashSetQP<T, T>);
-
-  { TGObjectOrderedHashSet }
 
   generic TGObjectOrderedHashSet<T: class; TEqRel> = class(specialize TGBaseOrderedHashSet<T, TEqRel>)
   private
@@ -334,8 +324,6 @@ type
 
   { TGObjOrderedHashSet assumes that type T implements TEqRel }
   generic TGObjOrderedHashSet<T: class> = class(specialize TGObjectOrderedHashSet<T, T>);
-
-  { TGObjectChainHashSet }
 
   generic TGObjectChainHashSet<T: class; TEqRel> = class(specialize TGCustomObjectHashSet<T>)
   protected
