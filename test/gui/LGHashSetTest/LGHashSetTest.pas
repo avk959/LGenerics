@@ -421,8 +421,6 @@ type
     procedure ObjectSetSymmetricSubtract;
   end;
 
-  { TLiteHashSetTest }
-
   TLiteHashSetTest = class(TTestClass)
   private
   type
@@ -462,6 +460,28 @@ type
     procedure IsEqual;
     procedure Intersecting;
     procedure SymmetricSubtract;
+  end;
+
+  TGDisjointSetUnionTest = class(TTestCase)
+  private
+  type
+    TDsu = specialize TGDisjointSetUnion<string, string>;
+
+  published
+    procedure Add;
+    procedure Clear;
+    procedure EnsureCapacity;
+    procedure GetEnumerator;
+    procedure ToArray;
+    procedure Join;
+    procedure JoinI;
+    procedure Tag;
+    procedure TagI;
+    procedure InSameSet;
+    procedure InSameSetI;
+    procedure InDiffSets;
+    procedure InDiffSetsI;
+    procedure Reset;
   end;
 
 implementation
@@ -5065,13 +5085,13 @@ var
 begin
   s.AddAll(IntArray21);
   s11.AddAll(IntArray11);
-  AssertTrue(s.Intersecting(s));
-  AssertTrue(s.Intersecting(s11));
-  AssertTrue(s11.Intersecting(s));
+  AssertTrue(s.Intersecting(s){%H-});
+  AssertTrue(s.Intersecting(s11){%H-});
+  AssertTrue(s11.Intersecting(s){%H-});
   s.Clear;
   s.AddAll(IntArray10);
-  AssertFalse(s.Intersecting(s11));
-  AssertFalse(s11.Intersecting(s));
+  AssertFalse(s.Intersecting(s11){%H-});
+  AssertFalse(s11.Intersecting(s){%H-});
 end;
 
 procedure TLiteHashSetTest.SymmetricSubtract;
@@ -5102,6 +5122,207 @@ begin
   AssertTrue(s.ContainsAll(IntArray21));
 end;
 
+{ TGDisjointSetUnionTest }
+
+procedure TGDisjointSetUnionTest.Add;
+var
+  d: TDsu;
+begin
+  AssertTrue(d.Count = 0);
+  AssertTrue(d.Add('str0') = 0);
+  AssertTrue(d.Count = 1);
+  AssertTrue(d.Contains('str0'));
+  AssertTrue(d.Add('str1') = 1);
+  AssertTrue(d.Count = 2);
+  AssertTrue(d.Contains('str1'));
+  AssertTrue('index = ' + d.Add('str0').ToString, d.Add('str0') = -1);
+  AssertTrue(d.Add('str1') = -1);
+  AssertTrue(d.Count = 2);
+  AssertTrue(d.Add('str2') = 2);
+  AssertTrue(d.Count = 3);
+  AssertTrue(d.Contains('str2'));
+end;
+
+procedure TGDisjointSetUnionTest.Clear;
+var
+  d: TDsu;
+  I: SizeInt;
+begin
+  for I in [1..50] do
+    d.Add('str' + I.ToString);
+  AssertTrue(d.Count = 50);
+  AssertTrue(d.Capacity >= 50);
+  d.Clear;
+  AssertTrue(d.Count = 0);
+  AssertTrue(d.Capacity = 0);
+end;
+
+procedure TGDisjointSetUnionTest.EnsureCapacity;
+var
+  d: TDsu;
+begin
+  AssertTrue(d.Capacity = 0);
+  d.EnsureCapacity(100);
+  AssertTrue(d.Capacity >= 100);
+end;
+
+procedure TGDisjointSetUnionTest.GetEnumerator;
+var
+  d: TDsu;
+  I: SizeInt;
+  s: string;
+begin
+  for I in [1..50] do
+    d.Add('str' + I.ToString);
+  I := 1;
+  for s in d do
+    begin
+      AssertTrue(s = 'str' + I.ToString);
+      Inc(I);
+    end;
+end;
+
+procedure TGDisjointSetUnionTest.ToArray;
+var
+  d: TDsu;
+  I: SizeInt;
+  s: string;
+  a: TStringArray;
+begin
+  for I in [1..50] do
+    d.Add('str' + I.ToString);
+  a := d.ToArray;
+  I := 1;
+  for s in a do
+    begin
+      AssertTrue(s = 'str' + I.ToString);
+      Inc(I);
+    end;
+end;
+
+procedure TGDisjointSetUnionTest.Join;
+var
+  d: TDsu;
+begin
+  AssertFalse(d.Join('str0', 'str0'));
+  AssertTrue(d.Join('str0', 'str1'));
+  AssertTrue(d.Contains('str1'));
+  AssertTrue(d.Count = 2);
+  AssertFalse(d.Join('str0', 'str1'));
+  AssertTrue(d.Add('str2') = 2);
+  AssertTrue(d.Join('str0', 'str2'));
+  AssertTrue(d.Count = 3);
+  AssertTrue(d.Contains('str2'));
+end;
+
+procedure TGDisjointSetUnionTest.JoinI;
+var
+  d: TDsu;
+  I, J: SizeInt;
+begin
+  I := d.Add('str0');
+  AssertFalse(d.JoinI(I, I));
+  J := d.Add('str1');
+  AssertTrue(d.JoinI(I, J));
+  AssertFalse(d.JoinI(I, J));
+  J := d.Add('str2');
+  AssertTrue(d.JoinI(I, J));
+  AssertFalse(d.JoinI(I, J));
+end;
+
+procedure TGDisjointSetUnionTest.Tag;
+var
+  d: TDsu;
+  I, J: SizeInt;
+begin
+  I := d.Add('str0');
+  AssertTrue(d.Tag('str0') = I);
+  J := d.Add('str1');
+  AssertTrue(d.Tag('str1') = J);
+  AssertTrue(d.Join('str0', 'str1'));
+  I := d.Tag('str0');
+  J := d.Tag('str1');
+  AssertTrue(I = J);
+end;
+
+procedure TGDisjointSetUnionTest.TagI;
+var
+  d: TDsu;
+  I, J: SizeInt;
+begin
+  I := d.Add('str0');
+  AssertTrue(d.TagI(I) = I);
+  J := d.Add('str1');
+  AssertTrue(d.TagI(J) = J);
+  AssertTrue(d.JoinI(I, J));
+  I := d.TagI(I);
+  J := d.TagI(J);
+  AssertTrue(I = J);
+end;
+
+procedure TGDisjointSetUnionTest.InSameSet;
+var
+  d: TDsu;
+begin
+  AssertFalse(d.InSameSet('str0', 'str1'));
+  AssertTrue(d.Join('str0', 'str1'));
+  AssertTrue(d.InSameSet('str0', 'str1'));
+  AssertFalse(d.InSameSet('str0', 'str2'));
+  AssertTrue(d.Join('str1', 'str2'));
+  AssertTrue(d.InSameSet('str0', 'str2'));
+end;
+
+procedure TGDisjointSetUnionTest.InSameSetI;
+var
+  d: TDsu;
+  I, J: SizeInt;
+begin
+  I := d.Add('str0');
+  J := d.Add('str1');
+  AssertFalse(d.InSameSetI(I, J));
+  AssertTrue(d.JoinI(I, J));
+  AssertTrue(d.InSameSetI(I, J));
+end;
+
+procedure TGDisjointSetUnionTest.InDiffSets;
+var
+  d: TDsu;
+begin
+  AssertTrue(d.InDiffSets('str0', 'str1'));
+  AssertTrue(d.Join('str0', 'str1'));
+  AssertFalse(d.InDiffSets('str0', 'str1'));
+  AssertTrue(d.InDiffSets('str0', 'str2'));
+  AssertTrue(d.Join('str1', 'str2'));
+  AssertFalse(d.InDiffSets('str0', 'str2'));
+end;
+
+procedure TGDisjointSetUnionTest.InDiffSetsI;
+var
+  d: TDsu;
+  I, J: SizeInt;
+begin
+  I := d.Add('str0');
+  J := d.Add('str1');
+  AssertTrue(d.InDiffSetsI(I, J));
+  AssertTrue(d.JoinI(I, J));
+  AssertFalse(d.InDiffSetsI(I, J));
+end;
+
+procedure TGDisjointSetUnionTest.Reset;
+var
+  d: TDsu;
+begin
+  AssertTrue(d.Join('str0', 'str1'));
+  AssertTrue(d.Join('str1', 'str2'));
+  AssertTrue(d.InSameSet('str0', 'str1'));
+  AssertTrue(d.InSameSet('str1', 'str2'));
+  AssertTrue(d.InSameSet('str0', 'str2'));
+  d.Reset;
+  AssertFalse(d.InSameSet('str0', 'str1'));
+  AssertFalse(d.InSameSet('str1', 'str2'));
+  AssertFalse(d.InSameSet('str0', 'str2'));
+end;
+
 initialization
   RegisterTest(THashSetLPTest);
   RegisterTest(THashSetLPTTest);
@@ -5109,5 +5330,6 @@ initialization
   RegisterTest(TChainHashSetTest);
   RegisterTest(TOrdHashSetTest);
   RegisterTest(TLiteHashSetTest);
+  RegisterTest(TGDisjointSetUnionTest);
 end.
 
