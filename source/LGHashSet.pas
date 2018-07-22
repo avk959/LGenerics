@@ -456,6 +456,8 @@ type
 
   public
   type
+    TArray = array of T;
+
     TEnumerator = record
     private
       FList: PNode;
@@ -477,6 +479,7 @@ type
     function  GetTag(aValue: SizeInt): SizeInt;
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  ToArray: TArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure Clear; inline;
@@ -1861,6 +1864,19 @@ begin
   Result.FList := FTable.NodeList;
   Result.FLastIndex := Pred(FTable.Count);
   Result.FCurrIndex := -1;
+end;
+
+function TGDisjointSetUnion.ToArray: TArray;
+var
+  v: T;
+  I: SizeInt = 0;
+begin
+  System.SetLength(Result, Count);
+  for v in Self do
+    begin
+      Result[I] := v;
+      Inc(I);
+    end;
 end;
 
 function TGDisjointSetUnion.IsEmpty: Boolean;
