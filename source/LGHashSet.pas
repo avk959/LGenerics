@@ -1820,9 +1820,11 @@ var
   v: T;
 begin
   if @aSet <> @Self then
-    for {%H-}v in aSet do
-      if not Remove(v) then
-        Add(v)
+    begin
+      for {%H-}v in aSet do
+        if not Remove(v) then
+          Add(v)
+    end
   else
     Clear;
 end;
