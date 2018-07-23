@@ -1945,7 +1945,7 @@ var
   I: SizeInt;
 begin
   I := FTree.FindLess(aPattern);
-  Result := I >= 0;
+  Result := I > 0;
   if Result then
     aValue := FTree.NodeList[I].Data.Key;
 end;
@@ -1955,7 +1955,7 @@ var
   I: SizeInt;
 begin
   I := FTree.FindLessOrEqual(aPattern);
-  Result := I >= 0;
+  Result := I > 0;
   if Result then
     aValue := FTree.NodeList[I].Data.Key;
 end;
@@ -1965,7 +1965,7 @@ var
   I: SizeInt;
 begin
   I := FTree.FindGreaterOrEqual(aPattern);
-  Result := I >= 0;
+  Result := I > 0;
   if Result then
     aValue := FTree.NodeList[I].Data.Key;
 end;
@@ -1975,7 +1975,7 @@ var
   I: SizeInt;
 begin
   I := FTree.FindGreater(aPattern);
-  Result := I >= 0;
+  Result := I > 0;
   if Result then
     aValue := FTree.NodeList[I].Data.Key;
 end;

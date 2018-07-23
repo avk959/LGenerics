@@ -3255,7 +3255,7 @@ end;
 
 procedure TGLiteAvlTree.RemoveAt(aIndex: SizeInt);
 begin
-  if aIndex <> 0 then
+  if aIndex > 0 then
     RemoveNode(aIndex);
 end;
 
