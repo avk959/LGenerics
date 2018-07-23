@@ -540,17 +540,21 @@ type
   { returns count of added elements }
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
+    function  AddAll(constref aSet: TGLiteTreeSet): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
     function  NonContains(constref aValue: T): Boolean; inline;
     function  ContainsAny(constref a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
+    function  ContainsAny(constref aSet: TGLiteTreeSet): Boolean;
     function  ContainsAll(constref a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
+    function  ContainsAll(constref aSet: TGLiteTreeSet): Boolean;
   { returns True if element removed }
     function  Remove(constref aValue: T): Boolean; inline;
   { returns count of removed elements }
     function  RemoveAll(constref a: array of T): SizeInt;
     function  RemoveAll(e: IEnumerable): SizeInt;
+    function  RemoveAll(constref aSet: TGLiteTreeSet): SizeInt;
   { returns count of removed elements }
     function  RemoveIf(aTest: TTest): SizeInt;
     function  RemoveIf(aTest: TOnTest): SizeInt;
@@ -560,13 +564,14 @@ type
     function  ExtractIf(aTest: TTest): TArray;
     function  ExtractIf(aTest: TOnTest): TArray;
     function  ExtractIf(aTest: TNestTest): TArray;
-  { will contain only those elements that are simultaneously contained in self and aCollection }
+  { will contain only those elements that are simultaneously contained in self and aCollection/aSet }
     procedure RetainAll(aCollection: ICollection);
-    function  IsSuperset(constref aSet: TGLiteTreeSet): Boolean;
+    procedure RetainAll(constref aSet: TGLiteTreeSet);
+    function  IsSuperset(constref aSet: TGLiteTreeSet): Boolean; inline;
     function  IsSubset(constref aSet: TGLiteTreeSet): Boolean; inline;
     function  IsEqual(constref aSet: TGLiteTreeSet): Boolean;
     function  Intersecting(constref aSet: TGLiteTreeSet): Boolean; inline;
-    procedure Intersect(constref aSet: TGLiteTreeSet);
+    procedure Intersect(constref aSet: TGLiteTreeSet); inline;
     procedure Join(constref aSet: TGLiteTreeSet);
     procedure Subtract(constref aSet: TGLiteTreeSet);
     procedure SymmetricSubtract(constref aSet: TGLiteTreeSet);
@@ -2128,18 +2133,35 @@ function TGLiteTreeSet.AddAll(constref a: array of T): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
+  Result := Count;
   for v in a do
-    Result += Ord(Add(v));
+    Add(v);
+  Result := Count - Result;
 end;
 
 function TGLiteTreeSet.AddAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
+  Result := Count;
   for v in e do
-    Result += Ord(Add(v));
+    Add(v);
+  Result := Count - Result;
+end;
+
+function TGLiteTreeSet.AddAll(constref aSet: TGLiteTreeSet): SizeInt;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      Result := Count;
+      for {%H-}v in aSet do
+        Add(v);
+      Result := Count - Result;
+    end
+  else
+    Result := 0;
 end;
 
 function TGLiteTreeSet.Contains(constref aValue: T): Boolean;
@@ -2172,6 +2194,18 @@ begin
   Result := False;
 end;
 
+function TGLiteTreeSet.ContainsAny(constref aSet: TGLiteTreeSet): Boolean;
+var
+  v: T;
+begin
+  if @aSet = @Self then
+    exit(True);
+  for {%H-}v in aSet do
+    if Contains(v) then
+      exit(True);
+  Result := False;
+end;
+
 function TGLiteTreeSet.ContainsAll(constref a: array of T): Boolean;
 var
   v: T;
@@ -2192,6 +2226,18 @@ begin
   Result := True;
 end;
 
+function TGLiteTreeSet.ContainsAll(constref aSet: TGLiteTreeSet): Boolean;
+var
+  v: T;
+begin
+  if @aSet = @Self then
+    exit(True);
+  for {%H-}v in aSet do
+    if NonContains(v) then
+      exit(False);
+  Result := True;
+end;
+
 function TGLiteTreeSet.Remove(constref aValue: T): Boolean;
 begin
   Result := FTree.Remove(aValue);
@@ -2201,18 +2247,38 @@ function TGLiteTreeSet.RemoveAll(constref a: array of T): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
+  Result := Count;
   for v in a do
-    Result += Ord(Remove(v));
+    Remove(v);
+  Result := Result - Count;
 end;
 
 function TGLiteTreeSet.RemoveAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
-  Result := 0;
+  Result := Count;
   for v in e do
-    Result += Ord(Remove(v));
+    Remove(v);
+  Result := Result - Count;
+end;
+
+function TGLiteTreeSet.RemoveAll(constref aSet: TGLiteTreeSet): SizeInt;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      Result := Count;
+      for {%H-}v in aSet do
+        Remove(v);
+      Result := Result - Count;
+    end
+  else
+    begin
+      Result := Count;
+      Clear;
+    end;
 end;
 
 function TGLiteTreeSet.RemoveIf(aTest: TTest): SizeInt;
@@ -2374,24 +2440,25 @@ begin
     end;
 end;
 
-function TGLiteTreeSet.IsSuperset(constref aSet: TGLiteTreeSet): Boolean;
+procedure TGLiteTreeSet.RetainAll(constref aSet: TGLiteTreeSet);
 var
-  v: T;
+  List: TTree.TNodeList;
+  I: SizeInt = 1;
 begin
-  if @aSet <> @Self then
+  if NonEmpty and (@aSet <> @Self) then
     begin
-      if Count >= aSet.Count then
-        begin
-          for v in aSet do
-            if NonContains(v) then
-              exit(False);
-          Result := True;
-        end
-      else
-        Result := False;
-    end
-  else
-    Result := True;
+      List := FTree.NodeList;
+      while I <= FTree.Count do
+        if aSet.NonContains(List[I].Data.Key) then
+          FTree.RemoveAt(I)
+        else
+          Inc(I);
+    end;
+end;
+
+function TGLiteTreeSet.IsSuperset(constref aSet: TGLiteTreeSet): Boolean;
+begin
+  Result := ContainsAll(aSet);
 end;
 
 function TGLiteTreeSet.IsSubset(constref aSet: TGLiteTreeSet): Boolean;
@@ -2432,44 +2499,42 @@ begin
 end;
 
 procedure TGLiteTreeSet.Intersect(constref aSet: TGLiteTreeSet);
-var
-  List: TTree.TNodeList;
-  I: SizeInt = 1;
 begin
-  if NonEmpty then
-    begin
-      List := FTree.NodeList;
-      while I <= FTree.Count do
-        if aSet.NonContains(List[I].Data.Key) then
-          FTree.RemoveAt(I)
-        else
-          Inc(I);
-    end;
+  RetainAll(aSet);
 end;
 
 procedure TGLiteTreeSet.Join(constref aSet: TGLiteTreeSet);
 var
   v: T;
 begin
-  for v in aSet do
-    Add(v);
+  if @aSet <> @Self then
+    for v in aSet do
+      Add(v);
 end;
 
 procedure TGLiteTreeSet.Subtract(constref aSet: TGLiteTreeSet);
 var
   v: T;
 begin
-  for v in aSet do
-    Remove(v);
+  if @aSet <> @Self then
+    for v in aSet do
+      Remove(v)
+  else
+    Clear;
 end;
 
 procedure TGLiteTreeSet.SymmetricSubtract(constref aSet: TGLiteTreeSet);
 var
   v: T;
 begin
-  for v in aSet do
-    if not Remove(v) then
-      Add(v);
+  if @aSet <> @Self then
+    begin
+      for v in aSet do
+        if not Remove(v) then
+          Add(v);
+    end
+  else
+    Clear;
 end;
 
 function TGLiteTreeSet.FindMin(out aValue: T): Boolean;
