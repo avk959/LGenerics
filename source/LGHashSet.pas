@@ -431,7 +431,7 @@ type
     function  IsSubset(constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  IsEqual(constref aSet: TGLiteHashSetLP): Boolean;
     function  Intersecting(constref aSet: TGLiteHashSetLP): Boolean; inline;
-    procedure Intersect(constref aSet: TGLiteHashSetLP);
+    procedure Intersect(constref aSet: TGLiteHashSetLP); inline;
     procedure Join(constref aSet: TGLiteHashSetLP);
     procedure Subtract(constref aSet: TGLiteHashSetLP);
     procedure SymmetricSubtract(constref aSet: TGLiteHashSetLP);
@@ -1791,11 +1791,7 @@ end;
 
 procedure TGLiteHashSetLP.Intersect(constref aSet: TGLiteHashSetLP);
 begin
-  if @aSet <> @Self then
-    with FTable{%H-}.GetRemovableEnumerator do
-      while MoveNext do
-        if aSet.NonContains(Current^.Key) then
-          RemoveCurrent;
+  RetainAll(aSet);
 end;
 
 procedure TGLiteHashSetLP.Join(constref aSet: TGLiteHashSetLP);
