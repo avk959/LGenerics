@@ -411,6 +411,9 @@ type
     function  AddAll(constref aSet: TGLiteHashMultiSetLP): SizeInt;
   { returns True if element removed }
     function  Remove(constref aValue: T): Boolean; inline;
+    function  RemoveAll(constref a: array of T): SizeInt;
+    function  RemoveAll(e: IEnumerable): SizeInt;
+    function  RemoveAll(constref aSet: TGLiteHashMultiSetLP): SizeInt;
   { returns count of removed elements }
     function  RemoveIf(aTest: TTest): SizeInt;
     function  RemoveIf(aTest: TOnTest): SizeInt;
@@ -1672,6 +1675,31 @@ end;
 function TGLiteHashMultiSetLP.Remove(constref aValue: T): Boolean;
 begin
   Result := Extract(aValue);
+end;
+
+function TGLiteHashMultiSetLP.RemoveAll(constref a: array of T): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in a do
+    Result += Ord(Remove(v));
+end;
+
+function TGLiteHashMultiSetLP.RemoveAll(e: IEnumerable): SizeInt;
+var
+  v: T;
+begin
+  Result := 0;
+  for v in e do
+    Result += Ord(Remove(v));
+end;
+
+function TGLiteHashMultiSetLP.RemoveAll(constref aSet: TGLiteHashMultiSetLP): SizeInt;
+begin
+  Result := Count;
+  SymmetricSubtract(aSet);
+  Result := Result - Count;
 end;
 
 function TGLiteHashMultiSetLP.RemoveIf(aTest: TTest): SizeInt;
