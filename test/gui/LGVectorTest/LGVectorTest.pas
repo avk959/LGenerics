@@ -2034,15 +2034,15 @@ end;
 procedure TBoolVectorTest.ToArray;
 var
   v: TBoolVector;
-  I: SizeInt;
-  a, r: array of Integer;
+  I: Integer;
+  a, r: array of SizeInt;
 begin
   a := [3, 17, 29, 44, 59];
   v.Size := 64;
   for I in a do
     v[I] := True;
   r := v.ToArray;
-  AssertTrue(specialize TGComparableArrayHelper<Integer>.Same(a, r));
+  AssertTrue(specialize TGComparableArrayHelper<SizeInt>.Same(a, r));
 end;
 
 procedure TBoolVectorTest.SetBits;
