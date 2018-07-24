@@ -259,8 +259,6 @@ type
       override;
   end;
 
-  { TGObjectTreeMultiSet }
-
   generic TGObjectTreeMultiSet<T: class; TCmpRel> = class(specialize TGBaseTreeMultiSet<T, TCmpRel>)
   private
     FOwnsObjects: Boolean;
