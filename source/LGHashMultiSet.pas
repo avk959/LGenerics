@@ -387,6 +387,8 @@ type
     function  MaxLoadFactor: Single; inline;
     function  MinLoadFactor: Single; inline;
     function  GetEnumerator: TEnumerator; inline;
+    function  Distinct: TDistinct; inline;
+    function  Entries: TEntries; inline;
     function  ToArray: TArray;
     function  ToEntryArray: TEntryArray;
     function  IsEmpty: Boolean; inline;
@@ -398,8 +400,10 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
     function  ContainsAny(constref a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
+    function  ContainsAny(constref aSet: TGLiteHashMultiSetLP): Boolean;
     function  ContainsAll(constref a: array of T): Boolean;
     function  ContainsAll(e: IEnumerable): Boolean;
+    function  ContainsAll(constref aSet: TGLiteHashMultiSetLP): Boolean;
     procedure Add(constref aValue: T);
   { returns count of added elements }
     function  AddAll(constref a: array of T): SizeInt;
@@ -419,31 +423,31 @@ type
     procedure RetainAll(aCollection: ICollection);
   { returns True if multiplicity of an any key in self is greater then or equal to
     the multiplicity of that key in aSet }
-    function  IsSuperMultiSet(aSet: TGLiteHashMultiSetLP): Boolean;
+    function  IsSuperMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean; inline;
   { returns True if multiplicity of an any key in aSet is greater then or equal to
     the multiplicity of that key in self }
-    function  IsSubMultiSet(aSet: TGLiteHashMultiSetLP): Boolean;
+    function  IsSubMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
   { returns True if the multiplicity of an any key in self is equal to the multiplicity of that key in aSet }
-    function  IsEqual(aSet: TGLiteHashMultiSetLP): Boolean;
-    function  Intersecting(aSet: TGLiteHashMultiSetLP): Boolean;
+    function  IsEqual(constref aSet: TGLiteHashMultiSetLP): Boolean;
+    function  Intersecting(constref aSet: TGLiteHashMultiSetLP): Boolean;
   { will contain only those keys that are simultaneously contained in self and in aSet;
     the multiplicity of a key becomes equal to the MINIMUM of the multiplicities of a key in self and aSet }
-    procedure Intersect(aSet: TGLiteHashMultiSetLP);
+    procedure Intersect(constref aSet: TGLiteHashMultiSetLP);
   { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the MAXIMUM of the multiplicities of
     a key in self and aSet }
-    procedure Join(aSet: TGLiteHashMultiSetLP);
+    procedure Join(constref aSet: TGLiteHashMultiSetLP);
   { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the SUM of the multiplicities of a key in self and aSet }
-    procedure ArithmeticAdd(aSet: TGLiteHashMultiSetLP);
+    procedure ArithmeticAdd(constref aSet: TGLiteHashMultiSetLP);
   { will contain only those keys whose multiplicity is greater then the multiplicity
     of that key in aSet; the multiplicity of a key will become equal to the difference of multiplicities
     of a key in self and aSet }
-    procedure ArithmeticSubtract(aSet: TGLiteHashMultiSetLP);
+    procedure ArithmeticSubtract(constref aSet: TGLiteHashMultiSetLP);
   { will contain only those keys whose multiplicity is not equal to the multiplicity
     of that key in aSet; the multiplicity of a key will become equal to absolute value of difference
     of the multiplicities of a key in self and aSet }
-    procedure SymmetricSubtract(aSet: TGLiteHashMultiSetLP);
+    procedure SymmetricSubtract(constref aSet: TGLiteHashMultiSetLP);
     //function  Distinct: TDistinct; inline;
     //function  Entries: TEntries; inline;
     property  Count: SizeInt read FCount;
@@ -1480,6 +1484,16 @@ begin
   Result.Init(Self);
 end;
 
+function TGLiteHashMultiSetLP.Distinct: TDistinct;
+begin
+  Result.Init(@Self);
+end;
+
+function TGLiteHashMultiSetLP.Entries: TEntries;
+begin
+  Result.Init(@Self);
+end;
+
 function TGLiteHashMultiSetLP.ToArray: TArray;
 var
   I: SizeInt = 0;
@@ -1562,6 +1576,21 @@ begin
   Result := False;
 end;
 
+function TGLiteHashMultiSetLP.ContainsAny(constref aSet: TGLiteHashMultiSetLP): Boolean;
+var
+  v: T;
+begin
+  if @aSet <> @Self then
+    begin
+      for v in aSet.Distinct do
+        if Contains(v) then
+          exit(True);
+      Result := False;
+    end
+  else
+    Result := True;
+end;
+
 function TGLiteHashMultiSetLP.ContainsAll(constref a: array of T): Boolean;
 var
   v: T;
@@ -1580,6 +1609,23 @@ begin
     if NonContains(v) then
       exit(False);
   Result := True;
+end;
+
+function TGLiteHashMultiSetLP.ContainsAll(constref aSet: TGLiteHashMultiSetLP): Boolean;
+var
+  p: PEntry;
+begin
+  if @aSet = @Self then
+    exit(True);
+  if (Count >= aSet.Count) and (EntryCount >= aSet.EntryCount) then
+    begin
+      for p in aSet.FTable do
+        if GetKeyCount(p^.Key) < p^.Count then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := False;
 end;
 
 procedure TGLiteHashMultiSetLP.Add(constref aValue: T);
@@ -1781,27 +1827,12 @@ begin
   RemoveIf(@aCollection.NonContains);
 end;
 
-function TGLiteHashMultiSetLP.IsSuperMultiSet(aSet: TGLiteHashMultiSetLP): Boolean;
-var
-  p: PEntry;
+function TGLiteHashMultiSetLP.IsSuperMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
 begin
-  if @aSet <> @Self then
-    begin
-      if (Count >= aSet.Count) and (EntryCount >= aSet.EntryCount) then
-        begin
-          for p in aSet.FTable do
-            if GetKeyCount(p^.Key) < p^.Count then
-              exit(False);
-          Result := True;
-        end
-      else
-        Result := False;
-    end
-  else
-    Result := True;
+  Result := ContainsAll(aSet);
 end;
 
-function TGLiteHashMultiSetLP.IsSubMultiSet(aSet: TGLiteHashMultiSetLP): Boolean;
+function TGLiteHashMultiSetLP.IsSubMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
 var
   p: PEntry;
 begin
@@ -1821,7 +1852,7 @@ begin
     Result := True;
 end;
 
-function TGLiteHashMultiSetLP.IsEqual(aSet: TGLiteHashMultiSetLP): Boolean;
+function TGLiteHashMultiSetLP.IsEqual(constref aSet: TGLiteHashMultiSetLP): Boolean;
 var
   p: PEntry;
 begin
@@ -1841,7 +1872,7 @@ begin
     Result := True;
 end;
 
-function TGLiteHashMultiSetLP.Intersecting(aSet: TGLiteHashMultiSetLP): Boolean;
+function TGLiteHashMultiSetLP.Intersecting(constref aSet: TGLiteHashMultiSetLP): Boolean;
 var
   p: PEntry;
 begin
@@ -1856,7 +1887,7 @@ begin
     Result := True;
 end;
 
-procedure TGLiteHashMultiSetLP.Intersect(aSet: TGLiteHashMultiSetLP);
+procedure TGLiteHashMultiSetLP.Intersect(constref aSet: TGLiteHashMultiSetLP);
 var
   cnt: SizeInt;
   p: PEntry;
@@ -1883,7 +1914,7 @@ begin
         end;
 end;
 
-procedure TGLiteHashMultiSetLP.Join(aSet: TGLiteHashMultiSetLP);
+procedure TGLiteHashMultiSetLP.Join(constref aSet: TGLiteHashMultiSetLP);
 var
   p, ps: PEntry;
 begin
@@ -1904,7 +1935,7 @@ begin
 {$POP}
 end;
 
-procedure TGLiteHashMultiSetLP.ArithmeticAdd(aSet: TGLiteHashMultiSetLP);
+procedure TGLiteHashMultiSetLP.ArithmeticAdd(constref aSet: TGLiteHashMultiSetLP);
 var
   p, ps: PEntry;
 begin
@@ -1930,7 +1961,7 @@ begin
 {$POP}
 end;
 
-procedure TGLiteHashMultiSetLP.ArithmeticSubtract(aSet: TGLiteHashMultiSetLP);
+procedure TGLiteHashMultiSetLP.ArithmeticSubtract(constref aSet: TGLiteHashMultiSetLP);
 var
   p, ps: PEntry;
   Pos: SizeInt;
@@ -1957,7 +1988,7 @@ begin
     Clear;
 end;
 
-procedure TGLiteHashMultiSetLP.SymmetricSubtract(aSet: TGLiteHashMultiSetLP);
+procedure TGLiteHashMultiSetLP.SymmetricSubtract(constref aSet: TGLiteHashMultiSetLP);
 var
   p, ps: PEntry;
   Pos: SizeInt;
