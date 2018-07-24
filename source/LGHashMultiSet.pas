@@ -1904,19 +1904,25 @@ var
   p, ps: PEntry;
 begin
 {$PUSH}{$Q+}
-  if @aSet <> @Self then
-    for ps in aSet.FTable do
-      if not FindOrAdd(ps^.Key, p) then
+  if @aSet = @Self then
+    begin
+      for p in FTable do
+        p^.Count += p^.Count;
+        FCount += FCount;
+      exit;
+    end;
+  for ps in aSet.FTable do
+    if not FindOrAdd(ps^.Key, p) then
+      begin
+        p^.Count := ps^.Count;
+        FCount += ps^.Count;
+      end
+    else
+      if ps^.Count > p^.Count then
         begin
+          FCount += ps^.Count - p^.Count;
           p^.Count := ps^.Count;
-          FCount += ps^.Count;
-        end
-      else
-        if ps^.Count > p^.Count then
-          begin
-            FCount += ps^.Count - p^.Count;
-            p^.Count := ps^.Count;
-          end;
+        end;
 {$POP}
 end;
 
