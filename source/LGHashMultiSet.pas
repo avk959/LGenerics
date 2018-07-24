@@ -408,6 +408,7 @@ type
   { returns count of added elements }
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
+    function  AddAll(constref aSet: TGLiteHashMultiSetLP): SizeInt;
   { returns True if element removed }
     function  Remove(constref aValue: T): Boolean; inline;
   { returns count of removed elements }
@@ -426,7 +427,7 @@ type
     function  IsSuperMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean; inline;
   { returns True if multiplicity of an any key in aSet is greater then or equal to
     the multiplicity of that key in self }
-    function  IsSubMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
+    function  IsSubMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean; inline;
   { returns True if the multiplicity of an any key in self is equal to the multiplicity of that key in aSet }
     function  IsEqual(constref aSet: TGLiteHashMultiSetLP): Boolean;
     function  Intersecting(constref aSet: TGLiteHashMultiSetLP): Boolean;
@@ -448,8 +449,6 @@ type
     of that key in aSet; the multiplicity of a key will become equal to absolute value of difference
     of the multiplicities of a key in self and aSet }
     procedure SymmetricSubtract(constref aSet: TGLiteHashMultiSetLP);
-    //function  Distinct: TDistinct; inline;
-    //function  Entries: TEntries; inline;
     property  Count: SizeInt read FCount;
   { returs number of distinct keys }
     property  EntryCount: SizeInt read GetEntryCount; //dimension, Count - cardinality
@@ -1663,6 +1662,13 @@ begin
     end;
 end;
 
+function TGLiteHashMultiSetLP.AddAll(constref aSet: TGLiteHashMultiSetLP): SizeInt;
+begin
+  Result := Count;
+  Join(aSet);
+  Result := Count - Result;
+end;
+
 function TGLiteHashMultiSetLP.Remove(constref aValue: T): Boolean;
 begin
   Result := Extract(aValue);
@@ -1833,58 +1839,37 @@ begin
 end;
 
 function TGLiteHashMultiSetLP.IsSubMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
-var
-  p: PEntry;
 begin
-  if @aSet <> @Self then
-    begin
-      if (aSet.Count >= Count) and (aSet.EntryCount >= EntryCount) then
-        begin
-          for p in FTable do
-            if aSet[p^.Key] < p^.Count then
-              exit(False);
-          Result := True;
-        end
-      else
-        Result := False;
-    end
-  else
-    Result := True;
+  Result := aSet.ContainsAll(Self);
 end;
 
 function TGLiteHashMultiSetLP.IsEqual(constref aSet: TGLiteHashMultiSetLP): Boolean;
 var
   p: PEntry;
 begin
-  if @aSet <> @Self then
+  if @aSet = @Self then
+    exit(True);
+  if (aSet.Count = Count) and (aSet.EntryCount = EntryCount) then
     begin
-      if (aSet.Count = Count) and (aSet.EntryCount = EntryCount) then
-        begin
-          for p in FTable do
-            if aSet[p^.Key] <> p^.Count then
-              exit(False);
-          Result := True;
-        end
-      else
-        Result := False;
+      for p in FTable do
+        if aSet[p^.Key] <> p^.Count then
+          exit(False);
+      Result := True;
     end
   else
-    Result := True;
+    Result := False;
 end;
 
 function TGLiteHashMultiSetLP.Intersecting(constref aSet: TGLiteHashMultiSetLP): Boolean;
 var
   p: PEntry;
 begin
-  if @aSet <> @Self then
-    begin
-      for p in FTable do
-        if aSet.Contains(p^.Key) then
-          exit(True);
-      Result := False;
-    end
-  else
-    Result := True;
+  if @aSet = @Self then
+    exit(True);
+  for p in FTable do
+    if aSet.Contains(p^.Key) then
+      exit(True);
+  Result := False;
 end;
 
 procedure TGLiteHashMultiSetLP.Intersect(constref aSet: TGLiteHashMultiSetLP);
@@ -2029,16 +2014,6 @@ begin
   else
     Clear;
 end;
-
-//function TGLiteHashMultiSetLP.Distinct: TDistinct;
-//begin
-//  Result.Init(@Self);
-//end;
-//
-//function TGLiteHashMultiSetLP.Entries: TEntries;
-//begin
-//  Result.Init(@Self);
-//end;
 
 end.
 
