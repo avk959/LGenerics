@@ -36,9 +36,6 @@ uses
   LGStrConst;
 
 type
-
-  { TGEnumerable }
-
   generic TGEnumerable<T> = class abstract(TObject, specialize IGEnumerable<T>, IObjInstance)
   public
   type
@@ -128,8 +125,7 @@ type
 
 {$I LGEnumsH.inc}
 
-  { TGCustomContainer }
-
+  { TGCustomContainer: container abstract ancestor class }
   generic TGCustomContainer<T> = class abstract(specialize TGEnumerable<T>, specialize IGContainer<T>)
   public
   type
@@ -243,8 +239,6 @@ type
     procedure RetainAll(aCollection: ICollection);
     function  Clone: TCustomCollection; virtual; abstract;
   end;
-
-  { TGThreadCollection }
 
   generic TGThreadCollection<T> = class
   public
@@ -378,7 +372,7 @@ type
   { will contain only those keys that are simultaneously contained in self and in aSet;
     the multiplicity of a key becomes equal to the MINIMUM of the multiplicities of a key in self and aSet }
     procedure Intersect(aSet: TCustomMultiSet);
-  { will contain all keys that are contained in self and in aSet;
+  { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the MAXIMUM of the multiplicities of
     a key in self and aSet }
     procedure Join(aSet: TCustomMultiSet);
@@ -402,8 +396,6 @@ type
     will raise EArgumentException if one try to set negative multiplicity of a aValue }
     property  Counts[const aValue: T]: SizeInt read GetKeyCount write SetKeyCount; default;
   end;
-
-  { TCustomIterable }
 
   TCustomIterable = class
   private

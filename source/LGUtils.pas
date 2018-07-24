@@ -102,8 +102,8 @@ type
   end;
 
   { TGAutoRef: the simplest way to get a class instance with limited lifetime;
-      instance will be destroyed automatically when it leaves the scope;
-      class T must provide default constructor without parameters }
+    the instance that TGAutoRef owns will be automatically destroyed when it leaves the scope;
+    class T must provide default constructor without parameters }
   TGAutoRef<T: class> = record
   private
     FInstance: T;

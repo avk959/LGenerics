@@ -37,7 +37,7 @@ uses
 
 type
 
-  { TGCustomHashMultiSet: common abstract ancestor hash multiset class }
+  { TGCustomHashMultiSet: common hash multiset abstract ancestor class }
   generic TGCustomHashMultiSet<T> = class abstract(specialize TGCustomMultiSet<T>)
   public
   type
@@ -238,8 +238,6 @@ type
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
-  { TGObjectHashMultiSetLP }
-
   generic TGObjectHashMultiSetLP<T: class; TEqRel> = class(specialize TGCustomObjectHashMultiSet<T>)
   protected
     class function GetTableClass: THashTableClass; override;
@@ -249,8 +247,6 @@ type
   end;
 
   generic TGObjHashMultiSetLP<T: class> = class(specialize TGObjectHashMultiSetLP<T, T>);
-
-  { TGObjectHashMultiSetLPT }
 
   generic TGObjectHashMultiSetLPT<T: class; TEqRel> = class(specialize TGCustomObjectHashMultiSet<T>)
   private
@@ -269,8 +265,6 @@ type
 
   generic TGObjHashMultiSetLPT<T: class> = class(specialize TGObjectHashMultiSetLPT<T, T>);
 
-  { TGObjectHashMultiSetQP }
-
   generic TGObjectHashMultiSetQP<T: class; TEqRel> = class(specialize TGCustomObjectHashMultiSet<T>)
   private
     function GetTombstonesCount: SizeInt; inline;
@@ -287,8 +281,6 @@ type
   end;
 
   generic TGObjHashMultiSetQP<T: class> = class(specialize TGObjectHashMultiSetQP<T, T>);
-
-  { TGObjectChainHashMultiSet }
 
   generic TGObjectChainHashMultiSet<T: class; TEqRel> = class(specialize TGCustomObjectHashMultiSet<T>)
   protected
@@ -386,7 +378,6 @@ type
     function  GetDistinctEnumerator: TDistinctEnumerator; inline;
     function  GetEntryEnumerator: TEntryEnumerator; inline;
     function  Find(constref aKey: T): PEntry; inline;
-    //return True if aKey found, otherwise inserts entry (garbage) and return False;
     function  FindOrAdd(constref aKey: T; out p: PEntry): Boolean;
     function  GetKeyCount(const aKey: T): SizeInt;
     procedure SetKeyCount(const aKey: T; aValue: SizeInt);
@@ -438,7 +429,7 @@ type
   { will contain only those keys that are simultaneously contained in self and in aSet;
     the multiplicity of a key becomes equal to the MINIMUM of the multiplicities of a key in self and aSet }
     procedure Intersect(aSet: TGLiteHashMultiSetLP);
-  { will contain all keys that are contained in self and in aSet;
+  { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the MAXIMUM of the multiplicities of
     a key in self and aSet }
     procedure Join(aSet: TGLiteHashMultiSetLP);
