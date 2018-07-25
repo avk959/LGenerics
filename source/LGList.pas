@@ -224,9 +224,8 @@ type
   { TGSortedList assumes that type T implements TCmpRel}
   generic TGSortedList<T> = class(specialize TGBaseSortedList<T, T>);
 
-  { do not compiles line:
-    sr := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue);
-    do not know why, so class in invalid condition }
+  { does not compiled line 3350 in DoSetItem(do not know why; currently line commented);
+    anyway class in invalid condition }
   generic TGObjectSortedList<T: class; TCmpRel> = class(specialize TGBaseSortedList<T, TCmpRel>)
   private
     FOwnsObects: Boolean;
@@ -2431,7 +2430,7 @@ end;
 
 function TGSortedListTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
-  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  //sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
   Entry: TEntry;
 begin
   Entry.Key := aKey;
@@ -2472,7 +2471,7 @@ end;
 
 function TGSortedListTable.Add(constref aKey: TKey): PEntry;
 var
-  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  //sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
   Entry: TEntry;
 begin
   Result := nil;
