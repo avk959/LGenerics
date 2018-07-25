@@ -201,12 +201,12 @@ type
     function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
     function  CountOf(constref aValue: T): SizeInt;
-  { returns index of element whose value greater then or equal to aValue (depend on aInclusive);
+  { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
     returns -1 if there are no such element }
-    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean): SizeInt;
-  { returns index of element whose value less then aBound (or equal to aValue depend on aInclusive);
+    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt;
+  { returns index of element whose value less then aValue (or equal to aValue, depending on aInclusive);
     returns -1 if there are no such element }
-    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt;
+    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt;
   { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
     function  Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable;
   { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
@@ -488,12 +488,12 @@ type
     function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
     function  CountOf(constref aValue: T): SizeInt;
-  { returns index of element whose value greater then or equal to aValue (depend on aInclusive);
+  { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
     returns -1 if there are no such element }
-    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean): SizeInt; inline;
-  { returns index of element whose value less then aBound (or equal to aValue depend on aInclusive);
+    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt; inline;
+  { returns index of element whose value less then aValue (or equal to aValue, depending on aInclusive);
     returns -1 if there are no such element }
-    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt; inline;
+    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt; inline;
   { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
     function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
   { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
@@ -627,12 +627,12 @@ type
     function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
     function  CountOf(constref aValue: T): SizeInt;
-  { returns index of element whose value greater then or equal to aValue (depend on aInclusive);
+  { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
     returns -1 if there are no such element }
-    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean): SizeInt; inline;
-  { returns index of element whose value less then aBound (or equal to aValue depend on aInclusive);
+    function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt; inline;
+  { returns index of element whose value less then aValue (or equal to aValue, depending on aInclusive);
     returns -1 if there are no such element }
-    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt; inline;
+    function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt; inline;
   { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
     function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
   { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
@@ -737,11 +737,6 @@ type
     procedure RemoveFromChain(aIndex: SizeInt);
     function  DoRemove(constref aValue: T): Boolean;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
-    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
-    function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
-    procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
-    class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList);
     class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
@@ -1538,6 +1533,13 @@ begin
     exit(-1);
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) > 0 then
      exit(Pred(ElemCount));
+  if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) = 0 then
+    begin
+      Result := Pred(ElemCount) - 1;
+      while (Result > 0) and (TCmpRel.Compare(aValue, FItems[Pred(Result)]) = 0) do
+        Dec(Result);
+      exit;
+    end;
   //here such element exist in FItems and not first nor last
   Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
   if TCmpRel.Compare(FItems[Result], aValue) >= 0 then
@@ -1585,10 +1587,17 @@ end;
 
 function TGBaseSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) > 0) then
+  if ElemCount = 0 then
     exit(-1);
   if TCmpRel.Compare(aValue, FItems[0]) <= 0 then
     exit(0);
+  if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) = 0 then
+    begin
+      Result := Pred(ElemCount);
+      while (Result > 0) and (TCmpRel.Compare(aValue, FItems[Pred(Result)]) = 0) do
+        Dec(Result);
+      exit;
+    end;
   //here such element exist in FItems and not first nor last
   Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
   if TCmpRel.Compare(FItems[Result], aValue) < 0 then
@@ -2705,6 +2714,13 @@ begin
     exit(-1);
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) > 0 then
      exit(Pred(Count));
+  if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) = 0 then
+    begin
+      Result := Pred(Count) - 1;
+      while (Result > 0) and (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Result)]) = 0) do
+        Dec(Result);
+      exit;
+    end;
   //here such element exist in FBuffer.FItems and not first nor last
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
   if TCmpRel.Compare(FBuffer.FItems[Result], aValue) >= 0 then
@@ -2752,10 +2768,17 @@ end;
 
 function TGLiteSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) > 0) then
+  if Count = 0 then
     exit(-1);
   if TCmpRel.Compare(aValue, FBuffer.FItems[0]) <= 0 then
     exit(0);
+  if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) = 0 then
+    begin
+      Result := Pred(Count);
+      while (Result > 0) and (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Result)]) = 0) do
+        Dec(Result);
+      exit;
+    end;
   //here such element exist in FBuffer.FItems and not first nor last
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
   if TCmpRel.Compare(FBuffer.FItems[Result], aValue) < 0 then
@@ -3295,6 +3318,13 @@ begin
     exit(-1);
   if aValue > FBuffer.FItems[Pred(Count)] then
      exit(Pred(Count));
+  if aValue = FBuffer.FItems[Pred(Count)] then
+    begin
+      Result := Pred(Count) - 1;
+      while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)] = 0) do
+        Dec(Result);
+      exit;
+    end;
   //here such element exist in FBuffer.FItems and not first nor last
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
   if FBuffer.FItems[Result] >= aValue then
@@ -3342,10 +3372,17 @@ end;
 
 function TGLiteComparableSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if IsEmpty or (aValue > FBuffer.FItems[Pred(Count)]) then
+  if Count = 0 then
     exit(-1);
   if aValue <= FBuffer.FItems[0] then
     exit(0);
+  if aValue = FBuffer.FItems[Pred(Count)] then
+    begin
+      Result := Pred(Count);
+      while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)] = 0) do
+        Dec(Result);
+      exit;
+    end;
   //here such element exist in FBuffer.FItems and not first nor last
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
   if FBuffer.FItems[Result] < aValue then
@@ -3748,24 +3785,30 @@ end;
 
 function TGLiteHashList.GetItem(aIndex: SizeInt): T;
 begin
-  CheckIndexRange(aIndex);
-  Result := FNodeList[aIndex].Data;
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := FNodeList[aIndex].Data
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteHashList.SetItem(aIndex: SizeInt; const aValue: T);
 var
   I: SizeInt;
 begin
-  CheckIndexRange(aIndex);
-  if TEqRel.Equal(aValue, FNodeList[aIndex].Data) then
-    exit;
-  RemoveFromChain(aIndex);
-  //add to new chain
-  FNodeList[aIndex].Data := aValue;
-  FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
-  I := FNodeList[aIndex].Hash and Pred(Capacity);
-  FNodeList[aIndex].Next := FChainList[I];
-  FChainList[I] := aIndex;
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    begin
+      if TEqRel.Equal(aValue, FNodeList[aIndex].Data) then
+        exit;
+      RemoveFromChain(aIndex);
+      //add to new chain
+      FNodeList[aIndex].Data := aValue;
+      FNodeList[aIndex].Hash := TEqRel.HashCode(aValue);
+      I := FNodeList[aIndex].Hash and Pred(Capacity);
+      FNodeList[aIndex].Next := FChainList[I];
+      FChainList[I] := aIndex;
+    end
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteHashList.InitialAlloc;
@@ -3945,33 +3988,6 @@ end;
 function TGLiteHashList.GetReverseEnumerator: TReverseEnumerator;
 begin
   Result.Init(Self);
-end;
-
-function TGLiteHashList.IndexInRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex < Count);
-end;
-
-function TGLiteHashList.IndexInInsertRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex <= Count);
-end;
-
-procedure TGLiteHashList.CheckIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
-end;
-
-procedure TGLiteHashList.CheckInsertIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInInsertRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
-end;
-
-class procedure TGLiteHashList.IndexOutOfBoundError(aIndex: SizeInt);
-begin
-  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 class procedure TGLiteHashList.CapacityExceedError(aValue: SizeInt);
@@ -4183,16 +4199,22 @@ end;
 
 procedure TGLiteHashList.Insert(aIndex: SizeInt; constref aValue: T);
 begin
-  CheckInsertIndexRange(aIndex);
-  if Count = Capacity then
-    Expand;
-  DoInsert(aIndex, aValue);
+  if SizeUInt(aIndex) <= SizeUInt(Count) then
+    begin
+      if Count = Capacity then
+        Expand;
+      DoInsert(aIndex, aValue);
+    end
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteHashList.Delete(aIndex: SizeInt);
 begin
-  CheckIndexRange(aIndex);
-  DoDelete(aIndex);
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    DoDelete(aIndex)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteHashList.Remove(constref aValue: T): Boolean;
