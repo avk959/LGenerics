@@ -132,9 +132,9 @@ type
     function FindMax(out aKey: TKey): Boolean; inline;
     function Max: TKeyOptional; inline;
   { returns True if exists key whose value greater then or equal to aKey (depending on aInclusive) }
-    function FindCeilKey(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean = True): Boolean;
+    function FindCeil(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean = True): Boolean;
   { returns True if exists key whose value less then aKey (or equal to aKey, depending on aInclusive) }
-    function FindFloorKey(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean = False): Boolean;
+    function FindFloor(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean = False): Boolean;
   { enumerates keys which are strictly less than(if not aInclusive) aHighBound }
     function Head(constref aHighBound: TKey; aInclusive: Boolean = False): IKeyEnumerable; virtual; abstract;
   { enumerates keys whose are greater than or equal to aLowBound(if aInclusive) }
@@ -826,7 +826,7 @@ begin
   Result := LastKey;
 end;
 
-function TGCustomTreeMap.FindCeilKey(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean): Boolean;
+function TGCustomTreeMap.FindCeil(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestGE(aKey, aCeil)
@@ -834,7 +834,7 @@ begin
     Result := FindNearestGT(aKey, aCeil);
 end;
 
-function TGCustomTreeMap.FindFloorKey(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean): Boolean;
+function TGCustomTreeMap.FindFloor(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestLE(aKey, aFloor)
