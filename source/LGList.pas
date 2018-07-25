@@ -256,7 +256,7 @@ type
   end;
 
   { TGObjSortedList uses comparator from LGHelpers }
-  generic TGObjSortedList<T: class> = class(specialize TGObjectSortedList<T, T>);
+  //generic TGObjSortedList<T: class> = class(specialize TGObjectSortedList<T, T>);
 
   { TGSortedList2: minimalistic sorted list }
   generic TGSortedList2<T, TCmpRel> = class
@@ -3343,7 +3343,7 @@ begin
   if aValue = FBuffer.FItems[Pred(Count)] then
     begin
       Result := Pred(Count) - 1;
-      while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)] = 0) do
+      while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)]) do
         Dec(Result);
       exit;
     end;
@@ -3401,7 +3401,7 @@ begin
   if aValue = FBuffer.FItems[Pred(Count)] then
     begin
       Result := Pred(Count);
-      while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)] = 0) do
+      while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)]) do
         Dec(Result);
       exit;
     end;
