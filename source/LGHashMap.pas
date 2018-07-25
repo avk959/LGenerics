@@ -236,9 +236,6 @@ type
     property  OwnsValues: Boolean read FOwnsValues write FOwnsValues;
   end;
 
-
-  { TGObjectHashMapLP }
-
   generic TGObjectHashMapLP<TKey, TValue, TKeyEqRel> = class(specialize TGCustomObjectHashMap<TKey, TValue>)
   protected
     class function GetTableClass: THashTableClass; override;
@@ -247,11 +244,7 @@ type
     function Clone: TGObjectHashMapLP; override;
   end;
 
-  { TGObjHashMapLP }
-
   generic TGObjHashMapLP<TKey, TValue> = class(specialize TGObjectHashMapLP<TKey, TValue, TKey>);
-
-  { TGObjectHashMapLPT }
 
   generic TGObjectHashMapLPT<TKey, TValue, TKeyEqRel> = class(specialize TGCustomObjectHashMap<TKey, TValue>)
   private
@@ -268,11 +261,7 @@ type
     property  TombstonesCount: SizeInt read GetTombstonesCount;
   end;
 
-  { TGObjHashMapLPT }
-
   generic TGObjHashMapLPT<TKey, TValue> = class(specialize TGObjectHashMapLPT<TKey, TValue, TKey>);
-
-  { TGObjectHashMapQP }
 
   generic TGObjectHashMapQP<TKey, TValue, TKeyEqRel> = class(specialize TGCustomObjectHashMap<TKey, TValue>)
   private
@@ -289,8 +278,6 @@ type
     property  TombstonesCount: SizeInt read GetTombstonesCount;
   end;
 
-  { TGObjHashMapQP }
-
   generic TGObjHashMapQP<TKey, TValue> = class(specialize TGObjectHashMapQP<TKey, TValue, TKey>);
 
   { TGObjectChainHashMap }
@@ -302,8 +289,6 @@ type
   public
     function Clone: TGObjectChainHashMap; override;
   end;
-
-  { TGObjChainHashMap }
 
   generic TGObjChainHashMap<TKey, TValue> = class(specialize TGObjectChainHashMap<TKey, TValue, TKey>);
 
