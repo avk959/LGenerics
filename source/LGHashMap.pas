@@ -280,8 +280,6 @@ type
 
   generic TGObjHashMapQP<TKey, TValue> = class(specialize TGObjectHashMapQP<TKey, TValue, TKey>);
 
-  { TGObjectChainHashMap }
-
   generic TGObjectChainHashMap<TKey, TValue, TKeyEqRel> = class(specialize TGCustomObjectHashMap<TKey, TValue>)
   protected
     class function GetTableClass: THashTableClass; override;
@@ -366,12 +364,19 @@ type
       function GetEnumerator: TValueEnumerator; inline;
     end;
 
+    TEntries = record
+    private
+      FMap: PLiteHashMapLP;
+      procedure Init(aMap: PLiteHashMapLP); inline;
+    public
+      function GetEnumerator: TEntryEnumerator; inline;
+    end;
+
   private
     FTable: TTableLP;
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
     function  Find(constref aKey: TKey): PEntry; inline;
-    //returns True if aKey found, otherwise inserts (garbage) entry and returns False;
     function  FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
     function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
@@ -379,8 +384,6 @@ type
     function  GetValue(const aKey: TKey): TValue; inline;
     procedure SetLoadFactor(aValue: Single); inline;
     function  SetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
-    function  GetKeyEnumerator: TKeyEnumerator; inline;
-    function  GetValueEnumerator: TValueEnumerator; inline;
   public
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
@@ -407,18 +410,22 @@ type
   { will add only entries which keys are absent in map }
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
+    function  AddAll(constref aMap: TGLiteHashMapLP): SizeInt;
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean; inline;
     function  Contains(constref aKey: TKey): Boolean; inline;
     function  NonContains(constref aKey: TKey): Boolean; inline;
     function  ContainsAny(constref a: array of TKey): Boolean;
     function  ContainsAny(e: IKeyEnumerable): Boolean;
+    function  ContainsAny(constref aMap: TGLiteHashMapLP): Boolean;
     function  ContainsAll(constref a: array of TKey): Boolean;
     function  ContainsAll(e: IKeyEnumerable): Boolean;
+    function  ContainsAll(constref aMap: TGLiteHashMapLP): Boolean;
   { returns True if entry removed }
     function  Remove(constref aKey: TKey): Boolean; inline;
     function  RemoveAll(constref a: array of TKey): SizeInt;
     function  RemoveAll(e: IKeyEnumerable): SizeInt;
+    function  RemoveAll(constref aMap: TGLiteHashMapLP): SizeInt;
     function  RemoveIf(aTest: TKeyTest): SizeInt;
     function  RemoveIf(aTest: TOnKeyTest): SizeInt;
     function  RemoveIf(aTest: TNestKeyTest): SizeInt;
@@ -429,6 +436,7 @@ type
     procedure RetainAll(aCollection: IKeyCollection);
     function  Keys: TKeys; inline;
     function  Values: TValues; inline;
+    function  Entries: TEntries; inline;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   { reading will raise ELGMapError if an aKey is not present in map }
@@ -1178,7 +1186,7 @@ end;
 
 function TGLiteHashMapLP.TKeys.GetEnumerator: TKeyEnumerator;
 begin
-  Result := FMap^.GetKeyEnumerator;
+  Result.Init(FMap^);
 end;
 
 { TGLiteHashMapLP.TValues }
@@ -1190,7 +1198,19 @@ end;
 
 function TGLiteHashMapLP.TValues.GetEnumerator: TValueEnumerator;
 begin
-  Result := FMap^.GetValueEnumerator;
+  Result.Init(FMap^);
+end;
+
+{ TGLiteHashMapLP.TEntries }
+
+procedure TGLiteHashMapLP.TEntries.Init(aMap: PLiteHashMapLP);
+begin
+  FMap := aMap;
+end;
+
+function TGLiteHashMapLP.TEntries.GetEnumerator: TEntryEnumerator;
+begin
+  Result.Init(FMap^);
 end;
 
 { TGLiteHashMapLP }
@@ -1255,16 +1275,6 @@ begin
   Result := p <> nil;
   if Result then
     p^.Value := aNewValue;
-end;
-
-function TGLiteHashMapLP.GetKeyEnumerator: TKeyEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteHashMapLP.GetValueEnumerator: TValueEnumerator;
-begin
-  Result.Init(Self);
 end;
 
 function TGLiteHashMapLP.DefaultLoadFactor: Single;
@@ -1389,6 +1399,17 @@ begin
     Result += Ord(Add(Entry));
 end;
 
+function TGLiteHashMapLP.AddAll(constref aMap: TGLiteHashMapLP): SizeInt;
+var
+  e: TEntry;
+begin
+  if @AMap = @Self then
+    exit(0);
+  Result := 0;
+  for e in aMap.Entries do
+    Result += Ord(Add(e));
+end;
+
 function TGLiteHashMapLP.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
 begin
   Result := SetValue(aKey, aNewValue);
@@ -1409,8 +1430,8 @@ var
   k: TKey;
 begin
   for k in a do
-  if Contains(k) then
-    exit(True);
+    if Contains(k) then
+      exit(True);
   Result := False;
 end;
 
@@ -1419,8 +1440,20 @@ var
   k: TKey;
 begin
   for k in e do
-  if Contains(k) then
+    if Contains(k) then
+      exit(True);
+  Result := False;
+end;
+
+function TGLiteHashMapLP.ContainsAny(constref aMap: TGLiteHashMapLP): Boolean;
+var
+  k: TKey;
+begin
+  if @aMap = @Self then
     exit(True);
+  for k in aMap.Keys do
+    if Contains(k) then
+      exit(True);
   Result := False;
 end;
 
@@ -1429,8 +1462,8 @@ var
   k: TKey;
 begin
   for k in a do
-  if not Contains(k) then
-    exit(False);
+    if not Contains(k) then
+      exit(False);
   Result := True;
 end;
 
@@ -1439,8 +1472,20 @@ var
   k: TKey;
 begin
   for k in e do
-  if not Contains(k) then
-    exit(False);
+    if not Contains(k) then
+      exit(False);
+  Result := True;
+end;
+
+function TGLiteHashMapLP.ContainsAll(constref aMap: TGLiteHashMapLP): Boolean;
+var
+  k: TKey;
+begin
+  if @aMap = @Self then
+    exit(True);
+  for k in aMap.Keys do
+    if not Contains(k) then
+      exit(False);
   Result := True;
 end;
 
@@ -1465,6 +1510,20 @@ begin
   Result := 0;
   for k in e do
     Result += Ord(Remove(k));
+end;
+
+function TGLiteHashMapLP.RemoveAll(constref aMap: TGLiteHashMapLP): SizeInt;
+var
+  k: TKey;
+begin
+  if @aMap <> @Self then
+    begin
+      Result := 0;
+      for k in aMap.Keys do
+        Result += Ord(Remove(k));
+    end
+  else
+    Clear;
 end;
 
 function TGLiteHashMapLP.RemoveIf(aTest: TKeyTest): SizeInt;
@@ -1597,6 +1656,11 @@ begin
 end;
 
 function TGLiteHashMapLP.Values: TValues;
+begin
+  Result{%H-}.Init(@Self);
+end;
+
+function TGLiteHashMapLP.Entries: TEntries;
 begin
   Result{%H-}.Init(@Self);
 end;
