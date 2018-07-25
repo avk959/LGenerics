@@ -15,8 +15,6 @@ uses
 
 type
 
-  { TGVectorTest }
-
   TGVectorTest = class(TTestCase)
   private
   type
