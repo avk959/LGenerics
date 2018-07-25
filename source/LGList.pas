@@ -224,7 +224,10 @@ type
   { TGSortedList assumes that type T implements TCmpRel}
   generic TGSortedList<T> = class(specialize TGBaseSortedList<T, T>);
 
-  generic TGObjectSortedList<T, TCmpRel> = class(specialize TGBaseSortedList<T, TCmpRel>)
+  { do not compiles line:
+    sr := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue);
+    do not know why, so class in invalid condition }
+  generic TGObjectSortedList<T: class; TCmpRel> = class(specialize TGBaseSortedList<T, TCmpRel>)
   private
     FOwnsObects: Boolean;
   protected
@@ -253,7 +256,7 @@ type
   end;
 
   { TGObjSortedList uses comparator from LGHelpers }
-  generic TGObjSortedList<T> = class(specialize TGObjectSortedList<T, T>);
+  generic TGObjSortedList<T: class> = class(specialize TGObjectSortedList<T, T>);
 
   { TGSortedList2: minimalistic sorted list }
   generic TGSortedList2<T, TCmpRel> = class
@@ -462,6 +465,7 @@ type
     function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator; inline;
     function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator; inline;
     function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator; inline;
+    class operator Initialize(var lst: TGLiteSortedList);
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
@@ -602,6 +606,7 @@ type
     function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator; inline;
     function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator; inline;
     function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator; inline;
+    class operator Initialize(var lst: TGLiteComparableSortedList);
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
@@ -1883,7 +1888,7 @@ var
 begin
   if OwnsObjects then
     for I := 0 to Pred(ElemCount) do
-      FItems[I].Free;
+      TObject(FItems[I]).Free;
   inherited;
 end;
 
@@ -1898,7 +1903,7 @@ begin
       CheckInIteration;
       if ElemCount > 1 then
         begin
-          sr := THelper.BinarySearchPos(Self.FItems[0..Pred(ElemCount)], aValue);
+          //sr := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue);
           if (sr.FoundIndex > -1) and RejectDuplicates then
             exit;
           if OwnsObjects then
@@ -1917,7 +1922,7 @@ function TGObjectSortedList.DoRemove(constref aValue: T): Boolean;
 begin
   Result := inherited DoRemove(aValue);
   if Result and OwnsObjects then
-    aValue.Free;
+    TObject(aValue).Free;
 end;
 
 function TGObjectSortedList.DoRemoveIf(aTest: TTest): SizeInt;
@@ -2825,6 +2830,11 @@ begin
   Result.Init(Self, aLowBound, aHighBound);
 end;
 
+class operator TGLiteSortedList.Initialize(var lst: TGLiteSortedList);
+begin
+  lst.RejectDuplicates := False;
+end;
+
 function TGLiteSortedList.GetEnumerator: TEnumerator;
 begin
   Result := FBuffer.GetEnumerator;
@@ -3427,6 +3437,11 @@ end;
 function TGLiteComparableSortedList.GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator;
 begin
   Result.Init(Self, aLowBound, aHighBound);
+end;
+
+class operator TGLiteComparableSortedList.Initialize(var lst: TGLiteComparableSortedList);
+begin
+  lst.RejectDuplicates := False;
 end;
 
 function TGLiteComparableSortedList.GetEnumerator: TEnumerator;
