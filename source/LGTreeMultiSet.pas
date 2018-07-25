@@ -139,9 +139,9 @@ type
     function  Reverse: IEnumerable; override;
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
-  { returns True if exists element whose value greater then or equal to aValue (depend on aInclusive) }
+  { returns True if exists element whose value greater then or equal to aValue (depending on aInclusive) }
     function FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean = True): Boolean;
-  { returns True if exists element whose value less then aBound (or equal to aValue depend on aInclusive) }
+  { returns True if exists element whose value less then aBound (or equal to aValue, depending on aInclusive) }
     function FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean = False): Boolean;
   { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
     function Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable; virtual; abstract;
