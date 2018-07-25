@@ -480,6 +480,7 @@ type
     function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
     function  Add(constref aValue: T): Boolean;
     function  AddAll(constref a: array of T): SizeInt;
+    function  Remove(constref aValue: T): Boolean;
   { returns insert index, -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
@@ -621,6 +622,7 @@ type
     function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
     function  Add(constref aValue: T): Boolean;
     function  AddAll(constref a: array of T): SizeInt;
+    function  Remove(constref aValue: T): Boolean;
   { returns insert index, -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
@@ -2959,6 +2961,16 @@ begin
     THelper.Sort(FBuffer.FItems[0..Pred(Count)])
 end;
 
+function TGLiteSortedList.Remove(constref aValue: T): Boolean;
+var
+  ToRemove: SizeInt;
+begin
+  ToRemove := IndexOf(aValue);
+  Result := ToRemove > -1;
+  if Result then
+    DeleteItem(ToRemove);
+end;
+
 function TGLiteSortedList.Insert(constref aValue: T): SizeInt;
 var
   sr: THelper.TSearchResult;
@@ -3566,6 +3578,16 @@ begin
     THelper.MergeSort(FBuffer.FItems[0..Pred(Count)])
   else
     THelper.Sort(FBuffer.FItems[0..Pred(Count)])
+end;
+
+function TGLiteComparableSortedList.Remove(constref aValue: T): Boolean;
+var
+  ToRemove: SizeInt;
+begin
+  ToRemove := IndexOf(aValue);
+  Result := ToRemove > -1;
+  if Result then
+    DeleteItem(ToRemove);
 end;
 
 function TGLiteComparableSortedList.Insert(constref aValue: T): SizeInt;
