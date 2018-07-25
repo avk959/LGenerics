@@ -1762,14 +1762,20 @@ var
 begin
   for I := 1 to 16 do
     s.Instance.Add(I * 3);
-  AssertFalse(s.Instance.FindNearestGT(48, I));
-  AssertTrue(s.Instance.FindNearestGT(9, I));
+  AssertTrue(s.Instance.FindCeil(48, I));
+  AssertTrue(I = 48);
+  AssertFalse(s.Instance.FindCeil(48, I, False));
+  AssertTrue(s.Instance.FindCeil(9, I));
+  AssertTrue(I = 9);
+  AssertTrue(s.Instance.FindCeil(9, I, False));
   AssertTrue(I = 12);
-  AssertTrue(s.Instance.FindNearestGT(13, I));
+  AssertTrue(s.Instance.FindCeil(13, I));
   AssertTrue(I = 15);
-  AssertTrue(s.Instance.FindNearestGT(22, I));
+  AssertTrue(s.Instance.FindCeil(22, I));
   AssertTrue(I = 24);
-  AssertTrue(s.Instance.FindNearestGT(27, I));
+  AssertTrue(s.Instance.FindCeil(27, I));
+  AssertTrue(I = 27);
+  AssertTrue(s.Instance.FindCeil(27, I, False));
   AssertTrue(I = 30);
 end;
 
@@ -2290,14 +2296,20 @@ var
 begin
   for I := 1 to 16 do
     s.Instance.Add(I * 3);
-  AssertFalse(s.Instance.FindNearestGT(48, I));
-  AssertTrue(s.Instance.FindNearestGT(9, I));
+  AssertTrue(s.Instance.FindCeil(48, I));
+  AssertTrue(I = 48);
+  AssertFalse(s.Instance.FindCeil(48, I, False));
+  AssertTrue(s.Instance.FindCeil(9, I));
+  AssertTrue(I = 9);
+  AssertTrue(s.Instance.FindCeil(9, I, False));
   AssertTrue(I = 12);
-  AssertTrue(s.Instance.FindNearestGT(13, I));
+  AssertTrue(s.Instance.FindCeil(13, I));
   AssertTrue(I = 15);
-  AssertTrue(s.Instance.FindNearestGT(22, I));
+  AssertTrue(s.Instance.FindCeil(22, I));
   AssertTrue(I = 24);
-  AssertTrue(s.Instance.FindNearestGT(27, I));
+  AssertTrue(s.Instance.FindCeil(27, I));
+  AssertTrue(I = 27);
+  AssertTrue(s.Instance.FindCeil(27, I, False));
   AssertTrue(I = 30);
 end;
 
@@ -3109,14 +3121,20 @@ var
 begin
   for I := 1 to 16 do
     s.Instance.Add(I * 3);
-  AssertFalse(s.Instance.FindNearestGT(48, I));
-  AssertTrue(s.Instance.FindNearestGT(9, I));
+  AssertTrue(s.Instance.FindCeil(48, I));
+  AssertTrue(I = 48);
+  AssertFalse(s.Instance.FindCeil(48, I, False));
+  AssertTrue(s.Instance.FindCeil(9, I));
+  AssertTrue(I = 9);
+  AssertTrue(s.Instance.FindCeil(9, I, False));
   AssertTrue(I = 12);
-  AssertTrue(s.Instance.FindNearestGT(13, I));
+  AssertTrue(s.Instance.FindCeil(13, I));
   AssertTrue(I = 15);
-  AssertTrue(s.Instance.FindNearestGT(22, I));
+  AssertTrue(s.Instance.FindCeil(22, I));
   AssertTrue(I = 24);
-  AssertTrue(s.Instance.FindNearestGT(27, I));
+  AssertTrue(s.Instance.FindCeil(27, I));
+  AssertTrue(I = 27);
+  AssertTrue(s.Instance.FindCeil(27, I, False));
   AssertTrue(I = 30);
 end;
 
