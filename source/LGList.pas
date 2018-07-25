@@ -459,9 +459,6 @@ type
     function  NearestGT(constref aValue: T): SizeInt;
     function  LeftmostGE(constref aValue: T): SizeInt;
     function  SelectDistinctArray(constref a: array of T): TArray;
-    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
-    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
     function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator; inline;
     function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator; inline;
     function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator; inline;
@@ -2610,14 +2607,18 @@ end;
 
 function TGLiteSortedList.GetItem(aIndex: SizeInt): T;
 begin
-  CheckIndexRange(aIndex);
-  Result := FBuffer.FItems[aIndex];
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := FBuffer.FItems[aIndex]
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteSortedList.SetItem(aIndex: SizeInt; aValue: T);
 begin
-  CheckIndexRange(aIndex);
-  DoSetItem(aIndex, aValue);
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    DoSetItem(aIndex, aValue)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteSortedList.DoSetItem(aIndex: SizeInt; const aValue: T);
@@ -2789,22 +2790,6 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
-function TGLiteSortedList.IndexInRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex < Count);
-end;
-
-procedure TGLiteSortedList.CheckIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
-end;
-
-procedure TGLiteSortedList.IndexOutOfBoundError(aIndex: SizeInt);
-begin
-  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
-end;
-
 function TGLiteSortedList.GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
 begin
   Result.Init(Self, aHighBound);
@@ -2972,13 +2957,15 @@ end;
 
 procedure TGLiteSortedList.Delete(aIndex: SizeInt);
 begin
-  CheckIndexRange(aIndex);
-  DeleteItem(aIndex);
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    DeleteItem(aIndex)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteSortedList.TryDelete(aIndex: SizeInt): Boolean;
 begin
-  Result := IndexInRange(aIndex);
+  Result := SizeUInt(aIndex) < SizeUInt(Count);
   if Result then
     DeleteItem(aIndex);
 end;

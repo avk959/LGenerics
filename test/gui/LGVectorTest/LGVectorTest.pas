@@ -774,7 +774,7 @@ begin
   AssertTrue(I = 4);
   AssertTrue(v.Instance.Count = 6);
   AssertTrue(v{%H-}.Instance[3] = 5);
-  AssertTrue(TIntHelper.Same(v.Instance.ToArray, [1, 2, 3, 5, 6, 7]))
+  AssertTrue(TIntHelper.Same(v.Instance.ToArray, [1, 2, 3, 5, 6, 7]));
 end;
 
 procedure TGVectorTest.TryExtractFromEmpty;
@@ -808,7 +808,7 @@ begin
   AssertTrue(I = 4);
   AssertTrue(v.Instance.Count = 6);
   AssertTrue(v{%H-}.Instance[3] = 5);
-  AssertTrue(TIntHelper.Same(v.Instance.ToArray, TIntArray.Create(1, 2, 3, 5, 6, 7)))
+  AssertTrue(TIntHelper.Same(v.Instance.ToArray, TIntArray.Create(1, 2, 3, 5, 6, 7)));
 end;
 
 procedure TGVectorTest.ExtractAllFromEmpty;
