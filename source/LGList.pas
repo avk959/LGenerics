@@ -223,8 +223,6 @@ type
   { TGSortedList assumes that type T implements TCmpRel}
   generic TGSortedList<T> = class(specialize TGBaseSortedList<T, T>);
 
-  { TGObjectSortedList }
-
   generic TGObjectSortedList<T, TCmpRel> = class(specialize TGBaseSortedList<T, TCmpRel>)
   private
     FOwnsObects: Boolean;
