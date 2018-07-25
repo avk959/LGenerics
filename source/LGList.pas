@@ -195,6 +195,7 @@ type
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
+  { returns index of any occurrence of aValue, -1 if there are no such element }
     function  IndexOf(constref aValue: T): SizeInt; inline;
   { returns index of leftest occurrence of aValue, -1 if there are no such element }
     function  FirstIndexOf(constref aValue: T): SizeInt;
@@ -484,6 +485,7 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
+  { returns index of any occurrence of aValue, -1 if there are no such element }
     function  IndexOf(constref aValue: T): SizeInt; inline;
   { returns index of leftest occurrence of aValue, -1 if there are no such element }
     function  FirstIndexOf(constref aValue: T): SizeInt;
