@@ -715,13 +715,6 @@ type
       function  GetEnumerator: TReverseEnumerator; inline;
     end;
 
-    TSearchData = record
-      Key: T;
-      Hash,
-      Index,
-      Next: SizeInt;
-    end;
-
   private
     FNodeList: TNodeList;
     FChainList: TChainList;
@@ -743,6 +736,8 @@ type
     procedure RemoveFromChain(aIndex: SizeInt);
     function  DoRemove(constref aValue: T): Boolean;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
+  { returns True if aValue found, False otherwise }
+    function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList);
     class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
@@ -759,9 +754,6 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
     function  IndexOf(constref aValue: T): SizeInt; inline;
     function  CountOf(constref aValue: T): SizeInt; inline;
-    function  FindFirst(constref aValue: T; out aData: TSearchData): Boolean;
-    function  FindNext(var aData: TSearchData): Boolean;
-    function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
   { returns index of the element added }
     function  Add(constref aValue: T): SizeInt; inline;
     function  AddAll(constref a: array of T): SizeInt;
@@ -839,13 +831,6 @@ type
       function  GetEnumerator: TReverseEnumerator; inline;
     end;
 
-    TSearchData = record
-      Key: TKey;
-      Hash,
-      Index,
-      Next: SizeInt;
-    end;
-
   private
     FNodeList: TNodeList;
     FChainList: TChainList;
@@ -868,6 +853,7 @@ type
     procedure RemoveFromChain(aIndex: SizeInt);
     function  DoRemove(constref aKey: TKey): Boolean;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList2);
     class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
@@ -884,9 +870,6 @@ type
     function  NonContains(constref aKey: TKey): Boolean; inline;
     function  IndexOf(constref aKey: TKey): SizeInt; inline;
     function  CountOf(constref aKey: TKey): SizeInt; inline;
-    function  FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
-    function  FindNext(var aData: TSearchData): Boolean;
-    function  FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     function  Add(constref e: TEntry): SizeInt; inline;
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
@@ -4020,6 +4003,24 @@ begin
   Result.Init(Self);
 end;
 
+function TGLiteHashList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+var
+  h: SizeInt;
+begin
+  h := TEqRel.HashCode(aValue);
+  if Count > 0 then
+    aIndex := Find(aValue, h)
+  else
+    aIndex := NULL_INDEX;
+  Result := aIndex >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      aIndex := DoAdd(aValue, h);
+    end;
+end;
+
 class procedure TGLiteHashList.CapacityExceedError(aValue: SizeInt);
 begin
   raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
@@ -4126,53 +4127,6 @@ begin
     Result := GetCountOf(aValue)
   else
     Result := 0;
-end;
-
-function TGLiteHashList.FindFirst(constref aValue: T; out aData: TSearchData): Boolean;
-begin
-  aData.Key := aValue;
-  aData.Index := IndexOf(aValue);
-  Result := aData.Index >= 0;
-  if Result then
-    begin
-      aData.Hash := FNodeList[aData.Index].Hash;
-      aData.Next :=  FNodeList[aData.Index].Next;
-    end
-  else
-    begin
-      aData.Hash := 0;
-      aData.Next :=  NULL_INDEX;
-    end;
-end;
-
-function TGLiteHashList.FindNext(var aData: TSearchData): Boolean;
-begin
-  while aData.Next >= 0 do
-    begin
-      aData.Index := aData.Next;
-      aData.Next := FNodeList[aData.Index].Next;
-      if (FNodeList[aData.Index].Hash = aData.Hash) and TEqRel.Equal(FNodeList[aData.Index].Data, aData.Key) then
-        exit(True);
-    end;
-  Result := False;
-end;
-
-function TGLiteHashList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
-var
-  h: SizeInt;
-begin
-  h := TEqRel.HashCode(aValue);
-  if Count > 0 then
-    aIndex := Find(aValue, h)
-  else
-    aIndex := NULL_INDEX;
-  Result := aIndex >= 0;
-  if not Result then
-    begin
-      if Count = Capacity then
-        Expand;
-      aIndex := DoAdd(aValue, h);
-    end;
 end;
 
 function TGLiteHashList.Add(constref aValue: T): SizeInt;
@@ -4543,6 +4497,25 @@ begin
   Result.Init(Self);
 end;
 
+function TGLiteHashList2.FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
+var
+  h: SizeInt;
+begin
+  h := TKeyEqRel.HashCode(aKey);
+  if Count > 0 then
+    aIndex := Find(aKey, h)
+  else
+    aIndex := NULL_INDEX;
+  Result := aIndex >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      aIndex := DoAddHash(h);
+    end;
+  p := @FNodeList[aIndex].Data;
+end;
+
 class procedure TGLiteHashList2.CapacityExceedError(aValue: SizeInt);
 begin
   raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
@@ -4648,55 +4621,6 @@ begin
     Result := GetCountOf(aKey)
   else
     Result := 0;
-end;
-
-function TGLiteHashList2.FindFirst(constref aKey: TKey; out aData: TSearchData): Boolean;
-begin
-  aData.Key := aKey;
-  aData.Index := IndexOf(aKey);
-  Result := aData.Index >= 0;
-  if Result then
-    begin
-      aData.Hash := FNodeList[aData.Index].Hash;
-      aData.Next :=  FNodeList[aData.Index].Next;
-    end
-  else
-    begin
-      aData.Hash := 0;
-      aData.Next :=  NULL_INDEX;
-    end;
-end;
-
-function TGLiteHashList2.FindNext(var aData: TSearchData): Boolean;
-begin
-  while aData.Next >= 0 do
-    begin
-      aData.Index := aData.Next;
-      aData.Next := FNodeList[aData.Index].Next;
-      if (FNodeList[aData.Index].Hash = aData.Hash) and
-          TKeyEqRel.Equal(FNodeList[aData.Index].Data.Key, aData.Key) then
-        exit(True);
-    end;
-  Result := False;
-end;
-
-function TGLiteHashList2.FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
-var
-  h: SizeInt;
-begin
-  h := TKeyEqRel.HashCode(aKey);
-  if Count > 0 then
-    aIndex := Find(aKey, h)
-  else
-    aIndex := NULL_INDEX;
-  Result := aIndex >= 0;
-  if not Result then
-    begin
-      if Count = Capacity then
-        Expand;
-      aIndex := DoAddHash(h);
-    end;
-  p := @FNodeList[aIndex].Data;
 end;
 
 function TGLiteHashList2.Add(constref e: TEntry): SizeInt;
