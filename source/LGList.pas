@@ -762,6 +762,7 @@ type
     function  FindFirst(constref aValue: T; out aData: TSearchData): Boolean;
     function  FindNext(var aData: TSearchData): Boolean;
     function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
+  { returns index of the element added }
     function  Add(constref aValue: T): SizeInt; inline;
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
@@ -4076,13 +4077,15 @@ procedure TGLiteHashList.EnsureCapacity(aValue: SizeInt);
 begin
   if aValue <= Capacity then
     exit;
-  if aValue <= DEFAULT_CONTAINER_CAPACITY then
-    aValue := DEFAULT_CONTAINER_CAPACITY
+  if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
+    begin
+      if aValue <= DEFAULT_CONTAINER_CAPACITY then
+        Resize(DEFAULT_CONTAINER_CAPACITY)
+      else
+        Resize(LGUtils.RoundUpTwoPower(aValue));
+    end
   else
-    if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
-      Resize(LGUtils.RoundUpTwoPower(aValue))
-    else
-      CapacityExceedError(aValue);
+    CapacityExceedError(aValue);
 end;
 
 procedure TGLiteHashList.TrimToFit;
