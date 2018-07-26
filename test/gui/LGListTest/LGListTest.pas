@@ -58,6 +58,7 @@ type
     procedure CreateEnum;
     procedure Clear;
     procedure EnsureCapacity;
+    procedure TrimToFit;
     procedure Add;
     procedure AddArray;
     procedure AddEnum;
@@ -99,6 +100,7 @@ type
     procedure Add;
     procedure Clear;
     procedure EnsureCapacity;
+    procedure TrimToFit;
     procedure RejectDuplicates;
     procedure IndexOf;
     procedure FirstIndexOf;
@@ -124,6 +126,7 @@ type
     procedure Add;
     procedure Clear;
     procedure EnsureCapacity;
+    procedure TrimToFit;
     procedure RejectDuplicates;
     procedure IndexOf;
     procedure FirstIndexOf;
@@ -138,6 +141,31 @@ type
     procedure Range;
     procedure FindFloor;
     procedure FindCeil;
+  end;
+
+  TLiteHashListTest = class(TTestCase)
+  private
+  type
+    TIntList = specialize TGLiteHashList<Integer, Integer>;
+
+  published
+    procedure Add;
+    procedure AddArray;
+    procedure AddEnum;
+    procedure AddUniq;
+    procedure AddUniqArray;
+    procedure AddUniqEnum;
+    procedure Clear;
+    procedure EnsureCapacity;
+    procedure TrimToFit;
+    procedure ToArray;
+    procedure Reverse;
+    procedure IndexOf;
+    procedure CountOf;
+    procedure Remove;
+    procedure Insert;
+    procedure Delete;
+    procedure DeleteOutOfBounds;
   end;
 
 implementation
@@ -279,6 +307,20 @@ begin
   AssertTrue(lst.Instance.Capacity >= 100);
 end;
 
+procedure TGSortedListTest.TrimToFit;
+var
+  lst: TAutoList;
+begin
+  {%H-}lst.Instance := TIntList.Create(IntArray21);
+  AssertTrue(lst.Instance.Count = 21);
+  AssertTrue(lst.Instance.Capacity <= DEFAULT_CONTAINER_CAPACITY);
+  lst.Instance.EnsureCapacity(255);
+  AssertTrue(lst.Instance.Capacity = 256);
+  lst.Instance.TrimToFit;
+  AssertTrue(lst.Instance.Count = 21);
+  AssertTrue(lst.Instance.Capacity = 21);
+end;
+
 procedure TGSortedListTest.Add;
 var
   lst: TAutoList;
@@ -312,11 +354,11 @@ end;
 
 procedure TGSortedListTest.AddEnum;
 var
-  s: TAutoList;
+  lst: TAutoList;
 begin
-  AssertTrue(s.Instance.AddAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21))) = Length(IntArray21));
-  AssertTrue(s.Instance.Count = Length(IntArray21));
-  AssertTrue(s.Instance.ContainsAll(IntArray21));
+  AssertTrue(lst.Instance.AddAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21))) = Length(IntArray21));
+  AssertTrue(lst.Instance.Count = Length(IntArray21));
+  AssertTrue(lst.Instance.ContainsAll(IntArray21));
 end;
 
 procedure TGSortedListTest.RejectDuplicates;
@@ -489,8 +531,8 @@ begin
     on ELGListError do
       Raised := True;
   end;
-
   AssertTrue(Raised);
+
   Raised := False;
   try
     lst.Instance.Delete(-1);
@@ -804,6 +846,22 @@ begin
   AssertTrue(lst.Capacity = 0);
   lst.EnsureCapacity(100);
   AssertTrue(lst.Capacity >= 100);
+end;
+
+procedure TLiteSortedListTest.TrimToFit;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  for I in IntArray21 do
+    lst.Add(I);
+  AssertTrue(lst.Count = 21);
+  AssertTrue(lst.Capacity <= DEFAULT_CONTAINER_CAPACITY);
+  lst.EnsureCapacity(255);
+  AssertTrue(lst.Capacity = 256);
+  lst.TrimToFit;
+  AssertTrue(lst.Count = 21);
+  AssertTrue(lst.Capacity = 21);
 end;
 
 procedure TLiteSortedListTest.RejectDuplicates;
@@ -1171,6 +1229,22 @@ begin
   AssertTrue(lst.Capacity >= 100);
 end;
 
+procedure TLiteComparableSortedListTest.TrimToFit;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  for I in IntArray21 do
+    lst.Add(I);
+  AssertTrue(lst.Count = 21);
+  AssertTrue(lst.Capacity <= DEFAULT_CONTAINER_CAPACITY);
+  lst.EnsureCapacity(255);
+  AssertTrue(lst.Capacity = 256);
+  lst.TrimToFit;
+  AssertTrue(lst.Count = 21);
+  AssertTrue(lst.Capacity = 21);
+end;
+
 procedure TLiteComparableSortedListTest.RejectDuplicates;
 var
   lst: TIntList;
@@ -1489,9 +1563,272 @@ begin
   AssertTrue(lst.IndexOfCeil(10, False) = 11);
 end;
 
+{ TLiteHashListTest }
+
+procedure TLiteHashListTest.Add;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  AssertTrue(lst.Count = 0);
+  AssertTrue(lst.Add(1) = 0);
+  AssertTrue(lst.Count = 1);
+  AssertTrue(lst.Contains(1));
+  AssertTrue(lst.Add(51) = 1);
+  AssertTrue(lst.Count = 2);
+  AssertTrue(lst.Contains(51));
+  AssertTrue(lst.Add(52) = 2);
+  AssertTrue(lst.Count = 3);
+  AssertTrue(lst.Contains(52));
+  for I := 1 to 100 do
+    AssertTrue(lst.Add(I) = I + 2);
+  AssertTrue(lst.Count = 103);
+  for I := 1 to 100 do
+    AssertTrue(lst.Contains(I));
+end;
+
+procedure TLiteHashListTest.AddArray;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  AssertTrue(lst.AddAll(IntArray21) = Length(IntArray21));
+  AssertTrue(lst.Count = Length(IntArray21));
+  for I in IntArray21 do
+    AssertTrue(lst.Contains(I));
+end;
+
+procedure TLiteHashListTest.AddEnum;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  AssertTrue(lst.AddAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21))) = Length(IntArray21));
+  AssertTrue(lst.Count = Length(IntArray21));
+  for I in IntArray21 do
+    AssertTrue(lst.Contains(I));
+end;
+
+procedure TLiteHashListTest.AddUniq;
+var
+  lst: TIntList;
+begin
+  AssertTrue(lst.Count = 0);
+  AssertTrue(lst.AddUniq(1));
+  AssertTrue(lst.Count = 1);
+  AssertTrue(lst.Contains(1));
+  AssertFalse(lst.AddUniq(1));
+  AssertTrue(lst.AddUniq(51));
+  AssertTrue(lst.Count = 2);
+  AssertTrue(lst.Contains(51));
+  AssertFalse(lst.AddUniq(51));
+  AssertTrue(lst.AddUniq(52));
+  AssertTrue(lst.Count = 3);
+  AssertTrue(lst.Contains(52));
+  AssertFalse(lst.AddUniq(52));
+end;
+
+procedure TLiteHashListTest.AddUniqArray;
+var
+  lst: TIntList;
+begin
+  AssertTrue(lst.AddAllUniq(IntArray11) = Length(IntArray11));
+  AssertTrue(lst.AddAllUniq(IntArray10) = Length(IntArray10));
+  AssertTrue(lst.AddAllUniq(IntArray11) = 0);
+  AssertTrue(lst.AddAllUniq(IntArray10) = 0);
+  AssertTrue(lst.AddAllUniq(IntArray21) = 0);
+end;
+
+procedure TLiteHashListTest.AddUniqEnum;
+var
+  lst: TIntList;
+begin
+  AssertTrue(lst.AddAllUniq(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11))) = Length(IntArray11));
+  AssertTrue(lst.AddAllUniq(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray10))) = Length(IntArray10));
+  AssertTrue(lst.AddAllUniq(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11))) = 0);
+  AssertTrue(lst.AddAllUniq(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray10))) = 0);
+  AssertTrue(lst.AddAllUniq(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21))) = 0);
+end;
+
+procedure TLiteHashListTest.Clear;
+var
+  lst: TIntList;
+begin
+  lst.AddAll(IntArray21);
+  AssertTrue(lst.Count = 21);
+  AssertTrue(lst.Capacity >= 21);
+  lst.Clear;
+  AssertTrue(lst.Count = 0);
+  AssertTrue(lst.Capacity = 0);
+end;
+
+procedure TLiteHashListTest.EnsureCapacity;
+var
+  lst: TIntList;
+begin
+  AssertTrue(lst.Capacity = 0);
+  lst.EnsureCapacity(100);
+  AssertTrue(lst.Capacity >= 100);
+end;
+
+procedure TLiteHashListTest.TrimToFit;
+var
+  lst: TIntList;
+begin
+  lst.AddAll(IntArray21);
+  AssertTrue(lst.Count = 21);
+  AssertTrue(lst.Capacity = DEFAULT_CONTAINER_CAPACITY);
+  lst.EnsureCapacity(255);
+  AssertTrue(lst.Capacity = 256);
+  lst.TrimToFit;
+  AssertTrue(lst.Count = 21);
+  AssertTrue(lst.Capacity = DEFAULT_CONTAINER_CAPACITY);
+end;
+
+procedure TLiteHashListTest.ToArray;
+var
+  lst: TIntList;
+  a: TIntArray;
+begin
+  lst.AddAll(IntArray21);
+  a := lst.ToArray;
+  AssertTrue(TIntHelper.Same(a, IntArray21));
+end;
+
+procedure TLiteHashListTest.Reverse;
+var
+  lst: TIntList;
+  a: TIntArray;
+  I, J: Integer;
+begin
+  lst.AddAll(IntArray21);
+  a := TIntHelper.CreateReverseCopy(IntArray21);
+  J := 0;
+  for I in lst.Reverse do
+    begin
+      AssertTrue(I = a[J]);
+      Inc(J);
+    end;
+end;
+
+procedure TLiteHashListTest.IndexOf;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  lst.AddAll(IntArray21);
+  for I in IntArray21 do
+    AssertTrue(lst.IndexOf(I) = I - 1);
+  AssertTrue(lst.IndexOf(0) = -1);
+  AssertTrue(lst.IndexOf(22) = -1);
+end;
+
+procedure TLiteHashListTest.CountOf;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  lst.AddAll(IntArray11);
+  lst.AddAll(IntArray11);
+  lst.AddAll(IntArray11);
+  AssertTrue(lst.Count = Length(IntArray11) * 3);
+  for I in IntArray11 do
+    AssertTrue(lst.CountOf(I) = 3);
+  AssertTrue(lst.CountOf(0) = 0);
+  AssertTrue(lst.CountOf(12) = 0);
+end;
+
+procedure TLiteHashListTest.Remove;
+var
+  lst: TIntList;
+begin
+  lst.AddAll(IntArray21);
+  AssertTrue(lst.Count = Length(IntArray21));
+  AssertTrue(lst.Remove(IntArray21[1]));
+  AssertTrue(lst.Count = Length(IntArray21) - 1);
+  AssertTrue(lst.Remove(IntArray21[High(IntArray21)]));
+  AssertTrue(lst.Count = Length(IntArray21) - 2);
+  AssertFalse(lst.Remove(-1));
+  AssertTrue(lst.Count = Length(IntArray21) - 2);
+  AssertFalse(lst.Remove(100));
+  AssertTrue(lst.Count = Length(IntArray21) - 2);
+  AssertTrue(lst.Remove(IntArray21[2]));
+  AssertTrue(lst.Count = Length(IntArray21) - 3);
+  AssertTrue(lst.Remove(IntArray21[High(IntArray21) - 1]));
+  AssertTrue(lst.Count = Length(IntArray21) - 4);
+end;
+
+procedure TLiteHashListTest.Insert;
+var
+  lst: TIntList;
+  I: Integer;
+begin
+  lst.AddAll(IntArray21);
+  lst.Insert(20, 22);
+  lst.Insert(20, 23);
+  lst.Insert(20, 24);
+  AssertTrue(lst.Count = 24);
+  for I := 1 to 20 do
+    AssertTrue(lst[I - 1] = I);
+  AssertTrue(lst[20] = 24);
+  AssertTrue(lst[21] = 23);
+  AssertTrue(lst[22] = 22);
+  AssertTrue(lst[23] = 21);
+end;
+
+procedure TLiteHashListTest.Delete;
+var
+  lst: TIntList;
+begin
+  lst.AddAll([0, 1, 2, 3, 4, 5, 6, 7]);
+  lst.Delete(0);
+  AssertTrue(lst.Count = 7);
+  AssertTrue(lst[0] = 1);
+  lst.Delete(3);
+  AssertTrue(lst.Count = 6);
+  AssertTrue(lst[3] = 5);
+  AssertTrue(TIntHelper.Same(lst.ToArray, [1, 2, 3, 5, 6, 7]));
+end;
+
+procedure TLiteHashListTest.DeleteOutOfBounds;
+var
+  lst: TIntList;
+  Raised: Boolean;
+begin
+  Raised := False;
+  try
+    lst.Delete(0);
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+
+  lst.Add(12);
+  AssertTrue(lst[0] = 12);
+  Raised := False;
+  try
+    lst.Delete(1);
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+
+  Raised := False;
+  try
+    lst.Delete(-1);
+  except
+    on ELGListError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
 initialization
   RegisterTest(TGSortedListTest);
   RegisterTest(TLiteSortedListTest);
   RegisterTest(TLiteComparableSortedListTest);
+  RegisterTest(TLiteHashListTest);
 end.
 
