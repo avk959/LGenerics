@@ -189,15 +189,30 @@ type
     TEdgeArray   = array of TWeightEdge;
 
     function  CreateEdgeArray: TEdgeArray;
-    procedure ReverseWeights;
     function  GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
     function  GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
   public
+{**********************************************************************************************************
+  auxiliary utilities
+***********************************************************************************************************}
+
     class function InfiniteWeight: TWeight; static; inline;
     class function NegInfiniteWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
     function  ContainsNegWeighedEdge: Boolean;
+
+{**********************************************************************************************************
+  class management utilities
+***********************************************************************************************************}
+
+    function  Clone: TGWeightedDiGraph;
+    function  Reverse: TGWeightedDiGraph;
+
+{**********************************************************************************************************
+  shortest path problem utilities
+***********************************************************************************************************}
+
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
@@ -230,6 +245,11 @@ type
     if there is a negative weight cycle, then aPaths will contain that cycle }
     function  FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function  FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+
+{**********************************************************************************************************
+  DAG utilities
+***********************************************************************************************************}
+
   { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
     the path from aSrc to it, or NegInfiniteWeight if it is unreachable from aSrc }
     function  DagMaxPathsMap(constref aSrc: TVertex): TWeightArray; inline;
@@ -241,8 +261,11 @@ type
     the path starting with it }
     function  DagMaxPaths: TWeightArray;
 
-    function  Clone: TGWeightedDiGraph;
-    function  Reverse: TGWeightedDiGraph;
+{**********************************************************************************************************
+  networks utilities
+***********************************************************************************************************}
+    function IsNetworkValid(constref aSource, aSink: TVertex): Boolean; inline;
+    function IsNetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
   end;
 
 implementation
@@ -1176,16 +1199,6 @@ begin
     end;
 end;
 
-procedure TGWeightedDiGraph.ReverseWeights;
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  for I := 0 to Pred(VertexCount) do
-    for p in AdjLists[I]^ do
-      p^.Data.Weight := -p^.Data.Weight;
-end;
-
 function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
 var
   Stack: TIntStack;
@@ -1275,6 +1288,16 @@ begin
     if e.Data.Weight < ZeroWeight then
       exit(True);
   Result := False;
+end;
+
+function TGWeightedDiGraph.Clone: TGWeightedDiGraph;
+begin
+  Result := inherited Clone as TGWeightedDiGraph;
+end;
+
+function TGWeightedDiGraph.Reverse: TGWeightedDiGraph;
+begin
+  Result := inherited Reverse as TGWeightedDiGraph;
 end;
 
 function TGWeightedDiGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
@@ -1405,14 +1428,42 @@ begin
         end;
 end;
 
-function TGWeightedDiGraph.Clone: TGWeightedDiGraph;
+function TGWeightedDiGraph.IsNetworkValid(constref aSource, aSink: TVertex): Boolean;
 begin
-  Result := inherited Clone as TGWeightedDiGraph;
+  Result := IsNetworkValidI(IndexOf(aSource), IndexOf(aSink));
 end;
 
-function TGWeightedDiGraph.Reverse: TGWeightedDiGraph;
+function TGWeightedDiGraph.IsNetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
+var
+  Visited: TBitVector;
+  Queue: TIntQueue;
+  Curr, Next, Total: SizeInt;
+  SinkFound: Boolean = False;
 begin
-  Result := inherited Reverse as TGWeightedDiGraph;
+  if IsEmpty then
+    exit(False);
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
+  if aSrcIndex = aSinkIndex then
+    exit(False);
+  if not (IsSourceI(aSrcIndex) and IsSinkI(aSinkIndex)) then
+    exit(False);
+  Total := 0;
+  Visited.Size := VertexCount;
+  Visited[aSrcIndex] := True;
+  Curr := aSrcIndex;
+  repeat
+    for Next in AdjVerticesI(Curr) do
+      if not Visited[Next] then
+        begin
+          if Next = aSinkIndex then
+            SinkFound := True;
+          Visited[Next] := True;
+          Inc(Total);
+          Queue.Enqueue(Next);
+        end;
+  until not Queue{%H-}.TryDequeue(Curr);
+  Result := (Total = VertexCount) and SinkFound;
 end;
 
 end.
