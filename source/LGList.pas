@@ -867,12 +867,6 @@ type
     procedure RemoveFromChain(aIndex: SizeInt);
     function  DoRemove(constref aKey: TKey): Boolean;
     function  GetReverseEnumerator: TReverseEnumerator; inline;
-    function  IndexInRange(aIndex: SizeInt): Boolean; inline;
-    function  IndexInInsertRange(aIndex: SizeInt): Boolean; inline;
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
-    procedure CheckInsertIndexRange(aIndex: SizeInt); inline;
-    function  GetItemRef(aIndex: SizeInt): PEntry;
-    class procedure IndexOutOfBoundError(aIndex: SizeInt); static; inline;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList2);
     class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
@@ -905,7 +899,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  Keys[aIndex: SizeInt]: TKey read GetKey;
     property  Items[aIndex: SizeInt]: TEntry read GetItem write SetItem; default;
-    property  ItemRefs[aIndex: SizeInt]: PEntry read GetItemRef;
   end;
 
 implementation
@@ -4332,33 +4325,41 @@ end;
 
 function TGLiteHashList2.GetItem(aIndex: SizeInt): TEntry;
 begin
-  CheckIndexRange(aIndex);
-  Result := FNodeList[aIndex].Data;
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := FNodeList[aIndex].Data
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteHashList2.GetKey(aIndex: SizeInt): TKey;
 begin
-  CheckIndexRange(aIndex);
-  Result := FNodeList[aIndex].Data.Key;
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    Result := FNodeList[aIndex].Data.Key
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteHashList2.SetItem(aIndex: SizeInt; const e: TEntry);
 var
   I: SizeInt;
 begin
-  CheckIndexRange(aIndex);
-  if TKeyEqRel.Equal(e.Key, FNodeList[aIndex].Data.Key) then
+  if SizeUInt(aIndex) < SizeUInt(Count) then
     begin
+      if TKeyEqRel.Equal(e.Key, FNodeList[aIndex].Data.Key) then
+        begin
+          FNodeList[aIndex].Data := e;
+          exit;
+        end;
+      RemoveFromChain(aIndex);
+      //add to new chain
       FNodeList[aIndex].Data := e;
-      exit;
-    end;
-  RemoveFromChain(aIndex);
-  //add to new chain
-  FNodeList[aIndex].Data := e;
-  FNodeList[aIndex].Hash := TKeyEqRel.HashCode(e.Key);
-  I := FNodeList[aIndex].Hash and Pred(Capacity);
-  FNodeList[aIndex].Next := FChainList[I];
-  FChainList[I] := aIndex;
+      FNodeList[aIndex].Hash := TKeyEqRel.HashCode(e.Key);
+      I := FNodeList[aIndex].Hash and Pred(Capacity);
+      FNodeList[aIndex].Next := FChainList[I];
+      FChainList[I] := aIndex;
+    end
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteHashList2.InitialAlloc;
@@ -4537,39 +4538,6 @@ end;
 function TGLiteHashList2.GetReverseEnumerator: TReverseEnumerator;
 begin
   Result.Init(Self);
-end;
-
-function TGLiteHashList2.IndexInRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex < Count);
-end;
-
-function TGLiteHashList2.IndexInInsertRange(aIndex: SizeInt): Boolean;
-begin
-  Result := (aIndex >= 0) and (aIndex <= Count);
-end;
-
-procedure TGLiteHashList2.CheckIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
-end;
-
-procedure TGLiteHashList2.CheckInsertIndexRange(aIndex: SizeInt);
-begin
-  if not IndexInInsertRange(aIndex) then
-    IndexOutOfBoundError(aIndex);
-end;
-
-function TGLiteHashList2.GetItemRef(aIndex: SizeInt): PEntry;
-begin
-  CheckIndexRange(aIndex);
-  Result := @FNodeList[aIndex].Data;
-end;
-
-class procedure TGLiteHashList2.IndexOutOfBoundError(aIndex: SizeInt);
-begin
-  raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 class procedure TGLiteHashList2.CapacityExceedError(aValue: SizeInt);
@@ -4787,16 +4755,22 @@ end;
 
 procedure TGLiteHashList2.Insert(aIndex: SizeInt; constref e: TEntry);
 begin
-  CheckInsertIndexRange(aIndex);
-  if Count = Capacity then
-    Expand;
-  DoInsert(aIndex, e);
+  if SizeUInt(aIndex) <= SizeUInt(Count) then
+    begin
+      if Count = Capacity then
+        Expand;
+      DoInsert(aIndex, e);
+    end
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteHashList2.Delete(aIndex: SizeInt);
 begin
-  CheckIndexRange(aIndex);
-  DoDelete(aIndex);
+  if SizeUInt(aIndex) < SizeUInt(Count) then
+    DoDelete(aIndex)
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TGLiteHashList2.Remove(constref aKey: TKey): Boolean;
