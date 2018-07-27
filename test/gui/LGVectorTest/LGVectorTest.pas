@@ -1156,8 +1156,21 @@ begin
 end;
 
 procedure TGVectorTest.InIteration;
+var
+  v: TAutoIntVector;
+  I: Integer;
+  Raised: Boolean = False;
 begin
-
+  v.Instance := TIntVector.Create(IntArray21);
+  try
+    for I in v.Instance do
+      if not Odd(I) then
+        v.Instance.Add(I);
+  except
+    on e: ELGUpdateLock do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
 end;
 
 procedure TGVectorTest.IterationDone;
