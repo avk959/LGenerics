@@ -561,7 +561,6 @@ type
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
-    TCustomMultiMap  = specialize TGCustomMultiMap<TKey, TValue>;
     TEntry           = specialize TGMapEntry<TKey, TValue>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IValueEnumerable = specialize IGEnumerable<TValue>;
@@ -592,33 +591,33 @@ type
 
     TCustomKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
     protected
-      FOwner: TCustomMultiMap;
+      FOwner: TGCustomMultiMap;
     public
-      constructor Create(aMap: TCustomMultiMap);
+      constructor Create(aMap: TGCustomMultiMap);
       destructor Destroy; override;
     end;
 
     TCustomValueEnumerable = class(specialize TGAutoEnumerable<TValue>)
     protected
-      FOwner: TCustomMultiMap;
+      FOwner: TGCustomMultiMap;
     public
-      constructor Create(aMap: TCustomMultiMap);
+      constructor Create(aMap: TGCustomMultiMap);
       destructor Destroy; override;
     end;
 
     TCustomEntryEnumerable = class(specialize TGAutoEnumerable<TEntry>)
     protected
-      FOwner: TCustomMultiMap;
+      FOwner: TGCustomMultiMap;
     public
-      constructor Create(aMap: TCustomMultiMap);
+      constructor Create(aMap: TGCustomMultiMap);
       destructor Destroy; override;
     end;
 
     TCustomValueCursor = class(specialize TGEnumCursor<TValue>)
     protected
-      FOwner: TCustomMultiMap;
+      FOwner: TGCustomMultiMap;
     public
-      constructor Create(e: TCustomEnumerator; aMap: TCustomMultiMap);
+      constructor Create(e: TCustomEnumerator; aMap: TGCustomMultiMap);
       destructor Destroy; override;
     end;
 
@@ -2694,7 +2693,7 @@ end;
 
 { TGCustomMultiMap.TCustomKeyEnumerable }
 
-constructor TGCustomMultiMap.TCustomKeyEnumerable.Create(aMap: TCustomMultiMap);
+constructor TGCustomMultiMap.TCustomKeyEnumerable.Create(aMap: TGCustomMultiMap);
 begin
   inherited Create;
   FOwner := aMap;
@@ -2708,7 +2707,7 @@ end;
 
 { TGCustomMultiMap.TCustomValueEnumerable }
 
-constructor TGCustomMultiMap.TCustomValueEnumerable.Create(aMap: TCustomMultiMap);
+constructor TGCustomMultiMap.TCustomValueEnumerable.Create(aMap: TGCustomMultiMap);
 begin
   inherited Create;
   FOwner := aMap;
@@ -2722,7 +2721,7 @@ end;
 
 { TGCustomMultiMap.TCustomEntryEnumerable }
 
-constructor TGCustomMultiMap.TCustomEntryEnumerable.Create(aMap: TCustomMultiMap);
+constructor TGCustomMultiMap.TCustomEntryEnumerable.Create(aMap: TGCustomMultiMap);
 begin
   inherited Create;
   FOwner := aMap;
@@ -2736,7 +2735,7 @@ end;
 
 { TGCustomMultiMap.TCustomValueCursor }
 
-constructor TGCustomMultiMap.TCustomValueCursor.Create(e: TCustomEnumerator; aMap: TCustomMultiMap);
+constructor TGCustomMultiMap.TCustomValueCursor.Create(e: TCustomEnumerator; aMap: TGCustomMultiMap);
 begin
   inherited Create(e);
   FOwner := aMap;
