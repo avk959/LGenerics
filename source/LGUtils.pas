@@ -322,6 +322,7 @@ type
   TGMapEntry<TKey, TValue> = record
     Key: TKey;
     Value: TValue;
+    constructor Create(constref aKey: TKey; constref aValue: TValue);
   end;
 
   //todo: -> IGSet
@@ -670,6 +671,14 @@ end;
 class operator TGAutoRef<T>.Implicit(var a: TGAutoRef<T>): T;
 begin
   Result := a.Instance;
+end;
+
+{ TGMapEntry }
+
+constructor TGMapEntry<TValue, TKey>.Create(constref aKey: TKey; constref aValue: TValue);
+begin
+  Key := aKey;
+  Value := aValue;
 end;
 
 { TGNodeManager }
