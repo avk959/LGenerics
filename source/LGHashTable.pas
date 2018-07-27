@@ -651,6 +651,19 @@ type
       PrevIndex: SizeInt;
     end;
 
+    TEnumerator = record
+    private
+      FList: TNodeList;
+      FLastIndex,
+      FCurrIndex: SizeInt;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(constref aTable: TGLiteChainHashTable);
+    public
+      function  MoveNext: Boolean; inline;
+      procedure Reset; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
   private
   type
     TChainList = array of SizeInt;
@@ -676,6 +689,7 @@ type
     class operator Initialize(var ht: TGLiteChainHashTable);
     class operator Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
   public
+    function  GetEnumerator: TEnumerator; inline;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
@@ -878,7 +892,7 @@ end;
 class function TGOpenAddressing.NewList(aCapacity: SizeInt): TNodeList;
 begin
   System.SetLength(Result, aCapacity);
-  System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
+  System.FillChar(Pointer(Result)^, aCapacity * NODE_SIZE, 0);
 end;
 
 procedure TGOpenAddressing.AllocList(aCapacity: SizeInt);
@@ -2742,7 +2756,7 @@ end;
 class function TGHashTableLP.NewList(aCapacity: SizeInt): TNodeList;
 begin
   System.SetLength(Result, aCapacity);
-  System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
+  System.FillChar(Pointer(Result)^, aCapacity * NODE_SIZE, 0);
 end;
 
 class function TGHashTableLP.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
@@ -3130,7 +3144,7 @@ end;
 class function TGLiteHashTableLP.NewList(aCapacity: SizeInt): TNodeList;
 begin
   System.SetLength(Result, aCapacity);
-  System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
+  System.FillChar(Pointer(Result)^, aCapacity * NODE_SIZE, 0);
 end;
 
 class function TGLiteHashTableLP.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
@@ -3270,6 +3284,31 @@ begin
     DoRemove(aPos);
 end;
 
+{ TGLiteChainHashTable.TEnumerator }
+
+function TGLiteChainHashTable.TEnumerator.GetCurrent: PEntry;
+begin
+  Result := @FList[FCurrIndex].Data;
+end;
+
+procedure TGLiteChainHashTable.TEnumerator.Init(constref aTable: TGLiteChainHashTable);
+begin
+  FList := aTable.FNodeList;
+  FLastIndex := System.High(FList);
+  FCurrIndex := -1;
+end;
+
+function TGLiteChainHashTable.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGLiteChainHashTable.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
 { TGLiteChainHashTable }
 
 function TGLiteChainHashTable.GetCapacity: SizeInt;
@@ -3286,7 +3325,7 @@ procedure TGLiteChainHashTable.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
   System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
-  System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FChainList)^, DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
 procedure TGLiteChainHashTable.Rehash;
@@ -3294,7 +3333,7 @@ var
   I, J, Mask: SizeInt;
 begin
   Mask := Pred(Capacity);
-  System.FillChar(FChainList[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FChainList)^, Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       J := FNodeList[I].Hash and Mask;
@@ -3419,9 +3458,14 @@ end;
 
 class operator TGLiteChainHashTable.Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
 begin
-  aDst.FNodeList := System.Copy(aSrc.FNodeList, 0, System.Length(aSrc.FNodeList));
-  aDst.FChainList := System.Copy(aSrc.FChainList, 0, System.Length(aSrc.FChainList));
+  aDst.FNodeList := System.Copy(aSrc.FNodeList);
+  aDst.FChainList := System.Copy(aSrc.FChainList);
   aDst.FCount := aSrc.Count;
+end;
+
+function TGLiteChainHashTable.GetEnumerator: TEnumerator;
+begin
+  Result.Init(Self);
 end;
 
 procedure TGLiteChainHashTable.Clear;
@@ -3703,7 +3747,7 @@ end;
 class function TGLiteIntHashTable.NewList(aCapacity: SizeInt): TNodeList;
 begin
   System.SetLength(Result, aCapacity);
-  System.FillChar(Result[0], aCapacity * NODE_SIZE, 0);
+  System.FillChar(Pointer(Result)^, aCapacity * NODE_SIZE, 0);
 end;
 
 class constructor TGLiteIntHashTable.Init;
