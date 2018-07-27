@@ -571,7 +571,7 @@ type
   type
     TCustomValueEnumerator = specialize TGCustomEnumerator<TValue>;
 
-    TCustomValueSet = class
+    TCustomValueSet = class abstract
     protected
       function GetCount: SizeInt; virtual; abstract;
     public
@@ -588,14 +588,6 @@ type
       Values: TCustomValueSet;
     end;
     PMMEntry = ^TMMEntry;
-
-    TCustomKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
-    protected
-      FOwner: TGCustomMultiMap;
-    public
-      constructor Create(aMap: TGCustomMultiMap);
-      destructor Destroy; override;
-    end;
 
     TCustomValueEnumerable = class(specialize TGAutoEnumerable<TValue>)
     protected
@@ -802,9 +794,8 @@ type
   { will raise exception if cell is missing }
     function  GetCell(constref aRow: TRow; constref aCol: TCol): TValue;
     function  TryGetCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
-    function  TryGetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue = Default(TValue)): TValue;
-              inline;
-    function  GetCellOrDefault(const aRow: TRow; const aCol: TCol): TValue;
+    function  GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue = Default(TValue)): TValue; inline;
+    function  GetCellOrDefault(const aRow: TRow; const aCol: TCol): TValue; inline;
     procedure AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
     function  AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
     function  AddCell(constref e: TCellData): Boolean; inline;
@@ -2691,20 +2682,6 @@ begin
   SetLength(Result, I);
 end;
 
-{ TGCustomMultiMap.TCustomKeyEnumerable }
-
-constructor TGCustomMultiMap.TCustomKeyEnumerable.Create(aMap: TGCustomMultiMap);
-begin
-  inherited Create;
-  FOwner := aMap;
-end;
-
-destructor TGCustomMultiMap.TCustomKeyEnumerable.Destroy;
-begin
-  FOwner.EndIteration;
-  inherited;
-end;
-
 { TGCustomMultiMap.TCustomValueEnumerable }
 
 constructor TGCustomMultiMap.TCustomValueEnumerable.Create(aMap: TGCustomMultiMap);
@@ -3180,11 +3157,10 @@ end;
 
 function TGCustomTable2D.GetCellOrDefault(const aRow: TRow; const aCol: TCol): TValue;
 begin
-  if not TryGetCell(aRow, aCol, Result) then
-    Result := Default(TValue);
+  Result := GetCellDef(aRow, aCol);
 end;
 
-function TGCustomTable2D.TryGetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue): TValue;
+function TGCustomTable2D.GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue): TValue;
 begin
   if not TryGetCell(aRow, aCol, Result) then
     Result := aDef;
