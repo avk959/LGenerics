@@ -700,7 +700,7 @@ type
       FCount,
       FCurrIndex: SizeInt;
       function  GetCurrent: T; inline;
-      procedure Init(constref aList: TGLiteHashList);
+      procedure Init(aList: PLiteHashList); inline;
     public
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
@@ -735,7 +735,6 @@ type
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
     function  DoRemove(constref aValue: T): Boolean;
-    function  GetReverseEnumerator: TReverseEnumerator; inline;
   { returns True if aValue found, False otherwise }
     function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
@@ -852,7 +851,6 @@ type
     procedure DoDelete(aIndex: SizeInt);
     procedure RemoveFromChain(aIndex: SizeInt);
     function  DoRemove(constref aKey: TKey): Boolean;
-    function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
     class procedure CapacityExceedError(aValue: SizeInt); static; inline;
     class operator Initialize(var hl: TGLiteHashList2);
@@ -3759,10 +3757,10 @@ begin
   Result := FList[FCurrIndex].Data;
 end;
 
-procedure TGLiteHashList.TReverseEnumerator.Init(constref aList: TGLiteHashList);
+procedure TGLiteHashList.TReverseEnumerator.Init(aList: PLiteHashList);
 begin
-  FList := aList.FNodeList;
-  FCount := aList.Count;
+  FList := aList^.FNodeList;
+  FCount := aList^.Count;
   FCurrIndex := FCount;
 end;
 
@@ -3786,7 +3784,7 @@ end;
 
 function TGLiteHashList.TReverse.GetEnumerator: TReverseEnumerator;
 begin
-  Result := FList^.GetReverseEnumerator;
+  Result.Init(FList);
 end;
 
 { TGLiteHashList }
@@ -3996,11 +3994,6 @@ begin
   Result := Removed >= 0;
   if Result then
     DoDelete(Removed);
-end;
-
-function TGLiteHashList.GetReverseEnumerator: TReverseEnumerator;
-begin
-  Result.Init(Self);
 end;
 
 function TGLiteHashList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
@@ -4270,7 +4263,7 @@ end;
 
 function TGLiteHashList2.TReverse.GetEnumerator: TReverseEnumerator;
 begin
-  Result := FList^.GetReverseEnumerator;
+  Result.Init(FList^);
 end;
 
 { TGLiteHashList2 }
@@ -4490,11 +4483,6 @@ begin
   Result := Removed >= 0;
   if Result then
     DoDelete(Removed);
-end;
-
-function TGLiteHashList2.GetReverseEnumerator: TReverseEnumerator;
-begin
-  Result.Init(Self);
 end;
 
 function TGLiteHashList2.FindOrAdd(constref aKey: TKey; out p: PEntry; out aIndex: SizeInt): Boolean;
