@@ -45,12 +45,14 @@ type
 
     THashTable    = class(specialize TGHashTableLP<TKey, TMMEntry, TKeyEqRel>);
 
-    TKeyEnumerable = class(TCustomKeyEnumerable)
+    TKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
     protected
+      FOwner: TGCustomHashMultiMap;
       FEnum: THashTable.TEnumerator;
       function  GetCurrent: TKey; override;
     public
       constructor Create(aMap: TGCustomHashMultiMap);
+      destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -62,6 +64,7 @@ type
       function  GetCurrent: TValue; override;
     public
       constructor Create(aMap: TGCustomHashMultiMap);
+      destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -73,9 +76,15 @@ type
       function  GetCurrent: TEntry; override;
     public
       constructor Create(aMap: TGCustomHashMultiMap);
+      destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
+
+    TValEntry = record
+      Key: TValue;
+    end;
+    PValEntry = ^TValEntry;
 
   var
     FTable: THashTable;
@@ -120,19 +129,15 @@ type
       functor TValueEqRel(value equality relation) must provide:
         class function HashCode([const[ref]] v: TValue): SizeInt;
         class function Equal([const[ref]] L, R: TValue): Boolean; }
-  generic TGHashMultiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
+  generic TGHashMultiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(
+    specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
   protected
   type
+    TTable = specialize TGHashTableLP<TValue, TValEntry, TValueEqRel>;
+
     TValueSet = class(TCustomValueSet)
     protected
     type
-      TValEntry = record
-        Key: TValue;
-      end;
-      PValEntry = ^TValEntry;
-
-      TTable = specialize TGHashTableLP<TValue, TValEntry, TValueEqRel>;
-
       TEnumerator = class(TCustomValueEnumerator)
       protected
         FEnum: TTable.TEnumerator;
@@ -159,7 +164,7 @@ type
       function  Remove(constref aValue: TValue): Boolean; override;
     end;
 
-    function GetUniqueKeyValues: Boolean; override;
+    function GetUniqueValues: Boolean; override;
     function CreateValueSet: TCustomValueSet; override;
   public
     destructor Destroy; override;
@@ -184,14 +189,10 @@ type
 
       functor TValueCmpRel(value comparision relation) must provide:
         class function Compare([const[ref]] L, R: TValue): SizeInt; }
-  generic TGTreeMultiMap<TKey, TValue, TKeyEqRel, TValueCmpRel> = class(specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
+  generic TGTreeMultiMap<TKey, TValue, TKeyEqRel, TValueCmpRel> = class(
+    specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
   protected
   type
-    TValEntry = record
-      Key: TValue;
-    end;
-    PValEntry = ^TValEntry;
-
     TNode        = specialize TGAvlTreeNode<TValEntry>;
     PNode        = ^TNode;
     TNodeManager = specialize TGPageNodeManager<TNode>;
@@ -200,20 +201,20 @@ type
     TValueSet = class(TCustomValueSet)
     protected
     type
-      TTable = specialize TGAvlTree2<TValue, TValEntry, TNodeManager, TValueCmpRel>;
+      TTree = specialize TGAvlTree2<TValue, TValEntry, TNodeManager, TValueCmpRel>;
 
       TEnumerator = class(TCustomValueEnumerator)
       protected
-        FEnum: TTable.TEnumerator;
+        FEnum: TTree.TEnumerator;
         function  GetCurrent: TValue; override;
       public
-        constructor Create(aTable: TTable);
+        constructor Create(aTable: TTree);
         function  MoveNext: Boolean; override;
         procedure Reset; override;
       end;
 
     var
-      FTable: TTable;
+      FTree: TTree;
       function GetCount: SizeInt; override;
     public
       constructor Create(aNodeManager: TNodeManager);
@@ -227,7 +228,7 @@ type
     FNodeManager: TNodeManager;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
-    function  GetUniqueKeyValues: Boolean; override;
+    function  GetUniqueValues: Boolean; override;
     function  CreateValueSet: TCustomValueSet; override;
   public
     constructor Create;
@@ -257,34 +258,36 @@ type
         class function Equal([const[ref]] L, R: TKey): Boolean;
 
       functor TValueCmpRel(value comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TValue): SizeInt; }
-  generic TGListMultiMap<TKey, TValue, TKeyEqRel, TValueCmpRel> = class(specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
-  protected
-  const
-    INITIAL_CAPACITY = 8;
+        class function Compare([const[ref]] L, R: TValue): SizeInt;
 
+      *** TGListMultiMap has memory leak *** }
+  generic TGListMultiMap<TKey, TValue, TKeyEqRel, TValueCmpRel> = class(
+    specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
+  protected
   type
+    TValList = specialize TGSortedList2<TValue, TValueCmpRel>;
+
     TValueSet = class(TCustomValueSet)
     protected
     type
-      TList = specialize TGSortedList2<TValue, TValueCmpRel>;
-
       TEnumerator = class(TCustomValueEnumerator)
       protected
-        FEnum: TList.TEnumerator;
+        FEnum: TValList.TEnumerator;
         function  GetCurrent: TValue; override;
       public
-        constructor Create(aList: TList);
+        constructor Create(aSet: TValueSet);
         function  MoveNext: Boolean; override;
         procedure Reset; override;
       end;
 
+    const
+      INITIAL_CAPACITY = 8;
     var
-      FList: TList;
+      FList: TValList;
       function GetCount: SizeInt; override;
     public
       constructor Create;
-      destructor Destroy; override; final;
+      destructor Destroy; override;
       function  GetEnumerator: TCustomValueEnumerator; override;
       procedure TrimToFit;
       function  Contains(constref aValue: TValue): Boolean; override;
@@ -293,7 +296,7 @@ type
     end;
 
     procedure DoTrimToFit; override;
-    function  GetUniqueKeyValues: Boolean; override;
+    function  GetUniqueValues: Boolean; override;
     function  CreateValueSet: TCustomValueSet; override;
   public
      destructor Destroy; override;
@@ -498,8 +501,15 @@ end;
 
 constructor TGCustomHashMultiMap.TKeyEnumerable.Create(aMap: TGCustomHashMultiMap);
 begin
-  inherited Create(aMap);
+  inherited Create;
+  FOwner := aMap;
   FEnum := aMap.FTable.GetEnumerator;
+end;
+
+destructor TGCustomHashMultiMap.TKeyEnumerable.Destroy;
+begin
+  FOwner.EndIteration;
+  inherited;
 end;
 
 function TGCustomHashMultiMap.TKeyEnumerable.MoveNext: Boolean;
@@ -523,6 +533,12 @@ constructor TGCustomHashMultiMap.TValueEnumerable.Create(aMap: TGCustomHashMulti
 begin
   inherited Create(aMap);
   FEntryEnum := aMap.FTable.GetEnumerator;
+end;
+
+destructor TGCustomHashMultiMap.TValueEnumerable.Destroy;
+begin
+  FValueEnum.Free;
+  inherited;
 end;
 
 function TGCustomHashMultiMap.TValueEnumerable.MoveNext: Boolean;
@@ -560,6 +576,12 @@ begin
   FEntryEnum := aMap.FTable.GetEnumerator;
 end;
 
+destructor TGCustomHashMultiMap.TEntryEnumerable.Destroy;
+begin
+  FValueEnum.Free;
+  inherited;
+end;
+
 function TGCustomHashMultiMap.TEntryEnumerable.MoveNext: Boolean;
 begin
   repeat
@@ -567,7 +589,7 @@ begin
       begin
         if not FEntryEnum.MoveNext then
           exit(False);
-        FValueEnum := FEntryEnum.Current^.Values.GetEnumerator;
+        FValueEnum := TCustomValueSet(FEntryEnum.Current^.Values).GetEnumerator;
       end;
     Result := FValueEnum.MoveNext;
     if not Result then
@@ -703,13 +725,13 @@ end;
 
 constructor TGCustomHashMultiMap.Create(constref a: array of TEntry);
 begin
-  FTable := THashTable.Create;
+  Create;
   DoAddAll(a);
 end;
 
 constructor TGCustomHashMultiMap.Create(e: IEntryEnumerable);
 begin
-  FTable := THashTable.Create;
+  Create;
   DoAddAll(e);
 end;
 
@@ -720,13 +742,13 @@ end;
 
 constructor TGCustomHashMultiMap.Create(aCapacity: SizeInt; constref a: array of TEntry);
 begin
-  FTable := THashTable.Create(aCapacity);
+  Create(aCapacity);
   DoAddAll(a);
 end;
 
 constructor TGCustomHashMultiMap.Create(aCapacity: SizeInt; e: IEntryEnumerable);
 begin
-  FTable := THashTable.Create(aCapacity);
+  Create(aCapacity);
   DoAddAll(e);
 end;
 
@@ -772,7 +794,7 @@ end;
 
 function TGHashMultiMap.TValueSet.GetEnumerator: TCustomValueEnumerator;
 begin
-  Result := TEnumerator.Create(Ftable);
+  Result := TEnumerator.Create(FTable);
 end;
 
 function TGHashMultiMap.TValueSet.Contains(constref aValue: TValue): Boolean;
@@ -801,7 +823,7 @@ end;
 
 { TGHashMultiMap }
 
-function TGHashMultiMap.GetUniqueKeyValues: Boolean;
+function TGHashMultiMap.GetUniqueValues: Boolean;
 begin
   Result := True;
 end;
@@ -825,7 +847,7 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGTreeMultiMap.TValueSet.TEnumerator.Create(aTable: TTable);
+constructor TGTreeMultiMap.TValueSet.TEnumerator.Create(aTable: TTree);
 begin
   FEnum := aTable.GetEnumerator;
 end;
@@ -844,42 +866,42 @@ end;
 
 function TGTreeMultiMap.TValueSet.GetCount: SizeInt;
 begin
-  Result := FTable.Count;
+  Result := FTree.Count;
 end;
 
 constructor TGTreeMultiMap.TValueSet.Create(aNodeManager: TNodeManager);
 begin
-  FTable := TTable.Create(aNodeManager);
+  FTree := TTree.Create(aNodeManager);
 end;
 
 destructor TGTreeMultiMap.TValueSet.Destroy;
 begin
-  FTable.Free;
+  FTree.Free;
   inherited;
 end;
 
 function TGTreeMultiMap.TValueSet.GetEnumerator: TCustomValueEnumerator;
 begin
-  Result := TEnumerator.Create(FTable);
+  Result := TEnumerator.Create(FTree);
 end;
 
 function TGTreeMultiMap.TValueSet.Contains(constref aValue: TValue): Boolean;
 begin
-  Result := FTable.Find(aValue) <> nil;
+  Result := FTree.Find(aValue) <> nil;
 end;
 
 function TGTreeMultiMap.TValueSet.Add(constref aValue: TValue): Boolean;
 var
   p: PNode;
 begin
-  Result := not FTable.FindOrAdd(aValue, p);
+  Result := not FTree.FindOrAdd(aValue, p);
   if Result then
     p^.Data.Key := aValue;
 end;
 
 function TGTreeMultiMap.TValueSet.Remove(constref aValue: TValue): Boolean;
 begin
-  Result := FTable.Remove(aValue);
+  Result := FTree.Remove(aValue);
 end;
 
 { TGTreeMultiMap }
@@ -897,7 +919,7 @@ begin
     FNodeManager.Clear;
 end;
 
-function TGTreeMultiMap.GetUniqueKeyValues: Boolean;
+function TGTreeMultiMap.GetUniqueValues: Boolean;
 begin
   Result := True;
 end;
@@ -962,9 +984,9 @@ begin
   Result := FEnum.Current;
 end;
 
-constructor TGListMultiMap.TValueSet.TEnumerator.Create(aList: TList);
+constructor TGListMultiMap.TValueSet.TEnumerator.Create(aSet: TValueSet);
 begin
-  FEnum := aList.GetEnumerator;
+  FEnum := aSet.FList.GetEnumerator;
 end;
 
 function TGListMultiMap.TValueSet.TEnumerator.MoveNext: Boolean;
@@ -986,7 +1008,7 @@ end;
 
 constructor TGListMultiMap.TValueSet.Create;
 begin
-  FList := TList.Create(INITIAL_CAPACITY, True);
+  FList := TValList.Create(INITIAL_CAPACITY, True);
 end;
 
 destructor TGListMultiMap.TValueSet.Destroy;
@@ -997,7 +1019,7 @@ end;
 
 function TGListMultiMap.TValueSet.GetEnumerator: TCustomValueEnumerator;
 begin
-  Result := TEnumerator.Create(FList);
+  Result := TEnumerator.Create(Self);
 end;
 
 procedure TGListMultiMap.TValueSet.TrimToFit;
@@ -1006,8 +1028,6 @@ begin
 end;
 
 function TGListMultiMap.TValueSet.Contains(constref aValue: TValue): Boolean;
-var
-  I: SizeInt;
 begin
   Result := FList.Contains(aValue);
 end;
@@ -1034,7 +1054,7 @@ begin
     TValueSet(p^.Values).TrimToFit;
 end;
 
-function TGListMultiMap.GetUniqueKeyValues: Boolean;
+function TGListMultiMap.GetUniqueValues: Boolean;
 begin
   Result := False;
 end;
