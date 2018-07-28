@@ -452,9 +452,6 @@ type
     procedure RemoveFromChain(aIndex: SizeInt);
     procedure DoRemove(constref aPos: TSearchResult);
     function  GetValuesView(const aKey: TKey): TValuesView;
-    function  GetKeyEnumerator: TKeyEnumerator; inline;
-    function  GetValueEnumerator: TValueEnumerator; inline;
-    function  GetValueViewEnumerator(constref aKey: TKey): TValueViewEnumerator; inline;
     class constructor Init;
     class operator Initialize(var m: TGLiteHashMultiMap);
     class operator Copy(constref aSrc: TGLiteHashMultiMap; var aDst: TGLiteHashMultiMap);
@@ -1184,7 +1181,7 @@ end;
 
 function TGLiteHashMultiMap.TKeys.GetEnumerator: TKeyEnumerator;
 begin
-  Result := FMap^.GetKeyEnumerator;
+  Result.Init(FMap^);
 end;
 
 { TGLiteHashMultiMap.TValues }
@@ -1196,7 +1193,7 @@ end;
 
 function TGLiteHashMultiMap.TValues.GetEnumerator: TValueEnumerator;
 begin
-  Result := FMap^.GetValueEnumerator;
+  Result.Init(FMap^);
 end;
 
 { TGLiteHashMultiMap.TValuesView }
@@ -1209,7 +1206,7 @@ end;
 
 function TGLiteHashMultiMap.TValuesView.GetEnumerator: TValueViewEnumerator;
 begin
-  Result := FMap^.GetValueViewEnumerator(FKey);
+  Result.Init(FMap, FKey);
 end;
 
 function TGLiteHashMultiMap.TValuesView.ToArray: TValueArray;
@@ -1385,21 +1382,6 @@ begin
       FNodeList[aPos.Index].Next := FChainList[I];
       FChainList[I] := aPos.Index;
     end;
-end;
-
-function TGLiteHashMultiMap.GetKeyEnumerator: TKeyEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteHashMultiMap.GetValueEnumerator: TValueEnumerator;
-begin
-  Result.Init(Self);
-end;
-
-function TGLiteHashMultiMap.GetValueViewEnumerator(constref aKey: TKey): TValueViewEnumerator;
-begin
-  Result.Init(@Self, aKey);
 end;
 
 class constructor TGLiteHashMultiMap.Init;
