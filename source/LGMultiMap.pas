@@ -299,7 +299,7 @@ type
     function  GetUniqueValues: Boolean; override;
     function  CreateValueSet: TCustomValueSet; override;
   public
-     destructor Destroy; override;
+    destructor Destroy; override;
   end;
 
   { TGListMultiMapK assumes that TKey implements TKeyEqRel }
