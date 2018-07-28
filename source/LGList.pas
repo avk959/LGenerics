@@ -224,39 +224,6 @@ type
   { TGSortedList assumes that type T implements TCmpRel}
   generic TGSortedList<T> = class(specialize TGBaseSortedList<T, T>);
 
-  { does not compiled line 3350 in DoSetItem(do not know why; currently line commented);
-    anyway class in invalid condition }
-  generic TGObjectSortedList<T: class; TCmpRel> = class(specialize TGBaseSortedList<T, TCmpRel>)
-  private
-    FOwnsObects: Boolean;
-  protected
-    procedure DoClear; override;
-    procedure DoSetItem(aIndex: SizeInt; const aValue: T); override;
-    function  DoRemove(constref aValue: T): Boolean; override;
-    function  DoRemoveIf(aTest: TTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
-    function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
-    function  DeleteItem(aIndex: SizeInt): T; override;
-    function  DoDeleteRange(aIndex, aCount: SizeInt): SizeInt; override;
-  public
-  type
-    TObjectSortedList = specialize TGObjectSortedList<T, TCmpRel>;
-
-    constructor CreateEmpty(aOwnsObjects: Boolean = True);
-    constructor Create(aOwnsObjects: Boolean = True);
-    constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
-    constructor Create(constref a: array of T; aOwnsObjects: Boolean = True);
-    constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
-    constructor Create(aRejectDuplicates: Boolean; aOwnsObjects: Boolean = True);
-    constructor Create(constref a: array of T; aRejectDuplicates: Boolean; aOwnsObjects: Boolean = True);
-    constructor Create(e: IEnumerable; aRejectDuplicates: Boolean; aOwnsObjects: Boolean = True);
-    function  Clone: TObjectSortedList; override;
-    property OwnsObjects: Boolean read FOwnsObects write FOwnsObects;
-  end;
-
-  { TGObjSortedList uses comparator from LGHelpers }
-  //generic TGObjSortedList<T: class> = class(specialize TGObjectSortedList<T, T>);
-
   { TGSortedList2: minimalistic sorted list }
   generic TGSortedList2<T, TCmpRel> = class
   private
@@ -306,6 +273,65 @@ type
     function  Add(constref aValue: T): Boolean;
     function  Contains(constref aValue: T): Boolean;
     function  Remove(constref aValue: T): Boolean;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+  { by default False }
+    property  AllowDuplicates: Boolean read FAllowDuplicates;
+  end;
+
+  { TGSortedListTable: table on top of sorted list }
+  generic TGSortedListTable<TKey, TEntry, TCmpRel> = class
+  private
+  type
+    TEntryList = array of TEntry;
+
+  public
+  type
+    PEntry = ^TEntry;
+
+    TEntryCmpRel = class
+      class function Compare(constref L, R: TEntry): SizeInt; static; inline;
+    end;
+
+    TEnumerator = record
+    private
+      FList: TEntryList;
+      FCurrIndex,
+      FLastIndex: SizeInt;
+      function  GetCurrent: PEntry; inline;
+    public
+      procedure Init(aTable: TGSortedListTable); inline;
+      function  MoveNext: Boolean;
+      procedure Reset; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
+  private
+    FItems: TEntryList;
+    FCount: SizeInt;
+    FAllowDuplicates: Boolean;
+    function  GetCapacity: SizeInt; inline;
+    procedure Expand(aValue: SizeInt);
+    procedure ItemAdding; inline;
+    procedure InsertItem(aIndex: SizeInt; constref aValue: TEntry);
+    procedure RemoveItem(aIndex: SizeInt);
+    procedure CapacityExceedError(aValue: SizeInt); inline;
+  public
+    constructor CreateEmpty;
+    constructor CreateEmpty(AllowDuplicates: Boolean);
+    constructor Create;
+    constructor Create(aCapacity: SizeInt);
+    constructor Create(aCapacity: SizeInt; AllowDuplicates: Boolean);
+    destructor  Destroy; override;
+    function  GetEnumerator: TEnumerator; inline;
+    procedure Clear; inline;
+    function  EnsureCapacity(aValue: SizeInt): Boolean; inline;
+    procedure TrimToFit; inline;
+    function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+    function  Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
+    function  Add(constref aKey: TKey): PEntry;
+    function  Remove(constref aKey: TKey): Boolean;
+    procedure RemoveAt(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   { by default False }
@@ -1797,217 +1823,6 @@ begin
   Result.FRejectDuplicates := RejectDuplicates;
 end;
 
-{ TGObjectSortedList }
-
-procedure TGObjectSortedList.DoClear;
-var
-  I: SizeInt;
-begin
-  if OwnsObjects then
-    for I := 0 to Pred(ElemCount) do
-      TObject(FItems[I]).Free;
-  inherited;
-end;
-
-procedure TGObjectSortedList.DoSetItem(aIndex: SizeInt; const aValue: T);
-var
-  sr: THelper.TSearchResult;
-  c: SizeInt;
-begin
-  c := TCmpRel.Compare(aValue, FItems[aIndex]);
-  if c <> 0 then
-    begin
-      CheckInIteration;
-      if ElemCount > 1 then
-        begin
-          //sr := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue);
-          if (sr.FoundIndex > -1) and RejectDuplicates then
-            exit;
-          if OwnsObjects then
-            FItems[aIndex].Free;
-          if sr.InsertIndex > aIndex then
-            System.Move(FItems[Succ(aIndex)], FItems[aIndex], sr.InsertIndex - aIndex)
-          else
-            System.Move(FItems[sr.InsertIndex], FItems[Succ(sr.InsertIndex)], aIndex - sr.InsertIndex);
-          //System.FillChar(FItems[sr.InsertIndex], SizeOf(T), 0);
-          FItems[sr.InsertIndex] := aValue;
-        end;
-    end;
-end;
-
-function TGObjectSortedList.DoRemove(constref aValue: T): Boolean;
-begin
-  Result := inherited DoRemove(aValue);
-  if Result and OwnsObjects then
-    TObject(aValue).Free;
-end;
-
-function TGObjectSortedList.DoRemoveIf(aTest: TTest): SizeInt;
-var
-  I, J: SizeInt;
-begin
-  Result := ElemCount;
-  if Result > 0 then
-    begin
-      J := 0;
-      for I := 0 to Pred(Result) do
-        begin
-          if aTest(FItems[I]) then
-            continue;
-          if I > J then
-            begin
-              if OwnsObjects then
-                FItems[J].Free;
-              FItems[J] := FItems[I];
-            end;
-          Inc(J);
-        end;
-      FCount := J;
-      if OwnsObjects then
-        for I := ElemCount to Pred(Result) do
-          FItems[I].Free;
-      Result := Result - ElemCount;
-    end;
-end;
-
-function TGObjectSortedList.DoRemoveIf(aTest: TOnTest): SizeInt;
-var
-  I, J: SizeInt;
-begin
-  Result := ElemCount;
-  if Result > 0 then
-    begin
-      J := 0;
-      for I := 0 to Pred(Result) do
-        begin
-          if aTest(FItems[I]) then
-            continue;
-          if I > J then
-            begin
-              if OwnsObjects then
-                FItems[J].Free;
-              FItems[J] := FItems[I];
-            end;
-          Inc(J);
-        end;
-      FCount := J;
-      if OwnsObjects then
-        for I := ElemCount to Pred(Result) do
-          FItems[I].Free;
-      Result := Result - ElemCount;
-    end;
-end;
-
-function TGObjectSortedList.DoRemoveIf(aTest: TNestTest): SizeInt;
-var
-  I, J: SizeInt;
-begin
-  Result := ElemCount;
-  if Result > 0 then
-    begin
-      J := 0;
-      for I := 0 to Pred(Result) do
-        begin
-          if aTest(FItems[I]) then
-            continue;
-          if I > J then
-            begin
-              if OwnsObjects then
-                FItems[J].Free;
-              FItems[J] := FItems[I];
-            end;
-          Inc(J);
-        end;
-      FCount := J;
-      if OwnsObjects then
-        for I := ElemCount to Pred(Result) do
-          FItems[I].Free;
-      Result := Result - ElemCount;
-    end;
-end;
-
-function TGObjectSortedList.DeleteItem(aIndex: SizeInt): T;
-begin
-  Result := inherited DeleteItem(aIndex);
-  if OwnsObjects then
-    Result.Free;
-end;
-
-function TGObjectSortedList.DoDeleteRange(aIndex, aCount: SizeInt): SizeInt;
-var
-  I: SizeInt;
-begin
-  if aCount < 0 then
-    aCount := 0;
-  Result := Math.Min(aCount, ElemCount - aIndex);
-  if Result > 0 then
-    begin
-      if OwnsObjects then
-        for I := aIndex to Pred(aIndex + Result) do
-          FItems[I].Free;
-      FCount -= Result;
-      System.Move(FItems[aIndex + Result], FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
-      //System.FillChar(FItems[ElemCount], SizeOf(T) * Result, 0);
-    end;
-end;
-
-constructor TGObjectSortedList.CreateEmpty(aOwnsObjects: Boolean);
-begin
-  inherited CreateEmpty;
-  OwnsObjects := aOwnsObjects;
-end;
-
-constructor TGObjectSortedList.Create(aOwnsObjects: Boolean);
-begin
-  inherited Create;
-  OwnsObjects := aOwnsObjects;
-end;
-
-constructor TGObjectSortedList.Create(aCapacity: SizeInt; aOwnsObjects: Boolean);
-begin
-  inherited Create(aCapacity);
-  OwnsObjects := aOwnsObjects;
-end;
-
-constructor TGObjectSortedList.Create(constref a: array of T; aOwnsObjects: Boolean);
-begin
-  inherited Create(a);
-  OwnsObjects := aOwnsObjects;
-end;
-
-constructor TGObjectSortedList.Create(e: IEnumerable; aOwnsObjects: Boolean);
-begin
-  inherited Create(e);
-  OwnsObjects := aOwnsObjects;
-end;
-
-constructor TGObjectSortedList.Create(aRejectDuplicates: Boolean; aOwnsObjects: Boolean);
-begin
-  inherited Create(aRejectDuplicates);
-  OwnsObjects := aOwnsObjects;
-end;
-
-constructor TGObjectSortedList.Create(constref a: array of T; aRejectDuplicates: Boolean; aOwnsObjects: Boolean);
-begin
-  inherited Create(a, aRejectDuplicates);
-  OwnsObjects := aOwnsObjects;
-end;
-
-constructor TGObjectSortedList.Create(e: IEnumerable; aRejectDuplicates: Boolean; aOwnsObjects: Boolean);
-begin
-  inherited Create(e, aRejectDuplicates);
-  OwnsObjects := aOwnsObjects;
-end;
-
-function TGObjectSortedList.Clone: TObjectSortedList;
-begin
-  Result := TObjectSortedList.CreateEmpty(OwnsObjects);
-  //Result.FItems := System.Copy(FItems, 0, ListCapacity);
-  Result.FItems := ToArray; ///////////////
-  Result.FCount := ElemCount;
-  Result.FRejectDuplicates := RejectDuplicates;
-end;
-
 { TGSortedList2.TEnumerator }
 
 function TGSortedList2.TEnumerator.GetCurrent: T;
@@ -2189,6 +2004,240 @@ begin
     end
   else
     Result := False;
+end;
+
+{ TGSortedListTable.TEntryCmpRel }
+
+class function TGSortedListTable.TEntryCmpRel.Compare(constref L, R: TEntry): SizeInt;
+begin
+  Result := TCmpRel.Compare(L.Key, R.Key);
+end;
+
+{ TGSortedListTable.TEnumerator }
+
+function TGSortedListTable.TEnumerator.GetCurrent: PEntry;
+begin
+  Result := @FList[FCurrIndex];
+end;
+
+procedure TGSortedListTable.TEnumerator.Init(aTable: TGSortedListTable);
+begin
+  FList := aTable.FItems;
+  FLastIndex := Pred(aTable.Count);
+  FCurrIndex := -1;
+end;
+
+function TGSortedListTable.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FCurrIndex < FLastIndex;
+  FCurrIndex += Ord(Result);
+end;
+
+procedure TGSortedListTable.TEnumerator.Reset;
+begin
+  FCurrIndex := -1;
+end;
+
+{ TGSortedListTable }
+
+function TGSortedListTable.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FItems);
+end;
+
+procedure TGSortedListTable.Expand(aValue: SizeInt);
+begin
+  //there aValue > Capacity
+  if aValue <= DEFAULT_CONTAINER_CAPACITY then
+    System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY)
+  else
+    if aValue <= MAX_CONTAINER_SIZE div SizeOf(TEntry) then
+      begin
+        aValue := Math.Min(MAX_CONTAINER_SIZE div SizeOf(TEntry), LGUtils.RoundUpTwoPower(aValue));
+        System.SetLength(FItems, aValue);
+      end
+    else
+      CapacityExceedError(aValue);
+end;
+
+procedure TGSortedListTable.ItemAdding;
+begin
+  if Count = Capacity then
+    Expand(Succ(Count));
+end;
+
+procedure TGSortedListTable.InsertItem(aIndex: SizeInt; constref aValue: TEntry);
+begin
+  ItemAdding;
+  if aIndex < Count then
+    begin
+      System.Move(FItems[aIndex], FItems[Succ(aIndex)], SizeOf(TEntry) * (Count - aIndex));
+      System.FillChar(FItems[aIndex], SizeOf(TEntry), 0);
+    end;
+  FItems[aIndex] := aValue;
+  Inc(FCount);
+end;
+
+procedure TGSortedListTable.RemoveItem(aIndex: SizeInt);
+begin
+  FItems[aIndex] := Default(TEntry);
+  Dec(FCount);
+  System.Move(FItems[Succ(aIndex)], FItems[aIndex], SizeOf(TEntry) * (Count - aIndex));
+  System.FillChar(FItems[Count], SizeOf(TEntry), 0);
+end;
+
+procedure TGSortedListTable.CapacityExceedError(aValue: SizeInt);
+begin
+  raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
+end;
+
+constructor TGSortedListTable.CreateEmpty;
+begin
+  inherited Create;
+end;
+
+constructor TGSortedListTable.CreateEmpty(AllowDuplicates: Boolean);
+begin
+  inherited Create;
+  FAllowDuplicates := AllowDuplicates;
+end;
+
+constructor TGSortedListTable.Create;
+begin
+  System.SetLength(FItems, DEFAULT_CONTAINER_CAPACITY);
+end;
+
+constructor TGSortedListTable.Create(aCapacity: SizeInt);
+begin
+  if aCapacity <= MAX_CONTAINER_SIZE div SizeOf(TEntry) then
+    begin
+      if aCapacity < 0 then
+        aCapacity := 0;
+      System.SetLength(FItems, aCapacity);
+    end
+  else
+    CapacityExceedError(aCapacity);
+end;
+
+constructor TGSortedListTable.Create(aCapacity: SizeInt; AllowDuplicates: Boolean);
+begin
+  Create(aCapacity);
+  FAllowDuplicates := AllowDuplicates;
+end;
+
+destructor TGSortedListTable.Destroy;
+begin
+  Clear;
+  inherited;
+end;
+
+function TGSortedListTable.GetEnumerator: TEnumerator;
+begin
+  Result.Init(Self);
+end;
+
+procedure TGSortedListTable.Clear;
+begin
+  FItems := nil;
+  FCount := 0;
+end;
+
+function TGSortedListTable.EnsureCapacity(aValue: SizeInt): Boolean;
+begin
+  try
+    if aValue > Capacity then
+      Expand(aValue);
+    Result := True;
+  except
+    Result := False;
+  end;
+end;
+
+procedure TGSortedListTable.TrimToFit;
+begin
+  System.SetLength(FItems, Count);
+end;
+
+function TGSortedListTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+var
+  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  Entry: TEntry;
+begin
+  Entry.Key := aKey;
+  if Count > 0 then
+    begin
+      sr := specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.BinarySearchPos(FItems[0..Pred(Count)], Entry);
+      Result := sr.FoundIndex >= 0;
+      if Result then
+        aPos := sr.FoundIndex
+      else
+        begin
+          aPos := sr.InsertIndex;
+          InsertItem(aPos, Entry);
+        end;
+    end
+  else
+    begin
+      Result := False;
+      aPos := 0;
+      InsertItem(aPos, Entry);
+    end;
+  e := @FItems[aPos];
+end;
+
+function TGSortedListTable.Find(constref aKey: TKey; out aPos: SizeInt): PEntry;
+var
+  e: TEntry;
+begin
+  Result := nil;
+  if Count > 0 then
+    begin
+      e.Key := aKey;
+      aPos := specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.BinarySearch(FItems[0..Pred(Count)], e);
+      if aPos >= 0 then
+        Result := @FItems[aPos];
+    end;
+end;
+
+function TGSortedListTable.Add(constref aKey: TKey): PEntry;
+var
+  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  Entry: TEntry;
+begin
+  Result := nil;
+  Entry.Key := aKey;
+  if Count > 0 then
+    begin
+      sr := specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.BinarySearchPos(FItems[0..Pred(Count)], Entry);
+      if (sr.FoundIndex < 0) or AllowDuplicates then
+        begin
+          InsertItem(sr.InsertIndex, Entry);
+          Result := @FItems[sr.InsertIndex];
+        end;
+    end
+  else
+    begin
+      InsertItem(0, Entry);
+      Result := @FItems[0];
+    end;
+end;
+
+function TGSortedListTable.Remove(constref aKey: TKey): Boolean;
+var
+  e: TEntry;
+  RemoveIdx: SizeInt;
+begin
+  e.Key := aKey;
+  RemoveIdx := specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.BinarySearch(FItems[0..Pred(Count)], e);
+  Result := RemoveIdx >= 0;
+  if Result then
+    RemoveItem(RemoveIdx);
+end;
+
+procedure TGSortedListTable.RemoveAt(aIndex: SizeInt);
+begin
+  if (aIndex >= 0) and (aIndex < Count) then
+    RemoveItem(aIndex);
 end;
 
 { TGLiteSortedList.THeadEnumerator }
