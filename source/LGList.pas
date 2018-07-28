@@ -264,7 +264,7 @@ type
     constructor CreateEmpty(aAllowDuplicates: Boolean);
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(aCapacity: SizeInt; AllowDuplicates: Boolean);
+    constructor Create(aCapacity: SizeInt; aAllowDuplicates: Boolean);
     destructor  Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
     procedure Clear; inline;
@@ -318,10 +318,10 @@ type
     procedure CapacityExceedError(aValue: SizeInt); inline;
   public
     constructor CreateEmpty;
-    constructor CreateEmpty(AllowDuplicates: Boolean);
+    constructor CreateEmpty(aAllowDuplicates: Boolean);
     constructor Create;
     constructor Create(aCapacity: SizeInt);
-    constructor Create(aCapacity: SizeInt; AllowDuplicates: Boolean);
+    constructor Create(aCapacity: SizeInt; aAllowDuplicates: Boolean);
     destructor  Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
     procedure Clear; inline;
@@ -1927,10 +1927,10 @@ begin
     CapacityExceedError(aCapacity);
 end;
 
-constructor TGSortedList2.Create(aCapacity: SizeInt; AllowDuplicates: Boolean);
+constructor TGSortedList2.Create(aCapacity: SizeInt; aAllowDuplicates: Boolean);
 begin
   Create(aCapacity);
-  FAllowDuplicates := AllowDuplicates;
+  FAllowDuplicates := aAllowDuplicates;
 end;
 
 destructor TGSortedList2.Destroy;
@@ -2096,10 +2096,10 @@ begin
   inherited Create;
 end;
 
-constructor TGSortedListTable.CreateEmpty(AllowDuplicates: Boolean);
+constructor TGSortedListTable.CreateEmpty(aAllowDuplicates: Boolean);
 begin
   inherited Create;
-  FAllowDuplicates := AllowDuplicates;
+  FAllowDuplicates := aAllowDuplicates;
 end;
 
 constructor TGSortedListTable.Create;
@@ -2119,10 +2119,10 @@ begin
     CapacityExceedError(aCapacity);
 end;
 
-constructor TGSortedListTable.Create(aCapacity: SizeInt; AllowDuplicates: Boolean);
+constructor TGSortedListTable.Create(aCapacity: SizeInt; aAllowDuplicates: Boolean);
 begin
   Create(aCapacity);
-  FAllowDuplicates := AllowDuplicates;
+  FAllowDuplicates := aAllowDuplicates;
 end;
 
 destructor TGSortedListTable.Destroy;
