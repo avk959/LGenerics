@@ -109,11 +109,11 @@ type
     constructor Create(aRowCapacity: SizeInt; aLoadFactor: Single);
     procedure Clear; override;
     procedure EnsureRowCapacity(aValue: SizeInt); override;
-    function  RowEnum: IRowEnumerable; override;
-    function  RowMapEnum: IRowMapEnumerable; override;
+    function  Rows: IRowEnumerable; override;
+    function  EnumRowMap: IRowMapEnumerable; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-  { The number of rows that can be written without rehashing }
+  { The number of RowMap that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
@@ -352,8 +352,7 @@ implementation
 
 function TGCustomHashTable2D.TColEnumerable.GetCurrent: TColData;
 begin
-  Result.Row := FEnum.Current^.Key;
-  Result.Value := FCurrValue;
+  Result := TColData.Create(FEnum.Current^.Key, FCurrValue);
 end;
 
 constructor TGCustomHashTable2D.TColEnumerable.Create(aTable: TGCustomHashTable2D; constref ACol: TCol);
@@ -383,9 +382,7 @@ end;
 
 function TGCustomHashTable2D.TCellEnumerable.GetCurrent: TCellData;
 begin
-  Result.Row := FEnum.Current^.Key;
-  Result.Column := FCurrRowEntry.Column;
-  Result.Value := FCurrRowEntry.Value;
+  Result := TCellData.Create(FEnum.Current^.Key, FCurrRowEntry.Column, FCurrRowEntry.Value);
 end;
 
 constructor TGCustomHashTable2D.TCellEnumerable.Create(aTable: TGCustomHashTable2D);
@@ -582,12 +579,12 @@ begin
   FRowTable.EnsureCapacity(aValue);
 end;
 
-function TGCustomHashTable2D.RowEnum: IRowEnumerable;
+function TGCustomHashTable2D.Rows: IRowEnumerable;
 begin
   Result := TRowEnumerable.Create(Self);
 end;
 
-function TGCustomHashTable2D.RowMapEnum: IRowMapEnumerable;
+function TGCustomHashTable2D.EnumRowMap: IRowMapEnumerable;
 begin
   Result := TRowMapEnumerable.Create(Self);
 end;
@@ -596,8 +593,7 @@ end;
 
 function TGHashTable2D.TRowMap.TEnumerator.GetCurrent: TRowData;
 begin
-  Result.Column := FEnum.Current^.Key;
-  Result.Value := FEnum.Current^.Value;
+  Result := TRowData.Create(FEnum.Current^.Key, FEnum.Current^.Value);
 end;
 
 constructor TGHashTable2D.TRowMap.TEnumerator.Create(aMap: TRowMapTable);
@@ -728,8 +724,7 @@ end;
 
 function TGTreeTable2D.TRowMap.TEnumerator.GetCurrent: TRowData;
 begin
-  Result.Column := FEnum.Current^.Key;
-  Result.Value := FEnum.Current^.Value;
+  Result := TRowData.Create(FEnum.Current^.Key, FEnum.Current^.Value);
 end;
 
 constructor TGTreeTable2D.TRowMap.TEnumerator.Create(aMap: TRowMapTable);
@@ -878,8 +873,7 @@ end;
 
 function TGListTable2D.TRowMap.TEnumerator.GetCurrent: TRowData;
 begin
-  Result.Column := FEnum.Current^.Key;
-  Result.Value := FEnum.Current^.Value;
+  Result := TRowData.Create(FEnum.Current^.Key, FEnum.Current^.Value);
 end;
 
 constructor TGListTable2D.TRowMap.TEnumerator.Create(aMap: TRowMapTable);
