@@ -617,7 +617,7 @@ type
     FCount: SizeInt;
     function  GetKeyCount: SizeInt; virtual; abstract;
     function  GetCapacity: SizeInt; virtual; abstract;
-    function  GetUniqueKeyValues: Boolean; virtual; abstract;
+    function  GetUniqueValues: Boolean; virtual; abstract;
     procedure DoClear; virtual; abstract;
     procedure DoEnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure DoTrimToFit; virtual; abstract;
@@ -678,7 +678,7 @@ type
     function  Entries: IEntryEnumerable;
   { returns count of values mapped to aKey (similar as multiset)}
     function  ValueCount(constref aKey: TKey): SizeInt;
-    property  UniqueKeyValues: Boolean read GetUniqueKeyValues;
+    property  UniqueValues: Boolean read GetUniqueValues;
     property  Count: SizeInt read FCount;
     property  KeyCount: SizeInt read GetKeyCount;
     property  Capacity: SizeInt read GetCapacity;

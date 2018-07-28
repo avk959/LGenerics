@@ -478,6 +478,7 @@ var
   m: TAutoMultiMap;
   Raised: Boolean = False;
   se: TStrEntry;
+  s: string;
 begin
   m.Instance.AddAll(Array12);
   try
