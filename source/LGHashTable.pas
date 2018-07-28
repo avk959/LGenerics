@@ -528,8 +528,6 @@ type
     property  FillRatio: Single read GetFillRatio;
   end;
 
-  { TGLiteHashTableLP }
-
   generic TGLiteHashTableLP<TKey, TEntry, TEqRel> = record
   private
   type
@@ -3294,7 +3292,7 @@ end;
 procedure TGLiteChainHashTable.TEnumerator.Init(constref aTable: TGLiteChainHashTable);
 begin
   FList := aTable.FNodeList;
-  FLastIndex := System.High(FList);
+  FLastIndex := Pred(aTable.Count);
   FCurrIndex := -1;
 end;
 
