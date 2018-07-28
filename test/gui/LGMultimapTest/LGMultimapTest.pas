@@ -108,6 +108,24 @@ type
     procedure InIteration;
   end;
 
+  TGLiteMultiMapTest = class(TTestCase)
+  private
+  type
+    TMultiMap = specialize TGLiteHashMultiMap<string, string, string>;
+
+  published
+    procedure Clear;
+    procedure EnsureCapacity;
+    procedure TrimToFit;
+    procedure Add;
+    procedure AddArray;
+    procedure AddEnum;
+    procedure AddValuesArray;
+    procedure AddValuesEnum;
+    procedure Remove;
+    procedure Items;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}{$WARNINGS OFF}
 
@@ -478,7 +496,6 @@ var
   m: TAutoMultiMap;
   Raised: Boolean = False;
   se: TStrEntry;
-  s: string;
 begin
   m.Instance.AddAll(Array12);
   try
@@ -1034,8 +1051,8 @@ begin
     end;
   for e in m.Instance.Entries do
     AssertTrue(ArrayContainsEntry(Array12, e));
-  AssertTrue(m.Instance.AddAll(Array12) = 12);
-  AssertTrue(m.Instance.Count = 24);
+  AssertTrue(m.Instance.AddAll(Array12) = Length(Array12));
+  AssertTrue(m.Instance.Count = Length(Array12) * 2);
   AssertTrue(m.Instance.KeyCount = 4);
 end;
 
@@ -1057,8 +1074,8 @@ begin
     end;
   for e in m.Instance.Entries do
     AssertTrue(ArrayContainsEntry(Array12, e));
-  AssertTrue(m.Instance.AddAll(TCursor.Create(THelper.CreateCopy(Array12))) = 12);
-  AssertTrue(m.Instance.Count = 24);
+  AssertTrue(m.Instance.AddAll(TCursor.Create(THelper.CreateCopy(Array12))) = Length(Array12));
+  AssertTrue(m.Instance.Count = Length(Array12) * 2);
   AssertTrue(m.Instance.KeyCount = 4);
 end;
 
@@ -1216,9 +1233,165 @@ begin
   AssertTrue(Raised);
 end;
 
+{ TGLiteMultiMapTest }
+
+procedure TGLiteMultiMapTest.Clear;
+var
+  m: TMultiMap;
+begin
+  m.AddAll(Array12);
+  AssertTrue(m.Count = 12);
+  AssertTrue(m.Capacity >= 12);
+  m.Clear;
+  AssertTrue(m.Count = 0);
+  AssertTrue(m.Capacity = 0);
+end;
+
+procedure TGLiteMultiMapTest.EnsureCapacity;
+var
+  m: TMultiMap;
+  c: SizeInt;
+begin
+  c := m.Capacity;
+  m.EnsureCapacity(c + 100);
+  AssertTrue(m.Capacity >= c + 100);
+end;
+
+procedure TGLiteMultiMapTest.TrimToFit;
+var
+  m: TMultiMap;
+  c: SizeInt;
+begin
+  m.AddAll(Array12);
+  c := m.Capacity;
+  m.TrimToFit;
+  AssertTrue(m.Capacity < c);
+  AssertTrue(m.Capacity = 16);
+end;
+
+procedure TGLiteMultiMapTest.Add;
+var
+  m: TMultiMap;
+begin
+  AssertTrue(m.Count = 0);
+  m.Add('key1', 'value1');
+  AssertTrue(m.Count = 1);
+  AssertTrue(m.Contains('key1'){%H-});
+  m.Add('key1', 'value1');
+  AssertTrue(m.Count = 2);
+  AssertTrue(m.ValueCount('key1') = 2);
+  m.Add(TStrEntry.Create('key1', 'value2'));
+  AssertTrue(m.Count = 3);
+  AssertTrue(m.ValueCount('key1') = 3);
+  m.Add('key2', 'value1');
+  AssertTrue(m.Count = 4);
+  m.Add('key2', 'value1');
+  AssertTrue(m.Count = 5);
+  m.Add(TStrEntry.Create('key2', 'value2'));
+  AssertTrue(m.Count = 6);
+  AssertTrue(m.ValueCount('key2') = 3);
+end;
+
+procedure TGLiteMultiMapTest.AddArray;
+var
+  m: TMultiMap;
+  e: TStrEntry;
+  s: string;
+begin
+  AssertTrue(m.AddAll(Array12) = Length(Array12));
+  AssertTrue(m.Count = 12);
+  for s in m.Keys do
+    AssertTrue(m.ValueCount(s) = 3);
+  for e in Array12 do
+    AssertTrue(m.Contains(e.Key){%H-});
+  AssertTrue(m.AddAll(Array12) = Length(Array12));
+  AssertTrue(m.Count = Length(Array12) * 2);
+end;
+
+procedure TGLiteMultiMapTest.AddEnum;
+var
+  m: TMultiMap;
+  e: TStrEntry;
+  s: string;
+begin
+  AssertTrue(m.AddAll(TCursor.Create(THelper.CreateCopy(Array12))) = Length(Array12));
+  AssertTrue(m.Count = 12);
+  for s in m.Keys do
+    AssertTrue(m.ValueCount(s) = 3);
+  for e in Array12 do
+    AssertTrue(m.Contains(e.Key){%H-});
+  AssertTrue(m.AddAll(TCursor.Create(THelper.CreateCopy(Array12))) = Length(Array12));
+  AssertTrue(m.Count = Length(Array12) * 2);
+end;
+
+procedure TGLiteMultiMapTest.AddValuesArray;
+var
+  m: TMultiMap;
+  s: string;
+begin
+  m.AddAll(Array12);
+  AssertTrue(m.AddValues('fish', ArrayFish4) = 4);
+  AssertTrue(m.Count = 16);
+  AssertTrue(m.AddValues('plant', ArrayPlant4) = 4);
+  AssertTrue(m.Count = 20);
+  AssertTrue(m.AddValues('fish', ArrayFish4) = 4);
+  AssertTrue(m.AddValues('plant', ArrayPlant4) = 4);
+  AssertTrue(m.Count = 28);
+end;
+
+procedure TGLiteMultiMapTest.AddValuesEnum;
+var
+  m: TMultiMap;
+  s: string;
+begin
+  m.AddAll(Array12);
+  AssertTrue(m.AddValues('fish', TStrCursor.Create(TStrHelper.CreateCopy(ArrayFish4))) = 4);
+  AssertTrue(m.Count = 16);
+  AssertTrue(m.AddValues('plant', TStrCursor.Create(TStrHelper.CreateCopy(ArrayPlant4))) = 4);
+  AssertTrue(m.Count = 20);
+  AssertTrue(m.AddValues('fish', TStrCursor.Create(TStrHelper.CreateCopy(ArrayFish4))) = 4);
+  AssertTrue(m.AddValues('plant', TStrCursor.Create(TStrHelper.CreateCopy(ArrayPlant4))) = 4);
+  AssertTrue(m.Count = 28);
+end;
+
+procedure TGLiteMultiMapTest.Remove;
+var
+  m: TMultiMap;
+begin
+  m.AddAll(Array12);
+  AssertTrue(m.Remove('fish'));
+  AssertTrue(m.Remove('bird'));
+  AssertFalse(m.Remove('plant'));
+  AssertTrue(m.Remove('reptile'));
+  AssertTrue(m.Remove('insect'));
+  AssertTrue(m.Count = 8);
+  AssertTrue(m.Remove('fish'));
+  AssertTrue(m.Remove('fish'));
+  AssertTrue(m.Count = 6);
+end;
+
+procedure TGLiteMultiMapTest.Items;
+var
+  m: TMultiMap;
+  k, v: string;
+  I: Integer = 0;
+begin
+  for k in m.Keys do
+    for v in m[k] do
+      Inc(I);
+  AssertTrue(I = 0);
+  m.AddAll(Array12);
+  I := 0;
+  for k in ArrayKeys do
+    for v in m[k] do
+      Inc(I);
+  AssertTrue(I = 12);
+end;
+
 initialization
   RegisterTest(TGHashMultiMapTest);
   RegisterTest(TGTreeMultiMapTest);
   RegisterTest(TGListMultiMapTest);
+  RegisterTest(TGLiteMultiMapTest);
 end.
 
