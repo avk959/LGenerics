@@ -276,7 +276,7 @@ var
 begin
   c := m.Instance.ExpandTreshold;
   m.Instance.EnsureCapacity(c + 1);
-  AssertTrue(m.Instance.Capacity > c);
+  AssertTrue(m.Instance.ExpandTreshold > c);
 end;
 
 procedure TGHashMultiMapTest.TrimToFit;
@@ -633,7 +633,7 @@ var
 begin
   c := m.Instance.ExpandTreshold;
   m.Instance.EnsureCapacity(c + 1);
-  AssertTrue(m.Instance.Capacity > c);
+  AssertTrue(m.Instance.ExpandTreshold > c);
 end;
 
 procedure TGTreeMultiMapTest.TrimToFit;
@@ -990,7 +990,7 @@ var
 begin
   c := m.Instance.ExpandTreshold;
   m.Instance.EnsureCapacity(c + 1);
-  AssertTrue(m.Instance.Capacity > c);
+  AssertTrue(m.Instance.ExpandTreshold > c);
 end;
 
 procedure TGListMultiMapTest.TrimToFit;
