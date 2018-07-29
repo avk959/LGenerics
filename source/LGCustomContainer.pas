@@ -724,6 +724,7 @@ type
       function  GetCount: SizeInt;
       function  GetEnumerator: TRowDataEnumerator;
       function  IsEmpty: Boolean;
+      procedure TrimToFit;
       function  Contains(constref aCol: TCol): Boolean;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean;
       function  GetValueOrDefault(const aCol: TCol): TValue;
@@ -746,6 +747,7 @@ type
     public
       function  GetEnumerator: TRowDataEnumerator; virtual; abstract;
       function  IsEmpty: Boolean;
+      procedure TrimToFit; virtual; abstract;
       function  Contains(constref aCol: TCol): Boolean; virtual; abstract;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; virtual; abstract;
       function  GetValueOrDefault(const aCol: TCol): TValue; inline;
@@ -780,6 +782,8 @@ type
     function  GetColCount(const aRow: TRow): SizeInt;
   { aRow will be added if it is missed }
     function  GetRowMap(const aRow: TRow): IRowMap;
+  { will raise exception if cell is missed }
+    function  GetCell(const aRow: TRow; const aCol: TCol): TValue;
   public
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean;
@@ -787,20 +791,19 @@ type
     procedure TrimToFit; virtual; abstract;
     procedure EnsureRowCapacity(aValue: SizeInt); virtual; abstract;
     function  ContainsRow(constref aRow: TRow): Boolean; inline;
+    function  FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
   { if not contains aRow then add aRow and returns True, False otherwise }
     function  AddRow(constref aRow: TRow): Boolean; inline;
+    function  AddRows(constref a: array of TRow): SizeInt;
   { returns count of columns in removed row }
     function  RemoveRow(constref aRow: TRow): SizeInt; inline;
     function  ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
-  { will raise exception if cell is missed }
-    function  GetCell(constref aRow: TRow; constref aCol: TCol): TValue;
-    function  TryGetCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
+    function  FindCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
     function  GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue = Default(TValue)): TValue; inline;
-    function  GetCellOrDefault(const aRow: TRow; const aCol: TCol): TValue; inline;
     procedure AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
     function  AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
     function  AddCell(constref e: TCellData): Boolean; inline;
-    function  AddAll(constref a: array of TCellData): SizeInt;
+    function  AddCells(constref a: array of TCellData): SizeInt;
     function  RemoveCell(constref aRow: TRow; constref aCol: TCol): Boolean;
 
     function  Rows: IRowEnumerable; virtual; abstract;
@@ -808,10 +811,11 @@ type
     property  RowCount: SizeInt read GetRowCount;
     property  ColCount[const aRow: TRow]: SizeInt read GetColCount;
     property  CellCount: SizeInt read FCellCount;
-    property  RowMap[const aRow: TRow]: IRowMap read GetRowMap;
+    property  RowMaps[const aRow: TRow]: IRowMap read GetRowMap;
     property  Columns[const aCol: TCol]: IColDataEnumerable read GetColumn;
     property  Cells: ICellDataEnumerable read GetCellData;
-    property  Items[const aRow: TRow; const aCol: TCol]: TValue read GetCellOrDefault write AddOrSetCell; default;
+  { will raise an exception if one try to read the missing cell }
+    property  Items[const aRow: TRow; const aCol: TCol]: TValue read GetCell write AddOrSetCell; default;
   end;
 
 implementation
@@ -3108,6 +3112,12 @@ begin
   Result := p^.Columns;
 end;
 
+function TGCustomTable2D.GetCell(const aRow: TRow; const aCol: TCol): TValue;
+begin
+  if not FindCell(aRow, aCol, Result) then
+    raise ELGTableError.CreateFmt(SECellNotFoundFmt, [ClassName]);
+end;
+
 function TGCustomTable2D.IsEmpty: Boolean;
 begin
   Result := CellCount = 0;
@@ -3123,11 +3133,30 @@ begin
   Result := DoFindRow(aRow) <> nil;
 end;
 
+function TGCustomTable2D.FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
+var
+  p: PRowEntry;
+begin
+  p := DoFindRow(aRow);
+  Result := p <> nil;
+  if Result then
+    aMap := p^.Columns;
+end;
+
 function TGCustomTable2D.AddRow(constref aRow: TRow): Boolean;
 var
   p: PRowEntry;
 begin
   Result := not DoFindOrAddRow(aRow, p);
+end;
+
+function TGCustomTable2D.AddRows(constref a: array of TRow): SizeInt;
+var
+  r: TRow;
+begin
+  Result := 0;
+  for r in a do
+    Result += Ord(AddRow(r));
 end;
 
 function TGCustomTable2D.RemoveRow(constref aRow: TRow): SizeInt;
@@ -3146,13 +3175,7 @@ begin
     Result := False;
 end;
 
-function TGCustomTable2D.GetCell(constref aRow: TRow; constref aCol: TCol): TValue;
-begin
-  if not TryGetCell(aRow, aCol, Result) then
-    raise ELGTableError.CreateFmt(SECellNotFoundFmt, [ClassName]);
-end;
-
-function TGCustomTable2D.TryGetCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
+function TGCustomTable2D.FindCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3163,14 +3186,9 @@ begin
     Result := False;
 end;
 
-function TGCustomTable2D.GetCellOrDefault(const aRow: TRow; const aCol: TCol): TValue;
-begin
-  Result := GetCellDef(aRow, aCol);
-end;
-
 function TGCustomTable2D.GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue): TValue;
 begin
-  if not TryGetCell(aRow, aCol, Result) then
+  if not FindCell(aRow, aCol, Result) then
     Result := aDef;
 end;
 
@@ -3194,7 +3212,7 @@ begin
   Result := AddCell(e.Row, e.Column, e.Value);
 end;
 
-function TGCustomTable2D.AddAll(constref a: array of TCellData): SizeInt;
+function TGCustomTable2D.AddCells(constref a: array of TCellData): SizeInt;
 var
   e: TCellData;
 begin

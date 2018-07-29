@@ -90,6 +90,7 @@ type
   var
     FRowTable: TRowHashTable;
     function  CreateRowMap: TCustomRowMap; virtual; abstract;
+    function  GetRowCapacity: SizeInt; inline;
     function  GetExpandTreshold: SizeInt; inline;
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
@@ -109,11 +110,13 @@ type
     constructor Create(aRowCapacity: SizeInt; aLoadFactor: Single);
     procedure Clear; override;
     procedure EnsureRowCapacity(aValue: SizeInt); override;
+    procedure TrimToFit; override;
     function  Rows: IRowEnumerable; override;
     function  EnumRowMap: IRowMapEnumerable; override;
+    property  RowCapacity: SizeInt read GetRowCapacity;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
-  { The number of RowMap that can be written without rehashing }
+  { The number of RowMaps that can be written without rehashing }
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
   end;
 
@@ -165,7 +168,7 @@ type
       constructor Create(aTable: TCustomTable2D);
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
-      procedure TrimToFit; inline;
+      procedure TrimToFit; override;
       function  Contains(constref aCol: TCol): Boolean; override;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
     { returns True if not contains aCol was added, False otherwise }
@@ -174,10 +177,9 @@ type
       function  Remove(constref aCol: TCol): Boolean; override;
     end;
 
-    function  CreateRowMap: TCustomRowMap; override;
+    function CreateRowMap: TCustomRowMap; override;
   public
     destructor Destroy; override;
-    procedure TrimToFit; override;
   end;
 
   { TGHashTable2DR assumes that TRow implements TRowEqRel }
@@ -239,6 +241,7 @@ type
       constructor Create(aTable: TGTreeTable2D);
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
+      procedure TrimToFit; override;
       function  Contains(constref aCol: TCol): Boolean; override;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
     { returns True if not contains aCol was added, False otherwise }
@@ -318,7 +321,7 @@ type
       constructor Create(aTable: TCustomTable2D);
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
-      procedure TrimToFit; inline;
+      procedure TrimToFit; override;
       function  Contains(constref aCol: TCol): Boolean; override;
       function  TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean; override;
     { returns True if not contains aCol was added, False otherwise }
@@ -330,7 +333,6 @@ type
    function  CreateRowMap: TCustomRowMap; override;
   public
     destructor Destroy; override;
-    procedure TrimToFit; override;
   end;
 
   { TGListTable2DR assumes that TRow implements TRowEqRel }
@@ -470,6 +472,11 @@ end;
 
 { TGCustomHashTable2D }
 
+function TGCustomHashTable2D.GetRowCapacity: SizeInt;
+begin
+  Result := FRowTable.Capacity;
+end;
+
 function TGCustomHashTable2D.GetExpandTreshold: SizeInt;
 begin
   Result := FRowTable.ExpandTreshold;
@@ -577,6 +584,25 @@ end;
 procedure TGCustomHashTable2D.EnsureRowCapacity(aValue: SizeInt);
 begin
   FRowTable.EnsureCapacity(aValue);
+end;
+
+procedure TGCustomHashTable2D.TrimToFit;
+var
+  p: PRowEntry;
+begin
+  with FRowTable.GetRemovableEnumerator do
+    while MoveNext do
+      begin
+        p := Current;
+        if p^.Columns.IsEmpty then
+          begin
+            TCustomRowMap(p^.Columns).Free;
+            RemoveCurrent;
+          end
+        else
+          TCustomRowMap(p^.Columns).TrimToFit;
+      end;
+  FRowTable.TrimToFit;
 end;
 
 function TGCustomHashTable2D.Rows: IRowEnumerable;
@@ -708,18 +734,6 @@ begin
   inherited;
 end;
 
-procedure TGHashTable2D.TrimToFit;
-var
-  p: PRowEntry;
-begin
-  for p in FRowTable do
-    if p^.Columns.IsEmpty then
-      FRowTable.Remove(p^.Key)
-    else
-      TRowMap(p^.Columns).TrimToFit;
-  FRowTable.TrimToFit;
-end;
-
 { TGTreeTable2D.TRowMap.TEnumerator }
 
 function TGTreeTable2D.TRowMap.TEnumerator.GetCurrent: TRowData;
@@ -765,6 +779,11 @@ end;
 function TGTreeTable2D.TRowMap.GetEnumerator: TRowDataEnumerator;
 begin
   Result := TEnumerator.Create(Self.FMap);
+end;
+
+procedure TGTreeTable2D.TRowMap.TrimToFit;
+begin
+  //do nothing
 end;
 
 function TGTreeTable2D.TRowMap.Contains(constref aCol: TCol): Boolean;
@@ -858,13 +877,8 @@ begin
 end;
 
 procedure TGTreeTable2D.TrimToFit;
-var
-  p: PRowEntry;
 begin
-  for p in FRowTable do
-    if p^.Columns.IsEmpty then
-      FRowTable.Remove(p^.Key);
-  FRowTable.TrimToFit;
+  inherited;
   if CellCount = 0 then
     FNodeManager.Clear;
 end;
@@ -980,18 +994,6 @@ begin
   Clear;
   FRowTable.Free;
   inherited;
-end;
-
-procedure TGListTable2D.TrimToFit;
-var
-  p: PRowEntry;
-begin
-  for p in FRowTable do
-    if p^.Columns.IsEmpty then
-      FRowTable.Remove(p^.Key)
-    else
-      TRowMap(p^.Columns).TrimToFit;
-  FRowTable.TrimToFit;
 end;
 
 end.
