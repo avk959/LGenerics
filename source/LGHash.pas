@@ -265,7 +265,7 @@ end;
 
 class function TxxHash32LE.HashStr(constref aValue: ansistring; aSeed: DWord): DWord;
 begin
-  Result := HashBuf(PAnsiChar(aValue), System.Length(aValue), aSeed);
+  Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
 
 class function TxxHash32LE.HashWord(aValue: Word; aSeed: DWord): DWord;
@@ -486,7 +486,7 @@ end;
 
 class function TxxHash64LE.HashStr(constref aValue: string; aSeed: QWord): QWord;
 begin
-  Result := HashBuf(PAnsiChar(aValue), System.Length(aValue), aSeed);
+  Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
 
 class function TxxHash64LE.HashWord(aValue: Word; aSeed: QWord): QWord;
@@ -655,7 +655,7 @@ end;
 
 class function TMurmur2LE.HashStr(constref aValue: string; aSeed: DWord): DWord;
 begin
-  Result := HashBuf(PAnsiChar(aValue), System.Length(aValue), aSeed);
+  Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
 
 class function TMurmur2LE.HashWord(aValue: Word; aSeed: DWord): DWord;
@@ -1014,7 +1014,7 @@ end;
 
 class function TMurmur3LE.HashStr(constref aValue: string; aSeed: DWord): DWord;
 begin
-  Result := HashBuf(PAnsiChar(aValue), System.Length(aValue), aSeed);
+  Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
 
 class function TMurmur3LE.HashWord(aValue: Word; aSeed: DWord): DWord;
@@ -1191,7 +1191,7 @@ end;
 
 class function TMurmur64aLE.HashStr(constref aValue: string; aSeed: QWord): QWord;
 begin
-  Result := HashBuf(PAnsiChar(aValue), System.Length(aValue), aSeed);
+  Result := HashBuf(Pointer(aValue), System.Length(aValue), aSeed);
 end;
 
 class function TMurmur64aLE.HashWord(aValue: Word; aSeed: QWord): QWord;

@@ -2857,7 +2857,7 @@ begin
         DoRemoveKey(aKey);
     end
   else
-    e.FindFirst(v);
+    e.FindFirst(v);///////////////
 end;
 
 function TGCustomMultiMap.DoRemoveKeys(constref a: array of TKey): SizeInt;
