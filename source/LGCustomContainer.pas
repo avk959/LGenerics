@@ -2855,7 +2855,9 @@ begin
       FCount -= Result;
       if p^.Values.Count = 0 then
         DoRemoveKey(aKey);
-    end;
+    end
+  else
+    e.FindFirst(v);
 end;
 
 function TGCustomMultiMap.DoRemoveKeys(constref a: array of TKey): SizeInt;

@@ -258,9 +258,7 @@ type
         class function Equal([const[ref]] L, R: TKey): Boolean;
 
       functor TValueCmpRel(value comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TValue): SizeInt;
-
-      *** TGListMultiMap has memory leak *** }
+        class function Compare([const[ref]] L, R: TValue): SizeInt; }
   generic TGListMultiMap<TKey, TValue, TKeyEqRel, TValueCmpRel> = class(
     specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
   protected
@@ -1064,6 +1062,7 @@ end;
 destructor TGListMultiMap.Destroy;
 begin
   DoClear;
+  FTable.Free;
   inherited;
 end;
 
