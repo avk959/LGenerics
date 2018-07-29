@@ -478,6 +478,19 @@ type
       property  Current: PEntry read GetCurrent;
     end;
 
+    TRemovableEnumerator = record
+    private
+      FEnum: TEnumerator;
+      FTable: TGHashTableLP;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(aTable: TGHashTableLP); inline;
+    public
+      function  MoveNext: Boolean;
+      procedure RemoveCurrent; inline;
+      procedure Reset; inline;
+      property  Current: PEntry read GetCurrent;
+    end;
+
   strict protected
     FList: TNodeList;
     FCount,
@@ -513,6 +526,7 @@ type
     constructor Create(aLoadFactor: Single);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
     function  GetEnumerator: TEnumerator;
+    function  GetRemovableEnumerator: TRemovableEnumerator;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
@@ -2588,6 +2602,35 @@ begin
   FCurrIndex := -1;
 end;
 
+{ TGHashTableLP.TRemovableEnumerator }
+
+function TGHashTableLP.TRemovableEnumerator.GetCurrent: PEntry;
+begin
+  Result := FEnum.Current;
+end;
+
+procedure TGHashTableLP.TRemovableEnumerator.Init(aTable: TGHashTableLP);
+begin
+  FTable := aTable;
+  FEnum := aTable.GetEnumerator;
+end;
+
+function TGHashTableLP.TRemovableEnumerator.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGHashTableLP.TRemovableEnumerator.RemoveCurrent;
+begin
+  FTable.DoRemove(FEnum.FCurrIndex);
+  Dec(FEnum.FCurrIndex);
+end;
+
+procedure TGHashTableLP.TRemovableEnumerator.Reset;
+begin
+  FEnum.Reset;
+end;
+
 { TGHashTableLP }
 
 function TGHashTableLP.RestrictLoadFactor(aValue: Single): Single;
@@ -2824,6 +2867,11 @@ end;
 function TGHashTableLP.GetEnumerator: TEnumerator;
 begin
   Result.Init(FList);
+end;
+
+function TGHashTableLP.GetRemovableEnumerator: TRemovableEnumerator;
+begin
+  Result.Init(Self);
 end;
 
 procedure TGHashTableLP.Clear;
