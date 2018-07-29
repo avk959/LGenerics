@@ -112,7 +112,7 @@ type
     procedure EnsureRowCapacity(aValue: SizeInt); override;
     procedure TrimToFit; override;
     function  Rows: IRowEnumerable; override;
-    function  EnumRowMap: IRowMapEnumerable; override;
+    function  EnumRowMaps: IRowMapEnumerable; override;
     property  RowCapacity: SizeInt read GetRowCapacity;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
@@ -600,7 +600,7 @@ begin
             RemoveCurrent;
           end
         else
-          TCustomRowMap(p^.Columns).TrimToFit;
+          p^.Columns.TrimToFit;
       end;
   FRowTable.TrimToFit;
 end;
@@ -610,7 +610,7 @@ begin
   Result := TRowEnumerable.Create(Self);
 end;
 
-function TGCustomHashTable2D.EnumRowMap: IRowMapEnumerable;
+function TGCustomHashTable2D.EnumRowMaps: IRowMapEnumerable;
 begin
   Result := TRowMapEnumerable.Create(Self);
 end;

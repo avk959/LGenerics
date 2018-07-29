@@ -795,8 +795,10 @@ type
   { if not contains aRow then add aRow and returns True, False otherwise }
     function  AddRow(constref aRow: TRow): Boolean; inline;
     function  AddRows(constref a: array of TRow): SizeInt;
-  { returns count of columns in removed row }
+  { returns count of the columns in the removed row }
     function  RemoveRow(constref aRow: TRow): SizeInt; inline;
+  { returns count of the removed cells }
+    function  RemoveColumn(constref aCol: TCol): SizeInt; inline;
     function  ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
     function  FindCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
     function  GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue = Default(TValue)): TValue; inline;
@@ -807,7 +809,7 @@ type
     function  RemoveCell(constref aRow: TRow; constref aCol: TCol): Boolean;
 
     function  Rows: IRowEnumerable; virtual; abstract;
-    function  EnumRowMap: IRowMapEnumerable; virtual; abstract;
+    function  EnumRowMaps: IRowMapEnumerable; virtual; abstract;
     property  RowCount: SizeInt read GetRowCount;
     property  ColCount[const aRow: TRow]: SizeInt read GetColCount;
     property  CellCount: SizeInt read FCellCount;
@@ -3162,6 +3164,15 @@ end;
 function TGCustomTable2D.RemoveRow(constref aRow: TRow): SizeInt;
 begin
   Result := DoRemoveRow(aRow);
+end;
+
+function TGCustomTable2D.RemoveColumn(constref aCol: TCol): SizeInt;
+var
+  Map: IRowMap;
+begin
+  Result := 0;
+  for Map in EnumRowMaps do
+    Result += Ord(Map.Remove(aCol));
 end;
 
 function TGCustomTable2D.ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
