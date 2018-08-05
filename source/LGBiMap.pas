@@ -275,7 +275,7 @@ type
     function  IInverseMap.TryGetValue   = TryGetKey;
     function  IInverseMap.GetValueDef   = GetKeyDef;
     function  IInverseMap.Add           = AddInverse;
-    procedure IInverseMap.AddOrSetValue = TryAddOrSetKey;
+    procedure IInverseMap.AddOrSetValue = AddOrSetKey;
     function  IInverseMap.Replace       = ReplaceKey;
     function  IInverseMap.Extract       = ExtractValue;
     function  IInverseMap.Remove        = RemoveValue;
@@ -286,7 +286,7 @@ type
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   { will raise ELGMapError if not contains aKey or contains aValue }
-    property  Items[const aKey: TKey]: TValue read GetValue write TryAddOrSetValue; default;
+    property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
 
   { TGHashBiMapK assumes that TKey implements TKeyEqRel }
