@@ -1127,8 +1127,14 @@ end;
 
 function TGHashBiMap.AddAll(e: IEntryEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoAddAll(e);
+  if not InIteration then
+    Result := DoAddAll(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGHashBiMap.Remove(constref aKey: TKey): Boolean;
@@ -1145,8 +1151,14 @@ end;
 
 function TGHashBiMap.RemoveAll(e: IKeyEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoRemoveKeys(e);
+  if not InIteration then
+    Result := DoRemoveKeys(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGHashBiMap.RemoveValue(constref aValue: TValue): Boolean;
@@ -1163,8 +1175,14 @@ end;
 
 function TGHashBiMap.RemoveValues(e: IValueEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoRemoveValues(e);
+  if not InIteration then
+    Result := DoRemoveValues(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGHashBiMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;

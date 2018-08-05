@@ -227,8 +227,14 @@ end;
 
 function TGStack.PushAll(e: IEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := AppendEnumerable(e);
+  if not InIteration then
+    Result := AppendEnumerable(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGStack.Pop: T;

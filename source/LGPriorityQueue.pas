@@ -793,11 +793,19 @@ function TGCustomBinHeap.EnqueueAll(e: IEnumerable): SizeInt;
 var
   OldCount: SizeInt;
 begin
-  CheckInIteration;
-  OldCount := ElemCount;
-  Result := AppendEnumerable(e);
-  if Result > 0 then
-    FixAfterEnqueue(OldCount);
+  if not InIteration then
+    begin
+      OldCount := ElemCount;
+      Result := AppendEnumerable(e);
+      if Result > 0 then
+        FixAfterEnqueue(OldCount);
+    end
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomBinHeap.Dequeue: T;
@@ -2124,12 +2132,20 @@ function TGCustomPairingHeap.EnqueueAll(e: IEnumerable): SizeInt;
 var
   o: TObject;
 begin
-  CheckInIteration;
-  o := e._GetRef;
-  if o is TCustomContainer then
-    Result := EnqueueContainer(TCustomContainer(o))
+  if not InIteration then
+    begin
+      o := e._GetRef;
+      if o is TCustomContainer then
+        Result := EnqueueContainer(TCustomContainer(o))
+      else
+        Result := EnqueueEnum(e);
+    end
   else
-    Result := EnqueueEnum(e);
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomPairingHeap.Dequeue: T;

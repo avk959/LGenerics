@@ -160,6 +160,7 @@ type
     procedure CapacityExceedError(aValue: SizeInt); inline;
     procedure AccessEmptyError; inline;
     procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
+    procedure UpdateLockError; inline;
     procedure CheckInIteration; inline;
     procedure BeginIteration; inline;
     procedure EndIteration; inline;
@@ -403,6 +404,7 @@ type
     function  GetInIteration: Boolean; inline;
   protected
     procedure CapacityExceedError(aValue: SizeInt); inline;
+    procedure UpdateLockError; inline;
     procedure CheckInIteration; inline;
     procedure BeginIteration; inline;
     procedure EndIteration; inline;
@@ -1469,10 +1471,15 @@ begin
   raise ELGListError.CreateFmt(SEClassIdxOutOfBoundsFmt, [ClassName, aIndex]);
 end;
 
+procedure TGCustomContainer.UpdateLockError;
+begin
+  raise ELGUpdateLock.CreateFmt(SECantUpdDuringIterFmt, [ClassName]);
+end;
+
 procedure TGCustomContainer.CheckInIteration;
 begin
   if InIteration then
-    raise ELGUpdateLock.CreateFmt(SECantUpdDuringIterFmt, [ClassName]);
+    UpdateLockError;
 end;
 
 procedure TGCustomContainer.BeginIteration;
@@ -1603,8 +1610,14 @@ end;
 
 function TGCustomCollection.AddAll(e: IEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoAddAll(e);
+  if not InIteration then
+    Result := DoAddAll(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomCollection.NonContains(constref aValue: T): Boolean;
@@ -1672,8 +1685,14 @@ end;
 
 function TGCustomCollection.RemoveAll(e: IEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoRemoveAll(e);
+  if not InIteration then
+    Result := DoRemoveAll(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomCollection.RemoveIf(aTest: TTest): SizeInt;
@@ -2267,10 +2286,15 @@ begin
   raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
 end;
 
+procedure TCustomIterable.UpdateLockError;
+begin
+  raise ELGUpdateLock.CreateFmt(SECantUpdDuringIterFmt, [ClassName]);
+end;
+
 procedure TCustomIterable.CheckInIteration;
 begin
   if InIteration then
-    raise ELGUpdateLock.CreateFmt(SECantUpdDuringIterFmt, [ClassName]);
+    UpdateLockError;
 end;
 
 procedure TCustomIterable.BeginIteration;
@@ -2522,8 +2546,14 @@ end;
 
 function TGCustomMap.AddAll(e: IEntryEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoAddAll(e);
+  if not InIteration then
+    Result := DoAddAll(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
@@ -2591,8 +2621,14 @@ end;
 
 function TGCustomMap.RemoveAll(e: IKeyEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoRemoveAll(e);
+  if not InIteration then
+    Result := DoRemoveAll(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomMap.RemoveIf(aTest: TKeyTest): SizeInt;
@@ -2944,8 +2980,14 @@ end;
 
 function TGCustomMultiMap.AddAll(e: IEntryEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoAddAll(e);
+  if not InIteration then
+    Result := DoAddAll(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomMultiMap.AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
@@ -2979,8 +3021,14 @@ end;
 
 function TGCustomMultiMap.RemoveAll(e: IEntryEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoRemoveAll(e);
+  if not InIteration then
+    Result := DoRemoveAll(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomMultiMap.RemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
@@ -2991,8 +3039,14 @@ end;
 
 function TGCustomMultiMap.RemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoRemoveValues(aKey, e);
+  if not InIteration then
+    Result := DoRemoveValues(aKey, e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomMultiMap.RemoveKey(constref aKey: TKey): SizeInt;
@@ -3010,8 +3064,14 @@ end;
 
 function TGCustomMultiMap.RemoveKeys(e: IKeyEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := DoRemoveKeys(e);
+  if not InIteration then
+    Result := DoRemoveKeys(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGCustomMultiMap.ValuesView(const aKey: TKey): IValueEnumerable;

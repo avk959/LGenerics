@@ -728,12 +728,20 @@ function TGDeque.PushAllFirst(e: IEnumerable): SizeInt;
 var
   o: TObject;
 begin
-  CheckInIteration;
-  o := e._GetRef;
-  if o is TCustomContainer then
-    Result := AddContainer2Head(TCustomContainer(o))
+  if not InIteration then
+    begin
+      o := e._GetRef;
+      if o is TCustomContainer then
+        Result := AddContainer2Head(TCustomContainer(o))
+      else
+        Result := AddEnum2Head(e);
+    end
   else
-    Result := AddEnum2Head(e);
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 procedure TGDeque.PushLast(constref aValue: T);
@@ -750,8 +758,14 @@ end;
 
 function TGDeque.PushAllLast(e: IEnumerable): SizeInt;
 begin
-  CheckInIteration;
-  Result := AppendEnumerable(e);
+  if not InIteration then
+    Result := AppendEnumerable(e)
+  else
+    begin
+      Result := 0;
+      e.Any;
+      UpdateLockError;
+    end;
 end;
 
 function TGDeque.PopFirst: T;
