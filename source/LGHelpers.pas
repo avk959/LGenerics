@@ -957,18 +957,27 @@ end;
 
 class function TGObjectHelper.HashCode(aValue: TObject): SizeInt;
 begin
-  if Assigned(aValue) then
-    Result := SizeInt.HashCode(aValue.GetHashCode)
+{$IF DEFINED(CPU64)}
+  if aValue <> nil then
+    Result := HashFunc.HashQWord(aValue.GetHashCode)
   else
-    Result := SizeInt.HashCode(0);
+    Result := HashFunc.HashQWord(0);
+{$ELSEIF DEFINED(CPU32)}
+  if aValue <> nil then
+    Result := HashFunc.HashDWord(aValue.GetHashCode)
+  else
+    Result := HashFunc.HashDWord(0);
+{$ELSE}
+  if aValue <> nil then
+    Result := HashFunc.HashWord(aValue.GetHashCode)
+  else
+    Result := HashFunc.HashWord(0);
+{$ENDIF}
 end;
 
 class function TGObjectHelper.Equal(L, R: TObject): Boolean;
 begin
-  if Assigned(L) then
-    Result := L.Equals(R)
-  else
-    Result := R = nil;
+  Result := L.Equals(R);
 end;
 
 class function TGObjectHelper.Compare(L, R: TObject): SizeInt;
