@@ -111,8 +111,7 @@ type
 
   const
     NULL_INDEX  = SizeInt(-1);
-    NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 2) div NODE_SIZE;
+    MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 2) div SizeOf(TNode);
 
   type
     TKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
@@ -171,6 +170,8 @@ type
     procedure Expand;
     procedure RemoveFromKeyChain(aIndex: SizeInt);
     procedure RemoveFromValueChain(aIndex: SizeInt);
+    procedure FixKeyChain(aOldIndex, aNewIndex: SizeInt);
+    procedure FixValueChain(aOldIndex, aNewIndex: SizeInt);
     function  DoFindKey(constref aKey: TKey; aHash: SizeInt): SizeInt;
     function  DoFindValue(constref aValue: TValue; aHash: SizeInt): SizeInt;
     function  FindKey(constref aKey: TKey): SizeInt; inline;
@@ -239,11 +240,11 @@ type
   { will raise ELGMapError if contains aValue }
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
   { will return False if contains aValue }
-    function  AddOrSetValue(constref e: TEntry): Boolean;
+    function  TryAddOrSetValue(constref e: TEntry): Boolean;
   { will raise ELGMapError if contains aValue }
     procedure AddOrSetKey(const aValue: TValue; const aKey: TKey);
   { will return False if contains aValue }
-    function  AddOrSetKey(constref e: TInverseEntry): Boolean;
+    function  TryAddOrSetKey(constref e: TInverseEntry): Boolean;
   { will add only entries which keys and values are not contained in the map }
     function  AddAll(constref a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
@@ -274,7 +275,7 @@ type
     function  IInverseMap.TryGetValue   = TryGetKey;
     function  IInverseMap.GetValueDef   = GetKeyDef;
     function  IInverseMap.Add           = AddInverse;
-    procedure IInverseMap.AddOrSetValue = AddOrSetKey;
+    procedure IInverseMap.AddOrSetValue = TryAddOrSetKey;
     function  IInverseMap.Replace       = ReplaceKey;
     function  IInverseMap.Extract       = ExtractValue;
     function  IInverseMap.Remove        = RemoveValue;
@@ -285,7 +286,7 @@ type
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   { will raise ELGMapError if not contains aKey or contains aValue }
-    property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
+    property  Items[const aKey: TKey]: TValue read GetValue write TryAddOrSetValue; default;
   end;
 
   { TGHashBiMapK assumes that TKey implements TKeyEqRel }
@@ -461,9 +462,9 @@ procedure TGHashBiMap.Rehash;
 var
   I, kInd, vInd, Mask: SizeInt;
 begin
-  Mask := Pred(Capacity);
-  System.FillChar(FKeyChains[0], Succ(Mask) * SizeOf(SizeInt), $ff);
-  System.FillChar(FValueChains[0], Succ(Mask) * SizeOf(SizeInt), $ff);
+  Mask := System.High(FNodeList);
+  System.FillChar(Pointer(FKeyChains)^, Succ(Mask) * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FValueChains)^, Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
       kInd := FNodeList[I].KeyHash and Mask;
@@ -503,7 +504,7 @@ procedure TGHashBiMap.RemoveFromKeyChain(aIndex: SizeInt);
 var
   I, Curr, Prev: SizeInt;
 begin
-  I := FNodeList[aIndex].KeyHash and Pred(Capacity);
+  I := FNodeList[aIndex].KeyHash and System.High(FNodeList);
   Curr := FKeyChains[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
@@ -525,7 +526,7 @@ procedure TGHashBiMap.RemoveFromValueChain(aIndex: SizeInt);
 var
   I, Curr, Prev: SizeInt;
 begin
-  I := FNodeList[aIndex].ValueHash and Pred(Capacity);
+  I := FNodeList[aIndex].ValueHash and System.High(FNodeList);
   Curr := FValueChains[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
@@ -543,9 +544,45 @@ begin
     end;
 end;
 
+procedure TGHashBiMap.FixKeyChain(aOldIndex, aNewIndex: SizeInt);
+var
+  I: SizeInt;
+begin
+  I := FNodeList[aOldIndex].KeyHash and System.High(FNodeList);
+  if FKeyChains[I] <> aOldIndex then
+    repeat
+      if FNodeList[I].NextKey = aOldIndex then
+        begin
+          FNodeList[I].NextKey := aNewIndex;
+          exit;
+        end;
+      I := FNodeList[I].NextKey;
+    until I = NULL_INDEX
+  else
+    FKeyChains[I] := aNewIndex;
+end;
+
+procedure TGHashBiMap.FixValueChain(aOldIndex, aNewIndex: SizeInt);
+var
+  I: SizeInt;
+begin
+  I := FNodeList[aOldIndex].ValueHash and System.High(FNodeList);
+  if FValueChains[I] <> aOldIndex then
+    repeat
+      if FNodeList[I].NextValue = aOldIndex then
+        begin
+          FNodeList[I].NextValue := aNewIndex;
+          exit;
+        end;
+      I := FNodeList[I].NextValue;
+    until I = NULL_INDEX
+  else
+    FValueChains[I] := aNewIndex
+end;
+
 function TGHashBiMap.DoFindKey(constref aKey: TKey; aHash: SizeInt): SizeInt;
 begin
-  Result := FKeyChains[aHash and Pred(Capacity)];
+  Result := FKeyChains[aHash and System.High(FNodeList)];
   while Result <> NULL_INDEX do
     begin
       if (FNodeList[Result].KeyHash = aHash) and TKeyEqRel.Equal(FNodeList[Result].Data.Key, aKey) then
@@ -556,7 +593,7 @@ end;
 
 function TGHashBiMap.DoFindValue(constref aValue: TValue; aHash: SizeInt): SizeInt;
 begin
-  Result := FValueChains[aHash and Pred(Capacity)];
+  Result := FValueChains[aHash and System.High(FNodeList)];
   while Result <> NULL_INDEX do
     begin
       if (FNodeList[Result].ValueHash = aHash) and TValueEqRel.Equal(FNodeList[Result].Data.Value, aValue) then
@@ -585,7 +622,7 @@ procedure TGHashBiMap.DoAddData(constref aKey: TKey; constref aValue: TValue; aK
 var
   kInd, vInd, Mask, I: SizeInt;
 begin
-  Mask := Pred(Capacity);
+  Mask := System.High(FNodeList);
   I := Count;
   kInd := aKeyHash and Mask;
   vInd := aValHash and Mask;
@@ -601,8 +638,6 @@ begin
 end;
 
 procedure TGHashBiMap.DoRemove(aIndex: SizeInt);
-var
-  kInd, vInd, Last: SizeInt;
 begin
   RemoveFromKeyChain(aIndex);
   RemoveFromValueChain(aIndex);
@@ -610,17 +645,10 @@ begin
   Dec(FCount);
   if aIndex < Count then
     begin
-      Last := Count;
-      RemoveFromKeyChain(Last);
-      RemoveFromValueChain(Last);
-      kInd := FNodeList[Last].KeyHash and Pred(Capacity);
-      vInd := FNodeList[Last].ValueHash and Pred(Capacity);
-      System.Move(FNodeList[Last], FNodeList[aIndex], NODE_SIZE);
-      System.FillChar(FNodeList[Last], NODE_SIZE, 0);
-      FNodeList[aIndex].NextKey := FKeyChains[kInd];
-      FKeyChains[kInd] := aIndex;
-      FNodeList[aIndex].NextValue := FValueChains[vInd];
-      FValueChains[kInd] := aIndex;
+      FixKeyChain(Count, aIndex);
+      FixValueChain(Count, aIndex);
+      System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
+      System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
     end;
 end;
 
@@ -756,9 +784,9 @@ end;
 
 function TGHashBiMap.DoRemoveKey(constref aKey: TKey): Boolean;
 var
-  v: TValue;
+  Dummy: TValue;
 begin
-  Result := DoExtractKey(aKey, v);
+  Result := DoExtractKey(aKey, Dummy);
 end;
 
 function TGHashBiMap.DoRemoveKeys(constref a: array of TKey): SizeInt;
@@ -796,9 +824,9 @@ end;
 
 function TGHashBiMap.DoRemoveValue(constref aValue: TValue): Boolean;
 var
-  k: TKey;
+  Dummy: TKey;
 begin
-  Result := DoExtractValue(aValue, k);
+  Result := DoExtractValue(aValue, Dummy);
 end;
 
 function TGHashBiMap.DoRemoveValues(constref a: array of TValue): SizeInt;
@@ -1073,7 +1101,7 @@ begin
   DoAddOrSetValue(aKey, aValue);
 end;
 
-function TGHashBiMap.AddOrSetValue(constref e: TEntry): Boolean;
+function TGHashBiMap.TryAddOrSetValue(constref e: TEntry): Boolean;
 begin
   CheckInIteration;
   Result := TryAddOrSetValue(e.Key, e.Value);
@@ -1085,7 +1113,7 @@ begin
   DoAddOrSetKey(aValue, aKey);
 end;
 
-function TGHashBiMap.AddOrSetKey(constref e: TInverseEntry): Boolean;
+function TGHashBiMap.TryAddOrSetKey(constref e: TInverseEntry): Boolean;
 begin
   CheckInIteration;
   Result := TryAddOrSetKey(e.Key, e.Value);
