@@ -694,6 +694,7 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand; inline;
     procedure RemoveFromChain(aIndex: SizeInt);
+    procedure FixChain(aOldIndex, aNewIndex: SizeInt);
     function  DoFind(constref aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
     function  DoAdd(aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(constref aPos: TSearchResult);
@@ -3378,7 +3379,7 @@ procedure TGLiteChainHashTable.Rehash;
 var
   I, J, Mask: SizeInt;
 begin
-  Mask := Pred(Capacity);
+  Mask := System.High(FNodeList);
   System.FillChar(Pointer(FChainList)^, Succ(Mask) * SizeOf(SizeInt), $ff);
   for I := 0 to Pred(Count) do
     begin
@@ -3407,7 +3408,7 @@ procedure TGLiteChainHashTable.RemoveFromChain(aIndex: SizeInt);
 var
   I, Curr, Prev: SizeInt;
 begin
-  I := FNodeList[aIndex].Hash and Pred(Capacity);
+  I := FNodeList[aIndex].Hash and System.High(FNodeList);
   Curr := FChainList[I];
   Prev := NULL_INDEX;
   while Curr <> NULL_INDEX do
@@ -3425,11 +3426,29 @@ begin
     end;
 end;
 
+procedure TGLiteChainHashTable.FixChain(aOldIndex, aNewIndex: SizeInt);
+var
+  I: SizeInt;
+begin
+  I := FNodeList[aOldIndex].Hash and System.High(FNodeList);
+  if FChainList[I] <> aOldIndex then
+    repeat
+      if FNodeList[I].Next = aOldIndex then
+        begin
+          FNodeList[I].Next := aNewIndex;
+          exit;
+        end;
+      I := FNodeList[I].Next;
+    until I = NULL_INDEX
+  else
+    FChainList[I] := aNewIndex;
+end;
+
 function TGLiteChainHashTable.DoFind(constref aKey: TKey; aHash: SizeInt; out aPos: TSearchResult): Boolean;
 var
   I: SizeInt;
 begin
-  I := FChainList[aHash and Pred(Capacity)];
+  I := FChainList[aHash and System.High(FNodeList)];
   aPos.PrevIndex := NULL_INDEX;
   while I <> NULL_INDEX do
     begin
@@ -3449,7 +3468,7 @@ var
   I: SizeInt;
 begin
   Result := Count;
-  I := aKeyHash and Pred(Capacity);
+  I := aKeyHash and System.High(FNodeList);
   FNodeList[Result].Hash := aKeyHash;
   FNodeList[Result].Next := FChainList[I];
   FChainList[I] := Result;
@@ -3457,8 +3476,6 @@ begin
 end;
 
 procedure TGLiteChainHashTable.DoRemove(constref aPos: TSearchResult);
-var
-  I, Last: SizeInt;
 begin
   if aPos.PrevIndex <> NULL_INDEX then  //is not head of chain
     FNodeList[aPos.PrevIndex].Next := FNodeList[aPos.Index].Next
@@ -3468,32 +3485,22 @@ begin
   Dec(FCount);
   if aPos.Index < Count then
     begin
-      Last := Count;
-      RemoveFromChain(Last);
-      I := FNodeList[Last].Hash and Pred(Capacity);
-      System.Move(FNodeList[Last], FNodeList[aPos.Index], SizeOf(TNode));
-      System.FillChar(FNodeList[Last], SizeOf(TNode), 0);
-      FNodeList[aPos.Index].Next := FChainList[I];
-      FChainList[I] := aPos.Index;
+      FixChain(Count, aPos.Index);
+      System.Move(FNodeList[Count], FNodeList[aPos.Index], SizeOf(TNode));
+      System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
     end;
 end;
 
 procedure TGLiteChainHashTable.DoRemoveIndex(aIndex: SizeInt);
-var
-  I, Last: SizeInt;
 begin
   RemoveFromChain(aIndex);
   FNodeList[aIndex].Data := Default(TEntry);
   Dec(FCount);
   if aIndex < Count then
     begin
-      Last := Count;
-      RemoveFromChain(Last);
-      I := FNodeList[Last].Hash and Pred(Capacity);
-      System.Move(FNodeList[Last], FNodeList[aIndex], SizeOf(TNode));
-      System.FillChar(FNodeList[Last], SizeOf(TNode), 0);
-      FNodeList[aIndex].Next := FChainList[I];
-      FChainList[I] := aIndex;
+      FixChain(Count, aIndex);
+      System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
+      System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
     end;
 end;
 
