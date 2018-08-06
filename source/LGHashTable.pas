@@ -3430,16 +3430,19 @@ procedure TGLiteChainHashTable.FixChain(aOldIndex, aNewIndex: SizeInt);
 var
   I: SizeInt;
 begin
-  I := FNodeList[aOldIndex].Hash and System.High(FNodeList);
+  I := FNodeList[aNewIndex].Hash and System.High(FNodeList);
   if FChainList[I] <> aOldIndex then
-    repeat
-      if FNodeList[I].Next = aOldIndex then
-        begin
-          FNodeList[I].Next := aNewIndex;
-          exit;
-        end;
-      I := FNodeList[I].Next;
-    until I = NULL_INDEX
+    begin
+      I := FChainList[I];
+      repeat
+        if FNodeList[I].Next = aOldIndex then
+          begin
+            FNodeList[I].Next := aNewIndex;
+            exit;
+          end;
+        I := FNodeList[I].Next;
+      until False
+    end
   else
     FChainList[I] := aNewIndex;
 end;
@@ -3485,9 +3488,9 @@ begin
   Dec(FCount);
   if aPos.Index < Count then
     begin
-      FixChain(Count, aPos.Index);
       System.Move(FNodeList[Count], FNodeList[aPos.Index], SizeOf(TNode));
       System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
+      FixChain(Count, aPos.Index);
     end;
 end;
 
@@ -3498,9 +3501,9 @@ begin
   Dec(FCount);
   if aIndex < Count then
     begin
-      FixChain(Count, aIndex);
       System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
       System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
+      FixChain(Count, aIndex);
     end;
 end;
 
