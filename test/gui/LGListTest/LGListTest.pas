@@ -163,6 +163,7 @@ type
     procedure IndexOf;
     procedure CountOf;
     procedure Remove;
+    procedure Remove_1;
     procedure Insert;
     procedure Delete;
     procedure DeleteOutOfBounds;
@@ -1756,6 +1757,22 @@ begin
   AssertTrue(lst.Count = Length(IntArray21) - 3);
   AssertTrue(lst.Remove(IntArray21[High(IntArray21) - 1]));
   AssertTrue(lst.Count = Length(IntArray21) - 4);
+end;
+
+procedure TLiteHashListTest.Remove_1;
+var
+  lst: TIntList;
+  I, TestSize: Integer;
+begin
+  TestSize := 257;
+  for I := 0 to Pred(TestSize) do
+    lst.Add(I);
+  AssertTrue(lst.Count = TestSize);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(lst.Contains(I));
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(lst.Remove(I));
+  AssertTrue(lst.IsEmpty);
 end;
 
 procedure TLiteHashListTest.Insert;
