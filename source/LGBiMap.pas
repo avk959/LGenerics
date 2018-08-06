@@ -192,7 +192,7 @@ type
     function  DoRemoveKey(constref aKey: TKey): Boolean; virtual;
     function  DoRemoveKeys(constref a: array of TKey): SizeInt;
     function  DoRemoveKeys(e: IKeyEnumerable): SizeInt;
-    function  DoExtractValue(constref aValue: TValue; out k: TKey): Boolean; virtual;
+    function  DoExtractValue(constref aValue: TValue; out k: TKey): Boolean;
     function  DoRemoveValue(constref aValue: TValue): Boolean; virtual;
     function  DoRemoveValues(constref a: array of TValue): SizeInt;
     function  DoRemoveValues(e: IValueEnumerable): SizeInt;
@@ -232,10 +232,9 @@ type
     function  TryGetKey(constref aValue: TValue; out aKey: TKey): Boolean;
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
     function  GetKeyDef(constref aValue: TValue; constref aDefault: TKey = Default(TKey)): TKey; inline;
-  { returns True and add TEntry(aKey, aValue) only if keys do not contain aKey and
-    values do not contain aValue }
+  { returns True and maps aValue to aKey only if not contains aKey and not contains aValue }
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-  { returns True and add e only if keys do not contain e.Key and values do not contain e.Value }
+  { returns True and maps e.Value to e.Key only if not contains e.Key and not contains e.Value }
     function  Add(constref e: TEntry): Boolean;
   { will raise ELGMapError if contains aValue }
     procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
@@ -505,21 +504,26 @@ var
   I, Curr, Prev: SizeInt;
 begin
   I := FNodeList[aIndex].KeyHash and System.High(FNodeList);
-  Curr := FKeyChains[I];
-  Prev := NULL_INDEX;
-  while Curr <> NULL_INDEX do
+  if FKeyChains[I] <> aIndex then
     begin
-      if Curr = aIndex then
-        begin
-          if Prev <> NULL_INDEX then
-            FNodeList[Prev].NextKey := FNodeList[Curr].NextKey
-          else
-            FKeyChains[I] := FNodeList[Curr].NextKey;
-          exit;
-        end;
-      Prev := Curr;
-      Curr := FNodeList[Curr].NextKey;
+      Prev := FKeyChains[I];
+      Curr := FNodeList[Prev].NextKey;
+      repeat
+        if Curr = aIndex then
+          begin
+            FNodeList[Prev].NextKey := FNodeList[Curr].NextKey;
+            exit;
+          end;
+        Prev := Curr;
+        Curr := FNodeList[Curr].NextKey;
+      until Curr = NULL_INDEX;
+    end
+  else
+    begin
+      FKeyChains[I] := FNodeList[aIndex].NextKey;
+      exit;
     end;
+  raise ELGMapError.Create(SEInternalDataInconsist);
 end;
 
 procedure TGHashBiMap.RemoveFromValueChain(aIndex: SizeInt);
@@ -527,57 +531,76 @@ var
   I, Curr, Prev: SizeInt;
 begin
   I := FNodeList[aIndex].ValueHash and System.High(FNodeList);
-  Curr := FValueChains[I];
-  Prev := NULL_INDEX;
-  while Curr <> NULL_INDEX do
+  if FValueChains[I] <> aIndex then
     begin
-      if Curr = aIndex then
-        begin
-          if Prev <> NULL_INDEX then
-            FNodeList[Prev].NextValue := FNodeList[Curr].NextValue
-          else
-            FValueChains[I] := FNodeList[Curr].NextValue;
-          exit;
-        end;
-      Prev := Curr;
-      Curr := FNodeList[Curr].NextValue;
+      Prev := FValueChains[I];
+      Curr := FNodeList[Prev].NextValue;
+      repeat
+        if Curr = aIndex then
+          begin
+            FNodeList[Prev].NextValue := FNodeList[Curr].NextValue;
+            exit;
+          end;
+        Prev := Curr;
+        Curr := FNodeList[Curr].NextValue;
+      until Curr = NULL_INDEX;
+    end
+  else
+    begin
+      FValueChains[I] := FNodeList[aIndex].NextValue;
+      exit;
     end;
+  raise ELGMapError.Create(SEInternalDataInconsist);
 end;
 
 procedure TGHashBiMap.FixKeyChain(aOldIndex, aNewIndex: SizeInt);
 var
   I: SizeInt;
 begin
-  I := FNodeList[aOldIndex].KeyHash and System.High(FNodeList);
+  I := FNodeList[aNewIndex].KeyHash and System.High(FNodeList);
   if FKeyChains[I] <> aOldIndex then
-    repeat
-      if FNodeList[I].NextKey = aOldIndex then
-        begin
-          FNodeList[I].NextKey := aNewIndex;
-          exit;
-        end;
-      I := FNodeList[I].NextKey;
-    until I = NULL_INDEX
+    begin
+      I := FKeyChains[I];
+      repeat
+        if FNodeList[I].NextKey = aOldIndex then
+          begin
+            FNodeList[I].NextKey := aNewIndex;
+            exit;
+          end;
+        I := FNodeList[I].NextKey;
+      until I = NULL_INDEX;
+    end
   else
-    FKeyChains[I] := aNewIndex;
+    begin
+      FKeyChains[I] := aNewIndex;
+      exit;
+    end;
+  raise ELGMapError.Create(SEInternalDataInconsist);
 end;
 
 procedure TGHashBiMap.FixValueChain(aOldIndex, aNewIndex: SizeInt);
 var
   I: SizeInt;
 begin
-  I := FNodeList[aOldIndex].ValueHash and System.High(FNodeList);
+  I := FNodeList[aNewIndex].ValueHash and System.High(FNodeList);
   if FValueChains[I] <> aOldIndex then
-    repeat
-      if FNodeList[I].NextValue = aOldIndex then
-        begin
-          FNodeList[I].NextValue := aNewIndex;
-          exit;
-        end;
-      I := FNodeList[I].NextValue;
-    until I = NULL_INDEX
+    begin
+      I := FValueChains[I];
+      repeat
+        if FNodeList[I].NextValue = aOldIndex then
+          begin
+            FNodeList[I].NextValue := aNewIndex;
+            exit;
+          end;
+        I := FNodeList[I].NextValue;
+      until I = NULL_INDEX;
+    end
   else
-    FValueChains[I] := aNewIndex
+    begin
+      FValueChains[I] := aNewIndex;
+      exit;
+    end;
+  raise ELGMapError.Create(SEInternalDataInconsist);
 end;
 
 function TGHashBiMap.DoFindKey(constref aKey: TKey; aHash: SizeInt): SizeInt;
@@ -620,21 +643,19 @@ end;
 
 procedure TGHashBiMap.DoAddData(constref aKey: TKey; constref aValue: TValue; aKeyHash, aValHash: SizeInt);
 var
-  kInd, vInd, Mask, I: SizeInt;
+  kInd, vInd, I: SizeInt;
 begin
-  Mask := System.High(FNodeList);
   I := Count;
-  kInd := aKeyHash and Mask;
-  vInd := aValHash and Mask;
-  FNodeList[I].Data.Key := aKey;
-  FNodeList[I].Data.Value := aValue;
+  Inc(FCount);
+  kInd := aKeyHash and System.High(FNodeList);
+  vInd := aValHash and System.High(FNodeList);
+  FNodeList[I].Data := TEntry.Create(aKey, aValue);
   FNodeList[I].KeyHash := aKeyHash;
   FNodeList[I].ValueHash := aValHash;
   FNodeList[I].NextKey := FKeyChains[kInd];
   FKeyChains[kInd] := I;
   FNodeList[I].NextValue := FValueChains[vInd];
   FValueChains[vInd] := I;
-  Inc(FCount);
 end;
 
 procedure TGHashBiMap.DoRemove(aIndex: SizeInt);
@@ -645,10 +666,10 @@ begin
   Dec(FCount);
   if aIndex < Count then
     begin
-      FixKeyChain(Count, aIndex);
-      FixValueChain(Count, aIndex);
       System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
       System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
+      FixKeyChain(Count, aIndex);
+      FixValueChain(Count, aIndex);
     end;
 end;
 
