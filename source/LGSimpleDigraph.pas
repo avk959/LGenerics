@@ -1456,8 +1456,7 @@ begin
     for Next in AdjVerticesI(Curr) do
       if not Visited[Next] then
         begin
-          if Next = aSinkIndex then
-            SinkFound := True;
+          SinkFound := SinkFound or (Next = aSinkIndex);
           Visited[Next] := True;
           Inc(Total);
           Queue.Enqueue(Next);

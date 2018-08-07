@@ -2142,7 +2142,7 @@ end;
 
 function TGCustomGraph.TIncidentEnumerator.GetCurrent: TIncidentEdge;
 var
-  p: ^TAdjItem;
+  p: PAdjItem;
 begin
   p := FEnum.Current;
   Result.Destination := p^.Destination;
@@ -3144,18 +3144,15 @@ begin
 end;
 
 function TIntHashSet.Contains(aValue: SizeInt): Boolean;
-var
-  Dummy: SizeInt;
 begin
-  Result := FTable.Find(aValue, Dummy) <> nil;
+  Result := FTable.Contains(aValue);
 end;
 
 function TIntHashSet.Add(aValue: SizeInt): Boolean;
 var
-  Dummy: SizeInt;
   p: PEntry;
 begin
-  Result := not FTable.FindOrAdd(aValue, p, Dummy);
+  Result := not FTable.FindOrAdd(aValue, p);
   if Result then
     p^.Key := aValue;
 end;
