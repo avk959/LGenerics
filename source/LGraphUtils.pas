@@ -44,7 +44,7 @@ type
   generic TGOnStreamRead<T>  = procedure(aStream: TStream; out aValue: T) of object;
   generic TGOnStreamWrite<T> = procedure(aStream: TStream; constref aValue: T) of object;
 
-  ELGraphError     = class(Exception); //???
+  EGraphError      = class(Exception); //???
 
   TEmptyRec        = record end;
 
@@ -1011,7 +1011,7 @@ begin
         System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
       end
     else
-      raise ELGraphError.CreateFmt(SEBitMatrixSizeExceedFmt, [aSize]);
+      raise EGraphError.CreateFmt(SEBitMatrixSizeExceedFmt, [aSize]);
 end;
 
 procedure TGCustomGraph.TSquareBitMatrix.ClearBits;
@@ -1486,9 +1486,9 @@ begin
       if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
         Result := FMatrix{%H-}[aSrc, aDst]
       else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
+        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
   else
-    raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
+    raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
 end;
 
 { TGCustomGraph.TIntSet.TEnumerator }
@@ -1679,7 +1679,7 @@ begin
     end
   else
     begin
-      ELGraphError.Create(SECantAccessEmpty);
+      EGraphError.Create(SECantAccessEmpty);
       Result := -1;
     end;
 end;
@@ -1700,7 +1700,7 @@ begin
     Result := FItems[Count]
   else
     begin
-      ELGraphError.Create(SECantAccessEmpty);
+      EGraphError.Create(SECantAccessEmpty);
       Result := -1;
     end;
 end;
@@ -2330,7 +2330,7 @@ begin
   if Capacity < MAX_POSITIVE_POW2 then
     Resize(Capacity shl 1)
   else
-    raise ELGraphError.CreateFmt(SECapacityExceedFmt, [Capacity shl 1]);
+    raise EGraphError.CreateFmt(SECapacityExceedFmt, [Capacity shl 1]);
 end;
 
 function TGCustomGraph.Add(constref v: TVertex; aHash: SizeInt): SizeInt;
@@ -2597,7 +2597,7 @@ begin
       if aValue < System.Length(aTree) then
         v.Add(aValue)
       else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aValue]);
+        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aValue]);
       aValue := aTree[aValue];
     end;
   Result := v.ToArray;
@@ -2615,7 +2615,7 @@ begin
       if I < System.Length(aTree) then
         v.Add(I)
       else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
       if I = aFrom then
         break;
       I := aTree[I];
@@ -2636,7 +2636,7 @@ begin
       if I < System.Length(aTree) then
         Inc(Result)
       else
-        raise ELGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
       if I = aFrom then
         break;
       I := aTree[I];
@@ -2687,7 +2687,7 @@ begin
     if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
       Resize(LGUtils.RoundUpTwoPower(aValue))
     else
-      raise ELGraphError.CreateFmt(SECapacityExceedFmt, [aValue]);
+      raise EGraphError.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
 procedure TGCustomGraph.TrimToFit;
