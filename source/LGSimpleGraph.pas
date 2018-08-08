@@ -377,33 +377,41 @@ type
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
 
 {**********************************************************************************************************
-  NP-hard problems utilities
+  some NP-hard problem utilities
 ***********************************************************************************************************}
 
-  { lists all maximal independent sets of vertices }
+  { lists all maximal independent sets of vertices;
+    setting aCancel to True in aOnFindSet will result in an exit from the method }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximal independent set of maximal cardinality;
-    worst case time cost O*(3^n/3)
+    worst case time cost of exact solution O*(3^n/3);
     aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best solution found by this time will be returned,
     and aExactSolution will be set to False }
     function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  ApproxMaxIndependentSet: TIntArray;
+  { returns True if aVertexSet contains indices of the some maximal independent vertex set, False otherwise }
+    function  IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
   { returns indices of the vertices of the some found minimum dominating set;
-    worst case time cost O*(2^n);
+    worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best solution found by this time will be returned,
     and aExactSolution will be set to False }
     function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  ApproxMinDominatingSet: TIntArray;
-  { lists all maximal cliques }
+  { returns True if aVertexSet contains indices of the some minimal dominating vertex set, False otherwise }
+    function  IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
+  { lists all maximal cliques; setting aCancel to True in aOnFindClique will result in an exit from the method }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
-  { returns indices of the vertices of the some found maximum clique; worst case time cost O*(3^n/3);
+  { returns indices of the vertices of the some found maximum clique;
+    worst case time cost of exact solution O*(3^n/3);
     aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best solution found by this time will be returned,
     and aExactSolution will be set to False }
     function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  ApproxMaxClique: TIntArray;
+  { returns True if aClique contains indices of the some maximal clique, False otherwise }
+    function  IsMaxClique(constref aClique: TIntArray): Boolean;
 
 {**********************************************************************************************************
   properties
@@ -518,17 +526,17 @@ type
     class function NegInfiniteWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
-    function  ContainsNegWeighedEdge: Boolean;
+    function ContainsNegWeighedEdge: Boolean;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
 
-    function  SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
-    function  SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
-    function  SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
-    function  SubgraphFromTree(constref aTree: TIntArray): TGWeightedGraph;
-    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
-    function  Clone: TGWeightedGraph;
+    function SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
+    function SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
+    function SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
+    function SubgraphFromTree(constref aTree: TIntArray): TGWeightedGraph;
+    function SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
+    function Clone: TGWeightedGraph;
 
 {**********************************************************************************************************
   shortest path problem utilities
@@ -538,32 +546,32 @@ type
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
     InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
-    function  MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
-    function  MinPathsMapI(aSrc: SizeInt): TWeightArray;
+    function MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
-    function  MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
-    function  MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+    function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
     returns weight of the path or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
-    function  MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
-    function  MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
+    function MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
+    function MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
-    function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
-    function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+    function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
+    function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
     the weights of all edges must be nonnegative; used A* algorithm if aHeur <> nil }
-    function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: TEstimate): TIntArray; inline;
-    function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
+    function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: TEstimate): TIntArray; inline;
+    function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
 
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
 
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Kruskal's algorithm used }
-    function  MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
+    function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
-    function  MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+    function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
   end;
 
   TRealPointEdge = record
@@ -3151,6 +3159,8 @@ function TGSimpleGraph.MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: 
 begin
   if IsEmpty then
     exit(nil);
+  if VertexCount = 1 then
+    exit([0]);
   if VertexCount > 256 then
     Result := GetMaxIsBP(aTimeOut, aExactSolution)
   else
@@ -3161,10 +3171,48 @@ function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
+  if VertexCount = 1 then
+    exit([0]);
   if VertexCount > COMMON_BP_CUTOFF then
     Result := GetApproxMaxIS
   else
     Result := GetApproxMaxIsBP;
+end;
+
+function TGSimpleGraph.IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
+var
+  TestIS, Remain: TIntSet;
+  I, J: SizeInt;
+  Adj: Boolean;
+begin
+  if System.Length(aVertexSet) = 0 then
+    exit(False);
+  for I in aVertexSet do
+    begin
+      if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
+        exit(False);
+      if not TestIS.Add(I) then //contains duplicates -> is not set
+        exit(False);
+    end;
+  for I in aVertexSet do
+    for J in aVertexSet do
+      if (I <> J) and AdjacentI(I, J) then //contains adjacent vertices -> is not independent
+        exit(False);
+  Remain.InitRange(VertexCount);
+  Remain.Subtract(TestIS);
+  for I in Remain do
+    begin
+      Adj := False;
+      for J in TestIS do
+        if AdjacentI(I, J) then
+          begin
+            Adj := True;
+            break;
+          end;
+      if not Adj then //I can be added to aVertexSet -> aVertexSet is not maximal
+        exit(False);
+    end;
+  Result := True;
 end;
 
 function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
@@ -3190,9 +3238,69 @@ begin
     Result := GetApproxMinIsBP;
 end;
 
+function TGSimpleGraph.IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
+var
+  TestMds, Remain: TIntSet;
+  I, J, K: SizeInt;
+  Adj: Boolean;
+begin
+  if System.Length(aVertexSet) = 0 then
+    exit(False);
+  for I in aVertexSet do
+    begin
+      if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
+        exit(False);
+      if not TestMds.Add(I) then //contains duplicates -> is not set
+        exit(False);
+    end;
+  Remain.InitRange(VertexCount);
+  Remain.Subtract(TestMds);
+  for I in Remain do
+    begin
+      Adj := False;
+      for J in aVertexSet do
+        if AdjacentI(I, J) then
+          begin
+            Adj := True;
+            break;
+          end;
+      if not Adj then //is not dominating set
+        exit(False);
+    end;
+
+  for I in aVertexSet do
+    begin
+      Adj := False;
+      for J in aVertexSet do
+        if (I <> J) and AdjacentI(I, J) then
+          begin
+            Adj := True;
+            break;
+          end;
+      if Adj then //test aVertexSet without I
+        begin
+          for K in Remain do
+            begin
+              Adj := False;
+              for J in aVertexSet do
+                if (K <> J) and (J <> I) and AdjacentI(K, J) then
+                  begin
+                    Adj := True;
+                    break;
+                  end;
+              if not Adj then // exist vertex nonadjacent with aVertexSet without I
+                break;
+            end;
+          if Adj then  //is not minimal
+            exit(False);
+        end;
+    end;
+  Result := True;
+end;
+
 procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
 begin
-  if IsEmpty or (EdgeCount = 0) then
+  if IsEmpty then
     exit;
   if aOnFindClique = nil then
     raise ELGraphError.Create(SECallbackMissed);
@@ -3207,7 +3315,7 @@ end;
 
 function TGSimpleGraph.MaxClique(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
 begin
-  if IsEmpty or (EdgeCount = 0) then
+  if IsEmpty then
     exit(nil);
   if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
     Result := GetMaxClique(aTimeOut, aExactSolution)
@@ -3223,7 +3331,7 @@ var
   Cand, Stack, Q: TIntSet;
   I, J: SizeInt;
 begin
-  if IsEmpty or (EdgeCount = 0) then
+  if IsEmpty then
     exit(nil);
   Cand.AssignArray(SortVerticesByWidth(soAsc));
   while Cand.NonEmpty do
@@ -3237,6 +3345,42 @@ begin
       Cand.Assign(Q);
     end;
   Result := Stack.ToArray;
+end;
+
+function TGSimpleGraph.IsMaxClique(constref aClique: TIntArray): Boolean;
+var
+  TestClique, Remain: TIntSet;
+  I, J: SizeInt;
+  Adj: Boolean;
+begin
+  if System.Length(aClique) = 0 then
+    exit(False);
+  for I in aClique do
+    begin
+      if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
+        exit(False);
+      if not TestClique.Add(I) then //contains duplicates -> is not set
+        exit(False);
+    end;
+  for I in aClique do
+    for J in aClique do
+      if (I <> J) and not AdjacentI(I, J) then //contains nonadjacent vertices -> is not clique
+        exit(False);
+  Remain.InitRange(VertexCount);
+  Remain.Subtract(TestClique);
+  for I in Remain do
+    begin
+      Adj := True;
+      for J in TestClique do
+        if not AdjacentI(I, J) then
+          begin
+            Adj := False;
+            break;
+          end;
+      if Adj then // I can be added to aClique -> aClique is not maximal
+        exit(False);
+    end;
+  Result := True;
 end;
 
 { TGChart }
