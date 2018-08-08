@@ -384,19 +384,18 @@ type
     setting aCancel to True in aOnFindSet will result in an exit from the method }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximal independent set of maximal cardinality;
-    worst case time cost of exact solution O*(3^n/3);
-    aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best solution found by this time will be returned,
-    and aExactSolution will be set to False }
+    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
+    at the end of the timeout, the best recent solution will be returned, and aExactSolution
+    will be set to False }
     function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  ApproxMaxIndependentSet: TIntArray;
   { returns True if aVertexSet contains indices of the some maximal independent vertex set, False otherwise }
     function  IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
-  { returns indices of the vertices of the some found minimum dominating set;
+  { returns indices of the vertices of the some found minimum dominating set in connected graph;
+    will raise exception if graph is disconnected;
     worst case time cost of exact solution O*(2^n);
-    aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best solution found by this time will be returned,
-    and aExactSolution will be set to False }
+    aTimeOut specifies the timeout in seconds; at the end of the timeout, the best
+    recent solution will be returned, and aExactSolution will be set to False }
     function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  ApproxMinDominatingSet: TIntArray;
   { returns True if aVertexSet contains indices of the some minimal dominating vertex set, False otherwise }
@@ -404,10 +403,9 @@ type
   { lists all maximal cliques; setting aCancel to True in aOnFindClique will result in an exit from the method }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique;
-    worst case time cost of exact solution O*(3^n/3);
-    aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best solution found by this time will be returned,
-    and aExactSolution will be set to False }
+    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
+    at the end of the timeout, the best recent solution will be returned, and aExactSolution
+    will be set to False }
     function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  ApproxMaxClique: TIntArray;
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
@@ -1510,7 +1508,7 @@ begin
             end;
         end
       else
-        raise ELGraphError.Create(SEGrapInconsist);
+        raise EGraphError.Create(SEInternalDataInconsist);
     end;
 end;
 
@@ -1624,7 +1622,7 @@ begin
       if Adjacent(Result[I], Result[J]) then
         begin
           if not GetEdgeData(Result[I], Result[J], d) then
-            raise ELGraphError.Create(SEGrapInconsist);
+            raise EGraphError.Create(SEInternalDataInconsist);
           Result.AddEdgeI(I, J, d);
         end;
 end;
@@ -2317,7 +2315,7 @@ begin
     exit;
   SearchForFundamentalsCyclesLen(aCycleLens);
   if aCycleLens.Count <> CyclomaticNumber then
-    raise ELGraphError.Create(SEGrapInconsist);
+    raise EGraphError.Create(SEInternalDataInconsist);
   TIntVectorHelper.Sort(aCycleLens);
 end;
 
@@ -2504,7 +2502,7 @@ var
   wbs: TWriteBufStream;
 begin
   if not Assigned(aWriteVertex) then
-    raise ELGraphError.Create(SEWriteCallbackMissed);
+    raise EGraphError.Create(SEWriteCallbackMissed);
 {$IFDEF CPU64}
   if VertexCount > System.High(Integer) then
     raise ELGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
@@ -2557,15 +2555,15 @@ var
   rbs: TReadBufStream;
 begin
   if not Assigned(aReadVertex) then
-    raise ELGraphError.Create(SEReadCallbackMissed);
+    raise EGraphError.Create(SEReadCallbackMissed);
   rbs := TReadBufStream.Create(aStream);
   try
     //read header
     rbs.ReadBuffer(Header, SizeOf(Header));
     if Header.Magic <> GRAPH_MAGIC then
-      raise ELGraphError.Create(SEUnknownGraphStreamFmt);
+      raise EGraphError.Create(SEUnknownGraphStreamFmt);
     if Header.Version > GRAPH_HEADER_VERSION then
-      raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
+      raise EGraphError.Create(SEUnsuppGraphFmtVersion);
     Clear;
     EnsureCapacity(Header.VertexCount);
     //read title
@@ -2587,9 +2585,9 @@ begin
       begin
         aReadVertex(rbs, Vertex);
         if not AddVertex(Vertex, Ind) then
-          raise ELGraphError.Create(SEGraphStreamCorrupt);
+          raise EGraphError.Create(SEGraphStreamCorrupt);
         if Ind <> I then
-          raise ELGraphError.Create(SEGraphStreamReadIntern);
+          raise EGraphError.Create(SEGraphStreamReadIntern);
       end;
     //read edges
     Data := DefaultEdgeData;
@@ -2942,7 +2940,7 @@ begin
     exit(False);
   SearchForFundamentalsCycles(aCycles);
   if aCycles.Count <> CyclomaticNumber then
-    raise ELGraphError.Create(SEGrapInconsist);
+    raise EGraphError.Create(SEInternalDataInconsist);
   TIntArrayVectorHelper.Sort(aCycles, @CmpIntArrayLen);
   Result := True;
 end;
@@ -3148,7 +3146,7 @@ begin
   if IsEmpty then
     exit;
   if aOnFindSet = nil then
-    raise ELGraphError.Create(SECallbackMissed);
+    raise EGraphError.Create(SECallbackMissed);
   if VertexCount > 256 then
     ListIsBP(aOnFindSet)
   else
@@ -3217,8 +3215,8 @@ end;
 
 function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
 begin
-  if IsEmpty then
-    exit(nil);
+  if not Connected then
+    raise EGraphError.Create(SEMethodNotApplicable);
   if VertexCount > COMMON_BP_CUTOFF then
     Result := GetMds(aTimeOut, aExactSolution)
   else
@@ -3230,8 +3228,8 @@ end;
 
 function TGSimpleGraph.ApproxMinDominatingSet: TIntArray;
 begin
-  if IsEmpty then
-    exit(nil);
+  if not Connected then
+    raise EGraphError.Create(SEMethodNotApplicable);
   if VertexCount > COMMON_BP_CUTOFF then
     Result := GetApproxMinIS
   else
@@ -3244,6 +3242,8 @@ var
   I, J, K: SizeInt;
   Adj: Boolean;
 begin
+  if not Connected then
+    exit(False);
   if System.Length(aVertexSet) = 0 then
     exit(False);
   for I in aVertexSet do
@@ -3303,7 +3303,7 @@ begin
   if IsEmpty then
     exit;
   if aOnFindClique = nil then
-    raise ELGraphError.Create(SECallbackMissed);
+    raise EGraphError.Create(SECallbackMissed);
   if (VertexCount > LISTCLIQUES_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
     ListCliques(aOnFindClique)
   else
@@ -3519,7 +3519,7 @@ var
 begin
   Reader := ReaderRef;
   if not Reader.Open(aFileName) then
-    raise ELGraphError.CreateFmt(SEUnableOpenFileFmt, [aFileName]);
+    raise EGraphError.CreateFmt(SEUnableOpenFileFmt, [aFileName]);
   Clear;
   for Line in Reader do
     begin
@@ -3541,7 +3541,7 @@ begin
                 if I > 1 then
                   begin
                     Clear;
-                    raise ELGraphError.Create(SEUnexpectElem);
+                    raise EGraphError.Create(SEUnexpectElem);
                   end;
                 CurrEdge[I] := StrToInt(Elem);
                 Inc(I);
@@ -3598,7 +3598,7 @@ var
 begin
   Len := System.Length(aValue);
   if Len > High(SmallInt) then
-    raise ELGraphError.CreateFmt(SEStrLenExceedFmt, [Len]);
+    raise EGraphError.CreateFmt(SEStrLenExceedFmt, [Len]);
   aStream.WriteBuffer(Len, 2);
   if Len > 0 then
     aStream.WriteBuffer(aValue[1], Len);
