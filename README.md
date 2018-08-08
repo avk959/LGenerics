@@ -34,6 +34,7 @@ Contains:
       - shortest paths finding
       - minimum spanning tree finding
       - strongly connected components finding
+      - minimum dominating set finding
       - maximum independent set finding
       - listing all maximal independent sets
       - maximum clique finding
