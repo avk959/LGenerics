@@ -53,12 +53,12 @@ resourcestring
   SEUnsuppGraphFmtVersion  = 'Unsupported graph stream format version';
   SEGraphStreamCorrupt     = 'Graph stream data corrupted';
   SEGraphStreamReadIntern  = 'Graph stream read intenal error';
-  SEGrapInconsist          = 'Graph data inconsistency';
   SEStrLenExceedFmt        = 'Maximum string length exceeded(%d)';
   SEBitMatrixSizeExceedFmt = 'Maximum bit matrix size exceeded(%d)';
-  SEUnableOpenFileFmt      = 'Unable to open file "%s"';
+  SEUnableOpenFileFmt      = 'Failed to open file "%s"';
   SEUnexpectElem           = 'Unexpected graph element';
   SEStreamSizeExceedFmt    = 'Maximum stream size exceeded(%d)';
+  SEMethodNotApplicable    = 'Method is not applicable';
 
 implementation
 
