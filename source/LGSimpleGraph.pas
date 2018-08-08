@@ -3179,9 +3179,9 @@ end;
 
 function TGSimpleGraph.IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
 var
-  TestIS, Remain: TIntSet;
+  TestIS, Remain: TIntHashSet;
   I, J: SizeInt;
-  Adj: Boolean;
+  AdjFound: Boolean;
 begin
   if System.Length(aVertexSet) = 0 then
     exit(False);
@@ -3196,18 +3196,19 @@ begin
     for J in aVertexSet do
       if (I <> J) and AdjacentI(I, J) then //contains adjacent vertices -> is not independent
         exit(False);
-  Remain.InitRange(VertexCount);
-  Remain.Subtract(TestIS);
+  for I := 0 to Pred(VertexCount) do
+    if not TestIS.Contains(I) then
+      Remain.Add(I);
   for I in Remain do
     begin
-      Adj := False;
-      for J in TestIS do
+      AdjFound := False;
+      for J in aVertexSet do
         if AdjacentI(I, J) then
           begin
-            Adj := True;
+            AdjFound := True;
             break;
           end;
-      if not Adj then //I can be added to aVertexSet -> aVertexSet is not maximal
+      if not AdjFound then //I can be added to aVertexSet -> aVertexSet is not maximal
         exit(False);
     end;
   Result := True;
@@ -3238,9 +3239,9 @@ end;
 
 function TGSimpleGraph.IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
 var
-  TestMds, Remain: TIntSet;
+  TestMds, Remain: TIntHashSet;
   I, J, K: SizeInt;
-  Adj: Boolean;
+  AdjFound: Boolean;
 begin
   if not Connected then
     exit(False);
@@ -3253,45 +3254,46 @@ begin
       if not TestMds.Add(I) then //contains duplicates -> is not set
         exit(False);
     end;
-  Remain.InitRange(VertexCount);
-  Remain.Subtract(TestMds);
+  for I := 0 to Pred(VertexCount) do
+    if not TestMds.Contains(I) then
+      Remain.Add(I);
   for I in Remain do
     begin
-      Adj := False;
+      AdjFound := False;
       for J in aVertexSet do
         if AdjacentI(I, J) then
           begin
-            Adj := True;
+            AdjFound := True;
             break;
           end;
-      if not Adj then //is not dominating set
+      if not AdjFound then //is not dominating set
         exit(False);
     end;
 
   for I in aVertexSet do
     begin
-      Adj := False;
+      AdjFound := False;
       for J in aVertexSet do
         if (I <> J) and AdjacentI(I, J) then
           begin
-            Adj := True;
+            AdjFound := True;
             break;
           end;
-      if Adj then //test aVertexSet without I
+      if AdjFound then //test aVertexSet without I
         begin
           for K in Remain do
             begin
-              Adj := False;
+              AdjFound := False;
               for J in aVertexSet do
                 if (K <> J) and (J <> I) and AdjacentI(K, J) then
                   begin
-                    Adj := True;
+                    AdjFound := True;
                     break;
                   end;
-              if not Adj then // exist vertex nonadjacent with aVertexSet without I
+              if not AdjFound then // exist vertex nonadjacent with aVertexSet without I
                 break;
             end;
-          if Adj then  //is not minimal
+          if AdjFound then  //is not minimal
             exit(False);
         end;
     end;
@@ -3349,9 +3351,9 @@ end;
 
 function TGSimpleGraph.IsMaxClique(constref aClique: TIntArray): Boolean;
 var
-  TestClique, Remain: TIntSet;
+  TestClique, Remain: TIntHashSet;
   I, J: SizeInt;
-  Adj: Boolean;
+  AdjFound: Boolean;
 begin
   if System.Length(aClique) = 0 then
     exit(False);
@@ -3366,18 +3368,19 @@ begin
     for J in aClique do
       if (I <> J) and not AdjacentI(I, J) then //contains nonadjacent vertices -> is not clique
         exit(False);
-  Remain.InitRange(VertexCount);
-  Remain.Subtract(TestClique);
+  for I := 0 to Pred(VertexCount) do
+    if not TestClique.Contains(I) then
+      Remain.Add(I);
   for I in Remain do
     begin
-      Adj := True;
-      for J in TestClique do
+      AdjFound := True;
+      for J in aClique do
         if not AdjacentI(I, J) then
           begin
-            Adj := False;
+            AdjFound := False;
             break;
           end;
-      if Adj then // I can be added to aClique -> aClique is not maximal
+      if AdjFound then // I can be added to clique -> clique is not maximal
         exit(False);
     end;
   Result := True;
