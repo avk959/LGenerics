@@ -293,6 +293,7 @@ type
       function  ContainsAll(constref aValue: TIntSet): Boolean;
       function  Find(aValue: SizeInt): SizeInt;
       function  Add(aValue: SizeInt): Boolean;
+      function  Add(constref a: TIntArray): SizeInt;
       function  Join(constref aValue: TIntSet): SizeInt;
       procedure Push(aValue: SizeInt); inline;
       function  Pop: SizeInt; inline;
@@ -1640,6 +1641,16 @@ begin
       FItems[Count] := aValue;
       Inc(FCount);
     end;
+end;
+
+function TGCustomGraph.TIntSet.Add(constref a: TIntArray): SizeInt;
+var
+  I: SizeInt;
+begin
+  Result := Count;
+  for I in a do
+    Add(I);
+  Result := Count - Result;
 end;
 
 function TGCustomGraph.TIntSet.Join(constref aValue: TIntSet): SizeInt;
