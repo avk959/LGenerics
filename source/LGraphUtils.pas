@@ -62,13 +62,13 @@ type
   TOnVisit         = procedure (aValue: SizeInt) of object;
   TOnAccept        = function (aValue: SizeInt): Boolean of object;
   TOnFindSet       = procedure(constref aSet: TIntArray; var aCancel: Boolean) of object;
-  TVertexColor     = 0..3;
+  TVertexColor     = type Byte;
 
 const
-  vclNone:  TVertexColor = 0;
-  vclWhite: TVertexColor = 1;
-  vclGray:  TVertexColor = 2;
-  vclBlack: TVertexColor = 3;
+  vcNone:  TVertexColor = 0;
+  vcWhite: TVertexColor = 1;
+  vcGray:  TVertexColor = 2;
+  vcBlack: TVertexColor = 3;
 
 type
   TColorArray = array of TVertexColor;
@@ -564,11 +564,11 @@ type
   auxiliary utilities
 ***********************************************************************************************************}
 
-    class function  MaxBitMatrixSize: SizeInt; static; inline;
-    class function  TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray; static;
-    class function  TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
-    class function  TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
-    class property  DefaultEdgeData: TEdgeData read CFData;
+    class function MaxBitMatrixSize: SizeInt; static; inline;
+    class function TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray; static;
+    class function TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
+    class function TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
+    class property DefaultEdgeData: TEdgeData read CFData;
 
 {**********************************************************************************************************
   class management utilities
@@ -587,36 +587,39 @@ type
   structural management utilities
 ***********************************************************************************************************}
 
-    function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
-    function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function  IndexOf(constref aVertex: TVertex): SizeInt; inline;
-    function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  AdjacentI(aSrc, aDst: SizeInt): Boolean;
+    function ContainsVertex(constref aVertex: TVertex): Boolean; inline;
+    function ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function IndexOf(constref aVertex: TVertex): SizeInt; inline;
+    function Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
+    function AdjacentI(aSrc, aDst: SizeInt): Boolean;
   { enumerates indices of adjacent vertices of aVertex }
-    function  AdjVertices(constref aVertex: TVertex): TAdjVertices; inline;
-    function  AdjVerticesI(aIndex: SizeInt): TAdjVertices;
+    function AdjVertices(constref aVertex: TVertex): TAdjVertices; inline;
+    function AdjVerticesI(aIndex: SizeInt): TAdjVertices;
   { enumerates incident edges of aVertex }
-    function  IncidentEdges(constref aVertex: TVertex): TIncidentEdges; inline;
-    function  IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
+    function IncidentEdges(constref aVertex: TVertex): TIncidentEdges; inline;
+    function IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
   { enumerates all vertices }
-    function  Vertices: TVertices; inline;
+    function Vertices: TVertices; inline;
   { enumerates all edges }
-    function  Edges: TEdges; inline;
-    function  GetEdgeData(constref aSrc, aDst: TVertex; out aData: TEdgeData): Boolean; inline;
-    function  GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
-    function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
-    function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+    function Edges: TEdges; inline;
+    function GetEdgeData(constref aSrc, aDst: TVertex; out aData: TEdgeData): Boolean; inline;
+    function GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
+    function SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
+    function SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
   { returns adjacency matrix;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
-    function  CreateAdjacencyMatrix: TAdjacencyMatrix;
+    function CreateAdjacencyMatrix: TAdjacencyMatrix;
   { test whether the graph is bipartite;
     the graph can be disconnected (in this case it consists of a number of connected
     bipartite components and / or several isolated vertices)}
-    function  IsBipartite: Boolean;
+    function IsBipartite: Boolean;
   { test whether the graph is bipartite; if returns True then information about the vertex
-    belonging to the fractions is returned in aColors(vclWhite or vclGray) }
-    function  IsBipartite(out aColors: TColorArray): Boolean;
+    belonging to the fractions is returned in aColors(vcWhite or vcGray) }
+    function IsBipartite(out aColors: TColorArray): Boolean;
+  { test whether the graph is bipartite; if returns True then aWhites and aGrays will contain
+    indices of correspondig vertices }
+    function IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
 
 {**********************************************************************************************************
   traversal utilities
@@ -624,12 +627,12 @@ type
 
   { returns count of visited vertices; OnAccept calls after vertex visite, OnNext calls after next vertex found;
     if TOnAccept returns False then traversal stops }
-    function  DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
-    function  DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
+    function DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
+    function DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
   { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
     if TOnAccept returns False then traversal stops}
-    function  BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
-    function  BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
+    function BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
+    function BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
 
 {**********************************************************************************************************
   shortest path problem utilities
@@ -637,27 +640,27 @@ type
 
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
-    function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
-    function  ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
+    function ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
+    function ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns an array containing in the corresponding components the length of the shortest path from aSrc
     (in sense 'edges count'), or -1 if it unreachable }
-    function  ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
-    function  ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
+    function ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
+    function ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
   { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
-    function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
-    function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+    function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
+    function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
 
-    property  Title: string read FTitle write FTitle;
-    property  Description: TStrings read FDescription;
-    property  VertexCount: SizeInt read FCount;
-    property  EdgeCount: SizeInt read FEdgeCount;
-    property  Capacity: SizeInt read GetCapacity;
-    property  Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
+    property Title: string read FTitle write FTitle;
+    property Description: TStrings read FDescription;
+    property VertexCount: SizeInt read FCount;
+    property EdgeCount: SizeInt read FEdgeCount;
+    property Capacity: SizeInt read GetCapacity;
+    property Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
   end;
 
   TDisjointSetUnion = record
@@ -2822,7 +2825,6 @@ end;
 
 function TGCustomGraph.IsBipartite(out aColors: TColorArray): Boolean;
 var
-  Visited: TBitVector;
   Queue: TIntQueue;
   Curr, I: SizeInt;
   CurrColor: TVertexColor;
@@ -2830,20 +2832,18 @@ begin
   aColors := CreateColorArray;
   if VertexCount < 2 then
     exit(False);
-  Visited.Size := VertexCount;
-  for I := 0 to Pred(System.Length(aColors)) do
-    if not Visited[I] then
+  for I := 0 to System.High(aColors) do
+    if aColors[I] = vcNone then
       begin
         Curr := I;
         repeat
-          if aColors[Curr] = vclNone then
-            aColors[Curr] := vclWhite;
+          if aColors[Curr] = vcNone then
+            aColors[Curr] := vcWhite;
           CurrColor := aColors[Curr];
           for Curr in AdjVerticesI(Curr) do
-            if not Visited[Curr] then
+            if aColors[Curr] = vcNone then
               begin
-                Visited[Curr] := True;
-                aColors[Curr] := vclBlack - CurrColor;
+                aColors[Curr] := vcBlack - CurrColor;
                 Queue.Enqueue(Curr);
               end
             else
@@ -2855,6 +2855,38 @@ begin
         until not Queue{%H-}.TryDequeue(Curr);
       end;
   Result := True;
+end;
+
+function TGCustomGraph.IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
+var
+  Colors: TColorArray;
+  WhiteIdx, GrayIdx, I: SizeInt;
+  CurrColor: TVertexColor;
+begin
+  Result := IsBipartite(Colors);
+  if not Result then
+    exit;
+  aWhites := CreateIntArray;
+  aGrays := CreateIntArray;
+  WhiteIdx := 0;
+  GrayIdx := 0;
+  I := 0;
+  for CurrColor in Colors do
+    begin
+      if CurrColor = vcWhite then
+        begin
+          aWhites[WhiteIdx] := I;
+          Inc(WhiteIdx);
+        end
+      else
+        begin
+          aGrays[GrayIdx] := I;
+          Inc(GrayIdx);
+        end;
+      Inc(I);
+    end;
+  System.SetLength(aWhites, WhiteIdx);
+  System.SetLength(aGrays, GrayIdx);
 end;
 
 function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept;
