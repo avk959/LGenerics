@@ -923,7 +923,7 @@ end;
 function TGAdjList.TEnumerator.MoveNext: Boolean;
 begin
   Result := pCurr < pLast;
-  Inc(pCurr, Ord(Result));
+  pCurr += Ord(Result);
 end;
 
 { TGAdjList }
@@ -1701,7 +1701,7 @@ end;
 function TGCustomGraph.TIntSet.TEnumerator.MoveNext: Boolean;
 begin
   Result := pCurr < pLast;
-  Inc(pCurr, Ord(Result));
+  pCurr += Ord(Result);
 end;
 
 { TIntSet }
@@ -1739,10 +1739,7 @@ end;
 
 function TGCustomGraph.TIntSet.ToArray: TIntArray;
 begin
-  if Count > 0 then
-    Result := System.Copy(FItems, 0, Count)
-  else
-    Result := nil;
+  Result := System.Copy(FItems, 0, Count);
 end;
 
 procedure TGCustomGraph.TIntSet.Assign(constref aValue: TIntSet);
