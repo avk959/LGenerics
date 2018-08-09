@@ -381,6 +381,7 @@ type
 ***********************************************************************************************************}
 
   { lists all maximal independent sets of vertices;
+    will raise exception if aOnFindSet is not assigned;
     setting aCancel to True in aOnFindSet will result in an exit from the method }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximal independent set of maximal cardinality;
@@ -400,7 +401,9 @@ type
     function  ApproxMinDominatingSet: TIntArray;
   { returns True if aVertexSet contains indices of the some minimal dominating vertex set, False otherwise }
     function  IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
-  { lists all maximal cliques; setting aCancel to True in aOnFindClique will result in an exit from the method }
+  { lists all maximal cliques;
+    will raise exception if aOnFindClique is not assigned;
+    setting aCancel to True in aOnFindClique will result in an exit from the method }
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
@@ -3290,7 +3293,7 @@ begin
                     AdjFound := True;
                     break;
                   end;
-              if not AdjFound then // exist vertex nonadjacent with aVertexSet without I
+              if not AdjFound then //exist vertex nonadjacent with aVertexSet without I
                 break;
             end;
           if AdjFound then  //is not minimal
