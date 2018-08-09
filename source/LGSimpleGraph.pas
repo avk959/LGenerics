@@ -33,7 +33,7 @@ uses
   {%H-}LGHelpers,
   LGArrayHelpers,
   LGVector,
-  LGraphUtils,
+  LGCustomGraph,
   LGStrHelpers,
   LGMiscUtils,
   LGStrConst;
@@ -561,9 +561,9 @@ type
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
-    the weights of all edges must be nonnegative; used A* algorithm if aHeur <> nil }
-    function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: TEstimate): TIntArray; inline;
-    function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
+    the weights of all edges must be nonnegative; used A* algorithm if aEst <> nil }
+    function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
+    function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
 
 {**********************************************************************************************************
   minimum spanning tree utilities
@@ -1535,7 +1535,7 @@ begin
   Result := TSkeleton.Create(VertexCount);
   Result.FEdgeCount := EdgeCount;
   for I := 0 to Pred(VertexCount) do
-    FNodeList[I].AdjList.CopyTo(Result[I]^);
+    Result[I]^.AssignList(AdjLists[I]);
 end;
 
 procedure TGSimpleGraph.AssignGraph(aGraph: TGSimpleGraph);
@@ -3806,17 +3806,17 @@ begin
 end;
 
 function TGWeightedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
-  aHeur: TEstimate): TIntArray;
+  aEst: TEstimate): TIntArray;
 begin
-  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aHeur);
+  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aEst);
 end;
 
-function TGWeightedGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
+function TGWeightedGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  if aHeur <> nil then
-    Result := THelper.AStar(Self, aSrc, aDst, aWeight, aHeur)
+  if aEst <> nil then
+    Result := THelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
     Result := THelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;

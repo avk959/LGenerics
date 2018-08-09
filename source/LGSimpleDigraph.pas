@@ -31,7 +31,7 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
-  LGraphUtils,
+  LGCustomGraph,
   LGStrConst;
 
 type
@@ -188,9 +188,16 @@ type
     TWeightEdge  = THelper.TWeightEdge;
     TEdgeArray   = array of TWeightEdge;
 
-    function  CreateEdgeArray: TEdgeArray;
-    function  GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
-    function  GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
+    TMaxFlowHelper = record
+    private
+
+    public
+      function GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
+    end;
+
+    function CreateEdgeArray: TEdgeArray;
+    function GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
+    function GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -200,14 +207,14 @@ type
     class function NegInfiniteWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
-    function  ContainsNegWeighedEdge: Boolean;
+    function ContainsNegWeighedEdge: Boolean;
 
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
 
-    function  Clone: TGWeightedDiGraph;
-    function  Reverse: TGWeightedDiGraph;
+    function Clone: TGWeightedDiGraph;
+    function Reverse: TGWeightedDiGraph;
 
 {**********************************************************************************************************
   shortest path problem utilities
@@ -217,34 +224,34 @@ type
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
     InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
-    function  MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
-    function  MinPathsMapI(aSrc: SizeInt): TWeightArray;
+    function MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
-    function  MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
-    function  MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+    function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
     returns path weight or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
-    function  MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
-    function  MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
+    function MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
+    function MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
-    function  MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
-    function  MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+    function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
+    function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
-    the weights of all edges must be nonnegative; used A* algorithm if aHeur <> nil }
-    function  MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aHeur: TEstimate): TIntArray; inline;
-    function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
+    the weights of all edges must be nonnegative; used A* algorithm if aEst <> nil }
+    function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
+    function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of the edges can be negative;
     returns False and empty aWeights if there is a negative weight cycle, otherwise
     aWeights will contain in the corresponding component the weight of the minimum path to the vertex or
     InfiniteWeight if the vertex is unreachable; used Bellman–Ford algorithm  }
-    function  FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
-    function  FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+    function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPaths returns paths,
     if there is a negative weight cycle, then aPaths will contain that cycle }
-    function  FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
-    function  FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+    function FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
 
 {**********************************************************************************************************
   DAG utilities
@@ -252,20 +259,22 @@ type
 
   { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
     the path from aSrc to it, or NegInfiniteWeight if it is unreachable from aSrc }
-    function  DagMaxPathsMap(constref aSrc: TVertex): TWeightArray; inline;
-    function  DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
+    function DagMaxPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
-    function  DagMaxPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
-    function  DagMaxPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+    function DagMaxPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function DagMaxPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
     the path starting with it }
-    function  DagMaxPaths: TWeightArray;
+    function DagMaxPaths: TWeightArray;
 
 {**********************************************************************************************************
   networks utilities
 ***********************************************************************************************************}
-    function IsNetworkValid(constref aSource, aSink: TVertex): Boolean; inline;
-    function IsNetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
+    function NetworkValid(constref aSource, aSink: TVertex): Boolean; inline;
+    function NetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
+    function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
+    function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
   end;
 
 implementation
@@ -380,7 +389,7 @@ begin
   Result := TSkeleton.Create(VertexCount, True);
   Result.FEdgeCount := EdgeCount;
   for I := 0 to Pred(VertexCount) do
-    FNodeList[I].AdjList.CopyTo(Result[I]^);
+    Result[I]^.AssignList(AdjLists[I]);
 end;
 
 function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
@@ -728,7 +737,7 @@ var
   wbs: TWriteBufStream;
 begin
   if not Assigned(aWriteVertex) then
-    raise ELGraphError.Create(SEWriteCallbackMissed);
+    raise EGraphError.Create(SEWriteCallbackMissed);
 {$IFDEF CPU64}
   if VertexCount > System.High(Integer) then
     raise ELGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
@@ -781,15 +790,15 @@ var
   rbs: TReadBufStream;
 begin
   if not Assigned(aReadVertex) then
-    raise ELGraphError.Create(SEReadCallbackMissed);
+    raise EGraphError.Create(SEReadCallbackMissed);
   rbs := TReadBufStream.Create(aStream);
   try
     //read header
     rbs.ReadBuffer(Header, SizeOf(Header));
     if Header.Magic <> GRAPH_MAGIC then
-      raise ELGraphError.Create(SEUnknownGraphStreamFmt);
+      raise EGraphError.Create(SEUnknownGraphStreamFmt);
     if Header.Version > GRAPH_HEADER_VERSION then
-      raise ELGraphError.Create(SEUnsuppGraphFmtVersion);
+      raise EGraphError.Create(SEUnsuppGraphFmtVersion);
     Clear;
     EnsureCapacity(Header.VertexCount);
     //read title
@@ -811,9 +820,9 @@ begin
       begin
         aReadVertex(rbs, Vertex);
         if not AddVertex(Vertex, Ind) then
-          raise ELGraphError.Create(SEGraphStreamCorrupt);
+          raise EGraphError.Create(SEGraphStreamCorrupt);
         if Ind <> I then
-          raise ELGraphError.Create(SEGraphStreamReadIntern);
+          raise EGraphError.Create(SEGraphStreamReadIntern);
       end;
     //read edges
     Data := DefaultEdgeData;
@@ -1184,6 +1193,13 @@ begin
         end;
 end;
 
+{ TGWeightedDiGraph.TMaxFlowHelper }
+
+function TGWeightedDiGraph.TMaxFlowHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
+begin
+  //not implemented yet
+end;
+
 { TGWeightedDiGraph }
 
 function TGWeightedDiGraph.CreateEdgeArray: TEdgeArray;
@@ -1347,17 +1363,17 @@ begin
 end;
 
 function TGWeightedDiGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
-  aHeur: TEstimate): TIntArray;
+  aEst: TEstimate): TIntArray;
 begin
-  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aHeur);
+  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aEst);
 end;
 
-function TGWeightedDiGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray;
+function TGWeightedDiGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  if aHeur <> nil then
-    Result := THelper.AStar(Self, aSrc, aDst, aWeight, aHeur)
+  if aEst <> nil then
+    Result := THelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
     Result := THelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
@@ -1428,12 +1444,12 @@ begin
         end;
 end;
 
-function TGWeightedDiGraph.IsNetworkValid(constref aSource, aSink: TVertex): Boolean;
+function TGWeightedDiGraph.NetworkValid(constref aSource, aSink: TVertex): Boolean;
 begin
-  Result := IsNetworkValidI(IndexOf(aSource), IndexOf(aSink));
+  Result := NetworkValidI(IndexOf(aSource), IndexOf(aSink));
 end;
 
-function TGWeightedDiGraph.IsNetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
+function TGWeightedDiGraph.NetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
 var
   Visited: TBitVector;
   Queue: TIntQueue;
@@ -1463,6 +1479,21 @@ begin
         end;
   until not Queue{%H-}.TryDequeue(Curr);
   Result := (Total = VertexCount) and SinkFound;
+end;
+
+function TGWeightedDiGraph.FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean;
+begin
+  Result := FindMaxFlowI(IndexOf(aSource), IndexOf(aSink), aFlow);
+end;
+
+function TGWeightedDiGraph.FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
+var
+  Helper: TMaxFlowHelper;
+begin
+  if not NetworkValidI(aSrcIndex, aSinkIndex) then
+    exit(False);
+  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
+  Result := True;
 end;
 
 end.

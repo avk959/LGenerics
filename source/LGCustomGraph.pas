@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGraphUtils;
+unit LGCustomGraph;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
@@ -90,8 +90,64 @@ type
 const
   GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';
   GRAPH_HEADER_VERSION     = 2;
+  ADJLIST_EXPAND_SIZE      = 8;
 
 type
+
+  generic TGAdjItem<T> = record
+    Destination: SizeInt;
+    Data: T;
+    property Key: SizeInt read Destination;
+    constructor Create(aDst: SizeInt; constref aData: T);
+  end;
+
+  generic TGAdjList<T> = record
+  public
+  type
+    TAdjItem = specialize TGAdjItem<T>;
+    PAdjItem = ^TAdjItem;
+
+    TEnumerator = record
+    private
+      pCurr,
+      pLast: PAdjItem;
+      function  GetCurrent: PAdjItem; inline;
+    public
+      function  MoveNext: Boolean; inline;
+      property  Current: PAdjItem read GetCurrent;
+    end;
+
+  private
+  type
+    TAdjItemArray = array of TAdjItem;
+
+  var
+    FList: TAdjItemArray;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    procedure Expand; inline;
+    function  DoFind(aValue: SizeInt): SizeInt;
+    procedure DoRemove(aIndex: SizeInt);
+    class operator Initialize(var aList: TGAdjList);
+    class operator Copy(constref aSrc: TGAdjList; var aDst: TGAdjList);
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    function  ToArray: TAdjItemArray; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Clear;
+    procedure MakeEmpty;
+    procedure TrimToFit; inline;
+    function  Contains(aDst: SizeInt): Boolean; inline;
+    function  ContainsAll(constref aList: TGAdjList): Boolean;
+    function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean; inline;
+    function  Find(aDst: SizeInt): PAdjItem;
+    function  FindFirst(out aValue: SizeInt): Boolean;
+    function  Add(constref aItem: TAdjItem): Boolean;
+    function  Remove(aDst: SizeInt): Boolean; inline;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
 
   { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TEqRel must provide:
@@ -233,16 +289,10 @@ type
 
   public
   type
-    TEdgeDataType = TEdgeData;
+    TSpecEdgeData = TEdgeData;
     PEdgeData     = ^TEdgeData;
+    TAdjItem      = specialize TGAdjItem<TEdgeData>;
     PAdjItem      = ^TAdjItem;
-
-    TAdjItem      = record
-      Destination: SizeInt;
-      Data: TEdgeData;
-      property Key: SizeInt read Destination;
-      constructor Create(aDst: SizeInt; constref aData: TEdgeData);
-    end;
 
     TAdjacencyMatrix = record
     private
@@ -257,6 +307,7 @@ type
 
   protected
   type
+    TAdjList = specialize TGAdjList<TEdgeData>;
     PAdjList = ^TAdjList;
 
     TIntSet = record
@@ -283,7 +334,7 @@ type
       function  ToArray: TIntArray; inline;
       procedure Assign(constref aValue: TIntSet);
       procedure AssignArray(constref a: TIntArray);
-      function  Copy: TIntSet; inline;
+      procedure AssignList(aList: PAdjList);
       function  IsEmpty: Boolean; inline;
       function  NonEmpty: Boolean; inline;
       procedure MakeEmpty; inline;
@@ -340,52 +391,6 @@ type
       property AdjLists[aIndex: SizeInt]: PIntSet read GetAdjList; default;
     end;
 
-    TAdjList = record
-    public
-    type
-      TEnumerator = record
-      private
-        pCurr,
-        pLast: PAdjItem;
-        function  GetCurrent: PAdjItem; inline;
-      public
-        function  MoveNext: Boolean; inline;
-        property  Current: PAdjItem read GetCurrent;
-      end;
-
-    private
-    type
-      TAdjItemArray = array of TAdjItem;
-
-    var
-      FList: TAdjItemArray;
-      FCount: SizeInt;
-      function  GetCapacity: SizeInt; inline;
-      procedure Expand; inline;
-      function  DoFind(aValue: SizeInt): SizeInt;
-      procedure DoRemove(aIndex: SizeInt);
-      class operator Initialize(var aList: TAdjList);
-      class operator Copy(constref aSrc: TAdjList; var aDst: TAdjList);
-    public
-      function  GetEnumerator: TEnumerator; inline;
-      function  ToArray: TAdjItemArray; inline;
-      procedure CopyTo(var aSet: TIntSet);
-      function  IsEmpty: Boolean; inline;
-      function  NonEmpty: Boolean; inline;
-      procedure Clear;
-      procedure MakeEmpty;
-      procedure TrimToFit; inline;
-      function  Contains(aDst: SizeInt): Boolean; inline;
-      function  ContainsAll(constref aList: TAdjList): Boolean;
-      function  FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean; inline;
-      function  Find(aDst: SizeInt): PAdjItem;
-      function  FindFirst(out aValue: SizeInt): Boolean;
-      function  Add(constref aItem: TAdjItem): Boolean;
-      function  Remove(aDst: SizeInt): Boolean; inline;
-      property  Count: SizeInt read FCount;
-      property  Capacity: SizeInt read GetCapacity;
-    end;
-
     TNode = record
       Hash,
       Next: SizeInt;
@@ -401,7 +406,6 @@ type
 
   const
     NULL_INDEX      = SizeInt(-1);
-    ADJ_EXPAND_SIZE = 8;
 
   type
     TStreamHeader = packed record
@@ -880,7 +884,7 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight; static;
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
-    class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aHeur: TEstimate): TIntArray; static;
+    class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
@@ -900,13 +904,216 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
+{ TGAdjItem }
+
+constructor TGAdjItem.Create(aDst: SizeInt; constref aData: T);
+begin
+  Destination := aDst;
+  Data := aData;
+end;
+
+{ TGAdjList.TEnumerator }
+
+function TGAdjList.TEnumerator.GetCurrent: PAdjItem;
+begin
+  Result := pCurr;
+end;
+
+function TGAdjList.TEnumerator.MoveNext: Boolean;
+begin
+  Result := pCurr < pLast;
+  Inc(pCurr, Ord(Result));
+end;
+
+{ TGAdjList }
+
+function TGAdjList.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FList);
+end;
+
+procedure TGAdjList.Expand;
+begin
+  System.SetLength(FList, Capacity + ADJLIST_EXPAND_SIZE);
+end;
+
+function TGAdjList.DoFind(aValue: SizeInt): SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    if FList[I].Destination = aValue then
+      exit(I);
+  Result := -1;
+end;
+
+procedure TGAdjList.DoRemove(aIndex: SizeInt);
+begin
+  FList[aIndex] := Default(TAdjItem);
+  Dec(FCount);
+  if aIndex < Count then
+    begin
+      FList[aIndex] := FList[Count];
+      FList[Count] := Default(TAdjItem);
+    end;
+end;
+
+class operator TGAdjList.Initialize(var aList: TGAdjList);
+begin
+  aList.FCount := 0;
+end;
+
+class operator TGAdjList.Copy(constref aSrc: TGAdjList; var aDst: TGAdjList);
+begin
+  aDst.FList := System.Copy(aSrc.FList);
+  aDst.FCount := aSrc.Count;
+end;
+
+function TGAdjList.GetEnumerator: TEnumerator;
+begin
+  Result.pCurr := PAdjItem(Pointer(FList)) - Ord(Count > 0);
+  Result.pLast := PAdjItem(Pointer(FList)) + Pred(Count) and (-SizeInt(Count > 0));
+end;
+
+function TGAdjList.ToArray: TAdjItemArray;
+begin
+  Result := System.Copy(FList, 0, Count);
+end;
+
+function TGAdjList.IsEmpty: Boolean;
+begin
+  Result := Count = 0;
+end;
+
+function TGAdjList.NonEmpty: Boolean;
+begin
+  Result := Count <> 0;
+end;
+
+procedure TGAdjList.Clear;
+begin
+  FList := nil;
+  FCount := 0;
+end;
+
+procedure TGAdjList.MakeEmpty;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Count) do
+    FList[I] := Default(TAdjItem);
+  FCount := 0;
+end;
+
+procedure TGAdjList.TrimToFit;
+begin
+  System.SetLength(FList, Count);
+end;
+
+function TGAdjList.Contains(aDst: SizeInt): Boolean;
+begin
+  if Count <> 0 then
+    Result := DoFind(aDst) >= 0
+  else
+    Result := False;
+end;
+
+function TGAdjList.ContainsAll(constref aList: TGAdjList): Boolean;
+var
+  I, J, v: SizeInt;
+  Found: Boolean;
+begin
+  for I := 0 to Pred(aList.Count) do
+    begin
+      Found := False;
+      v := aList.FList[I].Key;
+      for J := 0 to Pred(Count) do
+        if FList[J].Key = v then
+          begin
+            Found := True;
+            break;
+          end;
+      if not Found then
+        exit(False);
+    end;
+  Result := True;
+end;
+
+function TGAdjList.FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
+var
+  Pos: SizeInt;
+begin
+  if Count <> 0 then
+    Pos := DoFind(aDst)
+  else
+    Pos := -1;
+  Result := Pos >= 0;
+  if not Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      Pos := Count;
+      Inc(FCount);
+    end;
+  p := @FList[Pos];
+end;
+
+function TGAdjList.Find(aDst: SizeInt): PAdjItem;
+var
+  Pos: SizeInt;
+begin
+  Result := nil;
+  if Count <> 0 then
+    begin
+      Pos := DoFind(aDst);
+      if Pos >= 0 then
+        Result := @FList[Pos];
+    end;
+end;
+
+function TGAdjList.FindFirst(out aValue: SizeInt): Boolean;
+begin
+  Result := Count <> 0;
+  if Result then
+    aValue := FList[0].Destination;
+end;
+
+function TGAdjList.Add(constref aItem: TAdjItem): Boolean;
+begin
+  if Count <> 0 then
+    Result := DoFind(aItem.Destination) < 0
+  else
+    Result := True;
+  if Result then
+    begin
+      if Count = Capacity then
+        Expand;
+      FList[Count] := aItem;
+      Inc(FCount);
+    end;
+end;
+
+function TGAdjList.Remove(aDst: SizeInt): Boolean;
+var
+  Pos: SizeInt;
+begin
+  if Count <> 0 then
+    begin
+      Pos := DoFind(aDst);
+      Result := Pos >= 0;
+      if Result then
+        DoRemove(Pos);
+    end
+  else
+    Result := False;
+end;
+
 { TIntEdge }
 
 constructor TIntEdge.Create(s, d: SizeInt);
 begin
   Source := s;
   Destination := d;
-
 end;
 
 { TGCustomGraph.TBitVector }
@@ -1455,14 +1662,6 @@ begin
 {$ENDIF }
 end;
 
-{ TGCustomGraph.TAdjItem }
-
-constructor TGCustomGraph.TAdjItem.Create(aDst: SizeInt; constref aData: TEdgeData);
-begin
-  Destination := aDst;
-  Data := aData;
-end;
-
 { TGCustomGraph.TAdjacencyMatrix }
 
 function TGCustomGraph.TAdjacencyMatrix.GetSize: SizeInt;
@@ -1508,7 +1707,7 @@ end;
 
 procedure TGCustomGraph.TIntSet.Expand;
 begin
-  System.SetLength(FItems, System.Length(FItems) + ADJ_EXPAND_SIZE);
+  System.SetLength(FItems, System.Length(FItems) + ADJLIST_EXPAND_SIZE);
 end;
 
 class operator TGCustomGraph.TIntSet.Initialize(var aList: TIntSet);
@@ -1558,9 +1757,18 @@ begin
   FCount := System.Length(FItems);
 end;
 
-function TGCustomGraph.TIntSet.Copy: TIntSet;
+procedure TGCustomGraph.TIntSet.AssignList(aList: PAdjList);
+var
+  p: PAdjItem;
+  I: SizeInt = 0;
 begin
-  Result.Assign(Self);
+  FCount := aList^.Count;
+  System.SetLength(FItems, Count);
+  for p in aList^ do
+    begin
+      FItems[I] := p^.Destination;
+      Inc(I);
+    end;
 end;
 
 function TGCustomGraph.TIntSet.IsEmpty: Boolean;
@@ -1892,212 +2100,6 @@ begin
         FAdjLists[aDst].Remove(aSrc);
       Dec(FEdgeCount);
     end;
-end;
-
-{ TGCustomGraph.TAdjList.TEnumerator }
-
-function TGCustomGraph.TAdjList.TEnumerator.GetCurrent: PAdjItem;
-begin
-  Result := pCurr;
-end;
-
-function TGCustomGraph.TAdjList.TEnumerator.MoveNext: Boolean;
-begin
-  Result := pCurr < pLast;
-  Inc(pCurr, Ord(Result));
-end;
-
-{ TGCustomGraph.TAdjList }
-
-function TGCustomGraph.TAdjList.GetCapacity: SizeInt;
-begin
-  Result := System.Length(FList);
-end;
-
-procedure TGCustomGraph.TAdjList.Expand;
-begin
-  System.SetLength(FList, Capacity + ADJ_EXPAND_SIZE);
-end;
-
-function TGCustomGraph.TAdjList.DoFind(aValue: SizeInt): SizeInt;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(Count) do
-    if FList[I].Destination = aValue then
-      exit(I);
-  Result := -1;
-end;
-
-procedure TGCustomGraph.TAdjList.DoRemove(aIndex: SizeInt);
-begin
-  FList[aIndex] := Default(TAdjItem);
-  Dec(FCount);
-  if aIndex < Count then
-    begin
-      FList[aIndex] := FList[Count];
-      FList[Count] := Default(TAdjItem);
-    end;
-end;
-
-class operator TGCustomGraph.TAdjList.Initialize(var aList: TAdjList);
-begin
-  aList.FCount := 0;
-end;
-
-class operator TGCustomGraph.TAdjList.Copy(constref aSrc: TAdjList; var aDst: TAdjList);
-begin
-  aDst.FList := System.Copy(aSrc.FList);
-  aDst.FCount := aSrc.Count;
-end;
-
-function TGCustomGraph.TAdjList.GetEnumerator: TEnumerator;
-begin
-  Result.pCurr := PAdjItem(Pointer(FList)) - Ord(Count > 0);
-  Result.pLast := PAdjItem(Pointer(FList)) + Pred(Count) and (-SizeInt(Count > 0));
-end;
-
-function TGCustomGraph.TAdjList.ToArray: TAdjItemArray;
-begin
-  Result := System.Copy(FList, 0, Count);
-end;
-
-procedure TGCustomGraph.TAdjList.CopyTo(var aSet: TIntSet);
-var
-  I: SizeInt;
-begin
-  aSet.FCount := Count;
-  System.SetLength(aSet.FItems, Count);
-  for I := 0 to Pred(Count) do
-    aSet.FItems[I] := FList[I].Destination;
-end;
-
-function TGCustomGraph.TAdjList.IsEmpty: Boolean;
-begin
-  Result := Count = 0;
-end;
-
-function TGCustomGraph.TAdjList.NonEmpty: Boolean;
-begin
-  Result := Count <> 0;
-end;
-
-procedure TGCustomGraph.TAdjList.Clear;
-begin
-  FList := nil;
-  FCount := 0;
-end;
-
-procedure TGCustomGraph.TAdjList.MakeEmpty;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(Count) do
-    FList[I] := Default(TAdjItem);
-  FCount := 0;
-end;
-
-procedure TGCustomGraph.TAdjList.TrimToFit;
-begin
-  System.SetLength(FList, Count);
-end;
-
-function TGCustomGraph.TAdjList.Contains(aDst: SizeInt): Boolean;
-begin
-  if Count <> 0 then
-    Result := DoFind(aDst) >= 0
-  else
-    Result := False;
-end;
-
-function TGCustomGraph.TAdjList.ContainsAll(constref aList: TAdjList): Boolean;
-var
-  I, J, v: SizeInt;
-  Found: Boolean;
-begin
-  for I := 0 to Pred(aList.Count) do
-    begin
-      Found := False;
-      v := aList.FList[I].Key;
-      for J := 0 to Pred(Count) do
-        if FList[J].Key = v then
-          begin
-            Found := True;
-            break;
-          end;
-      if not Found then
-        exit(False);
-    end;
-  Result := True;
-end;
-
-function TGCustomGraph.TAdjList.FindOrAdd(aDst: SizeInt; out p: PAdjItem): Boolean;
-var
-  Pos: SizeInt;
-begin
-  if Count <> 0 then
-    Pos := DoFind(aDst)
-  else
-    Pos := -1;
-  Result := Pos >= 0;
-  if not Result then
-    begin
-      if Count = Capacity then
-        Expand;
-      Pos := Count;
-      Inc(FCount);
-    end;
-  p := @FList[Pos];
-end;
-
-function TGCustomGraph.TAdjList.Find(aDst: SizeInt): PAdjItem;
-var
-  Pos: SizeInt;
-begin
-  Result := nil;
-  if Count <> 0 then
-    begin
-      Pos := DoFind(aDst);
-      if Pos >= 0 then
-        Result := @FList[Pos];
-    end;
-end;
-
-function TGCustomGraph.TAdjList.FindFirst(out aValue: SizeInt): Boolean;
-begin
-  Result := Count <> 0;
-  if Result then
-    aValue := FList[0].Destination;
-end;
-
-function TGCustomGraph.TAdjList.Add(constref aItem: TAdjItem): Boolean;
-begin
-  if Count <> 0 then
-    Result := DoFind(aItem.Destination) < 0
-  else
-    Result := True;
-  if Result then
-    begin
-      if Count = Capacity then
-        Expand;
-      FList[Count] := aItem;
-      Inc(FCount);
-    end;
-end;
-
-function TGCustomGraph.TAdjList.Remove(aDst: SizeInt): Boolean;
-var
-  Pos: SizeInt;
-begin
-  if Count <> 0 then
-    begin
-      Pos := DoFind(aDst);
-      Result := Pos >= 0;
-      if Result then
-        DoRemove(Pos);
-    end
-  else
-    Result := False;
 end;
 
 { TGCustomGraph.TNode }
@@ -3854,7 +3856,7 @@ var
 end;
 
 class function TGWeightedHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
-  aHeur: TEstimate): TIntArray;
+  aEst: TEstimate): TIntArray;
 var
   Visited: TGraph.TBitVector;
   Queue: TAStarHeap;
@@ -3866,7 +3868,7 @@ var
   Queue := TAStarHeap.Create(g.VertexCount);
   Tree := g.CreateIntArray;
   Visited.Size := g.VertexCount;
-  Queue.Enqueue(TRankItem.Create(aHeur(g.Items[aSrc], g.Items[aDst]), ZeroWeight, aSrc), aSrc);
+  Queue.Enqueue(TRankItem.Create(aEst(g.Items[aSrc], g.Items[aDst]), ZeroWeight, aSrc), aSrc);
   while Queue.TryDequeue(Item) do
     begin
       if {%H-}Item.Index = aDst then
@@ -3881,7 +3883,7 @@ var
             begin
               Relaxed := p^.Data.Weight + Item.Weight;
               Queue.Enqueue(TRankItem.Create(
-                Relaxed + aHeur(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key), p^.Key);
+                Relaxed + aEst(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key), p^.Key);
               Tree[p^.Key] := Item.Index;
             end
           else
@@ -3891,7 +3893,7 @@ var
                 if Relaxed < Queue.Peek(p^.Key).Weight then
                   begin
                     Queue.Update(p^.Key, TRankItem.Create(
-                      Relaxed + aHeur(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key));
+                      Relaxed + aEst(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key));
                     Tree[p^.Key] := Item.Index;
                   end;
               end;
