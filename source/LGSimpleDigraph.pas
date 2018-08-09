@@ -128,7 +128,7 @@ type
     function  ContainsEulerianCircuit: Boolean;
     function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
   { returns count of the strong connected components; the corresponding element of the
-    aCompIds will contain its component index(used Gabow's algotitm) }
+    aCompIds will contain its component index(used Gabow's algorithm) }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
   { creates internal reachability matrix }
     procedure FillReachabilityMatrix;
