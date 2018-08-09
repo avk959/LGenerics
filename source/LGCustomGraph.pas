@@ -23,6 +23,7 @@ unit LGCustomGraph;
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 {$INLINE ON}{$WARN 6058 off : }
+
 interface
 
 uses
@@ -2839,7 +2840,7 @@ end;
 function TGCustomGraph.IsBipartite(out aColors: TColorArray): Boolean;
 var
   Queue: TIntQueue;
-  Curr, I: SizeInt;
+  Curr, Next, I: SizeInt;
   CurrColor: TVertexColor;
 begin
   aColors := CreateColorArray;
@@ -2849,18 +2850,17 @@ begin
     if aColors[I] = vcNone then
       begin
         Curr := I;
+        aColors[I] := vcWhite;
         repeat
-          if aColors[Curr] = vcNone then
-            aColors[Curr] := vcWhite;
           CurrColor := aColors[Curr];
-          for Curr in AdjVerticesI(Curr) do
-            if aColors[Curr] = vcNone then
+          for Next in AdjVerticesI(Curr) do
+            if aColors[Next] = vcNone then
               begin
-                aColors[Curr] := vcBlack - CurrColor;
-                Queue.Enqueue(Curr);
+                aColors[Next] := vcBlack - CurrColor;
+                Queue.Enqueue(Next);
               end
             else
-              if aColors[Curr] = CurrColor then
+              if aColors[Next] = CurrColor then
                 begin
                   aColors := nil;
                   exit(False);
