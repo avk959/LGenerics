@@ -1470,13 +1470,17 @@ begin
   Curr := aSrcIndex;
   repeat
     for Next in AdjVerticesI(Curr) do
-      if not Visited[Next] then
-        begin
-          SinkFound := SinkFound or (Next = aSinkIndex);
-          Visited[Next] := True;
-          Inc(Total);
-          Queue.Enqueue(Next);
-        end;
+      begin
+        if GetEdgeDataPtr(Curr, Next)^.Weight < ZeroWeight then
+          exit(False);
+        if not Visited[Next] then
+          begin
+            SinkFound := SinkFound or (Next = aSinkIndex);
+            Visited[Next] := True;
+            Inc(Total);
+            Queue.Enqueue(Next);
+          end;
+      end;
   until not Queue{%H-}.TryDequeue(Curr);
   Result := (Total = VertexCount) and SinkFound;
 end;
