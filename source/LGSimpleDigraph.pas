@@ -176,28 +176,40 @@ type
      specialize TGSimpleDiGraph<TVertex, TEdgeData, TEqRel>)
   private
   type
-    THelper = specialize TGWeightedHelper<TVertex, TWeight, TEdgeData, TEqRel>;
+    TPathHelper = specialize TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel>;
 
   public
   type
-    TWeightArray = THelper.TWeightArray;
-    TEstimate    = THelper.TEstimate;
+    TWeightArray = TPathHelper.TWeightArray;
+    TEstimate    = TPathHelper.TEstimate;
 
   protected
   type
-    TWeightEdge  = THelper.TWeightEdge;
+    TWeightEdge  = TPathHelper.TWeightEdge;
     TEdgeArray   = array of TWeightEdge;
 
     TMaxFlowHelper = record
     private
-
+      FSource,
+      FSink: SizeInt;
     public
-      function GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
+    type
+      TFlowData = record
+        Flow: TWeight;
+      end;
+
+      TFlowAdjList = specialize TGAdjList<TFlowData>;
+      PFlowAdjList = ^TFlowAdjList;
+
+      TGraphFlowChart = array of TFlowAdjList;
+
+      function GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out Chart: TGraphFlowChart): TWeight;
     end;
 
     function CreateEdgeArray: TEdgeArray;
     function GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
     function GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
+
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -271,6 +283,7 @@ type
 {**********************************************************************************************************
   networks utilities
 ***********************************************************************************************************}
+
     function NetworkValid(constref aSource, aSink: TVertex): Boolean; inline;
     function NetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
@@ -1195,7 +1208,8 @@ end;
 
 { TGWeightedDiGraph.TMaxFlowHelper }
 
-function TGWeightedDiGraph.TMaxFlowHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
+function TGWeightedDiGraph.TMaxFlowHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
+  out Chart: TGraphFlowChart): TWeight;
 begin
   //not implemented yet
 end;
@@ -1224,7 +1238,7 @@ var
   w: TWeight;
 begin
   AdjEnums := CreateAdjEnumArray;
-  Result := THelper.CreateWeightArrayNI(VertexCount);
+  Result := TPathHelper.CreateWeightArrayNI(VertexCount);
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
   Result[aSrc] := ZeroWeight;
@@ -1255,7 +1269,7 @@ var
   w: TWeight;
 begin
   AdjEnums := CreateAdjEnumArray;
-  Result := THelper.CreateWeightArrayNI(VertexCount);
+  Result := TPathHelper.CreateWeightArrayNI(VertexCount);
   aTree := CreateIntArray;
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
@@ -1283,17 +1297,17 @@ end;
 
 class function TGWeightedDiGraph.InfiniteWeight: TWeight;
 begin
-  Result := THelper.InfiniteWeight;
+  Result := TPathHelper.InfiniteWeight;
 end;
 
 class function TGWeightedDiGraph.NegInfiniteWeight: TWeight;
 begin
-  Result := THelper.NegInfiniteWeight;
+  Result := TPathHelper.NegInfiniteWeight;
 end;
 
 class function TGWeightedDiGraph.ZeroWeight: TWeight;
 begin
-  Result := THelper.ZeroWeight;
+  Result := TPathHelper.ZeroWeight;
 end;
 
 function TGWeightedDiGraph.ContainsNegWeighedEdge: Boolean;
@@ -1324,7 +1338,7 @@ end;
 function TGWeightedDiGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := THelper.DijkstraSssp(Self, aSrc);
+  Result := TPathHelper.DijkstraSssp(Self, aSrc);
 end;
 
 function TGWeightedDiGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -1335,7 +1349,7 @@ end;
 function TGWeightedDiGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := THelper.DijkstraSssp(Self, aSrc, aPathTree);
+  Result := TPathHelper.DijkstraSssp(Self, aSrc, aPathTree);
 end;
 
 function TGWeightedDiGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
@@ -1347,7 +1361,7 @@ function TGWeightedDiGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := THelper.DijkstraPath(Self, aSrc, aDst);
+  Result := TPathHelper.DijkstraPath(Self, aSrc, aDst);
 end;
 
 function TGWeightedDiGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
@@ -1359,7 +1373,7 @@ function TGWeightedDiGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): 
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := THelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+  Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedDiGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
@@ -1373,9 +1387,9 @@ begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   if aEst <> nil then
-    Result := THelper.AStar(Self, aSrc, aDst, aWeight, aEst)
+    Result := TPathHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
-    Result := THelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+    Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
@@ -1386,7 +1400,7 @@ end;
 function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := THelper.FordBellman(Self, aSrc, aWeights);
+  Result := TPathHelper.FordBellman(Self, aSrc, aWeights);
 end;
 
 function TGWeightedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
@@ -1399,7 +1413,7 @@ function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray
   out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := THelper.FordBellman(Self, aSrc, aPaths, aWeights);
+  Result := TPathHelper.FordBellman(Self, aSrc, aPaths, aWeights);
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
@@ -1433,7 +1447,7 @@ var
   w: TWeight;
 begin
   TopoOrd := TopologicalSort(soDesc);
-  Result := THelper.CreateWeightArrayZ(VertexCount);
+  Result := TPathHelper.CreateWeightArrayZ(VertexCount);
   for I := 1 to Pred(VertexCount) do
     for J := 0 to Pred(I) do
       if AdjacentI(TopoOrd[I], TopoOrd[J]) then
@@ -1471,6 +1485,8 @@ begin
   repeat
     for Next in AdjVerticesI(Curr) do
       begin
+        if AdjacentI(Next, Curr) then
+          exit(False);
         if GetEdgeDataPtr(Curr, Next)^.Weight < ZeroWeight then
           exit(False);
         if not Visited[Next] then
@@ -1493,10 +1509,11 @@ end;
 function TGWeightedDiGraph.FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
 var
   Helper: TMaxFlowHelper;
+  Chart: TMaxFlowHelper.TGraphFlowChart;
 begin
   if not NetworkValidI(aSrcIndex, aSinkIndex) then
     exit(False);
-  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
+  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, Chart);
   Result := True;
 end;
 

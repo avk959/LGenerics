@@ -502,18 +502,18 @@ type
     specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>)
   private
   type
-    THelper = specialize TGWeightedHelper<TVertex, TWeight, TEdgeData, TEqRel>;
+    TPathHelper = specialize TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel>;
 
   public
   type
-    TWeightArray = THelper.TWeightArray;
-    TEstimate    = THelper.TEstimate;
+    TWeightArray = TPathHelper.TWeightArray;
+    TEstimate    = TPathHelper.TEstimate;
 
   protected
   type
-    TWeightEdge  = THelper.TWeightEdge;
-    TPairingHeap = THelper.TPairingHeap;
-    TWeightItem  = THelper.TWeightItem;
+    TWeightEdge  = TPathHelper.TWeightEdge;
+    TPairingHeap = TPathHelper.TPairingHeap;
+    TWeightItem  = TPathHelper.TWeightItem;
     TEdgeArray   = array of TWeightEdge;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
 
@@ -3698,17 +3698,17 @@ end;
 
 class function TGWeightedGraph.InfiniteWeight: TWeight;
 begin
-  Result := THelper.InfiniteWeight;
+  Result := TPathHelper.InfiniteWeight;
 end;
 
 class function TGWeightedGraph.NegInfiniteWeight: TWeight;
 begin
-  Result := THelper.NegInfiniteWeight;
+  Result := TPathHelper.NegInfiniteWeight;
 end;
 
 class function TGWeightedGraph.ZeroWeight: TWeight;
 begin
-  Result := THelper.ZeroWeight;
+  Result := TPathHelper.ZeroWeight;
 end;
 
 function TGWeightedGraph.ContainsNegWeighedEdge: Boolean;
@@ -3767,7 +3767,7 @@ end;
 function TGWeightedGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := THelper.DijkstraSssp(Self, aSrc);
+  Result := TPathHelper.DijkstraSssp(Self, aSrc);
 end;
 
 function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -3778,7 +3778,7 @@ end;
 function TGWeightedGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := THelper.DijkstraSssp(Self, aSrc, aPathTree);
+  Result := TPathHelper.DijkstraSssp(Self, aSrc, aPathTree);
 end;
 
 function TGWeightedGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
@@ -3790,7 +3790,7 @@ function TGWeightedGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := THelper.DijkstraPath(Self, aSrc, aDst);
+  Result := TPathHelper.DijkstraPath(Self, aSrc, aDst);
 end;
 
 function TGWeightedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
@@ -3802,7 +3802,7 @@ function TGWeightedGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TI
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := THelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+  Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
@@ -3816,9 +3816,9 @@ begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   if aEst <> nil then
-    Result := THelper.AStar(Self, aSrc, aDst, aWeight, aEst)
+    Result := TPathHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
-    Result := THelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+    Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
