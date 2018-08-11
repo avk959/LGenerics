@@ -2955,8 +2955,8 @@ end;
 
 function TGCustomGraph.BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
 var
-  Visited: TBitVector;
   Queue: TIntQueue;
+  Visited: TBitVector;
 begin
   Result := 0;
   CheckIndexRange(aRoot);
@@ -3027,7 +3027,7 @@ begin
           Queue.Enqueue(Next);
           Result[Next] := Succ(Result[aSrc]);
         end;
-  until not Queue.TryDequeue(aSrc);
+  until not Queue{%H-}.TryDequeue(aSrc);
 end;
 
 function TGCustomGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntArray;
