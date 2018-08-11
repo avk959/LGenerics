@@ -63,8 +63,7 @@ type
       Balance: SizeInt;
       procedure SwapBalance(aNode: PNode); inline;
     {$ENDIF !CPU16}
-      //for node manager
-      property  NextLink: PNode read Left write Left;
+      property  NextLink: PNode read Left write Left; //for node manager
     public
       Data: TEntry;
       function Successor: PNode;
@@ -271,8 +270,7 @@ type
     function Predecessor: PNode;
     property Parent: PNode read GetParent write SetParent;
     property Balance: SizeInt read GetBalance write SetBalance;
-    //for node manager
-    property NextLink: PNode read Left write Left;
+    property NextLink: PNode read Left write Left; //for node manager
   end;
 
   { TGAvlTree2: simplified version TGAvlTree }
