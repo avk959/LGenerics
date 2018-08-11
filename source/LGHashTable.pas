@@ -249,8 +249,7 @@ type
       Next: PNode;
       Hash: SizeInt;
       Data: TEntry;
-      //for node manager
-      property  NextLink: PNode read ChainNext write ChainNext;
+      property  NextLink: PNode read ChainNext write ChainNext; //for node manager
     end;
 
   strict protected
@@ -363,8 +362,7 @@ type
       Next: PNode;
       Hash: SizeInt;
       Data: TEntry;
-      //for node manager
-      property  NextLink: PNode read Next write Next;
+      property  NextLink: PNode read Next write Next; //for node manager
     end;
 
   protected
@@ -1469,7 +1467,7 @@ begin
               Result.FoundIndex := Pos;            // key found
               exit;
             end;
-      Pos := TProbeSeq.NextProbe(Pos, I) and Mask;     // probe sequence
+      Pos := TProbeSeq.NextProbe(Pos, I) and Mask; // probe sequence
     end;
 end;
 
