@@ -3162,6 +3162,7 @@ begin
     exit(nil);
   if VertexCount = 1 then
     exit([0]);
+  //todo: if IsTree then ... else if IsBipartite then ...
   if VertexCount > 256 then
     Result := GetMaxIsBP(aTimeOut, aExactSolution)
   else
