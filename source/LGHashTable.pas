@@ -55,7 +55,7 @@ type
     function  GetCapacity: SizeInt; virtual; abstract;
     procedure SetLoadFactor(aValue: Single); virtual; abstract;
     function  GetFillRatio: Single;
-    function  RestrictLoadFactor(aValue: Single): Single; inline;
+    function  RestrictLoadFactor(aValue: Single): Single;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; virtual; abstract;
   public
   type
@@ -110,7 +110,6 @@ type
     specialize TGCustomHashTable<TKey, TEntry>)
   strict protected
   const
-    SLOT_NOT_FOUND: SizeInt = SizeInt(-1);
     USED_FLAG: SizeInt      = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
 
   type
@@ -453,10 +452,9 @@ type
     TNodeList = array of TNode;
 
   const
-    NODE_SIZE               = SizeOf(TNode);
-    SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
-    USED_FLAG: SizeInt      = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
-    MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
+    NODE_SIZE             = SizeOf(TNode);
+    USED_FLAG: SizeInt    = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
+    MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   type
     TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
@@ -554,10 +552,9 @@ type
     TNodeList = array of TNode;
 
   const
-    NODE_SIZE               = SizeOf(TNode);
-    SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
-    USED_FLAG: SizeInt      = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
-    MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
+    NODE_SIZE             = SizeOf(TNode);
+    USED_FLAG: SizeInt    = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
+    MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   type
     TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
@@ -680,9 +677,6 @@ type
   type
     TChainList = array of SizeInt;
 
-  const
-    NULL_INDEX  = SizeInt(-1);
-
   var
     FNodeList: TNodeList;
     FChainList: TChainList;
@@ -729,10 +723,9 @@ type
     TNodeList = array of TNode;
 
   const
-    NODE_SIZE               = SizeOf(TNode);
-    SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
-    USED_FLAG: SizeInt      = SizeInt(1);
-    MAX_CAPACITY: SizeInt   = MAX_CONTAINER_SIZE div NODE_SIZE;
+    NODE_SIZE             = SizeOf(TNode);
+    USED_FLAG: SizeInt    = SizeInt(1);
+    MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
 
   type
     TFakeNode  = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
@@ -804,6 +797,9 @@ type
     property  ExpandTreshold: SizeInt read GetExpandTreshold;
     property  Size: SizeInt read GetCapacity;
   end;
+
+const
+  SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
 
 implementation
 {$Q-}{$B-}{$COPERATORS ON}
@@ -1009,8 +1005,8 @@ var
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
-  Result.FoundIndex := SLOT_NOT_FOUND;
-  Result.InsertIndex := SLOT_NOT_FOUND;
+  Result.FoundIndex := NULL_INDEX;
+  Result.InsertIndex := NULL_INDEX;
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
@@ -1113,7 +1109,7 @@ begin
           Expand;
           aRes := DoFind(aKey, h);
         end;
-      if aRes.InsertIndex > SLOT_NOT_FOUND then
+      if aRes.InsertIndex > NULL_INDEX then
         begin
           FList[aRes.InsertIndex].Hash := h or USED_FLAG;
           aRes.FoundIndex := aRes.InsertIndex;
@@ -1449,28 +1445,28 @@ var
 begin
   Mask := System.High(FList);
   aKeyHash := aKeyHash or USED_FLAG;
-  Result.FoundIndex := SLOT_NOT_FOUND;
-  Result.InsertIndex := SLOT_NOT_FOUND;
+  Result.FoundIndex := NULL_INDEX;
+  Result.InsertIndex := NULL_INDEX;
   Pos := aKeyHash and Mask;
   for I := 0 to Mask do
     begin
       h := FList[Pos].Hash;
-      if h = 0 then                                    // node empty => key not found
+      if h = 0 then                                // node empty => key not found
         begin
-          if Result.InsertIndex = SLOT_NOT_FOUND then  // if none tombstone found, remember first empty
+          if Result.InsertIndex = NULL_INDEX then  // if none tombstone found, remember first empty
             Result.InsertIndex := Pos;
           exit;
         end
       else
         if h = TOMBSTONE then
           begin
-            if Result.InsertIndex = SLOT_NOT_FOUND then// remember first tombstone position
+            if Result.InsertIndex = NULL_INDEX then// remember first tombstone position
               Result.InsertIndex := Pos;
           end
         else
           if (h = aKeyHash) and TEqRel.Equal(FList[Pos].Data.Key, aKey) then
             begin
-              Result.FoundIndex := Pos;                // key found
+              Result.FoundIndex := Pos;            // key found
               exit;
             end;
       Pos := TProbeSeq.NextProbe(Pos, I) and Mask;     // probe sequence

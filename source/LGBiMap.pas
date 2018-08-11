@@ -110,7 +110,6 @@ type
     TChainList = array of SizeInt;
 
   const
-    NULL_INDEX  = SizeInt(-1);
     MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 2) div SizeOf(TNode);
 
   type

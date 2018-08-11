@@ -407,10 +407,6 @@ type
     TNodeList   = array of TNode;
     TChainList  = array of SizeInt;
 
-  const
-    NULL_INDEX      = SizeInt(-1);
-
-  type
     TStreamHeader = packed record
       Magic: TGraphMagic;
       Version: Byte;

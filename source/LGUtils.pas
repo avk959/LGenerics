@@ -72,6 +72,7 @@ const
   DEFAULT_CONTAINER_CAPACITY = 32;// * must be power of 2 *
   BOUNDS_BOTH                = TRangeBounds([rbLow, rbHigh]);
   WAIT_INFINITE              = -1;
+  NULL_INDEX: SizeInt        = SizeInt(-1);
 
 type
 

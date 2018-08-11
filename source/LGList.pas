@@ -640,9 +640,6 @@ type
     TChainList    = array of SizeInt;
     PLiteHashList = ^TGLiteHashList;
 
-  const
-    NULL_INDEX  = SizeInt(-1);
-
   public
   type
     IEnumerable = specialize IGEnumerable<T>;
@@ -753,9 +750,6 @@ type
     TNodeList     = array of TNode;
     TChainList    = array of SizeInt;
     PLiteHashList = ^TGLiteHashList2;
-
-  const
-    NULL_INDEX  = SizeInt(-1);
 
   public
   type

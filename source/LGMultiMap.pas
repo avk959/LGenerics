@@ -345,7 +345,6 @@ type
     PMultiMap  = ^TGLiteHashMultiMap;
 
   const
-    NULL_INDEX  = SizeInt(-1);
     NODE_SIZE   = SizeOf(TNode);
     MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
 

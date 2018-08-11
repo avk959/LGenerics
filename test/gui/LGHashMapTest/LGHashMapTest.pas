@@ -1263,6 +1263,7 @@ begin
       Raised := True;
   end;
   AssertTrue(Raised);
+
   AssertTrue(m.Remove(23));
   AssertFalse(m.Contains(23));
   AssertFalse(m.TryGetValue(12, I));
