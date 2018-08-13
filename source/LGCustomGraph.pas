@@ -113,9 +113,10 @@ type
       pCurr,
       pLast: PAdjItem;
       function  GetCurrent: PAdjItem; inline;
+      procedure SetCurrent(aValue: PAdjItem); inline;
     public
       function  MoveNext: Boolean; inline;
-      property  Current: PAdjItem read GetCurrent;
+      property  Current: PAdjItem read GetCurrent write SetCurrent; // ???
     end;
 
   private
@@ -916,6 +917,11 @@ end;
 function TGAdjList.TEnumerator.GetCurrent: PAdjItem;
 begin
   Result := pCurr;
+end;
+
+procedure TGAdjList.TEnumerator.SetCurrent(aValue: PAdjItem);
+begin
+  pCurr := aValue;
 end;
 
 function TGAdjList.TEnumerator.MoveNext: Boolean;
