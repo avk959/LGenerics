@@ -191,7 +191,7 @@ type
     private
     type
       TFlowData = record
-        Residual: TWeight;
+        ResidualCap: TWeight;
         BackIndex: SizeInt;  // index of opposite arc
         IsBack: Boolean;
         constructor Create(constref c: TWeight; aOpposite: SizeInt);
@@ -1256,14 +1256,14 @@ end;
 
 constructor TGWeightedDiGraph.TMaxFlowHelper.TFlowData.Create(constref c: TWeight; aOpposite: SizeInt);
 begin
-  Residual := c;
+  ResidualCap := c;
   BackIndex := aOpposite;
   IsBack := False;
 end;
 
 constructor TGWeightedDiGraph.TMaxFlowHelper.TFlowData.CreateBack(aOpposite: SizeInt);
 begin
-  Residual := ZeroWeight;
+  ResidualCap := ZeroWeight;
   BackIndex := aOpposite;
   IsBack := True;
 end;
@@ -1301,16 +1301,12 @@ var
   Curr, Next, Prev, Dist: SizeInt;
   p: PFlowAdjItem;
 begin
-  FMaxExcessLayer := NULL_INDEX; /////////////
-  FMinExcessLayer := FNodeCount; /////////////
   System.FillChar(Pointer(Layers)^, Succ(FMaxLayer) * SizeOf(TLayer), $ff);
+  FMaxExcessLayer := NULL_INDEX;
+  FMinExcessLayer := FNodeCount;
   FMaxLayer := NULL_INDEX;
   for Curr := 0 to  System.High(FPreFlow) do
-    begin
-      FPreFlow[Curr].LayerNext := NULL_INDEX;
-      FPreFlow[Curr].LayerPrev := NULL_INDEX;
-      FPreFlow[Curr].Distance := FNodeCount;
-    end;
+    FPreFlow[Curr].Distance := FNodeCount;
   Curr := FSink;
   FPreFlow[FSink].Distance := 0;
   repeat
@@ -1320,34 +1316,33 @@ begin
       begin
         Next := p^.Destination;
         if FPreFlow[Next].Distance = FNodeCount then
-          if FPreFlow[Next].AdjList[p^.Data.BackIndex]^.Data.Residual > ZeroWeight then///////////
+          if FPreFlow[Next].AdjList[p^.Data.BackIndex]^.Data.ResidualCap > ZeroWeight then
             begin
               Queue.Enqueue(Next);
               FPreFlow[Next].Distance := Dist;
               if Dist > FMaxLayer then
                 FMaxLayer := Dist;
-              //if Next <> FSource then          //////////////
-                if FPreFlow[Next].Excess > ZeroWeight then
-                  begin
-                    Prev := Layers[Dist].TopExceeded;
-                    FPreFlow[Next].LayerPrev := Prev;
-                    if Prev <> NULL_INDEX then
-                      FPreFlow[Prev].LayerNext := Next;
-                    if Dist > FMaxExcessLayer then
-                      FMaxExcessLayer := Dist;
-                    if Dist < FMinExcessLayer then
-                      FMinExcessLayer := Dist;
-                    Layers[Dist].TopExceeded := Next;
-                  end
-                else
-                  begin
-                    Prev := Layers[Dist].TopTransit;
-                    FPreFlow[Next].LayerPrev := Prev;
-                    if Prev <> NULL_INDEX then
-                      FPreFlow[Prev].LayerNext := Next;
-                    Layers[Dist].TopTransit := Next;
-                  end;
-              end;
+              if FPreFlow[Next].Excess > ZeroWeight then
+                begin
+                  Prev := Layers[Dist].TopExceeded;
+                  FPreFlow[Next].LayerPrev := Prev;
+                  if Prev <> NULL_INDEX then
+                    FPreFlow[Prev].LayerNext := Next;
+                  if Dist > FMaxExcessLayer then
+                    FMaxExcessLayer := Dist;
+                  if Dist < FMinExcessLayer then
+                    FMinExcessLayer := Dist;
+                  Layers[Dist].TopExceeded := Next;
+                end
+              else
+                begin
+                  Prev := Layers[Dist].TopTransit;
+                  FPreFlow[Next].LayerPrev := Prev;
+                  if Prev <> NULL_INDEX then
+                    FPreFlow[Prev].LayerNext := Next;
+                  Layers[Dist].TopTransit := Next;
+                end;
+            end;
       end;
   until not Queue{%H-}.TryDequeue(Curr);
 end;
@@ -1377,7 +1372,7 @@ end;
 
 function TGWeightedDiGraph.TMaxFlowHelper.Push(aIndex: SizeInt): Boolean;
 var
-  Dist, Prev, Curr: SizeInt;
+  Dist, Prev, Next: SizeInt;
   p: PFlowAdjItem;
   f: TWeight;
 begin
@@ -1385,39 +1380,37 @@ begin
   while FPreFlow[aIndex].Iterator.MoveNext do
     begin
       p := FPreFlow[aIndex].Iterator.Current;
-      if (p^.Data.Residual > ZeroWeight) and (FPreFlow[p^.Destination].Distance = Dist) then
-        //arc is not saturated and destination belongs to the Curr layer -> arc is admissible
+      Next := p^.Destination;
+      f := p^.Data.ResidualCap;
+      if (FPreFlow[Next].Distance = Dist) and (f > ZeroWeight) then
+        //arc is not saturated and destination belongs to the Next layer -> arc is admissible
         begin
-          f := Min(FPreFlow[aIndex].Excess, p^.Data.Residual);
+          f := Min(FPreFlow[aIndex].Excess, f);
           {$PUSH}{$Q+}
           FPreFlow[aIndex].Excess -= f;
-          p^.Data.Residual -= f;
-          FPreFlow[p^.Destination].AdjList[p^.Data.BackIndex]^.Data.Residual += f;
+          p^.Data.ResidualCap -= f;
+          FPreFlow[Next].AdjList[p^.Data.BackIndex]^.Data.ResidualCap += f;
           {$POP}
-          //if (Dist > 0) and (p^.Destination <> FSource) then
           if Dist > 0 then
-            if FPreFlow[p^.Destination].Excess <= ZeroWeight then //in transit list
+            if FPreFlow[Next].Excess <= ZeroWeight then //in transit list
                 begin
                   //remove from transit list
-                  Curr := p^.Destination;
-                  Prev := FPreFlow[p^.Destination].LayerPrev;
-                  if Layers[Dist].TopTransit = Curr then // on the top of list
+                  Prev := FPreFlow[Next].LayerPrev;
+                  if Layers[Dist].TopTransit = Next then // on the top of list
                     Layers[Dist].TopTransit := Prev
                   else
                     if Prev <> NULL_INDEX then
-                      FPreFlow[Prev].LayerNext := FPreFlow[Curr].LayerNext;
+                      FPreFlow[Prev].LayerNext := FPreFlow[Next].LayerNext;
                   //add to exceeded list
                   Prev := Layers[Dist].TopExceeded;
-                  Layers[Dist].TopExceeded := Curr;
-                  FPreFlow[Curr].LayerNext := NULL_INDEX;
-                  FPreFlow[Curr].LayerPrev := Prev;
+                  Layers[Dist].TopExceeded := Next;
+                  FPreFlow[Next].LayerNext := NULL_INDEX;
+                  FPreFlow[Next].LayerPrev := Prev;
                   if Prev <> NULL_INDEX then
-                    FPreFlow[Prev].LayerNext := Curr;
-                  //reset iterator
-                  FPreFlow[p^.Destination].ResetIterator;
+                    FPreFlow[Prev].LayerNext := Next;
                 end;
           {$PUSH}{$Q+}
-          FPreFlow[p^.Destination].Excess += f;
+          FPreFlow[Next].Excess += f;
           {$POP}
           if FPreFlow[aIndex].Excess <= ZeroWeight then
             begin
@@ -1450,7 +1443,7 @@ begin
   pMin := nil;
   MinDist := FNodeCount;
   for p in FPreFlow[aIndex].AdjList do
-    if (p^.Data.Residual > ZeroWeight) then
+    if (p^.Data.ResidualCap > ZeroWeight) then
       begin
         Dist := FPreFlow[p^.Destination].Distance;
         if (Dist < MinDist) then
@@ -1508,7 +1501,7 @@ begin
           Inc(RelableCount);
           if (Layers[FMaxExcessLayer].TopExceeded = NULL_INDEX) and
              (Layers[FMaxExcessLayer].TopTransit = NULL_INDEX) then Gap;
-          if RelableCount > FNodeCount then     /////////////////
+          if RelableCount > FNodeCount shr 2 then     /////////////////
             begin
               GlobalRelabel;
               RelableCount := 0;
@@ -1804,7 +1797,8 @@ function TGWeightedDiGraph.NetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolea
 var
   Queue: TIntQueue;
   Visited: TBitVector;
-  Curr, Next, Total: SizeInt;
+  Curr, Next: SizeInt;
+  SinkFound: Boolean = False;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
@@ -1814,7 +1808,6 @@ begin
     exit(False);
   if not (IsSourceI(aSrcIndex) and IsSinkI(aSinkIndex)) then
     exit(False);
-  Total := 1;
   Visited.Size := VertexCount;
   Visited[aSrcIndex] := True;
   Curr := aSrcIndex;
@@ -1830,13 +1823,13 @@ begin
         if not Visited[Next] then
           begin
             Visited[Next] := True;
-            Inc(Total);
+            SinkFound := SinkFound or (Next = aSinkIndex);
             Queue.Enqueue(Next);
           end;
       end;
   until not Queue{%H-}.TryDequeue(Curr);
-  //all nodes should be reachable from source
-  Result := Total = VertexCount;
+  //sink should be reachable from source
+  Result := SinkFound;
 end;
 
 function TGWeightedDiGraph.FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean;
