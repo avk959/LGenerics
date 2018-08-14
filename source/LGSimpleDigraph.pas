@@ -1306,7 +1306,11 @@ begin
   FMinExcessLayer := FNodeCount;
   FMaxLayer := NULL_INDEX;
   for Curr := 0 to  System.High(FPreFlow) do
-    FPreFlow[Curr].Distance := FNodeCount;
+    begin
+      FPreFlow[Curr].Distance := FNodeCount;
+      FPreFlow[Curr].LayerPrev := NULL_INDEX;
+      FPreFlow[Curr].LayerNext := NULL_INDEX;
+    end;
   Curr := FSink;
   FPreFlow[FSink].Distance := 0;
   repeat
@@ -1404,10 +1408,10 @@ begin
                   //add to exceeded list
                   Prev := Layers[Dist].TopExceeded;
                   Layers[Dist].TopExceeded := Next;
-                  FPreFlow[Next].LayerNext := NULL_INDEX;
                   FPreFlow[Next].LayerPrev := Prev;
                   if Prev <> NULL_INDEX then
                     FPreFlow[Prev].LayerNext := Next;
+                  FPreFlow[Next].LayerNext := NULL_INDEX;
                 end;
           {$PUSH}{$Q+}
           FPreFlow[Next].Excess += f;
@@ -1424,10 +1428,10 @@ begin
               //add to transit list
               Prev := Layers[Succ(Dist)].TopTransit;
               Layers[Succ(Dist)].TopTransit := aIndex;
-              FPreFlow[aIndex].LayerNext := NULL_INDEX;
               FPreFlow[aIndex].LayerPrev := Prev;
               if Prev <> NULL_INDEX then
                 FPreFlow[Prev].LayerNext := aIndex;
+              FPreFlow[aIndex].LayerNext := NULL_INDEX;
               exit(True);
             end;
         end;
