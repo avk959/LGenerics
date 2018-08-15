@@ -102,7 +102,7 @@ type
     constructor Create(aDst: SizeInt; constref aData: T);
   end;
 
-  generic TGAdjList<T> = record
+  generic TGAdjList<T> = record   //for internal use only
   public
   type
     TAdjItem = specialize TGAdjItem<T>;
@@ -150,6 +150,7 @@ type
     function  Remove(aDst: SizeInt): Boolean; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
+    //unsafe property: updating destination can lead to instance invalid
     property  Items[aIndex: SizeInt]: PAdjItem read GetItem; default;
   end;
 
@@ -563,6 +564,9 @@ type
     public
       function GetEnumerator: TEdgeEnumerator;
     end;
+
+    TNetworkState = (nwsValid, nwsTrivial, nwsInvalidSource, nwsInvalidSink, nwsAntiParallelArc,
+                     nwsNegArcCapacity, nwsSourceOverflow, nwsSinkUnreachable);
 
   public
 {**********************************************************************************************************
