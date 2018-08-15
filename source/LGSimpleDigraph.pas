@@ -321,8 +321,8 @@ type
   networks utilities
 ***********************************************************************************************************}
 
-    function NetworkValid(constref aSource, aSink: TVertex): Boolean; inline;
-    function NetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
+    function NetworkState(constref aSource, aSink: TVertex): TNetworkState; inline;
+    function NetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
@@ -1387,7 +1387,7 @@ begin
       Next := p^.Destination;
       f := p^.Data.ResidualCap;
       if (FPreFlow[Next].Distance = Dist) and (f > ZeroWeight) then
-        //arc is not saturated and destination belongs to the Next layer -> arc is admissible
+        //arc is not saturated and destination belongs to the next layer -> arc is admissible
         begin
           f := Min(FPreFlow[aIndex].Excess, f);
           {$PUSH}{$Q+}
@@ -1792,38 +1792,51 @@ begin
         end;
 end;
 
-function TGWeightedDiGraph.NetworkValid(constref aSource, aSink: TVertex): Boolean;
+function TGWeightedDiGraph.NetworkState(constref aSource, aSink: TVertex): TNetworkState;
 begin
-  Result := NetworkValidI(IndexOf(aSource), IndexOf(aSink));
+  Result := NetworkStateI(IndexOf(aSource), IndexOf(aSink));
 end;
 
-function TGWeightedDiGraph.NetworkValidI(aSrcIndex, aSinkIndex: SizeInt): Boolean;
+function TGWeightedDiGraph.NetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
 var
   Queue: TIntQueue;
   Visited: TBitVector;
   Curr, Next: SizeInt;
+  w: TWeight;
+  p: PEdgeData;
+  HasOverflow: Boolean = False;
   SinkFound: Boolean = False;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
   if VertexCount < 2 then
-    exit(False);
-  if aSrcIndex = aSinkIndex then
-    exit(False);
-  if not (IsSourceI(aSrcIndex) and IsSinkI(aSinkIndex)) then
-    exit(False);
+    exit(nwsTrivial); // network is trivial
+  if not IsSourceI(aSrcIndex) then
+    exit(nwsInvalidSource);
+  if not IsSinkI(aSinkIndex) then
+    exit(nwsInvalidSink);
+  w := ZeroWeight;
   Visited.Size := VertexCount;
   Visited[aSrcIndex] := True;
   Curr := aSrcIndex;
   repeat
     for Next in AdjVerticesI(Curr) do
       begin
-        // network should not contain antiparallel arcs
-        if AdjacentI(Next, Curr) then
-          exit(False);
-        // network should not contain arcs with negative capacity
-        if GetEdgeDataPtr(Curr, Next)^.Weight < ZeroWeight then
-          exit(False);
+        if AdjacentI(Next, Curr) then  // network should not contain antiparallel arcs
+          exit(nwsAntiParallelArc);
+        p := GetEdgeDataPtr(Curr, Next);
+        if p^.Weight < ZeroWeight then // network should not contain arcs with negative capacity
+          exit(nwsNegArcCapacity);
+        if Curr = aSrcIndex then
+          {$PUSH}{$Q+}
+          try
+            w += p^.Weight;
+          except
+            HasOverflow := True;
+          end;
+          {$POP}
+        if HasOverflow then //total capacity of edges incident to the source exceeds InfiniteWeight
+          exit(nwsSourceOverflow);
         if not Visited[Next] then
           begin
             Visited[Next] := True;
@@ -1832,8 +1845,9 @@ begin
           end;
       end;
   until not Queue{%H-}.TryDequeue(Curr);
-  //sink should be reachable from source
-  Result := SinkFound;
+  if not SinkFound then //sink must be reachable from the source
+    exit(nwsSinkUnreachable);
+  Result := nwsValid;
 end;
 
 function TGWeightedDiGraph.FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean;
@@ -1851,7 +1865,7 @@ function TGWeightedDiGraph.FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlo
 var
   Helper: TMaxFlowHelper;
 begin
-  if not NetworkValidI(aSrcIndex, aSinkIndex) then
+  if NetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
   Result := True;
@@ -1862,7 +1876,7 @@ function TGWeightedDiGraph.FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlo
 var
   Helper: TMaxFlowHelper;
 begin
-  if not NetworkValidI(aSrcIndex, aSinkIndex) then
+  if NetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
   Result := True;
