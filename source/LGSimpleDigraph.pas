@@ -193,7 +193,6 @@ type
       TFlowData = record
         ResidualCap: TWeight;
         BackIndex: SizeInt;  // index of opposite arc
-        IsBack: Boolean;
         constructor Create(constref c: TWeight; aOpposite: SizeInt);
         constructor CreateBack(aOpposite: SizeInt);
       end;
@@ -1258,14 +1257,12 @@ constructor TGWeightedDiGraph.TMaxFlowHelper.TFlowData.Create(constref c: TWeigh
 begin
   ResidualCap := c;
   BackIndex := aOpposite;
-  IsBack := False;
 end;
 
 constructor TGWeightedDiGraph.TMaxFlowHelper.TFlowData.CreateBack(aOpposite: SizeInt);
 begin
   ResidualCap := ZeroWeight;
   BackIndex := aOpposite;
-  IsBack := True;
 end;
 
 { TGWeightedDiGraph.TMaxFlowHelper }
@@ -1390,17 +1387,15 @@ begin
         //arc is not saturated and destination belongs to the next layer -> arc is admissible
         begin
           f := Min(FPreFlow[aIndex].Excess, f);
-          {$PUSH}{$Q+}
           FPreFlow[aIndex].Excess -= f;
           p^.Data.ResidualCap -= f;
           FPreFlow[Next].AdjList[p^.Data.BackIndex]^.Data.ResidualCap += f;
-          {$POP}
           if Dist > 0 then
             if FPreFlow[Next].Excess <= ZeroWeight then //in transit list
                 begin
                   //remove from transit list
                   Prev := FPreFlow[Next].LayerPrev;
-                  if Layers[Dist].TopTransit = Next then // on the top of list
+                  if Layers[Dist].TopTransit = Next then //on the top of list
                     Layers[Dist].TopTransit := Prev
                   else
                     if Prev <> NULL_INDEX then
@@ -1413,9 +1408,7 @@ begin
                     FPreFlow[Prev].LayerNext := Next;
                   FPreFlow[Next].LayerNext := NULL_INDEX;
                 end;
-          {$PUSH}{$Q+}
           FPreFlow[Next].Excess += f;
-          {$POP}
           if FPreFlow[aIndex].Excess <= ZeroWeight then
             begin
               //remove from exceeded list
@@ -1465,6 +1458,7 @@ begin
       if FPreFlow[aIndex].Excess > ZeroWeight then
         begin
           Prev := Layers[Dist].TopExceeded;
+          Layers[Dist].TopExceeded := aIndex;
           FPreFlow[aIndex].LayerPrev := Prev;
           if Prev <> NULL_INDEX then
             FPreFlow[Prev].LayerNext := aIndex;
@@ -1472,25 +1466,25 @@ begin
             FMaxExcessLayer := Dist;
           if Dist < FMinExcessLayer then
             FMinExcessLayer := Dist;
-          Layers[Dist].TopExceeded := aIndex;
         end
       else
         begin
           Prev := Layers[Dist].TopTransit;
+          Layers[Dist].TopTransit := aIndex;
           FPreFlow[aIndex].LayerPrev := Prev;
           if Prev <> NULL_INDEX then
             FPreFlow[Prev].LayerNext := aIndex;
-          Layers[Dist].TopTransit := aIndex;
         end;
     end;
 end;
 
 procedure TGWeightedDiGraph.TMaxFlowHelper.HighLevelPushRelabel;
 var
-  Curr: SizeInt;
+  Curr, RelableTreshold: SizeInt;
   RelableCount: SizeInt = 0;
 begin
   GlobalRelabel;
+  RelableTreshold := FNodeCount shr 2; /////////////////
   while FMaxExcessLayer >= FMinExcessLayer do
     begin
       Curr := Layers[FMaxExcessLayer].TopExceeded;
@@ -1505,7 +1499,7 @@ begin
           Inc(RelableCount);
           if (Layers[FMaxExcessLayer].TopExceeded = NULL_INDEX) and
              (Layers[FMaxExcessLayer].TopTransit = NULL_INDEX) then Gap;
-          if RelableCount > FNodeCount shr 2 then     /////////////////
+          if RelableCount > RelableTreshold then
             begin
               GlobalRelabel;
               RelableCount := 0;
@@ -1530,6 +1524,7 @@ begin
   Init(aGraph, aSource, aSink);
   HighLevelPushRelabel;
   Result := FPreFlow[aSink].Excess;
+  Layers := nil;
   a := ToFlow(aGraph);
 end;
 
