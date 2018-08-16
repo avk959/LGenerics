@@ -1180,7 +1180,6 @@ function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut
   out aExact: Boolean): TIntArray;
 var
   Sub, Cand: TBoolVector;
-  I: SizeInt;
 begin
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
@@ -1189,9 +1188,6 @@ begin
   FRecentBest := aGraph.ApproxMinDominatingSet;
   Cand.Size := aGraph.VertexCount;
   Sub.InitRange(aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(FVertices[I]) = 0 then  //////////
-      Sub[I] := False;
   Extend(Sub, Cand);
   aExact := not FCanceled;
   Result := FRecentBest;
@@ -1265,7 +1261,6 @@ function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTime
   out aExact: Boolean): TIntArray;
 var
   Sub, Cand: TBits256;
-  I: SizeInt;
 begin
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
@@ -1274,9 +1269,6 @@ begin
   FRecentBest := aGraph.ApproxMinDominatingSet;
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(FVertices[I]) = 0 then
-      Sub[I] := False;
   Extend(Sub, Cand);
   aExact := not FCanceled;
   Result := FRecentBest;
@@ -1333,7 +1325,6 @@ function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: 
   out aExact: Boolean): TIntArray;
 var
   Sub, Cand: TIntSet;
-  I: SizeInt;
 begin
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
@@ -1341,9 +1332,6 @@ begin
   FRecentBest := aGraph.ApproxMinDominatingSet;
   FMatrix := aGraph.CreateSkeleton;
   Sub.AssignArray(aGraph.SortVerticesByDegree(soDesc));
-  for I := 0 to Pred(aGraph.VertexCount) do
-    if aGraph.DegreeI(I) = 0 then        //////////
-      Sub.Delete(I);
   Extend(Sub, Cand{%H-});
   aExact := not FCancel;
   Result := FRecentBest;
@@ -3222,6 +3210,8 @@ function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: I
 begin
   if not Connected then
     raise EGraphError.Create(SEMethodNotApplicable);
+  if VertexCount < 3 then
+    exit([0]);
   if VertexCount > COMMON_BP_CUTOFF then
     Result := GetMds(aTimeOut, aExactSolution)
   else
@@ -3235,6 +3225,8 @@ function TGSimpleGraph.ApproxMinDominatingSet: TIntArray;
 begin
   if not Connected then
     raise EGraphError.Create(SEMethodNotApplicable);
+  if VertexCount < 3 then
+    exit([0]);
   if VertexCount > COMMON_BP_CUTOFF then
     Result := GetApproxMinIS
   else
