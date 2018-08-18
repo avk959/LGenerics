@@ -344,13 +344,13 @@ type
   { returns False if GetNetworkState <> nwsValid }
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
-  { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a  }
+  { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a }
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
-  { does not check network state }
+  { does not checks network state }
     function GetMaxFlow(constref aSource, aSink: TVertex): TWeight; inline;
     function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
-  { does not check network state, returns flows through the arcs in array a  }
+  { does not checks network state, returns flows through the arcs in array a }
     function GetMaxFlow(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
     function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
   end;
@@ -1680,14 +1680,7 @@ begin
         end;
       Inc(CurrNode);
     end;
-  //CurrNode := Pointer(FNodes);
-  //while CurrNode < PNode(FNodes) + FNodeCount do
-  //  begin
-  //    CurrNode^.Color := vcWhite;
-  //    CurrNode^.Parent := nil;
-  //    CurrNode^.ResetCurrent;
-  //    Inc(CurrNode);
-  //  end;
+
   CurrNode := Pointer(FNodes);
   while CurrNode < PNode(FNodes) + FNodeCount do
     begin
