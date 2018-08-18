@@ -565,9 +565,6 @@ type
       function GetEnumerator: TEdgeEnumerator;
     end;
 
-    TNetworkState = (nwsValid, nwsTrivial, nwsInvalidSource, nwsInvalidSink, nwsAntiParallelArc,
-                     nwsNegArcCapacity, nwsSourceOverflow, nwsSinkUnreachable);
-
   public
 {**********************************************************************************************************
   auxiliary utilities

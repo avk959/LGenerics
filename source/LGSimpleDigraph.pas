@@ -339,6 +339,10 @@ type
   networks utilities treat the weight of the arc as its capacity
 ***********************************************************************************************************}
 
+  type
+    TNetworkState = (nwsValid, nwsTrivial, nwsInvalidSource, nwsInvalidSink, nwsAntiParallelArc,
+                     nwsNegArcCapacity, nwsSourceOverflow, nwsSinkUnreachable);
+
     function GetNetworkState(constref aSource, aSink: TVertex): TNetworkState; inline;
     function GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
   { returns False if GetNetworkState <> nwsValid }
