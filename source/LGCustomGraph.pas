@@ -130,7 +130,6 @@ type
     procedure Expand; inline;
     function  DoFind(aValue: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    function  GetItem(aIndex: SizeInt): PAdjItem; inline;
     class operator Initialize(var aList: TGAdjList);
     class operator Copy(constref aSrc: TGAdjList; var aDst: TGAdjList);
   public
@@ -150,8 +149,6 @@ type
     function  Remove(aDst: SizeInt): Boolean; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
-    //unsafe property: updating destination can lead to instance invalid
-    property  Items[aIndex: SizeInt]: PAdjItem read GetItem; default;
   end;
 
   { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
@@ -962,14 +959,6 @@ begin
       FList[aIndex] := FList[Count];
       FList[Count] := Default(TAdjItem);
     end;
-end;
-
-function TGAdjList.GetItem(aIndex: SizeInt): PAdjItem;
-begin
-  if SizeUInt(aIndex) < SizeUInt(Count) then
-    Result := @FList[aIndex]
-  else
-    raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 class operator TGAdjList.Initialize(var aList: TGAdjList);
