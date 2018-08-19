@@ -191,7 +191,7 @@ type
     { TMaxFlowHelper: an efficient implementation of the push-relabel method for the maximum flow;
       see "On Implementing Push-Relabel Method for the Maximum Flow Problem"
           by B.V. Cherkassky and A.V. Goldberg;
-      this is freepascal port of PRF developed by Boris Cherkassky and Andrew Goldberg. }
+      this is freepascal port of H_PRF developed by Boris Cherkassky and Andrew Goldberg. }
     TMaxFlowHelper = record
     private
     type
@@ -225,8 +225,8 @@ type
       end;
 
       TLayer = record
-        ExceedHead,           // head of singly linked list of nodes with positive excess
-        TransitHead: PNode;   // head of doubly linked list of nodes with zero excess
+        ExceedHead,          // head of singly linked list of nodes with positive excess
+        TransitHead: PNode;  // head of doubly linked list of nodes with zero excess
       end;
 
       TQueue = specialize TGLiteQueue<PNode>;
@@ -254,7 +254,7 @@ type
       procedure Relabel(aNode: PNode);
       procedure HiLevelPushRelabel;
       function  CreateEdgeArray: TEdgeArray;
-      function  ToFlow: TEdgeArray; //flow decomposition
+      procedure PreflowToFlow; //flow decomposition
     public
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
@@ -348,15 +348,20 @@ type
   { returns False if GetNetworkState <> nwsValid }
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
-  { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a }
+  { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
+    warning: currently flow decomposition works correctly only for integer types }
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
-  { does not checks network state }
+  { warning: does not checks network state }
     function GetMaxFlow(constref aSource, aSink: TVertex): TWeight; inline;
     function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
-  { does not checks network state, returns flows through the arcs in array a }
+  { does not checks network state, returns flows through the arcs in array a;
+    warning: currently flow decomposition works correctly only for integer types }
     function GetMaxFlow(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
     function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
+  { warning: currently works correctly only for integer types }
+    function IsFlowFeasible(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
+    function IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
   end;
 
 implementation
@@ -1316,12 +1321,11 @@ var
   I, J: SizeInt;
   p: PAdjItem;
 begin
-  //transform graph into internal representation;
+  //transform graph into internal representation - residual graph;
   FNodeCount := aGraph.VertexCount;
   System.SetLength(CurrArcIdx, FNodeCount);
   CurrArcIdx[0] := 0;
   J := aGraph.DegreeI(0);
-
   for I := 1 to System.High(CurrArcIdx) do
     begin
       CurrArcIdx[I] := J;
@@ -1329,9 +1333,11 @@ begin
     end;
 
   System.SetLength(FNodes, FNodeCount);
-  System.SetLength(FArcs, aGraph.EdgeCount * 2);
   FSource := @FNodes[aSource];
   FSink := @FNodes[aSink];
+
+  //all arcs stored in the single array
+  System.SetLength(FArcs, aGraph.EdgeCount * 2);
 
   for I := 0 to System.High(FNodes) do
     begin
@@ -1365,7 +1371,7 @@ var
   I, J: SizeInt;
   p: PAdjItem;
 begin
-  //almost same as above, but also saves capacities of the arcs;
+  //almost same as above, but also stores capacities of the arcs;
   FNodeCount := aGraph.VertexCount;
   System.SetLength(CurrArcIdx, FNodeCount);
   CurrArcIdx[0] := 0;
@@ -1378,10 +1384,11 @@ begin
     end;
 
   System.SetLength(FNodes, FNodeCount);
-  System.SetLength(FArcs, aGraph.EdgeCount * 2);
-  System.SetLength(FCaps, aGraph.EdgeCount * 2); //
   FSource := @FNodes[aSource];
   FSink := @FNodes[aSink];
+
+  System.SetLength(FArcs, aGraph.EdgeCount * 2);
+  System.SetLength(FCaps, aGraph.EdgeCount * 2);
 
   for I := 0 to System.High(FNodes) do
     begin
@@ -1661,7 +1668,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.TMaxFlowHelper.ToFlow: TEdgeArray;
+procedure TGWeightedDiGraph.TMaxFlowHelper.PreflowToFlow;
 var
   CurrNode, NextNode, SaveNode, RestartNode: PNode;
   StackTop: PNode = nil;
@@ -1809,7 +1816,6 @@ begin
           CurrNode := CurrNode^.OrderNext;
       until False;
     end;
-  Result := CreateEdgeArray;
 end;
 
 function TGWeightedDiGraph.TMaxFlowHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
@@ -1826,7 +1832,8 @@ begin
   HiLevelPushRelabel;
   FLayers := nil;
   Result := FSink^.Excess;
-  a := ToFlow;
+  PreflowToFlow;
+  a := CreateEdgeArray;
 end;
 
 { TGWeightedDiGraph }
@@ -2113,17 +2120,17 @@ begin
         if AdjacentI(Next, Curr) then  // network should not contain antiparallel arcs
           exit(nwsAntiParallelArc);
         p := GetEdgeDataPtr(Curr, Next);
-        if p^.Weight < ZeroWeight then // network should not contain arcs with negative capacity
+        if p^.Weight < ZeroWeight then // network should not contain arc with negative capacity
           exit(nwsNegArcCapacity);
         if not Visited[Next] then
           begin
             Visited[Next] := True;
-            SinkFound := SinkFound or (Next = aSinkIndex);
             Queue.Enqueue(Next);
+            SinkFound := SinkFound or (Next = aSinkIndex);
           end;
       end;
   until not Queue{%H-}.TryDequeue(Curr);
-  if not SinkFound then //sink must be reachable from the source
+  if not SinkFound then // sink must be reachable from the source
     exit(nwsSinkUnreachable);
   w := ZeroWeight;
   for Next in AdjVerticesI(aSrcIndex) do
@@ -2184,6 +2191,8 @@ function TGWeightedDiGraph.GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
 var
   Helper: TMaxFlowHelper;
 begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
   Result := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
 end;
 
@@ -2196,7 +2205,42 @@ function TGWeightedDiGraph.GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out a: TE
 var
   Helper: TMaxFlowHelper;
 begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
   Result := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
+end;
+
+function TGWeightedDiGraph.IsFlowFeasible(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
+begin
+  Result := IsFlowFeasibleI(IndexOf(aSource), IndexOf(aSink), a);
+end;
+
+function TGWeightedDiGraph.IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
+var
+  v: array of TWeight;
+  e: TWeightEdge;
+  d: TEdgeData;
+  I: SizeInt;
+begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
+  if System.Length(a) <> EdgeCount then
+    exit(False);
+  v := TPathHelper.CreateWeightArrayZ(VertexCount);
+  for e in a do
+    begin
+      if not GetEdgeDataI(e.Source, e.Destination, d) then
+        exit(False);
+      if e.Weight > d.Weight then
+        exit(False);
+      v[e.Source] -= e.Weight;
+      v[e.Destination] += e.Weight;
+    end;
+  for I := 0 to System.High(v) do
+    if (I <> aSrcIndex) and (I <> aSinkIndex) then
+      if v[I] <> ZeroWeight then
+        exit(False);
+  Result := True;
 end;
 
 end.
