@@ -227,6 +227,11 @@ type
       TLayer = record
         ExceedHead,          // head of singly linked list of nodes with positive excess
         TransitHead: PNode;  // head of doubly linked list of nodes with zero excess
+        function  IsEmpty: Boolean; inline;
+        procedure AddToExceeded(aNode: PNode); inline;
+        procedure AddToTransit(aNode: PNode); inline;
+        procedure RemoveFromTransit(aNode: PNode); inline;
+        procedure Clear(aLabel: SizeInt);
       end;
 
       TQueue = specialize TGLiteQueue<PNode>;
@@ -244,9 +249,6 @@ type
       FMinExcessLayer: SizeInt; // minimal layer with excessed node
       procedure Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
       procedure Init2(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
-      procedure AddToExceeded(aNode: PNode; aLayer: SizeInt); inline;
-      procedure AddToTransit(aNode: PNode; aLayer: SizeInt); inline;
-      procedure RemoveFromTransit(aNode: PNode; aLayer: SizeInt); inline;
       procedure ClearLabels; inline;
       procedure GlobalRelabel;
       procedure Gap;
@@ -1313,6 +1315,67 @@ begin
   CurrentArc := FirstArc;
 end;
 
+{ TGWeightedDiGraph.TMaxFlowHelper.TLayer }
+
+function TGWeightedDiGraph.TMaxFlowHelper.TLayer.IsEmpty: Boolean;
+begin
+  Result := (ExceedHead = nil) and (TransitHead = nil);
+end;
+
+procedure TGWeightedDiGraph.TMaxFlowHelper.TLayer.AddToExceeded(aNode: PNode);
+begin
+  aNode^.LayerNext := ExceedHead;
+  ExceedHead := aNode;
+end;
+
+procedure TGWeightedDiGraph.TMaxFlowHelper.TLayer.AddToTransit(aNode: PNode);
+var
+  Next: PNode;
+begin
+  Next := TransitHead;
+  TransitHead := aNode;
+  aNode^.LayerNext := Next;
+  if Next <> nil then
+    Next^.LayerPrev := aNode;
+end;
+
+procedure TGWeightedDiGraph.TMaxFlowHelper.TLayer.RemoveFromTransit(aNode: PNode);
+var
+  Next, Prev: PNode;
+begin
+  Next := aNode^.LayerNext;
+  if TransitHead = aNode then // is on head of the list
+    TransitHead := Next
+  else
+    begin
+      Prev := aNode^.LayerPrev;
+      Prev^.LayerNext := aNode^.LayerNext;
+      if Next <> nil then
+        Next^.LayerPrev := Prev;
+    end;
+end;
+
+procedure TGWeightedDiGraph.TMaxFlowHelper.TLayer.Clear(aLabel: SizeInt);
+var
+  Next: PNode;
+  I: SizeInt;
+begin
+  Next := ExceedHead;
+  while Next <> nil do
+    begin
+      Next^.Distance := aLabel;
+      Next := Next^.LayerNext;
+    end;
+  Next := TransitHead;
+  while Next <> nil do
+    begin
+      Next^.Distance := aLabel;
+      Next := Next^.LayerNext;
+    end;
+  ExceedHead := nil;
+  TransitHead  := nil;
+end;
+
 { TGWeightedDiGraph.TMaxFlowHelper }
 
 procedure TGWeightedDiGraph.TMaxFlowHelper.Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
@@ -1418,39 +1481,6 @@ begin
   FMaxLayer := System.High(FLayers);
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.AddToExceeded(aNode: PNode; aLayer: SizeInt);
-begin
-  aNode^.LayerNext := FLayers[aLayer].ExceedHead;
-  FLayers[aLayer].ExceedHead := aNode;
-end;
-
-procedure TGWeightedDiGraph.TMaxFlowHelper.AddToTransit(aNode: PNode; aLayer: SizeInt);
-var
-  Next: PNode;
-begin
-  Next := FLayers[aLayer].TransitHead;
-  FLayers[aLayer].TransitHead := aNode;
-  aNode^.LayerNext := Next;
-  if Next <> nil then
-    Next^.LayerPrev := aNode;
-end;
-
-procedure TGWeightedDiGraph.TMaxFlowHelper.RemoveFromTransit(aNode: PNode; aLayer: SizeInt);
-var
-  Next, Prev: PNode;
-begin
-  Next := aNode^.LayerNext;
-  if FLayers[aLayer].TransitHead = aNode then //on the top of list
-    FLayers[aLayer].TransitHead := Next
-  else
-    begin
-      Prev := aNode^.LayerPrev;
-      Prev^.LayerNext := aNode^.LayerNext;
-      if Next <> nil then
-        Next^.LayerPrev := Prev;
-    end;
-end;
-
 procedure TGWeightedDiGraph.TMaxFlowHelper.ClearLabels;
 var
   I: SizeInt;
@@ -1487,14 +1517,14 @@ begin
               FMaxLayer := Dist;
             if NextNode^.Excess > ZeroWeight then
               begin
-                AddToExceeded(NextNode, Dist);
+                FLayers[Dist].AddToExceeded(NextNode);
                 if Dist > FMaxExcessLayer then
                   FMaxExcessLayer := Dist;
                 if Dist < FMinExcessLayer then
                   FMinExcessLayer := Dist;
               end
             else
-              AddToTransit(NextNode, Dist);
+              FLayers[Dist].AddToTransit(NextNode);
             Queue.Enqueue(NextNode);
           end;
         Inc(CurrArc);
@@ -1504,26 +1534,10 @@ end;
 
 procedure TGWeightedDiGraph.TMaxFlowHelper.Gap;
 var
-  CurrNode: PNode;
   I: SizeInt;
 begin
   for I := Succ(FMaxExcessLayer) to FMaxLayer do
-    begin
-      CurrNode := FLayers[I].ExceedHead;
-      while CurrNode <> nil do
-        begin
-          CurrNode^.Distance := FNodeCount;
-          CurrNode := CurrNode^.LayerNext;
-        end;
-      CurrNode := FLayers[I].TransitHead;
-      while CurrNode <> nil do
-        begin
-          CurrNode^.Distance := FNodeCount;
-          CurrNode := CurrNode^.LayerNext;
-        end;
-      FLayers[I].ExceedHead := nil;
-      FLayers[I].TransitHead  := nil;
-    end;
+    FLayers[I].Clear(FNodeCount);
   Dec(FMaxExcessLayer);
   FMaxLayer := FMaxExcessLayer;
 end;
@@ -1550,13 +1564,13 @@ begin
           CurrArc^.ReverseArc^.ResidualCap += Delta;
           if aNode^.Excess <= ZeroWeight then
             begin
-              AddToTransit(aNode, Succ(Dist));
+              FLayers[Succ(Dist)].AddToTransit(aNode);
               Result := True;
             end;
           if (Dist > 0) and (NextNode^.Excess <= ZeroWeight) then //in transit list
             begin
-              RemoveFromTransit(NextNode, Dist);
-              AddToExceeded(NextNode, Dist);
+              FLayers[Dist].RemoveFromTransit(NextNode);
+              FLayers[Dist].AddToExceeded(NextNode);
               if Dist < FMinExcessLayer then
                 FMinExcessLayer := Dist;
             end;
@@ -1599,14 +1613,14 @@ begin
         FMaxLayer := Dist;
       if aNode^.Excess > ZeroWeight then
         begin
-          AddToExceeded(aNode, Dist);
+          FLayers[Dist].AddToExceeded(aNode);
           if Dist > FMaxExcessLayer then
             FMaxExcessLayer := Dist;
           if Dist < FMinExcessLayer then
             FMinExcessLayer := Dist;
         end
       else
-        AddToTransit(aNode, Dist);
+        FLayers[Dist].AddToTransit(aNode);
     end;
 end;
 
@@ -1629,7 +1643,7 @@ begin
             begin
               Relabel(CurrNode);
               Inc(RelableCount);
-              if (FLayers[OldMax].ExceedHead = nil) and (FLayers[OldMax].TransitHead = nil) then
+              if FLayers[OldMax].IsEmpty then
                 Gap;
               if RelableCount > RelableTreshold then
                 begin
