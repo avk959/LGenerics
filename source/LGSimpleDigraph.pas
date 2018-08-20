@@ -188,11 +188,11 @@ type
 
   protected
   type
-    { TMaxFlowHelper: an efficient implementation of the push-relabel method for the maximum flow;
+    { THPrfHelper: an efficient implementation of the push-relabel method for the maximum flow;
       see "On Implementing Push-Relabel Method for the Maximum Flow Problem"
           by B.V. Cherkassky and A.V. Goldberg;
       this is freepascal port of H_PRF developed by Boris Cherkassky and Andrew Goldberg. }
-    TMaxFlowHelper = record
+    THPrfHelper = record
     private
     type
       PNode = ^TNode;
@@ -260,6 +260,7 @@ type
     public
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
+      function  GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     end;
 
     function CreateEdgeArray: TEdgeArray;
@@ -364,6 +365,18 @@ type
   { warning: works correctly only for integer types }
     function IsFlowFeasible(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
     function IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
+
+  type
+    TStCut = record
+      S,
+      T: TIntArray;
+    end;
+  { returns False if GetNetworkState <> nwsValid }
+    function FindMinSTCut(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
+    function FindMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
+  { warning: does not checks network state }
+    function GetMinSTCut(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight; inline;
+    function GetMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
   end;
 
 implementation
@@ -1282,53 +1295,53 @@ begin
         end;
 end;
 
-{ TGWeightedDiGraph.TMaxFlowHelper.TFlowData }
+{ TGWeightedDiGraph.THPrfHelper.TFlowData }
 
-constructor TGWeightedDiGraph.TMaxFlowHelper.TArc.Create(constref c: TWeight; aTarget, aOpposite: Pointer);
+constructor TGWeightedDiGraph.THPrfHelper.TArc.Create(constref c: TWeight; aTarget, aOpposite: Pointer);
 begin
   ResidualCap := c;
   Target := aTarget;
   ReverseArc := aOpposite;
 end;
 
-constructor TGWeightedDiGraph.TMaxFlowHelper.TArc.CreateReverse(aTarget, aOpposite: Pointer);
+constructor TGWeightedDiGraph.THPrfHelper.TArc.CreateReverse(aTarget, aOpposite: Pointer);
 begin
   ResidualCap := ZeroWeight;
   Target := aTarget;
   ReverseArc := aOpposite;
 end;
 
-{ TGWeightedDiGraph.TMaxFlowHelper.TNode }
+{ TGWeightedDiGraph.THPrfHelper.TNode }
 
-function TGWeightedDiGraph.TMaxFlowHelper.TNode.GetColor: TVertexColor;
+function TGWeightedDiGraph.THPrfHelper.TNode.GetColor: TVertexColor;
 begin
   Result := TVertexColor(Distance);
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.TNode.SetColor(aValue: TVertexColor);
+procedure TGWeightedDiGraph.THPrfHelper.TNode.SetColor(aValue: TVertexColor);
 begin
   Distance := SizeInt(aValue);
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.TNode.ResetCurrent;
+procedure TGWeightedDiGraph.THPrfHelper.TNode.ResetCurrent;
 begin
   CurrentArc := FirstArc;
 end;
 
-{ TGWeightedDiGraph.TMaxFlowHelper.TLayer }
+{ TGWeightedDiGraph.THPrfHelper.TLayer }
 
-function TGWeightedDiGraph.TMaxFlowHelper.TLayer.IsEmpty: Boolean;
+function TGWeightedDiGraph.THPrfHelper.TLayer.IsEmpty: Boolean;
 begin
   Result := (ExceedHead = nil) and (TransitHead = nil);
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.TLayer.AddToExceeded(aNode: PNode);
+procedure TGWeightedDiGraph.THPrfHelper.TLayer.AddToExceeded(aNode: PNode);
 begin
   aNode^.LayerNext := ExceedHead;
   ExceedHead := aNode;
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.TLayer.AddToTransit(aNode: PNode);
+procedure TGWeightedDiGraph.THPrfHelper.TLayer.AddToTransit(aNode: PNode);
 var
   Next: PNode;
 begin
@@ -1339,7 +1352,7 @@ begin
     Next^.LayerPrev := aNode;
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.TLayer.RemoveFromTransit(aNode: PNode);
+procedure TGWeightedDiGraph.THPrfHelper.TLayer.RemoveFromTransit(aNode: PNode);
 var
   Next, Prev: PNode;
 begin
@@ -1355,7 +1368,7 @@ begin
     end;
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.TLayer.Clear(aLabel: SizeInt);
+procedure TGWeightedDiGraph.THPrfHelper.TLayer.Clear(aLabel: SizeInt);
 var
   Next: PNode;
   I: SizeInt;
@@ -1376,9 +1389,9 @@ begin
   TransitHead  := nil;
 end;
 
-{ TGWeightedDiGraph.TMaxFlowHelper }
+{ TGWeightedDiGraph.THPrfHelper }
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
+procedure TGWeightedDiGraph.THPrfHelper.Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: array of SizeInt;
   I, J: SizeInt;
@@ -1428,7 +1441,7 @@ begin
   FMaxLayer := System.High(FLayers);
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.Init2(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
+procedure TGWeightedDiGraph.THPrfHelper.Init2(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: array of SizeInt;
   I, J: SizeInt;
@@ -1481,7 +1494,7 @@ begin
   FMaxLayer := System.High(FLayers);
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.ClearLabels;
+procedure TGWeightedDiGraph.THPrfHelper.ClearLabels;
 var
   I: SizeInt;
 begin
@@ -1489,7 +1502,7 @@ begin
     FNodes[I].Distance := FNodeCount;
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.GlobalRelabel;
+procedure TGWeightedDiGraph.THPrfHelper.GlobalRelabel;
 var
   Queue: TQueue;
   CurrNode, NextNode: PNode;
@@ -1532,7 +1545,7 @@ begin
   until not Queue{%H-}.TryDequeue(CurrNode);
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.Gap;
+procedure TGWeightedDiGraph.THPrfHelper.Gap;
 var
   I: SizeInt;
 begin
@@ -1542,7 +1555,7 @@ begin
   FMaxLayer := FMaxExcessLayer;
 end;
 
-function TGWeightedDiGraph.TMaxFlowHelper.Push(aNode: PNode): Boolean;
+function TGWeightedDiGraph.THPrfHelper.Push(aNode: PNode): Boolean;
 var
   CurrArc: PArc;
   NextNode: PNode;
@@ -1582,7 +1595,7 @@ begin
     end;
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.Relabel(aNode: PNode);
+procedure TGWeightedDiGraph.THPrfHelper.Relabel(aNode: PNode);
 var
   CurrArc: PArc;
   MinArc: PArc = nil;
@@ -1624,7 +1637,7 @@ begin
     end;
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.HiLevelPushRelabel;
+procedure TGWeightedDiGraph.THPrfHelper.HiLevelPushRelabel;
 var
   CurrNode: PNode;
   RelableTreshold, OldMax: SizeInt;
@@ -1657,7 +1670,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.TMaxFlowHelper.CreateEdgeArray: TEdgeArray;
+function TGWeightedDiGraph.THPrfHelper.CreateEdgeArray: TEdgeArray;
 var
   I, J: SizeInt;
   CurrArc: PArc;
@@ -1682,7 +1695,7 @@ begin
     end;
 end;
 
-procedure TGWeightedDiGraph.TMaxFlowHelper.PreflowToFlow;
+procedure TGWeightedDiGraph.THPrfHelper.PreflowToFlow;
 var
   CurrNode, NextNode, SaveNode, RestartNode: PNode;
   StackTop: PNode = nil;
@@ -1832,14 +1845,14 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.TMaxFlowHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
+function TGWeightedDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
 begin
   Init(aGraph, aSource, aSink);
   HiLevelPushRelabel;
   Result := FSink^.Excess;
 end;
 
-function TGWeightedDiGraph.TMaxFlowHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
+function TGWeightedDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
   Init2(aGraph, aSource, aSink);
@@ -1848,6 +1861,27 @@ begin
   Result := FSink^.Excess;
   PreflowToFlow;
   a := CreateEdgeArray;
+end;
+
+function TGWeightedDiGraph.THPrfHelper.GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
+  out s: TIntArray): TWeight;
+var
+  I, J: SizeInt;
+begin
+  Init(aGraph, aSource, aSink);
+  HiLevelPushRelabel;
+  Result := FSink^.Excess;
+  System.SetLength(s, ARRAY_INITIAL_SIZE);
+  J := 0;
+  for I := 0 to System.High(FNodes) do
+    if FNodes[I].Distance = FNodeCount then
+      begin
+        if System.Length(s) = J then
+          System.SetLength(s, J shl 1);
+        s[J] := I;
+        Inc(J);
+      end;
+  System.SetLength(s, J);
 end;
 
 { TGWeightedDiGraph }
@@ -2169,7 +2203,7 @@ end;
 
 function TGWeightedDiGraph.FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
 var
-  Helper: TMaxFlowHelper;
+  Helper: THPrfHelper;
 begin
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
     exit(False);
@@ -2186,7 +2220,7 @@ end;
 function TGWeightedDiGraph.FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
   out a: TEdgeArray): Boolean;
 var
-  Helper: TMaxFlowHelper;
+  Helper: THPrfHelper;
 begin
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
     exit(False);
@@ -2201,7 +2235,7 @@ end;
 
 function TGWeightedDiGraph.GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
 var
-  Helper: TMaxFlowHelper;
+  Helper: THPrfHelper;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
@@ -2215,7 +2249,7 @@ end;
 
 function TGWeightedDiGraph.GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
 var
-  Helper: TMaxFlowHelper;
+  Helper: THPrfHelper;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
@@ -2253,6 +2287,49 @@ begin
       if v[I] <> ZeroWeight then
         exit(False);
   Result := True;
+end;
+
+function TGWeightedDiGraph.FindMinSTCut(constref aSource, aSink: TVertex; out aValue: TWeight;
+  out aCut: TStCut): Boolean;
+begin
+  Result := FindMinSTCutI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
+end;
+
+function TGWeightedDiGraph.FindMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
+  out aCut: TStCut): Boolean;
+var
+  Helper: THPrfHelper;
+  TmpSet: TIntSet;
+  I: SizeInt;
+begin
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+    exit(False);
+  aValue := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
+  TmpSet.InitRange(VertexCount);
+  for I in aCut.S do
+    TmpSet.Remove(I);
+  aCut.T := TmpSet.ToArray;
+  Result := True;
+end;
+
+function TGWeightedDiGraph.GetMinSTCut(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight;
+begin
+  Result := GetMinSTCutI(IndexOf(aSource), IndexOf(aSink), aCut);
+end;
+
+function TGWeightedDiGraph.GetMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
+var
+  Helper: THPrfHelper;
+  TmpSet: TIntSet;
+  I: SizeInt;
+begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
+  Result := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
+  TmpSet.InitRange(VertexCount);
+  for I in aCut.S do
+    TmpSet.Remove(I);
+  aCut.T := TmpSet.ToArray;
 end;
 
 end.
