@@ -240,7 +240,7 @@ type
       FNodes: array of TNode;
       FArcs: array of TArc;
       FLayers: array of TLayer;
-      FCaps: array of TWeight;
+      FCaps: TWeightArray;
       FSource,
       FSink: PNode;
       FNodeCount,
@@ -1395,7 +1395,7 @@ end;
 
 procedure TGWeightedDiGraph.THPrfHelper.Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
 var
-  CurrArcIdx: array of SizeInt;
+  CurrArcIdx: TIntArray;
   I, J: SizeInt;
   p: PAdjItem;
 begin
@@ -1445,7 +1445,7 @@ end;
 
 procedure TGWeightedDiGraph.THPrfHelper.Init2(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
 var
-  CurrArcIdx: array of SizeInt;
+  CurrArcIdx: TIntArray;
   I, J: SizeInt;
   p: PAdjItem;
 begin
