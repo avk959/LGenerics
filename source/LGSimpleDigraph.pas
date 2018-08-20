@@ -367,10 +367,12 @@ type
     function IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
 
   type
+    //vertex partition
     TStCut = record
       S,
       T: TIntArray;
     end;
+
   { returns False if GetNetworkState <> nwsValid }
     function FindMinSTCut(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
     function FindMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
