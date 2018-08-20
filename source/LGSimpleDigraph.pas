@@ -351,17 +351,17 @@ type
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
   { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
-    warning: currently flow decomposition works correctly only for integer types }
+    warning: flow decomposition works correctly only for integer types }
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
   { warning: does not checks network state }
     function GetMaxFlow(constref aSource, aSink: TVertex): TWeight; inline;
     function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
   { does not checks network state, returns flows through the arcs in array a;
-    warning: currently flow decomposition works correctly only for integer types }
+    warning: flow decomposition works correctly only for integer types }
     function GetMaxFlow(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
     function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
-  { warning: currently works correctly only for integer types }
+  { warning: works correctly only for integer types }
     function IsFlowFeasible(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
     function IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
   end;
@@ -2113,7 +2113,7 @@ var
   Visited: TBitVector;
   Curr, Next: SizeInt;
   w: TWeight;
-  p: PEdgeData;
+  p: PAdjItem;
   HasOverflow: Boolean = False;
   SinkFound: Boolean = False;
 begin
@@ -2129,12 +2129,12 @@ begin
   Visited[aSrcIndex] := True;
   Curr := aSrcIndex;
   repeat
-    for Next in AdjVerticesI(Curr) do
+    for p in AdjLists[Curr]^ do
       begin
-        if AdjacentI(Next, Curr) then  // network should not contain antiparallel arcs
+        Next := p^.Destination;
+        if AdjLists[Next]^.Contains(Curr) then  // network should not contain antiparallel arcs
           exit(nwsAntiParallelArc);
-        p := GetEdgeDataPtr(Curr, Next);
-        if p^.Weight < ZeroWeight then // network should not contain arc with negative capacity
+        if p^.Data.Weight < ZeroWeight then // network should not contain arc with negative capacity
           exit(nwsNegArcCapacity);
         if not Visited[Next] then
           begin
@@ -2147,18 +2147,16 @@ begin
   if not SinkFound then // sink must be reachable from the source
     exit(nwsSinkUnreachable);
   w := ZeroWeight;
-  for Next in AdjVerticesI(aSrcIndex) do
+  {$PUSH}{$Q+}
+  for p in AdjLists[aSrcIndex]^ do
     begin
-      p := GetEdgeDataPtr(Curr, Next);
-      if Curr = aSrcIndex then
-      {$PUSH}{$Q+}
       try
-        w += p^.Weight;
+        w += p^.Data.Weight;
       except
         HasOverflow := True;
       end;
-      {$POP}
     end;
+  {$POP}
   if HasOverflow then //total capacity of edges incident to the source exceeds InfiniteWeight
     exit(nwsSourceOverflow);
   Result := nwsValid;
