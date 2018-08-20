@@ -1411,11 +1411,10 @@ begin
     end;
 
   System.SetLength(FNodes, FNodeCount);
-  FSource := @FNodes[aSource];
-  FSink := @FNodes[aSink];
-
   //all arcs stored in the single array
   System.SetLength(FArcs, aGraph.EdgeCount * 2);
+  FSource := @FNodes[aSource];
+  FSink := @FNodes[aSink];
 
   for I := 0 to System.High(FNodes) do
     begin
@@ -1462,11 +1461,10 @@ begin
     end;
 
   System.SetLength(FNodes, FNodeCount);
-  FSource := @FNodes[aSource];
-  FSink := @FNodes[aSink];
-
   System.SetLength(FArcs, aGraph.EdgeCount * 2);
   System.SetLength(FCaps, aGraph.EdgeCount * 2);
+  FSource := @FNodes[aSource];
+  FSink := @FNodes[aSink];
 
   for I := 0 to System.High(FNodes) do
     begin
