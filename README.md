@@ -39,6 +39,8 @@ Contains:
       - listing all maximal independent sets
       - maximum clique finding
       - listing all maximal cliques
+      - maximum flow through the network
+      - minimum s-t cut of the network
 
   3. Other algorithms:
       - some non-cryptogarphic hashes(unit LGHash)
