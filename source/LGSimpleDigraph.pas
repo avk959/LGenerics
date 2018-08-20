@@ -1381,13 +1381,13 @@ begin
       Next^.Distance := aLabel;
       Next := Next^.LayerNext;
     end;
+  ExceedHead := nil;
   Next := TransitHead;
   while Next <> nil do
     begin
       Next^.Distance := aLabel;
       Next := Next^.LayerNext;
     end;
-  ExceedHead := nil;
   TransitHead  := nil;
 end;
 
