@@ -204,6 +204,8 @@ type
         ReverseArc: PArc;    // pointer to opposite arc
         constructor Create(constref c: TWeight; aTarget, aOpposite: Pointer);
         constructor CreateReverse(aTarget, aOpposite: Pointer);
+        function Saturated: Boolean; inline;
+        function UnSaturated: Boolean; inline;
       end;
 
       TNode = record
@@ -219,14 +221,15 @@ type
         Distance: SizeInt;   // distance from the sink
         Excess: TWeight;     // excess at the node
         procedure ResetCurrent; inline;
+        function  HasExcess: Boolean; inline;
         property  OrderNext: PNode read LayerNext write LayerNext;  // for dfs
         property  Parent: PNode read LayerPrev write LayerPrev;     // for dfs
         property  Color: TVertexColor read GetColor write SetColor; // for dfs
       end;
 
       TLayer = record
-        ExceedHead,          // head of singly linked list of nodes with positive excess
-        TransitHead: PNode;  // head of doubly linked list of nodes with zero excess
+        ExceedHead,          // head of singly linked list of the nodes with positive excess
+        TransitHead: PNode;  // head of doubly linked list of the nodes with zero excess
         function  IsEmpty: Boolean; inline;
         procedure AddToExceeded(aNode: PNode); inline;
         procedure AddToTransit(aNode: PNode); inline;
@@ -256,7 +259,7 @@ type
       procedure Relabel(aNode: PNode);
       procedure HiLevelPushRelabel;
       function  CreateEdgeArray: TEdgeArray;
-      procedure PreflowToFlow; //flow decomposition
+      function  PreflowToFlow: TEdgeArray; //flow recovering
     public
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
@@ -1313,6 +1316,16 @@ begin
   ReverseArc := aOpposite;
 end;
 
+function TGWeightedDiGraph.THPrfHelper.TArc.Saturated: Boolean;
+begin
+  Result := ResidualCap <= ZeroWeight;
+end;
+
+function TGWeightedDiGraph.THPrfHelper.TArc.UnSaturated: Boolean;
+begin
+  Result := ResidualCap > ZeroWeight;
+end;
+
 { TGWeightedDiGraph.THPrfHelper.TNode }
 
 function TGWeightedDiGraph.THPrfHelper.TNode.GetColor: TVertexColor;
@@ -1328,6 +1341,11 @@ end;
 procedure TGWeightedDiGraph.THPrfHelper.TNode.ResetCurrent;
 begin
   CurrentArc := FirstArc;
+end;
+
+function TGWeightedDiGraph.THPrfHelper.TNode.HasExcess: Boolean;
+begin
+  Result := Excess > ZeroWeight;
 end;
 
 { TGWeightedDiGraph.THPrfHelper.TLayer }
@@ -1522,13 +1540,13 @@ begin
     while CurrArc <= CurrNode^.LastArc do
       begin
         NextNode := CurrArc^.Target;
-        if (NextNode^.Distance = FNodeCount) and (CurrArc^.ReverseArc^.ResidualCap > ZeroWeight) then
+        if (NextNode^.Distance = FNodeCount) and CurrArc^.ReverseArc^.UnSaturated then
           begin
             NextNode^.Distance := Dist;
             NextNode^.ResetCurrent;
             if Dist > FMaxLayer then
               FMaxLayer := Dist;
-            if NextNode^.Excess > ZeroWeight then
+            if NextNode^.HasExcess then
               begin
                 FLayers[Dist].AddToExceeded(NextNode);
                 if Dist > FMaxExcessLayer then
@@ -1568,19 +1586,19 @@ begin
     begin
       NextNode := aNode^.CurrentArc^.Target;
       CurrArc := aNode^.CurrentArc;
-      if (NextNode^.Distance = Dist) and (CurrArc^.ResidualCap > ZeroWeight) then
+      if (NextNode^.Distance = Dist) and CurrArc^.UnSaturated then
         //arc is not saturated and target belongs to the next layer -> arc is admissible
         begin
           Delta := Min(aNode^.Excess, CurrArc^.ResidualCap);
           aNode^.Excess -= Delta;
           CurrArc^.ResidualCap -= Delta;
           CurrArc^.ReverseArc^.ResidualCap += Delta;
-          if aNode^.Excess <= ZeroWeight then
+          if not aNode^.HasExcess then
             begin
               FLayers[Succ(Dist)].AddToTransit(aNode);
               Result := True;
             end;
-          if (Dist > 0) and (NextNode^.Excess <= ZeroWeight) then //in transit list
+          if (Dist > 0) and not NextNode^.HasExcess then //in transit list
             begin
               FLayers[Dist].RemoveFromTransit(NextNode);
               FLayers[Dist].AddToExceeded(NextNode);
@@ -1606,7 +1624,7 @@ begin
   CurrArc := aNode^.FirstArc;
   while CurrArc <= aNode^.LastArc do
     begin
-      if CurrArc^.ResidualCap > ZeroWeight then
+      if CurrArc^.UnSaturated then
         begin
           Dist := CurrArc^.Target^.Distance;
           if Dist < MinDist then
@@ -1624,7 +1642,7 @@ begin
       aNode^.CurrentArc := MinArc;
       if Dist > FMaxLayer then
         FMaxLayer := Dist;
-      if aNode^.Excess > ZeroWeight then
+      if aNode^.HasExcess then
         begin
           FLayers[Dist].AddToExceeded(aNode);
           if Dist > FMaxExcessLayer then
@@ -1695,7 +1713,7 @@ begin
     end;
 end;
 
-procedure TGWeightedDiGraph.THPrfHelper.PreflowToFlow;
+function TGWeightedDiGraph.THPrfHelper.PreflowToFlow: TEdgeArray;
 var
   CurrNode, NextNode, SaveNode, RestartNode: PNode;
   StackTop: PNode = nil;
@@ -1722,7 +1740,7 @@ begin
   CurrNode := Pointer(FNodes);
   while CurrNode < PNode(FNodes) + FNodeCount do
     begin
-      if (CurrNode^.Color = vcWhite) and (CurrNode^.Excess > ZeroWeight) and
+      if (CurrNode^.Color = vcWhite) and CurrNode^.HasExcess and
          (CurrNode <> FSource) and (CurrNode <> FSink) then
            begin
              SaveNode := CurrNode;
@@ -1731,7 +1749,7 @@ begin
                while CurrNode^.CurrentArc <= CurrNode^.LastArc do
                  begin
                    CurrArc := CurrNode^.CurrentArc;
-                   if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and (CurrArc^.ResidualCap > ZeroWeight) and
+                   if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.UnSaturated and
                       (CurrArc^.Target = FSource) and (CurrArc^.Target = FSink) then
                      begin
                        NextNode := CurrArc^.Target;
@@ -1772,7 +1790,7 @@ begin
                              while NextNode <> CurrNode do
                                begin
                                  CurrArc := NextNode^.CurrentArc;
-                                 if (NextNode^.Color = vcWhite) or (CurrArc^.ResidualCap <= ZeroWeight) then
+                                 if (NextNode^.Color = vcWhite) or CurrArc^.Saturated then
                                    begin
                                      NextNode^.CurrentArc^.Target^.Color := vcWhite;
                                      if NextNode^.Color <> vcWhite then
@@ -1825,9 +1843,9 @@ begin
       CurrNode := StackTop;
       repeat
         CurrArc := CurrNode^.FirstArc;
-        while CurrNode^.Excess > ZeroWeight do
+        while CurrNode^.HasExcess do
           begin
-            if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and (CurrArc^.ResidualCap > ZeroWeight) then
+            if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.UnSaturated then
               begin
                 Delta := Min(CurrNode^.Excess, CurrArc^.ResidualCap);
                 CurrArc^.ResidualCap -= Delta;
@@ -1843,6 +1861,7 @@ begin
           CurrNode := CurrNode^.OrderNext;
       until False;
     end;
+  Result := CreateEdgeArray;
 end;
 
 function TGWeightedDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
@@ -1859,8 +1878,7 @@ begin
   HiLevelPushRelabel;
   FLayers := nil;
   Result := FSink^.Excess;
-  PreflowToFlow;
-  a := CreateEdgeArray;
+  a := PreflowToFlow;
 end;
 
 function TGWeightedDiGraph.THPrfHelper.GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
