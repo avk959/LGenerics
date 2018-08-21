@@ -1659,7 +1659,7 @@ end;
 procedure TGWeightedDiGraph.THPrfHelper.HiLevelPushRelabel;
 var
   CurrNode: PNode;
-  GlobalRelableTreshold, OldMax: SizeInt;
+  GlobalRelableTreshold, OldMaxActive: SizeInt;
   RelableTimes: SizeInt = 0;
 begin
   GlobalRelabel;
@@ -1669,14 +1669,14 @@ begin
       CurrNode := FLayers[FMaxActiveLayer].TopActive;
       if CurrNode <> nil then
         begin
-          OldMax := FMaxActiveLayer;
-          FLayers[OldMax].TopActive := CurrNode^.LayerNext;
+          OldMaxActive := FMaxActiveLayer;
+          FLayers[OldMaxActive].TopActive := CurrNode^.LayerNext;
           if not Push(CurrNode) then
             begin
               Relabel(CurrNode);
               Inc(RelableTimes);
-              if FLayers[OldMax].IsEmpty then
-                RemoveGap(OldMax);
+              if FLayers[OldMaxActive].IsEmpty then
+                RemoveGap(OldMaxActive);
               if RelableTimes > GlobalRelableTreshold then
                 begin
                   GlobalRelabel;
