@@ -227,9 +227,10 @@ type
         property  Color: TVertexColor read GetColor write SetColor; // for dfs
       end;
 
+
       TLayer = record
-        ActiveHead,          // head of singly linked list of the nodes with positive excess
-        IdleHead: PNode;     // head of doubly linked list of the nodes with zero excess
+        TopActive,          // head of singly linked list of the nodes with positive excess
+        TopIdle: PNode;     // head of doubly linked list of the nodes with zero excess
         function  IsEmpty: Boolean; inline;
         procedure AddActive(aNode: PNode); inline;
         procedure AddIdle(aNode: PNode); inline;
@@ -254,7 +255,7 @@ type
       procedure Init2(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
       procedure GlobalRelabel;
-      procedure Gap;
+      procedure RemoveGap(aLayer: SizeInt);
       function  Push(aNode: PNode): Boolean;
       procedure Relabel(aNode: PNode);
       procedure HiLevelPushRelabel;
@@ -1352,21 +1353,21 @@ end;
 
 function TGWeightedDiGraph.THPrfHelper.TLayer.IsEmpty: Boolean;
 begin
-  Result := (ActiveHead = nil) and (IdleHead = nil);
+  Result := (TopActive = nil) and (TopIdle = nil);
 end;
 
 procedure TGWeightedDiGraph.THPrfHelper.TLayer.AddActive(aNode: PNode);
 begin
-  aNode^.LayerNext := ActiveHead;
-  ActiveHead := aNode;
+  aNode^.LayerNext := TopActive;
+  TopActive := aNode;
 end;
 
 procedure TGWeightedDiGraph.THPrfHelper.TLayer.AddIdle(aNode: PNode);
 var
   Next: PNode;
 begin
-  Next := IdleHead;
-  IdleHead := aNode;
+  Next := TopIdle;
+  TopIdle := aNode;
   aNode^.LayerNext := Next;
   if Next <> nil then
     Next^.LayerPrev := aNode;
@@ -1377,8 +1378,8 @@ var
   Next, Prev: PNode;
 begin
   Next := aNode^.LayerNext;
-  if IdleHead = aNode then // is on head of the list
-    IdleHead := Next
+  if TopIdle = aNode then // is on head of the list
+    TopIdle := Next
   else
     begin
       Prev := aNode^.LayerPrev;
@@ -1393,20 +1394,20 @@ var
   Next: PNode;
   I: SizeInt;
 begin
-  Next := ActiveHead;
+  Next := TopActive;
   while Next <> nil do
     begin
       Next^.Distance := aLabel;
       Next := Next^.LayerNext;
     end;
-  ActiveHead := nil;
-  Next := IdleHead;
+  TopActive := nil;
+  Next := TopIdle;
   while Next <> nil do
     begin
       Next^.Distance := aLabel;
       Next := Next^.LayerNext;
     end;
-  IdleHead  := nil;
+  TopIdle  := nil;
 end;
 
 { TGWeightedDiGraph.THPrfHelper }
@@ -1563,13 +1564,13 @@ begin
   until not Queue{%H-}.TryDequeue(CurrNode);
 end;
 
-procedure TGWeightedDiGraph.THPrfHelper.Gap;
+procedure TGWeightedDiGraph.THPrfHelper.RemoveGap(aLayer: SizeInt);
 var
   I: SizeInt;
 begin
-  for I := Succ(FMaxActiveLayer) to FMaxLayer do
+  for I := Succ(aLayer) to FMaxLayer do
     FLayers[I].Clear(FNodeCount);
-  Dec(FMaxActiveLayer);
+  FMaxActiveLayer := Pred(aLayer);
   FMaxLayer := FMaxActiveLayer;
 end;
 
@@ -1593,11 +1594,6 @@ begin
           aNode^.Excess -= Delta;
           CurrArc^.ResidualCap -= Delta;
           CurrArc^.Reverse^.ResidualCap += Delta;
-          if not aNode^.HasExcess then
-            begin
-              FLayers[Succ(Dist)].AddIdle(aNode);
-              Result := True;
-            end;
           if (Dist > 0) and not NextNode^.HasExcess then //in idle list
             begin
               FLayers[Dist].RemoveIdle(NextNode);
@@ -1606,6 +1602,11 @@ begin
                 FMinActiveLayer := Dist;
             end;
           NextNode^.Excess += Delta;
+          if not aNode^.HasExcess then
+            begin
+              FLayers[Succ(Dist)].AddIdle(aNode);
+              Result := True;
+            end;
         end;
       Inc(aNode^.CurrentArc);
       if Result then
@@ -1665,17 +1666,17 @@ begin
   GlobalRelableTreshold := FNodeCount;
   while FMaxActiveLayer >= FMinActiveLayer do
     begin
-      CurrNode := FLayers[FMaxActiveLayer].ActiveHead;
+      CurrNode := FLayers[FMaxActiveLayer].TopActive;
       if CurrNode <> nil then
         begin
           OldMax := FMaxActiveLayer;
-          FLayers[OldMax].ActiveHead := CurrNode^.LayerNext;
+          FLayers[OldMax].TopActive := CurrNode^.LayerNext;
           if not Push(CurrNode) then
             begin
               Relabel(CurrNode);
               Inc(RelableTimes);
               if FLayers[OldMax].IsEmpty then
-                Gap;
+                RemoveGap(OldMax);
               if RelableTimes > GlobalRelableTreshold then
                 begin
                   GlobalRelabel;
