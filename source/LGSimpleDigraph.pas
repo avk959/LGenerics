@@ -234,6 +234,7 @@ type
         function  IsEmpty: Boolean; inline;
         procedure AddActive(aNode: PNode); inline;
         procedure AddIdle(aNode: PNode); inline;
+        procedure ActivateIdle(aNode: PNode); inline;
         procedure RemoveIdle(aNode: PNode); inline;
         procedure Clear(aLabel: SizeInt);
       end;
@@ -1373,6 +1374,12 @@ begin
     Next^.LayerPrev := aNode;
 end;
 
+procedure TGWeightedDiGraph.THPrfHelper.TLayer.ActivateIdle(aNode: PNode);
+begin
+  RemoveIdle(aNode);
+  AddActive(aNode);
+end;
+
 procedure TGWeightedDiGraph.THPrfHelper.TLayer.RemoveIdle(aNode: PNode);
 var
   Next, Prev: PNode;
@@ -1596,8 +1603,7 @@ begin
           CurrArc^.Reverse^.ResidualCap += Delta;
           if (Dist > 0) and not NextNode^.HasExcess then //in idle list
             begin
-              FLayers[Dist].RemoveIdle(NextNode);
-              FLayers[Dist].AddActive(NextNode);
+              FLayers[Dist].ActivateIdle(NextNode);
               if Dist < FMinActiveLayer then
                 FMinActiveLayer := Dist;
             end;
