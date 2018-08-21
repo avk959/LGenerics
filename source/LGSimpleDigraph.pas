@@ -201,11 +201,11 @@ type
       TArc = record
         ResidualCap: TWeight;
         Target: PNode;       // pointer to target node
-        ReverseArc: PArc;    // pointer to opposite arc
+        Reverse: PArc;       // pointer to opposite arc
         constructor Create(constref c: TWeight; aTarget, aOpposite: Pointer);
         constructor CreateReverse(aTarget, aOpposite: Pointer);
         function Saturated: Boolean; inline;
-        function UnSaturated: Boolean; inline;
+        function HasResidual: Boolean; inline;
       end;
 
       TNode = record
@@ -248,8 +248,8 @@ type
       FSink: PNode;
       FNodeCount,
       FMaxLayer,                // maximal layer
-      FMaxExcessLayer,          // maximal layer with excessed node
-      FMinExcessLayer: SizeInt; // minimal layer with excessed node
+      FMaxActiveLayer,          // maximal layer with excessed node
+      FMinActiveLayer: SizeInt; // minimal layer with excessed node
       procedure Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
       procedure Init2(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
@@ -1306,14 +1306,14 @@ constructor TGWeightedDiGraph.THPrfHelper.TArc.Create(constref c: TWeight; aTarg
 begin
   ResidualCap := c;
   Target := aTarget;
-  ReverseArc := aOpposite;
+  Reverse := aOpposite;
 end;
 
 constructor TGWeightedDiGraph.THPrfHelper.TArc.CreateReverse(aTarget, aOpposite: Pointer);
 begin
   ResidualCap := ZeroWeight;
   Target := aTarget;
-  ReverseArc := aOpposite;
+  Reverse := aOpposite;
 end;
 
 function TGWeightedDiGraph.THPrfHelper.TArc.Saturated: Boolean;
@@ -1321,7 +1321,7 @@ begin
   Result := ResidualCap <= ZeroWeight;
 end;
 
-function TGWeightedDiGraph.THPrfHelper.TArc.UnSaturated: Boolean;
+function TGWeightedDiGraph.THPrfHelper.TArc.HasResidual: Boolean;
 begin
   Result := ResidualCap > ZeroWeight;
 end;
@@ -1529,8 +1529,8 @@ var
 begin
   System.FillChar(Pointer(FLayers)^, Succ(FMaxLayer) * SizeOf(TLayer), 0);
   FMaxLayer := 0;
-  FMaxExcessLayer := NULL_INDEX;
-  FMinExcessLayer := FNodeCount;
+  FMaxActiveLayer := NULL_INDEX;
+  FMinActiveLayer := FNodeCount;
   ClearLabels;
   FSink^.Distance := 0;
   CurrNode := FSink;
@@ -1540,7 +1540,7 @@ begin
     while CurrArc <= CurrNode^.LastArc do
       begin
         NextNode := CurrArc^.Target;
-        if (NextNode^.Distance = FNodeCount) and CurrArc^.ReverseArc^.UnSaturated then
+        if (NextNode^.Distance = FNodeCount) and CurrArc^.Reverse^.HasResidual then
           begin
             NextNode^.Distance := Dist;
             NextNode^.ResetCurrent;
@@ -1549,10 +1549,10 @@ begin
             if NextNode^.HasExcess then
               begin
                 FLayers[Dist].AddActive(NextNode);
-                if Dist > FMaxExcessLayer then
-                  FMaxExcessLayer := Dist;
-                if Dist < FMinExcessLayer then
-                  FMinExcessLayer := Dist;
+                if Dist > FMaxActiveLayer then
+                  FMaxActiveLayer := Dist;
+                if Dist < FMinActiveLayer then
+                  FMinActiveLayer := Dist;
               end
             else
               FLayers[Dist].AddIdle(NextNode);
@@ -1567,10 +1567,10 @@ procedure TGWeightedDiGraph.THPrfHelper.Gap;
 var
   I: SizeInt;
 begin
-  for I := Succ(FMaxExcessLayer) to FMaxLayer do
+  for I := Succ(FMaxActiveLayer) to FMaxLayer do
     FLayers[I].Clear(FNodeCount);
-  Dec(FMaxExcessLayer);
-  FMaxLayer := FMaxExcessLayer;
+  Dec(FMaxActiveLayer);
+  FMaxLayer := FMaxActiveLayer;
 end;
 
 function TGWeightedDiGraph.THPrfHelper.Push(aNode: PNode): Boolean;
@@ -1586,24 +1586,24 @@ begin
     begin
       NextNode := aNode^.CurrentArc^.Target;
       CurrArc := aNode^.CurrentArc;
-      if (NextNode^.Distance = Dist) and CurrArc^.UnSaturated then
+      if (NextNode^.Distance = Dist) and CurrArc^.HasResidual then
         //arc is not saturated and target belongs to the next layer -> arc is admissible
         begin
           Delta := Min(aNode^.Excess, CurrArc^.ResidualCap);
           aNode^.Excess -= Delta;
           CurrArc^.ResidualCap -= Delta;
-          CurrArc^.ReverseArc^.ResidualCap += Delta;
+          CurrArc^.Reverse^.ResidualCap += Delta;
           if not aNode^.HasExcess then
             begin
               FLayers[Succ(Dist)].AddIdle(aNode);
               Result := True;
             end;
-          if (Dist > 0) and not NextNode^.HasExcess then //in transit list
+          if (Dist > 0) and not NextNode^.HasExcess then //in idle list
             begin
               FLayers[Dist].RemoveIdle(NextNode);
               FLayers[Dist].AddActive(NextNode);
-              if Dist < FMinExcessLayer then
-                FMinExcessLayer := Dist;
+              if Dist < FMinActiveLayer then
+                FMinActiveLayer := Dist;
             end;
           NextNode^.Excess += Delta;
         end;
@@ -1624,7 +1624,7 @@ begin
   CurrArc := aNode^.FirstArc;
   while CurrArc <= aNode^.LastArc do
     begin
-      if CurrArc^.UnSaturated then
+      if CurrArc^.HasResidual then
         begin
           Dist := CurrArc^.Target^.Distance;
           if Dist < MinDist then
@@ -1645,10 +1645,10 @@ begin
       if aNode^.HasExcess then
         begin
           FLayers[Dist].AddActive(aNode);
-          if Dist > FMaxExcessLayer then
-            FMaxExcessLayer := Dist;
-          if Dist < FMinExcessLayer then
-            FMinExcessLayer := Dist;
+          if Dist > FMaxActiveLayer then
+            FMaxActiveLayer := Dist;
+          if Dist < FMinActiveLayer then
+            FMinActiveLayer := Dist;
         end
       else
         FLayers[Dist].AddIdle(aNode);
@@ -1658,33 +1658,33 @@ end;
 procedure TGWeightedDiGraph.THPrfHelper.HiLevelPushRelabel;
 var
   CurrNode: PNode;
-  RelableTreshold, OldMax: SizeInt;
-  RelableCount: SizeInt = 0;
+  GlobalRelableTreshold, OldMax: SizeInt;
+  RelableTimes: SizeInt = 0;
 begin
   GlobalRelabel;
-  RelableTreshold := FNodeCount;
-  while FMaxExcessLayer >= FMinExcessLayer do
+  GlobalRelableTreshold := FNodeCount;
+  while FMaxActiveLayer >= FMinActiveLayer do
     begin
-      CurrNode := FLayers[FMaxExcessLayer].ActiveHead;
+      CurrNode := FLayers[FMaxActiveLayer].ActiveHead;
       if CurrNode <> nil then
         begin
-          OldMax := FMaxExcessLayer;
+          OldMax := FMaxActiveLayer;
           FLayers[OldMax].ActiveHead := CurrNode^.LayerNext;
           if not Push(CurrNode) then
             begin
               Relabel(CurrNode);
-              Inc(RelableCount);
+              Inc(RelableTimes);
               if FLayers[OldMax].IsEmpty then
                 Gap;
-              if RelableCount > RelableTreshold then
+              if RelableTimes > GlobalRelableTreshold then
                 begin
                   GlobalRelabel;
-                  RelableCount := 0;
+                  RelableTimes := 0;
                 end;
             end;
         end
       else
-        Dec(FMaxExcessLayer);
+        Dec(FMaxActiveLayer);
     end;
 end;
 
@@ -1749,7 +1749,7 @@ begin
                while CurrNode^.CurrentArc <= CurrNode^.LastArc do
                  begin
                    CurrArc := CurrNode^.CurrentArc;
-                   if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.UnSaturated and
+                   if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.HasResidual and
                       (CurrArc^.Target = FSource) and (CurrArc^.Target = FSink) then
                      begin
                        NextNode := CurrArc^.Target;
@@ -1779,7 +1779,7 @@ begin
                                begin
                                  CurrArc := NextNode^.CurrentArc;
                                  CurrArc^.ResidualCap -= Delta;
-                                 CurrArc^.ReverseArc^.ResidualCap += Delta;
+                                 CurrArc^.Reverse^.ResidualCap += Delta;
                                  NextNode := CurrArc^.Target;
                                  if NextNode = CurrNode then
                                    break;
@@ -1845,11 +1845,11 @@ begin
         CurrArc := CurrNode^.FirstArc;
         while CurrNode^.HasExcess do
           begin
-            if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.UnSaturated then
+            if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.HasResidual then
               begin
                 Delta := Min(CurrNode^.Excess, CurrArc^.ResidualCap);
                 CurrArc^.ResidualCap -= Delta;
-                CurrArc^.ReverseArc^.ResidualCap += Delta;
+                CurrArc^.Reverse^.ResidualCap += Delta;
                 CurrNode^.Excess -= Delta;
                 CurrArc^.Target^.Excess += Delta;
               end;
