@@ -1715,7 +1715,7 @@ end;
 
 function TGWeightedDiGraph.THPrfHelper.PreflowToFlow: TEdgeArray;
 var
-  CurrNode, NextNode, SaveNode, RestartNode: PNode;
+  CurrNode, NextNode, RootNode, RestartNode: PNode;
   StackTop: PNode = nil;
   StackBottom: PNode = nil;
   CurrArc: PArc;
@@ -1743,8 +1743,8 @@ begin
       if (CurrNode^.Color = vcWhite) and CurrNode^.HasExcess and
          (CurrNode <> FSource) and (CurrNode <> FSink) then
            begin
-             SaveNode := CurrNode;
-             SaveNode^.Color := vcGray;
+             RootNode := CurrNode;
+             RootNode^.Color := vcGray;
              repeat
                while CurrNode^.CurrentArc <= CurrNode^.LastArc do
                  begin
@@ -1825,7 +1825,7 @@ begin
                          CurrNode^.OrderNext := StackTop;
                          StackTop := CurrNode;
                        end;
-                   if CurrNode <> SaveNode then
+                   if CurrNode <> RootNode then
                      begin
                        CurrNode := CurrNode^.Parent;
                        Inc(CurrNode^.CurrentArc);
