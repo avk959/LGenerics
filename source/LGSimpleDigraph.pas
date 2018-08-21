@@ -370,7 +370,7 @@ type
     function IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
 
   type
-    //vertex partition
+    //s-t vertex partition
     TStCut = record
       S,
       T: TIntArray;
