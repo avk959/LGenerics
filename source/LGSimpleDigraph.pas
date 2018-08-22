@@ -1589,16 +1589,14 @@ var
   Delta: TWeight;
 begin
   Dist := Pred(aNode^.Distance);
-  Result := False;
-  while aNode^.CurrentArc <= aNode^.LastArc do
+  while (aNode^.CurrentArc <= aNode^.LastArc) and aNode^.HasExcess do
     begin
-      NextNode := aNode^.CurrentArc^.Target;
       CurrArc := aNode^.CurrentArc;
+      NextNode := CurrArc^.Target;
       if (NextNode^.Distance = Dist) and CurrArc^.HasResidual then
         //arc is not saturated and target belongs to the next layer -> arc is admissible
         begin
           Delta := Min(aNode^.Excess, CurrArc^.ResidualCap);
-          aNode^.Excess -= Delta;
           CurrArc^.ResidualCap -= Delta;
           CurrArc^.Reverse^.ResidualCap += Delta;
           if (Dist > 0) and not NextNode^.HasExcess then //in idle list
@@ -1607,17 +1605,12 @@ begin
               if Dist < FMinActiveLayer then
                 FMinActiveLayer := Dist;
             end;
+          aNode^.Excess -= Delta;
           NextNode^.Excess += Delta;
-          if not aNode^.HasExcess then
-            begin
-              FLayers[Succ(Dist)].AddIdle(aNode);
-              Result := True;
-            end;
         end;
       Inc(aNode^.CurrentArc);
-      if Result then
-        break;
     end;
+  Result := aNode^.CurrentArc <= aNode^.LastArc;
 end;
 
 procedure TGWeightedDiGraph.THPrfHelper.Relabel(aNode: PNode);
@@ -1688,7 +1681,9 @@ begin
                   GlobalRelabel;
                   RelableTimes := 0;
                 end;
-            end;
+            end
+          else
+            FLayers[OldMaxActive].AddIdle(CurrNode);
         end
       else
         Dec(FMaxActiveLayer);
