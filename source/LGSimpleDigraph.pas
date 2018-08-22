@@ -1589,7 +1589,7 @@ var
   Delta: TWeight;
 begin
   Dist := Pred(aNode^.Distance);
-  while (aNode^.CurrentArc <= aNode^.LastArc) and aNode^.HasExcess do
+  while aNode^.CurrentArc <= aNode^.LastArc do
     begin
       CurrArc := aNode^.CurrentArc;
       NextNode := CurrArc^.Target;
@@ -1607,6 +1607,8 @@ begin
             end;
           aNode^.Excess -= Delta;
           NextNode^.Excess += Delta;
+          if not aNode^.HasExcess then
+            break;
         end;
       Inc(aNode^.CurrentArc);
     end;
@@ -1617,25 +1619,21 @@ procedure TGWeightedDiGraph.THPrfHelper.Relabel(aNode: PNode);
 var
   CurrArc: PArc;
   MinArc: PArc = nil;
-  Dist, MinDist: SizeInt;
+  Dist: SizeInt;
 begin
-  MinDist := FNodeCount;
+  Dist := FNodeCount;
   aNode^.Distance := FNodeCount;
   CurrArc := aNode^.FirstArc;
   while CurrArc <= aNode^.LastArc do
     begin
-      if CurrArc^.HasResidual then
+      if CurrArc^.HasResidual and (CurrArc^.Target^.Distance < Dist) then
         begin
           Dist := CurrArc^.Target^.Distance;
-          if Dist < MinDist then
-            begin
-              MinDist := Dist;
-              MinArc := CurrArc;
-            end;
+          MinArc := CurrArc;
         end;
       Inc(CurrArc);
     end;
-  Dist := Succ(MinDist);
+  Inc(Dist);
   if Dist < FNodeCount then
     begin
       aNode^.Distance := Dist;
