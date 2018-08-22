@@ -213,9 +213,9 @@ type
         function  GetColor: TVertexColor; inline;
         procedure SetColor(aValue: TVertexColor); inline;
       public
-        FirstArc,            // pointer to first adjacent arc in arcs array
-        CurrentArc,          // pointer to current adjacent arc in arcs array
-        LastArc: PArc;       // pointer to last adjacent arc in arcs array
+        FirstArc,            // pointer to first incident arc in arcs array
+        CurrentArc,          // pointer to current incident arc in arcs array
+        LastArc: PArc;       // pointer to last incident arc in arcs array
         LayerNext,           // next node in layer list
         LayerPrev: PNode;    // previous node in layer list
         Distance: SizeInt;   // distance from the sink
@@ -1888,6 +1888,7 @@ var
 begin
   Init(aGraph, aSource, aSink);
   HiLevelPushRelabel;
+  FLayers := nil;
   Result := FSink^.Excess;
   System.SetLength(s, ARRAY_INITIAL_SIZE);
   J := 0;
