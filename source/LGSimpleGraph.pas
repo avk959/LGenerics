@@ -3343,13 +3343,11 @@ end;
 
 function TGSimpleGraph.IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
 var
-  Helper: THopcroftMatch;
   w, g: TIntArray;
   WhiteFree, GrayFree,
   WhiteCover, GrayCover: TIntHashSet;
   e: TIntEdge;
   I, J: SizeInt;
-  Adj: Boolean;
 begin
   if aMatch = nil then
     exit(False);
