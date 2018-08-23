@@ -167,11 +167,12 @@ type
       function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     end;
 
+  { THopcroftMatchHelper: see en.wikipedia.org/wiki/Hopcroft–Karp_algorithm }
     THopcroftMatchHelper = record
     private
     type
       TArc = record
-        Target: SizeInt;
+        Target: SizeInt; // index of target node
       end;
       PArc = ^TArc;
 
@@ -179,7 +180,7 @@ type
         FirstArc,        // index of first incident arc in arcs array
         LastArc,         // index of last incident arc in arcs array
         Distance,
-        Matched: SizeInt;
+        Matched: SizeInt;// index of matched node
       end;
 
     const
@@ -399,14 +400,6 @@ type
     function  ComplementMatrix: TAdjacencyMatrix;
 
 {**********************************************************************************************************
-  matching utilities
-***********************************************************************************************************}
-
-  { returns False if graph is not bipartite, otherwise in aMatch returns matching of
-    maximum cardinality, used Hopcroft–Karp algorithm }
-   function FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
-
-{**********************************************************************************************************
   spanning tree utilities
 ***********************************************************************************************************}
 
@@ -417,6 +410,16 @@ type
     function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+
+
+{**********************************************************************************************************
+  matching utilities
+***********************************************************************************************************}
+
+  { returns False if graph is not bipartite, otherwise in aMatch returns matching of
+    maximum cardinality, used Hopcroft–Karp algorithm }
+   function FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
+   function IsMaxMatching(out aMatch: TIntEdgeArray): Boolean;
 
 {**********************************************************************************************************
   some NP-hard problem utilities
@@ -1451,7 +1454,7 @@ end;
 
 function TGSimpleGraph.THopcroftMatchHelper.Bfs: Boolean;
 var
-  Curr, CurrArc, Match, Dist: SizeInt;
+  Curr, CurrArc, Matched, Dist: SizeInt;
 begin
   for Curr in FWhites do
     if FNodes[Curr].Matched = FSink then
@@ -1471,11 +1474,11 @@ begin
         Dist := Succ(FNodes[Curr].Distance);
         while CurrArc <= FNodes[Curr].LastArc do
           begin
-            Match := FNodes[FArcs[CurrArc].Target].Matched;
-            if FNodes[Match].Distance = INF_DIST then
+            Matched := FNodes[FArcs[CurrArc].Target].Matched;
+            if FNodes[Matched].Distance = INF_DIST then
               begin
-                FNodes[Match].Distance := Dist;
-                FQueue.Enqueue(Match);
+                FNodes[Matched].Distance := Dist;
+                FQueue.Enqueue(Matched);
               end;
             Inc(CurrArc);
           end;
@@ -1485,7 +1488,7 @@ end;
 
 function TGSimpleGraph.THopcroftMatchHelper.Dfs(aNode: SizeInt): Boolean;
 var
-  CurrArc, Dist, Next, Match: SizeInt;
+  CurrArc, Dist, Next, Matched: SizeInt;
 begin
   if aNode = FSink then
     exit(True);
@@ -1494,8 +1497,8 @@ begin
   while CurrArc <= FNodes[aNode].LastArc do
     begin
       Next := FArcs[CurrArc].Target;
-      Match := FNodes[Next].Matched;
-      if (FNodes[Match].Distance = Dist) and Dfs(Match) then
+      Matched := FNodes[Next].Matched;
+      if (FNodes[Matched].Distance = Dist) and Dfs(Matched) then
         begin
           FNodes[aNode].Matched := Next;
           FNodes[Next].Matched := aNode;
@@ -3267,17 +3270,6 @@ begin
   Result := TAdjacencyMatrix.Create(m);
 end;
 
-function TGSimpleGraph.FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
-var
-  Helper: THopcroftMatchHelper;
-  w, g: TIntArray;
-begin
-  if not IsBipartite(w, g) then
-    exit(False);
-  aMatch := Helper.GetBiMaxMatch(Self, w, g);
-  Result := True;
-end;
-
 function TGSimpleGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := DfsSpanningTreeI(IndexOf(aRoot));
@@ -3335,6 +3327,22 @@ begin
           Queue.Enqueue(Next);
         end;
   until not Queue{%H-}.TryDequeue(aRoot);
+end;
+
+function TGSimpleGraph.FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
+var
+  Helper: THopcroftMatchHelper;
+  w, g: TIntArray;
+begin
+  if not IsBipartite(w, g) then
+    exit(False);
+  aMatch := Helper.GetBiMaxMatch(Self, w, g);
+  Result := True;
+end;
+
+function TGSimpleGraph.IsMaxMatching(out aMatch: TIntEdgeArray): Boolean;
+begin
+
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
