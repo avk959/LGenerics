@@ -2842,9 +2842,9 @@ var
   Curr, Next, I: SizeInt;
   CurrColor: TVertexColor;
 begin
-  aColors := CreateColorArray;
   if VertexCount < 2 then
     exit(False);
+  aColors := CreateColorArray;
   for I := 0 to System.High(aColors) do
     if aColors[I] = vcNone then
       begin
