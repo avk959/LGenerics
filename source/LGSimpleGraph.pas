@@ -32,6 +32,7 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
+  LGQueue,
   LGVector,
   LGCustomGraph,
   LGStrHelpers,
@@ -166,6 +167,38 @@ type
       function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     end;
 
+    THopcroftMatchHelper = record
+    private
+    type
+      TArc = record
+        Target: SizeInt;
+      end;
+      PArc = ^TArc;
+
+      TNode = record
+        FirstArc,        // index of first incident arc in arcs array
+        LastArc,         // index of last incident arc in arcs array
+        Distance,
+        Matched: SizeInt;
+      end;
+
+    const
+      INF_DIST = High(SizeInt);
+    var
+      FNodes: array of TNode;
+      FArcs: array of TArc;
+      FWhites: array of SizeInt;
+      FQueue: TIntQueue;
+      FNodeCount,
+      FSink: SizeInt;
+      procedure Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+      function  Bfs: Boolean;
+      function  Dfs(aNode: SizeInt): Boolean;
+      function  HopcroftKarp: TIntEdgeArray;
+    public
+      function GetBiMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+    end;
+
     TDistinctEdgeEnumerator = record
     private
       FList: PNode;
@@ -186,6 +219,7 @@ type
       public
         function GetEnumerator: TDistinctEdgeEnumerator;
     end;
+
   const
     LISTCLIQUES_BP_CUTOFF       = 60000; //BP: bit-parallel
     COMMON_BP_CUTOFF            = 50000;
@@ -363,6 +397,14 @@ type
   { returns adjacency matrix of the complement graph;
     warning: maximal matrix size limited, see MaxBitMatrixSize }
     function  ComplementMatrix: TAdjacencyMatrix;
+
+{**********************************************************************************************************
+  matching utilities
+***********************************************************************************************************}
+
+  { returns False if graph is not bipartite, otherwise in aMatch returns matching of
+    maximum cardinality, used Hopcroft–Karp algorithm }
+   function FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
 
 {**********************************************************************************************************
   spanning tree utilities
@@ -1335,6 +1377,158 @@ begin
   Extend(Sub, Cand{%H-});
   aExact := not FCancel;
   Result := FRecentBest;
+end;
+
+{ TGSimpleGraph.THopcroftMatchHelper }
+
+procedure TGSimpleGraph.THopcroftMatchHelper.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+var
+  CurrArcIdx: TIntArray;
+  Grays: TIntHashSet;
+  I, J: SizeInt;
+  p: PAdjItem;
+begin
+  FNodeCount := Succ(aGraph.VertexCount);
+  FSink := Pred(FNodeCount);
+  if System.Length(w) <= System.Length(g) then
+    begin
+      FWhites := w;
+      Grays.AddAll(g);
+    end
+  else
+    begin
+      FWhites := g;
+      Grays.AddAll(w);
+    end;
+  System.SetLength(CurrArcIdx{%H-}, FNodeCount);
+
+  CurrArcIdx[0] := 0;
+  J := aGraph.DegreeI(0);
+  if Grays.Contains(0) then
+    Inc(J);
+  for I := 1 to FNodeCount - 2 do
+    begin
+      CurrArcIdx[I] := J;
+      if Grays.Contains(I) then
+        J += Succ(aGraph.DegreeI(I))
+      else
+        J += aGraph.DegreeI(I);
+    end;
+  CurrArcIdx[Pred(FNodeCount)] := J;
+
+  System.SetLength(FNodes, FNodeCount);
+  System.SetLength(FArcs, (aGraph.EdgeCount + Grays.Count) * 2);
+
+  for I := 0 to System.High(FNodes) do
+    begin
+      FNodes[I].FirstArc := CurrArcIdx[I];
+      FNodes[I].Distance := 0;
+      FNodes[I].Matched := FSink;
+    end;
+
+  for I in FWhites do
+    for p in aGraph.AdjLists[I]^ do
+      begin
+        J := p^.Destination;
+        FArcs[CurrArcIdx[I]].Target := J;
+        FArcs[CurrArcIdx[J]].Target := I;
+        Inc(CurrArcIdx[I]);
+        Inc(CurrArcIdx[J]);
+      end;
+
+  J := FSink;
+  for I in Grays do
+    begin
+      FArcs[CurrArcIdx[I]].Target := J;
+      FArcs[CurrArcIdx[J]].Target := I;
+      Inc(CurrArcIdx[I]);
+      Inc(CurrArcIdx[J]);
+    end;
+
+  for I := 0 to System.High(FNodes) do
+    FNodes[I].LastArc := Pred(CurrArcIdx[I]);
+end;
+
+function TGSimpleGraph.THopcroftMatchHelper.Bfs: Boolean;
+var
+  Curr, CurrArc, Match, Dist: SizeInt;
+begin
+  for Curr in FWhites do
+    if FNodes[Curr].Matched = FSink then
+      begin
+        FNodes[Curr].Distance := 0;
+        FQueue.Enqueue(Curr);
+      end
+    else
+      FNodes[Curr].Distance := INF_DIST;
+
+  FNodes[FSink].Distance := INF_DIST;
+
+  while FQueue{%H-}.TryDequeue(Curr) do
+    if FNodes[{%H-}Curr].Distance < FNodes[FSink].Distance then
+      begin
+        CurrArc := FNodes[Curr].FirstArc;
+        Dist := Succ(FNodes[Curr].Distance);
+        while CurrArc <= FNodes[Curr].LastArc do
+          begin
+            Match := FNodes[FArcs[CurrArc].Target].Matched;
+            if FNodes[Match].Distance = INF_DIST then
+              begin
+                FNodes[Match].Distance := Dist;
+                FQueue.Enqueue(Match);
+              end;
+            Inc(CurrArc);
+          end;
+      end;
+  Result := FNodes[FSink].Distance <> INF_DIST;
+end;
+
+function TGSimpleGraph.THopcroftMatchHelper.Dfs(aNode: SizeInt): Boolean;
+var
+  CurrArc, Dist, Next, Match: SizeInt;
+begin
+  if aNode = FSink then
+    exit(True);
+  CurrArc := FNodes[aNode].FirstArc;
+  Dist := Succ(FNodes[aNode].Distance);
+  while CurrArc <= FNodes[aNode].LastArc do
+    begin
+      Next := FArcs[CurrArc].Target;
+      Match := FNodes[Next].Matched;
+      if (FNodes[Match].Distance = Dist) and Dfs(Match) then
+        begin
+          FNodes[aNode].Matched := Next;
+          FNodes[Next].Matched := aNode;
+          exit(True);
+        end;
+      Inc(CurrArc);
+    end;
+  FNodes[aNode].Distance := INF_DIST;
+  Result := False;
+end;
+
+function TGSimpleGraph.THopcroftMatchHelper.HopcroftKarp: TIntEdgeArray;
+var
+  I, J, Size: SizeInt;
+begin
+  Size := 0;
+  while Bfs do
+    for I in FWhites do
+      Size += Ord((FNodes[I].Matched = FSink) and Dfs(I));
+  System.SetLength(Result, Size);
+  J := 0;
+  for I in FWhites do
+    if FNodes[I].Matched <> FSink then
+      begin
+        Result[J] := TIntEdge.Create(I, FNodes[I].Matched);
+        Inc(J);
+      end;
+end;
+
+function TGSimpleGraph.THopcroftMatchHelper.GetBiMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+begin
+  Init(aGraph, w, g);
+  Result := HopcroftKarp;
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
@@ -3073,6 +3267,17 @@ begin
   Result := TAdjacencyMatrix.Create(m);
 end;
 
+function TGSimpleGraph.FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
+var
+  Helper: THopcroftMatchHelper;
+  w, g: TIntArray;
+begin
+  if not IsBipartite(w, g) then
+    exit(False);
+  aMatch := Helper.GetBiMaxMatch(Self, w, g);
+  Result := True;
+end;
+
 function TGSimpleGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := DfsSpanningTreeI(IndexOf(aRoot));
@@ -3537,13 +3742,15 @@ begin
               begin
                 if LowerCase(Elem) = Symb then
                   continue;
-                if I > 1 then
-                  begin
-                    Clear;
-                    raise EGraphError.Create(SEUnexpectElem);
-                  end;
                 CurrEdge[I] := StrToInt(Elem);
+                if I = 1 then
+                  break;
                 Inc(I);
+              end;
+            if I = 0 then
+              begin
+                Clear;
+                raise EGraphError.Create(SEUnexpectEol);
               end;
             AddEdge(CurrEdge[0], CurrEdge[1]);
           end;
