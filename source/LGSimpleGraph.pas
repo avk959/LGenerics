@@ -1517,7 +1517,8 @@ begin
   Size := 0;
   while Bfs do
     for I in FWhites do
-      Size += Ord((FNodes[I].Matched = FDummy) and Dfs(I));
+      if FNodes[I].Matched = FDummy then
+        Size += Ord(Dfs(I));
   System.SetLength(Result, Size);
   J := 0;
   for I in FWhites do
