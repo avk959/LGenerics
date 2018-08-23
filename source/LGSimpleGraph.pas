@@ -419,7 +419,7 @@ type
   { returns False if graph is not bipartite, otherwise in aMatch returns matching of
     maximum cardinality, used Hopcroft–Karp algorithm }
    function FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
-   function IsMaxMatching(out aMatch: TIntEdgeArray): Boolean;
+   function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
 
 {**********************************************************************************************************
   some NP-hard problem utilities
@@ -1386,7 +1386,7 @@ end;
 
 procedure TGSimpleGraph.THopcroftMatch.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
 var
-  CurrArcIdx: TIntArray;
+  CurrArcIdx: TIntArray = nil;
   Grays: TIntHashSet;
   I, J: SizeInt;
   p: PAdjItem;
@@ -1403,7 +1403,7 @@ begin
       FWhites := g;
       Grays.AddAll(w);
     end;
-  System.SetLength(CurrArcIdx{%H-}, FNodeCount);
+  System.SetLength(CurrArcIdx, FNodeCount);
 
   CurrArcIdx[0] := 0;
   J := aGraph.DegreeI(0);
@@ -3340,9 +3340,56 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.IsMaxMatching(out aMatch: TIntEdgeArray): Boolean;
+function TGSimpleGraph.IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
+var
+  Helper: THopcroftMatch;
+  w, g: TIntArray;
+  WhiteFree, GrayFree,
+  WhiteCover, GrayCover: TIntHashSet;
+  e: TIntEdge;
+  I, J: SizeInt;
+  Adj: Boolean;
 begin
-
+  if aMatch = nil then
+    exit(False);
+  if not IsBipartite(w, g) then
+    exit(False);
+  WhiteFree.AddAll(w);
+  GrayFree.AddAll(g);
+  w := nil;
+  g := nil;
+  for e in aMatch do
+    begin
+      if SizeUInt(e.Source) >= SizeUInt(VertexCount) then
+        exit(False);
+      if SizeUInt(e.Destination) >= SizeUInt(VertexCount) then
+        exit(False);
+      if e.Source = e.Destination then
+        exit(False);
+      if not AdjLists[e.Source]^.Contains(e.Destination) then
+        exit(False);
+      if WhiteFree.Remove(e.Source) then
+        begin
+          if not GrayFree.Remove(e.Destination) then  //contains adjacent edges -> not matching
+            exit(False);
+          WhiteCover.Add(e.Source);
+          GrayCover.Add(e.Destination)
+        end
+      else
+        begin
+          if not WhiteFree.Remove(e.Destination)then //contains adjacent edges -> not matching
+            exit(False);
+          if not GrayFree.Remove(e.Source) then      //contains adjacent edges -> not matching
+            exit(False);
+          WhiteCover.Add(e.Destination);
+          GrayCover.Add(e.Source);
+        end;
+    end;
+  for I in WhiteFree do
+    for J in AdjVerticesI(I) do
+      if GrayFree.Contains(J) then  // is not maximal
+       exit(False);
+  Result := True;
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
