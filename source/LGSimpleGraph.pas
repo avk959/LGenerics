@@ -1980,7 +1980,7 @@ begin
       end
     else
       exit(w); ////
-
+  //first, find min vertex cover
   for e in Helper.GetBipMatch(Self, w, g) do
     begin
       if Lefts.Contains(e.Source) then
@@ -2019,7 +2019,8 @@ begin
             end;
         end;
     end;
-
+  // min vertex cover is union of RightsVisit and LeftsUnvisit
+  // max independent set is complement of this union
   Lefts.AddAll(Rights);
   for I in RightsVisit do
     Lefts.Remove(I);
