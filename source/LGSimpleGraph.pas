@@ -419,7 +419,7 @@ type
 
   { returns False if graph is not bipartite, otherwise in aMatch returns matching of
     maximum cardinality, used Hopcroft–Karp algorithm }
-   function FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
+   function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
    function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
 
 {**********************************************************************************************************
@@ -3410,7 +3410,7 @@ begin
   until not Queue{%H-}.TryDequeue(aRoot);
 end;
 
-function TGSimpleGraph.FindMaxMatchingBipartite(out aMatch: TIntEdgeArray): Boolean;
+function TGSimpleGraph.FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
 var
   Helper: THopcroftMatch;
   w, g: TIntArray;
