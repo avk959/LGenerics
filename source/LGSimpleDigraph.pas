@@ -357,17 +357,17 @@ type
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
   { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
-    warning: flow decomposition works correctly only for integer types }
+    warning: flow recovery works correctly only for integer capacities }
     function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
   { warning: does not checks network state }
     function GetMaxFlow(constref aSource, aSink: TVertex): TWeight; inline;
     function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
   { does not checks network state, returns flows through the arcs in array a;
-    warning: flow decomposition works correctly only for integer types }
+    warning: flow recovery works correctly only for integer capacities }
     function GetMaxFlow(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
     function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
-  { warning: works correctly only for integer types }
+  { warning: works correctly only for integer capacities }
     function IsFlowFeasible(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
     function IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
 
@@ -384,6 +384,7 @@ type
   { warning: does not checks network state }
     function GetMinSTCut(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight; inline;
     function GetMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
+
   end;
 
 implementation

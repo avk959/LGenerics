@@ -419,8 +419,8 @@ type
 
   { returns False if graph is not bipartite, otherwise in aMatch returns matching of
     maximum cardinality, used Hopcroft–Karp algorithm }
-   function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
-   function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
+    function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
+    function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
 
 {**********************************************************************************************************
   some NP-hard problem utilities
