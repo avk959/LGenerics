@@ -2019,8 +2019,8 @@ begin
             end;
         end;
     end;
-  // min vertex cover is union of RightsVisit and LeftsUnvisit
-  // max independent set is complement of this union
+  // min vertex cover is union of RightsVisit and LeftsUnvisit,
+  // max independent set is complement of min vertex cover
   Lefts.AddAll(Rights);
   for I in RightsVisit do
     Lefts.Remove(I);
