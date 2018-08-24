@@ -257,6 +257,7 @@ type
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
+    function  GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
     function  GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxIsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure ListIsBP(aOnFind: TOnFindSet);
@@ -1948,6 +1949,51 @@ begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
+function TGSimpleGraph.GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
+var
+  Helper: THopcroftMatch;
+  Match: TIntEdgeArray;
+  Mis, LeftFree: TIntHashSet;
+  e: TIntEdge;
+  I: SizeInt;
+  p: PAdjItem;
+  Adj: Boolean;
+begin
+  //does not work
+  //todo: use dfs
+  Match := Helper.GetBipMatch(Self, w, g);
+  if System.Length(w) <= System.Length(g) then
+    begin
+      LeftFree.AddAll(w);
+      Mis.AddAll(g);
+    end
+  else
+    begin
+      LeftFree.AddAll(g);
+      Mis.AddAll(w);
+    end;
+
+  for e in Match do
+    if Mis.Contains(e.Source) then
+      LeftFree.Remove(e.Destination)
+    else
+      LeftFree.Remove(e.Source);
+  Match := nil;
+  for I in LeftFree do
+    begin
+      Adj := False;
+      for p in AdjLists[I]^ do
+        if Mis.Contains(p^.Destination) then
+          begin
+            Adj := True;
+            break;
+          end;
+      if not Adj then
+        Mis.Add(I);
+    end;
+  Result := Mis.ToArray;
+end;
+
 function TGSimpleGraph.GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPCliqueIsHelper;
@@ -3404,16 +3450,20 @@ begin
 end;
 
 function TGSimpleGraph.MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
+var
+  w, g: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
-  if VertexCount = 1 then
+  if VertexCount < 2 then  //
     exit([0]);
-  //todo: if IsTree then ... else if IsBipartite then ...
-  if VertexCount > 256 then
-    Result := GetMaxIsBP(aTimeOut, aExactSolution)
-  else
-    Result := GetMaxIsBP256(aTimeOut, aExactSolution);
+  //if IsBipartite(w, g) then
+  //  Result := GetMaxIsBipartite(w, g)
+  //else
+    if VertexCount > 256 then
+      Result := GetMaxIsBP(aTimeOut, aExactSolution)
+    else
+      Result := GetMaxIsBP256(aTimeOut, aExactSolution);
 end;
 
 function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
