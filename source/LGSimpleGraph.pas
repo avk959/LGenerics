@@ -1491,6 +1491,7 @@ function TGSimpleGraph.THopcroftMatch.Dfs(aNode: SizeInt): Boolean;
 var
   CurrArc, Dist, Next, Matched: SizeInt;
 begin
+  //todo: non-recursive dfs ???
   if aNode = FDummy then
     exit(True);
   CurrArc := FNodes[aNode].FirstArc;
@@ -1952,8 +1953,9 @@ end;
 function TGSimpleGraph.GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
 var
   Helper: THopcroftMatch;
-  Left, Right, LeftMinus, LeftFree, RightPlus: TIntHashSet;
+  Lefts, LeftsUnvisit, LeftsFree, RightsVisit: TIntHashSet;
   Match: TIntPairSet;
+  Rights: TIntArray;
   e: TIntEdge;
   Stack: TIntStack;
   Visited: TBitVector;
@@ -1963,40 +1965,40 @@ var
 begin
   if System.Length(w) < System.Length(g) then
     begin
-      Left.AddAll(w);
-      LeftFree.AddAll(w);
-      LeftMinus.AddAll(w);
-      Right.AddAll(g);
+      Lefts.AddAll(w);
+      LeftsFree.AddAll(w);
+      LeftsUnvisit.AddAll(w);
+      Rights := g;
     end
   else
     if System.Length(w) > System.Length(g) then
       begin
-        Left.AddAll(g);
-        LeftFree.AddAll(g);
-        LeftMinus.AddAll(g);
-        Right.AddAll(w);
+        Lefts.AddAll(g);
+        LeftsFree.AddAll(g);
+        LeftsUnvisit.AddAll(g);
+        Rights := w;
       end
     else
       exit(w); ////
 
   for e in Helper.GetBipMatch(Self, w, g) do
     begin
-      if Right.Contains(e.Source) then
-        LeftFree.Remove(e.Destination)
+      if Lefts.Contains(e.Source) then
+        LeftsFree.Remove(e.Source)
       else
-        LeftFree.Remove(e.Source);
+        LeftsFree.Remove(e.Destination);
       Match.Add(e.Source, e.Destination);
     end;
 
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  for I in LeftFree do
+  for I in LeftsFree do
     begin
       {%H-}Stack.Push(I);
       Visited[I] := True;
       while Stack.TryPeek(Curr) do
         begin
-          CurrIsLeft := Left.Contains(Curr);
+          CurrIsLeft := Lefts.Contains(Curr);
           if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
@@ -2011,19 +2013,19 @@ begin
             begin
               Stack.Pop;
               if CurrIsLeft then
-                LeftMinus.Remove(Curr)
+                LeftsUnvisit.Remove(Curr)
               else
-                RightPlus.Add(Curr);
+                RightsVisit.Add(Curr);
             end;
         end;
     end;
 
-  Right.AddAll(Left);
-  for I in RightPlus do
-    Right.Remove(I);
-  for I in LeftMinus do
-    Right.Remove(I);
-  Result := Right.ToArray;
+  Lefts.AddAll(Rights);
+  for I in RightsVisit do
+    Lefts.Remove(I);
+  for I in LeftsUnvisit do
+    Lefts.Remove(I);
+  Result := Lefts.ToArray;
 end;
 
 function TGSimpleGraph.GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
