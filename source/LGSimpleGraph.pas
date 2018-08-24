@@ -1952,46 +1952,78 @@ end;
 function TGSimpleGraph.GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
 var
   Helper: THopcroftMatch;
-  Match: TIntEdgeArray;
-  Mis, LeftFree: TIntHashSet;
+  Left, Right, LeftMinus, LeftFree, RightPlus: TIntHashSet;
+  Match: TIntPairSet;
   e: TIntEdge;
-  I: SizeInt;
-  p: PAdjItem;
-  Adj: Boolean;
+  Stack: TIntStack;
+  Visited: TBitVector;
+  AdjEnums: TAdjEnumArray;
+  I, Curr, Next: SizeInt;
+  CurrIsLeft: Boolean;
 begin
-  //does not work
-  //todo: use dfs
-  Match := Helper.GetBipMatch(Self, w, g);
-  if System.Length(w) <= System.Length(g) then
+  if System.Length(w) < System.Length(g) then
     begin
+      Left.AddAll(w);
       LeftFree.AddAll(w);
-      Mis.AddAll(g);
+      LeftMinus.AddAll(w);
+      Right.AddAll(g);
     end
   else
+    if System.Length(w) > System.Length(g) then
+      begin
+        Left.AddAll(g);
+        LeftFree.AddAll(g);
+        LeftMinus.AddAll(g);
+        Right.AddAll(w);
+      end
+    else
+      exit(w); ////
+
+  for e in Helper.GetBipMatch(Self, w, g) do
     begin
-      LeftFree.AddAll(g);
-      Mis.AddAll(w);
+      if Right.Contains(e.Source) then
+        LeftFree.Remove(e.Destination)
+      else
+        LeftFree.Remove(e.Source);
+      Match.Add(e.Source, e.Destination);
     end;
 
-  for e in Match do
-    if Mis.Contains(e.Source) then
-      LeftFree.Remove(e.Destination)
-    else
-      LeftFree.Remove(e.Source);
-  Match := nil;
+  Visited.Size := VertexCount;
+  AdjEnums := CreateAdjEnumArray;
   for I in LeftFree do
     begin
-      Adj := False;
-      for p in AdjLists[I]^ do
-        if Mis.Contains(p^.Destination) then
-          begin
-            Adj := True;
-            break;
-          end;
-      if not Adj then
-        Mis.Add(I);
+      {%H-}Stack.Push(I);
+      Visited[I] := True;
+      while Stack.TryPeek(Curr) do
+        begin
+          CurrIsLeft := Left.Contains(Curr);
+          if AdjEnums[Curr].MoveNext then
+            begin
+              Next := AdjEnums[Curr].Current;
+              if not Visited[Next] then
+                begin
+                  Visited[Next] := True;
+                  if CurrIsLeft xor Match.Contains(Curr, Next) then
+                    Stack.Push(Next);
+                end;
+            end
+          else
+            begin
+              Stack.Pop;
+              if CurrIsLeft then
+                LeftMinus.Remove(Curr)
+              else
+                RightPlus.Add(Curr);
+            end;
+        end;
     end;
-  Result := Mis.ToArray;
+
+  Right.AddAll(Left);
+  for I in RightPlus do
+    Right.Remove(I);
+  for I in LeftMinus do
+    Right.Remove(I);
+  Result := Right.ToArray;
 end;
 
 function TGSimpleGraph.GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -3455,11 +3487,11 @@ var
 begin
   if IsEmpty then
     exit(nil);
-  if VertexCount < 2 then  //
+  if VertexCount < 2 then
     exit([0]);
-  //if IsBipartite(w, g) then
-  //  Result := GetMaxIsBipartite(w, g)
-  //else
+  if IsBipartite(w, g) then
+    Result := GetMaxIsBipartite(w, g)
+  else
     if VertexCount > 256 then
       Result := GetMaxIsBP(aTimeOut, aExactSolution)
     else
