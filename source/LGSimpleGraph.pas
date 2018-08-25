@@ -254,6 +254,7 @@ type
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMaxMatching: TIntEdgeArray;
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
@@ -421,6 +422,7 @@ type
     maximum cardinality, used Hopcroft–Karp algorithm }
     function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
+    function ApproxMaxMatching: TIntEdgeArray;
 
 {**********************************************************************************************************
   some NP-hard problem utilities
@@ -1927,6 +1929,56 @@ var
   Helper: TCliqueHelper;
 begin
   Result := Helper.MaxClique(Self, aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GetMaxMatching: TIntEdgeArray;
+var
+  Nodes, Positions: TIntArray;
+  Cand: TBoolVector;
+  p: PAdjItem;
+  I, Pos, ResultPos, s, d: SizeInt;
+begin
+  Nodes := SortVerticesByDegree(soAsc);
+  Positions := CreateIntArray;
+  for I := 0 to System.High(Nodes) do
+    Positions[Nodes[I]] := I;
+  Cand.InitRange(VertexCount);
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  Pos := 0;
+  while (Pos < VertexCount) and IsolatedI(Nodes[Pos]) do
+    begin
+      Cand[Nodes[Pos]] := False;
+      Inc(Pos);
+    end;
+  ResultPos := 0;
+  while Pos < VertexCount do
+    begin
+      if Cand[Nodes[Pos]] then
+        begin
+          s := Nodes[Pos];
+          Cand[s] := False;
+          d := VertexCount;
+          for p in AdjLists[s]^ do // find adjacent node with min degree
+            begin
+              I := p^.Destination;
+              if Cand[I] then
+                begin
+                  Cand[I] := False;
+                  if (Positions[I] < d) then
+                    d := I;
+                end;
+            end;
+          if d < VertexCount then // node found
+            begin
+              if System.Length(Result) = ResultPos then
+                System.SetLength(Result, ResultPos shl 1);
+              Result[ResultPos] := TIntEdge.Create(s, d);
+              Inc(ResultPos);
+            end;
+        end;
+      Inc(Pos);
+    end;
+  System.SetLength(Result, ResultPos);
 end;
 
 procedure TGSimpleGraph.ListCliquesBP(aOnFind: TOnFindSet);
@@ -3477,6 +3529,15 @@ begin
       if GrayFree.Contains(J) then  // is not maximal
        exit(False);
   Result := True;
+end;
+
+function TGSimpleGraph.ApproxMaxMatching: TIntEdgeArray;
+begin
+  if VertexCount < 2 then
+    exit([]);
+  if (VertexCount = 2) and Connected then
+    exit([TIntEdge.Create(0, 1)]);
+  Result := GetMaxMatching;
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
