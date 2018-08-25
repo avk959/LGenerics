@@ -423,6 +423,7 @@ type
     function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
   { returns True if graph is bipartite and aMatch is maximal matching }
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
+  { returns approximation of maximum matching in arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
   { returns True if aMatch is maximal matching }
     function IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
