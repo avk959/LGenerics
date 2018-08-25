@@ -747,10 +747,11 @@ type
     FTable: TTable;
     function GetCount: SizeInt; inline;
   public
-    function Contains(L, R: SizeInt): Boolean; inline;
-    function Add(L, R: SizeInt): Boolean;
-    function Remove(L, R: SizeInt): Boolean; inline;
-    property Count: SizeInt read GetCount;
+    procedure Clear; inline;
+    function  Contains(L, R: SizeInt): Boolean; inline;
+    function  Add(L, R: SizeInt): Boolean;
+    function  Remove(L, R: SizeInt): Boolean; inline;
+    property  Count: SizeInt read GetCount;
   end;
 
   generic TGBinHeapMin<T> = record // for internal use only
@@ -3270,6 +3271,11 @@ end;
 function TIntPairSet.GetCount: SizeInt;
 begin
   Result := FTable.Count;
+end;
+
+procedure TIntPairSet.Clear;
+begin
+  FTable.Clear;
 end;
 
 function TIntPairSet.Contains(L, R: SizeInt): Boolean;
