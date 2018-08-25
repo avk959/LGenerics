@@ -254,7 +254,7 @@ type
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    function  GetMaxMatching: TIntEdgeArray;
+    function  GetApproxMaxMatching: TIntEdgeArray;
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
@@ -421,8 +421,11 @@ type
   { returns False if graph is not bipartite, otherwise in aMatch returns matching of
     maximum cardinality, used Hopcroft–Karp algorithm }
     function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
+  { returns True if graph is bipartite and aMatch is maximal matching }
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
     function ApproxMaxMatching: TIntEdgeArray;
+  { returns True if aMatch is maximal matching }
+    function IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
 
 {**********************************************************************************************************
   some NP-hard problem utilities
@@ -1931,7 +1934,7 @@ begin
   Result := Helper.MaxClique(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetMaxMatching: TIntEdgeArray;
+function TGSimpleGraph.GetApproxMaxMatching: TIntEdgeArray;
 var
   Nodes, Positions: TIntArray;
   Cand: TBoolVector;
@@ -1943,33 +1946,32 @@ begin
   for I := 0 to System.High(Nodes) do
     Positions[Nodes[I]] := I;
   Cand.InitRange(VertexCount);
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Pos := 0;
   while (Pos < VertexCount) and IsolatedI(Nodes[Pos]) do
     begin
       Cand[Nodes[Pos]] := False;
       Inc(Pos);
     end;
+  if Pos >= VertexCount then
+    exit([]);
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
   ResultPos := 0;
   while Pos < VertexCount do
     begin
       if Cand[Nodes[Pos]] then
         begin
           s := Nodes[Pos];
-          Cand[s] := False;
           d := VertexCount;
           for p in AdjLists[s]^ do // find adjacent node with min degree
             begin
               I := p^.Destination;
-              if Cand[I] then
-                begin
-                  Cand[I] := False;
-                  if (Positions[I] < d) then
-                    d := I;
-                end;
+              if Cand[I] and (Positions[I] < d) then
+                  d := I;
             end;
           if d < VertexCount then // node found
             begin
+              Cand[s] := False;
+              Cand[d] := False;
               if System.Length(Result) = ResultPos then
                 System.SetLength(Result, ResultPos shl 1);
               Result[ResultPos] := TIntEdge.Create(s, d);
@@ -3489,7 +3491,7 @@ var
   e: TIntEdge;
   I, J: SizeInt;
 begin
-  if aMatch = nil then
+  if System.Length(aMatch) = 0 then
     exit(False);
   if not IsBipartite(w, g) then
     exit(False);
@@ -3527,7 +3529,7 @@ begin
   for I in WhiteFree do
     for J in AdjVerticesI(I) do
       if GrayFree.Contains(J) then  // is not maximal
-       exit(False);
+        exit(False);
   Result := True;
 end;
 
@@ -3537,7 +3539,41 @@ begin
     exit([]);
   if (VertexCount = 2) and Connected then
     exit([TIntEdge.Create(0, 1)]);
-  Result := GetMaxMatching;
+  Result := GetApproxMaxMatching;
+end;
+
+function TGSimpleGraph.IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
+var
+  vFree: TIntHashSet;
+  e: TIntEdge;
+  I, J: SizeInt;
+begin
+  if VertexCount < 2 then
+    exit(False);
+  if System.Length(aMatch) = 0 then
+    exit(False);
+  for I := 0 to Pred(VertexCount) do
+    vFree.Add(I);
+  for e in aMatch do
+    begin
+      if SizeUInt(e.Source) >= SizeUInt(VertexCount) then
+        exit(False);
+      if SizeUInt(e.Destination) >= SizeUInt(VertexCount) then
+        exit(False);
+      if e.Source = e.Destination then
+        exit(False);
+      if not AdjLists[e.Source]^.Contains(e.Destination) then
+        exit(False);
+      if not vFree.Remove(e.Source) then  //contains adjacent edges -> not matching
+        exit(False);
+      if not vFree.Remove(e.Destination) then  //contains adjacent edges -> not matching
+        exit(False);
+    end;
+  for I in vFree do
+    for J in AdjVerticesI(I) do
+      if vFree.Contains(J) then  // is not maximal
+        exit(False);
+  Result := True;
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
