@@ -625,6 +625,13 @@ type
     function IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
 
 {**********************************************************************************************************
+  matching utilities
+***********************************************************************************************************}
+
+  { returns True if aMatch is maximal matching }
+    function IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
+
+{**********************************************************************************************************
   traversal utilities
 ***********************************************************************************************************}
 
@@ -2900,6 +2907,40 @@ begin
     end;
   System.SetLength(aWhites, WhiteIdx);
   System.SetLength(aGrays, GrayIdx);
+end;
+
+function TGCustomGraph.IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
+var
+  vFree: TIntHashSet;
+  e: TIntEdge;
+  I, J: SizeInt;
+begin
+  if VertexCount < 2 then
+    exit(False);
+  if System.Length(aMatch) = 0 then
+    exit(False);
+  for I := 0 to Pred(VertexCount) do
+    vFree.Add(I);
+  for e in aMatch do
+    begin
+      if SizeUInt(e.Source) >= SizeUInt(VertexCount) then
+        exit(False);
+      if SizeUInt(e.Destination) >= SizeUInt(VertexCount) then
+        exit(False);
+      if e.Source = e.Destination then
+        exit(False);
+      if not AdjLists[e.Source]^.Contains(e.Destination) then
+        exit(False);
+      if not vFree.Remove(e.Source) then  //contains adjacent edges -> not matching
+        exit(False);
+      if not vFree.Remove(e.Destination) then  //contains adjacent edges -> not matching
+        exit(False);
+    end;
+  for I in vFree do
+    for J in AdjVerticesI(I) do
+      if vFree.Contains(J) then  // is not maximal
+        exit(False);
+  Result := True;
 end;
 
 function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept;

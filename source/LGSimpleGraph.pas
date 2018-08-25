@@ -425,8 +425,6 @@ type
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns approximation of maximum matching in arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
-  { returns True if aMatch is maximal matching }
-    function IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
 
 {**********************************************************************************************************
   some NP-hard problem utilities
@@ -1967,7 +1965,7 @@ begin
             begin
               I := p^.Destination;
               if Cand[I] and (Positions[I] < d) then
-                  d := I;
+                d := I;
             end;
           if d < VertexCount then // node found
             begin
@@ -3541,40 +3539,6 @@ begin
   if (VertexCount = 2) and Connected then
     exit([TIntEdge.Create(0, 1)]);
   Result := GetApproxMaxMatching;
-end;
-
-function TGSimpleGraph.IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
-var
-  vFree: TIntHashSet;
-  e: TIntEdge;
-  I, J: SizeInt;
-begin
-  if VertexCount < 2 then
-    exit(False);
-  if System.Length(aMatch) = 0 then
-    exit(False);
-  for I := 0 to Pred(VertexCount) do
-    vFree.Add(I);
-  for e in aMatch do
-    begin
-      if SizeUInt(e.Source) >= SizeUInt(VertexCount) then
-        exit(False);
-      if SizeUInt(e.Destination) >= SizeUInt(VertexCount) then
-        exit(False);
-      if e.Source = e.Destination then
-        exit(False);
-      if not AdjLists[e.Source]^.Contains(e.Destination) then
-        exit(False);
-      if not vFree.Remove(e.Source) then  //contains adjacent edges -> not matching
-        exit(False);
-      if not vFree.Remove(e.Destination) then  //contains adjacent edges -> not matching
-        exit(False);
-    end;
-  for I in vFree do
-    for J in AdjVerticesI(I) do
-      if vFree.Contains(J) then  // is not maximal
-        exit(False);
-  Result := True;
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
