@@ -1946,7 +1946,7 @@ begin
     Positions[Nodes[I]] := I;
   Cand.InitRange(VertexCount);
   Pos := 0;
-  while (Pos < VertexCount) and IsolatedI(Nodes[Pos]) do
+  while (Pos < VertexCount) and FNodeList[Nodes[Pos]].AdjList.IsEmpty do
     begin
       Cand[Nodes[Pos]] := False;
       Inc(Pos);
