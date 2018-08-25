@@ -1953,9 +1953,8 @@ end;
 function TGSimpleGraph.GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
 var
   Helper: THopcroftMatch;
-  Lefts, LeftsUnvisit, LeftsFree, RightsVisit: TIntHashSet;
+  Lefts, LeftsVisit, LeftsFree, RightsUnvisit: TIntHashSet;
   Match: TIntPairSet;
-  Rights: TIntArray;
   e: TIntEdge;
   Stack: TIntStack;
   Visited: TBitVector;
@@ -1967,20 +1966,18 @@ begin
     begin
       Lefts.AddAll(w);
       LeftsFree.AddAll(w);
-      LeftsUnvisit.AddAll(w);
-      Rights := g;
+      RightsUnvisit.AddAll(g);
     end
   else
     if System.Length(w) > System.Length(g) then
       begin
         Lefts.AddAll(g);
         LeftsFree.AddAll(g);
-        LeftsUnvisit.AddAll(g);
-        Rights := w;
+        RightsUnvisit.AddAll(w);
       end
     else
       exit(w); ////
-  //first, find min vertex cover
+
   for e in Helper.GetBipMatch(Self, w, g) do
     begin
       if Lefts.Contains(e.Source) then
@@ -1990,6 +1987,7 @@ begin
       Match.Add(e.Source, e.Destination);
     end;
 
+  //find nodes that not belong min vertex cover
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   for I in LeftsFree do
@@ -2013,20 +2011,29 @@ begin
             begin
               Stack.Pop;
               if CurrIsLeft then
-                LeftsUnvisit.Remove(Curr)
+                LeftsVisit.Add(Curr)
               else
-                RightsVisit.Add(Curr);
+                RightsUnvisit.Remove(Curr);
             end;
         end;
     end;
-  // min vertex cover is union of RightsVisit and LeftsUnvisit,
-  // max independent set is complement of min vertex cover
-  Lefts.AddAll(Rights);
-  for I in RightsVisit do
-    Lefts.Remove(I);
-  for I in LeftsUnvisit do
-    Lefts.Remove(I);
-  Result := Lefts.ToArray;
+
+  Match.Clear;
+  Lefts.Clear;
+  LeftsFree.Clear;
+
+  System.SetLength(Result, LeftsVisit.Count + RightsUnvisit.Count);
+  I := 0;
+  for Curr in LeftsVisit do
+    begin
+      Result[I] := Curr;
+      Inc(I);
+    end;
+  for Curr in RightsUnvisit do
+    begin
+      Result[I] := Curr;
+      Inc(I);
+    end;
 end;
 
 function TGSimpleGraph.GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
