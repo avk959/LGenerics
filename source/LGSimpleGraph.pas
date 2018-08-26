@@ -568,6 +568,7 @@ type
     TEdgeArray   = array of TWeightEdge;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
 
+    function  GetApproxMaxWeightMatching: TEdgeArray;
     function  CreateEdgeArray: TEdgeArray;
   public
 {**********************************************************************************************************
@@ -624,6 +625,13 @@ type
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+
+{**********************************************************************************************************
+  matching utilities
+***********************************************************************************************************}
+
+    function ApproxMaxWeightMatching: TEdgeArray;
+
   end;
 
   TRealPointEdge = record
@@ -1939,7 +1947,7 @@ var
   Nodes, Positions: TIntArray;
   Cand: TBitVector;
   p: PAdjItem;
-  I, Pos, ResultPos, s, d: SizeInt;
+  NodesPos, ResultPos, I, s, d: SizeInt;
 begin
   Nodes := SortVerticesByDegree(soAsc);
   Positions := CreateIntArray;
@@ -1947,13 +1955,13 @@ begin
     Positions[Nodes[I]] := I;
   Cand.ExpandTrue(VertexCount);
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  Pos := 0;
+  NodesPos := 0;
   ResultPos := 0;
-  while Pos < VertexCount do
+  while NodesPos < VertexCount do
     begin
-      if Cand[Nodes[Pos]] then
+      if Cand[Nodes[NodesPos]] then
         begin
-          s := Nodes[Pos];
+          s := Nodes[NodesPos];
           d := NULL_INDEX;
           I := VertexCount;
           for p in AdjLists[s]^ do // find adjacent node with min degree
@@ -1972,7 +1980,7 @@ begin
               Inc(ResultPos);
             end;
         end;
-      Inc(Pos);
+      Inc(NodesPos);
     end;
   System.SetLength(Result, ResultPos);
 end;
@@ -4095,6 +4103,47 @@ end;
 
 { TGWeightedGraph }
 
+function TGWeightedGraph.GetApproxMaxWeightMatching: TEdgeArray;
+var
+  Nodes: TIntArray;
+  Cand: TBitVector;
+  p: PAdjItem;
+  NodesPos, ResultPos, I, s, d: SizeInt;
+  w: TWeight;
+begin
+  Nodes := SortVerticesByDegree(soAsc);
+  Cand.ExpandTrue(VertexCount);
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  NodesPos := 0;
+  ResultPos := 0;
+  while NodesPos < VertexCount do
+    begin
+      if Cand[Nodes[NodesPos]] then
+        begin
+          s := Nodes[NodesPos];
+          d := NULL_INDEX;
+          w := ZeroWeight;
+          for p in AdjLists[s]^ do // find adjacent node with max weight
+            if Cand[p^.Destination] and (p^.Data.Weight > w) then
+              begin
+                d := p^.Destination;
+                w := p^.Data.Weight;
+              end;
+          if d <> NULL_INDEX then // node found
+            begin
+              Cand[s] := False;
+              Cand[d] := False;
+              if System.Length(Result) = ResultPos then
+                System.SetLength(Result, ResultPos shl 1);
+              Result[ResultPos] := TWeightEdge.Create(s, d, w);
+              Inc(ResultPos);
+            end;
+        end;
+      Inc(NodesPos);
+    end;
+  System.SetLength(Result, ResultPos);
+end;
+
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
 var
   I, J: SizeInt;
@@ -4292,6 +4341,20 @@ begin
               end;
           end;
       end;
+end;
+
+function TGWeightedGraph.ApproxMaxWeightMatching: TEdgeArray;
+var
+  d: TEdgeData;
+begin
+  if VertexCount < 2 then
+    exit([]);
+  if (VertexCount = 2) and Connected then
+    begin
+      GetEdgeDataI(0, 1, d);
+      exit([TWeightEdge.Create(0, 1, {%H-}d.Weight)]);
+    end;
+  Result := GetApproxMaxWeightMatching;
 end;
 
 { TRealPointEdge }
