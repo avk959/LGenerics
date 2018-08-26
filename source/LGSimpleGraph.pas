@@ -1954,14 +1954,15 @@ begin
       if Cand[Nodes[Pos]] then
         begin
           s := Nodes[Pos];
-          d := VertexCount;
+          d := NULL_INDEX;
+          I := VertexCount;
           for p in AdjLists[s]^ do // find adjacent node with min degree
-            begin
-              I := p^.Destination;
-              if Cand[I] and (Positions[I] < d) then
-                d := I;
-            end;
-          if d < VertexCount then // node found
+            if Cand[p^.Destination] and (Positions[p^.Destination] < I) then
+              begin
+                d := p^.Destination;
+                I := Positions[d];
+              end;
+          if d <> NULL_INDEX then // node found
             begin
               Cand[s] := False;
               Cand[d] := False;
