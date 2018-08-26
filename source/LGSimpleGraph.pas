@@ -258,6 +258,7 @@ type
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
+  { returns max independent set in bipartite graph }
     function  GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
     function  GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxIsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -1936,7 +1937,7 @@ end;
 function TGSimpleGraph.GetApproxMaxMatching: TIntEdgeArray;
 var
   Nodes, Positions: TIntArray;
-  Cand: TBoolVector;
+  Cand: TBitVector;
   p: PAdjItem;
   I, Pos, ResultPos, s, d: SizeInt;
 begin
@@ -1944,16 +1945,9 @@ begin
   Positions := CreateIntArray;
   for I := 0 to System.High(Nodes) do
     Positions[Nodes[I]] := I;
-  Cand.InitRange(VertexCount);
-  Pos := 0;
-  while (Pos < VertexCount) and FNodeList[Nodes[Pos]].AdjList.IsEmpty do
-    begin
-      Cand[Nodes[Pos]] := False;
-      Inc(Pos);
-    end;
-  if Pos >= VertexCount then
-    exit([]);
+  Cand.ExpandTrue(VertexCount);
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  Pos := 0;
   ResultPos := 0;
   while Pos < VertexCount do
     begin
@@ -2006,38 +2000,50 @@ end;
 function TGSimpleGraph.GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
 var
   Helper: THopcroftMatch;
-  Lefts, LeftsVisit, LeftsFree, RightsUnvisit: TIntHashSet;
-  Match: TIntPairSet;
+  Lefts, LeftsVisit, LeftsFree, RightsUnvisit: TBoolVector;
+  Match: TIntArray;
   e: TIntEdge;
   Stack: TIntStack;
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   I, Curr, Next: SizeInt;
-  CurrIsLeft: Boolean;
+  CurrInLefts: Boolean;
 begin
+  Lefts.Size := VertexCount;
+  LeftsVisit.Size := VertexCount;
+  LeftsFree.Size := VertexCount;
+  RightsUnvisit.Size := VertexCount;
   if System.Length(w) < System.Length(g) then
     begin
-      Lefts.AddAll(w);
-      LeftsFree.AddAll(w);
-      RightsUnvisit.AddAll(g);
+      for I in w do
+        begin
+          Lefts[I] := True;
+          LeftsFree[I] := True;
+        end;
+      for I in g do
+        RightsUnvisit[I] := True;
     end
   else
     if System.Length(w) > System.Length(g) then
       begin
-        Lefts.AddAll(g);
-        LeftsFree.AddAll(g);
-        RightsUnvisit.AddAll(w);
+        for I in g do
+          begin
+            Lefts[I] := True;
+            LeftsFree[I] := True;
+          end;
+        for I in w do
+          RightsUnvisit[I] := True;
       end
     else
       exit(w); ////
 
+  Match := CreateIntArray;
   for e in Helper.GetBipMatch(Self, w, g) do
     begin
-      if Lefts.Contains(e.Source) then
-        LeftsFree.Remove(e.Source)
-      else
-        LeftsFree.Remove(e.Destination);
-      Match.Add(e.Source, e.Destination);
+      LeftsFree[e.Source] := False;
+      LeftsFree[e.Destination] := False;
+      Match[e.Source] := e.Destination;
+      Match[e.Destination] := e.Source;
     end;
 
   //find nodes that not belong min vertex cover
@@ -2049,33 +2055,33 @@ begin
       Visited[I] := True;
       while Stack.TryPeek(Curr) do
         begin
-          CurrIsLeft := Lefts.Contains(Curr);
+          CurrInLefts := Lefts[Curr];
           if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if not Visited[Next] then
                 begin
                   Visited[Next] := True;
-                  if CurrIsLeft xor Match.Contains(Curr, Next) then
+                  if CurrInLefts xor (Match[Curr] = Next) then
                     Stack.Push(Next);
                 end;
             end
           else
             begin
               Stack.Pop;
-              if CurrIsLeft then
-                LeftsVisit.Add(Curr)
+              if CurrInLefts then
+                LeftsVisit[Curr] := True
               else
-                RightsUnvisit.Remove(Curr);
+                RightsUnvisit[Curr] := False;
             end;
         end;
     end;
 
-  Match.Clear;
-  Lefts.Clear;
-  LeftsFree.Clear;
+  Match := nil;
+  Lefts.Size := 0;
+  LeftsFree.Size := 0;
 
-  System.SetLength(Result, LeftsVisit.Count + RightsUnvisit.Count);
+  System.SetLength(Result, LeftsVisit.PopCount + RightsUnvisit.PopCount);
   I := 0;
   for Curr in LeftsVisit do
     begin
