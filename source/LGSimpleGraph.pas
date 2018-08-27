@@ -419,12 +419,12 @@ type
   matching utilities
 ***********************************************************************************************************}
 
-  { returns False if graph is not bipartite, otherwise in aMatch returns matching of
-    maximum cardinality, used Hopcroft–Karp algorithm }
+  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
+    the maximum cardinality, used Hopcroft–Karp algorithm }
     function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
   { returns True if graph is bipartite and aMatch is maximal matching }
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
-  { returns approximation of maximum matching in arbitrary graph }
+  { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
 
 {**********************************************************************************************************
