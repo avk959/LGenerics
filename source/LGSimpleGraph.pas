@@ -174,13 +174,12 @@ type
       TArc = record
         Target: SizeInt; // index of target node
       end;
-      PArc = ^TArc;
 
       TNode = record
         FirstArc,        // index of first incident arc in arcs array
         LastArc,         // index of last incident arc in arcs array
         Distance,
-        Matched: SizeInt;// index of matched node
+        Mate: SizeInt;   // index of matched node
       end;
 
     const
@@ -1417,13 +1416,11 @@ begin
       FWhites := g;
       Grays.AddAll(w);
     end;
+
   System.SetLength(CurrArcIdx, FNodeCount);
 
-  CurrArcIdx[0] := 0;
-  J := aGraph.DegreeI(0);
-  if Grays.Contains(0) then
-    Inc(J);
-  for I := 1 to FNodeCount - 2 do
+  J := 0;
+  for I := 0 to FNodeCount - 2 do
     begin
       CurrArcIdx[I] := J;
       if Grays.Contains(I) then
@@ -1440,7 +1437,7 @@ begin
     begin
       FNodes[I].FirstArc := CurrArcIdx[I];
       FNodes[I].Distance := 0;
-      FNodes[I].Matched := FDummy;
+      FNodes[I].Mate := FDummy;
     end;
 
   for I in FWhites do
@@ -1471,7 +1468,7 @@ var
   Curr, CurrArc, Matched, Dist: SizeInt;
 begin
   for Curr in FWhites do
-    if FNodes[Curr].Matched = FDummy then
+    if FNodes[Curr].Mate = FDummy then
       begin
         FNodes[Curr].Distance := 0;
         FQueue.Enqueue(Curr);
@@ -1488,7 +1485,7 @@ begin
         Dist := Succ(FNodes[Curr].Distance);
         while CurrArc <= FNodes[Curr].LastArc do
           begin
-            Matched := FNodes[FArcs[CurrArc].Target].Matched;
+            Matched := FNodes[FArcs[CurrArc].Target].Mate;
             if FNodes[Matched].Distance = INF_DIST then
               begin
                 FNodes[Matched].Distance := Dist;
@@ -1512,11 +1509,11 @@ begin
   while CurrArc <= FNodes[aNode].LastArc do
     begin
       Next := FArcs[CurrArc].Target;
-      Matched := FNodes[Next].Matched;
+      Matched := FNodes[Next].Mate;
       if (FNodes[Matched].Distance = Dist) and Dfs(Matched) then
         begin
-          FNodes[aNode].Matched := Next;
-          FNodes[Next].Matched := aNode;
+          FNodes[aNode].Mate := Next;
+          FNodes[Next].Mate := aNode;
           exit(True);
         end;
       Inc(CurrArc);
@@ -1532,14 +1529,14 @@ begin
   Size := 0;
   while Bfs do
     for I in FWhites do
-      if FNodes[I].Matched = FDummy then
+      if FNodes[I].Mate = FDummy then
         Size += Ord(Dfs(I));
   System.SetLength(Result, Size);
   J := 0;
   for I in FWhites do
-    if FNodes[I].Matched <> FDummy then
+    if FNodes[I].Mate <> FDummy then
       begin
-        Result[J] := TIntEdge.Create(I, FNodes[I].Matched);
+        Result[J] := TIntEdge.Create(I, FNodes[I].Mate);
         Inc(J);
       end;
 end;

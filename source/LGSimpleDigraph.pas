@@ -1429,9 +1429,8 @@ begin
   //transform graph into internal representation - residual graph;
   FNodeCount := aGraph.VertexCount;
   System.SetLength(CurrArcIdx, FNodeCount);
-  CurrArcIdx[0] := 0;
-  J := aGraph.DegreeI(0);
-  for I := 1 to System.High(CurrArcIdx) do
+  J := 0;
+  for I := 0 to System.High(CurrArcIdx) do
     begin
       CurrArcIdx[I] := J;
       J += aGraph.DegreeI(I);
