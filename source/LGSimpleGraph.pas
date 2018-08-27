@@ -1942,15 +1942,13 @@ end;
 
 function TGSimpleGraph.GetApproxMaxMatching: TIntEdgeArray;
 var
-  Nodes, Positions, Matches: TIntArray;
-  Pos, Count, I, Deg, s, d: SizeInt;
-  p: PAdjItem;
+  Nodes, Matches: TIntArray;
+  Enums: TAdjEnumArray;
+  Pos, Count, I, s, d: SizeInt;
 begin
   Nodes := SortVerticesByDegree(soAsc);
   Matches := CreateIntArray;
-  Positions := CreateIntArray;
-  for I := 0 to System.High(Nodes) do
-    Positions[Nodes[I]] := I;
+  Enums := CreateAdjEnumArray;
   Pos := 0;
   Count := 0;
   while Pos < VertexCount do
@@ -1959,14 +1957,13 @@ begin
         begin
           s := Nodes[Pos];
           d := NULL_INDEX;
-          Deg := VertexCount;
-          for p in AdjLists[s]^ do // find adjacent node with min degree
+          while Enums[s].MoveNext do
             begin
-              I := p^.Destination;
-              if (Matches[I] = NULL_INDEX) and (Positions[I] < Deg) then
+              I := Enums[s].Current;
+              if Matches[I] = NULL_INDEX then
                 begin
                   d := I;
-                  Deg := Positions[I];
+                  break;
                 end;
             end;
           if d <> NULL_INDEX then // node found
