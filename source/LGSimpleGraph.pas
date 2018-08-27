@@ -196,7 +196,7 @@ type
       function  Dfs(aNode: SizeInt): Boolean;
       function  HopcroftKarp: TIntEdgeArray;
     public
-      function GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+      function  GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
     end;
 
     TDistinctEdgeEnumerator = record
@@ -254,6 +254,7 @@ type
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetApproxMaxMatching: TIntEdgeArray;
+    function  GetApproxMaxMatching2: TIntEdgeArray;
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
@@ -1965,10 +1966,57 @@ begin
             if Cand[p^.Destination] and (Positions[p^.Destination] < I) then
               begin
                 d := p^.Destination;
-                I := Positions[d];
+                I := Positions[p^.Destination];
               end;
           if d <> NULL_INDEX then // node found
             begin
+              Cand[s] := False;
+              Cand[d] := False;
+              if System.Length(Result) = ResultPos then
+                System.SetLength(Result, ResultPos shl 1);
+              Result[ResultPos] := TIntEdge.Create(s, d);
+              Inc(ResultPos);
+            end;
+        end;
+      Inc(NodesPos);
+    end;
+  System.SetLength(Result, ResultPos);
+end;
+
+function TGSimpleGraph.GetApproxMaxMatching2: TIntEdgeArray;
+var
+  Nodes, Degrees: TIntArray;
+  Cand: TBitVector;
+  p: PAdjItem;
+  NodesPos, ResultPos, I, s, d: SizeInt;
+begin
+  Nodes := SortVerticesByDegree(soAsc);
+  Degrees := CreateDegreeArray;
+  Cand.ExpandTrue(VertexCount);
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  NodesPos := 0;
+  ResultPos := 0;
+  while NodesPos < VertexCount do
+    begin
+      if Cand[Nodes[NodesPos]] then
+        begin
+          s := Nodes[NodesPos];
+          d := NULL_INDEX;
+          I := VertexCount;
+          for p in AdjLists[s]^ do // find adjacent node with min degree
+            if Cand[p^.Destination] then
+              begin
+                if Degrees[p^.Destination] < I then
+                  begin
+                    d := p^.Destination;
+                    I := Degrees[p^.Destination];
+                  end;
+                Dec(Degrees[p^.Destination]);
+              end;
+          if d <> NULL_INDEX then // node found
+            begin
+              for p in AdjLists[d]^ do
+                Dec(Degrees[p^.Destination]);
               Cand[s] := False;
               Cand[d] := False;
               if System.Length(Result) = ResultPos then
@@ -3550,7 +3598,7 @@ begin
     exit([]);
   if (VertexCount = 2) and Connected then
     exit([TIntEdge.Create(0, 1)]);
-  Result := GetApproxMaxMatching;
+  Result := GetApproxMaxMatching2;
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
@@ -4105,7 +4153,7 @@ var
   Nodes: TIntArray;
   Cand: TBitVector;
   p: PAdjItem;
-  NodesPos, ResultPos, I, s, d: SizeInt;
+  NodesPos, ResultPos, s, d: SizeInt;
   w: TWeight;
 begin
   Nodes := SortVerticesByDegree(soAsc);
