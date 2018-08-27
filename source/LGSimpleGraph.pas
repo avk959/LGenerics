@@ -1942,53 +1942,60 @@ end;
 
 function TGSimpleGraph.GetApproxMaxMatching: TIntEdgeArray;
 var
-  Nodes, Positions: TIntArray;
-  Cand: TBitVector;
+  Nodes, Positions, Matches: TIntArray;
+  Pos, Count, I, Deg, s, d: SizeInt;
   p: PAdjItem;
-  NodesPos, ResultPos, I, s, d: SizeInt;
 begin
   Nodes := SortVerticesByDegree(soAsc);
+  Matches := CreateIntArray;
   Positions := CreateIntArray;
   for I := 0 to System.High(Nodes) do
     Positions[Nodes[I]] := I;
-  Cand.ExpandTrue(VertexCount);
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  NodesPos := 0;
-  ResultPos := 0;
-  while NodesPos < VertexCount do
+  Pos := 0;
+  Count := 0;
+  while Pos < VertexCount do
     begin
-      if Cand[Nodes[NodesPos]] then
+      if Matches[Pos] = NULL_INDEX then
         begin
-          s := Nodes[NodesPos];
+          s := Nodes[Pos];
           d := NULL_INDEX;
-          I := VertexCount;
+          Deg := VertexCount;
           for p in AdjLists[s]^ do // find adjacent node with min degree
-            if Cand[p^.Destination] and (Positions[p^.Destination] < I) then
-              begin
-                d := p^.Destination;
-                I := Positions[p^.Destination];
-              end;
+            begin
+              I := p^.Destination;
+              if (Matches[I] = NULL_INDEX) and (Positions[I] < Deg) then
+                begin
+                  d := I;
+                  Deg := Positions[I];
+                end;
+            end;
           if d <> NULL_INDEX then // node found
             begin
-              Cand[s] := False;
-              Cand[d] := False;
-              if System.Length(Result) = ResultPos then
-                System.SetLength(Result, ResultPos shl 1);
-              Result[ResultPos] := TIntEdge.Create(s, d);
-              Inc(ResultPos);
+              Matches[s] := d;
+              Matches[d] := s;
+              Inc(Count);
             end;
         end;
-      Inc(NodesPos);
+      Inc(Pos);
     end;
-  System.SetLength(Result, ResultPos);
+  System.SetLength(Result, Count);
+  Pos := 0;
+  for I := 0 to System.High(Matches) do
+    if Matches[I] <> NULL_INDEX then
+      begin
+        d := Matches[I];
+        Result[Pos] := TIntEdge.Create(I, d);
+        Matches[d] := NULL_INDEX;
+        Inc(Pos);
+      end;
 end;
 
 function TGSimpleGraph.GetApproxMaxMatching2: TIntEdgeArray;
 var
   Nodes, Degrees: TIntArray;
   Cand: TBitVector;
+  NodesPos, ResultPos, Deg, s, d: SizeInt;
   p: PAdjItem;
-  NodesPos, ResultPos, I, s, d: SizeInt;
 begin
   Nodes := SortVerticesByDegree(soAsc);
   Degrees := CreateDegreeArray;
@@ -2002,14 +2009,14 @@ begin
         begin
           s := Nodes[NodesPos];
           d := NULL_INDEX;
-          I := VertexCount;
+          Deg := VertexCount;
           for p in AdjLists[s]^ do // find adjacent node with min degree
             if Cand[p^.Destination] then
               begin
-                if Degrees[p^.Destination] < I then
+                if Degrees[p^.Destination] < Deg then
                   begin
                     d := p^.Destination;
-                    I := Degrees[p^.Destination];
+                    Deg := Degrees[p^.Destination];
                   end;
                 Dec(Degrees[p^.Destination]);
               end;
