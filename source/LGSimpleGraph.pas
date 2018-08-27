@@ -199,6 +199,15 @@ type
       function  GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
     end;
 
+    { TMVMatch }
+
+    TMVMatch = record
+    private
+
+    public
+      function  GetMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+    end;
+
     TDistinctEdgeEnumerator = record
     private
       FList: PNode;
@@ -253,8 +262,8 @@ type
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    function  GetApproxMaxMatching: TIntEdgeArray;
-    function  GetApproxMaxMatching2: TIntEdgeArray;
+    function  GetApproxMatching: TIntEdgeArray;
+    function  GetApproxMatching2: TIntEdgeArray;
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
@@ -426,6 +435,7 @@ type
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
+    function MaxMatching: TIntEdgeArray;
 
 {**********************************************************************************************************
   some NP-hard problem utilities
@@ -1548,6 +1558,13 @@ begin
   Result := HopcroftKarp;
 end;
 
+{ TGSimpleGraph.TMVMatch }
+
+function TGSimpleGraph.TMVMatch.GetMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+begin
+
+end;
+
 { TGSimpleGraph.TDistinctEdgeEnumerator }
 
 function TGSimpleGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
@@ -1940,17 +1957,17 @@ begin
   Result := Helper.MaxClique(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetApproxMaxMatching: TIntEdgeArray;
+function TGSimpleGraph.GetApproxMatching: TIntEdgeArray;
 var
   Nodes, Matches: TIntArray;
   Enums: TAdjEnumArray;
-  Pos, Count, I, s, d: SizeInt;
+  Pos, Size, I, s, d: SizeInt;
 begin
   Nodes := SortVerticesByDegree(soAsc);
   Matches := CreateIntArray;
   Enums := CreateAdjEnumArray;
   Pos := 0;
-  Count := 0;
+  Size := 0;
   while Pos < VertexCount do
     begin
       if Matches[Pos] = NULL_INDEX then
@@ -1970,28 +1987,28 @@ begin
             begin
               Matches[s] := d;
               Matches[d] := s;
-              Inc(Count);
+              Inc(Size);
             end;
         end;
       Inc(Pos);
     end;
-  System.SetLength(Result, Count);
+  System.SetLength(Result, Size);
   Pos := 0;
   for I := 0 to System.High(Matches) do
     if Matches[I] <> NULL_INDEX then
       begin
         d := Matches[I];
-        Result[Pos] := TIntEdge.Create(I, d);
         Matches[d] := NULL_INDEX;
+        Result[Pos] := TIntEdge.Create(I, d);
         Inc(Pos);
       end;
 end;
 
-function TGSimpleGraph.GetApproxMaxMatching2: TIntEdgeArray;
+function TGSimpleGraph.GetApproxMatching2: TIntEdgeArray;
 var
   Nodes, Degrees: TIntArray;
   Cand: TBitVector;
-  CurrPos, RCount, Deg, s, d: SizeInt;
+  CurrPos, Size, Deg, s, d: SizeInt;
   p: PAdjItem;
 begin
   Nodes := SortVerticesByDegree(soAsc);
@@ -1999,7 +2016,7 @@ begin
   Cand.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   CurrPos := 0;
-  RCount := 0;
+  Size := 0;
   while CurrPos < VertexCount do
     begin
       if not Cand[Nodes[CurrPos]] then
@@ -2023,15 +2040,15 @@ begin
                 Dec(Degrees[p^.Destination]);
               Cand[s] := True;
               Cand[d] := True;
-              if System.Length(Result) = RCount then
-                System.SetLength(Result, RCount shl 1);
-              Result[RCount] := TIntEdge.Create(s, d);
-              Inc(RCount);
+              if System.Length(Result) = Size then
+                System.SetLength(Result, Size shl 1);
+              Result[Size] := TIntEdge.Create(s, d);
+              Inc(Size);
             end;
         end;
       Inc(CurrPos);
     end;
-  System.SetLength(Result, RCount);
+  System.SetLength(Result, Size);
 end;
 
 procedure TGSimpleGraph.ListCliquesBP(aOnFind: TOnFindSet);
@@ -3602,7 +3619,18 @@ begin
     exit([]);
   if (VertexCount = 2) and Connected then
     exit([TIntEdge.Create(0, 1)]);
-  Result := GetApproxMaxMatching2;
+  Result := GetApproxMatching2;
+end;
+
+function TGSimpleGraph.MaxMatching: TIntEdgeArray;
+var
+  Helper: TMVMatch;
+begin
+  if VertexCount < 2 then
+    exit([]);
+  if (VertexCount = 2) and Connected then
+    exit([TIntEdge.Create(0, 1)]);
+  Result := Helper.GetMatch(Self);
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
@@ -4157,14 +4185,14 @@ var
   Nodes: TIntArray;
   Cand: TBitVector;
   p: PAdjItem;
-  CurrPos, RCount, s, d: SizeInt;
+  CurrPos, Size, s, d: SizeInt;
   w: TWeight;
 begin
   Nodes := SortVerticesByDegree(soAsc);
   Cand.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   CurrPos := 0;
-  RCount := 0;
+  Size := 0;
   while CurrPos < VertexCount do
     begin
       if not Cand[Nodes[CurrPos]] then
@@ -4182,15 +4210,15 @@ begin
             begin
               Cand[s] := True;
               Cand[d] := True;
-              if System.Length(Result) = RCount then
-                System.SetLength(Result, RCount shl 1);
-              Result[RCount] := TWeightEdge.Create(s, d, w);
-              Inc(RCount);
+              if System.Length(Result) = Size then
+                System.SetLength(Result, Size shl 1);
+              Result[Size] := TWeightEdge.Create(s, d, w);
+              Inc(Size);
             end;
         end;
       Inc(CurrPos);
     end;
-  System.SetLength(Result, RCount);
+  System.SetLength(Result, Size);
 end;
 
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
