@@ -1994,24 +1994,24 @@ function TGSimpleGraph.GetApproxMaxMatching2: TIntEdgeArray;
 var
   Nodes, Degrees: TIntArray;
   Cand: TBitVector;
-  NodesPos, ResultPos, Deg, s, d: SizeInt;
+  CurrPos, RCount, Deg, s, d: SizeInt;
   p: PAdjItem;
 begin
   Nodes := SortVerticesByDegree(soAsc);
   Degrees := CreateDegreeArray;
-  Cand.ExpandTrue(VertexCount);
+  Cand.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  NodesPos := 0;
-  ResultPos := 0;
-  while NodesPos < VertexCount do
+  CurrPos := 0;
+  RCount := 0;
+  while CurrPos < VertexCount do
     begin
-      if Cand[Nodes[NodesPos]] then
+      if not Cand[Nodes[CurrPos]] then
         begin
-          s := Nodes[NodesPos];
+          s := Nodes[CurrPos];
           d := NULL_INDEX;
           Deg := VertexCount;
           for p in AdjLists[s]^ do // find adjacent node with min degree
-            if Cand[p^.Destination] then
+            if not Cand[p^.Destination] then
               begin
                 if Degrees[p^.Destination] < Deg then
                   begin
@@ -2024,17 +2024,17 @@ begin
             begin
               for p in AdjLists[d]^ do
                 Dec(Degrees[p^.Destination]);
-              Cand[s] := False;
-              Cand[d] := False;
-              if System.Length(Result) = ResultPos then
-                System.SetLength(Result, ResultPos shl 1);
-              Result[ResultPos] := TIntEdge.Create(s, d);
-              Inc(ResultPos);
+              Cand[s] := True;
+              Cand[d] := True;
+              if System.Length(Result) = RCount then
+                System.SetLength(Result, RCount shl 1);
+              Result[RCount] := TIntEdge.Create(s, d);
+              Inc(RCount);
             end;
         end;
-      Inc(NodesPos);
+      Inc(CurrPos);
     end;
-  System.SetLength(Result, ResultPos);
+  System.SetLength(Result, RCount);
 end;
 
 procedure TGSimpleGraph.ListCliquesBP(aOnFind: TOnFindSet);
@@ -4160,40 +4160,40 @@ var
   Nodes: TIntArray;
   Cand: TBitVector;
   p: PAdjItem;
-  NodesPos, ResultPos, s, d: SizeInt;
+  CurrPos, RCount, s, d: SizeInt;
   w: TWeight;
 begin
   Nodes := SortVerticesByDegree(soAsc);
-  Cand.ExpandTrue(VertexCount);
+  Cand.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  NodesPos := 0;
-  ResultPos := 0;
-  while NodesPos < VertexCount do
+  CurrPos := 0;
+  RCount := 0;
+  while CurrPos < VertexCount do
     begin
-      if Cand[Nodes[NodesPos]] then
+      if not Cand[Nodes[CurrPos]] then
         begin
-          s := Nodes[NodesPos];
+          s := Nodes[CurrPos];
           d := NULL_INDEX;
           w := ZeroWeight;
           for p in AdjLists[s]^ do // find adjacent node with max weight
-            if Cand[p^.Destination] and (p^.Data.Weight > w) then
+            if not Cand[p^.Destination] and (p^.Data.Weight > w) then
               begin
                 d := p^.Destination;
                 w := p^.Data.Weight;
               end;
           if d <> NULL_INDEX then // node found
             begin
-              Cand[s] := False;
-              Cand[d] := False;
-              if System.Length(Result) = ResultPos then
-                System.SetLength(Result, ResultPos shl 1);
-              Result[ResultPos] := TWeightEdge.Create(s, d, w);
-              Inc(ResultPos);
+              Cand[s] := True;
+              Cand[d] := True;
+              if System.Length(Result) = RCount then
+                System.SetLength(Result, RCount shl 1);
+              Result[RCount] := TWeightEdge.Create(s, d, w);
+              Inc(RCount);
             end;
         end;
-      Inc(NodesPos);
+      Inc(CurrPos);
     end;
-  System.SetLength(Result, ResultPos);
+  System.SetLength(Result, RCount);
 end;
 
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
