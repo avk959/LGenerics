@@ -761,6 +761,18 @@ type
     property  Count: SizeInt read GetCount;
   end;
 
+  TINode = record
+    Index,
+    Data: SizeInt;
+    class operator = (constref L, R: TINode): Boolean; inline;
+    class operator <>(constref L, R: TINode): Boolean; inline;
+    class operator > (constref L, R: TINode): Boolean; inline;
+    class operator < (constref L, R: TINode): Boolean; inline;
+    class operator >=(constref L, R: TINode): Boolean; inline;
+    class operator <=(constref L, R: TINode): Boolean; inline;
+    constructor Create(aIndex, aData: SizeInt);
+  end;
+
   generic TGBinHeapMin<T> = record // for internal use only
   private
   type
@@ -821,6 +833,8 @@ type
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
+
+  TINodeQueue = specialize TGPairHeap<TINode>;
 
   generic TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
@@ -3341,6 +3355,44 @@ end;
 function TIntPairSet.Remove(L, R: SizeInt): Boolean;
 begin
   Result := FTable.Remove(TIntPair.Create(L, R));
+end;
+
+{ TINode }
+
+class operator TINode. = (constref L, R: TINode): Boolean;
+begin
+  Result := L.Data = R.Data;
+end;
+
+class operator TINode.<>(constref L, R: TINode): Boolean;
+begin
+  Result := L.Data <> R.Data;
+end;
+
+class operator TINode.>(constref L, R: TINode): Boolean;
+begin
+  Result := L.Data > R.Data;
+end;
+
+class operator TINode.<(constref L, R: TINode): Boolean;
+begin
+  Result := L.Data < R.Data;
+end;
+
+class operator TINode.>=(constref L, R: TINode): Boolean;
+begin
+  Result := L.Data >= R.Data;
+end;
+
+class operator TINode.<=(constref L, R: TINode): Boolean;
+begin
+  Result := L.Data <= R.Data;
+end;
+
+constructor TINode.Create(aIndex, aData: SizeInt);
+begin
+  Index := aIndex;
+  Data := aData;
 end;
 
 { TGBinHeapMin }

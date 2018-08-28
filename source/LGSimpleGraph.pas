@@ -203,6 +203,7 @@ type
 
     TMVMatch = record
     private
+    type
 
     public
       function  GetMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
@@ -264,6 +265,7 @@ type
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetApproxMatching: TIntEdgeArray;
     function  GetApproxMatching2: TIntEdgeArray;
+    function  GetApproxMatching3: TIntEdgeArray;
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
@@ -1960,12 +1962,11 @@ end;
 function TGSimpleGraph.GetApproxMatching: TIntEdgeArray;
 var
   Nodes, Matches: TIntArray;
-  Enums: TAdjEnumArray;
   Pos, Size, I, s, d: SizeInt;
+  p: PAdjItem;
 begin
   Nodes := SortVerticesByDegree(soAsc);
   Matches := CreateIntArray;
-  Enums := CreateAdjEnumArray;
   Pos := 0;
   Size := 0;
   while Pos < VertexCount do
@@ -1974,9 +1975,9 @@ begin
         begin
           s := Nodes[Pos];
           d := NULL_INDEX;
-          while Enums[s].MoveNext do
+          for p in AdjLists[s]^ do
             begin
-              I := Enums[s].Current;
+              I := p^.Destination;
               if Matches[I] = NULL_INDEX then
                 begin
                   d := I;
@@ -2048,6 +2049,58 @@ begin
         end;
       Inc(CurrPos);
     end;
+  System.SetLength(Result, Size);
+end;
+
+function TGSimpleGraph.GetApproxMatching3: TIntEdgeArray;
+var
+  Nodes: TINodeQueue;
+  Cand: TBitVector;
+  Node: TINode;
+  Size, I, Deg, s, d: SizeInt;
+  p: PAdjItem;
+begin
+  Nodes := TINodeQueue.Create(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Nodes.Enqueue(TINode.Create(I, DegreeI(I)), I);
+  Cand.Size := VertexCount;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  Size := 0;
+  while Nodes.TryDequeue(Node) do
+    if not Cand[{%H-}Node.Index] then
+      begin
+        s := Node.Index;
+        d := NULL_INDEX;
+        Deg := VertexCount;
+        for p in AdjLists[s]^ do // find adjacent node with min degree
+          if not Cand[p^.Destination] then
+            begin
+              Node := Nodes.Peek(p^.Destination);
+              if  Node.Data < Deg then
+                begin
+                  d := p^.Destination;
+                  Deg := Node.Data;
+                end;
+              Dec(Node.Data);
+              Nodes.Update(Node.Index, Node);
+            end;
+        if d <> NULL_INDEX then // node found
+          begin
+            for p in AdjLists[d]^ do
+              if (p^.Destination <> s) and not Cand[p^.Destination] then
+                begin
+                  Node := Nodes.Peek(p^.Destination);
+                  Dec(Node.Data);
+                  Nodes.Update(Node.Index, Node);
+                end;
+            Cand[s] := True;
+            Cand[d] := True;
+            if System.Length(Result) = Size then
+              System.SetLength(Result, Size shl 1);
+            Result[Size] := TIntEdge.Create(s, d);
+            Inc(Size);
+          end;
+      end;
   System.SetLength(Result, Size);
 end;
 
@@ -3619,7 +3672,7 @@ begin
     exit([]);
   if (VertexCount = 2) and Connected then
     exit([TIntEdge.Create(0, 1)]);
-  Result := GetApproxMatching2;
+  Result := GetApproxMatching3;
 end;
 
 function TGSimpleGraph.MaxMatching: TIntEdgeArray;
@@ -3630,7 +3683,8 @@ begin
     exit([]);
   if (VertexCount = 2) and Connected then
     exit([TIntEdge.Create(0, 1)]);
-  Result := Helper.GetMatch(Self);
+  if not FindMaxBipartiteMatching(Result) then
+    Result := Helper.GetMatch(Self);
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
