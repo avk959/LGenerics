@@ -2008,25 +2008,25 @@ end;
 function TGSimpleGraph.GetApproxMatching2: TIntEdgeArray;
 var
   Nodes, Degrees: TIntArray;
-  Cand: TBitVector;
+  Matched: TBitVector;
   CurrPos, Size, Deg, s, d: SizeInt;
   p: PAdjItem;
 begin
   Nodes := SortVerticesByDegree(soAsc);
   Degrees := CreateDegreeArray;
-  Cand.Size := VertexCount;
+  Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   CurrPos := 0;
   Size := 0;
   while CurrPos < VertexCount do
     begin
-      if not Cand[Nodes[CurrPos]] then
+      if not Matched[Nodes[CurrPos]] then
         begin
           s := Nodes[CurrPos];
           d := NULL_INDEX;
           Deg := VertexCount;
           for p in AdjLists[s]^ do // find adjacent node with min degree
-            if not Cand[p^.Destination] then
+            if not Matched[p^.Destination] then
               begin
                 if Degrees[p^.Destination] < Deg then
                   begin
@@ -2039,8 +2039,8 @@ begin
             begin
               for p in AdjLists[d]^ do
                 Dec(Degrees[p^.Destination]);
-              Cand[s] := True;
-              Cand[d] := True;
+              Matched[s] := True;
+              Matched[d] := True;
               if System.Length(Result) = Size then
                 System.SetLength(Result, Size shl 1);
               Result[Size] := TIntEdge.Create(s, d);
@@ -2055,7 +2055,7 @@ end;
 function TGSimpleGraph.GetApproxMatching3: TIntEdgeArray;
 var
   Nodes: TINodeQueue;
-  Cand: TBitVector;
+  Matched: TBitVector;
   Node: TINode;
   Size, I, Deg, s, d: SizeInt;
   p: PAdjItem;
@@ -2063,38 +2063,44 @@ begin
   Nodes := TINodeQueue.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
     Nodes.Enqueue(TINode.Create(I, DegreeI(I)), I);
-  Cand.Size := VertexCount;
+  Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
   while Nodes.TryDequeue(Node) do
-    if not Cand[{%H-}Node.Index] then
+    if not Matched[{%H-}Node.Index] then
       begin
         s := Node.Index;
         d := NULL_INDEX;
         Deg := VertexCount;
         for p in AdjLists[s]^ do // find adjacent node with min degree
-          if not Cand[p^.Destination] then
-            begin
-              Node := Nodes.Peek(p^.Destination);
-              if  Node.Data < Deg then
-                begin
-                  d := p^.Destination;
-                  Deg := Node.Data;
-                end;
-              Dec(Node.Data);
-              Nodes.Update(Node.Index, Node);
-            end;
+          begin
+            I := p^.Destination;
+            if not Matched[I] then
+              begin
+                Node := Nodes.Peek(I);
+                if  Node.Data < Deg then
+                  begin
+                    d := I;
+                    Deg := Node.Data;
+                  end;
+                Dec(Node.Data);
+                Nodes.Update(I, Node);
+              end;
+          end;
         if d <> NULL_INDEX then // node found
           begin
             for p in AdjLists[d]^ do
-              if (p^.Destination <> s) and not Cand[p^.Destination] then
-                begin
-                  Node := Nodes.Peek(p^.Destination);
-                  Dec(Node.Data);
-                  Nodes.Update(Node.Index, Node);
-                end;
-            Cand[s] := True;
-            Cand[d] := True;
+              begin
+                I := p^.Destination;
+                if (I <> s) and not Matched[I] then
+                  begin
+                    Node := Nodes.Peek(I);
+                    Dec(Node.Data);
+                    Nodes.Update(I, Node);
+                  end;
+              end;
+            Matched[s] := True;
+            Matched[d] := True;
             if System.Length(Result) = Size then
               System.SetLength(Result, Size shl 1);
             Result[Size] := TIntEdge.Create(s, d);
@@ -4237,33 +4243,33 @@ end;
 function TGWeightedGraph.GetApproxMaxWeightMatching: TEdgeArray;
 var
   Nodes: TIntArray;
-  Cand: TBitVector;
+  Matched: TBitVector;
   p: PAdjItem;
   CurrPos, Size, s, d: SizeInt;
   w: TWeight;
 begin
   Nodes := SortVerticesByDegree(soAsc);
-  Cand.Size := VertexCount;
+  Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   CurrPos := 0;
   Size := 0;
   while CurrPos < VertexCount do
     begin
-      if not Cand[Nodes[CurrPos]] then
+      if not Matched[Nodes[CurrPos]] then
         begin
           s := Nodes[CurrPos];
           d := NULL_INDEX;
           w := ZeroWeight;
           for p in AdjLists[s]^ do // find adjacent node with max weight
-            if not Cand[p^.Destination] and (p^.Data.Weight > w) then
+            if not Matched[p^.Destination] and (p^.Data.Weight > w) then
               begin
                 d := p^.Destination;
                 w := p^.Data.Weight;
               end;
           if d <> NULL_INDEX then // node found
             begin
-              Cand[s] := True;
-              Cand[d] := True;
+              Matched[s] := True;
+              Matched[d] := True;
               if System.Length(Result) = Size then
                 System.SetLength(Result, Size shl 1);
               Result[Size] := TWeightEdge.Create(s, d, w);
