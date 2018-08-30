@@ -204,7 +204,83 @@ type
     TMVMatch = record
     private
     type
+      TDirection = -1..1;
+      TParity    = (paEven, paOdd);
+      TSide      = (siNone, siLeft, siRight);
 
+      PNode    = ^TNode;
+      PEdge    = ^TEdge;
+      PBlossom = ^TBlossom;
+      PLevel   = ^TLevel;
+
+      TEdge = record
+        Node1,
+        Node2,
+        PredNode: PNode;
+        Next1,              // next edge incident to Node1
+        Next2,              // next edge incident to Node2
+        PredNext,
+        PredPrev,
+        NextBridge,         // next bridge on the same level
+        NextAnomaly: PEdge;
+        VisitBlossom: PBlossom;
+        VisitSide: TSide;
+        IsBridge,
+        Used: Boolean;
+        function OtherNode(aNode: PNode): PNode; inline;
+        function NextEdge(aNode: PNode): PEdge; inline;
+      end;
+
+      TNode = record
+        DfsParent,              // parent node from the ddfs
+        SidePrev,
+        SideNext,               // nodes with same side marking (doubly linked list)
+        BStar,                  // base star structure
+        NextEven,               // next node with this even level
+        NextOdd,                // next node with this odd level
+        VertexOnPath,
+        StackNext: PNode;       // stack pointer for any use
+        FirstEdge,              // first incident edge (singly linked list)
+        MatchedEdge,
+        FirstProp,              // first prop (singly linked list)
+        FirstAnomaly,           // first anomaly (singly linked list)
+        LastUsed,
+        LastVisited,
+        DfsParentEdge,          // parent edge pointer from the ddfs *)
+        EdgeOnPath,
+        Blossom,
+        VisitBlossom: PBlossom; // blossom searching when visited
+        Mate,
+        PredecCount,            // predecessor count
+        EvenLevel,
+        OddLevel,
+        Level,
+        CallID: SizeInt;        // unique ID of BlossAug this node visited on
+        DfsSide,                // side of blossom node is on in ddfs
+        VisitSide: TSide;       // side of blossom searching when visited
+        Used: Boolean;
+      end;
+
+      TBlossom = record
+        Base:  PNode; // base vertex of blossom
+        Peake: PEdge; // peak edge of blossom
+      end;
+
+      TLevel = record
+        FirstNode: PNode;   // first node on this level (singly linked list)
+        FirstBridge,        // first of the bridges on this level
+        LastBridge:  PEdge; // last of the bridges on this level
+      end;
+
+    var
+      FNodes: array of TNode;
+      FEdges: array of TEdge;
+      FLevels: array of TLevel;
+      FDummy: PBlossom;
+      FNodeCount,
+      FMatched: SizeInt;
+      procedure Init(aGraph: TGSimpleGraph);
+      procedure Search;
     public
       function  GetMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
     end;
@@ -1560,11 +1636,51 @@ begin
   Result := HopcroftKarp;
 end;
 
+{ TGSimpleGraph.TMVMatch.TEdge }
+
+function TGSimpleGraph.TMVMatch.TEdge.OtherNode(aNode: PNode): PNode;
+begin
+  if aNode = Node1 then
+    Result := Node2
+  else
+    Result := Node1;
+end;
+
+function TGSimpleGraph.TMVMatch.TEdge.NextEdge(aNode: PNode): PEdge;
+begin
+  if aNode = Node1 then
+    Result := Next1
+  else
+    Result := Next2;
+end;
+
 { TGSimpleGraph.TMVMatch }
 
-function TGSimpleGraph.TMVMatch.GetMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+procedure TGSimpleGraph.TMVMatch.Init(aGraph: TGSimpleGraph);
 begin
 
+end;
+
+procedure TGSimpleGraph.TMVMatch.Search;
+begin
+
+end;
+
+function TGSimpleGraph.TMVMatch.GetMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+var
+  I, J: SizeInt;
+begin
+  Init(aGraph);
+  Search;
+  System.SetLength(Result, FMatched);
+  J := 0;
+  for I := 0 to Pred(FNodeCount) do
+    if FNodes[I].Mate <> NULL_INDEX then
+      begin
+        Result[J] := TIntEdge.Create(I, FNodes[I].Mate);
+        FNodes[FNodes[I].Mate].Mate := NULL_INDEX;
+        Inc(J);
+      end;
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
