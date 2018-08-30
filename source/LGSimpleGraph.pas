@@ -209,11 +209,11 @@ type
       TSide      = (siNone, siLeft, siRight);
 
       PNode    = ^TNode;
-      PEdge    = ^TEdge;
+      PEdg     = ^TEdg;
       PBlossom = ^TBlossom;
       PLevel   = ^TLevel;
 
-      TEdge = record
+      TEdg = record
         Node1,
         Node2,
         PredNode: PNode;
@@ -222,35 +222,38 @@ type
         PredNext,
         PredPrev,
         NextBridge,         // next bridge on the same level
-        NextAnomaly: PEdge;
+        NextAnomaly: PEdg;
         VisitBlossom: PBlossom;
         VisitSide: TSide;
         IsBridge,
         Used: Boolean;
         function OtherNode(aNode: PNode): PNode; inline;
-        function NextEdge(aNode: PNode): PEdge; inline;
+        function NextEdge(aNode: PNode): PEdg; inline;
       end;
 
+      { TNode }
+
       TNode = record
+        Mate,
         DfsParent,              // parent node from the ddfs
         SidePrev,
         SideNext,               // nodes with same side marking (doubly linked list)
         BStar,                  // base star structure
         NextEven,               // next node with this even level
         NextOdd,                // next node with this odd level
-        VertexOnPath,
+        NodeOnPath,
         StackNext: PNode;       // stack pointer for any use
-        FirstEdge,              // first incident edge (singly linked list)
+        FirstEdge,               // first incident edge (singly linked list)
         MatchedEdge,
         FirstProp,              // first prop (singly linked list)
         FirstAnomaly,           // first anomaly (singly linked list)
         LastUsed,
         LastVisited,
         DfsParentEdge,          // parent edge pointer from the ddfs *)
-        EdgeOnPath,
+        EdgeOnPath: PEdg;
         Blossom,
         VisitBlossom: PBlossom; // blossom searching when visited
-        Mate,
+        Index,
         PredecCount,            // predecessor count
         EvenLevel,
         OddLevel,
@@ -259,27 +262,49 @@ type
         DfsSide,                // side of blossom node is on in ddfs
         VisitSide: TSide;       // side of blossom searching when visited
         Used: Boolean;
+        function  Matched: Boolean; inline;
+        procedure AddPredecessor(aEdg: PEdg);
+        procedure AddAnomaly(aEdg: PEdg); inline;
+        function  OtherNode(aEdg: PEdg): PNode; inline;
       end;
 
       TBlossom = record
-        Base:  PNode; // base vertex of blossom
-        Peake: PEdge; // peak edge of blossom
+        Base:  PNode;  // base vertex of blossom
+        Peake: PEdg;   // peak edge of blossom
       end;
 
       TLevel = record
         FirstNode: PNode;   // first node on this level (singly linked list)
         FirstBridge,        // first of the bridges on this level
-        LastBridge:  PEdge; // last of the bridges on this level
+        LastBridge:  PEdg;  // last of the bridges on this level
+        procedure AddBridge(aEdg: PEdg);
       end;
+
+    const
+      NEG_DIR: TDirection = -1;
+      POS_DIR: TDirection = 1;
 
     var
       FNodes: array of TNode;
-      FEdges: array of TEdge;
+      FArcs: array of TEdg;
       FLevels: array of TLevel;
       FDummy: PBlossom;
       FNodeCount,
-      FMatched: SizeInt;
+      FMatched,
+      MaxLevel: SizeInt;
+      FDummyBlossom: TBlossom;
+      FStackTop: PNode;
       procedure Init(aGraph: TGSimpleGraph);
+      procedure ConnectPath(Node1, Node2: PNode; aEdg: PEdg; aDir: TDirection); inline;
+      procedure FindPath(aHigh, aLow: PNode; aBloss: PBlossom; aDir: TDirection; aSide: TSide);
+      procedure OpenBlossom(aNode, aBase: PNode; aDir: TDirection);
+      procedure Augment(aFrom, aTo: PNode);
+      function  BaseStar(aNode: PNode): PNode;
+      procedure StackPush(aNode: PNode); inline;
+      function  TryStackPop(out aNode: PNode): Boolean;
+      procedure Erase(aNode: PNode);
+      procedure TopologicErase(vl, vr: PNode);
+      procedure BlossAug(w1, w2: PNode; aPeak: PEdg; var Augmented: Boolean);
       procedure Search;
     public
       function  GetMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
@@ -1638,7 +1663,7 @@ end;
 
 { TGSimpleGraph.TMVMatch.TEdge }
 
-function TGSimpleGraph.TMVMatch.TEdge.OtherNode(aNode: PNode): PNode;
+function TGSimpleGraph.TMVMatch.TEdg.OtherNode(aNode: PNode): PNode;
 begin
   if aNode = Node1 then
     Result := Node2
@@ -1646,7 +1671,7 @@ begin
     Result := Node1;
 end;
 
-function TGSimpleGraph.TMVMatch.TEdge.NextEdge(aNode: PNode): PEdge;
+function TGSimpleGraph.TMVMatch.TEdg.NextEdge(aNode: PNode): PEdg;
 begin
   if aNode = Node1 then
     Result := Next1
@@ -1654,9 +1679,312 @@ begin
     Result := Next2;
 end;
 
+{ TGSimpleGraph.TMVMatch.TNode }
+
+function TGSimpleGraph.TMVMatch.TNode.Matched: Boolean;
+begin
+  Result := Mate <> nil;
+end;
+
+procedure TGSimpleGraph.TMVMatch.TNode.AddPredecessor(aEdg: PEdg);
+var
+  First: PEdg;
+begin
+  First := FirstProp;
+  aEdg^.PredNext := First;
+  if First <> nil then
+    First^.PredPrev := aEdg;
+  aEdg^.PredNode := @Self;
+  FirstProp := aEdg;
+  aEdg^.PredPrev := nil;
+  Inc(PredecCount);
+end;
+
+procedure TGSimpleGraph.TMVMatch.TNode.AddAnomaly(aEdg: PEdg);
+begin
+  aEdg^.NextAnomaly := FirstAnomaly;
+  FirstAnomaly := aEdg;
+end;
+
+function TGSimpleGraph.TMVMatch.TNode.OtherNode(aEdg: PEdg): PNode;
+begin
+  Result := aEdg^.OtherNode(@Self);
+end;
+
+{ TGSimpleGraph.TMVMatch.TLevel }
+
+procedure TGSimpleGraph.TMVMatch.TLevel.AddBridge(aEdg: PEdg);
+begin
+  if FirstBridge = nil then
+    FirstBridge := aEdg
+  else
+    LastBridge^.NextBridge := aEdg;
+  LastBridge := aEdg;
+  aEdg^.NextBridge := nil;
+  aEdg^.IsBridge := True;
+end;
+
 { TGSimpleGraph.TMVMatch }
 
 procedure TGSimpleGraph.TMVMatch.Init(aGraph: TGSimpleGraph);
+var
+  TopEdges: array of PEdg;
+  e: TEdge;
+  I: SizeInt;
+begin
+  FMatched := 0;
+  MaxLevel := NULL_INDEX;
+  FDummy := @FDummyBlossom;
+  FNodeCount := aGraph.VertexCount;
+  FStackTop := nil;
+  System.SetLength(FNodes, FNodeCount);
+  System.SetLength(TopEdges, FNodeCount);
+  System.SetLength(FArcs, aGraph.EdgeCount);
+
+  I := 0;
+  for e in aGraph.DistinctEdges do
+    begin
+      FArcs[I].Node1 := @FNodes[e.Source];
+      FArcs[I].Next1 := TopEdges[e.Source];
+      TopEdges[e.Source] := @FArcs[I];
+      FArcs[I].Node2 := @FNodes[e.Destination];
+      FArcs[I].Next2 := TopEdges[e.Destination];
+      TopEdges[e.Destination] := @FArcs[I];
+      Inc(I);
+    end;
+
+  for I := 0 to Pred(FNodeCount) do
+    begin
+      FNodes[I].Index := I;
+      FNodes[I].FirstEdge := TopEdges[I];
+    end;
+
+  TopEdges := nil;
+  System.SetLength(FLevels, FNodeCount);
+end;
+
+procedure TGSimpleGraph.TMVMatch.ConnectPath(Node1, Node2: PNode; aEdg: PEdg; aDir: TDirection);
+begin
+  if aDir = NEG_DIR then
+    begin
+      Node1^.NodeOnPath := Node2;
+      Node1^.EdgeOnPath := aEdg;
+    end
+  else
+    begin
+      Node2^.NodeOnPath := Node1;
+      Node2^.EdgeOnPath := aEdg;
+    end;
+end;
+
+procedure TGSimpleGraph.TMVMatch.FindPath(aHigh, aLow: PNode; aBloss: PBlossom; aDir: TDirection; aSide: TSide);
+var
+  ParentEdg, Prop: PEdg;
+  NodeU, NodeV: PNode;
+  WrongBlossom: Boolean = False;
+begin
+  if aHigh <> aLow then
+    begin
+      NodeV := aHigh;
+      NodeU := NodeV;
+      Prop := aHigh^.FirstProp;
+      while (NodeU <> aLow) do
+        begin
+          if Prop = nil then
+            Prop := NodeV^.FirstProp;
+          while (Prop^.VisitBlossom = aBloss) and (Prop^.PredNext <> nil) do
+            Prop := Prop^.PredNext;
+          NodeV^.LastVisited := Prop;
+          if Prop^.VisitBlossom = aBloss then
+            begin
+              NodeV := NodeV^.DfsParent;
+              Prop := NodeV^.LastVisited;
+            end
+          else
+            if ((NodeV^.Blossom <> aBloss) and WrongBlossom) then
+              begin
+                NodeV := NodeV^.DfsParent;
+                Prop := NodeV^.LastVisited;
+              end
+            else
+              begin
+                WrongBlossom := False;
+                if NodeV^.Blossom = aBloss then
+                  begin
+                    Prop^.VisitBlossom := aBloss;
+                    Prop^.VisitSide := aSide;
+                    NodeU := NodeV^.OtherNode(Prop);
+                  end
+                else
+                  NodeU := NodeV^.Blossom^.Base;
+                if NodeU <> aLow then
+                  if ((NodeU^.VisitSide = aSide) and (NodeU^.VisitBlossom = aBloss)) or
+                     (NodeU^.Level <= aLow^.Level) or ((NodeU^.Blossom = aBloss) and (NodeU^.DfsSide <> aSide)) then
+                      WrongBlossom := True
+                  else
+                    begin
+                      NodeU^.VisitBlossom := aBloss;
+                      NodeU^.VisitSide := aSide;
+                      NodeU^.DfsParent := NodeV;
+                      NodeU^.DfsParentEdge := Prop;
+                      NodeV := NodeU;
+                      Prop := NodeV^.LastVisited;
+                    end;
+              end;
+        end;
+        NodeU^.DfsParent := NodeV;
+        NodeU^.DfsParentEdge := Prop;
+        ParentEdg := NodeU^.DfsParentEdge;
+        while NodeV <> aHigh do
+          begin
+            ConnectPath(NodeU, NodeV, ParentEdg, aDir);
+            NodeU := NodeV;
+            NodeV := NodeV^.DfsParent;
+            ParentEdg := NodeU^.DfsParentEdge;
+          end;
+        ConnectPath(NodeU, NodeV, ParentEdg, aDir);
+        if aDir = POS_DIR then
+          begin
+            NodeV := aHigh;
+            NodeU := aHigh^.NodeOnPath;
+          end
+        else
+          begin
+            NodeU := aLow;
+            NodeV := aLow^.NodeOnPath;
+          end;
+        while not (((aDir = POS_DIR) and (NodeV = aLow)) or ((aDir = NEG_DIR) and (NodeU = aHigh))) do
+          begin
+            if NodeV^.Blossom <> aBloss then
+              OpenBlossom(NodeV, NodeU, aDir);
+            if aDir = POS_DIR then
+              begin
+                NodeV := NodeU;
+                NodeU := NodeU^.NodeOnPath;
+              end
+            else
+              begin
+                NodeU := NodeV;
+                NodeV := NodeV^.NodeOnPath;
+              end;
+          end;
+    end;
+end;
+
+procedure TGSimpleGraph.TMVMatch.OpenBlossom(aNode, aBase: PNode; aDir: TDirection);
+var
+  Blos: PBlossom;
+  Peak: PEdg;
+  Node1, Node2: PNode;
+begin
+  Blos := aNode^.Blossom;
+  if not Odd(aNode^.Level) then
+    FindPath(aNode, aBase, Blos, aDir, aNode^.DfsSide)
+  else
+    begin
+      Peak := Blos^.Peake;
+      Node1 := Peak^.Node1;
+      Node2 := Peak^.Node2;
+      if aNode^.DfsSide = siLeft then
+        begin
+          FindPath(Node1, aNode, Blos, -aDir, siLeft);
+          FindPath(Node2, aBase, Blos, aDir, siRight);
+          ConnectPath(Node1, Node2, Peak, -aDir);
+        end
+      else
+        begin
+          FindPath(Node2, aNode, Blos, -aDir, siRight);
+          FindPath(Node1, aBase, Blos, aDir, siLeft);
+          ConnectPath(Node2, Node1, Peak, -aDir);
+        end;
+    end;
+end;
+
+procedure TGSimpleGraph.TMVMatch.Augment(aFrom, aTo: PNode);
+var
+  CurrNode: PNode;
+  CurrEdge: PEdg;
+begin
+  repeat
+    CurrNode := aFrom^.NodeOnPath;
+    CurrEdge := aFrom^.EdgeOnPath;
+    aFrom^.Mate := CurrNode;
+    aFrom^.MatchedEdge := CurrEdge;
+    CurrNode^.Mate := aFrom;
+    CurrNode^.MatchedEdge := CurrEdge;
+    aFrom := CurrNode^.NodeOnPath;
+  until CurrNode = aTo;
+end;
+
+function TGSimpleGraph.TMVMatch.BaseStar(aNode: PNode): PNode;
+var
+  Curr, Next: PNode;
+begin
+  Curr := aNode;
+  while Curr^.BStar <> nil do
+    Curr := Curr^.BStar;
+  while aNode <> Curr do
+    begin
+      Next := aNode^.BStar;
+      aNode^.BStar := Curr;
+      aNode := Next;
+    end;
+  Result := Curr;
+end;
+
+procedure TGSimpleGraph.TMVMatch.StackPush(aNode: PNode);
+begin
+  aNode^.StackNext := FStackTop;
+  FStackTop := aNode;
+end;
+
+function TGSimpleGraph.TMVMatch.TryStackPop(out aNode: PNode): Boolean;
+begin
+  Result := FStackTop <> nil;
+  if Result then
+    begin
+      aNode := FStackTop;
+      FStackTop := FStackTop^.StackNext;
+      aNode^.StackNext := nil;
+    end;
+end;
+
+procedure TGSimpleGraph.TMVMatch.Erase(aNode: PNode);
+var
+  CurrNode: PNode;
+  CurrEdge: PEdg;
+begin
+  aNode^.Used := False;
+  CurrEdge := aNode^.FirstEdge;
+  while CurrEdge <> nil do
+    with CurrEdge^ do
+      begin
+        if (PredNode <> nil) and (PredNode <> aNode) then
+          begin
+            if PredNode^.Used then
+              begin
+                CurrNode := PredNode;
+                Dec(CurrNode^.PredecCount);
+                if CurrNode^.PredecCount = 0 then
+                  StackPush(CurrNode);
+                if PredNext <> nil then
+                  PredNext^.PredPrev := PredPrev;
+                if PredPrev <> nil then
+                  PredPrev^.PredNext := PredNext
+                else
+                  CurrNode^.FirstProp := PredNext;
+              end;
+          end;
+        CurrEdge := CurrEdge^.NextEdge(aNode);
+      end;
+end;
+
+procedure TGSimpleGraph.TMVMatch.TopologicErase(vl, vr: PNode);
+begin
+
+end;
+
+procedure TGSimpleGraph.TMVMatch.BlossAug(w1, w2: PNode; aPeak: PEdg; var Augmented: Boolean);
 begin
 
 end;
@@ -1668,17 +1996,18 @@ end;
 
 function TGSimpleGraph.TMVMatch.GetMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
 var
-  I, J: SizeInt;
+  I, J, Mate: SizeInt;
 begin
   Init(aGraph);
   Search;
   System.SetLength(Result, FMatched);
   J := 0;
   for I := 0 to Pred(FNodeCount) do
-    if FNodes[I].Mate <> NULL_INDEX then
+    if FNodes[I].Matched then
       begin
-        Result[J] := TIntEdge.Create(I, FNodes[I].Mate);
-        FNodes[FNodes[I].Mate].Mate := NULL_INDEX;
+        Mate := FNodes[I].Mate^.Index;
+        Result[J] := TIntEdge.Create(I, Mate);
+        FNodes[Mate].Mate := nil;
         Inc(J);
       end;
 end;
