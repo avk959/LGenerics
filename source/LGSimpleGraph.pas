@@ -199,6 +199,39 @@ type
       function  GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
     end;
 
+    TEdMatch = record
+    private
+    type
+      TNode = record
+        Mate,
+        FirstEdge,
+        LastEdge: SizeInt;
+        function  Matched: Boolean;
+        procedure UnMatch;
+      end;
+
+      TEdg = record
+        Target: SizeInt;
+      end;
+
+    var
+      FNodes: array of TNode;
+      FEdges: array of TEdg;
+      FBase,
+      FEvens,
+      FAugPath: TIntArray;
+      FUsed,
+      FBlossom: TBitVector;
+      FNodeCount: SizeInt;
+      function  Lca(L, R: SizeInt): SizeInt;
+      procedure MarkPath(aNode, aBloss, aChild: SizeInt);
+      function  FindPath(aRoot: SizeInt): SizeInt;
+      procedure Match;
+      procedure Init(aGraph: TGSimpleGraph);
+    public
+      function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+    end;
+
     TDistinctEdgeEnumerator = record
     private
       FList: PNode;
@@ -1550,6 +1583,50 @@ begin
   Result := HopcroftKarp;
 end;
 
+{ TGSimpleGraph.TEdMatch.TNode }
+
+function TGSimpleGraph.TEdMatch.TNode.Matched: Boolean;
+begin
+
+end;
+
+procedure TGSimpleGraph.TEdMatch.TNode.UnMatch;
+begin
+
+end;
+
+{ TGSimpleGraph.TEdMatch }
+
+function TGSimpleGraph.TEdMatch.Lca(L, R: SizeInt): SizeInt;
+begin
+
+end;
+
+procedure TGSimpleGraph.TEdMatch.MarkPath(aNode, aBloss, aChild: SizeInt);
+begin
+
+end;
+
+function TGSimpleGraph.TEdMatch.FindPath(aRoot: SizeInt): SizeInt;
+begin
+
+end;
+
+procedure TGSimpleGraph.TEdMatch.Match;
+begin
+
+end;
+
+procedure TGSimpleGraph.TEdMatch.Init(aGraph: TGSimpleGraph);
+begin
+
+end;
+
+function TGSimpleGraph.TEdMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+begin
+
+end;
+
 { TGSimpleGraph.TDistinctEdgeEnumerator }
 
 function TGSimpleGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
@@ -2053,7 +2130,7 @@ var
   e: TEdge;
   ie: TIntEdge;
   Nodes: LGMvMatch.TNodes;
-  CurEdges: LGMvMatch.TEdges;
+  Edgs: LGMvMatch.TEdges;
   I, J, Matched, NodeCount, Mate: SizeInt;
 begin
   Matched := 0;
@@ -2074,27 +2151,27 @@ begin
       Inc(Matched);
     end;
 
-  System.SetLength(CurEdges, EdgeCount);
+  System.SetLength(Edgs, EdgeCount);
   I := 0;
   for e in DistinctEdges do
     begin
-      CurEdges[I].Node1 := @Nodes[e.Source];
-      CurEdges[I].Next1 := Nodes[e.Source].FirstEdge;
-      Nodes[e.Source].FirstEdge := @CurEdges[I];
-      CurEdges[I].Node2 := @Nodes[e.Destination];
-      CurEdges[I].Next2 := Nodes[e.Destination].FirstEdge;
-      Nodes[e.Destination].FirstEdge := @CurEdges[I];
+      Edgs[I].Node1 := @Nodes[e.Source];
+      Edgs[I].Next1 := Nodes[e.Source].FirstEdge;
+      Nodes[e.Source].FirstEdge := @Edgs[I];
+      Edgs[I].Node2 := @Nodes[e.Destination];
+      Edgs[I].Next2 := Nodes[e.Destination].FirstEdge;
+      Nodes[e.Destination].FirstEdge := @Edgs[I];
 
       if Nodes[e.Source].Matched and (Nodes[e.Source].Mate = @Nodes[e.Destination]) then
         begin
-          Nodes[e.Source].MatchedEdge := @CurEdges[I];
-          Nodes[e.Destination].MatchedEdge := @CurEdges[I];
+          Nodes[e.Source].MatchedEdge := @Edgs[I];
+          Nodes[e.Destination].MatchedEdge := @Edgs[I];
         end;
       Inc(I);
     end;
 
-  LGMvMatch.Match(Nodes, CurEdges, Matched);
-  CurEdges := nil;
+  LGMvMatch.Match(Nodes, Edgs, Matched);
+  Edgs := nil;
 
   System.SetLength(Result, Matched);
   J := 0;

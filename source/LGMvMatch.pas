@@ -27,7 +27,7 @@ unit LGMvMatch;
 interface
 
 uses
-  SysUtils;
+  SysUtils, LGUtils;
 
 type
   TDirection = -1..1;
@@ -813,8 +813,8 @@ begin
   DummyBlossom.Base := nil;
   DummyBlossom.Peake := nil;
   Dummy := @DummyBlossom;
-  System.SetLength(Levels, NodeCount shr 2);
-  System.SetLength(Blossoms, NodeCount shr 2);
+  System.SetLength(Levels, ARRAY_INITIAL_SIZE);
+  System.SetLength(Blossoms, ARRAY_INITIAL_SIZE);
   Search;
 end;
 
