@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *   The Micali-Vazirani Maximum Cardinality Matching Algorithm.             *
-*   Adopted and modified implenentation of Steven Crocker                   *
+*   Adopted and modified implementation of Steven Crocker.                  *
 *                                                                           *
 *   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
 *                                                                           *
