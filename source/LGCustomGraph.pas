@@ -820,6 +820,7 @@ type
     function  NewNode(constref aValue: T; aHandle: SizeInt): PNode; inline;
     function  DequeueItem: T;
     procedure RootMerge(aNode: PNode); inline;
+    procedure ExtractNode(aNode: PNode);
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static; inline;
@@ -828,7 +829,8 @@ type
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     procedure Enqueue(constref aValue: T; aHandle: SizeInt); inline;
-    procedure Update(aHandle: SizeInt; constref aNewValue: T); inline;
+    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean; inline;
+    function  Remove(aHandle: SizeInt): Boolean; inline;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -3587,6 +3589,21 @@ begin
     FRoot^.Prev := nil;
 end;
 
+procedure TGPairHeap.ExtractNode(aNode: PNode);
+begin
+  if aNode <> FRoot then
+    begin
+      CutNode(aNode);
+      RootMerge(TwoPassMerge(aNode^.Child));
+    end
+  else
+    begin
+      FRoot := TwoPassMerge(FRoot^.Child);
+      if FRoot <> nil then
+        FRoot^.Prev := nil;
+    end;
+end;
+
 class function TGPairHeap.NodeMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
@@ -3660,12 +3677,13 @@ begin
   RootMerge(NewNode(aValue, aHandle));
 end;
 
-procedure TGPairHeap.Update(aHandle: SizeInt; constref aNewValue: T);
+function TGPairHeap.Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
 var
   Node: PNode;
 begin
   Node := @FNodeList[aHandle];
-  if aNewValue < Node^.Data then
+  Result := ((Node = FRoot) or (Node^.Prev <> nil)) and (aNewValue < Node^.Data);
+  if Result then
     begin
       Node^.Data := aNewValue;
       if Node <> FRoot then
@@ -3673,6 +3691,20 @@ begin
           CutNode(Node);
           RootMerge(Node);
         end;
+    end;
+end;
+
+function TGPairHeap.Remove(aHandle: SizeInt): Boolean;
+var
+  Node: PNode;
+begin
+  Node := @FNodeList[aHandle];
+  Result := (Node = FRoot) or (Node^.Prev <> nil);
+  if Result then
+    begin
+      ExtractNode(@FNodeList[aHandle]);
+      Node^.Prev := nil;
+      Dec(FCount);
     end;
 end;
 
