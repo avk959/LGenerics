@@ -41,7 +41,8 @@ Contains:
       - listing all maximal cliques
       - maximum flow through the network
       - minimum s-t cut of the network
-      - maximum cardinality matching on bipartite graphs
+      - maximum cardinality matching for bipartite graph
+      - maximum cardinality matching for general graph
 
   3. Other algorithms:
       - some non-cryptogarphic hashes(unit LGHash)
