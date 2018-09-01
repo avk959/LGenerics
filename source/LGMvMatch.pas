@@ -196,7 +196,7 @@ var
 
   procedure Search;
   var
-    StartSide: array [TSide] of PNode;
+    StSides: array[TSide] of PNode;
     CurrV, CurrU: PNode;
     NextEdge, CurrEdge, CurrProp: PEdge;
     CurrLevel: SizeInt;
@@ -469,10 +469,10 @@ var
       var
         Next: PNode;
       begin
-        Next := StartSide[aSide];
+        Next := StSides[aSide];
         aNode^.SideNext := Next;
         aNode^.DfsSide := aSide;
-        StartSide[aSide] := aNode;
+        StSides[aSide] := aNode;
         aNode^.SidePrev := nil;
         aNode^.CallID := LastBaCall;
         if Next <> nil then
@@ -488,7 +488,7 @@ var
             Prev := aNode^.SidePrev;
             Next := aNode^.SideNext;
             if Prev = nil then
-              StartSide[aNode^.DfsSide] := Next
+              StSides[aNode^.DfsSide] := Next
             else
               Prev^.SideNext := Next;
             if Next <> nil then
@@ -615,8 +615,8 @@ var
           Inc(LastBaCall);
           LAncEdge := vL^.LastUsed;
           RAncEdge := vR^.LastUsed;
-          StartSide[siLeft] := nil;
-          StartSide[siRight] := nil;
+          StSides[siLeft] := nil;
+          StSides[siRight] := nil;
           MarkNode(vL, siLeft);
           MarkNode(vR, siRight);
           vL^.DfsParent := nil;
@@ -648,7 +648,7 @@ var
               DcvBStar := BaseStar(Dcv);
               for Side := siLeft to siRight do
                 begin
-                  u := StartSide[Side];
+                  u := StSides[Side];
                   while u <> nil do
                     begin
                       u^.Blossom := Bloss;
