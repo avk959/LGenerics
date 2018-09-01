@@ -188,15 +188,15 @@ end;
 
 procedure Match(var aNodes: TNodes; var aEdges: TEdges; var aMatched: SizeInt);
 var
-  FLevels: array of TLevel;
-  FBlossoms: array of TBlossom;
-  FNodeCount,
-  FCurrBlossom: SizeInt;
-  FDummy: PBlossom;
+  Levels: array of TLevel;
+  Blossoms: array of TBlossom;
+  NodeCount,
+  CurrBlossom: SizeInt;
+  Dummy: PBlossom;
 
   procedure Search;
   var
-    FStartSide: array [TSide] of PNode;
+    StartSide: array [TSide] of PNode;
     CurrV, CurrU: PNode;
     NextEdge, CurrEdge, CurrProp: PEdge;
     CurrLevel: SizeInt;
@@ -209,14 +209,14 @@ var
       if aParity = paEven then
         begin
           aNode^.EvenLevel := aLevel;
-          aNode^.NextEven := FLevels[aLevel].FirstNode;
-          FLevels[aLevel].FirstNode := aNode;
+          aNode^.NextEven := Levels[aLevel].FirstNode;
+          Levels[aLevel].FirstNode := aNode;
         end
       else
         begin
           aNode^.OddLevel := aLevel;
-          aNode^.NextOdd := FLevels[aLevel].FirstNode;
-          FLevels[aLevel].FirstNode := aNode;
+          aNode^.NextOdd := Levels[aLevel].FirstNode;
+          Levels[aLevel].FirstNode := aNode;
         end;
       if aLevel < aNode^.Level then
         aNode^.Level := aLevel;
@@ -469,10 +469,10 @@ var
       var
         Next: PNode;
       begin
-        Next := FStartSide[aSide];
+        Next := StartSide[aSide];
         aNode^.SideNext := Next;
         aNode^.DfsSide := aSide;
-        FStartSide[aSide] := aNode;
+        StartSide[aSide] := aNode;
         aNode^.SidePrev := nil;
         aNode^.CallID := LastBaCall;
         if Next <> nil then
@@ -488,7 +488,7 @@ var
             Prev := aNode^.SidePrev;
             Next := aNode^.SideNext;
             if Prev = nil then
-              FStartSide[aNode^.DfsSide] := Next
+              StartSide[aNode^.DfsSide] := Next
             else
               Prev^.SideNext := Next;
             if Next <> nil then
@@ -597,6 +597,14 @@ var
         end;
     end;
 
+    function NewBlossom: PBlossom;
+    begin
+      Result := @Blossoms[CurrBlossom];
+      Inc(CurrBlossom);
+      if System.Length(Blossoms) = CurrBlossom then
+        System.SetLength(Blossoms, CurrBlossom shl 1);
+    end;
+
     begin
       BlossFound := False;
       Augmented := False;
@@ -607,8 +615,8 @@ var
           Inc(LastBaCall);
           LAncEdge := vL^.LastUsed;
           RAncEdge := vR^.LastUsed;
-          FStartSide[siLeft] := nil;
-          FStartSide[siRight] := nil;
+          StartSide[siLeft] := nil;
+          StartSide[siRight] := nil;
           MarkNode(vL, siLeft);
           MarkNode(vR, siRight);
           vL^.DfsParent := nil;
@@ -634,14 +642,13 @@ var
           if BlossFound then
             begin
               UnMarkNode(Dcv);
-              Bloss := @FBlossoms[FCurrBlossom];
-              Inc(FCurrBlossom);
+              Bloss := NewBlossom;
               Bloss^.Base := Dcv;
               Bloss^.Peake := aPeak;
               DcvBStar := BaseStar(Dcv);
               for Side := siLeft to siRight do
                 begin
-                  u := FStartSide[Side];
+                  u := StartSide[Side];
                   while u <> nil do
                     begin
                       u^.Blossom := Bloss;
@@ -653,7 +660,7 @@ var
                           while Anomaly <> nil do
                             begin
                               w := u^.OtherNode(Anomaly);
-                              FLevels[(u^.EvenLevel + w^.EvenLevel) shr 1].AddBridge(Anomaly);
+                              Levels[(u^.EvenLevel + w^.EvenLevel) shr 1].AddBridge(Anomaly);
                               Anomaly^.Used := True;
                               Anomaly := Anomaly^.NextAnomaly;
                             end;
@@ -682,7 +689,7 @@ var
             Blossom := nil;
             FirstProp := nil;
             FirstAnomaly := nil;
-            VisitBlossom := FDummy;
+            VisitBlossom := Dummy;
             OddLevel := INF_LEVEL;
             Level := INF_LEVEL;
             if Mate = nil then
@@ -709,27 +716,41 @@ var
           begin
             PredNode := nil;
             NextBridge := nil;
-            VisitBlossom := FDummy;
+            VisitBlossom := Dummy;
             VisitSide := siNone;
             Used := False;
             IsBridge := False;
           end;
     end;
 
+    procedure IncLevel;
+    begin
+      Inc(CurrLevel);
+      if System.Length(Levels) = CurrLevel then
+        System.SetLength(Levels, CurrLevel shl 1);
+    end;
+
+    function NextLevel: SizeInt;
+    begin
+      Result := Succ(CurrLevel);
+      if System.Length(Levels) = Result then
+        System.SetLength(Levels, Result shl 1);
+    end;
+
   begin
 
     while Augmented do
       begin
-        System.FillChar(Pointer(FLevels)^, Succ(FNodeCount) * SizeOf(TLevel), 0);
+        System.FillChar(Pointer(Levels)^, System.Length(Levels) * SizeOf(TLevel), 0);
         ReinitNodes;
         ReinitEdges;
         CurrLevel := -1;
-        FCurrBlossom := 0;
+        CurrBlossom := 0;
         Augmented := False;
-        while not Augmented and (CurrLevel < Pred(FNodeCount)) do
+        while not Augmented and (CurrLevel < Pred(NodeCount)) do
           begin
-            Inc(CurrLevel);
-            CurrV := FLevels[CurrLevel].FirstNode;
+            IncLevel;
+            CurrV := Levels[CurrLevel].FirstNode;
             if CurrV = nil then
               break;
             if Odd(CurrLevel) then
@@ -738,11 +759,11 @@ var
                   CurrEdge := CurrV^.MatchedEdge;
                   CurrU := CurrV^.Mate;
                   if (CurrU^.OddLevel = CurrLevel) and (not CurrEdge^.IsBridge) then
-                    FLevels[(CurrU^.OddLevel + CurrV^.OddLevel) shr 1].AddBridge(CurrEdge)
+                    Levels[(CurrU^.OddLevel + CurrV^.OddLevel) shr 1].AddBridge(CurrEdge)
                   else
                     if CurrU^.OddLevel = INF_LEVEL then
                       begin
-                        SetLevel(CurrU, Succ(CurrLevel), paEven);
+                        SetLevel(CurrU, NextLevel, paEven);
                         CurrU^.AddPredecessor(CurrEdge);
                       end;
                   CurrV := CurrV^.NextOdd;
@@ -757,12 +778,12 @@ var
                       NextEdge := CurrEdge^.NextEdge(CurrV);
                       if (CurrV^.Mate <> CurrU) and not CurrEdge^.Used then
                         if (CurrU^.EvenLevel < INF_LEVEL) and (not CurrEdge^.IsBridge) then
-                          FLevels[(CurrU^.EvenLevel + CurrV^.EvenLevel) shr 1].AddBridge(CurrEdge)
+                          Levels[(CurrU^.EvenLevel + CurrV^.EvenLevel) shr 1].AddBridge(CurrEdge)
                         else
                           if not CurrEdge^.IsBridge then
                             begin
                               if CurrU^.OddLevel = INF_LEVEL then
-                                SetLevel(CurrU, Succ(CurrLevel), paOdd);
+                                SetLevel(CurrU, NextLevel, paOdd);
                               if CurrU^.OddLevel = Succ(CurrLevel) then
                                 CurrU^.AddPredecessor(CurrEdge)
                               else
@@ -773,7 +794,7 @@ var
                     end;
                   CurrV := CurrV^.NextEven;
                 end;
-            CurrEdge := FLevels[CurrLevel].FirstBridge;
+            CurrEdge := Levels[CurrLevel].FirstBridge;
             while CurrEdge <> nil do
               begin
                 BlossAug(CurrEdge^.Node1, CurrEdge^.Node2, AugOccur, CurrEdge);
@@ -786,16 +807,14 @@ var
   end;
 
 var
-  FDummyBlossom: TBlossom;
+  DummyBlossom: TBlossom;
 begin
-  FDummyBlossom.Base := nil;
-  FDummyBlossom.Peake := nil;
-  FDummy := @FDummyBlossom;
-  FNodeCount := System.Length(aNodes);
-  System.SetLength(FLevels, Succ(FNodeCount));
-  System.SetLength(FBlossoms, FNodeCount);
-  System.FillChar(Pointer(FBlossoms)^, FNodeCount * SizeOf(TBlossom), 0);
-
+  NodeCount := System.Length(aNodes);
+  DummyBlossom.Base := nil;
+  DummyBlossom.Peake := nil;
+  Dummy := @DummyBlossom;
+  System.SetLength(Levels, NodeCount shr 2);
+  System.SetLength(Blossoms, NodeCount shr 2);
   Search;
 end;
 

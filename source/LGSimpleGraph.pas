@@ -2094,6 +2094,7 @@ begin
     end;
 
   LGMvMatch.Match(Nodes, CurEdges, Matched);
+  CurEdges := nil;
 
   System.SetLength(Result, Matched);
   J := 0;
