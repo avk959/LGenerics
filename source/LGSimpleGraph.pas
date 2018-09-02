@@ -441,7 +441,6 @@ type
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
 
-
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -453,7 +452,11 @@ type
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
+  { returns the matching of the maximum cardinality in an arbitrary graph,
+    used Edmond's algorithm }
     function MaxMatchingEd: TIntEdgeArray;
+  { returns the matching of the maximum cardinality in an arbitrary graph,
+    used Micali-Vazirani algorithm }
     function MaxMatchingMV: TIntEdgeArray;
 
 {**********************************************************************************************************
@@ -4463,7 +4466,7 @@ begin
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
   while Nodes.TryDequeue(Node) do
-    if not Matched[Node.Index] then
+    if not Matched[{%H-}Node.Index] then
       begin
         s := Node.Index;
         d := NULL_INDEX;
