@@ -167,7 +167,8 @@ type
       function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     end;
 
-  { THopcroftMatch: see en.wikipedia.org/wiki/Hopcroft–Karp_algorithm }
+  { THopcroftMatch: Hopcroft–Karp algorithm for maximum cardinality matching
+      for bipartite graph - see en.wikipedia.org/wiki/Hopcroft–Karp_algorithm }
     THopcroftMatch = record
     private
     type
@@ -199,34 +200,26 @@ type
       function  GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
     end;
 
+  { TEdMatch: Edmond’s algorithm for maximum cardinality matching }
     TEdMatch = record
     private
-    type
-      TNode = record
-        Mate,
-        FirstEdge,
-        LastEdge: SizeInt;
-        function  Matched: Boolean;
-        procedure UnMatch;
-      end;
-
-      TEdg = record
-        Target: SizeInt;
-      end;
-
-    var
-      FNodes: array of TNode;
-      FEdges: array of TEdg;
+      FGraph: TGSimpleGraph;
+      FMates,
       FBase,
-      FEvens,
-      FAugPath: TIntArray;
+      FPath,
+      FQueue: TIntArray;
       FUsed,
-      FBlossom: TBitVector;
-      FNodeCount: SizeInt;
+      FLcaUsed,
+      FBlossoms: TBitVector;
+      FMatchCount: SizeInt;
+      procedure Match(aIndex, aMate: SizeInt); inline;
+      procedure ClearBase; inline;
+      procedure ClearPath; inline;
       function  Lca(L, R: SizeInt): SizeInt;
-      procedure MarkPath(aNode, aBloss, aChild: SizeInt);
-      function  FindPath(aRoot: SizeInt): SizeInt;
-      procedure Match;
+      procedure MarkPath(aValue, aBloss, aChild: SizeInt);
+      function  FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
+      procedure AlternatePath(aRoot: SizeInt);
+      procedure EdMatch;
       procedure Init(aGraph: TGSimpleGraph);
     public
       function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
@@ -460,7 +453,8 @@ type
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
-    function MaxMatching: TIntEdgeArray;
+    function MaxMatchingEd: TIntEdgeArray;
+    function MaxMatchingMV: TIntEdgeArray;
 
 {**********************************************************************************************************
   some NP-hard problem utilities
@@ -1583,48 +1577,176 @@ begin
   Result := HopcroftKarp;
 end;
 
-{ TGSimpleGraph.TEdMatch.TNode }
-
-function TGSimpleGraph.TEdMatch.TNode.Matched: Boolean;
-begin
-
-end;
-
-procedure TGSimpleGraph.TEdMatch.TNode.UnMatch;
-begin
-
-end;
-
 { TGSimpleGraph.TEdMatch }
+
+procedure TGSimpleGraph.TEdMatch.Match(aIndex, aMate: SizeInt);
+begin
+  FMates[aIndex] := aMate;
+  FMates[aMate] := aIndex;
+end;
+
+procedure TGSimpleGraph.TEdMatch.ClearBase;
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(FBase) do
+   FBase[I] := I;
+end;
+
+procedure TGSimpleGraph.TEdMatch.ClearPath;
+begin
+  System.FillChar(Pointer(FPath)^, System.Length(FPath) * SizeOf(SizeInt), $ff);
+end;
 
 function TGSimpleGraph.TEdMatch.Lca(L, R: SizeInt): SizeInt;
 begin
-
+  FLcaUsed.ClearBits;
+  repeat
+    L := FBase[L];
+    FLcaUsed[L] := True;
+    if FMates[L] = NULL_INDEX then
+        break;
+    L := FPath[FMates[L]];
+  until False;
+  repeat
+    R := FBase[R];
+    if FLcaUsed[R] then
+      exit(R);
+     R := FPath[FMates[R]];
+  until False;
+  Result := NULL_INDEX;
 end;
 
-procedure TGSimpleGraph.TEdMatch.MarkPath(aNode, aBloss, aChild: SizeInt);
+procedure TGSimpleGraph.TEdMatch.MarkPath(aValue, aBloss, aChild: SizeInt);
 begin
-
+  while FBase[aBloss] <> aBloss do
+    begin
+      FBlossoms[FBase[aValue]] := True;
+      FBlossoms[FBase[FMates[aValue]]] := True;
+      FPath[aValue] := aChild;
+      aChild := FMates[aValue];
+      aValue := FPath[FMates[aValue]];
+    end;
 end;
 
-function TGSimpleGraph.TEdMatch.FindPath(aRoot: SizeInt): SizeInt;
+function TGSimpleGraph.TEdMatch.FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
+var
+  qh: SizeInt = 0;
+  qt: SizeInt = 0;
+  I, s, d, CurrBase: SizeInt;
+  pe: TGSimpleGraph.PAdjItem;
 begin
-
+  FUsed.ClearBits;
+  ClearPath;
+  ClearBase;
+  FUsed[aRoot] := True;
+  FQueue[qt] := aRoot;
+  Inc(qt);
+  while qh < qt do
+    begin
+      s := FQueue[qh];
+      Inc(qh);
+      for pe in FGraph.AdjLists[s]^ do
+        begin
+          d := pe^.Destination;
+          if (FBase[s] = FBase[d]) or (FMates[s] = d) then
+            continue;
+          if (d = aRoot) or (FMates[d] <> NULL_INDEX) and (FPath[FMates[d]] <> NULL_INDEX) then
+            begin
+              CurrBase := Lca(s, d);
+              FBlossoms.ClearBits;
+      	      MarkPath(s, CurrBase, d);
+      	      MarkPath(d, CurrBase, s);
+              for I := 0 to System.High(FBase) do
+      		if FBlossoms[FBase[I]] then
+                  begin
+      		    FBase[I] := CurrBase;
+      		    if not FUsed[I] then
+                      begin
+      		        FUsed[I] := True;
+      			FQueue[qt] := I;
+                        Inc(qt);
+                      end;
+                  end;
+            end
+          else
+            if FPath[d] = NULL_INDEX then
+              begin
+                FPath[d] := s;
+                if FMates[d] = NULL_INDEX then
+                  begin
+                    aLast := d;
+                    exit(True);
+                  end;
+                d := FMates[d];
+                FUsed[d] := True;
+                FQueue[qt] := d;
+                Inc(qt);
+              end;
+        end;
+    end;
+  Result := False;
 end;
 
-procedure TGSimpleGraph.TEdMatch.Match;
+procedure TGSimpleGraph.TEdMatch.AlternatePath(aRoot: SizeInt);
+var
+  Mate, tmp: SizeInt;
 begin
+  repeat
+    Mate := FPath[aRoot];
+    tmp := FMates[Mate];
+    Match(aRoot, Mate);
+    aRoot := tmp;
+  until aRoot = NULL_INDEX;
+end;
 
+procedure TGSimpleGraph.TEdMatch.EdMatch;
+var
+  I, Last: SizeInt;
+begin
+  for I := 0 to System.High(FMates) do
+    if (FMates[I] = NULL_INDEX) and FindAugmentPath(I, Last) then
+      begin
+        AlternatePath(Last);
+        Inc(FMatchCount);
+      end;
 end;
 
 procedure TGSimpleGraph.TEdMatch.Init(aGraph: TGSimpleGraph);
+var
+  e: TIntEdge;
 begin
-
+  FMatchCount := 0;
+  FGraph := aGraph;
+  FMates := aGraph.CreateIntArray;
+  FBase := aGraph.CreateIntArray;
+  FPath := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FUsed.Size := aGraph.VertexCount;
+  FLcaUsed.Size := aGraph.VertexCount;
+  FBlossoms.Size := aGraph.VertexCount;
+  for e in aGraph.GetApproxMatching2 do
+     begin
+       Match(e.Source, e.Destination);
+       Inc(FMatchCount);
+     end;
 end;
 
 function TGSimpleGraph.TEdMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+var
+  I, J: SizeInt;
 begin
-
+  Init(aGraph);
+  EdMatch;
+  System.SetLength(Result, FMatchCount);
+  J := 0;
+  for I := 0 to System.High(FMates) do
+    if FMates[I] <> NULL_INDEX then
+      begin
+        Result[J] := TIntEdge.Create(I, FMates[I]);
+        FMates[FMates[I]] := NULL_INDEX;
+        Inc(J);
+      end;
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
@@ -3756,7 +3878,19 @@ begin
   Result := GetApproxMatching2;
 end;
 
-function TGSimpleGraph.MaxMatching: TIntEdgeArray;
+function TGSimpleGraph.MaxMatchingEd: TIntEdgeArray;
+var
+  Helper: TEdMatch;
+begin
+  if VertexCount < 2 then
+    exit([]);
+  if (VertexCount = 2) and Connected then
+    exit([TIntEdge.Create(0, 1)]);
+  if not FindMaxBipartiteMatching(Result) then
+    Result := Helper.GetMaxMatch(Self);
+end;
+
+function TGSimpleGraph.MaxMatchingMV: TIntEdgeArray;
 begin
   if VertexCount < 2 then
     exit([]);
@@ -4315,42 +4449,61 @@ end;
 
 function TGWeightedGraph.GetApproxMaxWeightMatching: TEdgeArray;
 var
-  Nodes: TIntArray;
+  Nodes: TINodeQueue;
   Matched: TBitVector;
+  Node: TINode;
   p: PAdjItem;
-  CurrPos, Size, s, d: SizeInt;
+  I, Size, s, d: SizeInt;
   w: TWeight;
 begin
-  Nodes := SortVerticesByDegree(soAsc);
+  Nodes := TINodeQueue.Create(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Nodes.Enqueue(TINode.Create(I, DegreeI(I)), I);
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  CurrPos := 0;
   Size := 0;
-  while CurrPos < VertexCount do
-    begin
-      if not Matched[Nodes[CurrPos]] then
-        begin
-          s := Nodes[CurrPos];
-          d := NULL_INDEX;
-          w := ZeroWeight;
-          for p in AdjLists[s]^ do // find adjacent node with max weight
-            if not Matched[p^.Destination] and (p^.Data.Weight > w) then
+  while Nodes.TryDequeue(Node) do
+    if not Matched[Node.Index] then
+      begin
+        s := Node.Index;
+        d := NULL_INDEX;
+        w := ZeroWeight;
+        for p in AdjLists[s]^ do // find adjacent node with max weight
+          begin
+            I := p^.Destination;
+            if not Matched[I] then
               begin
-                d := p^.Destination;
-                w := p^.Data.Weight;
+                Node := Nodes.Peek(I);
+                if  p^.Data.Weight > w then
+                  begin
+                    w := p^.Data.Weight;
+                    d := I;
+                  end;
+                Dec(Node.Data);
+                Nodes.Update(I, Node);
               end;
-          if d <> NULL_INDEX then // node found
-            begin
-              Matched[s] := True;
-              Matched[d] := True;
-              if System.Length(Result) = Size then
-                System.SetLength(Result, Size shl 1);
-              Result[Size] := TWeightEdge.Create(s, d, w);
-              Inc(Size);
-            end;
-        end;
-      Inc(CurrPos);
-    end;
+          end;
+        if d <> NULL_INDEX then // node found
+          begin
+            for p in AdjLists[d]^ do
+              begin
+                I := p^.Destination;
+                if (I <> s) and not Matched[I] then
+                  begin
+                    Node := Nodes.Peek(I);
+                    Dec(Node.Data);
+                    Nodes.Update(I, Node);
+                  end;
+              end;
+            Matched[s] := True;
+            Matched[d] := True;
+            Nodes.Remove(d);
+            if System.Length(Result) = Size then
+              System.SetLength(Result, Size shl 1);
+            Result[Size] := TWeightEdge.Create(s, d, w);
+            Inc(Size);
+          end;
+      end;
   System.SetLength(Result, Size);
 end;
 
