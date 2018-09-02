@@ -200,7 +200,7 @@ type
       function  GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
     end;
 
-  { TEdMatch: Edmond’s algorithm for maximum cardinality matching }
+  { TEdMatch: Edmonds algorithm for maximum cardinality matching }
     TEdMatch = record
     private
       FGraph: TGSimpleGraph;
@@ -453,7 +453,7 @@ type
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph,
-    used Edmond's algorithm }
+    used Edmonds algorithm }
     function MaxMatchingEd: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph,
     used Micali-Vazirani algorithm }
