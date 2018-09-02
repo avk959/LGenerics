@@ -2927,7 +2927,7 @@ end;
 
 function TGCustomGraph.IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
 var
-  vFree: TIntHashSet;
+  vFree: TBoolVector;
   e: TIntEdge;
   I, J: SizeInt;
 begin
@@ -2935,8 +2935,7 @@ begin
     exit(False);
   if System.Length(aMatch) = 0 then
     exit(False);
-  for I := 0 to Pred(VertexCount) do
-    vFree.Add(I);
+  vFree.InitRange(VertexCount);
   for e in aMatch do
     begin
       if SizeUInt(e.Source) >= SizeUInt(VertexCount) then
@@ -2947,14 +2946,16 @@ begin
         exit(False);
       if not AdjLists[e.Source]^.Contains(e.Destination) then
         exit(False);
-      if not vFree.Remove(e.Source) then  //contains adjacent edges -> not matching
+      if not vFree[e.Source] then  //contains adjacent edges -> not matching
         exit(False);
-      if not vFree.Remove(e.Destination) then  //contains adjacent edges -> not matching
+      vFree[e.Source] := False;
+      if not vFree[e.Destination] then  //contains adjacent edges -> not matching
         exit(False);
+      vFree[e.Destination] := False;
     end;
   for I in vFree do
     for J in AdjVerticesI(I) do
-      if vFree.Contains(J) then  // is not maximal
+      if vFree[J] then  // is not maximal
         exit(False);
   Result := True;
 end;
