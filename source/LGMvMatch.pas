@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Adopted and modified Steven Crocker implementation of the maximum       *
 *   cardinality matching algorithm of Micali-Vazirani.                      *
-*   See Steven T. Crocker:  "An experimental comparison of two maximum      *
+*   See: Steven T. Crocker:  "An experimental comparison of two maximum     *
 *   cardinality matching programs".                                         *
 *                                                                           *
 *   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
