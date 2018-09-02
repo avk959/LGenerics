@@ -1,8 +1,10 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   The Micali-Vazirani Maximum Cardinality Matching Algorithm.             *
-*   Adopted and modified implementation of Steven Crocker.                  *
+*   Adopted and modified Steven Crocker implementation of the maximum       *
+*   cardinality matching algorithm of Micali-Vazirani.                      *
+*   See Steven T. Crocker:  "An experimental comparison of two maximum      *
+*   cardinality matching programs".                                         *
 *                                                                           *
 *   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
 *                                                                           *
@@ -30,14 +32,10 @@ uses
   SysUtils, LGUtils;
 
 type
-  TDirection = -1..1;
-  TParity    = (paEven, paOdd);
-  TSide      = (siNone, siLeft, siRight);
-
-  PNode      = ^TNode;
-  PEdge      = ^TEdge;
-  PBlossom   = ^TBlossom;
-  PLevel     = ^TLevel;
+  TSide     = (siNone, siLeft, siRight);
+  PNode     = ^TNode;
+  PEdge     = ^TEdge;
+  PBlossom  = ^TBlossom;
 
   TEdge = record
     Node1,
@@ -90,7 +88,6 @@ type
     procedure AddPredecessor(aEdg: PEdge);
     procedure AddAnomaly(aEdg: PEdge); inline;
     function  OtherNode(aEdg: PEdge): PNode; inline;
-    function  NextEdge(aEdg: PEdge): PEdge; inline;
   end;
 
   TBlossom = record
@@ -107,10 +104,6 @@ type
 
   TNodes = array of TNode;
   TEdges = array of TEdge;
-
-const
-  NEG_DIR: TDirection = -1;
-  POS_DIR: TDirection = 1;
 
   procedure Match(var aNodes: TNodes; var aEdges: TEdges; var aMatched: SizeInt);
 
@@ -167,11 +160,6 @@ begin
   Result := aEdg^.OtherNode(@Self);
 end;
 
-function TNode.NextEdge(aEdg: PEdge): PEdge;
-begin
-  Result := aEdg^.NextEdge(@Self);
-end;
-
 { TLevel }
 
 procedure TLevel.AddBridge(aEdg: PEdge);
@@ -186,11 +174,19 @@ begin
 end;
 
 procedure Match(var aNodes: TNodes; var aEdges: TEdges; var aMatched: SizeInt);
+type
+  TDirection = -1..1;
+  TParity    = (paEven, paOdd);
+
 var
   Levels: array of TLevel;
   Blossoms: array of TBlossom;
   NodeCount, InfLevel, CurrBlossom: SizeInt;
   Dummy: PBlossom;
+
+const
+  NEG_DIR: TDirection = -1;
+  POS_DIR: TDirection = 1;
 
   procedure Search;
   var
