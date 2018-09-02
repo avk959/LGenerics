@@ -1631,24 +1631,24 @@ end;
 
 function TGSimpleGraph.TEdMatch.FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
 var
-  qh: SizeInt = 0;
-  qt: SizeInt = 0;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
   I, s, d, CurrBase: SizeInt;
-  pe: TGSimpleGraph.PAdjItem;
+  p: TGSimpleGraph.PAdjItem;
 begin
   FUsed.ClearBits;
   ClearPath;
   ClearBase;
   FUsed[aRoot] := True;
-  FQueue[qt] := aRoot;
-  Inc(qt);
-  while qh < qt do
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
     begin
-      s := FQueue[qh];
-      Inc(qh);
-      for pe in FGraph.AdjLists[s]^ do
+      s := FQueue[qHead];
+      Inc(qHead);
+      for p in FGraph.AdjLists[s]^ do
         begin
-          d := pe^.Destination;
+          d := p^.Destination;
           if (FBase[s] = FBase[d]) or (FMates[s] = d) then
             continue;
           if (d = aRoot) or (FMates[d] <> NULL_INDEX) and (FPath[FMates[d]] <> NULL_INDEX) then
@@ -1664,8 +1664,8 @@ begin
       		    if not FUsed[I] then
                       begin
       		        FUsed[I] := True;
-      			FQueue[qt] := I;
-                        Inc(qt);
+      			FQueue[qTail] := I;
+                        Inc(qTail);
                       end;
                   end;
             end
@@ -1680,8 +1680,8 @@ begin
                   end;
                 d := FMates[d];
                 FUsed[d] := True;
-                FQueue[qt] := d;
-                Inc(qt);
+                FQueue[qTail] := d;
+                Inc(qTail);
               end;
         end;
     end;
@@ -1726,10 +1726,10 @@ begin
   FLcaUsed.Size := aGraph.VertexCount;
   FBlossoms.Size := aGraph.VertexCount;
   for e in aGraph.GetApproxMatching2 do
-     begin
-       Match(e.Source, e.Destination);
-       Inc(FMatchCount);
-     end;
+    begin
+      Match(e.Source, e.Destination);
+      Inc(FMatchCount);
+    end;
 end;
 
 function TGSimpleGraph.TEdMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
