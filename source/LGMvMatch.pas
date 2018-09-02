@@ -111,7 +111,6 @@ type
 const
   NEG_DIR: TDirection = -1;
   POS_DIR: TDirection = 1;
-  INF_LEVEL: SizeInt = High(SizeInt);
 
   procedure Match(var aNodes: TNodes; var aEdges: TEdges; var aMatched: SizeInt);
 
@@ -190,8 +189,7 @@ procedure Match(var aNodes: TNodes; var aEdges: TEdges; var aMatched: SizeInt);
 var
   Levels: array of TLevel;
   Blossoms: array of TBlossom;
-  NodeCount,
-  CurrBlossom: SizeInt;
+  NodeCount, InfLevel, CurrBlossom: SizeInt;
   Dummy: PBlossom;
 
   procedure Search;
@@ -601,8 +599,6 @@ var
     begin
       Result := @Blossoms[CurrBlossom];
       Inc(CurrBlossom);
-      if System.Length(Blossoms) = CurrBlossom then
-        System.SetLength(Blossoms, CurrBlossom shl 1);
     end;
 
     begin
@@ -690,8 +686,8 @@ var
             FirstProp := nil;
             FirstAnomaly := nil;
             VisitBlossom := Dummy;
-            OddLevel := INF_LEVEL;
-            Level := INF_LEVEL;
+            OddLevel := InfLevel;
+            Level := InfLevel;
             if Mate = nil then
               begin
                 SetLevel(@aNodes[I], 0, paEven);
@@ -699,7 +695,7 @@ var
               end
             else
               begin
-                EvenLevel := INF_LEVEL;
+                EvenLevel := InfLevel;
                 PredecCount := 0;
               end;
             VisitSide := siNone;
@@ -723,22 +719,7 @@ var
           end;
     end;
 
-    procedure IncLevel;
-    begin
-      Inc(CurrLevel);
-      if System.Length(Levels) = CurrLevel then
-        System.SetLength(Levels, CurrLevel shl 1);
-    end;
-
-    function NextLevel: SizeInt;
-    begin
-      Result := Succ(CurrLevel);
-      if System.Length(Levels) = Result then
-        System.SetLength(Levels, Result shl 1);
-    end;
-
   begin
-
     while Augmented do
       begin
         System.FillChar(Pointer(Levels)^, System.Length(Levels) * SizeOf(TLevel), 0);
@@ -749,7 +730,7 @@ var
         Augmented := False;
         while not Augmented and (CurrLevel < Pred(NodeCount)) do
           begin
-            IncLevel;
+            Inc(CurrLevel);
             CurrV := Levels[CurrLevel].FirstNode;
             if CurrV = nil then
               break;
@@ -761,9 +742,9 @@ var
                   if (CurrU^.OddLevel = CurrLevel) and (not CurrEdge^.IsBridge) then
                     Levels[(CurrU^.OddLevel + CurrV^.OddLevel) shr 1].AddBridge(CurrEdge)
                   else
-                    if CurrU^.OddLevel = INF_LEVEL then
+                    if CurrU^.OddLevel = InfLevel then
                       begin
-                        SetLevel(CurrU, NextLevel, paEven);
+                        SetLevel(CurrU, Succ(CurrLevel), paEven);
                         CurrU^.AddPredecessor(CurrEdge);
                       end;
                   CurrV := CurrV^.NextOdd;
@@ -777,13 +758,13 @@ var
                       CurrU := CurrV^.OtherNode(CurrEdge);
                       NextEdge := CurrEdge^.NextEdge(CurrV);
                       if (CurrV^.Mate <> CurrU) and not CurrEdge^.Used then
-                        if (CurrU^.EvenLevel < INF_LEVEL) and (not CurrEdge^.IsBridge) then
+                        if (CurrU^.EvenLevel < InfLevel) and (not CurrEdge^.IsBridge) then
                           Levels[(CurrU^.EvenLevel + CurrV^.EvenLevel) shr 1].AddBridge(CurrEdge)
                         else
                           if not CurrEdge^.IsBridge then
                             begin
-                              if CurrU^.OddLevel = INF_LEVEL then
-                                SetLevel(CurrU, NextLevel, paOdd);
+                              if CurrU^.OddLevel = InfLevel then
+                                SetLevel(CurrU, Succ(CurrLevel), paOdd);
                               if CurrU^.OddLevel = Succ(CurrLevel) then
                                 CurrU^.AddPredecessor(CurrEdge)
                               else
@@ -810,11 +791,12 @@ var
   DummyBlossom: TBlossom;
 begin
   NodeCount := System.Length(aNodes);
+  InfLevel := Succ(NodeCount);
   DummyBlossom.Base := nil;
   DummyBlossom.Peake := nil;
   Dummy := @DummyBlossom;
-  System.SetLength(Levels, ARRAY_INITIAL_SIZE);
-  System.SetLength(Blossoms, ARRAY_INITIAL_SIZE);
+  System.SetLength(Levels, Succ(NodeCount));
+  System.SetLength(Blossoms, NodeCount);
   Search;
 end;
 
