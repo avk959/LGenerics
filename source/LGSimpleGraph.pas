@@ -206,7 +206,7 @@ type
       FGraph: TGSimpleGraph;
       FMates,
       FBase,
-      FPath,
+      FParents,
       FQueue: TIntArray;
       FUsed,
       FLcaUsed,
@@ -214,7 +214,7 @@ type
       FMatchCount: SizeInt;
       procedure Match(aIndex, aMate: SizeInt); inline;
       procedure ClearBase; inline;
-      procedure ClearPath; inline;
+      procedure ClearParents; inline;
       function  Lca(L, R: SizeInt): SizeInt;
       procedure MarkPath(aValue, aBloss, aChild: SizeInt);
       function  FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
@@ -1596,9 +1596,9 @@ begin
    FBase[I] := I;
 end;
 
-procedure TGSimpleGraph.TEdMatch.ClearPath;
+procedure TGSimpleGraph.TEdMatch.ClearParents;
 begin
-  System.FillChar(Pointer(FPath)^, System.Length(FPath) * SizeOf(SizeInt), $ff);
+  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeInt), $ff);
 end;
 
 function TGSimpleGraph.TEdMatch.Lca(L, R: SizeInt): SizeInt;
@@ -1609,13 +1609,13 @@ begin
     FLcaUsed[L] := True;
     if FMates[L] = NULL_INDEX then
         break;
-    L := FPath[FMates[L]];
+    L := FParents[FMates[L]];
   until False;
   repeat
     R := FBase[R];
     if FLcaUsed[R] then
       exit(R);
-     R := FPath[FMates[R]];
+     R := FParents[FMates[R]];
   until False;
   Result := NULL_INDEX;
 end;
@@ -1626,9 +1626,9 @@ begin
     begin
       FBlossoms[FBase[aValue]] := True;
       FBlossoms[FBase[FMates[aValue]]] := True;
-      FPath[aValue] := aChild;
+      FParents[aValue] := aChild;
       aChild := FMates[aValue];
-      aValue := FPath[FMates[aValue]];
+      aValue := FParents[FMates[aValue]];
     end;
 end;
 
@@ -1640,7 +1640,7 @@ var
   p: TGSimpleGraph.PAdjItem;
 begin
   FUsed.ClearBits;
-  ClearPath;
+  ClearParents;
   ClearBase;
   FUsed[aRoot] := True;
   FQueue[qTail] := aRoot;
@@ -1654,7 +1654,7 @@ begin
           d := p^.Destination;
           if (FBase[s] = FBase[d]) or (FMates[s] = d) then
             continue;
-          if (d = aRoot) or (FMates[d] <> NULL_INDEX) and (FPath[FMates[d]] <> NULL_INDEX) then
+          if (d = aRoot) or (FMates[d] <> NULL_INDEX) and (FParents[FMates[d]] <> NULL_INDEX) then
             begin
               CurrBase := Lca(s, d);
               FBlossoms.ClearBits;
@@ -1673,9 +1673,9 @@ begin
                   end;
             end
           else
-            if FPath[d] = NULL_INDEX then
+            if FParents[d] = NULL_INDEX then
               begin
-                FPath[d] := s;
+                FParents[d] := s;
                 if FMates[d] = NULL_INDEX then
                   begin
                     aLast := d;
@@ -1696,7 +1696,7 @@ var
   Mate, tmp: SizeInt;
 begin
   repeat
-    Mate := FPath[aRoot];
+    Mate := FParents[aRoot];
     tmp := FMates[Mate];
     Match(aRoot, Mate);
     aRoot := tmp;
@@ -1723,7 +1723,7 @@ begin
   FGraph := aGraph;
   FMates := aGraph.CreateIntArray;
   FBase := aGraph.CreateIntArray;
-  FPath := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
   FUsed.Size := aGraph.VertexCount;
   FLcaUsed.Size := aGraph.VertexCount;
