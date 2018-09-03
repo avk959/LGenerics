@@ -448,6 +448,8 @@ type
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality, used Hopcroft–Karp algorithm }
     function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
+  { returns the matching of the maximum cardinality in a bipartite graph without any checks }
+    function GetMaxBipartiteMatching(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns True if graph is bipartite and aMatch is maximal matching }
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
@@ -601,6 +603,7 @@ type
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
 
     function  GetApproxMaxWeightMatching: TEdgeArray;
+    function  GetApproxMinWeightMatching: TEdgeArray;
     function  CreateEdgeArray: TEdgeArray;
   public
 {**********************************************************************************************************
@@ -662,7 +665,12 @@ type
   matching utilities
 ***********************************************************************************************************}
 
+  { returns the approximation of the matching of the maximum cardinality and
+    maximun weight in an arbitrary graph }
     function ApproxMaxWeightMatching: TEdgeArray;
+  { returns the approximation of the matching of the maximum cardinality and
+    minimun weight in an arbitrary graph }
+    function ApproxMinWeightMatching: TEdgeArray;
 
   end;
 
@@ -3822,6 +3830,13 @@ begin
   Result := True;
 end;
 
+function TGSimpleGraph.GetMaxBipartiteMatching(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+var
+  Helper: THopcroftMatch;
+begin
+  Result := Helper.GetBipMatch(Self, aWhites, aGrays);
+end;
+
 function TGSimpleGraph.IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
 var
   w, g: TIntArray;
@@ -4510,6 +4525,66 @@ begin
   System.SetLength(Result, Size);
 end;
 
+function TGWeightedGraph.GetApproxMinWeightMatching: TEdgeArray;
+var
+  Nodes: TINodeQueue;
+  Matched: TBitVector;
+  Node: TINode;
+  p: PAdjItem;
+  I, Size, s, d: SizeInt;
+  w: TWeight;
+begin
+  Nodes := TINodeQueue.Create(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Nodes.Enqueue(TINode.Create(I, DegreeI(I)), I);
+  Matched.Size := VertexCount;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
+  Size := 0;
+  while Nodes.TryDequeue(Node) do
+    if not Matched[{%H-}Node.Index] then
+      begin
+        s := Node.Index;
+        d := NULL_INDEX;
+        w := InfiniteWeight;
+        for p in AdjLists[s]^ do // find adjacent node with min weight
+          begin
+            I := p^.Destination;
+            if not Matched[I] then
+              begin
+                Node := Nodes.Peek(I);
+                if  p^.Data.Weight < w then
+                  begin
+                    w := p^.Data.Weight;
+                    d := I;
+                  end;
+                Dec(Node.Data);
+                Nodes.Update(I, Node);
+              end;
+          end;
+        if d <> NULL_INDEX then // node found
+          begin
+            for p in AdjLists[d]^ do
+              begin
+                I := p^.Destination;
+                if (I <> s) and not Matched[I] then
+                  begin
+                    Node := Nodes.Peek(I);
+                    Dec(Node.Data);
+                    Nodes.Update(I, Node);
+                  end;
+              end;
+            Matched[s] := True;
+            Matched[d] := True;
+            Nodes.Remove(d);
+            if System.Length(Result) = Size then
+              System.SetLength(Result, Size shl 1);
+            Result[Size] := TWeightEdge.Create(s, d, w);
+            Inc(Size);
+          end;
+      end;
+  System.SetLength(Result, Size);
+end;
+
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
 var
   I, J: SizeInt;
@@ -4721,6 +4796,20 @@ begin
       exit([TWeightEdge.Create(0, 1, {%H-}d.Weight)]);
     end;
   Result := GetApproxMaxWeightMatching;
+end;
+
+function TGWeightedGraph.ApproxMinWeightMatching: TEdgeArray;
+var
+  d: TEdgeData;
+begin
+  if VertexCount < 2 then
+    exit([]);
+  if (VertexCount = 2) and Connected then
+    begin
+      GetEdgeDataI(0, 1, d);
+      exit([TWeightEdge.Create(0, 1, {%H-}d.Weight)]);
+    end;
+  Result := GetApproxMinWeightMatching;
 end;
 
 { TRealPointEdge }
