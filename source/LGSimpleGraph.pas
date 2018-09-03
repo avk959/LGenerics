@@ -2272,7 +2272,6 @@ begin
     begin
       Nodes[I].Mate := nil;
       Nodes[I].FirstEdge := nil;
-      Nodes[I].CallID := 0;
     end;
 
   for ie in GetApproxMatching2 do
@@ -2298,6 +2297,7 @@ begin
           Nodes[e.Source].MatchedEdge := @Edgs[I];
           Nodes[e.Destination].MatchedEdge := @Edgs[I];
         end;
+
       Inc(I);
     end;
 
