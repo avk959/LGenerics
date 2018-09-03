@@ -60,7 +60,7 @@ type
     DfsParent,              // parent node from the ddfs
     SidePrev,
     SideNext,               // nodes with same side marking (doubly linked list)
-    BStar,                  // base star structure
+    BStar,                  // B* structure
     NextEven,               // next node with this even level
     NextOdd,                // next node with this odd level
     NextNodeOnPath,
@@ -75,7 +75,6 @@ type
     NextEdgeOnPath: PEdge;
     Blossom,
     VisitBlossom: PBlossom; // blossom searching when visited
-    Index,
     PredecCount,            // predecessor count
     EvenLevel,
     OddLevel,

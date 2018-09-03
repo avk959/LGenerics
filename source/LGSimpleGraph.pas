@@ -1459,7 +1459,6 @@ begin
     end;
 
   System.SetLength(CurrArcIdx, FNodeCount);
-
   J := 0;
   for I := 0 to FNodeCount - 2 do
     begin
@@ -2273,7 +2272,6 @@ begin
     begin
       Nodes[I].Mate := nil;
       Nodes[I].FirstEdge := nil;
-      Nodes[I].Index := I;
       Nodes[I].CallID := 0;
     end;
 
@@ -2311,7 +2309,7 @@ begin
   for I := 0 to System.High(Nodes) do
     if Nodes[I].Matched then
       begin
-        Mate := Nodes[I].Mate^.Index;
+        Mate := SizeInt(Nodes[I].Mate - LGMvMatch.PNode(Nodes));
         Result[J] := TIntEdge.Create(I, Mate);
         Nodes[Mate].Mate := nil;
         Inc(J);
