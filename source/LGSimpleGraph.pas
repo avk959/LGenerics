@@ -189,7 +189,7 @@ type
       FNodes: array of TNode;
       FArcs: array of TArc;
       FWhites: array of SizeInt;
-      FQueue: TIntQueue;
+      FQueue: TIntArray;
       FNodeCount,
       FDummy: SizeInt;   // index of dummy node
       procedure Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
@@ -208,7 +208,7 @@ type
       FBase,
       FParents,
       FQueue: TIntArray;
-      FUsed,
+      FVisited,
       FLcaUsed,
       FBlossoms: TBitVector;
       FMatchCount: SizeInt;
@@ -601,6 +601,28 @@ type
     TWeightItem  = TPathHelper.TWeightItem;
     TEdgeArray   = array of TWeightEdge;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
+
+    TKuhnMatch = record
+     private
+       FGraph: TGWeightedGraph;
+       FWhites,
+       FDists,
+       FMates,
+       FParents,
+       FQueue: TIntArray;
+       FLevels: TWeightArray;
+       FUsed,
+       FMatchCount: SizeInt;
+       procedure Match(aIndex, aMate: SizeInt); inline;
+       procedure ClearParents; inline;
+       function  FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
+       procedure AlternatePath(aRoot: SizeInt);
+       function  TryMatch(var aDelta: SizeInt): SizeInt;
+       procedure Correct(aDelta: SizeInt);
+       procedure Init(aGraph: TGWeightedGraph);
+     public
+       function  GetMaxMatch(aGraph: TGWeightedGraph): TEdgeArray;
+     end;
 
     function  GetApproxMaxWeightMatching: TEdgeArray;
     function  GetApproxMinWeightMatching: TEdgeArray;
@@ -1501,39 +1523,50 @@ begin
 
   for I := 0 to System.High(FNodes) do
     FNodes[I].LastArc := Pred(CurrArcIdx[I]);
+
+  CurrArcIdx := nil;
+  FQueue := aGraph.CreateIntArray;
 end;
 
 function TGSimpleGraph.THopcroftMatch.Bfs: Boolean;
 var
   Curr, CurrArc, Matched, Dist: SizeInt;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
   for Curr in FWhites do
     if FNodes[Curr].Mate = FDummy then
       begin
         FNodes[Curr].Distance := 0;
-        FQueue.Enqueue(Curr);
+        FQueue[qTail] := Curr;
+        Inc(qTail);
       end
     else
       FNodes[Curr].Distance := INF_DIST;
 
   FNodes[FDummy].Distance := INF_DIST;
 
-  while FQueue{%H-}.TryDequeue(Curr) do
-    if FNodes[{%H-}Curr].Distance < FNodes[FDummy].Distance then
-      begin
-        CurrArc := FNodes[Curr].FirstArc;
-        Dist := Succ(FNodes[Curr].Distance);
-        while CurrArc <= FNodes[Curr].LastArc do
-          begin
-            Matched := FNodes[FArcs[CurrArc].Target].Mate;
-            if FNodes[Matched].Distance = INF_DIST then
-              begin
-                FNodes[Matched].Distance := Dist;
-                FQueue.Enqueue(Matched);
-              end;
-            Inc(CurrArc);
-          end;
-      end;
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      if FNodes[{%H-}Curr].Distance < FNodes[FDummy].Distance then
+        begin
+          CurrArc := FNodes[Curr].FirstArc;
+          Dist := Succ(FNodes[Curr].Distance);
+          while CurrArc <= FNodes[Curr].LastArc do
+            begin
+              Matched := FNodes[FArcs[CurrArc].Target].Mate;
+              if FNodes[Matched].Distance = INF_DIST then
+                begin
+                  FNodes[Matched].Distance := Dist;
+                  FQueue[qTail] := Matched;
+                  Inc(qTail);
+                end;
+              Inc(CurrArc);
+            end;
+        end;
+    end;
   Result := FNodes[FDummy].Distance <> INF_DIST;
 end;
 
@@ -1646,10 +1679,10 @@ var
   I, s, d, CurrBase: SizeInt;
   p: TGSimpleGraph.PAdjItem;
 begin
-  FUsed.ClearBits;
+  FVisited.ClearBits;
   ClearParents;
   ClearBase;
-  FUsed[aRoot] := True;
+  FVisited[aRoot] := True;
   FQueue[qTail] := aRoot;
   Inc(qTail);
   while qHead < qTail do
@@ -1671,9 +1704,9 @@ begin
       		if FBlossoms[FBase[I]] then
                   begin
       		    FBase[I] := CurrBase;
-      		    if not FUsed[I] then
+      		    if not FVisited[I] then
                       begin
-      		        FUsed[I] := True;
+      		        FVisited[I] := True;
       			FQueue[qTail] := I;
                         Inc(qTail);
                       end;
@@ -1689,7 +1722,7 @@ begin
                     exit(True);
                   end;
                 d := FMates[d];
-                FUsed[d] := True;
+                FVisited[d] := True;
                 FQueue[qTail] := d;
                 Inc(qTail);
               end;
@@ -1732,7 +1765,7 @@ begin
   FBase := aGraph.CreateIntArray;
   FParents := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
-  FUsed.Size := aGraph.VertexCount;
+  FVisited.Size := aGraph.VertexCount;
   FLcaUsed.Size := aGraph.VertexCount;
   FBlossoms.Size := aGraph.VertexCount;
   for e in aGraph.GetApproxMatching2 do
@@ -4459,6 +4492,48 @@ function TStrChart.Clone: TStrChart;
 begin
   Result := TStrChart.Create;
   Result.AssignGraph(Self);
+end;
+
+{ TGWeightedGraph.TKuhnMatch }
+
+procedure TGWeightedGraph.TKuhnMatch.Match(aIndex, aMate: SizeInt);
+begin
+
+end;
+
+procedure TGWeightedGraph.TKuhnMatch.ClearParents;
+begin
+
+end;
+
+function TGWeightedGraph.TKuhnMatch.FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
+begin
+
+end;
+
+procedure TGWeightedGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
+begin
+
+end;
+
+function TGWeightedGraph.TKuhnMatch.TryMatch(var aDelta: SizeInt): SizeInt;
+begin
+
+end;
+
+procedure TGWeightedGraph.TKuhnMatch.Correct(aDelta: SizeInt);
+begin
+
+end;
+
+procedure TGWeightedGraph.TKuhnMatch.Init(aGraph: TGWeightedGraph);
+begin
+
+end;
+
+function TGWeightedGraph.TKuhnMatch.GetMaxMatch(aGraph: TGWeightedGraph): TEdgeArray;
+begin
+
 end;
 
 { TGWeightedGraph }
