@@ -798,6 +798,8 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
+  { TGPairHeap }
+
   generic TGPairHeap<T> = record // for internal use only
   private
   type
@@ -826,6 +828,7 @@ type
     class procedure CutNode(aNode: PNode); static; inline;
   public
     constructor Create(aSize: SizeInt);
+    procedure MakeEmpty;
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     procedure Enqueue(constref aValue: T; aHandle: SizeInt); inline;
@@ -3683,15 +3686,14 @@ begin
 end;
 
 constructor TGPairHeap.Create(aSize: SizeInt);
-var
-  I: SizeInt;
 begin
-  if aSize > 0 then
-    begin
-      System.SetLength(FNodeList, aSize);
-      for I := 0 to Pred(aSize) do
-        FNodeList[I].Prev := PNode(SizeUInt(-1));
-    end;
+  System.SetLength(FNodeList, aSize);
+  MakeEmpty;
+end;
+
+procedure TGPairHeap.MakeEmpty;
+begin
+  System.FillChar(Pointer(FNodeList)^, System.Length(FNodeList) * SizeOf(TNode), $ff);
   FRoot := nil;
   FCount := 0;
 end;
@@ -3738,7 +3740,7 @@ begin
   Result := (Node = FRoot) or (Node^.Prev <> nil);
   if Result then
     begin
-      ExtractNode(@FNodeList[aHandle]);
+      ExtractNode(Node);
       Node^.Prev := nil;
       Dec(FCount);
     end;
