@@ -798,8 +798,6 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TGPairHeap }
-
   generic TGPairHeap<T> = record // for internal use only
   private
   type
@@ -829,6 +827,7 @@ type
   public
     constructor Create(aSize: SizeInt);
     procedure MakeEmpty;
+    function  Used(aHandle: SizeInt): Boolean; inline;
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     procedure Enqueue(constref aValue: T; aHandle: SizeInt); inline;
@@ -3696,6 +3695,11 @@ begin
   System.FillChar(Pointer(FNodeList)^, System.Length(FNodeList) * SizeOf(TNode), $ff);
   FRoot := nil;
   FCount := 0;
+end;
+
+function TGPairHeap.Used(aHandle: SizeInt): Boolean;
+begin
+  Result := FNodeList[aHandle].Prev <> PNode(SizeUInt(-1));
 end;
 
 function TGPairHeap.NotUsed(aHandle: SizeInt): Boolean;
