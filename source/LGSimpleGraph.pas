@@ -602,40 +602,29 @@ type
     TWeightItem  = TPathHelper.TWeightItem;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
 
-    { THKDMatch: Hopcroft–Karp algorithm for maximum cardinality matching
-      for bipartite graph with priority queue }
-    THKDMatch = record
+    { TKuhnMatch: Kuhn weighted matching algorithm for bipartite graph }
+    TKuhnMatch = record
      private
-     type
-       TArc = record
-         Target: SizeInt; // index of target node
-         Weight: TWeight;
-       end;
-
-       TNode = record
-         FirstArc,        // index of first incident arc in arcs array
-         LastArc,         // index of last incident arc in arcs array
-         Distance,
-         Mate: SizeInt;   // index of matched node
-       end;
-
-     const
-       INF_DIST = High(SizeInt);
-     var
-       FNodes: array of TNode;
-       FArcs: array of TArc;
-       FWhites: array of SizeInt;
-       FQueue: TPairingHeap;
-       FNodeCount,
-       FDummy,
+       FGraph: TGWeightedGraph;
+       FMates,
+       FParents,
+       FQueue: array of SizeInt;
+       FPots: array of TWeight;
+       FWhites,
+       FVisited: TBoolVector;
        FMatchCount: SizeInt;
        procedure Match(aNode, aMate: SizeInt); inline;
+       procedure ClearParents; inline;
        procedure Init(aGraph: TGWeightedGraph; constref w, g: TIntArray);
-       function  Bfs: Boolean;
-       function  Dfs(aRoot: SizeInt): Boolean;
-       procedure HopcroftKarp;
+       function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+       procedure AlternatePath(aRoot: SizeInt);
+       function  TryMatch(var aDelta: TWeight): SizeInt;
+       procedure CorrectPots(constref aDelta: TWeight); inline;
+       procedure KuhnMatch;
+       function  CreateEdges: TEdgeArray;
      public
        function  GetMinWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+       function  GetMaxWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
      end;
 
     function  GetApproxMaxWeightMatching: TEdgeArray;
@@ -649,6 +638,7 @@ type
     class function InfiniteWeight: TWeight; static; inline;
     class function NegInfiniteWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
+    class function TotalWeight(constref aEdges: TEdgeArray): TWeight; static;
   { returns True if exists edge with negative weight }
     function ContainsNegWeighedEdge: Boolean;
 {**********************************************************************************************************
@@ -1691,10 +1681,10 @@ end;
 
 function TGSimpleGraph.TEdMatch.FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
 var
+  I, Curr, Next, CurrBase: SizeInt;
+  p: TGSimpleGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
-  I, s, d, CurrBase: SizeInt;
-  p: TGSimpleGraph.PAdjItem;
 begin
   FVisited.ClearBits;
   ClearParents;
@@ -1704,19 +1694,19 @@ begin
   Inc(qTail);
   while qHead < qTail do
     begin
-      s := FQueue[qHead];
+      Curr := FQueue[qHead];
       Inc(qHead);
-      for p in FGraph.AdjLists[s]^ do
+      for p in FGraph.AdjLists[Curr]^ do
         begin
-          d := p^.Destination;
-          if (FBase[s] = FBase[d]) or (FMates[s] = d) then
+          Next := p^.Destination;
+          if (FBase[Curr] = FBase[Next]) or (FMates[Curr] = Next) then
             continue;
-          if (d = aRoot) or (FMates[d] <> NULL_INDEX) and (FParents[FMates[d]] <> NULL_INDEX) then
+          if (Next = aRoot) or (FMates[Next] <> NULL_INDEX) and (FParents[FMates[Next]] <> NULL_INDEX) then
             begin
-              CurrBase := Lca(s, d);
+              CurrBase := Lca(Curr, Next);
               FBlossoms.ClearBits;
-      	      MarkPath(s, CurrBase, d);
-      	      MarkPath(d, CurrBase, s);
+      	      MarkPath(Curr, CurrBase, Next);
+      	      MarkPath(Next, CurrBase, Curr);
               for I := 0 to System.High(FBase) do
       		if FBlossoms[FBase[I]] then
                   begin
@@ -1730,17 +1720,17 @@ begin
                   end;
             end
           else
-            if FParents[d] = NULL_INDEX then
+            if FParents[Next] = NULL_INDEX then
               begin
-                FParents[d] := s;
-                if FMates[d] = NULL_INDEX then
+                FParents[Next] := Curr;
+                if FMates[Next] = NULL_INDEX then
                   begin
-                    aLast := d;
+                    aLast := Next;
                     exit(True);
                   end;
-                d := FMates[d];
-                FVisited[d] := True;
-                FQueue[qTail] := d;
+                Next := FMates[Next];
+                FVisited[Next] := True;
+                FQueue[qTail] := Next;
                 Inc(qTail);
               end;
         end;
@@ -2205,7 +2195,7 @@ function TGSimpleGraph.GetApproxMatching: TIntEdgeArray;
 var
   Nodes, Degrees: TIntArray;
   Matched: TBitVector;
-  CurrPos, Size, Deg, s, d: SizeInt;
+  CurrPos, Size, Curr, Next: SizeInt;
   p: PAdjItem;
 begin
   Nodes := SortVerticesByDegree(soAsc);
@@ -2218,28 +2208,21 @@ begin
     begin
       if not Matched[Nodes[CurrPos]] then
         begin
-          s := Nodes[CurrPos];
-          d := NULL_INDEX;
-          Deg := VertexCount;
-          for p in AdjLists[s]^ do // find adjacent node with min degree
+          Curr := Nodes[CurrPos];
+          Next := NULL_INDEX;
+          for p in AdjLists[Curr]^ do // find adjacent non matched node
             if not Matched[p^.Destination] then
               begin
-                if Degrees[p^.Destination] < Deg then
-                  begin
-                    d := p^.Destination;
-                    Deg := Degrees[p^.Destination];
-                  end;
-                Dec(Degrees[p^.Destination]);
+                Next := p^.Destination;
+                break;
               end;
-          if d <> NULL_INDEX then // node found
+          if Next <> NULL_INDEX then // node found
             begin
-              for p in AdjLists[d]^ do
-                Dec(Degrees[p^.Destination]);
-              Matched[s] := True;
-              Matched[d] := True;
+              Matched[Curr] := True;
+              Matched[Next] := True;
               if System.Length(Result) = Size then
                 System.SetLength(Result, Size shl 1);
-              Result[Size] := TIntEdge.Create(s, d);
+              Result[Size] := TIntEdge.Create(Curr, Next);
               Inc(Size);
             end;
         end;
@@ -4511,184 +4494,192 @@ begin
   Result.AssignGraph(Self);
 end;
 
-{ TGWeightedGraph.THKDMatch }
+{ TGWeightedGraph.TKuhnMatch }
 
-procedure TGWeightedGraph.THKDMatch.Match(aNode, aMate: SizeInt);
+procedure TGWeightedGraph.TKuhnMatch.Match(aNode, aMate: SizeInt);
 begin
-  FNodes[aNode].Mate := aMate;
-  FNodes[aMate].Mate := aNode;
+  FMates[aNode] := aMate;
+  FMates[aMate] := aNode;
 end;
 
-procedure TGWeightedGraph.THKDMatch.Init(aGraph: TGWeightedGraph; constref w, g: TIntArray);
+procedure TGWeightedGraph.TKuhnMatch.ClearParents;
+begin
+  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeUint), $ff);
+end;
+
+procedure TGWeightedGraph.TKuhnMatch.Init(aGraph: TGWeightedGraph; constref w, g: TIntArray);
 var
-  CurrArcIdx: TIntArray = nil;
-  Grays: TIntHashSet;
-  I, J: SizeInt;
+  I: SizeInt;
   p: PAdjItem;
   ew: TWeight;
 begin
-  FNodeCount := Succ(aGraph.VertexCount);
-  FDummy := Pred(FNodeCount);
+  FGraph := aGraph;
   FMatchCount := 0;
+  FWhites.Size := aGraph.VertexCount;
   if System.Length(w) <= System.Length(g) then
-    begin
-      FWhites := w;
-      Grays.AddAll(g);
-    end
+    for I in w do
+      FWhites[I] := True
   else
-    begin
-      FWhites := g;
-      Grays.AddAll(w);
-    end;
+    for I in g do
+      FWhites[I] := True;
 
-  System.SetLength(CurrArcIdx, FNodeCount);
-  J := 0;
-  for I := 0 to FNodeCount - 2 do
-    begin
-      CurrArcIdx[I] := J;
-      if Grays.Contains(I) then
-        J += Succ(aGraph.DegreeI(I))
-      else
-        J += aGraph.DegreeI(I);
-    end;
-  CurrArcIdx[Pred(FNodeCount)] := J;
-
-  System.SetLength(FNodes, FNodeCount);
-  System.SetLength(FArcs, (aGraph.EdgeCount + Grays.Count) * 2);
-
-  for I := 0 to System.High(FNodes) do
-    begin
-      FNodes[I].FirstArc := CurrArcIdx[I];
-      FNodes[I].Distance := 0;
-      FNodes[I].Mate := FDummy;
-    end;
-
+  FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
   for I in FWhites do
-    for p in aGraph.AdjLists[I]^ do
-      begin
-        J := p^.Destination;
-        ew := p^.Data.Weight + 1;
-        FArcs[CurrArcIdx[I]].Target := J;
-        FArcs[CurrArcIdx[I]].Weight := ew;
-        FArcs[CurrArcIdx[J]].Target := I;
-        FArcs[CurrArcIdx[J]].Weight := ew;
-        Inc(CurrArcIdx[I]);
-        Inc(CurrArcIdx[J]);
-      end;
-
-  J := FDummy;
-  for I in Grays do
     begin
-      FArcs[CurrArcIdx[I]].Target := J;
-      FArcs[CurrArcIdx[I]].Weight := ZeroWeight;
-      FArcs[CurrArcIdx[J]].Target := I;
-      FArcs[CurrArcIdx[J]].Weight := ZeroWeight;
-      Inc(CurrArcIdx[I]);
-      Inc(CurrArcIdx[J]);
+      ew := InfiniteWeight;
+      for p in aGraph.AdjLists[I]^ do
+        if p^.Data.Weight < ew then
+          ew := p^.Data.Weight;
+      FPots[I] := ew;
     end;
 
-  for I := 0 to System.High(FNodes) do
-    FNodes[I].LastArc := Pred(CurrArcIdx[I]);
-
-  CurrArcIdx := nil;
-  FQueue := TPairingHeap.Create(FNodeCount);
+  FMates := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FVisited.Size := aGraph.VertexCount;
 end;
 
-function TGWeightedGraph.THKDMatch.Bfs: Boolean;
+function TGWeightedGraph.TKuhnMatch.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
-  Curr, CurrArc, Matched, Dist: SizeInt;
-  Item: TWeightItem;
-  Relaxed: TWeight;
+  Curr, Next: SizeInt;
+  p: PAdjItem;
+  Cost: TWeight;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
-  FQueue.MakeEmpty;
-  for Curr in FWhites do
-    if FNodes[Curr].Mate = FDummy then
-      begin
-        FNodes[Curr].Distance := 0;
-        FQueue.Enqueue(TWeightItem.Create(InfiniteWeight, Curr), Curr);
-      end
-    else
-      FNodes[Curr].Distance := INF_DIST;
-
-  FNodes[FDummy].Distance := INF_DIST;
-
-  while FQueue{%H-}.TryDequeue(Item) do
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
     begin
-      Curr := {%H-}Item.Index;
-      if FNodes[Curr].Distance < FNodes[FDummy].Distance then
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      FVisited[Curr] := True;
+      if FWhites[Curr] then
         begin
-          CurrArc := FNodes[Curr].FirstArc;
-          Dist := Succ(FNodes[Curr].Distance);
-          while CurrArc <= FNodes[Curr].LastArc do
+          for p in FGraph.AdjLists[Curr]^ do
             begin
-              Matched := FNodes[FArcs[CurrArc].Target].Mate;
-              if FNodes[Matched].Distance = INF_DIST then
+              Next := p^.Destination;
+              if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+                continue;
+              Cost := p^.Data.Weight + FPots[Next] - FPots[Curr];
+              if Cost <= ZeroWeight then
                 begin
-                  FNodes[Matched].Distance := Dist;
-                  Relaxed := FArcs[CurrArc].Weight + Item.Weight;
-                  if FQueue.Used(Matched) then
-                    FQueue.Update(Matched, TWeightItem.Create(Relaxed, Matched))
+                  if FMates[Next] = NULL_INDEX then
+                    begin
+                      FParents[Next] := Curr;
+                      exit(Next);
+                    end
                   else
-                    FQueue.Enqueue(TWeightItem.Create(Relaxed, Matched), Matched);
-                end;
-              Inc(CurrArc);
+                    if not FVisited[Next] then
+                      begin
+                        FParents[Next] := Curr;
+                        FQueue[qTail] := Next;
+                        Inc(qTail);
+                      end;
+                end
+              else
+                if Cost < aDelta then
+                  aDelta := Cost;
             end;
-        end;
-    end;
-  Result := FNodes[FDummy].Distance <> INF_DIST;
-end;
-
-function TGWeightedGraph.THKDMatch.Dfs(aRoot: SizeInt): Boolean;
-var
-  CurrArc, Dist, Next, Matched: SizeInt;
-begin
-  //todo: non-recursive dfs ???
-  if aRoot = FDummy then
-    exit(True);
-  CurrArc := FNodes[aRoot].FirstArc;
-  Dist := Succ(FNodes[aRoot].Distance);
-  while CurrArc <= FNodes[aRoot].LastArc do
-    begin
-      Next := FArcs[CurrArc].Target;
-      Matched := FNodes[Next].Mate;
-      if (FNodes[Matched].Distance = Dist) and Dfs(Matched) then
+        end
+      else
         begin
-          Match(aRoot, Next);
-          exit(True);
+          Next := FMates[Curr];
+          FParents[Next] := Curr;
+          FQueue[qTail] := Next;
+          Inc(qTail);
         end;
-      Inc(CurrArc);
     end;
-  FNodes[aRoot].Distance := INF_DIST;
-  Result := False;
+  Result := NULL_INDEX;
 end;
 
-procedure TGWeightedGraph.THKDMatch.HopcroftKarp;
+procedure TGWeightedGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
+var
+  Mate, tmp: SizeInt;
+begin
+  repeat
+    Mate := FParents[aRoot];
+    tmp := FMates[Mate];
+    Match(aRoot, Mate);
+    aRoot := tmp;
+  until aRoot = NULL_INDEX;
+end;
+
+function TGWeightedGraph.TKuhnMatch.TryMatch(var aDelta: TWeight): SizeInt;
+var
+  vL, vR: SizeInt;
+begin
+  aDelta := InfiniteWeight;
+  FVisited.ClearBits;
+  ClearParents;
+  Result := 0;
+  for vL in FWhites do
+    if FMates[vL] = NULL_INDEX then
+      begin
+        vR := FindAugmentPath(vL, aDelta);
+        if vR <> NULL_INDEX then
+          begin
+            AlternatePath(vR);
+            Inc(Result);
+          end;
+      end;
+end;
+
+procedure TGWeightedGraph.TKuhnMatch.CorrectPots(constref aDelta: TWeight);
 var
   I: SizeInt;
 begin
-  while Bfs do
-    for I in FWhites do
-      if FNodes[I].Mate = FDummy then
-        FMatchCount += Ord(Dfs(I));
+  for I in FVisited do
+    FPots[I] += aDelta;
 end;
 
-function TGWeightedGraph.THKDMatch.GetMinWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+procedure TGWeightedGraph.TKuhnMatch.KuhnMatch;
+var
+  Matched: SizeInt;
+  Delta: TWeight;
+begin
+  Delta := InfiniteWeight;
+  repeat
+    repeat
+      Matched := TryMatch(Delta);
+      FMatchCount += Matched;
+    until Matched = 0;
+    if Delta < InfiniteWeight then
+      CorrectPots(Delta)
+    else
+      break;
+  until False;
+end;
+
+function TGWeightedGraph.TKuhnMatch.CreateEdges: TEdgeArray;
 var
   I, J: SizeInt;
   d: TEdgeData;
 begin
-  Init(aGraph, w, g);
-  HopcroftKarp;
   System.SetLength(Result, FMatchCount);
   J := 0;
   d := DefaultEdgeData;
   for I in FWhites do
-    if FNodes[I].Mate <> FDummy then
+    if FMates[I] <> NULL_INDEX then
       begin
-        aGraph.GetEdgeDataI(I, FNodes[I].Mate, d);
-        Result[J] := TWeightEdge.Create(I, FNodes[I].Mate, d.Weight);
+        FGraph.GetEdgeDataI(I, FMates[I], d);
+        Result[J] := TWeightEdge.Create(I, FMates[I], d.Weight);
         Inc(J);
       end;
+end;
+
+function TGWeightedGraph.TKuhnMatch.GetMinWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+begin
+  Init(aGraph, w, g);
+  KuhnMatch;
+  Result := CreateEdges;
+end;
+
+function TGWeightedGraph.TKuhnMatch.GetMaxWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+begin
+  Init(aGraph, w, g);
+  //KuhnMatch;
+  Result := CreateEdges;
 end;
 
 { TGWeightedGraph }
@@ -4842,6 +4833,15 @@ end;
 class function TGWeightedGraph.ZeroWeight: TWeight;
 begin
   Result := TPathHelper.ZeroWeight;
+end;
+
+class function TGWeightedGraph.TotalWeight(constref aEdges: TEdgeArray): TWeight;
+var
+  e: TWeightEdge;
+begin
+  Result := ZeroWeight;
+  for e in aEdges do
+    Result += e.Weight;
 end;
 
 function TGWeightedGraph.ContainsNegWeighedEdge: Boolean;
@@ -5014,7 +5014,7 @@ end;
 
 function TGWeightedGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
 var
-  Helper: THKDMatch;
+  Helper: TKuhnMatch;
   w, g: TIntArray;
 begin
   if not IsBipartite(w, g) then
