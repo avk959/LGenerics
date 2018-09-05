@@ -200,6 +200,27 @@ type
       function  GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
     end;
 
+    { TBfsMatch: simple BFS matching algorithm for bipartite graph }
+    TBfsMatch = record
+     private
+       FGraph: TGSimpleGraph;
+       FMates,
+       FParents,
+       FWhites,
+       FQueue: array of SizeInt;
+       FVisited: TBitVector;
+       FMatchCount: SizeInt;
+       procedure Match(aNode, aMate: SizeInt); inline;
+       procedure ClearParents; inline;
+       procedure Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+       function  FindAugmentPath(aRoot: SizeInt): SizeInt;
+       procedure AlternatePath(aRoot: SizeInt);
+       procedure BfsMatch;
+       function  CreateEdges: TIntEdgeArray;
+     public
+       function  GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+     end;
+
   { TEdMatch: Edmonds algorithm for maximum cardinality matching }
     TEdMatch = record
     private
@@ -1625,6 +1646,122 @@ function TGSimpleGraph.THKMatch.GetBipMatch(aGraph: TGSimpleGraph; constref w, g
 begin
   Init(aGraph, w, g);
   Result := HopcroftKarp;
+end;
+
+{ TGSimpleGraph.TBfsMatch }
+
+procedure TGSimpleGraph.TBfsMatch.Match(aNode, aMate: SizeInt);
+begin
+  FMates[aNode] := aMate;
+  FMates[aMate] := aNode;
+end;
+
+procedure TGSimpleGraph.TBfsMatch.ClearParents;
+begin
+  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeInt), $ff);
+end;
+
+procedure TGSimpleGraph.TBfsMatch.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+var
+  e: TIntEdge;
+begin
+  FMatchCount := 0;
+  FGraph := aGraph;
+  if System.Length(w) <= System.Length(g) then
+    FWhites := w
+  else
+    FWhites := g;
+  FMates := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FVisited.Size := aGraph.VertexCount;
+  for e in aGraph.GetApproxMatching do
+    begin
+      Match(e.Source, e.Destination);
+      Inc(FMatchCount);
+    end;
+end;
+
+function TGSimpleGraph.TBfsMatch.FindAugmentPath(aRoot: SizeInt): SizeInt;
+var
+  I, Curr, Next, CurrBase: SizeInt;
+  p: TGSimpleGraph.PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FVisited.ClearBits;
+  ClearParents;
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      FVisited[Curr] := True;
+      for p in FGraph.AdjLists[Curr]^ do
+        begin
+          Next := p^.Destination;
+          if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+            continue;
+          FParents[Next] := Curr;
+          if FMates[Next] = NULL_INDEX then
+            exit(Next);
+          Next := FMates[Next];
+          FVisited[Next] := True;
+          FQueue[qTail] := Next;
+          Inc(qTail);
+        end;
+    end;
+  Result := NULL_INDEX;
+end;
+
+procedure TGSimpleGraph.TBfsMatch.AlternatePath(aRoot: SizeInt);
+var
+  Mate, tmp: SizeInt;
+begin
+  repeat
+    Mate := FParents[aRoot];
+    tmp := FMates[Mate];
+    Match(aRoot, Mate);
+    aRoot := tmp;
+  until aRoot = NULL_INDEX;
+end;
+
+procedure TGSimpleGraph.TBfsMatch.BfsMatch;
+var
+  I, Last: SizeInt;
+begin
+  for I in FWhites do
+    if FMates[I] = NULL_INDEX then
+      begin
+        Last := FindAugmentPath(I);
+        if Last <> NULL_INDEX then
+          begin
+            AlternatePath(Last);
+            Inc(FMatchCount);
+          end;
+      end;
+end;
+
+function TGSimpleGraph.TBfsMatch.CreateEdges: TIntEdgeArray;
+var
+  I, J: SizeInt;
+begin
+  System.SetLength(Result, FMatchCount);
+  J := 0;
+  for I in FWhites do
+    if FMates[I] <> NULL_INDEX then
+      begin
+        Result[J] := TIntEdge.Create(I, FMates[I]);
+        Inc(J);
+      end;
+end;
+
+function TGSimpleGraph.TBfsMatch.GetBipMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+begin
+  Init(aGraph, w, g);
+  BfsMatch;
+  Result := CreateEdges;
 end;
 
 { TGSimpleGraph.TEdMatch }
@@ -3853,6 +3990,7 @@ end;
 function TGSimpleGraph.FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
 var
   Helper: THKMatch;
+  //Helper: TBfsMatch;
   w, g: TIntArray;
 begin
   if not IsBipartite(w, g) then
