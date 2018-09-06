@@ -1693,7 +1693,7 @@ end;
 
 function TGSimpleGraph.TBfsMatch.FindAugmentPath(aRoot: SizeInt): SizeInt;
 var
-  I, Curr, Next, CurrBase: SizeInt;
+  Curr, Next: SizeInt;
   p: TGSimpleGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
