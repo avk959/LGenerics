@@ -1700,13 +1700,13 @@ var
 begin
   FVisited.ClearBits;
   ClearParents;
+  FVisited[aRoot] := True;
   FQueue[qTail] := aRoot;
   Inc(qTail);
   while qHead < qTail do
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
-      FVisited[Curr] := True;
       for p in FGraph.AdjLists[Curr]^ do
         begin
           Next := p^.Destination;
