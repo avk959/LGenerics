@@ -43,6 +43,7 @@ Contains:
       - minimum s-t cut of the network
       - maximum cardinality matching for bipartite graph
       - maximum cardinality matching for general graph
+      - weighted matching for bipartite graph
 
   3. Other algorithms:
       - some non-cryptogarphic hashes(unit LGHash)
