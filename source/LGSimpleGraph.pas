@@ -208,7 +208,6 @@ type
        FParents,
        FWhites,
        FQueue: array of SizeInt;
-       FVisited: TBitVector;
        FMatchCount: SizeInt;
        procedure Match(aNode, aMate: SizeInt); inline;
        procedure ClearParents; inline;
@@ -1683,7 +1682,6 @@ begin
   FMates := aGraph.CreateIntArray;
   FParents := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
-  FVisited.Size := aGraph.VertexCount;
   for e in aGraph.GetApproxMatching do
     begin
       Match(e.Source, e.Destination);
@@ -1698,9 +1696,7 @@ var
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
-  FVisited.ClearBits;
   ClearParents;
-  FVisited[aRoot] := True;
   FQueue[qTail] := aRoot;
   Inc(qTail);
   while qHead < qTail do
@@ -1716,7 +1712,6 @@ begin
           if FMates[Next] = NULL_INDEX then
             exit(Next);
           Next := FMates[Next];
-          FVisited[Next] := True;
           FQueue[qTail] := Next;
           Inc(qTail);
         end;
@@ -3998,8 +3993,8 @@ end;
 
 function TGSimpleGraph.FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
 var
-  Helper: THKMatch;
-  //Helper: TBfsMatch;
+  //Helper: THKMatch;
+  Helper: TBfsMatch;
   w, g: TIntArray;
 begin
   if not IsBipartite(w, g) then
