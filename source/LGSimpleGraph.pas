@@ -637,11 +637,15 @@ type
        procedure Match(aNode, aMate: SizeInt); inline;
        procedure ClearParents; inline;
        procedure Init(aGraph: TGWeightedGraph; constref w, g: TIntArray);
+       procedure InitMax(aGraph: TGWeightedGraph; constref w, g: TIntArray);
        function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+       function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
        procedure AlternatePath(aRoot: SizeInt);
        function  TryMatch(var aDelta: TWeight): SizeInt;
+       function  TryMatchMax(var aDelta: TWeight): SizeInt;
        procedure CorrectPots(constref aDelta: TWeight); inline;
        procedure KuhnMatch;
+       procedure KuhnMatchMax;
        function  CreateEdges: TEdgeArray;
      public
        function  GetMinWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
@@ -713,8 +717,11 @@ type
 ***********************************************************************************************************}
 
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and minimum weight, the weights of all edges must be nonnegative }
+    the maximum cardinality and minimum weight }
     function FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
+  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
+    the maximum cardinality and maximum weight }
+    function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality and
     maximun weight in an arbitrary graph }
     function ApproxMaxWeightMatching: TEdgeArray;
@@ -4677,6 +4684,38 @@ begin
   FVisited.Size := aGraph.VertexCount;
 end;
 
+procedure TGWeightedGraph.TKuhnMatch.InitMax(aGraph: TGWeightedGraph; constref w, g: TIntArray);
+var
+  I: SizeInt;
+  p: PAdjItem;
+  ew: TWeight;
+begin
+  FGraph := aGraph;
+  FMatchCount := 0;
+  FWhites.Size := aGraph.VertexCount;
+  if System.Length(w) <= System.Length(g) then
+    for I in w do
+      FWhites[I] := True
+  else
+    for I in g do
+      FWhites[I] := True;
+
+  FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
+  for I in FWhites do
+    begin
+      ew := InfiniteWeight;
+      for p in aGraph.AdjLists[I]^ do
+        if p^.Data.Weight > ew then
+          ew := p^.Data.Weight;
+      FPots[I] := ew;
+    end;
+
+  FMates := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FVisited.Size := aGraph.VertexCount;
+end;
+
 function TGWeightedGraph.TKuhnMatch.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
   Curr, Next: SizeInt;
@@ -4731,6 +4770,60 @@ begin
   Result := NULL_INDEX;
 end;
 
+function TGWeightedGraph.TKuhnMatch.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+var
+  Curr, Next: SizeInt;
+  p: PAdjItem;
+  Cost: TWeight;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      FVisited[Curr] := True;
+      if FWhites[Curr] then
+        begin
+          for p in FGraph.AdjLists[Curr]^ do
+            begin
+              Next := p^.Destination;
+              if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+                continue;
+              Cost := p^.Data.Weight + FPots[Next] - FPots[Curr];
+              if Cost >= ZeroWeight then
+                begin
+                  if FMates[Next] = NULL_INDEX then
+                    begin
+                      FParents[Next] := Curr;
+                      exit(Next);
+                    end
+                  else
+                    if not FVisited[Next] then
+                      begin
+                        FParents[Next] := Curr;
+                        FQueue[qTail] := Next;
+                        Inc(qTail);
+                      end;
+                end
+              else
+                if Cost > aDelta then
+                  aDelta := Cost;
+            end;
+        end
+      else
+        begin
+          Next := FMates[Curr];
+          FParents[Next] := Curr;
+          FQueue[qTail] := Next;
+          Inc(qTail);
+        end;
+    end;
+  Result := NULL_INDEX;
+end;
+
 procedure TGWeightedGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
 var
   Mate, tmp: SizeInt;
@@ -4755,6 +4848,26 @@ begin
     if FMates[vL] = NULL_INDEX then
       begin
         vR := FindAugmentPath(vL, aDelta);
+        if vR <> NULL_INDEX then
+          begin
+            AlternatePath(vR);
+            Inc(Result);
+          end;
+      end;
+end;
+
+function TGWeightedGraph.TKuhnMatch.TryMatchMax(var aDelta: TWeight): SizeInt;
+var
+  vL, vR: SizeInt;
+begin
+  aDelta := NegInfiniteWeight;
+  FVisited.ClearBits;
+  ClearParents;
+  Result := 0;
+  for vL in FWhites do
+    if FMates[vL] = NULL_INDEX then
+      begin
+        vR := FindAugmentPathMax(vL, aDelta);
         if vR <> NULL_INDEX then
           begin
             AlternatePath(vR);
@@ -4789,6 +4902,24 @@ begin
   until False;
 end;
 
+procedure TGWeightedGraph.TKuhnMatch.KuhnMatchMax;
+var
+  Matched: SizeInt;
+  Delta: TWeight;
+begin
+  Delta := NegInfiniteWeight;
+  repeat
+    repeat
+      Matched := TryMatchMax(Delta);
+      FMatchCount += Matched;
+    until Matched = 0;
+    if Delta > NegInfiniteWeight then
+      CorrectPots(Delta)
+    else
+      break;
+  until False;
+end;
+
 function TGWeightedGraph.TKuhnMatch.CreateEdges: TEdgeArray;
 var
   I, J: SizeInt;
@@ -4815,8 +4946,8 @@ end;
 
 function TGWeightedGraph.TKuhnMatch.GetMaxWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
 begin
-  Init(aGraph, w, g);
-  //KuhnMatch;
+  InitMax(aGraph, w, g);
+  KuhnMatchMax;
   Result := CreateEdges;
 end;
 
@@ -5158,6 +5289,17 @@ begin
   if not IsBipartite(w, g) then
     exit(False);
   aMatch := Helper.GetMinWeightMatch(Self, w, g);
+  Result := True;
+end;
+
+function TGWeightedGraph.FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
+var
+  Helper: TKuhnMatch;
+  w, g: TIntArray;
+begin
+  if not IsBipartite(w, g) then
+    exit(False);
+  aMatch := Helper.GetMaxWeightMatch(Self, w, g);
   Result := True;
 end;
 
