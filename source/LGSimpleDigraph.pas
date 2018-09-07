@@ -198,14 +198,17 @@ type
       PNode = ^TNode;
       PArc  = ^TArc;
 
+      { TArc }
+
       TArc = record
         ResidualCap: TWeight;
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
-        constructor Create(constref c: TWeight; aTarget, aOpposite: Pointer);
-        constructor CreateReverse(aTarget, aOpposite: Pointer);
-        function Saturated: Boolean; inline;
-        function HasResidual: Boolean; inline;
+        constructor Create(constref c: TWeight; aTarget: PNode; aReverse: PArc);
+        constructor CreateReverse(aTarget: PNode; aReverse: PArc);
+        function  Saturated: Boolean; inline;
+        function  HasResidual: Boolean; inline;
+        procedure Push(constref aFlow: TWeight); inline;
       end;
 
       TNode = record
@@ -239,13 +242,12 @@ type
         procedure Clear(aLabel: SizeInt);
       end;
 
-      TQueue = specialize TGLiteQueue<PNode>;
-
     var
       FNodes: array of TNode;
       FArcs: array of TArc;
       FLayers: array of TLayer;
       FCaps: TWeightArray;
+      FQueue: array of PNode;
       FSource,
       FSink: PNode;
       FNodeCount,
@@ -262,6 +264,54 @@ type
       procedure HiLevelPushRelabel;
       function  CreateEdgeArray: TEdgeArray;
       function  PreflowToFlow: TEdgeArray; //flow recovering
+    public
+      function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
+      function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
+      function  GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
+    end;
+
+    { TDinicHelper }
+    TDinicHelper = record
+    type
+      PNode = ^TNode;
+      PArc  = ^TArc;
+
+      TArc = record
+        ResidualCap: TWeight;
+        Target: PNode;       // pointer to target node
+        Reverse: PArc;       // pointer to opposite arc
+        IsReal: Boolean;
+        constructor Create(constref c: TWeight; aTarget: PNode; aReverse: PArc);
+        constructor CreateReverse(aTarget: PNode; aReverse: PArc);
+        function  HasResidual: Boolean; inline;
+        procedure Push(constref aFlow: TWeight); inline;
+      end;
+
+      { TNode }
+
+      TNode = record
+      private
+        FirstArc,            // pointer to first incident arc in arcs array
+        CurrentArc,          // pointer to current incident arc in arcs array
+        LastArc: PArc;       // pointer to last incident arc in arcs array
+        Distance: SizeInt;   // distance from the sink
+        procedure ResetCurrent; inline;
+        function  UnLabeled: Boolean; inline;
+        function  Labeled: Boolean; inline;
+      end;
+
+    var
+      FNodes: array of TNode;
+      FArcs: array of TArc;
+      FQueue: array of PNode;
+      FSource,
+      FSink: PNode;
+      procedure Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
+      procedure ClearLabels; inline;
+      function  Bfs: Boolean;
+      function  Dfs(aRoot: PNode; var aFlow: TWeight): Boolean;
+      function  FindMaxFlow: TWeight;
+      function  CreateEdgeArray(aGraph: TGWeightedDiGraph): TEdgeArray;
     public
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
@@ -353,21 +403,37 @@ type
 
     function GetNetworkState(constref aSource, aSink: TVertex): TNetworkState; inline;
     function GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
-  { returns False if GetNetworkState <> nwsValid }
-    function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
-    function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
+  { returns False if GetNetworkState <> nwsValid, used PR algorithm }
+    function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
+    function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
+  { returns False if GetNetworkState <> nwsValid, used Dinic's algorithm }
+    function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
+    function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
   { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
+    used PR algorithm;
     warning: flow recovery works correctly only for integer capacities }
-    function FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
-    function FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
-  { warning: does not checks network state }
-    function GetMaxFlow(constref aSource, aSink: TVertex): TWeight; inline;
-    function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
-  { does not checks network state, returns flows through the arcs in array a;
+    function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
+    function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
+    { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
+      used Dinic's algorithm }
+    function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
+    function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
+  { warning: does not checks network state, used PR algorithm }
+    function GetMaxFlowPr(constref aSource, aSink: TVertex): TWeight; inline;
+    function GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
+  { warning: does not checks network state, used Dinic's algorithm }
+    function GetMaxFlowD(constref aSource, aSink: TVertex): TWeight; inline;
+    function GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
+  { returns flows through the arcs in array a, used PR algorithm
+    warning: does not checks network state;
     warning: flow recovery works correctly only for integer capacities }
-    function GetMaxFlow(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
-    function GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
-  { warning: works correctly only for integer capacities }
+    function GetMaxFlowPr(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
+    function GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
+  { returns flows through the arcs in array a, used Dinic's algorithm
+    warning: does not checks network state }
+    function GetMaxFlowD(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
+    function GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
+  { warning: works correctly only for integer capacities ??? }
     function IsFlowFeasible(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
     function IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
 
@@ -378,12 +444,18 @@ type
       T: TIntArray;
     end;
 
-  { returns False if GetNetworkState <> nwsValid }
-    function FindMinSTCut(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
-    function FindMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
-  { warning: does not checks network state }
-    function GetMinSTCut(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight; inline;
-    function GetMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
+  { returns False if GetNetworkState <> nwsValid, used PR algorithm }
+    function FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
+    function FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
+  { returns False if GetNetworkState <> nwsValid, used Dinic's algorithm }
+    function FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
+    function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
+  { warning: does not checks network state, used PR algorithm }
+    function GetMinSTCutPr(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight; inline;
+    function GetMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
+  { warning: does not checks network state, used Dinic's algorithm }
+    function GetMinSTCutD(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight; inline;
+    function GetMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
 
   end;
 
@@ -1305,18 +1377,18 @@ end;
 
 { TGWeightedDiGraph.THPrfHelper.TFlowData }
 
-constructor TGWeightedDiGraph.THPrfHelper.TArc.Create(constref c: TWeight; aTarget, aOpposite: Pointer);
+constructor TGWeightedDiGraph.THPrfHelper.TArc.Create(constref c: TWeight; aTarget: PNode; aReverse: PArc);
 begin
   ResidualCap := c;
   Target := aTarget;
-  Reverse := aOpposite;
+  Reverse := aReverse;
 end;
 
-constructor TGWeightedDiGraph.THPrfHelper.TArc.CreateReverse(aTarget, aOpposite: Pointer);
+constructor TGWeightedDiGraph.THPrfHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc);
 begin
   ResidualCap := ZeroWeight;
   Target := aTarget;
-  Reverse := aOpposite;
+  Reverse := aReverse;
 end;
 
 function TGWeightedDiGraph.THPrfHelper.TArc.Saturated: Boolean;
@@ -1327,6 +1399,14 @@ end;
 function TGWeightedDiGraph.THPrfHelper.TArc.HasResidual: Boolean;
 begin
   Result := ResidualCap > ZeroWeight;
+end;
+
+procedure TGWeightedDiGraph.THPrfHelper.TArc.Push(constref aFlow: TWeight);
+begin
+  ResidualCap -= aFlow;
+  Reverse^.ResidualCap += aFlow;
+  Target^.Excess += aFlow;
+  Reverse^.Target^.Excess -= aFlow;
 end;
 
 { TGWeightedDiGraph.THPrfHelper.TNode }
@@ -1466,6 +1546,7 @@ begin
   FSource^.Excess := InfiniteWeight;
   System.SetLength(FLayers, FNodeCount);
   FMaxLayer := System.High(FLayers);
+  System.SetLength(FQueue, FNodeCount);
 end;
 
 procedure TGWeightedDiGraph.THPrfHelper.Init2(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
@@ -1518,6 +1599,7 @@ begin
   FSource^.Excess := InfiniteWeight;
   System.SetLength(FLayers, FNodeCount);
   FMaxLayer := System.High(FLayers);
+  System.SetLength(FQueue, FNodeCount);
 end;
 
 procedure TGWeightedDiGraph.THPrfHelper.ClearLabels;
@@ -1530,10 +1612,11 @@ end;
 
 procedure TGWeightedDiGraph.THPrfHelper.GlobalRelabel;
 var
-  Queue: TQueue;
   CurrNode, NextNode: PNode;
   CurrArc: PArc;
   Dist: SizeInt;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
   System.FillChar(Pointer(FLayers)^, Succ(FMaxLayer) * SizeOf(TLayer), 0);
   FMaxLayer := 0;
@@ -1542,33 +1625,39 @@ begin
   ClearLabels;
   FSink^.Distance := 0;
   CurrNode := FSink;
-  repeat
-    Dist := Succ(CurrNode^.Distance);
-    CurrArc := CurrNode^.FirstArc;
-    while CurrArc <= CurrNode^.LastArc do
-      begin
-        NextNode := CurrArc^.Target;
-        if (NextNode^.Distance = FNodeCount) and CurrArc^.Reverse^.HasResidual then
-          begin
-            NextNode^.Distance := Dist;
-            NextNode^.ResetCurrent;
-            if Dist > FMaxLayer then
-              FMaxLayer := Dist;
-            if NextNode^.HasExcess then
-              begin
-                FLayers[Dist].AddActive(NextNode);
-                if Dist > FMaxActiveLayer then
-                  FMaxActiveLayer := Dist;
-                if Dist < FMinActiveLayer then
-                  FMinActiveLayer := Dist;
-              end
-            else
-              FLayers[Dist].AddIdle(NextNode);
-            Queue.Enqueue(NextNode);
-          end;
-        Inc(CurrArc);
-      end;
-  until not Queue{%H-}.TryDequeue(CurrNode);
+  FQueue[qTail] := FSink;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      CurrNode := FQueue[qHead];
+      Inc(qHead);
+      Dist := Succ(CurrNode^.Distance);
+      CurrArc := CurrNode^.FirstArc;
+      while CurrArc <= CurrNode^.LastArc do
+        begin
+          NextNode := CurrArc^.Target;
+          if (NextNode^.Distance = FNodeCount) and CurrArc^.Reverse^.HasResidual then
+            begin
+              NextNode^.Distance := Dist;
+              NextNode^.ResetCurrent;
+              if Dist > FMaxLayer then
+                FMaxLayer := Dist;
+              if NextNode^.HasExcess then
+                begin
+                  FLayers[Dist].AddActive(NextNode);
+                  if Dist > FMaxActiveLayer then
+                    FMaxActiveLayer := Dist;
+                  if Dist < FMinActiveLayer then
+                    FMinActiveLayer := Dist;
+                end
+              else
+                FLayers[Dist].AddIdle(NextNode);
+              FQueue[qTail] := NextNode;
+              Inc(qTail);
+            end;
+          Inc(CurrArc);
+        end;
+    end;
 end;
 
 procedure TGWeightedDiGraph.THPrfHelper.RemoveGap(aLayer: SizeInt);
@@ -1586,7 +1675,6 @@ var
   CurrArc: PArc;
   NextNode: PNode;
   Dist: SizeInt;
-  Delta: TWeight;
 begin
   Dist := Pred(aNode^.Distance);
   while aNode^.CurrentArc <= aNode^.LastArc do
@@ -1596,17 +1684,13 @@ begin
       if (NextNode^.Distance = Dist) and CurrArc^.HasResidual then
         //arc is not saturated and target belongs to the next layer -> arc is admissible
         begin
-          Delta := Min(aNode^.Excess, CurrArc^.ResidualCap);
-          CurrArc^.ResidualCap -= Delta;
-          CurrArc^.Reverse^.ResidualCap += Delta;
-          if (Dist > 0) and not NextNode^.HasExcess then //in idle list
+          if (Dist > 0) and not NextNode^.HasExcess then //NextNode in idle list
             begin
               FLayers[Dist].ActivateIdle(NextNode);
               if Dist < FMinActiveLayer then
                 FMinActiveLayer := Dist;
             end;
-          aNode^.Excess -= Delta;
-          NextNode^.Excess += Delta;
+          CurrArc^.Push(Min(aNode^.Excess, CurrArc^.ResidualCap));
           if not aNode^.HasExcess then
             break;
         end;
@@ -1846,13 +1930,7 @@ begin
         while CurrNode^.HasExcess do
           begin
             if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.HasResidual then
-              begin
-                Delta := Min(CurrNode^.Excess, CurrArc^.ResidualCap);
-                CurrArc^.ResidualCap -= Delta;
-                CurrArc^.Reverse^.ResidualCap += Delta;
-                CurrNode^.Excess -= Delta;
-                CurrArc^.Target^.Excess += Delta;
-              end;
+              CurrArc^.Push(Min(CurrNode^.Excess, CurrArc^.ResidualCap));
             Inc(CurrArc);
           end;
         if CurrNode = StackBottom then
@@ -1894,6 +1972,236 @@ begin
   J := 0;
   for I := 0 to System.High(FNodes) do
     if FNodes[I].Distance = FNodeCount then
+      begin
+        if System.Length(s) = J then
+          System.SetLength(s, J shl 1);
+        s[J] := I;
+        Inc(J);
+      end;
+  System.SetLength(s, J);
+end;
+
+{ TGWeightedDiGraph.TDinicHelper.TArc }
+
+constructor TGWeightedDiGraph.TDinicHelper.TArc.Create(constref c: TWeight; aTarget: PNode; aReverse: PArc);
+begin
+  ResidualCap := c;
+  Target := aTarget;
+  Reverse := aReverse;
+  IsReal := True;
+end;
+
+constructor TGWeightedDiGraph.TDinicHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc);
+begin
+  ResidualCap := ZeroWeight;
+  Target := aTarget;
+  Reverse := aReverse;
+  IsReal := False;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.TArc.HasResidual: Boolean;
+begin
+  Result := ResidualCap > ZeroWeight;
+end;
+
+procedure TGWeightedDiGraph.TDinicHelper.TArc.Push(constref aFlow: TWeight);
+begin
+  ResidualCap -= aFlow;
+  Reverse^.ResidualCap += aFlow;
+end;
+
+{ TGWeightedDiGraph.TDinicHelper.TNode }
+
+procedure TGWeightedDiGraph.TDinicHelper.TNode.ResetCurrent;
+begin
+  CurrentArc := FirstArc;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.TNode.UnLabeled: Boolean;
+begin
+  Result := Distance = NULL_INDEX;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.TNode.Labeled: Boolean;
+begin
+  Result := Distance <> NULL_INDEX;
+end;
+
+{ TGWeightedDiGraph.TDinicHelper }
+
+procedure TGWeightedDiGraph.TDinicHelper.Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
+var
+  CurrArcIdx: TIntArray;
+  I, J: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(CurrArcIdx, aGraph.VertexCount);
+  J := 0;
+  for I := 0 to System.High(CurrArcIdx) do
+    begin
+      CurrArcIdx[I] := J;
+      J += aGraph.DegreeI(I);
+    end;
+
+  System.SetLength(FNodes, aGraph.VertexCount);
+  FSource := @FNodes[aSource];
+  FSink := @FNodes[aSink];
+  System.SetLength(FArcs, aGraph.EdgeCount * 2);
+
+  for I := 0 to System.High(FNodes) do
+    FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
+
+  for I := 0 to System.High(FNodes) do
+    for p in aGraph.AdjLists[I]^ do
+      begin
+        J := p^.Destination;
+        FArcs[CurrArcIdx[I]] := TArc.Create(p^.Data.Weight, @FNodes[J], @FArcs[CurrArcIdx[J]]);
+        FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]]);
+        Inc(CurrArcIdx[I]);
+        Inc(CurrArcIdx[J]);
+      end;
+
+  for I := 0 to System.High(FNodes) do
+    FNodes[I].LastArc := @FArcs[Pred(CurrArcIdx[I])];
+
+  CurrArcIdx := nil;
+  System.SetLength(FQueue, aGraph.VertexCount);
+end;
+
+procedure TGWeightedDiGraph.TDinicHelper.ClearLabels;
+var
+  I: SizeInt;
+begin
+  for I := 0 to  System.High(FNodes) do
+    FNodes[I].Distance := NULL_INDEX;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.Bfs: Boolean;
+var
+  Curr, Next: PNode;
+  CurrArc: PArc;
+  Dist: SizeInt;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  ClearLabels;
+  FSource^.Distance := 0;
+  FSource^.ResetCurrent;
+  FQueue[qTail] := FSource;
+  Inc(qTail);
+  while (qHead < qTail) and (FSink^.Distance = NULL_INDEX) do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      Dist := Succ(Curr^.Distance);
+      CurrArc := Curr^.FirstArc;
+      while CurrArc <= Curr^.LastArc do
+        begin
+          Next := CurrArc^.Target;
+          if Next^.UnLabeled and CurrArc^.HasResidual then
+            begin
+              Next^.ResetCurrent;
+              Next^.Distance := Dist;
+              FQueue[qTail] := Next;
+              Inc(qTail);
+            end;
+          Inc(CurrArc);
+        end;
+    end;
+  Result := FSink^.Labeled;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.Dfs(aRoot: PNode; var aFlow: TWeight): Boolean;
+var
+  Flow: TWeight;
+begin
+  if aFlow > ZeroWeight then
+    begin
+      if aRoot = FSink then
+        exit(True);
+      while aRoot^.CurrentArc <= aRoot^.LastArc do
+        begin
+          if aRoot^.CurrentArc^.Target^.Distance = Succ(aRoot^.Distance) then
+            begin
+              Flow := Min(aFlow, aRoot^.CurrentArc^.ResidualCap);
+              if Dfs(aRoot^.CurrentArc^.Target, Flow) then
+                begin
+                  aRoot^.CurrentArc^.Push(Flow);
+                  aFlow := Flow;
+                  exit(True);
+                end;
+            end;
+          Inc(aRoot^.CurrentArc);
+        end;
+    end;
+  Result := False;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.FindMaxFlow: TWeight;
+var
+  Flow: TWeight;
+begin
+  Flow := InfiniteWeight;
+  Result := ZeroWeight;
+  while Bfs do
+    while Dfs(FSource, Flow) do
+      begin
+        Result += Flow;
+        Flow := InfiniteWeight;
+      end;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.CreateEdgeArray(aGraph: TGWeightedDiGraph): TEdgeArray;
+var
+  I, J, Dst: SizeInt;
+  CurrArc: PArc;
+  d: TEdgeData;
+begin
+  System.SetLength(Result, aGraph.EdgeCount);
+  J := 0;
+  d := Default(TEdgeData);
+  for I := 0 to System.High(FNodes) do
+    begin
+      CurrArc := FNodes[I].FirstArc;
+      while CurrArc <= FNodes[I].LastArc do
+        begin
+          if CurrArc^.IsReal then
+            begin
+              Dst := SizeInt(CurrArc^.Target - PNode(FNodes));
+              aGraph.GetEdgeDataI(I, Dst, d);
+              Result[J] := TWeightEdge.Create(I, Dst, d.Weight - CurrArc^.ResidualCap);
+              Inc(J);
+            end;
+          Inc(CurrArc);
+        end;
+    end;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
+begin
+  Init(aGraph, aSource, aSink);
+  Result := FindMaxFlow;;
+end;
+
+function TGWeightedDiGraph.TDinicHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
+  out a: TEdgeArray): TWeight;
+begin
+  Init(aGraph, aSource, aSink);
+  Result := FindMaxFlow;
+  a := CreateEdgeArray(aGraph);
+end;
+
+function TGWeightedDiGraph.TDinicHelper.GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
+  out s: TIntArray): TWeight;
+var
+  I, J: SizeInt;
+begin
+  Init(aGraph, aSource, aSink);
+  Result := FindMaxFlow;
+  System.SetLength(s, ARRAY_INITIAL_SIZE);
+  J := 0;
+  for I := 0 to System.High(FNodes) do
+    if FNodes[I].Labeled then
       begin
         if System.Length(s) = J then
           System.SetLength(s, J shl 1);
@@ -2215,12 +2523,12 @@ begin
   Result := nwsValid;
 end;
 
-function TGWeightedDiGraph.FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean;
+function TGWeightedDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean;
 begin
-  Result := FindMaxFlowI(IndexOf(aSource), IndexOf(aSink), aFlow);
+  Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow);
 end;
 
-function TGWeightedDiGraph.FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
+function TGWeightedDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
 var
   Helper: THPrfHelper;
 begin
@@ -2230,13 +2538,28 @@ begin
   Result := True;
 end;
 
-function TGWeightedDiGraph.FindMaxFlow(constref aSource, aSink: TVertex; out aFlow: TWeight;
-  out a: TEdgeArray): Boolean;
+function TGWeightedDiGraph.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean;
 begin
-  Result := FindMaxFlowI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
+  Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow);
 end;
 
-function TGWeightedDiGraph.FindMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
+function TGWeightedDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
+var
+  Helper: TDinicHelper;
+begin
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+    exit(False);
+  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
+  Result := True;
+end;
+
+function TGWeightedDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight;
+  out a: TEdgeArray): Boolean;
+begin
+  Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
+end;
+
+function TGWeightedDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
   out a: TEdgeArray): Boolean;
 var
   Helper: THPrfHelper;
@@ -2247,12 +2570,29 @@ begin
   Result := True;
 end;
 
-function TGWeightedDiGraph.GetMaxFlow(constref aSource, aSink: TVertex): TWeight;
+function TGWeightedDiGraph.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight;
+  out a: TEdgeArray): Boolean;
 begin
-  Result := GetMaxFlowI(IndexOf(aSource), IndexOf(aSink));
+  Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
-function TGWeightedDiGraph.GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
+function TGWeightedDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
+  out a: TEdgeArray): Boolean;
+var
+  Helper: TDinicHelper;
+begin
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+    exit(False);
+  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
+  Result := True;
+end;
+
+function TGWeightedDiGraph.GetMaxFlowPr(constref aSource, aSink: TVertex): TWeight;
+begin
+  Result := GetMaxFlowPrI(IndexOf(aSource), IndexOf(aSink));
+end;
+
+function TGWeightedDiGraph.GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
 var
   Helper: THPrfHelper;
 begin
@@ -2261,14 +2601,42 @@ begin
   Result := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
 end;
 
-function TGWeightedDiGraph.GetMaxFlow(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight;
+function TGWeightedDiGraph.GetMaxFlowD(constref aSource, aSink: TVertex): TWeight;
 begin
-  Result := GetMaxFlowI(IndexOf(aSource), IndexOf(aSink), a);
+  Result := GetMaxFlowDI(IndexOf(aSource), IndexOf(aSink));
 end;
 
-function TGWeightedDiGraph.GetMaxFlowI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
+function TGWeightedDiGraph.GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
+var
+  Helper: TDinicHelper;
+begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
+  Result := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
+end;
+
+function TGWeightedDiGraph.GetMaxFlowPr(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight;
+begin
+  Result := GetMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), a);
+end;
+
+function TGWeightedDiGraph.GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
 var
   Helper: THPrfHelper;
+begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
+  Result := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
+end;
+
+function TGWeightedDiGraph.GetMaxFlowD(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight;
+begin
+  Result := GetMaxFlowDI(IndexOf(aSource), IndexOf(aSink), a);
+end;
+
+function TGWeightedDiGraph.GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
+var
+  Helper: TDinicHelper;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
@@ -2308,13 +2676,13 @@ begin
   Result := True;
 end;
 
-function TGWeightedDiGraph.FindMinSTCut(constref aSource, aSink: TVertex; out aValue: TWeight;
+function TGWeightedDiGraph.FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight;
   out aCut: TStCut): Boolean;
 begin
-  Result := FindMinSTCutI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
+  Result := FindMinSTCutPrI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
 end;
 
-function TGWeightedDiGraph.FindMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
+function TGWeightedDiGraph.FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): Boolean;
 var
   Helper: THPrfHelper;
@@ -2331,14 +2699,57 @@ begin
   Result := True;
 end;
 
-function TGWeightedDiGraph.GetMinSTCut(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight;
+function TGWeightedDiGraph.FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight;
+  out aCut: TStCut): Boolean;
 begin
-  Result := GetMinSTCutI(IndexOf(aSource), IndexOf(aSink), aCut);
+  Result := FindMinSTCutDI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
 end;
 
-function TGWeightedDiGraph.GetMinSTCutI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
+function TGWeightedDiGraph.FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
+  out aCut: TStCut): Boolean;
+var
+  Helper: TDinicHelper;
+  TmpSet: TIntSet;
+  I: SizeInt;
+begin
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+    exit(False);
+  aValue := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
+  TmpSet.InitRange(VertexCount);
+  for I in aCut.S do
+    TmpSet.Remove(I);
+  aCut.T := TmpSet.ToArray;
+  Result := True;
+end;
+
+function TGWeightedDiGraph.GetMinSTCutPr(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight;
+begin
+  Result := GetMinSTCutPrI(IndexOf(aSource), IndexOf(aSink), aCut);
+end;
+
+function TGWeightedDiGraph.GetMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
 var
   Helper: THPrfHelper;
+  TmpSet: TIntSet;
+  I: SizeInt;
+begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
+  Result := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
+  TmpSet.InitRange(VertexCount);
+  for I in aCut.S do
+    TmpSet.Remove(I);
+  aCut.T := TmpSet.ToArray;
+end;
+
+function TGWeightedDiGraph.GetMinSTCutD(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight;
+begin
+  Result := GetMinSTCutDI(IndexOf(aSource), IndexOf(aSink), aCut);
+end;
+
+function TGWeightedDiGraph.GetMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
+var
+  Helper: TDinicHelper;
   TmpSet: TIntSet;
   I: SizeInt;
 begin

@@ -3993,8 +3993,8 @@ end;
 
 function TGSimpleGraph.FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
 var
-  //Helper: THKMatch;
-  Helper: TBfsMatch;
+  Helper: THKMatch;
+  //Helper: TBfsMatch;
   w, g: TIntArray;
 begin
   if not IsBipartite(w, g) then
