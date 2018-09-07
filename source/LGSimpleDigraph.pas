@@ -271,6 +271,7 @@ type
     end;
 
     { TDinicHelper: implementation of Dinic's maxflow algorithm }
+    {todo: scaling Dinic}
     TDinicHelper = record
     type
       PNode = ^TNode;
@@ -292,7 +293,7 @@ type
         FirstArc,            // pointer to first incident arc in arcs array
         CurrentArc,          // pointer to current incident arc in arcs array
         LastArc: PArc;       // pointer to last incident arc in arcs array
-        Distance: SizeInt;   // distance from the sink
+        Distance: SizeInt;   // distance from the source
         procedure ResetCurrent; inline;
         function  UnLabeled: Boolean; inline;
         function  Labeled: Boolean; inline;
