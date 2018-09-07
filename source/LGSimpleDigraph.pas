@@ -270,8 +270,8 @@ type
       function  GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     end;
 
-    { TDinicHelper: implementation of Dinic's maxflow algorithm }
-    {todo: scaling Dinic}
+    { TDinicHelper: implementation of Dinitz's maxflow algorithm }
+    {todo: scaling Dinitz}
     TDinicHelper = record
     type
       PNode = ^TNode;
@@ -405,7 +405,7 @@ type
   { returns False if GetNetworkState <> nwsValid, used PR algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
-  { returns False if GetNetworkState <> nwsValid, used Dinic's algorithm }
+  { returns False if GetNetworkState <> nwsValid, used Dinitz's algorithm }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
   { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
@@ -414,13 +414,13 @@ type
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
     { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
-      used Dinic's algorithm }
+      used Dinitz's algorithm }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
   { warning: does not checks network state, used PR algorithm }
     function GetMaxFlowPr(constref aSource, aSink: TVertex): TWeight; inline;
     function GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
-  { warning: does not checks network state, used Dinic's algorithm }
+  { warning: does not checks network state, used Dinitz's algorithm }
     function GetMaxFlowD(constref aSource, aSink: TVertex): TWeight; inline;
     function GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
   { returns flows through the arcs in array a, used PR algorithm
@@ -428,7 +428,7 @@ type
     warning: flow recovery works correctly only for integer capacities }
     function GetMaxFlowPr(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
     function GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
-  { returns flows through the arcs in array a, used Dinic's algorithm
+  { returns flows through the arcs in array a, used Dinitz's algorithm
     warning: does not checks network state }
     function GetMaxFlowD(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
     function GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
@@ -446,13 +446,13 @@ type
   { returns False if GetNetworkState <> nwsValid, used PR algorithm }
     function FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
     function FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
-  { returns False if GetNetworkState <> nwsValid, used Dinic's algorithm }
+  { returns False if GetNetworkState <> nwsValid, used Dinitz's algorithm }
     function FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
     function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
   { warning: does not checks network state, used PR algorithm }
     function GetMinSTCutPr(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight; inline;
     function GetMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
-  { warning: does not checks network state, used Dinic's algorithm }
+  { warning: does not checks network state, used Dinitz's algorithm }
     function GetMinSTCutD(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight; inline;
     function GetMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
 
