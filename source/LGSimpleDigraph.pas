@@ -270,7 +270,7 @@ type
       function  GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     end;
 
-    { TDinicHelper }
+    { TDinicHelper: implementation of Dinic's maxflow algorithm }
     TDinicHelper = record
     type
       PNode = ^TNode;
@@ -286,8 +286,6 @@ type
         function  HasResidual: Boolean; inline;
         procedure Push(constref aFlow: TWeight); inline;
       end;
-
-      { TNode }
 
       TNode = record
       private
