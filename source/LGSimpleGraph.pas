@@ -621,6 +621,7 @@ type
     TPairingHeap = TPathHelper.TPairingHeap;
     TWeightItem  = TPathHelper.TWeightItem;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
+    TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
     { TKuhnMatch: Kuhn weighted matching algorithm for bipartite graph }
     TKuhnMatch = record
@@ -729,6 +730,12 @@ type
   { returns the approximation of the matching of the maximum cardinality and
     minimun weight in an arbitrary graph }
     function ApproxMinWeightMatching: TEdgeArray;
+
+{**********************************************************************************************************
+  networks utilities treat the weight of the arc as its capacity
+***********************************************************************************************************}
+
+    function GetMinCut: TWeight;
 
   end;
 
@@ -5325,6 +5332,45 @@ begin
       exit([TWeightEdge.Create(0, 1, {%H-}d.Weight)]);
     end;
   Result := GetApproxMinWeightMatching;
+end;
+
+function TGWeightedGraph.GetMinCut: TWeight;
+var
+  Queue: TPairHeapMax;
+  InQueue: TBitVector;
+  I: SizeInt;
+  p: PAdjItem;
+  Item: TWeightItem;
+  w: TWeight;
+  d: TEdgeData;
+begin
+  if not Connected or (VertexCount < 2) then
+    exit(ZeroWeight);
+  if VertexCount = 2 then
+    begin
+      d := DefaultEdgeData;
+      GetEdgeDataI(0, 1, d);
+      exit(d.Weight);
+    end;
+  Queue := TPairHeapMax.Create(VertexCount);
+  Result := InfiniteWeight;
+  InQueue.ExpandTrue(VertexCount);
+  Queue.Enqueue(TWeightItem.Create(InfiniteWeight, 0), 0);
+  for I := 1 to Pred(VertexCount) do
+    Queue.Enqueue(TWeightItem.Create(ZeroWeight, I), I);
+  while Queue.Count > 1 do
+    begin
+      I := Queue.Dequeue.Index;
+      InQueue[I] := False;
+      for p in AdjLists[I]^ do
+        if InQueue[p^.Destination] then
+          begin
+            Item := Queue.Peek(p^.Destination);
+            Item.Weight += p^.Data.Weight;
+            Queue.Update(p^.Destination, Item);
+          end;
+    end;
+  Result := Queue.Dequeue.Weight;
 end;
 
 { TRealPointEdge }
