@@ -198,8 +198,6 @@ type
       PNode = ^TNode;
       PArc  = ^TArc;
 
-      { TArc }
-
       TArc = record
         ResidualCap: TWeight;
         Target: PNode;       // pointer to target node
@@ -270,9 +268,9 @@ type
       function  GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     end;
 
-    { TDinicHelper: implementation of Dinitz's maxflow algorithm }
+    { TDinitzHelper: implementation of Dinitz's maxflow algorithm }
     {todo: scaling Dinitz}
-    TDinicHelper = record
+    TDinitzHelper = record
     type
       PNode = ^TNode;
       PArc  = ^TArc;
@@ -1980,9 +1978,9 @@ begin
   System.SetLength(s, J);
 end;
 
-{ TGWeightedDiGraph.TDinicHelper.TArc }
+{ TGWeightedDiGraph.TDinitzHelper.TArc }
 
-constructor TGWeightedDiGraph.TDinicHelper.TArc.Create(constref c: TWeight; aTarget: PNode; aReverse: PArc);
+constructor TGWeightedDiGraph.TDinitzHelper.TArc.Create(constref c: TWeight; aTarget: PNode; aReverse: PArc);
 begin
   ResidualCap := c;
   Target := aTarget;
@@ -1990,7 +1988,7 @@ begin
   IsReal := True;
 end;
 
-constructor TGWeightedDiGraph.TDinicHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc);
+constructor TGWeightedDiGraph.TDinitzHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc);
 begin
   ResidualCap := ZeroWeight;
   Target := aTarget;
@@ -1998,37 +1996,37 @@ begin
   IsReal := False;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.TArc.HasResidual: Boolean;
+function TGWeightedDiGraph.TDinitzHelper.TArc.HasResidual: Boolean;
 begin
   Result := ResidualCap > ZeroWeight;
 end;
 
-procedure TGWeightedDiGraph.TDinicHelper.TArc.Push(constref aFlow: TWeight);
+procedure TGWeightedDiGraph.TDinitzHelper.TArc.Push(constref aFlow: TWeight);
 begin
   ResidualCap -= aFlow;
   Reverse^.ResidualCap += aFlow;
 end;
 
-{ TGWeightedDiGraph.TDinicHelper.TNode }
+{ TGWeightedDiGraph.TDinitzHelper.TNode }
 
-procedure TGWeightedDiGraph.TDinicHelper.TNode.ResetCurrent;
+procedure TGWeightedDiGraph.TDinitzHelper.TNode.ResetCurrent;
 begin
   CurrentArc := FirstArc;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.TNode.UnLabeled: Boolean;
+function TGWeightedDiGraph.TDinitzHelper.TNode.UnLabeled: Boolean;
 begin
   Result := Distance = NULL_INDEX;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.TNode.Labeled: Boolean;
+function TGWeightedDiGraph.TDinitzHelper.TNode.Labeled: Boolean;
 begin
   Result := Distance <> NULL_INDEX;
 end;
 
-{ TGWeightedDiGraph.TDinicHelper }
+{ TGWeightedDiGraph.TDinitzHelper }
 
-procedure TGWeightedDiGraph.TDinicHelper.Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
+procedure TGWeightedDiGraph.TDinitzHelper.Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -2067,7 +2065,7 @@ begin
   System.SetLength(FQueue, aGraph.VertexCount);
 end;
 
-procedure TGWeightedDiGraph.TDinicHelper.ClearLabels;
+procedure TGWeightedDiGraph.TDinitzHelper.ClearLabels;
 var
   I: SizeInt;
 begin
@@ -2075,7 +2073,7 @@ begin
     FNodes[I].Distance := NULL_INDEX;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.Bfs: Boolean;
+function TGWeightedDiGraph.TDinitzHelper.Bfs: Boolean;
 var
   Curr, Next: PNode;
   CurrArc: PArc;
@@ -2110,7 +2108,7 @@ begin
   Result := FSink^.Labeled;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.Dfs(aRoot: PNode; var aFlow: TWeight): Boolean;
+function TGWeightedDiGraph.TDinitzHelper.Dfs(aRoot: PNode; var aFlow: TWeight): Boolean;
 var
   Flow: TWeight;
 begin
@@ -2136,7 +2134,7 @@ begin
   Result := False;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.FindMaxFlow: TWeight;
+function TGWeightedDiGraph.TDinitzHelper.FindMaxFlow: TWeight;
 var
   Flow: TWeight;
 begin
@@ -2150,7 +2148,7 @@ begin
       end;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.CreateEdgeArray(aGraph: TGWeightedDiGraph): TEdgeArray;
+function TGWeightedDiGraph.TDinitzHelper.CreateEdgeArray(aGraph: TGWeightedDiGraph): TEdgeArray;
 var
   I, J, Dst: SizeInt;
   CurrArc: PArc;
@@ -2176,13 +2174,13 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
+function TGWeightedDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
 begin
   Init(aGraph, aSource, aSink);
   Result := FindMaxFlow;;
 end;
 
-function TGWeightedDiGraph.TDinicHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
+function TGWeightedDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
   Init(aGraph, aSource, aSink);
@@ -2190,7 +2188,7 @@ begin
   a := CreateEdgeArray(aGraph);
 end;
 
-function TGWeightedDiGraph.TDinicHelper.GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
+function TGWeightedDiGraph.TDinitzHelper.GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
   out s: TIntArray): TWeight;
 var
   I, J: SizeInt;
@@ -2544,7 +2542,7 @@ end;
 
 function TGWeightedDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
 var
-  Helper: TDinicHelper;
+  Helper: TDinitzHelper;
 begin
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
     exit(False);
@@ -2578,7 +2576,7 @@ end;
 function TGWeightedDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
   out a: TEdgeArray): Boolean;
 var
-  Helper: TDinicHelper;
+  Helper: TDinitzHelper;
 begin
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
     exit(False);
@@ -2607,7 +2605,7 @@ end;
 
 function TGWeightedDiGraph.GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
 var
-  Helper: TDinicHelper;
+  Helper: TDinitzHelper;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
@@ -2635,7 +2633,7 @@ end;
 
 function TGWeightedDiGraph.GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
 var
-  Helper: TDinicHelper;
+  Helper: TDinitzHelper;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
@@ -2707,7 +2705,7 @@ end;
 function TGWeightedDiGraph.FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): Boolean;
 var
-  Helper: TDinicHelper;
+  Helper: TDinitzHelper;
   TmpSet: TIntSet;
   I: SizeInt;
 begin
@@ -2748,7 +2746,7 @@ end;
 
 function TGWeightedDiGraph.GetMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
 var
-  Helper: TDinicHelper;
+  Helper: TDinitzHelper;
   TmpSet: TIntSet;
   I: SizeInt;
 begin
