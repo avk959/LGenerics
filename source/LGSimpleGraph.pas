@@ -2334,13 +2334,12 @@ end;
 
 function TGSimpleGraph.GetApproxMatching: TIntEdgeArray;
 var
-  Nodes, Degrees: TIntArray;
+  Nodes: TIntArray;
   Matched: TBitVector;
   CurrPos, Size, Curr, Next: SizeInt;
   p: PAdjItem;
 begin
   Nodes := SortVerticesByDegree(soAsc);
-  Degrees := CreateDegreeArray;
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   CurrPos := 0;

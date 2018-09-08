@@ -798,6 +798,35 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
+  generic TGBinHeapMax<T> = record // for internal use only
+  private
+  type
+    THeap = array of T;
+
+  var
+    FHeap: THeap;
+    FHandle2Index: TIntArray;
+    FIndex2Handle: TIntArray;
+    FCount: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+    procedure Expand;
+    procedure BuildHeap;
+    procedure FloatUp(aIndex: SizeInt);
+    procedure SiftDown(aIndex: SizeInt);
+    function  DequeueItem: T; inline;
+  public
+    constructor Create(aSize: SizeInt);
+    constructor Create(constref a: array of T);
+    function  NotUsed(aHandle: SizeInt): Boolean; inline;
+    function  TryDequeue(out aValue: T): Boolean;
+    function  Dequeue: T;
+    procedure Enqueue(constref aValue: T; aHandle: SizeInt);
+    procedure Update(aHandle: SizeInt; constref aNewValue: T);
+    function  Peek(aHandle: SizeInt): T; inline;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
+
   generic TGPairHeap<T> = record // for internal use only
   private
   type
@@ -3512,9 +3541,9 @@ end;
 
 constructor TGBinHeapMin.Create(aSize: SizeInt);
 begin
+  FCount := 0;
   if aSize > 0 then
     begin
-      FCount := 0;
       System.SetLength(FHandle2Index, aSize);
       System.FillChar(FHandle2Index[0], aSize * SizeOf(SizeInt), $ff);
       System.SetLength(FHeap, 4096 div SizeOf(SizeInt));
@@ -3575,6 +3604,212 @@ begin
 end;
 
 function TGBinHeapMin.Peek(aHandle: SizeInt): T;
+begin
+  Result := FHeap[FHandle2Index[aHandle]];
+end;
+
+{ TGBinHeapMax }
+
+function TGBinHeapMax.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FIndex2Handle);
+end;
+
+procedure TGBinHeapMax.Expand;
+begin
+  System.SetLength(FHeap, System.Length(FHeap) shl 1);
+  System.SetLength(FIndex2Handle, System.Length(FIndex2Handle) shl 1);
+end;
+
+procedure TGBinHeapMax.BuildHeap;
+var
+  I, CurrIdx, NextIdx, HighIdx, HandleIdx: SizeInt;
+  v: T;
+begin
+  if Count > 1 then
+    begin
+      HighIdx := Pred(Count);
+      for I := Pred(Count shr 1) downto 0 do
+        begin
+          CurrIdx := I;
+          NextIdx := Succ(I shl 1);
+          v := FHeap[I];
+          HandleIdx := FIndex2Handle[I];
+          while NextIdx <= HighIdx do
+            begin
+              if (Succ(NextIdx) <= HighIdx) and (FHeap[NextIdx] < FHeap[Succ(NextIdx)]) then
+                Inc(NextIdx);
+              if v >= FHeap[NextIdx] then
+                break;
+              FHeap[CurrIdx] := FHeap[NextIdx];
+              FHandle2Index[FIndex2Handle[NextIdx]] := CurrIdx;
+              FIndex2Handle[CurrIdx] := FIndex2Handle[NextIdx];
+              CurrIdx := NextIdx;
+              NextIdx := Succ(NextIdx shl 1);
+            end;
+          FHeap[CurrIdx] := v;
+          FHandle2Index[HandleIdx] := CurrIdx;
+          FIndex2Handle[CurrIdx] := HandleIdx;
+        end;
+    end;
+end;
+
+procedure TGBinHeapMax.FloatUp(aIndex: SizeInt);
+var
+  CurrIdx, ParentIdx, HandleIdx: SizeInt;
+  v: T;
+begin
+  if aIndex > 0 then
+    begin
+      CurrIdx := aIndex;
+      ParentIdx := Pred(aIndex) shr 1;
+      v := FHeap[aIndex];
+      HandleIdx := FIndex2Handle[aIndex];
+      while (CurrIdx > 0) and (v > FHeap[ParentIdx]) do
+        begin
+          FHeap[CurrIdx] := FHeap[ParentIdx];
+          FHandle2Index[FIndex2Handle[ParentIdx]] := CurrIdx;
+          FIndex2Handle[CurrIdx] := FIndex2Handle[ParentIdx];
+          CurrIdx := ParentIdx;
+          ParentIdx := Pred(ParentIdx) shr 1;
+        end;
+      FHeap[CurrIdx] := v;
+      FHandle2Index[HandleIdx] := CurrIdx;
+      FIndex2Handle[CurrIdx] := HandleIdx;
+    end;
+end;
+
+procedure TGBinHeapMax.SiftDown(aIndex: SizeInt);
+var
+  CurrIdx, NextIdx, HighIdx, HandleIdx: SizeInt;
+  v: T;
+begin
+  HighIdx := Pred(Count);
+  if HighIdx > 0 then
+    begin
+      CurrIdx := aIndex;
+      NextIdx := Succ(aIndex shl 1);
+      v := FHeap[aIndex];
+      HandleIdx := FIndex2Handle[aIndex];
+      while NextIdx <= HighIdx do
+        begin
+          if (Succ(NextIdx) <= HighIdx) and (FHeap[NextIdx] < FHeap[Succ(NextIdx)]) then
+            Inc(NextIdx);
+          FHeap[CurrIdx] := FHeap[NextIdx];
+          FHandle2Index[FIndex2Handle[NextIdx]] := CurrIdx;
+          FIndex2Handle[CurrIdx] := FIndex2Handle[NextIdx];
+          CurrIdx := NextIdx;
+          NextIdx := Succ(NextIdx shl 1);
+        end;
+      NextIdx := Pred(CurrIdx) shr 1;
+      while (CurrIdx > 0) and (v > FHeap[NextIdx]) do
+        begin
+          FHeap[CurrIdx] := FHeap[NextIdx];
+          FHandle2Index[FIndex2Handle[NextIdx]] := CurrIdx;
+          FIndex2Handle[CurrIdx] := FIndex2Handle[NextIdx];
+          CurrIdx := NextIdx;
+          NextIdx := Pred(NextIdx) shr 1;
+        end;
+      FHeap[CurrIdx] := v;
+      FHandle2Index[HandleIdx] := CurrIdx;
+      FIndex2Handle[CurrIdx] := HandleIdx;
+    end;
+end;
+
+function TGBinHeapMax.DequeueItem: T;
+begin
+  Dec(FCount);
+  Result := FHeap[0];
+  FHeap[0] := FHeap[Count];
+  FHandle2Index[FIndex2Handle[Count]] := 0;
+  FIndex2Handle[0] := FIndex2Handle[Count];
+  FHeap[Count] := Default(T);
+  SiftDown(0);
+end;
+
+constructor TGBinHeapMax.Create(aSize: SizeInt);
+begin
+  FCount := 0;
+  if aSize > 0 then
+    begin
+      System.SetLength(FHandle2Index, aSize);
+      System.FillChar(FHandle2Index[0], aSize * SizeOf(SizeInt), $ff);
+      System.SetLength(FHeap, aSize);
+      System.SetLength(FIndex2Handle, aSize);
+    end;
+end;
+
+constructor TGBinHeapMax.Create(constref a: array of T);
+var
+  I, Len: SizeInt;
+begin
+  FCount := 0;
+  Len := System.Length(a);
+  System.SetLength(FHeap, Len);
+  System.SetLength(FHandle2Index, Len);
+  System.SetLength(FIndex2Handle, Len);
+  for I := 0 to System.High(a) do
+    begin
+      FHeap[I] := a[I];
+      FHandle2Index[I] := I;
+      FIndex2Handle[I] := I;
+    end;
+  BuildHeap;
+end;
+
+function TGBinHeapMax.NotUsed(aHandle: SizeInt): Boolean;
+begin
+  Result := FHandle2Index[aHandle] = -1;
+end;
+
+function TGBinHeapMax.TryDequeue(out aValue: T): Boolean;
+begin
+  Result := Count > 0;
+  if Result then
+    aValue := DequeueItem;
+end;
+
+function TGBinHeapMax.Dequeue: T;
+begin
+  if Count > 0 then
+    Result := DequeueItem
+  else
+    raise ELGAccessEmpty.Create(SECantAccessEmpty);
+end;
+
+procedure TGBinHeapMax.Enqueue(constref aValue: T; aHandle: SizeInt);
+var
+  InsertIdx: SizeInt;
+begin
+  if Count = Capacity then
+    Expand;
+  InsertIdx := Count;
+  Inc(FCount);
+  FHeap[InsertIdx] := aValue;
+  FHandle2Index[aHandle] := InsertIdx;
+  FIndex2Handle[InsertIdx] := aHandle;
+  FloatUp(InsertIdx);
+end;
+
+procedure TGBinHeapMax.Update(aHandle: SizeInt; constref aNewValue: T);
+var
+  I: SizeInt;
+begin
+  I := FHandle2Index[aHandle];
+  if aNewValue < FHeap[I] then
+    begin
+      FHeap[I] := aNewValue;
+      FloatUp(I);
+    end
+  else
+    if aNewValue > FHeap[I] then
+      begin
+        FHeap[I] := aNewValue;
+        SiftDown(I);
+      end;
+end;
+
+function TGBinHeapMax.Peek(aHandle: SizeInt): T;
 begin
   Result := FHeap[FHandle2Index[aHandle]];
 end;
