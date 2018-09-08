@@ -3741,14 +3741,13 @@ end;
 
 constructor TGBinHeapMax.Create(constref a: array of T);
 var
-  I, Len: SizeInt;
+  I: SizeInt;
 begin
-  FCount := 0;
-  Len := System.Length(a);
-  System.SetLength(FHeap, Len);
-  System.SetLength(FHandle2Index, Len);
-  System.SetLength(FIndex2Handle, Len);
-  for I := 0 to System.High(a) do
+  FCount := System.Length(a);
+  System.SetLength(FHeap, Count);
+  System.SetLength(FHandle2Index, Count);
+  System.SetLength(FIndex2Handle, Count);
+  for I := 0 to Pred(Count) do
     begin
       FHeap[I] := a[I];
       FHandle2Index[I] := I;
@@ -3796,13 +3795,13 @@ var
   I: SizeInt;
 begin
   I := FHandle2Index[aHandle];
-  if aNewValue < FHeap[I] then
+  if aNewValue > FHeap[I] then
     begin
       FHeap[I] := aNewValue;
       FloatUp(I);
     end
   else
-    if aNewValue > FHeap[I] then
+    if aNewValue < FHeap[I] then
       begin
         FHeap[I] := aNewValue;
         SiftDown(I);
