@@ -30,9 +30,7 @@ uses
   Classes, SysUtils,
   LGUtils,
   {%H-}LGHelpers,
-  LGArrayHelpers,
   LGCustomGraph,
-  LGQueue,
   LGStrConst;
 
 type
@@ -260,7 +258,7 @@ type
       function  Push(aNode: PNode): Boolean;
       procedure Relabel(aNode: PNode);
       procedure HiLevelPushRelabel;
-      function  CreateEdgeArray: TEdgeArray;
+      function  CreateEdges: TEdgeArray;
       function  PreflowToFlow: TEdgeArray; //flow recovering
     public
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
@@ -269,7 +267,6 @@ type
     end;
 
     { TDinitzHelper: implementation of Dinitz's maxflow algorithm }
-    {todo: scaling Dinitz}
     TDinitzHelper = record
     type
       PNode = ^TNode;
@@ -293,7 +290,7 @@ type
         LastArc: PArc;       // pointer to last incident arc in arcs array
         Distance: SizeInt;   // distance from the source
         procedure ResetCurrent; inline;
-        function  UnLabeled: Boolean; inline;
+        function  NonLabeled: Boolean; inline;
         function  Labeled: Boolean; inline;
       end;
 
@@ -308,7 +305,7 @@ type
       function  Bfs: Boolean;
       function  Dfs(aRoot: PNode; var aFlow: TWeight): Boolean;
       function  FindMaxFlow: TWeight;
-      function  CreateEdgeArray(aGraph: TGWeightedDiGraph): TEdgeArray;
+      function  CreateEdges(aGraph: TGWeightedDiGraph): TEdgeArray;
     public
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
       function  GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
@@ -407,12 +404,7 @@ type
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
   { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
-    used PR algorithm;
-    warning: flow recovery works correctly only for integer capacities }
-    function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
-    function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
-    { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
-      used Dinitz's algorithm }
+    used Dinitz's algorithm }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
   { warning: does not checks network state, used PR algorithm }
@@ -421,11 +413,6 @@ type
   { warning: does not checks network state, used Dinitz's algorithm }
     function GetMaxFlowD(constref aSource, aSink: TVertex): TWeight; inline;
     function GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
-  { returns flows through the arcs in array a, used PR algorithm
-    warning: does not checks network state;
-    warning: flow recovery works correctly only for integer capacities }
-    function GetMaxFlowPr(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
-    function GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
   { returns flows through the arcs in array a, used Dinitz's algorithm
     warning: does not checks network state }
     function GetMaxFlowD(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
@@ -456,11 +443,28 @@ type
 
   end;
 
+
+  { TGIntWeightedDiGraph assumes TWeight is integer type }
+  generic TGIntWeightedDiGraph<TVertex, TWeight, TEdgeData, TEqRel> = class(
+     specialize TGWeightedDiGraph<TVertex, TWeight, TEdgeData, TEqRel>)
+{**********************************************************************************************************
+  networks utilities treat the weight of the arc as its capacity
+***********************************************************************************************************}
+
+  { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
+    used PR algorithm }
+    function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
+    function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
+  { returns flows through the arcs in array a, used PR algorithm;
+    warning: does not checks network state }
+    function GetMaxFlowPr(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
+    function GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}
 uses
   bufstream;
-
 { TGSimpleDiGraph.TReachabilityMatrix }
 
 function TGSimpleDiGraph.TReachabilityMatrix.GetSize: SizeInt;
@@ -1769,7 +1773,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.THPrfHelper.CreateEdgeArray: TEdgeArray;
+function TGWeightedDiGraph.THPrfHelper.CreateEdges: TEdgeArray;
 var
   I, J: SizeInt;
   CurrArc: PArc;
@@ -1936,7 +1940,7 @@ begin
           CurrNode := CurrNode^.OrderNext;
       until False;
     end;
-  Result := CreateEdgeArray;
+  Result := CreateEdges;
 end;
 
 function TGWeightedDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
@@ -2014,7 +2018,7 @@ begin
   CurrentArc := FirstArc;
 end;
 
-function TGWeightedDiGraph.TDinitzHelper.TNode.UnLabeled: Boolean;
+function TGWeightedDiGraph.TDinitzHelper.TNode.NonLabeled: Boolean;
 begin
   Result := Distance = NULL_INDEX;
 end;
@@ -2095,7 +2099,7 @@ begin
       while CurrArc <= Curr^.LastArc do
         begin
           Next := CurrArc^.Target;
-          if Next^.UnLabeled and CurrArc^.HasResidual then
+          if Next^.NonLabeled and CurrArc^.HasResidual then
             begin
               Next^.ResetCurrent;
               Next^.Distance := Dist;
@@ -2148,7 +2152,7 @@ begin
       end;
 end;
 
-function TGWeightedDiGraph.TDinitzHelper.CreateEdgeArray(aGraph: TGWeightedDiGraph): TEdgeArray;
+function TGWeightedDiGraph.TDinitzHelper.CreateEdges(aGraph: TGWeightedDiGraph): TEdgeArray;
 var
   I, J, Dst: SizeInt;
   CurrArc: PArc;
@@ -2177,7 +2181,7 @@ end;
 function TGWeightedDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt): TWeight;
 begin
   Init(aGraph, aSource, aSink);
-  Result := FindMaxFlow;;
+  Result := FindMaxFlow;
 end;
 
 function TGWeightedDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
@@ -2185,7 +2189,7 @@ function TGWeightedDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGWeightedDiGraph; a
 begin
   Init(aGraph, aSource, aSink);
   Result := FindMaxFlow;
-  a := CreateEdgeArray(aGraph);
+  a := CreateEdges(aGraph);
 end;
 
 function TGWeightedDiGraph.TDinitzHelper.GetMinCut(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt;
@@ -2550,23 +2554,6 @@ begin
   Result := True;
 end;
 
-function TGWeightedDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight;
-  out a: TEdgeArray): Boolean;
-begin
-  Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
-end;
-
-function TGWeightedDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
-  out a: TEdgeArray): Boolean;
-var
-  Helper: THPrfHelper;
-begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
-    exit(False);
-  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
-  Result := True;
-end;
-
 function TGWeightedDiGraph.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight;
   out a: TEdgeArray): Boolean;
 begin
@@ -2610,20 +2597,6 @@ begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
   Result := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
-end;
-
-function TGWeightedDiGraph.GetMaxFlowPr(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight;
-begin
-  Result := GetMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), a);
-end;
-
-function TGWeightedDiGraph.GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
-var
-  Helper: THPrfHelper;
-begin
-  CheckIndexRange(aSrcIndex);
-  CheckIndexRange(aSinkIndex);
-  Result := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
 end;
 
 function TGWeightedDiGraph.GetMaxFlowD(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight;
@@ -2757,6 +2730,39 @@ begin
   for I in aCut.S do
     TmpSet.Remove(I);
   aCut.T := TmpSet.ToArray;
+end;
+
+{ TGIntWeightedDiGraph }
+
+function TGIntWeightedDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight;
+  out a: TEdgeArray): Boolean;
+begin
+  Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
+end;
+
+function TGIntWeightedDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
+  out a: TEdgeArray): Boolean;
+var
+  Helper: THPrfHelper;
+begin
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+    exit(False);
+  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
+  Result := True;
+end;
+
+function TGIntWeightedDiGraph.GetMaxFlowPr(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight;
+begin
+  Result := GetMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), a);
+end;
+
+function TGIntWeightedDiGraph.GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
+var
+  Helper: THPrfHelper;
+begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
+  Result := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
 end;
 
 end.
