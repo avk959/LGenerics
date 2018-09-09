@@ -731,7 +731,7 @@ type
     minimun weight in an arbitrary graph }
     function ApproxMinWeightMatching: TEdgeArray;
 
-    function GetMinCut: TWeight;
+    function GetMinCut(out aCut: TIntArray): TWeight;
 
   end;
 
@@ -5330,16 +5330,16 @@ begin
   Result := GetApproxMinWeightMatching;
 end;
 
-function TGWeightedGraph.GetMinCut: TWeight;
+function TGWeightedGraph.GetMinCut(out aCut: TIntArray): TWeight;
 var
   Queue: TPairHeapMax;
-  InQueue: TBoolVector;
-  I, J: SizeInt;
+  Rest, InQueue, Best: TBoolVector;
+  gVerts: array of TBoolVector;
+  I, J, K: SizeInt;
   p: PAdjItem;
   Item: TWeightItem;
   d: TEdgeData;
 begin
-  //todo: is it correct ???
   if not Connected or (VertexCount < 2) then
     exit(ZeroWeight);
   if VertexCount = 2 then
@@ -5348,36 +5348,51 @@ begin
       GetEdgeDataI(0, 1, d);
       exit(d.Weight);
     end;
-
-  Queue := TPairHeapMax.Create(VertexCount);
-  Result := InfiniteWeight;
-  InQueue.Size := VertexCount;
+  //todo: is it correct ???
+  System.SetLength(gVerts, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
-      Queue.MakeEmpty;
-      InQueue.SetBits;
-      for J := 0 to Pred(VertexCount) do
-        Queue.Enqueue(TWeightItem.Create(ZeroWeight, J), J);
-      Queue.Update(I, TWeightItem.Create(InfiniteWeight, I));
-      InQueue[I] := False;
+      gVerts[I].Size := VertexCount;
+      gVerts[I][I] := True;
+    end;
+  Queue := TPairHeapMax.Create(VertexCount);
+  Rest.InitRange(VertexCount);
+  InQueue.Size := VertexCount;
+  Result := InfiniteWeight;
 
+  for I := 1 to Pred(VertexCount) do
+    begin
+      Queue.MakeEmpty;
+      InQueue.ClearBits;
+      InQueue.Join(Rest);
+      for J in InQueue do
+        Queue.Enqueue(TWeightItem.Create(ZeroWeight, J), J);
+      J := InQueue.Bsf;
+      Queue.Update(J, TWeightItem.Create(InfiniteWeight, J));
       while Queue.Count > 1 do
         begin
           J := Queue.Dequeue.Index;
           InQueue[J] := False;
-          for p in AdjLists[J]^ do
-            if InQueue[p^.Destination] then
-              begin
-                Item := Queue.Peek(p^.Destination);
-                Item.Weight += p^.Data.Weight;
-                Queue.Update(p^.Destination, Item);
-              end;
+          for K in gVerts[J] do
+            for p in AdjLists[K]^ do
+              if InQueue[p^.Destination] then
+                begin
+                  Item := Queue.Peek(p^.Destination);
+                  Item.Weight += p^.Data.Weight;
+                  Queue.Update(p^.Destination, Item);
+                end;
         end;
 
       Item := Queue.Dequeue;
       if Result > Item.Weight then
-        Result := Item.Weight;
+        begin
+          Result := Item.Weight;
+          Best := gVerts[Item.Index];
+        end;
+      gVerts[J].Join(gVerts[Item.Index]);
+      Rest[Item.Index] := False;
     end;
+  aCut := Best.ToArray;
 end;
 
 { TRealPointEdge }
