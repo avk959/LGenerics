@@ -2385,7 +2385,7 @@ end;
 function TGWeightedDiGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 begin
-  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aSrc), aWeight, aEst);
+  Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aDst), aWeight, aEst);
 end;
 
 function TGWeightedDiGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
