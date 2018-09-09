@@ -731,10 +731,6 @@ type
     minimun weight in an arbitrary graph }
     function ApproxMinWeightMatching: TEdgeArray;
 
-{**********************************************************************************************************
-  networks utilities treat the weight of the arc as its capacity
-***********************************************************************************************************}
-
     function GetMinCut: TWeight;
 
   end;
@@ -5337,13 +5333,13 @@ end;
 function TGWeightedGraph.GetMinCut: TWeight;
 var
   Queue: TPairHeapMax;
-  InQueue: TBitVector;
-  I: SizeInt;
+  InQueue: TBoolVector;
+  I, J: SizeInt;
   p: PAdjItem;
   Item: TWeightItem;
-  w: TWeight;
   d: TEdgeData;
 begin
+  //todo: is it correct ???
   if not Connected or (VertexCount < 2) then
     exit(ZeroWeight);
   if VertexCount = 2 then
@@ -5352,25 +5348,36 @@ begin
       GetEdgeDataI(0, 1, d);
       exit(d.Weight);
     end;
+
   Queue := TPairHeapMax.Create(VertexCount);
   Result := InfiniteWeight;
-  InQueue.ExpandTrue(VertexCount);
-  Queue.Enqueue(TWeightItem.Create(InfiniteWeight, 0), 0);
-  for I := 1 to Pred(VertexCount) do
-    Queue.Enqueue(TWeightItem.Create(ZeroWeight, I), I);
-  while Queue.Count > 1 do
+  InQueue.Size := VertexCount;
+  for I := 0 to Pred(VertexCount) do
     begin
-      I := Queue.Dequeue.Index;
+      Queue.MakeEmpty;
+      InQueue.SetBits;
+      for J := 0 to Pred(VertexCount) do
+        Queue.Enqueue(TWeightItem.Create(ZeroWeight, J), J);
+      Queue.Update(I, TWeightItem.Create(InfiniteWeight, I));
       InQueue[I] := False;
-      for p in AdjLists[I]^ do
-        if InQueue[p^.Destination] then
-          begin
-            Item := Queue.Peek(p^.Destination);
-            Item.Weight += p^.Data.Weight;
-            Queue.Update(p^.Destination, Item);
-          end;
+
+      while Queue.Count > 1 do
+        begin
+          J := Queue.Dequeue.Index;
+          InQueue[J] := False;
+          for p in AdjLists[J]^ do
+            if InQueue[p^.Destination] then
+              begin
+                Item := Queue.Peek(p^.Destination);
+                Item.Weight += p^.Data.Weight;
+                Queue.Update(p^.Destination, Item);
+              end;
+        end;
+
+      Item := Queue.Dequeue;
+      if Result > Item.Weight then
+        Result := Item.Weight;
     end;
-  Result := Queue.Dequeue.Weight;
 end;
 
 { TRealPointEdge }
