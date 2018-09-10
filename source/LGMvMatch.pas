@@ -29,7 +29,7 @@ unit LGMvMatch;
 interface
 
 uses
-  SysUtils, LGUtils;
+  SysUtils;
 
 type
   TSide     = (siNone, siLeft, siRight);

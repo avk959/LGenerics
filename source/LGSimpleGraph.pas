@@ -5081,14 +5081,15 @@ var
   Cuts: array of TIntSet;
   Rest, InQueue: TBoolVector;
   Best: TIntSet;
-  I, J, K: SizeInt;
+  Phase, Prev, Last, I, J: SizeInt;
   p: PAdjItem;
-  Item, SearchItem: TWeightItem;
+  Item, NextItem: TWeightItem;
 begin
   System.SetLength(g, VertexCount);
   for I := 0 to Pred(VertexCount) do
+    System.SetLength(g[I], DegreeI(I));
+  for I := 0 to Pred(VertexCount) do
     begin
-      System.SetLength(g[I], DegreeI(I));
       J := 0;
       for p in AdjLists[I]^ do
         begin
@@ -5104,44 +5105,45 @@ begin
   InQueue.Size := VertexCount;
   Result := InfiniteWeight;
 
-  for I := 1 to Pred(VertexCount) do
+  for Phase := 1 to Pred(VertexCount) do
     begin
       Queue.MakeEmpty;
       InQueue.ClearBits;
       InQueue.Join(Rest);
-      for J in InQueue do
-        Queue.Enqueue(TWeightItem.Create(ZeroWeight, J), J);
-      J := InQueue.Bsf;
-      Queue.Update(J, TWeightItem.Create(InfiniteWeight, J));
+      for I in InQueue do
+        Queue.Enqueue(TWeightItem.Create(ZeroWeight, I), I);
+      I := InQueue.Bsf;
+      Queue.Update(I, TWeightItem.Create(InfiniteWeight, I));
       while Queue.Count > 1 do
         begin
-          J := Queue.Dequeue.Index;
-          InQueue[J] := False;
-          for SearchItem in g[J] do
-            if InQueue[SearchItem.Index] then
+          Prev := Queue.Dequeue.Index;
+          InQueue[Prev] := False;
+          for NextItem in g[Prev] do
+            if InQueue[NextItem.Index] then
               begin
-                Item := Queue.Peek(SearchItem.Index);
-                Item.Weight += SearchItem.Weight;
-                Queue.Update(SearchItem.Index, Item);
+                Item := Queue.Peek(NextItem.Index);
+                Item.Weight += NextItem.Weight;
+                Queue.Update(NextItem.Index, Item);
               end;
         end;
       Item := Queue.Dequeue;
+      Last := Item.Index;
       if Result > Item.Weight then
         begin
           Result := Item.Weight;
-          Best.Assign(Cuts[Item.Index]);
+          Best.Assign(Cuts[Last]);
         end;
-      while Cuts[Item.Index].TryPop(K) do
-        Cuts[J].Push(K);
-      Finalize(Cuts[Item.Index]);
-      Rest[Item.Index] := False;
-      //merge last two vertices: remains J
-      Insert(g[Item.Index], g[J], System.Length(g[J]));
-      for SearchItem in g[Item.Index] do
-        for K := 0 to System.High(g[SearchItem.Index]) do
-          if g[SearchItem.Index][K].Index = Item.Index then
-            g[SearchItem.Index][K].Index := J;
-      g[Item.Index] := nil;
+      while Cuts[Last].TryPop(I) do
+        Cuts[Prev].Push(I);
+      Finalize(Cuts[Last]);
+      Rest[Last] := False;
+      //merge last two vertices: remains Prev
+      Insert(g[Last], g[Prev], System.Length(g[Prev]));
+      for NextItem in g[Last] do
+        for J := 0 to System.High(g[NextItem.Index]) do
+          if g[NextItem.Index][J].Index = Last then
+            g[NextItem.Index][J].Index := Prev;
+      g[Last] := nil;
     end;
   aCut := {%H-}Best.ToArray;
 end;
