@@ -622,7 +622,6 @@ type
     TWeightItem  = TPathHelper.TWeightItem;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
-    TWIVector    = specialize TGLiteVector<TWeightItem>;
 
     { TKuhnMatch: Kuhn weighted matching algorithm for bipartite graph }
     TKuhnMatch = record
@@ -5078,21 +5077,24 @@ end;
 function TGWeightedGraph.StoerWagner(out aCut: TIntArray): TWeight;
 var
   Queue: TPairHeapMax;
-  g: array of TWIVector;
+  g: array of array of TWeightItem;
   Cuts: array of TIntSet;
   Rest, InQueue: TBoolVector;
   Best: TIntSet;
   I, J, K: SizeInt;
   p: PAdjItem;
-  pwi, pSearch: TWIVector.PItem;
-  Item: TWeightItem;
+  Item, SearchItem: TWeightItem;
 begin
   System.SetLength(g, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
-      g[I].EnsureCapacity(DegreeI(I));
+      System.SetLength(g[I], DegreeI(I));
+      J := 0;
       for p in AdjLists[I]^ do
-        g[I].Add(TWeightItem.Create(p^.Data.Weight, p^.Destination));
+        begin
+          g[I, J] := TWeightItem.Create(p^.Data.Weight, p^.Destination);
+          Inc(J);
+        end;
     end;
   System.SetLength(Cuts, VertexCount);
   for I := 0 to Pred(VertexCount) do
@@ -5115,12 +5117,12 @@ begin
         begin
           J := Queue.Dequeue.Index;
           InQueue[J] := False;
-          for pwi in g[J].Mutables do
-            if InQueue[pwi^.Index] then
+          for SearchItem in g[J] do
+            if InQueue[SearchItem.Index] then
               begin
-                Item := Queue.Peek(pwi^.Index);
-                Item.Weight += pwi^.Weight;
-                Queue.Update(pwi^.Index, Item);
+                Item := Queue.Peek(SearchItem.Index);
+                Item.Weight += SearchItem.Weight;
+                Queue.Update(SearchItem.Index, Item);
               end;
         end;
       Item := Queue.Dequeue;
@@ -5134,12 +5136,12 @@ begin
       Finalize(Cuts[Item.Index]);
       Rest[Item.Index] := False;
       //merge last two vertices: remains J
-      g[J].AddAll(g[Item.Index]);
-      for pwi in g[Item.Index].Mutables do
-        for pSearch in g[pwi^.Index].Mutables do
-          if pSearch^.Index = Item.Index then
-            pSearch^.Index := J;
-      Finalize(g[Item.Index]);
+      Insert(g[Item.Index], g[J], System.Length(g[J]));
+      for SearchItem in g[Item.Index] do
+        for K := 0 to System.High(g[SearchItem.Index]) do
+          if g[SearchItem.Index][K].Index = Item.Index then
+            g[SearchItem.Index][K].Index := J;
+      g[Item.Index] := nil;
     end;
   aCut := {%H-}Best.ToArray;
 end;
