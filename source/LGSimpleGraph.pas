@@ -2408,7 +2408,7 @@ begin
                     d := I;
                   end;
                 Dec(Node.Data);
-                Nodes.Update(I, Node);
+                Nodes.Update(Node, I);
               end;
           end;
         if d <> NULL_INDEX then // node found
@@ -2420,7 +2420,7 @@ begin
                   begin
                     Node := Nodes.Peek(I);
                     Dec(Node.Data);
-                    Nodes.Update(I, Node);
+                    Nodes.Update(Node, I);
                   end;
               end;
             Matched[s] := True;
@@ -4987,7 +4987,7 @@ begin
                     d := I;
                   end;
                 Dec(Node.Data);
-                Nodes.Update(I, Node);
+                Nodes.Update(Node, I);
               end;
           end;
         if d <> NULL_INDEX then // node found
@@ -4999,7 +4999,7 @@ begin
                   begin
                     Node := Nodes.Peek(I);
                     Dec(Node.Data);
-                    Nodes.Update(I, Node);
+                    Nodes.Update(Node, I);
                   end;
               end;
             Matched[s] := True;
@@ -5047,7 +5047,7 @@ begin
                     d := I;
                   end;
                 Dec(Node.Data);
-                Nodes.Update(I, Node);
+                Nodes.Update(Node, I);
               end;
           end;
         if d <> NULL_INDEX then // node found
@@ -5059,7 +5059,7 @@ begin
                   begin
                     Node := Nodes.Peek(I);
                     Dec(Node.Data);
-                    Nodes.Update(I, Node);
+                    Nodes.Update(Node, I);
                   end;
               end;
             Matched[s] := True;
@@ -5087,9 +5087,8 @@ var
 begin
   System.SetLength(g, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    System.SetLength(g[I], DegreeI(I));
-  for I := 0 to Pred(VertexCount) do
     begin
+      System.SetLength(g[I], DegreeI(I));
       J := 0;
       for p in AdjLists[I]^ do
         begin
@@ -5113,17 +5112,17 @@ begin
       for I in InQueue do
         Queue.Enqueue(TWeightItem.Create(ZeroWeight, I), I);
       I := InQueue.Bsf;
-      Queue.Update(I, TWeightItem.Create(InfiniteWeight, I));
+      Queue.Update(TWeightItem.Create(InfiniteWeight, I), I);
       while Queue.Count > 1 do
         begin
           Prev := Queue.Dequeue.Index;
           InQueue[Prev] := False;
-          for NextItem in g[Prev] do
-            if InQueue[NextItem.Index] then
+          for Item in g[Prev] do
+            if InQueue[Item.Index] then
               begin
-                Item := Queue.Peek(NextItem.Index);
-                Item.Weight += NextItem.Weight;
-                Queue.Update(NextItem.Index, Item);
+                NextItem := Queue.Peek(Item.Index);
+                NextItem.Weight += Item.Weight;
+                Queue.Update(NextItem, Item.Index);
               end;
         end;
       Item := Queue.Dequeue;
@@ -5139,10 +5138,10 @@ begin
       Rest[Last] := False;
       //merge last two vertices: remains Prev
       Insert(g[Last], g[Prev], System.Length(g[Prev]));
-      for NextItem in g[Last] do
-        for J := 0 to System.High(g[NextItem.Index]) do
-          if g[NextItem.Index][J].Index = Last then
-            g[NextItem.Index][J].Index := Prev;
+      for Item in g[Last] do
+        for J := 0 to System.High(g[Item.Index]) do
+          if g[Item.Index][J].Index = Last then
+            g[Item.Index][J].Index := Prev;
       g[Last] := nil;
     end;
   aCut := {%H-}Best.ToArray;
@@ -5348,7 +5347,7 @@ begin
                 else
                   if not Visited[p^.Key] and (p^.Data.Weight < Queue.Peek(p^.Key).Weight) then
                     begin
-                      Queue.Update(p^.Key, TWeightItem.Create(p^.Data.Weight, p^.Key));
+                      Queue.Update(TWeightItem.Create(p^.Data.Weight, p^.Key), p^.Key);
                       Result[p^.Key] := Curr;
                     end;
               end;
