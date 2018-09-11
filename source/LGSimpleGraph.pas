@@ -35,6 +35,7 @@ uses
   LGArrayHelpers,
   LGVector,
   LGHashTable,
+  LGPriorityQueue,
   LGCustomGraph,
   LGStrHelpers,
   LGMiscUtils,
@@ -674,6 +675,75 @@ type
       property  Count: SizeInt read GetCount;
     end;
 
+    { TNIMinCut: some implemenation of Nagamochi-Ibaraki minimum cut algorithm:
+        H.Nagamochi and T.Ibaraki. "Computing Edge-Connectivity in Multigraphs and Capacitated Graphs" }
+    TNIMinCut = record
+    private
+    type
+      TNiEdge = record
+        Target: SizeInt;
+        Weight,
+        ScanValue: TWeight;
+        Scanned: Boolean;
+        constructor Create(aIndex: SizeInt; constref w: TWeight);
+        property Key: SizeInt read Target;
+      end;
+      PNiEdge = ^TNiEdge;
+
+      TNiAdjList = record
+      private
+      type
+        TTable = specialize TGLiteIntHashTable<SizeInt, TNiEdge>;
+
+      public
+      type
+        TEnumerator = TTable.TEnumerator;
+
+      private
+        FTable: TTable;
+        function  GetCount: SizeInt; inline;
+      public
+        function  GetEnumerator: TEnumerator; inline;
+        procedure EnsureCapacity(aValue: SizeInt); inline;
+        procedure ClearMarks; inline;
+        procedure Add(constref aValue: TNiEdge);
+        procedure AddAll(constref aList: TNiAdjList);
+        procedure Remove(aValue: SizeInt); inline;
+        property  Count: SizeInt read GetCount;
+      end;
+
+      TRib = record
+      private
+        FLess,
+        FGreater: SizeInt;
+      public
+        class function Compare(constref L, R: TRib): SizeInt; static; inline;
+        constructor Create(L, R: SizeInt);
+        property Source: SizeInt read FLess;
+        property Target: SizeInt read FGreater;
+      end;
+
+      TRibQueue = specialize TGLiteBinHeap<TRib, TRib>;
+
+    var
+      FGraph: array of TNiAdjList;
+      FCuts: array of TIntSet;
+      FQueue: TPairHeapMax;
+      FRibQueue: TRibQueue;
+      FRemains,
+      FInQueue: TBoolVector;
+      FBestSet: TIntSet;
+      FRemainCount: SizeInt;
+      FCut: TWeight;
+      procedure Contract(aLeft, aRight: SizeInt);
+      procedure Init(aGraph: TGWeightedGraph);
+      procedure ClearMarks; inline;
+      procedure Traverse;
+      procedure SafeContract;
+    public
+      function  GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
+    end;
+
     function  GetApproxMaxWeightMatching: TEdgeArray;
     function  GetApproxMinWeightMatching: TEdgeArray;
     function  StoerWagner(out aCut: TIntSet): TWeight;
@@ -762,8 +832,9 @@ type
     end;
 
   { returns the global minimum cut, used Stoer–Wagner algorithm }
-    function GetMinWeightCut(out aCut: TCut): TWeight;
-
+    function GetMinWeightCutSW(out aCut: TCut): TWeight;
+  { returns the global minimum cut, used Nagamochi-Ibaraki algorithm }
+    function GetMinWeightCutNI(out aCut: TCut): TWeight;
   end;
 
   TRealPointEdge = record
@@ -5021,6 +5092,203 @@ begin
   FTable.Remove(aValue);
 end;
 
+{ TGWeightedGraph.TNIMinCut.TNiEdge }
+
+constructor TGWeightedGraph.TNIMinCut.TNiEdge.Create(aIndex: SizeInt; constref w: TWeight);
+begin
+  Target := aIndex;
+  Weight := w;
+  ScanValue := ZeroWeight;
+end;
+
+{ TGWeightedGraph.TNIMinCut.TNiAdjList }
+
+function TGWeightedGraph.TNIMinCut.TNiAdjList.GetCount: SizeInt;
+begin
+  Result := FTable.Count;
+end;
+
+function TGWeightedGraph.TNIMinCut.TNiAdjList.GetEnumerator: TEnumerator;
+begin
+  Result := FTable.GetEnumerator;
+end;
+
+procedure TGWeightedGraph.TNIMinCut.TNiAdjList.EnsureCapacity(aValue: SizeInt);
+begin
+  FTable.EnsureCapacity(aValue);
+end;
+
+procedure TGWeightedGraph.TNIMinCut.TNiAdjList.ClearMarks;
+var
+  p: PNiEdge;
+begin
+  for p in FTable do
+    p^.Scanned := False;
+end;
+
+procedure TGWeightedGraph.TNIMinCut.TNiAdjList.Add(constref aValue: TNiEdge);
+var
+  p: PNiEdge;
+begin
+  if FTable.FindOrAdd(aValue.Key, p) then
+    p^.Weight += aValue.Weight
+  else
+    p^ := aValue;
+end;
+
+procedure TGWeightedGraph.TNIMinCut.TNiAdjList.AddAll(constref aList: TNiAdjList);
+var
+  p: PNiEdge;
+begin
+  for p in aList do
+    Add(p^);
+end;
+
+procedure TGWeightedGraph.TNIMinCut.TNiAdjList.Remove(aValue: SizeInt);
+begin
+  FTable.Remove(aValue);
+end;
+
+{ TGWeightedGraph.TNIMinCut.TRib }
+
+class function TGWeightedGraph.TNIMinCut.TRib.Compare(constref L, R: TRib): SizeInt;
+begin
+  Result := SizeInt.Compare(L.Source, R.Source);
+end;
+
+constructor TGWeightedGraph.TNIMinCut.TRib.Create(L, R: SizeInt);
+begin
+  if L <= R then
+    begin
+      FLess := L;
+      FGreater := R;
+    end
+  else
+    begin
+      FLess := R;
+      FGreater := L;
+    end;
+end;
+
+{ TGWeightedGraph.TNIMinCut }
+
+procedure TGWeightedGraph.TNIMinCut.Contract(aLeft, aRight: SizeInt);
+var
+  I: SizeInt;
+  p: PNiEdge;
+  Edge: TNiEdge;
+begin
+  FRemains[aRight] := False;
+  Dec(FRemainCount);
+  if FRemainCount = 1 then
+    exit;
+  while FCuts[aRight].TryPop(I) do
+    FCuts[aLeft].Push(I{%H-});
+  Finalize(FCuts[aRight]);
+  FGraph[aLeft].Remove(aRight);
+  FGraph[aRight].Remove(aLeft);
+  FGraph[aLeft].AddAll(FGraph[aRight]);
+  for p in FGraph[aRight] do
+    begin
+      I := p^.Target;
+      Edge := p^;
+      FGraph[I].Remove(aRight);
+      Edge.Target := aLeft;
+      FGraph[I].Add(Edge);
+    end;
+  Finalize(FGraph[aRight]);
+end;
+
+procedure TGWeightedGraph.TNIMinCut.Init(aGraph: TGWeightedGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  FRemainCount := aGraph.VertexCount;
+  System.SetLength(FGraph, FRemainCount);
+  for I := 0 to Pred(FRemainCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
+    end;
+  System.SetLength(FCuts, FRemainCount);
+  for I := 0 to Pred(FRemainCount) do
+    FCuts[I].Add(I);
+  FQueue := TPairHeapMax.Create(FRemainCount);
+  FRibQueue.EnsureCapacity(FRemainCount);
+  FRemains.InitRange(FRemainCount);
+  FInQueue.Size := FRemainCount;
+  FCut := InfiniteWeight;
+end;
+
+procedure TGWeightedGraph.TNIMinCut.ClearMarks;
+var
+  I: SizeInt;
+begin
+  for I in FRemains do
+    FGraph[I].ClearMarks;
+end;
+
+procedure TGWeightedGraph.TNIMinCut.Traverse;
+var
+  I, Prev, Last: SizeInt;
+  p: PNiEdge;
+  Item: TWeightItem;
+begin
+  ClearMarks;
+  FInQueue.Join(FRemains);
+  for I in FRemains do
+    FQueue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
+  while FQueue.Count > 1 do
+    begin
+      Prev := FQueue.Dequeue.Index;
+      FInQueue[Prev] := False;
+      for p in FGraph[Prev] do
+        if FInQueue[p^.Target] then
+          begin
+            Item := FQueue.Peek(p^.Target);
+            Item.Weight += p^.Weight;
+            FQueue.Update(p^.Target, Item);
+            p^.Scanned := True;
+            p^.ScanValue := Item.Weight;
+          end;
+    end;
+  Item := FQueue.Dequeue;
+  Last := Item.Index;
+  FInQueue[Item.Index] := False;
+  if Item.Weight < FCut then
+    begin
+      FCut := Item.Weight;
+      FBestSet.Assign(FCuts[Last]);
+    end;
+end;
+
+procedure TGWeightedGraph.TNIMinCut.SafeContract;
+var
+  I: SizeInt;
+  p: PNiEdge;
+  Rib: TRib;
+begin
+  Traverse;
+  for I in FRemains do
+    for p in FGraph[I] do
+      if p^.Scanned and (p^.ScanValue >= FCut) then
+        FRibQueue.Enqueue(TRib.Create(I, p^.Target));
+  while FRibQueue.TryDequeue(Rib) do
+    if FRemains[Rib.Source] and FRemains[Rib.Target] then
+      Contract(Rib.Source, Rib.Target);
+end;
+
+function TGWeightedGraph.TNIMinCut.GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
+begin
+  Init(aGraph);
+  while FRemainCount >= 2 do
+    SafeContract;
+  Result := FCut;
+  aCut.Assign(FBestSet);
+end;
+
 { TGWeightedGraph }
 
 function TGWeightedGraph.GetApproxMaxWeightMatching: TEdgeArray;
@@ -5148,7 +5416,7 @@ var
   Queue: TPairHeapMax;
   g: array of THashAdjList;
   Cuts: array of TIntSet;
-  vRest, vInQueue: TBoolVector;
+  vRemains, vInQueue: TBoolVector;
   Phase, Prev, Last, I: SizeInt;
   p: PAdjItem;
   pItem: ^TWeightItem;
@@ -5166,19 +5434,15 @@ begin
   for I := 0 to Pred(VertexCount) do
     Cuts[I].Add(I);
   Queue := TPairHeapMax.Create(VertexCount);
-  vRest.InitRange(VertexCount);
+  vRemains.InitRange(VertexCount);
   vInQueue.Size := VertexCount;
   Result := InfiniteWeight;
   //n-2 phases
   for Phase := 1 to Pred(VertexCount) do
     begin
-      Queue.MakeEmpty;
-      vInQueue.ClearBits;
-      vInQueue.Join(vRest);
-      for I in vInQueue do
+      vInQueue.Join(vRemains);
+      for I in vRemains do
         Queue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
-      I := vInQueue.Bsf;
-      Queue.Update(I, TWeightItem.Create(I, InfiniteWeight));
       while Queue.Count > 1 do
         begin
           Prev := Queue.Dequeue.Index;
@@ -5193,6 +5457,7 @@ begin
         end;
       NextItem := Queue.Dequeue;
       Last := NextItem.Index;
+      vInQueue[NextItem.Index] := False;
       if Result > NextItem.Weight then
         begin
           Result := NextItem.Weight;
@@ -5201,7 +5466,7 @@ begin
       while Cuts[Last].TryPop(I) do
         Cuts[Prev].Push(I);
       Finalize(Cuts[Last]);
-      vRest[Last] := False;
+      vRemains[Last] := False;
       //merge last two vertices, remain Prev
       g[Prev].Remove(Last);
       g[Last].Remove(Prev);
@@ -5476,7 +5741,7 @@ begin
   Result := GetApproxMinWeightMatching;
 end;
 
-function TGWeightedGraph.GetMinWeightCut(out aCut: TCut): TWeight;
+function TGWeightedGraph.GetMinWeightCutSW(out aCut: TCut): TWeight;
 var
   d: TEdgeData;
   Cut: TIntSet;
@@ -5494,6 +5759,32 @@ begin
       exit(d.Weight);
     end;
   Result := StoerWagner(Cut);
+  Total.InitRange(VertexCount);
+  for I in Cut do
+    Total[I] := False;
+  aCut.A := Cut.ToArray;
+  aCut.B := Total.ToArray;
+end;
+
+function TGWeightedGraph.GetMinWeightCutNI(out aCut: TCut): TWeight;
+var
+  Helper: TNIMinCut;
+  d: TEdgeData;
+  Cut: TIntSet;
+  Total: TBoolVector;
+  I: SizeInt;
+begin
+  if not Connected or (VertexCount < 2) then
+    exit(ZeroWeight);
+  if VertexCount = 2 then
+    begin
+      d := DefaultEdgeData;
+      GetEdgeDataI(0, 1, d);
+      aCut.A := [0];
+      aCut.B := [1];
+      exit(d.Weight);
+    end;
+  Result := Helper.GetMinCut(Self, Cut);
   Total.InitRange(VertexCount);
   for I in Cut do
     Total[I] := False;
