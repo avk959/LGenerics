@@ -5488,6 +5488,8 @@ begin
     begin
       d := DefaultEdgeData;
       GetEdgeDataI(0, 1, d);
+      aCut.A := [0];
+      aCut.B := [1];
       exit(d.Weight);
     end;
   Result := StoerWagner(Cut);
