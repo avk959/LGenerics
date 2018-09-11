@@ -41,6 +41,7 @@ Contains:
       - listing all maximal cliques
       - maximum flow through the network
       - minimum s-t cut of the network
+      - minimum cut for weighted graph
       - maximum cardinality matching for bipartite graph
       - maximum cardinality matching for general graph
       - weighted matching for bipartite graph
