@@ -2386,7 +2386,7 @@ var
 begin
   Nodes := TINodeQueue.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Nodes.Enqueue(TINode.Create(I, DegreeI(I)), I);
+    Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
@@ -2408,7 +2408,7 @@ begin
                     d := I;
                   end;
                 Dec(Node.Data);
-                Nodes.Update(Node, I);
+                Nodes.Update(I, Node);
               end;
           end;
         if d <> NULL_INDEX then // node found
@@ -2420,7 +2420,7 @@ begin
                   begin
                     Node := Nodes.Peek(I);
                     Dec(Node.Data);
-                    Nodes.Update(Node, I);
+                    Nodes.Update(I, Node);
                   end;
               end;
             Matched[s] := True;
@@ -4965,7 +4965,7 @@ var
 begin
   Nodes := TINodeQueue.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Nodes.Enqueue(TINode.Create(I, DegreeI(I)), I);
+    Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
@@ -4987,7 +4987,7 @@ begin
                     d := I;
                   end;
                 Dec(Node.Data);
-                Nodes.Update(Node, I);
+                Nodes.Update(I, Node);
               end;
           end;
         if d <> NULL_INDEX then // node found
@@ -4999,7 +4999,7 @@ begin
                   begin
                     Node := Nodes.Peek(I);
                     Dec(Node.Data);
-                    Nodes.Update(Node, I);
+                    Nodes.Update(I, Node);
                   end;
               end;
             Matched[s] := True;
@@ -5025,7 +5025,7 @@ var
 begin
   Nodes := TINodeQueue.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Nodes.Enqueue(TINode.Create(I, DegreeI(I)), I);
+    Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
@@ -5047,7 +5047,7 @@ begin
                     d := I;
                   end;
                 Dec(Node.Data);
-                Nodes.Update(Node, I);
+                Nodes.Update(I, Node);
               end;
           end;
         if d <> NULL_INDEX then // node found
@@ -5059,7 +5059,7 @@ begin
                   begin
                     Node := Nodes.Peek(I);
                     Dec(Node.Data);
-                    Nodes.Update(Node, I);
+                    Nodes.Update(I, Node);
                   end;
               end;
             Matched[s] := True;
@@ -5092,7 +5092,7 @@ begin
       J := 0;
       for p in AdjLists[I]^ do
         begin
-          g[I, J] := TWeightItem.Create(p^.Data.Weight, p^.Destination);
+          g[I, J] := TWeightItem.Create(p^.Destination, p^.Data.Weight);
           Inc(J);
         end;
     end;
@@ -5110,9 +5110,9 @@ begin
       InQueue.ClearBits;
       InQueue.Join(Rest);
       for I in InQueue do
-        Queue.Enqueue(TWeightItem.Create(ZeroWeight, I), I);
+        Queue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
       I := InQueue.Bsf;
-      Queue.Update(TWeightItem.Create(InfiniteWeight, I), I);
+      Queue.Update(I, TWeightItem.Create(I, InfiniteWeight));
       while Queue.Count > 1 do
         begin
           Prev := Queue.Dequeue.Index;
@@ -5122,7 +5122,7 @@ begin
               begin
                 NextItem := Queue.Peek(Item.Index);
                 NextItem.Weight += Item.Weight;
-                Queue.Update(NextItem, Item.Index);
+                Queue.Update(Item.Index, NextItem);
               end;
         end;
       Item := Queue.Dequeue;
@@ -5331,7 +5331,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
-        Queue.Enqueue(TWeightItem.Create(ZeroWeight, 0), I);
+        Queue.Enqueue(I, TWeightItem.Create(0, ZeroWeight));
         while Queue.TryDequeue(Item) do
           begin
             Curr := {%H-}Item.Index;
@@ -5341,13 +5341,13 @@ begin
               begin
                 if Queue.NotUsed(p^.Key) then
                   begin
-                    Queue.Enqueue(TWeightItem.Create(p^.Data.Weight, p^.Key), p^.Key);
+                    Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
                     Result[p^.Key] := Curr;
                   end
                 else
                   if not Visited[p^.Key] and (p^.Data.Weight < Queue.Peek(p^.Key).Weight) then
                     begin
-                      Queue.Update(TWeightItem.Create(p^.Data.Weight, p^.Key), p^.Key);
+                      Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
                       Result[p^.Key] := Curr;
                     end;
               end;

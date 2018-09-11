@@ -791,8 +791,8 @@ type
     constructor Create(aSize: SizeInt);
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean;
-    procedure Enqueue(constref aValue: T; aHandle: SizeInt);
-    procedure Update(constref aNewValue: T; aHandle: SizeInt);
+    procedure Enqueue(aHandle: SizeInt; constref aValue: T);
+    procedure Update(aHandle: SizeInt; constref aNewValue: T);
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -820,8 +820,8 @@ type
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean;
     function  Dequeue: T;
-    procedure Enqueue(constref aValue: T; aHandle: SizeInt);
-    procedure Update(constref aNewValue: T; aHandle: SizeInt);
+    procedure Enqueue(aHandle: SizeInt; constref aValue: T);
+    procedure Update(aHandle: SizeInt; constref aNewValue: T);
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -860,8 +860,8 @@ type
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
-    procedure Enqueue(constref aValue: T; aHandle: SizeInt); inline;
-    function  Update(constref aNewValue: T; aHandle: SizeInt): Boolean; inline;
+    procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
+    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean; inline;
     function  Remove(aHandle: SizeInt): Boolean; inline;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
@@ -901,8 +901,8 @@ type
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
-    procedure Enqueue(constref aValue: T; aHandle: SizeInt); inline;
-    function  Update(constref aNewValue: T; aHandle: SizeInt): Boolean; inline;
+    procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
+    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean; inline;
     function  Remove(aHandle: SizeInt): Boolean; inline;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
@@ -948,20 +948,20 @@ type
       class operator < (constref L, R: TWeightItem): Boolean; inline;
       class operator >=(constref L, R: TWeightItem): Boolean; inline;
       class operator <=(constref L, R: TWeightItem): Boolean; inline;
-      constructor Create(constref w: TWeight; aIndex: SizeInt);
+      constructor Create(aIndex: SizeInt; constref w: TWeight);
     end;
 
     TRankItem = record
+      Index: SizeInt;
       Rank,
       Weight: TWeight;
-      Index: SizeInt;
       class operator = (constref L, R: TRankItem): Boolean; inline;
       class operator <>(constref L, R: TRankItem): Boolean; inline;
       class operator > (constref L, R: TRankItem): Boolean; inline;
       class operator < (constref L, R: TRankItem): Boolean; inline;
       class operator >=(constref L, R: TRankItem): Boolean; inline;
       class operator <=(constref L, R: TRankItem): Boolean; inline;
-      constructor Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
+      constructor Create(aIndex: SizeInt; constref aRank, aWeight: TWeight);
     end;
 
     TGraph       = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
@@ -3613,7 +3613,7 @@ begin
     end;
 end;
 
-procedure TGBinHeapMin.Enqueue(constref aValue: T; aHandle: SizeInt);
+procedure TGBinHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
 var
   InsertIdx: SizeInt;
 begin
@@ -3627,7 +3627,7 @@ begin
   FloatUp(InsertIdx);
 end;
 
-procedure TGBinHeapMin.Update(constref aNewValue: T; aHandle: SizeInt);
+procedure TGBinHeapMin.Update(aHandle: SizeInt; constref aNewValue: T);
 var
   I: SizeInt;
 begin
@@ -3818,7 +3818,7 @@ begin
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
-procedure TGBinHeapMax.Enqueue(constref aValue: T; aHandle: SizeInt);
+procedure TGBinHeapMax.Enqueue(aHandle: SizeInt; constref aValue: T);
 var
   InsertIdx: SizeInt;
 begin
@@ -3832,7 +3832,7 @@ begin
   FloatUp(InsertIdx);
 end;
 
-procedure TGBinHeapMax.Update(constref aNewValue: T; aHandle: SizeInt);
+procedure TGBinHeapMax.Update(aHandle: SizeInt; constref aNewValue: T);
 var
   I: SizeInt;
 begin
@@ -3998,12 +3998,12 @@ begin
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
-procedure TGPairHeapMin.Enqueue(constref aValue: T; aHandle: SizeInt);
+procedure TGPairHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
 begin
   RootMerge(NewNode(aValue, aHandle));
 end;
 
-function TGPairHeapMin.Update(constref aNewValue: T; aHandle: SizeInt): Boolean;
+function TGPairHeapMin.Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -4182,12 +4182,12 @@ begin
     raise ELGAccessEmpty.Create(SECantAccessEmpty);
 end;
 
-procedure TGPairHeapMax.Enqueue(constref aValue: T; aHandle: SizeInt);
+procedure TGPairHeapMax.Enqueue(aHandle: SizeInt; constref aValue: T);
 begin
   RootMerge(NewNode(aValue, aHandle));
 end;
 
-function TGPairHeapMax.Update(constref aNewValue: T; aHandle: SizeInt): Boolean;
+function TGPairHeapMax.Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -4294,10 +4294,10 @@ begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeightedPathHelper.TWeightItem.Create(constref w: TWeight; aIndex: SizeInt);
+constructor TGWeightedPathHelper.TWeightItem.Create(aIndex: SizeInt; constref w: TWeight);
 begin
-  Weight := w;
   Index := aIndex;
+  Weight := w;
 end;
 
 { TGWeightedPathHelper.TRankItem }
@@ -4332,11 +4332,11 @@ begin
   Result := L.Rank <= R.Rank;
 end;
 
-constructor TGWeightedPathHelper.TRankItem.Create(constref aRank, aWeight: TWeight; aIndex: SizeInt);
+constructor TGWeightedPathHelper.TRankItem.Create(aIndex: SizeInt; constref aRank, aWeight: TWeight);
 begin
+  Index := aIndex;
   Rank := aRank;
   Weight := aWeight;
-  Index := aIndex;
 end;
 
 { TGWeightedPathHelper }
@@ -4368,20 +4368,20 @@ begin
   Result := CreateWeightArray(g.VertexCount);
   Queue := TPairingHeap.Create(g.VertexCount);
   Visited.Size := g.VertexCount;
-  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
+  Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
       Visited[{%H-}Item.Index] := True;
       Result[Item.Index] := Item.Weight;
       for p in g.AdjLists[Item.Index]^ do
         if Queue.NotUsed(p^.Key) then
-          Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key)
+          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight))
         else
           if not Visited[p^.Key] then
             begin
               Relaxed := p^.Data.Weight + Item.Weight;
               if Relaxed < Queue.Peek(p^.Key).Weight then
-                Queue.Update(TWeightItem.Create(Relaxed, p^.Key), p^.Key);
+                Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
             end;
     end;
 end;
@@ -4398,7 +4398,7 @@ begin
   Queue := TPairingHeap.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
   Visited.Size := g.VertexCount;
-  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
+  Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
       Visited[{%H-}Item.Index] := True;
@@ -4406,7 +4406,7 @@ begin
       for p in g.AdjLists[Item.Index]^ do
         if Queue.NotUsed(p^.Key) then
           begin
-            Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key);
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
             aPathTree[p^.Key] := Item.Index;
           end
         else
@@ -4415,7 +4415,7 @@ begin
               Relaxed := p^.Data.Weight + Item.Weight;
               if Relaxed < Queue.Peek(p^.Key).Weight then
                 begin
-                  Queue.Update(TWeightItem.Create(Relaxed, p^.Key), p^.Key);
+                  Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
                   aPathTree[p^.Key] := Item.Index;
                 end;
             end;
@@ -4432,7 +4432,7 @@ var
 begin
   Queue := TBinHeap.Create(g.VertexCount);
   Visited.Size := g.VertexCount;
-  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
+  Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
       if Item.Index = aDst then
@@ -4440,13 +4440,13 @@ begin
       Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
         if Queue.NotUsed(p^.Key) then
-          Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key)
+          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight))
         else
           if not Visited[p^.Key] then
             begin
               Relaxed := p^.Data.Weight + Item.Weight;
               if Relaxed < Queue.Peek(p^.Key).Weight then
-                Queue.Update(TWeightItem.Create(Relaxed, p^.Key), p^.Key);
+                Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
             end
     end;
   Result := InfiniteWeight;
@@ -4464,7 +4464,7 @@ var
   Queue := TBinHeap.Create(g.VertexCount);
   Tree := g.CreateIntArray;
   Visited.Size := g.VertexCount;
-  Queue.Enqueue(TWeightItem.Create(ZeroWeight, aSrc), aSrc);
+  Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while {%H-}Queue.TryDequeue(Item) do
     begin
       if Item.Index = aDst then
@@ -4477,7 +4477,7 @@ var
         begin
           if Queue.NotUsed(p^.Key) then
             begin
-              Queue.Enqueue(TWeightItem.Create(p^.Data.Weight + Item.Weight, p^.Key), p^.Key);
+              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               Tree[p^.Key] := Item.Index;
             end
           else
@@ -4486,7 +4486,7 @@ var
                 Relaxed := p^.Data.Weight + Item.Weight;
                 if Relaxed < Queue.Peek(p^.Key).Weight then
                   begin
-                    Queue.Update(TWeightItem.Create(Relaxed, p^.Key), p^.Key);
+                    Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
                     Tree[p^.Key] := Item.Index;
                   end;
               end;
@@ -4508,7 +4508,7 @@ var
   Queue := TAStarHeap.Create(g.VertexCount);
   Tree := g.CreateIntArray;
   Visited.Size := g.VertexCount;
-  Queue.Enqueue(TRankItem.Create(aEst(g.Items[aSrc], g.Items[aDst]), ZeroWeight, aSrc), aSrc);
+  Queue.Enqueue(aSrc, TRankItem.Create(aSrc, aEst(g.Items[aSrc], g.Items[aDst]), ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
       if {%H-}Item.Index = aDst then
@@ -4522,8 +4522,8 @@ var
           if Queue.NotUsed(p^.Key) then
             begin
               Relaxed := p^.Data.Weight + Item.Weight;
-              Queue.Enqueue(TRankItem.Create(
-                Relaxed + aEst(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key), p^.Key);
+              Queue.Enqueue(
+                p^.Key, TRankItem.Create(p^.Key, Relaxed + aEst(g.Items[p^.Key], g.Items[aDst]), Relaxed));
               Tree[p^.Key] := Item.Index;
             end
           else
@@ -4533,7 +4533,7 @@ var
                 if Relaxed < Queue.Peek(p^.Key).Weight then
                   begin
                     Queue.Update(
-                      TRankItem.Create(Relaxed + aEst(g.Items[p^.Key], g.Items[aDst]), Relaxed, p^.Key), p^.Key);
+                      p^.Key, TRankItem.Create(p^.Key, Relaxed + aEst(g.Items[p^.Key], g.Items[aDst]), Relaxed));
                     Tree[p^.Key] := Item.Index;
                   end;
               end;
