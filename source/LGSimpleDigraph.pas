@@ -417,6 +417,7 @@ type
     warning: does not checks network state }
     function GetMaxFlowD(constref aSource, aSink: TVertex; out a: TEdgeArray): TWeight; inline;
     function GetMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
+
   { warning: works correctly only for integer capacities ??? }
     function IsFlowFeasible(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
     function IsFlowFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
