@@ -949,6 +949,7 @@ type
       class operator >=(constref L, R: TWeightItem): Boolean; inline;
       class operator <=(constref L, R: TWeightItem): Boolean; inline;
       constructor Create(aIndex: SizeInt; constref w: TWeight);
+      property Key: SizeInt read Index;
     end;
 
     TRankItem = record

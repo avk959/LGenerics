@@ -34,6 +34,7 @@ uses
   {%H-}LGHelpers,
   LGArrayHelpers,
   LGVector,
+  LGHashTable,
   LGCustomGraph,
   LGStrHelpers,
   LGMiscUtils,
@@ -651,6 +652,27 @@ type
        function  GetMinWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
        function  GetMaxWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
      end;
+
+    THashAdjList = record
+    private
+    type
+      TTable = specialize TGLiteIntHashTable<SizeInt, TWeightItem>;
+      PEntry = TTable.PEntry;
+    public
+    type
+      TEnumerator = TTable.TEnumerator;
+
+    private
+      FTable: TTable;
+      function  GetCount: SizeInt; inline;
+    public
+      function  GetEnumerator: TEnumerator; inline;
+      procedure EnsureCapacity(aValue: SizeInt); inline;
+      procedure Add(constref aValue: TWeightItem);
+      procedure AddAll(constref aList: THashAdjList);
+      procedure Remove(aValue: SizeInt); inline;
+      property  Count: SizeInt read GetCount;
+    end;
 
     function  GetApproxMaxWeightMatching: TEdgeArray;
     function  GetApproxMinWeightMatching: TEdgeArray;
@@ -4950,6 +4972,46 @@ begin
   InitMax(aGraph, w, g);
   KuhnMatchMax;
   Result := CreateEdges;
+end;
+
+{ TGWeightedGraph.THashAdjList }
+
+function TGWeightedGraph.THashAdjList.GetCount: SizeInt;
+begin
+  Result := FTable.Count;
+end;
+
+function TGWeightedGraph.THashAdjList.GetEnumerator: TEnumerator;
+begin
+  Result := FTable.GetEnumerator;
+end;
+
+procedure TGWeightedGraph.THashAdjList.EnsureCapacity(aValue: SizeInt);
+begin
+  FTable.EnsureCapacity(aValue);
+end;
+
+procedure TGWeightedGraph.THashAdjList.Add(constref aValue: TWeightItem);
+var
+  p: PEntry;
+begin
+  if FTable.FindOrAdd(aValue.Key, p) then
+    p^.Weight += aValue.Weight
+  else
+    p^ := aValue;
+end;
+
+procedure TGWeightedGraph.THashAdjList.AddAll(constref aList: THashAdjList);
+var
+  p: PEntry;
+begin
+  for p in aList do
+    Add(p^);
+end;
+
+procedure TGWeightedGraph.THashAdjList.Remove(aValue: SizeInt);
+begin
+  FTable.Remove(aValue);
 end;
 
 { TGWeightedGraph }
