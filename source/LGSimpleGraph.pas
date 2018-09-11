@@ -676,7 +676,7 @@ type
 
     function  GetApproxMaxWeightMatching: TEdgeArray;
     function  GetApproxMinWeightMatching: TEdgeArray;
-    function  StoerWagner(out aCut: TIntArray): TWeight;
+    function  StoerWagner(out aCut: TIntSet): TWeight;
     function  CreateEdgeArray: TEdgeArray;
   public
 {**********************************************************************************************************
@@ -754,8 +754,15 @@ type
     minimun weight in an arbitrary graph }
     function ApproxMinWeightMatching: TEdgeArray;
 
+  type
+    //vertex partition
+    TCut = record
+      A,
+      B: TIntArray;
+    end;
+
   { returns the global minimum cut, used Stoer–Wagner algorithm }
-    function GetMinCut(out aCut: TIntArray): TWeight;
+    function GetMinWeightCut(out aCut: TCut): TWeight;
 
   end;
 
@@ -5136,27 +5143,23 @@ begin
   System.SetLength(Result, Size);
 end;
 
-function TGWeightedGraph.StoerWagner(out aCut: TIntArray): TWeight;
+function TGWeightedGraph.StoerWagner(out aCut: TIntSet): TWeight;
 var
   Queue: TPairHeapMax;
-  g: array of array of TWeightItem;
+  g: array of THashAdjList;
   Cuts: array of TIntSet;
   Rest, InQueue: TBoolVector;
-  Best: TIntSet;
-  Phase, Prev, Last, I, J: SizeInt;
+  Phase, Prev, Last, I: SizeInt;
   p: PAdjItem;
-  Item, NextItem: TWeightItem;
+  pItem: ^TWeightItem;
+  NextItem: TWeightItem;
 begin
   System.SetLength(g, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
-      System.SetLength(g[I], DegreeI(I));
-      J := 0;
+      g[I].EnsureCapacity(DegreeI(I));
       for p in AdjLists[I]^ do
-        begin
-          g[I, J] := TWeightItem.Create(p^.Destination, p^.Data.Weight);
-          Inc(J);
-        end;
+        g[I].Add(TWeightItem.Create(p^.Destination, p^.Data.Weight));
     end;
   System.SetLength(Cuts, VertexCount);
   for I := 0 to Pred(VertexCount) do
@@ -5179,34 +5182,39 @@ begin
         begin
           Prev := Queue.Dequeue.Index;
           InQueue[Prev] := False;
-          for Item in g[Prev] do
-            if InQueue[Item.Index] then
+          for pItem in g[Prev] do
+            if InQueue[pItem^.Index] then
               begin
-                NextItem := Queue.Peek(Item.Index);
-                NextItem.Weight += Item.Weight;
-                Queue.Update(Item.Index, NextItem);
+                NextItem := Queue.Peek(pItem^.Index);
+                NextItem.Weight += pItem^.Weight;
+                Queue.Update(pItem^.Index, NextItem);
               end;
         end;
-      Item := Queue.Dequeue;
-      Last := Item.Index;
-      if Result > Item.Weight then
+      NextItem := Queue.Dequeue;
+      Last := NextItem.Index;
+      if Result > NextItem.Weight then
         begin
-          Result := Item.Weight;
-          Best.Assign(Cuts[Last]);
+          Result := NextItem.Weight;
+          aCut.Assign(Cuts[Last]);
         end;
       while Cuts[Last].TryPop(I) do
         Cuts[Prev].Push(I);
       Finalize(Cuts[Last]);
       Rest[Last] := False;
-      //merge last two vertices: remains Prev
-      Insert(g[Last], g[Prev], System.Length(g[Prev]));
-      for Item in g[Last] do
-        for J := 0 to System.High(g[Item.Index]) do
-          if g[Item.Index][J].Index = Last then
-            g[Item.Index][J].Index := Prev;
-      g[Last] := nil;
+      //merge last two vertices, remains Prev
+      g[Prev].Remove(Last);
+      g[Last].Remove(Prev);
+      g[Prev].AddAll(g[Last]);
+      for pItem in g[Last] do
+        begin
+          I := pItem^.Index;
+          NextItem := pItem^;
+          g[I].Remove(Last);
+          NextItem.Index := Prev;
+          g[I].Add(NextItem);
+        end;
+      Finalize(g[Last]);
     end;
-  aCut := {%H-}Best.ToArray;
 end;
 
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
@@ -5467,9 +5475,12 @@ begin
   Result := GetApproxMinWeightMatching;
 end;
 
-function TGWeightedGraph.GetMinCut(out aCut: TIntArray): TWeight;
+function TGWeightedGraph.GetMinWeightCut(out aCut: TCut): TWeight;
 var
   d: TEdgeData;
+  Cut: TIntSet;
+  Total: TBoolVector;
+  I: SizeInt;
 begin
   if not Connected or (VertexCount < 2) then
     exit(ZeroWeight);
@@ -5479,7 +5490,12 @@ begin
       GetEdgeDataI(0, 1, d);
       exit(d.Weight);
     end;
-  Result := StoerWagner(aCut);
+  Result := StoerWagner(Cut);
+  Total.InitRange(VertexCount);
+  for I in Cut do
+    Total[I] := False;
+  aCut.A := Cut.ToArray;
+  aCut.B := Total.ToArray;
 end;
 
 { TRealPointEdge }
