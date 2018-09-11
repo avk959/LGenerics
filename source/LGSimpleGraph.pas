@@ -346,7 +346,6 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-
     constructor Create;
     constructor Create(aCapacity: SizeInt);
     procedure Clear; override;
@@ -367,11 +366,9 @@ type
     function  SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the edges provided by the aEdges }
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
-
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
-
   { returns True and vertex index, if it is added, False if such a vertex already exists }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
@@ -450,11 +447,9 @@ type
   { returns adjacency matrix of the complement graph;
     warning: maximal matrix size limited, see MaxBitMatrixSize }
     function  ComplementMatrix: TAdjacencyMatrix;
-
 {**********************************************************************************************************
   spanning tree utilities
 ***********************************************************************************************************}
-
   { returns the spanning tree, which is constructed starting from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
@@ -462,11 +457,9 @@ type
     function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
     function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
-
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
-
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality, used Hopcroft–Karp algorithm }
     function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
@@ -482,11 +475,9 @@ type
   { returns the matching of the maximum cardinality in an arbitrary graph,
     used Micali-Vazirani algorithm }
     function MaxMatchingMV: TIntEdgeArray;
-
 {**********************************************************************************************************
   some NP-hard problem utilities
 ***********************************************************************************************************}
-
   { lists all maximal independent sets of vertices;
     will raise exception if aOnFindSet is not assigned;
     setting aCancel to True in aOnFindSet will result in an exit from the method }
@@ -520,11 +511,9 @@ type
     function  ApproxMaxClique: TIntArray;
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
-
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
-
   { checks whether the cached info about connected is up-to-date }
     property  ConnectedValid: Boolean read FConnectedValid;
   { checks whether the graph is connected; an empty graph is considered disconnected }
@@ -752,7 +741,6 @@ type
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
-
     class function InfiniteWeight: TWeight; static; inline;
     class function NegInfiniteWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
@@ -762,18 +750,15 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-
     function SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
     function SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
     function SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
     function SubgraphFromTree(constref aTree: TIntArray): TGWeightedGraph;
     function SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
     function Clone: TGWeightedGraph;
-
 {**********************************************************************************************************
   shortest path problem utilities
 ***********************************************************************************************************}
-
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
@@ -795,20 +780,16 @@ type
     the weights of all edges must be nonnegative; used A* algorithm if aEst <> nil }
     function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
-
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
-
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Kruskal's algorithm used }
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
-
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
-
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality and minimum weight;
     warning: works correctly only for integer weights }
@@ -823,7 +804,9 @@ type
   { returns the approximation of the matching of the maximum cardinality and
     minimun weight in an arbitrary graph }
     function ApproxMinWeightMatching: TEdgeArray;
-
+{**********************************************************************************************************
+  networks utilities treat the weight of the edge as its capacity
+***********************************************************************************************************}
   type
     //vertex partition
     TCut = record
