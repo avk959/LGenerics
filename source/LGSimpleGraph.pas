@@ -5034,7 +5034,7 @@ var
 begin
   Nodes := TINodeQueue.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
+    {%H-}Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
@@ -5094,7 +5094,7 @@ var
 begin
   Nodes := TINodeQueue.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
+    {%H-}Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
@@ -5148,13 +5148,13 @@ var
   Queue: TPairHeapMax;
   g: array of THashAdjList;
   Cuts: array of TIntSet;
-  Rest, InQueue: TBoolVector;
+  vRest, vInQueue: TBoolVector;
   Phase, Prev, Last, I: SizeInt;
   p: PAdjItem;
   pItem: ^TWeightItem;
   NextItem: TWeightItem;
 begin
-  //initialization
+  //initialize
   System.SetLength(g, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
@@ -5166,25 +5166,25 @@ begin
   for I := 0 to Pred(VertexCount) do
     Cuts[I].Add(I);
   Queue := TPairHeapMax.Create(VertexCount);
-  Rest.InitRange(VertexCount);
-  InQueue.Size := VertexCount;
+  vRest.InitRange(VertexCount);
+  vInQueue.Size := VertexCount;
   Result := InfiniteWeight;
-  //n-1 phases
+  //n-2 phases
   for Phase := 1 to Pred(VertexCount) do
     begin
       Queue.MakeEmpty;
-      InQueue.ClearBits;
-      InQueue.Join(Rest);
-      for I in InQueue do
+      vInQueue.ClearBits;
+      vInQueue.Join(vRest);
+      for I in vInQueue do
         Queue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
-      I := InQueue.Bsf;
+      I := vInQueue.Bsf;
       Queue.Update(I, TWeightItem.Create(I, InfiniteWeight));
       while Queue.Count > 1 do
         begin
           Prev := Queue.Dequeue.Index;
-          InQueue[Prev] := False;
+          vInQueue[Prev] := False;
           for pItem in g[Prev] do
-            if InQueue[pItem^.Index] then
+            if vInQueue[pItem^.Index] then
               begin
                 NextItem := Queue.Peek(pItem^.Index);
                 NextItem.Weight += pItem^.Weight;
@@ -5201,7 +5201,7 @@ begin
       while Cuts[Last].TryPop(I) do
         Cuts[Prev].Push(I);
       Finalize(Cuts[Last]);
-      Rest[Last] := False;
+      vRest[Last] := False;
       //merge last two vertices, remain Prev
       g[Prev].Remove(Last);
       g[Last].Remove(Prev);
