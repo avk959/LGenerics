@@ -5154,6 +5154,7 @@ var
   pItem: ^TWeightItem;
   NextItem: TWeightItem;
 begin
+  //initialization
   System.SetLength(g, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
@@ -5168,7 +5169,7 @@ begin
   Rest.InitRange(VertexCount);
   InQueue.Size := VertexCount;
   Result := InfiniteWeight;
-
+  //n-1 phases
   for Phase := 1 to Pred(VertexCount) do
     begin
       Queue.MakeEmpty;
@@ -5201,7 +5202,7 @@ begin
         Cuts[Prev].Push(I);
       Finalize(Cuts[Last]);
       Rest[Last] := False;
-      //merge last two vertices, remains Prev
+      //merge last two vertices, remain Prev
       g[Prev].Remove(Last);
       g[Last].Remove(Prev);
       g[Prev].AddAll(g[Last]);
