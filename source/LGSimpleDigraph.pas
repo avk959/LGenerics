@@ -30,6 +30,7 @@ uses
   Classes, SysUtils,
   LGUtils,
   {%H-}LGHelpers,
+  LGVector,
   LGCustomGraph,
   LGStrConst;
 
@@ -2655,18 +2656,10 @@ end;
 
 function TGWeightedDiGraph.FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): Boolean;
-var
-  Helper: THPrfHelper;
-  TmpSet: TIntSet;
-  I: SizeInt;
 begin
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
     exit(False);
-  aValue := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
-  TmpSet.InitRange(VertexCount);
-  for I in aCut.S do
-    TmpSet.Remove(I);
-  aCut.T := TmpSet.ToArray;
+  aValue := GetMinSTCutPrI(aSrcIndex, aSinkIndex, aCut);
   Result := True;
 end;
 
@@ -2678,18 +2671,10 @@ end;
 
 function TGWeightedDiGraph.FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): Boolean;
-var
-  Helper: TDinitzHelper;
-  TmpSet: TIntSet;
-  I: SizeInt;
 begin
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
     exit(False);
-  aValue := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
-  TmpSet.InitRange(VertexCount);
-  for I in aCut.S do
-    TmpSet.Remove(I);
-  aCut.T := TmpSet.ToArray;
+  aValue := GetMinSTCutDI(aSrcIndex, aSinkIndex, aCut);
   Result := True;
 end;
 
@@ -2701,7 +2686,7 @@ end;
 function TGWeightedDiGraph.GetMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
 var
   Helper: THPrfHelper;
-  TmpSet: TIntSet;
+  TmpSet: TBoolVector;
   I: SizeInt;
 begin
   CheckIndexRange(aSrcIndex);
@@ -2709,7 +2694,7 @@ begin
   Result := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
   TmpSet.InitRange(VertexCount);
   for I in aCut.S do
-    TmpSet.Remove(I);
+    TmpSet[I] := False;
   aCut.T := TmpSet.ToArray;
 end;
 
@@ -2721,7 +2706,7 @@ end;
 function TGWeightedDiGraph.GetMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
 var
   Helper: TDinitzHelper;
-  TmpSet: TIntSet;
+  TmpSet: TBoolVector;
   I: SizeInt;
 begin
   CheckIndexRange(aSrcIndex);
@@ -2729,7 +2714,7 @@ begin
   Result := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
   TmpSet.InitRange(VertexCount);
   for I in aCut.S do
-    TmpSet.Remove(I);
+    TmpSet[I] := False;
   aCut.T := TmpSet.ToArray;
 end;
 
