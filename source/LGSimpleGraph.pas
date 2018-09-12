@@ -708,21 +708,25 @@ type
       FCuts: array of TIntSet;
       FQueue: TPairHeapMax;
       FEdgeQueue: TEdgeQueue;
-      FRestNodes,
+      FExistNodes,
       FInQueue: TBoolVector;
       FBestSet: TIntSet;
       FBestCut: TWeight;
       procedure ShrinkEdge(aSource, aTarget: SizeInt);
       procedure Init(aGraph: TGWeightedGraph);
+      procedure Init2(aGraph: TGWeightedGraph);
       procedure ClearMarks; inline;
       procedure ScanFirstSearch;
       procedure Shrink;
     public
       function  GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
+      function  GetMinCut(aGraph: TGWeightedGraph): TWeight;
     end;
 
     function  GetApproxMaxWeightMatching: TEdgeArray;
     function  GetApproxMinWeightMatching: TEdgeArray;
+    function  GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
+    function  GetTrivialMinCut(out aCut: TWeight): Boolean;
     function  StoerWagner(out aCut: TIntSet): TWeight;
     function  CreateEdgeArray: TEdgeArray;
   public
@@ -802,10 +806,13 @@ type
       B: TIntArray;
     end;
 
-  { returns the global minimum cut; used Stoer–Wagner algorithm }
+  { returns the global minimum cut; the weights of all edges must be nonnegative;
+    used Stoer–Wagner algorithm }
     function GetMinWeightCutSW(out aCut: TCut): TWeight;
-  { returns the global minimum cut; used Nagamochi-Ibaraki algorithm }
+  { returns the global minimum cut; the weights of all edges must be nonnegative;
+    used Nagamochi-Ibaraki algorithm }
     function GetMinWeightCutNI(out aCut: TCut): TWeight;
+    function GetMinWeightCutNI: TWeight;
   end;
 
   TRealPointEdge = record
@@ -5139,11 +5146,14 @@ begin
       Edge.Target := aSource;
       FGraph[I].Add(Edge);
     end;
-  while FCuts[aTarget].TryPop(I) do
-    FCuts[aSource].Push(I{%H-});
   Finalize(FGraph[aTarget]);
-  Finalize(FCuts[aTarget]);
-  FRestNodes[aTarget] := False;
+  FExistNodes[aTarget] := False;
+  if FCuts <> nil then
+    begin
+      while FCuts[aTarget].TryPop(I) do
+        FCuts[aSource].Push(I{%H-});
+      Finalize(FCuts[aTarget]);
+    end;
 end;
 
 procedure TGWeightedGraph.TNIMinCutHelper.Init(aGraph: TGWeightedGraph);
@@ -5162,16 +5172,35 @@ begin
   for I := 0 to Pred(aGraph.VertexCount) do
     FCuts[I].Add(I);
   FQueue := TPairHeapMax.Create(aGraph.VertexCount);
-  FRestNodes.InitRange(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Size := aGraph.VertexCount;
   FBestCut := InfiniteWeight;
+end;
+
+procedure TGWeightedGraph.TNIMinCutHelper.Init2(aGraph: TGWeightedGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
+    end;
+  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := InfiniteWeight;
+  FCuts := nil;
 end;
 
 procedure TGWeightedGraph.TNIMinCutHelper.ClearMarks;
 var
   I: SizeInt;
 begin
-  for I in FRestNodes do
+  for I in FExistNodes do
     FGraph[I].ClearMarks;
 end;
 
@@ -5182,8 +5211,8 @@ var
   Item: TWeightItem;
 begin
   ClearMarks;
-  FInQueue.Join(FRestNodes);
-  for I in FRestNodes do
+  FInQueue.Join(FExistNodes);
+  for I in FExistNodes do
     FQueue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
   while FQueue.Count > 1 do
     begin
@@ -5204,7 +5233,8 @@ begin
   if Item.Weight < FBestCut then
     begin
       FBestCut := Item.Weight;
-      FBestSet.Assign(FCuts[Item.Index]);
+      if FCuts <> nil then
+        FBestSet.Assign(FCuts[Item.Index]);
     end;
 end;
 
@@ -5215,22 +5245,30 @@ var
   Pair: TIntPair;
 begin
   ScanFirstSearch;
-  for I in FRestNodes do
+  for I in FExistNodes do
     for p in FGraph[I] do
       if p^.Scanned and (p^.ScanValue >= FBestCut) then
         FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
-    if FRestNodes[Pair.Left] and FRestNodes[Pair.Right] then
+    if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
 function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
 begin
   Init(aGraph);
-  while FRestNodes.PopCount >= 2 do
+  while FExistNodes.PopCount >= 2 do
     Shrink;
   Result := FBestCut;
   aCut.Assign(FBestSet);
+end;
+
+function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph): TWeight;
+begin
+  Init2(aGraph);
+  while FExistNodes.PopCount >= 2 do
+    Shrink;
+  Result := FBestCut;
 end;
 
 { TGWeightedGraph }
@@ -5353,6 +5391,46 @@ begin
           end;
       end;
   System.SetLength(Result, Size);
+end;
+
+function TGWeightedGraph.GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
+var
+  d: TEdgeData;
+begin
+  {%H-}aCutSet.MakeEmpty;
+  if not Connected or (VertexCount < 2) then
+    begin
+      aCutWeight := ZeroWeight;
+      exit(True);
+    end;
+  if VertexCount = 2 then
+    begin
+      d := DefaultEdgeData;
+      GetEdgeDataI(0, 1, d);
+      aCutWeight := d.Weight;
+      aCutSet.Add(0);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGWeightedGraph.GetTrivialMinCut(out aCut: TWeight): Boolean;
+var
+  d: TEdgeData;
+begin
+  if not Connected or (VertexCount < 2) then
+    begin
+      aCut := ZeroWeight;
+      exit(True);
+    end;
+  if VertexCount = 2 then
+    begin
+      d := DefaultEdgeData;
+      GetEdgeDataI(0, 1, d);
+      aCut := d.Weight;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGWeightedGraph.StoerWagner(out aCut: TIntSet): TWeight;
@@ -5687,22 +5765,12 @@ end;
 
 function TGWeightedGraph.GetMinWeightCutSW(out aCut: TCut): TWeight;
 var
-  d: TEdgeData;
   Cut: TIntSet;
   Total: TBoolVector;
   I: SizeInt;
 begin
-  if not Connected or (VertexCount < 2) then
-    exit(ZeroWeight);
-  if VertexCount = 2 then
-    begin
-      d := DefaultEdgeData;
-      GetEdgeDataI(0, 1, d);
-      aCut.A := [0];
-      aCut.B := [1];
-      exit(d.Weight);
-    end;
-  Result := StoerWagner(Cut);
+  if not GetTrivialMinCut(Cut, Result) then
+    Result := StoerWagner(Cut);
   Total.InitRange(VertexCount);
   for I in Cut do
     Total[I] := False;
@@ -5713,27 +5781,25 @@ end;
 function TGWeightedGraph.GetMinWeightCutNI(out aCut: TCut): TWeight;
 var
   Helper: TNIMinCutHelper;
-  d: TEdgeData;
   Cut: TIntSet;
   Total: TBoolVector;
   I: SizeInt;
 begin
-  if not Connected or (VertexCount < 2) then
-    exit(ZeroWeight);
-  if VertexCount = 2 then
-    begin
-      d := DefaultEdgeData;
-      GetEdgeDataI(0, 1, d);
-      aCut.A := [0];
-      aCut.B := [1];
-      exit(d.Weight);
-    end;
-  Result := Helper.GetMinCut(Self, Cut);
+  if not GetTrivialMinCut(Cut, Result) then
+    Result := Helper.GetMinCut(Self, Cut);
   Total.InitRange(VertexCount);
   for I in Cut do
     Total[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := Total.ToArray;
+end;
+
+function TGWeightedGraph.GetMinWeightCutNI: TWeight;
+var
+  Helper: TNIMinCutHelper;
+begin
+  if not GetTrivialMinCut(Result) then
+    Result := Helper.GetMinCut(Self);
 end;
 
 { TRealPointEdge }
