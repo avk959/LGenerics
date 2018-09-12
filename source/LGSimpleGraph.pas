@@ -712,7 +712,7 @@ type
       FInQueue: TBoolVector;
       FBestSet: TIntSet;
       FCut: TWeight;
-      procedure Contract(aLeft, aRight: SizeInt);
+      procedure Merge(aLeft, aRight: SizeInt);
       procedure Init(aGraph: TGWeightedGraph);
       procedure ClearMarks; inline;
       procedure ScanFirstSearch;
@@ -5122,7 +5122,7 @@ end;
 
 { TGWeightedGraph.TNIMinCut }
 
-procedure TGWeightedGraph.TNIMinCut.Contract(aLeft, aRight: SizeInt);
+procedure TGWeightedGraph.TNIMinCut.Merge(aLeft, aRight: SizeInt);
 var
   I: SizeInt;
   p: PNiEdge;
@@ -5221,7 +5221,7 @@ begin
         FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
     if FRemains[Pair.Left] and FRemains[Pair.Right] then
-      Contract(Pair.Left, Pair.Right);
+      Merge(Pair.Left, Pair.Right);
 end;
 
 function TGWeightedGraph.TNIMinCut.GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
