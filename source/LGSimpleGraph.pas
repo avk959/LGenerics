@@ -712,7 +712,7 @@ type
       FInQueue: TBoolVector;
       FBestSet: TIntSet;
       FBestCut: TWeight;
-      procedure ContractEdge(aSource, aTarget: SizeInt);
+      procedure ShrinkEdge(aSource, aTarget: SizeInt);
       procedure Init(aGraph: TGWeightedGraph);
       procedure ClearMarks; inline;
       procedure ScanFirstSearch;
@@ -802,9 +802,9 @@ type
       B: TIntArray;
     end;
 
-  { returns the global minimum cut, used Stoer–Wagner algorithm }
+  { returns the global minimum cut; used Stoer–Wagner algorithm }
     function GetMinWeightCutSW(out aCut: TCut): TWeight;
-  { returns the global minimum cut, used Nagamochi-Ibaraki algorithm }
+  { returns the global minimum cut; used Nagamochi-Ibaraki algorithm }
     function GetMinWeightCutNI(out aCut: TCut): TWeight;
   end;
 
@@ -5122,7 +5122,7 @@ end;
 
 { TGWeightedGraph.TNIMinCutHelper }
 
-procedure TGWeightedGraph.TNIMinCutHelper.ContractEdge(aSource, aTarget: SizeInt);
+procedure TGWeightedGraph.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
   p: PNiEdge;
@@ -5221,7 +5221,7 @@ begin
         FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
     if FRestNodes[Pair.Left] and FRestNodes[Pair.Right] then
-      ContractEdge(Pair.Left, Pair.Right);
+      ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
 function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
