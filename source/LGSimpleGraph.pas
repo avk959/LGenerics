@@ -727,7 +727,7 @@ type
       procedure Contract(aLeft, aRight: SizeInt);
       procedure Init(aGraph: TGWeightedGraph);
       procedure ClearMarks; inline;
-      procedure Traverse;
+      procedure ScanFirstSearch;
       procedure SafeContract;
     public
       function  GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
@@ -5161,13 +5161,6 @@ var
   p: PNiEdge;
   Edge: TNiEdge;
 begin
-  FRemains[aRight] := False;
-  Dec(FRemainCount);
-  if FRemainCount = 1 then
-    exit;
-  while FCuts[aRight].TryPop(I) do
-    FCuts[aLeft].Push(I{%H-});
-  Finalize(FCuts[aRight]);
   FGraph[aLeft].Remove(aRight);
   FGraph[aRight].Remove(aLeft);
   FGraph[aLeft].AddAll(FGraph[aRight]);
@@ -5179,7 +5172,12 @@ begin
       Edge.Target := aLeft;
       FGraph[I].Add(Edge);
     end;
+  while FCuts[aRight].TryPop(I) do
+    FCuts[aLeft].Push(I{%H-});
   Finalize(FGraph[aRight]);
+  Finalize(FCuts[aRight]);
+  FRemains[aRight] := False;
+  Dec(FRemainCount);
 end;
 
 procedure TGWeightedGraph.TNIMinCut.Init(aGraph: TGWeightedGraph);
@@ -5213,9 +5211,9 @@ begin
     FGraph[I].ClearMarks;
 end;
 
-procedure TGWeightedGraph.TNIMinCut.Traverse;
+procedure TGWeightedGraph.TNIMinCut.ScanFirstSearch;
 var
-  I, Prev, Last: SizeInt;
+  I: SizeInt;
   p: PNiEdge;
   Item: TWeightItem;
 begin
@@ -5225,9 +5223,9 @@ begin
     FQueue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
   while FQueue.Count > 1 do
     begin
-      Prev := FQueue.Dequeue.Index;
-      FInQueue[Prev] := False;
-      for p in FGraph[Prev] do
+      I := FQueue.Dequeue.Index;
+      FInQueue[I] := False;
+      for p in FGraph[I] do
         if FInQueue[p^.Target] then
           begin
             Item := FQueue.Peek(p^.Target);
@@ -5238,12 +5236,11 @@ begin
           end;
     end;
   Item := FQueue.Dequeue;
-  Last := Item.Index;
   FInQueue[Item.Index] := False;
   if Item.Weight < FCut then
     begin
       FCut := Item.Weight;
-      FBestSet.Assign(FCuts[Last]);
+      FBestSet.Assign(FCuts[Item.Index]);
     end;
 end;
 
@@ -5253,7 +5250,7 @@ var
   p: PNiEdge;
   Rib: TRib;
 begin
-  Traverse;
+  ScanFirstSearch;
   for I in FRemains do
     for p in FGraph[I] do
       if p^.Scanned and (p^.ScanValue >= FCut) then
