@@ -327,7 +327,7 @@ type
     class function NegInfiniteWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
-    function ContainsNegWeighedEdge: Boolean;
+    function ContainsNegWeightEdge: Boolean;
 
 {**********************************************************************************************************
   class management utilities
@@ -2318,7 +2318,7 @@ begin
   Result := Default(TWeight);
 end;
 
-function TGWeightedDiGraph.ContainsNegWeighedEdge: Boolean;
+function TGWeightedDiGraph.ContainsNegWeightEdge: Boolean;
 var
   e: TEdge;
 begin

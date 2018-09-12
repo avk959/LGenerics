@@ -35,7 +35,7 @@ uses
   LGArrayHelpers,
   LGVector,
   LGHashTable,
-  LGPriorityQueue,
+  LGQueue,
   LGCustomGraph,
   LGStrHelpers,
   LGMiscUtils,
@@ -701,34 +701,22 @@ type
         property  Count: SizeInt read GetCount;
       end;
 
-      TRib = record
-      private
-        FLess,
-        FGreater: SizeInt;
-      public
-        class function Compare(constref L, R: TRib): SizeInt; static; inline;
-        constructor Create(L, R: SizeInt);
-        property Source: SizeInt read FLess;
-        property Target: SizeInt read FGreater;
-      end;
-
-      TRibQueue = specialize TGLiteBinHeap<TRib, TRib>;
+      TEdgeQueue = specialize TGLiteQueue<TIntPair>;
 
     var
       FGraph: array of TNiAdjList;
       FCuts: array of TIntSet;
       FQueue: TPairHeapMax;
-      FRibQueue: TRibQueue;
+      FEdgeQueue: TEdgeQueue;
       FRemains,
       FInQueue: TBoolVector;
       FBestSet: TIntSet;
-      FRemainCount: SizeInt;
       FCut: TWeight;
       procedure Contract(aLeft, aRight: SizeInt);
       procedure Init(aGraph: TGWeightedGraph);
       procedure ClearMarks; inline;
       procedure ScanFirstSearch;
-      procedure SafeContract;
+      procedure Shrink;
     public
       function  GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
     end;
@@ -746,7 +734,7 @@ type
     class function ZeroWeight: TWeight; static; inline;
     class function TotalWeight(constref aEdges: TEdgeArray): TWeight; static;
   { returns True if exists edge with negative weight }
-    function ContainsNegWeighedEdge: Boolean;
+    function ContainsNegWeightEdge: Boolean;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -5132,27 +5120,6 @@ begin
   FTable.Remove(aValue);
 end;
 
-{ TGWeightedGraph.TNIMinCut.TRib }
-
-class function TGWeightedGraph.TNIMinCut.TRib.Compare(constref L, R: TRib): SizeInt;
-begin
-  Result := SizeInt.Compare(L.Source, R.Source);
-end;
-
-constructor TGWeightedGraph.TNIMinCut.TRib.Create(L, R: SizeInt);
-begin
-  if L <= R then
-    begin
-      FLess := L;
-      FGreater := R;
-    end
-  else
-    begin
-      FLess := R;
-      FGreater := L;
-    end;
-end;
-
 { TGWeightedGraph.TNIMinCut }
 
 procedure TGWeightedGraph.TNIMinCut.Contract(aLeft, aRight: SizeInt);
@@ -5177,7 +5144,6 @@ begin
   Finalize(FGraph[aRight]);
   Finalize(FCuts[aRight]);
   FRemains[aRight] := False;
-  Dec(FRemainCount);
 end;
 
 procedure TGWeightedGraph.TNIMinCut.Init(aGraph: TGWeightedGraph);
@@ -5185,21 +5151,19 @@ var
   I: SizeInt;
   p: PAdjItem;
 begin
-  FRemainCount := aGraph.VertexCount;
-  System.SetLength(FGraph, FRemainCount);
-  for I := 0 to Pred(FRemainCount) do
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
     begin
       FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
       for p in aGraph.AdjLists[I]^ do
         FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
     end;
-  System.SetLength(FCuts, FRemainCount);
-  for I := 0 to Pred(FRemainCount) do
+  System.SetLength(FCuts, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
     FCuts[I].Add(I);
-  FQueue := TPairHeapMax.Create(FRemainCount);
-  FRibQueue.EnsureCapacity(FRemainCount);
-  FRemains.InitRange(FRemainCount);
-  FInQueue.Size := FRemainCount;
+  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
+  FRemains.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
   FCut := InfiniteWeight;
 end;
 
@@ -5244,27 +5208,27 @@ begin
     end;
 end;
 
-procedure TGWeightedGraph.TNIMinCut.SafeContract;
+procedure TGWeightedGraph.TNIMinCut.Shrink;
 var
   I: SizeInt;
   p: PNiEdge;
-  Rib: TRib;
+  Pair: TIntPair;
 begin
   ScanFirstSearch;
   for I in FRemains do
     for p in FGraph[I] do
       if p^.Scanned and (p^.ScanValue >= FCut) then
-        FRibQueue.Enqueue(TRib.Create(I, p^.Target));
-  while FRibQueue.TryDequeue(Rib) do
-    if FRemains[Rib.Source] and FRemains[Rib.Target] then
-      Contract(Rib.Source, Rib.Target);
+        FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
+  while FEdgeQueue.TryDequeue(Pair) do
+    if FRemains[Pair.Left] and FRemains[Pair.Right] then
+      Contract(Pair.Left, Pair.Right);
 end;
 
 function TGWeightedGraph.TNIMinCut.GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
 begin
   Init(aGraph);
-  while FRemainCount >= 2 do
-    SafeContract;
+  while FRemains.PopCount >= 2 do
+    Shrink;
   Result := FCut;
   aCut.Assign(FBestSet);
 end;
@@ -5503,7 +5467,7 @@ begin
     Result += e.Weight;
 end;
 
-function TGWeightedGraph.ContainsNegWeighedEdge: Boolean;
+function TGWeightedGraph.ContainsNegWeightEdge: Boolean;
 var
   e: TEdge;
 begin
