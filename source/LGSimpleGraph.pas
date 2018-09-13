@@ -246,8 +246,8 @@ type
       function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
     end;
 
-    { TEdgeConnect }
-    TEdgeConnect = record
+    { TNIMinCut: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }
+    TNIMinCut = record
     private
     type
       TECEdge = record
@@ -267,18 +267,22 @@ type
 
     var
       FGraph: array of TECAdjList;
+      FCuts: array of TIntSet;
       FQueue: TPairHeap;
       FEdgeQueue: TEdgeQueue;
       FExistNodes,
       FInQueue: TBoolVector;
+      FBestSet: TIntSet;
       FBestCut: SizeInt;
       procedure ClearMarks; inline;
-      procedure ShrinkEdge(aSource, aTarget: SizeInt);
       procedure Init(aGraph: TGSimpleGraph);
+      procedure Init2(aGraph: TGSimpleGraph);
+      procedure ShrinkEdge(aSource, aTarget: SizeInt);
       procedure ScanFirstSearch;
       procedure Shrink;
     public
-      function  GetConnectivity(aGraph: TGSimpleGraph): SizeInt;
+      function  GetMinCut(aGraph: TGSimpleGraph): SizeInt;
+      function  GetMinCut(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
     end;
 
     TDistinctEdgeEnumerator = record
@@ -478,10 +482,21 @@ type
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
-  { returns edge connectivity of the graph }
-    function  EdgeConnectivity: SizeInt;
+
+    type
+      //vertex partition
+      TCut = record
+        A,
+        B: TIntArray;
+      end;
+
+  { returns vertex connectivity of the graph }
+    function  VertexConnectivity: SizeInt;
+  { returns the global minimum cut; used Nagamochi-Ibaraki algorithm }
+    function  GetMinCut: SizeInt;
+    function  GetMinCut(out aCut: TCut): SizeInt;
   { returns adjacency matrix of the complement graph;
-    warning: maximal matrix size limited, see MaxBitMatrixSize }
+    warning: maximum matrix size limited, see MaxBitMatrixSize }
     function  ComplementMatrix: TAdjacencyMatrix;
 {**********************************************************************************************************
   spanning tree utilities
@@ -709,14 +724,14 @@ type
       FBestSet: TIntSet;
       FBestCut: TWeight;
       procedure ClearMarks;
-      procedure ShrinkEdge(aSource, aTarget: SizeInt);
       procedure Init(aGraph: TGWeightedGraph);
       procedure Init2(aGraph: TGWeightedGraph);
+      procedure ShrinkEdge(aSource, aTarget: SizeInt);
       procedure ScanFirstSearch;
       procedure Shrink;
     public
-      function  GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
       function  GetMinCut(aGraph: TGWeightedGraph): TWeight;
+      function  GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
     end;
 
     function  GetApproxMaxWeightMatching: TEdgeArray;
@@ -795,20 +810,13 @@ type
 {**********************************************************************************************************
   networks utilities treat the weight of the edge as its capacity
 ***********************************************************************************************************}
-  type
-    //vertex partition
-    TCut = record
-      A,
-      B: TIntArray;
-    end;
-
   { returns the global minimum cut; the weights of all edges must be nonnegative;
     used Stoer–Wagner algorithm }
     function GetMinWeightCutSW(out aCut: TCut): TWeight;
   { returns the global minimum cut; the weights of all edges must be nonnegative;
     used Nagamochi-Ibaraki algorithm }
-    function GetMinWeightCutNI(out aCut: TCut): TWeight;
     function GetMinWeightCutNI: TWeight;
+    function GetMinWeightCutNI(out aCut: TCut): TWeight;
   end;
 
   TRealPointEdge = record
@@ -2019,17 +2027,17 @@ begin
       end;
 end;
 
-{ TGSimpleGraph.TEdgeConnect.TECEdge }
+{ TGSimpleGraph.TNIMinCut.TECEdge }
 
-constructor TGSimpleGraph.TEdgeConnect.TECEdge.Create(aTarget: SizeInt; constref w: SizeInt);
+constructor TGSimpleGraph.TNIMinCut.TECEdge.Create(aTarget: SizeInt; constref w: SizeInt);
 begin
   Target := aTarget;
   Weight := w;
 end;
 
-{ TGSimpleGraph.TEdgeConnect }
+{ TGSimpleGraph.TNIMinCut }
 
-procedure TGSimpleGraph.TEdgeConnect.ClearMarks;
+procedure TGSimpleGraph.TNIMinCut.ClearMarks;
 var
   I: SizeInt;
   p: TECAdjList.PEntry;
@@ -2039,7 +2047,47 @@ begin
       p^.Scanned := False;
 end;
 
-procedure TGSimpleGraph.TEdgeConnect.ShrinkEdge(aSource, aTarget: SizeInt);
+procedure TGSimpleGraph.TNIMinCut.Init(aGraph: TGSimpleGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TECEdge.Create(p^.Destination, 1));
+    end;
+  FQueue := TPairHeap.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := High(SizeInt);
+  FCuts := nil;
+end;
+
+procedure TGSimpleGraph.TNIMinCut.Init2(aGraph: TGSimpleGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TECEdge.Create(p^.Destination, 1));
+    end;
+  System.SetLength(FCuts, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    FCuts[I].Add(I);
+  FQueue := TPairHeap.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := High(SizeInt);
+end;
+
+procedure TGSimpleGraph.TNIMinCut.ShrinkEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
   p: TECAdjList.PEntry;
@@ -2058,27 +2106,15 @@ begin
     end;
   Finalize(FGraph[aTarget]);
   FExistNodes[aTarget] := False;
-end;
-
-procedure TGSimpleGraph.TEdgeConnect.Init(aGraph: TGSimpleGraph);
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  System.SetLength(FGraph, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
+  if FCuts <> nil then
     begin
-      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
-      for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TECEdge.Create(p^.Destination, 1));
+      while FCuts[aTarget].TryPop(I) do
+        FCuts[aSource].Push(I);
+      Finalize(FCuts[aTarget]);
     end;
-  FQueue := TPairHeap.Create(aGraph.VertexCount);
-  FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
-  FBestCut := High(SizeInt);
 end;
 
-procedure TGSimpleGraph.TEdgeConnect.ScanFirstSearch;
+procedure TGSimpleGraph.TNIMinCut.ScanFirstSearch;
 var
   I: SizeInt;
   p: TECAdjList.PEntry;
@@ -2105,10 +2141,14 @@ begin
   Item := FQueue.Dequeue;
   FInQueue[Item.Index] := False;
   if Item.Data < FBestCut then
-    FBestCut := Item.Data;
+    begin
+      FBestCut := Item.Data;
+      if FCuts <> nil then
+        FBestSet.Assign(FCuts[Item.Index]);
+    end;
 end;
 
-procedure TGSimpleGraph.TEdgeConnect.Shrink;
+procedure TGSimpleGraph.TNIMinCut.Shrink;
 var
   I: SizeInt;
   p: TECAdjList.PEntry;
@@ -2124,12 +2164,21 @@ begin
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
-function TGSimpleGraph.TEdgeConnect.GetConnectivity(aGraph: TGSimpleGraph): SizeInt;
+function TGSimpleGraph.TNIMinCut.GetMinCut(aGraph: TGSimpleGraph): SizeInt;
 begin
   Init(aGraph);
   while FExistNodes.PopCount >= 2 do
     Shrink;
   Result := FBestCut;
+end;
+
+function TGSimpleGraph.TNIMinCut.GetMinCut(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
+begin
+  Init2(aGraph);
+  while FExistNodes.PopCount >= 2 do
+    Shrink;
+  Result := FBestCut;
+  aCut.Assign(FBestSet);
 end;
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }
@@ -4108,15 +4157,45 @@ begin
     end;
 end;
 
-function TGSimpleGraph.EdgeConnectivity: SizeInt;
+function TGSimpleGraph.VertexConnectivity: SizeInt;
+begin
+  //not implemented yet
+  //todo: build edge graph, find its edge connectivity
+end;
+
+function TGSimpleGraph.GetMinCut: SizeInt;
 var
-  Helper: TEdgeConnect;
+  Helper: TNIMinCut;
 begin
   if not Connected or (VertexCount < 2) then
     exit(0);
   if VertexCount = 2 then
     exit(1);
-  Result := Helper.GetConnectivity(Self);
+  Result := Helper.GetMinCut(Self);
+end;
+
+function TGSimpleGraph.GetMinCut(out aCut: TCut): SizeInt;
+var
+  Helper: TNIMinCut;
+  Cut: TIntSet;
+  B: TBoolVector;
+  I: SizeInt;
+begin
+  {%H-}Cut.MakeEmpty;
+  if not Connected or (VertexCount < 2) then
+    exit(0);
+  if VertexCount = 2 then
+    begin
+      aCut.A := [0];
+      aCut.B := [1];
+      exit(1);
+    end;
+  Result := Helper.GetMinCut(Self, Cut);
+  B.InitRange(VertexCount);
+  for I in Cut do
+    B[I] := False;
+  aCut.A := Cut.ToArray;
+  aCut.B := B.ToArray;
 end;
 
 function TGSimpleGraph.ComplementMatrix: TAdjacencyMatrix;
@@ -5170,6 +5249,46 @@ begin
       p^.Scanned := False;
 end;
 
+procedure TGWeightedGraph.TNIMinCutHelper.Init(aGraph: TGWeightedGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
+    end;
+  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := InfWeight;
+  FCuts := nil;
+end;
+
+procedure TGWeightedGraph.TNIMinCutHelper.Init2(aGraph: TGWeightedGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
+    end;
+  System.SetLength(FCuts, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    FCuts[I].Add(I);
+  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := InfWeight;
+end;
+
 procedure TGWeightedGraph.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
@@ -5192,49 +5311,9 @@ begin
   if FCuts <> nil then
     begin
       while FCuts[aTarget].TryPop(I) do
-        FCuts[aSource].Push(I{%H-});
+        FCuts[aSource].Push(I);
       Finalize(FCuts[aTarget]);
     end;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.Init(aGraph: TGWeightedGraph);
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  System.SetLength(FGraph, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    begin
-      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
-      for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
-    end;
-  System.SetLength(FCuts, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    FCuts[I].Add(I);
-  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
-  FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
-  FBestCut := InfWeight;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.Init2(aGraph: TGWeightedGraph);
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  System.SetLength(FGraph, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    begin
-      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
-      for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
-    end;
-  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
-  FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
-  FBestCut := InfWeight;
-  FCuts := nil;
 end;
 
 procedure TGWeightedGraph.TNIMinCutHelper.ScanFirstSearch;
@@ -5287,21 +5366,21 @@ begin
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
-function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
+function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph): TWeight;
 begin
   Init(aGraph);
   while FExistNodes.PopCount >= 2 do
     Shrink;
   Result := FBestCut;
-  aCut.Assign(FBestSet);
 end;
 
-function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph): TWeight;
+function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
 begin
   Init2(aGraph);
   while FExistNodes.PopCount >= 2 do
     Shrink;
   Result := FBestCut;
+  aCut.Assign(FBestSet);
 end;
 
 { TGWeightedGraph }
@@ -5799,16 +5878,24 @@ end;
 function TGWeightedGraph.GetMinWeightCutSW(out aCut: TCut): TWeight;
 var
   Cut: TIntSet;
-  Total: TBoolVector;
+  B: TBoolVector;
   I: SizeInt;
 begin
   if not GetTrivialMinCut(Cut, Result) then
     Result := StoerWagner(Cut);
-  Total.InitRange(VertexCount);
+  B.InitRange(VertexCount);
   for I in Cut do
-    Total[I] := False;
+    B[I] := False;
   aCut.A := Cut.ToArray;
-  aCut.B := Total.ToArray;
+  aCut.B := B.ToArray;
+end;
+
+function TGWeightedGraph.GetMinWeightCutNI: TWeight;
+var
+  Helper: TNIMinCutHelper;
+begin
+  if not GetTrivialMinCut(Result) then
+    Result := Helper.GetMinCut(Self);
 end;
 
 function TGWeightedGraph.GetMinWeightCutNI(out aCut: TCut): TWeight;
@@ -5825,14 +5912,6 @@ begin
     Total[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := Total.ToArray;
-end;
-
-function TGWeightedGraph.GetMinWeightCutNI: TWeight;
-var
-  Helper: TNIMinCutHelper;
-begin
-  if not GetTrivialMinCut(Result) then
-    Result := Helper.GetMinCut(Self);
 end;
 
 { TRealPointEdge }
