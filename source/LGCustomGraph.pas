@@ -918,13 +918,13 @@ type
 
   strict private
   class var
-    CFInfiniteWeight,
-    CFNegInfiniteWeight,
+    CFInfWeight,
+    CFNegInfWeight,
     CFZeroWeight: TWeight;
 
     class constructor Init;
     class function CreateAndFill(constref aValue: TWeight; aSize: SizeInt): TWeightArray; static;
-  protected
+  public
   type
     TWeightEdge = record
       Source,
@@ -970,7 +970,6 @@ type
     TPairingHeap = specialize TGPairHeapMin<TWeightItem>;
     TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
     TAStarHeap   = specialize TGPairHeapMin<TRankItem>;
-    //TAStarHeap   = specialize TGBinHeapMin<TRankItem>;
     TEdgeArray   = array of TWeightEdge;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
@@ -992,8 +991,8 @@ type
   { fills array with ZeroWeight }
     class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
 
-    class property InfiniteWeight: TWeight read CFInfiniteWeight;
-    class property NegInfiniteWeight: TWeight read CFNegInfiniteWeight;
+    class property InfWeight: TWeight read CFInfWeight;
+    class property NegInfWeight: TWeight read CFNegInfWeight;
     class property ZeroWeight: TWeight read CFZeroWeight;
   end;
 
@@ -4344,8 +4343,8 @@ end;
 
 class constructor TGWeightedPathHelper.Init;
 begin
-  CFInfiniteWeight := TWeight.MaxValue;
-  CFNegInfiniteWeight := TWeight.MinValue;
+  CFInfWeight := TWeight.MaxValue;
+  CFNegInfWeight := TWeight.MinValue;
   CFZeroWeight := Default(TWeight);
 end;
 
@@ -4450,7 +4449,7 @@ begin
                 Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
             end
     end;
-  Result := InfiniteWeight;
+  Result := InfWeight;
 end;
 
 class function TGWeightedPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
@@ -4493,7 +4492,7 @@ var
               end;
         end;
     end;
-  aWeight := InfiniteWeight;
+  aWeight := InfWeight;
 end;
 
 class function TGWeightedPathHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
@@ -4540,7 +4539,7 @@ var
               end;
         end;
     end;
-  aWeight := InfiniteWeight;
+  aWeight := InfWeight;
 end;
 
 class function TGWeightedPathHelper.FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
@@ -4560,7 +4559,7 @@ begin
       while Enum.MoveNext do
         begin
           Edge := Enum.Current;
-          if aWeights[Edge.Source] < InfiniteWeight then
+          if aWeights[Edge.Source] < InfWeight then
             begin
               RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
               if RelaxValue < aWeights[Edge.Destination] then
@@ -4599,7 +4598,7 @@ begin
       while Enum.MoveNext do
         begin
           Edge := Enum.Current;
-          if aWeights[Edge.Source] < InfiniteWeight then
+          if aWeights[Edge.Source] < InfWeight then
             begin
               RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
               if RelaxValue < aWeights[Edge.Destination] then
@@ -4634,12 +4633,12 @@ end;
 
 class function TGWeightedPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
 begin
-  Result := CreateAndFill(InfiniteWeight, aLen);
+  Result := CreateAndFill(InfWeight, aLen);
 end;
 
 class function TGWeightedPathHelper.CreateWeightArrayNI(aLen: SizeInt): TWeightArray;
 begin
-  Result := CreateAndFill(NegInfiniteWeight, aLen);
+  Result := CreateAndFill(NegInfWeight, aLen);
 end;
 
 class function TGWeightedPathHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;

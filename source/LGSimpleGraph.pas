@@ -733,8 +733,8 @@ type
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
-    class function InfiniteWeight: TWeight; static; inline;
-    class function NegInfiniteWeight: TWeight; static; inline;
+    class function InfWeight: TWeight; static; inline;
+    class function NegInfWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
     class function TotalWeight(constref aEdges: TEdgeArray): TWeight; static;
   { returns True if exists edge with negative weight }
@@ -4750,7 +4750,7 @@ begin
   FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
   for I in FWhites do
     begin
-      ew := InfiniteWeight;
+      ew := InfWeight;
       for p in aGraph.AdjLists[I]^ do
         if p^.Data.Weight < ew then
           ew := p^.Data.Weight;
@@ -4782,7 +4782,7 @@ begin
   FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
   for I in FWhites do
     begin
-      ew := InfiniteWeight;
+      ew := InfWeight;
       for p in aGraph.AdjLists[I]^ do
         if p^.Data.Weight > ew then
           ew := p^.Data.Weight;
@@ -4919,7 +4919,7 @@ function TGWeightedGraph.TKuhnMatch.TryMatch(var aDelta: TWeight): SizeInt;
 var
   vL, vR: SizeInt;
 begin
-  aDelta := InfiniteWeight;
+  aDelta := InfWeight;
   FVisited.ClearBits;
   ClearParents;
   Result := 0;
@@ -4939,7 +4939,7 @@ function TGWeightedGraph.TKuhnMatch.TryMatchMax(var aDelta: TWeight): SizeInt;
 var
   vL, vR: SizeInt;
 begin
-  aDelta := NegInfiniteWeight;
+  aDelta := NegInfWeight;
   FVisited.ClearBits;
   ClearParents;
   Result := 0;
@@ -4968,13 +4968,13 @@ var
   Matched: SizeInt;
   Delta: TWeight;
 begin
-  Delta := InfiniteWeight;
+  Delta := InfWeight;
   repeat
     repeat
       Matched := TryMatch(Delta);
       FMatchCount += Matched;
     until Matched = 0;
-    if Delta < InfiniteWeight then
+    if Delta < InfWeight then
       CorrectPots(Delta)
     else
       break;
@@ -4986,13 +4986,13 @@ var
   Matched: SizeInt;
   Delta: TWeight;
 begin
-  Delta := NegInfiniteWeight;
+  Delta := NegInfWeight;
   repeat
     repeat
       Matched := TryMatchMax(Delta);
       FMatchCount += Matched;
     until Matched = 0;
-    if Delta > NegInfiniteWeight then
+    if Delta > NegInfWeight then
       CorrectPots(Delta)
     else
       break;
@@ -5174,7 +5174,7 @@ begin
   FQueue := TPairHeapMax.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Size := aGraph.VertexCount;
-  FBestCut := InfiniteWeight;
+  FBestCut := InfWeight;
 end;
 
 procedure TGWeightedGraph.TNIMinCutHelper.Init2(aGraph: TGWeightedGraph);
@@ -5192,7 +5192,7 @@ begin
   FQueue := TPairHeapMax.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Size := aGraph.VertexCount;
-  FBestCut := InfiniteWeight;
+  FBestCut := InfWeight;
   FCuts := nil;
 end;
 
@@ -5353,7 +5353,7 @@ begin
       begin
         s := Node.Index;
         d := NULL_INDEX;
-        w := InfiniteWeight;
+        w := InfWeight;
         for p in AdjLists[s]^ do // find adjacent node with min weight
           begin
             I := p^.Destination;
@@ -5458,7 +5458,7 @@ begin
   Queue := TPairHeapMax.Create(VertexCount);
   vRemains.InitRange(VertexCount);
   vInQueue.Size := VertexCount;
-  Result := InfiniteWeight;
+  Result := InfWeight;
   //n-2 phases
   for Phase := 1 to Pred(VertexCount) do
     begin
@@ -5521,14 +5521,14 @@ begin
         end;
 end;
 
-class function TGWeightedGraph.InfiniteWeight: TWeight;
+class function TGWeightedGraph.InfWeight: TWeight;
 begin
-  Result := TPathHelper.InfiniteWeight;
+  Result := TPathHelper.InfWeight;
 end;
 
-class function TGWeightedGraph.NegInfiniteWeight: TWeight;
+class function TGWeightedGraph.NegInfWeight: TWeight;
 begin
-  Result := TPathHelper.NegInfiniteWeight;
+  Result := TPathHelper.NegInfWeight;
 end;
 
 class function TGWeightedGraph.ZeroWeight: TWeight;

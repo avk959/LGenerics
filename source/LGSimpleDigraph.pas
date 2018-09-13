@@ -323,8 +323,8 @@ type
 ***********************************************************************************************************}
 
     class function Min(constref L, R: TWeight): TWeight; static; inline;
-    class function InfiniteWeight: TWeight; static; inline;
-    class function NegInfiniteWeight: TWeight; static; inline;
+    class function InfWeight: TWeight; static; inline;
+    class function NegInfWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
     function ContainsNegWeightEdge: Boolean;
@@ -1546,7 +1546,7 @@ begin
 
   CurrArcIdx := nil;
 
-  FSource^.Excess := InfiniteWeight;
+  FSource^.Excess := InfWeight;
   System.SetLength(FLayers, FNodeCount);
   FMaxLayer := System.High(FLayers);
   System.SetLength(FQueue, FNodeCount);
@@ -1599,7 +1599,7 @@ begin
 
   CurrArcIdx := nil;
 
-  FSource^.Excess := InfiniteWeight;
+  FSource^.Excess := InfWeight;
   System.SetLength(FLayers, FNodeCount);
   FMaxLayer := System.High(FLayers);
   System.SetLength(FQueue, FNodeCount);
@@ -2144,13 +2144,13 @@ function TGWeightedDiGraph.TDinitzHelper.FindMaxFlow: TWeight;
 var
   Flow: TWeight;
 begin
-  Flow := InfiniteWeight;
+  Flow := InfWeight;
   Result := ZeroWeight;
   while Bfs do
     while Dfs(FSource, Flow) do
       begin
         Result += Flow;
-        Flow := InfiniteWeight;
+        Flow := InfWeight;
       end;
 end;
 
@@ -2303,12 +2303,12 @@ begin
     Result := R;
 end;
 
-class function TGWeightedDiGraph.InfiniteWeight: TWeight;
+class function TGWeightedDiGraph.InfWeight: TWeight;
 begin
   Result := TWeight.MaxValue;
 end;
 
-class function TGWeightedDiGraph.NegInfiniteWeight: TWeight;
+class function TGWeightedDiGraph.NegInfWeight: TWeight;
 begin
   Result := TWeight.MinValue;
 end;
@@ -2521,7 +2521,7 @@ begin
       end;
     end;
   {$POP}
-  if HasOverflow then //total capacity of edges incident to the source exceeds InfiniteWeight
+  if HasOverflow then //total capacity of edges incident to the source exceeds InfWeight
     exit(nwsSourceOverflow);
   Result := nwsValid;
 end;
