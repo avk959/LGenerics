@@ -3761,23 +3761,21 @@ end;
 function TGSimpleGraph.CreateLineGraph: TLineGraph;
 var
   e: TEdge;
-  I, J, vCurr, Last, eCount: SizeInt;
+  I, J, CurrVertexIdx, LastIdx: SizeInt;
 begin
-  //not implemented yet
-  eCount := EdgeCount;
-  Result := TLineGraph.Create(eCount);
+  Result := TLineGraph.Create(EdgeCount);
   for e in DistinctEdges do
     Result.AddVertex(TIntPair.Create(e.Source, e.Destination));
-  Last := 0;
-  while Last < eCount do
+  LastIdx := 0;
+  while LastIdx < EdgeCount do
     begin
-      I := Last;
-      vCurr := Result[Last].Left;
-      while (Last < eCount) and (Result[Last].Left = vCurr) do
-        Inc(Last);
-      for I := I to Last - 2 do
-        for J := Succ(I) to Pred(Last) do
-          Result.AddEdgeI(I, J, TIntValue.Create(vCurr));
+      I := LastIdx;
+      CurrVertexIdx := Result[LastIdx].Left;
+      while (LastIdx < EdgeCount) and (Result[LastIdx].Left = CurrVertexIdx) do
+        Inc(LastIdx);
+      for I := I to LastIdx - 2 do
+        for J := Succ(I) to Pred(LastIdx) do
+          Result.AddEdgeI(I, J, TIntValue.Create(CurrVertexIdx));
     end;
 end;
 
