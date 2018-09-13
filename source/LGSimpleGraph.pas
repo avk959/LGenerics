@@ -41,6 +41,8 @@ uses
   LGStrConst;
 
 type
+  TLineGraph = class; //forward declaration
+
   { TGSimpleGraph implements simple sparse undirected graph based on adjacency lists;
 
       functor TEqRel must provide:
@@ -259,8 +261,7 @@ type
         property Key: SizeInt read Target;
       end;
 
-      PECEdge = ^TECEdge;
-
+      PECEdge    = ^TECEdge;
       TECAdjList = specialize TGJoinableHashList<TECEdge>;
       TPairHeap  = specialize TGPairHeapMax<TINode>;
       TEdgeQueue = specialize TGLiteQueue<TIntPair>;
@@ -378,9 +379,7 @@ type
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
-
     class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
-
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -404,13 +403,15 @@ type
     function  SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the edges provided by the aEdges }
     function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
+  { returns line graph constucted from self }
+    function  CreateLineGraph: TLineGraph;
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
   { returns True and vertex index, if it is added, False if such a vertex already exists }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
-  { note: removing destroys validity of connected }
+  { note: vertex removing breaks validity of connected property }
     procedure RemoveVertex(constref aVertex: TVertex); inline;
     procedure RemoveVertexI(aIndex: SizeInt);
   { returns True if the edge is added, False, if such an edge already exists }
@@ -418,7 +419,7 @@ type
     function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
-  { returns False if there is no such edge; note: removing destroys validity of connected }
+  { returns False if there is no such edge; edge removing breaks validity of connected property }
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  Degree(constref aVertex: TVertex): SizeInt; inline;
@@ -572,6 +573,8 @@ type
     property  Density: Double read GetDensity;
   end;
 
+  TLineGraph = class(specialize TGSimpleGraph<TIntPair, TIntValue, TIntPair>);
+
   { TGChart: simple outline;
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -707,8 +710,8 @@ type
         constructor Create(aTarget: SizeInt; constref w: TWeight);
         property Key: SizeInt read Target;
       end;
-      PNiEdge = ^TNiEdge;
 
+      PNiEdge    = ^TNiEdge;
       TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
       TEdgeQueue = specialize TGLiteQueue<TIntPair>;
 
@@ -3753,6 +3756,29 @@ function TGSimpleGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimp
 begin
   Result := TGSimpleGraph.Create;
   Result.AssignEdges(Self, aEdges);
+end;
+
+function TGSimpleGraph.CreateLineGraph: TLineGraph;
+var
+  e: TEdge;
+  I, J, vCurr, Last, eCount: SizeInt;
+begin
+  //not implemented yet
+  eCount := EdgeCount;
+  Result := TLineGraph.Create(eCount);
+  for e in DistinctEdges do
+    Result.AddVertex(TIntPair.Create(e.Source, e.Destination));
+  Last := 0;
+  while Last < eCount do
+    begin
+      I := Last;
+      vCurr := Result[Last].Left;
+      while (Last < eCount) and (Result[Last].Left = vCurr) do
+        Inc(Last);
+      for I := I to Last - 2 do
+        for J := Succ(I) to Pred(Last) do
+          Result.AddEdgeI(I, J, TIntValue.Create(vCurr));
+    end;
 end;
 
 function TGSimpleGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
