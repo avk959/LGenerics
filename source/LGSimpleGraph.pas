@@ -34,7 +34,6 @@ uses
   {%H-}LGHelpers,
   LGArrayHelpers,
   LGVector,
-  LGHashTable,
   LGQueue,
   LGCustomGraph,
   LGStrHelpers,
@@ -247,6 +246,41 @@ type
       function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
     end;
 
+    { TEdgeConnect }
+    TEdgeConnect = record
+    private
+    type
+      TECEdge = record
+        Target,
+        Weight,
+        ScanValue: SizeInt;
+        Scanned: Boolean;
+        constructor Create(aTarget: SizeInt; constref w: SizeInt);
+        property Key: SizeInt read Target;
+      end;
+
+      PECEdge = ^TECEdge;
+
+      TECAdjList = specialize TGJoinableHashList<TECEdge>;
+      TPairHeap  = specialize TGPairHeapMax<TINode>;
+      TEdgeQueue = specialize TGLiteQueue<TIntPair>;
+
+    var
+      FGraph: array of TECAdjList;
+      FQueue: TPairHeap;
+      FEdgeQueue: TEdgeQueue;
+      FExistNodes,
+      FInQueue: TBoolVector;
+      FBestCut: SizeInt;
+      procedure ClearMarks; inline;
+      procedure ShrinkEdge(aSource, aTarget: SizeInt);
+      procedure Init(aGraph: TGSimpleGraph);
+      procedure ScanFirstSearch;
+      procedure Shrink;
+    public
+      function  GetConnectivity(aGraph: TGSimpleGraph): SizeInt;
+    end;
+
     TDistinctEdgeEnumerator = record
     private
       FList: PNode;
@@ -444,6 +478,8 @@ type
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+  { returns edge connectivity of the graph }
+    function  EdgeConnectivity: SizeInt;
   { returns adjacency matrix of the complement graph;
     warning: maximal matrix size limited, see MaxBitMatrixSize }
     function  ComplementMatrix: TAdjacencyMatrix;
@@ -643,26 +679,7 @@ type
        function  GetMaxWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
      end;
 
-    THashAdjList = record
-    private
-    type
-      TTable = specialize TGLiteIntHashTable<SizeInt, TWeightItem>;
-      PEntry = TTable.PEntry;
-    public
-    type
-      TEnumerator = TTable.TEnumerator;
-
-    private
-      FTable: TTable;
-      function  GetCount: SizeInt; inline;
-    public
-      function  GetEnumerator: TEnumerator; inline;
-      procedure EnsureCapacity(aValue: SizeInt); inline;
-      procedure Add(constref aValue: TWeightItem);
-      procedure AddAll(constref aList: THashAdjList);
-      procedure Remove(aValue: SizeInt); inline;
-      property  Count: SizeInt read GetCount;
-    end;
+    TSWAdjList = specialize TGJoinableHashList<TWeightItem>;
 
     { TNIMinCutHelper: some implemenation of Nagamochi-Ibaraki minimum cut algorithm:
         H.Nagamochi and T.Ibaraki. "Computing Edge-Connectivity in Multigraphs and Capacitated Graphs" }
@@ -674,33 +691,12 @@ type
         Weight,
         ScanValue: TWeight;
         Scanned: Boolean;
-        constructor Create(aIndex: SizeInt; constref w: TWeight);
+        constructor Create(aTarget: SizeInt; constref w: TWeight);
         property Key: SizeInt read Target;
       end;
       PNiEdge = ^TNiEdge;
 
-      TNiAdjList = record
-      private
-      type
-        TTable = specialize TGLiteIntHashTable<SizeInt, TNiEdge>;
-
-      public
-      type
-        TEnumerator = TTable.TEnumerator;
-
-      private
-        FTable: TTable;
-        function  GetCount: SizeInt; inline;
-      public
-        function  GetEnumerator: TEnumerator; inline;
-        procedure EnsureCapacity(aValue: SizeInt); inline;
-        procedure ClearMarks; inline;
-        procedure Add(constref aValue: TNiEdge);
-        procedure AddAll(constref aList: TNiAdjList);
-        procedure Remove(aValue: SizeInt); inline;
-        property  Count: SizeInt read GetCount;
-      end;
-
+      TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
       TEdgeQueue = specialize TGLiteQueue<TIntPair>;
 
     var
@@ -712,10 +708,10 @@ type
       FInQueue: TBoolVector;
       FBestSet: TIntSet;
       FBestCut: TWeight;
+      procedure ClearMarks;
       procedure ShrinkEdge(aSource, aTarget: SizeInt);
       procedure Init(aGraph: TGWeightedGraph);
       procedure Init2(aGraph: TGWeightedGraph);
-      procedure ClearMarks; inline;
       procedure ScanFirstSearch;
       procedure Shrink;
     public
@@ -2023,6 +2019,119 @@ begin
       end;
 end;
 
+{ TGSimpleGraph.TEdgeConnect.TECEdge }
+
+constructor TGSimpleGraph.TEdgeConnect.TECEdge.Create(aTarget: SizeInt; constref w: SizeInt);
+begin
+  Target := aTarget;
+  Weight := w;
+end;
+
+{ TGSimpleGraph.TEdgeConnect }
+
+procedure TGSimpleGraph.TEdgeConnect.ClearMarks;
+var
+  I: SizeInt;
+  p: TECAdjList.PEntry;
+begin
+  for I in FExistNodes do
+    for p in FGraph[I] do
+      p^.Scanned := False;
+end;
+
+procedure TGSimpleGraph.TEdgeConnect.ShrinkEdge(aSource, aTarget: SizeInt);
+var
+  I: SizeInt;
+  p: TECAdjList.PEntry;
+  Edge: TECEdge;
+begin
+  FGraph[aSource].Remove(aTarget);
+  FGraph[aTarget].Remove(aSource);
+  FGraph[aSource].AddAll(FGraph[aTarget]);
+  for p in FGraph[aTarget] do
+    begin
+      I := p^.Target;
+      Edge := p^;
+      FGraph[I].Remove(aTarget);
+      Edge.Target := aSource;
+      FGraph[I].Add(Edge);
+    end;
+  Finalize(FGraph[aTarget]);
+  FExistNodes[aTarget] := False;
+end;
+
+procedure TGSimpleGraph.TEdgeConnect.Init(aGraph: TGSimpleGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TECEdge.Create(p^.Destination, 1));
+    end;
+  FQueue := TPairHeap.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := High(SizeInt);
+end;
+
+procedure TGSimpleGraph.TEdgeConnect.ScanFirstSearch;
+var
+  I: SizeInt;
+  p: TECAdjList.PEntry;
+  Item: TINode;
+begin
+  ClearMarks;
+  FInQueue.Join(FExistNodes);
+  for I in FExistNodes do
+    FQueue.Enqueue(I, TINode.Create(I, 0));
+  while FQueue.Count > 1 do
+    begin
+      I := FQueue.Dequeue.Index;
+      FInQueue[I] := False;
+      for p in FGraph[I] do
+        if FInQueue[p^.Target] then
+          begin
+            Item := FQueue.Peek(p^.Target);
+            Item.Data += p^.Weight;
+            FQueue.Update(p^.Target, Item);
+            p^.Scanned := True;
+            p^.ScanValue := Item.Data;
+          end;
+    end;
+  Item := FQueue.Dequeue;
+  FInQueue[Item.Index] := False;
+  if Item.Data < FBestCut then
+    FBestCut := Item.Data;
+end;
+
+procedure TGSimpleGraph.TEdgeConnect.Shrink;
+var
+  I: SizeInt;
+  p: TECAdjList.PEntry;
+  Pair: TIntPair;
+begin
+  ScanFirstSearch;
+  for I in FExistNodes do
+    for p in FGraph[I] do
+      if p^.Scanned and (p^.ScanValue >= FBestCut) then
+        FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
+  while FEdgeQueue.TryDequeue(Pair) do
+    if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
+      ShrinkEdge(Pair.Left, Pair.Right);
+end;
+
+function TGSimpleGraph.TEdgeConnect.GetConnectivity(aGraph: TGSimpleGraph): SizeInt;
+begin
+  Init(aGraph);
+  while FExistNodes.PopCount >= 2 do
+    Shrink;
+  Result := FBestCut;
+end;
+
 { TGSimpleGraph.TDistinctEdgeEnumerator }
 
 function TGSimpleGraph.TDistinctEdgeEnumerator.GetCurrent: TEdge;
@@ -2464,7 +2573,7 @@ var
 begin
   Nodes := TINodeQueue.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
+    {%H-}Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
@@ -3999,6 +4108,17 @@ begin
     end;
 end;
 
+function TGSimpleGraph.EdgeConnectivity: SizeInt;
+var
+  Helper: TEdgeConnect;
+begin
+  if not Connected or (VertexCount < 2) then
+    exit(0);
+  if VertexCount = 2 then
+    exit(1);
+  Result := Helper.GetConnectivity(Self);
+end;
+
 function TGSimpleGraph.ComplementMatrix: TAdjacencyMatrix;
 var
   m: TSquareBitMatrix;
@@ -5030,104 +5150,25 @@ begin
   Result := CreateEdges;
 end;
 
-{ TGWeightedGraph.THashAdjList }
-
-function TGWeightedGraph.THashAdjList.GetCount: SizeInt;
-begin
-  Result := FTable.Count;
-end;
-
-function TGWeightedGraph.THashAdjList.GetEnumerator: TEnumerator;
-begin
-  Result := FTable.GetEnumerator;
-end;
-
-procedure TGWeightedGraph.THashAdjList.EnsureCapacity(aValue: SizeInt);
-begin
-  FTable.EnsureCapacity(aValue);
-end;
-
-procedure TGWeightedGraph.THashAdjList.Add(constref aValue: TWeightItem);
-var
-  p: PEntry;
-begin
-  if FTable.FindOrAdd(aValue.Key, p) then
-    p^.Weight += aValue.Weight
-  else
-    p^ := aValue;
-end;
-
-procedure TGWeightedGraph.THashAdjList.AddAll(constref aList: THashAdjList);
-var
-  p: PEntry;
-begin
-  for p in aList do
-    Add(p^);
-end;
-
-procedure TGWeightedGraph.THashAdjList.Remove(aValue: SizeInt);
-begin
-  FTable.Remove(aValue);
-end;
-
 { TGWeightedGraph.TNIMinCutHelper.TNiEdge }
 
-constructor TGWeightedGraph.TNIMinCutHelper.TNiEdge.Create(aIndex: SizeInt; constref w: TWeight);
+constructor TGWeightedGraph.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; constref w: TWeight);
 begin
-  Target := aIndex;
+  Target := aTarget;
   Weight := w;
-  ScanValue := ZeroWeight;
-end;
-
-{ TGWeightedGraph.TNIMinCutHelper.TNiAdjList }
-
-function TGWeightedGraph.TNIMinCutHelper.TNiAdjList.GetCount: SizeInt;
-begin
-  Result := FTable.Count;
-end;
-
-function TGWeightedGraph.TNIMinCutHelper.TNiAdjList.GetEnumerator: TEnumerator;
-begin
-  Result := FTable.GetEnumerator;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.TNiAdjList.EnsureCapacity(aValue: SizeInt);
-begin
-  FTable.EnsureCapacity(aValue);
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.TNiAdjList.ClearMarks;
-var
-  p: PNiEdge;
-begin
-  for p in FTable do
-    p^.Scanned := False;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.TNiAdjList.Add(constref aValue: TNiEdge);
-var
-  p: PNiEdge;
-begin
-  if FTable.FindOrAdd(aValue.Key, p) then
-    p^.Weight += aValue.Weight
-  else
-    p^ := aValue;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.TNiAdjList.AddAll(constref aList: TNiAdjList);
-var
-  p: PNiEdge;
-begin
-  for p in aList do
-    Add(p^);
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.TNiAdjList.Remove(aValue: SizeInt);
-begin
-  FTable.Remove(aValue);
 end;
 
 { TGWeightedGraph.TNIMinCutHelper }
+
+procedure TGWeightedGraph.TNIMinCutHelper.ClearMarks;
+var
+  I: SizeInt;
+  p: TNiAdjList.PEntry;
+begin
+  for I in FExistNodes do
+    for p in FGraph[I] do
+      p^.Scanned := False;
+end;
 
 procedure TGWeightedGraph.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
 var
@@ -5194,14 +5235,6 @@ begin
   FInQueue.Size := aGraph.VertexCount;
   FBestCut := InfWeight;
   FCuts := nil;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.ClearMarks;
-var
-  I: SizeInt;
-begin
-  for I in FExistNodes do
-    FGraph[I].ClearMarks;
 end;
 
 procedure TGWeightedGraph.TNIMinCutHelper.ScanFirstSearch;
@@ -5436,7 +5469,7 @@ end;
 function TGWeightedGraph.StoerWagner(out aCut: TIntSet): TWeight;
 var
   Queue: TPairHeapMax;
-  g: array of THashAdjList;
+  g: array of TSWAdjList;
   Cuts: array of TIntSet;
   vRemains, vInQueue: TBoolVector;
   Phase, Prev, Last, I: SizeInt;

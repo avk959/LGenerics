@@ -911,6 +911,29 @@ type
 
   TINodeQueue = specialize TGPairHeapMin<TINode>;
 
+  { TGJoinableHashList for internal use only; TEntry must provide property Key: SizeInt and
+      field Weight }
+  generic TGJoinableHashList<TEntry> = record
+  private
+  type
+    TTable = specialize TGLiteIntHashTable<SizeInt, TEntry>;
+  public
+  type
+    TEnumerator = TTable.TEnumerator;
+    PEntry      = ^TEntry;
+
+  private
+    FTable: TTable;
+    function  GetCount: SizeInt; inline;
+  public
+    function  GetEnumerator: TEnumerator; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure Add(constref aValue: TEntry);
+    procedure AddAll(constref aList: TGJoinableHashList);
+    procedure Remove(aValue: SizeInt); inline;
+    property  Count: SizeInt read GetCount;
+  end;
+
   generic TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
@@ -4221,6 +4244,46 @@ end;
 function TGPairHeapMax.Peek(aHandle: SizeInt): T;
 begin
   Result := FNodeList[aHandle].Data;
+end;
+
+{ TGJoinableHashList }
+
+function TGJoinableHashList.GetCount: SizeInt;
+begin
+  Result := FTable.Count;
+end;
+
+function TGJoinableHashList.GetEnumerator: TEnumerator;
+begin
+  Result := FTable.GetEnumerator;
+end;
+
+procedure TGJoinableHashList.EnsureCapacity(aValue: SizeInt);
+begin
+  FTable.EnsureCapacity(aValue);
+end;
+
+procedure TGJoinableHashList.Add(constref aValue: TEntry);
+var
+  p: PEntry;
+begin
+  if FTable.FindOrAdd(aValue.Key, p) then
+    p^.Weight += aValue.Weight
+  else
+    p^ := aValue;
+end;
+
+procedure TGJoinableHashList.AddAll(constref aList: TGJoinableHashList);
+var
+  p: PEntry;
+begin
+  for p in aList do
+    Add(p^);
+end;
+
+procedure TGJoinableHashList.Remove(aValue: SizeInt);
+begin
+  FTable.Remove(aValue);
 end;
 
 { TGWeightedPathHelper.TWeightEdge }
