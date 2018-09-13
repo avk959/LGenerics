@@ -690,13 +690,16 @@ type
     property  Size: SizeInt read GetSize write SetSize;
   end;
 
+  TIntValue = record
+    Value: SizeInt;
+    constructor Create(aValue: SizeInt);
+    property Key: SizeInt read Value write Value;
+  end;
+
   TIntHashSet = record
   private
   type
-    TIntEntry = record
-      Key: SizeInt;
-    end;
-    TTable = specialize TGLiteIntHashTable<SizeInt, TIntEntry>;
+    TTable = specialize TGLiteIntHashTable<SizeInt, TIntValue>;
     PEntry = TTable.PEntry;
 
   public
@@ -911,8 +914,8 @@ type
 
   TINodeQueue = specialize TGPairHeapMin<TINode>;
 
-  { TGJoinableHashList for internal use only; TEntry must provide property Key: SizeInt and
-      field Weight }
+  { TGJoinableHashList for internal use only; TEntry must provide
+      property Key: SizeInt and numeric field Weight }
   generic TGJoinableHashList<TEntry> = record
   private
   type
@@ -3308,6 +3311,13 @@ begin
   else
     FList[R] := L;
   Result := True;
+end;
+
+{ TIntValue }
+
+constructor TIntValue.Create(aValue: SizeInt);
+begin
+  Value := aValue;
 end;
 
 { TIntHashSet.TEnumerator }
