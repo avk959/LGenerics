@@ -252,7 +252,6 @@ type
     procedure SetItem(aIndex: SizeInt; const aValue: T);
     procedure CheckFreeItems;
     class operator Initialize(var v: TGLiteObjectVector);
-    class operator Finalize(var v: TGLiteObjectVector);
     class operator Copy(constref aSrc: TGLiteObjectVector; var aDst: TGLiteObjectVector);
   public
   type
@@ -1665,11 +1664,6 @@ end;
 class operator TGLiteObjectVector.Initialize(var v: TGLiteObjectVector);
 begin
   v.OwnsObjects := True;
-end;
-
-class operator TGLiteObjectVector.Finalize(var v: TGLiteObjectVector);
-begin
-  v.Clear;
 end;
 
 class operator TGLiteObjectVector.Copy(constref aSrc: TGLiteObjectVector; var aDst: TGLiteObjectVector);

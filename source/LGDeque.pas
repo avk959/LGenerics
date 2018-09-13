@@ -265,7 +265,6 @@ type
     function  GetItem(aIndex: SizeInt): T; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T);
     class operator Initialize(var d: TGLiteObjectDeque);
-    class operator Finalize(var d: TGLiteObjectDeque);
     class operator Copy(constref aSrc: TGLiteObjectDeque; var aDst: TGLiteObjectDeque);
   public
     function  InnerDeque: PDeque;
@@ -1493,11 +1492,6 @@ end;
 class operator TGLiteObjectDeque.Initialize(var d: TGLiteObjectDeque);
 begin
   d.OwnsObjects := True;
-end;
-
-class operator TGLiteObjectDeque.Finalize(var d: TGLiteObjectDeque);
-begin
-  d.Clear;
 end;
 
 class operator TGLiteObjectDeque.Copy(constref aSrc: TGLiteObjectDeque; var aDst: TGLiteObjectDeque);

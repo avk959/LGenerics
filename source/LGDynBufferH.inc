@@ -139,7 +139,6 @@
     procedure Expand(aValue: SizeInt);
     procedure AccessEmptyError; inline;
     class operator Initialize(var b: TGLiteDynBuffer);
-    class operator Finalize(var b: TGLiteDynBuffer);
     class operator Copy(constref aSrc: TGLiteDynBuffer; var aDst: TGLiteDynBuffer); inline;
   public
     FItems: TArray;
@@ -309,7 +308,6 @@
     procedure AccessEmptyError; inline;
     procedure CheckEmpty; inline;
     class operator Initialize(var b: TGLiteRingDynBuffer);
-    class operator Finalize(var b: TGLiteRingDynBuffer);
     class operator Copy(constref aSrc: TGLiteRingDynBuffer; var aDst: TGLiteRingDynBuffer); inline;
   public
     FItems: TArray;
