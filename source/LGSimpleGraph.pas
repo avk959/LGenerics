@@ -490,8 +490,6 @@ type
         B: TIntArray;
       end;
 
-  { returns vertex connectivity of the graph }
-    function  VertexConnectivity: SizeInt;
   { returns the global minimum cut; used Nagamochi-Ibaraki algorithm }
     function  GetMinCut: SizeInt;
     function  GetMinCut(out aCut: TCut): SizeInt;
@@ -4155,12 +4153,6 @@ begin
         aOnAddEdge(Items[e.Source], Items[e.Destination], @d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
-end;
-
-function TGSimpleGraph.VertexConnectivity: SizeInt;
-begin
-  //not implemented yet
-  //todo: build edge graph, find its edge connectivity
 end;
 
 function TGSimpleGraph.GetMinCut: SizeInt;
