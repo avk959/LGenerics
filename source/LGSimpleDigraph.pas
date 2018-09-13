@@ -328,6 +328,7 @@ type
     class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
     function ContainsNegWeightEdge: Boolean;
+    //todo: negative cycle detection ???
 
 {**********************************************************************************************************
   class management utilities
