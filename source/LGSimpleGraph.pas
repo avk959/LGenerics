@@ -248,21 +248,38 @@ type
       function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
     end;
 
+    { TPapeMatch: Pape and Conradt general matching algorithm from
+      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
+    TPapeMatch = record
+    private
+      FGraph: TGSimpleGraph;
+      FMates,
+      FGrannies,
+      FQueue: TIntArray;
+      FInTree: TBitVector;
+      FMatchCount: SizeInt;
+      procedure Match(aIndex, aMate: SizeInt); inline;
+      procedure TryAugment(aRoot: SizeInt);
+      procedure Init(aGraph: TGSimpleGraph);
+    public
+      function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+    end;
+
     { TNIMinCut: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }
     TNIMinCut = record
     private
     type
-      TECEdge = record
+      TNIEdge = record
         Target,
         Weight,
-        ScanValue: SizeInt;
+        ScanRank: SizeInt;
         Scanned: Boolean;
         constructor Create(aTarget: SizeInt; constref w: SizeInt);
         property Key: SizeInt read Target;
       end;
 
-      PECEdge    = ^TECEdge;
-      TECAdjList = specialize TGJoinableHashList<TECEdge>;
+      PECEdge    = ^TNIEdge;
+      TECAdjList = specialize TGJoinableHashList<TNIEdge>;
       TPairHeap  = specialize TGPairHeapMax<TINode>;
       TEdgeQueue = specialize TGLiteQueue<TIntPair>;
 
@@ -483,8 +500,6 @@ type
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
-  { returns vertex connectivity of the graph }
-    function VertexConnectivity: SizeInt;
 
     type
       //vertex partition
@@ -523,10 +538,13 @@ type
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
-  { returns the matching of the maximum cardinality in an arbitrary graph,
-    used Edmonds algorithm }
+  { returns the matching of the maximum cardinality in an arbitrary graph;
+    used ?Edmonds? algorithm }
     function MaxMatchingEd: TIntEdgeArray;
-  { returns the matching of the maximum cardinality in an arbitrary graph,
+  { returns the matching of the maximum cardinality in an arbitrary graph;
+    used Pape-Conradt algorithm }
+    function MaxMatchingPC: TIntEdgeArray;
+  { returns the matching of the maximum cardinality in an arbitrary graph;
     used Micali-Vazirani algorithm }
     function MaxMatchingMV: TIntEdgeArray;
 {**********************************************************************************************************
@@ -709,7 +727,7 @@ type
       TNiEdge = record
         Target: SizeInt;
         Weight,
-        ScanValue: TWeight;
+        ScanRank: TWeight;
         Scanned: Boolean;
         constructor Create(aTarget: SizeInt; constref w: TWeight);
         property Key: SizeInt read Target;
@@ -2032,9 +2050,109 @@ begin
       end;
 end;
 
-{ TGSimpleGraph.TNIMinCut.TECEdge }
+{ TGSimpleGraph.TPapeMatch }
 
-constructor TGSimpleGraph.TNIMinCut.TECEdge.Create(aTarget: SizeInt; constref w: SizeInt);
+procedure TGSimpleGraph.TPapeMatch.Match(aIndex, aMate: SizeInt);
+begin
+  FMates[aIndex] := aMate;
+  FMates[aMate] := aIndex;
+end;
+
+procedure TGSimpleGraph.TPapeMatch.TryAugment(aRoot: SizeInt);
+var
+  Curr, Next, Mate, Tmp: SizeInt;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FInTree.ClearBits;
+  FInTree[aRoot] := True;
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      for p in FGraph.AdjLists[Curr]^ do
+        if not FInTree[p^.Destination] then
+          begin
+            Next := p^.Destination;
+            Mate := FMates[Next];
+            if Mate = NULL_INDEX then
+              begin
+                FMates[Next] := Curr;
+   	        repeat
+   	          Tmp := FMates[Curr];
+		  FMates[Curr] := Next;
+   	          if Tmp <> NULL_INDEX then
+   	            begin
+   	              Curr := FGrannies[Curr];
+   	              FMates[Tmp] := Curr;
+   	              Next := Tmp;
+   	            end;
+                until Tmp = NULL_INDEX;
+   	        Inc(FMatchCount);
+                exit;
+              end
+            else
+              if Mate <> Curr then
+                begin
+                  if Curr <> aRoot then
+                    begin
+ 	              Tmp := FGrannies[Curr];
+ 	              while (Tmp <> aRoot) and (Tmp <> Next) do
+ 	                Tmp := FGrannies[Tmp];
+                      if Tmp <> aRoot then
+                        continue;
+                    end;
+   	          FInTree[Next] := True;
+   	          FGrannies[Mate] := Curr;
+                  FQueue[qTail] := Mate;
+                  Inc(qTail);
+                end;
+          end;
+    end;
+end;
+
+procedure TGSimpleGraph.TPapeMatch.Init(aGraph: TGSimpleGraph);
+var
+  e: TIntEdge;
+begin
+  FMatchCount := 0;
+  FGraph := aGraph;
+  FMates := aGraph.CreateIntArray;
+  FGrannies := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FInTree.Size := aGraph.VertexCount;
+  for e in aGraph.GetApproxMatching do
+    begin
+      Match(e.Source, e.Destination);
+      Inc(FMatchCount);
+    end;
+end;
+
+function TGSimpleGraph.TPapeMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+var
+  I, J: SizeInt;
+begin
+  Init(aGraph);
+  for I := 0 to System.High(FMates) do
+    if FMates[I] = NULL_INDEX then
+      TryAugment(I);
+  System.SetLength(Result, FMatchCount);
+  J := 0;
+  for I := 0 to System.High(FMates) do
+    if FMates[I] <> NULL_INDEX then
+      begin
+        Result[J] := TIntEdge.Create(I, FMates[I]);
+        FMates[FMates[I]] := NULL_INDEX;
+        Inc(J);
+      end;
+end;
+
+{ TGSimpleGraph.TNIMinCut.TNIEdge }
+
+constructor TGSimpleGraph.TNIMinCut.TNIEdge.Create(aTarget: SizeInt; constref w: SizeInt);
 begin
   Target := aTarget;
   Weight := w;
@@ -2062,7 +2180,7 @@ begin
     begin
       FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
       for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TECEdge.Create(p^.Destination, 1));
+        FGraph[I].Add(TNIEdge.Create(p^.Destination, 1));
     end;
   FQueue := TPairHeap.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
@@ -2081,7 +2199,7 @@ begin
     begin
       FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
       for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TECEdge.Create(p^.Destination, 1));
+        FGraph[I].Add(TNIEdge.Create(p^.Destination, 1));
     end;
   System.SetLength(FCuts, aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -2096,7 +2214,7 @@ procedure TGSimpleGraph.TNIMinCut.ShrinkEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
   p: TECAdjList.PEntry;
-  Edge: TECEdge;
+  Edge: TNIEdge;
 begin
   FGraph[aSource].Remove(aTarget);
   FGraph[aTarget].Remove(aSource);
@@ -2140,7 +2258,7 @@ begin
             Item.Data += p^.Weight;
             FQueue.Update(p^.Target, Item);
             p^.Scanned := True;
-            p^.ScanValue := Item.Data;
+            p^.ScanRank := Item.Data;
           end;
     end;
   Item := FQueue.Dequeue;
@@ -2162,7 +2280,7 @@ begin
   ScanFirstSearch;
   for I in FExistNodes do
     for p in FGraph[I] do
-      if p^.Scanned and (p^.ScanValue >= FBestCut) then
+      if p^.Scanned and (p^.ScanRank >= FBestCut) then
         FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
     if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
@@ -4186,11 +4304,6 @@ begin
     end;
 end;
 
-function TGSimpleGraph.VertexConnectivity: SizeInt;
-begin
-  //not implemented yet
-end;
-
 function TGSimpleGraph.GetMinCut: SizeInt;
 var
   Helper: TNIMinCut;
@@ -4429,8 +4542,16 @@ var
 begin
   if VertexCount < 2 then
     exit([]);
-  if (VertexCount = 2) and Connected then
-    exit([TIntEdge.Create(0, 1)]);
+  if not FindMaxBipartiteMatching(Result) then
+    Result := Helper.GetMaxMatch(Self);
+end;
+
+function TGSimpleGraph.MaxMatchingPC: TIntEdgeArray;
+var
+  Helper: TPapeMatch;
+begin
+  if VertexCount < 2 then
+    exit([]);
   if not FindMaxBipartiteMatching(Result) then
     Result := Helper.GetMaxMatch(Self);
 end;
@@ -4439,8 +4560,6 @@ function TGSimpleGraph.MaxMatchingMV: TIntEdgeArray;
 begin
   if VertexCount < 2 then
     exit([]);
-  if (VertexCount = 2) and Connected then
-    exit([TIntEdge.Create(0, 1)]);
   if not FindMaxBipartiteMatching(Result) then
     Result := GetMvMatching;
 end;
@@ -5410,7 +5529,7 @@ begin
             Item.Weight += p^.Weight;
             FQueue.Update(p^.Target, Item);
             p^.Scanned := True;
-            p^.ScanValue := Item.Weight;
+            p^.ScanRank := Item.Weight;
           end;
     end;
   Item := FQueue.Dequeue;
@@ -5432,7 +5551,7 @@ begin
   ScanFirstSearch;
   for I in FExistNodes do
     for p in FGraph[I] do
-      if p^.Scanned and (p^.ScanValue >= FBestCut) then
+      if p^.Scanned and (p^.ScanRank >= FBestCut) then
         FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
     if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
