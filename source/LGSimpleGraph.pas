@@ -494,6 +494,8 @@ type
   { returns the global minimum cut; used Nagamochi-Ibaraki algorithm }
     function  GetMinCut: SizeInt;
     function  GetMinCut(out aCut: TCut): SizeInt;
+  { returns array of the edges that cross cut }
+    function  GetMinCutCross: TIntEdgeArray;
   { returns adjacency matrix of the complement graph;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
     function  ComplementMatrix: TAdjacencyMatrix;
@@ -3760,8 +3762,8 @@ end;
 
 function TGSimpleGraph.CreateLineGraph: TLineGraph;
 var
-  e: TEdge;
   I, J, CurrVertexIdx, LastIdx: SizeInt;
+  e: TEdge;
 begin
   Result := TLineGraph.Create(EdgeCount);
   for e in DistinctEdges do
@@ -4197,7 +4199,6 @@ var
   B: TBoolVector;
   I: SizeInt;
 begin
-  {%H-}Cut.MakeEmpty;
   if not Connected or (VertexCount < 2) then
     exit(0);
   if VertexCount = 2 then
@@ -4212,6 +4213,52 @@ begin
     B[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := B.ToArray;
+end;
+
+function TGSimpleGraph.GetMinCutCross: TIntEdgeArray;
+var
+  Helper: TNIMinCut;
+  Cut: TIntSet;
+  Left, Right: TBoolVector;
+  I, J: SizeInt;
+  p: PAdjItem;
+begin
+  if not Connected or (VertexCount < 2) then
+    exit([]);
+  if VertexCount = 2 then
+    exit([TIntEdge.Create(0, 1)]);
+  System.SetLength(Result, Helper.GetMinCut(Self, Cut));
+  if Cut.Count <= VertexCount shr 1 then
+    begin
+      Left.Size := VertexCount;
+      Right.InitRange(VertexCount);
+      for I in Cut do
+        begin
+          Left[I] := True;
+          Right[I] := False;
+        end;
+    end
+  else
+    begin
+      Right.Size := VertexCount;
+      Left.InitRange(VertexCount);
+      for I in Cut do
+        begin
+          Right[I] := True;
+          Left[I] := False;
+        end;
+    end;
+  J := 0;
+  for I in Left do
+    for p in AdjLists[I]^ do
+      if Right[p^.Destination] then
+        begin
+          if I < p^.Destination then
+            Result[J] := TIntEdge.Create(I, p^.Destination)
+          else
+            Result[J] := TIntEdge.Create(p^.Destination, I);
+          Inc(J);
+        end;
 end;
 
 function TGSimpleGraph.ComplementMatrix: TAdjacencyMatrix;
