@@ -483,6 +483,8 @@ type
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+  { returns vertex connectivity of the graph }
+    function VertexConnectivity: SizeInt;
 
     type
       //vertex partition
@@ -3762,22 +3764,25 @@ end;
 
 function TGSimpleGraph.CreateLineGraph: TLineGraph;
 var
-  I, J, CurrVertexIdx, LastIdx: SizeInt;
+  I, J: SizeInt;
+  vI, vJ: TIntPair;
   e: TEdge;
 begin
   Result := TLineGraph.Create(EdgeCount);
   for e in DistinctEdges do
     Result.AddVertex(TIntPair.Create(e.Source, e.Destination));
-  LastIdx := 0;
-  while LastIdx < EdgeCount do
+  for I := 0 to Result.VertexCount - 2 do
     begin
-      I := LastIdx;
-      CurrVertexIdx := Result[LastIdx].Left;
-      while (LastIdx < EdgeCount) and (Result[LastIdx].Left = CurrVertexIdx) do
-        Inc(LastIdx);
-      for I := I to LastIdx - 2 do
-        for J := Succ(I) to Pred(LastIdx) do
-          Result.AddEdgeI(I, J, TIntValue.Create(CurrVertexIdx));
+      vI := Result[I];
+      for J := Succ(I) to Pred(Result.VertexCount) do
+        begin
+          vJ := Result[J];
+          if (vI.Left = vJ.Left) or (vI.Left = vJ.Right) then
+            Result.AddEdgeI(I, J, TIntValue.Create(vI.Left))
+          else
+            if (vI.Right = vJ.Left) or (vI.Right = vJ.Right) then
+               Result.AddEdgeI(I, J, TIntValue.Create(vI.Right))
+        end;
     end;
 end;
 
@@ -4179,6 +4184,11 @@ begin
         aOnAddEdge(Items[e.Source], Items[e.Destination], @d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
+end;
+
+function TGSimpleGraph.VertexConnectivity: SizeInt;
+begin
+  //not implemented yet
 end;
 
 function TGSimpleGraph.GetMinCut: SizeInt;
