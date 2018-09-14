@@ -394,18 +394,18 @@ type
 ***********************************************************************************************************}
 
   type
-    TNetworkState = (nwsValid, nwsTrivial, nwsInvalidSource, nwsInvalidSink, nwsAntiParallelArc,
-                     nwsNegArcCapacity, nwsSourceOverflow, nwsSinkUnreachable);
+    TNetworkState = (nsValid, nsTrivial, nsInvalidSource, nsInvalidSink, nsNegCapacity, nsSourceOverflow,
+                     nsSinkUnreachable);
 
     function GetNetworkState(constref aSource, aSink: TVertex): TNetworkState; inline;
     function GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
-  { returns False if GetNetworkState <> nwsValid, used PR algorithm }
+  { returns False if GetNetworkState <> nsValid, used PR algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
-  { returns False if GetNetworkState <> nwsValid, used Dinitz's algorithm }
+  { returns False if GetNetworkState <> nsValid, used Dinitz's algorithm }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
-  { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
+  { returns False if GetNetworkState <> nsValid, returns flows through the arcs in array a;
     used Dinitz's algorithm }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
@@ -431,10 +431,10 @@ type
       T: TIntArray;
     end;
 
-  { returns False if GetNetworkState <> nwsValid, used PR algorithm }
+  { returns False if GetNetworkState <> nsValid, used PR algorithm }
     function FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
     function FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
-  { returns False if GetNetworkState <> nwsValid, used Dinitz's algorithm }
+  { returns False if GetNetworkState <> nsValid, used Dinitz's algorithm }
     function FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): Boolean;
     function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): Boolean;
   { warning: does not checks network state, used PR algorithm }
@@ -454,7 +454,7 @@ type
   networks utilities treat the weight of the arc as its capacity
 ***********************************************************************************************************}
 
-  { returns False if GetNetworkState <> nwsValid, returns flows through the arcs in array a;
+  { returns False if GetNetworkState <> nsValid, returns flows through the arcs in array a;
     used PR algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
@@ -2485,11 +2485,11 @@ begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
   if VertexCount < 2 then
-    exit(nwsTrivial);
+    exit(nsTrivial);
   if not IsSourceI(aSrcIndex) then
-    exit(nwsInvalidSource);
+    exit(nsInvalidSource);
   if not IsSinkI(aSinkIndex) then
-    exit(nwsInvalidSink);
+    exit(nsInvalidSink);
   Visited.Size := VertexCount;
   Visited[aSrcIndex] := True;
   Curr := aSrcIndex;
@@ -2497,10 +2497,8 @@ begin
     for p in AdjLists[Curr]^ do
       begin
         Next := p^.Destination;
-        if AdjLists[Next]^.Contains(Curr) then  // network should not contain antiparallel arcs
-          exit(nwsAntiParallelArc);
         if p^.Data.Weight < ZeroWeight then // network should not contain arc with negative capacity
-          exit(nwsNegArcCapacity);
+          exit(nsNegCapacity);
         if not Visited[Next] then
           begin
             Visited[Next] := True;
@@ -2510,7 +2508,7 @@ begin
       end;
   until not Queue{%H-}.TryDequeue(Curr);
   if not SinkFound then // sink must be reachable from the source
-    exit(nwsSinkUnreachable);
+    exit(nsSinkUnreachable);
   w := ZeroWeight;
   {$PUSH}{$Q+}
   for p in AdjLists[aSrcIndex]^ do
@@ -2523,8 +2521,8 @@ begin
     end;
   {$POP}
   if HasOverflow then //total capacity of edges incident to the source exceeds InfWeight
-    exit(nwsSourceOverflow);
-  Result := nwsValid;
+    exit(nsSourceOverflow);
+  Result := nsValid;
 end;
 
 function TGWeightedDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean;
@@ -2536,7 +2534,7 @@ function TGWeightedDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aF
 var
   Helper: THPrfHelper;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
   Result := True;
@@ -2551,7 +2549,7 @@ function TGWeightedDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFl
 var
   Helper: TDinitzHelper;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
   Result := True;
@@ -2568,7 +2566,7 @@ function TGWeightedDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFl
 var
   Helper: TDinitzHelper;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
   Result := True;
@@ -2658,7 +2656,7 @@ end;
 function TGWeightedDiGraph.FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): Boolean;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
     exit(False);
   aValue := GetMinSTCutPrI(aSrcIndex, aSinkIndex, aCut);
   Result := True;
@@ -2673,7 +2671,7 @@ end;
 function TGWeightedDiGraph.FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): Boolean;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
     exit(False);
   aValue := GetMinSTCutDI(aSrcIndex, aSinkIndex, aCut);
   Result := True;
@@ -2732,7 +2730,7 @@ function TGIntWeightedDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out
 var
   Helper: THPrfHelper;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nwsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
   Result := True;
