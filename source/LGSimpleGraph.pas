@@ -531,9 +531,14 @@ type
 ***********************************************************************************************************}
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality, used Hopcroft–Karp algorithm }
-    function FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
+    function FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
-    function GetMaxBipartiteMatching(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+    function GetMaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
+    the maximum cardinality }
+    function FindMaxBipartiteMatchingBfs(out aMatch: TIntEdgeArray): Boolean;
+  { returns the matching of the maximum cardinality in a bipartite graph without any checks }
+    function GetMaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns True if graph is bipartite and aMatch is maximal matching }
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
@@ -4474,10 +4479,9 @@ begin
   until not Queue{%H-}.TryDequeue(aRoot);
 end;
 
-function TGSimpleGraph.FindMaxBipartiteMatching(out aMatch: TIntEdgeArray): Boolean;
+function TGSimpleGraph.FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
 var
   Helper: THKMatch;
-  //Helper: TBfsMatch;
   w, g: TIntArray;
 begin
   if not IsBipartite(w, g) then
@@ -4486,9 +4490,27 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.GetMaxBipartiteMatching(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.GetMaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
 var
   Helper: THKMatch;
+begin
+  Result := Helper.GetBipMatch(Self, aWhites, aGrays);
+end;
+
+function TGSimpleGraph.FindMaxBipartiteMatchingBfs(out aMatch: TIntEdgeArray): Boolean;
+var
+  Helper: TBfsMatch;
+  w, g: TIntArray;
+begin
+  if not IsBipartite(w, g) then
+    exit(False);
+  aMatch := Helper.GetBipMatch(Self, w, g);
+  Result := True;
+end;
+
+function TGSimpleGraph.GetMaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+var
+  Helper: TBfsMatch;
 begin
   Result := Helper.GetBipMatch(Self, aWhites, aGrays);
 end;
@@ -4558,7 +4580,7 @@ var
 begin
   if VertexCount < 2 then
     exit([]);
-  if not FindMaxBipartiteMatching(Result) then
+  if not FindMaxBipartiteMatchingHK(Result) then
     Result := Helper.GetMaxMatch(Self);
 end;
 
@@ -4568,7 +4590,7 @@ var
 begin
   if VertexCount < 2 then
     exit([]);
-  //if not FindMaxBipartiteMatching(Result) then
+  //if not FindMaxBipartiteMatchingHK(Result) then
     Result := Helper.GetMaxMatch(Self);
 end;
 
@@ -4576,7 +4598,7 @@ function TGSimpleGraph.MaxMatchingMV: TIntEdgeArray;
 begin
   if VertexCount < 2 then
     exit([]);
-  if not FindMaxBipartiteMatching(Result) then
+  if not FindMaxBipartiteMatchingHK(Result) then
     Result := GetMvMatching;
 end;
 
