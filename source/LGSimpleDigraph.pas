@@ -304,7 +304,7 @@ type
       procedure Init(aGraph: TGWeightedDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
       function  Bfs: Boolean;
-      function  Dfs(aRoot: PNode; var aFlow: TWeight): Boolean;
+      function  Dfs(aRoot: PNode; constref aFlow: TWeight): TWeight;
       function  FindMaxFlow: TWeight;
       function  CreateEdges(aGraph: TGWeightedDiGraph): TEdgeArray;
     public
@@ -2115,44 +2115,41 @@ begin
   Result := FSink^.Labeled;
 end;
 
-function TGWeightedDiGraph.TDinitzHelper.Dfs(aRoot: PNode; var aFlow: TWeight): Boolean;
+function TGWeightedDiGraph.TDinitzHelper.Dfs(aRoot: PNode; constref aFlow: TWeight): TWeight;
 var
   Flow: TWeight;
 begin
   if aFlow > ZeroWeight then
     begin
       if aRoot = FSink then
-        exit(True);
+        exit(aFlow);
       while aRoot^.CurrentArc <= aRoot^.LastArc do
         begin
           if aRoot^.CurrentArc^.Target^.Distance = Succ(aRoot^.Distance) then
             begin
-              Flow := Min(aFlow, aRoot^.CurrentArc^.ResidualCap);
-              if Dfs(aRoot^.CurrentArc^.Target, Flow) then
+              Flow := Dfs(aRoot^.CurrentArc^.Target, Min(aFlow, aRoot^.CurrentArc^.ResidualCap));
+              if Flow > ZeroWeight then
                 begin
                   aRoot^.CurrentArc^.Push(Flow);
-                  aFlow := Flow;
-                  exit(True);
+                  exit(Flow);
                 end;
             end;
           Inc(aRoot^.CurrentArc);
         end;
     end;
-  Result := False;
+  Result := ZeroWeight;
 end;
 
 function TGWeightedDiGraph.TDinitzHelper.FindMaxFlow: TWeight;
 var
   Flow: TWeight;
 begin
-  Flow := InfWeight;
   Result := ZeroWeight;
   while Bfs do
-    while Dfs(FSource, Flow) do
-      begin
-        Result += Flow;
-        Flow := InfWeight;
-      end;
+    repeat
+      Flow := Dfs(FSource, InfWeight);
+      Result += Flow;
+    until Flow <= ZeroWeight;
 end;
 
 function TGWeightedDiGraph.TDinitzHelper.CreateEdges(aGraph: TGWeightedDiGraph): TEdgeArray;
