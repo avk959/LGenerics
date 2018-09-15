@@ -29,6 +29,7 @@ Contains:
       - articulation points finding
       - bridges finding
       - biconnected components finding
+      - edge-connectivity finding
       - cycle detection
       - fundamental cycles selection
       - shortest paths finding

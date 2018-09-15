@@ -1807,7 +1807,7 @@ end;
 function TGSimpleGraph.TBfsMatch.FindAugmentPath(aRoot: SizeInt): SizeInt;
 var
   Curr, Next: SizeInt;
-  p: TGSimpleGraph.PAdjItem;
+  p: PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
