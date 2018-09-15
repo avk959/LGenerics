@@ -4590,7 +4590,7 @@ var
 begin
   if VertexCount < 2 then
     exit([]);
-  //if not FindMaxBipartiteMatchingHK(Result) then
+  if not FindMaxBipartiteMatchingBfs(Result) then
     Result := Helper.GetMaxMatch(Self);
 end;
 
