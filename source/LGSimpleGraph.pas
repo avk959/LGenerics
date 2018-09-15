@@ -194,7 +194,7 @@ type
       FWhites: array of SizeInt;
       FQueue: TIntArray;
       FNodeCount,
-      FDummy: SizeInt;   // index of dummy node
+      FDummy: SizeInt;  // index of dummy node
       procedure Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
       function  Bfs: Boolean;
       function  Dfs(aRoot: SizeInt): Boolean;
