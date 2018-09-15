@@ -209,11 +209,11 @@ type
        FGraph: TGSimpleGraph;
        FMates,
        FParents,
-       FWhites,
        FQueue: array of SizeInt;
+       FVisited: TBitVector;
+       FWhites: TBoolVector;
        FMatchCount: SizeInt;
        procedure Match(aNode, aMate: SizeInt); inline;
-       procedure ClearParents; inline;
        procedure Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
        function  FindAugmentPath(aRoot: SizeInt): SizeInt;
        procedure AlternatePath(aRoot: SizeInt);
@@ -511,7 +511,7 @@ type
   { returns the global minimum cut; used Nagamochi-Ibaraki algorithm }
     function  GetMinCut: SizeInt;
     function  GetMinCut(out aCut: TCut): SizeInt;
-  { returns array of the edges that cross cut }
+  { returns array of the edges that cross the minimum cut }
     function  GetMinCutCross: TIntEdgeArray;
   { returns adjacency matrix of the complement graph;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
@@ -1774,21 +1774,21 @@ begin
   FMates[aMate] := aNode;
 end;
 
-procedure TGSimpleGraph.TBfsMatch.ClearParents;
-begin
-  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeInt), $ff);
-end;
-
 procedure TGSimpleGraph.TBfsMatch.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
 var
+  I: SizeInt;
   e: TIntEdge;
 begin
   FMatchCount := 0;
   FGraph := aGraph;
+  FWhites.Size := aGraph.VertexCount;
+  FVisited.Size := aGraph.VertexCount;
   if System.Length(w) <= System.Length(g) then
-    FWhites := w
+    for I in w do
+      FWhites[I] := True
   else
-    FWhites := g;
+    for I in g do
+      FWhites[I] := True;
   FMates := aGraph.CreateIntArray;
   FParents := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
@@ -1806,22 +1806,38 @@ var
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
-  ClearParents;
+  FVisited.ClearBits;
+  FParents[aRoot] := NULL_INDEX;
   FQueue[qTail] := aRoot;
   Inc(qTail);
   while qHead < qTail do
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
-      for p in FGraph.AdjLists[Curr]^ do
+      if FWhites[Curr] then
         begin
-          Next := p^.Destination;
-          if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
-            continue;
+          for p in FGraph.AdjLists[Curr]^ do
+            begin
+              Next := p^.Destination;
+              if (FMates[Curr] = Next) or FVisited[Next] then
+                continue;
+              if FMates[Next] = NULL_INDEX then
+                begin
+                  FParents[Next] := Curr;
+                  exit(Next);
+                end
+              else
+                begin
+                  FParents[Next] := Curr;
+                  FQueue[qTail] := Next;
+                  Inc(qTail);
+                end;
+            end;
+        end
+      else
+        begin
+          Next := FMates[Curr];
           FParents[Next] := Curr;
-          if FMates[Next] = NULL_INDEX then
-            exit(Next);
-          Next := FMates[Next];
           FQueue[qTail] := Next;
           Inc(qTail);
         end;
@@ -4552,7 +4568,7 @@ var
 begin
   if VertexCount < 2 then
     exit([]);
-  if not FindMaxBipartiteMatching(Result) then
+  //if not FindMaxBipartiteMatching(Result) then
     Result := Helper.GetMaxMatch(Self);
 end;
 
