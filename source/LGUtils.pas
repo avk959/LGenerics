@@ -676,7 +676,7 @@ end;
 
 { TGMapEntry }
 
-constructor TGMapEntry<TValue, TKey>.Create(constref aKey: TKey; constref aValue: TValue);
+constructor TGMapEntry<TKey, TValue>.Create(constref aKey: TKey; constref aValue: TValue);
 begin
   Key := aKey;
   Value := aValue;
