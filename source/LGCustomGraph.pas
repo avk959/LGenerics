@@ -4672,7 +4672,7 @@ begin
               Relax := aWeights[Edge.Source] + Edge.Data.Weight;
               if Relax < aWeights[Edge.Destination] then
                 begin
-                  aWeights[Edge.Destination] := Relax;
+                  aWeights[Edge.Destination] := MaxW(Relax, CFNegHalfInf); //todo: is it correct ?
                   Relaxed := True;
                 end;
             end;
@@ -4711,7 +4711,7 @@ begin
               Relax := aWeights[Edge.Source] + Edge.Data.Weight;
               if Relax < aWeights[Edge.Destination] then
                 begin
-                  aWeights[Edge.Destination] := Relax;
+                  aWeights[Edge.Destination] := MaxW(Relax, CFNegHalfInf); //todo: is it correct ?
                   aPaths[Edge.Destination] := Edge.Source;
                   J := Edge.Destination;
                 end;
