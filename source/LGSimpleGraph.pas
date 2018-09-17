@@ -4827,26 +4827,28 @@ end;
 
 function TGSimpleGraph.IsMaxClique(constref aClique: TIntArray): Boolean;
 var
-  TestClique, Remain: TIntHashSet;
+  TestClique, Remain: TBoolVector;
   I, J: SizeInt;
   AdjFound: Boolean;
 begin
   if System.Length(aClique) = 0 then
     exit(False);
+  TestClique.Size := VertexCount;
   for I in aClique do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if not TestClique.Add(I) then //contains duplicates -> is not set
+      if TestClique[I] then //contains duplicates -> is not set
         exit(False);
+      TestClique[I] := True;
     end;
   for I in aClique do
     for J in aClique do
       if (I <> J) and not AdjacentI(I, J) then //contains nonadjacent vertices -> is not clique
         exit(False);
-  for I := 0 to Pred(VertexCount) do
-    if not TestClique.Contains(I) then
-      Remain.Add(I);
+  Remain.InitRange(VertexCount);
+  Remain.Subtract(TestClique);
+  Finalize(TestClique);
   for I in Remain do
     begin
       AdjFound := True;
