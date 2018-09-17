@@ -936,6 +936,11 @@ type
     property  Count: SizeInt read GetCount;
   end;
 
+  generic TGSimpleWeight<T> = record
+    Weight: T;
+    constructor Create(aValue: T);
+  end;
+
   generic TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
@@ -4277,6 +4282,13 @@ end;
 procedure TGJoinableHashList.Remove(aValue: SizeInt);
 begin
   FTable.Remove(aValue);
+end;
+
+{ TGSimpleWeight }
+
+constructor TGSimpleWeight.Create(aValue: T);
+begin
+  Weight := aValue;
 end;
 
 { TGWeightedPathHelper.TWeightEdge }
