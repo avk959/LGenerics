@@ -205,7 +205,7 @@ type
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
         function  Saturated: Boolean; inline;
         function  HasResidual: Boolean; inline;
-        procedure Push(constref aFlow: TWeight); inline;
+        procedure Push(aFlow: TWeight); inline;
       end;
 
       TNode = record
@@ -278,10 +278,10 @@ type
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
         IsReal: Boolean;
-        constructor Create(constref c: TWeight; aTarget: PNode; aReverse: PArc);
+        constructor Create(c: TWeight; aTarget: PNode; aReverse: PArc);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
         function  HasResidual: Boolean; inline;
-        procedure Push(constref aFlow: TWeight); inline;
+        procedure Push(aFlow: TWeight); inline;
       end;
 
       TNode = record
@@ -322,7 +322,7 @@ type
   auxiliary utilities
 ***********************************************************************************************************}
 
-    class function Min(constref L, R: TWeight): TWeight; static; inline;
+    class function MinW(L, R: TWeight): TWeight; static; inline;
     class function InfWeight: TWeight; static; inline;
     class function NegInfWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
@@ -1405,7 +1405,7 @@ begin
   Result := ResidualCap > ZeroWeight;
 end;
 
-procedure TGWeightedDiGraph.THPrfHelper.TArc.Push(constref aFlow: TWeight);
+procedure TGWeightedDiGraph.THPrfHelper.TArc.Push(aFlow: TWeight);
 begin
   ResidualCap -= aFlow;
   Reverse^.ResidualCap += aFlow;
@@ -1694,7 +1694,7 @@ begin
               if Dist < FMinActiveLayer then
                 FMinActiveLayer := Dist;
             end;
-          CurrArc^.Push(Min(aNode^.Excess, CurrArc^.ResidualCap));
+          CurrArc^.Push(MinW(aNode^.Excess, CurrArc^.ResidualCap));
           if not aNode^.HasExcess then
             break;
         end;
@@ -1855,7 +1855,7 @@ begin
                              Delta := CurrArc^.ResidualCap;
                              while True do
                                begin
-                                 Delta := Min(Delta, NextNode^.CurrentArc^.ResidualCap);
+                                 Delta := MinW(Delta, NextNode^.CurrentArc^.ResidualCap);
                                  if NextNode = CurrNode then
                                    break
                                  else
@@ -1934,7 +1934,7 @@ begin
         while CurrNode^.HasExcess do
           begin
             if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.HasResidual then
-              CurrArc^.Push(Min(CurrNode^.Excess, CurrArc^.ResidualCap));
+              CurrArc^.Push(MinW(CurrNode^.Excess, CurrArc^.ResidualCap));
             Inc(CurrArc);
           end;
         if CurrNode = StackBottom then
@@ -1987,7 +1987,7 @@ end;
 
 { TGWeightedDiGraph.TDinitzHelper.TArc }
 
-constructor TGWeightedDiGraph.TDinitzHelper.TArc.Create(constref c: TWeight; aTarget: PNode; aReverse: PArc);
+constructor TGWeightedDiGraph.TDinitzHelper.TArc.Create(c: TWeight; aTarget: PNode; aReverse: PArc);
 begin
   ResidualCap := c;
   Target := aTarget;
@@ -2008,7 +2008,7 @@ begin
   Result := ResidualCap > ZeroWeight;
 end;
 
-procedure TGWeightedDiGraph.TDinitzHelper.TArc.Push(constref aFlow: TWeight);
+procedure TGWeightedDiGraph.TDinitzHelper.TArc.Push(aFlow: TWeight);
 begin
   ResidualCap -= aFlow;
   Reverse^.ResidualCap += aFlow;
@@ -2127,7 +2127,7 @@ begin
         begin
           if aRoot^.CurrentArc^.Target^.Distance = Succ(aRoot^.Distance) then
             begin
-              Flow := Dfs(aRoot^.CurrentArc^.Target, Min(aFlow, aRoot^.CurrentArc^.ResidualCap));
+              Flow := Dfs(aRoot^.CurrentArc^.Target, MinW(aFlow, aRoot^.CurrentArc^.ResidualCap));
               if Flow > ZeroWeight then
                 begin
                   aRoot^.CurrentArc^.Push(Flow);
@@ -2293,7 +2293,7 @@ begin
       Stack.Pop;
 end;
 
-class function TGWeightedDiGraph.Min(constref L, R: TWeight): TWeight;
+class function TGWeightedDiGraph.MinW(L, R: TWeight): TWeight;
 begin
   if L <= R then
     Result := L

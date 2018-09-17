@@ -27,7 +27,7 @@ unit LGCustomGraph;
 interface
 
 uses
-  Classes, SysUtils, math,
+  Classes, SysUtils, math, typinfo,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -950,10 +950,13 @@ type
   class var
     CFInfWeight,
     CFNegInfWeight,
+    CFNegHalfInf,
     CFZeroWeight: TWeight;
-
     class constructor Init;
-    class function CreateAndFill(constref aValue: TWeight; aSize: SizeInt): TWeightArray; static;
+    class procedure IntHalfInf(aData: PTypeData); static;
+    class procedure FloatHalfInf(aData: PTypeData); static;
+    class function CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
+    class function MaxW(L, R: TWeight): TWeight; static;
   public
   type
     TWeightEdge = record
@@ -978,7 +981,7 @@ type
       class operator < (constref L, R: TWeightItem): Boolean; inline;
       class operator >=(constref L, R: TWeightItem): Boolean; inline;
       class operator <=(constref L, R: TWeightItem): Boolean; inline;
-      constructor Create(aIndex: SizeInt; constref w: TWeight);
+      constructor Create(aIndex: SizeInt; w: TWeight);
       property Key: SizeInt read Index;
     end;
 
@@ -992,7 +995,7 @@ type
       class operator < (constref L, R: TRankItem): Boolean; inline;
       class operator >=(constref L, R: TRankItem): Boolean; inline;
       class operator <=(constref L, R: TRankItem): Boolean; inline;
-      constructor Create(aIndex: SizeInt; constref aRank, aWeight: TWeight);
+      constructor Create(aIndex: SizeInt; aRank, aWeight: TWeight);
     end;
 
     TGraph       = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
@@ -4362,7 +4365,7 @@ begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeightedPathHelper.TWeightItem.Create(aIndex: SizeInt; constref w: TWeight);
+constructor TGWeightedPathHelper.TWeightItem.Create(aIndex: SizeInt; w: TWeight);
 begin
   Index := aIndex;
   Weight := w;
@@ -4400,7 +4403,7 @@ begin
   Result := L.Rank <= R.Rank;
 end;
 
-constructor TGWeightedPathHelper.TRankItem.Create(aIndex: SizeInt; constref aRank, aWeight: TWeight);
+constructor TGWeightedPathHelper.TRankItem.Create(aIndex: SizeInt; aRank, aWeight: TWeight);
 begin
   Index := aIndex;
   Rank := aRank;
@@ -4410,19 +4413,56 @@ end;
 { TGWeightedPathHelper }
 
 class constructor TGWeightedPathHelper.Init;
+var
+  p: PTypeInfo;
 begin
   CFInfWeight := TWeight.MaxValue;
   CFNegInfWeight := TWeight.MinValue;
   CFZeroWeight := Default(TWeight);
+  p := System.TypeInfo(TWeight);
+  if p^.Kind = tkInteger then
+    IntHalfInf(GetTypeData(p))
+  else
+    if p^.Kind = tkFloat then
+      FloatHalfInf(GetTypeData(p));
 end;
 
-class function TGWeightedPathHelper.CreateAndFill(constref aValue: TWeight; aSize: SizeInt): TWeightArray;
+class procedure TGWeightedPathHelper.IntHalfInf(aData: PTypeData);
+begin
+  case aData^.OrdType of
+    otSByte:  PShortInt(@CFNegHalfInf)^ := PShortInt(@CFNegInfWeight)^ div 2;
+    otSWord:  PSmallInt(@CFNegHalfInf)^ := PSmallInt(@CFNegInfWeight)^ div 2;
+    otSLong:  PLongInt(@CFNegHalfInf)^ := PLongInt(@CFNegInfWeight)^ div 2;
+    otSQWord: PInt64(@CFNegHalfInf)^ := PInt64(@CFNegInfWeight)^ div 2;
+  end
+end;
+
+class procedure TGWeightedPathHelper.FloatHalfInf(aData: PTypeData);
+begin
+  case aData^.FloatType of
+    ftSingle:   PSingle(@CFNegHalfInf)^ := PSingle(@CFNegInfWeight)^/2.0;
+    ftDouble:   PDouble(@CFNegHalfInf)^ := PDouble(@CFNegInfWeight)^/2.0;
+    ftExtended: PExtended(@CFNegHalfInf)^ := PExtended(@CFNegInfWeight)^/2.0;
+    ftComp:     PComp(@CFNegHalfInf)^ := PComp(@CFNegInfWeight)^/2.0;
+    ftCurr:     PCurrency(@CFNegHalfInf)^ := PCurrency(@CFNegInfWeight)^/2.0;
+  end;
+end;
+
+class function TGWeightedPathHelper.CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray;
 var
   I: SizeInt;
 begin
   System.SetLength(Result, aSize);
   for I := 0 to Pred(aSize) do
     Result[I] := aValue;
+end;
+
+class function TGWeightedPathHelper.MaxW(L, R: TWeight): TWeight;
+begin
+  if L >= R then
+    Result := L
+  else
+    Result := R;
 end;
 
 class function TGWeightedPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
@@ -4614,7 +4654,7 @@ class function TGWeightedPathHelper.FordBellman(g: TGraph; aSrc: SizeInt; out aW
 var
   Edge: TGraph.TEdge;
   Enum: TGraph.TEdgeEnumerator;
-  RelaxValue: TWeight;
+  Relax: TWeight;
   I: SizeInt;
   Relaxed: Boolean = False;
 begin
@@ -4629,10 +4669,10 @@ begin
           Edge := Enum.Current;
           if aWeights[Edge.Source] < InfWeight then
             begin
-              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
-              if RelaxValue < aWeights[Edge.Destination] then
+              Relax := aWeights[Edge.Source] + Edge.Data.Weight;
+              if Relax < aWeights[Edge.Destination] then
                 begin
-                  aWeights[Edge.Destination] := RelaxValue;
+                  aWeights[Edge.Destination] := Relax;
                   Relaxed := True;
                 end;
             end;
@@ -4652,7 +4692,7 @@ var
   Edge: TGraph.TEdge;
   Enum: TGraph.TEdgeEnumerator;
   v: TIntVector;
-  RelaxValue: TWeight;
+  Relax: TWeight;
   I: SizeInt;
   J: SizeInt = -1;
 begin
@@ -4668,10 +4708,10 @@ begin
           Edge := Enum.Current;
           if aWeights[Edge.Source] < InfWeight then
             begin
-              RelaxValue := aWeights[Edge.Source] + Edge.Data.Weight;
-              if RelaxValue < aWeights[Edge.Destination] then
+              Relax := aWeights[Edge.Source] + Edge.Data.Weight;
+              if Relax < aWeights[Edge.Destination] then
                 begin
-                  aWeights[Edge.Destination] := RelaxValue;
+                  aWeights[Edge.Destination] := Relax;
                   aPaths[Edge.Destination] := Edge.Source;
                   J := Edge.Destination;
                 end;

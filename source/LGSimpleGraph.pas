@@ -713,7 +713,7 @@ type
        procedure AlternatePath(aRoot: SizeInt);
        function  TryMatch(var aDelta: TWeight): SizeInt;
        function  TryMatchMax(var aDelta: TWeight): SizeInt;
-       procedure CorrectPots(constref aDelta: TWeight); inline;
+       procedure CorrectPots(aDelta: TWeight); inline;
        procedure KuhnMatch;
        procedure KuhnMatchMax;
        function  CreateEdges: TEdgeArray;
@@ -734,7 +734,7 @@ type
         Weight,
         ScanRank: TWeight;
         Scanned: Boolean;
-        constructor Create(aTarget: SizeInt; constref w: TWeight);
+        constructor Create(aTarget: SizeInt; w: TWeight);
         property Key: SizeInt read Target;
       end;
 
@@ -5392,7 +5392,7 @@ begin
       end;
 end;
 
-procedure TGWeightedGraph.TKuhnMatch.CorrectPots(constref aDelta: TWeight);
+procedure TGWeightedGraph.TKuhnMatch.CorrectPots(aDelta: TWeight);
 var
   I: SizeInt;
 begin
@@ -5469,7 +5469,7 @@ end;
 
 { TGWeightedGraph.TNIMinCutHelper.TNiEdge }
 
-constructor TGWeightedGraph.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; constref w: TWeight);
+constructor TGWeightedGraph.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight);
 begin
   Target := aTarget;
   Weight := w;
