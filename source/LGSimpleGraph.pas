@@ -509,10 +509,10 @@ type
       end;
 
   { returns the global minimum cut; used Nagamochi-Ibaraki algorithm }
-    function  GetMinCut: SizeInt;
-    function  GetMinCut(out aCut: TCut): SizeInt;
+    function  MinCut: SizeInt;
+    function  MinCut(out aCut: TCut): SizeInt;
   { returns array of the edges that cross the minimum cut }
-    function  GetMinCutCross: TIntEdgeArray;
+    function  CrossMinCut: TIntEdgeArray;
   { returns adjacency matrix of the complement graph;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
     function  ComplementMatrix: TAdjacencyMatrix;
@@ -533,12 +533,12 @@ type
     the maximum cardinality, used Hopcroft–Karp algorithm }
     function FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
-    function GetMaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+    function MaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality }
     function FindMaxBipartiteMatchingBfs(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
-    function GetMaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+    function MaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns True if graph is bipartite and aMatch is maximal matching }
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
@@ -840,11 +840,13 @@ type
 ***********************************************************************************************************}
   { returns the global minimum cut; the weights of all edges must be nonnegative;
     used Stoer–Wagner algorithm }
-    function GetMinWeightCutSW(out aCut: TCut): TWeight;
+    function MinWeightCutSW(out aCut: TCut): TWeight;
   { returns the global minimum cut; the weights of all edges must be nonnegative;
     used Nagamochi-Ibaraki algorithm }
-    function GetMinWeightCutNI: TWeight;
-    function GetMinWeightCutNI(out aCut: TCut): TWeight;
+    function MinWeightCutNI: TWeight;
+    function MinWeightCutNI(out aCut: TCut): TWeight;
+  { returns array of the edges that cross the minimum cut }
+    function CrossMinWeightCut: TEdgeArray;
   end;
 
   TRealPointEdge = record
@@ -4325,7 +4327,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.GetMinCut: SizeInt;
+function TGSimpleGraph.MinCut: SizeInt;
 var
   Helper: TNIMinCut;
 begin
@@ -4336,7 +4338,7 @@ begin
   Result := Helper.GetMinCut(Self);
 end;
 
-function TGSimpleGraph.GetMinCut(out aCut: TCut): SizeInt;
+function TGSimpleGraph.MinCut(out aCut: TCut): SizeInt;
 var
   Helper: TNIMinCut;
   Cut: TIntSet;
@@ -4359,7 +4361,7 @@ begin
   aCut.B := B.ToArray;
 end;
 
-function TGSimpleGraph.GetMinCutCross: TIntEdgeArray;
+function TGSimpleGraph.CrossMinCut: TIntEdgeArray;
 var
   Helper: TNIMinCut;
   Cut: TIntSet;
@@ -4490,7 +4492,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.GetMaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.MaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
 var
   Helper: THKMatch;
 begin
@@ -4508,7 +4510,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.GetMaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.MaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
 var
   Helper: TBfsMatch;
 begin
@@ -6105,7 +6107,7 @@ begin
   Result := GetApproxMinWeightMatching;
 end;
 
-function TGWeightedGraph.GetMinWeightCutSW(out aCut: TCut): TWeight;
+function TGWeightedGraph.MinWeightCutSW(out aCut: TCut): TWeight;
 var
   Cut: TIntSet;
   B: TBoolVector;
@@ -6120,7 +6122,7 @@ begin
   aCut.B := B.ToArray;
 end;
 
-function TGWeightedGraph.GetMinWeightCutNI: TWeight;
+function TGWeightedGraph.MinWeightCutNI: TWeight;
 var
   Helper: TNIMinCutHelper;
 begin
@@ -6128,7 +6130,7 @@ begin
     Result := Helper.GetMinCut(Self);
 end;
 
-function TGWeightedGraph.GetMinWeightCutNI(out aCut: TCut): TWeight;
+function TGWeightedGraph.MinWeightCutNI(out aCut: TCut): TWeight;
 var
   Helper: TNIMinCutHelper;
   Cut: TIntSet;
@@ -6142,6 +6144,59 @@ begin
     Total[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := Total.ToArray;
+end;
+
+function TGWeightedGraph.CrossMinWeightCut: TEdgeArray;
+var
+  Helper: TNIMinCutHelper;
+  Cut: TIntSet;
+  Left, Right: TBoolVector;
+  I, J: SizeInt;
+  p: PAdjItem;
+  d: TEdgeData;
+begin
+  if not Connected or (VertexCount < 2) then
+    exit([]);
+  d := DefaultEdgeData;
+  if VertexCount = 2 then
+    begin
+      GetEdgeDataI(0, 1, d);
+      exit([TWeightEdge.Create(0, 1, d.Weight)]);
+    end;
+  Helper.GetMinCut(Self, Cut);
+  if Cut.Count <= VertexCount shr 1 then
+    begin
+      Left.Size := VertexCount;
+      Right.InitRange(VertexCount);
+      for I in Cut do
+        begin
+          Left[I] := True;
+          Right[I] := False;
+        end;
+    end
+  else
+    begin
+      Right.Size := VertexCount;
+      Left.InitRange(VertexCount);
+      for I in Cut do
+        begin
+          Right[I] := True;
+          Left[I] := False;
+        end;
+    end;
+  System.SetLength(Result, Cut.Count);
+  J := 0;
+  for I in Left do
+    for p in AdjLists[I]^ do
+      if Right[p^.Destination] then
+        begin
+          GetEdgeDataI(I, p^.Destination, d);
+          if I < p^.Destination then
+            Result[J] := TWeightEdge.Create(I, p^.Destination, d.Weight)
+          else
+            Result[J] := TWeightEdge.Create(p^.Destination, I, d.Weight);
+          Inc(J);
+        end;
 end;
 
 { TRealPointEdge }
