@@ -63,6 +63,7 @@ type
   TOnVisit         = procedure (aValue: SizeInt) of object;
   TOnAccept        = function (aValue: SizeInt): Boolean of object;
   TOnFindSet       = procedure(constref aSet: TIntArray; var aCancel: Boolean) of object;
+  TCost            = type Int64;
   TVertexColor     = type Byte;
 
 const
@@ -787,7 +788,6 @@ type
     FIndex2Handle: TIntArray;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    procedure Expand;
     procedure FloatUp(aIndex: SizeInt);
     procedure SiftDown(aIndex: SizeInt);
   public
@@ -812,7 +812,6 @@ type
     FIndex2Handle: TIntArray;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    procedure Expand;
     procedure BuildHeap;
     procedure FloatUp(aIndex: SizeInt);
     procedure SiftDown(aIndex: SizeInt);
@@ -3546,12 +3545,6 @@ begin
   Result := System.Length(FIndex2Handle);
 end;
 
-procedure TGBinHeapMin.Expand;
-begin
-  System.SetLength(FHeap, System.Length(FHeap) shl 1);
-  System.SetLength(FIndex2Handle, System.Length(FIndex2Handle) shl 1);
-end;
-
 procedure TGBinHeapMin.FloatUp(aIndex: SizeInt);
 var
   CurrIdx, ParentIdx, HandleIdx: SizeInt;
@@ -3621,8 +3614,8 @@ begin
     begin
       System.SetLength(FHandle2Index, aSize);
       System.FillChar(FHandle2Index[0], aSize * SizeOf(SizeInt), $ff);
-      System.SetLength(FHeap, 4096 div SizeOf(SizeInt));
-      System.SetLength(FIndex2Handle, 4096 div SizeOf(SizeInt));
+      System.SetLength(FHeap, aSize);
+      System.SetLength(FIndex2Handle, aSize);
     end;
 end;
 
@@ -3650,8 +3643,6 @@ procedure TGBinHeapMin.Enqueue(aHandle: SizeInt; constref aValue: T);
 var
   InsertIdx: SizeInt;
 begin
-  if Count = Capacity then
-    Expand;
   InsertIdx := Count;
   Inc(FCount);
   FHeap[InsertIdx] := aValue;
@@ -3688,12 +3679,6 @@ end;
 function TGBinHeapMax.GetCapacity: SizeInt;
 begin
   Result := System.Length(FIndex2Handle);
-end;
-
-procedure TGBinHeapMax.Expand;
-begin
-  System.SetLength(FHeap, System.Length(FHeap) shl 1);
-  System.SetLength(FIndex2Handle, System.Length(FIndex2Handle) shl 1);
 end;
 
 procedure TGBinHeapMax.BuildHeap;
@@ -3855,8 +3840,6 @@ procedure TGBinHeapMax.Enqueue(aHandle: SizeInt; constref aValue: T);
 var
   InsertIdx: SizeInt;
 begin
-  if Count = Capacity then
-    Expand;
   InsertIdx := Count;
   Inc(FCount);
   FHeap[InsertIdx] := aValue;
