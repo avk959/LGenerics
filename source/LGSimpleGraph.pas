@@ -1982,13 +1982,13 @@ begin
       	      MarkPath(Curr, CurrBase, Next);
       	      MarkPath(Next, CurrBase, Curr);
               for I := 0 to System.High(FBase) do
-      		if FBlossoms[FBase[I]] then
+                if FBlossoms[FBase[I]] then
                   begin
-      		    FBase[I] := CurrBase;
-      		    if not FVisited[I] then
+                    FBase[I] := CurrBase;
+                    if not FVisited[I] then
                       begin
-      		        FVisited[I] := True;
-      			FQueue[qTail] := I;
+                        FVisited[I] := True;
+                        FQueue[qTail] := I;
                         Inc(qTail);
                       end;
                   end;
@@ -2104,17 +2104,17 @@ begin
             if Mate = NULL_INDEX then
               begin
                 FMates[Next] := Curr;
-   	        repeat
-   	          Tmp := FMates[Curr];
-		  FMates[Curr] := Next;
-   	          if Tmp <> NULL_INDEX then
-   	            begin
-   	              Curr := FGrannies[Curr];
-   	              FMates[Tmp] := Curr;
-   	              Next := Tmp;
-   	            end;
+                repeat
+                  Tmp := FMates[Curr];
+                  FMates[Curr] := Next;
+                  if Tmp <> NULL_INDEX then
+                    begin
+                      Curr := FGrannies[Curr];
+                      FMates[Tmp] := Curr;
+                      Next := Tmp;
+                    end;
                 until Tmp = NULL_INDEX;
-   	        Inc(FMatchCount);
+                Inc(FMatchCount);
                 exit;
               end
             else
@@ -2122,14 +2122,14 @@ begin
                 begin
                   if Curr <> aRoot then
                     begin
- 	              Tmp := FGrannies[Curr];
- 	              while (Tmp <> aRoot) and (Tmp <> Next) do
- 	                Tmp := FGrannies[Tmp];
+                      Tmp := FGrannies[Curr];
+                      while (Tmp <> aRoot) and (Tmp <> Next) do
+                        Tmp := FGrannies[Tmp];
                       if Tmp <> aRoot then
                         continue;
                     end;
-   	          FInTree[Next] := True;
-   	          FGrannies[Mate] := Curr;
+                  FInTree[Next] := True;
+                  FGrannies[Mate] := Curr;
                   FQueue[qTail] := Mate;
                   Inc(qTail);
                 end;
@@ -4610,7 +4610,7 @@ begin
     exit;
   if aOnFindSet = nil then
     raise EGraphError.Create(SECallbackMissed);
-  if VertexCount > 256 then
+  if VertexCount > TBits256.BITNESS then
     ListIsBP(aOnFindSet)
   else
     ListIsBP256(aOnFindSet)
@@ -4627,7 +4627,7 @@ begin
   if IsBipartite(w, g) then
     Result := GetMaxIsBipartite(w, g)
   else
-    if VertexCount > 256 then
+    if VertexCount > TBits256.BITNESS then
       Result := GetMaxIsBP(aTimeOut, aExactSolution)
     else
       Result := GetMaxIsBP256(aTimeOut, aExactSolution);
@@ -4691,7 +4691,7 @@ begin
   if VertexCount > COMMON_BP_CUTOFF then
     Result := GetMds(aTimeOut, aExactSolution)
   else
-    if VertexCount > 256 then
+    if VertexCount > TBits256.BITNESS then
       Result := GetMdsBP(aTimeOut, aExactSolution)
     else
       Result := GetMdsBP256(aTimeOut, aExactSolution);
@@ -4781,7 +4781,7 @@ begin
   if (VertexCount > LISTCLIQUES_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
     ListCliques(aOnFindClique)
   else
-    if VertexCount > 256 then
+    if VertexCount > TBits256.BITNESS then
       ListCliquesBP(aOnFindClique)
     else
       ListCliquesBP256(aOnFindClique);
@@ -4794,7 +4794,7 @@ begin
   if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
     Result := GetMaxClique(aTimeOut, aExactSolution)
   else
-    if VertexCount > 256 then
+    if VertexCount > TBits256.BITNESS then
       Result := GetMaxCliqueBP(aTimeOut, aExactSolution)
     else
       Result := GetMaxCliqueBP256(aTimeOut, aExactSolution);
