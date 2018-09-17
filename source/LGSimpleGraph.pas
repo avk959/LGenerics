@@ -4647,26 +4647,28 @@ end;
 
 function TGSimpleGraph.IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
 var
-  TestIS, Remain: TIntHashSet;
+  TestIS, Remain: TBoolVector;
   I, J: SizeInt;
   AdjFound: Boolean;
 begin
   if System.Length(aVertexSet) = 0 then
     exit(False);
+  TestIS.Size := VertexCount;
   for I in aVertexSet do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if not TestIS.Add(I) then //contains duplicates -> is not set
+      if TestIS[I] then  //contains duplicates -> is not set
         exit(False);
+      TestIS[I] := True;
     end;
   for I in aVertexSet do
     for J in aVertexSet do
       if (I <> J) and AdjacentI(I, J) then //contains adjacent vertices -> is not independent
         exit(False);
-  for I := 0 to Pred(VertexCount) do
-    if not TestIS.Contains(I) then
-      Remain.Add(I);
+  Remain.InitRange(VertexCount);
+  Remain.Subtract(TestIS);
+  Finalize(TestIS);
   for I in Remain do
     begin
       AdjFound := False;
@@ -4762,7 +4764,7 @@ begin
                     AdjFound := True;
                     break;
                   end;
-              if not AdjFound then //exist vertex nonadjacent with aVertexSet without I
+              if not AdjFound then //exists vertex nonadjacent with aVertexSet without I
                 break;
             end;
           if AdjFound then  //is not minimal
