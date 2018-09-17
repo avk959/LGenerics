@@ -4713,7 +4713,7 @@ end;
 
 function TGSimpleGraph.IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
 var
-  TestMds, Remain: TIntHashSet;
+  TestMds, Remain: TBoolVector;
   I, J, K: SizeInt;
   AdjFound: Boolean;
 begin
@@ -4721,16 +4721,18 @@ begin
     exit(False);
   if System.Length(aVertexSet) = 0 then
     exit(False);
+  TestMds.Size := VertexCount;
   for I in aVertexSet do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if not TestMds.Add(I) then //contains duplicates -> is not set
+      if TestMds[I] then   //contains duplicates -> is not set
         exit(False);
+      TestMds[I] := True;
     end;
-  for I := 0 to Pred(VertexCount) do
-    if not TestMds.Contains(I) then
-      Remain.Add(I);
+  Remain.InitRange(VertexCount);
+  Remain.Subtract(TestMds);
+  Finalize(TestMds);
   for I in Remain do
     begin
       AdjFound := False;
