@@ -941,6 +941,8 @@ type
     constructor Create(aValue: T);
   end;
 
+  { TGWeightedPathHelper }
+
   generic TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
@@ -956,7 +958,7 @@ type
     class procedure IntHalfInf(aData: PTypeData); static;
     class procedure FloatHalfInf(aData: PTypeData); static;
     class function CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
-    class function MaxW(L, R: TWeight): TWeight; static;
+    class function wMax(L, R: TWeight): TWeight; static;
   public
   type
     TWeightEdge = record
@@ -1013,9 +1015,15 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  { Bellman-Ford algorithm: single-source shortest paths problem for any weights  }
+  { Bellman-Ford algorithm: single-source shortest paths problem for any weights }
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+                    static;
+  { Bellman-Ford algorithm with Yen modification: negative cycle detection }
+    class function  FordBellmanYen(g: TGraph; aSrc: SizeInt): TIntArray; static;
+  { Bellman-Ford algorithm with Yen modification: single-source shortest paths problem for any weights }
+    class function  FordBellmanYen(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
+    class function  FordBellmanYen(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
   { fills array with InfiniteWeight }
     class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
@@ -4457,7 +4465,7 @@ begin
     Result[I] := aValue;
 end;
 
-class function TGWeightedPathHelper.MaxW(L, R: TWeight): TWeight;
+class function TGWeightedPathHelper.wMax(L, R: TWeight): TWeight;
 begin
   if L >= R then
     Result := L
@@ -4672,7 +4680,7 @@ begin
               Relax := aWeights[Edge.Source] + Edge.Data.Weight;
               if Relax < aWeights[Edge.Destination] then
                 begin
-                  aWeights[Edge.Destination] := MaxW(Relax, CFNegHalfInf); //todo: is it correct ?
+                  aWeights[Edge.Destination] := wMax(Relax, CFNegHalfInf); //todo: is it correct ?
                   Relaxed := True;
                 end;
             end;
@@ -4711,7 +4719,7 @@ begin
               Relax := aWeights[Edge.Source] + Edge.Data.Weight;
               if Relax < aWeights[Edge.Destination] then
                 begin
-                  aWeights[Edge.Destination] := MaxW(Relax, CFNegHalfInf); //todo: is it correct ?
+                  aWeights[Edge.Destination] := wMax(Relax, CFNegHalfInf); //todo: is it correct ?
                   aPaths[Edge.Destination] := Edge.Source;
                   J := Edge.Destination;
                 end;
@@ -4736,6 +4744,193 @@ begin
       until I = J;
       aPaths := v.ToArray;
       aWeights := nil;
+    end;
+end;
+
+class function TGWeightedPathHelper.FordBellmanYen(g: TGraph; aSrc: SizeInt): TIntArray;
+var
+  Deque: TIntDeque;
+  Visits,
+  Parents: TIntArray;
+  Weights: TWeightArray;
+  v: TIntVector;
+  InDeque: TGraph.TBitVector;
+  Relax: TWeight;
+  Curr, Next, vCount: SizeInt;
+  p: TGraph.PAdjItem;
+  J: SizeInt = -1;
+begin
+  Result := [];
+  vCount := g.VertexCount;
+  Weights := CreateWeightArray(vCount);
+  Visits := g.CreateIntArray(vCount, 0);
+  Parents := g.CreateIntArray;
+  {%H-}Deque.EnsureCapacity(vCount);
+  InDeque.Size := vCount;
+  Weights[aSrc] := ZeroWeight;
+  Curr := aSrc;
+  Inc(Visits[aSrc]);
+  repeat
+    InDeque[Curr] := False;
+    Inc(Visits[Curr]);
+    if Visits[Curr] < vCount then
+      for p in g.AdjLists[Curr]^ do
+        begin
+          Next := p^.Destination;
+          Relax := Weights[Curr] + p^.Data.Weight;
+          if Relax < Weights[Next] then
+            begin
+              Weights[Next] := wMax(Relax, CFNegHalfInf);
+              Parents[Next] := Curr;
+              if not InDeque[Next] then
+                begin
+                  if Deque.NonEmpty then
+                    if Weights[Next] < Weights[Deque.PeekLast] then
+                      Deque.PushLast(Next)
+                    else
+                      Deque.PushFirst(Next)
+                  else
+                    Deque.PushLast(Next);
+                  InDeque[Next] := True;
+                end;
+            end;
+        end
+    else
+      begin
+        J := Curr;
+        break;
+      end;
+  until not Deque.TryPopLast(Curr);
+  Weights := nil;
+  if J <> -1 then
+    begin
+      for Curr := 1 to vCount do
+        J := Parents[J];
+      Curr := J;
+      v.Add(J);
+      repeat
+        Curr := Parents[Curr];
+        v.Add(Curr);
+      until Curr = J;
+      Result := v.ToArray;
+    end;
+end;
+
+class function TGWeightedPathHelper.FordBellmanYen(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+var
+  Deque: TIntDeque;
+  Visits: TIntArray;
+  InDeque: TGraph.TBitVector;
+  Relax: TWeight;
+  Curr, Next, vCount: SizeInt;
+  p: TGraph.PAdjItem;
+begin
+  vCount := g.VertexCount;
+  aWeights := CreateWeightArray(vCount);
+  Visits := g.CreateIntArray(vCount, 0);
+  Deque.EnsureCapacity(vCount);
+  InDeque.Size := vCount;
+  aWeights[aSrc] := ZeroWeight;
+  Curr := aSrc;
+  Inc(Visits[aSrc]);
+  repeat
+    InDeque[Curr] := False;
+    Inc(Visits[Curr]);
+    if Visits[Curr] < vCount then
+      for p in g.AdjLists[Curr]^ do
+        begin
+          Next := p^.Destination;
+          Relax := aWeights[Curr] + p^.Data.Weight;
+          if Relax < aWeights[Next] then
+            begin
+              aWeights[Next] := wMax(Relax, CFNegHalfInf);
+              if not InDeque[Next] then
+                begin
+                  if Deque.NonEmpty then
+                    if aWeights[Next] < aWeights[Deque.PeekLast] then
+                      Deque.PushLast(Next)
+                    else
+                      Deque.PushFirst(Next)
+                  else
+                    Deque.PushLast(Next);
+                  InDeque[Next] := True;
+                end;
+            end;
+        end
+    else
+      begin
+        aWeights := nil;
+        exit(False);
+      end;
+  until not Deque.TryPopLast(Curr);
+  Result := True;
+end;
+
+class function TGWeightedPathHelper.FordBellmanYen(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+var
+  Deque: TIntDeque;
+  Visits: TIntArray;
+  v: TIntVector;
+  InDeque: TGraph.TBitVector;
+  Relax: TWeight;
+  Curr, Next, vCount: SizeInt;
+  p: TGraph.PAdjItem;
+  J: SizeInt = -1;
+begin
+  vCount := g.VertexCount;
+  aWeights := CreateWeightArray(vCount);
+  Visits := g.CreateIntArray(vCount, 0);
+  aPaths := g.CreateIntArray;
+  {%H-}Deque.EnsureCapacity(vCount);
+  InDeque.Size := vCount;
+  aWeights[aSrc] := ZeroWeight;
+  Curr := aSrc;
+  Inc(Visits[aSrc]);
+  repeat
+    InDeque[Curr] := False;
+    Inc(Visits[Curr]);
+    if Visits[Curr] < vCount then
+      for p in g.AdjLists[Curr]^ do
+        begin
+          Next := p^.Destination;
+          Relax := aWeights[Curr] + p^.Data.Weight;
+          if Relax < aWeights[Next] then
+            begin
+              aWeights[Next] := wMax(Relax, CFNegHalfInf);
+              aPaths[Next] := Curr;
+              if not InDeque[Next] then
+                begin
+                  if Deque.NonEmpty then
+                    if aWeights[Next] < aWeights[Deque.PeekLast] then
+                      Deque.PushLast(Next)
+                    else
+                      Deque.PushFirst(Next)
+                  else
+                    Deque.PushLast(Next);
+                  InDeque[Next] := True;
+                end;
+            end;
+        end
+    else
+      begin
+        J := Curr;
+        break;
+      end;
+  until not Deque.TryPopLast(Curr);
+  Result := J = -1;
+  if not Result then
+    begin
+      aWeights := nil;
+      for Curr := 1 to vCount do
+        J := aPaths[J];
+      Curr := J;
+      v.Add(J);
+      repeat
+        Curr := aPaths[Curr];
+        v.Add(Curr);
+      until Curr = J;
+      aPaths := v.ToArray;
     end;
 end;
 
