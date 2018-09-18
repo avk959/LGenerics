@@ -4478,7 +4478,7 @@ end;
 class function TGWeightedPathHelper.ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray;
 var
   v: TIntVector;
-  I: SizeInt;
+  I, J: SizeInt;
 begin
   for I := 1 to aLen do
     aRoot := aTree[aRoot];
@@ -4488,7 +4488,13 @@ begin
     I := aTree[I];
     v.Add(I);
   until I = aRoot;
-  Result := v.ToArray;
+  System.SetLength(Result, v.Count);
+  J := 0;
+  for I in v.Reverse do
+    begin
+      Result[J] := I;
+      Inc(J);
+    end;
 end;
 
 class function TGWeightedPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
@@ -4763,7 +4769,7 @@ var
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
   p: TGraph.PAdjItem;
-  J: SizeInt = -1;
+  FoundNegCycle: Boolean = False;
 begin
   Result := [];
   vCount := g.VertexCount;
@@ -4802,13 +4808,13 @@ begin
         end
     else
       begin
-        J := Curr;
+        FoundNegCycle := True;
         break;
       end;
   until not Deque.TryPopLast(Curr);
   Weights := nil;
-  if J <> NULL_INDEX then
-    Result := ExtractCycle(J, vCount, Parents);
+  if FoundNegCycle then
+    Result := ExtractCycle(Curr, vCount, Parents);
 end;
 
 class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
@@ -4870,7 +4876,6 @@ var
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
   p: TGraph.PAdjItem;
-  J: SizeInt = -1;
 begin
   vCount := g.VertexCount;
   aWeights := CreateWeightArray(vCount);
@@ -4881,6 +4886,7 @@ begin
   aWeights[aSrc] := ZeroWeight;
   Curr := aSrc;
   Inc(Visits[aSrc]);
+  Result := True;
   repeat
     InDeque[Curr] := False;
     Inc(Visits[Curr]);
@@ -4896,7 +4902,7 @@ begin
               if not InDeque[Next] then
                 begin
                   if Deque.NonEmpty then
-                    if aWeights[Next] < aWeights[Deque.PeekLast] then
+                    if aWeights[Next] < aWeights[Deque{%H-}.PeekLast] then
                       Deque.PushLast(Next)
                     else
                       Deque.PushFirst(Next)
@@ -4908,15 +4914,14 @@ begin
         end
     else
       begin
-        J := Curr;
+        Result := False;
         break;
       end;
-  until not Deque.TryPopLast(Curr);
-  Result := J = NULL_INDEX;
+  until not Deque{%H-}.TryPopLast(Curr);
   if not Result then
     begin
       aWeights := nil;
-      aPaths := ExtractCycle(J, vCount, aPaths);
+      aPaths := ExtractCycle(Curr, vCount, aPaths);
     end;
 end;
 
@@ -4930,6 +4935,7 @@ var
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
   p: TGraph.PAdjItem;
+  FoundNegCycle: Boolean = False;
 begin
   vCount := g.VertexCount;
   Weights := CreateWeightArray(vCount);
@@ -4966,13 +4972,24 @@ begin
             end;
         end
     else
-      exit(False);
+      begin
+        FoundNegCycle := True;
+        break;
+      end;
   until not Deque.TryPopLast(Curr);
-  Result := aPath[aDst] <> NULL_INDEX;
+  Result := not FoundNegCycle and (aPath[aDst] <> NULL_INDEX);
   if Result then
     begin
       aWeight := Weights[aDst];
       aPath := g.TreePathTo(aPath, aDst)
+    end
+  else
+    begin
+      aWeight := InfWeight;
+      if FoundNegCycle then
+        aPath := ExtractCycle(Curr, vCount, aPath)
+      else
+        aPath := nil;
     end;
 end;
 
