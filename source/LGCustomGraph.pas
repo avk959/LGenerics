@@ -1020,13 +1020,13 @@ type
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
   { Bellman-Ford algorithm with Yen modification: negative cycle detection }
-    class function  FordBellmanYen(g: TGraph; aSrc: SizeInt): TIntArray; static;
+    class function  FordBellmanYenNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
   { Bellman-Ford algorithm with Yen modification: single-source shortest paths problem for any weights }
     class function  FordBellmanYen(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  FordBellmanYen(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
   { Ford-Bellman-Yen pathfinding algorithm }
-    class function  FordBellmanYenPath(g: TGraph; aSrc, aDst: SizeInt; out aPaths: TIntArray;
+    class function  FordBellmanYenPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
                     out aWeight: TWeight): Boolean; static;
   { fills array with InfiniteWeight }
     class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
@@ -4728,12 +4728,12 @@ begin
                 end;
             end;
         end;
-      if J = -1 then
+      if J = NULL_INDEX then
         break;
       Enum.Reset;
     end;
 
-  Result := J = -1;
+  Result := J = NULL_INDEX;
 
   if not Result then
     begin
@@ -4750,7 +4750,7 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.FordBellmanYen(g: TGraph; aSrc: SizeInt): TIntArray;
+class function TGWeightedPathHelper.FordBellmanYenNeg(g: TGraph; aSrc: SizeInt): TIntArray;
 var
   Deque: TIntDeque;
   Visits,
@@ -4805,7 +4805,7 @@ begin
       end;
   until not Deque.TryPopLast(Curr);
   Weights := nil;
-  if J <> -1 then
+  if J <> NULL_INDEX then
     begin
       for Curr := 1 to vCount do
         J := Parents[J];
@@ -4921,7 +4921,7 @@ begin
         break;
       end;
   until not Deque.TryPopLast(Curr);
-  Result := J = -1;
+  Result := J = NULL_INDEX;
   if not Result then
     begin
       aWeights := nil;
@@ -4937,10 +4937,62 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.FordBellmanYenPath(g: TGraph; aSrc, aDst: SizeInt; out aPaths: TIntArray;
+class function TGWeightedPathHelper.FordBellmanYenPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
+var
+  Deque: TIntDeque;
+  Visits: TIntArray;
+  Weights: TWeightArray;
+  v: TIntVector;
+  InDeque: TGraph.TBitVector;
+  Relax: TWeight;
+  Curr, Next, vCount: SizeInt;
+  p: TGraph.PAdjItem;
+  J: SizeInt = -1;
 begin
-
+  vCount := g.VertexCount;
+  Weights := CreateWeightArray(vCount);
+  Visits := g.CreateIntArray(vCount, 0);
+  aPath := g.CreateIntArray;
+  {%H-}Deque.EnsureCapacity(vCount);
+  InDeque.Size := vCount;
+  Weights[aSrc] := ZeroWeight;
+  Curr := aSrc;
+  Inc(Visits[aSrc]);
+  repeat
+    InDeque[Curr] := False;
+    Inc(Visits[Curr]);
+    if Visits[Curr] < vCount then
+      for p in g.AdjLists[Curr]^ do
+        begin
+          Next := p^.Destination;
+          Relax := Weights[Curr] + p^.Data.Weight;
+          if Relax < Weights[Next] then
+            begin
+              Weights[Next] := wMax(Relax, CFNegHalfInf);
+              aPath[Next] := Curr;
+              if not InDeque[Next] then
+                begin
+                  if Deque.NonEmpty then
+                    if Weights[Next] < Weights[Deque.PeekLast] then
+                      Deque.PushLast(Next)
+                    else
+                      Deque.PushFirst(Next)
+                  else
+                    Deque.PushLast(Next);
+                  InDeque[Next] := True;
+                end;
+            end;
+        end
+    else
+      exit(False);
+  until not Deque.TryPopLast(Curr);
+  Result := aPath[aDst] <> NULL_INDEX;
+  if Result then
+    begin
+      aWeight := Weights[aDst];
+      aPath := g.TreePathTo(aPath, aDst)
+    end;
 end;
 
 class function TGWeightedPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
