@@ -941,8 +941,6 @@ type
     constructor Create(aValue: T);
   end;
 
-  { TGWeightedPathHelper }
-
   generic TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
@@ -1020,13 +1018,13 @@ type
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
-  { Duan modification of Bellman-Ford algorithm: negative cycle detection }
+  { Duan modification of Bellman-Ford algorithm(aka SPFA): negative cycle detection }
     class function  SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
-  { Duan modification of Bellman-Ford algorithm: single-source shortest paths problem for any weights }
+  { Duan modification of Bellman-Ford algorithm(aka SPFA): single-source shortest paths problem for any weights }
     class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
-  { Duan modification of Bellman-Ford algorithm: pathfinding }
+  { Duan modification of Bellman-Ford algorithm(aka SPFA): pathfinding }
     class function  SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
                     out aWeight: TWeight): Boolean; static;
   { fills array with InfiniteWeight }

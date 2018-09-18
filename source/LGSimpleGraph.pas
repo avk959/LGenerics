@@ -790,6 +790,7 @@ type
 {**********************************************************************************************************
   shortest path problem utilities
 ***********************************************************************************************************}
+
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
@@ -799,6 +800,15 @@ type
   { same as above and in aPathTree returns paths }
     function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+  { returns False if exists edge with negative weight, otherwise finds all paths of
+    minimal weight from a given vertex to the remaining vertices in the same connected
+    component(SSSP); an aWeights contains in the corresponding component the weight of the path
+    to the vertex or InfiniteWeight if the vertex is unreachable; used SPFA algorithm  }
+    function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+  { same as above and in aPathTree returns paths }
+    function FindMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean; inline;
+    function FindMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
     returns weight of the path or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
@@ -807,6 +817,10 @@ type
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+  { returns False if exists edge with negative weight, otherwise returns the vertex path
+    of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight }
+    function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
+    function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
     the weights of all edges must be nonnegative; used A* algorithm if aEst <> nil }
     function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
@@ -814,6 +828,7 @@ type
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
+
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Kruskal's algorithm used }
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
@@ -821,6 +836,7 @@ type
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
+
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality and minimum weight;
     warning: works correctly only for integer weights }
@@ -838,6 +854,7 @@ type
 {**********************************************************************************************************
   networks utilities treat the weight of the edge as its capacity
 ***********************************************************************************************************}
+
   { returns the global minimum cut; the weights of all edges must be nonnegative;
     used Stoer–Wagner algorithm }
     function MinWeightCutSW(out aCut: TCut): TWeight;
@@ -5965,6 +5982,30 @@ begin
   Result := TPathHelper.DijkstraSssp(Self, aSrc, aPathTree);
 end;
 
+function TGWeightedGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+begin
+  Result := FindMinPathsMapI(IndexOf(aSrc), aWeights);
+end;
+
+function TGWeightedGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  Result := TPathHelper.SpfaSssp(Self, aSrc, aWeights);
+end;
+
+function TGWeightedGraph.FindMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+begin
+  Result := FindMinPathsMapI(IndexOf(aSrc), aPathTree, aWeights);
+end;
+
+function TGWeightedGraph.FindMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  Result := TPathHelper.SpfaSssp(Self, aSrc, aPathTree, aWeights);
+end;
+
 function TGWeightedGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
 begin
   Result := MinPathWeightI(IndexOf(aSrc), IndexOf(aDst));
@@ -5987,6 +6028,19 @@ begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+end;
+
+function TGWeightedGraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
+  out aWeight: TWeight): Boolean;
+begin
+  Result := FindMinPathI(IndexOf(aSrc), IndexOf(aDst), aPath, aWeight);
+end;
+
+function TGWeightedGraph.FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := TPathHelper.SpfaPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
 function TGWeightedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
