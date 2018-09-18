@@ -121,7 +121,7 @@ type
   { checks whether the aDst is reachable from the aSrc(each vertex is reachable from itself) }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
-  { checks whether exists any cycle in subgraph that reachable from a Root;
+  { checks whether exists any cycle in subgraph that reachable from a aRoot;
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
@@ -328,7 +328,10 @@ type
     class function ZeroWeight: TWeight; static; inline;
   { returns True if exists edge with negative weight }
     function ContainsNegWeightEdge: Boolean;
-    //todo: negative cycle detection ???
+  { checks whether exists any cycle of negative weight in subgraph that reachable from a aRoot;
+    if True then aCycle will contain indices of the vertices of the cycle }
+    function ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 
 {**********************************************************************************************************
   class management utilities
@@ -2324,6 +2327,18 @@ begin
     if e.Data.Weight < ZeroWeight then
       exit(True);
   Result := False;
+end;
+
+function TGWeightedDiGraph.ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
+begin
+  Result := ContainsNegCycleI(IndexOf(aRoot), aCycle);
+end;
+
+function TGWeightedDiGraph.ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
+begin
+  CheckIndexRange(aRootIdx);
+  aCycle := TPathHelper.FordBellmanYen(Self, aRootIdx);
+  Result := aCycle <> nil;
 end;
 
 function TGWeightedDiGraph.Clone: TGWeightedDiGraph;

@@ -1025,6 +1025,9 @@ type
     class function  FordBellmanYen(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  FordBellmanYen(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
+  { Ford-Bellman-Yen pathfinding algorithm }
+    class function  FordBellmanYenPath(g: TGraph; aSrc, aDst: SizeInt; out aPaths: TIntArray;
+                    out aWeight: TWeight): Boolean; static;
   { fills array with InfiniteWeight }
     class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with InfiniteWeight NegInfiniteWeight }
@@ -4932,6 +4935,12 @@ begin
       until Curr = J;
       aPaths := v.ToArray;
     end;
+end;
+
+class function TGWeightedPathHelper.FordBellmanYenPath(g: TGraph; aSrc, aDst: SizeInt; out aPaths: TIntArray;
+  out aWeight: TWeight): Boolean;
+begin
+
 end;
 
 class function TGWeightedPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
