@@ -347,7 +347,7 @@ type
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
-    InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
+    InfWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
@@ -355,7 +355,7 @@ type
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
-    returns path weight or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
+    returns path weight or InfWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
     function MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
@@ -373,7 +373,7 @@ type
     connected component(SSSP), the weights of the edges can be negative;
     returns False and empty aWeights if there is a negative weight cycle, otherwise
     aWeights will contain in the corresponding component the weight of the minimum path to the vertex or
-    InfiniteWeight if the vertex is unreachable; used SPFA algorithm  }
+    InfWeight if the vertex is unreachable; used SPFA algorithm  }
     function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPaths returns paths,
@@ -386,7 +386,7 @@ type
 ***********************************************************************************************************}
 
   { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
-    the path from aSrc to it, or NegInfiniteWeight if it is unreachable from aSrc }
+    the path from aSrc to it, or NegInfWeight if it is unreachable from aSrc }
     function DagMaxPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }

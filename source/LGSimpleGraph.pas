@@ -794,7 +794,7 @@ type
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
     connected component(SSSP), the weights of all edges must be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
-    InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
+    InfWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
@@ -803,7 +803,7 @@ type
   { returns False if exists edge with negative weight, otherwise finds all paths of
     minimal weight from a given vertex to the remaining vertices in the same connected
     component(SSSP); an aWeights will contain in the corresponding component the weight of the path
-    to the vertex or InfiniteWeight if the vertex is unreachable; used SPFA algorithm  }
+    to the vertex or InfWeight if the vertex is unreachable; used SPFA algorithm  }
     function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPathTree returns paths }
@@ -811,7 +811,7 @@ type
     function FindMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
   { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges must be nonnegative;
-    returns weight of the path or InfiniteWeight if the vertex is unreachable; used Dijkstra's algorithm  }
+    returns weight of the path or InfWeight if the vertex is unreachable; used Dijkstra's algorithm  }
     function MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
     function MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }

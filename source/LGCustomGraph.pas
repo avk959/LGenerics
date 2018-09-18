@@ -4751,7 +4751,7 @@ begin
         break;
       Enum.Reset;
     end;
-  Result := J = NULL_INDEX;
+  Result := {%H-}J = NULL_INDEX;
   if not Result then
     begin
       aWeights := nil;
@@ -4761,28 +4761,26 @@ end;
 
 class function TGWeightedPathHelper.SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray;
 var
-  Deque: TIntDeque;
+  Queue: TIntQueue;
   Visits,
   Parents: TIntArray;
   Weights: TWeightArray;
-  InDeque: TGraph.TBitVector;
+  InQueue: TGraph.TBitVector;
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
   p: TGraph.PAdjItem;
-  FoundNegCycle: Boolean = False;
 begin
   Result := [];
   vCount := g.VertexCount;
   Weights := CreateWeightArray(vCount);
   Visits := g.CreateIntArray(vCount, 0);
   Parents := g.CreateIntArray;
-  {%H-}Deque.EnsureCapacity(vCount);
-  InDeque.Size := vCount;
+  {%H-}Queue.EnsureCapacity(vCount);
+  InQueue.Size := vCount;
   Weights[aSrc] := ZeroWeight;
   Curr := aSrc;
-  Inc(Visits[aSrc]);
   repeat
-    InDeque[Curr] := False;
+    InQueue[Curr] := False;
     Inc(Visits[Curr]);
     if Visits[Curr] < vCount then
       for p in g.AdjLists[Curr]^ do
@@ -4793,35 +4791,28 @@ begin
             begin
               Weights[Next] := wMax(Relax, CFNegHalfInf);
               Parents[Next] := Curr;
-              if not InDeque[Next] then
+              if not InQueue[Next] then
                 begin
-                  if Deque.NonEmpty then
-                    if Weights[Next] < Weights[Deque.PeekLast] then
-                      Deque.PushLast(Next)
-                    else
-                      Deque.PushFirst(Next)
-                  else
-                    Deque.PushLast(Next);
-                  InDeque[Next] := True;
+                  Queue.Enqueue(Next);
+                  InQueue[Next] := True;
                 end;
             end;
         end
     else
       begin
-        FoundNegCycle := True;
+        Weights := nil;
         break;
       end;
-  until not Deque.TryPopLast(Curr);
-  Weights := nil;
-  if FoundNegCycle then
+  until not Queue{%H-}.TryDequeue(Curr);
+  if Weights = nil then
     Result := ExtractCycle(Curr, vCount, Parents);
 end;
 
 class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 var
-  Deque: TIntDeque;
+  Queue: TIntQueue;
   Visits: TIntArray;
-  InDeque: TGraph.TBitVector;
+  InQueue: TGraph.TBitVector;
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
   p: TGraph.PAdjItem;
@@ -4829,13 +4820,12 @@ begin
   vCount := g.VertexCount;
   aWeights := CreateWeightArray(vCount);
   Visits := g.CreateIntArray(vCount, 0);
-  {%H-}Deque.EnsureCapacity(vCount);
-  InDeque.Size := vCount;
+  {%H-}Queue.EnsureCapacity(vCount);
+  InQueue.Size := vCount;
   aWeights[aSrc] := ZeroWeight;
   Curr := aSrc;
-  Inc(Visits[aSrc]);
   repeat
-    InDeque[Curr] := False;
+    InQueue[Curr] := False;
     Inc(Visits[Curr]);
     if Visits[Curr] < vCount then
       for p in g.AdjLists[Curr]^ do
@@ -4845,16 +4835,10 @@ begin
           if Relax < aWeights[Next] then
             begin
               aWeights[Next] := wMax(Relax, CFNegHalfInf);
-              if not InDeque[Next] then
+              if not InQueue[Next] then
                 begin
-                  if Deque.NonEmpty then
-                    if aWeights[Next] < aWeights[Deque.PeekLast] then
-                      Deque.PushLast(Next)
-                    else
-                      Deque.PushFirst(Next)
-                  else
-                    Deque.PushLast(Next);
-                  InDeque[Next] := True;
+                  Queue.Enqueue(Next);
+                  InQueue[Next] := True;
                 end;
             end;
         end
@@ -4863,16 +4847,16 @@ begin
         aWeights := nil;
         exit(False);
       end;
-  until not Deque.TryPopLast(Curr);
+  until not Queue{%H-}.TryDequeue(Curr);
   Result := True;
 end;
 
 class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 var
-  Deque: TIntDeque;
+  Queue: TIntQueue;
   Visits: TIntArray;
-  InDeque: TGraph.TBitVector;
+  InQueue: TGraph.TBitVector;
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
   p: TGraph.PAdjItem;
@@ -4881,14 +4865,12 @@ begin
   aWeights := CreateWeightArray(vCount);
   Visits := g.CreateIntArray(vCount, 0);
   aPaths := g.CreateIntArray;
-  {%H-}Deque.EnsureCapacity(vCount);
-  InDeque.Size := vCount;
+  {%H-}Queue.EnsureCapacity(vCount);
+  InQueue.Size := vCount;
   aWeights[aSrc] := ZeroWeight;
   Curr := aSrc;
-  Inc(Visits[aSrc]);
-  Result := True;
   repeat
-    InDeque[Curr] := False;
+    InQueue[Curr] := False;
     Inc(Visits[Curr]);
     if Visits[Curr] < vCount then
       for p in g.AdjLists[Curr]^ do
@@ -4899,55 +4881,49 @@ begin
             begin
               aWeights[Next] := wMax(Relax, CFNegHalfInf);
               aPaths[Next] := Curr;
-              if not InDeque[Next] then
+              if not InQueue[Next] then
                 begin
-                  if Deque.NonEmpty then
-                    if aWeights[Next] < aWeights[Deque{%H-}.PeekLast] then
-                      Deque.PushLast(Next)
-                    else
-                      Deque.PushFirst(Next)
-                  else
-                    Deque.PushLast(Next);
-                  InDeque[Next] := True;
+                  Queue.Enqueue(Next);
+                  InQueue[Next] := True;
                 end;
             end;
         end
     else
       begin
-        Result := False;
+        aWeights := nil;
         break;
       end;
-  until not Deque{%H-}.TryPopLast(Curr);
-  if not Result then
+  until not Queue{%H-}.TryDequeue(Curr);
+  if aWeights = nil then
     begin
-      aWeights := nil;
       aPaths := ExtractCycle(Curr, vCount, aPaths);
+      exit(False);
     end;
+  Result := True;
 end;
 
 class function TGWeightedPathHelper.SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 var
-  Deque: TIntDeque;
+  Queue: TIntQueue;
   Visits: TIntArray;
   Weights: TWeightArray;
-  InDeque: TGraph.TBitVector;
+  InQueue: TGraph.TBitVector;
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
   p: TGraph.PAdjItem;
-  FoundNegCycle: Boolean = False;
 begin
   vCount := g.VertexCount;
   Weights := CreateWeightArray(vCount);
   Visits := g.CreateIntArray(vCount, 0);
   aPath := g.CreateIntArray;
-  {%H-}Deque.EnsureCapacity(vCount);
-  InDeque.Size := vCount;
+  {%H-}Queue.EnsureCapacity(vCount);
+  InQueue.Size := vCount;
   Weights[aSrc] := ZeroWeight;
   Curr := aSrc;
   Inc(Visits[aSrc]);
   repeat
-    InDeque[Curr] := False;
+    InQueue[Curr] := False;
     Inc(Visits[Curr]);
     if Visits[Curr] < vCount then
       for p in g.AdjLists[Curr]^ do
@@ -4958,38 +4934,30 @@ begin
             begin
               Weights[Next] := wMax(Relax, CFNegHalfInf);
               aPath[Next] := Curr;
-              if not InDeque[Next] then
+              if not InQueue[Next] then
                 begin
-                  if Deque.NonEmpty then
-                    if Weights[Next] < Weights[Deque.PeekLast] then
-                      Deque.PushLast(Next)
-                    else
-                      Deque.PushFirst(Next)
-                  else
-                    Deque.PushLast(Next);
-                  InDeque[Next] := True;
+                  Queue.Enqueue(Next);
+                  InQueue[Next] := True;
                 end;
             end;
         end
     else
       begin
-        FoundNegCycle := True;
+        Weights := nil;
         break;
       end;
-  until not Deque.TryPopLast(Curr);
-  Result := not FoundNegCycle and (aPath[aDst] <> NULL_INDEX);
+  until not Queue{%H-}.TryDequeue(Curr);
+  Result := (Weights <> nil) and (aPath[aDst] <> NULL_INDEX);
   if Result then
     begin
       aWeight := Weights[aDst];
-      aPath := g.TreePathTo(aPath, aDst)
+      aPath := g.TreePathTo(aPath, aDst);
     end
   else
     begin
       aWeight := InfWeight;
-      if FoundNegCycle then
-        aPath := ExtractCycle(Curr, vCount, aPath)
-      else
-        aPath := nil;
+      if Weights = nil then
+        aPath := ExtractCycle(Curr, vCount, aPath);
     end;
 end;
 
