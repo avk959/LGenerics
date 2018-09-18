@@ -1019,14 +1019,14 @@ type
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
-  { Bellman-Ford algorithm with Yen modification: negative cycle detection }
-    class function  FordBellmanYenNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
-  { Bellman-Ford algorithm with Yen modification: single-source shortest paths problem for any weights }
-    class function  FordBellmanYen(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
-    class function  FordBellmanYen(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+  { Duan modification of Bellman-Ford algorithm: negative cycle detection }
+    class function  SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
+  { Duan modification of Bellman-Ford algorithm: single-source shortest paths problem for any weights }
+    class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
+    class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
-  { Ford-Bellman-Yen pathfinding algorithm }
-    class function  FordBellmanYenPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
+  { Duan modification of Bellman-Ford algorithm: pathfinding }
+    class function  SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
                     out aWeight: TWeight): Boolean; static;
   { fills array with InfiniteWeight }
     class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
@@ -4750,7 +4750,7 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.FordBellmanYenNeg(g: TGraph; aSrc: SizeInt): TIntArray;
+class function TGWeightedPathHelper.SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray;
 var
   Deque: TIntDeque;
   Visits,
@@ -4819,7 +4819,7 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.FordBellmanYen(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 var
   Deque: TIntDeque;
   Visits: TIntArray;
@@ -4869,7 +4869,7 @@ begin
   Result := True;
 end;
 
-class function TGWeightedPathHelper.FordBellmanYen(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
+class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 var
   Deque: TIntDeque;
@@ -4937,7 +4937,7 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.FordBellmanYenPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
+class function TGWeightedPathHelper.SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 var
   Deque: TIntDeque;
