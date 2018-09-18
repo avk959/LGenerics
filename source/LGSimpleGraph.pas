@@ -802,7 +802,7 @@ type
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { returns False if exists edge with negative weight, otherwise finds all paths of
     minimal weight from a given vertex to the remaining vertices in the same connected
-    component(SSSP); an aWeights contains in the corresponding component the weight of the path
+    component(SSSP); an aWeights will contain in the corresponding component the weight of the path
     to the vertex or InfiniteWeight if the vertex is unreachable; used SPFA algorithm  }
     function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
