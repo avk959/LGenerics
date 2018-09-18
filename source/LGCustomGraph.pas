@@ -4720,8 +4720,7 @@ var
   Edge: TGraph.TEdge;
   Enum: TGraph.TEdgeEnumerator;
   Relax: TWeight;
-  I: SizeInt;
-  J: SizeInt = -1;
+  I, J: SizeInt;
 begin
   aWeights := CreateWeightArray(g.VertexCount);
   aPaths := g.CreateIntArray;
@@ -4729,7 +4728,7 @@ begin
   aWeights[aSrc] := ZeroWeight;
   for I := 1 to g.VertexCount do
     begin
-      J := -1;
+      J := NULL_INDEX;
       while Enum.MoveNext do
         begin
           Edge := Enum.Current;
@@ -4751,8 +4750,8 @@ begin
   Result := J = NULL_INDEX;
   if not Result then
     begin
-      aPaths := ExtractCycle(J, g.VertexCount, aPaths);
       aWeights := nil;
+      aPaths := ExtractCycle(J, g.VertexCount, aPaths);
     end;
 end;
 
