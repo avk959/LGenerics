@@ -959,6 +959,7 @@ type
     class procedure FloatHalfInf(aData: PTypeData); static;
     class function CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
     class function wMax(L, R: TWeight): TWeight; static;
+    class function ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
   public
   type
     TWeightEdge = record
@@ -4476,6 +4477,22 @@ begin
     Result := R;
 end;
 
+class function TGWeightedPathHelper.ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray;
+var
+  v: TIntVector;
+  I: SizeInt;
+begin
+  for I := 1 to aLen do
+    aRoot := aTree[aRoot];
+  I := aRoot;
+  v.Add(aRoot);
+  repeat
+    I := aTree[I];
+    v.Add(I);
+  until I = aRoot;
+  Result := v.ToArray;
+end;
+
 class function TGWeightedPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
   Visited: TGraph.TBitVector;
@@ -4702,7 +4719,6 @@ class function TGWeightedPathHelper.FordBellman(g: TGraph; aSrc: SizeInt; out aP
 var
   Edge: TGraph.TEdge;
   Enum: TGraph.TEdgeEnumerator;
-  v: TIntVector;
   Relax: TWeight;
   I: SizeInt;
   J: SizeInt = -1;
@@ -4732,20 +4748,10 @@ begin
         break;
       Enum.Reset;
     end;
-
   Result := J = NULL_INDEX;
-
   if not Result then
     begin
-      for I := 1 to g.VertexCount do
-        J := aPaths[J];
-      I := J;
-      v.Add(J);
-      repeat
-        I := aPaths[I];
-        v.Add(I);
-      until I = J;
-      aPaths := v.ToArray;
+      aPaths := ExtractCycle(J, g.VertexCount, aPaths);
       aWeights := nil;
     end;
 end;
@@ -4756,7 +4762,6 @@ var
   Visits,
   Parents: TIntArray;
   Weights: TWeightArray;
-  v: TIntVector;
   InDeque: TGraph.TBitVector;
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
@@ -4806,17 +4811,7 @@ begin
   until not Deque.TryPopLast(Curr);
   Weights := nil;
   if J <> NULL_INDEX then
-    begin
-      for Curr := 1 to vCount do
-        J := Parents[J];
-      Curr := J;
-      v.Add(J);
-      repeat
-        Curr := Parents[Curr];
-        v.Add(Curr);
-      until Curr = J;
-      Result := v.ToArray;
-    end;
+    Result := ExtractCycle(J, vCount, Parents);
 end;
 
 class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
@@ -4831,7 +4826,7 @@ begin
   vCount := g.VertexCount;
   aWeights := CreateWeightArray(vCount);
   Visits := g.CreateIntArray(vCount, 0);
-  Deque.EnsureCapacity(vCount);
+  {%H-}Deque.EnsureCapacity(vCount);
   InDeque.Size := vCount;
   aWeights[aSrc] := ZeroWeight;
   Curr := aSrc;
@@ -4874,7 +4869,6 @@ class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aPath
 var
   Deque: TIntDeque;
   Visits: TIntArray;
-  v: TIntVector;
   InDeque: TGraph.TBitVector;
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
@@ -4925,15 +4919,7 @@ begin
   if not Result then
     begin
       aWeights := nil;
-      for Curr := 1 to vCount do
-        J := aPaths[J];
-      Curr := J;
-      v.Add(J);
-      repeat
-        Curr := aPaths[Curr];
-        v.Add(Curr);
-      until Curr = J;
-      aPaths := v.ToArray;
+      aPaths := ExtractCycle(J, vCount, aPaths);
     end;
 end;
 
@@ -4943,12 +4929,10 @@ var
   Deque: TIntDeque;
   Visits: TIntArray;
   Weights: TWeightArray;
-  v: TIntVector;
   InDeque: TGraph.TBitVector;
   Relax: TWeight;
   Curr, Next, vCount: SizeInt;
   p: TGraph.PAdjItem;
-  J: SizeInt = -1;
 begin
   vCount := g.VertexCount;
   Weights := CreateWeightArray(vCount);
