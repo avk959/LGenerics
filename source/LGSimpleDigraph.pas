@@ -322,7 +322,7 @@ type
   auxiliary utilities
 ***********************************************************************************************************}
 
-    class function MinW(L, R: TWeight): TWeight; static; inline;
+    class function wMin(L, R: TWeight): TWeight; static; inline;
     class function InfWeight: TWeight; static; inline;
     class function NegInfWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
@@ -1694,7 +1694,7 @@ begin
               if Dist < FMinActiveLayer then
                 FMinActiveLayer := Dist;
             end;
-          CurrArc^.Push(MinW(aNode^.Excess, CurrArc^.ResidualCap));
+          CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResidualCap));
           if not aNode^.HasExcess then
             break;
         end;
@@ -1855,7 +1855,7 @@ begin
                              Delta := CurrArc^.ResidualCap;
                              while True do
                                begin
-                                 Delta := MinW(Delta, NextNode^.CurrentArc^.ResidualCap);
+                                 Delta := wMin(Delta, NextNode^.CurrentArc^.ResidualCap);
                                  if NextNode = CurrNode then
                                    break
                                  else
@@ -1934,7 +1934,7 @@ begin
         while CurrNode^.HasExcess do
           begin
             if (FCaps[CurrArc - PArc(FArcs)] <= ZeroWeight) and CurrArc^.HasResidual then
-              CurrArc^.Push(MinW(CurrNode^.Excess, CurrArc^.ResidualCap));
+              CurrArc^.Push(wMin(CurrNode^.Excess, CurrArc^.ResidualCap));
             Inc(CurrArc);
           end;
         if CurrNode = StackBottom then
@@ -2127,7 +2127,7 @@ begin
         begin
           if aRoot^.CurrentArc^.Target^.Distance = Succ(aRoot^.Distance) then
             begin
-              Flow := Dfs(aRoot^.CurrentArc^.Target, MinW(aFlow, aRoot^.CurrentArc^.ResidualCap));
+              Flow := Dfs(aRoot^.CurrentArc^.Target, wMin(aFlow, aRoot^.CurrentArc^.ResidualCap));
               if Flow > ZeroWeight then
                 begin
                   aRoot^.CurrentArc^.Push(Flow);
@@ -2293,7 +2293,7 @@ begin
       Stack.Pop;
 end;
 
-class function TGWeightedDiGraph.MinW(L, R: TWeight): TWeight;
+class function TGWeightedDiGraph.wMin(L, R: TWeight): TWeight;
 begin
   if L <= R then
     Result := L
