@@ -693,81 +693,9 @@ type
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
-    { TKuhnMatch: Kuhn weighted matching algorithm for bipartite graph }
-    TKuhnMatch = record
-     private
-       FGraph: TGWeightedGraph;
-       FMates,
-       FParents,
-       FQueue: array of SizeInt;
-       FPots: array of TWeight;
-       FWhites,
-       FVisited: TBoolVector;
-       FMatchCount: SizeInt;
-       procedure Match(aNode, aMate: SizeInt); inline;
-       procedure ClearParents; inline;
-       procedure Init(aGraph: TGWeightedGraph; constref w, g: TIntArray);
-       procedure InitMax(aGraph: TGWeightedGraph; constref w, g: TIntArray);
-       function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
-       function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
-       procedure AlternatePath(aRoot: SizeInt);
-       function  TryMatch(var aDelta: TWeight): SizeInt;
-       function  TryMatchMax(var aDelta: TWeight): SizeInt;
-       procedure CorrectPots(aDelta: TWeight); inline;
-       procedure KuhnMatch;
-       procedure KuhnMatchMax;
-       function  CreateEdges: TEdgeArray;
-     public
-       function  GetMinWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
-       function  GetMaxWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
-     end;
-
-    TSWAdjList = specialize TGJoinableHashList<TWeightItem>;
-
-    { TNIMinCutHelper: some implemenation of Nagamochi-Ibaraki minimum cut algorithm:
-        H.Nagamochi and T.Ibaraki. "Computing Edge-Connectivity in Multigraphs and Capacitated Graphs" }
-    TNIMinCutHelper = record
-    private
-    type
-      TNiEdge = record
-        Target: SizeInt;
-        Weight,
-        ScanRank: TWeight;
-        Scanned: Boolean;
-        constructor Create(aTarget: SizeInt; w: TWeight);
-        property Key: SizeInt read Target;
-      end;
-
-      PNiEdge    = ^TNiEdge;
-      TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
-      TEdgeQueue = specialize TGLiteQueue<TIntPair>;
-
-    var
-      FGraph: array of TNiAdjList;
-      FCuts: array of TIntSet;
-      FQueue: TPairHeapMax;
-      FEdgeQueue: TEdgeQueue;
-      FExistNodes,
-      FInQueue: TBoolVector;
-      FBestSet: TIntSet;
-      FBestCut: TWeight;
-      procedure ClearMarks;
-      procedure Init(aGraph: TGWeightedGraph);
-      procedure Init2(aGraph: TGWeightedGraph);
-      procedure ShrinkEdge(aSource, aTarget: SizeInt);
-      procedure ScanFirstSearch;
-      procedure Shrink;
-    public
-      function  GetMinCut(aGraph: TGWeightedGraph): TWeight;
-      function  GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
-    end;
-
-    function  GetApproxMaxWeightMatching: TEdgeArray;
-    function  GetApproxMinWeightMatching: TEdgeArray;
-    function  GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
-    function  GetTrivialMinCut(out aCut: TWeight): Boolean;
-    function  StoerWagner(out aCut: TIntSet): TWeight;
-    function  CreateEdgeArray: TEdgeArray;
+    function GetApproxMaxWeightMatching: TEdgeArray;
+    function GetApproxMinWeightMatching: TEdgeArray;
+    function CreateEdgeArray: TEdgeArray;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -837,33 +765,12 @@ type
   matching utilities
 ***********************************************************************************************************}
 
-  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and minimum weight;
-    warning: works correctly only for integer weights }
-    function FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
-  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and maximum weight;
-    warning: works correctly only for integer weights }
-    function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality and
     maximun weight in an arbitrary graph }
     function ApproxMaxWeightMatching: TEdgeArray;
   { returns the approximation of the matching of the maximum cardinality and
     minimun weight in an arbitrary graph }
     function ApproxMinWeightMatching: TEdgeArray;
-{**********************************************************************************************************
-  networks utilities treat the weight of the edge as its capacity
-***********************************************************************************************************}
-
-  { returns the global minimum cut; the weights of all edges must be nonnegative;
-    used Stoer–Wagner algorithm }
-    function MinWeightCutSW(out aCut: TCut): TWeight;
-  { returns the global minimum cut; the weights of all edges must be nonnegative;
-    used Nagamochi-Ibaraki algorithm }
-    function MinWeightCutNI: TWeight;
-    function MinWeightCutNI(out aCut: TCut): TWeight;
-  { returns array of the edges that cross the minimum cut }
-    function CrossMinWeightCut: TEdgeArray;
   end;
 
   TRealPointEdge = record
@@ -896,6 +803,119 @@ type
     function  Clone: TPointsChart;
     function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
+  end;
+
+  { TGIntWeightedGraph specializes TWeight with Int64 }
+  generic TGIntWeightedGraph<TVertex, TEdgeData, TEqRel> = class(
+    specialize TGWeightedGraph<TVertex, Int64, TEdgeData, TEqRel>)
+  public
+  type
+    TWeight = Int64;
+
+  protected
+  const
+    MaxWeight = High(Int64);
+    MinWeight = Low(Int64);
+
+  type
+    { TKuhnMatch: Kuhn weighted matching algorithm for bipartite graph }
+    TKuhnMatch = record
+     private
+       FGraph: TGIntWeightedGraph;
+       FMates,
+       FParents,
+       FQueue: array of SizeInt;
+       FPots: array of TWeight;
+       FWhites,
+       FVisited: TBoolVector;
+       FMatchCount: SizeInt;
+       procedure Match(aNode, aMate: SizeInt); inline;
+       procedure ClearParents; inline;
+       procedure Init(aGraph: TGIntWeightedGraph; constref w, g: TIntArray);
+       procedure InitMax(aGraph: TGIntWeightedGraph; constref w, g: TIntArray);
+       function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+       function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+       procedure AlternatePath(aRoot: SizeInt);
+       function  TryMatch(var aDelta: TWeight): SizeInt;
+       function  TryMatchMax(var aDelta: TWeight): SizeInt;
+       procedure CorrectPots(aDelta: TWeight); inline;
+       procedure KuhnMatch;
+       procedure KuhnMatchMax;
+       function  CreateEdges: TEdgeArray;
+     public
+       function  GetMinWeightMatch(aGraph: TGIntWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+       function  GetMaxWeightMatch(aGraph: TGIntWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+     end;
+
+    TSWAdjList = specialize TGJoinableHashList<TWeightItem>;
+
+    { TNIMinCutHelper: some implemenation of Nagamochi-Ibaraki minimum cut algorithm:
+        H.Nagamochi and T.Ibaraki. "Computing Edge-Connectivity in Multigraphs and Capacitated Graphs" }
+    TNIMinCutHelper = record
+    private
+    type
+      TNiEdge = record
+        Target: SizeInt;
+        Weight,
+        ScanRank: TWeight;
+        Scanned: Boolean;
+        constructor Create(aTarget: SizeInt; w: TWeight);
+        property Key: SizeInt read Target;
+      end;
+
+      PNiEdge    = ^TNiEdge;
+      TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
+      TEdgeQueue = specialize TGLiteQueue<TIntPair>;
+
+    var
+      FGraph: array of TNiAdjList;
+      FCuts: array of TIntSet;
+      FQueue: TPairHeapMax;
+      FEdgeQueue: TEdgeQueue;
+      FExistNodes,
+      FInQueue: TBoolVector;
+      FBestSet: TIntSet;
+      FBestCut: TWeight;
+      procedure ClearMarks;
+      procedure Init(aGraph: TGIntWeightedGraph);
+      procedure Init2(aGraph: TGIntWeightedGraph);
+      procedure ShrinkEdge(aSource, aTarget: SizeInt);
+      procedure ScanFirstSearch;
+      procedure Shrink;
+    public
+      function  GetMinCut(aGraph: TGIntWeightedGraph): TWeight;
+      function  GetMinCut(aGraph: TGIntWeightedGraph; out aCut: TIntSet): TWeight;
+    end;
+
+    function  GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
+    function  GetTrivialMinCut(out aCut: TWeight): Boolean;
+    function  StoerWagner(out aCut: TIntSet): TWeight;
+  public
+{**********************************************************************************************************
+  matching utilities
+***********************************************************************************************************}
+
+  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
+    the maximum cardinality and minimum weight;
+    warning: works correctly only for integer weights }
+    function FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
+  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
+    the maximum cardinality and maximum weight;
+    warning: works correctly only for integer weights }
+    function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
+{**********************************************************************************************************
+  networks utilities treat the weight of the edge as its capacity
+***********************************************************************************************************}
+
+  { returns the global minimum cut; the weights of all edges must be nonnegative;
+    used Stoer–Wagner algorithm }
+    function MinWeightCutSW(out aCut: TCut): TWeight;
+  { returns the global minimum cut; the weights of all edges must be nonnegative;
+    used Nagamochi-Ibaraki algorithm }
+    function MinWeightCutNI: TWeight;
+    function MinWeightCutNI(out aCut: TCut): TWeight;
+  { returns array of the edges that cross the minimum cut }
+    function CrossMinWeightCut: TEdgeArray;
   end;
 
 implementation
@@ -5172,472 +5192,6 @@ begin
   Result.AssignGraph(Self);
 end;
 
-{ TGWeightedGraph.TKuhnMatch }
-
-procedure TGWeightedGraph.TKuhnMatch.Match(aNode, aMate: SizeInt);
-begin
-  FMates[aNode] := aMate;
-  FMates[aMate] := aNode;
-end;
-
-procedure TGWeightedGraph.TKuhnMatch.ClearParents;
-begin
-  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeUint), $ff);
-end;
-
-procedure TGWeightedGraph.TKuhnMatch.Init(aGraph: TGWeightedGraph; constref w, g: TIntArray);
-var
-  I: SizeInt;
-  p: PAdjItem;
-  ew: TWeight;
-begin
-  FGraph := aGraph;
-  FMatchCount := 0;
-  FWhites.Size := aGraph.VertexCount;
-  if System.Length(w) <= System.Length(g) then
-    for I in w do
-      FWhites[I] := True
-  else
-    for I in g do
-      FWhites[I] := True;
-
-  FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
-  for I in FWhites do
-    begin
-      ew := InfWeight;
-      for p in aGraph.AdjLists[I]^ do
-        if p^.Data.Weight < ew then
-          ew := p^.Data.Weight;
-      FPots[I] := ew;
-    end;
-
-  FMates := aGraph.CreateIntArray;
-  FParents := aGraph.CreateIntArray;
-  FQueue := aGraph.CreateIntArray;
-  FVisited.Size := aGraph.VertexCount;
-end;
-
-procedure TGWeightedGraph.TKuhnMatch.InitMax(aGraph: TGWeightedGraph; constref w, g: TIntArray);
-var
-  I: SizeInt;
-  p: PAdjItem;
-  ew: TWeight;
-begin
-  FGraph := aGraph;
-  FMatchCount := 0;
-  FWhites.Size := aGraph.VertexCount;
-  if System.Length(w) <= System.Length(g) then
-    for I in w do
-      FWhites[I] := True
-  else
-    for I in g do
-      FWhites[I] := True;
-
-  FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
-  for I in FWhites do
-    begin
-      ew := InfWeight;
-      for p in aGraph.AdjLists[I]^ do
-        if p^.Data.Weight > ew then
-          ew := p^.Data.Weight;
-      FPots[I] := ew;
-    end;
-
-  FMates := aGraph.CreateIntArray;
-  FParents := aGraph.CreateIntArray;
-  FQueue := aGraph.CreateIntArray;
-  FVisited.Size := aGraph.VertexCount;
-end;
-
-function TGWeightedGraph.TKuhnMatch.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
-var
-  Curr, Next: SizeInt;
-  p: PAdjItem;
-  Cost: TWeight;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
-begin
-  FQueue[qTail] := aRoot;
-  Inc(qTail);
-  while qHead < qTail do
-    begin
-      Curr := FQueue[qHead];
-      Inc(qHead);
-      FVisited[Curr] := True;
-      if FWhites[Curr] then
-        begin
-          for p in FGraph.AdjLists[Curr]^ do
-            begin
-              Next := p^.Destination;
-              if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
-                continue;
-              Cost := p^.Data.Weight + FPots[Next] - FPots[Curr];
-              if Cost <= ZeroWeight then
-                begin
-                  if FMates[Next] = NULL_INDEX then
-                    begin
-                      FParents[Next] := Curr;
-                      exit(Next);
-                    end
-                  else
-                    if not FVisited[Next] then
-                      begin
-                        FParents[Next] := Curr;
-                        FQueue[qTail] := Next;
-                        Inc(qTail);
-                      end;
-                end
-              else
-                if Cost < aDelta then
-                  aDelta := Cost;
-            end;
-        end
-      else
-        begin
-          Next := FMates[Curr];
-          FParents[Next] := Curr;
-          FQueue[qTail] := Next;
-          Inc(qTail);
-        end;
-    end;
-  Result := NULL_INDEX;
-end;
-
-function TGWeightedGraph.TKuhnMatch.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
-var
-  Curr, Next: SizeInt;
-  p: PAdjItem;
-  Cost: TWeight;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
-begin
-  FQueue[qTail] := aRoot;
-  Inc(qTail);
-  while qHead < qTail do
-    begin
-      Curr := FQueue[qHead];
-      Inc(qHead);
-      FVisited[Curr] := True;
-      if FWhites[Curr] then
-        begin
-          for p in FGraph.AdjLists[Curr]^ do
-            begin
-              Next := p^.Destination;
-              if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
-                continue;
-              Cost := p^.Data.Weight + FPots[Next] - FPots[Curr];
-              if Cost >= ZeroWeight then
-                begin
-                  if FMates[Next] = NULL_INDEX then
-                    begin
-                      FParents[Next] := Curr;
-                      exit(Next);
-                    end
-                  else
-                    if not FVisited[Next] then
-                      begin
-                        FParents[Next] := Curr;
-                        FQueue[qTail] := Next;
-                        Inc(qTail);
-                      end;
-                end
-              else
-                if Cost > aDelta then
-                  aDelta := Cost;
-            end;
-        end
-      else
-        begin
-          Next := FMates[Curr];
-          FParents[Next] := Curr;
-          FQueue[qTail] := Next;
-          Inc(qTail);
-        end;
-    end;
-  Result := NULL_INDEX;
-end;
-
-procedure TGWeightedGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
-var
-  Mate, tmp: SizeInt;
-begin
-  repeat
-    Mate := FParents[aRoot];
-    tmp := FMates[Mate];
-    Match(aRoot, Mate);
-    aRoot := tmp;
-  until aRoot = NULL_INDEX;
-end;
-
-function TGWeightedGraph.TKuhnMatch.TryMatch(var aDelta: TWeight): SizeInt;
-var
-  vL, vR: SizeInt;
-begin
-  aDelta := InfWeight;
-  FVisited.ClearBits;
-  ClearParents;
-  Result := 0;
-  for vL in FWhites do
-    if FMates[vL] = NULL_INDEX then
-      begin
-        vR := FindAugmentPath(vL, aDelta);
-        if vR <> NULL_INDEX then
-          begin
-            AlternatePath(vR);
-            Inc(Result);
-          end;
-      end;
-end;
-
-function TGWeightedGraph.TKuhnMatch.TryMatchMax(var aDelta: TWeight): SizeInt;
-var
-  vL, vR: SizeInt;
-begin
-  aDelta := NegInfWeight;
-  FVisited.ClearBits;
-  ClearParents;
-  Result := 0;
-  for vL in FWhites do
-    if FMates[vL] = NULL_INDEX then
-      begin
-        vR := FindAugmentPathMax(vL, aDelta);
-        if vR <> NULL_INDEX then
-          begin
-            AlternatePath(vR);
-            Inc(Result);
-          end;
-      end;
-end;
-
-procedure TGWeightedGraph.TKuhnMatch.CorrectPots(aDelta: TWeight);
-var
-  I: SizeInt;
-begin
-  for I in FVisited do
-    FPots[I] += aDelta;
-end;
-
-procedure TGWeightedGraph.TKuhnMatch.KuhnMatch;
-var
-  Matched: SizeInt;
-  Delta: TWeight;
-begin
-  Delta := InfWeight;
-  repeat
-    repeat
-      Matched := TryMatch(Delta);
-      FMatchCount += Matched;
-    until Matched = 0;
-    if Delta < InfWeight then
-      CorrectPots(Delta)
-    else
-      break;
-  until False;
-end;
-
-procedure TGWeightedGraph.TKuhnMatch.KuhnMatchMax;
-var
-  Matched: SizeInt;
-  Delta: TWeight;
-begin
-  Delta := NegInfWeight;
-  repeat
-    repeat
-      Matched := TryMatchMax(Delta);
-      FMatchCount += Matched;
-    until Matched = 0;
-    if Delta > NegInfWeight then
-      CorrectPots(Delta)
-    else
-      break;
-  until False;
-end;
-
-function TGWeightedGraph.TKuhnMatch.CreateEdges: TEdgeArray;
-var
-  I, J: SizeInt;
-  d: TEdgeData;
-begin
-  System.SetLength(Result, FMatchCount);
-  J := 0;
-  d := DefaultEdgeData;
-  for I in FWhites do
-    if FMates[I] <> NULL_INDEX then
-      begin
-        FGraph.GetEdgeDataI(I, FMates[I], d);
-        Result[J] := TWeightEdge.Create(I, FMates[I], d.Weight);
-        Inc(J);
-      end;
-end;
-
-function TGWeightedGraph.TKuhnMatch.GetMinWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
-begin
-  Init(aGraph, w, g);
-  KuhnMatch;
-  Result := CreateEdges;
-end;
-
-function TGWeightedGraph.TKuhnMatch.GetMaxWeightMatch(aGraph: TGWeightedGraph; constref w, g: TIntArray): TEdgeArray;
-begin
-  InitMax(aGraph, w, g);
-  KuhnMatchMax;
-  Result := CreateEdges;
-end;
-
-{ TGWeightedGraph.TNIMinCutHelper.TNiEdge }
-
-constructor TGWeightedGraph.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight);
-begin
-  Target := aTarget;
-  Weight := w;
-end;
-
-{ TGWeightedGraph.TNIMinCutHelper }
-
-procedure TGWeightedGraph.TNIMinCutHelper.ClearMarks;
-var
-  I: SizeInt;
-  p: TNiAdjList.PEntry;
-begin
-  for I in FExistNodes do
-    for p in FGraph[I] do
-      p^.Scanned := False;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.Init(aGraph: TGWeightedGraph);
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  System.SetLength(FGraph, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    begin
-      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
-      for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
-    end;
-  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
-  FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
-  FBestCut := InfWeight;
-  FCuts := nil;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.Init2(aGraph: TGWeightedGraph);
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  System.SetLength(FGraph, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    begin
-      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
-      for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
-    end;
-  System.SetLength(FCuts, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    FCuts[I].Add(I);
-  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
-  FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
-  FBestCut := InfWeight;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
-var
-  I: SizeInt;
-  p: PNiEdge;
-  Edge: TNiEdge;
-begin
-  FGraph[aSource].Remove(aTarget);
-  FGraph[aTarget].Remove(aSource);
-  FGraph[aSource].AddAll(FGraph[aTarget]);
-  for p in FGraph[aTarget] do
-    begin
-      I := p^.Target;
-      Edge := p^;
-      FGraph[I].Remove(aTarget);
-      Edge.Target := aSource;
-      FGraph[I].Add(Edge);
-    end;
-  Finalize(FGraph[aTarget]);
-  FExistNodes[aTarget] := False;
-  if FCuts <> nil then
-    begin
-      while FCuts[aTarget].TryPop(I) do
-        FCuts[aSource].Push(I);
-      Finalize(FCuts[aTarget]);
-    end;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.ScanFirstSearch;
-var
-  I: SizeInt;
-  p: PNiEdge;
-  Item: TWeightItem;
-begin
-  ClearMarks;
-  FInQueue.Join(FExistNodes);
-  for I in FExistNodes do
-    FQueue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
-  while FQueue.Count > 1 do
-    begin
-      I := FQueue.Dequeue.Index;
-      FInQueue[I] := False;
-      for p in FGraph[I] do
-        if FInQueue[p^.Target] then
-          begin
-            Item := FQueue.Peek(p^.Target);
-            Item.Weight += p^.Weight;
-            FQueue.Update(p^.Target, Item);
-            p^.Scanned := True;
-            p^.ScanRank := Item.Weight;
-          end;
-    end;
-  Item := FQueue.Dequeue;
-  FInQueue[Item.Index] := False;
-  if Item.Weight < FBestCut then
-    begin
-      FBestCut := Item.Weight;
-      if FCuts <> nil then
-        FBestSet.Assign(FCuts[Item.Index]);
-    end;
-end;
-
-procedure TGWeightedGraph.TNIMinCutHelper.Shrink;
-var
-  I: SizeInt;
-  p: PNiEdge;
-  Pair: TIntPair;
-begin
-  ScanFirstSearch;
-  for I in FExistNodes do
-    for p in FGraph[I] do
-      if p^.Scanned and (p^.ScanRank >= FBestCut) then
-        FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
-  while FEdgeQueue.TryDequeue(Pair) do
-    if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
-      ShrinkEdge(Pair.Left, Pair.Right);
-end;
-
-function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph): TWeight;
-begin
-  Init(aGraph);
-  while FExistNodes.PopCount >= 2 do
-    Shrink;
-  Result := FBestCut;
-end;
-
-function TGWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph; out aCut: TIntSet): TWeight;
-begin
-  Init2(aGraph);
-  while FExistNodes.PopCount >= 2 do
-    Shrink;
-  Result := FBestCut;
-  aCut.Assign(FBestSet);
-end;
-
 { TGWeightedGraph }
 
 function TGWeightedGraph.GetApproxMaxWeightMatching: TEdgeArray;
@@ -5758,118 +5312,6 @@ begin
           end;
       end;
   System.SetLength(Result, Size);
-end;
-
-function TGWeightedGraph.GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
-var
-  d: TEdgeData;
-begin
-  {%H-}aCutSet.MakeEmpty;
-  if not Connected or (VertexCount < 2) then
-    begin
-      aCutWeight := ZeroWeight;
-      exit(True);
-    end;
-  if VertexCount = 2 then
-    begin
-      d := DefaultEdgeData;
-      GetEdgeDataI(0, 1, d);
-      aCutWeight := d.Weight;
-      aCutSet.Add(0);
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGWeightedGraph.GetTrivialMinCut(out aCut: TWeight): Boolean;
-var
-  d: TEdgeData;
-begin
-  if not Connected or (VertexCount < 2) then
-    begin
-      aCut := ZeroWeight;
-      exit(True);
-    end;
-  if VertexCount = 2 then
-    begin
-      d := DefaultEdgeData;
-      GetEdgeDataI(0, 1, d);
-      aCut := d.Weight;
-      exit(True);
-    end;
-  Result := False;
-end;
-
-function TGWeightedGraph.StoerWagner(out aCut: TIntSet): TWeight;
-var
-  Queue: TPairHeapMax;
-  g: array of TSWAdjList;
-  Cuts: array of TIntSet;
-  vRemains, vInQueue: TBoolVector;
-  Phase, Prev, Last, I: SizeInt;
-  p: PAdjItem;
-  pItem: ^TWeightItem;
-  NextItem: TWeightItem;
-begin
-  //initialize
-  System.SetLength(g, VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    begin
-      g[I].EnsureCapacity(DegreeI(I));
-      for p in AdjLists[I]^ do
-        g[I].Add(TWeightItem.Create(p^.Destination, p^.Data.Weight));
-    end;
-  System.SetLength(Cuts, VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Cuts[I].Add(I);
-  Queue := TPairHeapMax.Create(VertexCount);
-  vRemains.InitRange(VertexCount);
-  vInQueue.Size := VertexCount;
-  Result := InfWeight;
-  //n-2 phases
-  for Phase := 1 to Pred(VertexCount) do
-    begin
-      vInQueue.Join(vRemains);
-      for I in vRemains do
-        Queue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
-      while Queue.Count > 1 do
-        begin
-          Prev := Queue.Dequeue.Index;
-          vInQueue[Prev] := False;
-          for pItem in g[Prev] do
-            if vInQueue[pItem^.Index] then
-              begin
-                NextItem := Queue.Peek(pItem^.Index);
-                NextItem.Weight += pItem^.Weight;
-                Queue.Update(pItem^.Index, NextItem);
-              end;
-        end;
-      NextItem := Queue.Dequeue;
-      Last := NextItem.Index;
-      vInQueue[NextItem.Index] := False;
-      if Result > NextItem.Weight then
-        begin
-          Result := NextItem.Weight;
-          aCut.Assign(Cuts[Last]);
-        end;
-      while Cuts[Last].TryPop(I) do
-        Cuts[Prev].Push(I);
-      Finalize(Cuts[Last]);
-      vRemains[Last] := False;
-      //merge last two vertices, remain Prev
-      g[Prev].Remove(Last);
-      g[Last].Remove(Prev);
-      g[Prev].AddAll(g[Last]);
-      for pItem in g[Last] do
-        begin
-          I := pItem^.Index;
-          NextItem := pItem^;
-          g[I].Remove(Last);
-          NextItem.Index := Prev;
-          g[I].Add(NextItem);
-        end;
-      Finalize(g[Last]);
-    end;
 end;
 
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
@@ -6117,28 +5559,6 @@ begin
       end;
 end;
 
-function TGWeightedGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
-var
-  Helper: TKuhnMatch;
-  w, g: TIntArray;
-begin
-  if not IsBipartite(w, g) then
-    exit(False);
-  aMatch := Helper.GetMinWeightMatch(Self, w, g);
-  Result := True;
-end;
-
-function TGWeightedGraph.FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
-var
-  Helper: TKuhnMatch;
-  w, g: TIntArray;
-begin
-  if not IsBipartite(w, g) then
-    exit(False);
-  aMatch := Helper.GetMaxWeightMatch(Self, w, g);
-  Result := True;
-end;
-
 function TGWeightedGraph.ApproxMaxWeightMatching: TEdgeArray;
 var
   d: TEdgeData;
@@ -6165,98 +5585,6 @@ begin
       exit([TWeightEdge.Create(0, 1, {%H-}d.Weight)]);
     end;
   Result := GetApproxMinWeightMatching;
-end;
-
-function TGWeightedGraph.MinWeightCutSW(out aCut: TCut): TWeight;
-var
-  Cut: TIntSet;
-  B: TBoolVector;
-  I: SizeInt;
-begin
-  if not GetTrivialMinCut(Cut, Result) then
-    Result := StoerWagner(Cut);
-  B.InitRange(VertexCount);
-  for I in Cut do
-    B[I] := False;
-  aCut.A := Cut.ToArray;
-  aCut.B := B.ToArray;
-end;
-
-function TGWeightedGraph.MinWeightCutNI: TWeight;
-var
-  Helper: TNIMinCutHelper;
-begin
-  if not GetTrivialMinCut(Result) then
-    Result := Helper.GetMinCut(Self);
-end;
-
-function TGWeightedGraph.MinWeightCutNI(out aCut: TCut): TWeight;
-var
-  Helper: TNIMinCutHelper;
-  Cut: TIntSet;
-  Total: TBoolVector;
-  I: SizeInt;
-begin
-  if not GetTrivialMinCut(Cut, Result) then
-    Result := Helper.GetMinCut(Self, Cut);
-  Total.InitRange(VertexCount);
-  for I in Cut do
-    Total[I] := False;
-  aCut.A := Cut.ToArray;
-  aCut.B := Total.ToArray;
-end;
-
-function TGWeightedGraph.CrossMinWeightCut: TEdgeArray;
-var
-  Helper: TNIMinCutHelper;
-  Cut: TIntSet;
-  Left, Right: TBoolVector;
-  I, J: SizeInt;
-  p: PAdjItem;
-  d: TEdgeData;
-begin
-  if not Connected or (VertexCount < 2) then
-    exit([]);
-  d := DefaultEdgeData;
-  if VertexCount = 2 then
-    begin
-      GetEdgeDataI(0, 1, d);
-      exit([TWeightEdge.Create(0, 1, d.Weight)]);
-    end;
-  Helper.GetMinCut(Self, Cut);
-  if Cut.Count <= VertexCount shr 1 then
-    begin
-      Left.Size := VertexCount;
-      Right.InitRange(VertexCount);
-      for I in Cut do
-        begin
-          Left[I] := True;
-          Right[I] := False;
-        end;
-    end
-  else
-    begin
-      Right.Size := VertexCount;
-      Left.InitRange(VertexCount);
-      for I in Cut do
-        begin
-          Right[I] := True;
-          Left[I] := False;
-        end;
-    end;
-  System.SetLength(Result, Cut.Count);
-  J := 0;
-  for I in Left do
-    for p in AdjLists[I]^ do
-      if Right[p^.Destination] then
-        begin
-          GetEdgeDataI(I, p^.Destination, d);
-          if I < p^.Destination then
-            Result[J] := TWeightEdge.Create(I, p^.Destination, d.Weight)
-          else
-            Result[J] := TWeightEdge.Create(p^.Destination, I, d.Weight);
-          Inc(J);
-        end;
 end;
 
 { TRealPointEdge }
@@ -6398,6 +5726,700 @@ begin
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, @Distance)
   else
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, aHeur);
+end;
+
+{ TGIntWeightedGraph.TKuhnMatch }
+
+procedure TGIntWeightedGraph.TKuhnMatch.Match(aNode, aMate: SizeInt);
+begin
+  FMates[aNode] := aMate;
+  FMates[aMate] := aNode;
+end;
+
+procedure TGIntWeightedGraph.TKuhnMatch.ClearParents;
+begin
+  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeUint), $ff);
+end;
+
+procedure TGIntWeightedGraph.TKuhnMatch.Init(aGraph: TGIntWeightedGraph; constref w, g: TIntArray);
+var
+  I: SizeInt;
+  p: PAdjItem;
+  ew: TWeight;
+begin
+  FGraph := aGraph;
+  FMatchCount := 0;
+  FWhites.Size := aGraph.VertexCount;
+  if System.Length(w) <= System.Length(g) then
+    for I in w do
+      FWhites[I] := True
+  else
+    for I in g do
+      FWhites[I] := True;
+
+  FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
+  for I in FWhites do
+    begin
+      ew := MaxWeight;
+      for p in aGraph.AdjLists[I]^ do
+        if p^.Data.Weight < ew then
+          ew := p^.Data.Weight;
+      FPots[I] := ew;
+    end;
+
+  FMates := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FVisited.Size := aGraph.VertexCount;
+end;
+
+procedure TGIntWeightedGraph.TKuhnMatch.InitMax(aGraph: TGIntWeightedGraph; constref w, g: TIntArray);
+var
+  I: SizeInt;
+  p: PAdjItem;
+  ew: TWeight;
+begin
+  FGraph := aGraph;
+  FMatchCount := 0;
+  FWhites.Size := aGraph.VertexCount;
+  if System.Length(w) <= System.Length(g) then
+    for I in w do
+      FWhites[I] := True
+  else
+    for I in g do
+      FWhites[I] := True;
+
+  FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
+  for I in FWhites do
+    begin
+      ew := MinWeight;
+      for p in aGraph.AdjLists[I]^ do
+        if p^.Data.Weight > ew then
+          ew := p^.Data.Weight;
+      FPots[I] := ew;
+    end;
+
+  FMates := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FVisited.Size := aGraph.VertexCount;
+end;
+
+function TGIntWeightedGraph.TKuhnMatch.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+var
+  Curr, Next: SizeInt;
+  p: PAdjItem;
+  Cost: TWeight;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      FVisited[Curr] := True;
+      if FWhites[Curr] then
+        begin
+          for p in FGraph.AdjLists[Curr]^ do
+            begin
+              Next := p^.Destination;
+              if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+                continue;
+              Cost := p^.Data.Weight + FPots[Next] - FPots[Curr];
+              if Cost = 0 then
+                begin
+                  if FMates[Next] = NULL_INDEX then
+                    begin
+                      FParents[Next] := Curr;
+                      exit(Next);
+                    end
+                  else
+                    if not FVisited[Next] then
+                      begin
+                        FParents[Next] := Curr;
+                        FQueue[qTail] := Next;
+                        Inc(qTail);
+                      end;
+                end
+              else
+                if Cost < aDelta then
+                  aDelta := Cost;
+            end;
+        end
+      else
+        begin
+          Next := FMates[Curr];
+          FParents[Next] := Curr;
+          FQueue[qTail] := Next;
+          Inc(qTail);
+        end;
+    end;
+  Result := NULL_INDEX;
+end;
+
+function TGIntWeightedGraph.TKuhnMatch.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+var
+  Curr, Next: SizeInt;
+  p: PAdjItem;
+  Cost: TWeight;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      FVisited[Curr] := True;
+      if FWhites[Curr] then
+        begin
+          for p in FGraph.AdjLists[Curr]^ do
+            begin
+              Next := p^.Destination;
+              if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+                continue;
+              Cost := p^.Data.Weight + FPots[Next] - FPots[Curr];
+              if Cost = 0 then
+                begin
+                  if FMates[Next] = NULL_INDEX then
+                    begin
+                      FParents[Next] := Curr;
+                      exit(Next);
+                    end
+                  else
+                    if not FVisited[Next] then
+                      begin
+                        FParents[Next] := Curr;
+                        FQueue[qTail] := Next;
+                        Inc(qTail);
+                      end;
+                end
+              else
+                if Cost > aDelta then
+                  aDelta := Cost;
+            end;
+        end
+      else
+        begin
+          Next := FMates[Curr];
+          FParents[Next] := Curr;
+          FQueue[qTail] := Next;
+          Inc(qTail);
+        end;
+    end;
+  Result := NULL_INDEX;
+end;
+
+procedure TGIntWeightedGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
+var
+  Mate, tmp: SizeInt;
+begin
+  repeat
+    Mate := FParents[aRoot];
+    tmp := FMates[Mate];
+    Match(aRoot, Mate);
+    aRoot := tmp;
+  until aRoot = NULL_INDEX;
+end;
+
+function TGIntWeightedGraph.TKuhnMatch.TryMatch(var aDelta: TWeight): SizeInt;
+var
+  vL, vR: SizeInt;
+begin
+  aDelta := MaxWeight;
+  FVisited.ClearBits;
+  ClearParents;
+  Result := 0;
+  for vL in FWhites do
+    if FMates[vL] = NULL_INDEX then
+      begin
+        vR := FindAugmentPath(vL, aDelta);
+        if vR <> NULL_INDEX then
+          begin
+            AlternatePath(vR);
+            Inc(Result);
+          end;
+      end;
+end;
+
+function TGIntWeightedGraph.TKuhnMatch.TryMatchMax(var aDelta: TWeight): SizeInt;
+var
+  vL, vR: SizeInt;
+begin
+  aDelta := MinWeight;
+  FVisited.ClearBits;
+  ClearParents;
+  Result := 0;
+  for vL in FWhites do
+    if FMates[vL] = NULL_INDEX then
+      begin
+        vR := FindAugmentPathMax(vL, aDelta);
+        if vR <> NULL_INDEX then
+          begin
+            AlternatePath(vR);
+            Inc(Result);
+          end;
+      end;
+end;
+
+procedure TGIntWeightedGraph.TKuhnMatch.CorrectPots(aDelta: TWeight);
+var
+  I: SizeInt;
+begin
+  for I in FVisited do
+    FPots[I] += aDelta;
+end;
+
+procedure TGIntWeightedGraph.TKuhnMatch.KuhnMatch;
+var
+  Matched: SizeInt;
+  Delta: TWeight;
+begin
+  Delta := MaxWeight;
+  repeat
+    repeat
+      Matched := TryMatch(Delta);
+      FMatchCount += Matched;
+    until Matched = 0;
+    if Delta < MaxWeight then
+      CorrectPots(Delta)
+    else
+      break;
+  until False;
+end;
+
+procedure TGIntWeightedGraph.TKuhnMatch.KuhnMatchMax;
+var
+  Matched: SizeInt;
+  Delta: TWeight;
+begin
+  Delta := MinWeight;
+  repeat
+    repeat
+      Matched := TryMatchMax(Delta);
+      FMatchCount += Matched;
+    until Matched = 0;
+    if Delta > MinWeight then
+      CorrectPots(Delta)
+    else
+      break;
+  until False;
+end;
+
+function TGIntWeightedGraph.TKuhnMatch.CreateEdges: TEdgeArray;
+var
+  I, J: SizeInt;
+  d: TEdgeData;
+begin
+  System.SetLength(Result, FMatchCount);
+  J := 0;
+  d := DefaultEdgeData;
+  for I in FWhites do
+    if FMates[I] <> NULL_INDEX then
+      begin
+        FGraph.GetEdgeDataI(I, FMates[I], d);
+        Result[J] := TWeightEdge.Create(I, FMates[I], d.Weight);
+        Inc(J);
+      end;
+end;
+
+function TGIntWeightedGraph.TKuhnMatch.GetMinWeightMatch(aGraph: TGIntWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+begin
+  Init(aGraph, w, g);
+  KuhnMatch;
+  Result := CreateEdges;
+end;
+
+function TGIntWeightedGraph.TKuhnMatch.GetMaxWeightMatch(aGraph: TGIntWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+begin
+  InitMax(aGraph, w, g);
+  KuhnMatchMax;
+  Result := CreateEdges;
+end;
+
+{ TGIntWeightedGraph.TNIMinCutHelper.TNiEdge }
+
+constructor TGIntWeightedGraph.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight);
+begin
+  Target := aTarget;
+  Weight := w;
+end;
+
+{ TGIntWeightedGraph.TNIMinCutHelper }
+
+procedure TGIntWeightedGraph.TNIMinCutHelper.ClearMarks;
+var
+  I: SizeInt;
+  p: TNiAdjList.PEntry;
+begin
+  for I in FExistNodes do
+    for p in FGraph[I] do
+      p^.Scanned := False;
+end;
+
+procedure TGIntWeightedGraph.TNIMinCutHelper.Init(aGraph: TGIntWeightedGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
+    end;
+  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := MaxWeight;
+  FCuts := nil;
+end;
+
+procedure TGIntWeightedGraph.TNIMinCutHelper.Init2(aGraph: TGIntWeightedGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TNiEdge.Create(p^.Destination, p^.Data.Weight));
+    end;
+  System.SetLength(FCuts, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    FCuts[I].Add(I);
+  FQueue := TPairHeapMax.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := MaxWeight;
+end;
+
+procedure TGIntWeightedGraph.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
+var
+  I: SizeInt;
+  p: PNiEdge;
+  Edge: TNiEdge;
+begin
+  FGraph[aSource].Remove(aTarget);
+  FGraph[aTarget].Remove(aSource);
+  FGraph[aSource].AddAll(FGraph[aTarget]);
+  for p in FGraph[aTarget] do
+    begin
+      I := p^.Target;
+      Edge := p^;
+      FGraph[I].Remove(aTarget);
+      Edge.Target := aSource;
+      FGraph[I].Add(Edge);
+    end;
+  Finalize(FGraph[aTarget]);
+  FExistNodes[aTarget] := False;
+  if FCuts <> nil then
+    begin
+      while FCuts[aTarget].TryPop(I) do
+        FCuts[aSource].Push(I);
+      Finalize(FCuts[aTarget]);
+    end;
+end;
+
+procedure TGIntWeightedGraph.TNIMinCutHelper.ScanFirstSearch;
+var
+  I: SizeInt;
+  p: PNiEdge;
+  Item: TWeightItem;
+begin
+  ClearMarks;
+  FInQueue.Join(FExistNodes);
+  for I in FExistNodes do
+    FQueue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
+  while FQueue.Count > 1 do
+    begin
+      I := FQueue.Dequeue.Index;
+      FInQueue[I] := False;
+      for p in FGraph[I] do
+        if FInQueue[p^.Target] then
+          begin
+            Item := FQueue.Peek(p^.Target);
+            Item.Weight += p^.Weight;
+            FQueue.Update(p^.Target, Item);
+            p^.Scanned := True;
+            p^.ScanRank := Item.Weight;
+          end;
+    end;
+  Item := FQueue.Dequeue;
+  FInQueue[Item.Index] := False;
+  if Item.Weight < FBestCut then
+    begin
+      FBestCut := Item.Weight;
+      if FCuts <> nil then
+        FBestSet.Assign(FCuts[Item.Index]);
+    end;
+end;
+
+procedure TGIntWeightedGraph.TNIMinCutHelper.Shrink;
+var
+  I: SizeInt;
+  p: PNiEdge;
+  Pair: TIntPair;
+begin
+  ScanFirstSearch;
+  for I in FExistNodes do
+    for p in FGraph[I] do
+      if p^.Scanned and (p^.ScanRank >= FBestCut) then
+        FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
+  while FEdgeQueue.TryDequeue(Pair) do
+    if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
+      ShrinkEdge(Pair.Left, Pair.Right);
+end;
+
+function TGIntWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGIntWeightedGraph): TWeight;
+begin
+  Init(aGraph);
+  while FExistNodes.PopCount >= 2 do
+    Shrink;
+  Result := FBestCut;
+end;
+
+function TGIntWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGIntWeightedGraph; out aCut: TIntSet): TWeight;
+begin
+  Init2(aGraph);
+  while FExistNodes.PopCount >= 2 do
+    Shrink;
+  Result := FBestCut;
+  aCut.Assign(FBestSet);
+end;
+
+{ TGIntWeightedGraph }
+
+function TGIntWeightedGraph.GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
+var
+  d: TEdgeData;
+begin
+  {%H-}aCutSet.MakeEmpty;
+  if not Connected or (VertexCount < 2) then
+    begin
+      aCutWeight := ZeroWeight;
+      exit(True);
+    end;
+  if VertexCount = 2 then
+    begin
+      d := DefaultEdgeData;
+      GetEdgeDataI(0, 1, d);
+      aCutWeight := d.Weight;
+      aCutSet.Add(0);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGIntWeightedGraph.GetTrivialMinCut(out aCut: TWeight): Boolean;
+var
+  d: TEdgeData;
+begin
+  if not Connected or (VertexCount < 2) then
+    begin
+      aCut := ZeroWeight;
+      exit(True);
+    end;
+  if VertexCount = 2 then
+    begin
+      d := DefaultEdgeData;
+      GetEdgeDataI(0, 1, d);
+      aCut := d.Weight;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGIntWeightedGraph.StoerWagner(out aCut: TIntSet): TWeight;
+var
+  Queue: TPairHeapMax;
+  g: array of TSWAdjList;
+  Cuts: array of TIntSet;
+  vRemains, vInQueue: TBoolVector;
+  Phase, Prev, Last, I: SizeInt;
+  p: PAdjItem;
+  pItem: ^TWeightItem;
+  NextItem: TWeightItem;
+begin
+  //initialize
+  System.SetLength(g, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      g[I].EnsureCapacity(DegreeI(I));
+      for p in AdjLists[I]^ do
+        g[I].Add(TWeightItem.Create(p^.Destination, p^.Data.Weight));
+    end;
+  System.SetLength(Cuts, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Cuts[I].Add(I);
+  Queue := TPairHeapMax.Create(VertexCount);
+  vRemains.InitRange(VertexCount);
+  vInQueue.Size := VertexCount;
+  Result := MaxWeight;
+  //n-2 phases
+  for Phase := 1 to Pred(VertexCount) do
+    begin
+      vInQueue.Join(vRemains);
+      for I in vRemains do
+        Queue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
+      while Queue.Count > 1 do
+        begin
+          Prev := Queue.Dequeue.Index;
+          vInQueue[Prev] := False;
+          for pItem in g[Prev] do
+            if vInQueue[pItem^.Index] then
+              begin
+                NextItem := Queue.Peek(pItem^.Index);
+                NextItem.Weight += pItem^.Weight;
+                Queue.Update(pItem^.Index, NextItem);
+              end;
+        end;
+      NextItem := Queue.Dequeue;
+      Last := NextItem.Index;
+      vInQueue[NextItem.Index] := False;
+      if Result > NextItem.Weight then
+        begin
+          Result := NextItem.Weight;
+          aCut.Assign(Cuts[Last]);
+        end;
+      while Cuts[Last].TryPop(I) do
+        Cuts[Prev].Push(I);
+      Finalize(Cuts[Last]);
+      vRemains[Last] := False;
+      //merge last two vertices, remain Prev
+      g[Prev].Remove(Last);
+      g[Last].Remove(Prev);
+      g[Prev].AddAll(g[Last]);
+      for pItem in g[Last] do
+        begin
+          I := pItem^.Index;
+          NextItem := pItem^;
+          g[I].Remove(Last);
+          NextItem.Index := Prev;
+          g[I].Add(NextItem);
+        end;
+      Finalize(g[Last]);
+    end;
+end;
+
+function TGIntWeightedGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
+var
+  Helper: TKuhnMatch;
+  w, g: TIntArray;
+begin
+  if not IsBipartite(w, g) then
+    exit(False);
+  aMatch := Helper.GetMinWeightMatch(Self, w, g);
+  Result := True;
+end;
+
+function TGIntWeightedGraph.FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
+var
+  Helper: TKuhnMatch;
+  w, g: TIntArray;
+begin
+  if not IsBipartite(w, g) then
+    exit(False);
+  aMatch := Helper.GetMaxWeightMatch(Self, w, g);
+  Result := True;
+end;
+
+function TGIntWeightedGraph.MinWeightCutSW(out aCut: TCut): TWeight;
+var
+  Cut: TIntSet;
+  B: TBoolVector;
+  I: SizeInt;
+begin
+  if not GetTrivialMinCut(Cut, Result) then
+    Result := StoerWagner(Cut);
+  B.InitRange(VertexCount);
+  for I in Cut do
+    B[I] := False;
+  aCut.A := Cut.ToArray;
+  aCut.B := B.ToArray;
+end;
+
+function TGIntWeightedGraph.MinWeightCutNI: TWeight;
+var
+  Helper: TNIMinCutHelper;
+begin
+  if not GetTrivialMinCut(Result) then
+    Result := Helper.GetMinCut(Self);
+end;
+
+function TGIntWeightedGraph.MinWeightCutNI(out aCut: TCut): TWeight;
+var
+  Helper: TNIMinCutHelper;
+  Cut: TIntSet;
+  Total: TBoolVector;
+  I: SizeInt;
+begin
+  if not GetTrivialMinCut(Cut, Result) then
+    Result := Helper.GetMinCut(Self, Cut);
+  Total.InitRange(VertexCount);
+  for I in Cut do
+    Total[I] := False;
+  aCut.A := Cut.ToArray;
+  aCut.B := Total.ToArray;
+end;
+
+function TGIntWeightedGraph.CrossMinWeightCut: TEdgeArray;
+var
+  Helper: TNIMinCutHelper;
+  Cut: TIntSet;
+  Left, Right: TBoolVector;
+  I, J: SizeInt;
+  p: PAdjItem;
+  d: TEdgeData;
+begin
+  if not Connected or (VertexCount < 2) then
+    exit([]);
+  d := DefaultEdgeData;
+  if VertexCount = 2 then
+    begin
+      GetEdgeDataI(0, 1, d);
+      exit([TWeightEdge.Create(0, 1, d.Weight)]);
+    end;
+  Helper.GetMinCut(Self, Cut);
+  if Cut.Count <= VertexCount shr 1 then
+    begin
+      Left.Size := VertexCount;
+      Right.InitRange(VertexCount);
+      for I in Cut do
+        begin
+          Left[I] := True;
+          Right[I] := False;
+        end;
+    end
+  else
+    begin
+      Right.Size := VertexCount;
+      Left.InitRange(VertexCount);
+      for I in Cut do
+        begin
+          Right[I] := True;
+          Left[I] := False;
+        end;
+    end;
+  System.SetLength(Result, Cut.Count);
+  J := 0;
+  for I in Left do
+    for p in AdjLists[I]^ do
+      if Right[p^.Destination] then
+        begin
+          GetEdgeDataI(I, p^.Destination, d);
+          if I < p^.Destination then
+            Result[J] := TWeightEdge.Create(I, p^.Destination, d.Weight)
+          else
+            Result[J] := TWeightEdge.Create(p^.Destination, I, d.Weight);
+          Inc(J);
+        end;
 end;
 
 end.
