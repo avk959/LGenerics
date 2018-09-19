@@ -37,6 +37,7 @@ uses
   LGVector,
   LGHashTable,
   LGHash,
+  LGHashMap,
   LGStrConst;
 
 type
@@ -75,10 +76,13 @@ const
 type
   TColorArray = array of TVertexColor;
 
-  TIntEdge = record
+  TIntEdge = packed record
     Source,
     Destination: SizeInt;
+    class function HashCode(constref aValue: TIntEdge): SizeInt; static; inline;
+    class function Equal(constref L, R: TIntEdge): Boolean; static; inline;
     constructor Create(s, d: SizeInt);
+    function Key: TIntEdge; inline;
   end;
 
   TCostEdge = record
@@ -87,6 +91,8 @@ type
     Cost: TCost;
     constructor Create(s, d: SizeInt; aCost: TCost);
   end;
+
+  TEdgeCostMap = specialize TGLiteHashMapLP<TIntEdge, TCost, TIntEdge>;
 
   TIntArrayVectorHelper = specialize TGDelegatedVectorHelper<TIntArray>;
   TIntEdgeVector        = specialize TGLiteVector<TIntEdge>;
@@ -741,18 +747,17 @@ type
     property  Count: SizeInt read GetCount;
   end;
 
-  TIntPair = record
+  TIntPair = packed record
   private
     FLess,
     FGreater: SizeInt;
-    function GetKey: TIntPair; inline;
   public
-    class function HashCode(const aValue: TIntPair): SizeInt; static; inline;
-    class function Equal(const L, R: TIntPair): Boolean; static; inline;
+    class function HashCode(constref aValue: TIntPair): SizeInt; static; inline;
+    class function Equal(constref L, R: TIntPair): Boolean; static; inline;
     constructor Create(L, R: SizeInt);
+    function Key: TIntPair; inline;
     property Left: SizeInt read FLess;
     property Right: SizeInt read FGreater;
-    property Key: TIntPair read GetKey;
   end;
 
   PIntPair = ^TIntPair;
@@ -855,7 +860,7 @@ type
     FRoot: PNode;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    function  NewNode(constref aValue: T; aHandle: SizeInt): PNode; inline;
+    function  NewNode(constref aValue: T; aHandle: SizeInt): PNode;
     function  DequeueItem: T;
     procedure RootMerge(aNode: PNode); inline;
     procedure ExtractNode(aNode: PNode);
@@ -870,8 +875,8 @@ type
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
     procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
-    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean; inline;
-    function  Remove(aHandle: SizeInt): Boolean; inline;
+    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
+    function  Remove(aHandle: SizeInt): Boolean;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -911,8 +916,8 @@ type
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
     procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
-    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean; inline;
-    function  Remove(aHandle: SizeInt): Boolean; inline;
+    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
+    function  Remove(aHandle: SizeInt): Boolean;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -1049,15 +1054,39 @@ type
   end;
 
 implementation
-
 {$B-}{$COPERATORS ON}
 
 { TIntEdge }
+
+class function TIntEdge.HashCode(constref aValue: TIntEdge): SizeInt;
+begin
+{$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
+  {$IF DEFINED (CPU64)}
+      Result := TxxHash32LE.HashGuid(TGuid(aValue));
+  {$ELSEIF DEFINED (CPU32)}
+     Result := TxxHash32LE.HashQWord(QWord(aValue));
+  {$ELSE }
+     Result := TxxHash32LE.HashDWord(DWord(aValue));
+  {$ENDIF }
+{$Else FPC_REQUIRES_PROPER_ALIGNMENT}
+  Result := TxxHash32LE.HashBuf(@aValue, SizeOf(aValue));
+{$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
+end;
+
+class function TIntEdge.Equal(constref L, R: TIntEdge): Boolean;
+begin
+  Result := (L.Source = R.Source) and (L.Destination = R.Destination);
+end;
 
 constructor TIntEdge.Create(s, d: SizeInt);
 begin
   Source := s;
   Destination := d;
+end;
+
+function TIntEdge.Key: TIntEdge;
+begin
+  Result := Self;
 end;
 
 { TCostEdge }
@@ -3462,12 +3491,7 @@ end;
 
 { TIntPair }
 
-function TIntPair.GetKey: TIntPair;
-begin
-  Result := Self;
-end;
-
-class function TIntPair.HashCode(const aValue: TIntPair): SizeInt;
+class function TIntPair.HashCode(constref aValue: TIntPair): SizeInt;
 begin
 {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
   {$IF DEFINED (CPU64)}
@@ -3482,7 +3506,7 @@ begin
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
 
-class function TIntPair.Equal(const L, R: TIntPair): Boolean;
+class function TIntPair.Equal(constref L, R: TIntPair): Boolean;
 begin
   Result := (L.Left = R.Left) and (L.Right = R.Right);
 end;
@@ -3499,6 +3523,11 @@ begin
       FLess := R;
       FGreater := L;
     end;
+end;
+
+function TIntPair.Key: TIntPair;
+begin
+  Result := Self;
 end;
 
 { TIntPairSet }
