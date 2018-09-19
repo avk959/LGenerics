@@ -805,8 +805,8 @@ type
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
   end;
 
-  { TGIntWeightedGraph specializes TWeight with Int64 }
-  generic TGIntWeightedGraph<TVertex, TEdgeData, TEqRel> = class(
+  { TGIntWeightGraph specializes TWeight with Int64 }
+  generic TGIntWeightGraph<TVertex, TEdgeData, TEqRel> = class(
     specialize TGWeightedGraph<TVertex, Int64, TEdgeData, TEqRel>)
   public
   type
@@ -821,7 +821,7 @@ type
     { TKuhnMatch: Kuhn weighted matching algorithm for bipartite graph }
     TKuhnMatch = record
      private
-       FGraph: TGIntWeightedGraph;
+       FGraph: TGIntWeightGraph;
        FMates,
        FParents,
        FQueue: array of SizeInt;
@@ -831,8 +831,8 @@ type
        FMatchCount: SizeInt;
        procedure Match(aNode, aMate: SizeInt); inline;
        procedure ClearParents; inline;
-       procedure Init(aGraph: TGIntWeightedGraph; constref w, g: TIntArray);
-       procedure InitMax(aGraph: TGIntWeightedGraph; constref w, g: TIntArray);
+       procedure Init(aGraph: TGIntWeightGraph; constref w, g: TIntArray);
+       procedure InitMax(aGraph: TGIntWeightGraph; constref w, g: TIntArray);
        function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
        function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
        procedure AlternatePath(aRoot: SizeInt);
@@ -843,8 +843,8 @@ type
        procedure KuhnMatchMax;
        function  CreateEdges: TEdgeArray;
      public
-       function  GetMinWeightMatch(aGraph: TGIntWeightedGraph; constref w, g: TIntArray): TEdgeArray;
-       function  GetMaxWeightMatch(aGraph: TGIntWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+       function  GetMinWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;
+       function  GetMaxWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;
      end;
 
     TSWAdjList = specialize TGJoinableHashList<TWeightItem>;
@@ -877,14 +877,14 @@ type
       FBestSet: TIntSet;
       FBestCut: TWeight;
       procedure ClearMarks;
-      procedure Init(aGraph: TGIntWeightedGraph);
-      procedure Init2(aGraph: TGIntWeightedGraph);
+      procedure Init(aGraph: TGIntWeightGraph);
+      procedure Init2(aGraph: TGIntWeightGraph);
       procedure ShrinkEdge(aSource, aTarget: SizeInt);
       procedure ScanFirstSearch;
       procedure Shrink;
     public
-      function  GetMinCut(aGraph: TGIntWeightedGraph): TWeight;
-      function  GetMinCut(aGraph: TGIntWeightedGraph; out aCut: TIntSet): TWeight;
+      function  GetMinCut(aGraph: TGIntWeightGraph): TWeight;
+      function  GetMinCut(aGraph: TGIntWeightGraph; out aCut: TIntSet): TWeight;
     end;
 
     function  GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
@@ -5728,20 +5728,20 @@ begin
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, aHeur);
 end;
 
-{ TGIntWeightedGraph.TKuhnMatch }
+{ TGIntWeightGraph.TKuhnMatch }
 
-procedure TGIntWeightedGraph.TKuhnMatch.Match(aNode, aMate: SizeInt);
+procedure TGIntWeightGraph.TKuhnMatch.Match(aNode, aMate: SizeInt);
 begin
   FMates[aNode] := aMate;
   FMates[aMate] := aNode;
 end;
 
-procedure TGIntWeightedGraph.TKuhnMatch.ClearParents;
+procedure TGIntWeightGraph.TKuhnMatch.ClearParents;
 begin
   System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeUint), $ff);
 end;
 
-procedure TGIntWeightedGraph.TKuhnMatch.Init(aGraph: TGIntWeightedGraph; constref w, g: TIntArray);
+procedure TGIntWeightGraph.TKuhnMatch.Init(aGraph: TGIntWeightGraph; constref w, g: TIntArray);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -5773,7 +5773,7 @@ begin
   FVisited.Size := aGraph.VertexCount;
 end;
 
-procedure TGIntWeightedGraph.TKuhnMatch.InitMax(aGraph: TGIntWeightedGraph; constref w, g: TIntArray);
+procedure TGIntWeightGraph.TKuhnMatch.InitMax(aGraph: TGIntWeightGraph; constref w, g: TIntArray);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -5805,7 +5805,7 @@ begin
   FVisited.Size := aGraph.VertexCount;
 end;
 
-function TGIntWeightedGraph.TKuhnMatch.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+function TGIntWeightGraph.TKuhnMatch.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
   Curr, Next: SizeInt;
   p: PAdjItem;
@@ -5859,7 +5859,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-function TGIntWeightedGraph.TKuhnMatch.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+function TGIntWeightGraph.TKuhnMatch.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
   Curr, Next: SizeInt;
   p: PAdjItem;
@@ -5913,7 +5913,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-procedure TGIntWeightedGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
+procedure TGIntWeightGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
 var
   Mate, tmp: SizeInt;
 begin
@@ -5925,7 +5925,7 @@ begin
   until aRoot = NULL_INDEX;
 end;
 
-function TGIntWeightedGraph.TKuhnMatch.TryMatch(var aDelta: TWeight): SizeInt;
+function TGIntWeightGraph.TKuhnMatch.TryMatch(var aDelta: TWeight): SizeInt;
 var
   vL, vR: SizeInt;
 begin
@@ -5945,7 +5945,7 @@ begin
       end;
 end;
 
-function TGIntWeightedGraph.TKuhnMatch.TryMatchMax(var aDelta: TWeight): SizeInt;
+function TGIntWeightGraph.TKuhnMatch.TryMatchMax(var aDelta: TWeight): SizeInt;
 var
   vL, vR: SizeInt;
 begin
@@ -5965,7 +5965,7 @@ begin
       end;
 end;
 
-procedure TGIntWeightedGraph.TKuhnMatch.CorrectPots(aDelta: TWeight);
+procedure TGIntWeightGraph.TKuhnMatch.CorrectPots(aDelta: TWeight);
 var
   I: SizeInt;
 begin
@@ -5973,7 +5973,7 @@ begin
     FPots[I] += aDelta;
 end;
 
-procedure TGIntWeightedGraph.TKuhnMatch.KuhnMatch;
+procedure TGIntWeightGraph.TKuhnMatch.KuhnMatch;
 var
   Matched: SizeInt;
   Delta: TWeight;
@@ -5991,7 +5991,7 @@ begin
   until False;
 end;
 
-procedure TGIntWeightedGraph.TKuhnMatch.KuhnMatchMax;
+procedure TGIntWeightGraph.TKuhnMatch.KuhnMatchMax;
 var
   Matched: SizeInt;
   Delta: TWeight;
@@ -6009,7 +6009,7 @@ begin
   until False;
 end;
 
-function TGIntWeightedGraph.TKuhnMatch.CreateEdges: TEdgeArray;
+function TGIntWeightGraph.TKuhnMatch.CreateEdges: TEdgeArray;
 var
   I, J: SizeInt;
   d: TEdgeData;
@@ -6026,31 +6026,31 @@ begin
       end;
 end;
 
-function TGIntWeightedGraph.TKuhnMatch.GetMinWeightMatch(aGraph: TGIntWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+function TGIntWeightGraph.TKuhnMatch.GetMinWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;
 begin
   Init(aGraph, w, g);
   KuhnMatch;
   Result := CreateEdges;
 end;
 
-function TGIntWeightedGraph.TKuhnMatch.GetMaxWeightMatch(aGraph: TGIntWeightedGraph; constref w, g: TIntArray): TEdgeArray;
+function TGIntWeightGraph.TKuhnMatch.GetMaxWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;
 begin
   InitMax(aGraph, w, g);
   KuhnMatchMax;
   Result := CreateEdges;
 end;
 
-{ TGIntWeightedGraph.TNIMinCutHelper.TNiEdge }
+{ TGIntWeightGraph.TNIMinCutHelper.TNiEdge }
 
-constructor TGIntWeightedGraph.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight);
+constructor TGIntWeightGraph.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight);
 begin
   Target := aTarget;
   Weight := w;
 end;
 
-{ TGIntWeightedGraph.TNIMinCutHelper }
+{ TGIntWeightGraph.TNIMinCutHelper }
 
-procedure TGIntWeightedGraph.TNIMinCutHelper.ClearMarks;
+procedure TGIntWeightGraph.TNIMinCutHelper.ClearMarks;
 var
   I: SizeInt;
   p: TNiAdjList.PEntry;
@@ -6060,7 +6060,7 @@ begin
       p^.Scanned := False;
 end;
 
-procedure TGIntWeightedGraph.TNIMinCutHelper.Init(aGraph: TGIntWeightedGraph);
+procedure TGIntWeightGraph.TNIMinCutHelper.Init(aGraph: TGIntWeightGraph);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -6079,7 +6079,7 @@ begin
   FCuts := nil;
 end;
 
-procedure TGIntWeightedGraph.TNIMinCutHelper.Init2(aGraph: TGIntWeightedGraph);
+procedure TGIntWeightGraph.TNIMinCutHelper.Init2(aGraph: TGIntWeightGraph);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -6100,7 +6100,7 @@ begin
   FBestCut := MaxWeight;
 end;
 
-procedure TGIntWeightedGraph.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
+procedure TGIntWeightGraph.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
   p: PNiEdge;
@@ -6127,7 +6127,7 @@ begin
     end;
 end;
 
-procedure TGIntWeightedGraph.TNIMinCutHelper.ScanFirstSearch;
+procedure TGIntWeightGraph.TNIMinCutHelper.ScanFirstSearch;
 var
   I: SizeInt;
   p: PNiEdge;
@@ -6161,7 +6161,7 @@ begin
     end;
 end;
 
-procedure TGIntWeightedGraph.TNIMinCutHelper.Shrink;
+procedure TGIntWeightGraph.TNIMinCutHelper.Shrink;
 var
   I: SizeInt;
   p: PNiEdge;
@@ -6177,7 +6177,7 @@ begin
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
-function TGIntWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGIntWeightedGraph): TWeight;
+function TGIntWeightGraph.TNIMinCutHelper.GetMinCut(aGraph: TGIntWeightGraph): TWeight;
 begin
   Init(aGraph);
   while FExistNodes.PopCount >= 2 do
@@ -6185,7 +6185,7 @@ begin
   Result := FBestCut;
 end;
 
-function TGIntWeightedGraph.TNIMinCutHelper.GetMinCut(aGraph: TGIntWeightedGraph; out aCut: TIntSet): TWeight;
+function TGIntWeightGraph.TNIMinCutHelper.GetMinCut(aGraph: TGIntWeightGraph; out aCut: TIntSet): TWeight;
 begin
   Init2(aGraph);
   while FExistNodes.PopCount >= 2 do
@@ -6194,9 +6194,9 @@ begin
   aCut.Assign(FBestSet);
 end;
 
-{ TGIntWeightedGraph }
+{ TGIntWeightGraph }
 
-function TGIntWeightedGraph.GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
+function TGIntWeightGraph.GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
 var
   d: TEdgeData;
 begin
@@ -6217,7 +6217,7 @@ begin
   Result := False;
 end;
 
-function TGIntWeightedGraph.GetTrivialMinCut(out aCut: TWeight): Boolean;
+function TGIntWeightGraph.GetTrivialMinCut(out aCut: TWeight): Boolean;
 var
   d: TEdgeData;
 begin
@@ -6236,7 +6236,7 @@ begin
   Result := False;
 end;
 
-function TGIntWeightedGraph.StoerWagner(out aCut: TIntSet): TWeight;
+function TGIntWeightGraph.StoerWagner(out aCut: TIntSet): TWeight;
 var
   Queue: TPairHeapMax;
   g: array of TSWAdjList;
@@ -6308,7 +6308,7 @@ begin
     end;
 end;
 
-function TGIntWeightedGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
+function TGIntWeightGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
 var
   Helper: TKuhnMatch;
   w, g: TIntArray;
@@ -6319,7 +6319,7 @@ begin
   Result := True;
 end;
 
-function TGIntWeightedGraph.FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
+function TGIntWeightGraph.FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
 var
   Helper: TKuhnMatch;
   w, g: TIntArray;
@@ -6330,7 +6330,7 @@ begin
   Result := True;
 end;
 
-function TGIntWeightedGraph.MinWeightCutSW(out aCut: TCut): TWeight;
+function TGIntWeightGraph.MinWeightCutSW(out aCut: TCut): TWeight;
 var
   Cut: TIntSet;
   B: TBoolVector;
@@ -6345,7 +6345,7 @@ begin
   aCut.B := B.ToArray;
 end;
 
-function TGIntWeightedGraph.MinWeightCutNI: TWeight;
+function TGIntWeightGraph.MinWeightCutNI: TWeight;
 var
   Helper: TNIMinCutHelper;
 begin
@@ -6353,7 +6353,7 @@ begin
     Result := Helper.GetMinCut(Self);
 end;
 
-function TGIntWeightedGraph.MinWeightCutNI(out aCut: TCut): TWeight;
+function TGIntWeightGraph.MinWeightCutNI(out aCut: TCut): TWeight;
 var
   Helper: TNIMinCutHelper;
   Cut: TIntSet;
@@ -6369,7 +6369,7 @@ begin
   aCut.B := Total.ToArray;
 end;
 
-function TGIntWeightedGraph.CrossMinWeightCut: TEdgeArray;
+function TGIntWeightGraph.CrossMinWeightCut: TEdgeArray;
 var
   Helper: TNIMinCutHelper;
   Cut: TIntSet;
