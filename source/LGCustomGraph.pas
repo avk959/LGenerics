@@ -941,6 +941,8 @@ type
     constructor Create(aValue: T);
   end;
 
+  { TGWeightedPathHelper }
+
   generic TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
@@ -1014,18 +1016,22 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  { Duan modification of Bellman-Ford algorithm(aka SPFA): negative cycle detection }
+  { Duan modification of Bellman-Ford algorithm(aka SPFA)
+    see en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
+    class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): SizeInt;
+                    static;
+  { SPFA negative cycle detection }
     class function  SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
-  { Duan modification of Bellman-Ford algorithm(aka SPFA): single-source shortest paths problem for any weights }
+  { SPFA single-source shortest paths problem }
     class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
                     static;
-  { Duan modification of Bellman-Ford algorithm(aka SPFA): pathfinding }
-    class function  SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
-                    out aWeight: TWeight): Boolean; static;
-  { fills array with InfiniteWeight }
+  { SPFA pathfinding }
+    class function  SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
+                    static;
+  { fills array with InfWeight }
     class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
-  { fills array with InfiniteWeight NegInfiniteWeight }
+  { fills array with NegInfWeight }
     class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with ZeroWeight }
     class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
@@ -4678,100 +4684,8 @@ var
   aWeight := InfWeight;
 end;
 
-class function TGWeightedPathHelper.SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray;
-var
-  Queue: TIntQueue;
-  Visits,
-  Parents: TIntArray;
-  Weights: TWeightArray;
-  InQueue: TGraph.TBitVector;
-  Relax: TWeight;
-  Curr, Next, vCount: SizeInt;
-  p: TGraph.PAdjItem;
-begin
-  Result := [];
-  vCount := g.VertexCount;
-  Weights := CreateWeightArray(vCount);
-  Visits := g.CreateIntArray(vCount, 0);
-  Parents := g.CreateIntArray;
-  {%H-}Queue.EnsureCapacity(vCount);
-  InQueue.Size := vCount;
-  Weights[aSrc] := ZeroWeight;
-  Curr := aSrc;
-  repeat
-    InQueue[Curr] := False;
-    Inc(Visits[Curr]);
-    if Visits[Curr] < vCount then
-      for p in g.AdjLists[Curr]^ do
-        begin
-          Next := p^.Destination;
-          Relax := Weights[Curr] + p^.Data.Weight;
-          if Relax < Weights[Next] then
-            begin
-              Weights[Next] := wMax(Relax, CFNegHalfInf);
-              Parents[Next] := Curr;
-              if not InQueue[Next] then
-                begin
-                  Queue.Enqueue(Next);
-                  InQueue[Next] := True;
-                end;
-            end;
-        end
-    else
-      begin
-        Weights := nil;
-        break;
-      end;
-  until not Queue{%H-}.TryDequeue(Curr);
-  if Weights = nil then
-    Result := ExtractCycle(Curr, vCount, Parents);
-end;
-
-class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-var
-  Queue: TIntQueue;
-  Visits: TIntArray;
-  InQueue: TGraph.TBitVector;
-  Relax: TWeight;
-  Curr, Next, vCount: SizeInt;
-  p: TGraph.PAdjItem;
-begin
-  vCount := g.VertexCount;
-  aWeights := CreateWeightArray(vCount);
-  Visits := g.CreateIntArray(vCount, 0);
-  {%H-}Queue.EnsureCapacity(vCount);
-  InQueue.Size := vCount;
-  aWeights[aSrc] := ZeroWeight;
-  Curr := aSrc;
-  repeat
-    InQueue[Curr] := False;
-    Inc(Visits[Curr]);
-    if Visits[Curr] < vCount then
-      for p in g.AdjLists[Curr]^ do
-        begin
-          Next := p^.Destination;
-          Relax := aWeights[Curr] + p^.Data.Weight;
-          if Relax < aWeights[Next] then
-            begin
-              aWeights[Next] := wMax(Relax, CFNegHalfInf);
-              if not InQueue[Next] then
-                begin
-                  Queue.Enqueue(Next);
-                  InQueue[Next] := True;
-                end;
-            end;
-        end
-    else
-      begin
-        aWeights := nil;
-        exit(False);
-      end;
-  until not Queue{%H-}.TryDequeue(Curr);
-  Result := True;
-end;
-
-class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
-  out aWeights: TWeightArray): Boolean;
+class function TGWeightedPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
+  out aWeights: TWeightArray): SizeInt;
 var
   Queue: TIntQueue;
   Visits: TIntArray;
@@ -4808,76 +4722,65 @@ begin
             end;
         end
     else
-      begin
-        aWeights := nil;
-        break;
-      end;
+      exit(Curr);
   until not Queue{%H-}.TryDequeue(Curr);
-  if aWeights = nil then
+  Result := NULL_INDEX;
+end;
+
+class function TGWeightedPathHelper.SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray;
+var
+  Parents: TIntArray;
+  Weights: TWeightArray;
+  Cycle: SizeInt;
+begin
+  Cycle := SpfaBase(g, aSrc, Parents, Weights);
+  if Cycle <> NULL_INDEX then
+    Result := ExtractCycle(Cycle, g.VertexCount, Parents)
+  else
+    Result := nil;
+end;
+
+class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+var
+  Parents: TIntArray;
+begin
+  Result := SpfaBase(g, aSrc, Parents, aWeights) = NULL_INDEX;
+  if not Result then
+    aWeights := nil;
+end;
+
+class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
+  out aWeights: TWeightArray): Boolean;
+var
+  Cycle: SizeInt;
+begin
+  Cycle := SpfaBase(g, aSrc, aPaths, aWeights);
+  Result := Cycle = NULL_INDEX;
+  if not Result then
     begin
-      aPaths := ExtractCycle(Curr, vCount, aPaths);
-      exit(False);
+      aWeights := nil;
+      aPaths := ExtractCycle(Cycle, g.VertexCount, aPaths);
     end;
-  Result := True;
 end;
 
 class function TGWeightedPathHelper.SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 var
-  Queue: TIntQueue;
-  Visits: TIntArray;
   Weights: TWeightArray;
-  InQueue: TGraph.TBitVector;
-  Relax: TWeight;
-  Curr, Next, vCount: SizeInt;
-  p: TGraph.PAdjItem;
 begin
-  vCount := g.VertexCount;
-  Weights := CreateWeightArray(vCount);
-  Visits := g.CreateIntArray(vCount, 0);
-  aPath := g.CreateIntArray;
-  {%H-}Queue.EnsureCapacity(vCount);
-  InQueue.Size := vCount;
-  Weights[aSrc] := ZeroWeight;
-  Curr := aSrc;
-  Inc(Visits[aSrc]);
-  repeat
-    InQueue[Curr] := False;
-    Inc(Visits[Curr]);
-    if Visits[Curr] < vCount then
-      for p in g.AdjLists[Curr]^ do
-        begin
-          Next := p^.Destination;
-          Relax := Weights[Curr] + p^.Data.Weight;
-          if Relax < Weights[Next] then
-            begin
-              Weights[Next] := wMax(Relax, CFNegHalfInf);
-              aPath[Next] := Curr;
-              if not InQueue[Next] then
-                begin
-                  Queue.Enqueue(Next);
-                  InQueue[Next] := True;
-                end;
-            end;
-        end
-    else
-      begin
-        Weights := nil;
-        break;
-      end;
-  until not Queue{%H-}.TryDequeue(Curr);
-  Result := (Weights <> nil) and (aPath[aDst] <> NULL_INDEX);
-  if Result then
+  if SpfaSssp(g, aSrc, aPath, Weights) then
     begin
-      aWeight := Weights[aDst];
-      aPath := g.TreePathTo(aPath, aDst);
+      Result := aPath[aDst] <> NULL_INDEX;
+      if Result then
+        begin
+          aWeight := Weights[aDst];
+          aPath := g.TreePathTo(aPath, aDst);
+        end
+      else
+        aWeight := InfWeight;
     end
   else
-    begin
-      aWeight := InfWeight;
-      if Weights = nil then
-        aPath := ExtractCycle(Curr, vCount, aPath);
-    end;
+    Result := False;
 end;
 
 class function TGWeightedPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
