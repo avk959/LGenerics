@@ -63,7 +63,7 @@ type
   TOnVisit         = procedure (aValue: SizeInt) of object;
   TOnAccept        = function (aValue: SizeInt): Boolean of object;
   TOnFindSet       = procedure(constref aSet: TIntArray; var aCancel: Boolean) of object;
-  TCost            = type Int64;
+  TCost            = Int64;
   TVertexColor     = type Byte;
 
 const
@@ -81,11 +81,18 @@ type
     constructor Create(s, d: SizeInt);
   end;
 
+  TCostEdge = record
+    Source,
+    Destination: SizeInt;
+    Cost: TCost;
+    constructor Create(s, d: SizeInt; aCost: TCost);
+  end;
+
   TIntArrayVectorHelper = specialize TGDelegatedVectorHelper<TIntArray>;
   TIntEdgeVector        = specialize TGLiteVector<TIntEdge>;
-  PIntEdgeVector        = ^TIntEdgeVector;
   TIntEdgeArray         = array of TIntEdge;
   TEdgeArrayVector      = specialize TGLiteVector<TIntEdgeArray>;
+  TCostEdgeArray        = array of TCostEdge;
 
   TGraphMagic           = string[8];
 
@@ -1042,7 +1049,25 @@ type
   end;
 
 implementation
+
 {$B-}{$COPERATORS ON}
+
+{ TIntEdge }
+
+constructor TIntEdge.Create(s, d: SizeInt);
+begin
+  Source := s;
+  Destination := d;
+end;
+
+{ TCostEdge }
+
+constructor TCostEdge.Create(s, d: SizeInt; aCost: TCost);
+begin
+  Source := s;
+  Destination := d;
+  Cost := aCost;
+end;
 
 { TGAdjItem }
 
@@ -1251,14 +1276,6 @@ begin
     end
   else
     Result := False;
-end;
-
-{ TIntEdge }
-
-constructor TIntEdge.Create(s, d: SizeInt);
-begin
-  Source := s;
-  Destination := d;
 end;
 
 { TGCustomGraph.TBitVector }
@@ -4706,21 +4723,25 @@ begin
     InQueue[Curr] := False;
     Inc(Visits[Curr]);
     if Visits[Curr] < vCount then
-      for p in g.AdjLists[Curr]^ do
-        begin
-          Next := p^.Destination;
-          Relax := aWeights[Curr] + p^.Data.Weight;
-          if Relax < aWeights[Next] then
-            begin
-              aWeights[Next] := wMax(Relax, CFNegHalfInf);
-              aPaths[Next] := Curr;
-              if not InQueue[Next] then
-                begin
-                  Queue.Enqueue(Next);
-                  InQueue[Next] := True;
-                end;
-            end;
-        end
+      begin
+        if (aPaths[Curr] <> NULL_INDEX) and InQueue[aPaths[Curr]] then
+          continue;
+        for p in g.AdjLists[Curr]^ do
+          begin
+            Next := p^.Destination;
+            Relax := aWeights[Curr] + p^.Data.Weight;
+            if Relax < aWeights[Next] then
+              begin
+                aWeights[Next] := wMax(Relax, CFNegHalfInf);
+                aPaths[Next] := Curr;
+                if not InQueue[Next] then
+                  begin
+                    Queue.Enqueue(Next);
+                    InQueue[Next] := True;
+                  end;
+              end;
+          end
+      end
     else
       exit(Curr);
   until not Queue{%H-}.TryDequeue(Curr);
