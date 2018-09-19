@@ -1014,10 +1014,6 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  { Bellman-Ford algorithm: single-source shortest paths problem for any weights }
-    class function  FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
-    class function  FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
-                    static;
   { Duan modification of Bellman-Ford algorithm(aka SPFA): negative cycle detection }
     class function  SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
   { Duan modification of Bellman-Ford algorithm(aka SPFA): single-source shortest paths problem for any weights }
@@ -4680,83 +4676,6 @@ var
         end;
     end;
   aWeight := InfWeight;
-end;
-
-class function TGWeightedPathHelper.FordBellman(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
-var
-  Edge: TGraph.TEdge;
-  Enum: TGraph.TEdgeEnumerator;
-  Relax: TWeight;
-  I: SizeInt;
-  Relaxed: Boolean = False;
-begin
-  aWeights := CreateWeightArray(g.VertexCount);
-  Enum := g.Edges.GetEnumerator;
-  aWeights[aSrc] := ZeroWeight;
-  for I := 1 to g.VertexCount do
-    begin
-      Relaxed := False;
-      while Enum.MoveNext do
-        begin
-          Edge := Enum.Current;
-          if aWeights[Edge.Source] < InfWeight then
-            begin
-              Relax := aWeights[Edge.Source] + Edge.Data.Weight;
-              if Relax < aWeights[Edge.Destination] then
-                begin
-                  aWeights[Edge.Destination] := wMax(Relax, CFNegHalfInf); //todo: is it correct ?
-                  Relaxed := True;
-                end;
-            end;
-        end;
-      if not Relaxed then
-        break;
-      Enum.Reset;
-    end;
-  Result := not Relaxed;
-  if not Result then
-    aWeights := nil;
-end;
-
-class function TGWeightedPathHelper.FordBellman(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out
-  aWeights: TWeightArray): Boolean;
-var
-  Edge: TGraph.TEdge;
-  Enum: TGraph.TEdgeEnumerator;
-  Relax: TWeight;
-  I, J: SizeInt;
-begin
-  aWeights := CreateWeightArray(g.VertexCount);
-  aPaths := g.CreateIntArray;
-  Enum := g.Edges.GetEnumerator;
-  aWeights[aSrc] := ZeroWeight;
-  for I := 1 to g.VertexCount do
-    begin
-      J := NULL_INDEX;
-      while Enum.MoveNext do
-        begin
-          Edge := Enum.Current;
-          if aWeights[Edge.Source] < InfWeight then
-            begin
-              Relax := aWeights[Edge.Source] + Edge.Data.Weight;
-              if Relax < aWeights[Edge.Destination] then
-                begin
-                  aWeights[Edge.Destination] := wMax(Relax, CFNegHalfInf); //todo: is it correct ?
-                  aPaths[Edge.Destination] := Edge.Source;
-                  J := Edge.Destination;
-                end;
-            end;
-        end;
-      if J = NULL_INDEX then
-        break;
-      Enum.Reset;
-    end;
-  Result := {%H-}J = NULL_INDEX;
-  if not Result then
-    begin
-      aWeights := nil;
-      aPaths := ExtractCycle(J, g.VertexCount, aPaths);
-    end;
 end;
 
 class function TGWeightedPathHelper.SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray;
