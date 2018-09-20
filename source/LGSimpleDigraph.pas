@@ -470,7 +470,7 @@ type
       function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
                                constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
       function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
-                               constref aCosts: TEdgeCostMap; out a: TEdgeArray; out aTotalCost: TCost): TWeight;
+                               constref aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
     end;
 
   public
@@ -536,16 +536,22 @@ type
     function GetMinSTCutD(constref aSource, aSink: TVertex; out aCut: TStCut): TWeight; inline;
     function GetMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
 
-  { returns True and aMap if edge costs are correct(negative costs allows), False otherwise }
+  { returns True and aMap if arc costs are correct(negative costs allows), False otherwise }
     function IsValidCostArray(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
-  { param aNeedFlow defines needed flow > 0 (can be InfWeight);
-    returns False if network contains negative cycle or aNeedFlow = 0,
+  { param aNeedFlow specifies the required flow > 0 (can be InfWeight);
+    returns False if network is not correct or arc costs are not correct or network
+    contains negative cycle or aNeedFlow = 0,
     otherwise returns True, flow = min(aNeedFlow, maxflow) in aNeedFlow and
     total flow cost in aResultCost }
     function FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
                              var aNeedFlow: TWeight; out aResultCost: TCost): Boolean; inline;
     function FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
                               var aNeedFlow: TWeight; out aResultCost: TCost): Boolean;
+  { same as above and in addition in a returns edge flows }
+    function FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+                             var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean; inline;
+    function FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+                              var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean;
   end;
 
 implementation
@@ -2824,7 +2830,7 @@ begin
 end;
 
 function TGIntWeightDiGraph.TMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  aFlow: TWeight; constref aCosts: TEdgeCostMap; out a: TEdgeArray; out aTotalCost: TCost): TWeight;
+  aFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
   if aFlow = 0 then
     exit(aFlow);
@@ -3160,6 +3166,28 @@ begin
   if not IsValidCostArray(aCosts, Costs) then
     exit(False);
   aNeedFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aNeedFlow, Costs, aResultCost);
+  Result := aNeedFlow <> 0;
+end;
+
+function TGIntWeightDiGraph.FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+  var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean;
+begin
+  Result := FindMinCostFlowI(IndexOf(aSource), IndexOf(aSink), aCosts, aNeedFlow, aResultCost, a);
+end;
+
+function TGIntWeightDiGraph.FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+  var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean;
+var
+  Helper: TMcfHelper;
+  Costs: TEdgeCostMap;
+begin
+  if aNeedFlow < 1 then
+    exit(False);
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+    exit(False);
+  if not IsValidCostArray(aCosts, Costs) then
+    exit(False);
+  aNeedFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aNeedFlow, Costs, aResultCost, a);
   Result := aNeedFlow <> 0;
 end;
 
