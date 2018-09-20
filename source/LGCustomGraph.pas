@@ -4635,7 +4635,7 @@ begin
               Relaxed := p^.Data.Weight + Item.Weight;
               if Relaxed < Queue.Peek(p^.Key).Weight then
                 Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
-            end
+            end;
     end;
   Result := InfWeight;
 end;
