@@ -438,11 +438,10 @@ type
       private
         FirstArc,            // pointer to first incident arc in arcs array
         LastArc,             // pointer to last incident arc in arcs array
-        FromArc: PArc;       // pointer to tree arc
+        TreeArc: PArc;       // pointer to tree arc
         Parent: PNode;
-        Visit: SizeInt;
         Price: TCost;
-        MinFlow: TWeight;    // munimum flow on path
+        MinPathFlow: TWeight;    // munimum flow on path
         InQueue: Boolean;
       end;
 
@@ -460,7 +459,8 @@ type
       procedure Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
                 constref aCosts: TEdgeCostMap);
       procedure SearchInit; inline;
-      function  FindPath: Boolean;
+      function  NegCycleTest: Boolean;
+      function  FindMinCostPath: TWeight;
       procedure Push(aFlow: TWeight);
       function  FindMinCostFlow: TWeight;
       function  GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
@@ -2535,7 +2535,7 @@ var
 begin
   System.SetLength(Result, aGraph.EdgeCount);
   J := 0;
-  d := Default(TEdgeData);
+  d := DefaultEdgeData;
   for I := 0 to System.High(FNodes) do
     begin
       CurrArc := FNodes[I].FirstArc;
@@ -2672,28 +2672,31 @@ var
 begin
   for I := 0 to System.High(FNodes) do
     begin
-      FNodes[I].FromArc := nil;
+      FNodes[I].TreeArc := nil;
       FNodes[I].Parent := nil;
-      FNodes[I].Visit := 0;
       FNodes[I].Price := MaxCost;
-      FNodes[I].MinFlow := MaxWeight;
+      FNodes[I].MinPathFlow := MaxWeight;
       FNodes[I].InQueue := False;
     end;
   FSource^.Price := 0;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.FindPath: Boolean;
+function TGIntWeightDiGraph.TMcfHelper.NegCycleTest: Boolean;
 var
+  Visits: TIntArray;
   CurrNode, NextNode: PNode;
   CurrArc: PArc;
+  CurrIdx: SizeInt;
   Relax: TCost;
 begin
   SearchInit;
+  Visits := FGraph.CreateIntArray(FNodeCount, 0);
   CurrNode := FSource;
   repeat
-    Inc(CurrNode^.Visit);
+    CurrIdx := SizeInt(CurrNode - PNode(FNodes));
+    Inc(Visits[CurrIdx]);
     CurrNode^.InQueue := False;
-    if CurrNode^.Visit < FNodeCount then
+    if Visits[CurrIdx] < FNodeCount then
       begin
         if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
           continue;
@@ -2707,9 +2710,9 @@ begin
                 if Relax < NextNode^.Price then
                   begin
                     NextNode^.Price := wMax(Relax, HalfMinCost);
-                    NextNode^.MinFlow := wMin(CurrNode^.MinFlow, CurrArc^.ResidualCap);
+                    NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                     NextNode^.Parent := CurrNode;
-                    NextNode^.FromArc := CurrArc;
+                    NextNode^.TreeArc := CurrArc;
                     if not NextNode^.InQueue then
                       begin
                         FQueue.Enqueue(NextNode);
@@ -2726,17 +2729,58 @@ begin
   Result := FSink^.Parent <> nil;
 end;
 
+function TGIntWeightDiGraph.TMcfHelper.FindMinCostPath: TWeight;
+var
+  CurrNode, NextNode: PNode;
+  CurrArc: PArc;
+  Relax: TCost;
+begin
+  SearchInit;
+  CurrNode := FSource;
+  repeat
+    CurrNode^.InQueue := False;
+    if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
+      continue;
+    CurrArc := CurrNode^.FirstArc;
+    while CurrArc <= CurrNode^.LastArc do
+      begin
+        if CurrArc^.IsResidual then
+          begin
+            NextNode := CurrArc^.Target;
+            Relax := CurrNode^.Price + CurrArc^.Cost;
+            if Relax < NextNode^.Price then
+              begin
+                NextNode^.Price := wMax(Relax, HalfMinCost);
+                NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
+                NextNode^.Parent := CurrNode;
+                NextNode^.TreeArc := CurrArc;
+                if not NextNode^.InQueue then
+                  begin
+                    FQueue.Enqueue(NextNode);
+                    NextNode^.InQueue := True;
+                  end;
+              end;
+          end;
+        Inc(CurrArc);
+      end;
+  until not FQueue.TryDequeue(CurrNode);
+  if FSink^.Parent <> nil then
+    Result := FSink^.MinPathFlow
+  else
+    Result := 0;
+end;
+
 procedure TGIntWeightDiGraph.TMcfHelper.Push(aFlow: TWeight);
 var
   ParentNode: PNode;
   CurrArc: PArc;
 begin
   ParentNode := FSink^.Parent;
-  CurrArc := FSink^.FromArc;
+  CurrArc := FSink^.TreeArc;
   while CurrArc <> nil do
     begin
       CurrArc^.Push(aFlow);
-      CurrArc := ParentNode^.FromArc;
+      CurrArc := ParentNode^.TreeArc;
       ParentNode := ParentNode^.Parent;
     end;
 end;
@@ -2746,17 +2790,13 @@ var
   Flow: TWeight;
 begin
   Result := 0;
-  if not FindPath then
+  if not NegCycleTest then
     exit(0);
-  Flow := wMin(FSink^.MinFlow, FFlow);
-  if Flow = 0 then
-    exit;
+  Flow := wMin(FSink^.MinPathFlow, FFlow);
   repeat
     Push(Flow);
     Result += Flow;
-    Flow := 0;
-    if FindPath then
-      Flow := wMin(FSink^.MinFlow, FFlow - Result);
+    Flow := wMin(FindMinCostPath, FFlow - Result);
   until Flow = 0;
 end;
 
@@ -2766,7 +2806,7 @@ var
   CurrArc: PArc;
   d: TEdgeData;
 begin
-  d := Default(TEdgeData);
+  d := DefaultEdgeData;
   Result := 0;
   for I := 0 to System.High(FNodes) do
     begin
@@ -2793,7 +2833,7 @@ var
 begin
   System.SetLength(Result, FGraph.EdgeCount);
   J := 0;
-  d := Default(TEdgeData);
+  d := DefaultEdgeData;
   aTotalCost := 0;
   for I := 0 to System.High(FNodes) do
     begin
