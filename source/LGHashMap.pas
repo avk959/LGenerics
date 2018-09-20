@@ -1294,7 +1294,7 @@ end;
 
 function TGLiteHashMapLP.GetEnumerator: TEntryEnumerator;
 begin
-  Result.Init(Self);
+  Result{%H-}.Init(Self);
 end;
 
 function TGLiteHashMapLP.ToArray: TEntryArray;
@@ -1523,7 +1523,10 @@ begin
         Result += Ord(Remove(k));
     end
   else
-    Clear;
+    begin
+      Result := Count;
+      Clear;
+    end;
 end;
 
 function TGLiteHashMapLP.RemoveIf(aTest: TKeyTest): SizeInt;
