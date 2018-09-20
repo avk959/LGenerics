@@ -415,7 +415,7 @@ type
       function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     end;
 
-    { TMcfHelper: implementation of simplest mincost flow algorithm }
+    { TMcfHelper: simpliest mincost-flow algorithm(augmenting paths) }
     TMcfHelper = record
     private
     type
@@ -431,7 +431,6 @@ type
         constructor Create(c: TWeight; aCost: TCost; aTarget: PNode; aReverse: PArc);
         constructor CreateReverse(aCost: TCost; aTarget: PNode; aReverse: PArc);
         function  IsResidual: Boolean; inline;
-        function  IsResidual(aEps: TWeight): Boolean; inline;
         procedure Push(aFlow: TWeight); inline;
       end;
 
@@ -442,7 +441,7 @@ type
         FromArc: PArc;       // pointer to tree arc
         Parent: PNode;
         Visit: SizeInt;
-        Potential: TCost;
+        Price: TCost;
         MinFlow: TWeight;    // munimum flow on path
         InQueue: Boolean;
       end;
@@ -2614,11 +2613,6 @@ begin
   Result := ResidualCap > 0;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.TArc.IsResidual(aEps: TWeight): Boolean;
-begin
-  Result := ResidualCap > aEps;
-end;
-
 procedure TGIntWeightDiGraph.TMcfHelper.TArc.Push(aFlow: TWeight);
 begin
   ResidualCap -= aFlow;
@@ -2681,11 +2675,11 @@ begin
       FNodes[I].FromArc := nil;
       FNodes[I].Parent := nil;
       FNodes[I].Visit := 0;
-      FNodes[I].Potential := MaxCost;
+      FNodes[I].Price := MaxCost;
       FNodes[I].MinFlow := MaxWeight;
       FNodes[I].InQueue := False;
     end;
-  FSource^.Potential := 0;
+  FSource^.Price := 0;
 end;
 
 function TGIntWeightDiGraph.TMcfHelper.FindPath: Boolean;
@@ -2709,10 +2703,10 @@ begin
             if CurrArc^.IsResidual then
               begin
                 NextNode := CurrArc^.Target;
-                Relax := CurrNode^.Potential + CurrArc^.Cost;
-                if Relax < NextNode^.Potential then
+                Relax := CurrNode^.Price + CurrArc^.Cost;
+                if Relax < NextNode^.Price then
                   begin
-                    NextNode^.Potential := wMax(Relax, HalfMinCost);
+                    NextNode^.Price := wMax(Relax, HalfMinCost);
                     NextNode^.MinFlow := wMin(CurrNode^.MinFlow, CurrArc^.ResidualCap);
                     NextNode^.Parent := CurrNode;
                     NextNode^.FromArc := CurrArc;
