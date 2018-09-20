@@ -4555,17 +4555,20 @@ var
 begin
   Result := CreateWeightArray(g.VertexCount);
   Queue := TPairingHeap.Create(g.VertexCount);
-  InQueue.ExpandTrue(g.VertexCount);
+  InQueue.Size := g.VertexCount;
   Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
-      Result[{%H-}Item.Index] := Item.Weight;
+      Result[{%H-}Item.Index] := {%H-}Item.Weight;
       InQueue[Item.Index] := False;
       for p in g.AdjLists[Item.Index]^ do
         begin
           Relax := p^.Data.Weight + Item.Weight;
           if Queue.NotUsed(p^.Key) then
-            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax))
+            begin
+              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
+              InQueue[p^.Key] := True;
+            end
           else
             if InQueue[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
@@ -4584,11 +4587,11 @@ begin
   Result := CreateWeightArray(g.VertexCount);
   Queue := TPairingHeap.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
-  InQueue.ExpandTrue(g.VertexCount);
+  InQueue.Size := g.VertexCount;
   Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
-      Result[{%H-}Item.Index] := Item.Weight;
+      Result[{%H-}Item.Index] := {%H-}Item.Weight;
       InQueue[Item.Index] := False;
       for p in g.AdjLists[Item.Index]^ do
         begin
@@ -4597,6 +4600,7 @@ begin
             begin
               Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
               aPathTree[p^.Key] := Item.Index;
+              InQueue[p^.Key] := True;
             end
           else
             if InQueue[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
@@ -4617,7 +4621,7 @@ var
   p: TGraph.PAdjItem;
 begin
   Queue := TBinHeap.Create(g.VertexCount);
-  InQueue.ExpandTrue(g.VertexCount);
+  InQueue.Size := g.VertexCount;
   Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
@@ -4628,7 +4632,10 @@ begin
         begin
           Relax := p^.Data.Weight + Item.Weight;
           if Queue.NotUsed(p^.Key) then
-            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax))
+            begin
+              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
+              InQueue[p^.Key] := True;
+            end
           else
             if InQueue[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
@@ -4648,7 +4655,7 @@ var
 {%H-}begin
   Queue := TBinHeap.Create(g.VertexCount);
   Tree := g.CreateIntArray;
-  InQueue.ExpandTrue(g.VertexCount);
+  InQueue.Size := g.VertexCount;
   Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while {%H-}Queue.TryDequeue(Item) do
     begin
@@ -4665,6 +4672,7 @@ var
             begin
               Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
               Tree[p^.Key] := Item.Index;
+              InQueue[p^.Key] := True;
             end
           else
             if InQueue[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
@@ -4689,7 +4697,7 @@ var
 {%H-}begin
   Queue := TAStarHeap.Create(g.VertexCount);
   Tree := g.CreateIntArray;
-  InQueue.ExpandTrue(g.VertexCount);
+  InQueue.Size := g.VertexCount;
   Queue.Enqueue(aSrc, TRankItem.Create(aSrc, aEst(g.Items[aSrc], g.Items[aDst]), ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
@@ -4707,6 +4715,7 @@ var
               Queue.Enqueue(
                 p^.Key, TRankItem.Create(p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
               Tree[p^.Key] := Item.Index;
+              InQueue[p^.Key] := True;
             end
           else
             if InQueue[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
