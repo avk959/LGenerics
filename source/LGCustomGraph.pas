@@ -964,7 +964,7 @@ type
   class var
     CFInfWeight,
     CFNegInfWeight,
-    CFNegHalfInf,
+    CFHalfNegInf,
     CFZeroWeight: TWeight;
     class constructor Init;
     class procedure IntHalfInf(aData: PTypeData); static;
@@ -1028,7 +1028,7 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  { Duan modification of Bellman-Ford algorithm(aka SPFA)
+  { Some modification of Bellman-Ford algorithm(aka SPFA)
     see en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
     class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
@@ -4488,21 +4488,21 @@ end;
 class procedure TGWeightedPathHelper.IntHalfInf(aData: PTypeData);
 begin
   case aData^.OrdType of
-    otSByte:  PShortInt(@CFNegHalfInf)^ := PShortInt(@CFNegInfWeight)^ div 2;
-    otSWord:  PSmallInt(@CFNegHalfInf)^ := PSmallInt(@CFNegInfWeight)^ div 2;
-    otSLong:  PLongInt(@CFNegHalfInf)^ := PLongInt(@CFNegInfWeight)^ div 2;
-    otSQWord: PInt64(@CFNegHalfInf)^ := PInt64(@CFNegInfWeight)^ div 2;
+    otSByte:  PShortInt(@CFHalfNegInf)^ := PShortInt(@CFNegInfWeight)^ div 2;
+    otSWord:  PSmallInt(@CFHalfNegInf)^ := PSmallInt(@CFNegInfWeight)^ div 2;
+    otSLong:  PLongInt(@CFHalfNegInf)^ := PLongInt(@CFNegInfWeight)^ div 2;
+    otSQWord: PInt64(@CFHalfNegInf)^ := PInt64(@CFNegInfWeight)^ div 2;
   end
 end;
 
 class procedure TGWeightedPathHelper.FloatHalfInf(aData: PTypeData);
 begin
   case aData^.FloatType of
-    ftSingle:   PSingle(@CFNegHalfInf)^ := PSingle(@CFNegInfWeight)^/2.0;
-    ftDouble:   PDouble(@CFNegHalfInf)^ := PDouble(@CFNegInfWeight)^/2.0;
-    ftExtended: PExtended(@CFNegHalfInf)^ := PExtended(@CFNegInfWeight)^/2.0;
-    ftComp:     PComp(@CFNegHalfInf)^ := PComp(@CFNegInfWeight)^/2.0;
-    ftCurr:     PCurrency(@CFNegHalfInf)^ := PCurrency(@CFNegInfWeight)^/2.0;
+    ftSingle:   PSingle(@CFHalfNegInf)^ := PSingle(@CFNegInfWeight)^/2.0;
+    ftDouble:   PDouble(@CFHalfNegInf)^ := PDouble(@CFNegInfWeight)^/2.0;
+    ftExtended: PExtended(@CFHalfNegInf)^ := PExtended(@CFNegInfWeight)^/2.0;
+    ftComp:     PComp(@CFHalfNegInf)^ := PComp(@CFNegInfWeight)^/2.0;
+    ftCurr:     PCurrency(@CFHalfNegInf)^ := PCurrency(@CFNegInfWeight)^/2.0;
   end;
 end;
 
@@ -4761,7 +4761,7 @@ begin
             Relax := aWeights[Curr] + p^.Data.Weight;
             if Relax < aWeights[Next] then
               begin
-                aWeights[Next] := wMax(Relax, CFNegHalfInf);
+                aWeights[Next] := wMax(Relax, CFHalfNegInf);
                 aPaths[Next] := Curr;
                 if not InQueue[Next] then
                   begin
