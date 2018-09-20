@@ -1032,7 +1032,7 @@ type
     see en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
     class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
-  { SPFA negative cycle detection }
+  { SPFA negative cycle detection } //todo: need faster negative cycle detection
     class function  SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
   { SPFA single-source shortest paths problem }
     class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
