@@ -40,8 +40,9 @@ Contains:
       - listing all maximal independent sets
       - maximum clique finding
       - listing all maximal cliques
-      - maximum flow through the network
-      - minimum s-t cut of the network
+      - maximum flow through the directed network
+      - minimum-cost flow through the directed network
+      - minimum s-t cut of the directed network
       - minimum cut for weighted graph
       - maximum cardinality matching for bipartite graph
       - maximum cardinality matching for general graph
