@@ -453,19 +453,19 @@ type
       FNodes: array of TNode;
       FArcs: array of TArc;
       FQueue: TQueue;
+      FGraph: TGIntWeightDiGraph;
       FSource,
       FSink: PNode;
       FFlow: TWeight;
       FNodeCount: SizeInt;
       procedure Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
                 constref aCosts: TEdgeCostMap);
-      procedure ClearNodes; inline;
-      function  FordBellman: TWeight;
+      procedure SearchInit; inline;
+      function  FindPath: Boolean;
       procedure Push(aFlow: TWeight);
-      function  FindFlow: TWeight;
-      function  GetTotalCost(aGraph: TGIntWeightDiGraph; constref aCosts: TEdgeCostMap): TCost;
-      function  CreateEdges(aGraph: TGIntWeightDiGraph; constref aCosts: TEdgeCostMap;
-                            out aTotalCost: TCost): TEdgeArray;
+      function  FindMinCostFlow: TWeight;
+      function  GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
+      function  CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
     public
       function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
                                constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
@@ -540,14 +540,14 @@ type
     function IsValidCostArray(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
   { param aNeedFlow specifies the required flow > 0 (can be InfWeight);
     returns False if network is not correct or arc costs are not correct or network
-    contains negative cycle or aNeedFlow = 0,
+    contains negative cycle or aNeedFlow < 1,
     otherwise returns True, flow = min(aNeedFlow, maxflow) in aNeedFlow and
     total flow cost in aResultCost }
     function FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
                              var aNeedFlow: TWeight; out aResultCost: TCost): Boolean; inline;
     function FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
                               var aNeedFlow: TWeight; out aResultCost: TCost): Boolean;
-  { same as above and in addition in a returns edge flows }
+  { same as above and in addition returns edge flows in array a }
     function FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
                              var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean; inline;
     function FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
@@ -2635,6 +2635,7 @@ var
   c: TCost;
   p: PAdjItem;
 begin
+  FGraph := aGraph;
   FNodeCount := aGraph.VertexCount;
   FFlow := aFlow;
   System.SetLength(CurrArcIdx, FNodeCount);
@@ -2645,7 +2646,7 @@ begin
       J += aGraph.DegreeI(I);
     end;
 
-  System.SetLength(FNodes, aGraph.VertexCount);
+  System.SetLength(FNodes, FNodeCount);
   FSource := @FNodes[aSource];
   FSink := @FNodes[aSink];
   System.SetLength(FArcs, aGraph.EdgeCount * 2);
@@ -2671,7 +2672,7 @@ begin
   FQueue.EnsureCapacity(FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.TMcfHelper.ClearNodes;
+procedure TGIntWeightDiGraph.TMcfHelper.SearchInit;
 var
   I: SizeInt;
 begin
@@ -2687,17 +2688,17 @@ begin
   FSource^.Potential := 0;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.FordBellman: TWeight;
+function TGIntWeightDiGraph.TMcfHelper.FindPath: Boolean;
 var
   CurrNode, NextNode: PNode;
   CurrArc: PArc;
   Relax: TCost;
 begin
-  ClearNodes;
+  SearchInit;
   CurrNode := FSource;
   repeat
-    CurrNode^.InQueue := False;
     Inc(CurrNode^.Visit);
+    CurrNode^.InQueue := False;
     if CurrNode^.Visit < FNodeCount then
       begin
         if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
@@ -2726,12 +2727,9 @@ begin
           end;
       end
     else
-      exit(0);
+      exit(False);
   until not FQueue.TryDequeue(CurrNode);
-  if FSink^.Parent <> nil then
-    Result := FSink^.MinFlow
-  else
-    Result := 0;
+  Result := FSink^.Parent <> nil;
 end;
 
 procedure TGIntWeightDiGraph.TMcfHelper.Push(aFlow: TWeight);
@@ -2749,22 +2747,26 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.FindFlow: TWeight;
+function TGIntWeightDiGraph.TMcfHelper.FindMinCostFlow: TWeight;
 var
   Flow: TWeight;
 begin
   Result := 0;
-  Flow := wMin(FordBellman, FFlow);
+  if not FindPath then
+    exit(0);
+  Flow := wMin(FSink^.MinFlow, FFlow);
   if Flow = 0 then
     exit;
   repeat
     Push(Flow);
     Result += Flow;
-    Flow := wMin(FordBellman, FFlow - Result);
+    Flow := 0;
+    if FindPath then
+      Flow := wMin(FSink^.MinFlow, FFlow - Result);
   until Flow = 0;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.GetTotalCost(aGraph: TGIntWeightDiGraph; constref aCosts: TEdgeCostMap): TCost;
+function TGIntWeightDiGraph.TMcfHelper.GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
 var
   I, Dst: SizeInt;
   CurrArc: PArc;
@@ -2780,7 +2782,7 @@ begin
           if CurrArc^.IsReal then
             begin
               Dst := SizeInt(CurrArc^.Target - PNode(FNodes));
-              aGraph.GetEdgeDataI(I, Dst, d);
+              FGraph.GetEdgeDataI(I, Dst, d);
               Result += (d.Weight - CurrArc^.ResidualCap) * aCosts[TIntEdge.Create(I, Dst)];
             end;
           Inc(CurrArc);
@@ -2788,15 +2790,14 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.CreateEdges(aGraph: TGIntWeightDiGraph; constref aCosts: TEdgeCostMap; out
-  aTotalCost: TCost): TEdgeArray;
+function TGIntWeightDiGraph.TMcfHelper.CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
 var
   I, J, Dst: SizeInt;
   CurrArc: PArc;
   d: TEdgeData;
   w: TWeight;
 begin
-  System.SetLength(Result, aGraph.EdgeCount);
+  System.SetLength(Result, FGraph.EdgeCount);
   J := 0;
   d := Default(TEdgeData);
   aTotalCost := 0;
@@ -2808,7 +2809,7 @@ begin
           if CurrArc^.IsReal then
             begin
               Dst := SizeInt(CurrArc^.Target - PNode(FNodes));
-              aGraph.GetEdgeDataI(I, Dst, d);
+              FGraph.GetEdgeDataI(I, Dst, d);
               w := d.Weight - CurrArc^.ResidualCap;
               aTotalCost += w * aCosts[TIntEdge.Create(I, Dst)];
               Result[J] := TWeightEdge.Create(I, Dst, w);
@@ -2825,8 +2826,8 @@ begin
   if aFlow = 0 then
     exit(aFlow);
   Init(aGraph, aSource, aSink, aFlow, aCosts);
-  Result := FindFlow;
-  aTotalCost := GetTotalCost(aGraph, aCosts);
+  Result := FindMinCostFlow;
+  aTotalCost := GetTotalCost(aCosts);
 end;
 
 function TGIntWeightDiGraph.TMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
@@ -2835,8 +2836,8 @@ begin
   if aFlow = 0 then
     exit(aFlow);
   Init(aGraph, aSource, aSink, aFlow, aCosts);
-  Result := FindFlow;
-  a := CreateEdges(aGraph, aCosts, aTotalCost);
+  Result := FindMinCostFlow;
+  a := CreateEdges(aCosts, aTotalCost);
 end;
 
 { TGIntWeightDiGraph }
