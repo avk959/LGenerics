@@ -1186,7 +1186,7 @@ end;
 
 function TGLiteHashMapLP.TKeys.GetEnumerator: TKeyEnumerator;
 begin
-  Result.Init(FMap^);
+  Result{%H-}.Init(FMap^);
 end;
 
 { TGLiteHashMapLP.TValues }
@@ -1198,7 +1198,7 @@ end;
 
 function TGLiteHashMapLP.TValues.GetEnumerator: TValueEnumerator;
 begin
-  Result.Init(FMap^);
+  Result{%H-}.Init(FMap^);
 end;
 
 { TGLiteHashMapLP.TEntries }
@@ -1210,7 +1210,7 @@ end;
 
 function TGLiteHashMapLP.TEntries.GetEnumerator: TEntryEnumerator;
 begin
-  Result.Init(FMap^);
+  Result{%H-}.Init(FMap^);
 end;
 
 { TGLiteHashMapLP }
