@@ -4547,10 +4547,10 @@ end;
 
 class function TGWeightedPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
-  Visited: TGraph.TBitVector;
   Queue: TPairingHeap;
-  Relaxed: TWeight;
+  Visited: TGraph.TBitVector;
   Item: TWeightItem;
+  Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
@@ -4559,27 +4559,26 @@ begin
   Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
-      Visited[{%H-}Item.Index] := True;
       Result[Item.Index] := Item.Weight;
+      Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
-        if Queue.NotUsed(p^.Key) then
-          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight))
-        else
-          if not Visited[p^.Key] then
-            begin
-              Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Peek(p^.Key).Weight then
-                Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
-            end;
+        begin
+          Relax := p^.Data.Weight + Item.Weight;
+          if Queue.NotUsed(p^.Key) then
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax))
+          else
+            if not Visited[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
+              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
+        end;
     end;
 end;
 
 class function TGWeightedPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
-  Visited: TGraph.TBitVector;
   Queue: TPairingHeap;
-  Relaxed: TWeight;
+  Visited: TGraph.TBitVector;
   Item: TWeightItem;
+  Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
@@ -4589,33 +4588,32 @@ begin
   Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while Queue.TryDequeue(Item) do
     begin
-      Visited[{%H-}Item.Index] := True;
-      Result[Item.Index] := Item.Weight;
+      Result[{%H-}Item.Index] := Item.Weight;
+      Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
-        if Queue.NotUsed(p^.Key) then
-          begin
-            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
-            aPathTree[p^.Key] := Item.Index;
-          end
-        else
-          if not Visited[p^.Key] then
+        begin
+          Relax := p^.Data.Weight + Item.Weight;
+          if Queue.NotUsed(p^.Key) then
             begin
-              Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Peek(p^.Key).Weight then
-                begin
-                  Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
-                  aPathTree[p^.Key] := Item.Index;
-                end;
-            end;
+              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
+              aPathTree[p^.Key] := Item.Index;
+            end
+          else
+            if not Visited[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
+              begin
+                Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
+                aPathTree[p^.Key] := Item.Index;
+              end;
+        end;
     end;
 end;
 
 class function TGWeightedPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
 var
-  Visited: TGraph.TBitVector;
   Queue: TBinHeap;
-  Relaxed: TWeight;
+  Visited: TGraph.TBitVector;
   Item: TWeightItem;
+  Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
   Queue := TBinHeap.Create(g.VertexCount);
@@ -4627,26 +4625,25 @@ begin
         exit(Item.Weight);
       Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
-        if Queue.NotUsed(p^.Key) then
-          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight))
-        else
-          if not Visited[p^.Key] then
-            begin
-              Relaxed := p^.Data.Weight + Item.Weight;
-              if Relaxed < Queue.Peek(p^.Key).Weight then
-                Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
-            end;
+        begin
+          Relax := p^.Data.Weight + Item.Weight;
+          if Queue.NotUsed(p^.Key) then
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax))
+          else
+            if not Visited[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
+              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
+        end;
     end;
   Result := InfWeight;
 end;
 
 class function TGWeightedPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
-  Visited: TGraph.TBitVector;
   Queue: TBinHeap;
+  Visited: TGraph.TBitVector;
   Tree: TIntArray;
-  Relaxed: TWeight;
   Item: TWeightItem;
+  Relax: TWeight;
   p: TGraph.PAdjItem;
 {%H-}begin
   Queue := TBinHeap.Create(g.VertexCount);
@@ -4663,20 +4660,17 @@ var
       Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
         begin
+          Relax := p^.Data.Weight + Item.Weight;
           if Queue.NotUsed(p^.Key) then
             begin
-              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
               Tree[p^.Key] := Item.Index;
             end
           else
-            if not Visited[p^.Key] then
+            if not Visited[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
               begin
-                Relaxed := p^.Data.Weight + Item.Weight;
-                if Relaxed < Queue.Peek(p^.Key).Weight then
-                  begin
-                    Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relaxed));
-                    Tree[p^.Key] := Item.Index;
-                  end;
+                Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
+                Tree[p^.Key] := Item.Index;
               end;
         end;
     end;
@@ -4686,11 +4680,11 @@ end;
 class function TGWeightedPathHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 var
-  Visited: TGraph.TBitVector;
   Queue: TAStarHeap;
+  Visited: TGraph.TBitVector;
   Tree: TIntArray;
-  Relaxed: TWeight;
   Item: TRankItem;
+  Relax: TWeight;
   p: TGraph.PAdjItem;
 {%H-}begin
   Queue := TAStarHeap.Create(g.VertexCount);
@@ -4707,23 +4701,19 @@ var
       Visited[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
         begin
+          Relax := p^.Data.Weight + Item.Weight;
           if Queue.NotUsed(p^.Key) then
             begin
-              Relaxed := p^.Data.Weight + Item.Weight;
               Queue.Enqueue(
-                p^.Key, TRankItem.Create(p^.Key, Relaxed + aEst(g.Items[p^.Key], g.Items[aDst]), Relaxed));
+                p^.Key, TRankItem.Create(p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
               Tree[p^.Key] := Item.Index;
             end
           else
-            if not Visited[p^.Key] then
+            if not Visited[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
               begin
-                Relaxed := Item.Weight + p^.Data.Weight;
-                if Relaxed < Queue.Peek(p^.Key).Weight then
-                  begin
-                    Queue.Update(
-                      p^.Key, TRankItem.Create(p^.Key, Relaxed + aEst(g.Items[p^.Key], g.Items[aDst]), Relaxed));
-                    Tree[p^.Key] := Item.Index;
-                  end;
+                Queue.Update(
+                  p^.Key, TRankItem.Create(p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
+                Tree[p^.Key] := Item.Index;
               end;
         end;
     end;
