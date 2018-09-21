@@ -841,21 +841,17 @@ type
   generic TGOrdinalArrayHelper<T> = class(specialize TGNumArrayHelper<T>)
   private
   type
-    TMonotone = (moAsc, moDesc, moConst, moNone);
-
+    TMonotonicity = (moAsc, moDesc, moConst, moNone);
   const
   {$IFDEF CPU16}
     COUNTSORT_CUTOFF = $7fff;
   {$ELSE CPU16}
-    COUNTSORT_CUTOFF = $400000;
+    COUNTSORT_CUTOFF = $800000;
   {$ENDIF CPU16}
     ORD_TYPES  = [tkInteger, tkChar, tkEnumeration, tkBool, tkWChar, tkUChar];
     IsOrdType: Boolean = False;
-    class function  TypeInfo: PTypeInfo; static; inline;
-    class function  TypeData: PTypeData; static; inline;
-    class function  TypeKind: TTypeKind; static; inline;
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
-    class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotone; static;
+    class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonicity; static;
     class constructor Init;
   public
   { will use counting sort if possible }
@@ -8980,33 +8976,6 @@ end;
 
 { TGOrdinalArrayHelper }
 
-class function TGOrdinalArrayHelper.TypeInfo: PTypeInfo;
-begin
-  Result := System.TypeInfo(T);
-end;
-
-class function TGOrdinalArrayHelper.TypeData: PTypeData;
-var
-  p: PTypeInfo;
-begin
-  p := TypeInfo;
-  if p <> nil then
-    Result := GetTypeData(p)
-  else
-    Result := nil;
-end;
-
-class function TGOrdinalArrayHelper.TypeKind: TTypeKind;
-var
-  p: PTypeInfo;
-begin
-  p := TypeInfo;
-  if p <> nil then
-    Result := p^.Kind
-  else
-    Result := tkUnknown;
-end;
-
 class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aMinValue, aMaxValue: T);
 var
   I, J: SizeInt;
@@ -9032,7 +9001,7 @@ begin
       end;
 end;
 
-class function TGOrdinalArrayHelper.Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotone;
+class function TGOrdinalArrayHelper.Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonicity;
 var
   I, R: SizeInt;
 begin
@@ -9082,9 +9051,13 @@ begin
 end;
 
 class constructor TGOrdinalArrayHelper.Init;
+var
+  p: PTypeInfo;
 begin
+  p := System.TypeInfo(T);
+  if p <> nil then
 {$PUSH}{$J+}
-  IsOrdType := TypeKind in ORD_TYPES;
+    IsOrdType := p^.Kind in ORD_TYPES;
 {$POP}
 end;
 
@@ -9092,39 +9065,37 @@ class procedure TGOrdinalArrayHelper.Sort(var A: array of T; aOrder: TSortOrder)
 var
   R: SizeInt;
   vMin, vMax: T;
-  Mono: TMonotone;
+  Mono: TMonotonicity;
   Len: Int64;
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if IsOrdType then
-        begin
-          Mono := Scan(A, vMin, vMax);
-          if Mono < moNone then
-            begin
-              if (Mono <> moConst) and (Ord(Mono) <> Ord(aOrder)) then
-                Reverse(A);
-            end
-          else
-            begin
-              Len := Int64(vMax) - Int64(vMin);
-              if (Len <= COUNTSORT_CUTOFF) and (Len shr 3 <= Succ(R)) then //todo: any tuning needed
-                CountSort(A, vMin, vMax)
-              else
-                DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
-              if aOrder = soDesc then
-                Reverse(A);
-            end;
-        end
-      else
-        begin
-          if CountRun2Asc(A, 0, R) < R then
-            DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
-          if aOrder = soDesc then
-            Reverse(A);
-        end;
-    end;
+    if IsOrdType then
+      begin
+        Mono := Scan(A, vMin, vMax);
+        if Mono < moNone then
+          begin
+            if (Mono <> moConst) and (Ord(Mono) <> Ord(aOrder)) then
+              Reverse(A);
+          end
+        else
+          begin
+            Len := Int64(vMax) - Int64(vMin);
+            if (Len <= COUNTSORT_CUTOFF) and (Len shr 3 <= Succ(R)) then //todo: any tuning needed
+              CountSort(A, vMin, vMax)
+            else
+              DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+            if aOrder = soDesc then
+              Reverse(A);
+          end;
+      end
+    else
+      begin
+        if CountRun2Asc(A, 0, R) < R then
+          DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+        if aOrder = soDesc then
+          Reverse(A);
+      end;
 end;
 
 class function TGOrdinalArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
