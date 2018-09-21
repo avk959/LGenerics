@@ -3181,8 +3181,6 @@ begin
         exit(False);
       if not AdjLists[ce.Source]^.Contains(ce.Destination) then //no such arc
         exit(False);
-      //if ce.Cost < 0 then // negative cost
-      //  exit(False);
       if not aMap.Add(TIntEdge.Create(ce.Source, ce.Destination), ce.Cost) then //contains duplicates
         exit(False);
     end;
