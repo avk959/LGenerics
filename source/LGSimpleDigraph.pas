@@ -31,6 +31,7 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGQueue,
+  LGDeque,
   LGVector,
   LGCustomGraph,
   LGStrConst;
@@ -445,7 +446,7 @@ type
         InQueue: Boolean;
       end;
 
-      TQueue = specialize TGLiteQueue<PNode>;
+      TQueue = specialize TGLiteDeque<PNode>;
 
     var
       FNodes: array of TNode;
@@ -2684,7 +2685,7 @@ end;
 function TGIntWeightDiGraph.TMcfHelper.NegCycleTest: Boolean;
 var
   Visits: TIntArray;
-  CurrNode, NextNode: PNode;
+  CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
   CurrIdx: SizeInt;
   Relax: TCost;
@@ -2715,7 +2716,10 @@ begin
                     NextNode^.TreeArc := CurrArc;
                     if not NextNode^.InQueue then
                       begin
-                        FQueue.Enqueue(NextNode);
+                        if FQueue.TryPeekLast(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
+                          FQueue.PushLast(NextNode)
+                        else
+                          FQueue.PushFirst(NextNode);
                         NextNode^.InQueue := True;
                       end;
                   end;
@@ -2725,13 +2729,13 @@ begin
       end
     else
       exit(False);
-  until not FQueue.TryDequeue(CurrNode);
+  until not FQueue.TryPopLast(CurrNode);
   Result := FSink^.Parent <> nil;
 end;
 
 function TGIntWeightDiGraph.TMcfHelper.FindMinCostPath: TWeight;
 var
-  CurrNode, NextNode: PNode;
+  CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
   Relax: TCost;
 begin
@@ -2756,14 +2760,17 @@ begin
                 NextNode^.TreeArc := CurrArc;
                 if not NextNode^.InQueue then
                   begin
-                    FQueue.Enqueue(NextNode);
+                    if FQueue.TryPeekLast(TopNode) and (NextNode^.Price < TopNode^.Price) then
+                      FQueue.PushLast(NextNode)
+                    else
+                      FQueue.PushFirst(NextNode);
                     NextNode^.InQueue := True;
                   end;
               end;
           end;
         Inc(CurrArc);
       end;
-  until not FQueue.TryDequeue(CurrNode);
+  until not FQueue.TryPopLast(CurrNode);
   if FSink^.Parent <> nil then
     Result := FSink^.MinPathFlow
   else
