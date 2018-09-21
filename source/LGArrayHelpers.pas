@@ -840,14 +840,24 @@ type
   { TGOrdinalArrayHelper: for ordinal types only }
   generic TGOrdinalArrayHelper<T> = class(specialize TGNumArrayHelper<T>)
   private
+  type
+    TMonotone = (moAsc, moDesc, moConst, moNone);
+
   const
-    ORD_TYPES  = [tkInteger, tkChar, tkEnumeration, tkBool, tkWChar];
-    MAX_BITLEN = 15;
+  {$IFDEF CPU16}
+    COUNTSORT_CUTOFF = 8000;
+  {$ELSE CPU16}
+    COUNTSORT_CUTOFF = 1000000;
+  {$ENDIF CPU16}
+    ORD_TYPES  = [tkInteger, tkChar, tkEnumeration, tkBool, tkWChar, tkUChar];
+  class var
+    CFIsOrdType: Boolean;
     class function  TypeInfo: PTypeInfo; static; inline;
     class function  TypeData: PTypeData; static; inline;
     class function  TypeKind: TTypeKind; static; inline;
-    class function  CountSortAvailable(out aMinValue, aMaxValue: SizeInt): Boolean; static; inline;
-    class procedure CountSort(var A: array of T; aMinValue, aMaxValue: SizeInt); static;
+    class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
+    class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotone; static;
+    class constructor Init;
   public
   { will use counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
@@ -8998,25 +9008,7 @@ begin
     Result := tkUnknown;
 end;
 
-class function TGOrdinalArrayHelper.CountSortAvailable(out aMinValue, aMaxValue: SizeInt): Boolean;
-var
-  p: PTypeData;
-begin
-  if (TypeKind in ORD_TYPES) and (SizeOf(T) <= 2) then
-    begin
-      p := TypeData;
-      if p <> nil then
-        begin
-          aMinValue := p^.MinValue;
-          aMaxValue := p^.MaxValue;
-          if LGUtils.NSB(aMaxValue - aMinValue) <= MAX_BITLEN then
-            exit(True);
-        end;
-    end;
-  Result := False;
-end;
-
-class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aMinValue, aMaxValue: SizeInt);
+class procedure TGOrdinalArrayHelper.CountSort(var A: array of T; aMinValue, aMaxValue: T);
 var
   I, J: SizeInt;
   v: T;
@@ -9026,7 +9018,7 @@ begin
   System.FillChar(Counts[0], Succ(aMaxValue - aMinValue) * SizeOf(SizeInt), 0);
 
   for J := 0 to System.High(A) do
-    Inc(Counts[SizeInt(A[J]) - aMinValue]);
+    Inc(Counts[A[J] - aMinValue]);
 
   J := High(A);
   for I := aMaxValue - aMinValue downto 0 do
@@ -9041,20 +9033,96 @@ begin
       end;
 end;
 
+class function TGOrdinalArrayHelper.Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotone;
+var
+  I, R: SizeInt;
+begin
+  R := System.High(A);
+  Result := moConst;
+  I := 0;
+  aMinValue := A[0];
+  aMaxValue := A[0];
+  while (I < R) and (A[I] = A[Succ(I)]) do
+    Inc(I);
+  if I < R then
+    begin
+      Inc(I);
+      if A[Pred(I)] < A[I] then  // ascending
+        begin
+          Result := moAsc;
+          while (I < R) and (A[I] <= A[Succ(I)]) do
+            begin
+              if A[I] > aMaxValue then
+                aMaxValue := A[I];
+              Inc(I);
+            end;
+        end
+      else                      // descending
+        begin
+          Result := moDesc;
+          while (I < R) and (A[I] >= A[Succ(I)]) do
+            begin
+              if A[I] < aMinValue then
+                aMinValue := A[I];
+              Inc(I);
+            end;
+        end;
+    end;
+  if I < R then
+    begin
+      Result := moNone;
+      repeat
+        if A[I] < aMinValue then
+          aMinValue := A[I]
+        else
+          if A[I] > aMaxValue then
+            aMaxValue := A[I];
+        Inc(I);
+      until I > R;
+    end;
+end;
+
+class constructor TGOrdinalArrayHelper.Init;
+begin
+  CFIsOrdType := TypeKind in ORD_TYPES;
+end;
+
 class procedure TGOrdinalArrayHelper.Sort(var A: array of T; aOrder: TSortOrder);
 var
-  R, vMin, vMax: SizeInt;
+  R: SizeInt;
+  vMin, vMax: T;
+  Mono: TMonotone;
+  Len: Int64;
 begin
-  R := System.High(A);  //todo: also need to test array range
+  R := System.High(A);
   if R > 0 then
     begin
-      if CountRun2Asc(A, 0, R) < R then
-        if CountSortAvailable(vMin, vMax) and (Succ(vMax - vMin) <= System.Length(A)) then //todo: <= ???
-          CountSort(A, vMin, vMax)
-        else
-          DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
-      if aOrder = soDesc then
-        Reverse(A);
+      if CFIsOrdType then
+        begin
+          Mono := Scan(A, vMin, vMax);
+          if Mono < moNone then
+            begin
+              if (Mono <> moConst) and (Ord(Mono) <> Ord(aOrder)) then
+                Reverse(A);
+            end
+          else
+            begin
+              Len := Int64(vMax) - Int64(vMin);
+              if (Len <= COUNTSORT_CUTOFF) and (Len shr 3 <= Succ(R)) then
+                CountSort(A, vMin, vMax)
+              else
+                DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+              if aOrder = soDesc then
+                Reverse(A);
+            end;
+        end
+      else
+        begin
+          if CountRun2Asc(A, 0, R) < R then
+            DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+          if aOrder = soDesc then
+            Reverse(A);
+        end;
     end;
 end;
 
