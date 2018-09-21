@@ -4730,33 +4730,30 @@ begin
   aWeights[aSrc] := ZeroWeight;
   Curr := aSrc;
   repeat
-    InQueue[Curr] := False;
     Inc(Visits[Curr]);
-    if Visits[Curr] < vCount then
-      begin
-        if (aPaths[Curr] <> NULL_INDEX) and InQueue[aPaths[Curr]] then
-          continue;
-        for p in g.AdjLists[Curr]^ do
-          begin
-            Next := p^.Destination;
-            Relax := aWeights[Curr] + p^.Data.Weight;
-            if Relax < aWeights[Next] then
-              begin
-                aWeights[Next] := wMax(Relax, CFHalfNegInf);
-                aPaths[Next] := Curr;
-                if not InQueue[Next] then
-                  begin
-                    if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
-                      Queue.PushFirst(Next)
-                    else
-                      Queue.PushLast(Next);
-                    InQueue[Next] := True;
-                  end;
-              end;
-          end
-      end
-    else
+    InQueue[Curr] := False;
+    if Visits[Curr] >= vCount then
       exit(Curr);
+    if (aPaths[Curr] <> NULL_INDEX) and InQueue[aPaths[Curr]] then
+      continue;
+    for p in g.AdjLists[Curr]^ do
+      begin
+        Next := p^.Destination;
+        Relax := aWeights[Curr] + p^.Data.Weight;
+        if Relax < aWeights[Next] then
+          begin
+            aWeights[Next] := wMax(Relax, CFHalfNegInf);
+            aPaths[Next] := Curr;
+            if not InQueue[Next] then
+              begin
+                if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
+                  Queue.PushFirst(Next)
+                else
+                  Queue.PushLast(Next);
+                InQueue[Next] := True;
+              end;
+          end;
+      end;
   until not Queue.TryPopFirst(Curr);
   Result := NULL_INDEX;
 end;

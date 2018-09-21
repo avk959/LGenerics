@@ -2697,38 +2697,35 @@ begin
     CurrIdx := SizeInt(CurrNode - PNode(FNodes));
     Inc(Visits[CurrIdx]);
     CurrNode^.InQueue := False;
-    if Visits[CurrIdx] < FNodeCount then
+    if Visits[CurrIdx] >= FNodeCount then
+      exit(False);
+    if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
+      continue;
+    CurrArc := CurrNode^.FirstArc;
+    while CurrArc <= CurrNode^.LastArc do
       begin
-        if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
-          continue;
-        CurrArc := CurrNode^.FirstArc;
-        while CurrArc <= CurrNode^.LastArc do
+        if CurrArc^.IsResidual then
           begin
-            if CurrArc^.IsResidual then
+            NextNode := CurrArc^.Target;
+            Relax := CurrNode^.Price + CurrArc^.Cost;
+            if Relax < NextNode^.Price then
               begin
-                NextNode := CurrArc^.Target;
-                Relax := CurrNode^.Price + CurrArc^.Cost;
-                if Relax < NextNode^.Price then
+                NextNode^.Price := wMax(Relax, HalfMinCost);
+                NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
+                NextNode^.Parent := CurrNode;
+                NextNode^.TreeArc := CurrArc;
+                if not NextNode^.InQueue then
                   begin
-                    NextNode^.Price := wMax(Relax, HalfMinCost);
-                    NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
-                    NextNode^.Parent := CurrNode;
-                    NextNode^.TreeArc := CurrArc;
-                    if not NextNode^.InQueue then
-                      begin
-                        if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
-                          FQueue.PushFirst(NextNode)
-                        else
-                          FQueue.PushLast(NextNode);
-                        NextNode^.InQueue := True;
-                      end;
+                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
+                      FQueue.PushFirst(NextNode)
+                    else
+                      FQueue.PushLast(NextNode);
+                    NextNode^.InQueue := True;
                   end;
               end;
-            Inc(CurrArc);
           end;
-      end
-    else
-      exit(False);
+        Inc(CurrArc);
+      end;
   until not FQueue.TryPopFirst(CurrNode);
   Result := FSink^.Parent <> nil;
 end;
