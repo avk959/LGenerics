@@ -846,9 +846,9 @@ type
   {$IFDEF CPU16}
     COUNTSORT_CUTOFF = $7fff;
   {$ELSE CPU16}
-    COUNTSORT_CUTOFF = $800000;
+    COUNTSORT_CUTOFF = $800000; //todo: ???
   {$ENDIF CPU16}
-    ORD_TYPES  = [tkInteger, tkChar, tkEnumeration, tkBool, tkWChar, tkUChar];
+    ORD_TYPES = [tkInteger, tkChar, tkEnumeration, tkBool, tkWChar, tkUChar];
     IsOrdType: Boolean = False;
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonicity; static;
