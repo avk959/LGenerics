@@ -2716,10 +2716,10 @@ begin
                     NextNode^.TreeArc := CurrArc;
                     if not NextNode^.InQueue then
                       begin
-                        if FQueue.TryPeekLast(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
-                          FQueue.PushLast(NextNode)
+                        if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
+                          FQueue.PushFirst(NextNode)
                         else
-                          FQueue.PushFirst(NextNode);
+                          FQueue.PushLast(NextNode);
                         NextNode^.InQueue := True;
                       end;
                   end;
@@ -2729,7 +2729,7 @@ begin
       end
     else
       exit(False);
-  until not FQueue.TryPopLast(CurrNode);
+  until not FQueue.TryPopFirst(CurrNode);
   Result := FSink^.Parent <> nil;
 end;
 
@@ -2760,17 +2760,17 @@ begin
                 NextNode^.TreeArc := CurrArc;
                 if not NextNode^.InQueue then
                   begin
-                    if FQueue.TryPeekLast(TopNode) and (NextNode^.Price < TopNode^.Price) then
-                      FQueue.PushLast(NextNode)
+                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < TopNode^.Price) then
+                      FQueue.PushFirst(NextNode)
                     else
-                      FQueue.PushFirst(NextNode);
+                      FQueue.PushLast(NextNode);
                     NextNode^.InQueue := True;
                   end;
               end;
           end;
         Inc(CurrArc);
       end;
-  until not FQueue.TryPopLast(CurrNode);
+  until not FQueue.TryPopFirst(CurrNode);
   if FSink^.Parent <> nil then
     Result := FSink^.MinPathFlow
   else

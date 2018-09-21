@@ -1015,7 +1015,8 @@ type
     TEstimate    = function(constref aSrc, aDst: TVertex): TWeight;
     TPairingHeap = specialize TGPairHeapMin<TWeightItem>;
     TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap   = specialize TGPairHeapMin<TRankItem>;
+    TAStarHeap   = specialize TGBinHeapMin<TRankItem>;
+    //TAStarHeap   = specialize TGPairHeapMin<TRankItem>;
     TEdgeArray   = array of TWeightEdge;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
@@ -4640,7 +4641,7 @@ begin
   Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
   while {%H-}Queue.TryDequeue(Item) do
     begin
-      if Item.Index = aDst then
+      if {%H-}Item.Index = aDst then
         begin
           aWeight := Item.Weight;
           exit(g.TreePathTo(Parents, aDst));
@@ -4745,10 +4746,10 @@ begin
                 aPaths[Next] := Curr;
                 if not InQueue[Next] then
                   begin
-                    if Queue.TryPeekLast(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
-                      Queue.PushLast(Next)
+                    if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
+                      Queue.PushFirst(Next)
                     else
-                      Queue.PushFirst(Next);
+                      Queue.PushLast(Next);
                     InQueue[Next] := True;
                   end;
               end;
@@ -4756,7 +4757,7 @@ begin
       end
     else
       exit(Curr);
-  until not Queue.TryPopLast(Curr);
+  until not Queue.TryPopFirst(Curr);
   Result := NULL_INDEX;
 end;
 
