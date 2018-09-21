@@ -845,13 +845,12 @@ type
 
   const
   {$IFDEF CPU16}
-    COUNTSORT_CUTOFF = 8000;
+    COUNTSORT_CUTOFF = $7fff;
   {$ELSE CPU16}
-    COUNTSORT_CUTOFF = 1000000;
+    COUNTSORT_CUTOFF = $400000;
   {$ENDIF CPU16}
     ORD_TYPES  = [tkInteger, tkChar, tkEnumeration, tkBool, tkWChar, tkUChar];
-  class var
-    CFIsOrdType: Boolean;
+    IsOrdType: Boolean = False;
     class function  TypeInfo: PTypeInfo; static; inline;
     class function  TypeData: PTypeData; static; inline;
     class function  TypeKind: TTypeKind; static; inline;
@@ -9084,7 +9083,9 @@ end;
 
 class constructor TGOrdinalArrayHelper.Init;
 begin
-  CFIsOrdType := TypeKind in ORD_TYPES;
+{$PUSH}{$J+}
+  IsOrdType := TypeKind in ORD_TYPES;
+{$POP}
 end;
 
 class procedure TGOrdinalArrayHelper.Sort(var A: array of T; aOrder: TSortOrder);
@@ -9097,7 +9098,7 @@ begin
   R := System.High(A);
   if R > 0 then
     begin
-      if CFIsOrdType then
+      if IsOrdType then
         begin
           Mono := Scan(A, vMin, vMax);
           if Mono < moNone then
@@ -9108,7 +9109,7 @@ begin
           else
             begin
               Len := Int64(vMax) - Int64(vMin);
-              if (Len <= COUNTSORT_CUTOFF) and (Len shr 3 <= Succ(R)) then
+              if (Len <= COUNTSORT_CUTOFF) and (Len shr 3 <= Succ(R)) then //todo: any tuning needed
                 CountSort(A, vMin, vMax)
               else
                 DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
