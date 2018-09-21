@@ -2751,7 +2751,7 @@ begin
             Relax := CurrNode^.Price + CurrArc^.Cost;
             if Relax < NextNode^.Price then
               begin
-                NextNode^.Price := wMax(Relax, HalfMinCost);
+                NextNode^.Price := Relax;
                 NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.TreeArc := CurrArc;
