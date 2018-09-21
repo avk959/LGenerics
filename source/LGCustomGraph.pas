@@ -870,7 +870,6 @@ type
   public
     constructor Create(aSize: SizeInt);
     procedure MakeEmpty;
-    function  Used(aHandle: SizeInt): Boolean; inline;
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
@@ -911,7 +910,6 @@ type
   public
     constructor Create(aSize: SizeInt);
     procedure MakeEmpty;
-    function  Used(aHandle: SizeInt): Boolean; inline;
     function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
@@ -4055,11 +4053,6 @@ begin
   FCount := 0;
 end;
 
-function TGPairHeapMin.Used(aHandle: SizeInt): Boolean;
-begin
-  Result := FNodeList[aHandle].Prev <> PNode(SizeUInt(-1));
-end;
-
 function TGPairHeapMin.NotUsed(aHandle: SizeInt): Boolean;
 begin
   Result := FNodeList[aHandle].Prev = PNode(SizeUInt(-1));
@@ -4237,11 +4230,6 @@ begin
   System.FillChar(Pointer(FNodeList)^, System.Length(FNodeList) * SizeOf(TNode), $ff);
   FRoot := nil;
   FCount := 0;
-end;
-
-function TGPairHeapMax.Used(aHandle: SizeInt): Boolean;
-begin
-  Result := FNodeList[aHandle].Prev <> PNode(SizeUInt(-1));
 end;
 
 function TGPairHeapMax.NotUsed(aHandle: SizeInt): Boolean;
