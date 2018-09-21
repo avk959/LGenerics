@@ -5522,25 +5522,25 @@ end;
 
 function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 var
-  Visited: TBitVector;
   Queue: TPairingHeap;
+  Reached: TBitVector;
   I, Curr: SizeInt;
   Item: TWeightItem;
   p: PAdjItem;
 begin
   Result := CreateIntArray;
   Queue := TPairingHeap.Create(VertexCount);
-  Visited.Size := VertexCount;
-  aTotalWeight := 0;
+  Reached.Size := VertexCount;
+  aTotalWeight := ZeroWeight;
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Reached[I] then
       begin
-        Queue.Enqueue(I, TWeightItem.Create(0, ZeroWeight));
+        Queue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
         while Queue.TryDequeue(Item) do
           begin
             Curr := {%H-}Item.Index;
             aTotalWeight += Item.Weight;
-            Visited[Curr] := True;
+            Reached[Curr] := True;
             for p in AdjLists[Curr]^ do
               begin
                 if Queue.NotUsed(p^.Key) then
@@ -5549,7 +5549,7 @@ begin
                     Result[p^.Key] := Curr;
                   end
                 else
-                  if not Visited[p^.Key] and (p^.Data.Weight < Queue.Peek(p^.Key).Weight) then
+                  if not Reached[p^.Key] and (p^.Data.Weight < Queue.Peek(p^.Key).Weight) then
                     begin
                       Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
                       Result[p^.Key] := Curr;
