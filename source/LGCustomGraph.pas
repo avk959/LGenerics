@@ -4732,11 +4732,11 @@ end;
 class function TGWeightedPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
-  Queue: TIntQueue;
+  Queue: TIntDeque;
   Visits: TIntArray;
   InQueue: TGraph.TBitVector;
   Relax: TWeight;
-  Curr, Next, vCount: SizeInt;
+  Curr, Next, Top, vCount: SizeInt;
   p: TGraph.PAdjItem;
 begin
   vCount := g.VertexCount;
@@ -4764,7 +4764,10 @@ begin
                 aPaths[Next] := Curr;
                 if not InQueue[Next] then
                   begin
-                    Queue.Enqueue(Next);
+                    if Queue.TryPeekLast(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
+                      Queue.PushLast(Next)
+                    else
+                      Queue.PushFirst(Next);
                     InQueue[Next] := True;
                   end;
               end;
@@ -4772,7 +4775,7 @@ begin
       end
     else
       exit(Curr);
-  until not Queue{%H-}.TryDequeue(Curr);
+  until not Queue.TryPopLast(Curr);
   Result := NULL_INDEX;
 end;
 
