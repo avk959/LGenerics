@@ -4507,7 +4507,6 @@ var
   Queue: TPairingHeap;
   Reached: TGraph.TBitVector;
   Item: TWeightItem;
-  Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
@@ -4519,14 +4518,11 @@ begin
       Result[{%H-}Item.Index] := {%H-}Item.Weight;
       Reached[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
-        begin
-          Relax := p^.Data.Weight + Item.Weight;
-          if Queue.NotUsed(p^.Key) then
-            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax))
-          else
-            if not Reached[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
-              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
-        end;
+        if Queue.NotUsed(p^.Key) then
+          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight))
+        else
+          if not Reached[p^.Key] and (p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight) then
+            Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
     end;
 end;
 
@@ -4535,7 +4531,6 @@ var
   Queue: TPairingHeap;
   Reached: TGraph.TBitVector;
   Item: TWeightItem;
-  Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
@@ -4548,20 +4543,17 @@ begin
       Result[{%H-}Item.Index] := {%H-}Item.Weight;
       Reached[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
-        begin
-          Relax := p^.Data.Weight + Item.Weight;
-          if Queue.NotUsed(p^.Key) then
+        if Queue.NotUsed(p^.Key) then
+          begin
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+            aPathTree[p^.Key] := Item.Index;
+          end
+        else
+          if not Reached[p^.Key] and (p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight) then
             begin
-              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
+              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               aPathTree[p^.Key] := Item.Index;
-            end
-          else
-            if not Reached[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
-              begin
-                Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
-                aPathTree[p^.Key] := Item.Index;
-              end;
-        end;
+            end;
     end;
 end;
 
@@ -4570,7 +4562,6 @@ var
   Queue: TBinHeap;
   Reached: TGraph.TBitVector;
   Item: TWeightItem;
-  Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
   Queue := TBinHeap.Create(g.VertexCount);
@@ -4582,14 +4573,11 @@ begin
         exit(Item.Weight);
       Reached[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
-        begin
-          Relax := p^.Data.Weight + Item.Weight;
-          if Queue.NotUsed(p^.Key) then
-            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax))
-          else
-            if not Reached[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
-              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
-        end;
+        if Queue.NotUsed(p^.Key) then
+          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight))
+        else
+          if not Reached[p^.Key] and (p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight) then
+            Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
     end;
   Result := InfWeight;
 end;
@@ -4600,7 +4588,6 @@ var
   Parents: TIntArray;
   Reached: TGraph.TBitVector;
   Item: TWeightItem;
-  Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
   Queue := TBinHeap.Create(g.VertexCount);
@@ -4616,20 +4603,17 @@ begin
         end;
       Reached[Item.Index] := True;
       for p in g.AdjLists[Item.Index]^ do
-        begin
-          Relax := p^.Data.Weight + Item.Weight;
-          if Queue.NotUsed(p^.Key) then
+        if Queue.NotUsed(p^.Key) then
+          begin
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+            Parents[p^.Key] := Item.Index;
+          end
+        else
+          if not Reached[p^.Key] and (p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight) then
             begin
-              Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
+              Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               Parents[p^.Key] := Item.Index;
-            end
-          else
-            if not Reached[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
-              begin
-                Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
-                Parents[p^.Key] := Item.Index;
-              end;
-        end;
+            end;
     end;
   aWeight := InfWeight;
   Result := [];
@@ -4662,15 +4646,15 @@ begin
           Relax := p^.Data.Weight + Item.Weight;
           if Queue.NotUsed(p^.Key) then
             begin
-              Queue.Enqueue(
-                p^.Key, TRankItem.Create(p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
+              Queue.Enqueue(p^.Key, TRankItem.Create(
+                p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
               Parents[p^.Key] := Item.Index;
             end
           else
             if not Reached[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
               begin
-                Queue.Update(
-                  p^.Key, TRankItem.Create(p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
+                Queue.Update(p^.Key, TRankItem.Create(
+                  p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
                 Parents[p^.Key] := Item.Index;
               end;
         end;
