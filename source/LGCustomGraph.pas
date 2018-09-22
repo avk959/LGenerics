@@ -962,11 +962,8 @@ type
   class var
     CFInfWeight,
     CFNegInfWeight,
-    CFHalfNegInf,
     CFZeroWeight: TWeight;
     class constructor Init;
-    class procedure IntHalfInf(aData: PTypeData); static;
-    class procedure FloatHalfInf(aData: PTypeData); static;
     class function CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
     class function wMax(L, R: TWeight): TWeight; static;
     class function ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
@@ -4460,39 +4457,10 @@ end;
 { TGWeightedPathHelper }
 
 class constructor TGWeightedPathHelper.Init;
-var
-  p: PTypeInfo;
 begin
   CFInfWeight := TWeight.MaxValue;
   CFNegInfWeight := TWeight.MinValue;
   CFZeroWeight := Default(TWeight);
-  p := System.TypeInfo(TWeight);
-  if p^.Kind = tkInteger then
-    IntHalfInf(GetTypeData(p))
-  else
-    if p^.Kind = tkFloat then
-      FloatHalfInf(GetTypeData(p));
-end;
-
-class procedure TGWeightedPathHelper.IntHalfInf(aData: PTypeData);
-begin
-  case aData^.OrdType of
-    otSByte:  PShortInt(@CFHalfNegInf)^ := PShortInt(@CFNegInfWeight)^ div 2;
-    otSWord:  PSmallInt(@CFHalfNegInf)^ := PSmallInt(@CFNegInfWeight)^ div 2;
-    otSLong:  PLongInt(@CFHalfNegInf)^ := PLongInt(@CFNegInfWeight)^ div 2;
-    otSQWord: PInt64(@CFHalfNegInf)^ := PInt64(@CFNegInfWeight)^ div 2;
-  end
-end;
-
-class procedure TGWeightedPathHelper.FloatHalfInf(aData: PTypeData);
-begin
-  case aData^.FloatType of
-    ftSingle:   PSingle(@CFHalfNegInf)^ := PSingle(@CFNegInfWeight)^/2.0;
-    ftDouble:   PDouble(@CFHalfNegInf)^ := PDouble(@CFNegInfWeight)^/2.0;
-    ftExtended: PExtended(@CFHalfNegInf)^ := PExtended(@CFNegInfWeight)^/2.0;
-    ftComp:     PComp(@CFHalfNegInf)^ := PComp(@CFNegInfWeight)^/2.0;
-    ftCurr:     PCurrency(@CFHalfNegInf)^ := PCurrency(@CFNegInfWeight)^/2.0;
-  end;
 end;
 
 class function TGWeightedPathHelper.CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray;
@@ -4717,7 +4685,6 @@ var
   Queue: TIntDeque;
   Visits: TIntArray;
   InQueue: TGraph.TBitVector;
-  Relax: TWeight;
   Curr, Next, Top, vCount: SizeInt;
   p: TGraph.PAdjItem;
 begin
@@ -4739,10 +4706,9 @@ begin
     for p in g.AdjLists[Curr]^ do
       begin
         Next := p^.Destination;
-        Relax := aWeights[Curr] + p^.Data.Weight;
-        if Relax < aWeights[Next] then
+        if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
           begin
-            aWeights[Next] := wMax(Relax, CFHalfNegInf);
+            aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
             aPaths[Next] := Curr;
             if not InQueue[Next] then
               begin

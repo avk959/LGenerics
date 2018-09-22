@@ -286,7 +286,6 @@ type
     MinWeight   = Low(Int64);
     MaxCost     = High(TCost);
     MinCost     = Low(TCost);
-    HalfMinCost = MinCost div 2;
 
   type
     { THPrfHelper: an efficient implementation of the push-relabel method for the maximum flow;
@@ -2688,7 +2687,6 @@ var
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
   CurrIdx: SizeInt;
-  Relax: TCost;
 begin
   SearchInit;
   Visits := FGraph.CreateIntArray(FNodeCount, 0);
@@ -2707,16 +2705,15 @@ begin
         if CurrArc^.IsResidual then
           begin
             NextNode := CurrArc^.Target;
-            Relax := CurrNode^.Price + CurrArc^.Cost;
-            if Relax < NextNode^.Price then
+            if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
               begin
-                NextNode^.Price := wMax(Relax, HalfMinCost);
+                NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
                 NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.TreeArc := CurrArc;
                 if not NextNode^.InQueue then
                   begin
-                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price <= {%H-}TopNode^.Price) then
+                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
                       FQueue.PushFirst(NextNode)
                     else
                       FQueue.PushLast(NextNode);
@@ -2734,7 +2731,6 @@ function TGIntWeightDiGraph.TMcfHelper.FindMinCostPath: TWeight;
 var
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
-  Relax: TCost;
 begin
   SearchInit;
   CurrNode := FSource;
@@ -2748,16 +2744,15 @@ begin
         if CurrArc^.IsResidual then
           begin
             NextNode := CurrArc^.Target;
-            Relax := CurrNode^.Price + CurrArc^.Cost;
-            if Relax < NextNode^.Price then
+            if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
               begin
-                NextNode^.Price := Relax;
+                NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
                 NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.TreeArc := CurrArc;
                 if not NextNode^.InQueue then
                   begin
-                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price <= TopNode^.Price) then
+                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < TopNode^.Price) then
                       FQueue.PushFirst(NextNode)
                     else
                       FQueue.PushLast(NextNode);
