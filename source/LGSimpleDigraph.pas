@@ -2716,7 +2716,7 @@ begin
                 NextNode^.TreeArc := CurrArc;
                 if not NextNode^.InQueue then
                   begin
-                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
+                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price <= {%H-}TopNode^.Price) then
                       FQueue.PushFirst(NextNode)
                     else
                       FQueue.PushLast(NextNode);
@@ -2757,7 +2757,7 @@ begin
                 NextNode^.TreeArc := CurrArc;
                 if not NextNode^.InQueue then
                   begin
-                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < TopNode^.Price) then
+                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price <= TopNode^.Price) then
                       FQueue.PushFirst(NextNode)
                     else
                       FQueue.PushLast(NextNode);
