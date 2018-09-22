@@ -846,7 +846,7 @@ type
   {$IFDEF CPU16}
     COUNTSORT_CUTOFF = $7fff;
   {$ELSE CPU16}
-    COUNTSORT_CUTOFF = $800000; //todo: ???
+    COUNTSORT_CUTOFF = $400000; //todo: ???
   {$ENDIF CPU16}
     ORD_TYPES = [tkInteger, tkChar, tkEnumeration, tkBool, tkWChar, tkUChar];
     IsOrdType: Boolean = False;
