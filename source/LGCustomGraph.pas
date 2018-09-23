@@ -951,7 +951,23 @@ type
     constructor Create(aValue: T);
   end;
 
-  { TGWeightedPathHelper }
+  TSimpleStack = record
+  private
+    Items: TIntArray;
+    Top: SizeInt;
+    function  GetCapacity: SizeInt; inline;
+  public
+    constructor Create(aSize: SizeInt);
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Push(aValue: SizeInt); inline;
+    function  Pop: SizeInt; inline;
+    function  TryPop(out aValue: SizeInt): Boolean; inline;
+    function  Peek: SizeInt; inline;
+    function  TryPeek(out aValue: SizeInt): Boolean; inline;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
+  PSimpleStack = ^TSimpleStack;
 
   generic TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
@@ -1026,7 +1042,9 @@ type
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   { Some modification of Bellman-Ford algorithm(aka SPFA)
     see en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
-    class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): SizeInt;
+    class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
+                    static;
+    class function  Spfa2Base(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
   { SPFA negative cycle detection } //todo: need faster negative cycle detection
     class function  SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
@@ -4338,6 +4356,60 @@ begin
   Weight := aValue;
 end;
 
+{ TSimpleStack }
+
+function TSimpleStack.GetCapacity: SizeInt;
+begin
+  Result := System.Length(Items);
+end;
+
+constructor TSimpleStack.Create(aSize: SizeInt);
+begin
+  System.SetLength(Items, aSize);
+  Top := NULL_INDEX;
+end;
+
+function TSimpleStack.IsEmpty: Boolean;
+begin
+  Result := Top < 0;
+end;
+
+function TSimpleStack.NonEmpty: Boolean;
+begin
+  Result := Top >= 0;
+end;
+
+procedure TSimpleStack.Push(aValue: SizeInt);
+begin
+  Inc(Top);
+  Items[Top] := aValue;
+end;
+
+function TSimpleStack.Pop: SizeInt;
+begin
+  Result := Items[Top];
+  Dec(Top);
+end;
+
+function TSimpleStack.TryPop(out aValue: SizeInt): Boolean;
+begin
+  Result := Top >= 0;
+  if Result then
+    aValue := Pop;
+end;
+
+function TSimpleStack.Peek: SizeInt;
+begin
+  Result := Items[Top];
+end;
+
+function TSimpleStack.TryPeek(out aValue: SizeInt): Boolean;
+begin
+  Result := Top >= 0;
+  if Result then
+    aValue := Peek;
+end;
+
 { TGWeightedPathHelper.TWeightEdge }
 
 class operator TGWeightedPathHelper.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
@@ -4663,7 +4735,7 @@ begin
   Result := [];
 end;
 
-class function TGWeightedPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
+class function TGWeightedPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   Queue: TIntDeque;
@@ -4675,7 +4747,7 @@ begin
   vCount := g.VertexCount;
   aWeights := CreateWeightArray(vCount);
   Visits := g.CreateIntArray(vCount, 0);
-  aPaths := g.CreateIntArray;
+  aParents := g.CreateIntArray;
   {%H-}Queue.EnsureCapacity(vCount);
   InQueue.Size := vCount;
   aWeights[aSrc] := ZeroWeight;
@@ -4685,15 +4757,16 @@ begin
     InQueue[Curr] := False;
     if Visits[Curr] >= vCount then
       exit(Curr);
-    if (aPaths[Curr] <> NULL_INDEX) and InQueue[aPaths[Curr]] then
+    if (aParents[Curr] <> NULL_INDEX) and InQueue[aParents[Curr]] then
       continue;
     for p in g.AdjLists[Curr]^ do
       begin
         Next := p^.Destination;
         if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
+          //todo: need some kind of protection from overflow ???
           begin
             aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
-            aPaths[Next] := Curr;
+            aParents[Next] := Curr;
             if not InQueue[Next] then
               begin
                 if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
@@ -4705,6 +4778,58 @@ begin
           end;
       end;
   until not Queue.TryPopFirst(Curr);
+  Result := NULL_INDEX;
+end;
+
+class function TGWeightedPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
+  out aWeights: TWeightArray): SizeInt;
+var
+  Stack1, Stack2: TSimpleStack;
+  InStack: TGraph.TBitVector;
+  Curr, Next, Last, PassCount: SizeInt;
+  Pass, NextPass: PSimpleStack;
+  p: TGraph.PAdjItem;
+begin
+  PassCount := g.VertexCount;
+  aWeights := CreateWeightArray(PassCount);
+  aParents := g.CreateIntArray;
+  Stack1 := TSimpleStack.Create(PassCount);
+  Stack2 := TSimpleStack.Create(PassCount);
+  InStack.Size := PassCount;
+  aWeights[aSrc] := ZeroWeight;
+  Pass := @Stack1;
+  NextPass := @Stack2;
+  NextPass^.Push(aSrc);
+  repeat
+    //todo: there may be any better cycle test
+    Dec(PassCount);
+    if PassCount = 0 then
+      exit(Next);
+    p := Pointer(Pass);
+    Pass := NextPass;
+    NextPass := Pointer(p);
+    while Pass^.TryPop(Curr) do
+      begin
+        InStack[Curr] := False;
+        if (aParents[Curr] <> NULL_INDEX) and InStack[aParents[Curr]] then
+          continue;
+        for p in g.AdjLists[Curr]^ do
+          begin
+            Next := p^.Destination;
+            if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
+              begin
+                Last := Next;
+                aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
+                aParents[Next] := Curr;
+                if not InStack[Next] then
+                  begin
+                    NextPass^.Push(Next);
+                    InStack[Next] := True;
+                  end;
+              end;
+          end;
+      end;
+  until NextPass^.IsEmpty;
   Result := NULL_INDEX;
 end;
 
