@@ -3046,7 +3046,7 @@ end;
 function TGCustomGraph.IsBipartite(out aColors: TColorArray): Boolean;
 var
   Queue: TIntArray;
-  Curr, Next, I: SizeInt;
+  Curr, I: SizeInt;
   p: PAdjItem;
   CurrColor: TVertexColor;
   qHead: SizeInt = 0;
@@ -3069,21 +3069,18 @@ begin
             Inc(qHead);
             CurrColor := aColors[Curr];
             for p in AdjLists[Curr]^ do
-              begin
-                Next := p^.Destination;
-                if aColors[Next] = vcNone then
+              if aColors[p^.Destination] = vcNone then
+                begin
+                  aColors[p^.Destination] := vcBlack - CurrColor;
+                  Queue[qTail] := p^.Destination;
+                  Inc(qTail);
+                end
+              else
+                if aColors[p^.Destination] = CurrColor then
                   begin
-                    aColors[Next] := vcBlack - CurrColor;
-                    Queue[qTail] := Next;
-                    Inc(qTail);
-                  end
-                else
-                  if aColors[Next] = CurrColor then
-                    begin
-                      aColors := nil;
-                      exit(False);
-                    end;
-              end;
+                    aColors := nil;
+                    exit(False);
+                  end;
           end;
       end;
   Result := True;
@@ -3220,7 +3217,6 @@ function TGCustomGraph.BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFoun
 var
   Queue: TIntArray;
   Visited: TBitVector;
-  Next: SizeInt;
   p: PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -3242,18 +3238,15 @@ begin
       if Assigned(OnAccept) and not OnAccept(aRoot) then
         exit;
       for p in AdjLists[aRoot]^ do
-        begin
-          Next := p^.Destination;
-          if not Visited[Next] then
-            begin
-              if Assigned(OnFound) then
-                OnFound(Next);
-              Visited[Next] := True;
-              Inc(Result);
-              Queue[qTail] := Next;
-              Inc(qTail);
-            end;
-        end;
+        if not Visited[p^.Destination] then
+          begin
+            if Assigned(OnFound) then
+              OnFound(p^.Destination);
+            Visited[p^.Destination] := True;
+            Inc(Result);
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+          end;
     end;
 end;
 
@@ -3265,12 +3258,12 @@ end;
 procedure TGCustomGraph.BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
 var
   Queue: TIntArray;
-  Next: SizeInt;
   p: PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
   CheckIndexRange(aRoot);
+  {%H-}aVisited.ClearBits;
   aVisited.Size := VertexCount;
   Queue := CreateIntArray;
   aVisited[aRoot] := True;
@@ -3281,15 +3274,12 @@ begin
       aRoot := Queue[qHead];
       Inc(qHead);
       for p in AdjLists[aRoot]^ do
-        begin
-          Next := p^.Destination;
-          if not aVisited[Next] then
-            begin
-              aVisited[Next] := True;
-              Queue[qTail] := Next;
-              Inc(qTail);
-            end;
-        end;
+        if not aVisited[p^.Destination] then
+          begin
+            aVisited[p^.Destination] := True;
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+          end;
     end;
 end;
 
@@ -3302,7 +3292,7 @@ function TGCustomGraph.ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
 var
   Queue: TIntQueue;
   Dist: TIntArray;
-  Next: SizeInt;
+  p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -3311,14 +3301,14 @@ begin
   repeat
     if aSrc = aDst then
       exit(Dist[aSrc]);
-    for Next in AdjVerticesI(aSrc) do
-      if Dist[Next] = -1 then
+    for p in AdjLists[aSrc]^ do
+      if Dist[p^.Destination] = NULL_INDEX then
         begin
-          Queue.Enqueue(Next);
-          Dist[Next] := Succ(Dist[aSrc]);
+          Queue.Enqueue(p^.Destination);
+          Dist[p^.Destination] := Succ(Dist[aSrc]);
         end;
   until not Queue{%H-}.TryDequeue(aSrc);
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 function TGCustomGraph.ShortestPathsMap(constref aSrc: TVertex): TIntArray;
@@ -3329,17 +3319,17 @@ end;
 function TGCustomGraph.ShortestPathsMapI(aSrc: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
-  Next: SizeInt;
+  p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
   Result := CreateIntArray;
   Result[aSrc] := 0;
   repeat
-    for Next in AdjVerticesI(aSrc) do
-      if Result[Next] = -1 then
+    for p in AdjLists[aSrc]^ do
+      if Result[p^.Destination] = NULL_INDEX then
         begin
-          Queue.Enqueue(Next);
-          Result[Next] := Succ(Result[aSrc]);
+          Queue.Enqueue(p^.Destination);
+          Result[p^.Destination] := Succ(Result[aSrc]);
         end;
   until not Queue{%H-}.TryDequeue(aSrc);
 end;
@@ -3354,7 +3344,7 @@ var
   Queue: TIntQueue;
   Visited: TBitVector;
   Parents: TIntArray;
-  Next: SizeInt;
+  p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -3364,14 +3354,15 @@ begin
   repeat
     if aSrc = aDst then
       exit(TreePathTo(Parents, aDst));
-    for Next in AdjVerticesI(aSrc) do
-      if not Visited[Next] then
+    for p in AdjLists[aSrc]^ do
+      if not Visited[p^.Destination] then
         begin
-          Visited[Next] := True;
-          Queue.Enqueue(Next);
-          Parents[Next] := aSrc;
+          Visited[p^.Destination] := True;
+          Queue.Enqueue(p^.Destination);
+          Parents[p^.Destination] := aSrc;
         end;
   until not Queue{%H-}.TryDequeue(aSrc);
+  Result := [];
 end;
 
 { TDisjointSetUnion }
