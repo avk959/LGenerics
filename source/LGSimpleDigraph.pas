@@ -461,7 +461,7 @@ type
       procedure SearchInit; inline;
       function  NegCycleTest: Boolean;
       function  FindMinCostPath: TWeight;
-      procedure Push(aFlow: TWeight);
+      procedure PushFlow(aFlow: TWeight);
       function  FindMinCostFlow: TWeight;
       function  GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
       function  CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
@@ -2768,7 +2768,7 @@ begin
     Result := 0;
 end;
 
-procedure TGIntWeightDiGraph.TMcfHelper.Push(aFlow: TWeight);
+procedure TGIntWeightDiGraph.TMcfHelper.PushFlow(aFlow: TWeight);
 var
   ParentNode: PNode;
   CurrArc: PArc;
@@ -2792,7 +2792,7 @@ begin
     exit(0);
   Flow := wMin(FSink^.MinPathFlow, FFlow);
   repeat
-    Push(Flow);
+    PushFlow(Flow);
     Result += Flow;
     Flow := wMin(FindMinCostPath, FFlow - Result);
   until Flow = 0;

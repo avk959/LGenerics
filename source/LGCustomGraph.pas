@@ -1047,9 +1047,9 @@ type
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   { Some modification of Bellman-Ford algorithm(aka SPFA)
     see en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
-    class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
+    class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
-    class function  Spfa2Base(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
+    class function  Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
   { SPFA negative cycle detection } //todo: need faster negative cycle detection
     class function  SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
@@ -4772,7 +4772,7 @@ begin
   Result := [];
 end;
 
-class function TGWeightPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
+class function TGWeightPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   Queue: TIntDeque;
@@ -4784,7 +4784,7 @@ begin
   VertCount := g.VertexCount;
   aWeights := CreateWeightArray(VertCount);
   Dist := g.CreateIntArray;
-  aParents := g.CreateIntArray;
+  aTree := g.CreateIntArray;
   {%H-}Queue.EnsureCapacity(VertCount);
   InQueue.Size := VertCount;
   aWeights[aSrc] := ZeroWeight;
@@ -4792,7 +4792,7 @@ begin
   Curr := aSrc;
   repeat
     InQueue[Curr] := False;
-    if (aParents[Curr] <> NULL_INDEX) and InQueue[aParents[Curr]] then
+    if (aTree[Curr] <> NULL_INDEX) and InQueue[aTree[Curr]] then
       continue;
     for p in g.AdjLists[Curr]^ do
       begin
@@ -4800,11 +4800,11 @@ begin
         if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
           //todo: need some kind of protection from overflow ???
           begin
-            aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
-            aParents[Next] := Curr;
             Dist[Next] := Succ(Dist[Curr]);
             if Dist[Next] >= VertCount then
               exit(Next);
+            aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
+            aTree[Next] := Curr;
             if not InQueue[Next] then
               begin
                 if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
@@ -4819,7 +4819,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
+class function TGWeightPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   v1, v2: TBoolVector;
@@ -4831,7 +4831,7 @@ begin
   VertCount := g.VertexCount;
   aWeights := CreateWeightArray(VertCount);
   Dist := g.CreateIntArray;
-  aParents := g.CreateIntArray;
+  aTree := g.CreateIntArray;
   v1.Size := VertCount;
   v2.Size := VertCount;
   aWeights[aSrc] := ZeroWeight;
@@ -4855,7 +4855,7 @@ begin
                 if Dist[Next] >= VertCount then
                   exit(Next);
                 aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
-                aParents[Next] := Curr;
+                aTree[Next] := Curr;
                 NextPass^[Next] := True;
               end;
           end;
