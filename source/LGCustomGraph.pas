@@ -4840,7 +4840,6 @@ begin
   CurrPass := @v1;
   NextPass := @v2;
   repeat
-    //todo: there may be any better negative cycle test
     p := Pointer(CurrPass);
     CurrPass := NextPass;
     NextPass := Pointer(p);
