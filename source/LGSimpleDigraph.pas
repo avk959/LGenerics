@@ -2683,20 +2683,16 @@ end;
 
 function TGIntWeightDiGraph.TMcfHelper.NegCycleTest: Boolean;
 var
-  Visits: TIntArray;
+  Dist: TIntArray;
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
-  CurrIdx: SizeInt;
 begin
   SearchInit;
-  Visits := FGraph.CreateIntArray(FNodeCount, 0);
+  Dist := FGraph.CreateIntArray;
   CurrNode := FSource;
+  Dist[SizeInt(FSource - PNode(FNodes))] := 0;
   repeat
-    CurrIdx := SizeInt(CurrNode - PNode(FNodes));
-    Inc(Visits[CurrIdx]);
     CurrNode^.InQueue := False;
-    if Visits[CurrIdx] >= FNodeCount then
-      exit(False);
     if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
       continue;
     CurrArc := CurrNode^.FirstArc;
@@ -2707,6 +2703,9 @@ begin
             NextNode := CurrArc^.Target;
             if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
               begin
+                Dist[SizeInt(NextNode - PNode(FNodes))] := Succ(Dist[SizeInt(CurrNode - PNode(FNodes))]);
+                if Dist[SizeInt(NextNode - PNode(FNodes))] >= FNodeCount then
+                  exit(False);
                 NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
                 NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;

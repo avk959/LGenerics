@@ -4776,18 +4776,19 @@ class function TGWeightPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aParent
   out aWeights: TWeightArray): SizeInt;
 var
   Queue: TIntDeque;
-  Visit: TIntArray;
+  Dist: TIntArray;
   InQueue: TGraph.TBitVector;
   Curr, Next, Top, VertCount: SizeInt;
   p: TGraph.PAdjItem;
 begin
   VertCount := g.VertexCount;
   aWeights := CreateWeightArray(VertCount);
-  Visit := g.CreateIntArray(VertCount, 0);
+  Dist := g.CreateIntArray;
   aParents := g.CreateIntArray;
   {%H-}Queue.EnsureCapacity(VertCount);
   InQueue.Size := VertCount;
   aWeights[aSrc] := ZeroWeight;
+  Dist[aSrc] := 0;
   Curr := aSrc;
   repeat
     InQueue[Curr] := False;
@@ -4801,8 +4802,8 @@ begin
           begin
             aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
             aParents[Next] := Curr;
-            Inc(Visit[Next]);
-            if Visit[Next] = VertCount then
+            Dist[Next] := Succ(Dist[Curr]);
+            if Dist[Next] >= VertCount then
               exit(Next);
             if not InQueue[Next] then
               begin
@@ -4822,19 +4823,20 @@ class function TGWeightPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aParen
   out aWeights: TWeightArray): SizeInt;
 var
   v1, v2: TBoolVector;
-  Visit: TIntArray;
+  Dist: TIntArray;
   Curr, Next, VertCount: SizeInt;
   CurrPass, NextPass: ^TBoolVector;
   p: TGraph.PAdjItem;
 begin
   VertCount := g.VertexCount;
   aWeights := CreateWeightArray(VertCount);
-  Visit := g.CreateIntArray(VertCount, 0);
+  Dist := g.CreateIntArray;
   aParents := g.CreateIntArray;
   v1.Size := VertCount;
   v2.Size := VertCount;
   aWeights[aSrc] := ZeroWeight;
   v2[aSrc] := True;
+  Dist[aSrc] := 0;
   CurrPass := @v1;
   NextPass := @v2;
   repeat
@@ -4850,8 +4852,8 @@ begin
             Next := p^.Destination;
             if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
               begin
-                Inc(Visit[Next]);
-                if Visit[Next] = VertCount then
+                Dist[Next] := Succ(Dist[Curr]);
+                if Dist[Next] >= VertCount then
                   exit(Next);
                 aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
                 aParents[Next] := Curr;
