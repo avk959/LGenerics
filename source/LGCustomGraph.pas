@@ -4800,11 +4800,11 @@ begin
         if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
           //todo: need some kind of protection from overflow ???
           begin
+            aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
+            aTree[Next] := Curr;
             Dist[Next] := Succ(Dist[Curr]);
             if Dist[Next] >= VertCount then
               exit(Next);
-            aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
-            aTree[Next] := Curr;
             if not InQueue[Next] then
               begin
                 if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
@@ -4851,11 +4851,11 @@ begin
             Next := p^.Destination;
             if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
               begin
+                aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
+                aTree[Next] := Curr;
                 Dist[Next] := Succ(Dist[Curr]);
                 if Dist[Next] >= VertCount then
                   exit(Next);
-                aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
-                aTree[Next] := Curr;
                 NextPass^[Next] := True;
               end;
           end;
