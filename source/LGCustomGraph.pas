@@ -969,7 +969,7 @@ type
   end;
   PSimpleStack = ^TSimpleStack;
 
-  generic TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
+  generic TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
     TWeightArray  = array of TWeight;
@@ -4410,132 +4410,132 @@ begin
     aValue := Peek;
 end;
 
-{ TGWeightedPathHelper.TWeightEdge }
+{ TGWeightPathHelper.TWeightEdge }
 
-class operator TGWeightedPathHelper.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
+class operator TGWeightPathHelper.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightPathHelper.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightPathHelper.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightPathHelper.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightPathHelper.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightPathHelper.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeightedPathHelper.TWeightEdge.Create(s, d: SizeInt; w: TWeight);
+constructor TGWeightPathHelper.TWeightEdge.Create(s, d: SizeInt; w: TWeight);
 begin
   Source := s;
   Destination := d;
   Weight := w;
 end;
 
-{ TGWeightedPathHelper.TWeightItem }
+{ TGWeightPathHelper.TWeightItem }
 
-class operator TGWeightedPathHelper.TWeightItem. = (constref L, R: TWeightItem): Boolean;
+class operator TGWeightPathHelper.TWeightItem. = (constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
+class operator TGWeightPathHelper.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightItem.>(constref L, R: TWeightItem): Boolean;
+class operator TGWeightPathHelper.TWeightItem.>(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightItem.<(constref L, R: TWeightItem): Boolean;
+class operator TGWeightPathHelper.TWeightItem.<(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
+class operator TGWeightPathHelper.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGWeightedPathHelper.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
+class operator TGWeightPathHelper.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeightedPathHelper.TWeightItem.Create(aIndex: SizeInt; w: TWeight);
+constructor TGWeightPathHelper.TWeightItem.Create(aIndex: SizeInt; w: TWeight);
 begin
   Index := aIndex;
   Weight := w;
 end;
 
-{ TGWeightedPathHelper.TRankItem }
+{ TGWeightPathHelper.TRankItem }
 
-class operator TGWeightedPathHelper.TRankItem. = (constref L, R: TRankItem): Boolean;
+class operator TGWeightPathHelper.TRankItem. = (constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank = R.Rank;
 end;
 
-class operator TGWeightedPathHelper.TRankItem.<>(constref L, R: TRankItem): Boolean;
+class operator TGWeightPathHelper.TRankItem.<>(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank <> R.Rank;
 end;
 
-class operator TGWeightedPathHelper.TRankItem.>(constref L, R: TRankItem): Boolean;
+class operator TGWeightPathHelper.TRankItem.>(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank > R.Rank;
 end;
 
-class operator TGWeightedPathHelper.TRankItem.<(constref L, R: TRankItem): Boolean;
+class operator TGWeightPathHelper.TRankItem.<(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank < R.Rank;
 end;
 
-class operator TGWeightedPathHelper.TRankItem.>=(constref L, R: TRankItem): Boolean;
+class operator TGWeightPathHelper.TRankItem.>=(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank >= R.Rank;
 end;
 
-class operator TGWeightedPathHelper.TRankItem.<=(constref L, R: TRankItem): Boolean;
+class operator TGWeightPathHelper.TRankItem.<=(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank <= R.Rank;
 end;
 
-constructor TGWeightedPathHelper.TRankItem.Create(aIndex: SizeInt; aRank, aWeight: TWeight);
+constructor TGWeightPathHelper.TRankItem.Create(aIndex: SizeInt; aRank, aWeight: TWeight);
 begin
   Index := aIndex;
   Rank := aRank;
   Weight := aWeight;
 end;
 
-{ TGWeightedPathHelper }
+{ TGWeightPathHelper }
 
-class constructor TGWeightedPathHelper.Init;
+class constructor TGWeightPathHelper.Init;
 begin
   CFInfWeight := TWeight.MaxValue;
   CFNegInfWeight := TWeight.MinValue;
   CFZeroWeight := Default(TWeight);
 end;
 
-class function TGWeightedPathHelper.CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray;
+class function TGWeightPathHelper.CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray;
 var
   I: SizeInt;
 begin
@@ -4544,7 +4544,7 @@ begin
     Result[I] := aValue;
 end;
 
-class function TGWeightedPathHelper.wMax(L, R: TWeight): TWeight;
+class function TGWeightPathHelper.wMax(L, R: TWeight): TWeight;
 begin
   if L >= R then
     Result := L
@@ -4552,7 +4552,7 @@ begin
     Result := R;
 end;
 
-class function TGWeightedPathHelper.ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray;
+class function TGWeightPathHelper.ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray;
 var
   v: TIntVector;
   I, J: SizeInt;
@@ -4574,7 +4574,7 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
+class function TGWeightPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
   Queue: TPairingHeap;
   Reached: TGraph.TBitVector;
@@ -4598,7 +4598,7 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+class function TGWeightPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
   Queue: TPairingHeap;
   Reached: TGraph.TBitVector;
@@ -4629,7 +4629,7 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
+class function TGWeightPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
 var
   Queue: TBinHeap;
   Reached: TGraph.TBitVector;
@@ -4654,7 +4654,7 @@ begin
   Result := InfWeight;
 end;
 
-class function TGWeightedPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+class function TGWeightPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
   Queue: TBinHeap;
   Parents: TIntArray;
@@ -4691,7 +4691,7 @@ begin
   Result := [];
 end;
 
-class function TGWeightedPathHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
+class function TGWeightPathHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 var
   Queue: TAStarHeap;
@@ -4735,7 +4735,7 @@ begin
   Result := [];
 end;
 
-class function TGWeightedPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
+class function TGWeightPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   Queue: TIntDeque;
@@ -4781,7 +4781,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightedPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
+class function TGWeightPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   Stack1, Stack2: TSimpleStack;
@@ -4833,7 +4833,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightedPathHelper.SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray;
+class function TGWeightPathHelper.SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray;
 var
   Parents: TIntArray;
   Weights: TWeightArray;
@@ -4846,7 +4846,7 @@ begin
     Result := nil;
 end;
 
-class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+class function TGWeightPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 var
   Parents: TIntArray;
 begin
@@ -4855,7 +4855,7 @@ begin
     aWeights := nil;
 end;
 
-class function TGWeightedPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
+class function TGWeightPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 var
   Cycle: SizeInt;
@@ -4869,7 +4869,7 @@ begin
     end;
 end;
 
-class function TGWeightedPathHelper.SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
+class function TGWeightPathHelper.SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 var
   Weights: TWeightArray;
@@ -4889,17 +4889,17 @@ begin
     Result := False;
 end;
 
-class function TGWeightedPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
+class function TGWeightPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(InfWeight, aLen);
 end;
 
-class function TGWeightedPathHelper.CreateWeightArrayNI(aLen: SizeInt): TWeightArray;
+class function TGWeightPathHelper.CreateWeightArrayNI(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(NegInfWeight, aLen);
 end;
 
-class function TGWeightedPathHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
+class function TGWeightPathHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(ZeroWeight, aLen);
 end;

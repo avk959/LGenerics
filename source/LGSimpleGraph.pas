@@ -677,7 +677,7 @@ type
     specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>)
   private
   type
-    TPathHelper = specialize TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel>;
+    TPathHelper = specialize TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel>;
 
   public
   type

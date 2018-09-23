@@ -178,7 +178,7 @@ type
      specialize TGSimpleDiGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
-    TPathHelper = specialize TGWeightedPathHelper<TVertex, TWeight, TEdgeData, TEqRel>;
+    TPathHelper = specialize TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel>;
 
   public
   type
