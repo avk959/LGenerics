@@ -4739,23 +4739,23 @@ class function TGWeightPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aParent
   out aWeights: TWeightArray): SizeInt;
 var
   Queue: TIntDeque;
-  Visits: TIntArray;
+  Visit: TIntArray;
   InQueue: TGraph.TBitVector;
-  Curr, Next, Top, vCount: SizeInt;
+  Curr, Next, Top, VertCount: SizeInt;
   p: TGraph.PAdjItem;
 begin
-  vCount := g.VertexCount;
-  aWeights := CreateWeightArray(vCount);
-  Visits := g.CreateIntArray(vCount, 0);
+  VertCount := g.VertexCount;
+  aWeights := CreateWeightArray(VertCount);
+  Visit := g.CreateIntArray(VertCount, 0);
   aParents := g.CreateIntArray;
-  {%H-}Queue.EnsureCapacity(vCount);
-  InQueue.Size := vCount;
+  {%H-}Queue.EnsureCapacity(VertCount);
+  InQueue.Size := VertCount;
   aWeights[aSrc] := ZeroWeight;
   Curr := aSrc;
   repeat
-    Inc(Visits[Curr]);
     InQueue[Curr] := False;
-    if Visits[Curr] >= vCount then
+    Inc(Visit[Curr]);
+    if Visit[Curr] = VertCount then
       exit(Curr);
     if (aParents[Curr] <> NULL_INDEX) and InQueue[aParents[Curr]] then
       continue;
@@ -4785,32 +4785,35 @@ class function TGWeightPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aParen
   out aWeights: TWeightArray): SizeInt;
 var
   Stack1, Stack2: TSimpleStack;
+  Visit: TIntArray;
   InStack: TGraph.TBitVector;
-  Curr, Next, Last, PassCount: SizeInt;
-  Pass, NextPass: PSimpleStack;
+  Curr, Next, VertCount: SizeInt;
+  CurrPass, NextPass: PSimpleStack;
   p: TGraph.PAdjItem;
 begin
-  PassCount := g.VertexCount;
-  aWeights := CreateWeightArray(PassCount);
+  VertCount := g.VertexCount;
+  aWeights := CreateWeightArray(VertCount);
   aParents := g.CreateIntArray;
-  Stack1 := TSimpleStack.Create(PassCount);
-  Stack2 := TSimpleStack.Create(PassCount);
-  InStack.Size := PassCount;
+  Visit := g.CreateIntArray(VertCount, 0);
+  Stack1 := TSimpleStack.Create(VertCount);
+  Stack2 := TSimpleStack.Create(VertCount);
+  InStack.Size := VertCount;
   aWeights[aSrc] := ZeroWeight;
-  Pass := @Stack1;
+  CurrPass := @Stack1;
   NextPass := @Stack2;
   NextPass^.Push(aSrc);
   repeat
-    //todo: there may be any better cycle test
-    Dec(PassCount);
-    if PassCount = 0 then
-      exit(Next);
-    p := Pointer(Pass);
-    Pass := NextPass;
+    //todo: there may be any better negative cycle test
+    p := Pointer(CurrPass);
+    CurrPass := NextPass;
     NextPass := Pointer(p);
-    while Pass^.TryPop(Curr) do
+    InStack.ClearBits;
+    while CurrPass^.TryPop(Curr) do
       begin
-        InStack[Curr] := False;
+        InStack[Curr{%H-}] := False;
+        Inc(Visit[Curr]);
+        if Visit[Curr] = VertCount then
+          exit(Curr);
         if (aParents[Curr] <> NULL_INDEX) and InStack[aParents[Curr]] then
           continue;
         for p in g.AdjLists[Curr]^ do
@@ -4818,7 +4821,6 @@ begin
             Next := p^.Destination;
             if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
               begin
-                Last := Next;
                 aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
                 aParents[Next] := Curr;
                 if not InStack[Next] then
