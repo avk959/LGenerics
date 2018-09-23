@@ -649,14 +649,19 @@ type
   traversal utilities
 ***********************************************************************************************************}
 
-  { returns count of visited vertices; OnAccept calls after vertex visite, OnNext calls after next vertex found;
-    if TOnAccept returns False then traversal stops }
-    function DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
-    function DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
+  { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after next vertex found,
+    OnDone calls after vertex done; if TOnAccept returns False then traversal stops }
+    function  DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil;
+                          OnDone: TOnVisit = nil): SizeInt; inline;
+    function  DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil;
+                          OnDone: TOnVisit = nil): SizeInt;
   { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
     if TOnAccept returns False then traversal stops}
-    function BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
-    function BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
+    function  BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
+    function  BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
+  { in aVisited returns indices of visited vertices }
+    procedure BfsTraversal(constref aRoot: TVertex; out aVisited: TBoolVector); inline;
+    procedure BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
 
 {**********************************************************************************************************
   shortest path problem utilities
@@ -3151,13 +3156,14 @@ begin
   Result := True;
 end;
 
-function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept;
-  OnFound: TOnVisit): SizeInt;
+function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit;
+  OnDone: TOnVisit): SizeInt;
 begin
-  Result := DfsTraversalI(IndexOf(aRoot), OnAccept, OnFound);
+  Result := DfsTraversalI(IndexOf(aRoot), OnAccept, OnFound, OnDone);
 end;
 
-function TGCustomGraph.DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
+function TGCustomGraph.DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit;
+  OnDone: TOnVisit): SizeInt;
 var
   Stack: TIntArray;
   Visited: TBitVector;
@@ -3181,6 +3187,8 @@ begin
   while sTop >= 0 do
     begin
       aRoot := Stack[sTop];
+      if Assigned(OnAccept) and not OnAccept(aRoot) then
+        break;
       if AdjEnums[aRoot].MoveNext then
         begin
           Next := AdjEnums[aRoot].Current;
@@ -3192,12 +3200,14 @@ begin
               Inc(sTop);
               Stack[sTop] := Next;
               Inc(Result);
-              if Assigned(OnAccept) and not OnAccept(Next) then
-                break;
             end;
         end
       else
-        Dec(sTop);
+        begin
+          if Assigned(OnDone) then
+            OnDone(Stack[sTop]);
+          Dec(sTop);
+        end;
     end;
 end;
 
@@ -3240,6 +3250,42 @@ begin
                 OnFound(Next);
               Visited[Next] := True;
               Inc(Result);
+              Queue[qTail] := Next;
+              Inc(qTail);
+            end;
+        end;
+    end;
+end;
+
+procedure TGCustomGraph.BfsTraversal(constref aRoot: TVertex; out aVisited: TBoolVector);
+begin
+  BfsTraversalI(IndexOf(aRoot), aVisited);
+end;
+
+procedure TGCustomGraph.BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
+var
+  Queue: TIntArray;
+  Next: SizeInt;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  CheckIndexRange(aRoot);
+  aVisited.Size := VertexCount;
+  Queue := CreateIntArray;
+  aVisited[aRoot] := True;
+  Queue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      aRoot := Queue[qHead];
+      Inc(qHead);
+      for p in AdjLists[aRoot]^ do
+        begin
+          Next := p^.Destination;
+          if not aVisited[Next] then
+            begin
+              aVisited[Next] := True;
               Queue[qTail] := Next;
               Inc(qTail);
             end;
@@ -4784,38 +4830,33 @@ end;
 class function TGWeightPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
-  Stack1, Stack2: TSimpleStack;
+  v1, v2: TBoolVector;
   Visit: TIntArray;
-  InStack: TGraph.TBitVector;
   Curr, Next, VertCount: SizeInt;
-  CurrPass, NextPass: PSimpleStack;
+  CurrPass, NextPass: ^TBoolVector;
   p: TGraph.PAdjItem;
 begin
   VertCount := g.VertexCount;
   aWeights := CreateWeightArray(VertCount);
-  aParents := g.CreateIntArray;
   Visit := g.CreateIntArray(VertCount, 0);
-  Stack1 := TSimpleStack.Create(VertCount);
-  Stack2 := TSimpleStack.Create(VertCount);
-  InStack.Size := VertCount;
+  aParents := g.CreateIntArray;
+  v1.Size := VertCount;
+  v2.Size := VertCount;
   aWeights[aSrc] := ZeroWeight;
-  CurrPass := @Stack1;
-  NextPass := @Stack2;
-  NextPass^.Push(aSrc);
+  v2[aSrc] := True;
+  CurrPass := @v1;
+  NextPass := @v2;
   repeat
     //todo: there may be any better negative cycle test
     p := Pointer(CurrPass);
     CurrPass := NextPass;
     NextPass := Pointer(p);
-    InStack.ClearBits;
-    while CurrPass^.TryPop(Curr) do
+    for Curr in CurrPass^ do
       begin
-        InStack[Curr{%H-}] := False;
+        CurrPass^[Curr] := False;
         Inc(Visit[Curr]);
         if Visit[Curr] = VertCount then
           exit(Curr);
-        if (aParents[Curr] <> NULL_INDEX) and InStack[aParents[Curr]] then
-          continue;
         for p in g.AdjLists[Curr]^ do
           begin
             Next := p^.Destination;
@@ -4823,11 +4864,7 @@ begin
               begin
                 aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
                 aParents[Next] := Curr;
-                if not InStack[Next] then
-                  begin
-                    NextPass^.Push(Next);
-                    InStack[Next] := True;
-                  end;
+                NextPass^[Next] := True;
               end;
           end;
       end;
