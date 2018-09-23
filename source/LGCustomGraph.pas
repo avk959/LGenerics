@@ -4800,9 +4800,6 @@ begin
   Curr := aSrc;
   repeat
     InQueue[Curr] := False;
-    Inc(Visit[Curr]);
-    if Visit[Curr] = VertCount then
-      exit(Curr);
     if (aParents[Curr] <> NULL_INDEX) and InQueue[aParents[Curr]] then
       continue;
     for p in g.AdjLists[Curr]^ do
@@ -4813,6 +4810,9 @@ begin
           begin
             aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
             aParents[Next] := Curr;
+            Inc(Visit[Next]);
+            if Visit[Next] = VertCount then
+              exit(Next);
             if not InQueue[Next] then
               begin
                 if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
@@ -4854,14 +4854,14 @@ begin
     for Curr in CurrPass^ do
       begin
         CurrPass^[Curr] := False;
-        Inc(Visit[Curr]);
-        if Visit[Curr] = VertCount then
-          exit(Curr);
         for p in g.AdjLists[Curr]^ do
           begin
             Next := p^.Destination;
             if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
               begin
+                Inc(Visit[Next]);
+                if Visit[Next] = VertCount then
+                  exit(Next);
                 aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
                 aParents[Next] := Curr;
                 NextPass^[Next] := True;
