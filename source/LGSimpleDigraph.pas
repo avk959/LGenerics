@@ -2707,9 +2707,9 @@ begin
                 NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.TreeArc := CurrArc;
-                Dist[SizeInt(NextNode - PNode(FNodes))] := Succ(Dist[SizeInt(CurrNode - PNode(FNodes))]);
-                if Dist[SizeInt(NextNode - PNode(FNodes))] >= FNodeCount then
+                if (NextNode = FSource) or (Succ(Dist[SizeInt(CurrNode - PNode(FNodes))])>= FNodeCount) then
                   exit(False);
+                Dist[SizeInt(NextNode - PNode(FNodes))] := Succ(Dist[SizeInt(CurrNode - PNode(FNodes))]);
                 if not NextNode^.InQueue then
                   begin
                     if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
