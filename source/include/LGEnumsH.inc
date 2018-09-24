@@ -1,7 +1,23 @@
+{****************************************************************************
+*                                                                           *
+*   This file is part of the LGenerics package.                             *
+*                                                                           *
+*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*                                                                           *
+*   This code is free software; you can redistribute it and/or modify it    *
+*   under the terms of the Apache License, Version 2.0;                     *
+*   You may obtain a copy of the License at                                 *
+*     http://www.apache.org/licenses/LICENSE-2.0.                           *
+*                                                                           *
+*  Unless required by applicable law or agreed to in writing, software      *
+*  distributed under the License is distributed on an "AS IS" BASIS,        *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+*  See the License for the specific language governing permissions and      *
+*  limitations under the License.                                           *
+*                                                                           *
+*****************************************************************************}
 
   //IGEnumerable special descendents
-
-  { TGAutoEnumerable }
 
   generic TGAutoEnumerable<T> = class abstract(specialize TGCustomEnumerator<T>, specialize IGEnumerable<T>)
   protected
@@ -28,8 +44,6 @@
     destructor  Destroy; override;
   end;
 
-  { TGEnumCursor }
-
   generic TGEnumCursor<T> = class(specialize TGAutoEnumerable<T>)
   protected
     FEnum: TCustomEnumerator;
@@ -40,8 +54,6 @@
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
-
-  { TGEnumRegularFilter }
 
   generic TGEnumRegularFilter<T> = class(specialize TGEnumCursor<T>)
   public
@@ -55,8 +67,6 @@
     function MoveNext: Boolean; override;
   end;
 
-  { TGEnumDelegatedFilter }
-
   generic TGEnumDelegatedFilter<T> = class(specialize TGEnumCursor<T>)
   public
   type
@@ -68,8 +78,6 @@
     constructor Create(e: TCustomEnumerator; aTest: TOnTest);
     function MoveNext: Boolean; override;
   end;
-
-  { TGEnumNestedFilter }
 
   generic TGEnumNestedFilter<T> = class(specialize TGEnumCursor<T>)
   public
@@ -83,8 +91,6 @@
     function MoveNext: Boolean; override;
   end;
 
-  { TGEnumRegularMap }
-
   generic TGEnumRegularMap<T> = class(specialize TGEnumCursor<T>)
   public
   type
@@ -96,8 +102,6 @@
     constructor Create(e: TCustomEnumerator; aMap: TMapFunc);
     function GetCurrent: T; override;
   end;
-
-  { TGEnumDelegatedMap }
 
   generic TGEnumDelegatedMap<T> = class(specialize TGEnumCursor<T>)
   public
@@ -111,8 +115,6 @@
     function GetCurrent: T; override;
   end;
 
-  { TGEnumNestedMap }
-
   generic TGEnumNestedMap<T> = class(specialize TGEnumCursor<T>)
   public
   type
@@ -125,8 +127,6 @@
     function GetCurrent: T; override;
   end;
 
-  { TGSkipEnumerable }
-
   generic TGSkipEnumerable<T> = class(specialize TGEnumCursor<T>)
   private
     FSkipCount,
@@ -137,8 +137,6 @@
     procedure Reset; override;
   end;
 
-  { TGLimitEnumerable }
-
   generic TGLimitEnumerable<T> = class(specialize TGEnumCursor<T>)
   private
     FLimit,
@@ -148,8 +146,6 @@
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
-
-  { TGArrayCursor }
 
   generic TGArrayCursor<T> = class(specialize TGAutoEnumerable<T>)
   public
@@ -172,8 +168,6 @@
     procedure Reset; override;
   end;
 
-  { TGArrayReverse }
-
   generic TGArrayReverse<T> = class(specialize TGAutoEnumerable<T>)
   public
   type
@@ -194,8 +188,6 @@
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
-
-  { TGArrayEnumerator }
 
   generic TGArrayEnumerator<T> = class(specialize TGCustomEnumerator<T>)
   public
