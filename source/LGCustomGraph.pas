@@ -974,8 +974,6 @@ type
   end;
   PSimpleStack = ^TSimpleStack;
 
-  { TGWeightPathHelper }
-
   generic TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
@@ -983,7 +981,7 @@ type
 
   strict private
   type
-    TScanNodeStatus = (snsOutOfQueue, snsIdle, snsActive);
+    TScanStatus = (ssOutOfQueue, ssIdle, ssActive);
 
   class var
     CFInfWeight,
@@ -4865,11 +4863,11 @@ end;
 class function TGWeightPathHelper.BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
-  Queue: TIntQueue;
+  Queue: TIntDeque;
   TreePrev,
   TreeNext,
   Level: TIntArray;
-  Status: array of TScanNodeStatus;
+  Status: array of TScanStatus;
   Curr, Next, Prev, Post, Test, CurrLevel: SizeInt;
   p: TGraph.PAdjItem;
 begin
@@ -4879,18 +4877,21 @@ begin
   TreeNext := g.CreateIntArray;
   Level := g.CreateIntArray;
   System.SetLength(Status, g.VertexCount);
-  System.FillChar(Pointer(Status)^, g.VertexCount * SizeOf(TScanNodeStatus), 0);
+  System.FillChar(Pointer(Status)^, g.VertexCount * SizeOf(TScanStatus), 0);
   aWeights := CreateWeightArray(g.VertexCount);
   aWeights[aSrc] := ZeroWeight;
-  Status[aSrc] := snsActive;
+  aParents[aSrc] := aSrc;
+  TreePrev[aSrc] := aSrc;
+  TreeNext[aSrc] := aSrc;
+  Status[aSrc] := ssActive;
   Curr := aSrc;
   repeat
-    if Status[Curr] = snsIdle then
+    if Status[Curr] = ssIdle then
       begin
-        Status[Curr] := snsOutOfQueue;
+        Status[Curr] := ssOutOfQueue;
         continue;
       end;
-    Status[Curr] := snsOutOfQueue;
+    Status[Curr] := ssOutOfQueue;
     for p in g.AdjLists[Curr]^ do
       begin
         Next := p^.Destination;
@@ -4911,8 +4912,8 @@ begin
                   CurrLevel += Level[Test];
                   TreePrev[Test] := NULL_INDEX;
                   Level[Test] := NULL_INDEX;
-                  if Status[Test] = snsActive then
-                    Status[Test] := snsIdle;
+                  if Status[Test] = ssActive then
+                    Status[Test] := ssIdle;
                   Test := TreeNext[Test];
                 until CurrLevel < 0;
                 Dec(Level[aParents[Next]]);
@@ -4926,12 +4927,16 @@ begin
             TreePrev[Next] := Curr;
             TreeNext[Next] := Post;
             TreePrev[Post] := Next;
-            if Status[Next] = snsOutOfQueue then
-              Queue.Enqueue(Next);
-            Status[Next] := snsActive;
+            if Status[Next] = ssOutOfQueue then
+              if Queue.TryPeekFirst(Test) and (aWeights[Next] < aWeights[Test]) then
+                Queue.PushFirst(Next)
+              else
+                Queue.PushLast(Next);
+            Status[Next] := ssActive;
           end;
       end;
-  until not Queue.TryDequeue(Curr);
+  until not Queue.TryPopFirst(Curr);
+  aParents[aSrc] := NULL_INDEX;
   Result := NULL_INDEX;
 end;
 
@@ -4976,6 +4981,7 @@ class function TGWeightPathHelper.BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out a
 var
   Weights: TWeightArray;
 begin
+  aWeight := InfWeight;
   if BfmtSssp(g, aSrc, aPath, Weights) then
     begin
       Result := aPath[aDst] <> NULL_INDEX;
@@ -4983,9 +4989,7 @@ begin
         begin
           aWeight := Weights[aDst];
           aPath := g.TreePathTo(aPath, aDst);
-        end
-      else
-        aWeight := InfWeight;
+        end;
     end
   else
     Result := False;
