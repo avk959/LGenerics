@@ -731,7 +731,7 @@ type
   { returns False if exists edge with negative weight, otherwise finds all paths of
     minimal weight from a given vertex to the remaining vertices in the same connected
     component(SSSP); an aWeights will contain in the corresponding component the weight of the path
-    to the vertex or InfWeight if the vertex is unreachable; used SPFA algorithm  }
+    to the vertex or InfWeight if the vertex is unreachable; used BFMT algorithm  }
     function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPathTree returns paths }
@@ -746,7 +746,8 @@ type
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { returns False if exists edge with negative weight, otherwise returns the vertex path
-    of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight }
+    of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
+    used BFMT algorithm }
     function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
     function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
@@ -5432,7 +5433,7 @@ end;
 function TGWeightedGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.SpfaSssp(Self, aSrc, aWeights);
+  Result := TPathHelper.BfmtSssp(Self, aSrc, aWeights);
 end;
 
 function TGWeightedGraph.FindMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray;
@@ -5445,7 +5446,7 @@ function TGWeightedGraph.FindMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArra
   out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.SpfaSssp(Self, aSrc, aPathTree, aWeights);
+  Result := TPathHelper.BfmtSssp(Self, aSrc, aPathTree, aWeights);
 end;
 
 function TGWeightedGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
@@ -5482,7 +5483,7 @@ function TGWeightedGraph.FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.SpfaPath(Self, aSrc, aDst, aPath, aWeight);
+  Result := TPathHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
 function TGWeightedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;

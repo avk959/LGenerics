@@ -974,12 +974,17 @@ type
   end;
   PSimpleStack = ^TSimpleStack;
 
+  { TGWeightPathHelper }
+
   generic TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
     TWeightArray  = array of TWeight;
 
   strict private
+  type
+    TScanNodeStatus = (snsOutOfQueue, snsIdle, snsActive);
+
   class var
     CFInfWeight,
     CFNegInfWeight,
@@ -1045,20 +1050,24 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  { Some modification of Bellman-Ford algorithm(aka SPFA)
+  { modification of Bellman-Ford-Moore algorithm(aka SPFA)
     see en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
     class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
     class function  Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
-  { SPFA negative cycle detection } //todo: need faster negative cycle detection
-    class function  SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray; static;
-  { SPFA single-source shortest paths problem }
-    class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
-    class function  SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+  { modification of Bellman-Ford-Moore algorithm with Tarjan subtree disassembly:
+    B.V.Cherkassky and A.V.Goldberg. Negative-cycle detection algorithms. }
+    class function  BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
-  { SPFA pathfinding }
-    class function  SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
+  { negative cycle detection }
+    class function  NegDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
+  { BFMT single-source shortest paths problem }
+    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
+    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+                    static;
+  { BFMT pathfinding }
+    class function  BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
                     static;
   { fills array with InfWeight }
     class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
@@ -2705,16 +2714,14 @@ var
   Queue: TIntQueue;
   Visited: TBitVector;
 begin
-  if aSrc = aDst then
-    exit(True);
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
   repeat
+    if aSrc = aDst then
+      exit(True);
     for aSrc in AdjVerticesI(aSrc) do
       if not Visited[aSrc] then
         begin
-          if aSrc = aDst then
-            exit(True);
           Visited[aSrc] := True;
           Queue.Enqueue(aSrc);
         end;
@@ -2736,31 +2743,26 @@ begin
 end;
 
 function TGCustomGraph.CreateIntArray(aValue: SizeInt): TIntArray;
-var
-  c: SizeInt;
 begin
-  c := VertexCount;
-  System.SetLength(Result, c);
-  if c > 0 then
+  System.SetLength(Result, VertexCount);
 {$IF DEFINED(CPU64)}
-  System.FillQWord(Result[0], c, QWord(aValue));
+  System.FillQWord(Pointer(Result)^, VertexCount, QWord(aValue));
 {$ELSEIF DEFINED(CPU32)}
-  System.FillDWord(Result[0], c, DWord(aValue));
+  System.FillDWord(Pointer(Result)^, VertexCount, DWord(aValue));
 {$ELSE}
-  System.FillWord(Result[0], c, Word(aValue));
+  System.FillWord(Pointer(Result)^, VertexCount, Word(aValue));
 {$ENDIF}
 end;
 
 function TGCustomGraph.CreateIntArray(aLen, aValue: SizeInt): TIntArray;
 begin
   System.SetLength(Result, aLen);
-  if aLen > 0 then
 {$IF DEFINED(CPU64)}
-  System.FillQWord(Result[0], aLen, QWord(aValue));
+  System.FillQWord(Pointer(Result)^, aLen, QWord(aValue));
 {$ELSEIF DEFINED(CPU32)}
-  System.FillDWord(Result[0], aLen, DWord(aValue));
+  System.FillDWord(Pointer(Result)^, aLen, DWord(aValue));
 {$ELSE}
-  System.FillWord(Result[0], aLen, Word(aValue));
+  System.FillWord(Pointer(Result)^, aLen, Word(aValue));
 {$ENDIF}
 end;
 
@@ -2774,13 +2776,9 @@ begin
 end;
 
 function TGCustomGraph.CreateColorArray: TColorArray;
-var
-  c: SizeInt;
 begin
-  c := VertexCount;
-  System.SetLength(Result, c);
-  if c > 0 then
-    System.FillChar(Result[0], c, 0);
+  System.SetLength(Result, VertexCount);
+  System.FillChar(Pointer(Result)^, VertexCount, 0);
 end;
 
 function TGCustomGraph.CreateAdjEnumArray: TAdjEnumArray;
@@ -4802,9 +4800,9 @@ begin
           begin
             aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
             aTree[Next] := Curr;
-            Dist[Next] := Succ(Dist[Curr]);
-            if Dist[Next] >= VertCount then
+            if (Next = aSrc) or (Succ(Dist[Curr]) >= VertCount) then
               exit(Next);
+            Dist[Next] := Succ(Dist[Curr]);
             if not InQueue[Next] then
               begin
                 if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
@@ -4853,9 +4851,9 @@ begin
               begin
                 aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
                 aTree[Next] := Curr;
-                Dist[Next] := Succ(Dist[Curr]);
-                if Dist[Next] >= VertCount then
+                if (Next = aSrc) or (Succ(Dist[Curr]) >= VertCount) then
                   exit(Next);
+                Dist[Next] := Succ(Dist[Curr]);
                 NextPass^[Next] := True;
               end;
           end;
@@ -4864,34 +4862,107 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightPathHelper.SpfaNeg(g: TGraph; aSrc: SizeInt): TIntArray;
+class function TGWeightPathHelper.BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
+  out aWeights: TWeightArray): SizeInt;
+var
+  Queue: TIntQueue;
+  TreePrev,
+  TreeNext,
+  Level: TIntArray;
+  Status: array of TScanNodeStatus;
+  Curr, Next, Prev, Post, Test, CurrLevel: SizeInt;
+  p: TGraph.PAdjItem;
+begin
+  {%H-}Queue.EnsureCapacity(g.VertexCount);
+  aParents := g.CreateIntArray;
+  TreePrev := g.CreateIntArray;
+  TreeNext := g.CreateIntArray;
+  Level := g.CreateIntArray;
+  System.SetLength(Status, g.VertexCount);
+  System.FillChar(Pointer(Status)^, g.VertexCount * SizeOf(TScanNodeStatus), 0);
+  aWeights := CreateWeightArray(g.VertexCount);
+  aWeights[aSrc] := ZeroWeight;
+  Status[aSrc] := snsActive;
+  Curr := aSrc;
+  repeat
+    if Status[Curr] = snsIdle then
+      begin
+        Status[Curr] := snsOutOfQueue;
+        continue;
+      end;
+    Status[Curr] := snsOutOfQueue;
+    for p in g.AdjLists[Curr]^ do
+      begin
+        Next := p^.Destination;
+        if aWeights[Next] > aWeights[Curr] + p^.Data.Weight then
+          begin
+            aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
+            if TreePrev[Next] <> NULL_INDEX then
+              begin
+                Prev := TreePrev[Next];
+                Test := Next;
+                CurrLevel := 0;
+                repeat
+                  if Test = Curr then
+                    begin
+                      aParents[Next] := Curr;
+                      exit(Next);
+                    end;
+                  CurrLevel += Level[Test];
+                  TreePrev[Test] := NULL_INDEX;
+                  Level[Test] := NULL_INDEX;
+                  if Status[Test] = snsActive then
+                    Status[Test] := snsIdle;
+                  Test := TreeNext[Test];
+                until CurrLevel < 0;
+                Dec(Level[aParents[Next]]);
+                TreeNext[Prev] := Test;
+                TreePrev[Test] := Prev;
+              end;
+            aParents[Next] := Curr;
+            Inc(Level[Curr]);
+            Post := TreeNext[Curr];
+            TreeNext[Curr] := Next;
+            TreePrev[Next] := Curr;
+            TreeNext[Next] := Post;
+            TreePrev[Post] := Next;
+            if Status[Next] = snsOutOfQueue then
+              Queue.Enqueue(Next);
+            Status[Next] := snsActive;
+          end;
+      end;
+  until not Queue.TryDequeue(Curr);
+  Result := NULL_INDEX;
+end;
+
+class function TGWeightPathHelper.NegDetect(g: TGraph; aSrc: SizeInt): TIntArray;
 var
   Parents: TIntArray;
   Weights: TWeightArray;
   Cycle: SizeInt;
 begin
-  Cycle := SpfaBase(g, aSrc, Parents, Weights);
+  Cycle := BfmtBase(g, aSrc, Parents, Weights);
   if Cycle <> NULL_INDEX then
     Result := ExtractCycle(Cycle, g.VertexCount, Parents)
   else
     Result := nil;
 end;
 
-class function TGWeightPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+class function TGWeightPathHelper.BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 var
   Parents: TIntArray;
 begin
-  Result := SpfaBase(g, aSrc, Parents, aWeights) = NULL_INDEX;
+  Result := BfmtBase(g, aSrc, Parents, aWeights) = NULL_INDEX;
   if not Result then
     aWeights := nil;
 end;
 
-class function TGWeightPathHelper.SpfaSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
+class function TGWeightPathHelper.BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 var
   Cycle: SizeInt;
 begin
-  Cycle := SpfaBase(g, aSrc, aPaths, aWeights);
+  Cycle := BfmtBase(g, aSrc, aPaths, aWeights);
   Result := Cycle = NULL_INDEX;
   if not Result then
     begin
@@ -4900,12 +4971,12 @@ begin
     end;
 end;
 
-class function TGWeightPathHelper.SpfaPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
+class function TGWeightPathHelper.BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 var
   Weights: TWeightArray;
 begin
-  if SpfaSssp(g, aSrc, aPath, Weights) then
+  if BfmtSssp(g, aSrc, aPath, Weights) then
     begin
       Result := aPath[aDst] <> NULL_INDEX;
       if Result then
