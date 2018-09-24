@@ -2905,7 +2905,7 @@ begin
     for p in AdjLists[Curr]^ do
       begin
         Next := p^.Destination;
-        if p^.Data.Weight < 0 then // network should not contain arc with negative capacity
+        if p^.Data.Weight < 0 then // network should not contains arc with negative capacity
           exit(nsNegCapacity);
         if not Visited[Next] then
           begin
@@ -2915,20 +2915,18 @@ begin
           end;
       end;
   until not Queue{%H-}.TryDequeue(Curr);
-  if not SinkFound then // sink must be reachable from the source
+  if not SinkFound then // sink should be reachable from the source
     exit(nsSinkUnreachable);
   w := ZeroWeight;
-  {$PUSH}{$Q+}
-  for p in AdjLists[aSrcIndex]^ do
-    begin
-      try
-        w += p^.Data.Weight;
-      except
-        HasOverflow := True;
-      end;
-    end;
+  {$PUSH}{$Q+}  //todo: cast to Double ???
+  try
+    for p in AdjLists[aSrcIndex]^ do
+      w += p^.Data.Weight;
+  except
+    HasOverflow := True;
+  end;
   {$POP}
-  if HasOverflow then //total capacity of edges incident to the source exceeds InfWeight
+  if HasOverflow then //total capacity of edges incident to the source exceeds MaxWeight
     exit(nsSourceOverflow);
   Result := nsValid;
 end;
