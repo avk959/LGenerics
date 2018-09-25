@@ -2215,7 +2215,7 @@ begin
                  begin
                    CurrArc := CurrNode^.CurrentArc;
                    if (FCaps[CurrArc - PArc(FArcs)] = 0) and CurrArc^.IsResidual and
-                      (CurrArc^.Target = FSource) and (CurrArc^.Target = FSink) then
+                      (CurrArc^.Target <> FSource) and (CurrArc^.Target <> FSink) then
                      begin
                        NextNode := CurrArc^.Target;
                        if NextNode^.Color = vcWhite then
@@ -2431,7 +2431,6 @@ begin
 
   for I := 0 to System.High(FNodes) do
     FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
-
   for I := 0 to System.High(FNodes) do
     for p in aGraph.AdjLists[I]^ do
       begin
