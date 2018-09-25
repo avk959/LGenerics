@@ -1887,7 +1887,7 @@ var
   I, J: SizeInt;
   p: PAdjItem;
 begin
-  //transform graph into internal representation - residual graph;
+  //construct residual graph;
   FNodeCount := aGraph.VertexCount;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
@@ -2065,7 +2065,7 @@ begin
       if (NextNode^.Distance = Dist) and CurrArc^.IsResidual then
         //arc is not saturated and target belongs to the next layer -> arc is admissible
         begin
-          if (Dist > 0) and not NextNode^.HasExcess then //NextNode in idle list
+          if (Dist > 0) and not NextNode^.HasExcess then //-> NextNode in idle list
             begin
               FLevels[Dist].Activate(NextNode);
               if Dist < FMinActiveLevel then
