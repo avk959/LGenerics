@@ -1048,13 +1048,14 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  { modification of Bellman-Ford-Moore algorithm(aka SPFA)
-    see en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
+  { modification of Bellman-Ford-Moore algorithm(aka SPFA), faster on random graps;
+    en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
     class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
     class function  Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
-  { modification of Bellman-Ford-Moore algorithm with Tarjan subtree disassembly:
+  { modification of Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
+    most robust, faster negative cycle detection:
     B.V.Cherkassky and A.V.Goldberg. Negative-cycle detection algorithms. }
     class function  BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
@@ -4811,7 +4812,7 @@ begin
               end;
           end;
       end;
-  until not Queue.TryPopFirst(Curr);
+  until not Queue{%H-}.TryPopFirst(Curr);
   Result := NULL_INDEX;
 end;
 
@@ -4935,7 +4936,7 @@ begin
             Status[Next] := ssActive;
           end;
       end;
-  until not Queue.TryPopFirst(Curr);
+  until not Queue{%H-}.TryPopFirst(Curr);
   aParents[aSrc] := NULL_INDEX;
   Result := NULL_INDEX;
 end;
