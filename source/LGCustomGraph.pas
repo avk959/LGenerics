@@ -4989,10 +4989,15 @@ begin
         begin
           aWeight := Weights[aDst];
           aPath := g.TreePathTo(aPath, aDst);
-        end;
+        end
+      else
+        aWeight := InfWeight;
     end
   else
-    Result := False;
+    begin
+      Result := False;
+      aWeight := ZeroWeight;
+    end;
 end;
 
 class function TGWeightPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
