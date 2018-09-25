@@ -319,19 +319,19 @@ type
         FirstArc,            // pointer to first incident arc in arcs array
         CurrentArc,          // pointer to current incident arc in arcs array
         LastArc: PArc;       // pointer to last incident arc in arcs array
-        LayerNext,           // next node in layer list
-        LayerPrev: PNode;    // previous node in layer list
+        LevelNext,           // next node in level list
+        LevelPrev: PNode;    // previous node in level list
         Distance: SizeInt;   // distance from the sink
         Excess: TWeight;     // excess at the node
         procedure ResetCurrent; inline;
         function  HasExcess: Boolean; inline;
-        property  OrderNext: PNode read LayerNext write LayerNext;  // for dfs
-        property  Parent: PNode read LayerPrev write LayerPrev;     // for dfs
+        property  OrderNext: PNode read LevelNext write LevelNext;  // for dfs
+        property  Parent: PNode read LevelPrev write LevelPrev;     // for dfs
         property  Color: TVertexColor read GetColor write SetColor; // for dfs
       end;
 
 
-      TLayer = record
+      TLevel = record
         TopActive,          // head of singly linked list of the nodes with positive excess
         TopIdle: PNode;     // head of doubly linked list of the nodes with zero excess
         function  IsEmpty: Boolean; inline;
@@ -345,15 +345,15 @@ type
     var
       FNodes: array of TNode;
       FArcs: array of TArc;
-      FLayers: array of TLayer;
+      FLevels: array of TLevel;
       FCaps: TWeightArray;
       FQueue: array of PNode;
       FSource,
       FSink: PNode;
       FNodeCount,
-      FMaxLayer,                // maximal layer
-      FMaxActiveLayer,          // maximal layer with excessed node
-      FMinActiveLayer: SizeInt; // minimal layer with excessed node
+      FMaxLevel,                // maximal level
+      FMaxActiveLevel,          // maximal level with excessed node
+      FMinActiveLevel: SizeInt; // minimal level with excessed node
       procedure Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
       procedure Init2(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
@@ -1812,53 +1812,53 @@ begin
   Result := Excess > 0;
 end;
 
-{ TGIntWeightDiGraph.THPrfHelper.TLayer }
+{ TGIntWeightDiGraph.THPrfHelper.TLevel }
 
-function TGIntWeightDiGraph.THPrfHelper.TLayer.IsEmpty: Boolean;
+function TGIntWeightDiGraph.THPrfHelper.TLevel.IsEmpty: Boolean;
 begin
   Result := (TopActive = nil) and (TopIdle = nil);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLayer.AddActive(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrfHelper.TLevel.AddActive(aNode: PNode);
 begin
-  aNode^.LayerNext := TopActive;
+  aNode^.LevelNext := TopActive;
   TopActive := aNode;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLayer.AddIdle(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrfHelper.TLevel.AddIdle(aNode: PNode);
 var
   Next: PNode;
 begin
   Next := TopIdle;
   TopIdle := aNode;
-  aNode^.LayerNext := Next;
+  aNode^.LevelNext := Next;
   if Next <> nil then
-    Next^.LayerPrev := aNode;
+    Next^.LevelPrev := aNode;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLayer.Activate(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrfHelper.TLevel.Activate(aNode: PNode);
 begin
   RemoveIdle(aNode);
   AddActive(aNode);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLayer.RemoveIdle(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrfHelper.TLevel.RemoveIdle(aNode: PNode);
 var
   Next, Prev: PNode;
 begin
-  Next := aNode^.LayerNext;
+  Next := aNode^.LevelNext;
   if TopIdle = aNode then // is on head of the list
     TopIdle := Next
   else
     begin
-      Prev := aNode^.LayerPrev;
-      Prev^.LayerNext := aNode^.LayerNext;
+      Prev := aNode^.LevelPrev;
+      Prev^.LevelNext := aNode^.LevelNext;
       if Next <> nil then
-        Next^.LayerPrev := Prev;
+        Next^.LevelPrev := Prev;
     end;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLayer.Clear(aLabel: SizeInt);
+procedure TGIntWeightDiGraph.THPrfHelper.TLevel.Clear(aLabel: SizeInt);
 var
   Next: PNode;
   I: SizeInt;
@@ -1867,14 +1867,14 @@ begin
   while Next <> nil do
     begin
       Next^.Distance := aLabel;
-      Next := Next^.LayerNext;
+      Next := Next^.LevelNext;
     end;
   TopActive := nil;
   Next := TopIdle;
   while Next <> nil do
     begin
       Next^.Distance := aLabel;
-      Next := Next^.LayerNext;
+      Next := Next^.LevelNext;
     end;
   TopIdle  := nil;
 end;
@@ -1925,8 +1925,8 @@ begin
   CurrArcIdx := nil;
 
   FSource^.Excess := MaxWeight;
-  System.SetLength(FLayers, FNodeCount);
-  FMaxLayer := System.High(FLayers);
+  System.SetLength(FLevels, FNodeCount);
+  FMaxLevel := System.High(FLevels);
   System.SetLength(FQueue, FNodeCount);
 end;
 
@@ -1978,8 +1978,8 @@ begin
   CurrArcIdx := nil;
 
   FSource^.Excess := MaxWeight;
-  System.SetLength(FLayers, FNodeCount);
-  FMaxLayer := System.High(FLayers);
+  System.SetLength(FLevels, FNodeCount);
+  FMaxLevel := System.High(FLevels);
   System.SetLength(FQueue, FNodeCount);
 end;
 
@@ -1999,10 +1999,10 @@ var
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
-  System.FillChar(Pointer(FLayers)^, Succ(FMaxLayer) * SizeOf(TLayer), 0);
-  FMaxLayer := 0;
-  FMaxActiveLayer := NULL_INDEX;
-  FMinActiveLayer := FNodeCount;
+  System.FillChar(Pointer(FLevels)^, Succ(FMaxLevel) * SizeOf(TLevel), 0);
+  FMaxLevel := 0;
+  FMaxActiveLevel := NULL_INDEX;
+  FMinActiveLevel := FNodeCount;
   ClearLabels;
   FSink^.Distance := 0;
   CurrNode := FSink;
@@ -2021,18 +2021,18 @@ begin
             begin
               NextNode^.Distance := Dist;
               NextNode^.ResetCurrent;
-              if Dist > FMaxLayer then
-                FMaxLayer := Dist;
+              if Dist > FMaxLevel then
+                FMaxLevel := Dist;
               if NextNode^.HasExcess then
                 begin
-                  FLayers[Dist].AddActive(NextNode);
-                  if Dist > FMaxActiveLayer then
-                    FMaxActiveLayer := Dist;
-                  if Dist < FMinActiveLayer then
-                    FMinActiveLayer := Dist;
+                  FLevels[Dist].AddActive(NextNode);
+                  if Dist > FMaxActiveLevel then
+                    FMaxActiveLevel := Dist;
+                  if Dist < FMinActiveLevel then
+                    FMinActiveLevel := Dist;
                 end
               else
-                FLayers[Dist].AddIdle(NextNode);
+                FLevels[Dist].AddIdle(NextNode);
               FQueue[qTail] := NextNode;
               Inc(qTail);
             end;
@@ -2045,10 +2045,10 @@ procedure TGIntWeightDiGraph.THPrfHelper.RemoveGap(aLayer: SizeInt);
 var
   I: SizeInt;
 begin
-  for I := Succ(aLayer) to FMaxLayer do
-    FLayers[I].Clear(FNodeCount);
-  FMaxActiveLayer := Pred(aLayer);
-  FMaxLayer := FMaxActiveLayer;
+  for I := Succ(aLayer) to FMaxLevel do
+    FLevels[I].Clear(FNodeCount);
+  FMaxActiveLevel := Pred(aLayer);
+  FMaxLevel := FMaxActiveLevel;
 end;
 
 function TGIntWeightDiGraph.THPrfHelper.Push(aNode: PNode): Boolean;
@@ -2067,9 +2067,9 @@ begin
         begin
           if (Dist > 0) and not NextNode^.HasExcess then //NextNode in idle list
             begin
-              FLayers[Dist].Activate(NextNode);
-              if Dist < FMinActiveLayer then
-                FMinActiveLayer := Dist;
+              FLevels[Dist].Activate(NextNode);
+              if Dist < FMinActiveLevel then
+                FMinActiveLevel := Dist;
             end;
           CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResidualCap));
           if not aNode^.HasExcess then
@@ -2103,18 +2103,18 @@ begin
     begin
       aNode^.Distance := Dist;
       aNode^.CurrentArc := MinArc;
-      if Dist > FMaxLayer then
-        FMaxLayer := Dist;
+      if Dist > FMaxLevel then
+        FMaxLevel := Dist;
       if aNode^.HasExcess then
         begin
-          FLayers[Dist].AddActive(aNode);
-          if Dist > FMaxActiveLayer then
-            FMaxActiveLayer := Dist;
-          if Dist < FMinActiveLayer then
-            FMinActiveLayer := Dist;
+          FLevels[Dist].AddActive(aNode);
+          if Dist > FMaxActiveLevel then
+            FMaxActiveLevel := Dist;
+          if Dist < FMinActiveLevel then
+            FMinActiveLevel := Dist;
         end
       else
-        FLayers[Dist].AddIdle(aNode);
+        FLevels[Dist].AddIdle(aNode);
     end;
 end;
 
@@ -2126,18 +2126,18 @@ var
 begin
   GlobalRelabel;
   GlobalRelableTreshold := FNodeCount;
-  while FMaxActiveLayer >= FMinActiveLayer do
+  while FMaxActiveLevel >= FMinActiveLevel do
     begin
-      CurrNode := FLayers[FMaxActiveLayer].TopActive;
+      CurrNode := FLevels[FMaxActiveLevel].TopActive;
       if CurrNode <> nil then
         begin
-          OldMaxActive := FMaxActiveLayer;
-          FLayers[OldMaxActive].TopActive := CurrNode^.LayerNext;
+          OldMaxActive := FMaxActiveLevel;
+          FLevels[OldMaxActive].TopActive := CurrNode^.LevelNext;
           if not Push(CurrNode) then
             begin
               Relabel(CurrNode);
               Inc(RelableTimes);
-              if FLayers[OldMaxActive].IsEmpty then
+              if FLevels[OldMaxActive].IsEmpty then
                 RemoveGap(OldMaxActive);
               if RelableTimes > GlobalRelableTreshold then
                 begin
@@ -2146,10 +2146,10 @@ begin
                 end;
             end
           else
-            FLayers[OldMaxActive].AddIdle(CurrNode);
+            FLevels[OldMaxActive].AddIdle(CurrNode);
         end
       else
-        Dec(FMaxActiveLayer);
+        Dec(FMaxActiveLevel);
     end;
 end;
 
@@ -2335,7 +2335,7 @@ function TGIntWeightDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; a
 begin
   Init2(aGraph, aSource, aSink);
   HiLevelPushRelabel;
-  FLayers := nil;
+  FLevels := nil;
   Result := FSink^.Excess;
   a := RecoverFlow;
 end;
@@ -2347,7 +2347,7 @@ var
 begin
   Init(aGraph, aSource, aSink);
   HiLevelPushRelabel;
-  FLayers := nil;
+  FLevels := nil;
   Result := FSink^.Excess;
   System.SetLength(s, ARRAY_INITIAL_SIZE);
   J := 0;
