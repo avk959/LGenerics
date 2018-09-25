@@ -2170,7 +2170,7 @@ begin
           if Cap > 0 then
             begin
               Result[J] := TWeightEdge.Create(
-                I, SizeInt(CurrArc^.Target - PNode(FNodes)), Cap - CurrArc^.ResidualCap);
+                I, CurrArc^.Target - PNode(FNodes), Cap - CurrArc^.ResidualCap);
               Inc(J);
             end;
           Inc(CurrArc);
@@ -2469,7 +2469,7 @@ begin
   FSource^.ResetCurrent;
   FQueue[qTail] := FSource;
   Inc(qTail);
-  while (qHead < qTail) and (FSink^.Distance = NULL_INDEX) do
+  while (qHead < qTail) and FSink^.NonLabeled do
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
@@ -2544,7 +2544,7 @@ begin
         begin
           if CurrArc^.IsReal then
             begin
-              Dst := SizeInt(CurrArc^.Target - PNode(FNodes));
+              Dst := CurrArc^.Target - PNode(FNodes);
               aGraph.GetEdgeDataI(I, Dst, d);
               Result[J] := TWeightEdge.Create(I, Dst, d.Weight - CurrArc^.ResidualCap);
               Inc(J);
@@ -2691,7 +2691,7 @@ begin
   SearchInit;
   Dist := FGraph.CreateIntArray;
   CurrNode := FSource;
-  Dist[SizeInt(FSource - PNode(FNodes))] := 0;
+  Dist[FSource - PNode(FNodes)] := 0;
   repeat
     CurrNode^.InQueue := False;
     if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
@@ -2708,12 +2708,12 @@ begin
                 NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.TreeArc := CurrArc;
-                if (NextNode = FSource) or (Succ(Dist[SizeInt(CurrNode - PNode(FNodes))])>= FNodeCount) then
+                if (NextNode = FSource) or (Succ(Dist[CurrNode - PNode(FNodes)])>= FNodeCount) then
                   exit(False);
-                Dist[SizeInt(NextNode - PNode(FNodes))] := Succ(Dist[SizeInt(CurrNode - PNode(FNodes))]);
+                Dist[NextNode - PNode(FNodes)] := Succ(Dist[CurrNode - PNode(FNodes)]);
                 if not NextNode^.InQueue then
                   begin
-                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < {%H-}TopNode^.Price) then
+                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price <{%H-}TopNode^.Price) then
                       FQueue.PushFirst(NextNode)
                     else
                       FQueue.PushLast(NextNode);
@@ -2814,7 +2814,7 @@ begin
         begin
           if CurrArc^.IsReal then
             begin
-              Dst := SizeInt(CurrArc^.Target - PNode(FNodes));
+              Dst := CurrArc^.Target - PNode(FNodes);
               FGraph.GetEdgeDataI(I, Dst, d);
               Result += (d.Weight - CurrArc^.ResidualCap) * aCosts[TIntEdge.Create(I, Dst)];
             end;
@@ -2841,7 +2841,7 @@ begin
         begin
           if CurrArc^.IsReal then
             begin
-              Dst := SizeInt(CurrArc^.Target - PNode(FNodes));
+              Dst := CurrArc^.Target - PNode(FNodes);
               FGraph.GetEdgeDataI(I, Dst, d);
               w := d.Weight - CurrArc^.ResidualCap;
               aTotalCost += w * aCosts[TIntEdge.Create(I, Dst)];
