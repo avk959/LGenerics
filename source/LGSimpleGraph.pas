@@ -747,7 +747,8 @@ type
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { returns False if exists edge with negative weight, otherwise returns the vertex path
     of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
-    used BFMT algorithm }
+    to distinguish 'unreachable' and 'neg cycle': in case negative cycle aWeight returns ZeroWeight,
+    and InfWeight if aDst unreachable; used BFMT algorithm }
     function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
     function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
