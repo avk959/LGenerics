@@ -417,7 +417,7 @@ type
       function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     end;
 
-    { TMcfHelper: simpliest mincost-flow algorithm: augmenting flow along minimum cost paths }
+    { TMcfHelper: simpliest mincost-flow algorithm: shortest augmenting paths }
     TMcfHelper = record
     private
     type
