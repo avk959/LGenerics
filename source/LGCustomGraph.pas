@@ -1055,7 +1055,7 @@ type
     class function  Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
   { modification of Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
-    most robust, faster negative cycle detection:
+    faster negative cycle detection;
     B.V.Cherkassky and A.V.Goldberg. Negative-cycle detection algorithms. }
     class function  BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
