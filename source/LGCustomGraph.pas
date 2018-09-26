@@ -3289,6 +3289,7 @@ function TGCustomGraph.ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
 var
   Queue: TIntQueue;
   Dist: TIntArray;
+  d: SizeInt;
   p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
@@ -3298,11 +3299,12 @@ begin
   repeat
     if aSrc = aDst then
       exit(Dist[aSrc]);
+    d := Succ(Dist[aSrc]);
     for p in AdjLists[aSrc]^ do
       if Dist[p^.Destination] = NULL_INDEX then
         begin
           Queue.Enqueue(p^.Destination);
-          Dist[p^.Destination] := Succ(Dist[aSrc]);
+          Dist[p^.Destination] := d;
         end;
   until not Queue{%H-}.TryDequeue(aSrc);
   Result := NULL_INDEX;
@@ -3316,17 +3318,19 @@ end;
 function TGCustomGraph.ShortestPathsMapI(aSrc: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
+  d: SizeInt;
   p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
   Result := CreateIntArray;
   Result[aSrc] := 0;
   repeat
+    d := Succ(Result[aSrc]);
     for p in AdjLists[aSrc]^ do
       if Result[p^.Destination] = NULL_INDEX then
         begin
           Queue.Enqueue(p^.Destination);
-          Result[p^.Destination] := Succ(Result[aSrc]);
+          Result[p^.Destination] := d;
         end;
   until not Queue{%H-}.TryDequeue(aSrc);
 end;
@@ -3339,26 +3343,28 @@ end;
 function TGCustomGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 var
   Queue: TIntQueue;
-  Visited: TBitVector;
   Parents: TIntArray;
+  Curr: SizeInt;
   p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   Parents := CreateIntArray;
-  Visited.Size := VertexCount;
-  Visited[aSrc] := True;
+  Curr := aSrc;
+  Parents[aSrc] := aSrc;
   repeat
-    if aSrc = aDst then
-      exit(TreePathTo(Parents, aDst));
-    for p in AdjLists[aSrc]^ do
-      if not Visited[p^.Destination] then
+    if Curr = aDst then
+      begin
+        Parents[aSrc] := NULL_INDEX;
+        exit(TreePathTo(Parents, aDst));
+      end;
+    for p in AdjLists[Curr]^ do
+      if Parents[p^.Destination] = NULL_INDEX then
         begin
-          Visited[p^.Destination] := True;
           Queue.Enqueue(p^.Destination);
-          Parents[p^.Destination] := aSrc;
+          Parents[p^.Destination] := Curr;
         end;
-  until not Queue{%H-}.TryDequeue(aSrc);
+  until not Queue{%H-}.TryDequeue(Curr);
   Result := [];
 end;
 
