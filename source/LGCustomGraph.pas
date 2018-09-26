@@ -483,6 +483,7 @@ type
     function  CreateIntArrayRange: TIntArray;
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
+    function  PathToNearestFrom(aSrc: SizeInt; const aTargets: TBoolVector): TIntArray;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
@@ -689,7 +690,6 @@ type
     empty if path does not exists }
     function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
-
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -2797,6 +2797,43 @@ begin
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Result[I].FEnum := AdjLists[I]^.GetEnumerator;
+end;
+
+function TGCustomGraph.PathToNearestFrom(aSrc: SizeInt; const aTargets: TBoolVector): TIntArray;
+var
+  Queue: TIntQueue;
+  Dist,
+  Parents: TIntArray;
+  Curr, d, Nearest: SizeInt;
+  p: PAdjItem;
+begin
+  Parents := CreateIntArray;
+  Dist := CreateIntArray;
+  Curr := aSrc;
+  Dist[aSrc] := 0;
+  Nearest := NULL_INDEX;
+  repeat
+    d := Succ(Dist[Curr]);
+    for p in AdjLists[Curr]^ do
+      if Dist[p^.Destination] = NULL_INDEX then
+        begin
+          Dist[p^.Destination] := d;
+          Parents[p^.Destination] := Curr;
+          Queue.Enqueue(p^.Destination);
+        end;
+  until not Queue{%H-}.TryDequeue(Curr);
+  d := VertexCount;
+  Nearest := NULL_INDEX;
+  for Curr in aTargets do
+    if Dist[Curr] < d then
+      begin
+        Nearest := Curr;
+        d := Dist[Curr];
+      end;
+  if Nearest <> NULL_INDEX then
+    Result := TreePathTo(Parents, Nearest)
+  else
+    Result := [];
 end;
 
 class function TGCustomGraph.MaxBitMatrixSize: SizeInt;
