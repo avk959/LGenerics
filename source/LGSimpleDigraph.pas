@@ -324,7 +324,6 @@ type
         Distance: SizeInt;   // distance from the sink
         Excess: TWeight;     // excess at the node
         procedure ResetCurrent; inline;
-        function  HasExcess: Boolean; inline;
         property  OrderNext: PNode read LevelNext write LevelNext;  // for dfs
         property  Parent: PNode read LevelPrev write LevelPrev;     // for dfs
         property  Color: TVertexColor read GetColor write SetColor; // for dfs
@@ -440,10 +439,10 @@ type
       private
         FirstArc,            // pointer to first incident arc in arcs array
         LastArc,             // pointer to last incident arc in arcs array
-        TreeArc: PArc;       // pointer to tree arc
+        PathArc: PArc;       // pointer to incoming path arc
         Parent: PNode;
         Price: TCost;
-        MinPathFlow: TWeight;    // munimum flow on path
+        MinPathFlow: TWeight;// munimum flow on path
         InQueue: Boolean;
       end;
 
@@ -1807,11 +1806,6 @@ begin
   CurrentArc := FirstArc;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.TNode.HasExcess: Boolean;
-begin
-  Result := Excess > 0;
-end;
-
 { TGIntWeightDiGraph.THPrfHelper.TLevel }
 
 function TGIntWeightDiGraph.THPrfHelper.TLevel.IsEmpty: Boolean;
@@ -2023,7 +2017,7 @@ begin
               NextNode^.ResetCurrent;
               if Dist > FMaxLevel then
                 FMaxLevel := Dist;
-              if NextNode^.HasExcess then
+              if NextNode^.Excess > 0 then
                 begin
                   FLevels[Dist].AddActive(NextNode);
                   if Dist > FMaxActiveLevel then
@@ -2065,14 +2059,14 @@ begin
       if (NextNode^.Distance = Dist) and CurrArc^.IsResidual then
         //arc is not saturated and target belongs to the next layer -> arc is admissible
         begin
-          if (Dist > 0) and not NextNode^.HasExcess then //-> NextNode in idle list
+          if (Dist > 0) and (NextNode^.Excess = 0) then //-> NextNode in idle list
             begin
               FLevels[Dist].Activate(NextNode);
               if Dist < FMinActiveLevel then
                 FMinActiveLevel := Dist;
             end;
           CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResidualCap));
-          if not aNode^.HasExcess then
+          if aNode^.Excess = 0 then
             break;
         end;
       Inc(aNode^.CurrentArc);
@@ -2105,7 +2099,7 @@ begin
       aNode^.CurrentArc := MinArc;
       if Dist > FMaxLevel then
         FMaxLevel := Dist;
-      if aNode^.HasExcess then
+      if aNode^.Excess > 0 then
         begin
           FLevels[Dist].AddActive(aNode);
           if Dist > FMaxActiveLevel then
@@ -2205,7 +2199,7 @@ begin
   CurrNode := Pointer(FNodes);
   while CurrNode < PNode(FNodes) + FNodeCount do
     begin
-      if (CurrNode^.Color = vcWhite) and CurrNode^.HasExcess and
+      if (CurrNode^.Color = vcWhite) and (CurrNode^.Excess > 0) and
          (CurrNode <> FSource) and (CurrNode <> FSink) then
            begin
              RootNode := CurrNode;
@@ -2308,7 +2302,7 @@ begin
       CurrNode := StackTop;
       repeat
         CurrArc := CurrNode^.FirstArc;
-        while CurrNode^.HasExcess do
+        while CurrNode^.Excess > 0 do
           begin
             if (FCaps[CurrArc - PArc(FArcs)] = 0) and CurrArc^.IsResidual then
               CurrArc^.Push(wMin(CurrNode^.Excess, CurrArc^.ResidualCap));
@@ -2673,7 +2667,7 @@ var
 begin
   for I := 0 to System.High(FNodes) do
     begin
-      FNodes[I].TreeArc := nil;
+      FNodes[I].PathArc := nil;
       FNodes[I].Parent := nil;
       FNodes[I].Price := MaxCost;
       FNodes[I].MinPathFlow := MaxWeight;
@@ -2707,7 +2701,7 @@ begin
                 NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
                 NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
-                NextNode^.TreeArc := CurrArc;
+                NextNode^.PathArc := CurrArc;
                 if (NextNode = FSource) or (Succ(Dist[CurrNode - PNode(FNodes)])>= FNodeCount) then
                   exit(False);
                 Dist[NextNode - PNode(FNodes)] := Succ(Dist[CurrNode - PNode(FNodes)]);
@@ -2749,7 +2743,7 @@ begin
                 NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
                 NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
-                NextNode^.TreeArc := CurrArc;
+                NextNode^.PathArc := CurrArc;
                 if not NextNode^.InQueue then
                   begin
                     if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < TopNode^.Price) then
@@ -2775,11 +2769,11 @@ var
   CurrArc: PArc;
 begin
   ParentNode := FSink^.Parent;
-  CurrArc := FSink^.TreeArc;
+  CurrArc := FSink^.PathArc;
   while CurrArc <> nil do
     begin
       CurrArc^.Push(aFlow);
-      CurrArc := ParentNode^.TreeArc;
+      CurrArc := ParentNode^.PathArc;
       ParentNode := ParentNode^.Parent;
     end;
 end;
