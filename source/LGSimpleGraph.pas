@@ -898,12 +898,10 @@ type
 ***********************************************************************************************************}
 
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and minimum weight;
-    warning: works correctly only for integer weights }
+    the maximum cardinality and minimum weight }
     function FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and maximum weight;
-    warning: works correctly only for integer weights }
+    the maximum cardinality and maximum weight }
     function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
 {**********************************************************************************************************
   networks utilities treat the weight of the edge as its capacity
