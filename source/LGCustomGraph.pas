@@ -2811,7 +2811,6 @@ begin
   Dist := CreateIntArray;
   Curr := aSrc;
   Dist[aSrc] := 0;
-  Nearest := NULL_INDEX;
   repeat
     d := Succ(Dist[Curr]);
     for p in AdjLists[Curr]^ do
