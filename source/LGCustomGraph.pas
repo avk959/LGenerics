@@ -2807,6 +2807,10 @@ var
   Curr, d, Nearest: SizeInt;
   p: PAdjItem;
 begin
+  if aTargets.IsEmpty then
+    exit([]);
+  if aTargets[aSrc] then
+    exit([aSrc]);
   Parents := CreateIntArray;
   Dist := CreateIntArray;
   Curr := aSrc;
