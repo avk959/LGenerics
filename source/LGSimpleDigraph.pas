@@ -461,9 +461,9 @@ type
                 constref aCosts: TEdgeCostMap);
       procedure SearchInit; inline;
       function  NegCycleTest: Boolean;
-      function  FindMinCostPath: TWeight;
+      function  FlowOnMinCostPath: TWeight;
       procedure PushFlow(aFlow: TWeight);
-      function  FindMinCostFlow: TWeight;
+      function  MinCostFlow: TWeight;
       function  GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
       function  CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
     public
@@ -2721,7 +2721,7 @@ begin
   Result := FSink^.Parent <> nil;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.FindMinCostPath: TWeight;
+function TGIntWeightDiGraph.TMcfHelper.FlowOnMinCostPath: TWeight;
 var
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
@@ -2778,7 +2778,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.FindMinCostFlow: TWeight;
+function TGIntWeightDiGraph.TMcfHelper.MinCostFlow: TWeight;
 var
   Flow: TWeight;
 begin
@@ -2789,7 +2789,7 @@ begin
   repeat
     PushFlow(Flow);
     Result += Flow;
-    Flow := wMin(FindMinCostPath, FFlow - Result);
+    Flow := wMin(FlowOnMinCostPath, FFlow - Result);
   until Flow = 0;
 end;
 
@@ -2853,7 +2853,7 @@ begin
   if aFlow = 0 then
     exit(aFlow);
   Init(aGraph, aSource, aSink, aFlow, aCosts);
-  Result := FindMinCostFlow;
+  Result := MinCostFlow;
   aTotalCost := GetTotalCost(aCosts);
 end;
 
@@ -2863,7 +2863,7 @@ begin
   if aFlow = 0 then
     exit(aFlow);
   Init(aGraph, aSource, aSink, aFlow, aCosts);
-  Result := FindMinCostFlow;
+  Result := MinCostFlow;
   a := CreateEdges(aCosts, aTotalCost);
 end;
 
