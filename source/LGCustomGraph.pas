@@ -655,6 +655,11 @@ type
                           OnDone: TOnVisit = nil): SizeInt; inline;
     function  DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil;
                           OnDone: TOnVisit = nil): SizeInt;
+  { returns the DFS traversal tree started from aRoot;
+    each element contains the index of its parent (or -1 if it is root or not connected),
+    i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
+    function  DfsTree(constref aRoot: TVertex): TIntArray; inline;
+    function  DfsTreeI(aRoot: SizeInt = 0): TIntArray;
   { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
     if TOnAccept returns False then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
@@ -662,6 +667,11 @@ type
   { in aVisited returns indices of visited vertices }
     procedure BfsTraversal(constref aRoot: TVertex; out aVisited: TBoolVector); inline;
     procedure BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
+  { returns the BFS traversal tree started from aRoot;
+    each element contains the index of its parent (or -1 if it is root or not connected),
+    i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
+    function  BfsTree(constref aRoot: TVertex): TIntArray; inline;
+    function  BfsTreeI(aRoot: SizeInt = 0): TIntArray;
 
 {**********************************************************************************************************
   shortest path problem utilities
@@ -3205,6 +3215,38 @@ begin
     end;
 end;
 
+function TGCustomGraph.DfsTree(constref aRoot: TVertex): TIntArray;
+begin
+  Result := DfsTreeI(IndexOf(aRoot));
+end;
+
+function TGCustomGraph.DfsTreeI(aRoot: SizeInt): TIntArray;
+var
+  Stack: TSimpleStack;
+  AdjEnums: TAdjEnumArray;
+  Curr, Next: SizeInt;
+begin
+  CheckIndexRange(aRoot);
+  Stack := TSimpleStack.Create(VertexCount);
+  Result := CreateIntArray;
+  AdjEnums := CreateAdjEnumArray;
+  Result[aRoot] := aRoot;
+  {%H-}Stack.Push(aRoot);
+  while Stack.TryPeek(Curr) do
+    if AdjEnums[{%H-}Curr].MoveNext then
+      begin
+        Next := AdjEnums[Curr].Current;
+        if Result[Next] = NULL_INDEX then
+          begin
+            Result[Next] := Curr;
+            Stack.Push(Next);
+          end;
+      end
+    else
+      Stack.Pop;
+  Result[aRoot] := NULL_INDEX;
+end;
+
 function TGCustomGraph.BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), OnAccept, OnFound);
@@ -3278,6 +3320,31 @@ begin
             Inc(qTail);
           end;
     end;
+end;
+
+function TGCustomGraph.BfsTree(constref aRoot: TVertex): TIntArray;
+begin
+  Result := BfsTreeI(IndexOf(aRoot));
+end;
+
+function TGCustomGraph.BfsTreeI(aRoot: SizeInt): TIntArray;
+var
+  Queue: TIntQueue;
+  Curr, Next: SizeInt;
+begin
+  CheckIndexRange(aRoot);
+  Result := CreateIntArray;
+  Curr := aRoot;
+  Result[aRoot] := aRoot;
+  repeat
+    for Next in AdjVerticesI(Curr) do
+      if Result[Next] = NULL_INDEX then
+        begin
+          Result[Next] := Curr;
+          Queue.Enqueue(Next);
+        end;
+  until not Queue{%H-}.TryDequeue(Curr);
+  Result[aRoot] := NULL_INDEX;
 end;
 
 function TGCustomGraph.ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt;

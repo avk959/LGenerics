@@ -523,9 +523,9 @@ type
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
     function  DfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
-    function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+    function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
     function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
-    function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray;
+    function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -2702,15 +2702,16 @@ end;
 
 function TGSimpleGraph.CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 var
-  Stack: TIntStack;
-  Visited: TBitVector;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
+  Visited: TBitVector;
   Next: SizeInt;
 begin
-  Visited.Size := VertexCount;
+  Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
+  Visited.Size := VertexCount;
   Visited[aRoot] := True;
   {%H-}Stack.Push(aRoot);
   while Stack.TryPeek(aRoot) do
@@ -4461,35 +4462,12 @@ end;
 
 function TGSimpleGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
 begin
-  Result := DfsSpanningTreeI(IndexOf(aRoot));
+  Result := DfsTreeI(IndexOf(aRoot));
 end;
 
 function TGSimpleGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
-var
-  Visited: TBitVector;
-  Stack: TIntStack;
-  AdjEnums: TAdjEnumArray;
-  Next: SizeInt;
 begin
-  CheckIndexRange(aRoot);
-  Visited.Size := VertexCount;
-  Result := CreateIntArray;
-  AdjEnums := CreateAdjEnumArray;
-  Visited[aRoot] := True;
-  {%H-}Stack.Push(aRoot);
-  while Stack.TryPeek(aRoot) do
-    if AdjEnums[aRoot].MoveNext then
-      begin
-        Next := AdjEnums[aRoot].Current;
-        if not Visited[Next] then
-          begin
-            Visited[Next] := True;
-            Result[Next] := aRoot;
-            Stack.Push(Next);
-          end;
-      end
-    else
-      Stack.Pop;
+  Result := DfsTreeI(aRoot);
 end;
 
 function TGSimpleGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
@@ -4498,24 +4476,8 @@ begin
 end;
 
 function TGSimpleGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
-var
-  Visited: TBitVector;
-  Queue: TIntQueue;
-  Next: SizeInt;
 begin
-  CheckIndexRange(aRoot);
-  Visited.Size := VertexCount;
-  Result := CreateIntArray;
-  Visited[aRoot] := True;
-  repeat
-    for Next in AdjVerticesI(aRoot) do
-      if not Visited[Next] then
-        begin
-          Visited[Next] := True;
-          Result[Next] := aRoot;
-          Queue.Enqueue(Next);
-        end;
-  until not Queue{%H-}.TryDequeue(aRoot);
+  Result := BfsTreeI(aRoot);
 end;
 
 function TGSimpleGraph.FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
