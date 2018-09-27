@@ -290,37 +290,36 @@ type
     MinCost     = Low(TCost);
 
   type
-    { THPrfHelper: an implementation of the high level push-relabel method;
+    { THPrHelper: an implementation of the high level push-relabel method;
       B.V. Cherkassky, A.V. Goldberg: On Implementing Push-Relabel Method for the Maximum Flow Problem. }
-    THPrfHelper = record
+    THPrHelper = record
     private
     type
       PNode = ^TNode;
       PArc  = ^TArc;
 
       TArc = record
-        ResidualCap: TWeight;
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
-        constructor Create(c: TWeight; aTarget: PNode; aReverse: PArc);
+        ResidualCap: TWeight;
+        constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
         function  IsSaturated: Boolean; inline;
         function  IsResidual: Boolean; inline;
         procedure Push(aFlow: TWeight); inline;
       end;
 
-      TNode = record  //todo: avoid LastArc ???
+      TNode = record
       private
         function  GetColor: TVertexColor; inline;
         procedure SetColor(aValue: TVertexColor); inline;
       public
-        FirstArc,            // pointer to first incident arc in arcs array
-        CurrentArc,          // pointer to current incident arc in arcs array
-        LastArc: PArc;       // pointer to last incident arc in arcs array
+        FirstArc,            // pointer to first incident arc
+        CurrentArc: PArc;    // pointer to current incident arc
         LevelNext,           // next node in level list
         LevelPrev: PNode;    // previous node in level list
-        Distance: SizeInt;   // distance from the sink
         Excess: TWeight;     // excess at the node
+        Distance: SizeInt;   // distance from the sink
         procedure ResetCurrent; inline;
         property  OrderNext: PNode read LevelNext write LevelNext;  // for dfs
         property  Parent: PNode read LevelPrev write LevelPrev;     // for dfs
@@ -1751,33 +1750,33 @@ begin
         end;
 end;
 
-{ TGIntWeightDiGraph.THPrfHelper.TFlowData }
+{ TGIntWeightDiGraph.THPrHelper.TFlowData }
 
-constructor TGIntWeightDiGraph.THPrfHelper.TArc.Create(c: TWeight; aTarget: PNode; aReverse: PArc);
+constructor TGIntWeightDiGraph.THPrHelper.TArc.Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
 begin
-  ResidualCap := c;
   Target := aTarget;
   Reverse := aReverse;
+   ResidualCap := aCap;
 end;
 
-constructor TGIntWeightDiGraph.THPrfHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc);
+constructor TGIntWeightDiGraph.THPrHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc);
 begin
+  Target := aTarget;
+  Reverse := aReverse;
   ResidualCap := 0;
-  Target := aTarget;
-  Reverse := aReverse;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.TArc.IsSaturated: Boolean;
+function TGIntWeightDiGraph.THPrHelper.TArc.IsSaturated: Boolean;
 begin
   Result := ResidualCap = 0;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.TArc.IsResidual: Boolean;
+function TGIntWeightDiGraph.THPrHelper.TArc.IsResidual: Boolean;
 begin
   Result := ResidualCap > 0;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TArc.Push(aFlow: TWeight);
+procedure TGIntWeightDiGraph.THPrHelper.TArc.Push(aFlow: TWeight);
 begin
   ResidualCap -= aFlow;
   Target^.Excess += aFlow;
@@ -1785,37 +1784,37 @@ begin
   Reverse^.Target^.Excess -= aFlow;
 end;
 
-{ TGIntWeightDiGraph.THPrfHelper.TNode }
+{ TGIntWeightDiGraph.THPrHelper.TNode }
 
-function TGIntWeightDiGraph.THPrfHelper.TNode.GetColor: TVertexColor;
+function TGIntWeightDiGraph.THPrHelper.TNode.GetColor: TVertexColor;
 begin
   Result := TVertexColor(Distance);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TNode.SetColor(aValue: TVertexColor);
+procedure TGIntWeightDiGraph.THPrHelper.TNode.SetColor(aValue: TVertexColor);
 begin
   Distance := SizeInt(aValue);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TNode.ResetCurrent;
+procedure TGIntWeightDiGraph.THPrHelper.TNode.ResetCurrent;
 begin
   CurrentArc := FirstArc;
 end;
 
-{ TGIntWeightDiGraph.THPrfHelper.TLevel }
+{ TGIntWeightDiGraph.THPrHelper.TLevel }
 
-function TGIntWeightDiGraph.THPrfHelper.TLevel.IsEmpty: Boolean;
+function TGIntWeightDiGraph.THPrHelper.TLevel.IsEmpty: Boolean;
 begin
   Result := (TopActive = nil) and (TopIdle = nil);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLevel.AddActive(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrHelper.TLevel.AddActive(aNode: PNode);
 begin
   aNode^.LevelNext := TopActive;
   TopActive := aNode;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLevel.AddIdle(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrHelper.TLevel.AddIdle(aNode: PNode);
 var
   Next: PNode;
 begin
@@ -1826,13 +1825,13 @@ begin
     Next^.LevelPrev := aNode;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLevel.Activate(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrHelper.TLevel.Activate(aNode: PNode);
 begin
   RemoveIdle(aNode);
   AddActive(aNode);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLevel.RemoveIdle(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrHelper.TLevel.RemoveIdle(aNode: PNode);
 var
   Next, Prev: PNode;
 begin
@@ -1848,7 +1847,7 @@ begin
     end;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.TLevel.Clear(aLabel: SizeInt);
+procedure TGIntWeightDiGraph.THPrHelper.TLevel.Clear(aLabel: SizeInt);
 var
   Next: PNode;
   I: SizeInt;
@@ -1869,15 +1868,14 @@ begin
   TopIdle  := nil;
 end;
 
-{ TGIntWeightDiGraph.THPrfHelper }
+{ TGIntWeightDiGraph.THPrHelper }
 
-procedure TGIntWeightDiGraph.THPrfHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
   p: PAdjItem;
 begin
-  //construct residual graph;
   FNodeCount := aGraph.VertexCount;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
@@ -1887,32 +1885,38 @@ begin
       J += aGraph.DegreeI(I);
     end;
 
-  System.SetLength(FNodes, FNodeCount);
-  //all arcs stored in the single array
-  System.SetLength(FArcs, aGraph.EdgeCount * 2);
+  System.SetLength(FNodes, Succ(FNodeCount));
+  System.SetLength(FArcs, Succ(aGraph.EdgeCount * 2));
   FSource := @FNodes[aSource];
   FSink := @FNodes[aSink];
 
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     begin
       FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
       FNodes[I].Excess := ZeroWeight;
     end;
 
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
-        FArcs[CurrArcIdx[I]] := TArc.Create(p^.Data.Weight, @FNodes[J], @FArcs[CurrArcIdx[J]]);
+        FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], p^.Data.Weight);
         FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]]);
         Inc(CurrArcIdx[I]);
         Inc(CurrArcIdx[J]);
       end;
 
-  for I := 0 to System.High(FNodes) do
-    FNodes[I].LastArc := @FArcs[Pred(CurrArcIdx[I])];
-
   CurrArcIdx := nil;
+
+  FArcs[System.High(FArcs)] :=
+    TArc.Create(@FNodes[FNodeCount], @FArcs[System.High(FArcs)], 0);
+  //sentinel node
+  FNodes[FNodeCount].FirstArc := @FArcs[System.High(FArcs)];
+  FNodes[FNodeCount].CurrentArc := @FArcs[System.High(FArcs)];
+  FNodes[FNodeCount].LevelNext := nil;
+  FNodes[FNodeCount].LevelPrev := nil;
+  FNodes[FNodeCount].Excess := 0;
+  FNodes[FNodeCount].Distance := FNodeCount;
 
   FSource^.Excess := MaxWeight;
   System.SetLength(FLevels, FNodeCount);
@@ -1920,7 +1924,7 @@ begin
   System.SetLength(FQueue, FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource,aSink: SizeInt);
+procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource,aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -1938,34 +1942,41 @@ begin
       J += aGraph.DegreeI(I);
     end;
 
-  System.SetLength(FNodes, FNodeCount);
-  System.SetLength(FArcs, aGraph.EdgeCount * 2);
+  System.SetLength(FNodes, Succ(FNodeCount));
+  System.SetLength(FArcs, Succ(aGraph.EdgeCount * 2));
   System.SetLength(FCaps, aGraph.EdgeCount * 2);
   FSource := @FNodes[aSource];
   FSink := @FNodes[aSink];
 
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     begin
       FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
       FNodes[I].Excess := ZeroWeight;
     end;
 
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
         FCaps[CurrArcIdx[I]] := p^.Data.Weight;
         FCaps[CurrArcIdx[J]] := ZeroWeight;
-        FArcs[CurrArcIdx[I]] := TArc.Create(p^.Data.Weight, @FNodes[J], @FArcs[CurrArcIdx[J]]);
+        FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], p^.Data.Weight);
         FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]]);
         Inc(CurrArcIdx[I]);
         Inc(CurrArcIdx[J]);
       end;
 
-  for I := 0 to System.High(FNodes) do
-    FNodes[I].LastArc := @FArcs[Pred(CurrArcIdx[I])];
-
   CurrArcIdx := nil;
+
+  FArcs[System.High(FArcs)] :=
+    TArc.Create(@FNodes[FNodeCount], @FArcs[System.High(FArcs)], 0);
+  //sentinel node
+  FNodes[FNodeCount].FirstArc := @FArcs[System.High(FArcs)];
+  FNodes[FNodeCount].CurrentArc := @FArcs[System.High(FArcs)];
+  FNodes[FNodeCount].LevelNext := nil;
+  FNodes[FNodeCount].LevelPrev := nil;
+  FNodes[FNodeCount].Excess := 0;
+  FNodes[FNodeCount].Distance := FNodeCount;
 
   FSource^.Excess := MaxWeight;
   System.SetLength(FLevels, FNodeCount);
@@ -1973,7 +1984,7 @@ begin
   System.SetLength(FQueue, FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.ClearLabels;
+procedure TGIntWeightDiGraph.THPrHelper.ClearLabels;
 var
   I: SizeInt;
 begin
@@ -1981,7 +1992,7 @@ begin
     FNodes[I].Distance := FNodeCount;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.GlobalRelabel;
+procedure TGIntWeightDiGraph.THPrHelper.GlobalRelabel;
 var
   CurrNode, NextNode: PNode;
   CurrArc: PArc;
@@ -2004,7 +2015,7 @@ begin
       Inc(qHead);
       Dist := Succ(CurrNode^.Distance);
       CurrArc := CurrNode^.FirstArc;
-      while CurrArc <= CurrNode^.LastArc do
+      while CurrArc < (CurrNode + 1)^.FirstArc do
         begin
           NextNode := CurrArc^.Target;
           if (NextNode^.Distance = FNodeCount) and CurrArc^.Reverse^.IsResidual then
@@ -2031,7 +2042,7 @@ begin
     end;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.RemoveGap(aLayer: SizeInt);
+procedure TGIntWeightDiGraph.THPrHelper.RemoveGap(aLayer: SizeInt);
 var
   I: SizeInt;
 begin
@@ -2041,14 +2052,14 @@ begin
   FMaxLevel := FMaxActiveLevel;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.Push(aNode: PNode): Boolean;
+function TGIntWeightDiGraph.THPrHelper.Push(aNode: PNode): Boolean;
 var
   CurrArc: PArc;
   NextNode: PNode;
   Dist: SizeInt;
 begin
   Dist := Pred(aNode^.Distance);
-  while aNode^.CurrentArc <= aNode^.LastArc do
+  while aNode^.CurrentArc < (aNode + 1)^.FirstArc do
     begin
       CurrArc := aNode^.CurrentArc;
       NextNode := CurrArc^.Target;
@@ -2067,10 +2078,10 @@ begin
         end;
       Inc(aNode^.CurrentArc);
     end;
-  Result := aNode^.CurrentArc <= aNode^.LastArc;
+  Result := aNode^.CurrentArc < (aNode + 1)^.FirstArc;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.Relabel(aNode: PNode);
+procedure TGIntWeightDiGraph.THPrHelper.Relabel(aNode: PNode);
 var
   CurrArc: PArc;
   MinArc: PArc = nil;
@@ -2079,7 +2090,7 @@ begin
   Dist := FNodeCount;
   aNode^.Distance := FNodeCount;
   CurrArc := aNode^.FirstArc;
-  while CurrArc <= aNode^.LastArc do
+  while CurrArc < (aNode + 1)^.FirstArc do
     begin
       if CurrArc^.IsResidual and (CurrArc^.Target^.Distance < Dist) then
         begin
@@ -2108,7 +2119,7 @@ begin
     end;
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.HiLevelPushRelabel;
+procedure TGIntWeightDiGraph.THPrHelper.HiLevelPushRelabel;
 var
   CurrNode: PNode;
   GlobalRelableTreshold, OldMaxActive: SizeInt;
@@ -2143,7 +2154,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.CreateEdges: TEdgeArray;
+function TGIntWeightDiGraph.THPrHelper.CreateEdges: TEdgeArray;
 var
   I, J: SizeInt;
   CurrArc: PArc;
@@ -2154,7 +2165,7 @@ begin
   for I := 0 to System.High(FNodes) do
     begin
       CurrArc := FNodes[I].FirstArc;
-      while CurrArc <= FNodes[I].LastArc do
+      while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           Cap := FCaps[CurrArc - PArc(FArcs)];
           if Cap > 0 then
@@ -2168,7 +2179,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.RecoverFlow: TEdgeArray;
+function TGIntWeightDiGraph.THPrHelper.RecoverFlow: TEdgeArray;
 var
   CurrNode, NextNode, RootNode, RestartNode: PNode;
   StackTop: PNode = nil;
@@ -2183,7 +2194,7 @@ begin
       CurrNode^.Parent := nil;
       CurrNode^.ResetCurrent;
       CurrArc := CurrNode^.FirstArc;
-      while CurrArc <= CurrNode^.LastArc do
+      while CurrArc < (CurrNode + 1)^.FirstArc do
         begin
           if CurrArc^.Target = CurrNode then
             CurrArc^.ResidualCap := FCaps[CurrArc - PArc(FArcs)];
@@ -2201,7 +2212,7 @@ begin
              RootNode := CurrNode;
              RootNode^.Color := vcGray;
              repeat
-               while CurrNode^.CurrentArc <= CurrNode^.LastArc do
+               while CurrNode^.CurrentArc < (CurrNode + 1)^.FirstArc do
                  begin
                    CurrArc := CurrNode^.CurrentArc;
                    if (FCaps[CurrArc - PArc(FArcs)] = 0) and CurrArc^.IsResidual and
@@ -2266,7 +2277,7 @@ begin
                    Inc(CurrNode^.CurrentArc);
                  end;
                //
-               if CurrNode^.CurrentArc > CurrNode^.LastArc then
+               if CurrNode^.CurrentArc >= (CurrNode + 1)^.FirstArc then
                  begin
                    CurrNode^.Color := vcBlack;
                    if CurrNode <> FSource then
@@ -2313,14 +2324,14 @@ begin
   Result := CreateEdges;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
+function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
 begin
   CreateResudualGraph(aGraph, aSource, aSink);
   HiLevelPushRelabel;
   Result := FSink^.Excess;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
   CreateResudualGraphCap(aGraph, aSource, aSink);
@@ -2330,7 +2341,7 @@ begin
   a := RecoverFlow;
 end;
 
-function TGIntWeightDiGraph.THPrfHelper.GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+function TGIntWeightDiGraph.THPrHelper.GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out s: TIntArray): TWeight;
 var
   I, J: SizeInt;
@@ -2934,7 +2945,7 @@ end;
 
 function TGIntWeightDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
 var
-  Helper: THPrfHelper;
+  Helper: THPrHelper;
 begin
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
     exit(False);
@@ -2951,7 +2962,7 @@ end;
 function TGIntWeightDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
   out a: TEdgeArray): Boolean;
 var
-  Helper: THPrfHelper;
+  Helper: THPrHelper;
 begin
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
     exit(False);
@@ -2998,7 +3009,7 @@ end;
 
 function TGIntWeightDiGraph.GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt): TWeight;
 var
-  Helper: THPrfHelper;
+  Helper: THPrHelper;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
@@ -3012,7 +3023,7 @@ end;
 
 function TGIntWeightDiGraph.GetMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a: TEdgeArray): TWeight;
 var
-  Helper: THPrfHelper;
+  Helper: THPrHelper;
 begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
@@ -3117,7 +3128,7 @@ end;
 
 function TGIntWeightDiGraph.GetMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aCut: TStCut): TWeight;
 var
-  Helper: THPrfHelper;
+  Helper: THPrHelper;
   TmpSet: TBoolVector;
   I: SizeInt;
 begin
