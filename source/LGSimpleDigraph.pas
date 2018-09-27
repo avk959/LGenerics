@@ -290,10 +290,8 @@ type
     MinCost     = Low(TCost);
 
   type
-    { THPrfHelper: an efficient implementation of the push-relabel method for the maximum flow;
-      see "On Implementing Push-Relabel Method for the Maximum Flow Problem"
-          by B.V. Cherkassky and A.V. Goldberg;
-      this is freepascal port of H_PRF developed by Boris Cherkassky and Andrew Goldberg. }
+    { THPrfHelper: an implementation of the high level push-relabel method;
+      B.V. Cherkassky, A.V. Goldberg: On Implementing Push-Relabel Method for the Maximum Flow Problem. }
     THPrfHelper = record
     private
     type
@@ -311,7 +309,7 @@ type
         procedure Push(aFlow: TWeight); inline;
       end;
 
-      TNode = record
+      TNode = record  //todo: avoid LastArc ???
       private
         function  GetColor: TVertexColor; inline;
         procedure SetColor(aValue: TVertexColor); inline;
@@ -387,7 +385,7 @@ type
         procedure Push(aFlow: TWeight); inline;
       end;
 
-      TNode = record
+      TNode = record //todo: avoid LastArc ???
       private
         FirstArc,            // pointer to first incident arc in arcs array
         CurrentArc,          // pointer to current incident arc in arcs array
@@ -416,34 +414,32 @@ type
       function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     end;
 
-    { TMcfHelper: simpliest mincost-flow algorithm: shortest augmenting paths(Busacker and Gowen ?) }
-    TMcfHelper = record
+    { TBgMcfHelper: simpliest mincost-flow algorithm: shortest augmenting paths(Busacker and Gowen ?) }
+    TBgMcfHelper = record
     private
     type
       PNode  = ^TNode;
       PArc   = ^TArc;
 
       TArc = record
-        ResidualCap: TWeight;
-        Cost: TCost;
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
+        ResidualCap: TWeight;
+        Cost: TCost;
         IsReal: Boolean;
-        constructor Create(c: TWeight; aCost: TCost; aTarget: PNode; aReverse: PArc);
-        constructor CreateReverse(aCost: TCost; aTarget: PNode; aReverse: PArc);
+        constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
+        constructor CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
         function  IsResidual: Boolean; inline;
         procedure Push(aFlow: TWeight); inline;
       end;
 
       TNode = record
       private
-        FirstArc,            // pointer to first incident arc in arcs array
-        LastArc,             // pointer to last incident arc in arcs array
+        FirstArc,            // pointer to first incident arc
         PathArc: PArc;       // pointer to incoming path arc
         Parent: PNode;
         Price: TCost;
-        MinPathFlow: TWeight;// munimum flow on path
-        InQueue: Boolean;
+        PathMinCap: TWeight; // munimum capacity on path
       end;
 
       TQueue = specialize TGLiteDeque<PNode>;
@@ -453,6 +449,7 @@ type
       FArcs: array of TArc;
       FQueue: TQueue;
       FGraph: TGIntWeightDiGraph;
+      FInQueue: TBitVector;
       FSource,
       FSink: PNode;
       FFlow: TWeight;
@@ -460,9 +457,9 @@ type
       procedure Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
                 constref aCosts: TEdgeCostMap);
       procedure SearchInit; inline;
-      function  NegCycleTest: Boolean;
-      function  FlowOnMinCostPath: TWeight;
-      procedure PushFlow(aFlow: TWeight);
+      function  FindNegCycle: Boolean;
+      function  GetMinPathCapacity: TWeight;
+      procedure FlowIn(aFlow: TWeight);
       function  MinCostFlow: TWeight;
       function  GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
       function  CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
@@ -2133,7 +2130,7 @@ begin
               Inc(RelableTimes);
               if FLevels[OldMaxActive].IsEmpty then
                 RemoveGap(OldMaxActive);
-              if RelableTimes > GlobalRelableTreshold then
+              if RelableTimes = GlobalRelableTreshold then
                 begin
                   GlobalRelabel;
                   RelableTimes := 0;
@@ -2489,10 +2486,9 @@ function TGIntWeightDiGraph.TDinitzHelper.Dfs(aRoot: PNode; aFlow: TWeight): TWe
 var
   Flow: TWeight;
 begin
+  //todo: non-recursive dfs
   if aFlow > 0 then
-    begin
-      if aRoot = FSink then
-        exit(aFlow);
+    if aRoot <> FSink then
       while aRoot^.CurrentArc <= aRoot^.LastArc do
         begin
           if aRoot^.CurrentArc^.Target^.Distance = Succ(aRoot^.Distance) then
@@ -2505,8 +2501,9 @@ begin
                 end;
             end;
           Inc(aRoot^.CurrentArc);
-        end;
-    end;
+        end
+    else
+      exit(aFlow);
   Result := 0;
 end;
 
@@ -2583,40 +2580,40 @@ begin
   System.SetLength(s, J);
 end;
 
-{ TGIntWeightDiGraph.TMcfHelper.TArc }
+{ TGIntWeightDiGraph.TBgMcfHelper.TArc }
 
-constructor TGIntWeightDiGraph.TMcfHelper.TArc.Create(c: TWeight; aCost: TCost; aTarget: PNode; aReverse: PArc);
+constructor TGIntWeightDiGraph.TBgMcfHelper.TArc.Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
 begin
-  ResidualCap := c;
-  Cost := aCost;
   Target := aTarget;
   Reverse := aReverse;
+  ResidualCap := aCap;
+  Cost := aCost;
   IsReal := True;
 end;
 
-constructor TGIntWeightDiGraph.TMcfHelper.TArc.CreateReverse(aCost: TCost; aTarget: PNode; aReverse: PArc);
+constructor TGIntWeightDiGraph.TBgMcfHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
 begin
-  ResidualCap := 0;
-  Cost := -aCost;
   Target := aTarget;
   Reverse := aReverse;
+  ResidualCap := 0;
+  Cost := -aCost;
   IsReal := False;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.TArc.IsResidual: Boolean;
+function TGIntWeightDiGraph.TBgMcfHelper.TArc.IsResidual: Boolean;
 begin
   Result := ResidualCap > 0;
 end;
 
-procedure TGIntWeightDiGraph.TMcfHelper.TArc.Push(aFlow: TWeight);
+procedure TGIntWeightDiGraph.TBgMcfHelper.TArc.Push(aFlow: TWeight);
 begin
   ResidualCap -= aFlow;
   Reverse^.ResidualCap += aFlow;
 end;
 
-{ TGIntWeightDiGraph.TMcfHelper }
+{ TGIntWeightDiGraph.TBgMcfHelper }
 
-procedure TGIntWeightDiGraph.TMcfHelper.Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
+procedure TGIntWeightDiGraph.TBgMcfHelper.Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
   constref aCosts: TEdgeCostMap);
 var
   CurrArcIdx: TIntArray;
@@ -2635,33 +2632,41 @@ begin
       J += aGraph.DegreeI(I);
     end;
 
-  System.SetLength(FNodes, FNodeCount);
+  System.SetLength(FNodes, Succ(FNodeCount));
   FSource := @FNodes[aSource];
   FSink := @FNodes[aSink];
-  System.SetLength(FArcs, aGraph.EdgeCount * 2);
+  System.SetLength(FArcs, Succ(aGraph.EdgeCount * 2));
 
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
 
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
         c := aCosts[TIntEdge.Create(I, J)];
-        FArcs[CurrArcIdx[I]] := TArc.Create(p^.Data.Weight, c, @FNodes[J], @FArcs[CurrArcIdx[J]]);
-        FArcs[CurrArcIdx[J]] := TArc.CreateReverse(c, @FNodes[I], @FArcs[CurrArcIdx[I]]);
+        FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], p^.Data.Weight, c);
+        FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]], c);
         Inc(CurrArcIdx[I]);
         Inc(CurrArcIdx[J]);
       end;
 
-  for I := 0 to System.High(FNodes) do
-    FNodes[I].LastArc := @FArcs[Pred(CurrArcIdx[I])];
-
   CurrArcIdx := nil;
+
+  FArcs[System.High(FArcs)] :=
+    TArc.Create(@FNodes[FNodeCount], @FArcs[System.High(FArcs)], 0, 0);
+  //sentinel node
+  FNodes[FNodeCount].FirstArc := @FArcs[System.High(FArcs)];
+  FNodes[FNodeCount].PathArc := nil;
+  FNodes[FNodeCount].Parent := nil;
+  FNodes[FNodeCount].Price := 0;
+  FNodes[FNodeCount].PathMinCap := 0;
+
+  FInQueue.Size := FNodeCount;
   FQueue.EnsureCapacity(FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.TMcfHelper.SearchInit;
+procedure TGIntWeightDiGraph.TBgMcfHelper.SearchInit;
 var
   I: SizeInt;
 begin
@@ -2670,13 +2675,12 @@ begin
       FNodes[I].PathArc := nil;
       FNodes[I].Parent := nil;
       FNodes[I].Price := MaxCost;
-      FNodes[I].MinPathFlow := MaxWeight;
-      FNodes[I].InQueue := False;
+      FNodes[I].PathMinCap := MaxWeight;
     end;
   FSource^.Price := 0;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.NegCycleTest: Boolean;
+function TGIntWeightDiGraph.TBgMcfHelper.FindNegCycle: Boolean;
 var
   Dist: TIntArray;
   CurrNode, NextNode, TopNode: PNode;
@@ -2687,11 +2691,11 @@ begin
   CurrNode := FSource;
   Dist[FSource - PNode(FNodes)] := 0;
   repeat
-    CurrNode^.InQueue := False;
-    if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
+    FInQueue[CurrNode - PNode(FNodes)] := False;
+    if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
       continue;
     CurrArc := CurrNode^.FirstArc;
-    while CurrArc <= CurrNode^.LastArc do
+    while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
         if CurrArc^.IsResidual then
           begin
@@ -2699,19 +2703,19 @@ begin
             if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
               begin
                 NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
-                NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
+                NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.PathArc := CurrArc;
                 if (NextNode = FSource) or (Succ(Dist[CurrNode - PNode(FNodes)])>= FNodeCount) then
                   exit(False);
                 Dist[NextNode - PNode(FNodes)] := Succ(Dist[CurrNode - PNode(FNodes)]);
-                if not NextNode^.InQueue then
+                if not FInQueue[NextNode - PNode(FNodes)] then
                   begin
                     if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price <{%H-}TopNode^.Price) then
                       FQueue.PushFirst(NextNode)
                     else
                       FQueue.PushLast(NextNode);
-                    NextNode^.InQueue := True;
+                    FInQueue[NextNode - PNode(FNodes)] := True;
                   end;
               end;
           end;
@@ -2721,7 +2725,7 @@ begin
   Result := FSink^.Parent <> nil;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.FlowOnMinCostPath: TWeight;
+function TGIntWeightDiGraph.TBgMcfHelper.GetMinPathCapacity: TWeight;
 var
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
@@ -2729,11 +2733,11 @@ begin
   SearchInit;
   CurrNode := FSource;
   repeat
-    CurrNode^.InQueue := False;
-    if (CurrNode^.Parent <> nil) and CurrNode^.Parent^.InQueue then
+    FInQueue[CurrNode - PNode(FNodes)] := False;
+    if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
       continue;
     CurrArc := CurrNode^.FirstArc;
-    while CurrArc <= CurrNode^.LastArc do
+    while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
         if CurrArc^.IsResidual then
           begin
@@ -2741,16 +2745,16 @@ begin
             if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
               begin
                 NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
-                NextNode^.MinPathFlow := wMin(CurrNode^.MinPathFlow, CurrArc^.ResidualCap);
+                NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.PathArc := CurrArc;
-                if not NextNode^.InQueue then
+                if not FInQueue[NextNode - PNode(FNodes)] then
                   begin
                     if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < TopNode^.Price) then
                       FQueue.PushFirst(NextNode)
                     else
                       FQueue.PushLast(NextNode);
-                    NextNode^.InQueue := True;
+                    FInQueue[NextNode - PNode(FNodes)] := True;
                   end;
               end;
           end;
@@ -2758,12 +2762,12 @@ begin
       end;
   until not FQueue.TryPopFirst(CurrNode);
   if FSink^.Parent <> nil then
-    Result := FSink^.MinPathFlow
+    Result := FSink^.PathMinCap
   else
     Result := 0;
 end;
 
-procedure TGIntWeightDiGraph.TMcfHelper.PushFlow(aFlow: TWeight);
+procedure TGIntWeightDiGraph.TBgMcfHelper.FlowIn(aFlow: TWeight);
 var
   ParentNode: PNode;
   CurrArc: PArc;
@@ -2778,22 +2782,22 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.MinCostFlow: TWeight;
+function TGIntWeightDiGraph.TBgMcfHelper.MinCostFlow: TWeight;
 var
   Flow: TWeight;
 begin
   Result := 0;
-  if not NegCycleTest then
+  if not FindNegCycle then
     exit(0);
-  Flow := wMin(FSink^.MinPathFlow, FFlow);
+  Flow := wMin(FSink^.PathMinCap, FFlow);
   repeat
-    PushFlow(Flow);
+    FlowIn(Flow);
     Result += Flow;
-    Flow := wMin(FlowOnMinCostPath, FFlow - Result);
+    Flow := wMin(GetMinPathCapacity, FFlow - Result);
   until Flow = 0;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
+function TGIntWeightDiGraph.TBgMcfHelper.GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
 var
   I, Dst: SizeInt;
   CurrArc: PArc;
@@ -2801,10 +2805,10 @@ var
 begin
   d := DefaultEdgeData;
   Result := 0;
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     begin
       CurrArc := FNodes[I].FirstArc;
-      while CurrArc <= FNodes[I].LastArc do
+      while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           if CurrArc^.IsReal then
             begin
@@ -2817,7 +2821,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
+function TGIntWeightDiGraph.TBgMcfHelper.CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
 var
   I, J, Dst: SizeInt;
   CurrArc: PArc;
@@ -2828,10 +2832,10 @@ begin
   J := 0;
   d := DefaultEdgeData;
   aTotalCost := 0;
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     begin
       CurrArc := FNodes[I].FirstArc;
-      while CurrArc <= FNodes[I].LastArc do
+      while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           if CurrArc^.IsReal then
             begin
@@ -2847,7 +2851,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
   if aFlow = 0 then
@@ -2857,7 +2861,7 @@ begin
   aTotalCost := GetTotalCost(aCosts);
 end;
 
-function TGIntWeightDiGraph.TMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
   if aFlow = 0 then
@@ -3180,7 +3184,7 @@ end;
 function TGIntWeightDiGraph.FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
   var aNeedFlow: TWeight; out aResultCost: TCost): Boolean;
 var
-  Helper: TMcfHelper;
+  Helper: TBgMcfHelper;
   Costs: TEdgeCostMap;
 begin
   if aNeedFlow < 1 then
@@ -3202,7 +3206,7 @@ end;
 function TGIntWeightDiGraph.FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
   var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean;
 var
-  Helper: TMcfHelper;
+  Helper: TBgMcfHelper;
   Costs: TEdgeCostMap;
 begin
   if aNeedFlow < 1 then
