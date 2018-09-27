@@ -424,7 +424,6 @@ type
         Reverse: PArc;       // pointer to opposite arc
         ResidualCap: TWeight;
         Cost: TCost;
-        IsReal: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
         function  IsResidual: Boolean; inline;
@@ -2599,7 +2598,6 @@ begin
   Reverse := aReverse;
   ResidualCap := aCap;
   Cost := aCost;
-  IsReal := True;
 end;
 
 constructor TGIntWeightDiGraph.TBgMcfHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
@@ -2608,7 +2606,6 @@ begin
   Reverse := aReverse;
   ResidualCap := 0;
   Cost := -aCost;
-  IsReal := False;
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.TArc.IsResidual: Boolean;
@@ -2821,12 +2818,9 @@ begin
       CurrArc := FNodes[I].FirstArc;
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
-          if CurrArc^.IsReal then
-            begin
-              Dst := CurrArc^.Target - PNode(FNodes);
-              FGraph.GetEdgeDataI(I, Dst, d);
-              Result += (d.Weight - CurrArc^.ResidualCap) * aCosts[TIntEdge.Create(I, Dst)];
-            end;
+          Dst := CurrArc^.Target - PNode(FNodes);
+          if FGraph.GetEdgeDataI(I, Dst, d) then
+            Result += (d.Weight - CurrArc^.ResidualCap) * aCosts[TIntEdge.Create(I, Dst)];
           Inc(CurrArc);
         end;
     end;
@@ -2848,10 +2842,9 @@ begin
       CurrArc := FNodes[I].FirstArc;
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
-          if CurrArc^.IsReal then
+          Dst := CurrArc^.Target - PNode(FNodes);
+          if FGraph.GetEdgeDataI(I, Dst, d) then
             begin
-              Dst := CurrArc^.Target - PNode(FNodes);
-              FGraph.GetEdgeDataI(I, Dst, d);
               w := d.Weight - CurrArc^.ResidualCap;
               aTotalCost += w * aCosts[TIntEdge.Create(I, Dst)];
               Result[J] := TWeightEdge.Create(I, Dst, w);
