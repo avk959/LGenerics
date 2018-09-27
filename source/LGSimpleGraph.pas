@@ -181,7 +181,6 @@ type
 
       TNode = record
         FirstArc,        // index of first incident arc in arcs array
-        LastArc,         // index of last incident arc in arcs array
         Distance,
         Mate: SizeInt;   // index of matched node
       end;
@@ -1670,7 +1669,7 @@ begin
       Grays.AddAll(w);
     end;
 
-  System.SetLength(CurrArcIdx, FNodeCount);
+  System.SetLength(CurrArcIdx, Succ(FNodeCount));
   J := 0;
   for I := 0 to FNodeCount - 2 do
     begin
@@ -1682,13 +1681,12 @@ begin
     end;
   CurrArcIdx[Pred(FNodeCount)] := J;
 
-  System.SetLength(FNodes, FNodeCount);
-  System.SetLength(FArcs, (aGraph.EdgeCount + Grays.Count) * 2);
+  System.SetLength(FNodes, Succ(FNodeCount));
+  System.SetLength(FArcs, Succ((aGraph.EdgeCount + Grays.Count) * 2));
 
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     begin
       FNodes[I].FirstArc := CurrArcIdx[I];
-      FNodes[I].Distance := 0;
       FNodes[I].Mate := FDummy;
     end;
 
@@ -1711,10 +1709,14 @@ begin
       Inc(CurrArcIdx[J]);
     end;
 
-  for I := 0 to System.High(FNodes) do
-    FNodes[I].LastArc := Pred(CurrArcIdx[I]);
-
   CurrArcIdx := nil;
+
+  FArcs[System.High(FArcs)].Target := FNodeCount;
+  //sentinel node
+  FNodes[FNodeCount].FirstArc := System.High(FArcs);
+  FNodes[FNodeCount].Distance := INF_DIST;
+  FNodes[FNodeCount].Mate := FDummy;
+
   FQueue := aGraph.CreateIntArray;
 end;
 
@@ -1744,7 +1746,7 @@ begin
         begin
           CurrArc := FNodes[Curr].FirstArc;
           Dist := Succ(FNodes[Curr].Distance);
-          while CurrArc <= FNodes[Curr].LastArc do
+          while CurrArc < FNodes[Succ(Curr)].FirstArc do
             begin
               Matched := FNodes[FArcs[CurrArc].Target].Mate;
               if FNodes[Matched].Distance = INF_DIST then
@@ -1762,18 +1764,18 @@ end;
 
 function TGSimpleGraph.THKMatch.Dfs(aRoot: SizeInt): Boolean;
 var
-  CurrArc, Dist, Next, Matched: SizeInt;
+  CurrArc, Dist, Next, Mate: SizeInt;
 begin
   //todo: non-recursive dfs ???
   if aRoot = FDummy then
     exit(True);
   CurrArc := FNodes[aRoot].FirstArc;
   Dist := Succ(FNodes[aRoot].Distance);
-  while CurrArc <= FNodes[aRoot].LastArc do
+  while CurrArc < FNodes[Succ(aRoot)].FirstArc do
     begin
       Next := FArcs[CurrArc].Target;
-      Matched := FNodes[Next].Mate;
-      if (FNodes[Matched].Distance = Dist) and Dfs(Matched) then
+      Mate := FNodes[Next].Mate;
+      if (FNodes[Mate].Distance = Dist) and Dfs(Mate) then
         begin
           FNodes[aRoot].Mate := Next;
           FNodes[Next].Mate := aRoot;
