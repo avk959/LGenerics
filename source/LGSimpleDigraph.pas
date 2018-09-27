@@ -351,8 +351,8 @@ type
       FMaxLevel,                // maximal level
       FMaxActiveLevel,          // maximal level with excessed node
       FMinActiveLevel: SizeInt; // minimal level with excessed node
-      procedure Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
-      procedure Init2(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+      procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+      procedure CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
       procedure GlobalRelabel;
       procedure RemoveGap(aLayer: SizeInt);
@@ -375,11 +375,10 @@ type
       PArc  = ^TArc;
 
       TArc = record
-        ResidualCap: TWeight;
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
-        IsReal: Boolean;
-        constructor Create(c: TWeight; aTarget: PNode; aReverse: PArc);
+        ResidualCap: TWeight;
+        constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
         function  IsResidual: Boolean; inline;
         procedure Push(aFlow: TWeight); inline;
@@ -402,7 +401,7 @@ type
       FQueue: array of PNode;
       FSource,
       FSink: PNode;
-      procedure Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+      procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
       function  Bfs: Boolean;
       function  Dfs(aRoot: PNode; aFlow: TWeight): TWeight;
@@ -454,7 +453,7 @@ type
       FSink: PNode;
       FFlow: TWeight;
       FNodeCount: SizeInt;
-      procedure Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
+      procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
                 constref aCosts: TEdgeCostMap);
       procedure SearchInit; inline;
       function  FindNegCycle: Boolean;
@@ -1872,7 +1871,7 @@ end;
 
 { TGIntWeightDiGraph.THPrfHelper }
 
-procedure TGIntWeightDiGraph.THPrfHelper.Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+procedure TGIntWeightDiGraph.THPrfHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -1921,7 +1920,7 @@ begin
   System.SetLength(FQueue, FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.THPrfHelper.Init2(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+procedure TGIntWeightDiGraph.THPrfHelper.CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource,aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -2316,7 +2315,7 @@ end;
 
 function TGIntWeightDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
 begin
-  Init(aGraph, aSource, aSink);
+  CreateResudualGraph(aGraph, aSource, aSink);
   HiLevelPushRelabel;
   Result := FSink^.Excess;
 end;
@@ -2324,7 +2323,7 @@ end;
 function TGIntWeightDiGraph.THPrfHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
-  Init2(aGraph, aSource, aSink);
+  CreateResudualGraphCap(aGraph, aSource, aSink);
   HiLevelPushRelabel;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -2336,7 +2335,7 @@ function TGIntWeightDiGraph.THPrfHelper.GetMinCut(aGraph: TGIntWeightDiGraph; aS
 var
   I, J: SizeInt;
 begin
-  Init(aGraph, aSource, aSink);
+  CreateResudualGraph(aGraph, aSource, aSink);
   HiLevelPushRelabel;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -2355,20 +2354,18 @@ end;
 
 { TGIntWeightDiGraph.TDinitzHelper.TArc }
 
-constructor TGIntWeightDiGraph.TDinitzHelper.TArc.Create(c: TWeight; aTarget: PNode; aReverse: PArc);
+constructor TGIntWeightDiGraph.TDinitzHelper.TArc.Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
 begin
-  ResidualCap := c;
   Target := aTarget;
   Reverse := aReverse;
-  IsReal := True;
+  ResidualCap := aCap;
 end;
 
 constructor TGIntWeightDiGraph.TDinitzHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc);
 begin
-  ResidualCap := 0;
   Target := aTarget;
   Reverse := aReverse;
-  IsReal := False;
+  ResidualCap := 0;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.TArc.IsResidual: Boolean;
@@ -2401,7 +2398,7 @@ end;
 
 { TGIntWeightDiGraph.TDinitzHelper }
 
-procedure TGIntWeightDiGraph.TDinitzHelper.Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+procedure TGIntWeightDiGraph.TDinitzHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -2426,7 +2423,7 @@ begin
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
-        FArcs[CurrArcIdx[I]] := TArc.Create(p^.Data.Weight, @FNodes[J], @FArcs[CurrArcIdx[J]]);
+        FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], p^.Data.Weight);
         FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]]);
         Inc(CurrArcIdx[I]);
         Inc(CurrArcIdx[J]);
@@ -2521,23 +2518,21 @@ end;
 
 function TGIntWeightDiGraph.TDinitzHelper.CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
 var
-  I, J, Dst: SizeInt;
+  I, J: SizeInt;
   CurrArc: PArc;
   d: TEdgeData;
 begin
   System.SetLength(Result, aGraph.EdgeCount);
   J := 0;
-  d := DefaultEdgeData;
   for I := 0 to System.High(FNodes) do
     begin
       CurrArc := FNodes[I].FirstArc;
       while CurrArc <= FNodes[I].LastArc do
         begin
-          if CurrArc^.IsReal then
+          if aGraph.GetEdgeDataI(I, CurrArc^.Target - PNode(FNodes), d) then
             begin
-              Dst := CurrArc^.Target - PNode(FNodes);
-              aGraph.GetEdgeDataI(I, Dst, d);
-              Result[J] := TWeightEdge.Create(I, Dst, d.Weight - CurrArc^.ResidualCap);
+              Result[J] :=
+                TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), d.Weight - CurrArc^.ResidualCap);
               Inc(J);
             end;
           Inc(CurrArc);
@@ -2548,14 +2543,14 @@ end;
 function TGIntWeightDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource,
   aSink: SizeInt): TWeight;
 begin
-  Init(aGraph, aSource, aSink);
+  CreateResudualGraph(aGraph, aSource, aSink);
   Result := DinitzMaxFlow;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
-  Init(aGraph, aSource, aSink);
+  CreateResudualGraph(aGraph, aSource, aSink);
   Result := DinitzMaxFlow;
   a := CreateEdges(aGraph);
 end;
@@ -2565,7 +2560,7 @@ function TGIntWeightDiGraph.TDinitzHelper.GetMinCut(aGraph: TGIntWeightDiGraph; 
 var
   I, J: SizeInt;
 begin
-  Init(aGraph, aSource, aSink);
+  CreateResudualGraph(aGraph, aSource, aSink);
   Result := DinitzMaxFlow;
   System.SetLength(s, ARRAY_INITIAL_SIZE);
   J := 0;
@@ -2613,8 +2608,8 @@ end;
 
 { TGIntWeightDiGraph.TBgMcfHelper }
 
-procedure TGIntWeightDiGraph.TBgMcfHelper.Init(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
-  constref aCosts: TEdgeCostMap);
+procedure TGIntWeightDiGraph.TBgMcfHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+  aFlow: TWeight; constref aCosts: TEdgeCostMap);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -2854,9 +2849,12 @@ end;
 function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
-  if aFlow = 0 then
-    exit(aFlow);
-  Init(aGraph, aSource, aSink, aFlow, aCosts);
+  if aFlow <= 0 then
+    begin
+      aTotalCost := 0;
+      exit(0);
+    end;
+  CreateResudualGraph(aGraph, aSource, aSink, aFlow, aCosts);
   Result := MinCostFlow;
   aTotalCost := GetTotalCost(aCosts);
 end;
@@ -2866,7 +2864,7 @@ function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGra
 begin
   if aFlow = 0 then
     exit(aFlow);
-  Init(aGraph, aSource, aSink, aFlow, aCosts);
+  CreateResudualGraph(aGraph, aSource, aSink, aFlow, aCosts);
   Result := MinCostFlow;
   a := CreateEdges(aCosts, aTotalCost);
 end;
