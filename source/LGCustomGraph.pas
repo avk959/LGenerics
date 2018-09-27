@@ -1007,13 +1007,13 @@ type
       constructor Create(aIndex: SizeInt; aRank, aWeight: TWeight);
     end;
 
-    TGraph       = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
-    TEstimate    = function(constref aSrc, aDst: TVertex): TWeight;
-    TPairingHeap = specialize TGPairHeapMin<TWeightItem>;
-    TBinHeap     = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap   = specialize TGBinHeapMin<TRankItem>;
+    TGraph     = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TEstimate  = function(constref aSrc, aDst: TVertex): TWeight;
+    TPairHeap  = specialize TGPairHeapMin<TWeightItem>;
+    TBinHeap   = specialize TGBinHeapMin<TWeightItem>;
+    TAStarHeap = specialize TGBinHeapMin<TRankItem>;
     //TAStarHeap   = specialize TGPairHeapMin<TRankItem>;
-    TEdgeArray   = array of TWeightEdge;
+    TEdgeArray = array of TWeightEdge;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
@@ -4439,14 +4439,14 @@ end;
 
 class function TGWeightPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
-  Queue: TPairingHeap;
+  Queue: TPairHeap;
   Reached,
   InQueue: TGraph.TBitVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
-  Queue := TPairingHeap.Create(g.VertexCount);
+  Queue := TPairHeap.Create(g.VertexCount);
   Reached.Size := g.VertexCount;
   InQueue.Size := g.VertexCount;
   Item := TWeightItem.Create(aSrc, ZeroWeight);
@@ -4468,14 +4468,14 @@ end;
 
 class function TGWeightPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
-  Queue: TPairingHeap;
+  Queue: TPairHeap;
   Reached,
   InQueue: TGraph.TBitVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
-  Queue := TPairingHeap.Create(g.VertexCount);
+  Queue := TPairHeap.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
   Reached.Size := g.VertexCount;
   InQueue.Size := g.VertexCount;
