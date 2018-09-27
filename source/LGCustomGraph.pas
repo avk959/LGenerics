@@ -990,9 +990,6 @@ type
     TWeightArray  = array of TWeight;
 
   strict private
-  type
-    TScanStatus = (ssOutOfQueue, ssIdle, ssActive);
-
   class var
     CFInfWeight,
     CFNegInfWeight,
@@ -1066,7 +1063,7 @@ type
                     static;
   { modification of Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
     faster negative cycle detection;
-    B.V.Cherkassky and A.V.Goldberg. Negative-cycle detection algorithms. }
+    B.V.Cherkassky and A.V.Goldberg: Negative-cycle detection algorithms. }
     class function  BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
   { negative cycle detection }
@@ -4981,7 +4978,8 @@ var
   TreePrev,
   TreeNext,
   Level: TIntArray;
-  Status: array of TScanStatus;
+  InQueue,
+  Active: TGraph.TBitVector;
   Curr, Next, Prev, Post, Test, CurrLevel: SizeInt;
   p: TGraph.PAdjItem;
 begin
@@ -4990,22 +4988,20 @@ begin
   TreePrev := g.CreateIntArray;
   TreeNext := g.CreateIntArray;
   Level := g.CreateIntArray;
-  System.SetLength(Status, g.VertexCount);
-  System.FillChar(Pointer(Status)^, g.VertexCount * SizeOf(TScanStatus), 0);
+  InQueue.Size := g.VertexCount;
+  Active.Size := g.VertexCount;
   aWeights := CreateWeightArray(g.VertexCount);
   aWeights[aSrc] := ZeroWeight;
   aParents[aSrc] := aSrc;
   TreePrev[aSrc] := aSrc;
   TreeNext[aSrc] := aSrc;
-  Status[aSrc] := ssActive;
+  Active[aSrc] := True;
   Curr := aSrc;
   repeat
-    if Status[Curr] = ssIdle then
-      begin
-        Status[Curr] := ssOutOfQueue;
-        continue;
-      end;
-    Status[Curr] := ssOutOfQueue;
+    InQueue[Curr] := False;
+    if not Active[Curr] then
+      continue;
+    Active[Curr] := False;
     for p in g.AdjLists[Curr]^ do
       begin
         Next := p^.Destination;
@@ -5026,8 +5022,7 @@ begin
                   CurrLevel += Level[Test];
                   TreePrev[Test] := NULL_INDEX;
                   Level[Test] := NULL_INDEX;
-                  if Status[Test] = ssActive then
-                    Status[Test] := ssIdle;
+                  Active[Test] := False;
                   Test := TreeNext[Test];
                 until CurrLevel < 0;
                 Dec(Level[aParents[Next]]);
@@ -5041,12 +5036,15 @@ begin
             TreePrev[Next] := Curr;
             TreeNext[Next] := Post;
             TreePrev[Post] := Next;
-            if Status[Next] = ssOutOfQueue then
-              if Queue.TryPeekFirst(Test) and (aWeights[Next] < aWeights[Test]) then
-                Queue.PushFirst(Next)
-              else
-                Queue.PushLast(Next);
-            Status[Next] := ssActive;
+            if not InQueue[Next] then
+              begin
+                if Queue.TryPeekFirst(Test) and (aWeights[Next] < aWeights[Test]) then
+                  Queue.PushFirst(Next)
+                else
+                  Queue.PushLast(Next);
+                InQueue[Next] := True;
+              end;
+            Active[Next] := True;
           end;
       end;
   until not Queue{%H-}.TryPopFirst(Curr);
