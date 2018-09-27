@@ -687,7 +687,7 @@ type
 
   protected
   type
-    TPairingHeap = TPathHelper.TPairingHeap;
+    TPairingHeap = TPathHelper.TPairHeap;
     TWeightItem  = TPathHelper.TWeightItem;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
