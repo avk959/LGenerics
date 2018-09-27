@@ -383,11 +383,10 @@ type
         procedure Push(aFlow: TWeight); inline;
       end;
 
-      TNode = record //todo: avoid LastArc ???
+      TNode = record
       private
         FirstArc,            // pointer to first incident arc in arcs array
-        CurrentArc,          // pointer to current incident arc in arcs array
-        LastArc: PArc;       // pointer to last incident arc in arcs array
+        CurrentArc: PArc;    // pointer to current incident arc in arcs array
         Distance: SizeInt;   // distance from the source
         procedure ResetCurrent; inline;
         function  NonLabeled: Boolean; inline;
@@ -400,6 +399,7 @@ type
       FQueue: array of PNode;
       FSource,
       FSink: PNode;
+      FNodeCount: SizeInt;
       procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
       function  Bfs: Boolean;
@@ -2158,20 +2158,18 @@ function TGIntWeightDiGraph.THPrHelper.CreateEdges: TEdgeArray;
 var
   I, J: SizeInt;
   CurrArc: PArc;
-  Cap: TWeight;
 begin
   System.SetLength(Result, System.Length(FArcs) div 2);
   J := 0;
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     begin
       CurrArc := FNodes[I].FirstArc;
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
-          Cap := FCaps[CurrArc - PArc(FArcs)];
-          if Cap > 0 then
+          if FCaps[CurrArc - PArc(FArcs)] > 0 then
             begin
               Result[J] := TWeightEdge.Create(
-                I, CurrArc^.Target - PNode(FNodes), Cap - CurrArc^.ResidualCap);
+                I, CurrArc^.Target - PNode(FNodes), FCaps[CurrArc - PArc(FArcs)] - CurrArc^.ResidualCap);
               Inc(J);
             end;
           Inc(CurrArc);
@@ -2415,7 +2413,8 @@ var
   I, J: SizeInt;
   p: PAdjItem;
 begin
-  System.SetLength(CurrArcIdx, aGraph.VertexCount);
+  FNodeCount := aGraph.VertexCount;
+  System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
   for I := 0 to System.High(CurrArcIdx) do
     begin
@@ -2423,14 +2422,15 @@ begin
       J += aGraph.DegreeI(I);
     end;
 
-  System.SetLength(FNodes, aGraph.VertexCount);
+  System.SetLength(FNodes, Succ(FNodeCount));
   FSource := @FNodes[aSource];
   FSink := @FNodes[aSink];
-  System.SetLength(FArcs, aGraph.EdgeCount * 2);
+  System.SetLength(FArcs, Succ(aGraph.EdgeCount * 2));
 
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
-  for I := 0 to System.High(FNodes) do
+
+  for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
@@ -2440,10 +2440,15 @@ begin
         Inc(CurrArcIdx[J]);
       end;
 
-  for I := 0 to System.High(FNodes) do
-    FNodes[I].LastArc := @FArcs[Pred(CurrArcIdx[I])];
-
   CurrArcIdx := nil;
+
+  FArcs[System.High(FArcs)] :=
+    TArc.Create(@FNodes[FNodeCount], @FArcs[System.High(FArcs)], 0);
+  //sentinel node
+  FNodes[FNodeCount].FirstArc := @FArcs[System.High(FArcs)];
+  FNodes[FNodeCount].CurrentArc := @FArcs[System.High(FArcs)];
+  FNodes[FNodeCount].Distance := NULL_INDEX;
+
   System.SetLength(FQueue, aGraph.VertexCount);
 end;
 
@@ -2451,8 +2456,10 @@ procedure TGIntWeightDiGraph.TDinitzHelper.ClearLabels;
 var
   I: SizeInt;
 begin
-  for I := 0 to  System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     FNodes[I].Distance := NULL_INDEX;
+  FSource^.Distance := 0;
+  FSource^.ResetCurrent;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.Bfs: Boolean;
@@ -2464,8 +2471,6 @@ var
   qTail: SizeInt = 0;
 begin
   ClearLabels;
-  FSource^.Distance := 0;
-  FSource^.ResetCurrent;
   FQueue[qTail] := FSource;
   Inc(qTail);
   while (qHead < qTail) and FSink^.NonLabeled do
@@ -2474,7 +2479,7 @@ begin
       Inc(qHead);
       Dist := Succ(Curr^.Distance);
       CurrArc := Curr^.FirstArc;
-      while CurrArc <= Curr^.LastArc do
+      while CurrArc < (Curr + 1)^.FirstArc do
         begin
           Next := CurrArc^.Target;
           if Next^.NonLabeled and CurrArc^.IsResidual then
@@ -2497,7 +2502,7 @@ begin
   //todo: non-recursive dfs
   if aFlow > 0 then
     if aRoot <> FSink then
-      while aRoot^.CurrentArc <= aRoot^.LastArc do
+      while aRoot^.CurrentArc < (aRoot + 1)^.FirstArc do
         begin
           if aRoot^.CurrentArc^.Target^.Distance = Succ(aRoot^.Distance) then
             begin
@@ -2535,10 +2540,10 @@ var
 begin
   System.SetLength(Result, aGraph.EdgeCount);
   J := 0;
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     begin
       CurrArc := FNodes[I].FirstArc;
-      while CurrArc <= FNodes[I].LastArc do
+      while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           if aGraph.GetEdgeDataI(I, CurrArc^.Target - PNode(FNodes), d) then
             begin
