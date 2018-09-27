@@ -819,7 +819,7 @@ type
     procedure SiftDown(aIndex: SizeInt);
   public
     constructor Create(aSize: SizeInt);
-    function  NotUsed(aHandle: SizeInt): Boolean; inline;
+    procedure MakeEmpty; inline;
     function  TryDequeue(out aValue: T): Boolean;
     procedure Enqueue(aHandle: SizeInt; constref aValue: T);
     procedure Update(aHandle: SizeInt; constref aNewValue: T);
@@ -890,19 +890,16 @@ type
     function  NewNode(constref aValue: T; aHandle: SizeInt): PNode; inline;
     function  DequeueItem: T;
     procedure RootMerge(aNode: PNode); inline;
-    procedure ExtractNode(aNode: PNode);
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static; inline;
   public
     constructor Create(aSize: SizeInt);
     procedure MakeEmpty;
-    function  NotUsed(aHandle: SizeInt): Boolean; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
     procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
     function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
-    function  Remove(aHandle: SizeInt): Boolean;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -3809,15 +3806,14 @@ begin
   if aSize > 0 then
     begin
       System.SetLength(FHandle2Index, aSize);
-      System.FillChar(FHandle2Index[0], aSize * SizeOf(SizeInt), $ff);
       System.SetLength(FHeap, aSize);
       System.SetLength(FIndex2Handle, aSize);
     end;
 end;
 
-function TGBinHeapMin.NotUsed(aHandle: SizeInt): Boolean;
+procedure TGBinHeapMin.MakeEmpty;
 begin
-  Result := FHandle2Index[aHandle] = -1;
+  FCount := 0;
 end;
 
 function TGBinHeapMin.TryDequeue(out aValue: T): Boolean;
@@ -4097,21 +4093,6 @@ begin
     FRoot^.Prev := nil;
 end;
 
-procedure TGPairHeapMax.ExtractNode(aNode: PNode);
-begin
-  if aNode <> FRoot then
-    begin
-      CutNode(aNode);
-      RootMerge(TwoPassMerge(aNode^.Child));
-    end
-  else
-    begin
-      FRoot := TwoPassMerge(FRoot^.Child);
-      if FRoot <> nil then
-        FRoot^.Prev := nil;
-    end;
-end;
-
 class function TGPairHeapMax.NodeMerge(L, R: PNode): PNode;
 begin
   if L <> nil then
@@ -4162,14 +4143,8 @@ end;
 
 procedure TGPairHeapMax.MakeEmpty;
 begin
-  System.FillChar(Pointer(FNodeList)^, System.Length(FNodeList) * SizeOf(TNode), $ff);
   FRoot := nil;
   FCount := 0;
-end;
-
-function TGPairHeapMax.NotUsed(aHandle: SizeInt): Boolean;
-begin
-  Result := FNodeList[aHandle].Prev = PNode(SizeUInt(-1));
 end;
 
 function TGPairHeapMax.TryDequeue(out aValue: T): Boolean;
@@ -4206,20 +4181,6 @@ begin
           CutNode(Node);
           RootMerge(Node);
         end;
-    end;
-end;
-
-function TGPairHeapMax.Remove(aHandle: SizeInt): Boolean;
-var
-  Node: PNode;
-begin
-  Node := @FNodeList[aHandle];
-  Result := (Node = FRoot) or (Node^.Prev <> nil);
-  if Result then
-    begin
-      ExtractNode(Node);
-      Node^.Prev := nil;
-      Dec(FCount);
     end;
 end;
 
@@ -4551,25 +4512,30 @@ end;
 class function TGWeightPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
 var
   Queue: TBinHeap;
-  Reached: TGraph.TBitVector;
+  Reached,
+  InQueue: TGraph.TBitVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Queue := TBinHeap.Create(g.VertexCount);
   Reached.Size := g.VertexCount;
-  Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
-  while Queue.TryDequeue(Item) do
-    begin
-      if Item.Index = aDst then
-        exit(Item.Weight);
-      Reached[Item.Index] := True;
-      for p in g.AdjLists[Item.Index]^ do
-        if Queue.NotUsed(p^.Key) then
-          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight))
+  InQueue.Size := g.VertexCount;
+  Item := TWeightItem.Create(aSrc, ZeroWeight);
+  repeat
+    if Item.Index = aDst then
+      exit(Item.Weight);
+    Reached[Item.Index] := True;
+    for p in g.AdjLists[Item.Index]^ do
+      if not Reached[p^.Key] then
+        if not InQueue[p^.Key] then
+          begin
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+            InQueue[p^.Key] := True;
+          end
         else
-          if not Reached[p^.Key] and (p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight) then
+          if p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight then
             Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
-    end;
+  until not Queue.TryDequeue(Item);
   Result := InfWeight;
 end;
 
@@ -4577,35 +4543,38 @@ class function TGWeightPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; o
 var
   Queue: TBinHeap;
   Parents: TIntArray;
-  Reached: TGraph.TBitVector;
+  Reached,
+  InQueue: TGraph.TBitVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Queue := TBinHeap.Create(g.VertexCount);
   Parents := g.CreateIntArray;
   Reached.Size := g.VertexCount;
-  Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
-  while {%H-}Queue.TryDequeue(Item) do
-    begin
-      if {%H-}Item.Index = aDst then
-        begin
-          aWeight := Item.Weight;
-          exit(g.TreePathTo(Parents, aDst));
-        end;
-      Reached[Item.Index] := True;
-      for p in g.AdjLists[Item.Index]^ do
-        if Queue.NotUsed(p^.Key) then
+  InQueue.Size := g.VertexCount;
+  Item := TWeightItem.Create(aSrc, ZeroWeight);
+  repeat
+    if Item.Index = aDst then
+      begin
+        aWeight := Item.Weight;
+        exit(g.TreePathTo(Parents, aDst));
+      end;
+    Reached[Item.Index] := True;
+    for p in g.AdjLists[Item.Index]^ do
+      if not Reached[p^.Key] then
+        if not InQueue[p^.Key] then
           begin
             Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
             Parents[p^.Key] := Item.Index;
+            InQueue[p^.Key] := True;
           end
         else
-          if not Reached[p^.Key] and (p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight) then
+          if p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight then
             begin
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               Parents[p^.Key] := Item.Index;
             end;
-    end;
+  until not Queue.TryDequeue(Item);
   aWeight := InfWeight;
   Result := [];
 end;
@@ -4615,7 +4584,8 @@ class function TGWeightPathHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWei
 var
   Queue: TAStarHeap;
   Parents: TIntArray;
-  Reached: TGraph.TBitVector;
+  Reached,
+  InQueue: TGraph.TBitVector;
   Item: TRankItem;
   Relax: TWeight;
   p: TGraph.PAdjItem;
@@ -4623,33 +4593,35 @@ begin
   Queue := TAStarHeap.Create(g.VertexCount);
   Parents := g.CreateIntArray;
   Reached.Size := g.VertexCount;
-  Queue.Enqueue(aSrc, TRankItem.Create(aSrc, aEst(g.Items[aSrc], g.Items[aDst]), ZeroWeight));
-  while Queue.TryDequeue(Item) do
-    begin
-      if {%H-}Item.Index = aDst then
-        begin
-          aWeight := Item.Weight;
-          exit(g.TreePathTo(Parents, aDst));
-        end;
-      Reached[Item.Index] := True;
-      for p in g.AdjLists[Item.Index]^ do
+  InQueue.Size := g.VertexCount;
+  Item := TRankItem.Create(aSrc, aEst(g.Items[aSrc], g.Items[aDst]), ZeroWeight);
+  repeat
+    if {%H-}Item.Index = aDst then
+      begin
+        aWeight := Item.Weight;
+        exit(g.TreePathTo(Parents, aDst));
+      end;
+    Reached[Item.Index] := True;
+    for p in g.AdjLists[Item.Index]^ do
+      if not Reached[p^.Key] then
         begin
           Relax := p^.Data.Weight + Item.Weight;
-          if Queue.NotUsed(p^.Key) then
+          if not InQueue[p^.Key] then
             begin
               Queue.Enqueue(p^.Key, TRankItem.Create(
                 p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
               Parents[p^.Key] := Item.Index;
+              InQueue[p^.Key] := True;
             end
           else
-            if not Reached[p^.Key] and (Relax < Queue.Peek(p^.Key).Weight) then
+            if Relax < Queue.Peek(p^.Key).Weight then
               begin
                 Queue.Update(p^.Key, TRankItem.Create(
                   p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
                 Parents[p^.Key] := Item.Index;
               end;
         end;
-    end;
+  until not Queue.TryDequeue(Item);
   aWeight := InfWeight;
   Result := [];
 end;
