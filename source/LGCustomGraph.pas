@@ -856,13 +856,12 @@ type
     class procedure CutNode(aNode: PNode); static; inline;
   public
     constructor Create(aSize: SizeInt);
-    procedure MakeEmpty;
-    function  NotUsed(aHandle: SizeInt): Boolean; inline;
+    procedure MakeEmpty; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
     procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
-    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
-    function  Remove(aHandle: SizeInt): Boolean;
+    procedure Update(aHandle: SizeInt; constref aNewValue: T);
+    procedure Remove(aHandle: SizeInt); inline;
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -895,11 +894,11 @@ type
     class procedure CutNode(aNode: PNode); static; inline;
   public
     constructor Create(aSize: SizeInt);
-    procedure MakeEmpty;
+    procedure MakeEmpty; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Dequeue: T; inline;
     procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
-    function  Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
+    procedure Update(aHandle: SizeInt; constref aNewValue: T);
     function  Peek(aHandle: SizeInt): T; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -3927,6 +3926,7 @@ begin
       if FRoot <> nil then
         FRoot^.Prev := nil;
     end;
+  Dec(FCount);
 end;
 
 class function TGPairHeapMin.NodeMerge(L, R: PNode): PNode;
@@ -3979,14 +3979,8 @@ end;
 
 procedure TGPairHeapMin.MakeEmpty;
 begin
-  System.FillChar(Pointer(FNodeList)^, System.Length(FNodeList) * SizeOf(TNode), $ff);
   FRoot := nil;
   FCount := 0;
-end;
-
-function TGPairHeapMin.NotUsed(aHandle: SizeInt): Boolean;
-begin
-  Result := FNodeList[aHandle].Prev = PNode(SizeUInt(-1));
 end;
 
 function TGPairHeapMin.TryDequeue(out aValue: T): Boolean;
@@ -4009,13 +4003,12 @@ begin
   RootMerge(NewNode(aValue, aHandle));
 end;
 
-function TGPairHeapMin.Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
+procedure TGPairHeapMin.Update(aHandle: SizeInt; constref aNewValue: T);
 var
   Node: PNode;
 begin
   Node := @FNodeList[aHandle];
-  Result := ((Node = FRoot) or (Node^.Prev <> nil)) and (aNewValue < Node^.Data);
-  if Result then
+  if aNewValue < Node^.Data then
     begin
       Node^.Data := aNewValue;
       if Node <> FRoot then
@@ -4026,18 +4019,9 @@ begin
     end;
 end;
 
-function TGPairHeapMin.Remove(aHandle: SizeInt): Boolean;
-var
-  Node: PNode;
+procedure TGPairHeapMin.Remove(aHandle: SizeInt);
 begin
-  Node := @FNodeList[aHandle];
-  Result := (Node = FRoot) or (Node^.Prev <> nil);
-  if Result then
-    begin
-      ExtractNode(Node);
-      Node^.Prev := nil;
-      Dec(FCount);
-    end;
+  ExtractNode(@FNodeList[aHandle]);
 end;
 
 function TGPairHeapMin.Peek(aHandle: SizeInt): T;
@@ -4167,13 +4151,12 @@ begin
   RootMerge(NewNode(aValue, aHandle));
 end;
 
-function TGPairHeapMax.Update(aHandle: SizeInt; constref aNewValue: T): Boolean;
+procedure TGPairHeapMax.Update(aHandle: SizeInt; constref aNewValue: T);
 var
   Node: PNode;
 begin
   Node := @FNodeList[aHandle];
-  Result := ((Node = FRoot) or (Node^.Prev <> nil)) and (aNewValue > Node^.Data);
-  if Result then
+  if aNewValue > Node^.Data then
     begin
       Node^.Data := aNewValue;
       if Node <> FRoot then
@@ -4457,31 +4440,37 @@ end;
 class function TGWeightPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
   Queue: TPairingHeap;
-  Reached: TGraph.TBitVector;
+  Reached,
+  InQueue: TGraph.TBitVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
   Queue := TPairingHeap.Create(g.VertexCount);
   Reached.Size := g.VertexCount;
-  Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
-  while Queue.TryDequeue(Item) do
-    begin
-      Result[{%H-}Item.Index] := {%H-}Item.Weight;
-      Reached[Item.Index] := True;
-      for p in g.AdjLists[Item.Index]^ do
-        if Queue.NotUsed(p^.Key) then
-          Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight))
+  InQueue.Size := g.VertexCount;
+  Item := TWeightItem.Create(aSrc, ZeroWeight);
+  repeat
+    Result[Item.Index] := Item.Weight;
+    Reached[Item.Index] := True;
+    for p in g.AdjLists[Item.Index]^ do
+      if not Reached[p^.Key] then
+        if not InQueue[p^.Key] then
+          begin
+            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
+            InQueue[p^.Key] := True;
+          end
         else
-          if not Reached[p^.Key] and (p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight) then
+          if p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight then
             Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
-    end;
+  until not Queue.TryDequeue(Item);
 end;
 
 class function TGWeightPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
   Queue: TPairingHeap;
-  Reached: TGraph.TBitVector;
+  Reached,
+  InQueue: TGraph.TBitVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
@@ -4489,24 +4478,26 @@ begin
   Queue := TPairingHeap.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
   Reached.Size := g.VertexCount;
-  Queue.Enqueue(aSrc, TWeightItem.Create(aSrc, ZeroWeight));
-  while Queue.TryDequeue(Item) do
-    begin
-      Result[{%H-}Item.Index] := {%H-}Item.Weight;
-      Reached[Item.Index] := True;
-      for p in g.AdjLists[Item.Index]^ do
-        if Queue.NotUsed(p^.Key) then
+  InQueue.Size := g.VertexCount;
+  Item := TWeightItem.Create(aSrc, ZeroWeight);
+  repeat
+    Result[Item.Index] := Item.Weight;
+    Reached[Item.Index] := True;
+    for p in g.AdjLists[Item.Index]^ do
+      if not Reached[p^.Key] then
+        if not InQueue[p^.Key] then
           begin
             Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
             aPathTree[p^.Key] := Item.Index;
+            InQueue[p^.Key] := True;
           end
         else
-          if not Reached[p^.Key] and (p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight) then
+          if p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight then
             begin
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               aPathTree[p^.Key] := Item.Index;
             end;
-    end;
+  until not Queue.TryDequeue(Item);
 end;
 
 class function TGWeightPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
