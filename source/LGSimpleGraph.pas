@@ -5487,7 +5487,8 @@ end;
 function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 var
   Queue: TPairingHeap;
-  Reached: TBitVector;
+  Reached,
+  InQueue: TBitVector;
   I, Curr: SizeInt;
   Item: TWeightItem;
   p: PAdjItem;
@@ -5495,31 +5496,31 @@ begin
   Result := CreateIntArray;
   Queue := TPairingHeap.Create(VertexCount);
   Reached.Size := VertexCount;
+  InQueue.Size := VertexCount;
   aTotalWeight := ZeroWeight;
   for I := 0 to Pred(VertexCount) do
     if not Reached[I] then
       begin
-        Queue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
-        while Queue.TryDequeue(Item) do
-          begin
-            Curr := {%H-}Item.Index;
-            aTotalWeight += Item.Weight;
-            Reached[Curr] := True;
-            for p in AdjLists[Curr]^ do
-              begin
-                if Queue.NotUsed(p^.Key) then
+        Item := TWeightItem.Create(I, ZeroWeight);
+        repeat
+          Curr := Item.Index;
+          aTotalWeight += Item.Weight;
+          Reached[Curr] := True;
+          for p in AdjLists[Curr]^ do
+            if not Reached[p^.Key] then
+              if not InQueue[p^.Key] then
+                begin
+                  Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
+                  Result[p^.Key] := Curr;
+                  InQueue[p^.Key] := True;
+                end
+              else
+                if p^.Data.Weight < Queue.Peek(p^.Key).Weight then
                   begin
-                    Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
+                    Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
                     Result[p^.Key] := Curr;
-                  end
-                else
-                  if not Reached[p^.Key] and (p^.Data.Weight < Queue.Peek(p^.Key).Weight) then
-                    begin
-                      Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
-                      Result[p^.Key] := Curr;
-                    end;
-              end;
-          end;
+                  end;
+        until not Queue.TryDequeue(Item);
       end;
 end;
 
