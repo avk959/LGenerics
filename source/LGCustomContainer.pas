@@ -1420,7 +1420,7 @@ begin
     end;
 end;
 
-{$I LGEnumsImpl.inc}
+{$I LGEnums.inc}
 
 { TGCustomContainer.TGContainerEnumerator }
 
@@ -1550,7 +1550,7 @@ begin
   DoEnsureCapacity(aValue);
 end;
 
-{$I LGDynBufferImpl.inc}
+{$I LGDynBuffer.inc}
 
 { TGCustomCollection }
 
@@ -2572,8 +2572,8 @@ var
   k: TKey;
 begin
   for k in a do
-  if Contains(k) then
-    exit(True);
+    if Contains(k) then
+      exit(True);
   Result := False;
 end;
 
@@ -2582,8 +2582,8 @@ var
   k: TKey;
 begin
   for k in e do
-  if Contains(k) then
-    exit(True);
+    if Contains(k) then
+      exit(True);
   Result := False;
 end;
 
@@ -2592,8 +2592,8 @@ var
   k: TKey;
 begin
   for k in a do
-  if not Contains(k) then
-    exit(False);
+    if not Contains(k) then
+      exit(False);
   Result := True;
 end;
 
@@ -2602,8 +2602,8 @@ var
   k: TKey;
 begin
   for k in e do
-  if not Contains(k) then
-    exit(False);
+    if not Contains(k) then
+      exit(False);
   Result := True;
 end;
 
