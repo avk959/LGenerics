@@ -32,7 +32,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="4" Release="1"/>
-    <Files Count="31">
+    <Files Count="45">
       <Item1>
         <Filename Value="..\source\LGUtils.pas"/>
         <UnitName Value="LGUtils"/>
@@ -157,6 +157,62 @@
         <Filename Value="..\source\LGMvMatch.pas"/>
         <UnitName Value="LGMvMatch"/>
       </Item31>
+      <Item32>
+        <Filename Value="..\source\include\CustGraphBitHelp.inc"/>
+        <Type Value="Include"/>
+      </Item32>
+      <Item33>
+        <Filename Value="..\source\include\CustGraphBitHelpH.inc"/>
+        <Type Value="Include"/>
+      </Item33>
+      <Item34>
+        <Filename Value="..\source\include\CustGraphHelpers.inc"/>
+        <Type Value="Include"/>
+      </Item34>
+      <Item35>
+        <Filename Value="..\source\include\CustGraphHelpersH.inc"/>
+        <Type Value="Include"/>
+      </Item35>
+      <Item36>
+        <Filename Value="..\source\include\CustGraphIntSet.inc"/>
+        <Type Value="Include"/>
+      </Item36>
+      <Item37>
+        <Filename Value="..\source\include\CustGraphIntSetH.inc"/>
+        <Type Value="Include"/>
+      </Item37>
+      <Item38>
+        <Filename Value="..\source\include\LGDynBuffer.inc"/>
+        <Type Value="Include"/>
+      </Item38>
+      <Item39>
+        <Filename Value="..\source\include\LGDynBufferH.inc"/>
+        <Type Value="Include"/>
+      </Item39>
+      <Item40>
+        <Filename Value="..\source\include\LGEnums.inc"/>
+        <Type Value="Include"/>
+      </Item40>
+      <Item41>
+        <Filename Value="..\source\include\LGEnumsH.inc"/>
+        <Type Value="Include"/>
+      </Item41>
+      <Item42>
+        <Filename Value="..\source\include\SimpGraphHelp.inc"/>
+        <Type Value="Include"/>
+      </Item42>
+      <Item43>
+        <Filename Value="..\source\include\SimpGraphHelpH.inc"/>
+        <Type Value="Include"/>
+      </Item43>
+      <Item44>
+        <Filename Value="..\source\include\IntWeightGraphHelpH.inc"/>
+        <Type Value="Binary"/>
+      </Item44>
+      <Item45>
+        <Filename Value="..\source\include\IntWeightGraphHelp.inc"/>
+        <Type Value="Binary"/>
+      </Item45>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>

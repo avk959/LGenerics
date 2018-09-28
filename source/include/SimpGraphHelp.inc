@@ -1,0 +1,1463 @@
+{****************************************************************************
+*                                                                           *
+*   This file is part of the LGenerics package.                             *
+*                                                                           *
+*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*                                                                           *
+*   This code is free software; you can redistribute it and/or modify it    *
+*   under the terms of the Apache License, Version 2.0;                     *
+*   You may obtain a copy of the License at                                 *
+*     http://www.apache.org/licenses/LICENSE-2.0.                           *
+*                                                                           *
+*  Unless required by applicable law or agreed to in writing, software      *
+*  distributed under the License is distributed on an "AS IS" BASIS,        *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+*  See the License for the specific language governing permissions and      *
+*  limitations under the License.                                           *
+*                                                                           *
+*****************************************************************************}
+
+{ TGSimpleGraph.TBPCliqueIsHelper }
+
+procedure TGSimpleGraph.TBPCliqueIsHelper.Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+var
+  P, Q: TBoolVector;
+  I, J, ColorClass, PCount: SizeInt;
+begin
+  P := aCand;
+  ColorClass := 0;
+  I := 0;
+  PCount := P.PopCount;
+  while PCount > 0 do
+    begin
+      Inc(ColorClass);
+      Q := P;
+      while Q.NonEmpty do
+        begin
+          J := Q.Bsf;
+          P[J] := False;
+          Q[J] := False;
+          Q.Subtract(FMatrix[J]);
+          aColOrd[I] := J;
+          aColors[I] := ColorClass;
+          Inc(I);
+          Dec(PCount);
+        end;
+    end;
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper.Extend(var aCand: TBoolVector);
+var
+  NewCand: TBoolVector;
+  ColOrd, Colors: TIntArray;
+  I, J, ItemCount: SizeInt;
+begin
+  if aCand.NonEmpty then
+    begin
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
+        begin
+          FCanceled := True;
+          exit;
+        end;
+      ItemCount := aCand.PopCount;
+      System.SetLength(ColOrd, ItemCount);
+      System.SetLength(Colors, ItemCount);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(ItemCount) downto 0 do
+        begin
+          if Colors[I] + FCurrSet.PopCount <= System.Length(FRecentBest) then
+            exit;
+          J := ColOrd[I];
+          aCand[J] := False;
+          FCurrSet[FVertices[J]] := True;
+          NewCand := aCand.Intersection(FMatrix[J]);
+          Extend(NewCand);
+          FCurrSet[FVertices[J]] := False;
+        end;
+    end
+  else
+    if FCurrSet.PopCount > System.Length(FRecentBest) then
+      FRecentBest := FCurrSet.ToArray;
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper.Extend(var aSub, aCand: TBoolVector);
+var
+  NewSub, NewCand: TBoolVector;
+  I: SizeInt;
+begin
+  if FCanceled then
+    exit;
+  if aSub.NonEmpty then
+    begin
+      if aCand.NonEmpty then
+        for I in aCand.Difference(FMatrix[aSub.Bsf]) do
+          begin
+            aCand[I] := False;
+            NewCand := aCand.Intersection(FMatrix[I]);
+            NewSub := aSub.Intersection(FMatrix[I]);
+            FCurrSet[FVertices[I]] := True;
+            Extend(NewSub, NewCand);
+            FCurrSet[FVertices[I]] := False;
+          end;
+    end
+  else
+    FOnFind(FCurrSet.ToArray, FCanceled);
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
+var
+  I, J: SizeInt;
+  p: PAdjList;
+begin
+  System.SetLength(FMatrix, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FMatrix[I].Size := aGraph.VertexCount;
+      p := aGraph.AdjLists[FVertices[I]];
+      for J := 0 to Pred(aGraph.VertexCount) do
+        if (I <> J) and (p^.Contains(FVertices[J]) xor aComplement) then
+          FMatrix[I][J] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
+begin
+  if aComplement then
+    FVertices := aGraph.SortComplementByWidth
+  else
+    FVertices := aGraph.SortVerticesByWidth(soDesc);
+  FillMatrix(aGraph, aComplement);
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
+begin
+  if aComplement then
+    FVertices := aGraph.SortVerticesByDegree(soAsc)
+  else
+    FVertices := aGraph.SortVerticesByDegree(soDesc);
+  FillMatrix(aGraph, aComplement);
+end;
+
+function TGSimpleGraph.TBPCliqueIsHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Cand: TBoolVector;
+begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCanceled := False;
+  SortMatrixByWidth(aGraph, False);
+  FRecentBest := aGraph.ApproxMaxClique;
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.Size := aGraph.VertexCount;
+  Extend(Cand);
+  Result := FRecentBest;
+  aExact := not FCanceled;
+end;
+
+function TGSimpleGraph.TBPCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Cand: TBoolVector;
+begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCanceled := False;
+  SortMatrixByWidth(aGraph, True);
+  FRecentBest := aGraph.ApproxMaxIndependentSet;
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.Size := aGraph.VertexCount;
+  Extend(Cand);
+  Result := FRecentBest;
+  aExact := not FCanceled;
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Sub, Cand: TBoolVector;
+begin
+  SortMatrixByDegree(aGraph, False);
+  Sub.InitRange(aGraph.VertexCount);
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.Size := aGraph.VertexCount;
+  FOnFind := aOnFind;
+  FCanceled := False;
+  Extend(Sub, Cand);
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Sub, Cand: TBoolVector;
+begin
+  SortMatrixByDegree(aGraph, True);
+  Sub.InitRange(aGraph.VertexCount);
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.Size := aGraph.VertexCount;
+  FOnFind := aOnFind;
+  FCanceled := False;
+  Extend(Sub, Cand);
+end;
+
+{ TGSimpleGraph.TBPCliqueIsHelper256 }
+
+procedure TGSimpleGraph.TBPCliqueIsHelper256.Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+var
+  P, Q: TBits256;
+  I, J, ColorClass, PCount: SizeInt;
+begin
+  P := aCand;
+  ColorClass := 0;
+  I := 0;
+  PCount := P.PopCount;
+  while PCount > 0 do
+    begin
+      Inc(ColorClass);
+      Q := P;
+      while Q.NonEmpty do
+        begin
+          J := Q.Bsf;
+          P[J] := False;
+          Q[J] := False;
+          Q.Subtract(FMatrix[J]);
+          aColOrd[I] := J;
+          aColors[I] := ColorClass;
+          Inc(I);
+          Dec(PCount);
+        end;
+    end;
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper256.Extend(var aCand: TBits256);
+var
+  NewCand: TBits256;
+  ColOrd, Colors: TIntArray;
+  I, J, ItemCount: SizeInt;
+begin
+  if aCand.NonEmpty then
+    begin
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
+        begin
+          FCanceled := True;
+          exit;
+        end;
+      ItemCount := aCand.PopCount;
+      System.SetLength(ColOrd, ItemCount);
+      System.SetLength(Colors, ItemCount);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(ItemCount) downto 0 do
+        begin
+          if Colors[I] + FCurrSet.PopCount <= System.Length(FRecentBest) then
+            exit;
+          J := ColOrd[I];
+          aCand[J] := False;
+          FCurrSet[FVertices[J]] := True;
+          NewCand := aCand.Intersection(FMatrix[J]);
+          Extend(NewCand);
+          FCurrSet[FVertices[J]] := False;
+        end;
+    end
+  else
+    if FCurrSet.PopCount > System.Length(FRecentBest) then
+      FRecentBest := FCurrSet.ToArray;
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper256.Extend(var aSub, aCand: TBits256);
+var
+  NewSub, NewCand: TBits256;
+  I: SizeInt;
+begin
+  if FCanceled then
+    exit;
+  if aSub.NonEmpty then
+    begin
+      if aCand.NonEmpty then
+        for I in aCand.Difference(FMatrix[aSub.Bsf]) do
+          begin
+            aCand[I] := False;
+            NewCand := aCand.Intersection(FMatrix[I]);
+            NewSub := aSub.Intersection(FMatrix[I]);
+            FCurrSet[FVertices[I]] := True;
+            Extend(NewSub, NewCand);
+            FCurrSet[FVertices[I]] := False;
+          end;
+    end
+  else
+    FOnFind(FCurrSet.ToArray, FCanceled);
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper256.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
+var
+  I, J: SizeInt;
+  pA: PAdjList;
+begin
+  System.SetLength(FMatrix, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      pA := aGraph.AdjLists[FVertices[I]];
+      FMatrix[I].InitZero;
+      for J := 0 to Pred(aGraph.VertexCount) do
+        if (I <> J) and (pA^.Contains(FVertices[J]) xor aComplement) then
+          FMatrix[I][J] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
+begin
+  if aComplement then
+    FVertices := aGraph.SortComplementByWidth
+  else
+    FVertices := aGraph.SortVerticesByWidth(soDesc);
+  FillMatrix(aGraph, aComplement);
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
+begin
+  if aComplement then
+    FVertices := aGraph.SortVerticesByDegree(soAsc)
+  else
+    FVertices := aGraph.SortVerticesByDegree(soDesc);
+  FillMatrix(aGraph, aComplement);
+end;
+
+function TGSimpleGraph.TBPCliqueIsHelper256.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Cand: TBits256;
+begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCanceled := False;
+  SortMatrixByWidth(aGraph, False);
+  FRecentBest := aGraph.ApproxMaxClique;
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.InitZero;
+  Extend(Cand);
+  Result := FRecentBest;
+  aExact := not FCanceled;
+end;
+
+function TGSimpleGraph.TBPCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Cand: TBits256;
+begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCanceled := False;
+  SortMatrixByWidth(aGraph, True);
+  FRecentBest := aGraph.ApproxMaxIndependentSet;
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.InitZero;
+  Extend(Cand);
+  Result := FRecentBest;
+  aExact := not FCanceled;
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Sub, Cand: TBits256;
+begin
+  SortMatrixByDegree(aGraph, False);
+  Sub.InitRange(aGraph.VertexCount);
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.InitZero;
+  FOnFind := aOnFind;
+  FCanceled := False;
+  Extend(Sub, Cand);
+end;
+
+procedure TGSimpleGraph.TBPCliqueIsHelper256.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Sub, Cand: TBits256;
+begin
+  SortMatrixByDegree(aGraph, True);
+  Sub.InitRange(aGraph.VertexCount);
+  Cand.InitRange(aGraph.VertexCount);
+  FCurrSet.InitZero;
+  FOnFind := aOnFind;
+  FCanceled := False;
+  Extend(Sub, Cand);
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
+var
+  P, Q: TIntSet;
+  I, J, ColorClass: SizeInt;
+begin
+  P.Assign(aCand);
+  P.Reverse;
+  ColorClass := 0;
+  I := 0;
+  while P.NonEmpty do
+    begin
+      Inc(ColorClass);
+      Q.Assign(P);
+      while Q.NonEmpty do
+        begin
+          J := Q.Pop;
+          P.Delete(J);
+          Q.Subtract(FMatrix[J]^);
+          aColOrd[I] := J;
+          aColors[I] := ColorClass;
+          Inc(I);
+        end;
+    end;
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.Extend(var aCand: TIntSet);
+var
+  NewCand: TIntSet;
+  ColOrd, Colors: TIntArray;
+  I, J: SizeInt;
+begin
+  if aCand.NonEmpty then
+    begin
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
+        begin
+          FCanceled := True;
+          exit;
+        end;
+      System.SetLength(ColOrd, aCand.Count);
+      System.SetLength(Colors, aCand.Count);
+      Recolor(aCand, ColOrd, Colors);
+      for I := Pred(aCand.Count) downto 0 do
+        begin
+          if Colors[I] + FCurrSet.Count <= System.Length(FRecentBest) then
+            exit;
+          J := ColOrd[I];
+          aCand.Delete(J);
+          FCurrSet.Push(FVertices[J]);
+          NewCand := aCand.Intersection(FMatrix[J]^);
+          Extend(NewCand);
+          FCurrSet.Pop;
+        end;
+    end
+  else
+    if FCurrSet.Count > System.Length(FRecentBest) then
+      FRecentBest := FCurrSet.ToArray;
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.Extend(var aSub, aCand: TIntSet);
+var
+  NewSub, NewCand: TIntSet;
+  I: SizeInt;
+begin
+  if FCanceled then
+    exit;
+  if aSub.NonEmpty then
+    begin
+      if aCand.NonEmpty then
+        for I in aCand.Difference(FMatrix[aSub[0]]^) do
+          begin
+            aCand.Delete(I);
+            NewCand := aCand.Intersection(FMatrix[I]^);
+            NewSub := aSub.Intersection(FMatrix[I]^);
+            FCurrSet.Push(FVertices[I]);
+            Extend(NewSub, NewCand);
+            FCurrSet.Pop;
+          end;
+    end
+  else
+    FOnFind(FCurrSet.ToArray, FCanceled);
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.FillMatrix(aGraph: TGSimpleGraph);
+var
+  I, J: SizeInt;
+  pA: PAdjList;
+begin
+  FMatrix := TSkeleton.Create(aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      pA := aGraph.AdjLists[FVertices[I]];
+      for J := 0 to Pred(aGraph.VertexCount) do
+        if (I <> J) and pA^.Contains(FVertices[J]) then
+          FMatrix[I]^.Push(J);
+    end;
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.SortMatrixByWidth(aGraph: TGSimpleGraph);
+begin
+  FVertices := aGraph.SortVerticesByWidth(soDesc);
+  FillMatrix(aGraph);
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.SortMatrixByDegree(aGraph: TGSimpleGraph);
+begin
+  FVertices := aGraph.SortVerticesByDegree(soDesc);
+  FillMatrix(aGraph);
+end;
+
+function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Cand: TIntSet;
+begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCanceled := False;
+  SortMatrixByWidth(aGraph);
+  FRecentBest := aGraph.ApproxMaxClique;
+  Cand.InitRange(aGraph.VertexCount);
+  Extend(Cand);
+  Result := FRecentBest;
+  aExact := not FCanceled;
+end;
+
+procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+var
+  Sub, Cand: TIntSet;
+begin
+  SortMatrixByDegree(aGraph);
+  Sub.InitRange(aGraph.VertexCount);
+  Cand.InitRange(aGraph.VertexCount);
+  FOnFind := aOnFind;
+  FCanceled := False;
+  Extend(Sub, Cand);
+end;
+
+{ TGSimpleGraph.TBPDomSetHelper }
+
+procedure TGSimpleGraph.TBPDomSetHelper.FillMatrix(aGraph: TGSimpleGraph);
+var
+  I, J: SizeInt;
+  pA: PAdjList;
+begin
+  FVertices := aGraph.SortVerticesByDegree(soDesc);
+  System.SetLength(FMatrix, System.Length(FVertices));
+  for I := 0 to System.High(FVertices) do
+    begin
+      FMatrix[I].Size := System.Length(FVertices);
+      pA := aGraph.AdjLists[FVertices[I]];
+      for J := 0 to System.High(FVertices) do
+        if (I <> J) and pA^.Contains(FVertices[J]) then
+          FMatrix[I][J] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TBPDomSetHelper.Extend(constref aSub, aCand: TBoolVector);
+var
+  NewSub, NewCand: TBoolVector;
+  I, J: SizeInt;
+begin
+  if aSub.NonEmpty then
+    begin
+      if aCand.PopCount >= System.High(FRecentBest) then
+        exit;
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
+        begin
+          FCanceled := True;
+          exit;
+        end;
+      I := aSub.Bsf;
+      NewCand := aCand;
+      NewCand[FVertices[I]] := True;
+      NewSub := aSub.Difference(FMatrix[I]);
+      NewSub[I] := False;
+      Extend(NewSub, NewCand);
+      if aCand.PopCount >= System.High(FRecentBest) then
+        exit;
+      NewCand[FVertices[I]] := False;
+      for J in aSub.Intersection(FMatrix[I]) do
+        begin
+          NewCand[FVertices[J]] := True;
+          NewSub := aSub.Difference(FMatrix[J]);
+          NewSub[J] := False;
+          Extend(NewSub, NewCand);
+          if NewCand.PopCount >= System.High(FRecentBest) then
+            exit;
+          NewCand[FVertices[I]] := True;
+          NewSub.Subtract(FMatrix[I]);
+          Extend(NewSub, NewCand);
+          if NewCand.PopCount >= System.Length(FRecentBest) then
+            exit;
+          NewCand[FVertices[I]] := False;
+          NewCand[FVertices[J]] := False;
+        end;
+    end
+  else
+    if aCand.PopCount < System.Length(FRecentBest) then
+      FRecentBest := aCand.ToArray;
+end;
+
+function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Sub, Cand: TBoolVector;
+begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCanceled := False;
+  FillMatrix(aGraph);
+  FRecentBest := aGraph.ApproxMinDominatingSet;
+  Cand.Size := aGraph.VertexCount;
+  Sub.InitRange(aGraph.VertexCount);
+  Extend(Sub, Cand);
+  aExact := not FCanceled;
+  Result := FRecentBest;
+end;
+
+{ TGSimpleGraph.TBPDomSetHelper256 }
+
+procedure TGSimpleGraph.TBPDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph);
+var
+  I, J: SizeInt;
+  pA: PAdjList;
+begin
+  FVertices := aGraph.SortVerticesByDegree(soDesc);
+  System.SetLength(FMatrix, System.Length(FVertices));
+  for I := 0 to Pred(System.High(FVertices)) do
+    begin
+      FMatrix[I].InitZero;
+      pA := aGraph.AdjLists[FVertices[I]];
+      for J := 0 to System.High(FVertices) do
+        if (I <> J) and pA^.Contains(FVertices[J]) then
+          FMatrix[I][J] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aSub, aCand: TBits256);
+var
+  NewSub, NewCand: TBits256;
+  I, J: SizeInt;
+begin
+  if aSub.NonEmpty then
+    begin
+      if aCand.PopCount >= System.High(FRecentBest) then
+        exit;
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
+        begin
+          FCanceled := True;
+          exit;
+        end;
+      I := aSub.Bsf;
+      NewCand := aCand;
+      NewCand[FVertices[I]] := True;
+      NewSub := aSub.Difference(FMatrix[I]);
+      NewSub[I] := False;
+      Extend(NewSub, NewCand);
+      if aCand.PopCount >= System.High(FRecentBest) then
+        exit;
+      NewCand[FVertices[I]] := False;
+      for J in aSub.Intersection(FMatrix[I]) do
+        begin
+          NewCand[FVertices[J]] := True;
+          NewSub := aSub.Difference(FMatrix[J]);
+          NewSub[J] := False;
+          Extend(NewSub, NewCand);
+          if NewCand.PopCount >= System.High(FRecentBest) then
+            exit;
+          NewCand[FVertices[I]] := True;
+          NewSub.Subtract(FMatrix[I]);
+          Extend(NewSub, NewCand);
+          if NewCand.PopCount >= System.Length(FRecentBest) then
+            exit;
+          NewCand[FVertices[I]] := False;
+          NewCand[FVertices[J]] := False;
+        end;
+    end
+  else
+    if aCand.PopCount < System.Length(FRecentBest) then
+      FRecentBest := aCand.ToArray;
+end;
+
+function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Sub, Cand: TBits256;
+begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCanceled := False;
+  FillMatrix(aGraph);
+  FRecentBest := aGraph.ApproxMinDominatingSet;
+  {%H-}Cand.InitZero;
+  Sub.InitRange(aGraph.VertexCount);
+  Extend(Sub, Cand);
+  aExact := not FCanceled;
+  Result := FRecentBest;
+end;
+
+{ TGSimpleGraph.TDomSetHelper }
+
+procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TIntSet);
+var
+  NewSub, NewCand: TIntSet;
+  I, J: SizeInt;
+begin
+  if aSub.NonEmpty then
+    begin
+      if aCand.Count >= System.High(FRecentBest) then
+        exit;
+      if SecondsBetween(Now, FStartTime) >= FTimeOut then
+        begin
+          FCancel := True;
+          exit;
+        end;
+      I := aSub[0];
+      NewCand.Assign(aCand);
+      NewCand.Push(I);
+      NewSub := aSub.Difference(FMatrix[I]^);
+      NewSub.Delete(I);
+      Extend(NewSub, NewCand);
+      if aCand.Count >= System.High(FRecentBest) then
+        exit;
+      NewCand.Pop;
+      for J in aSub.Intersection(FMatrix[I]^) do
+        begin
+          NewCand.Push(J);
+          NewSub := aSub.Difference(FMatrix[J]^);
+          NewSub.Delete(J);
+          Extend(NewSub, NewCand);
+          if NewCand.Count >= System.High(FRecentBest) then
+            exit;
+          NewCand.Push(I);
+          NewSub.Subtract(FMatrix[I]^);
+          Extend(NewSub, NewCand);
+          if NewCand.Count >= System.Length(FRecentBest) then
+            exit;
+          NewCand.Pop;
+          NewCand.Pop;
+        end;
+    end
+  else
+    if aCand.Count < System.Length(FRecentBest) then
+      FRecentBest := aCand.ToArray;
+end;
+
+function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Sub, Cand: TIntSet;
+begin
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCancel := False;
+  FRecentBest := aGraph.ApproxMinDominatingSet;
+  FMatrix := aGraph.CreateSkeleton;
+  Sub.AssignArray(aGraph.SortVerticesByDegree(soDesc));
+  Extend(Sub, Cand{%H-});
+  aExact := not FCancel;
+  Result := FRecentBest;
+end;
+
+{ TGSimpleGraph.THKMatch }
+
+procedure TGSimpleGraph.THKMatch.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+var
+  CurrArcIdx: TIntArray = nil;
+  Grays: TIntHashSet;
+  I, J: SizeInt;
+  p: PAdjItem;
+begin
+  FNodeCount := Succ(aGraph.VertexCount);
+  FDummy := Pred(FNodeCount);
+  if System.Length(w) <= System.Length(g) then
+    begin
+      FWhites := w;
+      Grays.AddAll(g);
+    end
+  else
+    begin
+      FWhites := g;
+      Grays.AddAll(w);
+    end;
+
+  System.SetLength(CurrArcIdx, Succ(FNodeCount));
+  J := 0;
+  for I := 0 to FNodeCount - 2 do
+    begin
+      CurrArcIdx[I] := J;
+      if Grays.Contains(I) then
+        J += Succ(aGraph.DegreeI(I))
+      else
+        J += aGraph.DegreeI(I);
+    end;
+  CurrArcIdx[Pred(FNodeCount)] := J;
+
+  System.SetLength(FNodes, Succ(FNodeCount));
+  System.SetLength(FArcs, Succ((aGraph.EdgeCount + Grays.Count) * 2));
+
+  for I := 0 to Pred(FNodeCount) do
+    begin
+      FNodes[I].FirstArc := CurrArcIdx[I];
+      FNodes[I].Mate := FDummy;
+    end;
+
+  for I in FWhites do
+    for p in aGraph.AdjLists[I]^ do
+      begin
+        J := p^.Destination;
+        FArcs[CurrArcIdx[I]].Target := J;
+        FArcs[CurrArcIdx[J]].Target := I;
+        Inc(CurrArcIdx[I]);
+        Inc(CurrArcIdx[J]);
+      end;
+
+  J := FDummy;
+  for I in Grays do
+    begin
+      FArcs[CurrArcIdx[I]].Target := J;
+      FArcs[CurrArcIdx[J]].Target := I;
+      Inc(CurrArcIdx[I]);
+      Inc(CurrArcIdx[J]);
+    end;
+
+  CurrArcIdx := nil;
+
+  FArcs[System.High(FArcs)].Target := FNodeCount;
+  //sentinel node
+  FNodes[FNodeCount].FirstArc := System.High(FArcs);
+  FNodes[FNodeCount].Distance := INF_DIST;
+  FNodes[FNodeCount].Mate := FDummy;
+
+  FQueue := aGraph.CreateIntArray;
+end;
+
+function TGSimpleGraph.THKMatch.Bfs: Boolean;
+var
+  Curr, CurrArc, Matched, Dist: SizeInt;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  for Curr in FWhites do
+    if FNodes[Curr].Mate = FDummy then
+      begin
+        FNodes[Curr].Distance := 0;
+        FQueue[qTail] := Curr;
+        Inc(qTail);
+      end
+    else
+      FNodes[Curr].Distance := INF_DIST;
+
+  FNodes[FDummy].Distance := INF_DIST;
+
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      if FNodes[{%H-}Curr].Distance < FNodes[FDummy].Distance then
+        begin
+          CurrArc := FNodes[Curr].FirstArc;
+          Dist := Succ(FNodes[Curr].Distance);
+          while CurrArc < FNodes[Succ(Curr)].FirstArc do
+            begin
+              Matched := FNodes[FArcs[CurrArc].Target].Mate;
+              if FNodes[Matched].Distance = INF_DIST then
+                begin
+                  FNodes[Matched].Distance := Dist;
+                  FQueue[qTail] := Matched;
+                  Inc(qTail);
+                end;
+              Inc(CurrArc);
+            end;
+        end;
+    end;
+  Result := FNodes[FDummy].Distance <> INF_DIST;
+end;
+
+function TGSimpleGraph.THKMatch.Dfs(aRoot: SizeInt): Boolean;
+var
+  CurrArc, Dist, Next, Mate: SizeInt;
+begin
+  //todo: non-recursive dfs ???
+  if aRoot = FDummy then
+    exit(True);
+  CurrArc := FNodes[aRoot].FirstArc;
+  Dist := Succ(FNodes[aRoot].Distance);
+  while CurrArc < FNodes[Succ(aRoot)].FirstArc do
+    begin
+      Next := FArcs[CurrArc].Target;
+      Mate := FNodes[Next].Mate;
+      if (FNodes[Mate].Distance = Dist) and Dfs(Mate) then
+        begin
+          FNodes[aRoot].Mate := Next;
+          FNodes[Next].Mate := aRoot;
+          exit(True);
+        end;
+      Inc(CurrArc);
+    end;
+  FNodes[aRoot].Distance := INF_DIST;
+  Result := False;
+end;
+
+function TGSimpleGraph.THKMatch.HopcroftKarp: TIntEdgeArray;
+var
+  I, J, Size: SizeInt;
+begin
+  Size := 0;
+  while Bfs do
+    for I in FWhites do
+      if FNodes[I].Mate = FDummy then
+        Size += Ord(Dfs(I));
+  System.SetLength(Result, Size);
+  J := 0;
+  for I in FWhites do
+    if FNodes[I].Mate <> FDummy then
+      begin
+        Result[J] := TIntEdge.Create(I, FNodes[I].Mate);
+        Inc(J);
+      end;
+end;
+
+function TGSimpleGraph.THKMatch.GetMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+begin
+  Init(aGraph, w, g);
+  Result := HopcroftKarp;
+end;
+
+{ TGSimpleGraph.TBfsMatch }
+
+procedure TGSimpleGraph.TBfsMatch.Match(aNode, aMate: SizeInt);
+begin
+  FMates[aNode] := aMate;
+  FMates[aMate] := aNode;
+end;
+
+procedure TGSimpleGraph.TBfsMatch.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+var
+  I: SizeInt;
+  e: TIntEdge;
+begin
+  FMatchCount := 0;
+  FGraph := aGraph;
+  FWhites.Size := aGraph.VertexCount;
+  FVisited.Size := aGraph.VertexCount;
+  if System.Length(w) <= System.Length(g) then
+    for I in w do
+      FWhites[I] := True
+  else
+    for I in g do
+      FWhites[I] := True;
+  FMates := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  for e in aGraph.GetApproxMatching do
+    begin
+      Match(e.Source, e.Destination);
+      Inc(FMatchCount);
+    end;
+end;
+
+function TGSimpleGraph.TBfsMatch.FindAugmentPath(aRoot: SizeInt): SizeInt;
+var
+  Curr, Next: SizeInt;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FVisited.ClearBits;
+  FParents[aRoot] := NULL_INDEX;
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      if FWhites[Curr] then
+        begin
+          for p in FGraph.AdjLists[Curr]^ do
+            begin
+              Next := p^.Destination;
+              if (FMates[Curr] = Next) or FVisited[Next] then
+                continue;
+              if FMates[Next] = NULL_INDEX then
+                begin
+                  FParents[Next] := Curr;
+                  exit(Next);
+                end
+              else
+                begin
+                  FParents[Next] := Curr;
+                  FQueue[qTail] := Next;
+                  Inc(qTail);
+                end;
+            end;
+        end
+      else
+        begin
+          Next := FMates[Curr];
+          FParents[Next] := Curr;
+          FQueue[qTail] := Next;
+          Inc(qTail);
+        end;
+    end;
+  Result := NULL_INDEX;
+end;
+
+procedure TGSimpleGraph.TBfsMatch.AlternatePath(aRoot: SizeInt);
+var
+  Mate, tmp: SizeInt;
+begin
+  repeat
+    Mate := FParents[aRoot];
+    tmp := FMates[Mate];
+    Match(aRoot, Mate);
+    aRoot := tmp;
+  until aRoot = NULL_INDEX;
+end;
+
+procedure TGSimpleGraph.TBfsMatch.BfsMatch;
+var
+  I, Last: SizeInt;
+begin
+  for I in FWhites do
+    if FMates[I] = NULL_INDEX then
+      begin
+        Last := FindAugmentPath(I);
+        if Last <> NULL_INDEX then
+          begin
+            AlternatePath(Last);
+            Inc(FMatchCount);
+          end;
+      end;
+end;
+
+function TGSimpleGraph.TBfsMatch.CreateEdges: TIntEdgeArray;
+var
+  I, J: SizeInt;
+begin
+  System.SetLength(Result, FMatchCount);
+  J := 0;
+  for I in FWhites do
+    if FMates[I] <> NULL_INDEX then
+      begin
+        Result[J] := TIntEdge.Create(I, FMates[I]);
+        Inc(J);
+      end;
+end;
+
+function TGSimpleGraph.TBfsMatch.GetMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+begin
+  Init(aGraph, w, g);
+  BfsMatch;
+  Result := CreateEdges;
+end;
+
+{ TGSimpleGraph.TEdMatch }
+
+procedure TGSimpleGraph.TEdMatch.Match(aIndex, aMate: SizeInt);
+begin
+  FMates[aIndex] := aMate;
+  FMates[aMate] := aIndex;
+end;
+
+procedure TGSimpleGraph.TEdMatch.ClearBase;
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(FBase) do
+   FBase[I] := I;
+end;
+
+procedure TGSimpleGraph.TEdMatch.ClearParents;
+begin
+  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeInt), $ff);
+end;
+
+function TGSimpleGraph.TEdMatch.Lca(L, R: SizeInt): SizeInt;
+begin
+  FLcaUsed.ClearBits;
+  repeat
+    L := FBase[L];
+    FLcaUsed[L] := True;
+    if FMates[L] = NULL_INDEX then
+        break;
+    L := FParents[FMates[L]];
+  until False;
+  repeat
+    R := FBase[R];
+    if FLcaUsed[R] then
+      exit(R);
+     R := FParents[FMates[R]];
+  until False;
+  Result := NULL_INDEX;
+end;
+
+procedure TGSimpleGraph.TEdMatch.MarkPath(aValue, aBloss, aChild: SizeInt);
+begin
+  while FBase[aBloss] <> aBloss do
+    begin
+      FBlossoms[FBase[aValue]] := True;
+      FBlossoms[FBase[FMates[aValue]]] := True;
+      FParents[aValue] := aChild;
+      aChild := FMates[aValue];
+      aValue := FParents[FMates[aValue]];
+    end;
+end;
+
+function TGSimpleGraph.TEdMatch.FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
+var
+  I, Curr, Next, CurrBase: SizeInt;
+  p: TGSimpleGraph.PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FVisited.ClearBits;
+  ClearParents;
+  ClearBase;
+  FVisited[aRoot] := True;
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      for p in FGraph.AdjLists[Curr]^ do
+        begin
+          Next := p^.Destination;
+          if (FBase[Curr] = FBase[Next]) or (FMates[Curr] = Next) then
+            continue;
+          if (Next = aRoot) or (FMates[Next] <> NULL_INDEX) and (FParents[FMates[Next]] <> NULL_INDEX) then
+            begin
+              CurrBase := Lca(Curr, Next);
+              FBlossoms.ClearBits;
+      	      MarkPath(Curr, CurrBase, Next);
+      	      MarkPath(Next, CurrBase, Curr);
+              for I := 0 to System.High(FBase) do
+                if FBlossoms[FBase[I]] then
+                  begin
+                    FBase[I] := CurrBase;
+                    if not FVisited[I] then
+                      begin
+                        FVisited[I] := True;
+                        FQueue[qTail] := I;
+                        Inc(qTail);
+                      end;
+                  end;
+            end
+          else
+            if FParents[Next] = NULL_INDEX then
+              begin
+                FParents[Next] := Curr;
+                if FMates[Next] = NULL_INDEX then
+                  begin
+                    aLast := Next;
+                    exit(True);
+                  end;
+                Next := FMates[Next];
+                FVisited[Next] := True;
+                FQueue[qTail] := Next;
+                Inc(qTail);
+              end;
+        end;
+    end;
+  Result := False;
+end;
+
+procedure TGSimpleGraph.TEdMatch.AlternatePath(aRoot: SizeInt);
+var
+  Mate, tmp: SizeInt;
+begin
+  repeat
+    Mate := FParents[aRoot];
+    tmp := FMates[Mate];
+    Match(aRoot, Mate);
+    aRoot := tmp;
+  until aRoot = NULL_INDEX;
+end;
+
+procedure TGSimpleGraph.TEdMatch.EdMatch;
+var
+  I, Last: SizeInt;
+begin
+  for I := 0 to System.High(FMates) do
+    if (FMates[I] = NULL_INDEX) and FindAugmentPath(I, Last) then
+      begin
+        AlternatePath(Last);
+        Inc(FMatchCount);
+      end;
+end;
+
+procedure TGSimpleGraph.TEdMatch.Init(aGraph: TGSimpleGraph);
+var
+  e: TIntEdge;
+begin
+  FMatchCount := 0;
+  FGraph := aGraph;
+  FMates := aGraph.CreateIntArray;
+  FBase := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FVisited.Size := aGraph.VertexCount;
+  FLcaUsed.Size := aGraph.VertexCount;
+  FBlossoms.Size := aGraph.VertexCount;
+  for e in aGraph.GetApproxMatching2 do
+    begin
+      Match(e.Source, e.Destination);
+      Inc(FMatchCount);
+    end;
+end;
+
+function TGSimpleGraph.TEdMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+var
+  I, J: SizeInt;
+begin
+  Init(aGraph);
+  EdMatch;
+  System.SetLength(Result, FMatchCount);
+  J := 0;
+  for I := 0 to System.High(FMates) do
+    if FMates[I] <> NULL_INDEX then
+      begin
+        Result[J] := TIntEdge.Create(I, FMates[I]);
+        FMates[FMates[I]] := NULL_INDEX;
+        Inc(J);
+      end;
+end;
+
+{ TGSimpleGraph.TPapeMatch }
+
+procedure TGSimpleGraph.TPapeMatch.Match(aIndex, aMate: SizeInt);
+begin
+  FMates[aIndex] := aMate;
+  FMates[aMate] := aIndex;
+end;
+
+procedure TGSimpleGraph.TPapeMatch.TryAugment(aRoot: SizeInt);
+var
+  Curr, Next, Mate, Tmp: SizeInt;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FInTree.ClearBits;
+  FInTree[aRoot] := True;
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      for p in FGraph.AdjLists[Curr]^ do
+        if not FInTree[p^.Destination] then
+          begin
+            Next := p^.Destination;
+            Mate := FMates[Next];
+            if Mate = NULL_INDEX then
+              begin
+                FMates[Next] := Curr;
+                repeat
+                  Tmp := FMates[Curr];
+                  FMates[Curr] := Next;
+                  if Tmp <> NULL_INDEX then
+                    begin
+                      Curr := FGrannies[Curr];
+                      FMates[Tmp] := Curr;
+                      Next := Tmp;
+                    end;
+                until Tmp = NULL_INDEX;
+                Inc(FMatchCount);
+                exit;
+              end
+            else
+              if Mate <> Curr then
+                begin
+                  if Curr <> aRoot then
+                    begin
+                      Tmp := FGrannies[Curr];
+                      while (Tmp <> aRoot) and (Tmp <> Next) do
+                        Tmp := FGrannies[Tmp];
+                      if Tmp <> aRoot then
+                        continue;
+                    end;
+                  FInTree[Next] := True;
+                  FGrannies[Mate] := Curr;
+                  FQueue[qTail] := Mate;
+                  Inc(qTail);
+                end;
+          end;
+    end;
+end;
+
+procedure TGSimpleGraph.TPapeMatch.Init(aGraph: TGSimpleGraph);
+var
+  e: TIntEdge;
+begin
+  FMatchCount := 0;
+  FGraph := aGraph;
+  FMates := aGraph.CreateIntArray;
+  FGrannies := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FInTree.Size := aGraph.VertexCount;
+  for e in aGraph.GetApproxMatching do
+    begin
+      Match(e.Source, e.Destination);
+      Inc(FMatchCount);
+    end;
+end;
+
+function TGSimpleGraph.TPapeMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+var
+  I, J: SizeInt;
+begin
+  Init(aGraph);
+  for I := 0 to System.High(FMates) do
+    if FMates[I] = NULL_INDEX then
+      TryAugment(I);
+  System.SetLength(Result, FMatchCount);
+  J := 0;
+  for I := 0 to System.High(FMates) do
+    if FMates[I] <> NULL_INDEX then
+      begin
+        Result[J] := TIntEdge.Create(I, FMates[I]);
+        FMates[FMates[I]] := NULL_INDEX;
+        Inc(J);
+      end;
+end;
+
+{ TGSimpleGraph.TNIMinCut.TNIEdge }
+
+constructor TGSimpleGraph.TNIMinCut.TNIEdge.Create(aTarget: SizeInt; constref w: SizeInt);
+begin
+  Target := aTarget;
+  Weight := w;
+end;
+
+{ TGSimpleGraph.TNIMinCut }
+
+procedure TGSimpleGraph.TNIMinCut.ClearMarks;
+var
+  I: SizeInt;
+  p: TECAdjList.PEntry;
+begin
+  for I in FExistNodes do
+    for p in FGraph[I] do
+      p^.Scanned := False;
+end;
+
+procedure TGSimpleGraph.TNIMinCut.Init(aGraph: TGSimpleGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TNIEdge.Create(p^.Destination, 1));
+    end;
+  FQueue := TPairHeap.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := High(SizeInt);
+  FCuts := nil;
+end;
+
+procedure TGSimpleGraph.TNIMinCut.Init2(aGraph: TGSimpleGraph);
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FGraph, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    begin
+      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
+      for p in aGraph.AdjLists[I]^ do
+        FGraph[I].Add(TNIEdge.Create(p^.Destination, 1));
+    end;
+  System.SetLength(FCuts, aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    FCuts[I].Add(I);
+  FQueue := TPairHeap.Create(aGraph.VertexCount);
+  FExistNodes.InitRange(aGraph.VertexCount);
+  FInQueue.Size := aGraph.VertexCount;
+  FBestCut := High(SizeInt);
+end;
+
+procedure TGSimpleGraph.TNIMinCut.ShrinkEdge(aSource, aTarget: SizeInt);
+var
+  I: SizeInt;
+  p: TECAdjList.PEntry;
+  Edge: TNIEdge;
+begin
+  FGraph[aSource].Remove(aTarget);
+  FGraph[aTarget].Remove(aSource);
+  FGraph[aSource].AddAll(FGraph[aTarget]);
+  for p in FGraph[aTarget] do
+    begin
+      I := p^.Target;
+      Edge := p^;
+      FGraph[I].Remove(aTarget);
+      Edge.Target := aSource;
+      FGraph[I].Add(Edge);
+    end;
+  Finalize(FGraph[aTarget]);
+  FExistNodes[aTarget] := False;
+  if FCuts <> nil then
+    begin
+      while FCuts[aTarget].TryPop(I) do
+        FCuts[aSource].Push(I);
+      Finalize(FCuts[aTarget]);
+    end;
+end;
+
+procedure TGSimpleGraph.TNIMinCut.ScanFirstSearch;
+var
+  I: SizeInt;
+  p: TECAdjList.PEntry;
+  Item: TINode;
+begin
+  ClearMarks;
+  FInQueue.Join(FExistNodes);
+  for I in FExistNodes do
+    FQueue.Enqueue(I, TINode.Create(I, 0));
+  while FQueue.Count > 1 do
+    begin
+      I := FQueue.Dequeue.Index;
+      FInQueue[I] := False;
+      for p in FGraph[I] do
+        if FInQueue[p^.Target] then
+          begin
+            Item := FQueue.Peek(p^.Target);
+            Item.Data += p^.Weight;
+            FQueue.Update(p^.Target, Item);
+            p^.Scanned := True;
+            p^.ScanRank := Item.Data;
+          end;
+    end;
+  Item := FQueue.Dequeue;
+  FInQueue[Item.Index] := False;
+  if Item.Data < FBestCut then
+    begin
+      FBestCut := Item.Data;
+      if FCuts <> nil then
+        FBestSet.Assign(FCuts[Item.Index]);
+    end;
+end;
+
+procedure TGSimpleGraph.TNIMinCut.Shrink;
+var
+  I: SizeInt;
+  p: TECAdjList.PEntry;
+  Pair: TIntPair;
+begin
+  ScanFirstSearch;
+  for I in FExistNodes do
+    for p in FGraph[I] do
+      if p^.Scanned and (p^.ScanRank >= FBestCut) then
+        FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
+  while FEdgeQueue.TryDequeue(Pair) do
+    if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
+      ShrinkEdge(Pair.Left, Pair.Right);
+end;
+
+function TGSimpleGraph.TNIMinCut.GetMinCut(aGraph: TGSimpleGraph): SizeInt;
+begin
+  Init(aGraph);
+  while FExistNodes.PopCount >= 2 do
+    Shrink;
+  Result := FBestCut;
+end;
+
+function TGSimpleGraph.TNIMinCut.GetMinCut(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
+begin
+  Init2(aGraph);
+  while FExistNodes.PopCount >= 2 do
+    Shrink;
+  Result := FBestCut;
+  aCut.Assign(FBestSet);
+end;
+
+
