@@ -385,8 +385,8 @@ type
 
       TNode = record
       private
-        FirstArc,            // pointer to first incident arc in arcs array
-        CurrentArc: PArc;    // pointer to current incident arc in arcs array
+        FirstArc,            // pointer to first incident arc
+        CurrentArc: PArc;    // pointer to current incident arc
         Distance: SizeInt;   // distance from the source
         procedure ResetCurrent; inline;
         function  NonLabeled: Boolean; inline;
@@ -402,7 +402,7 @@ type
       FNodeCount: SizeInt;
       procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
-      function  Bfs: Boolean;
+      function  Relabel: Boolean;
       function  Dfs(aRoot: PNode; aFlow: TWeight): TWeight;
       function  DinitzMaxFlow: TWeight;
       function  CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
@@ -2462,7 +2462,7 @@ begin
   FSource^.ResetCurrent;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.Bfs: Boolean;
+function TGIntWeightDiGraph.TDinitzHelper.Relabel: Boolean;
 var
   Curr, Next: PNode;
   CurrArc: PArc;
@@ -2525,7 +2525,7 @@ var
   Flow: TWeight;
 begin
   Result := 0;
-  while Bfs do
+  while Relabel do
     repeat
       Flow := Dfs(FSource, InfWeight);
       Result += Flow;
