@@ -30,7 +30,6 @@ uses
   Classes, SysUtils,
   LGUtils,
   {%H-}LGHelpers,
-  LGQueue,
   LGDeque,
   LGVector,
   LGCustomGraph,
@@ -182,6 +181,7 @@ type
 
   public
   type
+    TWeightItem  = TPathHelper.TWeightItem;
     TWeightArray = TPathHelper.TWeightArray;
     TEstimate    = TPathHelper.TEstimate;
     TWeightEdge  = TPathHelper.TWeightEdge;
@@ -290,7 +290,7 @@ type
     MinCost     = Low(TCost);
 
   type
-    { THPrHelper: an implementation of the high level push-relabel method;
+    { THPrHelper: an implementation of the high-level push-relabel method;
       B.V. Cherkassky, A.V. Goldberg: On Implementing Push-Relabel Method for the Maximum Flow Problem. }
     THPrHelper = record
     private
@@ -412,7 +412,7 @@ type
       function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     end;
 
-    { TBgMcfHelper: simpliest mincost-flow algorithm: shortest augmenting paths(Busacker and Gowen ?) }
+    { TBgMcfHelper: simpliest mincost-flow algorithm: shortest augmenting paths(Busacker and Gowen?) }
     TBgMcfHelper = record
     private
     type
@@ -439,14 +439,15 @@ type
         PathMinCap: TWeight; // munimum capacity on path
       end;
 
-      TQueue = specialize TGLiteDeque<PNode>;
+      TDeque = specialize TGLiteDeque<PNode>;
 
     var
       FNodes: array of TNode;
       FArcs: array of TArc;
-      FQueue: TQueue;
+      FQueue: TPathHelper.TPairHeap;
       FGraph: TGIntWeightDiGraph;
-      FInQueue: TBitVector;
+      FInQueue,
+      FReached: TBitVector;
       FSource,
       FSink: PNode;
       FFlow: TWeight;
@@ -454,7 +455,7 @@ type
       procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
                 constref aCosts: TEdgeCostMap);
       procedure SearchInit; inline;
-      function  FindNegCycle: Boolean;
+      function  BfmMinPathCapacity: TWeight;
       function  GetMinPathCapacity: TWeight;
       procedure FlowIn(aFlow: TWeight);
       function  MinCostFlow: TWeight;
@@ -545,7 +546,7 @@ type
     function FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
                              var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean; inline;
     function FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-                              var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean;
+                              var aNeedFlow: TWeight; out aResultCost: TCost; out aArcFlows: TEdgeArray): Boolean;
   end;
 
 implementation
@@ -2671,25 +2672,24 @@ begin
   FNodes[FNodeCount].PathMinCap := 0;
 
   FInQueue.Size := FNodeCount;
-  FQueue.EnsureCapacity(FNodeCount);
+  FReached.Size := FNodeCount;
+  FQueue := TPathHelper.TPairHeap.Create(FNodeCount);
 end;
 
 procedure TGIntWeightDiGraph.TBgMcfHelper.SearchInit;
 var
   I: SizeInt;
 begin
-  for I := 0 to System.High(FNodes) do
-    begin
-      FNodes[I].PathArc := nil;
-      FNodes[I].Parent := nil;
-      FNodes[I].Price := MaxCost;
-      FNodes[I].PathMinCap := MaxWeight;
-    end;
+  for I := 0 to Pred(FNodeCount) do
+    FNodes[I].Price := MaxCost;
   FSource^.Price := 0;
+  FSource^.PathMinCap := MaxWeight;
+  FSink^.Parent := nil;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.FindNegCycle: Boolean;
+function TGIntWeightDiGraph.TBgMcfHelper.BfmMinPathCapacity: TWeight;
 var
+  Queue: TDeque;
   Dist: TIntArray;
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
@@ -2698,6 +2698,7 @@ begin
   Dist := FGraph.CreateIntArray;
   CurrNode := FSource;
   Dist[FSource - PNode(FNodes)] := 0;
+  Result := 0;
   repeat
     FInQueue[CurrNode - PNode(FNodes)] := False;
     if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
@@ -2715,62 +2716,85 @@ begin
                 NextNode^.Parent := CurrNode;
                 NextNode^.PathArc := CurrArc;
                 if (NextNode = FSource) or (Succ(Dist[CurrNode - PNode(FNodes)])>= FNodeCount) then
-                  exit(False);
+                  exit;
                 Dist[NextNode - PNode(FNodes)] := Succ(Dist[CurrNode - PNode(FNodes)]);
                 if not FInQueue[NextNode - PNode(FNodes)] then
                   begin
-                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price <{%H-}TopNode^.Price) then
-                      FQueue.PushFirst(NextNode)
+                    if Queue.TryPeekFirst(TopNode) and (NextNode^.Price <{%H-}TopNode^.Price) then
+                      Queue.PushFirst(NextNode)
                     else
-                      FQueue.PushLast(NextNode);
+                      Queue.PushLast(NextNode);
                     FInQueue[NextNode - PNode(FNodes)] := True;
                   end;
               end;
           end;
         Inc(CurrArc);
       end;
-  until not FQueue.TryPopFirst(CurrNode);
-  Result := FSink^.Parent <> nil;
+  until not Queue.TryPopFirst(CurrNode);
+
+  if FSink^.Parent <> nil then
+    Result := FSink^.PathMinCap;
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.GetMinPathCapacity: TWeight;
 var
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
+  Item: TWeightItem;
+  Price: TCost;
+  I: SizeInt;
 begin
-  SearchInit;
-  CurrNode := FSource;
+  FInQueue.ClearBits;
+  FReached.ClearBits;
+  FQueue.MakeEmpty;
+  FSource^.PathArc := nil;
+  FSource^.PathMinCap := MaxWeight;
+  Item := TWeightItem.Create(FSource - PNode(FNodes), 0);
   repeat
-    FInQueue[CurrNode - PNode(FNodes)] := False;
-    if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
-      continue;
+    CurrNode := @FNodes[Item.Index];
+    FNodes[Item.Index].Price += Item.Weight;
+    FReached[Item.Index] := True;
+    if CurrNode = FSink then
+      break;
     CurrArc := CurrNode^.FirstArc;
     while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
         if CurrArc^.IsResidual then
           begin
             NextNode := CurrArc^.Target;
-            if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
+            if not FReached[NextNode - PNode(FNodes)] then
               begin
-                NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
-                NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
-                NextNode^.Parent := CurrNode;
-                NextNode^.PathArc := CurrArc;
-                if not FInQueue[NextNode - PNode(FNodes)] then
+                I := NextNode - PNode(FNodes);
+                Price := CurrNode^.Price + CurrArc^.Cost - NextNode^.Price;
+                if not FInQueue[I] then
                   begin
-                    if FQueue.TryPeekFirst(TopNode) and (NextNode^.Price < TopNode^.Price) then
-                      FQueue.PushFirst(NextNode)
-                    else
-                      FQueue.PushLast(NextNode);
-                    FInQueue[NextNode - PNode(FNodes)] := True;
-                  end;
+                    NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
+                    NextNode^.Parent := CurrNode;
+                    NextNode^.PathArc := CurrArc;
+                    FQueue.Enqueue(I, TWeightItem.Create(I, Price));
+                    FInQueue[I] := True;
+                  end
+                else
+                  if Price < FQueue.Peek(I).Weight then
+                    begin
+                      NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
+                      NextNode^.Parent := CurrNode;
+                      NextNode^.PathArc := CurrArc;
+                      FQueue.Update(I, TWeightItem.Create(I, Price));
+                    end;
               end;
           end;
         Inc(CurrArc);
       end;
-  until not FQueue.TryPopFirst(CurrNode);
-  if FSink^.Parent <> nil then
-    Result := FSink^.PathMinCap
+  until not FQueue.TryDequeue(Item);
+
+  if FReached[FSink - PNode(FNodes)] then
+    begin
+      for I := 0 to Pred(FNodeCount) do
+        if FReached[I] then
+          FNodes[I].Price -= Item.Weight;
+      Result := FSink^.PathMinCap;
+    end
   else
     Result := 0;
 end;
@@ -2795,9 +2819,9 @@ var
   Flow: TWeight;
 begin
   Result := 0;
-  if not FindNegCycle then
-    exit(0);
-  Flow := wMin(FSink^.PathMinCap, FFlow);
+  Flow := wMin(BfmMinPathCapacity, FFlow);
+  if Flow = 0 then
+    exit;
   repeat
     FlowIn(Flow);
     Result += Flow;
@@ -3211,7 +3235,7 @@ begin
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-  var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean;
+  var aNeedFlow: TWeight; out aResultCost: TCost; out aArcFlows: TEdgeArray): Boolean;
 var
   Helper: TBgMcfHelper;
   Costs: TEdgeCostMap;
@@ -3222,7 +3246,7 @@ begin
     exit(False);
   if not IsValidCostArray(aCosts, Costs) then
     exit(False);
-  aNeedFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aNeedFlow, Costs, aResultCost, a);
+  aNeedFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aNeedFlow, Costs, aResultCost, aArcFlows);
   Result := aNeedFlow <> 0;
 end;
 
