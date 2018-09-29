@@ -1289,80 +1289,99 @@ end;
 class function TGWeightPathHelper.BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
-  Queue: TIntDeque;
-  TreePrev,
-  TreeNext,
-  Level: TIntArray;
-  InQueue,
-  Active: TGraph.TBitVector;
-  Curr, Next, Prev, Post, Test, CurrLevel: SizeInt;
+  Queue, TreePrev, TreeNext, Level: TIntArray;
+  InQueue, Active: TGraph.TBitVector;
+  Curr, Next, Prev, Post, Test, CurrLevel, vCount, qCount: SizeInt;
   p: TGraph.PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
-  {%H-}Queue.EnsureCapacity(g.VertexCount);
+  Queue := g.CreateIntArray;
   aParents := g.CreateIntArray;
   TreePrev := g.CreateIntArray;
   TreeNext := g.CreateIntArray;
   Level := g.CreateIntArray;
-  InQueue.Size := g.VertexCount;
-  Active.Size := g.VertexCount;
-  aWeights := CreateWeightArray(g.VertexCount);
+  vCount := g.VertexCount;
+  qCount := 0;
+  InQueue.Size := vCount;
+  Active.Size := vCount;
+  aWeights := CreateWeightArray(vCount);
   aWeights[aSrc] := ZeroWeight;
   aParents[aSrc] := aSrc;
   TreePrev[aSrc] := aSrc;
   TreeNext[aSrc] := aSrc;
   Active[aSrc] := True;
-  Curr := aSrc;
-  repeat
-    InQueue[Curr] := False;
-    if not Active[Curr] then
-      continue;
-    Active[Curr] := False;
-    for p in g.AdjLists[Curr]^ do
-      begin
-        Next := p^.Destination;
-        if aWeights[Next] > aWeights[Curr] + p^.Data.Weight then
-          begin
-            aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
-            if TreePrev[Next] <> NULL_INDEX then
-              begin
-                Prev := TreePrev[Next];
-                Test := Next;
-                CurrLevel := 0;
-                repeat
-                  if Test = Curr then
+  Queue[qTail] := aSrc;
+  Inc(qTail);
+  Inc(qCount);
+  while qHead <> qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      Dec(qCount);
+      if qHead = vCount then
+        qHead := 0;
+      InQueue[Curr] := False;
+      if not Active[Curr] then
+        continue;
+      Active[Curr] := False;
+      for p in g.AdjLists[Curr]^ do
+        begin
+          Next := p^.Destination;
+          if aWeights[Next] > aWeights[Curr] + p^.Data.Weight then
+            begin
+              aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
+              if TreePrev[Next] <> NULL_INDEX then
+                begin
+                  Prev := TreePrev[Next];
+                  Test := Next;
+                  CurrLevel := 0;
+                  repeat
+                    if Test = Curr then
+                      begin
+                        aParents[Next] := Curr;
+                        exit(Next);
+                      end;
+                    CurrLevel += Level[Test];
+                    TreePrev[Test] := NULL_INDEX;
+                    Level[Test] := NULL_INDEX;
+                    Active[Test] := False;
+                    Test := TreeNext[Test];
+                  until CurrLevel < 0;
+                  Dec(Level[aParents[Next]]);
+                  TreeNext[Prev] := Test;
+                  TreePrev[Test] := Prev;
+                end;
+              aParents[Next] := Curr;
+              Inc(Level[Curr]);
+              Post := TreeNext[Curr];
+              TreeNext[Curr] := Next;
+              TreePrev[Next] := Curr;
+              TreeNext[Next] := Post;
+              TreePrev[Post] := Next;
+              if not InQueue[Next] then
+                begin
+                  if (qCount <> 0) and (aWeights[Next] < aWeights[Queue[qHead]]) then
                     begin
-                      aParents[Next] := Curr;
-                      exit(Next);
+                      Dec(qHead);
+                      if qHead = NULL_INDEX then
+                        qHead := Pred(vCount);
+                      Queue[qHead] := Next;
+                    end
+                  else
+                    begin
+                      Queue[qTail] := Next;
+                      Inc(qTail);
+                      if qTail = vCount then
+                        qTail := 0;
                     end;
-                  CurrLevel += Level[Test];
-                  TreePrev[Test] := NULL_INDEX;
-                  Level[Test] := NULL_INDEX;
-                  Active[Test] := False;
-                  Test := TreeNext[Test];
-                until CurrLevel < 0;
-                Dec(Level[aParents[Next]]);
-                TreeNext[Prev] := Test;
-                TreePrev[Test] := Prev;
-              end;
-            aParents[Next] := Curr;
-            Inc(Level[Curr]);
-            Post := TreeNext[Curr];
-            TreeNext[Curr] := Next;
-            TreePrev[Next] := Curr;
-            TreeNext[Next] := Post;
-            TreePrev[Post] := Next;
-            if not InQueue[Next] then
-              begin
-                if Queue.TryPeekFirst(Test) and (aWeights[Next] < aWeights[Test]) then
-                  Queue.PushFirst(Next)
-                else
-                  Queue.PushLast(Next);
-                InQueue[Next] := True;
-              end;
-            Active[Next] := True;
-          end;
-      end;
-  until not Queue{%H-}.TryPopFirst(Curr);
+                  Inc(qCount);
+                  InQueue[Next] := True;
+                end;
+              Active[Next] := True;
+            end;
+        end;
+    end;
   aParents[aSrc] := NULL_INDEX;
   Result := NULL_INDEX;
 end;
