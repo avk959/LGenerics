@@ -271,7 +271,7 @@ type
     function  CreateIntArrayRange: TIntArray;
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
-    function  PathToNearestFrom(aSrc: SizeInt; const aTargets: TBoolVector): TIntArray;
+    function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
@@ -474,6 +474,8 @@ type
     (in sense 'edges count'), or -1 if it unreachable }
     function ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
     function ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
+    function ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
+    function ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
   { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
     function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
@@ -1250,7 +1252,7 @@ begin
     Result[I].FEnum := AdjLists[I]^.GetEnumerator;
 end;
 
-function TGCustomGraph.PathToNearestFrom(aSrc: SizeInt; const aTargets: TBoolVector): TIntArray;
+function TGCustomGraph.PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
 var
   Queue: TIntQueue;
   Dist,
@@ -1258,24 +1260,9 @@ var
   Curr, d, Nearest: SizeInt;
   p: PAdjItem;
 begin
-  if aTargets.IsEmpty then
+  if aTargets = nil then
     exit([]);
-  if aTargets[aSrc] then
-    exit([aSrc]);
-  Parents := CreateIntArray;
-  Dist := CreateIntArray;
-  Curr := aSrc;
-  Dist[aSrc] := 0;
-  repeat
-    d := Succ(Dist[Curr]);
-    for p in AdjLists[Curr]^ do
-      if Dist[p^.Destination] = NULL_INDEX then
-        begin
-          Dist[p^.Destination] := d;
-          Parents[p^.Destination] := Curr;
-          Queue.Enqueue(p^.Destination);
-        end;
-  until not Queue{%H-}.TryDequeue(Curr);
+  Dist := ShortestPathsMapI(aSrc, Parents);
   d := VertexCount;
   Nearest := NULL_INDEX;
   for Curr in aTargets do
@@ -1772,10 +1759,10 @@ begin
           begin
             if Assigned(OnFound) then
               OnFound(p^.Destination);
-            Visited[p^.Destination] := True;
             Inc(Result);
             Queue[qTail] := p^.Destination;
             Inc(qTail);
+            Visited[p^.Destination] := True;
           end;
     end;
 end;
@@ -1806,9 +1793,9 @@ begin
       for p in AdjLists[aRoot]^ do
         if not aVisited[p^.Destination] then
           begin
-            aVisited[p^.Destination] := True;
             Queue[qTail] := p^.Destination;
             Inc(qTail);
+            aVisited[p^.Destination] := True;
           end;
     end;
 end;
@@ -1820,21 +1807,30 @@ end;
 
 function TGCustomGraph.BfsTreeI(aRoot: SizeInt): TIntArray;
 var
-  Queue: TIntQueue;
-  Curr, Next: SizeInt;
+  Queue: TIntArray;
+  Curr: SizeInt;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
   CheckIndexRange(aRoot);
+  Queue := CreateIntArray;
   Result := CreateIntArray;
-  Curr := aRoot;
   Result[aRoot] := aRoot;
-  repeat
-    for Next in AdjVerticesI(Curr) do
-      if Result[Next] = NULL_INDEX then
-        begin
-          Result[Next] := Curr;
-          Queue.Enqueue(Next);
-        end;
-  until not Queue{%H-}.TryDequeue(Curr);
+  Queue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      for p in AdjLists[Curr]^ do
+        if Result[p^.Destination] = NULL_INDEX then
+          begin
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+            Result[p^.Destination] := Curr;
+          end;
+    end;
   Result[aRoot] := NULL_INDEX;
 end;
 
@@ -1845,26 +1841,35 @@ end;
 
 function TGCustomGraph.ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
 var
-  Queue: TIntQueue;
+  Queue: TIntArray;
   Dist: TIntArray;
   d: SizeInt;
   p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
+  Queue := CreateIntArray;
   Dist := CreateIntArray;
   Dist[aSrc] := 0;
-  repeat
-    if aSrc = aDst then
-      exit(Dist[aSrc]);
-    d := Succ(Dist[aSrc]);
-    for p in AdjLists[aSrc]^ do
-      if Dist[p^.Destination] = NULL_INDEX then
-        begin
-          Queue.Enqueue(p^.Destination);
-          Dist[p^.Destination] := d;
-        end;
-  until not Queue{%H-}.TryDequeue(aSrc);
+  Queue[qTail] := aSrc;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      aSrc := Queue[qHead];
+      Inc(qHead);
+      if aSrc = aDst then
+        exit(Dist[aSrc]);
+      d := Succ(Dist[aSrc]);
+      for p in AdjLists[aSrc]^ do
+        if Dist[p^.Destination] = NULL_INDEX then
+          begin
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+            Dist[p^.Destination] := d;
+          end;
+    end;
   Result := NULL_INDEX;
 end;
 
@@ -1875,22 +1880,67 @@ end;
 
 function TGCustomGraph.ShortestPathsMapI(aSrc: SizeInt): TIntArray;
 var
-  Queue: TIntQueue;
+  Queue: TIntArray;
   d: SizeInt;
   p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
   CheckIndexRange(aSrc);
+  Queue := CreateIntArray;
   Result := CreateIntArray;
   Result[aSrc] := 0;
-  repeat
-    d := Succ(Result[aSrc]);
-    for p in AdjLists[aSrc]^ do
-      if Result[p^.Destination] = NULL_INDEX then
-        begin
-          Queue.Enqueue(p^.Destination);
-          Result[p^.Destination] := d;
-        end;
-  until not Queue{%H-}.TryDequeue(aSrc);
+  Queue[qTail] := aSrc;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      aSrc := Queue[qHead];
+      Inc(qHead);
+      d := Succ(Result[aSrc]);
+      for p in AdjLists[aSrc]^ do
+        if Result[p^.Destination] = NULL_INDEX then
+          begin
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+            Result[p^.Destination] := d;
+          end;
+    end;
+end;
+
+function TGCustomGraph.ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
+begin
+  Result := ShortestPathsMapI(IndexOf(aSrc), aPathTree);
+end;
+
+function TGCustomGraph.ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
+var
+  Queue: TIntArray;
+  d: SizeInt;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  CheckIndexRange(aSrc);
+  Queue := CreateIntArray;
+  Result := CreateIntArray;
+  aPathTree := CreateIntArray;
+  Result[aSrc] := 0;
+  Queue[qTail] := aSrc;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      aSrc := Queue[qHead];
+      Inc(qHead);
+      d := Succ(Result[aSrc]);
+      for p in AdjLists[aSrc]^ do
+        if Result[p^.Destination] = NULL_INDEX then
+          begin
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+            Result[p^.Destination] := d;
+            aPathTree[p^.Destination] := aSrc;
+          end;
+    end;
 end;
 
 function TGCustomGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntArray;
@@ -1900,29 +1950,37 @@ end;
 
 function TGCustomGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 var
-  Queue: TIntQueue;
+  Queue: TIntArray;
   Parents: TIntArray;
   Curr: SizeInt;
   p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
+  Queue := CreateIntArray;
   Parents := CreateIntArray;
-  Curr := aSrc;
+  Queue[qTail] := aSrc;
+  Inc(qTail);
   Parents[aSrc] := aSrc;
-  repeat
-    if Curr = aDst then
-      begin
-        Parents[aSrc] := NULL_INDEX;
-        exit(TreePathTo(Parents, aDst));
-      end;
-    for p in AdjLists[Curr]^ do
-      if Parents[p^.Destination] = NULL_INDEX then
+  while qHead < qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      if Curr = aDst then
         begin
-          Queue.Enqueue(p^.Destination);
-          Parents[p^.Destination] := Curr;
+          Parents[aSrc] := NULL_INDEX;
+          exit(TreePathTo(Parents, aDst));
         end;
-  until not Queue{%H-}.TryDequeue(Curr);
+      for p in AdjLists[Curr]^ do
+        if Parents[p^.Destination] = NULL_INDEX then
+          begin
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+            Parents[p^.Destination] := Curr;
+          end;
+    end;
   Result := [];
 end;
 
