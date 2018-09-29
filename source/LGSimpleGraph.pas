@@ -688,8 +688,8 @@ end;
 
 procedure TGSimpleGraph.ValidateConnected;
 var
-  Visited: TBitVector;
   Queue: TIntQueue;
+  Visited: TBitVector;
   I, Curr, Next: SizeInt;
 begin
   if ConnectedValid then
@@ -1108,11 +1108,11 @@ end;
 
 function TGSimpleGraph.GetMvMatching: TIntEdgeArray;
 var
-  e: TEdge;
-  ie: TIntEdge;
   Nodes: LGMvMatch.TNodes;
   Edgs: LGMvMatch.TEdges;
   I, J, Matched, NodeCount, Mate: SizeInt;
+  e: TEdge;
+  ie: TIntEdge;
 begin
   Matched := 0;
   NodeCount := VertexCount;
@@ -1445,18 +1445,19 @@ end;
 
 procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, ChildCount: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   LowPt := CreateIntArray;
   PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   PreOrd[aRoot] := 0;
   LowPt[aRoot] := 0;
-  {%H-}Stack.Push(aRoot);
+  Stack.Push(aRoot);
   Counter := 1;
   ChildCount := 0;
   while Stack.TryPeek(Curr) do
@@ -1493,18 +1494,19 @@ end;
 
 function TGSimpleGraph.CutPointExists(aRoot: SizeInt): Boolean;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, ChildCount: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   LowPt := CreateIntArray;
   PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   PreOrd[aRoot] := 0;
   LowPt[aRoot] := 0;
-  {%H-}Stack.Push(aRoot);
+  Stack.Push(aRoot);
   Counter := 1;
   ChildCount := 0;
   while Stack.TryPeek(Curr) do
@@ -1540,12 +1542,13 @@ end;
 
 procedure TGSimpleGraph.SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents, Across: TIntArray;
   Counter, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   LowPt := CreateIntArray;
   PreOrd := CreateIntArray;
   Parents := CreateIntArray;
@@ -1595,7 +1598,7 @@ end;
 
 procedure TGSimpleGraph.SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   EdgeStack: TIntEdgeVector;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
@@ -1603,6 +1606,7 @@ var
   e: TIntEdge;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   LowPt := CreateIntArray;
   PreOrd := CreateIntArray;
   Parents := CreateIntArray;
@@ -1665,12 +1669,13 @@ end;
 
 function TGSimpleGraph.BridgeExists: Boolean;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, I: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   LowPt := CreateIntArray;
   PreOrd := CreateIntArray;
   Parents := CreateIntArray;
@@ -1715,12 +1720,13 @@ end;
 
 procedure TGSimpleGraph.SearchForBridges(var aBridges: TIntEdgeVector);
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   LowPt, PreOrd, Parents: TIntArray;
   Counter, Curr, Next, I: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   LowPt := CreateIntArray;
   PreOrd := CreateIntArray;
   Parents := CreateIntArray;
@@ -1764,7 +1770,7 @@ end;
 
 procedure TGSimpleGraph.SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
@@ -1772,13 +1778,14 @@ var
   I, Curr, Next: SizeInt;
 begin
   Visited.Size := VertexCount;
+  Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
         Visited[I] := True;
-        {%H-}Stack.Push(I);
+        Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
@@ -1800,7 +1807,7 @@ end;
 
 procedure TGSimpleGraph.SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
@@ -1808,13 +1815,14 @@ var
   I, Curr, Next: SizeInt;
 begin
   Visited.Size := VertexCount;
+  Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
         Visited[I] := True;
-        {%H-}Stack.Push(I);
+        Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
