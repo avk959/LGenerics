@@ -480,7 +480,7 @@ type
     function GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
   { returns False if GetNetworkState <> nsValid, used PR algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
-    function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
+    function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;//todo: TNetworkState?
   { returns False if GetNetworkState <> nsValid, returns flows through the arcs in array a;
     used PR algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
@@ -2949,7 +2949,7 @@ begin
   if not SinkFound then // sink should be reachable from the source
     exit(nsSinkUnreachable);
   w := ZeroWeight;
-  {$PUSH}{$Q+}  //todo: cast to Double ???
+  {$PUSH}{$Q+}
   try
     for p in AdjLists[aSrcIndex]^ do
       w += p^.Data.Weight;
