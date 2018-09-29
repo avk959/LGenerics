@@ -36,7 +36,6 @@ uses
   LGStrConst;
 
 type
-
   TSortOrder = LGUtils.TSortOrder;
 
   { TGSimpleDiGraph implements simple sparse directed graph based on adjacency lists;
@@ -666,19 +665,20 @@ end;
 
 function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   InStack: TBitVector;
   PreOrd, Parents: TIntArray;
   Counter, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   PreOrd := CreateIntArray;
   Parents := CreateIntArray;
   InStack.Size := VertexCount;
   PreOrd[aRoot] := 0;
   Counter := 1;
-  {%H-}Stack.Push(aRoot);
+  Stack.Push(aRoot);
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
       begin
@@ -705,13 +705,14 @@ end;
 
 function TGSimpleDiGraph.CycleExists: Boolean;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   InStack: TBitVector;
   PreOrd: TIntArray;
   Counter, I, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   PreOrd := CreateIntArray;
   InStack.Size := VertexCount;
   Counter := 0;
@@ -720,7 +721,7 @@ begin
       begin
         PreOrd[I] := Counter;
         Inc(Counter);
-        {%H-}Stack.Push(I);
+        Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
@@ -744,12 +745,13 @@ end;
 
 function TGSimpleDiGraph.TopoSort: TIntArray;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   Visited: TBitVector;
   Counter, I, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   Result := CreateIntArray;
   Visited.Size := VertexCount;
   Counter := Pred(VertexCount);
@@ -757,7 +759,7 @@ begin
     if not Visited[I] then
       begin
         Visited[I] := True;
-        {%H-}Stack.Push(I);
+        Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
@@ -778,17 +780,18 @@ end;
 
 function TGSimpleDiGraph.GetDagLongestPaths(aSrc: SizeInt): TIntArray;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   Visited: TBitVector;
   d, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   Result := CreateIntArray;
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
   Result[aSrc] := 0;
-  {%H-}Stack.Push(aSrc);
+  Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
@@ -808,12 +811,13 @@ end;
 
 function TGSimpleDiGraph.GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray): TIntArray;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   Visited: TBitVector;
   d, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   Result := CreateIntArray;
   aTree := CreateIntArray;
   Visited.Size := VertexCount;
@@ -842,11 +846,14 @@ end;
 
 function TGSimpleDiGraph.SearchForStrongComponents(out aIds: TIntArray): SizeInt;
 var
-  Stack, VtxStack, PathStack: TIntStack;
+  Stack, VtxStack, PathStack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   PreOrd: TIntArray;
   I, Counter, Curr, Next: SizeInt;
 begin
+  Stack := TSimpleStack.Create(VertexCount);
+  VtxStack := TSimpleStack.Create(VertexCount);
+  PathStack := TSimpleStack.Create(VertexCount);
   PreOrd := CreateIntArray;
   aIds := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
@@ -857,9 +864,9 @@ begin
       begin
         PreOrd[I] := Counter;
         Inc(Counter);
-        {%H-}Stack.Push(I);
-        VtxStack{%H-}.Push(I);
-        PathStack{%H-}.Push(I);
+        Stack.Push(I);
+        VtxStack.Push(I);
+        PathStack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
@@ -895,7 +902,7 @@ end;
 
 function TGSimpleDiGraph.GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   Visited, IdVisited: TBitVector;
   IdParents, IdOrd: TIntArray;
   m: TSquareBitMatrix;
@@ -903,6 +910,7 @@ var
   AdjEnums: TAdjEnumArray;
   I, J, Counter, Curr, Next, CurrId, NextId: SizeInt;
 begin
+  Stack := TSimpleStack.Create(VertexCount);
   IdParents := CreateIntArray(aScCount, -1);
   IdOrd := CreateIntArray(aScCount, -1);
   Visited.Size := VertexCount;
@@ -914,7 +922,7 @@ begin
     if not Visited[I] then
       begin
         Visited[I] := True;
-        {%H-}Stack.Push(I);
+        Stack.Push(I);
         if IdOrd[aScIds[I]] = -1 then
           begin
             IdOrd[aScIds[I]] := Counter;

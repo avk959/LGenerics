@@ -1173,21 +1173,30 @@ end;
 
 function TGCustomGraph.CheckPathExists(aSrc, aDst: SizeInt): Boolean;
 var
-  Queue: TIntQueue;
+  Queue: TIntArray;
   Visited: TBitVector;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
+  Queue := CreateIntArray;
   Visited.Size := VertexCount;
-  Visited[aSrc] := True;
-  repeat
-    if aSrc = aDst then
-      exit(True);
-    for aSrc in AdjVerticesI(aSrc) do
-      if not Visited[aSrc] then
-        begin
-          Visited[aSrc] := True;
-          Queue.Enqueue(aSrc);
-        end;
-  until not Queue{%H-}.TryDequeue(aSrc);
+  Queue[qTail] := aSrc;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      aSrc := Queue[qHead];
+      Inc(qHead);
+      if aSrc = aDst then
+        exit(True);
+      for p in AdjLists[aSrc]^ do
+        if not Visited[p^.Destination] then
+          begin
+            Queue[qTail] := p^.Destination;
+            Inc(qTail);
+            Visited[p^.Destination] := True;
+          end;
+    end;
   Result := False;
 end;
 
