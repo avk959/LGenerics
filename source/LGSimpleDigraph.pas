@@ -378,7 +378,7 @@ type
         ResidualCap: TWeight;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
-        function  IsResidual: Boolean; inline;
+        function  IsResidual(aCap: TWeight): Boolean; inline;
         procedure Push(aFlow: TWeight); inline;
       end;
 
@@ -388,8 +388,6 @@ type
         CurrentArc: PArc;    // pointer to current incident arc
         Distance: SizeInt;   // distance from the source
         procedure ResetCurrent; inline;
-        function  NonLabeled: Boolean; inline;
-        function  IsLabeled: Boolean; inline;
       end;
 
     var
@@ -398,6 +396,8 @@ type
       FQueue: array of PNode;
       FSource,
       FSink: PNode;
+      FCurrentLevel: TWeight;
+      FScaleFactor,
       FNodeCount: SizeInt;
       procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
@@ -2385,9 +2385,9 @@ begin
   ResidualCap := 0;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.TArc.IsResidual: Boolean;
+function TGIntWeightDiGraph.TDinitzHelper.TArc.IsResidual(aCap: TWeight): Boolean;
 begin
-  Result := ResidualCap > 0;
+  Result := ResidualCap > aCap;
 end;
 
 procedure TGIntWeightDiGraph.TDinitzHelper.TArc.Push(aFlow: TWeight);
@@ -2403,16 +2403,6 @@ begin
   CurrentArc := FirstArc;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.TNode.NonLabeled: Boolean;
-begin
-  Result := Distance = NULL_INDEX;
-end;
-
-function TGIntWeightDiGraph.TDinitzHelper.TNode.IsLabeled: Boolean;
-begin
-  Result := Distance <> NULL_INDEX;
-end;
-
 { TGIntWeightDiGraph.TDinitzHelper }
 
 procedure TGIntWeightDiGraph.TDinitzHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
@@ -2420,7 +2410,9 @@ var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
   p: PAdjItem;
+  Cap: TWeight;
 begin
+  FScaleFactor := 5;
   FNodeCount := aGraph.VertexCount;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
@@ -2438,11 +2430,15 @@ begin
   for I := 0 to Pred(FNodeCount) do
     FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
 
+  FCurrentLevel := 0;
   for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
-        FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], p^.Data.Weight);
+        Cap := p^.Data.Weight;
+        if Cap > FCurrentLevel then
+          FCurrentLevel := Cap;
+        FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], Cap);
         FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]]);
         Inc(CurrArcIdx[I]);
         Inc(CurrArcIdx[J]);
@@ -2481,7 +2477,7 @@ begin
   ClearLabels;
   FQueue[qTail] := FSource;
   Inc(qTail);
-  while (qHead < qTail) and FSink^.NonLabeled do
+  while (qHead < qTail) and (FSink^.Distance = NULL_INDEX) do
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
@@ -2490,7 +2486,7 @@ begin
       while CurrArc < (Curr + 1)^.FirstArc do
         begin
           Next := CurrArc^.Target;
-          if Next^.NonLabeled and CurrArc^.IsResidual then
+          if (Next^.Distance = NULL_INDEX) and CurrArc^.IsResidual(FCurrentLevel) then
             begin
               Next^.ResetCurrent;
               Next^.Distance := Dist;
@@ -2500,7 +2496,7 @@ begin
           Inc(CurrArc);
         end;
     end;
-  Result := FSink^.IsLabeled;
+  Result := FSink^.Distance <> NULL_INDEX;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.Dfs(aRoot: PNode; aFlow: TWeight): TWeight;
@@ -2533,11 +2529,15 @@ var
   Flow: TWeight;
 begin
   Result := 0;
-  while Relabel do
-    repeat
-      Flow := Dfs(FSource, InfWeight);
-      Result += Flow;
-    until Flow = 0;
+  while FCurrentLevel >= 1 do
+    begin
+      FCurrentLevel := FCurrentLevel div FScaleFactor;
+      while Relabel do
+        repeat
+          Flow := Dfs(FSource, InfWeight);
+          Result += Flow;
+        until Flow = 0;
+    end;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
@@ -2589,7 +2589,7 @@ begin
   System.SetLength(s, ARRAY_INITIAL_SIZE);
   J := 0;
   for I := 0 to System.High(FNodes) do
-    if FNodes[I].IsLabeled then
+    if FNodes[I].Distance <> NULL_INDEX then
       begin
         if System.Length(s) = J then
           System.SetLength(s, J shl 1);
