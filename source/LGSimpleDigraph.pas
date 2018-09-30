@@ -22,7 +22,6 @@ unit LGSimpleDigraph;
 {$mode objfpc}{$H+}
 {$INLINE ON}{$WARN 6058 off : }
 {$MODESWITCH ADVANCEDRECORDS}
-{$MODESWITCH NESTEDPROCVARS}
 
 interface
 
@@ -350,7 +349,7 @@ type
       FMaxActiveLevel,          // maximal level with excessed node
       FMinActiveLevel: SizeInt; // minimal level with excessed node
       procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
-      procedure CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+      procedure CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight);
       procedure ClearLabels; inline;
       procedure GlobalRelabel;
       procedure RemoveGap(aLayer: SizeInt);
@@ -363,6 +362,8 @@ type
       function  GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
       function  GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
       function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
+      function  GetFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
+                out a: TEdgeArray): TWeight;
     end;
 
     { TDinitzHelper: implementation of Dinitz's maxflow algorithm }
@@ -376,6 +377,7 @@ type
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
         ResidualCap: TWeight;
+        IsForward: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
         function  IsResidual(aCap: TWeight): Boolean; inline;
@@ -434,7 +436,8 @@ type
         FirstArc,            // pointer to first incident arc
         PathArc: PArc;       // pointer to incoming path arc
         Parent: PNode;
-        Price: TCost;
+        Price,
+        Distance: TCost;
         PathMinCap: TWeight; // munimum capacity on path
       end;
 
@@ -461,10 +464,45 @@ type
       function  GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
       function  CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
     public
-      function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
+      function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
                                constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
-      function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
+      function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
                                constref aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
+    end;
+
+    { TCsMcfHelper }
+    TCsMcfHelper = record
+    private
+    type
+      PNode  = ^TNode;
+      PArc   = ^TArc;
+
+      TArc = record
+        Target: PNode;       // pointer to target node
+        Reverse: PArc;       // pointer to opposite arc
+        ResidualCap: TWeight;
+        Cost: TCost;
+        IsForward: Boolean;
+        constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
+        constructor CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
+        function  IsResidual: Boolean; inline;
+        procedure Push(aFlow: TWeight); inline;
+      end;
+
+      TNode = record
+      private
+        FirstArc,            // pointer to first incident arc
+        CurrArc: PArc;       // pointer to current incident arc
+        QueueNext: PNode;    // next node in the queue
+        Price: TCost;
+        Excess: TWeight;     // excess at the node
+        procedure ResetCurrent; inline;
+      end;
+
+      function FindFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
+               out a: TEdgeArray): TWeight;
+    public
+
     end;
 
   public
@@ -472,22 +510,21 @@ type
   networks utilities treat the weight of the arc as its capacity
 ***********************************************************************************************************}
   type
-    TNetworkState = (nsValid, nsTrivial, nsInvalidSource, nsInvalidSink, nsNegCapacity, nsSourceOverflow,
-                     nsSinkUnreachable);
+    TNetworkState = (nsOk, nsTrivial, nsInvalidSource, nsInvalidSink, nsNegCapacity, nsSinkUnreachable);
 
     function GetNetworkState(constref aSource, aSink: TVertex): TNetworkState; inline;
     function GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
-  { returns False if GetNetworkState <> nsValid, used PR algorithm }
+  { returns False if GetNetworkState <> nsOk, used PR algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;//todo: TNetworkState?
-  { returns False if GetNetworkState <> nsValid, returns flows through the arcs in array a;
+  { returns False if GetNetworkState <> nsOk, returns flows through the arcs in array a;
     used PR algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
-  { returns False if GetNetworkState <> nsValid, used Dinitz's algorithm }
+  { returns False if GetNetworkState <> nsOk, used Dinitz's algorithm }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): Boolean;
-  { returns False if GetNetworkState <> nsValid, returns flows through the arcs in array a;
+  { returns False if GetNetworkState <> nsOk, returns flows through the arcs in array a;
     used Dinitz's algorithm }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): Boolean; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): Boolean;
@@ -532,20 +569,20 @@ type
 
   { returns True and aMap if arc costs are correct(negative costs allows), False otherwise }
     function IsValidCostArray(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
-  { param aNeedFlow specifies the required flow > 0 (can be InfWeight);
+  { param aReqFlow specifies the required flow > 0 (can be MaxWeight);
     returns False if network is not correct or arc costs are not correct or network
     contains negative cycle or aNeedFlow < 1,
-    otherwise returns True, flow = min(aNeedFlow, maxflow) in aNeedFlow and
-    total flow cost in aResultCost }
+    otherwise returns True, flow = min(aReqFlow, maxflow) in aReqFlow and
+    total flow cost in aTotalCost }
     function FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-                             var aNeedFlow: TWeight; out aResultCost: TCost): Boolean; inline;
+                             var aReqFlow: TWeight; out aTotalCost: TCost): Boolean; inline;
     function FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-                              var aNeedFlow: TWeight; out aResultCost: TCost): Boolean;
+                              var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
   { same as above and in addition returns edge flows in array a }
     function FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-                             var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean; inline;
+                             var aReqFlow: TWeight; out aTotalCost: TCost; out a: TEdgeArray): Boolean; inline;
     function FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-                              var aNeedFlow: TWeight; out aResultCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+                              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
   end;
 
 implementation
@@ -1932,7 +1969,8 @@ begin
   System.SetLength(FQueue, FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource,aSink: SizeInt);
+procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+  aReqFlow: TWeight);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -1986,7 +2024,7 @@ begin
   FNodes[FNodeCount].Excess := 0;
   FNodes[FNodeCount].Distance := FNodeCount;
 
-  FSource^.Excess := MaxWeight;
+  FSource^.Excess := aReqFlow;
   System.SetLength(FLevels, FNodeCount);
   FMaxLevel := System.High(FLevels);
   System.SetLength(FQueue, FNodeCount);
@@ -2340,7 +2378,7 @@ end;
 function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
-  CreateResudualGraphCap(aGraph, aSource, aSink);
+  CreateResudualGraphCap(aGraph, aSource, aSink, MaxWeight);
   HiLevelPushRelabel;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -2369,6 +2407,16 @@ begin
   System.SetLength(s, J);
 end;
 
+function TGIntWeightDiGraph.THPrHelper.GetFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+  aReqFlow: TWeight; out a: TEdgeArray): TWeight;
+begin
+  CreateResudualGraphCap(aGraph, aSource, aSink, aReqFlow);
+  HiLevelPushRelabel;
+  FLevels := nil;
+  Result := FSink^.Excess;
+  a := RecoverFlow;
+end;
+
 { TGIntWeightDiGraph.TDinitzHelper.TArc }
 
 constructor TGIntWeightDiGraph.TDinitzHelper.TArc.Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
@@ -2376,6 +2424,7 @@ begin
   Target := aTarget;
   Reverse := aReverse;
   ResidualCap := aCap;
+  IsForward := True;
 end;
 
 constructor TGIntWeightDiGraph.TDinitzHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc);
@@ -2383,6 +2432,7 @@ begin
   Target := aTarget;
   Reverse := aReverse;
   ResidualCap := 0;
+  IsForward := False;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.TArc.IsResidual(aCap: TWeight): Boolean;
@@ -2544,7 +2594,6 @@ function TGIntWeightDiGraph.TDinitzHelper.CreateEdges(aGraph: TGIntWeightDiGraph
 var
   I, J: SizeInt;
   CurrArc: PArc;
-  d: TEdgeData;
 begin
   System.SetLength(Result, aGraph.EdgeCount);
   J := 0;
@@ -2553,10 +2602,10 @@ begin
       CurrArc := FNodes[I].FirstArc;
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
-          if aGraph.GetEdgeDataI(I, CurrArc^.Target - PNode(FNodes), d) then
+          if CurrArc^.IsForward then
             begin
               Result[J] :=
-                TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), d.Weight - CurrArc^.ResidualCap);
+                TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), CurrArc^.Reverse^.ResidualCap);
               Inc(J);
             end;
           Inc(CurrArc);
@@ -2698,19 +2747,19 @@ end;
 function TGIntWeightDiGraph.TBgMcfHelper.ContainsNegCycle(out aMinCap: TWeight): Boolean;
 var
   Queue: TDeque;
-  Dist: TIntArray;
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
+  d: SizeInt;
 begin
   SearchInit;
-  Dist := FGraph.CreateIntArray;
   CurrNode := FSource;
-  Dist[FSource - PNode(FNodes)] := 0;
+  FSource^.Distance := 0;
   aMinCap := 0;
   repeat
     FInQueue[CurrNode - PNode(FNodes)] := False;
     if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
       continue;
+    d := Succ(CurrNode^.Distance);
     CurrArc := CurrNode^.FirstArc;
     while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
@@ -2723,9 +2772,9 @@ begin
                 NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.PathArc := CurrArc;
-                if (NextNode = FSource) or (Succ(Dist[CurrNode - PNode(FNodes)])>= FNodeCount) then
+                if (NextNode = FSource) or (d >= FNodeCount) then
                   exit(True);
-                Dist[NextNode - PNode(FNodes)] := Succ(Dist[CurrNode - PNode(FNodes)]);
+                NextNode^.Distance := d;
                 if not FInQueue[NextNode - PNode(FNodes)] then
                   begin
                     if Queue.TryPeekFirst(TopNode) and (NextNode^.Price <{%H-}TopNode^.Price) then
@@ -2890,26 +2939,77 @@ begin
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  aFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
+  aReqFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
-  if aFlow <= 0 then
+  if aReqFlow <= 0 then
     begin
       aTotalCost := 0;
       exit(0);
     end;
-  CreateResudualGraph(aGraph, aSource, aSink, aFlow, aCosts);
+  CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := MinCostFlow;
   aTotalCost := GetTotalCost(aCosts);
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  aFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
+  aReqFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
-  if aFlow = 0 then
-    exit(aFlow);
-  CreateResudualGraph(aGraph, aSource, aSink, aFlow, aCosts);
+  if aReqFlow = 0 then
+    exit(aReqFlow);
+  CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := MinCostFlow;
   a := CreateEdges(aCosts, aTotalCost);
+end;
+
+{ TGIntWeightDiGraph.TCsMcfHelper.TArc }
+
+constructor TGIntWeightDiGraph.TCsMcfHelper.TArc.Create(aTarget: PNode; aReverse: PArc; aCap: TWeight;
+  aCost: TCost);
+begin
+  Target := aTarget;
+  Reverse := aReverse;
+  ResidualCap := aCap;
+  Cost := aCost;
+  IsForward := True;
+end;
+
+constructor TGIntWeightDiGraph.TCsMcfHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
+begin
+  Target := aTarget;
+  Reverse := aReverse;
+  ResidualCap := 0;
+  Cost := -aCost;
+  IsForward := False;
+end;
+
+function TGIntWeightDiGraph.TCsMcfHelper.TArc.IsResidual: Boolean;
+begin
+  Result := ResidualCap > 0;
+end;
+
+procedure TGIntWeightDiGraph.TCsMcfHelper.TArc.Push(aFlow: TWeight);
+begin
+  ResidualCap -= aFlow;
+  Target^.Excess += aFlow;
+  Reverse^.ResidualCap += aFlow;
+  Reverse^.Target^.Excess -= aFlow;
+end;
+
+{ TGIntWeightDiGraph.TCsMcfHelper.TNode }
+
+procedure TGIntWeightDiGraph.TCsMcfHelper.TNode.ResetCurrent;
+begin
+  CurrArc := FirstArc;
+end;
+
+{ TGIntWeightDiGraph.TCsMcfHelper }
+
+function TGIntWeightDiGraph.TCsMcfHelper.FindFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+  aReqFlow: TWeight; out a: TEdgeArray): TWeight;
+var
+  Helper: THPrHelper;
+begin
+  Result := Helper.GetFlow(aGraph, aSource, aSink, aReqFlow, a);
 end;
 
 { TGIntWeightDiGraph }
@@ -2921,12 +3021,12 @@ end;
 
 function TGIntWeightDiGraph.GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
 var
-  Queue: TIntQueue;
+  Queue: TIntArray;
   Visited: TBitVector;
-  Curr, Next: SizeInt;
-  w: TWeight;
+  Curr: SizeInt;
   p: PAdjItem;
-  HasOverflow: Boolean = False;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
   SinkFound: Boolean = False;
 begin
   CheckIndexRange(aSrcIndex);
@@ -2937,37 +3037,31 @@ begin
     exit(nsInvalidSource);
   if not IsSinkI(aSinkIndex) then
     exit(nsInvalidSink);
+  Queue := CreateIntArray;
   Visited.Size := VertexCount;
   Visited[aSrcIndex] := True;
-  Curr := aSrcIndex;
-  repeat
-    for p in AdjLists[Curr]^ do
-      begin
-        Next := p^.Destination;
-        if p^.Data.Weight < 0 then // network should not contains arc with negative capacity
-          exit(nsNegCapacity);
-        if not Visited[Next] then
-          begin
-            Visited[Next] := True;
-            Queue.Enqueue(Next);
-            SinkFound := SinkFound or (Next = aSinkIndex);
-          end;
-      end;
-  until not Queue{%H-}.TryDequeue(Curr);
+  Queue[qTail] := aSrcIndex;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      for p in AdjLists[Curr]^ do
+        begin
+          if p^.Data.Weight < 0 then // network should not contains arcs with negative capacity
+            exit(nsNegCapacity);
+          if not Visited[p^.Destination] and (p^.Data.Weight > 0) then
+            begin
+              Queue[qTail] := p^.Destination;
+              Inc(qTail);
+              Visited[p^.Destination] := True;
+              SinkFound := SinkFound or (p^.Destination = aSinkIndex);
+            end;
+        end;
+    end;
   if not SinkFound then // sink should be reachable from the source
     exit(nsSinkUnreachable);
-  w := ZeroWeight;
-  {$PUSH}{$Q+}
-  try
-    for p in AdjLists[aSrcIndex]^ do
-      w += p^.Data.Weight;
-  except
-    HasOverflow := True;
-  end;
-  {$POP}
-  if HasOverflow then //total capacity of edges incident to the source exceeds MaxWeight
-    exit(nsSourceOverflow);
-  Result := nsValid;
+  Result := nsOk;
 end;
 
 function TGIntWeightDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): Boolean;
@@ -2979,7 +3073,7 @@ function TGIntWeightDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a
 var
   Helper: THPrHelper;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
   Result := True;
@@ -2996,7 +3090,7 @@ function TGIntWeightDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out a
 var
   Helper: THPrHelper;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
   Result := True;
@@ -3011,7 +3105,7 @@ function TGIntWeightDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aF
 var
   Helper: TDinitzHelper;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
   Result := True;
@@ -3028,7 +3122,7 @@ function TGIntWeightDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aF
 var
   Helper: TDinitzHelper;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
   Result := True;
@@ -3132,7 +3226,7 @@ end;
 function TGIntWeightDiGraph.FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): Boolean;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
   aValue := GetMinSTCutPrI(aSrcIndex, aSinkIndex, aCut);
   Result := True;
@@ -3147,7 +3241,7 @@ end;
 function TGIntWeightDiGraph.FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): Boolean;
 begin
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
   aValue := GetMinSTCutDI(aSrcIndex, aSinkIndex, aCut);
   Result := True;
@@ -3217,47 +3311,47 @@ begin
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  var aNeedFlow: TWeight; out aResultCost: TCost): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
 begin
-  Result := FindMinCostFlowI(IndexOf(aSource), IndexOf(aSink), aCosts, aNeedFlow, aResultCost);
+  Result := FindMinCostFlowI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-  var aNeedFlow: TWeight; out aResultCost: TCost): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
 var
   Helper: TBgMcfHelper;
   Costs: TEdgeCostMap;
 begin
-  if aNeedFlow < 1 then
+  if aReqFlow < 1 then
     exit(False);
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
   if not IsValidCostArray(aCosts, Costs) then
     exit(False);
-  aNeedFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aNeedFlow, Costs, aResultCost);
-  Result := aNeedFlow <> 0;
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, Costs, aTotalCost);
+  Result := aReqFlow <> 0;
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlow(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  var aNeedFlow: TWeight; out aResultCost: TCost; out a: TEdgeArray): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost; out a: TEdgeArray): Boolean;
 begin
-  Result := FindMinCostFlowI(IndexOf(aSource), IndexOf(aSink), aCosts, aNeedFlow, aResultCost, a);
+  Result := FindMinCostFlowI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, a);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-  var aNeedFlow: TWeight; out aResultCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
 var
   Helper: TBgMcfHelper;
   Costs: TEdgeCostMap;
 begin
-  if aNeedFlow < 1 then
+  if aReqFlow < 1 then
     exit(False);
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsValid then
+  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
   if not IsValidCostArray(aCosts, Costs) then
     exit(False);
-  aNeedFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aNeedFlow, Costs, aResultCost, aArcFlows);
-  Result := aNeedFlow <> 0;
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, Costs, aTotalCost, aArcFlows);
+  Result := aReqFlow <> 0;
 end;
 
 end.
