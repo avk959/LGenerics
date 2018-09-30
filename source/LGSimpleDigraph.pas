@@ -441,11 +441,12 @@ type
       end;
 
       TDeque = specialize TGLiteDeque<PNode>;
+      THeap  = specialize TGPairHeapMin<TCostItem>;
 
     var
       FNodes: array of TNode;
       FArcs: array of TArc;
-      FQueue: TPathHelper.TPairHeap;
+      FQueue: THeap;
       FGraph: TGIntWeightDiGraph;
       FInQueue: TBitVector;
       FReached: TBoolVector;
@@ -2729,7 +2730,7 @@ begin
 
   FInQueue.Size := FNodeCount;
   FReached.Size := FNodeCount;
-  FQueue := TPathHelper.TPairHeap.Create(FNodeCount);
+  FQueue := THeap.Create(FNodeCount);
 end;
 
 procedure TGIntWeightDiGraph.TBgMcfHelper.SearchInit;
@@ -2798,7 +2799,7 @@ function TGIntWeightDiGraph.TBgMcfHelper.FindShortestPath(out aMinCap: TWeight):
 var
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
-  Item: TWeightItem;
+  Item: TCostItem;
   Price: TCost;
   I: SizeInt;
 begin
@@ -2808,10 +2809,10 @@ begin
   FSource^.PathArc := nil;
   FSource^.PathMinCap := MaxWeight;
   aMinCap := 0;
-  Item := TWeightItem.Create(FSource - PNode(FNodes), 0);
+  Item := TCostItem.Create(FSource - PNode(FNodes), 0);
   repeat
     CurrNode := @FNodes[Item.Index];
-    FNodes[Item.Index].Price += Item.Weight;
+    FNodes[Item.Index].Price += Item.Cost;
     FReached[Item.Index] := True;
     if CurrNode = FSink then
       break;
@@ -2830,16 +2831,16 @@ begin
                     NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
                     NextNode^.Parent := CurrNode;
                     NextNode^.PathArc := CurrArc;
-                    FQueue.Enqueue(I, TWeightItem.Create(I, Price));
+                    FQueue.Enqueue(I, TCostItem.Create(I, Price));
                     FInQueue[I] := True;
                   end
                 else
-                  if Price < FQueue.Peek(I).Weight then
+                  if Price < FQueue.Peek(I).Cost then
                     begin
                       NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
                       NextNode^.Parent := CurrNode;
                       NextNode^.PathArc := CurrArc;
-                      FQueue.Update(I, TWeightItem.Create(I, Price));
+                      FQueue.Update(I, TCostItem.Create(I, Price));
                     end;
               end;
           end;
@@ -2851,7 +2852,7 @@ begin
   if Result then
     begin
       for I in FReached do
-        FNodes[I].Price -= Item.Weight;
+        FNodes[I].Price -= Item.Cost;
       aMinCap := FSink^.PathMinCap;
     end;
 end;
