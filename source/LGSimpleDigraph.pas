@@ -240,8 +240,8 @@ type
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { returns False if exists negative weighted cycle, otherwise returns the vertex path
     of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
-    to distinguish 'unreachable' and 'neg cycle': in case negative cycle aWeight returns ZeroWeight,
-    and InfWeight if aDst unreachable; used BFMT algorithm }
+    to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
+    but InfWeight if aDst unreachable; used BFMT algorithm }
     function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
     function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
   { finds all paths of minimal weight from a given vertex to the remaining vertices in the same

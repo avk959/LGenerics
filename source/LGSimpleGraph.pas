@@ -485,7 +485,7 @@ type
   { same as above and in aPathTree returns paths }
     function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-  { returns False if exists edge with negative weight, otherwise finds all paths of
+  { returns False if exists cycle of negative weight, otherwise finds all paths of
     minimal weight from a given vertex to the remaining vertices in the same connected
     component(SSSP); an aWeights will contain in the corresponding component the weight of the path
     to the vertex or InfWeight if the vertex is unreachable; used BFMT algorithm  }
@@ -502,10 +502,10 @@ type
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-  { returns False if exists edge with negative weight, otherwise returns the vertex path
+  { returns False if exists cycle of negative weight from otherwise returns the vertex path
     of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
-    to distinguish 'unreachable' and 'neg cycle': in case negative cycle aWeight returns ZeroWeight,
-    and InfWeight if aDst unreachable; used BFMT algorithm }
+    to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
+    but InfWeight if aDst unreachable; used BFMT algorithm }
     function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
     function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
