@@ -348,8 +348,8 @@ type
       FMaxLevel,                // maximal level
       FMaxActiveLevel,          // maximal level with excessed node
       FMinActiveLevel: SizeInt; // minimal level with excessed node
-      procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
-      procedure CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight);
+      procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight);
+      procedure CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
       procedure ClearLabels; inline;
       procedure GlobalRelabel;
       procedure RemoveGap(aLayer: SizeInt);
@@ -366,7 +366,7 @@ type
                 out a: TEdgeArray): TWeight;
     end;
 
-    { TDinitzHelper: implementation of Dinitz's maxflow algorithm }
+    { TDinitzHelper: implementation of scaling Dinitz's maxflow algorithm }
     TDinitzHelper = record
     private
     type
@@ -398,7 +398,7 @@ type
       FQueue: array of PNode;
       FSource,
       FSink: PNode;
-      FCurrentLevel: TWeight;
+      FMaxCap: TWeight;
       FScaleFactor,
       FNodeCount: SizeInt;
       procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
@@ -452,9 +452,9 @@ type
       FReached: TBoolVector;
       FSource,
       FSink: PNode;
-      FFlow: TWeight;
+      FRequestFlow: TWeight;
       FNodeCount: SizeInt;
-      procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aFlow: TWeight;
+      procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
                 constref aCosts: TEdgeCostMap);
       procedure SearchInit; inline;
       function  ContainsNegCycle(out aMinCap: TWeight): Boolean;
@@ -1915,7 +1915,8 @@ end;
 
 { TGIntWeightDiGraph.THPrHelper }
 
-procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+  aReqFlow: TWeight);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -1963,14 +1964,13 @@ begin
   FNodes[FNodeCount].Excess := 0;
   FNodes[FNodeCount].Distance := FNodeCount;
 
-  FSource^.Excess := MaxWeight;
+  FSource^.Excess := aReqFlow;
   System.SetLength(FLevels, FNodeCount);
   FMaxLevel := System.High(FLevels);
   System.SetLength(FQueue, FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  aReqFlow: TWeight);
+procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -2024,7 +2024,7 @@ begin
   FNodes[FNodeCount].Excess := 0;
   FNodes[FNodeCount].Distance := FNodeCount;
 
-  FSource^.Excess := aReqFlow;
+  FSource^.Excess := MaxWeight;
   System.SetLength(FLevels, FNodeCount);
   FMaxLevel := System.High(FLevels);
   System.SetLength(FQueue, FNodeCount);
@@ -2370,7 +2370,7 @@ end;
 
 function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
 begin
-  CreateResudualGraph(aGraph, aSource, aSink);
+  CreateResudualGraph(aGraph, aSource, aSink, MaxWeight);
   HiLevelPushRelabel;
   Result := FSink^.Excess;
 end;
@@ -2378,7 +2378,7 @@ end;
 function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
-  CreateResudualGraphCap(aGraph, aSource, aSink, MaxWeight);
+  CreateResudualGraphCap(aGraph, aSource, aSink);
   HiLevelPushRelabel;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -2390,7 +2390,7 @@ function TGIntWeightDiGraph.THPrHelper.GetMinCut(aGraph: TGIntWeightDiGraph; aSo
 var
   I, J: SizeInt;
 begin
-  CreateResudualGraph(aGraph, aSource, aSink);
+  CreateResudualGraph(aGraph, aSource, aSink, MaxWeight);
   HiLevelPushRelabel;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -2410,7 +2410,7 @@ end;
 function TGIntWeightDiGraph.THPrHelper.GetFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; out a: TEdgeArray): TWeight;
 begin
-  CreateResudualGraphCap(aGraph, aSource, aSink, aReqFlow);
+  CreateResudualGraph(aGraph, aSource, aSink, aReqFlow);
   HiLevelPushRelabel;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -2480,14 +2480,14 @@ begin
   for I := 0 to Pred(FNodeCount) do
     FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
 
-  FCurrentLevel := 0;
+  FMaxCap := 0;
   for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
         Cap := p^.Data.Weight;
-        if Cap > FCurrentLevel then
-          FCurrentLevel := Cap;
+        if Cap > FMaxCap then
+          FMaxCap := Cap;
         FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], Cap);
         FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]]);
         Inc(CurrArcIdx[I]);
@@ -2536,7 +2536,7 @@ begin
       while CurrArc < (Curr + 1)^.FirstArc do
         begin
           Next := CurrArc^.Target;
-          if (Next^.Distance = NULL_INDEX) and CurrArc^.IsResidual(FCurrentLevel) then
+          if (Next^.Distance = NULL_INDEX) and CurrArc^.IsResidual(FMaxCap) then
             begin
               Next^.ResetCurrent;
               Next^.Distance := Dist;
@@ -2579,9 +2579,9 @@ var
   Flow: TWeight;
 begin
   Result := 0;
-  while FCurrentLevel >= 1 do
+  while FMaxCap >= 1 do
     begin
-      FCurrentLevel := FCurrentLevel div FScaleFactor;
+      FMaxCap := FMaxCap div FScaleFactor;
       while Relabel do
         repeat
           Flow := Dfs(FSource, InfWeight);
@@ -2680,7 +2680,7 @@ end;
 { TGIntWeightDiGraph.TBgMcfHelper }
 
 procedure TGIntWeightDiGraph.TBgMcfHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  aFlow: TWeight; constref aCosts: TEdgeCostMap);
+  aReqFlow: TWeight; constref aCosts: TEdgeCostMap);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -2689,7 +2689,7 @@ var
 begin
   FGraph := aGraph;
   FNodeCount := aGraph.VertexCount;
-  FFlow := aFlow;
+  FRequestFlow := aReqFlow;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
   for I := 0 to System.High(CurrArcIdx) do
@@ -2835,7 +2835,7 @@ begin
                     FInQueue[I] := True;
                   end
                 else
-                  if Price < FQueue.Peek(I).Cost then
+                  if Price < FQueue.HeadPtr(I)^.Cost then
                     begin
                       NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
                       NextNode^.Parent := CurrNode;
@@ -2879,13 +2879,13 @@ begin
   Result := 0;
   if ContainsNegCycle(Flow) then
     exit(0);
-  Flow := wMin(Flow, FFlow);
+  Flow := wMin(Flow, FRequestFlow);
   repeat
     FlowIn(Flow);
     Result += Flow;
     Flow := 0;
     if FindShortestPath(Flow) then
-      Flow := wMin(Flow, FFlow - Result);
+      Flow := wMin(Flow, FRequestFlow - Result);
   until Flow = 0;
 end;
 
