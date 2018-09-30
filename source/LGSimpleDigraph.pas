@@ -436,8 +436,7 @@ type
         FirstArc,            // pointer to first incident arc
         PathArc: PArc;       // pointer to incoming path arc
         Parent: PNode;
-        Price,
-        Distance: TCost;
+        Price: TCost;
         PathMinCap: TWeight; // munimum capacity on path
       end;
 
@@ -2747,19 +2746,21 @@ end;
 function TGIntWeightDiGraph.TBgMcfHelper.ContainsNegCycle(out aMinCap: TWeight): Boolean;
 var
   Queue: TDeque;
+  Dist: TIntArray;
   CurrNode, NextNode, TopNode: PNode;
   CurrArc: PArc;
   d: SizeInt;
 begin
   SearchInit;
+  System.SetLength(Dist, FGraph.VertexCount);
   CurrNode := FSource;
-  FSource^.Distance := 0;
+  Dist[FSource - PNode(FNodes)] := 0;
   aMinCap := 0;
   repeat
     FInQueue[CurrNode - PNode(FNodes)] := False;
     if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
       continue;
-    d := Succ(CurrNode^.Distance);
+    d := Succ(Dist[CurrNode - PNode(FNodes)]);
     CurrArc := CurrNode^.FirstArc;
     while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
@@ -2774,7 +2775,7 @@ begin
                 NextNode^.PathArc := CurrArc;
                 if (NextNode = FSource) or (d >= FNodeCount) then
                   exit(True);
-                NextNode^.Distance := d;
+                Dist[NextNode - PNode(FNodes)] := d;
                 if not FInQueue[NextNode - PNode(FNodes)] then
                   begin
                     if Queue.TryPeekFirst(TopNode) and (NextNode^.Price <{%H-}TopNode^.Price) then
