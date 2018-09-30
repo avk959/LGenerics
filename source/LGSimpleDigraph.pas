@@ -199,7 +199,7 @@ type
     class function InfWeight: TWeight; static; inline;
     class function NegInfWeight: TWeight; static; inline;
     class function ZeroWeight: TWeight; static; inline;
-  { returns True if exists edge with negative weight }
+  { returns True if exists arc with negative weight }
     function ContainsNegWeightEdge: Boolean;
   { checks whether exists any cycle of negative weight in subgraph that reachable from a aRoot;
     if True then aCycle will contain indices of the vertices of the cycle }
@@ -425,6 +425,7 @@ type
         Reverse: PArc;       // pointer to opposite arc
         ResidualCap: TWeight;
         Cost: TCost;
+        IsForward: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
         function  IsResidual: Boolean; inline;
@@ -447,7 +448,6 @@ type
       FNodes: array of TNode;
       FArcs: array of TArc;
       FQueue: THeap;
-      FGraph: TGIntWeightDiGraph;
       FInQueue: TBitVector;
       FReached: TBoolVector;
       FSource,
@@ -2656,6 +2656,7 @@ begin
   Reverse := aReverse;
   ResidualCap := aCap;
   Cost := aCost;
+  IsForward := True;
 end;
 
 constructor TGIntWeightDiGraph.TBgMcfHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
@@ -2664,6 +2665,7 @@ begin
   Reverse := aReverse;
   ResidualCap := 0;
   Cost := -aCost;
+  IsForward := False;
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.TArc.IsResidual: Boolean;
@@ -2687,7 +2689,6 @@ var
   c: TCost;
   p: PAdjItem;
 begin
-  FGraph := aGraph;
   FNodeCount := aGraph.VertexCount;
   FRequestFlow := aReqFlow;
   System.SetLength(CurrArcIdx, FNodeCount);
@@ -2753,7 +2754,7 @@ var
   d: SizeInt;
 begin
   SearchInit;
-  System.SetLength(Dist, FGraph.VertexCount);
+  System.SetLength(Dist, FNodeCount);
   CurrNode := FSource;
   Dist[FSource - PNode(FNodes)] := 0;
   aMinCap := 0;
@@ -2902,9 +2903,11 @@ begin
       CurrArc := FNodes[I].FirstArc;
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
-          Dst := CurrArc^.Target - PNode(FNodes);
-          if FGraph.GetEdgeDataI(I, Dst, d) then
-            Result += (d.Weight - CurrArc^.ResidualCap) * aCosts[TIntEdge.Create(I, Dst)];
+          if CurrArc^.IsForward then
+            begin
+              Dst := CurrArc^.Target - PNode(FNodes);
+              Result += CurrArc^.Reverse^.ResidualCap * aCosts[TIntEdge.Create(I, Dst)];
+            end;
           Inc(CurrArc);
         end;
     end;
@@ -2917,7 +2920,7 @@ var
   d: TEdgeData;
   w: TWeight;
 begin
-  System.SetLength(Result, FGraph.EdgeCount);
+  System.SetLength(Result, aCosts.Count);
   J := 0;
   d := DefaultEdgeData;
   aTotalCost := 0;
@@ -2926,10 +2929,10 @@ begin
       CurrArc := FNodes[I].FirstArc;
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
-          Dst := CurrArc^.Target - PNode(FNodes);
-          if FGraph.GetEdgeDataI(I, Dst, d) then
+          if CurrArc^.IsForward then
             begin
-              w := d.Weight - CurrArc^.ResidualCap;
+              Dst := CurrArc^.Target - PNode(FNodes);
+              w := CurrArc^.Reverse^.ResidualCap;
               aTotalCost += w * aCosts[TIntEdge.Create(I, Dst)];
               Result[J] := TWeightEdge.Create(I, Dst, w);
               Inc(J);
