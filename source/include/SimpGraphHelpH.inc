@@ -173,7 +173,7 @@ type
      FGraph: TGSimpleGraph;
      FMates,
      FParents,
-     FQueue: array of SizeInt;
+     FQueue: TIntArray;
      FVisited: TBitVector;
      FWhites: TBoolVector;
      FMatchCount: SizeInt;
