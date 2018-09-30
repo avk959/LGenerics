@@ -447,8 +447,8 @@ type
       FArcs: array of TArc;
       FQueue: TPathHelper.TPairHeap;
       FGraph: TGIntWeightDiGraph;
-      FInQueue,
-      FReached: TBitVector;
+      FInQueue: TBitVector;
+      FReached: TBoolVector;
       FSource,
       FSink: PNode;
       FFlow: TWeight;
@@ -2850,9 +2850,8 @@ begin
   Result := FReached[FSink - PNode(FNodes)];
   if Result then
     begin
-      for I := 0 to Pred(FNodeCount) do
-        if FReached[I] then
-          FNodes[I].Price -= Item.Weight;
+      for I in FReached do
+        FNodes[I].Price -= Item.Weight;
       aMinCap := FSink^.PathMinCap;
     end;
 end;
