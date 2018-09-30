@@ -268,6 +268,19 @@ type
   end;
   PSimpleStack = ^TSimpleStack;
 
+  TCostItem = record
+    Index: SizeInt;
+    Cost: TCost;
+    class operator = (constref L, R: TCostItem): Boolean; inline;
+    class operator <>(constref L, R: TCostItem): Boolean; inline;
+    class operator > (constref L, R: TCostItem): Boolean; inline;
+    class operator < (constref L, R: TCostItem): Boolean; inline;
+    class operator >=(constref L, R: TCostItem): Boolean; inline;
+    class operator <=(constref L, R: TCostItem): Boolean; inline;
+    constructor Create(aIndex: SizeInt; aCost: TCost);
+    property Key: SizeInt read Index;
+  end;
+
   generic TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type

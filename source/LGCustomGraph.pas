@@ -1263,11 +1263,9 @@ end;
 
 function TGCustomGraph.PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
 var
-  Queue: TIntQueue;
   Dist,
   Parents: TIntArray;
   Curr, d, Nearest: SizeInt;
-  p: PAdjItem;
 begin
   if aTargets = nil then
     exit([]);

@@ -889,6 +889,44 @@ begin
   Weight := w;
 end;
 
+{ TCostItem }
+
+class operator TCostItem. = (constref L, R: TCostItem): Boolean;
+begin
+  Result := L.Cost = R.Cost;
+end;
+
+class operator TCostItem.<>(constref L, R: TCostItem): Boolean;
+begin
+  Result := L.Cost <> R.Cost;
+end;
+
+class operator TCostItem.>(constref L, R: TCostItem): Boolean;
+begin
+  Result := L.Cost > R.Cost;
+end;
+
+class operator TCostItem.<(constref L, R: TCostItem): Boolean;
+begin
+  Result := L.Cost < R.Cost;
+end;
+
+class operator TCostItem.>=(constref L, R: TCostItem): Boolean;
+begin
+  Result := L.Cost >= R.Cost;
+end;
+
+class operator TCostItem.<=(constref L, R: TCostItem): Boolean;
+begin
+  Result := L.Cost <= R.Cost;
+end;
+
+constructor TCostItem.Create(aIndex: SizeInt; aCost: TCost);
+begin
+  Index := aIndex;
+  Cost := aCost;
+end;
+
 { TGWeightPathHelper.TWeightItem }
 
 class operator TGWeightPathHelper.TWeightItem. = (constref L, R: TWeightItem): Boolean;
