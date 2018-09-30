@@ -455,19 +455,19 @@ type
       FRequestFlow: TWeight;
       FNodeCount: SizeInt;
       procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
-                constref aCosts: TEdgeCostMap);
+                var aCosts: TEdgeCostMap);
       procedure SearchInit; inline;
       function  ContainsNegCycle(out aMinCap: TWeight): Boolean;
       function  FindShortestPath(out aMinCap: TWeight): Boolean;
       procedure FlowIn(aFlow: TWeight);
       function  MinCostFlow: TWeight;
-      function  GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
-      function  CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
+      function  GetTotalCost: TCost;
+      function  CreateEdges(out aTotalCost: TCost): TEdgeArray;
     public
       function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
-                               constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
+                               var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
       function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
-                               constref aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
+                               var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
     end;
 
     { TCsMcfHelper }
@@ -2684,7 +2684,7 @@ end;
 { TGIntWeightDiGraph.TBgMcfHelper }
 
 procedure TGIntWeightDiGraph.TBgMcfHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  aReqFlow: TWeight; constref aCosts: TEdgeCostMap);
+  aReqFlow: TWeight; var aCosts: TEdgeCostMap);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -2721,6 +2721,7 @@ begin
       end;
 
   CurrArcIdx := nil;
+  Finalize(aCosts);
 
   FArcs[System.High(FArcs)] :=
     TArc.Create(@FNodes[FNodeCount], @FArcs[System.High(FArcs)], 0, 0);
@@ -2892,9 +2893,9 @@ begin
   until Flow = 0;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.GetTotalCost(constref aCosts: TEdgeCostMap): TCost;
+function TGIntWeightDiGraph.TBgMcfHelper.GetTotalCost: TCost;
 var
-  I, Dst: SizeInt;
+  I: SizeInt;
   CurrArc: PArc;
   d: TEdgeData;
 begin
@@ -2906,23 +2907,20 @@ begin
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           if CurrArc^.IsForward then
-            begin
-              Dst := CurrArc^.Target - PNode(FNodes);
-              Result += CurrArc^.Reverse^.ResidualCap * aCosts[TIntEdge.Create(I, Dst)];
-            end;
+            Result += CurrArc^.Reverse^.ResidualCap * CurrArc^.Cost;
           Inc(CurrArc);
         end;
     end;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.CreateEdges(constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TEdgeArray;
+function TGIntWeightDiGraph.TBgMcfHelper.CreateEdges(out aTotalCost: TCost): TEdgeArray;
 var
   I, J, Dst: SizeInt;
   CurrArc: PArc;
   d: TEdgeData;
   w: TWeight;
 begin
-  System.SetLength(Result, aCosts.Count);
+  System.SetLength(Result, Pred(System.Length(FArcs)) shr 1);
   J := 0;
   d := DefaultEdgeData;
   aTotalCost := 0;
@@ -2935,7 +2933,7 @@ begin
             begin
               Dst := CurrArc^.Target - PNode(FNodes);
               w := CurrArc^.Reverse^.ResidualCap;
-              aTotalCost += w * aCosts[TIntEdge.Create(I, Dst)];
+              aTotalCost += w * CurrArc^.Cost;
               Result[J] := TWeightEdge.Create(I, Dst, w);
               Inc(J);
             end;
@@ -2945,7 +2943,7 @@ begin
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  aReqFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
+  aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
   if aReqFlow <= 0 then
     begin
@@ -2954,17 +2952,17 @@ begin
     end;
   CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := MinCostFlow;
-  aTotalCost := GetTotalCost(aCosts);
+  aTotalCost := GetTotalCost;
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  aReqFlow: TWeight; constref aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
+  aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
   if aReqFlow = 0 then
     exit(aReqFlow);
   CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := MinCostFlow;
-  a := CreateEdges(aCosts, aTotalCost);
+  a := CreateEdges(aTotalCost);
 end;
 
 { TGIntWeightDiGraph.TCsMcfHelper.TArc }
