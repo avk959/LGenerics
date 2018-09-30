@@ -1296,7 +1296,7 @@ var
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
-  Queue := g.CreateIntArray;
+  System.SetLength(Queue, g.VertexCount);
   aParents := g.CreateIntArray;
   TreePrev := g.CreateIntArray;
   TreeNext := g.CreateIntArray;

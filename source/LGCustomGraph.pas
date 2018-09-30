@@ -1179,7 +1179,7 @@ var
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   Visited.Size := VertexCount;
   Queue[qTail] := aSrc;
   Inc(qTail);
@@ -1548,7 +1548,7 @@ var
 begin
   if VertexCount < 2 then
     exit(False);
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   aColors := CreateColorArray;
   for I := 0 to System.High(aColors) do
     if aColors[I] = vcNone then
@@ -1589,8 +1589,8 @@ begin
   Result := IsBipartite(Colors);
   if not Result then
     exit;
-  aWhites := CreateIntArray;
-  aGrays := CreateIntArray;
+  System.SetLength(aWhites, VertexCount);
+  System.SetLength(aGrays, VertexCount);
   WhiteIdx := 0;
   GrayIdx := 0;
   I := 0;
@@ -1750,7 +1750,7 @@ begin
   Result := 0;
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   if Assigned(OnFound) then
     OnFound(aRoot);
   Visited[aRoot] := True;
@@ -1791,7 +1791,7 @@ begin
   CheckIndexRange(aRoot);
   {%H-}aVisited.ClearBits;
   aVisited.Size := VertexCount;
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   aVisited[aRoot] := True;
   Queue[qTail] := aRoot;
   Inc(qTail);
@@ -1823,7 +1823,7 @@ var
   qTail: SizeInt = 0;
 begin
   CheckIndexRange(aRoot);
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   Result := CreateIntArray;
   Result[aRoot] := aRoot;
   Queue[qTail] := aRoot;
@@ -1859,7 +1859,7 @@ var
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   Dist := CreateIntArray;
   Dist[aSrc] := 0;
   Queue[qTail] := aSrc;
@@ -1896,7 +1896,7 @@ var
   qTail: SizeInt = 0;
 begin
   CheckIndexRange(aSrc);
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   Result := CreateIntArray;
   Result[aSrc] := 0;
   Queue[qTail] := aSrc;
@@ -1930,7 +1930,7 @@ var
   qTail: SizeInt = 0;
 begin
   CheckIndexRange(aSrc);
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   Result := CreateIntArray;
   aPathTree := CreateIntArray;
   Result[aSrc] := 0;
@@ -1968,7 +1968,7 @@ var
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Queue := CreateIntArray;
+  System.SetLength(Queue, VertexCount);
   Parents := CreateIntArray;
   Queue[qTail] := aSrc;
   Inc(qTail);
