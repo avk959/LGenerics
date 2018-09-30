@@ -606,6 +606,11 @@ begin
   Result := FNodeList[aHandle].Data;
 end;
 
+function TGPairHeapMin.HeadPtr(aHandle: SizeInt): PItem;
+begin
+  Result := @FNodeList[aHandle].Data;
+end;
+
 { TGPairHeapMax.TNode }
 
 function TGPairHeapMax.TNode.AddChild(aNode: PNode): PNode;
@@ -747,6 +752,11 @@ end;
 function TGPairHeapMax.Peek(aHandle: SizeInt): T;
 begin
   Result := FNodeList[aHandle].Data;
+end;
+
+function TGPairHeapMax.HeadPtr(aHandle: SizeInt): PItem;
+begin
+  Result := @FNodeList[aHandle].Data;
 end;
 
 { TGJoinableHashList }
@@ -1076,7 +1086,7 @@ begin
             InQueue[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight then
+          if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
             Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
   until not Queue.TryDequeue(Item);
 end;
@@ -1107,7 +1117,7 @@ begin
             InQueue[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight then
+          if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
             begin
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               aPathTree[p^.Key] := Item.Index;

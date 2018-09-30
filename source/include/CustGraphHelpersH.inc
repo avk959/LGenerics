@@ -171,6 +171,8 @@ type
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static; inline;
   public
+  type
+    PItem = ^T;
     constructor Create(aSize: SizeInt);
     procedure MakeEmpty; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
@@ -179,6 +181,7 @@ type
     procedure Update(aHandle: SizeInt; constref aNewValue: T);
     procedure Remove(aHandle: SizeInt); inline;
     function  Peek(aHandle: SizeInt): T; inline;
+    function  HeadPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -209,6 +212,8 @@ type
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static; inline;
   public
+  type
+    PItem = ^T;
     constructor Create(aSize: SizeInt);
     procedure MakeEmpty; inline;
     function  TryDequeue(out aValue: T): Boolean; inline;
@@ -216,6 +221,7 @@ type
     procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
     procedure Update(aHandle: SizeInt; constref aNewValue: T);
     function  Peek(aHandle: SizeInt): T; inline;
+    function  HeadPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
