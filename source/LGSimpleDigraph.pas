@@ -1527,18 +1527,19 @@ end;
 
 function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   Visited: TBitVector;
   Curr, Next: SizeInt;
   w: TWeight;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   Result := TPathHelper.CreateWeightArrayNI(VertexCount);
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
   Result[aSrc] := ZeroWeight;
-  {%H-}Stack.Push(aSrc);
+  Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
@@ -1558,13 +1559,14 @@ end;
 
 function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
 var
-  Stack: TIntStack;
+  Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   Visited: TBitVector;
   Curr, Next: SizeInt;
   w: TWeight;
 begin
   AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
   Result := TPathHelper.CreateWeightArrayNI(VertexCount);
   aTree := CreateIntArray;
   Visited.Size := VertexCount;
