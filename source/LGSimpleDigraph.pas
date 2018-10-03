@@ -847,7 +847,7 @@ begin
     raise EGraphError.Create(SEWriteCallbackMissed);
 {$IFDEF CPU64}
   if VertexCount > System.High(Integer) then
-    raise ELGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
+    raise EGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
 {$ENDIF CPU64}
   wbs := TWriteBufStream.Create(aStream);
   try
