@@ -2509,7 +2509,7 @@ var
   p: PAdjItem;
   Cap: TWeight;
 begin
-  FScaleFactor := 5;
+  FScaleFactor := 8;
   FNodeCount := aGraph.VertexCount;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
