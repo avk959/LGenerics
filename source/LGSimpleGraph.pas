@@ -450,8 +450,6 @@ type
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
-    function GetApproxMaxWeightMatching: TEdgeArray;
-    function GetApproxMinWeightMatching: TEdgeArray;
     function CreateEdgeArray: TEdgeArray;
   public
 {**********************************************************************************************************
@@ -520,16 +518,6 @@ type
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
-{**********************************************************************************************************
-  matching utilities
-***********************************************************************************************************}
-
-  { returns the approximation of the matching of the maximum cardinality and
-    maximun weight in an arbitrary graph }
-    function ApproxMaxWeightMatching: TEdgeArray;
-  { returns the approximation of the matching of the maximum cardinality and
-    minimun weight in an arbitrary graph }
-    function ApproxMinWeightMatching: TEdgeArray;
   end;
 
   TRealPointEdge = record
@@ -2038,7 +2026,7 @@ begin
     raise EGraphError.Create(SEWriteCallbackMissed);
 {$IFDEF CPU64}
   if VertexCount > System.High(Integer) then
-    raise ELGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
+    raise EGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
 {$ENDIF CPU64}
   wbs := TWriteBufStream.Create(aStream);
   try
@@ -3415,126 +3403,6 @@ end;
 
 { TGWeightedGraph }
 
-function TGWeightedGraph.GetApproxMaxWeightMatching: TEdgeArray;
-var
-  Nodes: TINodeQueue;
-  Matched: TBitVector;
-  Node: TINode;
-  p: PAdjItem;
-  I, Size, s, d: SizeInt;
-  w: TWeight;
-begin
-  Nodes := TINodeQueue.Create(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    {%H-}Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
-  Matched.Size := VertexCount;
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  Size := 0;
-  while Nodes.TryDequeue(Node) do
-    if not Matched[{%H-}Node.Index] then
-      begin
-        s := Node.Index;
-        d := NULL_INDEX;
-        w := ZeroWeight;
-        for p in AdjLists[s]^ do // find adjacent node with max weight
-          begin
-            I := p^.Destination;
-            if not Matched[I] then
-              begin
-                Node := Nodes.Peek(I);
-                if  p^.Data.Weight > w then
-                  begin
-                    w := p^.Data.Weight;
-                    d := I;
-                  end;
-                Dec(Node.Data);
-                Nodes.Update(I, Node);
-              end;
-          end;
-        if d <> NULL_INDEX then // node found
-          begin
-            for p in AdjLists[d]^ do
-              begin
-                I := p^.Destination;
-                if (I <> s) and not Matched[I] then
-                  begin
-                    Node := Nodes.Peek(I);
-                    Dec(Node.Data);
-                    Nodes.Update(I, Node);
-                  end;
-              end;
-            Matched[s] := True;
-            Matched[d] := True;
-            Nodes.Remove(d);
-            if System.Length(Result) = Size then
-              System.SetLength(Result, Size shl 1);
-            Result[Size] := TWeightEdge.Create(s, d, w);
-            Inc(Size);
-          end;
-      end;
-  System.SetLength(Result, Size);
-end;
-
-function TGWeightedGraph.GetApproxMinWeightMatching: TEdgeArray;
-var
-  Nodes: TINodeQueue;
-  Matched: TBitVector;
-  Node: TINode;
-  p: PAdjItem;
-  I, Size, s, d: SizeInt;
-  w: TWeight;
-begin
-  Nodes := TINodeQueue.Create(VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    {%H-}Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
-  Matched.Size := VertexCount;
-  System.SetLength(Result, ARRAY_INITIAL_SIZE);
-  Size := 0;
-  while Nodes.TryDequeue(Node) do
-    if not Matched[{%H-}Node.Index] then
-      begin
-        s := Node.Index;
-        d := NULL_INDEX;
-        w := InfWeight;
-        for p in AdjLists[s]^ do // find adjacent node with min weight
-          begin
-            I := p^.Destination;
-            if not Matched[I] then
-              begin
-                Node := Nodes.Peek(I);
-                if  p^.Data.Weight < w then
-                  begin
-                    w := p^.Data.Weight;
-                    d := I;
-                  end;
-                Dec(Node.Data);
-                Nodes.Update(I, Node);
-              end;
-          end;
-        if d <> NULL_INDEX then // node found
-          begin
-            for p in AdjLists[d]^ do
-              begin
-                I := p^.Destination;
-                if (I <> s) and not Matched[I] then
-                  begin
-                    Node := Nodes.Peek(I);
-                    Dec(Node.Data);
-                    Nodes.Update(I, Node);
-                  end;
-              end;
-            Matched[s] := True;
-            Matched[d] := True;
-            Nodes.Remove(d);
-            if System.Length(Result) = Size then
-              System.SetLength(Result, Size shl 1);
-            Result[Size] := TWeightEdge.Create(s, d, w);
-            Inc(Size);
-          end;
-      end;
-  System.SetLength(Result, Size);
-end;
-
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
 var
   I, J: SizeInt;
@@ -3779,34 +3647,6 @@ begin
                   end;
         until not Queue.TryDequeue(Item);
       end;
-end;
-
-function TGWeightedGraph.ApproxMaxWeightMatching: TEdgeArray;
-var
-  d: TEdgeData;
-begin
-  if VertexCount < 2 then
-    exit([]);
-  if (VertexCount = 2) and Connected then
-    begin
-      GetEdgeDataI(0, 1, d);
-      exit([TWeightEdge.Create(0, 1, {%H-}d.Weight)]);
-    end;
-  Result := GetApproxMaxWeightMatching;
-end;
-
-function TGWeightedGraph.ApproxMinWeightMatching: TEdgeArray;
-var
-  d: TEdgeData;
-begin
-  if VertexCount < 2 then
-    exit([]);
-  if (VertexCount = 2) and Connected then
-    begin
-      GetEdgeDataI(0, 1, d);
-      exit([TWeightEdge.Create(0, 1, {%H-}d.Weight)]);
-    end;
-  Result := GetApproxMinWeightMatching;
 end;
 
 { TRealPointEdge }
