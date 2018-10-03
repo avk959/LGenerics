@@ -286,8 +286,6 @@ type
   const
     MaxWeight     = High(Int64);
     MinWeight     = Low(Int64);
-    MaxCost       = High(TCost);
-    MinCost       = Low(TCost);
 
     {$I IntDiGraphHelpH.inc}
 

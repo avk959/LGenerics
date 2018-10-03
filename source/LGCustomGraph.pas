@@ -68,6 +68,9 @@ type
   TVertexColor     = type Byte;
 
 const
+  MaxCost  = High(TCost);
+  MinCost  = Low(TCost);
+
   vcNone:  TVertexColor = 0;
   vcWhite: TVertexColor = 1;
   vcGray:  TVertexColor = 2;
