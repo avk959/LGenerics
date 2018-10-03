@@ -385,7 +385,6 @@ type
         IsForward: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
-        function  IsResidual(aCap: TWeight): Boolean; inline;
         procedure Push(aFlow: TWeight); inline;
       end;
 
@@ -493,7 +492,6 @@ type
         IsForward: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
-        function  IsResidual: Boolean; inline;
         procedure Push(aFlow: TWeight); inline;
       end;
 
@@ -2482,11 +2480,6 @@ begin
   IsForward := False;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.TArc.IsResidual(aCap: TWeight): Boolean;
-begin
-  Result := ResCap > aCap;
-end;
-
 procedure TGIntWeightDiGraph.TDinitzHelper.TArc.Push(aFlow: TWeight);
 begin
   ResCap -= aFlow;
@@ -2583,7 +2576,7 @@ begin
       while CurrArc < (Curr + 1)^.FirstArc do
         begin
           Next := CurrArc^.Target;
-          if (Next^.Distance = NULL_INDEX) and CurrArc^.IsResidual(FMaxCap) then
+          if (Next^.Distance = NULL_INDEX) and (CurrArc^.ResCap > FMaxCap) then
             begin
               Next^.ResetCurrent;
               Next^.Distance := Dist;
@@ -3026,11 +3019,6 @@ begin
   IsForward := False;
 end;
 
-function TGIntWeightDiGraph.TCsMcfHelper.TArc.IsResidual: Boolean;
-begin
-  Result := ResCap > 0;
-end;
-
 procedure TGIntWeightDiGraph.TCsMcfHelper.TArc.Push(aFlow: TWeight);
 begin
   ResCap -= aFlow;
@@ -3124,7 +3112,7 @@ begin
     CurrArc := CurrNode^.FirstArc;
     while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
-        if CurrArc^.IsResidual then
+        if CurrArc^.ResCap > 0 then
           begin
             NextNode := CurrArc^.Target;
             if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
@@ -3208,7 +3196,7 @@ begin
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           NextNode := CurrArc^.Target;
-          if CurrArc^.IsResidual and (FNodes[I].Price + CurrArc^.Cost - NextNode^.Price < 0) then
+          if (CurrArc^.ResCap > 0) and (FNodes[I].Price + CurrArc^.Cost - NextNode^.Price < 0) then
             begin
               CurrArc^.Push(CurrArc^.ResCap);
               if NextNode^.Excess > 0 then
@@ -3222,23 +3210,18 @@ end;
 procedure TGIntWeightDiGraph.TCsMcfHelper.Discharge(aNode: PNode);
 var
   CurrArc, NextArc: PArc;
-  NextNode: PNode;
-  Price, MinPrice: TCost;
+  MinPrice: TCost;
 begin
   while aNode^.Excess > 0 do
     begin
       while aNode^.CurrArc < (aNode + 1)^.FirstArc do
         begin
           CurrArc := aNode^.CurrArc;
-          if CurrArc^.IsResidual then
+          if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price < 0 ) then
             begin
-              NextNode := aNode^.CurrArc^.Target;
-              if aNode^.Price + CurrArc^.Cost - NextNode^.Price < 0 then
-                begin
-                  CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResCap));
-                  if NextNode^.Excess > 0 then
-                    FQueue.Enqueue(NextNode);
-                end;
+              CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResCap));
+              if CurrArc^.Target^.Excess > 0 then
+                FQueue.Enqueue(CurrArc^.Target);
             end;
           Inc(aNode^.CurrArc);
         end;
@@ -3249,12 +3232,8 @@ begin
           MinPrice := MaxCost;
           while CurrArc < (aNode + 1)^.FirstArc do
             begin
-              if CurrArc^.ResCap > 0 then
-                begin
-                  Price := aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price;
-                  if Price < MinPrice then
-                    MinPrice := Price;
-                end;
+              if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price < MinPrice) then
+                MinPrice := aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price;
               Inc(CurrArc);
             end;
           aNode^.Price -= MinPrice + FEpsilon;
