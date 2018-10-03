@@ -2987,10 +2987,7 @@ function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGra
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
   if aReqFlow <= 0 then
-    begin
-      aTotalCost := 0;
-      exit(0);
-    end;
+    exit(0);
   CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := MinCostFlow;
   if Result > 0 then
@@ -3000,8 +2997,8 @@ end;
 function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
-  if aReqFlow = 0 then
-    exit(aReqFlow);
+  if aReqFlow <= 0 then
+    exit(0);
   CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := MinCostFlow;
   if Result > 0 then
@@ -3341,7 +3338,6 @@ end;
 function TGIntWeightDiGraph.TCsMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
-  aTotalCost := 0;
   if aReqFlow <= 0 then
     exit(0);
   CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
@@ -3355,7 +3351,6 @@ end;
 function TGIntWeightDiGraph.TCsMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
-  aTotalCost := 0;
   if aReqFlow <= 0 then
     exit(0);
   CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
@@ -3620,6 +3615,7 @@ var
   Helper: TBgMcfHelper;
   CostMap: TEdgeCostMap;
 begin
+  aTotalCost := 0;
   if aReqFlow < 1 then
     exit(False);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
@@ -3642,6 +3638,8 @@ var
   Helper: TBgMcfHelper;
   CostMap: TEdgeCostMap;
 begin
+  aTotalCost := 0;
+  aArcFlows := nil;
   if aReqFlow < 1 then
     exit(False);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
@@ -3664,6 +3662,7 @@ var
   Helper: TCsMcfHelper;
   CostMap: TEdgeCostMap;
 begin
+  aTotalCost := 0;
   if aReqFlow < 1 then
     exit(False);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
@@ -3686,6 +3685,8 @@ var
   Helper: TCsMcfHelper;
   CostMap: TEdgeCostMap;
 begin
+  aTotalCost := 0;
+  aArcFlows := nil;
   if aReqFlow < 1 then
     exit(False);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
