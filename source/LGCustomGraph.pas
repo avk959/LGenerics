@@ -495,7 +495,7 @@ type
     property Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
   end;
 
-  {$I CustGraphHelpersH.inc}
+  {$I CustGraphHelpH.inc}
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -1994,7 +1994,7 @@ begin
   Result := [];
 end;
 
-{$I CustGraphHelpers.inc}
+{$I CustGraphHelp.inc}
 
 end.
 

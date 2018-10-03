@@ -166,60 +166,60 @@
         <Type Value="Include"/>
       </Item33>
       <Item34>
-        <Filename Value="..\source\include\CustGraphHelpers.inc"/>
+        <Filename Value="..\source\include\CustGraphIntSet.inc"/>
         <Type Value="Include"/>
       </Item34>
       <Item35>
-        <Filename Value="..\source\include\CustGraphHelpersH.inc"/>
+        <Filename Value="..\source\include\CustGraphIntSetH.inc"/>
         <Type Value="Include"/>
       </Item35>
       <Item36>
-        <Filename Value="..\source\include\CustGraphIntSet.inc"/>
+        <Filename Value="..\source\include\LGDynBuffer.inc"/>
         <Type Value="Include"/>
       </Item36>
       <Item37>
-        <Filename Value="..\source\include\CustGraphIntSetH.inc"/>
+        <Filename Value="..\source\include\LGDynBufferH.inc"/>
         <Type Value="Include"/>
       </Item37>
       <Item38>
-        <Filename Value="..\source\include\LGDynBuffer.inc"/>
+        <Filename Value="..\source\include\LGEnums.inc"/>
         <Type Value="Include"/>
       </Item38>
       <Item39>
-        <Filename Value="..\source\include\LGDynBufferH.inc"/>
+        <Filename Value="..\source\include\LGEnumsH.inc"/>
         <Type Value="Include"/>
       </Item39>
       <Item40>
-        <Filename Value="..\source\include\LGEnums.inc"/>
+        <Filename Value="..\source\include\SimpGraphHelp.inc"/>
         <Type Value="Include"/>
       </Item40>
       <Item41>
-        <Filename Value="..\source\include\LGEnumsH.inc"/>
+        <Filename Value="..\source\include\SimpGraphHelpH.inc"/>
         <Type Value="Include"/>
       </Item41>
       <Item42>
-        <Filename Value="..\source\include\SimpGraphHelp.inc"/>
-        <Type Value="Include"/>
+        <Filename Value="..\source\include\IntGraphHelpH.inc"/>
+        <Type Value="Binary"/>
       </Item42>
       <Item43>
-        <Filename Value="..\source\include\SimpGraphHelpH.inc"/>
-        <Type Value="Include"/>
+        <Filename Value="..\source\include\IntGraphHelp.inc"/>
+        <Type Value="Binary"/>
       </Item43>
       <Item44>
-        <Filename Value="..\source\include\IntGraphHelpH.inc"/>
+        <Filename Value="..\source\include\IntDiGraphHelpH.inc"/>
         <Type Value="Binary"/>
       </Item44>
       <Item45>
-        <Filename Value="..\source\include\IntGraphHelp.inc"/>
+        <Filename Value="..\source\include\IntDiGraphHelp.inc"/>
         <Type Value="Binary"/>
       </Item45>
       <Item46>
-        <Filename Value="..\source\include\IntDiGraphHelpH.inc"/>
-        <Type Value="Binary"/>
+        <Filename Value="..\source\include\CustGraphHelp.inc"/>
+        <Type Value="Include"/>
       </Item46>
       <Item47>
-        <Filename Value="..\source\include\IntDiGraphHelp.inc"/>
-        <Type Value="Binary"/>
+        <Filename Value="..\source\include\CustGraphHelpH.inc"/>
+        <Type Value="Include"/>
       </Item47>
     </Files>
     <RequiredPkgs Count="1">
