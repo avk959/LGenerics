@@ -32,7 +32,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="4" Release="1"/>
-    <Files Count="45">
+    <Files Count="47">
       <Item1>
         <Filename Value="..\source\LGUtils.pas"/>
         <UnitName Value="LGUtils"/>
@@ -206,13 +206,21 @@
         <Type Value="Include"/>
       </Item43>
       <Item44>
-        <Filename Value="..\source\include\IntWeightGraphHelpH.inc"/>
+        <Filename Value="..\source\include\IntGraphHelpH.inc"/>
         <Type Value="Binary"/>
       </Item44>
       <Item45>
-        <Filename Value="..\source\include\IntWeightGraphHelp.inc"/>
+        <Filename Value="..\source\include\IntGraphHelp.inc"/>
         <Type Value="Binary"/>
       </Item45>
+      <Item46>
+        <Filename Value="..\source\include\IntDiGraphHelpH.inc"/>
+        <Type Value="Binary"/>
+      </Item46>
+      <Item47>
+        <Filename Value="..\source\include\IntDiGraphHelp.inc"/>
+        <Type Value="Binary"/>
+      </Item47>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>
