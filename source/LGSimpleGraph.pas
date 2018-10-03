@@ -576,7 +576,7 @@ type
     MaxWeight = High(Int64);
     MinWeight = Low(Int64);
 
-    {$I IntWeightGraphHelpH.inc}
+    {$I IntGraphHelpH.inc}
 
     function  GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
     function  GetTrivialMinCut(out aCut: TWeight): Boolean;
@@ -3950,7 +3950,7 @@ begin
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, aHeur);
 end;
 
-{$I IntWeightGraphHelp.inc}
+{$I IntGraphHelp.inc}
 
 { TGIntWeightGraph }
 
