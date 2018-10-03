@@ -214,11 +214,11 @@
         <Type Value="Binary"/>
       </Item45>
       <Item46>
-        <Filename Value="..\source\include\CustGraphHelp.inc"/>
+        <Filename Value="..\source\include\CustGraphHelpH.inc"/>
         <Type Value="Include"/>
       </Item46>
       <Item47>
-        <Filename Value="..\source\include\CustGraphHelpH.inc"/>
+        <Filename Value="..\source\include\CustGraphHelp.inc"/>
         <Type Value="Include"/>
       </Item47>
     </Files>
