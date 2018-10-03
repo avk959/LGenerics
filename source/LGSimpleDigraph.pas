@@ -26,7 +26,7 @@ unit LGSimpleDigraph;
 interface
 
 uses
-  Classes, SysUtils,
+  Classes, SysUtils, math,
   LGUtils,
   {%H-}LGHelpers,
   LGQueue,
@@ -303,7 +303,7 @@ type
       TArc = record
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
-        ResidualCap: TWeight;
+        ResCap: TWeight;     // residual capacity
         IsForward: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
@@ -381,7 +381,7 @@ type
       TArc = record
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
-        ResidualCap: TWeight;
+        ResCap: TWeight;     // residual capacity
         IsForward: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight);
         constructor CreateReverse(aTarget: PNode; aReverse: PArc);
@@ -428,7 +428,7 @@ type
       TArc = record
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
-        ResidualCap: TWeight;
+        ResCap: TWeight;     // residual capacity
         Cost: TCost;
         IsForward: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
@@ -488,7 +488,7 @@ type
       TArc = record
         Target: PNode;       // pointer to target node
         Reverse: PArc;       // pointer to opposite arc
-        ResidualCap: TWeight;
+        ResCap: TWeight;     // residual capacity
         Cost: TCost;
         IsForward: Boolean;
         constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
@@ -512,8 +512,8 @@ type
       FNodes: array of TNode;
       FArcs: array of TArc;
       FQueue: TQueue;
-      FGraph: TGIntWeightDiGraph;
       FInQueue: TBitVector;
+      FGraph: TGIntWeightDiGraph;
       FSource,
       FSink: PNode;
       FRequestFlow,
@@ -1844,7 +1844,7 @@ constructor TGIntWeightDiGraph.THPrHelper.TArc.Create(aTarget: PNode; aReverse: 
 begin
   Target := aTarget;
   Reverse := aReverse;
-  ResidualCap := aCap;
+  ResCap := aCap;
   IsForward := True;
 end;
 
@@ -1852,25 +1852,25 @@ constructor TGIntWeightDiGraph.THPrHelper.TArc.CreateReverse(aTarget: PNode; aRe
 begin
   Target := aTarget;
   Reverse := aReverse;
-  ResidualCap := 0;
+  ResCap := 0;
   IsForward := False;
 end;
 
 function TGIntWeightDiGraph.THPrHelper.TArc.IsSaturated: Boolean;
 begin
-  Result := ResidualCap = 0;
+  Result := ResCap = 0;
 end;
 
 function TGIntWeightDiGraph.THPrHelper.TArc.IsResidual: Boolean;
 begin
-  Result := ResidualCap > 0;
+  Result := ResCap > 0;
 end;
 
 procedure TGIntWeightDiGraph.THPrHelper.TArc.Push(aFlow: TWeight);
 begin
-  ResidualCap -= aFlow;
+  ResCap -= aFlow;
   Target^.Excess += aFlow;
-  Reverse^.ResidualCap += aFlow;
+  Reverse^.ResCap += aFlow;
   Reverse^.Target^.Excess -= aFlow;
 end;
 
@@ -2163,7 +2163,7 @@ begin
               if Dist < FMinActiveLevel then
                 FMinActiveLevel := Dist;
             end;
-          CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResidualCap));
+          CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResCap));
           if aNode^.Excess = 0 then
             break;
         end;
@@ -2259,7 +2259,7 @@ begin
         begin
           if CurrArc^.IsForward then
             begin
-              Result[J] := TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), CurrArc^.Reverse^.ResidualCap);
+              Result[J] := TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), CurrArc^.Reverse^.ResCap);
               Inc(J);
             end;
           Inc(CurrArc);
@@ -2285,7 +2285,7 @@ begin
       while CurrArc < (CurrNode + 1)^.FirstArc do
         begin
           if CurrArc^.Target = CurrNode then
-            CurrArc^.ResidualCap := FCaps[CurrArc - PArc(FArcs)];
+            CurrArc^.ResCap := FCaps[CurrArc - PArc(FArcs)];
           Inc(CurrArc);
         end;
       Inc(CurrNode);
@@ -2318,10 +2318,10 @@ begin
                          if NextNode^.Color = vcGray then
                            begin
                              //
-                             Delta := CurrArc^.ResidualCap;
+                             Delta := CurrArc^.ResCap;
                              while True do
                                begin
-                                 Delta := wMin(Delta, NextNode^.CurrentArc^.ResidualCap);
+                                 Delta := wMin(Delta, NextNode^.CurrentArc^.ResCap);
                                  if NextNode = CurrNode then
                                    break
                                  else
@@ -2332,8 +2332,8 @@ begin
                              while True do
                                begin
                                  CurrArc := NextNode^.CurrentArc;
-                                 CurrArc^.ResidualCap -= Delta;
-                                 CurrArc^.Reverse^.ResidualCap += Delta;
+                                 CurrArc^.ResCap -= Delta;
+                                 CurrArc^.Reverse^.ResCap += Delta;
                                  NextNode := CurrArc^.Target;
                                  if NextNode = CurrNode then
                                    break;
@@ -2400,7 +2400,7 @@ begin
         while CurrNode^.Excess > 0 do
           begin
             if (FCaps[CurrArc - PArc(FArcs)] = 0) and CurrArc^.IsResidual then
-              CurrArc^.Push(wMin(CurrNode^.Excess, CurrArc^.ResidualCap));
+              CurrArc^.Push(wMin(CurrNode^.Excess, CurrArc^.ResCap));
             Inc(CurrArc);
           end;
         if CurrNode = StackBottom then
@@ -2470,7 +2470,7 @@ constructor TGIntWeightDiGraph.TDinitzHelper.TArc.Create(aTarget: PNode; aRevers
 begin
   Target := aTarget;
   Reverse := aReverse;
-  ResidualCap := aCap;
+  ResCap := aCap;
   IsForward := True;
 end;
 
@@ -2478,19 +2478,19 @@ constructor TGIntWeightDiGraph.TDinitzHelper.TArc.CreateReverse(aTarget: PNode; 
 begin
   Target := aTarget;
   Reverse := aReverse;
-  ResidualCap := 0;
+  ResCap := 0;
   IsForward := False;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.TArc.IsResidual(aCap: TWeight): Boolean;
 begin
-  Result := ResidualCap > aCap;
+  Result := ResCap > aCap;
 end;
 
 procedure TGIntWeightDiGraph.TDinitzHelper.TArc.Push(aFlow: TWeight);
 begin
-  ResidualCap -= aFlow;
-  Reverse^.ResidualCap += aFlow;
+  ResCap -= aFlow;
+  Reverse^.ResCap += aFlow;
 end;
 
 { TGIntWeightDiGraph.TDinitzHelper.TNode }
@@ -2607,7 +2607,7 @@ begin
         begin
           if aRoot^.CurrentArc^.Target^.Distance = Succ(aRoot^.Distance) then
             begin
-              Flow := Dfs(aRoot^.CurrentArc^.Target, wMin(aFlow, aRoot^.CurrentArc^.ResidualCap));
+              Flow := Dfs(aRoot^.CurrentArc^.Target, wMin(aFlow, aRoot^.CurrentArc^.ResCap));
               if Flow > 0 then
                 begin
                   aRoot^.CurrentArc^.Push(Flow);
@@ -2652,7 +2652,7 @@ begin
           if CurrArc^.IsForward then
             begin
               Result[J] :=
-                TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), CurrArc^.Reverse^.ResidualCap);
+                TWeightEdge.Create(I, CurrArc^.Target - PNode(FNodes), CurrArc^.Reverse^.ResCap);
               Inc(J);
             end;
           Inc(CurrArc);
@@ -2701,7 +2701,7 @@ constructor TGIntWeightDiGraph.TBgMcfHelper.TArc.Create(aTarget: PNode; aReverse
 begin
   Target := aTarget;
   Reverse := aReverse;
-  ResidualCap := aCap;
+  ResCap := aCap;
   Cost := aCost;
   IsForward := True;
 end;
@@ -2710,20 +2710,20 @@ constructor TGIntWeightDiGraph.TBgMcfHelper.TArc.CreateReverse(aTarget: PNode; a
 begin
   Target := aTarget;
   Reverse := aReverse;
-  ResidualCap := 0;
+  ResCap := 0;
   Cost := -aCost;
   IsForward := False;
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.TArc.IsResidual: Boolean;
 begin
-  Result := ResidualCap > 0;
+  Result := ResCap > 0;
 end;
 
 procedure TGIntWeightDiGraph.TBgMcfHelper.TArc.Push(aFlow: TWeight);
 begin
-  ResidualCap -= aFlow;
-  Reverse^.ResidualCap += aFlow;
+  ResCap -= aFlow;
+  Reverse^.ResCap += aFlow;
 end;
 
 { TGIntWeightDiGraph.TBgMcfHelper }
@@ -2820,7 +2820,7 @@ begin
             if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
               begin
                 NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
-                NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
+                NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResCap);
                 NextNode^.Parent := CurrNode;
                 NextNode^.PathArc := CurrArc;
                 if (NextNode = FSource) or (d >= FNodeCount) then
@@ -2877,7 +2877,7 @@ begin
                 Price := CurrNode^.Price + CurrArc^.Cost - NextNode^.Price;
                 if not FInQueue[I] then
                   begin
-                    NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
+                    NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResCap);
                     NextNode^.Parent := CurrNode;
                     NextNode^.PathArc := CurrArc;
                     FQueue.Enqueue(I, TCostItem.Create(I, Price));
@@ -2886,7 +2886,7 @@ begin
                 else
                   if Price < FQueue.HeadPtr(I)^.Cost then
                     begin
-                      NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResidualCap);
+                      NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResCap);
                       NextNode^.Parent := CurrNode;
                       NextNode^.PathArc := CurrArc;
                       FQueue.Update(I, TCostItem.Create(I, Price));
@@ -2950,7 +2950,7 @@ begin
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           if CurrArc^.IsForward then
-            Result += CurrArc^.Reverse^.ResidualCap * CurrArc^.Cost;
+            Result += CurrArc^.Reverse^.ResCap * CurrArc^.Cost;
           Inc(CurrArc);
         end;
     end;
@@ -2973,7 +2973,7 @@ begin
           if CurrArc^.IsForward then
             begin
               Dst := CurrArc^.Target - PNode(FNodes);
-              w := CurrArc^.Reverse^.ResidualCap;
+              w := CurrArc^.Reverse^.ResCap;
               aTotalCost += w * CurrArc^.Cost;
               Result[J] := TWeightEdge.Create(I, Dst, w);
               Inc(J);
@@ -3012,7 +3012,7 @@ constructor TGIntWeightDiGraph.TCsMcfHelper.TArc.Create(aTarget: PNode; aReverse
 begin
   Target := aTarget;
   Reverse := aReverse;
-  ResidualCap := aCap;
+  ResCap := aCap;
   Cost := aCost;
   IsForward := True;
 end;
@@ -3021,21 +3021,21 @@ constructor TGIntWeightDiGraph.TCsMcfHelper.TArc.CreateReverse(aTarget: PNode; a
 begin
   Target := aTarget;
   Reverse := aReverse;
-  ResidualCap := 0;
+  ResCap := 0;
   Cost := -aCost;
   IsForward := False;
 end;
 
 function TGIntWeightDiGraph.TCsMcfHelper.TArc.IsResidual: Boolean;
 begin
-  Result := ResidualCap > 0;
+  Result := ResCap > 0;
 end;
 
 procedure TGIntWeightDiGraph.TCsMcfHelper.TArc.Push(aFlow: TWeight);
 begin
-  ResidualCap -= aFlow;
+  ResCap -= aFlow;
   Target^.Excess += aFlow;
-  Reverse^.ResidualCap += aFlow;
+  Reverse^.ResCap += aFlow;
   Reverse^.Target^.Excess -= aFlow;
 end;
 
@@ -3053,7 +3053,7 @@ procedure TGIntWeightDiGraph.TCsMcfHelper.CreateResidualGraph(aGraph: TGIntWeigh
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
-  c, MaxCost: TCost;
+  c: TCost;
   p: PAdjItem;
 begin
   FAlpha := 8;
@@ -3082,14 +3082,11 @@ begin
       FNodes[I].Excess := 0;
     end;
 
-  MaxCost := 0;
   for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
         c := aCosts[TIntEdge.Create(I, J)];
-        if c > MaxCost then
-          MaxCost := c;
         FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], p^.Data.Weight, c);
         FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]], c);
         Inc(CurrArcIdx[I]);
@@ -3191,6 +3188,8 @@ begin
           FArcs[I].Push(ArcMap[TIntEdge.Create(Src, Dst)]);
         end;
     end;
+  if FEpsilon < 1 then
+    FEpsilon := 1;
 
   Finalize(ArcMap);
   Result := True;
@@ -3211,7 +3210,7 @@ begin
           NextNode := CurrArc^.Target;
           if CurrArc^.IsResidual and (FNodes[I].Price + CurrArc^.Cost - NextNode^.Price < 0) then
             begin
-              CurrArc^.Push(CurrArc^.ResidualCap);
+              CurrArc^.Push(CurrArc^.ResCap);
               if NextNode^.Excess > 0 then
                 FQueue.Enqueue(NextNode);
             end;
@@ -3236,7 +3235,7 @@ begin
               NextNode := aNode^.CurrArc^.Target;
               if aNode^.Price + CurrArc^.Cost - NextNode^.Price < 0 then
                 begin
-                  CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResidualCap));
+                  CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResCap));
                   if NextNode^.Excess > 0 then
                     FQueue.Enqueue(NextNode);
                 end;
@@ -3250,7 +3249,7 @@ begin
           MinPrice := MaxCost;
           while CurrArc < (aNode + 1)^.FirstArc do
             begin
-              if CurrArc^.ResidualCap > 0 then
+              if CurrArc^.ResCap > 0 then
                 begin
                   Price := aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price;
                   if Price < MinPrice then
@@ -3278,9 +3277,7 @@ var
 begin
   while True do
     begin
-      FEpsilon := FEpsilon div FAlpha;
-      if FEpsilon < 1 then
-        FEpsilon := 1;
+      FEpsilon := Math.Max(FEpsilon div FAlpha, 1);
       InitPhase;
       while FQueue.TryDequeue(Node) do
         Discharge(Node);
@@ -3302,7 +3299,7 @@ begin
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           if CurrArc^.IsForward then
-            Result += CurrArc^.Reverse^.ResidualCap * CurrArc^.Cost;
+            Result += CurrArc^.Reverse^.ResCap * CurrArc^.Cost;
           Inc(CurrArc);
         end;
     end;
@@ -3325,7 +3322,7 @@ begin
           if CurrArc^.IsForward then
             begin
               Dst := CurrArc^.Target - PNode(FNodes);
-              w := CurrArc^.Reverse^.ResidualCap;
+              w := CurrArc^.Reverse^.ResCap;
               aTotalCost += w * CurrArc^.Cost;
               Result[J] := TWeightEdge.Create(I, Dst, w);
               Inc(J);
