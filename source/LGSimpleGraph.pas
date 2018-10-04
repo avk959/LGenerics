@@ -204,8 +204,9 @@ type
     function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
     function  LocalClusteringI(aIndex: SizeInt): Double;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
-    from the vertex with the index 0; returns count of added edges }
-    function  EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
+    from the vertex with the index 0; returns count of added edges;
+    if aOnAddEdge = nil then new edges will use default data value }
+    function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { checks whether the aDst reachable from the aSrc; each vertex reachable from itself  }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
@@ -238,9 +239,10 @@ type
     function  FindCutPoints(constref aRoot: TVertex): TIntArray; inline;
     function  FindCutPointsI(aRoot: SizeInt = 0): TIntArray;
   { removes the articulation points that belong to the same connected component as aRoot,
-    adding, if necessary, new edges; returns count of added edges }
-    function  RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge): SizeInt; inline;
-    function  RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
+    adding, if necessary, new edges; returns count of added edges;
+    if aOnAddEdge = nil then new edges will use default data value }
+    function  RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
+    function  RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { checks whether exists any bridge in graph }
     function  ContainsBridge: Boolean;
   { returns all bridges in the result vector, if any, otherwise the empty vector }
@@ -251,7 +253,8 @@ type
     function  FindBicomponentsI(aRoot: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
-  { makes graph biconnected, adding, if necessary, new edges; returns count of added edges }
+  { makes graph biconnected, adding, if necessary, new edges; returns count of added edges;
+    if aOnAddEdge = nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
 
     type
@@ -364,12 +367,6 @@ type
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
   generic TGChart<TVertex, TEqRel> = class(specialize TGSimpleGraph<TVertex, TEmptyRec, TEqRel>)
-    function  AddEdge(constref aSrc, aDst: TVertex): Boolean;
-    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function  EnsureConnected: SizeInt;
-    function  RemoveCutPoints(constref aRoot: TVertex): SizeInt;
-    function  RemoveCutPointsI(aRoot: SizeInt): SizeInt;
-    function  EnsureBiconnected: SizeInt;
     procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
     procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
@@ -525,19 +522,21 @@ type
     constructor Create(const aWeight: ValReal);
   end;
 
+  { TPointsChart }
+
   TPointsChart = class(specialize TGWeightedGraph<TPoint, ValReal, TRealPointEdge, TPoint>)
   protected
-    procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
+    procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: PEdgeData);
     procedure WritePoint(aStream: TStream; constref aValue: TPoint);
     procedure ReadPoint(aStream: TStream; out aValue: TPoint);
   public
     class function Distance(constref aSrc, aDst: TPoint): ValReal; static;
     function  AddEdge(constref aSrc, aDst: TPoint): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function  EnsureConnected: SizeInt;
-    function  RemoveCutPoints(constref aRoot: TPoint): SizeInt;
-    function  RemoveCutPointsI(aRoot: SizeInt): SizeInt;
-    function  EnsureBiconnected: SizeInt;
+    function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
+    function  RemoveCutPoints(constref aRoot: TPoint; aOnAddEdge: TOnAddEdge = nil): SizeInt;
+    function  RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
+    function  EnsureBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
     procedure SaveToStream(aStream: TStream);
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
@@ -3112,36 +3111,6 @@ end;
 
 { TGChart }
 
-function TGChart.AddEdge(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := inherited AddEdge(aSrc, aDst);
-end;
-
-function TGChart.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
-begin
-  Result := inherited AddEdgeI(aSrc, aDst);
-end;
-
-function TGChart.EnsureConnected: SizeInt;
-begin
-  Result := inherited EnsureConnected(nil);
-end;
-
-function TGChart.RemoveCutPoints(constref aRoot: TVertex): SizeInt;
-begin
-  Result := inherited RemoveCutPoints(aRoot, nil);
-end;
-
-function TGChart.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
-begin
-  Result := inherited RemoveCutPointsI(aRoot, nil);
-end;
-
-function TGChart.EnsureBiconnected: SizeInt;
-begin
-  Result := inherited EnsureBiconnected(nil);
-end;
-
 procedure TGChart.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
 begin
   inherited SaveToStream(aStream, aOnWriteVertex, nil);
@@ -3658,9 +3627,9 @@ end;
 
 { TPointsChart }
 
-procedure TPointsChart.OnAddEdge(constref aSrc, aDst: TPoint; aData: Pointer);
+procedure TPointsChart.OnAddEdge(constref aSrc, aDst: TPoint; aData: PEdgeData);
 begin
-  PEdgeData(aData)^.Weight := aSrc.Distance(aDst);
+  aData^.Weight := aSrc.Distance(aDst);
 end;
 
 procedure TPointsChart.WritePoint(aStream: TStream; constref aValue: TPoint);
@@ -3694,24 +3663,36 @@ begin
   Result := inherited AddEdgeI(aSrc, aDst, TRealPointEdge.Create(Items[aSrc].Distance(Items[aDst])));
 end;
 
-function TPointsChart.EnsureConnected: SizeInt;
+function TPointsChart.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
-  Result := inherited EnsureConnected(@OnAddEdge);
+  if aOnAddEdge <> nil then
+    Result := inherited EnsureConnected(aOnAddEdge)
+  else
+    Result := inherited EnsureConnected(@OnAddEdge);
 end;
 
-function TPointsChart.RemoveCutPoints(constref aRoot: TPoint): SizeInt;
+function TPointsChart.RemoveCutPoints(constref aRoot: TPoint; aOnAddEdge: TOnAddEdge): SizeInt;
 begin
-  Result := inherited RemoveCutPoints(aRoot, @OnAddEdge);
+  if aOnAddEdge <> nil then
+    Result := inherited RemoveCutPoints(aRoot, aOnAddEdge)
+  else
+    Result := inherited RemoveCutPoints(aRoot, @OnAddEdge);
 end;
 
-function TPointsChart.RemoveCutPointsI(aRoot: SizeInt): SizeInt;
+function TPointsChart.RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
 begin
-  Result := inherited RemoveCutPointsI(aRoot, @OnAddEdge);
+  if aOnAddEdge <> nil then
+    Result := inherited RemoveCutPointsI(aRoot, aOnAddEdge)
+  else
+    Result := inherited RemoveCutPointsI(aRoot, @OnAddEdge);
 end;
 
-function TPointsChart.EnsureBiconnected: SizeInt;
+function TPointsChart.EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
-  Result := inherited EnsureBiconnected(@OnAddEdge);
+  if aOnAddEdge <> nil then
+    Result := inherited EnsureBiconnected(aOnAddEdge)
+  else
+    Result := inherited EnsureBiconnected(@OnAddEdge);
 end;
 
 procedure TPointsChart.SaveToStream(aStream: TStream);

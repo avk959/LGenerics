@@ -42,12 +42,7 @@ uses
 
 type
 
-  generic TGOnAddEdge<T>     = procedure(constref aSrc, aDst: T; aData: Pointer) of object;
-  generic TGOnStreamRead<T>  = procedure(aStream: TStream; out aValue: T) of object;
-  generic TGOnStreamWrite<T> = procedure(aStream: TStream; constref aValue: T) of object;
-
   EGraphError      = class(Exception); //???
-
   TEmptyRec        = record end;
 
   TIntArray        = array of SizeInt;
@@ -278,13 +273,11 @@ type
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
-    TOnAddEdge     = specialize TGOnAddEdge<TVertex>;
-
-    TOnReadVertex  = specialize TGOnStreamRead<TVertex>;
-    TOnWriteVertex = specialize TGOnStreamWrite<TVertex>;
-
-    TOnReadData    = specialize TGOnStreamRead<TEdgeData>;
-    TOnWriteData   = specialize TGOnStreamWrite<TEdgeData>;
+    TOnAddEdge     = procedure(constref aSrc, aDst: TVertex; aData: PEdgeData) of object;
+    TOnReadVertex  = procedure(aStream: TStream; out aValue: TVertex) of object;
+    TOnWriteVertex = procedure(aStream: TStream; constref aValue: TVertex) of object;
+    TOnReadData    = procedure(aStream: TStream; out aValue: TEdgeData) of object;
+    TOnWriteData   = procedure(aStream: TStream; constref aValue: TEdgeData) of object;
 
     TEdge = record
       Source,
