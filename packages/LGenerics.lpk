@@ -32,7 +32,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="4" Release="1"/>
-    <Files Count="47">
+    <Files Count="46">
       <Item1>
         <Filename Value="..\source\LGUtils.pas"/>
         <UnitName Value="LGUtils"/>
@@ -217,10 +217,6 @@
         <Filename Value="..\source\include\CustGraphHelpH.inc"/>
         <Type Value="Include"/>
       </Item46>
-      <Item47>
-        <Filename Value="..\source\include\CustGraphHelp.inc"/>
-        <Type Value="Include"/>
-      </Item47>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>

@@ -170,8 +170,8 @@ type
 
       TEdgeData must provide field/property/function Weight: TWeight;
 
-      TWeight must have defined comparision operators and properties MinValue, MaxValue,
-      which used as infinity weight values;
+      TWeight must be one of predefined signed numeric types;
+      properties MinValue, MaxValue used as infinity weight values;
       Default(TWeight) used as zero weight value }
   generic TGWeightedDiGraph<TVertex, TWeight, TEdgeData, TEqRel> = class(
      specialize TGSimpleDiGraph<TVertex, TEdgeData, TEqRel>)
@@ -1401,17 +1401,17 @@ end;
 
 class function TGWeightedDiGraph.InfWeight: TWeight;
 begin
-  Result := TWeight.MaxValue;
+  Result :=  TPathHelper.InfWeight;
 end;
 
 class function TGWeightedDiGraph.NegInfWeight: TWeight;
 begin
-  Result := TWeight.MinValue;
+  Result := TPathHelper.NegInfWeight;
 end;
 
 class function TGWeightedDiGraph.ZeroWeight: TWeight;
 begin
-  Result := Default(TWeight);
+  Result := TPathHelper.ZeroWeight;
 end;
 
 function TGWeightedDiGraph.ContainsNegWeightEdge: Boolean;

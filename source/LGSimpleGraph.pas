@@ -427,7 +427,7 @@ type
 
       TEdgeData must provide field/property/function Weight: TWeight;
 
-      TWeight must be one of predefined numeric types;
+      TWeight must be one of predefined signed numeric types;
       properties MinValue, MaxValue used as infinity weight values;
       Default(TWeight) used as zero weight value }
   generic TGWeightedGraph<TVertex, TWeight, TEdgeData, TEqRel> = class(
