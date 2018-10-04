@@ -984,8 +984,8 @@ begin
     FInQueue[CurrNode - PNode(FNodes)] := False;
     if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
       continue;
-    d := Succ(Dist[CurrNode - PNode(FNodes)]);
     CurrArc := CurrNode^.FirstArc;
+    d := Succ(Dist[CurrNode - PNode(FNodes)]);
     while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
         if CurrArc^.IsResidual then
@@ -1289,8 +1289,8 @@ begin
   Dist[FSource - PNode(FNodes)] := 0;
   repeat
     FInQueue[CurrNode - PNode(FNodes)] := False;
-    d := Succ(Dist[CurrNode - PNode(FNodes)]);
     CurrArc := CurrNode^.FirstArc;
+    d := Succ(Dist[CurrNode - PNode(FNodes)]);
     while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
         if CurrArc^.ResCap > 0 then

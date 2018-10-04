@@ -3301,7 +3301,7 @@ var
   Queue: TIntDeque;
   Dist: TIntArray;
   InQueue: TGraph.TBitVector;
-  Curr, Next, Top, VertCount: SizeInt;
+  Curr, Next, Top, d, VertCount: SizeInt;
   p: TGraph.PAdjItem;
 begin
   VertCount := g.VertexCount;
@@ -3317,6 +3317,7 @@ begin
     InQueue[Curr] := False;
     if (aTree[Curr] <> NULL_INDEX) and InQueue[aTree[Curr]] then
       continue;
+    d := Succ(Dist[Curr]);
     for p in g.AdjLists[Curr]^ do
       begin
         Next := p^.Destination;
@@ -3325,9 +3326,9 @@ begin
           begin
             aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
             aTree[Next] := Curr;
-            if (Next = aSrc) or (Succ(Dist[Curr]) >= VertCount) then
+            if (Next = aSrc) or (d >= VertCount) then
               exit(Next);
-            Dist[Next] := Succ(Dist[Curr]);
+            Dist[Next] := d;
             if not InQueue[Next] then
               begin
                 if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
@@ -3347,7 +3348,7 @@ class function TGWeightPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree:
 var
   v1, v2: TBoolVector;
   Dist: TIntArray;
-  Curr, Next, VertCount: SizeInt;
+  Curr, Next, VertCount, d: SizeInt;
   CurrPass, NextPass: ^TBoolVector;
   p: TGraph.PAdjItem;
 begin
@@ -3369,6 +3370,7 @@ begin
     for Curr in CurrPass^ do
       begin
         CurrPass^[Curr] := False;
+        d := Succ(Dist[Curr]);
         for p in g.AdjLists[Curr]^ do
           begin
             Next := p^.Destination;
@@ -3376,9 +3378,9 @@ begin
               begin
                 aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
                 aTree[Next] := Curr;
-                if (Next = aSrc) or (Succ(Dist[Curr]) >= VertCount) then
+                if (Next = aSrc) or (d >= VertCount) then
                   exit(Next);
-                Dist[Next] := Succ(Dist[Curr]);
+                Dist[Next] := d;
                 NextPass^[Next] := True;
               end;
           end;
