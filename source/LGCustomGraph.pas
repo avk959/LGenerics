@@ -3023,12 +3023,6 @@ begin
               PLongInt(@CFNegInfWeight)^ := LongInt(-2147483648);
               PLongInt(@CFInfWeight)^ := LongInt(2147483647);
             end;
-          otSQWord:
-            begin
-              PInt64(@CFZeroWeight)^ := Int64(0);
-              PInt64(@CFNegInfWeight)^ := Int64(-9223372036854775808);
-              PInt64(@CFInfWeight)^ := Int64(9223372036854775807);
-            end;
         end;
       tkInt64:
         begin
