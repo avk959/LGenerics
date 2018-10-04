@@ -1501,6 +1501,18 @@ begin
             CFEqualCompare := TEqualCompare(@WCharEqual);
             CFHashCode := THashCode(@HashWChar);
           end;
+        tkInt64:
+          begin
+            CFCompare := TCompare(@CompareInt64);
+            CFEqualCompare := TEqualCompare(@Int64Equal);
+            CFHashCode := THashCode(@HashInt64);
+          end;
+        tkQWord:
+          begin
+            CFCompare := TCompare(@CompareQWord);
+            CFEqualCompare := TEqualCompare(@QWordEqual);
+            CFHashCode := THashCode(@HashQWord);
+          end;
         tkUString:
           begin
             CFCompare := TCompare(@CompareUStr);
