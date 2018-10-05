@@ -932,7 +932,7 @@ begin
           raise EGraphError.Create(SEGraphStreamReadIntern);
       end;
     //read edges
-    Data := DefaultEdgeData;
+    Data := Default(TEdgeData);
     for I := 0 to Pred(Header.EdgeCount) do
       begin
         rbs.ReadBuffer(s, SizeOf(s));
@@ -1010,7 +1010,7 @@ end;
 
 function TGSimpleDiGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := AddEdge(aSrc, aDst, DefaultEdgeData);
+  Result := AddEdge(aSrc, aDst, Default(TEdgeData));
 end;
 
 function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -1022,7 +1022,7 @@ end;
 
 function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := AddEdgeI(aSrc, aDst, DefaultEdgeData);
+  Result := AddEdgeI(aSrc, aDst, Default(TEdgeData));
 end;
 
 function TGSimpleDiGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;

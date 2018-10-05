@@ -171,10 +171,15 @@ type
     {$I CustGraphBitHelpH.inc}
   public
   type
-    TSpecEdgeData = TEdgeData;
-    PEdgeData     = ^TEdgeData;
-    TAdjItem      = specialize TGAdjItem<TEdgeData>;
-    PAdjItem      = ^TAdjItem;
+    TSpecEdgeData  = TEdgeData;
+    PEdgeData      = ^TEdgeData;
+    TAdjItem       = specialize TGAdjItem<TEdgeData>;
+    PAdjItem       = ^TAdjItem;
+    TOnAddEdge     = procedure(constref aSrc, aDst: TVertex; aData: PEdgeData) of object;
+    TOnReadVertex  = procedure(aStream: TStream; out aValue: TVertex) of object;
+    TOnWriteVertex = procedure(aStream: TStream; constref aValue: TVertex) of object;
+    TOnReadData    = procedure(aStream: TStream; out aValue: TEdgeData) of object;
+    TOnWriteData   = procedure(aStream: TStream; constref aValue: TEdgeData) of object;
 
     TAdjacencyMatrix = record
     private
@@ -220,9 +225,6 @@ type
       //edges: src index, dst index as little endian LongInt, data
     end;
 
-  class var
-    CFData: TEdgeData;
-
   private
     FNodeList: TNodeList;
     FChainList: TChainList;
@@ -245,7 +247,6 @@ type
     function  Find(constref v: TVertex): SizeInt;
     function  Find(constref v: TVertex; aHash: SizeInt): SizeInt;
     function  FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
-    class constructor Init;
   public
   type
     TAdjEnumerator = record
@@ -273,12 +274,6 @@ type
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
-    TOnAddEdge     = procedure(constref aSrc, aDst: TVertex; aData: PEdgeData) of object;
-    TOnReadVertex  = procedure(aStream: TStream; out aValue: TVertex) of object;
-    TOnWriteVertex = procedure(aStream: TStream; constref aValue: TVertex) of object;
-    TOnReadData    = procedure(aStream: TStream; out aValue: TEdgeData) of object;
-    TOnWriteData   = procedure(aStream: TStream; constref aValue: TEdgeData) of object;
-
     TEdge = record
       Source,
       Destination: SizeInt;
@@ -370,7 +365,6 @@ type
     class function TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray; static;
     class function TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
     class function TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
-    class property DefaultEdgeData: TEdgeData read CFData;
 
 {**********************************************************************************************************
   class management utilities
@@ -1117,11 +1111,6 @@ begin
         Expand;
       aIndex := Add(v, h);
     end;
-end;
-
-class constructor TGCustomGraph.Init;
-begin
-  CFData := Default(TEdgeData);
 end;
 
 function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;

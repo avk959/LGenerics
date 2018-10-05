@@ -927,7 +927,7 @@ var
   d: TEdgeData;
 begin
   Result := 0;
-  d := DefaultEdgeData;
+  d := Default(TEdgeData);
   for I := 1 to Pred(VertexCount) do
     if SeparateTag(0) <> SeparateTag(I) then
       begin
@@ -2110,7 +2110,7 @@ begin
           raise EGraphError.Create(SEGraphStreamReadIntern);
       end;
     //read edges
-    Data := DefaultEdgeData;
+    Data := Default(TEdgeData);
     for I := 0 to Pred(Header.EdgeCount) do
       begin
         rbs.ReadBuffer(s, SizeOf(s));
@@ -2255,7 +2255,7 @@ end;
 
 function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
-  Result := AddEdge(aSrc, aDst, DefaultEdgeData);
+  Result := AddEdge(aSrc, aDst, Default(TEdgeData));
 end;
 
 function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
@@ -2267,7 +2267,7 @@ end;
 
 function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := AddEdgeI(aSrc, aDst, DefaultEdgeData);
+  Result := AddEdgeI(aSrc, aDst, Default(TEdgeData));
 end;
 
 function TGSimpleGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
@@ -2536,7 +2536,7 @@ begin
   if VertexCount < 3 then
     exit;
   SearchForBiconnect(aRoot, NewEdges{%H-});
-  d := DefaultEdgeData;
+  d := Default(TEdgeData);
   for e in NewEdges do
     begin
       if Assigned(aOnAddEdge) then
@@ -2602,7 +2602,7 @@ begin
   if VertexCount < 3 then
     exit;
   SearchForBiconnect(0, NewEdges{%H-});
-  d := DefaultEdgeData;
+  d := Default(TEdgeData);
   for e in NewEdges do
     begin
       if Assigned(aOnAddEdge) then
@@ -3787,7 +3787,7 @@ begin
     end;
   if VertexCount = 2 then
     begin
-      d := DefaultEdgeData;
+      d := Default(TEdgeData);
       GetEdgeDataI(0, 1, d);
       aCutWeight := d.Weight;
       aCutSet.Add(0);
@@ -3807,7 +3807,7 @@ begin
     end;
   if VertexCount = 2 then
     begin
-      d := DefaultEdgeData;
+      d := Default(TEdgeData);
       GetEdgeDataI(0, 1, d);
       aCut := d.Weight;
       exit(True);
@@ -3959,7 +3959,7 @@ var
 begin
   if not Connected or (VertexCount < 2) then
     exit([]);
-  d := DefaultEdgeData;
+  d := Default(TEdgeData);
   if VertexCount = 2 then
     begin
       GetEdgeDataI(0, 1, d);

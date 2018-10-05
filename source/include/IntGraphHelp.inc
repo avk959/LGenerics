@@ -305,7 +305,7 @@ var
 begin
   System.SetLength(Result, FMatchCount);
   J := 0;
-  d := DefaultEdgeData;
+  d := Default(TEdgeData);
   for I in FWhites do
     if FMates[I] <> NULL_INDEX then
       begin
