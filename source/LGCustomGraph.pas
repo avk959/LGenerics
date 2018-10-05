@@ -232,6 +232,10 @@ type
     FEdgeCount: SizeInt;
     FTitle: string;
     FDescription: TStrings;
+    FOnReadVertex: TOnReadVertex;
+    FOnWriteVertex: TOnWriteVertex;
+    FOnReadData: TOnReadData;
+    FOnWriteData: TOnWriteData;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
     function  GetAdjList(aIndex: SizeInt): PAdjList; inline;
@@ -480,6 +484,10 @@ type
     property EdgeCount: SizeInt read FEdgeCount;
     property Capacity: SizeInt read GetCapacity;
     property Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
+    property OnStreamReadVertex: TOnReadVertex read FOnReadVertex write FOnReadVertex;
+    property OnStreamWriteVertex: TOnWriteVertex read FOnWriteVertex write FOnWriteVertex;
+    property OnStreamReadData: TOnReadData read FOnReadData write FOnReadData;
+    property OnStreamWriteData: TOnWriteData read FOnWriteData write FOnWriteData;
   end;
 
   {$I CustGraphHelpH.inc}

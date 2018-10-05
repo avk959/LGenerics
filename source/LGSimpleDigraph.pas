@@ -68,6 +68,7 @@ type
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
+    procedure AssignGraph(aGraph: TGSimpleDiGraph);
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
     function  TopoSort: TIntArray;
@@ -84,10 +85,10 @@ type
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
   { saves graph in its own binary format }
-    procedure SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
-    procedure LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
-    procedure SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
-    procedure LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+    procedure SaveToStream(aStream: TStream);
+    procedure LoadFromStream(aStream: TStream);
+    procedure SaveToFile(const aFileName: string);
+    procedure LoadFromFile(const aFileName: string);
 
 {**********************************************************************************************************
   structural management utilities
@@ -160,6 +161,42 @@ type
 
     property  ReachabilityValid: Boolean read GetReachabilityValid;
     property  Density: Double read GetDensity;
+  end;
+
+  { TGFlowChart: simple outline;
+      functor TEqRel must provide:
+        class function HashCode([const[ref]] aValue: TVertex): SizeInt;
+        class function Equal([const[ref]] L, R: TVertex): Boolean; }
+  generic TGFlowChart<TVertex, TEqRel> = class(specialize TGSimpleDiGraph<TVertex, TEmptyRec, TEqRel>)
+  private
+    procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
+    procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
+  public
+    constructor Create;
+    function Clone: TGFlowChart;
+    function Reverse: TGFlowChart;
+  end;
+
+  TIntFlowChart = class(specialize TGFlowChart<Integer, Integer>)
+  protected
+    procedure WriteVertex(aStream: TStream; constref aValue: Integer);
+    procedure ReadVertex(aStream: TStream; out aValue: Integer);
+  public
+    constructor Create;
+    function Clone: TIntFlowChart;
+    function Reverse: TIntFlowChart;
+  end;
+
+  { TStrFlowChart
+    warning: SaveToStream limitation for max string length = High(SmallInt) }
+  TStrFlowChart = class(specialize TGFlowChart<string, string>)
+  protected
+    procedure WriteVertex(aStream: TStream; constref aValue: string);
+    procedure ReadVertex(aStream: TStream; out aValue: string);
+  public
+    constructor Create;
+    function Clone: TStrFlowChart;
+    function Reverse: TStrFlowChart;
   end;
 
   { TGWeightedDiGraph implements simple sparse directed weighted graph based on adjacency lists;
@@ -273,7 +310,6 @@ type
     the path starting with it }
     function DagMaxPaths: TWeightArray;
   end;
-
 
   { TGIntWeightDiGraph specializes TWeight with Int64 }
   generic TGIntWeightDiGraph<TVertex, TEdgeData, TEqRel> = class(
@@ -488,6 +524,30 @@ begin
   Result.FEdgeCount := EdgeCount;
   for I := 0 to Pred(VertexCount) do
     Result[I]^.AssignList(AdjLists[I]);
+end;
+
+procedure TGSimpleDiGraph.AssignGraph(aGraph: TGSimpleDiGraph);
+var
+  I: SizeInt;
+begin
+  Clear;
+  FCount := aGraph.VertexCount;
+  FEdgeCount := aGraph.EdgeCount;
+  FTitle := aGraph.Title;
+  FDescription.Assign(aGraph.FDescription);
+  if aGraph.NonEmpty then
+    begin
+      FChainList := System.Copy(aGraph.FChainList);
+      System.SetLength(FNodeList, System.Length(aGraph.FNodeList));
+      for I := 0 to Pred(VertexCount) do
+        FNodeList[I].Assign(aGraph.FNodeList[I]);
+    end;
+  if not aGraph.FReachabilityMatrix.IsEmpty then
+    begin
+      FReachabilityMatrix.FMatrix.FSize := aGraph.FReachabilityMatrix.FMatrix.FSize;
+      FReachabilityMatrix.FMatrix.FBits := System.Copy(aGraph.FReachabilityMatrix.FMatrix.FBits);
+      FReachabilityMatrix.FIds := System.Copy(aGraph.FReachabilityMatrix.FIds);
+    end;
 end;
 
 function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
@@ -835,7 +895,7 @@ begin
     Result.AddEdgeI(e.Destination, e.Source, e.Data);
 end;
 
-procedure TGSimpleDiGraph.SaveToStream(aStream: TStream; aWriteVertex: TOnWriteVertex; aWriteData: TOnWriteData);
+procedure TGSimpleDiGraph.SaveToStream(aStream: TStream);
 var
   Header: TStreamHeader;
   s, d: Integer;
@@ -843,8 +903,10 @@ var
   gTitle, Descr: utf8string;
   wbs: TWriteBufStream;
 begin
-  if not Assigned(aWriteVertex) then
-    raise EGraphError.Create(SEWriteCallbackMissed);
+  if not Assigned(OnStreamWriteVertex) then
+    raise EGraphError.Create(SEStreamWriteVertMissed);
+  if not Assigned(OnStreamWriteData) then
+    raise EGraphError.Create(SEStreamWriteDataMissed);
 {$IFDEF CPU64}
   if VertexCount > System.High(Integer) then
     raise EGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
@@ -870,7 +932,7 @@ begin
     //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
     for s := 0 to Pred(Header.VertexCount) do
-      aWriteVertex(wbs, FNodeList[s].Vertex);
+      OnStreamWriteVertex(wbs, FNodeList[s].Vertex);
     //write edges
     for Edge in Edges do
       begin
@@ -878,15 +940,14 @@ begin
         d := Edge.Destination;
         wbs.WriteBuffer(NtoLE(s), SizeOf(s));
         wbs.WriteBuffer(NtoLE(d), SizeOf(d));
-        if Assigned(aWriteData) then
-          aWriteData(wbs, Edge.Data);
+        OnStreamWriteData(wbs, Edge.Data);
       end;
   finally
     wbs.Free;
   end;
 end;
 
-procedure TGSimpleDiGraph.LoadFromStream(aStream: TStream; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+procedure TGSimpleDiGraph.LoadFromStream(aStream: TStream);
 var
   Header: TStreamHeader;
   s, d: Integer;
@@ -896,8 +957,10 @@ var
   gTitle, Descr: utf8string;
   rbs: TReadBufStream;
 begin
-  if not Assigned(aReadVertex) then
-    raise EGraphError.Create(SEReadCallbackMissed);
+  if not Assigned(OnStreamReadVertex) then
+    raise EGraphError.Create(SEStreamReadVertMissed);
+  if not Assigned(OnStreamReadData) then
+    raise EGraphError.Create(SEStreamReadDataMissed);
   rbs := TReadBufStream.Create(aStream);
   try
     //read header
@@ -925,7 +988,7 @@ begin
     //read Items
     for I := 0 to Pred(Header.VertexCount) do
       begin
-        aReadVertex(rbs, Vertex);
+        OnStreamReadVertex(rbs, Vertex);
         if not AddVertex(Vertex, Ind) then
           raise EGraphError.Create(SEGraphStreamCorrupt);
         if Ind <> I then
@@ -937,8 +1000,7 @@ begin
       begin
         rbs.ReadBuffer(s, SizeOf(s));
         rbs.ReadBuffer(d, SizeOf(d));
-        if Assigned(aReadData) then
-          aReadData(rbs, Data);
+        OnStreamReadData(rbs, Data);
         AddEdgeI(LEToN(s), LEToN(d), Data);
       end;
   finally
@@ -946,26 +1008,25 @@ begin
   end;
 end;
 
-procedure TGSimpleDiGraph.SaveToFile(const aFileName: string; aWriteVertex: TOnWriteVertex;
-  aWriteData: TOnWriteData);
+procedure TGSimpleDiGraph.SaveToFile(const aFileName: string);
 var
   fs: TStream;
 begin
   fs := TFileStream.Create(aFileName, fmCreate);
   try
-    SaveToStream(fs, aWriteVertex, aWriteData);
+    SaveToStream(fs);
   finally
     fs.Free;
   end;
 end;
 
-procedure TGSimpleDiGraph.LoadFromFile(const aFileName: string; aReadVertex: TOnReadVertex; aReadData: TOnReadData);
+procedure TGSimpleDiGraph.LoadFromFile(const aFileName: string);
 var
   fs: TStream;
 begin
   fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
   try
-    LoadFromStream(fs, aReadVertex, aReadData);
+    LoadFromStream(fs);
   finally
     fs.Free;
   end;
@@ -1298,6 +1359,109 @@ begin
           if d > Result[TopoOrd[I]] then
             Result[TopoOrd[I]] := d;
         end;
+end;
+
+{ TGFlowChart }
+
+procedure TGFlowChart.ReadData(aStream: TStream; out aValue: TEmptyRec);
+begin
+  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+end;
+
+procedure TGFlowChart.WriteData(aStream: TStream; constref aValue: TEmptyRec);
+begin
+  aStream.WriteBuffer(aValue, SizeOf(aValue));
+end;
+
+constructor TGFlowChart.Create;
+begin
+  inherited;
+  OnStreamReadData := @ReadData;
+  OnStreamWriteData := @WriteData;
+end;
+
+function TGFlowChart.Clone: TGFlowChart;
+begin
+  Result := TGFlowChart.Create;
+  Result.AssignGraph(Self);
+end;
+
+function TGFlowChart.Reverse: TGFlowChart;
+begin
+  Result := inherited Reverse as TGFlowChart;
+end;
+
+{ TIntFlowChart }
+
+procedure TIntFlowChart.WriteVertex(aStream: TStream; constref aValue: Integer);
+begin
+  aStream.WriteBuffer(NtoLE(aValue), SizeOf(aValue));
+end;
+
+procedure TIntFlowChart.ReadVertex(aStream: TStream; out aValue: Integer);
+begin
+  aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
+  aValue := LEtoN(aValue);
+end;
+
+constructor TIntFlowChart.Create;
+begin
+  inherited;
+  OnStreamReadVertex := @ReadVertex;
+  OnStreamWriteVertex := @WriteVertex;
+end;
+
+function TIntFlowChart.Clone: TIntFlowChart;
+begin
+  Result := TIntFlowChart.Create;
+  Result.AssignGraph(Self);
+end;
+
+function TIntFlowChart.Reverse: TIntFlowChart;
+begin
+  Result := inherited Reverse as TIntFlowChart;
+end;
+
+{ TStrFlowChart }
+
+procedure TStrFlowChart.WriteVertex(aStream: TStream; constref aValue: string);
+var
+  Len: SizeInt;
+  sLen: SmallInt;
+begin
+  Len := System.Length(aValue);
+  if Len > High(SmallInt) then
+    raise EGraphError.CreateFmt(SEStrLenExceedFmt, [Len]);
+  sLen := Len;
+  aStream.WriteBuffer(sLen, SizeOf(sLen));
+  aStream.WriteBuffer(Pointer(aValue)^, Len);
+end;
+
+procedure TStrFlowChart.ReadVertex(aStream: TStream; out aValue: string);
+var
+  Len: SmallInt;
+begin
+  aStream.ReadBuffer(Len{%H-}, SizeOf(Len));
+  System.SetLength(aValue, Len);
+  aStream.ReadBuffer(Pointer(aValue)^, Len);
+end;
+
+constructor TStrFlowChart.Create;
+begin
+  inherited;
+  OnStreamReadVertex := @ReadVertex;
+  OnStreamWriteVertex := @WriteVertex;
+end;
+
+function TStrFlowChart.Clone: TStrFlowChart;
+begin
+  Result := TStrFlowChart.Create;
+  Result.AssignGraph(Self);
+end;
+
+function TStrFlowChart.Reverse: TStrFlowChart;
+begin
+  Result := inherited Reverse as TStrFlowChart;
 end;
 
 { TGWeightedDiGraph }

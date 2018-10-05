@@ -47,8 +47,10 @@ resourcestring
   SECellNotFoundFmt        = 'Specified cell of %s not found';
   SEEdgeNotFoundFmt        = 'Edge (%d, %d) not found';
   SECallbackMissed         = 'Callback missed';
-  SEWriteCallbackMissed    = 'Write callback missed';
-  SEReadCallbackMissed     = 'Read callback missed';
+  SEStreamWriteVertMissed  = 'OnStreamWriteVertex property missed';
+  SEStreamWriteDataMissed  = 'OnStreamWriteData property missed';
+  SEStreamReadVertMissed   = 'OnStreamReadVertex property missed';
+  SEStreamReadDataMissed   = 'OnStreamReadData property missed';
   SEUnknownGraphStreamFmt  = 'Unknown graph stream format';
   SEUnsuppGraphFmtVersion  = 'Unsupported graph stream format version';
   SEGraphStreamCorrupt     = 'Graph stream data corrupted';
