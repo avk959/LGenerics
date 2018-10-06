@@ -177,12 +177,10 @@ type
     function Reverse: TGFlowChart;
   end;
 
-  { TGDigraphDotWriter }
-
   generic TGDigraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
     specialize TGCustomDotWriter<TVertex, TEdgeData, TEqRel>)
   protected
-    function WriteGraph(aGraph: TGraph): utf8string; override;
+    function Graph2Dot(aGraph: TGraph): utf8string; override;
   public
     constructor Create;
   end;
@@ -1413,7 +1411,7 @@ end;
 
 { TGDigraphDotWriter }
 
-function TGDigraphDotWriter.WriteGraph(aGraph: TGraph): utf8string;
+function TGDigraphDotWriter.Graph2Dot(aGraph: TGraph): utf8string;
 var
   s: utf8string;
   I: SizeInt;

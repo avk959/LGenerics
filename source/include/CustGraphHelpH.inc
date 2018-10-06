@@ -394,7 +394,7 @@ type
   generic TGCustomDotWriter<TVertex, TEdgeData, TEqRel> = class abstract
   public
   type
-    TWriteDirection = (wrTopToBottom, wrLeftToWrite);
+    TWriteDirection = (wdTopToBottom, wdLeftToWrite);
     TGraph = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
     TOnStartWrite = function(aGraph: TGraph): utf8string of object;
     TOnWriteVertex = function(aGraph: TGraph; aIndex: SizeInt): utf8string of object;
@@ -410,7 +410,7 @@ type
     FOnStartWrite: TOnStartWrite;
     FOnWriteVertex: TOnWriteVertex;
     FOnWriteEdge: TOnWriteEdge;
-    function WriteGraph(aGraph: TGraph): utf8string; virtual; abstract;
+    function Graph2Dot(aGraph: TGraph): utf8string; virtual; abstract;
     function DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; virtual;
   public
     procedure SaveToDot(aGraph: TGraph; const aFileName: string);

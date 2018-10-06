@@ -3553,13 +3553,13 @@ end;
 
 procedure TGCustomDotWriter.SaveToDot(aGraph: TGraph; const aFileName: string);
 var
-  sg: utf8string;
+  Dot: utf8string;
   fs: TFileStream;
 begin
   fs := TFileStream.Create(aFileName, fmCreate);
   try
-    sg := WriteGraph(aGraph);
-    fs.WriteBuffer(Pointer(sg)^, System.Length(sg));
+    Dot := Graph2Dot(aGraph);
+    fs.WriteBuffer(Pointer(Dot)^, System.Length(Dot));
   finally
     fs.Free;
   end;

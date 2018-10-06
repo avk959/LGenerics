@@ -400,7 +400,7 @@ type
   type
     TSimpleGraph = specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>;
 
-    function WriteGraph(aGraph: TGraph): utf8string; override;
+    function Graph2Dot(aGraph: TGraph): utf8string; override;
   public
     constructor Create;
   end;
@@ -3293,7 +3293,7 @@ end;
 
 { TGraphDotWriter }
 
-function TGraphDotWriter.WriteGraph(aGraph: TGraph): utf8string;
+function TGraphDotWriter.Graph2Dot(aGraph: TGraph): utf8string;
 var
   s: utf8string;
   I: SizeInt;
