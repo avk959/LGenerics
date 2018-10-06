@@ -394,6 +394,13 @@ type
     function  Clone: TIntChart;
   end;
 
+  TIntChartDotWriter = class(specialize TGDotWriter<Integer, TEmptyRec, Integer>)
+  protected
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+  public
+    constructor Create;
+  end;
+
   { TStrChart
     warning: SaveToStream limitation for max string length = High(SmallInt) }
   TStrChart = class(specialize TGChart<string, string>)
@@ -408,6 +415,13 @@ type
     function SubgraphFromTree(constref aTree: TIntArray): TStrChart;
     function SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
     function Clone: TStrChart;
+  end;
+
+  TStrChartDotWriter = class(specialize TGDotWriter<string, TEmptyRec, string>)
+  protected
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+  public
+    constructor Create;
   end;
 
   { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
@@ -3270,6 +3284,18 @@ begin
   Result.AssignGraph(Self);
 end;
 
+{ TIntChartDotWriter }
+
+function TIntChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+begin
+  Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]);
+end;
+
+constructor TIntChartDotWriter.Create;
+begin
+  inherited Create(False);
+end;
+
 { TStrChart }
 
 procedure TStrChart.WriteVertex(aStream: TStream; constref aValue: string);
@@ -3337,6 +3363,18 @@ function TStrChart.Clone: TStrChart;
 begin
   Result := TStrChart.Create;
   Result.AssignGraph(Self);
+end;
+
+{ TStrChartDotWriter }
+
+function TStrChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+begin
+  Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '"';
+end;
+
+constructor TStrChartDotWriter.Create;
+begin
+  inherited Create(False);
 end;
 
 { TGWeightedGraph }

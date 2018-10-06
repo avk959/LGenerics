@@ -187,6 +187,13 @@ type
     function Reverse: TIntFlowChart;
   end;
 
+  TIntFlowChartDotWriter = class(specialize TGDotWriter<Integer, TEmptyRec, Integer>)
+  protected
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+  public
+    constructor Create;
+  end;
+
   { TStrFlowChart
     warning: SaveToStream limitation for max string length = High(SmallInt) }
   TStrFlowChart = class(specialize TGFlowChart<string, string>)
@@ -197,6 +204,13 @@ type
     constructor Create;
     function Clone: TStrFlowChart;
     function Reverse: TStrFlowChart;
+  end;
+
+  TStrFlowChartDotWriter = class(specialize TGDotWriter<string, TEmptyRec, string>)
+  protected
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+  public
+    constructor Create;
   end;
 
   { TGWeightedDiGraph implements simple sparse directed weighted graph based on adjacency lists;
@@ -1422,6 +1436,18 @@ begin
   Result := inherited Reverse as TIntFlowChart;
 end;
 
+{ TIntFlowChartDotWriter }
+
+function TIntFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+begin
+  Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]);
+end;
+
+constructor TIntFlowChartDotWriter.Create;
+begin
+  inherited Create(True);
+end;
+
 { TStrFlowChart }
 
 procedure TStrFlowChart.WriteVertex(aStream: TStream; constref aValue: string);
@@ -1462,6 +1488,18 @@ end;
 function TStrFlowChart.Reverse: TStrFlowChart;
 begin
   Result := inherited Reverse as TStrFlowChart;
+end;
+
+{ TStrFlowChartDotWriter }
+
+function TStrFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+begin
+  Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '"';
+end;
+
+constructor TStrFlowChartDotWriter.Create;
+begin
+  inherited Create(True);
 end;
 
 { TGWeightedDiGraph }
