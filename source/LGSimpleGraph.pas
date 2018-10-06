@@ -394,11 +394,20 @@ type
     function  Clone: TIntChart;
   end;
 
-  TIntChartDotWriter = class(specialize TGDotWriter<Integer, TEmptyRec, Integer>)
+  generic TGraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
+    specialize TGCustomDotWriter<TVertex, TEdgeData, TEqRel>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+  type
+    TSimpleGraph = specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>;
+
+    function WriteGraph(aGraph: TGraph): utf8string; override;
   public
     constructor Create;
+  end;
+
+  TIntChartDotWriter = class(specialize TGraphDotWriter<Integer, TEmptyRec, Integer>)
+  protected
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
   end;
 
   { TStrChart
@@ -417,11 +426,9 @@ type
     function Clone: TStrChart;
   end;
 
-  TStrChartDotWriter = class(specialize TGDotWriter<string, TEmptyRec, string>)
+  TStrChartDotWriter = class(specialize TGraphDotWriter<string, TEmptyRec, string>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
-  public
-    constructor Create;
   end;
 
   { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
@@ -3284,16 +3291,62 @@ begin
   Result.AssignGraph(Self);
 end;
 
+{ TGraphDotWriter }
+
+function TGraphDotWriter.WriteGraph(aGraph: TGraph): utf8string;
+var
+  s: utf8string;
+  I: SizeInt;
+  e: TGraph.TEdge;
+begin
+  if aGraph.Title <> '' then
+    s := '"' + aGraph.Title + '"'
+  else
+    s := 'Untitled';
+  with TStringList.Create do
+    try
+      SkipLastLineBreak := True;
+      WriteBOM := False;
+      DefaultEncoding := TEncoding.UTF8;
+      Add(FGraphMark + s + ' {');
+      Add(DIRECTS[Direction]);
+      if Assigned(OnStartWrite) then
+        begin
+          s := OnStartWrite(aGraph);
+          Add(s);
+        end;
+      if Assigned(OnWriteVertex) then
+        for I := 0 to Pred(aGraph.VertexCount) do
+          begin
+            s := OnWriteVertex(aGraph, I);
+            Add(s);
+          end;
+        for e in (aGraph as TSimpleGraph).DistinctEdges do
+          begin
+            if Assigned(OnWriteEdge) then
+              s := OnWriteEdge(aGraph, e)
+            else
+              s := DefaultWriteEdge(aGraph, e);
+            Add(s);
+          end;
+      Add('}');
+      Result := Text;
+    finally
+      Free;
+    end;
+end;
+
+constructor TGraphDotWriter.Create;
+begin
+  FGraphMark := 'graph ';
+  FEdgeMark := '--';
+end;
+
 { TIntChartDotWriter }
 
 function TIntChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
   Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]);
-end;
-
-constructor TIntChartDotWriter.Create;
-begin
-  inherited Create(False);
 end;
 
 { TStrChart }
@@ -3370,11 +3423,6 @@ end;
 function TStrChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
   Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '"';
-end;
-
-constructor TStrChartDotWriter.Create;
-begin
-  inherited Create(False);
 end;
 
 { TGWeightedGraph }

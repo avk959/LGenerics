@@ -3544,72 +3544,14 @@ begin
   Result := CreateAndFill(ZeroWeight, aLen);
 end;
 
-{ TGDotWriter }
+{ TGCustomDotWriter }
 
-function TGDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+function TGCustomDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
   Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
 end;
 
-function TGDotWriter.WriteGraph(aGraph: TGraph): utf8string;
-var
-  s: utf8string;
-  I: SizeInt;
-  e: TGraph.TEdge;
-begin
-  if aGraph.Title <> '' then
-    s := '"' + aGraph.Title + '"'
-  else
-    s := 'Untitled';
-  with TStringList.Create do
-    try
-      SkipLastLineBreak := True;
-      WriteBOM := False;
-      DefaultEncoding := TEncoding.UTF8;
-      Add(FGraphMark + s + ' {');
-      Add(DIRECTS[Direction]);
-      if Assigned(OnStartWrite) then
-        begin
-          s := OnStartWrite(aGraph);
-          Add(s);
-        end;
-      if Assigned(OnWriteVertex) then
-        for I := 0 to Pred(aGraph.VertexCount) do
-          begin
-            s := OnWriteVertex(aGraph, I);
-            Add(s);
-          end;
-        for e in aGraph.Edges do
-          begin
-            if Assigned(OnWriteEdge) then
-              s := OnWriteEdge(aGraph, e)
-            else
-              s := DefaultWriteEdge(aGraph, e);
-            Add(s);
-          end;
-      Add('}');
-      Result := Text;
-    finally
-      Free;
-    end;
-end;
-
-constructor TGDotWriter.Create(aDirected: Boolean);
-begin
-  FDirected := aDirected;
-  if aDirected then
-    begin
-      FGraphMark := 'digraph ';
-      FEdgeMark := '->';
-    end
-  else
-  begin
-    FGraphMark := 'graph ';
-    FEdgeMark := '--';
-  end;
-end;
-
-procedure TGDotWriter.SaveToDot(aGraph: TGraph; const aFileName: string);
+procedure TGCustomDotWriter.SaveToDot(aGraph: TGraph; const aFileName: string);
 var
   sg: utf8string;
   fs: TFileStream;

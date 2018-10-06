@@ -390,8 +390,8 @@ type
     class property ZeroWeight: TWeight read CFZeroWeight;
   end;
 
-  { TGDotWriter basic writer into Graphviz dot format }
-  generic TGDotWriter<TVertex, TEdgeData, TEqRel> = class
+  { TGCustomDotWriter basic writer into Graphviz dot format }
+  generic TGCustomDotWriter<TVertex, TEdgeData, TEqRel> = class abstract
   public
   type
     TWriteDirection = (wrTopToBottom, wrLeftToWrite);
@@ -407,14 +407,12 @@ type
     FGraphMark,
     FEdgeMark: utf8string;
     FDirection: TWriteDirection;
-    FDirected: Boolean;
     FOnStartWrite: TOnStartWrite;
     FOnWriteVertex: TOnWriteVertex;
     FOnWriteEdge: TOnWriteEdge;
-    function WriteGraph(aGraph: TGraph): utf8string;
+    function WriteGraph(aGraph: TGraph): utf8string; virtual; abstract;
     function DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; virtual;
   public
-    constructor Create(aDirected: Boolean);
     procedure SaveToDot(aGraph: TGraph; const aFileName: string);
     property Direction: TWriteDirection read FDirection write FDirection;
     property OnStartWrite: TOnStartWrite read FOnStartWrite write FOnStartWrite;

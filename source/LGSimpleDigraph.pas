@@ -177,6 +177,16 @@ type
     function Reverse: TGFlowChart;
   end;
 
+  { TGDigraphDotWriter }
+
+  generic TGDigraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
+    specialize TGCustomDotWriter<TVertex, TEdgeData, TEqRel>)
+  protected
+    function WriteGraph(aGraph: TGraph): utf8string; override;
+  public
+    constructor Create;
+  end;
+
   TIntFlowChart = class(specialize TGFlowChart<Integer, Integer>)
   protected
     procedure WriteVertex(aStream: TStream; constref aValue: Integer);
@@ -187,11 +197,9 @@ type
     function Reverse: TIntFlowChart;
   end;
 
-  TIntFlowChartDotWriter = class(specialize TGDotWriter<Integer, TEmptyRec, Integer>)
+  TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TEmptyRec, Integer>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
-  public
-    constructor Create;
   end;
 
   { TStrFlowChart
@@ -206,11 +214,9 @@ type
     function Reverse: TStrFlowChart;
   end;
 
-  TStrFlowChartDotWriter = class(specialize TGDotWriter<string, TEmptyRec, string>)
+  TStrFlowChartDotWriter = class(specialize TGDigraphDotWriter<string, TEmptyRec, string>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
-  public
-    constructor Create;
   end;
 
   { TGWeightedDiGraph implements simple sparse directed weighted graph based on adjacency lists;
@@ -1405,6 +1411,57 @@ begin
   Result := inherited Reverse as TGFlowChart;
 end;
 
+{ TGDigraphDotWriter }
+
+function TGDigraphDotWriter.WriteGraph(aGraph: TGraph): utf8string;
+var
+  s: utf8string;
+  I: SizeInt;
+  e: TGraph.TEdge;
+begin
+  if aGraph.Title <> '' then
+    s := '"' + aGraph.Title + '"'
+  else
+    s := 'Untitled';
+  with TStringList.Create do
+    try
+      SkipLastLineBreak := True;
+      WriteBOM := False;
+      DefaultEncoding := TEncoding.UTF8;
+      Add(FGraphMark + s + ' {');
+      Add(DIRECTS[Direction]);
+      if Assigned(OnStartWrite) then
+        begin
+          s := OnStartWrite(aGraph);
+          Add(s);
+        end;
+      if Assigned(OnWriteVertex) then
+        for I := 0 to Pred(aGraph.VertexCount) do
+          begin
+            s := OnWriteVertex(aGraph, I);
+            Add(s);
+          end;
+        for e in aGraph.Edges do
+          begin
+            if Assigned(OnWriteEdge) then
+              s := OnWriteEdge(aGraph, e)
+            else
+              s := DefaultWriteEdge(aGraph, e);
+            Add(s);
+          end;
+      Add('}');
+      Result := Text;
+    finally
+      Free;
+    end;
+end;
+
+constructor TGDigraphDotWriter.Create;
+begin
+  FGraphMark := 'digraph ';
+  FEdgeMark := '->';
+end;
+
 { TIntFlowChart }
 
 procedure TIntFlowChart.WriteVertex(aStream: TStream; constref aValue: Integer);
@@ -1441,11 +1498,6 @@ end;
 function TIntFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
   Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]);
-end;
-
-constructor TIntFlowChartDotWriter.Create;
-begin
-  inherited Create(True);
 end;
 
 { TStrFlowChart }
@@ -1495,11 +1547,6 @@ end;
 function TStrFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
   Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '"';
-end;
-
-constructor TStrFlowChartDotWriter.Create;
-begin
-  inherited Create(True);
 end;
 
 { TGWeightedDiGraph }
