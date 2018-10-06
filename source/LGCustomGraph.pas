@@ -79,7 +79,7 @@ type
     Destination: SizeInt;
     class function HashCode(constref aValue: TIntEdge): SizeInt; static; inline;
     class function Equal(constref L, R: TIntEdge): Boolean; static; inline;
-    constructor Create(s, d: SizeInt);
+    constructor Create(aSrc, aDst: SizeInt);
     function Key: TIntEdge; inline;
   end;
 
@@ -87,7 +87,7 @@ type
     Source,
     Destination: SizeInt;
     Cost: TCost;
-    constructor Create(s, d: SizeInt; aCost: TCost);
+    constructor Create(aSrc, aDst: SizeInt; aCost: TCost);
   end;
 
   TEdgeCostMap = specialize TGLiteHashMapLP<TIntEdge, TCost, TIntEdge>;
@@ -516,10 +516,10 @@ begin
   Result := (L.Source = R.Source) and (L.Destination = R.Destination);
 end;
 
-constructor TIntEdge.Create(s, d: SizeInt);
+constructor TIntEdge.Create(aSrc, aDst: SizeInt);
 begin
-  Source := s;
-  Destination := d;
+  Source := aSrc;
+  Destination := aDst;
 end;
 
 function TIntEdge.Key: TIntEdge;
@@ -529,10 +529,10 @@ end;
 
 { TCostEdge }
 
-constructor TCostEdge.Create(s, d: SizeInt; aCost: TCost);
+constructor TCostEdge.Create(aSrc, aDst: SizeInt; aCost: TCost);
 begin
-  Source := s;
-  Destination := d;
+  Source := aSrc;
+  Destination := aDst;
   Cost := aCost;
 end;
 

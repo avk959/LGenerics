@@ -209,15 +209,15 @@ type
   { checks whether the aDst reachable from the aSrc; each vertex reachable from itself  }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
-  { returns index of the connected component that contains aVertex }
-    function  SeparateIndexOf(constref aVertex: TVertex): SizeInt; inline;
-    function  SeparateIndexI(aIndex: SizeInt): SizeInt;
+  { returns tag of the connected component that contains aVertex }
+    function  GetSeparateTag(constref aVertex: TVertex): SizeInt; inline;
+    function  GetSeparateTagI(aIndex: SizeInt): SizeInt;
   { returns number of vertices(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
     function  IsTree: Boolean;
     function  CyclomaticNumber: SizeInt;
-  { checks whether the graph is a regular graph (that is, the degree of all its vertices equal);
+  { checks whether the graph is regular(that is, the degree of all its vertices equal);
     an empty graph is considered regular }
     function  IsRegular: Boolean;
   { checks whether exists any cycle in the same connected component as aRoot;
@@ -2385,12 +2385,12 @@ begin
     Result := True;
 end;
 
-function TGSimpleGraph.SeparateIndexOf(constref aVertex: TVertex): SizeInt;
+function TGSimpleGraph.GetSeparateTag(constref aVertex: TVertex): SizeInt;
 begin
-   Result := SeparateIndexI(IndexOf(aVertex));
+   Result := GetSeparateTagI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.SeparateIndexI(aIndex: SizeInt): SizeInt;
+function TGSimpleGraph.GetSeparateTagI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   if not ConnectedValid then
