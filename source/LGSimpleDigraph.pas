@@ -248,10 +248,8 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-
     function Clone: TGWeightedDiGraph;
     function Reverse: TGWeightedDiGraph;
-
 {**********************************************************************************************************
   shortest path problem utilities
 ***********************************************************************************************************}
@@ -327,6 +325,11 @@ type
 
      function IsCostArrayCorrect(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
   public
+{**********************************************************************************************************
+  class management utilities
+***********************************************************************************************************}
+    function Clone: TGIntWeightDiGraph;
+    function Reverse: TGIntWeightDiGraph;
 {**********************************************************************************************************
   networks utilities treat the weight of the arc as its capacity
 ***********************************************************************************************************}
@@ -1311,9 +1314,6 @@ begin
 end;
 
 function TGSimpleDiGraph.IsDag: Boolean;
-var
-  Dummy: TIntArray = nil;
-  I: SizeInt;
 begin
   if IsEmpty then
     exit(False);
@@ -1777,6 +1777,17 @@ begin
         exit(False);
     end;
   Result := True;
+end;
+
+function TGIntWeightDiGraph.Clone: TGIntWeightDiGraph;
+begin
+  Result := TGIntWeightDiGraph.Create;
+  Result.AssignGraph(Self);
+end;
+
+function TGIntWeightDiGraph.Reverse: TGIntWeightDiGraph;
+begin
+  Result := inherited Reverse as TGIntWeightDiGraph;
 end;
 
 function TGIntWeightDiGraph.GetNetworkState(constref aSource, aSink: TVertex): TNetworkState;

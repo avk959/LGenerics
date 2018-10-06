@@ -153,7 +153,6 @@ type
   class management utilities
 ***********************************************************************************************************}
     constructor Create;
-    constructor Create(aCapacity: SizeInt);
     procedure Clear; override;
   { saves graph in its own binary format }
     procedure SaveToStream(aStream: TStream);
@@ -562,6 +561,15 @@ type
     function  GetTrivialMinCut(out aCut: TWeight): Boolean;
     function  StoerWagner(out aCut: TIntSet): TWeight;
   public
+{**********************************************************************************************************
+  class management utilities
+***********************************************************************************************************}
+    function SeparateGraph(constref aVertex: TVertex): TGIntWeightGraph;
+    function SeparateGraphI(aIndex: SizeInt): TGIntWeightGraph;
+    function SubgraphFromVertexList(constref aList: TIntArray): TGIntWeightGraph;
+    function SubgraphFromTree(constref aTree: TIntArray): TGIntWeightGraph;
+    function SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGIntWeightGraph;
+    function Clone: TGIntWeightGraph;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -1993,12 +2001,6 @@ begin
   FConnectedValid := True;
 end;
 
-constructor TGSimpleGraph.Create(aCapacity: SizeInt);
-begin
-  inherited Create(aCapacity);
-  FConnectedValid := True;
-end;
-
 procedure TGSimpleGraph.Clear;
 begin
   inherited;
@@ -2188,7 +2190,8 @@ var
   vI, vJ: TIntPair;
   e: TEdge;
 begin
-  Result := TLineGraph.Create(EdgeCount);
+  Result := TLineGraph.Create;
+  Result.EnsureCapacity(EdgeCount);
   for e in DistinctEdges do
     Result.AddVertex(TIntPair.Create(e.Source, e.Destination));
   for I := 0 to Result.VertexCount - 2 do
@@ -3851,6 +3854,37 @@ begin
         end;
       Finalize(g[Last]);
     end;
+end;
+
+function TGIntWeightGraph.SeparateGraph(constref aVertex: TVertex): TGIntWeightGraph;
+begin
+  Result := inherited SeparateGraph(aVertex) as TGIntWeightGraph;
+end;
+
+function TGIntWeightGraph.SeparateGraphI(aIndex: SizeInt): TGIntWeightGraph;
+begin
+  Result := inherited SeparateGraphI(aIndex) as TGIntWeightGraph;
+end;
+
+function TGIntWeightGraph.SubgraphFromVertexList(constref aList: TIntArray): TGIntWeightGraph;
+begin
+  Result := inherited SubgraphFromVertexList(aList) as TGIntWeightGraph;
+end;
+
+function TGIntWeightGraph.SubgraphFromTree(constref aTree: TIntArray): TGIntWeightGraph;
+begin
+  Result := inherited SubgraphFromTree(aTree) as TGIntWeightGraph;
+end;
+
+function TGIntWeightGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGIntWeightGraph;
+begin
+  Result := inherited SubgraphFromEdges(aEdges) as TGIntWeightGraph;
+end;
+
+function TGIntWeightGraph.Clone: TGIntWeightGraph;
+begin
+  Result := TGIntWeightGraph.Create;
+  Result.AssignGraph(Self);
 end;
 
 function TGIntWeightGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;

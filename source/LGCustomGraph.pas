@@ -375,7 +375,6 @@ type
 ***********************************************************************************************************}
 
     constructor Create;
-    constructor Create(aCapacity: SizeInt);
     destructor Destroy; override;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -1341,12 +1340,6 @@ constructor TGCustomGraph.Create;
 begin
   FDescription := TStringList.Create;
   Title := 'Untitled';
-end;
-
-constructor TGCustomGraph.Create(aCapacity: SizeInt);
-begin
-  Create;
-  EnsureCapacity(aCapacity);
 end;
 
 destructor TGCustomGraph.Destroy;
