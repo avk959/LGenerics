@@ -1373,19 +1373,20 @@ begin
   for I := 0 to Pred(FNodeCount) do
     begin
       CurrArc := FNodes[I].FirstArc;
-      FNodes[I].ResetCurrent;
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           NextNode := CurrArc^.Target;
           if (CurrArc^.ResCap > 0) and (FNodes[I].Price + CurrArc^.Cost - NextNode^.Price < 0) then
-            begin
-              CurrArc^.Push(CurrArc^.ResCap);
-              if NextNode^.Excess > 0 then
-                FQueue.Enqueue(NextNode);
-            end;
+            CurrArc^.Push(CurrArc^.ResCap);
           Inc(CurrArc);
         end;
     end;
+  for I := 0 to Pred(FNodeCount) do
+    if FNodes[I].Excess > 0 then
+      begin
+        FNodes[I].ResetCurrent;
+        FQueue.Enqueue(@FNodes[I]);
+      end;
 end;
 
 procedure TGIntWeightDiGraph.TCsMcfHelper.Discharge(aNode: PNode);
