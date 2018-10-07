@@ -22,7 +22,7 @@ type
   private
     FMatrix: TBoolMatrix;
     FCurrSet: TBoolVector;
-    FVertices,
+    FNodes,
     FRecentBest: TIntArray;
     FOnFind: TOnFindSet;
     FStartTime: TDateTime;
@@ -55,7 +55,7 @@ type
   private
     FMatrix: TBitMatrix256;
     FCurrSet: TBits256;
-    FVertices,
+    FNodes,
     FRecentBest: TIntArray;
     FOnFind: TOnFindSet;
     FStartTime: TDateTime;
@@ -78,7 +78,7 @@ type
   private
     FMatrix: TSkeleton;
     FCurrSet: TIntSet;
-    FVertices,
+    FNodes,
     FRecentBest: TIntArray;
     FOnFind: TOnFindSet;
     FStartTime: TDateTime;
@@ -87,9 +87,6 @@ type
     procedure Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TIntSet);
     procedure Extend(var aSub, aCand: TIntSet);
-    procedure FillMatrix(aGraph: TGSimpleGraph);
-    procedure SortMatrixByWidth(aGraph: TGSimpleGraph);
-    procedure SortMatrixByDegree(aGraph: TGSimpleGraph);
   public
     function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -98,7 +95,7 @@ type
   TBPDomSetHelper = record // BP -> bit-parallel
   private
     FMatrix: TBoolMatrix;
-    FVertices,
+    FNodes,
     FRecentBest: TIntArray;
     FStartTime: TDateTime;
     FTimeOut: Integer;
@@ -112,7 +109,7 @@ type
   TBPDomSetHelper256 = record // BP -> bit-parallel
   private
     FMatrix: TBitMatrix256;
-    FVertices,
+    FNodes,
     FRecentBest: TIntArray;
     FStartTime: TDateTime;
     FTimeOut: Integer;

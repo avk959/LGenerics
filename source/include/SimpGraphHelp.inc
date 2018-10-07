@@ -69,10 +69,10 @@ begin
             exit;
           J := ColOrd[I];
           aCand[J] := False;
-          FCurrSet[FVertices[J]] := True;
+          FCurrSet[FNodes[J]] := True;
           NewCand := aCand.Intersection(FMatrix[J]);
           Extend(NewCand);
-          FCurrSet[FVertices[J]] := False;
+          FCurrSet[FNodes[J]] := False;
         end;
     end
   else
@@ -95,9 +95,9 @@ begin
             aCand[I] := False;
             NewCand := aCand.Intersection(FMatrix[I]);
             NewSub := aSub.Intersection(FMatrix[I]);
-            FCurrSet[FVertices[I]] := True;
+            FCurrSet[FNodes[I]] := True;
             Extend(NewSub, NewCand);
-            FCurrSet[FVertices[I]] := False;
+            FCurrSet[FNodes[I]] := False;
           end;
     end
   else
@@ -113,9 +113,9 @@ begin
   for I := 0 to Pred(aGraph.VertexCount) do
     begin
       FMatrix[I].Size := aGraph.VertexCount;
-      p := aGraph.AdjLists[FVertices[I]];
+      p := aGraph.AdjLists[FNodes[I]];
       for J := 0 to Pred(aGraph.VertexCount) do
-        if (I <> J) and (p^.Contains(FVertices[J]) xor aComplement) then
+        if (I <> J) and (p^.Contains(FNodes[J]) xor aComplement) then
           FMatrix[I][J] := True;
     end;
 end;
@@ -123,18 +123,18 @@ end;
 procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
-    FVertices := aGraph.SortComplementByWidth
+    FNodes := aGraph.SortComplementByWidth
   else
-    FVertices := aGraph.SortVerticesByWidth(soDesc);
+    FNodes := aGraph.SortNodesByWidth(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
-    FVertices := aGraph.SortVerticesByDegree(soAsc)
+    FNodes := aGraph.SortNodesByDegree(soAsc)
   else
-    FVertices := aGraph.SortVerticesByDegree(soDesc);
+    FNodes := aGraph.SortNodesByDegree(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
@@ -250,10 +250,10 @@ begin
             exit;
           J := ColOrd[I];
           aCand[J] := False;
-          FCurrSet[FVertices[J]] := True;
+          FCurrSet[FNodes[J]] := True;
           NewCand := aCand.Intersection(FMatrix[J]);
           Extend(NewCand);
-          FCurrSet[FVertices[J]] := False;
+          FCurrSet[FNodes[J]] := False;
         end;
     end
   else
@@ -276,9 +276,9 @@ begin
             aCand[I] := False;
             NewCand := aCand.Intersection(FMatrix[I]);
             NewSub := aSub.Intersection(FMatrix[I]);
-            FCurrSet[FVertices[I]] := True;
+            FCurrSet[FNodes[I]] := True;
             Extend(NewSub, NewCand);
-            FCurrSet[FVertices[I]] := False;
+            FCurrSet[FNodes[I]] := False;
           end;
     end
   else
@@ -293,10 +293,10 @@ begin
   System.SetLength(FMatrix, aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
     begin
-      pA := aGraph.AdjLists[FVertices[I]];
+      pA := aGraph.AdjLists[FNodes[I]];
       FMatrix[I].InitZero;
       for J := 0 to Pred(aGraph.VertexCount) do
-        if (I <> J) and (pA^.Contains(FVertices[J]) xor aComplement) then
+        if (I <> J) and (pA^.Contains(FNodes[J]) xor aComplement) then
           FMatrix[I][J] := True;
     end;
 end;
@@ -304,18 +304,18 @@ end;
 procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
-    FVertices := aGraph.SortComplementByWidth
+    FNodes := aGraph.SortComplementByWidth
   else
-    FVertices := aGraph.SortVerticesByWidth(soDesc);
+    FNodes := aGraph.SortNodesByWidth(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByDegree(aGraph: TGSimpleGraph; aComplement: Boolean);
 begin
   if aComplement then
-    FVertices := aGraph.SortVerticesByDegree(soAsc)
+    FNodes := aGraph.SortNodesByDegree(soAsc)
   else
-    FVertices := aGraph.SortVerticesByDegree(soDesc);
+    FNodes := aGraph.SortNodesByDegree(soDesc);
   FillMatrix(aGraph, aComplement);
 end;
 
@@ -426,7 +426,7 @@ begin
             exit;
           J := ColOrd[I];
           aCand.Delete(J);
-          FCurrSet.Push(FVertices[J]);
+          FCurrSet.Push(FNodes[J]);
           NewCand := aCand.Intersection(FMatrix[J]^);
           Extend(NewCand);
           FCurrSet.Pop;
@@ -452,40 +452,13 @@ begin
             aCand.Delete(I);
             NewCand := aCand.Intersection(FMatrix[I]^);
             NewSub := aSub.Intersection(FMatrix[I]^);
-            FCurrSet.Push(FVertices[I]);
+            FCurrSet.Push(FNodes[I]);
             Extend(NewSub, NewCand);
             FCurrSet.Pop;
           end;
     end
   else
     FOnFind(FCurrSet.ToArray, FCanceled);
-end;
-
-procedure TGSimpleGraph.TCliqueHelper.FillMatrix(aGraph: TGSimpleGraph);
-var
-  I, J: SizeInt;
-  pA: PAdjList;
-begin
-  FMatrix := TSkeleton.Create(aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    begin
-      pA := aGraph.AdjLists[FVertices[I]];
-      for J := 0 to Pred(aGraph.VertexCount) do
-        if (I <> J) and pA^.Contains(FVertices[J]) then
-          FMatrix[I]^.Push(J);
-    end;
-end;
-
-procedure TGSimpleGraph.TCliqueHelper.SortMatrixByWidth(aGraph: TGSimpleGraph);
-begin
-  FVertices := aGraph.SortVerticesByWidth(soDesc);
-  FillMatrix(aGraph);
-end;
-
-procedure TGSimpleGraph.TCliqueHelper.SortMatrixByDegree(aGraph: TGSimpleGraph);
-begin
-  FVertices := aGraph.SortVerticesByDegree(soDesc);
-  FillMatrix(aGraph);
 end;
 
 function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -496,7 +469,8 @@ begin
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
-  SortMatrixByWidth(aGraph);
+  FNodes := aGraph.SortNodesByWidth(soDesc);
+  FMatrix := aGraph.CreateSkeleton;
   FRecentBest := aGraph.ApproxMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   Extend(Cand);
@@ -508,7 +482,8 @@ procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind
 var
   Sub, Cand: TIntSet;
 begin
-  SortMatrixByDegree(aGraph);
+  FNodes := aGraph.SortNodesByDegree(soDesc);
+  FMatrix := aGraph.CreateSkeleton;
   Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
   FOnFind := aOnFind;
@@ -523,14 +498,14 @@ var
   I, J: SizeInt;
   pA: PAdjList;
 begin
-  FVertices := aGraph.SortVerticesByDegree(soDesc);
-  System.SetLength(FMatrix, System.Length(FVertices));
-  for I := 0 to System.High(FVertices) do
+  FNodes := aGraph.SortNodesByDegree(soDesc);
+  System.SetLength(FMatrix, System.Length(FNodes));
+  for I := 0 to System.High(FNodes) do
     begin
-      FMatrix[I].Size := System.Length(FVertices);
-      pA := aGraph.AdjLists[FVertices[I]];
-      for J := 0 to System.High(FVertices) do
-        if (I <> J) and pA^.Contains(FVertices[J]) then
+      FMatrix[I].Size := System.Length(FNodes);
+      pA := aGraph.AdjLists[FNodes[I]];
+      for J := 0 to System.High(FNodes) do
+        if (I <> J) and pA^.Contains(FNodes[J]) then
           FMatrix[I][J] := True;
     end;
 end;
@@ -551,28 +526,28 @@ begin
         end;
       I := aSub.Bsf;
       NewCand := aCand;
-      NewCand[FVertices[I]] := True;
+      NewCand[FNodes[I]] := True;
       NewSub := aSub.Difference(FMatrix[I]);
       NewSub[I] := False;
       Extend(NewSub, NewCand);
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
-      NewCand[FVertices[I]] := False;
+      NewCand[FNodes[I]] := False;
       for J in aSub.Intersection(FMatrix[I]) do
         begin
-          NewCand[FVertices[J]] := True;
+          NewCand[FNodes[J]] := True;
           NewSub := aSub.Difference(FMatrix[J]);
           NewSub[J] := False;
           Extend(NewSub, NewCand);
           if NewCand.PopCount >= System.High(FRecentBest) then
             exit;
-          NewCand[FVertices[I]] := True;
+          NewCand[FNodes[I]] := True;
           NewSub.Subtract(FMatrix[I]);
           Extend(NewSub, NewCand);
           if NewCand.PopCount >= System.Length(FRecentBest) then
             exit;
-          NewCand[FVertices[I]] := False;
-          NewCand[FVertices[J]] := False;
+          NewCand[FNodes[I]] := False;
+          NewCand[FNodes[J]] := False;
         end;
     end
   else
@@ -604,14 +579,14 @@ var
   I, J: SizeInt;
   pA: PAdjList;
 begin
-  FVertices := aGraph.SortVerticesByDegree(soDesc);
-  System.SetLength(FMatrix, System.Length(FVertices));
-  for I := 0 to Pred(System.High(FVertices)) do
+  FNodes := aGraph.SortNodesByDegree(soDesc);
+  System.SetLength(FMatrix, System.Length(FNodes));
+  for I := 0 to Pred(System.High(FNodes)) do
     begin
       FMatrix[I].InitZero;
-      pA := aGraph.AdjLists[FVertices[I]];
-      for J := 0 to System.High(FVertices) do
-        if (I <> J) and pA^.Contains(FVertices[J]) then
+      pA := aGraph.AdjLists[FNodes[I]];
+      for J := 0 to System.High(FNodes) do
+        if (I <> J) and pA^.Contains(FNodes[J]) then
           FMatrix[I][J] := True;
     end;
 end;
@@ -632,28 +607,28 @@ begin
         end;
       I := aSub.Bsf;
       NewCand := aCand;
-      NewCand[FVertices[I]] := True;
+      NewCand[FNodes[I]] := True;
       NewSub := aSub.Difference(FMatrix[I]);
       NewSub[I] := False;
       Extend(NewSub, NewCand);
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
-      NewCand[FVertices[I]] := False;
+      NewCand[FNodes[I]] := False;
       for J in aSub.Intersection(FMatrix[I]) do
         begin
-          NewCand[FVertices[J]] := True;
+          NewCand[FNodes[J]] := True;
           NewSub := aSub.Difference(FMatrix[J]);
           NewSub[J] := False;
           Extend(NewSub, NewCand);
           if NewCand.PopCount >= System.High(FRecentBest) then
             exit;
-          NewCand[FVertices[I]] := True;
+          NewCand[FNodes[I]] := True;
           NewSub.Subtract(FMatrix[I]);
           Extend(NewSub, NewCand);
           if NewCand.PopCount >= System.Length(FRecentBest) then
             exit;
-          NewCand[FVertices[I]] := False;
-          NewCand[FVertices[J]] := False;
+          NewCand[FNodes[I]] := False;
+          NewCand[FNodes[J]] := False;
         end;
     end
   else
@@ -735,7 +710,7 @@ begin
   FCancel := False;
   FRecentBest := aGraph.ApproxMinDominatingSet;
   FMatrix := aGraph.CreateSkeleton;
-  Sub.AssignArray(aGraph.SortVerticesByDegree(soDesc));
+  Sub.AssignArray(aGraph.SortNodesByDegree(soDesc));
   Extend(Sub, Cand{%H-});
   aExact := not FCancel;
   Result := FRecentBest;
