@@ -51,6 +51,7 @@ type
   TIntVector       = specialize TGLiteVector<SizeInt>;
   TIntVectorHelper = specialize TGComparableVectorHelper<SizeInt>;
   TIntArrayVector  = specialize TGLiteVector<TIntArray>;
+  TIntVectorArray  = array of TIntVector;
   TIntStack        = specialize TGLiteStack<SizeInt>;
   TIntQueue        = specialize TGLiteQueue<SizeInt>;
   TIntDeque        = specialize TGLiteDeque<SizeInt>;

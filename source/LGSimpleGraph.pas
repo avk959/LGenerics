@@ -215,6 +215,8 @@ type
   { returns number of vertices(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
+  { returns in corresponding component of the result vector of indices of the connected component }
+    function  GetSeparates: TIntVectorArray;
     function  IsTree: Boolean;
     function  CyclomaticNumber: SizeInt;
   { checks whether the graph is regular(that is, the degree of all its vertices equal);
@@ -2410,6 +2412,28 @@ begin
     Result := CountPop(SeparateTag(aIndex))
   else
     Result := VertexCount;
+end;
+
+function TGSimpleGraph.GetSeparates: TIntVectorArray;
+var
+  Tags: TIntArray;
+  CurrIndex, CurrTag, I: SizeInt;
+begin
+  if IsEmpty then
+    exit(nil);
+  Tags := CreateIntArray;
+  CurrIndex := NULL_INDEX;
+  System.SetLength(Result, SeparateCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      CurrTag := SeparateTag(I);
+      if Tags[CurrTag] = NULL_INDEX then
+        begin
+          Inc(CurrIndex);
+          Tags[CurrTag] := CurrIndex;
+        end;
+      Result[Tags[CurrTag]].Add(I);
+    end;
 end;
 
 function TGSimpleGraph.IsTree: Boolean;
