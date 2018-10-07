@@ -128,6 +128,7 @@ type
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GreedyColor(out aColors: TIntArray): SizeInt;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -139,9 +140,9 @@ type
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CreateDegreeArray: TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
-    function  SortVerticesByWidth(o: TSortOrder): TIntArray;
+    function  SortNodesByWidth(o: TSortOrder): TIntArray;
     function  SortComplementByWidth: TIntArray;
-    function  SortVerticesByDegree(o: TSortOrder): TIntArray;
+    function  SortNodesByDegree(o: TSortOrder): TIntArray;
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
   public
@@ -303,7 +304,7 @@ type
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function ApproxMaxMatching: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
-    used ?Edmonds? algorithm }
+    used Edmonds(?) algorithm }
     function MaxMatchingEd: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
     used Pape-Conradt algorithm }
@@ -348,6 +349,9 @@ type
     function  ApproxMaxClique: TIntArray;
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
+  { greedy vertex coloring; returns count of colors;
+    returns colors of the vertices in corresponding components of aColors }
+    function  ApproxVertexColor(out aColors: TIntArray): SizeInt;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -1027,7 +1031,7 @@ var
   CurrPos, Size, Curr, Next: SizeInt;
   p: PAdjItem;
 begin
-  Nodes := SortVerticesByDegree(soAsc);
+  Nodes := SortNodesByDegree(soAsc);
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   CurrPos := 0;
@@ -1453,6 +1457,30 @@ var
   Helper: TDomSetHelper;
 begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
+var
+  Matrix: TSkeleton;
+  P, Q: TIntSet;
+  I: SizeInt;
+begin
+  P.AssignArray(SortNodesByDegree(soDesc));
+  Matrix := CreateSkeleton;
+  System.SetLength(aColors, VertexCount);
+  Result := 0;
+  while P.NonEmpty do
+    begin
+      Inc(Result);
+      Q.Assign(P);
+      while Q.NonEmpty do
+        begin
+          I := Q.Pop;
+          P.Delete(I);
+          Q.Subtract(Matrix[I]^);
+          aColors[I] := Pred(Result);
+        end;
+    end;
 end;
 
 procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -1882,7 +1910,7 @@ begin
     Result[I] := VertexCount - AdjLists[I]^.Count;
 end;
 
-function TGSimpleGraph.SortVerticesByWidth(o: TSortOrder): TIntArray;
+function TGSimpleGraph.SortNodesByWidth(o: TSortOrder): TIntArray;
 var
   I, J: SizeInt;
   List, Stack: TIntSet;
@@ -1965,7 +1993,7 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-function TGSimpleGraph.SortVerticesByDegree(o: TSortOrder): TIntArray;
+function TGSimpleGraph.SortNodesByDegree(o: TSortOrder): TIntArray;
 begin
   Result := CreateIntArrayRange;
   TSortByDegreeHelper.Sort(Result, @CmpByDegree, o);
@@ -3099,7 +3127,7 @@ var
 begin
   if IsEmpty then
     exit(nil);
-  Cand.AssignArray(SortVerticesByWidth(soAsc));
+  Cand.AssignArray(SortNodesByWidth(soAsc));
   while Cand.NonEmpty do
     begin
       I := Cand.Pop;
@@ -3150,6 +3178,28 @@ begin
         exit(False);
     end;
   Result := True;
+end;
+
+function TGSimpleGraph.ApproxVertexColor(out aColors: TIntArray): SizeInt;
+var
+  Whites, Grays: TIntArray;
+  I: SizeInt;
+begin
+  if IsEmpty then
+    begin
+      aColors := nil;
+      exit(0);
+    end;
+  if IsBipartite(Whites, Grays) then
+    begin
+      System.SetLength(aColors, VertexCount);
+      for I in Whites do
+        aColors[I] := 0;
+      for I in Grays do
+        aColors[I] := 1;
+      exit(2);
+    end;
+  Result := GreedyColor(aColors);
 end;
 
 { TGChart }
