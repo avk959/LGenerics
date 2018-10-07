@@ -1367,7 +1367,6 @@ end;
 procedure TGIntWeightDiGraph.TCsMcfHelper.InitPhase;
 var
   I: SizeInt;
-  NextNode: PNode;
   CurrArc: PArc;
 begin
   for I := 0 to Pred(FNodeCount) do
@@ -1375,8 +1374,7 @@ begin
       CurrArc := FNodes[I].FirstArc;
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
-          NextNode := CurrArc^.Target;
-          if (CurrArc^.ResCap > 0) and (FNodes[I].Price + CurrArc^.Cost - NextNode^.Price < 0) then
+          if (CurrArc^.ResCap > 0) and (FNodes[I].Price + CurrArc^.Cost - CurrArc^.Target^.Price < 0) then
             CurrArc^.Push(CurrArc^.ResCap);
           Inc(CurrArc);
         end;
