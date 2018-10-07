@@ -1465,7 +1465,7 @@ var
   P, Q: TIntSet;
   I: SizeInt;
 begin
-  P.AssignArray(SortNodesByDegree(soDesc));
+  P.AssignArray(SortNodesByDegree(soAsc));
   Matrix := CreateSkeleton;
   System.SetLength(aColors, VertexCount);
   Result := 0;
