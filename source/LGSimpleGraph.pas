@@ -1065,13 +1065,13 @@ end;
 
 function TGSimpleGraph.GetApproxMatching2: TIntEdgeArray;
 var
-  Nodes: TINodeQueue;
+  Nodes: TINodePqMin;
   Matched: TBitVector;
   Node: TINode;
   Size, I, Deg, s, d: SizeInt;
   p: PAdjItem;
 begin
-  Nodes := TINodeQueue.Create(VertexCount);
+  Nodes := TINodePqMin.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
     {%H-}Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
   Matched.Size := VertexCount;
@@ -1461,24 +1461,44 @@ end;
 
 function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
 var
-  Matrix: TSkeleton;
-  P, Q: TIntSet;
+  Queue: TINodePqMax;
+  Nodes: array of TINode;
+  P, Q, InQueue: TBoolVector;
+  Node: TINode;
   I: SizeInt;
+  pItem: PAdjItem;
 begin
-  P.AssignArray(SortNodesByDegree(soAsc));
-  Matrix := CreateSkeleton;
+  System.SetLength(Nodes, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Nodes[I] := TINode.Create(I, DegreeI(I));
+  Queue := TINodePqMax.Create(VertexCount);
+  P.InitRange(VertexCount);
   System.SetLength(aColors, VertexCount);
   Result := 0;
   while P.NonEmpty do
     begin
       Inc(Result);
-      Q.Assign(P);
-      while Q.NonEmpty do
+      Q := P;
+      InQueue := P;
+      Queue.MakeEmpty;
+      for I in P do
+        {%H-}Queue.Enqueue(I, Nodes[I]);
+      while Queue.TryDequeue(Node) do
         begin
-          I := Q.Pop;
-          P.Delete(I);
-          Q.Subtract(Matrix[I]^);
-          aColors[I] := Pred(Result);
+          InQueue[Node.Index] := False;
+          if Q[Node.Index] then
+            begin
+              Q[Node.Index] := False;
+              P[Node.Index] := False;
+              aColors[Node.Index] := Pred(Result);
+              for pItem in AdjLists[Node.Index]^ do
+                begin
+                  Dec(Nodes[pItem^.Key].Data);
+                  Q[pItem^.Key] := False;
+                  if InQueue[pItem^.Key] and Q[pItem^.Key] then
+                    Queue.Update(pItem^.Key, Nodes[pItem^.Key]);
+                end;
+            end;
         end;
     end;
 end;
