@@ -226,7 +226,8 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  TINodeQueue = specialize TGPairHeapMin<TINode>;
+  TINodePqMin = specialize TGPairHeapMin<TINode>;
+  TINodePqMax = specialize TGPairHeapMax<TINode>;
 
   { TGJoinableHashList for internal use only; TEntry must provide
       property Key: SizeInt and numeric field Weight }
