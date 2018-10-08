@@ -355,7 +355,7 @@ type
     returns colors of the vertices in corresponding components of aColors }
     function  ApproxVertexColor(out aColors: TIntArray): SizeInt;
   { returns True if aColors is correct coloring of the vertices, False otherwise }
-    function  IsRightVertexColor(constref aColors: TIntArray): Boolean;
+    function  IsRightVertexColoring(constref aColors: TIntArray): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -3249,7 +3249,7 @@ begin
   Result := GreedyColor(aColors);
 end;
 
-function TGSimpleGraph.IsRightVertexColor(constref aColors: TIntArray): Boolean;
+function TGSimpleGraph.IsRightVertexColoring(constref aColors: TIntArray): Boolean;
 var
   Queue: TIntArray;
   Visited: TBitVector;
@@ -3260,6 +3260,8 @@ var
 begin
   if IsEmpty then
     exit(aColors = nil);
+  if System.Length(aColors) <> VertexCount then
+    exit(False);
   System.SetLength(Queue, VertexCount);
   Visited.Size := VertexCount;
   for I := 0 to Pred(VertexCount) do
