@@ -209,9 +209,9 @@ type
     function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
   end;
 
-  { TPapeMatch: Pape and Conradt general matching algorithm from
+  { TPcMatch: Pape and Conradt general matching algorithm from
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
-  TPapeMatch = record
+  TPcMatch = record
   private
     FGraph: TGSimpleGraph;
     FMates,
@@ -219,7 +219,7 @@ type
     FQueue: TIntArray;
     FInTree: TBitVector;
     FMatchCount: SizeInt;
-    procedure Match(aIndex, aMate: SizeInt); inline;
+    procedure DoMatch(aValue, aMate: SizeInt); inline;
     procedure TryAugment(aRoot: SizeInt);
     procedure Init(aGraph: TGSimpleGraph);
   public

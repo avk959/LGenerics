@@ -1181,15 +1181,15 @@ begin
       end;
 end;
 
-{ TGSimpleGraph.TPapeMatch }
+{ TGSimpleGraph.TPcMatch }
 
-procedure TGSimpleGraph.TPapeMatch.Match(aIndex, aMate: SizeInt);
+procedure TGSimpleGraph.TPcMatch.DoMatch(aValue, aMate: SizeInt);
 begin
-  FMates[aIndex] := aMate;
-  FMates[aMate] := aIndex;
+  FMates[aValue] := aMate;
+  FMates[aMate] := aValue;
 end;
 
-procedure TGSimpleGraph.TPapeMatch.TryAugment(aRoot: SizeInt);
+procedure TGSimpleGraph.TPcMatch.TryAugment(aRoot: SizeInt);
 var
   Curr, Next, Mate, Tmp: SizeInt;
   p: PAdjItem;
@@ -1245,7 +1245,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TPapeMatch.Init(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TPcMatch.Init(aGraph: TGSimpleGraph);
 var
   e: TIntEdge;
 begin
@@ -1257,12 +1257,12 @@ begin
   FInTree.Size := aGraph.VertexCount;
   for e in aGraph.GetApproxMatching do
     begin
-      Match(e.Source, e.Destination);
+      DoMatch(e.Source, e.Destination);
       Inc(FMatchCount);
     end;
 end;
 
-function TGSimpleGraph.TPapeMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+function TGSimpleGraph.TPcMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
 var
   I, J: SizeInt;
 begin

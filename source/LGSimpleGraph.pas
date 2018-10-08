@@ -2931,7 +2931,7 @@ end;
 
 function TGSimpleGraph.MaxMatchingPC: TIntEdgeArray;
 var
-  Helper: TPapeMatch;
+  Helper: TPcMatch;
 begin
   if VertexCount < 2 then
     exit([]);
