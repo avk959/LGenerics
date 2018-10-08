@@ -218,8 +218,9 @@ type
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
   { returns in corresponding component of the result vector of indices of the connected component }
     function  GetSeparates: TIntVectorArray;
-    function  IsTree: Boolean;
-    function  CyclomaticNumber: SizeInt;
+    function  IsTree: Boolean; inline;
+    function  IsComplete: Boolean; inline;
+    function  CyclomaticNumber: SizeInt; inline;
   { checks whether the graph is regular(that is, the degree of all its vertices equal);
     an empty graph is considered regular }
     function  IsRegular: Boolean;
@@ -2485,6 +2486,11 @@ begin
   Result := (EdgeCount = Pred(VertexCount)) and Connected;
 end;
 
+function TGSimpleGraph.IsComplete: Boolean;
+begin
+  Result := (EdgeCount shl 1) div VertexCount = Pred(VertexCount);
+end;
+
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
 begin
   Result := EdgeCount - VertexCount + SeparateCount;
@@ -3215,6 +3221,7 @@ begin
         aColors[I] := 1;
       exit(2);
     end;
+  //todo: complete graph
   Result := GreedyColor(aColors);
 end;
 
