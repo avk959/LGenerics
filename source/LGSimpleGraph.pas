@@ -1495,8 +1495,6 @@ begin
                 begin
                   Dec(Degrees[pItem^.Key].Data);
                   CurrIS[pItem^.Key] := False;
-                  if CurrIS[pItem^.Key] then
-                    Queue.Update(pItem^.Key, Degrees[pItem^.Key]);
                 end;
           end;
     end;
