@@ -352,6 +352,8 @@ type
   { greedy vertex coloring; returns count of colors;
     returns colors of the vertices in corresponding components of aColors }
     function  ApproxVertexColor(out aColors: TIntArray): SizeInt;
+  { returns True if aColors is correct coloring of the vertices, False otherwise }
+    function  IsRightVertexColor(constref aColors: TIntArray): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -1462,44 +1464,41 @@ end;
 function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
 var
   Queue: TINodePqMax;
-  Nodes: array of TINode;
-  P, Q, InQueue: TBoolVector;
+  Degrees: array of TINode;
+  Tintless, CurrIS: TBoolVector;
   Node: TINode;
   I: SizeInt;
   pItem: PAdjItem;
 begin
-  System.SetLength(Nodes, VertexCount);
+  System.SetLength(Degrees, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Nodes[I] := TINode.Create(I, DegreeI(I));
+    Degrees[I] := TINode.Create(I, DegreeI(I));
   Queue := TINodePqMax.Create(VertexCount);
-  P.InitRange(VertexCount);
+  Tintless.InitRange(VertexCount);
   System.SetLength(aColors, VertexCount);
   Result := 0;
-  while P.NonEmpty do
+  while Tintless.NonEmpty do
     begin
       Inc(Result);
-      Q := P;
-      InQueue := P;
+      CurrIS := Tintless;
       Queue.MakeEmpty;
-      for I in P do
-        {%H-}Queue.Enqueue(I, Nodes[I]);
+      for I in Tintless do
+        {%H-}Queue.Enqueue(I, Degrees[I]);
       while Queue.TryDequeue(Node) do
-        begin
-          InQueue[Node.Index] := False;
-          if Q[Node.Index] then
-            begin
-              Q[Node.Index] := False;
-              P[Node.Index] := False;
-              aColors[Node.Index] := Pred(Result);
-              for pItem in AdjLists[Node.Index]^ do
+        if CurrIS[Node.Index] then
+          begin
+            CurrIS[Node.Index] := False;
+            Tintless[Node.Index] := False;
+            aColors[Node.Index] := Pred(Result);
+            for pItem in AdjLists[Node.Index]^ do
+              if Tintless[pItem^.Key] then
                 begin
-                  Dec(Nodes[pItem^.Key].Data);
-                  Q[pItem^.Key] := False;
-                  if InQueue[pItem^.Key] and Q[pItem^.Key] then
-                    Queue.Update(pItem^.Key, Nodes[pItem^.Key]);
+                  Dec(Degrees[pItem^.Key].Data);
+                  CurrIS[pItem^.Key] := False;
+                  if CurrIS[pItem^.Key] then
+                    Queue.Update(pItem^.Key, Degrees[pItem^.Key]);
                 end;
-            end;
-        end;
+          end;
     end;
 end;
 
@@ -3220,6 +3219,46 @@ begin
       exit(2);
     end;
   Result := GreedyColor(aColors);
+end;
+
+function TGSimpleGraph.IsRightVertexColor(constref aColors: TIntArray): Boolean;
+var
+  Queue: TIntArray;
+  Visited: TBitVector;
+  I, Curr, CurrColor: SizeInt;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  if IsEmpty then
+    exit(aColors = nil);
+  System.SetLength(Queue, VertexCount);
+  Visited.Size := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Visited[I] := True;
+        Queue[qTail] := I;
+        Inc(qTail);
+        while qHead < qTail do
+          begin
+            Curr := Queue[qHead];
+            Inc(qHead);
+            CurrColor := aColors[Curr];
+            for p in AdjLists[Curr]^ do
+              begin
+                if aColors[p^.Key] = CurrColor then
+                  exit(False);
+                if not Visited[p^.Key] then
+                  begin
+                    Queue[qTail] := p^.Key;
+                    Inc(qTail);
+                    Visited[p^.Key] := True;
+                  end;
+              end;
+          end;
+      end;
+  Result := True;
 end;
 
 { TGChart }
