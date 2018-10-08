@@ -1481,7 +1481,6 @@ begin
     begin
       Inc(Result);
       CurrIS := Tintless;
-      Queue.MakeEmpty;
       for I in Tintless do
         {%H-}Queue.Enqueue(I, Degrees[I]);
       while Queue.TryDequeue(Node) do
