@@ -128,7 +128,7 @@ type
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    function  GreedyColor(var aColors: TIntArray): SizeInt;
+    function  GreedyColor(out aColors: TIntArray): SizeInt;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
@@ -220,7 +220,6 @@ type
     function  GetSeparates: TIntVectorArray;
     function  IsTree: Boolean; inline;
     function  IsComplete: Boolean; inline;
-    function  IsCycle: Boolean; inline;
     function  CyclomaticNumber: SizeInt; inline;
   { checks whether the graph is regular(that is, the degree of all its vertices equal);
     an empty graph is considered regular }
@@ -351,11 +350,12 @@ type
     function  ApproxMaxClique: TIntArray;
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
+    function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
   { greedy vertex coloring; returns count of colors;
     returns colors of the vertices in corresponding components of aColors }
-    function  ApproxVertexColor(out aColors: TIntArray): SizeInt;
-  { returns True if aColors is correct coloring of the vertices, False otherwise }
-    function  IsRightVertexColoring(constref aColors: TIntArray): Boolean;
+    function  ApproxVertexColoring(out aColors: TIntArray): SizeInt;
+  { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
+    function  IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -1463,7 +1463,7 @@ begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GreedyColor(var aColors: TIntArray): SizeInt;
+function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
 var
   Queue: TINodePqMax;
   Degrees: array of TINode;
@@ -1476,6 +1476,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     Degrees[I] := TINode.Create(I, DegreeI(I));
   Queue := TINodePqMax.Create(VertexCount);
+  System.SetLength(aColors, VertexCount);
   Tintless.InitRange(VertexCount);
   Result := 0;
   while Tintless.NonEmpty do
@@ -2491,11 +2492,6 @@ begin
   Result := Connected and ((EdgeCount shl 1) div VertexCount = Pred(VertexCount));
 end;
 
-function TGSimpleGraph.IsCycle: Boolean;
-begin
-  Result := Connected and (VertexCount = EdgeCount);
-end;
-
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
 begin
   Result := EdgeCount - VertexCount + SeparateCount;
@@ -3207,7 +3203,35 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.ApproxVertexColor(out aColors: TIntArray): SizeInt;
+function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
+var
+  Helper: TVColorHelper;
+  Whites, Grays: TIntArray;
+  I: SizeInt;
+begin
+  if IsEmpty then
+    begin
+      aColors := nil;
+      exit(0);
+    end;
+  if IsComplete then
+    begin
+      aColors := CreateIntArrayRange;
+      exit(VertexCount);
+    end;
+  if IsBipartite(Whites, Grays) then
+    begin
+      System.SetLength(aColors, VertexCount);
+      for I in Whites do
+        aColors[I] := 0;
+      for I in Grays do
+        aColors[I] := 1;
+      exit(2);
+    end;
+  Result := Helper.GetColoring(Self, aTimeOut, aColors, aExact);
+end;
+
+function TGSimpleGraph.ApproxVertexColoring(out aColors: TIntArray): SizeInt;
 var
   Whites, Grays: TIntArray;
   I: SizeInt;
@@ -3222,24 +3246,9 @@ begin
       aColors := CreateIntArrayRange;
       exit(VertexCount);
     end;
-  System.SetLength(aColors, VertexCount);
-  if IsCycle then
-    begin
-      for I := 0 to VertexCount - 2 do
-        aColors[I] := Ord(Odd(I));
-      if Odd(VertexCount) then
-        begin
-          aColors[Pred(VertexCount)] := 2;
-          exit(3);
-        end
-      else
-        begin
-          aColors[Pred(VertexCount)] := 1;
-          exit(2);
-        end;
-    end;
   if IsBipartite(Whites, Grays) then
     begin
+      System.SetLength(aColors, VertexCount);
       for I in Whites do
         aColors[I] := 0;
       for I in Grays do
@@ -3249,7 +3258,7 @@ begin
   Result := GreedyColor(aColors);
 end;
 
-function TGSimpleGraph.IsRightVertexColoring(constref aColors: TIntArray): Boolean;
+function TGSimpleGraph.IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
 var
   Queue: TIntArray;
   Visited: TBitVector;
