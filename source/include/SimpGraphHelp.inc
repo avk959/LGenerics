@@ -716,6 +716,75 @@ begin
   Result := FRecentBest;
 end;
 
+{ TGSimpleGraph.TVColorHelper }
+
+procedure TGSimpleGraph.TVColorHelper.BackwardStep();
+begin
+
+end;
+
+procedure TGSimpleGraph.TVColorHelper.RefineColoring;
+var
+  I, vCurr, CurrColCount: SizeInt;
+  ForwardStep: Boolean = True;
+begin
+  vCurr := 0;
+  repeat
+    if SecondsBetween(Now, FStartTime) >= FTimeOut then
+      begin
+        FCancel := True;
+        exit;
+      end;
+    if ForwardStep then
+      begin
+
+      end
+    else
+      begin
+        ForwardStep := True;
+        BackwardStep();
+      end;
+  until (vCurr >= FNodeCount) or (FBestColCount <= FMinColCount);
+end;
+
+function TGSimpleGraph.TVColorHelper.GetChromNumber(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
+  out aExact: Boolean): SizeInt;
+var
+  Elapsed: Integer;
+  I: SizeInt;
+begin
+  raise Exception.Create('not inplemented yet');
+  FStartTime := Now;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FBestColCount := aGraph.GreedyColor(FRecentBest);
+  Elapsed := SecondsBetween(Now, FStartTime);
+  FCancel := True;
+  if Elapsed < FTimeOut then
+    begin
+      FCancel := False;
+      FNodeCount := aGraph.VertexCount;
+      FClique := aGraph.MaxClique(aExact, FTimeOut - Elapsed);
+      FCancel := not aExact;
+      if aExact and (SecondsBetween(Now, FStartTime) < FTimeOut) then //else timeout
+        begin
+          FCancel := False;
+          FMinColCount := System.Length(FClique);
+          if  FMinColCount < FBestColCount then
+            begin
+              FGraph := aGraph;
+              FCurrent := System.Copy(FRecentBest);
+              System.SetLength(FColLists, FNodeCount);
+              for I := 0 to System.High(FColLists) do
+                FColLists[I].InitRange(FBestColCount);
+              RefineColoring;
+            end;
+        end;
+    end;
+  aExact := not FCancel;
+  Result := FBestColCount;
+  aColors := FRecentBest;
+end;
+
 { TGSimpleGraph.THKMatch }
 
 procedure TGSimpleGraph.THKMatch.Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);

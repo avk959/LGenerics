@@ -350,7 +350,7 @@ type
     function  ApproxMaxClique: TIntArray;
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
-    function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
+    function  ChromaticNumber(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
   { greedy vertex coloring; returns count of colors;
     returns colors of the vertices in corresponding components of aColors }
     function  ApproxVertexColoring(out aColors: TIntArray): SizeInt;
@@ -1474,7 +1474,7 @@ var
 begin
   System.SetLength(Degrees, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Degrees[I] := TINode.Create(I, DegreeI(I));
+    Degrees[I] := TINode.Create(I, AdjLists[I]^.Count);
   Queue := TINodePqMax.Create(VertexCount);
   System.SetLength(aColors, VertexCount);
   Tintless.InitRange(VertexCount);
@@ -3203,7 +3203,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
+function TGSimpleGraph.ChromaticNumber(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
 var
   Helper: TVColorHelper;
   Whites, Grays: TIntArray;
@@ -3228,7 +3228,7 @@ begin
         aColors[I] := 1;
       exit(2);
     end;
-  Result := Helper.GetColoring(Self, aTimeOut, aColors, aExact);
+  Result := Helper.GetChromNumber(Self, aTimeOut, aColors, aExact);
 end;
 
 function TGSimpleGraph.ApproxVertexColoring(out aColors: TIntArray): SizeInt;

@@ -132,6 +132,26 @@ type
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
+  { TVColorHelper }
+  TVColorHelper = record
+  private
+    FCurrent,
+    FClique,
+    FRecentBest: TIntArray;
+    FColLists: array of TBoolVector;
+    FGraph: TGSimpleGraph;
+    FMinColCount,
+    FBestColCount,
+    FNodeCount: SizeInt;
+    FStartTime: TDateTime;
+    FTimeOut: Integer;
+    FCancel: Boolean;
+    procedure BackwardStep();
+    procedure RefineColoring;
+  public
+    function GetChromNumber(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+  end;
+
 { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching
     for bipartite graph - see en.wikipedia.org/wiki/Hopcroft–Karp_algorithm }
   THKMatch = record
