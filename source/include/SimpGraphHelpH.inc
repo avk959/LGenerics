@@ -150,7 +150,7 @@ type
     procedure BackwardStep();
     procedure RefineColoring;
   public
-    function GetChromNumber(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+    function GetColors(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
   end;
 
 { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching

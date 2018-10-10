@@ -1489,7 +1489,7 @@ begin
           begin
             CurrIS[Node.Index] := False;
             Tintless[Node.Index] := False;
-            aColors[Node.Index] := Pred(Result);
+            aColors[Node.Index] := Result;
             for pItem in AdjLists[Node.Index]^ do
               if Tintless[pItem^.Key] then
                 begin
@@ -3227,7 +3227,7 @@ begin
         aColors[I] := 1;
       exit(2);
     end;
-  Result := Helper.GetChromNumber(Self, aTimeOut, aColors, aExact);
+  Result := Helper.GetColors(Self, aTimeOut, aColors, aExact);
 end;
 
 function TGSimpleGraph.GreedyVertexColoring(out aColors: TIntArray): SizeInt;
@@ -3259,43 +3259,17 @@ end;
 
 function TGSimpleGraph.IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
 var
-  Queue: TIntArray;
-  Visited: TBitVector;
-  I, Curr, CurrColor: SizeInt;
-  p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
+  e: TEdge;
 begin
   if IsEmpty then
     exit(aColors = nil);
   if System.Length(aColors) <> VertexCount then
     exit(False);
-  System.SetLength(Queue, VertexCount);
-  Visited.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
-      begin
-        Visited[I] := True;
-        Queue[qTail] := I;
-        Inc(qTail);
-        while qHead < qTail do
-          begin
-            Curr := Queue[qHead];
-            Inc(qHead);
-            CurrColor := aColors[Curr];
-            for p in AdjLists[Curr]^ do
-              begin
-                if aColors[p^.Key] = CurrColor then
-                  exit(False);
-                if not Visited[p^.Key] then
-                  begin
-                    Queue[qTail] := p^.Key;
-                    Inc(qTail);
-                    Visited[p^.Key] := True;
-                  end;
-              end;
-          end;
-      end;
+  for e in Edges do
+    if (aColors[e.Source] < 1) or (aColors[e.Source] > VertexCount) or
+       (aColors[e.Destination] < 1) or (aColors[e.Destination] > VertexCount) or
+       (aColors[e.Source] = aColors[e.Destination]) then
+      exit(False);
   Result := True;
 end;
 

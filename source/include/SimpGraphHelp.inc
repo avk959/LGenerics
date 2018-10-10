@@ -751,7 +751,7 @@ begin
   until (CurrIndex >= FNodeCount) or (FBestColCount <= FMinColCount);
 end;
 
-function TGSimpleGraph.TVColorHelper.GetChromNumber(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
+function TGSimpleGraph.TVColorHelper.GetColors(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
   out aExact: Boolean): SizeInt;
 var
   Clique: TIntArray;
