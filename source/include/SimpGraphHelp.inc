@@ -147,7 +147,7 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph, False);
-  FRecentBest := aGraph.ApproxMaxClique;
+  FRecentBest := aGraph.GreedyMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
@@ -164,7 +164,7 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph, True);
-  FRecentBest := aGraph.ApproxMaxIndependentSet;
+  FRecentBest := aGraph.GreedyMIS;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
@@ -328,7 +328,7 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph, False);
-  FRecentBest := aGraph.ApproxMaxClique;
+  FRecentBest := aGraph.GreedyMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   Extend(Cand);
@@ -345,7 +345,7 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   SortMatrixByWidth(aGraph, True);
-  FRecentBest := aGraph.ApproxMaxIndependentSet;
+  FRecentBest := aGraph.GreedyMIS;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   Extend(Cand);
@@ -471,7 +471,7 @@ begin
   FCanceled := False;
   FNodes := aGraph.SortNodesByWidth(soDesc);
   FMatrix := aGraph.CreateSkeleton;
-  FRecentBest := aGraph.ApproxMaxClique;
+  FRecentBest := aGraph.GreedyMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   Extend(Cand);
   Result := FRecentBest;
@@ -564,7 +564,7 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   FillMatrix(aGraph);
-  FRecentBest := aGraph.ApproxMinDominatingSet;
+  FRecentBest := aGraph.GreedyMDS;
   Cand.Size := aGraph.VertexCount;
   Sub.InitRange(aGraph.VertexCount);
   Extend(Sub, Cand);
@@ -645,7 +645,7 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
   FillMatrix(aGraph);
-  FRecentBest := aGraph.ApproxMinDominatingSet;
+  FRecentBest := aGraph.GreedyMDS;
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
   Extend(Sub, Cand);
@@ -708,7 +708,7 @@ begin
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FCancel := False;
-  FRecentBest := aGraph.ApproxMinDominatingSet;
+  FRecentBest := aGraph.GreedyMDS;
   FMatrix := aGraph.CreateSkeleton;
   Sub.AssignArray(aGraph.SortNodesByDegree(soDesc));
   Extend(Sub, Cand{%H-});
@@ -725,10 +725,14 @@ end;
 
 procedure TGSimpleGraph.TVColorHelper.RefineColoring;
 var
-  I, vCurr, CurrColCount: SizeInt;
+  CurrSeq: TIntArray;
+  I, CurrIndex, CurrColCount: SizeInt;
   ForwardStep: Boolean = True;
 begin
-  vCurr := 0;
+  System.SetLength(CurrSeq, FNodeCount);
+  for I := 0 to System.High(CurrSeq) do
+    CurrSeq[FCurrSeq[I]] := I;
+  CurrIndex := 0;
   repeat
     if SecondsBetween(Now, FStartTime) >= FTimeOut then
       begin
@@ -744,31 +748,28 @@ begin
         ForwardStep := True;
         BackwardStep();
       end;
-  until (vCurr >= FNodeCount) or (FBestColCount <= FMinColCount);
+  until (CurrIndex >= FNodeCount) or (FBestColCount <= FMinColCount);
 end;
 
 function TGSimpleGraph.TVColorHelper.GetChromNumber(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
   out aExact: Boolean): SizeInt;
 var
-  Elapsed: Integer;
-  I: SizeInt;
+  Clique: TIntArray;
+  I, J: SizeInt;
 begin
-  raise Exception.Create('not inplemented yet');
+  raise Exception.Create('not implemented yet');
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FBestColCount := aGraph.GreedyColor(FRecentBest);
-  Elapsed := SecondsBetween(Now, FStartTime);
-  FCancel := True;
-  if Elapsed < FTimeOut then
+  FCancel := SecondsBetween(Now, FStartTime) < FTimeOut;
+  if not FCancel then
     begin
-      FCancel := False;
       FNodeCount := aGraph.VertexCount;
-      FClique := aGraph.MaxClique(aExact, FTimeOut - Elapsed);
-      FCancel := not aExact;
-      if aExact and (SecondsBetween(Now, FStartTime) < FTimeOut) then //else timeout
+      Clique := aGraph.GreedyMaxClique;
+      FCancel := SecondsBetween(Now, FStartTime) < FTimeOut;
+      if not FCancel then
         begin
-          FCancel := False;
-          FMinColCount := System.Length(FClique);
+          FMinColCount := System.Length(Clique);
           if  FMinColCount < FBestColCount then
             begin
               FGraph := aGraph;
@@ -776,6 +777,13 @@ begin
               System.SetLength(FColLists, FNodeCount);
               for I := 0 to System.High(FColLists) do
                 FColLists[I].InitRange(FBestColCount);
+              FCurrSeq := FGraph.CreateIntArrayRange;
+              for I := 0 to Pred(FMinColCount) do
+                begin
+                  J := Clique[I];
+                  FCurrSeq[I] := Clique[I];
+                  FCurrSeq[Clique[I]] := J;
+                end;
               RefineColoring;
             end;
         end;

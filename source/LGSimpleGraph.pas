@@ -121,10 +121,10 @@ type
     function  GetMaxIsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure ListIsBP(aOnFind: TOnFindSet);
     procedure ListIsBP256(aOnFind: TOnFindSet);
-    function  GetApproxMaxIS: TIntArray;
-    function  GetApproxMaxIsBP: TIntArray;
-    function  GetApproxMinIS: TIntArray;
-    function  GetApproxMinIsBP: TIntArray;
+    function  GetGreedyMis: TIntArray;
+    function  GetGreedyMisBP: TIntArray;
+    function  GetGreedyMinIs: TIntArray;
+    function  GetGreedyMinIsBP: TIntArray;
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -326,7 +326,7 @@ type
     at the end of the timeout, the best recent solution will be returned, and aExactSolution
     will be set to False }
     function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
-    function  ApproxMaxIndependentSet: TIntArray;
+    function  GreedyMIS: TIntArray;
   { returns True if aVertexSet contains indices of the some maximal independent vertex set, False otherwise }
     function  IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
   { returns indices of the vertices of the some found minimum dominating set in connected graph;
@@ -335,7 +335,7 @@ type
     aTimeOut specifies the timeout in seconds; at the end of the timeout, the best
     recent solution will be returned, and aExactSolution will be set to False }
     function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
-    function  ApproxMinDominatingSet: TIntArray;
+    function  GreedyMDS: TIntArray;
   { returns True if aVertexSet contains indices of the some minimal dominating vertex set, False otherwise }
     function  IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
   { lists all maximal cliques;
@@ -347,13 +347,12 @@ type
     at the end of the timeout, the best recent solution will be returned, and aExactSolution
     will be set to False }
     function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
-    function  ApproxMaxClique: TIntArray;
+    function  GreedyMaxClique: TIntArray;
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
-    function  ChromaticNumber(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
-  { greedy vertex coloring; returns count of colors;
-    returns colors of the vertices in corresponding components of aColors }
-    function  ApproxVertexColoring(out aColors: TIntArray): SizeInt;
+    function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
+  { returns count of colors; returns colors of the vertices in corresponding components of aColors }
+    function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
     function  IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
 {**********************************************************************************************************
@@ -1332,7 +1331,7 @@ begin
   Helper.ListIS(Self, aOnFind);
 end;
 
-function TGSimpleGraph.GetApproxMaxIS: TIntArray;
+function TGSimpleGraph.GetGreedyMis: TIntArray;
 var
   Cand, Stack: TIntSet;
   I, J, CurrPop, MinPop: SizeInt;
@@ -1358,7 +1357,7 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.GetApproxMaxIsBP: TIntArray;
+function TGSimpleGraph.GetGreedyMisBP: TIntArray;
 var
   Matrix: TBoolMatrix;
   Cand: TBoolVector;
@@ -1387,7 +1386,7 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.GetApproxMinIS: TIntArray;
+function TGSimpleGraph.GetGreedyMinIs: TIntArray;
 var
   Cand, Stack: TIntSet;
   I, J, CurrPop, MaxPop: SizeInt;
@@ -1413,7 +1412,7 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.GetApproxMinIsBP: TIntArray;
+function TGSimpleGraph.GetGreedyMinIsBP: TIntArray;
 var
   Matrix: TBoolMatrix;
   Cand: TBoolVector;
@@ -2972,16 +2971,16 @@ begin
       Result := GetMaxIsBP256(aTimeOut, aExactSolution);
 end;
 
-function TGSimpleGraph.ApproxMaxIndependentSet: TIntArray;
+function TGSimpleGraph.GreedyMIS: TIntArray;
 begin
   if IsEmpty then
     exit(nil);
   if VertexCount = 1 then
     exit([0]);
   if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetApproxMaxIS
+    Result := GetGreedyMis
   else
-    Result := GetApproxMaxIsBP;
+    Result := GetGreedyMisBP;
 end;
 
 function TGSimpleGraph.IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
@@ -3038,16 +3037,16 @@ begin
       Result := GetMdsBP256(aTimeOut, aExactSolution);
 end;
 
-function TGSimpleGraph.ApproxMinDominatingSet: TIntArray;
+function TGSimpleGraph.GreedyMDS: TIntArray;
 begin
   if not Connected then
     raise EGraphError.Create(SEMethodNotApplicable);
   if VertexCount < 3 then
     exit([0]);
   if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetApproxMinIS
+    Result := GetGreedyMinIs
   else
-    Result := GetApproxMinIsBP;
+    Result := GetGreedyMinIsBP;
 end;
 
 function TGSimpleGraph.IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
@@ -3143,7 +3142,7 @@ begin
       Result := GetMaxCliqueBP256(aTimeOut, aExactSolution);
 end;
 
-function TGSimpleGraph.ApproxMaxClique: TIntArray;
+function TGSimpleGraph.GreedyMaxClique: TIntArray;
 var
   Cand, Stack, Q: TIntSet;
   I, J: SizeInt;
@@ -3203,7 +3202,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.ChromaticNumber(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
+function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
 var
   Helper: TVColorHelper;
   Whites, Grays: TIntArray;
@@ -3231,7 +3230,7 @@ begin
   Result := Helper.GetChromNumber(Self, aTimeOut, aColors, aExact);
 end;
 
-function TGSimpleGraph.ApproxVertexColoring(out aColors: TIntArray): SizeInt;
+function TGSimpleGraph.GreedyVertexColoring(out aColors: TIntArray): SizeInt;
 var
   Whites, Grays: TIntArray;
   I: SizeInt;

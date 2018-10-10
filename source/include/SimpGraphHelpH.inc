@@ -136,8 +136,9 @@ type
   TVColorHelper = record
   private
     FCurrent,
-    FClique,
-    FRecentBest: TIntArray;
+    FRecentBest,
+    FColCounts,
+    FCurrSeq: TIntArray;
     FColLists: array of TBoolVector;
     FGraph: TGSimpleGraph;
     FMinColCount,
