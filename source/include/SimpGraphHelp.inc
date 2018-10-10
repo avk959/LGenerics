@@ -716,6 +716,16 @@ begin
   Result := FRecentBest;
 end;
 
+{ TGSimpleGraph.TVColorHelper.TAvailColor }
+
+function TGSimpleGraph.TVColorHelper.TAvailColor.GetLowest: SizeInt;
+begin
+  if Count > 0 then
+    Result := Succ(ColorList.Bsf)
+  else
+    Result := 0;
+end;
+
 { TGSimpleGraph.TVColorHelper }
 
 function TGSimpleGraph.TVColorHelper.GreedyInit: SizeInt;
@@ -732,7 +742,8 @@ begin
     Degrees[I] := TINode.Create(I, FGraph.AdjLists[I]^.Count);
   Queue := TINodePqMax.Create(FNodeCount);
   System.SetLength(FRecentBest, FNodeCount);
-  System.SetLength(FSequence, FNodeCount);
+  System.SetLength(FNodeSeq, FNodeCount);
+  System.SetLength(FSeqPos, FNodeCount);
   Colorless.InitRange(FNodeCount);
   Result := 0;
   J := 0;
@@ -748,7 +759,8 @@ begin
             CurrIS[Node.Index] := False;
             Colorless[Node.Index] := False;
             FRecentBest[Node.Index] := Result;
-            FSequence[J] := Node.Index;
+            FNodeSeq[J] := Node.Index;
+            FSeqPos[Node.Index] := J;
             Inc(J);
             for p in FGraph.AdjLists[Node.Index]^ do
               if Colorless[p^.Key] then
@@ -762,16 +774,37 @@ end;
 
 procedure TGSimpleGraph.TVColorHelper.InitBackTrack;
 var
-  I, J: SizeInt;
+  I, NextPos, CurrNode, CurrCol, NearPos: SizeInt;
+  p: PAdjItem;
 begin
   System.SetLength(FColLists, FNodeCount);
   for I := 0 to System.High(FColLists) do
     begin
-      FColLists[I].AvailCount := Pred(FBestColCount);
-      FColLists[I].AvailList.InitRange(Pred(FBestColCount));
+      FColLists[I].Count := FBestColCount;
+      FColLists[I].ColorList.InitRange(FBestColCount);
     end;
-  //todo: init parents and FColLists
-  //for I := 0 to Pred(FNodeCount) do
+  System.SetLength(FParents, FNodeCount);
+  FParents[FNodeSeq[0]] := NULL_INDEX;
+  for I := 0 to Pred(FNodeCount) do
+    begin
+      CurrNode := FNodeSeq[I];
+      CurrCol := Pred(FRecentBest[CurrNode]);
+      Dec(FColLists[CurrNode].Count);
+      FColLists[CurrNode].ColorList[CurrCol] := False;
+      for p in FGraph.AdjLists[CurrNode]^ do
+        begin
+          NextPos := FSeqPos[p^.Key];
+          NearPos := FNodeCount;
+          if NextPos > I then
+            begin
+              Dec(FColLists[p^.Key].Count);
+              FColLists[p^.Key].ColorList[CurrCol] := False;
+              if NextPos < NearPos then
+                NearPos := NextPos;
+            end;
+          FParents[p^.Key] := CurrNode;
+        end;
+    end;
 end;
 
 procedure TGSimpleGraph.TVColorHelper.BackwardStep();
@@ -782,29 +815,41 @@ end;
 procedure TGSimpleGraph.TVColorHelper.Refine;
 var
   CurrColors: TIntArray;
-  I, vCurr, CurrCol, CurrPos, LastPos: SizeInt;
-  GoForward: Boolean = True;
+  I, CurrNode, CurrCol, MaxCol, CurrPos, LastPos: SizeInt;
+  StepIn: Boolean = True;
 begin
   InitBackTrack;
   LastPos := Pred(FNodeCount);
   CurrPos := LastPos;
   CurrCol := FBestColCount;
+  MaxCol := FBestColCount;
   CurrColors := System.Copy(FRecentBest);
-  vCurr := FSequence[CurrPos];
+  CurrNode := FNodeSeq[CurrPos];
 
   repeat
+    //check timeout
     if SecondsBetween(Now, FStartTime) >= FTimeOut then
       begin
         FCancel := True;
         exit;
       end;
     ////////////////
-    if GoForward then
+    if StepIn then
       begin
         ////////////
         if CurrPos = LastPos then
           begin
-
+            //found new coloring
+            //
+            if MaxCol < FBestColCount then
+              begin
+                //and new coloring better
+                //
+                if FBestColCount > FMinColCount then
+                  begin
+                    //backward step
+                  end;
+              end;
           end
         else
           begin
@@ -813,10 +858,10 @@ begin
       end
     else
       begin
-        GoForward := True;
+        StepIn := True;
         BackwardStep();
       end;
-  until (vCurr = 0) or (FBestColCount <= FMinColCount);
+  until (CurrPos = 0) or (FBestColCount <= FMinColCount);
 end;
 
 function TGSimpleGraph.TVColorHelper.GetColors(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
@@ -1408,10 +1453,10 @@ end;
 
 { TGSimpleGraph.TNIMinCut.TNIEdge }
 
-constructor TGSimpleGraph.TNIMinCut.TNIEdge.Create(aTarget: SizeInt; constref w: SizeInt);
+constructor TGSimpleGraph.TNIMinCut.TNIEdge.Create(aTarget, aWeight: SizeInt);
 begin
   Target := aTarget;
-  Weight := w;
+  Weight := aWeight;
 end;
 
 { TGSimpleGraph.TNIMinCut }

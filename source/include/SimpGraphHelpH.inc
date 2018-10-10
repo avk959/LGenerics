@@ -136,16 +136,18 @@ type
   TVColorHelper = record
   strict private
   type
-    TAvailColList = record
-      AvailCount: SizeInt;
-      AvailList: TBoolVector;
+    TAvailColor = record
+      ColorList: TBoolVector;
+      Count: SizeInt;
+      function GetLowest: SizeInt; inline;
     end;
 
   var
     FRecentBest,
-    FSequence,
+    FNodeSeq,
+    FSeqPos,
     FParents: TIntArray;
-    FColLists: array of TAvailColList;
+    FColLists: array of TAvailColor;
     FGraph: TGSimpleGraph;
     FMinColCount,
     FBestColCount,
@@ -195,23 +197,23 @@ type
 
   { TBfsMatch: simple BFS matching algorithm for bipartite graph }
   TBfsMatch = record
-   strict private
-     FGraph: TGSimpleGraph;
-     FMates,
-     FParents,
-     FQueue: TIntArray;
-     FVisited: TBitVector;
-     FWhites: TBoolVector;
-     FMatchCount: SizeInt;
-     procedure Match(aNode, aMate: SizeInt); inline;
-     procedure Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
-     function  FindAugmentPath(aRoot: SizeInt): SizeInt;
-     procedure AlternatePath(aRoot: SizeInt);
-     procedure BfsMatch;
-     function  CreateEdges: TIntEdgeArray;
-   public
-     function  GetMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
-   end;
+  strict private
+    FGraph: TGSimpleGraph;
+    FMates,
+    FParents,
+    FQueue: TIntArray;
+    FVisited: TBitVector;
+    FWhites: TBoolVector;
+    FMatchCount: SizeInt;
+    procedure Match(aNode, aMate: SizeInt); inline;
+    procedure Init(aGraph: TGSimpleGraph; constref w, g: TIntArray);
+    function  FindAugmentPath(aRoot: SizeInt): SizeInt;
+    procedure AlternatePath(aRoot: SizeInt);
+    procedure BfsMatch;
+    function  CreateEdges: TIntEdgeArray;
+  public
+    function  GetMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+  end;
 
 { TEdMatch: Edmonds algorithm for maximum cardinality matching }
   TEdMatch = record
@@ -264,7 +266,7 @@ type
       Weight,
       ScanRank: SizeInt;
       Scanned: Boolean;
-      constructor Create(aTarget: SizeInt; constref w: SizeInt);
+      constructor Create(aTarget, aWeight: SizeInt);
       property Key: SizeInt read Target;
     end;
 
