@@ -19,7 +19,7 @@
 
 type
   TBPCliqueIsHelper = record // BP -> bit-parallel
-  private
+  strict private
     FMatrix: TBoolMatrix;
     FCurrSet: TBoolVector;
     FNodes,
@@ -52,7 +52,7 @@ type
   end;
 
   TBPCliqueIsHelper256 = record // BP -> bit-parallel
-  private
+  strict private
     FMatrix: TBitMatrix256;
     FCurrSet: TBits256;
     FNodes,
@@ -75,7 +75,7 @@ type
   end;
 
   TCliqueHelper = record
-  private
+  strict private
     FMatrix: TSkeleton;
     FCurrSet: TIntSet;
     FNodes,
@@ -93,7 +93,7 @@ type
   end;
 
   TBPDomSetHelper = record // BP -> bit-parallel
-  private
+  strict private
     FMatrix: TBoolMatrix;
     FNodes,
     FRecentBest: TIntArray;
@@ -107,7 +107,7 @@ type
   end;
 
   TBPDomSetHelper256 = record // BP -> bit-parallel
-  private
+  strict private
     FMatrix: TBitMatrix256;
     FNodes,
     FRecentBest: TIntArray;
@@ -121,7 +121,7 @@ type
   end;
 
   TDomSetHelper = record
-  private
+  strict private
     FMatrix: TSkeleton;
     FRecentBest: TIntArray;
     FStartTime: TDateTime;
@@ -134,12 +134,18 @@ type
 
   { TVColorHelper }
   TVColorHelper = record
-  private
-    FCurrent,
+  strict private
+  type
+    TAvailColList = record
+      AvailCount: SizeInt;
+      AvailList: TBoolVector;
+    end;
+
+  var
     FRecentBest,
-    FColCounts,
-    FCurrSeq: TIntArray;
-    FColLists: array of TBoolVector;
+    FSequence,
+    FParents: TIntArray;
+    FColLists: array of TAvailColList;
     FGraph: TGSimpleGraph;
     FMinColCount,
     FBestColCount,
@@ -147,8 +153,10 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancel: Boolean;
+    function  GreedyInit: SizeInt;
+    procedure InitBackTrack;
     procedure BackwardStep();
-    procedure RefineColoring;
+    procedure Refine;
   public
     function GetColors(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
   end;
@@ -156,7 +164,7 @@ type
 { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching
     for bipartite graph - see en.wikipedia.org/wiki/Hopcroft–Karp_algorithm }
   THKMatch = record
-  private
+  strict private
   type
     TArc = record
       Target: SizeInt; // index of target node
@@ -187,7 +195,7 @@ type
 
   { TBfsMatch: simple BFS matching algorithm for bipartite graph }
   TBfsMatch = record
-   private
+   strict private
      FGraph: TGSimpleGraph;
      FMates,
      FParents,
@@ -207,7 +215,7 @@ type
 
 { TEdMatch: Edmonds algorithm for maximum cardinality matching }
   TEdMatch = record
-  private
+  strict private
     FGraph: TGSimpleGraph;
     FMates,
     FBase,
@@ -233,7 +241,7 @@ type
   { TPcMatch: Pape and Conradt general matching algorithm from
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
   TPcMatch = record
-  private
+  strict private
     FGraph: TGSimpleGraph;
     FMates,
     FGrannies,
@@ -249,7 +257,7 @@ type
 
   { TNIMinCut: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }
   TNIMinCut = record
-  private
+  strict private
   type
     TNIEdge = record
       Target,

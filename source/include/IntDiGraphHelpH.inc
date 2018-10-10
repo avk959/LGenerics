@@ -23,7 +23,7 @@ type
   { THPrHelper: an implementation of the high-level push-relabel method;
     B.V. Cherkassky, A.V. Goldberg: On Implementing Push-Relabel Method for the Maximum Flow Problem. }
   THPrHelper = record
-  private
+  strict private
   type
     PNode = ^TNode;
     PArc  = ^TArc;
@@ -101,7 +101,7 @@ type
 
   { TDinitzHelper: implementation of scaling Dinitz's maxflow algorithm }
   TDinitzHelper = record
-  private
+  strict private
   type
     PNode = ^TNode;
     PArc  = ^TArc;
@@ -147,7 +147,7 @@ type
 
   { TBgMcfHelper: simpliest mincost-flow algorithm: shortest augmenting paths(Busacker and Gowen?) }
   TBgMcfHelper = record
-  private
+  strict private
   type
     PNode  = ^TNode;
     PArc   = ^TArc;
@@ -207,7 +207,7 @@ type
       Minimum-Cost Flow Problem";
     todo: need to implement crutial heurictics }
   TCsMcfHelper = record
-  private
+  strict private
   type
     PNode  = ^TNode;
     PArc   = ^TArc;

@@ -42,7 +42,7 @@ type
   end;
 
   TIntHashSet = record
-  private
+  strict private
   type
     TTable = specialize TGLiteIntHashTable<SizeInt, TIntValue>;
     PEntry = TTable.PEntry;
@@ -59,7 +59,7 @@ type
       property  Current: SizeInt read GetCurrent;
     end;
 
-  private
+  strict private
     FTable: TTable;
     function  GetCount: SizeInt; inline;
   public
@@ -79,7 +79,7 @@ type
   end;
 
   TIntPair = packed record
-  private
+  strict private
     FLess,
     FGreater: SizeInt;
   public
@@ -94,7 +94,7 @@ type
   PIntPair = ^TIntPair;
 
   TIntPairSet = record
-  private
+  strict private
   type
     TTable = specialize TGLiteHashTableLP<TIntPair, TIntPair, TIntPair>;
   var
@@ -121,7 +121,7 @@ type
   end;
 
   generic TGBinHeapMin<T> = record // for internal use only
-  private
+  strict private
   type
     THeap = array of T;
 
@@ -145,7 +145,7 @@ type
   end;
 
   generic TGPairHeapMin<T> = record // for internal use only
-  private
+  strict private
   type
     PNode = ^TNode;
     TNode = record
@@ -187,7 +187,7 @@ type
   end;
 
   generic TGPairHeapMax<T> = record // for internal use only
-  private
+  strict private
   type
     PNode = ^TNode;
     TNode = record
@@ -232,7 +232,7 @@ type
   { TGJoinableHashList for internal use only; TEntry must provide
       property Key: SizeInt and numeric field Weight }
   generic TGJoinableHashList<TEntry> = record
-  private
+  strict private
   type
     TTable = specialize TGLiteIntHashTable<SizeInt, TEntry>;
   public
@@ -240,7 +240,7 @@ type
     TEnumerator = TTable.TEnumerator;
     PEntry      = ^TEntry;
 
-  private
+  strict private
     FTable: TTable;
     function  GetCount: SizeInt; inline;
   public
@@ -258,7 +258,7 @@ type
   end;
 
   TSimpleStack = record
-  private
+  strict private
     Items: TIntArray;
     Top: SizeInt;
     function  GetCapacity: SizeInt; inline;

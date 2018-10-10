@@ -718,75 +718,123 @@ end;
 
 { TGSimpleGraph.TVColorHelper }
 
+function TGSimpleGraph.TVColorHelper.GreedyInit: SizeInt;
+var
+  Queue: TINodePqMax;
+  Degrees: array of TINode;
+  Colorless, CurrIS: TBoolVector;
+  Node: TINode;
+  I, J: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(Degrees, VertexCount);
+  for I := 0 to Pred(FNodeCount) do
+    Degrees[I] := TINode.Create(I, FGraph.AdjLists[I]^.Count);
+  Queue := TINodePqMax.Create(FNodeCount);
+  System.SetLength(FRecentBest, FNodeCount);
+  System.SetLength(FSequence, FNodeCount);
+  Colorless.InitRange(FNodeCount);
+  Result := 0;
+  J := 0;
+  while Colorless.NonEmpty do
+    begin
+      Inc(Result);
+      CurrIS := Colorless;
+      for I in Colorless do
+        {%H-}Queue.Enqueue(I, Degrees[I]);
+      while Queue.TryDequeue(Node) do
+        if CurrIS[Node.Index] then
+          begin
+            CurrIS[Node.Index] := False;
+            Colorless[Node.Index] := False;
+            FRecentBest[Node.Index] := Result;
+            FSequence[J] := Node.Index;
+            Inc(J);
+            for p in FGraph.AdjLists[Node.Index]^ do
+              if Colorless[p^.Key] then
+                begin
+                  Dec(Degrees[p^.Key].Data);
+                  CurrIS[p^.Key] := False;
+                end;
+          end;
+    end;
+end;
+
+procedure TGSimpleGraph.TVColorHelper.InitBackTrack;
+var
+  I, J: SizeInt;
+begin
+  System.SetLength(FColLists, FNodeCount);
+  for I := 0 to System.High(FColLists) do
+    begin
+      FColLists[I].AvailCount := Pred(FBestColCount);
+      FColLists[I].AvailList.InitRange(Pred(FBestColCount));
+    end;
+  //todo: init parents and FColLists
+  //for I := 0 to Pred(FNodeCount) do
+end;
+
 procedure TGSimpleGraph.TVColorHelper.BackwardStep();
 begin
 
 end;
 
-procedure TGSimpleGraph.TVColorHelper.RefineColoring;
+procedure TGSimpleGraph.TVColorHelper.Refine;
 var
-  CurrSeq: TIntArray;
-  I, CurrIndex, CurrColCount: SizeInt;
-  ForwardStep: Boolean = True;
+  CurrColors: TIntArray;
+  I, vCurr, CurrCol, CurrPos, LastPos: SizeInt;
+  GoForward: Boolean = True;
 begin
-  System.SetLength(CurrSeq, FNodeCount);
-  for I := 0 to System.High(CurrSeq) do
-    CurrSeq[FCurrSeq[I]] := I;
-  CurrIndex := 0;
+  InitBackTrack;
+  LastPos := Pred(FNodeCount);
+  CurrPos := LastPos;
+  CurrCol := FBestColCount;
+  CurrColors := System.Copy(FRecentBest);
+  vCurr := FSequence[CurrPos];
+
   repeat
     if SecondsBetween(Now, FStartTime) >= FTimeOut then
       begin
         FCancel := True;
         exit;
       end;
-    if ForwardStep then
+    ////////////////
+    if GoForward then
       begin
+        ////////////
+        if CurrPos = LastPos then
+          begin
 
+          end
+        else
+          begin
+
+          end;
       end
     else
       begin
-        ForwardStep := True;
+        GoForward := True;
         BackwardStep();
       end;
-  until (CurrIndex >= FNodeCount) or (FBestColCount <= FMinColCount);
+  until (vCurr = 0) or (FBestColCount <= FMinColCount);
 end;
 
 function TGSimpleGraph.TVColorHelper.GetColors(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
   out aExact: Boolean): SizeInt;
-var
-  Clique: TIntArray;
-  I, J: SizeInt;
 begin
   raise Exception.Create('not implemented yet');
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
-  FBestColCount := aGraph.GreedyColor(FRecentBest);
+  FBestColCount := GreedyInit;
   FCancel := SecondsBetween(Now, FStartTime) < FTimeOut;
   if not FCancel then
     begin
       FNodeCount := aGraph.VertexCount;
-      Clique := aGraph.GreedyMaxClique;
+      FGraph := aGraph;
+      FMinColCount := System.Length(aGraph.GreedyMaxClique);
       FCancel := SecondsBetween(Now, FStartTime) < FTimeOut;
-      if not FCancel then
-        begin
-          FMinColCount := System.Length(Clique);
-          if  FMinColCount < FBestColCount then
-            begin
-              FGraph := aGraph;
-              FCurrent := System.Copy(FRecentBest);
-              System.SetLength(FColLists, FNodeCount);
-              for I := 0 to System.High(FColLists) do
-                FColLists[I].InitRange(FBestColCount);
-              FCurrSeq := FGraph.CreateIntArrayRange;
-              for I := 0 to Pred(FMinColCount) do
-                begin
-                  J := Clique[I];
-                  FCurrSeq[I] := Clique[I];
-                  FCurrSeq[Clique[I]] := J;
-                end;
-              RefineColoring;
-            end;
-        end;
+      if not FCancel and (FMinColCount < FBestColCount) then
+        Refine;
     end;
   aExact := not FCancel;
   Result := FBestColCount;
