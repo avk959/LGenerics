@@ -3552,15 +3552,21 @@ begin
   Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
 end;
 
-procedure TGCustomDotWriter.SaveToDot(aGraph: TGraph; const aFileName: string);
+procedure TGCustomDotWriter.SaveToStream(aGraph: TGraph; aStream: TStream);
 var
   Dot: utf8string;
+begin
+  Dot := Graph2Dot(aGraph);
+  aStream.WriteBuffer(Pointer(Dot)^, System.Length(Dot));
+end;
+
+procedure TGCustomDotWriter.SaveToFile(aGraph: TGraph; const aFileName: string);
+var
   fs: TFileStream;
 begin
   fs := TFileStream.Create(aFileName, fmCreate);
   try
-    Dot := Graph2Dot(aGraph);
-    fs.WriteBuffer(Pointer(Dot)^, System.Length(Dot));
+    SaveToStream(aGraph, fs);
   finally
     fs.Free;
   end;

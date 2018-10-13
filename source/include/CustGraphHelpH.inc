@@ -391,7 +391,7 @@ type
     class property ZeroWeight: TWeight read CFZeroWeight;
   end;
 
-  { TGCustomDotWriter basic writer into Graphviz dot format }
+  { TGCustomDotWriter: basic writer into Graphviz dot format }
   generic TGCustomDotWriter<TVertex, TEdgeData, TEqRel> = class abstract
   public
   type
@@ -414,7 +414,8 @@ type
     function Graph2Dot(aGraph: TGraph): utf8string; virtual; abstract;
     function DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; virtual;
   public
-    procedure SaveToDot(aGraph: TGraph; const aFileName: string);
+    procedure SaveToStream(aGraph: TGraph; aStream: TStream);
+    procedure SaveToFile(aGraph: TGraph; const aFileName: string);
     property Direction: TWriteDirection read FDirection write FDirection;
     property OnStartWrite: TOnStartWrite read FOnStartWrite write FOnStartWrite;
     property OnWriteVertex: TOnWriteVertex read FOnWriteVertex write FOnWriteVertex;
