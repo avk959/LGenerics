@@ -271,7 +271,7 @@ type
     function  MinCut: SizeInt;
     function  MinCut(out aCut: TCut): SizeInt;
   { returns array of the edges that cross the minimum cut }
-    function  CrossMinCut: TIntEdgeArray;
+    function  MinCutCrossing: TIntEdgeArray;
   { returns adjacency matrix of the complement graph;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
     function  ComplementMatrix: TAdjacencyMatrix;
@@ -350,7 +350,9 @@ type
     function  GreedyMaxClique: TIntArray;
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
-    function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
+  { returns count of colors; returns colors of the vertices in corresponding components of aColors;
+    param aMissCount defines maximum number of failed trials in a row(?~10000)}
+    function  ApproxVertexColoring(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
@@ -1466,7 +1468,7 @@ function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
 var
   Queue: TINodePqMax;
   Degrees: array of TINode;
-  Tintless, CurrIS: TBoolVector;
+  Achromatic, CurrIS: TBoolVector;
   Node: TINode;
   I: SizeInt;
   pItem: PAdjItem;
@@ -1476,22 +1478,22 @@ begin
     Degrees[I] := TINode.Create(I, AdjLists[I]^.Count);
   Queue := TINodePqMax.Create(VertexCount);
   System.SetLength(aColors, VertexCount);
-  Tintless.InitRange(VertexCount);
+  Achromatic.InitRange(VertexCount);
   Result := 0;
-  while Tintless.NonEmpty do
+  while Achromatic.NonEmpty do
     begin
       Inc(Result);
-      CurrIS := Tintless;
-      for I in Tintless do
+      CurrIS := Achromatic;
+      for I in Achromatic do
         {%H-}Queue.Enqueue(I, Degrees[I]);
       while Queue.TryDequeue(Node) do
         if CurrIS[Node.Index] then
           begin
             CurrIS[Node.Index] := False;
-            Tintless[Node.Index] := False;
+            Achromatic[Node.Index] := False;
             aColors[Node.Index] := Result;
             for pItem in AdjLists[Node.Index]^ do
-              if Tintless[pItem^.Key] then
+              if Achromatic[pItem^.Key] then
                 begin
                   Dec(Degrees[pItem^.Key].Data);
                   CurrIS[pItem^.Key] := False;
@@ -2738,7 +2740,7 @@ begin
   aCut.B := B.ToArray;
 end;
 
-function TGSimpleGraph.CrossMinCut: TIntEdgeArray;
+function TGSimpleGraph.MinCutCrossing: TIntEdgeArray;
 var
   Helper: TNIMinCut;
   Cut: TIntSet;
@@ -3202,9 +3204,9 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
+function TGSimpleGraph.ApproxVertexColoring(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
 var
-  Helper: TVColorHelper;
+  Helper: TApproxColHelper;
   Whites, Grays: TIntArray;
   I: SizeInt;
 begin
@@ -3227,7 +3229,7 @@ begin
         aColors[I] := 1;
       exit(2);
     end;
-  Result := Helper.GetColors(Self, aTimeOut, aColors, aExact);
+  Result := Helper.Colorize(Self, aMissCount, aColors);
 end;
 
 function TGSimpleGraph.GreedyVertexColoring(out aColors: TIntArray): SizeInt;
@@ -3491,7 +3493,7 @@ end;
 
 function TIntChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
-  Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]);
+  Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]) + ';';
 end;
 
 { TStrChart }
@@ -3567,7 +3569,7 @@ end;
 
 function TStrChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
-  Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '"';
+  Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '";';
 end;
 
 { TGWeightedGraph }

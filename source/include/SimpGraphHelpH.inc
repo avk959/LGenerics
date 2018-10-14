@@ -132,35 +132,31 @@ type
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
-  { TVColorHelper }
-  TVColorHelper = record
+  { TApproxColHelper }
+  TApproxColHelper = object
   strict private
   type
-    TAvailColor = record
-      ColorList: TBoolVector;
-      Count: SizeInt;
-      function GetLowest: SizeInt; inline;
+    TNode = record
+      Index: SizeInt;
+      Weight: Single;
     end;
+    THelper = specialize TGDelegatedArrayHelper<TNode>;
 
   var
+    FNodes: array of TNode;
     FRecentBest,
-    FNodeSeq,
-    FSeqPos,
-    FParents: TIntArray;
-    FColLists: array of TAvailColor;
+    FColorMap,
+    FNodePos: TIntArray;
     FGraph: TGSimpleGraph;
-    FMinColCount,
     FBestColCount,
-    FNodeCount: SizeInt;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
-    FCancel: Boolean;
-    function  GreedyInit: SizeInt;
-    procedure InitBackTrack;
-    procedure BackwardStep();
-    procedure Refine;
+    FNodeCount,
+    FUpperBound,
+    FParam: SizeInt;
+    procedure InitColorize;
+    procedure DoColorize;
+    function NodeCmp(constref L, R: TNode): SizeInt;
   public
-    function GetColors(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+    function Colorize(aGraph: TGSimpleGraph; aParam: Integer; out aColors: TIntArray): SizeInt;
   end;
 
 { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching
