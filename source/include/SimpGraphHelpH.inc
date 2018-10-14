@@ -139,24 +139,26 @@ type
     TNode = record
       Index: SizeInt;
       Weight: Single;
+      class operator = (constref L, R: TNode): Boolean; inline;
+      class operator <>(constref L, R: TNode): Boolean; inline;
+      class operator > (constref L, R: TNode): Boolean; inline;
+      class operator < (constref L, R: TNode): Boolean; inline;
+      class operator >=(constref L, R: TNode): Boolean; inline;
+      class operator <=(constref L, R: TNode): Boolean; inline;
     end;
-    THelper = specialize TGDelegatedArrayHelper<TNode>;
+    TQueue = specialize TGPairHeapMax<TNode>;
 
   var
     FNodes: array of TNode;
     FRecentBest,
-    FColorMap,
-    FNodePos: TIntArray;
+    FColorMap: TIntArray;
     FGraph: TGSimpleGraph;
     FBestColCount,
     FNodeCount,
-    FUpperBound,
-    FParam: SizeInt;
-    procedure InitColorize;
+    FMissCount: SizeInt;
     procedure DoColorize;
-    function NodeCmp(constref L, R: TNode): SizeInt;
   public
-    function Colorize(aGraph: TGSimpleGraph; aParam: Integer; out aColors: TIntArray): SizeInt;
+    function Colorize(aGraph: TGSimpleGraph; aMissCount: Integer; out aColors: TIntArray): SizeInt;
   end;
 
 { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching

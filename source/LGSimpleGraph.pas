@@ -351,7 +351,7 @@ type
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
-    param aMissCount defines maximum number of failed trials in a row(?~10000)}
+    param aMissCount defines maximum number of failed trials in a row(?~1000)}
     function  ApproxVertexColoring(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;

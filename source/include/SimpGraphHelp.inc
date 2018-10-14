@@ -716,85 +716,106 @@ begin
   Result := FRecentBest;
 end;
 
+{ TGSimpleGraph.TApproxColHelper.TNode }
+
+class operator TGSimpleGraph.TApproxColHelper.TNode. = (constref L, R: TNode): Boolean;
+begin
+  Result := L.Weight = R.Weight;
+end;
+
+class operator TGSimpleGraph.TApproxColHelper.TNode.<>(constref L, R: TNode): Boolean;
+begin
+  Result := L.Weight <> R.Weight;
+end;
+
+class operator TGSimpleGraph.TApproxColHelper.TNode.>(constref L, R: TNode): Boolean;
+begin
+  Result := L.Weight > R.Weight;
+end;
+
+class operator TGSimpleGraph.TApproxColHelper.TNode.<(constref L, R: TNode): Boolean;
+begin
+  Result := L.Weight < R.Weight;
+end;
+
+class operator TGSimpleGraph.TApproxColHelper.TNode.>=(constref L, R: TNode): Boolean;
+begin
+  Result := L.Weight >= R.Weight;
+end;
+
+class operator TGSimpleGraph.TApproxColHelper.TNode.<=(constref L, R: TNode): Boolean;
+begin
+  Result := L.Weight <= R.Weight;
+end;
+
 { TGSimpleGraph.TApproxColHelper }
 
-procedure TGSimpleGraph.TApproxColHelper.InitColorize;
+procedure TGSimpleGraph.TApproxColHelper.DoColorize;
 var
-  I, c, MaxDegree: SizeInt;
+  Queue: TQueue;
+  Nodes: array of TNode;
+  Achromatic, CurrIS: TBoolVector;
+  Node: TNode;
+  m, I, Color: SizeInt;
+  p: PAdjItem;
 begin
-  MaxDegree := 0;
   System.SetLength(FNodes, FNodeCount);
   for I := 0 to Pred(FNodeCount) do
     begin
       FNodes[I].Index := I;
-      c := FGraph.AdjLists[I]^.Count;
-      FNodes[I].Weight := c;
-      if c > MaxDegree then
-        MaxDegree := c;
+      FNodes[I].Weight := FGraph.AdjLists[I]^.Count;
     end;
-  FUpperBound := MaxDegree + 2;
   System.SetLength(FColorMap, FNodeCount);
-  System.SetLength(FNodePos, FNodeCount);
-end;
-
-procedure TGSimpleGraph.TApproxColHelper.DoColorize;
-var
-  AvailColors: TBoolVector;
-  m, I, Pos, Color, MaxColor: SizeInt;
-  p: PAdjItem;
-begin
+  System.SetLength(Nodes, FNodeCount);
   m := 0;
-  while m < FParam do
+  Queue := TQueue.Create(FNodeCount);
+  while m < FMissCount do
     begin
-      THelper.Sort(FNodes, @NodeCmp);
-      for I := 0 to Pred(FNodeCount) do
-        FNodePos[FNodes[I].Index] := I;
-      MaxColor := 1;
-      for Pos := 0 to Pred(FNodeCount) do
+      for I := 0 to System.High(FNodes) do
+       Nodes[I] := FNodes[I];
+      Color := 0;
+      Achromatic.InitRange(FNodeCount);
+      while Achromatic.NonEmpty do
         begin
-          AvailColors.InitRange(FUpperBound);
-          AvailColors[0] := False;
-          for p in FGraph.AdjLists[FNodes[Pos].Index]^ do
-            if FNodePos[p^.Key] < Pos then
-              AvailColors[FColorMap[p^.Key]] := False;
-          Color := AvailColors.Bsf;
-          if Color > MaxColor then
-            MaxColor := Color;
-          FColorMap[FNodes[Pos].Index] := Color;
+          Inc(Color);
+          CurrIS := Achromatic;
+          for I in Achromatic do
+            {%H-}Queue.Enqueue(I, Nodes[I]);
+          while Queue.TryDequeue(Node) do
+            if CurrIS[Node.Index] then
+              begin
+                CurrIS[Node.Index] := False;
+                Achromatic[Node.Index] := False;
+                FColorMap[Node.Index] := Color;
+                for p in FGraph.AdjLists[Node.Index]^ do
+                  if Achromatic[p^.Key] then
+                    begin
+                      Nodes[p^.Key].Weight -= 1;
+                      CurrIS[p^.Key] := False;
+                    end;
+              end;
         end;
-      if MaxColor < FBestColCount then
+      if Color < FBestColCount then
         begin
           m := 0;
-          FBestColCount := MaxColor;
+          FBestColCount := Color;
           FRecentBest := System.Copy(FColorMap);
         end
       else
         for I := 0 to System.High(FColorMap) do
           if FColorMap[I] >= FBestColCount then
-            FNodes[FNodePos[I]].Weight += Random;
+            FNodes[I].Weight += Random;
       Inc(m);
     end;
 end;
 
-function TGSimpleGraph.TApproxColHelper.NodeCmp(constref L, R: TNode): SizeInt;
-begin
-  if L.Weight < R.Weight then
-    Result := 1
-  else
-    if L.Weight > R.Weight then
-      Result := -1
-    else
-      Result := 0;
-end;
-
-function TGSimpleGraph.TApproxColHelper.Colorize(aGraph: TGSimpleGraph; aParam: Integer;
+function TGSimpleGraph.TApproxColHelper.Colorize(aGraph: TGSimpleGraph; aMissCount: Integer;
   out aColors: TIntArray): SizeInt;
 begin
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
-  FParam := aParam;
+  FMissCount := aMissCount;
   FBestColCount := aGraph.GreedyColor(FRecentBest);
-  InitColorize;
   DoColorize;
   Result := FBestColCount;
   aColors := FRecentBest;
