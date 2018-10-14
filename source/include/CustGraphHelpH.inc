@@ -403,7 +403,7 @@ type
 
   protected
   const
-    DIRECTS: array[TWriteDirection] of utf8string = ('rankdir=TB', 'rankdir=LR');
+    DIRECTS: array[TWriteDirection] of utf8string = ('rankdir=TB;', 'rankdir=LR;');
   var
     FGraphMark,
     FEdgeMark: utf8string;
