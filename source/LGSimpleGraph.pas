@@ -221,6 +221,7 @@ type
     function  GetSeparates: TIntVectorArray;
     function  IsTree: Boolean; inline;
     function  IsCycle: Boolean;
+    function  IsWheel(out aHub: SizeInt): Boolean;
     function  IsComplete: Boolean; inline;
     function  CyclomaticNumber: SizeInt; inline;
   { checks whether the graph is regular(that is, the degrees of all its vertices are equal);
@@ -2509,6 +2510,42 @@ var
 begin
   if (VertexCount = EdgeCount) and Connected and IsRegular(d) then
     Result := d = 2
+  else
+    Result := False;
+end;
+
+function TGSimpleGraph.IsWheel(out aHub: SizeInt): Boolean;
+var
+  I, d: SizeInt;
+begin
+  aHub := NULL_INDEX;
+  if Connected and (EdgeCount = Pred(VertexCount) shl 1) then
+    begin
+      if VertexCount > 4 then
+        begin
+          for I := 0 to Pred(VertexCount) do
+            begin
+              d := AdjLists[I]^.Count;
+              if d = Pred(VertexCount) then
+                if aHub <> NULL_INDEX then
+                  begin
+                    aHub := NULL_INDEX;
+                    exit(False);
+                  end
+                else
+                  aHub := d
+              else
+                if d <> 3 then
+                  begin
+                    aHub := NULL_INDEX;
+                    exit(False);
+                  end;
+            end;
+          Result := aHub <> NULL_INDEX;
+        end
+      else
+        Result := (VertexCount = 4) and IsRegular(d);
+    end
   else
     Result := False;
 end;
