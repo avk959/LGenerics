@@ -433,7 +433,7 @@ type
 ***********************************************************************************************************}
 
   { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after next vertex found,
-    OnDone calls after vertex done; if TOnAccept returns False then traversal stops }
+    OnDone calls after vertex done; if OnAccept returns False then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil;
                           OnDone: TOnVisit = nil): SizeInt; inline;
     function  DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil;
@@ -444,7 +444,7 @@ type
     function  DfsTree(constref aRoot: TVertex): TIntArray; inline;
     function  DfsTreeI(aRoot: SizeInt = 0): TIntArray;
   { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
-    if TOnAccept returns False then traversal stops}
+    if OnAccept returns False then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
     function  BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
   { in aVisited returns indices of visited vertices }
