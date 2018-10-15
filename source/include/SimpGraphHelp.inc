@@ -720,6 +720,7 @@ end;
 
 procedure TGSimpleGraph.TVColorHelper.DoColorize(aPrevPos, aMaxColor: SizeInt);
 var
+  AvailColors: TBoolVector;
   Color: SizeInt;
   p: PAdjItem;
 begin
@@ -734,13 +735,13 @@ begin
       FBestColCount := aMaxColor;
       exit;
     end;
-  FAvailColors.InitRange(Succ(FBestColCount));
-  FAvailColors[0] := False;
+  AvailColors.InitRange(Succ(FBestColCount));
+  AvailColors[0] := False;
   Inc(aPrevPos);
   for p in FGraph.AdjLists[aPrevPos]^ do
     if p^.Key < aPrevPos then
-      FAvailColors[FColorMap[p^.Key]] := False;
-  for Color in FAvailColors do
+      AvailColors[FColorMap[p^.Key]] := False;
+  for Color in AvailColors do
     if Color < FBestColCount then
       begin
         if Color > aMaxColor then

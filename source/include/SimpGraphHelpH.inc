@@ -138,7 +138,6 @@ type
     FRecentBest,
     FColorMap: TIntArray;
     FGraph: TGSimpleGraph;
-    FAvailColors: TBoolVector;
     FBestColCount,
     FNodeCount: SizeInt;
     FStartTime: TDateTime;
