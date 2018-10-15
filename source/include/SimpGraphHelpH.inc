@@ -136,12 +136,11 @@ type
   TVColorHelper = record
   strict private
     FRecentBest,
-    FColMap: TIntArray;
+    FColorMap: TIntArray;
     FGraph: TGSimpleGraph;
     FAvailColors: TBoolVector;
     FBestColCount,
-    FNodeCount,
-    FUpperBound: SizeInt;
+    FNodeCount: SizeInt;
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancel: Boolean;

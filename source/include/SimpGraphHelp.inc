@@ -728,52 +728,40 @@ begin
       FCancel := True;
       exit;
     end;
-  if aMaxColor >= FBestColCount then
-    exit;
   if aPrevPos = Pred(FNodeCount) then
     begin
-      FRecentBest := System.Copy(FColMap);
+      FRecentBest := System.Copy(FColorMap);
       FBestColCount := aMaxColor;
       exit;
     end;
-  FAvailColors.InitRange(FUpperBound);
+  FAvailColors.InitRange(Succ(FBestColCount));
   FAvailColors[0] := False;
   Inc(aPrevPos);
   for p in FGraph.AdjLists[aPrevPos]^ do
     if p^.Key < aPrevPos then
-      FAvailColors[FColMap[p^.Key]] := False;
+      FAvailColors[FColorMap[p^.Key]] := False;
   for Color in FAvailColors do
     if Color < FBestColCount then
       begin
         if Color > aMaxColor then
           aMaxColor := Color;
-        FColMap[aPrevPos] := Color;
+        FColorMap[aPrevPos] := Color;
         DoColorize(aPrevPos, aMaxColor);
       end;
 end;
 
 function TGSimpleGraph.TVColorHelper.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
   out aExact: Boolean): SizeInt;
-var
-  I, c, Degree: SizeInt;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FStartTime := Now;
   FBestColCount := aGraph.GreedyVertexColoringSL(1000, FRecentBest);
-  FCancel := SecondsBetween(Now, FStartTime) >= FTimeOut;
+  FCancel := SecondsBetween(Now, FStartTime) > FTimeOut;
   if not FCancel then
     begin
-      Degree := 0;
-      for I := 0 to Pred(FNodeCount) do
-        begin
-          c := FGraph.AdjLists[I]^.Count;
-          if c > Degree then
-            Degree := c;
-        end;
-      FUpperBound := Degree + 2;
-      System.SetLength(FColMap, FNodeCount);
+      System.SetLength(FColorMap, FNodeCount);
       DoColorize(-1, 1);
     end;
   aExact := not FCancel;

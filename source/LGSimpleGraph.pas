@@ -219,11 +219,12 @@ type
   { returns in corresponding component of the result vector of indices of the connected component }
     function  GetSeparates: TIntVectorArray;
     function  IsTree: Boolean; inline;
+    function  IsCycle: Boolean;
     function  IsComplete: Boolean; inline;
     function  CyclomaticNumber: SizeInt; inline;
-  { checks whether the graph is regular(that is, the degree of all its vertices equal);
+  { checks whether the graph is regular(that is, the degrees of all its vertices are equal);
     an empty graph is considered regular }
-    function  IsRegular: Boolean;
+    function  IsRegular(out aDegree: SizeInt): Boolean;
   { checks whether exists any cycle in the same connected component as aRoot;
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
@@ -2494,9 +2495,22 @@ begin
   Result := (EdgeCount = Pred(VertexCount)) and Connected;
 end;
 
+function TGSimpleGraph.IsCycle: Boolean;
+var
+  d: SizeInt;
+begin
+  if (VertexCount = EdgeCount) and Connected and IsRegular(d) then
+    Result := d = 2
+  else
+    Result := False;
+end;
+
 function TGSimpleGraph.IsComplete: Boolean;
 begin
-  Result := Connected and ((EdgeCount shl 1) div VertexCount = Pred(VertexCount));
+  if Connected then
+    Result := (EdgeCount shl 1) div VertexCount = Pred(VertexCount)
+  else
+    Result := False;
 end;
 
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
@@ -2504,16 +2518,20 @@ begin
   Result := EdgeCount - VertexCount + SeparateCount;
 end;
 
-function TGSimpleGraph.IsRegular: Boolean;
+function TGSimpleGraph.IsRegular(out aDegree: SizeInt): Boolean;
 var
-  I, d: SizeInt;
+  I: SizeInt;
 begin
+  aDegree := 0;
   if NonEmpty then
     begin
-      d := DegreeI(0);
+      aDegree := AdjLists[0]^.Count;
       for I := 1 to Pred(VertexCount) do
-        if DegreeI(I) <> d then
-          exit(False);
+        if AdjLists[I]^.Count <> aDegree then
+          begin
+            aDegree := 0;
+            exit(False);
+          end;
     end;
   Result := True;
 end;
@@ -3230,10 +3248,18 @@ begin
     begin
       System.SetLength(aColors, VertexCount);
       for I in Whites do
-        aColors[I] := 0;
-      for I in Grays do
         aColors[I] := 1;
+      for I in Grays do
+        aColors[I] := 2;
       exit(2);
+    end;
+  if IsCycle and Odd(VertexCount) then
+    begin
+      System.SetLength(aColors, VertexCount);
+      for I := 0 to Pred(System.High(aColors)) do
+        aColors[I] := Succ(Ord(Odd(I)));
+      aColors[System.High(aColors)] := 3;
+      exit(3);
     end;
   Result := Helper.Colorize(Self, aTimeOut, aColors, aExact);
 end;
@@ -3258,9 +3284,9 @@ begin
     begin
       System.SetLength(aColors, VertexCount);
       for I in Whites do
-        aColors[I] := 0;
-      for I in Grays do
         aColors[I] := 1;
+      for I in Grays do
+        aColors[I] := 2;
       exit(2);
     end;
   Result := Helper.Colorize(Self, aMissCount, aColors);
@@ -3285,9 +3311,9 @@ begin
     begin
       System.SetLength(aColors, VertexCount);
       for I in Whites do
-        aColors[I] := 0;
-      for I in Grays do
         aColors[I] := 1;
+      for I in Grays do
+        aColors[I] := 2;
       exit(2);
     end;
   Result := GreedyColor(aColors);
