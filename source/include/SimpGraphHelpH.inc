@@ -148,8 +148,8 @@ type
     function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
   end;
 
-  { TApproxColHelper }
-  TApproxColHelper = object
+  { TGreedyColor }
+  TGreedyColor = object
   strict private
   type
     TNode = record

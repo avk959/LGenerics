@@ -128,6 +128,7 @@ type
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
     function  GreedyColor(out aColors: TIntArray): SizeInt;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
@@ -1469,6 +1470,13 @@ var
   Helper: TDomSetHelper;
 begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
+var
+  Helper: TGreedyColor;
+begin
+  Result := Helper.Colorize(Self, aMissCount, aColors);
 end;
 
 function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
@@ -3266,7 +3274,6 @@ end;
 
 function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
 var
-  Helper: TApproxColHelper;
   Whites, Grays: TIntArray;
   I: SizeInt;
 begin
@@ -3289,7 +3296,7 @@ begin
         aColors[I] := 2;
       exit(2);
     end;
-  Result := Helper.Colorize(Self, aMissCount, aColors);
+  Result := GreedyColorSL(aMissCount, aColors);
 end;
 
 function TGSimpleGraph.GreedyVertexColoring(out aColors: TIntArray): SizeInt;
@@ -3321,6 +3328,7 @@ end;
 
 function TGSimpleGraph.IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
 var
+  sCol, dCol: SizeInt;
   e: TEdge;
 begin
   if IsEmpty then
@@ -3328,10 +3336,12 @@ begin
   if System.Length(aColors) <> VertexCount then
     exit(False);
   for e in Edges do
-    if (aColors[e.Source] < 1) or (aColors[e.Source] > VertexCount) or
-       (aColors[e.Destination] < 1) or (aColors[e.Destination] > VertexCount) or
-       (aColors[e.Source] = aColors[e.Destination]) then
-      exit(False);
+    begin
+      sCol := aColors[e.Source];
+      dCol := aColors[e.Destination];
+      if (sCol < 1) or (sCol > VertexCount) or (dCol < 1) or (dCol > VertexCount) or (sCol = dCol) then
+        exit(False);
+    end;
   Result := True;
 end;
 

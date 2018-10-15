@@ -758,7 +758,7 @@ begin
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FStartTime := Now;
-  FBestColCount := aGraph.GreedyVertexColoringSL(1000, FRecentBest);
+  FBestColCount := aGraph.GreedyColorSL(1000, FRecentBest);
   FCancel := SecondsBetween(Now, FStartTime) > FTimeOut;
   if not FCancel then
     begin
@@ -770,41 +770,41 @@ begin
   aColors := FRecentBest;
 end;
 
-{ TGSimpleGraph.TApproxColHelper.TNode }
+{ TGSimpleGraph.TGreedyColor.TNode }
 
-class operator TGSimpleGraph.TApproxColHelper.TNode. = (constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColor.TNode. = (constref L, R: TNode): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGSimpleGraph.TApproxColHelper.TNode.<>(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColor.TNode.<>(constref L, R: TNode): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGSimpleGraph.TApproxColHelper.TNode.>(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColor.TNode.>(constref L, R: TNode): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGSimpleGraph.TApproxColHelper.TNode.<(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColor.TNode.<(constref L, R: TNode): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGSimpleGraph.TApproxColHelper.TNode.>=(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColor.TNode.>=(constref L, R: TNode): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGSimpleGraph.TApproxColHelper.TNode.<=(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColor.TNode.<=(constref L, R: TNode): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-{ TGSimpleGraph.TApproxColHelper }
+{ TGSimpleGraph.TGreedyColor }
 
-procedure TGSimpleGraph.TApproxColHelper.DoColorize;
+procedure TGSimpleGraph.TGreedyColor.DoColorize;
 var
   Queue: TQueue;
   Nodes: array of TNode;
@@ -863,7 +863,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.TApproxColHelper.Colorize(aGraph: TGSimpleGraph; aMissCount: Integer;
+function TGSimpleGraph.TGreedyColor.Colorize(aGraph: TGSimpleGraph; aMissCount: Integer;
   out aColors: TIntArray): SizeInt;
 begin
   FNodeCount := aGraph.VertexCount;
