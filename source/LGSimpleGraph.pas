@@ -351,8 +351,9 @@ type
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
-    param aMissCount defines maximum number of failed trials in a row(?~1000)}
-    function  ApproxVertexColoring(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
+    param aMissCount defines maximum number of failed trials in a row(?~1000);
+    SL - self learning :) }
+    function  GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
@@ -3204,7 +3205,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.ApproxVertexColoring(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
+function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
 var
   Helper: TApproxColHelper;
   Whites, Grays: TIntArray;

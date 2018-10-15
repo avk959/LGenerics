@@ -815,7 +815,7 @@ begin
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FMissCount := aMissCount;
-  FBestColCount := aGraph.GreedyColor(FRecentBest);
+  FBestColCount := FNodeCount;
   DoColorize;
   Result := FBestColCount;
   aColors := FRecentBest;
