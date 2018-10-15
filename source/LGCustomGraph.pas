@@ -2156,9 +2156,9 @@ begin
   Result := FTable.Remove(aValue);
 end;
 
-{ TIntPair }
+{ TIntOrdPair }
 
-class function TIntPair.HashCode(constref aValue: TIntPair): SizeInt;
+class function TIntOrdPair.HashCode(constref aValue: TIntOrdPair): SizeInt;
 begin
 {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
   {$IF DEFINED (CPU64)}
@@ -2173,12 +2173,12 @@ begin
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
 
-class function TIntPair.Equal(constref L, R: TIntPair): Boolean;
+class function TIntOrdPair.Equal(constref L, R: TIntOrdPair): Boolean;
 begin
   Result := (L.Left = R.Left) and (L.Right = R.Right);
 end;
 
-constructor TIntPair.Create(L, R: SizeInt);
+constructor TIntOrdPair.Create(L, R: SizeInt);
 begin
   if L <= R then
     begin
@@ -2192,7 +2192,7 @@ begin
     end;
 end;
 
-function TIntPair.Key: TIntPair;
+function TIntOrdPair.Key: TIntOrdPair;
 begin
   Result := Self;
 end;
@@ -2213,16 +2213,16 @@ function TIntPairSet.Contains(L, R: SizeInt): Boolean;
 var
   Dummy: SizeInt;
 begin
-  Result := FTable.Find(TIntPair.Create(L, R), Dummy) <> nil;
+  Result := FTable.Find(TIntOrdPair.Create(L, R), Dummy) <> nil;
 end;
 
 function TIntPairSet.Add(L, R: SizeInt): Boolean;
 var
   Dummy: SizeInt;
-  p: PIntPair;
-  v: TIntPair;
+  p: PIntOrdPair;
+  v: TIntOrdPair;
 begin
-  v := TIntPair.Create(L, R);
+  v := TIntOrdPair.Create(L, R);
   Result := not FTable.FindOrAdd(v, p, Dummy);
   if Result then
     p^ := v;
@@ -2230,42 +2230,42 @@ end;
 
 function TIntPairSet.Remove(L, R: SizeInt): Boolean;
 begin
-  Result := FTable.Remove(TIntPair.Create(L, R));
+  Result := FTable.Remove(TIntOrdPair.Create(L, R));
 end;
 
-{ TINode }
+{ TIntNode }
 
-class operator TINode. = (constref L, R: TINode): Boolean;
+class operator TIntNode. = (constref L, R: TIntNode): Boolean;
 begin
   Result := L.Data = R.Data;
 end;
 
-class operator TINode.<>(constref L, R: TINode): Boolean;
+class operator TIntNode.<>(constref L, R: TIntNode): Boolean;
 begin
   Result := L.Data <> R.Data;
 end;
 
-class operator TINode.>(constref L, R: TINode): Boolean;
+class operator TIntNode.>(constref L, R: TIntNode): Boolean;
 begin
   Result := L.Data > R.Data;
 end;
 
-class operator TINode.<(constref L, R: TINode): Boolean;
+class operator TIntNode.<(constref L, R: TIntNode): Boolean;
 begin
   Result := L.Data < R.Data;
 end;
 
-class operator TINode.>=(constref L, R: TINode): Boolean;
+class operator TIntNode.>=(constref L, R: TIntNode): Boolean;
 begin
   Result := L.Data >= R.Data;
 end;
 
-class operator TINode.<=(constref L, R: TINode): Boolean;
+class operator TIntNode.<=(constref L, R: TIntNode): Boolean;
 begin
   Result := L.Data <= R.Data;
 end;
 
-constructor TINode.Create(aIndex, aData: SizeInt);
+constructor TIntNode.Create(aIndex, aData: SizeInt);
 begin
   Index := aIndex;
   Data := aData;

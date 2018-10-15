@@ -351,7 +351,12 @@ type
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
-    param aMissCount defines maximum number of failed trials in a row(?~1000);
+    worst case time cost of exact solution O*(n!); aTimeOut specifies the timeout in seconds;
+    at the end of the timeout, the best recent solution will be returned, and aExact
+    will be set to False }
+    function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
+  { returns count of colors; returns colors of the vertices in corresponding components of aColors;
+    param aMissCount specifies maximum number of failed trials in a row(?~1000);
     SL - self learning :) }
     function  GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors }
@@ -371,7 +376,7 @@ type
     property  Density: Double read GetDensity;
   end;
 
-  TLineGraph = class(specialize TGSimpleGraph<TIntPair, TIntValue, TIntPair>);
+  TLineGraph = class(specialize TGSimpleGraph<TIntOrdPair, TIntValue, TIntOrdPair>);
 
   { TGChart: simple outline;
       functor TEqRel must provide:
@@ -1073,13 +1078,13 @@ function TGSimpleGraph.GetApproxMatching2: TIntEdgeArray;
 var
   Nodes: TINodePqMin;
   Matched: TBitVector;
-  Node: TINode;
+  Node: TIntNode;
   Size, I, Deg, s, d: SizeInt;
   p: PAdjItem;
 begin
   Nodes := TINodePqMin.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    {%H-}Nodes.Enqueue(I, TINode.Create(I, DegreeI(I)));
+    {%H-}Nodes.Enqueue(I, TIntNode.Create(I, DegreeI(I)));
   Matched.Size := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
@@ -1468,15 +1473,15 @@ end;
 function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
 var
   Queue: TINodePqMax;
-  Degrees: array of TINode;
+  Degrees: array of TIntNode;
   Achromatic, CurrIS: TBoolVector;
-  Node: TINode;
+  Node: TIntNode;
   I: SizeInt;
   pItem: PAdjItem;
 begin
   System.SetLength(Degrees, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Degrees[I] := TINode.Create(I, AdjLists[I]^.Count);
+    Degrees[I] := TIntNode.Create(I, AdjLists[I]^.Count);
   Queue := TINodePqMax.Create(VertexCount);
   System.SetLength(aColors, VertexCount);
   Achromatic.InitRange(VertexCount);
@@ -2258,13 +2263,13 @@ end;
 function TGSimpleGraph.CreateLineGraph: TLineGraph;
 var
   I, J: SizeInt;
-  vI, vJ: TIntPair;
+  vI, vJ: TIntOrdPair;
   e: TEdge;
 begin
   Result := TLineGraph.Create;
   Result.EnsureCapacity(EdgeCount);
   for e in DistinctEdges do
-    Result.AddVertex(TIntPair.Create(e.Source, e.Destination));
+    Result.AddVertex(TIntOrdPair.Create(e.Source, e.Destination));
   for I := 0 to Result.VertexCount - 2 do
     begin
       vI := Result[I];
@@ -3203,6 +3208,34 @@ begin
         exit(False);
     end;
   Result := True;
+end;
+
+function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
+var
+  Helper: TVColorHelper;
+  Whites, Grays: TIntArray;
+  I: SizeInt;
+begin
+  if IsEmpty then
+    begin
+      aColors := nil;
+      exit(0);
+    end;
+  if IsComplete then
+    begin
+      aColors := CreateIntArrayRange;
+      exit(VertexCount);
+    end;
+  if IsBipartite(Whites, Grays) then
+    begin
+      System.SetLength(aColors, VertexCount);
+      for I in Whites do
+        aColors[I] := 0;
+      for I in Grays do
+        aColors[I] := 1;
+      exit(2);
+    end;
+  Result := Helper.Colorize(Self, aTimeOut, aColors, aExact);
 end;
 
 function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;

@@ -78,25 +78,25 @@ type
     property  Count: SizeInt read GetCount;
   end;
 
-  TIntPair = packed record
+  TIntOrdPair = packed record
   strict private
     FLess,
     FGreater: SizeInt;
   public
-    class function HashCode(constref aValue: TIntPair): SizeInt; static; inline;
-    class function Equal(constref L, R: TIntPair): Boolean; static; inline;
+    class function HashCode(constref aValue: TIntOrdPair): SizeInt; static; inline;
+    class function Equal(constref L, R: TIntOrdPair): Boolean; static; inline;
     constructor Create(L, R: SizeInt);
-    function Key: TIntPair; inline;
+    function Key: TIntOrdPair; inline;
     property Left: SizeInt read FLess;
     property Right: SizeInt read FGreater;
   end;
 
-  PIntPair = ^TIntPair;
+  PIntOrdPair = ^TIntOrdPair;
 
   TIntPairSet = record
   strict private
   type
-    TTable = specialize TGLiteHashTableLP<TIntPair, TIntPair, TIntPair>;
+    TTable = specialize TGLiteHashTableLP<TIntOrdPair, TIntOrdPair, TIntOrdPair>;
   var
     FTable: TTable;
     function GetCount: SizeInt; inline;
@@ -108,15 +108,15 @@ type
     property  Count: SizeInt read GetCount;
   end;
 
-  TINode = record
+  TIntNode = record
     Index,
     Data: SizeInt;
-    class operator = (constref L, R: TINode): Boolean; inline;
-    class operator <>(constref L, R: TINode): Boolean; inline;
-    class operator > (constref L, R: TINode): Boolean; inline;
-    class operator < (constref L, R: TINode): Boolean; inline;
-    class operator >=(constref L, R: TINode): Boolean; inline;
-    class operator <=(constref L, R: TINode): Boolean; inline;
+    class operator = (constref L, R: TIntNode): Boolean; inline;
+    class operator <>(constref L, R: TIntNode): Boolean; inline;
+    class operator > (constref L, R: TIntNode): Boolean; inline;
+    class operator < (constref L, R: TIntNode): Boolean; inline;
+    class operator >=(constref L, R: TIntNode): Boolean; inline;
+    class operator <=(constref L, R: TIntNode): Boolean; inline;
     constructor Create(aIndex, aData: SizeInt);
   end;
 
@@ -226,8 +226,8 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  TINodePqMin = specialize TGPairHeapMin<TINode>;
-  TINodePqMax = specialize TGPairHeapMax<TINode>;
+  TINodePqMin = specialize TGPairHeapMin<TIntNode>;
+  TINodePqMax = specialize TGPairHeapMax<TIntNode>;
 
   { TGJoinableHashList for internal use only; TEntry must provide
       property Key: SizeInt and numeric field Weight }

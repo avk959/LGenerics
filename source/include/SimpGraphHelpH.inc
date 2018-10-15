@@ -132,6 +132,24 @@ type
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
+  { TVColorHelper }
+  TVColorHelper = record
+  strict private
+    FRecentBest,
+    FColMap: TIntArray;
+    FGraph: TGSimpleGraph;
+    FAvailColors: TBoolVector;
+    FBestColCount,
+    FNodeCount,
+    FUpperBound: SizeInt;
+    FStartTime: TDateTime;
+    FTimeOut: Integer;
+    FCancel: Boolean;
+    procedure DoColorize(aPrevPos, aMaxColor: SizeInt);
+  public
+    function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+  end;
+
   { TApproxColHelper }
   TApproxColHelper = object
   strict private
@@ -270,8 +288,8 @@ type
 
     PECEdge    = ^TNIEdge;
     TECAdjList = specialize TGJoinableHashList<TNIEdge>;
-    TPairHeap  = specialize TGPairHeapMax<TINode>;
-    TEdgeQueue = specialize TGLiteQueue<TIntPair>;
+    TPairHeap  = specialize TGPairHeapMax<TIntNode>;
+    TEdgeQueue = specialize TGLiteQueue<TIntOrdPair>;
 
   var
     FGraph: array of TECAdjList;

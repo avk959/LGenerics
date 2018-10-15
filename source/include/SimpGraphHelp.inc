@@ -716,6 +716,71 @@ begin
   Result := FRecentBest;
 end;
 
+{ TGSimpleGraph.TVColorHelper }
+
+procedure TGSimpleGraph.TVColorHelper.DoColorize(aPrevPos, aMaxColor: SizeInt);
+var
+  Color: SizeInt;
+  p: PAdjItem;
+begin
+  if SecondsBetween(Now, FStartTime) >= FTimeOut then //timeout
+    begin
+      FCancel := True;
+      exit;
+    end;
+  if aMaxColor >= FBestColCount then
+    exit;
+  if aPrevPos = Pred(FNodeCount) then
+    begin
+      FRecentBest := System.Copy(FColMap);
+      FBestColCount := aMaxColor;
+      exit;
+    end;
+  FAvailColors.InitRange(FUpperBound);
+  FAvailColors[0] := False;
+  Inc(aPrevPos);
+  for p in FGraph.AdjLists[aPrevPos]^ do
+    if p^.Key < aPrevPos then
+      FAvailColors[FColMap[p^.Key]] := False;
+  for Color in FAvailColors do
+    if Color < FBestColCount then
+      begin
+        if Color > aMaxColor then
+          aMaxColor := Color;
+        FColMap[aPrevPos] := Color;
+        DoColorize(aPrevPos, aMaxColor);
+      end;
+end;
+
+function TGSimpleGraph.TVColorHelper.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
+  out aExact: Boolean): SizeInt;
+var
+  I, c, Degree: SizeInt;
+begin
+  FTimeOut := aTimeOut and System.High(Integer);
+  FNodeCount := aGraph.VertexCount;
+  FGraph := aGraph;
+  FStartTime := Now;
+  FBestColCount := aGraph.GreedyVertexColoringSL(1000, FRecentBest);
+  FCancel := SecondsBetween(Now, FStartTime) >= FTimeOut;
+  if not FCancel then
+    begin
+      Degree := 0;
+      for I := 0 to Pred(FNodeCount) do
+        begin
+          c := FGraph.AdjLists[I]^.Count;
+          if c > Degree then
+            Degree := c;
+        end;
+      FUpperBound := Degree + 2;
+      System.SetLength(FColMap, FNodeCount);
+      DoColorize(-1, 1);
+    end;
+  aExact := not FCancel;
+  Result := FBestColCount;
+  aColors := FRecentBest;
+end;
+
 { TGSimpleGraph.TApproxColHelper.TNode }
 
 class operator TGSimpleGraph.TApproxColHelper.TNode. = (constref L, R: TNode): Boolean;
@@ -1477,12 +1542,12 @@ procedure TGSimpleGraph.TNIMinCut.ScanFirstSearch;
 var
   I: SizeInt;
   p: TECAdjList.PEntry;
-  Item: TINode;
+  Item: TIntNode;
 begin
   ClearMarks;
   FInQueue.Join(FExistNodes);
   for I in FExistNodes do
-    FQueue.Enqueue(I, TINode.Create(I, 0));
+    FQueue.Enqueue(I, TIntNode.Create(I, 0));
   while FQueue.Count > 1 do
     begin
       I := FQueue.Dequeue.Index;
@@ -1511,13 +1576,13 @@ procedure TGSimpleGraph.TNIMinCut.Shrink;
 var
   I: SizeInt;
   p: TECAdjList.PEntry;
-  Pair: TIntPair;
+  Pair: TIntOrdPair;
 begin
   ScanFirstSearch;
   for I in FExistNodes do
     for p in FGraph[I] do
       if p^.Scanned and (p^.ScanRank >= FBestCut) then
-        FEdgeQueue.Enqueue(TIntPair.Create(I, p^.Target));
+        FEdgeQueue.Enqueue(TIntOrdPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
     if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
       ShrinkEdge(Pair.Left, Pair.Right);
