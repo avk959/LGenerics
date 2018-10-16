@@ -716,9 +716,45 @@ begin
   Result := FRecentBest;
 end;
 
-{ TGSimpleGraph.TVColorHelper }
+{ TGSimpleGraph.TExactColor }
 
-procedure TGSimpleGraph.TVColorHelper.DoColorize(aPrevPos, aMaxColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.Init;
+var
+  Clique: TIntHashSet;
+  I, J: SizeInt;
+  Exact: Boolean;
+begin
+  FUpperBound := FGraph.GreedyColorSL(1000, FRecentBest);
+  FCancel := SecondsBetween(Now, FStartTime) >= FTimeOut;
+  if FCancel then
+    exit;
+  Clique.AddAll(FGraph.MaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime)));
+  FLowerBound := Clique.Count;
+  FCancel := not Exact;
+  if FCancel or (FLowerBound = FUpperBound) then
+    exit;
+  System.SetLength(FNodes, FNodeCount);
+  System.SetLength(FColorMap, FNodeCount);
+  J := 0;
+  for I in Clique do
+    begin
+      FNodes[J] := I;
+      Inc(J);
+      FColorMap[I] := J;
+    end;
+  for I := 0 to Pred(FNodeCount) do
+    if not Clique.Contains(I) then
+      begin
+        FNodes[J] := I;
+        Inc(J);
+      end;
+  TSortHelper.Sort(FNodes[FLowerBound..Pred(FNodeCount)], @CmpNode);
+  System.SetLength(FIdx2Pos, FNodeCount);
+  for I := 0 to System.High(FNodes) do
+    FIdx2Pos[FNodes[I]] := I;
+end;
+
+procedure TGSimpleGraph.TExactColor.DoColorize(aPrevPos, aMaxColor: SizeInt);
 var
   AvailColors: TBoolVector;
   Color: SizeInt;
@@ -731,42 +767,48 @@ begin
     end;
   if aPrevPos = Pred(FNodeCount) then
     begin
+      FUpperBound := aMaxColor;
       FRecentBest := System.Copy(FColorMap);
-      FBestColCount := aMaxColor;
       exit;
     end;
-  AvailColors.InitRange(Succ(FBestColCount));
-  AvailColors[0] := False;
   Inc(aPrevPos);
-  for p in FGraph.AdjLists[aPrevPos]^ do
-    if p^.Key < aPrevPos then
+  AvailColors.InitRange(Succ(FUpperBound));
+  AvailColors[0] := False;
+  for p in FGraph.AdjLists[FNodes[aPrevPos]]^ do
+    if FIdx2Pos[p^.Key] < aPrevPos then
       AvailColors[FColorMap[p^.Key]] := False;
   for Color in AvailColors do
-    if Color < FBestColCount then
+    if Color < FUpperBound then
       begin
         if Color > aMaxColor then
           aMaxColor := Color;
-        FColorMap[aPrevPos] := Color;
+        FColorMap[FNodes[aPrevPos]] := Color;
         DoColorize(aPrevPos, aMaxColor);
       end;
 end;
 
-function TGSimpleGraph.TVColorHelper.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
+function TGSimpleGraph.TExactColor.CmpNode(constref L, R: SizeInt): SizeInt;
+begin
+  Result := SizeInt.Compare(FGraph.AdjLists[R]^.Count, FGraph.AdjLists[L]^.Count);
+  if Result = 0 then
+    if L < R then
+      Result := -1
+    else
+      Result := 1;
+end;
+
+function TGSimpleGraph.TExactColor.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
   out aExact: Boolean): SizeInt;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FStartTime := Now;
-  FBestColCount := aGraph.GreedyColorSL(1000, FRecentBest);
-  FCancel := SecondsBetween(Now, FStartTime) > FTimeOut;
-  if not FCancel then
-    begin
-      System.SetLength(FColorMap, FNodeCount);
-      DoColorize(-1, 1);
-    end;
+  Init;
+  if not (FCancel or (FLowerBound = FUpperBound)) then
+    DoColorize(Pred(FLowerBound), FLowerBound);
   aExact := not FCancel;
-  Result := FBestColCount;
+  Result := FUpperBound;
   aColors := FRecentBest;
 end;
 

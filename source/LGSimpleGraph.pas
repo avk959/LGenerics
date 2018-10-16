@@ -3275,7 +3275,7 @@ end;
 
 function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
 var
-  Helper: TVColorHelper;
+  Helper: TExactColor;
   Whites, Grays: TIntArray;
   I: SizeInt;
 begin

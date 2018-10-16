@@ -132,18 +132,26 @@ type
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
-  { TVColorHelper }
-  TVColorHelper = record
+  { TExactColor }
+  TExactColor = object
   strict private
+  type
+    TSortHelper = specialize TGDelegatedArrayHelper<SizeInt>;
+  var
     FRecentBest,
-    FColorMap: TIntArray;
+    FColorMap,
+    FNodes,
+    FIdx2Pos: TIntArray;
     FGraph: TGSimpleGraph;
-    FBestColCount,
+    FUpperBound,
+    FLowerBound,
     FNodeCount: SizeInt;
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancel: Boolean;
+    procedure Init;
     procedure DoColorize(aPrevPos, aMaxColor: SizeInt);
+    function  CmpNode(constref L, R: SizeInt): SizeInt;
   public
     function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
   end;
