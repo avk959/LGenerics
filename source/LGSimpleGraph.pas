@@ -3276,7 +3276,7 @@ end;
 function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
 var
   Helper: TExactColor;
-  Whites, Grays: TIntArray;
+  Cols: TColorArray;
   I: SizeInt;
 begin
   if IsEmpty then
@@ -3289,13 +3289,11 @@ begin
       aColors := CreateIntArrayRange;
       exit(VertexCount);
     end;
-  if IsBipartite(Whites, Grays) then
+  if IsBipartite(Cols) then
     begin
       System.SetLength(aColors, VertexCount);
-      for I in Whites do
-        aColors[I] := 1;
-      for I in Grays do
-        aColors[I] := 2;
+      for I := 0 to System.High(aColors) do
+        aColors[I] := Cols[I];
       exit(2);
     end;
   if IsCycle and Odd(VertexCount) then
@@ -3311,7 +3309,7 @@ end;
 
 function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
 var
-  Whites, Grays: TIntArray;
+  Cols: TColorArray;
   I: SizeInt;
 begin
   if IsEmpty then
@@ -3324,13 +3322,11 @@ begin
       aColors := CreateIntArrayRange;
       exit(VertexCount);
     end;
-  if IsBipartite(Whites, Grays) then
+  if IsBipartite(Cols) then
     begin
       System.SetLength(aColors, VertexCount);
-      for I in Whites do
-        aColors[I] := 1;
-      for I in Grays do
-        aColors[I] := 2;
+      for I := 0 to System.High(aColors) do
+        aColors[I] := Cols[I];
       exit(2);
     end;
   Result := GreedyColorSL(aMissCount, aColors);
@@ -3338,7 +3334,7 @@ end;
 
 function TGSimpleGraph.GreedyVertexColoring(out aColors: TIntArray): SizeInt;
 var
-  Whites, Grays: TIntArray;
+  Cols: TColorArray;
   I: SizeInt;
 begin
   if IsEmpty then
@@ -3351,13 +3347,11 @@ begin
       aColors := CreateIntArrayRange;
       exit(VertexCount);
     end;
-  if IsBipartite(Whites, Grays) then
+  if IsBipartite(Cols) then
     begin
       System.SetLength(aColors, VertexCount);
-      for I in Whites do
-        aColors[I] := 1;
-      for I in Grays do
-        aColors[I] := 2;
+      for I := 0 to System.High(aColors) do
+        aColors[I] := Cols[I];
       exit(2);
     end;
   Result := GreedyColor(aColors);
