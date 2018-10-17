@@ -2703,12 +2703,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R) < R then
+    if CountRun2Asc(@A[0], R) < R then
+      begin
         DoQSort(@A[0], R);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGBaseArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
@@ -2717,12 +2720,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R) < R then
+    if CountRun2Asc(@A[0], R) < R then
+      begin
         DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGBaseArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
@@ -2731,12 +2737,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R) < R then
+    if CountRun2Asc(@A[0], R) < R then
+      begin
         DoDPQSort(@A[0], R);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGBaseArrayHelper.MergeSort(var A: array of T; o: TSortOrder);
@@ -4002,12 +4011,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R) < R then
+    if CountRun2Asc(@A[0], R) < R then
+      begin
         DoQSort(@A[0], R);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGComparableArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
@@ -4016,12 +4028,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R) < R then
+    if CountRun2Asc(@A[0], R) < R then
+      begin
         DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGComparableArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
@@ -4030,12 +4045,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R) < R then
+    if CountRun2Asc(@A[0], R) < R then
+      begin
         DoDPQSort(@A[0], R);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGComparableArrayHelper.MergeSort(var A: array of T; o: TSortOrder);
@@ -5331,12 +5349,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoQSort(@A[0], R, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGRegularArrayHelper.IntroSort(var A: array of T; c: TCompare; o: TSortOrder);
@@ -5345,12 +5366,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGRegularArrayHelper.DualPivotQuickSort(var A: array of T; c: TCompare; o: TSortOrder);
@@ -5359,12 +5383,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoDPQSort(@A[0], R, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGRegularArrayHelper.MergeSort(var A: array of T; c: TCompare; o: TSortOrder);
@@ -6662,12 +6689,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoQSort(@A[0], R, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGDelegatedArrayHelper.IntroSort(var A: array of T; c: TOnCompare; o: TSortOrder);
@@ -6676,12 +6706,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGDelegatedArrayHelper.DualPivotQuickSort(var A: array of T; c: TOnCompare; o: TSortOrder);
@@ -6690,12 +6723,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoDPQSort(@A[0], R, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGDelegatedArrayHelper.MergeSort(var A: array of T; c: TOnCompare; o: TSortOrder);
@@ -7992,12 +8028,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoQSort(@A[0], R, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGNestedArrayHelper.IntroSort(var A: array of T; c: TNestCompare; o: TSortOrder);
@@ -8006,12 +8045,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGNestedArrayHelper.DualPivotQuickSort(var A: array of T; c: TNestCompare; o: TSortOrder);
@@ -8020,12 +8062,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(@A[0], R, c) < R then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
         DoDPQSort(@A[0], R, c);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGNestedArrayHelper.MergeSort(var A: array of T; c: TNestCompare; o: TSortOrder);
@@ -8907,12 +8952,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(A, 0, R) < R then
+    if CountRun2Asc(A, 0, R) < R then
+      begin
         DoQSort(A, 0, R);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGNumArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
@@ -8921,12 +8969,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(A, 0, R) < R then
+    if CountRun2Asc(A, 0, R) < R then
+      begin
         DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGNumArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
@@ -8935,12 +8986,15 @@ var
 begin
   R := System.High(A);
   if R > 0 then
-    begin
-      if CountRun2Asc(A, 0, R) < R then
+    if CountRun2Asc(A, 0, R) < R then
+      begin
         DoDPQSort(A, 0, R);
-      if o = soDesc then
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
         Reverse(A);
-    end;
 end;
 
 class procedure TGNumArrayHelper.Sort(var A: array of T; o: TSortOrder);
@@ -9090,12 +9144,15 @@ begin
           end;
       end
     else
-      begin
-        if CountRun2Asc(A, 0, R) < R then
+      if CountRun2Asc(A, 0, R) < R then
+        begin
           DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
-        if aOrder = soDesc then
+          if aOrder = soDesc then
+            Reverse(A);
+        end
+      else
+        if (aOrder = soDesc) and (A[0] <> A[R]) then
           Reverse(A);
-      end;
 end;
 
 class function TGOrdinalArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
