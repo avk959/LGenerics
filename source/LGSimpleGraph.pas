@@ -354,7 +354,7 @@ type
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
-    worst case time cost of exact solution O*(n^k); aTimeOut specifies the timeout in seconds;
+    worst case time cost of exact solution O*(k^n); aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best recent solution will be returned, and aExact
     will be set to False }
     function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;

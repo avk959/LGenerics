@@ -2710,7 +2710,7 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (A[0] <> A[R]) then
+      if (o = soDesc) and (TCmpRel.Compare(A[0], A[R]) <> 0) then
         Reverse(A);
 end;
 
@@ -2727,7 +2727,7 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (A[0] <> A[R]) then
+      if (o = soDesc) and (TCmpRel.Compare(A[0], A[R]) <> 0) then
         Reverse(A);
 end;
 
@@ -2744,7 +2744,7 @@ begin
           Reverse(A);
       end
     else
-      if (o = soDesc) and (A[0] <> A[R]) then
+      if (o = soDesc) and (TCmpRel.Compare(A[0], A[R]) <> 0) then
         Reverse(A);
 end;
 
