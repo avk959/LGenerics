@@ -177,7 +177,7 @@ type
     FRecentBest,
     FColorMap: TIntArray;
     FGraph: TGSimpleGraph;
-    FBestColCount,
+    FUpperBound,
     FNodeCount,
     FMissCount: SizeInt;
     procedure DoColorize;

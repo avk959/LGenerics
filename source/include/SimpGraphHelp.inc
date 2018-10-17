@@ -895,15 +895,15 @@ begin
                     end;
               end;
         end;
-      if Color < FBestColCount then
+      if Color < FUpperBound then
         begin
           m := 0;
-          FBestColCount := Color;
+          FUpperBound := Color;
           FRecentBest := System.Copy(FColorMap);
         end
       else
         for I := 0 to System.High(FColorMap) do
-          if FColorMap[I] >= FBestColCount then
+          if FColorMap[I] >= FUpperBound then
             FNodes[I].Weight += Random;
       Inc(m);
     end;
@@ -915,9 +915,9 @@ begin
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FMissCount := aMissCount;
-  FBestColCount := FNodeCount;
+  FUpperBound := FNodeCount;
   DoColorize;
-  Result := FBestColCount;
+  Result := FUpperBound;
   aColors := FRecentBest;
 end;
 
