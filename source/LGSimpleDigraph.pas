@@ -127,8 +127,8 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
-    function  ContainsEulerianCircuit: Boolean;
-    function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
+    function  ContainsEulerianCycle: Boolean;
+    function  FindEulerianCycle(out aCycle: TIntVector): Boolean;
   { returns count of the strong connected components; the corresponding element of the
     aCompIds will contain its component index(used Gabow's algorithm) }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
@@ -1235,7 +1235,7 @@ begin
   Result := System.Length(aCycle) <> 0;
 end;
 
-function TGSimpleDiGraph.ContainsEulerianCircuit: Boolean;
+function TGSimpleDiGraph.ContainsEulerianCycle: Boolean;
 var
   I, d: SizeInt;
 begin
@@ -1251,19 +1251,19 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleDiGraph.FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
+function TGSimpleDiGraph.FindEulerianCycle(out aCycle: TIntVector): Boolean;
 var
   g: TSkeleton;
   Stack: TIntStack;
   s, d: SizeInt;
 begin
-  if not ContainsEulerianCircuit then
+  if not ContainsEulerianCycle then
     exit(False);
   g := CreateSkeleton;
   s := 0;
   while g.Degree[s] = 0 do
     Inc(s);
-  aCircuit.Add(s);
+  aCycle.Add(s);
   repeat
     while g[s]^.FindFirst(d) do
       begin
@@ -1273,11 +1273,11 @@ begin
       end;
     if not Stack.TryPop(s) then
       break;
-    aCircuit.Add(s);
+    aCycle.Add(s);
   until False;
-  Result := aCircuit.Count > 0;
+  Result := aCycle.Count > 0;
   if Result then
-    TIntVectorHelper.Reverse(aCircuit);
+    TIntVectorHelper.Reverse(aCycle);
 end;
 
 function TGSimpleDiGraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
