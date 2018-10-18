@@ -779,7 +779,7 @@ var
   Color: SizeInt;
   p: PAdjItem;
 begin
-  if SecondsBetween(Now, FStartTime) < FTimeOut then //timeout
+  if SecondsBetween(Now, FStartTime) < FTimeOut then //else timeout
     begin
       if aPrevPos < Pred(FNodeCount) then
         begin
@@ -799,6 +799,9 @@ begin
               if LookAhead(aPrevPos, Color) then
                 DoColorize(aPrevPos, aMaxColor);
             end;
+          Color := FColorMap[FNodes[aPrevPos]];
+          if Color > FLowerBound then
+            FLowerBound := Color;
         end
       else
         begin
