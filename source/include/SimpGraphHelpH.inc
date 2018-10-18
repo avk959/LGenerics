@@ -149,7 +149,7 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancel: Boolean;
-    procedure Init;
+    procedure InitBounds;
     procedure DoColorize(aPrevPos, aMaxColor: SizeInt);
     function  CmpNode(constref L, R: SizeInt): SizeInt;
   public

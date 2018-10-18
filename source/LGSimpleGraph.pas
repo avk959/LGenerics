@@ -3286,7 +3286,9 @@ begin
     end;
   if IsComplete then
     begin
-      aColors := CreateIntArrayRange;
+      System.SetLength(aColors, VertexCount);
+      for I := 0 to Pred(VertexCount) do
+        aColors[I] := Succ(I);
       exit(VertexCount);
     end;
   if IsBipartite(Cols) then
@@ -3319,7 +3321,9 @@ begin
     end;
   if IsComplete then
     begin
-      aColors := CreateIntArrayRange;
+      System.SetLength(aColors, VertexCount);
+      for I := 0 to Pred(VertexCount) do
+        aColors[I] := Succ(I);
       exit(VertexCount);
     end;
   if IsBipartite(Cols) then
@@ -3344,7 +3348,9 @@ begin
     end;
   if IsComplete then
     begin
-      aColors := CreateIntArrayRange;
+      System.SetLength(aColors, VertexCount);
+      for I := 0 to Pred(VertexCount) do
+        aColors[I] := Succ(I);
       exit(VertexCount);
     end;
   if IsBipartite(Cols) then

@@ -718,15 +718,16 @@ end;
 
 { TGSimpleGraph.TExactColor }
 
-procedure TGSimpleGraph.TExactColor.Init;
+procedure TGSimpleGraph.TExactColor.InitBounds;
 var
   Clique: TIntHashSet;
   I, J: SizeInt;
   Exact: Boolean;
 begin
+  FLowerBound := 1;
   FUpperBound := FGraph.GreedyColorSL(1000, FRecentBest);
   FCancel := SecondsBetween(Now, FStartTime) >= FTimeOut;
-  if FCancel then
+  if FCancel or (FLowerBound = FUpperBound) then
     exit;
   Clique.AddAll(FGraph.MaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime)));
   FLowerBound := Clique.Count;
@@ -808,7 +809,7 @@ begin
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
   FStartTime := Now;
-  Init;
+  InitBounds;
   if not (FCancel or (FLowerBound = FUpperBound)) then
     DoColorize(Pred(FLowerBound), FLowerBound);
   aExact := not FCancel;
