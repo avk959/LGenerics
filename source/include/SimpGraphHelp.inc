@@ -780,35 +780,30 @@ var
   p: PAdjItem;
 begin
   if SecondsBetween(Now, FStartTime) < FTimeOut then //else timeout
-    begin
-      if aPrevPos < Pred(FNodeCount) then
-        begin
-          Inc(aPrevPos);
-          AvailColors.InitRange(FUpperBound);
-          AvailColors[0] := False;
-          for p in FGraph.AdjLists[FNodes[aPrevPos]]^ do
-            if FIdx2Pos[p^.Key] < aPrevPos then
-              AvailColors[FColorMap[p^.Key]] := False;
-          for Color in AvailColors do
-            begin
-              if Color > aMaxColor then
-                aMaxColor := Color;
-              if (aMaxColor >= FUpperBound) or (FLowerBound >= FUpperBound) then
-                break;
-              FColorMap[FNodes[aPrevPos]] := Color;
-              if LookAhead(aPrevPos, Color) then
-                DoColorize(aPrevPos, aMaxColor);
-            end;
-          Color := FColorMap[FNodes[aPrevPos]];
-          if Color > FLowerBound then
-            FLowerBound := Color;
-        end
-      else
-        begin
-          FUpperBound := aMaxColor;
-          FRecentBest := System.Copy(FColorMap);
-        end;
-    end
+    if aPrevPos < Pred(FNodeCount) then
+      begin
+        Inc(aPrevPos);
+        AvailColors.InitRange(FUpperBound);
+        AvailColors[0] := False;
+        for p in FGraph.AdjLists[FNodes[aPrevPos]]^ do
+          if FIdx2Pos[p^.Key] < aPrevPos then
+            AvailColors[FColorMap[p^.Key]] := False;
+        for Color in AvailColors do
+          begin
+            if Color > aMaxColor then
+              aMaxColor := Color;
+            if (aMaxColor >= FUpperBound) or (FLowerBound >= FUpperBound) then
+              break;
+            FColorMap[FNodes[aPrevPos]] := Color;
+            if LookAhead(aPrevPos, Color) then
+              DoColorize(aPrevPos, aMaxColor);
+          end;
+      end
+    else
+      begin
+        FUpperBound := aMaxColor;
+        FRecentBest := System.Copy(FColorMap);
+      end
   else
     FCancel := True;
 end;
