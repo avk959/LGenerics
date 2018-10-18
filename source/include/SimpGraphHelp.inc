@@ -757,7 +757,6 @@ end;
 
 function TGSimpleGraph.TExactColor.LookAhead(aPos, aColor: SizeInt): Boolean;
 var
-  ColCount: SizeInt;
   p, p2: PAdjItem;
 begin
   for p in FGraph.AdjLists[FNodes[aPos]]^ do
@@ -768,8 +767,7 @@ begin
         for p2 in FGraph.AdjLists[p^.Key]^ do
           if FIdx2Pos[p2^.Key] <= aPos then
             FTmpColors[FColorMap[p2^.Key]] := False;
-        ColCount := FTmpColors.PopCount;
-        if (ColCount = 0) or ((ColCount = 1) and (FTmpColors.Bsf = aColor)) then
+        if FTmpColors.IsEmpty then
           exit(False);
       end;
   Result := True;
