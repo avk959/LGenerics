@@ -143,6 +143,7 @@ type
     FNodes,
     FIdx2Pos: TIntArray;
     FGraph: TGSimpleGraph;
+    FTmpColors: TBoolVector;
     FUpperBound,
     FLowerBound,
     FNodeCount: SizeInt;
@@ -150,6 +151,7 @@ type
     FTimeOut: Integer;
     FCancel: Boolean;
     procedure InitBounds;
+    function  LookAhead(aPos, aColor: SizeInt): Boolean;
     procedure DoColorize(aPrevPos, aMaxColor: SizeInt);
     function  CmpNode(constref L, R: SizeInt): SizeInt;
   public

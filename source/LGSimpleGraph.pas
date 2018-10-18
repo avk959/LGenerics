@@ -223,17 +223,18 @@ type
     function  IsCycle: Boolean;
     function  IsWheel(out aHub: SizeInt): Boolean;
     function  IsComplete: Boolean; inline;
-    function  CyclomaticNumber: SizeInt; inline;
   { checks whether the graph is regular(that is, the degrees of all its vertices are equal);
     an empty graph is considered regular }
     function  IsRegular(out aDegree: SizeInt): Boolean;
+    function  CyclomaticNumber: SizeInt; inline;
   { checks whether exists any cycle in the same connected component as aRoot;
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCircuit: Boolean;
+    function  ContainsEulerianCycle: Boolean;
   { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
-    function  FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
+    function  FindEulerianCycle(out aCycle: TIntVector): Boolean;
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
@@ -2558,11 +2559,6 @@ begin
     Result := False;
 end;
 
-function TGSimpleGraph.CyclomaticNumber: SizeInt;
-begin
-  Result := EdgeCount - VertexCount + SeparateCount;
-end;
-
 function TGSimpleGraph.IsRegular(out aDegree: SizeInt): Boolean;
 var
   I: SizeInt;
@@ -2579,6 +2575,11 @@ begin
           end;
     end;
   Result := True;
+end;
+
+function TGSimpleGraph.CyclomaticNumber: SizeInt;
+begin
+  Result := EdgeCount - VertexCount + SeparateCount;
 end;
 
 function TGSimpleGraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
@@ -2598,34 +2599,68 @@ end;
 
 function TGSimpleGraph.ContainsEulerianCircuit: Boolean;
 var
-  I, d, cd: SizeInt;
+  Comps: TIntVectorArray;
+  I, Cand, OddCount: SizeInt;
+begin
+  if VertexCount < 2 then
+    exit(False);
+  Comps := GetSeparates;
+  Cand := NULL_INDEX;
+  for I := 0 to System.High(Comps) do
+    if Comps[I].Count > 1 then
+      if Cand = NULL_INDEX then
+        Cand := I
+      else
+        exit(False);
+  if Cand = NULL_INDEX then
+    exit(False);
+  OddCount := 0;
+  for I in Comps[Cand] do
+    if Odd(AdjLists[I]^.Count) then
+      begin
+        Inc(OddCount);
+        if OddCount > 2 then
+          exit(False);
+      end;
+  Result := True;
+end;
+
+function TGSimpleGraph.ContainsEulerianCycle: Boolean;
+var
+  Comps: TIntVectorArray;
+  I, Cand: SizeInt;
 begin
   if VertexCount < 3 then
     exit(False);
-  d := 0;
-  for I := 0 to Pred(VertexCount) do
-    begin
-      cd := DegreeI(I);
-      if Odd(cd) then
+  Comps := GetSeparates;
+  Cand := NULL_INDEX;
+  for I := 0 to System.High(Comps) do
+    if Comps[I].Count > 1 then
+      if Cand = NULL_INDEX then
+        Cand := I
+      else
         exit(False);
-      d += cd;
-    end;
-  Result := d > 0;
+  if Cand = NULL_INDEX then
+    exit(False);
+  for I in Comps[Cand] do
+    if Odd(AdjLists[I]^.Count) then
+      exit(False);
+  Result := True;
 end;
 
-function TGSimpleGraph.FindEulerianCircuit(out aCircuit: TIntVector): Boolean;
+function TGSimpleGraph.FindEulerianCycle(out aCycle: TIntVector): Boolean;
 var
   g: TSkeleton;
   Stack: TIntStack;
   s, d: SizeInt;
 begin
-  if not ContainsEulerianCircuit then
+  if not ContainsEulerianCycle then
     exit(False);
   g := CreateSkeleton;
   s := 0;
   while g.Degree[s] = 0 do
     Inc(s);
-  aCircuit.Add(s);
+  aCycle.Add(s);
   repeat
     while g[s]^.FindFirst(d) do
       begin
@@ -2635,11 +2670,11 @@ begin
       end;
     if not Stack.TryPop(s) then
       break;
-    aCircuit.Add(s);
+    aCycle.Add(s);
   until False;
-  Result := aCircuit.Count > 0;
+  Result := aCycle.Count > 0;
   if Result then
-    TIntVectorHelper.Reverse(aCircuit);
+    TIntVectorHelper.Reverse(aCycle);
 end;
 
 function TGSimpleGraph.FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;

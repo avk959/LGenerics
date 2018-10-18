@@ -755,41 +755,61 @@ begin
     FIdx2Pos[FNodes[I]] := I;
 end;
 
+function TGSimpleGraph.TExactColor.LookAhead(aPos, aColor: SizeInt): Boolean;
+var
+  ColCount: SizeInt;
+  p, p2: PAdjItem;
+begin
+  for p in FGraph.AdjLists[FNodes[aPos]]^ do
+    if FIdx2Pos[p^.Key] > aPos then
+      begin
+        FTmpColors.InitRange(FUpperBound);
+        FTmpColors[0] := False;
+        for p2 in FGraph.AdjLists[p^.Key]^ do
+          if FIdx2Pos[p2^.Key] <= aPos then
+            FTmpColors[FColorMap[p2^.Key]] := False;
+        ColCount := FTmpColors.PopCount;
+        if (ColCount = 0) or ((ColCount = 1) and (FTmpColors.Bsf = aColor)) then
+          exit(False);
+      end;
+  Result := True;
+end;
+
 procedure TGSimpleGraph.TExactColor.DoColorize(aPrevPos, aMaxColor: SizeInt);
 var
   AvailColors: TBoolVector;
   Color: SizeInt;
   p: PAdjItem;
 begin
-  if SecondsBetween(Now, FStartTime) >= FTimeOut then //timeout
+  if SecondsBetween(Now, FStartTime) < FTimeOut then //timeout
     begin
-      FCancel := True;
-      exit;
-    end;
-  if aMaxColor >= FUpperBound then
-    exit;
-  if aPrevPos = Pred(FNodeCount) then
-    begin
-      FUpperBound := aMaxColor;
-      FRecentBest := System.Copy(FColorMap);
-      exit;
-    end;
-  Inc(aPrevPos);
-  AvailColors.InitRange(FUpperBound);
-  AvailColors[0] := False;
-  for p in FGraph.AdjLists[FNodes[aPrevPos]]^ do
-    if FIdx2Pos[p^.Key] < aPrevPos then
-      AvailColors[FColorMap[p^.Key]] := False;
-  for Color in AvailColors do
-    begin
-      if Color > aMaxColor then
-        aMaxColor := Color;
-      if aMaxColor < FUpperBound then
+      if aPrevPos < Pred(FNodeCount) then
         begin
-          FColorMap[FNodes[aPrevPos]] := Color;
-          DoColorize(aPrevPos, aMaxColor);
+          Inc(aPrevPos);
+          AvailColors.InitRange(FUpperBound);
+          AvailColors[0] := False;
+          for p in FGraph.AdjLists[FNodes[aPrevPos]]^ do
+            if FIdx2Pos[p^.Key] < aPrevPos then
+              AvailColors[FColorMap[p^.Key]] := False;
+          for Color in AvailColors do
+            begin
+              if Color > aMaxColor then
+                aMaxColor := Color;
+              if (aMaxColor >= FUpperBound) or (FLowerBound >= FUpperBound) then
+                break;
+              FColorMap[FNodes[aPrevPos]] := Color;
+              if LookAhead(aPrevPos, Color) then
+                DoColorize(aPrevPos, aMaxColor);
+            end;
+        end
+      else
+        begin
+          FUpperBound := aMaxColor;
+          FRecentBest := System.Copy(FColorMap);
         end;
-    end;
+    end
+  else
+    FCancel := True;
 end;
 
 function TGSimpleGraph.TExactColor.CmpNode(constref L, R: SizeInt): SizeInt;
