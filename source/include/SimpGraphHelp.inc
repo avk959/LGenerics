@@ -835,16 +835,6 @@ end;
 
 { TGSimpleGraph.TGreedyColor.TNode }
 
-class operator TGSimpleGraph.TGreedyColor.TNode. = (constref L, R: TNode): Boolean;
-begin
-  Result := L.Weight = R.Weight;
-end;
-
-class operator TGSimpleGraph.TGreedyColor.TNode.<>(constref L, R: TNode): Boolean;
-begin
-  Result := L.Weight <> R.Weight;
-end;
-
 class operator TGSimpleGraph.TGreedyColor.TNode.>(constref L, R: TNode): Boolean;
 begin
   Result := L.Weight > R.Weight;
@@ -867,75 +857,66 @@ end;
 
 { TGSimpleGraph.TGreedyColor }
 
-procedure TGSimpleGraph.TGreedyColor.DoColorize;
+function TGSimpleGraph.TGreedyColor.Colorize(aGraph: TGSimpleGraph; aMissCount: Integer;
+  out aColors: TIntArray): SizeInt;
 var
   Queue: TQueue;
-  Nodes: array of TNode;
+  Nodes, CurrNodes: array of TNode;
+  ColorMap: TIntArray;
   Achromatic, CurrIS: TBoolVector;
   Node: TNode;
   m, I, Color: SizeInt;
   p: PAdjItem;
 begin
-  System.SetLength(FNodes, FNodeCount);
-  for I := 0 to Pred(FNodeCount) do
+  Result := aGraph.VertexCount;
+  System.SetLength(Nodes, aGraph.VertexCount);
+  for I := 0 to System.High(Nodes) do
     begin
-      FNodes[I].Index := I;
-      FNodes[I].Weight := FGraph.AdjLists[I]^.Count;
+      Nodes[I].Index := I;
+      Nodes[I].Weight := aGraph.AdjLists[I]^.Count;
     end;
-  System.SetLength(FColorMap, FNodeCount);
-  System.SetLength(Nodes, FNodeCount);
+  System.SetLength(ColorMap, aGraph.VertexCount);
+  System.SetLength(CurrNodes, aGraph.VertexCount);
   m := 0;
-  Queue := TQueue.Create(FNodeCount);
-  while m < FMissCount do
+  Queue := TQueue.Create(aGraph.VertexCount);
+  while m < aMissCount do
     begin
-      for I := 0 to System.High(FNodes) do
-       Nodes[I] := FNodes[I];
+      for I := 0 to System.High(Nodes) do
+       CurrNodes[I] := Nodes[I];
       Color := 0;
-      Achromatic.InitRange(FNodeCount);
+      Achromatic.InitRange(aGraph.VertexCount);
       while Achromatic.NonEmpty do
         begin
           Inc(Color);
           CurrIS := Achromatic;
           for I in Achromatic do
-            {%H-}Queue.Enqueue(I, Nodes[I]);
+            {%H-}Queue.Enqueue(I, CurrNodes[I]);
           while Queue.TryDequeue(Node) do
             if CurrIS[Node.Index] then
               begin
                 CurrIS[Node.Index] := False;
                 Achromatic[Node.Index] := False;
-                FColorMap[Node.Index] := Color;
-                for p in FGraph.AdjLists[Node.Index]^ do
+                ColorMap[Node.Index] := Color;
+                for p in aGraph.AdjLists[Node.Index]^ do
                   if Achromatic[p^.Key] then
                     begin
-                      Nodes[p^.Key].Weight -= 1;
+                      CurrNodes[p^.Key].Weight -= 1;
                       CurrIS[p^.Key] := False;
                     end;
               end;
         end;
-      if Color < FUpperBound then
+      if Color < Result then
         begin
           m := 0;
-          FUpperBound := Color;
-          FRecentBest := System.Copy(FColorMap);
+          Result := Color;
+          aColors := System.Copy(ColorMap);
         end
       else
-        for I := 0 to System.High(FColorMap) do
-          if FColorMap[I] >= FUpperBound then
-            FNodes[I].Weight += Random;
+        for I := 0 to System.High(ColorMap) do
+          if ColorMap[I] >= Result then
+            Nodes[I].Weight += Random;
       Inc(m);
     end;
-end;
-
-function TGSimpleGraph.TGreedyColor.Colorize(aGraph: TGSimpleGraph; aMissCount: Integer;
-  out aColors: TIntArray): SizeInt;
-begin
-  FNodeCount := aGraph.VertexCount;
-  FGraph := aGraph;
-  FMissCount := aMissCount;
-  FUpperBound := FNodeCount;
-  DoColorize;
-  Result := FUpperBound;
-  aColors := FRecentBest;
 end;
 
 { TGSimpleGraph.THKMatch }

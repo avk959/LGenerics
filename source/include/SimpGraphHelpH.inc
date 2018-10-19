@@ -165,8 +165,6 @@ type
     TNode = record
       Index: SizeInt;
       Weight: Single;
-      class operator = (constref L, R: TNode): Boolean; inline;
-      class operator <>(constref L, R: TNode): Boolean; inline;
       class operator > (constref L, R: TNode): Boolean; inline;
       class operator < (constref L, R: TNode): Boolean; inline;
       class operator >=(constref L, R: TNode): Boolean; inline;
@@ -174,15 +172,6 @@ type
     end;
     TQueue = specialize TGPairHeapMax<TNode>;
 
-  var
-    FNodes: array of TNode;
-    FRecentBest,
-    FColorMap: TIntArray;
-    FGraph: TGSimpleGraph;
-    FUpperBound,
-    FNodeCount,
-    FMissCount: SizeInt;
-    procedure DoColorize;
   public
     function Colorize(aGraph: TGSimpleGraph; aMissCount: Integer; out aColors: TIntArray): SizeInt;
   end;
