@@ -762,12 +762,12 @@ begin
   for p in FGraph.AdjLists[FNodes[aPos]]^ do
     if FIdx2Pos[p^.Key] > aPos then
       begin
-        FTmpColors.InitRange(FUpperBound);
-        FTmpColors[0] := False;
+        FAvailColors.InitRange(FUpperBound);
+        FAvailColors[0] := False;
         for p2 in FGraph.AdjLists[p^.Key]^ do
           if FIdx2Pos[p2^.Key] <= aPos then
-            FTmpColors[FColorMap[p2^.Key]] := False;
-        if FTmpColors.IsEmpty then
+            FAvailColors[FColorMap[p2^.Key]] := False;
+        if FAvailColors.IsEmpty then
           exit(False);
       end;
   Result := True;
@@ -790,10 +790,10 @@ begin
             AvailColors[FColorMap[p^.Key]] := False;
         for Color in AvailColors do
           begin
+            if (Color >= FUpperBound) or (FLowerBound = FUpperBound) then
+              break;
             if Color > aMaxColor then
               aMaxColor := Color;
-            if (aMaxColor >= FUpperBound) or (FLowerBound >= FUpperBound) then
-              break;
             FColorMap[FNodes[aPrevPos]] := Color;
             if LookAhead(aPrevPos, Color) then
               DoColorize(aPrevPos, aMaxColor);

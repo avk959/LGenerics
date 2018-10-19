@@ -231,10 +231,13 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
-    function  ContainsEulerianCircuit: Boolean;
+  { checks whether exists Eulerian circuit; if exists only circuit, then
+    aCircuitStart will contains index of first vertex with odd degree, otherwise -1 }
+    function  ContainsEulerianCircuit(out aCircuitStart: SizeInt): Boolean;
     function  ContainsEulerianCycle: Boolean;
-  { looking for some Eulerian cycle in the first connected component along the path from the first vertex }
-    function  FindEulerianCycle(out aCycle: TIntVector): Boolean;
+  { looking for some Eulerian cycle in the connected component }
+    function  FindEulerianCycle(out aCycle: TIntArray): Boolean;
+    function  FindEulerianCircuit(out aCircuit: TIntArray): Boolean;
   { finds a certain system of fundamental cycles of the graph;
     note: pretty costly time/memory operation }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
@@ -2597,11 +2600,12 @@ begin
   Result := CycleExists(aRoot, aCycle);
 end;
 
-function TGSimpleGraph.ContainsEulerianCircuit: Boolean;
+function TGSimpleGraph.ContainsEulerianCircuit(out aCircuitStart: SizeInt): Boolean;
 var
   Comps: TIntVectorArray;
   I, Cand, OddCount: SizeInt;
 begin
+  aCircuitStart := NULL_INDEX;
   if VertexCount < 2 then
     exit(False);
   Comps := GetSeparates;
@@ -2620,7 +2624,12 @@ begin
       begin
         Inc(OddCount);
         if OddCount > 2 then
-          exit(False);
+          begin
+            aCircuitStart := NULL_INDEX;
+            exit(False);
+          end;
+        if aCircuitStart = NULL_INDEX then
+          aCircuitStart := I;
       end;
   Result := True;
 end;
@@ -2648,19 +2657,21 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindEulerianCycle(out aCycle: TIntVector): Boolean;
+function TGSimpleGraph.FindEulerianCycle(out aCycle: TIntArray): Boolean;
 var
   g: TSkeleton;
   Stack: TIntStack;
+  v: TIntVector;
   s, d: SizeInt;
 begin
+  aCycle := nil;
   if not ContainsEulerianCycle then
     exit(False);
   g := CreateSkeleton;
   s := 0;
   while g.Degree[s] = 0 do
     Inc(s);
-  aCycle.Add(s);
+  v.Add(s);
   repeat
     while g[s]^.FindFirst(d) do
       begin
@@ -2670,11 +2681,61 @@ begin
       end;
     if not Stack.TryPop(s) then
       break;
-    aCycle.Add(s);
+    v.Add(s);
   until False;
-  Result := aCycle.Count > 0;
+  Result := v.Count > 0;
   if Result then
-    TIntVectorHelper.Reverse(aCycle);
+    begin
+      System.SetLength(aCycle, v.Count);
+      d := 0;
+      for s in v.Reverse do
+        begin
+          aCycle[d] := s;
+          Inc(d);
+        end;
+    end;
+end;
+
+function TGSimpleGraph.FindEulerianCircuit(out aCircuit: TIntArray): Boolean;
+var
+  g: TSkeleton;
+  Stack: TIntStack;
+  v: TIntVector;
+  s, d: SizeInt;
+begin
+  aCircuit := nil;
+  if not ContainsEulerianCircuit(s) then
+    exit(False);
+  g := CreateSkeleton;
+  if s = NULL_INDEX then
+    begin
+      s := 0;
+      while g.Degree[s] = 0 do
+        Inc(s);
+    end;
+  v.Add(s);
+  repeat
+    while g[s]^.FindFirst(d) do
+      begin
+        {%H-}Stack.Push(s);
+        g.RemoveEdge(s, d);
+        s := d;
+      end;
+    if not Stack.TryPop(s) then
+      break;
+    v.Add(s);
+  until False;
+  Result := v.Count > 0;
+  if Result then
+    begin
+      System.SetLength(aCircuit, v.Count);
+      d := 0;
+      for s in v.Reverse do
+        begin
+          aCircuit[d] := s;
+          Inc(d);
+        end;
+    end;
 end;
 
 function TGSimpleGraph.FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;

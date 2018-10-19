@@ -143,7 +143,7 @@ type
     FNodes,
     FIdx2Pos: TIntArray;
     FGraph: TGSimpleGraph;
-    FTmpColors: TBoolVector;
+    FAvailColors: TBoolVector;
     FUpperBound,
     FLowerBound,
     FNodeCount: SizeInt;

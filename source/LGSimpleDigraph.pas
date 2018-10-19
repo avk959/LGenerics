@@ -128,7 +128,7 @@ type
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCycle: Boolean;
-    function  FindEulerianCycle(out aCycle: TIntVector): Boolean;
+    function  FindEulerianCycle(out aCycle: TIntArray): Boolean;
   { returns count of the strong connected components; the corresponding element of the
     aCompIds will contain its component index(used Gabow's algorithm) }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
@@ -1251,19 +1251,21 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleDiGraph.FindEulerianCycle(out aCycle: TIntVector): Boolean;
+function TGSimpleDiGraph.FindEulerianCycle(out aCycle: TIntArray): Boolean;
 var
   g: TSkeleton;
   Stack: TIntStack;
+  v: TIntVector;
   s, d: SizeInt;
 begin
+  aCycle := nil;
   if not ContainsEulerianCycle then
     exit(False);
   g := CreateSkeleton;
   s := 0;
   while g.Degree[s] = 0 do
     Inc(s);
-  aCycle.Add(s);
+  v.Add(s);
   repeat
     while g[s]^.FindFirst(d) do
       begin
@@ -1273,11 +1275,19 @@ begin
       end;
     if not Stack.TryPop(s) then
       break;
-    aCycle.Add(s);
+    v.Add(s);
   until False;
-  Result := aCycle.Count > 0;
+  Result := v.Count > 0;
   if Result then
-    TIntVectorHelper.Reverse(aCycle);
+    begin
+      System.SetLength(aCycle, v.Count);
+      d := 0;
+      for s in v.Reverse do
+        begin
+          aCycle[d] := s;
+          Inc(d);
+        end;
+    end;
 end;
 
 function TGSimpleDiGraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
