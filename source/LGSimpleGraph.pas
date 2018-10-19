@@ -2661,7 +2661,6 @@ function TGSimpleGraph.FindEulerianCycle(out aCycle: TIntArray): Boolean;
 var
   g: TSkeleton;
   Stack: TIntStack;
-  v: TIntVector;
   s, d: SizeInt;
 begin
   aCycle := nil;
@@ -2671,36 +2670,21 @@ begin
   s := 0;
   while g.Degree[s] = 0 do
     Inc(s);
-  v.Add(s);
-  repeat
-    while g[s]^.FindFirst(d) do
-      begin
-        {%H-}Stack.Push(s);
-        g.RemoveEdge(s, d);
-        s := d;
-      end;
-    if not Stack.TryPop(s) then
-      break;
-    v.Add(s);
-  until False;
-  Result := v.Count > 0;
-  if Result then
+  {%H-}Stack.Push(s);
+  while g[s]^.FindFirst(d) do
     begin
-      System.SetLength(aCycle, v.Count);
-      d := 0;
-      for s in v.Reverse do
-        begin
-          aCycle[d] := s;
-          Inc(d);
-        end;
+      g.RemoveEdge(s, d);
+      Stack.Push(d);
+      s := d;
     end;
+  aCycle := Stack.ToArray;
+  Result := True;
 end;
 
 function TGSimpleGraph.FindEulerianCircuit(out aCircuit: TIntArray): Boolean;
 var
   g: TSkeleton;
-  Stack: TIntStack;
-  v: TIntVector;
+  Stack, Path: TIntStack;
   s, d: SizeInt;
 begin
   aCircuit := nil;
@@ -2713,29 +2697,17 @@ begin
       while g.Degree[s] = 0 do
         Inc(s);
     end;
-  v.Add(s);
-  repeat
-    while g[s]^.FindFirst(d) do
+  {%H-}Stack.Push(s);
+  while Stack.TryPeek(s) do
+    if g[s]^.FindFirst(d) then
       begin
-        {%H-}Stack.Push(s);
         g.RemoveEdge(s, d);
-        s := d;
-      end;
-    if not Stack.TryPop(s) then
-      break;
-    v.Add(s);
-  until False;
-  Result := v.Count > 0;
-  if Result then
-    begin
-      System.SetLength(aCircuit, v.Count);
-      d := 0;
-      for s in v.Reverse do
-        begin
-          aCircuit[d] := s;
-          Inc(d);
-        end;
-    end;
+        Stack.Push(d);
+      end
+    else
+      {%H-}Path.Push(Stack.Pop{%H-});
+  aCircuit := Path.ToArray;
+  Result := True;
 end;
 
 function TGSimpleGraph.FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;

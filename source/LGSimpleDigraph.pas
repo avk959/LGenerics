@@ -1254,8 +1254,7 @@ end;
 function TGSimpleDiGraph.FindEulerianCycle(out aCycle: TIntArray): Boolean;
 var
   g: TSkeleton;
-  Stack: TIntStack;
-  v: TIntVector;
+  Stack, Path: TIntStack;
   s, d: SizeInt;
 begin
   aCycle := nil;
@@ -1265,29 +1264,23 @@ begin
   s := 0;
   while g.Degree[s] = 0 do
     Inc(s);
-  v.Add(s);
-  repeat
-    while g[s]^.FindFirst(d) do
+  {%H-}Stack.Push(s);
+  while Stack.TryPeek(s) do
+    if g[s]^.FindFirst(d) then
       begin
-        {%H-}Stack.Push(s);
         g.RemoveEdge(s, d);
-        s := d;
-      end;
-    if not Stack.TryPop(s) then
-      break;
-    v.Add(s);
-  until False;
-  Result := v.Count > 0;
-  if Result then
+        Stack.Push(d);
+      end
+    else
+      {%H-}Path.Push(Stack.Pop{%H-});
+  System.SetLength(aCycle, Path.Count);
+  d := 0;
+  for s in Path.Reverse do
     begin
-      System.SetLength(aCycle, v.Count);
-      d := 0;
-      for s in v.Reverse do
-        begin
-          aCycle[d] := s;
-          Inc(d);
-        end;
+      aCycle[d] := s;
+      Inc(d);
     end;
+  Result := True;
 end;
 
 function TGSimpleDiGraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
