@@ -471,7 +471,7 @@ begin
   mmResult.Lines.BeginUpdate;
   try
     mmResult.Lines.Clear;
-    mmResult.Append('Executing employees selection by gender and age, groping by location:');
+    mmResult.Append('Executing employees selection by gender and age, grouping by location:');
     for s in cbLocation.Items do
       begin
         Total := 0;
