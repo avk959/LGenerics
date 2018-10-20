@@ -217,8 +217,8 @@ type
   { returns number of vertices(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
-  { returns in corresponding component of the result vector of indices of the connected component }
-    function  GetSeparates: TIntVectorArray;
+  { returns in the result array the vectors of indices of connected components }
+    function  FindSeparates: TIntVectorArray;
     function  IsTree: Boolean; inline;
     function  IsCycle: Boolean;
     function  IsWheel(out aHub: SizeInt): Boolean;
@@ -328,7 +328,7 @@ type
     will raise exception if aOnFindSet is not assigned;
     setting aCancel to True in aOnFindSet will result in an exit from the method }
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
-  { returns indices of the vertices of the some found maximal independent set of maximal cardinality;
+  { returns indices of the vertices of the some found maximum independent set;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best recent solution will be returned, and aExactSolution
     will be set to False }
@@ -364,7 +364,7 @@ type
     function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     param aMissCount specifies maximum number of failed trials in a row(?~1000);
-    SL - self learning :) }
+    (SL - self learning :) }
     function  GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
@@ -2481,7 +2481,7 @@ begin
     Result := VertexCount;
 end;
 
-function TGSimpleGraph.GetSeparates: TIntVectorArray;
+function TGSimpleGraph.FindSeparates: TIntVectorArray;
 var
   Tags: TIntArray;
   CurrIndex, CurrTag, I: SizeInt;
@@ -2608,7 +2608,7 @@ begin
   aCircuitStart := NULL_INDEX;
   if VertexCount < 2 then
     exit(False);
-  Comps := GetSeparates;
+  Comps := FindSeparates;
   Cand := NULL_INDEX;
   for I := 0 to System.High(Comps) do
     if Comps[I].Count > 1 then
@@ -2641,7 +2641,7 @@ var
 begin
   if VertexCount < 3 then
     exit(False);
-  Comps := GetSeparates;
+  Comps := FindSeparates;
   Cand := NULL_INDEX;
   for I := 0 to System.High(Comps) do
     if Comps[I].Count > 1 then
@@ -3366,7 +3366,7 @@ begin
         aColors[I] := Cols[I];
       exit(2);
     end;
-  if IsCycle and Odd(VertexCount) then
+  if Odd(VertexCount) and IsCycle then
     begin
       System.SetLength(aColors, VertexCount);
       for I := 0 to Pred(System.High(aColors)) do
