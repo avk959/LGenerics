@@ -1259,10 +1259,10 @@ begin
   aCycle := nil;
   if not ContainsEulerianCycle then
     exit(False);
-  g := CreateSkeleton;
   s := 0;
   while g.Degree[s] = 0 do
     Inc(s);
+  g := CreateSkeleton;
   {%H-}Stack.Push(s);
   while Stack.TryPeek(s) do
     if g[s]^.FindFirst(d) then
