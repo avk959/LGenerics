@@ -127,8 +127,8 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
-    function  ContainsEulerianCycle: Boolean;
-    function  FindEulerianCycle(out aCycle: TIntArray): Boolean;
+    function  ContainsEulerianCycle: Boolean;//todo: else from specified source
+    function  FindEulerianCycle(out aCycle: TIntArray): Boolean;//todo: else from specified source
   { returns count of the strong connected components; the corresponding element of the
     aCompIds will contain its component index(used Gabow's algorithm) }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
@@ -136,7 +136,6 @@ type
     procedure FillReachabilityMatrix;
   { creates internal reachability matrix using pre-calculated results of FindStrongComponents }
     procedure FillReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt);
-
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
