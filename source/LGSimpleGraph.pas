@@ -2666,10 +2666,10 @@ begin
   aCycle := nil;
   if not ContainsEulerianCycle then
     exit(False);
+  g := CreateSkeleton;
   s := 0;
   while g.Degree[s] = 0 do
     Inc(s);
-  g := CreateSkeleton;
   {%H-}Stack.Push(s);
   while g[s]^.FindFirst(d) do
     begin
@@ -2690,13 +2690,13 @@ begin
   aCircuit := nil;
   if not ContainsEulerianCircuit(s) then
     exit(False);
+  g := CreateSkeleton;
   if s = NULL_INDEX then
     begin
       s := 0;
       while g.Degree[s] = 0 do
         Inc(s);
     end;
-  g := CreateSkeleton;
   {%H-}Stack.Push(s);
   while Stack.TryPeek(s) do
     if g[s]^.FindFirst(d) then
@@ -2845,7 +2845,7 @@ end;
 
 function TGSimpleGraph.MinCut: SizeInt;
 var
-  Helper: TNIMinCut;
+  Helper: TNiMinCut;
 begin
   if not Connected or (VertexCount < 2) then
     exit(0);
@@ -2856,7 +2856,7 @@ end;
 
 function TGSimpleGraph.MinCut(out aCut: TCut): SizeInt;
 var
-  Helper: TNIMinCut;
+  Helper: TNiMinCut;
   Cut: TIntSet;
   B: TBoolVector;
   I: SizeInt;
@@ -2879,7 +2879,7 @@ end;
 
 function TGSimpleGraph.MinCutCrossing: TIntEdgeArray;
 var
-  Helper: TNIMinCut;
+  Helper: TNiMinCut;
   Cut: TIntSet;
   Left, Right: TBoolVector;
   I, J: SizeInt;
