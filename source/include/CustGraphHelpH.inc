@@ -18,8 +18,17 @@
 *****************************************************************************}
 
 type
-  TDisjointSetUnion = record
+
+  TIntArrayHelper = type helper for TIntArray
   private
+    function  GetLenght: SizeInt; inline;
+    procedure SetLength(aValue: SizeInt); inline;
+  public
+    property Length: SizeInt read GetLenght write SetLength;
+  end;
+
+  TDisjointSetUnion = record
+  strict private
     FList: array of SizeInt;
     function  GetSize: SizeInt; inline;
     procedure SetSize(aValue: SizeInt);

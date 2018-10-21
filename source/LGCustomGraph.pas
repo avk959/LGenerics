@@ -20,6 +20,7 @@
 unit LGCustomGraph;
 
 {$mode objfpc}{$H+}
+{$MODESWITCH TYPEHELPERS}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 {$INLINE ON}{$WARN 6058 off : }
@@ -1978,7 +1979,19 @@ begin
             Parents[p^.Destination] := Curr;
           end;
     end;
-  Result := [];
+  Result := nil;
+end;
+
+{ TIntArrayHelper }
+
+function TIntArrayHelper.GetLenght: SizeInt;
+begin
+  Result := System.Length(Self);
+end;
+
+procedure TIntArrayHelper.SetLength(aValue: SizeInt);
+begin
+  System.SetLength(Self, aValue);
 end;
 
 { TDisjointSetUnion }
