@@ -1487,17 +1487,17 @@ end;
 function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
 var
   Queue: TINodePqMax;
-  Degrees: array of TIntNode;
+  Nodes: array of TIntNode;
   Achromatic, CurrIS: TBoolVector;
   Node: TIntNode;
   I: SizeInt;
   pItem: PAdjItem;
 begin
-  System.SetLength(Degrees, VertexCount);
+  System.SetLength(Nodes, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    Degrees[I] := TIntNode.Create(I, AdjLists[I]^.Count);
+    Nodes[I] := TIntNode.Create(I, AdjLists[I]^.Count);
   Queue := TINodePqMax.Create(VertexCount);
-  System.SetLength(aColors, VertexCount);
+  aColors.Length := VertexCount;
   Achromatic.InitRange(VertexCount);
   Result := 0;
   while Achromatic.NonEmpty do
@@ -1505,7 +1505,7 @@ begin
       Inc(Result);
       CurrIS := Achromatic;
       for I in Achromatic do
-        {%H-}Queue.Enqueue(I, Degrees[I]);
+        {%H-}Queue.Enqueue(I, Nodes[I]);
       while Queue.TryDequeue(Node) do
         if CurrIS[Node.Index] then
           begin
@@ -1515,7 +1515,7 @@ begin
             for pItem in AdjLists[Node.Index]^ do
               if Achromatic[pItem^.Key] then
                 begin
-                  Dec(Degrees[pItem^.Key].Data);
+                  Dec(Nodes[pItem^.Key].Data);
                   CurrIS[pItem^.Key] := False;
                 end;
           end;
@@ -3389,14 +3389,14 @@ begin
     end;
   if IsComplete then
     begin
-      System.SetLength(aColors, VertexCount);
+      aColors.Length := VertexCount;
       for I := 0 to Pred(VertexCount) do
         aColors[I] := Succ(I);
       exit(VertexCount);
     end;
   if IsBipartite(Cols) then
     begin
-      System.SetLength(aColors, VertexCount);
+      aColors.Length := VertexCount;
       for I := 0 to System.High(aColors) do
         aColors[I] := Cols[I];
       exit(2);
