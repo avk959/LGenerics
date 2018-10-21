@@ -60,8 +60,8 @@ begin
           exit;
         end;
       ItemCount := aCand.PopCount;
-      System.SetLength(ColOrd, ItemCount);
-      System.SetLength(Colors, ItemCount);
+      ColOrd.Length := ItemCount;
+      Colors.Length := ItemCount;
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
@@ -160,9 +160,9 @@ function TGSimpleGraph.TBPCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph; aTimeOut: 
 var
   Cand: TBoolVector;
 begin
-  FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
+  FStartTime := Now;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
   Cand.InitRange(aGraph.VertexCount);
@@ -241,8 +241,8 @@ begin
           exit;
         end;
       ItemCount := aCand.PopCount;
-      System.SetLength(ColOrd, ItemCount);
-      System.SetLength(Colors, ItemCount);
+      ColOrd.Length := ItemCount;
+      Colors.Length := ItemCount;
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
@@ -324,9 +324,9 @@ function TGSimpleGraph.TBPCliqueIsHelper256.MaxClique(aGraph: TGSimpleGraph; aTi
 var
   Cand: TBits256;
 begin
-  FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
+  FStartTime := Now;
   SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.GreedyMaxClique;
   Cand.InitRange(aGraph.VertexCount);
@@ -417,8 +417,8 @@ begin
           FCanceled := True;
           exit;
         end;
-      System.SetLength(ColOrd, aCand.Count);
-      System.SetLength(Colors, aCand.Count);
+      ColOrd.Length := aCand.Count;
+      Colors.Length := aCand.Count;
       Recolor(aCand, ColOrd, Colors);
       for I := Pred(aCand.Count) downto 0 do
         begin
@@ -466,9 +466,9 @@ function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: 
 var
   Cand: TIntSet;
 begin
-  FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
+  FStartTime := Now;
   FNodes := aGraph.SortNodesByWidth(soDesc);
   FMatrix := aGraph.CreateSkeleton;
   FRecentBest := aGraph.GreedyMaxClique;
@@ -560,9 +560,9 @@ function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut
 var
   Sub, Cand: TBoolVector;
 begin
-  FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
+  FStartTime := Now;
   FillMatrix(aGraph);
   FRecentBest := aGraph.GreedyMDS;
   Cand.Size := aGraph.VertexCount;
@@ -641,9 +641,9 @@ function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTime
 var
   Sub, Cand: TBits256;
 begin
-  FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FCanceled := False;
+  FStartTime := Now;
   FillMatrix(aGraph);
   FRecentBest := aGraph.GreedyMDS;
   {%H-}Cand.InitZero;
@@ -705,9 +705,9 @@ function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: 
 var
   Sub, Cand: TIntSet;
 begin
-  FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
   FCancel := False;
+  FStartTime := Now;
   FRecentBest := aGraph.GreedyMDS;
   FMatrix := aGraph.CreateSkeleton;
   Sub.AssignArray(aGraph.SortNodesByDegree(soDesc));
@@ -734,8 +734,8 @@ begin
   FCancel := not Exact;
   if FCancel or (FLowerBound = FUpperBound) then
     exit;
-  System.SetLength(FNodes, FNodeCount);
-  System.SetLength(FColorMap, FNodeCount);
+  FNodes.Length := FNodeCount;
+  FColorMap.Length := FNodeCount;
   J := 0;
   for I in Clique do
     begin
@@ -750,7 +750,7 @@ begin
         Inc(J);
       end;
   TSortHelper.Sort(FNodes[FLowerBound..Pred(FNodeCount)], @CmpNode);
-  System.SetLength(FIdx2Pos, FNodeCount);
+  FIdx2Pos.Length := FNodeCount;
   for I := 0 to System.High(FNodes) do
     FIdx2Pos[FNodes[I]] := I;
 end;
@@ -782,6 +782,8 @@ begin
   if SecondsBetween(Now, FStartTime) < FTimeOut then //else timeout
     if aPrevPos < Pred(FNodeCount) then
       begin
+        if (aMaxColor >= FUpperBound) or (FLowerBound = FUpperBound) then
+          exit;
         Inc(aPrevPos);
         AvailColors.InitRange(FUpperBound);
         AvailColors[0] := False;
@@ -875,7 +877,7 @@ begin
       Nodes[I].Index := I;
       Nodes[I].Weight := aGraph.AdjLists[I]^.Count;
     end;
-  System.SetLength(ColorMap, aGraph.VertexCount);
+  ColorMap.Length := aGraph.VertexCount;
   System.SetLength(CurrNodes, aGraph.VertexCount);
   m := 0;
   Queue := TQueue.Create(aGraph.VertexCount);
@@ -941,7 +943,7 @@ begin
       Grays.AddAll(w);
     end;
 
-  System.SetLength(CurrArcIdx, Succ(FNodeCount));
+  CurrArcIdx.Length := Succ(FNodeCount);
   J := 0;
   for I := 0 to FNodeCount - 2 do
     begin
@@ -1484,27 +1486,27 @@ begin
       end;
 end;
 
-{ TGSimpleGraph.TNIMinCut.TNIEdge }
+{ TGSimpleGraph.TNiMinCut.TNiEdge }
 
-constructor TGSimpleGraph.TNIMinCut.TNIEdge.Create(aTarget, aWeight: SizeInt);
+constructor TGSimpleGraph.TNiMinCut.TNiEdge.Create(aTarget, aWeight: SizeInt);
 begin
   Target := aTarget;
   Weight := aWeight;
 end;
 
-{ TGSimpleGraph.TNIMinCut }
+{ TGSimpleGraph.TNiMinCut }
 
-procedure TGSimpleGraph.TNIMinCut.ClearMarks;
+procedure TGSimpleGraph.TNiMinCut.ClearMarks;
 var
   I: SizeInt;
-  p: TECAdjList.PEntry;
+  p: TNiAdjList.PEntry;
 begin
   for I in FExistNodes do
     for p in FGraph[I] do
       p^.Scanned := False;
 end;
 
-procedure TGSimpleGraph.TNIMinCut.Init(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TNiMinCut.Init(aGraph: TGSimpleGraph);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -1514,16 +1516,16 @@ begin
     begin
       FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
       for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TNIEdge.Create(p^.Destination, 1));
+        FGraph[I].Add(TNiEdge.Create(p^.Destination, 1));
     end;
-  FQueue := TPairHeap.Create(aGraph.VertexCount);
+  FQueue := TQueue.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Size := aGraph.VertexCount;
   FBestCut := High(SizeInt);
   FCuts := nil;
 end;
 
-procedure TGSimpleGraph.TNIMinCut.Init2(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TNiMinCut.Init2(aGraph: TGSimpleGraph);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -1533,22 +1535,22 @@ begin
     begin
       FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
       for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TNIEdge.Create(p^.Destination, 1));
+        FGraph[I].Add(TNiEdge.Create(p^.Destination, 1));
     end;
   System.SetLength(FCuts, aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
     FCuts[I].Add(I);
-  FQueue := TPairHeap.Create(aGraph.VertexCount);
+  FQueue := TQueue.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Size := aGraph.VertexCount;
   FBestCut := High(SizeInt);
 end;
 
-procedure TGSimpleGraph.TNIMinCut.ShrinkEdge(aSource, aTarget: SizeInt);
+procedure TGSimpleGraph.TNiMinCut.ShrinkEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
-  p: TECAdjList.PEntry;
-  Edge: TNIEdge;
+  p: TNiAdjList.PEntry;
+  Edge: TNiEdge;
 begin
   FGraph[aSource].Remove(aTarget);
   FGraph[aTarget].Remove(aSource);
@@ -1571,10 +1573,10 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TNIMinCut.ScanFirstSearch;
+procedure TGSimpleGraph.TNiMinCut.ScanFirstSearch;
 var
   I: SizeInt;
-  p: TECAdjList.PEntry;
+  p: TNiAdjList.PEntry;
   Item: TIntNode;
 begin
   ClearMarks;
@@ -1605,10 +1607,10 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TNIMinCut.Shrink;
+procedure TGSimpleGraph.TNiMinCut.Shrink;
 var
   I: SizeInt;
-  p: TECAdjList.PEntry;
+  p: TNiAdjList.PEntry;
   Pair: TIntOrdPair;
 begin
   ScanFirstSearch;
@@ -1621,7 +1623,7 @@ begin
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
-function TGSimpleGraph.TNIMinCut.GetMinCut(aGraph: TGSimpleGraph): SizeInt;
+function TGSimpleGraph.TNiMinCut.GetMinCut(aGraph: TGSimpleGraph): SizeInt;
 begin
   Init(aGraph);
   while FExistNodes.PopCount >= 2 do
@@ -1629,7 +1631,7 @@ begin
   Result := FBestCut;
 end;
 
-function TGSimpleGraph.TNIMinCut.GetMinCut(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
+function TGSimpleGraph.TNiMinCut.GetMinCut(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
 begin
   Init2(aGraph);
   while FExistNodes.PopCount >= 2 do

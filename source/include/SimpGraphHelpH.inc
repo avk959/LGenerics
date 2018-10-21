@@ -132,7 +132,7 @@ type
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
-  { TExactColor }
+  { TExactColor: simply branch-and-bound coloring algorithm }
   TExactColor = object
   strict private
   type
@@ -159,7 +159,7 @@ type
   end;
 
   { TGreedyColor }
-  TGreedyColor = object
+  TGreedyColor = record
   strict private
   type
     TNode = record
@@ -171,7 +171,6 @@ type
       class operator <=(constref L, R: TNode): Boolean; inline;
     end;
     TQueue = specialize TGPairHeapMax<TNode>;
-
   public
     function Colorize(aGraph: TGSimpleGraph; aMissCount: Integer; out aColors: TIntArray): SizeInt;
   end;
@@ -270,11 +269,11 @@ type
     function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
   end;
 
-  { TNIMinCut: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }
-  TNIMinCut = record
+  { TNiMinCut: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }
+  TNiMinCut = record
   strict private
   type
-    TNIEdge = record
+    TNiEdge = record
       Target,
       Weight,
       ScanRank: SizeInt;
@@ -283,15 +282,15 @@ type
       property Key: SizeInt read Target;
     end;
 
-    PECEdge    = ^TNIEdge;
-    TECAdjList = specialize TGJoinableHashList<TNIEdge>;
-    TPairHeap  = specialize TGPairHeapMax<TIntNode>;
+    PNiEdge    = ^TNiEdge;
+    TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
+    TQueue     = specialize TGPairHeapMax<TIntNode>;
     TEdgeQueue = specialize TGLiteQueue<TIntOrdPair>;
 
   var
-    FGraph: array of TECAdjList;
+    FGraph: array of TNiAdjList;
     FCuts: array of TIntSet;
-    FQueue: TPairHeap;
+    FQueue: TQueue;
     FEdgeQueue: TEdgeQueue;
     FExistNodes,
     FInQueue: TBoolVector;
