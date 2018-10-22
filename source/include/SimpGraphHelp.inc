@@ -718,6 +718,20 @@ end;
 
 { TGSimpleGraph.TExactColor }
 
+procedure TGSimpleGraph.TExactColor.CreateSumDegrees;
+var
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  FSumDegrees.Length := FNodeCount;
+  for I := 0 to Pred(FNodeCount) do
+    begin
+      FSumDegrees[I] := 0;
+      for p in FGraph.AdjLists[I]^ do
+        FSumDegrees[I] += FGraph.AdjLists[p^.Key]^.Count;
+    end;
+end;
+
 procedure TGSimpleGraph.TExactColor.InitBounds;
 var
   Clique: TIntHashSet;
@@ -749,7 +763,9 @@ begin
         FNodes[J] := I;
         Inc(J);
       end;
+  CreateSumDegrees;
   TSortHelper.Sort(FNodes[FLowerBound..Pred(FNodeCount)], @CmpNode);
+  FSumDegrees := nil;
   FIdx2Pos.Length := FNodeCount;
   for I := 0 to System.High(FNodes) do
     FIdx2Pos[FNodes[I]] := I;
@@ -814,10 +830,14 @@ function TGSimpleGraph.TExactColor.CmpNode(constref L, R: SizeInt): SizeInt;
 begin
   Result := SizeInt.Compare(FGraph.AdjLists[R]^.Count, FGraph.AdjLists[L]^.Count);
   if Result = 0 then
-    if L < R then
-      Result := -1
-    else
-      Result := 1;
+    begin
+      Result := SizeInt.Compare(FSumDegrees[R], FSumDegrees[L]);
+      if Result = 0 then
+        if L < R then
+          Result := -1
+        else
+          Result := 1;
+    end;
 end;
 
 function TGSimpleGraph.TExactColor.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;

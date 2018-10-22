@@ -141,6 +141,7 @@ type
     FRecentBest,
     FColorMap,
     FNodes,
+    FSumDegrees,
     FIdx2Pos: TIntArray;
     FGraph: TGSimpleGraph;
     FAvailColors: TBoolVector;
@@ -150,6 +151,7 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancel: Boolean;
+    procedure CreateSumDegrees;
     procedure InitBounds;
     function  LookAhead(aPos, aColor: SizeInt): Boolean;
     procedure DoColorize(aPrevPos, aMaxColor: SizeInt);
