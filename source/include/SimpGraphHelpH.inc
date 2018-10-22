@@ -28,7 +28,7 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCanceled: Boolean;
-    procedure Recolor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
+    procedure Colorize(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
     procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
     procedure Extend(var aSub, aCand: TBoolVector);
     procedure FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -61,7 +61,7 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCanceled: Boolean;
-    procedure Recolor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+    procedure Colorize(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBits256);
     procedure Extend(var aSub, aCand: TBits256);
     procedure FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -84,7 +84,7 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCanceled: Boolean;
-    procedure Recolor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
+    procedure Colorize(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TIntSet);
     procedure Extend(var aSub, aCand: TIntSet);
   public
