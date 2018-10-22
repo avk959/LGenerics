@@ -3293,11 +3293,11 @@ begin
     begin
       I := Cand.Pop;
       {%H-}Stack.Push(I);
-      {%H-}Q.MakeEmpty;
       for J in Cand do
         if AdjLists[I]^.Contains(J) then
-          Q.Push(J);
+          {%H-}Q.Push(J);
       Cand.Assign(Q);
+      Q.MakeEmpty;
     end;
   Result := Stack.ToArray;
 end;
