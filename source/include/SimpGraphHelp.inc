@@ -65,7 +65,7 @@ begin
       Colorize(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
-          if Colors[I] + FCurrSet.PopCount <= System.Length(FRecentBest) then
+          if Colors[I] + FCurrSet.PopCount <= FRecentBest.Length then
             exit;
           J := ColOrd[I];
           aCand[J] := False;
@@ -76,7 +76,7 @@ begin
         end;
     end
   else
-    if FCurrSet.PopCount > System.Length(FRecentBest) then
+    if FCurrSet.PopCount > FRecentBest.Length then
       FRecentBest := FCurrSet.ToArray;
 end;
 
@@ -246,7 +246,7 @@ begin
       Colorize(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
-          if Colors[I] + FCurrSet.PopCount <= System.Length(FRecentBest) then
+          if Colors[I] + FCurrSet.PopCount <= FRecentBest.Length then
             exit;
           J := ColOrd[I];
           aCand[J] := False;
@@ -257,7 +257,7 @@ begin
         end;
     end
   else
-    if FCurrSet.PopCount > System.Length(FRecentBest) then
+    if FCurrSet.PopCount > FRecentBest.Length then
       FRecentBest := FCurrSet.ToArray;
 end;
 
@@ -422,7 +422,7 @@ begin
       Colorize(aCand, ColOrd, Colors);
       for I := Pred(aCand.Count) downto 0 do
         begin
-          if Colors[I] + FCurrSet.Count <= System.Length(FRecentBest) then
+          if Colors[I] + FCurrSet.Count <= FRecentBest.Length then
             exit;
           J := ColOrd[I];
           aCand.Delete(J);
@@ -433,7 +433,7 @@ begin
         end;
     end
   else
-    if FCurrSet.Count > System.Length(FRecentBest) then
+    if FCurrSet.Count > FRecentBest.Length then
       FRecentBest := FCurrSet.ToArray;
 end;
 
@@ -932,11 +932,10 @@ begin
           m := 0;
           Result := Color;
           aColors := System.Copy(ColorMap);
-        end
-      else
-        for I := 0 to System.High(ColorMap) do
-          if ColorMap[I] >= Result then
-            Nodes[I].Weight += Random;
+        end;
+      for I := 0 to System.High(ColorMap) do
+        if ColorMap[I] >= Result then
+          Nodes[I].Weight += Random;
       Inc(m);
     end;
 end;
