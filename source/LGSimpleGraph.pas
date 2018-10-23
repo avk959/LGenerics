@@ -128,6 +128,8 @@ type
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  ColorConnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+    function  ColorDisconnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function  GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
     function  GreedyColor(out aColors: TIntArray): SizeInt;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -1475,6 +1477,52 @@ var
   Helper: TDomSetHelper;
 begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.ColorConnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+var
+  Helper: TExactColor;
+begin
+  Result := Helper.Colorize(Self, aTimeOut, aColors, aExact);
+end;
+
+function TGSimpleGraph.ColorDisconnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+var
+  Separates: TIntVectorArray;
+  g: TGSimpleGraph;
+  ColMap: TIntArray;
+  I, J, ColCount, MaxColCount: SizeInt;
+  TimeOut: Integer;
+  StartTime: TDateTime;
+  Exact: Boolean;
+begin
+  aExact := False;
+  TimeOut := aTimeOut and System.High(Integer);
+  StartTime := Now;
+  Result := GreedyColor(aColors);
+  if SecondsBetween(Now, StartTime) < TimeOut then
+    begin
+      Separates := FindSeparates;
+      MaxColCount := 0;
+      for I := 0 to System.High(Separates) do
+        begin
+          g := SubgraphFromVertexList(Separates[I].ToArray);
+          try
+            ColCount := g.VertexColoring(ColMap, Exact, TimeOut - SecondsBetween(Now, StartTime));
+            for J := 0 to System.High(ColMap) do
+              aColors[IndexOf(g[J])] := ColMap[J];
+            if ColCount > MaxColCount then
+              MaxColCount := ColCount;
+          finally
+            g.Free;
+          end;
+          if not Exact then
+            exit;
+        end;
+      if MaxColCount < Result then
+        Result := MaxColCount;
+      aExact := True;
+    end;
 end;
 
 function TGSimpleGraph.GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
@@ -3343,7 +3391,6 @@ end;
 
 function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
 var
-  Helper: TExactColor;
   Cols: TColorArray;
   I: SizeInt;
 begin
@@ -3374,7 +3421,10 @@ begin
       aColors[System.High(aColors)] := 3;
       exit(3);
     end;
-  Result := Helper.Colorize(Self, aTimeOut, aColors, aExact);
+  if Connected then
+    Result := ColorConnected(aTimeOut, aColors, aExact)
+  else
+    Result := ColorDisconnected(aTimeOut, aColors, aExact)
 end;
 
 function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
