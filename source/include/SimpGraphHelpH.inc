@@ -132,8 +132,8 @@ type
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
-  { TExactColor }
-  TExactColor = object
+  { TExactColor: a DSATUR-based branch and bound algorithm }
+  TExactColor = record
   strict private
   type
     TNode = record

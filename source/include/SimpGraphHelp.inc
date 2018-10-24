@@ -745,11 +745,7 @@ var
   I, J: SizeInt;
   Exact: Boolean;
 begin
-  FLowerBound := 1;
-  //FUpperBound := FGraph.GreedyColorSL(1000, FRecentBest);
   FUpperBound := FGraph.GreedyColor(FRecentBest);
-  if FCancel then
-    exit;
   Clique.AddAll(FGraph.MaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime)));
   FLowerBound := Clique.Count;
   FCancel := not Exact;
@@ -865,6 +861,8 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
+  FLowerBound := 1;
+  FUpperBound := FNodeCount;
   FCancel := False;
   FStartTime := Now;
   InitBounds;
