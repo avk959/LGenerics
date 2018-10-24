@@ -1527,7 +1527,7 @@ end;
 
 function TGSimpleGraph.GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
 var
-  Helper: TGreedyColor;
+  Helper: TGreedyColorSL;
 begin
   Result := Helper.Colorize(Self, aMissCount, aColors);
 end;
@@ -3394,6 +3394,7 @@ var
   Cols: TColorArray;
   I: SizeInt;
 begin
+  aExact := True;
   if IsEmpty then
     begin
       aColors := nil;
@@ -3401,26 +3402,27 @@ begin
     end;
   if IsComplete then
     begin
-      System.SetLength(aColors, VertexCount);
+      aColors.Length := VertexCount;
       for I := 0 to Pred(VertexCount) do
         aColors[I] := Succ(I);
       exit(VertexCount);
     end;
   if IsBipartite(Cols) then
     begin
-      System.SetLength(aColors, VertexCount);
+      aColors.Length := VertexCount;
       for I := 0 to System.High(aColors) do
         aColors[I] := Cols[I];
       exit(2);
     end;
   if Odd(VertexCount) and IsCycle then
     begin
-      System.SetLength(aColors, VertexCount);
+      aColors.Length := VertexCount;
       for I := 0 to Pred(System.High(aColors)) do
         aColors[I] := Succ(Ord(Odd(I)));
       aColors[System.High(aColors)] := 3;
       exit(3);
     end;
+  //todo: is wheel ???
   if Connected then
     Result := ColorConnected(aTimeOut, aColors, aExact)
   else
@@ -3466,14 +3468,14 @@ begin
     end;
   if IsComplete then
     begin
-      System.SetLength(aColors, VertexCount);
+      aColors.Length := VertexCount;
       for I := 0 to Pred(VertexCount) do
         aColors[I] := Succ(I);
       exit(VertexCount);
     end;
   if IsBipartite(Cols) then
     begin
-      System.SetLength(aColors, VertexCount);
+      aColors.Length := VertexCount;
       for I := 0 to System.High(aColors) do
         aColors[I] := Cols[I];
       exit(2);
@@ -3488,7 +3490,7 @@ var
 begin
   if IsEmpty then
     exit(aColors = nil);
-  if System.Length(aColors) <> VertexCount then
+  if aColors.Length <> VertexCount then
     exit(False);
   for e in Edges do
     begin

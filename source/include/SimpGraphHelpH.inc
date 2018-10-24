@@ -132,36 +132,45 @@ type
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
-  { TExactColor: simply branch-and-bound coloring algorithm }
+  { TExactColor }
   TExactColor = object
   strict private
   type
-    TSortHelper = specialize TGDelegatedArrayHelper<SizeInt>;
+    TNode = record
+      Saturation,
+      Degree: SizeInt;
+      AdjColors: array of Integer;
+      procedure PickColor(aColor: SizeInt); inline;
+      procedure FreeColor(aColor: SizeInt); inline;
+      function  Available(aColor: Integer): Boolean; inline;
+    end;
+
   var
-    FRecentBest,
+    FNodes: array of TNode;
+    FAchromatic: TBoolVector;
     FColorMap,
-    FNodes,
-    FSumDegrees,
-    FIdx2Pos: TIntArray;
+    FSaturation,
+    FRecentBest,
+    FSequence: TIntArray;
     FGraph: TGSimpleGraph;
-    FAvailColors: TBoolVector;
-    FUpperBound,
     FLowerBound,
+    FUpperBound,
     FNodeCount: SizeInt;
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancel: Boolean;
-    procedure CreateSumDegrees;
     procedure InitBounds;
-    function  LookAhead(aPos, aColor: SizeInt): Boolean;
-    procedure DoColorize(aPrevPos, aMaxColor: SizeInt);
-    function  CmpNode(constref L, R: SizeInt): SizeInt;
+    procedure PickColor(aIndex, aColor: SizeInt);
+    procedure FreeColor(aIndex, aColor: SizeInt);
+    function  SelectNext: SizeInt;
+    procedure CheckSolution(aColCount: SizeInt); inline;
+    function  DSatur(aIndex, aMaxColor: SizeInt): SizeInt;
   public
     function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
   end;
 
-  { TGreedyColor }
-  TGreedyColor = record
+  { TGreedyColorSL }
+  TGreedyColorSL = record
   strict private
   type
     TNode = record
