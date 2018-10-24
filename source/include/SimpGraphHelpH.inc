@@ -141,7 +141,7 @@ type
       Degree: SizeInt;
       AdjColors: array of Integer;
       procedure PickColor(aColor: SizeInt); inline;
-      procedure FreeColor(aColor: SizeInt); inline;
+      procedure DropColor(aColor: SizeInt); inline;
       function  Available(aColor: Integer): Boolean; inline;
     end;
 
@@ -159,10 +159,10 @@ type
     FCancel: Boolean;
     procedure InitBounds;
     procedure PickColor(aIndex, aColor: SizeInt);
-    procedure FreeColor(aIndex, aColor: SizeInt);
+    procedure DropColor(aIndex, aColor: SizeInt);
     function  SelectNext: SizeInt;
     procedure CheckSolution(aColCount: SizeInt); inline;
-    function  DSatur(aIndex, aMaxColor: SizeInt): SizeInt;
+    function  DSatur(aMaxColor: SizeInt): SizeInt;
   public
     function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
   end;

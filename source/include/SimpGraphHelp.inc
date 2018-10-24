@@ -725,7 +725,7 @@ begin
   Dec(Degree);
 end;
 
-procedure TGSimpleGraph.TExactColor.TNode.FreeColor(aColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.TNode.DropColor(aColor: SizeInt);
 begin
   Dec(AdjColors[Pred(aColor)]);
   Saturation -= Ord(AdjColors[Pred(aColor)] = 0);
@@ -779,13 +779,13 @@ begin
     FNodes[p^.Key].PickColor(aColor);
 end;
 
-procedure TGSimpleGraph.TExactColor.FreeColor(aIndex, aColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.DropColor(aIndex, aColor: SizeInt);
 var
   p: PAdjItem;
 begin
   FColorMap[aIndex] := 0;
   for p in FGraph.AdjLists[aIndex]^ do
-    FNodes[p^.Key].FreeColor(aColor);
+    FNodes[p^.Key].DropColor(aColor);
 end;
 
 function TGSimpleGraph.TExactColor.SelectNext: SizeInt;
@@ -812,7 +812,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.TExactColor.DSatur(aIndex, aMaxColor: SizeInt): SizeInt;
+function TGSimpleGraph.TExactColor.DSatur(aMaxColor: SizeInt): SizeInt;
 var
   CurrNode, Color, UpBound: SizeInt;
 begin
@@ -833,9 +833,9 @@ begin
     if FNodes[CurrNode].Available(Color) then
       begin
         PickColor(CurrNode, Color);
-        UpBound := DSatur(Succ(aIndex), aMaxColor);
+        UpBound := DSatur(aMaxColor);
         CheckSolution(UpBound);
-        FreeColor(CurrNode, Color);
+        DropColor(CurrNode, Color);
         if aMaxColor >= FUpperBound  then
           begin
             FAchromatic[CurrNode] := True;
@@ -845,9 +845,9 @@ begin
   if aMaxColor < Pred(FUpperBound) then
     begin
       PickColor(CurrNode, Succ(aMaxColor));
-      UpBound := DSatur(Succ(aIndex), Succ(aMaxColor));
+      UpBound := DSatur(Succ(aMaxColor));
       CheckSolution(UpBound);
-      FreeColor(CurrNode, Succ(aMaxColor));
+      DropColor(CurrNode, Succ(aMaxColor));
     end;
   FAchromatic[CurrNode] := True;
   Result := FUpperBound;
@@ -868,7 +868,7 @@ begin
   InitBounds;
   if not FCancel and (FLowerBound < FUpperBound) then
     begin
-      UpBound := DSatur(FLowerBound, FLowerBound);
+      UpBound := DSatur(FLowerBound);
       CheckSolution(UpBound);
     end;
   aExact := not FCancel;
