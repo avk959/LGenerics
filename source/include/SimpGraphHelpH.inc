@@ -149,9 +149,7 @@ type
     FNodes: array of TNode;
     FAchromatic: TBoolVector;
     FColorMap,
-    FSaturation,
-    FRecentBest,
-    FSequence: TIntArray;
+    FRecentBest: TIntArray;
     FGraph: TGSimpleGraph;
     FLowerBound,
     FUpperBound,

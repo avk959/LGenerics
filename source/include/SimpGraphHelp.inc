@@ -755,9 +755,6 @@ begin
   FCancel := not Exact;
   if FCancel or (FLowerBound >= FUpperBound) then
     exit;
-  FColorMap := FGraph.CreateIntArray(0);
-  FSaturation := FGraph.CreateIntArray(0);
-  FSequence := FGraph.CreateIntArray;
   System.SetLength(FNodes, FNodeCount);
   for I := 0 to System.High(FNodes) do
     begin
@@ -766,11 +763,11 @@ begin
       System.SetLength(FNodes[I].AdjColors, FUpperBound);
       System.FillChar(Pointer(FNodes[I].AdjColors)^, FUpperBound * SizeOf(Integer), 0);
     end;
+  FColorMap := FGraph.CreateIntArray(0);
   FAchromatic.InitRange(FNodeCount);
   J := 0;
   for I in Clique do
     begin
-      FSequence[J] := I;
       FAchromatic[I] := False;
       Inc(J);
       PickColor(I, J);
@@ -828,12 +825,13 @@ begin
       FCancel := True;
       exit(FUpperBound);
     end;
-  if (aIndex >= FNodeCount) or (aMaxColor >= FUpperBound) then
+  if aMaxColor >= FUpperBound then
     exit(aMaxColor);
   if FUpperBound <= FLowerBound then
     exit(FUpperBound);
   CurrNode := SelectNext;
-  FSequence[aIndex] := CurrNode;
+  if CurrNode = NULL_INDEX then
+    exit(aMaxColor);
   FAchromatic[CurrNode] := False;
   for Color := 1 to aMaxColor do
     if FNodes[CurrNode].Available(Color) then
