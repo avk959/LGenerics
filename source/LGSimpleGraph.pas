@@ -128,6 +128,7 @@ type
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  ColorTrivial(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
     function  ColorConnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function  ColorDisconnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function  GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
@@ -222,6 +223,7 @@ type
   { returns in the result array the vectors of indices of connected components }
     function  FindSeparates: TIntVectorArray;
     function  IsTree: Boolean; inline;
+    function  IsStar(out aHub: SizeInt): Boolean;
     function  IsCycle: Boolean;
     function  IsWheel(out aHub: SizeInt): Boolean;
     function  IsComplete: Boolean; inline;
@@ -1479,6 +1481,65 @@ begin
   Result := Helper.MinDomSet(Self, aTimeOut, aExact);
 end;
 
+function TGSimpleGraph.ColorTrivial(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
+var
+  Cycle: TIntArray;
+  Cols: TColorArray;
+  I, Hub: SizeInt;
+begin
+  aMaxColor := 0;
+  aColors := nil;
+  if IsEmpty then
+    exit(True);
+  if IsComplete then
+    begin
+      aColors.Length := VertexCount;
+      for I := 0 to Pred(VertexCount) do
+        aColors[I] := Succ(I);
+      aMaxColor := VertexCount;
+      exit(True);
+    end;
+  if IsBipartite(Cols) then
+    begin
+      aColors.Length := VertexCount;
+      for I := 0 to System.High(aColors) do
+        aColors[I] := Cols[I];
+      aMaxColor := 2;
+      exit(True);
+    end;
+  if Odd(VertexCount) and IsCycle then
+    begin
+      if not CycleExists(0, Cycle) then
+        exit(False); //todo: internal error ???
+      aColors.Length := VertexCount;
+      for I := 0 to VertexCount - 2 do
+        aColors[Cycle[I]] := Succ(Ord(Odd(I)));
+      aColors[Cycle[Pred(VertexCount)]] := 3;
+      aMaxColor := 3;
+      exit(True);
+    end;
+  if IsWheel(Hub) then
+    begin
+      if Hub <> 0 then
+        I := 0
+      else
+        I := 1;
+      if not CycleExists(I, Cycle) then
+        exit(False); //todo: internal error ???
+      aColors.Length := VertexCount;
+      aColors[Hub] := 1;
+      for I := 0 to VertexCount - 3 do
+        aColors[Cycle[I]] := Ord(Odd(I)) + 2;
+      if Odd(VertexCount) then
+        aMaxColor := 3
+      else
+        aMaxColor := 4;
+      aColors[Cycle[VertexCount - 2]] := aMaxColor;
+      exit(True);
+    end;
+  Result := False;
+end;
+
 function TGSimpleGraph.ColorConnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
 var
   Helper: TExactColor;
@@ -2556,6 +2617,25 @@ begin
   Result := (EdgeCount = Pred(VertexCount)) and Connected;
 end;
 
+function TGSimpleGraph.IsStar(out aHub: SizeInt): Boolean;
+var
+  I, d: SizeInt;
+begin
+  if (VertexCount < 4) or not IsTree then
+    exit(False);
+  aHub := NULL_INDEX;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      d := AdjLists[I]^.Count;
+      if d = 1 then
+        continue;
+      if d <> Pred(VertexCount) then
+        exit(False);
+      aHub := d;
+    end;
+  Result := True;
+end;
+
 function TGSimpleGraph.IsCycle: Boolean;
 var
   d: SizeInt;
@@ -2571,32 +2651,20 @@ var
   I, d: SizeInt;
 begin
   aHub := NULL_INDEX;
-  if Connected and (EdgeCount = Pred(VertexCount) shl 1) then
+  if (VertexCount >= 4) and (EdgeCount = Pred(VertexCount) shl 1) and Connected then
     begin
-      if VertexCount > 4 then
+      for I := 0 to Pred(VertexCount) do
         begin
-          for I := 0 to Pred(VertexCount) do
-            begin
-              d := AdjLists[I]^.Count;
-              if d = Pred(VertexCount) then
-                if aHub <> NULL_INDEX then
-                  begin
-                    aHub := NULL_INDEX;
-                    exit(False);
-                  end
-                else
-                  aHub := d
-              else
-                if d <> 3 then
-                  begin
-                    aHub := NULL_INDEX;
-                    exit(False);
-                  end;
-            end;
-          Result := aHub <> NULL_INDEX;
-        end
-      else
-        Result := (VertexCount = 4) and IsRegular(d);
+          d := AdjLists[I]^.Count;
+          if d = 3 then
+            continue;
+          if d <> Pred(VertexCount) then
+            exit(False);
+          aHub := d;
+        end;
+      if aHub = NULL_INDEX then
+        aHub := 0;
+      Result := True;
     end
   else
     Result := False;
@@ -3390,97 +3458,26 @@ begin
 end;
 
 function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
-var
-  Cols: TColorArray;
-  I: SizeInt;
 begin
-  aExact := True;
-  if IsEmpty then
-    begin
-      aColors := nil;
-      exit(0);
-    end;
-  if IsComplete then
-    begin
-      aColors.Length := VertexCount;
-      for I := 0 to Pred(VertexCount) do
-        aColors[I] := Succ(I);
-      exit(VertexCount);
-    end;
-  if IsBipartite(Cols) then
-    begin
-      aColors.Length := VertexCount;
-      for I := 0 to System.High(aColors) do
-        aColors[I] := Cols[I];
-      exit(2);
-    end;
-  if Odd(VertexCount) and IsCycle then
-    begin
-      aColors.Length := VertexCount;
-      for I := 0 to Pred(System.High(aColors)) do
-        aColors[I] := Succ(Ord(Odd(I)));
-      aColors[System.High(aColors)] := 3;
-      exit(3);
-    end;
-  //todo: is wheel ???
-  if Connected then
-    Result := ColorConnected(aTimeOut, aColors, aExact)
+  if ColorTrivial(Result, aColors) then
+    aExact := True
   else
-    Result := ColorDisconnected(aTimeOut, aColors, aExact)
+    if Connected then
+      Result := ColorConnected(aTimeOut, aColors, aExact)
+    else
+      Result := ColorDisconnected(aTimeOut, aColors, aExact)
 end;
 
 function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
-var
-  Cols: TColorArray;
-  I: SizeInt;
 begin
-  if IsEmpty then
-    begin
-      aColors := nil;
-      exit(0);
-    end;
-  if IsComplete then
-    begin
-      aColors.Length := VertexCount;
-      for I := 0 to Pred(VertexCount) do
-        aColors[I] := Succ(I);
-      exit(VertexCount);
-    end;
-  if IsBipartite(Cols) then
-    begin
-      aColors.Length := VertexCount;
-      for I := 0 to System.High(aColors) do
-        aColors[I] := Cols[I];
-      exit(2);
-    end;
-  Result := GreedyColorSL(aMissCount, aColors);
+  if not ColorTrivial(Result, aColors) then
+    Result := GreedyColorSL(aMissCount, aColors);
 end;
 
 function TGSimpleGraph.GreedyVertexColoring(out aColors: TIntArray): SizeInt;
-var
-  Cols: TColorArray;
-  I: SizeInt;
 begin
-  if IsEmpty then
-    begin
-      aColors := nil;
-      exit(0);
-    end;
-  if IsComplete then
-    begin
-      aColors.Length := VertexCount;
-      for I := 0 to Pred(VertexCount) do
-        aColors[I] := Succ(I);
-      exit(VertexCount);
-    end;
-  if IsBipartite(Cols) then
-    begin
-      aColors.Length := VertexCount;
-      for I := 0 to System.High(aColors) do
-        aColors[I] := Cols[I];
-      exit(2);
-    end;
-  Result := GreedyColor(aColors);
+  if not ColorTrivial(Result, aColors) then
+    Result := GreedyColor(aColors);
 end;
 
 function TGSimpleGraph.IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
