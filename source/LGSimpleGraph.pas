@@ -131,6 +131,8 @@ type
     function  ColorTrivial(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
     function  ColorConnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function  ColorDisconnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+    function  ColorableConnected(aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
+    function  ColorableDisconnected(aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
     function  GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
     function  GreedyColor(out aColors: TIntArray): SizeInt;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
@@ -334,7 +336,7 @@ type
     procedure ListIndependentSets(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best recent solution will be returned, and aExactSolution
+    at the end of the timeout the best recent solution will be returned, and aExactSolution
     will be set to False }
     function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMIS: TIntArray;
@@ -343,7 +345,7 @@ type
   { returns indices of the vertices of the some found minimum dominating set in connected graph;
     will raise exception if graph is disconnected;
     worst case time cost of exact solution O*(2^n);
-    aTimeOut specifies the timeout in seconds; at the end of the timeout, the best
+    aTimeOut specifies the timeout in seconds; at the end of the timeout the best
     recent solution will be returned, and aExactSolution will be set to False }
     function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMDS: TIntArray;
@@ -355,7 +357,7 @@ type
     procedure ListMaxCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best recent solution will be returned, and aExactSolution
+    at the end of the timeout the best recent solution will be returned, and aExactSolution
     will be set to False }
     function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMaxClique: TIntArray;
@@ -366,7 +368,10 @@ type
     at the end of the timeout, the best recent solution will be returned, and aExact
     will be set to False }
     function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
-  { returns count of colors; returns colors of the vertices in corresponding components of aColors;
+  { returns tlTrue if exist the vertex coloring which uses aK(or less) of colors;
+    aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
+    function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
+    { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     param aMissCount specifies maximum number of failed trials in a row(?~1000);
     (SL - self learning :) }
     function  GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
@@ -1583,6 +1588,45 @@ begin
       if MaxColCount < Result then
         Result := MaxColCount;
       aExact := True;
+    end;
+end;
+
+function TGSimpleGraph.ColorableConnected(aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
+var
+  Helper: TExactColor;
+begin
+  Result := Helper.IsColorable(Self, aK, aTimeOut, aColors);
+end;
+
+function TGSimpleGraph.ColorableDisconnected(aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
+var
+  Separates: TIntVectorArray;
+  g: TGSimpleGraph;
+  ColMap: TIntArray;
+  I, J: SizeInt;
+  TimeOut: Integer;
+  StartTime: TDateTime;
+begin
+  TimeOut := aTimeOut and System.High(Integer);
+  StartTime := Now;
+  Separates := FindSeparates;
+  aColors.Length := VertexCount;
+  for I := 0 to System.High(Separates) do
+    begin
+      g := SubgraphFromVertexList(Separates[I].ToArray);
+      try
+        Result := g.IsKColorable(aK, ColMap, TimeOut - SecondsBetween(Now, StartTime));
+        if Result = tlTrue then
+          for J := 0 to System.High(ColMap) do
+            aColors[IndexOf(g[J])] := ColMap[J];
+      finally
+        g.Free;
+      end;
+      if (Result = tlFalse) or (Result = tlUnknown) then
+        begin
+          aColors := nil;
+          exit;
+        end;
     end;
 end;
 
@@ -3465,7 +3509,20 @@ begin
     if Connected then
       Result := ColorConnected(aTimeOut, aColors, aExact)
     else
-      Result := ColorDisconnected(aTimeOut, aColors, aExact)
+      Result := ColorDisconnected(aTimeOut, aColors, aExact);
+end;
+
+function TGSimpleGraph.IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer): TTriLean;
+var
+  K: SizeInt;
+begin
+  K := GreedyVertexColoring(aColors);
+  if K <= aK then
+    exit(tlTrue);
+  if Connected then
+    Result := ColorableConnected(aK, aTimeOut, aColors)
+  else
+    Result := ColorableDisconnected(aK, aTimeOut, aColors);
 end;
 
 function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;

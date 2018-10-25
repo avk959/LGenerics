@@ -35,6 +35,7 @@ type
 
   TSortOrder            = (soAsc, soDesc);
   TRangeBound           = (rbLow, rbHigh);
+  TTriLean              = (tlFalse, tlTrue, tlUnknown);
   TRangeBounds          = set of TRangeBound;
   TGArray<T>            = array of T;
   TGCompare<T>          = function(constref L, R: T): SizeInt;

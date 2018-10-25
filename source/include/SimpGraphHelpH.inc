@@ -140,6 +140,7 @@ type
       Saturation,
       Degree: SizeInt;
       AdjColors: array of Integer;
+      constructor Create(aDegree, aUpperBound: SizeInt);
       procedure PickColor(aColor: SizeInt); inline;
       procedure DropColor(aColor: SizeInt); inline;
       function  Available(aColor: Integer): Boolean; inline;
@@ -157,7 +158,7 @@ type
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancel: Boolean;
-    procedure InitBounds;
+    function  InitLowerBound: SizeInt;
     procedure PickColor(aIndex, aColor: SizeInt);
     procedure DropColor(aIndex, aColor: SizeInt);
     function  SelectNext: SizeInt;
@@ -165,6 +166,7 @@ type
     function  DSatur(aMaxColor: SizeInt): SizeInt;
   public
     function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
+    function IsColorable(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
   end;
 
   { TGreedyColorSL }
