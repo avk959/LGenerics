@@ -371,7 +371,7 @@ type
   { returns tlTrue if exist the vertex coloring which uses aK(or less) of colors;
     aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
     function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
-    function  CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
+    function  FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
     { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     param aMissCount specifies maximum number of failed trials in a row(?~1000);
     (SL - self learning :) }
@@ -3529,7 +3529,7 @@ begin
     Result := ColorableDisconnected(aK, aTimeOut, aColors);
 end;
 
-function TGSimpleGraph.CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
+function TGSimpleGraph.FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
 var
   Helper: TExactColor;
   I: SizeInt;
