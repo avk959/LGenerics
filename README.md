@@ -40,6 +40,7 @@ Contains:
       - listing all maximal independent sets
       - maximum clique finding
       - listing all maximal cliques
+      - vertex coloring
       - maximum flow through the directed network
       - minimum-cost flow through the directed network
       - minimum s-t cut of the directed network
