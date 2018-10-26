@@ -772,6 +772,22 @@ begin
     end;
 end;
 
+procedure TGSimpleGraph.TExactColor.InitComplete;
+var
+  I: SizeInt;
+begin
+  System.SetLength(FNodes, FNodeCount);
+  for I := 0 to System.High(FNodes) do
+    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, FUpperBound);
+  FAchromatic.InitRange(FNodeCount);
+  for I := 0 to System.High(FColorMap) do
+    if FColorMap[I] > 0 then
+      begin
+        FAchromatic[I] := False;
+        PickColor(I, FColorMap[I]);
+      end;
+end;
+
 procedure TGSimpleGraph.TExactColor.PickColor(aIndex, aColor: SizeInt);
 var
   p: PAdjItem;
@@ -790,26 +806,28 @@ begin
     FNodes[p^.Key].DropColor(aColor);
 end;
 
-function TGSimpleGraph.TExactColor.SelectNext: SizeInt;
+function TGSimpleGraph.TExactColor.SelectNext(out aNode: SizeInt): Boolean;
 var
   I, MaxSat: Integer;
 begin
+  //todo: priority queue ?
   MaxSat := NULL_INDEX;
-  Result := NULL_INDEX;
+  aNode := NULL_INDEX;
   for I in FAchromatic do
     with FNodes[I] do
-      if (Saturation > MaxSat) or (Saturation = MaxSat) and (Degree > FNodes[Result].Degree) then
+      if (Saturation > MaxSat) or (Saturation = MaxSat) and (Degree > FNodes[aNode].Degree) then
         begin
           MaxSat := Saturation;
-          Result := I;
+          aNode := I;
         end;
+  Result := aNode >= 0;
 end;
 
-procedure TGSimpleGraph.TExactColor.CheckSolution(aColCount: SizeInt);
+procedure TGSimpleGraph.TExactColor.CheckSolution(aMaxColor: SizeInt);
 begin
-  if aColCount < FUpperBound then
+  if aMaxColor < FUpperBound then
     begin
-      FUpperBound := aColCount;
+      FUpperBound := aMaxColor;
       FRecentBest := System.Copy(FColorMap);
     end;
 end;
@@ -827,8 +845,7 @@ begin
     exit(aMaxColor);
   if FUpperBound <= FLowerBound then
     exit(FUpperBound);
-  CurrNode := SelectNext;
-  if CurrNode < 0 then
+  if not SelectNext(CurrNode) then
     exit(aMaxColor);
   FAchromatic[CurrNode] := False;
   for Color := 1 to aMaxColor do
@@ -891,6 +908,24 @@ begin
       Result := tlFalse
     else
       Result := tlUnknown;
+end;
+
+function TGSimpleGraph.TExactColor.Complete(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer;
+  var aColors: TIntArray): Boolean;
+begin
+  FTimeOut := aTimeOut and System.High(Integer);
+  FNodeCount := aGraph.VertexCount;
+  FGraph := aGraph;
+  FLowerBound := aK;
+  FUpperBound := Succ(aK);
+  FCancel := False;
+  FStartTime := Now;
+  FColorMap := System.Copy(aColors);
+  InitComplete;
+  CheckSolution(DSatur(FLowerBound));
+  Result := not FCancel and (FLowerBound >= FUpperBound);
+  if Result then
+    aColors := System.Copy(FRecentBest);
 end;
 
 { TGSimpleGraph.TGreedyColorSL.TNode }

@@ -159,14 +159,16 @@ type
     FTimeOut: Integer;
     FCancel: Boolean;
     function  InitLowerBound: SizeInt;
+    procedure InitComplete;
     procedure PickColor(aIndex, aColor: SizeInt);
     procedure DropColor(aIndex, aColor: SizeInt);
-    function  SelectNext: SizeInt;
-    procedure CheckSolution(aColCount: SizeInt); inline;
+    function  SelectNext(out aNode: SizeInt): Boolean;
+    procedure CheckSolution(aMaxColor: SizeInt); inline;
     function  DSatur(aMaxColor: SizeInt): SizeInt;
   public
     function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function IsColorable(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
+    function Complete(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer; var aColors: TIntArray): Boolean;
   end;
 
   { TGreedyColorSL }

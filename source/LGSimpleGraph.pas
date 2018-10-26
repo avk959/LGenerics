@@ -363,7 +363,7 @@ type
     function  GreedyMaxClique: TIntArray;
   { returns True if aClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(constref aClique: TIntArray): Boolean;
-  { returns count of colors; returns colors of the vertices in corresponding components of aColors;
+  { returns count of used colors; returns colors of the vertices in corresponding components of aColors;
     worst case time cost of exact solution O*(k^n); aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best recent solution will be returned, and aExact
     will be set to False }
@@ -371,6 +371,7 @@ type
   { returns tlTrue if exist the vertex coloring which uses aK(or less) of colors;
     aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
     function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
+    function  CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
     { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     param aMissCount specifies maximum number of failed trials in a row(?~1000);
     (SL - self learning :) }
@@ -3516,13 +3517,31 @@ function TGSimpleGraph.IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOu
 var
   K: SizeInt;
 begin
+  if aK <= 0 then
+    exit(tlFalse);
   K := GreedyVertexColoring(aColors);
   if K <= aK then
     exit(tlTrue);
+  aColors := nil;
   if Connected then
     Result := ColorableConnected(aK, aTimeOut, aColors)
   else
     Result := ColorableDisconnected(aK, aTimeOut, aColors);
+end;
+
+function TGSimpleGraph.CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
+var
+  Helper: TExactColor;
+  I: SizeInt;
+begin
+  if aMaxColor <= 0 then
+    exit(False);
+  if aColors.Length <> VertexCount then
+    exit(False);
+  for I in aColors do
+    if (I < 0) or (I > aMaxColor) then
+      exit(False);
+  Result := Helper.Complete(Self, aMaxColor, aTimeOut, aColors);
 end;
 
 function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
@@ -3546,7 +3565,7 @@ begin
     exit(aColors = nil);
   if aColors.Length <> VertexCount then
     exit(False);
-  for e in Edges do
+  for e in DistinctEdges do
     begin
       sCol := aColors[e.Source];
       dCol := aColors[e.Destination];
