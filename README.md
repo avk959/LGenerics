@@ -44,7 +44,7 @@ Contains:
       - maximum flow through the directed network
       - minimum-cost flow through the directed network
       - minimum s-t cut of the directed network
-      - minimum cut for weighted graph
+      - global minimum cut of the weighted graph
       - maximum cardinality matching for bipartite graph
       - maximum cardinality matching for general graph
       - weighted matching for bipartite graph
