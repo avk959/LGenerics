@@ -368,9 +368,11 @@ type
     at the end of the timeout, the best recent solution will be returned, and aExact
     will be set to False }
     function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
-  { returns tlTrue if exist the vertex coloring which uses aK(or less) of colors;
+  { returns tlTrue if exist the vertex coloring which uses at most aK of colors;
     aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
     function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
+  { returns True if it is possible to complete the coloring using colors no more than aMaxColor
+    and using the predefined colors specified in aColors }
     function  FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
     { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     param aMissCount specifies maximum number of failed trials in a row(?~1000);
