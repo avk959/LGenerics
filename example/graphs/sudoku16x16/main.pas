@@ -268,6 +268,7 @@ end;
 procedure TfrmMain.btShowClick(Sender: TObject);
 begin
   ShowSolution;
+  btShow.Enabled := False;
 end;
 
 end.
