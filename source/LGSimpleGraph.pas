@@ -3506,6 +3506,7 @@ end;
 
 function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
 begin
+  //todo: planar graphs, chordal graphs ?
   if ColorTrivial(Result, aColors) then
     aExact := True
   else
