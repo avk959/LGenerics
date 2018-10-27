@@ -26,7 +26,7 @@ type
     procedure btNewClick(Sender: TObject);
     procedure btShowClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
+    procedure sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; {%H-}aState: TGridDrawState);
   private
   type
     THelper   = specialize TGOrdinalArrayHelper<SizeInt>;
@@ -149,7 +149,7 @@ end;
 function TfrmMain.CreateColorArray: TIntArray;
 begin
   Result{%H-}.Length := 256;
-  FillChar(Pointer(Result)^, SizeOf(SizeInt) * 256, 0);
+  FillChar(Pointer(Result)^, SizeOf(SizeInt) * Result.Length, 0);
 end;
 
 function TfrmMain.CreateRangeArray: TIntArray;
@@ -157,7 +157,7 @@ var
   I: SizeInt;
 begin
   Result{%H-}.Length := 256;
-  for I := 0 to 255 do
+  for I := 0 to High(Result) do
     Result[I] := I;
 end;
 
@@ -168,7 +168,7 @@ var
 begin
   ToHide := CreateRangeArray;
   THelper.RandomShuffle(ToHide);
-  ToHide.Length := 256 - seHintCount.Value;
+  ToHide.Length := ToHide.Length - seHintCount.Value;
   Hints := CurrSolution;
   for I in ToHide do
     Hints[I] := 0;
@@ -178,7 +178,7 @@ procedure TfrmMain.NewSeed(var aSeed: TSeed);
 var
   I: SizeInt;
 begin
-  for I := 1 to 16 do
+  for I := Low(aSeed) to High(aSeed) do
     aSeed[I] := I;
   THelper.RandomShuffle(aSeed);
 end;
@@ -192,7 +192,7 @@ var
 begin
   Colors := CreateColorArray;
   NewSeed(Seed{%H-});
-  for I := 1 to 16 do
+  for I := Low(Seed) to High(Seed) do
     Colors[Graph.IndexOf(I)] := Seed[I];
 
   OldCursor := Screen.Cursor;
@@ -209,7 +209,7 @@ begin
       exit;
     end;
 
-  for I := 0 to 255 do
+  for I := Low(Colors) to High(Colors) do
     CurrSolution[I] := Colors[I];
   CreateHints;
 end;
