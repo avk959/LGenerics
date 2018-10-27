@@ -164,13 +164,13 @@ end;
 procedure TfrmMain.CreateHints;
 var
   I: SizeInt;
-  a: TIntArray;
+  ToHide: TIntArray;
 begin
-  a := CreateRangeArray;
-  THelper.RandomShuffle(a);
-  a.Length := 256 - seHintCount.Value;
+  ToHide := CreateRangeArray;
+  THelper.RandomShuffle(ToHide);
+  ToHide.Length := 256 - seHintCount.Value;
   Hints := CurrSolution;
-  for I in a do
+  for I in ToHide do
     Hints[I] := 0;
 end;
 
