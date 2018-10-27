@@ -15,12 +15,15 @@ object frmMain: TfrmMain
     Top = 4
     Width = 564
     Anchors = [akTop, akLeft, akRight, akBottom]
+    AutoAdvance = aaNone
     ColCount = 17
     DefaultColWidth = 32
-    FixedColor = clSilver
+    FixedColor = 14606046
+    Flat = True
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goEditing, goSmoothScroll, goFixedRowNumbering]
     RowCount = 17
     TabOrder = 1
+    OnDrawCell = sgCellsDrawCell
   end
   object seHintCount: TSpinEdit
     Left = 664

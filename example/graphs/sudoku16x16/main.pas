@@ -26,6 +26,7 @@ type
     procedure btNewClick(Sender: TObject);
     procedure btShowClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
   private
   type
     THelper   = specialize TGOrdinalArrayHelper<SizeInt>;
@@ -66,6 +67,24 @@ begin
     sgCells.Cells[I, 0] := I.ToString;
   Graph := GenGraph;
   Randomize;
+end;
+
+procedure TfrmMain.sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
+begin
+  if (aCol <> 0) and (aCol and 3 = 0) and (aRow <> 0) then
+    with sgCells.Canvas do
+      begin
+        Pen.Color := sgCells.GridLineColor;
+        MoveTo(aRect.Right - 2, aRect.Top);
+        LineTo(aRect.Right - 2, aRect.Bottom);
+      end;
+  if (aRow <> 0) and (aRow and 3 = 0) and (aCol <> 0) then
+    with sgCells.Canvas do
+      begin
+        Pen.Color := sgCells.GridLineColor;
+        MoveTo(aRect.Left, aRect.Bottom - 2);
+        LineTo(aRect.Right, aRect.Bottom - 2);
+      end;
 end;
 
 function TfrmMain.GenGraph: TIntChart;
@@ -168,6 +187,7 @@ function TfrmMain.GenSolution: Boolean;
 var
   Seed: TSeed;
   Colors: TIntArray;
+  OldCursor: TCursor;
   I: SizeInt;
 begin
   Colors := CreateColorArray;
@@ -175,11 +195,12 @@ begin
   for I := 1 to 16 do
     Colors[Graph.IndexOf(I)] := Seed[I];
 
+  OldCursor := Screen.Cursor;
   Screen.Cursor := crHourGlass;
   try
     Result := Graph.FindCompleteColoring(16, Colors, 5);
   finally
-    Screen.Cursor := crDefault;
+    Screen.Cursor := OldCursor;
   end;
 
   if not Result then
