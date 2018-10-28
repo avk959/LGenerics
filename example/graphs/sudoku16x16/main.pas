@@ -203,6 +203,7 @@ begin
 
   OldCursor := Screen.Cursor;
   Screen.Cursor := crHourGlass;
+  Application.ProcessMessages;
   try
     Result := Graph.FindCompleteColoring(16, Colors, 5);
   finally

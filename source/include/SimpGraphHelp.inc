@@ -749,12 +749,12 @@ end;
 
 function TGSimpleGraph.TExactColor.InitLowerBound: SizeInt;
 var
-  Clique: TIntHashSet;
+  Clique: TIntArray;
   I, J: SizeInt;
   Exact: Boolean;
 begin
-  Clique.AddAll(FGraph.MaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime)));
-  Result := Clique.Count;
+  Clique := FGraph.MaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime));
+  Result := Clique.Length;
   FCancel := not Exact;
   if FCancel or (Result >= FUpperBound) then
     exit;
@@ -924,7 +924,7 @@ begin
   CheckSolution(DSatur(FLowerBound));
   Result := not FCancel and (FLowerBound >= FUpperBound);
   if Result then
-    aColors := System.Copy(FRecentBest);
+    aColors := FRecentBest;
 end;
 
 { TGSimpleGraph.TGreedyColorRlf.TNode }
