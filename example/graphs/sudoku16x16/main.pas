@@ -26,6 +26,7 @@ type
     procedure btNewClick(Sender: TObject);
     procedure btShowClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; {%H-}aState: TGridDrawState);
   private
   type
@@ -67,6 +68,11 @@ begin
     sgCells.Cells[I, 0] := I.ToString;
   Graph := GenGraph;
   Randomize;
+end;
+
+procedure TfrmMain.FormDestroy(Sender: TObject);
+begin
+  Graph.Free;
 end;
 
 procedure TfrmMain.sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
