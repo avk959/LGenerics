@@ -760,7 +760,7 @@ begin
     exit;
   System.SetLength(FNodes, FNodeCount);
   for I := 0 to System.High(FNodes) do
-    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, FUpperBound);
+    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpperBound));
   FColorMap := FGraph.CreateIntArray(0);
   FAchromatic.InitRange(FNodeCount);
   J := 1;
@@ -778,7 +778,7 @@ var
 begin
   System.SetLength(FNodes, FNodeCount);
   for I := 0 to System.High(FNodes) do
-    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, FUpperBound);
+    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpperBound));
   FAchromatic.InitRange(FNodeCount);
   for I := 0 to System.High(FColorMap) do
     if FColorMap[I] > 0 then
