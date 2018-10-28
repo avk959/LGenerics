@@ -133,7 +133,7 @@ type
     function  ColorDisconnected(aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function  ColorableConnected(aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
     function  ColorableDisconnected(aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
-    function  GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
+    function  GreedyColorRlf(out aColors: TIntArray): SizeInt;
     function  GreedyColor(out aColors: TIntArray): SizeInt;
     procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
     function  CutPointExists(aRoot: SizeInt): Boolean;
@@ -374,10 +374,9 @@ type
   { returns True if it is possible to complete the coloring using colors no more than aMaxColor
     and using the predefined colors specified in aColors }
     function  FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
-    { returns count of colors; returns colors of the vertices in corresponding components of aColors;
-    param aMissCount specifies maximum number of failed trials in a row(?~1000);
-    (SL - self learning :) }
-    function  GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
+  { returns count of colors; returns colors of the vertices in corresponding components of aColors;
+    used RLF greedy coloring algorithm }
+    function  GreedyVertexColoringRlf(out aColors: TIntArray): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
@@ -1633,11 +1632,11 @@ begin
     end;
 end;
 
-function TGSimpleGraph.GreedyColorSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
+function TGSimpleGraph.GreedyColorRlf(out aColors: TIntArray): SizeInt;
 var
-  Helper: TGreedyColorSL;
+  Helper: TGreedyColorRlf;
 begin
-  Result := Helper.Colorize(Self, aMissCount, aColors);
+  Result := Helper.Colorize(Self, aColors);
 end;
 
 function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;
@@ -3522,7 +3521,7 @@ var
 begin
   if aK <= 0 then
     exit(tlFalse);
-  K := GreedyVertexColoring(aColors);
+  K := GreedyVertexColoringRlf(aColors);
   if K <= aK then
     exit(tlTrue);
   aColors := nil;
@@ -3547,10 +3546,23 @@ begin
   Result := Helper.Complete(Self, aMaxColor, aTimeOut, aColors);
 end;
 
-function TGSimpleGraph.GreedyVertexColoringSL(aMissCount: SizeInt; out aColors: TIntArray): SizeInt;
+function TGSimpleGraph.GreedyVertexColoringRlf(out aColors: TIntArray): SizeInt;
+var
+  I: SizeInt;
 begin
-  if not ColorTrivial(Result, aColors) then
-    Result := GreedyColorSL(aMissCount, aColors);
+  if IsEmpty then
+    begin
+      aColors := nil;
+      exit(0);
+    end;
+  if IsComplete then
+    begin
+      aColors.Length := VertexCount;
+      for I := 0 to Pred(VertexCount) do
+        aColors[I] := Succ(I);
+      exit(VertexCount);
+    end;
+  Result := GreedyColorRlf(aColors);
 end;
 
 function TGSimpleGraph.GreedyVertexColoring(out aColors: TIntArray): SizeInt;

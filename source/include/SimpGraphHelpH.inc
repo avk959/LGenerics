@@ -172,21 +172,23 @@ type
     function Complete(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer; var aColors: TIntArray): Boolean;
   end;
 
-  { TGreedyColorSL }
-  TGreedyColorSL = record
+  { TGreedyColorRlf }
+  TGreedyColorRlf = record
   strict private
   type
     TNode = record
-      Index: SizeInt;
-      Weight: Single;
+      Index,
+      WDegree,
+      Degree: SizeInt;
       class operator > (constref L, R: TNode): Boolean; inline;
       class operator < (constref L, R: TNode): Boolean; inline;
       class operator >=(constref L, R: TNode): Boolean; inline;
       class operator <=(constref L, R: TNode): Boolean; inline;
+      constructor Create(aIndex, aDegree: SizeInt);
     end;
     TQueue = specialize TGPairHeapMax<TNode>;
   public
-    function Colorize(aGraph: TGSimpleGraph; aMissCount: Integer; out aColors: TIntArray): SizeInt;
+    function Colorize(aGraph: TGSimpleGraph; out aColors: TIntArray): SizeInt;
   end;
 
 { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching

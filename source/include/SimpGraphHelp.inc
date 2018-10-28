@@ -875,8 +875,7 @@ begin
   FGraph := aGraph;
   FCancel := False;
   FStartTime := Now;
-  FUpperBound := FGraph.GreedyColor(FRecentBest);
-  //FUpperBound := FGraph.GreedyColorSL(1000, FRecentBest);
+  FUpperBound := FGraph.GreedyColorRlf(FRecentBest);
   FLowerBound := InitLowerBound;
   if not FCancel and (FLowerBound < FUpperBound) then
     CheckSolution(DSatur(FLowerBound));
@@ -928,88 +927,96 @@ begin
     aColors := System.Copy(FRecentBest);
 end;
 
-{ TGSimpleGraph.TGreedyColorSL.TNode }
+{ TGSimpleGraph.TGreedyColorRlf.TNode }
 
-class operator TGSimpleGraph.TGreedyColorSL.TNode.>(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColorRlf.TNode.>(constref L, R: TNode): Boolean;
 begin
-  Result := L.Weight > R.Weight;
+  if L.WDegree <> R.WDegree then
+    Result := L.WDegree > R.WDegree
+  else
+    if L.Degree <> R.Degree then
+      Result := L.Degree > R.Degree
+    else
+      Result := L.Index > R.Index;
 end;
 
-class operator TGSimpleGraph.TGreedyColorSL.TNode.<(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColorRlf.TNode.<(constref L, R: TNode): Boolean;
 begin
-  Result := L.Weight < R.Weight;
+  if L.WDegree <> R.WDegree then
+    Result := L.WDegree < R.WDegree
+  else
+    if L.Degree <> R.Degree then
+      Result := L.Degree < R.Degree
+    else
+      Result := L.Index < R.Index;
 end;
 
-class operator TGSimpleGraph.TGreedyColorSL.TNode.>=(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColorRlf.TNode.>=(constref L, R: TNode): Boolean;
 begin
-  Result := L.Weight >= R.Weight;
+  Result := not (L < R);
 end;
 
-class operator TGSimpleGraph.TGreedyColorSL.TNode.<=(constref L, R: TNode): Boolean;
+class operator TGSimpleGraph.TGreedyColorRlf.TNode.<=(constref L, R: TNode): Boolean;
 begin
-  Result := L.Weight <= R.Weight;
+  Result := not (L > R);
 end;
 
-{ TGSimpleGraph.TGreedyColorSL }
+constructor TGSimpleGraph.TGreedyColorRlf.TNode.Create(aIndex, aDegree: SizeInt);
+begin
+  Index := aIndex;
+  WDegree := 0;
+  Degree := aDegree;
+end;
 
-function TGSimpleGraph.TGreedyColorSL.Colorize(aGraph: TGSimpleGraph; aMissCount: Integer;
-  out aColors: TIntArray): SizeInt;
+{ TGSimpleGraph.TGreedyColorRlf }
+
+function TGSimpleGraph.TGreedyColorRlf.Colorize(aGraph: TGSimpleGraph; out aColors: TIntArray): SizeInt;
 var
+  Nodes: array of TNode;
   Queue: TQueue;
-  Nodes, CurrNodes: array of TNode;
-  ColorMap: TIntArray;
-  Achromatic, CurrIS: TBoolVector;
-  Node: TNode;
-  m, I, Color: SizeInt;
-  p: PAdjItem;
+  Achromatic, CurrIS, InQueue: TBoolVector;
+  Node, Neib: TNode;
+  I: SizeInt;
+  p, p2: PAdjItem;
 begin
-  Result := aGraph.VertexCount;
   System.SetLength(Nodes, aGraph.VertexCount);
   for I := 0 to System.High(Nodes) do
-    begin
-      Nodes[I].Index := I;
-      Nodes[I].Weight := aGraph.AdjLists[I]^.Count;
-    end;
-  ColorMap.Length := aGraph.VertexCount;
-  System.SetLength(CurrNodes, aGraph.VertexCount);
-  m := 0;
+    Nodes[I] := TNode.Create(I, aGraph.AdjLists[I]^.Count);
+  aColors.Length := aGraph.VertexCount;
+  Achromatic.InitRange(aGraph.VertexCount);
+  InQueue.Size := aGraph.VertexCount;
   Queue := TQueue.Create(aGraph.VertexCount);
-  while m < aMissCount do
+  Result := 0;
+  while Achromatic.NonEmpty do
     begin
-      for I := 0 to System.High(Nodes) do
-       CurrNodes[I] := Nodes[I];
-      Color := 0;
-      Achromatic.InitRange(aGraph.VertexCount);
-      while Achromatic.NonEmpty do
+      Inc(Result);
+      CurrIS := Achromatic;
+      InQueue := Achromatic;
+      for I in Achromatic do
+        Queue.Enqueue(I, Nodes[I]);
+      while Queue.TryDequeue(Node) do
         begin
-          Inc(Color);
-          CurrIS := Achromatic;
-          for I in Achromatic do
-            {%H-}Queue.Enqueue(I, CurrNodes[I]);
-          while Queue.TryDequeue(Node) do
-            if CurrIS[Node.Index] then
-              begin
-                CurrIS[Node.Index] := False;
-                Achromatic[Node.Index] := False;
-                ColorMap[Node.Index] := Color;
-                for p in aGraph.AdjLists[Node.Index]^ do
-                  if Achromatic[p^.Key] then
-                    begin
-                      CurrNodes[p^.Key].Weight -= 1;
-                      CurrIS[p^.Key] := False;
-                    end;
-              end;
+          InQueue[Node.Index] := False;
+          if CurrIS[Node.Index] then
+            begin
+              CurrIS[Node.Index] := False;
+              Achromatic[Node.Index] := False;
+              aColors[Node.Index] := Result;
+              for p in aGraph.AdjLists[Node.Index]^ do
+                if Achromatic[p^.Key] then
+                  begin
+                    Dec(Nodes[p^.Key].Degree);
+                    CurrIS[p^.Key] := False;
+                    for p2 in aGraph.AdjLists[p^.Key]^ do
+                      if InQueue[p2^.Key] then
+                        begin
+                          Neib := Queue.Peek(p2^.Key);
+                          Inc(Neib.WDegree);
+                          Queue.Update(p2^.Key, Neib);
+                        end;
+                  end;
+            end;
         end;
-      if Color < Result then
-        begin
-          m := 0;
-          Result := Color;
-          aColors := System.Copy(ColorMap);
-        end;
-      for I := 0 to System.High(ColorMap) do
-        if ColorMap[I] >= Result then
-          Nodes[I].Weight += Random;
-      Inc(m);
     end;
 end;
 
