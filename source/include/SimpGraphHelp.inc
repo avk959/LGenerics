@@ -726,14 +726,14 @@ begin
   System.FillChar(Pointer(AdjColors)^, aUpperBound * SizeOf(Integer), 0);
 end;
 
-procedure TGSimpleGraph.TExactColor.TNode.PickColor(aColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.TNode.NeibPickColor(aColor: SizeInt);
 begin
   Saturation += Ord(AdjColors[Pred(aColor)] = 0);
   Inc(AdjColors[Pred(aColor)]);
   Dec(Degree);
 end;
 
-procedure TGSimpleGraph.TExactColor.TNode.DropColor(aColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.TNode.NeibDropColor(aColor: SizeInt);
 begin
   Dec(AdjColors[Pred(aColor)]);
   Saturation -= Ord(AdjColors[Pred(aColor)] = 0);
@@ -794,7 +794,7 @@ var
 begin
   FColorMap[aIndex] := aColor;
   for p in FGraph.AdjLists[aIndex]^ do
-    FNodes[p^.Key].PickColor(aColor);
+    FNodes[p^.Key].NeibPickColor(aColor);
 end;
 
 procedure TGSimpleGraph.TExactColor.DropColor(aIndex, aColor: SizeInt);
@@ -803,7 +803,7 @@ var
 begin
   FColorMap[aIndex] := 0;
   for p in FGraph.AdjLists[aIndex]^ do
-    FNodes[p^.Key].DropColor(aColor);
+    FNodes[p^.Key].NeibDropColor(aColor);
 end;
 
 function TGSimpleGraph.TExactColor.SelectNext(out aNode: SizeInt): Boolean;

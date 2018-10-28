@@ -132,7 +132,8 @@ type
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
-  { TExactColor: a DSATUR-based branch and bound algorithm }
+  { TExactColor: a DSATUR-based branch and bound algorithm inspired by
+    https://mat.tepper.cmu.edu/COLOR/solvers/trick.c by Michael Trick }
   TExactColor = record
   strict private
   type
@@ -141,8 +142,8 @@ type
       Degree: SizeInt;
       AdjColors: array of Integer;
       constructor Create(aDegree, aUpperBound: SizeInt);
-      procedure PickColor(aColor: SizeInt); inline;
-      procedure DropColor(aColor: SizeInt); inline;
+      procedure NeibPickColor(aColor: SizeInt); inline;
+      procedure NeibDropColor(aColor: SizeInt); inline;
       function  Available(aColor: Integer): Boolean; inline;
     end;
 
