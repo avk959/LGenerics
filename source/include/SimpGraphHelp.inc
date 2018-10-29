@@ -886,6 +886,8 @@ end;
 
 function TGSimpleGraph.TExactColor.IsColorable(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer;
   out aColors: TIntArray): TTriLean;
+var
+  Lb: SizeInt;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
@@ -894,9 +896,9 @@ begin
   FUpperBound := Succ(aK);
   FCancel := False;
   FStartTime := Now;
-  InitLowerBound;
-  if not FCancel then
-    CheckSolution(DSatur(FLowerBound));
+  Lb := InitLowerBound;
+  if (Lb < FUpperBound) and not FCancel then
+    CheckSolution(DSatur(Lb));
   if FLowerBound >= FUpperBound then
     begin
       aColors := FRecentBest;
