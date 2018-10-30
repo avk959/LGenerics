@@ -1567,7 +1567,7 @@ begin
   aExact := False;
   TimeOut := aTimeOut and System.High(Integer);
   StartTime := Now;
-  Result := GreedyColor(aColors);
+  Result := GreedyColorRlf(aColors);
   if SecondsBetween(Now, StartTime) < TimeOut then
     begin
       Separates := FindSeparates;
