@@ -1180,7 +1180,7 @@ begin
       end;
 end;
 
-function TGSimpleGraph.THKMatch.GetMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.THKMatch.MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
 begin
   Init(aGraph, w, g);
   Result := HopcroftKarp;
@@ -1212,7 +1212,7 @@ begin
   FMates := aGraph.CreateIntArray;
   FParents := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
-  for e in aGraph.GetApproxMatching do
+  for e in aGraph.GreedyMatching do
     begin
       Match(e.Source, e.Destination);
       Inc(FMatchCount);
@@ -1307,7 +1307,7 @@ begin
       end;
 end;
 
-function TGSimpleGraph.TBfsMatch.GetMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.TBfsMatch.MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
 begin
   Init(aGraph, w, g);
   BfsMatch;
@@ -1316,10 +1316,10 @@ end;
 
 { TGSimpleGraph.TEdMatch }
 
-procedure TGSimpleGraph.TEdMatch.Match(aIndex, aMate: SizeInt);
+procedure TGSimpleGraph.TEdMatch.Match(aNode, aMate: SizeInt);
 begin
-  FMates[aIndex] := aMate;
-  FMates[aMate] := aIndex;
+  FMates[aNode] := aMate;
+  FMates[aMate] := aNode;
 end;
 
 procedure TGSimpleGraph.TEdMatch.ClearBase;
@@ -1354,15 +1354,15 @@ begin
   Result := NULL_INDEX;
 end;
 
-procedure TGSimpleGraph.TEdMatch.MarkPath(aValue, aBloss, aChild: SizeInt);
+procedure TGSimpleGraph.TEdMatch.MarkPath(aNode, aBloss, aChild: SizeInt);
 begin
   while FBase[aBloss] <> aBloss do
     begin
-      FBlossoms[FBase[aValue]] := True;
-      FBlossoms[FBase[FMates[aValue]]] := True;
-      FParents[aValue] := aChild;
-      aChild := FMates[aValue];
-      aValue := FParents[FMates[aValue]];
+      FBlossoms[FBase[aNode]] := True;
+      FBlossoms[FBase[FMates[aNode]]] := True;
+      FParents[aNode] := aChild;
+      aChild := FMates[aNode];
+      aNode := FParents[FMates[aNode]];
     end;
 end;
 
@@ -1462,14 +1462,14 @@ begin
   FVisited.Size := aGraph.VertexCount;
   FLcaUsed.Size := aGraph.VertexCount;
   FBlossoms.Size := aGraph.VertexCount;
-  for e in aGraph.GetApproxMatching2 do
+  for e in aGraph.GreedyMatching2 do
     begin
       Match(e.Source, e.Destination);
       Inc(FMatchCount);
     end;
 end;
 
-function TGSimpleGraph.TEdMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+function TGSimpleGraph.TEdMatch.MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
 var
   I, J: SizeInt;
 begin
@@ -1488,13 +1488,13 @@ end;
 
 { TGSimpleGraph.TPcMatch }
 
-procedure TGSimpleGraph.TPcMatch.DoMatch(aValue, aMate: SizeInt);
+procedure TGSimpleGraph.TPcMatch.Match(aNode, aMate: SizeInt);
 begin
-  FMates[aValue] := aMate;
-  FMates[aMate] := aValue;
+  FMates[aNode] := aMate;
+  FMates[aMate] := aNode;
 end;
 
-procedure TGSimpleGraph.TPcMatch.TryAugment(aRoot: SizeInt);
+procedure TGSimpleGraph.TPcMatch.FindAugmentPath(aRoot: SizeInt);
 var
   Curr, Next, Mate, Tmp: SizeInt;
   p: PAdjItem;
@@ -1560,21 +1560,21 @@ begin
   FGrannies := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
   FInTree.Size := aGraph.VertexCount;
-  for e in aGraph.GetApproxMatching do
+  for e in aGraph.GreedyMatching do
     begin
-      DoMatch(e.Source, e.Destination);
+      Match(e.Source, e.Destination);
       Inc(FMatchCount);
     end;
 end;
 
-function TGSimpleGraph.TPcMatch.GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+function TGSimpleGraph.TPcMatch.MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
 var
   I, J: SizeInt;
 begin
   Init(aGraph);
   for I := 0 to System.High(FMates) do
     if FMates[I] = NULL_INDEX then
-      TryAugment(I);
+      FindAugmentPath(I);
   System.SetLength(Result, FMatchCount);
   J := 0;
   for I := 0 to System.High(FMates) do

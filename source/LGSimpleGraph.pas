@@ -109,8 +109,8 @@ type
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    function  GetApproxMatching: TIntEdgeArray;
-    function  GetApproxMatching2: TIntEdgeArray;
+    function  GreedyMatching: TIntEdgeArray;
+    function  GreedyMatching2: TIntEdgeArray;
     function  GetMvMatching: TIntEdgeArray;
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
@@ -316,16 +316,16 @@ type
   { returns True if graph is bipartite and aMatch is maximal matching }
     function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
-    function ApproxMaxMatching: TIntEdgeArray;
+    function GreedyMaxMatching: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
     used Edmonds(?) algorithm }
-    function MaxMatchingEd: TIntEdgeArray;
+    function FindMaxMatchingEd: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
     used Pape-Conradt algorithm }
-    function MaxMatchingPC: TIntEdgeArray;
+    function FindMaxMatchingPC: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
     used Micali-Vazirani algorithm }
-    function MaxMatchingMV: TIntEdgeArray;
+    function FindMaxMatchingMV: TIntEdgeArray;
 {**********************************************************************************************************
   some NP-hard problem utilities
 ***********************************************************************************************************}
@@ -367,14 +367,16 @@ type
     worst case time cost of exact solution O*(k^n); aTimeOut specifies the timeout in seconds;
     at the end of the timeout, the best recent solution will be returned, and aExact
     will be set to False }
-    function  VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
+    function  VertexColoring(out aColors: TIntArray; out aExact: Boolean;
+              aTimeOut: Integer = WAIT_INFINITE): SizeInt;
   { returns tlTrue if exist the vertex coloring which uses at most aK of colors;
     aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
     function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
   { returns True if it is possible to complete the coloring using colors no more than aMaxColor
     and using the predefined colors specified in aColors;
     aTimeOut specifies the timeout in seconds; at the end of the timeout False will be returned }
-    function  FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): Boolean;
+    function  FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray;
+              aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     used RLF greedy coloring algorithm }
     function  GreedyVertexColoringRlf(out aColors: TIntArray): SizeInt;
@@ -382,6 +384,10 @@ type
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
     function  IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
+    function  FindHamiltonCycles(constref aRoot: TVertex; aCount: SizeInt;
+              aTimeOut: Integer = WAIT_INFINITE): TIntArrayVector; inline;
+    function  FindHamiltonCyclesI(aRootIndex, aCount: SizeInt;
+              aTimeOut: Integer = WAIT_INFINITE): TIntArrayVector; inline;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -1054,7 +1060,7 @@ begin
   Result := Helper.MaxClique(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetApproxMatching: TIntEdgeArray;
+function TGSimpleGraph.GreedyMatching: TIntEdgeArray;
 var
   Nodes: TIntArray;
   Matched: TBitVector;
@@ -1093,7 +1099,7 @@ begin
   System.SetLength(Result, Size);
 end;
 
-function TGSimpleGraph.GetApproxMatching2: TIntEdgeArray;
+function TGSimpleGraph.GreedyMatching2: TIntEdgeArray;
 var
   Nodes: TINodePqMin;
   Matched: TBitVector;
@@ -1169,7 +1175,7 @@ begin
       Nodes[I].FirstEdge := nil;
     end;
 
-  for ie in GetApproxMatching2 do
+  for ie in GreedyMatching2 do
     begin
       Nodes[ie.Source].Mate := @Nodes[ie.Destination];
       Nodes[ie.Destination].Mate := @Nodes[ie.Source];
@@ -1273,7 +1279,7 @@ begin
       exit(w); ////
 
   Match := CreateIntArray;
-  for e in Helper.GetMaxMatch(Self, w, g) do
+  for e in Helper.MaxMatching(Self, w, g) do
     begin
       LeftsFree[e.Source] := False;
       LeftsFree[e.Destination] := False;
@@ -3128,7 +3134,7 @@ var
 begin
   if not IsBipartite(w, g) then
     exit(False);
-  aMatch := Helper.GetMaxMatch(Self, w, g);
+  aMatch := Helper.MaxMatching(Self, w, g);
   Result := True;
 end;
 
@@ -3136,7 +3142,7 @@ function TGSimpleGraph.MaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArra
 var
   Helper: THKMatch;
 begin
-  Result := Helper.GetMaxMatch(Self, aWhites, aGrays);
+  Result := Helper.MaxMatching(Self, aWhites, aGrays);
 end;
 
 function TGSimpleGraph.FindMaxBipartiteMatchingBfs(out aMatch: TIntEdgeArray): Boolean;
@@ -3146,7 +3152,7 @@ var
 begin
   if not IsBipartite(w, g) then
     exit(False);
-  aMatch := Helper.GetMaxMatch(Self, w, g);
+  aMatch := Helper.MaxMatching(Self, w, g);
   Result := True;
 end;
 
@@ -3154,7 +3160,7 @@ function TGSimpleGraph.MaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArr
 var
   Helper: TBfsMatch;
 begin
-  Result := Helper.GetMaxMatch(Self, aWhites, aGrays);
+  Result := Helper.MaxMatching(Self, aWhites, aGrays);
 end;
 
 function TGSimpleGraph.IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
@@ -3207,36 +3213,36 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.ApproxMaxMatching: TIntEdgeArray;
+function TGSimpleGraph.GreedyMaxMatching: TIntEdgeArray;
 begin
   if VertexCount < 2 then
     exit([]);
   if (VertexCount = 2) and Connected then
     exit([TIntEdge.Create(0, 1)]);
-  Result := GetApproxMatching2;
+  Result := GreedyMatching2;
 end;
 
-function TGSimpleGraph.MaxMatchingEd: TIntEdgeArray;
+function TGSimpleGraph.FindMaxMatchingEd: TIntEdgeArray;
 var
   Helper: TEdMatch;
 begin
   if VertexCount < 2 then
     exit([]);
   if not FindMaxBipartiteMatchingHK(Result) then
-    Result := Helper.GetMaxMatch(Self);
+    Result := Helper.MaxMatching(Self);
 end;
 
-function TGSimpleGraph.MaxMatchingPC: TIntEdgeArray;
+function TGSimpleGraph.FindMaxMatchingPC: TIntEdgeArray;
 var
   Helper: TPcMatch;
 begin
   if VertexCount < 2 then
     exit([]);
   if not FindMaxBipartiteMatchingBfs(Result) then
-    Result := Helper.GetMaxMatch(Self);
+    Result := Helper.MaxMatching(Self);
 end;
 
-function TGSimpleGraph.MaxMatchingMV: TIntEdgeArray;
+function TGSimpleGraph.FindMaxMatchingMV: TIntEdgeArray;
 begin
   if VertexCount < 2 then
     exit([]);
@@ -3589,6 +3595,18 @@ begin
         exit(False);
     end;
   Result := True;
+end;
+
+function TGSimpleGraph.FindHamiltonCycles(constref aRoot: TVertex; aCount: SizeInt;
+  aTimeOut: Integer): TIntArrayVector;
+begin
+  Result := FindHamiltonCyclesI(IndexOf(aRoot), aCount, aTimeOut)
+end;
+
+function TGSimpleGraph.FindHamiltonCyclesI(aRootIndex, aCount: SizeInt; aTimeOut: Integer): TIntArrayVector;
+begin
+  if not Connected then
+    exit(Default(TIntArrayVector));
 end;
 
 { TGChart }

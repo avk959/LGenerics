@@ -221,7 +221,7 @@ type
     function  Dfs(aRoot: SizeInt): Boolean;
     function  HopcroftKarp: TIntEdgeArray;
   public
-    function  GetMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+    function  MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
   end;
 
   { TBfsMatch: simple BFS matching algorithm for bipartite graph }
@@ -241,7 +241,7 @@ type
     procedure BfsMatch;
     function  CreateEdges: TIntEdgeArray;
   public
-    function  GetMaxMatch(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
+    function  MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
   end;
 
 { TEdMatch: Edmonds algorithm for maximum cardinality matching }
@@ -256,17 +256,17 @@ type
     FLcaUsed,
     FBlossoms: TBitVector;
     FMatchCount: SizeInt;
-    procedure Match(aIndex, aMate: SizeInt); inline;
+    procedure Match(aNode, aMate: SizeInt); inline;
     procedure ClearBase; inline;
     procedure ClearParents; inline;
     function  Lca(L, R: SizeInt): SizeInt;
-    procedure MarkPath(aValue, aBloss, aChild: SizeInt);
+    procedure MarkPath(aNode, aBloss, aChild: SizeInt);
     function  FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
     procedure AlternatePath(aRoot: SizeInt);
     procedure EdMatch;
     procedure Init(aGraph: TGSimpleGraph);
   public
-    function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+    function  MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
   end;
 
   { TPcMatch: Pape and Conradt general matching algorithm from
@@ -279,11 +279,11 @@ type
     FQueue: TIntArray;
     FInTree: TBitVector;
     FMatchCount: SizeInt;
-    procedure DoMatch(aValue, aMate: SizeInt); inline;
-    procedure TryAugment(aRoot: SizeInt);
+    procedure Match(aNode, aMate: SizeInt); inline;
+    procedure FindAugmentPath(aRoot: SizeInt);
     procedure Init(aGraph: TGSimpleGraph);
   public
-    function  GetMaxMatch(aGraph: TGSimpleGraph): TIntEdgeArray;
+    function  MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
   end;
 
   { TNiMinCut: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }
