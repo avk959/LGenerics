@@ -1032,7 +1032,8 @@ begin
   FNodeCount := aGraph.VertexCount;
   FStack := TSimpleStack.Create(Succ(FNodeCount));
   FMatrix := aGraph.CreateBoolMatrix;
-  FVisited.Size := FNodeCount;
+  FVacant.InitRange(FNodeCount);
+  FInCycle.Size := FNodeCount;
   FTimeOut := aTimeOut and System.High(Integer);
   FFoundCount := 0;
   FDone := False;
@@ -1066,43 +1067,48 @@ end;
 
 procedure TGSimpleGraph.THamiltonCycles.DoSearch(aNode: SizeInt);
 var
-  Neighb, Back: TBoolVector;
+  Backs: TBoolVector;
   I: SizeInt;
 begin
   if TimeOut or Done then
     exit;
   if CycleFound(aNode) then
     exit;
-  if FVisited[aNode] or FMatrix[aNode].IsEmpty then
+  if FInCycle[aNode] or FMatrix[aNode].IsEmpty then
     exit;
-  Neighb := FMatrix[aNode];
-  Back.Size := FNodeCount;
-  FMatrix[aNode].ClearBits;
-  for I in Neighb do
+  for I in FVacant do
+    if (I <> aNode) and (FMatrix[I].PopCount < 2) then
+      exit;
+  FStack.Push(aNode);
+  FInCycle[aNode] := True;
+  FVacant[aNode] := False;
+  Backs.Size := FNodeCount;
+  for I in FMatrix[aNode] do
     begin
-      Back[I] := FMatrix[I][aNode];
+      Backs[I] := FMatrix[I][aNode];
       FMatrix[I][aNode] := False;
     end;
-  FStack.Push(aNode);
-  FVisited[aNode] := True;
-  for I in Neighb do
+
+  for I in FMatrix[aNode] do
     begin
       DoSearch(I);
       if TimeOut or Done then
         exit;
     end;
+
   FStack.Pop;
-  FVisited[aNode] := False;
-  for I in Back do
+  FInCycle[aNode] := False;
+  FVacant[aNode] := True;
+  for I in Backs do
     FMatrix[I][aNode] := True;
-  FMatrix[aNode] := Neighb;
 end;
 
 procedure TGSimpleGraph.THamiltonCycles.Search;
 var
   I: SizeInt;
 begin
-  FVisited[FRoot] := True;
+  FInCycle[FRoot] := True;
+  FVacant[FRoot] := False;
   FStack.Push(FRoot);
   for I in FMatrix[FRoot] do
     begin

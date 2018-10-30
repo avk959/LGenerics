@@ -196,7 +196,8 @@ type
   THamiltonCycles = record
   strict private
     FMatrix: TBoolMatrix;
-    FVisited: TBoolVector;
+    FInCycle,
+    FVacant: TBoolVector;
     FStack: TSimpleStack;
     FCycles: PIntArrayVector;
     FRoot,
