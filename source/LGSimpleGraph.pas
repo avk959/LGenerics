@@ -372,8 +372,9 @@ type
     aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
     function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
   { returns True if it is possible to complete the coloring using colors no more than aMaxColor
-    and using the predefined colors specified in aColors }
-    function  FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
+    and using the predefined colors specified in aColors;
+    aTimeOut specifies the timeout in seconds; at the end of the timeout False will be returned }
+    function  FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     used RLF greedy coloring algorithm }
     function  GreedyVertexColoringRlf(out aColors: TIntArray): SizeInt;
