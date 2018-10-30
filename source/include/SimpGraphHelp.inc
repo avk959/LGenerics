@@ -56,7 +56,7 @@ begin
     begin
       if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
-          FCanceled := True;
+          FCancelled := True;
           exit;
         end;
       ItemCount := aCand.PopCount;
@@ -85,7 +85,7 @@ var
   NewSub, NewCand: TBoolVector;
   I: SizeInt;
 begin
-  if FCanceled then
+  if FCancelled then
     exit;
   if aSub.NonEmpty then
     begin
@@ -101,7 +101,7 @@ begin
           end;
     end
   else
-    FOnFind(FCurrSet.ToArray, FCanceled);
+    FOnFind(FCurrSet.ToArray, FCancelled);
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -145,14 +145,14 @@ var
 begin
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
-  FCanceled := False;
+  FCancelled := False;
   SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.GreedyMaxClique;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCanceled;
+  aExact := not FCancelled;
 end;
 
 function TGSimpleGraph.TBPCliqueIsHelper.MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -161,7 +161,7 @@ var
   Cand: TBoolVector;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
@@ -169,7 +169,7 @@ begin
   FCurrSet.Size := aGraph.VertexCount;
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCanceled;
+  aExact := not FCancelled;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -181,7 +181,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   FOnFind := aOnFind;
-  FCanceled := False;
+  FCancelled := False;
   Extend(Sub, Cand);
 end;
 
@@ -194,7 +194,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.Size := aGraph.VertexCount;
   FOnFind := aOnFind;
-  FCanceled := False;
+  FCancelled := False;
   Extend(Sub, Cand);
 end;
 
@@ -237,7 +237,7 @@ begin
     begin
       if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
-          FCanceled := True;
+          FCancelled := True;
           exit;
         end;
       ItemCount := aCand.PopCount;
@@ -266,7 +266,7 @@ var
   NewSub, NewCand: TBits256;
   I: SizeInt;
 begin
-  if FCanceled then
+  if FCancelled then
     exit;
   if aSub.NonEmpty then
     begin
@@ -282,7 +282,7 @@ begin
           end;
     end
   else
-    FOnFind(FCurrSet.ToArray, FCanceled);
+    FOnFind(FCurrSet.ToArray, FCancelled);
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -325,7 +325,7 @@ var
   Cand: TBits256;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   SortMatrixByWidth(aGraph, False);
   FRecentBest := aGraph.GreedyMaxClique;
@@ -333,7 +333,7 @@ begin
   FCurrSet.InitZero;
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCanceled;
+  aExact := not FCancelled;
 end;
 
 function TGSimpleGraph.TBPCliqueIsHelper256.MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -343,14 +343,14 @@ var
 begin
   FStartTime := Now;
   FTimeOut := aTimeOut and System.High(Integer);
-  FCanceled := False;
+  FCancelled := False;
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCanceled;
+  aExact := not FCancelled;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -362,7 +362,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   FOnFind := aOnFind;
-  FCanceled := False;
+  FCancelled := False;
   Extend(Sub, Cand);
 end;
 
@@ -375,7 +375,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   FCurrSet.InitZero;
   FOnFind := aOnFind;
-  FCanceled := False;
+  FCancelled := False;
   Extend(Sub, Cand);
 end;
 
@@ -414,7 +414,7 @@ begin
     begin
       if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
-          FCanceled := True;
+          FCancelled := True;
           exit;
         end;
       ColOrd.Length := aCand.Count;
@@ -442,7 +442,7 @@ var
   NewSub, NewCand: TIntSet;
   I: SizeInt;
 begin
-  if FCanceled then
+  if FCancelled then
     exit;
   if aSub.NonEmpty then
     begin
@@ -458,7 +458,7 @@ begin
           end;
     end
   else
-    FOnFind(FCurrSet.ToArray, FCanceled);
+    FOnFind(FCurrSet.ToArray, FCancelled);
 end;
 
 function TGSimpleGraph.TCliqueHelper.MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer;
@@ -467,7 +467,7 @@ var
   Cand: TIntSet;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   FNodes := aGraph.SortNodesByWidth(soDesc);
   FMatrix := aGraph.CreateSkeleton;
@@ -475,7 +475,7 @@ begin
   Cand.InitRange(aGraph.VertexCount);
   Extend(Cand);
   Result := FRecentBest;
-  aExact := not FCanceled;
+  aExact := not FCancelled;
 end;
 
 procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
@@ -487,7 +487,7 @@ begin
   Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
   FOnFind := aOnFind;
-  FCanceled := False;
+  FCancelled := False;
   Extend(Sub, Cand);
 end;
 
@@ -521,7 +521,7 @@ begin
         exit;
       if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
-          FCanceled := True;
+          FCancelled := True;
           exit;
         end;
       I := aSub.Bsf;
@@ -561,14 +561,14 @@ var
   Sub, Cand: TBoolVector;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   FillMatrix(aGraph);
   FRecentBest := aGraph.GreedyMDS;
   Cand.Size := aGraph.VertexCount;
   Sub.InitRange(aGraph.VertexCount);
   Extend(Sub, Cand);
-  aExact := not FCanceled;
+  aExact := not FCancelled;
   Result := FRecentBest;
 end;
 
@@ -602,7 +602,7 @@ begin
         exit;
       if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
-          FCanceled := True;
+          FCancelled := True;
           exit;
         end;
       I := aSub.Bsf;
@@ -642,14 +642,14 @@ var
   Sub, Cand: TBits256;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   FillMatrix(aGraph);
   FRecentBest := aGraph.GreedyMDS;
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
   Extend(Sub, Cand);
-  aExact := not FCanceled;
+  aExact := not FCancelled;
   Result := FRecentBest;
 end;
 
@@ -666,7 +666,7 @@ begin
         exit;
       if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
-          FCanceled := True;
+          FCancelled := True;
           exit;
         end;
       I := aSub[0];
@@ -706,13 +706,13 @@ var
   Sub, Cand: TIntSet;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   FRecentBest := aGraph.GreedyMDS;
   FMatrix := aGraph.CreateSkeleton;
   Sub.AssignArray(aGraph.SortNodesByDegree(soDesc));
   Extend(Sub, Cand{%H-});
-  aExact := not FCanceled;
+  aExact := not FCancelled;
   Result := FRecentBest;
 end;
 
@@ -749,8 +749,8 @@ end;
 
 function TGSimpleGraph.TExactColor.TimeOut: Boolean;
 begin
-  FCanceled := FCanceled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
-  Result := FCanceled;
+  FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
+  Result := FCancelled;
 end;
 
 function TGSimpleGraph.TExactColor.InitLowBound: SizeInt;
@@ -761,8 +761,8 @@ var
 begin
   Clique := FGraph.MaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime));
   Result := Clique.Length;
-  FCanceled := not Exact;
-  if FCanceled or (Result >= FUpBound) then
+  FCancelled := not Exact;
+  if FCancelled or (Result >= FUpBound) then
     exit;
   System.SetLength(FNodes, FNodeCount);
   for I := 0 to System.High(FNodes) do
@@ -872,13 +872,13 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   FUpBound := FGraph.GreedyColorRlf(FRecentBest);
   FLowBound := InitLowBound;
-  if not FCanceled and (FLowBound < FUpBound) then
+  if not FCancelled and (FLowBound < FUpBound) then
     CheckSolution(DSatur(FLowBound));
-  aExact := not FCanceled;
+  aExact := not FCancelled;
   Result := FUpBound;
   aColors := FRecentBest;
 end;
@@ -893,10 +893,10 @@ begin
   FGraph := aGraph;
   FLowBound := aK;
   FUpBound := Succ(aK);
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   Lb := InitLowBound;
-  if (Lb < FUpBound) and not FCanceled then
+  if (Lb < FUpBound) and not FCancelled then
     CheckSolution(DSatur(Lb));
   if FLowBound >= FUpBound then
     begin
@@ -904,7 +904,7 @@ begin
       Result := tlTrue;
     end
   else
-    if not FCanceled then
+    if not FCancelled then
       Result := tlFalse
     else
       Result := tlUnknown;
@@ -918,12 +918,12 @@ begin
   FGraph := aGraph;
   FLowBound := aK;
   FUpBound := Succ(aK);
-  FCanceled := False;
+  FCancelled := False;
   FStartTime := Now;
   FColorMap := System.Copy(aColors);
   InitComplete;
   CheckSolution(DSatur(FLowBound));
-  Result := not FCanceled and (FLowBound >= FUpBound);
+  Result := not FCancelled and (FLowBound >= FUpBound);
   if Result then
     aColors := FRecentBest;
 end;

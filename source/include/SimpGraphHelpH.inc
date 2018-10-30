@@ -27,7 +27,7 @@ type
     FOnFind: TOnFindSet;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCanceled: Boolean;
+    FCancelled: Boolean;
     procedure Colorize(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
     procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
     procedure Extend(var aSub, aCand: TBoolVector);
@@ -60,7 +60,7 @@ type
     FOnFind: TOnFindSet;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCanceled: Boolean;
+    FCancelled: Boolean;
     procedure Colorize(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBits256);
     procedure Extend(var aSub, aCand: TBits256);
@@ -83,7 +83,7 @@ type
     FOnFind: TOnFindSet;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCanceled: Boolean;
+    FCancelled: Boolean;
     procedure Colorize(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TIntSet);
     procedure Extend(var aSub, aCand: TIntSet);
@@ -99,7 +99,7 @@ type
     FRecentBest: TIntArray;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCanceled: Boolean;
+    FCancelled: Boolean;
     procedure FillMatrix(aGraph: TGSimpleGraph);
     procedure Extend(constref aSub, aCand: TBoolVector);
   public
@@ -113,7 +113,7 @@ type
     FRecentBest: TIntArray;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCanceled: Boolean;
+    FCancelled: Boolean;
     procedure FillMatrix(aGraph: TGSimpleGraph);
     procedure Extend(constref aSub, aCand: TBits256);
   public
@@ -126,7 +126,7 @@ type
     FRecentBest: TIntArray;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCanceled: Boolean;
+    FCancelled: Boolean;
     procedure Extend(constref aSub, aCand: TIntSet);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -158,7 +158,7 @@ type
     FNodeCount: SizeInt;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCanceled: Boolean;
+    FCancelled: Boolean;
     function  TimeOut: Boolean; inline;
     function  InitLowBound: SizeInt;
     procedure InitComplete;
