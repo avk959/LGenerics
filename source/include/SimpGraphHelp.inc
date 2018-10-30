@@ -666,7 +666,7 @@ begin
         exit;
       if SecondsBetween(Now, FStartTime) >= FTimeOut then
         begin
-          FCancel := True;
+          FCanceled := True;
           exit;
         end;
       I := aSub[0];
@@ -706,13 +706,13 @@ var
   Sub, Cand: TIntSet;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
-  FCancel := False;
+  FCanceled := False;
   FStartTime := Now;
   FRecentBest := aGraph.GreedyMDS;
   FMatrix := aGraph.CreateSkeleton;
   Sub.AssignArray(aGraph.SortNodesByDegree(soDesc));
   Extend(Sub, Cand{%H-});
-  aExact := not FCancel;
+  aExact := not FCanceled;
   Result := FRecentBest;
 end;
 
@@ -747,7 +747,13 @@ end;
 
 { TGSimpleGraph.TExactColor }
 
-function TGSimpleGraph.TExactColor.InitLowerBound: SizeInt;
+function TGSimpleGraph.TExactColor.TimeOut: Boolean;
+begin
+  FCanceled := FCanceled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
+  Result := FCanceled;
+end;
+
+function TGSimpleGraph.TExactColor.InitLowBound: SizeInt;
 var
   Clique: TIntArray;
   I, J: SizeInt;
@@ -755,12 +761,12 @@ var
 begin
   Clique := FGraph.MaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime));
   Result := Clique.Length;
-  FCancel := not Exact;
-  if FCancel or (Result >= FUpperBound) then
+  FCanceled := not Exact;
+  if FCanceled or (Result >= FUpBound) then
     exit;
   System.SetLength(FNodes, FNodeCount);
   for I := 0 to System.High(FNodes) do
-    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpperBound));
+    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpBound));
   FColorMap := FGraph.CreateIntArray(0);
   FAchromatic.InitRange(FNodeCount);
   J := 1;
@@ -778,7 +784,7 @@ var
 begin
   System.SetLength(FNodes, FNodeCount);
   for I := 0 to System.High(FNodes) do
-    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpperBound));
+    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpBound));
   FAchromatic.InitRange(FNodeCount);
   for I := 0 to System.High(FColorMap) do
     if FColorMap[I] > 0 then
@@ -825,9 +831,9 @@ end;
 
 procedure TGSimpleGraph.TExactColor.CheckSolution(aMaxColor: SizeInt);
 begin
-  if aMaxColor < FUpperBound then
+  if aMaxColor < FUpBound then
     begin
-      FUpperBound := aMaxColor;
+      FUpBound := aMaxColor;
       FRecentBest := System.Copy(FColorMap);
     end;
 end;
@@ -836,15 +842,8 @@ function TGSimpleGraph.TExactColor.DSatur(aMaxColor: SizeInt): SizeInt;
 var
   CurrNode, Color: SizeInt;
 begin
-  if SecondsBetween(Now, FStartTime) >= FTimeOut then //timeout
-    begin
-      FCancel := True;
-      exit(FUpperBound);
-    end;
-  if aMaxColor >= FUpperBound then
-    exit(aMaxColor);
-  if FUpperBound <= FLowerBound then
-    exit(FUpperBound);
+  if TimeOut or (aMaxColor >= FUpBound) or (FUpBound <= FLowBound) then
+    exit(FUpBound);
   if not SelectNext(CurrNode) then
     exit(aMaxColor);
   FAchromatic[CurrNode] := False;
@@ -854,17 +853,17 @@ begin
         PickColor(CurrNode, Color);
         CheckSolution(DSatur(aMaxColor));
         DropColor(CurrNode, Color);
-        if aMaxColor >= FUpperBound  then
+        if aMaxColor >= FUpBound  then
           break;
       end;
-  if aMaxColor < Pred(FUpperBound) then
+  if aMaxColor < Pred(FUpBound) then
     begin
       PickColor(CurrNode, Succ(aMaxColor));
       CheckSolution(DSatur(Succ(aMaxColor)));
       DropColor(CurrNode, Succ(aMaxColor));
     end;
   FAchromatic[CurrNode] := True;
-  Result := FUpperBound;
+  Result := FUpBound;
 end;
 
 function TGSimpleGraph.TExactColor.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
@@ -873,14 +872,14 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
-  FCancel := False;
+  FCanceled := False;
   FStartTime := Now;
-  FUpperBound := FGraph.GreedyColorRlf(FRecentBest);
-  FLowerBound := InitLowerBound;
-  if not FCancel and (FLowerBound < FUpperBound) then
-    CheckSolution(DSatur(FLowerBound));
-  aExact := not FCancel;
-  Result := FUpperBound;
+  FUpBound := FGraph.GreedyColorRlf(FRecentBest);
+  FLowBound := InitLowBound;
+  if not FCanceled and (FLowBound < FUpBound) then
+    CheckSolution(DSatur(FLowBound));
+  aExact := not FCanceled;
+  Result := FUpBound;
   aColors := FRecentBest;
 end;
 
@@ -892,20 +891,20 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
-  FLowerBound := aK;
-  FUpperBound := Succ(aK);
-  FCancel := False;
+  FLowBound := aK;
+  FUpBound := Succ(aK);
+  FCanceled := False;
   FStartTime := Now;
-  Lb := InitLowerBound;
-  if (Lb < FUpperBound) and not FCancel then
+  Lb := InitLowBound;
+  if (Lb < FUpBound) and not FCanceled then
     CheckSolution(DSatur(Lb));
-  if FLowerBound >= FUpperBound then
+  if FLowBound >= FUpBound then
     begin
       aColors := FRecentBest;
       Result := tlTrue;
     end
   else
-    if not FCancel then
+    if not FCanceled then
       Result := tlFalse
     else
       Result := tlUnknown;
@@ -917,14 +916,14 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
-  FLowerBound := aK;
-  FUpperBound := Succ(aK);
-  FCancel := False;
+  FLowBound := aK;
+  FUpBound := Succ(aK);
+  FCanceled := False;
   FStartTime := Now;
   FColorMap := System.Copy(aColors);
   InitComplete;
-  CheckSolution(DSatur(FLowerBound));
-  Result := not FCancel and (FLowerBound >= FUpperBound);
+  CheckSolution(DSatur(FLowBound));
+  Result := not FCanceled and (FLowBound >= FUpBound);
   if Result then
     aColors := FRecentBest;
 end;

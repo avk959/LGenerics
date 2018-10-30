@@ -126,7 +126,7 @@ type
     FRecentBest: TIntArray;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCancel: Boolean;
+    FCanceled: Boolean;
     procedure Extend(constref aSub, aCand: TIntSet);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -153,13 +153,14 @@ type
     FColorMap,
     FRecentBest: TIntArray;
     FGraph: TGSimpleGraph;
-    FLowerBound,
-    FUpperBound,
+    FLowBound,
+    FUpBound,
     FNodeCount: SizeInt;
     FStartTime: TDateTime;
     FTimeOut: Integer;
-    FCancel: Boolean;
-    function  InitLowerBound: SizeInt;
+    FCanceled: Boolean;
+    function  TimeOut: Boolean; inline;
+    function  InitLowBound: SizeInt;
     procedure InitComplete;
     procedure PickColor(aIndex, aColor: SizeInt);
     procedure DropColor(aIndex, aColor: SizeInt);
