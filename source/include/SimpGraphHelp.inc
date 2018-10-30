@@ -1052,7 +1052,7 @@ begin
   Result := FDone;
 end;
 
-function TGSimpleGraph.THamiltonCycles.FoundCycle(aNode: SizeInt): Boolean;
+function TGSimpleGraph.THamiltonCycles.CycleFound(aNode: SizeInt): Boolean;
 begin
   Result := (FStack.Count = FNodeCount) and (aNode = FRoot);
   if Result then
@@ -1071,7 +1071,7 @@ var
 begin
   if TimeOut or Done then
     exit;
-  if FoundCycle(aNode) then
+  if CycleFound(aNode) then
     exit;
   if FVisited[aNode] or FMatrix[aNode].IsEmpty then
     exit;
@@ -1109,6 +1109,7 @@ begin
       if TimeOut or Done then
         break;
       DoSearch(I);
+      FMatrix[I][FRoot] := False;
     end;
 end;
 

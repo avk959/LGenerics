@@ -3611,6 +3611,7 @@ var
   Helper: THamiltonCycles;
   I: SizeInt;
 begin
+  //todo: to be tested !!!
   CheckIndexRange(aRootIndex);
   if not Connected or (VertexCount = 1) then
     exit(Default(TIntArrayVector));

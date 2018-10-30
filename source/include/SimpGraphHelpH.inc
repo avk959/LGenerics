@@ -210,7 +210,7 @@ type
     procedure Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
     function  TimeOut: Boolean; inline;
     function  Done: Boolean; inline;
-    function  FoundCycle(aNode: SizeInt): Boolean;
+    function  CycleFound(aNode: SizeInt): Boolean;
     procedure DoSearch(aNode: SizeInt);
     procedure Search;
   public
