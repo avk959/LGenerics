@@ -271,15 +271,19 @@ type
     Items: TIntArray;
     Top: SizeInt;
     function  GetCapacity: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
   public
     constructor Create(aSize: SizeInt);
+    function  ToArray: TIntArray; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
+    procedure MakeEmpty; inline;
     procedure Push(aValue: SizeInt); inline;
     function  Pop: SizeInt; inline;
     function  TryPop(out aValue: SizeInt): Boolean; inline;
     function  Peek: SizeInt; inline;
     function  TryPeek(out aValue: SizeInt): Boolean; inline;
+    property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
   PSimpleStack = ^TSimpleStack;

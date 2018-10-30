@@ -142,8 +142,8 @@ type
       Degree: SizeInt;
       AdjColors: array of Integer;
       constructor Create(aDegree, aUpperBound: SizeInt);
-      procedure NeibPickColor(aColor: SizeInt); inline;
-      procedure NeibDropColor(aColor: SizeInt); inline;
+      procedure NeighbPickColor(aColor: SizeInt); inline;
+      procedure NeighbDropColor(aColor: SizeInt); inline;
       function  Available(aColor: Integer): Boolean; inline;
     end;
 
@@ -192,7 +192,32 @@ type
     function Colorize(aGraph: TGSimpleGraph; out aColors: TIntArray): SizeInt;
   end;
 
-{ THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching
+  { THamiltonCycles }
+  THamiltonCycles = record
+  strict private
+    FMatrix: TBoolMatrix;
+    FVisited: TBoolVector;
+    FStack: TSimpleStack;
+    FCycles: PIntArrayVector;
+    FRoot,
+    FNodeCount,
+    FWishCount,
+    FFoundCount: SizeInt;
+    FStartTime: TDateTime;
+    FTimeOut: Integer;
+    FDone,
+    FCancelled: Boolean;
+    procedure Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
+    function  TimeOut: Boolean; inline;
+    function  Done: Boolean; inline;
+    function  FoundCycle(aNode: SizeInt): Boolean;
+    procedure DoSearch(aNode: SizeInt);
+    procedure Search;
+  public
+    procedure SearchFor(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
+  end;
+
+  { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching
     for bipartite graph - see en.wikipedia.org/wiki/Hopcroft–Karp_algorithm }
   THKMatch = record
   strict private

@@ -384,10 +384,13 @@ type
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
     function  IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
+  { returns the specified number of Hamiltonian cycles, starting from the vertex aRoot;
+    if aCount <= 0, then all cycles are returned; if aCount> 0, then
+    Min(aCount, <total number of cycles>) cycles are returned; aTimeOut specifies the timeout in seconds }
     function  FindHamiltonCycles(constref aRoot: TVertex; aCount: SizeInt;
               aTimeOut: Integer = WAIT_INFINITE): TIntArrayVector; inline;
     function  FindHamiltonCyclesI(aRootIndex, aCount: SizeInt;
-              aTimeOut: Integer = WAIT_INFINITE): TIntArrayVector; inline;
+              aTimeOut: Integer = WAIT_INFINITE): TIntArrayVector;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -3216,7 +3219,7 @@ end;
 function TGSimpleGraph.GreedyMaxMatching: TIntEdgeArray;
 begin
   if VertexCount < 2 then
-    exit([]);
+    exit(nil);
   if (VertexCount = 2) and Connected then
     exit([TIntEdge.Create(0, 1)]);
   Result := GreedyMatching2;
@@ -3227,7 +3230,7 @@ var
   Helper: TEdMatch;
 begin
   if VertexCount < 2 then
-    exit([]);
+    exit(nil);
   if not FindMaxBipartiteMatchingHK(Result) then
     Result := Helper.MaxMatching(Self);
 end;
@@ -3237,15 +3240,15 @@ var
   Helper: TPcMatch;
 begin
   if VertexCount < 2 then
-    exit([]);
-  if not FindMaxBipartiteMatchingBfs(Result) then
+    exit(nil);
+  if not FindMaxBipartiteMatchingHK(Result) then
     Result := Helper.MaxMatching(Self);
 end;
 
 function TGSimpleGraph.FindMaxMatchingMV: TIntEdgeArray;
 begin
   if VertexCount < 2 then
-    exit([]);
+    exit(nil);
   if not FindMaxBipartiteMatchingHK(Result) then
     Result := GetMvMatching;
 end;
@@ -3604,9 +3607,25 @@ begin
 end;
 
 function TGSimpleGraph.FindHamiltonCyclesI(aRootIndex, aCount: SizeInt; aTimeOut: Integer): TIntArrayVector;
+var
+  Helper: THamiltonCycles;
+  I: SizeInt;
 begin
-  if not Connected then
+  CheckIndexRange(aRootIndex);
+  if not Connected or (VertexCount = 1) then
     exit(Default(TIntArrayVector));
+  if VertexCount = 2 then
+    begin
+      if aRootIndex = 0 then
+        Result.Add([0, 1, 0])
+      else
+        Result.Add([1, 0, 1]);
+      exit;
+    end;
+  for I := 0 to Pred(VertexCount) do
+    if AdjLists[I]^.Count = 1 then
+      exit(Default(TIntArrayVector));
+  Helper.SearchFor(Self, aRootIndex, aCount, aTimeOut, @Result);
 end;
 
 { TGChart }

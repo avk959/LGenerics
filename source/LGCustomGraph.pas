@@ -50,13 +50,14 @@ type
   TShortArray      = array of ShortInt;
   TIntHelper       = specialize TGNumArrayHelper<SizeInt>;
   TIntVector       = specialize TGLiteVector<SizeInt>;
+  PIntVector       = ^TIntVector;
   TIntVectorHelper = specialize TGComparableVectorHelper<SizeInt>;
   TIntArrayVector  = specialize TGLiteVector<TIntArray>;
+  PIntArrayVector  = ^TIntArrayVector;
   TIntVectorArray  = array of TIntVector;
   TIntStack        = specialize TGLiteStack<SizeInt>;
   TIntQueue        = specialize TGLiteQueue<SizeInt>;
   TIntDeque        = specialize TGLiteDeque<SizeInt>;
-  PIntVector       = ^TIntVector;
 
   TOnVisit         = procedure (aValue: SizeInt) of object;
   TOnAccept        = function (aValue: SizeInt): Boolean of object;
@@ -1196,14 +1197,15 @@ end;
 
 function TGCustomGraph.CreateBoolMatrix: TBoolMatrix;
 var
-  I, J: SizeInt;
+  I: SizeInt;
+  p: PAdjItem;
 begin
   System.SetLength(Result, VertexCount);
   for I := 0 to System.High(Result) do
     begin
       Result[I].Size := VertexCount;
-      for J in AdjVerticesI(I) do
-        Result[I][J] := True;
+      for p in AdjLists[I]^ do
+        Result[I][p^.Key] := True;
     end;
 end;
 
@@ -2790,10 +2792,20 @@ begin
   Result := System.Length(Items);
 end;
 
+function TSimpleStack.GetCount: SizeInt;
+begin
+  Result := Succ(Top);
+end;
+
 constructor TSimpleStack.Create(aSize: SizeInt);
 begin
   System.SetLength(Items, aSize);
   Top := NULL_INDEX;
+end;
+
+function TSimpleStack.ToArray: TIntArray;
+begin
+  Result := System.Copy(Items, 0, Count);;
 end;
 
 function TSimpleStack.IsEmpty: Boolean;
@@ -2804,6 +2816,11 @@ end;
 function TSimpleStack.NonEmpty: Boolean;
 begin
   Result := Top >= 0;
+end;
+
+procedure TSimpleStack.MakeEmpty;
+begin
+  Top := NULL_INDEX;
 end;
 
 procedure TSimpleStack.Push(aValue: SizeInt);

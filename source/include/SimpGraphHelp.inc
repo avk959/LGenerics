@@ -726,14 +726,14 @@ begin
   System.FillChar(Pointer(AdjColors)^, aUpperBound * SizeOf(Integer), 0);
 end;
 
-procedure TGSimpleGraph.TExactColor.TNode.NeibPickColor(aColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.TNode.NeighbPickColor(aColor: SizeInt);
 begin
   Saturation += Ord(AdjColors[Pred(aColor)] = 0);
   Inc(AdjColors[Pred(aColor)]);
   Dec(Degree);
 end;
 
-procedure TGSimpleGraph.TExactColor.TNode.NeibDropColor(aColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.TNode.NeighbDropColor(aColor: SizeInt);
 begin
   Dec(AdjColors[Pred(aColor)]);
   Saturation -= Ord(AdjColors[Pred(aColor)] = 0);
@@ -800,7 +800,7 @@ var
 begin
   FColorMap[aIndex] := aColor;
   for p in FGraph.AdjLists[aIndex]^ do
-    FNodes[p^.Key].NeibPickColor(aColor);
+    FNodes[p^.Key].NeighbPickColor(aColor);
 end;
 
 procedure TGSimpleGraph.TExactColor.DropColor(aIndex, aColor: SizeInt);
@@ -809,7 +809,7 @@ var
 begin
   FColorMap[aIndex] := 0;
   for p in FGraph.AdjLists[aIndex]^ do
-    FNodes[p^.Key].NeibDropColor(aColor);
+    FNodes[p^.Key].NeighbDropColor(aColor);
 end;
 
 function TGSimpleGraph.TExactColor.SelectNext(out aNode: SizeInt): Boolean;
@@ -1019,6 +1019,104 @@ begin
             end;
         end;
     end;
+end;
+
+{ TGSimpleGraph.THamiltonCycles }
+
+procedure TGSimpleGraph.THamiltonCycles.Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
+  pv: PIntArrayVector);
+begin
+  FRoot := aRoot;
+  FWishCount := aCount;
+  FCycles := pv;
+  FNodeCount := aGraph.VertexCount;
+  FStack := TSimpleStack.Create(Succ(FNodeCount));
+  FMatrix := aGraph.CreateBoolMatrix;
+  FVisited.Size := FNodeCount;
+  FTimeOut := aTimeOut and System.High(Integer);
+  FFoundCount := 0;
+  FDone := False;
+  FCancelled := False;
+  FStartTime := Now;
+end;
+
+function TGSimpleGraph.THamiltonCycles.TimeOut: Boolean;
+begin
+  FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
+  Result := FCancelled;
+end;
+
+function TGSimpleGraph.THamiltonCycles.Done: Boolean;
+begin
+  FDone := FDone or (FWishCount > 0) and (FFoundCount >= FWishCount);
+  Result := FDone;
+end;
+
+function TGSimpleGraph.THamiltonCycles.FoundCycle(aNode: SizeInt): Boolean;
+begin
+  Result := (FStack.Count = FNodeCount) and (aNode = FRoot);
+  if Result then
+    begin
+      FStack.Push(aNode);
+      FCycles^.Add(FStack.ToArray);
+      Inc(FFoundCount);
+      FStack.Pop;
+    end;
+end;
+
+procedure TGSimpleGraph.THamiltonCycles.DoSearch(aNode: SizeInt);
+var
+  Neighb, Back: TBoolVector;
+  I: SizeInt;
+begin
+  if TimeOut or Done then
+    exit;
+  if FoundCycle(aNode) then
+    exit;
+  if FVisited[aNode] or FMatrix[aNode].IsEmpty then
+    exit;
+  Neighb := FMatrix[aNode];
+  Back.Size := FNodeCount;
+  FMatrix[aNode].ClearBits;
+  for I in Neighb do
+    begin
+      Back[I] := FMatrix[I][aNode];
+      FMatrix[I][aNode] := False;
+    end;
+  FStack.Push(aNode);
+  FVisited[aNode] := True;
+  for I in Neighb do
+    begin
+      DoSearch(I);
+      if TimeOut or Done then
+        exit;
+    end;
+  FStack.Pop;
+  FVisited[aNode] := False;
+  for I in Back do
+    FMatrix[I][aNode] := True;
+  FMatrix[aNode] := Neighb;
+end;
+
+procedure TGSimpleGraph.THamiltonCycles.Search;
+var
+  I: SizeInt;
+begin
+  FVisited[FRoot] := True;
+  FStack.Push(FRoot);
+  for I in FMatrix[FRoot] do
+    begin
+      if TimeOut or Done then
+        break;
+      DoSearch(I);
+    end;
+end;
+
+procedure TGSimpleGraph.THamiltonCycles.SearchFor(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
+  pv: PIntArrayVector);
+begin
+  Init(aGraph, aRoot, aCount, aTimeOut, pv);
+  Search;
 end;
 
 { TGSimpleGraph.THKMatch }
