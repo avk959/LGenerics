@@ -240,6 +240,7 @@ type
   { checks whether exists Eulerian circuit; if exists only circuit, then
     aCircuitStart will contains index of first vertex with odd degree, otherwise -1 }
     function  ContainsEulerianCircuit(out aCircuitStart: SizeInt): Boolean;
+  { checks whether exists Eulerian cycle }
     function  ContainsEulerianCycle: Boolean;
   { looking for some Eulerian cycle in the connected component }
     function  FindEulerianCycle(out aCycle: TIntArray): Boolean;
@@ -384,13 +385,15 @@ type
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
     function  IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
-  { returns the specified number of Hamiltonian cycles, starting from the vertex aRoot;
+  { tries to return in aCycles the specified number of Hamiltonian cycles, starting from the vertex aRoot;
     if aCount <= 0, then all cycles are returned; if aCount > 0, then
-    Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds }
+    Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
+    at the end of the timeout False will be returned }
     function  FindHamiltonCycles(constref aRoot: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonCyclesI(aRootIndex, aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
+  { returns True if aCycle is Hamiltonian cycle starting from the vertex with index aRootIndex }
     function  IsHamiltonCycle(constref aCycle: TIntArray; aRootIndex: SizeInt): Boolean;
 {**********************************************************************************************************
   properties
@@ -3610,7 +3613,7 @@ end;
 function TGSimpleGraph.FindHamiltonCyclesI(aRootIndex, aCount: SizeInt; out aCycles: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
-  Helper: THamiltonCycles;
+  Helper: THamiltonHelper;
   I: SizeInt;
 begin
   //todo: to be tested !!!
@@ -3629,26 +3632,33 @@ begin
   for I := 0 to Pred(VertexCount) do
     if AdjLists[I]^.Count = 1 then
       exit(False);
-  Result := Helper.Find(Self, aRootIndex, aCount, aTimeOut, @aCycles);
+  Result := Helper.FindCycles(Self, aRootIndex, aCount, aTimeOut, @aCycles);
 end;
 
 function TGSimpleGraph.IsHamiltonCycle(constref aCycle: TIntArray; aRootIndex: SizeInt): Boolean;
 var
   VertSet: TBitVector;
-  I, Curr: SizeInt;
+  I, Curr, Next: SizeInt;
 begin
   if aCycle.Length <> Succ(VertexCount) then
+    exit(False);
+  if SizeUInt(aRootIndex) >= SizeUInt(VertexCount) then
     exit(False);
   if (aCycle[0] <> aRootIndex) or (aCycle[VertexCount] <> aRootIndex) then
     exit(False);
   VertSet.Size := VertexCount;
-  for I := 0 to Pred(VertexCount) do
+  Next := aRootIndex;
+  VertSet[aRootIndex] := True;
+  for I := 1 to Pred(VertexCount) do
     begin
-      Curr := aCycle[I];
-      if VertSet[Curr] then
+      Curr := Next;
+      Next := aCycle[I];
+      if SizeUInt(Next) >= SizeUInt(VertexCount) then
         exit(False);
-      VertSet[Curr] := True;
-      if not AdjLists[Curr]^.Contains(aCycle[Succ(I)]) then
+      if VertSet[Next] then
+        exit(False);
+      VertSet[Next] := True;
+      if not AdjLists[Curr]^.Contains(Next) then
         exit(False);
     end;
   Result := True;

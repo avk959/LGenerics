@@ -1021,9 +1021,9 @@ begin
     end;
 end;
 
-{ TGSimpleGraph.THamiltonCycles }
+{ TGSimpleGraph.THamiltonHelper }
 
-procedure TGSimpleGraph.THamiltonCycles.Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
+procedure TGSimpleGraph.THamiltonHelper.Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector);
 begin
   FRoot := aRoot;
@@ -1040,19 +1040,13 @@ begin
   FStartTime := Now;
 end;
 
-function TGSimpleGraph.THamiltonCycles.TimeOut: Boolean;
+function TGSimpleGraph.THamiltonHelper.TimeToFinish: Boolean;
 begin
   FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
-  Result := FCancelled;
+  Result := FCancelled or FDone;
 end;
 
-function TGSimpleGraph.THamiltonCycles.Done: Boolean;
-begin
-  FDone := FDone or (FWishCount > 0) and (FFoundCount >= FWishCount);
-  Result := FDone;
-end;
-
-function TGSimpleGraph.THamiltonCycles.SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+function TGSimpleGraph.THamiltonHelper.SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
 var
   I, Degree, MinDegree: SizeInt;
 begin
@@ -1070,7 +1064,7 @@ begin
   Result := aValue <> NULL_INDEX;
 end;
 
-procedure TGSimpleGraph.THamiltonCycles.CheckSolution(aNode: SizeInt);
+procedure TGSimpleGraph.THamiltonHelper.CheckIsCycle(aNode: SizeInt);
 begin
   if FMatrix[aNode][FRoot] then
     begin
@@ -1078,10 +1072,11 @@ begin
       FCycles^.Add(FStack.ToArray);
       Inc(FFoundCount);
       FStack.Pop;
+      FDone := FDone or (FWishCount > 0) and (FFoundCount >= FWishCount);
     end;
 end;
 
-procedure TGSimpleGraph.THamiltonCycles.DoSearch(aNode: SizeInt);
+procedure TGSimpleGraph.THamiltonHelper.CycleSearch(aNode: SizeInt);
 var
   Cand, TmpList: TBoolVector;
   I: SizeInt;
@@ -1092,35 +1087,36 @@ begin
         if FMatrix[I].IsEmpty then
           exit;
       Cand := FMatrix[aNode].Intersection(FVacant);
-      if Cand.IsEmpty then
-        exit;
-      TmpList.Size := FNodeCount;
-      for I in FMatrix[aNode] do
+      if Cand.NonEmpty then
         begin
-          TmpList[I] := FMatrix[I][aNode];
-          FMatrix[I][aNode] := False;
+          TmpList.Size := FNodeCount;
+          for I in FMatrix[aNode] do
+            begin
+              TmpList[I] := FMatrix[I][aNode];
+              FMatrix[I][aNode] := False;
+            end;
+          /////////////////////////////
+          while SelectNext(Cand, I) do
+            begin
+              Cand[I] := False;
+              FStack.Push(I);
+              FVacant[I] := False;
+              CycleSearch(I);
+              if TimeToFinish then
+                exit;
+              FVacant[I] := True;
+              FStack.Pop;
+            end;
+          /////////////////////////////
+          for I in TmpList do
+            FMatrix[I][aNode] := True;
         end;
-
-      while SelectNext(Cand, I) do
-        begin
-          Cand[I] := False;
-          FStack.Push(I);
-          FVacant[I] := False;
-          DoSearch(I);
-          if TimeOut or Done then
-            exit;
-          FVacant[I] := True;
-          FStack.Pop;
-        end;
-
-      for I in TmpList do
-        FMatrix[I][aNode] := True;
     end
   else
-    CheckSolution(aNode);
+    CheckIsCycle(aNode);
 end;
 
-procedure TGSimpleGraph.THamiltonCycles.Search;
+procedure TGSimpleGraph.THamiltonHelper.SearchForCycles;
 var
   I: SizeInt;
 begin
@@ -1130,8 +1126,8 @@ begin
     begin
       FStack.Push(I);
       FVacant[I] := False;
-      DoSearch(I);
-      if TimeOut or Done then
+      CycleSearch(I);
+      if TimeToFinish then
         break;
       FVacant[I] := True;
       FStack.Pop;
@@ -1139,11 +1135,11 @@ begin
     end;
 end;
 
-function TGSimpleGraph.THamiltonCycles.Find(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
+function TGSimpleGraph.THamiltonHelper.FindCycles(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aRoot, aCount, aTimeOut, pv);
-  Search;
+  SearchForCycles;
   Result := not FCancelled;
 end;
 

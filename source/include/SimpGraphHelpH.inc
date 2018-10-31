@@ -192,8 +192,8 @@ type
     function Colorize(aGraph: TGSimpleGraph; out aColors: TIntArray): SizeInt;
   end;
 
-  { THamiltonCycles }
-  THamiltonCycles = record
+  { THamiltonHelper }
+  THamiltonHelper = record
   strict private
     FMatrix: TBoolMatrix;
     FVacant: TBoolVector;
@@ -208,14 +208,13 @@ type
     FDone,
     FCancelled: Boolean;
     procedure Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
-    function  TimeOut: Boolean; inline;
-    function  Done: Boolean; inline;
+    function  TimeToFinish: Boolean; inline;
     function  SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
-    procedure CheckSolution(aNode: SizeInt); inline;
-    procedure DoSearch(aNode: SizeInt);
-    procedure Search;
+    procedure CheckIsCycle(aNode: SizeInt); inline;
+    procedure CycleSearch(aNode: SizeInt);
+    procedure SearchForCycles;
   public
-    function  Find(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector): Boolean;
+    function  FindCycles(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector): Boolean;
   end;
 
   { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching
