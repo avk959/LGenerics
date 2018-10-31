@@ -1046,7 +1046,7 @@ begin
   Result := FCancelled or FDone;
 end;
 
-function TGSimpleGraph.THamiltonCycles.SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+function TGSimpleGraph.THamiltonCycles.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
 var
   I, Degree, MinDegree: SizeInt;
 begin
@@ -1086,17 +1086,17 @@ begin
       for I in FVacant do
         if FMatrix[I].IsEmpty then
           exit;
-      Cand := FMatrix[aNode].Intersection(FVacant);
-      if Cand.NonEmpty then
+      if FMatrix[aNode].IntersectionPop(FVacant) > 0 then
         begin
+          Cand := FMatrix[aNode].Intersection(FVacant);
           TmpList.Size := FNodeCount;
-          for I in FMatrix[aNode] do
+          for I in Cand do
             begin
               TmpList[I] := FMatrix[I][aNode];
               FMatrix[I][aNode] := False;
             end;
           /////////////////////////////
-          while SelectNext(Cand, I) do
+          while SelectMin(Cand, I) do
             begin
               Cand[I] := False;
               FStack.Push(I);

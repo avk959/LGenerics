@@ -209,7 +209,7 @@ type
     FCancelled: Boolean;
     procedure Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
     function  TimeToFinish: Boolean; inline;
-    function  SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+    function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
     procedure CheckIsCycle(aNode: SizeInt); inline;
     procedure DoSearch(aNode: SizeInt);
     procedure SearchFor;
