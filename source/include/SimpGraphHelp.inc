@@ -1033,7 +1033,6 @@ begin
   FStack := TSimpleStack.Create(Succ(FNodeCount));
   FMatrix := aGraph.CreateBoolMatrix;
   FVacant.InitRange(FNodeCount);
-  FInCycle.Size := FNodeCount;
   FTimeOut := aTimeOut and System.High(Integer);
   FFoundCount := 0;
   FDone := False;
@@ -1053,12 +1052,29 @@ begin
   Result := FDone;
 end;
 
-function TGSimpleGraph.THamiltonCycles.CycleFound(aNode: SizeInt): Boolean;
+function TGSimpleGraph.THamiltonCycles.SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+var
+  I, Degree, MinDegree: SizeInt;
 begin
-  Result := (FStack.Count = FNodeCount) and (aNode = FRoot);
-  if Result then
+  MinDegree := FNodeCount;
+  aValue := NULL_INDEX;
+  for I in v do
     begin
-      FStack.Push(aNode);
+      Degree := FMatrix[I].PopCount;
+      if Degree < MinDegree then
+        begin
+          MinDegree := Degree;
+          aValue := I;
+        end;
+    end;
+  Result := aValue <> NULL_INDEX;
+end;
+
+procedure TGSimpleGraph.THamiltonCycles.CheckSolution(aNode: SizeInt);
+begin
+  if FMatrix[aNode][FRoot] then
+    begin
+      FStack.Push(FRoot);
       FCycles^.Add(FStack.ToArray);
       Inc(FFoundCount);
       FStack.Pop;
@@ -1067,63 +1083,68 @@ end;
 
 procedure TGSimpleGraph.THamiltonCycles.DoSearch(aNode: SizeInt);
 var
-  Backs: TBoolVector;
+  Cand, TmpList: TBoolVector;
   I: SizeInt;
 begin
-  if TimeOut or Done then
-    exit;
-  if CycleFound(aNode) then
-    exit;
-  if FInCycle[aNode] or FMatrix[aNode].IsEmpty then
-    exit;
-  for I in FVacant do
-    if (I <> aNode) and (FMatrix[I].PopCount < 2) then
-      exit;
-  FStack.Push(aNode);
-  FInCycle[aNode] := True;
-  FVacant[aNode] := False;
-  Backs.Size := FNodeCount;
-  for I in FMatrix[aNode] do
+  if FVacant.NonEmpty then
     begin
-      Backs[I] := FMatrix[I][aNode];
-      FMatrix[I][aNode] := False;
-    end;
-
-  for I in FMatrix[aNode] do
-    begin
-      DoSearch(I);
-      if TimeOut or Done then
+      for I in FVacant do
+        if FMatrix[I].IsEmpty then
+          exit;
+      Cand := FMatrix[aNode].Intersection(FVacant);
+      if Cand.IsEmpty then
         exit;
-    end;
+      TmpList.Size := FNodeCount;
+      for I in FMatrix[aNode] do
+        begin
+          TmpList[I] := FMatrix[I][aNode];
+          FMatrix[I][aNode] := False;
+        end;
 
-  FStack.Pop;
-  FInCycle[aNode] := False;
-  FVacant[aNode] := True;
-  for I in Backs do
-    FMatrix[I][aNode] := True;
+      while SelectNext(Cand, I) do
+        begin
+          Cand[I] := False;
+          FStack.Push(I);
+          FVacant[I] := False;
+          DoSearch(I);
+          if TimeOut or Done then
+            exit;
+          FVacant[I] := True;
+          FStack.Pop;
+        end;
+
+      for I in TmpList do
+        FMatrix[I][aNode] := True;
+    end
+  else
+    CheckSolution(aNode);
 end;
 
 procedure TGSimpleGraph.THamiltonCycles.Search;
 var
   I: SizeInt;
 begin
-  FInCycle[FRoot] := True;
   FVacant[FRoot] := False;
   FStack.Push(FRoot);
   for I in FMatrix[FRoot] do
     begin
+      FStack.Push(I);
+      FVacant[I] := False;
+      DoSearch(I);
       if TimeOut or Done then
         break;
-      DoSearch(I);
+      FVacant[I] := True;
+      FStack.Pop;
       FMatrix[I][FRoot] := False;
     end;
 end;
 
-procedure TGSimpleGraph.THamiltonCycles.SearchFor(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
-  pv: PIntArrayVector);
+function TGSimpleGraph.THamiltonCycles.Find(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
+  pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aRoot, aCount, aTimeOut, pv);
   Search;
+  Result := not FCancelled;
 end;
 
 { TGSimpleGraph.THKMatch }

@@ -196,7 +196,6 @@ type
   THamiltonCycles = record
   strict private
     FMatrix: TBoolMatrix;
-    FInCycle,
     FVacant: TBoolVector;
     FStack: TSimpleStack;
     FCycles: PIntArrayVector;
@@ -211,11 +210,12 @@ type
     procedure Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
     function  TimeOut: Boolean; inline;
     function  Done: Boolean; inline;
-    function  CycleFound(aNode: SizeInt): Boolean;
+    function  SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+    procedure CheckSolution(aNode: SizeInt); inline;
     procedure DoSearch(aNode: SizeInt);
     procedure Search;
   public
-    procedure SearchFor(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
+    function  Find(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector): Boolean;
   end;
 
   { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching
