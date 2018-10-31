@@ -22,7 +22,7 @@ type
     btShow: TButton;
     Label1: TLabel;
     sgCells: TStringGrid;
-    seHintCount: TSpinEdit;
+    seCluesCount: TSpinEdit;
     procedure btNewClick(Sender: TObject);
     procedure btShowClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -35,16 +35,16 @@ type
     TSeed     = array[1..16] of SizeInt;
   var
     Graph: TIntChart;
-    CurrSolution,
-    Hints: TSolution;
+    Solution,
+    Clues: TSolution;
     function  GenGraph: TIntChart;
     function  CreateColorArray: TIntArray;
     function  CreateRangeArray: TIntArray;
-    procedure CreateHints;
+    procedure CreateClues;
     procedure NewSeed(var aSeed: TSeed);
     function  GenSolution: Boolean;
     procedure NewSolution;
-    procedure ShowSolutionHints;
+    procedure ShowClues;
     procedure ShowSolution;
   public
 
@@ -77,20 +77,23 @@ end;
 
 procedure TfrmMain.sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
 begin
-  if (aCol <> 0) and (aCol and 3 = 0) and (aRow <> 0) then
-    with sgCells.Canvas do
-      begin
-        Pen.Color := sgCells.GridLineColor;
-        MoveTo(aRect.Right - 2, aRect.Top);
-        LineTo(aRect.Right - 2, aRect.Bottom);
-      end;
-  if (aRow <> 0) and (aRow and 3 = 0) and (aCol <> 0) then
-    with sgCells.Canvas do
-      begin
-        Pen.Color := sgCells.GridLineColor;
-        MoveTo(aRect.Left, aRect.Bottom - 2);
-        LineTo(aRect.Right, aRect.Bottom - 2);
-      end;
+  if (aCol <> 0) and (aRow <> 0) then
+    begin
+      if aCol and 3 = 0 then
+        with sgCells.Canvas do
+          begin
+            Pen.Color := sgCells.GridLineColor;
+            MoveTo(aRect.Right - 2, aRect.Top);
+            LineTo(aRect.Right - 2, aRect.Bottom);
+          end;
+      if aRow and 3 = 0 then
+        with sgCells.Canvas do
+          begin
+            Pen.Color := sgCells.GridLineColor;
+            MoveTo(aRect.Left, aRect.Bottom - 2);
+            LineTo(aRect.Right, aRect.Bottom - 2);
+          end;
+    end;
 end;
 
 function TfrmMain.GenGraph: TIntChart;
@@ -167,17 +170,17 @@ begin
     Result[I] := I;
 end;
 
-procedure TfrmMain.CreateHints;
+procedure TfrmMain.CreateClues;
 var
   I: SizeInt;
   ToHide: TIntArray;
 begin
   ToHide := CreateRangeArray;
   THelper.RandomShuffle(ToHide);
-  ToHide.Length := ToHide.Length - seHintCount.Value;
-  Hints := CurrSolution;
+  ToHide.Length := ToHide.Length - seCluesCount.Value;
+  Clues := Solution;
   for I in ToHide do
-    Hints[I] := 0;
+    Clues[I] := 0;
 end;
 
 procedure TfrmMain.NewSeed(var aSeed: TSeed);
@@ -217,8 +220,8 @@ begin
     end;
 
   for I := Low(Colors) to High(Colors) do
-    CurrSolution[I] := Colors[I];
-  CreateHints;
+    Solution[I] := Colors[I];
+  CreateClues;
 end;
 
 procedure TfrmMain.NewSolution;
@@ -231,14 +234,14 @@ begin
   try
     Done := GenSolution;
     if Done then
-      ShowSolutionHints;
+      ShowClues;
   finally
     btNew.Enabled := True;
     btShow.Enabled := Enable or Done;
   end;
 end;
 
-procedure TfrmMain.ShowSolutionHints;
+procedure TfrmMain.ShowClues;
 var
   Col, Row, I: Integer;
 begin
@@ -246,8 +249,8 @@ begin
   for Col := 1 to Pred(sgCells.ColCount) do
     for Row := 1 to Pred(sgCells.RowCount) do
       begin
-        if Hints[I] > 0 then
-          sgCells.Cells[Col, Row] := Hints[I].ToString
+        if Clues[I] > 0 then
+          sgCells.Cells[Col, Row] := Clues[I].ToString
         else
           sgCells.Cells[Col, Row] := '';
         Inc(I);
@@ -262,7 +265,7 @@ begin
   for Col := 1 to Pred(sgCells.ColCount) do
     for Row := 1 to Pred(sgCells.RowCount) do
       begin
-        sgCells.Cells[Col, Row] := CurrSolution[I].ToString;
+        sgCells.Cells[Col, Row] := Solution[I].ToString;
         Inc(I);
       end;
 end;

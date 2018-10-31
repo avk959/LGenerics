@@ -10,7 +10,6 @@ object frmMain: TfrmMain
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poScreenCenter
-  LCLVersion = '2.1.0.0'
   object sgCells: TStringGrid
     Left = 4
     Height = 456
@@ -27,13 +26,13 @@ object frmMain: TfrmMain
     TabOrder = 1
     OnDrawCell = sgCellsDrawCell
   end
-  object seHintCount: TSpinEdit
+  object seCluesCount: TSpinEdit
     Left = 664
     Height = 27
     Top = 20
     Width = 68
     Anchors = [akTop, akRight]
-    MaxValue = 256
+    MaxValue = 250
     MinValue = 1
     TabOrder = 2
     Value = 36
@@ -42,9 +41,9 @@ object frmMain: TfrmMain
     Left = 576
     Height = 19
     Top = 20
-    Width = 68
+    Width = 75
     Anchors = [akTop, akRight]
-    Caption = 'Hint count:'
+    Caption = 'Clues count:'
     ParentColor = False
   end
   object btNew: TButton
