@@ -1021,9 +1021,9 @@ begin
     end;
 end;
 
-{ TGSimpleGraph.THamiltonHelper }
+{ TGSimpleGraph.THamiltonCycles }
 
-procedure TGSimpleGraph.THamiltonHelper.Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
+procedure TGSimpleGraph.THamiltonCycles.Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector);
 begin
   FRoot := aRoot;
@@ -1040,13 +1040,13 @@ begin
   FStartTime := Now;
 end;
 
-function TGSimpleGraph.THamiltonHelper.TimeToFinish: Boolean;
+function TGSimpleGraph.THamiltonCycles.TimeToFinish: Boolean;
 begin
   FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
   Result := FCancelled or FDone;
 end;
 
-function TGSimpleGraph.THamiltonHelper.SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+function TGSimpleGraph.THamiltonCycles.SelectNext(constref v: TBoolVector; out aValue: SizeInt): Boolean;
 var
   I, Degree, MinDegree: SizeInt;
 begin
@@ -1064,7 +1064,7 @@ begin
   Result := aValue <> NULL_INDEX;
 end;
 
-procedure TGSimpleGraph.THamiltonHelper.CheckIsCycle(aNode: SizeInt);
+procedure TGSimpleGraph.THamiltonCycles.CheckIsCycle(aNode: SizeInt);
 begin
   if FMatrix[aNode][FRoot] then
     begin
@@ -1076,7 +1076,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.THamiltonHelper.CycleSearch(aNode: SizeInt);
+procedure TGSimpleGraph.THamiltonCycles.DoSearch(aNode: SizeInt);
 var
   Cand, TmpList: TBoolVector;
   I: SizeInt;
@@ -1101,7 +1101,7 @@ begin
               Cand[I] := False;
               FStack.Push(I);
               FVacant[I] := False;
-              CycleSearch(I);
+              DoSearch(I);
               if TimeToFinish then
                 exit;
               FVacant[I] := True;
@@ -1116,7 +1116,7 @@ begin
     CheckIsCycle(aNode);
 end;
 
-procedure TGSimpleGraph.THamiltonHelper.SearchForCycles;
+procedure TGSimpleGraph.THamiltonCycles.SearchFor;
 var
   I: SizeInt;
 begin
@@ -1126,7 +1126,7 @@ begin
     begin
       FStack.Push(I);
       FVacant[I] := False;
-      CycleSearch(I);
+      DoSearch(I);
       if TimeToFinish then
         break;
       FVacant[I] := True;
@@ -1135,11 +1135,11 @@ begin
     end;
 end;
 
-function TGSimpleGraph.THamiltonHelper.FindCycles(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
+function TGSimpleGraph.THamiltonCycles.Find(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aRoot, aCount, aTimeOut, pv);
-  SearchForCycles;
+  SearchFor;
   Result := not FCancelled;
 end;
 

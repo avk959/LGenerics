@@ -3607,13 +3607,13 @@ end;
 function TGSimpleGraph.FindHamiltonCycles(constref aRoot: TVertex; aCount: SizeInt; out aCycles: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 begin
-  Result := FindHamiltonCyclesI(IndexOf(aRoot), aCount, aCycles, aTimeOut)
+  Result := FindHamiltonCyclesI(IndexOf(aRoot), aCount, aCycles, aTimeOut);
 end;
 
 function TGSimpleGraph.FindHamiltonCyclesI(aRootIndex, aCount: SizeInt; out aCycles: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
-  Helper: THamiltonHelper;
+  Helper: THamiltonCycles;
   I: SizeInt;
 begin
   //todo: to be tested !!!
@@ -3632,7 +3632,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     if AdjLists[I]^.Count = 1 then
       exit(False);
-  Result := Helper.FindCycles(Self, aRootIndex, aCount, aTimeOut, @aCycles);
+  Result := Helper.Find(Self, aRootIndex, aCount, aTimeOut, @aCycles);
 end;
 
 function TGSimpleGraph.IsHamiltonCycle(constref aCycle: TIntArray; aRootIndex: SizeInt): Boolean;
