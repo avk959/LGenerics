@@ -391,6 +391,7 @@ type
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonCyclesI(aRootIndex, aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
+    function  IsHamiltonCycle(constref aCycle: TIntArray; aRootIndex: SizeInt): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -3629,6 +3630,28 @@ begin
     if AdjLists[I]^.Count = 1 then
       exit(False);
   Result := Helper.Find(Self, aRootIndex, aCount, aTimeOut, @aCycles);
+end;
+
+function TGSimpleGraph.IsHamiltonCycle(constref aCycle: TIntArray; aRootIndex: SizeInt): Boolean;
+var
+  VertSet: TBitVector;
+  I, Curr: SizeInt;
+begin
+  if aCycle.Length <> Succ(VertexCount) then
+    exit(False);
+  if (aCycle[0] <> aRootIndex) or (aCycle[VertexCount] <> aRootIndex) then
+    exit(False);
+  VertSet.Size := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Curr := aCycle[I];
+      if VertSet[Curr] then
+        exit(False);
+      VertSet[Curr] := True;
+      if not AdjLists[Curr]^.Contains(aCycle[Succ(I)]) then
+        exit(False);
+    end;
+  Result := True;
 end;
 
 { TGChart }
