@@ -240,6 +240,8 @@ type
     TEstimate    = TPathHelper.TEstimate;
     TWeightEdge  = TPathHelper.TWeightEdge;
     TEdgeArray   = array of TWeightEdge;
+    TWeightStep  = TPathHelper.TWeightStep;
+    TAPSPMatrix  = TPathHelper.TAPSPMatrix;
 
   protected
     function CreateEdgeArray: TEdgeArray;
@@ -310,6 +312,7 @@ type
     function FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
 
+    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -1681,7 +1684,7 @@ end;
 function TGWeightedDiGraph.ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 begin
   CheckIndexRange(aRootIdx);
-  aCycle := TPathHelper.NegDetect(Self, aRootIdx);
+  aCycle := TPathHelper.NegCycleDetect(Self, aRootIdx);
   Result := aCycle <> nil;
 end;
 
@@ -1792,6 +1795,11 @@ function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray
 begin
   CheckIndexRange(aSrc);
   Result := TPathHelper.BfmtSssp(Self, aSrc, aPaths, aWeights);
+end;
+
+function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
+begin
+  Result := TPathHelper.FloydApsp(Self, aPaths);
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
