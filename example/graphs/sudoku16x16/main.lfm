@@ -35,7 +35,7 @@ object frmMain: TfrmMain
     MaxValue = 250
     MinValue = 1
     TabOrder = 2
-    Value = 36
+    Value = 64
   end
   object Label1: TLabel
     Left = 576

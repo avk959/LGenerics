@@ -1,6 +1,5 @@
-{
-  generator sudoku 16 x 16
-}
+
+{ 16x16 sudoku generator using graph coloring }
 unit main;
 
 {$mode objfpc}{$H+}
@@ -37,7 +36,7 @@ type
     Graph: TIntChart;
     Solution,
     Clues: TSolution;
-    function  GenGraph: TIntChart;
+    function  GenSudokuGraph: TIntChart;
     function  CreateColorArray: TIntArray;
     function  CreateRangeArray: TIntArray;
     procedure CreateClues;
@@ -66,7 +65,7 @@ begin
   Caption := Application.Title;
   for I := 1 to Pred(sgCells.ColCount) do
     sgCells.Cells[I, 0] := I.ToString;
-  Graph := GenGraph;
+  Graph := GenSudokuGraph;
   Randomize;
 end;
 
@@ -96,7 +95,7 @@ begin
     end;
 end;
 
-function TfrmMain.GenGraph: TIntChart;
+function TfrmMain.GenSudokuGraph: TIntChart;
 var
   I, J, K, I1, J1, I2: SizeInt;
   a: array[0..15] of SizeInt;
@@ -189,7 +188,7 @@ var
 begin
   for I := Low(aSeed) to High(aSeed) do
     aSeed[I] := I;
-  THelper.RandomShuffle(aSeed);
+  THelper.RandomShuffle(aSeed); //16!
 end;
 
 function TfrmMain.GenSolution: Boolean;
@@ -208,7 +207,7 @@ begin
   Screen.Cursor := crHourGlass;
   Application.ProcessMessages;
   try
-    Result := Graph.FindCompleteColoring(16, Colors, 5);
+    Result := Graph.FindCompleteColoring(16, Colors, 5);//wait for at most 5s
   finally
     Screen.Cursor := OldCursor;
   end;
