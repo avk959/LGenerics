@@ -3008,6 +3008,14 @@ begin
   Weight := aWeight;
 end;
 
+{ TGWeightPathHelper.TWeightStep }
+
+constructor TGWeightPathHelper.TWeightStep.Create(aWeight: TWeight; aSource: SizeInt);
+begin
+  Weight := aWeight;
+  Source := aSource;
+end;
+
 { TGWeightPathHelper }
 
 class constructor TGWeightPathHelper.Init;
@@ -3500,7 +3508,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightPathHelper.NegDetect(g: TGraph; aSrc: SizeInt): TIntArray;
+class function TGWeightPathHelper.NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray;
 var
   Parents: TIntArray;
   Weights: TWeightArray;
@@ -3560,6 +3568,38 @@ begin
     end;
 end;
 
+class function TGWeightPathHelper.FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): SizeInt;
+var
+  I, J, K, Last: SizeInt;
+  L, R, W: TWeight;
+begin
+  Last := Pred(aGraph.VertexCount);
+  aPaths := CreateAPSPMatrix(aGraph);
+  for K := 0 to Last do
+    for I := 0 to Last do
+      for J := 0 to Last do
+        begin
+          L := aPaths[I, K].Weight;
+          R := aPaths[K, J].Weight;
+          if (L < InfWeight) and (R < InfWeight) then
+            begin
+              W := L + R;
+              if W < aPaths[I, J].Weight then
+                if I <> J then
+                  begin
+                    aPaths[I, J].Weight := W;
+                    aPaths[I, J].Source := aPaths[K, J].Source;
+                  end
+                else
+                  begin
+                    aPaths := nil;
+                    exit(aPaths[K, J].Source); /////////////
+                  end;
+            end;
+        end;
+  Result := NULL_INDEX;
+end;
+
 class function TGWeightPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(InfWeight, aLen);
@@ -3573,6 +3613,47 @@ end;
 class function TGWeightPathHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(ZeroWeight, aLen);
+end;
+
+class function TGWeightPathHelper.CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix;
+var
+  Empties: TBoolVector;
+  I, J, VertCount: SizeInt;
+  p: TGraph.PAdjItem;
+begin
+  VertCount := aGraph.VertexCount;
+  System.SetLength(Result, VertCount, VertCount);
+  for I := 0 to Pred(VertCount) do
+    begin
+      Empties.InitRange(VertCount);
+      Result[I, I] := TWeightStep.Create(ZeroWeight, I);
+      Empties[I] := False;
+      for p in aGraph.AdjLists[I]^ do
+        begin
+          Result[I, p^.Key] := TWeightStep.Create(p^.Data.Weight, I);
+          Empties[p^.Key] := False;
+        end;
+      for J in Empties do
+        Result[I, J] := TWeightStep.Create(InfWeight, I);
+    end;
+end;
+
+class function TGWeightPathHelper.GetMinWeightPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray;
+var
+  Stack: TIntStack;
+begin
+  if aMatrix[aSrc, aDst].Weight < InfWeight then
+    repeat
+      Stack.Push(aDst);
+      aDst := aMatrix[aSrc, aDst].Source;
+    until aDst = aSrc;
+  Result.Length := Stack.Count;
+  aDst := 0;
+  for aSrc in Stack.Reverse do
+    begin
+      Result[aDst] := aSrc;
+      Inc(aDst);
+    end;
 end;
 
 { TGCustomDotWriter }

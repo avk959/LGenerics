@@ -356,13 +356,20 @@ type
       constructor Create(aIndex: SizeInt; aRank, aWeight: TWeight);
     end;
 
-    TGraph     = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
-    TEstimate  = function(constref aSrc, aDst: TVertex): TWeight;
-    TPairHeap  = specialize TGPairHeapMin<TWeightItem>;
-    TBinHeap   = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap = specialize TGBinHeapMin<TRankItem>;
-    //TAStarHeap   = specialize TGPairHeapMin<TRankItem>;
-    TEdgeArray = array of TWeightEdge;
+    TWeightStep = record
+      Weight: TWeight;
+      Source: SizeInt;
+      constructor Create(aWeight: TWeight; aSource: SizeInt);
+    end;
+
+    TGraph      = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TEstimate   = function(constref aSrc, aDst: TVertex): TWeight;
+    TPairHeap   = specialize TGPairHeapMin<TWeightItem>;
+    TBinHeap    = specialize TGBinHeapMin<TWeightItem>;
+    TAStarHeap  = specialize TGBinHeapMin<TRankItem>;
+    //TAStarHeap  = specialize TGPairHeapMin<TRankItem>;
+    TEdgeArray  = array of TWeightEdge;
+    TAPSPMatrix = array of array of TWeightStep;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
@@ -384,7 +391,7 @@ type
     class function BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                    static;
   { negative cycle detection }
-    class function  NegDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
+    class function NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
   { BFMT single-source shortest paths problem }
     class function BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
     class function BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
@@ -392,12 +399,19 @@ type
   { BFMT pathfinding }
     class function BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
                    static;
+  { returns index of element on negative cycle, NULL_INDEX if no negative cycle found }
+    class function FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): SizeInt;
   { fills array with InfWeight }
     class function CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with NegInfWeight }
     class function CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with ZeroWeight }
     class function CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
+  { creates square matrix, fills main diagonal with (I, ZeroWeight) and
+    fills other element with corresponding weights }
+    class function CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix; static;
+  { does not checks input }
+    class function GetMinWeightPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray; static;
 
     class property InfWeight: TWeight read CFInfWeight;
     class property NegInfWeight: TWeight read CFNegInfWeight;
@@ -409,10 +423,10 @@ type
   public
   type
     TWriteDirection = (wdTopToBottom, wdLeftToWrite);
-    TGraph = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
-    TOnStartWrite = function(aGraph: TGraph): utf8string of object;
-    TOnWriteVertex = function(aGraph: TGraph; aIndex: SizeInt): utf8string of object;
-    TOnWriteEdge = function(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string of object;
+    TGraph          = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TOnStartWrite   = function(aGraph: TGraph): utf8string of object;
+    TOnWriteVertex  = function(aGraph: TGraph; aIndex: SizeInt): utf8string of object;
+    TOnWriteEdge    = function(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string of object;
 
   protected
   const
