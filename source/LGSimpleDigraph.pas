@@ -312,7 +312,9 @@ type
     function FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
 
-    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
+    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt; inline;
+    function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray; inline;
+    function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TAPSPMatrix): TIntArray;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -1800,6 +1802,18 @@ end;
 function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
 begin
   Result := TPathHelper.FloydApsp(Self, aPaths);
+end;
+
+function TGWeightedDiGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray;
+begin
+  Result := ExtractMinPathI(IndexOf(aSrc), IndexOf(aDst), aPaths);
+end;
+
+function TGWeightedDiGraph.ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TAPSPMatrix): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := TPathHelper.ExtractMinPath(aSrc, aDst, aPaths);
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;

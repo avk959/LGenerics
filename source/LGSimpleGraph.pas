@@ -574,7 +574,9 @@ type
     function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
 
-    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
+    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt; inline;
+    function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray; inline;
+    function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TAPSPMatrix): TIntArray;
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
@@ -4157,6 +4159,18 @@ end;
 function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
 begin
   Result := TPathHelper.FloydApsp(Self, aPaths);
+end;
+
+function TGWeightedGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray;
+begin
+  Result := ExtractMinPathI(IndexOf(aSrc), IndexOf(aDst), aPaths);
+end;
+
+function TGWeightedGraph.ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TAPSPMatrix): TIntArray;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := TPathHelper.ExtractMinPath(aSrc, aDst, aPaths);
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;

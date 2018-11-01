@@ -3570,14 +3570,13 @@ end;
 
 class function TGWeightPathHelper.FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): SizeInt;
 var
-  I, J, K, Last: SizeInt;
+  I, J, K: SizeInt;
   L, R, W: TWeight;
 begin
-  Last := Pred(aGraph.VertexCount);
   aPaths := CreateAPSPMatrix(aGraph);
-  for K := 0 to Last do
-    for I := 0 to Last do
-      for J := 0 to Last do
+  for K := 0 to Pred(aGraph.VertexCount) do
+    for I := 0 to Pred(aGraph.VertexCount) do
+      for J := 0 to Pred(aGraph.VertexCount) do
         begin
           L := aPaths[I, K].Weight;
           R := aPaths[K, J].Weight;
@@ -3638,16 +3637,17 @@ begin
     end;
 end;
 
-class function TGWeightPathHelper.GetMinWeightPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray;
+class function TGWeightPathHelper.ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray;
 var
   Stack: TIntStack;
 begin
   if aMatrix[aSrc, aDst].Weight < InfWeight then
     repeat
-      Stack.Push(aDst);
+      {%H-}Stack.Push(aDst);
       aDst := aMatrix[aSrc, aDst].Source;
     until aDst = aSrc;
-  Result.Length := Stack.Count;
+  Stack.Push(aDst);
+  Result{%H-}.Length := Stack.Count;
   aDst := 0;
   for aSrc in Stack.Reverse do
     begin

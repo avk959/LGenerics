@@ -411,7 +411,7 @@ type
     fills other element with corresponding weights }
     class function CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix; static;
   { does not checks input }
-    class function GetMinWeightPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray; static;
+    class function ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray; static;
 
     class property InfWeight: TWeight read CFInfWeight;
     class property NegInfWeight: TWeight read CFNegInfWeight;
