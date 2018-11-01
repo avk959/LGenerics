@@ -39,8 +39,8 @@ type
      function  TryMatch(var aDelta: TWeight): SizeInt;
      function  TryMatchMax(var aDelta: TWeight): SizeInt;
      procedure CorrectPots(aDelta: TWeight); inline;
-     procedure KuhnMatch;
-     procedure KuhnMatchMax;
+     procedure FindMatching;
+     procedure FindMaxMatching;
      function  CreateEdges: TEdgeArray;
    public
      function  GetMinWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;

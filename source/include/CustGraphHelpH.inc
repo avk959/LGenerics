@@ -365,39 +365,39 @@ type
     TEdgeArray = array of TWeightEdge;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
-    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
-    class function  DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
+    class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
+    class function DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
   { Dijkstra's pathfinding algorithm }
-    class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight; static;
-    class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
+    class function DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight; static;
+    class function DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
-    class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
+    class function AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
   { modification of Bellman-Ford-Moore algorithm(aka SPFA), faster on random graps;
     en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
-    class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
-                    static;
-    class function  Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
-                    static;
+    class function SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
+                   static;
+    class function Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
+                   static;
   { modification of Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
     faster negative cycle detection;
     B.V.Cherkassky and A.V.Goldberg: Negative-cycle detection algorithms. }
-    class function  BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
-                    static;
+    class function BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
+                   static;
   { negative cycle detection }
     class function  NegDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
   { BFMT single-source shortest paths problem }
-    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
-    class function  BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
-                    static;
+    class function BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean; static;
+    class function BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+                   static;
   { BFMT pathfinding }
-    class function  BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
-                    static;
+    class function BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
+                   static;
   { fills array with InfWeight }
-    class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
+    class function CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with NegInfWeight }
-    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static; inline;
+    class function CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with ZeroWeight }
-    class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
+    class function CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
 
     class property InfWeight: TWeight read CFInfWeight;
     class property NegInfWeight: TWeight read CFNegInfWeight;

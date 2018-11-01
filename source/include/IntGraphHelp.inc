@@ -262,7 +262,7 @@ begin
     FPots[I] += aDelta;
 end;
 
-procedure TGIntWeightGraph.TKuhnMatch.KuhnMatch;
+procedure TGIntWeightGraph.TKuhnMatch.FindMatching;
 var
   Matched: SizeInt;
   Delta: TWeight;
@@ -280,7 +280,7 @@ begin
   until False;
 end;
 
-procedure TGIntWeightGraph.TKuhnMatch.KuhnMatchMax;
+procedure TGIntWeightGraph.TKuhnMatch.FindMaxMatching;
 var
   Matched: SizeInt;
   Delta: TWeight;
@@ -318,14 +318,14 @@ end;
 function TGIntWeightGraph.TKuhnMatch.GetMinWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;
 begin
   Init(aGraph, w, g);
-  KuhnMatch;
+  FindMatching;
   Result := CreateEdges;
 end;
 
 function TGIntWeightGraph.TKuhnMatch.GetMaxWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;
 begin
   InitMax(aGraph, w, g);
-  KuhnMatchMax;
+  FindMaxMatching;
   Result := CreateEdges;
 end;
 

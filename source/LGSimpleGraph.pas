@@ -4432,7 +4432,7 @@ begin
   vRemains.InitRange(VertexCount);
   vInQueue.Size := VertexCount;
   Result := MaxWeight;
-  //n-2 phases
+  //n-1 phases
   for Phase := 1 to Pred(VertexCount) do
     begin
       vInQueue.Join(vRemains);
