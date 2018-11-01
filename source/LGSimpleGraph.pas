@@ -341,8 +341,8 @@ type
     will be set to False }
     function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMIS: TIntArray;
-  { returns True if aVertexSet contains indices of the some maximal independent vertex set, False otherwise }
-    function  IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
+  { returns True if aTestSet contains indices of the some maximal independent vertex set, False otherwise }
+    function  IsMaxIndependentSet(constref aTestSet: TIntArray): Boolean;
   { returns indices of the vertices of the some found minimum dominating set in connected graph;
     will raise exception if graph is disconnected;
     worst case time cost of exact solution O*(2^n);
@@ -350,8 +350,8 @@ type
     recent solution will be returned, and aExactSolution will be set to False }
     function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMDS: TIntArray;
-  { returns True if aVertexSet contains indices of the some minimal dominating vertex set, False otherwise }
-    function  IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
+  { returns True if aTestSet contains indices of the some minimal dominating vertex set, False otherwise }
+    function  IsMinDominatingSet(constref aTestSet: TIntArray): Boolean;
   { lists all maximal cliques;
     will raise exception if aOnFindClique is not assigned;
     setting aCancel to True in aOnFindClique will result in an exit from the method }
@@ -362,12 +362,12 @@ type
     will be set to False }
     function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMaxClique: TIntArray;
-  { returns True if aClique contains indices of the some maximal clique, False otherwise }
-    function  IsMaxClique(constref aClique: TIntArray): Boolean;
-  { returns count of used colors; returns colors of the vertices in corresponding components of aColors;
-    worst case time cost of exact solution O*(k^n); aTimeOut specifies the timeout in seconds;
-    at the end of the timeout, the best recent solution will be returned, and aExact
-    will be set to False }
+  { returns True if aTestClique contains indices of the some maximal clique, False otherwise }
+    function  IsMaxClique(constref aTestClique: TIntArray): Boolean;
+  { returns count of used colors(chromatic number, if aExact); returns colors of the vertices
+    in corresponding components of aColors; worst case time cost of exact solution O*(k^n);
+    aTimeOut specifies the timeout in seconds; at the end of the timeout,
+    the best recent solution will be returned, and aExact will be set to False }
     function  VertexColoring(out aColors: TIntArray; out aExact: Boolean;
               aTimeOut: Integer = WAIT_INFINITE): SizeInt;
   { returns tlTrue if exist the vertex coloring which uses at most aK of colors;
@@ -383,8 +383,8 @@ type
     function  GreedyVertexColoringRlf(out aColors: TIntArray): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors(GIS ?) }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
-  { returns True if aColors is complete and proper coloring of the vertices, False otherwise }
-    function  IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
+  { returns True if aTestColors is complete and proper coloring of the vertices, False otherwise }
+    function  IsFeasibleVertexColoring(constref aTestColors: TIntArray): Boolean;
   { tries to return in aCycles the specified number of Hamiltonian cycles, starting from the vertex aRoot;
     if aCount <= 0, then all cycles are returned; if aCount > 0, then
     Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
@@ -393,8 +393,8 @@ type
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
     function  FindHamiltonCyclesI(aRootIndex, aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
-  { returns True if aCycle is Hamiltonian cycle starting from the vertex with index aRootIndex }
-    function  IsHamiltonCycle(constref aCycle: TIntArray; aRootIndex: SizeInt): Boolean;
+  { returns True if aTestCycle is Hamiltonian cycle starting from the vertex with index aRootIndex }
+    function  IsHamiltonCycle(constref aTestCycle: TIntArray; aRootIndex: SizeInt): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -3298,16 +3298,16 @@ begin
     Result := GetGreedyMisBP;
 end;
 
-function TGSimpleGraph.IsMaxIndependentSet(constref aVertexSet: TIntArray): Boolean;
+function TGSimpleGraph.IsMaxIndependentSet(constref aTestSet: TIntArray): Boolean;
 var
   TestIS, Remain: TBoolVector;
   I, J: SizeInt;
   AdjFound: Boolean;
 begin
-  if System.Length(aVertexSet) = 0 then
+  if System.Length(aTestSet) = 0 then
     exit(False);
   TestIS.Size := VertexCount;
-  for I in aVertexSet do
+  for I in aTestSet do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
@@ -3315,8 +3315,8 @@ begin
         exit(False);
       TestIS[I] := True;
     end;
-  for I in aVertexSet do
-    for J in aVertexSet do
+  for I in aTestSet do
+    for J in aTestSet do
       if (I <> J) and AdjacentI(I, J) then //contains adjacent vertices -> is not independent
         exit(False);
   Remain.InitRange(VertexCount);
@@ -3325,13 +3325,13 @@ begin
   for I in Remain do
     begin
       AdjFound := False;
-      for J in aVertexSet do
+      for J in aTestSet do
         if AdjacentI(I, J) then
           begin
             AdjFound := True;
             break;
           end;
-      if not AdjFound then //I can be added to aVertexSet -> aVertexSet is not maximal
+      if not AdjFound then //I can be added to aTestSet -> aTestSet is not maximal
         exit(False);
     end;
   Result := True;
@@ -3364,7 +3364,7 @@ begin
     Result := GetGreedyMinIsBP;
 end;
 
-function TGSimpleGraph.IsMinDominatingSet(constref aVertexSet: TIntArray): Boolean;
+function TGSimpleGraph.IsMinDominatingSet(constref aTestSet: TIntArray): Boolean;
 var
   TestMds, Remain: TBoolVector;
   I, J, K: SizeInt;
@@ -3372,10 +3372,10 @@ var
 begin
   if not Connected then
     exit(False);
-  if System.Length(aVertexSet) = 0 then
+  if System.Length(aTestSet) = 0 then
     exit(False);
   TestMds.Size := VertexCount;
-  for I in aVertexSet do
+  for I in aTestSet do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
@@ -3389,7 +3389,7 @@ begin
   for I in Remain do
     begin
       AdjFound := False;
-      for J in aVertexSet do
+      for J in aTestSet do
         if AdjacentI(I, J) then
           begin
             AdjFound := True;
@@ -3399,27 +3399,27 @@ begin
         exit(False);
     end;
 
-  for I in aVertexSet do
+  for I in aTestSet do
     begin
       AdjFound := False;
-      for J in aVertexSet do
+      for J in aTestSet do
         if (I <> J) and AdjacentI(I, J) then
           begin
             AdjFound := True;
             break;
           end;
-      if AdjFound then //test aVertexSet without I
+      if AdjFound then //test aTestSet without I
         begin
           for K in Remain do
             begin
               AdjFound := False;
-              for J in aVertexSet do
+              for J in aTestSet do
                 if (K <> J) and (J <> I) and AdjacentI(K, J) then
                   begin
                     AdjFound := True;
                     break;
                   end;
-              if not AdjFound then //exists vertex nonadjacent with aVertexSet without I
+              if not AdjFound then //exists vertex nonadjacent with aTestSet without I
                 break;
             end;
           if AdjFound then  //is not minimal
@@ -3478,16 +3478,16 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.IsMaxClique(constref aClique: TIntArray): Boolean;
+function TGSimpleGraph.IsMaxClique(constref aTestClique: TIntArray): Boolean;
 var
   TestClique, Remain: TBoolVector;
   I, J: SizeInt;
   AdjFound: Boolean;
 begin
-  if System.Length(aClique) = 0 then
+  if System.Length(aTestClique) = 0 then
     exit(False);
   TestClique.Size := VertexCount;
-  for I in aClique do
+  for I in aTestClique do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
@@ -3495,8 +3495,8 @@ begin
         exit(False);
       TestClique[I] := True;
     end;
-  for I in aClique do
-    for J in aClique do
+  for I in aTestClique do
+    for J in aTestClique do
       if (I <> J) and not AdjacentI(I, J) then //contains nonadjacent vertices -> is not clique
         exit(False);
   Remain.InitRange(VertexCount);
@@ -3505,7 +3505,7 @@ begin
   for I in Remain do
     begin
       AdjFound := True;
-      for J in aClique do
+      for J in aTestClique do
         if not AdjacentI(I, J) then
           begin
             AdjFound := False;
@@ -3585,19 +3585,19 @@ begin
     Result := GreedyColor(aColors);
 end;
 
-function TGSimpleGraph.IsFeasibleVertexColoring(constref aColors: TIntArray): Boolean;
+function TGSimpleGraph.IsFeasibleVertexColoring(constref aTestColors: TIntArray): Boolean;
 var
   sCol, dCol: SizeInt;
   e: TEdge;
 begin
   if IsEmpty then
-    exit(aColors = nil);
-  if aColors.Length <> VertexCount then
+    exit(aTestColors = nil);
+  if aTestColors.Length <> VertexCount then
     exit(False);
   for e in DistinctEdges do
     begin
-      sCol := aColors[e.Source];
-      dCol := aColors[e.Destination];
+      sCol := aTestColors[e.Source];
+      dCol := aTestColors[e.Destination];
       if (sCol < 1) or (sCol > VertexCount) or (dCol < 1) or (dCol > VertexCount) or (sCol = dCol) then
         exit(False);
     end;
@@ -3635,16 +3635,16 @@ begin
   Result := Helper.Find(Self, aRootIndex, aCount, aTimeOut, @aCycles);
 end;
 
-function TGSimpleGraph.IsHamiltonCycle(constref aCycle: TIntArray; aRootIndex: SizeInt): Boolean;
+function TGSimpleGraph.IsHamiltonCycle(constref aTestCycle: TIntArray; aRootIndex: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
 begin
-  if aCycle.Length <> Succ(VertexCount) then
+  if aTestCycle.Length <> Succ(VertexCount) then
     exit(False);
   if SizeUInt(aRootIndex) >= SizeUInt(VertexCount) then
     exit(False);
-  if (aCycle[0] <> aRootIndex) or (aCycle[VertexCount] <> aRootIndex) then
+  if (aTestCycle[0] <> aRootIndex) or (aTestCycle[VertexCount] <> aRootIndex) then
     exit(False);
   VertSet.Size := VertexCount;
   Next := aRootIndex;
@@ -3652,7 +3652,7 @@ begin
   for I := 1 to Pred(VertexCount) do
     begin
       Curr := Next;
-      Next := aCycle[I];
+      Next := aTestCycle[I];
       if SizeUInt(Next) >= SizeUInt(VertexCount) then
         exit(False);
       if VertSet[Next] then

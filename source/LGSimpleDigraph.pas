@@ -400,7 +400,7 @@ type
     function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
 
   { returns True if arc costs are correct(negative costs allows), False otherwise }
-    function IsValidCostArray(constref aCosts: TCostEdgeArray): Boolean;
+    function IsProperCostArray(constref aCosts: TCostEdgeArray): Boolean;
   { param aReqFlow specifies the required flow > 0 (can be MaxWeight);
     returns False if network is not correct or arc costs are not correct or network
     contains negative cycle or aNeedFlow < 1,
@@ -2084,7 +2084,7 @@ begin
   aCut.T := TmpSet.ToArray;
 end;
 
-function TGIntWeightDiGraph.IsValidCostArray(constref aCosts: TCostEdgeArray): Boolean;
+function TGIntWeightDiGraph.IsProperCostArray(constref aCosts: TCostEdgeArray): Boolean;
 var
   m: TEdgeCostMap;
 begin
