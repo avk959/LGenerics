@@ -3591,8 +3591,9 @@ begin
                   end
                 else
                   begin
+                    Result := aPaths[K, J].Source; /////////////
                     aPaths := nil;
-                    exit(aPaths[K, J].Source); /////////////
+                    exit;
                   end;
             end;
         end;
