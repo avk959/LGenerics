@@ -503,6 +503,8 @@ type
     TWeightEdge  = TPathHelper.TWeightEdge;
     TEdgeArray   = array of TWeightEdge;
     TEstimate    = TPathHelper.TEstimate;
+    TWeightStep  = TPathHelper.TWeightStep;
+    TAPSPMatrix  = TPathHelper.TAPSPMatrix;
 
   protected
   type
@@ -571,6 +573,8 @@ type
     the weights of all edges must be nonnegative; used A* algorithm if aEst <> nil }
     function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
+
+    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
@@ -4148,6 +4152,11 @@ begin
     Result := TPathHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
     Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+end;
+
+function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
+begin
+  Result := TPathHelper.FloydApsp(Self, aPaths);
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
