@@ -31,8 +31,10 @@ Contains:
       - biconnected components finding
       - edge-connectivity finding
       - cycle detection
+      - negative cycle detection
       - fundamental cycles selection
       - shortest paths finding
+      - all pairs shortest paths finding
       - minimum spanning tree finding
       - strongly connected components finding
       - minimum dominating set finding
@@ -41,13 +43,13 @@ Contains:
       - maximum clique finding
       - listing all maximal cliques
       - vertex coloring
-      - maximum flow through the directed network
-      - minimum-cost flow through the directed network
-      - minimum s-t cut of the directed network
-      - global minimum cut of the weighted graph
-      - maximum cardinality matching for bipartite graph
-      - maximum cardinality matching for general graph
-      - weighted matching for bipartite graph
+      - maximum flow through a directed network
+      - minimum-cost flow through a directed network
+      - minimum s-t cut in a directed network
+      - global minimum cut in a weighted graph
+      - maximum cardinality matching in bipartite graph
+      - maximum cardinality matching in arbitrary graph
+      - weighted matching in bipartite graph
 
   3. Other algorithms:
       - some non-cryptogarphic hashes(unit LGHash)
