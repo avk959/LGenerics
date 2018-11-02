@@ -1804,9 +1804,9 @@ end;
 function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
 begin
   if Density <= DENSE_CUTOFF then
-    //if Density <= JOHNSON_CUTOFF then
-    //  Result := TPathHelper.FbmApsp(Self, aPaths)
-    //else
+    if Density <= JOHNSON_CUTOFF then
+      Result := TPathHelper.FbmApsp(Self, aPaths)
+    else
       Result := TPathHelper.JohnsonApsp(Self, aPaths)
   else
     Result := TPathHelper.FloydApsp(Self, aPaths);

@@ -108,7 +108,7 @@ const
   GRAPH_HEADER_VERSION     = 2;
   GRAPH_ADJLIST_GROW       = 8;
   DENSE_CUTOFF             = 0.7;  //???
-  JOHNSON_CUTOFF           = 0.15; //???
+  JOHNSON_CUTOFF           = 0.2;  //???
 
 type
   generic TGAdjItem<T> = record
@@ -3493,20 +3493,10 @@ begin
               TreePrev[Post] := Next;
               if not InQueue[Next] then
                 begin
-                  if (qCount <> 0) and (aWeights[Next] < aWeights[Queue[qHead]]) then
-                    begin
-                      Dec(qHead);
-                      if qHead < 0 then
-                        qHead := Pred(vCount);
-                      Queue[qHead] := Next;
-                    end
-                  else
-                    begin
-                      Queue[qTail] := Next;
-                      Inc(qTail);
-                      if qTail = vCount then
-                        qTail := 0;
-                    end;
+                  Queue[qTail] := Next;
+                  Inc(qTail);
+                  if qTail = vCount then
+                    qTail := 0;
                   Inc(qCount);
                   InQueue[Next] := True;
                 end;
@@ -3598,20 +3588,10 @@ begin
               TreePrev[Post] := Next;
               if not InQueue[Next] then
                 begin
-                  if (qCount <> 0) and (aPhi[Next] < aPhi[Queue[qHead]]) then
-                    begin
-                      Dec(qHead);
-                      if qHead < 0 then
-                        qHead := Pred(vCount);
-                      Queue[qHead] := Next;
-                    end
-                  else
-                    begin
-                      Queue[qTail] := Next;
-                      Inc(qTail);
-                      if qTail = vCount then
-                        qTail := 0;
-                    end;
+                  Queue[qTail] := Next;
+                  Inc(qTail);
+                  if qTail = vCount then
+                    qTail := 0;
                   Inc(qCount);
                   InQueue[Next] := True;
                 end;
@@ -3825,20 +3805,10 @@ begin
                   Parents[Next] := Curr;
                   if not InQueue[Next] then
                     begin
-                      if (qCount <> 0) and (Weights[Next] < Weights[Queue[qHead]]) then
-                        begin
-                          Dec(qHead);
-                          if qHead < 0 then
-                            qHead := Pred(VertCount);
-                          Queue[qHead] := Next;
-                        end
-                      else
-                        begin
-                          Queue[qTail] := Next;
-                          Inc(qTail);
-                          if qTail = VertCount then
-                            qTail := 0;
-                        end;
+                      Queue[qTail] := Next;
+                      Inc(qTail);
+                      if qTail = VertCount then
+                        qTail := 0;
                       Inc(qCount);
                       InQueue[Next] := True;
                     end;
