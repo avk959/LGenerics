@@ -365,14 +365,15 @@ type
       constructor Create(aWeight: TWeight; aSource: SizeInt);
     end;
 
-    TGraph      = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
-    TEstimate   = function(constref aSrc, aDst: TVertex): TWeight;
-    TPairHeap   = specialize TGPairHeapMin<TWeightItem>;
-    TBinHeap    = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap  = specialize TGBinHeapMin<TRankItem>;
-    //TAStarHeap  = specialize TGPairHeapMin<TRankItem>;
-    TEdgeArray  = array of TWeightEdge;
-    TAPSPMatrix = array of array of TWeightStep;
+    TGraph         = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TEstimate      = function(constref aSrc, aDst: TVertex): TWeight;
+    TPairHeap      = specialize TGPairHeapMin<TWeightItem>;
+    TBinHeap       = specialize TGBinHeapMin<TWeightItem>;
+    TAStarHeap     = specialize TGBinHeapMin<TRankItem>;
+    //TAStarHeap     = specialize TGPairHeapMin<TRankItem>;
+    TEdgeArray     = array of TWeightEdge;
+    TWeightsMatrix = array of array of TWeight;
+    TAPSPMatrix    = array of array of TWeightStep;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
@@ -414,6 +415,7 @@ type
     class function CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with ZeroWeight }
     class function CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
+    class function CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix; static;
   { creates square matrix, fills main diagonal with (I, ZeroWeight) and
     fills other element with corresponding weights }
     class function CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix; static;

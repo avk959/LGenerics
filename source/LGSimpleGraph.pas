@@ -499,12 +499,13 @@ type
 
   public
   type
-    TWeightArray = TPathHelper.TWeightArray;
-    TWeightEdge  = TPathHelper.TWeightEdge;
-    TEdgeArray   = array of TWeightEdge;
-    TEstimate    = TPathHelper.TEstimate;
-    TWeightStep  = TPathHelper.TWeightStep;
-    TAPSPMatrix  = TPathHelper.TAPSPMatrix;
+    TWeightArray  = TPathHelper.TWeightArray;
+    TWeightEdge   = TPathHelper.TWeightEdge;
+    TEdgeArray    = array of TWeightEdge;
+    TEstimate     = TPathHelper.TEstimate;
+    TWeightMatrix = TPathHelper.TWeightsMatrix;
+    TWeightStep   = TPathHelper.TWeightStep;
+    TAPSPMatrix   = TPathHelper.TAPSPMatrix;
 
   protected
   type
@@ -573,6 +574,8 @@ type
     the weights of all edges must be nonnegative; used A* algorithm if aEst <> nil }
     function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
+  { creates a matrix of weights of edges }
+    function CreateWeightsMatrix: TWeightMatrix; inline;
   { returns True and the shortest paths between all pairs of vertices in matrix aPaths,
     if no negative-weight cycles exist, otherwise returns False and in single cell of aPaths
     the index of the vertex from which the negative weight cycle is reachable }
@@ -4156,6 +4159,11 @@ begin
     Result := TPathHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
     Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+end;
+
+function TGWeightedGraph.CreateWeightsMatrix: TWeightMatrix;
+begin
+  Result := TPathHelper.CreateWeightsMatrix(Self);
 end;
 
 function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;

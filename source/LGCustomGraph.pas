@@ -3824,6 +3824,29 @@ begin
   Result := CreateAndFill(ZeroWeight, aLen);
 end;
 
+class function TGWeightPathHelper.CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix;
+var
+  Empties: TBoolVector;
+  I, J, VertCount: SizeInt;
+  p: TGraph.PAdjItem;
+begin
+  VertCount := aGraph.VertexCount;
+  System.SetLength(Result, VertCount, VertCount);
+  for I := 0 to Pred(VertCount) do
+    begin
+      Empties.InitRange(VertCount);
+      Result[I, I] := ZeroWeight;
+      Empties[I] := False;
+      for p in aGraph.AdjLists[I]^ do
+        begin
+          Result[I, p^.Key] := p^.Data.Weight;
+          Empties[p^.Key] := False;
+        end;
+      for J in Empties do
+        Result[I, J] := InfWeight;
+    end;
+end;
+
 class function TGWeightPathHelper.CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix;
 var
   Empties: TBoolVector;

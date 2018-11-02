@@ -235,13 +235,14 @@ type
 
   public
   type
-    TWeightItem  = TPathHelper.TWeightItem;
-    TWeightArray = TPathHelper.TWeightArray;
-    TEstimate    = TPathHelper.TEstimate;
-    TWeightEdge  = TPathHelper.TWeightEdge;
-    TEdgeArray   = array of TWeightEdge;
-    TWeightStep  = TPathHelper.TWeightStep;
-    TAPSPMatrix  = TPathHelper.TAPSPMatrix;
+    TWeightItem   = TPathHelper.TWeightItem;
+    TWeightArray  = TPathHelper.TWeightArray;
+    TEstimate     = TPathHelper.TEstimate;
+    TWeightEdge   = TPathHelper.TWeightEdge;
+    TEdgeArray    = array of TWeightEdge;
+    TWeightMatrix = TPathHelper.TWeightsMatrix;
+    TWeightStep   = TPathHelper.TWeightStep;
+    TAPSPMatrix   = TPathHelper.TAPSPMatrix;
 
   protected
     function CreateEdgeArray: TEdgeArray;
@@ -311,6 +312,8 @@ type
     if there is a negative weight cycle, then aPaths will contain that cycle }
     function FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
+  { creates a matrix of weights of arcs }
+    function CreateWeightsMatrix: TWeightMatrix; inline;
   { returns True and the shortest paths between all pairs of vertices in matrix aPaths,
     if no negative-weight cycles exist, otherwise returns False and in single cell of aPaths
     the index of the vertex from which the negative weight cycle is reachable }
@@ -1799,6 +1802,11 @@ function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray
 begin
   CheckIndexRange(aSrc);
   Result := TPathHelper.BfmtSssp(Self, aSrc, aPaths, aWeights);
+end;
+
+function TGWeightedDiGraph.CreateWeightsMatrix: TWeightMatrix;
+begin
+  Result := TPathHelper.CreateWeightsMatrix(Self);
 end;
 
 function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
