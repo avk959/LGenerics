@@ -107,7 +107,8 @@ const
   GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';
   GRAPH_HEADER_VERSION     = 2;
   GRAPH_ADJLIST_GROW       = 8;
-  DENSE_CUTOFF             = 0.5; //??? 0.5 ???
+  DENSE_CUTOFF             = 0.7;  //???
+  JOHNSON_CUTOFF           = 0.15; //???
 
 type
   generic TGAdjItem<T> = record
@@ -3445,7 +3446,7 @@ begin
   Queue[qTail] := aSrc;
   Inc(qTail);
   Inc(qCount);
-  while qHead <> qTail do
+  while qCount > 0 do
     begin
       Curr := Queue[qHead];
       Inc(qHead);
@@ -3550,7 +3551,7 @@ begin
       Inc(qTail);
       Inc(qCount);
     end;
-  while qHead <> qTail do
+  while qCount > 0 do
     begin
       Curr := Queue[qHead];
       Inc(qHead);
@@ -3768,6 +3769,84 @@ begin
       for J := 0 to Pred(VertCount) do
         aPaths[I, J] := TWeightStep.Create(Weights[J] + Phi[J] - Phi[I], Parents[J]);
       Reached.ClearBits;
+    end;
+  Result := True;
+end;
+
+class function TGWeightPathHelper.FbmApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+var
+  Queue, Parents: TIntArray;
+  Weights: TWeightArray;
+  InQueue: TGraph.TBitVector;
+  Item: TWeightItem;
+  Relax: TWeight;
+  I, J, Curr, Next, qHead, qCount, qTail, VertCount: SizeInt;
+  p: TGraph.PAdjItem;
+begin
+  I := BfmtReweight(aGraph, Weights);
+  if I >= 0 then
+    begin
+      aPaths := [[TWeightStep.Create(ZeroWeight, I)]];
+      exit(False);
+    end;
+  VertCount := aGraph.VertexCount;
+  Parents.Length := VertCount;
+  System.SetLength(aPaths, VertCount, VertCount);
+  Queue.Length := VertCount;
+  InQueue.Size := VertCount;
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Parents)^, VertCount * SizeOf(SizeInt), $ff);
+      Fill(Weights, InfWeight);
+      Weights[I] := ZeroWeight;
+      Parents[I] := I;
+      qCount := 0;
+      qTail := 0;
+      qHead := 0;
+      Queue[qTail] := I;
+      Inc(qTail);
+      Inc(qCount);
+      while qCount > 0 do
+        begin
+          Curr := Queue[qHead];
+          Inc(qHead);
+          Dec(qCount);
+          if qHead = VertCount then
+            qHead := 0;
+          InQueue[Curr] := False;
+          if (Parents[Curr] <> NULL_INDEX) and InQueue[Parents[Curr]] then
+            continue;
+          for p in aGraph.AdjLists[Curr]^ do
+            begin
+              Next := p^.Destination;
+              if Weights[Curr] + p^.Data.Weight < Weights[Next] then
+                begin
+                  Weights[Next] := Weights[Curr] + p^.Data.Weight;
+                  Parents[Next] := Curr;
+                  if not InQueue[Next] then
+                    begin
+                      if (qCount <> 0) and (Weights[Next] < Weights[Queue[qHead]]) then
+                        begin
+                          Dec(qHead);
+                          if qHead < 0 then
+                            qHead := Pred(VertCount);
+                          Queue[qHead] := Next;
+                        end
+                      else
+                        begin
+                          Queue[qTail] := Next;
+                          Inc(qTail);
+                          if qTail = VertCount then
+                            qTail := 0;
+                        end;
+                      Inc(qCount);
+                      InQueue[Next] := True;
+                    end;
+                end;
+            end;
+        end;
+      for J := 0 to Pred(VertCount) do
+        aPaths[I, J] := TWeightStep.Create(Weights[J], Parents[J]);
     end;
   Result := True;
 end;

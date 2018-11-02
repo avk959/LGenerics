@@ -4161,7 +4161,10 @@ end;
 function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
 begin
   if Density <= DENSE_CUTOFF then
-    Result := TPathHelper.JohnsonApsp(Self, aPaths)
+    if Density <= JOHNSON_CUTOFF then
+      Result := TPathHelper.FbmApsp(Self, aPaths)
+    else
+      Result := TPathHelper.JohnsonApsp(Self, aPaths)
   else
     Result := TPathHelper.FloydApsp(Self, aPaths);
 end;

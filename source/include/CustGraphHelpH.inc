@@ -407,6 +407,7 @@ type
     single element with the index of an element on negative cycle }
     class function FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
     class function JohnsonApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+    class function FbmApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
   { fills array with InfWeight }
     class function CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with NegInfWeight }
