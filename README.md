@@ -35,7 +35,7 @@ Contains:
       - fundamental cycles 
       - shortest paths 
       - all pairs shortest paths 
-      - minimum spanning tree
+      - minimum spanning trees
       - strongly connected components
       - minimum dominating set 
       - maximum independent set
