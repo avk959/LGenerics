@@ -3423,7 +3423,7 @@ class function TGWeightPathHelper.BfmtBase(g: TGraph; aSrc: SizeInt; out aParent
 var
   Queue, TreePrev, TreeNext, Level: TIntArray;
   InQueue, Active: TGraph.TBitVector;
-  Curr, Next, Prev, Post, Test, CurrLevel, vCount, qCount: SizeInt;
+  Curr, Next, Prev, Post, Test, CurrLevel, vCount: SizeInt;
   p: TGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -3434,7 +3434,6 @@ begin
   TreePrev := g.CreateIntArray;
   TreeNext := g.CreateIntArray;
   Level := g.CreateIntArray;
-  qCount := 0;
   InQueue.Size := vCount;
   Active.Size := vCount;
   aWeights := CreateWeightArray(vCount);
@@ -3445,12 +3444,10 @@ begin
   Active[aSrc] := True;
   Queue[qTail] := aSrc;
   Inc(qTail);
-  Inc(qCount);
-  while qCount > 0 do
+  while qHead <> qTail do
     begin
       Curr := Queue[qHead];
       Inc(qHead);
-      Dec(qCount);
       if qHead = vCount then
         qHead := 0;
       InQueue[Curr] := False;
@@ -3497,7 +3494,6 @@ begin
                   Inc(qTail);
                   if qTail = vCount then
                     qTail := 0;
-                  Inc(qCount);
                   InQueue[Next] := True;
                 end;
               Active[Next] := True;
@@ -3512,7 +3508,7 @@ class function TGWeightPathHelper.BfmtReweight(g: TGraph; out aPhi: TWeightArray
 var
   Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
   InQueue, Active: TGraph.TBitVector;
-  Curr, Next, Prev, Post, Test, CurrLevel, vCount, qCount: SizeInt;
+  Curr, Next, Prev, Post, Test, CurrLevel, vCount: SizeInt;
   p: TGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -3524,7 +3520,6 @@ begin
   TreePrev := g.CreateIntArray(vCount, NULL_INDEX);
   TreeNext := g.CreateIntArray(vCount, NULL_INDEX);
   Level := g.CreateIntArray(vCount, NULL_INDEX);
-  qCount := 0;
   InQueue.Size := vCount;
   Active.Size := vCount;
   aPhi := CreateWeightArrayZ(vCount);
@@ -3539,13 +3534,11 @@ begin
       Active[Curr] := True;
       Queue[qTail] := Curr;
       Inc(qTail);
-      Inc(qCount);
     end;
-  while qCount > 0 do
+  while qHead <> qTail do
     begin
       Curr := Queue[qHead];
       Inc(qHead);
-      Dec(qCount);
       if qHead = vCount then
         qHead := 0;
       InQueue[Curr] := False;
@@ -3592,7 +3585,6 @@ begin
                   Inc(qTail);
                   if qTail = vCount then
                     qTail := 0;
-                  Inc(qCount);
                   InQueue[Next] := True;
                 end;
               Active[Next] := True;
@@ -3760,7 +3752,7 @@ var
   InQueue: TGraph.TBitVector;
   Item: TWeightItem;
   Relax: TWeight;
-  I, J, Curr, Next, qHead, qCount, qTail, VertCount: SizeInt;
+  I, Curr, Next, qHead, qTail, VertCount: SizeInt;
   p: TGraph.PAdjItem;
 begin
   I := BfmtReweight(aGraph, Weights);
@@ -3780,17 +3772,14 @@ begin
       Fill(Weights, InfWeight);
       Weights[I] := ZeroWeight;
       Parents[I] := I;
-      qCount := 0;
       qTail := 0;
       qHead := 0;
       Queue[qTail] := I;
       Inc(qTail);
-      Inc(qCount);
-      while qCount > 0 do
+      while qHead <> qTail do
         begin
           Curr := Queue[qHead];
           Inc(qHead);
-          Dec(qCount);
           if qHead = VertCount then
             qHead := 0;
           InQueue[Curr] := False;
@@ -3809,14 +3798,13 @@ begin
                       Inc(qTail);
                       if qTail = VertCount then
                         qTail := 0;
-                      Inc(qCount);
                       InQueue[Next] := True;
                     end;
                 end;
             end;
         end;
-      for J := 0 to Pred(VertCount) do
-        aPaths[I, J] := TWeightStep.Create(Weights[J], Parents[J]);
+      for Curr := 0 to Pred(VertCount) do
+        aPaths[I, Curr] := TWeightStep.Create(Weights[Curr], Parents[Curr]);
     end;
   Result := True;
 end;
