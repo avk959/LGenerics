@@ -107,6 +107,7 @@ const
   GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';
   GRAPH_HEADER_VERSION     = 2;
   GRAPH_ADJLIST_GROW       = 8;
+  DENSE_CUTOFF             = 0.5; //??? 0.5 ???
 
 type
   generic TGAdjItem<T> = record
@@ -3104,6 +3105,14 @@ begin
     Result[I] := aValue;
 end;
 
+class procedure TGWeightPathHelper.Fill(var a: TWeightArray; aValue: TWeight);
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(a) do
+    a[I] := aValue;
+end;
+
 class function TGWeightPathHelper.wMax(L, R: TWeight): TWeight;
 begin
   if L >= R then
@@ -3418,12 +3427,12 @@ var
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
-  System.SetLength(Queue, g.VertexCount);
+  vCount := g.VertexCount;
+  Queue.Length := vCount;
   aParents := g.CreateIntArray;
   TreePrev := g.CreateIntArray;
   TreeNext := g.CreateIntArray;
   Level := g.CreateIntArray;
-  vCount := g.VertexCount;
   qCount := 0;
   InQueue.Size := vCount;
   Active.Size := vCount;
@@ -3486,7 +3495,7 @@ begin
                   if (qCount <> 0) and (aWeights[Next] < aWeights[Queue[qHead]]) then
                     begin
                       Dec(qHead);
-                      if qHead = NULL_INDEX then
+                      if qHead < 0 then
                         qHead := Pred(vCount);
                       Queue[qHead] := Next;
                     end
@@ -3505,6 +3514,111 @@ begin
         end;
     end;
   aParents[aSrc] := NULL_INDEX;
+  Result := NULL_INDEX;
+end;
+
+class function TGWeightPathHelper.BfmtReweight(g: TGraph; out aPhi: TWeightArray): SizeInt;
+var
+  Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
+  InQueue, Active: TGraph.TBitVector;
+  Curr, Next, Prev, Post, Test, CurrLevel, vCount, qCount: SizeInt;
+  p: TGraph.PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  vCount := Succ(g.VertexCount);
+  Test := g.VertexCount;
+  Queue.Length := vCount;
+  Parents := g.CreateIntArray(vCount, NULL_INDEX);
+  TreePrev := g.CreateIntArray(vCount, NULL_INDEX);
+  TreeNext := g.CreateIntArray(vCount, NULL_INDEX);
+  Level := g.CreateIntArray(vCount, NULL_INDEX);
+  qCount := 0;
+  InQueue.Size := vCount;
+  Active.Size := vCount;
+  aPhi := CreateWeightArrayZ(vCount);
+  Parents[Test] := Test;
+  TreePrev[Test] := Test;
+  TreeNext[Test] := Test;
+  for Curr := 0 to Pred(Test) do
+    begin
+      Parents[Curr] := Pred(vCount);
+      TreePrev[Curr] := Pred(vCount);
+      InQueue[Curr] := True;
+      Active[Curr] := True;
+      Queue[qTail] := Curr;
+      Inc(qTail);
+      Inc(qCount);
+    end;
+  while qHead <> qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      Dec(qCount);
+      if qHead = vCount then
+        qHead := 0;
+      InQueue[Curr] := False;
+      if not Active[Curr] then
+        continue;
+      Active[Curr] := False;
+      for p in g.AdjLists[Curr]^ do
+        begin
+          Next := p^.Destination;
+          if aPhi[Next] > aPhi[Curr] + p^.Data.Weight then
+            begin
+              aPhi[Next] := aPhi[Curr] + p^.Data.Weight;
+              if TreePrev[Next] <> NULL_INDEX then
+                begin
+                  Prev := TreePrev[Next];
+                  Test := Next;
+                  CurrLevel := 0;
+                  repeat
+                    if Test = Curr then
+                      begin
+                        aPhi := nil;
+                        exit(Next);
+                      end;
+                    CurrLevel += Level[Test];
+                    TreePrev[Test] := NULL_INDEX;
+                    Level[Test] := NULL_INDEX;
+                    Active[Test] := False;
+                    Test := TreeNext[Test];
+                  until CurrLevel < 0;
+                  Dec(Level[Parents[Next]]);
+                  TreeNext[Prev] := Test;
+                  TreePrev[Test] := Prev;
+                end;
+              Parents[Next] := Curr;
+              Inc(Level[Curr]);
+              Post := TreeNext[Curr];
+              TreeNext[Curr] := Next;
+              TreePrev[Next] := Curr;
+              TreeNext[Next] := Post;
+              TreePrev[Post] := Next;
+              if not InQueue[Next] then
+                begin
+                  if (qCount <> 0) and (aPhi[Next] < aPhi[Queue[qHead]]) then
+                    begin
+                      Dec(qHead);
+                      if qHead < 0 then
+                        qHead := Pred(vCount);
+                      Queue[qHead] := Next;
+                    end
+                  else
+                    begin
+                      Queue[qTail] := Next;
+                      Inc(qTail);
+                      if qTail = vCount then
+                        qTail := 0;
+                    end;
+                  Inc(qCount);
+                  InQueue[Next] := True;
+                end;
+              Active[Next] := True;
+            end;
+        end;
+    end;
+  System.SetLength(aPhi, Pred(vCount));
   Result := NULL_INDEX;
 end;
 
@@ -3568,7 +3682,7 @@ begin
     end;
 end;
 
-class function TGWeightPathHelper.FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): SizeInt;
+class function TGWeightPathHelper.FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
 var
   I, J, K: SizeInt;
   L, R, W: TWeight;
@@ -3591,13 +3705,71 @@ begin
                   end
                 else
                   begin
-                    Result := aPaths[K, J].Source; /////////////
-                    aPaths := nil;
-                    exit;
+                    aPaths := [[TWeightStep.Create(ZeroWeight, aPaths[K, J].Source)]]; /////////////
+                    exit(False);
                   end;
             end;
         end;
-  Result := NULL_INDEX;
+  Result := True;
+end;
+
+class function TGWeightPathHelper.JohnsonApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+var
+  Queue: TPairHeap;
+  Parents: TIntArray;
+  Phi, Weights: TWeightArray;
+  Reached, InQueue: TGraph.TBitVector;
+  Item: TWeightItem;
+  Relax: TWeight;
+  I, J, VertCount: SizeInt;
+  p: TGraph.PAdjItem;
+begin
+  I := BfmtReweight(aGraph, Phi);
+  if I >= 0 then
+    begin
+      aPaths := [[TWeightStep.Create(ZeroWeight, I)]];
+      exit(False);
+    end;
+  VertCount := aGraph.VertexCount;
+  Parents.Length := VertCount;
+  System.SetLength(Weights, VertCount);
+  Queue := TPairHeap.Create(VertCount);
+  Reached.Size := VertCount;
+  InQueue.Size := VertCount;
+  System.SetLength(aPaths, VertCount, VertCount);
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Parents)^, VertCount * SizeOf(SizeInt), $ff);
+      Fill(Weights, InfWeight);
+      Item := TWeightItem.Create(I, ZeroWeight);
+      Parents[I] := I;
+      repeat
+        Weights[Item.Index] := Item.Weight;
+        Reached[Item.Index] := True;
+        InQueue[Item.Index] := False;
+        for p in aGraph.AdjLists[Item.Index]^ do
+          begin
+            Relax := Item.Weight + p^.Data.Weight + Phi[Item.Index] - Phi[p^.Key];
+            if not Reached[p^.Key] then
+              if not InQueue[p^.Key] then
+                begin
+                  Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
+                  Parents[p^.Key] := Item.Index;
+                  InQueue[p^.Key] := True;
+                end
+              else
+                if Relax < Queue.HeadPtr(p^.Key)^.Weight then
+                  begin
+                    Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
+                    Parents[p^.Key] := Item.Index;
+                  end;
+          end;
+      until not Queue.TryDequeue(Item);
+      for J := 0 to Pred(VertCount) do
+        aPaths[I, J] := TWeightStep.Create(Weights[J] + Phi[J] - Phi[I], Parents[J]);
+      Reached.ClearBits;
+    end;
+  Result := True;
 end;
 
 class function TGWeightPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;

@@ -311,8 +311,10 @@ type
     if there is a negative weight cycle, then aPaths will contain that cycle }
     function FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray; out aWeights: TWeightArray): Boolean;
-
-    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt; inline;
+  { returns True and the shortest paths between all pairs of vertices in matrix aPaths,
+    if no negative-weight cycles exist, otherwise returns False and in single cell of aPaths
+    the index of the vertex from which the negative weight cycle is reachable }
+    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
     function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray; inline;
     function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TAPSPMatrix): TIntArray;
 {**********************************************************************************************************
@@ -1799,9 +1801,12 @@ begin
   Result := TPathHelper.BfmtSssp(Self, aSrc, aPaths, aWeights);
 end;
 
-function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
+function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
 begin
-  Result := TPathHelper.FloydApsp(Self, aPaths);
+  if Density <= DENSE_CUTOFF then
+    Result := TPathHelper.JohnsonApsp(Self, aPaths)
+  else
+    Result := TPathHelper.FloydApsp(Self, aPaths);
 end;
 
 function TGWeightedDiGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray;

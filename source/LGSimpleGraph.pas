@@ -171,9 +171,9 @@ type
   { returns graph of connected component that contains aVertex }
     function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
     function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
-  { returns a graph consisting of vertices whose indices are contained in the array aList }
+  { returns a subgraph induced by the vertices whose indices are contained in the array aList }
     function  SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
-  { returns a graph constructed from the pairs provided by the aTree,
+  { returns a gsubgraph induced the pairs provided by the aTree,
     i.e. each element treates as pair of source - destination(value -> source, index -> destination ) }
     function  SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the edges provided by the aEdges }
@@ -563,7 +563,7 @@ type
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-  { returns False if exists cycle of negative weight from otherwise returns the vertex path
+  { returns False if exists cycle of negative weight, otherwise returns the vertex path
     of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
     to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
     but InfWeight if aDst unreachable; used BFMT algorithm }
@@ -573,8 +573,10 @@ type
     the weights of all edges must be nonnegative; used A* algorithm if aEst <> nil }
     function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
-
-    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt; inline;
+  { returns True and the shortest paths between all pairs of vertices in matrix aPaths,
+    if no negative-weight cycles exist, otherwise returns False and in single cell of aPaths
+    the index of the vertex from which the negative weight cycle is reachable }
+    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
     function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray; inline;
     function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TAPSPMatrix): TIntArray;
 {**********************************************************************************************************
@@ -4156,9 +4158,12 @@ begin
     Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
-function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): SizeInt;
+function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
 begin
-  Result := TPathHelper.FloydApsp(Self, aPaths);
+  if Density <= DENSE_CUTOFF then
+    Result := TPathHelper.JohnsonApsp(Self, aPaths)
+  else
+    Result := TPathHelper.FloydApsp(Self, aPaths);
 end;
 
 function TGWeightedGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray;

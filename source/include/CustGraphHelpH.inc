@@ -301,6 +301,8 @@ type
     property Key: SizeInt read Index;
   end;
 
+  { TGWeightPathHelper }
+
   generic TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
@@ -312,9 +314,10 @@ type
     CFNegInfWeight,
     CFZeroWeight: TWeight;
     class constructor Init;
-    class function CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
-    class function wMax(L, R: TWeight): TWeight; static;
-    class function ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
+    class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
+    class procedure Fill(var a: TWeightArray; aValue: TWeight); static;
+    class function  wMax(L, R: TWeight): TWeight; static;
+    class function  ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
   public
   type
     TWeightEdge = record
@@ -390,6 +393,7 @@ type
     B.V.Cherkassky and A.V.Goldberg: Negative-cycle detection algorithms. }
     class function BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                    static;
+    class function BfmtReweight(g: TGraph; out aPhi: TWeightArray): SizeInt; static;
   { negative cycle detection }
     class function NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
   { BFMT single-source shortest paths problem }
@@ -399,8 +403,10 @@ type
   { BFMT pathfinding }
     class function BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
                    static;
-  { returns index of element on negative cycle, NULL_INDEX if no negative cycle found }
-    class function FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): SizeInt;
+  { returns True if no negative cycle found, otherwise returns False and aPaths will contain
+    single element with the index of an element on negative cycle }
+    class function FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+    class function JohnsonApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
   { fills array with InfWeight }
     class function CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with NegInfWeight }
