@@ -24,23 +24,23 @@ Contains:
 
   2. Algorithms on graphs:
       - traversals
-      - connected components finding
+      - connected components
       - bipartite graph detection
-      - articulation points finding
-      - bridges finding
-      - biconnected components finding
-      - edge-connectivity finding
+      - articulation points
+      - bridges
+      - biconnected components
+      - edge-connectivity 
       - cycle detection
       - negative cycle detection
-      - fundamental cycles selection
-      - shortest paths finding
-      - all pairs shortest paths finding
-      - minimum spanning tree finding
-      - strongly connected components finding
-      - minimum dominating set finding
-      - maximum independent set finding
+      - fundamental cycles 
+      - shortest paths 
+      - all pairs shortest paths 
+      - minimum spanning tree
+      - strongly connected components
+      - minimum dominating set 
+      - maximum independent set
       - listing all maximal independent sets
-      - maximum clique finding
+      - maximum clique 
       - listing all maximal cliques
       - vertex coloring
       - maximum flow through a directed network
