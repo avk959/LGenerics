@@ -172,8 +172,6 @@ type
       Price: TCost;
       PathMinCap: TWeight; // munimum capacity on path
     end;
-
-    TDeque = specialize TGLiteDeque<PNode>;
     THeap  = specialize TGPairHeapMin<TCostItem>;
 
   var

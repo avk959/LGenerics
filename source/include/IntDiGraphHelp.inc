@@ -969,50 +969,59 @@ end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.FindNegCycle(out aMinCap: TWeight): Boolean;
 var
-  Queue: TDeque;
+  Queue: array of PNode;
   Dist: TIntArray;
-  CurrNode, NextNode, TopNode: PNode;
+  CurrNode, NextNode: PNode;
   CurrArc: PArc;
   d: SizeInt;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
   SearchInit;
-  System.SetLength(Dist, FNodeCount);
-  CurrNode := FSource;
+  Dist.Length := FNodeCount;
   Dist[FSource - PNode(FNodes)] := 0;
+  System.SetLength(Queue, FNodeCount);
+  Queue[qTail] := FSource;
+  Inc(qTail);
   aMinCap := 0;
-  repeat
-    FInQueue[CurrNode - PNode(FNodes)] := False;
-    if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
-      continue;
-    CurrArc := CurrNode^.FirstArc;
-    d := Succ(Dist[CurrNode - PNode(FNodes)]);
-    while CurrArc < (CurrNode + 1)^.FirstArc do
-      begin
-        if CurrArc^.IsResidual then
-          begin
-            NextNode := CurrArc^.Target;
-            if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
-              begin
-                NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
-                NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResCap);
-                NextNode^.Parent := CurrNode;
-                NextNode^.PathArc := CurrArc;
-                if (NextNode = FSource) or (d >= FNodeCount) then
-                  exit(True);
-                Dist[NextNode - PNode(FNodes)] := d;
-                if not FInQueue[NextNode - PNode(FNodes)] then
-                  begin
-                    if Queue.TryPeekFirst(TopNode) and (NextNode^.Price <{%H-}TopNode^.Price) then
-                      Queue.PushFirst(NextNode)
-                    else
-                      Queue.PushLast(NextNode);
-                    FInQueue[NextNode - PNode(FNodes)] := True;
-                  end;
-              end;
-          end;
-        Inc(CurrArc);
-      end;
-  until not Queue.TryPopFirst(CurrNode);
+  while qHead <> qTail do
+    begin
+      CurrNode := Queue[qHead];
+      Inc(qHead);
+      if qHead = FNodeCount then
+        qHead := 0;
+      FInQueue[CurrNode - PNode(FNodes)] := False;
+      if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
+        continue;
+      CurrArc := CurrNode^.FirstArc;
+      d := Succ(Dist[CurrNode - PNode(FNodes)]);
+      while CurrArc < (CurrNode + 1)^.FirstArc do
+        begin
+          if CurrArc^.IsResidual then
+            begin
+              NextNode := CurrArc^.Target;
+              if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
+                begin
+                  NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
+                  NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResCap);
+                  NextNode^.Parent := CurrNode;
+                  NextNode^.PathArc := CurrArc;
+                  if (NextNode = FSource) or (d >= FNodeCount) then
+                    exit(True);
+                  Dist[NextNode - PNode(FNodes)] := d;
+                  if not FInQueue[NextNode - PNode(FNodes)] then
+                    begin
+                      Queue[qTail] := NextNode;
+                      Inc(qTail);
+                      if qTail = FNodeCount then
+                        qTail := 0;
+                      FInQueue[NextNode - PNode(FNodes)] := True;
+                    end;
+                end;
+            end;
+          Inc(CurrArc);
+        end;
+    end;
   Result := FSink^.Parent = nil;
   if not Result then
     aMinCap := FSink^.PathMinCap;
