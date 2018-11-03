@@ -3750,8 +3750,6 @@ var
   Queue, Parents: TIntArray;
   Weights: TWeightArray;
   InQueue: TGraph.TBitVector;
-  Item: TWeightItem;
-  Relax: TWeight;
   I, Curr, Next, qHead, qTail, VertCount: SizeInt;
   p: TGraph.PAdjItem;
 begin
@@ -3768,8 +3766,8 @@ begin
   InQueue.Size := VertCount;
   for I := 0 to Pred(VertCount) do
     begin
-      System.FillChar(Pointer(Parents)^, VertCount * SizeOf(SizeInt), $ff);
       Fill(Weights, InfWeight);
+      System.FillChar(Pointer(Parents)^, VertCount * SizeOf(SizeInt), $ff);
       Weights[I] := ZeroWeight;
       Parents[I] := I;
       qTail := 0;
