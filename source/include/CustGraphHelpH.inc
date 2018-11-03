@@ -389,7 +389,6 @@ type
       FVisited: TBoolVector;
       FMatchCount: SizeInt;
       procedure Match(aNode, aMate: SizeInt); inline;
-      procedure ClearParents; inline;
       procedure Init(aGraph: TGraph; constref w, g: TIntArray);
       procedure InitMax(aGraph: TGraph; constref w, g: TIntArray);
       function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;

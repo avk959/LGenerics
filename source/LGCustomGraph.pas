@@ -3026,11 +3026,6 @@ begin
   FMates[aMate] := aNode;
 end;
 
-procedure TGWeightHelper.TKuhnMatchB.ClearParents;
-begin
-  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeUint), $ff);
-end;
-
 procedure TGWeightHelper.TKuhnMatchB.Init(aGraph: TGraph; constref w, g: TIntArray);
 var
   I: SizeInt;
@@ -3040,7 +3035,7 @@ begin
   FGraph := aGraph;
   FMatchCount := 0;
   FWhites.Size := aGraph.VertexCount;
-  if System.Length(w) <= System.Length(g) then
+  if w.Length <= g.Length then
     for I in w do
       FWhites[I] := True
   else
@@ -3072,7 +3067,7 @@ begin
   FGraph := aGraph;
   FMatchCount := 0;
   FWhites.Size := aGraph.VertexCount;
-  if System.Length(w) <= System.Length(g) then
+  if w.Length <= g.Length then
     for I in w do
       FWhites[I] := True
   else
@@ -3211,9 +3206,8 @@ var
   I, Last: SizeInt;
 begin
   aDelta := InfWeight;
-  FVisited.ClearBits;
-  ClearParents;
   Result := 0;
+  FVisited.ClearBits;
   for I in FWhites do
     if FMates[I] = NULL_INDEX then
       begin
@@ -3231,9 +3225,8 @@ var
   I, Last: SizeInt;
 begin
   aDelta := NegInfWeight;
-  FVisited.ClearBits;
-  ClearParents;
   Result := 0;
+  FVisited.ClearBits;
   for I in FWhites do
     if FMates[I] = NULL_INDEX then
       begin
@@ -3264,6 +3257,7 @@ begin
     repeat
       Count := TryAugment(Delta);
       FMatchCount += Count;
+      System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
     until Count = 0;
     if Delta = InfWeight then
       break;
@@ -3281,6 +3275,7 @@ begin
     repeat
       Count := TryAugmentMax(Delta);
       FMatchCount += Count;
+      System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
     until Count = 0;
     if Delta = NegInfWeight then
       break;

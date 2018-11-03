@@ -19,7 +19,7 @@
 
 { TGSimpleGraph.TBPCliqueIsHelper }
 
-procedure TGSimpleGraph.TBPCliqueIsHelper.Colorize(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TBPCliqueIsHelper.GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBoolVector;
   I, J, ColorClass, PCount: SizeInt;
@@ -62,7 +62,7 @@ begin
       ItemCount := aCand.PopCount;
       ColOrd.Length := ItemCount;
       Colors.Length := ItemCount;
-      Colorize(aCand, ColOrd, Colors);
+      GreedyColor(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
           if Colors[I] + FCurrSet.PopCount <= FRecentBest.Length then
@@ -200,7 +200,7 @@ end;
 
 { TGSimpleGraph.TBPCliqueIsHelper256 }
 
-procedure TGSimpleGraph.TBPCliqueIsHelper256.Colorize(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.GreedyColor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
 var
   P, Q: TBits256;
   I, J, ColorClass, PCount: SizeInt;
@@ -243,7 +243,7 @@ begin
       ItemCount := aCand.PopCount;
       ColOrd.Length := ItemCount;
       Colors.Length := ItemCount;
-      Colorize(aCand, ColOrd, Colors);
+      GreedyColor(aCand, ColOrd, Colors);
       for I := Pred(ItemCount) downto 0 do
         begin
           if Colors[I] + FCurrSet.PopCount <= FRecentBest.Length then
@@ -379,7 +379,7 @@ begin
   Extend(Sub, Cand);
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.Colorize(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
+procedure TGSimpleGraph.TCliqueHelper.GreedyColor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
 var
   P, Q: TIntSet;
   I, J, ColorClass: SizeInt;
@@ -419,7 +419,7 @@ begin
         end;
       ColOrd.Length := aCand.Count;
       Colors.Length := aCand.Count;
-      Colorize(aCand, ColOrd, Colors);
+      GreedyColor(aCand, ColOrd, Colors);
       for I := Pred(aCand.Count) downto 0 do
         begin
           if Colors[I] + FCurrSet.Count <= FRecentBest.Length then
