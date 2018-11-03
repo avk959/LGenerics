@@ -30,7 +30,6 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGQueue,
-  LGDeque,
   LGVector,
   LGHashMap,
   LGCustomGraph,
@@ -241,8 +240,8 @@ type
     TWeightEdge   = TWeightHelper.TWeightEdge;
     TEdgeArray    = array of TWeightEdge;
     TWeightMatrix = TWeightHelper.TWeightsMatrix;
-    TWeightStep   = TWeightHelper.TWeightStep;
-    TAPSPMatrix   = TWeightHelper.TAPSPMatrix;
+    TWeightStep   = TWeightHelper.TApspCell;
+    TAPSPMatrix   = TWeightHelper.TApspMatrix;
 
   protected
     function CreateEdgeArray: TEdgeArray;

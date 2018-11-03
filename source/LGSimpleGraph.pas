@@ -504,8 +504,8 @@ type
     TEdgeArray    = array of TWeightEdge;
     TEstimate     = TWeightHelper.TEstimate;
     TWeightMatrix = TWeightHelper.TWeightsMatrix;
-    TWeightStep   = TWeightHelper.TWeightStep;
-    TAPSPMatrix   = TWeightHelper.TAPSPMatrix;
+    TWeightStep   = TWeightHelper.TApspCell;
+    TAPSPMatrix   = TWeightHelper.TApspMatrix;
 
   protected
   type

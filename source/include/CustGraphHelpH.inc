@@ -359,9 +359,9 @@ type
       constructor Create(aIndex: SizeInt; aRank, aWeight: TWeight);
     end;
 
-    TWeightStep = record
+    TApspCell = record
       Weight: TWeight;
-      Source: SizeInt;
+      Predecessor: SizeInt;
       constructor Create(aWeight: TWeight; aSource: SizeInt);
     end;
 
@@ -373,7 +373,7 @@ type
     //TAStarHeap     = specialize TGPairHeapMin<TRankItem>;
     TEdgeArray     = array of TWeightEdge;
     TWeightsMatrix = array of array of TWeight;
-    TAPSPMatrix    = array of array of TWeightStep;
+    TApspMatrix    = array of array of TApspCell;
 
   private
   type
@@ -437,9 +437,9 @@ type
                    static;
   { returns True if no negative cycle found, otherwise returns False and aPaths will contain
     single element with the index of an element on negative cycle }
-    class function FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
-    class function JohnsonApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
-    class function FbmApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+    class function FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
+    class function JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
+    class function FbmApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
   { fills array with InfWeight }
     class function CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with NegInfWeight }
@@ -449,9 +449,9 @@ type
     class function CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix; static;
   { creates square matrix, fills main diagonal with (I, ZeroWeight) and
     fills other element with corresponding weights }
-    class function CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix; static;
+    class function CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
   { does not checks input }
-    class function ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray; static;
+    class function ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TApspMatrix): TIntArray; static;
     class function MinWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
     class function MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
 

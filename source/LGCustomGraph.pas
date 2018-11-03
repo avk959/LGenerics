@@ -3010,12 +3010,12 @@ begin
   Weight := aWeight;
 end;
 
-{ TGWeightHelper.TWeightStep }
+{ TGWeightHelper.TApspCell }
 
-constructor TGWeightHelper.TWeightStep.Create(aWeight: TWeight; aSource: SizeInt);
+constructor TGWeightHelper.TApspCell.Create(aWeight: TWeight; aSource: SizeInt);
 begin
   Weight := aWeight;
-  Source := aSource;
+  Predecessor := aSource;
 end;
 
 { TGWeightHelper.TKuhnMatchB }
@@ -3951,7 +3951,7 @@ begin
     end;
 end;
 
-class function TGWeightHelper.FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+class function TGWeightHelper.FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
 var
   I, J, K: SizeInt;
   L, R, W: TWeight;
@@ -3970,11 +3970,11 @@ begin
                 if I <> J then
                   begin
                     aPaths[I, J].Weight := W;
-                    aPaths[I, J].Source := aPaths[K, J].Source;
+                    aPaths[I, J].Predecessor := aPaths[K, J].Predecessor;
                   end
                 else
                   begin
-                    aPaths := [[TWeightStep.Create(ZeroWeight, aPaths[K, J].Source)]]; /////////////
+                    aPaths := [[TApspCell.Create(ZeroWeight, aPaths[K, J].Predecessor)]]; /////////////
                     exit(False);
                   end;
             end;
@@ -3982,7 +3982,7 @@ begin
   Result := True;
 end;
 
-class function TGWeightHelper.JohnsonApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+class function TGWeightHelper.JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
 var
   Queue: TPairHeap;
   Parents: TIntArray;
@@ -3996,7 +3996,7 @@ begin
   I := BfmtReweight(aGraph, Phi);
   if I >= 0 then
     begin
-      aPaths := [[TWeightStep.Create(ZeroWeight, I)]];
+      aPaths := [[TApspCell.Create(ZeroWeight, I)]];
       exit(False);
     end;
   VertCount := aGraph.VertexCount;
@@ -4035,13 +4035,13 @@ begin
           end;
       until not Queue.TryDequeue(Item);
       for J := 0 to Pred(VertCount) do
-        aPaths[I, J] := TWeightStep.Create(Weights[J] + Phi[J] - Phi[I], Parents[J]);
+        aPaths[I, J] := TApspCell.Create(Weights[J] + Phi[J] - Phi[I], Parents[J]);
       Reached.ClearBits;
     end;
   Result := True;
 end;
 
-class function TGWeightHelper.FbmApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+class function TGWeightHelper.FbmApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
 var
   Queue, Parents: TIntArray;
   Weights: TWeightArray;
@@ -4052,7 +4052,7 @@ begin
   I := BfmtReweight(aGraph, Weights);
   if I >= 0 then
     begin
-      aPaths := [[TWeightStep.Create(ZeroWeight, I)]];
+      aPaths := [[TApspCell.Create(ZeroWeight, I)]];
       exit(False);
     end;
   VertCount := aGraph.VertexCount;
@@ -4098,7 +4098,7 @@ begin
             end;
         end;
       for Curr := 0 to Pred(VertCount) do
-        aPaths[I, Curr] := TWeightStep.Create(Weights[Curr], Parents[Curr]);
+        aPaths[I, Curr] := TApspCell.Create(Weights[Curr], Parents[Curr]);
     end;
   Result := True;
 end;
@@ -4141,7 +4141,7 @@ begin
     end;
 end;
 
-class function TGWeightHelper.CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix;
+class function TGWeightHelper.CreateAPSPMatrix(aGraph: TGraph): TApspMatrix;
 var
   Empties: TBoolVector;
   I, J, VertCount: SizeInt;
@@ -4152,26 +4152,26 @@ begin
   for I := 0 to Pred(VertCount) do
     begin
       Empties.InitRange(VertCount);
-      Result[I, I] := TWeightStep.Create(ZeroWeight, I);
+      Result[I, I] := TApspCell.Create(ZeroWeight, I);
       Empties[I] := False;
       for p in aGraph.AdjLists[I]^ do
         begin
-          Result[I, p^.Key] := TWeightStep.Create(p^.Data.Weight, I);
+          Result[I, p^.Key] := TApspCell.Create(p^.Data.Weight, I);
           Empties[p^.Key] := False;
         end;
       for J in Empties do
-        Result[I, J] := TWeightStep.Create(InfWeight, I);
+        Result[I, J] := TApspCell.Create(InfWeight, I);
     end;
 end;
 
-class function TGWeightHelper.ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray;
+class function TGWeightHelper.ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TApspMatrix): TIntArray;
 var
   Stack: TIntStack;
 begin
   if aMatrix[aSrc, aDst].Weight < InfWeight then
     repeat
       {%H-}Stack.Push(aDst);
-      aDst := aMatrix[aSrc, aDst].Source;
+      aDst := aMatrix[aSrc, aDst].Predecessor;
     until aDst = aSrc;
   Stack.Push(aDst);
   Result{%H-}.Length := Stack.Count;
