@@ -2856,39 +2856,39 @@ begin
     aValue := Peek;
 end;
 
-{ TGWeightPathHelper.TWeightEdge }
+{ TGWeightHelper.TWeightEdge }
 
-class operator TGWeightPathHelper.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
+class operator TGWeightHelper.TWeightEdge. = (constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightHelper.TWeightEdge.<>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightHelper.TWeightEdge.>(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightHelper.TWeightEdge.<(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightHelper.TWeightEdge.>=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
+class operator TGWeightHelper.TWeightEdge.<=(constref L, R: TWeightEdge): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeightPathHelper.TWeightEdge.Create(s, d: SizeInt; w: TWeight);
+constructor TGWeightHelper.TWeightEdge.Create(s, d: SizeInt; w: TWeight);
 begin
   Source := s;
   Destination := d;
@@ -2933,94 +2933,395 @@ begin
   Cost := aCost;
 end;
 
-{ TGWeightPathHelper.TWeightItem }
+{ TGWeightHelper.TWeightItem }
 
-class operator TGWeightPathHelper.TWeightItem. = (constref L, R: TWeightItem): Boolean;
+class operator TGWeightHelper.TWeightItem. = (constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight = R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
+class operator TGWeightHelper.TWeightItem.<>(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight <> R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightItem.>(constref L, R: TWeightItem): Boolean;
+class operator TGWeightHelper.TWeightItem.>(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight > R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightItem.<(constref L, R: TWeightItem): Boolean;
+class operator TGWeightHelper.TWeightItem.<(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight < R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
+class operator TGWeightHelper.TWeightItem.>=(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight >= R.Weight;
 end;
 
-class operator TGWeightPathHelper.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
+class operator TGWeightHelper.TWeightItem.<=(constref L, R: TWeightItem): Boolean;
 begin
   Result := L.Weight <= R.Weight;
 end;
 
-constructor TGWeightPathHelper.TWeightItem.Create(aIndex: SizeInt; w: TWeight);
+constructor TGWeightHelper.TWeightItem.Create(aIndex: SizeInt; w: TWeight);
 begin
   Index := aIndex;
   Weight := w;
 end;
 
-{ TGWeightPathHelper.TRankItem }
+{ TGWeightHelper.TRankItem }
 
-class operator TGWeightPathHelper.TRankItem. = (constref L, R: TRankItem): Boolean;
+class operator TGWeightHelper.TRankItem. = (constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank = R.Rank;
 end;
 
-class operator TGWeightPathHelper.TRankItem.<>(constref L, R: TRankItem): Boolean;
+class operator TGWeightHelper.TRankItem.<>(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank <> R.Rank;
 end;
 
-class operator TGWeightPathHelper.TRankItem.>(constref L, R: TRankItem): Boolean;
+class operator TGWeightHelper.TRankItem.>(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank > R.Rank;
 end;
 
-class operator TGWeightPathHelper.TRankItem.<(constref L, R: TRankItem): Boolean;
+class operator TGWeightHelper.TRankItem.<(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank < R.Rank;
 end;
 
-class operator TGWeightPathHelper.TRankItem.>=(constref L, R: TRankItem): Boolean;
+class operator TGWeightHelper.TRankItem.>=(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank >= R.Rank;
 end;
 
-class operator TGWeightPathHelper.TRankItem.<=(constref L, R: TRankItem): Boolean;
+class operator TGWeightHelper.TRankItem.<=(constref L, R: TRankItem): Boolean;
 begin
   Result := L.Rank <= R.Rank;
 end;
 
-constructor TGWeightPathHelper.TRankItem.Create(aIndex: SizeInt; aRank, aWeight: TWeight);
+constructor TGWeightHelper.TRankItem.Create(aIndex: SizeInt; aRank, aWeight: TWeight);
 begin
   Index := aIndex;
   Rank := aRank;
   Weight := aWeight;
 end;
 
-{ TGWeightPathHelper.TWeightStep }
+{ TGWeightHelper.TWeightStep }
 
-constructor TGWeightPathHelper.TWeightStep.Create(aWeight: TWeight; aSource: SizeInt);
+constructor TGWeightHelper.TWeightStep.Create(aWeight: TWeight; aSource: SizeInt);
 begin
   Weight := aWeight;
   Source := aSource;
 end;
 
-{ TGWeightPathHelper }
+{ TGWeightHelper.TKuhnMatchB }
 
-class constructor TGWeightPathHelper.Init;
+procedure TGWeightHelper.TKuhnMatchB.Match(aNode, aMate: SizeInt);
+begin
+  FMates[aNode] := aMate;
+  FMates[aMate] := aNode;
+end;
+
+procedure TGWeightHelper.TKuhnMatchB.ClearParents;
+begin
+  System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeUint), $ff);
+end;
+
+procedure TGWeightHelper.TKuhnMatchB.Init(aGraph: TGraph; constref w, g: TIntArray);
+var
+  I: SizeInt;
+  ew: TWeight;
+  p: TGraph.PAdjItem;
+begin
+  FGraph := aGraph;
+  FMatchCount := 0;
+  FWhites.Size := aGraph.VertexCount;
+  if System.Length(w) <= System.Length(g) then
+    for I in w do
+      FWhites[I] := True
+  else
+    for I in g do
+      FWhites[I] := True;
+
+  FPhi := CreateWeightArrayZ(aGraph.VertexCount);
+  for I in FWhites do
+    begin
+      ew := InfWeight;
+      for p in aGraph.AdjLists[I]^ do
+        if p^.Data.Weight < ew then
+          ew := p^.Data.Weight;
+      FPhi[I] := ew;
+    end;
+
+  FMates := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FVisited.Size := aGraph.VertexCount;
+end;
+
+procedure TGWeightHelper.TKuhnMatchB.InitMax(aGraph: TGraph; constref w, g: TIntArray);
+var
+  I: SizeInt;
+  ew: TWeight;
+  p: TGraph.PAdjItem;
+begin
+  FGraph := aGraph;
+  FMatchCount := 0;
+  FWhites.Size := aGraph.VertexCount;
+  if System.Length(w) <= System.Length(g) then
+    for I in w do
+      FWhites[I] := True
+  else
+    for I in g do
+      FWhites[I] := True;
+
+  FPhi := CreateWeightArrayZ(aGraph.VertexCount);
+  for I in FWhites do
+    begin
+      ew := NegInfWeight;
+      for p in aGraph.AdjLists[I]^ do
+        if p^.Data.Weight > ew then
+          ew := p^.Data.Weight;
+      FPhi[I] := ew;
+    end;
+
+  FMates := aGraph.CreateIntArray;
+  FParents := aGraph.CreateIntArray;
+  FQueue := aGraph.CreateIntArray;
+  FVisited.Size := aGraph.VertexCount;
+end;
+{$PUSH}{$MACRO ON}
+{$DEFINE EnqueueNext :=
+begin
+  FParents[Next] := Curr;
+  FQueue[qTail] := Next;
+  Inc(qTail);
+end
+}
+function TGWeightHelper.TKuhnMatchB.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+var
+  Curr, Next: SizeInt;
+  Cost: TWeight;
+  p: TGraph.PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      FVisited[Curr] := True;
+      if FWhites[Curr] then
+        for p in FGraph.AdjLists[Curr]^ do
+          begin
+            Next := p^.Destination;
+            if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+              continue;
+            Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
+            if Cost = ZeroWeight then
+              begin
+                if FMates[Next] = NULL_INDEX then
+                  begin
+                    FParents[Next] := Curr;
+                    exit(Next);
+                  end
+                else
+                  if not FVisited[Next] then
+                    EnqueueNext;
+              end
+            else
+              if Cost < aDelta then
+                aDelta := Cost;
+          end
+      else
+        begin
+          Next := FMates[Curr];
+          EnqueueNext;
+        end;
+    end;
+  Result := NULL_INDEX;
+end;
+
+function TGWeightHelper.TKuhnMatchB.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+var
+  Curr, Next: SizeInt;
+  Cost: TWeight;
+  p: TGraph.PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  FQueue[qTail] := aRoot;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := FQueue[qHead];
+      Inc(qHead);
+      FVisited[Curr] := True;
+      if FWhites[Curr] then
+        for p in FGraph.AdjLists[Curr]^ do
+          begin
+            Next := p^.Destination;
+            if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+              continue;
+            Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
+            if Cost = ZeroWeight then
+              begin
+                if FMates[Next] = NULL_INDEX then
+                  begin
+                    FParents[Next] := Curr;
+                    exit(Next);
+                  end
+                else
+                  if not FVisited[Next] then
+                    EnqueueNext;
+              end
+            else
+              if Cost > aDelta then
+                aDelta := Cost;
+          end
+      else
+        begin
+          Next := FMates[Curr];
+          EnqueueNext;
+        end;
+    end;
+  Result := NULL_INDEX;
+end;
+{$UNDEF EnqueueNext}{$POP}
+procedure TGWeightHelper.TKuhnMatchB.AlternatePath(aRoot: SizeInt);
+var
+  Mate, Next: SizeInt;
+begin
+  repeat
+    Mate := FParents[aRoot];
+    Next := FMates[Mate];
+    Match(aRoot, Mate);
+    aRoot := Next;
+  until aRoot = NULL_INDEX;
+end;
+
+function TGWeightHelper.TKuhnMatchB.TryAugment(var aDelta: TWeight): SizeInt;
+var
+  I, Last: SizeInt;
+begin
+  aDelta := InfWeight;
+  FVisited.ClearBits;
+  ClearParents;
+  Result := 0;
+  for I in FWhites do
+    if FMates[I] = NULL_INDEX then
+      begin
+        Last := FindAugmentPath(I, aDelta);
+        if Last <> NULL_INDEX then
+          begin
+            AlternatePath(Last);
+            Inc(Result);
+          end;
+      end;
+end;
+
+function TGWeightHelper.TKuhnMatchB.TryAugmentMax(var aDelta: TWeight): SizeInt;
+var
+  I, Last: SizeInt;
+begin
+  aDelta := NegInfWeight;
+  FVisited.ClearBits;
+  ClearParents;
+  Result := 0;
+  for I in FWhites do
+    if FMates[I] = NULL_INDEX then
+      begin
+        Last := FindAugmentPathMax(I, aDelta);
+        if Last <> NULL_INDEX then
+          begin
+            AlternatePath(Last);
+            Inc(Result);
+          end;
+      end;
+end;
+
+procedure TGWeightHelper.TKuhnMatchB.CorrectPhi(aDelta: TWeight);
+var
+  I: SizeInt;
+begin
+  for I in FVisited do
+    FPhi[I] += aDelta;
+end;
+
+procedure TGWeightHelper.TKuhnMatchB.FindMatching;
+var
+  Count: SizeInt;
+  Delta: TWeight;
+begin
+  Delta := InfWeight;
+  repeat
+    repeat
+      Count := TryAugment(Delta);
+      FMatchCount += Count;
+    until Count = 0;
+    if Delta = InfWeight then
+      break;
+    CorrectPhi(Delta);
+  until False;
+end;
+
+procedure TGWeightHelper.TKuhnMatchB.FindMaxMatching;
+var
+  Count: SizeInt;
+  Delta: TWeight;
+begin
+  Delta := NegInfWeight;
+  repeat
+    repeat
+      Count := TryAugmentMax(Delta);
+      FMatchCount += Count;
+    until Count = 0;
+    if Delta = NegInfWeight then
+      break;
+    CorrectPhi(Delta);
+  until False;
+end;
+
+function TGWeightHelper.TKuhnMatchB.CreateEdges: TEdgeArray;
+var
+  I, J, Mate: SizeInt;
+begin
+  System.SetLength(Result, FMatchCount);
+  J := 0;
+  for I in FWhites do
+    begin
+      Mate := FMates[I];
+      if Mate <> NULL_INDEX then
+        begin
+          Result[J] := TWeightEdge.Create(I, Mate, FGraph.AdjLists[I]^.Find(Mate)^.Data.Weight);
+          Inc(J);
+        end;
+    end;
+end;
+
+function TGWeightHelper.TKuhnMatchB.GetMinWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+begin
+  Init(aGraph, w, g);
+  FindMatching;
+  Result := CreateEdges;
+end;
+
+function TGWeightHelper.TKuhnMatchB.GetMaxWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+begin
+  InitMax(aGraph, w, g);
+  FindMaxMatching;
+  Result := CreateEdges;
+end;
+
+{ TGWeightHelper }
+
+class constructor TGWeightHelper.Init;
 {$IFDEF WIN64}
 // compiler win64 does not want to see the type helpers for some strange reasons;
 // this is a some workaround(defective)
@@ -3097,7 +3398,7 @@ begin
 {$ENDIF WIN64}
 end;
 
-class function TGWeightPathHelper.CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray;
+class function TGWeightHelper.CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray;
 var
   I: SizeInt;
 begin
@@ -3106,7 +3407,7 @@ begin
     Result[I] := aValue;
 end;
 
-class procedure TGWeightPathHelper.Fill(var a: TWeightArray; aValue: TWeight);
+class procedure TGWeightHelper.Fill(var a: TWeightArray; aValue: TWeight);
 var
   I: SizeInt;
 begin
@@ -3114,7 +3415,7 @@ begin
     a[I] := aValue;
 end;
 
-class function TGWeightPathHelper.wMax(L, R: TWeight): TWeight;
+class function TGWeightHelper.wMax(L, R: TWeight): TWeight;
 begin
   if L >= R then
     Result := L
@@ -3122,7 +3423,7 @@ begin
     Result := R;
 end;
 
-class function TGWeightPathHelper.ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray;
+class function TGWeightHelper.ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray;
 var
   v: TIntVector;
   I, J: SizeInt;
@@ -3144,7 +3445,7 @@ begin
     end;
 end;
 
-class function TGWeightPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
+class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
   Queue: TPairHeap;
   Reached,
@@ -3173,7 +3474,7 @@ begin
   until not Queue.TryDequeue(Item);
 end;
 
-class function TGWeightPathHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
   Queue: TPairHeap;
   Reached,
@@ -3207,7 +3508,7 @@ begin
   until not Queue.TryDequeue(Item);
 end;
 
-class function TGWeightPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
+class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
 var
   Queue: TBinHeap;
   Reached,
@@ -3237,7 +3538,7 @@ begin
   Result := InfWeight;
 end;
 
-class function TGWeightPathHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
   Queue: TBinHeap;
   Parents: TIntArray;
@@ -3277,7 +3578,7 @@ begin
   Result := [];
 end;
 
-class function TGWeightPathHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
+class function TGWeightHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 var
   Queue: TAStarHeap;
@@ -3324,7 +3625,7 @@ begin
   Result := [];
 end;
 
-class function TGWeightPathHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
+class function TGWeightHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   Queue: TIntDeque;
@@ -3372,7 +3673,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightPathHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
+class function TGWeightHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   v1, v2: TBoolVector;
@@ -3418,7 +3719,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightPathHelper.BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
+class function TGWeightHelper.BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   Queue, TreePrev, TreeNext, Level: TIntArray;
@@ -3504,7 +3805,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightPathHelper.BfmtReweight(g: TGraph; out aPhi: TWeightArray): SizeInt;
+class function TGWeightHelper.BfmtReweight(g: TGraph; out aPhi: TWeightArray): SizeInt;
 var
   Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
   InQueue, Active: TGraph.TBitVector;
@@ -3595,7 +3896,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-class function TGWeightPathHelper.NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray;
+class function TGWeightHelper.NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray;
 var
   Parents: TIntArray;
   Weights: TWeightArray;
@@ -3608,7 +3909,7 @@ begin
     Result := nil;
 end;
 
-class function TGWeightPathHelper.BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+class function TGWeightHelper.BfmtSssp(g: TGraph; aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 var
   Parents: TIntArray;
 begin
@@ -3617,7 +3918,7 @@ begin
     aWeights := nil;
 end;
 
-class function TGWeightPathHelper.BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
+class function TGWeightHelper.BfmtSssp(g: TGraph; aSrc: SizeInt; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 var
   Cycle: SizeInt;
@@ -3631,7 +3932,7 @@ begin
     end;
 end;
 
-class function TGWeightPathHelper.BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
+class function TGWeightHelper.BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 var
   Weights: TWeightArray;
@@ -3655,7 +3956,7 @@ begin
     end;
 end;
 
-class function TGWeightPathHelper.FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+class function TGWeightHelper.FloydApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
 var
   I, J, K: SizeInt;
   L, R, W: TWeight;
@@ -3686,7 +3987,7 @@ begin
   Result := True;
 end;
 
-class function TGWeightPathHelper.JohnsonApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+class function TGWeightHelper.JohnsonApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
 var
   Queue: TPairHeap;
   Parents: TIntArray;
@@ -3745,7 +4046,7 @@ begin
   Result := True;
 end;
 
-class function TGWeightPathHelper.FbmApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
+class function TGWeightHelper.FbmApsp(aGraph: TGraph; out aPaths: TAPSPMatrix): Boolean;
 var
   Queue, Parents: TIntArray;
   Weights: TWeightArray;
@@ -3807,22 +4108,22 @@ begin
   Result := True;
 end;
 
-class function TGWeightPathHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
+class function TGWeightHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(InfWeight, aLen);
 end;
 
-class function TGWeightPathHelper.CreateWeightArrayNI(aLen: SizeInt): TWeightArray;
+class function TGWeightHelper.CreateWeightArrayNI(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(NegInfWeight, aLen);
 end;
 
-class function TGWeightPathHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
+class function TGWeightHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(ZeroWeight, aLen);
 end;
 
-class function TGWeightPathHelper.CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix;
+class function TGWeightHelper.CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix;
 var
   Empties: TBoolVector;
   I, J, VertCount: SizeInt;
@@ -3845,7 +4146,7 @@ begin
     end;
 end;
 
-class function TGWeightPathHelper.CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix;
+class function TGWeightHelper.CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix;
 var
   Empties: TBoolVector;
   I, J, VertCount: SizeInt;
@@ -3868,7 +4169,7 @@ begin
     end;
 end;
 
-class function TGWeightPathHelper.ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray;
+class function TGWeightHelper.ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray;
 var
   Stack: TIntStack;
 begin
@@ -3885,6 +4186,20 @@ begin
       Result[aDst] := aSrc;
       Inc(aDst);
     end;
+end;
+
+class function TGWeightHelper.MinWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+var
+  Helper: TKuhnMatchB;
+begin
+  Result := Helper.GetMinWeightMatch(aGraph, w, g);
+end;
+
+class function TGWeightHelper.MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+var
+  Helper: TKuhnMatchB;
+begin
+  Result := Helper.GetMaxWeightMatch(aGraph, w, g);
 end;
 
 { TGCustomDotWriter }

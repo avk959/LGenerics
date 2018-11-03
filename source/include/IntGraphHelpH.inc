@@ -18,35 +18,6 @@
 *****************************************************************************}
 
 type
-  { TKuhnMatch: Kuhn weighted bipartite matching algorithm }
-  TKuhnMatch = record
-   private
-     FGraph: TGIntWeightGraph;
-     FMates,
-     FParents,
-     FQueue: array of SizeInt;
-     FPhi: array of TWeight;
-     FWhites,
-     FVisited: TBoolVector;
-     FMatchCount: SizeInt;
-     procedure Match(aNode, aMate: SizeInt); inline;
-     procedure ClearParents; inline;
-     procedure Init(aGraph: TGIntWeightGraph; constref w, g: TIntArray);
-     procedure InitMax(aGraph: TGIntWeightGraph; constref w, g: TIntArray);
-     function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
-     function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
-     procedure AlternatePath(aRoot: SizeInt);
-     function  TryAugment(var aDelta: TWeight): SizeInt;
-     function  TryAugmentMax(var aDelta: TWeight): SizeInt;
-     procedure CorrectPhi(aDelta: TWeight); inline;
-     procedure FindMatching;
-     procedure FindMaxMatching;
-     function  CreateEdges: TEdgeArray;
-   public
-     function  GetMinWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;
-     function  GetMaxWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;
-   end;
-
   TSWAdjList = specialize TGJoinableHashList<TWeightItem>;
 
   { TNIMinCutHelper: some implemenation of Nagamochi-Ibaraki minimum cut algorithm:

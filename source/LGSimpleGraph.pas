@@ -495,22 +495,22 @@ type
     specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>)
   private
   type
-    TPathHelper = specialize TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel>;
+    TWeightHelper = specialize TGWeightHelper<TVertex, TWeight, TEdgeData, TEqRel>;
 
   public
   type
-    TWeightArray  = TPathHelper.TWeightArray;
-    TWeightEdge   = TPathHelper.TWeightEdge;
+    TWeightArray  = TWeightHelper.TWeightArray;
+    TWeightEdge   = TWeightHelper.TWeightEdge;
     TEdgeArray    = array of TWeightEdge;
-    TEstimate     = TPathHelper.TEstimate;
-    TWeightMatrix = TPathHelper.TWeightsMatrix;
-    TWeightStep   = TPathHelper.TWeightStep;
-    TAPSPMatrix   = TPathHelper.TAPSPMatrix;
+    TEstimate     = TWeightHelper.TEstimate;
+    TWeightMatrix = TWeightHelper.TWeightsMatrix;
+    TWeightStep   = TWeightHelper.TWeightStep;
+    TAPSPMatrix   = TWeightHelper.TAPSPMatrix;
 
   protected
   type
-    TPairingHeap = TPathHelper.TPairHeap;
-    TWeightItem  = TPathHelper.TWeightItem;
+    TPairingHeap = TWeightHelper.TPairHeap;
+    TWeightItem  = TWeightHelper.TWeightItem;
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
@@ -3992,17 +3992,17 @@ end;
 
 class function TGWeightedGraph.InfWeight: TWeight;
 begin
-  Result := TPathHelper.InfWeight;
+  Result := TWeightHelper.InfWeight;
 end;
 
 class function TGWeightedGraph.NegInfWeight: TWeight;
 begin
-  Result := TPathHelper.NegInfWeight;
+  Result := TWeightHelper.NegInfWeight;
 end;
 
 class function TGWeightedGraph.ZeroWeight: TWeight;
 begin
-  Result := TPathHelper.ZeroWeight;
+  Result := TWeightHelper.ZeroWeight;
 end;
 
 class function TGWeightedGraph.TotalWeight(constref aEdges: TEdgeArray): TWeight;
@@ -4070,7 +4070,7 @@ end;
 function TGWeightedGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.DijkstraSssp(Self, aSrc);
+  Result := TWeightHelper.DijkstraSssp(Self, aSrc);
 end;
 
 function TGWeightedGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -4081,7 +4081,7 @@ end;
 function TGWeightedGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.DijkstraSssp(Self, aSrc, aPathTree);
+  Result := TWeightHelper.DijkstraSssp(Self, aSrc, aPathTree);
 end;
 
 function TGWeightedGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
@@ -4092,7 +4092,7 @@ end;
 function TGWeightedGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.BfmtSssp(Self, aSrc, aWeights);
+  Result := TWeightHelper.BfmtSssp(Self, aSrc, aWeights);
 end;
 
 function TGWeightedGraph.FindMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray;
@@ -4105,7 +4105,7 @@ function TGWeightedGraph.FindMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArra
   out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.BfmtSssp(Self, aSrc, aPathTree, aWeights);
+  Result := TWeightHelper.BfmtSssp(Self, aSrc, aPathTree, aWeights);
 end;
 
 function TGWeightedGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
@@ -4117,7 +4117,7 @@ function TGWeightedGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.DijkstraPath(Self, aSrc, aDst);
+  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst);
 end;
 
 function TGWeightedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
@@ -4129,7 +4129,7 @@ function TGWeightedGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TI
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
@@ -4142,7 +4142,7 @@ function TGWeightedGraph.FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
+  Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
 function TGWeightedGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
@@ -4156,25 +4156,25 @@ begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   if aEst <> nil then
-    Result := TPathHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
+    Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
-    Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedGraph.CreateWeightsMatrix: TWeightMatrix;
 begin
-  Result := TPathHelper.CreateWeightsMatrix(Self);
+  Result := TWeightHelper.CreateWeightsMatrix(Self);
 end;
 
 function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
 begin
   if Density <= DENSE_CUTOFF then
     //if Density <= JOHNSON_CUTOFF then
-      Result := TPathHelper.FbmApsp(Self, aPaths)
+      Result := TWeightHelper.FbmApsp(Self, aPaths)
     //else
-    //  Result := TPathHelper.JohnsonApsp(Self, aPaths)
+    //  Result := TWeightHelper.JohnsonApsp(Self, aPaths)
   else
-    Result := TPathHelper.FloydApsp(Self, aPaths);
+    Result := TWeightHelper.FloydApsp(Self, aPaths);
 end;
 
 function TGWeightedGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray;
@@ -4186,7 +4186,7 @@ function TGWeightedGraph.ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: T
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.ExtractMinPath(aSrc, aDst, aPaths);
+  Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
@@ -4550,23 +4550,21 @@ end;
 
 function TGIntWeightGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
 var
-  Helper: TKuhnMatch;
   w, g: TIntArray;
 begin
   if not IsBipartite(w, g) then
     exit(False);
-  aMatch := Helper.GetMinWeightMatch(Self, w, g);
+  aMatch := TWeightHelper.MinWeightMatchingB(Self, w, g);
   Result := True;
 end;
 
 function TGIntWeightGraph.FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
 var
-  Helper: TKuhnMatch;
   w, g: TIntArray;
 begin
   if not IsBipartite(w, g) then
     exit(False);
-  aMatch := Helper.GetMaxWeightMatch(Self, w, g);
+  aMatch := TWeightHelper.MaxWeightMatchingB(Self, w, g);
   Result := True;
 end;
 

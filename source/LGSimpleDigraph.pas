@@ -231,18 +231,18 @@ type
      specialize TGSimpleDiGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
-    TPathHelper = specialize TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel>;
+    TWeightHelper = specialize TGWeightHelper<TVertex, TWeight, TEdgeData, TEqRel>;
 
   public
   type
-    TWeightItem   = TPathHelper.TWeightItem;
-    TWeightArray  = TPathHelper.TWeightArray;
-    TEstimate     = TPathHelper.TEstimate;
-    TWeightEdge   = TPathHelper.TWeightEdge;
+    TWeightItem   = TWeightHelper.TWeightItem;
+    TWeightArray  = TWeightHelper.TWeightArray;
+    TEstimate     = TWeightHelper.TEstimate;
+    TWeightEdge   = TWeightHelper.TWeightEdge;
     TEdgeArray    = array of TWeightEdge;
-    TWeightMatrix = TPathHelper.TWeightsMatrix;
-    TWeightStep   = TPathHelper.TWeightStep;
-    TAPSPMatrix   = TPathHelper.TAPSPMatrix;
+    TWeightMatrix = TWeightHelper.TWeightsMatrix;
+    TWeightStep   = TWeightHelper.TWeightStep;
+    TAPSPMatrix   = TWeightHelper.TAPSPMatrix;
 
   protected
     function CreateEdgeArray: TEdgeArray;
@@ -355,8 +355,19 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
+
     function Clone: TGIntWeightDiGraph;
     function Reverse: TGIntWeightDiGraph;
+{**********************************************************************************************************
+  matching utilities
+***********************************************************************************************************}
+
+  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
+    the maximum cardinality and minimum weight }
+    function FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
+  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
+    the maximum cardinality and maximum weight }
+    function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
 {**********************************************************************************************************
   networks utilities treat the weight of the arc as its capacity
 ***********************************************************************************************************}
@@ -1584,7 +1595,7 @@ var
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
-  Result := TPathHelper.CreateWeightArrayNI(VertexCount);
+  Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
   Result[aSrc] := ZeroWeight;
@@ -1616,7 +1627,7 @@ var
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
-  Result := TPathHelper.CreateWeightArrayNI(VertexCount);
+  Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
   aTree := CreateIntArray;
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
@@ -1660,17 +1671,17 @@ end;
 
 class function TGWeightedDiGraph.InfWeight: TWeight;
 begin
-  Result :=  TPathHelper.InfWeight;
+  Result :=  TWeightHelper.InfWeight;
 end;
 
 class function TGWeightedDiGraph.NegInfWeight: TWeight;
 begin
-  Result := TPathHelper.NegInfWeight;
+  Result := TWeightHelper.NegInfWeight;
 end;
 
 class function TGWeightedDiGraph.ZeroWeight: TWeight;
 begin
-  Result := TPathHelper.ZeroWeight;
+  Result := TWeightHelper.ZeroWeight;
 end;
 
 function TGWeightedDiGraph.ContainsNegWeightEdge: Boolean;
@@ -1691,7 +1702,7 @@ end;
 function TGWeightedDiGraph.ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 begin
   CheckIndexRange(aRootIdx);
-  aCycle := TPathHelper.NegCycleDetect(Self, aRootIdx);
+  aCycle := TWeightHelper.NegCycleDetect(Self, aRootIdx);
   Result := aCycle <> nil;
 end;
 
@@ -1713,7 +1724,7 @@ end;
 function TGWeightedDiGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.DijkstraSssp(Self, aSrc);
+  Result := TWeightHelper.DijkstraSssp(Self, aSrc);
 end;
 
 function TGWeightedDiGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -1724,7 +1735,7 @@ end;
 function TGWeightedDiGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.DijkstraSssp(Self, aSrc, aPathTree);
+  Result := TWeightHelper.DijkstraSssp(Self, aSrc, aPathTree);
 end;
 
 function TGWeightedDiGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
@@ -1736,7 +1747,7 @@ function TGWeightedDiGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.DijkstraPath(Self, aSrc, aDst);
+  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst);
 end;
 
 function TGWeightedDiGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
@@ -1748,7 +1759,7 @@ function TGWeightedDiGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): 
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedDiGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
@@ -1762,9 +1773,9 @@ begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   if aEst <> nil then
-    Result := TPathHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
+    Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
   else
-    Result := TPathHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedDiGraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
@@ -1777,7 +1788,7 @@ function TGWeightedDiGraph.FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArra
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
+  Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
 function TGWeightedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
@@ -1788,7 +1799,7 @@ end;
 function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.BfmtSssp(Self, aSrc, aWeights);
+  Result := TWeightHelper.BfmtSssp(Self, aSrc, aWeights);
 end;
 
 function TGWeightedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
@@ -1801,23 +1812,23 @@ function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray
   out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := TPathHelper.BfmtSssp(Self, aSrc, aPaths, aWeights);
+  Result := TWeightHelper.BfmtSssp(Self, aSrc, aPaths, aWeights);
 end;
 
 function TGWeightedDiGraph.CreateWeightsMatrix: TWeightMatrix;
 begin
-  Result := TPathHelper.CreateWeightsMatrix(Self);
+  Result := TWeightHelper.CreateWeightsMatrix(Self);
 end;
 
 function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
 begin
   if Density <= DENSE_CUTOFF then
     if Density <= JOHNSON_CUTOFF then
-      Result := TPathHelper.FbmApsp(Self, aPaths)
+      Result := TWeightHelper.FbmApsp(Self, aPaths)
     else
-      Result := TPathHelper.JohnsonApsp(Self, aPaths)
+      Result := TWeightHelper.JohnsonApsp(Self, aPaths)
   else
-    Result := TPathHelper.FloydApsp(Self, aPaths);
+    Result := TWeightHelper.FloydApsp(Self, aPaths);
 end;
 
 function TGWeightedDiGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray;
@@ -1829,7 +1840,7 @@ function TGWeightedDiGraph.ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths:
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TPathHelper.ExtractMinPath(aSrc, aDst, aPaths);
+  Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
@@ -1863,7 +1874,7 @@ var
   w: TWeight;
 begin
   TopoOrd := TopologicalSort(soDesc);
-  Result := TPathHelper.CreateWeightArrayZ(VertexCount);
+  Result := TWeightHelper.CreateWeightArrayZ(VertexCount);
   for I := 1 to Pred(VertexCount) do
     for J := 0 to Pred(I) do
       if AdjacentI(TopoOrd[I], TopoOrd[J]) then
@@ -1911,6 +1922,26 @@ end;
 function TGIntWeightDiGraph.Reverse: TGIntWeightDiGraph;
 begin
   Result := inherited Reverse as TGIntWeightDiGraph;
+end;
+
+function TGIntWeightDiGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
+var
+  w, g: TIntArray;
+begin
+  if not IsBipartite(w, g) then
+    exit(False);
+  aMatch := TWeightHelper.MinWeightMatchingB(Self, w, g);
+  Result := True;
+end;
+
+function TGIntWeightDiGraph.FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
+var
+  w, g: TIntArray;
+begin
+  if not IsBipartite(w, g) then
+    exit(False);
+  aMatch := TWeightHelper.MaxWeightMatchingB(Self, w, g);
+  Result := True;
 end;
 
 function TGIntWeightDiGraph.GetNetworkState(constref aSource, aSink: TVertex): TNetworkState;
@@ -2049,7 +2080,7 @@ begin
   CheckIndexRange(aSinkIndex);
   if System.Length(a) <> EdgeCount then
     exit(False);
-  v := TPathHelper.CreateWeightArrayZ(VertexCount);
+  v := TWeightHelper.CreateWeightArrayZ(VertexCount);
   for e in a do
     begin
       if not GetEdgeDataI(e.Source, e.Destination, d) then

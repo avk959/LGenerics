@@ -301,9 +301,8 @@ type
     property Key: SizeInt read Index;
   end;
 
-  { TGWeightPathHelper }
-
-  generic TGWeightPathHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
+  { TGWeightHelper }
+  generic TGWeightHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
   public
   type
     TWeightArray  = array of TWeight;
@@ -318,6 +317,7 @@ type
     class procedure Fill(var a: TWeightArray; aValue: TWeight); static;
     class function  wMax(L, R: TWeight): TWeight; static;
     class function  ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
+
   public
   type
     TWeightEdge = record
@@ -375,6 +375,38 @@ type
     TWeightsMatrix = array of array of TWeight;
     TAPSPMatrix    = array of array of TWeightStep;
 
+  private
+  type
+    { TKuhnMatchB: weighted bipartite matching algorithm }
+    TKuhnMatchB = record
+    strict private
+      FGraph: TGraph;
+      FMates,
+      FParents,
+      FQueue: TIntArray;
+      FPhi: TWeightArray;
+      FWhites,
+      FVisited: TBoolVector;
+      FMatchCount: SizeInt;
+      procedure Match(aNode, aMate: SizeInt); inline;
+      procedure ClearParents; inline;
+      procedure Init(aGraph: TGraph; constref w, g: TIntArray);
+      procedure InitMax(aGraph: TGraph; constref w, g: TIntArray);
+      function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+      function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+      procedure AlternatePath(aRoot: SizeInt);
+      function  TryAugment(var aDelta: TWeight): SizeInt;
+      function  TryAugmentMax(var aDelta: TWeight): SizeInt;
+      procedure CorrectPhi(aDelta: TWeight); inline;
+      procedure FindMatching;
+      procedure FindMaxMatching;
+      function  CreateEdges: TEdgeArray;
+    public
+      function  GetMinWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+      function  GetMaxWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+    end;
+
+  public
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
@@ -421,6 +453,8 @@ type
     class function CreateAPSPMatrix(aGraph: TGraph): TAPSPMatrix; static;
   { does not checks input }
     class function ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TAPSPMatrix): TIntArray; static;
+    class function MinWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
+    class function MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
 
     class property InfWeight: TWeight read CFInfWeight;
     class property NegInfWeight: TWeight read CFNegInfWeight;
@@ -457,5 +491,4 @@ type
     property OnWriteVertex: TOnWriteVertex read FOnWriteVertex write FOnWriteVertex;
     property OnWriteEdge: TOnWriteEdge read FOnWriteEdge write FOnWriteEdge;
   end;
-
 
