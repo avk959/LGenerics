@@ -18,14 +18,14 @@
 *****************************************************************************}
 
 type
-  { TKuhnMatch: Kuhn weighted matching algorithm for bipartite graph }
+  { TKuhnMatch: Kuhn weighted bipartite matching algorithm }
   TKuhnMatch = record
    private
      FGraph: TGIntWeightGraph;
      FMates,
      FParents,
      FQueue: array of SizeInt;
-     FPots: array of TWeight;
+     FPhi: array of TWeight;
      FWhites,
      FVisited: TBoolVector;
      FMatchCount: SizeInt;
@@ -38,7 +38,7 @@ type
      procedure AlternatePath(aRoot: SizeInt);
      function  TryMatch(var aDelta: TWeight): SizeInt;
      function  TryMatchMax(var aDelta: TWeight): SizeInt;
-     procedure CorrectPots(aDelta: TWeight); inline;
+     procedure CorrectPhi(aDelta: TWeight); inline;
      procedure FindMatching;
      procedure FindMaxMatching;
      function  CreateEdges: TEdgeArray;

@@ -961,7 +961,7 @@ var
   I: SizeInt;
 begin
   for I := 0 to Pred(FNodeCount) do
-    FNodes[I].Price := MaxCost;
+    FNodes[I].Price := MAX_COST;
   FSource^.Price := 0;
   FSource^.PathMinCap := MaxWeight;
   FSink^.Parent := nil;
@@ -1418,7 +1418,7 @@ begin
         begin
           CurrArc := aNode^.FirstArc;
           aNode^.ResetCurrent;
-          MinPrice := MaxCost;
+          MinPrice := MAX_COST;
           while CurrArc < (aNode + 1)^.FirstArc do
             begin
               if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price < MinPrice) then

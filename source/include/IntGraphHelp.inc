@@ -46,14 +46,14 @@ begin
     for I in g do
       FWhites[I] := True;
 
-  FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
+  FPhi := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
   for I in FWhites do
     begin
-      ew := MaxWeight;
+      ew := MAX_WEIGHT;
       for p in aGraph.AdjLists[I]^ do
         if p^.Data.Weight < ew then
           ew := p^.Data.Weight;
-      FPots[I] := ew;
+      FPhi[I] := ew;
     end;
 
   FMates := aGraph.CreateIntArray;
@@ -78,14 +78,14 @@ begin
     for I in g do
       FWhites[I] := True;
 
-  FPots := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
+  FPhi := TPathHelper.CreateWeightArrayZ(aGraph.VertexCount);
   for I in FWhites do
     begin
-      ew := MinWeight;
+      ew := MIN_WEIGHT;
       for p in aGraph.AdjLists[I]^ do
         if p^.Data.Weight > ew then
           ew := p^.Data.Weight;
-      FPots[I] := ew;
+      FPhi[I] := ew;
     end;
 
   FMates := aGraph.CreateIntArray;
@@ -116,7 +116,7 @@ begin
               Next := p^.Destination;
               if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
                 continue;
-              Cost := p^.Data.Weight + FPots[Next] - FPots[Curr];
+              Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
               if Cost = 0 then
                 begin
                   if FMates[Next] = NULL_INDEX then
@@ -170,7 +170,7 @@ begin
               Next := p^.Destination;
               if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
                 continue;
-              Cost := p^.Data.Weight + FPots[Next] - FPots[Curr];
+              Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
               if Cost = 0 then
                 begin
                   if FMates[Next] = NULL_INDEX then
@@ -218,7 +218,7 @@ function TGIntWeightGraph.TKuhnMatch.TryMatch(var aDelta: TWeight): SizeInt;
 var
   vL, vR: SizeInt;
 begin
-  aDelta := MaxWeight;
+  aDelta := MAX_WEIGHT;
   FVisited.ClearBits;
   ClearParents;
   Result := 0;
@@ -238,7 +238,7 @@ function TGIntWeightGraph.TKuhnMatch.TryMatchMax(var aDelta: TWeight): SizeInt;
 var
   vL, vR: SizeInt;
 begin
-  aDelta := MinWeight;
+  aDelta := MIN_WEIGHT;
   FVisited.ClearBits;
   ClearParents;
   Result := 0;
@@ -254,12 +254,12 @@ begin
       end;
 end;
 
-procedure TGIntWeightGraph.TKuhnMatch.CorrectPots(aDelta: TWeight);
+procedure TGIntWeightGraph.TKuhnMatch.CorrectPhi(aDelta: TWeight);
 var
   I: SizeInt;
 begin
   for I in FVisited do
-    FPots[I] += aDelta;
+    FPhi[I] += aDelta;
 end;
 
 procedure TGIntWeightGraph.TKuhnMatch.FindMatching;
@@ -267,14 +267,14 @@ var
   Matched: SizeInt;
   Delta: TWeight;
 begin
-  Delta := MaxWeight;
+  Delta := MAX_WEIGHT;
   repeat
     repeat
       Matched := TryMatch(Delta);
       FMatchCount += Matched;
     until Matched = 0;
-    if Delta < MaxWeight then
-      CorrectPots(Delta)
+    if Delta < MAX_WEIGHT then
+      CorrectPhi(Delta)
     else
       break;
   until False;
@@ -285,14 +285,14 @@ var
   Matched: SizeInt;
   Delta: TWeight;
 begin
-  Delta := MinWeight;
+  Delta := MIN_WEIGHT;
   repeat
     repeat
       Matched := TryMatchMax(Delta);
       FMatchCount += Matched;
     until Matched = 0;
-    if Delta > MinWeight then
-      CorrectPots(Delta)
+    if Delta > MIN_WEIGHT then
+      CorrectPhi(Delta)
     else
       break;
   until False;
@@ -364,7 +364,7 @@ begin
   FQueue := TPairHeapMax.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Size := aGraph.VertexCount;
-  FBestCut := MaxWeight;
+  FBestCut := MAX_WEIGHT;
   FCuts := nil;
 end;
 
@@ -386,7 +386,7 @@ begin
   FQueue := TPairHeapMax.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Size := aGraph.VertexCount;
-  FBestCut := MaxWeight;
+  FBestCut := MAX_WEIGHT;
 end;
 
 procedure TGIntWeightGraph.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);

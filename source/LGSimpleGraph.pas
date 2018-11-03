@@ -633,14 +633,14 @@ type
 
   protected
   const
-    MaxWeight = High(Int64);
-    MinWeight = Low(Int64);
+    MAX_WEIGHT = High(Int64);
+    MIN_WEIGHT = Low(Int64);
 
     {$I IntGraphHelpH.inc}
 
-    function  GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
-    function  GetTrivialMinCut(out aCut: TWeight): Boolean;
-    function  StoerWagner(out aCut: TIntSet): TWeight;
+    function GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
+    function GetTrivialMinCut(out aCut: TWeight): Boolean;
+    function StoerWagner(out aCut: TIntSet): TWeight;
   public
 {**********************************************************************************************************
   class management utilities
@@ -4470,7 +4470,7 @@ begin
   Queue := TPairHeapMax.Create(VertexCount);
   vRemains.InitRange(VertexCount);
   vInQueue.Size := VertexCount;
-  Result := MaxWeight;
+  Result := MAX_WEIGHT;
   //n-1 phases
   for Phase := 1 to Pred(VertexCount) do
     begin
