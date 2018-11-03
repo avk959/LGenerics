@@ -93,7 +93,6 @@ begin
   FQueue := aGraph.CreateIntArray;
   FVisited.Size := aGraph.VertexCount;
 end;
-
 {$PUSH}{$MACRO ON}
 {$DEFINE EnqueueNext :=
 begin
@@ -256,15 +255,15 @@ end;
 
 procedure TGIntWeightGraph.TKuhnMatch.FindMatching;
 var
-  Matched: SizeInt;
+  Count: SizeInt;
   Delta: TWeight;
 begin
   Delta := MAX_WEIGHT;
   repeat
     repeat
-      Matched := TryAugment(Delta);
-      FMatchCount += Matched;
-    until Matched = 0;
+      Count := TryAugment(Delta);
+      FMatchCount += Count;
+    until Count = 0;
     if Delta = MAX_WEIGHT then
       break;
     CorrectPhi(Delta);
@@ -273,15 +272,15 @@ end;
 
 procedure TGIntWeightGraph.TKuhnMatch.FindMaxMatching;
 var
-  Matched: SizeInt;
+  Count: SizeInt;
   Delta: TWeight;
 begin
   Delta := MIN_WEIGHT;
   repeat
     repeat
-      Matched := TryAugmentMax(Delta);
-      FMatchCount += Matched;
-    until Matched = 0;
+      Count := TryAugmentMax(Delta);
+      FMatchCount += Count;
+    until Count = 0;
     if Delta = MIN_WEIGHT then
       break;
     CorrectPhi(Delta);
@@ -290,19 +289,19 @@ end;
 
 function TGIntWeightGraph.TKuhnMatch.CreateEdges: TEdgeArray;
 var
-  I, J: SizeInt;
-  d: TEdgeData;
+  I, J, Mate: SizeInt;
 begin
   System.SetLength(Result, FMatchCount);
   J := 0;
-  d := Default(TEdgeData);
   for I in FWhites do
-    if FMates[I] <> NULL_INDEX then
-      begin
-        FGraph.GetEdgeDataI(I, FMates[I], d);
-        Result[J] := TWeightEdge.Create(I, FMates[I], d.Weight);
-        Inc(J);
-      end;
+    begin
+      Mate := FMates[I];
+      if Mate <> NULL_INDEX then
+        begin
+          Result[J] := TWeightEdge.Create(I, Mate, FGraph.AdjLists[I]^.Find(Mate)^.Data.Weight);
+          Inc(J);
+        end;
+    end;
 end;
 
 function TGIntWeightGraph.TKuhnMatch.GetMinWeightMatch(aGraph: TGIntWeightGraph; constref w, g: TIntArray): TEdgeArray;

@@ -145,7 +145,7 @@ type
     function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
   end;
 
-  { TBgMcfHelper: simpliest MIN_COST-flow algorithm: shortest augmenting paths(Busacker and Gowen?) }
+  { TBgMcfHelper: simpliest mincost flow algorithm: shortest augmenting paths(Busacker and Gowen?) }
   TBgMcfHelper = record
   strict private
   type
@@ -200,7 +200,7 @@ type
               var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
   end;
 
-  { TCsMcfHelper: basic implementation of cost scaling MIN_COST-flow algorithm;
+  { TCsMcfHelper: basic implementation of cost scaling mincost flow algorithm;
       A.V.Goldberg and M.Kharitonov. "On Implementing Scaling Push-Relabel Algorithms for the
       Minimum-Cost Flow Problem";
     todo: need to implement crutial heurictics }
