@@ -94,6 +94,14 @@ begin
   FVisited.Size := aGraph.VertexCount;
 end;
 
+{$PUSH}{$MACRO ON}
+{$DEFINE EnqueueNext :=
+begin
+  FParents[Next] := Curr;
+  FQueue[qTail] := Next;
+  Inc(qTail);
+end
+}
 function TGIntWeightGraph.TKuhnMatch.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
   Curr, Next: SizeInt;
@@ -126,11 +134,7 @@ begin
                     end
                   else
                     if not FVisited[Next] then
-                      begin
-                        FParents[Next] := Curr;
-                        FQueue[qTail] := Next;
-                        Inc(qTail);
-                      end;
+                      EnqueueNext;
                 end
               else
                 if Cost < aDelta then
@@ -140,9 +144,7 @@ begin
       else
         begin
           Next := FMates[Curr];
-          FParents[Next] := Curr;
-          FQueue[qTail] := Next;
-          Inc(qTail);
+          EnqueueNext;
         end;
     end;
   Result := NULL_INDEX;
@@ -180,11 +182,7 @@ begin
                     end
                   else
                     if not FVisited[Next] then
-                      begin
-                        FParents[Next] := Curr;
-                        FQueue[qTail] := Next;
-                        Inc(qTail);
-                      end;
+                      EnqueueNext;
                 end
               else
                 if Cost > aDelta then
@@ -194,14 +192,12 @@ begin
       else
         begin
           Next := FMates[Curr];
-          FParents[Next] := Curr;
-          FQueue[qTail] := Next;
-          Inc(qTail);
+          EnqueueNext;
         end;
     end;
   Result := NULL_INDEX;
 end;
-
+{$UNDEF EnqueueNext}{$POP}
 procedure TGIntWeightGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
 var
   Mate, tmp: SizeInt;
