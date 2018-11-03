@@ -118,29 +118,27 @@ begin
       Inc(qHead);
       FVisited[Curr] := True;
       if FWhites[Curr] then
-        begin
-          for p in FGraph.AdjLists[Curr]^ do
-            begin
-              Next := p^.Destination;
-              if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
-                continue;
-              Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
-              if Cost = 0 then
-                begin
-                  if FMates[Next] = NULL_INDEX then
-                    begin
-                      FParents[Next] := Curr;
-                      exit(Next);
-                    end
-                  else
-                    if not FVisited[Next] then
-                      EnqueueNext;
-                end
-              else
-                if Cost < aDelta then
-                  aDelta := Cost;
-            end;
-        end
+        for p in FGraph.AdjLists[Curr]^ do
+          begin
+            Next := p^.Destination;
+            if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+              continue;
+            Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
+            if Cost = 0 then
+              begin
+                if FMates[Next] = NULL_INDEX then
+                  begin
+                    FParents[Next] := Curr;
+                    exit(Next);
+                  end
+                else
+                  if not FVisited[Next] then
+                    EnqueueNext;
+              end
+            else
+              if Cost < aDelta then
+                aDelta := Cost;
+          end
       else
         begin
           Next := FMates[Curr];
@@ -166,29 +164,27 @@ begin
       Inc(qHead);
       FVisited[Curr] := True;
       if FWhites[Curr] then
-        begin
-          for p in FGraph.AdjLists[Curr]^ do
-            begin
-              Next := p^.Destination;
-              if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
-                continue;
-              Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
-              if Cost = 0 then
-                begin
-                  if FMates[Next] = NULL_INDEX then
-                    begin
-                      FParents[Next] := Curr;
-                      exit(Next);
-                    end
-                  else
-                    if not FVisited[Next] then
-                      EnqueueNext;
-                end
-              else
-                if Cost > aDelta then
-                  aDelta := Cost;
-            end;
-        end
+        for p in FGraph.AdjLists[Curr]^ do
+          begin
+            Next := p^.Destination;
+            if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
+              continue;
+            Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
+            if Cost = 0 then
+              begin
+                if FMates[Next] = NULL_INDEX then
+                  begin
+                    FParents[Next] := Curr;
+                    exit(Next);
+                  end
+                else
+                  if not FVisited[Next] then
+                    EnqueueNext;
+              end
+            else
+              if Cost > aDelta then
+                aDelta := Cost;
+          end
       else
         begin
           Next := FMates[Curr];
@@ -200,51 +196,51 @@ end;
 {$UNDEF EnqueueNext}{$POP}
 procedure TGIntWeightGraph.TKuhnMatch.AlternatePath(aRoot: SizeInt);
 var
-  Mate, tmp: SizeInt;
+  Mate, Next: SizeInt;
 begin
   repeat
     Mate := FParents[aRoot];
-    tmp := FMates[Mate];
+    Next := FMates[Mate];
     Match(aRoot, Mate);
-    aRoot := tmp;
+    aRoot := Next;
   until aRoot = NULL_INDEX;
 end;
 
-function TGIntWeightGraph.TKuhnMatch.TryMatch(var aDelta: TWeight): SizeInt;
+function TGIntWeightGraph.TKuhnMatch.TryAugment(var aDelta: TWeight): SizeInt;
 var
-  vL, vR: SizeInt;
+  I, Last: SizeInt;
 begin
   aDelta := MAX_WEIGHT;
   FVisited.ClearBits;
   ClearParents;
   Result := 0;
-  for vL in FWhites do
-    if FMates[vL] = NULL_INDEX then
+  for I in FWhites do
+    if FMates[I] = NULL_INDEX then
       begin
-        vR := FindAugmentPath(vL, aDelta);
-        if vR <> NULL_INDEX then
+        Last := FindAugmentPath(I, aDelta);
+        if Last <> NULL_INDEX then
           begin
-            AlternatePath(vR);
+            AlternatePath(Last);
             Inc(Result);
           end;
       end;
 end;
 
-function TGIntWeightGraph.TKuhnMatch.TryMatchMax(var aDelta: TWeight): SizeInt;
+function TGIntWeightGraph.TKuhnMatch.TryAugmentMax(var aDelta: TWeight): SizeInt;
 var
-  vL, vR: SizeInt;
+  I, Last: SizeInt;
 begin
   aDelta := MIN_WEIGHT;
   FVisited.ClearBits;
   ClearParents;
   Result := 0;
-  for vL in FWhites do
-    if FMates[vL] = NULL_INDEX then
+  for I in FWhites do
+    if FMates[I] = NULL_INDEX then
       begin
-        vR := FindAugmentPathMax(vL, aDelta);
-        if vR <> NULL_INDEX then
+        Last := FindAugmentPathMax(I, aDelta);
+        if Last <> NULL_INDEX then
           begin
-            AlternatePath(vR);
+            AlternatePath(Last);
             Inc(Result);
           end;
       end;
@@ -266,13 +262,12 @@ begin
   Delta := MAX_WEIGHT;
   repeat
     repeat
-      Matched := TryMatch(Delta);
+      Matched := TryAugment(Delta);
       FMatchCount += Matched;
     until Matched = 0;
-    if Delta < MAX_WEIGHT then
-      CorrectPhi(Delta)
-    else
+    if Delta = MAX_WEIGHT then
       break;
+    CorrectPhi(Delta);
   until False;
 end;
 
@@ -284,13 +279,12 @@ begin
   Delta := MIN_WEIGHT;
   repeat
     repeat
-      Matched := TryMatchMax(Delta);
+      Matched := TryAugmentMax(Delta);
       FMatchCount += Matched;
     until Matched = 0;
-    if Delta > MIN_WEIGHT then
-      CorrectPhi(Delta)
-    else
+    if Delta = MIN_WEIGHT then
       break;
+    CorrectPhi(Delta);
   until False;
 end;
 

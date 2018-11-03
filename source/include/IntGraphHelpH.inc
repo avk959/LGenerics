@@ -36,8 +36,8 @@ type
      function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
      function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
      procedure AlternatePath(aRoot: SizeInt);
-     function  TryMatch(var aDelta: TWeight): SizeInt;
-     function  TryMatchMax(var aDelta: TWeight): SizeInt;
+     function  TryAugment(var aDelta: TWeight): SizeInt;
+     function  TryAugmentMax(var aDelta: TWeight): SizeInt;
      procedure CorrectPhi(aDelta: TWeight); inline;
      procedure FindMatching;
      procedure FindMaxMatching;
