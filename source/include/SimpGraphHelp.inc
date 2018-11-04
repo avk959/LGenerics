@@ -976,9 +976,9 @@ var
   Nodes: array of TNode;
   Queue: TQueue;
   Achromatic, CurrIS, InQueue: TBoolVector;
-  Node, Neib: TNode;
+  CurrNode, NextNode: TNode;
   I: SizeInt;
-  p, p2: PAdjItem;
+  p, pAdj: PAdjItem;
 begin
   System.SetLength(Nodes, aGraph.VertexCount);
   for I := 0 to System.High(Nodes) do
@@ -995,25 +995,25 @@ begin
       InQueue := Achromatic;
       for I in Achromatic do
         Queue.Enqueue(I, Nodes[I]);
-      while Queue.TryDequeue(Node) do
+      while Queue.TryDequeue(CurrNode) do
         begin
-          InQueue[Node.Index] := False;
-          if CurrIS[Node.Index] then
+          InQueue[CurrNode.Index] := False;
+          if CurrIS[CurrNode.Index] then
             begin
-              CurrIS[Node.Index] := False;
-              Achromatic[Node.Index] := False;
-              aColors[Node.Index] := Result;
-              for p in aGraph.AdjLists[Node.Index]^ do
+              CurrIS[CurrNode.Index] := False;
+              Achromatic[CurrNode.Index] := False;
+              aColors[CurrNode.Index] := Result;
+              for p in aGraph.AdjLists[CurrNode.Index]^ do
                 if Achromatic[p^.Key] then
                   begin
                     Dec(Nodes[p^.Key].Degree);
                     CurrIS[p^.Key] := False;
-                    for p2 in aGraph.AdjLists[p^.Key]^ do
-                      if InQueue[p2^.Key] then
+                    for pAdj in aGraph.AdjLists[p^.Key]^ do
+                      if InQueue[pAdj^.Key] then
                         begin
-                          Neib := Queue.Peek(p2^.Key);
-                          Inc(Neib.WDegree);
-                          Queue.Update(p2^.Key, Neib);
+                          NextNode := Queue.Peek(pAdj^.Key);
+                          Inc(NextNode.WDegree);
+                          Queue.Update(pAdj^.Key, NextNode);
                         end;
                   end;
             end;

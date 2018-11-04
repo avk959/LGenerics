@@ -504,8 +504,8 @@ type
     TEdgeArray    = array of TWeightEdge;
     TEstimate     = TWeightHelper.TEstimate;
     TWeightMatrix = TWeightHelper.TWeightsMatrix;
-    TWeightStep   = TWeightHelper.TApspCell;
-    TAPSPMatrix   = TWeightHelper.TApspMatrix;
+    TApspCell     = TWeightHelper.TApspCell;
+    TApspMatrix   = TWeightHelper.TApspMatrix;
 
   protected
   type
@@ -579,9 +579,9 @@ type
   { returns True and the shortest paths between all pairs of vertices in matrix aPaths,
     if no negative-weight cycles exist, otherwise returns False and in single cell of aPaths
     the index of the vertex from which the negative weight cycle is reachable }
-    function FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
-    function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray; inline;
-    function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TAPSPMatrix): TIntArray;
+    function FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
+    function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TApspMatrix): TIntArray; inline;
+    function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TApspMatrix): TIntArray;
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
@@ -4166,7 +4166,7 @@ begin
   Result := TWeightHelper.CreateWeightsMatrix(Self);
 end;
 
-function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TAPSPMatrix): Boolean;
+function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
 begin
   if Density <= DENSE_CUTOFF then
     //if Density <= JOHNSON_CUTOFF then
@@ -4177,12 +4177,12 @@ begin
     Result := TWeightHelper.FloydApsp(Self, aPaths);
 end;
 
-function TGWeightedGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TAPSPMatrix): TIntArray;
+function TGWeightedGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TApspMatrix): TIntArray;
 begin
   Result := ExtractMinPathI(IndexOf(aSrc), IndexOf(aDst), aPaths);
 end;
 
-function TGWeightedGraph.ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TAPSPMatrix): TIntArray;
+function TGWeightedGraph.ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TApspMatrix): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
