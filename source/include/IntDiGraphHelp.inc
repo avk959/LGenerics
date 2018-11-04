@@ -162,7 +162,7 @@ begin
   for I := 0 to Pred(FNodeCount) do
     begin
       FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
-      FNodes[I].Excess := ZeroWeight;
+      FNodes[I].Excess := 0;
     end;
 
   for I := 0 to Pred(FNodeCount) do
@@ -221,7 +221,7 @@ begin
   for I := 0 to Pred(FNodeCount) do
     begin
       FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
-      FNodes[I].Excess := ZeroWeight;
+      FNodes[I].Excess := 0;
     end;
 
   for I := 0 to Pred(FNodeCount) do
@@ -229,7 +229,7 @@ begin
       begin
         J := p^.Destination;
         FCaps[CurrArcIdx[I]] := p^.Data.Weight;
-        FCaps[CurrArcIdx[J]] := ZeroWeight;
+        FCaps[CurrArcIdx[J]] := 0;
         FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], p^.Data.Weight);
         FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]]);
         Inc(CurrArcIdx[I]);

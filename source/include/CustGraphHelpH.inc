@@ -302,7 +302,7 @@ type
   end;
 
   { TGWeightHelper }
-  generic TGWeightHelper<TVertex, TWeight, TEdgeData, TEqRel> = class
+  generic TGWeightHelper<TVertex, TWeight, TEdgeData, TEqRel> = class sealed
   public
   type
     TWeightArray  = array of TWeight;
@@ -310,8 +310,7 @@ type
   strict private
   class var
     CFInfWeight,
-    CFNegInfWeight,
-    CFZeroWeight: TWeight;
+    CFNegInfWeight: TWeight;
     class constructor Init;
     class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
     class procedure Fill(var a: TWeightArray; aValue: TWeight); static;
@@ -407,7 +406,7 @@ type
 
   public
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
-    class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
+    class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
   { Dijkstra's pathfinding algorithm }
     class function DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight; static;
@@ -437,9 +436,9 @@ type
                    static;
   { returns True if no negative cycle found, otherwise returns False and aPaths will contain
     single element with the index of an element on negative cycle }
-    class function FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
-    class function JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
-    class function FbmApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean;
+    class function FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
+    class function JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
+    class function FbmApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
   { fills array with InfWeight }
     class function CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with NegInfWeight }
@@ -450,14 +449,13 @@ type
   { creates square matrix, fills main diagonal with (I, ZeroWeight) and
     fills other element with corresponding weights }
     class function CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
-  { does not checks input }
+  { warning: does not checks input }
     class function ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TApspMatrix): TIntArray; static;
     class function MinWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
     class function MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
 
     class property InfWeight: TWeight read CFInfWeight;
     class property NegInfWeight: TWeight read CFNegInfWeight;
-    class property ZeroWeight: TWeight read CFZeroWeight;
   end;
 
   { TGCustomDotWriter: basic writer into Graphviz dot format }

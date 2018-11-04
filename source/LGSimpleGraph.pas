@@ -520,7 +520,6 @@ type
 ***********************************************************************************************************}
     class function InfWeight: TWeight; static; inline;
     class function NegInfWeight: TWeight; static; inline;
-    class function ZeroWeight: TWeight; static; inline;
     class function TotalWeight(constref aEdges: TEdgeArray): TWeight; static;
   { returns True if exists edge with negative weight }
     function ContainsNegWeightEdge: Boolean;
@@ -3999,16 +3998,11 @@ begin
   Result := TWeightHelper.NegInfWeight;
 end;
 
-class function TGWeightedGraph.ZeroWeight: TWeight;
-begin
-  Result := TWeightHelper.ZeroWeight;
-end;
-
 class function TGWeightedGraph.TotalWeight(constref aEdges: TEdgeArray): TWeight;
 var
   e: TWeightEdge;
 begin
-  Result := ZeroWeight;
+  Result := 0;
   for e in aEdges do
     Result += e.Weight;
 end;
@@ -4018,7 +4012,7 @@ var
   e: TEdge;
 begin
   for e in DistinctEdges do
-    if e.Data.Weight < ZeroWeight then
+    if e.Data.Weight < 0 then
       exit(True);
   Result := False;
 end;
@@ -4198,7 +4192,7 @@ begin
   TEdgeHelper.Sort(LocEdges);
   Result := CreateIntArray;
   Dsu.Size := VertexCount;
-  aTotalWeight := ZeroWeight;
+  aTotalWeight := 0;
   for e in LocEdges do
     if Dsu.Join(e.Source, e.Destination)  then
       begin
@@ -4220,11 +4214,11 @@ begin
   Queue := TPairingHeap.Create(VertexCount);
   Reached.Size := VertexCount;
   InQueue.Size := VertexCount;
-  aTotalWeight := ZeroWeight;
+  aTotalWeight := 0;
   for I := 0 to Pred(VertexCount) do
     if not Reached[I] then
       begin
-        Item := TWeightItem.Create(I, ZeroWeight);
+        Item := TWeightItem.Create(I, 0);
         repeat
           Curr := Item.Index;
           aTotalWeight += Item.Weight;
@@ -4411,7 +4405,7 @@ begin
   {%H-}aCutSet.MakeEmpty;
   if not Connected or (VertexCount < 2) then
     begin
-      aCutWeight := ZeroWeight;
+      aCutWeight := 0;
       exit(True);
     end;
   if VertexCount = 2 then
@@ -4431,7 +4425,7 @@ var
 begin
   if not Connected or (VertexCount < 2) then
     begin
-      aCut := ZeroWeight;
+      aCut := 0;
       exit(True);
     end;
   if VertexCount = 2 then
@@ -4475,7 +4469,7 @@ begin
     begin
       vInQueue.Join(vRemains);
       for I in vRemains do
-        Queue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
+        Queue.Enqueue(I, TWeightItem.Create(I, 0));
       while Queue.Count > 1 do
         begin
           Prev := Queue.Dequeue.Index;

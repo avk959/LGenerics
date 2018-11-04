@@ -255,7 +255,6 @@ type
     class function wMax(L, R: TWeight): TWeight; static; inline;
     class function InfWeight: TWeight; static; inline;
     class function NegInfWeight: TWeight; static; inline;
-    class function ZeroWeight: TWeight; static; inline;
   { returns True if exists arc with negative weight }
     function ContainsNegWeightEdge: Boolean;
   { checks whether exists any cycle of negative weight in subgraph that reachable from a aRoot;
@@ -1596,7 +1595,7 @@ begin
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
-  Result[aSrc] := ZeroWeight;
+  Result[aSrc] := 0;
   Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
@@ -1629,7 +1628,7 @@ begin
   aTree := CreateIntArray;
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
-  Result[aSrc] := ZeroWeight;
+  Result[aSrc] := 0;
   {%H-}Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
@@ -1677,17 +1676,12 @@ begin
   Result := TWeightHelper.NegInfWeight;
 end;
 
-class function TGWeightedDiGraph.ZeroWeight: TWeight;
-begin
-  Result := TWeightHelper.ZeroWeight;
-end;
-
 function TGWeightedDiGraph.ContainsNegWeightEdge: Boolean;
 var
   e: TEdge;
 begin
   for e in Edges do
-    if e.Data.Weight < ZeroWeight then
+    if e.Data.Weight < 0 then
       exit(True);
   Result := False;
 end;

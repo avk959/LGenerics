@@ -3119,7 +3119,7 @@ begin
             if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
               continue;
             Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
-            if Cost = ZeroWeight then
+            if Cost = 0 then
               begin
                 if FMates[Next] = NULL_INDEX then
                   begin
@@ -3165,7 +3165,7 @@ begin
             if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
               continue;
             Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
-            if Cost = ZeroWeight then
+            if Cost = 0 then
               begin
                 if FMates[Next] = NULL_INDEX then
                   begin
@@ -3330,26 +3330,22 @@ begin
         case GetTypeData(pInfo)^.OrdType of
           otSByte:
             begin
-              PShortInt(@CFZeroWeight)^ := ShortInt(0);
               PShortInt(@CFNegInfWeight)^ := ShortInt(-128);
               PShortInt(@CFInfWeight)^ := ShortInt(127);
             end;
           otSWord:
             begin
-              PSmallInt(@CFZeroWeight)^ := SmallInt(0);
               PSmallInt(@CFNegInfWeight)^ := SmallInt(-32768);
               PSmallInt(@CFInfWeight)^ := SmallInt(32767);
             end;
           otSLong:
             begin
-              PLongInt(@CFZeroWeight)^ := LongInt(0);
               PLongInt(@CFNegInfWeight)^ := LongInt(-2147483648);
               PLongInt(@CFInfWeight)^ := LongInt(2147483647);
             end;
         end;
       tkInt64:
         begin
-          PInt64(@CFZeroWeight)^ := Int64(0);
           PInt64(@CFNegInfWeight)^ := Int64(-9223372036854775808);
           PInt64(@CFInfWeight)^ := Int64(9223372036854775807);
         end;
@@ -3357,25 +3353,21 @@ begin
         case GetTypeData(pInfo)^.FloatType of
           ftSingle:
             begin
-              PSingle(@CFZeroWeight)^ := Single(0.0);
               PSingle(@CFNegInfWeight)^ := Single(-340282346638528859811704183484516925440.0);
               PSingle(@CFInfWeight)^ := Single(340282346638528859811704183484516925440.0);
             end;
           ftDouble:
             begin
-              PDouble(@CFZeroWeight)^ := Double(0.0);
               PDouble(@CFNegInfWeight)^ := Double(-1.7976931348623157081e+308);
               PDouble(@CFInfWeight)^ := Double(1.7976931348623157081e+308);
             end;
           ftComp:
             begin
-              PComp(@CFZeroWeight)^ := Comp(0);
               PComp(@CFNegInfWeight)^ := Comp(-2E64+1);
               PComp(@CFInfWeight)^ := Comp(2E63-1);
             end;
           ftCurr:
             begin
-              PCurrency(@CFZeroWeight)^ := Currency(0.0);
               PCurrency(@CFNegInfWeight)^ := Currency(-922337203685477.5808);
               PCurrency(@CFInfWeight)^ := Currency(922337203685477.5807);
             end;
@@ -3389,7 +3381,6 @@ begin
 begin
   CFInfWeight := TWeight.MaxValue;
   CFNegInfWeight := TWeight.MinValue;
-  CFZeroWeight := Default(TWeight);
 {$ENDIF WIN64}
 end;
 
@@ -3452,7 +3443,7 @@ begin
   Queue := TPairHeap.Create(g.VertexCount);
   Reached.Size := g.VertexCount;
   InQueue.Size := g.VertexCount;
-  Item := TWeightItem.Create(aSrc, ZeroWeight);
+  Item := TWeightItem.Create(aSrc, 0);
   repeat
     Result[Item.Index] := Item.Weight;
     Reached[Item.Index] := True;
@@ -3482,7 +3473,7 @@ begin
   aPathTree := g.CreateIntArray;
   Reached.Size := g.VertexCount;
   InQueue.Size := g.VertexCount;
-  Item := TWeightItem.Create(aSrc, ZeroWeight);
+  Item := TWeightItem.Create(aSrc, 0);
   repeat
     Result[Item.Index] := Item.Weight;
     Reached[Item.Index] := True;
@@ -3514,7 +3505,7 @@ begin
   Queue := TBinHeap.Create(g.VertexCount);
   Reached.Size := g.VertexCount;
   InQueue.Size := g.VertexCount;
-  Item := TWeightItem.Create(aSrc, ZeroWeight);
+  Item := TWeightItem.Create(aSrc, 0);
   repeat
     if Item.Index = aDst then
       exit(Item.Weight);
@@ -3546,7 +3537,7 @@ begin
   Parents := g.CreateIntArray;
   Reached.Size := g.VertexCount;
   InQueue.Size := g.VertexCount;
-  Item := TWeightItem.Create(aSrc, ZeroWeight);
+  Item := TWeightItem.Create(aSrc, 0);
   repeat
     if Item.Index = aDst then
       begin
@@ -3588,7 +3579,7 @@ begin
   Parents := g.CreateIntArray;
   Reached.Size := g.VertexCount;
   InQueue.Size := g.VertexCount;
-  Item := TRankItem.Create(aSrc, aEst(g.Items[aSrc], g.Items[aDst]), ZeroWeight);
+  Item := TRankItem.Create(aSrc, aEst(g.Items[aSrc], g.Items[aDst]), 0);
   repeat
     if {%H-}Item.Index = aDst then
       begin
@@ -3635,7 +3626,7 @@ begin
   aTree := g.CreateIntArray;
   {%H-}Queue.EnsureCapacity(VertCount);
   InQueue.Size := VertCount;
-  aWeights[aSrc] := ZeroWeight;
+  aWeights[aSrc] := 0;
   Dist[aSrc] := 0;
   Curr := aSrc;
   repeat
@@ -3683,7 +3674,7 @@ begin
   aTree := g.CreateIntArray;
   v1.Size := VertCount;
   v2.Size := VertCount;
-  aWeights[aSrc] := ZeroWeight;
+  aWeights[aSrc] := 0;
   v2[aSrc] := True;
   Dist[aSrc] := 0;
   CurrPass := @v1;
@@ -3733,7 +3724,7 @@ begin
   InQueue.Size := vCount;
   Active.Size := vCount;
   aWeights := CreateWeightArray(vCount);
-  aWeights[aSrc] := ZeroWeight;
+  aWeights[aSrc] := 0;
   aParents[aSrc] := aSrc;
   TreePrev[aSrc] := aSrc;
   TreeNext[aSrc] := aSrc;
@@ -3947,7 +3938,7 @@ begin
   else
     begin
       Result := False;
-      aWeight := ZeroWeight;
+      aWeight := 0;
     end;
 end;
 
@@ -3974,7 +3965,7 @@ begin
                   end
                 else
                   begin
-                    aPaths := [[TApspCell.Create(ZeroWeight, aPaths[K, J].Predecessor)]]; /////////////
+                    aPaths := [[TApspCell.Create(0, aPaths[K, J].Predecessor)]]; /////////////
                     exit(False);
                   end;
             end;
@@ -3996,7 +3987,7 @@ begin
   I := BfmtReweight(aGraph, Phi);
   if I >= 0 then
     begin
-      aPaths := [[TApspCell.Create(ZeroWeight, I)]];
+      aPaths := [[TApspCell.Create(0, I)]];
       exit(False);
     end;
   VertCount := aGraph.VertexCount;
@@ -4010,7 +4001,7 @@ begin
     begin
       System.FillChar(Pointer(Parents)^, VertCount * SizeOf(SizeInt), $ff);
       Fill(Weights, InfWeight);
-      Item := TWeightItem.Create(I, ZeroWeight);
+      Item := TWeightItem.Create(I, 0);
       Parents[I] := I;
       repeat
         Weights[Item.Index] := Item.Weight;
@@ -4052,7 +4043,7 @@ begin
   I := BfmtReweight(aGraph, Weights);
   if I >= 0 then
     begin
-      aPaths := [[TApspCell.Create(ZeroWeight, I)]];
+      aPaths := [[TApspCell.Create(0, I)]];
       exit(False);
     end;
   VertCount := aGraph.VertexCount;
@@ -4064,7 +4055,7 @@ begin
     begin
       Fill(Weights, InfWeight);
       System.FillChar(Pointer(Parents)^, VertCount * SizeOf(SizeInt), $ff);
-      Weights[I] := ZeroWeight;
+      Weights[I] := 0;
       Parents[I] := I;
       qTail := 0;
       qHead := 0;
@@ -4115,7 +4106,7 @@ end;
 
 class function TGWeightHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
 begin
-  Result := CreateAndFill(ZeroWeight, aLen);
+  Result := CreateAndFill(0, aLen);
 end;
 
 class function TGWeightHelper.CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix;
@@ -4129,7 +4120,7 @@ begin
   for I := 0 to Pred(VertCount) do
     begin
       Empties.InitRange(VertCount);
-      Result[I, I] := ZeroWeight;
+      Result[I, I] := 0;
       Empties[I] := False;
       for p in aGraph.AdjLists[I]^ do
         begin
@@ -4152,7 +4143,7 @@ begin
   for I := 0 to Pred(VertCount) do
     begin
       Empties.InitRange(VertCount);
-      Result[I, I] := TApspCell.Create(ZeroWeight, I);
+      Result[I, I] := TApspCell.Create(0, I);
       Empties[I] := False;
       for p in aGraph.AdjLists[I]^ do
         begin

@@ -113,7 +113,7 @@ begin
   ClearMarks;
   FInQueue.Join(FExistNodes);
   for I in FExistNodes do
-    FQueue.Enqueue(I, TWeightItem.Create(I, ZeroWeight));
+    FQueue.Enqueue(I, TWeightItem.Create(I, 0));
   while FQueue.Count > 1 do
     begin
       I := FQueue.Dequeue.Index;
