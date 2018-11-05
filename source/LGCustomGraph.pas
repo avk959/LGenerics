@@ -466,25 +466,23 @@ type
 
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
-    function ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
-    function ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
+    function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
+    function  ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns an array containing in the corresponding components the length of the shortest path from aSrc
     (in sense 'edges count'), or -1 if it unreachable }
-    function ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
-    function ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
-    function ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
-    function ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
+    function  ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
+    function  ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
+    function  ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
+    function  ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
   { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
-    function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
-    function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+    function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
+    function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
   { returns the eccentricity of the aVertex within its connected component }
-    function Eccentricity(constref aVertex: TVertex): SizeInt; inline;
-    function EccentricityI(aIndex: SizeInt): SizeInt;
-  { returns the radus of the graph }
-    function Radius: SizeInt;
-  { returns the diameter of the graph }
-    function Diameter: SizeInt;
+    function  Eccentricity(constref aVertex: TVertex): SizeInt; inline;
+    function  EccentricityI(aIndex: SizeInt): SizeInt;
+  { finds the radus and diameter of the graph }
+    procedure SpotRadiusDiameter(out aRadius, aDiameter: SizeInt);
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -2010,17 +2008,16 @@ begin
       Result := Dist[I];
 end;
 
-function TGCustomGraph.Radius: SizeInt;
+procedure TGCustomGraph.SpotRadiusDiameter(out aRadius, aDiameter: SizeInt);
 var
   Queue: TIntQueue;
   Dist: TIntArray;
   VertCount, I, Ecc, J, d: SizeInt;
   p: PAdjItem;
 begin
-  if IsEmpty then
-    exit(0);
   VertCount := VertexCount;
-  Result := VertCount;
+  aRadius := VertCount;
+  aDiameter := 0;
   Dist.Length := VertCount;
   for I := 0 to Pred(VertCount) do
     begin
@@ -2039,42 +2036,10 @@ begin
               Dist[p^.Key] := d;
             end;
       until not Queue{%H-}.TryDequeue(J);
-      if Ecc < Result then
-        Result := Ecc;
-    end;
-end;
-
-function TGCustomGraph.Diameter: SizeInt;
-var
-  Queue: TIntQueue;
-  Dist: TIntArray;
-  VertCount, I, Ecc, J, d: SizeInt;
-  p: PAdjItem;
-begin
-  if IsEmpty then
-    exit(0);
-  VertCount := VertexCount;
-  Result := 0;
-  Dist.Length := VertCount;
-  for I := 0 to Pred(VertCount) do
-    begin
-      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
-      Dist[I] := 0;
-      Ecc := 0;
-      J := I;
-      repeat
-        for p in AdjLists[J]^ do
-          if Dist[p^.Key] = NULL_INDEX then
-            begin
-              Queue.Enqueue(p^.Key);
-              d := Succ(Dist[J]);
-              if Ecc < d then
-                Ecc := d;
-              Dist[p^.Key] := d;
-            end;
-      until not Queue{%H-}.TryDequeue(J);
-      if Ecc > Result then
-        Result := Ecc;
+      if Ecc < aRadius then
+        aRadius := Ecc;
+      if Ecc > aDiameter then
+        aDiameter := Ecc;
     end;
 end;
 
