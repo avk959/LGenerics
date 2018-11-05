@@ -103,7 +103,6 @@ type
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aTag: SizeInt): SizeInt;
-    function  GetEccentricity(aIndex: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -203,9 +202,6 @@ type
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
-  { returns the eccentricity of the aVertex within its connected component }
-    function  Eccentricity(constref aVertex: TVertex): SizeInt; inline;
-    function  EccentricityI(aIndex: SizeInt): SizeInt;
   { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
     function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
     function  LocalClusteringI(aIndex: SizeInt): Double;
@@ -978,28 +974,6 @@ begin
   Result := 0;
   for I := 0 to Pred(VertexCount) do
     Result += Ord(SeparateTag(I) = aTag);
-end;
-
-function TGSimpleGraph.GetEccentricity(aIndex: SizeInt): SizeInt;
-var
-  Queue: TIntQueue;
-  Dist: TIntArray;
-  Next, d: SizeInt;
-begin
-  Dist := CreateIntArray;
-  Dist[aIndex] := 0;
-  Result := 0;
-  repeat
-    for Next in AdjVerticesI(aIndex) do
-      if Dist[Next] = -1 then
-        begin
-          Queue.Enqueue(Next);
-          d := Succ(Dist[aIndex]);
-          if Result < d then
-            Result := d;
-          Dist[Next] := d;
-        end;
-  until not Queue{%H-}.TryDequeue(aIndex);
 end;
 
 function TGSimpleGraph.MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -2572,17 +2546,6 @@ end;
 function TGSimpleGraph.DistinctEdges: TDistinctEdges;
 begin
   Result.FGraph := Self;
-end;
-
-function TGSimpleGraph.Eccentricity(constref aVertex: TVertex): SizeInt;
-begin
-  Result := EccentricityI(IndexOf(aVertex));
-end;
-
-function TGSimpleGraph.EccentricityI(aIndex: SizeInt): SizeInt;
-begin
-  CheckIndexRange(aIndex);
-  Result := GetEccentricity(aIndex);
 end;
 
 function TGSimpleGraph.LocalClustering(constref aVertex: TVertex): ValReal;

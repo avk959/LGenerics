@@ -478,6 +478,9 @@ type
     empty if path does not exists }
     function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+  { returns the eccentricity of the aVertex within its connected component }
+    function Eccentricity(constref aVertex: TVertex): SizeInt; inline;
+    function EccentricityI(aIndex: SizeInt): SizeInt;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -1984,6 +1987,35 @@ begin
           end;
     end;
   Result := nil;
+end;
+
+function TGCustomGraph.Eccentricity(constref aVertex: TVertex): SizeInt;
+begin
+  Result := EccentricityI(IndexOf(aVertex));
+end;
+
+function TGCustomGraph.EccentricityI(aIndex: SizeInt): SizeInt;
+var
+  Queue: TIntQueue;
+  Dist: TIntArray;
+  d: SizeInt;
+  p: PAdjItem;
+begin
+  CheckIndexRange(aIndex);
+  Dist := CreateIntArray;
+  Dist[aIndex] := 0;
+  Result := 0;
+  repeat
+    for p in AdjLists[aIndex]^ do
+      if Dist[p^.Key] = -1 then
+        begin
+          Queue.Enqueue(p^.Key);
+          d := Succ(Dist[aIndex]);
+          if Result < d then
+            Result := d;
+          Dist[p^.Key] := d;
+        end;
+  until not Queue{%H-}.TryDequeue(aIndex);
 end;
 
 { TIntArrayHelper }
