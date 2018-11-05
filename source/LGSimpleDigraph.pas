@@ -135,6 +135,8 @@ type
     procedure FillReachabilityMatrix;
   { creates internal reachability matrix using pre-calculated results of FindStrongComponents }
     procedure FillReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt);
+  { returns True, radus and diameter, if graph is strongly connected, False otherwise }
+    function  GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -322,8 +324,8 @@ type
     otherwise returns True and the weighted eccentricity of the aVertex in aValue }
     function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
-  { returns False if is empty or exists cycle of negative weight, otherwise
-    returns True and weighted radus and diameter of the graph }
+  { returns False if is not strongly connected or exists cycle of negative weight,
+    otherwise returns True and weighted radus and diameter of the graph }
     function FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
 {**********************************************************************************************************
   DAG utilities
@@ -1350,6 +1352,54 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(aScIds, aScCount);
 end;
 
+function TGSimpleDiGraph.GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+var
+  Queue, Dist: TIntArray;
+  VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then
+    exit(False);
+  I := FindStrongComponents(Dist);
+  if I > 1 then
+    exit(False);
+  VertCount := VertexCount;
+  aRadius := VertCount;
+  aDiameter := 0;
+  Queue.Length := VertCount;
+  Dist.Length := VertCount;
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      qHead := 0;
+      qTail := 0;
+      Queue[qTail] := I;
+      Inc(qTail);
+      while qHead < qTail do
+        begin
+          J := Queue[qHead];
+          Inc(qHead);
+          for p in AdjLists[J]^ do
+            if Dist[p^.Key] = NULL_INDEX then
+              begin
+                Queue[qTail] := p^.Key;
+                Inc(qTail);
+                d := Succ(Dist[J]);
+                if Ecc < d then
+                  Ecc := d;
+                Dist[p^.Key] := d;
+              end;
+        end;
+      if Ecc < aRadius then
+        aRadius := Ecc;
+      if Ecc > aDiameter then
+        aDiameter := Ecc;
+    end;
+  Result := True;
+end;
+
 function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
 begin
   if IsEmpty then
@@ -1874,11 +1924,16 @@ end;
 function TGWeightedDiGraph.FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
 var
   Paths: TApspMatrix;
+  Ids: TIntArray;
   I, J: SizeInt;
   Ecc, Inf, w: TWeight;
 begin
   if IsEmpty then
     exit(False);
+  I := FindStrongComponents(Ids);
+  if I > 1 then
+    exit(False);
+  Ids := nil;
   Result := FindAllPairMinPaths(Paths);
   if not Result then
     exit;
