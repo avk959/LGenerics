@@ -137,6 +137,9 @@ type
     procedure FillReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt);
   { returns True, radus and diameter, if graph is strongly connected, False otherwise }
     function  GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+  { returns True, indices of the central vertices in aCenter,
+    if graph is strongly connected, False otherwise }
+    function  FindCenter(out aCenter: TIntArray): Boolean;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -327,6 +330,9 @@ type
   { returns False if is not strongly connected or exists cycle of negative weight,
     otherwise returns True and weighted radus and diameter of the graph }
     function FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+  { returns True, indices of the central vertices in aCenter,
+    if graph is strongly connected, False otherwise }
+    function FindWeightedCenter(out aCenter: TIntArray): Boolean;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -1400,6 +1406,62 @@ begin
   Result := True;
 end;
 
+function TGSimpleDiGraph.FindCenter(out aCenter: TIntArray): Boolean;
+var
+  Queue, Dist, Eccs: TIntArray;
+  VertCount, Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then
+    exit(False);
+  I := FindStrongComponents(Dist);
+  if I > 1 then
+    exit(False);
+  VertCount := VertexCount;
+  Radius := VertCount;
+  Queue.Length := VertCount;
+  Dist.Length := VertCount;
+  Eccs.Length := VertCount;
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      qHead := 0;
+      qTail := 0;
+      Queue[qTail] := I;
+      Inc(qTail);
+      while qHead < qTail do
+        begin
+          J := Queue[qHead];
+          Inc(qHead);
+          for p in AdjLists[J]^ do
+            if Dist[p^.Key] = NULL_INDEX then
+              begin
+                Queue[qTail] := p^.Key;
+                Inc(qTail);
+                d := Succ(Dist[J]);
+                if Ecc < d then
+                  Ecc := d;
+                Dist[p^.Key] := d;
+              end;
+        end;
+      Eccs[I] := Ecc;
+      if Ecc < Radius then
+        Radius := Ecc;
+    end;
+  aCenter.Length := VertCount;
+  J := 0;
+  for I := 0 to Pred(VertCount) do
+    if Eccs[I] = Radius then
+      begin
+        aCenter[J] := I;
+        Inc(J);
+      end;
+  aCenter.Length := J;
+  Result := True;
+end;
+
 function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
 begin
   if IsEmpty then
@@ -1955,6 +2017,51 @@ begin
       if Ecc > aDiameter then
         aDiameter := Ecc;
     end;
+end;
+
+function TGWeightedDiGraph.FindWeightedCenter(out aCenter: TIntArray): Boolean;
+var
+  Paths: TApspMatrix;
+  Eccs: TWeightArray;
+  Ids: TIntArray;
+  I, J: SizeInt;
+  Inf, Radius, Ecc, w: TWeight;
+begin
+  if IsEmpty then
+    exit(False);
+  I := FindStrongComponents(Ids);
+  if I > 1 then
+    exit(False);
+  Ids := nil;
+  Result := FindAllPairMinPaths(Paths);
+  if not Result then
+    exit;
+  Inf := InfWeight;
+  Radius := Inf;
+  System.SetLength(Eccs, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Ecc := 0;
+      for J := 0 to Pred(VertexCount) do
+        if I <> J then
+          begin
+            w := Paths[I, J].Weight;
+            if (w <> Inf) and (w > Ecc) then
+              Ecc := w;
+          end;
+      Eccs[I] := Ecc;
+      if Ecc < Radius then
+        Radius := Ecc;
+    end;
+  aCenter.Length := VertexCount;
+  J := 0;
+  for I := 0 to Pred(VertexCount) do
+    if Eccs[I] <= Radius then
+      begin
+        aCenter[J] := I;
+        Inc(J);
+      end;
+  aCenter.Length := J;
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
