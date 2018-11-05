@@ -271,7 +271,7 @@ type
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True, radus and diameter, if graph is connected, False otherwise }
     function  GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
-  { returns True, indices of the central vertices in aCenter, if graph is connected, False otherwise }
+  { returns True and indices of the central vertices in aCenter, if graph is connected, False otherwise }
     function  FindCenter(out aCenter: TIntArray): Boolean;
 
     type
@@ -545,7 +545,7 @@ type
   { same as above and in aPathTree returns paths }
     function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-  { returns False if exists cycle of negative weight reachable from aSrc,
+  { returns False if exists negative weight cycle reachable from aSrc,
     otherwise finds all paths of minimal weight from a given vertex to the remaining
     vertices in the same connected component(SSSP); an aWeights will contain
     in the corresponding component the weight of the path to the vertex or InfWeight
@@ -563,7 +563,7 @@ type
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-  { returns False if exists cycle of negative weight reachable from aSrc,
+  { returns False if exists negative weight cycle reachable from aSrc,
     otherwise returns the vertex path of minimal weight from a aSrc to aDst in aPath,
     if exists, and its weight in aWeight;
     to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
@@ -577,20 +577,21 @@ type
   { creates a matrix of weights of edges }
     function CreateWeightsMatrix: TWeightMatrix; inline;
   { returns True and the shortest paths between all pairs of vertices in matrix aPaths
-    if non empty and no negative-weight cycles exist,
-    otherwise returns False and if negative-weight cycles exist then in single cell of aPaths
-    returns index of the vertex from which the negative weight cycle is reachable }
+    if non empty and no negative weight cycles exist,
+    otherwise returns False and if negative weight cycle exists then in single cell of aPaths
+    returns index of the vertex from which this cycle is reachable }
     function FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
     function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TApspMatrix): TIntArray; inline;
     function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TApspMatrix): TIntArray;
-  { returns False if is empty or exists cycle of negative weight reachable from aVertex,
+  { returns False if is empty or exists  negative weight cycle reachable from aVertex,
     otherwise returns True and the weighted eccentricity of the aVertex in aValue }
     function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
-  { returns False if is not connected or exists cycle of negative weight, otherwise
+  { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and weighted radus and diameter of the graph }
     function FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
-  { returns True, indices of the central vertices in aCenter, if graph is connected, False otherwise }
+  { returns False if is not connected or exists negative weight cycle, otherwise
+    returns True and indices of the central vertices in aCenter }
     function FindWeightedCenter(out aCenter: TIntArray): Boolean;
 {**********************************************************************************************************
   minimum spanning tree utilities
