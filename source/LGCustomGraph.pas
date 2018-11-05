@@ -2006,7 +2006,7 @@ begin
   Dist := ShortestPathsMapI(aIndex);
   Result := 0;
   for I := 0 to System.High(Dist) do
-    if (I <> aIndex) and (Dist[I] > Result) then
+    if Dist[I] > Result then
       Result := Dist[I];
 end;
 
@@ -3342,16 +3342,17 @@ end;
 procedure TGWeightHelper.TKuhnMatchB.FindMatching;
 var
   Count: SizeInt;
-  Delta: TWeight;
+  Delta, Inf: TWeight;
 begin
-  Delta := InfWeight;
+  Inf := InfWeight;
+  Delta := Inf;
   repeat
     repeat
       Count := TryAugment(Delta);
       FMatchCount += Count;
       System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
     until Count = 0;
-    if Delta = InfWeight then
+    if Delta = Inf then
       break;
     CorrectPhi(Delta);
   until False;
@@ -3360,16 +3361,17 @@ end;
 procedure TGWeightHelper.TKuhnMatchB.FindMaxMatching;
 var
   Count: SizeInt;
-  Delta: TWeight;
+  Delta, Inf: TWeight;
 begin
-  Delta := NegInfWeight;
+  Inf := NegInfWeight;
+  Delta := Inf;
   repeat
     repeat
       Count := TryAugmentMax(Delta);
       FMatchCount += Count;
       System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
     until Count = 0;
-    if Delta = NegInfWeight then
+    if Delta = Inf then
       break;
     CorrectPhi(Delta);
   until False;
