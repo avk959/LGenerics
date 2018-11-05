@@ -466,21 +466,21 @@ type
 
   { returns the length of the shortest path between the aSrc and aDst(in sense 'edges count'),
     -1 if the path does not exist }
-    function  ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
-    function  ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
+    function ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt; inline;
+    function ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
   { returns an array containing in the corresponding components the length of the shortest path from aSrc
     (in sense 'edges count'), or -1 if it unreachable }
-    function  ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
-    function  ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
-    function  ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
-    function  ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
+    function ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
+    function ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
+    function ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
+    function ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
   { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),
     empty if path does not exists }
-    function  ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
-    function  ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+    function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
+    function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
   { returns the eccentricity of the aVertex within its connected component }
-    function  Eccentricity(constref aVertex: TVertex): SizeInt; inline;
-    function  EccentricityI(aIndex: SizeInt): SizeInt;
+    function Eccentricity(constref aVertex: TVertex): SizeInt; inline;
+    function EccentricityI(aIndex: SizeInt): SizeInt;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
