@@ -317,6 +317,10 @@ type
     function FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
     function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TApspMatrix): TIntArray; inline;
     function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TApspMatrix): TIntArray;
+  { returns False if exists cycle of negative weight reachable from aVertex,
+    otherwise returns True and the weighted eccentricity of the aVertex }
+    function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
+    function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -1833,6 +1837,30 @@ begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
+end;
+
+function TGWeightedDiGraph.FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean;
+begin
+  Result := FindEccentricityI(IndexOf(aVertex), aValue);
+end;
+
+function TGWeightedDiGraph.FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
+var
+  Weights: TWeightArray;
+  I: SizeInt;
+  w, Inf: TWeight;
+begin
+  Result := FindMinPathsMapI(aIndex, Weights);
+  if not Result then
+    exit;
+  Inf := InfWeight;
+  aValue := 0;
+  for I := 0 to System.High(Weights) do
+    begin
+      w := Weights[I];
+      if (w <> Inf) and (w > aValue) then
+        aValue := w;
+    end;
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
