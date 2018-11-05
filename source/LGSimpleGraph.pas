@@ -523,6 +523,10 @@ type
     class function TotalWeight(constref aEdges: TEdgeArray): TWeight; static;
   { returns True if exists edge with negative weight }
     function ContainsNegWeightEdge: Boolean;
+  { checks whether exists any negative weight cycle in connected component that
+    contains a aRoot; if True then aCycle will contain indices of the vertices of the cycle }
+    function ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -4093,6 +4097,18 @@ begin
     if e.Data.Weight < 0 then
       exit(True);
   Result := False;
+end;
+
+function TGWeightedGraph.ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
+begin
+  Result := ContainsNegCycleI(IndexOf(aRoot), aCycle);
+end;
+
+function TGWeightedGraph.ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
+begin
+  CheckIndexRange(aRootIdx);
+  aCycle := TWeightHelper.NegCycleDetect(Self, aRootIdx);
+  Result := aCycle <> nil;
 end;
 
 function TGWeightedGraph.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;

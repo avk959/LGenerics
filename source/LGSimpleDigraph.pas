@@ -262,11 +262,10 @@ type
     class function NegInfWeight: TWeight; static; inline;
   { returns True if exists arc with negative weight }
     function ContainsNegWeightEdge: Boolean;
-  { checks whether exists any cycle of negative weight in subgraph that reachable from a aRoot;
+  { checks whether exists any negative weight cycle in subgraph that reachable from a aRoot;
     if True then aCycle will contain indices of the vertices of the cycle }
     function ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
-
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
