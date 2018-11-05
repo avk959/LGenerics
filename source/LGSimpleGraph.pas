@@ -269,6 +269,8 @@ type
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges;
     if aOnAddEdge = nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
+  { returns True, radus and diameter, if graph is strongly connected, False otherwise }
+    function  GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
 
     type
       //vertex partition
@@ -583,7 +585,7 @@ type
     otherwise returns True and the weighted eccentricity of the aVertex in aValue }
     function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
-  { returns False if is empty or exists cycle of negative weight, otherwise
+  { returns False if is not connected or exists cycle of negative weight, otherwise
     returns True and weighted radus and diameter of the graph }
     function FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
 {**********************************************************************************************************
@@ -3001,6 +3003,51 @@ begin
     end;
 end;
 
+function TGSimpleGraph.GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+var
+  Queue, Dist: TIntArray;
+  VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  if not Connected then
+    exit(False);
+  VertCount := VertexCount;
+  aRadius := VertCount;
+  aDiameter := 0;
+  Queue.Length := VertCount;
+  Dist.Length := VertCount;
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      qHead := 0;
+      qTail := 0;
+      Queue[qTail] := I;
+      Inc(qTail);
+      while qHead < qTail do
+        begin
+          J := Queue[qHead];
+          Inc(qHead);
+          for p in AdjLists[J]^ do
+            if Dist[p^.Key] = NULL_INDEX then
+              begin
+                Queue[qTail] := p^.Key;
+                Inc(qTail);
+                d := Succ(Dist[J]);
+                if Ecc < d then
+                  Ecc := d;
+                Dist[p^.Key] := d;
+              end;
+        end;
+      if Ecc < aRadius then
+        aRadius := Ecc;
+      if Ecc > aDiameter then
+        aDiameter := Ecc;
+    end;
+  Result := True;
+end;
+
 function TGSimpleGraph.MinCut: SizeInt;
 var
   Helper: TNiMinCut;
@@ -4189,7 +4236,7 @@ var
   I, J: SizeInt;
   Ecc, Inf, w: TWeight;
 begin
-  if IsEmpty then
+  if not Connected then
     exit(False);
   Result := FindAllPairMinPaths(Paths);
   if not Result then
