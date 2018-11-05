@@ -481,8 +481,6 @@ type
   { returns the eccentricity of the aVertex within its connected component }
     function  Eccentricity(constref aVertex: TVertex): SizeInt; inline;
     function  EccentricityI(aIndex: SizeInt): SizeInt;
-  { finds the radus and diameter of the graph }
-    procedure SpotRadiusDiameter(out aRadius, aDiameter: SizeInt);
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -2006,41 +2004,6 @@ begin
   for I := 0 to System.High(Dist) do
     if Dist[I] > Result then
       Result := Dist[I];
-end;
-
-procedure TGCustomGraph.SpotRadiusDiameter(out aRadius, aDiameter: SizeInt);
-var
-  Queue: TIntQueue;
-  Dist: TIntArray;
-  VertCount, I, Ecc, J, d: SizeInt;
-  p: PAdjItem;
-begin
-  VertCount := VertexCount;
-  aRadius := VertCount;
-  aDiameter := 0;
-  Dist.Length := VertCount;
-  for I := 0 to Pred(VertCount) do
-    begin
-      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
-      Dist[I] := 0;
-      Ecc := 0;
-      J := I;
-      repeat
-        for p in AdjLists[J]^ do
-          if Dist[p^.Key] = NULL_INDEX then
-            begin
-              Queue.Enqueue(p^.Key);
-              d := Succ(Dist[J]);
-              if Ecc < d then
-                Ecc := d;
-              Dist[p^.Key] := d;
-            end;
-      until not Queue{%H-}.TryDequeue(J);
-      if Ecc < aRadius then
-        aRadius := Ecc;
-      if Ecc > aDiameter then
-        aDiameter := Ecc;
-    end;
 end;
 
 { TIntArrayHelper }
