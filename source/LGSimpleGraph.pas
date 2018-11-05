@@ -590,6 +590,8 @@ type
   { returns False if is not connected or exists cycle of negative weight, otherwise
     returns True and weighted radus and diameter of the graph }
     function FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+  { returns True, indices of the central vertices in aCenter, if graph is connected, False otherwise }
+    function FindWeightedCenter(out aCenter: TIntArray): Boolean;
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
@@ -3052,19 +3054,55 @@ end;
 
 function TGSimpleGraph.FindCenter(out aCenter: TIntArray): Boolean;
 var
-  Stack: TIntStack;
-  I, Ecc, Radius: SizeInt;
+  Queue, Dist, Eccs: TIntArray;
+  VertCount, Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
+  p: PAdjItem;
 begin
-  Result := GetRadiusDiameter(Radius, I);
-  if not Result then
-    exit;
-  for I := 0 to Pred(VertexCount) do
+  if not Connected then
+    exit(False);
+  VertCount := VertexCount;
+  Radius := VertCount;
+  Queue.Length := VertCount;
+  Dist.Length := VertCount;
+  Eccs.Length := VertCount;
+  for I := 0 to Pred(VertCount) do
     begin
-      Ecc := EccentricityI(I);
-      if Ecc = Radius then
-        Stack.Push(I);
+      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      qHead := 0;
+      qTail := 0;
+      Queue[qTail] := I;
+      Inc(qTail);
+      while qHead < qTail do
+        begin
+          J := Queue[qHead];
+          Inc(qHead);
+          for p in AdjLists[J]^ do
+            if Dist[p^.Key] = NULL_INDEX then
+              begin
+                Queue[qTail] := p^.Key;
+                Inc(qTail);
+                d := Succ(Dist[J]);
+                if Ecc < d then
+                  Ecc := d;
+                Dist[p^.Key] := d;
+              end;
+        end;
+      Eccs[I] := Ecc;
+      if Ecc < Radius then
+        Radius := Ecc;
     end;
-  aCenter := Stack.ToArray;
+  aCenter.Length := VertCount;
+  J := 0;
+  for I := 0 to Pred(VertCount) do
+    if Eccs[I] = Radius then
+      begin
+        aCenter[J] := I;
+        Inc(J);
+      end;
+  aCenter.Length := J;
+  Result := True;
 end;
 
 function TGSimpleGraph.MinCut: SizeInt;
@@ -4278,6 +4316,46 @@ begin
       if Ecc > aDiameter then
         aDiameter := Ecc;
     end;
+end;
+
+function TGWeightedGraph.FindWeightedCenter(out aCenter: TIntArray): Boolean;
+var
+  Paths: TApspMatrix;
+  Eccs: TWeightArray;
+  I, J: SizeInt;
+  Inf, Radius, Ecc, w: TWeight;
+begin
+  if not Connected then
+    exit(False);
+  Result := FindAllPairMinPaths(Paths);
+  if not Result then
+    exit;
+  Inf := InfWeight;
+  Radius := Inf;
+  System.SetLength(Eccs, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Ecc := 0;
+      for J := 0 to Pred(VertexCount) do
+        if I <> J then
+          begin
+            w := Paths[I, J].Weight;
+            if (w <> Inf) and (w > Ecc) then
+              Ecc := w;
+          end;
+      Eccs[I] := Ecc;
+      if Ecc < Radius then
+        Radius := Ecc;
+    end;
+  aCenter.Length := VertexCount;
+  J := 0;
+  for I := 0 to Pred(VertexCount) do
+    if Eccs[I] <= Radius then
+      begin
+        aCenter[J] := I;
+        Inc(J);
+      end;
+  aCenter.Length := J;
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
