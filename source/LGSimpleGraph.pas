@@ -572,16 +572,20 @@ type
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { creates a matrix of weights of edges }
     function CreateWeightsMatrix: TWeightMatrix; inline;
-  { returns True and the shortest paths between all pairs of vertices in matrix aPaths,
-    if no negative-weight cycles exist, otherwise returns False and in single cell of aPaths
-    the index of the vertex from which the negative weight cycle is reachable }
+  { returns True and the shortest paths between all pairs of vertices in matrix aPaths
+    if non empty and no negative-weight cycles exist,
+    otherwise returns False and if negative-weight cycles exist then in single cell of aPaths
+    returns index of the vertex from which the negative weight cycle is reachable }
     function FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
     function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TApspMatrix): TIntArray; inline;
     function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TApspMatrix): TIntArray;
-  { returns False if exists cycle of negative weight reachable from aVertex,
-    otherwise returns True and the weighted eccentricity of the aVertex }
+  { returns False if is empty or exists cycle of negative weight reachable from aVertex,
+    otherwise returns True and the weighted eccentricity of the aVertex in aValue }
     function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
+  { returns False if is empty or exists cycle of negative weight, otherwise
+    returns True and weighted radus and diameter of the graph }
+    function FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
@@ -4130,6 +4134,8 @@ end;
 
 function TGWeightedGraph.FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
 begin
+  if IsEmpty then
+    exit(False);
   if Density <= DENSE_CUTOFF then
     //if Density <= JOHNSON_CUTOFF then
       Result := TWeightHelper.FbmApsp(Self, aPaths)
@@ -4162,6 +4168,8 @@ var
   I: SizeInt;
   w, Inf: TWeight;
 begin
+  if IsEmpty then
+    exit(False);
   Result := FindMinPathsMapI(aIndex, Weights);
   if not Result then
     exit;
@@ -4172,6 +4180,37 @@ begin
       w := Weights[I];
       if (w <> Inf) and (w > aValue) then
         aValue := w;
+    end;
+end;
+
+function TGWeightedGraph.FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+var
+  Paths: TApspMatrix;
+  I, J: SizeInt;
+  Ecc, Inf, w: TWeight;
+begin
+  if IsEmpty then
+    exit(False);
+  Result := FindAllPairMinPaths(Paths);
+  if not Result then
+    exit;
+  Inf := InfWeight;
+  aRadius := Inf;
+  aDiameter := 0;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Ecc := 0;
+      for J := 0 to Pred(VertexCount) do
+        if I <> J then
+          begin
+            w := Paths[I, J].Weight;
+            if (w <> Inf) and (w > Ecc) then
+              Ecc := w;
+          end;
+      if Ecc < aRadius then
+        aRadius := Ecc;
+      if Ecc > aDiameter then
+        aDiameter := Ecc;
     end;
 end;
 
