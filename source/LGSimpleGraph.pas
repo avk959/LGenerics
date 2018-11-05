@@ -541,10 +541,11 @@ type
   { same as above and in aPathTree returns paths }
     function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-  { returns False if exists cycle of negative weight, otherwise finds all paths of
-    minimal weight from a given vertex to the remaining vertices in the same connected
-    component(SSSP); an aWeights will contain in the corresponding component the weight of the path
-    to the vertex or InfWeight if the vertex is unreachable; used BFMT algorithm  }
+  { returns False if exists cycle of negative weight reachable from aSrc,
+    otherwise finds all paths of minimal weight from a given vertex to the remaining
+    vertices in the same connected component(SSSP); an aWeights will contain
+    in the corresponding component the weight of the path to the vertex or InfWeight
+    if the vertex is unreachable; used BFMT algorithm  }
     function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPathTree returns paths }
@@ -558,8 +559,9 @@ type
   { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
-  { returns False if exists cycle of negative weight, otherwise returns the vertex path
-    of minimal weight from a aSrc to aDst in aPath, if exists, and its weight in aWeight;
+  { returns False if exists cycle of negative weight reachable from aSrc,
+    otherwise returns the vertex path of minimal weight from a aSrc to aDst in aPath,
+    if exists, and its weight in aWeight;
     to distinguish 'unreachable' and 'negative cycle': in case negative cycle aWeight returns ZeroWeight,
     but InfWeight if aDst unreachable; used BFMT algorithm }
     function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
@@ -576,6 +578,10 @@ type
     function FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
     function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TApspMatrix): TIntArray; inline;
     function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TApspMatrix): TIntArray;
+  { returns False if exists cycle of negative weight reachable from aVertex,
+    otherwise returns True and the weighted eccentricity of the aVertex }
+    function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
+    function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
 {**********************************************************************************************************
   minimum spanning tree utilities
 ***********************************************************************************************************}
@@ -4143,6 +4149,30 @@ begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
+end;
+
+function TGWeightedGraph.FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean;
+begin
+  Result := FindEccentricityI(IndexOf(aVertex), aValue);
+end;
+
+function TGWeightedGraph.FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
+var
+  Weights: TWeightArray;
+  I: SizeInt;
+  w, Inf: TWeight;
+begin
+  Result := FindMinPathsMapI(aIndex, Weights);
+  if not Result then
+    exit;
+  Inf := InfWeight;
+  aValue := 0;
+  for I := 0 to System.High(Weights) do
+    begin
+      w := Weights[I];
+      if (w <> Inf) and (w > aValue) then
+        aValue := w;
+    end;
 end;
 
 function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
