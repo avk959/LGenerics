@@ -481,6 +481,10 @@ type
   { returns the eccentricity of the aVertex within its connected component }
     function Eccentricity(constref aVertex: TVertex): SizeInt; inline;
     function EccentricityI(aIndex: SizeInt): SizeInt;
+  { returns the radus of the graph }
+    function Radius: SizeInt;
+  { returns the diameter of the graph }
+    function Diameter: SizeInt;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -1996,26 +2000,82 @@ end;
 
 function TGCustomGraph.EccentricityI(aIndex: SizeInt): SizeInt;
 var
+  Dist: TIntArray;
+  I: SizeInt;
+begin
+  Dist := ShortestPathsMapI(aIndex);
+  Result := 0;
+  for I := 0 to System.High(Dist) do
+    if (I <> aIndex) and (Dist[I] > Result) then
+      Result := Dist[I];
+end;
+
+function TGCustomGraph.Radius: SizeInt;
+var
   Queue: TIntQueue;
   Dist: TIntArray;
-  d: SizeInt;
+  VertCount, I, Ecc, J, d: SizeInt;
   p: PAdjItem;
 begin
-  CheckIndexRange(aIndex);
-  Dist := CreateIntArray;
-  Dist[aIndex] := 0;
+  if IsEmpty then
+    exit(0);
+  VertCount := VertexCount;
+  Result := VertCount;
+  Dist.Length := VertCount;
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      J := I;
+      repeat
+        for p in AdjLists[J]^ do
+          if Dist[p^.Key] = NULL_INDEX then
+            begin
+              Queue.Enqueue(p^.Key);
+              d := Succ(Dist[J]);
+              if Ecc < d then
+                Ecc := d;
+              Dist[p^.Key] := d;
+            end;
+      until not Queue{%H-}.TryDequeue(J);
+      if Ecc < Result then
+        Result := Ecc;
+    end;
+end;
+
+function TGCustomGraph.Diameter: SizeInt;
+var
+  Queue: TIntQueue;
+  Dist: TIntArray;
+  VertCount, I, Ecc, J, d: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then
+    exit(0);
+  VertCount := VertexCount;
   Result := 0;
-  repeat
-    for p in AdjLists[aIndex]^ do
-      if Dist[p^.Key] = -1 then
-        begin
-          Queue.Enqueue(p^.Key);
-          d := Succ(Dist[aIndex]);
-          if Result < d then
-            Result := d;
-          Dist[p^.Key] := d;
-        end;
-  until not Queue{%H-}.TryDequeue(aIndex);
+  Dist.Length := VertCount;
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      J := I;
+      repeat
+        for p in AdjLists[J]^ do
+          if Dist[p^.Key] = NULL_INDEX then
+            begin
+              Queue.Enqueue(p^.Key);
+              d := Succ(Dist[J]);
+              if Ecc < d then
+                Ecc := d;
+              Dist[p^.Key] := d;
+            end;
+      until not Queue{%H-}.TryDequeue(J);
+      if Ecc > Result then
+        Result := Ecc;
+    end;
 end;
 
 { TIntArrayHelper }
