@@ -269,8 +269,10 @@ type
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges;
     if aOnAddEdge = nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
-  { returns True, radus and diameter, if graph is strongly connected, False otherwise }
+  { returns True, radus and diameter, if graph is connected, False otherwise }
     function  GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+  { returns True, indices of the central vertices in aCenter, if graph is connected, False otherwise }
+    function  FindCenter(out aCenter: TIntArray): Boolean;
 
     type
       //vertex partition
@@ -3046,6 +3048,23 @@ begin
         aDiameter := Ecc;
     end;
   Result := True;
+end;
+
+function TGSimpleGraph.FindCenter(out aCenter: TIntArray): Boolean;
+var
+  Stack: TIntStack;
+  I, Ecc, Radius: SizeInt;
+begin
+  Result := GetRadiusDiameter(Radius, I);
+  if not Result then
+    exit;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      Ecc := EccentricityI(I);
+      if Ecc = Radius then
+        Stack.Push(I);
+    end;
+  aCenter := Stack.ToArray;
 end;
 
 function TGSimpleGraph.MinCut: SizeInt;
