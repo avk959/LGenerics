@@ -910,6 +910,7 @@ var
   c: TCost;
   p: PAdjItem;
 begin
+  FGraph := aGraph;
   FNodeCount := aGraph.VertexCount;
   FRequestFlow := aReqFlow;
   System.SetLength(CurrArcIdx, FNodeCount);
@@ -969,62 +970,91 @@ end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.FindNegCycle(out aMinCap: TWeight): Boolean;
 var
-  Queue: array of PNode;
-  Dist: TIntArray;
-  CurrNode, NextNode: PNode;
+  Queue, TreePrev, TreeNext, Level: TIntArray;
+  Active: TBitVector;
+  Curr, Next, Prev, Post, Test, CurrLevel, qHead, qTail: SizeInt;
   CurrArc: PArc;
-  d: SizeInt;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
 begin
   SearchInit;
-  Dist.Length := FNodeCount;
-  Dist[FSource - PNode(FNodes)] := 0;
-  System.SetLength(Queue, FNodeCount);
-  Queue[qTail] := FSource;
+  TreePrev := FGraph.CreateIntArray;
+  TreeNext := FGraph.CreateIntArray;
+  Level := FGraph.CreateIntArray;
+  Queue.Length := FNodeCount;
+  Active.Size := FNodeCount;
+  qHead := 0;
+  qTail := 0;
+  FSource^.Parent := FSource;
+  Next := FSource - PNode(FNodes);
+  TreePrev[Next] := Next;
+  TreeNext[Next] := Next;
+  Queue[qTail] := Next;
   Inc(qTail);
-  aMinCap := 0;
+  Active[Next] := True;
   while qHead <> qTail do
     begin
-      CurrNode := Queue[qHead];
+      Curr := Queue[qHead];
       Inc(qHead);
       if qHead = FNodeCount then
         qHead := 0;
-      FInQueue[CurrNode - PNode(FNodes)] := False;
-      if (CurrNode^.Parent <> nil) and FInQueue[CurrNode^.Parent - PNode(FNodes)] then
+      FInQueue[Curr] := False;
+      if not Active[Curr] then
         continue;
-      CurrArc := CurrNode^.FirstArc;
-      d := Succ(Dist[CurrNode - PNode(FNodes)]);
-      while CurrArc < (CurrNode + 1)^.FirstArc do
+      CurrArc := FNodes[Curr].FirstArc;
+      while CurrArc < FNodes[Succ(Curr)].FirstArc do
         begin
           if CurrArc^.IsResidual then
             begin
-              NextNode := CurrArc^.Target;
-              if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
+              Next := CurrArc^.Target - PNode(FNodes);
+              if FNodes[Curr].Price + CurrArc^.Cost < FNodes[Next].Price then
                 begin
-                  NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
-                  NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResCap);
-                  NextNode^.Parent := CurrNode;
-                  NextNode^.PathArc := CurrArc;
-                  if (NextNode = FSource) or (d >= FNodeCount) then
-                    exit(True);
-                  Dist[NextNode - PNode(FNodes)] := d;
-                  if not FInQueue[NextNode - PNode(FNodes)] then
+                  FNodes[Next].Price := FNodes[Curr].Price + CurrArc^.Cost;
+                  FNodes[Next].PathMinCap := wMin(FNodes[Curr].PathMinCap, CurrArc^.ResCap);
+                  if TreePrev[Next] <> NULL_INDEX then
                     begin
-                      Queue[qTail] := NextNode;
+                      Prev := TreePrev[Next];
+                      Test := Next;
+                      CurrLevel := 0;
+                      repeat
+                        if Test = Curr then
+                          exit(True);
+                        CurrLevel += Level[Test];
+                        TreePrev[Test] := NULL_INDEX;
+                        Level[Test] := NULL_INDEX;
+                        Active[Test] := False;
+                        Test := TreeNext[Test];
+                      until CurrLevel < 0;
+                      Dec(Level[FNodes[Next].Parent - PNode(FNodes)]);
+                      TreeNext[Prev] := Test;
+                      TreePrev[Test] := Prev;
+                    end;
+                  FNodes[Next].Parent := @FNodes[Curr];
+                  FNodes[Next].PathArc := CurrArc;
+                  Inc(Level[Curr]);
+                  Post := TreeNext[Curr];
+                  TreeNext[Curr] := Next;
+                  TreePrev[Next] := Curr;
+                  TreeNext[Next] := Post;
+                  TreePrev[Post] := Next;
+                  if not FInQueue[Next] then
+                    begin
+                      Queue[qTail] := Next;
                       Inc(qTail);
                       if qTail = FNodeCount then
                         qTail := 0;
-                      FInQueue[NextNode - PNode(FNodes)] := True;
+                      FInQueue[Next] := True;
                     end;
+                  Active[Next] := True;
                 end;
             end;
           Inc(CurrArc);
         end;
     end;
+  FSource^.Parent := nil;
   Result := FSink^.Parent = nil;
   if not Result then
-    aMinCap := FSink^.PathMinCap;
+    aMinCap := FSink^.PathMinCap
+  else
+    aMinCap := 0;
 end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.FindShortestPath(out aMinCap: TWeight): Boolean;

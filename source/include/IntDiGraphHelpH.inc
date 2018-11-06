@@ -182,6 +182,7 @@ type
     FReached: TBoolVector;
     FSource,
     FSink: PNode;
+    FGraph: TGIntWeightDiGraph;
     FRequestFlow: TWeight;
     FNodeCount: SizeInt;
     procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
