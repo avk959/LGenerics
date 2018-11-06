@@ -3388,7 +3388,7 @@ begin
   Nodes[FNodeCount].Level := NULL_INDEX;
 end;
 
-procedure TGWeightHelper.TBfmt.SearchInit(aSrc: SizeInt);
+procedure TGWeightHelper.TBfmt.SsspInit(aSrc: SizeInt);
 var
   I: SizeInt;
   Inf: TWeight;
@@ -3433,7 +3433,7 @@ var
   qTail: SizeInt = 0;
 begin
   NodeCount := FNodeCount;
-  SearchInit(aSrc);
+  SsspInit(aSrc);
   FActive[aSrc] := True;
   FQueue[qTail] := @Nodes[aSrc];
   Inc(qTail);

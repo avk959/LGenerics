@@ -402,7 +402,7 @@ type
       function  GetMaxWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
     end;
 
-  { TBfmt }
+  { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly }
   TBfmt = record
   strict private
   type
@@ -434,7 +434,7 @@ type
     FGraph: TGraph;
     FNodeCount: SizeInt;
     procedure CopyGraph(aDirected: Boolean);
-    procedure SearchInit(aSrc: SizeInt);
+    procedure SsspInit(aSrc: SizeInt);
   public
     constructor Create(aGraph: TGraph; aDirected: Boolean);
     function  IndexOf(aNode: PNode): SizeInt; inline;
@@ -456,8 +456,7 @@ type
     class function Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                    static;
   { modification of Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
-    faster negative cycle detection;
-    B.V.Cherkassky and A.V.Goldberg: Negative-cycle detection algorithms. }
+    faster negative cycle detection }
     class function BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                    static;
     class function BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt; static;
