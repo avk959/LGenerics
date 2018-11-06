@@ -1286,7 +1286,7 @@ begin
     begin
       FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
       FNodes[I].CurrArc := @FArcs[CurrArcIdx[I]];
-      FNodes[I].Price := 0;
+      FNodes[I].Price := MAX_COST;
       FNodes[I].Excess := 0;
     end;
 
@@ -1318,40 +1318,85 @@ end;
 
 function TGIntWeightDiGraph.TCsMcfHelper.NegCycleExists: Boolean;
 var
-  Dist: TIntArray;
-  CurrNode, NextNode: PNode;
+  Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
+  Active: TBitVector;
+  Curr, Next, Prev, Post, Test, CurrLevel, qHead, qTail: SizeInt;
   CurrArc: PArc;
-  d: SizeInt;
 begin
-  System.SetLength(Dist, FNodeCount);
-  CurrNode := FSource;
-  Dist[FSource - PNode(FNodes)] := 0;
-  repeat
-    FInQueue[CurrNode - PNode(FNodes)] := False;
-    CurrArc := CurrNode^.FirstArc;
-    d := Succ(Dist[CurrNode - PNode(FNodes)]);
-    while CurrArc < (CurrNode + 1)^.FirstArc do
-      begin
-        if CurrArc^.ResCap > 0 then
-          begin
-            NextNode := CurrArc^.Target;
-            if CurrNode^.Price + CurrArc^.Cost < NextNode^.Price then
-              begin
-                NextNode^.Price := CurrNode^.Price + CurrArc^.Cost;
-                if (NextNode = FSource) or (d >= FNodeCount) then
-                  exit(True);
-                Dist[NextNode - PNode(FNodes)] := d;
-                if not FInQueue[NextNode - PNode(FNodes)] then
-                  begin
-                    FQueue.Enqueue(NextNode);
-                    FInQueue[NextNode - PNode(FNodes)] := True;
-                  end;
-              end;
-          end;
-        Inc(CurrArc);
-      end;
-  until not FQueue.TryDequeue(CurrNode);
-  Result := False;
+  Parents := FGraph.CreateIntArray;
+  TreePrev := FGraph.CreateIntArray;
+  TreeNext := FGraph.CreateIntArray;
+  Level := FGraph.CreateIntArray;
+  Queue.Length := FNodeCount;
+  Active.Size := FNodeCount;
+  qHead := 0;
+  qTail := 0;
+  Next := FSource - PNode(FNodes);
+  FNodes[Next].Price := 0;
+  Parents[Next] := Next;
+  TreePrev[Next] := Next;
+  TreeNext[Next] := Next;
+  Active[Next] := True;
+  Queue[qTail] := Next;
+  Inc(qTail);
+  while qHead <> qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      if qHead = FNodeCount then
+        qHead := 0;
+      FInQueue[Curr] := False;
+      if not Active[Curr] then
+        continue;
+      CurrArc := FNodes[Curr].FirstArc;
+      while CurrArc < FNodes[Succ(Curr)].FirstArc do
+        begin
+          if CurrArc^.ResCap > 0 then
+            begin
+              Next := CurrArc^.Target - PNode(FNodes);
+              if FNodes[Curr].Price + CurrArc^.Cost < FNodes[Next].Price then
+                begin
+                  FNodes[Next].Price := FNodes[Curr].Price + CurrArc^.Cost;
+                  if TreePrev[Next] <> NULL_INDEX then
+                    begin
+                      Prev := TreePrev[Next];
+                      Test := Next;
+                      CurrLevel := 0;
+                      repeat
+                        if Test = Curr then
+                          exit(True);
+                        CurrLevel += Level[Test];
+                        TreePrev[Test] := NULL_INDEX;
+                        Level[Test] := NULL_INDEX;
+                        Active[Test] := False;
+                        Test := TreeNext[Test];
+                      until CurrLevel < 0;
+                      Dec(Level[Parents[Next]]);
+                      TreeNext[Prev] := Test;
+                      TreePrev[Test] := Prev;
+                    end;
+                  Parents[Next] := Curr;
+                  Inc(Level[Curr]);
+                  Post := TreeNext[Curr];
+                  TreeNext[Curr] := Next;
+                  TreePrev[Next] := Curr;
+                  TreeNext[Next] := Post;
+                  TreePrev[Post] := Next;
+                  if not FInQueue[Next] then
+                    begin
+                      Queue[qTail] := Next;
+                      Inc(qTail);
+                      if qTail = FNodeCount then
+                        qTail := 0;
+                      FInQueue[Next] := True;
+                    end;
+                  Active[Next] := True;
+                end;
+            end;
+          Inc(CurrArc);
+        end;
+    end;
+  Result := Parents[FSink - PNode(FNodes)] = NULL_INDEX;
 end;
 
 procedure TGIntWeightDiGraph.TCsMcfHelper.InitSolution(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out
@@ -1360,7 +1405,6 @@ var
   Helper: THPrHelper;
 begin
   FResultFlow := Helper.GetFlow(aGraph, aSource, aSink, FRequestFlow, m);
-  Finalize(Helper);
 end;
 
 function TGIntWeightDiGraph.TCsMcfHelper.InitSuccess: Boolean;
@@ -1398,8 +1442,6 @@ begin
     end;
   if FEpsilon < 1 then
     FEpsilon := 1;
-
-  Finalize(ArcMap);
   Result := True;
 end;
 
@@ -1478,7 +1520,7 @@ begin
       FEpsilon := Math.Max(FEpsilon div FAlpha, 1);
       InitPhase;
       while FQueue.TryDequeue(Node) do
-        Discharge(Node);
+        Discharge(Node{%H-});
       if FEpsilon = 1 then
         break;
     end;
