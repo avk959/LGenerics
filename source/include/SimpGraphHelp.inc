@@ -1078,7 +1078,7 @@ end;
 
 procedure TGSimpleGraph.THamiltonCycles.DoSearch(aNode: SizeInt);
 var
-  Cand, TmpList: TBoolVector;
+  Cand, Saved: TBoolVector;
   I: SizeInt;
 begin
   if FVacant.NonEmpty then
@@ -1089,10 +1089,10 @@ begin
       if FMatrix[aNode].IntersectionPop(FVacant) > 0 then
         begin
           Cand := FMatrix[aNode].Intersection(FVacant);
-          TmpList.Size := FNodeCount;
+          Saved.Size := FNodeCount;
           for I in Cand do
             begin
-              TmpList[I] := FMatrix[I][aNode];
+              Saved[I] := FMatrix[I][aNode];
               FMatrix[I][aNode] := False;
             end;
           /////////////////////////////
@@ -1108,7 +1108,7 @@ begin
               FStack.Pop;
             end;
           /////////////////////////////
-          for I in TmpList do
+          for I in Saved do
             FMatrix[I][aNode] := True;
         end;
     end
