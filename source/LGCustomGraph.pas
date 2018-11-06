@@ -3428,14 +3428,11 @@ procedure TGWeightHelper.TBfmt.Sssp(aSrc: SizeInt; var aPaths: TIntArray; var aW
 var
   CurrNode, NextNode, PrevNode, PostNode, TestNode: PNode;
   CurrArc: PArc;
-  NodeCount, CurrLevel, NodeIdx: SizeInt;
+  NodeCount, I, Level: SizeInt;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
   NodeCount := FNodeCount;
-  aPaths.Length := NodeCount;
-  System.FillChar(Pointer(aPaths)^, NodeCount * SizeOf(SizeInt), $ff);
-  System.SetLength(aWeights, NodeCount);
   SearchInit(aSrc);
   FActive[aSrc] := True;
   FQueue[qTail] := @FNodes[aSrc];
@@ -3446,11 +3443,11 @@ begin
       Inc(qHead);
       if qHead = NodeCount then
         qHead := 0;
-      NodeIdx := IndexOf(CurrNode);
-      FInQueue[NodeIdx] := False;
-      if not FActive[NodeIdx] then
+      I := IndexOf(CurrNode);
+      FInQueue[I] := False;
+      if not FActive[I] then
         continue;
-      FActive[NodeIdx] := False;
+      FActive[I] := False;
       CurrArc := CurrNode^.FirstArc;
       while CurrArc < (CurrNode + 1)^.FirstArc do
         begin
@@ -3462,14 +3459,14 @@ begin
                 begin
                   PrevNode := NextNode^.TreePrev;
                   TestNode := NextNode;
-                  CurrLevel := 0;
+                  Level := 0;
                   repeat
-                    CurrLevel += TestNode^.Level;
+                    Level += TestNode^.Level;
                     TestNode^.TreePrev := nil;
                     TestNode^.Level := NULL_INDEX;
                     FActive[IndexOf(TestNode)] := False;
                     TestNode := TestNode^.TreeNext;
-                  until CurrLevel < 0;
+                  until Level < 0;
                   Dec(NextNode^.Parent^.Level);
                   PrevNode^.TreeNext := TestNode;
                   TestNode^.TreePrev := PrevNode;
@@ -3481,25 +3478,27 @@ begin
               NextNode^.TreePrev := CurrNode;
               NextNode^.TreeNext := PostNode;
               PostNode^.TreePrev := NextNode;
-              NodeIdx := IndexOf(NextNode);
-              if not FInQueue[NodeIdx] then
+              I := IndexOf(NextNode);
+              if not FInQueue[I] then
                 begin
                   FQueue[qTail] := NextNode;
                   Inc(qTail);
                   if qTail = NodeCount then
                     qTail := 0;
-                  FInQueue[NodeIdx] := True;
+                  FInQueue[I] := True;
                 end;
-              FActive[NodeIdx] := True;
+              FActive[I] := True;
             end;
           Inc(CurrArc);
         end;
     end;
-  for NodeIdx := 0 to Pred(NodeCount) do
-    aPaths[NodeIdx] := IndexOf(FNodes[NodeIdx].Parent);
+  aPaths.Length := NodeCount;
+  for I := 0 to Pred(NodeCount) do
+    aPaths[I] := IndexOf(FNodes[I].Parent);
   aPaths[aSrc] := NULL_INDEX;
-  for NodeIdx := 0 to Pred(NodeCount) do
-    aWeights[NodeIdx] := FNodes[NodeIdx].Weight;
+  System.SetLength(aWeights, NodeCount);
+  for I := 0 to Pred(NodeCount) do
+    aWeights[I] := FNodes[I].Weight;
 end;
 
 { TGWeightHelper }
