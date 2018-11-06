@@ -4259,7 +4259,7 @@ begin
     exit(False);
   if Density <= DENSE_CUTOFF then
     //if Density <= JOHNSON_CUTOFF then
-      Result := TWeightHelper.FbmApsp(Self, aPaths)
+      Result := TWeightHelper.BfmtApsp(Self, False, aPaths)
     //else
     //  Result := TWeightHelper.JohnsonApsp(Self, aPaths)
   else
@@ -4344,7 +4344,7 @@ var
 begin
   if not Connected then
     exit(False);
-  Result := FindAllPairMinPaths(Paths);
+  Result := FindAllPairMinPaths(Paths); //todo: avoid this
   if not Result then
     exit;
   Inf := InfWeight;

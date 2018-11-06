@@ -374,8 +374,6 @@ type
     TWeightsMatrix = array of array of TWeight;
     TApspMatrix    = array of array of TApspCell;
 
-  private
-  type
     { TKuhnMatchB: weighted bipartite matching algorithm }
     TKuhnMatchB = record
     strict private
@@ -404,7 +402,44 @@ type
       function  GetMaxWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
     end;
 
+  { TBfmt }
+  TBfmt = record
+  strict private
+  type
+    PNode  = ^TNode;
+    PArc   = ^TArc;
+
+    TArc = record
+      Target: PNode;       // pointer to target node
+      Weight: TWeight;
+      constructor Create(aTarget: PNode; aWeight: TWeight);
+    end;
+
+    TNode = record
+    private
+      FirstArc: PArc;      // pointer to first incident arc
+      Weight: TWeight;
+      TreePrev,
+      TreeNext,
+      Parent: PNode;
+      Level: SizeInt;
+    end;
+  var
+    FNodes: array of TNode;
+    FArcs: array of TArc;
+    FQueue: array of PNode;
+    FInQueue,
+    FActive: TGraph.TBitVector;
+    FGraph: TGraph;
+    FNodeCount: SizeInt;
+    procedure CopyGraph(aDirected: Boolean);
+    procedure SearchInit(aSrc: SizeInt);
+    function  IndexOf(aNode: PNode): SizeInt; inline;
   public
+    constructor Create(aGraph: TGraph; aDirected: Boolean);
+    procedure Sssp(aSrc: SizeInt; var aPaths: TIntArray; var aWeights: TWeightArray);
+  end;
+
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
@@ -424,7 +459,7 @@ type
     B.V.Cherkassky and A.V.Goldberg: Negative-cycle detection algorithms. }
     class function BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                    static;
-    class function BfmtReweight(g: TGraph; out aPhi: TWeightArray): SizeInt; static;
+    class function BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt; static;
   { negative cycle detection }
     class function NegCycleDetect(g: TGraph; aSrc: SizeInt): TIntArray; static;
   { BFMT single-source shortest paths problem }
@@ -438,7 +473,7 @@ type
     single element with the index of an element on negative cycle }
     class function FloydApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
     class function JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
-    class function FbmApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
+    class function BfmtApsp(aGraph: TGraph; aDirect: Boolean; out aPaths: TApspMatrix): Boolean; static;
   { fills array with InfWeight }
     class function CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
   { fills array with NegInfWeight }

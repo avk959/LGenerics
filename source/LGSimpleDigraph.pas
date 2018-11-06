@@ -1937,7 +1937,7 @@ begin
     exit(False);
   if Density <= DENSE_CUTOFF then
     if Density <= JOHNSON_CUTOFF then
-      Result := TWeightHelper.FbmApsp(Self, aPaths)
+      Result := TWeightHelper.BfmtApsp(Self, True, aPaths)
     else
       Result := TWeightHelper.JohnsonApsp(Self, aPaths)
   else
