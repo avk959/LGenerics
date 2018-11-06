@@ -424,8 +424,9 @@ type
       Parent: PNode;
       Level: SizeInt;
     end;
-  var
-    FNodes: array of TNode;
+  public
+    Nodes: array of TNode;
+  strict private
     FArcs: array of TArc;
     FQueue: array of PNode;
     FInQueue,
@@ -434,10 +435,10 @@ type
     FNodeCount: SizeInt;
     procedure CopyGraph(aDirected: Boolean);
     procedure SearchInit(aSrc: SizeInt);
-    function  IndexOf(aNode: PNode): SizeInt; inline;
   public
     constructor Create(aGraph: TGraph; aDirected: Boolean);
-    procedure Sssp(aSrc: SizeInt; var aPaths: TIntArray; var aWeights: TWeightArray);
+    function  IndexOf(aNode: PNode): SizeInt; inline;
+    procedure Sssp(aSrc: SizeInt);
   end;
 
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }

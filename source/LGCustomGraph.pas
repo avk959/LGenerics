@@ -3360,32 +3360,32 @@ begin
       J += FGraph.AdjLists[I]^.Count;
     end;
 
-  System.SetLength(FNodes, Succ(FNodeCount));
+  System.SetLength(Nodes, Succ(FNodeCount));
   if aDirected then
     System.SetLength(FArcs, Succ(FGraph.EdgeCount))
   else
     System.SetLength(FArcs, Succ(FGraph.EdgeCount * 2));
 
   for I := 0 to Pred(FNodeCount) do
-    FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
+    Nodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
 
   for I := 0 to Pred(FNodeCount) do
     for p in FGraph.AdjLists[I]^ do
       begin
-        FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[p^.Key], p^.Data.Weight);
+        FArcs[CurrArcIdx[I]] := TArc.Create(@Nodes[p^.Key], p^.Data.Weight);
         Inc(CurrArcIdx[I]);
       end;
   CurrArcIdx := nil;
 
   FArcs[System.High(FArcs)] :=
-    TArc.Create(@FNodes[FNodeCount], 0);
+    TArc.Create(@Nodes[FNodeCount], 0);
   //sentinel node
-  FNodes[FNodeCount].FirstArc := @FArcs[System.High(FArcs)];
-  FNodes[FNodeCount].Weight := 0;
-  FNodes[FNodeCount].TreePrev := nil;
-  FNodes[FNodeCount].TreeNext := nil;
-  FNodes[FNodeCount].Parent := nil;
-  FNodes[FNodeCount].Level := NULL_INDEX;
+  Nodes[FNodeCount].FirstArc := @FArcs[System.High(FArcs)];
+  Nodes[FNodeCount].Weight := 0;
+  Nodes[FNodeCount].TreePrev := nil;
+  Nodes[FNodeCount].TreeNext := nil;
+  Nodes[FNodeCount].Parent := nil;
+  Nodes[FNodeCount].Level := NULL_INDEX;
 end;
 
 procedure TGWeightHelper.TBfmt.SearchInit(aSrc: SizeInt);
@@ -3395,7 +3395,7 @@ var
 begin
   Inf := InfWeight;
   for I := 0 to Pred(FNodeCount) do
-    with FNodes[I] do
+    with Nodes[I] do
       begin
         Weight := Inf;
         TreePrev := nil;
@@ -3403,15 +3403,10 @@ begin
         Parent := nil;
         Level := NULL_INDEX;
       end;
-  FNodes[aSrc].Weight := 0;
-  FNodes[aSrc].TreePrev := @FNodes[aSrc];
-  FNodes[aSrc].TreeNext := @FNodes[aSrc];
-  FNodes[aSrc].Parent := @FNodes[aSrc];
-end;
-
-function TGWeightHelper.TBfmt.IndexOf(aNode: PNode): SizeInt;
-begin
-  Result := aNode - PNode(FNodes);
+  Nodes[aSrc].Weight := 0;
+  Nodes[aSrc].TreePrev := @Nodes[aSrc];
+  Nodes[aSrc].TreeNext := @Nodes[aSrc];
+  Nodes[aSrc].Parent := @Nodes[aSrc];
 end;
 
 constructor TGWeightHelper.TBfmt.Create(aGraph: TGraph; aDirected: Boolean);
@@ -3424,7 +3419,12 @@ begin
   FActive.Size := FNodeCount;
 end;
 
-procedure TGWeightHelper.TBfmt.Sssp(aSrc: SizeInt; var aPaths: TIntArray; var aWeights: TWeightArray);
+function TGWeightHelper.TBfmt.IndexOf(aNode: PNode): SizeInt;
+begin
+  Result := aNode - PNode(Nodes);
+end;
+
+procedure TGWeightHelper.TBfmt.Sssp(aSrc: SizeInt);
 var
   CurrNode, NextNode, PrevNode, PostNode, TestNode: PNode;
   CurrArc: PArc;
@@ -3435,7 +3435,7 @@ begin
   NodeCount := FNodeCount;
   SearchInit(aSrc);
   FActive[aSrc] := True;
-  FQueue[qTail] := @FNodes[aSrc];
+  FQueue[qTail] := @Nodes[aSrc];
   Inc(qTail);
   while qHead <> qTail do
     begin
@@ -3492,13 +3492,6 @@ begin
           Inc(CurrArc);
         end;
     end;
-  aPaths.Length := NodeCount;
-  for I := 0 to Pred(NodeCount) do
-    aPaths[I] := IndexOf(FNodes[I].Parent);
-  aPaths[aSrc] := NULL_INDEX;
-  System.SetLength(aWeights, NodeCount);
-  for I := 0 to Pred(NodeCount) do
-    aWeights[I] := FNodes[I].Weight;
 end;
 
 { TGWeightHelper }
@@ -4237,9 +4230,10 @@ begin
   System.SetLength(aPaths, VertCount, VertCount);
   for I := 0 to Pred(VertCount) do
     begin
-      Bfmt.Sssp(I, Parents, Weights);
+      Bfmt.Sssp(I);
       for J := 0 to Pred(VertCount) do
-        aPaths[I, J] := TApspCell.Create(Weights[J], Parents[J]);
+        with Bfmt do
+          aPaths[I, J] := TApspCell.Create(Nodes[J].Weight, IndexOf(Nodes[J].Parent));
     end;
   Result := True;
 end;
