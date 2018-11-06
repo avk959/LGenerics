@@ -4215,7 +4215,6 @@ end;
 class function TGWeightHelper.BfmtApsp(aGraph: TGraph; aDirect: Boolean; out aPaths: TApspMatrix): Boolean;
 var
   Bfmt: TBfmt;
-  Parents: TIntArray;
   Weights: TWeightArray;
   I, J, VertCount: SizeInt;
 begin
@@ -4225,14 +4224,15 @@ begin
       aPaths := [[TApspCell.Create(0, I)]];
       exit(False);
     end;
+  Weights := nil;
   VertCount := aGraph.VertexCount;
   Bfmt := TBfmt.Create(aGraph, aDirect);
   System.SetLength(aPaths, VertCount, VertCount);
   for I := 0 to Pred(VertCount) do
     begin
       Bfmt.Sssp(I);
-      for J := 0 to Pred(VertCount) do
-        with Bfmt do
+      with Bfmt do
+        for J := 0 to Pred(VertCount) do
           aPaths[I, J] := TApspCell.Create(Nodes[J].Weight, IndexOf(Nodes[J].Parent));
     end;
   Result := True;
