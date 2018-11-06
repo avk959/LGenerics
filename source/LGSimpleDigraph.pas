@@ -363,8 +363,8 @@ type
 
   protected
   const
-    MaxWeight     = High(Int64);
-    MinWeight     = Low(Int64);
+    MAX_WEIGHT = High(Int64);
+    MIN_WEIGHT = Low(Int64);
 
     {$I IntDiGraphHelpH.inc}
 
@@ -440,7 +440,7 @@ type
 
   { returns True if arc costs are correct(negative costs allows), False otherwise }
     function IsProperCostArray(constref aCosts: TCostEdgeArray): Boolean;
-  { param aReqFlow specifies the required flow > 0 (can be MaxWeight);
+  { param aReqFlow specifies the required flow > 0 (can be MAX_WEIGHT);
     returns False if network is not correct or arc costs are not correct or network
     contains negative cycle or aNeedFlow < 1,
     otherwise returns True, flow = min(aReqFlow, maxflow) in aReqFlow and
@@ -454,7 +454,7 @@ type
                              var aReqFlow: TWeight; out aTotalCost: TCost; out a: TEdgeArray): Boolean; inline;
     function FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
                               var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
-  { param aReqFlow specifies the required flow > 0 (can be MaxWeight);
+  { param aReqFlow specifies the required flow > 0 (can be MAX_WEIGHT);
     returns False if network is not correct or arc costs are not correct or network
     contains negative cycle or aNeedFlow < 1,
     otherwise returns True, flow = min(aReqFlow, maxflow) in aReqFlow and

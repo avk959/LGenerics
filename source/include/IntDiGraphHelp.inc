@@ -187,7 +187,7 @@ begin
   FNodes[FNodeCount].Excess := 0;
   FNodes[FNodeCount].Distance := FNodeCount;
 
-  FSource^.Excess := MaxWeight;
+  FSource^.Excess := MAX_WEIGHT;
   System.SetLength(FLevels, FNodeCount);
   FMaxLevel := System.High(FLevels);
   System.SetLength(FQueue, FNodeCount);
@@ -601,7 +601,7 @@ end;
 function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
-  CreateResudualGraphCap(aGraph, aSource, aSink, MaxWeight);
+  CreateResudualGraphCap(aGraph, aSource, aSink, MAX_WEIGHT);
   HiLevelPushRelabel;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -964,7 +964,7 @@ begin
   for I := 0 to Pred(FNodeCount) do
     FNodes[I].Price := MAX_COST;
   FSource^.Price := 0;
-  FSource^.PathMinCap := MaxWeight;
+  FSource^.PathMinCap := MAX_WEIGHT;
   FSink^.Parent := nil;
 end;
 
@@ -1059,7 +1059,7 @@ end;
 
 function TGIntWeightDiGraph.TBgMcfHelper.FindShortestPath(out aMinCap: TWeight): Boolean;
 var
-  CurrNode, NextNode, TopNode: PNode;
+  CurrNode, NextNode: PNode;
   CurrArc: PArc;
   Item: TCostItem;
   Price: TCost;
@@ -1069,7 +1069,7 @@ begin
   FReached.ClearBits;
   FQueue.MakeEmpty;
   FSource^.PathArc := nil;
-  FSource^.PathMinCap := MaxWeight;
+  FSource^.PathMinCap := MAX_WEIGHT;
   aMinCap := 0;
   Item := TCostItem.Create(FSource - PNode(FNodes), 0);
   repeat
