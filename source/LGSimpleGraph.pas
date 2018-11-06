@@ -4306,28 +4306,33 @@ end;
 
 function TGWeightedGraph.FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
 var
-  Paths: TApspMatrix;
+  Bfmt: TWeightHelper.TBfmt;
+  Weights: TWeightArray;
   I, J: SizeInt;
   Ecc, Inf, w: TWeight;
 begin
   if not Connected then
     exit(False);
-  Result := FindAllPairMinPaths(Paths);
+  Result := TWeightHelper.BfmtReweight(Self, Weights) < 0;
   if not Result then
     exit;
+  Weights := nil;
+  Bfmt := TWeightHelper.TBfmt.Create(Self, False);
   Inf := InfWeight;
   aRadius := Inf;
   aDiameter := 0;
   for I := 0 to Pred(VertexCount) do
     begin
+      Bfmt.Sssp(I);
       Ecc := 0;
-      for J := 0 to Pred(VertexCount) do
-        if I <> J then
-          begin
-            w := Paths[I, J].Weight;
-            if (w <> Inf) and (w > Ecc) then
-              Ecc := w;
-          end;
+      with Bfmt do
+        for J := 0 to Pred(VertexCount) do
+          if I <> J then
+            begin
+              w := Nodes[J].Weight;
+              if (w <> Inf) and (w > Ecc) then
+                Ecc := w;
+            end;
       if Ecc < aRadius then
         aRadius := Ecc;
       if Ecc > aDiameter then
