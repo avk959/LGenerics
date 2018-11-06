@@ -140,6 +140,9 @@ type
   { returns True and indices of the central vertices in aCenter,
     if graph is strongly connected, False otherwise }
     function  FindCenter(out aCenter: TIntArray): Boolean;
+  { returns True and indices of the inner central vertices in aCenter,
+    if graph is strongly connected, False otherwise }
+    function  FindInnerCenter(out aCenter: TIntArray): Boolean;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -1392,9 +1395,9 @@ begin
                 Queue[qTail] := p^.Key;
                 Inc(qTail);
                 d := Succ(Dist[J]);
+                Dist[p^.Key] := d;
                 if Ecc < d then
                   Ecc := d;
-                Dist[p^.Key] := d;
               end;
         end;
       if Ecc < aRadius then
@@ -1440,12 +1443,69 @@ begin
                 Queue[qTail] := p^.Key;
                 Inc(qTail);
                 d := Succ(Dist[J]);
+                Dist[p^.Key] := d;
                 if Ecc < d then
                   Ecc := d;
-                Dist[p^.Key] := d;
               end;
         end;
       Eccs[I] := Ecc;
+      if Ecc < Radius then
+        Radius := Ecc;
+    end;
+  aCenter.Length := VertCount;
+  J := 0;
+  for I := 0 to Pred(VertCount) do
+    if Eccs[I] = Radius then
+      begin
+        aCenter[J] := I;
+        Inc(J);
+      end;
+  aCenter.Length := J;
+  Result := True;
+end;
+
+function TGSimpleDiGraph.FindInnerCenter(out aCenter: TIntArray): Boolean;
+var
+  Queue, Dist, Eccs: TIntArray;
+  VertCount, Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then
+    exit(False);
+  I := FindStrongComponents(Dist);
+  if I > 1 then
+    exit(False);
+  VertCount := VertexCount;
+  Radius := VertCount;
+  Queue.Length := VertCount;
+  Dist.Length := VertCount;
+  Eccs := CreateIntArray(0);
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      qHead := 0;
+      qTail := 0;
+      Queue[qTail] := I;
+      Inc(qTail);
+      while qHead < qTail do
+        begin
+          J := Queue[qHead];
+          Inc(qHead);
+          for p in AdjLists[J]^ do
+            if Dist[p^.Key] = NULL_INDEX then
+              begin
+                Queue[qTail] := p^.Key;
+                Inc(qTail);
+                d := Succ(Dist[J]);
+                Dist[p^.Key] := d;
+                if Ecc < d then
+                  Ecc := d;
+                if Dist[p^.Key] > Eccs[p^.Key] then
+                  Eccs[p^.Key] := Dist[p^.Key];
+              end;
+        end;
       if Ecc < Radius then
         Radius := Ecc;
     end;
