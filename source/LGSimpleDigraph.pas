@@ -2025,7 +2025,7 @@ end;
 
 function TGWeightedDiGraph.FindWeightedCenter(out aCenter: TIntArray): Boolean;
 var
-  Paths: TApspMatrix;
+  Bfmt: TWeightHelper.TBfmt;
   Eccs: TWeightArray;
   Ids: TIntArray;
   I, J: SizeInt;
@@ -2037,22 +2037,24 @@ begin
   if I > 1 then
     exit(False);
   Ids := nil;
-  Result := FindAllPairMinPaths(Paths);
+  Result := TWeightHelper.BfmtReweight(Self, Eccs) < 0;
   if not Result then
     exit;
+  Bfmt := TWeightHelper.TBfmt.Create(Self, True);
   Inf := InfWeight;
   Radius := Inf;
-  System.SetLength(Eccs, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
+      Bfmt.Sssp(I);
       Ecc := 0;
-      for J := 0 to Pred(VertexCount) do
-        if I <> J then
-          begin
-            w := Paths[I, J].Weight;
-            if (w <> Inf) and (w > Ecc) then
-              Ecc := w;
-          end;
+      with Bfmt do
+        for J := 0 to Pred(VertexCount) do
+          if I <> J then
+            begin
+              w := Nodes[J].Weight;
+              if (w <> Inf) and (w > Ecc) then
+                Ecc := w;
+            end;
       Eccs[I] := Ecc;
       if Ecc < Radius then
         Radius := Ecc;
