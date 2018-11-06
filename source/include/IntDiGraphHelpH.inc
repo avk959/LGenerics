@@ -201,11 +201,11 @@ type
               var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
   end;
 
-  { TCsMcfHelper: basic implementation of cost scaling mincost flow algorithm;
+  { TCosMcfHelper: basic implementation of cost scaling mincost flow algorithm;
       A.V.Goldberg and M.Kharitonov. "On Implementing Scaling Push-Relabel Algorithms for the
       Minimum-Cost Flow Problem";
     todo: need to implement crutial heurictics }
-  TCsMcfHelper = record
+  TCosMcfHelper = record
   strict private
   type
     PNode  = ^TNode;
