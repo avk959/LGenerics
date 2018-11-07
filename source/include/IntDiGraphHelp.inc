@@ -1310,6 +1310,11 @@ begin
   FQueue.EnsureCapacity(FNodeCount);
 end;
 
+function TGIntWeightDiGraph.TCosMcfHelper.IndexOf(aNode: PNode): SizeInt;
+begin
+  Result := aNode - PNode(FNodes);
+end;
+
 function TGIntWeightDiGraph.TCosMcfHelper.PriceUpdate: Boolean;
 var
   Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
@@ -1325,7 +1330,7 @@ begin
   Active.Size := FNodeCount;
   qHead := 0;
   qTail := 0;
-  Next := FSource - PNode(FNodes);
+  Next := IndexOf(FSource);
   FNodes[Next].Price := 0;
   Parents[Next] := Next;
   TreePrev[Next] := Next;
@@ -1347,7 +1352,7 @@ begin
         begin
           if CurrArc^.ResCap > 0 then
             begin
-              Next := CurrArc^.Target - PNode(FNodes);
+              Next := IndexOf(CurrArc^.Target);
               if FNodes[Curr].Price + CurrArc^.Cost < FNodes[Next].Price then
                 begin
                   FNodes[Next].Price := FNodes[Curr].Price + CurrArc^.Cost;
@@ -1358,7 +1363,7 @@ begin
                       CurrLevel := 0;
                       repeat
                         if Test = Curr then
-                          exit(True);
+                          exit(False);
                         CurrLevel += Level[Test];
                         TreePrev[Test] := NULL_INDEX;
                         Level[Test] := NULL_INDEX;
@@ -1390,7 +1395,7 @@ begin
           Inc(CurrArc);
         end;
     end;
-  Result := Parents[FSink - PNode(FNodes)] = NULL_INDEX;
+  Result := Parents[IndexOf(FSink)] >= 0;
 end;
 
 procedure TGIntWeightDiGraph.TCosMcfHelper.InitSolution(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out
@@ -1409,13 +1414,11 @@ var
   cAbs: TCost;
 begin
   FResultFlow := 0;
-  if PriceUpdate then
+  if not PriceUpdate then
     exit(False);
   InitSolution(FGraph, FSource - PNode(FNodes), FSink - PNode(FNodes), ArcMap);
   if FResultFlow = 0 then
     exit(False);
-  //for I := 0 to Pred(FNodeCount) do
-  //  FNodes[I].Price := 0;
 
   FSource^.Excess += FResultFlow;
   FSink^.Excess -= FResultFlow;
@@ -1459,11 +1462,13 @@ begin
       begin
         FNodes[I].Reset;
         FQueue.Enqueue(@FNodes[I]);
+        FInQueue[I] := True;
       end;
 end;
 
 procedure TGIntWeightDiGraph.TCosMcfHelper.Discharge(aNode: PNode);
 var
+  NextNode: PNode;
   CurrArc, NextArc: PArc;
   MinPrice: TCost;
 begin
@@ -1472,11 +1477,15 @@ begin
       while aNode^.CurrArc < (aNode + 1)^.FirstArc do
         begin
           CurrArc := aNode^.CurrArc;
-          if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price < 0) then
+          NextNode := CurrArc^.Target;
+          if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - NextNode^.Price < 0) then
             begin
               CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResCap));
-              if CurrArc^.Target^.Excess > 0 then
-                FQueue.Enqueue(CurrArc^.Target);
+              if (NextNode^.Excess > 0) and not FInQueue[IndexOf(NextNode)] then
+                begin
+                  FQueue.Enqueue(NextNode);
+                  FInQueue[IndexOf(NextNode)] := True;
+                end;
             end;
           Inc(aNode^.CurrArc);
         end;
@@ -1487,8 +1496,9 @@ begin
           MinPrice := MAX_COST;
           while CurrArc < (aNode + 1)^.FirstArc do
             begin
-              if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price < MinPrice) then
-                MinPrice := aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price;
+              NextNode := CurrArc^.Target;
+              if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - NextNode^.Price < MinPrice) then
+                MinPrice := aNode^.Price + CurrArc^.Cost - NextNode^.Price;
               Inc(CurrArc);
             end;
           aNode^.Price -= MinPrice + FEpsilon;
@@ -1514,7 +1524,10 @@ begin
       FEpsilon := Math.Max(FEpsilon div FAlpha, 1);
       InitPhase;
       while FQueue.TryDequeue(Node) do
-        Discharge(Node{%H-});
+        begin
+          FInQueue[IndexOf(Node)] := False;
+          Discharge(Node{%H-});
+        end;
       if FEpsilon = 1 then
         break;
     end;

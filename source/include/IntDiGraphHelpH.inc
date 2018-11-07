@@ -229,7 +229,6 @@ type
       Excess: TWeight;     // excess at the node
       procedure Reset; inline;
     end;
-
     TQueue = specialize TGLiteQueue<PNode>;
 
   var
@@ -248,6 +247,7 @@ type
     FNodeCount: SizeInt;
     procedure CreateResidualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap);
+    function  IndexOf(aNode: PNode): SizeInt; inline;
     function  PriceUpdate: Boolean;
     procedure InitSolution(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out m: TWeightArcMap);
     function  InitSuccess: Boolean;
