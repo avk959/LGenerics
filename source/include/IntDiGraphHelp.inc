@@ -1543,9 +1543,7 @@ var
   Node: PNode;
 begin
   repeat
-    FEpsilon := FEpsilon div FAlpha;
-    if FEpsilon < 1 then
-      FEpsilon := 1;
+    FEpsilon := cMax(FEpsilon div FAlpha, 1);
     PriceUpdate;
     InitPhase;
     while FQueue.TryDequeue(Node) do

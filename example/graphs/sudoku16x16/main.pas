@@ -27,6 +27,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; {%H-}aState: TGridDrawState);
+    procedure sgCellsPrepareCanvas(sender: TObject; aCol, aRow: Integer; aState: TGridDrawState);
   private
   type
     THelper   = specialize TGOrdinalArrayHelper<SizeInt>;
@@ -36,6 +37,7 @@ type
     Graph: TIntChart;
     Solution,
     Clues: TSolution;
+    SaveFont: TFont;
     function  GenSudokuGraph: TIntChart;
     function  CreateColorArray: TIntArray;
     function  CreateRangeArray: TIntArray;
@@ -65,12 +67,15 @@ begin
   Caption := Application.Title;
   for I := 1 to Pred(sgCells.ColCount) do
     sgCells.Cells[I, 0] := I.ToString;
+  SaveFont := TFont.Create;
+  SaveFont.Assign(sgCells.Font);
   Graph := GenSudokuGraph;
   Randomize;
 end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
 begin
+  SaveFont.Free;
   Graph.Free;
 end;
 
@@ -93,6 +98,14 @@ begin
             LineTo(aRect.Right, aRect.Bottom - 2);
           end;
     end;
+end;
+
+procedure TfrmMain.sgCellsPrepareCanvas(sender: TObject; aCol, aRow: Integer; aState: TGridDrawState);
+begin
+  if sgCells.Objects[aCol, aRow] = nil then
+    sgCells.Canvas.Font.Color := SaveFont.Color
+  else
+    sgCells.Canvas.Font.Color := clBlue;
 end;
 
 function TfrmMain.GenSudokuGraph: TIntChart;
@@ -249,9 +262,15 @@ begin
     for Row := 1 to Pred(sgCells.RowCount) do
       begin
         if Clues[I] > 0 then
-          sgCells.Cells[Col, Row] := Clues[I].ToString
+          begin
+            sgCells.Cells[Col, Row] := Clues[I].ToString;
+            sgCells.Objects[Col, Row] := TObject(Clues[I]);
+          end
         else
-          sgCells.Cells[Col, Row] := '';
+          begin
+            sgCells.Cells[Col, Row] := '';
+            sgCells.Objects[Col, Row] := nil;
+          end;
         Inc(I);
       end;
 end;

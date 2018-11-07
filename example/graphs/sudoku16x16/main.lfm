@@ -10,6 +10,7 @@ object frmMain: TfrmMain
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poScreenCenter
+  LCLVersion = '2.1.0.0'
   object sgCells: TStringGrid
     Left = 4
     Height = 456
@@ -25,6 +26,7 @@ object frmMain: TfrmMain
     RowCount = 17
     TabOrder = 1
     OnDrawCell = sgCellsDrawCell
+    OnPrepareCanvas = sgCellsPrepareCanvas
   end
   object seCluesCount: TSpinEdit
     Left = 664

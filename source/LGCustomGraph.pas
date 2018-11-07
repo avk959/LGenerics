@@ -369,7 +369,8 @@ type
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
-
+    class function cMin(L, R: TCost): TCost; static; inline;
+    class function cMax(L, R: TCost): TCost; static; inline;
     class function MaxBitMatrixSize: SizeInt; static; inline;
     class function TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray; static;
     class function TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
@@ -431,7 +432,6 @@ type
 
   { returns True if aMatch is maximal matching }
     function IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
-
 {**********************************************************************************************************
   traversal utilities
 ***********************************************************************************************************}
@@ -1283,6 +1283,22 @@ begin
     Result := TreePathTo(Parents, Nearest)
   else
     Result := [];
+end;
+
+class function TGCustomGraph.cMin(L, R: TCost): TCost;
+begin
+  if L <= R then
+    Result := L
+  else
+    Result := R;
+end;
+
+class function TGCustomGraph.cMax(L, R: TCost): TCost;
+begin
+  if L >= R then
+    Result := L
+  else
+    Result := R;
 end;
 
 class function TGCustomGraph.MaxBitMatrixSize: SizeInt;
