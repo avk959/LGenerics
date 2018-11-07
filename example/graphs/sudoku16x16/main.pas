@@ -1,5 +1,6 @@
-
-{ 16x16 sudoku generator using graph coloring }
+{
+  16x16 sudoku generator (using graph coloring)
+}
 unit main;
 
 {$mode objfpc}{$H+}
