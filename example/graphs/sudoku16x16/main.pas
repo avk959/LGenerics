@@ -37,7 +37,7 @@ type
     Graph: TIntChart;
     Solution,
     Clues: TSolution;
-    SaveFont: TFont;
+    SaveColor: TColor;
     function  GenSudokuGraph: TIntChart;
     function  CreateColorArray: TIntArray;
     function  CreateRangeArray: TIntArray;
@@ -67,43 +67,40 @@ begin
   Caption := Application.Title;
   for I := 1 to Pred(sgCells.ColCount) do
     sgCells.Cells[I, 0] := I.ToString;
-  SaveFont := TFont.Create;
-  SaveFont.Assign(sgCells.Font);
+  SaveColor := sgCells.Font.Color;
   Graph := GenSudokuGraph;
   Randomize;
 end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
 begin
-  SaveFont.Free;
   Graph.Free;
 end;
 
 procedure TfrmMain.sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
 begin
   if (aCol <> 0) and (aRow <> 0) then
-    begin
-      if aCol and 3 = 0 then
-        with sgCells.Canvas do
+    with sgCells.Canvas do
+      begin
+        if aCol and 3 = 0 then
           begin
             Pen.Color := sgCells.GridLineColor;
             MoveTo(aRect.Right - 2, aRect.Top);
             LineTo(aRect.Right - 2, aRect.Bottom);
           end;
-      if aRow and 3 = 0 then
-        with sgCells.Canvas do
+        if aRow and 3 = 0 then
           begin
             Pen.Color := sgCells.GridLineColor;
             MoveTo(aRect.Left, aRect.Bottom - 2);
             LineTo(aRect.Right, aRect.Bottom - 2);
-          end;
-    end;
+         end;
+      end;
 end;
 
 procedure TfrmMain.sgCellsPrepareCanvas(sender: TObject; aCol, aRow: Integer; aState: TGridDrawState);
 begin
   if sgCells.Objects[aCol, aRow] = nil then
-    sgCells.Canvas.Font.Color := SaveFont.Color
+    sgCells.Canvas.Font.Color := SaveColor
   else
     sgCells.Canvas.Font.Color := clBlue;
 end;
@@ -257,22 +254,27 @@ procedure TfrmMain.ShowClues;
 var
   Col, Row, I: Integer;
 begin
-  I := 0;
-  for Col := 1 to Pred(sgCells.ColCount) do
-    for Row := 1 to Pred(sgCells.RowCount) do
-      begin
-        if Clues[I] > 0 then
-          begin
-            sgCells.Cells[Col, Row] := Clues[I].ToString;
-            sgCells.Objects[Col, Row] := TObject(Clues[I]);
-          end
-        else
-          begin
-            sgCells.Cells[Col, Row] := '';
-            sgCells.Objects[Col, Row] := nil;
-          end;
-        Inc(I);
-      end;
+  sgCells.BeginUpdate;
+  try
+    I := 0;
+    for Col := 1 to Pred(sgCells.ColCount) do
+      for Row := 1 to Pred(sgCells.RowCount) do
+        begin
+          if Clues[I] > 0 then
+            begin
+              sgCells.Cells[Col, Row] := Clues[I].ToString;
+              sgCells.Objects[Col, Row] := TObject(Clues[I]);
+            end
+          else
+            begin
+              sgCells.Cells[Col, Row] := '';
+              sgCells.Objects[Col, Row] := nil;
+            end;
+          Inc(I);
+        end;
+  finally
+    sgCells.EndUpdate;
+  end;
 end;
 
 procedure TfrmMain.ShowSolution;
