@@ -200,11 +200,11 @@ type
               var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
   end;
 
-  { TCosMcfHelper: basic implementation of cost scaling mincost flow algorithm;
+  { TCsMcfHelper: basic implementation of cost scaling mincost flow algorithm;
       A.V.Goldberg and M.Kharitonov. "On Implementing Scaling Push-Relabel Algorithms for the
       Minimum-Cost Flow Problem";
-    todo: need to implement crutial heurictics }
-  TCosMcfHelper = record
+    todo: more crutial heurictics }
+  TCsMcfHelper = record
   strict private
   type
     PNode  = ^TNode;
@@ -219,6 +219,7 @@ type
       constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
       constructor CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
       procedure Push(aFlow: TWeight); inline;
+      procedure PushAll; inline;
     end;
 
     TNode = record
@@ -250,7 +251,7 @@ type
     function  IndexOf(aNode: PNode): SizeInt; inline;
     function  PriceUpdate: Boolean;
     procedure InitSolution(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out m: TWeightArcMap);
-    function  InitSuccess: Boolean;
+    function  InitOk: Boolean;
     procedure InitPhase;
     procedure Discharge(aNode: PNode);
     procedure Done;
