@@ -1468,7 +1468,7 @@ begin
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           J := IndexOf(CurrArc^.Target);
-          if (CurrArc^.ResCap > 0) and (FNodes[I].Price + CurrArc^.Cost - FNodes[J].Price < -FEpsilon) then
+          if (CurrArc^.ResCap > 0) and (FNodes[I].Price + CurrArc^.Cost - FNodes[J].Price <= -FEpsilon) then
             CurrArc^.PushAll;
           Inc(CurrArc);
         end;
@@ -1485,37 +1485,44 @@ end;
 procedure TGIntWeightDiGraph.TCsMcfHelper.Discharge(aNode: PNode);
 var
   NextNode: PNode;
-  CurrArc, NextArc: PArc;
-  MinPrice: TCost;
+  Arc, NextArc: PArc;
+  Price, MinPrice: TCost;
 begin
   while aNode^.Excess > 0 do
     begin
       while aNode^.CurrArc < (aNode + 1)^.FirstArc do
         begin
-          CurrArc := aNode^.CurrArc;
-          NextNode := CurrArc^.Target;
-          if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - NextNode^.Price < 0) then
+          Arc := aNode^.CurrArc;
+          if Arc^.ResCap > 0 then
             begin
-              CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResCap));
-              if (NextNode^.Excess > 0) and not FInQueue[IndexOf(NextNode)] then
+              NextNode := Arc^.Target;
+              if aNode^.Price + Arc^.Cost - NextNode^.Price < 0 then
                 begin
-                  FQueue.Enqueue(NextNode);
-                  FInQueue[IndexOf(NextNode)] := True;
+                  Arc^.Push(wMin(aNode^.Excess, Arc^.ResCap));
+                  if (NextNode^.Excess > 0) and not FInQueue[IndexOf(NextNode)] then
+                    begin
+                      FQueue.Enqueue(NextNode);
+                      FInQueue[IndexOf(NextNode)] := True;
+                    end;
                 end;
             end;
           Inc(aNode^.CurrArc);
         end;
       if aNode^.Excess > 0 then
         begin
-          CurrArc := aNode^.FirstArc;
+          Arc := aNode^.FirstArc;
           aNode^.Reset;
           MinPrice := MAX_COST;
-          while CurrArc < (aNode + 1)^.FirstArc do
+          while Arc < (aNode + 1)^.FirstArc do
             begin
-              NextNode := CurrArc^.Target;
-              if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - NextNode^.Price < MinPrice) then
-                MinPrice := aNode^.Price + CurrArc^.Cost - NextNode^.Price;
-              Inc(CurrArc);
+              if Arc^.ResCap > 0 then
+                begin
+                  NextNode := Arc^.Target;
+                  Price := aNode^.Price + Arc^.Cost - NextNode^.Price;
+                  if Price < MinPrice then
+                    MinPrice := Price;
+                end;
+              Inc(Arc);
             end;
           aNode^.Price -= MinPrice + FEpsilon;
         end;
@@ -1537,7 +1544,9 @@ var
 begin
   while True do
     begin
-      FEpsilon := Math.Max(FEpsilon div FAlpha, 1);
+      FEpsilon := FEpsilon div FAlpha;
+      if FEpsilon < 1 then
+        FEpsilon := 1;
       InitPhase;
       while FQueue.TryDequeue(Node) do
         begin

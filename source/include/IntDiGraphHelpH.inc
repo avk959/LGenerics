@@ -203,7 +203,7 @@ type
   { TCsMcfHelper: basic implementation of cost scaling mincost flow algorithm;
       A.V.Goldberg and M.Kharitonov. "On Implementing Scaling Push-Relabel Algorithms for the
       Minimum-Cost Flow Problem";
-    todo: more crutial heurictics }
+    todo: more crucial heurictics }
   TCsMcfHelper = record
   strict private
   type
@@ -231,6 +231,8 @@ type
       procedure Reset; inline;
     end;
     TQueue = specialize TGLiteQueue<PNode>;
+  const
+    MAX_AUGMENT = 4;
 
   var
     FNodes: array of TNode;

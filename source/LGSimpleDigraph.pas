@@ -26,7 +26,7 @@ unit LGSimpleDigraph;
 interface
 
 uses
-  Classes, SysUtils, math,
+  Classes, SysUtils,
   LGUtils,
   {%H-}LGHelpers,
   LGQueue,
@@ -368,7 +368,7 @@ type
 
     {$I IntDiGraphHelpH.inc}
 
-     function IsCostArrayCorrect(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
+     function IsCostsCorrect(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
   public
 {**********************************************************************************************************
   class management utilities
@@ -2229,7 +2229,7 @@ end;
 
 { TGIntWeightDiGraph }
 
-function TGIntWeightDiGraph.IsCostArrayCorrect(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
+function TGIntWeightDiGraph.IsCostsCorrect(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
 var
   Arc: TCostEdge;
   vCount: SizeUInt;
@@ -2497,7 +2497,7 @@ function TGIntWeightDiGraph.IsProperCosts(constref aCosts: TCostEdgeArray): Bool
 var
   m: TEdgeCostMap;
 begin
-  Result := IsCostArrayCorrect(aCosts, m);
+  Result := IsCostsCorrect(aCosts, m);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
@@ -2517,7 +2517,7 @@ begin
     exit(False);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
-  if not IsCostArrayCorrect(aCosts, CostMap) then
+  if not IsCostsCorrect(aCosts, CostMap) then
     exit(False);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost);
   Result := aReqFlow <> 0;
@@ -2541,7 +2541,7 @@ begin
     exit(False);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
-  if not IsCostArrayCorrect(aCosts, CostMap) then
+  if not IsCostsCorrect(aCosts, CostMap) then
     exit(False);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost, aArcFlows);
   Result := aReqFlow <> 0;
@@ -2564,7 +2564,7 @@ begin
     exit(False);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
-  if not IsCostArrayCorrect(aCosts, CostMap) then
+  if not IsCostsCorrect(aCosts, CostMap) then
     exit(False);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost);
   Result := aReqFlow <> 0;
@@ -2588,7 +2588,7 @@ begin
     exit(False);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(False);
-  if not IsCostArrayCorrect(aCosts, CostMap) then
+  if not IsCostsCorrect(aCosts, CostMap) then
     exit(False);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost, aArcFlows);
   Result := aReqFlow <> 0;
