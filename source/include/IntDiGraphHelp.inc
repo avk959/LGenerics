@@ -1511,7 +1511,6 @@ begin
       if aNode^.Excess > 0 then
         begin
           Arc := aNode^.FirstArc;
-          aNode^.Reset;
           MinPrice := MAX_COST;
           while Arc < (aNode + 1)^.FirstArc do
             begin
@@ -1525,6 +1524,7 @@ begin
               Inc(Arc);
             end;
           aNode^.Price -= MinPrice + FEpsilon;
+          aNode^.Reset;
         end;
     end;
 end;

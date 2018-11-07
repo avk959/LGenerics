@@ -231,8 +231,6 @@ type
       procedure Reset; inline;
     end;
     TQueue = specialize TGLiteQueue<PNode>;
-  const
-    MAX_AUGMENT = 4;
 
   var
     FNodes: array of TNode;
