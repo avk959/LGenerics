@@ -434,7 +434,7 @@ type
     procedure ReadVertex(aStream: TStream; out aValue: Integer);
   public
     constructor Create;
-    procedure LoadFromDIMACSAsciiFile(const aFileName: string);
+    procedure LoadDIMACSAscii(const aFileName: string);
     function  SeparateGraph(aVertex: Integer): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
     function  SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
@@ -3832,7 +3832,7 @@ begin
   OnStreamWriteVertex := @WriteVertex;
 end;
 
-procedure TIntChart.LoadFromDIMACSAsciiFile(const aFileName: string);
+procedure TIntChart.LoadDIMACSAscii(const aFileName: string);
 type
   TReaderRef = specialize TGAutoRef<TTextFileReader>;
 var
