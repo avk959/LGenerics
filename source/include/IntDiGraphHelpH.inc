@@ -254,7 +254,7 @@ type
     function  InitOk: Boolean;
     procedure InitPhase;
     procedure Discharge(aNode: PNode);
-    procedure Done;
+    procedure RemoveFactor;
     procedure Execute;
     function  GetTotalCost: TCost;
     function  CreateEdges(out aTotalCost: TCost): TEdgeArray;

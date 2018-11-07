@@ -1266,9 +1266,9 @@ var
   c: TCost;
   p: PAdjItem;
 begin
-  FAlpha := 8;
-  FNodeCount := aGraph.VertexCount;
   FGraph := aGraph;
+  FNodeCount := aGraph.VertexCount;
+  FAlpha := 8;
   Factor := FAlpha * FNodeCount;
   FRequestFlow := aReqFlow;
   System.SetLength(CurrArcIdx, FNodeCount);
@@ -1430,7 +1430,7 @@ begin
   FResultFlow := 0;
   if not PriceUpdate then
     exit(False);
-  InitSolution(FGraph, FSource - PNode(FNodes), FSink - PNode(FNodes), ArcMap);
+  InitSolution(FGraph, IndexOf(FSource), IndexOf(FSink), ArcMap);
   if FResultFlow = 0 then
     exit(False);
 
@@ -1446,11 +1446,12 @@ begin
           cAbs := Abs(FArcs[I].Cost);
           if cAbs > FEpsilon then
             FEpsilon := cAbs;
-          Src := FArcs[I].Reverse^.Target - PNode(FNodes);
-          Dst := FArcs[I].Target - PNode(FNodes);
+          Src := IndexOf(FArcs[I].Reverse^.Target);
+          Dst := IndexOf(FArcs[I].Target);
           FArcs[I].Push(ArcMap[TIntEdge.Create(Src, Dst)]);
         end;
     end;
+
   if FEpsilon < 1 then
     FEpsilon := 1;
   Result := True;
@@ -1458,19 +1459,19 @@ end;
 
 procedure TGIntWeightDiGraph.TCsMcfHelper.InitPhase;
 var
-  CurrArc: PArc;
+  Arc: PArc;
   I, J: SizeInt;
 begin
   PriceUpdate;
   for I := 0 to Pred(FNodeCount) do
     begin
-      CurrArc := FNodes[I].FirstArc;
-      while CurrArc < FNodes[Succ(I)].FirstArc do
+      Arc := FNodes[I].FirstArc;
+      while Arc < FNodes[Succ(I)].FirstArc do
         begin
-          J := IndexOf(CurrArc^.Target);
-          if (CurrArc^.ResCap > 0) and (FNodes[I].Price + CurrArc^.Cost - FNodes[J].Price <= -FEpsilon) then
-            CurrArc^.PushAll;
-          Inc(CurrArc);
+          J := IndexOf(Arc^.Target);
+          if (Arc^.ResCap > 0) and (FNodes[I].Price + Arc^.Cost - FNodes[J].Price <= -FEpsilon) then
+            Arc^.PushAll;
+          Inc(Arc);
         end;
     end;
   for I := 0 to Pred(FNodeCount) do
@@ -1485,7 +1486,7 @@ end;
 procedure TGIntWeightDiGraph.TCsMcfHelper.Discharge(aNode: PNode);
 var
   NextNode: PNode;
-  Arc, NextArc: PArc;
+  Arc: PArc;
   Price, MinPrice: TCost;
 begin
   while aNode^.Excess > 0 do
@@ -1529,7 +1530,7 @@ begin
     end;
 end;
 
-procedure TGIntWeightDiGraph.TCsMcfHelper.Done;
+procedure TGIntWeightDiGraph.TCsMcfHelper.RemoveFactor;
 var
   I: SizeInt;
 begin
@@ -1542,21 +1543,18 @@ procedure TGIntWeightDiGraph.TCsMcfHelper.Execute;
 var
   Node: PNode;
 begin
-  while True do
-    begin
-      FEpsilon := FEpsilon div FAlpha;
-      if FEpsilon < 1 then
-        FEpsilon := 1;
-      InitPhase;
-      while FQueue.TryDequeue(Node) do
-        begin
-          FInQueue[IndexOf(Node)] := False;
-          Discharge(Node{%H-});
-        end;
-      if FEpsilon = 1 then
-        break;
-    end;
-  Done;
+  repeat
+    FEpsilon := FEpsilon div FAlpha;
+    if FEpsilon < 1 then
+      FEpsilon := 1;
+    InitPhase;
+    while FQueue.TryDequeue(Node) do
+      begin
+        FInQueue[IndexOf(Node)] := False;
+        Discharge(Node{%H-});
+      end;
+  until FEpsilon = 1;
+  RemoveFactor;
 end;
 
 function TGIntWeightDiGraph.TCsMcfHelper.GetTotalCost: TCost;
