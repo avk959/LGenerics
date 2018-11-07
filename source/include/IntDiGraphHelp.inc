@@ -1462,7 +1462,6 @@ var
   Arc: PArc;
   I, J: SizeInt;
 begin
-  PriceUpdate;
   for I := 0 to Pred(FNodeCount) do
     begin
       Arc := FNodes[I].FirstArc;
@@ -1547,6 +1546,7 @@ begin
     FEpsilon := FEpsilon div FAlpha;
     if FEpsilon < 1 then
       FEpsilon := 1;
+    PriceUpdate;
     InitPhase;
     while FQueue.TryDequeue(Node) do
       begin
