@@ -2509,7 +2509,7 @@ end;
 function TGIntWeightDiGraph.FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
 var
-  Helper: TBgMcfHelper;
+  Helper: TSspMcfHelper;
   CostMap: TEdgeCostMap;
 begin
   aTotalCost := 0;
@@ -2532,7 +2532,7 @@ end;
 function TGIntWeightDiGraph.FindMinCostFlowI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
 var
-  Helper: TBgMcfHelper;
+  Helper: TSspMcfHelper;
   CostMap: TEdgeCostMap;
 begin
   aTotalCost := 0;

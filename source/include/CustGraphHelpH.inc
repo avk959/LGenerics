@@ -394,8 +394,8 @@ type
       function  TryAugment(var aDelta: TWeight): SizeInt;
       function  TryAugmentMax(var aDelta: TWeight): SizeInt;
       procedure CorrectPhi(aDelta: TWeight); inline;
-      procedure FindMatching;
-      procedure FindMaxMatching;
+      procedure ExecuteMin;
+      procedure ExecuteMax;
       function  CreateEdges: TEdgeArray;
     public
       function  GetMinWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;

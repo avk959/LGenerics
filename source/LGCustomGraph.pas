@@ -3267,7 +3267,7 @@ begin
     FPhi[I] += aDelta;
 end;
 
-procedure TGWeightHelper.TKuhnMatchB.FindMatching;
+procedure TGWeightHelper.TKuhnMatchB.ExecuteMin;
 var
   Count: SizeInt;
   Delta, Inf: TWeight;
@@ -3286,7 +3286,7 @@ begin
   until False;
 end;
 
-procedure TGWeightHelper.TKuhnMatchB.FindMaxMatching;
+procedure TGWeightHelper.TKuhnMatchB.ExecuteMax;
 var
   Count: SizeInt;
   Delta, Inf: TWeight;
@@ -3325,14 +3325,14 @@ end;
 function TGWeightHelper.TKuhnMatchB.GetMinWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
 begin
   Init(aGraph, w, g);
-  FindMatching;
+  ExecuteMin;
   Result := CreateEdges;
 end;
 
 function TGWeightHelper.TKuhnMatchB.GetMaxWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
 begin
   InitMax(aGraph, w, g);
-  FindMaxMatching;
+  ExecuteMax;
   Result := CreateEdges;
 end;
 

@@ -51,7 +51,7 @@ type
       LevelPrev: PNode;    // previous node in level list
       Excess: TWeight;     // excess at the node
       Distance: SizeInt;   // distance from the sink
-      procedure ResetCurrent; inline;
+      procedure Reset; inline;
       property  OrderNext: PNode read LevelNext write LevelNext;  // for dfs
       property  Parent: PNode read LevelPrev write LevelPrev;     // for dfs
       property  Color: TVertexColor read GetColor write SetColor; // for dfs
@@ -88,7 +88,7 @@ type
     procedure RemoveGap(aLayer: SizeInt);
     function  Push(aNode: PNode): Boolean;
     procedure Relabel(aNode: PNode);
-    procedure HiLevelPushRelabel;
+    procedure Execute;
     function  CreateEdges: TEdgeArray;
     function  RecoverFlow: TEdgeArray;
   public
@@ -121,7 +121,7 @@ type
       FirstArc,            // pointer to first incident arc
       CurrentArc: PArc;    // pointer to current incident arc
       Distance: SizeInt;   // distance from the source
-      procedure ResetCurrent; inline;
+      procedure Reset; inline;
     end;
 
   var
@@ -137,7 +137,7 @@ type
     procedure ClearLabels; inline;
     function  Relabel: Boolean;
     function  Dfs(aRoot: PNode; aFlow: TWeight): TWeight;
-    function  DinitzMaxFlow: TWeight;
+    function  Execute: TWeight;
     function  CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
   public
     function  GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
@@ -145,8 +145,8 @@ type
     function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
   end;
 
-  { TBgMcfHelper: simpliest mincost flow algorithm: shortest augmenting paths(Busacker and Gowen?) }
-  TBgMcfHelper = record
+  { TSspMcfHelper: successive shortest path algorithm(Busacker and Gowen?) }
+  TSspMcfHelper = record
   strict private
   type
     PNode  = ^TNode;
@@ -160,7 +160,6 @@ type
       IsForward: Boolean;
       constructor Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
       constructor CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
-      function  IsResidual: Boolean; inline;
       procedure Push(aFlow: TWeight); inline;
     end;
 
@@ -191,7 +190,7 @@ type
     function  FindNegCycle(out aMinCap: TWeight): Boolean;
     function  FindShortestPath(out aMinCap: TWeight): Boolean;
     procedure FlowIn(aFlow: TWeight);
-    function  MinCostFlow: TWeight;
+    function  Execute: TWeight;
     function  GetTotalCost: TCost;
     function  CreateEdges(out aTotalCost: TCost): TEdgeArray;
   public
@@ -228,7 +227,7 @@ type
       CurrArc: PArc;       // pointer to current incident arc
       Price: TCost;
       Excess: TWeight;     // excess at the node
-      procedure ResetCurrent; inline;
+      procedure Reset; inline;
     end;
 
     TQueue = specialize TGLiteQueue<PNode>;
@@ -249,13 +248,13 @@ type
     FNodeCount: SizeInt;
     procedure CreateResidualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap);
-    function  NegCycleExists: Boolean;
+    function  PriceUpdate: Boolean;
     procedure InitSolution(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out m: TWeightArcMap);
     function  InitSuccess: Boolean;
     procedure InitPhase;
     procedure Discharge(aNode: PNode);
     procedure Done;
-    procedure OptimizeFlow;
+    procedure Execute;
     function  GetTotalCost: TCost;
     function  CreateEdges(out aTotalCost: TCost): TEdgeArray;
   public
@@ -264,4 +263,6 @@ type
     function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
   end;
+
+
 

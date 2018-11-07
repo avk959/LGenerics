@@ -65,7 +65,7 @@ begin
   Distance := SizeInt(aValue);
 end;
 
-procedure TGIntWeightDiGraph.THPrHelper.TNode.ResetCurrent;
+procedure TGIntWeightDiGraph.THPrHelper.TNode.Reset;
 begin
   CurrentArc := FirstArc;
 end;
@@ -291,7 +291,7 @@ begin
           if (NextNode^.Distance = FNodeCount) and CurrArc^.Reverse^.IsResidual then
             begin
               NextNode^.Distance := Dist;
-              NextNode^.ResetCurrent;
+              NextNode^.Reset;
               if Dist > FMaxLevel then
                 FMaxLevel := Dist;
               if NextNode^.Excess > 0 then
@@ -389,7 +389,7 @@ begin
     end;
 end;
 
-procedure TGIntWeightDiGraph.THPrHelper.HiLevelPushRelabel;
+procedure TGIntWeightDiGraph.THPrHelper.Execute;
 var
   CurrNode: PNode;
   GlobalRelableTreshold, OldMaxActive: SizeInt;
@@ -459,7 +459,7 @@ begin
     begin
       CurrNode^.Color := vcWhite;
       CurrNode^.Parent := nil;
-      CurrNode^.ResetCurrent;
+      CurrNode^.Reset;
       CurrArc := CurrNode^.FirstArc;
       while CurrArc < (CurrNode + 1)^.FirstArc do
         begin
@@ -594,7 +594,7 @@ end;
 function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
 begin
   CreateResudualGraph(aGraph, aSource, aSink);
-  HiLevelPushRelabel;
+  Execute;
   Result := FSink^.Excess;
 end;
 
@@ -602,7 +602,7 @@ function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aS
   out a: TEdgeArray): TWeight;
 begin
   CreateResudualGraphCap(aGraph, aSource, aSink, MAX_WEIGHT);
-  HiLevelPushRelabel;
+  Execute;
   FLevels := nil;
   Result := FSink^.Excess;
   a := RecoverFlow;
@@ -614,7 +614,7 @@ var
   I, J: SizeInt;
 begin
   CreateResudualGraph(aGraph, aSource, aSink);
-  HiLevelPushRelabel;
+  Execute;
   FLevels := nil;
   Result := FSink^.Excess;
   System.SetLength(s, ARRAY_INITIAL_SIZE);
@@ -636,7 +636,7 @@ var
   e: TWeightEdge;
 begin
   CreateResudualGraphCap(aGraph, aSource, aSink, aReqFlow);
-  HiLevelPushRelabel;
+  Execute;
   FLevels := nil;
   Result := FSink^.Excess;
   for e in RecoverFlow do
@@ -669,7 +669,7 @@ end;
 
 { TGIntWeightDiGraph.TDinitzHelper.TNode }
 
-procedure TGIntWeightDiGraph.TDinitzHelper.TNode.ResetCurrent;
+procedure TGIntWeightDiGraph.TDinitzHelper.TNode.Reset;
 begin
   CurrentArc := FirstArc;
 end;
@@ -734,7 +734,7 @@ begin
   for I := 0 to Pred(FNodeCount) do
     FNodes[I].Distance := NULL_INDEX;
   FSource^.Distance := 0;
-  FSource^.ResetCurrent;
+  FSource^.Reset;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.Relabel: Boolean;
@@ -759,7 +759,7 @@ begin
           Next := CurrArc^.Target;
           if (Next^.Distance = NULL_INDEX) and (CurrArc^.ResCap > FMaxCap) then
             begin
-              Next^.ResetCurrent;
+              Next^.Reset;
               Next^.Distance := Dist;
               FQueue[qTail] := Next;
               Inc(qTail);
@@ -795,7 +795,7 @@ begin
   Result := 0;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.DinitzMaxFlow: TWeight;
+function TGIntWeightDiGraph.TDinitzHelper.Execute: TWeight;
 var
   Flow: TWeight;
 begin
@@ -838,14 +838,14 @@ function TGIntWeightDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph;
   aSink: SizeInt): TWeight;
 begin
   CreateResudualGraph(aGraph, aSource, aSink);
-  Result := DinitzMaxFlow;
+  Result := Execute;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
   CreateResudualGraph(aGraph, aSource, aSink);
-  Result := DinitzMaxFlow;
+  Result := Execute;
   a := CreateEdges(aGraph);
 end;
 
@@ -855,7 +855,7 @@ var
   I, J: SizeInt;
 begin
   CreateResudualGraph(aGraph, aSource, aSink);
-  Result := DinitzMaxFlow;
+  Result := Execute;
   System.SetLength(s, ARRAY_INITIAL_SIZE);
   J := 0;
   for I := 0 to System.High(FNodes) do
@@ -869,9 +869,9 @@ begin
   System.SetLength(s, J);
 end;
 
-{ TGIntWeightDiGraph.TBgMcfHelper.TArc }
+{ TGIntWeightDiGraph.TSspMcfHelper.TArc }
 
-constructor TGIntWeightDiGraph.TBgMcfHelper.TArc.Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
+constructor TGIntWeightDiGraph.TSspMcfHelper.TArc.Create(aTarget: PNode; aReverse: PArc; aCap: TWeight; aCost: TCost);
 begin
   Target := aTarget;
   Reverse := aReverse;
@@ -880,7 +880,7 @@ begin
   IsForward := True;
 end;
 
-constructor TGIntWeightDiGraph.TBgMcfHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
+constructor TGIntWeightDiGraph.TSspMcfHelper.TArc.CreateReverse(aTarget: PNode; aReverse: PArc; aCost: TCost);
 begin
   Target := aTarget;
   Reverse := aReverse;
@@ -889,20 +889,15 @@ begin
   IsForward := False;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.TArc.IsResidual: Boolean;
-begin
-  Result := ResCap > 0;
-end;
-
-procedure TGIntWeightDiGraph.TBgMcfHelper.TArc.Push(aFlow: TWeight);
+procedure TGIntWeightDiGraph.TSspMcfHelper.TArc.Push(aFlow: TWeight);
 begin
   ResCap -= aFlow;
   Reverse^.ResCap += aFlow;
 end;
 
-{ TGIntWeightDiGraph.TBgMcfHelper }
+{ TGIntWeightDiGraph.TSspMcfHelper }
 
-procedure TGIntWeightDiGraph.TBgMcfHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+procedure TGIntWeightDiGraph.TSspMcfHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; var aCosts: TEdgeCostMap);
 var
   CurrArcIdx: TIntArray;
@@ -928,7 +923,6 @@ begin
 
   for I := 0 to Pred(FNodeCount) do
     FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
-
   for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
@@ -957,7 +951,7 @@ begin
   FQueue := THeap.Create(FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.TBgMcfHelper.SearchInit;
+procedure TGIntWeightDiGraph.TSspMcfHelper.SearchInit;
 var
   I: SizeInt;
 begin
@@ -968,7 +962,7 @@ begin
   FSink^.Parent := nil;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.FindNegCycle(out aMinCap: TWeight): Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.FindNegCycle(out aMinCap: TWeight): Boolean;
 var
   Queue, TreePrev, TreeNext, Level: TIntArray;
   Active: TBitVector;
@@ -1002,7 +996,7 @@ begin
       CurrArc := FNodes[Curr].FirstArc;
       while CurrArc < FNodes[Succ(Curr)].FirstArc do
         begin
-          if CurrArc^.IsResidual then
+          if CurrArc^.ResCap > 0 then
             begin
               Next := CurrArc^.Target - PNode(FNodes);
               if FNodes[Curr].Price + CurrArc^.Cost < FNodes[Next].Price then
@@ -1057,7 +1051,7 @@ begin
     aMinCap := 0;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.FindShortestPath(out aMinCap: TWeight): Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.FindShortestPath(out aMinCap: TWeight): Boolean;
 var
   CurrNode, NextNode: PNode;
   CurrArc: PArc;
@@ -1081,7 +1075,7 @@ begin
     CurrArc := CurrNode^.FirstArc;
     while CurrArc < (CurrNode + 1)^.FirstArc do
       begin
-        if CurrArc^.IsResidual then
+        if CurrArc^.ResCap > 0 then
           begin
             NextNode := CurrArc^.Target;
             if not FReached[NextNode - PNode(FNodes)] then
@@ -1119,7 +1113,7 @@ begin
     end;
 end;
 
-procedure TGIntWeightDiGraph.TBgMcfHelper.FlowIn(aFlow: TWeight);
+procedure TGIntWeightDiGraph.TSspMcfHelper.FlowIn(aFlow: TWeight);
 var
   ParentNode: PNode;
   CurrArc: PArc;
@@ -1134,7 +1128,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.MinCostFlow: TWeight;
+function TGIntWeightDiGraph.TSspMcfHelper.Execute: TWeight;
 var
   Flow: TWeight;
 begin
@@ -1151,7 +1145,7 @@ begin
   until Flow = 0;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.GetTotalCost: TCost;
+function TGIntWeightDiGraph.TSspMcfHelper.GetTotalCost: TCost;
 var
   I: SizeInt;
   CurrArc: PArc;
@@ -1169,7 +1163,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.CreateEdges(out aTotalCost: TCost): TEdgeArray;
+function TGIntWeightDiGraph.TSspMcfHelper.CreateEdges(out aTotalCost: TCost): TEdgeArray;
 var
   I, J, Dst: SizeInt;
   CurrArc: PArc;
@@ -1196,24 +1190,24 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+function TGIntWeightDiGraph.TSspMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
   if aReqFlow <= 0 then
     exit(0);
   CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
-  Result := MinCostFlow;
+  Result := Execute;
   if Result > 0 then
     aTotalCost := GetTotalCost;
 end;
 
-function TGIntWeightDiGraph.TBgMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+function TGIntWeightDiGraph.TSspMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
   if aReqFlow <= 0 then
     exit(0);
   CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
-  Result := MinCostFlow;
+  Result := Execute;
   if Result > 0 then
     a := CreateEdges(aTotalCost);
 end;
@@ -1249,7 +1243,7 @@ end;
 
 { TGIntWeightDiGraph.TCosMcfHelper.TNode }
 
-procedure TGIntWeightDiGraph.TCosMcfHelper.TNode.ResetCurrent;
+procedure TGIntWeightDiGraph.TCosMcfHelper.TNode.Reset;
 begin
   CurrArc := FirstArc;
 end;
@@ -1316,7 +1310,7 @@ begin
   FQueue.EnsureCapacity(FNodeCount);
 end;
 
-function TGIntWeightDiGraph.TCosMcfHelper.NegCycleExists: Boolean;
+function TGIntWeightDiGraph.TCosMcfHelper.PriceUpdate: Boolean;
 var
   Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
   Active: TBitVector;
@@ -1415,13 +1409,13 @@ var
   cAbs: TCost;
 begin
   FResultFlow := 0;
-  if NegCycleExists then
+  if PriceUpdate then
     exit(False);
   InitSolution(FGraph, FSource - PNode(FNodes), FSink - PNode(FNodes), ArcMap);
   if FResultFlow = 0 then
     exit(False);
-  for I := 0 to Pred(FNodeCount) do
-    FNodes[I].Price := 0;
+  //for I := 0 to Pred(FNodeCount) do
+  //  FNodes[I].Price := 0;
 
   FSource^.Excess += FResultFlow;
   FSink^.Excess -= FResultFlow;
@@ -1463,7 +1457,7 @@ begin
   for I := 0 to Pred(FNodeCount) do
     if FNodes[I].Excess > 0 then
       begin
-        FNodes[I].ResetCurrent;
+        FNodes[I].Reset;
         FQueue.Enqueue(@FNodes[I]);
       end;
 end;
@@ -1478,7 +1472,7 @@ begin
       while aNode^.CurrArc < (aNode + 1)^.FirstArc do
         begin
           CurrArc := aNode^.CurrArc;
-          if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price < 0 ) then
+          if (CurrArc^.ResCap > 0) and (aNode^.Price + CurrArc^.Cost - CurrArc^.Target^.Price < 0) then
             begin
               CurrArc^.Push(wMin(aNode^.Excess, CurrArc^.ResCap));
               if CurrArc^.Target^.Excess > 0 then
@@ -1489,7 +1483,7 @@ begin
       if aNode^.Excess > 0 then
         begin
           CurrArc := aNode^.FirstArc;
-          aNode^.ResetCurrent;
+          aNode^.Reset;
           MinPrice := MAX_COST;
           while CurrArc < (aNode + 1)^.FirstArc do
             begin
@@ -1511,7 +1505,7 @@ begin
       FArcs[I].Cost := FArcs[I].Cost div Factor;
 end;
 
-procedure TGIntWeightDiGraph.TCosMcfHelper.OptimizeFlow;
+procedure TGIntWeightDiGraph.TCosMcfHelper.Execute;
 var
   Node: PNode;
 begin
@@ -1580,7 +1574,7 @@ begin
   CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   if not InitSuccess then
     exit(0);
-  OptimizeFlow;
+  Execute;
   Result := FResultFlow;
   aTotalCost := GetTotalCost;
 end;
@@ -1593,7 +1587,7 @@ begin
   CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   if not InitSuccess then
     exit(0);
-  OptimizeFlow;
+  Execute;
   Result := FResultFlow;
   a := CreateEdges(aTotalCost);
 end;
