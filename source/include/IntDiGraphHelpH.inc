@@ -242,7 +242,7 @@ type
     FSink: PNode;
     FRequestFlow,
     FResultFlow: TWeight;
-    Factor,
+    FScaleFactor,
     FEpsilon,
     FAlpha: TCost;
     FNodeCount: SizeInt;
@@ -254,7 +254,7 @@ type
     function  InitOk: Boolean;
     procedure InitPhase;
     procedure Discharge(aNode: PNode);
-    procedure RemoveFactor;
+    procedure RemoveScaleFactor;
     procedure Execute;
     function  GetTotalCost: TCost;
     function  CreateEdges(out aTotalCost: TCost): TEdgeArray;

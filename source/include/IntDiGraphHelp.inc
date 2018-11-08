@@ -1274,7 +1274,7 @@ begin
   FGraph := aGraph;
   FNodeCount := aGraph.VertexCount;
   FAlpha := 8;
-  Factor := FAlpha * FNodeCount;
+  FScaleFactor := FAlpha * FNodeCount;
   FRequestFlow := aReqFlow;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
@@ -1447,7 +1447,7 @@ begin
 
   for I := 0 to Pred(System.High(FArcs)) do
     begin
-      FArcs[I].Cost *= Factor;
+      FArcs[I].Cost *= FScaleFactor;
       if FArcs[I].IsForward then
         begin
           cAbs := Abs(FArcs[I].Cost);
@@ -1538,13 +1538,13 @@ begin
     end;
 end;
 
-procedure TGIntWeightDiGraph.TCsMcfHelper.RemoveFactor;
+procedure TGIntWeightDiGraph.TCsMcfHelper.RemoveScaleFactor;
 var
   I: SizeInt;
 begin
   for I := 0 to Pred(System.High(FArcs)) do
     if FArcs[I].IsForward then
-      FArcs[I].Cost := FArcs[I].Cost div Factor;
+      FArcs[I].Cost := FArcs[I].Cost div FScaleFactor;
 end;
 
 procedure TGIntWeightDiGraph.TCsMcfHelper.Execute;
@@ -1564,7 +1564,7 @@ begin
         Discharge(Node{%H-});
       end;
   until FEpsilon = 1;
-  RemoveFactor;
+  RemoveScaleFactor;
 end;
 
 function TGIntWeightDiGraph.TCsMcfHelper.GetTotalCost: TCost;
