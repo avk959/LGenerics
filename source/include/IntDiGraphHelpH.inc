@@ -83,7 +83,7 @@ type
     FMinActiveLevel: SizeInt; // minimal level with excessed node
     procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
     procedure CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight);
-    procedure ClearLabels; inline;
+    procedure ClearLabels;
     procedure GlobalRelabel;
     procedure RemoveGap(aLayer: SizeInt);
     function  Push(aNode: PNode): Boolean;
@@ -99,7 +99,7 @@ type
               out m: TWeightArcMap): TWeight;
   end;
 
-  { TDinitzHelper: implementation of scaling Dinitz's maxflow algorithm }
+  { TDinitzHelper: implementation of capacity scaling Dinitz's maxflow algorithm }
   TDinitzHelper = record
   strict private
   type
@@ -135,8 +135,8 @@ type
     FNodeCount: SizeInt;
     procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
     procedure ClearLabels;
-    function  Relabel: Boolean;
-    function  AugmentFlow(aRoot: PNode; aFlow: TWeight): TWeight;
+    function  BuildLevelGraph: Boolean;
+    function  FindBlockingFlow(aRoot: PNode; aFlow: TWeight): TWeight;
     function  Execute: TWeight;
     function  CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
   public

@@ -392,11 +392,11 @@ end;
 procedure TGIntWeightDiGraph.THPrHelper.Execute;
 var
   CurrNode: PNode;
-  GlobalRelableTreshold, OldMaxActive: SizeInt;
-  RelableTimes: SizeInt = 0;
+  TimeToGlobalRelable, OldMaxActive: SizeInt;
+  RelableCount: SizeInt = 0;
 begin
   GlobalRelabel;
-  GlobalRelableTreshold := FNodeCount;
+  TimeToGlobalRelable := FNodeCount;
   while FMaxActiveLevel >= FMinActiveLevel do
     begin
       CurrNode := FLevels[FMaxActiveLevel].TopActive;
@@ -407,13 +407,13 @@ begin
           if not Push(CurrNode) then
             begin
               Relabel(CurrNode);
-              Inc(RelableTimes);
+              Inc(RelableCount);
               if FLevels[OldMaxActive].IsEmpty then
                 RemoveGap(OldMaxActive);
-              if RelableTimes = GlobalRelableTreshold then
+              if RelableCount = TimeToGlobalRelable then
                 begin
                   GlobalRelabel;
-                  RelableTimes := 0;
+                  RelableCount := 0;
                 end;
             end
           else
@@ -737,7 +737,7 @@ begin
   FSource^.Reset;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.Relabel: Boolean;
+function TGIntWeightDiGraph.TDinitzHelper.BuildLevelGraph: Boolean;
 var
   Curr, Next: PNode;
   CurrArc: PArc;
@@ -770,11 +770,11 @@ begin
   Result := FSink^.Distance <> NULL_INDEX;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.AugmentFlow(aRoot: PNode; aFlow: TWeight): TWeight;
+function TGIntWeightDiGraph.TDinitzHelper.FindBlockingFlow(aRoot: PNode; aFlow: TWeight): TWeight;
 var
   Arc: PArc;
 begin
-  //todo: non-recursive AugmentFlow ???
+  //todo: non-recursive FindBlockingFlow ???
   if aFlow > 0 then
     if aRoot <> FSink then
       while aRoot^.CurrentArc < (aRoot + 1)^.FirstArc do
@@ -782,7 +782,7 @@ begin
           Arc := aRoot^.CurrentArc;
           if Arc^.Target^.Distance = Succ(aRoot^.Distance) then
             begin
-              Result := AugmentFlow(Arc^.Target, wMin(aFlow, Arc^.ResCap));
+              Result := FindBlockingFlow(Arc^.Target, wMin(aFlow, Arc^.ResCap));
               if Result > 0 then
                 begin
                   Arc^.Push(Result);
@@ -805,9 +805,9 @@ begin
   while FEpsilon > 0 do
     begin
       FEpsilon := FEpsilon div FScaleFactor;
-      while Relabel do
+      while BuildLevelGraph do
         repeat
-          Flow := AugmentFlow(FSource, Inf);
+          Flow := FindBlockingFlow(FSource, Inf);
           Result += Flow;
         until Flow = 0;
     end;
