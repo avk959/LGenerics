@@ -964,7 +964,7 @@ begin
   FSink^.Parent := nil;
 end;
 
-function TGIntWeightDiGraph.TSspMcfHelper.ReweightGraph(out aMinCap: TWeight): Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.ReweightGraph(out aMinPathCap: TWeight): Boolean;
 var
   Queue, TreePrev, TreeNext, Level: TIntArray;
   Active: TBitVector;
@@ -1050,12 +1050,12 @@ begin
   FSource^.Parent := nil;
   Result := FSink^.Parent <> nil;
   if Result then
-    aMinCap := FSink^.PathMinCap
+    aMinPathCap := FSink^.PathMinCap
   else
-    aMinCap := 0;
+    aMinPathCap := 0;
 end;
 
-function TGIntWeightDiGraph.TSspMcfHelper.FindAugmentPath(out aMinCap: TWeight): Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.FindAugmentPath(out aMinPathCap: TWeight): Boolean;
 var
   Node, NextNode: PNode;
   Arc: PArc;
@@ -1068,7 +1068,6 @@ begin
   FQueue.MakeEmpty;
   FSource^.PathArc := nil;
   FSource^.PathMinCap := MAX_WEIGHT;
-  aMinCap := 0;
   Item := TCostItem.Create(FSource - PNode(FNodes), 0);
   repeat
     Node := @FNodes[Item.Index];
@@ -1112,13 +1111,15 @@ begin
   Result := FReached[FSink - PNode(FNodes)];
   if Result then
     begin
+      aMinPathCap := FSink^.PathMinCap;
       for I in FReached do
         FNodes[I].Price -= Item.Cost;
-      aMinCap := FSink^.PathMinCap;
-    end;
+    end
+  else
+    aMinPathCap := 0;
 end;
 
-procedure TGIntWeightDiGraph.TSspMcfHelper.FlowIn(aFlow: TWeight);
+procedure TGIntWeightDiGraph.TSspMcfHelper.PushFlow(aFlow: TWeight);
 var
   ParentNode: PNode;
   CurrArc: PArc;
@@ -1142,7 +1143,7 @@ begin
     exit(0);
   Flow := wMin(Flow, FRequestFlow);
   repeat
-    FlowIn(Flow);
+    PushFlow(Flow);
     Result += Flow;
     Flow := 0;
     if FindAugmentPath(Flow) then
@@ -1419,46 +1420,42 @@ begin
   Result := True;
 end;
 
-procedure TGIntWeightDiGraph.TCsMcfHelper.InitSolution(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out
-  m: TWeightArcMap);
+procedure TGIntWeightDiGraph.TCsMcfHelper.FindRequiredFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+  out m: TWeightArcMap);
 var
   Helper: THPrHelper;
 begin
   FResultFlow := Helper.GetFlow(aGraph, aSource, aSink, FRequestFlow, m);
 end;
 
-function TGIntWeightDiGraph.TCsMcfHelper.InitOk: Boolean;
+function TGIntWeightDiGraph.TCsMcfHelper.FindInitSolution: Boolean;
 var
   ArcMap: TWeightArcMap;
-  CurrArc: PArc;
   I, Src, Dst: SizeInt;
-  cAbs: TCost;
+  CostAbs: TCost;
 begin
   FResultFlow := 0;
   if not PriceUpdate then
     exit(False);
-  InitSolution(FGraph, IndexOf(FSource), IndexOf(FSink), ArcMap);
+  FindRequiredFlow(FGraph, IndexOf(FSource), IndexOf(FSink), ArcMap);
   if FResultFlow = 0 then
     exit(False);
-
   FSource^.Excess += FResultFlow;
   FSink^.Excess -= FResultFlow;
   FEpsilon := 0;
-
   for I := 0 to Pred(System.High(FArcs)) do
     begin
       FArcs[I].Cost *= FScaleFactor;
       if FArcs[I].IsForward then
         begin
-          cAbs := Abs(FArcs[I].Cost);
-          if cAbs > FEpsilon then
-            FEpsilon := cAbs;
+          CostAbs := Abs(FArcs[I].Cost);
+          if CostAbs > FEpsilon then
+            FEpsilon := CostAbs;
           Src := IndexOf(FArcs[I].Reverse^.Target);
           Dst := IndexOf(FArcs[I].Target);
           FArcs[I].Push(ArcMap[TIntEdge.Create(Src, Dst)]);
         end;
     end;
-
   if FEpsilon < 1 then
     FEpsilon := 1;
   Result := True;
@@ -1618,7 +1615,7 @@ begin
   if aReqFlow <= 0 then
     exit(0);
   CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
-  if not InitOk then
+  if not FindInitSolution then
     exit(0);
   Execute;
   Result := FResultFlow;
@@ -1631,7 +1628,7 @@ begin
   if aReqFlow <= 0 then
     exit(0);
   CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
-  if not InitOk then
+  if not FindInitSolution then
     exit(0);
   Execute;
   Result := FResultFlow;

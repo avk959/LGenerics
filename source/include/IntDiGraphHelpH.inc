@@ -187,9 +187,9 @@ type
     procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap);
     procedure SearchInit;
-    function  ReweightGraph(out aMinCap: TWeight): Boolean;
-    function  FindAugmentPath(out aMinCap: TWeight): Boolean;
-    procedure FlowIn(aFlow: TWeight);
+    function  ReweightGraph(out aMinPathCap: TWeight): Boolean;
+    function  FindAugmentPath(out aMinPathCap: TWeight): Boolean;
+    procedure PushFlow(aFlow: TWeight);
     function  Execute: TWeight;
     function  GetTotalCost: TCost;
     function  CreateEdges(out aTotalCost: TCost): TEdgeArray;
@@ -250,8 +250,8 @@ type
               var aCosts: TEdgeCostMap);
     function  IndexOf(aNode: PNode): SizeInt; inline;
     function  PriceUpdate: Boolean;
-    procedure InitSolution(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out m: TWeightArcMap);
-    function  InitOk: Boolean;
+    procedure FindRequiredFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out m: TWeightArcMap);
+    function  FindInitSolution: Boolean;
     procedure InitPhase;
     procedure Discharge(aNode: PNode);
     procedure RemoveScaleFactor;
