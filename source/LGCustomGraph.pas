@@ -3136,7 +3136,7 @@ end
 function TGWeightHelper.TKuhnMatchB.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
   Curr, Next: SizeInt;
-  Cost: TWeight;
+  CurrPhi, Cost: TWeight;
   p: TGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -3148,13 +3148,14 @@ begin
       Curr := FQueue[qHead];
       Inc(qHead);
       FVisited[Curr] := True;
+      CurrPhi := FPhi[Curr];
       if FWhites[Curr] then
         for p in FGraph.AdjLists[Curr]^ do
           begin
             Next := p^.Destination;
             if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
               continue;
-            Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
+            Cost := p^.Data.Weight + FPhi[Next] - CurrPhi;
             if Cost = 0 then
               begin
                 if FMates[Next] = NULL_INDEX then
@@ -3182,7 +3183,7 @@ end;
 function TGWeightHelper.TKuhnMatchB.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
   Curr, Next: SizeInt;
-  Cost: TWeight;
+  CurrPhi, Cost: TWeight;
   p: TGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -3194,13 +3195,14 @@ begin
       Curr := FQueue[qHead];
       Inc(qHead);
       FVisited[Curr] := True;
+      CurrPhi := FPhi[Curr];
       if FWhites[Curr] then
         for p in FGraph.AdjLists[Curr]^ do
           begin
             Next := p^.Destination;
             if (FMates[Curr] = Next) or (FParents[Next] <> NULL_INDEX) then
               continue;
-            Cost := p^.Data.Weight + FPhi[Next] - FPhi[Curr];
+            Cost := p^.Data.Weight + FPhi[Next] - CurrPhi;
             if Cost = 0 then
               begin
                 if FMates[Next] = NULL_INDEX then
