@@ -701,14 +701,14 @@ begin
   for I := 0 to Pred(FNodeCount) do
     FNodes[I].FirstArc := @FArcs[CurrArcIdx[I]];
 
-  FMaxCap := 0;
+  FEpsilon := 0;
   for I := 0 to Pred(FNodeCount) do
     for p in aGraph.AdjLists[I]^ do
       begin
         J := p^.Destination;
         Cap := p^.Data.Weight;
-        if Cap > FMaxCap then
-          FMaxCap := Cap;
+        if Cap > FEpsilon then
+          FEpsilon := Cap;
         FArcs[CurrArcIdx[I]] := TArc.Create(@FNodes[J], @FArcs[CurrArcIdx[J]], Cap);
         FArcs[CurrArcIdx[J]] := TArc.CreateReverse(@FNodes[I], @FArcs[CurrArcIdx[I]]);
         Inc(CurrArcIdx[I]);
@@ -757,7 +757,7 @@ begin
       while CurrArc < (Curr + 1)^.FirstArc do
         begin
           Next := CurrArc^.Target;
-          if (Next^.Distance = NULL_INDEX) and (CurrArc^.ResCap > FMaxCap) then
+          if (Next^.Distance = NULL_INDEX) and (CurrArc^.ResCap > FEpsilon) then
             begin
               Next^.Reset;
               Next^.Distance := Dist;
@@ -770,22 +770,23 @@ begin
   Result := FSink^.Distance <> NULL_INDEX;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.Dfs(aRoot: PNode; aFlow: TWeight): TWeight;
+function TGIntWeightDiGraph.TDinitzHelper.AugmentFlow(aRoot: PNode; aFlow: TWeight): TWeight;
 var
-  Flow: TWeight;
+  Arc: PArc;
 begin
-  //todo: non-recursive dfs
+  //todo: non-recursive AugmentFlow ???
   if aFlow > 0 then
     if aRoot <> FSink then
       while aRoot^.CurrentArc < (aRoot + 1)^.FirstArc do
         begin
-          if aRoot^.CurrentArc^.Target^.Distance = Succ(aRoot^.Distance) then
+          Arc := aRoot^.CurrentArc;
+          if Arc^.Target^.Distance = Succ(aRoot^.Distance) then
             begin
-              Flow := Dfs(aRoot^.CurrentArc^.Target, wMin(aFlow, aRoot^.CurrentArc^.ResCap));
-              if Flow > 0 then
+              Result := AugmentFlow(Arc^.Target, wMin(aFlow, Arc^.ResCap));
+              if Result > 0 then
                 begin
-                  aRoot^.CurrentArc^.Push(Flow);
-                  exit(Flow);
+                  Arc^.Push(Result);
+                  exit;
                 end;
             end;
           Inc(aRoot^.CurrentArc);
@@ -797,15 +798,16 @@ end;
 
 function TGIntWeightDiGraph.TDinitzHelper.Execute: TWeight;
 var
-  Flow: TWeight;
+  Flow, Inf: TWeight;
 begin
+  Inf := InfWeight;
   Result := 0;
-  while FMaxCap >= 1 do
+  while FEpsilon > 0 do
     begin
-      FMaxCap := FMaxCap div FScaleFactor;
+      FEpsilon := FEpsilon div FScaleFactor;
       while Relabel do
         repeat
-          Flow := Dfs(FSource, InfWeight);
+          Flow := AugmentFlow(FSource, Inf);
           Result += Flow;
         until Flow = 0;
     end;

@@ -130,13 +130,13 @@ type
     FQueue: array of PNode;
     FSource,
     FSink: PNode;
-    FMaxCap: TWeight;
+    FEpsilon: TWeight;
     FScaleFactor,
     FNodeCount: SizeInt;
     procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
-    procedure ClearLabels; inline;
+    procedure ClearLabels;
     function  Relabel: Boolean;
-    function  Dfs(aRoot: PNode; aFlow: TWeight): TWeight;
+    function  AugmentFlow(aRoot: PNode; aFlow: TWeight): TWeight;
     function  Execute: TWeight;
     function  CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
   public
