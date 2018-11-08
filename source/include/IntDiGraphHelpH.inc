@@ -186,9 +186,9 @@ type
     FNodeCount: SizeInt;
     procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap);
-    procedure SearchInit; inline;
-    function  FindNegCycle(out aMinCap: TWeight): Boolean;
-    function  FindShortestPath(out aMinCap: TWeight): Boolean;
+    procedure SearchInit;
+    function  ReweightGraph(out aMinCap: TWeight): Boolean;
+    function  FindAugmentPath(out aMinCap: TWeight): Boolean;
     procedure FlowIn(aFlow: TWeight);
     function  Execute: TWeight;
     function  GetTotalCost: TCost;

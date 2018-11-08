@@ -962,7 +962,7 @@ begin
   FSink^.Parent := nil;
 end;
 
-function TGIntWeightDiGraph.TSspMcfHelper.FindNegCycle(out aMinCap: TWeight): Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.ReweightGraph(out aMinCap: TWeight): Boolean;
 var
   Queue, TreePrev, TreeNext, Level: TIntArray;
   Active: TBitVector;
@@ -1012,7 +1012,7 @@ begin
                       CurrLevel := 0;
                       repeat
                         if Test = Curr then
-                          exit(True);
+                          exit(False);
                         CurrLevel += Level[Test];
                         TreePrev[Test] := NULL_INDEX;
                         Level[Test] := NULL_INDEX;
@@ -1046,14 +1046,14 @@ begin
         end;
     end;
   FSource^.Parent := nil;
-  Result := FSink^.Parent = nil;
-  if not Result then
+  Result := FSink^.Parent <> nil;
+  if Result then
     aMinCap := FSink^.PathMinCap
   else
     aMinCap := 0;
 end;
 
-function TGIntWeightDiGraph.TSspMcfHelper.FindShortestPath(out aMinCap: TWeight): Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.FindAugmentPath(out aMinCap: TWeight): Boolean;
 var
   Node, NextNode: PNode;
   Arc: PArc;
@@ -1136,14 +1136,14 @@ var
   Flow: TWeight;
 begin
   Result := 0;
-  if FindNegCycle(Flow) then
+  if not ReweightGraph(Flow) then
     exit(0);
   Flow := wMin(Flow, FRequestFlow);
   repeat
     FlowIn(Flow);
     Result += Flow;
     Flow := 0;
-    if FindShortestPath(Flow) then
+    if FindAugmentPath(Flow) then
       Flow := wMin(Flow, FRequestFlow - Result);
   until Flow = 0;
 end;
