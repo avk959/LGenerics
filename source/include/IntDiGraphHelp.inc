@@ -1541,11 +1541,14 @@ end;
 procedure TGIntWeightDiGraph.TCsMcfHelper.Execute;
 var
   Node: PNode;
+  NeedUpdate: Boolean = True;
 begin
   repeat
     FEpsilon := cMax(FEpsilon div FAlpha, 1);
-    PriceUpdate;
+    if NeedUpdate then
+      PriceUpdate;
     InitPhase;
+    NeedUpdate := FQueue.NonEmpty;
     while FQueue.TryDequeue(Node) do
       begin
         FInQueue[IndexOf(Node)] := False;
