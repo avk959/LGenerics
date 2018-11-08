@@ -424,6 +424,7 @@ type
       Parent: PNode;
       Level: SizeInt;
     end;
+
   public
     Nodes: array of TNode;
   strict private

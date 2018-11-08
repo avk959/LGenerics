@@ -968,6 +968,7 @@ var
   Active: TBitVector;
   Curr, Next, Prev, Post, Test, CurrLevel, qHead, qTail: SizeInt;
   CurrArc: PArc;
+  NodePrice: TCost;
 begin
   SearchInit;
   TreePrev := FGraph.CreateIntArray;
@@ -994,14 +995,15 @@ begin
       if not Active[Curr] then
         continue;
       CurrArc := FNodes[Curr].FirstArc;
+      NodePrice := FNodes[Curr].Price;
       while CurrArc < FNodes[Succ(Curr)].FirstArc do
         begin
           if CurrArc^.ResCap > 0 then
             begin
               Next := CurrArc^.Target - PNode(FNodes);
-              if FNodes[Curr].Price + CurrArc^.Cost < FNodes[Next].Price then
+              if NodePrice + CurrArc^.Cost < FNodes[Next].Price then
                 begin
-                  FNodes[Next].Price := FNodes[Curr].Price + CurrArc^.Cost;
+                  FNodes[Next].Price := NodePrice + CurrArc^.Cost;
                   FNodes[Next].PathMinCap := wMin(FNodes[Curr].PathMinCap, CurrArc^.ResCap);
                   if TreePrev[Next] <> NULL_INDEX then
                     begin
@@ -1053,10 +1055,10 @@ end;
 
 function TGIntWeightDiGraph.TSspMcfHelper.FindShortestPath(out aMinCap: TWeight): Boolean;
 var
-  CurrNode, NextNode: PNode;
-  CurrArc: PArc;
+  Node, NextNode: PNode;
+  Arc: PArc;
   Item: TCostItem;
-  Price: TCost;
+  NodePrice, RelaxPrice: TCost;
   I: SizeInt;
 begin
   FInQueue.ClearBits;
@@ -1067,40 +1069,41 @@ begin
   aMinCap := 0;
   Item := TCostItem.Create(FSource - PNode(FNodes), 0);
   repeat
-    CurrNode := @FNodes[Item.Index];
+    Node := @FNodes[Item.Index];
     FNodes[Item.Index].Price += Item.Cost;
     FReached[Item.Index] := True;
-    if CurrNode = FSink then
+    if Node = FSink then
       break;
-    CurrArc := CurrNode^.FirstArc;
-    while CurrArc < (CurrNode + 1)^.FirstArc do
+    Arc := Node^.FirstArc;
+    NodePrice := Node^.Price;
+    while Arc < (Node + 1)^.FirstArc do
       begin
-        if CurrArc^.ResCap > 0 then
+        if Arc^.ResCap > 0 then
           begin
-            NextNode := CurrArc^.Target;
+            NextNode := Arc^.Target;
             if not FReached[NextNode - PNode(FNodes)] then
               begin
                 I := NextNode - PNode(FNodes);
-                Price := CurrNode^.Price + CurrArc^.Cost - NextNode^.Price;
+                RelaxPrice := NodePrice + Arc^.Cost - NextNode^.Price;
                 if not FInQueue[I] then
                   begin
-                    NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResCap);
-                    NextNode^.Parent := CurrNode;
-                    NextNode^.PathArc := CurrArc;
-                    FQueue.Enqueue(I, TCostItem.Create(I, Price));
+                    NextNode^.PathMinCap := wMin(Node^.PathMinCap, Arc^.ResCap);
+                    NextNode^.Parent := Node;
+                    NextNode^.PathArc := Arc;
+                    FQueue.Enqueue(I, TCostItem.Create(I, RelaxPrice));
                     FInQueue[I] := True;
                   end
                 else
-                  if Price < FQueue.HeadPtr(I)^.Cost then
+                  if RelaxPrice < FQueue.HeadPtr(I)^.Cost then
                     begin
-                      NextNode^.PathMinCap := wMin(CurrNode^.PathMinCap, CurrArc^.ResCap);
-                      NextNode^.Parent := CurrNode;
-                      NextNode^.PathArc := CurrArc;
-                      FQueue.Update(I, TCostItem.Create(I, Price));
+                      NextNode^.PathMinCap := wMin(Node^.PathMinCap, Arc^.ResCap);
+                      NextNode^.Parent := Node;
+                      NextNode^.PathArc := Arc;
+                      FQueue.Update(I, TCostItem.Create(I, RelaxPrice));
                     end;
               end;
           end;
-        Inc(CurrArc);
+        Inc(Arc);
       end;
   until not FQueue.TryDequeue(Item);
 
@@ -1329,6 +1332,7 @@ var
   InQueue, Active: TBitVector;
   Curr, Next, Prev, Post, Test, CurrLevel, qLen, qHead, qTail: SizeInt;
   CurrArc: PArc;
+  NodePrice: TCost;
 begin
   qLen := Succ(FNodeCount);
   qHead := 0;
@@ -1362,14 +1366,15 @@ begin
       if not Active[Curr] then
         continue;
       CurrArc := FNodes[Curr].FirstArc;
+      NodePrice := FNodes[Curr].Price;
       while CurrArc < FNodes[Succ(Curr)].FirstArc do
         begin
           if CurrArc^.ResCap > 0 then
             begin
               Next := IndexOf(CurrArc^.Target);
-              if FNodes[Curr].Price + CurrArc^.Cost < FNodes[Next].Price then
+              if NodePrice + CurrArc^.Cost < FNodes[Next].Price then
                 begin
-                  FNodes[Next].Price := FNodes[Curr].Price + CurrArc^.Cost;
+                  FNodes[Next].Price := NodePrice + CurrArc^.Cost;
                   if TreePrev[Next] <> NULL_INDEX then
                     begin
                       Prev := TreePrev[Next];
@@ -1461,14 +1466,16 @@ procedure TGIntWeightDiGraph.TCsMcfHelper.InitPhase;
 var
   Arc: PArc;
   I, J: SizeInt;
+  PriceI: TCost;
 begin
   for I := 0 to Pred(FNodeCount) do
     begin
       Arc := FNodes[I].FirstArc;
+      PriceI := FNodes[I].Price;
       while Arc < FNodes[Succ(I)].FirstArc do
         begin
           J := IndexOf(Arc^.Target);
-          if (Arc^.ResCap > 0) and (FNodes[I].Price + Arc^.Cost - FNodes[J].Price <= -FEpsilon) then
+          if (Arc^.ResCap > 0) and (PriceI + Arc^.Cost - FNodes[J].Price <= -FEpsilon) then
             Arc^.PushAll;
           Inc(Arc);
         end;
@@ -1486,17 +1493,18 @@ procedure TGIntWeightDiGraph.TCsMcfHelper.Discharge(aNode: PNode);
 var
   NextNode: PNode;
   Arc: PArc;
-  Price, MinPrice: TCost;
+  NodePrice, MinPrice: TCost;
 begin
   while aNode^.Excess > 0 do
     begin
+      NodePrice := aNode^.Price;
       while aNode^.CurrArc < (aNode + 1)^.FirstArc do
         begin
           Arc := aNode^.CurrArc;
           if Arc^.ResCap > 0 then
             begin
               NextNode := Arc^.Target;
-              if aNode^.Price + Arc^.Cost - NextNode^.Price < 0 then
+              if NodePrice + Arc^.Cost - NextNode^.Price < 0 then
                 begin
                   Arc^.Push(wMin(aNode^.Excess, Arc^.ResCap));
                   if (NextNode^.Excess > 0) and not FInQueue[IndexOf(NextNode)] then
@@ -1517,9 +1525,8 @@ begin
               if Arc^.ResCap > 0 then
                 begin
                   NextNode := Arc^.Target;
-                  Price := aNode^.Price + Arc^.Cost - NextNode^.Price;
-                  if Price < MinPrice then
-                    MinPrice := Price;
+                  if NodePrice + Arc^.Cost - NextNode^.Price < MinPrice then
+                    MinPrice := NodePrice + Arc^.Cost - NextNode^.Price;
                 end;
               Inc(Arc);
             end;

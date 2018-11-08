@@ -3445,6 +3445,7 @@ var
   CurrNode, NextNode, PrevNode, PostNode, TestNode: PNode;
   CurrArc: PArc;
   NodeCount, I, Level: SizeInt;
+  CurrWeight: TWeight;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
@@ -3465,12 +3466,13 @@ begin
         continue;
       FActive[I] := False;
       CurrArc := CurrNode^.FirstArc;
+      CurrWeight := CurrNode^.Weight;
       while CurrArc < (CurrNode + 1)^.FirstArc do
         begin
           NextNode := CurrArc^.Target;
-          if NextNode^.Weight > CurrNode^.Weight + CurrArc^.Weight then
+          if NextNode^.Weight > CurrWeight + CurrArc^.Weight then
             begin
-              NextNode^.Weight := CurrNode^.Weight + CurrArc^.Weight;
+              NextNode^.Weight := CurrWeight + CurrArc^.Weight;
               if NextNode^.TreePrev <> nil then
                 begin
                   PrevNode := NextNode^.TreePrev;
@@ -3907,6 +3909,7 @@ var
   Queue, TreePrev, TreeNext, Level: TIntArray;
   InQueue, Active: TGraph.TBitVector;
   Curr, Next, Prev, Post, Test, CurrLevel, vCount: SizeInt;
+  CurrWeight: TWeight;
   p: TGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -3937,12 +3940,13 @@ begin
       if not Active[Curr] then
         continue;
       Active[Curr] := False;
+      CurrWeight := aWeights[Curr];
       for p in g.AdjLists[Curr]^ do
         begin
           Next := p^.Destination;
-          if aWeights[Next] > aWeights[Curr] + p^.Data.Weight then
+          if aWeights[Next] > CurrWeight + p^.Data.Weight then
             begin
-              aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
+              aWeights[Next] := CurrWeight + p^.Data.Weight;
               if TreePrev[Next] <> NULL_INDEX then
                 begin
                   Prev := TreePrev[Next];
@@ -3992,6 +3996,7 @@ var
   Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
   InQueue, Active: TGraph.TBitVector;
   Curr, Next, Prev, Post, Test, CurrLevel, vCount: SizeInt;
+  CurrWeight: TWeight;
   p: TGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -4028,12 +4033,13 @@ begin
       if not Active[Curr] then
         continue;
       Active[Curr] := False;
+      CurrWeight := aWeights[Curr];
       for p in g.AdjLists[Curr]^ do
         begin
           Next := p^.Destination;
-          if aWeights[Next] > aWeights[Curr] + p^.Data.Weight then
+          if aWeights[Next] > CurrWeight + p^.Data.Weight then
             begin
-              aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
+              aWeights[Next] := CurrWeight + p^.Data.Weight;
               if TreePrev[Next] <> NULL_INDEX then
                 begin
                   Prev := TreePrev[Next];
