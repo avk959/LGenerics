@@ -964,7 +964,7 @@ begin
   FSink^.Parent := nil;
 end;
 
-function TGIntWeightDiGraph.TSspMcfHelper.ReweightGraph(out aMinPathCap: TWeight): Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.ReweightGraph: Boolean;
 var
   Queue, TreePrev, TreeNext, Level: TIntArray;
   Active: TBitVector;
@@ -1049,19 +1049,15 @@ begin
     end;
   FSource^.Parent := nil;
   Result := FSink^.Parent <> nil;
-  if Result then
-    aMinPathCap := FSink^.PathMinCap
-  else
-    aMinPathCap := 0;
 end;
 
-function TGIntWeightDiGraph.TSspMcfHelper.FindAugmentPath(out aMinPathCap: TWeight): Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.FindAugmentPath: Boolean;
 var
   Node, NextNode: PNode;
   Arc: PArc;
+  I: SizeInt;
   Item: TCostItem;
   NodePrice, RelaxPrice: TCost;
-  I: SizeInt;
 begin
   FInQueue.ClearBits;
   FReached.ClearBits;
@@ -1110,45 +1106,31 @@ begin
 
   Result := FReached[FSink - PNode(FNodes)];
   if Result then
-    begin
-      aMinPathCap := FSink^.PathMinCap;
-      for I in FReached do
-        FNodes[I].Price -= Item.Cost;
-    end
-  else
-    aMinPathCap := 0;
+    for I in FReached do
+      FNodes[I].Price -= Item.Cost;
 end;
 
-procedure TGIntWeightDiGraph.TSspMcfHelper.PushFlow(aFlow: TWeight);
+function TGIntWeightDiGraph.TSspMcfHelper.PushFlow(aRestFlow: TWeight): TWeight;
 var
-  ParentNode: PNode;
-  CurrArc: PArc;
+  Node: PNode;
 begin
-  ParentNode := FSink^.Parent;
-  CurrArc := FSink^.PathArc;
-  while CurrArc <> nil do
-    begin
-      CurrArc^.Push(aFlow);
-      CurrArc := ParentNode^.PathArc;
-      ParentNode := ParentNode^.Parent;
-    end;
+  Node := FSink;
+  Result := wMin(aRestFlow, FSink^.PathMinCap);
+  repeat
+    if Node^.Parent <> nil then
+      Node^.PathArc^.Push(Result);
+    Node := Node^.Parent;
+  until Node = nil;
 end;
 
 function TGIntWeightDiGraph.TSspMcfHelper.Execute: TWeight;
-var
-  Flow: TWeight;
 begin
   Result := 0;
-  if not ReweightGraph(Flow) then
-    exit(0);
-  Flow := wMin(Flow, FRequestFlow);
+  if not ReweightGraph then
+    exit;
   repeat
-    PushFlow(Flow);
-    Result += Flow;
-    Flow := 0;
-    if FindAugmentPath(Flow) then
-      Flow := wMin(Flow, FRequestFlow - Result);
-  until Flow = 0;
+    Result += PushFlow(FRequestFlow - Result);
+  until not FindAugmentPath;
 end;
 
 function TGIntWeightDiGraph.TSspMcfHelper.GetTotalCost: TCost;
