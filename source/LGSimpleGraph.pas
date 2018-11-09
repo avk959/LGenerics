@@ -914,7 +914,7 @@ var
   v: TIntArray;
   I, J, Tag: SizeInt;
 begin
-  System.SetLength(v, aGraph.SeparatePopI(aIndex));
+  v.Length := aGraph.SeparatePopI(aIndex);
   Tag := aGraph.SeparateTag(aIndex);
   J := 0;
   for I := 0 to Pred(aGraph.VertexCount) do
@@ -928,15 +928,21 @@ end;
 
 procedure TGSimpleGraph.AssignVertexList(aGraph: TGSimpleGraph; constref aList: TIntArray);
 var
-  vSet: TIntHashSet;
-  I, J: SizeInt;
+  VertSet: TBitVector;
+  I: SizeInt;
+  p: PAdjItem;
 begin
-  vSet.AddAll(aList);
   Clear;
-  for I in vSet do
-    for J in aGraph.AdjVerticesI(I) do
-      if vSet.Contains(J) then
-        AddEdge(aGraph[I], aGraph[J], aGraph.GetEdgeDataPtr(I, J)^);
+  VertSet.Size := aGraph.VertexCount;
+  for I in aList do
+    begin
+      {%H-}AddVertex(aGraph[I]);
+      VertSet[I] := True;
+    end;
+  for I in aList do
+    for p in aGraph.AdjLists[I]^ do
+      if VertSet[p^.Key] then
+        AddEdge(aGraph[I], aGraph[p^.Key], aGraph.GetEdgeDataPtr(I, p^.Key)^);
 end;
 
 procedure TGSimpleGraph.AssignTree(aGraph: TGSimpleGraph; constref aTree: TIntArray);
@@ -946,6 +952,7 @@ begin
   Clear;
   for I := 0 to Pred(System.Length(aTree)) do
     begin
+      AddVertex(aGraph[I]);
       Src := aTree[I];
       if Src <> -1 then
         AddEdge(aGraph[Src], aGraph[I], aGraph.GetEdgeDataPtr(Src, I)^);
