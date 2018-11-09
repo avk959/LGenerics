@@ -129,6 +129,8 @@ type
     constructor Create(aIndex, aData: SizeInt);
   end;
 
+  { TGBinHeapMin }
+
   generic TGBinHeapMin<T> = record // for internal use only
   strict private
   type
@@ -143,12 +145,15 @@ type
     procedure FloatUp(aIndex: SizeInt);
     procedure SiftDown(aIndex: SizeInt);
   public
+  type
+    PItem = ^T;
     constructor Create(aSize: SizeInt);
     procedure MakeEmpty; inline;
     function  TryDequeue(out aValue: T): Boolean;
     procedure Enqueue(aHandle: SizeInt; constref aValue: T);
     procedure Update(aHandle: SizeInt; constref aNewValue: T);
     function  Peek(aHandle: SizeInt): T; inline;
+    function  HeadPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;

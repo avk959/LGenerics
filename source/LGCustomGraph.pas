@@ -2459,6 +2459,11 @@ begin
   Result := FHeap[FHandle2Index[aHandle]];
 end;
 
+function TGBinHeapMin.HeadPtr(aHandle: SizeInt): PItem;
+begin
+  Result := @FHeap[FHandle2Index[aHandle]];
+end;
+
 { TGPairHeapMin.TNode }
 
 function TGPairHeapMin.TNode.AddChild(aNode: PNode): PNode;
@@ -3718,7 +3723,7 @@ begin
             InQueue[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight then
+          if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
             Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
   until not Queue.TryDequeue(Item);
   Result := InfWeight;
@@ -3754,7 +3759,7 @@ begin
             InQueue[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.Peek(p^.Key).Weight then
+          if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
             begin
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               Parents[p^.Key] := Item.Index;
@@ -3799,7 +3804,7 @@ begin
               InQueue[p^.Key] := True;
             end
           else
-            if Relax < Queue.Peek(p^.Key).Weight then
+            if Relax < Queue.HeadPtr(p^.Key)^.Weight then
               begin
                 Queue.Update(p^.Key, TRankItem.Create(
                   p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
