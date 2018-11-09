@@ -1082,9 +1082,9 @@ begin
         if Arc^.ResCap > 0 then
           begin
             NextNode := Arc^.Target;
-            if not FReached[NextNode - PNode(FNodes)] then
+            I := NextNode - PNode(FNodes);
+            if not FReached[I] then
               begin
-                I := NextNode - PNode(FNodes);
                 RelaxPrice := NodePrice + Arc^.Cost - NextNode^.Price;
                 if not FInQueue[I] then
                   begin
