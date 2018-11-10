@@ -375,11 +375,9 @@ type
     class function TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray; static;
     class function TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
     class function TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
-
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-
     constructor Create;
     destructor Destroy; override;
     function  IsEmpty: Boolean; inline;
@@ -387,11 +385,9 @@ type
     procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
-
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
-
     function ContainsVertex(constref aVertex: TVertex): Boolean; inline;
     function ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
@@ -425,13 +421,14 @@ type
   { test whether the graph is bipartite; if returns True then aWhites and aGrays will contain
     indices of correspondig vertices }
     function IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
-
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
 
   { returns True if aMatch is maximal matching }
     function IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
+  { returns True if aMatch is perfect matching }
+    function IsPerfectMatching(constref aMatch: TIntEdgeArray): Boolean;
 {**********************************************************************************************************
   traversal utilities
 ***********************************************************************************************************}
@@ -1637,13 +1634,13 @@ begin
   vFree.InitRange(VertexCount);
   for e in aMatch do
     begin
-      if SizeUInt(e.Source) >= SizeUInt(VertexCount) then
+      if SizeUInt(e.Source) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if SizeUInt(e.Destination) >= SizeUInt(VertexCount) then
+      if SizeUInt(e.Destination) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if e.Source = e.Destination then
+      if e.Source = e.Destination then //contains garbage
         exit(False);
-      if not AdjLists[e.Source]^.Contains(e.Destination) then
+      if not AdjLists[e.Source]^.Contains(e.Destination) then //contains garbage
         exit(False);
       if not vFree[e.Source] then  //contains adjacent edges -> not matching
         exit(False);
@@ -1657,6 +1654,36 @@ begin
       if vFree[J] then  // is not maximal
         exit(False);
   Result := True;
+end;
+
+function TGCustomGraph.IsPerfectMatching(constref aMatch: TIntEdgeArray): Boolean;
+var
+  vFree: TBoolVector;
+  e: TIntEdge;
+begin
+  if (VertexCount < 2) or Odd(VertexCount) then
+    exit(False);
+  if System.Length(aMatch) <> VertexCount div 2 then
+    exit(False);
+  vFree.InitRange(VertexCount);
+  for e in aMatch do
+    begin
+      if SizeUInt(e.Source) >= SizeUInt(VertexCount) then //contains garbage
+        exit(False);
+      if SizeUInt(e.Destination) >= SizeUInt(VertexCount) then //contains garbage
+        exit(False);
+      if e.Source = e.Destination then //contains garbage
+        exit(False);
+      if not AdjLists[e.Source]^.Contains(e.Destination) then //contains garbage
+        exit(False);
+      if not vFree[e.Source] then  //contains adjacent edges -> not matching
+        exit(False);
+      vFree[e.Source] := False;
+      if not vFree[e.Destination] then  //contains adjacent edges -> not matching
+        exit(False);
+      vFree[e.Destination] := False;
+    end;
+  Result := vFree.IsEmpty;
 end;
 
 function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit;
