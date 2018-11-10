@@ -1661,7 +1661,7 @@ function TGSimpleGraph.GreedyColorRlf(out aColors: TIntArray): SizeInt;
 var
   Helper: TGreedyColorRlf;
 begin
-  Result := Helper.Colorize(Self, aColors);
+  Result := Helper.Execute(Self, aColors);
 end;
 
 function TGSimpleGraph.GreedyColor(out aColors: TIntArray): SizeInt;

@@ -3059,15 +3059,15 @@ begin
   Predecessor := aSource;
 end;
 
-{ TGWeightHelper.TKuhnMatchB }
+{ TGWeightHelper.THungarian }
 
-procedure TGWeightHelper.TKuhnMatchB.Match(aNode, aMate: SizeInt);
+procedure TGWeightHelper.THungarian.Match(aNode, aMate: SizeInt);
 begin
   FMates[aNode] := aMate;
   FMates[aMate] := aNode;
 end;
 
-procedure TGWeightHelper.TKuhnMatchB.Init(aGraph: TGraph; constref w, g: TIntArray);
+procedure TGWeightHelper.THungarian.Init(aGraph: TGraph; constref w, g: TIntArray);
 var
   I: SizeInt;
   ew: TWeight;
@@ -3099,7 +3099,7 @@ begin
   FVisited.Size := aGraph.VertexCount;
 end;
 
-procedure TGWeightHelper.TKuhnMatchB.InitMax(aGraph: TGraph; constref w, g: TIntArray);
+procedure TGWeightHelper.THungarian.InitMax(aGraph: TGraph; constref w, g: TIntArray);
 var
   I: SizeInt;
   ew: TWeight;
@@ -3138,7 +3138,7 @@ begin
   Inc(qTail);
 end
 }
-function TGWeightHelper.TKuhnMatchB.FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+function TGWeightHelper.THungarian.FindAugmentPathMin(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
   Curr, Next: SizeInt;
   CurrPhi, Cost: TWeight;
@@ -3185,7 +3185,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-function TGWeightHelper.TKuhnMatchB.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+function TGWeightHelper.THungarian.FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
 var
   Curr, Next: SizeInt;
   CurrPhi, Cost: TWeight;
@@ -3232,7 +3232,7 @@ begin
   Result := NULL_INDEX;
 end;
 {$UNDEF EnqueueNext}{$POP}
-procedure TGWeightHelper.TKuhnMatchB.AlternatePath(aRoot: SizeInt);
+procedure TGWeightHelper.THungarian.AlternatePath(aRoot: SizeInt);
 var
   Mate, Next: SizeInt;
 begin
@@ -3244,17 +3244,18 @@ begin
   until aRoot = NULL_INDEX;
 end;
 
-function TGWeightHelper.TKuhnMatchB.TryAugment(var aDelta: TWeight): SizeInt;
+function TGWeightHelper.THungarian.TryAugmentMin(var aDelta: TWeight): SizeInt;
 var
   I, Last: SizeInt;
 begin
   aDelta := InfWeight;
   Result := 0;
+  System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
   FVisited.ClearBits;
   for I in FWhites do
     if FMates[I] = NULL_INDEX then
       begin
-        Last := FindAugmentPath(I, aDelta);
+        Last := FindAugmentPathMin(I, aDelta);
         if Last <> NULL_INDEX then
           begin
             AlternatePath(Last);
@@ -3263,12 +3264,13 @@ begin
       end;
 end;
 
-function TGWeightHelper.TKuhnMatchB.TryAugmentMax(var aDelta: TWeight): SizeInt;
+function TGWeightHelper.THungarian.TryAugmentMax(var aDelta: TWeight): SizeInt;
 var
   I, Last: SizeInt;
 begin
   aDelta := NegInfWeight;
   Result := 0;
+  System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
   FVisited.ClearBits;
   for I in FWhites do
     if FMates[I] = NULL_INDEX then
@@ -3282,7 +3284,7 @@ begin
       end;
 end;
 
-procedure TGWeightHelper.TKuhnMatchB.CorrectPhi(aDelta: TWeight);
+procedure TGWeightHelper.THungarian.CorrectPhi(aDelta: TWeight);
 var
   I: SizeInt;
 begin
@@ -3290,7 +3292,7 @@ begin
     FPhi[I] += aDelta;
 end;
 
-procedure TGWeightHelper.TKuhnMatchB.ExecuteMin;
+procedure TGWeightHelper.THungarian.ExecuteMin;
 var
   Count: SizeInt;
   Delta, Inf: TWeight;
@@ -3299,9 +3301,8 @@ begin
   Delta := Inf;
   repeat
     repeat
-      Count := TryAugment(Delta);
+      Count := TryAugmentMin(Delta);
       FMatchCount += Count;
-      System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
     until Count = 0;
     if Delta = Inf then
       break;
@@ -3309,7 +3310,7 @@ begin
   until False;
 end;
 
-procedure TGWeightHelper.TKuhnMatchB.ExecuteMax;
+procedure TGWeightHelper.THungarian.ExecuteMax;
 var
   Count: SizeInt;
   Delta, Inf: TWeight;
@@ -3320,7 +3321,6 @@ begin
     repeat
       Count := TryAugmentMax(Delta);
       FMatchCount += Count;
-      System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
     until Count = 0;
     if Delta = Inf then
       break;
@@ -3328,7 +3328,7 @@ begin
   until False;
 end;
 
-function TGWeightHelper.TKuhnMatchB.CreateEdges: TEdgeArray;
+function TGWeightHelper.THungarian.CreateEdges: TEdgeArray;
 var
   I, J, Mate: SizeInt;
 begin
@@ -3345,14 +3345,14 @@ begin
     end;
 end;
 
-function TGWeightHelper.TKuhnMatchB.GetMinWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+function TGWeightHelper.THungarian.MinWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
 begin
   Init(aGraph, w, g);
   ExecuteMin;
   Result := CreateEdges;
 end;
 
-function TGWeightHelper.TKuhnMatchB.GetMaxWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+function TGWeightHelper.THungarian.MaxWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
 begin
   InitMax(aGraph, w, g);
   ExecuteMax;
@@ -4349,16 +4349,16 @@ end;
 
 class function TGWeightHelper.MinWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
 var
-  Helper: TKuhnMatchB;
+  Helper: THungarian;
 begin
-  Result := Helper.GetMinWeightMatch(aGraph, w, g);
+  Result := Helper.MinWeightMatching(aGraph, w, g);
 end;
 
 class function TGWeightHelper.MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
 var
-  Helper: TKuhnMatchB;
+  Helper: THungarian;
 begin
-  Result := Helper.GetMaxWeightMatch(aGraph, w, g);
+  Result := Helper.MaxWeightMatching(aGraph, w, g);
 end;
 
 { TGCustomDotWriter }

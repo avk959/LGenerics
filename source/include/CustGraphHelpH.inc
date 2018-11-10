@@ -379,8 +379,8 @@ type
     TWeightsMatrix = array of array of TWeight;
     TApspMatrix    = array of array of TApspCell;
 
-    { TKuhnMatchB: weighted bipartite matching algorithm }
-    TKuhnMatchB = record
+    { THungarian: hungarian weighted bipartite matching algorithm }
+    THungarian = record
     strict private
       FGraph: TGraph;
       FMates,
@@ -393,21 +393,22 @@ type
       procedure Match(aNode, aMate: SizeInt); inline;
       procedure Init(aGraph: TGraph; constref w, g: TIntArray);
       procedure InitMax(aGraph: TGraph; constref w, g: TIntArray);
-      function  FindAugmentPath(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
+      function  FindAugmentPathMin(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
       function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
       procedure AlternatePath(aRoot: SizeInt);
-      function  TryAugment(var aDelta: TWeight): SizeInt;
+      function  TryAugmentMin(var aDelta: TWeight): SizeInt;
       function  TryAugmentMax(var aDelta: TWeight): SizeInt;
       procedure CorrectPhi(aDelta: TWeight); inline;
       procedure ExecuteMin;
       procedure ExecuteMax;
       function  CreateEdges: TEdgeArray;
     public
-      function  GetMinWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
-      function  GetMaxWeightMatch(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+      function  MinWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+      function  MaxWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
     end;
 
-  { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly }
+  { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly;
+    copies graph into internal representation }
   TBfmt = record
   strict private
   type
@@ -461,7 +462,7 @@ type
                    static;
     class function Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                    static;
-  { modification of Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
+  { inplace Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
     faster negative cycle detection }
     class function BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray; out aWeights: TWeightArray): SizeInt;
                    static;
