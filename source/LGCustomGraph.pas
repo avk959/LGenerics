@@ -48,7 +48,7 @@ type
 
   TIntArray        = array of SizeInt;
   TShortArray      = array of ShortInt;
-  TIntHelper       = specialize TGNumArrayHelper<SizeInt>;
+  TIntHelper       = specialize TGOrdinalArrayHelper<SizeInt>;
   TIntVector       = specialize TGLiteVector<SizeInt>;
   PIntVector       = ^TIntVector;
   TIntVectorHelper = specialize TGComparableVectorHelper<SizeInt>;
