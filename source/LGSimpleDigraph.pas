@@ -457,11 +457,11 @@ type
                              var aReqFlow: TWeight; out aTotalCost: TCost): Boolean; inline;
     function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
                               var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
-  { same as above and in addition returns flows through the arcs in array a }
+  { same as above and in addition returns flows through the arcs in array aArcFlows }
     function FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-                             var aReqFlow: TWeight; out aTotalCost: TCost; out a: TEdgeArray): Boolean; inline;
+                                var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean; inline;
     function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-                              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+                                 var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
   { param aReqFlow specifies the required flow > 0 (can be MAX_WEIGHT);
     returns False if network is not correct or arc costs are not correct or network
     contains negative cycle or aNeedFlow < 1,
@@ -471,9 +471,9 @@ type
                              var aReqFlow: TWeight; out aTotalCost: TCost): Boolean; inline;
     function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
                               var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
-  { same as above and in addition returns flows through the arcs in array a }
+  { same as above and in addition returns flows through the arcs in array aArcFlows }
     function FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-                             var aReqFlow: TWeight; out aTotalCost: TCost; out a: TEdgeArray): Boolean; inline;
+                               var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean; inline;
     function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
                                 var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
   end;
@@ -2542,9 +2542,9 @@ begin
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out a: TEdgeArray): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
 begin
-  Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, a);
+  Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, aArcFlows);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
@@ -2589,9 +2589,9 @@ begin
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out a: TEdgeArray): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
 begin
-  Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, a);
+  Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, aArcFlows);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
