@@ -449,6 +449,8 @@ type
 
   { returns True if aMatch is maximal matching }
     class function IsMaxMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean; static;
+  { returns True if aMatch is perfect matching }
+    class function IsPerfectMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean; static;
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
