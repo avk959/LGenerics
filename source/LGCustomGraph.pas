@@ -3663,6 +3663,42 @@ begin
     end;
 end;
 
+class function TGWeightHelper.IsMaxMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean;
+var
+  vFree: TBoolVector;
+  e: TWeightEdge;
+  I, J, vCount: SizeInt;
+begin
+  if g.VertexCount < 2 then
+    exit(False);
+  if System.Length(aMatch) = 0 then
+    exit(False);
+  vCount := g.VertexCount;
+  vFree.InitRange(vCount);
+  for e in aMatch do
+    begin
+      if SizeUInt(e.Source) >= SizeUInt(vCount) then //contains garbage
+        exit(False);
+      if SizeUInt(e.Destination) >= SizeUInt(vCount) then //contains garbage
+        exit(False);
+      if e.Source = e.Destination then //contains garbage
+        exit(False);
+      if not g.AdjLists[e.Source]^.Contains(e.Destination) then //contains garbage
+        exit(False);
+      if not vFree[e.Source] then  //contains adjacent edges -> not matching
+        exit(False);
+      vFree[e.Source] := False;
+      if not vFree[e.Destination] then  //contains adjacent edges -> not matching
+        exit(False);
+      vFree[e.Destination] := False;
+    end;
+  for I in vFree do
+    for J in g.AdjVerticesI(I) do
+      if vFree[J] then  // is not maximal
+        exit(False);
+  Result := True;
+end;
+
 class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
   Queue: TPairHeap;

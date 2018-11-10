@@ -374,7 +374,6 @@ type
     TPairHeap      = specialize TGPairHeapMin<TWeightItem>;
     TBinHeap       = specialize TGBinHeapMin<TWeightItem>;
     TAStarHeap     = specialize TGBinHeapMin<TRankItem>;
-    //TAStarHeap     = specialize TGPairHeapMin<TRankItem>;
     TEdgeArray     = array of TWeightEdge;
     TWeightsMatrix = array of array of TWeight;
     TApspMatrix    = array of array of TApspCell;
@@ -448,6 +447,8 @@ type
     procedure Sssp(aSrc: SizeInt);
   end;
 
+  { returns True if aMatch is maximal matching }
+    class function IsMaxMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean; static;
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
     class function DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
