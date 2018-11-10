@@ -352,6 +352,14 @@ type
   { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
     the path starting with it }
     function DagMaxPaths: TWeightArray;
+{**********************************************************************************************************
+  matching utilities
+***********************************************************************************************************}
+
+  { returns True if aMatch is maximal matching }
+    function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
+  { returns True if aMatch is perfect matching }
+    function IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean; inline;
   end;
 
   { TGIntWeightDiGraph specializes TWeight with Int64 }
@@ -386,8 +394,6 @@ type
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality and maximum weight }
     function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
-  { returns True if aMatch is maximal matching }
-    function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
 {**********************************************************************************************************
   networks utilities treat the weight of the arc as its capacity
 ***********************************************************************************************************}
@@ -2227,6 +2233,16 @@ begin
         end;
 end;
 
+function TGWeightedDiGraph.IsMaximalMatching(constref aMatch: TEdgeArray): Boolean;
+begin
+  Result := TWeightHelper.IsMaxMatching(Self, aMatch);
+end;
+
+function TGWeightedDiGraph.IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean;
+begin
+  Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
+end;
+
 {$I IntDiGraphHelp.inc}
 
 { TGIntWeightDiGraph }
@@ -2284,11 +2300,6 @@ begin
     exit(False);
   aMatch := TWeightHelper.MaxWeightMatchingB(Self, w, g);
   Result := True;
-end;
-
-function TGIntWeightDiGraph.IsMaximalMatching(constref aMatch: TEdgeArray): Boolean;
-begin
-  Result := TWeightHelper.IsMaxMatching(Self, aMatch);
 end;
 
 function TGIntWeightDiGraph.GetNetworkState(constref aSource, aSink: TVertex): TNetworkState;
