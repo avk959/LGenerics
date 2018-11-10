@@ -605,6 +605,15 @@ type
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
+
+{**********************************************************************************************************
+  matching utilities
+***********************************************************************************************************}
+
+  { returns True if aMatch is maximal matching }
+    function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
+  { returns True if aMatch is perfect matching }
+    function IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean; inline;
   end;
 
   TRealPointEdge = record
@@ -676,8 +685,6 @@ type
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality and maximum weight }
     function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
-  { returns True if aMatch is maximal matching }
-    function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
 {**********************************************************************************************************
   networks utilities treat the weight of the edge as its capacity
 ***********************************************************************************************************}
@@ -4450,6 +4457,16 @@ begin
       end;
 end;
 
+function TGWeightedGraph.IsMaximalMatching(constref aMatch: TEdgeArray): Boolean;
+begin
+  Result := TWeightHelper.IsMaxMatching(Self, aMatch);
+end;
+
+function TGWeightedGraph.IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean;
+begin
+  Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
+end;
+
 { TRealPointEdge }
 
 constructor TRealPointEdge.Create(const aWeight: ValReal);
@@ -4768,11 +4785,6 @@ begin
     exit(False);
   aMatch := TWeightHelper.MaxWeightMatchingB(Self, w, g);
   Result := True;
-end;
-
-function TGIntWeightGraph.IsMaximalMatching(constref aMatch: TEdgeArray): Boolean;
-begin
-  Result := TWeightHelper.IsMaxMatching(Self, aMatch);
 end;
 
 function TGIntWeightGraph.MinWeightCutSW(out aCut: TCut): TWeight;
