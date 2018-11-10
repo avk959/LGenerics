@@ -676,6 +676,8 @@ type
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality and maximum weight }
     function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
+  { returns True if aMatch is maximal matching }
+    function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
 {**********************************************************************************************************
   networks utilities treat the weight of the edge as its capacity
 ***********************************************************************************************************}
@@ -4766,6 +4768,11 @@ begin
     exit(False);
   aMatch := TWeightHelper.MaxWeightMatchingB(Self, w, g);
   Result := True;
+end;
+
+function TGIntWeightGraph.IsMaximalMatching(constref aMatch: TEdgeArray): Boolean;
+begin
+  Result := TWeightHelper.IsMaxMatching(Self, aMatch);
 end;
 
 function TGIntWeightGraph.MinWeightCutSW(out aCut: TCut): TWeight;
