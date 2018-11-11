@@ -196,6 +196,21 @@ type
     function Clone: TGChainHashMap; override;
   end;
 
+  { TGBaseOrderedHashMap implements node based hashmap with predictable iteration order,
+    which is the order in which elements were inserted into the set (insertion-order) }
+  generic TGBaseOrderedHashMap<TKey, TValue, TKeyEqRel> = class(specialize TGCustomHashMap<TKey, TValue>)
+  protected
+    class function GetTableClass: THashTableClass; override;
+    class function GetClass: THashMapClass; override;
+  end;
+
+  { TGOrderedHashMap implements node based hashmap with predictable iteration order,
+    which is the order in which elements were inserted into the set (insertion-order);
+    it assumes that type TKey implements TKeyEqRel }
+  generic TGOrderedHashMap<TKey, TValue> = class(specialize TGBaseOrderedHashMap<TKey, TValue, TKey>)
+    function Clone: TGOrderedHashMap; override;
+  end;
+
   { TGCustomObjectHashMap
       note: for equality comparision of (TValue as TObject) used TObjectHelper from LGHelpers }
   generic TGCustomObjectHashMap<TKey, TValue> = class abstract(specialize TGCustomHashMap<TKey, TValue>)
@@ -851,6 +866,25 @@ end;
 function TGChainHashMap.Clone: TGChainHashMap;
 begin
   Result := TGChainHashMap(inherited Clone);
+end;
+
+{ TGBaseOrderedHashMap }
+
+class function TGBaseOrderedHashMap.GetTableClass: THashTableClass;
+begin
+  Result := specialize TGOrderedHashTable<TKey, TEntry, TKeyEqRel>;
+end;
+
+class function TGBaseOrderedHashMap.GetClass: THashMapClass;
+begin
+  Result := TGBaseOrderedHashMap;
+end;
+
+{ TGOrderedHashMap }
+
+function TGOrderedHashMap.Clone: TGOrderedHashMap;
+begin
+  Result := TGOrderedHashMap(inherited Clone);
 end;
 
 { TGCustomObjectHashMap }
