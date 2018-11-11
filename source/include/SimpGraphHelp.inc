@@ -1064,6 +1064,8 @@ var
 begin
   System.SetLength(Nodes, aNodeCount);
   System.FillChar(Pointer(Nodes)^, aNodeCount * SizeOf(Integer), 0);
+  System.SetLength(Clashes, aNodeCount);
+  System.FillChar(Pointer(Clashes)^, aNodeCount * SizeOf(Integer), 0);
   System.SetLength(ColorClasses, aUpBound);
   for I := 1 to aUpBound do
     ColorClasses[Pred(I)] := TColorClass.Create(I, aNodeCount);
@@ -1097,10 +1099,16 @@ begin
     begin
       NeighbColor := Nodes[p^.Key];
       if NeighbColor = aNewColor then
-        Inc(ClashCount)
+        begin
+          Inc(Clashes[aIndex]);
+          Inc(ClashCount);
+        end
       else
         if NeighbColor = Color then
-          Dec(ClashCount);
+          begin
+            Dec(Clashes[aIndex]);
+            Dec(ClashCount);
+          end;
     end;
 end;
 
@@ -1109,6 +1117,7 @@ var
   I: Integer;
 begin
   Nodes := System.Copy(aEntity.Nodes);
+  Clashes := System.Copy(aEntity.Clashes);
   System.SetLength(ColorClasses, System.Length(aEntity.ColorClasses));
   for I := 0 to System.High(ColorClasses) do
     begin
@@ -1123,6 +1132,7 @@ var
   I: Integer;
 begin
   System.FillChar(Pointer(Nodes)^, System.Length(Nodes) * SizeOf(Integer), 0);
+  System.FillChar(Pointer(Clashes)^, System.Length(Clashes) * SizeOf(Integer), 0);
   for I := 0 to Pred(aUpBound) do
     ColorClasses[I].Members.ClearBits;
   ClashCount := 0;
@@ -1142,7 +1152,8 @@ begin
   FTimeOut := aTimeOut and MaxLongInt;
   FStartTime := Now;
   FLowBound := 1;
-  FUpBound := Pred(FGraph.GreedyColorRlf(FRecentBest));
+  FBestCount := FGraph.GreedyColorRlf(FRecentBest);
+  FUpBound := Pred(FBestCount);
 end;
 
 function TGSimpleGraph.THeaColor.TimeOut: Boolean;
@@ -1174,8 +1185,7 @@ end;
 
 procedure TGSimpleGraph.THeaColor.InitPopulation;
 var
-  I, J: SizeInt;
-  Color: Integer;
+  I, J, Color: Integer;
   p: PAdjItem;
 begin
   System.SetLength(FPopulation, PopulationSize);
@@ -1190,7 +1200,11 @@ begin
             begin
               Color := Nodes[J];
               for p in FGraph.AdjLists[J]^ do
-                ClashCount += Ord(Nodes[p^.Key] = Color);
+                if Nodes[p^.Key] = Color then
+                  begin
+                    Inc(Clashes[J]);
+                    Inc(ClashCount);
+                  end;
             end;
         end;
     end;
@@ -1206,7 +1220,7 @@ end;
 
 procedure TGSimpleGraph.THeaColor.CrossOver(p1, p2: Integer; var aEntity: TEntity);
 var
-  I, J, Curr, MaxClass, MaxCount, Count, Rest: Integer;
+  I, J, Curr, MaxClass, MaxCount, Count, Color, Rest: Integer;
   p: PAdjItem;
   InP1: Boolean = True;
 begin
@@ -1247,11 +1261,13 @@ begin
   I := 1;
   J := 2;
   Rest := NodeCount;
+  Color := 0;
   while True do
     begin
+      Color := Succ(MaxClass);
       for Curr in FParents[I].ColorClasses[MaxClass].Members do
         begin
-          aEntity.PickColor(Curr, Succ(MaxClass));
+          aEntity.PickColor(Curr, Color);
           FParents[I].DropColor(Curr);
           FParents[J].DropColor(Curr);
           Dec(Rest);
@@ -1279,27 +1295,43 @@ begin
       begin
         J := Nodes[I];
         for p in FGraph.AdjLists[I]^ do
-          ClashCount += Ord(Nodes[p^.Key] = J);
+          if Nodes[p^.Key] = J then
+            begin
+              Inc(Clashes[I]);
+              Inc(ClashCount);
+            end;
       end;
+end;
+
+procedure TGSimpleGraph.THeaColor.UpperBoundChanged;
+var
+  I, J: Integer;
+begin
+  for I := 0 to Pred(PopulationSize) do
+    with FPopulation[I] do
+      for J in ColorClasses[UpperBound].Members do
+        Move(J, Succ(Random(UpperBound)), FGraph);
 end;
 
 procedure TGSimpleGraph.THeaColor.TabuSearch(var aEntity: TEntity);
 var
-  I, cCount, Curr, OldColor: Integer;
-  SearchCount: Integer = 0;
+  SearchCount, I, cCount, Curr, OldColor: Integer;
 begin
-  while not TimeToStop and (aEntity.ClashCount <> 0) and (SearchCount < SearchLength) do
+  SearchCount := 0;
+  while not TimeToStop and (aEntity.ClashCount > 0) and (SearchCount < SearchLength) do
     begin
       Curr := Random(NodeCount);
+      if aEntity.Clashes[Curr] < 1 then
+        continue;
       OldColor := aEntity.Nodes[Curr];
       for I := 1 to UpperBound do
         if (I <> OldColor) and not IsTabu(Curr, I) then
           begin
             cCount := aEntity.ClashCount;
             aEntity.Move(Curr, I, FGraph);
-            if aEntity.ClashCount <= cCount then
+            if aEntity.ClashCount <= cCount then // <= ???
               begin
-                AddTabu(Curr, I);
+                AddTabu(Curr, OldColor);
                 break;
               end
             else
@@ -1311,7 +1343,9 @@ begin
     begin
       for I := 0 to Pred(NodeCount) do
         FRecentBest[I] := aEntity.Nodes[I];
+      FBestCount := UpperBound;
       Dec(FUpBound);
+      UpperBoundChanged;
     end;
 end;
 
@@ -1345,7 +1379,7 @@ begin
   Init(aGraph, aTimeOut);
   Execute;
   aColors := FRecentBest;
-  Result := FUpBound;
+  Result := FBestCount;
 end;
 
 { TGSimpleGraph.THamiltonCycles }

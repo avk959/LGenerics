@@ -216,7 +216,8 @@ type
     TColorClassList = array of TColorClass;
 
     TEntity = record
-      Nodes: array of Integer;
+      Nodes,
+      Clashes: array of Integer;
       ColorClasses: TColorClassList;
       ClashCount: Integer;
       constructor Create(aNodeCount, aUpBound: Integer);
@@ -238,6 +239,7 @@ type
     FGraph: TGSimpleGraph;
     FStartTime: TDateTime;
     FTimeOut: Integer;
+    FBestCount,
     FTabuSize,
     FSearchLen,
     FPopSize,
@@ -252,6 +254,7 @@ type
     procedure InitPopulation;
     procedure ChooseParents(out p1, p2: Integer); inline;
     procedure CrossOver(p1, p2: Integer; var aEntity: TEntity);
+    procedure UpperBoundChanged;
     procedure TabuSearch(var aEntity: TEntity);
     procedure UpdatePopulation(p1, p2: Integer; constref aEntity: TEntity); inline;
     procedure Execute;
