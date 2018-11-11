@@ -208,17 +208,10 @@ type
     TTabuList = specialize TGOrderedHashMap<TMove, Integer>;
     TTabuRef  = specialize TGAutoRef<TTabuList>;
 
-    TColorClass = record
-      Members: TBoolVector;
-      Color: Integer;
-      constructor Create(aColor, aNodeCount: SizeInt);
-    end;
-    TColorClassList = array of TColorClass;
-
     TEntity = record
       Nodes,
       Clashes: array of Integer;
-      ColorClasses: TColorClassList;
+      ColorClasses: array of TBoolVector;
       ClashCount: Integer;
       constructor Create(aNodeCount, aUpBound: Integer);
       procedure PickColor(aIndex, aColor: Integer); inline;

@@ -1048,14 +1048,6 @@ begin
   Result := Self;
 end;
 
-{ TGSimpleGraph.THeaColor.TColorClass }
-
-constructor TGSimpleGraph.THeaColor.TColorClass.Create(aColor, aNodeCount: SizeInt);
-begin
-  Members.Size := aNodeCount;
-  Color := aColor;
-end;
-
 { TGSimpleGraph.THeaColor.TEntity }
 
 constructor TGSimpleGraph.THeaColor.TEntity.Create(aNodeCount, aUpBound: Integer);
@@ -1068,21 +1060,21 @@ begin
   System.FillChar(Pointer(Clashes)^, aNodeCount * SizeOf(Integer), 0);
   System.SetLength(ColorClasses, aUpBound);
   for I := 1 to aUpBound do
-    ColorClasses[Pred(I)] := TColorClass.Create(I, aNodeCount);
+    ColorClasses[Pred(I)].Size := aNodeCount;
   ClashCount := 0;
 end;
 
 procedure TGSimpleGraph.THeaColor.TEntity.PickColor(aIndex, aColor: Integer);
 begin
   if Nodes[aIndex] > 0 then
-    ColorClasses[Pred(Nodes[aIndex])].Members[aIndex] := False;
+    ColorClasses[Pred(Nodes[aIndex])][aIndex] := False;
   Nodes[aIndex] := aColor;
-  ColorClasses[Pred(aColor)].Members[aIndex] := True;
+  ColorClasses[Pred(aColor)][aIndex] := True;
 end;
 
 procedure TGSimpleGraph.THeaColor.TEntity.DropColor(aIndex: Integer);
 begin
-  ColorClasses[Pred(Nodes[aIndex])].Members[aIndex] := False;
+  ColorClasses[Pred(Nodes[aIndex])][aIndex] := False;
   Nodes[aIndex] := 0;
 end;
 
@@ -1120,10 +1112,7 @@ begin
   Clashes := System.Copy(aEntity.Clashes);
   System.SetLength(ColorClasses, System.Length(aEntity.ColorClasses));
   for I := 0 to System.High(ColorClasses) do
-    begin
-      ColorClasses[I].Members := aEntity.ColorClasses[I].Members;
-      ColorClasses[I].Color := aEntity.ColorClasses[I].Color
-    end;
+    ColorClasses[I] := aEntity.ColorClasses[I];
   ClashCount := aEntity.ClashCount;
 end;
 
@@ -1134,7 +1123,7 @@ begin
   System.FillChar(Pointer(Nodes)^, System.Length(Nodes) * SizeOf(Integer), 0);
   System.FillChar(Pointer(Clashes)^, System.Length(Clashes) * SizeOf(Integer), 0);
   for I := 0 to Pred(aUpBound) do
-    ColorClasses[I].Members.ClearBits;
+    ColorClasses[I].ClearBits;
   ClashCount := 0;
 end;
 
@@ -1230,7 +1219,7 @@ begin
   with FPopulation[p1] do
     for I := 0 to Pred(UpperBound) do
       begin
-        Count := ColorClasses[I].Members.PopCount;
+        Count := ColorClasses[I].PopCount;
         if Count > MaxCount then
           begin
             MaxCount := Count;
@@ -1240,7 +1229,7 @@ begin
   with FPopulation[p2] do
     for I := 0 to Pred(UpperBound) do
       begin
-        Count := ColorClasses[I].Members.PopCount;
+        Count := ColorClasses[I].PopCount;
         if Count > MaxCount then
           begin
             MaxCount := Count;
@@ -1265,7 +1254,7 @@ begin
   while True do
     begin
       Color := Succ(MaxClass);
-      for Curr in FParents[I].ColorClasses[MaxClass].Members do
+      for Curr in FParents[I].ColorClasses[MaxClass] do
         begin
           aEntity.PickColor(Curr, Color);
           FParents[I].DropColor(Curr);
@@ -1282,7 +1271,7 @@ begin
       with FParents[I] do
         for Curr := 0 to Pred(UpperBound) do
           begin
-            Count := ColorClasses[Curr].Members.PopCount;
+            Count := ColorClasses[Curr].PopCount;
             if Count > MaxCount then
               begin
                 MaxCount := Count;
@@ -1309,7 +1298,7 @@ var
 begin
   for I := 0 to Pred(PopulationSize) do
     with FPopulation[I] do
-      for J in ColorClasses[UpperBound].Members do
+      for J in ColorClasses[UpperBound] do
         Move(J, Succ(Random(UpperBound)), FGraph);
 end;
 
