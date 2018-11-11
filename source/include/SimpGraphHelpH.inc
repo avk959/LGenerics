@@ -189,7 +189,80 @@ type
     end;
     TQueue = specialize TGPairHeapMax<TNode>;
   public
-    function Colorize(aGraph: TGSimpleGraph; out aColors: TIntArray): SizeInt;
+    function Execute(aGraph: TGSimpleGraph; out aColors: TIntArray): SizeInt;
+  end;
+
+  { THeaColor }
+  THeaColor = record
+  strict private
+  type
+    TMove = record
+      Index,
+      Color: Integer;
+      class function HashCode(constref aValue: TMove): SizeInt; static; inline;
+      class function Equal(constref L, R: TMove): Boolean; static; inline;
+      constructor Create(aIndex, aColor: Integer);
+      function Key: TMove; inline;
+    end;
+
+    TTabuList = specialize TGOrderedHashMap<TMove, Integer>;
+    TTabuRef  = specialize TGAutoRef<TTabuList>;
+
+    TColorClass = record
+      Members: TBoolVector;
+      Color: Integer;
+      constructor Create(aColor, aNodeCount: SizeInt);
+    end;
+    TColorClassList = array of TColorClass;
+
+    TEntity = record
+      Nodes: array of Integer;
+      ColorClasses: TColorClassList;
+      ClashCount: Integer;
+      constructor Create(aNodeCount, aUpBound: Integer);
+      procedure PickColor(aIndex, aColor: Integer); inline;
+      procedure DropColor(aIndex: Integer); inline;
+      procedure Move(aIndex, aNewColor: Integer; aGraph: TGSimpleGraph);
+      procedure Assign(constref aEntity: TEntity);
+      procedure Clear(aUpBound: Integer);
+    end;
+
+    TColorMap = array of Integer;
+
+  var
+    FPopulation: array of TEntity;
+    FParents: array[1..2] of TEntity;
+    FRecentBest: TIntArray;
+    FTabuRef: TTabuRef;
+    FTabuList: TTabuList;
+    FGraph: TGSimpleGraph;
+    FStartTime: TDateTime;
+    FTimeOut: Integer;
+    FTabuSize,
+    FSearchLen,
+    FPopSize,
+    FNodeCount,
+    FLowBound,
+    FUpBound: Integer;
+    procedure Init(aGraph: TGSimpleGraph; aTimeOut: Integer);
+    function  TimeOut: Boolean; inline;
+    function  TimeToStop: Boolean; inline;
+    function  IsTabu(aIndex, aColor: Integer): Boolean; inline;
+    procedure AddTabu(aIndex, aColor: Integer); inline;
+    procedure InitPopulation;
+    procedure ChooseParents(out p1, p2: Integer); inline;
+    procedure CrossOver(p1, p2: Integer; var aEntity: TEntity);
+    procedure TabuSearch(var aEntity: TEntity);
+    procedure UpdatePopulation(p1, p2: Integer; constref aEntity: TEntity); inline;
+    procedure Execute;
+    property  NodeCount: Integer read FNodeCount;
+    property  TabuListSize: Integer read FTabuSize;
+    property  SearchLength: Integer read FSearchLen;
+    property  PopulationSize: Integer read FPopSize;
+    property  LowerBound: Integer read FLowBound;
+    property  UpperBound: Integer read FUpBound;
+  public
+    function Colorize(aGraph: TGSimpleGraph; out aColors: TIntArray; aTimeOut: Integer): SizeInt;
   end;
 
   { THamiltonCycles }

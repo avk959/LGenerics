@@ -35,6 +35,8 @@ uses
   LGArrayHelpers,
   LGVector,
   LGQueue,
+  LGHash,
+  LGHashMap,
   LGCustomGraph,
   LGStrHelpers,
   LGMiscUtils,
@@ -383,6 +385,7 @@ type
     function  GreedyVertexColoringRlf(out aColors: TIntArray): SizeInt;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors(GIS ?) }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
+    function  VertexColoringHea(out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): SizeInt;
   { returns True if aTestColors is complete and proper coloring of the vertices, False otherwise }
     function  IsFeasibleVertexColoring(constref aTestColors: TIntArray): Boolean;
   { tries to return in aCycles the specified number of Hamiltonian cycles, starting from the vertex aRoot;
@@ -3690,6 +3693,14 @@ function TGSimpleGraph.GreedyVertexColoring(out aColors: TIntArray): SizeInt;
 begin
   if not ColorTrivial(Result, aColors) then
     Result := GreedyColor(aColors);
+end;
+
+function TGSimpleGraph.VertexColoringHea(out aColors: TIntArray; aTimeOut: Integer): SizeInt;
+var
+  Helper: THeaColor;
+begin
+  if not ColorTrivial(Result, aColors) then
+    Result := Helper.Colorize(Self, aColors, aTimeOut);
 end;
 
 function TGSimpleGraph.IsFeasibleVertexColoring(constref aTestColors: TIntArray): Boolean;
