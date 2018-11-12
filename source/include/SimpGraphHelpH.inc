@@ -209,16 +209,36 @@ type
     TTabuRef  = specialize TGAutoRef<TTabuList>;
 
     TEntity = record
-      Nodes,
-      Clashes: array of Integer;
+      Nodes: array of Integer;
       ColorClasses: array of TBoolVector;
       ClashCount: Integer;
-      constructor Create(aNodeCount, aUpBound: Integer);
-      procedure PickColor(aIndex, aColor: Integer); inline;
-      procedure DropColor(aIndex: Integer); inline;
-      procedure Move(aIndex, aNewColor: Integer; aGraph: TGSimpleGraph);
+      constructor Create(aNodeCount, aUpperBound: Integer);
+      procedure Clear(aUpperBound: Integer);
       procedure Assign(constref aEntity: TEntity);
-      procedure Clear(aUpBound: Integer);
+      procedure Recolor(aIndex, aNewColor: Integer);
+      procedure DropColor(aIndex: Integer); inline;
+    end;
+
+    TNode = record
+      Color: Integer;
+      AdjColors: array of Integer;
+    strict private
+      function  GetClashCount: Integer; inline;
+    public
+      constructor Create(aUpperBound: Integer);
+      procedure Clear; inline;
+      procedure NeighbRecolor(aOldColor, aNewColor: Integer); inline;
+      function  MinClashColor: Integer;
+      property  ClashCount: Integer read GetClashCount;
+    end;
+
+    TOffSpring = record
+      Nodes: array of TNode;
+      constructor Create(aNodeCount, aUpperBound: Integer);
+      procedure Clear;
+      procedure Recolor(aIndex, aNewColor: Integer; aGraph: TGSimpleGraph);
+      procedure AssignTo(var aEntity: TEntity; aUpperBound: Integer);
+      function ClashCount: Integer;
     end;
 
     TColorMap = array of Integer;
@@ -246,10 +266,10 @@ type
     procedure AddTabu(aIndex, aColor: Integer); inline;
     procedure InitPopulation;
     procedure ChooseParents(out p1, p2: Integer); inline;
-    procedure CrossOver(p1, p2: Integer; var aEntity: TEntity);
+    procedure CrossOver(p1, p2: Integer; var aOffs: TOffSpring);
     procedure UpperBoundChanged;
-    procedure TabuSearch(var aEntity: TEntity);
-    procedure UpdatePopulation(p1, p2: Integer; constref aEntity: TEntity); inline;
+    procedure TabuSearch(var aOffs: TOffSpring);
+    procedure UpdatePopulation(p1, p2: Integer; constref aOffs: TOffSpring); inline;
     procedure Execute;
     property  NodeCount: Integer read FNodeCount;
     property  TabuListSize: Integer read FTabuSize;

@@ -1050,81 +1050,165 @@ end;
 
 { TGSimpleGraph.THeaColor.TEntity }
 
-constructor TGSimpleGraph.THeaColor.TEntity.Create(aNodeCount, aUpBound: Integer);
+constructor TGSimpleGraph.THeaColor.TEntity.Create(aNodeCount, aUpperBound: Integer);
 var
   I: Integer;
 begin
   System.SetLength(Nodes, aNodeCount);
   System.FillChar(Pointer(Nodes)^, aNodeCount * SizeOf(Integer), 0);
-  System.SetLength(Clashes, aNodeCount);
-  System.FillChar(Pointer(Clashes)^, aNodeCount * SizeOf(Integer), 0);
-  System.SetLength(ColorClasses, aUpBound);
-  for I := 1 to aUpBound do
-    ColorClasses[Pred(I)].Size := aNodeCount;
+  System.SetLength(ColorClasses, aUpperBound);
+  for I := 0 to Pred(aUpperBound) do
+    ColorClasses[I].Size := aNodeCount;
   ClashCount := 0;
 end;
 
-procedure TGSimpleGraph.THeaColor.TEntity.PickColor(aIndex, aColor: Integer);
-begin
-  if Nodes[aIndex] > 0 then
-    ColorClasses[Pred(Nodes[aIndex])][aIndex] := False;
-  Nodes[aIndex] := aColor;
-  ColorClasses[Pred(aColor)][aIndex] := True;
-end;
-
-procedure TGSimpleGraph.THeaColor.TEntity.DropColor(aIndex: Integer);
-begin
-  ColorClasses[Pred(Nodes[aIndex])][aIndex] := False;
-  Nodes[aIndex] := 0;
-end;
-
-procedure TGSimpleGraph.THeaColor.TEntity.Move(aIndex, aNewColor: Integer; aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.THeaColor.TEntity.Clear(aUpperBound: Integer);
 var
-  Color, NeighbColor: Integer;
-  p: PAdjItem;
+  I: Integer;
 begin
-  Color := Nodes[aIndex];
-  if aNewColor = Color then
-    exit;
-  PickColor(aIndex, aNewColor);
-  for p in aGraph.AdjLists[aIndex]^ do
-    begin
-      NeighbColor := Nodes[p^.Key];
-      if NeighbColor = aNewColor then
-        begin
-          Inc(Clashes[aIndex]);
-          Inc(ClashCount);
-        end
-      else
-        if NeighbColor = Color then
-          begin
-            Dec(Clashes[aIndex]);
-            Dec(ClashCount);
-          end;
-    end;
+  System.FillChar(Pointer(Nodes)^, System.Length(Nodes) * SizeOf(Integer), 0);
+  for I := 0 to Pred(aUpperBound) do
+    ColorClasses[I].ClearBits;
+  ClashCount := 0;
 end;
 
 procedure TGSimpleGraph.THeaColor.TEntity.Assign(constref aEntity: TEntity);
 var
   I: Integer;
 begin
+  ClashCount := aEntity.ClashCount;
   Nodes := System.Copy(aEntity.Nodes);
-  Clashes := System.Copy(aEntity.Clashes);
   System.SetLength(ColorClasses, System.Length(aEntity.ColorClasses));
   for I := 0 to System.High(ColorClasses) do
     ColorClasses[I] := aEntity.ColorClasses[I];
-  ClashCount := aEntity.ClashCount;
 end;
 
-procedure TGSimpleGraph.THeaColor.TEntity.Clear(aUpBound: Integer);
+procedure TGSimpleGraph.THeaColor.TEntity.Recolor(aIndex, aNewColor: Integer);
+var
+  OldColor: Integer;
+begin
+  OldColor := Nodes[aIndex];
+  if OldColor <> aNewColor then
+    begin
+      if OldColor > 0 then
+        ColorClasses[Pred(OldColor)][aIndex] := False;
+      Nodes[aIndex] := aNewColor;
+      ColorClasses[Pred(aNewColor)][aIndex] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.THeaColor.TEntity.DropColor(aIndex: Integer);
+var
+  Color: Integer;
+begin
+  Color := Nodes[aIndex];
+  if Color > 0 then
+    ColorClasses[Pred(Color)][aIndex] := False;
+  Nodes[aIndex] := 0;
+end;
+
+{ TGSimpleGraph.THeaColor.TNode }
+
+function TGSimpleGraph.THeaColor.TNode.GetClashCount: Integer;
+begin
+  if Color > 0 then
+    Result := AdjColors[Pred(Color)]
+  else
+    Result := 0;
+end;
+
+constructor TGSimpleGraph.THeaColor.TNode.Create(aUpperBound: Integer);
+begin
+  System.SetLength(AdjColors, aUpperBound);
+  Clear;
+end;
+
+procedure TGSimpleGraph.THeaColor.TNode.Clear;
+begin
+  Color := 0;
+  System.FillChar(Pointer(AdjColors)^, System.Length(AdjColors) * SizeOf(Integer), 0);
+end;
+
+procedure TGSimpleGraph.THeaColor.TNode.NeighbRecolor(aOldColor, aNewColor: Integer);
+begin
+  if aOldColor <> aNewColor then
+    begin
+      if aOldColor > 0 then
+        Dec(AdjColors[Pred(aOldColor)]);
+      Inc(AdjColors[Pred(aNewColor)]);
+    end;
+end;
+
+function TGSimpleGraph.THeaColor.TNode.MinClashColor: Integer;
+var
+  I, J, MinCount, Count: Integer;
+begin
+  MinCount := MaxLongInt;
+  Result := 0;
+  for I := 0 to System.High(AdjColors) do
+    begin
+      Count := AdjColors[I];
+      if Count < MinCount then
+        begin
+          MinCount := Count;
+          Result := Succ(I);
+        end;
+    end;
+end;
+
+{ TGSimpleGraph.THeaColor.TOffSpring }
+
+constructor TGSimpleGraph.THeaColor.TOffSpring.Create(aNodeCount, aUpperBound: Integer);
 var
   I: Integer;
 begin
-  System.FillChar(Pointer(Nodes)^, System.Length(Nodes) * SizeOf(Integer), 0);
-  System.FillChar(Pointer(Clashes)^, System.Length(Clashes) * SizeOf(Integer), 0);
-  for I := 0 to Pred(aUpBound) do
-    ColorClasses[I].ClearBits;
-  ClashCount := 0;
+  System.SetLength(Nodes, aNodeCount);
+  for I := 0 to Pred(aNodeCount) do
+    Nodes[I] := TNode.Create(aUpperBound);
+end;
+
+procedure TGSimpleGraph.THeaColor.TOffSpring.Clear;
+var
+  I: Integer;
+begin
+  for I := 0 to System.High(Nodes) do
+    Nodes[I].Clear;
+end;
+
+procedure TGSimpleGraph.THeaColor.TOffSpring.Recolor(aIndex, aNewColor: Integer; aGraph: TGSimpleGraph);
+var
+  OldColor: Integer;
+  p: PAdjItem;
+begin
+  OldColor := Nodes[aIndex].Color;
+  if aNewColor <> OldColor then
+    begin
+      Nodes[aIndex].Color := aNewColor;
+      for p in aGraph.AdjLists[aIndex]^ do
+        Nodes[p^.Key].NeighbRecolor(OldColor, aNewColor);
+    end;
+end;
+
+procedure TGSimpleGraph.THeaColor.TOffSpring.AssignTo(var aEntity: TEntity; aUpperBound: Integer);
+var
+  I, Color: Integer;
+begin
+  aEntity.Clear(aUpperBound);
+  for I := 0 to System.High(Nodes) do
+    begin
+      Color := Nodes[I].Color;
+      aEntity.ClashCount += Nodes[I].ClashCount;
+      aEntity.Recolor(I, Color);
+    end;
+end;
+
+function TGSimpleGraph.THeaColor.TOffSpring.ClashCount: Integer;
+var
+  I: Integer;
+begin
+  Result := 0;
+  for I := 0 to System.High(Nodes) do
+    Result += Nodes[I].ClashCount;
 end;
 
 { TGSimpleGraph.THeaColor }
@@ -1184,36 +1268,44 @@ begin
       with FPopulation[I] do
         begin
           for J := 0 to Pred(NodeCount) do
-            PickColor(J, Succ(Random(UpperBound)));
+            Recolor(J, Succ(Random(UpperBound)));
           for J := 0 to Pred(NodeCount) do
             begin
               Color := Nodes[J];
               for p in FGraph.AdjLists[J]^ do
-                if Nodes[p^.Key] = Color then
-                  begin
-                    Inc(Clashes[J]);
-                    Inc(ClashCount);
-                  end;
+                ClashCount += Ord(Nodes[p^.Key] = Color);
             end;
         end;
     end;
 end;
 
 procedure TGSimpleGraph.THeaColor.ChooseParents(out p1, p2: Integer);
+//var
+//  I, MinClash: Integer;
 begin
+  //MinClash := MaxLongInt;
+  //p1 := NULL_INDEX;
+  //for I := 0 to Pred(PopulationSize) do
+  //  begin
+  //    if FPopulation[I].ClashCount < MinClash then
+  //      begin
+  //        MinClash := FPopulation[I].ClashCount;
+  //        p1 := I;
+  //      end;
+  //  end;
   p1 := Random(PopulationSize);
   repeat
     p2 := Random(PopulationSize);
   until p1 <> p2;
 end;
 
-procedure TGSimpleGraph.THeaColor.CrossOver(p1, p2: Integer; var aEntity: TEntity);
+procedure TGSimpleGraph.THeaColor.CrossOver(p1, p2: Integer; var aOffs: TOffSpring);
 var
   I, J, Curr, MaxClass, MaxCount, Count, Color, Rest: Integer;
   p: PAdjItem;
   InP1: Boolean = True;
 begin
-  aEntity.Clear(UpperBound);
+  aOffs.Clear;
   MaxClass := NULL_INDEX;
   MaxCount := 0;
   with FPopulation[p1] do
@@ -1256,7 +1348,7 @@ begin
       Color := Succ(MaxClass);
       for Curr in FParents[I].ColorClasses[MaxClass] do
         begin
-          aEntity.PickColor(Curr, Color);
+          aOffs.Recolor(Curr, Color, FGraph);
           FParents[I].DropColor(Curr);
           FParents[J].DropColor(Curr);
           Dec(Rest);
@@ -1279,80 +1371,96 @@ begin
               end;
           end;
     end;
-  with aEntity do
-    for I := 0 to Pred(NodeCount) do
-      begin
-        J := Nodes[I];
-        for p in FGraph.AdjLists[I]^ do
-          if Nodes[p^.Key] = J then
-            begin
-              Inc(Clashes[I]);
-              Inc(ClashCount);
-            end;
-      end;
 end;
 
 procedure TGSimpleGraph.THeaColor.UpperBoundChanged;
 var
-  I, J: Integer;
+  I, J, Color: Integer;
+  p: PAdjItem;
 begin
   for I := 0 to Pred(PopulationSize) do
     with FPopulation[I] do
-      for J in ColorClasses[UpperBound] do
-        Move(J, Succ(Random(UpperBound)), FGraph);
+      begin
+        for J in ColorClasses[UpperBound] do
+          Recolor(J, Succ(Random(UpperBound)));
+        ClashCount := 0;
+        for J := 0 to System.High(Nodes) do
+          begin
+            Color := Nodes[J];
+            for p in FGraph.AdjLists[J]^ do
+              ClashCount += Ord(Nodes[p^.Key] = Color);
+          end;
+      end;
 end;
 
-procedure TGSimpleGraph.THeaColor.TabuSearch(var aEntity: TEntity);
+procedure TGSimpleGraph.THeaColor.TabuSearch(var aOffs: TOffSpring);
 var
-  SearchCount, I, cCount, Curr, OldColor: Integer;
+  SearchCount, ClashCount, I, Curr, Color: Integer;
 begin
   SearchCount := 0;
-  while not TimeToStop and (aEntity.ClashCount > 0) and (SearchCount < SearchLength) do
+  ClashCount := aOffs.ClashCount;
+  I := 0;
+  while not TimeToStop and (ClashCount > 0) and (SearchCount < SearchLength) do
     begin
-      Curr := Random(NodeCount);
-      if aEntity.Clashes[Curr] < 1 then
+      if I = NodeCount then
+        I := 0;
+      while I < NodeCount do
+        begin
+          Color := aOffs.Nodes[I].MinClashColor;
+          if( aOffs.Nodes[I].ClashCount > 0) and (aOffs.Nodes[I].Color <> Color) then
+            break;
+          Inc(I);
+        end;
+      if I = NodeCount then
         continue;
-      OldColor := aEntity.Nodes[Curr];
-      for I := 1 to UpperBound do
-        if (I <> OldColor) and not IsTabu(Curr, I) then
-          begin
-            cCount := aEntity.ClashCount;
-            aEntity.Move(Curr, I, FGraph);
-            if aEntity.ClashCount <= cCount then // <= ???
-              begin
-                AddTabu(Curr, OldColor);
-                break;
-              end
-            else
-              aEntity.Move(Curr, OldColor, FGraph);
-          end;
+      if not IsTabu(I, Color) then
+        begin
+          AddTabu(I, aOffs.Nodes[I].Color);
+          ClashCount -= aOffs.Nodes[I].ClashCount;
+          aOffs.Recolor(I, Color, FGraph);
+          ClashCount += aOffs.Nodes[I].ClashCount;
+        end;
+      Inc(I);
       Inc(SearchCount);
     end;
-  if aEntity.ClashCount = 0 then
+  if ClashCount = 0 then
     begin
       for I := 0 to Pred(NodeCount) do
-        FRecentBest[I] := aEntity.Nodes[I];
+        FRecentBest[I] := aOffs.Nodes[I].Color;
       FBestCount := UpperBound;
       Dec(FUpBound);
       UpperBoundChanged;
     end;
 end;
 
-procedure TGSimpleGraph.THeaColor.UpdatePopulation(p1, p2: Integer; constref aEntity: TEntity);
+procedure TGSimpleGraph.THeaColor.UpdatePopulation(p1, p2: Integer; constref aOffs: TOffSpring);
+//var
+//  I, J, MaxClash: Integer;
 begin
+  //MaxClash := 0;
+  //J := NULL_INDEX;
+  //for I := 0 to Pred(PopulationSize) do
+  //  begin
+  //    if FPopulation[I].ClashCount > MaxClash then
+  //      begin
+  //        MaxClash := FPopulation[I].ClashCount;
+  //        J := I;
+  //      end;
+  //  end;
+  //aOffs.AssignTo(FPopulation[J], UpperBound);
   if FPopulation[p1].ClashCount >= FPopulation[p2].ClashCount then
-    FPopulation[p1].Assign(aEntity)
+    aOffs.AssignTo(FPopulation[p1], UpperBound)
   else
-    FPopulation[p2].Assign(aEntity)
+    aOffs.AssignTo(FPopulation[p2], UpperBound);
 end;
 
 procedure TGSimpleGraph.THeaColor.Execute;
 var
-  OffSpring: TEntity;
+  OffSpring: TOffSpring;
   p1, p2: Integer;
 begin
   InitPopulation;
-  OffSpring := TEntity.Create(NodeCount, UpperBound);
+  OffSpring := TOffSpring.Create(NodeCount, UpperBound);
   while not TimeToStop do
     begin
       ChooseParents(p1, p2);
