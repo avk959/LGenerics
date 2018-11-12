@@ -425,8 +425,8 @@ type
              inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   {  }
-    function IsFeasibleFlow(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
-    function IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
+    function IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight; constref a: TEdgeArray): Boolean;
+    function IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight; constref a: TEdgeArray): Boolean;
 
   type
     //s-t vertex partition
@@ -2422,12 +2422,14 @@ begin
   aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
 end;
 
-function TGIntWeightDiGraph.IsFeasibleFlow(constref aSource, aSink: TVertex; constref a: TEdgeArray): Boolean;
+function TGIntWeightDiGraph.IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight;
+  constref a: TEdgeArray): Boolean;
 begin
-  Result := IsFeasibleFlowI(IndexOf(aSource), IndexOf(aSink), a);
+  Result := IsFeasibleFlowI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
-function TGIntWeightDiGraph.IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; constref a: TEdgeArray): Boolean;
+function TGIntWeightDiGraph.IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight;
+  constref a: TEdgeArray): Boolean;
 var
   v: array of TWeight;
   e: TWeightEdge;
@@ -2439,6 +2441,8 @@ begin
   if System.Length(a) <> EdgeCount then
     exit(False);
   v := TWeightHelper.CreateWeightArrayZ(VertexCount);
+  v[aSrcIndex] += aFlow;
+  v[aSinkIndex] -= aFlow;
   for e in a do
     begin
       if not GetEdgeDataI(e.Source, e.Destination, d) then
@@ -2449,9 +2453,8 @@ begin
       v[e.Destination] += e.Weight;
     end;
   for I := 0 to System.High(v) do
-    if (I <> aSrcIndex) and (I <> aSinkIndex) then
-      if v[I] <> 0 then
-        exit(False);
+    if v[I] <> 0 then
+      exit(False);
   Result := True;
 end;
 

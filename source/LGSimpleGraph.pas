@@ -384,7 +384,7 @@ type
   { returns count of colors; returns colors of the vertices in corresponding components of aColors(GIS ?) }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aTestColors is complete and proper coloring of the vertices, False otherwise }
-    function  IsFeasibleVertexColoring(constref aTestColors: TIntArray): Boolean;
+    function  IsProperVertexColoring(constref aTestColors: TIntArray): Boolean;
   { tries to return in aCycles the specified number of Hamiltonian cycles, starting from the vertex aRoot;
     if aCount <= 0, then all cycles are returned; if aCount > 0, then
     Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
@@ -3692,7 +3692,7 @@ begin
     Result := GreedyColor(aColors);
 end;
 
-function TGSimpleGraph.IsFeasibleVertexColoring(constref aTestColors: TIntArray): Boolean;
+function TGSimpleGraph.IsProperVertexColoring(constref aTestColors: TIntArray): Boolean;
 var
   sCol, dCol: SizeInt;
   e: TEdge;
