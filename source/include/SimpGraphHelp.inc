@@ -1215,13 +1215,12 @@ end;
 
 procedure TGSimpleGraph.THeaColor.Init(aGraph: TGSimpleGraph; aTimeOut: Integer);
 begin
-  FSearchLen := 2500;
-  FTabuSize := 1024;
   FPopSize := 10;
   FGraph := aGraph;
   FNodeCount := aGraph.VertexCount;
+  FSearchLen := FNodeCount * 16;
   FTabuList := FTabuRef;
-  FTabuList.EnsureCapacity(TabuListSize);
+  FTabuList.EnsureCapacity(aGraph.EdgeCount);
   FTimeOut := aTimeOut and MaxLongInt;
   FStartTime := Now;
   FLowBound := 1;
@@ -1240,20 +1239,15 @@ begin
 end;
 
 function TGSimpleGraph.THeaColor.IsTabu(aIndex, aColor: Integer): Boolean;
-var
-  UpBound: Integer;
 begin
-  if FTabuList.TryGetValue(TMove.Create(aIndex, aColor), UpBound) then
-    Result := UpBound <= UpperBound
-  else
-    Result := False;
+  Result := FTabuList.Contains(TMove.Create(aIndex, aColor));
 end;
 
 procedure TGSimpleGraph.THeaColor.AddTabu(aIndex, aColor: Integer);
 begin
-  FTabuList.Add(TMove.Create(aIndex, aColor), UpperBound);
+  FTabuList.Add(TMove.Create(aIndex, aColor));
   if FTabuList.Count > TabuListSize then
-    FTabuList.Remove(FTabuList.Keys.First.Value);
+    FTabuList.Remove(FTabuList.First.Value);
 end;
 
 procedure TGSimpleGraph.THeaColor.InitPopulation;
@@ -1268,7 +1262,10 @@ begin
       with FPopulation[I] do
         begin
           for J := 0 to Pred(NodeCount) do
-            Recolor(J, Succ(Random(UpperBound)));
+            if FRecentBest[J] <= UpperBound then
+              Recolor(J, FRecentBest[J])
+            else
+              Recolor(J, Succ(Random(UpperBound)));
           for J := 0 to Pred(NodeCount) do
             begin
               Color := Nodes[J];
@@ -1280,19 +1277,7 @@ begin
 end;
 
 procedure TGSimpleGraph.THeaColor.ChooseParents(out p1, p2: Integer);
-//var
-//  I, MinClash: Integer;
 begin
-  //MinClash := MaxLongInt;
-  //p1 := NULL_INDEX;
-  //for I := 0 to Pred(PopulationSize) do
-  //  begin
-  //    if FPopulation[I].ClashCount < MinClash then
-  //      begin
-  //        MinClash := FPopulation[I].ClashCount;
-  //        p1 := I;
-  //      end;
-  //  end;
   p1 := Random(PopulationSize);
   repeat
     p2 := Random(PopulationSize);
@@ -1301,7 +1286,7 @@ end;
 
 procedure TGSimpleGraph.THeaColor.CrossOver(p1, p2: Integer; var aOffs: TOffSpring);
 var
-  I, J, Curr, MaxClass, MaxCount, Count, Color, Rest: Integer;
+  I, J, Curr, MaxClass, MaxCount, Count, Color: Integer;
   p: PAdjItem;
   InP1: Boolean = True;
 begin
@@ -1322,7 +1307,7 @@ begin
     for I := 0 to Pred(UpperBound) do
       begin
         Count := ColorClasses[I].PopCount;
-        if Count > MaxCount then
+        if (Count > MaxCount) or (Count = MaxCount) and NextRandomBoolean then
           begin
             MaxCount := Count;
             MaxClass := I;
@@ -1341,19 +1326,19 @@ begin
     end;
   I := 1;
   J := 2;
-  Rest := NodeCount;
+  FVertexSet.InitRange(NodeCount);
   Color := 0;
   while True do
     begin
-      Color := Succ(MaxClass);
+      Inc(Color);
       for Curr in FParents[I].ColorClasses[MaxClass] do
         begin
           aOffs.Recolor(Curr, Color, FGraph);
           FParents[I].DropColor(Curr);
           FParents[J].DropColor(Curr);
-          Dec(Rest);
+          FVertexSet[Curr] := False;
         end;
-      if Rest = 0 then
+      if (Color = UpperBound) or FVertexSet.IsEmpty then
         break;
       Curr := I;
       I := J;
@@ -1371,6 +1356,8 @@ begin
               end;
           end;
     end;
+  for I in FVertexSet do
+    aOffs.Recolor(I, Succ(Random(UpperBound)), FGraph);
 end;
 
 procedure TGSimpleGraph.THeaColor.UpperBoundChanged;
@@ -1395,10 +1382,12 @@ end;
 
 procedure TGSimpleGraph.THeaColor.TabuSearch(var aOffs: TOffSpring);
 var
-  SearchCount, ClashCount, I, Curr, Color: Integer;
+  SearchCount, ClashCount, I, Color: Integer;
 begin
   SearchCount := 0;
+  FTabuList.Clear;
   ClashCount := aOffs.ClashCount;
+  FTabuSize := Random(10) + Trunc(ClashCount * 0.6);
   I := 0;
   while not TimeToStop and (ClashCount > 0) and (SearchCount < SearchLength) do
     begin
@@ -1413,7 +1402,7 @@ begin
         end;
       if I = NodeCount then
         continue;
-      if not IsTabu(I, Color) then
+      if not IsTabu(I, Color) or (ClashCount - aOffs.Nodes[I].AdjColors[Pred(Color)] = 0) then
         begin
           AddTabu(I, aOffs.Nodes[I].Color);
           ClashCount -= aOffs.Nodes[I].ClashCount;
@@ -1434,20 +1423,7 @@ begin
 end;
 
 procedure TGSimpleGraph.THeaColor.UpdatePopulation(p1, p2: Integer; constref aOffs: TOffSpring);
-//var
-//  I, J, MaxClash: Integer;
 begin
-  //MaxClash := 0;
-  //J := NULL_INDEX;
-  //for I := 0 to Pred(PopulationSize) do
-  //  begin
-  //    if FPopulation[I].ClashCount > MaxClash then
-  //      begin
-  //        MaxClash := FPopulation[I].ClashCount;
-  //        J := I;
-  //      end;
-  //  end;
-  //aOffs.AssignTo(FPopulation[J], UpperBound);
   if FPopulation[p1].ClashCount >= FPopulation[p2].ClashCount then
     aOffs.AssignTo(FPopulation[p1], UpperBound)
   else

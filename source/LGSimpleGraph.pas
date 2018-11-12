@@ -36,7 +36,7 @@ uses
   LGVector,
   LGQueue,
   LGHash,
-  LGHashMap,
+  LGHashSet,
   LGCustomGraph,
   LGStrHelpers,
   LGMiscUtils,

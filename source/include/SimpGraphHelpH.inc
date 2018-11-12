@@ -205,7 +205,7 @@ type
       function Key: TMove; inline;
     end;
 
-    TTabuList = specialize TGOrderedHashMap<TMove, Integer>;
+    TTabuList = specialize TGOrderedHashSet<TMove>;
     TTabuRef  = specialize TGAutoRef<TTabuList>;
 
     TEntity = record
@@ -247,6 +247,7 @@ type
     FPopulation: array of TEntity;
     FParents: array[1..2] of TEntity;
     FRecentBest: TIntArray;
+    FVertexSet: TBoolVector;
     FTabuRef: TTabuRef;
     FTabuList: TTabuList;
     FGraph: TGSimpleGraph;
