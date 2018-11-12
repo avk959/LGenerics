@@ -201,8 +201,8 @@ type
     FCycles: PIntArrayVector;
     FRoot,
     FNodeCount,
-    FWishCount,
-    FFoundCount: SizeInt;
+    FRequired,
+    FFound: SizeInt;
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FDone,

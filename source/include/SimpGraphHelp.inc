@@ -1027,14 +1027,14 @@ procedure TGSimpleGraph.THamiltonCycles.Init(aGraph: TGSimpleGraph; aRoot, aCoun
   pv: PIntArrayVector);
 begin
   FRoot := aRoot;
-  FWishCount := aCount;
+  FRequired := aCount;
   FCycles := pv;
   FNodeCount := aGraph.VertexCount;
   FStack := TSimpleStack.Create(Succ(FNodeCount));
   FMatrix := aGraph.CreateBoolMatrix;
   FVacant.InitRange(FNodeCount);
   FTimeOut := aTimeOut and System.High(Integer);
-  FFoundCount := 0;
+  FFound := 0;
   FDone := False;
   FCancelled := False;
   FStartTime := Now;
@@ -1070,9 +1070,9 @@ begin
     begin
       FStack.Push(FRoot);
       FCycles^.Add(FStack.ToArray);
-      Inc(FFoundCount);
+      Inc(FFound);
       FStack.Pop;
-      FDone := FDone or (FWishCount > 0) and (FFoundCount >= FWishCount);
+      FDone := FDone or (FRequired > 0) and (FFound >= FRequired);
     end;
 end;
 
