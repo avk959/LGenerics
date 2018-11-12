@@ -1116,7 +1116,7 @@ begin
     CheckIsCycle(aNode);
 end;
 
-procedure TGSimpleGraph.THamiltonCycles.SearchFor;
+procedure TGSimpleGraph.THamiltonCycles.Execute;
 var
   I: SizeInt;
 begin
@@ -1139,7 +1139,7 @@ function TGSimpleGraph.THamiltonCycles.Find(aGraph: TGSimpleGraph; aRoot, aCount
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aRoot, aCount, aTimeOut, pv);
-  SearchFor;
+  Execute;
   Result := not FCancelled;
 end;
 

@@ -212,7 +212,7 @@ type
     function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
     procedure CheckIsCycle(aNode: SizeInt); inline;
     procedure DoSearch(aNode: SizeInt);
-    procedure SearchFor;
+    procedure Execute;
   public
     function  Find(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
               pv: PIntArrayVector): Boolean;
