@@ -683,7 +683,6 @@ var
   p: PAdjItem;
   Cap: TWeight;
 begin
-  FScaleFactor := 8;
   FNodeCount := aGraph.VertexCount;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
@@ -714,8 +713,8 @@ begin
         Inc(CurrArcIdx[I]);
         Inc(CurrArcIdx[J]);
       end;
-
   CurrArcIdx := nil;
+  FScaleFactor := wMax(MIN_SCALE, BsrQWord(FEpsilon));
 
   FArcs[System.High(FArcs)] :=
     TArc.Create(@FNodes[FNodeCount], @FArcs[System.High(FArcs)], 0);

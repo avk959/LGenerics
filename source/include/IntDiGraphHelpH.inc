@@ -124,6 +124,9 @@ type
       procedure Reset; inline;
     end;
 
+  const
+    MIN_SCALE = 6;
+
   var
     FNodes: array of TNode;
     FArcs: array of TArc;
