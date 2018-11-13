@@ -192,14 +192,14 @@ type
     function Execute(aGraph: TGSimpleGraph; out aColors: TIntArray): SizeInt;
   end;
 
-  { THamiltonCycles }
-  THamiltonCycles = record
+  { THamiltonian }
+  THamiltonian = record
   strict private
     FMatrix: TBoolMatrix;
     FVacant: TBoolVector;
     FStack: TSimpleStack;
-    FCycles: PIntArrayVector;
-    FRoot,
+    FPaths: PIntArrayVector;
+    FSource,
     FNodeCount,
     FRequired,
     FFound: SizeInt;
@@ -207,14 +207,19 @@ type
     FTimeOut: Integer;
     FDone,
     FCancelled: Boolean;
-    procedure Init(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
+    procedure Init(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
     function  TimeToFinish: Boolean; inline;
     function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
-    procedure CheckIsCycle(aNode: SizeInt); inline;
-    procedure DoSearch(aNode: SizeInt);
-    procedure Execute;
+    procedure CheckIsCycle(aNode: SizeInt);
+    procedure SavePath; inline;
+    procedure SearchForCycle(aNode: SizeInt);
+    procedure SearchForPath(aNode: SizeInt);
+    procedure ExecuteCycles;
+    procedure ExecutePaths;
   public
-    function  Find(aGraph: TGSimpleGraph; aRoot, aCount: SizeInt; aTimeOut: Integer;
+    function  FindCycles(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+              pv: PIntArrayVector): Boolean;
+    function  FindPaths(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
               pv: PIntArrayVector): Boolean;
   end;
 
