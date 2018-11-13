@@ -237,7 +237,7 @@ type
     TQueue = specialize TGLiteQueue<PNode>;
 
   const
-    ALPHA = 8;
+    ALPHA: TCost = TCost(8);
 
   var
     FNodes: array of TNode;

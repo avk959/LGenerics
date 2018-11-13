@@ -1255,7 +1255,7 @@ var
 begin
   FGraph := aGraph;
   FNodeCount := aGraph.VertexCount;
-  FScaleFactor := FNodeCount * ALPHA;
+  FScaleFactor := TCost(FNodeCount) * ALPHA;
   FRequestFlow := aReqFlow;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;

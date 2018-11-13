@@ -199,8 +199,10 @@ type
 
   protected
   type
-    TAdjList = specialize TGAdjList<TEdgeData>;
-    PAdjList = ^TAdjList;
+    TAdjList           = specialize TGAdjList<TEdgeData>;
+    PAdjList           = ^TAdjList;
+    TAdjItemEnumerator = TAdjList.TEnumerator;
+    TAdjEnumArrayEx    = array of TAdjItemEnumerator;
 
     {$I CustGraphIntSetH.inc}
 
@@ -260,7 +262,7 @@ type
   type
     TAdjEnumerator = record
     private
-      FEnum: TAdjList.TEnumerator;
+      FEnum: TAdjItemEnumerator;
       function  GetCurrent: SizeInt; inline;
     public
       function  MoveNext: Boolean; inline;
@@ -279,6 +281,7 @@ type
     function  CreateIntArrayRange: TIntArray;
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
+    function  CreateAdjEnumArrayEx: TAdjEnumArrayEx;
     function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
@@ -1257,6 +1260,15 @@ begin
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Result[I].FEnum := AdjLists[I]^.GetEnumerator;
+end;
+
+function TGCustomGraph.CreateAdjEnumArrayEx: TAdjEnumArrayEx;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := AdjLists[I]^.GetEnumerator;
 end;
 
 function TGCustomGraph.PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;

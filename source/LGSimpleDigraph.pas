@@ -252,6 +252,8 @@ type
 
   protected
     function CreateEdgeArray: TEdgeArray;
+    function GetDagMinPaths(aSrc: SizeInt): TWeightArray;
+    function GetDagMinPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
     function GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
     function GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
   public
@@ -341,8 +343,15 @@ type
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
-
-  { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
+  { SSSP for an acyclic graph;
+    returns an array containing in the corresponding components the maximum weight of
+    the path from aSrc to it, or InfWeight if it is unreachable from aSrc }
+    function DagMinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
+    function DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
+  { same as above and in aPathTree returns paths }
+    function DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
+    function DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+  { for an acyclic graph returns an array containing in the corresponding components the maximum weight of
     the path from aSrc to it, or NegInfWeight if it is unreachable from aSrc }
     function DagMaxPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
@@ -1772,15 +1781,90 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
+function TGWeightedDiGraph.GetDagMinPaths(aSrc: SizeInt): TWeightArray;
 var
-  Stack: TSimpleStack;
-  AdjEnums: TAdjEnumArray;
+  Queue: TIntArray;
   Visited: TBitVector;
   Curr, Next: SizeInt;
   w: TWeight;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
 begin
-  AdjEnums := CreateAdjEnumArray;
+  Queue := CreateIntArray;
+  Result := TWeightHelper.CreateWeightArray(VertexCount);
+  Visited.Size := VertexCount;
+  Visited[aSrc] := True;
+  Result[aSrc] := 0;
+  Queue[qTail] := aSrc;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      for p in AdjLists[Curr]^ do
+        begin
+          Next := p^.Key;
+          if not Visited[Next] then
+            begin
+              Visited[Next] := True;
+              Queue[qTail] := Next;
+              Inc(qTail);
+            end;
+          w := Result[Curr] + p^.Data.Weight;
+          if Result[Next] > w then
+            Result[Next] := w;
+        end;
+    end;
+end;
+
+function TGWeightedDiGraph.GetDagMinPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
+var
+  Queue: TIntArray;
+  Curr, Next: SizeInt;
+  w: TWeight;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  Queue := CreateIntArray;
+  aTree := CreateIntArray;
+  Result := TWeightHelper.CreateWeightArray(VertexCount);
+  Result[aSrc] := 0;
+  Queue[qTail] := aSrc;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      Curr := Queue[qHead];
+      Inc(qHead);
+      for p in AdjLists[Curr]^ do
+        begin
+          Next := p^.Key;
+          if aTree[Next] = NULL_INDEX then
+            begin
+              Queue[qTail] := Next;
+              Inc(qTail);
+            end;
+          w := Result[Curr] + p^.Data.Weight;
+          if Result[Next] > w then
+            begin
+              Result[Next] := w;
+              aTree[Next] := Curr;
+            end;
+        end;
+    end;
+end;
+
+function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
+var
+  Stack: TSimpleStack;
+  AdjEnums: TAdjEnumArrayEx;
+  Visited: TBitVector;
+  Curr, Next: SizeInt;
+  p: PAdjItem;
+  w: TWeight;
+begin
+  AdjEnums := CreateAdjEnumArrayEx;
   Stack := TSimpleStack.Create(VertexCount);
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
   Visited.Size := VertexCount;
@@ -1790,13 +1874,14 @@ begin
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
-        Next := AdjEnums[Curr].Current;
+        p := AdjEnums[Curr].Current;
+        Next := p^.Key;
         if not Visited[Next] then
           begin
             Visited[Next] := True;
             Stack.Push(Next);
           end;
-        w := Result[Curr] + GetEdgeDataPtr(Curr, Next)^.Weight;
+        w := Result[Curr] + p^.Data.Weight;
         if w > Result[Next] then
           Result[Next] := w;
       end
@@ -1807,29 +1892,25 @@ end;
 function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
 var
   Stack: TSimpleStack;
-  AdjEnums: TAdjEnumArray;
-  Visited: TBitVector;
+  AdjEnums: TAdjEnumArrayEx;
   Curr, Next: SizeInt;
+  p: PAdjItem;
   w: TWeight;
 begin
-  AdjEnums := CreateAdjEnumArray;
+  AdjEnums := CreateAdjEnumArrayEx;
   Stack := TSimpleStack.Create(VertexCount);
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
   aTree := CreateIntArray;
-  Visited.Size := VertexCount;
-  Visited[aSrc] := True;
   Result[aSrc] := 0;
   {%H-}Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
-        Next := AdjEnums[Curr].Current;
-        if not Visited[Next] then
-          begin
-            Visited[Next] := True;
-            Stack.Push(Next);
-          end;
-        w := Result[Curr] + GetEdgeDataPtr(Curr, Next)^.Weight;
+        p := AdjEnums[Curr].Current;
+        Next := p^.Key;
+        if aTree[Next] = NULL_INDEX then
+          Stack.Push(Next);
+        w := Result[Curr] + p^.Data.Weight;
         if w > Result[Next] then
           begin
             Result[Next] := w;
@@ -2191,6 +2272,27 @@ begin
   aCenter.Length := J;
 end;
 
+function TGWeightedDiGraph.DagMinPathsMap(constref aSrc: TVertex): TWeightArray;
+begin
+  Result := DagMinPathsMapI(IndexOf(aSrc));
+end;
+
+function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
+begin
+  CheckIndexRange(aSrc);
+  Result := GetDagMinPaths(aSrc);
+end;
+
+function TGWeightedDiGraph.DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+begin
+
+end;
+
+function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+begin
+
+end;
+
 function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
 begin
   Result := DagMaxPathsMapI(IndexOf(aSrc));
@@ -2220,17 +2322,25 @@ var
   TopoOrd: TIntArray;
   I, J: SizeInt;
   w: TWeight;
+  p: PAdjItem;
+  pList: PAdjList;
 begin
   TopoOrd := TopologicalSort(soDesc);
   Result := TWeightHelper.CreateWeightArrayZ(VertexCount);
   for I := 1 to Pred(VertexCount) do
-    for J := 0 to Pred(I) do
-      if AdjacentI(TopoOrd[I], TopoOrd[J]) then
+    begin
+      pList := AdjLists[TopoOrd[I]];
+      for J := 0 to Pred(I) do
         begin
-          w := Result[TopoOrd[J]] + GetEdgeDataPtr(TopoOrd[I], TopoOrd[J])^.Weight;
-          if w > Result[TopoOrd[I]] then
-            Result[TopoOrd[I]] := w;
+          p := pList^.Find(TopoOrd[J]);
+          if p <> nil then
+            begin
+              w := Result[TopoOrd[J]] + p^.Data.Weight;
+              if w > Result[TopoOrd[I]] then
+                Result[TopoOrd[I]] := w;
+            end;
         end;
+    end;
 end;
 
 function TGWeightedDiGraph.IsMaximalMatching(constref aMatch: TEdgeArray): Boolean;
