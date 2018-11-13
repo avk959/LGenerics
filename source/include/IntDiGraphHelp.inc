@@ -1255,8 +1255,7 @@ var
 begin
   FGraph := aGraph;
   FNodeCount := aGraph.VertexCount;
-  FAlpha := 8;
-  FScaleFactor := FAlpha * FNodeCount;
+  FScaleFactor := FNodeCount * ALPHA;
   FRequestFlow := aReqFlow;
   System.SetLength(CurrArcIdx, FNodeCount);
   J := 0;
@@ -1531,7 +1530,7 @@ var
   NeedUpdate: Boolean = True;
 begin
   repeat
-    FEpsilon := cMax(FEpsilon div FAlpha, 1);
+    FEpsilon := cMax(FEpsilon div ALPHA, 1);
     if NeedUpdate then
       PriceUpdate;
     InitPhase;

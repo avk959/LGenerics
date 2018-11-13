@@ -148,8 +148,8 @@ type
     function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
   end;
 
-  { TSspMcfHelper: Busacker-Gowen successive shortest path minimum-cost flow algorithm;
-    Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
+  { TSspMcfHelper: Busacker-Gowen successive shortest path minimum-cost flow algorithm with
+    potentials; Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
   TSspMcfHelper = record
   strict private
   type
@@ -236,6 +236,9 @@ type
     end;
     TQueue = specialize TGLiteQueue<PNode>;
 
+  const
+    ALPHA = 8;
+
   var
     FNodes: array of TNode;
     FArcs: array of TArc;
@@ -247,8 +250,7 @@ type
     FRequestFlow,
     FResultFlow: TWeight;
     FScaleFactor,
-    FEpsilon,
-    FAlpha: TCost;
+    FEpsilon: TCost;
     FNodeCount: SizeInt;
     procedure CreateResidualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap);
