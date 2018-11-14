@@ -1730,9 +1730,9 @@ begin
                 begin
                   if Curr <> aSource then
                     begin
-                      Tmp := FGrannies[Curr];
-                      while (Tmp <> aSource) and (Tmp <> Next) do
-                        Tmp := FGrannies[Tmp];
+                      Tmp := Curr;
+                      repeat Tmp := FGrannies[Tmp];
+                      until (Tmp = aSource) or (Tmp = Next);
                       if Tmp <> aSource then
                         continue;
                     end;
