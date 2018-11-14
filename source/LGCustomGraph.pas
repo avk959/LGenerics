@@ -279,6 +279,7 @@ type
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
     function  CreateIntArray(aLen, aValue: SizeInt): TIntArray;
     function  CreateIntArrayRange: TIntArray;
+    procedure ResizeAndFill(var a: TIntArray; aLen, aValue: SizeInt);
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  CreateAdjEnumArrayEx: TAdjEnumArrayEx;
@@ -1245,6 +1246,18 @@ begin
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Result[I] := I;
+end;
+
+procedure TGCustomGraph.ResizeAndFill(var a: TIntArray; aLen, aValue: SizeInt);
+begin
+  System.SetLength(a, aLen);
+{$IF DEFINED(CPU64)}
+  System.FillQWord(Pointer(a)^, aLen, QWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(Pointer(a)^, aLen, DWord(aValue));
+{$ELSE}
+  System.FillWord(Pointer(a)^, aLen, Word(aValue));
+{$ENDIF}
 end;
 
 function TGCustomGraph.CreateColorArray: TColorArray;
@@ -4387,6 +4400,15 @@ end;
 class function TGWeightHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
 begin
   Result := CreateAndFill(0, aLen);
+end;
+
+class procedure TGWeightHelper.ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight);
+var
+  I: SizeInt;
+begin
+  System.SetLength(a, aLen);
+  for I := 0 to Pred(aLen) do
+    a[I] := aValue;
 end;
 
 class function TGWeightHelper.CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix;
