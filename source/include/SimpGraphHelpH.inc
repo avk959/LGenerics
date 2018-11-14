@@ -311,7 +311,7 @@ type
     FInTree: TBitVector;
     FMatchCount: SizeInt;
     procedure Match(aNode, aMate: SizeInt); inline;
-    procedure FindAugmentPath(aRoot: SizeInt);
+    procedure FindAugmentPath(aSource: SizeInt);
     procedure Init(aGraph: TGSimpleGraph);
   public
     function  MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;

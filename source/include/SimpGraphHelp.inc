@@ -1689,7 +1689,7 @@ begin
   FMates[aMate] := aNode;
 end;
 
-procedure TGSimpleGraph.TPcMatch.FindAugmentPath(aRoot: SizeInt);
+procedure TGSimpleGraph.TPcMatch.FindAugmentPath(aSource: SizeInt);
 var
   Curr, Next, Mate, Tmp: SizeInt;
   p: PAdjItem;
@@ -1697,8 +1697,8 @@ var
   qTail: SizeInt = 0;
 begin
   FInTree.ClearBits;
-  FInTree[aRoot] := True;
-  FQueue[qTail] := aRoot;
+  FInTree[aSource] := True;
+  FQueue[qTail] := aSource;
   Inc(qTail);
   while qHead < qTail do
     begin
@@ -1728,12 +1728,12 @@ begin
             else
               if Mate <> Curr then
                 begin
-                  if Curr <> aRoot then
+                  if Curr <> aSource then
                     begin
                       Tmp := FGrannies[Curr];
-                      while (Tmp <> aRoot) and (Tmp <> Next) do
+                      while (Tmp <> aSource) and (Tmp <> Next) do
                         Tmp := FGrannies[Tmp];
-                      if Tmp <> aRoot then
+                      if Tmp <> aSource then
                         continue;
                     end;
                   FInTree[Next] := True;
