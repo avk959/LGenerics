@@ -198,7 +198,7 @@ type
     FMatrix: TBoolMatrix;
     FVacant: TBoolVector;
     FStack: TSimpleStack;
-    FPaths: PIntArrayVector;
+    FCycles: PIntArrayVector;
     FSource,
     FNodeCount,
     FRequired,
@@ -211,15 +211,10 @@ type
     function  TimeToFinish: Boolean; inline;
     function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
     procedure CheckIsCycle(aNode: SizeInt);
-    procedure SavePath; inline;
-    procedure SearchForCycle(aNode: SizeInt);
-    procedure SearchForPath(aNode: SizeInt);
-    procedure ExecuteCycles;
-    procedure ExecutePaths;
+    procedure Search(aNode: SizeInt);
+    procedure Execute;
   public
     function  FindCycles(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
-              pv: PIntArrayVector): Boolean;
-    function  FindPaths(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
               pv: PIntArrayVector): Boolean;
   end;
 
