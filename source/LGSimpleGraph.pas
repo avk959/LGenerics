@@ -3758,9 +3758,8 @@ var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
 begin
+  CheckIndexRange(aSourceIdx);
   if aTestCycle.Length <> Succ(VertexCount) then
-    exit(False);
-  if SizeUInt(aSourceIdx) >= SizeUInt(VertexCount) then
     exit(False);
   if (aTestCycle[0] <> aSourceIdx) or (aTestCycle[VertexCount] <> aSourceIdx) then
     exit(False);
@@ -3814,9 +3813,8 @@ var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
 begin
+  CheckIndexRange(aSourceIdx);
   if aTestPath.Length <> VertexCount then
-    exit(False);
-  if SizeUInt(aSourceIdx) >= SizeUInt(VertexCount) then
     exit(False);
   if aTestPath[0] <> aSourceIdx then
     exit(False);
