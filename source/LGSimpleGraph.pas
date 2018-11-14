@@ -44,7 +44,6 @@ type
   TLineGraph = class; //forward declaration
 
   { TGSimpleGraph implements simple sparse undirected graph based on adjacency lists;
-
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
@@ -492,7 +491,6 @@ type
   end;
 
   { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
-
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean;
@@ -3734,7 +3732,7 @@ var
   Helper: THamiltonian;
   I: SizeInt;
 begin
-  //todo: test needed
+  //todo: tests needed
   CheckIndexRange(aSourceIdx);
   {%H-}aCycles.Clear;
   if not Connected or (VertexCount = 1) then
@@ -3792,7 +3790,7 @@ function TGSimpleGraph.FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPath
 var
   Helper: THamiltonian;
 begin
-  //todo: test needed
+  //todo: tests needed
   CheckIndexRange(aSourceIdx);
   {%H-}aPaths.Clear;
   if not Connected or (VertexCount = 1) then
