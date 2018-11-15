@@ -369,14 +369,14 @@ type
       constructor Create(aWeight: TWeight; aSource: SizeInt);
     end;
 
-    TGraph         = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
-    TEstimate      = function(constref aSrc, aDst: TVertex): TWeight;
-    TPairHeap      = specialize TGPairHeapMin<TWeightItem>;
-    TBinHeap       = specialize TGBinHeapMin<TWeightItem>;
-    TAStarHeap     = specialize TGBinHeapMin<TRankItem>;
-    TEdgeArray     = array of TWeightEdge;
-    TWeightsMatrix = array of array of TWeight;
-    TApspMatrix    = array of array of TApspCell;
+    TGraph        = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TEstimate     = function(constref aSrc, aDst: TVertex): TWeight;
+    TPairHeap     = specialize TGPairHeapMin<TWeightItem>;
+    TBinHeap      = specialize TGBinHeapMin<TWeightItem>;
+    TAStarHeap    = specialize TGBinHeapMin<TRankItem>;
+    TEdgeArray    = array of TWeightEdge;
+    TWeightMatrix = array of array of TWeight;
+    TApspMatrix   = array of array of TApspCell;
 
     { THungarian: hungarian weighted bipartite matching algorithm }
     THungarian = record
@@ -492,14 +492,19 @@ type
     class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
   { resizes array to length aLen and fills array with aValue }
     class procedure ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight); static;
-    class function  CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix; static;
+    class function  CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix; static;
   { creates square matrix, fills main diagonal with (I, ZeroWeight) and
     fills other element with corresponding weights }
     class function  CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
   { warning: does not checks input }
     class function  ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TApspMatrix): TIntArray; static;
+  { returns bipartite matching of maximum cardinality and minimum weight;
+    warning: does not checks if aGraph is bipartite }
     class function  MinWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
+  { returns bipartite matching of maximum cardinality and maximum weight;
+    warning: does not checks if aGraph is bipartite }
     class function  MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
+    //class function  GreedyTspClose(constref m: ): TIntArray;
 
     class property  InfWeight: TWeight read CFInfWeight;
     class property  NegInfWeight: TWeight read CFNegInfWeight;

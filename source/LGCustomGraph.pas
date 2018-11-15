@@ -4411,7 +4411,7 @@ begin
     a[I] := aValue;
 end;
 
-class function TGWeightHelper.CreateWeightsMatrix(aGraph: TGraph): TWeightsMatrix;
+class function TGWeightHelper.CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix;
 var
   Empties: TBoolVector;
   I, J, VertCount: SizeInt;

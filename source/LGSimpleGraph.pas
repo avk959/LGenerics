@@ -511,7 +511,7 @@ type
     TWeightEdge   = TWeightHelper.TWeightEdge;
     TEdgeArray    = array of TWeightEdge;
     TEstimate     = TWeightHelper.TEstimate;
-    TWeightMatrix = TWeightHelper.TWeightsMatrix;
+    TWeightMatrix = TWeightHelper.TWeightMatrix;
     TApspCell     = TWeightHelper.TApspCell;
     TApspMatrix   = TWeightHelper.TApspMatrix;
 
