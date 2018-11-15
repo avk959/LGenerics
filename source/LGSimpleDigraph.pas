@@ -73,7 +73,7 @@ type
       FMatrix: TMatrix;
       FVacant: TBoolVector;
       FStack: TSimpleStack;
-      FCycles: PIntArrayVector;
+      FPaths: PIntArrayVector;
       FSource,
       FNodeCount,
       FRequired,
@@ -86,10 +86,15 @@ type
       function  TimeToFinish: Boolean; inline;
       function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
       procedure CheckIsCycle(aNode: SizeInt);
-      procedure Search(aNode: SizeInt);
-      procedure Execute;
+      procedure SavePath; inline;
+      procedure SearchForCycle(aNode: SizeInt);
+      procedure SearchForPath(aNode: SizeInt);
+      procedure ExecuteCycles;
+      procedure ExecutePaths;
     public
       function  FindCycles(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+                pv: PIntArrayVector): Boolean;
+      function  FindPaths(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
                 pv: PIntArrayVector): Boolean;
     end;
 
@@ -207,6 +212,16 @@ type
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestCycle is Hamiltonian cycle starting from the vertex with index aSourceIdx }
     function  IsHamiltonCycle(constref aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
+  { tries to return in aPaths the specified number of Hamiltonian paths, starting from the vertex aSource;
+    if aCount <= 0, then all paths are returned; if aCount > 0, then
+    Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
+    at the end of the timeout False will be returned }
+    function  FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+              aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
+    function  FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
+              aTimeOut: Integer = WAIT_INFINITE): Boolean;
+  { returns True if aTestPath is Hamiltonian path starting from the vertex with index aSourceIdx }
+    function  IsHamiltonPath(constref aTestPath: TIntArray; aSourceIdx: SizeInt): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -593,7 +608,7 @@ var
 begin
   FSource := aSrc;
   FRequired := aCount;
-  FCycles := pv;
+  FPaths := pv;
   FNodeCount := aGraph.VertexCount;
   FStack := TSimpleStack.Create(Succ(FNodeCount));
   System.SetLength(FMatrix, FNodeCount);
@@ -636,14 +651,21 @@ begin
   if FMatrix[aNode].OutList[FSource] then
     begin
       FStack.Push(FSource);
-      FCycles^.Add(FStack.ToArray);
+      FPaths^.Add(FStack.ToArray);
       Inc(FFound);
       FStack.Pop;
       FDone := FDone or (FRequired > 0) and (FFound >= FRequired);
     end;
 end;
 
-procedure TGSimpleDiGraph.THamiltonian.Search(aNode: SizeInt);
+procedure TGSimpleDiGraph.THamiltonian.SavePath;
+begin
+  FPaths^.Add(FStack.ToArray);
+  Inc(FFound);
+  FDone := FDone or (FRequired > 0) and (FFound >= FRequired);
+end;
+
+procedure TGSimpleDiGraph.THamiltonian.SearchForCycle(aNode: SizeInt);
 var
   Cand, Saved: TBoolVector;
   I: SizeInt;
@@ -669,7 +691,7 @@ begin
               Cand[I] := False;
               FStack.Push(I);
               FVacant[I] := False;
-              Search(I);
+              SearchForCycle(I);
               if TimeToFinish then
                 exit;
               FVacant[I] := True;
@@ -687,7 +709,51 @@ begin
     CheckIsCycle(aNode);
 end;
 
-procedure TGSimpleDiGraph.THamiltonian.Execute;
+procedure TGSimpleDiGraph.THamiltonian.SearchForPath(aNode: SizeInt);
+var
+  Cand, Saved: TBoolVector;
+  I: SizeInt;
+begin
+  if FVacant.NonEmpty then
+    begin
+      for I in FVacant do
+        if (FMatrix[I].InDegree = 0) or FMatrix[I].OutList.IsEmpty then
+          exit;
+      if FMatrix[aNode].OutList.IntersectionPop(FVacant) > 0 then
+        begin
+          Cand := FMatrix[aNode].OutList.Intersection(FVacant);
+          Saved.Size := FNodeCount;
+          for I in Cand do
+            begin
+              Saved[I] := FMatrix[I].OutList[aNode];
+              FMatrix[I].OutList[aNode] := False;
+              Dec(FMatrix[I].InDegree, Ord(Saved[I]));
+            end;
+          /////////////////////////////
+          while SelectMin(Cand, I) do
+            begin
+              Cand[I] := False;
+              FStack.Push(I);
+              FVacant[I] := False;
+              SearchForPath(I);
+              if TimeToFinish then
+                exit;
+              FVacant[I] := True;
+              FStack.Pop;
+            end;
+          /////////////////////////////
+          for I in Saved do
+            begin
+              FMatrix[I].OutList[aNode] := True;
+              Inc(FMatrix[I].InDegree);
+            end;
+        end;
+    end
+  else
+    SavePath;
+end;
+
+procedure TGSimpleDiGraph.THamiltonian.ExecuteCycles;
 var
   I: SizeInt;
 begin
@@ -697,7 +763,7 @@ begin
     begin
       FStack.Push(I);
       FVacant[I] := False;
-      Search(I);
+      SearchForCycle(I);
       if TimeToFinish then
         break;
       FVacant[I] := True;
@@ -706,11 +772,37 @@ begin
     end;
 end;
 
+procedure TGSimpleDiGraph.THamiltonian.ExecutePaths;
+var
+  I: SizeInt;
+begin
+  FVacant[FSource] := False;
+  FStack.Push(FSource);
+  for I in FMatrix[FSource].OutList do
+    begin
+      FStack.Push(I);
+      FVacant[I] := False;
+      SearchForPath(I);
+      if TimeToFinish then
+        break;
+      FVacant[I] := True;
+      FStack.Pop;
+    end;
+end;
+
 function TGSimpleDiGraph.THamiltonian.FindCycles(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
-  Execute;
+  ExecuteCycles;
+  Result := not FCancelled;
+end;
+
+function TGSimpleDiGraph.THamiltonian.FindPaths(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+  pv: PIntArrayVector): Boolean;
+begin
+  Init(aGraph, aSrc, aCount, aTimeOut, pv);
+  ExecutePaths;
   Result := not FCancelled;
 end;
 
@@ -1827,6 +1919,52 @@ begin
     begin
       Curr := Next;
       Next := aTestCycle[I];
+      if SizeUInt(Next) >= SizeUInt(VertexCount) then
+        exit(False);
+      if VertSet[Next] then
+        exit(False);
+      VertSet[Next] := True;
+      if not AdjLists[Curr]^.Contains(Next) then
+        exit(False);
+    end;
+  Result := True;
+end;
+
+function TGSimpleDiGraph.FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+  aTimeOut: Integer): Boolean;
+begin
+  Result := FindHamiltonPathsI(IndexOf(aSource), aCount, aPaths, aTimeOut);
+end;
+
+function TGSimpleDiGraph.FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
+  aTimeOut: Integer): Boolean;
+var
+  Helper: THamiltonian;
+begin
+  CheckIndexRange(aSourceIdx);
+  {%H-}aPaths.Clear;
+  if VertexCount < 2 then
+    exit(False);
+  Result := Helper.FindPaths(Self, aSourceIdx, aCount, aTimeOut, @aPaths);
+end;
+
+function TGSimpleDiGraph.IsHamiltonPath(constref aTestPath: TIntArray; aSourceIdx: SizeInt): Boolean;
+var
+  VertSet: TBitVector;
+  I, Curr, Next: SizeInt;
+begin
+  CheckIndexRange(aSourceIdx);
+  if aTestPath.Length <> VertexCount then
+    exit(False);
+  if aTestPath[0] <> aSourceIdx then
+    exit(False);
+  VertSet.Size := VertexCount;
+  Next := aSourceIdx;
+  VertSet[aSourceIdx] := True;
+  for I := 1 to Pred(VertexCount) do
+    begin
+      Curr := Next;
+      Next := aTestPath[I];
       if SizeUInt(Next) >= SizeUInt(VertexCount) then
         exit(False);
       if VertSet[Next] then
