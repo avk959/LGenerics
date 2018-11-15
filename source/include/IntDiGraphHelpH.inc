@@ -119,7 +119,9 @@ type
     TNode = record
     private
       FirstArc,            // pointer to first incident arc
-      CurrentArc: PArc;    // pointer to current incident arc
+      CurrentArc,          // pointer to current incident arc
+      PathArc: PArc;       // pointer to incoming path arc
+      PathMinCap: TWeight; // munimum capacity on path
       Distance: SizeInt;   // distance from the source
       procedure Reset; inline;
     end;
@@ -140,7 +142,9 @@ type
     procedure ClearLabels;
     function  BuildLevelGraph: Boolean;
     function  FindBlockingFlow(aRoot: PNode; aFlow: TWeight): TWeight;
+    function  SaturateLevelGraph: TWeight;
     function  Execute: TWeight;
+    function  Execute2: TWeight;
     function  CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
   public
     function  GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;

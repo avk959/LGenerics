@@ -724,6 +724,8 @@ begin
   FNodes[FNodeCount].Distance := NULL_INDEX;
 
   System.SetLength(FQueue, aGraph.VertexCount);
+  FSource^.PathArc := nil;
+  FSource^.PathMinCap := InfWeight;
 end;
 
 procedure TGIntWeightDiGraph.TDinitzHelper.ClearLabels;
@@ -773,7 +775,6 @@ function TGIntWeightDiGraph.TDinitzHelper.FindBlockingFlow(aRoot: PNode; aFlow: 
 var
   Arc: PArc;
 begin
-  //todo: non-recursive FindBlockingFlow ???
   if aFlow > 0 then
     if aRoot <> FSink then
       while aRoot^.CurrentArc < (aRoot + 1)^.FirstArc do
@@ -795,6 +796,57 @@ begin
   Result := 0;
 end;
 
+function TGIntWeightDiGraph.TDinitzHelper.SaturateLevelGraph: TWeight;
+var
+  Curr, Next: PNode;
+  CurrArc: PArc;
+  Dist, sTop: SizeInt;
+  BlockFlow: TWeight;
+begin
+  Result := 0;
+  while True do
+    begin
+      sTop := 0;
+      FQueue[sTop] := FSource;
+      FSink^.PathArc := nil;
+      while sTop >= 0 do
+        begin
+          Curr := FQueue[sTop];
+          if Curr = FSink then
+            break;
+          Dist := Succ(Curr^.Distance);
+          if Curr^.CurrentArc < (Curr + 1)^.FirstArc then
+            begin
+              if Curr^.CurrentArc^.ResCap > 0 then
+                begin
+                  CurrArc := Curr^.CurrentArc;
+                  if CurrArc^.Target^.Distance = Dist then
+                    begin
+                      Next := CurrArc^.Target;
+                      Next^.PathArc := CurrArc;
+                      Next^.PathMinCap := wMin(Curr^.PathMinCap, CurrArc^.ResCap);
+                      Inc(sTop);
+                      FQueue[sTop] := Next;
+                    end;
+                end;
+              Inc(Curr^.CurrentArc);
+            end
+          else
+            Dec(sTop);
+        end;
+      if FSink^.PathArc = nil then
+        exit;
+      BlockFlow := FSink^.PathMinCap;
+      Result += BlockFlow;
+      Curr := FSink;
+      repeat
+        CurrArc := Curr^.PathArc;
+        Curr := CurrArc^.Reverse^.Target;
+        CurrArc^.Push(BlockFlow);
+      until Curr = FSource;
+    end;
+end;
+
 function TGIntWeightDiGraph.TDinitzHelper.Execute: TWeight;
 var
   Flow, Inf: TWeight;
@@ -809,6 +861,19 @@ begin
           Flow := FindBlockingFlow(FSource, Inf);
           Result += Flow;
         until Flow = 0;
+    end;
+end;
+
+function TGIntWeightDiGraph.TDinitzHelper.Execute2: TWeight;
+var
+  Flow: TWeight;
+begin
+  Result := 0;
+  while FEpsilon > 0 do
+    begin
+      FEpsilon := FEpsilon div FScaleFactor;
+      while BuildLevelGraph do
+        Result += SaturateLevelGraph;
     end;
 end;
 
@@ -839,14 +904,14 @@ function TGIntWeightDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph;
   aSink: SizeInt): TWeight;
 begin
   CreateResudualGraph(aGraph, aSource, aSink);
-  Result := Execute;
+  Result := Execute2;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
   CreateResudualGraph(aGraph, aSource, aSink);
-  Result := Execute;
+  Result := Execute2;
   a := CreateEdges(aGraph);
 end;
 
