@@ -395,6 +395,7 @@ type
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestCycle is Hamiltonian cycle starting from the vertex with index aSourceIdx }
     function  IsHamiltonCycle(constref aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
+<<<<<<< HEAD
   { tries to return in aPaths the specified number of Hamiltonian paths
     from the vertex aSrc to vertex aDst; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
@@ -405,6 +406,8 @@ type
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestPath is Hamiltonian path starting from the vertex with index aSourceIdx }
     function  IsHamiltonPath(constref aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
+=======
+>>>>>>> 0f65a0a2424d04e79301858bdb819705f78c8831
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -3778,6 +3781,7 @@ begin
   Result := True;
 end;
 
+<<<<<<< HEAD
 function TGSimpleGraph.FindHamiltonPaths(constref aSrc, aDst: TVertex; aCount: SizeInt; out
   aPaths: TIntArrayVector; aTimeOut: Integer): Boolean;
 begin
@@ -3832,6 +3836,8 @@ begin
   Result := True;
 end;
 
+=======
+>>>>>>> 0f65a0a2424d04e79301858bdb819705f78c8831
 { TGChart }
 
 procedure TGChart.ReadData(aStream: TStream; out aValue: TEmptyRec);
