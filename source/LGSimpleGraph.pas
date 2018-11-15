@@ -395,16 +395,16 @@ type
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestCycle is Hamiltonian cycle starting from the vertex with index aSourceIdx }
     function  IsHamiltonCycle(constref aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
-  { tries to return in aPaths the specified number of Hamiltonian paths, starting from the vertex aSource;
-    if aCount <= 0, then all paths are returned; if aCount > 0, then
-    Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
-    at the end of the timeout False will be returned }
-    function  FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+  { tries to return in aPaths the specified number of Hamiltonian paths
+    from the vertex aSrc to vertex aDst; if aCount <= 0, then all paths are returned;
+    if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
+    the timeout in seconds; at the end of the timeout False will be returned }
+    function  FindHamiltonPaths(constref aSrc, aDst: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
-    function  FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
+    function  FindHamiltonPathsI(aSrcIdx, aDstIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestPath is Hamiltonian path starting from the vertex with index aSourceIdx }
-    function  IsHamiltonPath(constref aTestPath: TIntArray; aSourceIdx: SizeInt): Boolean;
+    function  IsHamiltonPath(constref aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -3732,7 +3732,6 @@ var
   Helper: THamiltonian;
   I: SizeInt;
 begin
-  //todo: tests needed
   CheckIndexRange(aSourceIdx);
   {%H-}aCycles.Clear;
   if not Connected or (VertexCount = 1) then
@@ -3746,7 +3745,7 @@ begin
       exit(True);
     end;
   for I := 0 to Pred(VertexCount) do
-    if AdjLists[I]^.Count = 1 then
+    if AdjLists[I]^.Count < 2 then
       exit(False);
   Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles);
 end;
@@ -3779,46 +3778,45 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
-  aTimeOut: Integer): Boolean;
+function TGSimpleGraph.FindHamiltonPaths(constref aSrc, aDst: TVertex; aCount: SizeInt; out
+  aPaths: TIntArrayVector; aTimeOut: Integer): Boolean;
 begin
-  Result := FindHamiltonPathsI(IndexOf(aSource), aCount, aPaths, aTimeOut);
+  Result := FindHamiltonPathsI(IndexOf(aSrc), IndexOf(aDst), aCount, aPaths, aTimeOut);
 end;
 
-function TGSimpleGraph.FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
+function TGSimpleGraph.FindHamiltonPathsI(aSrcIdx, aDstIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
   Helper: THamiltonian;
+  I: SizeInt;
 begin
-  //todo: tests needed
-  CheckIndexRange(aSourceIdx);
+  CheckIndexRange(aSrcIdx);
+  CheckIndexRange(aDstIdx);
   {%H-}aPaths.Clear;
   if not Connected or (VertexCount = 1) then
     exit(False);
-  if VertexCount = 2 then
-    begin
-      if aSourceIdx = 0 then
-        aPaths.Add([0, 1])
-      else
-        aPaths.Add([1, 0]);
-      exit(True);
-    end;
-  Result := Helper.FindPaths(Self, aSourceIdx, aCount, aTimeOut, @aPaths);
+  for I := 0 to Pred(VertexCount) do
+    if (I <> aSrcIdx) and (I <> aDstIdx) and (AdjLists[I]^.Count < 2) then
+      exit(False);
+  Result := Helper.FindPaths(Self, aSrcIdx, aDstIdx, aCount, aTimeOut, @aPaths);
 end;
 
-function TGSimpleGraph.IsHamiltonPath(constref aTestPath: TIntArray; aSourceIdx: SizeInt): Boolean;
+function TGSimpleGraph.IsHamiltonPath(constref aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
 begin
-  CheckIndexRange(aSourceIdx);
+  CheckIndexRange(aSrcIdx);
+  CheckIndexRange(aDstIdx);
   if aTestPath.Length <> VertexCount then
     exit(False);
-  if aTestPath[0] <> aSourceIdx then
+  if aTestPath[0] <> aSrcIdx then
+    exit(False);
+  if aTestPath[Pred(VertexCount)] <> aDstIdx then
     exit(False);
   VertSet.Size := VertexCount;
-  Next := aSourceIdx;
-  VertSet[aSourceIdx] := True;
+  Next := aSrcIdx;
+  VertSet[aSrcIdx] := True;
   for I := 1 to Pred(VertexCount) do
     begin
       Curr := Next;

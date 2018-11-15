@@ -193,13 +193,15 @@ type
   end;
 
   { THamiltonian }
-  THamiltonian = record
+  THamiltonian = object
   strict private
     FMatrix: TBoolMatrix;
     FVacant: TBoolVector;
     FStack: TSimpleStack;
     FPaths: PIntArrayVector;
+    FCheckNode: TOnVisit;
     FSource,
+    FTarget,
     FNodeCount,
     FRequired,
     FFound: SizeInt;
@@ -211,15 +213,14 @@ type
     function  TimeToFinish: Boolean; inline;
     function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
     procedure CheckIsCycle(aNode: SizeInt);
-    procedure SavePath; inline;
-    procedure SearchForCycle(aNode: SizeInt);
-    procedure SearchForPath(aNode: SizeInt);
+    procedure CheckIsPath(aNode: SizeInt); inline;
+    procedure SearchFor(aNode: SizeInt);
     procedure ExecuteCycles;
     procedure ExecutePaths;
   public
     function  FindCycles(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
               pv: PIntArrayVector): Boolean;
-    function  FindPaths(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+    function  FindPaths(aGraph: TGSimpleGraph; aSrc, aDst, aCount: SizeInt; aTimeOut: Integer;
               pv: PIntArrayVector): Boolean;
   end;
 
