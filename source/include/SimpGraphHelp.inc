@@ -1028,7 +1028,7 @@ procedure TGSimpleGraph.THamiltonian.Init(aGraph: TGSimpleGraph; aSrc, aCount: S
 begin
   FSource := aSrc;
   FRequired := aCount;
-  FCycles := pv;
+  FPaths := pv;
   FNodeCount := aGraph.VertexCount;
   FStack := TSimpleStack.Create(Succ(FNodeCount));
   FMatrix := aGraph.CreateBoolMatrix;
@@ -1069,14 +1069,13 @@ begin
   if FMatrix[aNode][FSource] then
     begin
       FStack.Push(FSource);
-      FCycles^.Add(FStack.ToArray);
+      FPaths^.Add(FStack.ToArray);
       Inc(FFound);
       FStack.Pop;
       FDone := FDone or (FRequired > 0) and (FFound >= FRequired);
     end;
 end;
 
-<<<<<<< HEAD
 procedure TGSimpleGraph.THamiltonian.CheckIsPath(aNode: SizeInt);
 begin
   if FMatrix[aNode][FTarget] then
@@ -1130,49 +1129,6 @@ begin
 end;
 
 procedure TGSimpleGraph.THamiltonian.ExecuteCycles;
-=======
-procedure TGSimpleGraph.THamiltonian.Search(aNode: SizeInt);
-var
-  Cand, Saved: TBoolVector;
-  I: SizeInt;
-begin
-  if FVacant.NonEmpty then
-    begin
-      for I in FVacant do
-        if FMatrix[I].IsEmpty then
-          exit;
-      if FMatrix[aNode].IntersectionPop(FVacant) > 0 then
-        begin
-          Cand := FMatrix[aNode].Intersection(FVacant);
-          Saved.Size := FNodeCount;
-          for I in Cand do
-            begin
-              Saved[I] := FMatrix[I][aNode];
-              FMatrix[I][aNode] := False;
-            end;
-          /////////////////////////////
-          while SelectMin(Cand, I) do
-            begin
-              Cand[I] := False;
-              FStack.Push(I);
-              FVacant[I] := False;
-              Search(I);
-              if TimeToFinish then
-                exit;
-              FVacant[I] := True;
-              FStack.Pop;
-            end;
-          /////////////////////////////
-          for I in Saved do
-            FMatrix[I][aNode] := True;
-        end;
-    end
-  else
-    CheckIsCycle(aNode);
-end;
-
-procedure TGSimpleGraph.THamiltonian.Execute;
->>>>>>> 0f65a0a2424d04e79301858bdb819705f78c8831
 var
   I: SizeInt;
 begin
@@ -1183,11 +1139,7 @@ begin
     begin
       FStack.Push(I);
       FVacant[I] := False;
-<<<<<<< HEAD
       SearchFor(I);
-=======
-      Search(I);
->>>>>>> 0f65a0a2424d04e79301858bdb819705f78c8831
       if TimeToFinish then
         break;
       FVacant[I] := True;
@@ -1196,7 +1148,6 @@ begin
     end;
 end;
 
-<<<<<<< HEAD
 procedure TGSimpleGraph.THamiltonian.ExecutePaths;
 var
   I: SizeInt;
@@ -1217,13 +1168,10 @@ begin
     end;
 end;
 
-=======
->>>>>>> 0f65a0a2424d04e79301858bdb819705f78c8831
 function TGSimpleGraph.THamiltonian.FindCycles(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
-<<<<<<< HEAD
   ExecuteCycles;
   Result := not FCancelled;
 end;
@@ -1234,9 +1182,6 @@ begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
   FTarget := aDst;
   ExecutePaths;
-=======
-  Execute;
->>>>>>> 0f65a0a2424d04e79301858bdb819705f78c8831
   Result := not FCancelled;
 end;
 

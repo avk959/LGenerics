@@ -198,12 +198,8 @@ type
     FMatrix: TBoolMatrix;
     FVacant: TBoolVector;
     FStack: TSimpleStack;
-<<<<<<< HEAD
     FPaths: PIntArrayVector;
     FCheckNode: TOnVisit;
-=======
-    FCycles: PIntArrayVector;
->>>>>>> 0f65a0a2424d04e79301858bdb819705f78c8831
     FSource,
     FTarget,
     FNodeCount,
@@ -217,7 +213,6 @@ type
     function  TimeToFinish: Boolean; inline;
     function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
     procedure CheckIsCycle(aNode: SizeInt);
-<<<<<<< HEAD
     procedure CheckIsPath(aNode: SizeInt); inline;
     procedure SearchFor(aNode: SizeInt);
     procedure ExecuteCycles;
@@ -227,13 +222,6 @@ type
               pv: PIntArrayVector): Boolean;
     function  FindPaths(aGraph: TGSimpleGraph; aSrc, aDst, aCount: SizeInt; aTimeOut: Integer;
               pv: PIntArrayVector): Boolean;
-=======
-    procedure Search(aNode: SizeInt);
-    procedure Execute;
-  public
-    function  FindCycles(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
-              pv: PIntArrayVector): Boolean;
->>>>>>> 0f65a0a2424d04e79301858bdb819705f78c8831
   end;
 
   { THKMatch: Hopcroft–Karp algorithm for maximum cardinality matching
