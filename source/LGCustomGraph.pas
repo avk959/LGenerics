@@ -4490,6 +4490,92 @@ begin
   Result := Helper.MaxWeightMatching(aGraph, w, g);
 end;
 
+class function TGWeightHelper.GreedyCloseTspNn(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+var
+  Tour: TIntArray;
+  Unvisit: TBoolVector;
+  I, J, K, Curr, Next, Len: SizeInt;
+  CurrMin, Total, wCurr, Inf: TWeight;
+begin
+  Inf := InfWeight;
+  Result := nil;
+  aWeight := Inf;
+  Len := System.Length(m);
+  Tour.Length := Succ(Len);
+  for K := 0 to Pred(Len) do
+    begin
+      Unvisit.InitRange(Len);
+      Tour[0] := K;
+      Unvisit[K] := False;
+      Curr := K;
+      I := 1;
+      Total := 0;
+      while Unvisit.NonEmpty do
+        begin
+          CurrMin := Inf;
+          for J in Unvisit do
+            begin
+              wCurr := m[Curr, J];
+              if wCurr < CurrMin then
+                begin
+                  CurrMin := wCurr;
+                  Next := J;
+                end;
+            end;
+          Curr := Next;
+          Tour[I] := Next;
+          Unvisit[Next] := False;
+          Inc(I);
+          Total += CurrMin;
+        end;
+      Total += m[Next, K];
+      Tour[I] := K;
+      if Total < aWeight then
+        begin
+          aWeight := Total;
+          Result := System.Copy(Tour);
+        end;
+    end;
+end;
+
+class function TGWeightHelper.GreedyOpenTspNn(constref m: TWeightMatrix; aSrc, aDst: SizeInt;
+  out aWeight: TWeight): TIntArray;
+var
+  Unvisit: TBoolVector;
+  I, J, Curr, Next: SizeInt;
+  CurrMin, wCurr, Inf: TWeight;
+begin
+  Inf := InfWeight;
+  Result{%H-}.Length := System.Length(m);
+  Unvisit.InitRange(System.Length(m));
+  Result[0] := aSrc;
+  Unvisit[aSrc] := False;
+  Unvisit[aDst] := False;
+  Curr := aSrc;
+  I := 1;
+  aWeight := 0;
+  while Unvisit.NonEmpty do
+    begin
+      CurrMin := Inf;
+      for J in Unvisit do
+        begin
+          wCurr := m[Curr, J];
+          if wCurr < CurrMin then
+            begin
+              CurrMin := wCurr;
+              Next := J;
+            end;
+        end;
+      Curr := Next;
+      Result[I] := Next;
+      Unvisit[Next] := False;
+      Inc(I);
+      aWeight += CurrMin;
+    end;
+  aWeight += m[Next, aDst];
+  Result[I] := aDst;
+end;
+
 { TGCustomDotWriter }
 
 function TGCustomDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;

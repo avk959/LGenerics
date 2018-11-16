@@ -504,7 +504,11 @@ type
   { returns bipartite matching of maximum cardinality and maximum weight;
     warning: does not checks if aGraph is bipartite }
     class function  MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
-    //class function  GreedyTspClose(constref m: ): TIntArray;
+  { greedy Nearest Neighbour closed TSP algorithm(closed variant) }
+    class function  GreedyCloseTspNn(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+  { greedy Nearest Neighbour TSP algorithm(open variant) }
+    class function  GreedyOpenTspNn(constref m: TWeightMatrix; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+                    static;
 
     class property  InfWeight: TWeight read CFInfWeight;
     class property  NegInfWeight: TWeight read CFNegInfWeight;
