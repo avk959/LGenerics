@@ -523,6 +523,7 @@ type
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
     function CreateEdgeArray: TEdgeArray;
+    class procedure Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight); static;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -614,7 +615,6 @@ type
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
-
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -623,6 +623,13 @@ type
     function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
   { returns True if aMatch is perfect matching }
     function IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean; inline;
+{**********************************************************************************************************
+  some NP-hard problem utilities
+***********************************************************************************************************}
+
+    class function GreedyCloseTsp2Opt(constref aMatrix: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+    class function GreedyOpenTsp2Opt(constref aMatrix: TWeightMatrix; aSrc, aDst: SizeInt;
+                   out aWeight: TWeight): TIntArray; static;
   end;
 
   TRealPointEdge = record
@@ -4147,6 +4154,44 @@ begin
         end;
 end;
 
+class procedure TGWeightedGraph.Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
+var
+  I, J, PosI, PosJ, Len: SizeInt;
+  OldI, Gain, MaxGain: TWeight;
+begin
+  Len := System.Length(m);
+  PosI := NULL_INDEX;
+  PosJ := NULL_INDEX;
+  repeat
+    MaxGain := 0;
+    for I := 1 to Len - 3 do
+      begin
+        OldI := m[aPath[I], aPath[Succ(I)]];
+        for J := I + 2 to Len - 2 do
+          begin
+            Gain :=
+              (OldI + m[aPath[J], aPath[Succ(J)]]) - (m[aPath[I], aPath[J]] + m[aPath[Succ(I)], aPath[Succ(J)]]);
+            if Gain > MaxGain then
+              begin
+                MaxGain := Gain;
+                PosI := I;
+                PosJ := J;
+              end;
+          end;
+      end;
+    if MaxGain > 0 then
+      begin
+        I := aPath[Succ(PosI)];
+        aPath[Succ(PosI)] := aPath[PosJ];
+        aPath[PosJ] := aPath[Succ(PosJ)];
+        aPath[Succ(PosJ)] := I;
+      end;
+  until MaxGain = 0;
+  aWeight := 0;
+  for I := 0 to Pred(Len) do
+    aWeight += m[aPath[I], aPath[I+1]];
+end;
+
 class function TGWeightedGraph.InfWeight: TWeight;
 begin
   Result := TWeightHelper.InfWeight;
@@ -4526,6 +4571,19 @@ end;
 function TGWeightedGraph.IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
+end;
+
+class function TGWeightedGraph.GreedyCloseTsp2Opt(constref aMatrix: TWeightMatrix; out aWeight: TWeight): TIntArray;
+begin
+  Result := TWeightHelper.GreedyCloseTspNn(aMatrix, aWeight);
+  Tsp2Opt(aMatrix, Result, aWeight);
+end;
+
+class function TGWeightedGraph.GreedyOpenTsp2Opt(constref aMatrix: TWeightMatrix; aSrc, aDst: SizeInt; out
+  aWeight: TWeight): TIntArray;
+begin
+  Result := TWeightHelper.GreedyOpenTspNn(aMatrix, aSrc, aDst, aWeight);
+  Tsp2Opt(aMatrix, Result, aWeight);
 end;
 
 { TRealPointEdge }
