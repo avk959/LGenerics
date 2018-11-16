@@ -272,7 +272,6 @@ type
     TAdjEnumArray = array of TAdjEnumerator;
   protected
     function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
-    function  NonRecDfs(aRoot: SizeInt): SizeInt;
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
     function  CreateBoolMatrix: TBoolMatrix;
@@ -1132,38 +1131,6 @@ end;
 function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
 begin
   Result := @FNodeList[aSrc].AdjList.Find(aDst)^.Data;
-end;
-
-function TGCustomGraph.NonRecDfs(aRoot: SizeInt): SizeInt;
-var
-  Stack: TIntStack;
-  Visited: TBitVector;
-  AdjEnums: TAdjEnumArray;
-  Next: SizeInt;
-begin
-  Visited.Size := VertexCount;
-  AdjEnums := CreateAdjEnumArray;
-  Visited[aRoot] := True;
-  {%H-}Stack.Push(aRoot);
-  Result := 1;
-  while Stack.TryPeek(aRoot) do
-    if AdjEnums[aRoot].MoveNext then
-      begin
-        Next := AdjEnums[aRoot].Current;
-        if not Visited[Next] then
-          begin
-            //on white
-            Visited[Next] := True;
-            Inc(Result);
-            Stack.Push(Next);
-            //on gray
-          end;
-      end
-    else
-      begin
-        Stack.Pop;
-        //on black
-      end;
 end;
 
 procedure TGCustomGraph.CheckIndexRange(aIndex: SizeInt);
@@ -4541,7 +4508,7 @@ end;
 class function TGWeightHelper.GreedyOpenTspNn(constref m: TWeightMatrix; aSrc, aDst: SizeInt;
   out aWeight: TWeight): TIntArray;
 var
-  Unvisit: TBoolVector;
+  Unvisit: TBoolVector;  //todo: Farthest Insertion Algorithm
   I, J, Curr, Next: SizeInt;
   CurrMin, wCurr, Inf: TWeight;
 begin
