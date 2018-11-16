@@ -4545,6 +4545,10 @@ var
   I, J, Curr, Next: SizeInt;
   CurrMin, wCurr, Inf: TWeight;
 begin
+  if SizeUInt(aSrc) >= SizeUInt(System.Length(m)) then
+    raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc]);
+  if SizeUInt(aDst) >= SizeUInt(System.Length(m)) then
+    raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst]);
   Inf := InfWeight;
   Result{%H-}.Length := System.Length(m);
   Unvisit.InitRange(System.Length(m));

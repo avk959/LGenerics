@@ -506,7 +506,8 @@ type
     class function  MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
   { greedy Nearest Neighbour closed TSP algorithm(closed variant) }
     class function  GreedyCloseTspNn(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { greedy Nearest Neighbour TSP algorithm(open variant) }
+  { greedy Nearest Neighbour TSP algorithm(open variant);
+    raises EGraphError if aSrc or aDst out of m bounds }
     class function  GreedyOpenTspNn(constref m: TWeightMatrix; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
                     static;
 
