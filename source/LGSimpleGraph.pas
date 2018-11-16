@@ -4157,20 +4157,20 @@ end;
 class procedure TGWeightedGraph.Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
 var
   I, J, PosI, PosJ, Len: SizeInt;
-  OldI, Gain, MaxGain: TWeight;
+  wOldI, Gain, MaxGain: TWeight;
 begin
-  Len := System.Length(m);
+  Len := System.High(aPath);
   PosI := NULL_INDEX;
   PosJ := NULL_INDEX;
   repeat
     MaxGain := 0;
-    for I := 1 to Len - 3 do
+    for I := 1 to Len - 4 do
       begin
-        OldI := m[aPath[I], aPath[Succ(I)]];
+        wOldI := m[aPath[I], aPath[Succ(I)]];
         for J := I + 2 to Len - 2 do
           begin
             Gain :=
-              (OldI + m[aPath[J], aPath[Succ(J)]]) - (m[aPath[I], aPath[J]] + m[aPath[Succ(I)], aPath[Succ(J)]]);
+              (wOldI + m[aPath[J], aPath[Succ(J)]]) - (m[aPath[I], aPath[J]] + m[aPath[Succ(I)], aPath[Succ(J)]]);
             if Gain > MaxGain then
               begin
                 MaxGain := Gain;
