@@ -4505,48 +4505,6 @@ begin
     end;
 end;
 
-class function TGWeightHelper.GreedyOpenTspNn(constref m: TWeightMatrix; aSrc, aDst: SizeInt;
-  out aWeight: TWeight): TIntArray;
-var
-  Unvisit: TBoolVector;  //todo: Farthest Insertion Algorithm
-  I, J, Curr, Next: SizeInt;
-  CurrMin, wCurr, Inf: TWeight;
-begin
-  if SizeUInt(aSrc) >= SizeUInt(System.Length(m)) then
-    raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc]);
-  if SizeUInt(aDst) >= SizeUInt(System.Length(m)) then
-    raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst]);
-  Inf := InfWeight;
-  Result{%H-}.Length := System.Length(m);
-  Unvisit.InitRange(System.Length(m));
-  Result[0] := aSrc;
-  Unvisit[aSrc] := False;
-  Unvisit[aDst] := False;
-  Curr := aSrc;
-  I := 1;
-  aWeight := 0;
-  while Unvisit.NonEmpty do
-    begin
-      CurrMin := Inf;
-      for J in Unvisit do
-        begin
-          wCurr := m[Curr, J];
-          if wCurr < CurrMin then
-            begin
-              CurrMin := wCurr;
-              Next := J;
-            end;
-        end;
-      Curr := Next;
-      Result[I] := Next;
-      Unvisit[Next] := False;
-      Inc(I);
-      aWeight += CurrMin;
-    end;
-  aWeight += m[Next, aDst];
-  Result[I] := aDst;
-end;
-
 { TGCustomDotWriter }
 
 function TGCustomDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
