@@ -27,16 +27,14 @@ interface
 
 uses
 
-  SysUtils,
-  math,
-  typinfo,
+  SysUtils, math, typinfo,
   LGUtils,
   {%H-}LGHelpers;
 
 type
 
   TSortOrder   = LGUtils.TSortOrder;
-  {.$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT  for test purpose only}
+  {.$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT  :for test purpose only}
 
   { TGArrayHelpUtil }
 
@@ -123,6 +121,12 @@ type
     if aCount > length A then Result is truncated }
     class function  Extract(var A: TArray; aIndex, aCount: SizeInt): TArray; static;
     class procedure Reverse(var A: array of T); static;
+  { cyclic shift of array elements by aDist positions to the left;
+    Abs(aDist) > Length(A) ignored }
+    class procedure RotateLeft(var A: array of T; aDist: SizeInt); static;
+  { cyclic shift of array elements by aDist positions to the right;
+    Abs(aDist) > Length(A) ignored }
+    class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
     class procedure RandomShuffle(var A: array of T); static;
   { returns 0-based position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TEqualCompare): SizeInt;
@@ -771,6 +775,12 @@ type
     class function  QSelectR(var A: array of T; N: SizeInt): T; static;
   public
     class procedure Reverse(var A: array of T); static;
+  { cyclic shift of array elements by aDist positions to the left;
+    Abs(aDist) > Length(A) ignored }
+    class procedure RotateLeft(var A: array of T; aDist: SizeInt); static;
+  { cyclic shift of array elements by aDist positions to the right;
+    Abs(aDist) > Length(A) ignored }
+    class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
   { returns 0-based position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
   { returns 0-based position of aValue in SORTED array A, -1 if not found }
@@ -1180,6 +1190,30 @@ class procedure TGArrayHelpUtil.Reverse(var A: array of T);
 begin
   if System.High(A) > 0 then
     DoReverse(@A[0], System.High(A));
+end;
+
+class procedure TGArrayHelpUtil.RotateLeft(var A: array of T; aDist: SizeInt);
+var
+  Len: SizeInt;
+begin
+  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+    exit;
+  Len := System.Length(A);
+  if aDist < 0 then
+    aDist += Len;
+  DoReverse(@A[0], Pred(aDist));
+  DoReverse(@A[aDist], Pred(Len - aDist));
+  DoReverse(@A[0], Pred(Len));
+end;
+
+class procedure TGArrayHelpUtil.RotateRight(var A: array of T; aDist: SizeInt);
+begin
+  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+    exit;
+  if aDist > 0 then
+    RotateLeft(A, System.Length(A) - aDist)
+  else
+    RotateLeft(A, -aDist);
 end;
 
 
@@ -8661,6 +8695,30 @@ begin
   R := System.High(A);
   if R > 0 then
     DoReverse(A, 0, R);
+end;
+
+class procedure TGNumArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
+var
+  Len: SizeInt;
+begin
+  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+    exit;
+  Len := System.Length(A);
+  if aDist < 0 then
+    aDist += Len;
+  DoReverse(A, 0, Pred(aDist));
+  DoReverse(A, aDist, Pred(Len));
+  DoReverse(A, 0, Pred(Len));
+end;
+
+class procedure TGNumArrayHelper.RotateRight(var A: array of T; aDist: SizeInt);
+begin
+  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+    exit;
+  if aDist > 0 then
+    RotateLeft(A, System.Length(A) - aDist)
+  else
+    RotateLeft(A, -aDist)
 end;
 
 class function TGNumArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
