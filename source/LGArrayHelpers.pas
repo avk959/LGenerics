@@ -122,10 +122,10 @@ type
     class function  Extract(var A: TArray; aIndex, aCount: SizeInt): TArray; static;
     class procedure Reverse(var A: array of T); static;
   { cyclic shift of array elements by aDist positions to the left;
-    Abs(aDist) > Length(A) ignored }
+    the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateLeft(var A: array of T; aDist: SizeInt); static;
   { cyclic shift of array elements by aDist positions to the right;
-    Abs(aDist) > Length(A) ignored }
+    the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
     class procedure RandomShuffle(var A: array of T); static;
   { returns 0-based position of aValue in array A, -1 if not found }
@@ -776,10 +776,10 @@ type
   public
     class procedure Reverse(var A: array of T); static;
   { cyclic shift of array elements by aDist positions to the left;
-    Abs(aDist) > Length(A) ignored }
+    the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateLeft(var A: array of T; aDist: SizeInt); static;
   { cyclic shift of array elements by aDist positions to the right;
-    Abs(aDist) > Length(A) ignored }
+    the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
   { returns 0-based position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
@@ -1195,7 +1195,7 @@ end;
 class procedure TGArrayHelpUtil.RotateLeft(var A: array of T; aDist: SizeInt);
 var
   Len: SizeInt;
-begin
+begin       //todo: test needed
   if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
     exit;
   Len := System.Length(A);
@@ -1207,7 +1207,7 @@ begin
 end;
 
 class procedure TGArrayHelpUtil.RotateRight(var A: array of T; aDist: SizeInt);
-begin
+begin    //todo: test needed
   if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
     exit;
   if aDist > 0 then
@@ -8700,7 +8700,7 @@ end;
 class procedure TGNumArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
 var
   Len: SizeInt;
-begin
+begin  //todo: test needed
   if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
     exit;
   Len := System.Length(A);
@@ -8712,7 +8712,7 @@ begin
 end;
 
 class procedure TGNumArrayHelper.RotateRight(var A: array of T; aDist: SizeInt);
-begin
+begin  //todo: test needed
   if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
     exit;
   if aDist > 0 then
