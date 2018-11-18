@@ -331,7 +331,21 @@ type
     procedure DualPivotQuickSortAscOfDyn577RandomZeroes;
     procedure DualPivotQuickSortDescOfDyn577Random;
     procedure DualPivotQuickSortDescOfDyn577RandomZeroes;
+  end;
 
+  { TOrdArrayHelperTest }
+
+  TOrdArrayHelperTest = class(TTestCase)
+  private
+  type
+    THelper   = specialize TGOrdinalArrayHelper<Integer>;
+    TIntArray = THelper.TArray;
+  published
+    procedure CreateRange;
+    procedure SortAsc;
+    procedure SortDesc;
+    procedure SortAsc577;
+    procedure SortDesc577;
   end;
 
 
@@ -2791,9 +2805,83 @@ begin
   AssertTrue(TIntHelper.IsNonAscending(a));
 end;
 
+{ TOrdArrayHelperTest }
+
+procedure TOrdArrayHelperTest.CreateRange;
+var
+  I, J: Integer;
+  a: TIntArray;
+begin
+  a := THelper.CreateRange(0, -1);
+  AssertTrue(a = nil);
+  a := THelper.CreateRange(0, 0);
+  AssertTrue(System.Length(a) = 1);
+  J := -10;
+  I := 50;
+  a := THelper.CreateRange(J, I);
+  AssertTrue(System.Length(a) = Succ(I - J));
+  for I in a do
+    begin
+      AssertTrue(I = J);
+      Inc(J);
+    end;
+end;
+
+procedure TOrdArrayHelperTest.SortAsc;
+var
+  I: Integer;
+  a, b: TIntArray;
+begin
+  a := THelper.CreateRange(0, 1000);
+  b := THelper.CreateCopy(a);
+  THelper.RandomShuffle(b);
+  AssertFalse(THelper.Same(a, b));
+  THelper.Sort(b);
+  AssertTrue(THelper.Same(a, b));
+end;
+
+procedure TOrdArrayHelperTest.SortDesc;
+var
+  I: Integer;
+  a, b: TIntArray;
+begin
+  a := THelper.CreateRange(0, 1000);
+  THelper.Reverse(a);
+  b := THelper.CreateCopy(a);
+  THelper.RandomShuffle(b);
+  AssertFalse(THelper.Same(a, b));
+  THelper.Sort(b, soDesc);
+  AssertTrue(THelper.Same(a, b));
+end;
+
+procedure TOrdArrayHelperTest.SortAsc577;
+var
+  I: Integer;
+  a: TIntArray;
+begin
+  System.SetLength(a, 577);
+  for I := 0 to System.High(a) do
+    a[I] := Random(10000);
+  THelper.Sort(a);
+  AssertTrue(THelper.IsNonDescending(a));
+end;
+
+procedure TOrdArrayHelperTest.SortDesc577;
+var
+  I: Integer;
+  a: TIntArray;
+begin
+  System.SetLength(a, 577);
+  for I := 0 to System.High(a) do
+    a[I] := Random(10000);
+  THelper.Sort(a, soDesc);
+  AssertTrue(THelper.IsNonAscending(a));
+end;
+
 initialization
 
   RegisterTest(TNumArrayHelperTest);
+  RegisterTest(TOrdArrayHelperTest);
 
 end.
 
