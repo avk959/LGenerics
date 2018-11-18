@@ -21,6 +21,18 @@ type
     TIntArray   = specialize TGArray<Integer>;
 
   published
+    procedure ReverseEmpty;
+    procedure ReverseStatic1;
+    procedure ReverseDyn1;
+    procedure ReverseStatic2;
+    procedure ReverseDyn2;
+    procedure ReverseStatic10;
+    procedure ReverseDyn10;
+
+    procedure RotateIllegal;
+    procedure RotateStatic;
+    procedure RotateDyn;
+
     procedure SequentSearchEmpty;
     procedure SequentSearchStaticSuccess1;
     procedure SequentSearchStaticUnsuccess1;
@@ -360,6 +372,7 @@ type
 const
 
   IntSrc10: array[2..11] of Integer = (10, -15, 117, 21, -199, 1, 13, 0, -29, -1);
+  ReverseIntSrc10: array[2..11] of Integer = (-1, -29, 0, 13, 1, -199, 21, 117, -15, 10);
 
   IntSrc7: array[0..6] of Integer = (101, 0, -11, -27, 127, 1, 0);
 
@@ -375,9 +388,155 @@ const
 
 { TNumArrayHelperTest }
 
-procedure TNumArrayHelperTest.SequentSearchEmpty;
+procedure TNumArrayHelperTest.ReverseEmpty;
+var
+  a: TIntArray = nil;
+begin
+  TIntHelper.Reverse(a);
+  AssertTrue(a = nil);
+end;
+
+procedure TNumArrayHelperTest.ReverseStatic1;
+type
+  TArray = array[0..0] of Integer;
+const
+  a: TArray = (10);
+var
+  b: TArray;
+begin
+  b := a;
+  TIntHelper.Reverse(b);
+  AssertTrue(TIntHelper.Same(b, a));
+end;
+
+procedure TNumArrayHelperTest.ReverseDyn1;
+const
+  a: array[0..0] of Integer = (10);
+var
+  b: TIntArray;
+begin
+  b := TIntHelper.CreateCopy(a);
+  TIntHelper.Reverse(b);
+  AssertTrue(TIntHelper.Same(b, a));
+end;
+
+procedure TNumArrayHelperTest.ReverseStatic2;
+type
+  TArray = array[0..1] of Integer;
+const
+  r: TArray = (-30, 10);
+var
+  a: TArray = (10, -30);
+begin
+  TIntHelper.Reverse(a);
+  AssertTrue(TIntHelper.Same(r, a));
+end;
+
+procedure TNumArrayHelperTest.ReverseDyn2;
+const
+  r: array[0..1] of Integer = (-30, 10);
 var
   a: TIntArray;
+begin
+  a := TIntArray.Create(10, -30);
+  TIntHelper.Reverse(a);
+  AssertTrue(TIntHelper.Same(r, a));
+end;
+
+procedure TNumArrayHelperTest.ReverseStatic10;
+var
+  a: array[2..11] of Integer;
+begin
+  a := IntSrc10;
+  TIntHelper.Reverse(a);
+  AssertTrue(TIntHelper.Same(ReverseIntSrc10, a));
+end;
+
+procedure TNumArrayHelperTest.ReverseDyn10;
+var
+  a: TIntArray;
+begin
+  a := TIntHelper.CreateCopy(IntSrc10);
+  TIntHelper.Reverse(a);
+  AssertTrue(TIntHelper.Same(ReverseIntSrc10, a));
+end;
+
+procedure TNumArrayHelperTest.RotateIllegal;
+type
+  TIntArray10 = array[1..10] of Integer;
+const
+  Sample: TIntArray10 = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+var
+  a: TIntArray10;
+begin
+  a := Sample;
+  TIntHelper.RotateLeft(a, 0);
+  AssertTrue(TIntHelper.Same(a, Sample));
+  TIntHelper.RotateLeft(a, 10);
+  AssertTrue(TIntHelper.Same(a, Sample));
+  TIntHelper.RotateLeft(a, -10);
+  AssertTrue(TIntHelper.Same(a, Sample));
+  TIntHelper.RotateRight(a, 10);
+  AssertTrue(TIntHelper.Same(a, Sample));
+  TIntHelper.RotateRight(a, -10);
+  AssertTrue(TIntHelper.Same(a, Sample));
+end;
+
+procedure TNumArrayHelperTest.RotateStatic;
+type
+  TIntArray10 = array[1..10] of Integer;
+const
+  Sample: TIntArray10 = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+  RolSample: TIntArray10 = (4, 5, 6, 7, 8, 9, 0, 1, 2, 3);
+  RorSample: TIntArray10 = (6, 7, 8, 9, 0, 1, 2, 3, 4, 5);
+var
+  a: TIntArray10;
+begin
+  a := Sample;
+  TIntHelper.RotateLeft(a, 4);
+  AssertTrue(TIntHelper.Same(a, RolSample));
+  a := Sample;
+  TIntHelper.RotateLeft(a, -4);
+  AssertTrue(TIntHelper.Same(a, RorSample));
+  a := Sample;
+  TIntHelper.RotateRight(a, 4);
+  AssertTrue(TIntHelper.Same(a, RorSample));
+  a := Sample;
+  TIntHelper.RotateRight(a, -4);
+  AssertTrue(TIntHelper.Same(a, RolSample));
+  TIntHelper.RotateLeft(a, -4);
+  AssertTrue(TIntHelper.Same(a, Sample));
+end;
+
+procedure TNumArrayHelperTest.RotateDyn;
+type
+  TIntArray10 = array[1..10] of Integer;
+const
+  Sample: TIntArray10 = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+  RolSample: TIntArray10 = (4, 5, 6, 7, 8, 9, 0, 1, 2, 3);
+  RorSample: TIntArray10 = (6, 7, 8, 9, 0, 1, 2, 3, 4, 5);
+var
+  a: TIntArray;
+begin
+  a := TIntHelper.CreateCopy(Sample);
+  TIntHelper.RotateLeft(a, 4);
+  AssertTrue(TIntHelper.Same(a, RolSample));
+  a := TIntHelper.CreateCopy(Sample);
+  TIntHelper.RotateLeft(a, -4);
+  AssertTrue(TIntHelper.Same(a, RorSample));
+  a := TIntHelper.CreateCopy(Sample);
+  TIntHelper.RotateRight(a, 4);
+  AssertTrue(TIntHelper.Same(a, RorSample));
+  a := TIntHelper.CreateCopy(Sample);
+  TIntHelper.RotateRight(a, -4);
+  AssertTrue(TIntHelper.Same(a, RolSample));
+  TIntHelper.RotateLeft(a, -4);
+  AssertTrue(TIntHelper.Same(a, Sample));
+end;
+
+procedure TNumArrayHelperTest.SequentSearchEmpty;
+var
+  a: TIntArray = nil;
 begin
   AssertTrue(TIntHelper.SequentSearch(a, 13) = -1);
 end;
