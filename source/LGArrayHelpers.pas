@@ -900,8 +900,8 @@ type
       function GetEnumerator: TDownRangeEnumerator; inline;
     end;
   public
-    class function UpRange(aFrom, aTo: T; aStep: T = 1): TUpRange; static; inline;
-    class function DownRange(aFrom, aTo: T; aStep: T = 1): TDownRange; static; inline;
+    class function UpRange(aFrom, aTo: T; aStep: T = T(1)): TUpRange; static; inline;
+    class function DownRange(aFrom, aTo: T; aStep: T = T(1)): TDownRange; static; inline;
   end;
 
   { TGOrdinalArrayHelper: for ordinal types only }
