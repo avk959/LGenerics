@@ -752,7 +752,6 @@ type
 
   { TGNumArrayHelper: for numeric or ordinal types }
   generic TGNumArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
-  public //todo: why TGNumArrayHelper ???
   private
     class function  CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
@@ -852,18 +851,20 @@ type
   private
   type
     TMonotonicity = (moAsc, moDesc, moConst, moNone);
+
   const
   {$IFDEF CPU16}
     COUNTSORT_CUTOFF = $7fff;
   {$ELSE CPU16}
     COUNTSORT_CUTOFF = $400000; //todo: ???
   {$ENDIF CPU16}
-    ORD_TYPES = [tkInteger, tkChar, tkEnumeration, tkBool, tkWChar, tkUChar];
+    ORD_TYPES = [tkInteger, tkChar, tkEnumeration, tkBool, tkInt64, tkQWord, tkWChar, tkUChar];
     IsOrdType: Boolean = False;
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonicity; static;
     class constructor Init;
   public
+    class function CreateRange(aFrom, aTo: T): TArray; static;
   { will use counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
@@ -9171,6 +9172,19 @@ begin
 {$PUSH}{$J+}
     IsOrdType := p^.Kind in ORD_TYPES;
 {$POP}
+end;
+
+class function TGOrdinalArrayHelper.CreateRange(aFrom, aTo: T): TArray;
+var
+  I: T;
+  J: SizeInt = 0;
+begin
+  System.SetLength(Result, Succ(aTo - aFrom));
+  for I := aFrom to aTo do
+    begin
+      Result[J] := I;
+      Inc(J);
+    end;
 end;
 
 class procedure TGOrdinalArrayHelper.Sort(var A: array of T; aOrder: TSortOrder);
