@@ -858,7 +858,7 @@ type
       constructor Create(aFirst, aLast, aStep: T);
     end;
 
-    TUpRangeEnumerator = record
+    TRangeEnumerator = record
     private
       FCurrent,
       FLast,
@@ -884,12 +884,12 @@ type
 
   public
   type
-    TUpRange = record
+    TRange = record
     strict private
       FBounds: TRangeBounds;
     public
       constructor Create(aFirst, aLast, aStep: T);
-      function GetEnumerator: TUpRangeEnumerator; inline;
+      function GetEnumerator: TRangeEnumerator; inline;
     end;
 
     TDownRange = record
@@ -900,7 +900,7 @@ type
       function GetEnumerator: TDownRangeEnumerator; inline;
     end;
   public
-    class function UpRange(aFrom, aTo: T; aStep: T = T(1)): TUpRange; static; inline;
+    class function Range(aFrom, aTo: T; aStep: T = T(1)): TRange; static; inline;
     class function DownRange(aFrom, aTo: T; aStep: T = T(1)): TDownRange; static; inline;
   end;
 
@@ -9154,9 +9154,9 @@ begin
   Step := aStep;
 end;
 
-{ TGNumArrayHelper.TUpRangeEnumerator }
+{ TGNumArrayHelper.TRangeEnumerator }
 
-constructor TGNumArrayHelper.TUpRangeEnumerator.Create(constref aBounds: TRangeBounds);
+constructor TGNumArrayHelper.TRangeEnumerator.Create(constref aBounds: TRangeBounds);
 begin
   FCurrent := aBounds.First;
   FLast := aBounds.Last;
@@ -9164,7 +9164,7 @@ begin
   FInCycle := False;
 end;
 
-function TGNumArrayHelper.TUpRangeEnumerator.MoveNext: Boolean;
+function TGNumArrayHelper.TRangeEnumerator.MoveNext: Boolean;
 begin
   if FInCycle then
     begin
@@ -9204,16 +9204,16 @@ begin
     end;
 end;
 
-{ TGNumArrayHelper.TUpRange }
+{ TGNumArrayHelper.TRange }
 
-constructor TGNumArrayHelper.TUpRange.Create(aFirst, aLast, aStep: T);
+constructor TGNumArrayHelper.TRange.Create(aFirst, aLast, aStep: T);
 begin
   FBounds := TRangeBounds.Create(aFirst, aLast, aStep);
 end;
 
-function TGNumArrayHelper.TUpRange.GetEnumerator: TUpRangeEnumerator;
+function TGNumArrayHelper.TRange.GetEnumerator: TRangeEnumerator;
 begin
-  Result := TUpRangeEnumerator.Create(FBounds);
+  Result := TRangeEnumerator.Create(FBounds);
 end;
 
 { TGNumArrayHelper.TDownRange }
@@ -9228,9 +9228,9 @@ begin
   Result := TDownRangeEnumerator.Create(FBounds);
 end;
 
-class function TGNumArrayHelper.UpRange(aFrom, aTo: T; aStep: T): TUpRange;
+class function TGNumArrayHelper.Range(aFrom, aTo: T; aStep: T): TRange;
 begin
-  Result := TUpRange.Create(aFrom, aTo, aStep);
+  Result := TRange.Create(aFrom, aTo, aStep);
 end;
 
 class function TGNumArrayHelper.DownRange(aFrom, aTo: T; aStep: T): TDownRange;

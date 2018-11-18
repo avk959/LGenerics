@@ -345,12 +345,12 @@ type
     procedure DualPivotQuickSortDescOfDyn577Random;
     procedure DualPivotQuickSortDescOfDyn577RandomZeroes;
 
-    procedure UpRangeInt0;
-    procedure UpRangeDouble0;
+    procedure RangeInt0;
+    procedure RangeDouble0;
     procedure DownRangeInt0;
     procedure DownRangeDouble0;
-    procedure UpRangeInt1;
-    procedure UpRangeDouble1;
+    procedure RangeInt1;
+    procedure RangeDouble1;
     procedure DownRangeInt1;
     procedure DownRangeDouble1;
   end;
@@ -2974,36 +2974,36 @@ begin
   AssertTrue(TIntHelper.IsNonAscending(a));
 end;
 
-procedure TNumArrayHelperTest.UpRangeInt0;
+procedure TNumArrayHelperTest.RangeInt0;
 var
   I: Integer;
   Times: Integer = 0;
 begin
-  for I in TIntHelper.UpRange(2, 1) do
+  for I in TIntHelper.Range(2, 1) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for I in TIntHelper.UpRange(2, 2) do
+  for I in TIntHelper.Range(2, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for I in TIntHelper.UpRange(2, 3, 2) do
+  for I in TIntHelper.Range(2, 3, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
 end;
 
-procedure TNumArrayHelperTest.UpRangeDouble0;
+procedure TNumArrayHelperTest.RangeDouble0;
 var
   d: Double;
   Times: Integer = 0;
 begin
-  for d in TDblHelper.UpRange(2, 1) do
+  for d in TDblHelper.Range(2, 1) do
     Inc(Times);
   AssertTrue(Times = 0);
-  for d in TDblHelper.UpRange(2, 2) do
+  for d in TDblHelper.Range(2, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
   Times := 0;
-  for d in TDblHelper.UpRange(2, 3, 2) do
+  for d in TDblHelper.Range(2, 3, 2) do
     Inc(Times);
   AssertTrue(Times = 1);
 end;
@@ -3042,22 +3042,22 @@ begin
   AssertTrue(Times = 1);
 end;
 
-procedure TNumArrayHelperTest.UpRangeInt1;
+procedure TNumArrayHelperTest.RangeInt1;
 var
   I: Integer;
   Sum: Integer = 0;
 begin
-  for I in TIntHelper.UpRange(1, 10, 2) do
+  for I in TIntHelper.Range(1, 10, 2) do
     Sum += I;
   AssertTrue(Sum = 25);
 end;
 
-procedure TNumArrayHelperTest.UpRangeDouble1;
+procedure TNumArrayHelperTest.RangeDouble1;
 var
   d: Double;
   Sum: Double = 0;
 begin
-  for d in TDblHelper.UpRange(1, 10, 2) do
+  for d in TDblHelper.Range(1, 10, 2) do
     Sum += d;
   AssertTrue(Sum = 25);
 end;
