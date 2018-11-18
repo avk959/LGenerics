@@ -21,6 +21,7 @@ unit LGArrayHelpers;
 
 {$mode objfpc}{$H+}
 {$INLINE ON}{$WARN 6058 off : }
+{$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
 interface
@@ -753,6 +754,57 @@ type
   { TGNumArrayHelper: for numeric or ordinal types }
   generic TGNumArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   private
+  type
+    TRangeBounds = record
+      First,
+      Last,
+      Step: T;
+      constructor Create(aFirst, aLast, aStep: T);
+    end;
+
+    TUpRangeEnumerator = record
+    private
+      FCurrent,
+      FLast,
+      FStep: T;
+      FInCycle: Boolean;
+    public
+      constructor Create(constref aBounds: TRangeBounds);
+      function MoveNext: Boolean; inline;
+      property Current: T read FCurrent;
+    end;
+
+    TDownRangeEnumerator = record
+    private
+      FCurrent,
+      FLast,
+      FStep: T;
+      FInCycle: Boolean;
+    public
+      constructor Create(constref aBounds: TRangeBounds);
+      function MoveNext: Boolean; inline;
+      property Current: T read FCurrent;
+    end;
+
+  public
+  type
+    TUpRange = record
+    strict private
+      FBounds: TRangeBounds;
+    public
+      constructor Create(aFirst, aLast, aStep: T);
+      function GetEnumerator: TUpRangeEnumerator; inline;
+    end;
+
+    TDownRange = record
+    strict private
+      FBounds: TRangeBounds;
+    public
+      constructor Create(aFirst, aLast, aStep: T);
+      function GetEnumerator: TDownRangeEnumerator; inline;
+    end;
+
+  private
     class function  CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
     class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -773,6 +825,8 @@ type
   { QuickSelect with random pivot, does not checks indexes }
     class function  QSelectR(var A: array of T; N: SizeInt): T; static;
   public
+    class function  UpRange(aFrom, aTo: T; aStep: T = 1): TUpRange; static; inline;
+    class function  DownRange(aFrom, aTo: T; aStep: T = 1): TDownRange; static; inline;
     class procedure Reverse(var A: array of T); static;
   { cyclic shift of array elements by aDist positions to the left;
     the case if Abs(aDist) > Length(A) is ignored }
@@ -8151,6 +8205,89 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
+{ TGNumArrayHelper.TRangeBounds }
+
+constructor TGNumArrayHelper.TRangeBounds.Create(aFirst, aLast, aStep: T);
+begin
+  First := aFirst;
+  Last := aLast;
+  Step := aStep;
+end;
+
+{ TGNumArrayHelper.TUpRangeEnumerator }
+
+constructor TGNumArrayHelper.TUpRangeEnumerator.Create(constref aBounds: TRangeBounds);
+begin
+  FCurrent := aBounds.First;
+  FLast := aBounds.Last;
+  FStep := aBounds.Step;
+  FInCycle := False;
+end;
+
+function TGNumArrayHelper.TUpRangeEnumerator.MoveNext: Boolean;
+begin
+  if FInCycle then
+    begin
+      Result := FLast - FCurrent >= FStep;
+      if Result then
+        FCurrent += FStep;
+    end
+  else
+    begin
+      Result := FCurrent <= FLast;
+      FInCycle := True;
+    end;
+end;
+
+{ TGNumArrayHelper.TDownRangeEnumerator }
+
+constructor TGNumArrayHelper.TDownRangeEnumerator.Create(constref aBounds: TRangeBounds);
+begin
+  FCurrent := aBounds.First;
+  FLast := aBounds.Last;
+  FStep := aBounds.Step;
+  FInCycle := False;
+end;
+
+function TGNumArrayHelper.TDownRangeEnumerator.MoveNext: Boolean;
+begin
+  if FInCycle then
+    begin
+      Result := FCurrent - FLast >= FStep;
+      if Result then
+        FCurrent -= FStep;
+    end
+  else
+    begin
+      Result := FCurrent >= FLast;
+      FInCycle := True;
+    end;
+end;
+
+{ TGNumArrayHelper.TUpRange }
+
+constructor TGNumArrayHelper.TUpRange.Create(aFirst, aLast, aStep: T);
+begin
+  FBounds := TRangeBounds.Create(aFirst, aLast, aStep);
+end;
+
+function TGNumArrayHelper.TUpRange.GetEnumerator: TUpRangeEnumerator;
+begin
+  Result := TUpRangeEnumerator.Create(FBounds);
+end;
+
+{ TGNumArrayHelper.TDownRange }
+
+constructor TGNumArrayHelper.TDownRange.Create(aFirst, aLast, aStep: T);
+begin
+  FBounds := TRangeBounds.Create(aFirst, aLast, aStep);
+end;
+
+function TGNumArrayHelper.TDownRange.GetEnumerator: TDownRangeEnumerator;
+begin
+  Result := TDownRangeEnumerator.Create(FBounds);
+end;
+
 { TGNumArrayHelper }
 
 class function TGNumArrayHelper.CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt;
@@ -8687,6 +8824,16 @@ begin
       A[R] := v;
     end;
   Result := A[N];
+end;
+
+class function TGNumArrayHelper.UpRange(aFrom, aTo: T; aStep: T): TUpRange;
+begin
+  Result := TUpRange.Create(aFrom, aTo, aStep);
+end;
+
+class function TGNumArrayHelper.DownRange(aFrom, aTo: T; aStep: T): TDownRange;
+begin
+  Result := TDownRange.Create(aFrom, aTo, aStep);
 end;
 
 class procedure TGNumArrayHelper.Reverse(var A: array of T);
