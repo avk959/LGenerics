@@ -751,59 +751,8 @@ type
                     static;
   end;
 
-  { TGNumArrayHelper: for numeric or ordinal types }
-  generic TGNumArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
-  private
-  type
-    TRangeBounds = record
-      First,
-      Last,
-      Step: T;
-      constructor Create(aFirst, aLast, aStep: T);
-    end;
-
-    TUpRangeEnumerator = record
-    private
-      FCurrent,
-      FLast,
-      FStep: T;
-      FInCycle: Boolean;
-    public
-      constructor Create(constref aBounds: TRangeBounds);
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
-    TDownRangeEnumerator = record
-    private
-      FCurrent,
-      FLast,
-      FStep: T;
-      FInCycle: Boolean;
-    public
-      constructor Create(constref aBounds: TRangeBounds);
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
-  public
-  type
-    TUpRange = record
-    strict private
-      FBounds: TRangeBounds;
-    public
-      constructor Create(aFirst, aLast, aStep: T);
-      function GetEnumerator: TUpRangeEnumerator; inline;
-    end;
-
-    TDownRange = record
-    strict private
-      FBounds: TRangeBounds;
-    public
-      constructor Create(aFirst, aLast, aStep: T);
-      function GetEnumerator: TDownRangeEnumerator; inline;
-    end;
-
+  { TGBaseTypArrayHelper: for base types }
+  generic TGBaseTypArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   private
     class function  CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
@@ -825,8 +774,6 @@ type
   { QuickSelect with random pivot, does not checks indexes }
     class function  QSelectR(var A: array of T; N: SizeInt): T; static;
   public
-    class function  UpRange(aFrom, aTo: T; aStep: T = 1): TUpRange; static; inline;
-    class function  DownRange(aFrom, aTo: T; aStep: T = 1): TDownRange; static; inline;
     class procedure Reverse(var A: array of T); static;
   { cyclic shift of array elements by aDist positions to the left;
     the case if Abs(aDist) > Length(A) is ignored }
@@ -900,8 +847,65 @@ type
     class function  SelectDistinct(constref A: array of T): TArray; static;
   end;
 
+  { TGNumArrayHelper: for numeric types only }
+  generic TGNumArrayHelper<T> = class(specialize TGBaseTypArrayHelper<T>)
+  private
+  type
+    TRangeBounds = record
+      First,
+      Last,
+      Step: T;
+      constructor Create(aFirst, aLast, aStep: T);
+    end;
+
+    TUpRangeEnumerator = record
+    private
+      FCurrent,
+      FLast,
+      FStep: T;
+      FInCycle: Boolean;
+    public
+      constructor Create(constref aBounds: TRangeBounds);
+      function MoveNext: Boolean; inline;
+      property Current: T read FCurrent;
+    end;
+
+    TDownRangeEnumerator = record
+    private
+      FCurrent,
+      FLast,
+      FStep: T;
+      FInCycle: Boolean;
+    public
+      constructor Create(constref aBounds: TRangeBounds);
+      function MoveNext: Boolean; inline;
+      property Current: T read FCurrent;
+    end;
+
+  public
+  type
+    TUpRange = record
+    strict private
+      FBounds: TRangeBounds;
+    public
+      constructor Create(aFirst, aLast, aStep: T);
+      function GetEnumerator: TUpRangeEnumerator; inline;
+    end;
+
+    TDownRange = record
+    strict private
+      FBounds: TRangeBounds;
+    public
+      constructor Create(aFirst, aLast, aStep: T);
+      function GetEnumerator: TDownRangeEnumerator; inline;
+    end;
+  public
+    class function UpRange(aFrom, aTo: T; aStep: T = 1): TUpRange; static; inline;
+    class function DownRange(aFrom, aTo: T; aStep: T = 1): TDownRange; static; inline;
+  end;
+
   { TGOrdinalArrayHelper: for ordinal types only }
-  generic TGOrdinalArrayHelper<T> = class(specialize TGNumArrayHelper<T>)
+  generic TGOrdinalArrayHelper<T> = class(specialize TGBaseTypArrayHelper<T>)
   private
   type
     TMonotonicity = (moAsc, moDesc, moConst, moNone);
@@ -8205,6 +8209,942 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
+{ TGBaseTypArrayHelper }
+
+class function TGBaseTypArrayHelper.CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt;
+begin
+  Result := L;
+  while (Result < R) and (A[Result] = A[Succ(Result)]) do
+    Inc(Result);
+  if Result < R then
+    begin
+      Inc(Result);
+      if A[Pred(Result)] < A[Result] then  // ascending
+        while (Result < R) and (A[Result] <= A[Succ(Result)]) do
+          Inc(Result)
+      else                                 // descending
+        begin
+          while (Result < R) and (A[Result] >= A[Succ(Result)]) do
+            Inc(Result);
+          Reverse(A[0..Result]);
+        end;
+    end;
+end;
+
+class procedure TGBaseTypArrayHelper.InsertionSort(var A: array of T; L, R: SizeInt);
+var
+  I, J: SizeInt;
+  v: T;
+begin
+  for I := L + 1 to R do
+    begin
+      v := A[I];
+      J := I - 1;
+      while (J >= 0) and (A[J] > v) do
+        begin
+          A[J + 1] := A[J];
+          Dec(J);
+        end;
+      A[J + 1] := v;
+    end;
+end;
+
+class function TGBaseTypArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  //here R must be >= 0;
+  Result := -1;
+  L := 0;
+  if A[R] > A[L] then  //ascending
+    begin
+      while L < R do
+        begin
+          M := L + (R - L) shr 1;
+          if A[M] < aValue then
+            L := Succ(M)
+          else
+            begin
+              if A[M] = aValue then
+                exit(M);
+              R := M;
+            end;
+        end;
+      //here L >= R
+      if A[R] = aValue then
+        Result := R;
+    end
+  else
+    if A[R] < A[L] then  //descending
+      begin
+        while L < R do
+          begin
+            M := L + ((R - L) shr 1);
+            if A[M] > aValue then
+              L := Succ(M)
+            else
+              begin
+                if A[M] = aValue then
+                  exit(M);
+                R := M;
+              end;
+          end;
+        //here L >= R
+        if A[R] = aValue then
+          Result := R;
+      end
+    else              //constant
+      if A[L] = aValue then
+        exit(L);
+end;
+
+class function TGBaseTypArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+var
+  L, M: SizeInt;
+begin
+  //here exists at least 2 ascending elements;
+  Result.FoundIndex := -1;
+  L := 0;
+  while L < R do
+    begin
+      M := L + (R - L) shr 1;
+      if A[M] < aValue then
+        L := Succ(M)
+      else
+        begin
+          if A[M] = aValue then
+            begin
+              Result.FoundIndex := M;
+              Result.InsertIndex := Succ(M);
+              exit;
+            end;
+          R := M;
+        end;
+    end;
+  //here L >= R
+  if aValue < A[R] then
+    Result.InsertIndex := R
+  else
+    begin
+      Result.InsertIndex := Succ(R);
+      if aValue = A[R] then
+        Result.FoundIndex := R;
+    end;
+end;
+
+class function TGBaseTypArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+var
+  L, M: SizeInt;
+begin
+  //here exists at least 2 descending elements
+  Result.FoundIndex := -1;
+  L := 0;
+  while L < R do
+    begin
+      M := L + (R - L) shr 1;
+      if A[M] > aValue then
+        L := Succ(M)
+      else
+        begin
+          if A[M] = aValue then
+            begin
+              Result.FoundIndex := M;
+              Result.InsertIndex := Succ(M);
+              exit;
+            end;
+          R := M;
+        end;
+    end;
+  //here L >= R
+  if aValue > A[R] then
+    Result.InsertIndex := R
+  else
+    begin
+      Result.InsertIndex := Succ(R);
+      if aValue = A[R] then
+        Result.FoundIndex := R;
+    end;
+end;
+
+class function TGBaseTypArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+begin
+  //here R must be >= 0;
+  if A[0] < A[R] then   //ascending
+    Result := DoBinSearchPosA(A, R, aValue)
+  else
+    if A[0] > A[R] then //descending
+      Result := DoBinSearchPosD(A, R, aValue)
+    else                //constant
+      begin
+        Result.FoundIndex := -1;
+        if A[R] > aValue then
+           Result.InsertIndex := 0
+        else
+          begin
+            Result.InsertIndex := Succ(R);
+            if A[R] = aValue then
+              Result.FoundIndex := 0;
+          end;
+      end;
+end;
+
+class procedure TGBaseTypArrayHelper.DoHeapSort(A: PItem; R: SizeInt);
+var
+  I, Curr, Next: SizeInt;
+  v: T;
+begin
+  if R > 0 then
+    begin
+      for I := Pred(Succ(R) shr 1) downto 0 do
+        begin
+          Curr := I;
+          Next := Succ(I shl 1);
+          v := A[Curr];
+          while Next <= R do
+            begin
+              if(Succ(Next) <= R) and (A[Next] < A[Succ(Next)])then
+                Inc(Next);
+              if v >= A[Next] then
+                break;
+              A[Curr] := A[Next];
+              Curr := Next;
+              Next := Succ(Next shl 1);
+            end;
+          A[Curr] := v;
+        end;
+      for I := R downto 1 do
+        begin
+          Curr := 0;
+          Next := 1;
+          v := A[I];
+          A[I] := A[0];
+          while Next < I do
+            begin
+              if(Succ(Next) < I) and (A[Next] < A[Succ(Next)]) then
+                Inc(Next);
+              A[Curr] := A[Next];
+              Curr := Next;
+              Next := Succ(Next shl 1);
+            end;
+          Next := Pred(Curr) shr 1;
+          while (Curr > 0) and (v > A[Next]) do
+            begin
+              A[Curr] := A[Next];
+              Curr := Next;
+              Next := Pred(Next) shr 1;
+            end;
+          A[Curr] := v;
+        end;
+    end;
+end;
+
+class function TGBaseTypArrayHelper.QSplitR(var A: array of T; L, R: SizeInt): TSortSplit;
+var
+  v, Pivot: T;
+begin
+  Pivot := A[Succ(L + Random(Pred(R - L)))]; //shouldn't be first or last
+  Dec(L);
+  Inc(R);
+  repeat
+    repeat Inc(L); until A[L] >= Pivot;
+    repeat Dec(R); until A[R] <= Pivot;
+    //if L > R then
+    //  break;
+    v := A[L];
+    A[L] := A[R];
+    A[R] := v;
+  //until False;
+  until L > R;
+  v := A[L];
+  A[L] := A[R];
+  A[R] := v;
+
+  Result.Left := R;
+  Result.Right := L;
+end;
+
+class procedure TGBaseTypArrayHelper.DoQSort(var A: array of T; L, R: SizeInt);
+begin
+  while R - L > QUICK_INSERT_CUTOFF do
+    with QSplitR(A, L, R) do
+      if Left - L <= R - Right then
+        begin
+          DoQSort(A, L, Left);
+          L := Right;
+        end
+      else
+        begin
+          DoQSort(A, Right, R);
+          R := Left;
+        end;
+  if R - L > 0 then
+    InsertionSort(A, L, R);
+end;
+
+class function TGBaseTypArrayHelper.MedianOf3(const v1, v2, v3: T): T;
+begin
+  Result := v2;
+  if v1 < Result then
+    begin
+      if v3 < Result then
+        begin
+          if v1 < v3 then
+            Result := v3
+          else
+            Result := v1;
+        end;
+    end
+  else { v1 >= Result }
+    begin
+      if v3 > Result then
+        begin
+          if v1 > v3 then
+            Result := v3
+          else
+            Result := v1;
+        end;
+    end;
+end;
+
+class function TGBaseTypArrayHelper.GetMo9Pivot(constref A: array of T; L, R: SizeInt): T;
+begin
+  if R - L > MEDIAN_OF9_CUTOFF then
+    begin
+      Result := MedianOf3(
+      MedianOf3(A[L], A[L + Succ(R - L) shr 3], A[L + Succ(R - L) shr 2]),
+      MedianOf3(A[L + Succ(R - L) shr 1 - Succ(R - L) shr 3], A[L + Succ(R - L) shr 1],
+                A[L + Succ(R - L) shr 1 + Succ(R - L) shr 3]),
+      MedianOf3(A[R - Succ(R - L) shr 2], A[R - Succ(R - L) shr 3], A[R]));
+    end
+  else
+    Result := MedianOf3(A[L], A[L + Succ(R - L) shr 1], A[R]);
+end;
+
+class function TGBaseTypArrayHelper.QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit;
+var
+  v, Pivot: T;
+begin
+  Pivot := GetMo9Pivot(A, L, R);
+  Dec(L);
+  Inc(R);
+  repeat
+    repeat
+      Inc(L);
+    until A[L] >= Pivot;
+    repeat
+      Dec(R);
+    until A[R] <= Pivot;
+    if L > R then
+      break;
+    v := A[L];
+    A[L] := A[R];
+    A[R] := v;
+  until False;
+  Result.Left := R;
+  Result.Right := L;
+end;
+
+class procedure TGBaseTypArrayHelper.DoIntroSort(var A: array of T; L, R, Ttl: SizeInt);
+begin
+  if R - L > QUICK_INSERT_CUTOFF then
+    if Ttl > 0 then
+      with QSplitMo9(A, L, R) do
+        begin
+          DoIntroSort(A, L, Left, Pred(Ttl));
+          DoIntroSort(A, Right, R, Pred(Ttl));
+        end
+    else
+      DoHeapSort(@A[L], R - L)
+  else
+    if R - L > 0 then
+      InsertionSort(A, L, R);
+end;
+
+class function TGBaseTypArrayHelper.DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit;
+var
+  v, Pivot1, Pivot2: T;
+  pL, pR, I: SizeInt;
+label
+  EndLoop;
+begin
+  pL := Succ(L + Random(Pred((R - L) shr 1)));
+  pR := Pred(R - Random(Pred((R - L) shr 1)));
+
+  if A[pL] <= A[pR] then
+    begin
+      Pivot1 := A[pL];
+      A[pL] := A[L];
+      Pivot2 := A[pR];
+      A[pR] := A[R];
+    end
+  else
+    begin
+      Pivot2 := A[pL];
+      A[pL] := A[R];
+      Pivot1 := A[pR];
+      A[pR] := A[L];
+    end;
+
+  pL := Succ(L);
+  I  := Succ(L);
+  pR := Pred(R);
+  while I <= pR do
+    begin
+      v := A[I];
+      if v < Pivot1 then
+        begin
+          A[I] := A[pL];
+          A[pL] := v;
+          Inc(pL);
+        end
+      else
+        if v > Pivot2 then
+          begin
+            while A[pR] > Pivot2 do
+              begin
+                Dec(pR);
+                if pR < I then
+                  goto EndLoop;
+              end;
+            if A[pR] < Pivot1 then
+              begin
+                A[I] := A[pL];
+                A[pL] := A[pR];
+                Inc(pL);
+              end
+            else
+              A[I] := A[pR];
+            A[pR] := v;
+            Dec(pR);
+          end;
+      Inc(I);
+    end;
+
+EndLoop:
+
+  A[L] := A[pL - 1];
+  A[pL - 1] := Pivot1;
+  A[R] := A[pR + 1];
+  A[pR + 1] := Pivot2;
+
+  Result.Left := pL - 1;
+  Result.Right := pR + 1;
+end;
+
+class procedure TGBaseTypArrayHelper.DoDPQSort(var A: array of T; L, R: SizeInt);
+begin
+  if R - L > DPQ_INSERT_CUTOFF then
+    with DPQSplit(A, L, R) do
+      begin
+        DoDPQSort(A, L, Left - 1);
+        DoDPQSort(A, Right + 1, R);
+        if A[Left] <> A[Right] then
+          DoDPQSort(A, Left + 1, Right - 1);
+      end
+  else
+    if R - L > 0 then
+      InsertionSort(A, L, R);
+end;
+
+class procedure TGBaseTypArrayHelper.DoSwap(p: PItem; L, R: SizeInt);
+var
+  v: T;
+begin
+  v := p[L];
+  p[L] := p[R];
+  p[R] := v;
+end;
+
+class procedure TGBaseTypArrayHelper.DoReverse(var A: array of T; L, R: SizeInt);
+var
+  v0, v1, v2, v3: T;
+begin
+  while R - L >= 7 do
+    begin
+      v0 := A[L    ];
+      v1 := A[L + 1];
+      v2 := A[L + 2];
+      v3 := A[L + 3];
+      A[L    ] := A[R    ];
+      A[L + 1] := A[R - 1];
+      A[L + 2] := A[R - 2];
+      A[L + 3] := A[R - 3];
+      A[R    ] := v0;
+      A[R - 1] := v1;
+      A[R - 2] := v2;
+      A[R - 3] := v3;
+      L += 4;
+      R -= 4;
+    end;
+  case R - L of
+    1..2:
+      begin
+        v0 := A[L];
+        A[L] := A[R];
+        A[R] := v0;
+      end;
+    3..4:
+      begin
+        v0 := A[L    ];
+        v1 := A[L + 1];
+        A[L    ] := A[R    ];
+        A[L + 1] := A[R - 1];
+        A[R    ] := v0;
+        A[R - 1] := v1;
+      end;
+    5..6:
+      begin
+        v0 := A[L    ];
+        v1 := A[L + 1];
+        v2 := A[L + 2];
+        A[L    ] := A[R    ];
+        A[L + 1] := A[R - 1];
+        A[L + 2] := A[R - 2];
+        A[R    ] := v0;
+        A[R - 1] := v1;
+        A[R - 2] := v2;
+      end;
+  end;
+end;
+
+class function TGBaseTypArrayHelper.QSelectR(var A: array of T; N: SizeInt): T;
+var
+  L, R, pL, pR: SizeInt;
+  v, Pivot: T;
+begin
+  R := System.High(A);
+  L := 0;
+  while L < Pred(R) do
+    begin
+      Pivot := A[L + Random(Succ(R - L))];
+      pL := Pred(L);
+      pR := Succ(R);
+      repeat
+        repeat Inc(pL) until A[pL] >= Pivot;
+        repeat Dec(pR) until A[pR] <= Pivot;
+        if pL >= pR then break;
+        v := A[pL];
+        A[pL] := A[pR];
+        A[pR] := v;
+      until False;
+      if pL = pR then
+        begin
+          if pL > L then
+            Dec(pR)
+          else
+            if pL < R then
+              Inc(pL);
+        end;
+      if pR < N then L := pL;
+      if pL > N then R := pR;
+    end;
+  if (L < R) and (A[L] > A[R]) then
+    begin
+      v := A[L];
+      A[L] := A[R];
+      A[R] := v;
+    end;
+  Result := A[N];
+end;
+
+class procedure TGBaseTypArrayHelper.Reverse(var A: array of T);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    DoReverse(A, 0, R);
+end;
+
+class procedure TGBaseTypArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
+var
+  Len: SizeInt;
+begin
+  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+    exit;
+  Len := System.Length(A);
+  if aDist < 0 then
+    aDist += Len;
+  DoReverse(A, 0, Pred(aDist));
+  DoReverse(A, aDist, Pred(Len));
+  DoReverse(A, 0, Pred(Len));
+end;
+
+class procedure TGBaseTypArrayHelper.RotateRight(var A: array of T; aDist: SizeInt);
+begin
+  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
+    exit;
+  if aDist > 0 then
+    RotateLeft(A, System.Length(A) - aDist)
+  else
+    RotateLeft(A, -aDist)
+end;
+
+class function TGBaseTypArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
+begin
+  for Result := 0 to System.High(A) do
+    if aValue = A[Result] then
+      exit;
+  Result := -1;
+end;
+
+class function TGBaseTypArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
+begin
+  Result := High(A);
+  if Result >= 0 then
+    Result := DoBinSearch(@A[0], Result, aValue);
+end;
+
+class function TGBaseTypArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
+var
+  hi: SizeInt;
+begin
+  hi := High(A);
+  if hi >= 0 then
+    Result := DoBinSearchPos(@A[0], hi, aValue)
+  else
+    begin
+      Result.FoundIndex := hi;
+      Result.InsertIndex := hi;
+    end;
+end;
+
+class function TGBaseTypArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
+var
+  R, I: SizeInt;
+  v: T;
+begin
+  R := System.High(A);
+  if R >= 0 then
+    begin
+      Result := 0;
+      v := A[0];
+      for I := 1 to R do
+        if v > A[I] then
+          begin
+            v := A[I];
+            Result := I;
+          end;
+    end
+  else
+    Result := R;
+end;
+
+class function TGBaseTypArrayHelper.IndexOfMax(constref A: array of T): SizeInt;
+var
+  R, I: SizeInt;
+  v: T;
+begin
+  R := System.High(A);
+  if R >= 0 then
+    begin
+      Result := 0;
+      v := A[0];
+      for I := 1 to R do
+        if v < A[I] then
+          begin
+            v := A[I];
+            Result := I;
+          end;
+    end
+  else
+    Result := R;
+end;
+
+class function TGBaseTypArrayHelper.GetMin(constref A: array of T): TOptional;
+var
+  v: T;
+begin
+  if FindMin(A, v) then
+    Result.Assign(v);
+end;
+
+class function TGBaseTypArrayHelper.GetMax(constref A: array of T): TOptional;
+var
+  v: T;
+begin
+  if FindMax(A, v) then
+    Result.Assign(v);
+end;
+
+class function TGBaseTypArrayHelper.FindMin(constref A: array of T; out aValue: T): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := System.High(A);
+  Result := R >= 0;
+  if Result then
+    begin
+      aValue := A[0];
+      for I := 1 to R do
+        if aValue > A[I] then
+          aValue := A[I];
+    end;
+end;
+
+class function TGBaseTypArrayHelper.FindMax(constref A: array of T; out aValue: T): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := System.High(A);
+  Result := R >= 0;
+  if Result then
+    begin
+      aValue := A[0];
+      for I := 1 to R do
+        if aValue < A[I] then
+          aValue := A[I];
+    end;
+end;
+
+class function TGBaseTypArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := System.High(A);
+  Result := R >= 0;
+  if Result then
+    begin
+      aMin := A[0];
+      aMax := A[0];
+      for I := 1 to R do
+        if A[I] > aMax then
+          aMax := A[I]
+        else
+          if A[I] < aMin then
+            aMin := A[I];
+    end;
+end;
+
+class function TGBaseTypArrayHelper.FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T): Boolean;
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R < 0 then
+    exit(False);
+  if N <= 0 then
+    exit(FindMin(A, aValue));
+  if N >= R then
+    exit(FindMax(A, aValue));
+  aValue := QSelectR(A, N);
+  Result := True;
+end;
+
+class function TGBaseTypArrayHelper.NthSmallest(var A: array of T; N: SizeInt): TOptional;
+var
+  v: T;
+begin
+  if FindNthSmallest(A, N, v) then
+    Result.Assign(v);
+end;
+
+class function TGBaseTypArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean;
+begin
+  Result := FindNthSmallest(CreateCopy(A), N, aValue);
+end;
+
+class function TGBaseTypArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt): TOptional;
+var
+  v: T;
+begin
+  if FindNthSmallestND(A, N, v) then
+    Result.Assign(v);
+end;
+
+class function TGBaseTypArrayHelper.NextPermutation2Asc(var A: array of T): Boolean;
+var
+  I, J, R: SizeInt;
+begin
+  R := System.High(A);
+  J := -1;
+  for I := Pred(R) downto 0 do
+    if A[I] > A[Succ(I)] then
+      begin
+        J := I;
+        break;
+      end;
+  if J < 0 then exit(False);
+  for I := R downto 0 do
+    if A[J] > A[I] then
+      begin
+        DoSwap(@A[0], I, J);
+        break;
+      end;
+  DoReverse(A, Succ(J), R);
+  Result := True;
+end;
+
+class function TGBaseTypArrayHelper.NextPermutation2Desc(var A: array of T): Boolean;
+var
+  I, J, R: SizeInt;
+begin
+  R := System.High(A);
+  J := -1;
+  for I := Pred(R) downto 0 do
+    if A[I] < A[Succ(I)] then
+      begin
+        J := I;
+        break;
+      end;
+  if J < 0 then exit(False);
+  for I := R downto 0 do
+    if A[J] < A[I] then
+      begin
+        DoSwap(@A[0], I, J);
+        break;
+      end;
+  DoReverse(A, Succ(J), R);
+  Result := True;
+end;
+
+class function TGBaseTypArrayHelper.IsNonDescending(constref A: array of T): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(System.High(A)) do
+    if A[I] > A[Succ(I)] then
+      exit(False);
+  Result := True;
+end;
+
+class function TGBaseTypArrayHelper.IsStrictAscending(constref A: array of T): Boolean;
+var
+  I, R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    begin
+      for I := 1 to R do
+        if A[Pred(I)] >= A[I] then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := False;
+end;
+
+class function TGBaseTypArrayHelper.IsNonAscending(constref A: array of T): Boolean;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(System.High(A)) do
+    if A[I] < A[Succ(I)] then
+      exit(False);
+  Result := True;
+end;
+
+class function TGBaseTypArrayHelper.IsStrictDescending(constref A: array of T): Boolean;
+var
+  I, R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    begin
+      for I := 1 to R do
+        if A[Pred(I)] <= A[I] then
+          exit(False);
+      Result := True;
+    end
+  else
+    Result := False;
+end;
+
+class function TGBaseTypArrayHelper.Same(constref A, B: array of T): Boolean;
+var
+  R, I: SizeInt;
+begin
+  R := System.High(A);
+  if System.High(B) <> R then
+    exit(False);
+  for I := 0 to R do
+    if A[I] <> B[I] then
+      exit(False);
+  Result := True;
+end;
+
+class procedure TGBaseTypArrayHelper.QuickSort(var A: array of T; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(A, 0, R) < R then
+      begin
+        DoQSort(A, 0, R);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
+        Reverse(A);
+end;
+
+class procedure TGBaseTypArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(A, 0, R) < R then
+      begin
+        DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
+        Reverse(A);
+end;
+
+class procedure TGBaseTypArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(A, 0, R) < R then
+      begin
+        DoDPQSort(A, 0, R);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
+        Reverse(A);
+end;
+
+class procedure TGBaseTypArrayHelper.Sort(var A: array of T; o: TSortOrder);
+begin
+  IntroSort(A, o);
+end;
+
+class function TGBaseTypArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
+begin
+  Result := CreateCopy(A);
+  Sort(Result, o);
+end;
+
+class function TGBaseTypArrayHelper.SelectDistinct(constref A: array of T): TArray;
+var
+  I, J, Hi: SizeInt;
+begin
+  Result := Sorted(A);
+  Hi := System.High(Result);
+  if Hi < 1 then
+    exit;
+  I := 0;
+  for J := 1 to Hi do
+    begin
+      if Result[I] = Result[J] then
+        continue;
+      Inc(I);
+      if J > I then
+        Result[I] := Result[J];
+    end;
+  System.SetLength(Result, Succ(I));
+end;
+
 { TGNumArrayHelper.TRangeBounds }
 
 constructor TGNumArrayHelper.TRangeBounds.Create(aFirst, aLast, aStep: T);
@@ -8288,544 +9228,6 @@ begin
   Result := TDownRangeEnumerator.Create(FBounds);
 end;
 
-{ TGNumArrayHelper }
-
-class function TGNumArrayHelper.CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt;
-begin
-  Result := L;
-  while (Result < R) and (A[Result] = A[Succ(Result)]) do
-    Inc(Result);
-  if Result < R then
-    begin
-      Inc(Result);
-      if A[Pred(Result)] < A[Result] then  // ascending
-        while (Result < R) and (A[Result] <= A[Succ(Result)]) do
-          Inc(Result)
-      else                                 // descending
-        begin
-          while (Result < R) and (A[Result] >= A[Succ(Result)]) do
-            Inc(Result);
-          Reverse(A[0..Result]);
-        end;
-    end;
-end;
-
-class procedure TGNumArrayHelper.InsertionSort(var A: array of T; L, R: SizeInt);
-var
-  I, J: SizeInt;
-  v: T;
-begin
-  for I := L + 1 to R do
-    begin
-      v := A[I];
-      J := I - 1;
-      while (J >= 0) and (A[J] > v) do
-        begin
-          A[J + 1] := A[J];
-          Dec(J);
-        end;
-      A[J + 1] := v;
-    end;
-end;
-
-class function TGNumArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
-var
-  L, M: SizeInt;
-begin
-  //here R must be >= 0;
-  Result := -1;
-  L := 0;
-  if A[R] > A[L] then  //ascending
-    begin
-      while L < R do
-        begin
-          M := L + (R - L) shr 1;
-          if A[M] < aValue then
-            L := Succ(M)
-          else
-            begin
-              if A[M] = aValue then
-                exit(M);
-              R := M;
-            end;
-        end;
-      //here L >= R
-      if A[R] = aValue then
-        Result := R;
-    end
-  else
-    if A[R] < A[L] then  //descending
-      begin
-        while L < R do
-          begin
-            M := L + ((R - L) shr 1);
-            if A[M] > aValue then
-              L := Succ(M)
-            else
-              begin
-                if A[M] = aValue then
-                  exit(M);
-                R := M;
-              end;
-          end;
-        //here L >= R
-        if A[R] = aValue then
-          Result := R;
-      end
-    else              //constant
-      if A[L] = aValue then
-        exit(L);
-end;
-
-class function TGNumArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M: SizeInt;
-begin
-  //here exists at least 2 ascending elements;
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      if A[M] < aValue then
-        L := Succ(M)
-      else
-        begin
-          if A[M] = aValue then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  if aValue < A[R] then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if aValue = A[R] then
-        Result.FoundIndex := R;
-    end;
-end;
-
-class function TGNumArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M: SizeInt;
-begin
-  //here exists at least 2 descending elements
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      if A[M] > aValue then
-        L := Succ(M)
-      else
-        begin
-          if A[M] = aValue then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  if aValue > A[R] then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if aValue = A[R] then
-        Result.FoundIndex := R;
-    end;
-end;
-
-class function TGNumArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-begin
-  //here R must be >= 0;
-  if A[0] < A[R] then   //ascending
-    Result := DoBinSearchPosA(A, R, aValue)
-  else
-    if A[0] > A[R] then //descending
-      Result := DoBinSearchPosD(A, R, aValue)
-    else                //constant
-      begin
-        Result.FoundIndex := -1;
-        if A[R] > aValue then
-           Result.InsertIndex := 0
-        else
-          begin
-            Result.InsertIndex := Succ(R);
-            if A[R] = aValue then
-              Result.FoundIndex := 0;
-          end;
-      end;
-end;
-
-class procedure TGNumArrayHelper.DoHeapSort(A: PItem; R: SizeInt);
-var
-  I, Curr, Next: SizeInt;
-  v: T;
-begin
-  if R > 0 then
-    begin
-      for I := Pred(Succ(R) shr 1) downto 0 do
-        begin
-          Curr := I;
-          Next := Succ(I shl 1);
-          v := A[Curr];
-          while Next <= R do
-            begin
-              if(Succ(Next) <= R) and (A[Next] < A[Succ(Next)])then
-                Inc(Next);
-              if v >= A[Next] then
-                break;
-              A[Curr] := A[Next];
-              Curr := Next;
-              Next := Succ(Next shl 1);
-            end;
-          A[Curr] := v;
-        end;
-      for I := R downto 1 do
-        begin
-          Curr := 0;
-          Next := 1;
-          v := A[I];
-          A[I] := A[0];
-          while Next < I do
-            begin
-              if(Succ(Next) < I) and (A[Next] < A[Succ(Next)]) then
-                Inc(Next);
-              A[Curr] := A[Next];
-              Curr := Next;
-              Next := Succ(Next shl 1);
-            end;
-          Next := Pred(Curr) shr 1;
-          while (Curr > 0) and (v > A[Next]) do
-            begin
-              A[Curr] := A[Next];
-              Curr := Next;
-              Next := Pred(Next) shr 1;
-            end;
-          A[Curr] := v;
-        end;
-    end;
-end;
-
-class function TGNumArrayHelper.QSplitR(var A: array of T; L, R: SizeInt): TSortSplit;
-var
-  v, Pivot: T;
-begin
-  Pivot := A[Succ(L + Random(Pred(R - L)))]; //shouldn't be first or last
-  Dec(L);
-  Inc(R);
-  repeat
-    repeat Inc(L); until A[L] >= Pivot;
-    repeat Dec(R); until A[R] <= Pivot;
-    //if L > R then
-    //  break;
-    v := A[L];
-    A[L] := A[R];
-    A[R] := v;
-  //until False;
-  until L > R;
-  v := A[L];
-  A[L] := A[R];
-  A[R] := v;
-
-  Result.Left := R;
-  Result.Right := L;
-end;
-
-class procedure TGNumArrayHelper.DoQSort(var A: array of T; L, R: SizeInt);
-begin
-  while R - L > QUICK_INSERT_CUTOFF do
-    with QSplitR(A, L, R) do
-      if Left - L <= R - Right then
-        begin
-          DoQSort(A, L, Left);
-          L := Right;
-        end
-      else
-        begin
-          DoQSort(A, Right, R);
-          R := Left;
-        end;
-  if R - L > 0 then
-    InsertionSort(A, L, R);
-end;
-
-class function TGNumArrayHelper.MedianOf3(const v1, v2, v3: T): T;
-begin
-  Result := v2;
-  if v1 < Result then
-    begin
-      if v3 < Result then
-        begin
-          if v1 < v3 then
-            Result := v3
-          else
-            Result := v1;
-        end;
-    end
-  else { v1 >= Result }
-    begin
-      if v3 > Result then
-        begin
-          if v1 > v3 then
-            Result := v3
-          else
-            Result := v1;
-        end;
-    end;
-end;
-
-class function TGNumArrayHelper.GetMo9Pivot(constref A: array of T; L, R: SizeInt): T;
-begin
-  if R - L > MEDIAN_OF9_CUTOFF then
-    begin
-      Result := MedianOf3(
-      MedianOf3(A[L], A[L + Succ(R - L) shr 3], A[L + Succ(R - L) shr 2]),
-      MedianOf3(A[L + Succ(R - L) shr 1 - Succ(R - L) shr 3], A[L + Succ(R - L) shr 1],
-                A[L + Succ(R - L) shr 1 + Succ(R - L) shr 3]),
-      MedianOf3(A[R - Succ(R - L) shr 2], A[R - Succ(R - L) shr 3], A[R]));
-    end
-  else
-    Result := MedianOf3(A[L], A[L + Succ(R - L) shr 1], A[R]);
-end;
-
-class function TGNumArrayHelper.QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit;
-var
-  v, Pivot: T;
-begin
-  Pivot := GetMo9Pivot(A, L, R);
-  Dec(L);
-  Inc(R);
-  repeat
-    repeat
-      Inc(L);
-    until A[L] >= Pivot;
-    repeat
-      Dec(R);
-    until A[R] <= Pivot;
-    if L > R then
-      break;
-    v := A[L];
-    A[L] := A[R];
-    A[R] := v;
-  until False;
-  Result.Left := R;
-  Result.Right := L;
-end;
-
-class procedure TGNumArrayHelper.DoIntroSort(var A: array of T; L, R, Ttl: SizeInt);
-begin
-  if R - L > QUICK_INSERT_CUTOFF then
-    if Ttl > 0 then
-      with QSplitMo9(A, L, R) do
-        begin
-          DoIntroSort(A, L, Left, Pred(Ttl));
-          DoIntroSort(A, Right, R, Pred(Ttl));
-        end
-    else
-      DoHeapSort(@A[L], R - L)
-  else
-    if R - L > 0 then
-      InsertionSort(A, L, R);
-end;
-
-class function TGNumArrayHelper.DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit;
-var
-  v, Pivot1, Pivot2: T;
-  pL, pR, I: SizeInt;
-label
-  EndLoop;
-begin
-  pL := Succ(L + Random(Pred((R - L) shr 1)));
-  pR := Pred(R - Random(Pred((R - L) shr 1)));
-
-  if A[pL] <= A[pR] then
-    begin
-      Pivot1 := A[pL];
-      A[pL] := A[L];
-      Pivot2 := A[pR];
-      A[pR] := A[R];
-    end
-  else
-    begin
-      Pivot2 := A[pL];
-      A[pL] := A[R];
-      Pivot1 := A[pR];
-      A[pR] := A[L];
-    end;
-
-  pL := Succ(L);
-  I  := Succ(L);
-  pR := Pred(R);
-  while I <= pR do
-    begin
-      v := A[I];
-      if v < Pivot1 then
-        begin
-          A[I] := A[pL];
-          A[pL] := v;
-          Inc(pL);
-        end
-      else
-        if v > Pivot2 then
-          begin
-            while A[pR] > Pivot2 do
-              begin
-                Dec(pR);
-                if pR < I then
-                  goto EndLoop;
-              end;
-            if A[pR] < Pivot1 then
-              begin
-                A[I] := A[pL];
-                A[pL] := A[pR];
-                Inc(pL);
-              end
-            else
-              A[I] := A[pR];
-            A[pR] := v;
-            Dec(pR);
-          end;
-      Inc(I);
-    end;
-
-EndLoop:
-
-  A[L] := A[pL - 1];
-  A[pL - 1] := Pivot1;
-  A[R] := A[pR + 1];
-  A[pR + 1] := Pivot2;
-
-  Result.Left := pL - 1;
-  Result.Right := pR + 1;
-end;
-
-class procedure TGNumArrayHelper.DoDPQSort(var A: array of T; L, R: SizeInt);
-begin
-  if R - L > DPQ_INSERT_CUTOFF then
-    with DPQSplit(A, L, R) do
-      begin
-        DoDPQSort(A, L, Left - 1);
-        DoDPQSort(A, Right + 1, R);
-        if A[Left] <> A[Right] then
-          DoDPQSort(A, Left + 1, Right - 1);
-      end
-  else
-    if R - L > 0 then
-      InsertionSort(A, L, R);
-end;
-
-class procedure TGNumArrayHelper.DoSwap(p: PItem; L, R: SizeInt);
-var
-  v: T;
-begin
-  v := p[L];
-  p[L] := p[R];
-  p[R] := v;
-end;
-
-class procedure TGNumArrayHelper.DoReverse(var A: array of T; L, R: SizeInt);
-var
-  v0, v1, v2, v3: T;
-begin
-  while R - L >= 7 do
-    begin
-      v0 := A[L    ];
-      v1 := A[L + 1];
-      v2 := A[L + 2];
-      v3 := A[L + 3];
-      A[L    ] := A[R    ];
-      A[L + 1] := A[R - 1];
-      A[L + 2] := A[R - 2];
-      A[L + 3] := A[R - 3];
-      A[R    ] := v0;
-      A[R - 1] := v1;
-      A[R - 2] := v2;
-      A[R - 3] := v3;
-      L += 4;
-      R -= 4;
-    end;
-  case R - L of
-    1..2:
-      begin
-        v0 := A[L];
-        A[L] := A[R];
-        A[R] := v0;
-      end;
-    3..4:
-      begin
-        v0 := A[L    ];
-        v1 := A[L + 1];
-        A[L    ] := A[R    ];
-        A[L + 1] := A[R - 1];
-        A[R    ] := v0;
-        A[R - 1] := v1;
-      end;
-    5..6:
-      begin
-        v0 := A[L    ];
-        v1 := A[L + 1];
-        v2 := A[L + 2];
-        A[L    ] := A[R    ];
-        A[L + 1] := A[R - 1];
-        A[L + 2] := A[R - 2];
-        A[R    ] := v0;
-        A[R - 1] := v1;
-        A[R - 2] := v2;
-      end;
-  end;
-end;
-
-class function TGNumArrayHelper.QSelectR(var A: array of T; N: SizeInt): T;
-var
-  L, R, pL, pR: SizeInt;
-  v, Pivot: T;
-begin
-  R := System.High(A);
-  L := 0;
-  while L < Pred(R) do
-    begin
-      Pivot := A[L + Random(Succ(R - L))];
-      pL := Pred(L);
-      pR := Succ(R);
-      repeat
-        repeat Inc(pL) until A[pL] >= Pivot;
-        repeat Dec(pR) until A[pR] <= Pivot;
-        if pL >= pR then break;
-        v := A[pL];
-        A[pL] := A[pR];
-        A[pR] := v;
-      until False;
-      if pL = pR then
-        begin
-          if pL > L then
-            Dec(pR)
-          else
-            if pL < R then
-              Inc(pL);
-        end;
-      if pR < N then L := pL;
-      if pL > N then R := pR;
-    end;
-  if (L < R) and (A[L] > A[R]) then
-    begin
-      v := A[L];
-      A[L] := A[R];
-      A[R] := v;
-    end;
-  Result := A[N];
-end;
-
 class function TGNumArrayHelper.UpRange(aFrom, aTo: T; aStep: T): TUpRange;
 begin
   Result := TUpRange.Create(aFrom, aTo, aStep);
@@ -8834,404 +9236,6 @@ end;
 class function TGNumArrayHelper.DownRange(aFrom, aTo: T; aStep: T): TDownRange;
 begin
   Result := TDownRange.Create(aFrom, aTo, aStep);
-end;
-
-class procedure TGNumArrayHelper.Reverse(var A: array of T);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if R > 0 then
-    DoReverse(A, 0, R);
-end;
-
-class procedure TGNumArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
-var
-  Len: SizeInt;
-begin
-  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
-    exit;
-  Len := System.Length(A);
-  if aDist < 0 then
-    aDist += Len;
-  DoReverse(A, 0, Pred(aDist));
-  DoReverse(A, aDist, Pred(Len));
-  DoReverse(A, 0, Pred(Len));
-end;
-
-class procedure TGNumArrayHelper.RotateRight(var A: array of T; aDist: SizeInt);
-begin
-  if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
-    exit;
-  if aDist > 0 then
-    RotateLeft(A, System.Length(A) - aDist)
-  else
-    RotateLeft(A, -aDist)
-end;
-
-class function TGNumArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
-begin
-  for Result := 0 to System.High(A) do
-    if aValue = A[Result] then
-      exit;
-  Result := -1;
-end;
-
-class function TGNumArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
-begin
-  Result := High(A);
-  if Result >= 0 then
-    Result := DoBinSearch(@A[0], Result, aValue);
-end;
-
-class function TGNumArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
-var
-  hi: SizeInt;
-begin
-  hi := High(A);
-  if hi >= 0 then
-    Result := DoBinSearchPos(@A[0], hi, aValue)
-  else
-    begin
-      Result.FoundIndex := hi;
-      Result.InsertIndex := hi;
-    end;
-end;
-
-class function TGNumArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
-var
-  R, I: SizeInt;
-  v: T;
-begin
-  R := System.High(A);
-  if R >= 0 then
-    begin
-      Result := 0;
-      v := A[0];
-      for I := 1 to R do
-        if v > A[I] then
-          begin
-            v := A[I];
-            Result := I;
-          end;
-    end
-  else
-    Result := R;
-end;
-
-class function TGNumArrayHelper.IndexOfMax(constref A: array of T): SizeInt;
-var
-  R, I: SizeInt;
-  v: T;
-begin
-  R := System.High(A);
-  if R >= 0 then
-    begin
-      Result := 0;
-      v := A[0];
-      for I := 1 to R do
-        if v < A[I] then
-          begin
-            v := A[I];
-            Result := I;
-          end;
-    end
-  else
-    Result := R;
-end;
-
-class function TGNumArrayHelper.GetMin(constref A: array of T): TOptional;
-var
-  v: T;
-begin
-  if FindMin(A, v) then
-    Result.Assign(v);
-end;
-
-class function TGNumArrayHelper.GetMax(constref A: array of T): TOptional;
-var
-  v: T;
-begin
-  if FindMax(A, v) then
-    Result.Assign(v);
-end;
-
-class function TGNumArrayHelper.FindMin(constref A: array of T; out aValue: T): Boolean;
-var
-  R, I: SizeInt;
-begin
-  R := System.High(A);
-  Result := R >= 0;
-  if Result then
-    begin
-      aValue := A[0];
-      for I := 1 to R do
-        if aValue > A[I] then
-          aValue := A[I];
-    end;
-end;
-
-class function TGNumArrayHelper.FindMax(constref A: array of T; out aValue: T): Boolean;
-var
-  R, I: SizeInt;
-begin
-  R := System.High(A);
-  Result := R >= 0;
-  if Result then
-    begin
-      aValue := A[0];
-      for I := 1 to R do
-        if aValue < A[I] then
-          aValue := A[I];
-    end;
-end;
-
-class function TGNumArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean;
-var
-  R, I: SizeInt;
-begin
-  R := System.High(A);
-  Result := R >= 0;
-  if Result then
-    begin
-      aMin := A[0];
-      aMax := A[0];
-      for I := 1 to R do
-        if A[I] > aMax then
-          aMax := A[I]
-        else
-          if A[I] < aMin then
-            aMin := A[I];
-    end;
-end;
-
-class function TGNumArrayHelper.FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T): Boolean;
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if R < 0 then
-    exit(False);
-  if N <= 0 then
-    exit(FindMin(A, aValue));
-  if N >= R then
-    exit(FindMax(A, aValue));
-  aValue := QSelectR(A, N);
-  Result := True;
-end;
-
-class function TGNumArrayHelper.NthSmallest(var A: array of T; N: SizeInt): TOptional;
-var
-  v: T;
-begin
-  if FindNthSmallest(A, N, v) then
-    Result.Assign(v);
-end;
-
-class function TGNumArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean;
-begin
-  Result := FindNthSmallest(CreateCopy(A), N, aValue);
-end;
-
-class function TGNumArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt): TOptional;
-var
-  v: T;
-begin
-  if FindNthSmallestND(A, N, v) then
-    Result.Assign(v);
-end;
-
-class function TGNumArrayHelper.NextPermutation2Asc(var A: array of T): Boolean;
-var
-  I, J, R: SizeInt;
-begin
-  R := System.High(A);
-  J := -1;
-  for I := Pred(R) downto 0 do
-    if A[I] > A[Succ(I)] then
-      begin
-        J := I;
-        break;
-      end;
-  if J < 0 then exit(False);
-  for I := R downto 0 do
-    if A[J] > A[I] then
-      begin
-        DoSwap(@A[0], I, J);
-        break;
-      end;
-  DoReverse(A, Succ(J), R);
-  Result := True;
-end;
-
-class function TGNumArrayHelper.NextPermutation2Desc(var A: array of T): Boolean;
-var
-  I, J, R: SizeInt;
-begin
-  R := System.High(A);
-  J := -1;
-  for I := Pred(R) downto 0 do
-    if A[I] < A[Succ(I)] then
-      begin
-        J := I;
-        break;
-      end;
-  if J < 0 then exit(False);
-  for I := R downto 0 do
-    if A[J] < A[I] then
-      begin
-        DoSwap(@A[0], I, J);
-        break;
-      end;
-  DoReverse(A, Succ(J), R);
-  Result := True;
-end;
-
-class function TGNumArrayHelper.IsNonDescending(constref A: array of T): Boolean;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(System.High(A)) do
-    if A[I] > A[Succ(I)] then
-      exit(False);
-  Result := True;
-end;
-
-class function TGNumArrayHelper.IsStrictAscending(constref A: array of T): Boolean;
-var
-  I, R: SizeInt;
-begin
-  R := System.High(A);
-  if R > 0 then
-    begin
-      for I := 1 to R do
-        if A[Pred(I)] >= A[I] then
-          exit(False);
-      Result := True;
-    end
-  else
-    Result := False;
-end;
-
-class function TGNumArrayHelper.IsNonAscending(constref A: array of T): Boolean;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(System.High(A)) do
-    if A[I] < A[Succ(I)] then
-      exit(False);
-  Result := True;
-end;
-
-class function TGNumArrayHelper.IsStrictDescending(constref A: array of T): Boolean;
-var
-  I, R: SizeInt;
-begin
-  R := System.High(A);
-  if R > 0 then
-    begin
-      for I := 1 to R do
-        if A[Pred(I)] <= A[I] then
-          exit(False);
-      Result := True;
-    end
-  else
-    Result := False;
-end;
-
-class function TGNumArrayHelper.Same(constref A, B: array of T): Boolean;
-var
-  R, I: SizeInt;
-begin
-  R := System.High(A);
-  if System.High(B) <> R then
-    exit(False);
-  for I := 0 to R do
-    if A[I] <> B[I] then
-      exit(False);
-  Result := True;
-end;
-
-class procedure TGNumArrayHelper.QuickSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(A, 0, R) < R then
-      begin
-        DoQSort(A, 0, R);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
-        Reverse(A);
-end;
-
-class procedure TGNumArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(A, 0, R) < R then
-      begin
-        DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
-        Reverse(A);
-end;
-
-class procedure TGNumArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
-var
-  R: SizeInt;
-begin
-  R := System.High(A);
-  if R > 0 then
-    if CountRun2Asc(A, 0, R) < R then
-      begin
-        DoDPQSort(A, 0, R);
-        if o = soDesc then
-          Reverse(A);
-      end
-    else
-      if (o = soDesc) and (A[0] <> A[R]) then
-        Reverse(A);
-end;
-
-class procedure TGNumArrayHelper.Sort(var A: array of T; o: TSortOrder);
-begin
-  IntroSort(A, o);
-end;
-
-class function TGNumArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
-begin
-  Result := CreateCopy(A);
-  Sort(Result, o);
-end;
-
-class function TGNumArrayHelper.SelectDistinct(constref A: array of T): TArray;
-var
-  I, J, Hi: SizeInt;
-begin
-  Result := Sorted(A);
-  Hi := System.High(Result);
-  if Hi < 1 then
-    exit;
-  I := 0;
-  for J := 1 to Hi do
-    begin
-      if Result[I] = Result[J] then
-        continue;
-      Inc(I);
-      if J > I then
-        Result[I] := Result[J];
-    end;
-  System.SetLength(Result, Succ(I));
 end;
 
 { TGOrdinalArrayHelper }
