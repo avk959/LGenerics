@@ -80,6 +80,10 @@ type
     procedure ReverseStatic10;
     procedure ReverseDyn10;
 
+    procedure RotateIllegal;
+    procedure RotateStatic;
+    procedure RotateDyn;
+
     procedure RandomShuffleEmpty;
     procedure RandomShuffleStatic1;
     procedure RandomShuffleDyn1;
@@ -538,6 +542,79 @@ begin
   a := TIntHelper.CreateCopy(IntSrc10);
   TIntHelper.Reverse(a);
   AssertTrue(TCompHelper.Same(ReverseIntSrc10, a));
+end;
+
+procedure TArrayHelpUtilTest.RotateIllegal;
+type
+  TIntArray10 = array[1..10] of Integer;
+const
+  Sample: TIntArray10 = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+var
+  a: TIntArray10;
+begin
+  a := Sample;
+  TCompHelper.RotateLeft(a, 0);
+  AssertTrue(TCompHelper.Same(a, Sample));
+  TCompHelper.RotateLeft(a, 10);
+  AssertTrue(TCompHelper.Same(a, Sample));
+  TCompHelper.RotateLeft(a, -10);
+  AssertTrue(TCompHelper.Same(a, Sample));
+  TCompHelper.RotateRight(a, 10);
+  AssertTrue(TCompHelper.Same(a, Sample));
+  TCompHelper.RotateRight(a, -10);
+  AssertTrue(TCompHelper.Same(a, Sample));
+end;
+
+procedure TArrayHelpUtilTest.RotateStatic;
+type
+  TIntArray10 = array[1..10] of Integer;
+const
+  Sample: TIntArray10 = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+  RolSample: TIntArray10 = (4, 5, 6, 7, 8, 9, 0, 1, 2, 3);
+  RorSample: TIntArray10 = (6, 7, 8, 9, 0, 1, 2, 3, 4, 5);
+var
+  a: TIntArray10;
+begin
+  a := Sample;
+  TCompHelper.RotateLeft(a, 4);
+  AssertTrue(TCompHelper.Same(a, RolSample));
+  a := Sample;
+  TCompHelper.RotateLeft(a, -4);
+  AssertTrue(TCompHelper.Same(a, RorSample));
+  a := Sample;
+  TCompHelper.RotateRight(a, 4);
+  AssertTrue(TCompHelper.Same(a, RorSample));
+  a := Sample;
+  TCompHelper.RotateRight(a, -4);
+  AssertTrue(TCompHelper.Same(a, RolSample));
+  TCompHelper.RotateLeft(a, -4);
+  AssertTrue(TCompHelper.Same(a, Sample));
+end;
+
+procedure TArrayHelpUtilTest.RotateDyn;
+type
+  TIntArray10 = array[1..10] of Integer;
+const
+  Sample: TIntArray10 = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+  RolSample: TIntArray10 = (4, 5, 6, 7, 8, 9, 0, 1, 2, 3);
+  RorSample: TIntArray10 = (6, 7, 8, 9, 0, 1, 2, 3, 4, 5);
+var
+  a: TIntArray;
+begin
+  a := TCompHelper.CreateCopy(Sample);
+  TCompHelper.RotateLeft(a, 4);
+  AssertTrue(TCompHelper.Same(a, RolSample));
+  a := TCompHelper.CreateCopy(Sample);
+  TCompHelper.RotateLeft(a, -4);
+  AssertTrue(TCompHelper.Same(a, RorSample));
+  a := TCompHelper.CreateCopy(Sample);
+  TCompHelper.RotateRight(a, 4);
+  AssertTrue(TCompHelper.Same(a, RorSample));
+  a := TCompHelper.CreateCopy(Sample);
+  TCompHelper.RotateRight(a, -4);
+  AssertTrue(TCompHelper.Same(a, RolSample));
+  TCompHelper.RotateLeft(a, -4);
+  AssertTrue(TCompHelper.Same(a, Sample));
 end;
 
 procedure TArrayHelpUtilTest.RandomShuffleEmpty;
