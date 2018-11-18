@@ -8701,7 +8701,7 @@ end;
 class procedure TGNumArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
 var
   Len: SizeInt;
-begin  //todo: test needed
+begin
   if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
     exit;
   Len := System.Length(A);
@@ -8713,7 +8713,7 @@ begin  //todo: test needed
 end;
 
 class procedure TGNumArrayHelper.RotateRight(var A: array of T; aDist: SizeInt);
-begin  //todo: test needed
+begin
   if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
     exit;
   if aDist > 0 then
