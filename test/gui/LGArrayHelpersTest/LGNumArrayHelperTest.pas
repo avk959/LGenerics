@@ -18,6 +18,7 @@ type
 
     TIntHelper  = specialize TGNumArrayHelper<Integer>;
     THackHelper = class(TIntHelper);
+    TDblHelper  = specialize TGNumArrayHelper<Double>;
     TIntArray   = specialize TGArray<Integer>;
 
   published
@@ -343,6 +344,15 @@ type
     procedure DualPivotQuickSortAscOfDyn577RandomZeroes;
     procedure DualPivotQuickSortDescOfDyn577Random;
     procedure DualPivotQuickSortDescOfDyn577RandomZeroes;
+
+    procedure UpRangeInt0;
+    procedure UpRangeDouble0;
+    procedure DownRangeInt0;
+    procedure DownRangeDouble0;
+    procedure UpRangeInt1;
+    procedure UpRangeDouble1;
+    procedure DownRangeInt1;
+    procedure DownRangeDouble1;
   end;
 
   { TOrdArrayHelperTest }
@@ -2962,6 +2972,114 @@ begin
     a[I] := Random(2);
   TIntHelper.DualPivotQuickSort(a, soDesc);
   AssertTrue(TIntHelper.IsNonAscending(a));
+end;
+
+procedure TNumArrayHelperTest.UpRangeInt0;
+var
+  I: Integer;
+  Times: Integer = 0;
+begin
+  for I in TIntHelper.UpRange(2, 1) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  for I in TIntHelper.UpRange(2, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for I in TIntHelper.UpRange(2, 3, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+end;
+
+procedure TNumArrayHelperTest.UpRangeDouble0;
+var
+  d: Double;
+  Times: Integer = 0;
+begin
+  for d in TDblHelper.UpRange(2, 1) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  for d in TDblHelper.UpRange(2, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for d in TDblHelper.UpRange(2, 3, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+end;
+
+procedure TNumArrayHelperTest.DownRangeInt0;
+var
+  I: Integer;
+  Times: Integer = 0;
+begin
+  for I in TIntHelper.DownRange(1, 2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  for I in TIntHelper.DownRange(2, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for I in TIntHelper.DownRange(2, 1, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+end;
+
+procedure TNumArrayHelperTest.DownRangeDouble0;
+var
+  d: Double;
+  Times: Integer = 0;
+begin
+  for d in TDblHelper.DownRange(1, 2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  for d in TDblHelper.DownRange(2, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+  Times := 0;
+  for d in TDblHelper.DownRange(2, 1, 2) do
+    Inc(Times);
+  AssertTrue(Times = 1);
+end;
+
+procedure TNumArrayHelperTest.UpRangeInt1;
+var
+  I: Integer;
+  Sum: Integer = 0;
+begin
+  for I in TIntHelper.UpRange(1, 10, 2) do
+    Sum += I;
+  AssertTrue(Sum = 25);
+end;
+
+procedure TNumArrayHelperTest.UpRangeDouble1;
+var
+  d: Double;
+  Sum: Double = 0;
+begin
+  for d in TDblHelper.UpRange(1, 10, 2) do
+    Sum += d;
+  AssertTrue(Sum = 25);
+end;
+
+procedure TNumArrayHelperTest.DownRangeInt1;
+var
+  I: Integer;
+  Sum: Integer = 0;
+begin
+  for I in TIntHelper.DownRange(10, 1, 2) do
+    Sum += I;
+  AssertTrue(Sum = 30);
+end;
+
+procedure TNumArrayHelperTest.DownRangeDouble1;
+var
+  d: Double;
+  Sum: Double = 0;
+begin
+  for d in TDblHelper.DownRange(10, 1, 2) do
+    Sum += d;
+  AssertTrue(Sum = 30);
 end;
 
 { TOrdArrayHelperTest }
