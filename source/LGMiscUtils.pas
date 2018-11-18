@@ -39,36 +39,6 @@ uses
 
 type
 
-  generic TGNumRange<T> = class
-  type
-    TRange = record
-    private
-      FCurrent,
-      FMax,
-      FStep: T;
-      FInCycle: Boolean;
-    public
-      function GetEnumerator: TRange; inline;
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
-    TDownRange = record
-    private
-      FCurrent,
-      FMin,
-      FStep: T;
-      FInCycle: Boolean;
-    public
-      function GetEnumerator: TDownRange; inline;
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
-    class function Up(const aFrom, aTo: T; const aStep: T = 1): TRange; static; inline;
-    class function Down(const aFrom, aDownTo: T; const aStep: T = 1): TDownRange; static; inline;
-  end;
-
   { TGCustomTimSort: base ancestor class;
     Free Pascal port of java timsort implementation }
   generic TGCustomTimSort<T> = class
@@ -553,72 +523,6 @@ begin
   if Options = nil then
     ParseOptions;
   Result := System.Copy(Options, 0, System.Length(Options)) ;
-end;
-
-{ TGNumRange.TRange }
-
-function TGNumRange.TRange.GetEnumerator: TRange;
-begin
-  Result := Self;
-end;
-
-function TGNumRange.TRange.MoveNext: Boolean;
-begin
-  if FInCycle then
-    begin
-      Result := FMax - FCurrent >= FStep;
-      if Result then
-        FCurrent += FStep;
-    end
-  else
-    begin
-      Result := FCurrent <= FMax;
-      FInCycle := True;
-    end;
-end;
-
-{ TGNumRange.TDownRange }
-
-function TGNumRange.TDownRange.GetEnumerator: TDownRange;
-begin
-  Result := Self;
-end;
-
-function TGNumRange.TDownRange.MoveNext: Boolean;
-begin
-  if FInCycle then
-    begin
-      Result := FCurrent - FMin >= FStep;
-      if Result then
-        FCurrent -= FStep;
-    end
-  else
-    begin
-      Result := FCurrent >= FMin;
-      FInCycle := True;
-    end;
-end;
-
-class function TGNumRange.Up(const aFrom, aTo: T; const aStep: T): TRange;
-begin
-  with Result do
-    begin
-      FMax := aTo;
-      FStep := aStep;
-      FCurrent := aFrom;
-      FInCycle := False;
-    end;
-end;
-
-class function TGNumRange.Down(const aFrom, aDownTo: T; const aStep: T): TDownRange;
-begin
-  with Result do
-    begin
-      FMin := aDownTo;
-      FStep := aStep;
-      FCurrent := aFrom;
-      FInCycle := False;
-    end;
 end;
 
 { TGCustomTimSort.TTimSortBase }
