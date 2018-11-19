@@ -63,6 +63,7 @@ resourcestring
   SEMethodNotApplicable    = 'Method is not applicable';
   SEUnknownWeight          = 'Unknown weight type';
   SEUndefinedTypeInfo      = 'TypeInfo of specialize type undefined';
+  SENonSquareInputMatrix   = 'Input matrix is not square';
 
 implementation
 
