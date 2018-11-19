@@ -493,6 +493,7 @@ type
   { resizes array to length aLen and fills array with aValue }
     class procedure ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight); static;
     class function  CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix; static;
+    class function  IsSquareMatrix(constref m: TWeightMatrix): Boolean; static;
   { creates square matrix, fills main diagonal with (I, ZeroWeight) and
     fills other element with corresponding weights }
     class function  CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
@@ -504,8 +505,12 @@ type
   { returns bipartite matching of maximum cardinality and maximum weight;
     warning: does not checks if aGraph is bipartite }
     class function  MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
-  { greedy Nearest Neighbour closed TSP algorithm }
-    class function  GreedyCloseTspNn(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+  { returns total weight of TS tour specified of aTour;
+    warning: does not checks not matrix nor tour }
+    class function  TotalTourWeight(constref m: TWeightMatrix; constref aTour: TIntArray): TWeight; static;
+  { cyclic shifts aTour so that element aSrc becomes the first;
+    warning: does not checks if aSrc exist in aTour }
+    class procedure NormalizeTour(var aTour: TIntArray; aSrc: SizeInt); static;
 
     class property  InfWeight: TWeight read CFInfWeight;
     class property  NegInfWeight: TWeight read CFNegInfWeight;

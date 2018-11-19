@@ -4401,6 +4401,17 @@ begin
     end;
 end;
 
+class function TGWeightHelper.IsSquareMatrix(constref m: TWeightMatrix): Boolean;
+var
+  I, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then
+      exit(False);
+  Result := True;
+end;
+
 class function TGWeightHelper.CreateAPSPMatrix(aGraph: TGraph): TApspMatrix;
 var
   Empties: TBoolVector;
@@ -4457,52 +4468,23 @@ begin
   Result := Helper.MaxWeightMatching(aGraph, w, g);
 end;
 
-class function TGWeightHelper.GreedyCloseTspNn(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightHelper.TotalTourWeight(constref m: TWeightMatrix; constref aTour: TIntArray): TWeight;
 var
-  Tour: TIntArray;
-  Unvisit: TBoolVector;
-  I, J, K, Curr, Next, Len: SizeInt;
-  CurrMin, Total, wCurr, Inf: TWeight;
+  I: SizeInt;
 begin
-  Inf := InfWeight;
-  Result := nil;
-  aWeight := Inf;
-  Len := System.Length(m);
-  Tour.Length := Succ(Len);
-  for K := 0 to Pred(Len) do
-    begin
-      Unvisit.InitRange(Len);
-      Tour[0] := K;
-      Unvisit[K] := False;
-      Curr := K;
-      I := 1;
-      Total := 0;
-      while Unvisit.NonEmpty do
-        begin
-          CurrMin := Inf;
-          for J in Unvisit do
-            begin
-              wCurr := m[Curr, J];
-              if wCurr < CurrMin then
-                begin
-                  CurrMin := wCurr;
-                  Next := J;
-                end;
-            end;
-          Curr := Next;
-          Tour[I] := Next;
-          Unvisit[Next] := False;
-          Inc(I);
-          Total += CurrMin;
-        end;
-      Total += m[Next, K];
-      Tour[I] := K;
-      if Total < aWeight then
-        begin
-          aWeight := Total;
-          Result := System.Copy(Tour);
-        end;
-    end;
+  Result := 0;
+  for I := 0 to Pred(System.High(aTour)) do
+    Result += m[aTour[I], aTour[Succ(I)]];
+end;
+
+class procedure TGWeightHelper.NormalizeTour(var aTour: TIntArray; aSrc: SizeInt);
+var
+  I: SizeInt = 0;
+begin
+  while aTour[I] <> aSrc do
+    Inc(I);
+  TIntHelper.RotateLeft(aTour[0..Pred(System.High(aTour))], I);
+  aTour[System.High(aTour)] := aTour[0];
 end;
 
 { TGCustomDotWriter }
