@@ -282,7 +282,7 @@ type
     function  CreateAdjEnumArrayEx: TAdjEnumArrayEx;
     function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
-    class procedure ResizeAndFill(var a: TIntArray; aLen, aValue: SizeInt); static;
+    class procedure ResizeAndFill(out a: TIntArray; aLen, aValue: SizeInt); static;
     class function  CreateIntArray(aLen, aValue: SizeInt): TIntArray; static; inline;
   public
   type
@@ -1184,7 +1184,7 @@ end;
 
 function TGCustomGraph.CreateIntArray(aValue: SizeInt): TIntArray;
 begin
-  ResizeAndFill(Result{%H-}, VertexCount, aValue);
+  ResizeAndFill(Result, VertexCount, aValue);
 end;
 
 function TGCustomGraph.CreateIntArrayRange: TIntArray;
@@ -1239,7 +1239,7 @@ begin
     Result := [];
 end;
 
-class procedure TGCustomGraph.ResizeAndFill(var a: TIntArray; aLen, aValue: SizeInt);
+class procedure TGCustomGraph.ResizeAndFill(out a: TIntArray; aLen, aValue: SizeInt);
 begin
   System.SetLength(a, aLen);
 {$IF DEFINED(CPU64)}
@@ -4469,6 +4469,115 @@ begin
     Inc(I);
   TIntHelper.RotateLeft(aTour[0..Pred(System.High(aTour))], I);
   aTour[System.High(aTour)] := aTour[0];
+end;
+
+class procedure TGWeightHelper.Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight);
+var
+  I, J, L, R, Len: SizeInt;
+  wFirst, Gain, MaxGain: TWeight;
+begin
+  Len := System.High(aPath);
+  L := NULL_INDEX;
+  R := NULL_INDEX;
+  repeat
+    MaxGain := 0;
+    for I := 0 to Len - 3 do
+      begin
+        wFirst := m[aPath[I], aPath[Succ(I)]];
+        for J := I + 2 to Pred(Len) do
+          begin
+            Gain := wFirst + m[aPath[J], aPath[Succ(J)]] - m[aPath[I], aPath[J]] -
+                             m[aPath[Succ(I)], aPath[Succ(J)]];
+            if Gain > MaxGain then
+              begin
+                MaxGain := Gain;
+                L := I;
+                R := J;
+              end;
+          end;
+      end;
+    if MaxGain > 0 then
+      begin
+        I := aPath[Succ(L)];
+        aPath[Succ(L)] := aPath[R];
+        aPath[R] := I;
+        TIntHelper.Reverse(aPath[L + 2..Pred(R)]);
+      end;
+  until MaxGain = 0;
+  aWeight := TotalTourWeight(m, aPath);
+end;
+
+class function TGWeightHelper.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+var
+  Tour, Cycle: TIntArray;
+  Weights: TWeightArray;
+  Unvisit: TBoolVector;
+  Len, I, J, K, L, R, Curr, Next, Farthest: SizeInt;
+  Inf, NegInf, InsW, MaxW, CurrW, TotalW: TWeight;
+begin
+  Result := nil;
+  Len := System.Length(m);
+  Inf := InfWeight;
+  NegInf := NegInfWeight;
+  aWeight := Inf;
+  Tour.Length := Succ(Len);
+  Cycle.Length := Len;
+  for K := 0 to Pred(Len) do
+    begin
+      Unvisit.InitRange(Len);
+      Cycle[K] := K;
+      Unvisit[K] := False;
+      Weights := System.Copy(m[K]);
+      TotalW := 0;
+      for I := 0 to Len - 2 do
+        begin
+          MaxW := NegInf;
+          for J in Unvisit do
+            if Weights[J] > MaxW then
+              begin
+                MaxW := Weights[J];
+                Farthest := J;
+              end;
+          InsW := Inf;
+          Curr := K;
+          for J := 0 to I do
+            begin
+              Next := Cycle[Curr];
+              CurrW := m[Curr, Farthest] + m[Farthest, Next] - m[Curr, Next];
+              if CurrW < InsW then
+                begin
+                  InsW := CurrW;
+                  L := Curr;
+                  R := Next;
+                end;
+              Curr := Next;
+            end;
+          Cycle[Farthest] := R;
+          Cycle[L] := Farthest;
+          TotalW += InsW;
+          Unvisit[Farthest] := False;
+          for J in Unvisit do
+            begin
+              InsW := m[Farthest, J];
+              if InsW < Weights[J] then
+                 Weights[J] := InsW;
+            end;
+        end;
+      J := K;
+      for I := 0 to Pred(Len) do
+        begin
+          Tour[I] := J;
+          J := Cycle[J];
+        end;
+      Tour[Len] := J;
+      TotalW += m[Tour[Pred(Len)], J];
+      if TotalW < aWeight then
+        begin
+          aWeight := TotalW;
+          Result := System.Copy(Tour);
+        end;
+    end;
+  Tsp2Opt(m, Result, aWeight);
 end;
 
 { TGCustomDotWriter }

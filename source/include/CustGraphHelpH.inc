@@ -511,6 +511,13 @@ type
   { cyclic shifts aTour so that element aSrc becomes the first;
     warning: does not checks if aSrc exist in aTour }
     class procedure NormalizeTour(var aTour: TIntArray; aSrc: SizeInt); static;
+  { 2-opt local search algorithm for the traveling salesman problem;
+    warning: does not checks not matrix nor path }
+    class procedure Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight); static;
+  { An greedy farthest insertion algorithm for the traveling salesman problem;
+    Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
+    warning: does not checks matrix }
+    class function  GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
 
     class property  InfWeight: TWeight read CFInfWeight;
     class property  NegInfWeight: TWeight read CFNegInfWeight;
