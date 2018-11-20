@@ -301,7 +301,7 @@ type
     function  MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
   end;
 
-  { TPcMatch: Pape and Conradt general matching algorithm from
+  { TPcMatch: Pape and Conradt general matching algorithm;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
   TPcMatch = record
   strict private
