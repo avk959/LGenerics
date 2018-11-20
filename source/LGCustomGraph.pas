@@ -4529,15 +4529,15 @@ begin
       Unvisit[K] := False;
       Weights := System.Copy(m[K]);
       TotalW := 0;
+      MaxW := NegInf;
+      for J in Unvisit do
+        if Weights[J] > MaxW then
+          begin
+            MaxW := Weights[J];
+            Farthest := J;
+          end;
       for I := 0 to Len - 2 do
         begin
-          MaxW := NegInf;
-          for J in Unvisit do
-            if Weights[J] > MaxW then
-              begin
-                MaxW := Weights[J];
-                Farthest := J;
-              end;
           InsW := Inf;
           Curr := K;
           for J := 0 to I do
@@ -4556,12 +4556,18 @@ begin
           Cycle[L] := Farthest;
           TotalW += InsW;
           Unvisit[Farthest] := False;
+          MaxW := NegInf;
           for J in Unvisit do
             begin
-              InsW := m[Farthest, J];
-              if InsW < Weights[J] then
-                 Weights[J] := InsW;
+              if m[Farthest, J] < Weights[J] then
+                 Weights[J] := m[Farthest, J];
+              if Weights[J] > MaxW then
+                begin
+                  MaxW := Weights[J];
+                  Next := J;
+                end;
             end;
+          Farthest := Next;
         end;
       J := K;
       for I := 0 to Pred(Len) do
