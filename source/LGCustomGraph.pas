@@ -275,15 +275,15 @@ type
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
     function  CreateBoolMatrix: TBoolMatrix;
-    function  CreateIntArray(aValue: SizeInt = -1): TIntArray;
-    function  CreateIntArray(aLen, aValue: SizeInt): TIntArray;
-    function  CreateIntArrayRange: TIntArray;
-    procedure ResizeAndFill(var a: TIntArray; aLen, aValue: SizeInt);
+    function  CreateIntArray(aValue: SizeInt = -1): TIntArray; inline;
+    function  CreateIntArrayRange: TIntArray; inline;
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  CreateAdjEnumArrayEx: TAdjEnumArrayEx;
     function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
+    class procedure ResizeAndFill(var a: TIntArray; aLen, aValue: SizeInt); static;
+    class function  CreateIntArray(aLen, aValue: SizeInt): TIntArray; static; inline;
   public
   type
     TEdge = record
@@ -1184,47 +1184,12 @@ end;
 
 function TGCustomGraph.CreateIntArray(aValue: SizeInt): TIntArray;
 begin
-  System.SetLength(Result, VertexCount);
-{$IF DEFINED(CPU64)}
-  System.FillQWord(Pointer(Result)^, VertexCount, QWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  System.FillDWord(Pointer(Result)^, VertexCount, DWord(aValue));
-{$ELSE}
-  System.FillWord(Pointer(Result)^, VertexCount, Word(aValue));
-{$ENDIF}
-end;
-
-function TGCustomGraph.CreateIntArray(aLen, aValue: SizeInt): TIntArray;
-begin
-  System.SetLength(Result, aLen);
-{$IF DEFINED(CPU64)}
-  System.FillQWord(Pointer(Result)^, aLen, QWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  System.FillDWord(Pointer(Result)^, aLen, DWord(aValue));
-{$ELSE}
-  System.FillWord(Pointer(Result)^, aLen, Word(aValue));
-{$ENDIF}
+  ResizeAndFill(Result{%H-}, VertexCount, aValue);
 end;
 
 function TGCustomGraph.CreateIntArrayRange: TIntArray;
-var
-  I: SizeInt;
 begin
-  System.SetLength(Result, VertexCount);
-  for I := 0 to Pred(VertexCount) do
-    Result[I] := I;
-end;
-
-procedure TGCustomGraph.ResizeAndFill(var a: TIntArray; aLen, aValue: SizeInt);
-begin
-  System.SetLength(a, aLen);
-{$IF DEFINED(CPU64)}
-  System.FillQWord(Pointer(a)^, aLen, QWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  System.FillDWord(Pointer(a)^, aLen, DWord(aValue));
-{$ELSE}
-  System.FillWord(Pointer(a)^, aLen, Word(aValue));
-{$ENDIF}
+  Result := TIntHelper.CreateRange(0, Pred(VertexCount));
 end;
 
 function TGCustomGraph.CreateColorArray: TColorArray;
@@ -1272,6 +1237,23 @@ begin
     Result := TreePathTo(Parents, Nearest)
   else
     Result := [];
+end;
+
+class procedure TGCustomGraph.ResizeAndFill(var a: TIntArray; aLen, aValue: SizeInt);
+begin
+  System.SetLength(a, aLen);
+{$IF DEFINED(CPU64)}
+  System.FillQWord(Pointer(a)^, aLen, QWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(Pointer(a)^, aLen, DWord(aValue));
+{$ELSE}
+  System.FillWord(Pointer(a)^, aLen, Word(aValue));
+{$ENDIF}
+end;
+
+class function TGCustomGraph.CreateIntArray(aLen, aValue: SizeInt): TIntArray;
+begin
+  ResizeAndFill(Result{%H-}, aLen, aValue);
 end;
 
 class function TGCustomGraph.cMin(L, R: TCost): TCost;
@@ -1697,7 +1679,7 @@ begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
-  Stack := CreateIntArray;
+  {%H-}Stack := CreateIntArray;
   if Assigned(OnFound) then
     OnFound(aRoot);
   Visited[aRoot] := True;
@@ -1891,7 +1873,7 @@ begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
   System.SetLength(Queue, VertexCount);
-  Dist := CreateIntArray;
+  {%H-}Dist := CreateIntArray;
   Dist[aSrc] := 0;
   Queue[qTail] := aSrc;
   Inc(qTail);
