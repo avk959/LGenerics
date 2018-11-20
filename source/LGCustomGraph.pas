@@ -4388,6 +4388,8 @@ var
   I, Size: SizeInt;
 begin
   Size := System.Length(m);
+  if Size < 2 then
+    exit(False);
   for I := 0 to Pred(Size) do
     if System.Length(m[I]) <> Size then
       exit(False);
