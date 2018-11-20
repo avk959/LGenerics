@@ -651,22 +651,23 @@ type
     class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { greedy farthest insertion + 3-opt heuristic }
     class function GreedyTsp3Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-    class function Tsp2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+  { greedy nearest neighbour + 2-opt heuristic stsrting from every vertex }
+    class function TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   end;
 
-  TRealPointEdge = record
+  TRealEdge = record
     Weight: ValReal;
     constructor Create(const aWeight: ValReal);
   end;
 
   { TPointsChart }
-  TPointsChart = class(specialize TGWeightedGraph<TPoint, ValReal, TRealPointEdge, TPoint>)
+  TPointsChart = class(specialize TGWeightedGraph<TPoint, ValReal, TRealEdge, TPoint>)
   protected
     procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: PEdgeData);
     procedure WritePoint(aStream: TStream; constref aValue: TPoint);
     procedure ReadPoint(aStream: TStream; out aValue: TPoint);
-    procedure WriteData(aStream: TStream; constref aValue: TRealPointEdge);
-    procedure ReadData(aStream: TStream; out aValue: TRealPointEdge);
+    procedure WriteData(aStream: TStream; constref aValue: TRealEdge);
+    procedure ReadData(aStream: TStream; out aValue: TRealEdge);
   public
     class function Distance(constref aSrc, aDst: TPoint): ValReal; static;
     constructor Create;
@@ -4720,7 +4721,7 @@ begin
   Tsp3Opt.Execute(m, Result, aWeight);
 end;
 
-class function TGWeightedGraph.Tsp2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightedGraph.TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
   if not TWeightHelper.IsSquareMatrix(m) then
     raise EGraphError.Create(SENonSquareInputMatrix);
@@ -4728,9 +4729,9 @@ begin
   TWeightHelper.NormalizeTour(Result, 0);
 end;
 
-{ TRealPointEdge }
+{ TRealEdge }
 
-constructor TRealPointEdge.Create(const aWeight: ValReal);
+constructor TRealEdge.Create(const aWeight: ValReal);
 begin
   Weight := aWeight;
 end;
@@ -4758,7 +4759,7 @@ begin
   aValue.Y := LEtoN(aValue.Y);
 end;
 
-procedure TPointsChart.WriteData(aStream: TStream; constref aValue: TRealPointEdge);
+procedure TPointsChart.WriteData(aStream: TStream; constref aValue: TRealEdge);
 var
   Buf: Double;
 begin
@@ -4766,7 +4767,7 @@ begin
   aStream.WriteBuffer(Buf, SizeOf(Buf));
 end;
 
-procedure TPointsChart.ReadData(aStream: TStream; out aValue: TRealPointEdge);
+procedure TPointsChart.ReadData(aStream: TStream; out aValue: TRealEdge);
 var
   Buf: Double;
 begin
@@ -4790,12 +4791,12 @@ end;
 
 function TPointsChart.AddEdge(constref aSrc, aDst: TPoint): Boolean;
 begin
-  Result := inherited AddEdge(aSrc, aDst, TRealPointEdge.Create(aSrc.Distance(aDst)));
+  Result := inherited AddEdge(aSrc, aDst, TRealEdge.Create(aSrc.Distance(aDst)));
 end;
 
 function TPointsChart.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := inherited AddEdgeI(aSrc, aDst, TRealPointEdge.Create(Items[aSrc].Distance(Items[aDst])));
+  Result := inherited AddEdgeI(aSrc, aDst, TRealEdge.Create(Items[aSrc].Distance(Items[aDst])));
 end;
 
 function TPointsChart.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
