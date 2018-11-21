@@ -1128,7 +1128,7 @@ begin
     exit;
   repeat
     Result += PushFlow(FRequestFlow - Result);
-  until not FindAugmentPath or (Result = FRequestFlow);
+  until (Result = FRequestFlow) or not FindAugmentPath;
 end;
 
 function TGIntWeightDiGraph.TSspMcfHelper.GetTotalCost: TCost;
