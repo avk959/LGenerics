@@ -2757,7 +2757,7 @@ begin
         exit(False);
       if not AdjLists[Arc.Source]^.Contains(Arc.Destination) then //no such arc
         exit(False);
-      if not aMap.Add(TIntEdge.Create(Arc.Source, Arc.Destination), Arc.Cost) then //contains duplicates
+      if not aMap.Add(Arc.Edge, Arc.Cost) then //contains duplicates
         exit(False);
     end;
   Result := True;
@@ -2828,7 +2828,7 @@ begin
       Inc(qHead);
       for p in AdjLists[Curr]^ do
         begin
-          if p^.Data.Weight < 0 then // network should not contains arcs with negative capacity
+          if p^.Data.Weight < 0 then // network can not contain arcs with negative capacity
             exit(nsNegCapacity);
           if not Visited[p^.Destination] and (p^.Data.Weight > 0) then
             begin
@@ -2839,7 +2839,7 @@ begin
             end;
         end;
     end;
-  if not SinkFound then // sink should be reachable from the source
+  if not SinkFound then // sink must be reachable from the source
     exit(nsSinkUnreachable);
   Result := nsOk;
 end;
@@ -3149,7 +3149,7 @@ begin
         exit(False);
       v[e.Source] -= e.Weight;
       v[e.Destination] += e.Weight;
-      Cost += e.Weight * CostMap[TIntEdge.Create(e.Source, e.Destination)];
+      Cost += e.Weight * CostMap[e.Edge];
     end;
   for I := 0 to System.High(v) do
     if v[I] <> 0 then
