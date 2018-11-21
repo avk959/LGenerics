@@ -553,6 +553,7 @@ type
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
     function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
+  {  }
     function IsMcfFeasible(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
              constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean; inline;
     function IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;

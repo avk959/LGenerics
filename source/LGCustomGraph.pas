@@ -91,6 +91,7 @@ type
     Destination: SizeInt;
     Cost: TCost;
     constructor Create(aSrc, aDst: SizeInt; aCost: TCost);
+    function Edge: TIntEdge; inline;
   end;
 
   TEdgeCostMap = specialize TGLiteHashMapLP<TIntEdge, TCost, TIntEdge>;
@@ -542,6 +543,11 @@ begin
   Source := aSrc;
   Destination := aDst;
   Cost := aCost;
+end;
+
+function TCostEdge.Edge: TIntEdge;
+begin
+  Result := TIntEdge.Create(Source, Destination);
 end;
 
 { TGAdjItem }
@@ -2935,6 +2941,11 @@ begin
   Source := s;
   Destination := d;
   Weight := w;
+end;
+
+function TGWeightHelper.TWeightEdge.Edge: TIntEdge;
+begin
+  Result := TIntEdge.Create(Source, Destination);
 end;
 
 { TCostItem }

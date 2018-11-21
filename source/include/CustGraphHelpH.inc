@@ -335,6 +335,7 @@ type
       class operator >=(constref L, R: TWeightEdge): Boolean; inline;
       class operator <=(constref L, R: TWeightEdge): Boolean; inline;
       constructor Create(s, d: SizeInt; w: TWeight);
+      function Edge: TIntEdge; inline;
     end;
 
     TWeightItem = record
