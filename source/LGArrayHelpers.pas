@@ -900,7 +900,9 @@ type
       function GetEnumerator: TDownRangeEnumerator; inline;
     end;
   public
+  { enumerates values in range from aFrom to aTo, aFrom <= aTo; aStep must be positive }
     class function Range(aFrom, aTo: T; aStep: T = T(1)): TRange; static; inline;
+  { enumerates values in range from aFrom down to aTo, aFrom >= aTo; aStep must be positive }
     class function DownRange(aFrom, aTo: T; aStep: T = T(1)): TDownRange; static; inline;
   end;
 
@@ -9174,7 +9176,7 @@ begin
     end
   else
     begin
-      Result := FCurrent <= FLast;
+      Result := (FCurrent <= FLast) and (FStep > T(0));
       FInCycle := True;
     end;
 end;
@@ -9199,7 +9201,7 @@ begin
     end
   else
     begin
-      Result := FCurrent >= FLast;
+      Result := (FCurrent >= FLast) and (FStep > T(0));
       FInCycle := True;
     end;
 end;
