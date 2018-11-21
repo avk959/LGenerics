@@ -522,26 +522,6 @@ type
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
-  { 3-opt local search algorithm for the traveling salesman problem;
-    Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"; }
-    TTsp3Opt = record
-    strict private
-    type
-      TSwapKind = (skSymm, skAsymm);
-      TSwap  = record
-        X1, X2, Y1, Y2, Z1, Z2: SizeInt;
-        Gain: TWeight;
-        SwapKind: TSwapKind;
-      end;
-    var
-      Matrix: TWeightMatrix;
-      Heads: TIntArray;
-      procedure PickSwapKind(var aSwap: TSwap);
-      procedure Reverse(aFirst, aLast: SizeInt);
-    public
-      procedure Execute(constref m: TWeightMatrix; var aTour: TIntArray; var aWeight: TWeight);
-    end;
-
     function CreateEdgeArray: TEdgeArray;
     class function  GetTsp2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   public
@@ -649,8 +629,6 @@ type
 
   { greedy approach for Travelling Salesman problem - farthest insertion strategy + 2-opt heuristic }
     class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { greedy farthest insertion + 3-opt heuristic }
-    class function GreedyTsp3Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { greedy nearest neighbour + 2-opt heuristic stsrting from every vertex }
     class function TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   end;
@@ -4159,105 +4137,6 @@ begin
   Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '";';
 end;
 
-{ TGWeightedGraph.TTsp3Opt }
-
-procedure TGWeightedGraph.TTsp3Opt.PickSwapKind(var aSwap: TSwap);
-var
-  OldW, MaxGain: TWeight;
-begin
-  aSwap.Gain := 0;
-  OldW := Matrix[aSwap.X1, aSwap.X2] + Matrix[aSwap.Y1, aSwap.Y2] + Matrix[aSwap.Z1, aSwap.Z2];
-  MaxGain := OldW - (Matrix[aSwap.Y1, aSwap.X1] + Matrix[aSwap.Z1, aSwap.X2] + Matrix[aSwap.Z2, aSwap.Y2]);
-  if MaxGain > aSwap.Gain then
-    begin
-     aSwap.Gain := MaxGain;
-     aSwap.SwapKind := skAsymm;
-    end;
-  MaxGain := OldW - (Matrix[aSwap.X1, aSwap.Y2] + Matrix[aSwap.Z1, aSwap.X2] + Matrix[aSwap.Y1, aSwap.Z2]);
-  if MaxGain > aSwap.Gain then
-    begin
-      aSwap.Gain := MaxGain;
-      aSwap.SwapKind := skSymm;
-    end;
-end;
-
-procedure TGWeightedGraph.TTsp3Opt.Reverse(aFirst, aLast: SizeInt);
-var
-  Head, Prev, Next: SizeInt;
-begin
-  if aFirst <> aLast then
-    begin
-      Prev := aFirst;
-      Next := Heads[Prev];
-      repeat
-        Head := Heads[Next];
-        Heads[Next] := Prev;
-        Prev := Next;
-        Next := Head;
-      until Prev = aLast;
-    end;
-end;
-
-procedure TGWeightedGraph.TTsp3Opt.Execute(constref m: TWeightMatrix; var aTour: TIntArray; var aWeight: TWeight);
-var
-  Best, Curr: TSwap;
-  Len, I, J, K: SizeInt;
-begin
-  Len := System.Length(m);
-  Matrix := m;
-  Heads.Length := Len;
-  for I := 0 to Len - 2 do
-    Heads[aTour[I]] := aTour[Succ(I)];
-  Heads[aTour[Pred(Len)]] := aTour[0];
-  repeat
-    Best.Gain := 0;
-    Curr.X1 := 0;
-    for I := 0 to Pred(Len) do
-      begin
-        Curr.X2 := Heads[Curr.X1];
-        Curr.Y1 := Curr.X2;
-        for J := 1 to Len - 4 do
-          begin
-            Curr.Y2 := Heads[Curr.Y1];
-            Curr.Z1 := Heads[Curr.Y2];
-            for K := J + 2 to Len - 2 do
-              begin
-                Curr.Z2 := Heads[Curr.Z1];
-                PickSwapKind(Curr);
-                if Curr.Gain > Best.Gain then
-                  Best := Curr;
-                Curr.Z1 := Curr.Z2;
-              end;
-            Curr.Y1 := Curr.Y2;
-          end;
-        Curr.X1 := Curr.X2;
-      end;
-    if Best.Gain > 0 then
-      begin
-        if Best.SwapKind = skAsymm then
-          begin
-            Reverse(Best.Z2, Best.X1);
-            Heads[Best.Y1] := Best.X1;
-            Heads[Best.Z2] := Best.Y2
-          end
-        else
-          begin
-            Heads[Best.X1] := Best.Y2;
-            Heads[Best.Y1] := Best.Z2;
-          end;
-        Heads[Best.Z1] := Best.X2;
-        aWeight -= Best.Gain;
-      end;
-  until Best.Gain = 0;
-  J := 0;
-  for I := 0 to Pred(Len) do
-    begin
-      aTour[I] := J;
-      J := Heads[J];
-    end;
-  aTour[Len] := aTour[0];
-end;
-
 { TGWeightedGraph }
 
 function TGWeightedGraph.CreateEdgeArray: TEdgeArray;
@@ -4709,16 +4588,6 @@ begin
     raise EGraphError.Create(SENonSquareInputMatrix);
   Result := TWeightHelper.GreedyTsp(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
-end;
-
-class function TGWeightedGraph.GreedyTsp3Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
-var
-  Tsp3Opt: TTsp3Opt;
-begin
-  if not TWeightHelper.IsSquareMatrix(m) then
-    raise EGraphError.Create(SENonSquareInputMatrix);
-  Result := TWeightHelper.GreedyTsp(m, aWeight);
-  Tsp3Opt.Execute(m, Result, aWeight);
 end;
 
 class function TGWeightedGraph.TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
