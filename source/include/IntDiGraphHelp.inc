@@ -640,7 +640,7 @@ begin
   FLevels := nil;
   Result := FSink^.Excess;
   for e in RecoverFlow do
-    m.Add(TIntEdge.Create(e.Source, e.Destination), e.Weight);
+    m.Add(e.Edge, e.Weight);
 end;
 
 { TGIntWeightDiGraph.TDinitzHelper.TArc }
@@ -1128,7 +1128,7 @@ begin
     exit;
   repeat
     Result += PushFlow(FRequestFlow - Result);
-  until not FindAugmentPath;
+  until not FindAugmentPath or (Result = FRequestFlow);
 end;
 
 function TGIntWeightDiGraph.TSspMcfHelper.GetTotalCost: TCost;
