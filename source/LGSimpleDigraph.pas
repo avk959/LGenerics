@@ -433,6 +433,16 @@ type
     function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
   { returns True if aMatch is perfect matching }
     function IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean; inline;
+{**********************************************************************************************************
+  some NP-hard problem utilities
+***********************************************************************************************************}
+
+  { greedy approach for Travelling Salesman problem;
+    best of farthest insertion starting from every vertex + 2-opt local search at the end }
+    class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+  { greedy approach for Travelling Salesman problem;
+    best of nearest neighbour + 2-opt local search starting from every vertex }
+    class function TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   end;
 
   { TGIntWeightDiGraph specializes TWeight with Int64 }
@@ -2733,6 +2743,22 @@ end;
 function TGWeightedDiGraph.IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
+end;
+
+class function TGWeightedDiGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+begin
+  if not TWeightHelper.IsSquareMatrix(m) then
+    raise EGraphError.Create(SENonSquareInputMatrix);
+  Result := TWeightHelper.GreedyTsp(m, aWeight);
+  TWeightHelper.NormalizeTour(Result, 0);
+end;
+
+class function TGWeightedDiGraph.TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+begin
+  if not TWeightHelper.IsSquareMatrix(m) then
+    raise EGraphError.Create(SENonSquareInputMatrix);
+  Result := TWeightHelper.GreedyTspNn2Opt(m, aWeight);
+  TWeightHelper.NormalizeTour(Result, 0);
 end;
 
 {$I IntDiGraphHelp.inc}
