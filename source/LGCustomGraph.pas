@@ -4586,6 +4586,52 @@ begin
   Tsp2Opt(m, Result, aWeight);
 end;
 
+class function TGWeightHelper.GreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+var
+  Tour: TIntArray;
+  Unvisit: TBoolVector;
+  I, J, K, Curr, Next, Len: SizeInt;
+  CurrMin, Total, wCurr, Inf: TWeight;
+begin
+  Len := System.Length(m);
+  Inf := InfWeight;
+  Result := nil;
+  aWeight := Inf;
+  {%H-}Tour.Length := Succ(Len);
+  for K := 0 to Pred(Len) do
+    begin
+      Unvisit.InitRange(Len);
+      Tour[0] := K;
+      Unvisit[K] := False;
+      Curr := K;
+      I := 1;
+      while Unvisit.NonEmpty do
+        begin
+          CurrMin := Inf;
+          for J in Unvisit do
+            begin
+              wCurr := m[Curr, J];
+              if wCurr < CurrMin then
+                begin
+                  CurrMin := wCurr;
+                  Next := J;
+                end;
+            end;
+          Curr := Next;
+          Tour[I] := Next;
+          Unvisit[Next] := False;
+          Inc(I);
+        end;
+      Tour[I] := K;
+      Tsp2Opt(m, Tour, Total);
+      if Total < aWeight then
+        begin
+          aWeight := Total;
+          Result := System.Copy(Tour);
+        end;
+    end;
+end;
+
 { TGCustomDotWriter }
 
 function TGCustomDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;

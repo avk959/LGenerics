@@ -514,10 +514,13 @@ type
   { 2-opt local search algorithm for the traveling salesman problem;
     warning: does not checks not matrix nor path }
     class procedure Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight); static;
-  { An greedy farthest insertion algorithm for the traveling salesman problem;
+  { greedy TSP, best of farthest insertion starting from every vertex + 2-opt local search at the end;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
     warning: does not checks matrix }
     class function  GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+  { greedy TSP, best of nearest neighbour + 2-opt local search starting from every vertex;
+    warning: does not checks matrix}
+    class function  GreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
 
     class property  InfWeight: TWeight read CFInfWeight;
     class property  NegInfWeight: TWeight read CFNegInfWeight;
