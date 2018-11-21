@@ -525,7 +525,8 @@ type
   type
     TMcfState = (mcfOk, mcfNoFlowRequired, mcfInvaldNet, mcfInvaldCost, mcfNegCycle);
 
-  { param aReqFlow specifies the required flow > 0 (can be MAX_WEIGHT);
+  { param aReqFlow specifies required flow > 0(MAX_WEIGHT means maximum flow is required);
+    param aCosts specifies arc cost function, negative costs allows;
     returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
     no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
     total flow cost in aTotalCost }
@@ -538,7 +539,8 @@ type
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
     function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
-  { param aReqFlow specifies the required flow > 0 (can be MAX_WEIGHT);
+  { param aReqFlow specifies the required flow > 0(MAX_WEIGHT means maximum flow is required);
+    param aCosts specifies arc cost function, negative costs allows;
     returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
     no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
     total flow cost in aTotalCost; used cost scaling algorithm }
@@ -551,6 +553,10 @@ type
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
     function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
+    function IsMcfFeasible(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+             constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean; inline;
+    function IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+             constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
   end;
 
 implementation
@@ -3106,6 +3112,48 @@ begin
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
+end;
+
+function TGIntWeightDiGraph.IsMcfFeasible(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+  constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
+begin
+  Result := IsMcfFeasibleI(IndexOf(aSource), IndexOf(aSink), aCosts, aArcFlows, aFlow, aTotalCost);
+end;
+
+function TGIntWeightDiGraph.IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+  constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
+var
+  CostMap: TEdgeCostMap;
+  v: array of TWeight;
+  e: TWeightEdge;
+  d: TEdgeData;
+  Cost: TCost;
+  I: SizeInt;
+begin
+  CheckIndexRange(aSrcIndex);
+  CheckIndexRange(aSinkIndex);
+  if System.Length(aArcFlows) <> EdgeCount then
+    exit(False);
+  if not IsCostsCorrect(aCosts, CostMap) then
+    exit(False);
+  v := TWeightHelper.CreateWeightArrayZ(VertexCount);
+  v[aSrcIndex] += aFlow;
+  v[aSinkIndex] -= aFlow;
+  Cost := 0;
+  for e in aArcFlows do
+    begin
+      if not GetEdgeDataI(e.Source, e.Destination, d) then
+        exit(False);
+      if e.Weight > d.Weight then
+        exit(False);
+      v[e.Source] -= e.Weight;
+      v[e.Destination] += e.Weight;
+      Cost += e.Weight * CostMap[TIntEdge.Create(e.Source, e.Destination)];
+    end;
+  for I := 0 to System.High(v) do
+    if v[I] <> 0 then
+      exit(False);
+  Result := Cost = aTotalCost;
 end;
 
 end.
