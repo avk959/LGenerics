@@ -61,8 +61,6 @@ resourcestring
   SEUnexpectEol            = 'Unexpected end of line';
   SEStreamSizeExceedFmt    = 'Maximum stream size exceeded(%d)';
   SEMethodNotApplicable    = 'Method is not applicable';
-  SEUnknownWeight          = 'Unknown weight type';
-  SEUndefinedTypeInfo      = 'TypeInfo of specialize type undefined';
   SENonSquareInputMatrix   = 'Input matrix is not square';
 
 implementation
