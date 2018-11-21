@@ -518,11 +518,11 @@ type
     if result = nsOk, otherwise 0 and empty partition; used Dinitz's algorithm }
     function FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
     function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
-  { negative costs allows; returns True if arc cost function defined correctly
-    (except negative cycles), False otherwise }
+  { aCosts specifies arc cost function, negative costs allows;
+    returns True if function defined correctly(except negative cycles), False otherwise }
     function IsProperCosts(constref aCosts: TCostEdgeArray): Boolean;
   { param aReqFlow specifies the required flow > 0 (can be MAX_WEIGHT);
-    returns False if network is not correct or arc costs are not correct or network
+    returns False if network is not correct or arc cost function is not correct or network
     contains negative cycle or aNeedFlow < 1,
     otherwise returns True, flow = min(aReqFlow, maxflow) in aReqFlow and
     total flow cost in aTotalCost }
