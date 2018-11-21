@@ -521,34 +521,36 @@ type
   { aCosts specifies arc cost function, negative costs allows;
     returns True if function defined correctly(except negative cycles), False otherwise }
     function IsProperCosts(constref aCosts: TCostEdgeArray): Boolean;
+
+  type
+    TMcfState = (mcfOk, mcfNoFlowRequired, mcfInvaldNet, mcfInvaldCost, mcfNegCycle);
+
   { param aReqFlow specifies the required flow > 0 (can be MAX_WEIGHT);
-    returns False if network is not correct or arc cost function is not correct or network
-    contains negative cycle or aNeedFlow < 1,
-    otherwise returns True, flow = min(aReqFlow, maxflow) in aReqFlow and
+    returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
+    no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
     total flow cost in aTotalCost }
     function FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-                             var aReqFlow: TWeight; out aTotalCost: TCost): Boolean; inline;
+             var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState; inline;
     function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-                              var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
+             var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
     function FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-                                var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean; inline;
+             var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
     function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-                                 var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+             var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
   { param aReqFlow specifies the required flow > 0 (can be MAX_WEIGHT);
-    returns False if network is not correct or arc costs are not correct or network
-    contains negative cycle or aNeedFlow < 1,
-    otherwise returns True, flow = min(aReqFlow, maxflow) in aReqFlow and
+    returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
+    no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
     total flow cost in aTotalCost; used cost scaling algorithm }
     function FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-                             var aReqFlow: TWeight; out aTotalCost: TCost): Boolean; inline;
+             var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState; inline;
     function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-                              var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
+             var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
     function FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-                               var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean; inline;
+             var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
     function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-                                var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+             var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
   end;
 
 implementation
@@ -3005,36 +3007,38 @@ begin
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
 begin
   Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
 var
   Helper: TSspMcfHelper;
   CostMap: TEdgeCostMap;
 begin
   aTotalCost := 0;
   if aReqFlow < 1 then
-    exit(False);
+    exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
-    exit(False);
+    exit(mcfInvaldNet);
   if not IsCostsCorrect(aCosts, CostMap) then
-    exit(False);
+    exit(mcfInvaldCost);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost);
-  Result := aReqFlow <> 0;
+  if aReqFlow = 0 then
+    exit(mcfNegCycle);
+  Result := mcfOk;
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 begin
   Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, aArcFlows);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 var
   Helper: TSspMcfHelper;
   CostMap: TEdgeCostMap;
@@ -3042,46 +3046,50 @@ begin
   aTotalCost := 0;
   aArcFlows := nil;
   if aReqFlow < 1 then
-    exit(False);
+    exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
-    exit(False);
+    exit(mcfInvaldNet);
   if not IsCostsCorrect(aCosts, CostMap) then
-    exit(False);
+    exit(mcfInvaldCost);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost, aArcFlows);
-  Result := aReqFlow <> 0;
+  if aReqFlow = 0 then
+    exit(mcfNegCycle);
+  Result := mcfOk;
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
 begin
   Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
 var
   Helper: TCsMcfHelper;
   CostMap: TEdgeCostMap;
 begin
   aTotalCost := 0;
   if aReqFlow < 1 then
-    exit(False);
+    exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
-    exit(False);
+    exit(mcfInvaldNet);
   if not IsCostsCorrect(aCosts, CostMap) then
-    exit(False);
+    exit(mcfInvaldCost);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost);
-  Result := aReqFlow <> 0;
+  if aReqFlow = 0 then
+    exit(mcfNegCycle);
+  Result := mcfOk;
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 begin
   Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, aArcFlows);
 end;
 
 function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): Boolean;
+  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 var
   Helper: TCsMcfHelper;
   CostMap: TEdgeCostMap;
@@ -3089,13 +3097,15 @@ begin
   aTotalCost := 0;
   aArcFlows := nil;
   if aReqFlow < 1 then
-    exit(False);
+    exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
-    exit(False);
+    exit(mcfInvaldNet);
   if not IsCostsCorrect(aCosts, CostMap) then
-    exit(False);
+    exit(mcfInvaldCost);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost, aArcFlows);
-  Result := aReqFlow <> 0;
+  if aReqFlow = 0 then
+    exit(mcfNegCycle);
+  Result := mcfOk;
 end;
 
 end.

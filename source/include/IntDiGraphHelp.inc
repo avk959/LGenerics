@@ -1180,7 +1180,10 @@ function TGIntWeightDiGraph.TSspMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGr
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
   if aReqFlow <= 0 then
-    exit(0);
+    begin
+      Result := 0;
+      raise EGraphError.Create(SEMethodNotApplicable);
+    end;
   CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := Execute;
   if Result > 0 then
@@ -1191,7 +1194,10 @@ function TGIntWeightDiGraph.TSspMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGr
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
   if aReqFlow <= 0 then
-    exit(0);
+    begin
+      Result := 0;
+      raise EGraphError.Create(SEMethodNotApplicable);
+    end;
   CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := Execute;
   if Result > 0 then
@@ -1592,7 +1598,10 @@ function TGIntWeightDiGraph.TCsMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGra
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
 begin
   if aReqFlow <= 0 then
-    exit(0);
+    begin
+      Result := 0;
+      raise EGraphError.Create(SEMethodNotApplicable);
+    end;
   CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   if not FindInitSolution then
     exit(0);
@@ -1605,7 +1614,10 @@ function TGIntWeightDiGraph.TCsMcfHelper.GetMinCostFlow(aGraph: TGIntWeightDiGra
   aReqFlow: TWeight; var aCosts: TEdgeCostMap; out aTotalCost: TCost; out a: TEdgeArray): TWeight;
 begin
   if aReqFlow <= 0 then
-    exit(0);
+    begin
+      Result := 0;
+      raise EGraphError.Create(SEMethodNotApplicable);
+    end;
   CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
   if not FindInitSolution then
     exit(0);
