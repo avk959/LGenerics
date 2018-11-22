@@ -851,51 +851,30 @@ type
   generic TGNumArrayHelper<T> = class(specialize TGBaseTypArrayHelper<T>)
   private
   type
-    TLoopData = record
-      First,
-      Last,
-      Step: T;
-      constructor Create(aFirst, aLast, aStep: T);
-    end;
-
-    TRangeEnumerator = record
-    strict private
-      FCurrent,
-      FLast,
-      FStep: T;
-      FInLoop: Boolean;
-    public
-      constructor Create(constref aData: TLoopData);
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
-    TDownRangeEnumerator = record
-    strict private
-      FCurrent,
-      FLast,
-      FStep: T;
-      FInLoop: Boolean;
-    public
-      constructor Create(constref aData: TLoopData);
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
     TRange = record
     strict private
-      FData: TLoopData;
+      FCurrent,
+      FLast,
+      FStep: T;
+      FInLoop: Boolean;
     public
       constructor Create(aFirst, aLast, aStep: T);
-      function GetEnumerator: TRangeEnumerator; inline;
+      function GetEnumerator: TRange; inline;
+      function MoveNext: Boolean; inline;
+      property Current: T read FCurrent;
     end;
 
     TDownRange = record
     strict private
-      FData: TLoopData;
+      FCurrent,
+      FLast,
+      FStep: T;
+      FInLoop: Boolean;
     public
       constructor Create(aFirst, aLast, aStep: T);
-      function GetEnumerator: TDownRangeEnumerator; inline;
+      function GetEnumerator: TDownRange; inline;
+      function MoveNext: Boolean; inline;
+      property Current: T read FCurrent;
     end;
 
   public
@@ -9150,26 +9129,22 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
-{ TGNumArrayHelper.TLoopData }
+{ TGNumArrayHelper.TRange }
 
-constructor TGNumArrayHelper.TLoopData.Create(aFirst, aLast, aStep: T);
+constructor TGNumArrayHelper.TRange.Create(aFirst, aLast, aStep: T);
 begin
-  First := aFirst;
-  Last := aLast;
-  Step := aStep;
-end;
-
-{ TGNumArrayHelper.TRangeEnumerator }
-
-constructor TGNumArrayHelper.TRangeEnumerator.Create(constref aData: TLoopData);
-begin
-  FCurrent := aData.First;
-  FLast := aData.Last;
-  FStep := aData.Step;
+  FCurrent := aFirst;
+  FLast := aLast;
+  FStep := aStep;
   FInLoop := False;
 end;
 
-function TGNumArrayHelper.TRangeEnumerator.MoveNext: Boolean;
+function TGNumArrayHelper.TRange.GetEnumerator: TRange;
+begin
+  Result := Self;
+end;
+
+function TGNumArrayHelper.TRange.MoveNext: Boolean;
 begin
   if FInLoop then
     begin
@@ -9184,17 +9159,22 @@ begin
     end;
 end;
 
-{ TGNumArrayHelper.TDownRangeEnumerator }
+{ TGNumArrayHelper.TDownRange }
 
-constructor TGNumArrayHelper.TDownRangeEnumerator.Create(constref aData: TLoopData);
+constructor TGNumArrayHelper.TDownRange.Create(aFirst, aLast, aStep: T);
 begin
-  FCurrent := aData.First;
-  FLast := aData.Last;
-  FStep := aData.Step;
+  FCurrent := aFirst;
+  FLast := aLast;
+  FStep := aStep;
   FInLoop := False;
 end;
 
-function TGNumArrayHelper.TDownRangeEnumerator.MoveNext: Boolean;
+function TGNumArrayHelper.TDownRange.GetEnumerator: TDownRange;
+begin
+  Result := Self;
+end;
+
+function TGNumArrayHelper.TDownRange.MoveNext: Boolean;
 begin
   if FInLoop then
     begin
@@ -9207,30 +9187,6 @@ begin
       Result := (FCurrent >= FLast) and (FStep > T(0));
       FInLoop := True;
     end;
-end;
-
-{ TGNumArrayHelper.TRange }
-
-constructor TGNumArrayHelper.TRange.Create(aFirst, aLast, aStep: T);
-begin
-  FData := TLoopData.Create(aFirst, aLast, aStep);
-end;
-
-function TGNumArrayHelper.TRange.GetEnumerator: TRangeEnumerator;
-begin
-  Result := TRangeEnumerator.Create(FData);
-end;
-
-{ TGNumArrayHelper.TDownRange }
-
-constructor TGNumArrayHelper.TDownRange.Create(aFirst, aLast, aStep: T);
-begin
-  FData := TLoopData.Create(aFirst, aLast, aStep);
-end;
-
-function TGNumArrayHelper.TDownRange.GetEnumerator: TDownRangeEnumerator;
-begin
-  Result := TDownRangeEnumerator.Create(FData);
 end;
 
 { TGNumArrayHelper }
