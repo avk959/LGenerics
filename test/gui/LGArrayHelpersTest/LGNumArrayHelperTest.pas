@@ -2993,6 +2993,10 @@ begin
   for I in TIntHelper.Range(2, 3, -2) do
     Inc(Times);
   AssertTrue(Times = 0);
+  Times := 0;
+  for I in TIntHelper.Range(2, 3, 0) do
+    Inc(Times);
+  AssertTrue(Times = 0);
 end;
 
 procedure TNumArrayHelperTest.RangeDouble0;
@@ -3012,6 +3016,10 @@ begin
   AssertTrue(Times = 1);
   Times := 0;
   for d in TDblHelper.Range(2, 3, -2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  Times := 0;
+  for d in TDblHelper.Range(2, 3, 0) do
     Inc(Times);
   AssertTrue(Times = 0);
 end;
@@ -3035,6 +3043,10 @@ begin
   for I in TIntHelper.DownRange(2, 1, -2) do
     Inc(Times);
   AssertTrue(Times = 0);
+  Times := 0;
+  for I in TIntHelper.DownRange(2, 1, 0) do
+    Inc(Times);
+  AssertTrue(Times = 0);
 end;
 
 procedure TNumArrayHelperTest.DownRangeDouble0;
@@ -3054,6 +3066,10 @@ begin
   AssertTrue(Times = 1);
   Times := 0;
   for d in TDblHelper.DownRange(2, 1, -2) do
+    Inc(Times);
+  AssertTrue(Times = 0);
+  Times := 0;
+  for d in TDblHelper.DownRange(2, 1, 0) do
     Inc(Times);
   AssertTrue(Times = 0);
 end;
