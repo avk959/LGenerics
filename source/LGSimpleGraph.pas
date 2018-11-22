@@ -35,7 +35,7 @@ uses
   LGArrayHelpers,
   LGVector,
   LGQueue,
-  LGCustomGraph,
+  LGSparseGraph,
   LGStrHelpers,
   LGMiscUtils,
   LGStrConst;

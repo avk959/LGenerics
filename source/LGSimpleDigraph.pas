@@ -32,7 +32,7 @@ uses
   LGQueue,
   LGVector,
   LGHashMap,
-  LGCustomGraph,
+  LGSparseGraph,
   LGStrConst;
 
 type

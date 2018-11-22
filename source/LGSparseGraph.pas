@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGCustomGraph;
+unit LGSparseGraph;
 
 {$mode objfpc}{$H+}
 {$MODESWITCH TYPEHELPERS}
