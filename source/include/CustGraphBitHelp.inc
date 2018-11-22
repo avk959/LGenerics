@@ -17,19 +17,19 @@
 *                                                                           *
 *****************************************************************************}
 
-{ TGCustomGraph.TBitVector }
+{ TGSparseGraph.TBitVector }
 
-function TGCustomGraph.TBitVector.GetBit(aIndex: SizeInt): Boolean;
+function TGSparseGraph.TBitVector.GetBit(aIndex: SizeInt): Boolean;
 begin
   Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
 end;
 
-function TGCustomGraph.TBitVector.GetSize: SizeInt;
+function TGSparseGraph.TBitVector.GetSize: SizeInt;
 begin
   Result := System.Length(FBits) shl INT_SIZE_LOG;
 end;
 
-procedure TGCustomGraph.TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+procedure TGSparseGraph.TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
   if aValue then
     FBits[aIndex shr INT_SIZE_LOG] :=
@@ -39,7 +39,7 @@ begin
     FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
-procedure TGCustomGraph.TBitVector.SetSize(aValue: SizeInt);
+procedure TGSparseGraph.TBitVector.SetSize(aValue: SizeInt);
 var
   OldLen: SizeInt;
 begin
@@ -52,13 +52,13 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.TBitVector.ClearBits;
+procedure TGSparseGraph.TBitVector.ClearBits;
 begin
   if FBits <> nil then
     System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
-procedure TGCustomGraph.TBitVector.ExpandTrue(aSize: SizeInt);
+procedure TGSparseGraph.TBitVector.ExpandTrue(aSize: SizeInt);
 var
   OldLen: SizeInt;
 begin
@@ -71,20 +71,20 @@ begin
     end;
 end;
 
-{ TGCustomGraph.TSquareBitMatrix }
+{ TGSparseGraph.TSquareBitMatrix }
 
-function TGCustomGraph.TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
+function TGSparseGraph.TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;
 begin
   Result := (FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] and
             (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK))) <> 0
 end;
 
-function TGCustomGraph.TSquareBitMatrix.GetSize: SizeInt;
+function TGSparseGraph.TSquareBitMatrix.GetSize: SizeInt;
 begin
   Result := FSize;
 end;
 
-procedure TGCustomGraph.TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
+procedure TGSparseGraph.TSquareBitMatrix.SetBit(I, J: SizeInt; aValue: Boolean);
 begin
   if aValue then
     FBits[(SizeUInt(I) * FSize + SizeUInt(J)) shr INT_SIZE_LOG] :=
@@ -96,17 +96,17 @@ begin
           (SizeUInt(1) shl ((SizeUInt(I) * FSize + SizeUInt(J)) and INT_SIZE_MASK));
 end;
 
-class operator TGCustomGraph.TSquareBitMatrix.Initialize(var aMatrix: TSquareBitMatrix);
+class operator TGSparseGraph.TSquareBitMatrix.Initialize(var aMatrix: TSquareBitMatrix);
 begin
   aMatrix.Clear;
 end;
 
-class function TGCustomGraph.TSquareBitMatrix.MaxSize: SizeInt;
+class function TGSparseGraph.TSquareBitMatrix.MaxSize: SizeInt;
 begin
   Result := Trunc(Sqrt(High(SizeUInt)));
 end;
 
-constructor TGCustomGraph.TSquareBitMatrix.Create(aSize: SizeInt);
+constructor TGSparseGraph.TSquareBitMatrix.Create(aSize: SizeInt);
 var
   s: SizeInt;
 begin
@@ -122,25 +122,25 @@ begin
       raise EGraphError.CreateFmt(SEBitMatrixSizeExceedFmt, [aSize]);
 end;
 
-procedure TGCustomGraph.TSquareBitMatrix.ClearBits;
+procedure TGSparseGraph.TSquareBitMatrix.ClearBits;
 begin
   System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
-procedure TGCustomGraph.TSquareBitMatrix.Clear;
+procedure TGSparseGraph.TSquareBitMatrix.Clear;
 begin
   FBits := nil;
   FSize := 0;
 end;
 
-{ TGCustomGraph.TBits256.TEnumerator }
+{ TGSparseGraph.TBits256.TEnumerator }
 
-function TGCustomGraph.TBits256.TEnumerator.GetCurrent: SizeInt;
+function TGSparseGraph.TBits256.TEnumerator.GetCurrent: SizeInt;
 begin
   Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
 end;
 
-function TGCustomGraph.TBits256.TEnumerator.FindFirst: Boolean;
+function TGSparseGraph.TBits256.TEnumerator.FindFirst: Boolean;
 var
   I: SizeInt;
 begin
@@ -161,7 +161,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.TBits256.TEnumerator.MoveNext: Boolean;
+function TGSparseGraph.TBits256.TEnumerator.MoveNext: Boolean;
 begin
   if FInCycle then
     repeat
@@ -184,14 +184,14 @@ begin
     end;
 end;
 
-{ TGCustomGraph.TBits256.TReverseEnumerator }
+{ TGSparseGraph.TBits256.TReverseEnumerator }
 
-function TGCustomGraph.TBits256.TReverseEnumerator.GetCurrent: SizeInt;
+function TGSparseGraph.TBits256.TReverseEnumerator.GetCurrent: SizeInt;
 begin
   Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
 end;
 
-function TGCustomGraph.TBits256.TReverseEnumerator.FindFirst: Boolean;
+function TGSparseGraph.TBits256.TReverseEnumerator.FindFirst: Boolean;
 var
   I: SizeInt;
 begin
@@ -212,7 +212,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.TBits256.TReverseEnumerator.MoveNext: Boolean;
+function TGSparseGraph.TBits256.TReverseEnumerator.MoveNext: Boolean;
 begin
   if FInCycle then
     repeat
@@ -235,22 +235,22 @@ begin
     end;
 end;
 
-{ TGCustomGraph.TBits256.TReverse }
+{ TGSparseGraph.TBits256.TReverse }
 
-function TGCustomGraph.TBits256.TReverse.GetEnumerator: TReverseEnumerator;
+function TGSparseGraph.TBits256.TReverse.GetEnumerator: TReverseEnumerator;
 begin
   Result.FValue := FValue;
   Result.FInCycle := False;
 end;
 
-{ TGCustomGraph.TBits256 }
+{ TGSparseGraph.TBits256 }
 
-function TGCustomGraph.TBits256.GetBit(aIndex: SizeInt): Boolean;
+function TGSparseGraph.TBits256.GetBit(aIndex: SizeInt): Boolean;
 begin
   Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
 end;
 
-procedure TGCustomGraph.TBits256.SetBit(aIndex: SizeInt; aValue: Boolean);
+procedure TGSparseGraph.TBits256.SetBit(aIndex: SizeInt; aValue: Boolean);
 begin
   if aValue then
     FBits[aIndex shr INT_SIZE_LOG] :=
@@ -260,7 +260,7 @@ begin
       FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
-class function TGCustomGraph.TBits256.BsfValue(aValue: SizeUInt): SizeInt;
+class function TGSparseGraph.TBits256.BsfValue(aValue: SizeUInt): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
   Result := ShortInt(BsfQWord(aValue));
@@ -271,7 +271,7 @@ begin
 {$ENDIF}
 end;
 
-class function TGCustomGraph.TBits256.BsrValue(aValue: SizeUInt): SizeInt;
+class function TGSparseGraph.TBits256.BsrValue(aValue: SizeUInt): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
   Result := ShortInt(BsrQWord(aValue));
@@ -282,23 +282,23 @@ begin
 {$ENDIF}
 end;
 
-class procedure TGCustomGraph.TBits256.ClearBit(aIndex: SizeInt; var aValue: SizeUInt);
+class procedure TGSparseGraph.TBits256.ClearBit(aIndex: SizeInt; var aValue: SizeUInt);
 begin
   aValue := aValue and not (SizeUInt(1) shl aIndex);
 end;
 
-function TGCustomGraph.TBits256.GetEnumerator: TEnumerator;
+function TGSparseGraph.TBits256.GetEnumerator: TEnumerator;
 begin
   Result.FValue := @Self;
   Result.FInCycle := False;
 end;
 
-function TGCustomGraph.TBits256.Reverse: TReverse;
+function TGSparseGraph.TBits256.Reverse: TReverse;
 begin
   Result.FValue := @Self;
 end;
 
-procedure TGCustomGraph.TBits256.InitRange(aRange: SizeInt);
+procedure TGSparseGraph.TBits256.InitRange(aRange: SizeInt);
 var
   msb: SizeInt;
 begin
@@ -313,7 +313,7 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.TBits256.InitZero;
+procedure TGSparseGraph.TBits256.InitZero;
 begin
 {$IF DEFINED(CPU64)}
   System.FillQWord(FBits[0], LIMB_COUNT, 0);
@@ -324,7 +324,7 @@ begin
 {$ENDIF}
 end;
 
-function TGCustomGraph.TBits256.ToArray: TIntArray;
+function TGSparseGraph.TBits256.ToArray: TIntArray;
 var
   I, Pos: SizeInt;
 begin
@@ -337,7 +337,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.TBits256.IsEmpty: Boolean;
+function TGSparseGraph.TBits256.IsEmpty: Boolean;
 var
   I: SizeUInt;
 begin
@@ -347,12 +347,12 @@ begin
   Result := True;
 end;
 
-function TGCustomGraph.TBits256.NonEmpty: Boolean;
+function TGSparseGraph.TBits256.NonEmpty: Boolean;
 begin
   Result := not IsEmpty;
 end;
 
-function TGCustomGraph.TBits256.Bsf: SizeInt;
+function TGSparseGraph.TBits256.Bsf: SizeInt;
 var
   I: SizeInt;
 begin
@@ -362,7 +362,7 @@ begin
   Result := -1;
 end;
 
-function TGCustomGraph.TBits256.Bsr: SizeInt;
+function TGSparseGraph.TBits256.Bsr: SizeInt;
 var
   I: SizeInt;
 begin
@@ -372,7 +372,7 @@ begin
   Result := -1;
 end;
 
-function TGCustomGraph.TBits256.Intersecting(constref aValue: TBits256): Boolean;
+function TGSparseGraph.TBits256.Intersecting(constref aValue: TBits256): Boolean;
 var
   I: SizeInt;
 begin
@@ -382,7 +382,7 @@ begin
   Result := False;
 end;
 
-function TGCustomGraph.TBits256.IntersectionPop(constref aValue: TBits256): SizeInt;
+function TGSparseGraph.TBits256.IntersectionPop(constref aValue: TBits256): SizeInt;
 {$IF DEFINED(CPU64)}
 begin
   Result := SizeInt(PopCnt(FBits[0] and aValue.FBits[0])) +
@@ -409,7 +409,7 @@ begin
 {$ENDIF }
 end;
 
-function TGCustomGraph.TBits256.Contains(constref aValue: TBits256): Boolean;
+function TGSparseGraph.TBits256.Contains(constref aValue: TBits256): Boolean;
 var
   I: SizeInt;
 begin
@@ -419,7 +419,7 @@ begin
   Result := True;
 end;
 
-function TGCustomGraph.TBits256.JoinGain(constref aValue: TBits256): SizeInt;
+function TGSparseGraph.TBits256.JoinGain(constref aValue: TBits256): SizeInt;
 {$IF DEFINED(CPU64)}
 begin
   Result := SizeInt(PopCnt(not FBits[0] and aValue.FBits[0])) +
@@ -446,7 +446,7 @@ begin
 {$ENDIF }
 end;
 
-procedure TGCustomGraph.TBits256.Join(constref aValue: TBits256);
+procedure TGSparseGraph.TBits256.Join(constref aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
   FBits[0] := FBits[0] or aValue.FBits[0];
@@ -472,13 +472,13 @@ begin
 {$ENDIF }
 end;
 
-function TGCustomGraph.TBits256.Union(constref aValue: TBits256): TBits256;
+function TGSparseGraph.TBits256.Union(constref aValue: TBits256): TBits256;
 begin
   Result := Self;
   Result.Join(aValue);
 end;
 
-procedure TGCustomGraph.TBits256.Subtract(constref aValue: TBits256);
+procedure TGSparseGraph.TBits256.Subtract(constref aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
   FBits[0] := FBits[0] and not aValue.FBits[0];
@@ -504,13 +504,13 @@ begin
 {$ENDIF }
 end;
 
-function TGCustomGraph.TBits256.Difference(constref aValue: TBits256): TBits256;
+function TGSparseGraph.TBits256.Difference(constref aValue: TBits256): TBits256;
 begin
   Result := Self;
   Result.Subtract(aValue);
 end;
 
-procedure TGCustomGraph.TBits256.Intersect(constref aValue: TBits256);
+procedure TGSparseGraph.TBits256.Intersect(constref aValue: TBits256);
 {$IF DEFINED(CPU64)}
 begin
   FBits[0] := FBits[0] and aValue.FBits[0];
@@ -536,13 +536,13 @@ begin
 {$ENDIF }
 end;
 
-function TGCustomGraph.TBits256.Intersection(constref aValue: TBits256): TBits256;
+function TGSparseGraph.TBits256.Intersection(constref aValue: TBits256): TBits256;
 begin
   Result := Self;
   Result.Intersect(aValue);
 end;
 
-function TGCustomGraph.TBits256.PopCount: SizeInt;
+function TGSparseGraph.TBits256.PopCount: SizeInt;
 {$IF DEFINED(CPU64)}
 begin
   Result := SizeInt(PopCnt(FBits[0])) + SizeInt(PopCnt(FBits[1])) +

@@ -168,11 +168,11 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TGCustomGraph: simple sparse graph abstract ancestor class based on adjacency lists;
+  { TGSparseGraph: simple sparse graph abstract ancestor class based on adjacency lists;
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGCustomGraph<TVertex, TEdgeData, TEqRel> = class abstract
+  generic TGSparseGraph<TVertex, TEdgeData, TEqRel> = class abstract
   protected
     {$I CustGraphBitHelpH.inc}
   public
@@ -302,10 +302,10 @@ type
 
     TAdjVertices = record
     private
-      FGraph: TGCustomGraph;
+      FGraph: TGSparseGraph;
       FSource: SizeInt;
     public
-      constructor Create(aGraph: TGCustomGraph; aSource: SizeInt);
+      constructor Create(aGraph: TGSparseGraph; aSource: SizeInt);
       function GetEnumerator: TAdjEnumerator; inline;
     end;
 
@@ -320,10 +320,10 @@ type
 
     TIncidentEdges = record
     private
-      FGraph: TGCustomGraph;
+      FGraph: TGSparseGraph;
       FSource: SizeInt;
     public
-      constructor Create(aGraph: TGCustomGraph; aSource: SizeInt);
+      constructor Create(aGraph: TGSparseGraph; aSource: SizeInt);
       function GetEnumerator: TIncidentEnumerator; inline;
     end;
 
@@ -334,7 +334,7 @@ type
       FLastIndex: SizeInt;
       function  GetCurrent: TVertex;
     public
-      constructor Create(aGraph: TGCustomGraph);
+      constructor Create(aGraph: TGSparseGraph);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: TVertex read GetCurrent;
@@ -342,9 +342,9 @@ type
 
     TVertices = record
     private
-      FGraph: TGCustomGraph;
+      FGraph: TGSparseGraph;
     public
-      constructor Create(aGraph: TGCustomGraph);
+      constructor Create(aGraph: TGSparseGraph);
       function GetEnumerator: TVertexEnumerator; inline;
     end;
 
@@ -364,7 +364,7 @@ type
 
     TEdges = record
     private
-      FGraph: TGCustomGraph;
+      FGraph: TGSparseGraph;
     public
       function GetEnumerator: TEdgeEnumerator;
     end;
@@ -761,24 +761,24 @@ end;
 
 {$I CustGraphBitHelp.inc}
 
-{ TGCustomGraph.TAdjacencyMatrix }
+{ TGSparseGraph.TAdjacencyMatrix }
 
-function TGCustomGraph.TAdjacencyMatrix.GetSize: SizeInt;
+function TGSparseGraph.TAdjacencyMatrix.GetSize: SizeInt;
 begin
   Result := FMatrix.FSize;
 end;
 
-constructor TGCustomGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
+constructor TGSparseGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
 begin
   FMatrix := aMatrix;
 end;
 
-function TGCustomGraph.TAdjacencyMatrix.IsEmpty: Boolean;
+function TGSparseGraph.TAdjacencyMatrix.IsEmpty: Boolean;
 begin
   Result := FMatrix.Size = 0;
 end;
 
-function TGCustomGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
+function TGSparseGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
 begin
   if SizeUInt(aSrc) < SizeUInt(FMatrix.FSize) then
       if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
@@ -791,9 +791,9 @@ end;
 
 {$I CustGraphIntSet.inc}
 
-{ TGCustomGraph.TNode }
+{ TGSparseGraph.TNode }
 
-procedure TGCustomGraph.TNode.Assign(constref aSrc: TNode);
+procedure TGSparseGraph.TNode.Assign(constref aSrc: TNode);
 begin
   Hash := aSrc.Hash;
   Next := aSrc.Next;
@@ -802,50 +802,50 @@ begin
   Tag := aSrc.Tag;
 end;
 
-{ TGCustomGraph.TEdge }
+{ TGSparseGraph.TEdge }
 
-constructor TGCustomGraph.TEdge.Create(aSrc: SizeInt; p: PAdjItem);
+constructor TGSparseGraph.TEdge.Create(aSrc: SizeInt; p: PAdjItem);
 begin
   Source := aSrc;
   Destination := p^.Destination;
   Data := p^.Data;
 end;
 
-constructor TGCustomGraph.TEdge.Create(aSrc, aDst: SizeInt; constref d: TEdgeData);
+constructor TGSparseGraph.TEdge.Create(aSrc, aDst: SizeInt; constref d: TEdgeData);
 begin
   Source := aSrc;
   Destination := aDst;
   Data := d;
 end;
 
-{ TGCustomGraph.TAdjEnumerator }
+{ TGSparseGraph.TAdjEnumerator }
 
-function TGCustomGraph.TAdjEnumerator.GetCurrent: SizeInt;
+function TGSparseGraph.TAdjEnumerator.GetCurrent: SizeInt;
 begin
   Result := FEnum.Current^.Destination;
 end;
 
-function TGCustomGraph.TAdjEnumerator.MoveNext: Boolean;
+function TGSparseGraph.TAdjEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-{ TGCustomGraph.TAdjVertices }
+{ TGSparseGraph.TAdjVertices }
 
-constructor TGCustomGraph.TAdjVertices.Create(aGraph: TGCustomGraph; aSource: SizeInt);
+constructor TGSparseGraph.TAdjVertices.Create(aGraph: TGSparseGraph; aSource: SizeInt);
 begin
   FGraph := aGraph;
   FSource := aSource;
 end;
 
-function TGCustomGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
+function TGSparseGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
 begin
   Result.FEnum := FGraph.AdjLists[FSource]^.GetEnumerator;
 end;
 
-{ TGCustomGraph.TIncidentEnumerator }
+{ TGSparseGraph.TIncidentEnumerator }
 
-function TGCustomGraph.TIncidentEnumerator.GetCurrent: TIncidentEdge;
+function TGSparseGraph.TIncidentEnumerator.GetCurrent: TIncidentEdge;
 var
   p: PAdjItem;
 begin
@@ -854,39 +854,39 @@ begin
   Result.Data := p^.Data;
 end;
 
-function TGCustomGraph.TIncidentEnumerator.MoveNext: Boolean;
+function TGSparseGraph.TIncidentEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-{ TGCustomGraph.TIncidentEdges }
+{ TGSparseGraph.TIncidentEdges }
 
-constructor TGCustomGraph.TIncidentEdges.Create(aGraph: TGCustomGraph; aSource: SizeInt);
+constructor TGSparseGraph.TIncidentEdges.Create(aGraph: TGSparseGraph; aSource: SizeInt);
 begin
   FGraph := aGraph;
   FSource := aSource;
 end;
 
-function TGCustomGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
+function TGSparseGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
 begin
   Result.FEnum := FGraph.AdjLists[FSource]^.GetEnumerator;
 end;
 
-{ TGCustomGraph.TVertexEnumerator }
+{ TGSparseGraph.TVertexEnumerator }
 
-function TGCustomGraph.TVertexEnumerator.GetCurrent: TVertex;
+function TGSparseGraph.TVertexEnumerator.GetCurrent: TVertex;
 begin
   Result := FNodeList[FCurrIndex].Vertex;
 end;
 
-constructor TGCustomGraph.TVertexEnumerator.Create(aGraph: TGCustomGraph);
+constructor TGSparseGraph.TVertexEnumerator.Create(aGraph: TGSparseGraph);
 begin
   FNodeList := Pointer(aGraph.FNodeList);
   FLastIndex := Pred(aGraph.VertexCount);
   FCurrIndex := -1;
 end;
 
-function TGCustomGraph.TVertexEnumerator.MoveNext: Boolean;
+function TGSparseGraph.TVertexEnumerator.MoveNext: Boolean;
 begin
   if FCurrIndex >= FLastIndex then
     exit(False);
@@ -894,31 +894,31 @@ begin
   Result := True;
 end;
 
-procedure TGCustomGraph.TVertexEnumerator.Reset;
+procedure TGSparseGraph.TVertexEnumerator.Reset;
 begin
   FCurrIndex := -1;
 end;
 
-{ TGCustomGraph.TVertices }
+{ TGSparseGraph.TVertices }
 
-constructor TGCustomGraph.TVertices.Create(aGraph: TGCustomGraph);
+constructor TGSparseGraph.TVertices.Create(aGraph: TGSparseGraph);
 begin
   FGraph := aGraph;
 end;
 
-function TGCustomGraph.TVertices.GetEnumerator: TVertexEnumerator;
+function TGSparseGraph.TVertices.GetEnumerator: TVertexEnumerator;
 begin
   Result := TVertexEnumerator.Create(FGraph);
 end;
 
-{ TGCustomGraph.TEdgeEnumerator }
+{ TGSparseGraph.TEdgeEnumerator }
 
-function TGCustomGraph.TEdgeEnumerator.GetCurrent: TEdge;
+function TGSparseGraph.TEdgeEnumerator.GetCurrent: TEdge;
 begin
   Result := TEdge.Create(FCurrIndex, FEnum.Current);
 end;
 
-function TGCustomGraph.TEdgeEnumerator.MoveNext: Boolean;
+function TGSparseGraph.TEdgeEnumerator.MoveNext: Boolean;
 begin
   repeat
     if FEnumDone then
@@ -933,15 +933,15 @@ begin
   until Result;
 end;
 
-procedure TGCustomGraph.TEdgeEnumerator.Reset;
+procedure TGSparseGraph.TEdgeEnumerator.Reset;
 begin
   FCurrIndex := -1;
   FEnumDone := True;
 end;
 
-{ TGCustomGraph.TEdges }
+{ TGSparseGraph.TEdges }
 
-function TGCustomGraph.TEdges.GetEnumerator: TEdgeEnumerator;
+function TGSparseGraph.TEdges.GetEnumerator: TEdgeEnumerator;
 begin
   Result.FList := Pointer(FGraph.FNodeList);
   Result.FLastIndex := Pred(FGraph.VertexCount);
@@ -949,25 +949,25 @@ begin
   Result.FEnumDone := True;
 end;
 
-{ TGCustomGraph }
+{ TGSparseGraph }
 
-function TGCustomGraph.GetCapacity: SizeInt;
+function TGSparseGraph.GetCapacity: SizeInt;
 begin
   Result := System.Length(FNodeList);
 end;
 
-function TGCustomGraph.GetItem(aIndex: SizeInt): TVertex;
+function TGSparseGraph.GetItem(aIndex: SizeInt): TVertex;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].Vertex;
 end;
 
-function TGCustomGraph.GetAdjList(aIndex: SizeInt): PAdjList;
+function TGSparseGraph.GetAdjList(aIndex: SizeInt): PAdjList;
 begin
   Result := @FNodeList[aIndex].AdjList;
 end;
 
-procedure TGCustomGraph.SetItem(aIndex: SizeInt; const aValue: TVertex);
+procedure TGSparseGraph.SetItem(aIndex: SizeInt; const aValue: TVertex);
 var
   I: SizeInt;
 begin
@@ -983,14 +983,14 @@ begin
   FChainList[I] := aIndex;
 end;
 
-procedure TGCustomGraph.InitialAlloc;
+procedure TGSparseGraph.InitialAlloc;
 begin
   System.SetLength(FNodeList, DEFAULT_CONTAINER_CAPACITY);
   System.SetLength(FChainList, DEFAULT_CONTAINER_CAPACITY);
   System.FillChar(FChainList[0], DEFAULT_CONTAINER_CAPACITY * SizeOf(SizeInt), $ff);
 end;
 
-procedure TGCustomGraph.Rehash;
+procedure TGSparseGraph.Rehash;
 var
   I, J, Mask: SizeInt;
 begin
@@ -1004,14 +1004,14 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.Resize(aNewCapacity: SizeInt);
+procedure TGSparseGraph.Resize(aNewCapacity: SizeInt);
 begin
   System.SetLength(FNodeList, aNewCapacity);
   System.SetLength(FChainList, aNewCapacity);
   Rehash;
 end;
 
-procedure TGCustomGraph.Expand;
+procedure TGSparseGraph.Expand;
 begin
   if Capacity = 0 then
     begin
@@ -1024,7 +1024,7 @@ begin
     raise EGraphError.CreateFmt(SECapacityExceedFmt, [Capacity shl 1]);
 end;
 
-function TGCustomGraph.Add(constref v: TVertex; aHash: SizeInt): SizeInt;
+function TGSparseGraph.Add(constref v: TVertex; aHash: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1037,7 +1037,7 @@ begin
   Inc(FCount);
 end;
 
-procedure TGCustomGraph.RemoveFromChain(aIndex: SizeInt);
+procedure TGSparseGraph.RemoveFromChain(aIndex: SizeInt);
 var
   I, Curr, Prev: SizeInt;
 begin
@@ -1059,7 +1059,7 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.Delete(aIndex: SizeInt);
+procedure TGSparseGraph.Delete(aIndex: SizeInt);
 begin
   Dec(FCount);
   if aIndex < VertexCount then
@@ -1076,7 +1076,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.Remove(constref v: TVertex): Boolean;
+function TGSparseGraph.Remove(constref v: TVertex): Boolean;
 var
   ToRemove: SizeInt;
 begin
@@ -1091,7 +1091,7 @@ begin
     Result := False;
 end;
 
-function TGCustomGraph.Find(constref v: TVertex): SizeInt;
+function TGSparseGraph.Find(constref v: TVertex): SizeInt;
 var
   h: SizeInt;
 begin
@@ -1105,7 +1105,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.Find(constref v: TVertex; aHash: SizeInt): SizeInt;
+function TGSparseGraph.Find(constref v: TVertex; aHash: SizeInt): SizeInt;
 begin
   Result := FChainList[aHash and System.High(FChainList)];
   while Result <> NULL_INDEX do
@@ -1116,7 +1116,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
+function TGSparseGraph.FindOrAdd(constref v: TVertex; out aIndex: SizeInt): Boolean;
 var
   h: SizeInt;
 begin
@@ -1134,18 +1134,18 @@ begin
     end;
 end;
 
-function TGCustomGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
+function TGSparseGraph.GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData;
 begin
   Result := @FNodeList[aSrc].AdjList.Find(aDst)^.Data;
 end;
 
-procedure TGCustomGraph.CheckIndexRange(aIndex: SizeInt);
+procedure TGSparseGraph.CheckIndexRange(aIndex: SizeInt);
 begin
   if SizeUInt(aIndex) >= SizeUInt(VertexCount) then
     raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TGCustomGraph.CheckPathExists(aSrc, aDst: SizeInt): Boolean;
+function TGSparseGraph.CheckPathExists(aSrc, aDst: SizeInt): Boolean;
 var
   Queue: TIntArray;
   Visited: TBitVector;
@@ -1174,7 +1174,7 @@ begin
   Result := False;
 end;
 
-function TGCustomGraph.CreateBoolMatrix: TBoolMatrix;
+function TGSparseGraph.CreateBoolMatrix: TBoolMatrix;
 var
   I: SizeInt;
   p: PAdjItem;
@@ -1188,23 +1188,23 @@ begin
     end;
 end;
 
-function TGCustomGraph.CreateIntArray(aValue: SizeInt): TIntArray;
+function TGSparseGraph.CreateIntArray(aValue: SizeInt): TIntArray;
 begin
   ResizeAndFill(Result, VertexCount, aValue);
 end;
 
-function TGCustomGraph.CreateIntArrayRange: TIntArray;
+function TGSparseGraph.CreateIntArrayRange: TIntArray;
 begin
   Result := TIntHelper.CreateRange(0, Pred(VertexCount));
 end;
 
-function TGCustomGraph.CreateColorArray: TColorArray;
+function TGSparseGraph.CreateColorArray: TColorArray;
 begin
   System.SetLength(Result, VertexCount);
   System.FillChar(Pointer(Result)^, VertexCount, 0);
 end;
 
-function TGCustomGraph.CreateAdjEnumArray: TAdjEnumArray;
+function TGSparseGraph.CreateAdjEnumArray: TAdjEnumArray;
 var
   I: SizeInt;
 begin
@@ -1213,7 +1213,7 @@ begin
     Result[I].FEnum := AdjLists[I]^.GetEnumerator;
 end;
 
-function TGCustomGraph.CreateAdjEnumArrayEx: TAdjEnumArrayEx;
+function TGSparseGraph.CreateAdjEnumArrayEx: TAdjEnumArrayEx;
 var
   I: SizeInt;
 begin
@@ -1222,7 +1222,7 @@ begin
     Result[I] := AdjLists[I]^.GetEnumerator;
 end;
 
-function TGCustomGraph.PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
+function TGSparseGraph.PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
 var
   Dist,
   Parents: TIntArray;
@@ -1245,7 +1245,7 @@ begin
     Result := [];
 end;
 
-class procedure TGCustomGraph.ResizeAndFill(out a: TIntArray; aLen, aValue: SizeInt);
+class procedure TGSparseGraph.ResizeAndFill(out a: TIntArray; aLen, aValue: SizeInt);
 begin
   System.SetLength(a, aLen);
 {$IF DEFINED(CPU64)}
@@ -1257,12 +1257,12 @@ begin
 {$ENDIF}
 end;
 
-class function TGCustomGraph.CreateIntArray(aLen, aValue: SizeInt): TIntArray;
+class function TGSparseGraph.CreateIntArray(aLen, aValue: SizeInt): TIntArray;
 begin
   ResizeAndFill(Result{%H-}, aLen, aValue);
 end;
 
-class function TGCustomGraph.cMin(L, R: TCost): TCost;
+class function TGSparseGraph.cMin(L, R: TCost): TCost;
 begin
   if L <= R then
     Result := L
@@ -1270,7 +1270,7 @@ begin
     Result := R;
 end;
 
-class function TGCustomGraph.cMax(L, R: TCost): TCost;
+class function TGSparseGraph.cMax(L, R: TCost): TCost;
 begin
   if L >= R then
     Result := L
@@ -1278,12 +1278,12 @@ begin
     Result := R;
 end;
 
-class function TGCustomGraph.MaxBitMatrixSize: SizeInt;
+class function TGSparseGraph.MaxBitMatrixSize: SizeInt;
 begin
   Result := TSquareBitMatrix.MaxSize;
 end;
 
-class function TGCustomGraph.TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray;
+class function TGSparseGraph.TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray;
 var
   v: TIntVector;
 begin
@@ -1299,7 +1299,7 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-class function TGCustomGraph.TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
+class function TGSparseGraph.TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
 var
   I: SizeInt;
   v: TIntVector;
@@ -1320,7 +1320,7 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-class function TGCustomGraph.TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
+class function TGSparseGraph.TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1338,7 +1338,7 @@ begin
     end;
 end;
 
-constructor TGCustomGraph.Create;
+constructor TGSparseGraph.Create;
 begin
   FDescription := TStringList.Create;
   FDescription.WriteBOM := False;
@@ -1347,23 +1347,23 @@ begin
   Title := 'Untitled';
 end;
 
-destructor TGCustomGraph.Destroy;
+destructor TGSparseGraph.Destroy;
 begin
   FDescription.Free;
   inherited;
 end;
 
-function TGCustomGraph.IsEmpty: Boolean;
+function TGSparseGraph.IsEmpty: Boolean;
 begin
   Result := VertexCount = 0;
 end;
 
-function TGCustomGraph.NonEmpty: Boolean;
+function TGSparseGraph.NonEmpty: Boolean;
 begin
   Result := VertexCount <> 0;
 end;
 
-procedure TGCustomGraph.Clear;
+procedure TGSparseGraph.Clear;
 begin
   FNodeList := nil;
   FChainList := nil;
@@ -1373,7 +1373,7 @@ begin
   FDescription.Clear;
 end;
 
-procedure TGCustomGraph.EnsureCapacity(aValue: SizeInt);
+procedure TGSparseGraph.EnsureCapacity(aValue: SizeInt);
 begin
   if aValue > Capacity then
     if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
@@ -1382,7 +1382,7 @@ begin
       raise EGraphError.CreateFmt(SECapacityExceedFmt, [aValue]);
 end;
 
-procedure TGCustomGraph.TrimToFit;
+procedure TGSparseGraph.TrimToFit;
 var
   I, NewCapacity: SizeInt;
 begin
@@ -1400,17 +1400,17 @@ begin
     Clear;
 end;
 
-function TGCustomGraph.ContainsVertex(constref aVertex: TVertex): Boolean;
+function TGSparseGraph.ContainsVertex(constref aVertex: TVertex): Boolean;
 begin
   Result := IndexOf(aVertex) >= 0;
 end;
 
-function TGCustomGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
+function TGSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := ContainsEdgeI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
-function TGCustomGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+function TGSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc >= 0) and (aSrc < VertexCount) then
     Result := AdjLists[aSrc]^.Contains(aDst)
@@ -1418,7 +1418,7 @@ begin
     Result := False;
 end;
 
-function TGCustomGraph.IndexOf(constref aVertex: TVertex): SizeInt;
+function TGSparseGraph.IndexOf(constref aVertex: TVertex): SizeInt;
 begin
   if VertexCount > 0 then
     Result := Find(aVertex)
@@ -1426,12 +1426,12 @@ begin
     Result := NULL_INDEX;
 end;
 
-function TGCustomGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
+function TGSparseGraph.Adjacent(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := AdjacentI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
-function TGCustomGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
+function TGSparseGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc >= 0) and (aSrc < VertexCount) then
     Result := AdjLists[aSrc]^.Contains(aDst)
@@ -1439,44 +1439,44 @@ begin
     Result := False;
 end;
 
-function TGCustomGraph.AdjVertices(constref aVertex: TVertex): TAdjVertices;
+function TGSparseGraph.AdjVertices(constref aVertex: TVertex): TAdjVertices;
 begin
   Result := AdjVerticesI(IndexOf(aVertex));
 end;
 
-function TGCustomGraph.AdjVerticesI(aIndex: SizeInt): TAdjVertices;
+function TGSparseGraph.AdjVerticesI(aIndex: SizeInt): TAdjVertices;
 begin
   CheckIndexRange(aIndex);
   Result := TAdjVertices.Create(Self, aIndex);
 end;
 
-function TGCustomGraph.IncidentEdges(constref aVertex: TVertex): TIncidentEdges;
+function TGSparseGraph.IncidentEdges(constref aVertex: TVertex): TIncidentEdges;
 begin
   Result := IncidentEdgesI(IndexOf(aVertex));
 end;
 
-function TGCustomGraph.IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
+function TGSparseGraph.IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
 begin
   CheckIndexRange(aIndex);
   Result := TIncidentEdges.Create(Self, aIndex);
 end;
 
-function TGCustomGraph.Vertices: TVertices;
+function TGSparseGraph.Vertices: TVertices;
 begin
   Result := TVertices.Create(Self);
 end;
 
-function TGCustomGraph.Edges: TEdges;
+function TGSparseGraph.Edges: TEdges;
 begin
   Result.FGraph := Self;
 end;
 
-function TGCustomGraph.GetEdgeData(constref aSrc, aDst: TVertex; out aData: TEdgeData): Boolean;
+function TGSparseGraph.GetEdgeData(constref aSrc, aDst: TVertex; out aData: TEdgeData): Boolean;
 begin
   Result := GetEdgeDataI(IndexOf(aSrc), IndexOf(aDst), aData);
 end;
 
-function TGCustomGraph.GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
+function TGSparseGraph.GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
 var
   p: PAdjItem;
 begin
@@ -1488,12 +1488,12 @@ begin
     aData := p^.Data;
 end;
 
-function TGCustomGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean;
+function TGSparseGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean;
 begin
   Result := SetEdgeDataI(IndexOf(aSrc), IndexOf(aDst), aValue);
 end;
 
-function TGCustomGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+function TGSparseGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
 var
   p: PAdjItem;
 begin
@@ -1504,7 +1504,7 @@ begin
     p^.Data := aValue;
 end;
 
-function TGCustomGraph.CreateAdjacencyMatrix: TAdjacencyMatrix;
+function TGSparseGraph.CreateAdjacencyMatrix: TAdjacencyMatrix;
 var
   m: TSquareBitMatrix;
   s, d: SizeInt;
@@ -1519,14 +1519,14 @@ begin
   Result := TAdjacencyMatrix.Create(m);
 end;
 
-function TGCustomGraph.IsBipartite: Boolean;
+function TGSparseGraph.IsBipartite: Boolean;
 var
   Colors: TColorArray;
 begin
   Result := IsBipartite(Colors);
 end;
 
-function TGCustomGraph.IsBipartite(out aColors: TColorArray): Boolean;
+function TGSparseGraph.IsBipartite(out aColors: TColorArray): Boolean;
 var
   Queue: TIntArray;
   Curr, I: SizeInt;
@@ -1569,7 +1569,7 @@ begin
   Result := True;
 end;
 
-function TGCustomGraph.IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
+function TGSparseGraph.IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
 var
   Colors: TColorArray;
   WhiteIdx, GrayIdx, I: SizeInt;
@@ -1601,7 +1601,7 @@ begin
   System.SetLength(aGrays, GrayIdx);
 end;
 
-function TGCustomGraph.IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
+function TGSparseGraph.IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
 var
   vFree: TBoolVector;
   e: TIntEdge;
@@ -1636,7 +1636,7 @@ begin
   Result := True;
 end;
 
-function TGCustomGraph.IsPerfectMatching(constref aMatch: TIntEdgeArray): Boolean;
+function TGSparseGraph.IsPerfectMatching(constref aMatch: TIntEdgeArray): Boolean;
 var
   vFree: TBoolVector;
   e: TIntEdge;
@@ -1666,13 +1666,13 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGCustomGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit;
+function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit;
   OnDone: TOnVisit): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), OnAccept, OnFound, OnDone);
 end;
 
-function TGCustomGraph.DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit;
+function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit;
   OnDone: TOnVisit): SizeInt;
 var
   Stack: TIntArray;
@@ -1721,12 +1721,12 @@ begin
     end;
 end;
 
-function TGCustomGraph.DfsTree(constref aRoot: TVertex): TIntArray;
+function TGSparseGraph.DfsTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := DfsTreeI(IndexOf(aRoot));
 end;
 
-function TGCustomGraph.DfsTreeI(aRoot: SizeInt): TIntArray;
+function TGSparseGraph.DfsTreeI(aRoot: SizeInt): TIntArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -1753,12 +1753,12 @@ begin
   Result[aRoot] := NULL_INDEX;
 end;
 
-function TGCustomGraph.BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
+function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), OnAccept, OnFound);
 end;
 
-function TGCustomGraph.BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
+function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
 var
   Queue: TIntArray;
   Visited: TBitVector;
@@ -1795,12 +1795,12 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.BfsTraversal(constref aRoot: TVertex; out aVisited: TBoolVector);
+procedure TGSparseGraph.BfsTraversal(constref aRoot: TVertex; out aVisited: TBoolVector);
 begin
   BfsTraversalI(IndexOf(aRoot), aVisited);
 end;
 
-procedure TGCustomGraph.BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
+procedure TGSparseGraph.BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
 var
   Queue: TIntArray;
   p: PAdjItem;
@@ -1828,12 +1828,12 @@ begin
     end;
 end;
 
-function TGCustomGraph.BfsTree(constref aRoot: TVertex): TIntArray;
+function TGSparseGraph.BfsTree(constref aRoot: TVertex): TIntArray;
 begin
   Result := BfsTreeI(IndexOf(aRoot));
 end;
 
-function TGCustomGraph.BfsTreeI(aRoot: SizeInt): TIntArray;
+function TGSparseGraph.BfsTreeI(aRoot: SizeInt): TIntArray;
 var
   Queue: TIntArray;
   Curr: SizeInt;
@@ -1862,12 +1862,12 @@ begin
   Result[aRoot] := NULL_INDEX;
 end;
 
-function TGCustomGraph.ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt;
+function TGSparseGraph.ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt;
 begin
   Result := ShortestPathLenI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
-function TGCustomGraph.ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
+function TGSparseGraph.ShortestPathLenI(aSrc, aDst: SizeInt): SizeInt;
 var
   Queue: TIntArray;
   Dist: TIntArray;
@@ -1901,12 +1901,12 @@ begin
   Result := NULL_INDEX;
 end;
 
-function TGCustomGraph.ShortestPathsMap(constref aSrc: TVertex): TIntArray;
+function TGSparseGraph.ShortestPathsMap(constref aSrc: TVertex): TIntArray;
 begin
   Result := ShortestPathsMapI(IndexOf(aSrc));
 end;
 
-function TGCustomGraph.ShortestPathsMapI(aSrc: SizeInt): TIntArray;
+function TGSparseGraph.ShortestPathsMapI(aSrc: SizeInt): TIntArray;
 var
   Queue: TIntArray;
   d: SizeInt;
@@ -1935,12 +1935,12 @@ begin
     end;
 end;
 
-function TGCustomGraph.ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
+function TGSparseGraph.ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
 begin
   Result := ShortestPathsMapI(IndexOf(aSrc), aPathTree);
 end;
 
-function TGCustomGraph.ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
+function TGSparseGraph.ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
 var
   Queue: TIntArray;
   d: SizeInt;
@@ -1971,12 +1971,12 @@ begin
     end;
 end;
 
-function TGCustomGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntArray;
+function TGSparseGraph.ShortestPath(constref aSrc, aDst: TVertex): TIntArray;
 begin
   Result := ShortestPathI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
-function TGCustomGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
+function TGSparseGraph.ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
 var
   Queue: TIntArray;
   Parents: TIntArray;
@@ -2012,12 +2012,12 @@ begin
   Result := nil;
 end;
 
-function TGCustomGraph.Eccentricity(constref aVertex: TVertex): SizeInt;
+function TGSparseGraph.Eccentricity(constref aVertex: TVertex): SizeInt;
 begin
   Result := EccentricityI(IndexOf(aVertex));
 end;
 
-function TGCustomGraph.EccentricityI(aIndex: SizeInt): SizeInt;
+function TGSparseGraph.EccentricityI(aIndex: SizeInt): SizeInt;
 var
   Dist: TIntArray;
   I: SizeInt;

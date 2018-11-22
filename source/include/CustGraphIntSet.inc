@@ -17,14 +17,14 @@
 *                                                                           *
 *****************************************************************************}
 
-{ TGCustomGraph.TIntSet.TEnumerator }
+{ TGSparseGraph.TIntSet.TEnumerator }
 
-function TGCustomGraph.TIntSet.TEnumerator.GetCurrent: SizeInt;
+function TGSparseGraph.TIntSet.TEnumerator.GetCurrent: SizeInt;
 begin
   Result := pCurr^;
 end;
 
-function TGCustomGraph.TIntSet.TEnumerator.MoveNext: Boolean;
+function TGSparseGraph.TIntSet.TEnumerator.MoveNext: Boolean;
 begin
   Result := pCurr < pLast;
   pCurr += Ord(Result);
@@ -32,17 +32,17 @@ end;
 
 { TIntSet }
 
-procedure TGCustomGraph.TIntSet.Expand;
+procedure TGSparseGraph.TIntSet.Expand;
 begin
   System.SetLength(FItems, System.Length(FItems) + GRAPH_ADJLIST_GROW);
 end;
 
-class operator TGCustomGraph.TIntSet.Initialize(var aList: TIntSet);
+class operator TGSparseGraph.TIntSet.Initialize(var aList: TIntSet);
 begin
   aList.FCount := 0;
 end;
 
-procedure TGCustomGraph.TIntSet.InitRange(aRange: SizeInt);
+procedure TGSparseGraph.TIntSet.InitRange(aRange: SizeInt);
 var
   I: SizeInt;
 begin
@@ -57,31 +57,31 @@ begin
     FCount := 0;
 end;
 
-function TGCustomGraph.TIntSet.GetEnumerator: TEnumerator;
+function TGSparseGraph.TIntSet.GetEnumerator: TEnumerator;
 begin
   Result.pCurr := PSizeInt(Pointer(FItems)) - Ord(Count > 0);
   Result.pLast := PSizeInt(Pointer(FItems)) + (Pred(Count) and (-SizeInt(Count > 0)));
 end;
 
-function TGCustomGraph.TIntSet.ToArray: TIntArray;
+function TGSparseGraph.TIntSet.ToArray: TIntArray;
 begin
   Result := System.Copy(FItems, 0, Count);
 end;
 
-procedure TGCustomGraph.TIntSet.Assign(constref aValue: TIntSet);
+procedure TGSparseGraph.TIntSet.Assign(constref aValue: TIntSet);
 begin
   FCount := aValue.Count;
   if Count <> 0 then
     FItems := System.Copy(aValue.FItems, 0, Count);
 end;
 
-procedure TGCustomGraph.TIntSet.AssignArray(constref a: TIntArray);
+procedure TGSparseGraph.TIntSet.AssignArray(constref a: TIntArray);
 begin
   FItems := System.Copy(a);
   FCount := System.Length(FItems);
 end;
 
-procedure TGCustomGraph.TIntSet.AssignList(aList: PAdjList);
+procedure TGSparseGraph.TIntSet.AssignList(aList: PAdjList);
 var
   p: PAdjItem;
   I: SizeInt = 0;
@@ -95,39 +95,39 @@ begin
     end;
 end;
 
-function TGCustomGraph.TIntSet.IsEmpty: Boolean;
+function TGSparseGraph.TIntSet.IsEmpty: Boolean;
 begin
   Result := Count = 0;
 end;
 
-function TGCustomGraph.TIntSet.NonEmpty: Boolean;
+function TGSparseGraph.TIntSet.NonEmpty: Boolean;
 begin
   Result := Count <> 0;
 end;
 
-procedure TGCustomGraph.TIntSet.MakeEmpty;
+procedure TGSparseGraph.TIntSet.MakeEmpty;
 begin
   FCount := 0;
 end;
 
-function TGCustomGraph.TIntSet.FindFirst(out aValue: SizeInt): Boolean;
+function TGSparseGraph.TIntSet.FindFirst(out aValue: SizeInt): Boolean;
 begin
   Result := Count <> 0;
   if Result then
     aValue := FItems[Pred(Count)]
 end;
 
-function TGCustomGraph.TIntSet.GetItem(aIndex: SizeInt): SizeInt;
+function TGSparseGraph.TIntSet.GetItem(aIndex: SizeInt): SizeInt;
 begin
   Result := FItems[aIndex];
 end;
 
-function TGCustomGraph.TIntSet.Contains(aValue: SizeInt): Boolean;
+function TGSparseGraph.TIntSet.Contains(aValue: SizeInt): Boolean;
 begin
   Result := Find(aValue) >= 0;
 end;
 
-function TGCustomGraph.TIntSet.ContainsAny(constref aValue: TIntSet): Boolean;
+function TGSparseGraph.TIntSet.ContainsAny(constref aValue: TIntSet): Boolean;
 var
   I: SizeInt;
 begin
@@ -138,7 +138,7 @@ begin
   Result := False;
 end;
 
-function TGCustomGraph.TIntSet.ContainsAll(constref aValue: TIntSet): Boolean;
+function TGSparseGraph.TIntSet.ContainsAll(constref aValue: TIntSet): Boolean;
 var
   I: SizeInt;
 begin
@@ -153,7 +153,7 @@ begin
     Result := False;
 end;
 
-function TGCustomGraph.TIntSet.Find(aValue: SizeInt): SizeInt;
+function TGSparseGraph.TIntSet.Find(aValue: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -163,7 +163,7 @@ begin
   Result := -1;
 end;
 
-function TGCustomGraph.TIntSet.Add(aValue: SizeInt): Boolean;
+function TGSparseGraph.TIntSet.Add(aValue: SizeInt): Boolean;
 begin
   Result := Find(aValue) < 0;
   if Result then
@@ -175,7 +175,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.TIntSet.Add(constref a: TIntArray): SizeInt;
+function TGSparseGraph.TIntSet.Add(constref a: TIntArray): SizeInt;
 var
   I: SizeInt;
 begin
@@ -185,7 +185,7 @@ begin
   Result := Count - Result;
 end;
 
-function TGCustomGraph.TIntSet.Join(constref aValue: TIntSet): SizeInt;
+function TGSparseGraph.TIntSet.Join(constref aValue: TIntSet): SizeInt;
 var
   I: SizeInt;
 begin
@@ -194,7 +194,7 @@ begin
     Result += Ord(Add(I));
 end;
 
-procedure TGCustomGraph.TIntSet.Push(aValue: SizeInt);
+procedure TGSparseGraph.TIntSet.Push(aValue: SizeInt);
 begin
   if Count = System.Length(FItems) then
     Expand;
@@ -202,7 +202,7 @@ begin
   Inc(FCount);
 end;
 
-function TGCustomGraph.TIntSet.Pop: SizeInt;
+function TGSparseGraph.TIntSet.Pop: SizeInt;
 begin
   if Count <> 0 then
     begin
@@ -216,7 +216,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.TIntSet.TryPop(out aValue: SizeInt): Boolean;
+function TGSparseGraph.TIntSet.TryPop(out aValue: SizeInt): Boolean;
 begin
   Result := Count <> 0;
   if Result then
@@ -226,7 +226,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.TIntSet.Last: SizeInt;
+function TGSparseGraph.TIntSet.Last: SizeInt;
 begin
   if Count <> 0 then
     Result := FItems[Count]
@@ -237,7 +237,7 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.TIntSet.Subtract(constref aValue: TIntSet);
+procedure TGSparseGraph.TIntSet.Subtract(constref aValue: TIntSet);
 var
   I, Pos: SizeInt;
 begin
@@ -255,7 +255,7 @@ begin
     end;
 end;
 
-procedure TGCustomGraph.TIntSet.Subtract(PList: PAdjList);
+procedure TGSparseGraph.TIntSet.Subtract(PList: PAdjList);
 var
   I, Pos: SizeInt;
 begin
@@ -273,13 +273,13 @@ begin
     end;
 end;
 
-function TGCustomGraph.TIntSet.Difference(constref aValue: TIntSet): TIntSet;
+function TGSparseGraph.TIntSet.Difference(constref aValue: TIntSet): TIntSet;
 begin
   Result.Assign(Self);
   Result.Subtract(aValue);
 end;
 
-procedure TGCustomGraph.TIntSet.Intersect(constref aValue: TIntSet);
+procedure TGSparseGraph.TIntSet.Intersect(constref aValue: TIntSet);
 var
   I, Pos: SizeInt;
 begin
@@ -299,13 +299,13 @@ begin
     MakeEmpty;
 end;
 
-function TGCustomGraph.TIntSet.Intersection(constref aValue: TIntSet): TIntSet;
+function TGSparseGraph.TIntSet.Intersection(constref aValue: TIntSet): TIntSet;
 begin
   Result.Assign(Self);
   Result.Intersect(aValue);
 end;
 
-function TGCustomGraph.TIntSet.IntersectionCount(constref aValue: TIntSet): SizeInt;
+function TGSparseGraph.TIntSet.IntersectionCount(constref aValue: TIntSet): SizeInt;
 var
   I: SizeInt;
 begin
@@ -314,7 +314,7 @@ begin
     Result += Ord(Contains(I));
 end;
 
-function TGCustomGraph.TIntSet.IntersectionCount(PList: PAdjList): SizeInt;
+function TGSparseGraph.TIntSet.IntersectionCount(PList: PAdjList): SizeInt;
 var
   p: PAdjItem;
 begin
@@ -323,7 +323,7 @@ begin
     Result += Ord(Contains(p^.Destination));
 end;
 
-function TGCustomGraph.TIntSet.Remove(aValue: SizeInt): Boolean;
+function TGSparseGraph.TIntSet.Remove(aValue: SizeInt): Boolean;
 var
   I: SizeInt;
 begin
@@ -337,7 +337,7 @@ begin
   Result := False;
 end;
 
-procedure TGCustomGraph.TIntSet.Delete(aValue: SizeInt);
+procedure TGSparseGraph.TIntSet.Delete(aValue: SizeInt);
 var
   I: SizeInt;
 begin
@@ -351,37 +351,37 @@ begin
       end;
 end;
 
-procedure TGCustomGraph.TIntSet.Reverse;
+procedure TGSparseGraph.TIntSet.Reverse;
 begin
   if Count <> 0 then
     TIntHelper.Reverse(FItems[0..Pred(Count)]);
 end;
 
-{ TGCustomGraph.TSkeleton }
+{ TGSparseGraph.TSkeleton }
 
-function TGCustomGraph.TSkeleton.GetVertexCount: SizeInt;
+function TGSparseGraph.TSkeleton.GetVertexCount: SizeInt;
 begin
   Result := System.Length(FAdjLists);
 end;
 
-function TGCustomGraph.TSkeleton.GetAdjList(aIndex: SizeInt): PIntSet;
+function TGSparseGraph.TSkeleton.GetAdjList(aIndex: SizeInt): PIntSet;
 begin
   Result := @FAdjLists[aIndex];
 end;
 
-function TGCustomGraph.TSkeleton.GetDegree(aIndex: SizeInt): SizeInt;
+function TGSparseGraph.TSkeleton.GetDegree(aIndex: SizeInt): SizeInt;
 begin
   Result := FAdjLists[aIndex].Count;
 end;
 
-constructor TGCustomGraph.TSkeleton.Create(aVertCount: SizeInt; aDirected: Boolean);
+constructor TGSparseGraph.TSkeleton.Create(aVertCount: SizeInt; aDirected: Boolean);
 begin
   System.SetLength(FAdjLists, aVertCount);
   FEdgeCount := 0;
   FDirected := aDirected;
 end;
 
-constructor TGCustomGraph.TSkeleton.Create(constref s: TSkeleton);
+constructor TGSparseGraph.TSkeleton.Create(constref s: TSkeleton);
 var
   I: SizeInt;
 begin
@@ -392,7 +392,7 @@ begin
     FAdjLists[I].Assign(s.FAdjLists[I]);
 end;
 
-function TGCustomGraph.TSkeleton.ContainsEdge(aSrc, aDst: SizeInt): Boolean;
+function TGSparseGraph.TSkeleton.ContainsEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc >= 0) and (aSrc < VertexCount) then
     Result := FAdjLists[aSrc].Contains(aDst)
@@ -400,7 +400,7 @@ begin
     Result := False;
 end;
 
-function TGCustomGraph.TSkeleton.AddEdge(aSrc, aDst: SizeInt): Boolean;
+function TGSparseGraph.TSkeleton.AddEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= VertexCount) or (aDst < 0) or (aDst >= VertexCount) then
     exit(False);
@@ -413,7 +413,7 @@ begin
     end;
 end;
 
-function TGCustomGraph.TSkeleton.RemoveEdge(aSrc, aDst: SizeInt): Boolean;
+function TGSparseGraph.TSkeleton.RemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);

@@ -370,7 +370,7 @@ type
       constructor Create(aWeight: TWeight; aSource: SizeInt);
     end;
 
-    TGraph        = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TGraph        = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
     TEstimate     = function(constref aSrc, aDst: TVertex): TWeight;
     TPairHeap     = specialize TGPairHeapMin<TWeightItem>;
     TBinHeap      = specialize TGBinHeapMin<TWeightItem>;
@@ -532,7 +532,7 @@ type
   public
   type
     TWriteDirection = (wdTopToBottom, wdLeftToWrite);
-    TGraph          = specialize TGCustomGraph<TVertex, TEdgeData, TEqRel>;
+    TGraph          = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
     TOnStartWrite   = function(aGraph: TGraph): utf8string of object;
     TOnWriteVertex  = function(aGraph: TGraph; aIndex: SizeInt): utf8string of object;
     TOnWriteEdge    = function(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string of object;
