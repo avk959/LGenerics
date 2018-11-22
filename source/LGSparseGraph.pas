@@ -174,7 +174,7 @@ type
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
   generic TGSparseGraph<TVertex, TEdgeData, TEqRel> = class abstract
   protected
-    {$I CustGraphBitHelpH.inc}
+    {$I SparseGraphBitHelpH.inc}
   public
   type
     TSpecEdgeData  = TEdgeData;
@@ -205,7 +205,7 @@ type
     TAdjItemEnumerator = TAdjList.TEnumerator;
     TAdjEnumArrayEx    = array of TAdjItemEnumerator;
 
-    {$I CustGraphIntSetH.inc}
+    {$I SparseGraphIntSetH.inc}
 
     TNode = record
       Hash,
@@ -498,7 +498,7 @@ type
     property OnStreamWriteData: TOnWriteData read FOnWriteData write FOnWriteData;
   end;
 
-  {$I CustGraphHelpH.inc}
+  {$I SparseGraphHelpH.inc}
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -759,7 +759,7 @@ begin
     Result := False;
 end;
 
-{$I CustGraphBitHelp.inc}
+{$I SparseGraphBitHelp.inc}
 
 { TGSparseGraph.TAdjacencyMatrix }
 
@@ -789,7 +789,7 @@ begin
     raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
 end;
 
-{$I CustGraphIntSet.inc}
+{$I SparseGraphIntSet.inc}
 
 { TGSparseGraph.TNode }
 
