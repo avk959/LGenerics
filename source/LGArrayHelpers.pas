@@ -851,7 +851,7 @@ type
   generic TGNumArrayHelper<T> = class(specialize TGBaseTypArrayHelper<T>)
   private
   type
-    TRangeBounds = record
+    TLoopData = record
       First,
       Last,
       Step: T;
@@ -859,34 +859,32 @@ type
     end;
 
     TRangeEnumerator = record
-    private
+    strict private
       FCurrent,
       FLast,
       FStep: T;
-      FInCycle: Boolean;
+      FInLoop: Boolean;
     public
-      constructor Create(constref aBounds: TRangeBounds);
+      constructor Create(constref aData: TLoopData);
       function MoveNext: Boolean; inline;
       property Current: T read FCurrent;
     end;
 
     TDownRangeEnumerator = record
-    private
+    strict private
       FCurrent,
       FLast,
       FStep: T;
-      FInCycle: Boolean;
+      FInLoop: Boolean;
     public
-      constructor Create(constref aBounds: TRangeBounds);
+      constructor Create(constref aData: TLoopData);
       function MoveNext: Boolean; inline;
       property Current: T read FCurrent;
     end;
 
-  public
-  type
     TRange = record
     strict private
-      FBounds: TRangeBounds;
+      FData: TLoopData;
     public
       constructor Create(aFirst, aLast, aStep: T);
       function GetEnumerator: TRangeEnumerator; inline;
@@ -894,16 +892,21 @@ type
 
     TDownRange = record
     strict private
-      FBounds: TRangeBounds;
+      FData: TLoopData;
     public
       constructor Create(aFirst, aLast, aStep: T);
       function GetEnumerator: TDownRangeEnumerator; inline;
     end;
+
   public
-  { enumerates values in range from aFrom to aTo, aFrom <= aTo; aStep must be positive }
-    class function Range(aFrom, aTo: T; aStep: T = T(1)): TRange; static; inline;
-  { enumerates values in range from aFrom down to aTo, aFrom >= aTo; aStep must be positive }
-    class function DownRange(aFrom, aTo: T; aStep: T = T(1)): TDownRange; static; inline;
+  { loop from aStart to aFinal with step aStep;
+    if aStep > T(0) then iteration count = Max(0, Int((aFinal - aStart + aStep)/aStep)),
+    otherwise 0 }
+    class function Range(aStart, aFinal: T; aStep: T = T(1)): TRange; static; inline;
+  { loop from aStart down to aFinal with step aStep;
+    if aStep > T(0) then iteration count = Max(0, Int((aStart - aFinal + aStep)/aStep)),
+    otherwise 0 }
+    class function DownRange(aStart, aFinal: T; aStep: T = T(1)): TDownRange; static; inline;
   end;
 
   { TGOrdinalArrayHelper: for ordinal types only }
@@ -9147,9 +9150,9 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
-{ TGNumArrayHelper.TRangeBounds }
+{ TGNumArrayHelper.TLoopData }
 
-constructor TGNumArrayHelper.TRangeBounds.Create(aFirst, aLast, aStep: T);
+constructor TGNumArrayHelper.TLoopData.Create(aFirst, aLast, aStep: T);
 begin
   First := aFirst;
   Last := aLast;
@@ -9158,17 +9161,17 @@ end;
 
 { TGNumArrayHelper.TRangeEnumerator }
 
-constructor TGNumArrayHelper.TRangeEnumerator.Create(constref aBounds: TRangeBounds);
+constructor TGNumArrayHelper.TRangeEnumerator.Create(constref aData: TLoopData);
 begin
-  FCurrent := aBounds.First;
-  FLast := aBounds.Last;
-  FStep := aBounds.Step;
-  FInCycle := False;
+  FCurrent := aData.First;
+  FLast := aData.Last;
+  FStep := aData.Step;
+  FInLoop := False;
 end;
 
 function TGNumArrayHelper.TRangeEnumerator.MoveNext: Boolean;
 begin
-  if FInCycle then
+  if FInLoop then
     begin
       Result := FLast - FCurrent >= FStep;
       if Result then
@@ -9177,23 +9180,23 @@ begin
   else
     begin
       Result := (FCurrent <= FLast) and (FStep > T(0));
-      FInCycle := True;
+      FInLoop := True;
     end;
 end;
 
 { TGNumArrayHelper.TDownRangeEnumerator }
 
-constructor TGNumArrayHelper.TDownRangeEnumerator.Create(constref aBounds: TRangeBounds);
+constructor TGNumArrayHelper.TDownRangeEnumerator.Create(constref aData: TLoopData);
 begin
-  FCurrent := aBounds.First;
-  FLast := aBounds.Last;
-  FStep := aBounds.Step;
-  FInCycle := False;
+  FCurrent := aData.First;
+  FLast := aData.Last;
+  FStep := aData.Step;
+  FInLoop := False;
 end;
 
 function TGNumArrayHelper.TDownRangeEnumerator.MoveNext: Boolean;
 begin
-  if FInCycle then
+  if FInLoop then
     begin
       Result := FCurrent - FLast >= FStep;
       if Result then
@@ -9202,7 +9205,7 @@ begin
   else
     begin
       Result := (FCurrent >= FLast) and (FStep > T(0));
-      FInCycle := True;
+      FInLoop := True;
     end;
 end;
 
@@ -9210,34 +9213,36 @@ end;
 
 constructor TGNumArrayHelper.TRange.Create(aFirst, aLast, aStep: T);
 begin
-  FBounds := TRangeBounds.Create(aFirst, aLast, aStep);
+  FData := TLoopData.Create(aFirst, aLast, aStep);
 end;
 
 function TGNumArrayHelper.TRange.GetEnumerator: TRangeEnumerator;
 begin
-  Result := TRangeEnumerator.Create(FBounds);
+  Result := TRangeEnumerator.Create(FData);
 end;
 
 { TGNumArrayHelper.TDownRange }
 
 constructor TGNumArrayHelper.TDownRange.Create(aFirst, aLast, aStep: T);
 begin
-  FBounds := TRangeBounds.Create(aFirst, aLast, aStep);
+  FData := TLoopData.Create(aFirst, aLast, aStep);
 end;
 
 function TGNumArrayHelper.TDownRange.GetEnumerator: TDownRangeEnumerator;
 begin
-  Result := TDownRangeEnumerator.Create(FBounds);
+  Result := TDownRangeEnumerator.Create(FData);
 end;
 
-class function TGNumArrayHelper.Range(aFrom, aTo: T; aStep: T): TRange;
+{ TGNumArrayHelper }
+
+class function TGNumArrayHelper.Range(aStart, aFinal: T; aStep: T): TRange;
 begin
-  Result := TRange.Create(aFrom, aTo, aStep);
+  Result := TRange.Create(aStart, aFinal, aStep);
 end;
 
-class function TGNumArrayHelper.DownRange(aFrom, aTo: T; aStep: T): TDownRange;
+class function TGNumArrayHelper.DownRange(aStart, aFinal: T; aStep: T): TDownRange;
 begin
-  Result := TDownRange.Create(aFrom, aTo, aStep);
+  Result := TDownRange.Create(aStart, aFinal, aStep);
 end;
 
 { TGOrdinalArrayHelper }
