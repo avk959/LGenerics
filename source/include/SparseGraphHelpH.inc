@@ -18,12 +18,12 @@
 *****************************************************************************}
 
 type
-
   TIntArrayHelper = type helper for TIntArray
   private
     function  GetLenght: SizeInt; inline;
     procedure SetLength(aValue: SizeInt); inline;
   public
+    function Copy: TIntArray; inline;
     property Length: SizeInt read GetLenght write SetLength;
   end;
 
@@ -319,7 +319,8 @@ type
     class constructor Init;
     class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
     class procedure Fill(var a: TWeightArray; aValue: TWeight); static;
-    class function  wMax(L, R: TWeight): TWeight; static;
+    class function  wMax(L, R: TWeight): TWeight; static; inline;
+    class function  wMin(L, R: TWeight): TWeight; static; inline;
     class function  ExtractCycle(aRoot, aLen: SizeInt; constref aTree: TIntArray): TIntArray; static;
 
   public
@@ -407,46 +408,72 @@ type
       function  MaxWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
     end;
 
-  { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly;
-    copies graph into internal representation }
-  TBfmt = record
-  strict private
-  type
-    PNode  = ^TNode;
-    PArc   = ^TArc;
+    { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly;
+      copies graph into internal representation }
+    TBfmt = record
+    strict private
+    type
+      PNode  = ^TNode;
+      PArc   = ^TArc;
 
-    TArc = record
-      Target: PNode;       // pointer to target node
-      Weight: TWeight;
-      constructor Create(aTarget: PNode; aWeight: TWeight);
+      TArc = record
+        Target: PNode;       // pointer to target node
+        Weight: TWeight;
+        constructor Create(aTarget: PNode; aWeight: TWeight);
+      end;
+
+      TNode = record
+      private
+        FirstArc: PArc;      // pointer to first incident arc
+        Weight: TWeight;
+        TreePrev,
+        TreeNext,
+        Parent: PNode;
+        Level: SizeInt;
+      end;
+
+    public
+      Nodes: array of TNode;
+    strict private
+      FArcs: array of TArc;
+      FQueue: array of PNode;
+      FInQueue,
+      FActive: TGraph.TBitVector;
+      FGraph: TGraph;
+      FNodeCount: SizeInt;
+      procedure CopyGraph(aDirected: Boolean);
+      procedure SsspInit(aSrc: SizeInt);
+    public
+      constructor Create(aGraph: TGraph; aDirected: Boolean);
+      function  IndexOf(aNode: PNode): SizeInt; inline;
+      procedure Sssp(aSrc: SizeInt);
     end;
 
-    TNode = record
-    private
-      FirstArc: PArc;      // pointer to first incident arc
-      Weight: TWeight;
-      TreePrev,
-      TreeNext,
-      Parent: PNode;
-      Level: SizeInt;
+    { TExactTsp:  branch and bound exact TSP algorithm;
+      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"}
+    TExactTsp = record
+    strict private
+      FMatrix: TWeightMatrix;
+      FAheadTree,
+      FBackTree,
+      FCurrTour,
+      FBestTour: TIntArray;
+      FCurrWeight,
+      FBestWeight: TWeight;
+      FMatrixSize: SizeInt;
+      FStartTime: TDateTime;
+      FTimeOut: Integer;
+      FCancelled: Boolean;
+      procedure Init(constref m: TWeightMatrix; aTimeOut: Integer);
+      function  TimeOut: Boolean; inline;
+      function  Reduce(constref aRow, aCol: TIntArray; var aRowRed, aColRed: TWeightArray;
+                aSize: SizeInt): TWeight;
+      function  SelectBest(constref aRow, aCol: TIntArray; out aRowIdx, aColIdx: SizeInt;
+                aSize: SizeInt): TWeight;
+      procedure Search(aTourLen: SizeInt; aTourWeight: TWeight; constref aRow, aCol: TIntArray);
+    public
+      function Execute(constref m: TWeightMatrix; aTimeOut: Integer;out w: TWeight; out aExact: Boolean): TIntArray;
     end;
-
-  public
-    Nodes: array of TNode;
-  strict private
-    FArcs: array of TArc;
-    FQueue: array of PNode;
-    FInQueue,
-    FActive: TGraph.TBitVector;
-    FGraph: TGraph;
-    FNodeCount: SizeInt;
-    procedure CopyGraph(aDirected: Boolean);
-    procedure SsspInit(aSrc: SizeInt);
-  public
-    constructor Create(aGraph: TGraph; aDirected: Boolean);
-    function  IndexOf(aNode: PNode): SizeInt; inline;
-    procedure Sssp(aSrc: SizeInt);
-  end;
 
   { returns True if aMatch is maximal matching }
     class function  IsMaxMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean; static;
@@ -509,7 +536,7 @@ type
   { returns total weight of TS tour specified of aTour;
     warning: does not checks not matrix nor tour }
     class function  TotalTourWeight(constref m: TWeightMatrix; constref aTour: TIntArray): TWeight; static;
-  { cyclic shifts aTour so that element aSrc becomes the first;
+  { cyclic shifts path aTour so that element aSrc becomes the first;
     warning: does not checks if aSrc exist in aTour }
     class procedure NormalizeTour(var aTour: TIntArray; aSrc: SizeInt); static;
   { 2-opt local search algorithm for the traveling salesman problem;
@@ -527,7 +554,7 @@ type
     class property  NegInfWeight: TWeight read CFNegInfWeight;
   end;
 
-  { TGCustomDotWriter: basic writer into Graphviz dot format }
+  { TGCustomDotWriter: abstract writer into Graphviz dot format }
   generic TGCustomDotWriter<TVertex, TEdgeData, TEqRel> = class abstract
   public
   type

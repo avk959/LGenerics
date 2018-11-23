@@ -632,6 +632,11 @@ type
   { greedy approach for Travelling Salesman problem;
     best of nearest neighbour + 2-opt local search starting from every vertex }
     class function TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+  { exact branch and bound approach for Travelling Salesman problem;
+    aTimeOut specifies the timeout in seconds; at the end of the timeout,
+    the best recent solution will be returned, and aExact will be set to False }
+    class function TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
+                         aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
   end;
 
   TRealEdge = record
@@ -4551,6 +4556,16 @@ begin
     raise EGraphError.Create(SENonSquareInputMatrix);
   Result := TWeightHelper.GreedyTspNn2Opt(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
+end;
+
+class function TGWeightedGraph.TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
+  aTimeOut: Integer): TIntArray;
+var
+  Helper: TWeightHelper.TExactTsp;
+begin
+  if not TWeightHelper.IsSquareMatrix(m) then
+    raise EGraphError.Create(SENonSquareInputMatrix);
+  Result := Helper.Execute(m, aTimeOut, aWeight, aExact);
 end;
 
 { TRealEdge }
