@@ -3563,7 +3563,7 @@ begin
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TExactTspBB.Reduce(constref aRow, aCol: TIntArray; var aRowRed, aColRed: TWeightArray;
+function TGWeightHelper.TExactTspBB.Reduce(constref aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray;
   aSize: SizeInt): TWeight;
 var
   I, J: SizeInt;
@@ -3575,12 +3575,12 @@ begin
     begin
       MinWeight := Inf;
       for J := 0 to Pred(aSize) do
-        MinWeight := wMin(MinWeight, FMatrix[aRow[I], aCol[J]]);
+        MinWeight := wMin(MinWeight, FMatrix[aRows[I], aCols[J]]);
       if MinWeight > 0 then
         begin
           for J := 0 to Pred(aSize) do
-            if FMatrix[aRow[I], aCol[J]] < Inf then
-              FMatrix[aRow[I], aCol[J]] -= MinWeight;
+            if FMatrix[aRows[I], aCols[J]] < Inf then
+              FMatrix[aRows[I], aCols[J]] -= MinWeight;
           Result += MinWeight;
         end;
       aRowRed[I] := MinWeight;
@@ -3589,19 +3589,19 @@ begin
     begin
       MinWeight := Inf;
       for I := 0 to Pred(aSize) do
-        MinWeight := wMin(MinWeight, FMatrix[aRow[I], aCol[J]]);
+        MinWeight := wMin(MinWeight, FMatrix[aRows[I], aCols[J]]);
       if MinWeight > 0 then
         begin
           for I := 0 to Pred(aSize) do
-            if FMatrix[aRow[I], aCol[J]] < Inf then
-              FMatrix[aRow[I], aCol[J]] -= MinWeight;
+            if FMatrix[aRows[I], aCols[J]] < Inf then
+              FMatrix[aRows[I], aCols[J]] -= MinWeight;
           Result += MinWeight;
         end;
       aColRed[J] := MinWeight;
     end;
 end;
 
-function TGWeightHelper.TExactTspBB.SelectBest(constref aRow, aCol: TIntArray; out aRowIdx, aColIdx: SizeInt;
+function TGWeightHelper.TExactTspBB.SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: SizeInt;
   aSize: SizeInt): TWeight;
 var
   I, J, K, ZeroCount: SizeInt;
@@ -3611,24 +3611,24 @@ begin
   Inf := InfWeight;
   for I := 0 to Pred(aSize) do
     for J := 0 to Pred(aSize) do
-      if FMatrix[aRow[I], aCol[J]] = 0 then
+      if FMatrix[aRows[I], aCols[J]] = 0 then
         begin
           MinInRow := Inf;
           ZeroCount := 0;
           for K := 0 to Pred(aSize) do
-            if FMatrix[aRow[I], aCol[K]] = 0 then
+            if FMatrix[aRows[I], aCols[K]] = 0 then
               Inc(ZeroCount)
             else
-              MinInRow := wMin(MinInRow, FMatrix[aRow[I], aCol[K]]);
+              MinInRow := wMin(MinInRow, FMatrix[aRows[I], aCols[K]]);
           if ZeroCount > 1 then
             MinInRow := 0;
           MinInCol := Inf;
           ZeroCount := 0;
           for K := 0 to Pred(aSize) do
-            if FMatrix[aRow[K], aCol[J]] = 0 then
+            if FMatrix[aRows[K], aCols[J]] = 0 then
               Inc(ZeroCount)
             else
-              MinInCol := wMin(MinInCol, FMatrix[aRow[K], aCol[J]]);
+              MinInCol := wMin(MinInCol, FMatrix[aRows[K], aCols[J]]);
           if ZeroCount > 1 then
             MinInCol := 0;
           if MinInRow + MinInCol > Result then
@@ -3640,81 +3640,81 @@ begin
         end;
 end;
 
-procedure TGWeightHelper.TExactTspBB.Search(aTourLen: SizeInt; aTourWeight: TWeight; constref aRow, aCol: TIntArray);
+procedure TGWeightHelper.TExactTspBB.Search(aLen: SizeInt; aWeight: TWeight; constref aRows, aCols: TIntArray);
 var
-  NewRow, NewCol: TIntArray;
+  NewRows, NewCols: TIntArray;
   RowReduce, ColReduce: TWeightArray;
   I, J, Row, Col, FirstRow, LastCol, Size: Integer;
-  Inf, LowerBound, SaveElem: TWeight;
+  Inf, LowBound, SaveElem: TWeight;
 begin
   if TimeOut then
     exit;
-  Size := FMatrixSize - aTourLen;
+  Size := FMatrixSize - aLen;
   RowReduce := CreateWeightArrayZ(Size);
   ColReduce := CreateWeightArrayZ(Size);
-  aTourWeight += Reduce(aRow, aCol, RowReduce, ColReduce, Size);
+  aWeight += Reduce(aRows, aCols, RowReduce, ColReduce, Size);
   Inf := InfWeight;
-  if aTourWeight < FCurrWeight then
-     if aTourLen = (FMatrixSize - 2) then
+  if aWeight < FCurrWeight then
+     if aLen = (FMatrixSize - 2) then
        begin
          FCurrTour := FAheadTree.Copy;
-         J := Ord(Boolean(FMatrix[aRow[0], aCol[0]] <> Inf));
-         FCurrTour[aRow[0]] := aCol[1 - J];
-         FCurrTour[aRow[1]] := aCol[J];
-         FCurrWeight := aTourWeight;
+         J := Ord(Boolean(FMatrix[aRows[0], aCols[0]] <> Inf));
+         FCurrTour[aRows[0]] := aCols[1 - J];
+         FCurrTour[aRows[1]] := aCols[J];
+         FCurrWeight := aWeight;
        end
      else
        begin
-         LowerBound := aTourWeight + SelectBest(aRow, aCol, Row, Col, Size);
-         LastCol := aCol[Col];
-         FirstRow := aRow[Row];
-         FAheadTree[aRow[Row]] := LastCol;
-         FBackTree[aCol[Col]] := FirstRow;
+         LowBound := aWeight + SelectBest(aRows, aCols, Row, Col, Size);
+         LastCol := aCols[Col];
+         FirstRow := aRows[Row];
+         FAheadTree[aRows[Row]] := LastCol;
+         FBackTree[aCols[Col]] := FirstRow;
          while FAheadTree[LastCol] <> NULL_INDEX do
            LastCol := FAheadTree[LastCol];
          while FBackTree[FirstRow] <> NULL_INDEX do
            FirstRow := FBackTree[FirstRow];
          SaveElem := FMatrix[LastCol, FirstRow];
          FMatrix[LastCol, FirstRow] := Inf;
-         NewRow := aRow.Copy;
-         Delete(NewRow, Row, 1);  // remove Row
-         NewCol := aCol.Copy;
-         Delete(NewCol, Col, 1);  // remove Col
+         NewRows := aRows.Copy;
+         Delete(NewRows, Row, 1);  // remove Row
+         NewCols := aCols.Copy;
+         Delete(NewCols, Col, 1);  // remove Col
          ///////////////
-         Search(Succ(aTourLen), aTourWeight, NewRow, NewCol);
+         Search(Succ(aLen), aWeight, NewRows, NewCols);
          /////////////// restore values
          FMatrix[LastCol, FirstRow] := SaveElem; //
-         FBackTree[aCol[Col]] := NULL_INDEX;
-         FAheadTree[aRow[Row]] := NULL_INDEX;
-         NewRow := nil;
-         NewCol := nil;
-         if LowerBound < FCurrWeight then
+         FBackTree[aCols[Col]] := NULL_INDEX;
+         FAheadTree[aRows[Row]] := NULL_INDEX;
+         NewRows := nil;
+         NewCols := nil;
+         if LowBound < FCurrWeight then
            begin
-             FMatrix[aRow[Row], aCol[Col]] := Inf;
+             FMatrix[aRows[Row], aCols[Col]] := Inf;
              //////////
-             Search(aTourLen, aTourWeight, aRow, aCol);
+             Search(aLen, aWeight, aRows, aCols);
              //////////
-             FMatrix[aRow[Row], aCol[Col]] := 0;
+             FMatrix[aRows[Row], aCols[Col]] := 0;
            end;
        end;
   for I := 0 to Pred(Size) do   // restore matrix
      for J := 0 to Pred(Size) do
-       if FMatrix[aRow[I], aCol[J]] < Inf then
-         FMatrix[aRow[I], aCol[J]] += RowReduce[I] + ColReduce[J];
+       if FMatrix[aRows[I], aCols[J]] < Inf then
+         FMatrix[aRows[I], aCols[J]] += RowReduce[I] + ColReduce[J];
 end;
 
 function TGWeightHelper.TExactTspBB.Execute(constref m: TWeightMatrix; aTimeOut: Integer; out w: TWeight;
   out aExact: Boolean): TIntArray;
 var
-  Col, Row: TIntArray;
+  Cols, Rows: TIntArray;
   I, J: SizeInt;
 begin
   Init(m, aTimeOut);
   if not FCancelled then
     begin
-      Row := TIntHelper.CreateRange(0, Pred(FMatrixSize));
-      Col := Row.Copy;
-      Search(0, 0, Row, Col);
+      Rows := TIntHelper.CreateRange(0, Pred(FMatrixSize));
+      Cols := Rows.Copy;
+      Search(0, 0, Rows, Cols);
     end;
   if FCurrWeight < FBestWeight then
     begin
@@ -4736,10 +4736,10 @@ end;
 
 class function TGWeightHelper.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 var
-  Tour, Cycle: TIntArray;
+  Tour, CycleTree: TIntArray;
   Weights: TWeightArray;
   Unvisit: TBoolVector;
-  Len, I, J, K, L, R, Curr, Next, Farthest: SizeInt;
+  Len, I, J, K, Source, Target, Curr, Next, Farthest: SizeInt;
   Inf, NegInf, InsW, MaxW, CurrW, TotalW: TWeight;
 begin
   Result := nil;
@@ -4748,11 +4748,11 @@ begin
   NegInf := NegInfWeight;
   aWeight := Inf;
   Tour.Length := Succ(Len);
-  Cycle.Length := Len;
+  CycleTree.Length := Len;
   for K := 0 to Pred(Len) do
     begin
       Unvisit.InitRange(Len);
-      Cycle[K] := K;
+      CycleTree[K] := K;
       Unvisit[K] := False;
       Weights := System.Copy(m[K]);
       TotalW := 0;
@@ -4769,18 +4769,18 @@ begin
           Curr := K;
           for J := 0 to I do
             begin
-              Next := Cycle[Curr];
+              Next := CycleTree[Curr];
               CurrW := m[Curr, Farthest] + m[Farthest, Next] - m[Curr, Next];
               if CurrW < InsW then
                 begin
                   InsW := CurrW;
-                  L := Curr;
-                  R := Next;
+                  Source := Curr;
+                  Target := Next;
                 end;
               Curr := Next;
             end;
-          Cycle[Farthest] := R;
-          Cycle[L] := Farthest;
+          CycleTree[Farthest] := Target;
+          CycleTree[Source] := Farthest;
           TotalW += InsW;
           Unvisit[Farthest] := False;
           MaxW := NegInf;
@@ -4800,7 +4800,7 @@ begin
       for I := 0 to Pred(Len) do
         begin
           Tour[I] := J;
-          J := Cycle[J];
+          J := CycleTree[J];
         end;
       Tour[Len] := J;
       TotalW += m[Tour[Pred(Len)], J];
