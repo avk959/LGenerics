@@ -4544,6 +4544,7 @@ end;
 
 class function TGWeightedGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
+  //todo: check for symmetric?
   if not TWeightHelper.IsSquareMatrix(m) then
     raise EGraphError.Create(SENonSquareInputMatrix);
   Result := TWeightHelper.GreedyTsp(m, aWeight);
@@ -4552,6 +4553,7 @@ end;
 
 class function TGWeightedGraph.TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
+  //todo: check for symmetric?
   if not TWeightHelper.IsSquareMatrix(m) then
     raise EGraphError.Create(SENonSquareInputMatrix);
   Result := TWeightHelper.GreedyTspNn2Opt(m, aWeight);
@@ -4563,6 +4565,7 @@ class function TGWeightedGraph.TspBB(constref m: TWeightMatrix; out aWeight: TWe
 var
   Helper: TWeightHelper.TExactTspBB;
 begin
+  //todo: check for symmetric?
   if not TWeightHelper.IsSquareMatrix(m) then
     raise EGraphError.Create(SENonSquareInputMatrix);
   Result := Helper.Execute(m, aTimeOut, aWeight, aExact);
