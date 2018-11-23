@@ -449,9 +449,9 @@ type
       procedure Sssp(aSrc: SizeInt);
     end;
 
-    { TExactTsp:  branch and bound exact TSP algorithm;
+    { TExactTspBB:  branch and bound exact TSP algorithm;
       Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"}
-    TExactTsp = record
+    TExactTspBB = record
     strict private
       FMatrix: TWeightMatrix;
       FAheadTree,

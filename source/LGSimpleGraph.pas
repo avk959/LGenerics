@@ -4561,7 +4561,7 @@ end;
 class function TGWeightedGraph.TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
   aTimeOut: Integer): TIntArray;
 var
-  Helper: TWeightHelper.TExactTsp;
+  Helper: TWeightHelper.TExactTspBB;
 begin
   if not TWeightHelper.IsSquareMatrix(m) then
     raise EGraphError.Create(SENonSquareInputMatrix);

@@ -3536,9 +3536,9 @@ begin
     end;
 end;
 
-{ TGWeightHelper.TExactTsp }
+{ TGWeightHelper.TExactTspBB }
 
-procedure TGWeightHelper.TExactTsp.Init(constref m: TWeightMatrix; aTimeOut: Integer);
+procedure TGWeightHelper.TExactTspBB.Init(constref m: TWeightMatrix; aTimeOut: Integer);
 var
   I: SizeInt;
   Inf: TWeight;
@@ -3557,13 +3557,13 @@ begin
   FCancelled := False;
 end;
 
-function TGWeightHelper.TExactTsp.TimeOut: Boolean;
+function TGWeightHelper.TExactTspBB.TimeOut: Boolean;
 begin
   FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TExactTsp.Reduce(constref aRow, aCol: TIntArray; var aRowRed, aColRed: TWeightArray;
+function TGWeightHelper.TExactTspBB.Reduce(constref aRow, aCol: TIntArray; var aRowRed, aColRed: TWeightArray;
   aSize: SizeInt): TWeight;
 var
   I, J: SizeInt;
@@ -3601,7 +3601,7 @@ begin
     end;
 end;
 
-function TGWeightHelper.TExactTsp.SelectBest(constref aRow, aCol: TIntArray; out aRowIdx, aColIdx: SizeInt;
+function TGWeightHelper.TExactTspBB.SelectBest(constref aRow, aCol: TIntArray; out aRowIdx, aColIdx: SizeInt;
   aSize: SizeInt): TWeight;
 var
   I, J, K, ZeroCount: SizeInt;
@@ -3640,7 +3640,7 @@ begin
         end;
 end;
 
-procedure TGWeightHelper.TExactTsp.Search(aTourLen: SizeInt; aTourWeight: TWeight; constref aRow, aCol: TIntArray);
+procedure TGWeightHelper.TExactTspBB.Search(aTourLen: SizeInt; aTourWeight: TWeight; constref aRow, aCol: TIntArray);
 var
   NewRow, NewCol: TIntArray;
   RowReduce, ColReduce: TWeightArray;
@@ -3702,7 +3702,7 @@ begin
         FMatrix[aRow[I], aCol[J]] += RowReduce[I] + ColReduce[J];
 end;
 
-function TGWeightHelper.TExactTsp.Execute(constref m: TWeightMatrix; aTimeOut: Integer; out w: TWeight;
+function TGWeightHelper.TExactTspBB.Execute(constref m: TWeightMatrix; aTimeOut: Integer; out w: TWeight;
   out aExact: Boolean): TIntArray;
 var
   Col, Row: TIntArray;
