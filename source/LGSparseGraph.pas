@@ -3699,7 +3699,8 @@ begin
        end;
   for I := 0 to Pred(Size) do   // restore matrix
      for J := 0 to Pred(Size) do
-        FMatrix[aRow[I], aCol[J]] += RowReduce[I] + ColReduce[J];
+       if FMatrix[aRow[I], aCol[J]] < Inf then
+         FMatrix[aRow[I], aCol[J]] += RowReduce[I] + ColReduce[J];
 end;
 
 function TGWeightHelper.TExactTspBB.Execute(constref m: TWeightMatrix; aTimeOut: Integer; out w: TWeight;
@@ -3726,6 +3727,8 @@ begin
           J := FCurrTour[J];
         end;
       Result[FMatrixSize] := J;
+      if FCancelled then
+        Tsp2Opt(m, Result, w);
     end
   else
     begin
@@ -3785,8 +3788,8 @@ begin
             end;
           ftComp:
             begin
-              PComp(@CFNegInfWeight)^ := Comp(-2E64+1);
-              PComp(@CFInfWeight)^ := Comp(2E63-1);
+              PComp(@CFNegInfWeight)^ := Comp(-9223372036854775808);
+              PComp(@CFInfWeight)^ := Comp(9223372036854775807);
             end;
           ftCurr:
             begin
@@ -3795,10 +3798,10 @@ begin
             end;
         end
     else
-      raise EGraphError(SEUnknownWeight);
+      raise EGraphError(SEInternalDataInconsist);
     end
   else
-    raise EGraphError(SEUndefinedTypeInfo);
+    raise EGraphError(SEInternalDataInconsist);
 {$ELSE}
 begin
   CFInfWeight := TWeight.MaxValue;
