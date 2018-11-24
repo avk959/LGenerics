@@ -552,8 +552,8 @@ type
     class property  NegInfWeight: TWeight read CFNegInfWeight;
   end;
 
-  { TGCustomDotWriter: abstract writer into Graphviz dot format }
-  generic TGCustomDotWriter<TVertex, TEdgeData, TEqRel> = class abstract
+  { TGAbstractDotWriter: abstract writer into Graphviz dot format }
+  generic TGAbstractDotWriter<TVertex, TEdgeData, TEqRel> = class abstract
   public
   type
     TWriteDirection = (wdTopToBottom, wdLeftToWrite);

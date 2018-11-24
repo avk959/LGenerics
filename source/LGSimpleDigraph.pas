@@ -246,7 +246,7 @@ type
   end;
 
   generic TGDigraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
-    specialize TGCustomDotWriter<TVertex, TEdgeData, TEqRel>)
+    specialize TGAbstractDotWriter<TVertex, TEdgeData, TEqRel>)
   protected
     function Graph2Dot(aGraph: TGraph): utf8string; override;
   public

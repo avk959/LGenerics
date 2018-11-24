@@ -454,7 +454,7 @@ type
   end;
 
   generic TGraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
-    specialize TGCustomDotWriter<TVertex, TEdgeData, TEqRel>)
+    specialize TGAbstractDotWriter<TVertex, TEdgeData, TEqRel>)
   protected
   type
     TSimpleGraph = specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>;

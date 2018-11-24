@@ -4861,14 +4861,14 @@ begin
     end;
 end;
 
-{ TGCustomDotWriter }
+{ TGAbstractDotWriter }
 
-function TGCustomDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
   Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
 end;
 
-procedure TGCustomDotWriter.SaveToStream(aGraph: TGraph; aStream: TStream);
+procedure TGAbstractDotWriter.SaveToStream(aGraph: TGraph; aStream: TStream);
 var
   Dot: utf8string;
 begin
@@ -4876,7 +4876,7 @@ begin
   aStream.WriteBuffer(Pointer(Dot)^, System.Length(Dot));
 end;
 
-procedure TGCustomDotWriter.SaveToFile(aGraph: TGraph; const aFileName: string);
+procedure TGAbstractDotWriter.SaveToFile(aGraph: TGraph; const aFileName: string);
 var
   fs: TFileStream;
 begin
