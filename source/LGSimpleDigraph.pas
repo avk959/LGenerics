@@ -437,11 +437,15 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
+  { returns True if the matrix m is non-degenerate, square and does not contain negative elements }
+    class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static; inline;
   { greedy approach for Travelling Salesman problem;
-    best of farthest insertion starting from every vertex + 2-opt local search at the end }
+    best of farthest insertion starting from every vertex + 2-opt local search at the end;
+    will raise EGraphError if m is not proper matrix }
     class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { greedy approach for Travelling Salesman problem;
-    best of nearest neighbour + 2-opt local search starting from every vertex }
+    best of nearest neighbour + 2-opt local search starting from every vertex;
+    will raise EGraphError if m is not proper matrix }
     class function TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   end;
 
@@ -2745,18 +2749,21 @@ begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
 end;
 
+class function TGWeightedDiGraph.IsProperTspMatrix(constref m: TWeightMatrix): Boolean;
+begin
+  Result := TWeightHelper.IsProperTspMatrix(m);
+end;
+
 class function TGWeightedDiGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
-  if not TWeightHelper.IsSquareMatrix(m) then
-    raise EGraphError.Create(SENonSquareInputMatrix);
+  TWeightHelper.CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTsp(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
 end;
 
 class function TGWeightedDiGraph.TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
-  if not TWeightHelper.IsSquareMatrix(m) then
-    raise EGraphError.Create(SENonSquareInputMatrix);
+  TWeightHelper.CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTspNn2Opt(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
 end;

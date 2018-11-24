@@ -626,15 +626,20 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
+  { returns True if the matrix m is non-degenerate, square and does not contain negative elements }
+    class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static; inline;
   { greedy approach for Travelling Salesman problem;
-    best of farthest insertion starting from every vertex + 2-opt local search at the end }
+    best of farthest insertion starting from every vertex + 2-opt local search at the end;
+    will raise EGraphError if m is not proper matrix }
     class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { greedy approach for Travelling Salesman problem;
-    best of nearest neighbour + 2-opt local search starting from every vertex }
+    best of nearest neighbour + 2-opt local search starting from every vertex;
+    will raise EGraphError if m is not proper matrix }
     class function TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { exact branch and bound approach for Travelling Salesman problem;
     aTimeOut specifies the timeout in seconds; at the end of the timeout,
-    the best recent solution will be returned, and aExact will be set to False }
+    the best recent solution will be returned, and aExact will be set to False;
+    will raise EGraphError if m is not proper matrix }
     class function TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
                          aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
   end;
@@ -4542,11 +4547,15 @@ begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
 end;
 
+class function TGWeightedGraph.IsProperTspMatrix(constref m: TWeightMatrix): Boolean;
+begin
+  Result := TWeightHelper.IsProperTspMatrix(m);
+end;
+
 class function TGWeightedGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
   //todo: check for symmetric?
-  if not TWeightHelper.IsSquareMatrix(m) then
-    raise EGraphError.Create(SENonSquareInputMatrix);
+  TWeightHelper.CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTsp(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
 end;
@@ -4554,8 +4563,7 @@ end;
 class function TGWeightedGraph.TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
   //todo: check for symmetric?
-  if not TWeightHelper.IsSquareMatrix(m) then
-    raise EGraphError.Create(SENonSquareInputMatrix);
+  TWeightHelper.CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTspNn2Opt(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
 end;
@@ -4566,8 +4574,7 @@ var
   Helper: TWeightHelper.TExactTspBB;
 begin
   //todo: check for symmetric?
-  if not TWeightHelper.IsSquareMatrix(m) then
-    raise EGraphError.Create(SENonSquareInputMatrix);
+  TWeightHelper.CheckTspMatrix(m);
   Result := Helper.Execute(m, aTimeOut, aWeight, aExact);
 end;
 

@@ -4612,9 +4612,9 @@ begin
     end;
 end;
 
-class function TGWeightHelper.IsSquareMatrix(constref m: TWeightMatrix): Boolean;
+class function TGWeightHelper.IsProperTspMatrix(constref m: TWeightMatrix): Boolean;
 var
-  I, Size: SizeInt;
+  I, J, Size: SizeInt;
 begin
   Size := System.Length(m);
   if Size < 2 then
@@ -4622,7 +4622,27 @@ begin
   for I := 0 to Pred(Size) do
     if System.Length(m[I]) <> Size then
       exit(False);
+  for I := 0 to Pred(Size) do
+    for J := 0 to Pred(Size) do
+      if (I <> J) and (m[I, J] < 0) then
+        exit(False);
   Result := True;
+end;
+
+class procedure TGWeightHelper.CheckTspMatrix(constref m: TWeightMatrix);
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then
+    raise EGraphError.Create(SEInputMatrixDegenerate);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then
+      raise EGraphError.Create(SENonSquareInputMatrix);
+  for I := 0 to Pred(Size) do
+    for J := 0 to Pred(Size) do
+      if (I <> J) and (m[I, J] < 0) then
+        raise EGraphError.Create(SENegInputMatrix);
 end;
 
 class function TGWeightHelper.CreateAPSPMatrix(aGraph: TGraph): TApspMatrix;
