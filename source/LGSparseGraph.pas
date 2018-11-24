@@ -3563,36 +3563,37 @@ begin
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TExactTspBB.Reduce(constref aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray;
-  aSize: SizeInt): TWeight;
+function TGWeightHelper.TExactTspBB.Reduce(constref aRows, aCols: TIntArray; var aRowRed,
+  aColRed: TWeightArray): TWeight;
 var
-  I, J: SizeInt;
+  I, J, Last: SizeInt;
   Inf, MinWeight: TWeight;
 begin
   Result := 0;
+  Last := System.High(aRows);
   Inf := InfWeight;
-  for I := 0 to Pred(aSize) do  // reduce rows
+  for I := 0 to Last do  // reduce rows
     begin
       MinWeight := Inf;
-      for J := 0 to Pred(aSize) do
+      for J := 0 to Last do
         MinWeight := wMin(MinWeight, FMatrix[aRows[I], aCols[J]]);
       if MinWeight > 0 then
         begin
-          for J := 0 to Pred(aSize) do
+          for J := 0 to Last do
             if FMatrix[aRows[I], aCols[J]] < Inf then
               FMatrix[aRows[I], aCols[J]] -= MinWeight;
           Result += MinWeight;
         end;
       aRowRed[I] := MinWeight;
     end;
-  for J := 0 to Pred(aSize) do  // reduce columns
+  for J := 0 to Last do  // reduce columns
     begin
       MinWeight := Inf;
-      for I := 0 to Pred(aSize) do
+      for I := 0 to Last do
         MinWeight := wMin(MinWeight, FMatrix[aRows[I], aCols[J]]);
       if MinWeight > 0 then
         begin
-          for I := 0 to Pred(aSize) do
+          for I := 0 to Last do
             if FMatrix[aRows[I], aCols[J]] < Inf then
               FMatrix[aRows[I], aCols[J]] -= MinWeight;
           Result += MinWeight;
@@ -3601,21 +3602,22 @@ begin
     end;
 end;
 
-function TGWeightHelper.TExactTspBB.SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: SizeInt;
-  aSize: SizeInt): TWeight;
+function TGWeightHelper.TExactTspBB.SelectBest(constref aRows, aCols: TIntArray; out aRowIdx,
+  aColIdx: SizeInt): TWeight;
 var
-  I, J, K, ZeroCount: SizeInt;
+  I, J, K, ZeroCount, Last: SizeInt;
   Inf, MinInCol, MinInRow: TWeight;
 begin
   Result := NegInfWeight;
+  Last := System.High(aRows);
   Inf := InfWeight;
-  for I := 0 to Pred(aSize) do
-    for J := 0 to Pred(aSize) do
+  for I := 0 to Last do
+    for J := 0 to Last do
       if FMatrix[aRows[I], aCols[J]] = 0 then
         begin
           MinInRow := Inf;
           ZeroCount := 0;
-          for K := 0 to Pred(aSize) do
+          for K := 0 to Last do
             if FMatrix[aRows[I], aCols[K]] = 0 then
               Inc(ZeroCount)
             else
@@ -3624,7 +3626,7 @@ begin
             MinInRow := 0;
           MinInCol := Inf;
           ZeroCount := 0;
-          for K := 0 to Pred(aSize) do
+          for K := 0 to Last do
             if FMatrix[aRows[K], aCols[J]] = 0 then
               Inc(ZeroCount)
             else
@@ -3640,32 +3642,32 @@ begin
         end;
 end;
 
-procedure TGWeightHelper.TExactTspBB.Search(aLen: SizeInt; aWeight: TWeight; constref aRows, aCols: TIntArray);
+procedure TGWeightHelper.TExactTspBB.Search(aCurrWeight: TWeight; constref aRows, aCols: TIntArray);
 var
   NewRows, NewCols: TIntArray;
   RowReduce, ColReduce: TWeightArray;
-  I, J, Row, Col, FirstRow, LastCol, Size: Integer;
+  I, J, Row, Col, FirstRow, LastCol, MartixSize: Integer;
   Inf, LowBound, SaveElem: TWeight;
 begin
   if TimeOut then
     exit;
-  Size := FMatrixSize - aLen;
-  RowReduce := CreateWeightArrayZ(Size);
-  ColReduce := CreateWeightArrayZ(Size);
-  aWeight += Reduce(aRows, aCols, RowReduce, ColReduce, Size);
+  MartixSize := System.Length(aRows);
+  RowReduce := CreateWeightArrayZ(MartixSize);
+  ColReduce := CreateWeightArrayZ(MartixSize);
+  aCurrWeight += Reduce(aRows, aCols, RowReduce, ColReduce);
   Inf := InfWeight;
-  if aWeight < FUpperBound then
-     if aLen = (FMatrixSize - 2) then
+  if aCurrWeight < FUpperBound then
+     if MartixSize = 2 then
        begin
          FCurrTour := FAheadTree.Copy;
          J := Ord(Boolean(FMatrix[aRows[0], aCols[0]] <> Inf));
          FCurrTour[aRows[0]] := aCols[1 - J];
          FCurrTour[aRows[1]] := aCols[J];
-         FUpperBound := aWeight;
+         FUpperBound := aCurrWeight;
        end
      else
        begin
-         LowBound := aWeight + SelectBest(aRows, aCols, Row, Col, Size);
+         LowBound := aCurrWeight + SelectBest(aRows, aCols, Row, Col);
          LastCol := aCols[Col];
          FirstRow := aRows[Row];
          FAheadTree[aRows[Row]] := LastCol;
@@ -3681,9 +3683,9 @@ begin
          NewCols := aCols.Copy;
          Delete(NewCols, Col, 1);  // remove Col
          ///////////////
-         Search(Succ(aLen), aWeight, NewRows, NewCols);
+         Search(aCurrWeight, NewRows, NewCols);
          /////////////// restore values
-         FMatrix[LastCol, FirstRow] := SaveElem; //
+         FMatrix[LastCol, FirstRow] := SaveElem;
          FBackTree[aCols[Col]] := NULL_INDEX;
          FAheadTree[aRows[Row]] := NULL_INDEX;
          NewRows := nil;
@@ -3692,13 +3694,13 @@ begin
            begin
              FMatrix[aRows[Row], aCols[Col]] := Inf;
              //////////
-             Search(aLen, aWeight, aRows, aCols);
+             Search(aCurrWeight, aRows, aCols);
              //////////
              FMatrix[aRows[Row], aCols[Col]] := 0;
            end;
        end;
-  for I := 0 to Pred(Size) do   // restore matrix
-     for J := 0 to Pred(Size) do
+  for I := 0 to Pred(MartixSize) do   // restore matrix
+     for J := 0 to Pred(MartixSize) do
        if FMatrix[aRows[I], aCols[J]] < Inf then
          FMatrix[aRows[I], aCols[J]] += RowReduce[I] + ColReduce[J];
 end;
@@ -3714,7 +3716,7 @@ begin
     begin
       Rows := TIntHelper.CreateRange(0, Pred(FMatrixSize));
       Cols := Rows.Copy;
-      Search(0, 0, Rows, Cols);
+      Search(0, Rows, Cols);
     end;
   if FUpperBound < FInitWeight then
     begin

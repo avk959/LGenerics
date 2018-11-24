@@ -466,11 +466,9 @@ type
       FCancelled: Boolean;
       procedure Init(constref m: TWeightMatrix; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
-      function  Reduce(constref aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray;
-                aSize: SizeInt): TWeight;
-      function  SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: SizeInt;
-                aSize: SizeInt): TWeight;
-      procedure Search(aLen: SizeInt; aWeight: TWeight; constref aRows, aCols: TIntArray);
+      function  Reduce(constref aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray): TWeight;
+      function  SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: SizeInt): TWeight;
+      procedure Search(aCurrWeight: TWeight; constref aRows, aCols: TIntArray);
     public
       function Execute(constref m: TWeightMatrix; aTimeOut: Integer;out w: TWeight; out aExact: Boolean): TIntArray;
     end;
