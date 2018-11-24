@@ -3552,8 +3552,8 @@ begin
   FAheadTree := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
   FBackTree := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
   FStartTime := Now;
-  FBestTour := GreedyTspNn2Opt(m, FBestWeight);
-  FCurrWeight := FBestWeight;
+  FBestTour := GreedyTspNn2Opt(m, FInitWeight);
+  FUpperBound := FInitWeight;
   FCancelled := False;
 end;
 
@@ -3654,14 +3654,14 @@ begin
   ColReduce := CreateWeightArrayZ(Size);
   aWeight += Reduce(aRows, aCols, RowReduce, ColReduce, Size);
   Inf := InfWeight;
-  if aWeight < FCurrWeight then
+  if aWeight < FUpperBound then
      if aLen = (FMatrixSize - 2) then
        begin
          FCurrTour := FAheadTree.Copy;
          J := Ord(Boolean(FMatrix[aRows[0], aCols[0]] <> Inf));
          FCurrTour[aRows[0]] := aCols[1 - J];
          FCurrTour[aRows[1]] := aCols[J];
-         FCurrWeight := aWeight;
+         FUpperBound := aWeight;
        end
      else
        begin
@@ -3688,7 +3688,7 @@ begin
          FAheadTree[aRows[Row]] := NULL_INDEX;
          NewRows := nil;
          NewCols := nil;
-         if LowBound < FCurrWeight then
+         if LowBound < FUpperBound then
            begin
              FMatrix[aRows[Row], aCols[Col]] := Inf;
              //////////
@@ -3716,9 +3716,9 @@ begin
       Cols := Rows.Copy;
       Search(0, 0, Rows, Cols);
     end;
-  if FCurrWeight < FBestWeight then
+  if FUpperBound < FInitWeight then
     begin
-      w := FCurrWeight;
+      w := FUpperBound;
       Result{%H-}.Length := Succ(FMatrixSize);
       J := 0;
       for I := 0 to Pred(FMatrixSize) do
@@ -3732,7 +3732,7 @@ begin
     end
   else
     begin
-      w := FBestWeight;
+      w := FInitWeight;
       Result := FBestTour;
       NormalizeTour(Result, 0);
     end;

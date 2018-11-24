@@ -458,8 +458,8 @@ type
       FBackTree,
       FCurrTour,
       FBestTour: TIntArray;
-      FCurrWeight,
-      FBestWeight: TWeight;
+      FUpperBound,
+      FInitWeight: TWeight;
       FMatrixSize: SizeInt;
       FStartTime: TDateTime;
       FTimeOut: Integer;
