@@ -450,7 +450,8 @@ type
     end;
 
     { TExactTspBB:  branch and bound exact TSP algorithm;
-      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"}
+      Little, Murty, Sweeney, and Karel "An Algorithm for Traveling Salesman Problem";
+      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
     TExactTspBB = record
     strict private
       FMatrix: TWeightMatrix;

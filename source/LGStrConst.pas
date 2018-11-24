@@ -61,7 +61,9 @@ resourcestring
   SEUnexpectEol            = 'Unexpected end of line';
   SEStreamSizeExceedFmt    = 'Maximum stream size exceeded(%d)';
   SEMethodNotApplicable    = 'Method is not applicable';
+  SEEmptyInputMatrix       = 'Input matrix is empty';
   SENonSquareInputMatrix   = 'Input matrix is not square';
+  SENegInputMatrix         = 'Input matrix contains negative elements';
 
 implementation
 
