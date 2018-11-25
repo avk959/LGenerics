@@ -468,7 +468,7 @@ type
       procedure Init(constref m: TWeightMatrix; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
       function  Reduce(constref aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray): TWeight;
-      function  SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: SizeInt): TWeight;
+      function  SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: Integer): TWeight;
       procedure Search(aCurrWeight: TWeight; constref aRows, aCols: TIntArray);
     public
       function Execute(constref m: TWeightMatrix; aTimeOut: Integer;out w: TWeight; out aExact: Boolean): TIntArray;

@@ -3540,19 +3540,19 @@ end;
 
 procedure TGWeightHelper.TExactTspBB.Init(constref m: TWeightMatrix; aTimeOut: Integer);
 var
-  I: SizeInt;
+  I: Integer;
   Inf: TWeight;
 begin
   FMatrix := System.Copy(m);
   FMatrixSize := System.Length(m);
   Inf := InfWeight;
-  for I := 0 to Pred(FMatrixSize) do
-    FMatrix[I, I] := Inf;
   FTimeOut := aTimeOut and System.High(Integer);
   FAheadTree := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
   FBackTree := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
   FStartTime := Now;
   FBestTour := GreedyTspNn2Opt(m, FInitWeight);
+  for I := 0 to Pred(FMatrixSize) do
+    FMatrix[I, I] := Inf;
   FUpperBound := FInitWeight;
   FCancelled := False;
 end;
@@ -3566,7 +3566,7 @@ end;
 function TGWeightHelper.TExactTspBB.Reduce(constref aRows, aCols: TIntArray; var aRowRed,
   aColRed: TWeightArray): TWeight;
 var
-  I, J, Last: SizeInt;
+  I, J, Last: Integer;
   Inf, MinWeight: TWeight;
 begin
   Result := 0;
@@ -3603,9 +3603,9 @@ begin
 end;
 
 function TGWeightHelper.TExactTspBB.SelectBest(constref aRows, aCols: TIntArray; out aRowIdx,
-  aColIdx: SizeInt): TWeight;
+  aColIdx: Integer): TWeight;
 var
-  I, J, K, ZeroCount, Last: SizeInt;
+  I, J, K, ZeroCount, Last: Integer;
   Inf, MinInCol, MinInRow: TWeight;
 begin
   Result := NegInfWeight;
@@ -3622,7 +3622,7 @@ begin
               Inc(ZeroCount)
             else
               MinInRow := wMin(MinInRow, FMatrix[aRows[I], aCols[K]]);
-          if ZeroCount > 1 then
+          if (ZeroCount > 1) or (MinInRow = Inf) then
             MinInRow := 0;
           MinInCol := Inf;
           ZeroCount := 0;
@@ -3631,7 +3631,7 @@ begin
               Inc(ZeroCount)
             else
               MinInCol := wMin(MinInCol, FMatrix[aRows[K], aCols[J]]);
-          if ZeroCount > 1 then
+          if (ZeroCount > 1) or (MinInCol = Inf) then
             MinInCol := 0;
           if MinInRow + MinInCol > Result then
             begin
@@ -3709,7 +3709,7 @@ function TGWeightHelper.TExactTspBB.Execute(constref m: TWeightMatrix; aTimeOut:
   out aExact: Boolean): TIntArray;
 var
   Cols, Rows: TIntArray;
-  I, J: SizeInt;
+  I, J: Integer;
 begin
   Init(m, aTimeOut);
   if not FCancelled then
@@ -4745,17 +4745,17 @@ begin
       Unvisit[K] := False;
       Weights := System.Copy(m[K]);
       TotalW := 0;
-      MaxW := NegInf;
-      for J in Unvisit do
-        if Weights[J] > MaxW then
-          begin
-            MaxW := Weights[J];
-            Farthest := J;
-          end;
       for I := 0 to Len - 2 do
         begin
           InsW := Inf;
           Curr := K;
+          MaxW := NegInf;
+          for J in Unvisit do
+            if Weights[J] > MaxW then
+              begin
+                MaxW := Weights[J];
+                Farthest := J;
+              end;
           for J := 0 to I do
             begin
               Next := CycleTree[Curr];
@@ -4774,16 +4774,11 @@ begin
           Unvisit[Farthest] := False;
           MaxW := NegInf;
           for J in Unvisit do
-            begin
-              if m[Farthest, J] < Weights[J] then
-                 Weights[J] := m[Farthest, J];
-              if Weights[J] > MaxW then
-                begin
-                  MaxW := Weights[J];
-                  Next := J;
-                end;
-            end;
-          Farthest := Next;
+            if Weights[J] > MaxW then
+              begin
+                MaxW := Weights[J];
+                Next := J;
+              end;
         end;
       J := K;
       for I := 0 to Pred(Len) do
