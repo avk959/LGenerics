@@ -433,20 +433,6 @@ type
     function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
   { returns True if aMatch is perfect matching }
     function IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean; inline;
-{**********************************************************************************************************
-  some NP-hard problem utilities
-***********************************************************************************************************}
-
-  { returns True if the matrix m is non-degenerate, square and does not contain negative elements }
-    class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static; inline;
-  { greedy approach for Travelling Salesman problem;
-    best of farthest insertion starting from every vertex + 2-opt local search at the end;
-    will raise EGraphError if m is not proper matrix }
-    class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { greedy approach for Travelling Salesman problem;
-    best of nearest neighbour + 2-opt local search starting from every vertex;
-    will raise EGraphError if m is not proper matrix }
-    class function TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   end;
 
   { TGIntWeightDiGraph specializes TWeight with Int64 }
@@ -2747,25 +2733,6 @@ end;
 function TGWeightedDiGraph.IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
-end;
-
-class function TGWeightedDiGraph.IsProperTspMatrix(constref m: TWeightMatrix): Boolean;
-begin
-  Result := TWeightHelper.IsProperTspMatrix(m);
-end;
-
-class function TGWeightedDiGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
-begin
-  TWeightHelper.CheckTspMatrix(m);
-  Result := TWeightHelper.GreedyTsp(m, aWeight);
-  TWeightHelper.NormalizeTour(Result, 0);
-end;
-
-class function TGWeightedDiGraph.TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
-begin
-  TWeightHelper.CheckTspMatrix(m);
-  Result := TWeightHelper.GreedyTspNn2Opt(m, aWeight);
-  TWeightHelper.NormalizeTour(Result, 0);
 end;
 
 {$I IntDiGraphHelp.inc}
