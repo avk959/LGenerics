@@ -3688,8 +3688,8 @@ begin
          FMatrix[LastCol, FirstRow] := SaveElem;
          FBackTree[aCols[Col]] := NULL_INDEX;
          FAheadTree[aRows[Row]] := NULL_INDEX;
-         NewRows := nil;
-         NewCols := nil;
+         Finalize(NewRows);
+         Finalize(NewCols);
          if LowBound < FUpperBound then
            begin
              FMatrix[aRows[Row], aCols[Col]] := Inf;
