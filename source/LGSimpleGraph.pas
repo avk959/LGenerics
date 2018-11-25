@@ -523,6 +523,7 @@ type
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
     function CreateEdgeArray: TEdgeArray;
+    class procedure CheckTspMatrix(constref m: TWeightMatrix); static;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -4166,6 +4167,31 @@ begin
         end;
 end;
 
+class procedure TGWeightedGraph.CheckTspMatrix(constref m: TWeightMatrix);
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then
+    raise EGraphError.Create(SEInputMatrixDegenerate);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then
+      raise EGraphError.Create(SENonSquareInputMatrix);
+  for I := 0 to Pred(Size) do
+    begin
+      if m[I, I] <> 0 then
+        raise EGraphError.Create(SEInputMatrixSelfLoops);
+      for J := 0 to Pred(Size) do
+        if I <> J then
+          begin
+            if m[I, J] < 0 then
+              raise EGraphError.Create(SENegInputMatrix);
+            if (I > J) and (m[I, J] <> m[J, I]) then
+              raise EGraphError.Create(SEInputMatrixNonSymm);
+          end;
+    end;
+end;
+
 class function TGWeightedGraph.InfWeight: TWeight;
 begin
   Result := TWeightHelper.InfWeight;
@@ -4548,22 +4574,41 @@ begin
 end;
 
 class function TGWeightedGraph.IsProperTspMatrix(constref m: TWeightMatrix): Boolean;
+var
+  I, J, Size: SizeInt;
 begin
-  Result := TWeightHelper.IsProperTspMatrix(m);
+  Size := System.Length(m);
+  if Size < 2 then  // degenerate
+    exit(False);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then // non square
+      exit(False);
+  for I := 0 to Pred(Size) do
+    begin
+      if m[I, I] <> 0 then   // self loops
+        exit(False);
+      for J := 0 to Pred(Size) do
+        if I <> J then
+          begin
+            if m[I, J] < 0 then // negative element
+              exit(False);
+            if (I > J) and (m[I, J] <> m[J, I]) then // non symmetric
+              exit(False);
+          end;
+    end;
+  Result := True;
 end;
 
 class function TGWeightedGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
-  //todo: check for symmetric?
-  TWeightHelper.CheckTspMatrix(m);
+  CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTsp(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
 end;
 
 class function TGWeightedGraph.TspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
-  //todo: check for symmetric?
-  TWeightHelper.CheckTspMatrix(m);
+  CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTspNn2Opt(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
 end;
@@ -4573,8 +4618,7 @@ class function TGWeightedGraph.TspBB(constref m: TWeightMatrix; out aWeight: TWe
 var
   Helper: TWeightHelper.TExactTspBB;
 begin
-  //todo: check for symmetric?
-  TWeightHelper.CheckTspMatrix(m);
+  CheckTspMatrix(m);
   Result := Helper.Execute(m, aTimeOut, aWeight, aExact);
 end;
 

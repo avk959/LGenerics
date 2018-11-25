@@ -520,8 +520,6 @@ type
   { resizes array to length aLen and fills array with aValue }
     class procedure ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight); static;
     class function  CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix; static;
-    class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static;
-    class procedure CheckTspMatrix(constref m: TWeightMatrix); static;
   { creates square matrix, fills main diagonal with (I, ZeroWeight) and
     fills other element with corresponding weights }
     class function  CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
