@@ -656,25 +656,28 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
-  { returns True if the matrix m is non-degenerate, square and does not contain negative elements }
+  { returns True if the matrix m is nondegenerate, square, and does not contain
+    loops and negative elements }
     class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static; inline;
   { greedy approach for Travelling Salesman problem;
     best of farthest insertion starting from every vertex + 2-opt local search at the end;
-    will raise EGraphError if m is not proper matrix }
+    will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { greedy approach for Travelling Salesman problem;
     best of farthest insertion starting from every vertex + 3-opt local search at the end;
-    will raise EGraphError if m is not proper matrix }
+    will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTsp3Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { greedy approach for Travelling Salesman problem;
     best of nearest neighbour + 2-opt local search starting from every vertex;
-    will raise EGraphError if m is not proper matrix }
+    will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+  { GreedyTspNn2Opt + 3-opt local search;
+    will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTspNn23Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { exact branch and bound approach for Travelling Salesman problem;
     aTimeOut specifies the timeout in seconds; at the end of the timeout,
     the best recent solution will be returned, and aExact will be set to False;
-    will raise EGraphError if m is not proper matrix }
+    will raise EGraphError if m is not proper TSP matrix }
     class function TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
                          aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
   end;
