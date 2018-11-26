@@ -3566,8 +3566,8 @@ begin
       FUpperBound := Inf;
     end;
   FTimeOut := aTimeOut and System.High(Integer);
-  FAheadTree := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
-  FBackTree := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
+  FForwardTour := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
+  FBackTour := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
   FStartTime := Now;
   FCancelled := False;
 end;
@@ -3679,12 +3679,12 @@ begin
          LowBound := aCurrWeight + SelectBest(aRows, aCols, Row, Col);
          LastCol := aCols[Col];
          FirstRow := aRows[Row];
-         FAheadTree[aRows[Row]] := LastCol;
-         FBackTree[aCols[Col]] := FirstRow;
-         while FAheadTree[LastCol] <> NULL_INDEX do
-           LastCol := FAheadTree[LastCol];
-         while FBackTree[FirstRow] <> NULL_INDEX do
-           FirstRow := FBackTree[FirstRow];
+         FForwardTour[aRows[Row]] := LastCol;
+         FBackTour[aCols[Col]] := FirstRow;
+         while FForwardTour[LastCol] <> NULL_INDEX do
+           LastCol := FForwardTour[LastCol];
+         while FBackTour[FirstRow] <> NULL_INDEX do
+           FirstRow := FBackTour[FirstRow];
          SaveElem := FMatrix[LastCol, FirstRow];
          FMatrix[LastCol, FirstRow] := Inf;
          NewRows := aRows.Copy;
@@ -3695,8 +3695,8 @@ begin
          Search(aCurrWeight, NewRows, NewCols);
          /////////////// restore values
          FMatrix[LastCol, FirstRow] := SaveElem;
-         FBackTree[aCols[Col]] := NULL_INDEX;
-         FAheadTree[aRows[Row]] := NULL_INDEX;
+         FBackTour[aCols[Col]] := NULL_INDEX;
+         FForwardTour[aRows[Row]] := NULL_INDEX;
          Finalize(NewRows);
          Finalize(NewCols);
          if LowBound < FUpperBound then
@@ -3710,7 +3710,7 @@ begin
        end
      else
        begin
-         FBestTour := FAheadTree.Copy;
+         FBestTour := FForwardTour.Copy;
          J := Ord(Boolean(FMatrix[aRows[0], aCols[0]] < Inf));
          FBestTour[aRows[0]] := aCols[1 - J];
          FBestTour[aRows[1]] := aCols[J];
@@ -3727,14 +3727,17 @@ var
   I, J: Integer;
 begin
   w := FUpperBound;
-  aTour.Length := Succ(FMatrixSize);
-  J := 0;
-  for I := 0 to Pred(FMatrixSize) do
+  if w < Inf then
     begin
-      aTour[I] := J;
-      J := FBestTour[J];
+      aTour.Length := Succ(FMatrixSize);
+      J := 0;
+      for I := 0 to Pred(FMatrixSize) do
+        begin
+          aTour[I] := J;
+          J := FBestTour[J];
+        end;
+      aTour[FMatrixSize] := J;
     end;
-  aTour[FMatrixSize] := J;
 end;
 
 function TGWeightHelper.TExactTspBB.Execute(constref m: TWeightMatrix; var aTour: TIntArray; out w: TWeight;
@@ -4698,7 +4701,7 @@ end;
 
 class function TGWeightHelper.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 var
-  CurrTour: TIntArray;
+  Tour: TIntArray;
   Weights: TWeightArray;
   Unvisit: TBoolVector;
   Len, I, J, K, Source, Target, Curr, Next, Farthest: SizeInt;
@@ -4709,12 +4712,12 @@ begin
   Inf := InfWeight;
   NegInf := NegInfWeight;
   aWeight := Inf;
-  CurrTour.Length := Len;
+  Tour.Length := Len;
   Result.Length := Succ(Len);
   for K := 0 to Pred(Len) do
     begin
       Unvisit.InitRange(Len);
-      CurrTour[K] := K;
+      Tour[K] := K;
       Unvisit[K] := False;
       Weights := System.Copy(m[K]);
       TotalW := 0;
@@ -4725,13 +4728,13 @@ begin
             MaxW := Weights[J];
             Farthest := J;
           end;
-      for I := 0 to Len - 2 do
+      for I := 2 to Len do
         begin
           InsW := Inf;
           Curr := K;
           for J := 0 to I do
             begin
-              Next := CurrTour[Curr];
+              Next := Tour[Curr];
               CurrW := m[Curr, Farthest] + m[Farthest, Next] - m[Curr, Next];
               if CurrW < InsW then
                 begin
@@ -4741,8 +4744,8 @@ begin
                 end;
               Curr := Next;
             end;
-          CurrTour[Farthest] := Target;
-          CurrTour[Source] := Farthest;
+          Tour[Farthest] := Target;
+          Tour[Source] := Farthest;
           TotalW += InsW;
           Unvisit[Farthest] := False;
           MaxW := NegInf;
@@ -4762,11 +4765,11 @@ begin
       if TotalW < aWeight then
         begin
           aWeight := TotalW;
-          J := K;
+          J := 0;
           for I := 0 to Pred(Len) do
             begin
               Result[I] := J;
-              J := CurrTour[J];
+              J := Tour[J];
             end;
           Result[Len] := J;
         end;

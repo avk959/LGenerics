@@ -455,8 +455,8 @@ type
     TExactTspBB = record
     strict private
       FMatrix: TWeightMatrix;
-      FAheadTree,
-      FBackTree,
+      FForwardTour,
+      FBackTour,
       FBestTour: TIntArray;
       FUpperBound: TWeight;
       FMatrixSize: SizeInt;
