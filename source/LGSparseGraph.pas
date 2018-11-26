@@ -3727,7 +3727,7 @@ var
   I, J: Integer;
 begin
   w := FUpperBound;
-  if w < Inf then
+  if w < InfWeight then
     begin
       aTour.Length := Succ(FMatrixSize);
       J := 0;
