@@ -457,21 +457,20 @@ type
       FMatrix: TWeightMatrix;
       FAheadTree,
       FBackTree,
-      FCurrTour,
       FBestTour: TIntArray;
-      FUpperBound,
-      FInitWeight: TWeight;
+      FUpperBound: TWeight;
       FMatrixSize: SizeInt;
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCancelled: Boolean;
-      procedure Init(constref m: TWeightMatrix; aTimeOut: Integer);
+      procedure Init(constref m: TWeightMatrix; constref aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
       function  Reduce(constref aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray): TWeight;
       function  SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: Integer): TWeight;
       procedure Search(aCurrWeight: TWeight; constref aRows, aCols: TIntArray);
+      procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
-      function Execute(constref m: TWeightMatrix; aTimeOut: Integer;out w: TWeight; out aExact: Boolean): TIntArray;
+      function Execute(constref m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;
     end;
 
   { returns True if aMatch is maximal matching }
@@ -537,16 +536,10 @@ type
   { cyclic shifts path aTour so that element aSrc becomes the first;
     warning: does not checks if aSrc exist in aTour }
     class procedure NormalizeTour(var aTour: TIntArray; aSrc: SizeInt); static;
-  { 2-opt local search algorithm for the traveling salesman problem;
-    warning: does not checks not matrix nor path }
-    class procedure Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight); static;
   { greedy TSP, best of farthest insertion starting from every vertex + 2-opt local search at the end;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
     warning: does not checks matrix }
     class function  GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { greedy TSP, best of nearest neighbour + 2-opt local search starting from every vertex;
-    warning: does not checks matrix}
-    class function  GreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
 
     class property  InfWeight: TWeight read CFInfWeight;
     class property  NegInfWeight: TWeight read CFNegInfWeight;

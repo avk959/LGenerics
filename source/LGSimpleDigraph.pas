@@ -318,6 +318,7 @@ type
     procedure GetDagMinPaths(aSrc: SizeInt; var aTree: TIntArray; var aWeights: TWeightArray);
     function  GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
     function  GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
+    class procedure CheckTspMatrix(constref m: TWeightMatrix); static;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -433,6 +434,22 @@ type
     function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
   { returns True if aMatch is perfect matching }
     function IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean; inline;
+{**********************************************************************************************************
+  some NP-hard problem utilities
+***********************************************************************************************************}
+
+  { returns True if the matrix m is non-degenerate, square and does not contain negative elements }
+    class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static; inline;
+  { greedy approach for Travelling Salesman problem;
+    best of farthest insertion starting from every vertex;
+    will raise EGraphError if m is not proper matrix }
+    class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+  { exact branch and bound approach for Travelling Salesman problem;
+    aTimeOut specifies the timeout in seconds; at the end of the timeout,
+    the best recent solution will be returned, and aExact will be set to False;
+    will raise EGraphError if m is not proper matrix }
+    class function TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
+                         aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
   end;
 
   { TGIntWeightDiGraph specializes TWeight with Int64 }
@@ -2284,6 +2301,26 @@ begin
       Stack.Pop;
 end;
 
+class procedure TGWeightedDiGraph.CheckTspMatrix(constref m: TWeightMatrix);
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then
+    raise EGraphError.Create(SEInputMatrixDegenerate);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then
+      raise EGraphError.Create(SENonSquareInputMatrix);
+  for I := 0 to Pred(Size) do
+    begin
+      if m[I, I] <> 0 then
+        raise EGraphError.Create(SEInputMatrixSelfLoops);
+      for J := 0 to Pred(Size) do
+        if (I <> J) and (m[I, J] < 0) then
+          raise EGraphError.Create(SENegInputMatrix);
+    end;
+end;
+
 class function TGWeightedDiGraph.wMin(L, R: TWeight): TWeight;
 begin
   if L <= R then
@@ -2733,6 +2770,44 @@ end;
 function TGWeightedDiGraph.IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
+end;
+
+class function TGWeightedDiGraph.IsProperTspMatrix(constref m: TWeightMatrix): Boolean;
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then  // degenerate
+    exit(False);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then // non square
+      exit(False);
+  for I := 0 to Pred(Size) do
+    begin
+      if m[I, I] <> 0 then   // self loops
+        exit(False);
+      for J := 0 to Pred(Size) do
+        if (I <> J) and (m[I, J] < 0) then // negative element
+          exit(False);
+    end;
+  Result := True;
+end;
+
+class function TGWeightedDiGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+begin
+  CheckTspMatrix(m);
+  Result := TWeightHelper.GreedyTsp(m, aWeight);
+  TWeightHelper.NormalizeTour(Result, 0);
+end;
+
+class function TGWeightedDiGraph.TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
+  aTimeOut: Integer): TIntArray;
+var
+  Helper: TWeightHelper.TExactTspBB;
+begin
+  CheckTspMatrix(m);
+  Result := GreedyTsp(m, aWeight);
+  aExact := Helper.Execute(m, Result, aWeight, aTimeOut);
 end;
 
 {$I IntDiGraphHelp.inc}

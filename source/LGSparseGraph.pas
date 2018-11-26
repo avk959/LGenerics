@@ -3538,22 +3538,37 @@ end;
 
 { TGWeightHelper.TExactTspBB }
 
-procedure TGWeightHelper.TExactTspBB.Init(constref m: TWeightMatrix; aTimeOut: Integer);
+procedure TGWeightHelper.TExactTspBB.Init(constref m: TWeightMatrix; constref aTour: TIntArray; aTimeOut: Integer);
 var
-  I: Integer;
+  I, Source, Target: Integer;
   Inf: TWeight;
 begin
   FMatrix := System.Copy(m);
   FMatrixSize := System.Length(m);
   Inf := InfWeight;
+  for I := 0 to Pred(FMatrixSize) do
+    FMatrix[I, I] := Inf;
+  if aTour.Length = Succ(FMatrixSize) then
+    begin
+      FBestTour.Length := FMatrixSize;
+      FUpperBound := 0;
+      for I := 0 to Pred(FMatrixSize) do
+        begin
+          Source := aTour[I];
+          Target := aTour[Succ(I)];
+          FBestTour[Source] := Target;
+          FUpperBound += m[Source, Target];
+        end;
+    end
+  else
+    begin
+      FBestTour := nil;
+      FUpperBound := Inf;
+    end;
   FTimeOut := aTimeOut and System.High(Integer);
   FAheadTree := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
   FBackTree := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
   FStartTime := Now;
-  FBestTour := GreedyTspNn2Opt(m, FInitWeight);
-  for I := 0 to Pred(FMatrixSize) do
-    FMatrix[I, I] := Inf;
-  FUpperBound := FInitWeight;
   FCancelled := False;
 end;
 
@@ -3575,30 +3590,32 @@ begin
   for I := 0 to Last do  // reduce rows
     begin
       MinWeight := Inf;
+      aRowRed[I] := 0;
       for J := 0 to Last do
         MinWeight := wMin(MinWeight, FMatrix[aRows[I], aCols[J]]);
-      if MinWeight > 0 then
+      if (MinWeight > 0) and (MinWeight < Inf) then
         begin
           for J := 0 to Last do
             if FMatrix[aRows[I], aCols[J]] < Inf then
               FMatrix[aRows[I], aCols[J]] -= MinWeight;
           Result += MinWeight;
+          aRowRed[I] := MinWeight;
         end;
-      aRowRed[I] := MinWeight;
     end;
   for J := 0 to Last do  // reduce columns
     begin
       MinWeight := Inf;
+      aColRed[J] := 0;
       for I := 0 to Last do
         MinWeight := wMin(MinWeight, FMatrix[aRows[I], aCols[J]]);
-      if MinWeight > 0 then
+      if (MinWeight > 0) and (MinWeight < Inf) then
         begin
           for I := 0 to Last do
             if FMatrix[aRows[I], aCols[J]] < Inf then
               FMatrix[aRows[I], aCols[J]] -= MinWeight;
           Result += MinWeight;
+          aColRed[J] := MinWeight;
         end;
-      aColRed[J] := MinWeight;
     end;
 end;
 
@@ -3622,7 +3639,7 @@ begin
               Inc(ZeroCount)
             else
               MinInRow := wMin(MinInRow, FMatrix[aRows[I], aCols[K]]);
-          if (ZeroCount > 1) or (MinInRow = Inf) then
+          if ZeroCount > 1 then
             MinInRow := 0;
           MinInCol := Inf;
           ZeroCount := 0;
@@ -3631,7 +3648,7 @@ begin
               Inc(ZeroCount)
             else
               MinInCol := wMin(MinInCol, FMatrix[aRows[K], aCols[J]]);
-          if (ZeroCount > 1) or (MinInCol = Inf) then
+          if ZeroCount > 1 then
             MinInCol := 0;
           if MinInRow + MinInCol > Result then
             begin
@@ -3645,27 +3662,19 @@ end;
 procedure TGWeightHelper.TExactTspBB.Search(aCurrWeight: TWeight; constref aRows, aCols: TIntArray);
 var
   NewRows, NewCols: TIntArray;
-  RowReduce, ColReduce: TWeightArray;
-  I, J, Row, Col, FirstRow, LastCol, MartixSize: Integer;
+  RowsReduce, ColsReduce: TWeightArray;
+  I, J, Row, Col, FirstRow, LastCol, MatrixSize: Integer;
   Inf, LowBound, SaveElem: TWeight;
 begin
   if TimeOut then
     exit;
-  MartixSize := System.Length(aRows);
-  RowReduce := CreateWeightArrayZ(MartixSize);
-  ColReduce := CreateWeightArrayZ(MartixSize);
-  aCurrWeight += Reduce(aRows, aCols, RowReduce, ColReduce);
+  MatrixSize := System.Length(aRows);
+  RowsReduce := CreateWeightArrayZ(MatrixSize);
+  ColsReduce := CreateWeightArrayZ(MatrixSize);
+  aCurrWeight += Reduce(aRows, aCols, RowsReduce, ColsReduce);
   Inf := InfWeight;
   if aCurrWeight < FUpperBound then
-     if MartixSize = 2 then
-       begin
-         FCurrTour := FAheadTree.Copy;
-         J := Ord(Boolean(FMatrix[aRows[0], aCols[0]] <> Inf));
-         FCurrTour[aRows[0]] := aCols[1 - J];
-         FCurrTour[aRows[1]] := aCols[J];
-         FUpperBound := aCurrWeight;
-       end
-     else
+     if MatrixSize > 2 then
        begin
          LowBound := aCurrWeight + SelectBest(aRows, aCols, Row, Col);
          LastCol := aCols[Col];
@@ -3698,47 +3707,47 @@ begin
              //////////
              FMatrix[aRows[Row], aCols[Col]] := 0;
            end;
+       end
+     else
+       begin
+         FBestTour := FAheadTree.Copy;
+         J := Ord(Boolean(FMatrix[aRows[0], aCols[0]] < Inf));
+         FBestTour[aRows[0]] := aCols[1 - J];
+         FBestTour[aRows[1]] := aCols[J];
+         FUpperBound := aCurrWeight;
        end;
-  for I := 0 to Pred(MartixSize) do   // restore matrix
-     for J := 0 to Pred(MartixSize) do
+  for I := 0 to Pred(MatrixSize) do   // restore matrix
+     for J := 0 to Pred(MatrixSize) do
        if FMatrix[aRows[I], aCols[J]] < Inf then
-         FMatrix[aRows[I], aCols[J]] += RowReduce[I] + ColReduce[J];
+         FMatrix[aRows[I], aCols[J]] += RowsReduce[I] + ColsReduce[J];
 end;
 
-function TGWeightHelper.TExactTspBB.Execute(constref m: TWeightMatrix; aTimeOut: Integer; out w: TWeight;
-  out aExact: Boolean): TIntArray;
+procedure TGWeightHelper.TExactTspBB.CopyBest(var aTour: TIntArray; out w: TWeight);
 var
-  Cols, Rows: TIntArray;
   I, J: Integer;
 begin
-  Init(m, aTimeOut);
-  if not FCancelled then
+  w := FUpperBound;
+  aTour.Length := Succ(FMatrixSize);
+  J := 0;
+  for I := 0 to Pred(FMatrixSize) do
     begin
-      Rows := TIntHelper.CreateRange(0, Pred(FMatrixSize));
-      Cols := Rows.Copy;
-      Search(0, Rows, Cols);
+      aTour[I] := J;
+      J := FBestTour[J];
     end;
-  if FUpperBound < FInitWeight then
-    begin
-      w := FUpperBound;
-      Result{%H-}.Length := Succ(FMatrixSize);
-      J := 0;
-      for I := 0 to Pred(FMatrixSize) do
-        begin
-          Result[I] := J;
-          J := FCurrTour[J];
-        end;
-      Result[FMatrixSize] := J;
-      if FCancelled then
-        Tsp2Opt(m, Result, w);
-    end
-  else
-    begin
-      w := FInitWeight;
-      Result := FBestTour;
-      NormalizeTour(Result, 0);
-    end;
-  aExact := not FCancelled;
+  aTour[FMatrixSize] := J;
+end;
+
+function TGWeightHelper.TExactTspBB.Execute(constref m: TWeightMatrix; var aTour: TIntArray; out w: TWeight;
+  aTimeOut: Integer): Boolean;
+var
+  Cols, Rows: TIntArray;
+begin
+  Init(m, aTour, aTimeOut);
+  Rows := TIntHelper.CreateRange(0, Pred(FMatrixSize));
+  Cols := Rows.Copy;
+  Search(0, Rows, Cols);
+  CopyBest(aTour, w);
+  Result := not FCancelled;
 end;
 
 { TGWeightHelper }
@@ -4687,45 +4696,9 @@ begin
   aTour[System.High(aTour)] := aTour[0];
 end;
 
-class procedure TGWeightHelper.Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight);
-var
-  I, J, L, R, Len: SizeInt;
-  wFirst, Gain, MaxGain: TWeight;
-begin
-  Len := System.High(aPath);
-  L := NULL_INDEX;
-  R := NULL_INDEX;
-  repeat
-    MaxGain := 0;
-    for I := 0 to Len - 3 do
-      begin
-        wFirst := m[aPath[I], aPath[Succ(I)]];
-        for J := I + 2 to Pred(Len) do
-          begin
-            Gain := wFirst + m[aPath[J], aPath[Succ(J)]] - m[aPath[I], aPath[J]] -
-                             m[aPath[Succ(I)], aPath[Succ(J)]];
-            if Gain > MaxGain then
-              begin
-                MaxGain := Gain;
-                L := I;
-                R := J;
-              end;
-          end;
-      end;
-    if MaxGain > 0 then
-      begin
-        I := aPath[Succ(L)];
-        aPath[Succ(L)] := aPath[R];
-        aPath[R] := I;
-        TIntHelper.Reverse(aPath[L + 2..Pred(R)]);
-      end;
-  until MaxGain = 0;
-  aWeight := TotalTourWeight(m, aPath);
-end;
-
 class function TGWeightHelper.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 var
-  Tour, CycleTree: TIntArray;
+  CurrTour: TIntArray;
   Weights: TWeightArray;
   Unvisit: TBoolVector;
   Len, I, J, K, Source, Target, Curr, Next, Farthest: SizeInt;
@@ -4736,29 +4709,29 @@ begin
   Inf := InfWeight;
   NegInf := NegInfWeight;
   aWeight := Inf;
-  Tour.Length := Succ(Len);
-  CycleTree.Length := Len;
+  CurrTour.Length := Len;
+  Result.Length := Succ(Len);
   for K := 0 to Pred(Len) do
     begin
       Unvisit.InitRange(Len);
-      CycleTree[K] := K;
+      CurrTour[K] := K;
       Unvisit[K] := False;
       Weights := System.Copy(m[K]);
       TotalW := 0;
+      MaxW := NegInf;
+      for J in Unvisit do
+        if Weights[J] > MaxW then
+          begin
+            MaxW := Weights[J];
+            Farthest := J;
+          end;
       for I := 0 to Len - 2 do
         begin
           InsW := Inf;
           Curr := K;
-          MaxW := NegInf;
-          for J in Unvisit do
-            if Weights[J] > MaxW then
-              begin
-                MaxW := Weights[J];
-                Farthest := J;
-              end;
           for J := 0 to I do
             begin
-              Next := CycleTree[Curr];
+              Next := CurrTour[Curr];
               CurrW := m[Curr, Farthest] + m[Farthest, Next] - m[Curr, Next];
               if CurrW < InsW then
                 begin
@@ -4768,77 +4741,34 @@ begin
                 end;
               Curr := Next;
             end;
-          CycleTree[Farthest] := Target;
-          CycleTree[Source] := Farthest;
+          CurrTour[Farthest] := Target;
+          CurrTour[Source] := Farthest;
           TotalW += InsW;
           Unvisit[Farthest] := False;
           MaxW := NegInf;
           for J in Unvisit do
-            if Weights[J] > MaxW then
-              begin
-                MaxW := Weights[J];
-                Next := J;
-              end;
-        end;
-      J := K;
-      for I := 0 to Pred(Len) do
-        begin
-          Tour[I] := J;
-          J := CycleTree[J];
-        end;
-      Tour[Len] := J;
-      TotalW += m[Tour[Pred(Len)], J];
-      if TotalW < aWeight then
-        begin
-          aWeight := TotalW;
-          Result := System.Copy(Tour);
-        end;
-    end;
-  Tsp2Opt(m, Result, aWeight);
-end;
-
-class function TGWeightHelper.GreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
-var
-  Tour: TIntArray;
-  Unvisit: TBoolVector;
-  I, J, K, Curr, Next, Len: SizeInt;
-  CurrMin, Total, wCurr, Inf: TWeight;
-begin
-  Len := System.Length(m);
-  Inf := InfWeight;
-  Result := nil;
-  aWeight := Inf;
-  {%H-}Tour.Length := Succ(Len);
-  for K := 0 to Pred(Len) do
-    begin
-      Unvisit.InitRange(Len);
-      Tour[0] := K;
-      Unvisit[K] := False;
-      Curr := K;
-      I := 1;
-      while Unvisit.NonEmpty do
-        begin
-          CurrMin := Inf;
-          for J in Unvisit do
             begin
-              wCurr := m[Curr, J];
-              if wCurr < CurrMin then
+              CurrW := m[Farthest, J];
+              if CurrW < Weights[J] then
+                Weights[J] := CurrW;
+              if Weights[J] > MaxW then
                 begin
-                  CurrMin := wCurr;
+                  MaxW := Weights[J];
                   Next := J;
                 end;
             end;
-          Curr := Next;
-          Tour[I] := Next;
-          Unvisit[Next] := False;
-          Inc(I);
+          Farthest := Next;
         end;
-      Tour[I] := K;
-      Tsp2Opt(m, Tour, Total);
-      if Total < aWeight then
+      if TotalW < aWeight then
         begin
-          aWeight := Total;
-          Result := System.Copy(Tour);
+          aWeight := TotalW;
+          J := K;
+          for I := 0 to Pred(Len) do
+            begin
+              Result[I] := J;
+              J := CurrTour[J];
+            end;
+          Result[Len] := J;
         end;
     end;
 end;
