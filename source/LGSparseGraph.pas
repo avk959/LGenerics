@@ -28,7 +28,7 @@ unit LGSparseGraph;
 interface
 
 uses
-  Classes, SysUtils, math, typinfo, DateUtils,
+  Classes, SysUtils, DateUtils,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -414,6 +414,7 @@ type
     function SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
     function IndexPath2VertexPath(constref aIdxPath: TIntArray): TVertexArray;
+    function VertexPath2IndexPath(constref aVertPath: TVertexArray): TIntArray;
   { returns adjacency matrix;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
     function CreateAdjacencyMatrix: TAdjacencyMatrix;
@@ -1513,6 +1514,15 @@ begin
   System.SetLength(Result, aIdxPath.Length);
   for I := 0 to Pred(aIdxPath.Length) do
     Result[I] := Items[aIdxPath[I]];
+end;
+
+function TGSparseGraph.VertexPath2IndexPath(constref aVertPath: TVertexArray): TIntArray;
+var
+  I: SizeInt;
+begin
+  Result{%H-}.Length := System.Length(aVertPath);
+  for I := 0 to Pred(Result.Length) do
+    Result[I] := IndexOf(aVertPath[I]);
 end;
 
 function TGSparseGraph.CreateAdjacencyMatrix: TAdjacencyMatrix;
