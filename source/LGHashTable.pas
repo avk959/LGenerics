@@ -36,16 +36,14 @@ uses
 
 type
 
-  { TGCustomHashTable}
-
-  generic TGCustomHashTable<TKey, TEntry> = class abstract
+  generic TGAbstractHashTable<TKey, TEntry> = class abstract
   strict protected
   const
     MIN_LOAD_FACTOR  = 0.25;
 
   type
-    TCustomHashTable = specialize TGCustomHashTable<TKey, TEntry>;
-    THashTableClass  = class of TGCustomHashTable;
+    TAbstractHashTable = specialize TGAbstractHashTable<TKey, TEntry>;
+    THashTableClass  = class of TAbstractHashTable;
 
   var
     FCount,
@@ -83,7 +81,7 @@ type
     constructor Create(aLoadFactor: Single); virtual;
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single); virtual;
     function  GetEnumerator: TEntryEnumerator; virtual; abstract;
-    function  Clone: TCustomHashTable; virtual; abstract;
+    function  Clone: TAbstractHashTable; virtual; abstract;
     procedure Clear; virtual; abstract;
     procedure EnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure TrimToFit; virtual; abstract;
@@ -107,7 +105,7 @@ type
   { TGOpenAddressing }
 
   generic TGOpenAddressing<TKey, TEntry, TEqRel, TProbeSeq> = class abstract(
-    specialize TGCustomHashTable<TKey, TEntry>)
+    specialize TGAbstractHashTable<TKey, TEntry>)
   strict protected
   const
     USED_FLAG: SizeInt      = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
@@ -183,7 +181,7 @@ type
   strict protected
     procedure DoRemove(aIndex: SizeInt); override;
   public
-    function  Clone: TCustomHashTable; override;
+    function  Clone: TAbstractHashTable; override;
     function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt; override;
@@ -218,7 +216,7 @@ type
   { TGOpenAddrLPT implements open addressing tombstones hash table with linear probing and lazy deletion}
   generic TGOpenAddrLPT<TKey, TEntry, TEqRel> = class(
     specialize TGOpenAddrTombstones<TKey, TEntry, TEqRel, TLPSeq>)
-    function Clone: TCustomHashTable; override;
+    function Clone: TAbstractHashTable; override;
   end;
 
   TQP12Seq = class
@@ -231,14 +229,14 @@ type
   { TGOpenAddrQP implements open addressing hash table with quadratic probing(c1 = 1/2, c2 = 1/2) }
   generic TGOpenAddrQP<TKey, TEntry, TEqRel> = class(
     specialize TGOpenAddrTombstones<TKey, TEntry, TEqRel, TQP12Seq>)
-    function Clone: TCustomHashTable; override;
+    function Clone: TAbstractHashTable; override;
   end;
 
 {.$DEFINE ORDEREDHASHTABLE_ENABLE_PAGEDNODEMANAGER}{ if uncomment define, TGOrderedHashTable
                                                      will use TGPageNodeManager }
   { TGOrderedHashTable }
 
-  generic TGOrderedHashTable<TKey, TEntry, TEqRel> = class(specialize TGCustomHashTable<TKey, TEntry>)
+  generic TGOrderedHashTable<TKey, TEntry, TEqRel> = class(specialize TGAbstractHashTable<TKey, TEntry>)
   public
   type
     PNode = ^TNode;
@@ -330,7 +328,7 @@ type
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single); override;
     destructor Destroy; override;
     procedure Clear; override;
-    function  Clone: TCustomHashTable; override;
+    function  Clone: TAbstractHashTable; override;
     procedure EnsureCapacity(aValue: SizeInt); override;
     procedure TrimToFit; override;
     function  GetEnumerator: TEntryEnumerator; override;
@@ -354,7 +352,7 @@ type
                                                    will use TGPageNodeManager }
   { TGChainHashTable }
 
-  generic TGChainHashTable<TKey, TEntry, TEqRel> = class(specialize TGCustomHashTable<TKey, TEntry>)
+  generic TGChainHashTable<TKey, TEntry, TEqRel> = class(specialize TGAbstractHashTable<TKey, TEntry>)
   public
   type
     PNode = ^TNode;
@@ -421,7 +419,7 @@ type
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single); override;
     destructor Destroy; override;
     procedure Clear; override;
-    function  Clone: TCustomHashTable; override;
+    function  Clone: TAbstractHashTable; override;
     procedure EnsureCapacity(aValue: SizeInt); override;
     procedure TrimToFit; override;
     function  GetEnumerator: TEntryEnumerator; override;
@@ -802,9 +800,9 @@ const
 implementation
 {$Q-}{$B-}{$COPERATORS ON}
 
-{ TGCustomHashTable }
+{ TGAbstractHashTable }
 
-function TGCustomHashTable.GetFillRatio: Single;
+function TGAbstractHashTable.GetFillRatio: Single;
 var
   c: SizeInt;
 begin
@@ -815,45 +813,45 @@ begin
     Result := 0.0;
 end;
 
-function TGCustomHashTable.RestrictLoadFactor(aValue: Single): Single;
+function TGAbstractHashTable.RestrictLoadFactor(aValue: Single): Single;
 begin
   Result := Math.Min(Math.Max(aValue, MinLoadFactor), MaxLoadFactor);
 end;
 
-class function TGCustomHashTable.MinLoadFactor: Single;
+class function TGAbstractHashTable.MinLoadFactor: Single;
 begin
   Result := MIN_LOAD_FACTOR;
 end;
 
-constructor TGCustomHashTable.CreateEmpty;
+constructor TGAbstractHashTable.CreateEmpty;
 begin
   FLoadFactor := DefaultLoadFactor;
 end;
 
-constructor TGCustomHashTable.CreateEmpty(aLoadFactor: Single);
+constructor TGAbstractHashTable.CreateEmpty(aLoadFactor: Single);
 begin
   FLoadFactor := RestrictLoadFactor(aLoadFactor);
 end;
 
-constructor TGCustomHashTable.Create;
+constructor TGAbstractHashTable.Create;
 begin
   FLoadFactor := DefaultLoadFactor;
   AllocList(DEFAULT_CONTAINER_CAPACITY);
 end;
 
-constructor TGCustomHashTable.Create(aCapacity: SizeInt);
+constructor TGAbstractHashTable.Create(aCapacity: SizeInt);
 begin
   FLoadFactor := DefaultLoadFactor;
   AllocList(EstimateCapacity(aCapacity, LoadFactor));
 end;
 
-constructor TGCustomHashTable.Create(aLoadFactor: Single);
+constructor TGAbstractHashTable.Create(aLoadFactor: Single);
 begin
   FLoadFactor := RestrictLoadFactor(aLoadFactor);
   AllocList(DEFAULT_CONTAINER_CAPACITY);
 end;
 
-constructor TGCustomHashTable.Create(aCapacity: SizeInt; aLoadFactor: Single);
+constructor TGAbstractHashTable.Create(aCapacity: SizeInt; aLoadFactor: Single);
 begin
   FLoadFactor := RestrictLoadFactor(aLoadFactor);
   AllocList(EstimateCapacity(aCapacity, LoadFactor));
@@ -1189,7 +1187,7 @@ begin
     end;
 end;
 
-function TGOpenAddrLP.Clone: TCustomHashTable;
+function TGOpenAddrLP.Clone: TAbstractHashTable;
 var
   c: TGOpenAddrLP;
 begin
@@ -1473,7 +1471,7 @@ end;
 
 { TGOpenAddrLPT }
 
-function TGOpenAddrLPT.Clone: TCustomHashTable;
+function TGOpenAddrLPT.Clone: TAbstractHashTable;
 var
   c: TGOpenAddrLPT;
 begin
@@ -1495,7 +1493,7 @@ end;
 
 { TGOpenAddrQP }
 
-function TGOpenAddrQP.Clone: TCustomHashTable;
+function TGOpenAddrQP.Clone: TAbstractHashTable;
 var
   c: TGOpenAddrQP;
 begin
@@ -1835,7 +1833,7 @@ begin
   FExpandTreshold := 0;
 end;
 
-function TGOrderedHashTable.Clone: TCustomHashTable;
+function TGOrderedHashTable.Clone: TAbstractHashTable;
 var
   CurrNode, AddedNode: PNode;
 begin
@@ -2332,7 +2330,7 @@ begin
   FExpandTreshold := 0;
 end;
 
-function TGChainHashTable.Clone: TCustomHashTable;
+function TGChainHashTable.Clone: TAbstractHashTable;
 var
   AddedNode, CurrNode: PNode;
   I: SizeInt;

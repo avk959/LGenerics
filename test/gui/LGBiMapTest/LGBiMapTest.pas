@@ -13,7 +13,7 @@ uses
   LGArrayHelpers;
 
 type
-  TEntry      = specialize TGMapEntry<string, Integer>;
+  TEntry = specialize TGMapEntry<string, Integer>;
 
   { THashBiMapTest }
 

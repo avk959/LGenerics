@@ -35,9 +35,9 @@ uses
 
 type
 
-  { TGCustomHashTable2D: implements rows as as linear probing hashmap }
-  generic TGCustomHashTable2D<TRow, TCol, TValue, TRowEqRel> = class abstract(
-    specialize TGCustomTable2D<TRow, TCol, TValue>)
+  { TGAbstractHashTable2D: implements rows as as linear probing hashmap }
+  generic TGAbstractHashTable2D<TRow, TCol, TValue, TRowEqRel> = class abstract(
+    specialize TGAbstractTable2D<TRow, TCol, TValue>)
   protected
   type
     TRowHashTable = specialize TGHashTableLP<TRow, TRowEntry, TRowEqRel>;
@@ -49,7 +49,7 @@ type
       FCol: TCol;
       function GetCurrent: TColData; override;
     public
-      constructor Create(aTable: TGCustomHashTable2D; constref ACol: TCol);
+      constructor Create(aTable: TGAbstractHashTable2D; constref ACol: TCol);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -61,7 +61,7 @@ type
       FCurrRowEntry: TRowData;
       function GetCurrent: TCellData; override;
     public
-      constructor Create(aTable: TGCustomHashTable2D);
+      constructor Create(aTable: TGAbstractHashTable2D);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -72,7 +72,7 @@ type
       FEnum: TRowHashTable.TEnumerator;
       function GetCurrent: TRow; override;
     public
-      constructor Create(aTable: TGCustomHashTable2D);
+      constructor Create(aTable: TGAbstractHashTable2D);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -82,7 +82,7 @@ type
       FEnum: TRowHashTable.TEnumerator;
       function GetCurrent: IRowMap; override;
     public
-      constructor Create(aTable: TGCustomHashTable2D);
+      constructor Create(aTable: TGAbstractHashTable2D);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -130,7 +130,7 @@ type
         class function HashCode([const[ref]] c: TCol): SizeInt;
         class function Equal([const[ref]] L, R: TCol): Boolean; }
   generic TGHashTable2D<TRow, TCol, TValue, TRowEqRel, TColEqRel> = class(
-    specialize TGCustomHashTable2D<TRow, TCol, TValue, TRowEqRel>)
+    specialize TGAbstractHashTable2D<TRow, TCol, TValue, TRowEqRel>)
   protected
   type
 
@@ -203,7 +203,7 @@ type
       functor TColCmpRel(column equality relation) must provide:
         class function Compare([const[ref]] L, R: TCol): SizeInt; }
   generic TGTreeTable2D<TRow, TCol, TValue, TRowEqRel, TColCmpRel> = class(
-    specialize TGCustomHashTable2D<TRow, TCol, TValue, TRowEqRel>)
+    specialize TGAbstractHashTable2D<TRow, TCol, TValue, TRowEqRel>)
   protected
   type
     TEntry = record
@@ -285,7 +285,7 @@ type
       functor TColCmpRel(column equality relation) must provide:
         class function Compare([const[ref]] L, R: TCol): SizeInt; }
   generic TGListTable2D<TRow, TCol, TValue, TRowEqRel, TColCmpRel> = class(
-    specialize TGCustomHashTable2D<TRow, TCol, TValue, TRowEqRel>)
+    specialize TGAbstractHashTable2D<TRow, TCol, TValue, TRowEqRel>)
   protected
   type
     TEntry = record
@@ -350,14 +350,14 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGCustomHashTable2D.TColEnumerable }
+{ TGAbstractHashTable2D.TColEnumerable }
 
-function TGCustomHashTable2D.TColEnumerable.GetCurrent: TColData;
+function TGAbstractHashTable2D.TColEnumerable.GetCurrent: TColData;
 begin
   Result := TColData.Create(FEnum.Current^.Key, FCurrValue);
 end;
 
-constructor TGCustomHashTable2D.TColEnumerable.Create(aTable: TGCustomHashTable2D; constref ACol: TCol);
+constructor TGAbstractHashTable2D.TColEnumerable.Create(aTable: TGAbstractHashTable2D; constref ACol: TCol);
 begin
   inherited Create;
   FEnum := aTable.FRowTable.GetEnumerator;
@@ -365,7 +365,7 @@ begin
   FCurrValue := Default(TValue);
 end;
 
-function TGCustomHashTable2D.TColEnumerable.MoveNext: Boolean;
+function TGAbstractHashTable2D.TColEnumerable.MoveNext: Boolean;
 begin
   repeat
     if not FEnum.MoveNext then
@@ -374,33 +374,33 @@ begin
   until Result;
 end;
 
-procedure TGCustomHashTable2D.TColEnumerable.Reset;
+procedure TGAbstractHashTable2D.TColEnumerable.Reset;
 begin
   FEnum.Reset;
   FCurrValue := Default(TValue);
 end;
 
-{ TGCustomHashTable2D.TCellEnumerable }
+{ TGAbstractHashTable2D.TCellEnumerable }
 
-function TGCustomHashTable2D.TCellEnumerable.GetCurrent: TCellData;
+function TGAbstractHashTable2D.TCellEnumerable.GetCurrent: TCellData;
 begin
   Result := TCellData.Create(FEnum.Current^.Key, FCurrRowEntry.Column, FCurrRowEntry.Value);
 end;
 
-constructor TGCustomHashTable2D.TCellEnumerable.Create(aTable: TGCustomHashTable2D);
+constructor TGAbstractHashTable2D.TCellEnumerable.Create(aTable: TGAbstractHashTable2D);
 begin
   inherited Create;
   FEnum :=  aTable.FRowTable.GetEnumerator;
   FCurrRowEntry := Default(TRowData);
 end;
 
-destructor TGCustomHashTable2D.TCellEnumerable.Destroy;
+destructor TGAbstractHashTable2D.TCellEnumerable.Destroy;
 begin
   FRowEnum.Free;
   inherited;
 end;
 
-function TGCustomHashTable2D.TCellEnumerable.MoveNext: Boolean;
+function TGAbstractHashTable2D.TCellEnumerable.MoveNext: Boolean;
 begin
   repeat
     if not Assigned(FRowEnum) then
@@ -417,87 +417,87 @@ begin
   until Result;
 end;
 
-procedure TGCustomHashTable2D.TCellEnumerable.Reset;
+procedure TGAbstractHashTable2D.TCellEnumerable.Reset;
 begin
   FEnum.Reset;
   FreeAndNil(FRowEnum);
   FCurrRowEntry := Default(TRowData);
 end;
 
-{ TGCustomHashTable2D.TRowEnumerable }
+{ TGAbstractHashTable2D.TRowEnumerable }
 
-function TGCustomHashTable2D.TRowEnumerable.GetCurrent: TRow;
+function TGAbstractHashTable2D.TRowEnumerable.GetCurrent: TRow;
 begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGCustomHashTable2D.TRowEnumerable.Create(aTable: TGCustomHashTable2D);
+constructor TGAbstractHashTable2D.TRowEnumerable.Create(aTable: TGAbstractHashTable2D);
 begin
   inherited Create;
   FEnum := aTable.FRowTable.GetEnumerator;
 end;
 
-function TGCustomHashTable2D.TRowEnumerable.MoveNext: Boolean;
+function TGAbstractHashTable2D.TRowEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomHashTable2D.TRowEnumerable.Reset;
+procedure TGAbstractHashTable2D.TRowEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomHashTable2D.TRowMapEnumerable }
+{ TGAbstractHashTable2D.TRowMapEnumerable }
 
-function TGCustomHashTable2D.TRowMapEnumerable.GetCurrent: IRowMap;
+function TGAbstractHashTable2D.TRowMapEnumerable.GetCurrent: IRowMap;
 begin
   Result := FEnum.Current^.Columns;
 end;
 
-constructor TGCustomHashTable2D.TRowMapEnumerable.Create(aTable: TGCustomHashTable2D);
+constructor TGAbstractHashTable2D.TRowMapEnumerable.Create(aTable: TGAbstractHashTable2D);
 begin
   inherited Create;
   FEnum := aTable.FRowTable.GetEnumerator;
 end;
 
-function TGCustomHashTable2D.TRowMapEnumerable.MoveNext: Boolean;
+function TGAbstractHashTable2D.TRowMapEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomHashTable2D.TRowMapEnumerable.Reset;
+procedure TGAbstractHashTable2D.TRowMapEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomHashTable2D }
+{ TGAbstractHashTable2D }
 
-function TGCustomHashTable2D.GetRowCapacity: SizeInt;
+function TGAbstractHashTable2D.GetRowCapacity: SizeInt;
 begin
   Result := FRowTable.Capacity;
 end;
 
-function TGCustomHashTable2D.GetExpandTreshold: SizeInt;
+function TGAbstractHashTable2D.GetExpandTreshold: SizeInt;
 begin
   Result := FRowTable.ExpandTreshold;
 end;
 
-function TGCustomHashTable2D.GetFillRatio: Single;
+function TGAbstractHashTable2D.GetFillRatio: Single;
 begin
   Result := FRowTable.FillRatio;
 end;
 
-function TGCustomHashTable2D.GetLoadFactor: Single;
+function TGAbstractHashTable2D.GetLoadFactor: Single;
 begin
   Result := FRowTable.LoadFactor;
 end;
 
-procedure TGCustomHashTable2D.SetLoadFactor(aValue: Single);
+procedure TGAbstractHashTable2D.SetLoadFactor(aValue: Single);
 begin
   FRowTable.LoadFactor := aValue;
 end;
 
-procedure TGCustomHashTable2D.ClearItems;
+procedure TGAbstractHashTable2D.ClearItems;
 var
   p: TRowHashTable.PEntry;
 begin
@@ -505,19 +505,19 @@ begin
     p^.Columns.Free;
 end;
 
-function TGCustomHashTable2D.GetRowCount: SizeInt;
+function TGAbstractHashTable2D.GetRowCount: SizeInt;
 begin
   Result := FRowTable.Count;
 end;
 
-function TGCustomHashTable2D.DoFindRow(constref aRow: TRow): PRowEntry;
+function TGAbstractHashTable2D.DoFindRow(constref aRow: TRow): PRowEntry;
 var
   Pos: SizeInt;
 begin
   Result := FRowTable.Find(aRow, Pos);
 end;
 
-function TGCustomHashTable2D.DoFindOrAddRow(constref aRow: TRow; out p: PRowEntry): Boolean;
+function TGAbstractHashTable2D.DoFindOrAddRow(constref aRow: TRow; out p: PRowEntry): Boolean;
 var
   Pos: SizeInt;
 begin
@@ -529,7 +529,7 @@ begin
     end;
 end;
 
-function TGCustomHashTable2D.DoRemoveRow(constref aRow: TRow): SizeInt;
+function TGAbstractHashTable2D.DoRemoveRow(constref aRow: TRow): SizeInt;
 var
   Pos: SizeInt;
   p: PRowEntry;
@@ -545,48 +545,48 @@ begin
     Result := 0;
 end;
 
-function TGCustomHashTable2D.GetColumn(const aCol: TCol): IColDataEnumerable;
+function TGAbstractHashTable2D.GetColumn(const aCol: TCol): IColDataEnumerable;
 begin
   Result := TColEnumerable.Create(Self, aCol);
 end;
 
-function TGCustomHashTable2D.GetCellData: ICellDataEnumerable;
+function TGAbstractHashTable2D.GetCellData: ICellDataEnumerable;
 begin
   Result := TCellEnumerable.Create(Self);
 end;
 
-constructor TGCustomHashTable2D.Create;
+constructor TGAbstractHashTable2D.Create;
 begin
   FRowTable := TRowHashTable.Create;
 end;
 
-constructor TGCustomHashTable2D.Create(aRowCapacity: SizeInt);
+constructor TGAbstractHashTable2D.Create(aRowCapacity: SizeInt);
 begin
   FRowTable := TRowHashTable.Create(aRowCapacity);
 end;
 
-constructor TGCustomHashTable2D.Create(aLoadFactor: Single);
+constructor TGAbstractHashTable2D.Create(aLoadFactor: Single);
 begin
   FRowTable := TRowHashTable.Create(aLoadFactor);
 end;
 
-constructor TGCustomHashTable2D.Create(aRowCapacity: SizeInt; aLoadFactor: Single);
+constructor TGAbstractHashTable2D.Create(aRowCapacity: SizeInt; aLoadFactor: Single);
 begin
   FRowTable := TRowHashTable.Create(aRowCapacity, aLoadFactor);
 end;
 
-procedure TGCustomHashTable2D.Clear;
+procedure TGAbstractHashTable2D.Clear;
 begin
   ClearItems;
   FRowTable.Clear;
 end;
 
-procedure TGCustomHashTable2D.EnsureRowCapacity(aValue: SizeInt);
+procedure TGAbstractHashTable2D.EnsureRowCapacity(aValue: SizeInt);
 begin
   FRowTable.EnsureCapacity(aValue);
 end;
 
-procedure TGCustomHashTable2D.TrimToFit;
+procedure TGAbstractHashTable2D.TrimToFit;
 var
   p: PRowEntry;
 begin
@@ -605,12 +605,12 @@ begin
   FRowTable.TrimToFit;
 end;
 
-function TGCustomHashTable2D.Rows: IRowEnumerable;
+function TGAbstractHashTable2D.Rows: IRowEnumerable;
 begin
   Result := TRowEnumerable.Create(Self);
 end;
 
-function TGCustomHashTable2D.EnumRowMaps: IRowMapEnumerable;
+function TGAbstractHashTable2D.EnumRowMaps: IRowMapEnumerable;
 begin
   Result := TRowMapEnumerable.Create(Self);
 end;

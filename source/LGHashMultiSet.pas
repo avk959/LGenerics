@@ -38,16 +38,16 @@ uses
 type
 
   { TGCustomHashMultiSet: common hash multiset abstract ancestor class }
-  generic TGCustomHashMultiSet<T> = class abstract(specialize TGCustomMultiSet<T>)
+  generic TGAbstractHashMultiSet<T> = class abstract(specialize TGAbstractMultiSet<T>)
   public
   type
-    TCustomHashMultiSet = specialize TGCustomHashMultiSet<T>;
+    TAbstractHashMultiSet = specialize TGAbstractHashMultiSet<T>;
 
   protected
   type
-    THashTable          = specialize TGCustomHashTable<T, TEntry>;
+    THashTable          = specialize TGAbstractHashTable<T, TEntry>;
     THashTableClass     = class of THashTable;
-    THashMultiSetClass  = class of TCustomHashMultiSet;
+    THashMultiSetClass  = class of TAbstractHashMultiSet;
     TSearchResult       = THashTable.TSearchResult;
 
     TEnumerator = class(TContainerEnumerator)
@@ -56,7 +56,7 @@ type
       FCurrKeyCount: SizeInt;
       function  GetCurrent: T; override;
     public
-      constructor Create(ms: TCustomHashMultiSet);
+      constructor Create(ms: TAbstractHashMultiSet);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -67,7 +67,7 @@ type
       FEnum: THashTable.TEntryEnumerator;
       function  GetCurrent: T; override;
     public
-      constructor Create(aSet: TCustomHashMultiSet);
+      constructor Create(aSet: TAbstractHashMultiSet);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -75,11 +75,11 @@ type
 
     TEntryEnumerable = class(specialize TGAutoEnumerable<TEntry>)
     protected
-      FOwner: TCustomHashMultiSet;
+      FOwner: TAbstractHashMultiSet;
       FEnum: THashTable.TEntryEnumerator;
       function  GetCurrent: TEntry; override;
     public
-      constructor Create(aSet: TCustomHashMultiSet);
+      constructor Create(aSet: TAbstractHashMultiSet);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -106,7 +106,7 @@ type
     function  DoDoubleEntryCounters: SizeInt; override;
     function  GetDistinct: IEnumerable; override;  // distinct keys
     function  GetEntries: IEntryEnumerable; override;
-    procedure DoIntersect(aSet: TCustomMultiSet); override;
+    procedure DoIntersect(aSet: TAbstractMultiSet); override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -131,9 +131,9 @@ type
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
-    constructor CreateCopy(aMultiSet: TCustomHashMultiSet);
+    constructor CreateCopy(aMultiSet: TAbstractHashMultiSet);
     destructor Destroy; override;
-    function  Clone: TCustomHashMultiSet; override;
+    function  Clone: TAbstractHashMultiSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
   { The number of entries that can be written without rehashing }
@@ -144,7 +144,7 @@ type
       functor TEqRel(equality relation) must provide:
         class function HashCode([const[ref]] aValue: T): SizeInt;
         class function Equal([const[ref]] L, R: T): Boolean; }
-  generic TGBaseHashMultiSetLP<T, TEqRel> = class(specialize TGCustomHashMultiSet<T>)
+  generic TGBaseHashMultiSetLP<T, TEqRel> = class(specialize TGAbstractHashMultiSet<T>)
   protected
     class function GetTableClass: THashTableClass; override;
     class function GetClass: THashMultiSetClass; override;
@@ -155,7 +155,7 @@ type
   generic TGHashMultiSetLP<T> = class(specialize TGBaseHashMultiSetLP<T, T>);
 
   { TGBaseHashMultiSetLPT implements open addressing hash multiset with linear probing and lazy deletion }
-  generic TGBaseHashMultiSetLPT<T, TEqRel> = class(specialize TGCustomHashMultiSet<T>)
+  generic TGBaseHashMultiSetLPT<T, TEqRel> = class(specialize TGAbstractHashMultiSet<T>)
   private
     function GetTombstonesCount: SizeInt; inline;
   protected
@@ -174,7 +174,7 @@ type
   generic TGHashMultiSetLPT<T> = class(specialize TGBaseHashMultiSetLPT<T, T>);
 
   { TGBaseHashMultiSetQP implements open addressing hashmultiset with quadratic probing(c1 = c2 = 1/2) }
-  generic TGBaseHashMultiSetQP<T, TEqRel> = class(specialize TGCustomHashMultiSet<T>)
+  generic TGBaseHashMultiSetQP<T, TEqRel> = class(specialize TGAbstractHashMultiSet<T>)
   private
     function GetTombstonesCount: SizeInt; inline;
   protected
@@ -193,7 +193,7 @@ type
   generic TGHashMultiSetQP<T> = class(specialize TGBaseHashMultiSetQP<T, T>);
 
   { TGBaseChainHashMultiSet implements node based hashset with singly linked list chains }
-  generic TGBaseChainHashMultiSet<T, TEqRel> = class(specialize TGCustomHashMultiSet<T>)
+  generic TGBaseChainHashMultiSet<T, TEqRel> = class(specialize TGAbstractHashMultiSet<T>)
   protected
     class function GetTableClass: THashTableClass; override;
     class function GetClass: THashMultiSetClass; override;
@@ -205,7 +205,7 @@ type
 
   { TGCustomObjectHashMultiSet }
 
-  generic TGCustomObjectHashMultiSet<T: class> = class abstract(specialize TGCustomHashMultiSet<T>)
+  generic TGCustomObjectHashMultiSet<T: class> = class abstract(specialize TGAbstractHashMultiSet<T>)
   private
     FOwnsObjects: Boolean;
   protected
@@ -217,7 +217,7 @@ type
     function  DoRemove(constref aKey: T): Boolean; override;
     procedure DoClear; override;
     procedure EntryRemoved(p: PEntry);
-    procedure DoIntersect(aSet: TCustomMultiSet); override;
+    procedure DoIntersect(aSet: TAbstractMultiSet); override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -468,26 +468,26 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGCustomHashMultiSet.TEnumerator }
+{ TGAbstractHashMultiSet.TEnumerator }
 
-function TGCustomHashMultiSet.TEnumerator.GetCurrent: T;
+function TGAbstractHashMultiSet.TEnumerator.GetCurrent: T;
 begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGCustomHashMultiSet.TEnumerator.Create(ms: TCustomHashMultiSet);
+constructor TGAbstractHashMultiSet.TEnumerator.Create(ms: TAbstractHashMultiSet);
 begin
   inherited Create(ms);
   FEnum := ms.FTable.GetEnumerator;
 end;
 
-destructor TGCustomHashMultiSet.TEnumerator.Destroy;
+destructor TGAbstractHashMultiSet.TEnumerator.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomHashMultiSet.TEnumerator.MoveNext: Boolean;
+function TGAbstractHashMultiSet.TEnumerator.MoveNext: Boolean;
 begin
   Result := FCurrKeyCount > 0;
   FCurrKeyCount -= Ord(Result);
@@ -499,133 +499,133 @@ begin
     end;
 end;
 
-procedure TGCustomHashMultiSet.TEnumerator.Reset;
+procedure TGAbstractHashMultiSet.TEnumerator.Reset;
 begin
   FEnum.Reset;
   FCurrKeyCount := 0;
 end;
 
-{ TGCustomHashMultiSet.TDistinctEnumerable }
+{ TGAbstractHashMultiSet.TDistinctEnumerable }
 
-function TGCustomHashMultiSet.TDistinctEnumerable.GetCurrent: T;
+function TGAbstractHashMultiSet.TDistinctEnumerable.GetCurrent: T;
 begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGCustomHashMultiSet.TDistinctEnumerable.Create(aSet: TCustomHashMultiSet);
+constructor TGAbstractHashMultiSet.TDistinctEnumerable.Create(aSet: TAbstractHashMultiSet);
 begin
   inherited Create(aSet);
   FEnum := aSet.FTable.GetEnumerator;
 end;
 
-destructor TGCustomHashMultiSet.TDistinctEnumerable.Destroy;
+destructor TGAbstractHashMultiSet.TDistinctEnumerable.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomHashMultiSet.TDistinctEnumerable.MoveNext: Boolean;
+function TGAbstractHashMultiSet.TDistinctEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomHashMultiSet.TDistinctEnumerable.Reset;
+procedure TGAbstractHashMultiSet.TDistinctEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomHashMultiSet.TEntryEnumerable }
+{ TGAbstractHashMultiSet.TEntryEnumerable }
 
-function TGCustomHashMultiSet.TEntryEnumerable.GetCurrent: TEntry;
+function TGAbstractHashMultiSet.TEntryEnumerable.GetCurrent: TEntry;
 begin
   Result := FEnum.Current^;
 end;
 
-constructor TGCustomHashMultiSet.TEntryEnumerable.Create(aSet: TCustomHashMultiSet);
+constructor TGAbstractHashMultiSet.TEntryEnumerable.Create(aSet: TAbstractHashMultiSet);
 begin
   inherited Create;
   FOwner := aSet;
   FEnum := aSet.FTable.GetEnumerator;
 end;
 
-destructor TGCustomHashMultiSet.TEntryEnumerable.Destroy;
+destructor TGAbstractHashMultiSet.TEntryEnumerable.Destroy;
 begin
   FEnum.Free;
   FOwner.EndIteration;
   inherited;
 end;
 
-function TGCustomHashMultiSet.TEntryEnumerable.MoveNext: Boolean;
+function TGAbstractHashMultiSet.TEntryEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomHashMultiSet.TEntryEnumerable.Reset;
+procedure TGAbstractHashMultiSet.TEntryEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomHashMultiSet }
+{ TGAbstractHashMultiSet }
 
-function TGCustomHashMultiSet.GetExpandTreshold: SizeInt;
+function TGAbstractHashMultiSet.GetExpandTreshold: SizeInt;
 begin
   Result := FTable.ExpandTreshold;
 end;
 
-procedure TGCustomHashMultiSet.EntryRemoved(p: PEntry);
+procedure TGAbstractHashMultiSet.EntryRemoved(p: PEntry);
 begin
   FCount -= p^.Count;
 end;
 
-function TGCustomHashMultiSet.GetFillRatio: Single;
+function TGAbstractHashMultiSet.GetFillRatio: Single;
 begin
   Result := FTable.FillRatio;
 end;
 
-function TGCustomHashMultiSet.GetLoadFactor: Single;
+function TGAbstractHashMultiSet.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
 end;
 
-procedure TGCustomHashMultiSet.SetLoadFactor(aValue: Single);
+procedure TGAbstractHashMultiSet.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
 end;
 
-function TGCustomHashMultiSet.GetCapacity: SizeInt;
+function TGAbstractHashMultiSet.GetCapacity: SizeInt;
 begin
   Result := FTable.Capacity;
 end;
 
-function TGCustomHashMultiSet.DoGetEnumerator: TCustomEnumerator;
+function TGAbstractHashMultiSet.DoGetEnumerator: TCustomEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;
 
-procedure TGCustomHashMultiSet.DoClear;
+procedure TGAbstractHashMultiSet.DoClear;
 begin
   FTable.Clear;
   FCount := 0;
 end;
 
-procedure TGCustomHashMultiSet.DoTrimToFit;
+procedure TGAbstractHashMultiSet.DoTrimToFit;
 begin
   FTable.TrimToFit;
 end;
 
-procedure TGCustomHashMultiSet.DoEnsureCapacity(aValue: SizeInt);
+procedure TGAbstractHashMultiSet.DoEnsureCapacity(aValue: SizeInt);
 begin
   FTable.EnsureCapacity(aValue);
 end;
 
-function TGCustomHashMultiSet.FindEntry(constref aKey: T): PEntry;
+function TGAbstractHashMultiSet.FindEntry(constref aKey: T): PEntry;
 var
   sr: TSearchResult;
 begin
   Result := FTable.Find(aKey, sr);
 end;
 
-function TGCustomHashMultiSet.FindOrAdd(constref aKey: T; out p: PEntry): Boolean;
+function TGAbstractHashMultiSet.FindOrAdd(constref aKey: T; out p: PEntry): Boolean;
 var
   sr: TSearchResult;
 begin
@@ -637,7 +637,7 @@ begin
     end;
 end;
 
-function TGCustomHashMultiSet.DoSubEntry(constref e: TEntry): Boolean;
+function TGAbstractHashMultiSet.DoSubEntry(constref e: TEntry): Boolean;
 var
   p: PEntry;
   sr: TSearchResult;
@@ -660,7 +660,7 @@ begin
   Result := False;
 end;
 
-function TGCustomHashMultiSet.DoSymmSubEntry(constref e: TEntry): Boolean;
+function TGAbstractHashMultiSet.DoSymmSubEntry(constref e: TEntry): Boolean;
 var
   sr: TSearchResult;
   p: PEntry;
@@ -698,7 +698,7 @@ begin
   Result := False;
 end;
 
-function TGCustomHashMultiSet.DoExtract(constref aKey: T): Boolean;
+function TGAbstractHashMultiSet.DoExtract(constref aKey: T): Boolean;
 var
   p: PEntry;
   sr: TSearchResult;
@@ -714,12 +714,12 @@ begin
     end;
 end;
 
-function TGCustomHashMultiSet.GetEntryCount: SizeInt;
+function TGAbstractHashMultiSet.GetEntryCount: SizeInt;
 begin
   Result := FTable.Count;
 end;
 
-function TGCustomHashMultiSet.DoDoubleEntryCounters: SizeInt;
+function TGAbstractHashMultiSet.DoDoubleEntryCounters: SizeInt;
 var
   p: PEntry;
 begin
@@ -739,17 +739,17 @@ begin
     end;
 end;
 
-function TGCustomHashMultiSet.GetDistinct: IEnumerable;
+function TGAbstractHashMultiSet.GetDistinct: IEnumerable;
 begin
   Result := TDistinctEnumerable.Create(Self);
 end;
 
-function TGCustomHashMultiSet.GetEntries: IEntryEnumerable;
+function TGAbstractHashMultiSet.GetEntries: IEntryEnumerable;
 begin
   Result := TEntryEnumerable.Create(Self);
 end;
 
-procedure TGCustomHashMultiSet.DoIntersect(aSet: TCustomMultiSet);
+procedure TGAbstractHashMultiSet.DoIntersect(aSet: TAbstractMultiSet);
 var
   I{%H-}: TIntersectHelper;
 begin
@@ -758,28 +758,28 @@ begin
   FTable.RemoveIf(@I.OnIntersect, @EntryRemoved);
 end;
 
-function TGCustomHashMultiSet.DoRemoveIf(aTest: TTest): SizeInt;
+function TGAbstractHashMultiSet.DoRemoveIf(aTest: TTest): SizeInt;
 begin
   Result := ElemCount;
   FTable.RemoveIf(aTest, @EntryRemoved);
   Result -= ElemCount;
 end;
 
-function TGCustomHashMultiSet.DoRemoveIf(aTest: TOnTest): SizeInt;
+function TGAbstractHashMultiSet.DoRemoveIf(aTest: TOnTest): SizeInt;
 begin
   Result := ElemCount;
   FTable.RemoveIf(aTest, @EntryRemoved);
   Result -= ElemCount;
 end;
 
-function TGCustomHashMultiSet.DoRemoveIf(aTest: TNestTest): SizeInt;
+function TGAbstractHashMultiSet.DoRemoveIf(aTest: TNestTest): SizeInt;
 begin
   Result := ElemCount;
   FTable.RemoveIf(aTest, @EntryRemoved);
   Result -= ElemCount;
 end;
 
-function TGCustomHashMultiSet.DoExtractIf(aTest: TTest): TArray;
+function TGAbstractHashMultiSet.DoExtractIf(aTest: TTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -789,7 +789,7 @@ begin
   FCount -= System.Length(Result);
 end;
 
-function TGCustomHashMultiSet.DoExtractIf(aTest: TOnTest): TArray;
+function TGAbstractHashMultiSet.DoExtractIf(aTest: TOnTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -799,7 +799,7 @@ begin
   FCount -= System.Length(Result);
 end;
 
-function TGCustomHashMultiSet.DoExtractIf(aTest: TNestTest): TArray;
+function TGAbstractHashMultiSet.DoExtractIf(aTest: TNestTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -809,107 +809,107 @@ begin
   FCount -= System.Length(Result);
 end;
 
-class function TGCustomHashMultiSet.DefaultLoadFactor: Single;
+class function TGAbstractHashMultiSet.DefaultLoadFactor: Single;
 begin
   Result := GetTableClass.DefaultLoadFactor;
 end;
 
-class function TGCustomHashMultiSet.MaxLoadFactor: Single;
+class function TGAbstractHashMultiSet.MaxLoadFactor: Single;
 begin
   Result := GetTableClass.MaxLoadFactor;
 end;
 
-class function TGCustomHashMultiSet.MinLoadFactor: Single;
+class function TGAbstractHashMultiSet.MinLoadFactor: Single;
 begin
   Result := GetTableClass.MinLoadFactor;
 end;
 
-constructor TGCustomHashMultiSet.Create;
+constructor TGAbstractHashMultiSet.Create;
 begin
   FTable := GetTableClass.Create;
 end;
 
-constructor TGCustomHashMultiSet.Create(constref a: array of T);
+constructor TGAbstractHashMultiSet.Create(constref a: array of T);
 begin
   FTable := GetTableClass.Create;
   DoAddAll(a);
 end;
 
-constructor TGCustomHashMultiSet.Create(e: IEnumerable);
+constructor TGAbstractHashMultiSet.Create(e: IEnumerable);
 var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TCustomHashMultiSet then
-    CreateCopy(TCustomHashMultiSet(o))
+  if o is TAbstractHashMultiSet then
+    CreateCopy(TAbstractHashMultiSet(o))
   else
     begin
-      if o is TCustomMultiSet then
-        Create(TCustomMultiSet(o).EntryCount)
+      if o is TAbstractMultiSet then
+        Create(TAbstractMultiSet(o).EntryCount)
       else
         Create;
       DoAddAll(e);
     end;
 end;
 
-constructor TGCustomHashMultiSet.Create(aCapacity: SizeInt);
+constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt);
 begin
   FTable := GetTableClass.Create(aCapacity);
 end;
 
-constructor TGCustomHashMultiSet.Create(aCapacity: SizeInt; constref a: array of T);
+constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; constref a: array of T);
 begin
   FTable := GetTableClass.Create(aCapacity);
   DoAddAll(a);
 end;
 
-constructor TGCustomHashMultiSet.Create(aCapacity: SizeInt; e: IEnumerable);
+constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; e: IEnumerable);
 begin
   FTable := GetTableClass.Create(aCapacity);
   DoAddAll(e);
 end;
 
-constructor TGCustomHashMultiSet.Create(aLoadFactor: Single);
+constructor TGAbstractHashMultiSet.Create(aLoadFactor: Single);
 begin
   FTable := GetTableClass.Create(aLoadFactor);
 end;
 
-constructor TGCustomHashMultiSet.Create(aLoadFactor: Single; constref a: array of T);
+constructor TGAbstractHashMultiSet.Create(aLoadFactor: Single; constref a: array of T);
 begin
   FTable := GetTableClass.Create(aLoadFactor);
   DoAddAll(a);
 end;
 
-constructor TGCustomHashMultiSet.Create(aLoadFactor: Single; e: IEnumerable);
+constructor TGAbstractHashMultiSet.Create(aLoadFactor: Single; e: IEnumerable);
 var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TCustomMultiSet then
-    Create(TCustomMultiSet(o).EntryCount, aLoadFactor)
+  if o is TAbstractMultiSet then
+    Create(TAbstractMultiSet(o).EntryCount, aLoadFactor)
   else
     Create(aLoadFactor);
   DoAddAll(e);
 end;
 
-constructor TGCustomHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single);
+constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
 end;
 
-constructor TGCustomHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
+constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
   DoAddAll(a);
 end;
 
-constructor TGCustomHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
+constructor TGAbstractHashMultiSet.Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
   DoAddAll(e);
 end;
 
-constructor TGCustomHashMultiSet.CreateCopy(aMultiSet: TCustomHashMultiSet);
+constructor TGAbstractHashMultiSet.CreateCopy(aMultiSet: TAbstractHashMultiSet);
 var
   e: TEntry;
 begin
@@ -926,14 +926,14 @@ begin
     end;
 end;
 
-destructor TGCustomHashMultiSet.Destroy;
+destructor TGAbstractHashMultiSet.Destroy;
 begin
   DoClear;
   FTable.Free;
   inherited;
 end;
 
-function TGCustomHashMultiSet.Clone: TCustomHashMultiSet;
+function TGAbstractHashMultiSet.Clone: TAbstractHashMultiSet;
 begin
   Result := GetClass.Create(Self);
 end;
@@ -1059,7 +1059,7 @@ begin
     p^.Key.Free;
 end;
 
-procedure TGCustomObjectHashMultiSet.DoIntersect(aSet: TCustomMultiSet);
+procedure TGCustomObjectHashMultiSet.DoIntersect(aSet: TAbstractMultiSet);
 var
   {%H-}I: TIntersectHelper;
 begin

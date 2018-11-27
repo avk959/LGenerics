@@ -175,7 +175,7 @@ begin
     end;
 end;
 
-function TGCustomArrayContainer.AppendContainer(aContainer: TCustomContainer): SizeInt;
+function TGCustomArrayContainer.AppendContainer(aContainer: TAbstractContainer): SizeInt;
 begin
   Result := aContainer.Count;
   if Result > 0 then
@@ -191,8 +191,8 @@ var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TCustomContainer then
-    Result := AppendContainer(TCustomContainer(o))
+  if o is TAbstractContainer then
+    Result := AppendContainer(TAbstractContainer(o))
   else
     Result := AppendEnum(e)
 end;
@@ -254,8 +254,8 @@ var
 begin
   Create;
   o := e._GetRef;
-  if o is TCustomContainer then
-    AppendContainer(TCustomContainer(o))
+  if o is TAbstractContainer then
+    AppendContainer(TAbstractContainer(o))
   else
     AppendEnum(e);
 end;
@@ -651,7 +651,7 @@ begin
     end;
 end;
 
-function TGCustomRingArrayBuffer.AppendContainer(aContainer: TCustomContainer): SizeInt;
+function TGCustomRingArrayBuffer.AppendContainer(aContainer: TAbstractContainer): SizeInt;
 var
   TailPos, c: SizeInt;
   v: T;
@@ -703,8 +703,8 @@ var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TCustomContainer then
-    Result := AppendContainer(TCustomContainer(o))
+  if o is TAbstractContainer then
+    Result := AppendContainer(TAbstractContainer(o))
   else
     Result := AppendEnum(e)
 end;
@@ -791,8 +791,8 @@ var
 begin
   Create;
   o := e._GetRef;
-  if o is TCustomContainer then
-    AppendContainer(TCustomContainer(o))
+  if o is TAbstractContainer then
+    AppendContainer(TAbstractContainer(o))
   else
     AppendEnum(e);
 end;

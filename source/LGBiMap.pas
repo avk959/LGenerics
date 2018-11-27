@@ -89,8 +89,8 @@ type
     IValueEnumerable = specialize IGEnumerable<TValue>;
     IEntryEnumerable = specialize IGEnumerable<TEntry>;
     TEntryArray      = specialize TGArray<TEntry>;
-    TKeyCollection   = specialize TGCustomCollection<TKey>;
-    TValueCollection = specialize TGCustomCollection<TValue>;
+    TKeyCollection   = specialize TGAbstractCollection<TKey>;
+    TValueCollection = specialize TGAbstractCollection<TValue>;
     IKeyCollection   = specialize IGCollection<TKey>;
     IValueCollection = specialize IGCollection<TValue>;
     IInverseMap      = specialize IGInverseMap<TKey, TValue>;

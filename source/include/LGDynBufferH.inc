@@ -19,7 +19,7 @@
 
   //TGCustomContainer special descendents
 
-  generic TGCustomArrayBuffer<T> = class abstract(specialize TGCustomContainer<T>)
+  generic TGCustomArrayBuffer<T> = class abstract(specialize TGAbstractContainer<T>)
   protected
   type
     TCopyArrayHelper = class(specialize TGArrayHelpUtil<T>); // need access to protected functions
@@ -73,7 +73,7 @@
     function  Append(constref aValue: T): SizeInt; inline;
     function  AppendArray(constref a: array of T): SizeInt;
     function  AppendEnum(e: IEnumerable): SizeInt;
-    function  AppendContainer(aContainer: TCustomContainer): SizeInt;
+    function  AppendContainer(aContainer: TAbstractContainer): SizeInt;
     function  AppendEnumerable(e: IEnumerable): SizeInt;
     function  GetReverse: IEnumerable;
     function  DoGetEnumerator: TCustomEnumerator; override;
@@ -215,7 +215,7 @@
     procedure ItemAdding; inline;
     procedure Append(constref aValue: T);
     function  AppendArray(constref a: array of T): SizeInt;
-    function  AppendContainer(aContainer: TCustomContainer): SizeInt;
+    function  AppendContainer(aContainer: TAbstractContainer): SizeInt;
     function  AppendEnum(e: IEnumerable): SizeInt;
     function  AppendEnumerable(e: IEnumerable): SizeInt;
     function  ExtractHead: T;

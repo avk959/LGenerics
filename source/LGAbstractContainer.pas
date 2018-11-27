@@ -125,11 +125,11 @@ type
 
 {$I LGEnumsH.inc}
 
-  { TGCustomContainer: container abstract ancestor class }
-  generic TGCustomContainer<T> = class abstract(specialize TGEnumerable<T>, specialize IGContainer<T>)
+  { TGAbstractContainer: container abstract ancestor class }
+  generic TGAbstractContainer<T> = class abstract(specialize TGEnumerable<T>, specialize IGContainer<T>)
   public
   type
-    TCustomContainer = specialize TGCustomContainer<T>;
+    TAbstractContainer = specialize TGAbstractContainer<T>;
 
   protected
   type
@@ -139,17 +139,17 @@ type
 
     TContainerEnumerator = class(specialize TGCustomEnumerator<T>)
     strict protected
-      FOwner: TCustomContainer;
+      FOwner: TAbstractContainer;
     public
-      constructor Create(c: TCustomContainer);
+      constructor Create(c: TAbstractContainer);
       destructor Destroy; override;
     end;
 
     TContainerEnumerable = class(specialize TGAutoEnumerable<T>)
     strict protected
-      FOwner: TCustomContainer;
+      FOwner: TAbstractContainer;
     public
-      constructor Create(c: TCustomContainer);
+      constructor Create(c: TAbstractContainer);
       destructor Destroy; override;
     end;
 
@@ -186,12 +186,12 @@ type
 
 {$I LGDynBufferH.inc}
 
-  { TGCustomCollection: collection abstract ancestor class}
-  generic TGCustomCollection<T> = class abstract(specialize TGCustomContainer<T>, specialize IGCollection<T>)
+  { TGAbstractCollection: collection abstract ancestor class}
+  generic TGAbstractCollection<T> = class abstract(specialize TGAbstractContainer<T>, specialize IGCollection<T>)
   public
   type
-    TCustomCollection = specialize TGCustomCollection<T>;
-    ICollection       = specialize IGCollection<T>;
+    TAbstractCollection = specialize TGAbstractCollection<T>;
+    ICollection         = specialize IGCollection<T>;
 
   protected
     function  DoAdd(constref aValue: T): Boolean; virtual; abstract;
@@ -238,7 +238,7 @@ type
     function  ExtractIf(aTest: TNestTest): TArray;
   { will contain only those elements that are simultaneously contained in self and aCollection }
     procedure RetainAll(aCollection: ICollection);
-    function  Clone: TCustomCollection; virtual; abstract;
+    function  Clone: TAbstractCollection; virtual; abstract;
   end;
 
   generic TGThreadCollection<T> = class
@@ -262,11 +262,11 @@ type
     function  Remove(constref aValue: T): Boolean;
   end;
 
-  { TGCustomSet: set abstract ancestor class }
-  generic TGCustomSet<T> = class abstract(specialize TGCustomCollection<T>)
+  { TGAbstractSet: set abstract ancestor class }
+  generic TGAbstractSet<T> = class abstract(specialize TGAbstractCollection<T>)
   public
   type
-    TCustomSet = specialize TGCustomSet<T>;
+    TAbstractSet = specialize TGAbstractSet<T>;
 
   protected
   type
@@ -286,16 +286,16 @@ type
     end;
 
     function  DoAddAll(e: IEnumerable): SizeInt; override; overload;
-    procedure DoSymmetricSubtract(aSet: TCustomSet);
+    procedure DoSymmetricSubtract(aSet: TAbstractSet);
   public
-    function  IsSuperset(aSet: TCustomSet): Boolean;
-    function  IsSubset(aSet: TCustomSet): Boolean; inline;
-    function  IsEqual(aSet: TCustomSet): Boolean;
-    function  Intersecting(aSet: TCustomSet): Boolean; inline;
-    procedure Intersect(aSet: TCustomSet);
-    procedure Join(aSet: TCustomSet);
-    procedure Subtract(aSet: TCustomSet);
-    procedure SymmetricSubtract(aSet: TCustomSet);
+    function  IsSuperset(aSet: TAbstractSet): Boolean;
+    function  IsSubset(aSet: TAbstractSet): Boolean; inline;
+    function  IsEqual(aSet: TAbstractSet): Boolean;
+    function  Intersecting(aSet: TAbstractSet): Boolean; inline;
+    procedure Intersect(aSet: TAbstractSet);
+    procedure Join(aSet: TAbstractSet);
+    procedure Subtract(aSet: TAbstractSet);
+    procedure SymmetricSubtract(aSet: TAbstractSet);
   end;
 
   generic TGMultiSetEntry<T> = record
@@ -303,13 +303,13 @@ type
     Count: SizeInt; //multiplicity(count of occurrences)
   end;
 
-  { TGCustomMultiSet: multiSet abstract ancestor class  }
-  generic TGCustomMultiSet<T> = class abstract(specialize TGCustomCollection<T>)
+  { TGAbstractMultiSet: multiSet abstract ancestor class  }
+  generic TGAbstractMultiSet<T> = class abstract(specialize TGAbstractCollection<T>)
   public
   type
-    TEntry           = specialize TGMultiSetEntry<T>;
-    TCustomMultiSet  = specialize TGCustomMultiSet<T>;
-    IEntryEnumerable = specialize IGEnumerable<TEntry>;
+    TEntry            = specialize TGMultiSetEntry<T>;
+    TAbstractMultiSet = specialize TGAbstractMultiSet<T>;
+    IEntryEnumerable  = specialize IGEnumerable<TEntry>;
 
   protected
   type
@@ -327,7 +327,7 @@ type
 
     TIntersectHelper = object
       FSet,
-      FOtherSet: TCustomMultiSet;
+      FOtherSet: TAbstractMultiSet;
       function OnIntersect(p: PEntry): Boolean;
     end;
 
@@ -344,16 +344,16 @@ type
     function  DoDoubleEntryCounters: SizeInt; virtual; abstract;
     function  GetDistinct: IEnumerable; virtual; abstract;  // distinct keys
     function  GetEntries: IEntryEnumerable; virtual; abstract;
-    procedure DoIntersect(aSet: TCustomMultiSet); virtual; abstract;
+    procedure DoIntersect(aSet: TAbstractMultiSet); virtual; abstract;
 
     function  GetCount: SizeInt; override;
     procedure DoJoinEntry(constref e: TEntry);
     procedure DoAddEntry(constref e: TEntry);
     function  GetKeyCount(const aKey: T): SizeInt;
     procedure SetKeyCount(const aKey: T; aValue: SizeInt);
-    procedure DoArithAdd(aSet: TCustomMultiSet);
-    procedure DoArithSubtract(aSet: TCustomMultiSet);
-    procedure DoSymmSubtract(aSet: TCustomMultiSet);
+    procedure DoArithAdd(aSet: TAbstractMultiSet);
+    procedure DoArithSubtract(aSet: TAbstractMultiSet);
+    procedure DoSymmSubtract(aSet: TAbstractMultiSet);
 
     function  DoAdd(constref aKey: T): Boolean; override;
     function  DoAddAll(e: IEnumerable): SizeInt; override; overload;
@@ -363,31 +363,31 @@ type
     function  Contains(constref aValue: T): Boolean; override;
   { returns True if multiplicity of an any key in self is greater then or equal to
     the multiplicity of that key in aSet }
-    function  IsSuperMultiSet(aSet: TCustomMultiSet): Boolean;
+    function  IsSuperMultiSet(aSet: TAbstractMultiSet): Boolean;
   { returns True if multiplicity of an any key in aSet is greater then or equal to
     the multiplicity of that key in self }
-    function  IsSubMultiSet(aSet: TCustomMultiSet): Boolean;
+    function  IsSubMultiSet(aSet: TAbstractMultiSet): Boolean;
   { returns True if the multiplicity of an any key in self is equal to the multiplicity of that key in aSet }
-    function  IsEqual(aSet: TCustomMultiSet): Boolean;
-    function  Intersecting(aSet: TCustomMultiSet): Boolean;
+    function  IsEqual(aSet: TAbstractMultiSet): Boolean;
+    function  Intersecting(aSet: TAbstractMultiSet): Boolean;
   { will contain only those keys that are simultaneously contained in self and in aSet;
     the multiplicity of a key becomes equal to the MINIMUM of the multiplicities of a key in self and aSet }
-    procedure Intersect(aSet: TCustomMultiSet);
+    procedure Intersect(aSet: TAbstractMultiSet);
   { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the MAXIMUM of the multiplicities of
     a key in self and aSet }
-    procedure Join(aSet: TCustomMultiSet);
+    procedure Join(aSet: TAbstractMultiSet);
   { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the SUM of the multiplicities of a key in self and aSet }
-    procedure ArithmeticAdd(aSet: TCustomMultiSet);
+    procedure ArithmeticAdd(aSet: TAbstractMultiSet);
   { will contain only those keys whose multiplicity is greater then the multiplicity
     of that key in aSet; the multiplicity of a key will become equal to the difference of multiplicities
     of a key in self and aSet }
-    procedure ArithmeticSubtract(aSet: TCustomMultiSet);
+    procedure ArithmeticSubtract(aSet: TAbstractMultiSet);
   { will contain only those keys whose multiplicity is not equal to the multiplicity
     of that key in aSet; the multiplicity of a key will become equal to absolute value of difference
     of the multiplicities of a key in self and aSet }
-    procedure SymmetricSubtract(aSet: TCustomMultiSet);
+    procedure SymmetricSubtract(aSet: TAbstractMultiSet);
   { enumerates underlying set - distinct keys only }
     function  Distinct: IEnumerable;
     function  Entries: IEntryEnumerable;
@@ -418,13 +418,13 @@ type
     OWNS_BOTH = [moOwnsKeys, moOwnsValues];
 
   type
-  { TGCustomMap: map abstract ancestor class  }
-  generic TGCustomMap<TKey, TValue> = class abstract(TCustomIterable, specialize IGMap<TKey, TValue>)
-  {must be  generic TGCustomMap<TKey, TValue> = class abstract(
+  { TGAbstractMap: map abstract ancestor class  }
+  generic TGAbstractMap<TKey, TValue> = class abstract(TCustomIterable, specialize IGMap<TKey, TValue>)
+  {must be  generic TGAbstractMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
-    TCustomMap       = specialize TGCustomMap<TKey, TValue>;
+    TCustomMap       = specialize TGAbstractMap<TKey, TValue>;
     TEntry           = specialize TGMapEntry<TKey, TValue>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IValueEnumerable = specialize IGEnumerable<TValue>;
@@ -436,7 +436,7 @@ type
     TNestKeyTest     = specialize TGNestTest<TKey>;
     TKeyOptional     = specialize TGOptional<TKey>;
     TValueOptional   = specialize TGOptional<TValue>;
-    TKeyCollection   = specialize TGCustomCollection<TKey>;
+    TKeyCollection   = specialize TGAbstractCollection<TKey>;
     IKeyCollection   = specialize IGCollection<TKey>;
 
   protected
@@ -557,9 +557,9 @@ type
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
 
-  { TGCustomMultiMap: multimap abstract ancestor class }
-  generic TGCustomMultiMap<TKey, TValue> = class abstract(TCustomIterable)
-  {must be  generic TGCustomMultiMap<TKey, TValue> = class abstract(
+  { TGAbstractMultiMap: multimap abstract ancestor class }
+  generic TGAbstractMultiMap<TKey, TValue> = class abstract(TCustomIterable)
+  {must be  generic TGAbstractMultiMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
@@ -593,25 +593,25 @@ type
 
     TCustomValueEnumerable = class(specialize TGAutoEnumerable<TValue>)
     protected
-      FOwner: TGCustomMultiMap;
+      FOwner: TGAbstractMultiMap;
     public
-      constructor Create(aMap: TGCustomMultiMap);
+      constructor Create(aMap: TGAbstractMultiMap);
       destructor Destroy; override;
     end;
 
     TCustomEntryEnumerable = class(specialize TGAutoEnumerable<TEntry>)
     protected
-      FOwner: TGCustomMultiMap;
+      FOwner: TGAbstractMultiMap;
     public
-      constructor Create(aMap: TGCustomMultiMap);
+      constructor Create(aMap: TGAbstractMultiMap);
       destructor Destroy; override;
     end;
 
     TCustomValueCursor = class(specialize TGEnumCursor<TValue>)
     protected
-      FOwner: TGCustomMultiMap;
+      FOwner: TGAbstractMultiMap;
     public
-      constructor Create(e: TCustomEnumerator; aMap: TGCustomMultiMap);
+      constructor Create(e: TCustomEnumerator; aMap: TGAbstractMultiMap);
       destructor Destroy; override;
     end;
 
@@ -687,8 +687,8 @@ type
     property  Items[const aKey: TKey]: IValueEnumerable read ValuesView; default;
   end;
 
-  { TGCustomTable2D: abstract ancestor class }
-  generic TGCustomTable2D<TRow, TCol, TValue> = class abstract
+  { TGAbstractTable2D: table abstract ancestor class }
+  generic TGAbstractTable2D<TRow, TCol, TValue> = class abstract
   public
   type
 
@@ -711,7 +711,7 @@ type
       constructor Create(constref aCol: TCol; constref aValue: TValue);
     end;
 
-    TCustomTable2D      = TGCustomTable2D;
+    TCustomTable2D      = TGAbstractTable2D;
     TValueArray         = array of TValue;
     IValueEnumerable    = specialize IGEnumerable<TValue>;
     IColEnumerable      = specialize IGEnumerable<TCol>;
@@ -1422,77 +1422,77 @@ end;
 
 {$I LGEnums.inc}
 
-{ TGCustomContainer.TGContainerEnumerator }
+{ TGAbstractContainer.TGContainerEnumerator }
 
-constructor TGCustomContainer.TContainerEnumerator.Create(c: TCustomContainer);
+constructor TGAbstractContainer.TContainerEnumerator.Create(c: TAbstractContainer);
 begin
   FOwner := c;
 end;
 
-destructor TGCustomContainer.TContainerEnumerator.Destroy;
+destructor TGAbstractContainer.TContainerEnumerator.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-{ TGCustomContainer.TContainerEnumerable }
+{ TGAbstractContainer.TContainerEnumerable }
 
-constructor TGCustomContainer.TContainerEnumerable.Create(c: TCustomContainer);
+constructor TGAbstractContainer.TContainerEnumerable.Create(c: TAbstractContainer);
 begin
   inherited Create;
   FOwner := c;
 end;
 
-destructor TGCustomContainer.TContainerEnumerable.Destroy;
+destructor TGAbstractContainer.TContainerEnumerable.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-{ TGCustomContainer }
+{ TGAbstractContainer }
 
-function TGCustomContainer.GetInIteration: Boolean;
+function TGAbstractContainer.GetInIteration: Boolean;
 begin
   Result := Boolean(LongBool(FIterationCount));
 end;
 
-procedure TGCustomContainer.CapacityExceedError(aValue: SizeInt);
+procedure TGAbstractContainer.CapacityExceedError(aValue: SizeInt);
 begin
   raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
 end;
 
-procedure TGCustomContainer.AccessEmptyError;
+procedure TGAbstractContainer.AccessEmptyError;
 begin
   raise ELGAccessEmpty.CreateFmt(SEClassAccessEmptyFmt, [ClassName]);
 end;
 
-procedure TGCustomContainer.IndexOutOfBoundError(aIndex: SizeInt);
+procedure TGAbstractContainer.IndexOutOfBoundError(aIndex: SizeInt);
 begin
   raise ELGListError.CreateFmt(SEClassIdxOutOfBoundsFmt, [ClassName, aIndex]);
 end;
 
-procedure TGCustomContainer.UpdateLockError;
+procedure TGAbstractContainer.UpdateLockError;
 begin
   raise ELGUpdateLock.CreateFmt(SECantUpdDuringIterFmt, [ClassName]);
 end;
 
-procedure TGCustomContainer.CheckInIteration;
+procedure TGAbstractContainer.CheckInIteration;
 begin
   if InIteration then
     UpdateLockError;
 end;
 
-procedure TGCustomContainer.BeginIteration;
+procedure TGAbstractContainer.BeginIteration;
 begin
   InterlockedIncrement(FIterationCount);
 end;
 
-procedure TGCustomContainer.EndIteration;
+procedure TGAbstractContainer.EndIteration;
 begin
   InterlockedDecrement(FIterationCount);
 end;
 
-procedure TGCustomContainer.CopyItems(aBuffer: PItem);
+procedure TGAbstractContainer.CopyItems(aBuffer: PItem);
 begin
   with GetEnumerator do
     try
@@ -1506,13 +1506,13 @@ begin
     end;
 end;
 
-function TGCustomContainer.GetEnumerator: TCustomEnumerator;
+function TGAbstractContainer.GetEnumerator: TCustomEnumerator;
 begin
   BeginIteration;
   Result := DoGetEnumerator;
 end;
 
-function TGCustomContainer.ToArray: TArray;
+function TGAbstractContainer.ToArray: TArray;
 var
   c: SizeInt;
 begin
@@ -1522,29 +1522,29 @@ begin
     CopyItems(@Result[0]);
 end;
 
-function TGCustomContainer.IsEmpty: Boolean;
+function TGAbstractContainer.IsEmpty: Boolean;
 begin
   Result := GetCount = 0;
 end;
 
-function TGCustomContainer.NonEmpty: Boolean;
+function TGAbstractContainer.NonEmpty: Boolean;
 begin
   Result := GetCount <> 0;
 end;
 
-procedure TGCustomContainer.Clear;
+procedure TGAbstractContainer.Clear;
 begin
   CheckInIteration;
   DoClear;
 end;
 
-procedure TGCustomContainer.TrimToFit;
+procedure TGAbstractContainer.TrimToFit;
 begin
   CheckInIteration;
   DoTrimToFit;
 end;
 
-procedure TGCustomContainer.EnsureCapacity(aValue: SizeInt);
+procedure TGAbstractContainer.EnsureCapacity(aValue: SizeInt);
 begin
   CheckInIteration;
   DoEnsureCapacity(aValue);
@@ -1552,14 +1552,14 @@ end;
 
 {$I LGDynBuffer.inc}
 
-{ TGCustomCollection }
+{ TGAbstractCollection }
 
-function TGCustomCollection.DoRemove(constref aValue: T): Boolean;
+function TGAbstractCollection.DoRemove(constref aValue: T): Boolean;
 begin
   Result := DoExtract(aValue);
 end;
 
-function TGCustomCollection.DoAddAll(constref a: array of T): SizeInt;
+function TGAbstractCollection.DoAddAll(constref a: array of T): SizeInt;
 var
   v: T;
 begin
@@ -1568,7 +1568,7 @@ begin
     Result += Ord(DoAdd(v));
 end;
 
-function TGCustomCollection.DoRemoveAll(constref a: array of T): SizeInt;
+function TGAbstractCollection.DoRemoveAll(constref a: array of T): SizeInt;
 var
   v: T;
 begin
@@ -1577,7 +1577,7 @@ begin
     Result += Ord(DoRemove(v));
 end;
 
-function TGCustomCollection.DoRemoveAll(e: IEnumerable): SizeInt;
+function TGAbstractCollection.DoRemoveAll(e: IEnumerable): SizeInt;
 var
   o: TObject;
   v: T;
@@ -1596,19 +1596,19 @@ begin
     end;
 end;
 
-function TGCustomCollection.Add(constref aValue: T): Boolean;
+function TGAbstractCollection.Add(constref aValue: T): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(aValue);
 end;
 
-function TGCustomCollection.AddAll(constref a: array of T): SizeInt;
+function TGAbstractCollection.AddAll(constref a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddAll(a);
 end;
 
-function TGCustomCollection.AddAll(e: IEnumerable): SizeInt;
+function TGAbstractCollection.AddAll(e: IEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoAddAll(e)
@@ -1620,12 +1620,12 @@ begin
     end;
 end;
 
-function TGCustomCollection.NonContains(constref aValue: T): Boolean;
+function TGAbstractCollection.NonContains(constref aValue: T): Boolean;
 begin
   Result := not Contains(aValue);
 end;
 
-function TGCustomCollection.ContainsAny(constref a: array of T): Boolean;
+function TGAbstractCollection.ContainsAny(constref a: array of T): Boolean;
 var
   v: T;
 begin
@@ -1635,7 +1635,7 @@ begin
   Result := False;
 end;
 
-function TGCustomCollection.ContainsAny(e: IEnumerable): Boolean;
+function TGAbstractCollection.ContainsAny(e: IEnumerable): Boolean;
 var
   v: T;
 begin
@@ -1650,7 +1650,7 @@ begin
     Result := not IsEmpty;
 end;
 
-function TGCustomCollection.ContainsAll(constref a: array of T): Boolean;
+function TGAbstractCollection.ContainsAll(constref a: array of T): Boolean;
 var
   v: T;
 begin
@@ -1660,7 +1660,7 @@ begin
   Result := True;
 end;
 
-function TGCustomCollection.ContainsAll(e: IEnumerable): Boolean;
+function TGAbstractCollection.ContainsAll(e: IEnumerable): Boolean;
 var
   v: T;
 begin
@@ -1671,19 +1671,19 @@ begin
   Result := True;
 end;
 
-function TGCustomCollection.Remove(constref aValue: T): Boolean;
+function TGAbstractCollection.Remove(constref aValue: T): Boolean;
 begin
   CheckInIteration;
   Result := DoRemove(aValue);
 end;
 
-function TGCustomCollection.RemoveAll(constref a: array of T): SizeInt;
+function TGAbstractCollection.RemoveAll(constref a: array of T): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveAll(a);
 end;
 
-function TGCustomCollection.RemoveAll(e: IEnumerable): SizeInt;
+function TGAbstractCollection.RemoveAll(e: IEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoRemoveAll(e)
@@ -1695,49 +1695,49 @@ begin
     end;
 end;
 
-function TGCustomCollection.RemoveIf(aTest: TTest): SizeInt;
+function TGAbstractCollection.RemoveIf(aTest: TTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
 end;
 
-function TGCustomCollection.RemoveIf(aTest: TOnTest): SizeInt;
+function TGAbstractCollection.RemoveIf(aTest: TOnTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
 end;
 
-function TGCustomCollection.RemoveIf(aTest: TNestTest): SizeInt;
+function TGAbstractCollection.RemoveIf(aTest: TNestTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
 end;
 
-function TGCustomCollection.Extract(constref aValue: T): Boolean;
+function TGAbstractCollection.Extract(constref aValue: T): Boolean;
 begin
   CheckInIteration;
   Result := DoExtract(aValue);
 end;
 
-function TGCustomCollection.ExtractIf(aTest: TTest): TArray;
+function TGAbstractCollection.ExtractIf(aTest: TTest): TArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
-function TGCustomCollection.ExtractIf(aTest: TOnTest): TArray;
+function TGAbstractCollection.ExtractIf(aTest: TOnTest): TArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
-function TGCustomCollection.ExtractIf(aTest: TNestTest): TArray;
+function TGAbstractCollection.ExtractIf(aTest: TNestTest): TArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
-procedure TGCustomCollection.RetainAll(aCollection: ICollection);
+procedure TGAbstractCollection.RetainAll(aCollection: ICollection);
 begin
   if aCollection._GetRef <> Self then
     begin
@@ -1832,9 +1832,9 @@ begin
   end;
 end;
 
-{ TGCustomSet.TExtractHelper }
+{ TGAbstractSet.TExtractHelper }
 
-procedure TGCustomSet.TExtractHelper.OnExtract(p: PEntry);
+procedure TGAbstractSet.TExtractHelper.OnExtract(p: PEntry);
 var
   c: SizeInt;
 begin
@@ -1845,21 +1845,21 @@ begin
   Inc(FCurrIndex);
 end;
 
-procedure TGCustomSet.TExtractHelper.Init;
+procedure TGAbstractSet.TExtractHelper.Init;
 begin
   FCurrIndex := 0;
   System.SetLength(FExtracted, ARRAY_INITIAL_SIZE);
 end;
 
-function TGCustomSet.TExtractHelper.Final: TArray;
+function TGAbstractSet.TExtractHelper.Final: TArray;
 begin
   System.SetLength(FExtracted, FCurrIndex);
   Result := FExtracted;
 end;
 
-{ TGCustomSet }
+{ TGAbstractSet }
 
-function TGCustomSet.DoAddAll(e: IEnumerable): SizeInt;
+function TGAbstractSet.DoAddAll(e: IEnumerable): SizeInt;
 var
   v: T;
 begin
@@ -1873,7 +1873,7 @@ begin
     Result := 0;
 end;
 
-procedure TGCustomSet.DoSymmetricSubtract(aSet: TCustomSet);
+procedure TGAbstractSet.DoSymmetricSubtract(aSet: TAbstractSet);
 var
   v: T;
 begin
@@ -1887,7 +1887,7 @@ begin
     Clear;
 end;
 
-function TGCustomSet.IsSuperset(aSet: TCustomSet): Boolean;
+function TGAbstractSet.IsSuperset(aSet: TAbstractSet): Boolean;
 begin
   if aSet <> Self then
     begin
@@ -1900,12 +1900,12 @@ begin
     Result := True;
 end;
 
-function TGCustomSet.IsSubset(aSet: TCustomSet): Boolean;
+function TGAbstractSet.IsSubset(aSet: TAbstractSet): Boolean;
 begin
   Result := aSet.IsSuperset(Self);
 end;
 
-function TGCustomSet.IsEqual(aSet: TCustomSet): Boolean;
+function TGAbstractSet.IsEqual(aSet: TAbstractSet): Boolean;
 begin
   if aSet <> Self then
     Result := (Count = aSet.Count) and ContainsAll(aSet)
@@ -1913,35 +1913,35 @@ begin
     Result := True;
 end;
 
-function TGCustomSet.Intersecting(aSet: TCustomSet): Boolean;
+function TGAbstractSet.Intersecting(aSet: TAbstractSet): Boolean;
 begin
   Result := ContainsAny(aSet);
 end;
 
-procedure TGCustomSet.Intersect(aSet: TCustomSet);
+procedure TGAbstractSet.Intersect(aSet: TAbstractSet);
 begin
   RetainAll(aSet);
 end;
 
-procedure TGCustomSet.Join(aSet: TCustomSet);
+procedure TGAbstractSet.Join(aSet: TAbstractSet);
 begin
   AddAll(aSet);
 end;
 
-procedure TGCustomSet.Subtract(aSet: TCustomSet);
+procedure TGAbstractSet.Subtract(aSet: TAbstractSet);
 begin
   RemoveAll(aSet);
 end;
 
-procedure TGCustomSet.SymmetricSubtract(aSet: TCustomSet);
+procedure TGAbstractSet.SymmetricSubtract(aSet: TAbstractSet);
 begin
   CheckInIteration;
   DoSymmetricSubtract(aSet);
 end;
 
-{ TGCustomMultiSet.TExtractor }
+{ TGAbstractMultiSet.TExtractor }
 
-procedure TGCustomMultiSet.TExtractHelper.OnExtract(p: PEntry);
+procedure TGAbstractMultiSet.TExtractHelper.OnExtract(p: PEntry);
 var
   I, LastKey: SizeInt;
   Key: T;
@@ -1955,21 +1955,21 @@ begin
   FCurrIndex := Succ(LastKey);
 end;
 
-procedure TGCustomMultiSet.TExtractHelper.Init;
+procedure TGAbstractMultiSet.TExtractHelper.Init;
 begin
   FCurrIndex := 0;
   System.SetLength(FExtracted, ARRAY_INITIAL_SIZE);
 end;
 
-function TGCustomMultiSet.TExtractHelper.Final: TArray;
+function TGAbstractMultiSet.TExtractHelper.Final: TArray;
 begin
   System.SetLength(FExtracted, FCurrIndex);
   Result := FExtracted;
 end;
 
-{ TGCustomMultiSet.TIntersectHelper }
+{ TGAbstractMultiSet.TIntersectHelper }
 
-function TGCustomMultiSet.TIntersectHelper.OnIntersect(p: PEntry): Boolean;
+function TGAbstractMultiSet.TIntersectHelper.OnIntersect(p: PEntry): Boolean;
 var
   c, SetCount: SizeInt;
 begin
@@ -1988,14 +1988,14 @@ begin
     Result := True;
 end;
 
-{ TGCustomMultiSet }
+{ TGAbstractMultiSet }
 
-function TGCustomMultiSet.GetCount: SizeInt;
+function TGAbstractMultiSet.GetCount: SizeInt;
 begin
   Result := FCount;
 end;
 
-procedure TGCustomMultiSet.DoJoinEntry(constref e: TEntry);
+procedure TGAbstractMultiSet.DoJoinEntry(constref e: TEntry);
 var
   p: PEntry;
 begin
@@ -2014,7 +2014,7 @@ begin
 {$POP}
 end;
 
-procedure TGCustomMultiSet.DoAddEntry(constref e: TEntry);
+procedure TGAbstractMultiSet.DoAddEntry(constref e: TEntry);
 var
   p: PEntry;
 begin
@@ -2027,7 +2027,7 @@ begin
     p^.Count += e.Count;
 end;
 
-function TGCustomMultiSet.GetKeyCount(const aKey: T): SizeInt;
+function TGAbstractMultiSet.GetKeyCount(const aKey: T): SizeInt;
 var
   p: PEntry;
 begin
@@ -2038,7 +2038,7 @@ begin
     Result := 0;
 end;
 
-procedure TGCustomMultiSet.SetKeyCount(const aKey: T; aValue: SizeInt);
+procedure TGAbstractMultiSet.SetKeyCount(const aKey: T; aValue: SizeInt);
 var
   p: PEntry;
   e: TEntry;
@@ -2069,7 +2069,7 @@ begin
     end;
 end;
 
-procedure TGCustomMultiSet.DoArithAdd(aSet: TCustomMultiSet);
+procedure TGAbstractMultiSet.DoArithAdd(aSet: TAbstractMultiSet);
 var
   e: TEntry;
 begin
@@ -2080,7 +2080,7 @@ begin
     DoDoubleEntryCounters;
 end;
 
-procedure TGCustomMultiSet.DoArithSubtract(aSet: TCustomMultiSet);
+procedure TGAbstractMultiSet.DoArithSubtract(aSet: TAbstractMultiSet);
 var
   e: TEntry;
 begin
@@ -2091,7 +2091,7 @@ begin
     Clear;
 end;
 
-procedure TGCustomMultiSet.DoSymmSubtract(aSet: TCustomMultiSet);
+procedure TGAbstractMultiSet.DoSymmSubtract(aSet: TAbstractMultiSet);
 var
   e: TEntry;
 begin
@@ -2102,7 +2102,7 @@ begin
     Clear;
 end;
 
-function TGCustomMultiSet.DoAdd(constref aKey: T): Boolean;
+function TGAbstractMultiSet.DoAdd(constref aKey: T): Boolean;
 var
   p: PEntry;
 begin
@@ -2113,16 +2113,16 @@ begin
     Inc(p^.Count);
   Result := True;
 end;
-function TGCustomMultiSet.DoAddAll(e: IEnumerable): SizeInt;
+function TGAbstractMultiSet.DoAddAll(e: IEnumerable): SizeInt;
 var
   v: T;
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TCustomMultiSet then
+  if o is TAbstractMultiSet then
     begin
       Result := ElemCount;
-      DoArithAdd(TCustomMultiSet(o));
+      DoArithAdd(TAbstractMultiSet(o));
       Result := ElemCount - Result;
     end
   else
@@ -2133,16 +2133,16 @@ begin
     end;
 end;
 
-function TGCustomMultiSet.DoRemoveAll(e: IEnumerable): SizeInt;
+function TGAbstractMultiSet.DoRemoveAll(e: IEnumerable): SizeInt;
 var
   o: TObject;
   v: T;
 begin
   o := e._GetRef;
-  if o is TCustomMultiSet then
+  if o is TAbstractMultiSet then
     begin
       Result := ElemCount;
-      DoArithSubtract(TCustomMultiSet(o));
+      DoArithSubtract(TAbstractMultiSet(o));
       Result -= ElemCount;
     end
   else
@@ -2153,12 +2153,12 @@ begin
     end;
 end;
 
-function TGCustomMultiSet.Contains(constref aValue: T): Boolean;
+function TGAbstractMultiSet.Contains(constref aValue: T): Boolean;
 begin
   Result := FindEntry(aValue) <> nil;
 end;
 
-function TGCustomMultiSet.IsSuperMultiSet(aSet: TCustomMultiSet): Boolean;
+function TGAbstractMultiSet.IsSuperMultiSet(aSet: TAbstractMultiSet): Boolean;
 var
   e: TEntry;
 begin
@@ -2178,7 +2178,7 @@ begin
     Result := True;
 end;
 
-function TGCustomMultiSet.IsSubMultiSet(aSet: TCustomMultiSet): Boolean;
+function TGAbstractMultiSet.IsSubMultiSet(aSet: TAbstractMultiSet): Boolean;
 var
   e: TEntry;
 begin
@@ -2198,7 +2198,7 @@ begin
     Result := True;
 end;
 
-function TGCustomMultiSet.IsEqual(aSet: TCustomMultiSet): Boolean;
+function TGAbstractMultiSet.IsEqual(aSet: TAbstractMultiSet): Boolean;
 var
   e: TEntry;
 begin
@@ -2218,12 +2218,12 @@ begin
     Result := True;
 end;
 
-function TGCustomMultiSet.Intersecting(aSet: TCustomMultiSet): Boolean;
+function TGAbstractMultiSet.Intersecting(aSet: TAbstractMultiSet): Boolean;
 begin
   Result := ContainsAny(aSet.Distinct);
 end;
 
-procedure TGCustomMultiSet.Intersect(aSet: TCustomMultiSet);
+procedure TGAbstractMultiSet.Intersect(aSet: TAbstractMultiSet);
 begin
   if aSet <> Self then
     begin
@@ -2232,7 +2232,7 @@ begin
     end;
 end;
 
-procedure TGCustomMultiSet.Join(aSet: TCustomMultiSet);
+procedure TGAbstractMultiSet.Join(aSet: TAbstractMultiSet);
 var
   e: TEntry;
 begin
@@ -2244,31 +2244,31 @@ begin
     end;
 end;
 
-procedure TGCustomMultiSet.ArithmeticAdd(aSet: TCustomMultiSet);
+procedure TGAbstractMultiSet.ArithmeticAdd(aSet: TAbstractMultiSet);
 begin
   CheckInIteration;
   DoArithAdd(aSet);
 end;
 
-procedure TGCustomMultiSet.ArithmeticSubtract(aSet: TCustomMultiSet);
+procedure TGAbstractMultiSet.ArithmeticSubtract(aSet: TAbstractMultiSet);
 begin
   CheckInIteration;
   DoArithSubtract(aSet);
 end;
 
-procedure TGCustomMultiSet.SymmetricSubtract(aSet: TCustomMultiSet);
+procedure TGAbstractMultiSet.SymmetricSubtract(aSet: TAbstractMultiSet);
 begin
   CheckInIteration;
   DoSymmSubtract(aSet);
 end;
 
-function TGCustomMultiSet.Distinct: IEnumerable;
+function TGAbstractMultiSet.Distinct: IEnumerable;
 begin
   BeginIteration;
   Result := GetDistinct;
 end;
 
-function TGCustomMultiSet.Entries: IEntryEnumerable;
+function TGAbstractMultiSet.Entries: IEntryEnumerable;
 begin
   BeginIteration;
   Result := GetEntries;
@@ -2307,9 +2307,9 @@ begin
   InterlockedDecrement(FIterationCount);
 end;
 
-{ TGCustomMap.TExtractHelper }
+{ TGAbstractMap.TExtractHelper }
 
-procedure TGCustomMap.TExtractHelper.OnExtract(p: PEntry);
+procedure TGAbstractMap.TExtractHelper.OnExtract(p: PEntry);
 var
   c: SizeInt;
 begin
@@ -2320,81 +2320,81 @@ begin
   Inc(FCurrIndex);
 end;
 
-procedure TGCustomMap.TExtractHelper.Init;
+procedure TGAbstractMap.TExtractHelper.Init;
 begin
   FCurrIndex := 0;
   System.SetLength(FExtracted, ARRAY_INITIAL_SIZE);
 end;
 
-function TGCustomMap.TExtractHelper.Final: TEntryArray;
+function TGAbstractMap.TExtractHelper.Final: TEntryArray;
 begin
   System.SetLength(FExtracted, FCurrIndex);
   Result := FExtracted;
 end;
 
-{ TGCustomMap.TCustomKeyEnumerable }
+{ TGAbstractMap.TCustomKeyEnumerable }
 
-constructor TGCustomMap.TCustomKeyEnumerable.Create(aMap: TCustomMap);
+constructor TGAbstractMap.TCustomKeyEnumerable.Create(aMap: TCustomMap);
 begin
   inherited Create;
   FOwner := aMap;
 end;
 
-destructor TGCustomMap.TCustomKeyEnumerable.Destroy;
+destructor TGAbstractMap.TCustomKeyEnumerable.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-{ TGCustomMap.TCustomValueEnumerable }
+{ TGAbstractMap.TCustomValueEnumerable }
 
-constructor TGCustomMap.TCustomValueEnumerable.Create(aMap: TCustomMap);
+constructor TGAbstractMap.TCustomValueEnumerable.Create(aMap: TCustomMap);
 begin
   inherited Create;
   FOwner := aMap;
 end;
 
-destructor TGCustomMap.TCustomValueEnumerable.Destroy;
+destructor TGAbstractMap.TCustomValueEnumerable.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-{ TGCustomMap.TCustomEntryEnumerable }
+{ TGAbstractMap.TCustomEntryEnumerable }
 
-constructor TGCustomMap.TCustomEntryEnumerable.Create(aMap: TCustomMap);
+constructor TGAbstractMap.TCustomEntryEnumerable.Create(aMap: TCustomMap);
 begin
   inherited Create;
   FOwner := aMap;
 end;
 
-destructor TGCustomMap.TCustomEntryEnumerable.Destroy;
+destructor TGAbstractMap.TCustomEntryEnumerable.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-{ TGCustomMap }
+{ TGAbstractMap }
 
-function TGCustomMap._GetRef: TObject;
+function TGAbstractMap._GetRef: TObject;
 begin
   Result := Self;
 end;
 
-function TGCustomMap.DoRemove(constref aKey: TKey): Boolean;
+function TGAbstractMap.DoRemove(constref aKey: TKey): Boolean;
 var
   v: TValue;
 begin
   Result := DoExtract(aKey, v);
 end;
 
-function TGCustomMap.GetValue(const aKey: TKey): TValue;
+function TGAbstractMap.GetValue(const aKey: TKey): TValue;
 begin
   if not TryGetValue(aKey, Result) then
     raise ELGMapError.Create(SEKeyNotFound);
 end;
 
-function TGCustomMap.DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGAbstractMap.DoSetValue(constref aKey: TKey; constref aNewValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -2404,7 +2404,7 @@ begin
     p^.Value := aNewValue;
 end;
 
-function TGCustomMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -2413,7 +2413,7 @@ begin
     p^.Value := aValue;
 end;
 
-function TGCustomMap.DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean;
+function TGAbstractMap.DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -2421,7 +2421,7 @@ begin
   p^.Value := aValue;
 end;
 
-function TGCustomMap.DoAddAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMap.DoAddAll(constref a: array of TEntry): SizeInt;
 var
   e: TEntry;
 begin
@@ -2430,7 +2430,7 @@ begin
     Result += Ord(DoAdd(e.Key, e.Value));
 end;
 
-function TGCustomMap.DoAddAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMap.DoAddAll(e: IEntryEnumerable): SizeInt;
 var
   Entry: TEntry;
 begin
@@ -2440,7 +2440,7 @@ begin
       Result += Ord(DoAdd(Entry.Key, Entry.Value));
 end;
 
-function TGCustomMap.DoRemoveAll(constref a: array of TKey): SizeInt;
+function TGAbstractMap.DoRemoveAll(constref a: array of TKey): SizeInt;
 var
   k: TKey;
 begin
@@ -2449,7 +2449,7 @@ begin
     Result += Ord(DoRemove(k));
 end;
 
-function TGCustomMap.DoRemoveAll(e: IKeyEnumerable): SizeInt;
+function TGAbstractMap.DoRemoveAll(e: IKeyEnumerable): SizeInt;
 var
   k: TKey;
 begin
@@ -2458,7 +2458,7 @@ begin
     Result += Ord(DoRemove(k));
 end;
 
-function TGCustomMap.ToArray: TEntryArray;
+function TGAbstractMap.ToArray: TEntryArray;
 var
   I: Integer = 0;
   e: TEntry;
@@ -2471,35 +2471,35 @@ begin
     end;
 end;
 
-function TGCustomMap.IsEmpty: Boolean;
+function TGAbstractMap.IsEmpty: Boolean;
 begin
   Result := Count = 0;
 end;
 
-function TGCustomMap.NonEmpty: Boolean;
+function TGAbstractMap.NonEmpty: Boolean;
 begin
   Result := Count <> 0;
 end;
 
-procedure TGCustomMap.Clear;
+procedure TGAbstractMap.Clear;
 begin
   CheckInIteration;
   DoClear;
 end;
 
-procedure TGCustomMap.EnsureCapacity(aValue: SizeInt);
+procedure TGAbstractMap.EnsureCapacity(aValue: SizeInt);
 begin
   CheckInIteration;
   DoEnsureCapacity(aValue);
 end;
 
-procedure TGCustomMap.TrimToFit;
+procedure TGAbstractMap.TrimToFit;
 begin
   CheckInIteration;
   DoTrimToFit;
 end;
 
-function TGCustomMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+function TGAbstractMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
 var
   p: PEntry;
 begin
@@ -2509,42 +2509,42 @@ begin
     aValue := p^.Value;
 end;
 
-function TGCustomMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+function TGAbstractMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
 end;
 
-function TGCustomMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(aKey, aValue);
 end;
 
-function TGCustomMap.Add(constref e: TEntry): Boolean;
+function TGAbstractMap.Add(constref e: TEntry): Boolean;
 begin
   Result := Add(e.Key, e.Value);
 end;
 
-procedure TGCustomMap.AddOrSetValue(const aKey: TKey; const aValue: TValue);
+procedure TGAbstractMap.AddOrSetValue(const aKey: TKey; const aValue: TValue);
 begin
   CheckInIteration;
   DoAddOrSetValue(aKey, aValue);
 end;
 
-function TGCustomMap.AddOrSetValue(constref e: TEntry): Boolean;
+function TGAbstractMap.AddOrSetValue(constref e: TEntry): Boolean;
 begin
   CheckInIteration;
   Result := DoAddOrSetValue(e.Key, e.Value);
 end;
 
-function TGCustomMap.AddAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMap.AddAll(constref a: array of TEntry): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddAll(a);
 end;
 
-function TGCustomMap.AddAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMap.AddAll(e: IEntryEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoAddAll(e)
@@ -2556,18 +2556,18 @@ begin
     end;
 end;
 
-function TGCustomMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+function TGAbstractMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoSetValue(aKey, aNewValue);
 end;
 
-function TGCustomMap.Contains(constref aKey: TKey): Boolean;
+function TGAbstractMap.Contains(constref aKey: TKey): Boolean;
 begin
   Result := Find(aKey) <> nil;
 end;
 
-function TGCustomMap.ContainsAny(constref a: array of TKey): Boolean;
+function TGAbstractMap.ContainsAny(constref a: array of TKey): Boolean;
 var
   k: TKey;
 begin
@@ -2577,7 +2577,7 @@ begin
   Result := False;
 end;
 
-function TGCustomMap.ContainsAny(e: IKeyEnumerable): Boolean;
+function TGAbstractMap.ContainsAny(e: IKeyEnumerable): Boolean;
 var
   k: TKey;
 begin
@@ -2587,7 +2587,7 @@ begin
   Result := False;
 end;
 
-function TGCustomMap.ContainsAll(constref a: array of TKey): Boolean;
+function TGAbstractMap.ContainsAll(constref a: array of TKey): Boolean;
 var
   k: TKey;
 begin
@@ -2597,7 +2597,7 @@ begin
   Result := True;
 end;
 
-function TGCustomMap.ContainsAll(e: IKeyEnumerable): Boolean;
+function TGAbstractMap.ContainsAll(e: IKeyEnumerable): Boolean;
 var
   k: TKey;
 begin
@@ -2607,19 +2607,19 @@ begin
   Result := True;
 end;
 
-function TGCustomMap.Remove(constref aKey: TKey): Boolean;
+function TGAbstractMap.Remove(constref aKey: TKey): Boolean;
 begin
   CheckInIteration;
   Result := DoRemove(aKey);
 end;
 
-function TGCustomMap.RemoveAll(constref a: array of TKey): SizeInt;
+function TGAbstractMap.RemoveAll(constref a: array of TKey): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveAll(a);
 end;
 
-function TGCustomMap.RemoveAll(e: IKeyEnumerable): SizeInt;
+function TGAbstractMap.RemoveAll(e: IKeyEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoRemoveAll(e)
@@ -2631,76 +2631,76 @@ begin
     end;
 end;
 
-function TGCustomMap.RemoveIf(aTest: TKeyTest): SizeInt;
+function TGAbstractMap.RemoveIf(aTest: TKeyTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
 end;
 
-function TGCustomMap.RemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGAbstractMap.RemoveIf(aTest: TOnKeyTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
 end;
 
-function TGCustomMap.RemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGAbstractMap.RemoveIf(aTest: TNestKeyTest): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveIf(aTest);
 end;
 
-function TGCustomMap.Extract(constref aKey: TKey; out v: TValue): Boolean;
+function TGAbstractMap.Extract(constref aKey: TKey; out v: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoExtract(aKey, v);
 end;
 
-function TGCustomMap.ExtractIf(aTest: TKeyTest): TEntryArray;
+function TGAbstractMap.ExtractIf(aTest: TKeyTest): TEntryArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
-function TGCustomMap.ExtractIf(aTest: TOnKeyTest): TEntryArray;
+function TGAbstractMap.ExtractIf(aTest: TOnKeyTest): TEntryArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
-function TGCustomMap.ExtractIf(aTest: TNestKeyTest): TEntryArray;
+function TGAbstractMap.ExtractIf(aTest: TNestKeyTest): TEntryArray;
 begin
   CheckInIteration;
   Result := DoExtractIf(aTest);
 end;
 
-procedure TGCustomMap.RetainAll(c: IKeyCollection);
+procedure TGAbstractMap.RetainAll(c: IKeyCollection);
 begin
   CheckInIteration;
   DoRemoveIf(@c.NonContains);
 end;
 
 
-function TGCustomMap.Keys: IKeyEnumerable;
+function TGAbstractMap.Keys: IKeyEnumerable;
 begin
   BeginIteration;
   Result := GetKeys;
 end;
 
-function TGCustomMap.Values: IValueEnumerable;
+function TGAbstractMap.Values: IValueEnumerable;
 begin
   BeginIteration;
   Result := GetValues;
 end;
 
-function TGCustomMap.Entries: IEntryEnumerable;
+function TGAbstractMap.Entries: IEntryEnumerable;
 begin
   BeginIteration;
   Result := GetEntries;
 end;
 
-{ TGCustomMultiMap.TCustomValueSet }
+{ TGAbstractMultiMap.TCustomValueSet }
 
-function TGCustomMultiMap.TCustomValueSet.ToArray: TValueArray;
+function TGAbstractMultiMap.TCustomValueSet.ToArray: TValueArray;
 var
   I, Len: SizeInt;
 begin
@@ -2725,51 +2725,51 @@ begin
   SetLength(Result, I);
 end;
 
-{ TGCustomMultiMap.TCustomValueEnumerable }
+{ TGAbstractMultiMap.TCustomValueEnumerable }
 
-constructor TGCustomMultiMap.TCustomValueEnumerable.Create(aMap: TGCustomMultiMap);
+constructor TGAbstractMultiMap.TCustomValueEnumerable.Create(aMap: TGAbstractMultiMap);
 begin
   inherited Create;
   FOwner := aMap;
 end;
 
-destructor TGCustomMultiMap.TCustomValueEnumerable.Destroy;
+destructor TGAbstractMultiMap.TCustomValueEnumerable.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-{ TGCustomMultiMap.TCustomEntryEnumerable }
+{ TGAbstractMultiMap.TCustomEntryEnumerable }
 
-constructor TGCustomMultiMap.TCustomEntryEnumerable.Create(aMap: TGCustomMultiMap);
+constructor TGAbstractMultiMap.TCustomEntryEnumerable.Create(aMap: TGAbstractMultiMap);
 begin
   inherited Create;
   FOwner := aMap;
 end;
 
-destructor TGCustomMultiMap.TCustomEntryEnumerable.Destroy;
+destructor TGAbstractMultiMap.TCustomEntryEnumerable.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-{ TGCustomMultiMap.TCustomValueCursor }
+{ TGAbstractMultiMap.TCustomValueCursor }
 
-constructor TGCustomMultiMap.TCustomValueCursor.Create(e: TCustomEnumerator; aMap: TGCustomMultiMap);
+constructor TGAbstractMultiMap.TCustomValueCursor.Create(e: TCustomEnumerator; aMap: TGAbstractMultiMap);
 begin
   inherited Create(e);
   FOwner := aMap;
 end;
 
-destructor TGCustomMultiMap.TCustomValueCursor.Destroy;
+destructor TGAbstractMultiMap.TCustomValueCursor.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-{ TGCustomMultiMap }
+{ TGAbstractMultiMap }
 
-function TGCustomMultiMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
 var
   p: PMMEntry;
 begin
@@ -2778,7 +2778,7 @@ begin
   FCount += Ord(Result);
 end;
 
-function TGCustomMultiMap.DoAddAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMultiMap.DoAddAll(constref a: array of TEntry): SizeInt;
 var
   e: TEntry;
 begin
@@ -2787,7 +2787,7 @@ begin
     Result += Ord(DoAdd(e.Key, e.Value));
 end;
 
-function TGCustomMultiMap.DoAddAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMultiMap.DoAddAll(e: IEntryEnumerable): SizeInt;
 var
   Entry: TEntry;
 begin
@@ -2796,7 +2796,7 @@ begin
     Result += Ord(DoAdd(Entry.Key, Entry.Value));
 end;
 
-function TGCustomMultiMap.DoAddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGAbstractMultiMap.DoAddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
 var
   p: PMMEntry;
   v: TValue;
@@ -2811,7 +2811,7 @@ begin
     end;
 end;
 
-function TGCustomMultiMap.DoAddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGAbstractMultiMap.DoAddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
 var
   p: PMMEntry = nil;
   v: TValue;
@@ -2826,7 +2826,7 @@ begin
   FCount += Result;
 end;
 
-function TGCustomMultiMap.DoRemove(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.DoRemove(constref aKey: TKey; constref aValue: TValue): Boolean;
 var
   p: PMMEntry;
 begin
@@ -2842,7 +2842,7 @@ begin
     Result := False;
 end;
 
-function TGCustomMultiMap.DoRemoveAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMultiMap.DoRemoveAll(constref a: array of TEntry): SizeInt;
 var
   e: TEntry;
 begin
@@ -2851,7 +2851,7 @@ begin
     Result += Ord(DoRemove(e.Key, e.Value));
 end;
 
-function TGCustomMultiMap.DoRemoveAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMultiMap.DoRemoveAll(e: IEntryEnumerable): SizeInt;
 var
   Entry: TEntry;
 begin
@@ -2860,7 +2860,7 @@ begin
     Result += Ord(DoRemove(Entry.Key, Entry.Value));
 end;
 
-function TGCustomMultiMap.DoRemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGAbstractMultiMap.DoRemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
 var
   p: PMMEntry;
   v: TValue;
@@ -2877,7 +2877,7 @@ begin
     end;
 end;
 
-function TGCustomMultiMap.DoRemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGAbstractMultiMap.DoRemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
 var
   p: PMMEntry;
   v: TValue;
@@ -2896,7 +2896,7 @@ begin
     e.FindFirst(v);///////////////
 end;
 
-function TGCustomMultiMap.DoRemoveKeys(constref a: array of TKey): SizeInt;
+function TGAbstractMultiMap.DoRemoveKeys(constref a: array of TKey): SizeInt;
 var
   k: TKey;
 begin
@@ -2906,7 +2906,7 @@ begin
   FCount -= Result;
 end;
 
-function TGCustomMultiMap.DoRemoveKeys(e: IKeyEnumerable): SizeInt;
+function TGAbstractMultiMap.DoRemoveKeys(e: IKeyEnumerable): SizeInt;
 var
   k: TKey;
 begin
@@ -2916,41 +2916,41 @@ begin
   FCount -= Result;
 end;
 
-function TGCustomMultiMap.IsEmpty: Boolean;
+function TGAbstractMultiMap.IsEmpty: Boolean;
 begin
   Result := Count = 0;
 end;
 
-function TGCustomMultiMap.NonEmpty: Boolean;
+function TGAbstractMultiMap.NonEmpty: Boolean;
 begin
   Result := Count <> 0;
 end;
 
-procedure TGCustomMultiMap.Clear;
+procedure TGAbstractMultiMap.Clear;
 begin
   CheckInIteration;
   DoClear;
   FCount := 0;
 end;
 
-procedure TGCustomMultiMap.EnsureCapacity(aValue: SizeInt);
+procedure TGAbstractMultiMap.EnsureCapacity(aValue: SizeInt);
 begin
   CheckInIteration;
   DoEnsureCapacity(aValue);
 end;
 
-procedure TGCustomMultiMap.TrimToFit;
+procedure TGAbstractMultiMap.TrimToFit;
 begin
   CheckInIteration;
   DoTrimToFit;
 end;
 
-function TGCustomMultiMap.Contains(constref aKey: TKey): Boolean;
+function TGAbstractMultiMap.Contains(constref aKey: TKey): Boolean;
 begin
   Result := Find(aKey) <> nil;
 end;
 
-function TGCustomMultiMap.ContainsValue(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.ContainsValue(constref aKey: TKey; constref aValue: TValue): Boolean;
 var
   p: PMMEntry;
 begin
@@ -2961,24 +2961,24 @@ begin
     Result := False;
 end;
 
-function TGCustomMultiMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoAdd(aKey, aValue);
 end;
 
-function TGCustomMultiMap.Add(constref e: TEntry): Boolean;
+function TGAbstractMultiMap.Add(constref e: TEntry): Boolean;
 begin
   Result := Add(e.Key, e.Value);
 end;
 
-function TGCustomMultiMap.AddAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMultiMap.AddAll(constref a: array of TEntry): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddAll(a);
 end;
 
-function TGCustomMultiMap.AddAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMultiMap.AddAll(e: IEntryEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoAddAll(e)
@@ -2990,36 +2990,36 @@ begin
     end;
 end;
 
-function TGCustomMultiMap.AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGAbstractMultiMap.AddValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddValues(aKey, a);
 end;
 
-function TGCustomMultiMap.AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGAbstractMultiMap.AddValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
 begin
   CheckInIteration;
   Result := DoAddValues(aKey, e);
 end;
 
-function TGCustomMultiMap.Remove(constref aKey: TKey; constref aValue: TValue): Boolean;
+function TGAbstractMultiMap.Remove(constref aKey: TKey; constref aValue: TValue): Boolean;
 begin
   CheckInIteration;
   Result := DoRemove(aKey, aValue);
 end;
 
-function TGCustomMultiMap.Remove(constref e: TEntry): Boolean;
+function TGAbstractMultiMap.Remove(constref e: TEntry): Boolean;
 begin
   Result := Remove(e.Key, e.Value);
 end;
 
-function TGCustomMultiMap.RemoveAll(constref a: array of TEntry): SizeInt;
+function TGAbstractMultiMap.RemoveAll(constref a: array of TEntry): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveAll(a);
 end;
 
-function TGCustomMultiMap.RemoveAll(e: IEntryEnumerable): SizeInt;
+function TGAbstractMultiMap.RemoveAll(e: IEntryEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoRemoveAll(e)
@@ -3031,13 +3031,13 @@ begin
     end;
 end;
 
-function TGCustomMultiMap.RemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
+function TGAbstractMultiMap.RemoveValues(constref aKey: TKey; constref a: array of TValue): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveValues(aKey, a);
 end;
 
-function TGCustomMultiMap.RemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
+function TGAbstractMultiMap.RemoveValues(constref aKey: TKey; e: IValueEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoRemoveValues(aKey, e)
@@ -3049,20 +3049,20 @@ begin
     end;
 end;
 
-function TGCustomMultiMap.RemoveKey(constref aKey: TKey): SizeInt;
+function TGAbstractMultiMap.RemoveKey(constref aKey: TKey): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveKey(aKey);
   FCount -= Result;
 end;
 
-function TGCustomMultiMap.RemoveKeys(constref a: array of TKey): SizeInt;
+function TGAbstractMultiMap.RemoveKeys(constref a: array of TKey): SizeInt;
 begin
   CheckInIteration;
   Result := DoRemoveKeys(a);
 end;
 
-function TGCustomMultiMap.RemoveKeys(e: IKeyEnumerable): SizeInt;
+function TGAbstractMultiMap.RemoveKeys(e: IKeyEnumerable): SizeInt;
 begin
   if not InIteration then
     Result := DoRemoveKeys(e)
@@ -3074,7 +3074,7 @@ begin
     end;
 end;
 
-function TGCustomMultiMap.ValuesView(const aKey: TKey): IValueEnumerable;
+function TGAbstractMultiMap.ValuesView(const aKey: TKey): IValueEnumerable;
 var
   p: PMMEntry;
 begin
@@ -3088,25 +3088,25 @@ begin
     Result := specialize TGArrayCursor<TValue>.Create(nil);
 end;
 
-function TGCustomMultiMap.Keys: IKeyEnumerable;
+function TGAbstractMultiMap.Keys: IKeyEnumerable;
 begin
   BeginIteration;
   Result := GetKeys;
 end;
 
-function TGCustomMultiMap.Values: IValueEnumerable;
+function TGAbstractMultiMap.Values: IValueEnumerable;
 begin
   BeginIteration;
   Result := GetValues;
 end;
 
-function TGCustomMultiMap.Entries: IEntryEnumerable;
+function TGAbstractMultiMap.Entries: IEntryEnumerable;
 begin
   BeginIteration;
   Result := GetEntries;
 end;
 
-function TGCustomMultiMap.ValueCount(constref aKey: TKey): SizeInt;
+function TGAbstractMultiMap.ValueCount(constref aKey: TKey): SizeInt;
 var
   p: PMMEntry;
 begin
@@ -3117,47 +3117,47 @@ begin
     Result := 0;
 end;
 
-{ TGCustomTable2D.TCellData }
+{ TGAbstractTable2D.TCellData }
 
-constructor TGCustomTable2D.TCellData.Create(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue);
+constructor TGAbstractTable2D.TCellData.Create(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue);
 begin
   Row := aRow;
   Column := aCol;
   Value := aValue;
 end;
 
-{ TGCustomTable2D.TColData }
+{ TGAbstractTable2D.TColData }
 
-constructor TGCustomTable2D.TColData.Create(constref aRow: TRow; constref aValue: TValue);
+constructor TGAbstractTable2D.TColData.Create(constref aRow: TRow; constref aValue: TValue);
 begin
   Row := aRow;
   Value := aValue;
 end;
 
-{ TGCustomTable2D.TRowData }
+{ TGAbstractTable2D.TRowData }
 
-constructor TGCustomTable2D.TRowData.Create(constref aCol: TCol; constref aValue: TValue);
+constructor TGAbstractTable2D.TRowData.Create(constref aCol: TCol; constref aValue: TValue);
 begin
   Column := aCol;
   Value := aValue;
 end;
 
-{ TGCustomTable2D.TCustomRowMap }
+{ TGAbstractTable2D.TCustomRowMap }
 
-function TGCustomTable2D.TCustomRowMap.IsEmpty: Boolean;
+function TGAbstractTable2D.TCustomRowMap.IsEmpty: Boolean;
 begin
   Result := Count = 0;
 end;
 
-function TGCustomTable2D.TCustomRowMap.GetValueOrDefault(const aCol: TCol): TValue;
+function TGAbstractTable2D.TCustomRowMap.GetValueOrDefault(const aCol: TCol): TValue;
 begin
   if not TryGetValue(aCol, Result) then
     Result := Default(TValue);
 end;
 
-{ TGCustomTable2D }
+{ TGAbstractTable2D }
 
-function TGCustomTable2D.GetColCount(const aRow: TRow): SizeInt;
+function TGAbstractTable2D.GetColCount(const aRow: TRow): SizeInt;
 var
   p: PRowEntry;
 begin
@@ -3168,7 +3168,7 @@ begin
     Result := 0;
 end;
 
-function TGCustomTable2D.GetRowMap(const aRow: TRow): IRowMap;
+function TGAbstractTable2D.GetRowMap(const aRow: TRow): IRowMap;
 var
   p: PRowEntry;
 begin
@@ -3176,28 +3176,28 @@ begin
   Result := p^.Columns;
 end;
 
-function TGCustomTable2D.GetCell(const aRow: TRow; const aCol: TCol): TValue;
+function TGAbstractTable2D.GetCell(const aRow: TRow; const aCol: TCol): TValue;
 begin
   if not FindCell(aRow, aCol, Result) then
     raise ELGTableError.CreateFmt(SECellNotFoundFmt, [ClassName]);
 end;
 
-function TGCustomTable2D.IsEmpty: Boolean;
+function TGAbstractTable2D.IsEmpty: Boolean;
 begin
   Result := CellCount = 0;
 end;
 
-function TGCustomTable2D.NonEmpty: Boolean;
+function TGAbstractTable2D.NonEmpty: Boolean;
 begin
   Result := CellCount <> 0;
 end;
 
-function TGCustomTable2D.ContainsRow(constref aRow: TRow): Boolean;
+function TGAbstractTable2D.ContainsRow(constref aRow: TRow): Boolean;
 begin
   Result := DoFindRow(aRow) <> nil;
 end;
 
-function TGCustomTable2D.FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
+function TGAbstractTable2D.FindRow(constref aRow: TRow; out aMap: IRowMap): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3207,14 +3207,14 @@ begin
     aMap := p^.Columns;
 end;
 
-function TGCustomTable2D.AddRow(constref aRow: TRow): Boolean;
+function TGAbstractTable2D.AddRow(constref aRow: TRow): Boolean;
 var
   p: PRowEntry;
 begin
   Result := not DoFindOrAddRow(aRow, p);
 end;
 
-function TGCustomTable2D.AddRows(constref a: array of TRow): SizeInt;
+function TGAbstractTable2D.AddRows(constref a: array of TRow): SizeInt;
 var
   r: TRow;
 begin
@@ -3223,12 +3223,12 @@ begin
     Result += Ord(AddRow(r));
 end;
 
-function TGCustomTable2D.RemoveRow(constref aRow: TRow): SizeInt;
+function TGAbstractTable2D.RemoveRow(constref aRow: TRow): SizeInt;
 begin
   Result := DoRemoveRow(aRow);
 end;
 
-function TGCustomTable2D.RemoveColumn(constref aCol: TCol): SizeInt;
+function TGAbstractTable2D.RemoveColumn(constref aCol: TCol): SizeInt;
 var
   Map: IRowMap;
 begin
@@ -3237,7 +3237,7 @@ begin
     Result += Ord(Map.Remove(aCol));
 end;
 
-function TGCustomTable2D.ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
+function TGAbstractTable2D.ContainsCell(constref aRow: TRow; constref aCol: TCol): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3248,7 +3248,7 @@ begin
     Result := False;
 end;
 
-function TGCustomTable2D.FindCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
+function TGAbstractTable2D.FindCell(constref aRow: TRow; constref aCol: TCol; out aValue: TValue): Boolean;
 var
   p: PRowEntry;
 begin
@@ -3259,13 +3259,13 @@ begin
     Result := False;
 end;
 
-function TGCustomTable2D.GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue): TValue;
+function TGAbstractTable2D.GetCellDef(constref aRow: TRow; constref aCol: TCol; aDef: TValue): TValue;
 begin
   if not FindCell(aRow, aCol, Result) then
     Result := aDef;
 end;
 
-procedure TGCustomTable2D.AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
+procedure TGAbstractTable2D.AddOrSetCell(const aRow: TRow; const aCol: TCol; const aValue: TValue);
 var
   p: PRowEntry;
 begin
@@ -3273,19 +3273,19 @@ begin
   p^.Columns[aCol] := aValue;
 end;
 
-function TGCustomTable2D.AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
+function TGAbstractTable2D.AddCell(constref aRow: TRow; constref aCol: TCol; constref aValue: TValue): Boolean;
 begin
   Result := not ContainsCell(aRow, aCol);
   if Result then
     AddOrSetCell(aRow, aCol, aValue);
 end;
 
-function TGCustomTable2D.AddCell(constref e: TCellData): Boolean;
+function TGAbstractTable2D.AddCell(constref e: TCellData): Boolean;
 begin
   Result := AddCell(e.Row, e.Column, e.Value);
 end;
 
-function TGCustomTable2D.AddCells(constref a: array of TCellData): SizeInt;
+function TGAbstractTable2D.AddCells(constref a: array of TCellData): SizeInt;
 var
   e: TCellData;
 begin
@@ -3294,7 +3294,7 @@ begin
     Result += Ord(AddCell(e));
 end;
 
-function TGCustomTable2D.RemoveCell(constref aRow: TRow; constref aCol: TCol): Boolean;
+function TGAbstractTable2D.RemoveCell(constref aRow: TRow; constref aCol: TCol): Boolean;
 var
   p: PRowEntry;
 begin

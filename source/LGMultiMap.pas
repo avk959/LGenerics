@@ -38,20 +38,20 @@ uses
 
 type
 
-  { TGCustomHashMultiMap: common abstract ancestor class}
-  generic TGCustomHashMultiMap<TKey, TValue, TKeyEqRel> = class abstract(specialize TGCustomMultiMap<TKey, TValue>)
+  { TGAbstractHashMultiMap: common abstract ancestor class}
+  generic TGAbstractHashMultiMap<TKey, TValue, TKeyEqRel> = class abstract(
+    specialize TGAbstractMultiMap<TKey, TValue>)
   protected
   type
-
     THashTable    = class(specialize TGHashTableLP<TKey, TMMEntry, TKeyEqRel>);
 
     TKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
     protected
-      FOwner: TGCustomHashMultiMap;
+      FOwner: TGAbstractHashMultiMap;
       FEnum: THashTable.TEnumerator;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(aMap: TGCustomHashMultiMap);
+      constructor Create(aMap: TGAbstractHashMultiMap);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -63,7 +63,7 @@ type
       FEntryEnum: THashTable.TEnumerator;
       function  GetCurrent: TValue; override;
     public
-      constructor Create(aMap: TGCustomHashMultiMap);
+      constructor Create(aMap: TGAbstractHashMultiMap);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -75,7 +75,7 @@ type
       FEntryEnum: THashTable.TEnumerator;
       function  GetCurrent: TEntry; override;
     public
-      constructor Create(aMap: TGCustomHashMultiMap);
+      constructor Create(aMap: TGAbstractHashMultiMap);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -130,7 +130,7 @@ type
         class function HashCode([const[ref]] v: TValue): SizeInt;
         class function Equal([const[ref]] L, R: TValue): Boolean; }
   generic TGHashMultiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(
-    specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
+    specialize TGAbstractHashMultiMap<TKey, TValue, TKeyEqRel>)
   protected
   type
     TTable = specialize TGHashTableLP<TValue, TValEntry, TValueEqRel>;
@@ -190,7 +190,7 @@ type
       functor TValueCmpRel(value comparision relation) must provide:
         class function Compare([const[ref]] L, R: TValue): SizeInt; }
   generic TGTreeMultiMap<TKey, TValue, TKeyEqRel, TValueCmpRel> = class(
-    specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
+    specialize TGAbstractHashMultiMap<TKey, TValue, TKeyEqRel>)
   protected
   type
     TNode        = specialize TGAvlTreeNode<TValEntry>;
@@ -260,7 +260,7 @@ type
       functor TValueCmpRel(value comparision relation) must provide:
         class function Compare([const[ref]] L, R: TValue): SizeInt; }
   generic TGListMultiMap<TKey, TValue, TKeyEqRel, TValueCmpRel> = class(
-    specialize TGCustomHashMultiMap<TKey, TValue, TKeyEqRel>)
+    specialize TGAbstractHashMultiMap<TKey, TValue, TKeyEqRel>)
   protected
   type
     TValList = specialize TGSortedList2<TValue, TValueCmpRel>;
@@ -486,56 +486,56 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGCustomHashMultiMap.TKeyEnumerable }
+{ TGAbstractHashMultiMap.TKeyEnumerable }
 
-function TGCustomHashMultiMap.TKeyEnumerable.GetCurrent: TKey;
+function TGAbstractHashMultiMap.TKeyEnumerable.GetCurrent: TKey;
 begin
   Result := FEnum.Current^.Key;
 end;
 
-constructor TGCustomHashMultiMap.TKeyEnumerable.Create(aMap: TGCustomHashMultiMap);
+constructor TGAbstractHashMultiMap.TKeyEnumerable.Create(aMap: TGAbstractHashMultiMap);
 begin
   inherited Create;
   FOwner := aMap;
   FEnum := aMap.FTable.GetEnumerator;
 end;
 
-destructor TGCustomHashMultiMap.TKeyEnumerable.Destroy;
+destructor TGAbstractHashMultiMap.TKeyEnumerable.Destroy;
 begin
   FOwner.EndIteration;
   inherited;
 end;
 
-function TGCustomHashMultiMap.TKeyEnumerable.MoveNext: Boolean;
+function TGAbstractHashMultiMap.TKeyEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomHashMultiMap.TKeyEnumerable.Reset;
+procedure TGAbstractHashMultiMap.TKeyEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomHashMultiMap.TValueEnumerable }
+{ TGAbstractHashMultiMap.TValueEnumerable }
 
-function TGCustomHashMultiMap.TValueEnumerable.GetCurrent: TValue;
+function TGAbstractHashMultiMap.TValueEnumerable.GetCurrent: TValue;
 begin
   Result := FValueEnum.Current;
 end;
 
-constructor TGCustomHashMultiMap.TValueEnumerable.Create(aMap: TGCustomHashMultiMap);
+constructor TGAbstractHashMultiMap.TValueEnumerable.Create(aMap: TGAbstractHashMultiMap);
 begin
   inherited Create(aMap);
   FEntryEnum := aMap.FTable.GetEnumerator;
 end;
 
-destructor TGCustomHashMultiMap.TValueEnumerable.Destroy;
+destructor TGAbstractHashMultiMap.TValueEnumerable.Destroy;
 begin
   FValueEnum.Free;
   inherited;
 end;
 
-function TGCustomHashMultiMap.TValueEnumerable.MoveNext: Boolean;
+function TGAbstractHashMultiMap.TValueEnumerable.MoveNext: Boolean;
 begin
   repeat
     if not Assigned(FValueEnum) then
@@ -550,33 +550,33 @@ begin
   until Result;
 end;
 
-procedure TGCustomHashMultiMap.TValueEnumerable.Reset;
+procedure TGAbstractHashMultiMap.TValueEnumerable.Reset;
 begin
   FEntryEnum.Reset;
   FValueEnum := nil;
 end;
 
-{ TGCustomHashMultiMap.TEntryEnumerable }
+{ TGAbstractHashMultiMap.TEntryEnumerable }
 
-function TGCustomHashMultiMap.TEntryEnumerable.GetCurrent: TEntry;
+function TGAbstractHashMultiMap.TEntryEnumerable.GetCurrent: TEntry;
 begin
   Result.Key := FEntryEnum.Current^.Key;
   Result.Value := FValueEnum.Current;
 end;
 
-constructor TGCustomHashMultiMap.TEntryEnumerable.Create(aMap: TGCustomHashMultiMap);
+constructor TGAbstractHashMultiMap.TEntryEnumerable.Create(aMap: TGAbstractHashMultiMap);
 begin
   inherited Create(aMap);
   FEntryEnum := aMap.FTable.GetEnumerator;
 end;
 
-destructor TGCustomHashMultiMap.TEntryEnumerable.Destroy;
+destructor TGAbstractHashMultiMap.TEntryEnumerable.Destroy;
 begin
   FValueEnum.Free;
   inherited;
 end;
 
-function TGCustomHashMultiMap.TEntryEnumerable.MoveNext: Boolean;
+function TGAbstractHashMultiMap.TEntryEnumerable.MoveNext: Boolean;
 begin
   repeat
     if not Assigned(FValueEnum) then
@@ -591,45 +591,45 @@ begin
   until Result;
 end;
 
-procedure TGCustomHashMultiMap.TEntryEnumerable.Reset;
+procedure TGAbstractHashMultiMap.TEntryEnumerable.Reset;
 begin
   FEntryEnum.Reset;
   FValueEnum := nil;
 end;
 
-{ TGCustomHashMultiMap }
+{ TGAbstractHashMultiMap }
 
-function TGCustomHashMultiMap.GetExpandTreshold: SizeInt;
+function TGAbstractHashMultiMap.GetExpandTreshold: SizeInt;
 begin
   Result := FTable.ExpandTreshold;
 end;
 
-function TGCustomHashMultiMap.GetFillRatio: Single;
+function TGAbstractHashMultiMap.GetFillRatio: Single;
 begin
   Result := FTable.FillRatio;
 end;
 
-function TGCustomHashMultiMap.GetLoadFactor: Single;
+function TGAbstractHashMultiMap.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
 end;
 
-procedure TGCustomHashMultiMap.SetLoadFactor(aValue: Single);
+procedure TGAbstractHashMultiMap.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
 end;
 
-function TGCustomHashMultiMap.GetKeyCount: SizeInt;
+function TGAbstractHashMultiMap.GetKeyCount: SizeInt;
 begin
   Result := FTable.Count;
 end;
 
-function TGCustomHashMultiMap.GetCapacity: SizeInt;
+function TGAbstractHashMultiMap.GetCapacity: SizeInt;
 begin
   Result := FTable.Capacity;
 end;
 
-procedure TGCustomHashMultiMap.DoClear;
+procedure TGAbstractHashMultiMap.DoClear;
 var
   p: PMMEntry;
 begin
@@ -638,24 +638,24 @@ begin
   FTable.Clear;
 end;
 
-procedure TGCustomHashMultiMap.DoEnsureCapacity(aValue: SizeInt);
+procedure TGAbstractHashMultiMap.DoEnsureCapacity(aValue: SizeInt);
 begin
   FTable.EnsureCapacity(aValue);
 end;
 
-procedure TGCustomHashMultiMap.DoTrimToFit;
+procedure TGAbstractHashMultiMap.DoTrimToFit;
 begin
   FTable.TrimToFit;
 end;
 
-function TGCustomHashMultiMap.Find(constref aKey: TKey): PMMEntry;
+function TGAbstractHashMultiMap.Find(constref aKey: TKey): PMMEntry;
 var
   p: SizeInt;
 begin
   Result := FTable.Find(aKey, p);
 end;
 
-function TGCustomHashMultiMap.FindOrAdd(constref aKey: TKey): PMMEntry;
+function TGAbstractHashMultiMap.FindOrAdd(constref aKey: TKey): PMMEntry;
 var
   p: SizeInt;
 begin
@@ -666,7 +666,7 @@ begin
     end;
 end;
 
-function TGCustomHashMultiMap.DoRemoveKey(constref aKey: TKey): SizeInt;
+function TGAbstractHashMultiMap.DoRemoveKey(constref aKey: TKey): SizeInt;
 var
   Pos: SizeInt;
   p: PMMEntry;
@@ -682,65 +682,65 @@ begin
     Result := 0;
 end;
 
-function TGCustomHashMultiMap.GetKeys: IKeyEnumerable;
+function TGAbstractHashMultiMap.GetKeys: IKeyEnumerable;
 begin
   Result := TKeyEnumerable.Create(Self);
 end;
 
-function TGCustomHashMultiMap.GetValues: IValueEnumerable;
+function TGAbstractHashMultiMap.GetValues: IValueEnumerable;
 begin
   Result := TValueEnumerable.Create(Self);
 end;
 
-function TGCustomHashMultiMap.GetEntries: IEntryEnumerable;
+function TGAbstractHashMultiMap.GetEntries: IEntryEnumerable;
 begin
   Result := TEntryEnumerable.Create(Self);
 end;
 
-class function TGCustomHashMultiMap.DefaultLoadFactor: Single;
+class function TGAbstractHashMultiMap.DefaultLoadFactor: Single;
 begin
   Result := THashTable.DefaultLoadFactor;
 end;
 
-class function TGCustomHashMultiMap.MaxLoadFactor: Single;
+class function TGAbstractHashMultiMap.MaxLoadFactor: Single;
 begin
   Result := THashTable.MaxLoadFactor;
 end;
 
-class function TGCustomHashMultiMap.MinLoadFactor: Single;
+class function TGAbstractHashMultiMap.MinLoadFactor: Single;
 begin
   Result := THashTable.MinLoadFactor;
 end;
 
-constructor TGCustomHashMultiMap.Create;
+constructor TGAbstractHashMultiMap.Create;
 begin
   FTable := THashTable.Create;
 end;
 
-constructor TGCustomHashMultiMap.Create(constref a: array of TEntry);
+constructor TGAbstractHashMultiMap.Create(constref a: array of TEntry);
 begin
   Create;
   DoAddAll(a);
 end;
 
-constructor TGCustomHashMultiMap.Create(e: IEntryEnumerable);
+constructor TGAbstractHashMultiMap.Create(e: IEntryEnumerable);
 begin
   Create;
   DoAddAll(e);
 end;
 
-constructor TGCustomHashMultiMap.Create(aCapacity: SizeInt);
+constructor TGAbstractHashMultiMap.Create(aCapacity: SizeInt);
 begin
   FTable := THashTable.Create(aCapacity);
 end;
 
-constructor TGCustomHashMultiMap.Create(aCapacity: SizeInt; constref a: array of TEntry);
+constructor TGAbstractHashMultiMap.Create(aCapacity: SizeInt; constref a: array of TEntry);
 begin
   Create(aCapacity);
   DoAddAll(a);
 end;
 
-constructor TGCustomHashMultiMap.Create(aCapacity: SizeInt; e: IEntryEnumerable);
+constructor TGAbstractHashMultiMap.Create(aCapacity: SizeInt; e: IEntryEnumerable);
 begin
   Create(aCapacity);
   DoAddAll(e);

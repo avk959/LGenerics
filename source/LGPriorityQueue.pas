@@ -271,7 +271,7 @@ type
   THandle = LGUtils.THandle;
 
   { TGCustomPairingHeap: abstract ancestor class to implement priority queue on top of pairing heap }
-  generic TGCustomPairingHeap<T> = class abstract(specialize TGCustomContainer<T>, specialize IGQueue<T>,
+  generic TGCustomPairingHeap<T> = class abstract(specialize TGAbstractContainer<T>, specialize IGQueue<T>,
     specialize IGPriorityQueue<T>)
   public
   type
@@ -340,7 +340,7 @@ type
     function  FindLeftmost: PNode;
     function  FindRightmost: PNode;
     function  EnqueueArray(constref a: array of T): SizeInt;
-    function  EnqueueContainer(c: TCustomContainer): SizeInt;
+    function  EnqueueContainer(c: TAbstractContainer): SizeInt;
     function  EnqueueEnum(e: IEnumerable): SizeInt;
     function  DoEnqueue(constref aValue: T): PNode; virtual; abstract;
     procedure DoUpdate(aNode: PNode; constref aValue: T); virtual; abstract;
@@ -2067,7 +2067,7 @@ begin
     end;
 end;
 
-function TGCustomPairingHeap.EnqueueContainer(c: TCustomContainer): SizeInt;
+function TGCustomPairingHeap.EnqueueContainer(c: TAbstractContainer): SizeInt;
 var
   v: T;
 begin
@@ -2135,8 +2135,8 @@ begin
   if not InIteration then
     begin
       o := e._GetRef;
-      if o is TCustomContainer then
-        Result := EnqueueContainer(TCustomContainer(o))
+      if o is TAbstractContainer then
+        Result := EnqueueContainer(TAbstractContainer(o))
       else
         Result := EnqueueEnum(e);
     end
@@ -2221,7 +2221,7 @@ begin
   if o <> Self then
     begin
       CheckInIteration;
-      TCustomContainer(o).CheckInIteration;
+      TAbstractContainer(o).CheckInIteration;
       if o is TCustomPairingHeap then
         Result := DoMergeHeap(TCustomPairingHeap(o))
       else

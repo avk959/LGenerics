@@ -35,11 +35,11 @@ uses
 
 type
 
-  { TGCustomTreeMap:  common tree map abstract ancestor class }
-  generic TGCustomTreeMap<TKey, TValue> = class abstract(specialize TGCustomMap<TKey, TValue>)
+  { TGAbstractTreeMap:  common tree map abstract ancestor class }
+  generic TGAbstractTreeMap<TKey, TValue> = class abstract(specialize TGAbstractMap<TKey, TValue>)
   public
   type
-    TCustomTreeMap = specialize TGCustomTreeMap<TKey, TValue>;
+    TAbstractTreeMap = specialize TGAbstractTreeMap<TKey, TValue>;
 
   protected
   type
@@ -51,7 +51,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(aMap: TCustomTreeMap; aReverse: Boolean = False);
+      constructor Create(aMap: TAbstractTreeMap; aReverse: Boolean = False);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -62,7 +62,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: TValue; override;
     public
-      constructor Create(aMap: TCustomTreeMap; aReverse: Boolean = False);
+      constructor Create(aMap: TAbstractTreeMap; aReverse: Boolean = False);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -73,7 +73,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: TEntry; override;
     public
-      constructor Create(aMap: TCustomTreeMap; aReverse: Boolean = False);
+      constructor Create(aMap: TAbstractTreeMap; aReverse: Boolean = False);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -84,7 +84,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aLowBound: TKey; aMap: TCustomTreeMap; aInclusive: Boolean);
+      constructor Create(constref aLowBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -143,12 +143,12 @@ type
     function Range(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): IKeyEnumerable;
       virtual; abstract;
   { returns sorted map whose keys are strictly less than(if not aInclusive) aHighBound }
-    function HeadMap(constref aHighBound: TKey; aInclusive: Boolean = False): TCustomTreeMap; virtual; abstract;
+    function HeadMap(constref aHighBound: TKey; aInclusive: Boolean = False): TAbstractTreeMap; virtual; abstract;
   { returns sorted map whose keys are greater than or equal to(if aInclusive) aLowBound }
-    function TailMap(constref aLowBound: TKey; aInclusive: Boolean = True): TCustomTreeMap; virtual; abstract;
+    function TailMap(constref aLowBound: TKey; aInclusive: Boolean = True): TAbstractTreeMap; virtual; abstract;
   { returns sorted map whose keys are greater than or equal to aLowBound and strictly less than
     aHighBound(by default) }
-    function SubMap(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TCustomTreeMap;
+    function SubMap(constref aLowBound, aHighBound: TKey; aIncludeBounds: TRangeBounds = [rbLow]): TAbstractTreeMap;
       virtual; abstract;
   end;
 
@@ -156,7 +156,7 @@ type
   { TGBaseTreeMap implements sorted map;
      functor TKeyCmpRel (key comparision relation) must provide:
        class function Compare([const[ref]] L, R: TKey): SizeInt;  }
-  generic TGBaseTreeMap<TKey, TValue, TKeyCmpRel> = class(specialize TGCustomTreeMap<TKey, TValue>)
+  generic TGBaseTreeMap<TKey, TValue, TKeyCmpRel> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   protected
   type
     TBaseTree  = specialize TGAvlTree<TKey, TEntry, TKeyCmpRel>;
@@ -170,14 +170,14 @@ type
     protected
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aHighBound: TKey; aMap: TCustomTreeMap; aInclusive: Boolean); overload;
+      constructor Create(constref aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TKeyRangeEnumerable = class(TKeyHeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TCustomTreeMap; aBounds: TRangeBounds); overload;
+      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
     class function DoCompare(constref L, R: TKey): SizeInt; static;
@@ -232,7 +232,7 @@ type
   generic TGObjTreeMap<TKey, TValue> = class(specialize TGObjectTreeMap<TKey, TValue, TKey>);
 
   { TGComparableTreeMap implements sorted map; it assumes that type T has defined comparision operators }
-  generic TGComparableTreeMap<TKey, TValue> = class(specialize TGCustomTreeMap<TKey, TValue>)
+  generic TGComparableTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   protected
   type
     TComparableTree = specialize TGComparableAvlTree<TKey, TEntry>;
@@ -245,14 +245,14 @@ type
       FDone: Boolean;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aHighBound: TKey; aMap: TCustomTreeMap; aInclusive: Boolean); overload;
+      constructor Create(constref aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TKeyRangeEnumerable = class(TKeyHeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TCustomTreeMap; aBounds: TRangeBounds); overload;
+      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
     class function DoCompare(constref L, R: TKey): SizeInt; static;
@@ -276,7 +276,7 @@ type
   end;
 
   { TGRegularTreeMap implements sorted map with regular comparator }
-  generic TGRegularTreeMap<TKey, TValue> = class(specialize TGCustomTreeMap<TKey, TValue>)
+  generic TGRegularTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   public
   type
     TComparator = specialize TGCompare<TKey>;
@@ -294,14 +294,14 @@ type
       FDone: Boolean;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aHighBound: TKey; aMap: TCustomTreeMap; aInclusive: Boolean); overload;
+      constructor Create(constref aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TKeyRangeEnumerable = class(TKeyHeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TCustomTreeMap; aBounds: TRangeBounds); overload;
+      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
   public
@@ -350,7 +350,7 @@ type
   end;
 
   { TGDelegatedTreeMap implements sorted map with delegated comparator }
-  generic TGDelegatedTreeMap<TKey, TValue> = class(specialize TGCustomTreeMap<TKey, TValue>)
+  generic TGDelegatedTreeMap<TKey, TValue> = class(specialize TGAbstractTreeMap<TKey, TValue>)
   public
   type
     TComparator = specialize TGOnCompare<TKey>;
@@ -368,14 +368,14 @@ type
       FDone: Boolean;
       function  GetCurrent: TKey; override;
     public
-      constructor Create(constref aHighBound: TKey; aMap: TCustomTreeMap; aInclusive: Boolean); overload;
+      constructor Create(constref aHighBound: TKey; aMap: TAbstractTreeMap; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TKeyRangeEnumerable = class(TKeyHeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TCustomTreeMap; aBounds: TRangeBounds); overload;
+      constructor Create(constref aLowBound, aHighBound: TKey; aMap: TAbstractTreeMap; aBounds: TRangeBounds); overload;
     end;
 
   public
@@ -427,14 +427,14 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGCustomTreeMap.TKeyEnumerable }
+{ TGAbstractTreeMap.TKeyEnumerable }
 
-function TGCustomTreeMap.TKeyEnumerable.GetCurrent: TKey;
+function TGAbstractTreeMap.TKeyEnumerable.GetCurrent: TKey;
 begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGCustomTreeMap.TKeyEnumerable.Create(aMap: TCustomTreeMap; aReverse: Boolean);
+constructor TGAbstractTreeMap.TKeyEnumerable.Create(aMap: TAbstractTreeMap; aReverse: Boolean);
 begin
   inherited Create(aMap);
   if aReverse then
@@ -443,30 +443,30 @@ begin
     FEnum := aMap.FTree.GetEnumerator;
 end;
 
-destructor TGCustomTreeMap.TKeyEnumerable.Destroy;
+destructor TGAbstractTreeMap.TKeyEnumerable.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomTreeMap.TKeyEnumerable.MoveNext: Boolean;
+function TGAbstractTreeMap.TKeyEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomTreeMap.TKeyEnumerable.Reset;
+procedure TGAbstractTreeMap.TKeyEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomTreeMap.TValueEnumerable }
+{ TGAbstractTreeMap.TValueEnumerable }
 
-function TGCustomTreeMap.TValueEnumerable.GetCurrent: TValue;
+function TGAbstractTreeMap.TValueEnumerable.GetCurrent: TValue;
 begin
   Result := FEnum.Current^.Data.Value;
 end;
 
-constructor TGCustomTreeMap.TValueEnumerable.Create(aMap: TCustomTreeMap; aReverse: Boolean);
+constructor TGAbstractTreeMap.TValueEnumerable.Create(aMap: TAbstractTreeMap; aReverse: Boolean);
 begin
   inherited Create(aMap);
   if aReverse then
@@ -475,30 +475,30 @@ begin
     FEnum := aMap.FTree.GetEnumerator;
 end;
 
-destructor TGCustomTreeMap.TValueEnumerable.Destroy;
+destructor TGAbstractTreeMap.TValueEnumerable.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomTreeMap.TValueEnumerable.MoveNext: Boolean;
+function TGAbstractTreeMap.TValueEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomTreeMap.TValueEnumerable.Reset;
+procedure TGAbstractTreeMap.TValueEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
 { TGBaseTreeMap.TEntryEnumerable }
 
-function TGCustomTreeMap.TEntryEnumerable.GetCurrent: TEntry;
+function TGAbstractTreeMap.TEntryEnumerable.GetCurrent: TEntry;
 begin
   Result := FEnum.Current^.Data;
 end;
 
-constructor TGCustomTreeMap.TEntryEnumerable.Create(aMap: TCustomTreeMap; aReverse: Boolean);
+constructor TGAbstractTreeMap.TEntryEnumerable.Create(aMap: TAbstractTreeMap; aReverse: Boolean);
 begin
   inherited Create(aMap);
   if aReverse then
@@ -507,65 +507,65 @@ begin
     FEnum := aMap.FTree.GetEnumerator;
 end;
 
-destructor TGCustomTreeMap.TEntryEnumerable.Destroy;
+destructor TGAbstractTreeMap.TEntryEnumerable.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomTreeMap.TEntryEnumerable.MoveNext: Boolean;
+function TGAbstractTreeMap.TEntryEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomTreeMap.TEntryEnumerable.Reset;
+procedure TGAbstractTreeMap.TEntryEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomTreeMap.TKeyTailEnumerable }
+{ TGAbstractTreeMap.TKeyTailEnumerable }
 
-function TGCustomTreeMap.TKeyTailEnumerable.GetCurrent: TKey;
+function TGAbstractTreeMap.TKeyTailEnumerable.GetCurrent: TKey;
 begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGCustomTreeMap.TKeyTailEnumerable.Create(constref aLowBound: TKey; aMap: TCustomTreeMap;
+constructor TGAbstractTreeMap.TKeyTailEnumerable.Create(constref aLowBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumeratorAt(aLowBound, aInclusive);
 end;
 
-destructor TGCustomTreeMap.TKeyTailEnumerable.Destroy;
+destructor TGAbstractTreeMap.TKeyTailEnumerable.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomTreeMap.TKeyTailEnumerable.MoveNext: Boolean;
+function TGAbstractTreeMap.TKeyTailEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomTreeMap.TKeyTailEnumerable.Reset;
+procedure TGAbstractTreeMap.TKeyTailEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomTreeMap }
+{ TGAbstractTreeMap }
 
-function TGCustomTreeMap.GetCount: SizeInt;
+function TGAbstractTreeMap.GetCount: SizeInt;
 begin
   Result := FTree.Count;
 end;
 
-function TGCustomTreeMap.GetCapacity: SizeInt;
+function TGAbstractTreeMap.GetCapacity: SizeInt;
 begin
   Result := FTree.Capacity;
 end;
 
-function TGCustomTreeMap.Find(constref aKey: TKey): PEntry;
+function TGAbstractTreeMap.Find(constref aKey: TKey): PEntry;
 var
   Node: PNode;
 begin
@@ -576,7 +576,7 @@ begin
     Result := nil;
 end;
 
-function TGCustomTreeMap.FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
+function TGAbstractTreeMap.FindOrAdd(constref aKey: TKey; out p: PEntry): Boolean;
 var
   Node: PNode;
 begin
@@ -584,7 +584,7 @@ begin
   p := @Node^.Data;
 end;
 
-function TGCustomTreeMap.DoExtract(constref aKey: TKey; out v: TValue): Boolean;
+function TGAbstractTreeMap.DoExtract(constref aKey: TKey; out v: TValue): Boolean;
 var
   Node: PNode;
 begin
@@ -597,22 +597,22 @@ begin
     end;
 end;
 
-function TGCustomTreeMap.DoRemoveIf(aTest: TKeyTest): SizeInt;
+function TGAbstractTreeMap.DoRemoveIf(aTest: TKeyTest): SizeInt;
 begin
   Result := FTree.RemoveIf(aTest);
 end;
 
-function TGCustomTreeMap.DoRemoveIf(aTest: TOnKeyTest): SizeInt;
+function TGAbstractTreeMap.DoRemoveIf(aTest: TOnKeyTest): SizeInt;
 begin
   Result := FTree.RemoveIf(aTest);
 end;
 
-function TGCustomTreeMap.DoRemoveIf(aTest: TNestKeyTest): SizeInt;
+function TGAbstractTreeMap.DoRemoveIf(aTest: TNestKeyTest): SizeInt;
 begin
   Result := FTree.RemoveIf(aTest);
 end;
 
-function TGCustomTreeMap.DoExtractIf(aTest: TKeyTest): TEntryArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TKeyTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
@@ -621,7 +621,7 @@ begin
   Result := e.Final;
 end;
 
-function TGCustomTreeMap.DoExtractIf(aTest: TOnKeyTest): TEntryArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TOnKeyTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
@@ -630,7 +630,7 @@ begin
   Result := e.Final;
 end;
 
-function TGCustomTreeMap.DoExtractIf(aTest: TNestKeyTest): TEntryArray;
+function TGAbstractTreeMap.DoExtractIf(aTest: TNestKeyTest): TEntryArray;
 var
   e: TExtractHelper;
 begin
@@ -639,37 +639,37 @@ begin
   Result := e.Final;
 end;
 
-procedure TGCustomTreeMap.DoClear;
+procedure TGAbstractTreeMap.DoClear;
 begin
   FTree.Clear;
 end;
 
-procedure TGCustomTreeMap.DoEnsureCapacity(aValue: SizeInt);
+procedure TGAbstractTreeMap.DoEnsureCapacity(aValue: SizeInt);
 begin
   FTree.EnsureCapacity(aValue);
 end;
 
-procedure TGCustomTreeMap.DoTrimToFit;
+procedure TGAbstractTreeMap.DoTrimToFit;
 begin
   FTree.TrimToFit;
 end;
 
-function TGCustomTreeMap.GetKeys: IKeyEnumerable;
+function TGAbstractTreeMap.GetKeys: IKeyEnumerable;
 begin
   Result := TKeyEnumerable.Create(Self);
 end;
 
-function TGCustomTreeMap.GetValues: IValueEnumerable;
+function TGAbstractTreeMap.GetValues: IValueEnumerable;
 begin
   Result := TValueEnumerable.Create(Self);
 end;
 
-function TGCustomTreeMap.GetEntries: IEntryEnumerable;
+function TGAbstractTreeMap.GetEntries: IEntryEnumerable;
 begin
   Result := TEntryEnumerable.Create(Self);
 end;
 
-function TGCustomTreeMap.FindNearestLT(constref aPattern: TKey; out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindNearestLT(constref aPattern: TKey; out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -679,7 +679,7 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-function TGCustomTreeMap.FindNearestLE(constref aPattern: TKey; out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindNearestLE(constref aPattern: TKey; out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -689,7 +689,7 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-function TGCustomTreeMap.FindNearestGT(constref aPattern: TKey; out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindNearestGT(constref aPattern: TKey; out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -699,7 +699,7 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-function TGCustomTreeMap.FindNearestGE(constref aPattern: TKey; out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindNearestGE(constref aPattern: TKey; out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -709,32 +709,32 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-destructor TGCustomTreeMap.Destroy;
+destructor TGAbstractTreeMap.Destroy;
 begin
   DoClear;
   FTree.Free;
   inherited;
 end;
 
-function TGCustomTreeMap.ReverseKeys: IKeyEnumerable;
+function TGAbstractTreeMap.ReverseKeys: IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyEnumerable.Create(Self, True);
 end;
 
-function TGCustomTreeMap.ReverseValues: IValueEnumerable;
+function TGAbstractTreeMap.ReverseValues: IValueEnumerable;
 begin
   BeginIteration;
   Result := TValueEnumerable.Create(Self, True);
 end;
 
-function TGCustomTreeMap.ReverseEntries: IEntryEnumerable;
+function TGAbstractTreeMap.ReverseEntries: IEntryEnumerable;
 begin
   BeginIteration;
   Result := TEntryEnumerable.Create(Self, True);
 end;
 
-function TGCustomTreeMap.FindFirstKey(out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindFirstKey(out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -744,7 +744,7 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-function TGCustomTreeMap.FirstKey: TKeyOptional;
+function TGAbstractTreeMap.FirstKey: TKeyOptional;
 var
   k: TKey;
 begin
@@ -752,7 +752,7 @@ begin
     Result.Assign(k);
 end;
 
-function TGCustomTreeMap.FindLastKey(out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindLastKey(out aKey: TKey): Boolean;
 var
   Node: PNode;
 begin
@@ -762,7 +762,7 @@ begin
     aKey := Node^.Data.Key;
 end;
 
-function TGCustomTreeMap.LastKey: TKeyOptional;
+function TGAbstractTreeMap.LastKey: TKeyOptional;
 var
   k: TKey;
 begin
@@ -770,7 +770,7 @@ begin
     Result.Assign(k);
 end;
 
-function TGCustomTreeMap.FindFirstValue(out aValue: TValue): Boolean;
+function TGAbstractTreeMap.FindFirstValue(out aValue: TValue): Boolean;
 var
   Node: PNode;
 begin
@@ -780,7 +780,7 @@ begin
     aValue := Node^.Data.Value;
 end;
 
-function TGCustomTreeMap.FirstValue: TValueOptional;
+function TGAbstractTreeMap.FirstValue: TValueOptional;
 var
   v: TValue;
 begin
@@ -788,7 +788,7 @@ begin
     Result.Assign(v);
 end;
 
-function TGCustomTreeMap.FindLastValue(out aValue: TValue): Boolean;
+function TGAbstractTreeMap.FindLastValue(out aValue: TValue): Boolean;
 var
   Node: PNode;
 begin
@@ -798,7 +798,7 @@ begin
     aValue := Node^.Data.Value;
 end;
 
-function TGCustomTreeMap.LastValue: TValueOptional;
+function TGAbstractTreeMap.LastValue: TValueOptional;
 var
   v: TValue;
 begin
@@ -806,27 +806,27 @@ begin
     Result.Assign(v);
 end;
 
-function TGCustomTreeMap.FindMin(out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindMin(out aKey: TKey): Boolean;
 begin
   Result := FindFirstKey(aKey);
 end;
 
-function TGCustomTreeMap.Min: TKeyOptional;
+function TGAbstractTreeMap.Min: TKeyOptional;
 begin
   Result := FirstKey;
 end;
 
-function TGCustomTreeMap.FindMax(out aKey: TKey): Boolean;
+function TGAbstractTreeMap.FindMax(out aKey: TKey): Boolean;
 begin
   Result := FindLastKey(aKey);
 end;
 
-function TGCustomTreeMap.Max: TKeyOptional;
+function TGAbstractTreeMap.Max: TKeyOptional;
 begin
   Result := LastKey;
 end;
 
-function TGCustomTreeMap.FindCeil(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean): Boolean;
+function TGAbstractTreeMap.FindCeil(constref aKey: TKey; out aCeil: TKey; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestGE(aKey, aCeil)
@@ -834,7 +834,7 @@ begin
     Result := FindNearestGT(aKey, aCeil);
 end;
 
-function TGCustomTreeMap.FindFloor(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean): Boolean;
+function TGAbstractTreeMap.FindFloor(constref aKey: TKey; out aFloor: TKey; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestLE(aKey, aFloor)
@@ -842,7 +842,7 @@ begin
     Result := FindNearestLT(aKey, aFloor);
 end;
 
-function TGCustomTreeMap.Tail(constref aLowBound: TKey; aInclusive: Boolean): IKeyEnumerable;
+function TGAbstractTreeMap.Tail(constref aLowBound: TKey; aInclusive: Boolean): IKeyEnumerable;
 begin
   BeginIteration;
   Result := TKeyTailEnumerable.Create(aLowBound, Self, aInclusive);
@@ -855,7 +855,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGBaseTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TCustomTreeMap;
+constructor TGBaseTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -890,7 +890,7 @@ end;
 { TGBaseTreeMap.TKeyRangeEnumerable }
 
 constructor TGBaseTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHighBound: TKey;
-  aMap: TCustomTreeMap; aBounds: TRangeBounds);
+  aMap: TAbstractTreeMap; aBounds: TRangeBounds);
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);
@@ -1122,7 +1122,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGComparableTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TCustomTreeMap;
+constructor TGComparableTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -1157,7 +1157,7 @@ end;
 { TGComparableTreeMap.TKeyRangeEnumerable }
 
 constructor TGComparableTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHighBound: TKey;
-  aMap: TCustomTreeMap; aBounds: TRangeBounds);
+  aMap: TAbstractTreeMap; aBounds: TRangeBounds);
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);
@@ -1273,7 +1273,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGRegularTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TCustomTreeMap;
+constructor TGRegularTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -1309,7 +1309,7 @@ end;
 { TGRegularTreeMap.TKeyRangeEnumerable }
 
 constructor TGRegularTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHighBound: TKey;
-  aMap: TCustomTreeMap; aBounds: TRangeBounds);
+  aMap: TAbstractTreeMap; aBounds: TRangeBounds);
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);
@@ -1548,7 +1548,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGDelegatedTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TCustomTreeMap;
+constructor TGDelegatedTreeMap.TKeyHeadEnumerable.Create(constref aHighBound: TKey; aMap: TAbstractTreeMap;
   aInclusive: Boolean);
 begin
   inherited Create(aMap);
@@ -1584,7 +1584,7 @@ end;
 { TGDelegatedTreeMap.TKeyRangeEnumerable }
 
 constructor TGDelegatedTreeMap.TKeyRangeEnumerable.Create(constref aLowBound, aHighBound: TKey;
-  aMap: TCustomTreeMap; aBounds: TRangeBounds);
+  aMap: TAbstractTreeMap; aBounds: TRangeBounds);
 begin
   inherited Create(aMap);
   FEnum := aMap.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);

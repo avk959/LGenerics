@@ -37,15 +37,15 @@ uses
 
 type
 
-  {TGCustomHashSet: common abstract ancestor hashset class }
-  generic TGCustomHashSet<T> = class abstract(specialize TGCustomSet<T>)
+  {TGAbstractHashSet: common abstract ancestor hashset class }
+  generic TGAbstractHashSet<T> = class abstract(specialize TGAbstractSet<T>)
   public
   type
-    TCustomHashSet = specialize TGCustomHashSet<T>;
+    TCustomHashSet = specialize TGAbstractHashSet<T>;
 
   protected
   type
-    THashTable           = specialize TGCustomHashTable<T, TEntry>;
+    THashTable           = specialize TGAbstractHashTable<T, TEntry>;
     THashTableClass      = class of THashTable;
     THashSetClass        = class of TCustomHashSet;
     TSearchResult        = THashTable.TSearchResult;
@@ -126,7 +126,7 @@ type
       functor TEqRel(equality relation) must provide:
         class function HashCode([const[ref]] aValue: T): SizeInt;
         class function Equal([const[ref]] L, R: T): Boolean; }
-  generic TGBaseHashSetLP<T, TEqRel> = class(specialize TGCustomHashSet<T>)
+  generic TGBaseHashSetLP<T, TEqRel> = class(specialize TGAbstractHashSet<T>)
   protected
     class function GetClass: THashSetClass; override;
     class function GetTableClass: THashTableClass; override;
@@ -137,7 +137,7 @@ type
   generic TGHashSetLP<T> = class(specialize TGBaseHashSetLP<T, T>);
 
   { TGBaseHashSetLPT implements open addressing hashset with linear probing and lazy deletion }
-  generic TGBaseHashSetLPT<T, TEqRel> = class(specialize TGCustomHashSet<T>)
+  generic TGBaseHashSetLPT<T, TEqRel> = class(specialize TGAbstractHashSet<T>)
   private
     function GetTombstonesCount: SizeInt; inline;
   protected
@@ -156,7 +156,7 @@ type
   generic TGHashSetLPT<T> = class(specialize TGBaseHashSetLPT<T, T>);
 
   { TGBaseHashSetQP implements open addressing hashset with quadratic probing(c1 = c2 = 1/2) }
-  generic TGBaseHashSetQP<T, TEqRel> = class(specialize TGCustomHashSet<T>)
+  generic TGBaseHashSetQP<T, TEqRel> = class(specialize TGAbstractHashSet<T>)
   private
     function GetTombstonesCount: SizeInt; inline;
   protected
@@ -176,7 +176,7 @@ type
 
   { TGBaseOrderedHashSet implements node based hashset with predictable iteration order,
     which is the order in which elements were inserted into the set (insertion-order) }
-  generic TGBaseOrderedHashSet<T, TEqRel> = class(specialize TGCustomHashSet<T>)
+  generic TGBaseOrderedHashSet<T, TEqRel> = class(specialize TGAbstractHashSet<T>)
   protected
   type
     TOrderedHashTable = specialize TGOrderedHashTable<T, TEntry, TEqRel>;
@@ -205,7 +205,7 @@ type
   generic TGOrderedHashSet<T> = class(specialize TGBaseOrderedHashSet<T, T>);
 
   { TGBaseChainHashSet implements node based hashset with singly linked list chains }
-  generic TGBaseChainHashSet<T, TEqRel> = class(specialize TGCustomHashSet<T>)
+  generic TGBaseChainHashSet<T, TEqRel> = class(specialize TGAbstractHashSet<T>)
   protected
     class function GetClass: THashSetClass; override;
     class function GetTableClass: THashTableClass; override;
@@ -215,7 +215,7 @@ type
     it assumes that type T implements TEqRel }
   generic TGChainHashSet<T> = class(specialize TGBaseChainHashSet<T, T>);
 
-  generic TGCustomObjectHashSet<T: class> = class abstract(specialize TGCustomHashSet<T>)
+  generic TGCustomObjectHashSet<T: class> = class abstract(specialize TGAbstractHashSet<T>)
   private
     FOwnsObjects: Boolean;
   protected
@@ -511,50 +511,50 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGCustomHashSet.TEnumerator }
+{ TGAbstractHashSet.TEnumerator }
 
-function TGCustomHashSet.TEnumerator.GetCurrent: T;
+function TGAbstractHashSet.TEnumerator.GetCurrent: T;
 begin
   Result := FEnum.GetCurrent^.Key;
 end;
 
-constructor TGCustomHashSet.TEnumerator.Create(hs: TCustomHashSet);
+constructor TGAbstractHashSet.TEnumerator.Create(hs: TCustomHashSet);
 begin
   inherited Create(hs);
   FEnum := hs.FTable.GetEnumerator;
 end;
 
-destructor TGCustomHashSet.TEnumerator.Destroy;
+destructor TGAbstractHashSet.TEnumerator.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomHashSet.TEnumerator.MoveNext: Boolean;
+function TGAbstractHashSet.TEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomHashSet.TEnumerator.Reset;
+procedure TGAbstractHashSet.TEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomHashSet.TDistinctEnumerable }
+{ TGAbstractHashSet.TDistinctEnumerable }
 
-constructor TGCustomHashSet.TDistinctEnumerable.Create(e: TCustomEnumerator; aSetClass: THashSetClass);
+constructor TGAbstractHashSet.TDistinctEnumerable.Create(e: TCustomEnumerator; aSetClass: THashSetClass);
 begin
   inherited Create(e);
   FSet := aSetClass.Create;
 end;
 
-destructor TGCustomHashSet.TDistinctEnumerable.Destroy;
+destructor TGAbstractHashSet.TDistinctEnumerable.Destroy;
 begin
   FSet.Free;
   inherited;
 end;
 
-function TGCustomHashSet.TDistinctEnumerable.MoveNext: Boolean;
+function TGAbstractHashSet.TDistinctEnumerable.MoveNext: Boolean;
 begin
   repeat
     if not inherited MoveNext then
@@ -563,65 +563,65 @@ begin
   until Result;
 end;
 
-procedure TGCustomHashSet.TDistinctEnumerable.Reset;
+procedure TGAbstractHashSet.TDistinctEnumerable.Reset;
 begin
   inherited;
   FSet.Clear;
 end;
 
-{ TGCustomHashSet }
+{ TGAbstractHashSet }
 
-function TGCustomHashSet.GetExpandTreshold: SizeInt;
+function TGAbstractHashSet.GetExpandTreshold: SizeInt;
 begin
   Result := FTable.ExpandTreshold;
 end;
 
-function TGCustomHashSet.GetCount: SizeInt;
+function TGAbstractHashSet.GetCount: SizeInt;
 begin
   Result := FTable.Count;
 end;
 
-function TGCustomHashSet.GetCapacity: SizeInt;
+function TGAbstractHashSet.GetCapacity: SizeInt;
 begin
   Result := FTable.Capacity;
 end;
 
-function TGCustomHashSet.GetFillRatio: Single;
+function TGAbstractHashSet.GetFillRatio: Single;
 begin
   Result := FTable.FillRatio;
 end;
 
-function TGCustomHashSet.GetLoadFactor: Single;
+function TGAbstractHashSet.GetLoadFactor: Single;
 begin
   Result := FTable.LoadFactor;
 end;
 
-procedure TGCustomHashSet.SetLoadFactor(aValue: Single);
+procedure TGAbstractHashSet.SetLoadFactor(aValue: Single);
 begin
   FTable.LoadFactor := aValue;
 end;
 
-function TGCustomHashSet.DoGetEnumerator: TCustomEnumerator;
+function TGAbstractHashSet.DoGetEnumerator: TCustomEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;
 
-procedure TGCustomHashSet.DoClear;
+procedure TGAbstractHashSet.DoClear;
 begin
   FTable.Clear;
 end;
 
-procedure TGCustomHashSet.DoTrimToFit;
+procedure TGAbstractHashSet.DoTrimToFit;
 begin
   FTable.TrimToFit;
 end;
 
-procedure TGCustomHashSet.DoEnsureCapacity(aValue: SizeInt);
+procedure TGAbstractHashSet.DoEnsureCapacity(aValue: SizeInt);
 begin
   FTable.EnsureCapacity(aValue);
 end;
 
-function TGCustomHashSet.DoAdd(constref aValue: T): Boolean;
+function TGAbstractHashSet.DoAdd(constref aValue: T): Boolean;
 var
   p: PEntry;
   sr: TSearchResult;
@@ -631,27 +631,27 @@ begin
     p^.Key := aValue;
 end;
 
-function TGCustomHashSet.DoExtract(constref aValue: T): Boolean;
+function TGAbstractHashSet.DoExtract(constref aValue: T): Boolean;
 begin
   Result := FTable.Remove(aValue);
 end;
 
-function TGCustomHashSet.DoRemoveIf(aTest: TTest): SizeInt;
+function TGAbstractHashSet.DoRemoveIf(aTest: TTest): SizeInt;
 begin
   Result := FTable.RemoveIf(aTest);
 end;
 
-function TGCustomHashSet.DoRemoveIf(aTest: TOnTest): SizeInt;
+function TGAbstractHashSet.DoRemoveIf(aTest: TOnTest): SizeInt;
 begin
   Result := FTable.RemoveIf(aTest);
 end;
 
-function TGCustomHashSet.DoRemoveIf(aTest: TNestTest): SizeInt;
+function TGAbstractHashSet.DoRemoveIf(aTest: TNestTest): SizeInt;
 begin
   Result := FTable.RemoveIf(aTest);
 end;
 
-function TGCustomHashSet.DoExtractIf(aTest: TTest): TArray;
+function TGAbstractHashSet.DoExtractIf(aTest: TTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -660,7 +660,7 @@ begin
   Result := e.Final;
 end;
 
-function TGCustomHashSet.DoExtractIf(aTest: TOnTest): TArray;
+function TGAbstractHashSet.DoExtractIf(aTest: TOnTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -669,7 +669,7 @@ begin
   Result := e.Final;
 end;
 
-function TGCustomHashSet.DoExtractIf(aTest: TNestTest): TArray;
+function TGAbstractHashSet.DoExtractIf(aTest: TNestTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -678,43 +678,43 @@ begin
   Result := e.Final;
 end;
 
-class function TGCustomHashSet.DefaultLoadFactor: Single;
+class function TGAbstractHashSet.DefaultLoadFactor: Single;
 begin
   Result := GetTableClass.DefaultLoadFactor;
 end;
 
-class function TGCustomHashSet.MaxLoadFactor: Single;
+class function TGAbstractHashSet.MaxLoadFactor: Single;
 begin
   Result := GetTableClass.MaxLoadFactor;
 end;
 
-class function TGCustomHashSet.MinLoadFactor: Single;
+class function TGAbstractHashSet.MinLoadFactor: Single;
 begin
   Result := GetTableClass.MinLoadFactor;
 end;
 
-class function TGCustomHashSet.Distinct(constref a: TArray): IEnumerable;
+class function TGAbstractHashSet.Distinct(constref a: TArray): IEnumerable;
 begin
   Result := TDistinctEnumerable.Create(specialize TGArrayEnumerator<T>.Create(a), GetClass);
 end;
 
-class function TGCustomHashSet.Distinct(e: IEnumerable): IEnumerable;
+class function TGAbstractHashSet.Distinct(e: IEnumerable): IEnumerable;
 begin
   Result := TDistinctEnumerable.Create(e.GetEnumerator, GetClass);
 end;
 
-constructor TGCustomHashSet.Create;
+constructor TGAbstractHashSet.Create;
 begin
   FTable := GetTableClass.Create;
 end;
 
-constructor TGCustomHashSet.Create(constref a: array of T);
+constructor TGAbstractHashSet.Create(constref a: array of T);
 begin
   FTable := GetTableClass.Create;
   DoAddAll(a);
 end;
 
-constructor TGCustomHashSet.Create(e: IEnumerable);
+constructor TGAbstractHashSet.Create(e: IEnumerable);
 var
   o: TObject;
 begin
@@ -723,72 +723,72 @@ begin
     CreateCopy(TCustomHashSet(o))
   else
     begin
-      if o is TCustomSet then
-        Create(TCustomSet(o).Count)
+      if o is TAbstractSet then
+        Create(TAbstractSet(o).Count)
       else
         Create;
       DoAddAll(e);
     end;
 end;
 
-constructor TGCustomHashSet.Create(aCapacity: SizeInt);
+constructor TGAbstractHashSet.Create(aCapacity: SizeInt);
 begin
   FTable := GetTableClass.Create(aCapacity);
 end;
 
-constructor TGCustomHashSet.Create(aCapacity: SizeInt; constref a: array of T);
+constructor TGAbstractHashSet.Create(aCapacity: SizeInt; constref a: array of T);
 begin
   FTable := GetTableClass.Create(aCapacity);
   DoAddAll(a);
 end;
 
-constructor TGCustomHashSet.Create(aCapacity: SizeInt; e: IEnumerable);
+constructor TGAbstractHashSet.Create(aCapacity: SizeInt; e: IEnumerable);
 begin
   FTable := GetTableClass.Create(aCapacity);
   DoAddAll(e);
 end;
 
-constructor TGCustomHashSet.Create(aLoadFactor: Single);
+constructor TGAbstractHashSet.Create(aLoadFactor: Single);
 begin
   FTable := GetTableClass.Create(aLoadFactor);
 end;
 
-constructor TGCustomHashSet.Create(aLoadFactor: Single; constref a: array of T);
+constructor TGAbstractHashSet.Create(aLoadFactor: Single; constref a: array of T);
 begin
   FTable := GetTableClass.Create(aLoadFactor);
   DoAddAll(a);
 end;
 
-constructor TGCustomHashSet.Create(aLoadFactor: Single; e: IEnumerable);
+constructor TGAbstractHashSet.Create(aLoadFactor: Single; e: IEnumerable);
 var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TCustomSet then
-    Create(TCustomSet(o).Count, aLoadFactor)
+  if o is TAbstractSet then
+    Create(TAbstractSet(o).Count, aLoadFactor)
   else
     Create(aLoadFactor);
   DoAddAll(e);
 end;
 
-constructor TGCustomHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single);
+constructor TGAbstractHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
 end;
 
-constructor TGCustomHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
+constructor TGAbstractHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
   DoAddAll(a);
 end;
 
-constructor TGCustomHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
+constructor TGAbstractHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
   DoAddAll(e);
 end;
 
-constructor TGCustomHashSet.CreateCopy(aSet: TCustomHashSet);
+constructor TGAbstractHashSet.CreateCopy(aSet: TCustomHashSet);
 begin
   if aSet.GetClass = GetClass then
     FTable := aSet.FTable.Clone
@@ -799,21 +799,21 @@ begin
     end;
 end;
 
-destructor TGCustomHashSet.Destroy;
+destructor TGAbstractHashSet.Destroy;
 begin
   DoClear;
   FTable.Free;
   inherited;
 end;
 
-function TGCustomHashSet.Contains(constref aValue: T): Boolean;
+function TGAbstractHashSet.Contains(constref aValue: T): Boolean;
 var
   sr: TSearchResult;
 begin
   Result := FTable.Find(aValue, sr) <> nil;
 end;
 
-function TGCustomHashSet.Clone: TCustomHashSet;
+function TGAbstractHashSet.Clone: TCustomHashSet;
 begin
   Result := GetClass.CreateCopy(Self);
 end;

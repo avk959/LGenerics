@@ -41,7 +41,7 @@ type
   { TGBaseSortedList is always sorted ascending;
       functor TCmpRel(column equality relation) must provide:
         class function Compare([const[ref]] L, R: TCol): SizeInt; }
-  generic TGBaseSortedList<T, TCmpRel> = class(specialize TGCustomCollection<T>)
+  generic TGBaseSortedList<T, TCmpRel> = class(specialize TGAbstractCollection<T>)
   protected
   type
     TSortedList = specialize TGBaseSortedList<T, TCmpRel>;

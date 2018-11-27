@@ -36,11 +36,11 @@ uses
 
 type
 
-  { TGCustomTreeSet: common abstract ancestor set class }
-  generic TGCustomTreeSet<T> = class abstract(specialize TGCustomSet<T>)
+  { TGAbstractTreeSet: common abstract ancestor set class }
+  generic TGAbstractTreeSet<T> = class abstract(specialize TGAbstractSet<T>)
   public
   type
-    TCustomTreeSet = specialize TGCustomTreeSet<T>;
+    TCustomTreeSet = specialize TGAbstractTreeSet<T>;
 
   protected
   type
@@ -130,7 +130,7 @@ type
   { TGBaseTreeSet implements sorted set;
       functor TCmpRel (comparision relation) must provide:
         class function Compare([const[ref]] L, R: T): SizeInt; }
-  generic TGBaseTreeSet<T, TCmpRel> = class(specialize TGCustomTreeSet<T>)
+  generic TGBaseTreeSet<T, TCmpRel> = class(specialize TGAbstractTreeSet<T>)
   protected
   type
     TBaseTree = specialize TGAvlTree<T, TEntry, TCmpRel>;
@@ -177,7 +177,7 @@ type
   generic TGTreeSet<T> = class(specialize TGBaseTreeSet<T, T>);
 
   { TGComparableTreeSet implements sorted set; it assumes that type T has defined comparision operators }
-  generic TGComparableTreeSet<T> = class(specialize TGCustomTreeSet<T>)
+  generic TGComparableTreeSet<T> = class(specialize TGAbstractTreeSet<T>)
   protected
   type
     TComparableTree = specialize TGComparableAvlTree<T, TEntry>;
@@ -245,7 +245,7 @@ type
   generic TGObjTreeSet<T: class> = class(specialize TGObjectTreeSet<T, T>);
 
   { TGRegularTreeSet implements sorted set with regular comparator }
-  generic TGRegularTreeSet<T> = class(specialize TGCustomTreeSet<T>)
+  generic TGRegularTreeSet<T> = class(specialize TGAbstractTreeSet<T>)
   protected
   type
     TRegularTree = specialize TGRegularAvlTree<T, TEntry>;
@@ -312,7 +312,7 @@ type
   end;
 
   { TGDelegatedTreeSet implements sorted set with delegated comparator }
-  generic TGDelegatedTreeSet<T> = class(specialize TGCustomTreeSet<T>)
+  generic TGDelegatedTreeSet<T> = class(specialize TGAbstractTreeSet<T>)
   protected
   type
     TDelegatedTree = specialize TGDelegatedAvlTree<T, TEntry>;
@@ -601,154 +601,154 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGCustomTreeSet.TEnumerator }
+{ TGAbstractTreeSet.TEnumerator }
 
-function TGCustomTreeSet.TEnumerator.GetCurrent: T;
+function TGAbstractTreeSet.TEnumerator.GetCurrent: T;
 begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGCustomTreeSet.TEnumerator.Create(aSet: TCustomTreeSet);
+constructor TGAbstractTreeSet.TEnumerator.Create(aSet: TCustomTreeSet);
 begin
   inherited Create(aSet);
   FEnum := aSet.FTree.GetEnumerator;
 end;
 
-destructor TGCustomTreeSet.TEnumerator.Destroy;
+destructor TGAbstractTreeSet.TEnumerator.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomTreeSet.TEnumerator.MoveNext: Boolean;
+function TGAbstractTreeSet.TEnumerator.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomTreeSet.TEnumerator.Reset;
+procedure TGAbstractTreeSet.TEnumerator.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomTreeSet.TReverseEnumerable }
+{ TGAbstractTreeSet.TReverseEnumerable }
 
-function TGCustomTreeSet.TReverseEnumerable.GetCurrent: T;
+function TGAbstractTreeSet.TReverseEnumerable.GetCurrent: T;
 begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGCustomTreeSet.TReverseEnumerable.Create(aSet: TCustomTreeSet);
+constructor TGAbstractTreeSet.TReverseEnumerable.Create(aSet: TCustomTreeSet);
 begin
   inherited Create(aSet);
   FEnum := aSet.FTree.GetReverseEnumerator;
 end;
 
-destructor TGCustomTreeSet.TReverseEnumerable.Destroy;
+destructor TGAbstractTreeSet.TReverseEnumerable.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomTreeSet.TReverseEnumerable.MoveNext: Boolean;
+function TGAbstractTreeSet.TReverseEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomTreeSet.TReverseEnumerable.Reset;
+procedure TGAbstractTreeSet.TReverseEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomTreeSet.TTailEnumerable }
+{ TGAbstractTreeSet.TTailEnumerable }
 
-function TGCustomTreeSet.TTailEnumerable.GetCurrent: T;
+function TGAbstractTreeSet.TTailEnumerable.GetCurrent: T;
 begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGCustomTreeSet.TTailEnumerable.Create(constref aLowBound: T; aSet: TCustomTreeSet;
+constructor TGAbstractTreeSet.TTailEnumerable.Create(constref aLowBound: T; aSet: TCustomTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
   FEnum := aSet.FTree.GetEnumeratorAt(aLowBound, aInclusive);
 end;
 
-destructor TGCustomTreeSet.TTailEnumerable.Destroy;
+destructor TGAbstractTreeSet.TTailEnumerable.Destroy;
 begin
   FEnum.Free;
   inherited;
 end;
 
-function TGCustomTreeSet.TTailEnumerable.MoveNext: Boolean;
+function TGAbstractTreeSet.TTailEnumerable.MoveNext: Boolean;
 begin
   Result := FEnum.MoveNext;
 end;
 
-procedure TGCustomTreeSet.TTailEnumerable.Reset;
+procedure TGAbstractTreeSet.TTailEnumerable.Reset;
 begin
   FEnum.Reset;
 end;
 
-{ TGCustomTreeSet }
+{ TGAbstractTreeSet }
 
-function TGCustomTreeSet.GetCount: SizeInt;
+function TGAbstractTreeSet.GetCount: SizeInt;
 begin
   Result := FTree.Count;
 end;
 
-function TGCustomTreeSet.GetCapacity: SizeInt;
+function TGAbstractTreeSet.GetCapacity: SizeInt;
 begin
   Result := FTree.Capacity;
 end;
 
-function TGCustomTreeSet.DoGetEnumerator: TCustomEnumerator;
+function TGAbstractTreeSet.DoGetEnumerator: TCustomEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;
 
-procedure TGCustomTreeSet.DoClear;
+procedure TGAbstractTreeSet.DoClear;
 begin
   FTree.Clear;
 end;
 
-procedure TGCustomTreeSet.DoTrimToFit;
+procedure TGAbstractTreeSet.DoTrimToFit;
 begin
   FTree.TrimToFit;
 end;
 
-procedure TGCustomTreeSet.DoEnsureCapacity(aValue: SizeInt);
+procedure TGAbstractTreeSet.DoEnsureCapacity(aValue: SizeInt);
 begin
   FTree.EnsureCapacity(aValue);
 end;
 
-function TGCustomTreeSet.DoAdd(constref aValue: T): Boolean;
+function TGAbstractTreeSet.DoAdd(constref aValue: T): Boolean;
 var
   p: PNode;
 begin
   Result := not FTree.FindOrAdd(aValue, p);
 end;
 
-function TGCustomTreeSet.DoExtract(constref aValue: T): Boolean;
+function TGAbstractTreeSet.DoExtract(constref aValue: T): Boolean;
 begin
   Result := FTree.Remove(aValue);
 end;
 
-function TGCustomTreeSet.DoRemoveIf(aTest: TTest): SizeInt;
+function TGAbstractTreeSet.DoRemoveIf(aTest: TTest): SizeInt;
 begin
   Result := FTree.RemoveIf(aTest);
 end;
 
-function TGCustomTreeSet.DoRemoveIf(aTest: TOnTest): SizeInt;
+function TGAbstractTreeSet.DoRemoveIf(aTest: TOnTest): SizeInt;
 begin
   Result := FTree.RemoveIf(aTest);
 end;
 
-function TGCustomTreeSet.DoRemoveIf(aTest: TNestTest): SizeInt;
+function TGAbstractTreeSet.DoRemoveIf(aTest: TNestTest): SizeInt;
 begin
   Result := FTree.RemoveIf(aTest);
 end;
 
-function TGCustomTreeSet.DoExtractIf(aTest: TTest): TArray;
+function TGAbstractTreeSet.DoExtractIf(aTest: TTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -757,7 +757,7 @@ begin
   Result := e.Final;
 end;
 
-function TGCustomTreeSet.DoExtractIf(aTest: TOnTest): TArray;
+function TGAbstractTreeSet.DoExtractIf(aTest: TOnTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -766,7 +766,7 @@ begin
   Result := e.Final;
 end;
 
-function TGCustomTreeSet.DoExtractIf(aTest: TNestTest): TArray;
+function TGAbstractTreeSet.DoExtractIf(aTest: TNestTest): TArray;
 var
   e: TExtractHelper;
 begin
@@ -775,7 +775,7 @@ begin
   Result := e.Final;
 end;
 
-function TGCustomTreeSet.FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
+function TGAbstractTreeSet.FindNearestLT(constref aPattern: T; out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -785,7 +785,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGCustomTreeSet.FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
+function TGAbstractTreeSet.FindNearestLE(constref aPattern: T; out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -795,7 +795,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGCustomTreeSet.FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
+function TGAbstractTreeSet.FindNearestGT(constref aPattern: T; out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -805,7 +805,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGCustomTreeSet.FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
+function TGAbstractTreeSet.FindNearestGE(constref aPattern: T; out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -815,25 +815,25 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-destructor TGCustomTreeSet.Destroy;
+destructor TGAbstractTreeSet.Destroy;
 begin
   DoClear;
   FTree.Free;
   inherited;
 end;
 
-function TGCustomTreeSet.Reverse: IEnumerable;
+function TGAbstractTreeSet.Reverse: IEnumerable;
 begin
   BeginIteration;
   Result := TReverseEnumerable.Create(Self);
 end;
 
-function TGCustomTreeSet.Contains(constref aValue: T): Boolean;
+function TGAbstractTreeSet.Contains(constref aValue: T): Boolean;
 begin
   Result := FTree.Find(aValue) <> nil;
 end;
 
-function TGCustomTreeSet.FindMin(out aValue: T): Boolean;
+function TGAbstractTreeSet.FindMin(out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -843,7 +843,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGCustomTreeSet.FindMax(out aValue: T): Boolean;
+function TGAbstractTreeSet.FindMax(out aValue: T): Boolean;
 var
   Node: PNode;
 begin
@@ -853,7 +853,7 @@ begin
     aValue := Node^.Data.Key;
 end;
 
-function TGCustomTreeSet.FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean): Boolean;
+function TGAbstractTreeSet.FindCeil(constref aValue: T; out aCeil: T; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestGE(aValue, aCeil)
@@ -861,7 +861,7 @@ begin
     Result := FindNearestGT(aValue, aCeil);
 end;
 
-function TGCustomTreeSet.FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean): Boolean;
+function TGAbstractTreeSet.FindFloor(constref aValue: T; out aFloor: T; aInclusive: Boolean): Boolean;
 begin
   if aInclusive then
     Result := FindNearestLE(aValue, aFloor)
@@ -869,7 +869,7 @@ begin
     Result := FindNearestLT(aValue, aFloor);
 end;
 
-function TGCustomTreeSet.Tail(constref aLowBound: T; aInclusive: Boolean): IEnumerable;
+function TGAbstractTreeSet.Tail(constref aLowBound: T; aInclusive: Boolean): IEnumerable;
 begin
   BeginIteration;
   Result := TTailEnumerable.Create(aLowBound, Self, aInclusive);
@@ -962,8 +962,8 @@ begin
     CreateCopy(TGBaseTreeSet(o))
   else
     begin
-      if o is TCustomSet then
-        Create(TCustomSet(o).Count)
+      if o is TAbstractSet then
+        Create(TAbstractSet(o).Count)
       else
         Create;
       DoAddAll(e);
@@ -1112,8 +1112,8 @@ begin
     CreateCopy(TGComparableTreeSet(o))
   else
     begin
-      if o is TCustomSet then
-        Create(TCustomSet(o).Count)
+      if o is TAbstractSet then
+        Create(TAbstractSet(o).Count)
       else
         Create;
       DoAddAll(e);
