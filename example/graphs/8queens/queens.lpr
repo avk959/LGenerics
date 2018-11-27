@@ -17,7 +17,7 @@ uses
   SysUtils,
   LGUtils,
   LGVector,
-  LGraphUtils,
+  LGSparseGraph,
   LGSimpleGraph;
 
 type

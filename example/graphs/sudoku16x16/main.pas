@@ -10,7 +10,7 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Grids, Spin, StdCtrls,
   LGArrayHelpers,
-  LGCustomGraph,
+  LGSparseGraph,
   LGSimpleGraph;
 
 type
@@ -28,7 +28,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; {%H-}aState: TGridDrawState);
-    procedure sgCellsPrepareCanvas(sender: TObject; aCol, aRow: Integer; aState: TGridDrawState);
+    procedure sgCellsPrepareCanvas(Sender: TObject; aCol, aRow: Integer; aState: TGridDrawState);
   private
   type
     THelper   = specialize TGOrdinalArrayHelper<SizeInt>;
@@ -98,7 +98,7 @@ begin
       end;
 end;
 
-procedure TfrmMain.sgCellsPrepareCanvas(sender: TObject; aCol, aRow: Integer; aState: TGridDrawState);
+procedure TfrmMain.sgCellsPrepareCanvas(Sender: TObject; aCol, aRow: Integer; aState: TGridDrawState);
 begin
   if sgCells.Objects[aCol, aRow] = nil then
     sgCells.Canvas.Font.Color := SaveColor

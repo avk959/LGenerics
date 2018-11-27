@@ -25,7 +25,7 @@ uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls,
   DateUtils,
   LGUtils,
-  LGraphUtils,
+  LGSparseGraph,
   LGSimpleGraph;
 
 type

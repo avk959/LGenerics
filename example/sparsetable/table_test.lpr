@@ -24,7 +24,7 @@ var
 begin
 
   Table := TTable.Create;
-  Table.AddAll(Data);
+  Table.AddCells(Data);
 
   repeat
     WriteLn;
@@ -39,7 +39,7 @@ begin
         begin
           UserInput := Copy(UserInput, 3, Length(UserInput));
           WriteLn('>>>');
-          for RowData in Table.Rows[UserInput] do
+          for RowData in Table.RowMaps[UserInput] do
             WriteLn('Location: ', RowData.Column, ', employees: ', RowData.Value);
         end;
       '2':
