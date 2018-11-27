@@ -181,6 +181,7 @@ type
     PEdgeData      = ^TEdgeData;
     TAdjItem       = specialize TGAdjItem<TEdgeData>;
     PAdjItem       = ^TAdjItem;
+    TVertexArray   = array of TVertex;
     TOnAddEdge     = procedure(constref aSrc, aDst: TVertex; aData: PEdgeData) of object;
     TOnReadVertex  = procedure(aStream: TStream; out aValue: TVertex) of object;
     TOnWriteVertex = procedure(aStream: TStream; constref aValue: TVertex) of object;
@@ -412,6 +413,7 @@ type
     function GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
     function SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+    function IndexPath2VertexPath(constref aIdxPath: TIntArray): TVertexArray;
   { returns adjacency matrix;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
     function CreateAdjacencyMatrix: TAdjacencyMatrix;
@@ -1502,6 +1504,15 @@ begin
   Result := p <> nil;
   if Result then
     p^.Data := aValue;
+end;
+
+function TGSparseGraph.IndexPath2VertexPath(constref aIdxPath: TIntArray): TVertexArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, aIdxPath.Length);
+  for I := 0 to Pred(aIdxPath.Length) do
+    Result[I] := Items[aIdxPath[I]];
 end;
 
 function TGSparseGraph.CreateAdjacencyMatrix: TAdjacencyMatrix;
@@ -3582,39 +3593,39 @@ function TGWeightHelper.TExactTspBB.Reduce(constref aRows, aCols: TIntArray; var
   aColRed: TWeightArray): TWeight;
 var
   I, J, Last: Integer;
-  Inf, MinWeight: TWeight;
+  Inf, Reduction: TWeight;
 begin
   Result := 0;
   Last := System.High(aRows);
   Inf := InfWeight;
   for I := 0 to Last do  // reduce rows
     begin
-      MinWeight := Inf;
+      Reduction := Inf;
       aRowRed[I] := 0;
       for J := 0 to Last do
-        MinWeight := wMin(MinWeight, FMatrix[aRows[I], aCols[J]]);
-      if (MinWeight > 0) and (MinWeight < Inf) then
+        Reduction := wMin(Reduction, FMatrix[aRows[I], aCols[J]]);
+      if (Reduction > 0) and (Reduction < Inf) then
         begin
           for J := 0 to Last do
             if FMatrix[aRows[I], aCols[J]] < Inf then
-              FMatrix[aRows[I], aCols[J]] -= MinWeight;
-          Result += MinWeight;
-          aRowRed[I] := MinWeight;
+              FMatrix[aRows[I], aCols[J]] -= Reduction;
+          Result += Reduction;
+          aRowRed[I] := Reduction;
         end;
     end;
   for J := 0 to Last do  // reduce columns
     begin
-      MinWeight := Inf;
+      Reduction := Inf;
       aColRed[J] := 0;
       for I := 0 to Last do
-        MinWeight := wMin(MinWeight, FMatrix[aRows[I], aCols[J]]);
-      if (MinWeight > 0) and (MinWeight < Inf) then
+        Reduction := wMin(Reduction, FMatrix[aRows[I], aCols[J]]);
+      if (Reduction > 0) and (Reduction < Inf) then
         begin
           for I := 0 to Last do
             if FMatrix[aRows[I], aCols[J]] < Inf then
-              FMatrix[aRows[I], aCols[J]] -= MinWeight;
-          Result += MinWeight;
-          aColRed[J] := MinWeight;
+              FMatrix[aRows[I], aCols[J]] -= Reduction;
+          Result += Reduction;
+          aColRed[J] := Reduction;
         end;
     end;
 end;
@@ -3693,8 +3704,8 @@ begin
          Delete(NewCols, Col, 1);  // remove Col
          ///////////////
          Search(aCurrWeight, NewRows, NewCols);
-         /////////////// restore values
-         FMatrix[LastCol, FirstRow] := SaveElem;
+         ///////////////
+         FMatrix[LastCol, FirstRow] := SaveElem; //restore values
          FBackTour[aCols[Col]] := NULL_INDEX;
          FForwardTour[aRows[Row]] := NULL_INDEX;
          Finalize(NewRows);
