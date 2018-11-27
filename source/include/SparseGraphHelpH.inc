@@ -171,8 +171,6 @@ type
     constructor Create(aIndex, aData: SizeInt);
   end;
 
-  { TGBinHeapMin }
-
   generic TGBinHeapMin<T> = record // for internal use only
   strict private
   type
@@ -285,7 +283,7 @@ type
   TINodePqMin = specialize TGPairHeapMin<TIntNode>;
   TINodePqMax = specialize TGPairHeapMax<TIntNode>;
 
-  { TGJoinableHashList for internal use only; TEntry must provide
+  { TGJoinableHashList: for internal use only; TEntry must provide
       property Key: SizeInt and numeric field Weight }
   generic TGJoinableHashList<TEntry> = record
   strict private
@@ -574,7 +572,7 @@ type
   { cyclic shifts path aTour so that element aSrc becomes the first;
     warning: does not checks if aSrc exist in aTour }
     class procedure NormalizeTour(var aTour: TIntArray; aSrc: SizeInt); static;
-  { greedy TSP, best of farthest insertion starting from every vertex + 2-opt local search at the end;
+  { greedy TSP, best of farthest insertion starting from every vertex;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
     warning: does not checks matrix }
     class function  GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
