@@ -202,18 +202,18 @@ type
 
   TGCurrencyHelper = type helper for Currency
   const
-   MinValue: Currency = -922337203685477.5808;
-   MaxValue: Currency = 922337203685477.5807;
-   class function HashCode(const aValue: Currency): SizeInt; static; inline;
-   class function Equal(const L, R: Currency): Boolean; static; inline;
-   class function Compare(const L, R: Currency): SizeInt; static; inline;
-   function ToString: string; inline;
+    MinValue: Currency = -922337203685477.5808;
+    MaxValue: Currency = 922337203685477.5807;
+    class function HashCode(const aValue: Currency): SizeInt; static; inline;
+    class function Equal(const L, R: Currency): Boolean; static; inline;
+    class function Compare(const L, R: Currency): SizeInt; static; inline;
+    function ToString: string; inline;
   end;
 
   TGObjectHelper = class helper for TObject
-   class function HashCode(aValue: TObject): SizeInt; static; inline;
-   class function Equal(L, R: TObject): Boolean; static; inline;
-   class function Compare(L, R: TObject): SizeInt; static; inline;
+    class function HashCode(aValue: TObject): SizeInt; static; inline;
+    class function Equal(L, R: TObject): Boolean; static; inline;
+    class function Compare(L, R: TObject): SizeInt; static; inline;
   end;
 
   TVariantHelper = type helper for Variant

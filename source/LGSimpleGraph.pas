@@ -4368,12 +4368,11 @@ var
   Tour: TIntArray;
   Unvisit: TBoolVector;
   I, J, K, Curr, Next, Len: SizeInt;
-  CurrMin, Total, wCurr, Inf: TWeight;
+  CurrMin, Total, wCurr: TWeight;
 begin
   Len := System.Length(m);
-  Inf := InfWeight;
   Result := nil;
-  aWeight := Inf;
+  aWeight := TWeight.INF_VALUE;
   {%H-}Tour.Length := Succ(Len);
   for K := 0 to Pred(Len) do
     begin
@@ -4384,7 +4383,7 @@ begin
       I := 1;
       while Unvisit.NonEmpty do
         begin
-          CurrMin := Inf;
+          CurrMin := TWeight.INF_VALUE;
           for J in Unvisit do
             begin
               wCurr := m[Curr, J];
@@ -4411,12 +4410,12 @@ end;
 
 class function TGWeightedGraph.InfWeight: TWeight;
 begin
-  Result := TWeightHelper.InfWeight;
+  Result := TWeight.INF_VALUE;
 end;
 
 class function TGWeightedGraph.NegInfWeight: TWeight;
 begin
-  Result := TWeightHelper.NegInfWeight;
+  Result := TWeight.NEGINF_VALUE;
 end;
 
 class function TGWeightedGraph.TotalWeight(constref aEdges: TEdgeArray): TWeight;
@@ -4626,19 +4625,18 @@ function TGWeightedGraph.FindEccentricityI(aIndex: SizeInt; out aValue: TWeight)
 var
   Weights: TWeightArray;
   I: SizeInt;
-  w, Inf: TWeight;
+  w: TWeight;
 begin
   if IsEmpty then
     exit(False);
   Result := FindMinPathsMapI(aIndex, Weights);
   if not Result then
     exit;
-  Inf := InfWeight;
   aValue := 0;
   for I := 0 to System.High(Weights) do
     begin
       w := Weights[I];
-      if (w <> Inf) and (w > aValue) then
+      if (w < TWeight.INF_VALUE) and (w > aValue) then
         aValue := w;
     end;
 end;
@@ -4648,7 +4646,7 @@ var
   Bfmt: TWeightHelper.TBfmt;
   Weights: TWeightArray;
   I, J: SizeInt;
-  Ecc, Inf, w: TWeight;
+  Ecc, w: TWeight;
 begin
   if not Connected then
     exit(False);
@@ -4657,8 +4655,7 @@ begin
     exit;
   Weights := nil;
   Bfmt := TWeightHelper.TBfmt.Create(Self, False);
-  Inf := InfWeight;
-  aRadius := Inf;
+  aRadius := TWeight.INF_VALUE;
   aDiameter := 0;
   for I := 0 to Pred(VertexCount) do
     begin
@@ -4669,7 +4666,7 @@ begin
           if I <> J then
             begin
               w := Nodes[J].Weight;
-              if (w <> Inf) and (w > Ecc) then
+              if (w < TWeight.INF_VALUE) and (w > Ecc) then
                 Ecc := w;
             end;
       if Ecc < aRadius then
@@ -4684,7 +4681,7 @@ var
   Bfmt: TWeightHelper.TBfmt;
   Eccs: TWeightArray;
   I, J: SizeInt;
-  Inf, Radius, Ecc, w: TWeight;
+  Radius, Ecc, w: TWeight;
 begin
   if not Connected then
     exit(False);
@@ -4692,8 +4689,7 @@ begin
   if not Result then
     exit;
   Bfmt := TWeightHelper.TBfmt.Create(Self, False);
-  Inf := InfWeight;
-  Radius := Inf;
+  Radius := TWeight.INF_VALUE;
   for I := 0 to Pred(VertexCount) do
     begin
       Bfmt.Sssp(I);
@@ -4703,7 +4699,7 @@ begin
           if I <> J then
             begin
               w := Nodes[J].Weight;
-              if (w <> Inf) and (w > Ecc) then
+              if (w < TWeight.INF_VALUE) and (w > Ecc) then
                 Ecc := w;
             end;
       Eccs[I] := Ecc;

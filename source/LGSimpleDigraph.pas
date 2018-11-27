@@ -323,11 +323,10 @@ type
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
-
-    class function wMin(L, R: TWeight): TWeight; static; inline;
-    class function wMax(L, R: TWeight): TWeight; static; inline;
     class function InfWeight: TWeight; static; inline;
     class function NegInfWeight: TWeight; static; inline;
+    class function wMin(L, R: TWeight): TWeight; static; inline;
+    class function wMax(L, R: TWeight): TWeight; static; inline;
   { returns True if exists arc with negative weight }
     function ContainsNegWeightEdge: Boolean;
   { checks whether exists any negative weight cycle in subgraph that reachable from a aRoot;
@@ -2171,7 +2170,7 @@ var
   qTail: SizeInt = 0;
 begin
   Queue := CreateIntArray;
-  TWeightHelper.ResizeAndFill(aWeights, VertexCount, InfWeight);
+  TWeightHelper.ResizeAndFill(aWeights, VertexCount, TWeight.INF_VALUE);
   Visited.Size := VertexCount;
   Visited[aSrc] := True;
   aWeights[aSrc] := 0;
@@ -2208,7 +2207,7 @@ var
 begin
   Queue := CreateIntArray;
   ResizeAndFill(aTree, VertexCount, NULL_INDEX);
-  TWeightHelper.ResizeAndFill(aWeights, VertexCount, InfWeight);
+  TWeightHelper.ResizeAndFill(aWeights, VertexCount, TWeight.INF_VALUE);
   aWeights[aSrc] := 0;
   Queue[qTail] := aSrc;
   Inc(qTail);
@@ -2322,6 +2321,16 @@ begin
     end;
 end;
 
+class function TGWeightedDiGraph.InfWeight: TWeight;
+begin
+  Result := TWeight.INF_VALUE;
+end;
+
+class function TGWeightedDiGraph.NegInfWeight: TWeight;
+begin
+  Result := TWeight.NEGINF_VALUE;
+end;
+
 class function TGWeightedDiGraph.wMin(L, R: TWeight): TWeight;
 begin
   if L <= R then
@@ -2336,16 +2345,6 @@ begin
     Result := L
   else
     Result := R;
-end;
-
-class function TGWeightedDiGraph.InfWeight: TWeight;
-begin
-  Result :=  TWeightHelper.InfWeight;
-end;
-
-class function TGWeightedDiGraph.NegInfWeight: TWeight;
-begin
-  Result := TWeightHelper.NegInfWeight;
 end;
 
 function TGWeightedDiGraph.ContainsNegWeightEdge: Boolean;
@@ -2518,19 +2517,18 @@ function TGWeightedDiGraph.FindEccentricityI(aIndex: SizeInt; out aValue: TWeigh
 var
   Weights: TWeightArray;
   I: SizeInt;
-  w, Inf: TWeight;
+  w: TWeight;
 begin
   if IsEmpty then
     exit(False);
   Result := FindMinPathsMapI(aIndex, Weights);
   if not Result then
     exit;
-  Inf := InfWeight;
   aValue := 0;
   for I := 0 to System.High(Weights) do
     begin
       w := Weights[I];
-      if (w <> Inf) and (w > aValue) then
+      if (w < TWeight.INF_VALUE) and (w > aValue) then
         aValue := w;
     end;
 end;
@@ -2541,7 +2539,7 @@ var
   Weights: TWeightArray;
   Ids: TIntArray;
   I, J: SizeInt;
-  Ecc, Inf, w: TWeight;
+  Ecc, w: TWeight;
 begin
   if IsEmpty then
     exit(False);
@@ -2554,8 +2552,7 @@ begin
     exit;
   Weights := nil;
   Bfmt := TWeightHelper.TBfmt.Create(Self, True);
-  Inf := InfWeight;
-  aRadius := Inf;
+  aRadius := TWeight.INF_VALUE;
   aDiameter := 0;
   for I := 0 to Pred(VertexCount) do
     begin
@@ -2566,7 +2563,7 @@ begin
           if I <> J then
             begin
               w := Nodes[J].Weight;
-              if (w <> Inf) and (w > Ecc) then
+              if (w < TWeight.INF_VALUE) and (w > Ecc) then
                 Ecc := w;
             end;
       if Ecc < aRadius then
@@ -2582,7 +2579,7 @@ var
   Eccs: TWeightArray;
   Ids: TIntArray;
   I, J: SizeInt;
-  Inf, Radius, Ecc, w: TWeight;
+  Radius, Ecc, w: TWeight;
 begin
   if IsEmpty then
     exit(False);
@@ -2594,8 +2591,7 @@ begin
   if not Result then
     exit;
   Bfmt := TWeightHelper.TBfmt.Create(Self, True);
-  Inf := InfWeight;
-  Radius := Inf;
+  Radius := TWeight.INF_VALUE;
   for I := 0 to Pred(VertexCount) do
     begin
       Bfmt.Sssp(I);
@@ -2605,7 +2601,7 @@ begin
           if I <> J then
             begin
               w := Nodes[J].Weight;
-              if (w <> Inf) and (w > Ecc) then
+              if (w < TWeight.INF_VALUE) and (w > Ecc) then
                 Ecc := w;
             end;
       Eccs[I] := Ecc;
@@ -2629,7 +2625,7 @@ var
   Eccs: TWeightArray;
   Ids: TIntArray;
   I, J: SizeInt;
-  Inf, Radius, Ecc, w: TWeight;
+  Radius, Ecc, w: TWeight;
 begin
   if IsEmpty then
     exit(False);
@@ -2643,8 +2639,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     Eccs[I] := 0;
   Bfmt := TWeightHelper.TBfmt.Create(Self, True);
-  Inf := InfWeight;
-  Radius := Inf;
+  Radius := TWeight.INF_VALUE;
   for I := 0 to Pred(VertexCount) do
     begin
       Bfmt.Sssp(I);
@@ -2654,7 +2649,7 @@ begin
           if I <> J then
             begin
               w := Nodes[J].Weight;
-              if (w <> Inf) and (w > Ecc) then
+              if (w < TWeight.INF_VALUE) and (w > Ecc) then
                 Ecc := w;
               if w > Eccs[J] then
                 Eccs[J] := w;

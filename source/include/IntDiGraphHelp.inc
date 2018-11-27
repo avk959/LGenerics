@@ -796,16 +796,15 @@ end;
 
 function TGIntWeightDiGraph.TDinitzHelper.Execute: TWeight;
 var
-  Flow, Inf: TWeight;
+  Flow: TWeight;
 begin
-  Inf := InfWeight;
   Result := 0;
   while FEpsilon > 0 do
     begin
       FEpsilon := FEpsilon div FScaleFactor;
       while BuildLevelGraph do
         repeat
-          Flow := FindBlockingFlow(FSource, Inf);
+          Flow := FindBlockingFlow(FSource, TWeight.INF_VALUE);
           Result += Flow;
         until Flow = 0;
     end;

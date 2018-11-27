@@ -3114,7 +3114,7 @@ begin
   FPhi := CreateWeightArrayZ(aGraph.VertexCount);
   for I in FWhites do
     begin
-      ew := InfWeight;
+      ew := TWeight.INF_VALUE;
       for p in aGraph.AdjLists[I]^ do
         if p^.Data.Weight < ew then
           ew := p^.Data.Weight;
@@ -3146,7 +3146,7 @@ begin
   FPhi := CreateWeightArrayZ(aGraph.VertexCount);
   for I in FWhites do
     begin
-      ew := NegInfWeight;
+      ew := TWeight.NEGINF_VALUE;
       for p in aGraph.AdjLists[I]^ do
         if p^.Data.Weight > ew then
           ew := p^.Data.Weight;
@@ -3276,7 +3276,7 @@ function TGWeightHelper.THungarian.TryAugmentMin(var aDelta: TWeight): SizeInt;
 var
   I, Last: SizeInt;
 begin
-  aDelta := InfWeight;
+  aDelta := TWeight.INF_VALUE;
   Result := 0;
   System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
   FVisited.ClearBits;
@@ -3296,7 +3296,7 @@ function TGWeightHelper.THungarian.TryAugmentMax(var aDelta: TWeight): SizeInt;
 var
   I, Last: SizeInt;
 begin
-  aDelta := NegInfWeight;
+  aDelta := TWeight.NEGINF_VALUE;
   Result := 0;
   System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
   FVisited.ClearBits;
@@ -3323,16 +3323,15 @@ end;
 procedure TGWeightHelper.THungarian.ExecuteMin;
 var
   Count: SizeInt;
-  Delta, Inf: TWeight;
+  Delta: TWeight;
 begin
-  Inf := InfWeight;
-  Delta := Inf;
+  Delta := TWeight.INF_VALUE;
   repeat
     repeat
       Count := TryAugmentMin(Delta);
       FMatchCount += Count;
     until Count = 0;
-    if Delta = Inf then
+    if not (Delta < TWeight.INF_VALUE) then
       break;
     CorrectPhi(Delta);
   until False;
@@ -3341,16 +3340,15 @@ end;
 procedure TGWeightHelper.THungarian.ExecuteMax;
 var
   Count: SizeInt;
-  Delta, Inf: TWeight;
+  Delta: TWeight;
 begin
-  Inf := NegInfWeight;
-  Delta := Inf;
+  Delta := TWeight.NEGINF_VALUE;
   repeat
     repeat
       Count := TryAugmentMax(Delta);
       FMatchCount += Count;
     until Count = 0;
-    if Delta = Inf then
+    if not (Delta > TWeight.NEGINF_VALUE) then
       break;
     CorrectPhi(Delta);
   until False;
@@ -3442,13 +3440,11 @@ end;
 procedure TGWeightHelper.TBfmt.SsspInit(aSrc: SizeInt);
 var
   I: SizeInt;
-  Inf: TWeight;
 begin
-  Inf := InfWeight;
   for I := 0 to Pred(FNodeCount) do
     with Nodes[I] do
       begin
-        Weight := Inf;
+        Weight := TWeight.INF_VALUE;
         TreePrev := nil;
         TreeNext := nil;
         Parent := nil;
@@ -3552,13 +3548,11 @@ end;
 procedure TGWeightHelper.TExactTspBB.Init(constref m: TWeightMatrix; constref aTour: TIntArray; aTimeOut: Integer);
 var
   I, Source, Target: Integer;
-  Inf: TWeight;
 begin
   FMatrix := System.Copy(m);
   FMatrixSize := System.Length(m);
-  Inf := InfWeight;
   for I := 0 to Pred(FMatrixSize) do
-    FMatrix[I, I] := Inf;
+    FMatrix[I, I] := TWeight.INF_VALUE;
   if aTour.Length = Succ(FMatrixSize) then
     begin
       FBestTour.Length := FMatrixSize;
@@ -3574,7 +3568,7 @@ begin
   else
     begin
       FBestTour := nil;
-      FUpperBound := Inf;
+      FUpperBound := TWeight.INF_VALUE;
     end;
   FTimeOut := aTimeOut and System.High(Integer);
   FForwardTour := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
@@ -3593,21 +3587,20 @@ function TGWeightHelper.TExactTspBB.Reduce(constref aRows, aCols: TIntArray; var
   aColRed: TWeightArray): TWeight;
 var
   I, J, Last: Integer;
-  Inf, Reduction: TWeight;
+  Reduction: TWeight;
 begin
   Result := 0;
   Last := System.High(aRows);
-  Inf := InfWeight;
   for I := 0 to Last do  // reduce rows
     begin
-      Reduction := Inf;
+      Reduction := TWeight.INF_VALUE;
       aRowRed[I] := 0;
       for J := 0 to Last do
         Reduction := wMin(Reduction, FMatrix[aRows[I], aCols[J]]);
-      if (Reduction > 0) and (Reduction < Inf) then
+      if (Reduction > 0) and (Reduction < TWeight.INF_VALUE) then
         begin
           for J := 0 to Last do
-            if FMatrix[aRows[I], aCols[J]] < Inf then
+            if FMatrix[aRows[I], aCols[J]] < TWeight.INF_VALUE then
               FMatrix[aRows[I], aCols[J]] -= Reduction;
           Result += Reduction;
           aRowRed[I] := Reduction;
@@ -3615,14 +3608,14 @@ begin
     end;
   for J := 0 to Last do  // reduce columns
     begin
-      Reduction := Inf;
+      Reduction := TWeight.INF_VALUE;
       aColRed[J] := 0;
       for I := 0 to Last do
         Reduction := wMin(Reduction, FMatrix[aRows[I], aCols[J]]);
-      if (Reduction > 0) and (Reduction < Inf) then
+      if (Reduction > 0) and (Reduction < TWeight.INF_VALUE) then
         begin
           for I := 0 to Last do
-            if FMatrix[aRows[I], aCols[J]] < Inf then
+            if FMatrix[aRows[I], aCols[J]] < TWeight.INF_VALUE then
               FMatrix[aRows[I], aCols[J]] -= Reduction;
           Result += Reduction;
           aColRed[J] := Reduction;
@@ -3634,16 +3627,15 @@ function TGWeightHelper.TExactTspBB.SelectBest(constref aRows, aCols: TIntArray;
   aColIdx: Integer): TWeight;
 var
   I, J, K, ZeroCount, Last: Integer;
-  Inf, MinInCol, MinInRow: TWeight;
+  MinInCol, MinInRow: TWeight;
 begin
-  Result := NegInfWeight;
+  Result := TWeight.NEGINF_VALUE;
   Last := System.High(aRows);
-  Inf := InfWeight;
   for I := 0 to Last do
     for J := 0 to Last do
       if FMatrix[aRows[I], aCols[J]] = 0 then
         begin
-          MinInRow := Inf;
+          MinInRow := TWeight.INF_VALUE;
           ZeroCount := 0;
           for K := 0 to Last do
             if FMatrix[aRows[I], aCols[K]] = 0 then
@@ -3652,7 +3644,7 @@ begin
               MinInRow := wMin(MinInRow, FMatrix[aRows[I], aCols[K]]);
           if ZeroCount > 1 then
             MinInRow := 0;
-          MinInCol := Inf;
+          MinInCol := TWeight.INF_VALUE;
           ZeroCount := 0;
           for K := 0 to Last do
             if FMatrix[aRows[K], aCols[J]] = 0 then
@@ -3675,7 +3667,7 @@ var
   NewRows, NewCols: TIntArray;
   RowsReduce, ColsReduce: TWeightArray;
   I, J, Row, Col, FirstRow, LastCol, MatrixSize: Integer;
-  Inf, LowBound, SaveElem: TWeight;
+  LowBound, SaveElem: TWeight;
 begin
   if TimeOut then
     exit;
@@ -3683,7 +3675,6 @@ begin
   RowsReduce := CreateWeightArrayZ(MatrixSize);
   ColsReduce := CreateWeightArrayZ(MatrixSize);
   aCurrWeight += Reduce(aRows, aCols, RowsReduce, ColsReduce);
-  Inf := InfWeight;
   if aCurrWeight < FUpperBound then
      if MatrixSize > 2 then
        begin
@@ -3697,7 +3688,7 @@ begin
          while FBackTour[FirstRow] <> NULL_INDEX do
            FirstRow := FBackTour[FirstRow];
          SaveElem := FMatrix[LastCol, FirstRow];
-         FMatrix[LastCol, FirstRow] := Inf;
+         FMatrix[LastCol, FirstRow] := TWeight.INF_VALUE;
          NewRows := aRows.Copy;
          Delete(NewRows, Row, 1);  // remove Row
          NewCols := aCols.Copy;
@@ -3712,7 +3703,7 @@ begin
          Finalize(NewCols);
          if LowBound < FUpperBound then
            begin
-             FMatrix[aRows[Row], aCols[Col]] := Inf;
+             FMatrix[aRows[Row], aCols[Col]] := TWeight.INF_VALUE;
              //////////
              Search(aCurrWeight, aRows, aCols);
              //////////
@@ -3722,14 +3713,14 @@ begin
      else
        begin
          FBestTour := FForwardTour.Copy;
-         J := Ord(Boolean(FMatrix[aRows[0], aCols[0]] < Inf));
+         J := Ord(Boolean(FMatrix[aRows[0], aCols[0]] < TWeight.INF_VALUE));
          FBestTour[aRows[0]] := aCols[1 - J];
          FBestTour[aRows[1]] := aCols[J];
          FUpperBound := aCurrWeight;
        end;
   for I := 0 to Pred(MatrixSize) do   // restore matrix
      for J := 0 to Pred(MatrixSize) do
-       if FMatrix[aRows[I], aCols[J]] < Inf then
+       if FMatrix[aRows[I], aCols[J]] < TWeight.INF_VALUE then
          FMatrix[aRows[I], aCols[J]] += RowsReduce[I] + ColsReduce[J];
 end;
 
@@ -3738,7 +3729,7 @@ var
   I, J: Integer;
 begin
   w := FUpperBound;
-  if w < InfWeight then
+  if w < TWeight.INF_VALUE then
     begin
       aTour.Length := Succ(FMatrixSize);
       J := 0;
@@ -3765,74 +3756,6 @@ begin
 end;
 
 { TGWeightHelper }
-
-class constructor TGWeightHelper.Init;
-{$IFDEF WIN64}
-// compiler win64 does not want to see the type helpers for some strange reasons;
-// this is a some workaround(defective)
-var
-  pInfo: PTypeInfo;
-begin
-  pInfo := System.TypeInfo(TWeight);
-  if pInfo <> nil then
-    case pInfo^.Kind of
-      tkInteger:
-        case GetTypeData(pInfo)^.OrdType of
-          otSByte:
-            begin
-              PShortInt(@CFNegInfWeight)^ := ShortInt(-128);
-              PShortInt(@CFInfWeight)^ := ShortInt(127);
-            end;
-          otSWord:
-            begin
-              PSmallInt(@CFNegInfWeight)^ := SmallInt(-32768);
-              PSmallInt(@CFInfWeight)^ := SmallInt(32767);
-            end;
-          otSLong:
-            begin
-              PLongInt(@CFNegInfWeight)^ := LongInt(-2147483648);
-              PLongInt(@CFInfWeight)^ := LongInt(2147483647);
-            end;
-        end;
-      tkInt64:
-        begin
-          PInt64(@CFNegInfWeight)^ := Int64(-9223372036854775808);
-          PInt64(@CFInfWeight)^ := Int64(9223372036854775807);
-        end;
-      tkFloat:
-        case GetTypeData(pInfo)^.FloatType of
-          ftSingle:
-            begin
-              PSingle(@CFNegInfWeight)^ := Single(-340282346638528859811704183484516925440.0);
-              PSingle(@CFInfWeight)^ := Single(340282346638528859811704183484516925440.0);
-            end;
-          ftDouble:
-            begin
-              PDouble(@CFNegInfWeight)^ := Double(-1.7976931348623157081e+308);
-              PDouble(@CFInfWeight)^ := Double(1.7976931348623157081e+308);
-            end;
-          ftComp:
-            begin
-              PComp(@CFNegInfWeight)^ := Comp(-9223372036854775808);
-              PComp(@CFInfWeight)^ := Comp(9223372036854775807);
-            end;
-          ftCurr:
-            begin
-              PCurrency(@CFNegInfWeight)^ := Currency(-922337203685477.5808);
-              PCurrency(@CFInfWeight)^ := Currency(922337203685477.5807);
-            end;
-        end
-    else
-      raise EGraphError(SEInternalDataInconsist);
-    end
-  else
-    raise EGraphError(SEInternalDataInconsist);
-{$ELSE}
-begin
-  CFInfWeight := TWeight.MaxValue;
-  CFNegInfWeight := TWeight.MinValue;
-{$ENDIF WIN64}
-end;
 
 class function TGWeightHelper.CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray;
 var
@@ -4047,7 +3970,7 @@ begin
           if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
             Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
   until not Queue.TryDequeue(Item);
-  Result := InfWeight;
+  Result := TWeight.INF_VALUE;
 end;
 
 class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
@@ -4086,7 +4009,7 @@ begin
               Parents[p^.Key] := Item.Index;
             end;
   until not Queue.TryDequeue(Item);
-  aWeight := InfWeight;
+  aWeight := TWeight.INF_VALUE;
   Result := [];
 end;
 
@@ -4133,7 +4056,7 @@ begin
               end;
         end;
   until not Queue.TryDequeue(Item);
-  aWeight := InfWeight;
+  aWeight := TWeight.INF_VALUE;
   Result := [];
 end;
 
@@ -4453,7 +4376,7 @@ class function TGWeightHelper.BfmtPath(g: TGraph; aSrc, aDst: SizeInt; out aPath
 var
   Weights: TWeightArray;
 begin
-  aWeight := InfWeight;
+  aWeight := TWeight.INF_VALUE;
   if BfmtSssp(g, aSrc, aPath, Weights) then
     begin
       Result := aPath[aDst] <> NULL_INDEX;
@@ -4463,7 +4386,7 @@ begin
           aPath := g.TreePathTo(aPath, aDst);
         end
       else
-        aWeight := InfWeight;
+        aWeight := TWeight.INF_VALUE;
     end
   else
     begin
@@ -4484,7 +4407,7 @@ begin
         begin
           L := aPaths[I, K].Weight;
           R := aPaths[K, J].Weight;
-          if (L < InfWeight) and (R < InfWeight) then
+          if (L < TWeight.INF_VALUE) and (R < TWeight.INF_VALUE) then
             begin
               W := L + R;
               if W < aPaths[I, J].Weight then
@@ -4530,7 +4453,7 @@ begin
   for I := 0 to Pred(VertCount) do
     begin
       System.FillChar(Pointer(Parents)^, VertCount * SizeOf(SizeInt), $ff);
-      Fill(Weights, InfWeight);
+      Fill(Weights, TWeight.INF_VALUE);
       Item := TWeightItem.Create(I, 0);
       Parents[I] := I;
       repeat
@@ -4590,12 +4513,12 @@ end;
 
 class function TGWeightHelper.CreateWeightArray(aLen: SizeInt): TWeightArray;
 begin
-  Result := CreateAndFill(InfWeight, aLen);
+  Result := CreateAndFill(TWeight.INF_VALUE, aLen);
 end;
 
 class function TGWeightHelper.CreateWeightArrayNI(aLen: SizeInt): TWeightArray;
 begin
-  Result := CreateAndFill(NegInfWeight, aLen);
+  Result := CreateAndFill(TWeight.NEGINF_VALUE, aLen);
 end;
 
 class function TGWeightHelper.CreateWeightArrayZ(aLen: SizeInt): TWeightArray;
@@ -4631,7 +4554,7 @@ begin
           Empties[p^.Key] := False;
         end;
       for J in Empties do
-        Result[I, J] := InfWeight;
+        Result[I, J] := TWeight.INF_VALUE;
     end;
 end;
 
@@ -4654,7 +4577,7 @@ begin
           Empties[p^.Key] := False;
         end;
       for J in Empties do
-        Result[I, J] := TApspCell.Create(InfWeight, I);
+        Result[I, J] := TApspCell.Create(TWeight.INF_VALUE, I);
     end;
 end;
 
@@ -4662,7 +4585,7 @@ class function TGWeightHelper.ExtractMinPath(aSrc, aDst: SizeInt; constref aMatr
 var
   Stack: TIntStack;
 begin
-  if aMatrix[aSrc, aDst].Weight < InfWeight then
+  if aMatrix[aSrc, aDst].Weight < TWeight.INF_VALUE then
     repeat
       {%H-}Stack.Push(aDst);
       aDst := aMatrix[aSrc, aDst].Predecessor;
@@ -4716,13 +4639,11 @@ var
   Weights: TWeightArray;
   Unvisit: TBoolVector;
   Len, I, J, K, Source, Target, Curr, Next, Farthest: SizeInt;
-  Inf, NegInf, InsW, MaxW, CurrW, TotalW: TWeight;
+  InsW, MaxW, CurrW, TotalW: TWeight;
 begin
   Result := nil;
   Len := System.Length(m);
-  Inf := InfWeight;
-  NegInf := NegInfWeight;
-  aWeight := Inf;
+  aWeight := TWeight.INF_VALUE;
   Tour.Length := Len;
   Result.Length := Succ(Len);
   for K := 0 to Pred(Len) do
@@ -4732,7 +4653,7 @@ begin
       Unvisit[K] := False;
       Weights := System.Copy(m[K]);
       TotalW := 0;
-      MaxW := NegInf;
+      MaxW := TWeight.NEGINF_VALUE;
       for J in Unvisit do
         if Weights[J] > MaxW then
           begin
@@ -4741,7 +4662,7 @@ begin
           end;
       for I := 2 to Len do
         begin
-          InsW := Inf;
+          InsW := TWeight.INF_VALUE;
           Curr := K;
           for J := 0 to I do
             begin
@@ -4759,7 +4680,7 @@ begin
           Tour[Source] := Farthest;
           TotalW += InsW;
           Unvisit[Farthest] := False;
-          MaxW := NegInf;
+          MaxW := TWeight.NEGINF_VALUE;
           for J in Unvisit do
             begin
               CurrW := m[Farthest, J];

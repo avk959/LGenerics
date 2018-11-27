@@ -27,6 +27,48 @@ type
     property Length: SizeInt read GetLenght write SetLength;
   end;
 
+  TLGSmallIntHelper = type helper(TGSmallIntHelper) for SmallInt
+    const INF_VALUE: SmallInt    = 32767;
+    const NEGINF_VALUE: SmallInt = -32768;
+  end;
+
+  TLGLongIntHelper = type helper(TGLongIntHelper) for LongInt
+    const INF_VALUE: LongInt    = 2147483647;
+    const NEGINF_VALUE: LongInt = -2147483648;
+  end;
+
+  TLGInt64Helper = type helper(TGInt64Helper) for Int64
+    const INF_VALUE: Int64    = 9223372036854775807;
+    const NEGINF_VALUE: Int64 = -9223372036854775808;
+  end;
+
+  TLGSingleHelper = type helper(TGSingleHelper) for Single
+    const INF_VALUE: Single    = 340282346638528859811704183484516925440.0;
+    const NEGINF_VALUE: Single = -340282346638528859811704183484516925440.0;
+  end;
+
+  TLGDoubleHelper = type helper(TGDoubleHelper) for Double
+    const INF_VALUE: Double    = 1.7976931348623157081e+308;
+    const NEGINF_VALUE: Double = -1.7976931348623157081e+308;
+  end;
+
+{$ifdef FPC_HAS_TYPE_EXTENDED}
+  TLGExtendedHelper = type helper(TGExtendedHelper) for Extended
+    const INF_VALUE: Extended    = 1.18973149535723176505e+4932;
+    const NEGINF_VALUE: Extended = -1.18973149535723176505e+4932;
+  end;
+{$ENDIF}
+
+  TLGCompHelper = type helper(TCompHelper) for Comp
+    const INF_VALUE: Comp    = 9223372036854775807;
+    const NEGINF_VALUE: Comp = -9223372036854775808;
+  end;
+
+  TLGCurrencyHelper = type helper(TGCurrencyHelper) for Currency
+    const INF_VALUE: Currency    = 922337203685477.5807;
+    const NEGINF_VALUE: Currency = -922337203685477.5808;
+  end;
+
   TDisjointSetUnion = record
   strict private
     FList: array of SizeInt;
@@ -313,10 +355,6 @@ type
     TWeightArray  = array of TWeight;
 
   strict private
-  class var
-    CFInfWeight,
-    CFNegInfWeight: TWeight;
-    class constructor Init;
     class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
     class procedure Fill(var a: TWeightArray; aValue: TWeight); static;
     class function  wMax(L, R: TWeight): TWeight; static; inline;
@@ -540,9 +578,6 @@ type
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
     warning: does not checks matrix }
     class function  GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-
-    class property  InfWeight: TWeight read CFInfWeight;
-    class property  NegInfWeight: TWeight read CFNegInfWeight;
   end;
 
   { TGAbstractDotWriter: abstract writer into Graphviz dot format }
