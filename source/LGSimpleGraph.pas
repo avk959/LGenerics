@@ -656,7 +656,7 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
-  { returns True if the matrix m is nondegenerate, square, and does not contain
+  { returns True if the matrix m is nondegenerate, square, summetric and does not contain
     loops and negative elements }
     class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static; inline;
   { greedy approach for Travelling Salesman problem;
