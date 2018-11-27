@@ -32,8 +32,8 @@ uses
   math,
   LGUtils,
   {%H-}LGHelpers,
-  LGCustomContainer,
   LGArrayHelpers,
+  LGAbstractContainer,
   LGStrConst;
 
 type

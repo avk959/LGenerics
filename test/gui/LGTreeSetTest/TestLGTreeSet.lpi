@@ -50,7 +50,7 @@
       <Filename Value="bin\$(TargetCPU)-$(TargetOS)/TestLGTreeSet"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir)"/>
+      <IncludeFiles Value="$(ProjOutDir);..\..\..\source\include"/>
       <OtherUnitFiles Value="..\..\..\source"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>

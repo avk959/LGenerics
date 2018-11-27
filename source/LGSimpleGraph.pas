@@ -546,10 +546,10 @@ type
     class procedure CheckTspMatrix(constref m: TWeightMatrix); static;
   { 2-opt local search algorithm for the traveling salesman problem;
     warning: does not checks not matrix nor path }
-    class procedure Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight); static;
+    class procedure Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight); static;
   { 2-opt local search algorithm for the traveling salesman problem;
     warning: does not checks not matrix nor path }
-    class procedure Tsp3Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight); static;
+    class procedure Tsp3Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight); static;
   { greedy TSP, best of nearest neighbour + 2-opt local search starting from every vertex;
     warning: does not checks matrix}
     class function  GetGreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
@@ -4326,7 +4326,7 @@ begin
     end;
 end;
 
-class procedure TGWeightedGraph.Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight);
+class procedure TGWeightedGraph.Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
 var
   I, J, L, R, Len: SizeInt;
   wFirst, Gain, MaxGain: TWeight;
@@ -4356,7 +4356,7 @@ begin
   aWeight := TWeightHelper.TotalTourWeight(m, aPath);
 end;
 
-class procedure TGWeightedGraph.Tsp3Opt(constref m: TWeightMatrix; var aPath: TIntArray; out aWeight: TWeight);
+class procedure TGWeightedGraph.Tsp3Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
 var
   Helper: TTsp3Opt;
 begin

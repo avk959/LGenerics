@@ -8,7 +8,7 @@ uses
   SysUtils, fpcunit, testregistry,
   LGUtils,
   LGHelpers,
-  LGCustomContainer,
+  LGAbstractContainer,
   LGTreeMap,
   LGHashSet,
   LGArrayHelpers;

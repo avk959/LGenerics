@@ -28,7 +28,7 @@ uses
   SysUtils,
   LGUtils,
   {%H-}LGHelpers,
-  LGCustomContainer,
+  LGAbstractContainer,
   LGStrConst;
 
 type

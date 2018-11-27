@@ -8,7 +8,7 @@ interface
 uses
   SysUtils, fpcunit, testregistry,
   LGUtils,
-  LGCustomContainer,
+  LGAbstractContainer,
   LGHelpers,
   LGList,
   LGArrayHelpers;

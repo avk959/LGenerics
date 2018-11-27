@@ -50,7 +50,7 @@
       <Filename Value="TestLGTable2D"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir)"/>
+      <IncludeFiles Value="$(ProjOutDir);..\..\..\source\include"/>
       <OtherUnitFiles Value="..\..\..\source"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
@@ -64,7 +64,6 @@
       <Debugging>
         <GenerateDebugInfo Value="False"/>
         <UseLineInfoUnit Value="False"/>
-        <UseHeaptrc Value="True"/>
       </Debugging>
       <LinkSmart Value="True"/>
       <Options>

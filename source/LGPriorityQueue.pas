@@ -30,7 +30,7 @@ uses
   SysUtils,
   LGUtils,
   LGHelpers,
-  LGCustomContainer,
+  LGAbstractContainer,
   LGStrConst;
 
 type

@@ -34,8 +34,8 @@ uses
   FileUtil,
   LGUtils,
   {%H-}LGHelpers,
-  LGCustomContainer,
-  LGArrayHelpers;
+  LGArrayHelpers,
+  LGAbstractContainer;
 
 type
 

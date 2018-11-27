@@ -9,7 +9,7 @@ uses
 
   SysUtils, fpcunit, testregistry,
   LGUtils,
-  LGCustomContainer,
+  LGAbstractContainer,
   LGVector,
   LGArrayHelpers;
 

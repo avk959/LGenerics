@@ -54,7 +54,7 @@
       <Filename Value="bin\$(TargetCPU)-$(TargetOS)/TestLGMultimap"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir)"/>
+      <IncludeFiles Value="$(ProjOutDir);..\..\..\source\include"/>
       <OtherUnitFiles Value="..\..\..\source"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>

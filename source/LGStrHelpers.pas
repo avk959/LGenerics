@@ -31,7 +31,7 @@ uses
   SysUtils,
   LGUtils,
   LGHelpers,
-  LGCustomContainer,
+  LGAbstractContainer,
   regexpr;
 
 type

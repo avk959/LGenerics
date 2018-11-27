@@ -17,7 +17,7 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-unit LGCustomContainer;
+unit LGAbstractContainer;
 
 {$MODE OBJFPC}{$H+}
 {$INLINE ON}{$WARN 6058 off : }

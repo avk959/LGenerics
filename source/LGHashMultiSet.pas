@@ -31,7 +31,7 @@ uses
   SysUtils,
   LGUtils,
   {%H-}LGHelpers,
-  LGCustomContainer,
+  LGAbstractContainer,
   LGHashTable,
   LGStrConst;
 

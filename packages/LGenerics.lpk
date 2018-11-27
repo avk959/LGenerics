@@ -38,8 +38,8 @@
         <UnitName Value="LGUtils"/>
       </Item1>
       <Item2>
-        <Filename Value="..\source\LGCustomContainer.pas"/>
-        <UnitName Value="LGCustomContainer"/>
+        <Filename Value="..\source\LGAbstractContainer.pas"/>
+        <UnitName Value="LGAbstractContainer"/>
       </Item2>
       <Item3>
         <Filename Value="..\source\LGHash.pas"/>

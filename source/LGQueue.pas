@@ -28,7 +28,7 @@ interface
 uses
   SysUtils,
   LGUtils,
-  LGCustomContainer;
+  LGAbstractContainer;
 
 type
 
