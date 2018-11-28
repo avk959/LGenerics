@@ -428,8 +428,8 @@ type
       FVisited: TBoolVector;
       FMatchCount: SizeInt;
       procedure Match(aNode, aMate: SizeInt); inline;
-      procedure Init(aGraph: TGraph; constref w, g: TIntArray);
-      procedure InitMax(aGraph: TGraph; constref w, g: TIntArray);
+      procedure Init(aGraph: TGraph; const w, g: TIntArray);
+      procedure InitMax(aGraph: TGraph; const w, g: TIntArray);
       function  FindAugmentPathMin(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
       function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
       procedure AlternatePath(aRoot: SizeInt);
@@ -440,8 +440,8 @@ type
       procedure ExecuteMax;
       function  CreateEdges: TEdgeArray;
     public
-      function  MinWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
-      function  MaxWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+      function  MinWeightMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+      function  MaxWeightMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
     end;
 
     { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly;
@@ -511,20 +511,20 @@ type
       FStartTime: TDateTime;
       FTimeOut: Integer;
       FCancelled: Boolean;
-      procedure Init(constref m: TWeightMatrix; constref aTour: TIntArray; aTimeOut: Integer);
+      procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
-      function  Reduce(constref aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray): TWeight;
-      function  SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: Integer): TWeight;
+      function  Reduce(const aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray): TWeight;
+      function  SelectBest(const aRows, aCols: TIntArray; out aRowIdx, aColIdx: Integer): TWeight;
       procedure Search(aCurrWeight: TWeight; var aRows, aCols: TIntArray);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
-      function Execute(constref m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;
+      function Execute(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;
     end;
 
   { returns True if aMatch is maximal matching }
-    class function  IsMaxMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean; static;
+    class function  IsMaxMatching(g: TGraph; const aMatch: TEdgeArray): Boolean; static;
   { returns True if aMatch is perfect matching }
-    class function  IsPerfectMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean; static;
+    class function  IsPerfectMatching(g: TGraph; const aMatch: TEdgeArray): Boolean; static;
   { Dijkstra's algorithm: single-source shortest paths problem for non-negative weights  }
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
@@ -571,23 +571,23 @@ type
     fills other element with corresponding weights }
     class function  CreateAPSPMatrix(aGraph: TGraph): TApspMatrix; static;
   { warning: does not checks input }
-    class function  ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TApspMatrix): TIntArray; static;
+    class function  ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix: TApspMatrix): TIntArray; static;
   { returns bipartite matching of maximum cardinality and minimum weight;
     warning: does not checks if aGraph is bipartite }
-    class function  MinWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
+    class function  MinWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
   { returns bipartite matching of maximum cardinality and maximum weight;
     warning: does not checks if aGraph is bipartite }
-    class function  MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray; static;
+    class function  MaxWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
   { returns total weight of TS tour specified of aTour;
     warning: does not checks not matrix nor tour }
-    class function  TotalTourWeight(constref m: TWeightMatrix; constref aTour: TIntArray): TWeight; static;
+    class function  TotalTourWeight(const m: TWeightMatrix; const aTour: TIntArray): TWeight; static;
   { cyclic shifts path aTour so that element aSrc becomes the first;
     warning: does not checks if aSrc exist in aTour }
     class procedure NormalizeTour(var aTour: TIntArray; aSrc: SizeInt); static;
   { greedy TSP, best of farthest insertion starting from every vertex;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
     warning: does not checks matrix }
-    class function  GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+    class function  GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   end;
 
   { TGAbstractDotWriter: abstract writer into Graphviz dot format }

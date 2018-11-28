@@ -96,9 +96,9 @@ type
     function  CreateSkeleton: TSkeleton;
     procedure AssignGraph(aGraph: TGSimpleGraph);
     procedure AssignSeparate(aGraph: TGSimpleGraph; aIndex: SizeInt);
-    procedure AssignVertexList(aGraph: TGSimpleGraph; constref aList: TIntArray);
-    procedure AssignTree(aGraph: TGSimpleGraph; constref aTree: TIntArray);
-    procedure AssignEdges(aGraph: TGSimpleGraph; constref aEdges: TIntEdgeArray);
+    procedure AssignVertexList(aGraph: TGSimpleGraph; const aList: TIntArray);
+    procedure AssignTree(aGraph: TGSimpleGraph; const aTree: TIntArray);
+    procedure AssignEdges(aGraph: TGSimpleGraph; const aEdges: TIntEdgeArray);
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aTag: SizeInt): SizeInt;
@@ -114,7 +114,7 @@ type
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
   { returns max independent set in bipartite graph }
-    function  GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
+    function  GetMaxIsBipartite(const w, g: TIntArray): TIntArray;
     function  GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxIsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure ListIsBP(aOnFind: TOnFindSet);
@@ -170,12 +170,12 @@ type
     function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
     function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
   { returns a subgraph induced by the vertices whose indices are contained in the array aList }
-    function  SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
+    function  SubgraphFromVertexList(const aList: TIntArray): TGSimpleGraph;
   { returns a gsubgraph induced the pairs provided by the aTree,
     i.e. each element treates as pair of source - destination(value -> source, index -> destination ) }
-    function  SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
+    function  SubgraphFromTree(const aTree: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the edges provided by the aEdges }
-    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
+    function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TGSimpleGraph;
   { returns line graph constucted from self }
     function  CreateLineGraph: TLineGraph;
 {**********************************************************************************************************
@@ -308,14 +308,14 @@ type
     the maximum cardinality, used Hopcroft–Karp algorithm }
     function FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
-    function MaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+    function MaxBipartiteMatchingHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality }
     function FindMaxBipartiteMatchingBfs(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
-    function MaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+    function MaxBipartiteMatchingBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns True if graph is bipartite and aMatch is maximal matching }
-    function IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
+    function IsMaxBipartiteMatching(const aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function GreedyMaxMatching: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
@@ -342,7 +342,7 @@ type
     function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMIS: TIntArray;
   { returns True if aTestSet contains indices of the some maximal independent vertex set, False otherwise }
-    function  IsMaxIndependentSet(constref aTestSet: TIntArray): Boolean;
+    function  IsMaxIndependentSet(const aTestSet: TIntArray): Boolean;
   { returns indices of the vertices of the some found minimum dominating set in connected graph;
     will raise exception if graph is disconnected;
     worst case time cost of exact solution O*(2^n);
@@ -351,7 +351,7 @@ type
     function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMDS: TIntArray;
   { returns True if aTestSet contains indices of the some minimal dominating vertex set, False otherwise }
-    function  IsMinDominatingSet(constref aTestSet: TIntArray): Boolean;
+    function  IsMinDominatingSet(const aTestSet: TIntArray): Boolean;
   { lists all maximal cliques;
     will raise exception if aOnFindClique is not assigned;
     setting aCancel to True in aOnFindClique will result in an exit from the method }
@@ -363,7 +363,7 @@ type
     function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMaxClique: TIntArray;
   { returns True if aTestClique contains indices of the some maximal clique, False otherwise }
-    function  IsMaxClique(constref aTestClique: TIntArray): Boolean;
+    function  IsMaxClique(const aTestClique: TIntArray): Boolean;
   { returns count of used colors(chromatic number, if aExact); returns colors of the vertices
     in corresponding components of aColors; worst case time cost of exact solution O*(k^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout,
@@ -384,7 +384,7 @@ type
   { returns count of colors; returns colors of the vertices in corresponding components of aColors(GIS ?) }
     function  GreedyVertexColoring(out aColors: TIntArray): SizeInt;
   { returns True if aTestColors is complete and proper coloring of the vertices, False otherwise }
-    function  IsProperVertexColoring(constref aTestColors: TIntArray): Boolean;
+    function  IsProperVertexColoring(const aTestColors: TIntArray): Boolean;
   { tries to return in aCycles the specified number of Hamiltonian cycles, starting from the vertex aSource;
     if aCount <= 0, then all cycles are returned; if aCount > 0, then
     Min(aCount, total) cycles are returned; aTimeOut specifies the timeout in seconds;
@@ -394,7 +394,7 @@ type
     function  FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestCycle is Hamiltonian cycle starting from the vertex with index aSourceIdx }
-    function  IsHamiltonCycle(constref aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
+    function  IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
   { tries to return in aPaths the specified number of Hamiltonian paths
     from the vertex aSrc to vertex aDst; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
@@ -404,7 +404,7 @@ type
     function  FindHamiltonPathsI(aSrcIdx, aDstIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestPath is Hamiltonian path starting from the vertex with index aSourceIdx }
-    function  IsHamiltonPath(constref aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
+    function  IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -432,9 +432,9 @@ type
     constructor Create;
     function SeparateGraph(constref aVertex: TVertex): TGChart;
     function SeparateGraphI(aIndex: SizeInt): TGChart;
-    function SubgraphFromVertexList(constref aList: TIntArray): TGChart;
-    function SubgraphFromTree(constref aTree: TIntArray): TGChart;
-    function SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
+    function SubgraphFromVertexList(const aList: TIntArray): TGChart;
+    function SubgraphFromTree(const aTree: TIntArray): TGChart;
+    function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGChart;
     function Clone: TGChart;
   end;
 
@@ -447,9 +447,9 @@ type
     procedure LoadDIMACSAscii(const aFileName: string);
     function  SeparateGraph(aVertex: Integer): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
-    function  SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
-    function  SubgraphFromTree(constref aTree: TIntArray): TIntChart;
-    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
+    function  SubgraphFromVertexList(const aList: TIntArray): TIntChart;
+    function  SubgraphFromTree(const aTree: TIntArray): TIntChart;
+    function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TIntChart;
     function  Clone: TIntChart;
   end;
 
@@ -479,9 +479,9 @@ type
     constructor Create;
     function SeparateGraph(const aVertex: string): TStrChart;
     function SeparateGraphI(aIndex: SizeInt): TStrChart;
-    function SubgraphFromVertexList(constref aList: TIntArray): TStrChart;
-    function SubgraphFromTree(constref aTree: TIntArray): TStrChart;
-    function SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
+    function SubgraphFromVertexList(const aList: TIntArray): TStrChart;
+    function SubgraphFromTree(const aTree: TIntArray): TStrChart;
+    function SubgraphFromEdges(const aEdges: TIntEdgeArray): TStrChart;
     function Clone: TStrChart;
   end;
 
@@ -522,7 +522,7 @@ type
     TEdgeHelper  = specialize TGComparableArrayHelper<TWeightEdge>;
     TPairHeapMax = specialize TGPairHeapMax<TWeightItem>;
 
-  { 3-opt local search algorithm for the traveling salesman problem;
+  { TTsp3Opt: 3-opt local search algorithm for the traveling salesman problem;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"; }
     TTsp3Opt = record
     strict private
@@ -539,27 +539,27 @@ type
       procedure PickSwapKind(var aSwap: TSwap);
       procedure Reverse(aFirst, aLast: SizeInt);
     public
-      procedure Execute(constref m: TWeightMatrix; var aTour: TIntArray; var aWeight: TWeight);
+      procedure Execute(const m: TWeightMatrix; var aTour: TIntArray; var aWeight: TWeight);
     end;
 
     function CreateEdgeArray: TEdgeArray;
-    class procedure CheckTspMatrix(constref m: TWeightMatrix); static;
+    class procedure CheckTspMatrix(const m: TWeightMatrix); static;
   { 2-opt local search algorithm for the traveling salesman problem;
     warning: does not checks not matrix nor path }
-    class procedure Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight); static;
+    class procedure Tsp2Opt(const m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight); static;
   { 2-opt local search algorithm for the traveling salesman problem;
     warning: does not checks not matrix nor path }
-    class procedure Tsp3Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight); static;
+    class procedure Tsp3Opt(const m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight); static;
   { greedy TSP, best of nearest neighbour + 2-opt local search starting from every vertex;
     warning: does not checks matrix}
-    class function  GetGreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+    class function  GetGreedyTspNn2Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   public
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
     class function InfWeight: TWeight; static; inline;
     class function NegInfWeight: TWeight; static; inline;
-    class function TotalWeight(constref aEdges: TEdgeArray): TWeight; static;
+    class function TotalWeight(const aEdges: TEdgeArray): TWeight; static;
   { returns True if exists edge with negative weight }
     function ContainsNegWeightEdge: Boolean;
   { checks whether exists any negative weight cycle in connected component that
@@ -571,9 +571,9 @@ type
 ***********************************************************************************************************}
     function SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
     function SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
-    function SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
-    function SubgraphFromTree(constref aTree: TIntArray): TGWeightedGraph;
-    function SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
+    function SubgraphFromVertexList(const aList: TIntArray): TGWeightedGraph;
+    function SubgraphFromTree(const aTree: TIntArray): TGWeightedGraph;
+    function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGWeightedGraph;
     function Clone: TGWeightedGraph;
 {**********************************************************************************************************
   shortest path problem utilities
@@ -649,36 +649,36 @@ type
 ***********************************************************************************************************}
 
   { returns True if aMatch is maximal matching }
-    function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
+    function IsMaximalMatching(const aMatch: TEdgeArray): Boolean; inline;
   { returns True if aMatch is perfect matching }
-    function IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean; inline;
+    function IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean; inline;
 {**********************************************************************************************************
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
   { returns True if the matrix m is nondegenerate, square, summetric and does not contain
     loops and negative elements }
-    class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static; inline;
+    class function  IsProperTspMatrix(const m: TWeightMatrix): Boolean; static; inline;
   { greedy approach for Travelling Salesman problem;
     best of farthest insertion starting from every vertex + 2-opt local search at the end;
     will raise EGraphError if m is not proper TSP matrix }
-    class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+    class function GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { greedy approach for Travelling Salesman problem;
     best of farthest insertion starting from every vertex + 3-opt local search at the end;
     will raise EGraphError if m is not proper TSP matrix }
-    class function GreedyTsp3Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+    class function GreedyTsp3Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { greedy approach for Travelling Salesman problem;
     best of nearest neighbour + 2-opt local search starting from every vertex;
     will raise EGraphError if m is not proper TSP matrix }
-    class function GreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+    class function GreedyTspNn2Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { GreedyTspNn2Opt + 3-opt local search;
     will raise EGraphError if m is not proper TSP matrix }
-    class function GreedyTspNn23Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+    class function GreedyTspNn23Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { exact branch and bound approach for Travelling Salesman problem;
     aTimeOut specifies the timeout in seconds; at the end of the timeout,
     the best recent solution will be returned, and aExact will be set to False;
     will raise EGraphError if m is not proper TSP matrix }
-    class function TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
+    class function TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
                          aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
   end;
 
@@ -706,9 +706,9 @@ type
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
     function  SeparateGraph(aVertex: TPoint): TPointsChart;
     function  SeparateGraphI(aIndex: SizeInt): TPointsChart;
-    function  SubgraphFromVertexList(constref aList: TIntArray): TPointsChart;
-    function  SubgraphFromTree(constref aTree: TIntArray): TPointsChart;
-    function  SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
+    function  SubgraphFromVertexList(const aList: TIntArray): TPointsChart;
+    function  SubgraphFromTree(const aTree: TIntArray): TPointsChart;
+    function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
     function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
@@ -737,9 +737,9 @@ type
 ***********************************************************************************************************}
     function SeparateGraph(constref aVertex: TVertex): TGIntWeightGraph;
     function SeparateGraphI(aIndex: SizeInt): TGIntWeightGraph;
-    function SubgraphFromVertexList(constref aList: TIntArray): TGIntWeightGraph;
-    function SubgraphFromTree(constref aTree: TIntArray): TGIntWeightGraph;
-    function SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGIntWeightGraph;
+    function SubgraphFromVertexList(const aList: TIntArray): TGIntWeightGraph;
+    function SubgraphFromTree(const aTree: TIntArray): TGIntWeightGraph;
+    function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGIntWeightGraph;
     function Clone: TGIntWeightGraph;
 {**********************************************************************************************************
   matching utilities
@@ -1001,7 +1001,7 @@ begin
   AssignVertexList(aGraph, v);
 end;
 
-procedure TGSimpleGraph.AssignVertexList(aGraph: TGSimpleGraph; constref aList: TIntArray);
+procedure TGSimpleGraph.AssignVertexList(aGraph: TGSimpleGraph; const aList: TIntArray);
 var
   VertSet: TBitVector;
   I: SizeInt;
@@ -1020,7 +1020,7 @@ begin
         AddEdge(aGraph[I], aGraph[p^.Key], aGraph.GetEdgeDataPtr(I, p^.Key)^);
 end;
 
-procedure TGSimpleGraph.AssignTree(aGraph: TGSimpleGraph; constref aTree: TIntArray);
+procedure TGSimpleGraph.AssignTree(aGraph: TGSimpleGraph; const aTree: TIntArray);
 var
   I, Src: SizeInt;
 begin
@@ -1034,7 +1034,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.AssignEdges(aGraph: TGSimpleGraph; constref aEdges: TIntEdgeArray);
+procedure TGSimpleGraph.AssignEdges(aGraph: TGSimpleGraph; const aEdges: TIntEdgeArray);
 var
   e: TIntEdge;
 begin
@@ -1331,7 +1331,7 @@ begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
-function TGSimpleGraph.GetMaxIsBipartite(constref w, g: TIntArray): TIntArray;
+function TGSimpleGraph.GetMaxIsBipartite(const w, g: TIntArray): TIntArray;
 var
   Helper: THKMatch;
   Lefts, LeftsVisit, LeftsFree, RightsUnvisit: TBoolVector;
@@ -2511,19 +2511,19 @@ begin
     Result.AssignGraph(Self)
 end;
 
-function TGSimpleGraph.SubgraphFromVertexList(constref aList: TIntArray): TGSimpleGraph;
+function TGSimpleGraph.SubgraphFromVertexList(const aList: TIntArray): TGSimpleGraph;
 begin
   Result := TGSimpleGraph.Create;
   Result.AssignVertexList(Self, aList);
 end;
 
-function TGSimpleGraph.SubgraphFromTree(constref aTree: TIntArray): TGSimpleGraph;
+function TGSimpleGraph.SubgraphFromTree(const aTree: TIntArray): TGSimpleGraph;
 begin
   Result := TGSimpleGraph.Create;
   Result.AssignTree(Self, aTree);
 end;
 
-function TGSimpleGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGSimpleGraph;
+function TGSimpleGraph.SubgraphFromEdges(const aEdges: TIntEdgeArray): TGSimpleGraph;
 begin
   Result := TGSimpleGraph.Create;
   Result.AssignEdges(Self, aEdges);
@@ -3318,7 +3318,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.MaxBipartiteMatchingHK(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.MaxBipartiteMatchingHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;
 var
   Helper: THKMatch;
 begin
@@ -3336,14 +3336,14 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.MaxBipartiteMatchingBfs(constref aWhites, aGrays: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.MaxBipartiteMatchingBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
 var
   Helper: TBfsMatch;
 begin
   Result := Helper.MaxMatching(Self, aWhites, aGrays);
 end;
 
-function TGSimpleGraph.IsMaxBipartiteMatching(constref aMatch: TIntEdgeArray): Boolean;
+function TGSimpleGraph.IsMaxBipartiteMatching(const aMatch: TIntEdgeArray): Boolean;
 var
   w, g: TIntArray;
   WhiteFree, GrayFree,
@@ -3471,7 +3471,7 @@ begin
     Result := GetGreedyMisBP;
 end;
 
-function TGSimpleGraph.IsMaxIndependentSet(constref aTestSet: TIntArray): Boolean;
+function TGSimpleGraph.IsMaxIndependentSet(const aTestSet: TIntArray): Boolean;
 var
   TestIS, Remain: TBoolVector;
   I, J: SizeInt;
@@ -3537,7 +3537,7 @@ begin
     Result := GetGreedyMinIsBP;
 end;
 
-function TGSimpleGraph.IsMinDominatingSet(constref aTestSet: TIntArray): Boolean;
+function TGSimpleGraph.IsMinDominatingSet(const aTestSet: TIntArray): Boolean;
 var
   TestMds, Remain: TBoolVector;
   I, J, K: SizeInt;
@@ -3651,7 +3651,7 @@ begin
   Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.IsMaxClique(constref aTestClique: TIntArray): Boolean;
+function TGSimpleGraph.IsMaxClique(const aTestClique: TIntArray): Boolean;
 var
   TestClique, Remain: TBoolVector;
   I, J: SizeInt;
@@ -3758,7 +3758,7 @@ begin
     Result := GreedyColor(aColors);
 end;
 
-function TGSimpleGraph.IsProperVertexColoring(constref aTestColors: TIntArray): Boolean;
+function TGSimpleGraph.IsProperVertexColoring(const aTestColors: TIntArray): Boolean;
 var
   sCol, dCol: SizeInt;
   e: TEdge;
@@ -3807,7 +3807,7 @@ begin
   Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles);
 end;
 
-function TGSimpleGraph.IsHamiltonCycle(constref aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
+function TGSimpleGraph.IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
@@ -3858,7 +3858,7 @@ begin
   Result := Helper.FindPaths(Self, aSrcIdx, aDstIdx, aCount, aTimeOut, @aPaths);
 end;
 
-function TGSimpleGraph.IsHamiltonPath(constref aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
+function TGSimpleGraph.IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
@@ -3922,19 +3922,19 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TGChart.SubgraphFromVertexList(constref aList: TIntArray): TGChart;
+function TGChart.SubgraphFromVertexList(const aList: TIntArray): TGChart;
 begin
   Result := TGChart.Create;
   Result.AssignVertexList(Self, aList);
 end;
 
-function TGChart.SubgraphFromTree(constref aTree: TIntArray): TGChart;
+function TGChart.SubgraphFromTree(const aTree: TIntArray): TGChart;
 begin
   Result := TGChart.Create;
   Result.AssignTree(Self, aTree);
 end;
 
-function TGChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGChart;
+function TGChart.SubgraphFromEdges(const aEdges: TIntEdgeArray): TGChart;
 begin
   Result := TGChart.Create;
   Result.AssignEdges(Self, aEdges);
@@ -4028,19 +4028,19 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TIntChart.SubgraphFromVertexList(constref aList: TIntArray): TIntChart;
+function TIntChart.SubgraphFromVertexList(const aList: TIntArray): TIntChart;
 begin
   Result := TIntChart.Create;
   Result.AssignVertexList(Self, aList);
 end;
 
-function TIntChart.SubgraphFromTree(constref aTree: TIntArray): TIntChart;
+function TIntChart.SubgraphFromTree(const aTree: TIntArray): TIntChart;
 begin
   Result := TIntChart.Create;
   Result.AssignTree(Self, aTree);
 end;
 
-function TIntChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TIntChart;
+function TIntChart.SubgraphFromEdges(const aEdges: TIntEdgeArray): TIntChart;
 begin
   Result := TIntChart.Create;
   Result.AssignEdges(Self, aEdges);
@@ -4155,19 +4155,19 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TStrChart.SubgraphFromVertexList(constref aList: TIntArray): TStrChart;
+function TStrChart.SubgraphFromVertexList(const aList: TIntArray): TStrChart;
 begin
   Result := TStrChart.Create;
   Result.AssignVertexList(Self, aList);
 end;
 
-function TStrChart.SubgraphFromTree(constref aTree: TIntArray): TStrChart;
+function TStrChart.SubgraphFromTree(const aTree: TIntArray): TStrChart;
 begin
   Result := TStrChart.Create;
   Result.AssignTree(Self, aTree);
 end;
 
-function TStrChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TStrChart;
+function TStrChart.SubgraphFromEdges(const aEdges: TIntEdgeArray): TStrChart;
 begin
   Result := TStrChart.Create;
   Result.AssignEdges(Self, aEdges);
@@ -4224,7 +4224,7 @@ begin
     end;
 end;
 
-procedure TGWeightedGraph.TTsp3Opt.Execute(constref m: TWeightMatrix; var aTour: TIntArray; var aWeight: TWeight);
+procedure TGWeightedGraph.TTsp3Opt.Execute(const m: TWeightMatrix; var aTour: TIntArray; var aWeight: TWeight);
 var
   Best, Curr: TSwap;
   Len, I, J, K: SizeInt;
@@ -4301,7 +4301,7 @@ begin
         end;
 end;
 
-class procedure TGWeightedGraph.CheckTspMatrix(constref m: TWeightMatrix);
+class procedure TGWeightedGraph.CheckTspMatrix(const m: TWeightMatrix);
 var
   I, J, Size: SizeInt;
 begin
@@ -4326,7 +4326,7 @@ begin
     end;
 end;
 
-class procedure TGWeightedGraph.Tsp2Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
+class procedure TGWeightedGraph.Tsp2Opt(const m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
 var
   I, J, L, R, Len: SizeInt;
   wFirst, Gain, MaxGain: TWeight;
@@ -4356,14 +4356,14 @@ begin
   aWeight := TWeightHelper.TotalTourWeight(m, aPath);
 end;
 
-class procedure TGWeightedGraph.Tsp3Opt(constref m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
+class procedure TGWeightedGraph.Tsp3Opt(const m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
 var
   Helper: TTsp3Opt;
 begin
   Helper.Execute(m, aPath, aWeight);
 end;
 
-class function TGWeightedGraph.GetGreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightedGraph.GetGreedyTspNn2Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 var
   Tour: TIntArray;
   Unvisit: TBoolVector;
@@ -4418,7 +4418,7 @@ begin
   Result := TWeight.NEGINF_VALUE;
 end;
 
-class function TGWeightedGraph.TotalWeight(constref aEdges: TEdgeArray): TWeight;
+class function TGWeightedGraph.TotalWeight(const aEdges: TEdgeArray): TWeight;
 var
   e: TWeightEdge;
 begin
@@ -4463,19 +4463,19 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TGWeightedGraph.SubgraphFromVertexList(constref aList: TIntArray): TGWeightedGraph;
+function TGWeightedGraph.SubgraphFromVertexList(const aList: TIntArray): TGWeightedGraph;
 begin
   Result := TGWeightedGraph.Create;
   Result.AssignVertexList(Self, aList);
 end;
 
-function TGWeightedGraph.SubgraphFromTree(constref aTree: TIntArray): TGWeightedGraph;
+function TGWeightedGraph.SubgraphFromTree(const aTree: TIntArray): TGWeightedGraph;
 begin
   Result := TGWeightedGraph.Create;
   Result.AssignTree(Self, aTree);
 end;
 
-function TGWeightedGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGWeightedGraph;
+function TGWeightedGraph.SubgraphFromEdges(const aEdges: TIntEdgeArray): TGWeightedGraph;
 begin
   Result := TGWeightedGraph.Create;
   Result.AssignEdges(Self, aEdges);
@@ -4776,17 +4776,17 @@ begin
       end;
 end;
 
-function TGWeightedGraph.IsMaximalMatching(constref aMatch: TEdgeArray): Boolean;
+function TGWeightedGraph.IsMaximalMatching(const aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsMaxMatching(Self, aMatch);
 end;
 
-function TGWeightedGraph.IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean;
+function TGWeightedGraph.IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
 end;
 
-class function TGWeightedGraph.IsProperTspMatrix(constref m: TWeightMatrix): Boolean;
+class function TGWeightedGraph.IsProperTspMatrix(const m: TWeightMatrix): Boolean;
 var
   I, J, Size: SizeInt;
 begin
@@ -4812,35 +4812,35 @@ begin
   Result := True;
 end;
 
-class function TGWeightedGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightedGraph.GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
   CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTsp(m, aWeight);
   Tsp2Opt(m, Result, aWeight);
 end;
 
-class function TGWeightedGraph.GreedyTsp3Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightedGraph.GreedyTsp3Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
   CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTsp(m, aWeight);
   Tsp3Opt(m, Result, aWeight);
 end;
 
-class function TGWeightedGraph.GreedyTspNn2Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightedGraph.GreedyTspNn2Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
   CheckTspMatrix(m);
   Result := GetGreedyTspNn2Opt(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
 end;
 
-class function TGWeightedGraph.GreedyTspNn23Opt(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightedGraph.GreedyTspNn23Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
   CheckTspMatrix(m);
   Result := GetGreedyTspNn2Opt(m, aWeight);
   Tsp3Opt(m, Result, aWeight);
 end;
 
-class function TGWeightedGraph.TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
+class function TGWeightedGraph.TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
   aTimeOut: Integer): TIntArray;
 var
   Helper: TWeightHelper.TExactTspBB;
@@ -4979,19 +4979,19 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TPointsChart.SubgraphFromVertexList(constref aList: TIntArray): TPointsChart;
+function TPointsChart.SubgraphFromVertexList(const aList: TIntArray): TPointsChart;
 begin
   Result := TPointsChart.Create;
   Result.AssignVertexList(Self, aList);
 end;
 
-function TPointsChart.SubgraphFromTree(constref aTree: TIntArray): TPointsChart;
+function TPointsChart.SubgraphFromTree(const aTree: TIntArray): TPointsChart;
 begin
   Result := TPointsChart.Create;
   Result.AssignTree(Self, aTree);
 end;
 
-function TPointsChart.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TPointsChart;
+function TPointsChart.SubgraphFromEdges(const aEdges: TIntEdgeArray): TPointsChart;
 begin
   Result := TPointsChart.Create;
   Result.AssignEdges(Self, aEdges);
@@ -5142,17 +5142,17 @@ begin
   Result := inherited SeparateGraphI(aIndex) as TGIntWeightGraph;
 end;
 
-function TGIntWeightGraph.SubgraphFromVertexList(constref aList: TIntArray): TGIntWeightGraph;
+function TGIntWeightGraph.SubgraphFromVertexList(const aList: TIntArray): TGIntWeightGraph;
 begin
   Result := inherited SubgraphFromVertexList(aList) as TGIntWeightGraph;
 end;
 
-function TGIntWeightGraph.SubgraphFromTree(constref aTree: TIntArray): TGIntWeightGraph;
+function TGIntWeightGraph.SubgraphFromTree(const aTree: TIntArray): TGIntWeightGraph;
 begin
   Result := inherited SubgraphFromTree(aTree) as TGIntWeightGraph;
 end;
 
-function TGIntWeightGraph.SubgraphFromEdges(constref aEdges: TIntEdgeArray): TGIntWeightGraph;
+function TGIntWeightGraph.SubgraphFromEdges(const aEdges: TIntEdgeArray): TGIntWeightGraph;
 begin
   Result := inherited SubgraphFromEdges(aEdges) as TGIntWeightGraph;
 end;

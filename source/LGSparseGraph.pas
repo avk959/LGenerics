@@ -376,9 +376,9 @@ type
     class function cMin(L, R: TCost): TCost; static; inline;
     class function cMax(L, R: TCost): TCost; static; inline;
     class function MaxBitMatrixSize: SizeInt; static; inline;
-    class function TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray; static;
-    class function TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
-    class function TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
+    class function TreePathTo(const aTree: TIntArray; aValue: SizeInt): TIntArray; static;
+    class function TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
+    class function TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -412,8 +412,8 @@ type
     function GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
     function SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
-    function IndexPath2VertexPath(constref aIdxPath: TIntArray): TVertexArray;
-    function VertexPath2IndexPath(constref aVertPath: TVertexArray): TIntArray;
+    function IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
+    function VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
   { returns adjacency matrix;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
     function CreateAdjacencyMatrix: TAdjacencyMatrix;
@@ -432,9 +432,9 @@ type
 ***********************************************************************************************************}
 
   { returns True if aMatch is maximal matching }
-    function IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
+    function IsMaxMatching(const aMatch: TIntEdgeArray): Boolean;
   { returns True if aMatch is perfect matching }
-    function IsPerfectMatching(constref aMatch: TIntEdgeArray): Boolean;
+    function IsPerfectMatching(const aMatch: TIntEdgeArray): Boolean;
 {**********************************************************************************************************
   traversal utilities
 ***********************************************************************************************************}
@@ -1285,7 +1285,7 @@ begin
   Result := TSquareBitMatrix.MaxSize;
 end;
 
-class function TGSparseGraph.TreePathTo(constref aTree: TIntArray; aValue: SizeInt): TIntArray;
+class function TGSparseGraph.TreePathTo(const aTree: TIntArray; aValue: SizeInt): TIntArray;
 var
   v: TIntVector;
 begin
@@ -1301,7 +1301,7 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-class function TGSparseGraph.TreePathFromTo(constref aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
+class function TGSparseGraph.TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
 var
   I: SizeInt;
   v: TIntVector;
@@ -1322,7 +1322,7 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-class function TGSparseGraph.TreePathLen(constref aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
+class function TGSparseGraph.TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
 var
   I: SizeInt;
 begin
@@ -1506,7 +1506,7 @@ begin
     p^.Data := aValue;
 end;
 
-function TGSparseGraph.IndexPath2VertexPath(constref aIdxPath: TIntArray): TVertexArray;
+function TGSparseGraph.IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
 var
   I: SizeInt;
 begin
@@ -1515,7 +1515,7 @@ begin
     Result[I] := Items[aIdxPath[I]];
 end;
 
-function TGSparseGraph.VertexPath2IndexPath(constref aVertPath: TVertexArray): TIntArray;
+function TGSparseGraph.VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
 var
   I: SizeInt;
 begin
@@ -1621,7 +1621,7 @@ begin
   System.SetLength(aGrays, GrayIdx);
 end;
 
-function TGSparseGraph.IsMaxMatching(constref aMatch: TIntEdgeArray): Boolean;
+function TGSparseGraph.IsMaxMatching(const aMatch: TIntEdgeArray): Boolean;
 var
   vFree: TBoolVector;
   e: TIntEdge;
@@ -1656,7 +1656,7 @@ begin
   Result := True;
 end;
 
-function TGSparseGraph.IsPerfectMatching(constref aMatch: TIntEdgeArray): Boolean;
+function TGSparseGraph.IsPerfectMatching(const aMatch: TIntEdgeArray): Boolean;
 var
   vFree: TBoolVector;
   e: TIntEdge;
@@ -3104,7 +3104,7 @@ begin
   FMates[aMate] := aNode;
 end;
 
-procedure TGWeightHelper.THungarian.Init(aGraph: TGraph; constref w, g: TIntArray);
+procedure TGWeightHelper.THungarian.Init(aGraph: TGraph; const w, g: TIntArray);
 var
   I: SizeInt;
   ew: TWeight;
@@ -3136,7 +3136,7 @@ begin
   FVisited.Size := aGraph.VertexCount;
 end;
 
-procedure TGWeightHelper.THungarian.InitMax(aGraph: TGraph; constref w, g: TIntArray);
+procedure TGWeightHelper.THungarian.InitMax(aGraph: TGraph; const w, g: TIntArray);
 var
   I: SizeInt;
   ew: TWeight;
@@ -3380,14 +3380,14 @@ begin
     end;
 end;
 
-function TGWeightHelper.THungarian.MinWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+function TGWeightHelper.THungarian.MinWeightMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 begin
   Init(aGraph, w, g);
   ExecuteMin;
   Result := CreateEdges;
 end;
 
-function TGWeightHelper.THungarian.MaxWeightMatching(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+function TGWeightHelper.THungarian.MaxWeightMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 begin
   InitMax(aGraph, w, g);
   ExecuteMax;
@@ -3562,7 +3562,7 @@ end;
 
 { TGWeightHelper.TExactTspBB }
 
-procedure TGWeightHelper.TExactTspBB.Init(constref m: TWeightMatrix; constref aTour: TIntArray; aTimeOut: Integer);
+procedure TGWeightHelper.TExactTspBB.Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
 var
   I, Source, Target: Integer;
 begin
@@ -3605,8 +3605,8 @@ begin
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TExactTspBB.Reduce(constref aRows, aCols: TIntArray; var aRowRed,
-  aColRed: TWeightArray): TWeight;
+function TGWeightHelper.TExactTspBB.Reduce(const aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray
+  ): TWeight;
 var
   I, J, Last: Integer;
   MinValue: TWeight;
@@ -3645,8 +3645,8 @@ begin
     end;
 end;
 
-function TGWeightHelper.TExactTspBB.SelectBest(constref aRows, aCols: TIntArray; out aRowIdx,
-  aColIdx: Integer): TWeight;
+function TGWeightHelper.TExactTspBB.SelectBest(const aRows, aCols: TIntArray; out aRowIdx, aColIdx: Integer
+  ): TWeight;
 var
   I, J, Last: Integer;
   CurrVal: TWeight;
@@ -3707,8 +3707,8 @@ begin
   if TimeOut then
     exit;
   CurrSize := System.Length(aRows);
-  RowsReduce := CreateWeightArrayZ(CurrSize);
-  ColsReduce := System.Copy(RowsReduce);
+  System.SetLength(RowsReduce, CurrSize);
+  System.SetLength(ColsReduce, CurrSize);
   aCurrWeight += Reduce(aRows, aCols, RowsReduce, ColsReduce);
   if aCurrWeight < FUpperBound then
      if CurrSize > 2 then
@@ -3725,17 +3725,17 @@ begin
          SaveElem := FMatrix[LastCol, FirstRow];
          FMatrix[LastCol, FirstRow] := TWeight.INF_VALUE;
          I := aRows[Row];
-         Delete(aRows, Row, 1);    // remove Row
+         Delete(aRows, Row, 1);  // remove Row
          J := aCols[Col];
-         Delete(aCols, Col, 1);    // remove Col
+         Delete(aCols, Col, 1);  // remove Col
          ///////////////
          Search(aCurrWeight, aRows, aCols);
          ///////////////
-         FMatrix[LastCol, FirstRow] := SaveElem; //restore values
+         Insert(I, aRows, Row);     //restore values
+         Insert(J, aCols, Col);
+         FMatrix[LastCol, FirstRow] := SaveElem;
          FForwardTour[I] := NULL_INDEX;
          FBackTour[J] := NULL_INDEX;
-         Insert(I, aRows, Row);
-         Insert(J, aCols, Col);
          if LowBound < FUpperBound then
            begin
              FMatrix[aRows[Row], aCols[Col]] := TWeight.INF_VALUE;
@@ -3780,7 +3780,7 @@ begin
     end;
 end;
 
-function TGWeightHelper.TExactTspBB.Execute(constref m: TWeightMatrix; var aTour: TIntArray; out w: TWeight;
+function TGWeightHelper.TExactTspBB.Execute(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight;
   aTimeOut: Integer): Boolean;
 var
   Cols, Rows: TIntArray;
@@ -3850,7 +3850,7 @@ begin
     end;
 end;
 
-class function TGWeightHelper.IsMaxMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean;
+class function TGWeightHelper.IsMaxMatching(g: TGraph; const aMatch: TEdgeArray): Boolean;
 var
   vFree: TBoolVector;
   e: TWeightEdge;
@@ -3886,7 +3886,7 @@ begin
   Result := True;
 end;
 
-class function TGWeightHelper.IsPerfectMatching(g: TGraph; constref aMatch: TEdgeArray): Boolean;
+class function TGWeightHelper.IsPerfectMatching(g: TGraph; const aMatch: TEdgeArray): Boolean;
 var
   vFree: TBoolVector;
   e: TWeightEdge;
@@ -4619,7 +4619,7 @@ begin
     end;
 end;
 
-class function TGWeightHelper.ExtractMinPath(aSrc, aDst: SizeInt; constref aMatrix: TApspMatrix): TIntArray;
+class function TGWeightHelper.ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix: TApspMatrix): TIntArray;
 var
   Stack: TIntStack;
 begin
@@ -4638,21 +4638,21 @@ begin
     end;
 end;
 
-class function TGWeightHelper.MinWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+class function TGWeightHelper.MinWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 var
   Helper: THungarian;
 begin
   Result := Helper.MinWeightMatching(aGraph, w, g);
 end;
 
-class function TGWeightHelper.MaxWeightMatchingB(aGraph: TGraph; constref w, g: TIntArray): TEdgeArray;
+class function TGWeightHelper.MaxWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 var
   Helper: THungarian;
 begin
   Result := Helper.MaxWeightMatching(aGraph, w, g);
 end;
 
-class function TGWeightHelper.TotalTourWeight(constref m: TWeightMatrix; constref aTour: TIntArray): TWeight;
+class function TGWeightHelper.TotalTourWeight(const m: TWeightMatrix; const aTour: TIntArray): TWeight;
 var
   I: SizeInt;
 begin
@@ -4671,7 +4671,7 @@ begin
   aTour[System.High(aTour)] := aTour[0];
 end;
 
-class function TGWeightHelper.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightHelper.GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 var
   Tour: TIntArray;
   Weights: TWeightArray;

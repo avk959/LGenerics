@@ -114,7 +114,7 @@ type
     function  GetDagLongestPaths(aSrc: SizeInt): TIntArray;
     function  GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
-    function  GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
+    function  GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
   public
 {**********************************************************************************************************
   class management utilities
@@ -173,7 +173,7 @@ type
   { creates internal reachability matrix }
     procedure FillReachabilityMatrix;
   { creates internal reachability matrix using pre-calculated results of FindStrongComponents }
-    procedure FillReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt);
+    procedure FillReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt);
   { returns True, radus and diameter, if graph is strongly connected, False otherwise }
     function  GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
   { returns True and indices of the central vertices in aCenter,
@@ -212,7 +212,7 @@ type
     function  FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestCycle is Hamiltonian cycle starting from the vertex with index aSourceIdx }
-    function  IsHamiltonCycle(constref aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
+    function  IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
   { tries to return in aPaths the specified number of Hamiltonian paths
     from the vertex aSrc to vertex aDst; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
@@ -222,7 +222,7 @@ type
     function  FindHamiltonPathsI(aSrcIdx, aDstIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestPath is Hamiltonian path starting from the vertex with index aSourceIdx }
-    function  IsHamiltonPath(constref aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
+    function  IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -318,7 +318,7 @@ type
     procedure GetDagMinPaths(aSrc: SizeInt; var aTree: TIntArray; var aWeights: TWeightArray);
     function  GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
     function  GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
-    class procedure CheckTspMatrix(constref m: TWeightMatrix); static;
+    class procedure CheckTspMatrix(const m: TWeightMatrix); static;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -430,25 +430,25 @@ type
 ***********************************************************************************************************}
 
   { returns True if aMatch is maximal matching }
-    function IsMaximalMatching(constref aMatch: TEdgeArray): Boolean; inline;
+    function IsMaximalMatching(const aMatch: TEdgeArray): Boolean; inline;
   { returns True if aMatch is perfect matching }
-    function IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean; inline;
+    function IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean; inline;
 {**********************************************************************************************************
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
   { returns True if the matrix m is nondegenerate, square, and does not contain
     loops and negative elements }
-    class function  IsProperTspMatrix(constref m: TWeightMatrix): Boolean; static; inline;
+    class function  IsProperTspMatrix(const m: TWeightMatrix): Boolean; static; inline;
   { greedy approach for Travelling Salesman problem;
     best of farthest insertion starting from every vertex;
     will raise EGraphError if m is not proper TSP matrix }
-    class function GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
+    class function GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { exact branch and bound approach for Travelling Salesman problem;
     aTimeOut specifies the timeout in seconds; at the end of the timeout,
     the best recent solution will be returned, and aExact will be set to False;
     will raise EGraphError if m is not proper TSP matrix }
-    class function TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
+    class function TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
                          aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
   end;
 
@@ -515,8 +515,8 @@ type
              inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   {  }
-    function IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight; constref a: TEdgeArray): Boolean;
-    function IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight; constref a: TEdgeArray): Boolean;
+    function IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight; const a: TEdgeArray): Boolean;
+    function IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight; const a: TEdgeArray): Boolean;
 
   type
     //s-t vertex partition
@@ -537,7 +537,7 @@ type
     function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
   { aCosts specifies arc cost function, negative costs allows;
     returns True if function defined correctly(except negative cycles), False otherwise }
-    function IsProperCosts(constref aCosts: TCostEdgeArray): Boolean;
+    function IsProperCosts(const aCosts: TCostEdgeArray): Boolean;
 
   type
     TMcfState = (mcfOk, mcfNoFlowRequired, mcfInvaldNet, mcfInvaldCost, mcfNegCycle);
@@ -547,34 +547,34 @@ type
     returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
     no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
     total flow cost in aTotalCost }
-    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState; inline;
-    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
-    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
-    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
   { param aReqFlow specifies the required flow > 0(MAX_WEIGHT means maximum flow is required);
     param aCosts specifies arc cost function, negative costs allows;
     returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
     no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
     total flow cost in aTotalCost; used cost scaling algorithm }
-    function FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+    function FindMinCostFlowCs(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState; inline;
-    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
-    function FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+    function FindMinCostFlowCs(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
-    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
   {  }
-    function IsMcfFeasible(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-             constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean; inline;
-    function IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-             constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
+    function IsMcfFeasible(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
+             const aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean; inline;
+    function IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
+             const aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
   end;
 
 implementation
@@ -1137,7 +1137,7 @@ begin
       end;
 end;
 
-function TGSimpleDiGraph.GetReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
+function TGSimpleDiGraph.GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
 var
   Stack: TSimpleStack;
   Visited, IdVisited: TBitVector;
@@ -1640,7 +1640,7 @@ begin
   FillReachabilityMatrix(Ids, ScCount);
 end;
 
-procedure TGSimpleDiGraph.FillReachabilityMatrix(constref aScIds: TIntArray; aScCount: SizeInt);
+procedure TGSimpleDiGraph.FillReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt);
 var
   m: TSquareBitMatrix;
 begin
@@ -1894,7 +1894,7 @@ begin
   Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles);
 end;
 
-function TGSimpleDiGraph.IsHamiltonCycle(constref aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
+function TGSimpleDiGraph.IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
@@ -1945,7 +1945,7 @@ begin
   Result := Helper.FindPaths(Self, aSrcIdx, aDstIdx, aCount, aTimeOut, @aPaths);
 end;
 
-function TGSimpleDiGraph.IsHamiltonPath(constref aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
+function TGSimpleDiGraph.IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
@@ -2301,7 +2301,7 @@ begin
       Stack.Pop;
 end;
 
-class procedure TGWeightedDiGraph.CheckTspMatrix(constref m: TWeightMatrix);
+class procedure TGWeightedDiGraph.CheckTspMatrix(const m: TWeightMatrix);
 var
   I, J, Size: SizeInt;
 begin
@@ -2758,17 +2758,17 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.IsMaximalMatching(constref aMatch: TEdgeArray): Boolean;
+function TGWeightedDiGraph.IsMaximalMatching(const aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsMaxMatching(Self, aMatch);
 end;
 
-function TGWeightedDiGraph.IsPerfectWeightMatching(constref aMatch: TEdgeArray): Boolean;
+function TGWeightedDiGraph.IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
 end;
 
-class function TGWeightedDiGraph.IsProperTspMatrix(constref m: TWeightMatrix): Boolean;
+class function TGWeightedDiGraph.IsProperTspMatrix(const m: TWeightMatrix): Boolean;
 var
   I, J, Size: SizeInt;
 begin
@@ -2789,14 +2789,14 @@ begin
   Result := True;
 end;
 
-class function TGWeightedDiGraph.GreedyTsp(constref m: TWeightMatrix; out aWeight: TWeight): TIntArray;
+class function TGWeightedDiGraph.GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray;
 begin
   CheckTspMatrix(m);
   Result := TWeightHelper.GreedyTsp(m, aWeight);
   TWeightHelper.NormalizeTour(Result, 0);
 end;
 
-class function TGWeightedDiGraph.TspBB(constref m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
+class function TGWeightedDiGraph.TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
   aTimeOut: Integer): TIntArray;
 var
   Helper: TWeightHelper.TExactTspBB;
@@ -2986,13 +2986,13 @@ begin
 end;
 
 function TGIntWeightDiGraph.IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight;
-  constref a: TEdgeArray): Boolean;
+  const a: TEdgeArray): Boolean;
 begin
   Result := IsFeasibleFlowI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
 function TGIntWeightDiGraph.IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight;
-  constref a: TEdgeArray): Boolean;
+  const a: TEdgeArray): Boolean;
 var
   v: array of TWeight;
   e: TWeightEdge;
@@ -3077,20 +3077,20 @@ begin
   aCut.T := TmpSet.ToArray;
 end;
 
-function TGIntWeightDiGraph.IsProperCosts(constref aCosts: TCostEdgeArray): Boolean;
+function TGIntWeightDiGraph.IsProperCosts(const aCosts: TCostEdgeArray): Boolean;
 var
   m: TEdgeCostMap;
 begin
   Result := IsCostsCorrect(aCosts, m);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
 begin
   Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
 var
   Helper: TSspMcfHelper;
@@ -3109,13 +3109,13 @@ begin
   Result := mcfOk;
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 begin
   Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, aArcFlows);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 var
   Helper: TSspMcfHelper;
@@ -3135,13 +3135,13 @@ begin
   Result := mcfOk;
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
 begin
   Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
 var
   Helper: TCsMcfHelper;
@@ -3160,13 +3160,13 @@ begin
   Result := mcfOk;
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
+function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 begin
   Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, aArcFlows);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
+function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
   var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 var
   Helper: TCsMcfHelper;
@@ -3186,14 +3186,14 @@ begin
   Result := mcfOk;
 end;
 
-function TGIntWeightDiGraph.IsMcfFeasible(constref aSource, aSink: TVertex; constref aCosts: TCostEdgeArray;
-  constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
+function TGIntWeightDiGraph.IsMcfFeasible(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
+  const aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
 begin
   Result := IsMcfFeasibleI(IndexOf(aSource), IndexOf(aSink), aCosts, aArcFlows, aFlow, aTotalCost);
 end;
 
-function TGIntWeightDiGraph.IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; constref aCosts: TCostEdgeArray;
-  constref aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
+function TGIntWeightDiGraph.IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
+  const aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
 var
   CostMap: TEdgeCostMap;
   v: array of TWeight;

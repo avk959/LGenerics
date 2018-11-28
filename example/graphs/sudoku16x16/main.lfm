@@ -2,20 +2,19 @@ object frmMain: TfrmMain
   Left = 331
   Height = 467
   Top = 250
-  Width = 749
+  Width = 737
   Caption = 'frmMain'
   ClientHeight = 467
-  ClientWidth = 749
+  ClientWidth = 737
   DesignTimePPI = 115
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poScreenCenter
-  LCLVersion = '2.1.0.0'
   object sgCells: TStringGrid
     Left = 4
     Height = 456
     Top = 4
-    Width = 564
+    Width = 552
     Anchors = [akTop, akLeft, akRight, akBottom]
     AutoAdvance = aaNone
     ColCount = 17
@@ -29,10 +28,10 @@ object frmMain: TfrmMain
     OnPrepareCanvas = sgCellsPrepareCanvas
   end
   object seCluesCount: TSpinEdit
-    Left = 664
+    Left = 668
     Height = 27
     Top = 20
-    Width = 68
+    Width = 52
     Anchors = [akTop, akRight]
     MaxValue = 250
     MinValue = 1
@@ -40,16 +39,16 @@ object frmMain: TfrmMain
     Value = 64
   end
   object Label1: TLabel
-    Left = 576
+    Left = 584
     Height = 19
-    Top = 20
+    Top = 24
     Width = 75
     Anchors = [akTop, akRight]
     Caption = 'Clues count:'
     ParentColor = False
   end
   object btNew: TButton
-    Left = 622
+    Left = 610
     Height = 30
     Top = 72
     Width = 110
@@ -59,7 +58,7 @@ object frmMain: TfrmMain
     TabOrder = 0
   end
   object btShow: TButton
-    Left = 622
+    Left = 610
     Height = 30
     Top = 116
     Width = 110
