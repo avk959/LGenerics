@@ -515,7 +515,7 @@ type
       function  TimeOut: Boolean; inline;
       function  Reduce(constref aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray): TWeight;
       function  SelectBest(constref aRows, aCols: TIntArray; out aRowIdx, aColIdx: Integer): TWeight;
-      procedure Search(aCurrWeight: TWeight; constref aRows, aCols: TIntArray);
+      procedure Search(aCurrWeight: TWeight; var aRows, aCols: TIntArray);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
       function Execute(constref m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;

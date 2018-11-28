@@ -3673,13 +3673,13 @@ begin
           end
         else
           begin
+            FBoolMatrix[I][J] := True;
             Inc(FSelRow[I].ZeroCount);
             if FSelRow[I].ZeroCount > 1 then
               FSelRow[I].MinValue := 0;
             Inc(FSelCol[J].ZeroCount);
             if FSelCol[J].ZeroCount > 1 then
               FSelCol[J].MinValue := 0;
-            FBoolMatrix[I][J] := True;
           end;
       end;
 
@@ -3698,21 +3698,20 @@ begin
       end;
 end;
 
-procedure TGWeightHelper.TExactTspBB.Search(aCurrWeight: TWeight; constref aRows, aCols: TIntArray);
+procedure TGWeightHelper.TExactTspBB.Search(aCurrWeight: TWeight; var aRows, aCols: TIntArray);
 var
-  NewRows, NewCols: TIntArray;
   RowsReduce, ColsReduce: TWeightArray;
-  I, J, Row, Col, FirstRow, LastCol, MatrixSize: Integer;
+  I, J, Row, Col, FirstRow, LastCol, CurrSize: Integer;
   LowBound, SaveElem: TWeight;
 begin
   if TimeOut then
     exit;
-  MatrixSize := System.Length(aRows);
-  RowsReduce := CreateWeightArrayZ(MatrixSize);
-  ColsReduce := CreateWeightArrayZ(MatrixSize);
+  CurrSize := System.Length(aRows);
+  RowsReduce := CreateWeightArrayZ(CurrSize);
+  ColsReduce := System.Copy(RowsReduce);
   aCurrWeight += Reduce(aRows, aCols, RowsReduce, ColsReduce);
   if aCurrWeight < FUpperBound then
-     if MatrixSize > 2 then
+     if CurrSize > 2 then
        begin
          LowBound := aCurrWeight + SelectBest(aRows, aCols, Row, Col);
          LastCol := aCols[Col];
@@ -3725,18 +3724,18 @@ begin
            FirstRow := FBackTour[FirstRow];
          SaveElem := FMatrix[LastCol, FirstRow];
          FMatrix[LastCol, FirstRow] := TWeight.INF_VALUE;
-         NewRows := aRows.Copy;
-         Delete(NewRows, Row, 1);  // remove Row
-         NewCols := aCols.Copy;
-         Delete(NewCols, Col, 1);  // remove Col
+         I := aRows[Row];
+         Delete(aRows, Row, 1);    // remove Row
+         J := aCols[Col];
+         Delete(aCols, Col, 1);    // remove Col
          ///////////////
-         Search(aCurrWeight, NewRows, NewCols);
+         Search(aCurrWeight, aRows, aCols);
          ///////////////
          FMatrix[LastCol, FirstRow] := SaveElem; //restore values
-         FBackTour[aCols[Col]] := NULL_INDEX;
-         FForwardTour[aRows[Row]] := NULL_INDEX;
-         Finalize(NewRows);
-         Finalize(NewCols);
+         FForwardTour[I] := NULL_INDEX;
+         FBackTour[J] := NULL_INDEX;
+         Insert(I, aRows, Row);
+         Insert(J, aCols, Col);
          if LowBound < FUpperBound then
            begin
              FMatrix[aRows[Row], aCols[Col]] := TWeight.INF_VALUE;
@@ -3754,8 +3753,8 @@ begin
          FBestTour[aRows[1]] := aCols[J];
          FUpperBound := aCurrWeight;
        end;
-  for I := 0 to Pred(MatrixSize) do   // restore matrix
-     for J := 0 to Pred(MatrixSize) do
+  for I := 0 to Pred(CurrSize) do   // restore matrix
+     for J := 0 to Pred(CurrSize) do
        begin
          SaveElem := FMatrix[aRows[I], aCols[J]];
          if SaveElem < TWeight.INF_VALUE then
