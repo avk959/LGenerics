@@ -540,7 +540,7 @@ type
     function IsProperCosts(const aCosts: TCostEdgeArray): Boolean;
 
   type
-    TMcfState = (mcfOk, mcfNoFlowRequired, mcfInvaldNet, mcfInvaldCost, mcfNegCycle);
+    TMcfState = (mcfOk, mcfNoFlowRequired, mcfInvalidNet, mcfInvalidCost, mcfNegCycle);
 
   { param aReqFlow specifies required flow > 0(MAX_WEIGHT means maximum flow is required);
     param aCosts specifies arc cost function, negative costs allows;
@@ -3100,9 +3100,9 @@ begin
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
-    exit(mcfInvaldNet);
+    exit(mcfInvalidNet);
   if not IsCostsCorrect(aCosts, CostMap) then
-    exit(mcfInvaldCost);
+    exit(mcfInvalidCost);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
@@ -3126,9 +3126,9 @@ begin
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
-    exit(mcfInvaldNet);
+    exit(mcfInvalidNet);
   if not IsCostsCorrect(aCosts, CostMap) then
-    exit(mcfInvaldCost);
+    exit(mcfInvalidCost);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost, aArcFlows);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
@@ -3151,9 +3151,9 @@ begin
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
-    exit(mcfInvaldNet);
+    exit(mcfInvalidNet);
   if not IsCostsCorrect(aCosts, CostMap) then
-    exit(mcfInvaldCost);
+    exit(mcfInvalidCost);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
@@ -3177,9 +3177,9 @@ begin
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
-    exit(mcfInvaldNet);
+    exit(mcfInvalidNet);
   if not IsCostsCorrect(aCosts, CostMap) then
-    exit(mcfInvaldCost);
+    exit(mcfInvalidCost);
   aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost, aArcFlows);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
