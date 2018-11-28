@@ -490,10 +490,22 @@ type
       Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
     TExactTspBB = record
     strict private
-      FMatrix: TWeightMatrix;
+    type
+      TSelData = record
+        ZeroCount: Integer;
+        MinValue: TWeight;
+        procedure Init; inline;
+      end;
+      TSelArray = array of TSelData;
+
+    var
+      FMatrix: TWeightMatrix; //todo: try replace 2d matrix by 1d array ?
+      FBoolMatrix: TGraph.TBoolMatrix;
       FForwardTour,
       FBackTour,
       FBestTour: TIntArray;
+      FSelRow,
+      FSelCol: TSelArray;
       FUpperBound: TWeight;
       FMatrixSize: SizeInt;
       FStartTime: TDateTime;
