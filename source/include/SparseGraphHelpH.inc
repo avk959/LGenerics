@@ -496,6 +496,7 @@ type
         MinValue: TWeight;
         procedure Init; inline;
       end;
+      TInts     = array of Integer;
       TSelArray = array of TSelData;
 
     var
@@ -503,7 +504,7 @@ type
       FBoolMatrix: TGraph.TBoolMatrix;
       FForwardTour,
       FBackTour,
-      FBestTour: TIntArray;
+      FBestTour: TInts;
       FSelRow,
       FSelCol: TSelArray;
       FUpperBound: TWeight;
@@ -513,9 +514,9 @@ type
       FCancelled: Boolean;
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
-      function  Reduce(const aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray): TWeight;
-      function  SelectBest(const aRows, aCols: TIntArray; out aRowIdx, aColIdx: Integer): TWeight;
-      procedure Search(aCurrWeight: TWeight; var aRows, aCols: TIntArray);
+      function  Reduce(const aRows, aCols: TInts; var aRowRed, aColRed: TWeightArray): TWeight;
+      function  SelectBest(const aRows, aCols: TInts; out aRowIdx, aColIdx: Integer): TWeight;
+      procedure Search(var aRows, aCols: TInts; aCurrWeight: TWeight);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
       function Execute(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;

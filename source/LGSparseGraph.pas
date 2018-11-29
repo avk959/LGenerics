@@ -3572,7 +3572,7 @@ begin
     FMatrix[I, I] := TWeight.INF_VALUE;
   if aTour.Length = Succ(FMatrixSize) then
     begin
-      FBestTour.Length := FMatrixSize;
+      System.SetLength(FBestTour, FMatrixSize);
       FUpperBound := 0;
       for I := 0 to Pred(FMatrixSize) do
         begin
@@ -3588,8 +3588,9 @@ begin
       FUpperBound := TWeight.INF_VALUE;
     end;
   FTimeOut := aTimeOut and System.High(Integer);
-  FForwardTour := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
-  FBackTour := TGraph.CreateIntArray(FMatrixSize, NULL_INDEX);
+  System.SetLength(FForwardTour, FMatrixSize);
+  System.FillChar(Pointer(FForwardTour)^, FMatrixSize * SizeOf(Integer), $ff);
+  FBackTour := System.Copy(FForwardTour);
   System.SetLength(FSelRow, FMatrixSize);
   System.SetLength(FSelCol, FMatrixSize);  //
   System.SetLength(FBoolMatrix, FMatrixSize);
@@ -3605,8 +3606,7 @@ begin
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TExactTspBB.Reduce(const aRows, aCols: TIntArray; var aRowRed, aColRed: TWeightArray
-  ): TWeight;
+function TGWeightHelper.TExactTspBB.Reduce(const aRows, aCols: TInts; var aRowRed, aColRed: TWeightArray): TWeight;
 var
   I, J, Last: Integer;
   MinValue: TWeight;
@@ -3645,8 +3645,7 @@ begin
     end;
 end;
 
-function TGWeightHelper.TExactTspBB.SelectBest(const aRows, aCols: TIntArray; out aRowIdx, aColIdx: Integer
-  ): TWeight;
+function TGWeightHelper.TExactTspBB.SelectBest(const aRows, aCols: TInts; out aRowIdx, aColIdx: Integer): TWeight;
 var
   I, J, Last: Integer;
   CurrVal: TWeight;
@@ -3698,7 +3697,7 @@ begin
       end;
 end;
 
-procedure TGWeightHelper.TExactTspBB.Search(aCurrWeight: TWeight; var aRows, aCols: TIntArray);
+procedure TGWeightHelper.TExactTspBB.Search(var aRows, aCols: TInts; aCurrWeight: TWeight);
 var
   RowsReduce, ColsReduce: TWeightArray;
   I, J, Row, Col, FirstRow, LastCol, CurrSize: Integer;
@@ -3729,7 +3728,7 @@ begin
          J := aCols[Col];
          Delete(aCols, Col, 1);  // remove Col
          ///////////////
-         Search(aCurrWeight, aRows, aCols);
+         Search(aRows, aCols, aCurrWeight);
          ///////////////
          Insert(I, aRows, Row);     //restore values
          Insert(J, aCols, Col);
@@ -3740,14 +3739,14 @@ begin
            begin
              FMatrix[aRows[Row], aCols[Col]] := TWeight.INF_VALUE;
              //////////
-             Search(aCurrWeight, aRows, aCols);
+             Search(aRows, aCols, aCurrWeight);
              //////////
              FMatrix[aRows[Row], aCols[Col]] := 0;
            end;
        end
      else
        begin
-         FBestTour := FForwardTour.Copy;
+         FBestTour := System.Copy(FForwardTour);
          J := Ord(FMatrix[aRows[0], aCols[0]] < TWeight.INF_VALUE);
          FBestTour[aRows[0]] := aCols[1 - J];
          FBestTour[aRows[1]] := aCols[J];
@@ -3783,12 +3782,15 @@ end;
 function TGWeightHelper.TExactTspBB.Execute(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight;
   aTimeOut: Integer): Boolean;
 var
-  Cols, Rows: TIntArray;
+  Cols, Rows: TInts;
+  I: Integer;
 begin
   Init(m, aTour, aTimeOut);
-  Rows := TIntHelper.CreateRange(0, Pred(FMatrixSize));
-  Cols := Rows.Copy;
-  Search(0, Rows, Cols);
+  System.SetLength(Rows, FMatrixSize);
+  for I := 0 to Pred(FMatrixSize) do
+    Rows[I] := I;
+  Cols := System.Copy(Rows);
+  Search(Rows, Cols, 0);
   CopyBest(aTour, w);
   Result := not FCancelled;
 end;
