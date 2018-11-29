@@ -495,8 +495,9 @@ type
       TSelData = record
         ZeroCount: Integer;
         MinValue: TWeight;
-        procedure Init; inline;
+        procedure Clear; inline;
       end;
+      PSelData  = ^TSelData;
       PInt      = PInteger;
       TSelArray = array of TSelData;
 
@@ -515,8 +516,8 @@ type
       FCancelled: Boolean;
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
-      function  Reduce(aRows, aCols: PInt; var aRowRed, aColRed: TWeightArray; aSize: Integer): TWeight;
-      function  SelectBest(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
+      function  Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+      function  SelectBestCell(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
       procedure Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
