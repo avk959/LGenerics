@@ -351,6 +351,7 @@ type
   public
   type
     TWeightArray  = array of TWeight;
+    PWeight       = ^TWeight;
 
   strict private
     class function  CreateAndFill(aValue: TWeight; aSize: SizeInt): TWeightArray; static;
@@ -496,7 +497,7 @@ type
         MinValue: TWeight;
         procedure Init; inline;
       end;
-      TInts     = array of Integer;
+      PInt      = PInteger;
       TSelArray = array of TSelData;
 
     var
@@ -504,7 +505,7 @@ type
       FBoolMatrix: TGraph.TBoolMatrix;
       FForwardTour,
       FBackTour,
-      FBestTour: TInts;
+      FBestTour: array of Integer;
       FSelRow,
       FSelCol: TSelArray;
       FUpperBound: TWeight;
@@ -514,9 +515,9 @@ type
       FCancelled: Boolean;
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
-      function  Reduce(const aRows, aCols: TInts; var aRowRed, aColRed: TWeightArray): TWeight;
-      function  SelectBest(const aRows, aCols: TInts; out aRowIdx, aColIdx: Integer): TWeight;
-      procedure Search(var aRows, aCols: TInts; aCurrWeight: TWeight);
+      function  Reduce(aRows, aCols: PInt; var aRowRed, aColRed: TWeightArray): TWeight;
+      function  SelectBest(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
+      procedure Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
       function Execute(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;
