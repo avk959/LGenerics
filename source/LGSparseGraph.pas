@@ -503,7 +503,7 @@ type
   {$I SparseGraphHelpH.inc}
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 { TIntEdge }
 
@@ -3564,22 +3564,23 @@ end;
 
 procedure TGWeightHelper.TExactTspBB.Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
 var
-  I, Source, Target: Integer;
+  I, J: Integer;
 begin
-  FMatrix := System.Copy(m);
   FMatrixSize := System.Length(m);
+  System.SetLength(FMatrix, FMatrixSize * FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do
-    FMatrix[I, I] := TWeight.INF_VALUE;
+    for J := 0 to Pred(FMatrixSize) do
+      FMatrix[I * FMatrixSize + J] := m[I, J];
+  for I := 0 to Pred(FMatrixSize) do
+    FMatrix[I * FMatrixSize + I] := TWeight.INF_VALUE;
   if aTour.Length = Succ(FMatrixSize) then
     begin
       System.SetLength(FBestTour, FMatrixSize);
       FUpperBound := 0;
       for I := 0 to Pred(FMatrixSize) do
         begin
-          Source := aTour[I];
-          Target := aTour[Succ(I)];
-          FBestTour[Source] := Target;
-          FUpperBound += m[Source, Target];
+          FBestTour[aTour[I]] := aTour[Succ(I)];
+          FUpperBound += m[aTour[I], aTour[Succ(I)]];
         end;
     end
   else
@@ -3606,39 +3607,49 @@ begin
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TExactTspBB.Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+function TGWeightHelper.TExactTspBB.Reduce(aRows, aCols: PInt; var aRowRed, aColRed: TWeightArray; aSize: Integer
+  ): TWeight;
 var
-  I, J, Last: Integer;
+  I, J, Curr, MxSize: Integer;
   MinValue: TWeight;
+  m: PWeight;
 begin
-  Last := System.High(aRowRed);
+  Dec(aSize);
+  m := PWeight(FMatrix);
+  MxSize := FMatrixSize;
   Result := 0;
-  for I := 0 to Last do  // reduce rows
+  for I := 0 to aSize do  // reduce rows
     begin
       MinValue := TWeight.INF_VALUE;
       aRowRed[I] := 0;
-      for J := 0 to Last do
-        MinValue := wMin(MinValue, FMatrix[aRows[I], aCols[J]]);
+      for J := 0 to aSize do
+        MinValue := wMin(MinValue, m[aRows[I] * MxSize + aCols[J]]);
       if (MinValue > 0) and (MinValue < TWeight.INF_VALUE) then
         begin
-          for J := 0 to Last do
-            if FMatrix[aRows[I], aCols[J]] < TWeight.INF_VALUE then
-              FMatrix[aRows[I], aCols[J]] -= MinValue;
+          for J := 0 to aSize do
+            begin
+              Curr := aRows[I] * MxSize + aCols[J];
+              if m[Curr] < TWeight.INF_VALUE then
+                m[Curr] -= MinValue;
+            end;
           Result += MinValue;
           aRowRed[I] := MinValue;
         end;
     end;
-  for J := 0 to Last do  // reduce columns
+  for J := 0 to aSize do  // reduce columns
     begin
       MinValue := TWeight.INF_VALUE;
       aColRed[J] := 0;
-      for I := 0 to Last do
-        MinValue := wMin(MinValue, FMatrix[aRows[I], aCols[J]]);
+      for I := 0 to aSize do
+        MinValue := wMin(MinValue, m[aRows[I] * MxSize + aCols[J]]);
       if (MinValue > 0) and (MinValue < TWeight.INF_VALUE) then
         begin
-          for I := 0 to Last do
-            if FMatrix[aRows[I], aCols[J]] < TWeight.INF_VALUE then
-              FMatrix[aRows[I], aCols[J]] -= MinValue;
+          for I := 0 to aSize do
+            begin
+              Curr := aRows[I] * MxSize + aCols[J];
+              if m[Curr] < TWeight.INF_VALUE then
+                m[Curr] -= MinValue;
+            end;
           Result += MinValue;
           aColRed[J] := MinValue;
         end;
@@ -3648,10 +3659,13 @@ end;
 function TGWeightHelper.TExactTspBB.SelectBest(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer;
   aSize: Integer): TWeight;
 var
-  I, J: Integer;
+  I, J, MxSize: Integer;
   CurrVal: TWeight;
+  m: PWeight;
 begin
   Dec(aSize);
+  m := PWeight(FMatrix);
+  MxSize := FMatrixSize;
   ///////////////
   for I := 0 to aSize do
     FSelRow[I].Init;
@@ -3663,7 +3677,7 @@ begin
   for I := 0 to aSize do
     for J := 0 to aSize do
       begin
-        CurrVal := FMatrix[aRows[I], aCols[J]];
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal <> 0 then
           begin
             if CurrVal < FSelRow[I].MinValue then
@@ -3701,14 +3715,17 @@ end;
 procedure TGWeightHelper.TExactTspBB.Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
 var
   RowsReduce, ColsReduce: TWeightArray;
-  I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol: Integer;
+  I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
   LowBound, SaveElem: TWeight;
+  m: PWeight;
 begin
   if TimeOut then
     exit;
+  m := PWeight(FMatrix);
+  MxSize := FMatrixSize;
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
-  aCurrWeight += Reduce(aRows, aCols, RowsReduce, ColsReduce);
+  aCurrWeight += Reduce(aRows, aCols, RowsReduce, ColsReduce, aSize);
   if aCurrWeight < FUpperBound then
      if aSize > 2 then
        begin
@@ -3723,8 +3740,8 @@ begin
            LastCol := FForwardTour[LastCol];
          while FBackTour[FirstRow] <> NULL_INDEX do
            FirstRow := FBackTour[FirstRow];
-         SaveElem := FMatrix[LastCol, FirstRow];
-         FMatrix[LastCol, FirstRow] := TWeight.INF_VALUE;
+         SaveElem := m[LastCol * MxSize + FirstRow];
+         m[LastCol * MxSize + FirstRow] := TWeight.INF_VALUE;
          for I := Row to aSize - 2 do // remove Row
            aRows[I] := aRows[Succ(I)];
          for J := Col to aSize - 2 do // remove Col
@@ -3738,23 +3755,23 @@ begin
          for J := aSize - 2 downto  Col do //restore Col
            aCols[Succ(J)] := aCols[J];
          aCols[Col] := SaveCol;
-         FMatrix[LastCol, FirstRow] := SaveElem;
+         m[LastCol * MxSize + FirstRow] := SaveElem;
          FForwardTour[SaveRow] := NULL_INDEX;
          FBackTour[SaveCol] := NULL_INDEX;
          ////////////////
          if LowBound < FUpperBound then
            begin
-             FMatrix[aRows[Row], aCols[Col]] := TWeight.INF_VALUE;
+             m[aRows[Row] * MxSize + aCols[Col]] := TWeight.INF_VALUE;
              //////////
              Search(aRows, aCols, aCurrWeight, aSize);
              //////////
-             FMatrix[aRows[Row], aCols[Col]] := 0;
+             m[aRows[Row] * MxSize + aCols[Col]] := 0;
            end;
        end
      else
        begin
          FBestTour := System.Copy(FForwardTour);
-         J := Ord(FMatrix[aRows[0], aCols[0]] < TWeight.INF_VALUE);
+         J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
          FBestTour[aRows[0]] := aCols[1 - J];
          FBestTour[aRows[1]] := aCols[J];
          FUpperBound := aCurrWeight;
@@ -3762,9 +3779,10 @@ begin
   for I := 0 to Pred(aSize) do      // restore matrix
      for J := 0 to Pred(aSize) do
        begin
-         SaveElem := FMatrix[aRows[I], aCols[J]];
+         Col := aRows[I] * MxSize + aCols[J];
+         SaveElem := m[Col];
          if SaveElem < TWeight.INF_VALUE then
-           FMatrix[aRows[I], aCols[J]] := SaveElem + RowsReduce[I] + ColsReduce[J];
+           m[Col] := SaveElem + RowsReduce[I] + ColsReduce[J];
        end;
 end;
 

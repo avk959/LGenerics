@@ -501,7 +501,7 @@ type
       TSelArray = array of TSelData;
 
     var
-      FMatrix: TWeightMatrix; //todo: try replace 2d matrix by 1d array ?
+      FMatrix: TWeightArray;
       FBoolMatrix: TGraph.TBoolMatrix;
       FForwardTour,
       FBackTour,
@@ -515,7 +515,7 @@ type
       FCancelled: Boolean;
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
-      function  Reduce(aRows, aCols: PInt; var aRowRed, aColRed: TWeightArray): TWeight;
+      function  Reduce(aRows, aCols: PInt; var aRowRed, aColRed: TWeightArray; aSize: Integer): TWeight;
       function  SelectBest(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
       procedure Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);

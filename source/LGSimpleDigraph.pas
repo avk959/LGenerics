@@ -578,7 +578,7 @@ type
   end;
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 uses
   bufstream;
 
