@@ -61,7 +61,7 @@ resourcestring
   SEUnexpectEol            = 'Unexpected end of line';
   SEStreamSizeExceedFmt    = 'Maximum stream size exceeded(%d)';
   SEMethodNotApplicable    = 'Method is not applicable';
-  SEInputMatrixDegenerate  = 'Input matrix is degenerated';
+  SEInputMatrixTrivial     = 'Input matrix is trivial';
   SENonSquareInputMatrix   = 'Input matrix is not square';
   SEInputMatrixSelfLoops   = 'Input matrix contains self loops';
   SEInputMatrixNonSymm     = 'Input matrix is not symmetric';

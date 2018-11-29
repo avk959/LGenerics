@@ -656,7 +656,7 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
-  { returns True if the matrix m is nondegenerate, square, summetric and does not contain
+  { returns True if the matrix m is nontrivial, square, summetric and does not contain
     loops and negative elements }
     class function  IsProperTspMatrix(const m: TWeightMatrix): Boolean; static; inline;
   { greedy approach for Travelling Salesman problem;
@@ -4307,7 +4307,7 @@ var
 begin
   Size := System.Length(m);
   if Size < 2 then
-    raise EGraphError.Create(SEInputMatrixDegenerate);
+    raise EGraphError.Create(SEInputMatrixTrivial);
   for I := 0 to Pred(Size) do
     if System.Length(m[I]) <> Size then
       raise EGraphError.Create(SENonSquareInputMatrix);
@@ -4791,7 +4791,7 @@ var
   I, J, Size: SizeInt;
 begin
   Size := System.Length(m);
-  if Size < 2 then  // degenerate
+  if Size < 2 then  // trivial
     exit(False);
   for I := 0 to Pred(Size) do
     if System.Length(m[I]) <> Size then // non square
