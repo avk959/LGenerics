@@ -3655,7 +3655,7 @@ begin
     end;
 end;
 
-function TGWeightHelper.TExactTspBB.SelectBestCell(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer;
+function TGWeightHelper.TExactTspBB.SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer;
   aSize: Integer): TWeight;
 var
   I, J, MxSize: Integer;
@@ -3731,7 +3731,7 @@ begin
   if aCurrWeight < FUpperBound then
      if aSize > 2 then
        begin
-         LowBound := aCurrWeight + SelectBestCell(aRows, aCols, Row, Col, aSize);
+         LowBound := aCurrWeight + SelectNext(aRows, aCols, Row, Col, aSize);
          SaveRow := aRows[Row];
          SaveCol := aCols[Col];
          FirstRow := SaveRow;
@@ -3763,11 +3763,11 @@ begin
          ////////////////
          if LowBound < FUpperBound then
            begin
-             m[aRows[Row] * MxSize + aCols[Col]] := TWeight.INF_VALUE;
+             m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
              //////////
              Search(aRows, aCols, aCurrWeight, aSize);
              //////////
-             m[aRows[Row] * MxSize + aCols[Col]] := 0;
+             m[SaveRow * MxSize + SaveCol] := 0;
            end;
        end
      else
