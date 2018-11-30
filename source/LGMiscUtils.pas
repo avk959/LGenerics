@@ -543,7 +543,7 @@ function TGCustomTimSort.TTimSortBase.EnsureBufferSize(aSize: SizeInt): PItem;
 begin
   if aSize > System.Length(FBuffer) then
     System.SetLength(FBuffer, LGUtils.RoundUpTwoPower(aSize));
-  Result := @FBuffer[0];
+  Result := Pointer(FBuffer);
 end;
 
 procedure TGCustomTimSort.TTimSortBase.Init(A: PItem);
