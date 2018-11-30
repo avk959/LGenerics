@@ -488,7 +488,8 @@ type
 
     { TExactTspBB:  branch and bound exact TSP algorithm;
       Little, Murty, Sweeney, and Karel "An Algorithm for Traveling Salesman Problem";
-      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
+      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
+      Костюк Ю.Л. "Эффективная реализация алгоритма решения задачи коммтвояжёра методом ветвей и границ" }
     TExactTspBB = record
     strict private
     type
@@ -513,15 +514,19 @@ type
       FMatrixSize: SizeInt;
       FStartTime: TDateTime;
       FTimeOut: Integer;
+      FAsymmetric,
       FCancelled: Boolean;
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
       function  Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+      function  ReduceRows(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+      function  ReduceCols(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
       function  SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
       procedure Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
       function Execute(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;
+      function ExecuteAsymm(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;
     end;
 
   { returns True if aMatch is maximal matching }

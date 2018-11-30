@@ -3622,7 +3622,11 @@ begin
       MinVal := TWeight.INF_VALUE;
       aRowRed[I] := 0;
       for J := 0 to aSize do
-        MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+        begin
+          MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+          if MinVal <= 0 then
+            break;
+        end;
       if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
         begin
           for J := 0 to aSize do
@@ -3640,7 +3644,11 @@ begin
       MinVal := TWeight.INF_VALUE;
       aColRed[J] := 0;
       for I := 0 to aSize do
-        MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+        begin
+          MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+          if MinVal <= 0 then
+            break;
+        end;
       if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
         begin
           for I := 0 to aSize do
@@ -3653,6 +3661,158 @@ begin
           aColRed[J] := MinVal;
         end;
     end;
+end;
+
+function TGWeightHelper.TExactTspBB.ReduceRows(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
+  aSize: Integer): TWeight;
+var
+  I, J, K, Curr, MxSize: Integer;
+  MinVal, CurrVal: TWeight;
+  SelRow: PSelData;
+  m: PWeight;
+begin
+  Dec(aSize);
+  m := PWeight(FMatrix);
+  SelRow := PSelData(FSelRow);
+  MxSize := FMatrixSize;
+  Result := 0;
+  //////////////////
+  for I := 0 to aSize do
+    SelRow[I].Clear;
+  for J := 0 to aSize do
+    FBoolMatrix[J].ClearBits;
+  ///////////////
+  for I := 0 to aSize do
+    for J := 0 to aSize do
+      begin
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
+        if CurrVal > 0 then
+          if CurrVal < FSelRow[I].MinValue then
+            FSelRow[I].MinValue := CurrVal
+          else
+        else
+          begin
+            Inc(FSelRow[I].ZeroCount);
+            if FSelRow[I].ZeroCount > 1 then
+              begin
+                FSelRow[I].MinValue := 0;
+                FBoolMatrix[J][I] := False;
+                break;
+              end
+            else
+              FBoolMatrix[J][I] := True;
+          end
+      end;
+  ///////////
+  for J := 0 to aSize do
+    if FBoolMatrix[J].PopCount > 1 then
+      begin
+        MinVal := TWeight.INF_VALUE;
+        for I in FBoolMatrix[J] do
+          begin
+            CurrVal := FSelRow[I].MinValue;
+            if CurrVal < MinVal then
+              MinVal := CurrVal;
+          end;
+        if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
+          begin
+            for I := 0 to aSize do
+              begin
+                Curr := aRows[I] * MxSize + aCols[J];
+                if m[Curr] < TWeight.INF_VALUE then
+                  m[Curr] += MinVal;
+              end;
+            aColRed[J] -= MinVal;
+            Result -= MinVal;
+            for I in FBoolMatrix[J] do
+              begin
+                for K := 0 to aSize do
+                  begin
+                    Curr := aRows[I] * MxSize + aCols[K];
+                    if m[Curr] < TWeight.INF_VALUE then
+                      m[Curr] -= MinVal;
+                  end;
+                aRowRed[I] += MinVal;
+                Result += MinVal;
+              end;
+          end;
+      end;
+end;
+
+function TGWeightHelper.TExactTspBB.ReduceCols(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
+  aSize: Integer): TWeight;
+var
+  I, J, K, Curr, MxSize: Integer;
+  MinVal, CurrVal: TWeight;
+  SelCol: PSelData;
+  m: PWeight;
+begin
+  Dec(aSize);
+  m := PWeight(FMatrix);
+  SelCol := PSelData(FSelCol);
+  MxSize := FMatrixSize;
+  Result := 0;
+  ////////////////
+  for I := 0 to aSize do
+    SelCol[I].Clear;
+  for J := 0 to aSize do
+    FBoolMatrix[J].ClearBits;
+  ///////////////
+  for J := 0 to aSize do
+    for I := 0 to aSize do
+      begin
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
+        if CurrVal > 0 then
+          if CurrVal < FSelCol[J].MinValue then
+            FSelCol[J].MinValue := CurrVal
+          else
+        else
+          begin
+            Inc(FSelCol[J].ZeroCount);
+            if FSelCol[J].ZeroCount > 1 then
+              begin
+                FSelCol[J].MinValue := 0;
+                FBoolMatrix[I][J] := False;
+                break;
+              end
+            else
+              FBoolMatrix[I][J] := True;
+          end;
+      end;
+  /////////////
+  for I := 0 to aSize do
+    if FBoolMatrix[I].PopCount > 1 then
+      begin
+        MinVal := TWeight.INF_VALUE;
+        for J in FBoolMatrix[I] do
+          begin
+            CurrVal := FSelCol[J].MinValue;
+            if CurrVal < MinVal then
+              MinVal := CurrVal;
+          end;
+        if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
+          begin
+            for J := 0 to aSize do
+              begin
+                Curr := aRows[I] * MxSize + aCols[J];
+                if m[Curr] < TWeight.INF_VALUE then
+                  m[Curr] += MinVal;
+              end;
+            aRowRed[I] -= MinVal;
+            Result -= MinVal;
+            for J in FBoolMatrix[I] do
+              begin
+                for K := 0 to aSize do
+                  begin
+                    Curr := aRows[K] * MxSize + aCols[J];
+                    if m[Curr] < TWeight.INF_VALUE then
+                      m[Curr] -= MinVal;
+                  end;
+                aColRed[J] += MinVal;
+                Result += MinVal;
+              end;
+          end;
+      end;
 end;
 
 function TGWeightHelper.TExactTspBB.SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer;
@@ -3680,7 +3840,7 @@ begin
     for J := 0 to aSize do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
-        if CurrVal <> 0 then
+        if CurrVal > 0 then
           begin
             if CurrVal < SelRow[I].MinValue then
               SelRow[I].MinValue := CurrVal;
@@ -3728,56 +3888,62 @@ begin
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
   aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+  if FAsymmetric and (aCurrWeight < FUpperBound) and (aSize >= 8) then
+    begin
+      aCurrWeight += ReduceRows(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+      if aCurrWeight < FUpperBound then
+        aCurrWeight += ReduceCols(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+    end;
   if aCurrWeight < FUpperBound then
-     if aSize > 2 then
-       begin
-         LowBound := aCurrWeight + SelectNext(aRows, aCols, Row, Col, aSize);
-         SaveRow := aRows[Row];
-         SaveCol := aCols[Col];
-         FirstRow := SaveRow;
-         LastCol := SaveCol;
-         FForwardTour[SaveRow] := SaveCol;
-         FBackTour[SaveCol] := SaveRow;
-         while FForwardTour[LastCol] <> NULL_INDEX do
-           LastCol := FForwardTour[LastCol];
-         while FBackTour[FirstRow] <> NULL_INDEX do
-           FirstRow := FBackTour[FirstRow];
-         SaveElem := m[LastCol * MxSize + FirstRow];
-         m[LastCol * MxSize + FirstRow] := TWeight.INF_VALUE;
-         for I := Row to aSize - 2 do // remove Row
-           aRows[I] := aRows[Succ(I)];
-         for J := Col to aSize - 2 do // remove Col
-           aCols[J] := aCols[Succ(J)];
-         ///////////////
-         Search(aRows, aCols, aCurrWeight, Pred(aSize));
-         ///////////////  restore values
-         for I := aSize - 2 downto  Row do //restore Row
-           aRows[Succ(I)] := aRows[I];
-         aRows[Row] := SaveRow;
-         for J := aSize - 2 downto  Col do //restore Col
-           aCols[Succ(J)] := aCols[J];
-         aCols[Col] := SaveCol;
-         m[LastCol * MxSize + FirstRow] := SaveElem;
-         FForwardTour[SaveRow] := NULL_INDEX;
-         FBackTour[SaveCol] := NULL_INDEX;
-         ////////////////
-         if LowBound < FUpperBound then
-           begin
-             m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
-             //////////
-             Search(aRows, aCols, aCurrWeight, aSize);
-             //////////
-             m[SaveRow * MxSize + SaveCol] := 0;
-           end;
-       end
-     else
-       begin
-         FBestTour := System.Copy(FForwardTour);
-         J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
-         FBestTour[aRows[0]] := aCols[1 - J];
-         FBestTour[aRows[1]] := aCols[J];
-         FUpperBound := aCurrWeight;
-       end;
+    if aSize > 2 then
+      begin
+        LowBound := aCurrWeight + SelectNext(aRows, aCols, Row, Col, aSize);
+        SaveRow := aRows[Row];
+        SaveCol := aCols[Col];
+        FirstRow := SaveRow;
+        LastCol := SaveCol;
+        FForwardTour[SaveRow] := SaveCol;
+        FBackTour[SaveCol] := SaveRow;
+        while FForwardTour[LastCol] <> NULL_INDEX do
+          LastCol := FForwardTour[LastCol];
+        while FBackTour[FirstRow] <> NULL_INDEX do
+          FirstRow := FBackTour[FirstRow];
+        SaveElem := m[LastCol * MxSize + FirstRow];
+        m[LastCol * MxSize + FirstRow] := TWeight.INF_VALUE;
+        for I := Row to aSize - 2 do // remove Row
+          aRows[I] := aRows[Succ(I)];
+        for J := Col to aSize - 2 do // remove Col
+          aCols[J] := aCols[Succ(J)];
+        ///////////////
+        Search(aRows, aCols, aCurrWeight, Pred(aSize));
+        ///////////////  restore values
+        for I := aSize - 2 downto  Row do //restore Row
+          aRows[Succ(I)] := aRows[I];
+        aRows[Row] := SaveRow;
+        for J := aSize - 2 downto  Col do //restore Col
+          aCols[Succ(J)] := aCols[J];
+        aCols[Col] := SaveCol;
+        m[LastCol * MxSize + FirstRow] := SaveElem;
+        FForwardTour[SaveRow] := NULL_INDEX;
+        FBackTour[SaveCol] := NULL_INDEX;
+        ////////////////
+        if LowBound < FUpperBound then
+          begin
+            m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
+            //////////
+            Search(aRows, aCols, aCurrWeight, aSize);
+            //////////
+            m[SaveRow * MxSize + SaveCol] := 0;
+          end;
+      end
+    else
+      begin
+        FBestTour := System.Copy(FForwardTour);
+        J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
+        FBestTour[aRows[0]] := aCols[1 - J];
+        FBestTour[aRows[1]] := aCols[J];
+        FUpperBound := aCurrWeight;
+      end;
   for I := 0 to Pred(aSize) do      // restore matrix
      for J := 0 to Pred(aSize) do
        begin
@@ -3812,6 +3978,24 @@ var
   Cols, Rows: array of Integer;
   I: Integer;
 begin
+  FAsymmetric := False;
+  Init(m, aTour, aTimeOut);
+  System.SetLength(Rows, FMatrixSize);
+  for I := 0 to Pred(FMatrixSize) do
+    Rows[I] := I;
+  Cols := System.Copy(Rows);
+  Search(PInt(Rows), PInt(Cols), 0, FMatrixSize);
+  CopyBest(aTour, w);
+  Result := not FCancelled;
+end;
+
+function TGWeightHelper.TExactTspBB.ExecuteAsymm(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight;
+  aTimeOut: Integer): Boolean;
+var
+  Cols, Rows: array of Integer;
+  I: Integer;
+begin
+  FAsymmetric := True;
   Init(m, aTour, aTimeOut);
   System.SetLength(Rows, FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do

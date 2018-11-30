@@ -2803,7 +2803,7 @@ var
 begin
   CheckTspMatrix(m);
   Result := GreedyTsp(m, aWeight);
-  aExact := Helper.Execute(m, Result, aWeight, aTimeOut);
+  aExact := Helper.ExecuteAsymm(m, Result, aWeight, aTimeOut);
 end;
 
 {$I IntDiGraphHelp.inc}
