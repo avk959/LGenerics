@@ -38,7 +38,6 @@ type
   {.$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT  :for test purpose only}
 
   { TGArrayHelpUtil }
-
   generic TGArrayHelpUtil<T> = class
   public
   type
@@ -933,7 +932,7 @@ function TGArrayHelpUtil.TMergeSortBase.EnsureBufferCapacity(aSize: SizeInt): PI
 begin
   if aSize > System.Length(FBuffer) then
     System.SetLength(FBuffer, LGUtils.RoundUpTwoPower(aSize));
-  Result := @FBuffer[0];
+  Result := Pointer(FBuffer);
 end;
 
 procedure TGArrayHelpUtil.TMergeSortBase.Init(A: PItem);
