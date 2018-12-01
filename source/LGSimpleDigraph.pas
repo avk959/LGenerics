@@ -440,16 +440,19 @@ type
   { returns True if the matrix m is nontrivial, square, and does not contain
     loops and negative elements }
     class function  IsProperTspMatrix(const m: TWeightMatrix): Boolean; static; inline;
-  { greedy approach for Travelling Salesman problem;
+  { greedy approach for TSP;
     best of farthest insertion starting from every vertex;
     will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { exact branch and bound approach for Travelling Salesman problem;
+  { exact branch and bound approach for TSP;
     aTimeOut specifies the timeout in seconds; at the end of the timeout,
     the best recent solution will be returned, and aExact will be set to False;
     will raise EGraphError if m is not proper TSP matrix }
     class function TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
                          aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
+  { returns an suboptimal solution for TSP of a given guaranteed accuracy, specified with param Accuracy;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function ApproxTspBB(const m: TWeightMatrix; Accuracy: Double; out aWeight: TWeight): TIntArray; static;
   end;
 
   { TGIntWeightDiGraph specializes TWeight with Int64 }
@@ -2799,11 +2802,20 @@ end;
 class function TGWeightedDiGraph.TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
   aTimeOut: Integer): TIntArray;
 var
-  Helper: TWeightHelper.TExactTspBB;
+  Helper: TWeightHelper.TBbTspHelper;
 begin
   CheckTspMatrix(m);
   Result := GreedyTsp(m, aWeight);
-  aExact := Helper.ExecuteAsymm(m, Result, aWeight, aTimeOut);
+  aExact := Helper.Execute(m, aTimeOut, False, Result, aWeight);
+end;
+
+class function TGWeightedDiGraph.ApproxTspBB(const m: TWeightMatrix; Accuracy: Double; out aWeight: TWeight): TIntArray;
+var
+  Helper: TWeightHelper.TBbTspHelper;
+begin
+  CheckTspMatrix(m);
+  Result := GreedyTsp(m, aWeight);
+  Helper.ExecuteApprox(m, Accuracy, False, Result, aWeight);
 end;
 
 {$I IntDiGraphHelp.inc}

@@ -3552,17 +3552,17 @@ begin
     end;
 end;
 
-{ TGWeightHelper.TExactTspBB.TSelData }
+{ TGWeightHelper.TBbTspHelper.TSelData }
 
-procedure TGWeightHelper.TExactTspBB.TSelData.Clear;
+procedure TGWeightHelper.TBbTspHelper.TSelData.Clear;
 begin
   ZeroCount := 0;
   MinValue := TWeight.INF_VALUE;
 end;
 
-{ TGWeightHelper.TExactTspBB }
+{ TGWeightHelper.TBbTspHelper }
 
-procedure TGWeightHelper.TExactTspBB.Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
+procedure TGWeightHelper.TBbTspHelper.Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
 var
   I, J: Integer;
 begin
@@ -3601,27 +3601,26 @@ begin
   FCancelled := False;
 end;
 
-function TGWeightHelper.TExactTspBB.TimeOut: Boolean;
+function TGWeightHelper.TBbTspHelper.TimeOut: Boolean;
 begin
   FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TExactTspBB.Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+function TGWeightHelper.TBbTspHelper.Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
 var
   I, J, Curr, MxSize: Integer;
   MinVal: TWeight;
   m: PWeight;
 begin
-  Dec(aSize);
   m := PWeight(FMatrix);
   MxSize := FMatrixSize;
   Result := 0;
-  for I := 0 to aSize do  // reduce rows
+  for I := 0 to Pred(aSize) do  // reduce rows
     begin
       MinVal := TWeight.INF_VALUE;
       aRowRed[I] := 0;
-      for J := 0 to aSize do
+      for J := 0 to Pred(aSize) do
         begin
           MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
           if MinVal <= 0 then
@@ -3629,7 +3628,7 @@ begin
         end;
       if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
         begin
-          for J := 0 to aSize do
+          for J := 0 to Pred(aSize) do
             begin
               Curr := aRows[I] * MxSize + aCols[J];
               if m[Curr] < TWeight.INF_VALUE then
@@ -3639,11 +3638,11 @@ begin
           aRowRed[I] := MinVal;
         end;
     end;
-  for J := 0 to aSize do  // reduce columns
+  for J := 0 to Pred(aSize) do  // reduce columns
     begin
       MinVal := TWeight.INF_VALUE;
       aColRed[J] := 0;
-      for I := 0 to aSize do
+      for I := 0 to Pred(aSize) do
         begin
           MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
           if MinVal <= 0 then
@@ -3651,7 +3650,7 @@ begin
         end;
       if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
         begin
-          for I := 0 to aSize do
+          for I := 0 to Pred(aSize) do
             begin
               Curr := aRows[I] * MxSize + aCols[J];
               if m[Curr] < TWeight.INF_VALUE then
@@ -3663,7 +3662,7 @@ begin
     end;
 end;
 
-function TGWeightHelper.TExactTspBB.ReduceRows(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
+function TGWeightHelper.TBbTspHelper.ReduceRows(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
   aSize: Integer): TWeight;
 var
   I, J, K, Curr, MxSize: Integer;
@@ -3671,19 +3670,18 @@ var
   SelRow: PSelData;
   m: PWeight;
 begin
-  Dec(aSize);
   m := PWeight(FMatrix);
   SelRow := PSelData(FSelRow);
   MxSize := FMatrixSize;
   Result := 0;
   //////////////////
-  for I := 0 to aSize do
+  for I := 0 to Pred(aSize) do
     SelRow[I].Clear;
-  for J := 0 to aSize do
+  for J := 0 to Pred(aSize) do
     FBoolMatrix[J].ClearBits;
   ///////////////
-  for I := 0 to aSize do
-    for J := 0 to aSize do
+  for I := 0 to Pred(aSize) do
+    for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
@@ -3704,7 +3702,7 @@ begin
           end
       end;
   ///////////
-  for J := 0 to aSize do
+  for J := 0 to Pred(aSize) do
     if FBoolMatrix[J].PopCount > 1 then
       begin
         MinVal := TWeight.INF_VALUE;
@@ -3716,7 +3714,7 @@ begin
           end;
         if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
           begin
-            for I := 0 to aSize do
+            for I := 0 to Pred(aSize) do
               begin
                 Curr := aRows[I] * MxSize + aCols[J];
                 if m[Curr] < TWeight.INF_VALUE then
@@ -3726,7 +3724,7 @@ begin
             Result -= MinVal;
             for I in FBoolMatrix[J] do
               begin
-                for K := 0 to aSize do
+                for K := 0 to Pred(aSize) do
                   begin
                     Curr := aRows[I] * MxSize + aCols[K];
                     if m[Curr] < TWeight.INF_VALUE then
@@ -3739,7 +3737,7 @@ begin
       end;
 end;
 
-function TGWeightHelper.TExactTspBB.ReduceCols(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
+function TGWeightHelper.TBbTspHelper.ReduceCols(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
   aSize: Integer): TWeight;
 var
   I, J, K, Curr, MxSize: Integer;
@@ -3747,19 +3745,18 @@ var
   SelCol: PSelData;
   m: PWeight;
 begin
-  Dec(aSize);
   m := PWeight(FMatrix);
   SelCol := PSelData(FSelCol);
   MxSize := FMatrixSize;
   Result := 0;
   ////////////////
-  for I := 0 to aSize do
+  for I := 0 to Pred(aSize) do
     SelCol[I].Clear;
-  for J := 0 to aSize do
+  for J := 0 to Pred(aSize) do
     FBoolMatrix[J].ClearBits;
   ///////////////
-  for J := 0 to aSize do
-    for I := 0 to aSize do
+  for J := 0 to Pred(aSize) do
+    for I := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
@@ -3780,7 +3777,7 @@ begin
           end;
       end;
   /////////////
-  for I := 0 to aSize do
+  for I := 0 to Pred(aSize) do
     if FBoolMatrix[I].PopCount > 1 then
       begin
         MinVal := TWeight.INF_VALUE;
@@ -3792,7 +3789,7 @@ begin
           end;
         if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
           begin
-            for J := 0 to aSize do
+            for J := 0 to Pred(aSize) do
               begin
                 Curr := aRows[I] * MxSize + aCols[J];
                 if m[Curr] < TWeight.INF_VALUE then
@@ -3802,7 +3799,7 @@ begin
             Result -= MinVal;
             for J in FBoolMatrix[I] do
               begin
-                for K := 0 to aSize do
+                for K := 0 to Pred(aSize) do
                   begin
                     Curr := aRows[K] * MxSize + aCols[J];
                     if m[Curr] < TWeight.INF_VALUE then
@@ -3815,7 +3812,7 @@ begin
       end;
 end;
 
-function TGWeightHelper.TExactTspBB.SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer;
+function TGWeightHelper.TBbTspHelper.SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer;
   aSize: Integer): TWeight;
 var
   I, J, MxSize: Integer;
@@ -3823,21 +3820,20 @@ var
   SelRow, SelCol: PSelData;
   m: PWeight;
 begin
-  Dec(aSize);
   m := PWeight(FMatrix);
   SelRow := PSelData(FSelRow);
   SelCol := PSelData(FSelCol);
   MxSize := FMatrixSize;
   ///////////////
-  for I := 0 to aSize do
+  for I := 0 to Pred(aSize) do
     SelRow[I].Clear;
-  for J := 0 to aSize do
+  for J := 0 to Pred(aSize) do
     SelCol[J].Clear;
-  for I := 0 to aSize do
+  for I := 0 to Pred(aSize) do
     FBoolMatrix[I].ClearBits;
   //////////////
-  for I := 0 to aSize do
-    for J := 0 to aSize do
+  for I := 0 to Pred(aSize) do
+    for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
@@ -3861,7 +3857,7 @@ begin
   ///////////////////////
   Result := TWeight.NEGINF_VALUE;
   ///////////////////////
-  for I := 0 to aSize do
+  for I := 0 to Pred(aSize) do
     for J in FBoolMatrix[I] do
       begin
         CurrVal := SelRow[I].MinValue + SelCol[J].MinValue;
@@ -3874,7 +3870,7 @@ begin
       end;
 end;
 
-procedure TGWeightHelper.TExactTspBB.Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
+procedure TGWeightHelper.TBbTspHelper.Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
 var
   RowsReduce, ColsReduce: TWeightArray;
   I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
@@ -3888,7 +3884,7 @@ begin
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
   aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
-  if FAsymmetric and (aCurrWeight < FUpperBound) and (aSize >= 8) then
+  if FAsymmetric and (aSize >= ADV_RED_CUTOFF) and (aCurrWeight < FUpperBound) then
     begin
       aCurrWeight += ReduceRows(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
       if aCurrWeight < FUpperBound then
@@ -3954,7 +3950,85 @@ begin
        end;
 end;
 
-procedure TGWeightHelper.TExactTspBB.CopyBest(var aTour: TIntArray; out w: TWeight);
+procedure TGWeightHelper.TBbTspHelper.SearchApprox(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
+var
+  RowsReduce, ColsReduce: TWeightArray;
+  I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
+  LowBound, SaveElem: TWeight;
+  m: PWeight;
+begin
+  m := PWeight(FMatrix);
+  MxSize := FMatrixSize;
+  System.SetLength(RowsReduce, aSize);
+  System.SetLength(ColsReduce, aSize);
+  aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+  if FAsymmetric and (aSize >= ADV_RED_CUTOFF) and (aCurrWeight * Factor < FUpperBound) then
+    begin
+      aCurrWeight += ReduceRows(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+      if aCurrWeight * Factor < FUpperBound then
+        aCurrWeight += ReduceCols(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+    end;
+  if aCurrWeight * Factor < FUpperBound then
+    if aSize > 2 then
+      begin
+        LowBound := aCurrWeight + SelectNext(aRows, aCols, Row, Col, aSize);
+        SaveRow := aRows[Row];
+        SaveCol := aCols[Col];
+        FirstRow := SaveRow;
+        LastCol := SaveCol;
+        FForwardTour[SaveRow] := SaveCol;
+        FBackTour[SaveCol] := SaveRow;
+        while FForwardTour[LastCol] <> NULL_INDEX do
+          LastCol := FForwardTour[LastCol];
+        while FBackTour[FirstRow] <> NULL_INDEX do
+          FirstRow := FBackTour[FirstRow];
+        SaveElem := m[LastCol * MxSize + FirstRow];
+        m[LastCol * MxSize + FirstRow] := TWeight.INF_VALUE;
+        for I := Row to aSize - 2 do // remove Row
+          aRows[I] := aRows[Succ(I)];
+        for J := Col to aSize - 2 do // remove Col
+          aCols[J] := aCols[Succ(J)];
+        ///////////////
+        SearchApprox(aRows, aCols, aCurrWeight, Pred(aSize));
+        ///////////////  restore values
+        for I := aSize - 2 downto  Row do //restore Row
+          aRows[Succ(I)] := aRows[I];
+        aRows[Row] := SaveRow;
+        for J := aSize - 2 downto  Col do //restore Col
+          aCols[Succ(J)] := aCols[J];
+        aCols[Col] := SaveCol;
+        m[LastCol * MxSize + FirstRow] := SaveElem;
+        FForwardTour[SaveRow] := NULL_INDEX;
+        FBackTour[SaveCol] := NULL_INDEX;
+        ////////////////
+        if LowBound * Factor < FUpperBound then
+          begin
+            m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
+            //////////
+            SearchApprox(aRows, aCols, aCurrWeight, aSize);
+            //////////
+            m[SaveRow * MxSize + SaveCol] := 0;
+          end;
+      end
+    else
+      begin
+        FBestTour := System.Copy(FForwardTour);
+        J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
+        FBestTour[aRows[0]] := aCols[1 - J];
+        FBestTour[aRows[1]] := aCols[J];
+        FUpperBound := aCurrWeight;
+      end;
+  for I := 0 to Pred(aSize) do      // restore matrix
+     for J := 0 to Pred(aSize) do
+       begin
+         Col := aRows[I] * MxSize + aCols[J];
+         SaveElem := m[Col];
+         if SaveElem < TWeight.INF_VALUE then
+           m[Col] := SaveElem + RowsReduce[I] + ColsReduce[J];
+       end;
+end;
+
+procedure TGWeightHelper.TBbTspHelper.CopyBest(var aTour: TIntArray; out w: TWeight);
 var
   I, J: Integer;
 begin
@@ -3972,13 +4046,13 @@ begin
     end;
 end;
 
-function TGWeightHelper.TExactTspBB.Execute(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight;
-  aTimeOut: Integer): Boolean;
+function TGWeightHelper.TBbTspHelper.Execute(const m: TWeightMatrix; aTimeOut: Integer; aIsSymm: Boolean;
+  var aTour: TIntArray; out w: TWeight): Boolean;
 var
   Cols, Rows: array of Integer;
   I: Integer;
 begin
-  FAsymmetric := False;
+  FAsymmetric := not aIsSymm;
   Init(m, aTour, aTimeOut);
   System.SetLength(Rows, FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do
@@ -3989,21 +4063,21 @@ begin
   Result := not FCancelled;
 end;
 
-function TGWeightHelper.TExactTspBB.ExecuteAsymm(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight;
-  aTimeOut: Integer): Boolean;
+procedure TGWeightHelper.TBbTspHelper.ExecuteApprox(const m: TWeightMatrix; aEps: Double; aIsSymm: Boolean;
+  var aTour: TIntArray; out w: TWeight);
 var
   Cols, Rows: array of Integer;
   I: Integer;
 begin
-  FAsymmetric := True;
-  Init(m, aTour, aTimeOut);
+  FAsymmetric := not aIsSymm;
+  Factor := Double(1.0) + aEps;
+  Init(m, aTour, WAIT_INFINITE);
   System.SetLength(Rows, FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do
     Rows[I] := I;
   Cols := System.Copy(Rows);
-  Search(PInt(Rows), PInt(Cols), 0, FMatrixSize);
+  SearchApprox(PInt(Rows), PInt(Cols), 0, FMatrixSize);
   CopyBest(aTour, w);
-  Result := not FCancelled;
 end;
 
 { TGWeightHelper }

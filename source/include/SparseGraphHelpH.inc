@@ -486,11 +486,12 @@ type
       procedure Sssp(aSrc: SizeInt);
     end;
 
-    { TExactTspBB:  branch and bound exact TSP algorithm;
+    { TBbTspHelper:  branch and bound TSP algorithm;
       Little, Murty, Sweeney, and Karel "An Algorithm for Traveling Salesman Problem";
       Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
+      advanced matrix reduction:
       Костюк Ю.Л. "Эффективная реализация алгоритма решения задачи коммтвояжёра методом ветвей и границ" }
-    TExactTspBB = record
+    TBbTspHelper = record
     strict private
     type
       TSelData = record
@@ -501,6 +502,9 @@ type
       PSelData  = ^TSelData;
       PInt      = PInteger;
       TSelArray = array of TSelData;
+
+    const
+      ADV_RED_CUTOFF = 8;
 
     var
       FMatrix: TWeightArray;
@@ -513,6 +517,7 @@ type
       FUpperBound: TWeight;
       FMatrixSize: SizeInt;
       FStartTime: TDateTime;
+      Factor: Double;
       FTimeOut: Integer;
       FAsymmetric,
       FCancelled: Boolean;
@@ -523,10 +528,13 @@ type
       function  ReduceCols(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
       function  SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
       procedure Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
+      procedure SearchApprox(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
-      function Execute(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;
-      function ExecuteAsymm(const m: TWeightMatrix; var aTour: TIntArray; out w: TWeight; aTimeOut: Integer): Boolean;
+      function  Execute(const m: TWeightMatrix; aTimeOut: Integer; aIsSymm: Boolean; var aTour: TIntArray;
+                out w: TWeight): Boolean;
+      procedure ExecuteApprox(const m: TWeightMatrix; aEps: Double; aIsSymm: Boolean; var aTour: TIntArray;
+                out w: TWeight);
     end;
 
   { returns True if aMatch is maximal matching }

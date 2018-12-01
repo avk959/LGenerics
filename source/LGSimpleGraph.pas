@@ -659,27 +659,30 @@ type
   { returns True if the matrix m is nontrivial, square, summetric and does not contain
     loops and negative elements }
     class function  IsProperTspMatrix(const m: TWeightMatrix): Boolean; static; inline;
-  { greedy approach for Travelling Salesman problem;
+  { greedy approach TSP;
     best of farthest insertion starting from every vertex + 2-opt local search at the end;
     will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { greedy approach for Travelling Salesman problem;
+  { greedy approach for TSP;
     best of farthest insertion starting from every vertex + 3-opt local search at the end;
     will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTsp3Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { greedy approach for Travelling Salesman problem;
+  { greedy approach for TSP;
     best of nearest neighbour + 2-opt local search starting from every vertex;
     will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTspNn2Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   { GreedyTspNn2Opt + 3-opt local search;
     will raise EGraphError if m is not proper TSP matrix }
     class function GreedyTspNn23Opt(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { exact branch and bound approach for Travelling Salesman problem;
+  { exact branch and bound approach for TSP;
     aTimeOut specifies the timeout in seconds; at the end of the timeout,
     the best recent solution will be returned, and aExact will be set to False;
     will raise EGraphError if m is not proper TSP matrix }
     class function TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
                          aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
+  { returns an suboptimal solution for TSP of a given guaranteed accuracy, specified with param Accuracy;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function ApproxTspBB(const m: TWeightMatrix; Accuracy: Double; out aWeight: TWeight): TIntArray; static;
   end;
 
   TRealEdge = record
@@ -4843,7 +4846,7 @@ end;
 class function TGWeightedGraph.TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
   aTimeOut: Integer): TIntArray;
 var
-  Helper: TWeightHelper.TExactTspBB;
+  Helper: TWeightHelper.TBbTspHelper;
   Greedy: TIntArray;
   GreedyW: TWeight;
 begin
@@ -4858,9 +4861,20 @@ begin
       Result := Greedy;
     end;
   Greedy := nil;
-  aExact := Helper.Execute(m, Result, aWeight, aTimeOut);
+  aExact := Helper.Execute(m, aTimeOut, True, Result, aWeight);
   if not aExact then
     Tsp3Opt(m, Result, aWeight);
+end;
+
+class function TGWeightedGraph.ApproxTspBB(const m: TWeightMatrix; Accuracy: Double; out aWeight: TWeight): TIntArray;
+var
+  Helper: TWeightHelper.TBbTspHelper;
+begin
+  CheckTspMatrix(m);
+  Result := TWeightHelper.GreedyTsp(m, aWeight);
+  Tsp3Opt(m, Result, aWeight);
+  Helper.ExecuteApprox(m, Accuracy, True, Result, aWeight);
+  Tsp3Opt(m, Result, aWeight);
 end;
 
 { TRealEdge }
