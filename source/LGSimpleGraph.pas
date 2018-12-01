@@ -4874,7 +4874,6 @@ begin
   Result := TWeightHelper.GreedyTsp(m, aWeight);
   Tsp3Opt(m, Result, aWeight);
   Helper.ExecuteApprox(m, Accuracy, True, Result, aWeight);
-  Tsp3Opt(m, Result, aWeight);
 end;
 
 { TRealEdge }
