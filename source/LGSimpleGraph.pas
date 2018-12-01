@@ -4869,11 +4869,22 @@ end;
 class function TGWeightedGraph.ApproxTspBB(const m: TWeightMatrix; Accuracy: Double; out aWeight: TWeight): TIntArray;
 var
   Helper: TWeightHelper.TBbTspHelper;
+  Greedy: TIntArray;
+  GreedyW: TWeight;
 begin
   CheckTspMatrix(m);
-  Result := TWeightHelper.GreedyTsp(m, aWeight);
+  Result := GetGreedyTspNn2Opt(m, aWeight);
   Tsp3Opt(m, Result, aWeight);
+  Greedy := TWeightHelper.GreedyTsp(m, GreedyW);
+  Tsp3Opt(m, Greedy, GreedyW);
+  if GreedyW < aWeight then
+    begin
+      aWeight := GreedyW;
+      Result := Greedy;
+    end;
+  Greedy := nil;
   Helper.ExecuteApprox(m, Accuracy, True, Result, aWeight);
+  Tsp3Opt(m, Result, aWeight);
 end;
 
 { TRealEdge }
