@@ -50,6 +50,7 @@ Contains:
       - maximum cardinality matching in bipartite graph
       - maximum cardinality matching in arbitrary graph
       - weighted matching in bipartite graph
+      - some TSP approaches
 
   3. Other algorithms:
       - some non-cryptogarphic hashes(unit LGHash)
