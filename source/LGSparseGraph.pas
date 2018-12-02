@@ -3662,10 +3662,10 @@ begin
     end;
 end;
 
-function TGWeightHelper.TBbTspHelper.ReduceRows(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
+function TGWeightHelper.TBbTspHelper.ReduceRowsA(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
   aSize: Integer): TWeight;
 var
-  I, J, K, Curr, MxSize: Integer;
+  I, J, K, Curr, MxSize, RowCount: Integer;
   MinVal, CurrVal: TWeight;
   SelRow: PSelData;
   m: PWeight;
@@ -3685,62 +3685,57 @@ begin
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
-          if CurrVal < FSelRow[I].MinValue then
-            FSelRow[I].MinValue := CurrVal
-          else
+          FSelRow[I].MinValue := wMin(CurrVal, FSelRow[I].MinValue)
         else
           begin
             Inc(FSelRow[I].ZeroCount);
-            if FSelRow[I].ZeroCount > 1 then
+            Curr := FSelRow[I].ZeroCount;
+            FBoolMatrix[J][I] := Curr = 1;
+            if Curr > 1 then
               begin
                 FSelRow[I].MinValue := 0;
-                FBoolMatrix[J][I] := False;
                 break;
-              end
-            else
-              FBoolMatrix[J][I] := True;
+              end;
           end
       end;
   ///////////
   for J := 0 to Pred(aSize) do
-    if FBoolMatrix[J].PopCount > 1 then
-      begin
-        MinVal := TWeight.INF_VALUE;
-        for I in FBoolMatrix[J] do
-          begin
-            CurrVal := FSelRow[I].MinValue;
-            if CurrVal < MinVal then
-              MinVal := CurrVal;
-          end;
-        if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
-          begin
-            for I := 0 to Pred(aSize) do
-              begin
-                Curr := aRows[I] * MxSize + aCols[J];
-                if m[Curr] < TWeight.INF_VALUE then
-                  m[Curr] += MinVal;
-              end;
-            aColRed[J] -= MinVal;
-            Result -= MinVal;
-            for I in FBoolMatrix[J] do
-              begin
-                for K := 0 to Pred(aSize) do
-                  begin
-                    Curr := aRows[I] * MxSize + aCols[K];
-                    if m[Curr] < TWeight.INF_VALUE then
-                      m[Curr] -= MinVal;
-                  end;
-                aRowRed[I] += MinVal;
-                Result += MinVal;
-              end;
-          end;
-      end;
+    begin
+      RowCount := FBoolMatrix[J].PopCount;
+      if RowCount > 1 then
+        begin
+          MinVal := TWeight.INF_VALUE;
+          for I in FBoolMatrix[J] do
+            MinVal := wMin(MinVal, FSelRow[I].MinValue);
+          if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
+            begin
+              for I := 0 to Pred(aSize) do
+                begin
+                  Curr := aRows[I] * MxSize + aCols[J];
+                  if m[Curr] < TWeight.INF_VALUE then
+                    m[Curr] += MinVal;
+                end;
+              aColRed[J] -= MinVal;
+              for I in FBoolMatrix[J] do
+                begin
+                  for K := 0 to Pred(aSize) do
+                    begin
+                      Curr := aRows[I] * MxSize + aCols[K];
+                      if m[Curr] < TWeight.INF_VALUE then
+                        m[Curr] -= MinVal;
+                    end;
+                  aRowRed[I] += MinVal;
+                end;
+              Result += MinVal * Pred(RowCount);
+            end;
+        end;
+    end;
 end;
 
-function TGWeightHelper.TBbTspHelper.ReduceCols(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
+function TGWeightHelper.TBbTspHelper.ReduceColsA(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
   aSize: Integer): TWeight;
 var
-  I, J, K, Curr, MxSize: Integer;
+  I, J, K, Curr, MxSize, ColCount: Integer;
   MinVal, CurrVal: TWeight;
   SelCol: PSelData;
   m: PWeight;
@@ -3760,56 +3755,51 @@ begin
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
-          if CurrVal < FSelCol[J].MinValue then
-            FSelCol[J].MinValue := CurrVal
-          else
+          FSelCol[J].MinValue := wMin(CurrVal, FSelCol[J].MinValue)
         else
           begin
             Inc(FSelCol[J].ZeroCount);
-            if FSelCol[J].ZeroCount > 1 then
+            Curr := FSelCol[J].ZeroCount;
+            FBoolMatrix[I][J] := Curr = 1;
+            if Curr > 1 then
               begin
                 FSelCol[J].MinValue := 0;
-                FBoolMatrix[I][J] := False;
                 break;
-              end
-            else
-              FBoolMatrix[I][J] := True;
+              end;
           end;
       end;
   /////////////
   for I := 0 to Pred(aSize) do
-    if FBoolMatrix[I].PopCount > 1 then
-      begin
-        MinVal := TWeight.INF_VALUE;
-        for J in FBoolMatrix[I] do
-          begin
-            CurrVal := FSelCol[J].MinValue;
-            if CurrVal < MinVal then
-              MinVal := CurrVal;
-          end;
-        if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
-          begin
-            for J := 0 to Pred(aSize) do
-              begin
-                Curr := aRows[I] * MxSize + aCols[J];
-                if m[Curr] < TWeight.INF_VALUE then
-                  m[Curr] += MinVal;
-              end;
-            aRowRed[I] -= MinVal;
-            Result -= MinVal;
-            for J in FBoolMatrix[I] do
-              begin
-                for K := 0 to Pred(aSize) do
-                  begin
-                    Curr := aRows[K] * MxSize + aCols[J];
-                    if m[Curr] < TWeight.INF_VALUE then
-                      m[Curr] -= MinVal;
-                  end;
-                aColRed[J] += MinVal;
-                Result += MinVal;
-              end;
-          end;
-      end;
+    begin
+      ColCount := FBoolMatrix[I].PopCount;
+      if ColCount > 1 then
+        begin
+          MinVal := TWeight.INF_VALUE;
+          for J in FBoolMatrix[I] do
+            MinVal := wMin(MinVal, FSelCol[J].MinValue);
+          if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
+            begin
+              for J := 0 to Pred(aSize) do
+                begin
+                  Curr := aRows[I] * MxSize + aCols[J];
+                  if m[Curr] < TWeight.INF_VALUE then
+                    m[Curr] += MinVal;
+                end;
+              aRowRed[I] -= MinVal;
+              for J in FBoolMatrix[I] do
+                begin
+                  for K := 0 to Pred(aSize) do
+                    begin
+                      Curr := aRows[K] * MxSize + aCols[J];
+                      if m[Curr] < TWeight.INF_VALUE then
+                        m[Curr] -= MinVal;
+                    end;
+                  aColRed[J] += MinVal;
+                end;
+            end;
+          Result += MinVal * Pred(ColCount);
+        end;
+    end;
 end;
 
 function TGWeightHelper.TBbTspHelper.SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer;
@@ -3886,9 +3876,9 @@ begin
   aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
   if FAsymmetric and (aSize >= ADV_RED_CUTOFF) and (aCurrWeight < FUpperBound) then
     begin
-      aCurrWeight += ReduceRows(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+      aCurrWeight += ReduceRowsA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
       if aCurrWeight < FUpperBound then
-        aCurrWeight += ReduceCols(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+        aCurrWeight += ReduceColsA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
     end;
   if aCurrWeight < FUpperBound then
     if aSize > 2 then
@@ -3964,9 +3954,9 @@ begin
   aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
   if FAsymmetric and (aSize >= ADV_RED_CUTOFF) and (aCurrWeight * Factor < FUpperBound) then
     begin
-      aCurrWeight += ReduceRows(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+      aCurrWeight += ReduceRowsA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
       if aCurrWeight * Factor < FUpperBound then
-        aCurrWeight += ReduceCols(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+        aCurrWeight += ReduceColsA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
     end;
   if aCurrWeight * Factor < FUpperBound then
     if aSize > 2 then

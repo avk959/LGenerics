@@ -524,8 +524,8 @@ type
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
       function  Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
-      function  ReduceRows(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
-      function  ReduceCols(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+      function  ReduceRowsA(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+      function  ReduceColsA(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
       function  SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
       procedure Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
       procedure SearchApprox(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
