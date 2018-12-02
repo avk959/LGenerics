@@ -3626,18 +3626,18 @@ begin
           if MinVal <= 0 then
             break;
         end;
-      if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
+      if (MinVal <= 0) or (MinVal = TWeight.INF_VALUE) then
+        continue;
+      for J := 0 to Pred(aSize) do
         begin
-          for J := 0 to Pred(aSize) do
-            begin
-              Curr := aRows[I] * MxSize + aCols[J];
-              if m[Curr] < TWeight.INF_VALUE then
-                m[Curr] -= MinVal;
-            end;
-          Result += MinVal;
-          aRowRed[I] := MinVal;
+          Curr := aRows[I] * MxSize + aCols[J];
+          if m[Curr] < TWeight.INF_VALUE then
+            m[Curr] -= MinVal;
         end;
+      Result += MinVal;
+      aRowRed[I] := MinVal;
     end;
+
   for J := 0 to Pred(aSize) do  // reduce columns
     begin
       MinVal := TWeight.INF_VALUE;
@@ -3648,17 +3648,16 @@ begin
           if MinVal <= 0 then
             break;
         end;
-      if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
+      if (MinVal <= 0) or (MinVal = TWeight.INF_VALUE) then
+        continue;
+      for I := 0 to Pred(aSize) do
         begin
-          for I := 0 to Pred(aSize) do
-            begin
-              Curr := aRows[I] * MxSize + aCols[J];
-              if m[Curr] < TWeight.INF_VALUE then
-                m[Curr] -= MinVal;
-            end;
-          Result += MinVal;
-          aColRed[J] := MinVal;
+          Curr := aRows[I] * MxSize + aCols[J];
+          if m[Curr] < TWeight.INF_VALUE then
+            m[Curr] -= MinVal;
         end;
+      Result += MinVal;
+      aColRed[J] := MinVal;
     end;
 end;
 
@@ -3689,9 +3688,8 @@ begin
         else
           begin
             Inc(FSelRow[I].ZeroCount);
-            Curr := FSelRow[I].ZeroCount;
-            FBoolMatrix[J][I] := Curr = 1;
-            if Curr > 1 then
+            FBoolMatrix[J][I] := FSelRow[I].ZeroCount = 1;
+            if not (FSelRow[I].ZeroCount = 1) then
               begin
                 FSelRow[I].MinValue := 0;
                 break;
@@ -3759,9 +3757,8 @@ begin
         else
           begin
             Inc(FSelCol[J].ZeroCount);
-            Curr := FSelCol[J].ZeroCount;
-            FBoolMatrix[I][J] := Curr = 1;
-            if Curr > 1 then
+            FBoolMatrix[I][J] := FSelCol[J].ZeroCount = 1;
+            if not (FSelCol[J].ZeroCount = 1) then
               begin
                 FSelCol[J].MinValue := 0;
                 break;
