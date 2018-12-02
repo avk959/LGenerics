@@ -3556,8 +3556,8 @@ end;
 
 procedure TGWeightHelper.TBbTspHelper.TSelData.Clear;
 begin
-  ZeroCount := 0;
   MinValue := TWeight.INF_VALUE;
+  ZeroFlag := False;
 end;
 
 { TGWeightHelper.TBbTspHelper }
@@ -3684,17 +3684,19 @@ begin
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
-          FSelRow[I].MinValue := wMin(CurrVal, FSelRow[I].MinValue)
+          SelRow[I].MinValue := wMin(CurrVal, SelRow[I].MinValue)
         else
-          begin
-            Inc(FSelRow[I].ZeroCount);
-            FBoolMatrix[J][I] := FSelRow[I].ZeroCount = 1;
-            if not (FSelRow[I].ZeroCount = 1) then
-              begin
-                FSelRow[I].MinValue := 0;
-                break;
-              end;
-          end
+          if SelRow[I].ZeroFlag then
+            begin
+              SelRow[I].MinValue := 0;
+              FBoolMatrix[J][I] := False;
+              break;
+            end
+          else
+            begin
+              SelRow[I].ZeroFlag := True;
+              FBoolMatrix[J][I] := True;
+            end;
       end;
   ///////////
   for J := 0 to Pred(aSize) do
@@ -3704,7 +3706,7 @@ begin
         begin
           MinVal := TWeight.INF_VALUE;
           for I in FBoolMatrix[J] do
-            MinVal := wMin(MinVal, FSelRow[I].MinValue);
+            MinVal := wMin(MinVal, SelRow[I].MinValue);
           if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
             begin
               for I := 0 to Pred(aSize) do
@@ -3753,17 +3755,19 @@ begin
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
-          FSelCol[J].MinValue := wMin(CurrVal, FSelCol[J].MinValue)
+          SelCol[J].MinValue := wMin(CurrVal, SelCol[J].MinValue)
         else
-          begin
-            Inc(FSelCol[J].ZeroCount);
-            FBoolMatrix[I][J] := FSelCol[J].ZeroCount = 1;
-            if not (FSelCol[J].ZeroCount = 1) then
-              begin
-                FSelCol[J].MinValue := 0;
-                break;
-              end;
-          end;
+          if SelCol[J].ZeroFlag then
+            begin
+              SelCol[J].MinValue := 0;
+              FBoolMatrix[I][J] := False;
+              break;
+            end
+          else
+            begin
+              SelCol[J].ZeroFlag := True;
+              FBoolMatrix[I][J] := True;
+            end;
       end;
   /////////////
   for I := 0 to Pred(aSize) do
@@ -3773,7 +3777,7 @@ begin
         begin
           MinVal := TWeight.INF_VALUE;
           for J in FBoolMatrix[I] do
-            MinVal := wMin(MinVal, FSelCol[J].MinValue);
+            MinVal := wMin(MinVal, SelCol[J].MinValue);
           if (MinVal > 0) and (MinVal < TWeight.INF_VALUE) then
             begin
               for J := 0 to Pred(aSize) do
@@ -3833,12 +3837,14 @@ begin
         else
           begin
             FBoolMatrix[I][J] := True;
-            Inc(SelRow[I].ZeroCount);
-            if SelRow[I].ZeroCount > 1 then
-              SelRow[I].MinValue := 0;
-            Inc(SelCol[J].ZeroCount);
-            if SelCol[J].ZeroCount > 1 then
-              SelCol[J].MinValue := 0;
+            if SelRow[I].ZeroFlag then
+              SelRow[I].MinValue := 0
+            else
+              SelRow[I].ZeroFlag := True;
+            if SelCol[J].ZeroFlag then
+              SelCol[J].MinValue := 0
+            else
+              SelCol[J].ZeroFlag := True;
           end;
       end;
   ///////////////////////

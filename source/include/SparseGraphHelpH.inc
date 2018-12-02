@@ -495,8 +495,8 @@ type
     strict private
     type
       TSelData = record
-        ZeroCount: Integer;
         MinValue: TWeight;
+        ZeroFlag: Boolean;
         procedure Clear; inline;
       end;
       PSelData  = ^TSelData;
