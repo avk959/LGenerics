@@ -3556,8 +3556,8 @@ end;
 
 procedure TGWeightHelper.TBbTspHelper.TMinData.Clear;
 begin
-  ZeroCount := 0;
   Value := TWeight.INF_VALUE;
+  ZeroFlag := False;
 end;
 
 { TGWeightHelper.TBbTspHelper }
@@ -3592,8 +3592,8 @@ begin
   System.SetLength(FForwardTour, FMatrixSize);
   System.FillChar(Pointer(FForwardTour)^, FMatrixSize * SizeOf(Integer), $ff);
   FBackTour := System.Copy(FForwardTour);
-  System.SetLength(FSelRow, FMatrixSize);
-  System.SetLength(FSelCol, FMatrixSize);  //
+  System.SetLength(FRowMin, FMatrixSize);
+  System.SetLength(FColMin, FMatrixSize);  //
   System.SetLength(FZeros, FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do
     FZeros[I].Size := FMatrixSize;
@@ -3667,7 +3667,7 @@ begin
   if (aSize < 4) or (Result >= FUpperBound) then
     exit;
   m := PWeight(FMatrix);
-  RowMin := PMinData(FSelRow);
+  RowMin := PMinData(FRowMin);
   MxSize := FMatrixSize;
   //////////////////
   for I := 0 to Pred(aSize) do
@@ -3683,15 +3683,17 @@ begin
           if CurrVal < RowMin[I].Value then
             RowMin[I].Value := CurrVal else
         else
-          begin
-            Inc(RowMin[I].ZeroCount);
-            FZeros[J][I] := RowMin[I].ZeroCount = 1;
-            if RowMin[I].ZeroCount > 1 then
-              begin
-                RowMin[I].Value := 0;
-                break;
-              end;
-          end;
+          if RowMin[I].ZeroFlag then
+            begin
+              RowMin[I].Value := 0;
+              FZeros[J][I] := False;
+              break;
+            end
+          else
+            begin
+              RowMin[I].ZeroFlag := True;
+              FZeros[J][I] := True;
+            end;
       end;
   ///////////
   for J := 0 to Pred(aSize) do
@@ -3737,15 +3739,17 @@ begin
           if CurrVal < ColMin[J].Value then
             ColMin[J].Value := CurrVal else
         else
-          begin
-            Inc(ColMin[J].ZeroCount);
-            FZeros[I][J] := ColMin[J].ZeroCount = 1;
-            if ColMin[J].ZeroCount > 1 then
-              begin
-                ColMin[J].Value := 0;
-                break;
-              end;
-          end;
+          if ColMin[J].ZeroFlag then
+            begin
+              ColMin[J].Value := 0;
+              FZeros[I][J] := False;
+              break;
+            end
+          else
+            begin
+              ColMin[J].ZeroFlag := True;
+              FZeros[I][J] := True;
+            end;
       end;
   /////////////
   for I := 0 to Pred(aSize) do
@@ -3784,8 +3788,8 @@ var
   m: PWeight;
 begin
   m := PWeight(FMatrix);
-  RowMin := PMinData(FSelRow);
-  ColMin := PMinData(FSelCol);
+  RowMin := PMinData(FRowMin);
+  ColMin := PMinData(FColMin);
   MxSize := FMatrixSize;
   ////////////////////
   for I := 0 to Pred(aSize) do
@@ -3809,12 +3813,14 @@ begin
         else
           begin
             FZeros[I][J] := True;
-            Inc(RowMin[I].ZeroCount);
-            if RowMin[I].ZeroCount = 2 then
-              RowMin[I].Value := 0;
-            Inc(ColMin[J].ZeroCount);
-            if ColMin[J].ZeroCount = 2 then
-              ColMin[J].Value := 0;
+            if RowMin[I].ZeroFlag then
+              RowMin[I].Value := 0
+            else
+              RowMin[I].ZeroFlag := True;
+            if ColMin[J].ZeroFlag then
+              ColMin[J].Value := 0
+            else
+              ColMin[J].ZeroFlag := True;
           end;
       end;
   ///////////////////////

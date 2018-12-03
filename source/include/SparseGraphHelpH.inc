@@ -496,7 +496,7 @@ type
     type
       TMinData = record
         Value: TWeight;
-        ZeroCount: Integer;
+        ZeroFlag: Boolean;
         procedure Clear; inline;
       end;
       PMinData  = ^TMinData;
@@ -509,8 +509,8 @@ type
       FForwardTour,
       FBackTour,
       FBestTour: array of Integer;
-      FSelRow,
-      FSelCol: TMinArray;
+      FRowMin,
+      FColMin: TMinArray;
       FUpperBound: TWeight;
       FMatrixSize: SizeInt;
       FStartTime: TDateTime;
