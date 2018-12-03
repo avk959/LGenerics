@@ -503,12 +503,11 @@ type
       PInt      = PInteger;
       TSelArray = array of TSelData;
 
-    const
-      ADV_RED_CUTOFF = 8;
-
     var
       FMatrix: TWeightArray;
       FBoolMatrix: TGraph.TBoolMatrix;
+      FUnCoverRows,
+      FUnCoverCols: TBoolVector;
       FForwardTour,
       FBackTour,
       FBestTour: array of Integer;
@@ -524,11 +523,10 @@ type
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
       function  Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
-      function  ReduceRowsA(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
-      function  ReduceColsA(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+      function  ReduceA(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
       function  SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
       procedure Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
-      procedure SearchApprox(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
+      procedure ApproxSearch(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
       function  Execute(const m: TWeightMatrix; aTimeOut: Integer; aIsSymm: Boolean; var aTour: TIntArray;
