@@ -3663,6 +3663,9 @@ var
   SelRow, SelCol: PSelData;
   m: PWeight;
 begin
+  Result := Reduce(aRows, aCols, aRowRed, aColRed, aSize);
+  if (aSize < 4) or (Result >= FUpperBound) then
+    exit;
   m := PWeight(FMatrix);
   SelRow := PSelData(FSelRow);
   MxSize := FMatrixSize;
@@ -3693,8 +3696,6 @@ begin
             end;
       end;
   ///////////
-  Result := 0;
-  //////////
   for J := 0 to Pred(aSize) do
     begin
       CellCount := FBoolMatrix[J].PopCount;
@@ -3720,6 +3721,9 @@ begin
           Result += MinVal * Pred(CellCount);
         end;
     end;
+  //////////////
+  if Result >= FUpperBound then
+    exit;
   //////////////
   SelCol := SelRow;
   for I := 0 to Pred(aSize) do
@@ -3850,9 +3854,10 @@ begin
   MxSize := FMatrixSize;
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
-  aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
-  if FAsymmetric and (aCurrWeight < FUpperBound) then
-    aCurrWeight += ReduceA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+  if FAsymmetric then
+    aCurrWeight += ReduceA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize)
+  else
+    aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
   if aCurrWeight < FUpperBound then
     if aSize > 2 then
       begin
@@ -3924,9 +3929,10 @@ begin
   MxSize := FMatrixSize;
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
-  aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
-  if FAsymmetric and (aCurrWeight * Factor < FUpperBound) then
-    aCurrWeight += ReduceA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+  if FAsymmetric then
+    aCurrWeight += ReduceA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize)
+  else
+    aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
   if aCurrWeight * Factor < FUpperBound then
     if aSize > 2 then
       begin
