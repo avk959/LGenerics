@@ -3552,12 +3552,12 @@ begin
     end;
 end;
 
-{ TGWeightHelper.TBbTspHelper.TSelData }
+{ TGWeightHelper.TBbTspHelper.TMinData }
 
-procedure TGWeightHelper.TBbTspHelper.TSelData.Clear;
+procedure TGWeightHelper.TBbTspHelper.TMinData.Clear;
 begin
-  MinValue := TWeight.INF_VALUE;
-  ZeroFlag := False;
+  ZeroCount := 0;
+  Value := TWeight.INF_VALUE;
 end;
 
 { TGWeightHelper.TBbTspHelper }
@@ -3594,9 +3594,9 @@ begin
   FBackTour := System.Copy(FForwardTour);
   System.SetLength(FSelRow, FMatrixSize);
   System.SetLength(FSelCol, FMatrixSize);  //
-  System.SetLength(FBoolMatrix, FMatrixSize);
+  System.SetLength(FZeros, FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do
-    FBoolMatrix[I].Size := FMatrixSize;
+    FZeros[I].Size := FMatrixSize;
   FStartTime := Now;
   FCancelled := False;
 end;
@@ -3660,58 +3660,56 @@ function TGWeightHelper.TBbTspHelper.ReduceA(aRows, aCols: PInt; aRowRed, aColRe
 var
   I, J, K, MxSize, CellCount: Integer;
   MinVal, CurrVal: TWeight;
-  SelRow, SelCol: PSelData;
+  RowMin, ColMin: PMinData;
   m: PWeight;
 begin
   Result := Reduce(aRows, aCols, aRowRed, aColRed, aSize);
   if (aSize < 4) or (Result >= FUpperBound) then
     exit;
   m := PWeight(FMatrix);
-  SelRow := PSelData(FSelRow);
+  RowMin := PMinData(FSelRow);
   MxSize := FMatrixSize;
   //////////////////
   for I := 0 to Pred(aSize) do
-    SelRow[I].Clear;
+    RowMin[I].Clear;
   for J := 0 to Pred(aSize) do
-    FBoolMatrix[J].ClearBits;
+    FZeros[J].ClearBits;
   ///////////////
   for I := 0 to Pred(aSize) do
     for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
-          if CurrVal < SelRow[I].MinValue then
-            SelRow[I].MinValue := CurrVal else
+          if CurrVal < RowMin[I].Value then
+            RowMin[I].Value := CurrVal else
         else
-          if SelRow[I].ZeroFlag then
-            begin
-              SelRow[I].MinValue := 0;
-              FBoolMatrix[J][I] := False;
-              break;
-            end
-          else
-            begin
-              SelRow[I].ZeroFlag := True;
-              FBoolMatrix[J][I] := True;
-            end;
+          begin
+            Inc(RowMin[I].ZeroCount);
+            FZeros[J][I] := RowMin[I].ZeroCount = 1;
+            if RowMin[I].ZeroCount > 1 then
+              begin
+                RowMin[I].Value := 0;
+                break;
+              end;
+          end;
       end;
   ///////////
   for J := 0 to Pred(aSize) do
     begin
-      CellCount := FBoolMatrix[J].PopCount;
+      CellCount := FZeros[J].PopCount;
       if CellCount > 1 then
         begin
           MinVal := TWeight.INF_VALUE;
-          for I in FBoolMatrix[J] do
-            if SelRow[I].MinValue < MinVal then
-              MinVal := SelRow[I].MinValue;
+          for I in FZeros[J] do
+            if RowMin[I].Value < MinVal then
+              MinVal := RowMin[I].Value;
           if (MinVal <= 0) or (MinVal = TWeight.INF_VALUE) then
             continue;
           for I := 0 to Pred(aSize) do
             if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
               m[aRows[I] * MxSize + aCols[J]] += MinVal;
           aColRed[J] -= MinVal;
-          for I in FBoolMatrix[J] do
+          for I in FZeros[J] do
             begin
               for K := 0 to Pred(aSize) do
                 if m[aRows[I] * MxSize + aCols[K]] < TWeight.INF_VALUE then
@@ -3725,49 +3723,47 @@ begin
   if Result >= FUpperBound then
     exit;
   //////////////
-  SelCol := SelRow;
+  ColMin := RowMin;
   for I := 0 to Pred(aSize) do
-    SelCol[I].Clear;
+    ColMin[I].Clear;
   for J := 0 to Pred(aSize) do
-    FBoolMatrix[J].ClearBits;
+    FZeros[J].ClearBits;
   //////////////
   for J := 0 to Pred(aSize) do
     for I := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
-          if CurrVal < SelCol[J].MinValue then
-            SelCol[J].MinValue := CurrVal else
+          if CurrVal < ColMin[J].Value then
+            ColMin[J].Value := CurrVal else
         else
-          if SelCol[J].ZeroFlag then
-            begin
-              SelCol[J].MinValue := 0;
-              FBoolMatrix[I][J] := False;
-              break;
-            end
-          else
-            begin
-              SelCol[J].ZeroFlag := True;
-              FBoolMatrix[I][J] := True;
-            end;
+          begin
+            Inc(ColMin[J].ZeroCount);
+            FZeros[I][J] := ColMin[J].ZeroCount = 1;
+            if ColMin[J].ZeroCount > 1 then
+              begin
+                ColMin[J].Value := 0;
+                break;
+              end;
+          end;
       end;
   /////////////
   for I := 0 to Pred(aSize) do
     begin
-      CellCount := FBoolMatrix[I].PopCount;
+      CellCount := FZeros[I].PopCount;
       if CellCount > 1 then
         begin
           MinVal := TWeight.INF_VALUE;
-          for J in FBoolMatrix[I] do
-            if SelCol[J].MinValue < MinVal then
-              MinVal := SelCol[J].MinValue;
+          for J in FZeros[I] do
+            if ColMin[J].Value < MinVal then
+              MinVal := ColMin[J].Value;
           if (MinVal <= 0) or (MinVal = TWeight.INF_VALUE) then
             continue;
           for J := 0 to Pred(aSize) do
             if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
               m[aRows[I] * MxSize + aCols[J]] += MinVal;
           aRowRed[I] -= MinVal;
-          for J in FBoolMatrix[I] do
+          for J in FZeros[I] do
             begin
               for K := 0 to Pred(aSize) do
                 if m[aRows[K] * MxSize + aCols[J]] < TWeight.INF_VALUE then
@@ -3783,44 +3779,42 @@ function TGWeightHelper.TBbTspHelper.SelectNext(aRows, aCols: PInt; out aRowIdx,
   aSize: Integer): TWeight;
 var
   I, J, MxSize: Integer;
-  CurrVal: TWeight;
-  SelRow, SelCol: PSelData;
+  MinVal, CurrVal: TWeight;
+  RowMin, ColMin: PMinData;
   m: PWeight;
 begin
   m := PWeight(FMatrix);
-  SelRow := PSelData(FSelRow);
-  SelCol := PSelData(FSelCol);
+  RowMin := PMinData(FSelRow);
+  ColMin := PMinData(FSelCol);
   MxSize := FMatrixSize;
-  ///////////////
+  ////////////////////
   for I := 0 to Pred(aSize) do
-    SelRow[I].Clear;
+    RowMin[I].Clear;
   for J := 0 to Pred(aSize) do
-    SelCol[J].Clear;
+    ColMin[J].Clear;
   for I := 0 to Pred(aSize) do
-    FBoolMatrix[I].ClearBits;
-  //////////////
+    FZeros[I].ClearBits;
+  /////////////////////////
   for I := 0 to Pred(aSize) do
     for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
         if CurrVal > 0 then
           begin
-            if CurrVal < SelRow[I].MinValue then
-              SelRow[I].MinValue := CurrVal;
-            if CurrVal < SelCol[J].MinValue then
-              SelCol[J].MinValue := CurrVal;
+            if CurrVal < RowMin[I].Value then
+              RowMin[I].Value := CurrVal;
+            if CurrVal < ColMin[J].Value then
+              ColMin[J].Value := CurrVal;
           end
         else
           begin
-            FBoolMatrix[I][J] := True;
-            if SelRow[I].ZeroFlag then
-              SelRow[I].MinValue := 0
-            else
-              SelRow[I].ZeroFlag := True;
-            if SelCol[J].ZeroFlag then
-              SelCol[J].MinValue := 0
-            else
-              SelCol[J].ZeroFlag := True;
+            FZeros[I][J] := True;
+            Inc(RowMin[I].ZeroCount);
+            if RowMin[I].ZeroCount = 2 then
+              RowMin[I].Value := 0;
+            Inc(ColMin[J].ZeroCount);
+            if ColMin[J].ZeroCount = 2 then
+              ColMin[J].Value := 0;
           end;
       end;
   ///////////////////////
@@ -3829,9 +3823,9 @@ begin
   aColIdx := NULL_INDEX;
   ///////////////////////
   for I := 0 to Pred(aSize) do
-    for J in FBoolMatrix[I] do
+    for J in FZeros[I] do
       begin
-        CurrVal := SelRow[I].MinValue + SelCol[J].MinValue;
+        CurrVal := RowMin[I].Value + ColMin[J].Value;
         if CurrVal > Result then
           begin
             Result := CurrVal;

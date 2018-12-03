@@ -494,25 +494,23 @@ type
     TBbTspHelper = record
     strict private
     type
-      TSelData = record
-        MinValue: TWeight;
-        ZeroFlag: Boolean;
+      TMinData = record
+        Value: TWeight;
+        ZeroCount: Integer;
         procedure Clear; inline;
       end;
-      PSelData  = ^TSelData;
+      PMinData  = ^TMinData;
       PInt      = PInteger;
-      TSelArray = array of TSelData;
+      TMinArray = array of TMinData;
 
     var
       FMatrix: TWeightArray;
-      FBoolMatrix: TGraph.TBoolMatrix;
-      FUnCoverRows,
-      FUnCoverCols: TBoolVector;
+      FZeros: TGraph.TBoolMatrix;
       FForwardTour,
       FBackTour,
       FBestTour: array of Integer;
       FSelRow,
-      FSelCol: TSelArray;
+      FSelCol: TMinArray;
       FUpperBound: TWeight;
       FMatrixSize: SizeInt;
       FStartTime: TDateTime;
