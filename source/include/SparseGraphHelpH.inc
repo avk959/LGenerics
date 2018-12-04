@@ -520,11 +520,11 @@ type
       FCancelled: Boolean;
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
-      function  Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
-      function  ReduceA(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
-      function  SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer; aSize: Integer): TWeight;
-      procedure Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
-      procedure ApproxSearch(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
+      function  Reduce(aSize: Integer; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
+      function  ReduceA(aSize: Integer; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
+      function  SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): TWeight;
+      procedure Search(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
+      procedure ApproxSearch(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
       function  Execute(const m: TWeightMatrix; aTimeOut: Integer; aIsSymm: Boolean; var aTour: TIntArray;

@@ -3607,7 +3607,7 @@ begin
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TBbTspHelper.Reduce(aRows, aCols: PInt; aRowRed, aColRed: PWeight; aSize: Integer): TWeight;
+function TGWeightHelper.TBbTspHelper.Reduce(aSize: Integer; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
 var
   I, J, MxSize: Integer;
   MinVal: TWeight;
@@ -3655,15 +3655,15 @@ begin
     end;
 end;
 
-function TGWeightHelper.TBbTspHelper.ReduceA(aRows, aCols: PInt; aRowRed, aColRed: PWeight;
-  aSize: Integer): TWeight;
+function TGWeightHelper.TBbTspHelper.ReduceA(aSize: Integer; aRows, aCols: PInt; aRowRed,
+  aColRed: PWeight): TWeight;
 var
   I, J, K, MxSize, CellCount: Integer;
   MinVal, CurrVal: TWeight;
   RowMin, ColMin: PMinData;
   m: PWeight;
 begin
-  Result := Reduce(aRows, aCols, aRowRed, aColRed, aSize);
+  Result := Reduce(aSize, aRows, aCols, aRowRed, aColRed);
   if (aSize < 4) or (Result >= FUpBound) then
     exit;
   m := PWeight(FMatrix);
@@ -3779,8 +3779,8 @@ begin
     end;
 end;
 
-function TGWeightHelper.TBbTspHelper.SelectNext(aRows, aCols: PInt; out aRowIdx, aColIdx: Integer;
-  aSize: Integer): TWeight;
+function TGWeightHelper.TBbTspHelper.SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx,
+  aColIdx: Integer): TWeight;
 var
   I, J, MxSize: Integer;
   MinVal, CurrVal: TWeight;
@@ -3841,7 +3841,7 @@ begin
       end;
 end;
 
-procedure TGWeightHelper.TBbTspHelper.Search(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
+procedure TGWeightHelper.TBbTspHelper.Search(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
 var
   RowsReduce, ColsReduce: TWeightArray;
   I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
@@ -3855,13 +3855,13 @@ begin
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
   if FAsymmetric then
-    aCurrWeight += ReduceA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize)
+    aCurrWeight += ReduceA(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce))
   else
-    aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+    aCurrWeight += Reduce(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce));
   if aCurrWeight < FUpBound then
     if aSize > 2 then
       begin
-        LowBound := aCurrWeight + SelectNext(aRows, aCols, Row, Col, aSize);
+        LowBound := aCurrWeight + SelectNext(aSize, aRows, aCols, Row, Col);
         SaveRow := aRows[Row];
         SaveCol := aCols[Col];
         FirstRow := SaveRow;
@@ -3879,7 +3879,7 @@ begin
         for J := Col to aSize - 2 do // remove Col
           aCols[J] := aCols[Succ(J)];
         ///////////////
-        Search(aRows, aCols, aCurrWeight, Pred(aSize));
+        Search(Pred(aSize), aCurrWeight, aRows, aCols);
         ///////////////  restore values
         for I := aSize - 2 downto  Row do //restore Row
           aRows[Succ(I)] := aRows[I];
@@ -3895,7 +3895,7 @@ begin
           begin
             m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
             //////////
-            Search(aRows, aCols, aCurrWeight, aSize);
+            Search(aSize, aCurrWeight, aRows, aCols);
             //////////
             m[SaveRow * MxSize + SaveCol] := TWeight(0);
           end;
@@ -3918,7 +3918,7 @@ begin
        end;
 end;
 
-procedure TGWeightHelper.TBbTspHelper.ApproxSearch(aRows, aCols: PInt; aCurrWeight: TWeight; aSize: Integer);
+procedure TGWeightHelper.TBbTspHelper.ApproxSearch(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
 var
   RowsReduce, ColsReduce: TWeightArray;
   I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
@@ -3930,13 +3930,13 @@ begin
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
   if FAsymmetric then
-    aCurrWeight += ReduceA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize)
+    aCurrWeight += ReduceA(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce))
   else
-    aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
+    aCurrWeight += Reduce(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce));
   if aCurrWeight * Factor < FUpBound then
     if aSize > 2 then
       begin
-        LowBound := aCurrWeight + SelectNext(aRows, aCols, Row, Col, aSize);
+        LowBound := aCurrWeight + SelectNext(aSize, aRows, aCols, Row, Col);
         SaveRow := aRows[Row];
         SaveCol := aCols[Col];
         FirstRow := SaveRow;
@@ -3954,7 +3954,7 @@ begin
         for J := Col to aSize - 2 do // remove Col
           aCols[J] := aCols[Succ(J)];
         ///////////////
-        ApproxSearch(aRows, aCols, aCurrWeight, Pred(aSize));
+        ApproxSearch(Pred(aSize), aCurrWeight, aRows, aCols);
         ///////////////  restore values
         for I := aSize - 2 downto  Row do //restore Row
           aRows[Succ(I)] := aRows[I];
@@ -3970,9 +3970,9 @@ begin
           begin
             m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
             //////////
-            ApproxSearch(aRows, aCols, aCurrWeight, aSize);
+            ApproxSearch(aSize, aCurrWeight, aRows, aCols);
             //////////
-            m[SaveRow * MxSize + SaveCol] := 0;
+            m[SaveRow * MxSize + SaveCol] := TWeight(0);
           end;
       end
     else
@@ -4023,7 +4023,7 @@ begin
   for I := 0 to Pred(FMatrixSize) do
     Rows[I] := I;
   Cols := System.Copy(Rows);
-  Search(PInt(Rows), PInt(Cols), 0, FMatrixSize);
+  Search(FMatrixSize, TWeight(0), PInt(Rows), PInt(Cols));
   CopyBest(aTour, w);
   Result := not FCancelled;
 end;
@@ -4041,7 +4041,7 @@ begin
   for I := 0 to Pred(FMatrixSize) do
     Rows[I] := I;
   Cols := System.Copy(Rows);
-  ApproxSearch(PInt(Rows), PInt(Cols), 0, FMatrixSize);
+  ApproxSearch(FMatrixSize, TWeight(0), PInt(Rows), PInt(Cols));
   CopyBest(aTour, Result);
 end;
 
