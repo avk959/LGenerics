@@ -523,8 +523,6 @@ type
       function  Reduce(aSize: Integer; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
       function  ReduceA(aSize: Integer; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
       function  SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): TWeight;
-      procedure Check2x2(aCurrWeight: TWeight; aRows, aCols: PInt);
-      procedure Check2x2A(aCurrWeight: TWeight; aRows, aCols: PInt);
       procedure Search(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
       procedure ApproxSearch(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
