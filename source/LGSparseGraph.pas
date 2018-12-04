@@ -3841,6 +3841,40 @@ begin
       end;
 end;
 
+procedure TGWeightHelper.TBbTspHelper.Check2x2(aCurrWeight: TWeight; aRows, aCols: PInt);
+var
+  wCurr: TWeight;
+  First, Last: Integer;
+begin
+  Last := Ord(FMatrix[aRows[0] * FMatrixSize + aCols[0]] < TWeight.INF_VALUE);
+  First := 1 - Last;
+  wCurr :=  FMatrix[aRows[0] * FMatrixSize + aCols[First]];
+  if aCurrWeight + wCurr < FUpBound then
+    begin
+      FBestTour := System.Copy(FForwardTour);
+      FBestTour[aRows[0]] := aCols[First];
+      FBestTour[aRows[1]] := aCols[Last];
+      FUpBound := aCurrWeight + wCurr;
+    end;
+end;
+
+procedure TGWeightHelper.TBbTspHelper.Check2x2A(aCurrWeight: TWeight; aRows, aCols: PInt);
+var
+  wCurr: TWeight;
+  First, Last: Integer;
+begin
+  Last := Ord(FMatrix[aRows[0] * FMatrixSize + aCols[0]] < TWeight.INF_VALUE);
+  First := 1 - Last;
+  wCurr :=  FMatrix[aRows[0] * FMatrixSize + aCols[First]];
+  if (aCurrWeight + wCurr) * Factor < FUpBound then
+    begin
+      FBestTour := System.Copy(FForwardTour);
+      FBestTour[aRows[0]] := aCols[First];
+      FBestTour[aRows[1]] := aCols[Last];
+      FUpBound := aCurrWeight + wCurr;
+    end;
+end;
+
 procedure TGWeightHelper.TBbTspHelper.Search(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
 var
   RowsReduce, ColsReduce: TWeightArray;
@@ -3850,6 +3884,11 @@ var
 begin
   if TimeOut then
     exit;
+  if aSize = 2 then
+    begin
+      Check2x2(aCurrWeight, aRows, aCols);
+      exit;
+    end;
   m := PWeight(FMatrix);
   MxSize := FMatrixSize;
   System.SetLength(RowsReduce, aSize);
@@ -3859,55 +3898,46 @@ begin
   else
     aCurrWeight += Reduce(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce));
   if aCurrWeight < FUpBound then
-    if aSize > 2 then
-      begin
-        LowBound := aCurrWeight + SelectNext(aSize, aRows, aCols, Row, Col);
-        SaveRow := aRows[Row];
-        SaveCol := aCols[Col];
-        FirstRow := SaveRow;
-        LastCol := SaveCol;
-        FForwardTour[SaveRow] := SaveCol;
-        FBackTour[SaveCol] := SaveRow;
-        while FForwardTour[LastCol] <> NULL_INDEX do
-          LastCol := FForwardTour[LastCol];
-        while FBackTour[FirstRow] <> NULL_INDEX do
-          FirstRow := FBackTour[FirstRow];
-        SaveElem := m[LastCol * MxSize + FirstRow];
-        m[LastCol * MxSize + FirstRow] := TWeight.INF_VALUE;
-        for I := Row to aSize - 2 do // remove Row
-          aRows[I] := aRows[Succ(I)];
-        for J := Col to aSize - 2 do // remove Col
-          aCols[J] := aCols[Succ(J)];
-        ///////////////
-        Search(Pred(aSize), aCurrWeight, aRows, aCols);
-        ///////////////  restore values
-        for I := aSize - 2 downto  Row do //restore Row
-          aRows[Succ(I)] := aRows[I];
-        aRows[Row] := SaveRow;
-        for J := aSize - 2 downto  Col do //restore Col
-          aCols[Succ(J)] := aCols[J];
-        aCols[Col] := SaveCol;
-        m[LastCol * MxSize + FirstRow] := SaveElem;
-        FForwardTour[SaveRow] := NULL_INDEX;
-        FBackTour[SaveCol] := NULL_INDEX;
-        ////////////////
-        if LowBound < FUpBound then
-          begin
-            m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
-            //////////
-            Search(aSize, aCurrWeight, aRows, aCols);
-            //////////
-            m[SaveRow * MxSize + SaveCol] := TWeight(0);
-          end;
-      end
-    else
-      begin
-        FBestTour := System.Copy(FForwardTour);
-        J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
-        FBestTour[aRows[0]] := aCols[1 - J];
-        FBestTour[aRows[1]] := aCols[J];
-        FUpBound := aCurrWeight;
-      end;
+    begin
+      LowBound := aCurrWeight + SelectNext(aSize, aRows, aCols, Row, Col);
+      SaveRow := aRows[Row];
+      SaveCol := aCols[Col];
+      FirstRow := SaveRow;
+      LastCol := SaveCol;
+      FForwardTour[SaveRow] := SaveCol;
+      FBackTour[SaveCol] := SaveRow;
+      while FForwardTour[LastCol] <> NULL_INDEX do
+        LastCol := FForwardTour[LastCol];
+      while FBackTour[FirstRow] <> NULL_INDEX do
+        FirstRow := FBackTour[FirstRow];
+      SaveElem := m[LastCol * MxSize + FirstRow];
+      m[LastCol * MxSize + FirstRow] := TWeight.INF_VALUE;
+      for I := Row to aSize - 2 do // remove Row
+        aRows[I] := aRows[Succ(I)];
+      for J := Col to aSize - 2 do // remove Col
+        aCols[J] := aCols[Succ(J)];
+      ///////////////
+      Search(Pred(aSize), aCurrWeight, aRows, aCols);
+      ///////////////  restore values
+      for I := aSize - 2 downto  Row do //restore Row
+        aRows[Succ(I)] := aRows[I];
+      aRows[Row] := SaveRow;
+      for J := aSize - 2 downto  Col do //restore Col
+        aCols[Succ(J)] := aCols[J];
+      aCols[Col] := SaveCol;
+      m[LastCol * MxSize + FirstRow] := SaveElem;
+      FForwardTour[SaveRow] := NULL_INDEX;
+      FBackTour[SaveCol] := NULL_INDEX;
+      ////////////////
+      if LowBound < FUpBound then
+        begin
+          m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
+          //////////
+          Search(aSize, aCurrWeight, aRows, aCols);
+          //////////
+          m[SaveRow * MxSize + SaveCol] := TWeight(0);
+        end;
+    end;
   for I := 0 to Pred(aSize) do      // restore matrix
      for J := 0 to Pred(aSize) do
        begin
@@ -3925,6 +3955,11 @@ var
   LowBound, SaveElem: TWeight;
   m: PWeight;
 begin
+  if aSize = 2 then
+    begin
+      Check2x2A(aCurrWeight, aRows, aCols);
+      exit;
+    end;
   m := PWeight(FMatrix);
   MxSize := FMatrixSize;
   System.SetLength(RowsReduce, aSize);
@@ -3934,55 +3969,46 @@ begin
   else
     aCurrWeight += Reduce(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce));
   if aCurrWeight * Factor < FUpBound then
-    if aSize > 2 then
-      begin
-        LowBound := aCurrWeight + SelectNext(aSize, aRows, aCols, Row, Col);
-        SaveRow := aRows[Row];
-        SaveCol := aCols[Col];
-        FirstRow := SaveRow;
-        LastCol := SaveCol;
-        FForwardTour[SaveRow] := SaveCol;
-        FBackTour[SaveCol] := SaveRow;
-        while FForwardTour[LastCol] <> NULL_INDEX do
-          LastCol := FForwardTour[LastCol];
-        while FBackTour[FirstRow] <> NULL_INDEX do
-          FirstRow := FBackTour[FirstRow];
-        SaveElem := m[LastCol * MxSize + FirstRow];
-        m[LastCol * MxSize + FirstRow] := TWeight.INF_VALUE;
-        for I := Row to aSize - 2 do // remove Row
-          aRows[I] := aRows[Succ(I)];
-        for J := Col to aSize - 2 do // remove Col
-          aCols[J] := aCols[Succ(J)];
-        ///////////////
-        ApproxSearch(Pred(aSize), aCurrWeight, aRows, aCols);
-        ///////////////  restore values
-        for I := aSize - 2 downto  Row do //restore Row
-          aRows[Succ(I)] := aRows[I];
-        aRows[Row] := SaveRow;
-        for J := aSize - 2 downto  Col do //restore Col
-          aCols[Succ(J)] := aCols[J];
-        aCols[Col] := SaveCol;
-        m[LastCol * MxSize + FirstRow] := SaveElem;
-        FForwardTour[SaveRow] := NULL_INDEX;
-        FBackTour[SaveCol] := NULL_INDEX;
-        ////////////////
-        if LowBound * Factor < FUpBound then
-          begin
-            m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
-            //////////
-            ApproxSearch(aSize, aCurrWeight, aRows, aCols);
-            //////////
-            m[SaveRow * MxSize + SaveCol] := TWeight(0);
-          end;
-      end
-    else
-      begin
-        FBestTour := System.Copy(FForwardTour);
-        J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
-        FBestTour[aRows[0]] := aCols[1 - J];
-        FBestTour[aRows[1]] := aCols[J];
-        FUpBound := aCurrWeight;
-      end;
+    begin
+      LowBound := aCurrWeight + SelectNext(aSize, aRows, aCols, Row, Col);
+      SaveRow := aRows[Row];
+      SaveCol := aCols[Col];
+      FirstRow := SaveRow;
+      LastCol := SaveCol;
+      FForwardTour[SaveRow] := SaveCol;
+      FBackTour[SaveCol] := SaveRow;
+      while FForwardTour[LastCol] <> NULL_INDEX do
+        LastCol := FForwardTour[LastCol];
+      while FBackTour[FirstRow] <> NULL_INDEX do
+        FirstRow := FBackTour[FirstRow];
+      SaveElem := m[LastCol * MxSize + FirstRow];
+      m[LastCol * MxSize + FirstRow] := TWeight.INF_VALUE;
+      for I := Row to aSize - 2 do // remove Row
+        aRows[I] := aRows[Succ(I)];
+      for J := Col to aSize - 2 do // remove Col
+        aCols[J] := aCols[Succ(J)];
+      ///////////////
+      ApproxSearch(Pred(aSize), aCurrWeight, aRows, aCols);
+      ///////////////  restore values
+      for I := aSize - 2 downto  Row do //restore Row
+        aRows[Succ(I)] := aRows[I];
+      aRows[Row] := SaveRow;
+      for J := aSize - 2 downto  Col do //restore Col
+        aCols[Succ(J)] := aCols[J];
+      aCols[Col] := SaveCol;
+      m[LastCol * MxSize + FirstRow] := SaveElem;
+      FForwardTour[SaveRow] := NULL_INDEX;
+      FBackTour[SaveCol] := NULL_INDEX;
+      ////////////////
+      if LowBound * Factor < FUpBound then
+        begin
+          m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
+          //////////
+          ApproxSearch(aSize, aCurrWeight, aRows, aCols);
+          //////////
+          m[SaveRow * MxSize + SaveCol] := TWeight(0);
+        end;
+    end;
   for I := 0 to Pred(aSize) do      // restore matrix
      for J := 0 to Pred(aSize) do
        begin
