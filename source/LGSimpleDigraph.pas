@@ -2815,7 +2815,7 @@ var
 begin
   CheckTspMatrix(m);
   Result := GreedyTsp(m, aWeight);
-  Helper.ExecuteApprox(m, Accuracy, False, Result, aWeight);
+  aWeight := Helper.ExecuteApprox(m, Accuracy, False, Result);
 end;
 
 {$I IntDiGraphHelp.inc}

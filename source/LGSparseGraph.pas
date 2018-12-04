@@ -3576,24 +3576,24 @@ begin
   if aTour.Length = Succ(FMatrixSize) then
     begin
       System.SetLength(FBestTour, FMatrixSize);
-      FUpperBound := 0;
+      FUpBound := 0;
       for I := 0 to Pred(FMatrixSize) do
         begin
           FBestTour[aTour[I]] := aTour[Succ(I)];
-          FUpperBound += m[aTour[I], aTour[Succ(I)]];
+          FUpBound += m[aTour[I], aTour[Succ(I)]];
         end;
     end
   else
     begin
       FBestTour := nil;
-      FUpperBound := TWeight.INF_VALUE;
+      FUpBound := TWeight.INF_VALUE;
     end;
   FTimeOut := aTimeOut and System.High(Integer);
   System.SetLength(FForwardTour, FMatrixSize);
   System.FillChar(Pointer(FForwardTour)^, FMatrixSize * SizeOf(Integer), $ff);
   FBackTour := System.Copy(FForwardTour);
   System.SetLength(FRowMin, FMatrixSize);
-  System.SetLength(FColMin, FMatrixSize);  //
+  System.SetLength(FColMin, FMatrixSize);
   System.SetLength(FZeros, FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do
     FZeros[I].Size := FMatrixSize;
@@ -3619,14 +3619,14 @@ begin
   for I := 0 to Pred(aSize) do  // reduce rows
     begin
       MinVal := TWeight.INF_VALUE;
-      aRowRed[I] := 0;
+      aRowRed[I] := TWeight(0);
       for J := 0 to Pred(aSize) do
         begin
           MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
-          if MinVal <= 0 then
+          if MinVal <= TWeight(0) then
             break;
         end;
-      if (MinVal <= 0) or (MinVal = TWeight.INF_VALUE) then
+      if (MinVal <= TWeight(0)) or (MinVal = TWeight.INF_VALUE) then
         continue;
       for J := 0 to Pred(aSize) do
         if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
@@ -3638,14 +3638,14 @@ begin
   for J := 0 to Pred(aSize) do  // reduce columns
     begin
       MinVal := TWeight.INF_VALUE;
-      aColRed[J] := 0;
+      aColRed[J] := TWeight(0);
       for I := 0 to Pred(aSize) do
         begin
           MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
-          if MinVal <= 0 then
+          if MinVal <= TWeight(0) then
             break;
         end;
-      if (MinVal <= 0) or (MinVal = TWeight.INF_VALUE) then
+      if (MinVal <= TWeight(0)) or (MinVal = TWeight.INF_VALUE) then
         continue;
       for I := 0 to Pred(aSize) do
         if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
@@ -3664,7 +3664,7 @@ var
   m: PWeight;
 begin
   Result := Reduce(aRows, aCols, aRowRed, aColRed, aSize);
-  if (aSize < 4) or (Result >= FUpperBound) then
+  if (aSize < 4) or (Result >= FUpBound) then
     exit;
   m := PWeight(FMatrix);
   RowMin := PMinData(FRowMin);
@@ -3679,13 +3679,13 @@ begin
     for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
-        if CurrVal > 0 then
+        if CurrVal > TWeight(0) then
           if CurrVal < RowMin[I].Value then
             RowMin[I].Value := CurrVal else
         else
           if RowMin[I].ZeroFlag then
             begin
-              RowMin[I].Value := 0;
+              RowMin[I].Value := TWeight(0);
               FZeros[J][I] := False;
               break;
             end
@@ -3705,7 +3705,7 @@ begin
           for I in FZeros[J] do
             if RowMin[I].Value < MinVal then
               MinVal := RowMin[I].Value;
-          if (MinVal <= 0) or (MinVal = TWeight.INF_VALUE) then
+          if (MinVal <= TWeight(0)) or (MinVal = TWeight.INF_VALUE) then
             continue;
           for I := 0 to Pred(aSize) do
             if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
@@ -3722,7 +3722,7 @@ begin
         end;
     end;
   //////////////
-  if Result >= FUpperBound then
+  if Result >= FUpBound then
     exit;
   //////////////
   ColMin := RowMin;
@@ -3735,13 +3735,13 @@ begin
     for I := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
-        if CurrVal > 0 then
+        if CurrVal > TWeight(0) then
           if CurrVal < ColMin[J].Value then
             ColMin[J].Value := CurrVal else
         else
           if ColMin[J].ZeroFlag then
             begin
-              ColMin[J].Value := 0;
+              ColMin[J].Value := TWeight(0);
               FZeros[I][J] := False;
               break;
             end
@@ -3761,7 +3761,7 @@ begin
           for J in FZeros[I] do
             if ColMin[J].Value < MinVal then
               MinVal := ColMin[J].Value;
-          if (MinVal <= 0) or (MinVal = TWeight.INF_VALUE) then
+          if (MinVal <= TWeight(0)) or (MinVal = TWeight.INF_VALUE) then
             continue;
           for J := 0 to Pred(aSize) do
             if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
@@ -3803,7 +3803,7 @@ begin
     for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
-        if CurrVal > 0 then
+        if CurrVal > TWeight(0) then
           begin
             if CurrVal < RowMin[I].Value then
               RowMin[I].Value := CurrVal;
@@ -3814,11 +3814,11 @@ begin
           begin
             FZeros[I][J] := True;
             if RowMin[I].ZeroFlag then
-              RowMin[I].Value := 0
+              RowMin[I].Value := TWeight(0)
             else
               RowMin[I].ZeroFlag := True;
             if ColMin[J].ZeroFlag then
-              ColMin[J].Value := 0
+              ColMin[J].Value := TWeight(0)
             else
               ColMin[J].ZeroFlag := True;
           end;
@@ -3858,7 +3858,7 @@ begin
     aCurrWeight += ReduceA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize)
   else
     aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
-  if aCurrWeight < FUpperBound then
+  if aCurrWeight < FUpBound then
     if aSize > 2 then
       begin
         LowBound := aCurrWeight + SelectNext(aRows, aCols, Row, Col, aSize);
@@ -3891,13 +3891,13 @@ begin
         FForwardTour[SaveRow] := NULL_INDEX;
         FBackTour[SaveCol] := NULL_INDEX;
         ////////////////
-        if LowBound < FUpperBound then
+        if LowBound < FUpBound then
           begin
             m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
             //////////
             Search(aRows, aCols, aCurrWeight, aSize);
             //////////
-            m[SaveRow * MxSize + SaveCol] := 0;
+            m[SaveRow * MxSize + SaveCol] := TWeight(0);
           end;
       end
     else
@@ -3906,7 +3906,7 @@ begin
         J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
         FBestTour[aRows[0]] := aCols[1 - J];
         FBestTour[aRows[1]] := aCols[J];
-        FUpperBound := aCurrWeight;
+        FUpBound := aCurrWeight;
       end;
   for I := 0 to Pred(aSize) do      // restore matrix
      for J := 0 to Pred(aSize) do
@@ -3933,7 +3933,7 @@ begin
     aCurrWeight += ReduceA(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize)
   else
     aCurrWeight += Reduce(aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce), aSize);
-  if aCurrWeight * Factor < FUpperBound then
+  if aCurrWeight * Factor < FUpBound then
     if aSize > 2 then
       begin
         LowBound := aCurrWeight + SelectNext(aRows, aCols, Row, Col, aSize);
@@ -3966,7 +3966,7 @@ begin
         FForwardTour[SaveRow] := NULL_INDEX;
         FBackTour[SaveCol] := NULL_INDEX;
         ////////////////
-        if LowBound * Factor < FUpperBound then
+        if LowBound * Factor < FUpBound then
           begin
             m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
             //////////
@@ -3981,7 +3981,7 @@ begin
         J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
         FBestTour[aRows[0]] := aCols[1 - J];
         FBestTour[aRows[1]] := aCols[J];
-        FUpperBound := aCurrWeight;
+        FUpBound := aCurrWeight;
       end;
   for I := 0 to Pred(aSize) do      // restore matrix
      for J := 0 to Pred(aSize) do
@@ -3997,7 +3997,7 @@ procedure TGWeightHelper.TBbTspHelper.CopyBest(var aTour: TIntArray; out w: TWei
 var
   I, J: Integer;
 begin
-  w := FUpperBound;
+  w := FUpBound;
   if w < TWeight.INF_VALUE then
     begin
       aTour.Length := Succ(FMatrixSize);
@@ -4028,8 +4028,8 @@ begin
   Result := not FCancelled;
 end;
 
-procedure TGWeightHelper.TBbTspHelper.ExecuteApprox(const m: TWeightMatrix; aEps: Double; aIsSymm: Boolean;
-  var aTour: TIntArray; out w: TWeight);
+function TGWeightHelper.TBbTspHelper.ExecuteApprox(const m: TWeightMatrix; aEps: Double; aIsSymm: Boolean;
+  var aTour: TIntArray): TWeight;
 var
   Cols, Rows: array of Integer;
   I: Integer;
@@ -4042,7 +4042,7 @@ begin
     Rows[I] := I;
   Cols := System.Copy(Rows);
   ApproxSearch(PInt(Rows), PInt(Cols), 0, FMatrixSize);
-  CopyBest(aTour, w);
+  CopyBest(aTour, Result);
 end;
 
 { TGWeightHelper }
@@ -4377,7 +4377,7 @@ begin
       begin
         Next := p^.Destination;
         if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
-          //todo: need some kind of protection from overflow ???
+          //todo: need some kind of protection from overflow ?
           begin
             aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
             aTree[Next] := Curr;

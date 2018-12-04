@@ -486,11 +486,11 @@ type
       procedure Sssp(aSrc: SizeInt);
     end;
 
-    { TBbTspHelper:  branch and bound TSP algorithm;
+    { TBbTspHelper: branch and bound TSP algorithm;
       Little, Murty, Sweeney, and Karel "An Algorithm for Traveling Salesman Problem";
       Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
       advanced matrix reduction:
-      Костюк Ю.Л. "Эффективная реализация алгоритма решения задачи коммтвояжёра методом ветвей и границ" }
+      Костюк Ю.Л. "Эффективная реализация алгоритма решения задачи коммивояжёра методом ветвей и границ" }
     TBbTspHelper = record
     strict private
     type
@@ -511,11 +511,11 @@ type
       FBestTour: array of Integer;
       FRowMin,
       FColMin: TMinArray;
-      FUpperBound: TWeight;
-      FMatrixSize: SizeInt;
+      FMatrixSize,
+      FTimeOut: Integer;
+      FUpBound: TWeight;
       FStartTime: TDateTime;
       Factor: Double;
-      FTimeOut: Integer;
       FAsymmetric,
       FCancelled: Boolean;
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
@@ -529,8 +529,7 @@ type
     public
       function  Execute(const m: TWeightMatrix; aTimeOut: Integer; aIsSymm: Boolean; var aTour: TIntArray;
                 out w: TWeight): Boolean;
-      procedure ExecuteApprox(const m: TWeightMatrix; aEps: Double; aIsSymm: Boolean; var aTour: TIntArray;
-                out w: TWeight);
+      function  ExecuteApprox(const m: TWeightMatrix; aEps: Double; aIsSymm: Boolean;var aTour: TIntArray): TWeight;
     end;
 
   { returns True if aMatch is maximal matching }

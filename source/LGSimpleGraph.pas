@@ -4883,7 +4883,7 @@ begin
       Result := Greedy;
     end;
   Greedy := nil;
-  Helper.ExecuteApprox(m, Accuracy, True, Result, aWeight);
+  aWeight := Helper.ExecuteApprox(m, Accuracy, True, Result);
   Tsp3Opt(m, Result, aWeight);
 end;
 
