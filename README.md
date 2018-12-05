@@ -43,9 +43,8 @@ Contains:
       - maximum clique 
       - listing all maximal cliques
       - vertex coloring
-      - maximum flow through a directed network
-      - minimum-cost flow through a directed network
-      - minimum s-t cut in a directed network
+      - maximum flow in a network
+      - minimum-cost flow in a network
       - global minimum cut in a weighted graph
       - maximum cardinality matching in bipartite graph
       - maximum cardinality matching in arbitrary graph
