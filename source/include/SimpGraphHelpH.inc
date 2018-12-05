@@ -334,7 +334,7 @@ type
     PNiEdge    = ^TNiEdge;
     TNiAdjList = specialize TGJoinableHashList<TNiEdge>;
     TQueue     = specialize TGPairHeapMax<TIntNode>;
-    TEdgeQueue = specialize TGLiteQueue<TIntOrdPair>;
+    TEdgeQueue = specialize TGLiteQueue<TOrdIntPair>;
 
   var
     FGraph: array of TNiAdjList;

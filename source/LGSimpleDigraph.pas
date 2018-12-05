@@ -2209,7 +2209,7 @@ var
   qTail: SizeInt = 0;
 begin
   Queue := CreateIntArray;
-  ResizeAndFill(aTree, VertexCount, NULL_INDEX);
+  aTree := CreateIntArray;
   TWeightHelper.ResizeAndFill(aWeights, VertexCount, TWeight.INF_VALUE);
   aWeights[aSrc] := 0;
   Queue[qTail] := aSrc;
@@ -2315,13 +2315,9 @@ begin
     if System.Length(m[I]) <> Size then
       raise EGraphError.Create(SENonSquareInputMatrix);
   for I := 0 to Pred(Size) do
-    begin
-      if m[I, I] <> 0 then
-        raise EGraphError.Create(SEInputMatrixSelfLoops);
-      for J := 0 to Pred(Size) do
-        if (I <> J) and (m[I, J] < 0) then
-          raise EGraphError.Create(SENegInputMatrix);
-    end;
+    for J := 0 to Pred(Size) do
+      if (I <> J) and (m[I, J] < 0) then
+        raise EGraphError.Create(SENegInputMatrix);
 end;
 
 class function TGWeightedDiGraph.InfWeight: TWeight;

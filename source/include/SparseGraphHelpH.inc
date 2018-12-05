@@ -23,6 +23,7 @@ type
     function  GetLenght: SizeInt; inline;
     procedure SetLength(aValue: SizeInt); inline;
   public
+    class function Construct(aLength: SizeInt; aInitValue: SizeInt = 0): TIntArray; static; inline;
     function Copy: TIntArray; inline;
     property Length: SizeInt read GetLenght write SetLength;
   end;
@@ -67,6 +68,32 @@ type
   TLGCurrencyHelper = type helper(TGCurrencyHelper) for Currency
     const INF_VALUE: Currency    = 922337203685477.5807;
     const NEGINF_VALUE: Currency = -922337203685477.5808;
+  end;
+
+  generic TGSimpleWeight<T> = record
+    Weight: T;
+    constructor Create(aValue: T);
+  end;
+
+  generic TGPoint2D<T> = record
+    X,
+    Y: T;
+    constructor Create(aX, aY: T);
+    function Distance(const aPoint: TGPoint2D): ValReal; inline;
+  end;
+
+  { TGTspHelper }
+  generic TGTspHelper<TWeight> = class
+  public
+  type
+    PWeight = ^TWeight;
+    TMatrix = array of array of TWeight;
+  private
+    class procedure CheckTspMatrix(const m: TMatrix); static;
+    class procedure CheckSymmTspMatrix(const m: TMatrix); static;
+  public
+    class function IsProperTspMatrix(const m: TMatrix): Boolean; static; inline;
+    class function IsProperSymmTspMatrix(const m: TMatrix): Boolean; static; inline;
   end;
 
   TDisjointSetUnion = record
@@ -129,25 +156,25 @@ type
     property  Count: SizeInt read GetCount;
   end;
 
-  TIntOrdPair = packed record
+  TOrdIntPair = packed record
   strict private
     FLess,
     FGreater: SizeInt;
   public
-    class function HashCode(constref aValue: TIntOrdPair): SizeInt; static; inline;
-    class function Equal(constref L, R: TIntOrdPair): Boolean; static; inline;
+    class function HashCode(constref aValue: TOrdIntPair): SizeInt; static; inline;
+    class function Equal(constref L, R: TOrdIntPair): Boolean; static; inline;
     constructor Create(L, R: SizeInt);
-    function Key: TIntOrdPair; inline;
+    function Key: TOrdIntPair; inline;
     property Left: SizeInt read FLess;
     property Right: SizeInt read FGreater;
   end;
 
-  PIntOrdPair = ^TIntOrdPair;
+  POrdIntPair = ^TOrdIntPair;
 
   TIntPairSet = record
   strict private
   type
-    TTable = specialize TGLiteHashTableLP<TIntOrdPair, TIntOrdPair, TIntOrdPair>;
+    TTable = specialize TGLiteHashTableLP<TOrdIntPair, TOrdIntPair, TOrdIntPair>;
   var
     FTable: TTable;
     function GetCount: SizeInt; inline;
@@ -304,11 +331,6 @@ type
     procedure AddAll(constref aList: TGJoinableHashList);
     procedure Remove(aValue: SizeInt); inline;
     property  Count: SizeInt read GetCount;
-  end;
-
-  generic TGSimpleWeight<T> = record
-    Weight: T;
-    constructor Create(aValue: T);
   end;
 
   TSimpleStack = record
@@ -502,6 +524,8 @@ type
       PMinData  = ^TMinData;
       PInt      = PInteger;
       TMinArray = array of TMinData;
+    const
+      ADV_CUTOFF = 4;
 
     var
       FMatrix: TWeightArray;
@@ -520,11 +544,11 @@ type
       FCancelled: Boolean;
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
-      function  Reduce(aSize: Integer; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
-      function  ReduceA(aSize: Integer; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
+      function  Reduce(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
+      function  ReduceA(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
       function  SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): TWeight;
-      procedure Search(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
-      procedure ApproxSearch(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
+      procedure Search(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt);
+      procedure ApproxSearch(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt);
       procedure CopyBest(var aTour: TIntArray; out w: TWeight);
     public
       function  Execute(const m: TWeightMatrix; aTimeOut: Integer; aIsSymm: Boolean; var aTour: TIntArray;

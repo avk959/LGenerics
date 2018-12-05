@@ -418,7 +418,7 @@ type
     property  Density: Double read GetDensity;
   end;
 
-  TLineGraph = class(specialize TGSimpleGraph<TIntOrdPair, TIntValue, TIntOrdPair>);
+  TLineGraph = class(specialize TGSimpleGraph<TOrdIntPair, TIntValue, TOrdIntPair>);
 
   { TGChart: simple outline;
       functor TEqRel must provide:
@@ -2535,13 +2535,13 @@ end;
 function TGSimpleGraph.CreateLineGraph: TLineGraph;
 var
   I, J: SizeInt;
-  vI, vJ: TIntOrdPair;
+  vI, vJ: TOrdIntPair;
   e: TEdge;
 begin
   Result := TLineGraph.Create;
   Result.EnsureCapacity(EdgeCount);
   for e in DistinctEdges do
-    Result.AddVertex(TIntOrdPair.Create(e.Source, e.Destination));
+    Result.AddVertex(TOrdIntPair.Create(e.Source, e.Destination));
   for I := 0 to Result.VertexCount - 2 do
     begin
       vI := Result[I];
@@ -4315,18 +4315,9 @@ begin
     if System.Length(m[I]) <> Size then
       raise EGraphError.Create(SENonSquareInputMatrix);
   for I := 0 to Pred(Size) do
-    begin
-      if m[I, I] <> 0 then
-        raise EGraphError.Create(SEInputMatrixSelfLoops);
-      for J := 0 to Pred(Size) do
-        if I <> J then
-          begin
-            if m[I, J] < 0 then
-              raise EGraphError.Create(SENegInputMatrix);
-            if (I > J) and (m[I, J] <> m[J, I]) then
-              raise EGraphError.Create(SEInputMatrixNonSymm);
-          end;
-    end;
+    for J := 0 to Pred(Size) do
+      if (I <> J) and (m[I, J] < 0) then
+        raise EGraphError.Create(SENegInputMatrix);
 end;
 
 class procedure TGWeightedGraph.Tsp2Opt(const m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);
@@ -4800,18 +4791,9 @@ begin
     if System.Length(m[I]) <> Size then // non square
       exit(False);
   for I := 0 to Pred(Size) do
-    begin
-      if m[I, I] <> 0 then   // self loops
+    for J := 0 to Pred(Size) do
+      if (I <> J) and (m[I, J] < TWeight(0)) then // negative element
         exit(False);
-      for J := 0 to Pred(Size) do
-        if I <> J then
-          begin
-            if m[I, J] < 0 then // negative element
-              exit(False);
-            if (I > J) and (m[I, J] <> m[J, I]) then // non symmetric
-              exit(False);
-          end;
-    end;
   Result := True;
 end;
 

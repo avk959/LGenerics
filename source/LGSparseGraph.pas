@@ -276,6 +276,7 @@ type
     procedure CheckIndexRange(aIndex: SizeInt);
     function  CheckPathExists(aSrc, aDst: SizeInt): Boolean;
     function  CreateBoolMatrix: TBoolMatrix;
+    function  CreateIntArray(aLength, aValue: SizeInt): TIntArray; inline;
     function  CreateIntArray(aValue: SizeInt = -1): TIntArray; inline;
     function  CreateIntArrayRange: TIntArray; inline;
     function  CreateColorArray: TColorArray;
@@ -283,8 +284,6 @@ type
     function  CreateAdjEnumArrayEx: TAdjEnumArrayEx;
     function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
-    class procedure ResizeAndFill(out a: TIntArray; aLen, aValue: SizeInt); static;
-    class function  CreateIntArray(aLen, aValue: SizeInt): TIntArray; static; inline;
   public
   type
     TEdge = record
@@ -1190,9 +1189,14 @@ begin
     end;
 end;
 
+function TGSparseGraph.CreateIntArray(aLength, aValue: SizeInt): TIntArray;
+begin
+  Result := TIntArray.Construct(aLength, aValue);
+end;
+
 function TGSparseGraph.CreateIntArray(aValue: SizeInt): TIntArray;
 begin
-  ResizeAndFill(Result, VertexCount, aValue);
+  Result := TIntArray.Construct(VertexCount, aValue);
 end;
 
 function TGSparseGraph.CreateIntArrayRange: TIntArray;
@@ -1245,23 +1249,6 @@ begin
     Result := TreePathTo(Parents, Nearest)
   else
     Result := [];
-end;
-
-class procedure TGSparseGraph.ResizeAndFill(out a: TIntArray; aLen, aValue: SizeInt);
-begin
-  System.SetLength(a, aLen);
-{$IF DEFINED(CPU64)}
-  System.FillQWord(Pointer(a)^, aLen, QWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  System.FillDWord(Pointer(a)^, aLen, DWord(aValue));
-{$ELSE}
-  System.FillWord(Pointer(a)^, aLen, Word(aValue));
-{$ENDIF}
-end;
-
-class function TGSparseGraph.CreateIntArray(aLen, aValue: SizeInt): TIntArray;
-begin
-  ResizeAndFill(Result{%H-}, aLen, aValue);
 end;
 
 class function TGSparseGraph.cMin(L, R: TCost): TCost;
@@ -2061,9 +2048,119 @@ begin
   System.SetLength(Self, aValue);
 end;
 
+class function TIntArrayHelper.Construct(aLength: SizeInt; aInitValue: SizeInt): TIntArray;
+begin
+  System.SetLength(Result, aLength);
+{$IF DEFINED(CPU64)}
+  System.FillQWord(Pointer(Result)^, aLength, QWord(aInitValue));
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(Pointer(Result)^, aLength, DWord(aInitValue));
+{$ELSE}
+  System.FillWord(Pointer(Result)^, aLength, Word(aInitValue));
+{$ENDIF}
+end;
+
 function TIntArrayHelper.Copy: TIntArray;
 begin
   Result := System.Copy(Self);
+end;
+
+{ TGSimpleWeight }
+
+constructor TGSimpleWeight.Create(aValue: T);
+begin
+  Weight := aValue;
+end;
+
+{ TGPoint2D }
+
+constructor TGPoint2D.Create(aX, aY: T);
+begin
+  X := aX;
+  Y := aY;
+end;
+
+function TGPoint2D.Distance(const aPoint: TGPoint2D): ValReal;
+begin
+  Result := Sqrt((ValReal(aPoint.X) - ValReal(X)) * (ValReal(aPoint.X) - ValReal(X)) +
+                 (ValReal(aPoint.Y) - ValReal(Y)) * (ValReal(aPoint.Y) - ValReal(Y)));
+end;
+
+{ TGTspHelper }
+
+class procedure TGTspHelper.CheckTspMatrix(const m: TMatrix);
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then
+    raise EGraphError.Create(SEInputMatrixTrivial);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then
+      raise EGraphError.Create(SENonSquareInputMatrix);
+  for I := 0 to Pred(Size) do
+    if I <> J then
+      if m[I, J] < TWeight(0) then
+        raise EGraphError.Create(SENegInputMatrix);
+end;
+
+class procedure TGTspHelper.CheckSymmTspMatrix(const m: TMatrix);
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then
+    raise EGraphError.Create(SEInputMatrixTrivial);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then
+      raise EGraphError.Create(SENonSquareInputMatrix);
+  for I := 0 to Pred(Size) do
+    if I > J then
+      begin
+        if m[I, J] <> m[J, I] then
+          raise EGraphError.Create(SEInputMatrixNonSymm);
+        if m[I, J] < TWeight(0) then
+          raise EGraphError.Create(SENegInputMatrix);
+      end;
+end;
+
+class function TGTspHelper.IsProperTspMatrix(const m: TMatrix): Boolean;
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then  // trivial
+    exit(False);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then // non square
+      exit(False);
+  for I := 0 to Pred(Size) do
+    for J := 0 to Pred(Size) do
+      if (I <> J) and (m[I, J] < TWeight(0)) then // negative element
+        exit(False);
+  Result := True;
+end;
+
+class function TGTspHelper.IsProperSymmTspMatrix(const m: TMatrix): Boolean;
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then  // trivial
+    exit(False);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then // non square
+      exit(False);
+  for I := 0 to Pred(Size) do
+    for J := 0 to Pred(Size) do
+      if I > J then
+        begin
+          if m[I, J] <> m[J, I] then   // asymmetric
+            exit(False);
+          if m[I, J] < TWeight(0) then // negative element
+            exit(False);
+        end;
+  Result := True;
 end;
 
 { TDisjointSetUnion }
@@ -2241,9 +2338,9 @@ begin
   Result := FTable.Remove(aValue);
 end;
 
-{ TIntOrdPair }
+{ TOrdIntPair }
 
-class function TIntOrdPair.HashCode(constref aValue: TIntOrdPair): SizeInt;
+class function TOrdIntPair.HashCode(constref aValue: TOrdIntPair): SizeInt;
 begin
 {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}
   {$IF DEFINED (CPU64)}
@@ -2258,12 +2355,12 @@ begin
 {$ENDIF FPC_REQUIRES_PROPER_ALIGNMENT}
 end;
 
-class function TIntOrdPair.Equal(constref L, R: TIntOrdPair): Boolean;
+class function TOrdIntPair.Equal(constref L, R: TOrdIntPair): Boolean;
 begin
   Result := (L.Left = R.Left) and (L.Right = R.Right);
 end;
 
-constructor TIntOrdPair.Create(L, R: SizeInt);
+constructor TOrdIntPair.Create(L, R: SizeInt);
 begin
   if L <= R then
     begin
@@ -2277,7 +2374,7 @@ begin
     end;
 end;
 
-function TIntOrdPair.Key: TIntOrdPair;
+function TOrdIntPair.Key: TOrdIntPair;
 begin
   Result := Self;
 end;
@@ -2298,16 +2395,16 @@ function TIntPairSet.Contains(L, R: SizeInt): Boolean;
 var
   Dummy: SizeInt;
 begin
-  Result := FTable.Find(TIntOrdPair.Create(L, R), Dummy) <> nil;
+  Result := FTable.Find(TOrdIntPair.Create(L, R), Dummy) <> nil;
 end;
 
 function TIntPairSet.Add(L, R: SizeInt): Boolean;
 var
   Dummy: SizeInt;
-  p: PIntOrdPair;
-  v: TIntOrdPair;
+  p: POrdIntPair;
+  v: TOrdIntPair;
 begin
-  v := TIntOrdPair.Create(L, R);
+  v := TOrdIntPair.Create(L, R);
   Result := not FTable.FindOrAdd(v, p, Dummy);
   if Result then
     p^ := v;
@@ -2315,7 +2412,7 @@ end;
 
 function TIntPairSet.Remove(L, R: SizeInt): Boolean;
 begin
-  Result := FTable.Remove(TIntOrdPair.Create(L, R));
+  Result := FTable.Remove(TOrdIntPair.Create(L, R));
 end;
 
 { TIntNode }
@@ -2851,13 +2948,6 @@ end;
 procedure TGJoinableHashList.Remove(aValue: SizeInt);
 begin
   FTable.Remove(aValue);
-end;
-
-{ TGSimpleWeight }
-
-constructor TGSimpleWeight.Create(aValue: T);
-begin
-  Weight := aValue;
 end;
 
 { TSimpleStack }
@@ -3607,7 +3697,8 @@ begin
   Result := FCancelled;
 end;
 
-function TGWeightHelper.TBbTspHelper.Reduce(aSize: Integer; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
+function TGWeightHelper.TBbTspHelper.Reduce(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed,
+  aColRed: PWeight): TWeight;
 var
   I, J, MxSize: Integer;
   MinVal: TWeight;
@@ -3615,7 +3706,8 @@ var
 begin
   m := PWeight(FMatrix);
   MxSize := FMatrixSize;
-  Result := 0;
+  Result := aWeight;
+  //////////////////
   for I := 0 to Pred(aSize) do  // reduce rows
     begin
       MinVal := TWeight.INF_VALUE;
@@ -3633,8 +3725,10 @@ begin
           m[aRows[I] * MxSize + aCols[J]] -= MinVal;
       Result += MinVal;
       aRowRed[I] := MinVal;
+      if Result >= FUpBound then
+        exit;
     end;
-
+  //////////////////
   for J := 0 to Pred(aSize) do  // reduce columns
     begin
       MinVal := TWeight.INF_VALUE;
@@ -3652,19 +3746,21 @@ begin
           m[aRows[I] * MxSize + aCols[J]] -= MinVal;
       Result += MinVal;
       aColRed[J] := MinVal;
+      if Result >= FUpBound then
+        exit;
     end;
 end;
 
-function TGWeightHelper.TBbTspHelper.ReduceA(aSize: Integer; aRows, aCols: PInt; aRowRed,
+function TGWeightHelper.TBbTspHelper.ReduceA(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed,
   aColRed: PWeight): TWeight;
 var
-  I, J, K, MxSize, CellCount: Integer;
+  I, J, K, MxSize, ZeroCount: Integer;
   MinVal, CurrVal: TWeight;
   RowMin, ColMin: PMinData;
   m: PWeight;
 begin
-  Result := Reduce(aSize, aRows, aCols, aRowRed, aColRed);
-  if (aSize < 4) or (Result >= FUpBound) then
+  Result := Reduce(aSize, aWeight, aRows, aCols, aRowRed, aColRed);
+  if (aSize <= ADV_CUTOFF) or (Result >= FUpBound) then
     exit;
   m := PWeight(FMatrix);
   RowMin := PMinData(FRowMin);
@@ -3674,7 +3770,7 @@ begin
     RowMin[I].Clear;
   for J := 0 to Pred(aSize) do
     FZeros[J].ClearBits;
-  ///////////////
+  //////////////////
   for I := 0 to Pred(aSize) do
     for J := 0 to Pred(aSize) do
       begin
@@ -3695,11 +3791,11 @@ begin
               FZeros[J][I] := True;
             end;
       end;
-  ///////////
+  ///////////////
   for J := 0 to Pred(aSize) do
     begin
-      CellCount := FZeros[J].PopCount;
-      if CellCount > 1 then
+      ZeroCount := FZeros[J].PopCount;
+      if ZeroCount > 1 then
         begin
           MinVal := TWeight.INF_VALUE;
           for I in FZeros[J] do
@@ -3718,12 +3814,11 @@ begin
                   m[aRows[I] * MxSize + aCols[K]] -= MinVal;
               aRowRed[I] += MinVal;
             end;
-          Result += MinVal * Pred(CellCount);
+          Result += MinVal * Pred(ZeroCount);
+          if Result >= FUpBound then
+            exit;
         end;
     end;
-  //////////////
-  if Result >= FUpBound then
-    exit;
   //////////////
   ColMin := RowMin;
   for I := 0 to Pred(aSize) do
@@ -3754,8 +3849,8 @@ begin
   /////////////
   for I := 0 to Pred(aSize) do
     begin
-      CellCount := FZeros[I].PopCount;
-      if CellCount > 1 then
+      ZeroCount := FZeros[I].PopCount;
+      if ZeroCount > 1 then
         begin
           MinVal := TWeight.INF_VALUE;
           for J in FZeros[I] do
@@ -3774,7 +3869,9 @@ begin
                   m[aRows[K] * MxSize + aCols[J]] -= MinVal;
               aColRed[J] += MinVal;
             end;
-          Result += MinVal * Pred(CellCount);
+          Result += MinVal * Pred(ZeroCount);
+          if Result >= FUpBound then
+            exit;
         end;
     end;
 end;
@@ -3783,7 +3880,7 @@ function TGWeightHelper.TBbTspHelper.SelectNext(aSize: Integer; aRows, aCols: PI
   aColIdx: Integer): TWeight;
 var
   I, J, MxSize: Integer;
-  MinVal, CurrVal: TWeight;
+  CurrVal: TWeight;
   RowMin, ColMin: PMinData;
   m: PWeight;
 begin
@@ -3841,7 +3938,7 @@ begin
       end;
 end;
 
-procedure TGWeightHelper.TBbTspHelper.Search(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
+procedure TGWeightHelper.TBbTspHelper.Search(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt);
 var
   RowsReduce, ColsReduce: TWeightArray;
   I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
@@ -3855,13 +3952,13 @@ begin
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
   if FAsymmetric then
-    aCurrWeight += ReduceA(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce))
+    aWeight := ReduceA(aSize, aWeight, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce))
   else
-    aCurrWeight += Reduce(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce));
-  if aCurrWeight < FUpBound then
+    aWeight := Reduce(aSize, aWeight, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce));
+  if aWeight < FUpBound then
     if aSize > 2 then
       begin
-        LowBound := aCurrWeight + SelectNext(aSize, aRows, aCols, Row, Col);
+        LowBound := aWeight + SelectNext(aSize, aRows, aCols, Row, Col);
         SaveRow := aRows[Row];
         SaveCol := aCols[Col];
         FirstRow := SaveRow;
@@ -3879,7 +3976,7 @@ begin
         for J := Col to aSize - 2 do // remove Col
           aCols[J] := aCols[Succ(J)];
         ///////////////
-        Search(Pred(aSize), aCurrWeight, aRows, aCols);
+        Search(Pred(aSize), aWeight, aRows, aCols);
         ///////////////  restore values
         for I := aSize - 2 downto  Row do //restore Row
           aRows[Succ(I)] := aRows[I];
@@ -3895,7 +3992,7 @@ begin
           begin
             m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
             //////////
-            Search(aSize, aCurrWeight, aRows, aCols);
+            Search(aSize, aWeight, aRows, aCols);
             //////////
             m[SaveRow * MxSize + SaveCol] := TWeight(0);
           end;
@@ -3903,10 +4000,10 @@ begin
     else
       begin
         FBestTour := System.Copy(FForwardTour);
-        J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
-        FBestTour[aRows[0]] := aCols[1 - J];
-        FBestTour[aRows[1]] := aCols[J];
-        FUpBound := aCurrWeight;
+        Col := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
+        FBestTour[aRows[0]] := aCols[1 - Col];
+        FBestTour[aRows[1]] := aCols[Col];
+        FUpBound := aWeight;
       end;
   for I := 0 to Pred(aSize) do      // restore matrix
      for J := 0 to Pred(aSize) do
@@ -3918,7 +4015,7 @@ begin
        end;
 end;
 
-procedure TGWeightHelper.TBbTspHelper.ApproxSearch(aSize: Integer; aCurrWeight: TWeight; aRows, aCols: PInt);
+procedure TGWeightHelper.TBbTspHelper.ApproxSearch(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt);
 var
   RowsReduce, ColsReduce: TWeightArray;
   I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
@@ -3930,13 +4027,13 @@ begin
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
   if FAsymmetric then
-    aCurrWeight += ReduceA(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce))
+    aWeight := ReduceA(aSize, aWeight, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce))
   else
-    aCurrWeight += Reduce(aSize, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce));
-  if aCurrWeight * Factor < FUpBound then
+    aWeight := Reduce(aSize, aWeight, aRows, aCols, PWeight(RowsReduce), PWeight(ColsReduce));
+  if aWeight * Factor < FUpBound then
     if aSize > 2 then
       begin
-        LowBound := aCurrWeight + SelectNext(aSize, aRows, aCols, Row, Col);
+        LowBound := aWeight + SelectNext(aSize, aRows, aCols, Row, Col);
         SaveRow := aRows[Row];
         SaveCol := aCols[Col];
         FirstRow := SaveRow;
@@ -3954,7 +4051,7 @@ begin
         for J := Col to aSize - 2 do // remove Col
           aCols[J] := aCols[Succ(J)];
         ///////////////
-        ApproxSearch(Pred(aSize), aCurrWeight, aRows, aCols);
+        ApproxSearch(Pred(aSize), aWeight, aRows, aCols);
         ///////////////  restore values
         for I := aSize - 2 downto  Row do //restore Row
           aRows[Succ(I)] := aRows[I];
@@ -3970,7 +4067,7 @@ begin
           begin
             m[SaveRow * MxSize + SaveCol] := TWeight.INF_VALUE;
             //////////
-            ApproxSearch(aSize, aCurrWeight, aRows, aCols);
+            ApproxSearch(aSize, aWeight, aRows, aCols);
             //////////
             m[SaveRow * MxSize + SaveCol] := TWeight(0);
           end;
@@ -3978,10 +4075,10 @@ begin
     else
       begin
         FBestTour := System.Copy(FForwardTour);
-        J := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
-        FBestTour[aRows[0]] := aCols[1 - J];
-        FBestTour[aRows[1]] := aCols[J];
-        FUpBound := aCurrWeight;
+        Col := Ord(m[aRows[0] * MxSize + aCols[0]] < TWeight.INF_VALUE);
+        FBestTour[aRows[0]] := aCols[1 - Col];
+        FBestTour[aRows[1]] := aCols[Col];
+        FUpBound := aWeight;
       end;
   for I := 0 to Pred(aSize) do      // restore matrix
      for J := 0 to Pred(aSize) do

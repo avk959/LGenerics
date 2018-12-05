@@ -1875,13 +1875,13 @@ procedure TGSimpleGraph.TNiMinCut.Shrink;
 var
   I: SizeInt;
   p: TNiAdjList.PEntry;
-  Pair: TIntOrdPair;
+  Pair: TOrdIntPair;
 begin
   ScanFirstSearch;
   for I in FExistNodes do
     for p in FGraph[I] do
       if p^.Scanned and (p^.ScanRank >= FBestCut) then
-        FEdgeQueue.Enqueue(TIntOrdPair.Create(I, p^.Target));
+        FEdgeQueue.Enqueue(TOrdIntPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
     if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
       ShrinkEdge(Pair.Left, Pair.Right);
