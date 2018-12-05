@@ -4006,13 +4006,13 @@ begin
         FUpBound := aWeight;
       end;
   for I := 0 to Pred(aSize) do      // restore matrix
-     for J := 0 to Pred(aSize) do
-       begin
-         Col := aRows[I] * MxSize + aCols[J];
-         SaveElem := m[Col];
-         if SaveElem < TWeight.INF_VALUE then
-           m[Col] := SaveElem + RowsReduce[I] + ColsReduce[J];
-       end;
+    for J := 0 to Pred(aSize) do
+      begin
+        Col := aRows[I] * MxSize + aCols[J];
+        SaveElem := m[Col];
+        if SaveElem < TWeight.INF_VALUE then
+          m[Col] := SaveElem + RowsReduce[I] + ColsReduce[J];
+      end;
 end;
 
 procedure TGWeightHelper.TBbTspHelper.ApproxSearch(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt);
@@ -4081,13 +4081,13 @@ begin
         FUpBound := aWeight;
       end;
   for I := 0 to Pred(aSize) do      // restore matrix
-     for J := 0 to Pred(aSize) do
-       begin
-         Col := aRows[I] * MxSize + aCols[J];
-         SaveElem := m[Col];
-         if SaveElem < TWeight.INF_VALUE then
-           m[Col] := SaveElem + RowsReduce[I] + ColsReduce[J];
-       end;
+    for J := 0 to Pred(aSize) do
+      begin
+        Col := aRows[I] * MxSize + aCols[J];
+        SaveElem := m[Col];
+        if SaveElem < TWeight.INF_VALUE then
+          m[Col] := SaveElem + RowsReduce[I] + ColsReduce[J];
+      end;
 end;
 
 procedure TGWeightHelper.TBbTspHelper.CopyBest(var aTour: TIntArray; out w: TWeight);
