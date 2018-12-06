@@ -4317,7 +4317,7 @@ begin
   for I := 0 to Pred(Size) do
     for J := 0 to Pred(Size) do
       if (I <> J) and (m[I, J] < 0) then
-        raise EGraphError.Create(SENegInputMatrix);
+        raise EGraphError.Create(SEInputMatrixNegElem);
 end;
 
 class procedure TGWeightedGraph.Tsp2Opt(const m: TWeightMatrix; var aPath: TIntArray; var aWeight: TWeight);

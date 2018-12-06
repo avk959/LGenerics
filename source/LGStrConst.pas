@@ -63,8 +63,7 @@ resourcestring
   SEMethodNotApplicable    = 'Method is not applicable';
   SEInputMatrixTrivial     = 'Input matrix is trivial';
   SENonSquareInputMatrix   = 'Input matrix is not square';
-  SEInputMatrixNonSymm     = 'Input matrix is not symmetric';
-  SENegInputMatrix         = 'Input matrix contains negative elements';
+  SEInputMatrixNegElem     = 'Input matrix contains negative element';
 
 implementation
 

@@ -2317,7 +2317,7 @@ begin
   for I := 0 to Pred(Size) do
     for J := 0 to Pred(Size) do
       if (I <> J) and (m[I, J] < 0) then
-        raise EGraphError.Create(SENegInputMatrix);
+        raise EGraphError.Create(SEInputMatrixNegElem);
 end;
 
 class function TGWeightedDiGraph.InfWeight: TWeight;
