@@ -38,6 +38,7 @@ uses
   LGVector,
   LGHashTable,
   LGHash,
+  LGHashSet,
   LGHashMap,
   LGStrConst;
 
@@ -2072,7 +2073,415 @@ begin
   Weight := aValue;
 end;
 
+{ TGTspHelper.TLs3Opt }
+
+procedure TGTspHelper.TLs3Opt.PickSwapKind(var aSwap: TSwap);
+var
+  OldCost, MaxGain: T;
+begin
+  aSwap.Gain := 0;
+  OldCost := Matrix[aSwap.X1, aSwap.X2] + Matrix[aSwap.Y1, aSwap.Y2] + Matrix[aSwap.Z1, aSwap.Z2];
+  MaxGain := OldCost - (Matrix[aSwap.Y1, aSwap.X1] + Matrix[aSwap.Z1, aSwap.X2] + Matrix[aSwap.Z2, aSwap.Y2]);
+  if MaxGain > aSwap.Gain then
+    begin
+     aSwap.Gain := MaxGain;
+     aSwap.SwapKind := skAsymm;
+    end;
+  MaxGain := OldCost - (Matrix[aSwap.X1, aSwap.Y2] + Matrix[aSwap.Z1, aSwap.X2] + Matrix[aSwap.Y1, aSwap.Z2]);
+  if MaxGain > aSwap.Gain then
+    begin
+      aSwap.Gain := MaxGain;
+      aSwap.SwapKind := skSymm;
+    end;
+end;
+
+procedure TGTspHelper.TLs3Opt.Reverse(aFirst, aLast: SizeInt);
+var
+  Head, Next: SizeInt;
+begin
+  if aFirst <> aLast then
+    begin
+      Next := CurrTour[aFirst];
+      repeat
+        Head := CurrTour[Next];
+        CurrTour[Next] := aFirst;
+        aFirst := Next;
+        Next := Head;
+      until aFirst = aLast;
+    end;
+end;
+
+procedure TGTspHelper.TLs3Opt.Execute(var aCost: T);
+var
+  Best, Curr: TSwap;
+  Len, I, J, K: SizeInt;
+begin
+  Len := CurrTour.Length;
+  repeat
+    Best.Gain := 0;
+    Curr.X1 := 0;
+    for I := 0 to Pred(Len) do
+      begin
+        Curr.X2 := CurrTour[Curr.X1];
+        Curr.Y1 := Curr.X2;
+        for J := 1 to Len - 4 do
+          begin
+            Curr.Y2 := CurrTour[Curr.Y1];
+            Curr.Z1 := CurrTour[Curr.Y2];
+            for K := J + 2 to Len - 2 do
+              begin
+                Curr.Z2 := CurrTour[Curr.Z1];
+                PickSwapKind(Curr);
+                if Curr.Gain > Best.Gain then
+                  Best := Curr;
+                Curr.Z1 := Curr.Z2;
+              end;
+            Curr.Y1 := Curr.Y2;
+          end;
+        Curr.X1 := Curr.X2;
+      end;
+    if Best.Gain > 0 then
+      begin
+        if Best.SwapKind = skAsymm then
+          begin
+            Reverse(Best.Z2, Best.X1);
+            CurrTour[Best.Y1] := Best.X1;
+            CurrTour[Best.Z2] := Best.Y2
+          end
+        else
+          begin
+            CurrTour[Best.X1] := Best.Y2;
+            CurrTour[Best.Y1] := Best.Z2;
+          end;
+        CurrTour[Best.Z1] := Best.X2;
+        aCost -= Best.Gain;
+      end;
+  until Best.Gain = 0;
+end;
+
+procedure TGTspHelper.TLs3Opt.OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+var
+  Best, Curr: TSwap;
+  I, J, Len: SizeInt;
+begin
+  Len := System.Length(m);
+  Matrix := m;
+  CurrTour.Length := Len;
+  for I := 0 to Pred(Len) do
+    CurrTour[aTour[I]] := aTour[Succ(I)];
+  Execute(aCost);
+  J := 0;
+  for I := 0 to Pred(Len) do
+    begin
+      aTour[I] := J;
+      J := CurrTour[J];
+    end;
+  aTour[Len] := J;
+end;
+
+procedure TGTspHelper.TLs3Opt.OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+begin
+  CurrTour := aTour.Copy;
+  Matrix := m;
+  Execute(aCost);
+  aTour := CurrTour;
+end;
+
+{ TGTspHelper }
+
+class function TGTspHelper.CheckMatrixProper(const m: TTspMatrix): Boolean;
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then
+    raise EGraphError.Create(SEInputMatrixTrivial);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then
+      raise EGraphError.Create(SENonSquareInputMatrix);
+  Result := True;
+  for I := 0 to Pred(Size) do
+    for J := 0 to Pred(Size) do
+      if I <> J then
+        begin
+          if m[I, J] < T(0) then
+            raise EGraphError.Create(SEInputMatrixNegElem);
+          if I > J then
+            Result := Result and (m[I, J] = m[J, I]);
+        end;
+end;
+
+class procedure TGTspHelper.NormalizeTour(aSrc: SizeInt; var aTour: TIntArray);
+var
+  I: SizeInt = 0;
+begin
+  while aTour[I] <> aSrc do
+    Inc(I);
+  TIntHelper.RotateLeft(aTour[0..Pred(System.High(aTour))], I);
+  aTour[System.High(aTour)] := aTour[0];
+end;
+
+class procedure TGTspHelper.Ls2Opt(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+var
+  I, J, L, R, Len: SizeInt;
+  Cost, Gain, MaxGain: T;
+begin
+  Len := System.High(aTour);
+  repeat
+    MaxGain := T(0);
+    L := NULL_INDEX;
+    R := NULL_INDEX;
+    for I := 0 to Len - 3 do
+      begin
+        Cost := m[aTour[I], aTour[Succ(I)]];
+        for J := I + 2 to Pred(Len) do
+          begin
+            Gain := Cost + m[aTour[J], aTour[J+1]] - m[aTour[I], aTour[J]] - m[aTour[I+1], aTour[J+1]];
+            if Gain > MaxGain then
+              begin
+                MaxGain := Gain;
+                L := I;
+                R := J;
+              end;
+          end;
+      end;
+    if MaxGain > T(0) then
+      TIntHelper.Reverse(aTour[L+1..R]);
+  until MaxGain <= T(0);
+  aCost := GetTotalCost(m, aTour);
+end;
+
+class procedure TGTspHelper.Ls3OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+var
+  Opt: TLs3Opt;
+begin
+  Opt.OptPath(m, aTour, aCost);
+end;
+
+class procedure TGTspHelper.Ls3OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+var
+  Opt: TLs3Opt;
+begin
+  Opt.OptTree(m, aTour, aCost);
+end;
+
+class function TGTspHelper.GreedyFInsTsp(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray;
+var
+  Tour: TIntArray;
+  CurrRow: TArray;
+  Unvisit: TBoolVector;
+  Len, I, J, K, Source, Target, Curr, Next, Farthest: SizeInt;
+  InsCost, MaxCost, Cost, TotalCost: T;
+begin
+  Result := nil;
+  Len := System.Length(m);
+  aCost := T.INF_VALUE;
+  Tour.Length := Len;
+  Result.Length := Succ(Len);
+  for K := 0 to Pred(Len) do
+    begin
+      Unvisit.InitRange(Len);
+      Tour[K] := K;
+      Unvisit[K] := False;
+      CurrRow := System.Copy(m[K]);
+      TotalCost := 0;
+      MaxCost := T.NEGINF_VALUE;
+      for J in Unvisit do
+        if CurrRow[J] > MaxCost then
+          begin
+            MaxCost := CurrRow[J];
+            Farthest := J;
+          end;
+      for I := 2 to Len do
+        begin
+          InsCost := T.INF_VALUE;
+          Curr := K;
+          for J := 0 to I do
+            begin
+              Next := Tour[Curr];
+              Cost := m[Curr, Farthest] + m[Farthest, Next] - m[Curr, Next];
+              if Cost < InsCost then
+                begin
+                  InsCost := Cost;
+                  Source := Curr;
+                  Target := Next;
+                end;
+              Curr := Next;
+            end;
+          Tour[Farthest] := Target;
+          Tour[Source] := Farthest;
+          TotalCost += InsCost;
+          Unvisit[Farthest] := False;
+          MaxCost := T.NEGINF_VALUE;
+          for J in Unvisit do
+            begin
+              Cost := m[Farthest, J];
+              if Cost < CurrRow[J] then
+                CurrRow[J] := Cost;
+              if CurrRow[J] > MaxCost then
+                begin
+                  MaxCost := CurrRow[J];
+                  Next := J;
+                end;
+            end;
+          Farthest := Next;
+        end;
+      if aOnReady <> nil then
+        aOnReady(m, Tour, TotalCost);
+      if TotalCost < aCost then
+        begin
+          aCost := TotalCost;
+          J := 0;
+          for I := 0 to Pred(Len) do
+            begin
+              Result[I] := J;
+              J := Tour[J];
+            end;
+          Result[Len] := J;
+        end;
+    end;
+end;
+
+class function TGTspHelper.GreedyNearNeighb(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray;
+var
+  Tour: TIntArray;
+  Unvisit: TBoolVector;
+  I, J, K, Curr, Next, Len: SizeInt;
+  MinCost, CurrCost, TotalCost: T;
+begin
+  Len := System.Length(m);
+  Result := nil;
+  aCost := T.INF_VALUE;
+  {%H-}Tour.Length := Succ(Len);
+  for K := 0 to Pred(Len) do
+    begin
+      Unvisit.InitRange(Len);
+      Tour[0] := K;
+      Unvisit[K] := False;
+      Curr := K;
+      I := 1;
+      while Unvisit.NonEmpty do
+        begin
+          MinCost := T.INF_VALUE;
+          for J in Unvisit do
+            begin
+              CurrCost := m[Curr, J];
+              if CurrCost < MinCost then
+                begin
+                  MinCost := CurrCost;
+                  Next := J;
+                end;
+            end;
+          Curr := Next;
+          Tour[I] := Next;
+          Unvisit[Next] := False;
+          Inc(I);
+        end;
+      Tour[I] := K;
+      TotalCost := GetTotalCost(m, Tour);
+      if aOnReady <> nil then
+        aOnReady(m, Tour, TotalCost);
+      if TotalCost < aCost then
+        begin
+          aCost := TotalCost;
+          Result := System.Copy(Tour);
+        end;
+    end;
+end;
+
+class function TGTspHelper.GetMatrixState(const m: TTspMatrix; out aIsSymm: Boolean): TTspMatrixState;
+var
+  I, J, Size: SizeInt;
+begin
+  Size := System.Length(m);
+  if Size < 2 then  // trivial
+    exit(tmsTrivial);
+  for I := 0 to Pred(Size) do
+    if System.Length(m[I]) <> Size then // non square
+      exit(tmsNonSquare);
+  aIsSymm := True;
+  for I := 0 to Pred(Size) do
+    for J := 0 to Pred(Size) do
+      if I <> J then
+        begin
+          if m[I, J] < T(0) then // negative element
+            exit(tmsNegElement);
+          if I > J then
+            aIsSymm := aIsSymm and (m[I, J] = m[J, I]);
+        end;
+  Result := tmsProper;
+end;
+
+class function TGTspHelper.GetTotalCost(const m: TTspMatrix; const aTour: TIntArray): T;
+var
+  I: SizeInt;
+begin
+  Result := T(0);
+  for I := 0 to Pred(System.High(aTour)) do
+    Result += m[aTour[I], aTour[Succ(I)]];
+end;
+
+class function TGTspHelper.FindGreedyFast(const m: TTspMatrix; out aCost: T): TIntArray;
+var
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  Result := GreedyFInsTsp(m, nil, aCost);
+  if Symm then
+    Ls2Opt(m, Result, aCost);
+end;
+
+class function TGTspHelper.FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray;
+var
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  if Symm then
+    begin
+      Result := GreedyNearNeighb(m, @Ls2Opt, aCost);
+      NormalizeTour(0, Result);
+      Ls3OptPath(m, Result, aCost);
+    end
+  else
+    Result := GreedyFInsTsp(m, nil, aCost);
+end;
+
+class function TGTspHelper.FindGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray;
+var
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  if Symm then
+    begin
+      Result := GreedyFInsTsp(m, nil, aCost);
+      Ls3OptPath(m, Result, aCost);
+    end
+  else
+    Result := GreedyFInsTsp(m, nil, aCost);
+end;
+
+class function TGTspHelper.FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray;
+var
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  if Symm then
+    Result := GreedyFInsTsp(m, @Ls3OptTree, aCost)
+  else
+    Result := GreedyFInsTsp(m, nil, aCost);
+end;
+
 { TGPoint2D }
+
+class function TGPoint2D.Equal(constref L, R: TGPoint2D): Boolean;
+begin
+  Result := (L.X = R.X) and (L.Y = R.Y);
+end;
+
+class function TGPoint2D.HashCode(constref aPoint: TGPoint2D): SizeInt;
+begin
+  Result := TxxHash32LE.HashBuf(@aPoint, SizeOf(aPoint));
+end;
 
 constructor TGPoint2D.Create(aX, aY: T);
 begin
@@ -2080,87 +2489,36 @@ begin
   Y := aY;
 end;
 
-function TGPoint2D.Distance(const aPoint: TGPoint2D): ValReal;
+function TGPoint2D.Distance(constref aPoint: TGPoint2D): ValReal;
 begin
   Result := Sqrt((ValReal(aPoint.X) - ValReal(X)) * (ValReal(aPoint.X) - ValReal(X)) +
                  (ValReal(aPoint.Y) - ValReal(Y)) * (ValReal(aPoint.Y) - ValReal(Y)));
 end;
 
-{ TGTspHelper }
+{ TGPoint3D }
 
-class procedure TGTspHelper.CheckTspMatrix(const m: TMatrix);
-var
-  I, J, Size: SizeInt;
+class function TGPoint3D.Equal(constref L, R: TGPoint3D): Boolean;
 begin
-  Size := System.Length(m);
-  if Size < 2 then
-    raise EGraphError.Create(SEInputMatrixTrivial);
-  for I := 0 to Pred(Size) do
-    if System.Length(m[I]) <> Size then
-      raise EGraphError.Create(SENonSquareInputMatrix);
-  for I := 0 to Pred(Size) do
-    if I <> J then
-      if m[I, J] < TWeight(0) then
-        raise EGraphError.Create(SENegInputMatrix);
+  Result := (L.X = R.X) and (L.Y = R.Y) and (L.Z = R.Z);
 end;
 
-class procedure TGTspHelper.CheckSymmTspMatrix(const m: TMatrix);
-var
-  I, J, Size: SizeInt;
+class function TGPoint3D.HashCode(constref aPoint: TGPoint3D): SizeInt;
 begin
-  Size := System.Length(m);
-  if Size < 2 then
-    raise EGraphError.Create(SEInputMatrixTrivial);
-  for I := 0 to Pred(Size) do
-    if System.Length(m[I]) <> Size then
-      raise EGraphError.Create(SENonSquareInputMatrix);
-  for I := 0 to Pred(Size) do
-    if I > J then
-      begin
-        if m[I, J] <> m[J, I] then
-          raise EGraphError.Create(SEInputMatrixNonSymm);
-        if m[I, J] < TWeight(0) then
-          raise EGraphError.Create(SENegInputMatrix);
-      end;
+  Result := TxxHash32LE.HashBuf(@aPoint, SizeOf(aPoint));
 end;
 
-class function TGTspHelper.IsProperTspMatrix(const m: TMatrix): Boolean;
-var
-  I, J, Size: SizeInt;
+constructor TGPoint3D.Create(aX, aY, aZ: T);
 begin
-  Size := System.Length(m);
-  if Size < 2 then  // trivial
-    exit(False);
-  for I := 0 to Pred(Size) do
-    if System.Length(m[I]) <> Size then // non square
-      exit(False);
-  for I := 0 to Pred(Size) do
-    for J := 0 to Pred(Size) do
-      if (I <> J) and (m[I, J] < TWeight(0)) then // negative element
-        exit(False);
-  Result := True;
+  X := aX;
+  Y := aY;
+  Z := aZ;
 end;
 
-class function TGTspHelper.IsProperSymmTspMatrix(const m: TMatrix): Boolean;
-var
-  I, J, Size: SizeInt;
+function TGPoint3D.Distance(constref aPoint: TGPoint3D): ValReal;
 begin
-  Size := System.Length(m);
-  if Size < 2 then  // trivial
-    exit(False);
-  for I := 0 to Pred(Size) do
-    if System.Length(m[I]) <> Size then // non square
-      exit(False);
-  for I := 0 to Pred(Size) do
-    for J := 0 to Pred(Size) do
-      if I > J then
-        begin
-          if m[I, J] <> m[J, I] then   // asymmetric
-            exit(False);
-          if m[I, J] < TWeight(0) then // negative element
-            exit(False);
-        end;
-  Result := True;
+  Result := Sqrt((ValReal(aPoint.X) - ValReal(X)) * (ValReal(aPoint.X) - ValReal(X)) +
+                 (ValReal(aPoint.Y) - ValReal(Y)) * (ValReal(aPoint.Y) - ValReal(Y)) +
+                 (ValReal(aPoint.Z) - ValReal(Z)) * (ValReal(aPoint.Z) - ValReal(Z)));
 end;
 
 { TDisjointSetUnion }

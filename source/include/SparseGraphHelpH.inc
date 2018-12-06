@@ -75,25 +75,111 @@ type
     constructor Create(aValue: T);
   end;
 
-  generic TGPoint2D<T> = record
-    X,
-    Y: T;
-    constructor Create(aX, aY: T);
-    function Distance(const aPoint: TGPoint2D): ValReal; inline;
-  end;
+  TTspMatrixState = (tmsProper, tmsTrivial, tmsNonSquare, tmsNegElement);
 
   { TGTspHelper }
-  generic TGTspHelper<TWeight> = class
+  generic TGTspHelper<T> = class
   public
   type
-    PWeight = ^TWeight;
-    TMatrix = array of array of TWeight;
-  private
-    class procedure CheckTspMatrix(const m: TMatrix); static;
-    class procedure CheckSymmTspMatrix(const m: TMatrix); static;
+    PItem      = ^T;
+    TArray     = array of T;
+    TTspMatrix = array of array of T;
+  protected
+  type
+    TOnTourReady = procedure(const m: TTspMatrix; var aTour: TArray; var aCost: T);
+
+  { TLs3Opt: 3-opt local search algorithm for the traveling salesman problem;
+    Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"; }
+    TLs3Opt = record
+    strict private
+    type
+      TSwapKind = (skSymm, skAsymm);
+
+      TSwap  = record
+        X1, X2, Y1, Y2, Z1, Z2: SizeInt;
+        Gain: T;
+        SwapKind: TSwapKind;
+      end;
+
+    var
+      Matrix: TTspMatrix;
+      CurrTour: TIntArray;
+      procedure PickSwapKind(var aSwap: TSwap);
+      procedure Reverse(aFirst, aLast: SizeInt);
+      procedure Execute(var aCost: T);
+    public
+      procedure OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+      procedure OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+    end;
+
+  { returns True if matrix m is symmetric;
+    raises exception if m is not proper matrix }
+    class function  CheckMatrixProper(const m: TTspMatrix): Boolean; static;
+  { cyclic shifts aTour so that element aSrc becomes the first;
+    does not checks if aSrc exists in aTour }
+    class procedure NormalizeTour(aSrc: SizeInt; var aTour: TIntArray); static;
+  { 2-opt local search; does not checks not matrix nor path }
+    class procedure Ls2Opt(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
+  { 3-opt local search; does not checks not matrix nor path }
+    class procedure Ls3OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
+  { 3-opt local search; does not checks not matrix nor path }
+    class procedure Ls3OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
+  { best of farthest insertion starting from every vertex; does not checks matrix;
+    Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"  }
+    class function GreedyFInsTsp(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray; static;
+  { best of nearest neighbour, starting from every vertex; does not checks matrix }
+    class function GreedyNearNeighb(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray; static;
   public
-    class function IsProperTspMatrix(const m: TMatrix): Boolean; static; inline;
-    class function IsProperSymmTspMatrix(const m: TMatrix): Boolean; static; inline;
+    class function GetMatrixState(const m: TTspMatrix; out aIsSymm: Boolean): TTspMatrixState; static;
+  { returns total cost of TS tour specified by aTour }
+    class function GetTotalCost(const m: TTspMatrix; const aTour: TIntArray): T; static;
+  { best of farthest insertion starting from every vertex;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindGreedyFast(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { best of nearest neighbour + 2-opt local search starting from every vertex +
+    3-opt local search at the end; applicable only for symmetric matrices;
+    returns best of farthest insertion starting from every vertex, if matrix is asymmetric;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { best of farthest insertion starting from every vertex + 3-opt local search at the end;
+    applicable only for symmetric matrices;
+    returns best of farthest insertion starting from every vertex, if matrix is asymmetric;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { best of farthest insertion + 3-opt local search, starting from every vertex;
+    applicable only for symmetric matrices;
+    returns best of farthest insertion starting from every vertex, if matrix is asymmetric;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  end;
+
+  generic TGPoint2D<T> = record
+    X, Y: T;
+    constructor Create(aX, aY: T);
+    class function Equal(constref L, R: TGPoint2D): Boolean; static; inline;
+    class function HashCode(constref aPoint: TGPoint2D): SizeInt; static; inline;
+    function Distance(constref aPoint: TGPoint2D): ValReal; inline;
+  end;
+
+  generic TGPoint3D<T> = record
+    X, Y, Z: T;
+    class function Equal(constref L, R: TGPoint3D): Boolean; static; inline;
+    class function HashCode(constref aPoint: TGPoint3D): SizeInt; static; inline;
+    constructor Create(aX, aY, aZ: T);
+    function Distance(constref aPoint: TGPoint3D): ValReal; inline;
+  end;
+
+  generic TGEuclidTspHelper<TGPoint> = class
+  public
+  type
+    TPointArray = array of TGPoint;
+  private
+  type
+    THelper  = specialize TGTspHelper<ValReal>;
+    THashSet = specialize TGLiteHashSetLP<TGPoint, TGPoint>;
+
+  public
+
   end;
 
   TDisjointSetUnion = record
