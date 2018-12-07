@@ -671,55 +671,6 @@ type
       procedure Sssp(aSrc: SizeInt);
     end;
 
-    { TBbTspHelper: branch and bound TSP algorithm;
-      Little, Murty, Sweeney, and Karel "An Algorithm for Traveling Salesman Problem";
-      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
-      advanced matrix reduction:
-      Костюк Ю.Л. "Эффективная реализация алгоритма решения задачи коммивояжёра методом ветвей и границ" }
-    TBbTspHelper = record
-    strict private
-    type
-      TMinData = record
-        Value: TWeight;
-        ZeroFlag: Boolean;
-        procedure Clear; inline;
-      end;
-      PMinData  = ^TMinData;
-      PInt      = PInteger;
-      TMinArray = array of TMinData;
-    const
-      ADV_CUTOFF = 4;
-
-    var
-      FMatrix: TWeightArray;
-      FZeros: TGraph.TBoolMatrix;
-      FForwardTour,
-      FBackTour,
-      FBestTour: array of Integer;
-      FRowMin,
-      FColMin: TMinArray;
-      FMatrixSize,
-      FTimeOut: Integer;
-      FUpBound: TWeight;
-      FStartTime: TDateTime;
-      Factor: Double;
-      FAsymmetric,
-      FCancelled: Boolean;
-      procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
-      function  TimeOut: Boolean; inline;
-      function  Reduce(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
-      function  Reduce2(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
-      function  ReduceA(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
-      function  SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): TWeight;
-      procedure Search(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt);
-      procedure ApproxSearch(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt);
-      procedure CopyBest(var aTour: TIntArray; out w: TWeight);
-    public
-      function  Execute(const m: TWeightMatrix; aTimeOut: Integer; aIsSymm: Boolean; var aTour: TIntArray;
-                out w: TWeight): Boolean;
-      function  ExecuteApprox(const m: TWeightMatrix; aEps: Double; aIsSymm: Boolean;var aTour: TIntArray): TWeight;
-    end;
-
   { returns True if aMatch is maximal matching }
     class function  IsMaxMatching(g: TGraph; const aMatch: TEdgeArray): Boolean; static;
   { returns True if aMatch is perfect matching }
@@ -777,16 +728,6 @@ type
   { returns bipartite matching of maximum cardinality and maximum weight;
     warning: does not checks if aGraph is bipartite }
     class function  MaxWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
-  { returns total weight of TS tour specified of aTour;
-    warning: does not checks not matrix nor tour }
-    class function  TotalTourWeight(const m: TWeightMatrix; const aTour: TIntArray): TWeight; static;
-  { cyclic shifts path aTour so that element aSrc becomes the first;
-    warning: does not checks if aSrc exist in aTour }
-    class procedure NormalizeTour(var aTour: TIntArray; aSrc: SizeInt); static;
-  { greedy TSP, best of farthest insertion starting from every vertex;
-    Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
-    warning: does not checks matrix }
-    class function  GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
   end;
 
   { TGAbstractDotWriter: abstract writer into Graphviz dot format }
