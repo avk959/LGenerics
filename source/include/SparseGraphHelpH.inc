@@ -77,7 +77,7 @@ type
 
   TTspMatrixState = (tmsProper, tmsTrivial, tmsNonSquare, tmsNegElement);
 
-  { TGTspHelper }
+  { TGTspHelper: some algorithms for TSP }
   generic TGTspHelper<T> = class
   public
   type
@@ -87,6 +87,65 @@ type
   protected
   type
     TOnTourReady = procedure(const m: TTspMatrix; var aTour: TArray; var aCost: T);
+
+    { TBbTsp: branch and bound TSP algorithm;
+      Little, Murty, Sweeney, and Karel "An Algorithm for Traveling Salesman Problem";
+      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
+      advanced matrix reduction:
+      Костюк Ю.Л. "Эффективная реализация алгоритма решения задачи коммивояжёра методом ветвей и границ" }
+    TBbTsp = object
+    protected
+    type
+      TMinData = record
+        Value: T;
+        ZeroFlag: Boolean;
+        procedure Clear; inline;
+      end;
+
+      PMinData    = ^TMinData;
+      PInt        = PInteger;
+      TMinArray   = array of TMinData;
+      TArray      = array of T;
+      TBoolMatrix = array of TBoolVector;
+
+    const
+      ADV_CUTOFF = 4;
+
+    var
+      FMatrix: TArray;
+      FZeros: TBoolMatrix;
+      FForwardTour,
+      FBackTour,
+      FBestTour: array of Integer;
+      FRowMin,
+      FColMin: TMinArray;
+      FMatrixSize,
+      FTimeOut: Integer;
+      FUpBound: T;
+      FStartTime: TDateTime;
+      FCancelled: Boolean;
+      procedure Init(const m: TTspMatrix; const aTour: TIntArray; aTimeOut: Integer);
+      function  TimeOut: Boolean; inline;
+      function  Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+      function  ReduceA(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+      function  SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): T;
+      procedure Search(aSize: Integer; aCost: T; aRows, aCols: PInt);
+      procedure CopyBest(var aTour: TIntArray; out aCost: T);
+    public
+      function  Execute(const m: TTspMatrix; aTimeOut: Integer; var aTour: TIntArray; out aCost: T): Boolean;
+    end;
+
+    { TApproxBbTsp }
+    TApproxBbTsp = object(TBbTsp)
+    protected
+      Factor: Double;
+      function  Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+      function  ReduceA(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+      procedure Search(aSize: Integer; aCost: T; aRows, aCols: PInt);
+    public
+      function  Execute(const m: TTspMatrix; aEps: Double; aTimeOut: Integer; var aTour: TIntArray;
+                out aCost: T): Boolean;
+    end;
 
   { TLs3Opt: 3-opt local search algorithm for the traveling salesman problem;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"; }
@@ -112,6 +171,7 @@ type
       procedure OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
     end;
 
+    class function  vMin(L, R: T): T; static; inline;
   { returns True if matrix m is symmetric;
     raises exception if m is not proper matrix }
     class function  CheckMatrixProper(const m: TTspMatrix): Boolean; static;
@@ -131,26 +191,43 @@ type
     class function GreedyNearNeighb(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray; static;
   public
     class function GetMatrixState(const m: TTspMatrix; out aIsSymm: Boolean): TTspMatrixState; static;
-  { returns total cost of TS tour specified by aTour }
+  { returns total cost of TS tour specified by aTour;
+    warning: does not checks not matrix not tour }
     class function GetTotalCost(const m: TTspMatrix; const aTour: TIntArray): T; static;
   { best of farthest insertion starting from every vertex;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindGreedyFast(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { best of nearest neighbour starting from every vertex;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindGreedyFastNn(const m: TTspMatrix; out aCost: T): TIntArray; static;
   { best of nearest neighbour + 2-opt local search starting from every vertex +
     3-opt local search at the end; applicable only for symmetric matrices;
-    returns best of farthest insertion starting from every vertex, if matrix is asymmetric;
+    returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
   { best of farthest insertion starting from every vertex + 3-opt local search at the end;
     applicable only for symmetric matrices;
-    returns best of farthest insertion starting from every vertex, if matrix is asymmetric;
+    returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
   { best of farthest insertion + 3-opt local search, starting from every vertex;
     applicable only for symmetric matrices;
-    returns best of farthest insertion starting from every vertex, if matrix is asymmetric;
+    returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { exact branch and bound algorithm for TSP;
+    aTimeOut specifies the timeout in seconds; at the end of the timeout,
+    will be returned False and the best recent solution;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+  { suboptimal branch and bound algorithm for TSP;
+    aTimeOut specifies the timeout in seconds; at the end of the timeout,
+    will be returned False and the best recent solution, otherwise
+    returns solution of a given guaranteed accuracy, specified with param Accuracy;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindApprox(const m: TTspMatrix; Accuracy: Double; out aTour: TIntArray; out aCost: T;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
   end;
 
   generic TGPoint2D<T> = record
@@ -631,6 +708,7 @@ type
       procedure Init(const m: TWeightMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
       function  Reduce(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
+      function  Reduce2(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
       function  ReduceA(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed, aColRed: PWeight): TWeight;
       function  SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): TWeight;
       procedure Search(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt);

@@ -2073,6 +2073,683 @@ begin
   Weight := aValue;
 end;
 
+{ TGTspHelper.TBbTsp.TMinData }
+
+procedure TGTspHelper.TBbTsp.TMinData.Clear;
+begin
+  Value := T.INF_VALUE;
+  ZeroFlag := False;
+end;
+
+{ TGTspHelper.TBbTsp }
+
+procedure TGTspHelper.TBbTsp.Init(const m: TTspMatrix; const aTour: TIntArray; aTimeOut: Integer);
+var
+  I, J: Integer;
+begin
+  FMatrixSize := System.Length(m);
+  System.SetLength(FMatrix, FMatrixSize * FMatrixSize);
+  for I := 0 to Pred(FMatrixSize) do
+    for J := 0 to Pred(FMatrixSize) do
+      FMatrix[I * FMatrixSize + J] := m[I, J];
+  for I := 0 to Pred(FMatrixSize) do
+    FMatrix[I * FMatrixSize + I] := T.INF_VALUE;
+  if aTour.Length = Succ(FMatrixSize) then
+    begin
+      System.SetLength(FBestTour, FMatrixSize);
+      FUpBound := 0;
+      for I := 0 to Pred(FMatrixSize) do
+        begin
+          FBestTour[aTour[I]] := aTour[Succ(I)];
+          FUpBound += m[aTour[I], aTour[Succ(I)]];
+        end;
+    end
+  else
+    begin
+      FBestTour := nil;
+      FUpBound := T.INF_VALUE;
+    end;
+  FTimeOut := aTimeOut and System.High(Integer);
+  System.SetLength(FForwardTour, FMatrixSize);
+  System.FillChar(Pointer(FForwardTour)^, FMatrixSize * SizeOf(Integer), $ff);
+  FBackTour := System.Copy(FForwardTour);
+  System.SetLength(FRowMin, FMatrixSize);
+  System.SetLength(FColMin, FMatrixSize);
+  System.SetLength(FZeros, FMatrixSize);
+  for I := 0 to Pred(FMatrixSize) do
+    FZeros[I].Size := FMatrixSize;
+  FStartTime := Now;
+  FCancelled := False;
+end;
+
+function TGTspHelper.TBbTsp.TimeOut: Boolean;
+begin
+  FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
+  Result := FCancelled;
+end;
+
+function TGTspHelper.TBbTsp.Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+var
+  I, J, Curr, MxSize: Integer;
+  MinVal, CurrVal: T;
+  m: PItem;
+begin
+  m := PItem(FMatrix);
+  MxSize := FMatrixSize;
+  Result := aCost;
+  for I := 0 to Pred(aSize) do
+    begin
+      aRowRed[I] := T(0);
+      aColRed[I] := T(0);
+    end;
+  //////////////////
+  for I := 0 to Pred(aSize) do  // reduce rows
+    begin
+      MinVal := T.INF_VALUE;
+      for J := 0 to Pred(aSize) do
+        begin
+          MinVal := vMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+          if MinVal <= T(0) then
+            break;
+        end;
+      if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+        continue;
+      for J := 0 to Pred(aSize) do
+        if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
+          m[aRows[I] * MxSize + aCols[J]] -= MinVal;
+      Result += MinVal;
+      aRowRed[I] := MinVal;
+      if Result >= FUpBound then
+        exit;
+    end;
+  //////////////////
+  for J := 0 to Pred(aSize) do  // reduce columns
+    begin
+      MinVal := T.INF_VALUE;
+      for I := 0 to Pred(aSize) do
+        begin
+          MinVal := vMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+          if MinVal <= T(0) then
+            break;
+        end;
+      if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+        continue;
+      for I := 0 to Pred(aSize) do
+        if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
+          m[aRows[I] * MxSize + aCols[J]] -= MinVal;
+      Result += MinVal;
+      aColRed[J] := MinVal;
+      if Result >= FUpBound then
+        exit;
+    end;
+end;
+
+function TGTspHelper.TBbTsp.ReduceA(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+var
+  I, J, K, MxSize, ZeroCount: Integer;
+  MinVal, CurrVal: T;
+  RowMin, ColMin: PMinData;
+  m: PItem;
+begin
+  Result := Reduce(aSize, aCost, aRows, aCols, aRowRed, aColRed);
+  if (aSize <= ADV_CUTOFF) or (Result >= FUpBound) then
+    exit;
+  m := PItem(FMatrix);
+  RowMin := PMinData(FRowMin);
+  ColMin := PMinData(FColMin);
+  MxSize := FMatrixSize;
+  //////////////////
+  for I := 0 to Pred(aSize) do
+    begin
+      RowMin[I].Clear;
+      ColMin[I].Clear;
+      FZeros[I].ClearBits;
+    end;
+  //////////////////
+  for I := 0 to Pred(aSize) do
+    for J := 0 to Pred(aSize) do
+      begin
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
+        if CurrVal > T(0) then
+          if CurrVal < RowMin[I].Value then
+            RowMin[I].Value := CurrVal else
+        else
+          if RowMin[I].ZeroFlag then
+            begin
+              RowMin[I].Value := T(0);
+              FZeros[J][I] := False;
+              break;
+            end
+          else
+            begin
+              RowMin[I].ZeroFlag := True;
+              FZeros[J][I] := True;
+            end;
+      end;
+  ///////////////
+  for J := 0 to Pred(aSize) do
+    begin
+      ZeroCount := FZeros[J].PopCount;
+      if ZeroCount > 1 then
+        begin
+          MinVal := T.INF_VALUE;
+          for I in FZeros[J] do
+            if RowMin[I].Value < MinVal then
+              MinVal := RowMin[I].Value;
+          if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+            continue;
+          for I := 0 to Pred(aSize) do
+            if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
+              m[aRows[I] * MxSize + aCols[J]] += MinVal;
+          aColRed[J] -= MinVal;
+          for I in FZeros[J] do
+            begin
+              for K := 0 to Pred(aSize) do
+                if m[aRows[I] * MxSize + aCols[K]] < T.INF_VALUE then
+                  m[aRows[I] * MxSize + aCols[K]] -= MinVal;
+              aRowRed[I] += MinVal;
+            end;
+          Result += MinVal * Pred(ZeroCount);
+          if Result >= FUpBound then
+            exit;
+        end;
+    end;
+  //////////////
+  for I := 0 to Pred(aSize) do
+    FZeros[I].ClearBits;
+  //////////////
+  for J := 0 to Pred(aSize) do
+    for I := 0 to Pred(aSize) do
+      begin
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
+        if CurrVal > T(0) then
+          if CurrVal < ColMin[J].Value then
+            ColMin[J].Value := CurrVal else
+        else
+          if ColMin[J].ZeroFlag then
+            begin
+              ColMin[J].Value := T(0);
+              FZeros[I][J] := False;
+              break;
+            end
+          else
+            begin
+              ColMin[J].ZeroFlag := True;
+              FZeros[I][J] := True;
+            end;
+      end;
+  /////////////
+  for I := 0 to Pred(aSize) do
+    begin
+      ZeroCount := FZeros[I].PopCount;
+      if ZeroCount > 1 then
+        begin
+          MinVal := T.INF_VALUE;
+          for J in FZeros[I] do
+            if ColMin[J].Value < MinVal then
+              MinVal := ColMin[J].Value;
+          if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+            continue;
+          for J := 0 to Pred(aSize) do
+            if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
+              m[aRows[I] * MxSize + aCols[J]] += MinVal;
+          aRowRed[I] -= MinVal;
+          for J in FZeros[I] do
+            begin
+              for K := 0 to Pred(aSize) do
+                if m[aRows[K] * MxSize + aCols[J]] < T.INF_VALUE then
+                  m[aRows[K] * MxSize + aCols[J]] -= MinVal;
+              aColRed[J] += MinVal;
+            end;
+          Result += MinVal * Pred(ZeroCount);
+          if Result >= FUpBound then
+            exit;
+        end;
+    end;
+end;
+
+function TGTspHelper.TBbTsp.SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): T;
+var
+  I, J, MxSize: Integer;
+  MinVal, CurrVal: T;
+  RowMin, ColMin: PMinData;
+  m: PItem;
+begin
+  m := PItem(FMatrix);
+  RowMin := PMinData(FRowMin);
+  ColMin := PMinData(FColMin);
+  MxSize := FMatrixSize;
+  ////////////////////
+  for I := 0 to Pred(aSize) do
+    begin
+      RowMin[I].Clear;
+      ColMin[I].Clear;
+      FZeros[I].ClearBits;
+    end;
+  /////////////////////////
+  for I := 0 to Pred(aSize) do
+    for J := 0 to Pred(aSize) do
+      begin
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
+        if CurrVal > T(0) then
+          begin
+            if CurrVal < RowMin[I].Value then
+              RowMin[I].Value := CurrVal;
+            if CurrVal < ColMin[J].Value then
+              ColMin[J].Value := CurrVal;
+          end
+        else
+          begin
+            FZeros[I][J] := True;
+            if RowMin[I].ZeroFlag then
+              RowMin[I].Value := T(0)
+            else
+              RowMin[I].ZeroFlag := True;
+            if ColMin[J].ZeroFlag then
+              ColMin[J].Value := T(0)
+            else
+              ColMin[J].ZeroFlag := True;
+          end;
+      end;
+  ///////////////////////
+  Result := T.NEGINF_VALUE;
+  aRowIdx := NULL_INDEX;
+  aColIdx := NULL_INDEX;
+  ///////////////////////
+  for I := 0 to Pred(aSize) do
+    for J in FZeros[I] do
+      begin
+        CurrVal := RowMin[I].Value + ColMin[J].Value;
+        if CurrVal > Result then
+          begin
+            Result := CurrVal;
+            aRowIdx := I;
+            aColIdx := J;
+          end;
+      end;
+end;
+
+procedure TGTspHelper.TBbTsp.Search(aSize: Integer; aCost: T; aRows, aCols: PInt);
+var
+  RowsReduce, ColsReduce: TArray;
+  I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
+  LowBound, SaveValue: T;
+  m: PItem;
+begin
+  if TimeOut then
+    exit;
+  m := PItem(FMatrix);
+  MxSize := FMatrixSize;
+  System.SetLength(RowsReduce, aSize);
+  System.SetLength(ColsReduce, aSize);
+  aCost := ReduceA(aSize, aCost, aRows, aCols, PItem(RowsReduce), PItem(ColsReduce));
+  if aCost < FUpBound then
+    if aSize > 2 then
+      begin
+        LowBound := aCost + SelectNext(aSize, aRows, aCols, Row, Col);
+        SaveRow := aRows[Row];
+        SaveCol := aCols[Col];
+        FirstRow := SaveRow;
+        LastCol := SaveCol;
+        FForwardTour[SaveRow] := SaveCol;
+        FBackTour[SaveCol] := SaveRow;
+        while FForwardTour[LastCol] <> NULL_INDEX do
+          LastCol := FForwardTour[LastCol];
+        while FBackTour[FirstRow] <> NULL_INDEX do
+          FirstRow := FBackTour[FirstRow];
+        SaveValue := m[LastCol * MxSize + FirstRow];
+        m[LastCol * MxSize + FirstRow] := T.INF_VALUE;
+        for I := Row to aSize - 2 do // remove Row
+          aRows[I] := aRows[Succ(I)];
+        for J := Col to aSize - 2 do // remove Col
+          aCols[J] := aCols[Succ(J)];
+        ///////////////
+        Search(Pred(aSize), aCost, aRows, aCols);
+        ///////////////  restore values
+        for I := aSize - 2 downto  Row do //restore Row
+          aRows[Succ(I)] := aRows[I];
+        aRows[Row] := SaveRow;
+        for J := aSize - 2 downto  Col do //restore Col
+          aCols[Succ(J)] := aCols[J];
+        aCols[Col] := SaveCol;
+        m[LastCol * MxSize + FirstRow] := SaveValue;
+        FForwardTour[SaveRow] := NULL_INDEX;
+        FBackTour[SaveCol] := NULL_INDEX;
+        ////////////////
+        if LowBound < FUpBound then
+          begin
+            m[SaveRow * MxSize + SaveCol] := T.INF_VALUE;
+            //////////
+            Search(aSize, aCost, aRows, aCols);
+            //////////
+            m[SaveRow * MxSize + SaveCol] := T(0);
+          end;
+      end
+    else
+      begin
+        FBestTour := System.Copy(FForwardTour);
+        Col := Ord(m[aRows[0] * MxSize + aCols[0]] < T.INF_VALUE);
+        FBestTour[aRows[0]] := aCols[1 - Col];
+        FBestTour[aRows[1]] := aCols[Col];
+        FUpBound := aCost;
+      end;
+  for I := 0 to Pred(aSize) do      // restore matrix
+    for J := 0 to Pred(aSize) do
+      begin
+        Col := aRows[I] * MxSize + aCols[J];
+        SaveValue := m[Col];
+        if SaveValue < T.INF_VALUE then
+          m[Col] := SaveValue + RowsReduce[I] + ColsReduce[J];
+      end;
+end;
+
+procedure TGTspHelper.TBbTsp.CopyBest(var aTour: TIntArray; out aCost: T);
+var
+  I, J: Integer;
+begin
+  aCost := FUpBound;
+  if aCost < T.INF_VALUE then
+    begin
+      aTour.Length := Succ(FMatrixSize);
+      J := 0;
+      for I := 0 to Pred(FMatrixSize) do
+        begin
+          aTour[I] := J;
+          J := FBestTour[J];
+        end;
+      aTour[FMatrixSize] := J;
+    end;
+end;
+
+function TGTspHelper.TBbTsp.Execute(const m: TTspMatrix; aTimeOut: Integer; var aTour: TIntArray;
+  out aCost: T): Boolean;
+var
+  Cols, Rows: array of Integer;
+  I: Integer;
+begin
+  Init(m, aTour, aTimeOut);
+  System.SetLength(Rows, FMatrixSize);
+  for I := 0 to Pred(FMatrixSize) do
+    Rows[I] := I;
+  Cols := System.Copy(Rows);
+  Search(FMatrixSize, T(0), PInt(Rows), PInt(Cols));
+  CopyBest(aTour, aCost);
+  Result := not FCancelled;
+end;
+
+{ TGTspHelper.TApproxBbTsp }
+
+function TGTspHelper.TApproxBbTsp.Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+var
+  I, J, Curr, MxSize: Integer;
+  MinVal, CurrVal: T;
+  m: PItem;
+begin
+  m := PItem(FMatrix);
+  MxSize := FMatrixSize;
+  Result := aCost;
+  for I := 0 to Pred(aSize) do
+    begin
+      aRowRed[I] := T(0);
+      aColRed[I] := T(0);
+    end;
+  //////////////////
+  for I := 0 to Pred(aSize) do  // reduce rows
+    begin
+      MinVal := T.INF_VALUE;
+      for J := 0 to Pred(aSize) do
+        begin
+          MinVal := vMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+          if MinVal <= T(0) then
+            break;
+        end;
+      if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+        continue;
+      for J := 0 to Pred(aSize) do
+        if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
+          m[aRows[I] * MxSize + aCols[J]] -= MinVal;
+      Result += MinVal;
+      aRowRed[I] := MinVal;
+      if Result * Factor >= FUpBound then
+        exit;
+    end;
+  //////////////////
+  for J := 0 to Pred(aSize) do  // reduce columns
+    begin
+      MinVal := T.INF_VALUE;
+      for I := 0 to Pred(aSize) do
+        begin
+          MinVal := vMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+          if MinVal <= T(0) then
+            break;
+        end;
+      if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+        continue;
+      for I := 0 to Pred(aSize) do
+        if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
+          m[aRows[I] * MxSize + aCols[J]] -= MinVal;
+      Result += MinVal;
+      aColRed[J] := MinVal;
+      if Result * Factor >= FUpBound then
+        exit;
+    end;
+end;
+
+function TGTspHelper.TApproxBbTsp.ReduceA(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+var
+  I, J, K, MxSize, ZeroCount: Integer;
+  MinVal, CurrVal: T;
+  RowMin, ColMin: PMinData;
+  m: PItem;
+begin
+  Result := Reduce(aSize, aCost, aRows, aCols, aRowRed, aColRed);
+  if (aSize <= ADV_CUTOFF) or (Result >= FUpBound) then
+    exit;
+  m := PItem(FMatrix);
+  RowMin := PMinData(FRowMin);
+  ColMin := PMinData(FColMin);
+  MxSize := FMatrixSize;
+  //////////////////
+  for I := 0 to Pred(aSize) do
+    begin
+      RowMin[I].Clear;
+      ColMin[I].Clear;
+      FZeros[I].ClearBits;
+    end;
+  //////////////////
+  for I := 0 to Pred(aSize) do
+    for J := 0 to Pred(aSize) do
+      begin
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
+        if CurrVal > T(0) then
+          if CurrVal < RowMin[I].Value then
+            RowMin[I].Value := CurrVal else
+        else
+          if RowMin[I].ZeroFlag then
+            begin
+              RowMin[I].Value := T(0);
+              FZeros[J][I] := False;
+              break;
+            end
+          else
+            begin
+              RowMin[I].ZeroFlag := True;
+              FZeros[J][I] := True;
+            end;
+      end;
+  ///////////////
+  for J := 0 to Pred(aSize) do
+    begin
+      ZeroCount := FZeros[J].PopCount;
+      if ZeroCount > 1 then
+        begin
+          MinVal := T.INF_VALUE;
+          for I in FZeros[J] do
+            if RowMin[I].Value < MinVal then
+              MinVal := RowMin[I].Value;
+          if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+            continue;
+          for I := 0 to Pred(aSize) do
+            if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
+              m[aRows[I] * MxSize + aCols[J]] += MinVal;
+          aColRed[J] -= MinVal;
+          for I in FZeros[J] do
+            begin
+              for K := 0 to Pred(aSize) do
+                if m[aRows[I] * MxSize + aCols[K]] < T.INF_VALUE then
+                  m[aRows[I] * MxSize + aCols[K]] -= MinVal;
+              aRowRed[I] += MinVal;
+            end;
+          Result += MinVal * Pred(ZeroCount);
+          if Result * Factor >= FUpBound then
+            exit;
+        end;
+    end;
+  //////////////
+  for I := 0 to Pred(aSize) do
+    FZeros[I].ClearBits;
+  //////////////
+  for J := 0 to Pred(aSize) do
+    for I := 0 to Pred(aSize) do
+      begin
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
+        if CurrVal > T(0) then
+          if CurrVal < ColMin[J].Value then
+            ColMin[J].Value := CurrVal else
+        else
+          if ColMin[J].ZeroFlag then
+            begin
+              ColMin[J].Value := T(0);
+              FZeros[I][J] := False;
+              break;
+            end
+          else
+            begin
+              ColMin[J].ZeroFlag := True;
+              FZeros[I][J] := True;
+            end;
+      end;
+  /////////////
+  for I := 0 to Pred(aSize) do
+    begin
+      ZeroCount := FZeros[I].PopCount;
+      if ZeroCount > 1 then
+        begin
+          MinVal := T.INF_VALUE;
+          for J in FZeros[I] do
+            if ColMin[J].Value < MinVal then
+              MinVal := ColMin[J].Value;
+          if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+            continue;
+          for J := 0 to Pred(aSize) do
+            if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
+              m[aRows[I] * MxSize + aCols[J]] += MinVal;
+          aRowRed[I] -= MinVal;
+          for J in FZeros[I] do
+            begin
+              for K := 0 to Pred(aSize) do
+                if m[aRows[K] * MxSize + aCols[J]] < T.INF_VALUE then
+                  m[aRows[K] * MxSize + aCols[J]] -= MinVal;
+              aColRed[J] += MinVal;
+            end;
+          Result += MinVal * Pred(ZeroCount);
+          if Result * Factor >= FUpBound then
+            exit;
+        end;
+    end;
+end;
+
+procedure TGTspHelper.TApproxBbTsp.Search(aSize: Integer; aCost: T; aRows, aCols: PInt);
+var
+  RowsReduce, ColsReduce: TArray;
+  I, J, Row, Col, SaveRow, SaveCol, FirstRow, LastCol, MxSize: Integer;
+  LowBound, SaveValue: T;
+  m: PItem;
+begin
+  if TimeOut then
+    exit;
+  m := PItem(FMatrix);
+  MxSize := FMatrixSize;
+  System.SetLength(RowsReduce, aSize);
+  System.SetLength(ColsReduce, aSize);
+  aCost := ReduceA(aSize, aCost, aRows, aCols, PItem(RowsReduce), PItem(ColsReduce));
+  if aCost * Factor < FUpBound then
+    if aSize > 2 then
+      begin
+        LowBound := aCost + SelectNext(aSize, aRows, aCols, Row, Col);
+        SaveRow := aRows[Row];
+        SaveCol := aCols[Col];
+        FirstRow := SaveRow;
+        LastCol := SaveCol;
+        FForwardTour[SaveRow] := SaveCol;
+        FBackTour[SaveCol] := SaveRow;
+        while FForwardTour[LastCol] <> NULL_INDEX do
+          LastCol := FForwardTour[LastCol];
+        while FBackTour[FirstRow] <> NULL_INDEX do
+          FirstRow := FBackTour[FirstRow];
+        SaveValue := m[LastCol * MxSize + FirstRow];
+        m[LastCol * MxSize + FirstRow] := T.INF_VALUE;
+        for I := Row to aSize - 2 do // remove Row
+          aRows[I] := aRows[Succ(I)];
+        for J := Col to aSize - 2 do // remove Col
+          aCols[J] := aCols[Succ(J)];
+        ///////////////
+        Search(Pred(aSize), aCost, aRows, aCols);
+        ///////////////  restore values
+        for I := aSize - 2 downto  Row do //restore Row
+          aRows[Succ(I)] := aRows[I];
+        aRows[Row] := SaveRow;
+        for J := aSize - 2 downto  Col do //restore Col
+          aCols[Succ(J)] := aCols[J];
+        aCols[Col] := SaveCol;
+        m[LastCol * MxSize + FirstRow] := SaveValue;
+        FForwardTour[SaveRow] := NULL_INDEX;
+        FBackTour[SaveCol] := NULL_INDEX;
+        ////////////////
+        if LowBound * Factor < FUpBound then
+          begin
+            m[SaveRow * MxSize + SaveCol] := T.INF_VALUE;
+            //////////
+            Search(aSize, aCost, aRows, aCols);
+            //////////
+            m[SaveRow * MxSize + SaveCol] := T(0);
+          end;
+      end
+    else
+      begin
+        FBestTour := System.Copy(FForwardTour);
+        Col := Ord(m[aRows[0] * MxSize + aCols[0]] < T.INF_VALUE);
+        FBestTour[aRows[0]] := aCols[1 - Col];
+        FBestTour[aRows[1]] := aCols[Col];
+        FUpBound := aCost;
+      end;
+  for I := 0 to Pred(aSize) do      // restore matrix
+    for J := 0 to Pred(aSize) do
+      begin
+        Col := aRows[I] * MxSize + aCols[J];
+        SaveValue := m[Col];
+        if SaveValue < T.INF_VALUE then
+          m[Col] := SaveValue + RowsReduce[I] + ColsReduce[J];
+      end;
+end;
+
+function TGTspHelper.TApproxBbTsp.Execute(const m: TTspMatrix; aEps: Double; aTimeOut: Integer;
+  var aTour: TIntArray; out aCost: T): Boolean;
+var
+  Cols, Rows: array of Integer;
+  I: Integer;
+begin
+  Factor := Double(1.0) + aEps;
+  Init(m, aTour, aTimeOut);
+  System.SetLength(Rows, FMatrixSize);
+  for I := 0 to Pred(FMatrixSize) do
+    Rows[I] := I;
+  Cols := System.Copy(Rows);
+  Search(FMatrixSize, T(0), PInt(Rows), PInt(Cols));
+  CopyBest(aTour, aCost);
+  Result := not FCancelled;
+end;
+
 { TGTspHelper.TLs3Opt }
 
 procedure TGTspHelper.TLs3Opt.PickSwapKind(var aSwap: TSwap);
@@ -2188,6 +2865,14 @@ begin
 end;
 
 { TGTspHelper }
+
+class function TGTspHelper.vMin(L, R: T): T;
+begin
+  if L <= R then
+    Result := L
+  else
+    Result := R;
+end;
 
 class function TGTspHelper.CheckMatrixProper(const m: TTspMatrix): Boolean;
 var
@@ -2431,19 +3116,26 @@ begin
     Ls2Opt(m, Result, aCost);
 end;
 
+class function TGTspHelper.FindGreedyFastNn(const m: TTspMatrix; out aCost: T): TIntArray;
+var
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  Result := GreedyNearNeighb(m, nil, aCost);
+  NormalizeTour(0, Result);
+  if Symm then
+    Ls2Opt(m, Result, aCost);
+end;
+
 class function TGTspHelper.FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray;
 var
   Symm: Boolean;
 begin
   Symm := CheckMatrixProper(m);
+  Result := GreedyNearNeighb(m, @Ls2Opt, aCost);
+  NormalizeTour(0, Result);
   if Symm then
-    begin
-      Result := GreedyNearNeighb(m, @Ls2Opt, aCost);
-      NormalizeTour(0, Result);
-      Ls3OptPath(m, Result, aCost);
-    end
-  else
-    Result := GreedyFInsTsp(m, nil, aCost);
+    Ls3OptPath(m, Result, aCost);
 end;
 
 class function TGTspHelper.FindGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray;
@@ -2457,7 +3149,10 @@ begin
       Ls3OptPath(m, Result, aCost);
     end
   else
-    Result := GreedyFInsTsp(m, nil, aCost);
+    begin
+      Result := GreedyNearNeighb(m, nil, aCost);
+      NormalizeTour(0, Result);
+    end;
 end;
 
 class function TGTspHelper.FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray;
@@ -2468,7 +3163,76 @@ begin
   if Symm then
     Result := GreedyFInsTsp(m, @Ls3OptTree, aCost)
   else
-    Result := GreedyFInsTsp(m, nil, aCost);
+    begin
+      Result := GreedyNearNeighb(m, nil, aCost);
+      NormalizeTour(0, Result);
+    end;
+end;
+
+class function TGTspHelper.FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
+  aTimeOut: Integer): Boolean;
+var
+  Helper: TBbTsp;
+  Greedy: TIntArray;
+  GreedyCost: T;
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  if Symm then
+    begin
+      aTour := GreedyFInsTsp(m, nil, aCost);
+      Ls3OptTree(m, aTour, aCost);
+      Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
+      Ls3OptPath(m, Greedy, GreedyCost);
+      if GreedyCost < aCost then
+        begin
+          aCost := GreedyCost;
+          aTour := Greedy;
+        end;
+      Greedy := nil;
+      Result := Helper.Execute(m, aTimeOut, aTour, aCost);
+      if not Result then
+        Ls3OptPath(m, aTour, aCost);
+    end
+  else
+    begin
+      aTour := GreedyNearNeighb(m, nil, aCost);
+      NormalizeTour(0, aTour);
+      Result := Helper.Execute(m, aTimeOut, aTour, aCost);
+    end;
+end;
+
+class function TGTspHelper.FindApprox(const m: TTspMatrix; Accuracy: Double; out aTour: TIntArray; out aCost: T;
+  aTimeOut: Integer): Boolean;
+var
+  Helper: TApproxBbTsp;
+  Greedy: TIntArray;
+  GreedyCost: T;
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  if Symm then
+    begin
+      aTour := GreedyFInsTsp(m, nil, aCost);
+      Ls3OptTree(m, aTour, aCost);
+      Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
+      Ls3OptPath(m, Greedy, GreedyCost);
+      if GreedyCost < aCost then
+        begin
+          aCost := GreedyCost;
+          aTour := Greedy;
+        end;
+      Greedy := nil;
+      Result := Helper.Execute(m, Accuracy, aTimeOut, aTour, aCost);
+      if not Result then
+        Ls3OptPath(m, aTour, aCost);
+    end
+  else
+    begin
+      aTour := GreedyNearNeighb(m, nil, aCost);
+      NormalizeTour(0, aTour);
+      Result := Helper.Execute(m, Accuracy, aTimeOut, aTour, aCost);
+    end;
 end;
 
 { TGPoint2D }
@@ -4065,11 +4829,15 @@ begin
   m := PWeight(FMatrix);
   MxSize := FMatrixSize;
   Result := aWeight;
+  for I := 0 to Pred(aSize) do
+    begin
+      aRowRed[I] := TWeight(0);
+      aColRed[I] := TWeight(0);
+    end;
   //////////////////
   for I := 0 to Pred(aSize) do  // reduce rows
     begin
       MinVal := TWeight.INF_VALUE;
-      aRowRed[I] := TWeight(0);
       for J := 0 to Pred(aSize) do
         begin
           MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
@@ -4090,7 +4858,6 @@ begin
   for J := 0 to Pred(aSize) do  // reduce columns
     begin
       MinVal := TWeight.INF_VALUE;
-      aColRed[J] := TWeight(0);
       for I := 0 to Pred(aSize) do
         begin
           MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
@@ -4106,6 +4873,115 @@ begin
       aColRed[J] := MinVal;
       if Result >= FUpBound then
         exit;
+    end;
+end;
+
+function TGWeightHelper.TBbTspHelper.Reduce2(aSize: Integer; aWeight: TWeight; aRows, aCols: PInt; aRowRed,
+  aColRed: PWeight): TWeight;
+var
+  I, J, MxSize: Integer;
+  MinVal, CurrVal: TWeight;
+  RowMin, ColMin: PMinData;
+  m: PWeight;
+begin
+  m := PWeight(FMatrix);
+  RowMin := PMinData(FRowMin);
+  ColMin := PMinData(FColMin);
+  MxSize := FMatrixSize;
+  Result := aWeight;
+  ////////////////////
+  for I := 0 to Pred(aSize) do
+    begin
+      RowMin[I].Clear;
+      ColMin[I].Clear;
+      aRowRed[I] := TWeight(0);
+      aColRed[I] := TWeight(0);
+    end;
+  /////////////////////////
+  for I := 0 to Pred(aSize) do
+    for J := 0 to Pred(aSize) do
+      begin
+        CurrVal := m[aRows[I] * MxSize + aCols[J]];
+        if CurrVal < RowMin[I].Value then
+          RowMin[I].Value := CurrVal;
+        if CurrVal < ColMin[J].Value then
+          ColMin[J].Value := CurrVal;
+      end;
+  MinVal := TWeight(0);
+  CurrVal := TWeight(0);
+  for I := 0 to Pred(aSize) do
+    begin
+      MinVal += RowMin[I].Value;
+      CurrVal += ColMin[I].Value;
+    end;
+
+  if MinVal >= CurrVal then
+    begin
+      for I := 0 to Pred(aSize) do
+        begin
+          if RowMin[I].Value <= TWeight(0) then
+            continue;
+          for J := 0 to Pred(aSize) do
+            if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
+              m[aRows[I] * MxSize + aCols[J]] -= RowMin[I].Value;
+          Result += RowMin[I].Value;
+          aRowRed[I] := RowMin[I].Value;
+          if Result >= FUpBound then
+            exit;
+        end;
+      for J := 0 to Pred(aSize) do  // reduce columns
+        begin
+          MinVal := TWeight.INF_VALUE;
+          for I := 0 to Pred(aSize) do
+            begin
+              MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+              if MinVal <= TWeight(0) then
+                break;
+            end;
+          if (MinVal <= TWeight(0)) or (MinVal = TWeight.INF_VALUE) then
+            continue;
+          for I := 0 to Pred(aSize) do
+            if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
+              m[aRows[I] * MxSize + aCols[J]] -= MinVal;
+          Result += MinVal;
+          aColRed[J] := MinVal;
+          if Result >= FUpBound then
+            exit;
+        end;
+    end
+  else
+    begin
+      for J := 0 to Pred(aSize) do
+        begin
+          if ColMin[J].Value <= TWeight(0) then
+            continue;
+          for I := 0 to Pred(aSize) do
+            if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
+              m[aRows[I] * MxSize + aCols[J]] -= ColMin[J].Value;
+          Result += ColMin[J].Value;
+          aColRed[J] := ColMin[J].Value;
+          if Result >= FUpBound then
+            exit;
+        end;
+      for I := 0 to Pred(aSize) do  // reduce rows
+        begin
+          MinVal := TWeight.INF_VALUE;
+          for J := 0 to Pred(aSize) do
+            begin
+              MinVal := wMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
+              if MinVal <= TWeight(0) then
+                break;
+            end;
+          if (MinVal <= TWeight(0)) or (MinVal = TWeight.INF_VALUE) then
+            continue;
+          for J := 0 to Pred(aSize) do
+            if m[aRows[I] * MxSize + aCols[J]] < TWeight.INF_VALUE then
+              m[aRows[I] * MxSize + aCols[J]] -= MinVal;
+          Result += MinVal;
+          aRowRed[I] := MinVal;
+          if Result >= FUpBound then
+            exit;
+        end;
     end;
 end;
 
@@ -4125,9 +5001,10 @@ begin
   MxSize := FMatrixSize;
   //////////////////
   for I := 0 to Pred(aSize) do
-    RowMin[I].Clear;
-  for J := 0 to Pred(aSize) do
-    FZeros[J].ClearBits;
+    begin
+      RowMin[I].Clear;
+      FZeros[I].ClearBits;
+    end;
   //////////////////
   for I := 0 to Pred(aSize) do
     for J := 0 to Pred(aSize) do
@@ -4180,9 +5057,10 @@ begin
   //////////////
   ColMin := RowMin;
   for I := 0 to Pred(aSize) do
-    ColMin[I].Clear;
-  for J := 0 to Pred(aSize) do
-    FZeros[J].ClearBits;
+    begin
+      ColMin[I].Clear;
+      FZeros[I].ClearBits;
+    end;
   //////////////
   for J := 0 to Pred(aSize) do
     for I := 0 to Pred(aSize) do
@@ -4248,11 +5126,11 @@ begin
   MxSize := FMatrixSize;
   ////////////////////
   for I := 0 to Pred(aSize) do
-    RowMin[I].Clear;
-  for J := 0 to Pred(aSize) do
-    ColMin[J].Clear;
-  for I := 0 to Pred(aSize) do
-    FZeros[I].ClearBits;
+    begin
+      RowMin[I].Clear;
+      ColMin[I].Clear;
+      FZeros[I].ClearBits;
+    end;
   /////////////////////////
   for I := 0 to Pred(aSize) do
     for J := 0 to Pred(aSize) do

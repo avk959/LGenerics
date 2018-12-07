@@ -318,7 +318,6 @@ type
     procedure GetDagMinPaths(aSrc: SizeInt; var aTree: TIntArray; var aWeights: TWeightArray);
     function  GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
     function  GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
-    class procedure CheckTspMatrix(const m: TWeightMatrix); static;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -433,26 +432,6 @@ type
     function IsMaximalMatching(const aMatch: TEdgeArray): Boolean; inline;
   { returns True if aMatch is perfect matching }
     function IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean; inline;
-{**********************************************************************************************************
-  some NP-hard problem utilities
-***********************************************************************************************************}
-
-  { returns True if the matrix m is nontrivial, square, and does not contain
-    loops and negative elements }
-    class function  IsProperTspMatrix(const m: TWeightMatrix): Boolean; static; inline;
-  { greedy approach for TSP;
-    best of farthest insertion starting from every vertex;
-    will raise EGraphError if m is not proper TSP matrix }
-    class function GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray; static;
-  { exact branch and bound approach for TSP;
-    aTimeOut specifies the timeout in seconds; at the end of the timeout,
-    the best recent solution will be returned, and aExact will be set to False;
-    will raise EGraphError if m is not proper TSP matrix }
-    class function TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
-                         aTimeOut: Integer = WAIT_INFINITE): TIntArray; static;
-  { returns an suboptimal solution for TSP of a given guaranteed accuracy, specified with param Accuracy;
-    will raise EGraphError if m is not proper TSP matrix }
-    class function ApproxTspBB(const m: TWeightMatrix; Accuracy: Double; out aWeight: TWeight): TIntArray; static;
   end;
 
   { TGIntWeightDiGraph specializes TWeight with Int64 }
@@ -2304,22 +2283,6 @@ begin
       Stack.Pop;
 end;
 
-class procedure TGWeightedDiGraph.CheckTspMatrix(const m: TWeightMatrix);
-var
-  I, J, Size: SizeInt;
-begin
-  Size := System.Length(m);
-  if Size < 2 then
-    raise EGraphError.Create(SEInputMatrixTrivial);
-  for I := 0 to Pred(Size) do
-    if System.Length(m[I]) <> Size then
-      raise EGraphError.Create(SENonSquareInputMatrix);
-  for I := 0 to Pred(Size) do
-    for J := 0 to Pred(Size) do
-      if (I <> J) and (m[I, J] < 0) then
-        raise EGraphError.Create(SEInputMatrixNegElem);
-end;
-
 class function TGWeightedDiGraph.InfWeight: TWeight;
 begin
   Result := TWeight.INF_VALUE;
@@ -2765,53 +2728,6 @@ end;
 function TGWeightedDiGraph.IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean;
 begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
-end;
-
-class function TGWeightedDiGraph.IsProperTspMatrix(const m: TWeightMatrix): Boolean;
-var
-  I, J, Size: SizeInt;
-begin
-  Size := System.Length(m);
-  if Size < 2 then  // trivial
-    exit(False);
-  for I := 0 to Pred(Size) do
-    if System.Length(m[I]) <> Size then // non square
-      exit(False);
-  for I := 0 to Pred(Size) do
-    begin
-      if m[I, I] <> 0 then   // self loops
-        exit(False);
-      for J := 0 to Pred(Size) do
-        if (I <> J) and (m[I, J] < 0) then // negative element
-          exit(False);
-    end;
-  Result := True;
-end;
-
-class function TGWeightedDiGraph.GreedyTsp(const m: TWeightMatrix; out aWeight: TWeight): TIntArray;
-begin
-  CheckTspMatrix(m);
-  Result := TWeightHelper.GreedyTsp(m, aWeight);
-  TWeightHelper.NormalizeTour(Result, 0);
-end;
-
-class function TGWeightedDiGraph.TspBB(const m: TWeightMatrix; out aWeight: TWeight; out aExact: Boolean;
-  aTimeOut: Integer): TIntArray;
-var
-  Helper: TWeightHelper.TBbTspHelper;
-begin
-  CheckTspMatrix(m);
-  Result := GreedyTsp(m, aWeight);
-  aExact := Helper.Execute(m, aTimeOut, False, Result, aWeight);
-end;
-
-class function TGWeightedDiGraph.ApproxTspBB(const m: TWeightMatrix; Accuracy: Double; out aWeight: TWeight): TIntArray;
-var
-  Helper: TWeightHelper.TBbTspHelper;
-begin
-  CheckTspMatrix(m);
-  Result := GreedyTsp(m, aWeight);
-  aWeight := Helper.ExecuteApprox(m, Accuracy, False, Result);
 end;
 
 {$I IntDiGraphHelp.inc}
