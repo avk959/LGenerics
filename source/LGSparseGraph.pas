@@ -2762,13 +2762,13 @@ begin
   if MaxGain > aSwap.Gain then
     begin
      aSwap.Gain := MaxGain;
-     aSwap.SwapKind := skAsymm;
+     aSwap.IsAsymm := True;
     end;
   MaxGain := OldCost - (Matrix[aSwap.X1, aSwap.Y2] + Matrix[aSwap.Z1, aSwap.X2] + Matrix[aSwap.Y1, aSwap.Z2]);
   if MaxGain > aSwap.Gain then
     begin
       aSwap.Gain := MaxGain;
-      aSwap.SwapKind := skSymm;
+      aSwap.IsAsymm := False;
     end;
 end;
 
@@ -2819,7 +2819,7 @@ begin
       end;
     if Best.Gain > 0 then
       begin
-        if Best.SwapKind = skAsymm then
+        if Best.IsAsymm then
           begin
             Reverse(Best.Z2, Best.X1);
             CurrTour[Best.Y1] := Best.X1;
@@ -3128,22 +3128,23 @@ begin
 end;
 
 class function TGTspHelper.FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray;
-var
-  Symm: Boolean;
 begin
-  Symm := CheckMatrixProper(m);
-  Result := GreedyNearNeighb(m, @Ls2Opt, aCost);
-  NormalizeTour(0, Result);
-  if Symm then
-    Ls3OptPath(m, Result, aCost);
+  if CheckMatrixProper(m) then
+    begin
+      Result := GreedyNearNeighb(m, @Ls2Opt, aCost);
+      NormalizeTour(0, Result);
+      Ls3OptPath(m, Result, aCost);
+    end
+  else
+    begin
+      Result := GreedyNearNeighb(m, nil, aCost);
+      NormalizeTour(0, Result);
+    end;
 end;
 
 class function TGTspHelper.FindGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray;
-var
-  Symm: Boolean;
 begin
-  Symm := CheckMatrixProper(m);
-  if Symm then
+  if CheckMatrixProper(m) then
     begin
       Result := GreedyFInsTsp(m, nil, aCost);
       Ls3OptPath(m, Result, aCost);
@@ -3156,11 +3157,8 @@ begin
 end;
 
 class function TGTspHelper.FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray;
-var
-  Symm: Boolean;
 begin
-  Symm := CheckMatrixProper(m);
-  if Symm then
+  if CheckMatrixProper(m) then
     Result := GreedyFInsTsp(m, @Ls3OptTree, aCost)
   else
     begin

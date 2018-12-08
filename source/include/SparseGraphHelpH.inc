@@ -152,12 +152,10 @@ type
     TLs3Opt = record
     strict private
     type
-      TSwapKind = (skSymm, skAsymm);
-
       TSwap  = record
         X1, X2, Y1, Y2, Z1, Z2: SizeInt;
         Gain: T;
-        SwapKind: TSwapKind;
+        IsAsymm: Boolean;
       end;
 
     var

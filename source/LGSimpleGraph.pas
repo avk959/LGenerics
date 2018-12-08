@@ -624,19 +624,16 @@ type
     function IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean; inline;
   end;
 
-  TRealEdge = record
-    Weight: ValReal;
-    constructor Create(const aWeight: ValReal);
-  end;
+  TRealWeight = specialize TGSimpleWeight<ValReal>;
 
   { TPointsChart }
-  TPointsChart = class(specialize TGWeightedGraph<TPoint, ValReal, TRealEdge, TPoint>)
+  TPointsChart = class(specialize TGWeightedGraph<TPoint, ValReal, TRealWeight, TPoint>)
   protected
     procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: PEdgeData);
     procedure WritePoint(aStream: TStream; constref aValue: TPoint);
     procedure ReadPoint(aStream: TStream; out aValue: TPoint);
-    procedure WriteData(aStream: TStream; constref aValue: TRealEdge);
-    procedure ReadData(aStream: TStream; out aValue: TRealEdge);
+    procedure WriteData(aStream: TStream; constref aValue: TRealWeight);
+    procedure ReadData(aStream: TStream; out aValue: TRealWeight);
   public
     class function Distance(constref aSrc, aDst: TPoint): ValReal; static;
     constructor Create;
@@ -4524,13 +4521,6 @@ begin
   Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
 end;
 
-{ TRealEdge }
-
-constructor TRealEdge.Create(const aWeight: ValReal);
-begin
-  Weight := aWeight;
-end;
-
 { TPointsChart }
 
 procedure TPointsChart.OnAddEdge(constref aSrc, aDst: TPoint; aData: PEdgeData);
@@ -4554,7 +4544,7 @@ begin
   aValue.Y := LEtoN(aValue.Y);
 end;
 
-procedure TPointsChart.WriteData(aStream: TStream; constref aValue: TRealEdge);
+procedure TPointsChart.WriteData(aStream: TStream; constref aValue: TRealWeight);
 var
   Buf: Double;
 begin
@@ -4562,7 +4552,7 @@ begin
   aStream.WriteBuffer(Buf, SizeOf(Buf));
 end;
 
-procedure TPointsChart.ReadData(aStream: TStream; out aValue: TRealEdge);
+procedure TPointsChart.ReadData(aStream: TStream; out aValue: TRealWeight);
 var
   Buf: Double;
 begin
@@ -4586,12 +4576,12 @@ end;
 
 function TPointsChart.AddEdge(constref aSrc, aDst: TPoint): Boolean;
 begin
-  Result := inherited AddEdge(aSrc, aDst, TRealEdge.Create(aSrc.Distance(aDst)));
+  Result := inherited AddEdge(aSrc, aDst, TRealWeight.Create(aSrc.Distance(aDst)));
 end;
 
 function TPointsChart.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  Result := inherited AddEdgeI(aSrc, aDst, TRealEdge.Create(Items[aSrc].Distance(Items[aDst])));
+  Result := inherited AddEdgeI(aSrc, aDst, TRealWeight.Create(Items[aSrc].Distance(Items[aDst])));
 end;
 
 function TPointsChart.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
