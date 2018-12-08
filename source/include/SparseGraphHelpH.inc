@@ -230,8 +230,7 @@ type
                    aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
   end;
 
-  { TGMetricTspHelper }
-
+  { TGMetricTspHelper: algorithms for metric TSP }
   generic TGMetricTspHelper<T> = class(specialize TGTspHelper<T>)
     class function FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
                    aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
@@ -261,7 +260,7 @@ type
     TPointArray = array of TGPoint;
   private
   type
-    THelper  = specialize TGMetricTspHelper<ValReal>;
+    THelper  = specialize TGTspHelper<ValReal>;
     THashSet = specialize TGLiteHashSetLP<TGPoint, TGPoint>;
 
   public

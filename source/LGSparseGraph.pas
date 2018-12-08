@@ -2192,7 +2192,7 @@ var
   m: PItem;
 begin
   Result := Reduce(aSize, aCost, aRows, aCols, aRowRed, aColRed);
-  //if (aSize <= ADV_CUTOFF) or (Result >= FUpBound) then
+  if (aSize <= ADV_CUTOFF) or (Result >= FUpBound) then
     exit;
   m := PItem(FMatrix);
   RowMin := PMinData(FRowMin);
@@ -3172,6 +3172,8 @@ begin
       NormalizeTour(0, Result);
     end;
 end;
+
+{ TGMetricTspHelper }
 
 class function TGTspHelper.FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
   aTimeOut: Integer): Boolean;
