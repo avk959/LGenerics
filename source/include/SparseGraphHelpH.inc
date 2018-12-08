@@ -77,7 +77,7 @@ type
 
   TTspMatrixState = (tmsProper, tmsTrivial, tmsNonSquare, tmsNegElement);
 
-  { TGTspHelper: some algorithms for TSP }
+  { TGTspHelper: some algorithms for non-metric TSP }
   generic TGTspHelper<T> = class
   public
   type
@@ -123,6 +123,7 @@ type
       FTimeOut: Integer;
       FUpBound: T;
       FStartTime: TDateTime;
+      FIsMetric,
       FCancelled: Boolean;
       procedure Init(const m: TTspMatrix; const aTour: TIntArray; aTimeOut: Integer);
       function  TimeOut: Boolean; inline;
@@ -133,6 +134,7 @@ type
       procedure CopyBest(var aTour: TIntArray; out aCost: T);
     public
       function  Execute(const m: TTspMatrix; aTimeOut: Integer; var aTour: TIntArray; out aCost: T): Boolean;
+      property  IsMetric: Boolean read FIsMetric write FIsMetric;
     end;
 
     { TApproxBbTsp }
@@ -228,6 +230,15 @@ type
                    aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
   end;
 
+  { TGMetricTspHelper }
+
+  generic TGMetricTspHelper<T> = class(specialize TGTspHelper<T>)
+    class function FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+    class function FindApprox(const m: TTspMatrix; Accuracy: Double; out aTour: TIntArray; out aCost: T;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+  end;
+
   generic TGPoint2D<T> = record
     X, Y: T;
     constructor Create(aX, aY: T);
@@ -250,7 +261,7 @@ type
     TPointArray = array of TGPoint;
   private
   type
-    THelper  = specialize TGTspHelper<ValReal>;
+    THelper  = specialize TGMetricTspHelper<ValReal>;
     THashSet = specialize TGLiteHashSetLP<TGPoint, TGPoint>;
 
   public

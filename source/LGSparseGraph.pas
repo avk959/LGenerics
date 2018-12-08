@@ -2192,7 +2192,7 @@ var
   m: PItem;
 begin
   Result := Reduce(aSize, aCost, aRows, aCols, aRowRed, aColRed);
-  if (aSize <= ADV_CUTOFF) or (Result >= FUpBound) then
+  //if (aSize <= ADV_CUTOFF) or (Result >= FUpBound) then
     exit;
   m := PItem(FMatrix);
   RowMin := PMinData(FRowMin);
@@ -2382,7 +2382,10 @@ begin
   MxSize := FMatrixSize;
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
-  aCost := ReduceA(aSize, aCost, aRows, aCols, PItem(RowsReduce), PItem(ColsReduce));
+  if IsMetric then
+    aCost := Reduce(aSize, aCost, aRows, aCols, PItem(RowsReduce), PItem(ColsReduce))
+  else
+    aCost := ReduceA(aSize, aCost, aRows, aCols, PItem(RowsReduce), PItem(ColsReduce));
   if aCost < FUpBound then
     if aSize > 2 then
       begin
@@ -2672,7 +2675,10 @@ begin
   MxSize := FMatrixSize;
   System.SetLength(RowsReduce, aSize);
   System.SetLength(ColsReduce, aSize);
-  aCost := ReduceA(aSize, aCost, aRows, aCols, PItem(RowsReduce), PItem(ColsReduce));
+  if IsMetric then
+    aCost := Reduce(aSize, aCost, aRows, aCols, PItem(RowsReduce), PItem(ColsReduce))
+  else
+    aCost := ReduceA(aSize, aCost, aRows, aCols, PItem(RowsReduce), PItem(ColsReduce));
   if aCost * Factor < FUpBound then
     if aSize > 2 then
       begin
@@ -3176,6 +3182,7 @@ var
   Symm: Boolean;
 begin
   Symm := CheckMatrixProper(m);
+  Helper.IsMetric := False;
   if Symm then
     begin
       aTour := GreedyFInsTsp(m, nil, aCost);
@@ -3209,6 +3216,76 @@ var
   Symm: Boolean;
 begin
   Symm := CheckMatrixProper(m);
+  Helper.IsMetric := False;
+  if Symm then
+    begin
+      aTour := GreedyFInsTsp(m, nil, aCost);
+      Ls3OptTree(m, aTour, aCost);
+      Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
+      Ls3OptPath(m, Greedy, GreedyCost);
+      if GreedyCost < aCost then
+        begin
+          aCost := GreedyCost;
+          aTour := Greedy;
+        end;
+      Greedy := nil;
+      Result := Helper.Execute(m, Accuracy, aTimeOut, aTour, aCost);
+      if not Result then
+        Ls3OptPath(m, aTour, aCost);
+    end
+  else
+    begin
+      aTour := GreedyNearNeighb(m, nil, aCost);
+      NormalizeTour(0, aTour);
+      Result := Helper.Execute(m, Accuracy, aTimeOut, aTour, aCost);
+    end;
+end;
+
+{ TGMetricTspHelper }
+
+class function TGMetricTspHelper.FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
+  aTimeOut: Integer): Boolean;
+var
+  Helper: TBbTsp;
+  Greedy: TIntArray;
+  GreedyCost: T;
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  Helper.IsMetric := True;
+  if Symm then
+    begin
+      aTour := GreedyFInsTsp(m, @Ls3OptTree, aCost);
+      Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
+      Ls3OptPath(m, Greedy, GreedyCost);
+      if GreedyCost < aCost then
+        begin
+          aCost := GreedyCost;
+          aTour := Greedy;
+        end;
+      Greedy := nil;
+      Result := Helper.Execute(m, aTimeOut, aTour, aCost);
+      if not Result then
+        Ls3OptPath(m, aTour, aCost);
+    end
+  else
+    begin
+      aTour := GreedyNearNeighb(m, nil, aCost);
+      NormalizeTour(0, aTour);
+      Result := Helper.Execute(m, aTimeOut, aTour, aCost);
+    end;
+end;
+
+class function TGMetricTspHelper.FindApprox(const m: TTspMatrix; Accuracy: Double; out aTour: TIntArray; out
+  aCost: T; aTimeOut: Integer): Boolean;
+var
+  Helper: TApproxBbTsp;
+  Greedy: TIntArray;
+  GreedyCost: T;
+  Symm: Boolean;
+begin
+  Symm := CheckMatrixProper(m);
+  Helper.IsMetric := True;
   if Symm then
     begin
       aTour := GreedyFInsTsp(m, nil, aCost);
