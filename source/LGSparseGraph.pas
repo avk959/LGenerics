@@ -709,32 +709,6 @@ type
     function Distance(constref aPoint: TGPoint3D): ValReal; inline;
   end;
 
-  { TGEuclidTspHelper }
-  generic TGEuclidTspHelper<TGPoint> = class
-  public
-  type
-    TPointArray = array of TGPoint;
-  private
-  type
-    THelper    = specialize TGMetricTspHelper<ValReal>;
-    TTspMatrix = THelper.TTspMatrix;
-    THashSet   = specialize TGLiteHashSetLP<TGPoint, TGPoint>;
-
-    class function PointArray2IndexArray(const aPoints: TPointArray): TIntArray; static;
-    class function CreateMatrix(const aPoints: TPointArray; out aDist: TIntArray): TTspMatrix; static;
-  public
-    class function DistinctCount(const aPoints: TPointArray): SizeInt; static;
-    class function FindGreedyFast(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
-    class function FindGreedyFastNn(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
-    class function FindGreedy2Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
-    class function FindGreedy3Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
-    class function FindSlowGreedy3Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
-    class function FindExact(const aPoints: TPointArray; out aTour: TIntArray; out aCost: ValReal;
-                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
-    class function FindApprox(const aPoints: TPointArray; Accuracy: Double; out aTour: TIntArray;
-                   out aCost: ValReal; aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
-  end;
-
   {$I SparseGraphHelpH.inc}
 
 implementation
@@ -3190,7 +3164,6 @@ var
   Len, I, J, K, Source, Target, Curr, Next, Farthest: SizeInt;
   InsCost, MaxCost, Cost, TotalCost: T;
 begin
-  Result := nil;
   Len := System.Length(m);
   aCost := T.INF_VALUE;
   Tour.Length := Len;
@@ -3586,136 +3559,6 @@ begin
   Result := Sqrt((ValReal(aPoint.X) - ValReal(X)) * (ValReal(aPoint.X) - ValReal(X)) +
                  (ValReal(aPoint.Y) - ValReal(Y)) * (ValReal(aPoint.Y) - ValReal(Y)) +
                  (ValReal(aPoint.Z) - ValReal(Z)) * (ValReal(aPoint.Z) - ValReal(Z)));
-end;
-
-{ TGEuclidTspHelper }
-
-class function TGEuclidTspHelper.PointArray2IndexArray(const aPoints: TPointArray): TIntArray;
-var
-  HashSet: THashSet;
-  p: TGPoint;
-  I: SizeInt = 0;
-  J: SizeInt = 0;
-begin
-  Result.Length := System.Length(aPoints);
-  for p in aPoints do
-    begin
-      if HashSet.Add(p) then
-        begin
-          Result[I] := J;
-          Inc(I);
-        end;
-      Inc(J);
-    end;
-  Result.Length := I;
-end;
-
-class function TGEuclidTspHelper.CreateMatrix(const aPoints: TPointArray; out aDist: TIntArray): TTspMatrix;
-var
-  I, J, Size: Integer;
-begin
-  aDist := PointArray2IndexArray(aPoints);
-  Size := aDist.Length;
-  System.SetLength(Result, Size, Size);
-  for I := 0 to Pred(Size) do
-    for J := 0 to Pred(Size) do
-      if I <> J then
-        Result[I, J] := aPoints[aDist[I]].Distance(aPoints[aDist[J]])
-      else
-        Result[I, J] := 0.0;
-end;
-
-class function TGEuclidTspHelper.DistinctCount(const aPoints: TPointArray): SizeInt;
-var
-  HashSet: THashSet;
-begin
-  Result := HashSet.AddAll(aPoints);
-end;
-
-class function TGEuclidTspHelper.FindGreedyFast(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
-var
-  m: TTspMatrix;
-  Distinct: TIntArray;
-  I: SizeInt;
-begin
-  m := CreateMatrix(aPoints, Distinct);
-  Result := THelper.FindGreedyFast(m, aCost);
-  for I := 0 to System.High(Result) do
-    Result[I] := Distinct[Result[I]];
-end;
-
-class function TGEuclidTspHelper.FindGreedyFastNn(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
-var
-  m: TTspMatrix;
-  Distinct: TIntArray;
-  I: SizeInt;
-begin
-  m := CreateMatrix(aPoints, Distinct);
-  Result := THelper.FindGreedyFastNn(m, aCost);
-  for I := 0 to System.High(Result) do
-    Result[I] := Distinct[Result[I]];
-end;
-
-class function TGEuclidTspHelper.FindGreedy2Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
-var
-  m: TTspMatrix;
-  Distinct: TIntArray;
-  I: SizeInt;
-begin
-  m := CreateMatrix(aPoints, Distinct);
-  Result := THelper.FindGreedy2Opt(m, aCost);
-  for I := 0 to System.High(Result) do
-    Result[I] := Distinct[Result[I]];
-end;
-
-class function TGEuclidTspHelper.FindGreedy3Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
-var
-  m: TTspMatrix;
-  Distinct: TIntArray;
-  I: SizeInt;
-begin
-  m := CreateMatrix(aPoints, Distinct);
-  Result := THelper.FindGreedy3Opt(m, aCost);
-  for I := 0 to System.High(Result) do
-    Result[I] := Distinct[Result[I]];
-end;
-
-class function TGEuclidTspHelper.FindSlowGreedy3Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
-var
-  m: TTspMatrix;
-  Distinct: TIntArray;
-  I: SizeInt;
-begin
-  m := CreateMatrix(aPoints, Distinct);
-  Result := THelper.FindSlowGreedy3Opt(m, aCost);
-  for I := 0 to System.High(Result) do
-    Result[I] := Distinct[Result[I]];
-end;
-
-class function TGEuclidTspHelper.FindExact(const aPoints: TPointArray; out aTour: TIntArray; out aCost: ValReal;
-  aTimeOut: Integer): Boolean;
-var
-  m: TTspMatrix;
-  Distinct: TIntArray;
-  I: SizeInt;
-begin
-  m := CreateMatrix(aPoints, Distinct);
-  Result := THelper.FindExact(m, aTour, aCost, aTimeOut);
-  for I := 0 to System.High(aTour) do
-    aTour[I] := Distinct[aTour[I]];
-end;
-
-class function TGEuclidTspHelper.FindApprox(const aPoints: TPointArray; Accuracy: Double; out aTour: TIntArray;
-  out aCost: ValReal; aTimeOut: Integer): Boolean;
-var
-  m: TTspMatrix;
-  Distinct: TIntArray;
-  I: SizeInt;
-begin
-  m := CreateMatrix(aPoints, Distinct);
-  Result := THelper.FindApprox(m, Accuracy, aTour, aCost, aTimeOut);
-  for I := 0 to System.High(aTour) do
-    aTour[I] := Distinct[aTour[I]];
 end;
 
 { TIntArrayHelper }
