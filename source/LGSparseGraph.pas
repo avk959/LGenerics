@@ -500,6 +500,242 @@ type
     property OnStreamWriteData: TOnWriteData read FOnWriteData write FOnWriteData;
   end;
 
+  { TGAbstractDotWriter: abstract writer into Graphviz dot format }
+  generic TGAbstractDotWriter<TVertex, TEdgeData, TEqRel> = class abstract
+  public
+  type
+    TWriteDirection = (wdTopToBottom, wdLeftToWrite);
+    TGraph          = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
+    TOnStartWrite   = function(aGraph: TGraph): utf8string of object;
+    TOnWriteVertex  = function(aGraph: TGraph; aIndex: SizeInt): utf8string of object;
+    TOnWriteEdge    = function(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string of object;
+
+  protected
+  const
+    DIRECTS: array[TWriteDirection] of utf8string = ('rankdir=TB;', 'rankdir=LR;');
+  var
+    FGraphMark,
+    FEdgeMark: utf8string;
+    FDirection: TWriteDirection;
+    FOnStartWrite: TOnStartWrite;
+    FOnWriteVertex: TOnWriteVertex;
+    FOnWriteEdge: TOnWriteEdge;
+    function Graph2Dot(aGraph: TGraph): utf8string; virtual; abstract;
+    function DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; virtual;
+  public
+    procedure SaveToStream(aGraph: TGraph; aStream: TStream);
+    procedure SaveToFile(aGraph: TGraph; const aFileName: string);
+    property Direction: TWriteDirection read FDirection write FDirection;
+    property OnStartWrite: TOnStartWrite read FOnStartWrite write FOnStartWrite;
+    property OnWriteVertex: TOnWriteVertex read FOnWriteVertex write FOnWriteVertex;
+    property OnWriteEdge: TOnWriteEdge read FOnWriteEdge write FOnWriteEdge;
+  end;
+
+  TTspMatrixState = (tmsProper, tmsTrivial, tmsNonSquare, tmsNegElement);
+
+  { TGTspHelper: some algorithms for non-metric TSP }
+  generic TGTspHelper<T> = class
+  public
+  type
+    PItem      = ^T;
+    TArray     = array of T;
+    TTspMatrix = array of array of T;
+  protected
+  type
+    TOnTourReady = procedure(const m: TTspMatrix; var aTour: TArray; var aCost: T);
+
+    { TBbTsp: branch and bound TSP algorithm;
+      Little, Murty, Sweeney, and Karel "An Algorithm for Traveling Salesman Problem";
+      Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs";
+      advanced matrix reduction:
+      Костюк Ю.Л. "Эффективная реализация алгоритма решения задачи коммивояжёра методом ветвей и границ" }
+    TBbTsp = object
+    protected
+    type
+      TMinData = record
+        Value: T;
+        ZeroFlag: Boolean;
+        procedure Clear; inline;
+      end;
+
+      PMinData    = ^TMinData;
+      PInt        = PInteger;
+      TMinArray   = array of TMinData;
+      TArray      = array of T;
+      TBoolMatrix = array of TBoolVector;
+
+    const
+      ADV_CUTOFF = 4;
+
+    var
+      FMatrix: TArray;
+      FZeros: TBoolMatrix;
+      FForwardTour,
+      FBackTour,
+      FBestTour: array of Integer;
+      FRowMin,
+      FColMin: TMinArray;
+      FMatrixSize,
+      FTimeOut: Integer;
+      FUpBound: T;
+      FStartTime: TDateTime;
+      FIsMetric,
+      FCancelled: Boolean;
+      procedure Init(const m: TTspMatrix; const aTour: TIntArray; aTimeOut: Integer);
+      function  TimeOut: Boolean; inline;
+      function  Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+      function  ReduceA(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+      function  SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): T;
+      procedure Search(aSize: Integer; aCost: T; aRows, aCols: PInt);
+      procedure CopyBest(var aTour: TIntArray; out aCost: T);
+    public
+      function  Execute(const m: TTspMatrix; aTimeOut: Integer; var aTour: TIntArray; out aCost: T): Boolean;
+      property  IsMetric: Boolean read FIsMetric write FIsMetric;
+    end;
+
+    { TApproxBbTsp }
+    TApproxBbTsp = object(TBbTsp)
+    protected
+      Factor: Double;
+      function  Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+      function  ReduceA(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
+      procedure Search(aSize: Integer; aCost: T; aRows, aCols: PInt);
+    public
+      function  Execute(const m: TTspMatrix; aEps: Double; aTimeOut: Integer; var aTour: TIntArray;
+                out aCost: T): Boolean;
+    end;
+
+  { TLs3Opt: 3-opt local search algorithm for the traveling salesman problem;
+    Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"; }
+    TLs3Opt = record
+    strict private
+    type
+      TSwap  = record
+        X1, X2, Y1, Y2, Z1, Z2: SizeInt;
+        Gain: T;
+        IsAsymm: Boolean;
+      end;
+
+    var
+      Matrix: TTspMatrix;
+      CurrTour: TIntArray;
+      procedure PickSwapKind(var aSwap: TSwap);
+      procedure Reverse(aFirst, aLast: SizeInt);
+      procedure Execute(var aCost: T);
+    public
+      procedure OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+      procedure OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+    end;
+
+    class function  vMin(L, R: T): T; static; inline;
+  { returns True if matrix m is symmetric;
+    raises exception if m is not proper matrix }
+    class function  CheckMatrixProper(const m: TTspMatrix): Boolean; static;
+  { cyclic shifts aTour so that element aSrc becomes the first;
+    does not checks if aSrc exists in aTour }
+    class procedure NormalizeTour(aSrc: SizeInt; var aTour: TIntArray); static;
+  { 2-opt local search; does not checks not matrix nor path }
+    class procedure Ls2Opt(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
+  { 3-opt local search; does not checks not matrix nor path }
+    class procedure Ls3OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
+  { 3-opt local search; does not checks not matrix nor path }
+    class procedure Ls3OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
+  { best of farthest insertion starting from every vertex; does not checks matrix;
+    Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"  }
+    class function GreedyFInsTsp(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray; static;
+  { best of nearest neighbour, starting from every vertex; does not checks matrix }
+    class function GreedyNearNeighb(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray; static;
+  public
+    class function GetMatrixState(const m: TTspMatrix; out aIsSymm: Boolean): TTspMatrixState; static;
+  { returns total cost of TS tour specified by aTour;
+    warning: does not checks not matrix not tour }
+    class function GetTotalCost(const m: TTspMatrix; const aTour: TIntArray): T; static;
+  { best of farthest insertion starting from every vertex;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindGreedyFast(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { best of nearest neighbour starting from every vertex;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindGreedyFastNn(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { best of nearest neighbour + 2-opt local search starting from every vertex +
+    3-opt local search at the end; applicable only for symmetric matrices;
+    returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { best of farthest insertion starting from every vertex + 3-opt local search at the end;
+    applicable only for symmetric matrices;
+    returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { best of farthest insertion + 3-opt local search, starting from every vertex;
+    applicable only for symmetric matrices;
+    returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
+  { exact branch and bound algorithm for TSP;
+    aTimeOut specifies the timeout in seconds; at the end of the timeout,
+    will be returned False and the best recent solution;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+  { suboptimal branch and bound algorithm for TSP;
+    aTimeOut specifies the timeout in seconds; at the end of the timeout,
+    will be returned False and the best recent solution, otherwise
+    returns solution of a given guaranteed accuracy, specified with param Accuracy;
+    will raise EGraphError if m is not proper TSP matrix }
+    class function FindApprox(const m: TTspMatrix; Accuracy: Double; out aTour: TIntArray; out aCost: T;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+  end;
+
+  { TGMetricTspHelper: algorithms for metric TSP }
+  generic TGMetricTspHelper<T> = class(specialize TGTspHelper<T>)
+    class function FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+    class function FindApprox(const m: TTspMatrix; Accuracy: Double; out aTour: TIntArray; out aCost: T;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+  end;
+
+  generic TGPoint2D<T> = record
+    X, Y: T;
+    constructor Create(aX, aY: T);
+    class function Equal(constref L, R: TGPoint2D): Boolean; static; inline;
+    class function HashCode(constref aPoint: TGPoint2D): SizeInt; static; inline;
+    function Distance(constref aPoint: TGPoint2D): ValReal; inline;
+  end;
+
+  generic TGPoint3D<T> = record
+    X, Y, Z: T;
+    class function Equal(constref L, R: TGPoint3D): Boolean; static; inline;
+    class function HashCode(constref aPoint: TGPoint3D): SizeInt; static; inline;
+    constructor Create(aX, aY, aZ: T);
+    function Distance(constref aPoint: TGPoint3D): ValReal; inline;
+  end;
+
+  { TGEuclidTspHelper }
+  generic TGEuclidTspHelper<TGPoint> = class
+  public
+  type
+    TPointArray = array of TGPoint;
+  private
+  type
+    THelper    = specialize TGMetricTspHelper<ValReal>;
+    TTspMatrix = THelper.TTspMatrix;
+    THashSet   = specialize TGLiteHashSetLP<TGPoint, TGPoint>;
+
+    class function PointArray2IndexArray(const aPoints: TPointArray): TIntArray; static;
+    class function CreateMatrix(const aPoints: TPointArray; out aDist: TIntArray): TTspMatrix; static;
+  public
+    class function DistinctCount(const aPoints: TPointArray): SizeInt; static;
+    class function FindGreedyFast(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
+    class function FindGreedyFastNn(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
+    class function FindGreedy2Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
+    class function FindGreedy3Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
+    class function FindSlowGreedy3Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray; static;
+    class function FindExact(const aPoints: TPointArray; out aTour: TIntArray; out aCost: ValReal;
+                   aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+    class function FindApprox(const aPoints: TPointArray; Accuracy: Double; out aTour: TIntArray;
+                   out aCost: ValReal; aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
+  end;
+
   {$I SparseGraphHelpH.inc}
 
 implementation
@@ -2037,40 +2273,31 @@ begin
       Result := Dist[I];
 end;
 
-{ TIntArrayHelper }
+{ TGAbstractDotWriter }
 
-function TIntArrayHelper.GetLenght: SizeInt;
+function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
 begin
-  Result := System.Length(Self);
+  Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
 end;
 
-procedure TIntArrayHelper.SetLength(aValue: SizeInt);
+procedure TGAbstractDotWriter.SaveToStream(aGraph: TGraph; aStream: TStream);
+var
+  Dot: utf8string;
 begin
-  System.SetLength(Self, aValue);
+  Dot := Graph2Dot(aGraph);
+  aStream.WriteBuffer(Pointer(Dot)^, System.Length(Dot));
 end;
 
-class function TIntArrayHelper.Construct(aLength: SizeInt; aInitValue: SizeInt): TIntArray;
+procedure TGAbstractDotWriter.SaveToFile(aGraph: TGraph; const aFileName: string);
+var
+  fs: TFileStream;
 begin
-  System.SetLength(Result, aLength);
-{$IF DEFINED(CPU64)}
-  System.FillQWord(Pointer(Result)^, aLength, QWord(aInitValue));
-{$ELSEIF DEFINED(CPU32)}
-  System.FillDWord(Pointer(Result)^, aLength, DWord(aInitValue));
-{$ELSE}
-  System.FillWord(Pointer(Result)^, aLength, Word(aInitValue));
-{$ENDIF}
-end;
-
-function TIntArrayHelper.Copy: TIntArray;
-begin
-  Result := System.Copy(Self);
-end;
-
-{ TGSimpleWeight }
-
-constructor TGSimpleWeight.Create(aValue: T);
-begin
-  Weight := aValue;
+  fs := TFileStream.Create(aFileName, fmCreate);
+  try
+    SaveToStream(aGraph, fs);
+  finally
+    fs.Free;
+  end;
 end;
 
 { TGTspHelper.TBbTsp.TMinData }
@@ -3360,6 +3587,172 @@ begin
   Result := Sqrt((ValReal(aPoint.X) - ValReal(X)) * (ValReal(aPoint.X) - ValReal(X)) +
                  (ValReal(aPoint.Y) - ValReal(Y)) * (ValReal(aPoint.Y) - ValReal(Y)) +
                  (ValReal(aPoint.Z) - ValReal(Z)) * (ValReal(aPoint.Z) - ValReal(Z)));
+end;
+
+{ TGEuclidTspHelper }
+
+class function TGEuclidTspHelper.PointArray2IndexArray(const aPoints: TPointArray): TIntArray;
+var
+  HashSet: THashSet;
+  p: TGPoint;
+  I: SizeInt = 0;
+  J: SizeInt = 0;
+begin
+  Result.Length := System.Length(aPoints);
+  for p in aPoints do
+    begin
+      if HashSet.Add(p) then
+        begin
+          Result[I] := J;
+          Inc(I);
+        end;
+      Inc(J);
+    end;
+  Result.Length := I;
+end;
+
+class function TGEuclidTspHelper.CreateMatrix(const aPoints: TPointArray; out aDist: TIntArray): TTspMatrix;
+var
+  I, J, Size: Integer;
+begin
+  aDist := PointArray2IndexArray(aPoints);
+  Size := aDist.Length;
+  System.SetLength(Result, Size, Size);
+  for I := 0 to Pred(Size) do
+    for J := 0 to Pred(Size) do
+      if I <> J then
+        Result[I, J] := aPoints[aDist[I]].Distance(aPoints[aDist[J]])
+      else
+        Result[I, J] := 0.0;
+end;
+
+class function TGEuclidTspHelper.DistinctCount(const aPoints: TPointArray): SizeInt;
+var
+  HashSet: THashSet;
+begin
+  Result := HashSet.AddAll(aPoints);
+end;
+
+class function TGEuclidTspHelper.FindGreedyFast(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
+var
+  m: TTspMatrix;
+  Distinct: TIntArray;
+  I: SizeInt;
+begin
+  m := CreateMatrix(aPoints, Distinct);
+  Result := THelper.FindGreedyFast(m, aCost);
+  for I := 0 to System.High(Result) do
+    Result[I] := Distinct[Result[I]];
+end;
+
+class function TGEuclidTspHelper.FindGreedyFastNn(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
+var
+  m: TTspMatrix;
+  Distinct: TIntArray;
+  I: SizeInt;
+begin
+  m := CreateMatrix(aPoints, Distinct);
+  Result := THelper.FindGreedyFastNn(m, aCost);
+  for I := 0 to System.High(Result) do
+    Result[I] := Distinct[Result[I]];
+end;
+
+class function TGEuclidTspHelper.FindGreedy2Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
+var
+  m: TTspMatrix;
+  Distinct: TIntArray;
+  I: SizeInt;
+begin
+  m := CreateMatrix(aPoints, Distinct);
+  Result := THelper.FindGreedy2Opt(m, aCost);
+  for I := 0 to System.High(Result) do
+    Result[I] := Distinct[Result[I]];
+end;
+
+class function TGEuclidTspHelper.FindGreedy3Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
+var
+  m: TTspMatrix;
+  Distinct: TIntArray;
+  I: SizeInt;
+begin
+  m := CreateMatrix(aPoints, Distinct);
+  Result := THelper.FindGreedy3Opt(m, aCost);
+  for I := 0 to System.High(Result) do
+    Result[I] := Distinct[Result[I]];
+end;
+
+class function TGEuclidTspHelper.FindSlowGreedy3Opt(const aPoints: TPointArray; out aCost: ValReal): TIntArray;
+var
+  m: TTspMatrix;
+  Distinct: TIntArray;
+  I: SizeInt;
+begin
+  m := CreateMatrix(aPoints, Distinct);
+  Result := THelper.FindSlowGreedy3Opt(m, aCost);
+  for I := 0 to System.High(Result) do
+    Result[I] := Distinct[Result[I]];
+end;
+
+class function TGEuclidTspHelper.FindExact(const aPoints: TPointArray; out aTour: TIntArray; out aCost: ValReal;
+  aTimeOut: Integer): Boolean;
+var
+  m: TTspMatrix;
+  Distinct: TIntArray;
+  I: SizeInt;
+begin
+  m := CreateMatrix(aPoints, Distinct);
+  Result := THelper.FindExact(m, aTour, aCost, aTimeOut);
+  for I := 0 to System.High(aTour) do
+    aTour[I] := Distinct[aTour[I]];
+end;
+
+class function TGEuclidTspHelper.FindApprox(const aPoints: TPointArray; Accuracy: Double; out aTour: TIntArray;
+  out aCost: ValReal; aTimeOut: Integer): Boolean;
+var
+  m: TTspMatrix;
+  Distinct: TIntArray;
+  I: SizeInt;
+begin
+  m := CreateMatrix(aPoints, Distinct);
+  Result := THelper.FindApprox(m, Accuracy, aTour, aCost, aTimeOut);
+  for I := 0 to System.High(aTour) do
+    aTour[I] := Distinct[aTour[I]];
+end;
+
+{ TIntArrayHelper }
+
+function TIntArrayHelper.GetLenght: SizeInt;
+begin
+  Result := System.Length(Self);
+end;
+
+procedure TIntArrayHelper.SetLength(aValue: SizeInt);
+begin
+  System.SetLength(Self, aValue);
+end;
+
+class function TIntArrayHelper.Construct(aLength: SizeInt; aInitValue: SizeInt): TIntArray;
+begin
+  System.SetLength(Result, aLength);
+{$IF DEFINED(CPU64)}
+  System.FillQWord(Pointer(Result)^, aLength, QWord(aInitValue));
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(Pointer(Result)^, aLength, DWord(aInitValue));
+{$ELSE}
+  System.FillWord(Pointer(Result)^, aLength, Word(aInitValue));
+{$ENDIF}
+end;
+
+function TIntArrayHelper.Copy: TIntArray;
+begin
+  Result := System.Copy(Self);
+end;
+
+{ TGSimpleWeight }
+
+constructor TGSimpleWeight.Create(aValue: T);
+begin
+  Weight := aValue;
 end;
 
 { TDisjointSetUnion }
@@ -5698,33 +6091,6 @@ var
   Helper: THungarian;
 begin
   Result := Helper.MaxWeightMatching(aGraph, w, g);
-end;
-
-{ TGAbstractDotWriter }
-
-function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
-begin
-  Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
-end;
-
-procedure TGAbstractDotWriter.SaveToStream(aGraph: TGraph; aStream: TStream);
-var
-  Dot: utf8string;
-begin
-  Dot := Graph2Dot(aGraph);
-  aStream.WriteBuffer(Pointer(Dot)^, System.Length(Dot));
-end;
-
-procedure TGAbstractDotWriter.SaveToFile(aGraph: TGraph; const aFileName: string);
-var
-  fs: TFileStream;
-begin
-  fs := TFileStream.Create(aFileName, fmCreate);
-  try
-    SaveToStream(aGraph, fs);
-  finally
-    fs.Free;
-  end;
 end;
 
 end.
