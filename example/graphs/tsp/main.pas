@@ -58,10 +58,7 @@ type
     FGreedyCost,
     FBnBCost: Integer;
     FScale: Double;
-    FExact: Boolean;
     procedure NewPoints;
-    procedure StartGreedy;
-    procedure StartBnB;
     procedure RunGreedy;
     procedure RunBnB;
   public
@@ -84,12 +81,12 @@ end;
 
 procedure TfrmMain.btStartBnBClick(Sender: TObject);
 begin
-  StartBnB;
+  RunBnB;
 end;
 
 procedure TfrmMain.btStartGreedyClick(Sender: TObject);
 begin
-  StartGreedy;
+  RunGreedy;
 end;
 
 procedure TfrmMain.FormCreate(Sender: TObject);
@@ -187,41 +184,30 @@ begin
   pbBnB.Invalidate;
 end;
 
-procedure TfrmMain.StartGreedy;
+procedure TfrmMain.RunGreedy;
 begin
   if FPoints = nil then
     exit;
   FGreedySol := nil;
   lbGreedyResult.Caption := 'running';
   Application.ProcessMessages;
-  RunGreedy;
+  FGreedySol := TSolver.FindGreedyFast(FMatrix, FGreedyCost);
   lbGreedyResult.Caption := IntToStr(FGreedyCost);
   pbGreedy.Invalidate;
 end;
 
-procedure TfrmMain.StartBnB;
+procedure TfrmMain.RunBnB;
 begin
   if FPoints = nil then
     exit;
   FBnBSol := nil;
   lbBnBResult.Caption := 'running';
   Application.ProcessMessages;
-  RunBnB;
-  if FExact then
+  if TSolver.FindExact(FMatrix, FBnBSol, FBnBCost, seTtl.Value) then
     lbBnBResult.Caption := IntToStr(FBnBCost) + '(exact)'
   else
     lbBnBResult.Caption := IntToStr(FBnBCost) + '(approx)';
   pbBnB.Invalidate;
-end;
-
-procedure TfrmMain.RunGreedy;
-begin
-  FGreedySol := TSolver.FindGreedyFast(FMatrix, FGreedyCost);
-end;
-
-procedure TfrmMain.RunBnB;
-begin
-  FExact := TSolver.FindExact(FMatrix, FBnBSol, FBnBCost, seTtl.Value);
 end;
 
 end.
