@@ -13,25 +13,28 @@ object frmMain: TfrmMain
     Left = 0
     Height = 781
     Top = 0
-    Width = 1428
+    Width = 1430
+    BevelOuter = bvNone
     ClientHeight = 781
-    ClientWidth = 1428
+    ClientWidth = 1430
     TabOrder = 0
     object Panel2: TPanel
-      Left = 1
-      Height = 779
-      Top = 1
-      Width = 713
+      Left = 0
+      Height = 781
+      Top = 0
+      Width = 715
       Align = alLeft
-      ClientHeight = 779
-      ClientWidth = 713
+      BevelInner = bvLowered
+      ClientHeight = 781
+      ClientWidth = 715
       TabOrder = 0
       object Panel4: TPanel
-        Left = 1
+        Left = 2
         Height = 66
-        Top = 1
+        Top = 2
         Width = 711
         Align = alTop
+        BevelInner = bvLowered
         ClientHeight = 66
         ClientWidth = 711
         TabOrder = 0
@@ -53,29 +56,31 @@ object frmMain: TfrmMain
         end
       end
       object pbGreedy: TPaintBox
-        Left = 1
+        Left = 2
         Height = 711
-        Top = 67
+        Top = 68
         Width = 711
         Align = alClient
         OnPaint = PaintBoxPaint
       end
     end
     object Panel3: TPanel
-      Left = 714
-      Height = 779
-      Top = 1
-      Width = 713
+      Left = 715
+      Height = 781
+      Top = 0
+      Width = 715
       Align = alClient
-      ClientHeight = 779
-      ClientWidth = 713
+      BevelInner = bvLowered
+      ClientHeight = 781
+      ClientWidth = 715
       TabOrder = 1
       object Panel5: TPanel
-        Left = 1
+        Left = 2
         Height = 66
-        Top = 1
+        Top = 2
         Width = 711
         Align = alTop
+        BevelInner = bvLowered
         ClientHeight = 66
         ClientWidth = 711
         TabOrder = 0
@@ -115,9 +120,9 @@ object frmMain: TfrmMain
         end
       end
       object pbBnB: TPaintBox
-        Left = 1
+        Left = 2
         Height = 711
-        Top = 67
+        Top = 68
         Width = 711
         Align = alClient
         OnPaint = PaintBoxPaint

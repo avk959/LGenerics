@@ -94,7 +94,7 @@ end;
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
-  FRange := 1000;
+  FRange := 10000;
   FCanvasSize := pbGreedy.Width;
   FScale := (FCanvasSize - GAP * 2) / FRange;
 end;
@@ -159,6 +159,7 @@ procedure TfrmMain.NewPoints;
 var
   HashSet: THashSet;
   I, J, Size: SizeInt;
+  Dist: Integer;
 begin
   FGreedySol := nil;
   FBnBSol := nil;
@@ -174,10 +175,14 @@ begin
   SetLength(FMatrix, Size, Size);
   for I := 0 to Pred(Size) do
     for J := 0 to Pred(Size) do
-      if I <> J then
-        FMatrix[I, J] := Round(FPoints[I].Distance(FPoints[J]))
-      else
-        FMatrix[I, J] := 0;
+      if I > J then
+        begin
+          Dist := Round(FPoints[I].Distance(FPoints[J]));
+          FMatrix[I, J] := Dist;
+          FMatrix[J, I] := Dist;
+        end;
+  for I := 0 to Pred(Size) do
+    FMatrix[I, I] := 0;
   pbGreedy.Invalidate;
   pbBnB.Invalidate;
 end;
