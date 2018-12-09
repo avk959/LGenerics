@@ -24,8 +24,8 @@ type
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
-    lbBnBResult: TLabel;
-    lbGreedyResult: TLabel;
+    lbBnBCost: TLabel;
+    lbGreedyCost: TLabel;
     pbGreedy: TPaintBox;
     pbBnB: TPaintBox;
     Panel1: TPanel;
@@ -51,12 +51,11 @@ type
   var
     FPoints: TPointArray;
     FMatrix: TSolver.TTspMatrix;
-    FGreedySol,
-    FBnBSol: TIntArray;
-    FRange,
-    FCanvasSize: Integer;
-    FGreedyCost,
-    FBnBCost: Integer;
+    FGreedyTour,
+    FBnBTour: TIntArray;
+    FRange: Integer;
+    FGreedyTourCost,
+    FBnBTourCost: Integer;
     FScale: Double;
     procedure NewPoints;
     procedure RunGreedy;
@@ -92,14 +91,14 @@ end;
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
   FRange := 10000;
-  FCanvasSize := pbGreedy.Width;
-  FScale := (FCanvasSize - GAP * 2) / FRange;
+  FScale := (pbGreedy.Width - GAP * 2) / FRange;
+  Randomize;
 end;
 
 procedure TfrmMain.PaintBoxPaint(Sender: TObject);
 var
   PaintBox: TPaintBox;
-  Solution: TIntArray;
+  Tour: TIntArray;
   I, X, Y, OldX, OldY: Integer;
   p: TPoint2D;
 begin
@@ -107,15 +106,15 @@ begin
     exit;
   PaintBox := TPaintBox(Sender);
   if PaintBox = pbGreedy then
-    Solution := FGreedySol
+    Tour := FGreedyTour
   else
-    Solution := FBnBSol;
+    Tour := FBnBTour;
   PaintBox.Canvas.Brush.Color := $00e9ffff;
   PaintBox.Canvas.FillRect(0, 0, PaintBox.Width, PaintBox.Height);
   if FPoints = nil then
     exit;
   PaintBox.Canvas.Pen.Width := 1;
-  if Solution = nil then
+  if Tour = nil then
     begin
       PaintBox.Canvas.Brush.Color := clBlue;
       PaintBox.Canvas.Pen.Color := clBlue;
@@ -129,16 +128,16 @@ begin
     end
   else
     begin
-      p := FPoints[Solution[0]];
+      p := FPoints[Tour[0]];
       X := Round(p.X * FScale) + GAP;
       Y := Round(p.Y * FScale) + GAP;
       PaintBox.Canvas.MoveTo(X, Y);
       PaintBox.Canvas.Brush.Color := clBlue;
-      for I := 1 to High(Solution) do
+      for I := 1 to High(Tour) do
         begin
           OldX := X;
           OldY := Y;
-          p := FPoints[Solution[I]];
+          p := FPoints[Tour[I]];
           X := Round(p.X * FScale) + GAP;
           Y := Round(p.Y * FScale) + GAP;
           PaintBox.Canvas.Pen.Color := clLime;
@@ -158,11 +157,11 @@ var
   I, J, Size: SizeInt;
   Dist: Integer;
 begin
-  FGreedySol := nil;
-  FBnBSol := nil;
+  FGreedyTour := nil;
+  FBnBTour := nil;
   FPoints := nil;
-  lbGreedyResult.Caption := '-';
-  lbBnBResult.Caption := '-';
+  lbGreedyCost.Caption := '-';
+  lbBnBCost.Caption := '-';
   Size := seSize.Value;
   SetLength(FPoints, Size);
   for I := 0 to High(FPoints) do
@@ -188,11 +187,11 @@ procedure TfrmMain.RunGreedy;
 begin
   if FPoints = nil then
     exit;
-  FGreedySol := nil;
-  lbGreedyResult.Caption := 'running';
+  FGreedyTour := nil;
+  lbGreedyCost.Caption := 'running';
   Application.ProcessMessages;
-  FGreedySol := TSolver.FindGreedyFast(FMatrix, FGreedyCost);
-  lbGreedyResult.Caption := IntToStr(FGreedyCost);
+  FGreedyTour := TSolver.FindGreedyFast(FMatrix, FGreedyTourCost);
+  lbGreedyCost.Caption := IntToStr(FGreedyTourCost);
   pbGreedy.Invalidate;
 end;
 
@@ -200,13 +199,13 @@ procedure TfrmMain.RunBnB;
 begin
   if FPoints = nil then
     exit;
-  FBnBSol := nil;
-  lbBnBResult.Caption := 'running';
+  FBnBTour := nil;
+  lbBnBCost.Caption := 'running';
   Application.ProcessMessages;
-  if TSolver.FindExact(FMatrix, FBnBSol, FBnBCost, seTtl.Value) then
-    lbBnBResult.Caption := IntToStr(FBnBCost) + '(exact)'
+  if TSolver.FindExact(FMatrix, FBnBTour, FBnBTourCost, seTtl.Value) then
+    lbBnBCost.Caption := IntToStr(FBnBTourCost) + '(exact)'
   else
-    lbBnBResult.Caption := IntToStr(FBnBCost) + '(approx)';
+    lbBnBCost.Caption := IntToStr(FBnBTourCost) + '(approx)';
   pbBnB.Invalidate;
 end;
 

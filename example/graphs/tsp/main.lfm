@@ -46,7 +46,7 @@ object frmMain: TfrmMain
           Caption = 'Greedy TSP solution: '
           ParentColor = False
         end
-        object lbGreedyResult: TLabel
+        object lbGreedyCost: TLabel
           Left = 144
           Height = 19
           Top = 40
@@ -92,7 +92,7 @@ object frmMain: TfrmMain
           Caption = 'BnB TSP solution:'
           ParentColor = False
         end
-        object lbBnBResult: TLabel
+        object lbBnBCost: TLabel
           Left = 124
           Height = 19
           Top = 40
