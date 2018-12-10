@@ -533,7 +533,8 @@ type
 
   TTspMatrixState = (tmsProper, tmsTrivial, tmsNonSquare, tmsNegElement);
 
-  { TGTspHelper: some algorithms for TSP }
+  { TGTspHelper: some algorithms for TSP;
+    warning: for signed integer types only }
   generic TGTspHelper<T> = class
   public
   type
@@ -686,6 +687,7 @@ type
                    aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
   end;
 
+  { TGMetricTspHelper: for signed integer types only }
   generic TGMetricTspHelper<T> = class(specialize TGTspHelper<T>)
     class function FindExact(const m: TTspMatrix; out aTour: TIntArray; out aCost: T;
                    aTimeOut: Integer = WAIT_INFINITE): Boolean; static;
