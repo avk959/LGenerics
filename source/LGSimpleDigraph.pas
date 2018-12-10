@@ -261,6 +261,7 @@ type
     constructor Create;
     function Clone: TIntFlowChart;
     function Reverse: TIntFlowChart;
+    function AddVertexRange(aFrom, aTo: Integer): Integer;
   end;
 
   TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TEmptyRec, Integer>)
@@ -2068,6 +2069,15 @@ end;
 function TIntFlowChart.Reverse: TIntFlowChart;
 begin
   Result := inherited Reverse as TIntFlowChart;
+end;
+
+function TIntFlowChart.AddVertexRange(aFrom, aTo: Integer): Integer;
+var
+  I: Integer;
+begin
+  Result := Succ(aTo - aFrom);
+  for I := aFrom to aTo do
+    AddVertex(I);
 end;
 
 { TIntFlowChartDotWriter }

@@ -452,6 +452,7 @@ type
     function  SubgraphFromTree(const aTree: TIntArray): TIntChart;
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TIntChart;
     function  Clone: TIntChart;
+    function  AddVertexRange(aFrom, aTo: Integer): Integer;
   end;
 
   generic TGraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
@@ -3990,6 +3991,15 @@ function TIntChart.Clone: TIntChart;
 begin
   Result := TIntChart.Create;
   Result.AssignGraph(Self);
+end;
+
+function TIntChart.AddVertexRange(aFrom, aTo: Integer): Integer;
+var
+  I: Integer;
+begin
+  Result := Succ(aTo - aFrom);
+  for I := aFrom to aTo do
+    AddVertex(I);
 end;
 
 { TGraphDotWriter }
