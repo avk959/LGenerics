@@ -3169,7 +3169,7 @@ begin
   Len := System.Length(m);
   aCost := T.INF_VALUE;
   Tour.Length := Len;
-  Result.Length := Succ(Len);
+  Result{%H-}.Length := Succ(Len);
   for K := 0 to Pred(Len) do
     begin
       Unvisit.InitRange(Len);
