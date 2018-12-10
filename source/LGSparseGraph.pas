@@ -1612,7 +1612,7 @@ end;
 
 function TGSparseGraph.ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  if (aSrc >= 0) and (aSrc < VertexCount) then
+  if SizeUInt(aSrc) < SizeUInt(VertexCount) then
     Result := AdjLists[aSrc]^.Contains(aDst)
   else
     Result := False;
@@ -1633,7 +1633,7 @@ end;
 
 function TGSparseGraph.AdjacentI(aSrc, aDst: SizeInt): Boolean;
 begin
-  if (aSrc >= 0) and (aSrc < VertexCount) then
+  if SizeUInt(aSrc) < SizeUInt(VertexCount) then
     Result := AdjLists[aSrc]^.Contains(aDst)
   else
     Result := False;

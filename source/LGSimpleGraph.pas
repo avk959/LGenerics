@@ -185,7 +185,8 @@ type
   { returns True and vertex index, if it is added, False if such a vertex already exists }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
-  { note: vertex removing breaks validity of connected property }
+  { note: vertex removing breaks validity of connected property;
+    raises EGraphError if not contains aVertex }
     procedure RemoveVertex(constref aVertex: TVertex); inline;
     procedure RemoveVertexI(aIndex: SizeInt);
   { returns True if the edge is added, False, if such an edge already exists }
