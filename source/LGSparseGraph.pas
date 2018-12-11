@@ -469,7 +469,7 @@ type
   { returns an array containing in the corresponding components the length of the shortest path from aSrc
     (in sense 'edges count'), or -1 if it unreachable }
     function ShortestPathsMap(constref aSrc: TVertex): TIntArray; inline;
-    function ShortestPathsMapI(aSrc: SizeInt = 0): TIntArray;
+    function ShortestPathsMapI(aSrc: SizeInt): TIntArray;
     function ShortestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
     function ShortestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
   { returns an array containing chain of vertex indices of found shortest path(in sense 'edges count'),

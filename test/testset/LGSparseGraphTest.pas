@@ -24,8 +24,15 @@ type
     TGraphRef   = specialize TGAutoRef<TGraph>;
     TDiGraphRef = specialize TGAutoRef<TDiGraph>;
 
+  var
+    FFound,
+    FDone: TBoolVector;
     function  GenerateTestGrBip1: TGraph;
     function  GenerateTestDigrBip1: TDiGraph;
+    function  GenerateTestGr1: TGraph;
+    function  GenerateTestDigr1: TDiGraph;
+    function  vFound({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+    procedure vDone({%H-}aSender: TObject; aIndex: SizeInt);
   published
     procedure IsEmpty;
     procedure IsEmptyDirect;
@@ -61,6 +68,10 @@ type
     procedure VerticesDirect;
     procedure IsBipartite;
     procedure IsBipartiteDirect;
+    procedure DfsTraversal;
+    procedure DfsTraversalDirect;
+    procedure BfsTraversal;
+    procedure BfsTraversalDirect;
   end;
 
 implementation
@@ -69,16 +80,43 @@ function SparseGraphTest.GenerateTestGrBip1: TGraph;
 begin
   Result := TGraph.Create;
   Result.AddVertexRange(1, 16);
-  Result.AddEdges([1, 2, 1, 4, 1, 6, 3, 4, 3, 6, 3, 8, 5, 6, 5, 8, 5, 10, 7, 8, 7, 10, 7, 12,
-                   9, 10, 9, 12, 9, 14, 11, 12, 11, 14, 11, 16, 13, 14, 13, 16, 15, 16]);
+  Result.AddEdges([1, 2, 1, 4, 1, 6, 3, 4, 3, 6, 3, 8, 5, 6, 5, 8, 5, 10, 7, 8, 7, 10, 7,
+                   12, 9, 10, 9, 12, 9, 14, 11, 12, 11, 14, 11, 16, 13, 14, 13, 16, 15, 16]);
 end;
 
 function SparseGraphTest.GenerateTestDigrBip1: TDiGraph;
 begin
   Result := TDiGraph.Create;
   Result.AddVertexRange(1, 12);
-  Result.AddEdges([1, 2, 1, 4, 1, 6, 2, 3, 3, 4, 3, 6, 3, 8, 4, 5, 5, 6, 5, 8, 5, 10, 6, 7,
-              7, 8, 7, 10, 7, 12, 8, 9, 9, 10, 9, 12, 10, 11, 11, 8, 12, 1]);
+  Result.AddEdges([1, 2, 1, 4, 1, 6, 2, 3, 3, 4, 3, 6, 3, 8, 4, 5, 5, 6, 5, 8, 5, 10,
+                   6, 7, 7, 8, 7, 10, 7, 12, 8, 9, 9, 10, 9, 12, 10, 11, 11, 8, 12, 1]);
+end;
+
+function SparseGraphTest.GenerateTestGr1: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(0, 12);
+  Result.AddEdges([0, 1, 0, 2, 0, 3, 0, 5, 0, 6, 2, 3, 3, 5, 3, 4, 6, 4, 4, 9, 6, 9, 7, 6,
+                   8, 7, 9, 10, 9, 11, 9, 12, 11, 12]);
+end;
+
+function SparseGraphTest.GenerateTestDigr1: TDiGraph;
+begin
+  Result := TDiGraph.Create;
+  Result.AddVertexRange(0, 12);
+  Result.AddEdges([0, 1, 0, 2, 0, 3, 0, 5, 0, 6, 2, 3, 3, 5, 3, 4, 6, 4, 4, 9, 6, 9, 7, 6,
+                   8, 7, 9, 10, 9, 11, 9, 12, 11, 12]);
+end;
+
+function SparseGraphTest.vFound(aSender: TObject; aIndex: SizeInt): Boolean;
+begin
+  FFound[aIndex] := False;
+  Result := True;
+end;
+
+procedure SparseGraphTest.vDone(aSender: TObject; aIndex: SizeInt);
+begin
+  FDone[aIndex] := False;
 end;
 
 procedure SparseGraphTest.IsEmpty;
@@ -664,6 +702,7 @@ var
 begin
   Ref.Instance := GenerateTestGrBip1;
   g := Ref;
+  AssertTrue(g.VertexCount = 16);
   AssertTrue(g.IsBipartite(Whites, Grays));
   AssertTrue(Whites.Length + Grays.Length = g.VertexCount);
   for I := 0 to Pred(Whites.Length) do
@@ -685,6 +724,7 @@ var
 begin
   Ref.Instance := GenerateTestDigrBip1;
   g := Ref;
+  AssertTrue(g.VertexCount = 12);
   AssertTrue(g.IsBipartite(Whites, Grays));
   AssertTrue(Whites.Length + Grays.Length = g.VertexCount);
   for I := 0 to Pred(Whites.Length) do
@@ -695,6 +735,82 @@ begin
     for J := 0 to Pred(Grays.Length) do
       if I <> J then
         AssertFalse(g.AdjacentI(Grays[I], Grays[J]));
+end;
+
+procedure SparseGraphTest.DfsTraversal;
+var
+  Ref: TGraphRef;
+  g: TGraph;
+  vCount: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  vCount := g.VertexCount;
+  AssertTrue(vCount = 13);
+  FFound.InitRange(vCount);
+  FDone.InitRange(vCount);
+  AssertTrue(FFound.PopCount = vCount);
+  AssertTrue(FDone.PopCount = vCount);
+  AssertTrue(g.DfsTraversal(0, @vFound, @vDone) = vCount);
+  AssertTrue(FFound.IsEmpty);
+  AssertTrue(FDone.IsEmpty);
+end;
+
+procedure SparseGraphTest.DfsTraversalDirect;
+var
+  Ref: TDiGraphRef;
+  g: TDiGraph;
+  vCount: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  vCount := g.VertexCount;
+  AssertTrue(vCount = 13);
+  FFound.InitRange(vCount);
+  FDone.InitRange(vCount);
+  AssertTrue(FFound.PopCount = vCount);
+  AssertTrue(FDone.PopCount = vCount);
+  AssertTrue(g.DfsTraversal(0, @vFound, @vDone) = vCount - 2);
+  AssertTrue(FFound.PopCount = 2);
+  AssertTrue(FFound[7]);
+  AssertTrue(FFound[8]);
+  AssertTrue(FDone.PopCount = 2);
+  AssertTrue(FDone[7]);
+  AssertTrue(FDone[8]);
+end;
+
+procedure SparseGraphTest.BfsTraversal;
+var
+  Ref: TGraphRef;
+  g: TGraph;
+  vCount: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  vCount := g.VertexCount;
+  AssertTrue(vCount = 13);
+  FFound.InitRange(vCount);
+  AssertTrue(FFound.PopCount = vCount);
+  AssertTrue(g.BfsTraversal(0, @vFound) = vCount);
+  AssertTrue(FFound.IsEmpty);
+end;
+
+procedure SparseGraphTest.BfsTraversalDirect;
+var
+  Ref: TDiGraphRef;
+  g: TDiGraph;
+  vCount: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  vCount := g.VertexCount;
+  AssertTrue(vCount = 13);
+  FFound.InitRange(vCount);
+  AssertTrue(FFound.PopCount = vCount);
+  AssertTrue(g.BfsTraversal(0, @vFound) = vCount - 2);
+  AssertTrue(FFound.PopCount = 2);
+  AssertTrue(FFound[7]);
+  AssertTrue(FFound[8]);
 end;
 
 
