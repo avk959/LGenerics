@@ -7,6 +7,7 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry,
   LGUtils,
+  LGArrayHelpers,
   LGVector,
   LGSparseGraph,
   LGSimpleGraph,
@@ -23,6 +24,7 @@ type
     TDiGraph    = TIntFlowChart;
     TGraphRef   = specialize TGAutoRef<TGraph>;
     TDiGraphRef = specialize TGAutoRef<TDiGraph>;
+    THelper     = specialize TGOrdinalArrayHelper<SizeInt>;
 
   var
     FFound,
@@ -72,6 +74,10 @@ type
     procedure DfsTraversalDirect;
     procedure BfsTraversal;
     procedure BfsTraversalDirect;
+    procedure ShortestPaths;
+    procedure ShortestPathsDirect;
+    procedure Eccentricity;
+    procedure EccentricityDirect;
   end;
 
 implementation
@@ -811,6 +817,78 @@ begin
   AssertTrue(FFound.PopCount = 2);
   AssertTrue(FFound[7]);
   AssertTrue(FFound[8]);
+end;
+
+procedure SparseGraphTest.ShortestPaths;
+var
+  Ref: TGraphRef;
+  g: TGraph;
+  Paths: TIntArray;
+const
+  RightPaths: array[1..13] of SizeInt = (0, 1, 1, 1, 2, 1, 1, 2, 3, 2, 3, 3, 3);
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  Paths := g.ShortestPathsMap(0);
+  AssertTrue(THelper.Same(Paths, RightPaths));
+end;
+
+procedure SparseGraphTest.ShortestPathsDirect;
+var
+  Ref: TDiGraphRef;
+  g: TDiGraph;
+  Paths: TIntArray;
+const
+  RightPaths: array[1..13] of SizeInt = (0, 1, 1, 1, 2, 1, 1, -1, -1, 2, 3, 3, 3);
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Paths := g.ShortestPathsMap(0);
+  AssertTrue(THelper.Same(Paths, RightPaths));
+end;
+
+procedure SparseGraphTest.Eccentricity;
+var
+  Ref: TGraphRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.Eccentricity(0) = 3);
+  AssertTrue(g.Eccentricity(1) = 4);
+  AssertTrue(g.Eccentricity(2) = 4);
+  AssertTrue(g.Eccentricity(3) = 4);
+  AssertTrue(g.Eccentricity(4) = 3);
+  AssertTrue(g.Eccentricity(5) = 4);
+  AssertTrue(g.Eccentricity(6) = 2);
+  AssertTrue(g.Eccentricity(7) = 3);
+  AssertTrue(g.Eccentricity(8) = 4);
+  AssertTrue(g.Eccentricity(9) = 3);
+  AssertTrue(g.Eccentricity(10) = 4);
+  AssertTrue(g.Eccentricity(11) = 4);
+  AssertTrue(g.Eccentricity(12) = 4);
+end;
+
+procedure SparseGraphTest.EccentricityDirect;
+var
+  Ref: TDiGraphRef;
+  g: TDiGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertTrue(g.Eccentricity(0) = 3);
+  AssertTrue(g.Eccentricity(1) = 0);
+  AssertTrue(g.Eccentricity(2) = 4);
+  AssertTrue(g.Eccentricity(3) = 3);
+  AssertTrue(g.Eccentricity(4) = 2);
+  AssertTrue(g.Eccentricity(5) = 0);
+  AssertTrue(g.Eccentricity(6) = 2);
+  AssertTrue(g.Eccentricity(7) = 3);
+  AssertTrue(g.Eccentricity(8) = 4);
+  AssertTrue(g.Eccentricity(9) = 1);
+  AssertTrue(g.Eccentricity(10) = 0);
+  AssertTrue(g.Eccentricity(11) = 1);
+  AssertTrue(g.Eccentricity(12) = 0);
 end;
 
 
