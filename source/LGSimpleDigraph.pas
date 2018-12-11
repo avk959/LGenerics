@@ -253,6 +253,8 @@ type
     constructor Create;
   end;
 
+  { TIntFlowChart }
+
   TIntFlowChart = class(specialize TGFlowChart<Integer, Integer>)
   protected
     procedure WriteVertex(aStream: TStream; constref aValue: Integer);
@@ -261,7 +263,11 @@ type
     constructor Create;
     function Clone: TIntFlowChart;
     function Reverse: TIntFlowChart;
+  { adds numbers in range [aFrom, aTo] as vertices, returns count of added vertices }
     function AddVertexRange(aFrom, aTo: Integer): Integer;
+  { treats aVertexList as list of the pairs of source-target, odd element ignored;
+    returns count of added edges; }
+    function  AddEdges(const aVertexList: array of Integer): Integer;
   end;
 
   TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TEmptyRec, Integer>)
@@ -2075,9 +2081,23 @@ function TIntFlowChart.AddVertexRange(aFrom, aTo: Integer): Integer;
 var
   I: Integer;
 begin
-  Result := Succ(aTo - aFrom);
+  Result := 0;
   for I := aFrom to aTo do
-    AddVertex(I);
+    Result += Ord(AddVertex(I));
+end;
+
+function TIntFlowChart.AddEdges(const aVertexList: array of Integer): Integer;
+var
+  I, R: Integer;
+begin
+  Result := 0;
+  R := System.High(aVertexList);
+  I := 0;
+  while I < R do
+    begin
+      Result += Ord(AddEdge(aVertexList[I], aVertexList[Succ(I)]));
+      I += 2;
+    end;
 end;
 
 { TIntFlowChartDotWriter }
