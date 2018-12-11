@@ -7,6 +7,7 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry,
   LGUtils,
+  LGVector,
   LGSparseGraph,
   LGSimpleGraph,
   LGSimpleDigraph;
@@ -22,6 +23,9 @@ type
     TDiGraph    = TIntFlowChart;
     TGraphRef   = specialize TGAutoRef<TGraph>;
     TDiGraphRef = specialize TGAutoRef<TDiGraph>;
+
+    function  GenerateTestGrBip1: TGraph;
+    function  GenerateTestDigrBip1: TDiGraph;
   published
     procedure IsEmpty;
     procedure IsEmptyDirect;
@@ -55,9 +59,27 @@ type
     procedure AdjVerticesIDirect;
     procedure Vertices;
     procedure VerticesDirect;
+    procedure IsBipartite;
+    procedure IsBipartiteDirect;
   end;
 
 implementation
+
+function SparseGraphTest.GenerateTestGrBip1: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 16);
+  Result.AddEdges([1, 2, 1, 4, 1, 6, 3, 4, 3, 6, 3, 8, 5, 6, 5, 8, 5, 10, 7, 8, 7, 10, 7, 12,
+                   9, 10, 9, 12, 9, 14, 11, 12, 11, 14, 11, 16, 13, 14, 13, 16, 15, 16]);
+end;
+
+function SparseGraphTest.GenerateTestDigrBip1: TDiGraph;
+begin
+  Result := TDiGraph.Create;
+  Result.AddVertexRange(1, 12);
+  Result.AddEdges([1, 2, 1, 4, 1, 6, 2, 3, 3, 4, 3, 6, 3, 8, 4, 5, 5, 6, 5, 8, 5, 10, 6, 7,
+              7, 8, 7, 10, 7, 12, 8, 9, 9, 10, 9, 12, 10, 11, 11, 8, 12, 1]);
+end;
 
 procedure SparseGraphTest.IsEmpty;
 var
@@ -631,6 +653,48 @@ begin
   for Vert in g.Vertices do
     Inc(I);
   AssertTrue(I = 4);
+end;
+
+procedure SparseGraphTest.IsBipartite;
+var
+  Ref: TGraphRef;
+  g: TGraph;
+  Whites, Grays: TIntArray;
+  I, J: Integer;
+begin
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  AssertTrue(g.IsBipartite(Whites, Grays));
+  AssertTrue(Whites.Length + Grays.Length = g.VertexCount);
+  for I := 0 to Pred(Whites.Length) do
+    for J := 0 to Pred(Whites.Length) do
+      if I <> J then
+        AssertFalse(g.AdjacentI(Whites[I], Whites[J]));
+  for I := 0 to Pred(Grays.Length) do
+    for J := 0 to Pred(Grays.Length) do
+      if I <> J then
+        AssertFalse(g.AdjacentI(Grays[I], Grays[J]));
+end;
+
+procedure SparseGraphTest.IsBipartiteDirect;
+var
+  Ref: TDiGraphRef;
+  g: TDiGraph;
+  Whites, Grays: TIntArray;
+  I, J: Integer;
+begin
+  Ref.Instance := GenerateTestDigrBip1;
+  g := Ref;
+  AssertTrue(g.IsBipartite(Whites, Grays));
+  AssertTrue(Whites.Length + Grays.Length = g.VertexCount);
+  for I := 0 to Pred(Whites.Length) do
+    for J := 0 to Pred(Whites.Length) do
+      if I <> J then
+        AssertFalse(g.AdjacentI(Whites[I], Whites[J]));
+  for I := 0 to Pred(Grays.Length) do
+    for J := 0 to Pred(Grays.Length) do
+      if I <> J then
+        AssertFalse(g.AdjacentI(Grays[I], Grays[J]));
 end;
 
 
