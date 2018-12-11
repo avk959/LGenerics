@@ -59,8 +59,8 @@ type
   TIntQueue        = specialize TGLiteQueue<SizeInt>;
   TIntDeque        = specialize TGLiteDeque<SizeInt>;
 
-  TOnVisit         = procedure (aValue: SizeInt) of object;
-  TOnAccept        = function (aValue: SizeInt): Boolean of object;
+  TOnVisit         = procedure (aSender: TObject; aIndex: SizeInt) of object;
+  TOnAccept        = function (aSender: TObject; aIndex: SizeInt): Boolean of object;
   TOnFindSet       = procedure(constref aSet: TIntArray; var aCancel: Boolean) of object;
   TCost            = Int64;
   TVertexColor     = type Byte;
@@ -437,21 +437,21 @@ type
   traversal utilities
 ***********************************************************************************************************}
 
-  { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after next vertex found,
-    OnDone calls after vertex done; if OnAccept returns False then traversal stops }
-    function  DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil;
-                          OnDone: TOnVisit = nil): SizeInt; inline;
-    function  DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil;
-                          OnDone: TOnVisit = nil): SizeInt;
+  { returns count of visited vertices during the DFS traversal;
+    aOnFound calls after next vertex found, aOnDone calls after vertex done;
+    if aOnFound returns False then traversal stops }
+    function  DfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil;
+                           aOnDone: TOnVisit = nil): SizeInt; inline;
+    function  DfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
   { returns the DFS traversal tree started from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
     function  DfsTree(constref aRoot: TVertex): TIntArray; inline;
     function  DfsTreeI(aRoot: SizeInt = 0): TIntArray;
-  { returns count of visited vertices; OnAccept calls after vertex visite, OnFound calls after vertex found;
-    if OnAccept returns False then traversal stops}
-    function  BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt; inline;
-    function  BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept = nil; OnFound: TOnVisit = nil): SizeInt;
+  { returns count of visited vertices during the BFS traversal;
+    aOnFound calls after vertex found; if aOnFound returns False then traversal stops}
+    function  BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil): SizeInt; inline;
+    function  BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil): SizeInt;
   { in aVisited returns indices of visited vertices }
     procedure BfsTraversal(constref aRoot: TVertex; out aVisited: TBoolVector); inline;
     procedure BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
@@ -1878,14 +1878,12 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit;
-  OnDone: TOnVisit): SizeInt;
+function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept; aOnDone: TOnVisit): SizeInt;
 begin
-  Result := DfsTraversalI(IndexOf(aRoot), OnAccept, OnFound, OnDone);
+  Result := DfsTraversalI(IndexOf(aRoot), aOnFound, aOnDone);
 end;
 
-function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit;
-  OnDone: TOnVisit): SizeInt;
+function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept; aOnDone: TOnVisit): SizeInt;
 var
   Stack: TIntArray;
   Visited: TBitVector;
@@ -1895,39 +1893,35 @@ var
 begin
   Result := 0;
   CheckIndexRange(aRoot);
+  Inc(Result);
+  if Assigned(aOnFound) and not aOnFound(Self, aRoot) then
+    exit;
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   {%H-}Stack := CreateIntArray;
-  if Assigned(OnFound) then
-    OnFound(aRoot);
   Visited[aRoot] := True;
   Inc(sTop);
   Stack[sTop] := aRoot;
-  Result := 1;
-  if Assigned(OnAccept) then
-    OnAccept(aRoot);
   while sTop >= 0 do
     begin
       aRoot := Stack[sTop];
-      if Assigned(OnAccept) and not OnAccept(aRoot) then
-        break;
       if AdjEnums[aRoot].MoveNext then
         begin
           Next := AdjEnums[aRoot].Current;
           if not Visited[Next] then
             begin
-              if Assigned(OnFound) then
-                OnFound(Next);
+              Inc(Result);
+              if Assigned(aOnFound) and not aOnFound(Self, Next) then
+                exit;
               Visited[Next] := True;
               Inc(sTop);
               Stack[sTop] := Next;
-              Inc(Result);
             end;
         end
       else
         begin
-          if Assigned(OnDone) then
-            OnDone(Stack[sTop]);
+          if Assigned(aOnDone) then
+            aOnDone(Self, Stack[sTop]);
           Dec(sTop);
         end;
     end;
@@ -1965,12 +1959,12 @@ begin
   Result[aRoot] := NULL_INDEX;
 end;
 
-function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
+function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept): SizeInt;
 begin
-  Result := BfsTraversalI(IndexOf(aRoot), OnAccept, OnFound);
+  Result := BfsTraversalI(IndexOf(aRoot), aOnFound);
 end;
 
-function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; OnAccept: TOnAccept; OnFound: TOnVisit): SizeInt;
+function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept): SizeInt;
 var
   Queue: TIntArray;
   Visited: TBitVector;
@@ -1982,8 +1976,8 @@ begin
   CheckIndexRange(aRoot);
   Visited.Size := VertexCount;
   System.SetLength(Queue, VertexCount);
-  if Assigned(OnFound) then
-    OnFound(aRoot);
+  if Assigned(aOnFound) and not aOnFound(Self, aRoot) then
+    exit;
   Visited[aRoot] := True;
   Queue[qTail] := aRoot;
   Inc(qTail);
@@ -1992,14 +1986,12 @@ begin
     begin
       aRoot := Queue[qHead];
       Inc(qHead);
-      if Assigned(OnAccept) and not OnAccept(aRoot) then
-        exit;
       for p in AdjLists[aRoot]^ do
         if not Visited[p^.Destination] then
           begin
-            if Assigned(OnFound) then
-              OnFound(p^.Destination);
             Inc(Result);
+            if Assigned(aOnFound) and not aOnFound(Self, aRoot) then
+              exit;
             Queue[qTail] := p^.Destination;
             Inc(qTail);
             Visited[p^.Destination] := True;

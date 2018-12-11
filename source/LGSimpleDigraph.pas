@@ -62,6 +62,8 @@ type
     THamiltonian = object
     strict private
     type
+      TOnCheckNode  = procedure (aIndex: SizeInt) of object;
+
       TAdjList = record
         InDegree: SizeInt;
         OutList: TBoolVector;
@@ -74,7 +76,7 @@ type
       FVacant: TBoolVector;
       FStack: TSimpleStack;
       FPaths: PIntArrayVector;
-      FCheckNode: TOnVisit;
+      FCheckNode: TOnCheckNode;
       FSource,
       FTarget,
       FNodeCount,
