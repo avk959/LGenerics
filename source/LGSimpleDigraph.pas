@@ -267,7 +267,7 @@ type
     function AddVertexRange(aFrom, aTo: Integer): Integer;
   { treats aVertexList as list of the pairs of source-target, odd element ignored;
     returns count of added edges; }
-    function  AddEdges(const aVertexList: array of Integer): Integer;
+    function AddEdges(const aVertexList: array of Integer): Integer;
   end;
 
   TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TEmptyRec, Integer>)
