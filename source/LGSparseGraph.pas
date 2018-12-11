@@ -452,9 +452,6 @@ type
     aOnFound calls after vertex found; if aOnFound returns False then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil): SizeInt; inline;
     function  BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil): SizeInt;
-  { in aVisited returns indices of visited vertices }
-    procedure BfsTraversal(constref aRoot: TVertex; out aVisited: TBoolVector); inline;
-    procedure BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
   { returns the BFS traversal tree started from aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
@@ -1990,44 +1987,11 @@ begin
         if not Visited[p^.Destination] then
           begin
             Inc(Result);
-            if Assigned(aOnFound) and not aOnFound(Self, aRoot) then
+            if Assigned(aOnFound) and not aOnFound(Self, p^.Destination) then
               exit;
             Queue[qTail] := p^.Destination;
             Inc(qTail);
             Visited[p^.Destination] := True;
-          end;
-    end;
-end;
-
-procedure TGSparseGraph.BfsTraversal(constref aRoot: TVertex; out aVisited: TBoolVector);
-begin
-  BfsTraversalI(IndexOf(aRoot), aVisited);
-end;
-
-procedure TGSparseGraph.BfsTraversalI(aRoot: SizeInt; out aVisited: TBoolVector);
-var
-  Queue: TIntArray;
-  p: PAdjItem;
-  qHead: SizeInt = 0;
-  qTail: SizeInt = 0;
-begin
-  CheckIndexRange(aRoot);
-  {%H-}aVisited.ClearBits;
-  aVisited.Size := VertexCount;
-  System.SetLength(Queue, VertexCount);
-  aVisited[aRoot] := True;
-  Queue[qTail] := aRoot;
-  Inc(qTail);
-  while qHead < qTail do
-    begin
-      aRoot := Queue[qHead];
-      Inc(qHead);
-      for p in AdjLists[aRoot]^ do
-        if not aVisited[p^.Destination] then
-          begin
-            Queue[qTail] := p^.Destination;
-            Inc(qTail);
-            aVisited[p^.Destination] := True;
           end;
     end;
 end;
