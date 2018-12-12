@@ -802,7 +802,7 @@ begin
   for I := 0 to Pred(Count) do
     if FList[I].Destination = aValue then
       exit(I);
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 procedure TGAdjList.DoRemove(aIndex: SizeInt);
@@ -904,7 +904,7 @@ begin
   if Count <> 0 then
     Pos := DoFind(aDst)
   else
-    Pos := -1;
+    Pos := NULL_INDEX;
   Result := Pos >= 0;
   if not Result then
     begin
@@ -938,13 +938,13 @@ end;
 
 function TGAdjList.Add(constref aItem: TAdjItem): Boolean;
 begin
-  if Count <> 0 then
-    Result := DoFind(aItem.Destination) < 0
+  if Count > 0 then
+    Result := DoFind(aItem.Destination) = NULL_INDEX
   else
     Result := True;
   if Result then
     begin
-      if Count = Capacity then
+      if Count >= Capacity then
         Expand;
       FList[Count] := aItem;
       Inc(FCount);
@@ -955,7 +955,7 @@ function TGAdjList.Remove(aDst: SizeInt): Boolean;
 var
   Pos: SizeInt;
 begin
-  if Count <> 0 then
+  if Count > 0 then
     begin
       Pos := DoFind(aDst);
       Result := Pos >= 0;
