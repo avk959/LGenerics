@@ -443,7 +443,7 @@ type
     function  DfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil;
                            aOnDone: TOnVisit = nil): SizeInt; inline;
     function  DfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
-  { returns the DFS traversal tree started from vertex aRoot;
+  { returns the DFS traversal tree(forest, if not connected) started from vertex aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
     function  DfsTree(constref aRoot: TVertex): TIntArray; inline;
@@ -452,7 +452,7 @@ type
     aOnFound calls after vertex found; if aOnFound returns False then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil): SizeInt; inline;
     function  BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil): SizeInt;
-  { returns the BFS traversal tree started from vertex aRoot;
+  { returns the BFS traversal tree(forest, if not connected) started from vertex aRoot;
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
     function  BfsTree(constref aRoot: TVertex): TIntArray; inline;

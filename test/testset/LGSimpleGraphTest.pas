@@ -33,6 +33,8 @@ type
     procedure SeparateCount1;
     procedure SeparateCount2;
     procedure SeparateGraph;
+    procedure SubgraphFromVertexList;
+    procedure SubgraphFromTree;
   end;
 
 implementation
@@ -202,6 +204,46 @@ begin
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 11);
   AssertTrue(g2.Connected);
+end;
+
+procedure TSimpleGraphTest.SubgraphFromVertexList;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.VertexCount = 16);
+  {%H-}Ref2.Instance := g.SubgraphFromVertexList([]);
+  g2 := Ref2;
+  AssertTrue(g2.IsEmpty);
+  Ref2.Instance := g.SubgraphFromVertexList(
+    [g.IndexOf(8), g.IndexOf(9), g.IndexOf(14), g.IndexOf(15), g.IndexOf(16)]);
+  g2 := Ref2;
+  AssertTrue(g2.VertexCount = 5);
+  AssertTrue(g2.EdgeCount = 7);
+  AssertTrue(g2.ContainsEdge( 8,  9));
+  AssertTrue(g2.ContainsEdge( 8, 14));
+  AssertTrue(g2.ContainsEdge( 8, 15));
+  AssertTrue(g2.ContainsEdge( 9, 15));
+  AssertTrue(g2.ContainsEdge( 9, 16));
+  AssertTrue(g2.ContainsEdge(14, 15));
+  AssertTrue(g2.ContainsEdge(14, 16));
+end;
+
+procedure TSimpleGraphTest.SubgraphFromTree;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+  Tree: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.VertexCount = 16);
+  Tree := g.DfsTree(1);
+  {%H-}Ref2.Instance := g.SubgraphFromTree(Tree);
+  g2 := Ref2;
+  AssertTrue(g2.VertexCount = 16);
 end;
 
 
