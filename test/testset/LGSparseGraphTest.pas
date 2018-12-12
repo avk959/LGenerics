@@ -15,7 +15,7 @@ uses
 
 type
 
-  SparseGraphTest = class(TTestCase)
+  TSparseGraphTest = class(TTestCase)
   private
   type
     TGraph      = TIntChart;
@@ -92,7 +92,7 @@ type
 
 implementation
 
-function SparseGraphTest.GenerateTestGrBip1: TGraph;
+function TSparseGraphTest.GenerateTestGrBip1: TGraph;
 begin
   Result := TGraph.Create;
   Result.AddVertexRange(1, 16);
@@ -100,7 +100,7 @@ begin
                    12, 9, 10, 9, 12, 9, 14, 11, 12, 11, 14, 11, 16, 13, 14, 13, 16, 15, 16]);
 end;
 
-function SparseGraphTest.GenerateTestDigrBip1: TDiGraph;
+function TSparseGraphTest.GenerateTestDigrBip1: TDiGraph;
 begin
   Result := TDiGraph.Create;
   Result.AddVertexRange(1, 12);
@@ -108,7 +108,7 @@ begin
                    6, 7, 7, 8, 7, 10, 7, 12, 8, 9, 9, 10, 9, 12, 10, 11, 11, 8, 12, 1]);
 end;
 
-function SparseGraphTest.GenerateTestGr1: TGraph;
+function TSparseGraphTest.GenerateTestGr1: TGraph;
 begin
   Result := TGraph.Create;
   Result.AddVertexRange(0, 12);
@@ -116,7 +116,7 @@ begin
                    8, 7, 9, 10, 9, 11, 9, 12, 11, 12]);
 end;
 
-function SparseGraphTest.GenerateTestDigr1: TDiGraph;
+function TSparseGraphTest.GenerateTestDigr1: TDiGraph;
 begin
   Result := TDiGraph.Create;
   Result.AddVertexRange(0, 12);
@@ -124,18 +124,18 @@ begin
                    8, 7, 9, 10, 9, 11, 9, 12, 11, 12]);
 end;
 
-function SparseGraphTest.vFound(aSender: TObject; aIndex: SizeInt): Boolean;
+function TSparseGraphTest.vFound(aSender: TObject; aIndex: SizeInt): Boolean;
 begin
   FFound[aIndex] := False;
   Result := True;
 end;
 
-procedure SparseGraphTest.vDone(aSender: TObject; aIndex: SizeInt);
+procedure TSparseGraphTest.vDone(aSender: TObject; aIndex: SizeInt);
 begin
   FDone[aIndex] := False;
 end;
 
-procedure SparseGraphTest.IsEmpty;
+procedure TSparseGraphTest.IsEmpty;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -146,7 +146,7 @@ begin
   AssertFalse(g.IsEmpty);
 end;
 
-procedure SparseGraphTest.IsEmptyDirect;
+procedure TSparseGraphTest.IsEmptyDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -157,7 +157,7 @@ begin
   AssertFalse(g.IsEmpty);
 end;
 
-procedure SparseGraphTest.NonEmpty;
+procedure TSparseGraphTest.NonEmpty;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -168,7 +168,7 @@ begin
   AssertTrue(g.NonEmpty);
 end;
 
-procedure SparseGraphTest.NonEmptyDirect;
+procedure TSparseGraphTest.NonEmptyDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -179,7 +179,7 @@ begin
   AssertTrue(g.NonEmpty);
 end;
 
-procedure SparseGraphTest.EnsureCapacity;
+procedure TSparseGraphTest.EnsureCapacity;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -193,7 +193,7 @@ begin
   AssertTrue(g.Capacity >= c*2);
 end;
 
-procedure SparseGraphTest.EnsureCapacityDirect;
+procedure TSparseGraphTest.EnsureCapacityDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -207,7 +207,7 @@ begin
   AssertTrue(g.Capacity >= c*2);
 end;
 
-procedure SparseGraphTest.Clear;
+procedure TSparseGraphTest.Clear;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -222,7 +222,7 @@ begin
   AssertTrue(g.Capacity = 0);
 end;
 
-procedure SparseGraphTest.ClearDirect;
+procedure TSparseGraphTest.ClearDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -237,7 +237,7 @@ begin
   AssertTrue(g.Capacity = 0);
 end;
 
-procedure SparseGraphTest.AddVertex;
+procedure TSparseGraphTest.AddVertex;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -252,7 +252,7 @@ begin
   AssertTrue(g.VertexCount = 2);
 end;
 
-procedure SparseGraphTest.AddVertexDirect;
+procedure TSparseGraphTest.AddVertexDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -267,7 +267,7 @@ begin
   AssertTrue(g.VertexCount = 2);
 end;
 
-procedure SparseGraphTest.RemoveVertex;
+procedure TSparseGraphTest.RemoveVertex;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -289,7 +289,7 @@ begin
   AssertTrue(g.VertexCount = 1);
 end;
 
-procedure SparseGraphTest.RemoveVertexDirect;
+procedure TSparseGraphTest.RemoveVertexDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -311,7 +311,7 @@ begin
   AssertTrue(g.VertexCount = 1);
 end;
 
-procedure SparseGraphTest.IndexOf;
+procedure TSparseGraphTest.IndexOf;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -331,7 +331,7 @@ begin
   AssertTrue(I = NULL_INDEX);
 end;
 
-procedure SparseGraphTest.IndexOfDirect;
+procedure TSparseGraphTest.IndexOfDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -351,7 +351,7 @@ begin
   AssertTrue(I = NULL_INDEX);
 end;
 
-procedure SparseGraphTest.Items;
+procedure TSparseGraphTest.Items;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -373,7 +373,7 @@ begin
   AssertTrue(Raised);
 end;
 
-procedure SparseGraphTest.ItemsDirect;
+procedure TSparseGraphTest.ItemsDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -395,7 +395,7 @@ begin
   AssertTrue(Raised);
 end;
 
-procedure SparseGraphTest.RemoveVertexI;
+procedure TSparseGraphTest.RemoveVertexI;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -420,7 +420,7 @@ begin
   AssertTrue(g.VertexCount = 1);
 end;
 
-procedure SparseGraphTest.RemoveVertexIDirect;
+procedure TSparseGraphTest.RemoveVertexIDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -445,7 +445,7 @@ begin
   AssertTrue(g.VertexCount = 1);
 end;
 
-procedure SparseGraphTest.ContainsVertex;
+procedure TSparseGraphTest.ContainsVertex;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -459,7 +459,7 @@ begin
   AssertTrue(g.ContainsVertex(5));
 end;
 
-procedure SparseGraphTest.ContainsVertexDirect;
+procedure TSparseGraphTest.ContainsVertexDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -473,7 +473,7 @@ begin
   AssertTrue(g.ContainsVertex(5));
 end;
 
-procedure SparseGraphTest.AddEdge;
+procedure TSparseGraphTest.AddEdge;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -485,7 +485,7 @@ begin
   AssertFalse(g.AddEdge(3, 5));
 end;
 
-procedure SparseGraphTest.AddArc;
+procedure TSparseGraphTest.AddArc;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -497,7 +497,7 @@ begin
   AssertFalse(g.AddEdge(3, 5));
 end;
 
-procedure SparseGraphTest.AddEdgeI;
+procedure TSparseGraphTest.AddEdgeI;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -521,7 +521,7 @@ begin
   AssertTrue(g.ContainsEdgeI(I, J));
 end;
 
-procedure SparseGraphTest.AddEdgeIDirect;
+procedure TSparseGraphTest.AddEdgeIDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -545,7 +545,7 @@ begin
   AssertTrue(g.ContainsEdgeI(I, J));
 end;
 
-procedure SparseGraphTest.Adjacent;
+procedure TSparseGraphTest.Adjacent;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -560,7 +560,7 @@ begin
   AssertTrue(g.Adjacent(5, 3));
 end;
 
-procedure SparseGraphTest.AdjacentDirect;
+procedure TSparseGraphTest.AdjacentDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -575,7 +575,7 @@ begin
   AssertFalse(g.Adjacent(5, 3));
 end;
 
-procedure SparseGraphTest.AdjVertices;
+procedure TSparseGraphTest.AdjVertices;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -596,7 +596,7 @@ begin
   AssertTrue(I = 3);
 end;
 
-procedure SparseGraphTest.AdjVerticesDirect;
+procedure TSparseGraphTest.AdjVerticesDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -617,7 +617,7 @@ begin
   AssertTrue(I = 2);
 end;
 
-procedure SparseGraphTest.AdjVerticesI;
+procedure TSparseGraphTest.AdjVerticesI;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -638,7 +638,7 @@ begin
   AssertTrue(I = 3);
 end;
 
-procedure SparseGraphTest.AdjVerticesIDirect;
+procedure TSparseGraphTest.AdjVerticesIDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -659,7 +659,7 @@ begin
   AssertTrue(I = 2);
 end;
 
-procedure SparseGraphTest.Vertices;
+procedure TSparseGraphTest.Vertices;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -684,7 +684,7 @@ begin
   AssertTrue(I = 4);
 end;
 
-procedure SparseGraphTest.VerticesDirect;
+procedure TSparseGraphTest.VerticesDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -709,7 +709,7 @@ begin
   AssertTrue(I = 4);
 end;
 
-procedure SparseGraphTest.IsBipartite;
+procedure TSparseGraphTest.IsBipartite;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -731,7 +731,7 @@ begin
         AssertFalse(g.AdjacentI(Grays[I], Grays[J]));
 end;
 
-procedure SparseGraphTest.IsBipartiteDirect;
+procedure TSparseGraphTest.IsBipartiteDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -753,7 +753,7 @@ begin
         AssertFalse(g.AdjacentI(Grays[I], Grays[J]));
 end;
 
-procedure SparseGraphTest.DfsTraversal;
+procedure TSparseGraphTest.DfsTraversal;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -772,7 +772,7 @@ begin
   AssertTrue(FDone.IsEmpty);
 end;
 
-procedure SparseGraphTest.DfsTraversalDirect;
+procedure TSparseGraphTest.DfsTraversalDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -795,7 +795,7 @@ begin
   AssertTrue(FDone[8]);
 end;
 
-procedure SparseGraphTest.BfsTraversal;
+procedure TSparseGraphTest.BfsTraversal;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -811,7 +811,7 @@ begin
   AssertTrue(FFound.IsEmpty);
 end;
 
-procedure SparseGraphTest.BfsTraversalDirect;
+procedure TSparseGraphTest.BfsTraversalDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -829,7 +829,7 @@ begin
   AssertTrue(FFound[8]);
 end;
 
-procedure SparseGraphTest.ShortestPaths;
+procedure TSparseGraphTest.ShortestPaths;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -843,7 +843,7 @@ begin
   AssertTrue(THelper.Same(Paths, RightPaths));
 end;
 
-procedure SparseGraphTest.ShortestPathsDirect;
+procedure TSparseGraphTest.ShortestPathsDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -857,7 +857,7 @@ begin
   AssertTrue(THelper.Same(Paths, RightPaths));
 end;
 
-procedure SparseGraphTest.Eccentricity;
+procedure TSparseGraphTest.Eccentricity;
 var
   Ref: TGraphRef;
   g: TGraph;
@@ -879,7 +879,7 @@ begin
   AssertTrue(g.Eccentricity(12) = 4);
 end;
 
-procedure SparseGraphTest.EccentricityDirect;
+procedure TSparseGraphTest.EccentricityDirect;
 var
   Ref: TDiGraphRef;
   g: TDiGraph;
@@ -981,7 +981,7 @@ end;
 
 
 initialization
-  RegisterTest(SparseGraphTest);
+  RegisterTest(TSparseGraphTest);
   RegisterTest(TTspTest);
 end.
 
