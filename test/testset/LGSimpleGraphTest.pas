@@ -30,6 +30,7 @@ type
     procedure Clone;
     procedure Degree;
     procedure Connected;
+    procedure RemoveVertex;
     procedure SeparateCount1;
     procedure SeparateCount2;
     procedure SeparateGraph1;
@@ -37,6 +38,7 @@ type
     procedure SubgraphFromVertexList1;
     procedure SubgraphFromVertexList2;
     procedure SubgraphFromTree;
+    procedure CreateLineGraph;
   end;
 
 implementation
@@ -166,6 +168,22 @@ begin
   AssertTrue(g.Connected);
 end;
 
+procedure TSimpleGraphTest.RemoveVertex;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.VertexCount = 13);
+  g.RemoveVertex(9);
+  AssertTrue(g.VertexCount = 12);
+  AssertTrue(g.SeparateCount = 3);
+  AssertTrue(g.Degree(10) = 0);
+  AssertTrue(g.Degree(11) = 1);
+  AssertTrue(g.Degree(12) = 1);
+end;
+
 procedure TSimpleGraphTest.SeparateCount1;
 var
   Ref: TRef;
@@ -283,6 +301,29 @@ begin
   AssertTrue(g2.Degree(14) = 0);
   AssertTrue(g2.Degree(15) = 0);
   AssertTrue(g2.Degree(16) = 0);
+end;
+
+procedure TSimpleGraphTest.CreateLineGraph;
+var
+  Ref: TRef;
+  g: TGraph;
+  lg: TLineGraph;
+  I, DegSum: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  DegSum := 0;
+  for I := 0 to Pred(g.VertexCount) do
+    DegSum += g.DegreeI(I) * g.DegreeI(I);
+  DegSum := DegSum div 2 - g.EdgeCount;
+  lg := g.CreateLineGraph;
+  try
+    AssertTrue(lg.SeparateCount = 1);
+    AssertTrue(lg.VertexCount = g.EdgeCount);
+    AssertTrue(lg.EdgeCount = DegSum);
+  finally
+    lg.Free;
+  end;
 end;
 
 
