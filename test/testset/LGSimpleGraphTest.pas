@@ -32,8 +32,10 @@ type
     procedure Connected;
     procedure SeparateCount1;
     procedure SeparateCount2;
-    procedure SeparateGraph;
-    procedure SubgraphFromVertexList;
+    procedure SeparateGraph1;
+    procedure SeparateGraph2;
+    procedure SubgraphFromVertexList1;
+    procedure SubgraphFromVertexList2;
     procedure SubgraphFromTree;
   end;
 
@@ -122,6 +124,7 @@ procedure TSimpleGraphTest.Degree;
 var
   Ref: TRef;
   g: TGraph;
+  I: SizeInt;
   Raised: Boolean = False;
 begin
   g := Ref;
@@ -131,7 +134,7 @@ begin
   g.RemoveVertex(2);
   AssertTrue(g.Degree(1) = 0);
   try
-    AssertTrue(g.Degree(2) = 0);
+    I := g.Degree(2);
   except
     on e: EGraphError do
       Raised := True;
@@ -170,7 +173,7 @@ var
 begin
   {%H-}Ref.Instance := GenerateTestGr1;
   g := Ref;
-   AssertTrue(g.SeparateCount = 1);
+  AssertTrue(g.SeparateCount = 1);
 end;
 
 procedure TSimpleGraphTest.SeparateCount2;
@@ -180,10 +183,10 @@ var
 begin
   {%H-}Ref.Instance := GenerateTestGr2;
   g := Ref;
-   AssertTrue(g.SeparateCount = 2);
+  AssertTrue(g.SeparateCount = 2);
 end;
 
-procedure TSimpleGraphTest.SeparateGraph;
+procedure TSimpleGraphTest.SeparateGraph1;
 var
   Ref, Ref2: TRef;
   g, g2: TGraph;
@@ -200,13 +203,33 @@ begin
   AssertTrue(g2.ContainsVertex(14));
   AssertTrue(g2.ContainsVertex(15));
   AssertTrue(g2.ContainsVertex(16));
+end;
+
+procedure TSimpleGraphTest.SeparateGraph2;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
   Ref2.Instance := g.SeparateGraph(1);
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 11);
   AssertTrue(g2.Connected);
+  AssertTrue(g2.ContainsVertex(1));
+  AssertTrue(g2.ContainsVertex(2));
+  AssertTrue(g2.ContainsVertex(3));
+  AssertTrue(g2.ContainsVertex(4));
+  AssertTrue(g2.ContainsVertex(5));
+  AssertTrue(g2.ContainsVertex(6));
+  AssertTrue(g2.ContainsVertex(7));
+  AssertTrue(g2.ContainsVertex(10));
+  AssertTrue(g2.ContainsVertex(11));
+  AssertTrue(g2.ContainsVertex(12));
+  AssertTrue(g2.ContainsVertex(13));
 end;
 
-procedure TSimpleGraphTest.SubgraphFromVertexList;
+procedure TSimpleGraphTest.SubgraphFromVertexList1;
 var
   Ref, Ref2: TRef;
   g, g2: TGraph;
@@ -217,6 +240,16 @@ begin
   {%H-}Ref2.Instance := g.SubgraphFromVertexList([]);
   g2 := Ref2;
   AssertTrue(g2.IsEmpty);
+end;
+
+procedure TSimpleGraphTest.SubgraphFromVertexList2;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.VertexCount = 16);
   Ref2.Instance := g.SubgraphFromVertexList(
     [g.IndexOf(8), g.IndexOf(9), g.IndexOf(14), g.IndexOf(15), g.IndexOf(16)]);
   g2 := Ref2;
@@ -244,6 +277,12 @@ begin
   {%H-}Ref2.Instance := g.SubgraphFromTree(Tree);
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 16);
+  AssertTrue(g2.SeparateCount = 6);
+  AssertTrue(g2.Degree(8) = 0);
+  AssertTrue(g2.Degree(9) = 0);
+  AssertTrue(g2.Degree(14) = 0);
+  AssertTrue(g2.Degree(15) = 0);
+  AssertTrue(g2.Degree(16) = 0);
 end;
 
 
