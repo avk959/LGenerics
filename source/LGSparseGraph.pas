@@ -620,22 +620,26 @@ type
       procedure Execute(var aCost: T);
     public
       procedure OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
-      procedure OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+      procedure OptEdges(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
     end;
 
     class function  vMin(L, R: T): T; static; inline;
   { returns True if matrix m is symmetric;
     raises exception if m is not proper matrix }
     class function  CheckMatrixProper(const m: TTspMatrix): Boolean; static;
-  { cyclic shifts aTour so that element aSrc becomes the first;
+  { assumes aTour is closed path;
+    cyclic shifts aTour so that element aSrc becomes the first;
     does not checks if aSrc exists in aTour }
     class procedure NormalizeTour(aSrc: SizeInt; var aTour: TIntArray); static;
-  { 2-opt local search; does not checks not matrix nor path }
+  { 2-opt local search; assumes aTour is closed path;
+    does not checks not matrix nor path }
     class procedure Ls2Opt(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
-  { 3-opt local search; does not checks not matrix nor path }
+  { 3-opt local search; assumes aTour is closed path;
+    does not checks not matrix nor path }
     class procedure Ls3OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
-  { 3-opt local search; does not checks not matrix nor path }
-    class procedure Ls3OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
+  { 3-opt local search; assumes aTour is edge set(index - source, value - target);
+    does not checks not matrix nor aTour }
+    class procedure Ls3OptEdges(const m: TTspMatrix; var aTour: TIntArray; var aCost: T); static;
   { best of farthest insertion starting from every vertex; does not checks matrix;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs"  }
     class function GreedyFInsTsp(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray; static;
@@ -3013,7 +3017,7 @@ begin
   aTour[Len] := J;
 end;
 
-procedure TGTspHelper.TLs3Opt.OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+procedure TGTspHelper.TLs3Opt.OptEdges(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
 begin
   CurrTour := aTour.Copy;
   Matrix := m;
@@ -3100,11 +3104,11 @@ begin
   Opt.OptPath(m, aTour, aCost);
 end;
 
-class procedure TGTspHelper.Ls3OptTree(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
+class procedure TGTspHelper.Ls3OptEdges(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
 var
   Opt: TLs3Opt;
 begin
-  Opt.OptTree(m, aTour, aCost);
+  Opt.OptEdges(m, aTour, aCost);
 end;
 
 class function TGTspHelper.GreedyFInsTsp(const m: TTspMatrix; aOnReady: TOnTourReady; out aCost: T): TIntArray;
@@ -3315,7 +3319,7 @@ end;
 class function TGTspHelper.FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray;
 begin
   if CheckMatrixProper(m) then
-    Result := GreedyFInsTsp(m, @Ls3OptTree, aCost)
+    Result := GreedyFInsTsp(m, @Ls3OptEdges, aCost)
   else
     begin
       Result := GreedyNearNeighb(m, nil, aCost);
@@ -3338,7 +3342,7 @@ begin
   if Symm then
     begin
       aTour := GreedyFInsTsp(m, nil, aCost);
-      Ls3OptTree(m, aTour, aCost);
+      Ls3OptEdges(m, aTour, aCost);
       Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
       Ls3OptPath(m, Greedy, GreedyCost);
       if GreedyCost < aCost then
@@ -3372,7 +3376,7 @@ begin
   if Symm then
     begin
       aTour := GreedyFInsTsp(m, nil, aCost);
-      Ls3OptTree(m, aTour, aCost);
+      Ls3OptEdges(m, aTour, aCost);
       Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
       Ls3OptPath(m, Greedy, GreedyCost);
       if GreedyCost < aCost then
@@ -3407,7 +3411,7 @@ begin
   Helper.IsMetric := True;
   if Symm then
     begin
-      aTour := GreedyFInsTsp(m, @Ls3OptTree, aCost);
+      aTour := GreedyFInsTsp(m, @Ls3OptEdges, aCost);
       Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
       Ls3OptPath(m, Greedy, GreedyCost);
       if GreedyCost < aCost then
@@ -3441,7 +3445,7 @@ begin
   if Symm then
     begin
       aTour := GreedyFInsTsp(m, nil, aCost);
-      Ls3OptTree(m, aTour, aCost);
+      Ls3OptEdges(m, aTour, aCost);
       Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
       Ls3OptPath(m, Greedy, GreedyCost);
       if GreedyCost < aCost then
