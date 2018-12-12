@@ -1269,17 +1269,17 @@ end;
 procedure TGSparseGraph.Delete(aIndex: SizeInt);
 begin
   Dec(FCount);
+  Finalize(FNodeList[aIndex].AdjList);
   if aIndex < VertexCount then
     begin
-      FNodeList[aIndex].AdjList := Default(TAdjList);
       System.Move(FNodeList[Succ(aIndex)], FNodeList[aIndex], (VertexCount - aIndex) * SizeOf(TNode));
-      System.FillChar(FNodeList[VertexCount].AdjList, SizeOf(TAdjList), 0);
+      System.FillChar(FNodeList[VertexCount], SizeOf(TNode), 0);
       Rehash;
     end
   else   // last element
     begin
       RemoveFromChain(aIndex);
-      System.FillChar(FNodeList[VertexCount].AdjList, SizeOf(TAdjList), 0);
+      System.FillChar(FNodeList[VertexCount], SizeOf(TNode), 0);
     end;
 end;
 
