@@ -189,12 +189,19 @@ begin
   {%H-}Ref.Instance := GenerateTestGr2;
   g := Ref;
   AssertTrue(g.VertexCount = 16);
-  Ref2.Instance := g.SeparateGraph(8);
+  {%H-}Ref2.Instance := g.SeparateGraph(8);
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 5);
+  AssertTrue(g2.Connected);
+  AssertTrue(g2.ContainsVertex(8));
+  AssertTrue(g2.ContainsVertex(9));
+  AssertTrue(g2.ContainsVertex(14));
+  AssertTrue(g2.ContainsVertex(15));
+  AssertTrue(g2.ContainsVertex(16));
   Ref2.Instance := g.SeparateGraph(1);
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 11);
+  AssertTrue(g2.Connected);
 end;
 
 
