@@ -447,7 +447,7 @@ type
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
     function  DfsTree(constref aRoot: TVertex): TIntArray; inline;
-    function  DfsTreeI(aRoot: SizeInt = 0): TIntArray;
+    function  DfsTreeI(aRoot: SizeInt): TIntArray;
   { returns count of visited vertices during the BFS traversal;
     aOnFound calls after vertex found; if aOnFound returns False then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil): SizeInt; inline;
@@ -456,7 +456,7 @@ type
     each element contains the index of its parent (or -1 if it is root or not connected),
     i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
     function  BfsTree(constref aRoot: TVertex): TIntArray; inline;
-    function  BfsTreeI(aRoot: SizeInt = 0): TIntArray;
+    function  BfsTreeI(aRoot: SizeInt): TIntArray;
 
 {**********************************************************************************************************
   shortest path problem utilities
