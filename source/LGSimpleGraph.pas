@@ -291,17 +291,6 @@ type
     warning: maximum matrix size limited, see MaxBitMatrixSize }
     function  ComplementMatrix: TAdjacencyMatrix;
 {**********************************************************************************************************
-  spanning tree utilities
-***********************************************************************************************************}
-
-  { returns the spanning tree, which is constructed starting from aRoot;
-    each element contains the index of its parent (or -1 if it is root or not connected),
-    i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
-    function  DfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
-    function  DfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
-    function  BfsSpanningTree(constref aRoot: TVertex): TIntArray; inline;
-    function  BfsSpanningTreeI(aRoot: SizeInt = 0): TIntArray; inline;
-{**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
 
@@ -3230,26 +3219,6 @@ begin
       if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
         m[s, d] := True;
   Result := TAdjacencyMatrix.Create(m);
-end;
-
-function TGSimpleGraph.DfsSpanningTree(constref aRoot: TVertex): TIntArray;
-begin
-  Result := DfsTreeI(IndexOf(aRoot));
-end;
-
-function TGSimpleGraph.DfsSpanningTreeI(aRoot: SizeInt): TIntArray;
-begin
-  Result := DfsTreeI(aRoot);
-end;
-
-function TGSimpleGraph.BfsSpanningTree(constref aRoot: TVertex): TIntArray;
-begin
-  Result := BfsSpanningTreeI(IndexOf(aRoot));
-end;
-
-function TGSimpleGraph.BfsSpanningTreeI(aRoot: SizeInt): TIntArray;
-begin
-  Result := BfsTreeI(aRoot);
 end;
 
 function TGSimpleGraph.FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
