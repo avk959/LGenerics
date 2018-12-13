@@ -25,6 +25,10 @@ type
 
     function  GenerateTestGr1: TGraph;
     function  GenerateTestGr2: TGraph;
+    function  GenerateStar: TGraph;
+    function  GenerateCycle: TGraph;
+    function  GenerateWheel: TGraph;
+    function  GenerateComplete: TGraph;
   published
     procedure SaveToStream;
     procedure Clone;
@@ -41,12 +45,24 @@ type
     procedure SubgraphFromEdges1;
     procedure SubgraphFromEdges2;
     procedure CreateLineGraph;
+
+    procedure DistinctEdges;
+    procedure EnsureConnected;
+    procedure PathExists;
+    procedure SeparatePop;
+    procedure FindSeparates;
+    procedure IsTree;
+    procedure IsStar;
+    procedure IsCycle;
+    procedure IsWheel;
+    procedure IsComplete;
   end;
 
 implementation
 
 function TSimpleGraphTest.GenerateTestGr1: TGraph;
 begin
+  //see TestGr1.png
   Result := TGraph.Create;
   Result.AddVertexRange(0, 12);
   Result.AddEdges([0, 1, 0, 2, 0, 3, 0, 5, 0, 6, 2, 3, 3, 5, 3, 4, 6, 4, 4, 9, 6, 9, 7, 6,
@@ -55,11 +71,49 @@ end;
 
 function TSimpleGraphTest.GenerateTestGr2: TGraph;
 begin
+  //see TestGr2.png
   Result := TGraph.Create;
   Result.AddVertexRange(1, 16);
   Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 6, 1, 7, 3, 4, 4, 6, 4, 5, 7, 4, 5, 10, 7, 10,
                    10, 11, 10, 12, 10, 13, 12, 13,
                    8, 9, 8, 14, 8, 15, 9, 15, 9, 16, 14, 15, 14, 16]);
+end;
+
+function TSimpleGraphTest.GenerateStar: TGraph;
+begin
+  //see Star.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 12);
+  Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 8, 1, 9, 1, 10, 1, 11, 1, 12]);
+end;
+
+function TSimpleGraphTest.GenerateCycle: TGraph;
+begin
+  //see Cycle.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 12);
+  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 1, 12]);
+end;
+
+function TSimpleGraphTest.GenerateWheel: TGraph;
+begin
+  //see Wheel.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 12);
+  Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 8, 1, 9, 1, 10, 1, 11, 1, 12]);
+  Result.AddEdges([2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 2, 12]);
+end;
+
+function TSimpleGraphTest.GenerateComplete: TGraph;
+var
+  I, J: SizeInt;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 12);
+  for I := 0 to Pred(Result.VertexCount) do
+    for J := 0 to Pred(Result.VertexCount) do
+      if I > J then
+        Result.AddEdgeI(I, J);
 end;
 
 procedure TSimpleGraphTest.SaveToStream;
@@ -365,6 +419,206 @@ begin
   finally
     lg.Free;
   end;
+end;
+
+procedure TSimpleGraphTest.DistinctEdges;
+var
+  Ref: TRef;
+  g: TGraph;
+  e: TGraph.TEdge;
+  I: Integer;
+begin
+  g := {%H-}Ref;
+  I := 0;
+  for e in g.DistinctEdges do
+    Inc(I);
+  AssertTrue(I = 0);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  I := 0;
+  for e in g.Edges do
+    Inc(I);
+  AssertTrue(I = 44);
+  I := 0;
+  for e in g.DistinctEdges do
+    Inc(I);
+  AssertTrue(I = 22);
+end;
+
+procedure TSimpleGraphTest.EnsureConnected;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.EdgeCount = 22);
+  AssertFalse(g.Connected);
+  AssertTrue(g.SeparateCount = 2);
+  g.EnsureConnected;
+  AssertTrue(g.Connected);
+  AssertTrue(g.SeparateCount = 1);
+  AssertTrue(g.EdgeCount = 23);
+end;
+
+procedure TSimpleGraphTest.PathExists;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.PathExists(1, 2));
+  AssertTrue(g.PathExists(1, 13));
+  AssertFalse(g.PathExists(1, 8));
+  AssertFalse(g.PathExists(13, 14));
+  g.EnsureConnected;
+  AssertTrue(g.PathExists(1, 8));
+  AssertTrue(g.PathExists(13, 14));
+end;
+
+procedure TSimpleGraphTest.SeparatePop;
+var
+  Ref: TRef;
+  g: TGraph;
+  Pop: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  Pop := g.SeparatePop(1);
+  AssertTrue(Pop = 13);
+  Pop := g.SeparatePop(11);
+  AssertTrue(Pop = 13);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  Pop := g.SeparatePop(1);
+  AssertTrue(Pop = 11);
+  Pop := g.SeparatePop(14);
+  AssertTrue(Pop = 5);
+  g.EnsureConnected;
+  Pop := g.SeparatePop(1);
+  AssertTrue(Pop = 16);
+  Pop := g.SeparatePop(14);
+  AssertTrue(Pop = 16);
+end;
+
+procedure TSimpleGraphTest.FindSeparates;
+var
+  Ref: TRef;
+  g: TGraph;
+  Separates: TIntVectorArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  Separates := g.FindSeparates;
+  AssertTrue(System.Length(Separates) = 2);
+  if Separates[0].Count < Separates[1].Count then
+    begin
+      AssertTrue(Separates[0].Count = 5);
+      AssertTrue(Separates[1].Count = 11);
+    end
+  else
+    begin
+      AssertTrue(Separates[0].Count = 11);
+      AssertTrue(Separates[1].Count = 5);
+    end;
+end;
+
+procedure TSimpleGraphTest.IsTree;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.IsTree);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsTree);
+  g2 := g.SubgraphFromTree(g.BfsTree(0));
+  try
+    AssertTrue(g2.IsTree);
+  finally
+    g2.Free;
+  end;
+end;
+
+procedure TSimpleGraphTest.IsStar;
+var
+  Ref: TRef;
+  g: TGraph;
+  Hub: SizeInt;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.IsStar(Hub));
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsStar(Hub));
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertFalse(g.IsStar(Hub));
+  Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertTrue(g.IsStar(Hub));
+  AssertTrue(g[Hub] = 1);
+end;
+
+procedure TSimpleGraphTest.IsCycle;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.IsCycle);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsCycle);
+  Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertFalse(g.IsCycle);
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.IsCycle);
+end;
+
+procedure TSimpleGraphTest.IsWheel;
+var
+  Ref: TRef;
+  g: TGraph;
+  Hub: SizeInt;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.IsWheel(Hub));
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsWheel(Hub));
+  Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertFalse(g.IsWheel(Hub));
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.IsWheel(Hub));
+  AssertTrue(g[Hub] = 1);
+end;
+
+procedure TSimpleGraphTest.IsComplete;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.IsComplete);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsComplete);
+  Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertFalse(g.IsComplete);
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertFalse(g.IsComplete);
+  Ref.Instance := GenerateComplete;
+  g := Ref;
+  AssertTrue(g.IsComplete);
 end;
 
 
