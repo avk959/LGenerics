@@ -2593,6 +2593,7 @@ end;
 function TGSimpleGraph.LocalClusteringI(aIndex: SizeInt): Double;
 var
   I, J, Counter, d: SizeInt;
+  pList: PAdjList;
 begin
   CheckIndexRange(aIndex);
   d := DegreeI(aIndex);
@@ -2600,8 +2601,12 @@ begin
     exit(0.0);
   Counter := 0;
   for I in AdjVerticesI(aIndex) do
-    for J in AdjVerticesI(aIndex) do
-      Counter += Ord((I <> J) and FNodeList[I].AdjList.Contains(J));
+    begin
+      pList := AdjLists[I];
+      for J in AdjVerticesI(aIndex) do
+        if I <> J then
+          Counter += Ord(pList^.Contains(J));
+    end;
   Result := Double(Counter) / (Double(d) * Double(Pred(d)));
 end;
 
