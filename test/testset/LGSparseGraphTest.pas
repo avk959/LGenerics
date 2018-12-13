@@ -94,6 +94,7 @@ implementation
 
 function TSparseGraphTest.GenerateTestGrBip1: TGraph;
 begin
+  //see TestGrBip1.png
   Result := TGraph.Create;
   Result.AddVertexRange(1, 16);
   Result.AddEdges([1, 2, 1, 4, 1, 6, 3, 4, 3, 6, 3, 8, 5, 6, 5, 8, 5, 10, 7, 8, 7, 10, 7,
@@ -102,6 +103,7 @@ end;
 
 function TSparseGraphTest.GenerateTestDigrBip1: TDiGraph;
 begin
+  //see TestDigrBip1.png
   Result := TDiGraph.Create;
   Result.AddVertexRange(1, 12);
   Result.AddEdges([1, 2, 1, 4, 1, 6, 2, 3, 3, 4, 3, 6, 3, 8, 4, 5, 5, 6, 5, 8, 5, 10,
@@ -110,6 +112,7 @@ end;
 
 function TSparseGraphTest.GenerateTestGr1: TGraph;
 begin
+  //see TestGr1.png
   Result := TGraph.Create;
   Result.AddVertexRange(0, 12);
   Result.AddEdges([0, 1, 0, 2, 0, 3, 0, 5, 0, 6, 2, 3, 3, 5, 3, 4, 6, 4, 4, 9, 6, 9, 7, 6,
@@ -118,6 +121,7 @@ end;
 
 function TSparseGraphTest.GenerateTestDigr1: TDiGraph;
 begin
+  //see TestDigr1.png
   Result := TDiGraph.Create;
   Result.AddVertexRange(0, 12);
   Result.AddEdges([0, 1, 0, 2, 0, 3, 0, 5, 0, 6, 2, 3, 3, 5, 3, 4, 6, 4, 4, 9, 6, 9, 7, 6,
