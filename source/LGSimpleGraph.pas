@@ -212,9 +212,6 @@ type
   { checks whether the aDst reachable from the aSrc; each vertex reachable from itself  }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
-  { returns tag of the connected component that contains aVertex }
-    function  GetSeparateTag(constref aVertex: TVertex): SizeInt; inline;
-    function  GetSeparateTagI(aIndex: SizeInt): SizeInt;
   { returns number of vertices(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
@@ -2635,19 +2632,6 @@ begin
     Result := SeparateTag(aSrc) = SeparateTag(aDst)
   else
     Result := True;
-end;
-
-function TGSimpleGraph.GetSeparateTag(constref aVertex: TVertex): SizeInt;
-begin
-   Result := GetSeparateTagI(IndexOf(aVertex));
-end;
-
-function TGSimpleGraph.GetSeparateTagI(aIndex: SizeInt): SizeInt;
-begin
-  CheckIndexRange(aIndex);
-  if not ConnectedValid then
-    ValidateConnected;
-  Result := SeparateTag(aIndex);
 end;
 
 function TGSimpleGraph.SeparatePop(constref aVertex: TVertex): SizeInt;
