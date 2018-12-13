@@ -38,6 +38,8 @@ type
     procedure SubgraphFromVertexList1;
     procedure SubgraphFromVertexList2;
     procedure SubgraphFromTree;
+    procedure SubgraphFromEdges1;
+    procedure SubgraphFromEdges2;
     procedure CreateLineGraph;
   end;
 
@@ -126,7 +128,6 @@ procedure TSimpleGraphTest.Degree;
 var
   Ref: TRef;
   g: TGraph;
-  I: SizeInt;
   Raised: Boolean = False;
 begin
   g := Ref;
@@ -136,7 +137,7 @@ begin
   g.RemoveVertex(2);
   AssertTrue(g.Degree(1) = 0);
   try
-    I := g.Degree(2);
+    g.Degree(2);
   except
     on e: EGraphError do
       Raised := True;
@@ -230,7 +231,7 @@ var
 begin
   {%H-}Ref.Instance := GenerateTestGr2;
   g := Ref;
-  Ref2.Instance := g.SeparateGraph(1);
+  {%H-}Ref2.Instance := g.SeparateGraph(1);
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 11);
   AssertTrue(g2.Connected);
@@ -268,7 +269,7 @@ begin
   {%H-}Ref.Instance := GenerateTestGr2;
   g := Ref;
   AssertTrue(g.VertexCount = 16);
-  Ref2.Instance := g.SubgraphFromVertexList(
+  {%H-}Ref2.Instance := g.SubgraphFromVertexList(
     [g.IndexOf(8), g.IndexOf(9), g.IndexOf(14), g.IndexOf(15), g.IndexOf(16)]);
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 5);
@@ -303,12 +304,48 @@ begin
   AssertTrue(g2.Degree(16) = 0);
 end;
 
+procedure TSimpleGraphTest.SubgraphFromEdges1;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+  Edges: TIntEdgeArray = nil;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.VertexCount = 13);
+  {%H-}Ref2.Instance := g.SubgraphFromEdges(Edges);
+  g2 := Ref2;
+  AssertTrue(g2.IsEmpty);
+end;
+
+procedure TSimpleGraphTest.SubgraphFromEdges2;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+  Edges: TIntEdgeArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.VertexCount = 16);
+  Edges := [TIntEdge.Create(0, 1), TIntEdge.Create(0, 2), TIntEdge.Create(2, 3), TIntEdge.Create(3, 6)];
+  {%H-}Ref2.Instance := g.SubgraphFromEdges(Edges);
+  g2 := Ref2;
+  AssertTrue(g2.VertexCount = 5);
+  AssertTrue(g2.ContainsVertex(1));
+  AssertTrue(g2.ContainsVertex(2));
+  AssertTrue(g2.ContainsVertex(3));
+  AssertTrue(g2.ContainsVertex(4));
+  AssertTrue(g2.ContainsVertex(7));
+end;
+
 procedure TSimpleGraphTest.CreateLineGraph;
 var
   Ref: TRef;
   g: TGraph;
   lg: TLineGraph;
   I, DegSum: Integer;
+  v: TOrdIntPair;
+  e: TLineGraph.TEdge;
 begin
   {%H-}Ref.Instance := GenerateTestGr1;
   g := Ref;
@@ -321,6 +358,10 @@ begin
     AssertTrue(lg.SeparateCount = 1);
     AssertTrue(lg.VertexCount = g.EdgeCount);
     AssertTrue(lg.EdgeCount = DegSum);
+    for v in lg.Vertices do
+      AssertTrue(g.ContainsEdge(v.Left, v.Right));
+    for e in lg.Edges do
+      AssertTrue(g.ContainsVertex(e.Data.Value));
   finally
     lg.Free;
   end;
