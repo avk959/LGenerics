@@ -2718,7 +2718,7 @@ begin
             continue;
           if d <> Pred(VertexCount) then
             exit(False);
-          aHub := d;
+          aHub := I;
         end;
       if aHub = NULL_INDEX then
         aHub := 0;
