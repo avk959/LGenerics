@@ -9,6 +9,7 @@ object frmMain: TfrmMain
   DesignTimePPI = 115
   OnCreate = FormCreate
   Position = poScreenCenter
+  LCLVersion = '2.1.0.0'
   object Panel1: TPanel
     Left = 0
     Height = 781

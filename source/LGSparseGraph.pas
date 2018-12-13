@@ -3333,8 +3333,6 @@ class function TGTspHelper.FindExact(const m: TTspMatrix; out aTour: TIntArray; 
   aTimeOut: Integer): Boolean;
 var
   Helper: TBbTsp;
-  Greedy: TIntArray;
-  GreedyCost: T;
   Symm: Boolean;
 begin
   Symm := CheckMatrixProper(m);
@@ -3343,14 +3341,6 @@ begin
     begin
       aTour := GreedyFInsTsp(m, nil, aCost);
       Ls3OptEdges(m, aTour, aCost);
-      Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
-      Ls3OptPath(m, Greedy, GreedyCost);
-      if GreedyCost < aCost then
-        begin
-          aCost := GreedyCost;
-          aTour := Greedy;
-        end;
-      Greedy := nil;
       Result := Helper.Execute(m, aTimeOut, aTour, aCost);
       if not Result then
         Ls3OptPath(m, aTour, aCost);
@@ -3367,8 +3357,6 @@ class function TGTspHelper.FindApprox(const m: TTspMatrix; Accuracy: Double; out
   aTimeOut: Integer): Boolean;
 var
   Helper: TApproxBbTsp;
-  Greedy: TIntArray;
-  GreedyCost: T;
   Symm: Boolean;
 begin
   Symm := CheckMatrixProper(m);
@@ -3377,14 +3365,6 @@ begin
     begin
       aTour := GreedyFInsTsp(m, nil, aCost);
       Ls3OptEdges(m, aTour, aCost);
-      Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
-      Ls3OptPath(m, Greedy, GreedyCost);
-      if GreedyCost < aCost then
-        begin
-          aCost := GreedyCost;
-          aTour := Greedy;
-        end;
-      Greedy := nil;
       Result := Helper.Execute(m, Accuracy, aTimeOut, aTour, aCost);
       if not Result then
         Ls3OptPath(m, aTour, aCost);
@@ -3403,23 +3383,14 @@ class function TGMetricTspHelper.FindExact(const m: TTspMatrix; out aTour: TIntA
   aTimeOut: Integer): Boolean;
 var
   Helper: TBbTsp;
-  Greedy: TIntArray;
-  GreedyCost: T;
   Symm: Boolean;
 begin
   Symm := CheckMatrixProper(m);
   Helper.IsMetric := True;
   if Symm then
     begin
-      aTour := GreedyFInsTsp(m, @Ls3OptEdges, aCost);
-      Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
-      Ls3OptPath(m, Greedy, GreedyCost);
-      if GreedyCost < aCost then
-        begin
-          aCost := GreedyCost;
-          aTour := Greedy;
-        end;
-      Greedy := nil;
+      aTour := GreedyFInsTsp(m, nil, aCost);
+      Ls3OptEdges(m, aTour, aCost);
       Result := Helper.Execute(m, aTimeOut, aTour, aCost);
       if not Result then
         Ls3OptPath(m, aTour, aCost);
@@ -3436,8 +3407,6 @@ class function TGMetricTspHelper.FindApprox(const m: TTspMatrix; Accuracy: Doubl
   aCost: T; aTimeOut: Integer): Boolean;
 var
   Helper: TApproxBbTsp;
-  Greedy: TIntArray;
-  GreedyCost: T;
   Symm: Boolean;
 begin
   Symm := CheckMatrixProper(m);
@@ -3446,14 +3415,6 @@ begin
     begin
       aTour := GreedyFInsTsp(m, nil, aCost);
       Ls3OptEdges(m, aTour, aCost);
-      Greedy := GreedyNearNeighb(m, @Ls2Opt, GreedyCost);
-      Ls3OptPath(m, Greedy, GreedyCost);
-      if GreedyCost < aCost then
-        begin
-          aCost := GreedyCost;
-          aTour := Greedy;
-        end;
-      Greedy := nil;
       Result := Helper.Execute(m, Accuracy, aTimeOut, aTour, aCost);
       if not Result then
         Ls3OptPath(m, aTour, aCost);
