@@ -243,8 +243,7 @@ type
     function  FindEulerianCycle(out aCycle: TIntArray): Boolean;
   { looking for some Eulerian path in the connected component }
     function  FindEulerianPath(out aPath: TIntArray): Boolean;
-  { finds a certain system of fundamental cycles of the graph;
-    note: pretty costly time/memory operation }
+  { finds a certain system of fundamental cycles }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
     function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
