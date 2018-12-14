@@ -405,7 +405,7 @@ type
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not strongly connected or exists negative weight cycle,
     otherwise returns True and weighted radus and diameter of the graph }
-    function FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+    function FindWeightedRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
   { returns False if is not strongly connected or exists negative weight cycle,
     otherwise returns True and indices of the central vertices in aCenter }
     function FindWeightedCenter(out aCenter: TIntArray): Boolean;
@@ -2538,7 +2538,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+function TGWeightedDiGraph.FindWeightedRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
 var
   Bfmt: TWeightHelper.TBfmt;
   Weights: TWeightArray;

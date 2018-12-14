@@ -245,33 +245,33 @@ type
     function  FindEulerianPath: TIntArray;
   { finds a certain system of fundamental cycles }
     function  FindFundamentalCycles: TIntArrayVector;
-  { checks whether exists any articulation point that belong to the same connected component as aVertex }
+  { checks whether exists any articulation point that belong to the aVertex connected component }
     function  ContainsCutPoint(constref aVertex: TVertex): Boolean; inline;
     function  ContainsCutPointI(aIndex: SizeInt): Boolean;
-  { returns the articulation points that belong to the same connection component as aVertex, if any,
+  { returns the articulation points that belong to the aVertex connection component, if any,
     otherwise the empty vector }
     function  FindCutPoints(constref aVertex: TVertex): TIntArray; inline;
     function  FindCutPointsI(aIndex: SizeInt): TIntArray;
-  { removes the articulation points that belong to the same connected component as aVertex,
-    adding, if necessary, new edges; returns count of added edges;
-    if aOnAddEdge = nil then new edges will use default data value }
+  { removes the articulation points that belong to the aVertex connected, adding,
+    if necessary, new edges; returns count of added edges;
+    if aOnAddEdge is nil then new edges will use default data value }
     function  RemoveCutPoints(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
     function  RemoveCutPointsI(aIndex: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { checks whether exists any bridge in graph }
     function  ContainsBridge: Boolean;
   { returns all bridges in the result vector, if any, otherwise the empty vector }
     function  FindBridges: TIntEdgeArray;
-  { returns count of biconnected components in the same connected component as aVertex;
-    the corresponding elements of the aComponents will contain  the edges of those bicomponents }
-    function  FindBicomponents(constref aVertex: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
-    function  FindBicomponentsI(aIndex: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
+  { returns vector containing in the corresponding elements edges of found bicomponents
+    in aVertex connected component }
+    function  FindBicomponents(constref aVertex: TVertex): TEdgeArrayVector;
+    function  FindBicomponentsI(aIndex: SizeInt): TEdgeArrayVector;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges;
     if aOnAddEdge = nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True, radus and diameter, if graph is connected, False otherwise }
-    function  GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+    function  FindRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
   { returns True and indices of the central vertices in aCenter, if graph is connected, False otherwise }
     function  FindCenter(out aCenter: TIntArray): Boolean;
 
@@ -597,7 +597,7 @@ type
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and weighted radus and diameter of the graph }
-    function FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+    function FindWeightedRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and indices of the central vertices in aCenter }
     function FindWeightedCenter(out aCenter: TIntArray): Boolean;
@@ -3007,26 +3007,20 @@ begin
   Result := v.ToArray;
 end;
 
-function TGSimpleGraph.FindBicomponents(constref aVertex: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
+function TGSimpleGraph.FindBicomponents(constref aVertex: TVertex): TEdgeArrayVector;
 begin
-  Result := FindBicomponentsI(IndexOf(aVertex), aComponents);
+  Result := FindBicomponentsI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.FindBicomponentsI(aIndex: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
+function TGSimpleGraph.FindBicomponentsI(aIndex: SizeInt): TEdgeArrayVector;
 begin
-  Result := 0;
+  Result := Default(TEdgeArrayVector);
   CheckIndexRange(aIndex);
   if VertexCount > 2 then
-    begin
-      SearchForBicomponent(aIndex, aComponents{%H-});
-      Result := aComponents.Count;
-    end
+    SearchForBicomponent(aIndex, Result)
   else
     if (VertexCount = 2) and ContainsEdgeI(0, 1) then
-      begin
-        aComponents.Add([TIntEdge.Create(0, 1)]);
-        Result := 1;
-      end;
+      Result.Add([TIntEdge.Create(0, 1)]);
 end;
 
 function TGSimpleGraph.IsBiconnected: Boolean;
@@ -3056,7 +3050,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+function TGSimpleGraph.FindRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
 var
   Queue, Dist: TIntArray;
   VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
@@ -4404,7 +4398,7 @@ begin
     end;
 end;
 
-function TGWeightedGraph.FindRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+function TGWeightedGraph.FindWeightedRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
 var
   Bfmt: TWeightHelper.TBfmt;
   Weights: TWeightArray;
