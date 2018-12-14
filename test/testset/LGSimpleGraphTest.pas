@@ -773,10 +773,11 @@ var
 begin
   {%H-}Ref.Instance := GenerateTestGr1;
   g := Ref;
-  AssertFalse(g.FindEulerianPath(Path));
+  Path := g.FindEulerianPath;
+  AssertTrue(Path = nil);
   Ref.Instance := GenerateTestGr3;
   g := Ref;
-  AssertTrue(g.FindEulerianPath(Path));
+  Path := g.FindEulerianPath;
   AssertTrue(Path.Length = Succ(g.EdgeCount));
 end;
 
@@ -788,13 +789,14 @@ var
 begin
   {%H-}Ref.Instance := GenerateCycle;
   g := Ref;
-  AssertTrue(g.FindEulerianCycle(Cycle));
+  Cycle := g.FindEulerianCycle;
   AssertTrue(Cycle.Length = Succ(g.EdgeCount));
   Ref.Instance := GenerateTestGr3;
   g := Ref;
-  AssertFalse(g.FindEulerianCycle(Cycle));
+  Cycle := g.FindEulerianCycle;
+  AssertTrue(Cycle = nil);
   g.RemoveEdge(3, 10);
-  AssertTrue(g.FindEulerianCycle(Cycle));
+  Cycle := g.FindEulerianCycle;
   AssertTrue(Cycle.Length = Succ(g.EdgeCount));
 end;
 
