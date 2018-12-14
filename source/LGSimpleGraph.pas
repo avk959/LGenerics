@@ -1733,13 +1733,13 @@ begin
       begin
         Next := AdjEnums[Curr].Current;
         if Next <> Parents[Curr] then
-          if PreOrd[Next] = -1 then
+          if PreOrd[Next] = NULL_INDEX then
             begin
               Parents[Next] := Curr;
               PreOrd[Next] := Counter;
               LowPt[Next] := Counter;
               Inc(Counter);
-              Inc(ChildCount, Ord(Curr = aRoot));
+              ChildCount += Ord(Curr = aRoot);
               Stack.Push(Next);
             end
           else
@@ -1748,12 +1748,12 @@ begin
       end
     else
       begin
-        Stack.Pop;
-        Next := Curr;
+        Next := Stack.Pop;
         Curr := Parents[Curr];
         if LowPt[Curr] > LowPt[Next] then
           LowPt[Curr] := LowPt[Next];
-        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
+        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) and
+           (TIntVectorHelper.SequentSearch(aPoints, Curr) = NULL_INDEX) then
           aPoints.Add(Curr);
       end;
   if ChildCount > 1 then
