@@ -137,6 +137,8 @@ type
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
+  { returns count of added vertices }
+    function  AddVertices(const aVertices: TVertexArray): SizeInt;
     procedure RemoveVertex(constref aVertex: TVertex); inline;
     procedure RemoveVertexI(aIndex: SizeInt);
   { returns True if the edge is added, False, if such an edge already exists }
@@ -1388,6 +1390,16 @@ var
   Dummy: SizeInt;
 begin
   Result := AddVertex(aVertex, Dummy);
+end;
+
+function TGSimpleDiGraph.AddVertices(const aVertices: TVertexArray): SizeInt;
+var
+  v: TVertex;
+begin
+  Result := VertexCount;
+  for v in aVertices do
+    AddVertex(v);
+  Result := VertexCount - Result;
 end;
 
 procedure TGSimpleDiGraph.RemoveVertex(constref aVertex: TVertex);
