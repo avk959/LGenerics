@@ -7,7 +7,6 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry,
   LGUtils,
-  //LGArrayHelpers,
   LGSparseGraph,
   LGSimpleGraph;
 
@@ -21,7 +20,6 @@ type
   type
     TGraph  = TIntChart;
     TRef    = specialize TGAutoRef<TGraph>;
-    //THelper = specialize TGOrdinalArrayHelper<SizeInt>;
 
     function  GenerateTestGr1: TGraph;
     function  GenerateTestGr2: TGraph;
@@ -58,7 +56,6 @@ type
     procedure IsCycle;
     procedure IsWheel;
     procedure IsComplete;
-
     procedure IsRegular;
     procedure ContainsCycle;
     procedure ContainsEulerianPath;
@@ -66,6 +63,10 @@ type
     procedure FindEulerianPath;
     procedure FindEulerianCycle;
     procedure ContainsCutPoint;
+    procedure FindCutPoints;
+    procedure RemoveCutPoints;
+    procedure ContainsBridge;
+    procedure FindBridges;
   end;
 
 implementation
@@ -774,7 +775,7 @@ begin
   {%H-}Ref.Instance := GenerateTestGr1;
   g := Ref;
   Path := g.FindEulerianPath;
-  AssertTrue(Path = nil);
+  AssertTrue(Path.IsEmpty);
   Ref.Instance := GenerateTestGr3;
   g := Ref;
   Path := g.FindEulerianPath;
@@ -794,7 +795,7 @@ begin
   Ref.Instance := GenerateTestGr3;
   g := Ref;
   Cycle := g.FindEulerianCycle;
-  AssertTrue(Cycle = nil);
+  AssertTrue(Cycle.IsEmpty);
   g.RemoveEdge(3, 10);
   Cycle := g.FindEulerianCycle;
   AssertTrue(Cycle.Length = Succ(g.EdgeCount));
@@ -808,9 +809,74 @@ begin
   {%H-}Ref.Instance := GenerateCycle;
   g := Ref;
   AssertFalse(g.ContainsCutPoint(1));
+  g.RemoveEdge(1, 12);
+  AssertTrue(g.ContainsCutPoint(1));
   Ref.Instance := GenerateTestGr1;
   g := Ref;
   AssertTrue(g.ContainsCutPoint(1));
+end;
+
+procedure TSimpleGraphTest.FindCutPoints;
+var
+  Ref: TRef;
+  g: TGraph;
+  Points: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateCycle;
+  g := Ref;
+  Points := g.FindCutPoints(1);
+  AssertTrue(Points.IsEmpty);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  Points := g.FindCutPoints(1);
+  AssertTrue(Points.Length = 4);
+  AssertTrue((TIntHelper.SequentSearch(Points, 0) <> NULL_INDEX) and
+             (TIntHelper.SequentSearch(Points, 6) <> NULL_INDEX) and
+             (TIntHelper.SequentSearch(Points, 7) <> NULL_INDEX) and
+             (TIntHelper.SequentSearch(Points, 9) <> NULL_INDEX));
+end;
+
+procedure TSimpleGraphTest.RemoveCutPoints;
+var
+  Ref: TRef;
+  g: TGraph;
+  EdgeCount: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.ContainsCutPoint(1));
+  EdgeCount := g.RemoveCutPoints(1);
+  AssertFalse(g.ContainsCutPoint(1));
+  AssertTrue(EdgeCount = 5);
+end;
+
+procedure TSimpleGraphTest.ContainsBridge;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertFalse(g.ContainsBridge);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.ContainsBridge);
+end;
+
+procedure TSimpleGraphTest.FindBridges;
+var
+  Ref: TRef;
+  g: TGraph;
+  Bridges: TIntEdgeArray;
+begin
+  {%H-}Ref.Instance := GenerateCycle;
+  g := Ref;
+  Bridges := g.FindBridges;
+  AssertTrue(Bridges = nil);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  Bridges := g.FindBridges;
+  AssertTrue(System.Length(Bridges) = 4);
 end;
 
 
