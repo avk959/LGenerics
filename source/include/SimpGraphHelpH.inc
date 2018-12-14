@@ -18,16 +18,21 @@
 *****************************************************************************}
 
 type
-  TBPCliqueIsHelper = record // BP -> bit-parallel
-  strict private
-    FMatrix: TBoolMatrix;
-    FCurrSet: TBoolVector;
-    FNodes,
+  TNodeSearch = object
+  protected
     FRecentBest: TIntArray;
-    FOnFind: TOnFindSet;
     FStartTime: TDateTime;
     FTimeOut: Integer;
     FCancelled: Boolean;
+    function TimeOut: Boolean; inline;
+  end;
+
+  TBPCliqueIsHelper = object(TNodeSearch) // BP -> bit-parallel
+  strict private
+    FMatrix: TBoolMatrix;
+    FCurrSet: TBoolVector;
+    FNodes: TIntArray;
+    FOnFind: TOnFindSet;
     procedure GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
     procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
     procedure Extend(var aSub, aCand: TBoolVector);
@@ -51,16 +56,12 @@ type
     procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
   end;
 
-  TBPCliqueIsHelper256 = record // BP -> bit-parallel
+  TBPCliqueIsHelper256 = object(TNodeSearch) // BP -> bit-parallel
   strict private
     FMatrix: TBitMatrix256;
     FCurrSet: TBits256;
-    FNodes,
-    FRecentBest: TIntArray;
+    FNodes: TIntArray;
     FOnFind: TOnFindSet;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
-    FCancelled: Boolean;
     procedure GreedyColor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBits256);
     procedure Extend(var aSub, aCand: TBits256);
@@ -74,16 +75,12 @@ type
     procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
   end;
 
-  TCliqueHelper = record
+  TCliqueHelper = object(TNodeSearch)
   strict private
     FMatrix: TSkeleton;
     FCurrSet: TIntSet;
-    FNodes,
-    FRecentBest: TIntArray;
+    FNodes: TIntArray;
     FOnFind: TOnFindSet;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
-    FCancelled: Boolean;
     procedure GreedyColor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TIntSet);
     procedure Extend(var aSub, aCand: TIntSet);
@@ -92,41 +89,30 @@ type
     procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
   end;
 
-  TBPDomSetHelper = record // BP -> bit-parallel
+  TBPDomSetHelper = object(TNodeSearch) // BP -> bit-parallel
   strict private
     FMatrix: TBoolMatrix;
-    FNodes,
-    FRecentBest: TIntArray;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
-    FCancelled: Boolean;
+    FNodes: TIntArray;
     procedure FillMatrix(aGraph: TGSimpleGraph);
     procedure Extend(constref aSub, aCand: TBoolVector);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
-  TBPDomSetHelper256 = record // BP -> bit-parallel
+  { TBPDomSetHelper256 }
+  TBPDomSetHelper256 = object(TNodeSearch) // BP -> bit-parallel
   strict private
     FMatrix: TBitMatrix256;
-    FNodes,
-    FRecentBest: TIntArray;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
-    FCancelled: Boolean;
+    FNodes: TIntArray;
     procedure FillMatrix(aGraph: TGSimpleGraph);
     procedure Extend(constref aSub, aCand: TBits256);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
 
-  TDomSetHelper = record
+  TDomSetHelper = object(TNodeSearch)
   strict private
     FMatrix: TSkeleton;
-    FRecentBest: TIntArray;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
-    FCancelled: Boolean;
     procedure Extend(constref aSub, aCand: TIntSet);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -134,7 +120,7 @@ type
 
   { TExactColor: a DSATUR-based branch and bound algorithm inspired by
     https://mat.tepper.cmu.edu/COLOR/solvers/trick.c by Michael Trick }
-  TExactColor = record
+  TExactColor = object(TNodeSearch)
   strict private
   type
     TNode = record
@@ -150,16 +136,11 @@ type
   var
     FNodes: array of TNode;
     FAchromatic: TBoolVector;
-    FColorMap,
-    FRecentBest: TIntArray;
+    FColorMap: TIntArray;
     FGraph: TGSimpleGraph;
     FLowBound,
     FUpBound,
     FNodeCount: SizeInt;
-    FStartTime: TDateTime;
-    FTimeOut: Integer;
-    FCancelled: Boolean;
-    function  TimeOut: Boolean; inline;
     function  InitLowBound: SizeInt;
     procedure InitComplete;
     procedure PickColor(aIndex, aColor: SizeInt);

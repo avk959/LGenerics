@@ -54,11 +54,8 @@ var
 begin
   if aCand.NonEmpty then
     begin
-      if SecondsBetween(Now, FStartTime) >= FTimeOut then
-        begin
-          FCancelled := True;
-          exit;
-        end;
+      if TimeOut then
+        exit;
       ItemCount := aCand.PopCount;
       ColOrd.Length := ItemCount;
       Colors.Length := ItemCount;
@@ -235,11 +232,8 @@ var
 begin
   if aCand.NonEmpty then
     begin
-      if SecondsBetween(Now, FStartTime) >= FTimeOut then
-        begin
-          FCancelled := True;
-          exit;
-        end;
+      if TimeOut then
+        exit;
       ItemCount := aCand.PopCount;
       ColOrd.Length := ItemCount;
       Colors.Length := ItemCount;
@@ -412,11 +406,8 @@ var
 begin
   if aCand.NonEmpty then
     begin
-      if SecondsBetween(Now, FStartTime) >= FTimeOut then
-        begin
-          FCancelled := True;
-          exit;
-        end;
+      if TimeOut then
+        exit;
       ColOrd.Length := aCand.Count;
       Colors.Length := aCand.Count;
       GreedyColor(aCand, ColOrd, Colors);
@@ -496,16 +487,16 @@ end;
 procedure TGSimpleGraph.TBPDomSetHelper.FillMatrix(aGraph: TGSimpleGraph);
 var
   I, J: SizeInt;
-  pA: PAdjList;
+  pList: PAdjList;
 begin
   FNodes := aGraph.SortNodesByDegree(soDesc);
   System.SetLength(FMatrix, System.Length(FNodes));
   for I := 0 to System.High(FNodes) do
     begin
       FMatrix[I].Size := System.Length(FNodes);
-      pA := aGraph.AdjLists[FNodes[I]];
+      pList := aGraph.AdjLists[FNodes[I]];
       for J := 0 to System.High(FNodes) do
-        if (I <> J) and pA^.Contains(FNodes[J]) then
+        if (I <> J) and pList^.Contains(FNodes[J]) then
           FMatrix[I][J] := True;
     end;
 end;
@@ -519,11 +510,8 @@ begin
     begin
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
-      if SecondsBetween(Now, FStartTime) >= FTimeOut then
-        begin
-          FCancelled := True;
-          exit;
-        end;
+      if TimeOut then
+        exit;
       I := aSub.Bsf;
       NewCand := aCand;
       NewCand[FNodes[I]] := True;
@@ -577,16 +565,16 @@ end;
 procedure TGSimpleGraph.TBPDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph);
 var
   I, J: SizeInt;
-  pA: PAdjList;
+  pList: PAdjList;
 begin
   FNodes := aGraph.SortNodesByDegree(soDesc);
   System.SetLength(FMatrix, System.Length(FNodes));
   for I := 0 to Pred(System.High(FNodes)) do
     begin
       FMatrix[I].InitZero;
-      pA := aGraph.AdjLists[FNodes[I]];
+      pList := aGraph.AdjLists[FNodes[I]];
       for J := 0 to System.High(FNodes) do
-        if (I <> J) and pA^.Contains(FNodes[J]) then
+        if (I <> J) and pList^.Contains(FNodes[J]) then
           FMatrix[I][J] := True;
     end;
 end;
@@ -600,11 +588,8 @@ begin
     begin
       if aCand.PopCount >= System.High(FRecentBest) then
         exit;
-      if SecondsBetween(Now, FStartTime) >= FTimeOut then
-        begin
-          FCancelled := True;
-          exit;
-        end;
+      if TimeOut then
+        exit;
       I := aSub.Bsf;
       NewCand := aCand;
       NewCand[FNodes[I]] := True;
@@ -664,11 +649,8 @@ begin
     begin
       if aCand.Count >= System.High(FRecentBest) then
         exit;
-      if SecondsBetween(Now, FStartTime) >= FTimeOut then
-        begin
-          FCancelled := True;
-          exit;
-        end;
+      if TimeOut then
+        exit;
       I := aSub[0];
       NewCand.Assign(aCand);
       NewCand.Push(I);
@@ -746,12 +728,6 @@ begin
 end;
 
 { TGSimpleGraph.TExactColor }
-
-function TGSimpleGraph.TExactColor.TimeOut: Boolean;
-begin
-  FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
-  Result := FCancelled;
-end;
 
 function TGSimpleGraph.TExactColor.InitLowBound: SizeInt;
 var
