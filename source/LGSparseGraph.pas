@@ -3501,6 +3501,11 @@ begin
 {$ENDIF}
 end;
 
+function TIntArrayHelper.IsEmpty: Boolean;
+begin
+  Result := Length = 0;
+end;
+
 function TIntArrayHelper.Copy: TIntArray;
 begin
   Result := System.Copy(Self);

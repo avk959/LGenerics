@@ -18,12 +18,16 @@
 *****************************************************************************}
 
 type
+
+  { TIntArrayHelper }
+
   TIntArrayHelper = type helper for TIntArray
   private
     function  GetLenght: SizeInt; inline;
     procedure SetLength(aValue: SizeInt); inline;
   public
     class function Construct(aLength: SizeInt; aInitValue: SizeInt = 0): TIntArray; static; inline;
+    function IsEmpty: Boolean; inline;
     function Copy: TIntArray; inline;
     property Length: SizeInt read GetLenght write SetLength;
   end;
