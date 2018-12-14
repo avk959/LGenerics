@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry,
   LGUtils,
-  LGArrayHelpers,
+  //LGArrayHelpers,
   LGSparseGraph,
   LGSimpleGraph;
 
@@ -21,15 +21,17 @@ type
   type
     TGraph  = TIntChart;
     TRef    = specialize TGAutoRef<TGraph>;
-    THelper = specialize TGOrdinalArrayHelper<SizeInt>;
+    //THelper = specialize TGOrdinalArrayHelper<SizeInt>;
 
     function  GenerateTestGr1: TGraph;
     function  GenerateTestGr2: TGraph;
+    function  GenerateTestGr3: TGraph;
     function  GenerateStar: TGraph;
     function  GenerateCycle: TGraph;
     function  GenerateWheel: TGraph;
     function  GenerateComplete: TGraph;
   published
+    procedure AddVertices;
     procedure SaveToStream;
     procedure Clone;
     procedure Degree;
@@ -45,17 +47,25 @@ type
     procedure SubgraphFromEdges1;
     procedure SubgraphFromEdges2;
     procedure CreateLineGraph;
-
     procedure DistinctEdges;
     procedure EnsureConnected;
     procedure PathExists;
     procedure SeparatePop;
+    procedure GetSeparate;
     procedure FindSeparates;
     procedure IsTree;
     procedure IsStar;
     procedure IsCycle;
     procedure IsWheel;
     procedure IsComplete;
+
+    procedure IsRegular;
+    procedure ContainsCycle;
+    procedure ContainsEulerianPath;
+    procedure ContainsEulerianCycle;
+    procedure FindEulerianPath;
+    procedure FindEulerianCycle;
+    procedure ContainsCutPoint;
   end;
 
 implementation
@@ -77,6 +87,14 @@ begin
   Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 6, 1, 7, 3, 4, 4, 6, 4, 5, 7, 4, 5, 10, 7, 10,
                    10, 11, 10, 12, 10, 13, 12, 13,
                    8, 9, 8, 14, 8, 15, 9, 15, 9, 16, 14, 15, 14, 16]);
+end;
+
+function TSimpleGraphTest.GenerateTestGr3: TGraph;
+begin
+  //see TestGr3.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 10);
+  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 1, 2, 6, 6, 4, 4, 5, 5, 2, 1, 7, 1, 8, 8, 9, 7, 9, 3, 10]);
 end;
 
 function TSimpleGraphTest.GenerateStar: TGraph;
@@ -114,6 +132,21 @@ begin
     for J := 0 to Pred(Result.VertexCount) do
       if I > J then
         Result.AddEdgeI(I, J);
+end;
+
+procedure TSimpleGraphTest.AddVertices;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.AddVertices([]) = 0);
+  AssertTrue(g.AddVertices([1]) = 1);
+  AssertTrue(g.VertexCount = 1);
+  AssertTrue(g.AddVertices([3, 4, 5]) = 3);
+  AssertTrue(g.VertexCount = 4);
+  AssertTrue(g.AddVertices([3, 4, 5, 6]) = 1);
+  AssertTrue(g.VertexCount = 5);
 end;
 
 procedure TSimpleGraphTest.SaveToStream;
@@ -502,13 +535,40 @@ begin
   AssertTrue(Pop = 16);
 end;
 
+procedure TSimpleGraphTest.GetSeparate;
+var
+  Ref: TRef;
+  g: TGraph;
+  Separate: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  Separate := g.GetSeparate(1);
+  AssertTrue(System.Length(Separate) = 13);
+  Separate := g.GetSeparate(8);
+  AssertTrue(System.Length(Separate) = 13);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  Separate := g.GetSeparate(1);
+  AssertTrue(System.Length(Separate) = 11);
+  Separate := g.GetSeparate(13);
+  AssertTrue(System.Length(Separate) = 11);
+  Separate := g.GetSeparate(8);
+  AssertTrue(System.Length(Separate) = 5);
+  Separate := g.GetSeparate(16);
+  AssertTrue(System.Length(Separate) = 5);
+end;
+
 procedure TSimpleGraphTest.FindSeparates;
 var
   Ref: TRef;
   g: TGraph;
   Separates: TIntVectorArray;
 begin
-  {%H-}Ref.Instance := GenerateTestGr2;
+  g := {%H-}Ref;
+  Separates := g.FindSeparates;
+  AssertTrue(System.Length(Separates) = 0);
+  Ref.Instance := GenerateTestGr2;
   g := Ref;
   Separates := g.FindSeparates;
   AssertTrue(System.Length(Separates) = 2);
@@ -619,6 +679,136 @@ begin
   Ref.Instance := GenerateComplete;
   g := Ref;
   AssertTrue(g.IsComplete);
+end;
+
+procedure TSimpleGraphTest.IsRegular;
+var
+  Ref: TRef;
+  g: TGraph;
+  Deg: SizeInt;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.IsRegular(Deg));
+  AssertTrue(Deg = NULL_INDEX);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsRegular(Deg));
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertFalse(g.IsRegular(Deg));
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.IsRegular(Deg));
+  AssertTrue(Deg = 2);
+  Ref.Instance := GenerateComplete;
+  g := Ref;
+  AssertTrue(g.IsRegular(Deg));
+  AssertTrue(Deg = Pred(g.VertexCount));
+end;
+
+procedure TSimpleGraphTest.ContainsCycle;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cycle: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.ContainsCycle(1, Cycle));
+  AssertTrue(Cycle[0] = Cycle[System.High(Cycle)]);
+  Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertFalse(g.ContainsCycle(1, Cycle));
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.ContainsCycle(1, Cycle));
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.ContainsCycle(1, Cycle));
+  AssertTrue(System.Length(Cycle) = Succ(g.VertexCount));
+end;
+
+procedure TSimpleGraphTest.ContainsEulerianPath;
+var
+  Ref: TRef;
+  g: TGraph;
+  vOdd: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.ContainsEulerianPath(vOdd));
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  AssertTrue(g.ContainsEulerianPath(vOdd));
+  AssertTrue(vOdd = 2);
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.ContainsEulerianPath(vOdd));
+  AssertTrue(vOdd = -1);
+end;
+
+procedure TSimpleGraphTest.ContainsEulerianCycle;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.ContainsEulerianCycle);
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.ContainsEulerianCycle);
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  AssertFalse(g.ContainsEulerianCycle);
+  g.RemoveEdge(3, 10);
+  AssertTrue(g.ContainsEulerianCycle);
+end;
+
+procedure TSimpleGraphTest.FindEulerianPath;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.FindEulerianPath(Path));
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  AssertTrue(g.FindEulerianPath(Path));
+  AssertTrue(Path.Length = Succ(g.EdgeCount));
+end;
+
+procedure TSimpleGraphTest.FindEulerianCycle;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cycle: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.FindEulerianCycle(Cycle));
+  AssertTrue(Cycle.Length = Succ(g.EdgeCount));
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  AssertFalse(g.FindEulerianCycle(Cycle));
+  g.RemoveEdge(3, 10);
+  AssertTrue(g.FindEulerianCycle(Cycle));
+  AssertTrue(Cycle.Length = Succ(g.EdgeCount));
+end;
+
+procedure TSimpleGraphTest.ContainsCutPoint;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertFalse(g.ContainsCutPoint(1));
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.ContainsCutPoint(1));
 end;
 
 
