@@ -244,27 +244,27 @@ type
   { looking for some Eulerian path in the connected component }
     function  FindEulerianPath: TIntArray;
   { finds a certain system of fundamental cycles }
-    function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
-  { checks whether exists any articulation point that belong to the same connected component as aRoot }
-    function  ContainsCutPoint(constref aRoot: TVertex): Boolean; inline;
-    function  ContainsCutPointI(aRoot: SizeInt = 0): Boolean;
-  { returns the articulation points that belong to the same connection component as aRoot, if any,
+    function  FindFundamentalCycles: TIntArrayVector;
+  { checks whether exists any articulation point that belong to the same connected component as aVertex }
+    function  ContainsCutPoint(constref aVertex: TVertex): Boolean; inline;
+    function  ContainsCutPointI(aIndex: SizeInt): Boolean;
+  { returns the articulation points that belong to the same connection component as aVertex, if any,
     otherwise the empty vector }
-    function  FindCutPoints(constref aRoot: TVertex): TIntArray; inline;
-    function  FindCutPointsI(aRoot: SizeInt = 0): TIntArray;
-  { removes the articulation points that belong to the same connected component as aRoot,
+    function  FindCutPoints(constref aVertex: TVertex): TIntArray; inline;
+    function  FindCutPointsI(aIndex: SizeInt): TIntArray;
+  { removes the articulation points that belong to the same connected component as aVertex,
     adding, if necessary, new edges; returns count of added edges;
     if aOnAddEdge = nil then new edges will use default data value }
-    function  RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
-    function  RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
+    function  RemoveCutPoints(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
+    function  RemoveCutPointsI(aIndex: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { checks whether exists any bridge in graph }
     function  ContainsBridge: Boolean;
   { returns all bridges in the result vector, if any, otherwise the empty vector }
     function  FindBridges: TIntEdgeArray;
-  { returns count of biconnected components in the same connected component as aRoot;
+  { returns count of biconnected components in the same connected component as aVertex;
     the corresponding elements of the aComponents will contain  the edges of those bicomponents }
-    function  FindBicomponents(constref aRoot: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
-    function  FindBicomponentsI(aRoot: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
+    function  FindBicomponents(constref aVertex: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
+    function  FindBicomponentsI(aIndex: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
   { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
     function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges;
@@ -2922,55 +2922,55 @@ begin
   Result := Path.ToArray;
 end;
 
-function TGSimpleGraph.FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
+function TGSimpleGraph.FindFundamentalCycles: TIntArrayVector;
 begin
+  Result := Default(TIntArrayVector);
   if IsTree then
-    exit(False);
-  SearchForFundamentalsCycles(aCycles);
-  if aCycles.Count <> CyclomaticNumber then
+    exit;
+  SearchForFundamentalsCycles(Result);
+  if Result.Count <> CyclomaticNumber then
     raise EGraphError.Create(SEInternalDataInconsist);
-  TIntArrayVectorHelper.Sort(aCycles, @CmpIntArrayLen);
-  Result := True;
+  TIntArrayVectorHelper.Sort(Result, @CmpIntArrayLen);
 end;
 
-function TGSimpleGraph.ContainsCutPoint(constref aRoot: TVertex): Boolean;
+function TGSimpleGraph.ContainsCutPoint(constref aVertex: TVertex): Boolean;
 begin
-  Result := ContainsCutPointI(IndexOf(aRoot));
+  Result := ContainsCutPointI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.ContainsCutPointI(aRoot: SizeInt): Boolean;
+function TGSimpleGraph.ContainsCutPointI(aIndex: SizeInt): Boolean;
 begin
-  CheckIndexRange(aRoot);
+  CheckIndexRange(aIndex);
   if VertexCount < 3 then
     exit(False);
-  Result := CutPointExists(aRoot);
+  Result := CutPointExists(aIndex);
 end;
 
-function TGSimpleGraph.FindCutPoints(constref aRoot: TVertex): TIntArray;
+function TGSimpleGraph.FindCutPoints(constref aVertex: TVertex): TIntArray;
 begin
-  Result := FindCutPointsI(IndexOf(aRoot));
+  Result := FindCutPointsI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.FindCutPointsI(aRoot: SizeInt): TIntArray;
+function TGSimpleGraph.FindCutPointsI(aIndex: SizeInt): TIntArray;
 var
   v: TIntVector;
 begin
-  CheckIndexRange(aRoot);
+  CheckIndexRange(aIndex);
   if VertexCount > 2 then
     begin
-      SearchForCutPoints(aRoot, v{%H-});
+      SearchForCutPoints(aIndex, v{%H-});
       Result := v.ToArray;
     end
   else
     Result := nil;
 end;
 
-function TGSimpleGraph.RemoveCutPoints(constref aRoot: TVertex; aOnAddEdge: TOnAddEdge): SizeInt;
+function TGSimpleGraph.RemoveCutPoints(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge): SizeInt;
 begin
-  Result := RemoveCutPointsI(IndexOf(aRoot), aOnAddEdge);
+  Result := RemoveCutPointsI(IndexOf(aVertex), aOnAddEdge);
 end;
 
-function TGSimpleGraph.RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
+function TGSimpleGraph.RemoveCutPointsI(aIndex: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
 var
   NewEdges: TIntEdgeVector;
   e: TIntEdge;
@@ -2979,7 +2979,7 @@ begin
   Result := 0;
   if VertexCount < 3 then
     exit;
-  SearchForBiconnect(aRoot, NewEdges{%H-});
+  SearchForBiconnect(aIndex, NewEdges{%H-});
   d := Default(TEdgeData);
   for e in NewEdges do
     begin
@@ -3006,18 +3006,18 @@ begin
   Result := v.ToArray;
 end;
 
-function TGSimpleGraph.FindBicomponents(constref aRoot: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
+function TGSimpleGraph.FindBicomponents(constref aVertex: TVertex; out aComponents: TEdgeArrayVector): SizeInt;
 begin
-  Result := FindBicomponentsI(IndexOf(aRoot), aComponents);
+  Result := FindBicomponentsI(IndexOf(aVertex), aComponents);
 end;
 
-function TGSimpleGraph.FindBicomponentsI(aRoot: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
+function TGSimpleGraph.FindBicomponentsI(aIndex: SizeInt; out aComponents: TEdgeArrayVector): SizeInt;
 begin
   Result := 0;
-  CheckIndexRange(aRoot);
+  CheckIndexRange(aIndex);
   if VertexCount > 2 then
     begin
-      SearchForBicomponent(aRoot, aComponents{%H-});
+      SearchForBicomponent(aIndex, aComponents{%H-});
       Result := aComponents.Count;
     end
   else
@@ -3031,7 +3031,7 @@ end;
 function TGSimpleGraph.IsBiconnected: Boolean;
 begin
   if Connected then
-    Result := not ContainsCutPointI
+    Result := not ContainsCutPointI(0)
   else
     Result := False;
 end;
