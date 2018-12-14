@@ -3001,8 +3001,9 @@ function TGSimpleGraph.FindBridges: TIntEdgeArray;
 var
   v: TIntEdgeVector;
 begin
+  v := Default(TIntEdgeVector);
   if VertexCount > 1 then
-    SearchForBridges(v{%H-});
+    SearchForBridges(v);
   Result := v.ToArray;
 end;
 
