@@ -868,6 +868,8 @@ var
   Ref: TRef;
   g: TGraph;
   Bridges: TIntEdgeArray;
+  BridgeSet: TIntPairSet;
+  e: TIntEdge;
 begin
   {%H-}Ref.Instance := GenerateCycle;
   g := Ref;
@@ -876,7 +878,11 @@ begin
   Ref.Instance := GenerateTestGr1;
   g := Ref;
   Bridges := g.FindBridges;
-  AssertTrue(System.Length(Bridges) = 4);
+  for e in Bridges do
+    BridgeSet.Add(e.Source, e.Destination);
+  AssertTrue(BridgeSet.Count = 4);
+  AssertTrue(BridgeSet.Contains(0, 1) and BridgeSet.Contains(10, 9) and
+             BridgeSet.Contains(7, 6) and BridgeSet.Contains(8, 7));
 end;
 
 

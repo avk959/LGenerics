@@ -133,7 +133,7 @@ type
     function  ColorableDisconnected(aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
     function  GreedyColorRlf(out aColors: TIntArray): SizeInt;
     function  GreedyColor(out aColors: TIntArray): SizeInt;
-    procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
+    procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntHashSet);
     function  CutPointExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
     procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
@@ -1711,7 +1711,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntVector);
+procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntHashSet);
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -1752,8 +1752,7 @@ begin
         Curr := Parents[Curr];
         if LowPt[Curr] > LowPt[Next] then
           LowPt[Curr] := LowPt[Next];
-        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) and
-           (TIntVectorHelper.SequentSearch(aPoints, Curr) = NULL_INDEX) then
+        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
           aPoints.Add(Curr);
       end;
   if ChildCount > 1 then
@@ -2953,7 +2952,7 @@ end;
 
 function TGSimpleGraph.FindCutPointsI(aIndex: SizeInt): TIntArray;
 var
-  v: TIntVector;
+  v: TIntHashSet;
 begin
   CheckIndexRange(aIndex);
   if VertexCount > 2 then
