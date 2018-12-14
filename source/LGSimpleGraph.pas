@@ -185,6 +185,7 @@ type
   { returns True and vertex index, if it is added, False if such a vertex already exists }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
+    function  AddVertices(const aVertices: TVertexArray): SizeInt;
   { note: vertex removing breaks validity of connected property;
     raises EGraphError if not contains aVertex }
     procedure RemoveVertex(constref aVertex: TVertex); inline;
@@ -215,7 +216,10 @@ type
   { returns number of vertices(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
-  { returns in the result array the vectors of indices of connected components }
+  { returns array of indices of connected component that contains aVertex }
+    function  GetSeparate(constref aVertex: TVertex): TIntArray; inline;
+    function  GetSeparateI(aIndex: SizeInt): TIntArray;
+  { returns in the result array the vectors of indices of all connected components }
     function  FindSeparates: TIntVectorArray;
     function  IsTree: Boolean; inline;
     function  IsStar(out aHub: SizeInt): Boolean;
@@ -226,13 +230,13 @@ type
     an empty graph is considered regular }
     function  IsRegular(out aDegree: SizeInt): Boolean;
     function  CyclomaticNumber: SizeInt; inline;
-  { checks whether exists any cycle in the same connected component as aRoot;
-    if True then aCycle will contain indices of the vertices of the cycle }
-    function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
-    function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+  { returns True if exists any cycle in the aVertex connected component,
+    in this case aCycle will contain indices of the vertices of the found cycle }
+    function  ContainsCycle(constref aVertex: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function  ContainsCycleI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
   { checks whether exists Eulerian path; if exists only path, then
-    aSource will contains index of first vertex with odd degree, otherwise -1 }
-    function  ContainsEulerianPath(out aSource: SizeInt): Boolean;
+    aFirstOdd will contains index of first vertex with odd degree, otherwise -1 }
+    function  ContainsEulerianPath(out aFirstOdd: SizeInt): Boolean;
   { checks whether exists Eulerian cycle }
     function  ContainsEulerianCycle: Boolean;
   { looking for some Eulerian cycle in the connected component }
@@ -958,7 +962,7 @@ begin
   Clear;
   for I := 0 to Pred(System.Length(aTree)) do
     begin
-      AddVertex(aGraph[I]);
+      {%H-}AddVertex(aGraph[I]);
       Src := aTree[I];
       if Src <> -1 then
         AddEdge(aGraph[Src], aGraph[I], aGraph.GetEdgeDataPtr(Src, I)^);
@@ -983,7 +987,7 @@ begin
   J := SeparateTag(aIndex);
   for I := 0 to Pred(VertexCount) do
     if SeparateTag(I) = J then
-       Result.AddVertex(Items[I]);
+       {%H-}Result.AddVertex(Items[I]);
   for I := 0 to Pred(Result.VertexCount) do
     for J := Succ(I) to Pred(Result.VertexCount) do
       if Adjacent(Result[I], Result[J]) then
@@ -1208,7 +1212,7 @@ begin
 
   System.SetLength(Edgs, EdgeCount);
   I := 0;
-  for e in DistinctEdges do
+  for e in {%H-}DistinctEdges do
     begin
       Edgs[I].Node1 := @Nodes[e.Source];
       Edgs[I].Next1 := Nodes[e.Source].FirstEdge;
@@ -1529,7 +1533,7 @@ begin
   aColors := nil;
   if IsEmpty then
     exit(True);
-  if IsComplete then
+  if {%H-}IsComplete then
     begin
       aColors.Length := VertexCount;
       for I := 0 to Pred(VertexCount) do
@@ -2109,10 +2113,10 @@ end;
 
 procedure TGSimpleGraph.FindFundamentalCyclesLen(out aCycleLens: TIntVector);
 begin
-  if IsTree then
+  if {%H-}IsTree then
     exit;
   SearchForFundamentalsCyclesLen(aCycleLens);
-  if aCycleLens.Count <> CyclomaticNumber then
+  if aCycleLens.Count <> {%H-}CyclomaticNumber then
     raise EGraphError.Create(SEInternalDataInconsist);
   TIntVectorHelper.Sort(aCycleLens);
 end;
@@ -2324,7 +2328,7 @@ begin
     for s := 0 to Pred(Header.VertexCount) do
       OnStreamWriteVertex(wbs, FNodeList[s].Vertex);
     //write edges
-    for Edge in DistinctEdges do
+    for Edge in {%H-}DistinctEdges do
       begin
         s := Edge.Source;
         d := Edge.Destination;
@@ -2468,8 +2472,8 @@ var
 begin
   Result := TLineGraph.Create;
   Result.EnsureCapacity(EdgeCount);
-  for e in DistinctEdges do
-    Result.AddVertex(TOrdIntPair.Create(e.Source, e.Destination));
+  for e in {%H-}DistinctEdges do
+    {%H-}Result.AddVertex(TOrdIntPair.Create(e.Source, e.Destination));
   for I := 0 to Result.VertexCount - 2 do
     begin
       vI := Result[I];
@@ -2505,6 +2509,16 @@ var
   Dummy: SizeInt;
 begin
   Result := AddVertex(aVertex, Dummy);
+end;
+
+function TGSimpleGraph.AddVertices(const aVertices: TVertexArray): SizeInt;
+var
+  v: TVertex;
+begin
+  Result := VertexCount;
+  for v in aVertices do
+    AddVertex(v);
+  Result := VertexCount - Result;
 end;
 
 procedure TGSimpleGraph.RemoveVertex(constref aVertex: TVertex);
@@ -2648,6 +2662,33 @@ begin
     Result := VertexCount;
 end;
 
+function TGSimpleGraph.GetSeparate(constref aVertex: TVertex): TIntArray;
+begin
+  Result := GetSeparateI(IndexOf(aVertex));
+end;
+
+function TGSimpleGraph.GetSeparateI(aIndex: SizeInt): TIntArray;
+var
+  I, J, Tag: SizeInt;
+begin
+  CheckIndexRange(aIndex);
+  if SeparateCount > 1 then
+    begin
+      Result{%H-}.Length := VertexCount;
+      Tag := SeparateTag(aIndex);
+      J := 0;
+      for I := 0 to Pred(VertexCount) do
+        if SeparateTag(I) = Tag then
+          begin
+            Result[J] := I;
+            Inc(J);
+          end;
+      Result.Length := J;
+    end
+  else
+    Result := CreateIntArrayRange;
+end;
+
 function TGSimpleGraph.FindSeparates: TIntVectorArray;
 var
   Tags: TIntArray;
@@ -2740,14 +2781,14 @@ function TGSimpleGraph.IsRegular(out aDegree: SizeInt): Boolean;
 var
   I: SizeInt;
 begin
-  aDegree := 0;
+  aDegree := NULL_INDEX;
   if NonEmpty then
     begin
       aDegree := AdjLists[0]^.Count;
       for I := 1 to Pred(VertexCount) do
         if AdjLists[I]^.Count <> aDegree then
           begin
-            aDegree := 0;
+            aDegree := NULL_INDEX;
             exit(False);
           end;
     end;
@@ -2759,27 +2800,27 @@ begin
   Result := EdgeCount - VertexCount + SeparateCount;
 end;
 
-function TGSimpleGraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
+function TGSimpleGraph.ContainsCycle(constref aVertex: TVertex; out aCycle: TIntArray): Boolean;
 begin
-  Result := ContainsCycleI(IndexOf(aRoot), aCycle);
+  Result := ContainsCycleI(IndexOf(aVertex), aCycle);
 end;
 
-function TGSimpleGraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+function TGSimpleGraph.ContainsCycleI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
 begin
-  CheckIndexRange(aRoot);
+  CheckIndexRange(aIndex);
   if VertexCount < 3 then
     exit(False);
   if ConnectedValid and IsTree then
     exit(False);
-  Result := CycleExists(aRoot, aCycle);
+  Result := CycleExists(aIndex, aCycle);
 end;
 
-function TGSimpleGraph.ContainsEulerianPath(out aSource: SizeInt): Boolean;
+function TGSimpleGraph.ContainsEulerianPath(out aFirstOdd: SizeInt): Boolean;
 var
   Comps: TIntVectorArray;
   I, Cand, OddCount: SizeInt;
 begin
-  aSource := NULL_INDEX;
+  aFirstOdd := NULL_INDEX;
   if VertexCount < 2 then
     exit(False);
   Comps := FindSeparates;
@@ -2799,11 +2840,11 @@ begin
         Inc(OddCount);
         if OddCount > 2 then
           begin
-            aSource := NULL_INDEX;
+            aFirstOdd := NULL_INDEX;
             exit(False);
           end;
-        if aSource = NULL_INDEX then
-          aSource := I;
+        if aFirstOdd = NULL_INDEX then
+          aFirstOdd := I;
       end;
   Result := True;
 end;
@@ -3959,23 +4000,25 @@ function TIntChart.AddVertexRange(aFrom, aTo: Integer): Integer;
 var
   I: Integer;
 begin
-  Result := 0;
+  Result := VertexCount;
   for I := aFrom to aTo do
-    Result += Ord(AddVertex(I));
+    AddVertex(I);
+  Result := VertexCount - Result;
 end;
 
 function TIntChart.AddEdges(const aVertexList: array of Integer): Integer;
 var
   I, R: Integer;
 begin
-  Result := 0;
+  Result := EdgeCount;
   R := System.High(aVertexList);
   I := 0;
   while I < R do
     begin
-      Result += Ord(AddEdge(aVertexList[I], aVertexList[Succ(I)]));
+      AddEdge(aVertexList[I], aVertexList[Succ(I)]);
       I += 2;
     end;
+  Result := EdgeCount - Result;
 end;
 
 { TGraphDotWriter }
