@@ -240,9 +240,9 @@ type
   { checks whether exists Eulerian cycle }
     function  ContainsEulerianCycle: Boolean;
   { looking for some Eulerian cycle in the connected component }
-    function  FindEulerianCycle(out aCycle: TIntArray): Boolean;
+    function  FindEulerianCycle: TIntArray;
   { looking for some Eulerian path in the connected component }
-    function  FindEulerianPath(out aPath: TIntArray): Boolean;
+    function  FindEulerianPath: TIntArray;
   { finds a certain system of fundamental cycles }
     function  FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
   { checks whether exists any articulation point that belong to the same connected component as aRoot }
@@ -2871,15 +2871,15 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindEulerianCycle(out aCycle: TIntArray): Boolean;
+function TGSimpleGraph.FindEulerianCycle: TIntArray;
 var
   g: TSkeleton;
   Stack: TIntStack;
   s, d: SizeInt;
 begin
-  aCycle := nil;
+  Result := nil;
   if not ContainsEulerianCycle then
-    exit(False);
+    exit;
   g := CreateSkeleton;
   s := 0;
   while g.Degree[s] = 0 do
@@ -2891,19 +2891,18 @@ begin
       Stack.Push(d);
       s := d;
     end;
-  aCycle := Stack.ToArray;
-  Result := True;
+  Result := Stack.ToArray;
 end;
 
-function TGSimpleGraph.FindEulerianPath(out aPath: TIntArray): Boolean;
+function TGSimpleGraph.FindEulerianPath: TIntArray;
 var
   g: TSkeleton;
   Stack, Path: TIntStack;
   s, d: SizeInt;
 begin
-  aPath := nil;
+  Result := nil;
   if not ContainsEulerianPath(s) then
-    exit(False);
+    exit;
   g := CreateSkeleton;
   if s = NULL_INDEX then
     begin
@@ -2920,8 +2919,7 @@ begin
       end
     else
       {%H-}Path.Push(Stack.Pop{%H-});
-  aPath := Path.ToArray;
-  Result := True;
+  Result := Path.ToArray;
 end;
 
 function TGSimpleGraph.FindFundamentalCycles(out aCycles: TIntArrayVector): Boolean;
