@@ -706,14 +706,6 @@ implementation
 uses
   bufstream;
 
-{ TGSimpleGraph.TNodeSearch }
-
-function TGSimpleGraph.TNodeSearch.TimeOut: Boolean;
-begin
-  FCancelled := SecondsBetween(Now, FStartTime) >= FTimeOut;
-  Result := FCancelled;
-end;
-
 {$I SimpGraphHelp.inc}
 
 { TGSimpleGraph.TDistinctEdgeEnumerator }

@@ -17,6 +17,14 @@
 *                                                                           *
 *****************************************************************************}
 
+{ TGSimpleGraph.TNodeSearch }
+
+function TGSimpleGraph.TNodeSearch.TimeOut: Boolean;
+begin
+  FCancelled := SecondsBetween(Now, FStartTime) >= FTimeOut;
+  Result := FCancelled;
+end;
+
 { TGSimpleGraph.TBPCliqueIsHelper }
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
