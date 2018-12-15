@@ -2938,9 +2938,8 @@ var
   Stack: TIntStack;
   s, d: SizeInt;
 begin
-  Result := nil;
   if not ContainsEulerianCycle then
-    exit;
+    exit(nil);
   g := CreateSkeleton;
   s := 0;
   while g.Degree[s] = 0 do
@@ -2961,9 +2960,8 @@ var
   Stack, Path: TIntStack;
   s, d: SizeInt;
 begin
-  Result := nil;
   if not ContainsEulerianPath(s) then
-    exit;
+    exit(nil);
   g := CreateSkeleton;
   if s = NULL_INDEX then
     begin
