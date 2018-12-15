@@ -476,7 +476,7 @@ type
     empty if path does not exists }
     function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
-  { returns the eccentricity of the aVertex within its connected component }
+  { returns the eccentricity of the aVertex }
     function Eccentricity(constref aVertex: TVertex): SizeInt; inline;
     function EccentricityI(aIndex: SizeInt): SizeInt;
 {**********************************************************************************************************
@@ -2197,8 +2197,11 @@ begin
   Dist := ShortestPathsMapI(aIndex);
   Result := 0;
   for I := 0 to System.High(Dist) do
-    if Dist[I] > Result then
-      Result := Dist[I];
+    if Dist[I] = NULL_INDEX then
+      exit(High(SizeInt))
+    else
+      if (Dist[I] > Result) then
+        Result := Dist[I];
 end;
 
 { TGAbstractDotWriter }
