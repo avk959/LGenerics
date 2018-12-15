@@ -252,7 +252,7 @@ type
     otherwise the empty vector }
     function  FindCutVertices(constref aVertex: TVertex): TIntArray; inline;
     function  FindCutVerticesI(aIndex: SizeInt): TIntArray;
-  { removes the articulation points that belong to the aVertex connected, adding,
+  { removes the articulation points that belong to the aVertex connected component, adding,
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
     function  RemoveCutVertices(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
@@ -2984,6 +2984,7 @@ var
   d: TEdgeData;
 begin
   Result := 0;
+  CheckIndexRange(aIndex);
   if VertexCount < 3 then
     exit;
   SearchForBiconnect(aIndex, NewEdges{%H-});
