@@ -1796,17 +1796,17 @@ begin
       end;
 end;
 
-{ TGSimpleGraph.TNiMinCut.TNiEdge }
+{ TGSimpleGraph.TNISimpMinCutHelper.TNiEdge }
 
-constructor TGSimpleGraph.TNiMinCut.TNiEdge.Create(aTarget, aWeight: SizeInt);
+constructor TGSimpleGraph.TNISimpMinCutHelper.TNiEdge.Create(aTarget, aWeight: SizeInt);
 begin
   Target := aTarget;
   Weight := aWeight;
 end;
 
-{ TGSimpleGraph.TNiMinCut }
+{ TGSimpleGraph.TNISimpMinCutHelper }
 
-procedure TGSimpleGraph.TNiMinCut.ClearMarks;
+procedure TGSimpleGraph.TNISimpMinCutHelper.ClearMarks;
 var
   I: SizeInt;
   p: TNiAdjList.PEntry;
@@ -1816,7 +1816,7 @@ begin
       p^.Scanned := False;
 end;
 
-procedure TGSimpleGraph.TNiMinCut.Init(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TNISimpMinCutHelper.Init(aGraph: TGSimpleGraph);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -1835,7 +1835,7 @@ begin
   FCuts := nil;
 end;
 
-procedure TGSimpleGraph.TNiMinCut.Init2(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TNISimpMinCutHelper.Init2(aGraph: TGSimpleGraph);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -1856,7 +1856,7 @@ begin
   FBestCut := High(SizeInt);
 end;
 
-procedure TGSimpleGraph.TNiMinCut.ShrinkEdge(aSource, aTarget: SizeInt);
+procedure TGSimpleGraph.TNISimpMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
   p: TNiAdjList.PEntry;
@@ -1883,7 +1883,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TNiMinCut.ScanFirstSearch;
+procedure TGSimpleGraph.TNISimpMinCutHelper.ScanFirstSearch;
 var
   I: SizeInt;
   p: TNiAdjList.PEntry;
@@ -1917,7 +1917,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TNiMinCut.Shrink;
+procedure TGSimpleGraph.TNISimpMinCutHelper.Shrink;
 var
   I: SizeInt;
   p: TNiAdjList.PEntry;
@@ -1933,7 +1933,7 @@ begin
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
-function TGSimpleGraph.TNiMinCut.GetMinCut(aGraph: TGSimpleGraph): SizeInt;
+function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph): SizeInt;
 begin
   Init(aGraph);
   while FExistNodes.PopCount >= 2 do
@@ -1941,7 +1941,7 @@ begin
   Result := FBestCut;
 end;
 
-function TGSimpleGraph.TNiMinCut.GetMinCut(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
+function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
 begin
   Init2(aGraph);
   while FExistNodes.PopCount >= 2 do

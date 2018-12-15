@@ -3159,18 +3159,18 @@ end;
 
 function TGSimpleGraph.MinCut: SizeInt;
 var
-  Helper: TNiMinCut;
+  Helper: TNISimpMinCutHelper;
 begin
   if not Connected or (VertexCount < 2) then
     exit(0);
   if VertexCount = 2 then
     exit(1);
-  Result := Helper.GetMinCut(Self);
+  Result := Helper.Execute(Self);
 end;
 
 function TGSimpleGraph.MinCut(out aCut: TCut): SizeInt;
 var
-  Helper: TNiMinCut;
+  Helper: TNISimpMinCutHelper;
   Cut: TIntSet;
   B: TBoolVector;
   I: SizeInt;
@@ -3183,7 +3183,7 @@ begin
       aCut.B := [1];
       exit(1);
     end;
-  Result := Helper.GetMinCut(Self, Cut);
+  Result := Helper.Execute(Self, Cut);
   B.InitRange(VertexCount);
   for I in Cut do
     B[I] := False;
@@ -3193,12 +3193,16 @@ end;
 
 function TGSimpleGraph.MinCut(out aCut: TCut; out aCrossEdges: TIntEdgeArray): SizeInt;
 var
-  Helper: TNiMinCut;
   Left, Right: TBoolVector;
   I, J: SizeInt;
   p: PAdjItem;
 begin
   Result := MinCut(aCut);
+  if Result < 1 then
+    begin
+      aCrossEdges := nil;
+      exit;
+    end;
   if aCut.A.Length <= aCut.B.Length then
     begin
       Left.Size := VertexCount;

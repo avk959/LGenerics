@@ -304,8 +304,8 @@ type
     function  MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
   end;
 
-  { TNiMinCut: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }
-  TNiMinCut = record
+  { TNISimpMinCutHelper: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }
+  TNISimpMinCutHelper = record
   strict private
   type
     TNiEdge = record
@@ -338,7 +338,7 @@ type
     procedure ScanFirstSearch;
     procedure Shrink;
   public
-    function  GetMinCut(aGraph: TGSimpleGraph): SizeInt;
-    function  GetMinCut(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
+    function  Execute(aGraph: TGSimpleGraph): SizeInt;
+    function  Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
   end;
 
