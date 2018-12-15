@@ -600,7 +600,7 @@ type
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and weighted radus and diameter of the graph }
-    function FindWeightedMerics(out aRadius, aDiameter: TWeight): Boolean;
+    function FindWeightedMetrics(out aRadius, aDiameter: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and indices of the central vertices in aCenter }
     function FindWeightedCenter(out aCenter: TIntArray): Boolean;
@@ -3127,7 +3127,7 @@ begin
   if not Connected then
     exit(nil);
   Eccs := DoFindMetrics(Radius, Diam);
-  Result.Length := VertexCount;
+  Result{%H-}.Length := VertexCount;
   J := 0;
   for I := 0 to Pred(VertexCount) do
     if Eccs[I] = Radius then
@@ -3146,7 +3146,7 @@ begin
   if not Connected then
     exit(nil);
   Eccs := DoFindMetrics(Radius, Diam);
-  Result.Length := VertexCount;
+  Result{%H-}.Length := VertexCount;
   J := 0;
   for I := 0 to Pred(VertexCount) do
     if Eccs[I] = Diam then
@@ -4392,7 +4392,7 @@ begin
     end;
 end;
 
-function TGWeightedGraph.FindWeightedMerics(out aRadius, aDiameter: TWeight): Boolean;
+function TGWeightedGraph.FindWeightedMetrics(out aRadius, aDiameter: TWeight): Boolean;
 var
   Bfmt: TWeightHelper.TBfmt;
   Weights: TWeightArray;
