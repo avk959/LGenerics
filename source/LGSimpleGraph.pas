@@ -142,6 +142,7 @@ type
     procedure SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
+    function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
     function  CreateDegreeArray: TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
@@ -274,9 +275,11 @@ type
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True, radus and diameter, if graph is connected, False otherwise }
-    function  FindMerics(out aRadius, aDiameter: SizeInt): Boolean;
+    function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is connected, nil otherwise }
     function  FindCenter: TIntArray;
+  { returns array of indices of the peripheral vertices, if graph is connected, nil otherwise }
+    function  FindPeripheral: TIntArray;
 
     type
       //vertex partition
@@ -2119,6 +2122,50 @@ begin
   TIntVectorHelper.Sort(aCycleLens);
 end;
 
+function TGSimpleGraph.DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
+var
+  Queue, Dist: TIntArray;
+  VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  VertCount := VertexCount;
+  aRadius := VertCount;
+  aDiameter := 0;
+  Queue.Length := VertCount;
+  Dist.Length := VertCount;
+  Result{%H-}.Length := VertCount;
+  for I := 0 to Pred(VertCount) do
+    begin
+      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      qHead := 0;
+      qTail := 0;
+      Queue[qTail] := I;
+      Inc(qTail);
+      while qHead < qTail do
+        begin
+          J := Queue[qHead];
+          Inc(qHead);
+          for p in AdjLists[J]^ do
+            if Dist[p^.Key] = NULL_INDEX then
+              begin
+                Queue[qTail] := p^.Key;
+                Inc(qTail);
+                d := Succ(Dist[J]);
+                if Ecc < d then
+                  Ecc := d;
+                Dist[p^.Key] := d;
+              end;
+        end;
+      Result[I] := Ecc;
+      if Ecc < aRadius then
+        aRadius := Ecc;
+      if Ecc > aDiameter then
+        aDiameter := Ecc;
+    end;
+end;
+
 function TGSimpleGraph.CreateDegreeArray: TIntArray;
 var
   I: SizeInt;
@@ -3065,96 +3112,44 @@ begin
     end;
 end;
 
-function TGSimpleGraph.FindMerics(out aRadius, aDiameter: SizeInt): Boolean;
-var
-  Queue, Dist: TIntArray;
-  VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
-  p: PAdjItem;
+function TGSimpleGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
 begin
-  if not Connected then
-    exit(False);
-  VertCount := VertexCount;
-  aRadius := VertCount;
-  aDiameter := 0;
-  Queue.Length := VertCount;
-  Dist.Length := VertCount;
-  for I := 0 to Pred(VertCount) do
-    begin
-      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
-      Dist[I] := 0;
-      Ecc := 0;
-      qHead := 0;
-      qTail := 0;
-      Queue[qTail] := I;
-      Inc(qTail);
-      while qHead < qTail do
-        begin
-          J := Queue[qHead];
-          Inc(qHead);
-          for p in AdjLists[J]^ do
-            if Dist[p^.Key] = NULL_INDEX then
-              begin
-                Queue[qTail] := p^.Key;
-                Inc(qTail);
-                d := Succ(Dist[J]);
-                if Ecc < d then
-                  Ecc := d;
-                Dist[p^.Key] := d;
-              end;
-        end;
-      if Ecc < aRadius then
-        aRadius := Ecc;
-      if Ecc > aDiameter then
-        aDiameter := Ecc;
-    end;
-  Result := True;
+  Result := Connected;
+  if Result then
+    DoFindMetrics(aRadius, aDiameter);
 end;
 
 function TGSimpleGraph.FindCenter: TIntArray;
 var
-  Queue, Dist, Eccs: TIntArray;
-  VertCount, Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
-  p: PAdjItem;
+  Eccs: TIntArray;
+  I, J, Radius, Diam: SizeInt;
 begin
   if not Connected then
     exit(nil);
-  VertCount := VertexCount;
-  Radius := VertCount;
-  Queue.Length := VertCount;
-  Dist.Length := VertCount;
-  Eccs.Length := VertCount;
-  for I := 0 to Pred(VertCount) do
-    begin
-      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
-      Dist[I] := 0;
-      Ecc := 0;
-      qHead := 0;
-      qTail := 0;
-      Queue[qTail] := I;
-      Inc(qTail);
-      while qHead < qTail do
-        begin
-          J := Queue[qHead];
-          Inc(qHead);
-          for p in AdjLists[J]^ do
-            if Dist[p^.Key] = NULL_INDEX then
-              begin
-                Queue[qTail] := p^.Key;
-                Inc(qTail);
-                d := Succ(Dist[J]);
-                if Ecc < d then
-                  Ecc := d;
-                Dist[p^.Key] := d;
-              end;
-        end;
-      Eccs[I] := Ecc;
-      if Ecc < Radius then
-        Radius := Ecc;
-    end;
-  Result.Length := VertCount;
+  Eccs := DoFindMetrics(Radius, Diam);
+  Result.Length := VertexCount;
   J := 0;
-  for I := 0 to Pred(VertCount) do
+  for I := 0 to Pred(VertexCount) do
     if Eccs[I] = Radius then
+      begin
+        Result[J] := I;
+        Inc(J);
+      end;
+  Result.Length := J;
+end;
+
+function TGSimpleGraph.FindPeripheral: TIntArray;
+var
+  Eccs: TIntArray;
+  I, J, Radius, Diam: SizeInt;
+begin
+  if not Connected then
+    exit(nil);
+  Eccs := DoFindMetrics(Radius, Diam);
+  Result.Length := VertexCount;
+  J := 0;
+  for I := 0 to Pred(VertexCount) do
+    if Eccs[I] = Diam then
       begin
         Result[J] := I;
         Inc(J);
