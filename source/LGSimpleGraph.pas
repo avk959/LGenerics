@@ -134,7 +134,7 @@ type
     function  GreedyColorRlf(out aColors: TIntArray): SizeInt;
     function  GreedyColor(out aColors: TIntArray): SizeInt;
     procedure SearchForCutVertices(aRoot: SizeInt; var aPoints: TIntHashSet);
-    function  CuVertexExists(aRoot: SizeInt): Boolean;
+    function  CutVertexExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
     procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
     function  BridgeExists: Boolean;
@@ -1767,7 +1767,7 @@ begin
     aPoints.Add(aRoot);
 end;
 
-function TGSimpleGraph.CuVertexExists(aRoot: SizeInt): Boolean;
+function TGSimpleGraph.CutVertexExists(aRoot: SizeInt): Boolean;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -2950,7 +2950,7 @@ begin
   CheckIndexRange(aIndex);
   if VertexCount < 3 then
     exit(False);
-  Result := CuVertexExists(aIndex);
+  Result := CutVertexExists(aIndex);
 end;
 
 function TGSimpleGraph.FindCutVertices(constref aVertex: TVertex): TIntArray;

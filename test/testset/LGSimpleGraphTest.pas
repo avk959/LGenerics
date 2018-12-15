@@ -808,12 +808,12 @@ var
 begin
   {%H-}Ref.Instance := GenerateCycle;
   g := Ref;
-  AssertFalse(g.ContainsCutPoint(1));
+  AssertFalse(g.ContainsCutVertex(1));
   g.RemoveEdge(1, 12);
-  AssertTrue(g.ContainsCutPoint(1));
+  AssertTrue(g.ContainsCutVertex(1));
   Ref.Instance := GenerateTestGr1;
   g := Ref;
-  AssertTrue(g.ContainsCutPoint(1));
+  AssertTrue(g.ContainsCutVertex(1));
 end;
 
 procedure TSimpleGraphTest.FindCutPoints;
@@ -824,11 +824,11 @@ var
 begin
   {%H-}Ref.Instance := GenerateCycle;
   g := Ref;
-  Points := g.FindCutPoints(1);
+  Points := g.FindCutVertices(1);
   AssertTrue(Points.IsEmpty);
   Ref.Instance := GenerateTestGr1;
   g := Ref;
-  Points := g.FindCutPoints(1);
+  Points := g.FindCutVertices(1);
   AssertTrue(Points.Length = 4);
   AssertTrue((TIntHelper.SequentSearch(Points, 0) <> NULL_INDEX) and
              (TIntHelper.SequentSearch(Points, 6) <> NULL_INDEX) and
@@ -844,9 +844,9 @@ var
 begin
   {%H-}Ref.Instance := GenerateTestGr1;
   g := Ref;
-  AssertTrue(g.ContainsCutPoint(1));
-  EdgeCount := g.RemoveCutPoints(1);
-  AssertFalse(g.ContainsCutPoint(1));
+  AssertTrue(g.ContainsCutVertex(1));
+  EdgeCount := g.RemoveCutVertices(1);
+  AssertFalse(g.ContainsCutVertex(1));
   AssertTrue(EdgeCount = 5);
 end;
 
