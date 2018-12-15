@@ -133,8 +133,8 @@ type
     function  ColorableDisconnected(aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
     function  GreedyColorRlf(out aColors: TIntArray): SizeInt;
     function  GreedyColor(out aColors: TIntArray): SizeInt;
-    procedure SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntHashSet);
-    function  CutPointExists(aRoot: SizeInt): Boolean;
+    procedure SearchForCutVertices(aRoot: SizeInt; var aPoints: TIntHashSet);
+    function  CuVertexExists(aRoot: SizeInt): Boolean;
     procedure SearchForBiconnect(aRoot: SizeInt; var aEdges: TIntEdgeVector);
     procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
     function  BridgeExists: Boolean;
@@ -246,17 +246,17 @@ type
   { finds a certain system of fundamental cycles }
     function  FindFundamentalCycles: TIntArrayVector;
   { checks whether exists any articulation point that belong to the aVertex connected component }
-    function  ContainsCutPoint(constref aVertex: TVertex): Boolean; inline;
-    function  ContainsCutPointI(aIndex: SizeInt): Boolean;
+    function  ContainsCutVertex(constref aVertex: TVertex): Boolean; inline;
+    function  ContainsCutVertexI(aIndex: SizeInt): Boolean;
   { returns the articulation points that belong to the aVertex connection component, if any,
     otherwise the empty vector }
-    function  FindCutPoints(constref aVertex: TVertex): TIntArray; inline;
-    function  FindCutPointsI(aIndex: SizeInt): TIntArray;
+    function  FindCutVertices(constref aVertex: TVertex): TIntArray; inline;
+    function  FindCutVerticesI(aIndex: SizeInt): TIntArray;
   { removes the articulation points that belong to the aVertex connected, adding,
     if necessary, new edges; returns count of added edges;
     if aOnAddEdge is nil then new edges will use default data value }
-    function  RemoveCutPoints(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
-    function  RemoveCutPointsI(aIndex: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
+    function  RemoveCutVertices(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge = nil): SizeInt; inline;
+    function  RemoveCutVerticesI(aIndex: SizeInt; aOnAddEdge: TOnAddEdge = nil): SizeInt;
   { checks whether exists any bridge in graph }
     function  ContainsBridge: Boolean;
   { returns all bridges in the result vector, if any, otherwise the empty vector }
@@ -1719,7 +1719,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.SearchForCutPoints(aRoot: SizeInt; var aPoints: TIntHashSet);
+procedure TGSimpleGraph.SearchForCutVertices(aRoot: SizeInt; var aPoints: TIntHashSet);
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -1767,7 +1767,7 @@ begin
     aPoints.Add(aRoot);
 end;
 
-function TGSimpleGraph.CutPointExists(aRoot: SizeInt): Boolean;
+function TGSimpleGraph.CuVertexExists(aRoot: SizeInt): Boolean;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -2940,44 +2940,44 @@ begin
   TIntArrayVectorHelper.Sort(Result, @CmpIntArrayLen);
 end;
 
-function TGSimpleGraph.ContainsCutPoint(constref aVertex: TVertex): Boolean;
+function TGSimpleGraph.ContainsCutVertex(constref aVertex: TVertex): Boolean;
 begin
-  Result := ContainsCutPointI(IndexOf(aVertex));
+  Result := ContainsCutVertexI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.ContainsCutPointI(aIndex: SizeInt): Boolean;
+function TGSimpleGraph.ContainsCutVertexI(aIndex: SizeInt): Boolean;
 begin
   CheckIndexRange(aIndex);
   if VertexCount < 3 then
     exit(False);
-  Result := CutPointExists(aIndex);
+  Result := CuVertexExists(aIndex);
 end;
 
-function TGSimpleGraph.FindCutPoints(constref aVertex: TVertex): TIntArray;
+function TGSimpleGraph.FindCutVertices(constref aVertex: TVertex): TIntArray;
 begin
-  Result := FindCutPointsI(IndexOf(aVertex));
+  Result := FindCutVerticesI(IndexOf(aVertex));
 end;
 
-function TGSimpleGraph.FindCutPointsI(aIndex: SizeInt): TIntArray;
+function TGSimpleGraph.FindCutVerticesI(aIndex: SizeInt): TIntArray;
 var
   v: TIntHashSet;
 begin
   CheckIndexRange(aIndex);
   if VertexCount > 2 then
     begin
-      SearchForCutPoints(aIndex, v{%H-});
+      SearchForCutVertices(aIndex, v{%H-});
       Result := v.ToArray;
     end
   else
     Result := nil;
 end;
 
-function TGSimpleGraph.RemoveCutPoints(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge): SizeInt;
+function TGSimpleGraph.RemoveCutVertices(constref aVertex: TVertex; aOnAddEdge: TOnAddEdge): SizeInt;
 begin
-  Result := RemoveCutPointsI(IndexOf(aVertex), aOnAddEdge);
+  Result := RemoveCutVerticesI(IndexOf(aVertex), aOnAddEdge);
 end;
 
-function TGSimpleGraph.RemoveCutPointsI(aIndex: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
+function TGSimpleGraph.RemoveCutVerticesI(aIndex: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
 var
   NewEdges: TIntEdgeVector;
   e: TIntEdge;
@@ -3033,7 +3033,7 @@ end;
 function TGSimpleGraph.IsBiconnected: Boolean;
 begin
   if Connected then
-    Result := not ContainsCutPointI(0)
+    Result := not ContainsCutVertexI(0)
   else
     Result := False;
 end;
@@ -3456,7 +3456,7 @@ end;
 function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if not Connected then
-    raise EGraphError.Create(SEMethodNotApplicable);
+    raise EGraphError.Create(SEMethodNotApplicable); //????
   if VertexCount < 3 then
     exit([0]);
   if VertexCount > COMMON_BP_CUTOFF then
@@ -4624,17 +4624,17 @@ end;
 function TPointsChart.RemoveCutPoints(constref aRoot: TPoint; aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   if aOnAddEdge <> nil then
-    Result := inherited RemoveCutPoints(aRoot, aOnAddEdge)
+    Result := inherited RemoveCutVertices(aRoot, aOnAddEdge)
   else
-    Result := inherited RemoveCutPoints(aRoot, @OnAddEdge);
+    Result := inherited RemoveCutVertices(aRoot, @OnAddEdge);
 end;
 
 function TPointsChart.RemoveCutPointsI(aRoot: SizeInt; aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   if aOnAddEdge <> nil then
-    Result := inherited RemoveCutPointsI(aRoot, aOnAddEdge)
+    Result := inherited RemoveCutVerticesI(aRoot, aOnAddEdge)
   else
-    Result := inherited RemoveCutPointsI(aRoot, @OnAddEdge);
+    Result := inherited RemoveCutVerticesI(aRoot, @OnAddEdge);
 end;
 
 function TPointsChart.EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;

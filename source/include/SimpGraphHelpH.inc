@@ -106,6 +106,7 @@ type
     FNodes: TIntArray;
     procedure FillMatrix(aGraph: TGSimpleGraph);
     procedure Extend(constref aSub, aCand: TBits256);
+    procedure Extend2(constref aSub, aCand: TBits256);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;

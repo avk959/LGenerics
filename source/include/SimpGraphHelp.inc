@@ -504,11 +504,12 @@ end;
 procedure TGSimpleGraph.TBPDomSetHelper.Extend(constref aSub, aCand: TBoolVector);
 var
   NewSub, NewCand: TBoolVector;
-  I, J: SizeInt;
+  I, J, Count: SizeInt;
 begin
   if aSub.NonEmpty then
     begin
-      if aCand.PopCount >= System.High(FRecentBest) then
+      Count := aCand.PopCount;
+      if Count >= FRecentBest.Length - 1 then
         exit;
       if TimeOut then
         exit;
@@ -518,28 +519,27 @@ begin
       NewSub := aSub.Difference(FMatrix[I]);
       NewSub[I] := False;
       Extend(NewSub, NewCand);
-      if aCand.PopCount >= System.High(FRecentBest) then
+      if Count >= FRecentBest.Length - 1 then
         exit;
-      NewCand[FNodes[I]] := False;
       for J in aSub.Intersection(FMatrix[I]) do
         begin
+          NewCand[FNodes[I]] := False;
           NewCand[FNodes[J]] := True;
           NewSub := aSub.Difference(FMatrix[J]);
           NewSub[J] := False;
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.High(FRecentBest) then
+          if Count >= FRecentBest.Length - 2 then
             exit;
           NewCand[FNodes[I]] := True;
           NewSub.Subtract(FMatrix[I]);
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.Length(FRecentBest) then
+          if Count >= FRecentBest.Length - 1 then
             exit;
-          NewCand[FNodes[I]] := False;
           NewCand[FNodes[J]] := False;
         end;
     end
   else
-    if aCand.PopCount < System.Length(FRecentBest) then
+    if aCand.PopCount < FRecentBest.Length then
       FRecentBest := aCand.ToArray;
 end;
 
@@ -582,11 +582,12 @@ end;
 procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aSub, aCand: TBits256);
 var
   NewSub, NewCand: TBits256;
-  I, J: SizeInt;
+  I, J, Count: SizeInt;
 begin
   if aSub.NonEmpty then
     begin
-      if aCand.PopCount >= System.High(FRecentBest) then
+      Count := aCand.PopCount;
+      if Count >= FRecentBest.Length - 1 then
         exit;
       if TimeOut then
         exit;
@@ -596,28 +597,90 @@ begin
       NewSub := aSub.Difference(FMatrix[I]);
       NewSub[I] := False;
       Extend(NewSub, NewCand);
-      if aCand.PopCount >= System.High(FRecentBest) then
+      if Count >= FRecentBest.Length - 1 then
         exit;
-      NewCand[FNodes[I]] := False;
       for J in aSub.Intersection(FMatrix[I]) do
         begin
+          NewCand[FNodes[I]] := False;
           NewCand[FNodes[J]] := True;
           NewSub := aSub.Difference(FMatrix[J]);
           NewSub[J] := False;
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.High(FRecentBest) then
+          if Count >= FRecentBest.Length - 2 then
             exit;
           NewCand[FNodes[I]] := True;
           NewSub.Subtract(FMatrix[I]);
           Extend(NewSub, NewCand);
-          if NewCand.PopCount >= System.Length(FRecentBest) then
+          if Count >= FRecentBest.Length - 1 then
             exit;
-          NewCand[FNodes[I]] := False;
           NewCand[FNodes[J]] := False;
         end;
     end
   else
-    if aCand.PopCount < System.Length(FRecentBest) then
+    if aCand.PopCount < FRecentBest.Length then
+      FRecentBest := aCand.ToArray;
+end;
+
+procedure TGSimpleGraph.TBPDomSetHelper256.Extend2(constref aSub, aCand: TBits256);
+var
+  NewSub, NewCand, InterSect: TBits256;
+  I, J, Count: SizeInt;
+begin
+  if aSub.NonEmpty then
+    begin
+      Count := aCand.PopCount;
+      if Count >= FRecentBest.Length - 1 then
+        exit;
+      if TimeOut then
+        exit;
+      I := aSub.Bsf;
+      InterSect := aSub.Intersection(FMatrix[I]);
+      case InterSect.PopCount of
+        0:
+          begin
+            NewCand := aCand;
+            NewCand[FNodes[I]] := True;
+            NewSub := aSub;
+            NewSub[I] := False;
+            Extend2(NewSub, NewCand);
+          end;
+        1:
+          begin
+            J := InterSect.Bsf;
+            NewCand := aCand;
+            NewCand[FNodes[J]] := True;
+            NewSub := aSub.Difference(FMatrix[J]);
+            NewSub[J] := False;
+            Extend2(NewSub, NewCand);
+          end;
+      else
+        NewCand := aCand;
+        NewCand[FNodes[I]] := True;
+        NewSub := aSub.Difference(FMatrix[I]);
+        NewSub[I] := False;
+        Extend2(NewSub, NewCand);
+        if Count >= FRecentBest.Length - 1 then
+          exit;
+        for J in aSub.Intersection(FMatrix[I]) do
+          begin
+            NewCand[FNodes[I]] := False;
+            NewCand[FNodes[J]] := True;
+            NewSub := aSub.Difference(FMatrix[J]);
+            NewSub[J] := False;
+            Extend2(NewSub, NewCand);
+            if Count >= FRecentBest.Length - 2 then
+              exit;
+            NewCand[FNodes[I]] := True;
+            NewSub.Subtract(FMatrix[I]);
+            Extend2(NewSub, NewCand);
+            if Count >= FRecentBest.Length - 1 then
+              exit;
+            NewCand[FNodes[J]] := False;
+          end;
+      end;
+    end
+  else
+    if aCand.PopCount < FRecentBest.Length then
       FRecentBest := aCand.ToArray;
 end;
 
@@ -647,7 +710,7 @@ var
 begin
   if aSub.NonEmpty then
     begin
-      if aCand.Count >= System.High(FRecentBest) then
+      if aCand.Count >= FRecentBest.Length - 1 then
         exit;
       if TimeOut then
         exit;
@@ -657,28 +720,27 @@ begin
       NewSub := aSub.Difference(FMatrix[I]^);
       NewSub.Delete(I);
       Extend(NewSub, NewCand);
-      if aCand.Count >= System.High(FRecentBest) then
+      if aCand.Count >= FRecentBest.Length - 1 then
         exit;
-      NewCand.Pop;
       for J in aSub.Intersection(FMatrix[I]^) do
         begin
+          NewCand.Pop;
           NewCand.Push(J);
           NewSub := aSub.Difference(FMatrix[J]^);
           NewSub.Delete(J);
           Extend(NewSub, NewCand);
-          if NewCand.Count >= System.High(FRecentBest) then
+          if NewCand.Count >= FRecentBest.Length - 1 then
             exit;
           NewCand.Push(I);
           NewSub.Subtract(FMatrix[I]^);
           Extend(NewSub, NewCand);
-          if NewCand.Count >= System.Length(FRecentBest) then
+          if NewCand.Count >= FRecentBest.Length then
             exit;
-          NewCand.Pop;
           NewCand.Pop;
         end;
     end
   else
-    if aCand.Count < System.Length(FRecentBest) then
+    if aCand.Count < FRecentBest.Length then
       FRecentBest := aCand.ToArray;
 end;
 
