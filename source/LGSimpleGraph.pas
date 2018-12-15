@@ -288,11 +288,11 @@ type
         B: TIntArray;
       end;
 
-  { returns the some global minimum cut; used Nagamochi-Ibaraki algorithm }
+  { returns size of the some global minimum cut; used Nagamochi-Ibaraki algorithm }
     function  MinCut: SizeInt;
     function  MinCut(out aCut: TCut): SizeInt;
-  { returns array of the edges that cross the minimum cut }
-    function  MinCutCrossing: TIntEdgeArray;
+  { same as above and additionally in aCrossEdges returns array of the edges that cross the minimum cut }
+    function  MinCut(out aCut: TCut; out aCrossEdges: TIntEdgeArray): SizeInt;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -3191,24 +3191,19 @@ begin
   aCut.B := B.ToArray;
 end;
 
-function TGSimpleGraph.MinCutCrossing: TIntEdgeArray;
+function TGSimpleGraph.MinCut(out aCut: TCut; out aCrossEdges: TIntEdgeArray): SizeInt;
 var
   Helper: TNiMinCut;
-  Cut: TIntSet;
   Left, Right: TBoolVector;
   I, J: SizeInt;
   p: PAdjItem;
 begin
-  if not Connected or (VertexCount < 2) then
-    exit([]);
-  if VertexCount = 2 then
-    exit([TIntEdge.Create(0, 1)]);
-  System.SetLength(Result, Helper.GetMinCut(Self, Cut));
-  if Cut.Count <= VertexCount shr 1 then
+  Result := MinCut(aCut);
+  if aCut.A.Length <= aCut.B.Length then
     begin
       Left.Size := VertexCount;
       Right.InitRange(VertexCount);
-      for I in Cut do
+      for I in aCut.A do
         begin
           Left[I] := True;
           Right[I] := False;
@@ -3218,21 +3213,22 @@ begin
     begin
       Right.Size := VertexCount;
       Left.InitRange(VertexCount);
-      for I in Cut do
+      for I in aCut.B do
         begin
           Right[I] := True;
           Left[I] := False;
         end;
     end;
   J := 0;
+  System.SetLength(aCrossEdges, Result);
   for I in Left do
     for p in AdjLists[I]^ do
       if Right[p^.Destination] then
         begin
           if I < p^.Destination then
-            Result[J] := TIntEdge.Create(I, p^.Destination)
+            aCrossEdges[J] := TIntEdge.Create(I, p^.Destination)
           else
-            Result[J] := TIntEdge.Create(p^.Destination, I);
+            aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
           Inc(J);
         end;
 end;
