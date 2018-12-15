@@ -267,8 +267,8 @@ type
     in aVertex connected component }
     function  FindBicomponents(constref aVertex: TVertex): TEdgeArrayVector;
     function  FindBicomponentsI(aIndex: SizeInt): TEdgeArrayVector;
-  { makes graph biconnected, adding, if necessary, new edges; returns count of added edges;
-    if aOnAddEdge = nil then new edges will use default data value }
+  { if the graph is not empty, then make graph biconnected, adding, if necessary, new edges;
+    returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True, radus and diameter, if graph is connected, False otherwise }
     function  FindRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
