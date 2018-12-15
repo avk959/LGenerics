@@ -661,7 +661,7 @@ begin
         Extend2(NewSub, NewCand);
         if Count >= FRecentBest.Length - 1 then
           exit;
-        for J in aSub.Intersection(FMatrix[I]) do
+        for J in InterSect do
           begin
             NewCand[FNodes[I]] := False;
             NewCand[FNodes[J]] := True;
