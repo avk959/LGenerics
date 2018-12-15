@@ -203,6 +203,9 @@ type
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
+  { returns adjacency matrix of the complement graph;
+    warning: maximum matrix size limited, see MaxBitMatrixSize }
+    function  ComplementMatrix: TAdjacencyMatrix;
   { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
     function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
     function  LocalClusteringI(aIndex: SizeInt): Double;
@@ -271,7 +274,7 @@ type
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True, radus and diameter, if graph is connected, False otherwise }
-    function  FindRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+    function  FindMerics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns True and indices of the central vertices in aCenter, if graph is connected, False otherwise }
     function  FindCenter(out aCenter: TIntArray): Boolean;
 
@@ -282,14 +285,11 @@ type
         B: TIntArray;
       end;
 
-  { returns the global minimum cut; used Nagamochi-Ibaraki algorithm }
+  { returns the some global minimum cut; used Nagamochi-Ibaraki algorithm }
     function  MinCut: SizeInt;
     function  MinCut(out aCut: TCut): SizeInt;
   { returns array of the edges that cross the minimum cut }
     function  MinCutCrossing: TIntEdgeArray;
-  { returns adjacency matrix of the complement graph;
-    warning: maximum matrix size limited, see MaxBitMatrixSize }
-    function  ComplementMatrix: TAdjacencyMatrix;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -597,7 +597,7 @@ type
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and weighted radus and diameter of the graph }
-    function FindWeightedRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+    function FindWeightedMerics(out aRadius, aDiameter: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and indices of the central vertices in aCenter }
     function FindWeightedCenter(out aCenter: TIntArray): Boolean;
@@ -2602,6 +2602,21 @@ begin
   Result.FGraph := Self;
 end;
 
+function TGSimpleGraph.ComplementMatrix: TAdjacencyMatrix;
+var
+  m: TSquareBitMatrix;
+  s, d: SizeInt;
+begin
+  if IsEmpty then
+    exit(Default(TAdjacencyMatrix));
+  m := TSquareBitMatrix.Create(VertexCount);
+  for s := 0 to Pred(VertexCount) do
+    for d := 0 to Pred(VertexCount) do
+      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
+        m[s, d] := True;
+  Result := TAdjacencyMatrix.Create(m);
+end;
+
 function TGSimpleGraph.LocalClustering(constref aVertex: TVertex): ValReal;
 begin
   Result := LocalClusteringI(IndexOf(aVertex));
@@ -3058,7 +3073,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.FindRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+function TGSimpleGraph.FindMerics(out aRadius, aDiameter: SizeInt): Boolean;
 var
   Queue, Dist: TIntArray;
   VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
@@ -3234,21 +3249,6 @@ begin
             Result[J] := TIntEdge.Create(p^.Destination, I);
           Inc(J);
         end;
-end;
-
-function TGSimpleGraph.ComplementMatrix: TAdjacencyMatrix;
-var
-  m: TSquareBitMatrix;
-  s, d: SizeInt;
-begin
-  if IsEmpty then
-    exit(Default(TAdjacencyMatrix));
-  m := TSquareBitMatrix.Create(VertexCount);
-  for s := 0 to Pred(VertexCount) do
-    for d := 0 to Pred(VertexCount) do
-      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
-        m[s, d] := True;
-  Result := TAdjacencyMatrix.Create(m);
 end;
 
 function TGSimpleGraph.FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
@@ -4406,7 +4406,7 @@ begin
     end;
 end;
 
-function TGWeightedGraph.FindWeightedRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+function TGWeightedGraph.FindWeightedMerics(out aRadius, aDiameter: TWeight): Boolean;
 var
   Bfmt: TWeightHelper.TBfmt;
   Weights: TWeightArray;
