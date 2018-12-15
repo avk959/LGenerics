@@ -890,19 +890,19 @@ var
 begin
   {%H-}Ref.Instance := GenerateTestDigr1;
   g := Ref;
-  AssertTrue(g.Eccentricity(0) = 3);
-  AssertTrue(g.Eccentricity(1) = 0);
-  AssertTrue(g.Eccentricity(2) = 4);
-  AssertTrue(g.Eccentricity(3) = 3);
-  AssertTrue(g.Eccentricity(4) = 2);
-  AssertTrue(g.Eccentricity(5) = 0);
-  AssertTrue(g.Eccentricity(6) = 2);
-  AssertTrue(g.Eccentricity(7) = 3);
-  AssertTrue(g.Eccentricity(8) = 4);
-  AssertTrue(g.Eccentricity(9) = 1);
-  AssertTrue(g.Eccentricity(10) = 0);
-  AssertTrue(g.Eccentricity(11) = 1);
-  AssertTrue(g.Eccentricity(12) = 0);
+  AssertTrue(g.Eccentricity(0) = High(SizeInt));
+  AssertTrue(g.Eccentricity(1) = High(SizeInt));
+  AssertTrue(g.Eccentricity(2) = High(SizeInt));
+  AssertTrue(g.Eccentricity(3) = High(SizeInt));
+  AssertTrue(g.Eccentricity(4) = High(SizeInt));
+  AssertTrue(g.Eccentricity(5) = High(SizeInt));
+  AssertTrue(g.Eccentricity(6) = High(SizeInt));
+  AssertTrue(g.Eccentricity(7) = High(SizeInt));
+  AssertTrue(g.Eccentricity(8) = High(SizeInt));
+  AssertTrue(g.Eccentricity(9) = High(SizeInt));
+  AssertTrue(g.Eccentricity(10) = High(SizeInt));
+  AssertTrue(g.Eccentricity(11) = High(SizeInt));
+  AssertTrue(g.Eccentricity(12) = High(SizeInt));
 end;
 
 { TTspTest }
