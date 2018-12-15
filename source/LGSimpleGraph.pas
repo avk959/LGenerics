@@ -261,12 +261,12 @@ type
     function  ContainsBridge: Boolean;
   { returns all bridges in the result vector, if any, otherwise the empty vector }
     function  FindBridges: TIntEdgeArray;
+  { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
+    function  IsBiconnected: Boolean; inline;
   { returns vector containing in the corresponding elements edges of found bicomponents
     in aVertex connected component }
     function  FindBicomponents(constref aVertex: TVertex): TEdgeArrayVector;
     function  FindBicomponentsI(aIndex: SizeInt): TEdgeArrayVector;
-  { checks whether the graph is biconnected; graph with single vertex is considered biconnected }
-    function  IsBiconnected: Boolean; inline;
   { makes graph biconnected, adding, if necessary, new edges; returns count of added edges;
     if aOnAddEdge = nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -3015,6 +3015,14 @@ begin
   Result := v.ToArray;
 end;
 
+function TGSimpleGraph.IsBiconnected: Boolean;
+begin
+  if Connected then
+    Result := not ContainsCutVertexI(0)
+  else
+    Result := False;
+end;
+
 function TGSimpleGraph.FindBicomponents(constref aVertex: TVertex): TEdgeArrayVector;
 begin
   Result := FindBicomponentsI(IndexOf(aVertex));
@@ -3029,14 +3037,6 @@ begin
   else
     if (VertexCount = 2) and ContainsEdgeI(0, 1) then
       Result.Add([TIntEdge.Create(0, 1)]);
-end;
-
-function TGSimpleGraph.IsBiconnected: Boolean;
-begin
-  if Connected then
-    Result := not ContainsCutVertexI(0)
-  else
-    Result := False;
 end;
 
 function TGSimpleGraph.EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
