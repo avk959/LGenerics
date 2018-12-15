@@ -21,6 +21,8 @@ type
     TGraph  = TIntChart;
     TRef    = specialize TGAutoRef<TGraph>;
 
+  var
+    FCallCount: Integer;
     function  GenerateTestGr1: TGraph;
     function  GenerateTestGr2: TGraph;
     function  GenerateTestGr3: TGraph;
@@ -28,6 +30,7 @@ type
     function  GenerateCycle: TGraph;
     function  GenerateWheel: TGraph;
     function  GenerateComplete: TGraph;
+    procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; {%H-}aData: TGraph.PEdgeData);
   published
     procedure AddVertices;
     procedure SaveToStream;
@@ -47,6 +50,7 @@ type
     procedure CreateLineGraph;
     procedure DistinctEdges;
     procedure EnsureConnected;
+    procedure EnsureConnected2;
     procedure PathExists;
     procedure SeparatePop;
     procedure GetSeparate;
@@ -62,11 +66,17 @@ type
     procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
     procedure FindEulerianCycle;
-    procedure ContainsCutPoint;
-    procedure FindCutPoints;
-    procedure RemoveCutPoints;
+    procedure ContainsCutVertex;
+    procedure FindCutVertices;
+    procedure RemoveCutVertices;
     procedure ContainsBridge;
     procedure FindBridges;
+
+    procedure IsBiconnected;
+    procedure FindBicomponents;
+    procedure EnsureBiconnected;
+    procedure FindMerics;
+    procedure FindCenter;
   end;
 
 implementation
@@ -133,6 +143,11 @@ begin
     for J := 0 to Pred(Result.VertexCount) do
       if I > J then
         Result.AddEdgeI(I, J);
+end;
+
+procedure TSimpleGraphTest.EdgeAdding(constref aSrc, aDst: Integer; aData: TGraph.PEdgeData);
+begin
+  Inc(FCallCount);
 end;
 
 procedure TSimpleGraphTest.AddVertices;
@@ -495,6 +510,25 @@ begin
   AssertTrue(g.EdgeCount = 23);
 end;
 
+procedure TSimpleGraphTest.EnsureConnected2;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  FCallCount := 0;
+  g.EnsureConnected(@EdgeAdding);
+  AssertTrue(FCallCount = 0);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  g.EnsureConnected(@EdgeAdding);
+  AssertTrue(FCallCount = 0);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  g.EnsureConnected(@EdgeAdding);
+  AssertTrue(FCallCount = 1);
+end;
+
 procedure TSimpleGraphTest.PathExists;
 var
   Ref: TRef;
@@ -735,7 +769,9 @@ var
   g: TGraph;
   vOdd: SizeInt;
 begin
-  {%H-}Ref.Instance := GenerateTestGr1;
+  g := {%H-}Ref;
+  AssertFalse(g.ContainsEulerianPath(vOdd));
+  Ref.Instance := GenerateTestGr1;
   g := Ref;
   AssertFalse(g.ContainsEulerianPath(vOdd));
   Ref.Instance := GenerateTestGr3;
@@ -753,7 +789,9 @@ var
   Ref: TRef;
   g: TGraph;
 begin
-  {%H-}Ref.Instance := GenerateTestGr1;
+  g := {%H-}Ref;
+  AssertFalse(g.ContainsEulerianCycle);
+  Ref.Instance := GenerateTestGr1;
   g := Ref;
   AssertFalse(g.ContainsEulerianCycle);
   Ref.Instance := GenerateCycle;
@@ -801,7 +839,7 @@ begin
   AssertTrue(Cycle.Length = Succ(g.EdgeCount));
 end;
 
-procedure TSimpleGraphTest.ContainsCutPoint;
+procedure TSimpleGraphTest.ContainsCutVertex;
 var
   Ref: TRef;
   g: TGraph;
@@ -816,7 +854,7 @@ begin
   AssertTrue(g.ContainsCutVertex(1));
 end;
 
-procedure TSimpleGraphTest.FindCutPoints;
+procedure TSimpleGraphTest.FindCutVertices;
 var
   Ref: TRef;
   g: TGraph;
@@ -836,7 +874,7 @@ begin
              (TIntHelper.SequentSearch(Points, 9) <> NULL_INDEX));
 end;
 
-procedure TSimpleGraphTest.RemoveCutPoints;
+procedure TSimpleGraphTest.RemoveCutVertices;
 var
   Ref: TRef;
   g: TGraph;
@@ -855,7 +893,9 @@ var
   Ref: TRef;
   g: TGraph;
 begin
-  {%H-}Ref.Instance := GenerateCycle;
+  g := {%H-}Ref;
+  AssertFalse(g.ContainsBridge);
+  Ref.Instance := GenerateCycle;
   g := Ref;
   AssertFalse(g.ContainsBridge);
   Ref.Instance := GenerateTestGr1;
@@ -871,7 +911,10 @@ var
   BridgeSet: TIntPairSet;
   e: TIntEdge;
 begin
-  {%H-}Ref.Instance := GenerateCycle;
+  g := {%H-}Ref;
+  Bridges := g.FindBridges;
+  AssertTrue(System.Length(Bridges) = 0);
+  Ref.Instance := GenerateCycle;
   g := Ref;
   Bridges := g.FindBridges;
   AssertTrue(Bridges = nil);
@@ -883,6 +926,122 @@ begin
   AssertTrue(BridgeSet.Count = 4);
   AssertTrue(BridgeSet.Contains(0, 1) and BridgeSet.Contains(10, 9) and
              BridgeSet.Contains(7, 6) and BridgeSet.Contains(8, 7));
+end;
+
+procedure TSimpleGraphTest.IsBiconnected;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.IsBiconnected);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsBiconnected);
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.IsBiconnected);
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.IsBiconnected);
+end;
+
+procedure TSimpleGraphTest.FindBicomponents;
+var
+  Ref: TRef;
+  g: TGraph;
+  Comps: TEdgeArrayVector;
+begin
+  {%H-}Ref.Instance := GenerateCycle;
+  g := Ref;
+  Comps := g.FindBicomponentsI(1);
+  AssertTrue(Comps.Count = 1);
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  Comps := g.FindBicomponentsI(1);
+  AssertTrue(Comps.Count = 1);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  Comps := g.FindBicomponentsI(1);
+  AssertTrue(Comps.Count = 6);
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  Comps := g.FindBicomponentsI(1);
+  AssertTrue(Comps.Count = 3);
+end;
+
+procedure TSimpleGraphTest.EnsureBiconnected;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  FCallCount := 0;
+  g.EnsureBiconnected(@EdgeAdding);
+  AssertTrue(FCallCount = 0);
+  AssertFalse(g.IsBiconnected);
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  g.EnsureBiconnected(@EdgeAdding);
+  AssertTrue(FCallCount = 0);
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  g.EnsureBiconnected(@EdgeAdding);
+  AssertTrue(FCallCount = 0);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  g.EnsureBiconnected(@EdgeAdding);
+  AssertTrue(g.IsBiconnected);
+  AssertTrue(FCallCount = 5);
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  FCallCount := 0;
+  g.EnsureBiconnected(@EdgeAdding);
+  AssertTrue(g.IsBiconnected);
+  AssertTrue(FCallCount = 2);
+end;
+
+procedure TSimpleGraphTest.FindMerics;
+var
+  Ref: TRef;
+  g: TGraph;
+  r, d: SizeInt;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindMerics(r, d));
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertFalse(g.FindMerics(r, d));
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.FindMerics(r, d));
+  AssertTrue(r = 2);
+  AssertTrue(d = 4);
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.FindMerics(r, d));
+  AssertTrue(r = 1);
+  AssertTrue(d = 2);
+end;
+
+procedure TSimpleGraphTest.FindCenter;
+var
+  Ref: TRef;
+  g: TGraph;
+  c: TIntArray;
+begin
+  g := {%H-}Ref;
+  c := g.FindCenter;
+  AssertTrue(c = nil);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  c := g.FindCenter;
+  AssertTrue(c = nil);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  c := g.FindCenter;
+  AssertTrue(c.Length = 1);
+  AssertTrue(c[0] = 6)
 end;
 
 
