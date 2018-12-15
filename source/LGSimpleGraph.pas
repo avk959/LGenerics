@@ -3234,6 +3234,7 @@ begin
           else
             aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
           Inc(J);
+          break;
         end;
 end;
 
