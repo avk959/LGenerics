@@ -476,7 +476,8 @@ type
     empty if path does not exists }
     function ShortestPath(constref aSrc, aDst: TVertex): TIntArray; inline;
     function ShortestPathI(aSrc, aDst: SizeInt): TIntArray;
-  { returns the eccentricity of the aVertex }
+  { returns the eccentricity of the aVertex;
+    returns High(SizeInt), if exists any vertex unreachable from aVertex }
     function Eccentricity(constref aVertex: TVertex): SizeInt; inline;
     function EccentricityI(aIndex: SizeInt): SizeInt;
 {**********************************************************************************************************
