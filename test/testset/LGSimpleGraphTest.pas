@@ -75,8 +75,9 @@ type
     procedure IsBiconnected;
     procedure FindBicomponents;
     procedure EnsureBiconnected;
-    procedure FindMerics;
+    procedure FindMetrics;
     procedure FindCenter;
+    procedure FindPeripheral;
   end;
 
 implementation
@@ -1001,25 +1002,25 @@ begin
   AssertTrue(FCallCount = 2);
 end;
 
-procedure TSimpleGraphTest.FindMerics;
+procedure TSimpleGraphTest.FindMetrics;
 var
   Ref: TRef;
   g: TGraph;
   r, d: SizeInt;
 begin
   g := {%H-}Ref;
-  AssertFalse(g.FindMerics(r, d));
+  AssertFalse(g.FindMetrics(r, d));
   Ref.Instance := GenerateTestGr2;
   g := Ref;
-  AssertFalse(g.FindMerics(r, d));
+  AssertFalse(g.FindMetrics(r, d));
   Ref.Instance := GenerateTestGr1;
   g := Ref;
-  AssertTrue(g.FindMerics(r, d));
+  AssertTrue(g.FindMetrics(r, d));
   AssertTrue(r = 2);
   AssertTrue(d = 4);
   Ref.Instance := GenerateWheel;
   g := Ref;
-  AssertTrue(g.FindMerics(r, d));
+  AssertTrue(g.FindMetrics(r, d));
   AssertTrue(r = 1);
   AssertTrue(d = 2);
 end;
@@ -1041,7 +1042,26 @@ begin
   g := Ref;
   c := g.FindCenter;
   AssertTrue(c.Length = 1);
-  AssertTrue(c[0] = 6)
+  AssertTrue(c[0] = 6);
+end;
+
+procedure TSimpleGraphTest.FindPeripheral;
+var
+  Ref: TRef;
+  g: TGraph;
+  p: TIntArray;
+begin
+  g := {%H-}Ref;
+  p := g.FindPeripheral;
+  AssertTrue(p = nil);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  p := g.FindPeripheral;
+  AssertTrue(p = nil);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  p := g.FindPeripheral;
+  AssertTrue(p.Length = 8);
 end;
 
 
