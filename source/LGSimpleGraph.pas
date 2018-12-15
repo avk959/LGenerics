@@ -276,7 +276,7 @@ type
   { returns True, radus and diameter, if graph is connected, False otherwise }
     function  FindMerics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns True and indices of the central vertices in aCenter, if graph is connected, False otherwise }
-    function  FindCenter(out aCenter: TIntArray): Boolean;
+    function  FindCenter: TIntArray;
 
     type
       //vertex partition
@@ -3110,14 +3110,14 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindCenter(out aCenter: TIntArray): Boolean;
+function TGSimpleGraph.FindCenter: TIntArray;
 var
   Queue, Dist, Eccs: TIntArray;
   VertCount, Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
   p: PAdjItem;
 begin
   if not Connected then
-    exit(False);
+    exit(nil);
   VertCount := VertexCount;
   Radius := VertCount;
   Queue.Length := VertCount;
@@ -3151,16 +3151,15 @@ begin
       if Ecc < Radius then
         Radius := Ecc;
     end;
-  aCenter.Length := VertCount;
+  Result.Length := VertCount;
   J := 0;
   for I := 0 to Pred(VertCount) do
     if Eccs[I] = Radius then
       begin
-        aCenter[J] := I;
+        Result[J] := I;
         Inc(J);
       end;
-  aCenter.Length := J;
-  Result := True;
+  Result.Length := J;
 end;
 
 function TGSimpleGraph.MinCut: SizeInt;
