@@ -176,11 +176,10 @@ type
   public
   type
     TSpecEdgeData  = TEdgeData;
-    PEdgeData      = ^TEdgeData;
     TAdjItem       = specialize TGAdjItem<TEdgeData>;
     PAdjItem       = ^TAdjItem;
     TVertexArray   = array of TVertex;
-    TOnAddEdge     = procedure(constref aSrc, aDst: TVertex; aData: PEdgeData) of object;
+    TOnAddEdge     = procedure(constref aSrc, aDst: TVertex; var aData: TEdgeData) of object;
     TOnReadVertex  = procedure(aStream: TStream; out aValue: TVertex) of object;
     TOnWriteVertex = procedure(aStream: TStream; constref aValue: TVertex) of object;
     TOnReadData    = procedure(aStream: TStream; out aValue: TEdgeData) of object;
@@ -199,6 +198,7 @@ type
 
   protected
   type
+    PEdgeData          = ^TEdgeData;
     TAdjList           = specialize TGAdjList<TEdgeData>;
     PAdjList           = ^TAdjList;
     TAdjItemEnumerator = TAdjList.TEnumerator;

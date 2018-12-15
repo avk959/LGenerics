@@ -627,7 +627,7 @@ type
   { TPointsChart }
   TPointsChart = class(specialize TGWeightedGraph<TPoint, ValReal, TRealWeight, TPoint>)
   protected
-    procedure OnAddEdge(constref aSrc, aDst: TPoint; aData: PEdgeData);
+    procedure OnAddEdge(constref aSrc, aDst: TPoint; var aData: TRealWeight);
     procedure WritePoint(aStream: TStream; constref aValue: TPoint);
     procedure ReadPoint(aStream: TStream; out aValue: TPoint);
     procedure WriteData(aStream: TStream; constref aValue: TRealWeight);
@@ -1027,7 +1027,7 @@ begin
     if SeparateTag(0) <> SeparateTag(I) then
       begin
         if Assigned(aOnAddEdge) then
-          aOnAddEdge(FNodeList[0].Vertex, FNodeList[I].Vertex, @d);
+          aOnAddEdge(FNodeList[0].Vertex, FNodeList[I].Vertex, d);
         AddEdgeI(0, I, d);
         Inc(Result);
       end;
@@ -3044,7 +3044,7 @@ begin
   for e in NewEdges do
     begin
       if Assigned(aOnAddEdge) then
-        aOnAddEdge(FNodeList[e.Source].Vertex, FNodeList[e.Destination].Vertex, @d);
+        aOnAddEdge(FNodeList[e.Source].Vertex, FNodeList[e.Destination].Vertex, d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
 end;
@@ -3105,7 +3105,7 @@ begin
   for e in NewEdges do
     begin
       if Assigned(aOnAddEdge) then
-        aOnAddEdge(Items[e.Source], Items[e.Destination], @d);
+        aOnAddEdge(Items[e.Source], Items[e.Destination], d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
 end;
@@ -4538,9 +4538,9 @@ end;
 
 { TPointsChart }
 
-procedure TPointsChart.OnAddEdge(constref aSrc, aDst: TPoint; aData: PEdgeData);
+procedure TPointsChart.OnAddEdge(constref aSrc, aDst: TPoint; var aData: TRealWeight);
 begin
-  aData^.Weight := aSrc.Distance(aDst);
+  aData.Weight := aSrc.Distance(aDst);
 end;
 
 procedure TPointsChart.WritePoint(aStream: TStream; constref aValue: TPoint);
