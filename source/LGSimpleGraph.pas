@@ -275,7 +275,7 @@ type
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True, radus and diameter, if graph is connected, False otherwise }
     function  FindMerics(out aRadius, aDiameter: SizeInt): Boolean;
-  { returns True and indices of the central vertices in aCenter, if graph is connected, False otherwise }
+  { returns array of indices of the central vertices, if graph is connected, nil otherwise }
     function  FindCenter: TIntArray;
 
     type
