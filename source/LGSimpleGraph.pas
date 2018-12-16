@@ -1753,10 +1753,13 @@ begin
       begin
         Next := Stack.Pop;
         Curr := Parents[Curr];
-        if LowPt[Curr] > LowPt[Next] then
-          LowPt[Curr] := LowPt[Next];
-        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
-          aPoints.Add(Curr);
+        if Curr <> NULL_INDEX then
+          begin
+            if LowPt[Curr] > LowPt[Next] then
+              LowPt[Curr] := LowPt[Next];
+            if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
+              aPoints.Add(Curr);
+          end;
       end;
   if ChildCount > 1 then
     aPoints.Add(aRoot);
@@ -1802,10 +1805,13 @@ begin
         Stack.Pop;
         Next := Curr;
         Curr := Parents[Curr];
-        if LowPt[Curr] > LowPt[Next] then
-          LowPt[Curr] := LowPt[Next];
-        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
-          exit(True);
+        if Curr <> NULL_INDEX then
+          begin
+            if LowPt[Curr] > LowPt[Next] then
+              LowPt[Curr] := LowPt[Next];
+            if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
+              exit(True);
+          end;
       end;
   Result := ChildCount > 1;
 end;
@@ -1851,17 +1857,20 @@ begin
         Stack.Pop;
         Next := Curr;
         Curr := Parents[Curr];
-        if LowPt[Curr] > LowPt[Next] then
-          LowPt[Curr] := LowPt[Next];
-        if LowPt[Next] >= PreOrd[Curr] then
+        if Curr <> NULL_INDEX then
           begin
-            if Next = Across[Curr] then
+            if LowPt[Curr] > LowPt[Next] then
+              LowPt[Curr] := LowPt[Next];
+            if LowPt[Next] >= PreOrd[Curr] then
               begin
-                if Curr <> aRoot then
-                  aEdges.Add(TIntEdge.Create(Parents[Curr], Next));
-              end
-            else
-              aEdges.Add(TIntEdge.Create(Across[Curr], Next));
+                if Next = Across[Curr] then
+                  begin
+                    if Curr <> aRoot then
+                      aEdges.Add(TIntEdge.Create(Parents[Curr], Next));
+                  end
+                else
+                  aEdges.Add(TIntEdge.Create(Across[Curr], Next));
+              end;
           end;
       end;
 end;
@@ -1912,16 +1921,19 @@ begin
         Stack.Pop;
         Next := Curr;
         Curr := Parents[Curr];
-        if LowPt[Curr] > LowPt[Next] then
-          LowPt[Curr] := LowPt[Next];
-        if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
+        if Curr <> NULL_INDEX then
           begin
-            I := EdgeStack.Count;
-            repeat
-              Dec(I);
-              e := EdgeStack[I];
-            until (e.Source = Curr) or (e.Destination = Next);
-            aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count - I));
+            if LowPt[Curr] > LowPt[Next] then
+              LowPt[Curr] := LowPt[Next];
+            if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
+              begin
+                I := EdgeStack.Count;
+                repeat
+                  Dec(I);
+                  e := EdgeStack[I];
+                until (e.Source = Curr) or (e.Destination = Next);
+                aComp.Add(EdgeStack.ExtractAll(I, EdgeStack.Count - I));
+              end;
           end;
       end;
   if ChildCount > 1 then
@@ -1979,10 +1991,13 @@ begin
               Stack.Pop;
               Next := Curr;
               Curr := Parents[Curr];
-              if LowPt[Curr] > LowPt[Next] then
-                LowPt[Curr] := LowPt[Next];
-              if LowPt[Next] > PreOrd[Curr] then
-                exit(True);
+              if Curr <> NULL_INDEX then
+                begin
+                  if LowPt[Curr] > LowPt[Next] then
+                    LowPt[Curr] := LowPt[Next];
+                  if LowPt[Next] > PreOrd[Curr] then
+                    exit(True);
+                end;
             end;
       end;
   Result := False;
@@ -2030,10 +2045,13 @@ begin
               Stack.Pop;
               Next := Curr;
               Curr := Parents[Curr];
-              if LowPt[Curr] > LowPt[Next] then
-                LowPt[Curr] := LowPt[Next];
-              if LowPt[Next] > PreOrd[Curr] then
-                aBridges.Add(TIntEdge.Create(Curr, Next));
+              if Curr <> NULL_INDEX then
+                begin
+                  if LowPt[Curr] > LowPt[Next] then
+                    LowPt[Curr] := LowPt[Next];
+                  if LowPt[Next] > PreOrd[Curr] then
+                    aBridges.Add(TIntEdge.Create(Curr, Next));
+                end;
             end;
       end;
 end;
@@ -3232,7 +3250,6 @@ begin
           else
             aCrossEdges[J] := TIntEdge.Create(p^.Destination, I);
           Inc(J);
-          break;
         end;
 end;
 
