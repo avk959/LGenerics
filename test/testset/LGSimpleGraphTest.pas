@@ -32,6 +32,7 @@ type
     function  GenerateWheel: TGraph;
     function  GenerateComplete: TGraph;
     function  GenerateTestGrBip1: TGraph;
+    function  GenerateTestTriangle: TGraph;
     procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TEmptyRec);
   published
     procedure AddVertices;
@@ -85,6 +86,8 @@ type
     procedure GetMaxBipMatchHK;
     procedure FindMaxBipMatchBfs;
     procedure GetMaxBipMatchBfs;
+    procedure FindMaxMatchEd;
+    procedure FindMaxMatchPC;
   end;
 
 implementation
@@ -169,6 +172,23 @@ begin
   Result.AddVertexRange(1, 16);
   Result.AddEdges([1, 2, 1, 4, 1, 6, 3, 4, 3, 6, 3, 8, 5, 6, 5, 8, 5, 10, 7, 8, 7, 10, 7,
                    12, 9, 10, 9, 12, 9, 14, 11, 12, 11, 14, 11, 16, 13, 14, 13, 16, 15, 16]);
+end;
+
+function TSimpleGraphTest.GenerateTestTriangle: TGraph;
+var
+  I: Integer = 0;
+begin
+  //see TestTriangle.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(0, 12);
+  while I < Result.VertexCount - 3 do
+    begin
+      Result.AddEdgeI(I, I + 1);
+      Result.AddEdgeI(I + 1, I + 2);
+      Result.AddEdgeI(I, I + 2);
+      Result.AddEdgeI(I + 2, I + 3);
+      I += 3;
+    end;
 end;
 
 procedure TSimpleGraphTest.EdgeAdding(constref aSrc, aDst: Integer; var aData: TEmptyRec);
@@ -1237,6 +1257,48 @@ begin
       AssertTrue(g.IsMaxMatching(Match));
     end;
   AssertTrue(Tested);
+end;
+
+procedure TSimpleGraphTest.FindMaxMatchEd;
+var
+  Ref: TRef;
+  g: TGraph;
+  Match: TIntEdgeArray;
+begin
+  g := {%H-}Ref;
+  Match := g.FindMaxMatchEd;
+  AssertTrue(Match = nil);
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  Match := g.FindMaxMatchEd;
+  AssertTrue(Length(Match) = 8);
+  AssertTrue(g.IsMaxMatching(Match));
+  Ref.Instance := GenerateTestTriangle;
+  g := Ref;
+  Match := g.FindMaxMatchEd;
+  AssertTrue(Length(Match) = 6);
+  AssertTrue(g.IsMaxMatching(Match));
+end;
+
+procedure TSimpleGraphTest.FindMaxMatchPC;
+var
+  Ref: TRef;
+  g: TGraph;
+  Match: TIntEdgeArray;
+begin
+  g := {%H-}Ref;
+  Match := g.FindMaxMatchPC;
+  AssertTrue(Match = nil);
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  Match := g.FindMaxMatchPC;
+  AssertTrue(Length(Match) = 8);
+  AssertTrue(g.IsMaxMatching(Match));
+  Ref.Instance := GenerateTestTriangle;
+  g := Ref;
+  Match := g.FindMaxMatchPC;
+  AssertTrue(Length(Match) = 6);
+  AssertTrue(g.IsMaxMatching(Match));
 end;
 
 
