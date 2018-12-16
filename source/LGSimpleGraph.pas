@@ -307,8 +307,6 @@ type
     function FindMaxBipMatchBfs(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
     function GetMaxBipMatchBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
-  { returns True if graph is bipartite and aMatch is maximal matching }
-    function IsMaxBipartiteMatching(const aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
     function GreedyMaxMatch: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
@@ -3288,56 +3286,6 @@ var
   Helper: TBfsMatch;
 begin
   Result := Helper.MaxMatching(Self, aWhites, aGrays);
-end;
-
-function TGSimpleGraph.IsMaxBipartiteMatching(const aMatch: TIntEdgeArray): Boolean;
-var
-  w, g: TIntArray;
-  WhiteFree, GrayFree,
-  WhiteCover, GrayCover: TIntHashSet;
-  e: TIntEdge;
-  I, J: SizeInt;
-begin
-  if System.Length(aMatch) = 0 then
-    exit(False);
-  if not IsBipartite(w, g) then
-    exit(False);
-  WhiteFree.AddAll(w);
-  GrayFree.AddAll(g);
-  w := nil;
-  g := nil;
-  for e in aMatch do
-    begin
-      if SizeUInt(e.Source) >= SizeUInt(VertexCount) then
-        exit(False);
-      if SizeUInt(e.Destination) >= SizeUInt(VertexCount) then
-        exit(False);
-      if e.Source = e.Destination then
-        exit(False);
-      if not AdjLists[e.Source]^.Contains(e.Destination) then
-        exit(False);
-      if WhiteFree.Remove(e.Source) then
-        begin
-          if not GrayFree.Remove(e.Destination) then  //contains adjacent edges -> not matching
-            exit(False);
-          WhiteCover.Add(e.Source);
-          GrayCover.Add(e.Destination)
-        end
-      else
-        begin
-          if not WhiteFree.Remove(e.Destination)then //contains adjacent edges -> not matching
-            exit(False);
-          if not GrayFree.Remove(e.Source) then      //contains adjacent edges -> not matching
-            exit(False);
-          WhiteCover.Add(e.Destination);
-          GrayCover.Add(e.Source);
-        end;
-    end;
-  for I in WhiteFree do
-    for J in AdjVerticesI(I) do
-      if GrayFree.Contains(J) then  // is not maximal
-        exit(False);
-  Result := True;
 end;
 
 function TGSimpleGraph.GreedyMaxMatch: TIntEdgeArray;
