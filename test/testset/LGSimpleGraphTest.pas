@@ -79,7 +79,7 @@ type
     procedure FindCenter;
     procedure FindPeripheral;
 
-    procedure MinCut1;
+    procedure MinCut;
   end;
 
 implementation
@@ -1091,7 +1091,7 @@ begin
   AssertTrue(p.Length = 8);
 end;
 
-procedure TSimpleGraphTest.MinCut1;
+procedure TSimpleGraphTest.MinCut;
 var
   Ref: TRef;
   g: TGraph;
@@ -1104,6 +1104,7 @@ begin
   AssertTrue(CutSize = 0);
   Ref.Instance := GenerateTestGr2;
   g := Ref;
+  CutSize := g.MinCut;
   AssertTrue(CutSize = 0);
   Ref.Instance := GenerateTestGr4;
   g := Ref;
@@ -1130,12 +1131,12 @@ begin
       AssertTrue(Cross[1].Source.ToString, Cross[1].Source = 6);
       AssertTrue(Cross[1].Destination = 8);
     end
-  //else
-  //  begin
-  //    AssertTrue(Cross[0].Destination = 8);
-  //    AssertTrue(Cross[1].Source = 4);
-  //    AssertTrue(Cross[1].Destination = 6);
-  //  end;
+  else
+    begin
+      AssertTrue(Cross[0].Destination = 8);
+      AssertTrue(Cross[1].Source = 4);
+      AssertTrue(Cross[1].Destination = 6);
+    end;
 end;
 
 

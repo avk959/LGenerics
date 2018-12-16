@@ -299,24 +299,24 @@ type
 
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality, used Hopcroft–Karp algorithm }
-    function FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
+    function FindMaxBipMatchHK(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
-    function MaxBipartiteMatchingHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;
+    function GetMaxBipMatchHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
     the maximum cardinality }
-    function FindMaxBipartiteMatchingBfs(out aMatch: TIntEdgeArray): Boolean;
+    function FindMaxBipMatchBfs(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
-    function MaxBipartiteMatchingBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
+    function GetMaxBipMatchBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
   { returns True if graph is bipartite and aMatch is maximal matching }
     function IsMaxBipartiteMatching(const aMatch: TIntEdgeArray): Boolean;
   { returns the approximation of the matching of the maximum cardinality in an arbitrary graph }
-    function GreedyMaxMatching: TIntEdgeArray;
+    function GreedyMaxMatch: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
     used Edmonds(?) algorithm }
-    function FindMaxMatchingEd: TIntEdgeArray;
+    function FindMaxMatchEd: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
     used Pape-Conradt algorithm }
-    function FindMaxMatchingPC: TIntEdgeArray;
+    function FindMaxMatchPC: TIntEdgeArray;
   { returns the matching of the maximum cardinality in an arbitrary graph;
     used Micali-Vazirani algorithm }
     function FindMaxMatchingMV: TIntEdgeArray;
@@ -3254,7 +3254,7 @@ begin
         end;
 end;
 
-function TGSimpleGraph.FindMaxBipartiteMatchingHK(out aMatch: TIntEdgeArray): Boolean;
+function TGSimpleGraph.FindMaxBipMatchHK(out aMatch: TIntEdgeArray): Boolean;
 var
   Helper: THKMatch;
   w, g: TIntArray;
@@ -3265,14 +3265,14 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.MaxBipartiteMatchingHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.GetMaxBipMatchHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;
 var
   Helper: THKMatch;
 begin
   Result := Helper.MaxMatching(Self, aWhites, aGrays);
 end;
 
-function TGSimpleGraph.FindMaxBipartiteMatchingBfs(out aMatch: TIntEdgeArray): Boolean;
+function TGSimpleGraph.FindMaxBipMatchBfs(out aMatch: TIntEdgeArray): Boolean;
 var
   Helper: TBfsMatch;
   w, g: TIntArray;
@@ -3283,7 +3283,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.MaxBipartiteMatchingBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
+function TGSimpleGraph.GetMaxBipMatchBfs(const aWhites, aGrays: TIntArray): TIntEdgeArray;
 var
   Helper: TBfsMatch;
 begin
@@ -3340,7 +3340,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.GreedyMaxMatching: TIntEdgeArray;
+function TGSimpleGraph.GreedyMaxMatch: TIntEdgeArray;
 begin
   if VertexCount < 2 then
     exit(nil);
@@ -3349,23 +3349,23 @@ begin
   Result := GreedyMatching2;
 end;
 
-function TGSimpleGraph.FindMaxMatchingEd: TIntEdgeArray;
+function TGSimpleGraph.FindMaxMatchEd: TIntEdgeArray;
 var
   Helper: TEdMatch;
 begin
   if VertexCount < 2 then
     exit(nil);
-  if not FindMaxBipartiteMatchingHK(Result) then
+  if not FindMaxBipMatchHK(Result) then
     Result := Helper.MaxMatching(Self);
 end;
 
-function TGSimpleGraph.FindMaxMatchingPC: TIntEdgeArray;
+function TGSimpleGraph.FindMaxMatchPC: TIntEdgeArray;
 var
   Helper: TPcMatch;
 begin
   if VertexCount < 2 then
     exit(nil);
-  if not FindMaxBipartiteMatchingHK(Result) then
+  if not FindMaxBipMatchHK(Result) then
     Result := Helper.MaxMatching(Self);
 end;
 
@@ -3373,7 +3373,7 @@ function TGSimpleGraph.FindMaxMatchingMV: TIntEdgeArray;
 begin
   if VertexCount < 2 then
     exit(nil);
-  if not FindMaxBipartiteMatchingHK(Result) then
+  if not FindMaxBipMatchHK(Result) then
     Result := GetMvMatching;
 end;
 
