@@ -1816,7 +1816,7 @@ begin
       p^.Scanned := False;
 end;
 
-procedure TGSimpleGraph.TNISimpMinCutHelper.Init(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TNISimpMinCutHelper.Init(aGraph: TGSimpleGraph; aCutsNeeded: Boolean);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -1828,28 +1828,14 @@ begin
       for p in aGraph.AdjLists[I]^ do
         FGraph[I].Add(TNiEdge.Create(p^.Destination, 1));
     end;
-  FQueue := TQueue.Create(aGraph.VertexCount);
-  FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
-  FBestCut := High(SizeInt);
-  FCuts := nil;
-end;
-
-procedure TGSimpleGraph.TNISimpMinCutHelper.Init2(aGraph: TGSimpleGraph);
-var
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  System.SetLength(FGraph, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
+  if aCutsNeeded then
     begin
-      FGraph[I].EnsureCapacity(aGraph.DegreeI(I));
-      for p in aGraph.AdjLists[I]^ do
-        FGraph[I].Add(TNiEdge.Create(p^.Destination, 1));
-    end;
-  System.SetLength(FCuts, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    FCuts[I].Add(I);
+      System.SetLength(FCuts, aGraph.VertexCount);
+      for I := 0 to Pred(aGraph.VertexCount) do
+        FCuts[I].Add(I);
+    end
+  else
+    FCuts := nil;
   FQueue := TQueue.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
   FInQueue.Size := aGraph.VertexCount;
@@ -1935,7 +1921,7 @@ end;
 
 function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph): SizeInt;
 begin
-  Init(aGraph);
+  Init(aGraph, False);
   while FExistNodes.PopCount >= 2 do
     Shrink;
   Result := FBestCut;
@@ -1943,7 +1929,7 @@ end;
 
 function TGSimpleGraph.TNISimpMinCutHelper.Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
 begin
-  Init2(aGraph);
+  Init(aGraph, True);
   while FExistNodes.PopCount >= 2 do
     Shrink;
   Result := FBestCut;

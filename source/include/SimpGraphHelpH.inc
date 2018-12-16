@@ -332,8 +332,7 @@ type
     FBestSet: TIntSet;
     FBestCut: SizeInt;
     procedure ClearMarks; inline;
-    procedure Init(aGraph: TGSimpleGraph);
-    procedure Init2(aGraph: TGSimpleGraph);
+    procedure Init(aGraph: TGSimpleGraph; aCutsNeeded: Boolean);
     procedure ShrinkEdge(aSource, aTarget: SizeInt);
     procedure ScanFirstSearch;
     procedure Shrink;
