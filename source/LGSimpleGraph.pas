@@ -3235,22 +3235,20 @@ end;
 
 function TGSimpleGraph.FindMaxMatchEd: TIntEdgeArray;
 var
-  Helper: TEdMatch;
+  Helper: TEdMatchHelper;
 begin
   if VertexCount < 2 then
     exit(nil);
-  if not FindMaxBipMatchHK(Result) then
-    Result := Helper.MaxMatching(Self);
+  Result := Helper.Execute(Self);
 end;
 
 function TGSimpleGraph.FindMaxMatchPC: TIntEdgeArray;
 var
-  Helper: TPcMatch;
+  Helper: TPcMatchHelper;
 begin
   if VertexCount < 2 then
     exit(nil);
-  if not FindMaxBipMatchHK(Result) then
-    Result := Helper.MaxMatching(Self);
+  Result := Helper.Execute(Self);
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);

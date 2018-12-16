@@ -262,8 +262,8 @@ type
     function  MaxMatching(aGraph: TGSimpleGraph; constref w, g: TIntArray): TIntEdgeArray;
   end;
 
-{ TEdMatch: Edmonds algorithm for maximum cardinality matching }
-  TEdMatch = record
+{ TEdMatchHelper: Edmonds algorithm for maximum cardinality matching }
+  TEdMatchHelper = record
   strict private
     FGraph: TGSimpleGraph;
     FMates,
@@ -284,12 +284,12 @@ type
     procedure EdMatch;
     procedure Init(aGraph: TGSimpleGraph);
   public
-    function  MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
+    function  Execute(aGraph: TGSimpleGraph): TIntEdgeArray;
   end;
 
-  { TPcMatch: Pape and Conradt general matching algorithm;
+  { TPcMatchHelper: Pape and Conradt general matching algorithm;
     Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
-  TPcMatch = record
+  TPcMatchHelper = record
   strict private
     FGraph: TGSimpleGraph;
     FMates,
@@ -301,7 +301,7 @@ type
     procedure FindAugmentPath(aSource: SizeInt);
     procedure Init(aGraph: TGSimpleGraph);
   public
-    function  MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
+    function  Execute(aGraph: TGSimpleGraph): TIntEdgeArray;
   end;
 
   { TNISimpMinCutHelper: some implemenation of Nagamochi-Ibaraki minimum cut algorithm }

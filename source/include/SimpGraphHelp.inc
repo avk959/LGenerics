@@ -1524,15 +1524,15 @@ begin
   Result := CreateEdges;
 end;
 
-{ TGSimpleGraph.TEdMatch }
+{ TGSimpleGraph.TEdMatchHelper }
 
-procedure TGSimpleGraph.TEdMatch.Match(aNode, aMate: SizeInt);
+procedure TGSimpleGraph.TEdMatchHelper.Match(aNode, aMate: SizeInt);
 begin
   FMates[aNode] := aMate;
   FMates[aMate] := aNode;
 end;
 
-procedure TGSimpleGraph.TEdMatch.ClearBase;
+procedure TGSimpleGraph.TEdMatchHelper.ClearBase;
 var
   I: SizeInt;
 begin
@@ -1540,12 +1540,12 @@ begin
    FBase[I] := I;
 end;
 
-procedure TGSimpleGraph.TEdMatch.ClearParents;
+procedure TGSimpleGraph.TEdMatchHelper.ClearParents;
 begin
   System.FillChar(Pointer(FParents)^, System.Length(FParents) * SizeOf(SizeInt), $ff);
 end;
 
-function TGSimpleGraph.TEdMatch.Lca(L, R: SizeInt): SizeInt;
+function TGSimpleGraph.TEdMatchHelper.Lca(L, R: SizeInt): SizeInt;
 begin
   FLcaUsed.ClearBits;
   repeat
@@ -1564,7 +1564,7 @@ begin
   Result := NULL_INDEX;
 end;
 
-procedure TGSimpleGraph.TEdMatch.MarkPath(aNode, aBloss, aChild: SizeInt);
+procedure TGSimpleGraph.TEdMatchHelper.MarkPath(aNode, aBloss, aChild: SizeInt);
 begin
   while FBase[aBloss] <> aBloss do
     begin
@@ -1576,7 +1576,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.TEdMatch.FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
+function TGSimpleGraph.TEdMatchHelper.FindAugmentPath(aRoot: SizeInt; out aLast: SizeInt): Boolean;
 var
   I, Curr, Next, CurrBase: SizeInt;
   p: TGSimpleGraph.PAdjItem;
@@ -1635,7 +1635,7 @@ begin
   Result := False;
 end;
 
-procedure TGSimpleGraph.TEdMatch.AlternatePath(aRoot: SizeInt);
+procedure TGSimpleGraph.TEdMatchHelper.AlternatePath(aRoot: SizeInt);
 var
   Mate, tmp: SizeInt;
 begin
@@ -1647,7 +1647,7 @@ begin
   until aRoot = NULL_INDEX;
 end;
 
-procedure TGSimpleGraph.TEdMatch.EdMatch;
+procedure TGSimpleGraph.TEdMatchHelper.EdMatch;
 var
   I, Last: SizeInt;
 begin
@@ -1659,7 +1659,7 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.TEdMatch.Init(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TEdMatchHelper.Init(aGraph: TGSimpleGraph);
 var
   e: TIntEdge;
 begin
@@ -1679,7 +1679,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.TEdMatch.MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
+function TGSimpleGraph.TEdMatchHelper.Execute(aGraph: TGSimpleGraph): TIntEdgeArray;
 var
   I, J: SizeInt;
 begin
@@ -1696,15 +1696,15 @@ begin
       end;
 end;
 
-{ TGSimpleGraph.TPcMatch }
+{ TGSimpleGraph.TPcMatchHelper }
 
-procedure TGSimpleGraph.TPcMatch.Match(aNode, aMate: SizeInt);
+procedure TGSimpleGraph.TPcMatchHelper.Match(aNode, aMate: SizeInt);
 begin
   FMates[aNode] := aMate;
   FMates[aMate] := aNode;
 end;
 
-procedure TGSimpleGraph.TPcMatch.FindAugmentPath(aSource: SizeInt);
+procedure TGSimpleGraph.TPcMatchHelper.FindAugmentPath(aSource: SizeInt);
 var
   Curr, Next, Mate, Tmp: SizeInt;
   p: PAdjItem;
@@ -1760,7 +1760,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TPcMatch.Init(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TPcMatchHelper.Init(aGraph: TGSimpleGraph);
 var
   e: TIntEdge;
 begin
@@ -1777,7 +1777,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.TPcMatch.MaxMatching(aGraph: TGSimpleGraph): TIntEdgeArray;
+function TGSimpleGraph.TPcMatchHelper.Execute(aGraph: TGSimpleGraph): TIntEdgeArray;
 var
   I, J: SizeInt;
 begin
