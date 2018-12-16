@@ -26,11 +26,12 @@ type
     function  GenerateTestGr1: TGraph;
     function  GenerateTestGr2: TGraph;
     function  GenerateTestGr3: TGraph;
+    function  GenerateTestGr4: TGraph;
     function  GenerateStar: TGraph;
     function  GenerateCycle: TGraph;
     function  GenerateWheel: TGraph;
     function  GenerateComplete: TGraph;
-    procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; {%H-}aData: TGraph.PEdgeData);
+    procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TEmptyRec);
   published
     procedure AddVertices;
     procedure SaveToStream;
@@ -71,13 +72,14 @@ type
     procedure RemoveCutVertices;
     procedure ContainsBridge;
     procedure FindBridges;
-
     procedure IsBiconnected;
     procedure FindBicomponents;
     procedure EnsureBiconnected;
     procedure FindMetrics;
     procedure FindCenter;
     procedure FindPeripheral;
+
+    procedure MinCut1;
   end;
 
 implementation
@@ -107,6 +109,15 @@ begin
   Result := TGraph.Create;
   Result.AddVertexRange(1, 10);
   Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 1, 2, 6, 6, 4, 4, 5, 5, 2, 1, 7, 1, 8, 8, 9, 7, 9, 3, 10]);
+end;
+
+function TSimpleGraphTest.GenerateTestGr4: TGraph;
+begin
+  //see TestGr4.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(0, 8);
+  Result.AddEdges([0, 1, 0, 2, 1, 3, 2, 3, 0, 3, 1, 2, 2, 4, 2, 5, 3, 5, 4, 5,
+                   4, 6, 5, 7, 5, 7, 4, 7, 5, 6, 6, 8, 7, 8, 0, 8]);
 end;
 
 function TSimpleGraphTest.GenerateStar: TGraph;
@@ -146,7 +157,7 @@ begin
         Result.AddEdgeI(I, J);
 end;
 
-procedure TSimpleGraphTest.EdgeAdding(constref aSrc, aDst: Integer; aData: TGraph.PEdgeData);
+procedure TSimpleGraphTest.EdgeAdding(constref aSrc, aDst: Integer; var aData: TEmptyRec);
 begin
   Inc(FCallCount);
 end;
@@ -715,6 +726,8 @@ begin
   Ref.Instance := GenerateComplete;
   g := Ref;
   AssertTrue(g.IsComplete);
+  g.RemoveEdge(1, 12);
+  AssertFalse(g.IsComplete);
 end;
 
 procedure TSimpleGraphTest.IsRegular;
@@ -867,11 +880,22 @@ begin
   AssertTrue(Points.IsEmpty);
   Ref.Instance := GenerateTestGr1;
   g := Ref;
-  Points := g.FindCutVertices(1);
+  Points := g.FindCutVertices(0);
   AssertTrue(Points.Length = 4);
   AssertTrue((TIntHelper.SequentSearch(Points, 0) <> NULL_INDEX) and
              (TIntHelper.SequentSearch(Points, 6) <> NULL_INDEX) and
              (TIntHelper.SequentSearch(Points, 7) <> NULL_INDEX) and
+             (TIntHelper.SequentSearch(Points, 9) <> NULL_INDEX));
+  g.AddEdge(1, 2);
+  Points := g.FindCutVertices(1);
+  AssertTrue(Points.Length = 3);
+  AssertTrue((TIntHelper.SequentSearch(Points, 6) <> NULL_INDEX) and
+             (TIntHelper.SequentSearch(Points, 7) <> NULL_INDEX) and
+             (TIntHelper.SequentSearch(Points, 9) <> NULL_INDEX));
+  g.AddEdge(7, 9);
+  Points := g.FindCutVertices(6);
+  AssertTrue(Points.Length = 2);
+  AssertTrue((TIntHelper.SequentSearch(Points, 7) <> NULL_INDEX) and
              (TIntHelper.SequentSearch(Points, 9) <> NULL_INDEX));
 end;
 
@@ -943,6 +967,9 @@ begin
   g := Ref;
   AssertTrue(g.IsBiconnected);
   Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.IsBiconnected);
+  Ref.Instance := GenerateTestGr4;
   g := Ref;
   AssertTrue(g.IsBiconnected);
 end;
@@ -1062,6 +1089,53 @@ begin
   g := Ref;
   p := g.FindPeripheral;
   AssertTrue(p.Length = 8);
+end;
+
+procedure TSimpleGraphTest.MinCut1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cut: TGraph.TCut;
+  Cross: TIntEdgeArray;
+  CutSize: SizeInt;
+begin
+  g := {%H-}Ref;
+  CutSize := g.MinCut;
+  AssertTrue(CutSize = 0);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(CutSize = 0);
+  Ref.Instance := GenerateTestGr4;
+  g := Ref;
+  AssertTrue(g.IsBiconnected);
+  CutSize := g.MinCut;
+  AssertTrue(CutSize = 3);
+  g.RemoveEdge(5, 6);
+  CutSize := g.MinCut(Cut, Cross);
+  AssertTrue(CutSize = 2);
+  if Cut.A.Length <= Cut.B.Length then
+    begin
+      AssertTrue(Cut.A.Length = 1);
+      AssertTrue(Cut.A[0] = 6);
+    end
+  else
+    begin
+      AssertTrue(Cut.B.Length = 1);
+      AssertTrue(Cut.B[0] = 6);
+    end;
+  AssertTrue(Length(Cross) = 2);
+  if Cross[0].Source = 4 then
+    begin
+      AssertTrue(Cross[0].Destination.ToString, Cross[0].Destination = 6);
+      AssertTrue(Cross[1].Source.ToString, Cross[1].Source = 6);
+      AssertTrue(Cross[1].Destination = 8);
+    end
+  //else
+  //  begin
+  //    AssertTrue(Cross[0].Destination = 8);
+  //    AssertTrue(Cross[1].Source = 4);
+  //    AssertTrue(Cross[1].Destination = 6);
+  //  end;
 end;
 
 
