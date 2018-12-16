@@ -31,6 +31,7 @@ type
     function  GenerateCycle: TGraph;
     function  GenerateWheel: TGraph;
     function  GenerateComplete: TGraph;
+    function  GenerateTestGrBip1: TGraph;
     procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TEmptyRec);
   published
     procedure AddVertices;
@@ -80,6 +81,10 @@ type
     procedure FindPeripheral;
 
     procedure MinCut;
+    procedure FindMaxBipMatchHK;
+    procedure GetMaxBipMatchHK;
+    procedure FindMaxBipMatchBfs;
+    procedure GetMaxBipMatchBfs;
   end;
 
 implementation
@@ -155,6 +160,15 @@ begin
     for J := 0 to Pred(Result.VertexCount) do
       if I > J then
         Result.AddEdgeI(I, J);
+end;
+
+function TSimpleGraphTest.GenerateTestGrBip1: TGraph;
+begin
+  //see TestGrBip1.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 16);
+  Result.AddEdges([1, 2, 1, 4, 1, 6, 3, 4, 3, 6, 3, 8, 5, 6, 5, 8, 5, 10, 7, 8, 7, 10, 7,
+                   12, 9, 10, 9, 12, 9, 14, 11, 12, 11, 14, 11, 16, 13, 14, 13, 16, 15, 16]);
 end;
 
 procedure TSimpleGraphTest.EdgeAdding(constref aSrc, aDst: Integer; var aData: TEmptyRec);
@@ -1137,6 +1151,92 @@ begin
       AssertTrue(Cross[1].Source = 4);
       AssertTrue(Cross[1].Destination = 6);
     end;
+end;
+
+procedure TSimpleGraphTest.FindMaxBipMatchHK;
+var
+  Ref: TRef;
+  g: TGraph;
+  Match: TIntEdgeArray;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindMaxBipMatchHK(Match));
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.FindMaxBipMatchHK(Match));
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  AssertTrue(g.FindMaxBipMatchHK(Match));
+  AssertTrue(Length(Match) = 8);
+  AssertTrue(g.IsMaxMatching(Match));
+end;
+
+procedure TSimpleGraphTest.GetMaxBipMatchHK;
+var
+  Ref: TRef;
+  g: TGraph;
+  Match: TIntEdgeArray;
+  Whites, Grays: TIntArray;
+  Tested: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  if g.IsBipartite(Whites, Grays) then
+    Tested := True;
+  AssertFalse(Tested);
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  if g.IsBipartite(Whites, Grays) then
+    begin
+      Tested := True;
+      Match := g.GetMaxBipMatchHK(Whites, Grays);
+      AssertTrue(Length(Match) = 8);
+      AssertTrue(g.IsMaxMatching(Match));
+    end;
+  AssertTrue(Tested);
+end;
+
+procedure TSimpleGraphTest.FindMaxBipMatchBfs;
+var
+  Ref: TRef;
+  g: TGraph;
+  Match: TIntEdgeArray;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindMaxBipMatchBfs(Match));
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.FindMaxBipMatchBfs(Match));
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  AssertTrue(g.FindMaxBipMatchBfs(Match));
+  AssertTrue(Length(Match) = 8);
+  AssertTrue(g.IsMaxMatching(Match));
+end;
+
+procedure TSimpleGraphTest.GetMaxBipMatchBfs;
+var
+  Ref: TRef;
+  g: TGraph;
+  Match: TIntEdgeArray;
+  Whites, Grays: TIntArray;
+  Tested: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  if g.IsBipartite(Whites, Grays) then
+    Tested := True;
+  AssertFalse(Tested);
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  if g.IsBipartite(Whites, Grays) then
+    begin
+      Tested := True;
+      Match := g.GetMaxBipMatchBfs(Whites, Grays);
+      AssertTrue(Length(Match) = 8);
+      AssertTrue(g.IsMaxMatching(Match));
+    end;
+  AssertTrue(Tested);
 end;
 
 
