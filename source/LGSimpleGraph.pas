@@ -1751,10 +1751,11 @@ begin
       end
     else
       begin
-        Next := Stack.Pop;
-        Curr := Parents[Curr];
-        if Curr <> NULL_INDEX then
+        Stack.Pop;
+        if Parents[Curr] <> NULL_INDEX then
           begin
+            Next := Curr;
+            Curr := Parents[Curr];
             if LowPt[Curr] > LowPt[Next] then
               LowPt[Curr] := LowPt[Next];
             if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
@@ -1803,10 +1804,10 @@ begin
     else
       begin
         Stack.Pop;
-        Next := Curr;
-        Curr := Parents[Curr];
-        if Curr <> NULL_INDEX then
+        if Parents[Curr] <> NULL_INDEX then
           begin
+            Next := Curr;
+            Curr := Parents[Curr];
             if LowPt[Curr] > LowPt[Next] then
               LowPt[Curr] := LowPt[Next];
             if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
@@ -1855,10 +1856,10 @@ begin
     else
       begin
         Stack.Pop;
-        Next := Curr;
-        Curr := Parents[Curr];
-        if Curr <> NULL_INDEX then
+        if Parents[Curr] <> NULL_INDEX then
           begin
+            Next := Curr;
+            Curr := Parents[Curr];
             if LowPt[Curr] > LowPt[Next] then
               LowPt[Curr] := LowPt[Next];
             if LowPt[Next] >= PreOrd[Curr] then
@@ -1919,10 +1920,10 @@ begin
     else
       begin
         Stack.Pop;
-        Next := Curr;
-        Curr := Parents[Curr];
-        if Curr <> NULL_INDEX then
+        if Parents[Curr] <> NULL_INDEX then
           begin
+            Next := Curr;
+            Curr := Parents[Curr];
             if LowPt[Curr] > LowPt[Next] then
               LowPt[Curr] := LowPt[Next];
             if (LowPt[Next] >= PreOrd[Curr]) and (Curr <> aRoot) then
@@ -1989,10 +1990,10 @@ begin
           else
             begin
               Stack.Pop;
-              Next := Curr;
-              Curr := Parents[Curr];
-              if Curr <> NULL_INDEX then
+              if Parents[Curr] <> NULL_INDEX then
                 begin
+                  Next := Curr;
+                  Curr := Parents[Curr];
                   if LowPt[Curr] > LowPt[Next] then
                     LowPt[Curr] := LowPt[Next];
                   if LowPt[Next] > PreOrd[Curr] then
@@ -2043,10 +2044,10 @@ begin
           else
             begin
               Stack.Pop;
-              Next := Curr;
-              Curr := Parents[Curr];
-              if Curr <> NULL_INDEX then
+              if Parents[Curr] <> NULL_INDEX then
                 begin
+                  Next := Curr;
+                  Curr := Parents[Curr];
                   if LowPt[Curr] > LowPt[Next] then
                     LowPt[Curr] := LowPt[Next];
                   if LowPt[Next] > PreOrd[Curr] then
