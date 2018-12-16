@@ -29,7 +29,6 @@ interface
 
 uses
   Classes, SysUtils, DateUtils,
-  LGMvMatch,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -109,7 +108,6 @@ type
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GreedyMatching: TIntEdgeArray;
     function  GreedyMatching2: TIntEdgeArray;
-    function  GetMvMatching: TIntEdgeArray;
     procedure ListCliquesBP(aOnFind: TOnFindSet);
     procedure ListCliquesBP256(aOnFind: TOnFindSet);
     procedure ListCliques(aOnFind: TOnFindSet);
@@ -315,9 +313,6 @@ type
   { returns the matching of the maximum cardinality in an arbitrary graph;
     used Pape-Conradt algorithm }
     function FindMaxMatchPC: TIntEdgeArray;
-  { returns the matching of the maximum cardinality in an arbitrary graph;
-    used Micali-Vazirani algorithm }
-    function FindMaxMatchingMV: TIntEdgeArray;
 {**********************************************************************************************************
   some NP-hard problem utilities
 ***********************************************************************************************************}
@@ -1184,65 +1179,6 @@ begin
           end;
       end;
   System.SetLength(Result, Size);
-end;
-
-function TGSimpleGraph.GetMvMatching: TIntEdgeArray;
-var
-  Nodes: LGMvMatch.TNodes;
-  Edgs: LGMvMatch.TEdges;
-  I, J, Matched, NodeCount, Mate: SizeInt;
-  e: TEdge;
-  ie: TIntEdge;
-begin
-  Matched := 0;
-  NodeCount := VertexCount;
-  System.SetLength(Nodes, NodeCount);
-  for I := 0 to Pred(NodeCount) do
-    begin
-      Nodes[I].Mate := nil;
-      Nodes[I].FirstEdge := nil;
-    end;
-
-  for ie in GreedyMatching2 do
-    begin
-      Nodes[ie.Source].Mate := @Nodes[ie.Destination];
-      Nodes[ie.Destination].Mate := @Nodes[ie.Source];
-      Inc(Matched);
-    end;
-
-  System.SetLength(Edgs, EdgeCount);
-  I := 0;
-  for e in {%H-}DistinctEdges do
-    begin
-      Edgs[I].Node1 := @Nodes[e.Source];
-      Edgs[I].Next1 := Nodes[e.Source].FirstEdge;
-      Nodes[e.Source].FirstEdge := @Edgs[I];
-      Edgs[I].Node2 := @Nodes[e.Destination];
-      Edgs[I].Next2 := Nodes[e.Destination].FirstEdge;
-      Nodes[e.Destination].FirstEdge := @Edgs[I];
-
-      if Nodes[e.Source].Matched and (Nodes[e.Source].Mate = @Nodes[e.Destination]) then
-        begin
-          Nodes[e.Source].MatchedEdge := @Edgs[I];
-          Nodes[e.Destination].MatchedEdge := @Edgs[I];
-        end;
-
-      Inc(I);
-    end;
-
-  LGMvMatch.Match(Nodes, Edgs, Matched);
-  Edgs := nil;
-
-  System.SetLength(Result, Matched);
-  J := 0;
-  for I := 0 to System.High(Nodes) do
-    if Nodes[I].Matched then
-      begin
-        Mate := SizeInt(Nodes[I].Mate - LGMvMatch.PNode(Nodes));
-        Result[J] := TIntEdge.Create(I, Mate);
-        Nodes[Mate].Mate := nil;
-        Inc(J);
-      end;
 end;
 
 procedure TGSimpleGraph.ListCliquesBP(aOnFind: TOnFindSet);
@@ -3315,14 +3251,6 @@ begin
     exit(nil);
   if not FindMaxBipMatchHK(Result) then
     Result := Helper.MaxMatching(Self);
-end;
-
-function TGSimpleGraph.FindMaxMatchingMV: TIntEdgeArray;
-begin
-  if VertexCount < 2 then
-    exit(nil);
-  if not FindMaxBipMatchHK(Result) then
-    Result := GetMvMatching;
 end;
 
 procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);

@@ -32,7 +32,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="4" Release="1"/>
-    <Files Count="46">
+    <Files Count="45">
       <Item1>
         <Filename Value="..\source\LGUtils.pas"/>
         <UnitName Value="LGUtils"/>
@@ -154,69 +154,65 @@
         <UnitName Value="LGSimpleDigraph"/>
       </Item30>
       <Item31>
-        <Filename Value="..\source\LGMvMatch.pas"/>
-        <UnitName Value="LGMvMatch"/>
+        <Filename Value="..\source\include\LGDynBuffer.inc"/>
+        <Type Value="Include"/>
       </Item31>
       <Item32>
-        <Filename Value="..\source\include\LGDynBuffer.inc"/>
+        <Filename Value="..\source\include\LGDynBufferH.inc"/>
         <Type Value="Include"/>
       </Item32>
       <Item33>
-        <Filename Value="..\source\include\LGDynBufferH.inc"/>
+        <Filename Value="..\source\include\LGEnums.inc"/>
         <Type Value="Include"/>
       </Item33>
       <Item34>
-        <Filename Value="..\source\include\LGEnums.inc"/>
+        <Filename Value="..\source\include\LGEnumsH.inc"/>
         <Type Value="Include"/>
       </Item34>
       <Item35>
-        <Filename Value="..\source\include\LGEnumsH.inc"/>
+        <Filename Value="..\source\include\SimpGraphHelp.inc"/>
         <Type Value="Include"/>
       </Item35>
       <Item36>
-        <Filename Value="..\source\include\SimpGraphHelp.inc"/>
+        <Filename Value="..\source\include\SimpGraphHelpH.inc"/>
         <Type Value="Include"/>
       </Item36>
       <Item37>
-        <Filename Value="..\source\include\SimpGraphHelpH.inc"/>
-        <Type Value="Include"/>
+        <Filename Value="..\source\include\IntGraphHelpH.inc"/>
+        <Type Value="Binary"/>
       </Item37>
       <Item38>
-        <Filename Value="..\source\include\IntGraphHelpH.inc"/>
+        <Filename Value="..\source\include\IntGraphHelp.inc"/>
         <Type Value="Binary"/>
       </Item38>
       <Item39>
-        <Filename Value="..\source\include\IntGraphHelp.inc"/>
+        <Filename Value="..\source\include\IntDiGraphHelpH.inc"/>
         <Type Value="Binary"/>
       </Item39>
       <Item40>
-        <Filename Value="..\source\include\IntDiGraphHelpH.inc"/>
+        <Filename Value="..\source\include\IntDiGraphHelp.inc"/>
         <Type Value="Binary"/>
       </Item40>
       <Item41>
-        <Filename Value="..\source\include\IntDiGraphHelp.inc"/>
-        <Type Value="Binary"/>
+        <Filename Value="..\source\include\SparseGraphBitHelp.inc"/>
+        <Type Value="Include"/>
       </Item41>
       <Item42>
-        <Filename Value="..\source\include\SparseGraphBitHelp.inc"/>
+        <Filename Value="..\source\include\SparseGraphBitHelpH.inc"/>
         <Type Value="Include"/>
       </Item42>
       <Item43>
-        <Filename Value="..\source\include\SparseGraphBitHelpH.inc"/>
+        <Filename Value="..\source\include\SparseGraphHelpH.inc"/>
         <Type Value="Include"/>
       </Item43>
       <Item44>
-        <Filename Value="..\source\include\SparseGraphHelpH.inc"/>
+        <Filename Value="..\source\include\SparseGraphIntSet.inc"/>
         <Type Value="Include"/>
       </Item44>
       <Item45>
-        <Filename Value="..\source\include\SparseGraphIntSet.inc"/>
-        <Type Value="Include"/>
-      </Item45>
-      <Item46>
         <Filename Value="..\source\include\SparseGraphIntSetH.inc"/>
         <Type Value="Include"/>
-      </Item46>
+      </Item45>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>
