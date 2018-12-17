@@ -439,7 +439,7 @@ type
     function  Clone: TIntChart;
   { adds numbers in range [aFrom, aTo] as vertices, returns count of added vertices }
     function  AddVertexRange(aFrom, aTo: Integer): Integer;
-  { treats aVertexList as list of the pairs of source-target, odd element ignored;
+  { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
     function  AddEdges(const aVertexList: array of Integer): Integer;
   end;
@@ -474,6 +474,9 @@ type
     function SubgraphFromTree(const aTree: TIntArray): TStrChart;
     function SubgraphFromEdges(const aEdges: TIntEdgeArray): TStrChart;
     function Clone: TStrChart;
+  { treats aVertexList as list of the pairs of source-target, last odd element ignored;
+    returns count of added edges; }
+    function AddEdges(const aVertexList: array of string): Integer;
   end;
 
   TStrChartDotWriter = class(specialize TGraphDotWriter<string, TEmptyRec, string>)
@@ -3885,12 +3888,10 @@ end;
 
 function TIntChart.AddEdges(const aVertexList: array of Integer): Integer;
 var
-  I, R: Integer;
+  I: SizeInt = 0;
 begin
   Result := EdgeCount;
-  R := System.High(aVertexList);
-  I := 0;
-  while I < R do
+  while I < System.High(aVertexList) do
     begin
       AddEdge(aVertexList[I], aVertexList[Succ(I)]);
       I += 2;
@@ -4023,6 +4024,19 @@ function TStrChart.Clone: TStrChart;
 begin
   Result := TStrChart.Create;
   Result.AssignGraph(Self);
+end;
+
+function TStrChart.AddEdges(const aVertexList: array of string): Integer;
+var
+  I: SizeInt = 0;
+begin
+  Result := EdgeCount;
+  while I < System.High(aVertexList) do
+    begin
+      AddEdge(aVertexList[I], aVertexList[Succ(I)]);
+      I += 2;
+    end;
+  Result := EdgeCount - Result;
 end;
 
 { TStrChartDotWriter }
