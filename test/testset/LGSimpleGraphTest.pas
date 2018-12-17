@@ -39,8 +39,8 @@ type
     function  GenerateC125Clique: TGraph;
     function  GenerateC125Mis: TGraph;
     procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TEmptyRec);
-    procedure SetFound(constref aSet: TIntArray; var {%H-}aCancel: Boolean);
-    procedure SetFound2(constref aSet: TIntArray; var aCancel: Boolean);
+    procedure SetFound(const aSet: TIntArray; var {%H-}aCancel: Boolean);
+    procedure SetFound2(const aSet: TIntArray; var aCancel: Boolean);
   published
     procedure AddVertices;
     procedure SaveToStream;
@@ -263,12 +263,12 @@ begin
   Inc(FCallCount);
 end;
 
-procedure TSimpleGraphTest.SetFound(constref aSet: TIntArray; var aCancel: Boolean);
+procedure TSimpleGraphTest.SetFound(const aSet: TIntArray; var aCancel: Boolean);
 begin
   FSetVector.Add(aSet);
 end;
 
-procedure TSimpleGraphTest.SetFound2(constref aSet: TIntArray; var aCancel: Boolean);
+procedure TSimpleGraphTest.SetFound2(const aSet: TIntArray; var aCancel: Boolean);
 begin
   FSetVector.Add(aSet);
   aCancel := True;
@@ -1420,7 +1420,12 @@ var
   Mis: TIntArray;
   Exact: Boolean;
 begin
-  {%H-}Ref.Instance := GenerateC125Mis;
+  {%H-}Ref.Instance := GenerateComplete;
+  g := Ref;
+  Mis := g.FindMIS(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 1);
+  Ref.Instance := GenerateC125Mis;
   g := Ref;
   Mis := g.FindMIS(Exact, 10);
   AssertTrue(Exact);
@@ -1469,7 +1474,12 @@ var
   Clique: TIntArray;
   Exact: Boolean;
 begin
-  {%H-}Ref.Instance := GenerateC125Clique;
+  {%H-}Ref.Instance := GenerateComplete;
+  g := Ref;
+  Clique := g.FindMaxClique(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = g.VertexCount);
+  Ref.Instance := GenerateC125Clique;
   g := Ref;
   Clique := g.FindMaxClique(Exact, 10);
   AssertTrue(Exact);
