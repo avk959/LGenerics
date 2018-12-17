@@ -317,10 +317,10 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
-  { lists all maximal independent sets of vertices;
+  { lists all maximal independent sets of the vertices;
     will raise exception if aOnFindSet is not assigned;
     setting aCancel to True in aOnFindSet will result in an exit from the method }
-    procedure ListMIS(aOnFindSet: TOnFindSet);
+    procedure ListAllMIS(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
     at the end of the timeout the best recent solution will be returned, and aExact
@@ -333,20 +333,20 @@ type
     will raise exception if graph is disconnected;
     worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout the best
-    recent solution will be returned, and aExactSolution will be set to False }
-    function  MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    recent solution will be returned, and aExact will be set to False }
+    function  FindMDS(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMDS: TIntArray;
   { returns True if aTestSet contains indices of the some minimal dominating vertex set, False otherwise }
-    function  IsMinDominatingSet(const aTestSet: TIntArray): Boolean;
+    function  IsMDS(const aTestSet: TIntArray): Boolean;
   { lists all maximal cliques;
     will raise exception if aOnFindClique is not assigned;
     setting aCancel to True in aOnFindClique will result in an exit from the method }
-    procedure ListMaxCliques(aOnFindClique: TOnFindSet);
+    procedure ListAllCliques(aOnFindClique: TOnFindSet);
   { returns indices of the vertices of the some found maximum clique;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
-    at the end of the timeout the best recent solution will be returned, and aExactSolution
+    at the end of the timeout the best recent solution will be returned, and aExact
     will be set to False }
-    function  FindMaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  FindMaxClique(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMaxClique: TIntArray;
   { returns True if aTestClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(const aTestClique: TIntArray): Boolean;
@@ -3254,7 +3254,7 @@ begin
   Result := Helper.Execute(Self);
 end;
 
-procedure TGSimpleGraph.ListMIS(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListAllMIS(aOnFindSet: TOnFindSet);
 begin
   if IsEmpty then
     exit;
@@ -3334,19 +3334,19 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.MinDominatingSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.FindMDS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if not Connected then
     raise EGraphError.Create(SEMethodNotApplicable); //????
   if VertexCount < 3 then
     exit([0]);
   if VertexCount > COMMON_BP_CUTOFF then
-    Result := GetMds(aTimeOut, aExactSolution)
+    Result := GetMds(aTimeOut, aExact)
   else
     if VertexCount > TBits256.BITNESS then
-      Result := GetMdsBP(aTimeOut, aExactSolution)
+      Result := GetMdsBP(aTimeOut, aExact)
     else
-      Result := GetMdsBP256(aTimeOut, aExactSolution);
+      Result := GetMdsBP256(aTimeOut, aExact);
 end;
 
 function TGSimpleGraph.GreedyMDS: TIntArray;
@@ -3361,7 +3361,7 @@ begin
     Result := GetGreedyMinIsBP;
 end;
 
-function TGSimpleGraph.IsMinDominatingSet(const aTestSet: TIntArray): Boolean;
+function TGSimpleGraph.IsMDS(const aTestSet: TIntArray): Boolean;
 var
   TestMds, Remain: TBoolVector;
   I, J, K: SizeInt;
@@ -3426,7 +3426,7 @@ begin
   Result := True;
 end;
 
-procedure TGSimpleGraph.ListMaxCliques(aOnFindClique: TOnFindSet);
+procedure TGSimpleGraph.ListAllCliques(aOnFindClique: TOnFindSet);
 begin
   if IsEmpty then
     exit;
@@ -3441,17 +3441,17 @@ begin
       ListCliquesBP256(aOnFindClique);
 end;
 
-function TGSimpleGraph.FindMaxClique(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.FindMaxClique(out aExact: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if IsEmpty then
     exit(nil);
   if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
-    Result := GetMaxClique(aTimeOut, aExactSolution)
+    Result := GetMaxClique(aTimeOut, aExact)
   else
     if VertexCount > TBits256.BITNESS then
-      Result := GetMaxCliqueBP(aTimeOut, aExactSolution)
+      Result := GetMaxCliqueBP(aTimeOut, aExact)
     else
-      Result := GetMaxCliqueBP256(aTimeOut, aExactSolution);
+      Result := GetMaxCliqueBP256(aTimeOut, aExact);
 end;
 
 function TGSimpleGraph.GreedyMaxClique: TIntArray;

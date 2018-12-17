@@ -805,7 +805,7 @@ var
   I, J: SizeInt;
   Exact: Boolean;
 begin
-  Clique := FGraph.MaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime));
+  Clique := FGraph.FindMaxClique(Exact, FTimeOut - SecondsBetween(Now, FStartTime));
   Result := Clique.Length;
   FCancelled := not Exact;
   if FCancelled or (Result >= FUpBound) then
