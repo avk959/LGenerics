@@ -320,15 +320,15 @@ type
   { lists all maximal independent sets of vertices;
     will raise exception if aOnFindSet is not assigned;
     setting aCancel to True in aOnFindSet will result in an exit from the method }
-    procedure ListIndependentSets(aOnFindSet: TOnFindSet);
+    procedure ListMIS(aOnFindSet: TOnFindSet);
   { returns indices of the vertices of the some found maximum independent set;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
-    at the end of the timeout the best recent solution will be returned, and aExactSolution
+    at the end of the timeout the best recent solution will be returned, and aExact
     will be set to False }
-    function  MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  FindMIS(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMIS: TIntArray;
   { returns True if aTestSet contains indices of the some maximal independent vertex set, False otherwise }
-    function  IsMaxIndependentSet(const aTestSet: TIntArray): Boolean;
+    function  IsMIS(const aTestSet: TIntArray): Boolean;
   { returns indices of the vertices of the some found minimum dominating set in connected graph;
     will raise exception if graph is disconnected;
     worst case time cost of exact solution O*(2^n);
@@ -346,7 +346,7 @@ type
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
     at the end of the timeout the best recent solution will be returned, and aExactSolution
     will be set to False }
-    function  MaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  FindMaxClique(out aExactSolution: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMaxClique: TIntArray;
   { returns True if aTestClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(const aTestClique: TIntArray): Boolean;
@@ -3254,7 +3254,7 @@ begin
   Result := Helper.Execute(Self);
 end;
 
-procedure TGSimpleGraph.ListIndependentSets(aOnFindSet: TOnFindSet);
+procedure TGSimpleGraph.ListMIS(aOnFindSet: TOnFindSet);
 begin
   if IsEmpty then
     exit;
@@ -3266,7 +3266,7 @@ begin
     ListIsBP256(aOnFindSet)
 end;
 
-function TGSimpleGraph.MaxIndependentSet(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.FindMIS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
 var
   w, g: TIntArray;
 begin
@@ -3278,9 +3278,9 @@ begin
     Result := GetMaxIsBipartite(w, g)
   else
     if VertexCount > TBits256.BITNESS then
-      Result := GetMaxIsBP(aTimeOut, aExactSolution)
+      Result := GetMaxIsBP(aTimeOut, aExact)
     else
-      Result := GetMaxIsBP256(aTimeOut, aExactSolution);
+      Result := GetMaxIsBP256(aTimeOut, aExact);
 end;
 
 function TGSimpleGraph.GreedyMIS: TIntArray;
@@ -3295,7 +3295,7 @@ begin
     Result := GetGreedyMisBP;
 end;
 
-function TGSimpleGraph.IsMaxIndependentSet(const aTestSet: TIntArray): Boolean;
+function TGSimpleGraph.IsMIS(const aTestSet: TIntArray): Boolean;
 var
   TestIS, Remain: TBoolVector;
   I, J: SizeInt;
@@ -3441,7 +3441,7 @@ begin
       ListCliquesBP256(aOnFindClique);
 end;
 
-function TGSimpleGraph.MaxClique(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
+function TGSimpleGraph.FindMaxClique(out aExactSolution: Boolean; aTimeOut: Integer): TIntArray;
 begin
   if IsEmpty then
     exit(nil);
