@@ -269,7 +269,7 @@ type
     function Reverse: TIntFlowChart;
   { adds numbers in range [aFrom, aTo] as vertices, returns count of added vertices }
     function AddVertexRange(aFrom, aTo: Integer): Integer;
-  { treats aVertexList as list of the pairs of source-target, odd element ignored;
+  { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
     function AddEdges(const aVertexList: array of Integer): Integer;
   end;
@@ -289,6 +289,9 @@ type
     constructor Create;
     function Clone: TStrFlowChart;
     function Reverse: TStrFlowChart;
+  { treats aVertexList as list of the pairs of source-target, last odd element ignored;
+    returns count of added edges; }
+    function AddEdges(const aVertexList: array of string): Integer;
   end;
 
   TStrFlowChartDotWriter = class(specialize TGDigraphDotWriter<string, TEmptyRec, string>)
@@ -2101,16 +2104,15 @@ end;
 
 function TIntFlowChart.AddEdges(const aVertexList: array of Integer): Integer;
 var
-  I, R: Integer;
+  I: SizeInt = 0;
 begin
-  Result := 0;
-  R := System.High(aVertexList);
-  I := 0;
-  while I < R do
+  Result := EdgeCount;
+  while I < System.High(aVertexList) do
     begin
-      Result += Ord(AddEdge(aVertexList[I], aVertexList[Succ(I)]));
+      AddEdge(aVertexList[I], aVertexList[Succ(I)]);
       I += 2;
     end;
+  Result := EdgeCount - Result;
 end;
 
 { TIntFlowChartDotWriter }
@@ -2160,6 +2162,19 @@ end;
 function TStrFlowChart.Reverse: TStrFlowChart;
 begin
   Result := inherited Reverse as TStrFlowChart;
+end;
+
+function TStrFlowChart.AddEdges(const aVertexList: array of string): Integer;
+var
+  I: SizeInt = 0;
+begin
+  Result := EdgeCount;
+  while I < System.High(aVertexList) do
+    begin
+      AddEdge(aVertexList[I], aVertexList[Succ(I)]);
+      I += 2;
+    end;
+  Result := EdgeCount - Result;
 end;
 
 { TStrFlowChartDotWriter }
