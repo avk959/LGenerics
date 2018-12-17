@@ -3270,6 +3270,7 @@ function TGSimpleGraph.FindMIS(out aExact: Boolean; aTimeOut: Integer): TIntArra
 var
   w, g: TIntArray;
 begin
+  aExact := True;
   if IsEmpty then
     exit(nil);
   if VertexCount < 2 then
@@ -3338,6 +3339,7 @@ function TGSimpleGraph.FindMDS(out aExact: Boolean; aTimeOut: Integer): TIntArra
 begin
   if not Connected then
     raise EGraphError.Create(SEMethodNotApplicable); //????
+  aExact := True;
   if VertexCount < 3 then
     exit([0]);
   if VertexCount > COMMON_BP_CUTOFF then
@@ -3443,6 +3445,7 @@ end;
 
 function TGSimpleGraph.FindMaxClique(out aExact: Boolean; aTimeOut: Integer): TIntArray;
 begin
+  aExact := True;
   if IsEmpty then
     exit(nil);
   if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
