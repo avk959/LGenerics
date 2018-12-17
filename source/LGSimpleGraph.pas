@@ -317,7 +317,7 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
-  { lists all maximal independent sets of the vertices;
+  { lists all maximal independent vertex sets;
     will raise exception if aOnFindSet is not assigned;
     setting aCancel to True in aOnFindSet will result in an exit from the method }
     procedure ListAllMIS(aOnFindSet: TOnFindSet);
