@@ -329,7 +329,7 @@ type
     function  GreedyMIS: TIntArray;
   { returns True if aTestSet contains indices of the some maximal independent vertex set, False otherwise }
     function  IsMIS(const aTestSet: TIntArray): Boolean;
-  { returns indices of the vertices of the some found minimum dominating set in connected graph;
+  { returns indices of the vertices of the some found minimum dominating vertex set in connected graph;
     will raise exception if graph is disconnected;
     worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout the best

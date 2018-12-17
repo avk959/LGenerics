@@ -188,12 +188,12 @@ type
     TAdjacencyMatrix = record
     private
       FMatrix: TSquareBitMatrix;
-      function  GetSize: SizeInt; inline;
+      function GetSize: SizeInt; inline;
     public
       constructor Create(constref aMatrix: TSquareBitMatrix);
-      function  IsEmpty: Boolean; inline;
-      function  Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
-      property  Size: SizeInt read GetSize;
+      function IsEmpty: Boolean; inline;
+      function Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
+      property Size: SizeInt read GetSize;
     end;
 
   protected
