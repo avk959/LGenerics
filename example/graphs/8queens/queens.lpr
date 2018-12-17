@@ -28,8 +28,8 @@ type
     FBoard: TStrChart;
     FSolutions: TStrArrayVector;
     procedure BuildBoard;
-    function  CopySolution(constref s: TIntArray): TStringArray;
-    procedure OnFindSolution(constref s: TIntArray; var {%H-}aCancel: Boolean);
+    function  CopySolution(const s: TIntArray): TStringArray;
+    procedure OnFindSolution(const s: TIntArray; var {%H-}aCancel: Boolean);
     procedure PrintSolutions;
   public
     constructor Create;
@@ -93,7 +93,7 @@ begin
         FBoard.AddEdge(Brd[Pred(K + I), Succ(8 - I)], Brd[Pred(K + J), Succ(8 - J)]);
 end;
 
-function TQueensSolver.CopySolution(constref s: TIntArray): TStringArray;
+function TQueensSolver.CopySolution(const s: TIntArray): TStringArray;
 var
   I: SizeInt;
 begin
@@ -102,7 +102,7 @@ begin
     Result[I] := FBoard[s[I]];
 end;
 
-procedure TQueensSolver.OnFindSolution(constref s: TIntArray; var aCancel: Boolean);
+procedure TQueensSolver.OnFindSolution(const s: TIntArray; var aCancel: Boolean);
 begin
   if Length(s) = 8 then
     FSolutions.Add(CopySolution(s));
