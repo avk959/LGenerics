@@ -22,18 +22,25 @@ type
     TRef    = specialize TGAutoRef<TGraph>;
 
   var
+    FSetVector: TIntArrayVector;
     FCallCount: Integer;
     function  GenerateTestGr1: TGraph;
     function  GenerateTestGr2: TGraph;
     function  GenerateTestGr3: TGraph;
     function  GenerateTestGr4: TGraph;
+    function  GenerateTestGr5: TGraph;
+    function  GenerateTestGr5Compl: TGraph;
     function  GenerateStar: TGraph;
     function  GenerateCycle: TGraph;
     function  GenerateWheel: TGraph;
     function  GenerateComplete: TGraph;
     function  GenerateTestGrBip1: TGraph;
-    function  GenerateTestTriangle: TGraph;
+    function  GenerateTestTriangles: TGraph;
+    function  GenerateC125Clique: TGraph;
+    function  GenerateC125Mis: TGraph;
     procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TEmptyRec);
+    procedure SetFound(constref aSet: TIntArray; var {%H-}aCancel: Boolean);
+    procedure SetFound2(constref aSet: TIntArray; var aCancel: Boolean);
   published
     procedure AddVertices;
     procedure SaveToStream;
@@ -80,7 +87,6 @@ type
     procedure FindMetrics;
     procedure FindCenter;
     procedure FindPeripheral;
-
     procedure MinCut;
     procedure FindMaxBipMatchHK;
     procedure GetMaxBipMatchHK;
@@ -88,6 +94,13 @@ type
     procedure GetMaxBipMatchBfs;
     procedure FindMaxMatchEd;
     procedure FindMaxMatchPC;
+
+    procedure ListAllMIS1;
+    procedure ListAllMIS2;
+    procedure FindMIS;
+    procedure ListAllCliques1;
+    procedure ListAllCliques2;
+    procedure FindMaxClique;
   end;
 
 implementation
@@ -126,6 +139,34 @@ begin
   Result.AddVertexRange(0, 8);
   Result.AddEdges([0, 1, 0, 2, 1, 3, 2, 3, 0, 3, 1, 2, 2, 4, 2, 5, 3, 5, 4, 5,
                    4, 6, 5, 7, 5, 7, 4, 7, 5, 6, 6, 8, 7, 8, 0, 8]);
+end;
+
+function TSimpleGraphTest.GenerateTestGr5: TGraph;
+begin
+  //see TestGr5.png, mis count 295, independance number 8
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 20);
+  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 6, 12, 12, 7,
+                   7, 13, 13, 8, 8, 14, 14, 9, 9, 15, 15, 10, 10, 11, 11, 6, 12, 17, 13, 18,
+                   14, 19, 15, 20, 16, 11, 16, 17, 17, 18, 18, 19, 19, 20, 20, 16]);
+end;
+
+function TSimpleGraphTest.GenerateTestGr5Compl: TGraph;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, J: Integer;
+begin
+  //complement of TestGr5
+  {%H-}Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 20);
+  for I := 1 to 20 do
+    for J := 1 to 20 do
+      if I <> J then
+        if not g.Adjacent(I, J) then
+          Result.AddEdge(I, J);
 end;
 
 function TSimpleGraphTest.GenerateStar: TGraph;
@@ -174,11 +215,11 @@ begin
                    12, 9, 10, 9, 12, 9, 14, 11, 12, 11, 14, 11, 16, 13, 14, 13, 16, 15, 16]);
 end;
 
-function TSimpleGraphTest.GenerateTestTriangle: TGraph;
+function TSimpleGraphTest.GenerateTestTriangles: TGraph;
 var
   I: Integer = 0;
 begin
-  //see TestTriangle.png
+  //see TestTriangles.png
   Result := TGraph.Create;
   Result.AddVertexRange(0, 12);
   while I < Result.VertexCount - 3 do
@@ -191,9 +232,46 @@ begin
     end;
 end;
 
+function TSimpleGraphTest.GenerateC125Clique: TGraph;
+begin
+  //C125.9.clq instance form the Second DIMACS Implementation Challenge, w = 34
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 125);
+  Result.AddEdges([{$I C125Clique.inc}]);
+end;
+
+function TSimpleGraphTest.GenerateC125Mis: TGraph;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, J: Integer;
+begin
+  //complement of C125.9.clq
+  {%H-}Ref.Instance := GenerateC125Clique;
+  g := Ref;
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 125);
+  for I := 1 to 125 do
+    for J := 1 to 125 do
+      if I <> J then
+        if not g.Adjacent(I, J) then
+          Result.AddEdge(I, J);
+end;
+
 procedure TSimpleGraphTest.EdgeAdding(constref aSrc, aDst: Integer; var aData: TEmptyRec);
 begin
   Inc(FCallCount);
+end;
+
+procedure TSimpleGraphTest.SetFound(constref aSet: TIntArray; var aCancel: Boolean);
+begin
+  FSetVector.Add(aSet);
+end;
+
+procedure TSimpleGraphTest.SetFound2(constref aSet: TIntArray; var aCancel: Boolean);
+begin
+  FSetVector.Add(aSet);
+  aCancel := True;
 end;
 
 procedure TSimpleGraphTest.AddVertices;
@@ -1273,7 +1351,7 @@ begin
   Match := g.FindMaxMatchEd;
   AssertTrue(Length(Match) = 8);
   AssertTrue(g.IsMaxMatching(Match));
-  Ref.Instance := GenerateTestTriangle;
+  Ref.Instance := GenerateTestTriangles;
   g := Ref;
   Match := g.FindMaxMatchEd;
   AssertTrue(Length(Match) = 6);
@@ -1294,11 +1372,109 @@ begin
   Match := g.FindMaxMatchPC;
   AssertTrue(Length(Match) = 8);
   AssertTrue(g.IsMaxMatching(Match));
-  Ref.Instance := GenerateTestTriangle;
+  Ref.Instance := GenerateTestTriangles;
   g := Ref;
   Match := g.FindMaxMatchPC;
   AssertTrue(Length(Match) = 6);
   AssertTrue(g.IsMaxMatching(Match));
+end;
+
+procedure TSimpleGraphTest.ListAllMIS1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  FSetVector.Clear;
+  g.ListAllMIS(@SetFound);
+  AssertTrue(FSetVector.IsEmpty);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  g.ListAllMIS(@SetFound2);
+  AssertTrue(FSetVector.Count = 1);
+  AssertTrue(g.IsMIS(FSetVector[0]));
+end;
+
+procedure TSimpleGraphTest.ListAllMIS2;
+var
+  Ref: TRef;
+  g: TGraph;
+  CurrSet: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  FSetVector.Clear;
+  g.ListAllMIS(@SetFound);
+  AssertTrue(FSetVector.Count = 295);
+  for CurrSet in FSetVector do
+    begin
+      AssertTrue(not CurrSet.IsEmpty and (CurrSet.Length <= 8));
+      AssertTrue(g.IsMIS(CurrSet));
+    end;
+end;
+
+procedure TSimpleGraphTest.FindMIS;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mis: TIntArray;
+  Exact: Boolean;
+begin
+  {%H-}Ref.Instance := GenerateC125Mis;
+  g := Ref;
+  Mis := g.FindMIS(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 34);
+  AssertTrue(g.IsMIS(Mis));
+end;
+
+procedure TSimpleGraphTest.ListAllCliques1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  FSetVector.Clear;
+  g.ListAllCliques(@SetFound);
+  AssertTrue(FSetVector.IsEmpty);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  g.ListAllCliques(@SetFound2);
+  AssertTrue(FSetVector.Count = 1);
+  AssertTrue(g.IsMaxClique(FSetVector[0]));
+end;
+
+procedure TSimpleGraphTest.ListAllCliques2;
+var
+  Ref: TRef;
+  g: TGraph;
+  CurrSet: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr5Compl;
+  g := Ref;
+  FSetVector.Clear;
+  g.ListAllCliques(@SetFound);
+  AssertTrue(FSetVector.Count = 295);
+  for CurrSet in FSetVector do
+    begin
+      AssertTrue(not CurrSet.IsEmpty and (CurrSet.Length <= 8));
+      AssertTrue(g.IsMaxClique(CurrSet));
+    end;
+end;
+
+procedure TSimpleGraphTest.FindMaxClique;
+var
+  Ref: TRef;
+  g: TGraph;
+  Clique: TIntArray;
+  Exact: Boolean;
+begin
+  {%H-}Ref.Instance := GenerateC125Clique;
+  g := Ref;
+  Clique := g.FindMaxClique(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = 34);
+  AssertTrue(g.IsMaxClique(Clique));
 end;
 
 
