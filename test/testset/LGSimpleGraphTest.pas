@@ -98,9 +98,11 @@ type
     procedure ListAllMIS1;
     procedure ListAllMIS2;
     procedure FindMIS;
+    procedure GreedyMIS;
     procedure ListAllCliques1;
     procedure ListAllCliques2;
     procedure FindMaxClique;
+    procedure GreedyMaxClique;
   end;
 
 implementation
@@ -1420,16 +1422,51 @@ var
   Mis: TIntArray;
   Exact: Boolean;
 begin
-  {%H-}Ref.Instance := GenerateComplete;
+  g := {%H-}Ref;
+  Mis := g.FindMIS(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Mis.IsEmpty);
+  Ref.Instance := GenerateComplete;
   g := Ref;
   Mis := g.FindMIS(Exact, 10);
   AssertTrue(Exact);
   AssertTrue(Mis.Length = 1);
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  Mis := g.FindMIS(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 8);
+  AssertTrue(g.IsMIS(Mis));
   Ref.Instance := GenerateC125Mis;
   g := Ref;
   Mis := g.FindMIS(Exact, 10);
   AssertTrue(Exact);
   AssertTrue(Mis.Length = 34);
+  AssertTrue(g.IsMIS(Mis));
+end;
+
+procedure TSimpleGraphTest.GreedyMIS;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mis: TIntArray;
+begin
+  g := {%H-}Ref;
+  Mis := g.GreedyMIS;
+  AssertTrue(Mis.IsEmpty);
+  Ref.Instance := GenerateComplete;
+  g := Ref;
+  Mis := g.GreedyMIS;
+  AssertTrue(Mis.Length > 0);
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  Mis := g.GreedyMIS;
+  AssertTrue(Mis.Length > 0);
+  AssertTrue(g.IsMIS(Mis));
+  Ref.Instance := GenerateC125Mis;
+  g := Ref;
+  Mis := g.GreedyMIS;
+  AssertTrue(Mis.Length > 0);
   AssertTrue(g.IsMIS(Mis));
 end;
 
@@ -1474,16 +1511,51 @@ var
   Clique: TIntArray;
   Exact: Boolean;
 begin
-  {%H-}Ref.Instance := GenerateComplete;
+  g := {%H-}Ref;
+  Clique := g.FindMaxClique(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Clique.IsEmpty);
+  Ref.Instance := GenerateComplete;
   g := Ref;
   Clique := g.FindMaxClique(Exact, 10);
   AssertTrue(Exact);
   AssertTrue(Clique.Length = g.VertexCount);
+  Ref.Instance := GenerateTestGr5Compl;
+  g := Ref;
+  Clique := g.FindMaxClique(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = 8);
+  AssertTrue(g.IsMaxClique(Clique));
   Ref.Instance := GenerateC125Clique;
   g := Ref;
   Clique := g.FindMaxClique(Exact, 10);
   AssertTrue(Exact);
   AssertTrue(Clique.Length = 34);
+  AssertTrue(g.IsMaxClique(Clique));
+end;
+
+procedure TSimpleGraphTest.GreedyMaxClique;
+var
+  Ref: TRef;
+  g: TGraph;
+  Clique: TIntArray;
+begin
+  g := {%H-}Ref;
+  Clique := g.GreedyMaxClique;
+  AssertTrue(Clique.IsEmpty);
+  Ref.Instance := GenerateComplete;
+  g := Ref;
+  Clique := g.GreedyMaxClique;
+  AssertTrue(Clique.Length > 0);
+  Ref.Instance := GenerateTestGr5Compl;
+  g := Ref;
+  Clique := g.GreedyMaxClique;
+  AssertTrue(Clique.Length > 0);
+  AssertTrue(g.IsMaxClique(Clique));
+  Ref.Instance := GenerateC125Clique;
+  g := Ref;
+  Clique := g.GreedyMaxClique;
+  AssertTrue(Clique.Length > 0);
   AssertTrue(g.IsMaxClique(Clique));
 end;
 
