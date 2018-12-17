@@ -61,7 +61,7 @@ type
 
   TOnVisit         = procedure (aSender: TObject; aIndex: SizeInt) of object;
   TOnAccept        = function (aSender: TObject; aIndex: SizeInt): Boolean of object;
-  TOnFindSet       = procedure(constref aSet: TIntArray; var aCancel: Boolean) of object;
+  TOnFindSet       = procedure(const aSet: TIntArray; var aCancel: Boolean) of object;
   TCost            = Int64;
   TVertexColor     = type Byte;
 
