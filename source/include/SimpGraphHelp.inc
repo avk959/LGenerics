@@ -190,7 +190,7 @@ begin
   Extend(Sub, Cand);
 end;
 
-procedure TGSimpleGraph.TBPCliqueIsHelper.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper.ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Sub, Cand: TBoolVector;
 begin
@@ -368,7 +368,7 @@ begin
   Extend(Sub, Cand);
 end;
 
-procedure TGSimpleGraph.TBPCliqueIsHelper256.ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
 var
   Sub, Cand: TBits256;
 begin

@@ -33,7 +33,7 @@ type
     FCurrSet: TBoolVector;
     FNodes: TIntArray;
     FOnFind: TOnFindSet;
-    procedure GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);//aka BB_Color
+    procedure GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
     procedure Extend(var aSub, aCand: TBoolVector);
     procedure FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -53,7 +53,7 @@ type
          computational experiments. }
     procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
   { executes ListCliques upon complement graph }
-    procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    procedure ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
   end;
 
   TBPCliqueIsHelper256 = object(TNodeSearch) // BP -> bit-parallel
@@ -72,7 +72,7 @@ type
     function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
-    procedure ListIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    procedure ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
   end;
 
   TCliqueHelper = object(TNodeSearch)

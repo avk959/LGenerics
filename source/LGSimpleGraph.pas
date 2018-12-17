@@ -1321,14 +1321,14 @@ procedure TGSimpleGraph.ListIsBP(aOnFind: TOnFindSet);
 var
   Helper: TBPCliqueIsHelper;
 begin
-  Helper.ListIS(Self, aOnFind);
+  Helper.ListMIS(Self, aOnFind);
 end;
 
 procedure TGSimpleGraph.ListIsBP256(aOnFind: TOnFindSet);
 var
   Helper: TBPCliqueIsHelper256;
 begin
-  Helper.ListIS(Self, aOnFind);
+  Helper.ListMIS(Self, aOnFind);
 end;
 
 function TGSimpleGraph.GetGreedyMis: TIntArray;
