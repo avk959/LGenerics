@@ -134,7 +134,7 @@ end;
 procedure TQueensSolver.Solve;
 begin
   BuildBoard;
-  FBoard.ListIndependentSets(@OnFindSolution);
+  FBoard.ListAllMIS(@OnFindSolution);
   PrintSolutions;
 end;
 
