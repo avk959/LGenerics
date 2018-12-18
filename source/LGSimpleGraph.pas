@@ -3535,6 +3535,11 @@ var
 begin
   if aK <= 0 then
     exit(tlFalse);
+  if aK >= VertexCount then
+    begin
+      aColors := TIntHelper.CreateRange(1, VertexCount);
+      exit(tlTrue);
+    end;
   K := GreedyVertexColoringRlf(aColors);
   if K <= aK then
     exit(tlTrue);
