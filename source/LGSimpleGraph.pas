@@ -3533,7 +3533,7 @@ function TGSimpleGraph.IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOu
 var
   K: SizeInt;
 begin
-  if aK <= 0 then
+  if (aK <= 0) or IsEmpty then
     exit(tlFalse);
   if aK >= VertexCount then
     begin
