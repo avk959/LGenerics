@@ -810,9 +810,11 @@ begin
   vCount := g.VertexCount;
   AssertTrue(vCount = 13);
   FFound.InitRange(vCount);
+  FDone.InitRange(vCount);
   AssertTrue(FFound.PopCount = vCount);
-  AssertTrue(g.BfsTraversal(0, @vFound) = vCount);
+  AssertTrue(g.BfsTraversal(0, @vFound, @vDone) = vCount);
   AssertTrue(FFound.IsEmpty);
+  AssertTrue(FDone.IsEmpty);
 end;
 
 procedure TSparseGraphTest.BfsTraversalDirect;
@@ -826,11 +828,14 @@ begin
   vCount := g.VertexCount;
   AssertTrue(vCount = 13);
   FFound.InitRange(vCount);
-  AssertTrue(FFound.PopCount = vCount);
-  AssertTrue(g.BfsTraversal(0, @vFound) = vCount - 2);
+  FDone.InitRange(vCount);
+  AssertTrue(g.BfsTraversal(0, @vFound, @vDone) = vCount - 2);
   AssertTrue(FFound.PopCount = 2);
   AssertTrue(FFound[7]);
   AssertTrue(FFound[8]);
+  AssertTrue(FDone.PopCount = 2);
+  AssertTrue(FDone[7]);
+  AssertTrue(FDone[8]);
 end;
 
 procedure TSparseGraphTest.ShortestPaths;
