@@ -38,6 +38,7 @@ type
     function  GenerateTestTriangles: TGraph;
     function  GenerateC125Clique: TGraph;
     function  GenerateC125Mis: TGraph;
+    function  GenerateQueen6_6: TGraph;
     procedure EdgeAdding(constref {%H-}aSrc, {%H-}aDst: Integer; var{%H-}aData: TEmptyRec);
     procedure SetFound(const aSet: TIntArray; var {%H-}aCancel: Boolean);
     procedure SetFound2(const aSet: TIntArray; var aCancel: Boolean);
@@ -65,6 +66,7 @@ type
     procedure SeparatePop;
     procedure GetSeparate;
     procedure FindSeparates;
+    procedure CreateAdjacencyMatrix;
     procedure IsTree;
     procedure IsStar;
     procedure IsCycle;
@@ -94,7 +96,6 @@ type
     procedure GetMaxBipMatchBfs;
     procedure FindMaxMatchEd;
     procedure FindMaxMatchPC;
-
     procedure ListAllMIS1;
     procedure ListAllMIS2;
     procedure FindMIS;
@@ -103,6 +104,10 @@ type
     procedure ListAllCliques2;
     procedure FindMaxClique;
     procedure GreedyMaxClique;
+
+    procedure VertexColoring;
+    procedure IsKColorable;
+    procedure CompleteColoring;
   end;
 
 implementation
@@ -145,7 +150,7 @@ end;
 
 function TSimpleGraphTest.GenerateTestGr5: TGraph;
 begin
-  //see TestGr5.png, mis count 295, independance number 8
+  //see TestGr5.png, mis count is 295, independance number is 8
   Result := TGraph.Create;
   Result.AddVertexRange(1, 20);
   Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 6, 12, 12, 7,
@@ -236,7 +241,7 @@ end;
 
 function TSimpleGraphTest.GenerateC125Clique: TGraph;
 begin
-  //C125.9.clq instance form the Second DIMACS Implementation Challenge, w = 34
+  //C125.9.clq instance from the Second DIMACS Implementation Challenge, clique number is 34
   Result := TGraph.Create;
   Result.AddVertexRange(1, 125);
   Result.AddEdges([{$I C125Clique.inc}]);
@@ -258,6 +263,14 @@ begin
       if I <> J then
         if not g.Adjacent(I, J) then
           Result.AddEdge(I, J);
+end;
+
+function TSimpleGraphTest.GenerateQueen6_6: TGraph;
+begin
+  //queen6_6.col instance from the Second DIMACS Implementation Challenge, chromatic number is 7
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 36);
+  Result.AddEdges([{$I queen6_6.inc}]);
 end;
 
 procedure TSimpleGraphTest.EdgeAdding(constref aSrc, aDst: Integer; var aData: TEmptyRec);
@@ -743,6 +756,32 @@ begin
       AssertTrue(Separates[0].Count = 11);
       AssertTrue(Separates[1].Count = 5);
     end;
+end;
+
+procedure TSimpleGraphTest.CreateAdjacencyMatrix;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TAdjacencyMatrix;
+  I, J: SizeInt;
+begin
+  g := {%H-}Ref;
+  m := g.CreateAdjacencyMatrix;
+  AssertTrue(m.IsEmpty);
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  m := g.CreateAdjacencyMatrix;
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if I <> J then
+        AssertFalse(g.AdjacentI(I, J) xor m.Adjacent(I, J));
+  Ref.Instance := GenerateC125Clique;
+  g := Ref;
+  m := g.CreateAdjacencyMatrix;
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if I <> J then
+        AssertFalse(g.AdjacentI(I, J) xor m.Adjacent(I, J));
 end;
 
 procedure TSimpleGraphTest.IsTree;
@@ -1557,6 +1596,102 @@ begin
   Clique := g.GreedyMaxClique;
   AssertTrue(Clique.Length > 0);
   AssertTrue(g.IsMaxClique(Clique));
+end;
+
+procedure TSimpleGraphTest.VertexColoring;
+var
+  Ref: TRef;
+  g: TGraph;
+  Colors: TIntArray;
+  ColCount: SizeInt;
+  Exact: Boolean;
+begin
+  g := {%H-}Ref;
+  ColCount := g.VertexColoring(Colors, Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(ColCount = 0);
+  Ref.Instance := GenerateComplete;
+  g := Ref;
+  ColCount := g.VertexColoring(Colors, Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(ColCount = g.VertexCount);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  ColCount := g.VertexColoring(Colors, Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(ColCount = 2);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateQueen6_6;
+  g := Ref;
+  ColCount := g.VertexColoring(Colors, Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(ColCount = 7);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+end;
+
+procedure TSimpleGraphTest.IsKColorable;
+var
+  Ref: TRef;
+  g: TGraph;
+  Colors: TIntArray;
+  Colorable: TTriLean;
+begin
+  g := {%H-}Ref;
+  Colorable := g.IsKColorable(3, Colors, 5);
+  AssertTrue(Colorable = tlFalse);
+  Ref.Instance := GenerateTestGrBip1;
+  g := Ref;
+  Colorable := g.IsKColorable(1, Colors, 5);
+  AssertTrue(Colorable = tlFalse);
+  Colorable := g.IsKColorable(2, Colors, 5);
+  AssertTrue(Colorable = tlTrue);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateComplete;
+  g := Ref;
+  Colorable := g.IsKColorable(Pred(g.VertexCount), Colors, 5);
+  AssertTrue(Colorable = tlFalse);
+  Colorable := g.IsKColorable(g.VertexCount, Colors, 5);
+  AssertTrue(Colorable = tlTrue);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateQueen6_6;
+  g := Ref;
+  Colorable := g.IsKColorable(6, Colors, 5);
+  AssertTrue(Colorable = tlFalse);
+  Colorable := g.IsKColorable(7, Colors, 5);
+  AssertTrue(Colorable = tlTrue);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+end;
+
+procedure TSimpleGraphTest.CompleteColoring;
+var
+  Ref: TRef;
+  g: TGraph;
+  Colors: TIntArray;
+  I: SizeInt;
+  Done: Boolean;
+begin
+  {%H-}Ref.Instance := GenerateComplete;
+  g := Ref;
+  Colors.Length := g.VertexCount;
+  for I := 0 to Pred(g.VertexCount) do
+    Colors[I] := g.VertexCount - I;
+  Done := g.CompleteColoring(g.VertexCount, Colors, 5);
+  AssertTrue(Done);
+  for I := 0 to Pred(g.VertexCount) do
+    AssertTrue(Colors[I] = g.VertexCount - I);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateQueen6_6;
+  g := Ref;
+  Colors.Length := g.VertexCount;
+  FillChar(Pointer(Colors)^, Colors.Length * SizeOf(SizeInt), 0);
+  Colors[g.IndexOf(1)] := 7;
+  Colors[g.IndexOf(2)] := 3;
+  Done := g.CompleteColoring(7, Colors, 5);
+  AssertTrue(Done);
+  AssertTrue(Colors[g.IndexOf(1)] = 7);
+  AssertTrue(Colors[g.IndexOf(2)] = 3);
+  AssertTrue(g.IsProperVertexColoring(Colors));
 end;
 
 
