@@ -218,7 +218,7 @@ begin
   Screen.Cursor := crHourGlass;
   Application.ProcessMessages;
   try
-    Result := Graph.FindCompleteColoring(16, Colors, 5);//wait for at most 5s
+    Result := Graph.CompleteColoring(16, Colors, 5);//wait for at most 5s
   finally
     Screen.Cursor := OldCursor;
   end;
