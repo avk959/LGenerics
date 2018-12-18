@@ -359,10 +359,10 @@ type
   { returns tlTrue if exist the vertex coloring which uses at most aK of colors;
     aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
     function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
-  { returns True if it is possible to complete the coloring using colors no more than aMaxColor
-    and using the predefined colors specified in aColors;
+  { returns True if it is possible to complete the coloring using no more colors than aMaxColor
+    and using predefined colors specified in aColors;
     aTimeOut specifies the timeout in seconds; at the end of the timeout False will be returned }
-    function  FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray;
+    function  CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     used RLF greedy coloring algorithm }
@@ -3545,7 +3545,7 @@ begin
     Result := ColorableDisconnected(aK, aTimeOut, aColors);
 end;
 
-function TGSimpleGraph.FindCompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
+function TGSimpleGraph.CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
 var
   Helper: TExactColor;
   I: SizeInt;
