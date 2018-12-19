@@ -3807,7 +3807,6 @@ var
   Line, ParseLine, Elem: string;
   I: SizeInt;
   CurrEdge: array[0..1] of SizeInt;
-  Symb: AnsiChar;
 begin
   Reader := ReaderRef;
   if not Reader.Open(aFileName) then
@@ -3816,8 +3815,9 @@ begin
   for Line in Reader do
     begin
       ParseLine := Trim(Line);
-      Symb := LowerCase(ParseLine)[1];
-      case Symb of
+      if ParseLine.IsEmpty then
+        continue;
+      case LowerCase(ParseLine)[1] of
         'c':
           begin
             Description.Add(System.Copy(ParseLine, 3, System.Length(ParseLine)));
@@ -3826,9 +3826,9 @@ begin
         'e':
           begin
             I := 0;
-            for Elem in Line.SplitSB([' ']) do
+            for Elem in ParseLine.SplitSB([' ']) do
               begin
-                if LowerCase(Elem) = Symb then
+                if LowerCase(Elem) = 'e' then
                   continue;
                 CurrEdge[I] := StrToInt(Elem);
                 if I = 1 then
