@@ -104,10 +104,12 @@ type
     procedure ListAllCliques2;
     procedure FindMaxClique;
     procedure GreedyMaxClique;
-
     procedure VertexColoring;
     procedure IsKColorable;
     procedure CompleteColoring;
+    procedure FindHamiltonCycles;
+    procedure FindHamiltonPaths;
+
   end;
 
 implementation
@@ -531,19 +533,23 @@ var
   g, g2: TGraph;
   Tree: TIntArray;
 begin
-  {%H-}Ref.Instance := GenerateTestGr2;
+  {%H-}Ref.Instance := GenerateTestGr1;
   g := Ref;
-  AssertTrue(g.VertexCount = 16);
-  Tree := g.DfsTree(1);
+  AssertTrue(g.VertexCount = 13);
+  Tree := g.DfsTree;
   {%H-}Ref2.Instance := g.SubgraphFromTree(Tree);
   g2 := Ref2;
+  AssertTrue(g2.VertexCount = 13);
+  AssertTrue(g2.SeparateCount = 1);
+  AssertTrue(g2.IsTree);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.VertexCount = 16);
+  Tree := g.DfsTree;
+  Ref2.Instance := g.SubgraphFromTree(Tree);
+  g2 := Ref2;
   AssertTrue(g2.VertexCount = 16);
-  AssertTrue(g2.SeparateCount = 6);
-  AssertTrue(g2.Degree(8) = 0);
-  AssertTrue(g2.Degree(9) = 0);
-  AssertTrue(g2.Degree(14) = 0);
-  AssertTrue(g2.Degree(15) = 0);
-  AssertTrue(g2.Degree(16) = 0);
+  AssertTrue(g2.SeparateCount = 2);
 end;
 
 procedure TSimpleGraphTest.SubgraphFromEdges1;
@@ -794,7 +800,16 @@ begin
   Ref.Instance := GenerateTestGr1;
   g := Ref;
   AssertFalse(g.IsTree);
-  g2 := g.SubgraphFromTree(g.BfsTree(0));
+  g2 := g.SubgraphFromTree(g.BfsTree);
+  try
+    AssertTrue(g2.IsTree);
+  finally
+    g2.Free;
+  end;
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertFalse(g.IsTree);
+  g2 := g.SubgraphFromTree(g.DfsTree);
   try
     AssertTrue(g2.IsTree);
   finally
@@ -1692,6 +1707,73 @@ begin
   AssertTrue(Colors[g.IndexOf(1)] = 7);
   AssertTrue(Colors[g.IndexOf(2)] = 3);
   AssertTrue(g.IsProperVertexColoring(Colors));
+end;
+
+procedure TSimpleGraphTest.FindHamiltonCycles;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cycles: TIntArrayVector;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertFalse(g.FindHamiltonCycles(1, 0, Cycles, 5));
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.FindHamiltonCycles(1, 0, Cycles, 5));
+  AssertTrue(Cycles.Count = 2);
+  AssertTrue(g.IsHamiltonCycle(Cycles[0], g.IndexOf(1)));
+  AssertTrue(g.IsHamiltonCycle(Cycles[1], g.IndexOf(1)));
+  AssertTrue(g.FindHamiltonCycles(1, 1, Cycles, 5));
+  AssertTrue(Cycles.Count = 1);
+  AssertTrue(g.IsHamiltonCycle(Cycles[0], g.IndexOf(1)));
+  g.RemoveEdge(1, 2);
+  AssertFalse(g.FindHamiltonCycles(1, 0, Cycles, 5));
+  {%H-}Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.FindHamiltonCycles(1, 0, Cycles, 5));
+  AssertTrue(Cycles.Count = 22);
+  for I := 0 to Pred(Cycles.Count) do
+    AssertTrue(g.IsHamiltonCycle(Cycles[I], g.IndexOf(1)));
+  AssertTrue(g.FindHamiltonCycles(1, 1, Cycles, 5));
+  AssertTrue(Cycles.Count = 1);
+end;
+
+procedure TSimpleGraphTest.FindHamiltonPaths;
+var
+  Ref: TRef;
+  g: TGraph;
+  Paths: TIntArrayVector;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertFalse(g.FindHamiltonPaths(1, 0, Paths, 5));
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  g.FindHamiltonPaths(1, 0, Paths, 5);
+  AssertTrue(g.FindHamiltonPaths(1, 0, Paths, 5));
+  AssertTrue(Paths.Count = 2);
+  AssertTrue(g.IsHamiltonPath(Paths[0], g.IndexOf(1)));
+  AssertTrue(g.IsHamiltonPath(Paths[1], g.IndexOf(1)));
+  g.RemoveEdge(1, 2);
+  AssertTrue(g.FindHamiltonPaths(1, 0, Paths, 5));
+  AssertTrue(Paths.Count = 1);
+  {%H-}Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.FindHamiltonPaths(1, 0, Paths, 5));
+  AssertTrue(Paths.Count.ToString, Paths.Count = 22);
+  for I := 0 to Pred(Paths.Count) do
+    AssertTrue(g.IsHamiltonPath(Paths[I], g.IndexOf(1)));
+  AssertTrue(g.FindHamiltonPaths(1, 1, Paths, 5));
+  AssertTrue(Paths.Count = 1);
+  AssertTrue(g.IsHamiltonPath(Paths[0], g.IndexOf(1)));
+  g.RemoveEdge(2, 3);
+  AssertTrue(g.FindHamiltonPaths(1, 0, Paths, 5));
+  AssertTrue(Paths.Count = 2);
+  AssertTrue(g.IsHamiltonPath(Paths[0], g.IndexOf(1)));
+  AssertTrue(g.IsHamiltonPath(Paths[1], g.IndexOf(1)));
 end;
 
 
