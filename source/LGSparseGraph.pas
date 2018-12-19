@@ -442,20 +442,16 @@ type
     if aOnFound returns False then traversal stops }
     function  DfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt; inline;
     function  DfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
-  { returns the DFS traversal tree(forest, if not connected) started from vertex aRoot;
-    each element contains the index of its parent (or -1 if it is root or not connected),
-    i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
-    function  DfsTree(constref aRoot: TVertex): TIntArray; inline;
-    function  DfsTreeI(aRoot: SizeInt): TIntArray;
+  { returns the DFS traversal tree(forest, if not connected) started from vertex with index 0;
+    each element of Result contains the index of its parent in tree(or -1 if it is root) }
+    function  DfsTree: TIntArray;
   { returns count of visited vertices during the BFS traversal;
     aOnFound calls after vertex found; if aOnFound returns False then traversal stops}
     function  BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt; inline;
     function  BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
-  { returns the BFS traversal tree(forest, if not connected) started from vertex aRoot;
-    each element contains the index of its parent (or -1 if it is root or not connected),
-    i.e. provides a pair of source - destination(Result[index] - source, index - destination) }
-    function  BfsTree(constref aRoot: TVertex): TIntArray; inline;
-    function  BfsTreeI(aRoot: SizeInt): TIntArray;
+  { returns the BFS traversal tree(forest, if not connected) started from vertex with index 0;
+    each element of Result contains the index of its parent (or -1 if it is root) }
+    function  BfsTree: TIntArray;
 
 {**********************************************************************************************************
   shortest path problem utilities
@@ -1928,36 +1924,38 @@ begin
     end;
 end;
 
-function TGSparseGraph.DfsTree(constref aRoot: TVertex): TIntArray;
-begin
-  Result := DfsTreeI(IndexOf(aRoot));
-end;
-
-function TGSparseGraph.DfsTreeI(aRoot: SizeInt): TIntArray;
+function TGSparseGraph.DfsTree: TIntArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  Curr, Next: SizeInt;
+  Visited: TBitVector;
+  I, Curr, Next: SizeInt;
 begin
-  CheckIndexRange(aRoot);
+  if IsEmpty then
+    exit(nil);
   Stack := TSimpleStack.Create(VertexCount);
   Result := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
-  Result[aRoot] := aRoot;
-  {%H-}Stack.Push(aRoot);
-  while Stack.TryPeek(Curr) do
-    if AdjEnums[{%H-}Curr].MoveNext then
+  Visited.Size := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
       begin
-        Next := AdjEnums[Curr].Current;
-        if Result[Next] = NULL_INDEX then
-          begin
-            Result[Next] := Curr;
-            Stack.Push(Next);
-          end;
-      end
-    else
-      Stack.Pop;
-  Result[aRoot] := NULL_INDEX;
+        {%H-}Stack.Push(I);
+        Visited[I] := True;
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[{%H-}Curr].MoveNext then
+            begin
+              Next := AdjEnums[Curr].Current;
+              if not Visited[Next] then
+                begin
+                  Result[Next] := Curr;
+                  Visited[Next] := True;
+                  Stack.Push(Next);
+                end;
+            end
+          else
+            Stack.Pop;
+      end;
 end;
 
 function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept; aOnDone: TOnVisit): SizeInt;
@@ -1975,14 +1973,14 @@ var
 begin
   Result := 0;
   CheckIndexRange(aRoot);
-  Visited.Size := VertexCount;
-  System.SetLength(Queue, VertexCount);
+  Inc(Result);
   if Assigned(aOnFound) and not aOnFound(Self, aRoot) then
     exit;
+  Visited.Size := VertexCount;
+  Queue.Length := VertexCount;
   Visited[aRoot] := True;
   Queue[qTail] := aRoot;
   Inc(qTail);
-  Inc(Result);
   while qHead < qTail do
     begin
       aRoot := Queue[qHead];
@@ -2002,38 +2000,43 @@ begin
     end;
 end;
 
-function TGSparseGraph.BfsTree(constref aRoot: TVertex): TIntArray;
-begin
-  Result := BfsTreeI(IndexOf(aRoot));
-end;
-
-function TGSparseGraph.BfsTreeI(aRoot: SizeInt): TIntArray;
+function TGSparseGraph.BfsTree: TIntArray;
 var
   Queue: TIntArray;
-  Curr: SizeInt;
+  Visited: TBitVector;
+  I, Curr, Next: SizeInt;
   p: PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
-  CheckIndexRange(aRoot);
-  System.SetLength(Queue, VertexCount);
+  if IsEmpty then
+    exit(nil);
+  Queue.Length := VertexCount;
+  Visited.Size := VertexCount;
   Result := CreateIntArray;
-  Result[aRoot] := aRoot;
-  Queue[qTail] := aRoot;
-  Inc(qTail);
-  while qHead < qTail do
-    begin
-      Curr := Queue[qHead];
-      Inc(qHead);
-      for p in AdjLists[Curr]^ do
-        if Result[p^.Destination] = NULL_INDEX then
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Queue[qTail] := I;
+        Inc(qTail);
+        Visited[I] := True;
+        while qHead < qTail do
           begin
-            Queue[qTail] := p^.Destination;
-            Inc(qTail);
-            Result[p^.Destination] := Curr;
+            Curr := Queue[qHead];
+            Inc(qHead);
+            for p in AdjLists[Curr]^ do
+              begin
+                Next := p^.Destination;
+                if not Visited[Next] then
+                  begin
+                    Result[Next] := Curr;
+                    Visited[Next] := True;
+                    Queue[qTail] := Next;
+                    Inc(qTail);
+                  end;
+              end;
           end;
-    end;
-  Result[aRoot] := NULL_INDEX;
+      end;
 end;
 
 function TGSparseGraph.ShortestPathLen(constref aSrc, aDst: TVertex): SizeInt;
