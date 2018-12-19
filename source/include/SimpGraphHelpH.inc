@@ -185,9 +185,8 @@ type
     FVacant: TBoolVector;
     FStack: TSimpleStack;
     FPaths: PIntArrayVector;
-    FCheckNode: TOnCheckNode;
+    FOnCheckNode: TOnCheckNode;
     FSource,
-    FTarget,
     FNodeCount,
     FRequired,
     FFound: SizeInt;
@@ -206,7 +205,7 @@ type
   public
     function  FindCycles(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
               pv: PIntArrayVector): Boolean;
-    function  FindPaths(aGraph: TGSimpleGraph; aSrc, aDst, aCount: SizeInt; aTimeOut: Integer;
+    function  FindPaths(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
               pv: PIntArrayVector): Boolean;
   end;
 

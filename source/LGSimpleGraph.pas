@@ -385,12 +385,12 @@ type
     from the vertex aSrc to vertex aDst; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
     the timeout in seconds; at the end of the timeout False will be returned }
-    function  FindHamiltonPaths(constref aSrc, aDst: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+    function  FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean; inline;
-    function  FindHamiltonPathsI(aSrcIdx, aDstIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
+    function  FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestPath is Hamiltonian path starting from the vertex with index aSourceIdx }
-    function  IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
+    function  IsHamiltonPath(const aTestPath: TIntArray; aSourceIdx: SizeInt): Boolean;
 {**********************************************************************************************************
   properties
 ***********************************************************************************************************}
@@ -3645,6 +3645,8 @@ var
   I, Curr, Next: SizeInt;
 begin
   CheckIndexRange(aSourceIdx);
+  if not Connected or (VertexCount < 2) then
+    exit(False);
   if aTestCycle.Length <> Succ(VertexCount) then
     exit(False);
   if (aTestCycle[0] <> aSourceIdx) or (aTestCycle[VertexCount] <> aSourceIdx) then
@@ -3667,45 +3669,50 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindHamiltonPaths(constref aSrc, aDst: TVertex; aCount: SizeInt; out
-  aPaths: TIntArrayVector; aTimeOut: Integer): Boolean;
+function TGSimpleGraph.FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+  aTimeOut: Integer): Boolean;
 begin
-  Result := FindHamiltonPathsI(IndexOf(aSrc), IndexOf(aDst), aCount, aPaths, aTimeOut);
+  Result := FindHamiltonPathsI(IndexOf(aSource), aCount, aPaths, aTimeOut);
 end;
 
-function TGSimpleGraph.FindHamiltonPathsI(aSrcIdx, aDstIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
+function TGSimpleGraph.FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
   Helper: THamiltonian;
-  I: SizeInt;
+  I, LeafCount: SizeInt;
 begin
-  CheckIndexRange(aSrcIdx);
-  CheckIndexRange(aDstIdx);
+  CheckIndexRange(aSourceIdx);
   {%H-}aPaths.Clear;
   if not Connected or (VertexCount < 2) then
     exit(False);
+  LeafCount := 0;
   for I := 0 to Pred(VertexCount) do
-    if (I <> aSrcIdx) and (I <> aDstIdx) and (AdjLists[I]^.Count < 2) then
-      exit(False);
-  Result := Helper.FindPaths(Self, aSrcIdx, aDstIdx, aCount, aTimeOut, @aPaths);
+    if AdjLists[I]^.Count < 2 then
+      begin
+        Inc(LeafCount);
+        if LeafCount > 2 then
+          exit(False);
+      end;
+  if (LeafCount = 2) and not (AdjLists[aSourceIdx]^.Count < 2) then
+    exit(False);
+  Result := Helper.FindPaths(Self, aSourceIdx, aCount, aTimeOut, @aPaths);
 end;
 
-function TGSimpleGraph.IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
+function TGSimpleGraph.IsHamiltonPath(const aTestPath: TIntArray; aSourceIdx: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
 begin
-  CheckIndexRange(aSrcIdx);
-  CheckIndexRange(aDstIdx);
+  CheckIndexRange(aSourceIdx);
+  if not Connected or (VertexCount < 2) then
+    exit(False);
   if aTestPath.Length <> VertexCount then
     exit(False);
-  if aTestPath[0] <> aSrcIdx then
-    exit(False);
-  if aTestPath[Pred(VertexCount)] <> aDstIdx then
+  if aTestPath[0] <> aSourceIdx then
     exit(False);
   VertSet.Size := VertexCount;
-  Next := aSrcIdx;
-  VertSet[aSrcIdx] := True;
+  Next := aSourceIdx;
+  VertSet[aSourceIdx] := True;
   for I := 1 to Pred(VertexCount) do
     begin
       Curr := Next;
