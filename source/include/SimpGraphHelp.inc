@@ -778,14 +778,14 @@ begin
   System.FillChar(Pointer(AdjColors)^, aUpperBound * SizeOf(Integer), 0);
 end;
 
-procedure TGSimpleGraph.TExactColor.TNode.NeighbPickColor(aColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.TNode.NeighbPickColor(aColor: Integer);
 begin
   Saturation += Ord(AdjColors[Pred(aColor)] = 0);
   Inc(AdjColors[Pred(aColor)]);
   Dec(Degree);
 end;
 
-procedure TGSimpleGraph.TExactColor.TNode.NeighbDropColor(aColor: SizeInt);
+procedure TGSimpleGraph.TExactColor.TNode.NeighbDropColor(aColor: Integer);
 begin
   Dec(AdjColors[Pred(aColor)]);
   Saturation -= Ord(AdjColors[Pred(aColor)] = 0);

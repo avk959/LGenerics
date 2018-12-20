@@ -126,11 +126,11 @@ type
   type
     TNode = record
       Saturation,
-      Degree: SizeInt;
+      Degree: Integer;
       AdjColors: array of Integer;
       constructor Create(aDegree, aUpperBound: SizeInt);
-      procedure NeighbPickColor(aColor: SizeInt); inline;
-      procedure NeighbDropColor(aColor: SizeInt); inline;
+      procedure NeighbPickColor(aColor: Integer); inline;
+      procedure NeighbDropColor(aColor: Integer); inline;
       function  Available(aColor: Integer): Boolean; inline;
     end;
 
