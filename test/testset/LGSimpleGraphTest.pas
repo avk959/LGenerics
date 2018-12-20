@@ -1639,6 +1639,8 @@ begin
   AssertTrue(g.IsProperVertexColoring(Colors));
   Ref.Instance := GenerateQueen6_6;
   g := Ref;
+  ColCount := g.GreedyVertexColoringRlf(Colors);
+  AssertTrue(ColCount > 7);
   ColCount := g.VertexColoring(Colors, Exact, 5);
   AssertTrue(Exact);
   AssertTrue(ColCount = 7);
