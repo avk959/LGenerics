@@ -296,7 +296,7 @@ type
 ***********************************************************************************************************}
 
   { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality, used Hopcroft–Karp algorithm }
+    the maximum cardinality, used Hopcroft–Karp algorithm with recursive DFS }
     function FindMaxBipMatchHK(out aMatch: TIntEdgeArray): Boolean;
   { returns the matching of the maximum cardinality in a bipartite graph without any checks }
     function GetMaxBipMatchHK(const aWhites, aGrays: TIntArray): TIntEdgeArray;

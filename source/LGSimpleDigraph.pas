@@ -501,12 +501,12 @@ type
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow, if result = nsOk, 0 otherwise;
-    used Dinitz's algorithm }
+    used Dinitz's algorithm with recursive DFS }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState; inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
   { returns state of network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow and flows through the arcs
-    in array a, if result = nsOk, 0 and nil otherwise; used Dinitz's algorithm }
+    in array a, if result = nsOk, 0 and nil otherwise; used Dinitz's algorithm with recursive DFS }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
     function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
@@ -528,7 +528,7 @@ type
     function FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns value of the minimum cut in aValue and vertex partition in aCut,
-    if result = nsOk, otherwise 0 and empty partition; used Dinitz's algorithm }
+    if result = nsOk, otherwise 0 and empty partition; used Dinitz's algorithm with recursive DFS }
     function FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
     function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
   { aCosts specifies arc cost function, negative costs allows;
