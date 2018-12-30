@@ -692,7 +692,7 @@ end;
 function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
-  Univ, Sub, Cand: TBits256;
+  Sub, Cand: TBits256;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
@@ -701,9 +701,85 @@ begin
   FRecentBest := aGraph.GreedyMDS;
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
-  Univ := Sub;
   Extend(Sub, Cand);
-  //Extend2(Univ, Sub, Cand);
+  aExact := not FCancelled;
+  Result := FRecentBest;
+end;
+
+{ TGSimpleGraph.TBPDomSetHelper256_ }
+
+procedure TGSimpleGraph.TBPDomSetHelper256_.FillMatrix(aGraph: TGSimpleGraph);
+var
+  I, J: SizeInt;
+  pList: PAdjList;
+begin
+  FNodes := aGraph.SortNodesByDegree(soDesc);
+  System.SetLength(FMatrix, System.Length(FNodes));
+  for I := 0 to Pred(System.High(FNodes)) do
+    begin
+      FMatrix[I].InitZero;
+      pList := aGraph.AdjLists[FNodes[I]];
+      for J := 0 to System.High(FNodes) do
+        if (I <> J) and pList^.Contains(FNodes[J]) then
+          FMatrix[I][J] := True;
+    end;
+end;
+
+procedure TGSimpleGraph.TBPDomSetHelper256_.Extend(constref aSub, aCand: TBits256);
+var
+  NewSub, NewCand: TBits256;
+  I, J, Count: SizeInt;
+begin
+  if aSub.NonEmpty then
+    begin
+      Count := aCand.PopCount;
+      if Count >= FRecentBest.Length - 1 then
+        exit;
+      if TimeOut then
+        exit;
+      I := aSub.Bsf;
+      NewCand := aCand;
+      NewCand[FNodes[I]] := True;
+      NewSub := aSub.Difference(FMatrix[I]);
+      NewSub[I] := False;
+      Extend(NewSub, NewCand);
+      if Count >= FRecentBest.Length - 1 then
+        exit;
+      for J in aSub.Intersection(FMatrix[I]) do
+        begin
+          NewCand[FNodes[I]] := False;
+          NewCand[FNodes[J]] := True;
+          NewSub := aSub.Difference(FMatrix[J]);
+          NewSub[J] := False;
+          Extend(NewSub, NewCand);
+          if Count >= FRecentBest.Length - 2 then
+            exit;
+          NewCand[FNodes[I]] := True;
+          NewSub.Subtract(FMatrix[I]);
+          Extend(NewSub, NewCand);
+          if Count >= FRecentBest.Length - 1 then
+            exit;
+          NewCand[FNodes[J]] := False;
+        end;
+    end
+  else
+    if aCand.PopCount < FRecentBest.Length then
+      FRecentBest := aCand.ToArray;
+end;
+
+function TGSimpleGraph.TBPDomSetHelper256_.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
+  out aExact: Boolean): TIntArray;
+var
+  Sub, Cand: TBits256;
+begin
+  FTimeOut := aTimeOut and System.High(Integer);
+  FCancelled := False;
+  FStartTime := Now;
+  FillMatrix(aGraph);
+  FRecentBest := aGraph.GreedyMDS;
+  {%H-}Cand.InitZero;
+  Sub.InitRange(aGraph.VertexCount);
+  Extend(Sub, Cand);
   aExact := not FCancelled;
   Result := FRecentBest;
 end;
