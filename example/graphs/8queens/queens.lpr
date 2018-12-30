@@ -25,12 +25,16 @@ type
 
   TQueensSolver = class
   private
+  const
+    INDEPENDENCE_NUMBER = 8;
+  var
     FBoard: TStrChart;
     FSolutions: TStrArrayVector;
     procedure BuildBoard;
     function  CopySolution(const s: TIntArray): TStringArray;
     procedure OnFindSolution(const s: TIntArray; var {%H-}aCancel: Boolean);
     procedure PrintSolutions;
+    function  IndependenceNumber: Integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -104,7 +108,7 @@ end;
 
 procedure TQueensSolver.OnFindSolution(const s: TIntArray; var aCancel: Boolean);
 begin
-  if Length(s) = 8 then
+  if Length(s) = INDEPENDENCE_NUMBER then
     FSolutions.Add(CopySolution(s));
 end;
 
@@ -120,6 +124,13 @@ begin
   Writeln('Total solutions: ', FSolutions.Count);
 end;
 
+function TQueensSolver.IndependenceNumber: Integer;
+var
+  Exact: Boolean;
+begin
+  Result := Length(FBoard.FindMIS(Exact));
+end;
+
 constructor TQueensSolver.Create;
 begin
   FBoard := TStrChart.Create;
@@ -132,8 +143,16 @@ begin
 end;
 
 procedure TQueensSolver.Solve;
+var
+  INum: Integer;
 begin
   BuildBoard;
+  INum := IndependenceNumber;
+  if INum <> INDEPENDENCE_NUMBER then
+    begin
+      Writeln(Format('Unexpected independence number of input graph', [INum]));
+      exit;
+    end;
   FBoard.ListAllMIS(@OnFindSolution);
   PrintSolutions;
 end;

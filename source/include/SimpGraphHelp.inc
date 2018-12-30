@@ -629,62 +629,59 @@ begin
       FRecentBest := aCand.ToArray;
 end;
 
-procedure TGSimpleGraph.TBPDomSetHelper256.Extend2(constref aSub, aCand: TBits256);
+procedure TGSimpleGraph.TBPDomSetHelper256.Extend2(constref aUniv, aSub, aCand: TBits256);
 var
-  NewSub, NewCand, InterSect: TBits256;
+  NewUniv, NewSub, NewCand, InterSect: TBits256;
   I, J, Count: SizeInt;
 begin
-  if aSub.NonEmpty then
+  if aUniv.NonEmpty then
     begin
+      if aSub.IsEmpty then
+        exit;
       Count := aCand.PopCount;
       if Count >= FRecentBest.Length - 1 then
         exit;
       if TimeOut then
         exit;
       I := aSub.Bsf;
-      InterSect := aSub.Intersection(FMatrix[I]);
+      InterSect := aUniv.Intersection(FMatrix[I]);
       case InterSect.PopCount of
         0:
           begin
-            NewCand := aCand;
-            NewCand[FNodes[I]] := True;
+            NewUniv := aUniv;
             NewSub := aSub;
+            NewCand := aCand;
+            NewUniv[I] := False;
             NewSub[I] := False;
-            Extend2(NewSub, NewCand);
+            NewCand[FNodes[I]] := True;
+            Extend2(NewUniv, NewSub, NewCand);
           end;
         1:
           begin
             J := InterSect.Bsf;
-            NewCand := aCand;
-            NewCand[FNodes[J]] := True;
+            NewUniv := aUniv.Difference(FMatrix[J]);
             NewSub := aSub.Difference(FMatrix[J]);
+            NewCand := aCand;
+            NewUniv[J] := False;
             NewSub[J] := False;
-            Extend2(NewSub, NewCand);
+            NewCand[FNodes[J]] := True;
+            Extend2(NewUniv, NewSub, NewCand);
           end;
       else
-        NewCand := aCand;
-        NewCand[FNodes[I]] := True;
+        NewUniv := aUniv.Difference(FMatrix[I]);
         NewSub := aSub.Difference(FMatrix[I]);
+        NewCand := aCand;
+        NewUniv[I] := False;
         NewSub[I] := False;
-        Extend2(NewSub, NewCand);
-        if Count >= FRecentBest.Length - 1 then
+        NewCand[FNodes[I]] := True;
+        Extend2(NewUniv, NewSub, NewCand);
+        if Count >= FRecentBest.Length then
           exit;
-        for J in InterSect do
-          begin
-            NewCand[FNodes[I]] := False;
-            NewCand[FNodes[J]] := True;
-            NewSub := aSub.Difference(FMatrix[J]);
-            NewSub[J] := False;
-            Extend2(NewSub, NewCand);
-            if Count >= FRecentBest.Length - 2 then
-              exit;
-            NewCand[FNodes[I]] := True;
-            NewSub.Subtract(FMatrix[I]);
-            Extend2(NewSub, NewCand);
-            if Count >= FRecentBest.Length - 1 then
-              exit;
-            NewCand[FNodes[J]] := False;
-          end;
+        NewUniv := aUniv;
+        NewSub := aSub;
+        NewSub[I] := False;
+        NewCand[FNodes[I]] := False;
+        Extend2(NewUniv, NewSub, NewCand);
       end;
     end
   else
@@ -695,7 +692,7 @@ end;
 function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
-  Sub, Cand: TBits256;
+  Univ, Sub, Cand: TBits256;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
@@ -704,7 +701,9 @@ begin
   FRecentBest := aGraph.GreedyMDS;
   {%H-}Cand.InitZero;
   Sub.InitRange(aGraph.VertexCount);
+  Univ := Sub;
   Extend(Sub, Cand);
+  //Extend2(Univ, Sub, Cand);
   aExact := not FCancelled;
   Result := FRecentBest;
 end;
