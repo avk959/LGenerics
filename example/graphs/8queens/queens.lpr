@@ -150,7 +150,7 @@ begin
   INum := IndependenceNumber;
   if INum <> INDEPENDENCE_NUMBER then
     begin
-      Writeln(Format('Unexpected independence number of input graph', [INum]));
+      Writeln(Format('Unexpected independence number of input graph(%d)', [INum]));
       exit;
     end;
   FBoard.ListAllMIS(@OnFindSolution);
