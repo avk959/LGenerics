@@ -492,353 +492,326 @@ end;
 
 { TGSimpleGraph.TBPDomSetHelper }
 
-procedure TGSimpleGraph.TBPDomSetHelper.FillMatrix(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TBPDomSetHelper.FillMatrix(aGraph: TGSimpleGraph; out aCand: TBoolVector);
 var
-  I, J: SizeInt;
+  I, J, Degree: SizeInt;
   pList: PAdjList;
 begin
   FNodes := aGraph.SortNodesByDegree(soDesc);
   System.SetLength(FMatrix, System.Length(FNodes));
+  aCand.InitRange(FNodes.Length);
+  FCurrSet.Size := FNodes.Length;
   for I := 0 to System.High(FNodes) do
     begin
-      FMatrix[I].Size := System.Length(FNodes);
+      FMatrix[I].Size := FNodes.Length;
       pList := aGraph.AdjLists[FNodes[I]];
+      Degree := 0;
       for J := 0 to System.High(FNodes) do
         if (I <> J) and pList^.Contains(FNodes[J]) then
-          FMatrix[I][J] := True;
+          begin
+            FMatrix[I][J] := True;
+            Inc(Degree);
+          end;
+      if Degree = 0 then
+        begin
+          FCurrSet[FNodes[I]] := True;
+          aCand[I] := False;
+        end
+      else
+        if Degree = 1 then
+          begin
+            J := FMatrix[I].Bsf;
+            FCurrSet[FNodes[J]] := True;
+            aCand[J] := False;
+            aCand[I] := False;
+          end
     end;
 end;
 
-procedure TGSimpleGraph.TBPDomSetHelper.Extend(constref aSub, aCand: TBoolVector);
+procedure TGSimpleGraph.TBPDomSetHelper.Extend(const aCand: TBoolVector);
 var
-  NewSub, NewCand: TBoolVector;
+  NewCand, InterSect: TBoolVector;
   I, J, Count: SizeInt;
 begin
-  if aSub.NonEmpty then
+  if aCand.NonEmpty then
     begin
-      Count := aCand.PopCount;
+      Count := FCurrSet.PopCount;
       if Count >= FRecentBest.Length - 1 then
         exit;
       if TimeOut then
         exit;
-      I := aSub.Bsf;
-      NewCand := aCand;
-      NewCand[FNodes[I]] := True;
-      NewSub := aSub.Difference(FMatrix[I]);
-      NewSub[I] := False;
-      Extend(NewSub, NewCand);
-      if Count >= FRecentBest.Length - 1 then
-        exit;
-      for J in aSub.Intersection(FMatrix[I]) do
-        begin
-          NewCand[FNodes[I]] := False;
-          NewCand[FNodes[J]] := True;
-          NewSub := aSub.Difference(FMatrix[J]);
-          NewSub[J] := False;
-          Extend(NewSub, NewCand);
-          if Count >= FRecentBest.Length - 2 then
-            exit;
-          NewCand[FNodes[I]] := True;
-          NewSub.Subtract(FMatrix[I]);
-          Extend(NewSub, NewCand);
-          if Count >= FRecentBest.Length - 1 then
-            exit;
-          NewCand[FNodes[J]] := False;
-        end;
+      I := aCand.Bsf;
+      InterSect := aCand.Intersection(FMatrix[I]);
+      case InterSect.PopCount of
+        0:
+          begin
+            NewCand := aCand;
+            NewCand[I] := False;
+            FCurrSet[FNodes[I]] := True;
+            Extend(NewCand);
+            FCurrSet[FNodes[I]] := False;
+          end;
+        1:
+          begin
+            J := InterSect.Bsf;
+            NewCand := aCand.Difference(FMatrix[J]);
+            NewCand[J] := False;
+            FCurrSet[FNodes[J]] := True;
+            Extend(NewCand);
+            FCurrSet[FNodes[J]] := False;
+          end;
+      else
+        I := aCand.Bsf;
+        NewCand := aCand.Difference(FMatrix[I]);
+        NewCand[I] := False;
+        FCurrSet[FNodes[I]] := True;
+        Extend(NewCand);
+        FCurrSet[FNodes[I]] := False;
+        if Count >= Pred(FRecentBest.Length) then
+          exit;
+        for J in InterSect do
+          begin
+            NewCand := aCand.Difference(FMatrix[J]);
+            NewCand[J] := False;
+            FCurrSet[FNodes[J]] := True;
+            Extend(NewCand);
+            if Count < FRecentBest.Length - 2 then
+              begin
+                NewCand.Subtract(FMatrix[I]);
+                FCurrSet[FNodes[I]] := True;
+                Extend(NewCand);
+                FCurrSet[FNodes[I]] := False;
+              end;
+            FCurrSet[FNodes[J]] := False;
+            if Count >= Pred(FRecentBest.Length) then
+              exit;
+          end;
+      end;
     end
   else
-    if aCand.PopCount < FRecentBest.Length then
-      FRecentBest := aCand.ToArray;
+    if FCurrSet.PopCount < FRecentBest.Length then
+      FRecentBest := FCurrSet.ToArray;
 end;
 
 function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
-  Sub, Cand: TBoolVector;
+  Cand: TBoolVector;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
   FStartTime := Now;
-  FillMatrix(aGraph);
+  FillMatrix(aGraph, Cand);
   FRecentBest := aGraph.GreedyMDS;
-  Cand.Size := aGraph.VertexCount;
-  Sub.InitRange(aGraph.VertexCount);
-  Extend(Sub, Cand);
+  Extend(Cand);
   aExact := not FCancelled;
   Result := FRecentBest;
 end;
 
 { TGSimpleGraph.TBPDomSetHelper256 }
 
-procedure TGSimpleGraph.TBPDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph);
+procedure TGSimpleGraph.TBPDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph; out aCand: TBits256);
 var
-  I, J: SizeInt;
+  I, J, Degree: SizeInt;
   pList: PAdjList;
 begin
   FNodes := aGraph.SortNodesByDegree(soDesc);
   System.SetLength(FMatrix, System.Length(FNodes));
-  for I := 0 to Pred(System.High(FNodes)) do
+  aCand.InitRange(FNodes.Length);
+  FCurrSet.InitZero;
+  for I := 0 to System.High(FNodes) do
     begin
       FMatrix[I].InitZero;
       pList := aGraph.AdjLists[FNodes[I]];
+      Degree := 0;
       for J := 0 to System.High(FNodes) do
         if (I <> J) and pList^.Contains(FNodes[J]) then
-          FMatrix[I][J] := True;
+          begin
+            FMatrix[I][J] := True;
+            Inc(Degree);
+          end;
+      if Degree = 0 then
+        begin
+          FCurrSet[FNodes[I]] := True;
+          aCand[I] := False;
+        end
+      else
+        if Degree = 1 then
+          begin
+            J := FMatrix[I].Bsf;
+            FCurrSet[FNodes[J]] := True;
+            aCand[J] := False;
+            aCand[I] := False;
+          end
     end;
 end;
 
-procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aSub, aCand: TBits256);
+procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aCand: TBits256);
 var
-  NewSub, NewCand: TBits256;
+  NewCand, InterSect: TBits256;
   I, J, Count: SizeInt;
 begin
-  if aSub.NonEmpty then
+  if aCand.NonEmpty then
     begin
-      Count := aCand.PopCount;
+      Count := FCurrSet.PopCount;
       if Count >= FRecentBest.Length - 1 then
         exit;
       if TimeOut then
         exit;
-      I := aSub.Bsf;
-      NewCand := aCand;
-      NewCand[FNodes[I]] := True;
-      NewSub := aSub.Difference(FMatrix[I]);
-      NewSub[I] := False;
-      Extend(NewSub, NewCand);
-      if Count >= FRecentBest.Length - 1 then
-        exit;
-      for J in aSub.Intersection(FMatrix[I]) do
-        begin
-          NewCand[FNodes[I]] := False;
-          NewCand[FNodes[J]] := True;
-          NewSub := aSub.Difference(FMatrix[J]);
-          NewSub[J] := False;
-          Extend(NewSub, NewCand);
-          if Count >= FRecentBest.Length - 2 then
-            exit;
-          NewCand[FNodes[I]] := True;
-          NewSub.Subtract(FMatrix[I]);
-          Extend(NewSub, NewCand);
-          if Count >= FRecentBest.Length - 1 then
-            exit;
-          NewCand[FNodes[J]] := False;
-        end;
-    end
-  else
-    if aCand.PopCount < FRecentBest.Length then
-      FRecentBest := aCand.ToArray;
-end;
-
-procedure TGSimpleGraph.TBPDomSetHelper256.Extend2(constref aUniv, aSub, aCand: TBits256);
-var
-  NewUniv, NewSub, NewCand, InterSect: TBits256;
-  I, J, Count: SizeInt;
-begin
-  if aUniv.NonEmpty then
-    begin
-      if aSub.IsEmpty then
-        exit;
-      Count := aCand.PopCount;
-      if Count >= FRecentBest.Length - 1 then
-        exit;
-      if TimeOut then
-        exit;
-      I := aSub.Bsf;
-      InterSect := aUniv.Intersection(FMatrix[I]);
+      I := aCand.Bsf;
+      InterSect := aCand.Intersection(FMatrix[I]);
       case InterSect.PopCount of
         0:
           begin
-            NewUniv := aUniv;
-            NewSub := aSub;
             NewCand := aCand;
-            NewUniv[I] := False;
-            NewSub[I] := False;
-            NewCand[FNodes[I]] := True;
-            Extend2(NewUniv, NewSub, NewCand);
+            NewCand[I] := False;
+            FCurrSet[FNodes[I]] := True;
+            Extend(NewCand);
+            FCurrSet[FNodes[I]] := False;
           end;
         1:
           begin
             J := InterSect.Bsf;
-            NewUniv := aUniv.Difference(FMatrix[J]);
-            NewSub := aSub.Difference(FMatrix[J]);
-            NewCand := aCand;
-            NewUniv[J] := False;
-            NewSub[J] := False;
-            NewCand[FNodes[J]] := True;
-            Extend2(NewUniv, NewSub, NewCand);
+            NewCand := aCand.Difference(FMatrix[J]);
+            NewCand[J] := False;
+            FCurrSet[FNodes[J]] := True;
+            Extend(NewCand);
+            FCurrSet[FNodes[J]] := False;
           end;
       else
-        NewUniv := aUniv.Difference(FMatrix[I]);
-        NewSub := aSub.Difference(FMatrix[I]);
-        NewCand := aCand;
-        NewUniv[I] := False;
-        NewSub[I] := False;
-        NewCand[FNodes[I]] := True;
-        Extend2(NewUniv, NewSub, NewCand);
-        if Count >= FRecentBest.Length then
+        I := aCand.Bsf;
+        NewCand := aCand.Difference(FMatrix[I]);
+        NewCand[I] := False;
+        FCurrSet[FNodes[I]] := True;
+        Extend(NewCand);
+        FCurrSet[FNodes[I]] := False;
+        if Count >= Pred(FRecentBest.Length) then
           exit;
-        NewUniv := aUniv;
-        NewSub := aSub;
-        NewSub[I] := False;
-        NewCand[FNodes[I]] := False;
-        Extend2(NewUniv, NewSub, NewCand);
+        for J in InterSect do
+          begin
+            NewCand := aCand.Difference(FMatrix[J]);
+            NewCand[J] := False;
+            FCurrSet[FNodes[J]] := True;
+            Extend(NewCand);
+            if Count < FRecentBest.Length - 2 then
+              begin
+                NewCand.Subtract(FMatrix[I]);
+                FCurrSet[FNodes[I]] := True;
+                Extend(NewCand);
+                FCurrSet[FNodes[I]] := False;
+              end;
+            FCurrSet[FNodes[J]] := False;
+            if Count >= Pred(FRecentBest.Length) then
+              exit;
+          end;
       end;
     end
   else
-    if aCand.PopCount < FRecentBest.Length then
-      FRecentBest := aCand.ToArray;
+    if FCurrSet.PopCount < FRecentBest.Length then
+      FRecentBest := FCurrSet.ToArray;
 end;
 
 function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
-  Sub, Cand: TBits256;
+  Cand: TBits256;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
   FStartTime := Now;
-  FillMatrix(aGraph);
+  FillMatrix(aGraph, Cand);
   FRecentBest := aGraph.GreedyMDS;
-  {%H-}Cand.InitZero;
-  Sub.InitRange(aGraph.VertexCount);
-  Extend(Sub, Cand);
-  aExact := not FCancelled;
-  Result := FRecentBest;
-end;
-
-{ TGSimpleGraph.TBPDomSetHelper256_ }
-
-procedure TGSimpleGraph.TBPDomSetHelper256_.FillMatrix(aGraph: TGSimpleGraph);
-var
-  I, J: SizeInt;
-  pList: PAdjList;
-begin
-  FNodes := aGraph.SortNodesByDegree(soDesc);
-  System.SetLength(FMatrix, System.Length(FNodes));
-  for I := 0 to Pred(System.High(FNodes)) do
-    begin
-      FMatrix[I].InitZero;
-      pList := aGraph.AdjLists[FNodes[I]];
-      for J := 0 to System.High(FNodes) do
-        if (I <> J) and pList^.Contains(FNodes[J]) then
-          FMatrix[I][J] := True;
-    end;
-end;
-
-procedure TGSimpleGraph.TBPDomSetHelper256_.Extend(constref aSub, aCand: TBits256);
-var
-  NewSub, NewCand: TBits256;
-  I, J, Count: SizeInt;
-begin
-  if aSub.NonEmpty then
-    begin
-      Count := aCand.PopCount;
-      if Count >= FRecentBest.Length - 1 then
-        exit;
-      if TimeOut then
-        exit;
-      I := aSub.Bsf;
-      NewCand := aCand;
-      NewCand[FNodes[I]] := True;
-      NewSub := aSub.Difference(FMatrix[I]);
-      NewSub[I] := False;
-      Extend(NewSub, NewCand);
-      if Count >= FRecentBest.Length - 1 then
-        exit;
-      for J in aSub.Intersection(FMatrix[I]) do
-        begin
-          NewCand[FNodes[I]] := False;
-          NewCand[FNodes[J]] := True;
-          NewSub := aSub.Difference(FMatrix[J]);
-          NewSub[J] := False;
-          Extend(NewSub, NewCand);
-          if Count >= FRecentBest.Length - 2 then
-            exit;
-          NewCand[FNodes[I]] := True;
-          NewSub.Subtract(FMatrix[I]);
-          Extend(NewSub, NewCand);
-          if Count >= FRecentBest.Length - 1 then
-            exit;
-          NewCand[FNodes[J]] := False;
-        end;
-    end
-  else
-    if aCand.PopCount < FRecentBest.Length then
-      FRecentBest := aCand.ToArray;
-end;
-
-function TGSimpleGraph.TBPDomSetHelper256_.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
-  out aExact: Boolean): TIntArray;
-var
-  Sub, Cand: TBits256;
-begin
-  FTimeOut := aTimeOut and System.High(Integer);
-  FCancelled := False;
-  FStartTime := Now;
-  FillMatrix(aGraph);
-  FRecentBest := aGraph.GreedyMDS;
-  {%H-}Cand.InitZero;
-  Sub.InitRange(aGraph.VertexCount);
-  Extend(Sub, Cand);
+  Extend(Cand);
   aExact := not FCancelled;
   Result := FRecentBest;
 end;
 
 { TGSimpleGraph.TDomSetHelper }
 
-procedure TGSimpleGraph.TDomSetHelper.Extend(constref aSub, aCand: TIntSet);
+procedure TGSimpleGraph.TDomSetHelper.Extend(constref aCand: TIntSet);
 var
-  NewSub, NewCand: TIntSet;
+  NewCand, InterSect: TIntSet;
   I, J: SizeInt;
 begin
-  if aSub.NonEmpty then
+  if aCand.NonEmpty then
     begin
-      if aCand.Count >= FRecentBest.Length - 1 then
+      if FCurrSet.Count >= FRecentBest.Length - 1 then
         exit;
       if TimeOut then
         exit;
-      I := aSub[0];
-      NewCand.Assign(aCand);
-      NewCand.Push(I);
-      NewSub := aSub.Difference(FMatrix[I]^);
-      NewSub.Delete(I);
-      Extend(NewSub, NewCand);
-      if aCand.Count >= FRecentBest.Length - 1 then
-        exit;
-      for J in aSub.Intersection(FMatrix[I]^) do
-        begin
-          NewCand.Pop;
-          NewCand.Push(J);
-          NewSub := aSub.Difference(FMatrix[J]^);
-          NewSub.Delete(J);
-          Extend(NewSub, NewCand);
-          if NewCand.Count >= FRecentBest.Length - 1 then
-            exit;
-          NewCand.Push(I);
-          NewSub.Subtract(FMatrix[I]^);
-          Extend(NewSub, NewCand);
-          if NewCand.Count >= FRecentBest.Length then
-            exit;
-          NewCand.Pop;
-        end;
+      I := aCand[0];
+      InterSect := aCand.Intersection(FMatrix[I]^);
+      case InterSect.Count of
+        0:
+          begin
+            NewCand := aCand;
+            NewCand.Delete(I);
+            FCurrSet.Push(I);
+            Extend(NewCand);
+            FCurrSet.Pop;
+          end;
+        1:
+          begin
+            J := InterSect.Last;
+            NewCand := aCand.Difference(FMatrix[J]^);
+            NewCand.Delete(J);
+            FCurrSet.Push(J);
+            Extend(NewCand);
+            FCurrSet.Pop;
+          end;
+      else
+        NewCand.Assign(aCand);
+        FCurrSet.Push(I);
+        NewCand := aCand.Difference(FMatrix[I]^);
+        NewCand.Delete(I);
+        Extend(NewCand);
+        FCurrSet.Pop;
+        if FCurrSet.Count >= FRecentBest.Length - 1 then
+          exit;
+        for J in InterSect do
+          begin
+            FCurrSet.Push(J);
+            NewCand := aCand.Difference(FMatrix[J]^);
+            NewCand.Delete(J);
+            Extend(NewCand);
+            if FCurrSet.Count < FRecentBest.Length - 1 then
+              begin
+                FCurrSet.Push(I);
+                NewCand.Subtract(FMatrix[I]^);
+                Extend(NewCand);
+                FCurrSet.Pop;
+              end;
+            FCurrSet.Pop;
+            if FCurrSet.Count >= FRecentBest.Length - 1 then
+              exit;
+          end;
+      end;
     end
   else
     if aCand.Count < FRecentBest.Length then
-      FRecentBest := aCand.ToArray;
+      FRecentBest := FCurrSet.ToArray;
 end;
 
 function TGSimpleGraph.TDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
-  Sub, Cand: TIntSet;
+  Cand: TIntSet;
+  I: SizeInt;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
   FStartTime := Now;
   FRecentBest := aGraph.GreedyMDS;
   FMatrix := aGraph.CreateSkeleton;
-  Sub.AssignArray(aGraph.SortNodesByDegree(soDesc));
-  Extend(Sub, Cand{%H-});
+  Cand.AssignArray(aGraph.SortNodesByDegree(soDesc));
+  while Cand.NonEmpty and FMatrix[Cand.Last]^.IsEmpty do
+    FCurrSet.Push(Cand.Pop);
+  while Cand.NonEmpty and (FMatrix[Cand.Last]^.Count = 1) do
+    begin
+      FMatrix[Cand.Pop]^.FindFirst(I);
+      FCurrSet.Push(I);
+    end;
+  Extend(Cand);
   aExact := not FCancelled;
   Result := FRecentBest;
 end;

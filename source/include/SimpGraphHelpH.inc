@@ -92,9 +92,10 @@ type
   TBPDomSetHelper = object(TNodeSearch) // BP -> bit-parallel
   strict private
     FMatrix: TBoolMatrix;
+    FCurrSet: TBoolVector;
     FNodes: TIntArray;
-    procedure FillMatrix(aGraph: TGSimpleGraph);
-    procedure Extend(constref aSub, aCand: TBoolVector);
+    procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBoolVector);
+    procedure Extend(const aCand: TBoolVector);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
@@ -103,20 +104,10 @@ type
   TBPDomSetHelper256 = object(TNodeSearch) // BP -> bit-parallel
   strict private
     FMatrix: TBitMatrix256;
+    FCurrSet: TBits256;
     FNodes: TIntArray;
-    procedure FillMatrix(aGraph: TGSimpleGraph);
-    procedure Extend(constref aSub, aCand: TBits256);
-    procedure Extend2(constref aUniv, aSub, aCand: TBits256);
-  public
-    function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
-  end;
-
-  TBPDomSetHelper256_ = object(TNodeSearch) // BP -> bit-parallel
-  strict private
-    FMatrix: TBitMatrix256;
-    FNodes: TIntArray;
-    procedure FillMatrix(aGraph: TGSimpleGraph);
-    procedure Extend(constref aSub, aCand: TBits256);
+    procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBits256);
+    procedure Extend(constref aCand: TBits256);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
@@ -124,7 +115,8 @@ type
   TDomSetHelper = object(TNodeSearch)
   strict private
     FMatrix: TSkeleton;
-    procedure Extend(constref aSub, aCand: TIntSet);
+    FCurrSet: TIntSet;
+    procedure Extend(constref aCand: TIntSet);
   public
     function  MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
   end;
