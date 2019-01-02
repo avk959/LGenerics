@@ -229,7 +229,7 @@ end;
 function TGSparseGraph.TIntSet.Last: SizeInt;
 begin
   if Count <> 0 then
-    Result := FItems[Count]
+    Result := FItems[Pred(Count)]
   else
     begin
       EGraphError.Create(SECantAccessEmpty);
