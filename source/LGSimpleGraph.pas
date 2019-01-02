@@ -329,8 +329,7 @@ type
     function  GreedyMIS: TIntArray;
   { returns True if aTestSet contains indices of the some maximal independent vertex set, False otherwise }
     function  IsMIS(const aTestSet: TIntArray): Boolean;
-  { returns indices of the vertices of the some found minimum dominating vertex set in connected graph;
-    will raise exception if graph is disconnected;
+  { returns indices of the vertices of the some found minimum dominating vertex set;
     worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout the best
     recent solution will be returned, and aExact will be set to False }
@@ -3337,11 +3336,17 @@ end;
 
 function TGSimpleGraph.FindMDS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
 begin
-  if not Connected then
-    raise EGraphError.Create(SEMethodNotApplicable); //????
   aExact := True;
-  if VertexCount < 3 then
-    exit([0]);
+  if IsEmpty then
+    exit(nil);
+  if VertexCount = 1 then
+    exit([0])
+  else
+    if VertexCount = 2 then
+      if Connected then
+        exit([0])
+      else
+        exit([0, 1]);
   if VertexCount > COMMON_BP_CUTOFF then
     Result := GetMds(aTimeOut, aExact)
   else
@@ -3353,10 +3358,16 @@ end;
 
 function TGSimpleGraph.GreedyMDS: TIntArray;
 begin
-  if not Connected then
-    raise EGraphError.Create(SEMethodNotApplicable);
-  if VertexCount < 3 then
-    exit([0]);
+  if IsEmpty then
+    exit(nil);
+  if VertexCount = 1 then
+    exit([0])
+  else
+    if VertexCount = 2 then
+      if Connected then
+        exit([0])
+      else
+        exit([0, 1]);
   if VertexCount > COMMON_BP_CUTOFF then
     Result := GetGreedyMinIs
   else
