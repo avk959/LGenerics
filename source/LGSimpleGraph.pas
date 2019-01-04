@@ -3380,7 +3380,7 @@ var
   I, J, K: SizeInt;
   AdjFound: Boolean;
 begin
-  if not Connected then
+  if IsEmpty then
     exit(False);
   if System.Length(aTestSet) = 0 then
     exit(False);
@@ -3389,7 +3389,7 @@ begin
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if TestMds[I] then   //contains duplicates -> is not set
+      if TestMds[I] then         //contains duplicates -> is not set
         exit(False);
       TestMds[I] := True;
     end;
@@ -3405,36 +3405,28 @@ begin
             AdjFound := True;
             break;
           end;
-      if not AdjFound then //is not dominating set
+      if not AdjFound then      //is not dominating set
         exit(False);
     end;
 
   for I in aTestSet do
     begin
-      AdjFound := False;
-      for J in aTestSet do
-        if (I <> J) and AdjacentI(I, J) then
-          begin
-            AdjFound := True;
-            break;
-          end;
-      if AdjFound then //test aTestSet without I
+      Remain[I] := True;        //test aTestSet without I
+      for K in Remain do
         begin
-          for K in Remain do
-            begin
-              AdjFound := False;
-              for J in aTestSet do
-                if (K <> J) and (J <> I) and AdjacentI(K, J) then
-                  begin
-                    AdjFound := True;
-                    break;
-                  end;
-              if not AdjFound then //exists vertex nonadjacent with aTestSet without I
+          AdjFound := False;
+          for J in aTestSet do
+            if (J <> I) and AdjacentI(K, J) then
+              begin
+                AdjFound := True;
                 break;
-            end;
-          if AdjFound then  //is not minimal
-            exit(False);
+              end;
+          if not AdjFound then //exists vertex nonadjacent with aTestSet without I
+            break;
         end;
+      if AdjFound then         //is not minimal
+        exit(False);
+      Remain[I] := False;
     end;
   Result := True;
 end;
