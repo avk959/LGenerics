@@ -3262,7 +3262,7 @@ begin
   if VertexCount > TBits256.BITNESS then
     ListIsBP(aOnFindSet)
   else
-    ListIsBP256(aOnFindSet)
+    ListIsBP256(aOnFindSet);
 end;
 
 function TGSimpleGraph.FindMIS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
