@@ -720,7 +720,7 @@ var
   Whites, Grays: TIntArray;
   I, J: Integer;
 begin
-  Ref.Instance := GenerateTestGrBip1;
+  {%H-}Ref.Instance := GenerateTestGrBip1;
   g := Ref;
   AssertTrue(g.VertexCount = 16);
   AssertTrue(g.IsBipartite(Whites, Grays));
@@ -742,7 +742,7 @@ var
   Whites, Grays: TIntArray;
   I, J: Integer;
 begin
-  Ref.Instance := GenerateTestDigrBip1;
+  {%H-}Ref.Instance := GenerateTestDigrBip1;
   g := Ref;
   AssertTrue(g.VertexCount = 12);
   AssertTrue(g.IsBipartite(Whites, Grays));

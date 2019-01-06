@@ -3137,7 +3137,6 @@ end;
 
 procedure TGTspHelper.TLs3Opt.OptPath(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
 var
-  Best, Curr: TSwap;
   I, J, Len: SizeInt;
 begin
   Len := System.Length(m);
