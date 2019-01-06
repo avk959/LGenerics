@@ -92,7 +92,6 @@ type
     function  CreateSkeleton: TSkeleton;
     procedure AssignGraph(aGraph: TGSimpleGraph);
     procedure AssignSeparate(aGraph: TGSimpleGraph; aIndex: SizeInt);
-    procedure AssignEdges(aGraph: TGSimpleGraph; const aEdges: TIntEdgeArray);
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  GetSeparateCount: SizeInt;
     function  CountPop(aTag: SizeInt): SizeInt;
@@ -856,15 +855,6 @@ begin
         Inc(J);
       end;
   AssignVertexList(aGraph, v);
-end;
-
-procedure TGSimpleGraph.AssignEdges(aGraph: TGSimpleGraph; const aEdges: TIntEdgeArray);
-var
-  e: TIntEdge;
-begin
-  Clear;
-  for e in aEdges do
-    AddEdge(aGraph[e.Source], aGraph[e.Destination], aGraph.GetEdgeDataPtr(e.Source, e.Destination)^);
 end;
 
 function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;

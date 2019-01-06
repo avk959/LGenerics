@@ -284,6 +284,7 @@ type
     function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
     procedure AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
     procedure AssignTree(aGraph: TGSparseGraph; const aTree: TIntArray);
+    procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; virtual; abstract;
@@ -1510,6 +1511,15 @@ begin
       if Src <> -1 then
         AddEdge(aGraph[Src], aGraph[I], aGraph.GetEdgeDataPtr(Src, I)^);
     end;
+end;
+
+procedure TGSparseGraph.AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
+var
+  e: TIntEdge;
+begin
+  Clear;
+  for e in aEdges do
+    AddEdge(aGraph[e.Source], aGraph[e.Destination], aGraph.GetEdgeDataPtr(e.Source, e.Destination)^);
 end;
 
 class function TGSparseGraph.cMin(L, R: TCost): TCost;
