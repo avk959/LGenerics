@@ -282,6 +282,10 @@ type
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  CreateAdjEnumArrayEx: TAdjEnumArrayEx;
     function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
+    function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
+    procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
+    function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; virtual; abstract;
+    function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; virtual; abstract;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
@@ -390,41 +394,61 @@ type
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
-    function ContainsVertex(constref aVertex: TVertex): Boolean; inline;
-    function ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function IndexOf(constref aVertex: TVertex): SizeInt; inline;
-    function Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
-    function AdjacentI(aSrc, aDst: SizeInt): Boolean;
+  { returns True and vertex index, if it was added, False otherwise }
+    function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; inline;
+    function  AddVertex(constref aVertex: TVertex): Boolean; inline;
+  { returns count of added vertices }
+    function  AddVertices(const aVertices: TVertexArray): SizeInt;
+  { removes vertex aVertex from graph; raises EGraphError if not contains aVertex }
+    procedure RemoveVertex(constref aVertex: TVertex); inline;
+    procedure RemoveVertexI(aIndex: SizeInt);
+    function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
+  { if does not contain aSrc or aDst vertices, they will be added;
+    returns True if the edge is added, False, if such an edge already exists }
+    function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+  { adds edge with default data }
+    function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+  { returns True if the edge is added, False, if such an edge already exists;
+    raises EGraphError if aSrc or aDst out of range }
+    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+  { returns False if there is no such edge; raises EGraphError if not contains aSrc or aDst }
+    function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function  IndexOf(constref aVertex: TVertex): SizeInt; inline;
+    function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  AdjacentI(aSrc, aDst: SizeInt): Boolean;
   { enumerates indices of adjacent vertices of aVertex }
-    function AdjVertices(constref aVertex: TVertex): TAdjVertices; inline;
-    function AdjVerticesI(aIndex: SizeInt): TAdjVertices;
+    function  AdjVertices(constref aVertex: TVertex): TAdjVertices; inline;
+    function  AdjVerticesI(aIndex: SizeInt): TAdjVertices;
   { enumerates incident edges of aVertex }
-    function IncidentEdges(constref aVertex: TVertex): TIncidentEdges; inline;
-    function IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
+    function  IncidentEdges(constref aVertex: TVertex): TIncidentEdges; inline;
+    function  IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
   { enumerates all vertices }
-    function Vertices: TVertices; inline;
+    function  Vertices: TVertices; inline;
   { enumerates all edges }
-    function Edges: TEdges; inline;
-    function GetEdgeData(constref aSrc, aDst: TVertex; out aData: TEdgeData): Boolean; inline;
-    function GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
-    function SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
-    function SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
-    function IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
-    function VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
+    function  Edges: TEdges; inline;
+    function  GetEdgeData(constref aSrc, aDst: TVertex; out aData: TEdgeData): Boolean; inline;
+    function  GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
+    function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
+    function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+    function  IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
+    function  VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
   { returns adjacency matrix;
     warning: maximum matrix size limited, see MaxBitMatrixSize }
-    function CreateAdjacencyMatrix: TAdjacencyMatrix;
+    function  CreateAdjacencyMatrix: TAdjacencyMatrix;
   { test whether the graph is bipartite;
     the graph can be disconnected (in this case it consists of a number of connected
     bipartite components and / or several isolated vertices)}
-    function IsBipartite: Boolean;
+    function  IsBipartite: Boolean;
   { test whether the graph is bipartite; if returns True then information about the vertex
     belonging to the fractions is returned in aColors(vcWhite or vcGray) }
-    function IsBipartite(out aColors: TColorArray): Boolean;
+    function  IsBipartite(out aColors: TColorArray): Boolean;
   { test whether the graph is bipartite; if returns True then aWhites and aGrays will contain
     indices of correspondig vertices }
-    function IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
+    function  IsBipartite(out aWhites, aGrays: TIntArray): Boolean;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -440,18 +464,18 @@ type
   { returns count of visited vertices during the DFS traversal;
     aOnFound calls after next vertex found, aOnDone calls after vertex done;
     if aOnFound returns False then traversal stops }
-    function  DfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt; inline;
-    function  DfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
+    function DfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt; inline;
+    function DfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
   { returns the DFS traversal tree(forest, if not connected) started from vertex with index 0;
     each element of Result contains the index of its parent in tree(or -1 if it is root) }
-    function  DfsTree: TIntArray;
+    function DfsTree: TIntArray;
   { returns count of visited vertices during the BFS traversal;
     aOnFound calls after vertex found; if aOnFound returns False then traversal stops}
-    function  BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt; inline;
-    function  BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
+    function BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt; inline;
+    function BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
   { returns the BFS traversal tree(forest, if not connected) started from vertex with index 0;
     each element of Result contains the index of its parent (or -1 if it is root) }
-    function  BfsTree: TIntArray;
+    function BfsTree: TIntArray;
 
 {**********************************************************************************************************
   shortest path problem utilities
@@ -1591,9 +1615,80 @@ begin
     Clear;
 end;
 
+function TGSparseGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+begin
+  Result := DoAddVertex(aVertex, aIndex);
+end;
+
+function TGSparseGraph.AddVertex(constref aVertex: TVertex): Boolean;
+var
+  Dummy: SizeInt;
+begin
+  Result := AddVertex(aVertex, Dummy);
+end;
+
+function TGSparseGraph.AddVertices(const aVertices: TVertexArray): SizeInt;
+var
+  v: TVertex;
+begin
+  Result := VertexCount;
+  for v in aVertices do
+    AddVertex(v);
+  Result := VertexCount - Result;
+end;
+
+procedure TGSparseGraph.RemoveVertex(constref aVertex: TVertex);
+begin
+  RemoveVertexI(IndexOf(aVertex));
+end;
+
+procedure TGSparseGraph.RemoveVertexI(aIndex: SizeInt);
+begin
+  CheckIndexRange(aIndex);
+  DoRemoveVertex(aIndex);
+end;
+
 function TGSparseGraph.ContainsVertex(constref aVertex: TVertex): Boolean;
 begin
   Result := IndexOf(aVertex) >= 0;
+end;
+
+function TGSparseGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+var
+  SrcIdx, DstIdx: SizeInt;
+begin
+  AddVertex(aSrc, SrcIdx);
+  AddVertex(aDst, DstIdx);
+  Result := DoAddEdge(SrcIdx, DstIdx, aData);
+end;
+
+function TGSparseGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := AddEdge(aSrc, aDst, Default(TEdgeData));
+end;
+
+function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := DoAddEdge(aSrc, aDst, aData);
+end;
+
+function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
+begin
+  Result := AddEdgeI(aSrc, aDst, Default(TEdgeData));
+end;
+
+function TGSparseGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := RemoveEdgeI(IndexOf(aSrc), IndexOf(aDst));
+end;
+
+function TGSparseGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+begin
+  CheckIndexRange(aSrc);
+  CheckIndexRange(aDst);
+  Result := DoRemoveEdge(aSrc, aDst);
 end;
 
 function TGSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;

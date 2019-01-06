@@ -105,9 +105,6 @@ type
     FReachabilityMatrix: TReachabilityMatrix;
     function  GetReachabilityValid: Boolean; inline;
     function  GetDensity: Double; inline;
-    procedure DoRemoveVertex(aIndex: SizeInt);
-    function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-    function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
     procedure AssignGraph(aGraph: TGSimpleDiGraph);
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
@@ -117,6 +114,10 @@ type
     function  GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
     function  GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
+    function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
+    procedure DoRemoveVertex(aIndex: SizeInt); override;
+    function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; override;
+    function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
   public
 {**********************************************************************************************************
   class management utilities
@@ -134,20 +135,6 @@ type
   structural management utilities
 ***********************************************************************************************************}
 
-  { returns True and vertex index, if it was added, False otherwise }
-    function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
-    function  AddVertex(constref aVertex: TVertex): Boolean; inline;
-  { returns count of added vertices }
-    function  AddVertices(const aVertices: TVertexArray): SizeInt;
-    procedure RemoveVertex(constref aVertex: TVertex); inline;
-    procedure RemoveVertexI(aIndex: SizeInt);
-  { returns True if the edge is added, False, if such an edge already exists }
-    function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
-    function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
-    function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  InDegree(constref aVertex: TVertex): SizeInt; inline;
     function  InDegreeI(aIndex: SizeInt): SizeInt;
     function  OutDegree(constref aVertex: TVertex): SizeInt; inline;
@@ -809,59 +796,6 @@ begin
   Result := NonEmpty and not FReachabilityMatrix.IsEmpty;
 end;
 
-procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
-var
-  I, J: SizeInt;
-  p: ^TAdjItem;
-  CurrEdges: TAdjList.TAdjItemArray;
-begin
-  FEdgeCount -= FNodeList[aIndex].AdjList.Count;
-  for p in FNodeList[aIndex].AdjList do
-    Dec(FNodeList[p^.Destination].Tag);
-  Delete(aIndex);
-  for I := 0 to Pred(VertexCount) do
-    begin
-      CurrEdges := FNodeList[I].AdjList.ToArray;
-      FNodeList[I].AdjList.MakeEmpty;
-      for J := 0 to System.High(CurrEdges) do
-        begin
-          if CurrEdges[J].Destination <> aIndex then
-            begin
-              if CurrEdges[J].Destination > aIndex then
-                Dec(CurrEdges[J].Destination);
-              FNodeList[I].AdjList.Add(CurrEdges[J]);
-            end;
-        end;
-    end;
-  FReachabilityMatrix.Clear;
-end;
-
-function TGSimpleDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
-  if Result then
-    begin
-      Inc(FNodeList[aDst].Tag);
-      Inc(FEdgeCount);
-      FReachabilityMatrix.Clear;
-    end;
-end;
-
-function TGSimpleDiGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
-begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FNodeList[aSrc].AdjList.Remove(aDst);
-  if Result then
-    begin
-      Dec(FNodeList[aDst].Tag);
-      Dec(FEdgeCount);
-      FReachabilityMatrix.Clear;
-    end;
-end;
-
 function TGSimpleDiGraph.CreateSkeleton: TSkeleton;
 var
   I: SizeInt;
@@ -1206,6 +1140,69 @@ begin
   Result := TReachabilityMatrix.Create(m, aScIds);
 end;
 
+function TGSimpleDiGraph.DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+begin
+  Result := not FindOrAdd(aVertex, aIndex);
+  if Result then
+    begin
+      FNodeList[aIndex].Tag := 0;
+      FReachabilityMatrix.Clear;
+    end;
+end;
+
+procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
+var
+  I, J: SizeInt;
+  p: ^TAdjItem;
+  CurrEdges: TAdjList.TAdjItemArray;
+begin
+  FEdgeCount -= FNodeList[aIndex].AdjList.Count;
+  for p in FNodeList[aIndex].AdjList do
+    Dec(FNodeList[p^.Destination].Tag);
+  Delete(aIndex);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      CurrEdges := FNodeList[I].AdjList.ToArray;
+      FNodeList[I].AdjList.MakeEmpty;
+      for J := 0 to System.High(CurrEdges) do
+        begin
+          if CurrEdges[J].Destination <> aIndex then
+            begin
+              if CurrEdges[J].Destination > aIndex then
+                Dec(CurrEdges[J].Destination);
+              FNodeList[I].AdjList.Add(CurrEdges[J]);
+            end;
+        end;
+    end;
+  FReachabilityMatrix.Clear;
+end;
+
+function TGSimpleDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Result := FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
+  if Result then
+    begin
+      Inc(FNodeList[aDst].Tag);
+      Inc(FEdgeCount);
+      FReachabilityMatrix.Clear;
+    end;
+end;
+
+function TGSimpleDiGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Result := FNodeList[aSrc].AdjList.Remove(aDst);
+  if Result then
+    begin
+      Dec(FNodeList[aDst].Tag);
+      Dec(FEdgeCount);
+      FReachabilityMatrix.Clear;
+    end;
+end;
+
 procedure TGSimpleDiGraph.Clear;
 begin
   inherited;
@@ -1376,82 +1373,6 @@ begin
   finally
     fs.Free;
   end;
-end;
-
-function TGSimpleDiGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
-begin
-  Result := not FindOrAdd(aVertex, aIndex);
-  if Result then
-    begin
-      FNodeList[aIndex].Tag := 0;
-      FReachabilityMatrix.Clear;
-    end;
-end;
-
-function TGSimpleDiGraph.AddVertex(constref aVertex: TVertex): Boolean;
-var
-  Dummy: SizeInt;
-begin
-  Result := AddVertex(aVertex, Dummy);
-end;
-
-function TGSimpleDiGraph.AddVertices(const aVertices: TVertexArray): SizeInt;
-var
-  v: TVertex;
-begin
-  Result := VertexCount;
-  for v in aVertices do
-    AddVertex(v);
-  Result := VertexCount - Result;
-end;
-
-procedure TGSimpleDiGraph.RemoveVertex(constref aVertex: TVertex);
-begin
-  RemoveVertexI(IndexOf(aVertex));
-end;
-
-procedure TGSimpleDiGraph.RemoveVertexI(aIndex: SizeInt);
-begin
-  CheckIndexRange(aIndex);
-  DoRemoveVertex(aIndex);
-end;
-
-function TGSimpleDiGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
-var
-  SrcIdx, DstIdx: SizeInt;
-begin
-  AddVertex(aSrc, SrcIdx);
-  AddVertex(aDst, DstIdx);
-  Result := DoAddEdge(SrcIdx, DstIdx, aData);
-end;
-
-function TGSimpleDiGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := AddEdge(aSrc, aDst, Default(TEdgeData));
-end;
-
-function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := DoAddEdge(aSrc, aDst, aData);
-end;
-
-function TGSimpleDiGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
-begin
-  Result := AddEdgeI(aSrc, aDst, Default(TEdgeData));
-end;
-
-function TGSimpleDiGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := RemoveEdgeI(IndexOf(aSrc), IndexOf(aDst));
-end;
-
-function TGSimpleDiGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := DoRemoveEdge(aSrc, aDst);
 end;
 
 function TGSimpleDiGraph.InDegree(constref aVertex: TVertex): SizeInt;

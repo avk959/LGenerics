@@ -89,9 +89,6 @@ type
     procedure ValidateConnected;
     function  GetConnected: Boolean; inline;
     function  GetDensity: Double; inline;
-    procedure DoRemoveVertex(aIndex: SizeInt);
-    function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-    function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
     function  CreateSkeleton: TSkeleton;
     procedure AssignGraph(aGraph: TGSimpleGraph);
     procedure AssignSeparate(aGraph: TGSimpleGraph; aIndex: SizeInt);
@@ -148,6 +145,10 @@ type
     function  SortNodesByDegree(o: TSortOrder): TIntArray;
     function  CmpByDegree(constref L, R: SizeInt): SizeInt;
     function  CmpIntArrayLen(constref L, R: TIntArray): SizeInt;
+    function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
+    procedure DoRemoveVertex(aIndex: SizeInt); override;
+    function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; override;
+    function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -181,22 +182,6 @@ type
   structural management utilities
 ***********************************************************************************************************}
 
-  { returns True and vertex index, if it is added, False if such a vertex already exists }
-    function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
-    function  AddVertex(constref aVertex: TVertex): Boolean; inline;
-  { returns count of added vertices }
-    function  AddVertices(const aVertices: TVertexArray): SizeInt;
-  { raises EGraphError if graph not contains aVertex }
-    procedure RemoveVertex(constref aVertex: TVertex); inline;
-    procedure RemoveVertexI(aIndex: SizeInt);
-  { returns True if the edge is added, False, if such an edge already exists }
-    function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
-    function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-    function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
-  { returns False if there is no such edge; edge removing breaks validity of connected property }
-    function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  Degree(constref aVertex: TVertex): SizeInt; inline;
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
@@ -825,64 +810,6 @@ begin
     Result := (Double(EdgeCount) * 2)/(Double(VertexCount) * Double(Pred(VertexCount)))
   else
     Result := 0.0;
-end;
-
-procedure TGSimpleGraph.DoRemoveVertex(aIndex: SizeInt);
-var
-  CurrEdges: TAdjList.TAdjItemArray;
-  I, J: SizeInt;
-begin
-  FEdgeCount -= FNodeList[aIndex].AdjList.Count;
-  Delete(aIndex);
-  FConnectedValid := False;
-  for I := 0 to Pred(VertexCount) do
-    begin
-      CurrEdges := FNodeList[I].AdjList.ToArray;
-      FNodeList[I].AdjList.MakeEmpty;
-      for J := 0 to System.High(CurrEdges) do
-        begin
-          if CurrEdges[J].Destination <> aIndex then
-            begin
-              if CurrEdges[J].Destination > aIndex then
-                Dec(CurrEdges[J].Destination);
-              FNodeList[I].AdjList.Add(CurrEdges[J]);
-            end;
-        end;
-    end;
-end;
-
-function TGSimpleGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
-  if Result then
-    begin
-      if FNodeList[aDst].AdjList.Add(TAdjItem.Create(aSrc, aData)) then
-        begin
-          Inc(FEdgeCount);
-          if ConnectedValid and SeparateJoin(aSrc, aDst) then
-            begin
-              Dec(FCompCount);
-              FConnected := FCompCount = 1;
-            end;
-        end
-      else
-        raise EGraphError.Create(SEInternalDataInconsist);
-    end;
-end;
-
-function TGSimpleGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
-begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FNodeList[aSrc].AdjList.Remove(aDst);
-  if Result then
-    begin
-      FNodeList[aDst].AdjList.Remove(aSrc);
-      Dec(FEdgeCount);
-      FConnectedValid := False;
-    end;
 end;
 
 function TGSimpleGraph.CreateSkeleton: TSkeleton;
@@ -2249,6 +2176,79 @@ begin
       Result := 0;
 end;
 
+function TGSimpleGraph.DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+begin
+  Result := not FindOrAdd(aVertex, aIndex);
+  if not Result then
+    exit;
+  if ConnectedValid then
+    begin
+      FNodeList[aIndex].Tag := aIndex;
+      Inc(FCompCount);
+      FConnected := FCompCount = 1;
+    end
+  else
+    FNodeList[aIndex].Tag := FCompCount;
+end;
+
+procedure TGSimpleGraph.DoRemoveVertex(aIndex: SizeInt);
+var
+  CurrEdges: TAdjList.TAdjItemArray;
+  I, J: SizeInt;
+begin
+  FEdgeCount -= FNodeList[aIndex].AdjList.Count;
+  Delete(aIndex);
+  FConnectedValid := False;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      CurrEdges := FNodeList[I].AdjList.ToArray;
+      FNodeList[I].AdjList.MakeEmpty;
+      for J := 0 to System.High(CurrEdges) do
+        begin
+          if CurrEdges[J].Destination <> aIndex then
+            begin
+              if CurrEdges[J].Destination > aIndex then
+                Dec(CurrEdges[J].Destination);
+              FNodeList[I].AdjList.Add(CurrEdges[J]);
+            end;
+        end;
+    end;
+end;
+
+function TGSimpleGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Result := FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
+  if Result then
+    begin
+      if FNodeList[aDst].AdjList.Add(TAdjItem.Create(aSrc, aData)) then
+        begin
+          Inc(FEdgeCount);
+          if ConnectedValid and SeparateJoin(aSrc, aDst) then
+            begin
+              Dec(FCompCount);
+              FConnected := FCompCount = 1;
+            end;
+        end
+      else
+        raise EGraphError.Create(SEInternalDataInconsist);
+    end;
+end;
+
+function TGSimpleGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+begin
+  if aSrc = aDst then
+    exit(False);
+  Result := FNodeList[aSrc].AdjList.Remove(aDst);
+  if Result then
+    begin
+      FNodeList[aDst].AdjList.Remove(aSrc);
+      Dec(FEdgeCount);
+      FConnectedValid := False;
+    end;
+end;
+
 class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
 var
   fcL, fcR: TIntVector;
@@ -2487,87 +2487,6 @@ begin
                Result.AddEdgeI(I, J, TIntValue.Create(vI.Right))
         end;
     end;
-end;
-
-function TGSimpleGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
-begin
-  Result := not FindOrAdd(aVertex, aIndex);
-  if not Result then
-    exit;
-  if ConnectedValid then
-    begin
-      FNodeList[aIndex].Tag := aIndex;
-      Inc(FCompCount);
-      FConnected := FCompCount = 1;
-    end
-  else
-    FNodeList[aIndex].Tag := FCompCount;
-end;
-
-function TGSimpleGraph.AddVertex(constref aVertex: TVertex): Boolean;
-var
-  Dummy: SizeInt;
-begin
-  Result := AddVertex(aVertex, Dummy);
-end;
-
-function TGSimpleGraph.AddVertices(const aVertices: TVertexArray): SizeInt;
-var
-  v: TVertex;
-begin
-  Result := VertexCount;
-  for v in aVertices do
-    AddVertex(v);
-  Result := VertexCount - Result;
-end;
-
-procedure TGSimpleGraph.RemoveVertex(constref aVertex: TVertex);
-begin
-  RemoveVertexI(IndexOf(aVertex));
-end;
-
-procedure TGSimpleGraph.RemoveVertexI(aIndex: SizeInt);
-begin
-  CheckIndexRange(aIndex);
-  DoRemoveVertex(aIndex);
-end;
-
-function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
-var
-  SrcIdx, DstIdx: SizeInt;
-begin
-  AddVertex(aSrc, SrcIdx);
-  AddVertex(aDst, DstIdx);
-  Result := DoAddEdge(SrcIdx, DstIdx, aData);
-end;
-
-function TGSimpleGraph.AddEdge(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := AddEdge(aSrc, aDst, Default(TEdgeData));
-end;
-
-function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := DoAddEdge(aSrc, aDst, aData);
-end;
-
-function TGSimpleGraph.AddEdgeI(aSrc, aDst: SizeInt): Boolean;
-begin
-  Result := AddEdgeI(aSrc, aDst, Default(TEdgeData));
-end;
-
-function TGSimpleGraph.RemoveEdge(constref aSrc, aDst: TVertex): Boolean;
-begin
-  Result := RemoveEdgeI(IndexOf(aSrc), IndexOf(aDst));
-end;
-
-function TGSimpleGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := DoRemoveEdge(aSrc, aDst);
 end;
 
 function TGSimpleGraph.Degree(constref aVertex: TVertex): SizeInt;
