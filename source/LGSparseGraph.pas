@@ -282,6 +282,8 @@ type
     function  CreateAdjEnumArray: TAdjEnumArray;
     function  CreateAdjEnumArrayEx: TAdjEnumArrayEx;
     function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
+    procedure AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
+    procedure AssignTree(aGraph: TGSparseGraph; const aTree: TIntArray);
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; virtual; abstract;
@@ -1475,6 +1477,39 @@ begin
     Result := TreePathTo(Parents, Nearest)
   else
     Result := [];
+end;
+
+procedure TGSparseGraph.AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
+var
+  VertSet: TBitVector;
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  Clear;
+  VertSet.Size := aGraph.VertexCount;
+  for I in aList do
+    begin
+      {%H-}AddVertex(aGraph[I]);
+      VertSet[I] := True;
+    end;
+  for I in aList do
+    for p in aGraph.AdjLists[I]^ do
+      if VertSet[p^.Key] then
+        AddEdge(aGraph[I], aGraph[p^.Key], p^.Data);
+end;
+
+procedure TGSparseGraph.AssignTree(aGraph: TGSparseGraph; const aTree: TIntArray);
+var
+  I, Src: SizeInt;
+begin
+  Clear;
+  for I := 0 to Pred(System.Length(aTree)) do
+    begin
+      {%H-}AddVertex(aGraph[I]);
+      Src := aTree[I];
+      if Src <> -1 then
+        AddEdge(aGraph[Src], aGraph[I], aGraph.GetEdgeDataPtr(Src, I)^);
+    end;
 end;
 
 class function TGSparseGraph.cMin(L, R: TCost): TCost;

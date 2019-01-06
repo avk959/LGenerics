@@ -92,8 +92,6 @@ type
     function  CreateSkeleton: TSkeleton;
     procedure AssignGraph(aGraph: TGSimpleGraph);
     procedure AssignSeparate(aGraph: TGSimpleGraph; aIndex: SizeInt);
-    procedure AssignVertexList(aGraph: TGSimpleGraph; const aList: TIntArray);
-    procedure AssignTree(aGraph: TGSimpleGraph; const aTree: TIntArray);
     procedure AssignEdges(aGraph: TGSimpleGraph; const aEdges: TIntEdgeArray);
     function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
     function  GetSeparateCount: SizeInt;
@@ -858,39 +856,6 @@ begin
         Inc(J);
       end;
   AssignVertexList(aGraph, v);
-end;
-
-procedure TGSimpleGraph.AssignVertexList(aGraph: TGSimpleGraph; const aList: TIntArray);
-var
-  VertSet: TBitVector;
-  I: SizeInt;
-  p: PAdjItem;
-begin
-  Clear;
-  VertSet.Size := aGraph.VertexCount;
-  for I in aList do
-    begin
-      {%H-}AddVertex(aGraph[I]);
-      VertSet[I] := True;
-    end;
-  for I in aList do
-    for p in aGraph.AdjLists[I]^ do
-      if VertSet[p^.Key] then
-        AddEdge(aGraph[I], aGraph[p^.Key], aGraph.GetEdgeDataPtr(I, p^.Key)^);
-end;
-
-procedure TGSimpleGraph.AssignTree(aGraph: TGSimpleGraph; const aTree: TIntArray);
-var
-  I, Src: SizeInt;
-begin
-  Clear;
-  for I := 0 to Pred(System.Length(aTree)) do
-    begin
-      {%H-}AddVertex(aGraph[I]);
-      Src := aTree[I];
-      if Src <> -1 then
-        AddEdge(aGraph[Src], aGraph[I], aGraph.GetEdgeDataPtr(Src, I)^);
-    end;
 end;
 
 procedure TGSimpleGraph.AssignEdges(aGraph: TGSimpleGraph; const aEdges: TIntEdgeArray);
