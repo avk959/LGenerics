@@ -53,8 +53,8 @@ type
     procedure SeparateCount2;
     procedure SeparateGraph1;
     procedure SeparateGraph2;
-    procedure SubgraphFromVertexList1;
-    procedure SubgraphFromVertexList2;
+    procedure InducedSubgraph1;
+    procedure InducedSubgraph2;
     procedure SubgraphFromTree;
     procedure SubgraphFromEdges1;
     procedure SubgraphFromEdges2;
@@ -492,7 +492,7 @@ begin
   AssertTrue(g2.ContainsVertex(13));
 end;
 
-procedure TSimpleGraphTest.SubgraphFromVertexList1;
+procedure TSimpleGraphTest.InducedSubgraph1;
 var
   Ref, Ref2: TRef;
   g, g2: TGraph;
@@ -500,12 +500,12 @@ begin
   {%H-}Ref.Instance := GenerateTestGr2;
   g := Ref;
   AssertTrue(g.VertexCount = 16);
-  {%H-}Ref2.Instance := g.SubgraphFromVertexList([]);
+  {%H-}Ref2.Instance := g.InducedSubgraph([]);
   g2 := Ref2;
   AssertTrue(g2.IsEmpty);
 end;
 
-procedure TSimpleGraphTest.SubgraphFromVertexList2;
+procedure TSimpleGraphTest.InducedSubgraph2;
 var
   Ref, Ref2: TRef;
   g, g2: TGraph;
@@ -513,7 +513,7 @@ begin
   {%H-}Ref.Instance := GenerateTestGr2;
   g := Ref;
   AssertTrue(g.VertexCount = 16);
-  {%H-}Ref2.Instance := g.SubgraphFromVertexList(
+  {%H-}Ref2.Instance := g.InducedSubgraph(
     [g.IndexOf(8), g.IndexOf(9), g.IndexOf(14), g.IndexOf(15), g.IndexOf(16)]);
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 5);

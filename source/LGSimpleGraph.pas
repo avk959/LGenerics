@@ -167,9 +167,9 @@ type
   { returns graph of connected component that contains aVertex }
     function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
     function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
-  { returns a subgraph induced by the vertices whose indices are contained in the array aList }
-    function  SubgraphFromVertexList(const aList: TIntArray): TGSimpleGraph;
-  { returns a gsubgraph induced the pairs provided by the aTree,
+  { returns a subgraph induced by the vertices whose indices are contained in the array aVertexList }
+    function  InducedSubgraph(const aVertexList: TIntArray): TGSimpleGraph;
+  { returns a subgraph constructed the pairs provided by the aTree,
     i.e. each element treates as pair of source - destination(value -> source, index -> destination ) }
     function  SubgraphFromTree(const aTree: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the edges provided by the aEdges }
@@ -400,7 +400,7 @@ type
     constructor Create;
     function SeparateGraph(constref aVertex: TVertex): TGChart;
     function SeparateGraphI(aIndex: SizeInt): TGChart;
-    function SubgraphFromVertexList(const aList: TIntArray): TGChart;
+    function InducedSubgraph(const aVertexList: TIntArray): TGChart;
     function SubgraphFromTree(const aTree: TIntArray): TGChart;
     function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGChart;
     function Clone: TGChart;
@@ -415,7 +415,7 @@ type
     procedure LoadDIMACSAscii(const aFileName: string);
     function  SeparateGraph(aVertex: Integer): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
-    function  SubgraphFromVertexList(const aList: TIntArray): TIntChart;
+    function  InducedSubgraph(const aVertexList: TIntArray): TIntChart;
     function  SubgraphFromTree(const aTree: TIntArray): TIntChart;
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TIntChart;
     function  Clone: TIntChart;
@@ -452,7 +452,7 @@ type
     constructor Create;
     function SeparateGraph(const aVertex: string): TStrChart;
     function SeparateGraphI(aIndex: SizeInt): TStrChart;
-    function SubgraphFromVertexList(const aList: TIntArray): TStrChart;
+    function InducedSubgraph(const aVertexList: TIntArray): TStrChart;
     function SubgraphFromTree(const aTree: TIntArray): TStrChart;
     function SubgraphFromEdges(const aEdges: TIntEdgeArray): TStrChart;
     function Clone: TStrChart;
@@ -517,7 +517,7 @@ type
 ***********************************************************************************************************}
     function SeparateGraph(constref aVertex: TVertex): TGWeightedGraph;
     function SeparateGraphI(aIndex: SizeInt): TGWeightedGraph;
-    function SubgraphFromVertexList(const aList: TIntArray): TGWeightedGraph;
+    function InducedSubgraph(const aVertexList: TIntArray): TGWeightedGraph;
     function SubgraphFromTree(const aTree: TIntArray): TGWeightedGraph;
     function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGWeightedGraph;
     function Clone: TGWeightedGraph;
@@ -621,7 +621,7 @@ type
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
     function  SeparateGraph(aVertex: TPoint): TPointsChart;
     function  SeparateGraphI(aIndex: SizeInt): TPointsChart;
-    function  SubgraphFromVertexList(const aList: TIntArray): TPointsChart;
+    function  InducedSubgraph(const aVertexList: TIntArray): TPointsChart;
     function  SubgraphFromTree(const aTree: TIntArray): TPointsChart;
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
@@ -652,7 +652,7 @@ type
 ***********************************************************************************************************}
     function SeparateGraph(constref aVertex: TVertex): TGIntWeightGraph;
     function SeparateGraphI(aIndex: SizeInt): TGIntWeightGraph;
-    function SubgraphFromVertexList(const aList: TIntArray): TGIntWeightGraph;
+    function InducedSubgraph(const aVertexList: TIntArray): TGIntWeightGraph;
     function SubgraphFromTree(const aTree: TIntArray): TGIntWeightGraph;
     function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGIntWeightGraph;
     function Clone: TGIntWeightGraph;
@@ -1439,7 +1439,7 @@ begin
       MaxColCount := 0;
       for I := 0 to System.High(Separates) do
         begin
-          g := SubgraphFromVertexList(Separates[I].ToArray);
+          g := InducedSubgraph(Separates[I].ToArray);
           try
             ColCount := g.VertexColoring(ColMap, Exact, TimeOut - SecondsBetween(Now, StartTime));
             for J := 0 to System.High(ColMap) do
@@ -1480,7 +1480,7 @@ begin
   aColors.Length := VertexCount;
   for I := 0 to System.High(Separates) do
     begin
-      g := SubgraphFromVertexList(Separates[I].ToArray);
+      g := InducedSubgraph(Separates[I].ToArray);
       try
         Result := g.IsKColorable(aK, ColMap, TimeOut - SecondsBetween(Now, StartTime));
         if Result = tlTrue then
@@ -2411,10 +2411,10 @@ begin
     Result.AssignGraph(Self)
 end;
 
-function TGSimpleGraph.SubgraphFromVertexList(const aList: TIntArray): TGSimpleGraph;
+function TGSimpleGraph.InducedSubgraph(const aVertexList: TIntArray): TGSimpleGraph;
 begin
   Result := TGSimpleGraph.Create;
-  Result.AssignVertexList(Self, aList);
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 function TGSimpleGraph.SubgraphFromTree(const aTree: TIntArray): TGSimpleGraph;
@@ -3648,10 +3648,10 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TGChart.SubgraphFromVertexList(const aList: TIntArray): TGChart;
+function TGChart.InducedSubgraph(const aVertexList: TIntArray): TGChart;
 begin
   Result := TGChart.Create;
-  Result.AssignVertexList(Self, aList);
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 function TGChart.SubgraphFromTree(const aTree: TIntArray): TGChart;
@@ -3754,10 +3754,10 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TIntChart.SubgraphFromVertexList(const aList: TIntArray): TIntChart;
+function TIntChart.InducedSubgraph(const aVertexList: TIntArray): TIntChart;
 begin
   Result := TIntChart.Create;
-  Result.AssignVertexList(Self, aList);
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 function TIntChart.SubgraphFromTree(const aTree: TIntArray): TIntChart;
@@ -3904,10 +3904,10 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TStrChart.SubgraphFromVertexList(const aList: TIntArray): TStrChart;
+function TStrChart.InducedSubgraph(const aVertexList: TIntArray): TStrChart;
 begin
   Result := TStrChart.Create;
-  Result.AssignVertexList(Self, aList);
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 function TStrChart.SubgraphFromTree(const aTree: TIntArray): TStrChart;
@@ -4021,10 +4021,10 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TGWeightedGraph.SubgraphFromVertexList(const aList: TIntArray): TGWeightedGraph;
+function TGWeightedGraph.InducedSubgraph(const aVertexList: TIntArray): TGWeightedGraph;
 begin
   Result := TGWeightedGraph.Create;
-  Result.AssignVertexList(Self, aList);
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 function TGWeightedGraph.SubgraphFromTree(const aTree: TIntArray): TGWeightedGraph;
@@ -4453,10 +4453,10 @@ begin
     Result.AssignGraph(Self);
 end;
 
-function TPointsChart.SubgraphFromVertexList(const aList: TIntArray): TPointsChart;
+function TPointsChart.InducedSubgraph(const aVertexList: TIntArray): TPointsChart;
 begin
   Result := TPointsChart.Create;
-  Result.AssignVertexList(Self, aList);
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 function TPointsChart.SubgraphFromTree(const aTree: TIntArray): TPointsChart;
@@ -4616,9 +4616,9 @@ begin
   Result := inherited SeparateGraphI(aIndex) as TGIntWeightGraph;
 end;
 
-function TGIntWeightGraph.SubgraphFromVertexList(const aList: TIntArray): TGIntWeightGraph;
+function TGIntWeightGraph.InducedSubgraph(const aVertexList: TIntArray): TGIntWeightGraph;
 begin
-  Result := inherited SubgraphFromVertexList(aList) as TGIntWeightGraph;
+  Result := inherited InducedSubgraph(aVertexList) as TGIntWeightGraph;
 end;
 
 function TGIntWeightGraph.SubgraphFromTree(const aTree: TIntArray): TGIntWeightGraph;
