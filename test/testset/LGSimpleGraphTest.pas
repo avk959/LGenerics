@@ -109,7 +109,7 @@ type
     procedure CompleteColoring;
     procedure FindHamiltonCycles;
     procedure FindHamiltonPaths;
-
+    procedure FindMDS;
   end;
 
 implementation
@@ -152,7 +152,7 @@ end;
 
 function TSimpleGraphTest.GenerateTestGr5: TGraph;
 begin
-  //see TestGr5.png, mis count is 295, independance number is 8
+  //see TestGr5.png, mis count is 295, independance number is 8, domination number is 6
   Result := TGraph.Create;
   Result.AddVertexRange(1, 20);
   Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 6, 12, 12, 7,
@@ -1776,6 +1776,27 @@ begin
   AssertTrue(Paths.Count = 2);
   AssertTrue(g.IsHamiltonPath(Paths[0], g.IndexOf(1)));
   AssertTrue(g.IsHamiltonPath(Paths[1], g.IndexOf(1)));
+end;
+
+procedure TSimpleGraphTest.FindMDS;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mds: TIntArray;
+  Exact: Boolean;
+begin
+  g := {%H-}Ref;
+  Mds := g.FindMDS(Exact);
+  AssertTrue(Mds.IsEmpty);
+  g.AddVertexRange(0, 2);
+  Mds := g.FindMDS(Exact);
+  AssertTrue(Mds.Length = 3);
+  AssertTrue(g.IsMDS(Mds));
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  Mds := g.FindMDS(Exact, 5);
+  AssertTrue(Mds.Length = 6);
+  AssertTrue(g.IsMDS(Mds));
 end;
 
 
