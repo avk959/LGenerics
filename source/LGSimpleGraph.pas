@@ -146,6 +146,7 @@ type
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
+    procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
   public
 {**********************************************************************************************************
   auxiliary utilities
@@ -156,11 +157,6 @@ type
 ***********************************************************************************************************}
     constructor Create;
     procedure Clear; override;
-  { saves graph in its own binary format }
-    procedure SaveToStream(aStream: TStream);
-    procedure LoadFromStream(aStream: TStream);
-    procedure SaveToFile(const aFileName: string);
-    procedure LoadFromFile(const aFileName: string);
   { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
   { returns graph of connected component that contains aVertex }
@@ -396,13 +392,16 @@ type
     procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
     procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
   public
-    constructor Create;
-    function SeparateGraph(constref aVertex: TVertex): TGChart;
-    function SeparateGraphI(aIndex: SizeInt): TGChart;
-    function InducedSubgraph(const aVertexList: TIntArray): TGChart;
-    function SubgraphFromTree(const aTree: TIntArray): TGChart;
-    function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGChart;
-    function Clone: TGChart;
+    function  SeparateGraph(constref aVertex: TVertex): TGChart;
+    function  SeparateGraphI(aIndex: SizeInt): TGChart;
+    function  InducedSubgraph(const aVertexList: TIntArray): TGChart;
+    function  SubgraphFromTree(const aTree: TIntArray): TGChart;
+    function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TGChart;
+    function  Clone: TGChart;
+    procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
+    procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
+    procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
+    procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
   end;
 
   TIntChart = class(specialize TGChart<Integer, Integer>)
@@ -410,7 +409,6 @@ type
     procedure WriteVertex(aStream: TStream; constref aValue: Integer);
     procedure ReadVertex(aStream: TStream; out aValue: Integer);
   public
-    constructor Create;
     procedure LoadDIMACSAscii(const aFileName: string);
     function  SeparateGraph(aVertex: Integer): TIntChart;
     function  SeparateGraphI(aIndex: SizeInt): TIntChart;
@@ -418,6 +416,10 @@ type
     function  SubgraphFromTree(const aTree: TIntArray): TIntChart;
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TIntChart;
     function  Clone: TIntChart;
+    procedure SaveToStream(aStream: TStream);
+    procedure LoadFromStream(aStream: TStream);
+    procedure SaveToFile(const aFileName: string);
+    procedure LoadFromFile(const aFileName: string);
   { adds numbers in range [aFrom, aTo] as vertices, returns count of added vertices }
     function  AddVertexRange(aFrom, aTo: Integer): Integer;
   { treats aVertexList as list of the pairs of source-target, last odd element ignored;
@@ -448,13 +450,16 @@ type
     procedure WriteVertex(aStream: TStream; constref aValue: string);
     procedure ReadVertex(aStream: TStream; out aValue: string);
   public
-    constructor Create;
-    function SeparateGraph(const aVertex: string): TStrChart;
-    function SeparateGraphI(aIndex: SizeInt): TStrChart;
-    function InducedSubgraph(const aVertexList: TIntArray): TStrChart;
-    function SubgraphFromTree(const aTree: TIntArray): TStrChart;
-    function SubgraphFromEdges(const aEdges: TIntEdgeArray): TStrChart;
-    function Clone: TStrChart;
+    function  SeparateGraph(const aVertex: string): TStrChart;
+    function  SeparateGraphI(aIndex: SizeInt): TStrChart;
+    function  InducedSubgraph(const aVertexList: TIntArray): TStrChart;
+    function  SubgraphFromTree(const aTree: TIntArray): TStrChart;
+    function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TStrChart;
+    function  Clone: TStrChart;
+    procedure SaveToStream(aStream: TStream);
+    procedure LoadFromStream(aStream: TStream);
+    procedure SaveToFile(const aFileName: string);
+    procedure LoadFromFile(const aFileName: string);
   { treats aVertexList as list of the pairs of source-target, last odd element ignored;
     returns count of added edges; }
     function AddEdges(const aVertexList: array of string): Integer;
@@ -611,7 +616,6 @@ type
     procedure ReadData(aStream: TStream; out aValue: TRealWeight);
   public
     class function Distance(constref aSrc, aDst: TPoint): ValReal; static;
-    constructor Create;
     function  AddEdge(constref aSrc, aDst: TPoint): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  EnsureConnected(aOnAddEdge: TOnAddEdge = nil): SizeInt;
@@ -624,6 +628,10 @@ type
     function  SubgraphFromTree(const aTree: TIntArray): TPointsChart;
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TPointsChart;
     function  Clone: TPointsChart;
+    procedure SaveToStream(aStream: TStream);
+    procedure LoadFromStream(aStream: TStream);
+    procedure SaveToFile(const aFileName: string);
+    procedure LoadFromFile(const aFileName: string);
     function  MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray; inline;
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
   end;
@@ -682,9 +690,6 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
-
-uses
-  bufstream;
 
 {$I SimpGraphHelp.inc}
 
@@ -2204,6 +2209,21 @@ begin
     end;
 end;
 
+procedure TGSimpleGraph.DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData);
+var
+  s, d: Integer;
+  e: TEdge;
+begin
+  for e in {%H-}DistinctEdges do
+    begin
+      s := e.Source;
+      d := e.Destination;
+      aStream.WriteBuffer(NtoLE(s), SizeOf(s));
+      aStream.WriteBuffer(NtoLE(d), SizeOf(d));
+      aOnWriteData(aStream, e.Data);
+    end;
+end;
+
 class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
 var
   fcL, fcR: TIntVector;
@@ -2242,143 +2262,6 @@ begin
   FCompCount := 0;
   FConnected := False;
   FConnectedValid := True;
-end;
-
-procedure TGSimpleGraph.SaveToStream(aStream: TStream);
-var
-  Header: TStreamHeader;
-  s, d: Integer;
-  Edge: TEdge;
-  gTitle, Descr: utf8string;
-  wbs: TWriteBufStream;
-begin
-  if not Assigned(OnStreamWriteVertex) then
-    raise EGraphError.Create(SEStreamWriteVertMissed);
-  if not Assigned(OnStreamWriteData) then
-    raise EGraphError.Create(SEStreamWriteDataMissed);
-{$IFDEF CPU64}
-  if VertexCount > System.High(Integer) then
-    raise EGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
-{$ENDIF CPU64}
-  wbs := TWriteBufStream.Create(aStream);
-  try
-    //write header
-    Header.Magic := GRAPH_MAGIC;
-    Header.Version := GRAPH_HEADER_VERSION;
-    gTitle := Title;
-    Header.TitleLen := System.Length(gTitle);
-    Descr := Description.Text;
-    Header.DescriptionLen := System.Length(Descr);
-    Header.VertexCount := VertexCount;
-    Header.EdgeCount := EdgeCount;
-    wbs.WriteBuffer(Header, SizeOf(Header));
-    //write title
-    if Header.TitleLen > 0 then
-      wbs.WriteBuffer(Pointer(gTitle)^, Header.TitleLen);
-    //write description
-    if Header.DescriptionLen > 0 then
-      wbs.WriteBuffer(Pointer(Descr)^, Header.DescriptionLen);
-    //write Items, but does not save any info about connected
-    //this should allow transfer data between directed/undirected graphs ???
-    for s := 0 to Pred(Header.VertexCount) do
-      OnStreamWriteVertex(wbs, FNodeList[s].Vertex);
-    //write edges
-    for Edge in {%H-}DistinctEdges do
-      begin
-        s := Edge.Source;
-        d := Edge.Destination;
-        wbs.WriteBuffer(NtoLE(s), SizeOf(s));
-        wbs.WriteBuffer(NtoLE(d), SizeOf(d));
-        OnStreamWriteData(wbs, Edge.Data);
-      end;
-  finally
-    wbs.Free;
-  end;
-end;
-
-procedure TGSimpleGraph.LoadFromStream(aStream: TStream);
-var
-  Header: TStreamHeader;
-  s, d: Integer;
-  I, Ind: SizeInt;
-  Data: TEdgeData;
-  Vertex: TVertex;
-  gTitle, Descr: utf8string;
-  rbs: TReadBufStream;
-begin
-  if not Assigned(OnStreamReadVertex) then
-    raise EGraphError.Create(SEStreamReadVertMissed);
-  if not Assigned(OnStreamReadData) then
-    raise EGraphError.Create(SEStreamReadDataMissed);
-  rbs := TReadBufStream.Create(aStream);
-  try
-    //read header
-    rbs.ReadBuffer(Header, SizeOf(Header));
-    if Header.Magic <> GRAPH_MAGIC then
-      raise EGraphError.Create(SEUnknownGraphStreamFmt);
-    if Header.Version > GRAPH_HEADER_VERSION then
-      raise EGraphError.Create(SEUnsuppGraphFmtVersion);
-    Clear;
-    EnsureCapacity(Header.VertexCount);
-    //read title
-    if Header.TitleLen > 0 then
-      begin
-        System.SetLength(gTitle, Header.TitleLen);
-        rbs.ReadBuffer(Pointer(gTitle)^, Header.TitleLen);
-        FTitle := gTitle;
-      end;
-    //read description
-    if Header.DescriptionLen > 0 then
-      begin
-        System.SetLength(Descr, Header.DescriptionLen);
-        rbs.ReadBuffer(Pointer(Descr)^, Header.DescriptionLen);
-        Description.Text := Descr;
-      end;
-    //read Items
-    for I := 0 to Pred(Header.VertexCount) do
-      begin
-        OnStreamReadVertex(rbs, Vertex);
-        if not AddVertex(Vertex, Ind) then
-          raise EGraphError.Create(SEGraphStreamCorrupt);
-        if Ind <> I then
-          raise EGraphError.Create(SEGraphStreamReadIntern);
-      end;
-    //read edges
-    Data := Default(TEdgeData);
-    for I := 0 to Pred(Header.EdgeCount) do
-      begin
-        rbs.ReadBuffer(s, SizeOf(s));
-        rbs.ReadBuffer(d, SizeOf(d));
-        OnStreamReadData(rbs, Data);
-        AddEdgeI(LEToN(s), LEToN(d), Data);
-      end;
-  finally
-    rbs.Free;
-  end;
-end;
-
-procedure TGSimpleGraph.SaveToFile(const aFileName: string);
-var
-  fs: TStream;
-begin
-  fs := TFileStream.Create(aFileName, fmCreate);
-  try
-    SaveToStream(fs);
-  finally
-    fs.Free;
-  end;
-end;
-
-procedure TGSimpleGraph.LoadFromFile(const aFileName: string);
-var
-  fs: TStream;
-begin
-  fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
-  try
-    LoadFromStream(fs);
-  finally
-    fs.Free;
-  end;
 end;
 
 function TGSimpleGraph.Clone: TGSimpleGraph;
@@ -3617,13 +3500,6 @@ begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;
 
-constructor TGChart.Create;
-begin
-  inherited;
-  OnStreamReadData := @ReadData;
-  OnStreamWriteData := @WriteData;
-end;
-
 function TGChart.SeparateGraph(constref aVertex: TVertex): TGChart;
 begin
   Result := SeparateGraphI(IndexOf(aVertex));
@@ -3662,6 +3538,26 @@ begin
   Result.AssignGraph(Self);
 end;
 
+procedure TGChart.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
+begin
+  inherited SaveToStream(aStream, aOnWriteVertex, @WriteData);
+end;
+
+procedure TGChart.LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
+begin
+  inherited LoadFromStream(aStream, aOnReadVertex, @ReadData);
+end;
+
+procedure TGChart.SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
+begin
+  inherited SaveToFile(aFileName, aOnWriteVertex, @WriteData);
+end;
+
+procedure TGChart.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
+begin
+  inherited LoadFromFile(aFileName, aOnReadVertex, @ReadData);
+end;
+
 { TIntChart }
 
 procedure TIntChart.WriteVertex(aStream: TStream; constref aValue: Integer);
@@ -3673,13 +3569,6 @@ procedure TIntChart.ReadVertex(aStream: TStream; out aValue: Integer);
 begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
   aValue := LEtoN(aValue);
-end;
-
-constructor TIntChart.Create;
-begin
-  inherited;
-  OnStreamReadVertex := @ReadVertex;
-  OnStreamWriteVertex := @WriteVertex;
 end;
 
 procedure TIntChart.LoadDIMACSAscii(const aFileName: string);
@@ -3766,6 +3655,26 @@ function TIntChart.Clone: TIntChart;
 begin
   Result := TIntChart.Create;
   Result.AssignGraph(Self);
+end;
+
+procedure TIntChart.SaveToStream(aStream: TStream);
+begin
+  inherited SaveToStream(aStream, @WriteVertex);
+end;
+
+procedure TIntChart.LoadFromStream(aStream: TStream);
+begin
+  inherited LoadFromStream(aStream, @ReadVertex);
+end;
+
+procedure TIntChart.SaveToFile(const aFileName: string);
+begin
+  inherited SaveToFile(aFileName, @WriteVertex);
+end;
+
+procedure TIntChart.LoadFromFile(const aFileName: string);
+begin
+  inherited LoadFromFile(aFileName, @ReadVertex);
 end;
 
 function TIntChart.AddVertexRange(aFrom, aTo: Integer): Integer;
@@ -3873,13 +3782,6 @@ begin
   aStream.ReadBuffer(Pointer(aValue)^, Len);
 end;
 
-constructor TStrChart.Create;
-begin
-  inherited;
-  OnStreamReadVertex := @ReadVertex;
-  OnStreamWriteVertex := @WriteVertex;
-end;
-
 function TStrChart.SeparateGraph(const aVertex: string): TStrChart;
 begin
   Result := SeparateGraphI(IndexOf(aVertex));
@@ -3916,6 +3818,26 @@ function TStrChart.Clone: TStrChart;
 begin
   Result := TStrChart.Create;
   Result.AssignGraph(Self);
+end;
+
+procedure TStrChart.SaveToStream(aStream: TStream);
+begin
+  inherited SaveToStream(aStream, @WriteVertex);
+end;
+
+procedure TStrChart.LoadFromStream(aStream: TStream);
+begin
+  inherited LoadFromStream(aStream, @ReadVertex);
+end;
+
+procedure TStrChart.SaveToFile(const aFileName: string);
+begin
+  inherited SaveToFile(aFileName, @WriteVertex);
+end;
+
+procedure TStrChart.LoadFromFile(const aFileName: string);
+begin
+  inherited LoadFromFile(aFileName, @ReadVertex);
 end;
 
 function TStrChart.AddEdges(const aVertexList: array of string): Integer;
@@ -4378,15 +4300,6 @@ begin
   Result := aSrc.Distance(aDst);
 end;
 
-constructor TPointsChart.Create;
-begin
-  inherited;
-  OnStreamReadVertex := @ReadPoint;
-  OnStreamWriteVertex := @WritePoint;
-  OnStreamReadData := @ReadData;
-  OnStreamWriteData := @WriteData;
-end;
-
 function TPointsChart.AddEdge(constref aSrc, aDst: TPoint): Boolean;
 begin
   Result := inherited AddEdge(aSrc, aDst, TRealWeight.Create(aSrc.Distance(aDst)));
@@ -4465,6 +4378,26 @@ function TPointsChart.Clone: TPointsChart;
 begin
   Result := TPointsChart.Create;
   Result.AssignGraph(Self);
+end;
+
+procedure TPointsChart.SaveToStream(aStream: TStream);
+begin
+  inherited SaveToStream(aStream, @WritePoint, @WriteData);
+end;
+
+procedure TPointsChart.LoadFromStream(aStream: TStream);
+begin
+  inherited LoadFromStream(aStream, @ReadPoint, @ReadData);
+end;
+
+procedure TPointsChart.SaveToFile(const aFileName: string);
+begin
+  inherited SaveToFile(aFileName, @WritePoint, @WriteData);
+end;
+
+procedure TPointsChart.LoadFromFile(const aFileName: string);
+begin
+  inherited LoadFromFile(aFileName, @ReadPoint, @ReadData);
 end;
 
 function TPointsChart.MinPathAStar(constref aSrc, aDst: TPoint; out aWeight: ValReal; aHeur: TEstimate): TIntArray;

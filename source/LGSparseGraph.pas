@@ -239,10 +239,6 @@ type
     FEdgeCount: SizeInt;
     FTitle: string;
     FDescription: TStrings;
-    FOnReadVertex: TOnReadVertex;
-    FOnWriteVertex: TOnWriteVertex;
-    FOnReadData: TOnReadData;
-    FOnWriteData: TOnWriteData;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
     function  GetAdjList(aIndex: SizeInt): PAdjList; inline;
@@ -289,6 +285,7 @@ type
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; virtual; abstract;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; virtual; abstract;
+    procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
   type
@@ -394,6 +391,11 @@ type
     procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
+  { saves graph in its own binary format }
+    procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex; aOnWriteData: TOnWriteData);
+    procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex; aOnReadData: TOnReadData);
+    procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex; aOnWriteData: TOnWriteData);
+    procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex; aOnReadData: TOnReadData);
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
@@ -512,10 +514,6 @@ type
     property EdgeCount: SizeInt read FEdgeCount;
     property Capacity: SizeInt read GetCapacity;
     property Items[aIndex: SizeInt]: TVertex read GetItem write SetItem; default;
-    property OnStreamReadVertex: TOnReadVertex read FOnReadVertex write FOnReadVertex;
-    property OnStreamWriteVertex: TOnWriteVertex read FOnWriteVertex write FOnWriteVertex;
-    property OnStreamReadData: TOnReadData read FOnReadData write FOnReadData;
-    property OnStreamWriteData: TOnWriteData read FOnWriteData write FOnWriteData;
   end;
 
   { TGAbstractDotWriter: abstract writer into Graphviz dot format }
@@ -737,6 +735,9 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+
+uses
+  bufstream;
 
 { TIntEdge }
 
@@ -1658,6 +1659,137 @@ begin
     end
   else
     Clear;
+end;
+
+procedure TGSparseGraph.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex; aOnWriteData: TOnWriteData);
+var
+  Header: TStreamHeader;
+  I: Integer;
+  gTitle, Descr: utf8string;
+  wbs: TWriteBufStream;
+begin
+  if not Assigned(aOnWriteVertex) then
+    raise EGraphError.Create(SEStreamWriteVertMissed);
+  if not Assigned(aOnWriteData) then
+    raise EGraphError.Create(SEStreamWriteDataMissed);
+{$IFDEF CPU64}
+  if VertexCount > System.High(Integer) then
+    raise EGraphError.CreateFmt(SEStreamSizeExceedFmt, [VertexCount]);
+{$ENDIF CPU64}
+  wbs := TWriteBufStream.Create(aStream);
+  try
+    //write header
+    Header.Magic := GRAPH_MAGIC;
+    Header.Version := GRAPH_HEADER_VERSION;
+    gTitle := Title;
+    Header.TitleLen := System.Length(gTitle);
+    Descr := Description.Text;
+    Header.DescriptionLen := System.Length(Descr);
+    Header.VertexCount := VertexCount;
+    Header.EdgeCount := EdgeCount;
+    wbs.WriteBuffer(Header, SizeOf(Header));
+    //write title
+    if Header.TitleLen > 0 then
+      wbs.WriteBuffer(Pointer(gTitle)^, Header.TitleLen);
+    //write description
+    if Header.DescriptionLen > 0 then
+      wbs.WriteBuffer(Pointer(Descr)^, Header.DescriptionLen);
+    //write Items, but does not save any info about connected
+    //this should allow transfer data between directed/undirected graphs ???
+    for I := 0 to Pred(Header.VertexCount) do
+      aOnWriteVertex(wbs, FNodeList[I].Vertex);
+    //write edges
+    DoWriteEdges(wbs, aOnWriteData);
+  finally
+    wbs.Free;
+  end;
+end;
+
+procedure TGSparseGraph.LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex; aOnReadData: TOnReadData);
+var
+  Header: TStreamHeader;
+  s, d: Integer;
+  I, Ind: SizeInt;
+  Data: TEdgeData;
+  Vertex: TVertex;
+  gTitle, Descr: utf8string;
+  rbs: TReadBufStream;
+begin
+  if not Assigned(aOnReadVertex) then
+    raise EGraphError.Create(SEStreamReadVertMissed);
+  if not Assigned(aOnReadData) then
+    raise EGraphError.Create(SEStreamReadDataMissed);
+  rbs := TReadBufStream.Create(aStream);
+  try
+    //read header
+    rbs.ReadBuffer(Header, SizeOf(Header));
+    if Header.Magic <> GRAPH_MAGIC then
+      raise EGraphError.Create(SEUnknownGraphStreamFmt);
+    if Header.Version > GRAPH_HEADER_VERSION then
+      raise EGraphError.Create(SEUnsuppGraphFmtVersion);
+    Clear;
+    EnsureCapacity(Header.VertexCount);
+    //read title
+    if Header.TitleLen > 0 then
+      begin
+        System.SetLength(gTitle, Header.TitleLen);
+        rbs.ReadBuffer(Pointer(gTitle)^, Header.TitleLen);
+        FTitle := gTitle;
+      end;
+    //read description
+    if Header.DescriptionLen > 0 then
+      begin
+        System.SetLength(Descr, Header.DescriptionLen);
+        rbs.ReadBuffer(Pointer(Descr)^, Header.DescriptionLen);
+        Description.Text := Descr;
+      end;
+    //read Items
+    for I := 0 to Pred(Header.VertexCount) do
+      begin
+        aOnReadVertex(rbs, Vertex);
+        if not AddVertex(Vertex, Ind) then
+          raise EGraphError.Create(SEGraphStreamCorrupt);
+        if Ind <> I then
+          raise EGraphError.Create(SEGraphStreamReadIntern);
+      end;
+    //read edges
+    Data := Default(TEdgeData);
+    for I := 0 to Pred(Header.EdgeCount) do
+      begin
+        rbs.ReadBuffer(s, SizeOf(s));
+        rbs.ReadBuffer(d, SizeOf(d));
+        aOnReadData(rbs, Data);
+        AddEdgeI(LEToN(s), LEToN(d), Data);
+      end;
+  finally
+    rbs.Free;
+  end;
+end;
+
+procedure TGSparseGraph.SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex;
+  aOnWriteData: TOnWriteData);
+var
+  fs: TStream;
+begin
+  fs := TFileStream.Create(aFileName, fmCreate);
+  try
+    SaveToStream(fs, aOnWriteVertex, aOnWriteData);
+  finally
+    fs.Free;
+  end;
+end;
+
+procedure TGSparseGraph.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex;
+  aOnReadData: TOnReadData);
+var
+  fs: TStream;
+begin
+  fs := TFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadFromStream(fs, aOnReadVertex, aOnReadData);
+  finally
+    fs.Free;
+  end;
 end;
 
 function TGSparseGraph.AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
