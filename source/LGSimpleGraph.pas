@@ -2340,19 +2340,19 @@ begin
   Tmp := TGSimpleGraph.Create;
   Tmp.Title := Title;
   Tmp.Description.Assign(Description);
-  for e in DistinctEdges do
+  for e in {%H-}DistinctEdges do
     begin
       s := Items[e.Source];
       d := Items[e.Destination];
       if not aGraph.ContainsEdge(s, d) then
-        Tmp.AddEdge(s, s, e.Data);
+        Tmp.AddEdge(s, d, e.Data);
     end;
-  for e in aGraph.DistinctEdges do
+  for e in aGraph{%H-}.DistinctEdges do
     begin
       s := aGraph[e.Source];
       d := aGraph[e.Destination];
       if not ContainsEdge(s, d) then
-        Tmp.AddEdge(s, s, e.Data);
+        Tmp.AddEdge(s, d, e.Data);
     end;
   AssignGraph(Tmp);
 end;

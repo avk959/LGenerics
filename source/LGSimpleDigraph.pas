@@ -1272,14 +1272,14 @@ begin
       s := Items[e.Source];
       d := Items[e.Destination];
       if not aGraph.ContainsEdge(s, d) then
-        Tmp.AddEdge(s, s, e.Data);
+        Tmp.AddEdge(s, d, e.Data);
     end;
   for e in aGraph.Edges do
     begin
       s := aGraph[e.Source];
       d := aGraph[e.Destination];
       if not ContainsEdge(s, d) then
-        Tmp.AddEdge(s, s, e.Data);
+        Tmp.AddEdge(s, d, e.Data);
     end;
   AssignGraph(Tmp);
 end;
