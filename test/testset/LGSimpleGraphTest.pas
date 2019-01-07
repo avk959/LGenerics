@@ -32,6 +32,7 @@ type
     function  GenerateTestGr5Compl: TGraph;
     function  GenerateStar: TGraph;
     function  GenerateCycle: TGraph;
+    function  GenerateCycle11: TGraph;
     function  GenerateWheel: TGraph;
     function  GenerateComplete: TGraph;
     function  GenerateTestGrBip1: TGraph;
@@ -110,6 +111,16 @@ type
     procedure FindHamiltonCycles;
     procedure FindHamiltonPaths;
     procedure FindMDS;
+
+    procedure SetSymmDifferenceOf;
+    procedure SetSymmDifferenceOf2;
+    procedure SetSymmDifferenceOf3;
+    procedure SetSymmDifferenceOf4;
+    procedure SetUnionOf;
+    procedure SetUnionOf2;
+    procedure SetIntersectionOf;
+    procedure SetIntersectionOf2;
+    procedure SetIntersectionOf3;
   end;
 
 implementation
@@ -192,6 +203,13 @@ begin
   Result := TGraph.Create;
   Result.AddVertexRange(1, 12);
   Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 1, 12]);
+end;
+
+function TSimpleGraphTest.GenerateCycle11: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(2, 12);
+  Result.AddEdges([2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 2, 12]);
 end;
 
 function TSimpleGraphTest.GenerateWheel: TGraph;
@@ -1797,6 +1815,185 @@ begin
   Mds := g.FindMDS(Exact, 5);
   AssertTrue(Mds.Length = 6);
   AssertTrue(g.IsMDS(Mds));
+end;
+
+procedure TSimpleGraphTest.SetSymmDifferenceOf;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+  Hub: SizeInt;
+begin
+  g := {%H-}Ref;
+  g2 := TGraph.Create;
+  try
+    g.SetSymmDifferenceOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.IsEmpty);
+  g2 := GenerateStar;
+  try
+    g.SetUnionOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.VertexCount = 12);
+  AssertTrue(g.IsStar(Hub));
+  AssertTrue(Hub = 0);
+end;
+
+procedure TSimpleGraphTest.SetSymmDifferenceOf2;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+  Hub: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateStar;
+  g := Ref;
+  g2 := GenerateCycle11;
+  try
+    g.SetSymmDifferenceOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.VertexCount.ToString, g.VertexCount = 12);
+  AssertTrue(g.IsWheel(Hub));
+  AssertTrue(Hub = 0);
+end;
+
+procedure TSimpleGraphTest.SetSymmDifferenceOf3;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+  Hub: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateWheel;
+  g := Ref;
+  g2 := GenerateCycle11;
+  try
+    g.SetSymmDifferenceOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.VertexCount = 12);
+  AssertTrue(g.IsStar(Hub));
+  AssertTrue(Hub = 0);
+end;
+
+procedure TSimpleGraphTest.SetSymmDifferenceOf4;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateWheel;
+  g := Ref;
+  g2 := GenerateWheel;
+  try
+    g.SetSymmDifferenceOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.IsEmpty);
+end;
+
+procedure TSimpleGraphTest.SetUnionOf;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+  Hub: SizeInt;
+begin
+  g := {%H-}Ref;
+  g2 := TGraph.Create;
+  try
+    g.SetUnionOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.IsEmpty);
+  g2 := GenerateStar;
+  try
+    g.SetUnionOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.VertexCount = 12);
+  AssertTrue(g.IsStar(Hub));
+  AssertTrue(Hub = 0);
+end;
+
+procedure TSimpleGraphTest.SetUnionOf2;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+  Hub: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateStar;
+  g := Ref;
+  g2 := GenerateCycle11;
+  try
+    g.SetUnionOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.VertexCount = 12);
+  AssertTrue(g.IsWheel(Hub));
+  AssertTrue(Hub = 0);
+end;
+
+procedure TSimpleGraphTest.SetIntersectionOf;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+begin
+  g := {%H-}Ref;
+  g2 := TGraph.Create;
+  try
+    g.SetIntersectionOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.IsEmpty);
+  g2 := GenerateStar;
+  try
+    g.SetIntersectionOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.IsEmpty);
+end;
+
+procedure TSimpleGraphTest.SetIntersectionOf2;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateStar;
+  g := Ref;
+  g2 := GenerateCycle11;
+  try
+    g.SetIntersectionOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.VertexCount = 11);
+  AssertTrue(g.SeparateCount = 11);
+end;
+
+procedure TSimpleGraphTest.SetIntersectionOf3;
+var
+  Ref: TRef;
+  g, g2: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateWheel;
+  g := Ref;
+  g2 := GenerateCycle;
+  try
+    g.SetIntersectionOf(g2);
+  finally
+    g2.Free;
+  end;
+  AssertTrue(g.VertexCount = 12);
+  AssertTrue(g.IsCycle);
 end;
 
 
