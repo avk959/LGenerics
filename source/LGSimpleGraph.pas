@@ -3590,8 +3590,11 @@ end;
 
 procedure TGChart.SetUnionOf(aChart: TGChart);
 var
+  v: TVertex;
   e: TEdge;
 begin
+  for v in aChart.Vertices do
+    AddVertex(v);
   for e in aChart.DistinctEdges do
     AddEdge(aChart[e.Source], aChart[e.Destination]);
 end;
@@ -3605,6 +3608,9 @@ begin
   Tmp := TGChart.Create;
   Tmp.Title := Title;
   Tmp.Description.Assign(Description);
+  for s in Vertices do
+    if aChart.ContainsVertex(s) then
+      Tmp.AddVertex(s);
   for e in DistinctEdges do
     begin
       s := Items[e.Source];

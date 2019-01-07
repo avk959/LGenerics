@@ -1856,8 +1856,11 @@ end;
 
 procedure TGFlowChart.SetUnionOf(aChart: TGFlowChart);
 var
+  v: TVertex;
   e: TEdge;
 begin
+  for v in aChart.Vertices do
+    AddVertex(v);
   for e in aChart.Edges do
     AddEdge(aChart[e.Source], aChart[e.Destination]);
 end;
@@ -1871,6 +1874,9 @@ begin
   Tmp := TGFlowChart.Create;
   Tmp.Title := Title;
   Tmp.Description.Assign(Description);
+  for s in Vertices do
+    if aChart.ContainsVertex(s) then
+      Tmp.AddVertex(s);
   for e in Edges do
     begin
       s := Items[e.Source];
