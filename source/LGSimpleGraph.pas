@@ -171,6 +171,8 @@ type
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TGSimpleGraph;
   { returns line graph constucted from self }
     function  CreateLineGraph: TLineGraph;
+  { symmetric difference }
+    procedure SetSymmDifferenceOf(aGraph: TGSimpleGraph);
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
@@ -402,6 +404,8 @@ type
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
     procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
     procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
+    procedure SetUnionOf(aChart: TGChart);
+    procedure SetIntersectionOf(aChart: TGChart);
   end;
 
   TIntChart = class(specialize TGChart<Integer, Integer>)
@@ -2327,6 +2331,32 @@ begin
     end;
 end;
 
+procedure TGSimpleGraph.SetSymmDifferenceOf(aGraph: TGSimpleGraph);
+var
+  Tmp: TGSimpleGraph;
+  e: TEdge;
+  s, d: TVertex;
+begin
+  Tmp := TGSimpleGraph.Create;
+  Tmp.Title := Title;
+  Tmp.Description.Assign(Description);
+  for e in DistinctEdges do
+    begin
+      s := Items[e.Source];
+      d := Items[e.Destination];
+      if not aGraph.ContainsEdge(s, d) then
+        Tmp.AddEdge(s, s, e.Data);
+    end;
+  for e in aGraph.DistinctEdges do
+    begin
+      s := aGraph[e.Source];
+      d := aGraph[e.Destination];
+      if not ContainsEdge(s, d) then
+        Tmp.AddEdge(s, s, e.Data);
+    end;
+  AssignGraph(Tmp);
+end;
+
 function TGSimpleGraph.Degree(constref aVertex: TVertex): SizeInt;
 begin
   Result := DegreeI(IndexOf(aVertex));
@@ -3556,6 +3586,33 @@ end;
 procedure TGChart.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
 begin
   inherited LoadFromFile(aFileName, aOnReadVertex, @ReadData);
+end;
+
+procedure TGChart.SetUnionOf(aChart: TGChart);
+var
+  e: TEdge;
+begin
+  for e in aChart.DistinctEdges do
+    AddEdge(aChart[e.Source], aChart[e.Destination]);
+end;
+
+procedure TGChart.SetIntersectionOf(aChart: TGChart);
+var
+  Tmp: TGChart;
+  s, d: TVertex;
+  e: TEdge;
+begin
+  Tmp := TGChart.Create;
+  Tmp.Title := Title;
+  Tmp.Description.Assign(Description);
+  for e in DistinctEdges do
+    begin
+      s := Items[e.Source];
+      d := Items[e.Destination];
+      if aChart.ContainsEdge(s, d) then
+        Tmp.AddEdge(s, d);
+    end;
+  AssignGraph(Tmp);
 end;
 
 { TIntChart }

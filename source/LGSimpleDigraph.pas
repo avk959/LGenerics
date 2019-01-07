@@ -127,6 +127,8 @@ type
     procedure Clear; override;
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
+  { symmetric difference }
+    procedure SymmDifferenceOf(aGraph: TGSimpleDiGraph);
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
@@ -162,7 +164,7 @@ type
   { creates internal reachability matrix using pre-calculated results of FindStrongComponents }
     procedure FillReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt);
   { returns True, radus and diameter, if graph is strongly connected, False otherwise }
-    function  GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+    function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns True and indices of the central vertices in aCenter,
     if graph is strongly connected, False otherwise }
     function  FindCenter(out aCenter: TIntArray): Boolean;
@@ -233,6 +235,8 @@ type
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
     procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
     procedure LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
+    procedure SetUnionOf(aChart: TGFlowChart);
+    procedure SetIntersectionOf(aChart: TGFlowChart);
   end;
 
   generic TGDigraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
@@ -398,7 +402,7 @@ type
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not strongly connected or exists negative weight cycle,
     otherwise returns True and weighted radus and diameter of the graph }
-    function FindWeightedRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+    function FindWeightedMetrics(out aRadius, aDiameter: TWeight): Boolean;
   { returns False if is not strongly connected or exists negative weight cycle,
     otherwise returns True and indices of the central vertices in aCenter }
     function FindWeightedCenter(out aCenter: TIntArray): Boolean;
@@ -1256,6 +1260,30 @@ begin
     Result.AddEdgeI(e.Destination, e.Source, e.Data);
 end;
 
+procedure TGSimpleDiGraph.SymmDifferenceOf(aGraph: TGSimpleDiGraph);
+var
+  Tmp: TGSimpleDiGraph;
+  e: TEdge;
+  s, d: TVertex;
+begin
+  Tmp := TGSimpleDiGraph.Create;
+  for e in Edges do
+    begin
+      s := Items[e.Source];
+      d := Items[e.Destination];
+      if not aGraph.ContainsEdge(s, d) then
+        Tmp.AddEdge(s, s, e.Data);
+    end;
+  for e in aGraph.Edges do
+    begin
+      s := aGraph[e.Source];
+      d := aGraph[e.Destination];
+      if not ContainsEdge(s, d) then
+        Tmp.AddEdge(s, s, e.Data);
+    end;
+  AssignGraph(Tmp);
+end;
+
 function TGSimpleDiGraph.InDegree(constref aVertex: TVertex): SizeInt;
 begin
   Result := InDegreeI(IndexOf(aVertex));
@@ -1461,7 +1489,7 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(aScIds, aScCount);
 end;
 
-function TGSimpleDiGraph.GetRadiusDiameter(out aRadius, aDiameter: SizeInt): Boolean;
+function TGSimpleDiGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
 var
   Queue, Dist: TIntArray;
   VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
@@ -1824,6 +1852,33 @@ end;
 procedure TGFlowChart.LoadFromFile(const aFileName: string; aOnReadVertex: TOnReadVertex);
 begin
   inherited LoadFromFile(aFileName, aOnReadVertex, @ReadData);
+end;
+
+procedure TGFlowChart.SetUnionOf(aChart: TGFlowChart);
+var
+  e: TEdge;
+begin
+  for e in aChart.Edges do
+    AddEdge(aChart[e.Source], aChart[e.Destination]);
+end;
+
+procedure TGFlowChart.SetIntersectionOf(aChart: TGFlowChart);
+var
+  Tmp: TGFlowChart;
+  s, d: TVertex;
+  e: TEdge;
+begin
+  Tmp := TGFlowChart.Create;
+  Tmp.Title := Title;
+  Tmp.Description.Assign(Description);
+  for e in Edges do
+    begin
+      s := Items[e.Source];
+      d := Items[e.Destination];
+      if aChart.ContainsEdge(s, d) then
+        Tmp.AddEdge(s, d);
+    end;
+  AssignGraph(Tmp);
 end;
 
 { TGDigraphDotWriter }
@@ -2394,7 +2449,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.FindWeightedRadiusDiameter(out aRadius, aDiameter: TWeight): Boolean;
+function TGWeightedDiGraph.FindWeightedMetrics(out aRadius, aDiameter: TWeight): Boolean;
 var
   Bfmt: TWeightHelper.TBfmt;
   Weights: TWeightArray;
