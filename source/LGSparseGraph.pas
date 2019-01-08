@@ -417,9 +417,10 @@ type
     raises EGraphError if aSrc or aDst out of range }
     function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
-  { returns False if there is no such edge; raises EGraphError if not contains aSrc or aDst }
+  { if contains edge (aSrc, aDst) then removes it and returns True,
+    otherwise returns False }
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
+    function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  IndexOf(constref aVertex: TVertex): SizeInt; inline;
@@ -1863,9 +1864,10 @@ end;
 
 function TGSparseGraph.RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
 begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := DoRemoveEdge(aSrc, aDst);
+  if (SizeUInt(aSrc) < SizeUInt(VertexCount)) and (SizeUInt(aDst) < SizeUInt(VertexCount)) then
+    Result := DoRemoveEdge(aSrc, aDst)
+  else
+    Result := False;
 end;
 
 function TGSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
