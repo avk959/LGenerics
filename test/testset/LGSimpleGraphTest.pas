@@ -52,6 +52,10 @@ type
     procedure RemoveVertex;
     procedure SeparateCount1;
     procedure SeparateCount2;
+    procedure RemoveEdge;
+    procedure RemoveEdge1;
+    procedure ContractEdge;
+    procedure ContractEdge1;
     procedure SeparateGraph1;
     procedure SeparateGraph2;
     procedure InducedSubgraph1;
@@ -465,6 +469,88 @@ begin
   {%H-}Ref.Instance := GenerateTestGr2;
   g := Ref;
   AssertTrue(g.SeparateCount = 2);
+end;
+
+procedure TSimpleGraphTest.RemoveEdge;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.RemoveEdge(0, 0));
+  AssertFalse(g.RemoveEdge(0, 1));
+end;
+
+procedure TSimpleGraphTest.RemoveEdge1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.Connected);
+  AssertTrue(g.EdgeCount = 17);
+  AssertFalse(g.RemoveEdge(0, 0));
+  AssertTrue(g.Connected);
+  AssertTrue(g.EdgeCount = 17);
+  AssertFalse(g.RemoveEdge(0, 4));
+  AssertTrue(g.Connected);
+  AssertTrue(g.EdgeCount = 17);
+  AssertTrue(g.ContainsEdge(0, 1));
+  AssertTrue(g.RemoveEdge(0, 1));
+  AssertFalse(g.ContainsEdge(0, 1));
+  AssertTrue(g.EdgeCount = 16);
+  AssertFalse(g.Connected);
+  AssertTrue(g.SeparateCount = 2);
+  AssertTrue(g.ContainsEdge(6, 7));
+  AssertTrue(g.RemoveEdge(6, 7));
+  AssertFalse(g.ContainsEdge(6, 7));
+  AssertTrue(g.EdgeCount = 15);
+  AssertTrue(g.SeparateCount = 3);
+end;
+
+procedure TSimpleGraphTest.ContractEdge;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.ContractEdge(0, 0));
+  AssertFalse(g.ContractEdge(0, 1));
+end;
+
+procedure TSimpleGraphTest.ContractEdge1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.Connected);
+  AssertTrue(g.EdgeCount = 17);
+  AssertTrue(g.VertexCount = 13);
+  AssertFalse(g.ContractEdge(0, 0));
+  AssertTrue(g.Connected);
+  AssertTrue(g.EdgeCount = 17);
+  AssertTrue(g.VertexCount = 13);
+  AssertFalse(g.ContractEdge(0, 4));
+  AssertTrue(g.Connected);
+  AssertTrue(g.EdgeCount = 17);
+  AssertTrue(g.VertexCount = 13);
+  AssertTrue(g.ContainsEdge(0, 1));
+  AssertTrue(g.ContractEdge(0, 1));
+  AssertFalse(g.ContainsEdge(0, 1));
+  AssertTrue(g.ContainsVertex(0));
+  AssertFalse(g.ContainsVertex(1));
+  AssertTrue(g.EdgeCount = 16);
+  AssertTrue(g.Connected);
+  AssertTrue(g.ContainsEdge(6, 7));
+  AssertTrue(g.ContractEdge(6, 7));
+  AssertFalse(g.ContainsEdge(6, 7));
+  AssertTrue(g.ContainsVertex(6));
+  AssertFalse(g.ContainsVertex(7));
+  AssertTrue(g.EdgeCount = 15);
+  AssertTrue(g.Connected);
 end;
 
 procedure TSimpleGraphTest.SeparateGraph1;
