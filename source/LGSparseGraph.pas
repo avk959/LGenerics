@@ -417,10 +417,14 @@ type
     raises EGraphError if aSrc or aDst out of range }
     function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
-  { if contains edge (aSrc, aDst) then removes it and returns True,
+  { if contains an edge (aSrc, aDst) then removes it and returns True,
     otherwise returns False }
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+  { if contains an edge (aSrc, aDst) then contracts it and returns True(vertex aSrc remains, aDst is removed),
+    otherwise returns False }
+    function  ContractEdge(constref aSrc, aDst: TVertex): Boolean; inline;
+    function  ContractEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  IndexOf(constref aVertex: TVertex): SizeInt; inline;
@@ -1868,6 +1872,40 @@ begin
     Result := DoRemoveEdge(aSrc, aDst)
   else
     Result := False;
+end;
+
+function TGSparseGraph.ContractEdge(constref aSrc, aDst: TVertex): Boolean;
+begin
+  Result := ContractEdgeI(IndexOf(aSrc), IndexOf(aDst));
+end;
+
+function TGSparseGraph.ContractEdgeI(aSrc, aDst: SizeInt): Boolean;
+var
+  DstEdges: array of TIncidentEdge;
+  e: TIncidentEdge;
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  Result := RemoveEdgeI(aSrc, aDst);
+  if not Result then
+    exit;
+  if AdjLists[aDst]^.Count > 0 then
+    begin
+      System.SetLength(DstEdges, AdjLists[aDst]^.Count);
+      I := 0;
+      for p in AdjLists[aDst]^ do
+        begin
+          DstEdges[I].Destination := p^.Destination;
+          DstEdges[I].Data := p^.Data;
+          Inc(I);
+        end;
+      for e in DstEdges do
+        begin
+          DoRemoveEdge(aDst, e.Destination);
+          DoAddEdge(aSrc, e.Destination, e.Data);
+        end;
+    end;
+  RemoveVertexI(aDst);
 end;
 
 function TGSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
