@@ -1,15 +1,14 @@
 object frmMain: TfrmMain
   Left = 331
-  Height = 782
+  Height = 781
   Top = 250
-  Width = 1530
+  Width = 1540
   Caption = 'frmMain'
-  ClientHeight = 782
-  ClientWidth = 1530
+  ClientHeight = 781
+  ClientWidth = 1540
   DesignTimePPI = 115
   OnCreate = FormCreate
   Position = poScreenCenter
-  LCLVersion = '2.1.0.0'
   object Panel1: TPanel
     Left = 0
     Height = 781
@@ -48,10 +47,13 @@ object frmMain: TfrmMain
           ParentColor = False
         end
         object lbGreedyCost: TLabel
-          Left = 144
+          AnchorSideLeft.Control = Label2
+          AnchorSideLeft.Side = asrBottom
+          Left = 138
           Height = 19
           Top = 40
           Width = 6
+          BorderSpacing.Left = 4
           Caption = '-'
           ParentColor = False
         end
@@ -94,10 +96,13 @@ object frmMain: TfrmMain
           ParentColor = False
         end
         object lbBnBCost: TLabel
-          Left = 124
+          AnchorSideLeft.Control = Label3
+          AnchorSideLeft.Side = asrBottom
+          Left = 118
           Height = 19
           Top = 40
           Width = 6
+          BorderSpacing.Left = 4
           Caption = '-'
           ParentColor = False
         end
@@ -112,7 +117,7 @@ object frmMain: TfrmMain
         object seTtl: TSpinEdit
           Left = 600
           Height = 27
-          Top = 36
+          Top = 34
           Width = 92
           MaxValue = 7200
           MinValue = 1
@@ -134,7 +139,7 @@ object frmMain: TfrmMain
     Left = 1436
     Height = 30
     Top = 80
-    Width = 84
+    Width = 96
     Anchors = [akTop, akRight]
     Caption = 'New points'
     OnClick = btNewClick
@@ -144,7 +149,7 @@ object frmMain: TfrmMain
     Left = 1436
     Height = 30
     Top = 124
-    Width = 84
+    Width = 96
     Anchors = [akTop, akRight]
     Caption = 'Start greedy'
     OnClick = btStartGreedyClick
@@ -163,7 +168,7 @@ object frmMain: TfrmMain
     Left = 1436
     Height = 27
     Top = 40
-    Width = 80
+    Width = 96
     Anchors = [akTop, akRight]
     MaxValue = 500
     MinValue = 10
@@ -174,7 +179,8 @@ object frmMain: TfrmMain
     Left = 1436
     Height = 30
     Top = 168
-    Width = 84
+    Width = 96
+    Anchors = [akTop, akRight]
     Caption = 'Start BnB'
     OnClick = btStartBnBClick
     TabOrder = 4
