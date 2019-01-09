@@ -535,8 +535,8 @@ type
   shortest path problem utilities
 ***********************************************************************************************************}
 
-  { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
-    connected component(SSSP), the weights of all edges MUST be nonnegative;
+  { returns the weights of paths of minimal weight from a given vertex to the remaining
+    vertices(SSSP), the weights of all edges MUST be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
     InfWeight if the vertex is unreachable; used Dijkstra's algorithm;
     raises an exception if aSrc does not exist }
@@ -546,10 +546,9 @@ type
     function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { returns False if exists negative weight cycle reachable from aSrc,
-    otherwise finds all paths of minimal weight from a given vertex to the remaining
-    vertices in the same connected component(SSSP); an aWeights will contain
-    in the corresponding component the weight of the path to the vertex or InfWeight
-    if the vertex is unreachable; used BFMT algorithm;
+    otherwise returns the weights of paths of minimal weight from a given vertex to the remaining
+    vertices(SSSP); an aWeights will contain in the corresponding component the weight of the path
+    to the vertex or InfWeight if the vertex is unreachable; used BFMT algorithm;
     raises an exception if aSrc does not exist  }
     function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
