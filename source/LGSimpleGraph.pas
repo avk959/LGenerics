@@ -3955,7 +3955,7 @@ class function TGWeightedGraph.TotalWeight(const aEdges: TEdgeArray): TWeight;
 var
   e: TWeightEdge;
 begin
-  Result := 0;
+  Result := TWeight(0);
   for e in aEdges do
     Result += e.Weight;
 end;
@@ -3965,7 +3965,7 @@ var
   e: TEdge;
 begin
   for e in DistinctEdges do
-    if e.Data.Weight < 0 then
+    if e.Data.Weight < TWeight(0) then
       exit(True);
   Result := False;
 end;
