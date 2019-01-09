@@ -285,6 +285,7 @@ type
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; virtual; abstract;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; virtual; abstract;
+    function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; virtual; abstract;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
   public
@@ -2000,14 +2001,9 @@ begin
 end;
 
 function TGSparseGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
-var
-  p: PAdjItem;
 begin
   CheckIndexRange(aSrc);
-  p := AdjLists[aSrc]^.Find(aDst);
-  Result := p <> nil;
-  if Result then
-    p^.Data := aValue;
+  Result := DoSetEdgeData(aSrc, aDst, aValue);
 end;
 
 function TGSparseGraph.IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;

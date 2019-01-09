@@ -118,6 +118,7 @@ type
     procedure DoRemoveVertex(aIndex: SizeInt); override;
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
+    function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
   public
 {**********************************************************************************************************
@@ -1208,6 +1209,16 @@ begin
       Dec(FEdgeCount);
       FReachabilityMatrix.Clear;
     end;
+end;
+
+function TGSimpleDiGraph.DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+var
+  p: PAdjItem;
+begin
+  p := AdjLists[aSrc]^.Find(aDst);
+  Result := p <> nil;
+  if Result then
+    p^.Data := aValue;
 end;
 
 procedure TGSimpleDiGraph.DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData);
