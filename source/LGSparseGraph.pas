@@ -5946,7 +5946,7 @@ begin
           aPath := g.TreePathTo(aPath, aDst);
         end
       else
-        aWeight := TWeight.INF_VALUE;
+        aPath := nil;
     end
   else
     begin
