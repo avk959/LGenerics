@@ -7,6 +7,7 @@ interface
 uses
   Classes, SysUtils, fpcunit, testregistry,
   LGUtils,
+  LGArrayHelpers,
   LGSparseGraph,
   LGSimpleGraph;
 
@@ -125,6 +126,43 @@ type
     procedure SetIntersectionOf;
     procedure SetIntersectionOf2;
     procedure SetIntersectionOf3;
+  end;
+
+  { TWeightedGraphTest }
+
+  TWeightedGraphTest = class(TTestCase)
+  private
+  type
+    TIntWeight = specialize TGSimpleWeight<Integer>;
+    TGraph     = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
+    TRef       = specialize TGAutoRef<TGraph>;
+    THelper    = specialize TGOrdinalArrayHelper<Integer>;
+  const
+    WEIGHTS_ARRAY: array of TIntArray  = ((0, 1, 0, 5, 2, 0), (1, 0, 1, 6, 3, 1), (0, 1, 0, 5, 2, 0),
+                                          (5, 6, 5, 0, 4, 5), (2, 3, 2, 4, 0, 2), (0, 1, 0, 5, 2, 0));
+    PATHTREE_ARRAY: array of TIntArray = ((-1, 2, 0, 2, 5, 2), (2, -1, 1, 2, 5, 2), (2, 2, -1, 2, 5, 2),
+                                          (2, 2, 3, -1, 3, 2), (2, 2, 5, 4, -1, 4), (2, 2, 5, 2, 5, -1));
+    PATHS_FROM_0: array of TIntArray   = ((0, 2, 1), (0, 2), (0, 2, 3), (0, 2, 5, 4), (0, 2, 5));
+
+    function  GenerateTestWGr1: TGraph;
+    function  GenerateTestWGr2: TGraph;
+  published
+    procedure ContainsNegWeightEdge;
+    procedure ContainsNegCycle;
+    procedure ContainsNegCycle1;
+    procedure MinPathsMap;
+    procedure MinPathsMap1;
+    procedure MinPathsMap2;
+    procedure FindMinPathsMap;
+    procedure FindMinPathsMap1;
+    procedure FindMinPathsMap2;
+    procedure FindMinPathsMap3;
+    procedure FindMinPathsMap4;
+    procedure MinPath;
+    procedure MinPath1;
+    procedure FindMinPath;
+    procedure FindMinPath1;
+    procedure FindMinPath2;
   end;
 
 implementation
@@ -2082,8 +2120,324 @@ begin
   AssertTrue(g.IsCycle);
 end;
 
+{ TWeightedGraphTest }
+
+function TWeightedGraphTest.GenerateTestWGr1: TGraph;
+var
+  I: Integer;
+begin
+  Result := TGraph.Create;  //TestWGr1.png
+  for I := 0 to 5 do
+    Result.AddVertex(I);
+  Result.AddEdge(0, 1, TIntWeight.Create(2));
+  Result.AddEdge(1, 2, TIntWeight.Create(2));
+  Result.AddEdge(2, 3, TIntWeight.Create(5));
+  Result.AddEdge(4, 3, TIntWeight.Create(4));
+  Result.AddEdge(5, 4, TIntWeight.Create(3));
+  Result.AddEdge(5, 0, TIntWeight.Create(5));
+  Result.AddEdge(5, 1, TIntWeight.Create(3));
+  Result.AddEdge(4, 2, TIntWeight.Create(3));
+  Result.AddEdge(2, 5, TIntWeight.Create(-6));
+end;
+
+function TWeightedGraphTest.GenerateTestWGr2: TGraph;
+var
+  I: Integer;
+begin
+  Result := TGraph.Create; //TestWGr2.png
+  for I := 0 to 5 do
+    Result.AddVertex(I);
+  Result.AddEdge(0, 1, TIntWeight.Create(2));
+  Result.AddEdge(1, 2, TIntWeight.Create(1));
+  Result.AddEdge(2, 3, TIntWeight.Create(5));
+  Result.AddEdge(4, 3, TIntWeight.Create(4));
+  Result.AddEdge(5, 4, TIntWeight.Create(2));
+  Result.AddEdge(5, 0, TIntWeight.Create(5));
+  Result.AddEdge(5, 1, TIntWeight.Create(3));
+  Result.AddEdge(4, 2, TIntWeight.Create(3));
+  Result.AddEdge(2, 5, TIntWeight.Create(0));
+  Result.AddEdge(2, 0, TIntWeight.Create(0));
+end;
+
+procedure TWeightedGraphTest.ContainsNegWeightEdge;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.ContainsNegWeightEdge);
+  Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  AssertTrue(g.ContainsNegWeightEdge);
+  g.SetEdgeData(2, 5, TIntWeight.Create(0));
+  AssertFalse(g.ContainsNegWeightEdge);
+end;
+
+procedure TWeightedGraphTest.ContainsNegCycle;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cycle: TIntArray;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+   g.ContainsNegCycle(0, Cycle);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  g.AddVertex(1);
+  AssertFalse(g.ContainsNegCycle(1, Cycle));
+  g.AddVertex(2);
+  AssertFalse(g.ContainsNegCycle(2, Cycle));
+end;
+
+procedure TWeightedGraphTest.ContainsNegCycle1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cycle: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  AssertTrue(g.ContainsNegCycle(0, Cycle));
+  AssertTrue(Cycle.Length = 3);
+  g.SetEdgeData(2, 5, TIntWeight.Create(0));
+  AssertFalse(g.ContainsNegCycle(0, Cycle));
+  AssertTrue(Cycle.IsEmpty);
+end;
+
+procedure TWeightedGraphTest.MinPathsMap;
+var
+  Ref: TRef;
+  g: TGraph;
+  Weights: TIntArray;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.MinPathsMap(0);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  g.AddVertex(1);
+  Weights := g.MinPathsMap(1);
+  AssertTrue(Weights.Length = 1);
+  AssertTrue(Weights[0] = 0);
+end;
+
+procedure TWeightedGraphTest.MinPathsMap1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Weights: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      Weights := g.MinPathsMap(I);
+      AssertTrue(THelper.Same(Weights, WEIGHTS_ARRAY[I]))
+    end;
+end;
+
+procedure TWeightedGraphTest.MinPathsMap2;
+var
+  Ref: TRef;
+  g: TGraph;
+  PathTree: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      g.MinPathsMap(I, PathTree);
+      AssertTrue(THelper.Same(PathTree, PATHTREE_ARRAY[I]))
+    end;
+end;
+
+procedure TWeightedGraphTest.FindMinPathsMap;
+var
+  Ref: TRef;
+  g: TGraph;
+  Weights: TIntArray;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.FindMinPathsMap(0, Weights);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  g.AddVertex(1);
+  AssertTrue(g.FindMinPathsMap(1, Weights));
+  AssertTrue(Weights.Length = 1);
+  AssertTrue(Weights[0] = 0);
+end;
+
+procedure TWeightedGraphTest.FindMinPathsMap1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Weights: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(g.FindMinPathsMap(I, Weights));
+      AssertTrue(THelper.Same(Weights, WEIGHTS_ARRAY[I]))
+    end;
+end;
+
+procedure TWeightedGraphTest.FindMinPathsMap2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Weights, PathTree: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(g.FindMinPathsMap(I, PathTree, Weights));
+      AssertTrue(THelper.Same(PathTree, PATHTREE_ARRAY[I]))
+    end;
+end;
+
+procedure TWeightedGraphTest.FindMinPathsMap3;
+var
+  Ref: TRef;
+  g: TGraph;
+  Weights: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    AssertFalse(g.FindMinPathsMap(I, Weights));
+end;
+
+procedure TWeightedGraphTest.FindMinPathsMap4;
+var
+  Ref: TRef;
+  g: TGraph;
+  Weights, PathTree: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    AssertFalse(g.FindMinPathsMap(I, PathTree, Weights));
+end;
+
+procedure TWeightedGraphTest.MinPath;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path: TIntArray;
+  Weight: Integer;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.MinPath(0, 1, Weight);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  g.AddVertex(1);
+  g.AddVertex(2);
+  Path := g.MinPath(1, 2, Weight);
+  AssertTrue(Weight = g.InfWeight);
+  AssertTrue(Path.IsEmpty);
+end;
+
+procedure TWeightedGraphTest.MinPath1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path: TIntArray;
+  Weight: Integer;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path := g.MinPath(0, I, Weight);
+      AssertTrue(Weight = WEIGHTS_ARRAY[0, I]);
+      AssertTrue(THelper.Same(Path, PATHS_FROM_0[I - 1]));
+    end;
+end;
+
+procedure TWeightedGraphTest.FindMinPath;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path: TIntArray;
+  Weight: Integer;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.FindMinPath(0, 1, Path, Weight);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  g.AddVertex(1);
+  g.AddVertex(2);
+  AssertFalse(g.FindMinPath(1, 2, Path, Weight));
+  AssertTrue(Weight = g.InfWeight);
+  AssertTrue(Path.IsEmpty);
+end;
+
+procedure TWeightedGraphTest.FindMinPath1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path: TIntArray;
+  Weight: Integer;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(g.FindMinPath(0, I, Path, Weight));
+      AssertTrue(Weight = WEIGHTS_ARRAY[0, I]);
+      AssertTrue(THelper.Same(Path, PATHS_FROM_0[I - 1]));
+    end;
+end;
+
+procedure TWeightedGraphTest.FindMinPath2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Path: TIntArray;
+  Weight: Integer;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      AssertFalse(g.FindMinPath(0, I, Path, Weight));
+      AssertTrue(Weight = 0);
+      AssertTrue(Path.Length = 3);
+    end;
+end;
 
 initialization
   RegisterTest(TSimpleGraphTest);
+  RegisterTest(TWeightedGraphTest);
 end.
 
