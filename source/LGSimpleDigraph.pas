@@ -338,7 +338,8 @@ type
   { returns True if exists arc with negative weight }
     function ContainsNegWeightEdge: Boolean;
   { checks whether exists any negative weight cycle in subgraph that reachable from a aRoot;
-    if True then aCycle will contain indices of the vertices of the cycle }
+    if True then aCycle will contain indices of the vertices of the cycle;
+    raises an exception if aRoot does not exist }
     function ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 {**********************************************************************************************************
@@ -350,25 +351,25 @@ type
   shortest path problem utilities
 ***********************************************************************************************************}
 
-  { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
-    connected component(SSSP), the weights of all edges must be nonnegative;
+  { returns the weights of paths of minimal weight from a given vertex to the remaining
+    vertices(SSSP), the weights of all arcs MUST be nonnegative;
     the result contains in the corresponding component the weight of the path to the vertex or
-    InfWeight if the vertex is unreachable; used Dijkstra's algorithm  }
+    InfWeight if the vertex is unreachable; used Dijkstra's algorithm;
+    raises an exception if aSrc does not exist }
     function MinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
     function MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-  { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
-    the weights of all edges must be nonnegative;
-    returns path weight or InfWeight if the vertex is unreachable; used Dijkstra's algorithm  }
-    function MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
-    function MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
-  { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
+  { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
+    the weights of all arcs MUST be nonnegative;
+    returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
+    used Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { finds the path of minimal weight from a aSrc to aDst if it exists;
-    the weights of all edges must be nonnegative; used A* algorithm if aEst <> nil }
+    the weights of all arcs MUST be nonnegative; used A* algorithm if aEst <> nil;
+    raises an exception if aSrc or aDst does not exist }
     function MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight; aEst: TEstimate): TIntArray; inline;
     function MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
   { returns False if exists negative weighted cycle, otherwise returns the vertex path
@@ -377,11 +378,11 @@ type
     but InfWeight if aDst unreachable; used BFMT algorithm }
     function FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray; out aWeight: TWeight): Boolean; inline;
     function FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
-  { finds all paths of minimal weight from a given vertex to the remaining vertices in the same
-    connected component(SSSP), the weights of the edges can be negative;
-    returns False and empty aWeights if there is a negative weight cycle, otherwise
-    aWeights will contain in the corresponding component the weight of the minimum path to the vertex or
-    InfWeight if the vertex is unreachable; used BFMT algorithm  }
+  { returns False if exists negative weight cycle reachable from aSrc,
+    otherwise returns the weights of paths of minimal weight from a given vertex to the remaining
+    vertices(SSSP); an aWeights will contain in the corresponding component the weight of the path
+    to the vertex or InfWeight if the vertex is unreachable; used BFMT algorithm;
+    raises an exception if aSrc does not exist  }
     function FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
   { same as above and in aPaths returns paths,
@@ -2298,8 +2299,13 @@ end;
 function TGWeightedDiGraph.ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 begin
   CheckIndexRange(aRootIdx);
-  aCycle := TWeightHelper.NegCycleDetect(Self, aRootIdx);
-  Result := aCycle <> nil;
+  if VertexCount > 1 then
+    begin
+      aCycle := TWeightHelper.NegCycleDetect(Self, aRootIdx);
+      Result := aCycle <> nil;
+    end
+  else
+    Result := False;
 end;
 
 function TGWeightedDiGraph.Clone: TGWeightedDiGraph;
@@ -2320,7 +2326,10 @@ end;
 function TGWeightedDiGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := TWeightHelper.DijkstraSssp(Self, aSrc);
+  if VertexCount > 1 then
+    Result := TWeightHelper.DijkstraSssp(Self, aSrc)
+  else
+    Result := [TWeight(0)];
 end;
 
 function TGWeightedDiGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -2331,19 +2340,13 @@ end;
 function TGWeightedDiGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  Result := TWeightHelper.DijkstraSssp(Self, aSrc, aPathTree);
-end;
-
-function TGWeightedDiGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
-begin
-  Result := MinPathWeightI(IndexOf(aSrc), IndexOf(aDst));
-end;
-
-function TGWeightedDiGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst);
+  if VertexCount > 1 then
+    Result := TWeightHelper.DijkstraSssp(Self, aSrc, aPathTree)
+  else
+    begin
+      aPathTree := [NULL_INDEX];
+      Result := [TWeight(0)];
+    end;
 end;
 
 function TGWeightedDiGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
@@ -2355,7 +2358,13 @@ function TGWeightedDiGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): 
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      Result := nil;
+    end
+  else
+    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedDiGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
@@ -2368,10 +2377,16 @@ function TGWeightedDiGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeig
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  if aEst <> nil then
-    Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      Result := nil;
+    end
   else
-    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
+    if aEst <> nil then
+      Result := TWeightHelper.AStar(Self, aSrc, aDst, aWeight, aEst)
+    else
+      Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
 function TGWeightedDiGraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
@@ -2384,7 +2399,14 @@ function TGWeightedDiGraph.FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArra
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
+  if aSrc = aDst then
+    begin
+      aWeight := TWeight(0);
+      aPath := nil;
+      Result := True;
+    end
+  else
+    Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
 function TGWeightedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
@@ -2395,7 +2417,13 @@ end;
 function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := TWeightHelper.BfmtSssp(Self, aSrc, aWeights);
+  if VertexCount > 1 then
+    Result := TWeightHelper.BfmtSssp(Self, aSrc, aWeights)
+  else
+    begin
+      aWeights := [TWeight(0)];
+      Result := True;
+    end;
 end;
 
 function TGWeightedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
@@ -2408,7 +2436,14 @@ function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray
   out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
-  Result := TWeightHelper.BfmtSssp(Self, aSrc, aPaths, aWeights);
+  if VertexCount > 1 then
+    Result := TWeightHelper.BfmtSssp(Self, aSrc, aPaths, aWeights)
+  else
+    begin
+      aPaths := [NULL_INDEX];
+      aWeights := [TWeight(0)];
+      Result := True;
+    end;
 end;
 
 function TGWeightedDiGraph.CreateWeightsMatrix: TWeightMatrix;
