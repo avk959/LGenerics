@@ -556,13 +556,10 @@ type
   { same as above and in aPathTree returns paths }
     function FindMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean; inline;
     function FindMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray; out aWeights: TWeightArray): Boolean;
-  { finds the path of minimal weight from a aSrc to aDst if it exists(pathfinding);
+  { returns the vertex path of minimal weight from a aSrc to aDst if it exists(pathfinding);
     the weights of all edges MUST be nonnegative;
-    returns weight of the path or InfWeight if the vertex is unreachable; used Dijkstra's algorithm;
-    raises an exception if aSrc or aDst does not exist }
-    function MinPathWeight(constref aSrc, aDst: TVertex): TWeight; inline;
-    function MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
-  { returns the vertex path of minimal weight from a aSrc to aDst, if exists, and its weight in aWeight }
+    returns weight of the path or InfWeight if the vertex is unreachable in aWeight;
+    used Dijkstra's algorithm; raises an exception if aSrc or aDst does not exist }
     function MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray; inline;
     function MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
   { returns False if exists negative weight cycle reachable from aSrc,
@@ -4111,21 +4108,6 @@ begin
       aWeights := [TWeight(0)];
       Result := True;
     end;
-end;
-
-function TGWeightedGraph.MinPathWeight(constref aSrc, aDst: TVertex): TWeight;
-begin
-  Result := MinPathWeightI(IndexOf(aSrc), IndexOf(aDst));
-end;
-
-function TGWeightedGraph.MinPathWeightI(aSrc, aDst: SizeInt): TWeight;
-begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  if aSrc = aDst then
-    Result := TWeight(0)
-  else
-    Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst);
 end;
 
 function TGWeightedGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
