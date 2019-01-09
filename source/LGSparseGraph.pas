@@ -1883,17 +1883,19 @@ function TGSparseGraph.ContractEdgeI(aSrc, aDst: SizeInt): Boolean;
 var
   DstEdges: array of TIncidentEdge;
   e: TIncidentEdge;
-  I: SizeInt;
+  I, Deg: SizeInt;
+  pList: PAdjList;
   p: PAdjItem;
 begin
-  Result := RemoveEdgeI(aSrc, aDst);
-  if not Result then
-    exit;
-  if AdjLists[aDst]^.Count > 0 then
+  if not RemoveEdgeI(aSrc, aDst) then
+    exit(False);
+  pList := AdjLists[aDst];
+  Deg := pList^.Count;
+  if Deg > 0 then
     begin
-      System.SetLength(DstEdges, AdjLists[aDst]^.Count);
       I := 0;
-      for p in AdjLists[aDst]^ do
+      System.SetLength(DstEdges, Deg);
+      for p in pList^ do
         begin
           DstEdges[I].Destination := p^.Destination;
           DstEdges[I].Data := p^.Data;
@@ -1905,7 +1907,8 @@ begin
           DoAddEdge(aSrc, e.Destination, e.Data);
         end;
     end;
-  RemoveVertexI(aDst);
+  DoRemoveVertex(aDst);
+  Result := True;
 end;
 
 function TGSparseGraph.ContainsEdge(constref aSrc, aDst: TVertex): Boolean;
