@@ -5503,36 +5503,6 @@ begin
   until not Queue.TryDequeue(Item);
 end;
 
-class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight;
-var
-  Queue: TBinHeap;
-  Reached,
-  InQueue: TGraph.TBitVector;
-  Item: TWeightItem;
-  p: TGraph.PAdjItem;
-begin
-  Queue := TBinHeap.Create(g.VertexCount);
-  Reached.Size := g.VertexCount;
-  InQueue.Size := g.VertexCount;
-  Item := TWeightItem.Create(aSrc, 0);
-  repeat
-    if Item.Index = aDst then
-      exit(Item.Weight);
-    Reached[Item.Index] := True;
-    for p in g.AdjLists[Item.Index]^ do
-      if not Reached[p^.Key] then
-        if not InQueue[p^.Key] then
-          begin
-            Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
-            InQueue[p^.Key] := True;
-          end
-        else
-          if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
-            Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
-  until not Queue.TryDequeue(Item);
-  Result := TWeight.INF_VALUE;
-end;
-
 class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 var
   Queue: TBinHeap;
