@@ -499,7 +499,6 @@ type
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray; static;
     class function  DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray; static;
   { Dijkstra's pathfinding algorithm }
-    class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt): TWeight; static;
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
