@@ -396,8 +396,9 @@ type
     otherwise returns False and if negative weight cycle exists then in single cell of aPaths
     returns index of the vertex from which this cycle is reachable }
     function FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
-    function ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TApspMatrix): TIntArray; inline;
-    function ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TApspMatrix): TIntArray;
+  { raises an exception if aSrc or aDst does not exist }
+    function ExtractMinPath(constref aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray; inline;
+    function ExtractMinPathI(aSrc, aDst: SizeInt; const aPaths: TApspMatrix): TIntArray;
   { returns False if is empty or exists negative weight cycle reachable from aVertex,
     otherwise returns True and the weighted eccentricity of the aVertex in aValue }
     function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
@@ -434,14 +435,6 @@ type
   { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
     the path starting with it }
     function DagMaxPaths: TWeightArray;
-{**********************************************************************************************************
-  matching utilities
-***********************************************************************************************************}
-
-  { returns True if aMatch is maximal matching }
-    function IsMaximalMatching(const aMatch: TEdgeArray): Boolean; inline;
-  { returns True if aMatch is perfect matching }
-    function IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean; inline;
   end;
 
   { TGIntWeightDiGraph specializes TWeight with Int64 }
@@ -2453,27 +2446,37 @@ end;
 
 function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
 begin
-  if IsEmpty then
-    exit(False);
-  if Density <= DENSE_CUTOFF then
-    if Density <= JOHNSON_CUTOFF then
-      Result := TWeightHelper.BfmtApsp(Self, True, aPaths)
+  if VertexCount > 1 then
+    if Density <= DENSE_CUTOFF then
+      if Density <= JOHNSON_CUTOFF then
+        Result := TWeightHelper.BfmtApsp(Self, True, aPaths)
+      else
+        Result := TWeightHelper.JohnsonApsp(Self, aPaths)
     else
-      Result := TWeightHelper.JohnsonApsp(Self, aPaths)
+      Result := TWeightHelper.FloydApsp(Self, aPaths)
   else
-    Result := TWeightHelper.FloydApsp(Self, aPaths);
+    begin
+      Result := True;
+      if VertexCount = 0 then
+        aPaths := nil
+      else
+        aPaths := [[TApspCell.Create(TWeight(0), NULL_INDEX)]];
+    end;
 end;
 
-function TGWeightedDiGraph.ExtractMinPath(constref aSrc, aDst: TVertex; constref aPaths: TApspMatrix): TIntArray;
+function TGWeightedDiGraph.ExtractMinPath(constref aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray;
 begin
   Result := ExtractMinPathI(IndexOf(aSrc), IndexOf(aDst), aPaths);
 end;
 
-function TGWeightedDiGraph.ExtractMinPathI(aSrc, aDst: SizeInt; constref aPaths: TApspMatrix): TIntArray;
+function TGWeightedDiGraph.ExtractMinPathI(aSrc, aDst: SizeInt; const aPaths: TApspMatrix): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
-  Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
+  if aSrc = aDst then
+    Result := nil
+  else
+    Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
 end;
 
 function TGWeightedDiGraph.FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean;
@@ -2724,16 +2727,6 @@ begin
             end;
         end;
     end;
-end;
-
-function TGWeightedDiGraph.IsMaximalMatching(const aMatch: TEdgeArray): Boolean;
-begin
-  Result := TWeightHelper.IsMaxMatching(Self, aMatch);
-end;
-
-function TGWeightedDiGraph.IsPerfectWeightMatching(const aMatch: TEdgeArray): Boolean;
-begin
-  Result := TWeightHelper.IsPerfectMatching(Self, aMatch);
 end;
 
 {$I IntDiGraphHelp.inc}

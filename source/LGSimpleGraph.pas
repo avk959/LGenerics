@@ -598,8 +598,8 @@ type
   minimum spanning tree utilities
 ***********************************************************************************************************}
 
-  { finds a spanning tree(or spanning forest if not connected) of minimal weight, Kruskal's algorithm used }
-    function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
+  { finds a spanning tree(or spanning forest if not connected) of minimal weight; Kruskal's algorithm used }
+    function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntEdgeArray;
   { finds a spanning tree(or spanning forest if not connected) of minimal weight,
     the weights of all edges MUST be nonnegative; Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
@@ -4301,23 +4301,26 @@ begin
   aCenter.Length := J;
 end;
 
-function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
+function TGWeightedGraph.MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntEdgeArray;
 var
   e: TWeightEdge;
   LocEdges: TEdgeArray;
   Dsu: TDisjointSetUnion;
+  I: SizeInt = 0;
 begin
   LocEdges := CreateEdgeArray;
   TEdgeHelper.Sort(LocEdges);
-  Result := CreateIntArray;
+  System.SetLength(Result, VertexCount);
   Dsu.Size := VertexCount;
-  aTotalWeight := 0;
+  aTotalWeight := TWeight(0);
   for e in LocEdges do
     if Dsu.Join(e.Source, e.Destination)  then
       begin
-        Result[e.Destination] := e.Source;
+        Result[I] := TIntEdge.Create(e.Source, e.Destination);
         aTotalWeight += e.Weight;
+        Inc(I);
       end;
+  System.SetLength(Result, I);
 end;
 
 function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
