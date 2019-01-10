@@ -600,7 +600,8 @@ type
 
   { finds a spanning tree(or spanning forest if not connected) of minimal weight, Kruskal's algorithm used }
     function MinSpanningTreeKrus(out aTotalWeight: TWeight): TIntArray;
-  { finds a spanning tree(or spanning forest if not connected) of minimal weight, Prim's algorithm used }
+  { finds a spanning tree(or spanning forest if not connected) of minimal weight,
+    the weights of all edges MUST be nonnegative; Prim's algorithm used }
     function MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
   end;
 
