@@ -144,8 +144,11 @@ type
                                           (2, 2, 3, -1, 3, 2), (2, 2, 5, 4, -1, 4), (2, 2, 5, 2, 5, -1));
     PATHS_FROM_0: array of TIntArray   = ((0, 2, 1), (0, 2), (0, 2, 3), (0, 2, 5, 4), (0, 2, 5));
 
+    ECCENTR: TIntArray = (5, 6, 5, 6, 4, 5);
+
     function  GenerateTestWGr1: TGraph;
-    function  GenerateTestWGr2: TGraph;
+    function  GenerateTestWGr2: TGraph; //TPointsChart
+    function  GenerateRandomPoints(aCount: Integer): TPointsChart;
   published
     procedure ContainsNegWeightEdge;
     procedure ContainsNegCycle;
@@ -163,6 +166,18 @@ type
     procedure FindMinPath;
     procedure FindMinPath1;
     procedure FindMinPath2;
+    procedure MinPathAStar;
+    procedure FindAllPairMinPaths;
+    procedure FindAllPairMinPaths1;
+    procedure FindAllPairMinPaths2;
+    procedure FindEccentricity;
+    procedure FindEccentricity1;
+    procedure FindWeightedMetrics;
+    procedure FindWeightedMetrics1;
+    procedure MinSpanningTreeKrus;
+    procedure MinSpanningTreeKrus1;
+    procedure MinSpanningTreePrim;
+    procedure MinSpanningTreePrim1;
   end;
 
 implementation
@@ -2159,6 +2174,31 @@ begin
   Result.AddEdge(2, 0, TIntWeight.Create(0));
 end;
 
+function TWeightedGraphTest.GenerateRandomPoints(aCount: Integer): TPointsChart;
+var
+  I, J: Integer;
+begin
+  Result := TPointsChart.Create;
+  while Result.VertexCount < aCount do
+    begin
+      I := Random(High(Integer));
+      repeat
+        J := Random(High(Integer))
+      until I <> J;
+      Result.AddVertex(TPoint.Create(I, J));
+    end;
+  while True do
+    begin
+      I := Random(aCount);
+      repeat
+        J := Random(aCount)
+      until I <> J;
+      Result.AddEdgeI(I, J);
+      if Result.EdgeCount >= aCount * 6 then
+        break;
+    end;
+end;
+
 procedure TWeightedGraphTest.ContainsNegWeightEdge;
 var
   Ref: TRef;
@@ -2434,6 +2474,208 @@ begin
       AssertTrue(Weight = 0);
       AssertTrue(Path.Length = 3);
     end;
+end;
+
+procedure TWeightedGraphTest.MinPathAStar;
+type
+  TPcRef = specialize TGAutoRef<TPointsChart>;
+var
+  Ref: TPcRef;
+  g: TPointsChart;
+  AStarPath, DijkPath: TIntArray;
+  AStarWeight, DijkWeight: ValReal;
+const
+  TestSize = 100;
+begin
+  {%H-}Ref.Instance := GenerateRandomPoints(TestSize);
+  g := Ref;
+  AStarPath := g.MinPathAStarI(0, 99, AStarWeight);
+  DijkPath := g.MinPathI(0, 99, DijkWeight);
+  AssertTrue(AStarWeight = DijkWeight);
+  AssertTrue(THelper.Same(AStarPath, DijkPath));
+end;
+
+procedure TWeightedGraphTest.FindAllPairMinPaths;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: g.TApspMatrix;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.FindAllPairMinPaths(m));
+  AssertTrue(m = nil);
+  g.AddVertex(1);
+  AssertTrue(g.FindAllPairMinPaths(m));
+  AssertTrue(Length(m) = 1);
+  AssertTrue(Length(m[0]) = 1);
+  AssertTrue(m[0][0].Weight = 0);
+  AssertTrue(m[0][0].Predecessor = -1);
+end;
+
+procedure TWeightedGraphTest.FindAllPairMinPaths1;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: g.TApspMatrix;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  AssertFalse(g.FindAllPairMinPaths(m));
+  AssertTrue(Length(m) = 1);
+  AssertTrue(Length(m[0]) = 1);
+end;
+
+procedure TWeightedGraphTest.FindAllPairMinPaths2;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: g.TApspMatrix;
+  Path: TIntArray;
+  I, J: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  AssertTrue(g.FindAllPairMinPaths(m));
+  AssertTrue(Length(m) = g.VertexCount);
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(Length(m[I]) = g.VertexCount);
+      for J := 0 to Pred(g.VertexCount) do
+        AssertTrue(m[I, J].Weight = WEIGHTS_ARRAY[I, J]);
+    end;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path := g.ExtractMinPath(0, I, m);
+      AssertTrue(THelper.Same(Path, PATHS_FROM_0[I - 1]));
+    end;
+end;
+
+procedure TWeightedGraphTest.FindEccentricity;
+var
+  Ref: TRef;
+  g: TGraph;
+  Ecc: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  AssertFalse(g.FindEccentricity(0, Ecc));
+end;
+
+procedure TWeightedGraphTest.FindEccentricity1;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, Ecc: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(g.FindEccentricity(I, Ecc));
+      AssertTrue(Ecc = ECCENTR[I]);
+    end;
+end;
+
+procedure TWeightedGraphTest.FindWeightedMetrics;
+var
+  Ref: TRef;
+  g: TGraph;
+  r, d: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  AssertFalse(g.FindWeightedMetrics(r, d));
+end;
+
+procedure TWeightedGraphTest.FindWeightedMetrics1;
+var
+  Ref: TRef;
+  g: TGraph;
+  r, d: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  AssertTrue(g.FindWeightedMetrics(r, d));
+  AssertTrue(r = 4);
+  AssertTrue(d = 6);
+end;
+
+procedure TWeightedGraphTest.MinSpanningTreeKrus;
+var
+  Ref: TRef;
+  g, g1: TGraph;
+  Edges: TIntEdgeArray;
+  I, Weight: Integer;
+  w: TIntWeight;
+begin
+  g := {%H-}Ref;
+  Edges := g.MinSpanningTreeKrus(Weight);
+  AssertTrue(Edges = nil);
+  AssertTrue(Weight = 0);
+  Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  Edges := g.MinSpanningTreeKrus(Weight);
+  AssertTrue(Weight = 5);
+  g1 := g.SubgraphFromEdges(Edges);
+  try
+    AssertTrue(g1.VertexCount = g.VertexCount);
+    AssertTrue(g1.IsTree);
+  finally
+    g1.Free;
+  end;
+end;
+
+procedure TWeightedGraphTest.MinSpanningTreeKrus1;
+var
+  Ref: TRef;
+  g, g1: TGraph;
+  Edges: TIntEdgeArray;
+  w: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  Edges := g.MinSpanningTreeKrus(w);
+  AssertTrue(w = 7);
+  g1 := g.SubgraphFromEdges(Edges);
+  try
+    AssertTrue(g1.VertexCount = g.VertexCount);
+    AssertTrue(g1.IsTree);
+  finally
+    g1.Free;
+  end;
+end;
+
+procedure TWeightedGraphTest.MinSpanningTreePrim;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray;
+  w: Integer;
+begin
+  g := {%H-}Ref;
+  Tree := g.MinSpanningTreePrim(w);
+  AssertTrue(Tree = nil);
+  AssertTrue(w = 0);
+end;
+
+procedure TWeightedGraphTest.MinSpanningTreePrim1;
+var
+  Ref: TRef;
+  g, g1: TGraph;
+  Tree: TIntArray;
+  w: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr2;
+  g := Ref;
+  Tree := g.MinSpanningTreePrim(w);
+  AssertTrue(w = 7);
+  g1 := g.SubgraphFromTree(Tree);
+  try
+    AssertTrue(g1.VertexCount = g.VertexCount);
+    AssertTrue(g1.IsTree);
+  finally
+    g1.Free;
+  end;
 end;
 
 initialization
