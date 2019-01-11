@@ -5,7 +5,7 @@ unit LGSimpleGraphTest;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry,
+  Classes, SysUtils, fpcunit, testregistry, math,
   LGUtils,
   LGArrayHelpers,
   LGSparseGraph,
@@ -133,10 +133,12 @@ type
   TWeightedGraphTest = class(TTestCase)
   private
   type
-    TIntWeight = specialize TGSimpleWeight<Integer>;
-    TGraph     = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
-    TRef       = specialize TGAutoRef<TGraph>;
-    THelper    = specialize TGOrdinalArrayHelper<Integer>;
+    TIntWeight   = specialize TGSimpleWeight<Integer>;
+    TInt64Weight = specialize TGSimpleWeight<Int64>;
+    TGraph       = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
+    TGraph64     = specialize TGIntWeightGraph<Integer, TInt64Weight, Integer>;
+    TRef         = specialize TGAutoRef<TGraph>;
+    THelper      = specialize TGOrdinalArrayHelper<Integer>;
   const
     WEIGHTS_ARRAY: array of TIntArray  = ((0, 1, 0, 5, 2, 0), (1, 0, 1, 6, 3, 1), (0, 1, 0, 5, 2, 0),
                                           (5, 6, 5, 0, 4, 5), (2, 3, 2, 4, 0, 2), (0, 1, 0, 5, 2, 0));
@@ -147,8 +149,9 @@ type
     ECCENTR: TIntArray = (5, 6, 5, 6, 4, 5);
 
     function  GenerateTestWGr1: TGraph;
-    function  GenerateTestWGr2: TGraph; //TPointsChart
+    function  GenerateTestWGr2: TGraph;
     function  GenerateRandomPoints(aCount: Integer): TPointsChart;
+    function  GenerateTestWGrBip1: TGraph64;
   published
     procedure ContainsNegWeightEdge;
     procedure ContainsNegCycle;
@@ -178,6 +181,11 @@ type
     procedure MinSpanningTreeKrus1;
     procedure MinSpanningTreePrim;
     procedure MinSpanningTreePrim1;
+    procedure MinSpanningTree;
+    procedure FindMinWeightBipMatch;
+    procedure FindMinWeightBipMatch1;
+    procedure FindMaxWeightBipMatch;
+    procedure FindMaxWeightBipMatch1;
   end;
 
 implementation
@@ -2197,6 +2205,35 @@ begin
       if Result.EdgeCount >= aCount * 6 then
         break;
     end;
+  Result.EnsureConnected;
+end;
+
+function TWeightedGraphTest.GenerateTestWGrBip1: TGraph64;
+begin
+  Result := TGraph64.Create;
+  Result.AddEdge(1, 2, TInt64Weight.Create(92));
+  Result.AddEdge(1, 4, TInt64Weight.Create(17));
+  Result.AddEdge(1, 6, TInt64Weight.Create(8));
+  Result.AddEdge(1, 8, TInt64Weight.Create(60));
+  Result.AddEdge(3, 2, TInt64Weight.Create(10));
+  Result.AddEdge(3, 4, TInt64Weight.Create(24));
+  Result.AddEdge(3, 6, TInt64Weight.Create(28));
+  Result.AddEdge(3, 8, TInt64Weight.Create(3));
+  Result.AddEdge(3, 10, TInt64Weight.Create(13));
+  Result.AddEdge(5, 4, TInt64Weight.Create(39));
+  Result.AddEdge(5, 6, TInt64Weight.Create(52));
+  Result.AddEdge(5, 8, TInt64Weight.Create(68));
+  Result.AddEdge(5, 10, TInt64Weight.Create(4));
+  Result.AddEdge(5, 12, TInt64Weight.Create(79));
+  Result.AddEdge(7, 6, TInt64Weight.Create(8));
+  Result.AddEdge(7, 8, TInt64Weight.Create(20));
+  Result.AddEdge(7, 10, TInt64Weight.Create(72));
+  Result.AddEdge(7, 12, TInt64Weight.Create(27));
+  Result.AddEdge(9, 8, TInt64Weight.Create(24));
+  Result.AddEdge(9, 10, TInt64Weight.Create(6));
+  Result.AddEdge(9, 12, TInt64Weight.Create(14));
+  Result.AddEdge(11, 10, TInt64Weight.Create(43));
+  Result.AddEdge(11, 8, TInt64Weight.Create(5));
 end;
 
 procedure TWeightedGraphTest.ContainsNegWeightEdge;
@@ -2477,10 +2514,8 @@ begin
 end;
 
 procedure TWeightedGraphTest.MinPathAStar;
-type
-  TPcRef = specialize TGAutoRef<TPointsChart>;
 var
-  Ref: TPcRef;
+  Ref: specialize TGAutoRef<TPointsChart>;
   g: TPointsChart;
   AStarPath, DijkPath: TIntArray;
   AStarWeight, DijkWeight: ValReal;
@@ -2491,7 +2526,7 @@ begin
   g := Ref;
   AStarPath := g.MinPathAStarI(0, 99, AStarWeight);
   DijkPath := g.MinPathI(0, 99, DijkWeight);
-  AssertTrue(AStarWeight = DijkWeight);
+  AssertTrue(math.SameValue(AStarWeight, DijkWeight));
   AssertTrue(THelper.Same(AStarPath, DijkPath));
 end;
 
@@ -2605,8 +2640,7 @@ var
   Ref: TRef;
   g, g1: TGraph;
   Edges: TIntEdgeArray;
-  I, Weight: Integer;
-  w: TIntWeight;
+  Weight: Integer;
 begin
   g := {%H-}Ref;
   Edges := g.MinSpanningTreeKrus(Weight);
@@ -2648,7 +2682,7 @@ end;
 procedure TWeightedGraphTest.MinSpanningTreePrim;
 var
   Ref: TRef;
-  g: TGraph;
+  g, g1: TGraph;
   Tree: TIntArray;
   w: Integer;
 begin
@@ -2656,6 +2690,17 @@ begin
   Tree := g.MinSpanningTreePrim(w);
   AssertTrue(Tree = nil);
   AssertTrue(w = 0);
+  Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  Tree := g.MinSpanningTreePrim(w);
+  AssertTrue(w = 5);
+  g1 := g.SubgraphFromTree(Tree);
+  try
+    AssertTrue(g1.VertexCount = g.VertexCount);
+    AssertTrue(g1.IsTree);
+  finally
+    g1.Free;
+  end;
 end;
 
 procedure TWeightedGraphTest.MinSpanningTreePrim1;
@@ -2676,6 +2721,91 @@ begin
   finally
     g1.Free;
   end;
+end;
+
+procedure TWeightedGraphTest.MinSpanningTree;
+var
+  Ref: specialize TGAutoRef<TPointsChart>;
+  g: TPointsChart;
+  KrusWeight, PrimWeight: ValReal;
+const
+  TestSize = 100;
+begin
+  {%H-}Ref.Instance := GenerateRandomPoints(TestSize);
+  g := Ref;
+  g.MinSpanningTreeKrus(KrusWeight);
+  g.MinSpanningTreePrim(PrimWeight);
+  AssertTrue(math.SameValue(KrusWeight, PrimWeight));
+end;
+
+procedure TWeightedGraphTest.FindMinWeightBipMatch;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Match: TGraph.TEdgeArray;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindMinWeightBipMatch(Match));
+  AssertTrue(Match = nil);
+  g.AddVertex(1);
+  AssertFalse(g.FindMinWeightBipMatch(Match));
+  AssertTrue(Match = nil);
+  g.AddVertex(2);
+  AssertTrue(g.FindMinWeightBipMatch(Match));
+  AssertTrue(Match = nil);
+end;
+
+procedure TWeightedGraphTest.FindMinWeightBipMatch1;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Match: TGraph.TEdgeArray;
+  IntMatch: TIntEdgeArray;
+  Total: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWGrBip1;
+  g := Ref;
+  AssertTrue(g.FindMinWeightBipMatch(Match));
+  IntMatch := g.EdgeArray2IntEdgeArray(Match);
+  AssertTrue(g.IsMaxMatching(IntMatch));
+  AssertTrue(g.IsPerfectMatching(IntMatch));
+  Total := g.TotalWeight(Match);
+  AssertTrue(Total = 58);
+end;
+
+procedure TWeightedGraphTest.FindMaxWeightBipMatch;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Match: TGraph.TEdgeArray;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindMaxWeightBipMatch(Match));
+  AssertTrue(Match = nil);
+  g.AddVertex(1);
+  AssertFalse(g.FindMaxWeightBipMatch(Match));
+  AssertTrue(Match = nil);
+  g.AddVertex(2);
+  AssertTrue(g.FindMaxWeightBipMatch(Match));
+  AssertTrue(Match = nil);
+end;
+
+procedure TWeightedGraphTest.FindMaxWeightBipMatch1;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Match: TGraph.TEdgeArray;
+  IntMatch: TIntEdgeArray;
+  Total: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWGrBip1;
+  g := Ref;
+  AssertTrue(g.FindMaxWeightBipMatch(Match));
+  IntMatch := g.EdgeArray2IntEdgeArray(Match);
+  AssertTrue(g.IsMaxMatching(IntMatch));
+  AssertTrue(g.IsPerfectMatching(IntMatch));
+  Total := g.TotalWeight(Match);
+  AssertTrue(Total = 270);
 end;
 
 initialization
