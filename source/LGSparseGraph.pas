@@ -5144,14 +5144,14 @@ begin
     end;
 end;
 
-function TGWeightHelper.THungarian.MinWeightMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+function TGWeightHelper.THungarian.MinMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 begin
   Init(aGraph, w, g);
   ExecuteMin;
   Result := CreateEdges;
 end;
 
-function TGWeightHelper.THungarian.MaxWeightMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+function TGWeightHelper.THungarian.MaxMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 begin
   InitMax(aGraph, w, g);
   ExecuteMax;
@@ -6063,18 +6063,18 @@ begin
     end;
 end;
 
-class function TGWeightHelper.MinWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+class function TGWeightHelper.MinBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 var
   Helper: THungarian;
 begin
-  Result := Helper.MinWeightMatching(aGraph, w, g);
+  Result := Helper.MinMatching(aGraph, w, g);
 end;
 
-class function TGWeightHelper.MaxWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+class function TGWeightHelper.MaxBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 var
   Helper: THungarian;
 begin
-  Result := Helper.MaxWeightMatching(aGraph, w, g);
+  Result := Helper.MaxMatching(aGraph, w, g);
 end;
 
 end.

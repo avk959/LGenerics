@@ -446,8 +446,8 @@ type
       procedure ExecuteMax;
       function  CreateEdges: TEdgeArray;
     public
-      function  MinWeightMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
-      function  MaxWeightMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+      function  MinMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
+      function  MaxMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
     end;
 
     { TBfmt: Bellman-Ford-Moore SSSP algorithm with Tarjan subtree disassembly;
@@ -538,10 +538,10 @@ type
     class function  ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix: TApspMatrix): TIntArray; static;
   { returns bipartite matching of maximum cardinality and minimum weight;
     warning: does not checks if aGraph is bipartite }
-    class function  MinWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
+    class function  MinBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
   { returns bipartite matching of maximum cardinality and maximum weight;
     warning: does not checks if aGraph is bipartite }
-    class function  MaxWeightMatchingB(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
+    class function  MaxBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
   end;
 
 

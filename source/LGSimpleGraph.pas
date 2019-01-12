@@ -668,11 +668,11 @@ type
   matching utilities
 ***********************************************************************************************************}
 
-  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and minimum weight }
+  { returns True and the matching of the maximum cardinality and minimum weight
+    if graph is bipartite, otherwise returns False }
     function FindMinWeightBipMatch(out aMatch: TEdgeArray): Boolean;
-  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and maximum weight }
+  { returns True and the matching of the maximum cardinality and maximum weight
+    if graph is bipartite, otherwise returns False }
     function FindMaxWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 {**********************************************************************************************************
   networks utilities treat the weight of the edge as its capacity
@@ -4686,7 +4686,7 @@ var
 begin
   if not IsBipartite(w, g) then
     exit(False);
-  aMatch := TWeightHelper.MinWeightMatchingB(Self, w, g);
+  aMatch := TWeightHelper.MinBipMatch(Self, w, g);
   Result := True;
 end;
 
@@ -4696,7 +4696,7 @@ var
 begin
   if not IsBipartite(w, g) then
     exit(False);
-  aMatch := TWeightHelper.MaxWeightMatchingB(Self, w, g);
+  aMatch := TWeightHelper.MaxBipMatch(Self, w, g);
   Result := True;
 end;
 

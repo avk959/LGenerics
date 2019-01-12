@@ -2210,7 +2210,7 @@ end;
 
 function TWeightedGraphTest.GenerateTestWGrBip1: TGraph64;
 begin
-  Result := TGraph64.Create;
+  Result := TGraph64.Create;  // min match weight = 58, max match weight = 270
   Result.AddEdge(1, 2, TInt64Weight.Create(92));
   Result.AddEdge(1, 4, TInt64Weight.Create(17));
   Result.AddEdge(1, 6, TInt64Weight.Create(8));
