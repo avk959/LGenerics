@@ -2761,7 +2761,6 @@ var
   g: TGraph64;
   Match: TGraph.TEdgeArray;
   IntMatch: TIntEdgeArray;
-  Total: Int64;
 begin
   {%H-}Ref.Instance := GenerateTestWGrBip1;
   g := Ref;
@@ -2769,8 +2768,7 @@ begin
   IntMatch := g.EdgeArray2IntEdgeArray(Match);
   AssertTrue(g.IsMaxMatching(IntMatch));
   AssertTrue(g.IsPerfectMatching(IntMatch));
-  Total := g.TotalWeight(Match);
-  AssertTrue(Total = 58);
+  AssertTrue(g.TotalWeight(Match) = 58);
 end;
 
 procedure TWeightedGraphTest.FindMaxWeightBipMatch;
@@ -2796,7 +2794,6 @@ var
   g: TGraph64;
   Match: TGraph.TEdgeArray;
   IntMatch: TIntEdgeArray;
-  Total: Int64;
 begin
   {%H-}Ref.Instance := GenerateTestWGrBip1;
   g := Ref;
@@ -2804,8 +2801,7 @@ begin
   IntMatch := g.EdgeArray2IntEdgeArray(Match);
   AssertTrue(g.IsMaxMatching(IntMatch));
   AssertTrue(g.IsPerfectMatching(IntMatch));
-  Total := g.TotalWeight(Match);
-  AssertTrue(Total = 270);
+  AssertTrue(g.TotalWeight(Match) = 270);
 end;
 
 initialization
