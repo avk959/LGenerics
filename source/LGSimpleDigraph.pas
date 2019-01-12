@@ -2774,7 +2774,7 @@ var
 begin
   if not IsBipartite(w, g) then
     exit(False);
-  aMatch := TWeightHelper.MinWeightMatchingB(Self, w, g);
+  aMatch := TWeightHelper.MinBipMatch(Self, w, g);
   Result := True;
 end;
 
@@ -2784,7 +2784,7 @@ var
 begin
   if not IsBipartite(w, g) then
     exit(False);
-  aMatch := TWeightHelper.MaxWeightMatchingB(Self, w, g);
+  aMatch := TWeightHelper.MaxBipMatch(Self, w, g);
   Result := True;
 end;
 
