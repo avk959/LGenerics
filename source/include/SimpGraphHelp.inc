@@ -177,7 +177,7 @@ begin
   aExact := not FCancelled;
 end;
 
-procedure TGSimpleGraph.TBPCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
 var
   Sub, Cand: TBoolVector;
 begin
@@ -190,7 +190,7 @@ begin
   Extend(Sub, Cand);
 end;
 
-procedure TGSimpleGraph.TBPCliqueIsHelper.ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper.ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
 var
   Sub, Cand: TBoolVector;
 begin
@@ -355,7 +355,7 @@ begin
   aExact := not FCancelled;
 end;
 
-procedure TGSimpleGraph.TBPCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
 var
   Sub, Cand: TBits256;
 begin
@@ -368,7 +368,7 @@ begin
   Extend(Sub, Cand);
 end;
 
-procedure TGSimpleGraph.TBPCliqueIsHelper256.ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TBPCliqueIsHelper256.ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
 var
   Sub, Cand: TBits256;
 begin
@@ -477,7 +477,7 @@ begin
   aExact := not FCancelled;
 end;
 
-procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+procedure TGSimpleGraph.TCliqueHelper.ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
 var
   Sub, Cand: TIntSet;
 begin

@@ -32,7 +32,7 @@ type
     FMatrix: TBoolMatrix;
     FCurrSet: TBoolVector;
     FNodes: TIntArray;
-    FOnFind: TOnFindSet;
+    FOnFind: TOnSetFound;
     procedure GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
     procedure Extend(var aSub, aCand: TBoolVector);
@@ -51,9 +51,9 @@ type
       Etsuji Tomitaa, Akira Tanakaa, Haruhisa Takahashi:
         "The worst-case time complexity for generating all maximal cliques and
          computational experiments. }
-    procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
   { executes ListCliques upon complement graph }
-    procedure ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    procedure ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
   end;
 
   TBPCliqueIsHelper256 = object(TNodeSearch) // BP -> bit-parallel
@@ -61,7 +61,7 @@ type
     FMatrix: TBitMatrix256;
     FCurrSet: TBits256;
     FNodes: TIntArray;
-    FOnFind: TOnFindSet;
+    FOnFind: TOnSetFound;
     procedure GreedyColor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBits256);
     procedure Extend(var aSub, aCand: TBits256);
@@ -71,8 +71,8 @@ type
   public
     function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  MaxIS(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
-    procedure ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
+    procedure ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
   end;
 
   TCliqueHelper = object(TNodeSearch)
@@ -80,13 +80,13 @@ type
     FMatrix: TSkeleton;
     FCurrSet: TIntSet;
     FNodes: TIntArray;
-    FOnFind: TOnFindSet;
+    FOnFind: TOnSetFound;
     procedure GreedyColor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TIntSet);
     procedure Extend(var aSub, aCand: TIntSet);
   public
     function  MaxClique(aGraph: TGSimpleGraph; aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnFindSet);
+    procedure ListCliques(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
   end;
 
   TBPDomSetHelper = object(TNodeSearch) // BP -> bit-parallel

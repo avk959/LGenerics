@@ -59,9 +59,9 @@ type
   TIntQueue        = specialize TGLiteQueue<SizeInt>;
   TIntDeque        = specialize TGLiteDeque<SizeInt>;
 
-  TOnVisit         = procedure (aSender: TObject; aIndex: SizeInt) of object;
-  TOnAccept        = function (aSender: TObject; aIndex: SizeInt): Boolean of object;
-  TOnFindSet       = procedure(const aSet: TIntArray; var aCancel: Boolean) of object;
+  TOnNodeVisit     = function (aSender: TObject; aIndex: SizeInt): Boolean of object;
+  TOnNodeFound     = function (aSender: TObject; aNode, aParent: SizeInt): Boolean of object;
+  TOnSetFound      = procedure(const aSet: TIntArray; var aCancel: Boolean) of object;
   TCost            = Int64;
   TVertexColor     = type Byte;
 
@@ -474,16 +474,17 @@ type
 
   { returns count of visited vertices during the DFS traversal;
     aOnFound calls after next vertex found, aOnDone calls after vertex done;
-    if aOnFound returns False then traversal stops }
-    function DfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt; inline;
-    function DfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
+    if aOnFound or aOnDone returns False then traversal stops }
+    function DfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt; inline;
+    function DfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt;
   { returns the DFS traversal tree(forest, if not connected) started from vertex with index 0;
     each element of Result contains the index of its parent in tree(or -1 if it is root) }
     function DfsTree: TIntArray;
   { returns count of visited vertices during the BFS traversal;
-    aOnFound calls after vertex found; if aOnFound returns False then traversal stops}
-    function BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt; inline;
-    function BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept = nil; aOnDone: TOnVisit = nil): SizeInt;
+    aOnFound calls after vertex found, aOnDone calls after vertex done;
+    if aOnFound or aOnDone returns False then traversal stops}
+    function BfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt; inline;
+    function BfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt;
   { returns the BFS traversal tree(forest, if not connected) started from vertex with index 0;
     each element of Result contains the index of its parent (or -1 if it is root) }
     function BfsTree: TIntArray;
@@ -2186,12 +2187,12 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept; aOnDone: TOnVisit): SizeInt;
+function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFound; aOnDone: TOnNodeVisit): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnFound, aOnDone);
 end;
 
-function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept; aOnDone: TOnVisit): SizeInt;
+function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound; aOnDone: TOnNodeVisit): SizeInt;
 var
   Stack: TIntArray;
   Visited: TBitVector;
@@ -2202,7 +2203,7 @@ begin
   Result := 0;
   CheckIndexRange(aRoot);
   Inc(Result);
-  if Assigned(aOnFound) and not aOnFound(Self, aRoot) then
+  if Assigned(aOnFound) and not aOnFound(Self, aRoot, NULL_INDEX) then
     exit;
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
@@ -2219,7 +2220,7 @@ begin
           if not Visited[Next] then
             begin
               Inc(Result);
-              if Assigned(aOnFound) and not aOnFound(Self, Next) then
+              if Assigned(aOnFound) and not aOnFound(Self, Next, aRoot) then
                 exit;
               Visited[Next] := True;
               Inc(sTop);
@@ -2228,8 +2229,8 @@ begin
         end
       else
         begin
-          if Assigned(aOnDone) then
-            aOnDone(Self, Stack[sTop]);
+          if Assigned(aOnDone) and not aOnDone(Self, Stack[sTop]) then
+            exit;
           Dec(sTop);
         end;
     end;
@@ -2269,12 +2270,12 @@ begin
       end;
 end;
 
-function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnFound: TOnAccept; aOnDone: TOnVisit): SizeInt;
+function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFound; aOnDone: TOnNodeVisit): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnFound, aOnDone);
 end;
 
-function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnFound: TOnAccept; aOnDone: TOnVisit): SizeInt;
+function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound; aOnDone: TOnNodeVisit): SizeInt;
 var
   Queue: TIntArray;
   Visited: TBitVector;
@@ -2285,7 +2286,7 @@ begin
   Result := 0;
   CheckIndexRange(aRoot);
   Inc(Result);
-  if Assigned(aOnFound) and not aOnFound(Self, aRoot) then
+  if Assigned(aOnFound) and not aOnFound(Self, aRoot, NULL_INDEX) then
     exit;
   Visited.Size := VertexCount;
   Queue.Length := VertexCount;
@@ -2300,14 +2301,14 @@ begin
         if not Visited[p^.Destination] then
           begin
             Inc(Result);
-            if Assigned(aOnFound) and not aOnFound(Self, p^.Destination) then
+            if Assigned(aOnFound) and not aOnFound(Self, p^.Destination, aRoot) then
               exit;
             Queue[qTail] := p^.Destination;
             Inc(qTail);
             Visited[p^.Destination] := True;
           end;
-      if Assigned(aOnDone) then
-        aOnDone(Self, aRoot);
+      if Assigned(aOnDone) and not aOnDone(Self, aRoot) then
+        exit;
     end;
 end;
 

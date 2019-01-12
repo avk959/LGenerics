@@ -15,6 +15,8 @@ uses
 
 type
 
+  { TSparseGraphTest }
+
   TSparseGraphTest = class(TTestCase)
   private
   type
@@ -31,8 +33,8 @@ type
     function  GenerateTestDigrBip1: TDiGraph;
     function  GenerateTestGr1: TGraph;
     function  GenerateTestDigr1: TDiGraph;
-    function  vFound({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
-    procedure vDone({%H-}aSender: TObject; aIndex: SizeInt);
+    function  vFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+    function  vDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
   published
     procedure IsEmpty;
     procedure IsEmptyDirect;
@@ -128,15 +130,16 @@ begin
                    8, 7, 9, 10, 9, 11, 9, 12, 11, 12]);
 end;
 
-function TSparseGraphTest.vFound(aSender: TObject; aIndex: SizeInt): Boolean;
+function TSparseGraphTest.vFound(aSender: TObject; aNode, aParent: SizeInt): Boolean;
 begin
-  FFound[aIndex] := False;
+  FFound[aNode] := False;
   Result := True;
 end;
 
-procedure TSparseGraphTest.vDone(aSender: TObject; aIndex: SizeInt);
+function TSparseGraphTest.vDone(aSender: TObject; aIndex: SizeInt): Boolean;
 begin
   FDone[aIndex] := False;
+  Result := True;
 end;
 
 procedure TSparseGraphTest.IsEmpty;
