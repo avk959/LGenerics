@@ -677,16 +677,25 @@ type
 {**********************************************************************************************************
   networks utilities treat the weight of the edge as its capacity
 ***********************************************************************************************************}
+  type
+    TGlobalNetState = (gnsOk, gnsTrivial, gnsDisconnected, gnsNegEdgeCapacity);
 
-  { returns the global minimum cut; the weights of all edges must be nonnegative;
-    used Stoer–Wagner algorithm }
-    function MinWeightCutSW(out aCut: TCut): TWeight;
-  { returns the global minimum cut; the weights of all edges must be nonnegative;
-    used Nagamochi-Ibaraki algorithm }
-    function MinWeightCutNI: TWeight;
-    function MinWeightCutNI(out aCut: TCut): TWeight;
-  { returns array of the edges that cross the minimum cut }
-    function CrossMinWeightCut: TEdgeArray;
+  { the capacities of all edges must be nonnegative; returns state of network;
+    if state is gnsOk then returns the global minimum cut in aCut and it capacity in aCutWeight;
+    otherwise empty cut and 0; used Stoer–Wagner algorithm }
+    function MinWeightCutSW(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
+  { the capacities of all edges must be nonnegative; returns state of network;
+    if state is gnsOk then returns capacity of the global minimum cut in aCutWeight;
+    otherwise 0; used Nagamochi-Ibaraki algorithm }
+    function MinWeightCutNI(out aCutWeight: TWeight): TGlobalNetState;
+  { the capacities of all edges must be nonnegative; returns state of network;
+    if state is gnsOk then returns the global minimum cut in aCut and it capacity in aCutWeight;
+    otherwise empty cut and 0; used Nagamochi-Ibaraki algorithm }
+    function MinWeightCutNI(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
+  { the capacities of all edges must be nonnegative; returns state of network;
+    if state is gnsOk then returns the global minimum cut in aCut and array of the edges
+    that cross the minimum cut in aCrossEdges; used Nagamochi-Ibaraki algorithm }
+    function MinWeightCutNI(out aCut: TCut; out aCrossEdges: TEdgeArray): TGlobalNetState;
   end;
 
 implementation
@@ -4700,62 +4709,97 @@ begin
   Result := True;
 end;
 
-function TGIntWeightGraph.MinWeightCutSW(out aCut: TCut): TWeight;
+function TGIntWeightGraph.MinWeightCutSW(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
 var
   Cut: TIntSet;
   B: TBoolVector;
   I: SizeInt;
+  e: TEdge;
+  d: TEdgeData;
 begin
-  if not GetTrivialMinCut(Cut, Result) then
-    Result := StoerWagner(Cut);
+  aCutWeight := 0;
+  aCut.A := nil;
+  aCut.B := nil;
+  if VertexCount < 2 then
+    exit(gnsTrivial);
+  if not Connected then
+    exit(gnsDisconnected);
+  for e in DistinctEdges do
+    if e.Data.Weight < 0 then
+      exit(gnsNegEdgeCapacity);
+  aCutWeight := StoerWagner(Cut);
   B.InitRange(VertexCount);
   for I in Cut do
     B[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := B.ToArray;
+  Result := gnsOk;
 end;
 
-function TGIntWeightGraph.MinWeightCutNI: TWeight;
+function TGIntWeightGraph.MinWeightCutNI(out aCutWeight: TWeight): TGlobalNetState;
 var
   Helper: TNIMinCutHelper;
+  e: TEdge;
 begin
-  if not GetTrivialMinCut(Result) then
-    Result := Helper.GetMinCut(Self);
+  aCutWeight := 0;
+  if VertexCount < 2 then
+    exit(gnsTrivial);
+  if not Connected then
+    exit(gnsDisconnected);
+  for e in DistinctEdges do
+    if e.Data.Weight < 0 then
+      exit(gnsNegEdgeCapacity);
+  aCutWeight := Helper.GetMinCut(Self);
+  Result := gnsOk;
 end;
 
-function TGIntWeightGraph.MinWeightCutNI(out aCut: TCut): TWeight;
+function TGIntWeightGraph.MinWeightCutNI(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
 var
   Helper: TNIMinCutHelper;
   Cut: TIntSet;
   Total: TBoolVector;
   I: SizeInt;
+  e: TEdge;
 begin
-  if not GetTrivialMinCut(Cut, Result) then
-    Result := Helper.GetMinCut(Self, Cut);
+  aCutWeight := 0;
+  aCut.A := nil;
+  aCut.B := nil;
+  if VertexCount < 2 then
+    exit(gnsTrivial);
+  if not Connected then
+    exit(gnsDisconnected);
+  for e in DistinctEdges do
+    if e.Data.Weight < 0 then
+      exit(gnsNegEdgeCapacity);
+  aCutWeight := Helper.GetMinCut(Self, Cut);
   Total.InitRange(VertexCount);
   for I in Cut do
     Total[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := Total.ToArray;
+  Result := gnsOk;
 end;
 
-function TGIntWeightGraph.CrossMinWeightCut: TEdgeArray;
+function TGIntWeightGraph.MinWeightCutNI(out aCut: TCut; out aCrossEdges: TEdgeArray): TGlobalNetState;
 var
   Helper: TNIMinCutHelper;
   Cut: TIntSet;
   Left, Right: TBoolVector;
   I, J: SizeInt;
+  e: TEdge;
   p: PAdjItem;
   d: TEdgeData;
 begin
-  if not Connected or (VertexCount < 2) then
-    exit([]);
-  d := Default(TEdgeData);
-  if VertexCount = 2 then
-    begin
-      GetEdgeDataI(0, 1, d);
-      exit([TWeightEdge.Create(0, 1, d.Weight)]);
-    end;
+  aCrossEdges := nil;
+  aCut.A := nil;
+  aCut.B := nil;
+  if VertexCount < 2 then
+    exit(gnsTrivial);
+  if not Connected then
+    exit(gnsDisconnected);
+  for e in DistinctEdges do
+    if e.Data.Weight < 0 then
+      exit(gnsNegEdgeCapacity);
   Helper.GetMinCut(Self, Cut);
   if Cut.Count <= VertexCount shr 1 then
     begin
@@ -4777,19 +4821,24 @@ begin
           Left[I] := False;
         end;
     end;
-  System.SetLength(Result, Cut.Count);
+  aCut.A := Left.ToArray;
+  aCut.B := Right.ToArray;
+  System.SetLength(aCrossEdges, Left.PopCount);
   J := 0;
+  d := Default(TEdgeData);
   for I in Left do
     for p in AdjLists[I]^ do
       if Right[p^.Destination] then
         begin
           GetEdgeDataI(I, p^.Destination, d);
           if I < p^.Destination then
-            Result[J] := TWeightEdge.Create(I, p^.Destination, d.Weight)
+            aCrossEdges[J] := TWeightEdge.Create(I, p^.Destination, d.Weight)
           else
-            Result[J] := TWeightEdge.Create(p^.Destination, I, d.Weight);
+            aCrossEdges[J] := TWeightEdge.Create(p^.Destination, I, d.Weight);
           Inc(J);
         end;
+  System.SetLength(aCrossEdges, J);
+  Result := gnsOk;
 end;
 
 end.
