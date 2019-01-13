@@ -441,8 +441,8 @@ type
     function  Vertices: TVertices; inline;
   { enumerates all edges }
     function  Edges: TEdges; inline;
-    function  GetEdgeData(constref aSrc, aDst: TVertex; out aData: TEdgeData): Boolean; inline;
-    function  GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean; inline;
+    function  GetEdgeData(constref aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean; inline;
+    function  GetEdgeDataI(aSrc, aDst: SizeInt; out aValue: TEdgeData): Boolean;
     function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
     function  IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
@@ -1979,21 +1979,24 @@ begin
   Result.FGraph := Self;
 end;
 
-function TGSparseGraph.GetEdgeData(constref aSrc, aDst: TVertex; out aData: TEdgeData): Boolean;
+function TGSparseGraph.GetEdgeData(constref aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean;
 begin
-  Result := GetEdgeDataI(IndexOf(aSrc), IndexOf(aDst), aData);
+  Result := GetEdgeDataI(IndexOf(aSrc), IndexOf(aDst), aValue);
 end;
 
-function TGSparseGraph.GetEdgeDataI(aSrc, aDst: SizeInt; out aData: TEdgeData): Boolean;
+function TGSparseGraph.GetEdgeDataI(aSrc, aDst: SizeInt; out aValue: TEdgeData): Boolean;
 var
   p: PAdjItem;
 begin
-  CheckIndexRange(aSrc);
-  CheckIndexRange(aDst);
-  p := AdjLists[aSrc]^.Find(aDst);
-  Result := p <> nil;
-  if Result then
-    aData := p^.Data;
+  if SizeUInt(aSrc) < SizeUInt(VertexCount) then
+    begin
+      p := AdjLists[aSrc]^.Find(aDst);
+      Result := p <> nil;
+      if Result then
+        aValue := p^.Data;
+    end
+  else
+    Result := False;
 end;
 
 function TGSparseGraph.SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean;
@@ -2003,8 +2006,10 @@ end;
 
 function TGSparseGraph.SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
 begin
-  CheckIndexRange(aSrc);
-  Result := DoSetEdgeData(aSrc, aDst, aValue);
+  if SizeUInt(aSrc) < SizeUInt(VertexCount) then
+    Result := DoSetEdgeData(aSrc, aDst, aValue)
+  else
+    Result := False;
 end;
 
 function TGSparseGraph.IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
