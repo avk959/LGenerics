@@ -133,12 +133,13 @@ type
   TWeightedGraphTest = class(TTestCase)
   private
   type
-    TIntWeight   = specialize TGSimpleWeight<Integer>;
-    TInt64Weight = specialize TGSimpleWeight<Int64>;
-    TGraph       = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
-    TGraph64     = specialize TGIntWeightGraph<Integer, TInt64Weight, Integer>;
-    TRef         = specialize TGAutoRef<TGraph>;
-    THelper      = specialize TGOrdinalArrayHelper<Integer>;
+    TIntWeight      = specialize TGSimpleWeight<Integer>;
+    TInt64Weight    = specialize TGSimpleWeight<Int64>;
+    TGraph          = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
+    TGraph64        = specialize TGIntWeightGraph<Integer, TInt64Weight, Integer>;
+    TRef            = specialize TGAutoRef<TGraph>;
+    THelper         = specialize TGOrdinalArrayHelper<Integer>;
+    TGlobalNetState = TGraph64.TGlobalNetState;
   const
     WEIGHTS_ARRAY: array of TIntArray  = ((0, 1, 0, 5, 2, 0), (1, 0, 1, 6, 3, 1), (0, 1, 0, 5, 2, 0),
                                           (5, 6, 5, 0, 4, 5), (2, 3, 2, 4, 0, 2), (0, 1, 0, 5, 2, 0));
@@ -152,6 +153,7 @@ type
     function  GenerateTestWGr2: TGraph;
     function  GenerateRandomPoints(aCount: Integer): TPointsChart;
     function  GenerateTestWGrBip1: TGraph64;
+    function  GenerateTestWGr3: TGraph64;
   published
     procedure ContainsNegWeightEdge;
     procedure ContainsNegCycle;
@@ -186,6 +188,14 @@ type
     procedure FindMinWeightBipMatch1;
     procedure FindMaxWeightBipMatch;
     procedure FindMaxWeightBipMatch1;
+    procedure MinWeightCutSW;
+    procedure MinWeightCutSW1;
+    procedure MinWeightCutSW2;
+    procedure MinWeightCutNI;
+    procedure MinWeightCutNI1;
+    procedure MinWeightCutNI2;
+    procedure MinWeightCutNI3;
+    procedure MinWeightCutNI4;
   end;
 
 implementation
@@ -2236,6 +2246,25 @@ begin
   Result.AddEdge(11, 8, TInt64Weight.Create(5));
 end;
 
+function TWeightedGraphTest.GenerateTestWGr3: TGraph64;
+var
+  I, J: Integer;
+begin
+  Result := TGraph64.Create;//TestWGr3.png
+  for I := 0 to 7 do
+    Result.AddVertex(I);
+  Result.AddEdgeI(0, 1, TInt64Weight.Create(100));
+  Result.AddEdgeI(0, 2, TInt64Weight.Create(60));
+  Result.AddEdgeI(1, 3, TInt64Weight.Create(60));
+  Result.AddEdgeI(2, 3, TInt64Weight.Create(100));
+  Result.AddEdgeI(2, 4, TInt64Weight.Create(50));
+  Result.AddEdgeI(3, 5, TInt64Weight.Create(60));
+  Result.AddEdgeI(4, 5, TInt64Weight.Create(100));
+  Result.AddEdgeI(4, 6, TInt64Weight.Create(60));
+  Result.AddEdgeI(5, 7, TInt64Weight.Create(60));
+  Result.AddEdgeI(6, 7, TInt64Weight.Create(100));
+end;
+
 procedure TWeightedGraphTest.ContainsNegWeightEdge;
 var
   Ref: TRef;
@@ -2802,6 +2831,299 @@ begin
   AssertTrue(g.IsMaxMatching(IntMatch));
   AssertTrue(g.IsPerfectMatching(IntMatch));
   AssertTrue(g.TotalWeight(Match) = 270);
+end;
+
+procedure TWeightedGraphTest.MinWeightCutSW;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Cut: TGraph64.TCut;
+  w: Int64;
+begin
+  g := {%H-}Ref;
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutSW(Cut, w) = gnsTrivial);
+  AssertTrue(w = 0);
+  AssertTrue(Cut.A.IsEmpty);
+  AssertTrue(Cut.B.IsEmpty);
+  g.AddVertex(1);
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutSW(Cut, w) = gnsTrivial);
+  AssertTrue(w = 0);
+  AssertTrue(Cut.A.IsEmpty);
+  AssertTrue(Cut.B.IsEmpty);
+  g.AddVertex(2);
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutSW(Cut, w) = gnsDisconnected);
+  AssertTrue(w = 0);
+  AssertTrue(Cut.A.IsEmpty);
+  AssertTrue(Cut.B.IsEmpty);
+  g.AddEdge(1, 2, TInt64Weight.Create(-100));
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutSW(Cut, w) = gnsNegEdgeCapacity);
+  AssertTrue(w = 0);
+  AssertTrue(Cut.A.IsEmpty);
+  AssertTrue(Cut.B.IsEmpty);
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  g.SetEdgeData(1, 2, TInt64Weight.Create(100));
+  AssertTrue(g.MinWeightCutSW(Cut, w) = gnsOk);
+  AssertTrue(w = 100);
+  AssertTrue(Cut.A.Length = 1);
+  AssertTrue(Cut.B.Length = 1);
+  AssertTrue(Cut.A[0] <> Cut.B[0]);
+end;
+
+procedure TWeightedGraphTest.MinWeightCutSW1;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Cut: TGraph64.TCut;
+  I: SizeInt;
+  w: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr3;
+  g := Ref;
+  AssertTrue(g.MinWeightCutSW(Cut, w) = gnsOk);
+  AssertTrue(w = 110);
+  AssertTrue(Cut.A.Length + Cut.B.Length = g.VertexCount);
+  AssertTrue(Cut.A.Length = 4);
+  if Cut.A[0] in [0..3] then
+    begin
+      for I in [0..3] do
+        AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
+      for I in [4..7] do
+        AssertTrue(THelper.SequentSearch(Cut.B, I) <> NULL_INDEX);
+    end
+  else
+    begin
+      for I in [0..3] do
+        AssertTrue(THelper.SequentSearch(Cut.B, I) <> NULL_INDEX);
+      for I in [4..7] do
+        AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
+    end;
+end;
+
+procedure TWeightedGraphTest.MinWeightCutSW2;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Cut: TGraph64.TCut;
+  I: SizeInt;
+  w: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr3;
+  g := Ref;
+  g.SetEdgeData(4, 6, TInt64Weight.Create(45));
+  AssertTrue(g.MinWeightCutSW(Cut, w) = gnsOk);
+  AssertTrue(w = 105);
+  AssertTrue(Cut.A.Length + Cut.B.Length = g.VertexCount);
+  if Cut.A[0] in [0..5] then
+    begin
+      for I in [0..5] do
+        AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
+      for I in [6..7] do
+        AssertTrue(THelper.SequentSearch(Cut.B, I) <> NULL_INDEX);
+    end
+  else
+    begin
+      for I in [0..5] do
+        AssertTrue(THelper.SequentSearch(Cut.B, I) <> NULL_INDEX);
+      for I in [6..7] do
+        AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
+    end;
+end;
+
+procedure TWeightedGraphTest.MinWeightCutNI;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Cut: TGraph64.TCut;
+  w: Int64;
+begin
+  g := {%H-}Ref;
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutNI(Cut, w) = gnsTrivial);
+  AssertTrue(w = 0);
+  AssertTrue(Cut.A.IsEmpty);
+  AssertTrue(Cut.B.IsEmpty);
+  g.AddVertex(1);
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutNI(Cut, w) = gnsTrivial);
+  AssertTrue(w = 0);
+  AssertTrue(Cut.A.IsEmpty);
+  AssertTrue(Cut.B.IsEmpty);
+  g.AddVertex(2);
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutNI(Cut, w) = gnsDisconnected);
+  AssertTrue(w = 0);
+  AssertTrue(Cut.A.IsEmpty);
+  AssertTrue(Cut.B.IsEmpty);
+  g.AddEdge(1, 2, TInt64Weight.Create(-100));
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutNI(Cut, w) = gnsNegEdgeCapacity);
+  AssertTrue(w = 0);
+  AssertTrue(Cut.A.IsEmpty);
+  AssertTrue(Cut.B.IsEmpty);
+  g.SetEdgeData(1, 2, TInt64Weight.Create(100));
+  w := 50;
+  Cut.A := [3];
+  Cut.B := [4];
+  AssertTrue(g.MinWeightCutNI(Cut, w) = gnsOk);
+  AssertTrue(w = 100);
+  AssertTrue(Cut.A.Length = 1);
+  AssertTrue(Cut.B.Length = 1);
+  AssertTrue(Cut.A[0] <> Cut.B[0]);
+end;
+
+procedure TWeightedGraphTest.MinWeightCutNI1;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Cut: TGraph64.TCut;
+  I: SizeInt;
+  w: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr3;
+  g := Ref;
+  AssertTrue(g.MinWeightCutNI(Cut, w) = gnsOk);
+  AssertTrue(w = 110);
+  AssertTrue(Cut.A.Length + Cut.B.Length = g.VertexCount);
+  AssertTrue(Cut.A.Length = 4);
+  if Cut.A[0] in [0..3] then
+    begin
+      for I in [0..3] do
+        AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
+      for I in [4..7] do
+        AssertTrue(THelper.SequentSearch(Cut.B, I) <> NULL_INDEX);
+    end
+  else
+    begin
+      for I in [0..3] do
+        AssertTrue(THelper.SequentSearch(Cut.B, I) <> NULL_INDEX);
+      for I in [4..7] do
+        AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
+    end;
+end;
+
+procedure TWeightedGraphTest.MinWeightCutNI2;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Cut: TGraph64.TCut;
+  I: SizeInt;
+  w: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr3;
+  g := Ref;
+  g.SetEdgeData(4, 6, TInt64Weight.Create(45));
+  AssertTrue(g.MinWeightCutNI(Cut, w) = gnsOk);
+  AssertTrue(w = 105);
+  AssertTrue(Cut.A.Length + Cut.B.Length = g.VertexCount);
+  if Cut.A[0] in [0..5] then
+    begin
+      for I in [0..5] do
+        AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
+      for I in [6..7] do
+        AssertTrue(THelper.SequentSearch(Cut.B, I) <> NULL_INDEX);
+    end
+  else
+    begin
+      for I in [0..5] do
+        AssertTrue(THelper.SequentSearch(Cut.B, I) <> NULL_INDEX);
+      for I in [6..7] do
+        AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
+    end;
+end;
+
+procedure TWeightedGraphTest.MinWeightCutNI3;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Cut: TGraph64.TCut;
+  a : TGraph64.TEdgeArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr3;
+  g := Ref;
+  AssertTrue(g.MinWeightCutNI(Cut, a) = gnsOk);
+  AssertTrue(Length(a) = 2);
+  AssertTrue(g.TotalWeight(a) = 110);
+  if (a[0].Source = 2) or (a[0].Source = 4) then
+    begin
+      if a[0].Source = 2 then
+        AssertTrue(a[0].Destination = 4)
+      else
+        AssertTrue(a[0].Destination = 2);
+      if a[1].Source = 3 then
+        AssertTrue(a[1].Destination = 5)
+      else
+        AssertTrue(a[1].Destination = 3);
+    end
+  else
+    begin
+      if a[0].Source = 3 then
+        AssertTrue(a[0].Destination = 5)
+      else
+        AssertTrue(a[0].Destination = 3);
+      if a[1].Source = 2 then
+        AssertTrue(a[1].Destination = 4)
+      else
+        AssertTrue(a[1].Destination = 2);
+    end;
+end;
+
+procedure TWeightedGraphTest.MinWeightCutNI4;
+var
+  Ref: specialize TGAutoRef<TGraph64>;
+  g: TGraph64;
+  Cut: TGraph64.TCut;
+  a : TGraph64.TEdgeArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr3;
+  g := Ref;
+  g.SetEdgeData(1, 3, TInt64Weight.Create(45));
+  AssertTrue(g.MinWeightCutNI(Cut, a) = gnsOk);
+  AssertTrue(Length(a) = 2);
+  AssertTrue(g.TotalWeight(a) = 105);
+  if (a[0].Source = 0) or (a[0].Source = 2) then
+    begin
+      if a[0].Source = 0 then
+        AssertTrue(a[0].Destination = 2)
+      else
+        AssertTrue(a[0].Destination = 0);
+      if a[1].Source = 1 then
+        AssertTrue(a[1].Destination = 3)
+      else
+        AssertTrue(a[1].Destination = 1);
+    end
+  else
+    begin
+      if a[0].Source = 1 then
+        AssertTrue(a[0].Destination = 3)
+      else
+        AssertTrue(a[0].Destination = 1);
+      if a[1].Source = 0 then
+        AssertTrue(a[1].Destination = 2)
+      else
+        AssertTrue(a[1].Destination = 0);
+    end;
 end;
 
 initialization
