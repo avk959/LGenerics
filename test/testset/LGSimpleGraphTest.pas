@@ -121,6 +121,7 @@ type
     procedure SetSymmDifferenceOf2;
     procedure SetSymmDifferenceOf3;
     procedure SetSymmDifferenceOf4;
+    procedure SetSymmDifferenceOf5;
     procedure SetUnionOf;
     procedure SetUnionOf2;
     procedure SetIntersectionOf;
@@ -2049,6 +2050,17 @@ begin
   finally
     g2.Free;
   end;
+  AssertTrue(g.IsEmpty);
+end;
+
+procedure TSimpleGraphTest.SetSymmDifferenceOf5;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateWheel;
+  g := Ref;
+  g.SetSymmDifferenceOf(g);
   AssertTrue(g.IsEmpty);
 end;
 
