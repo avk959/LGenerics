@@ -139,7 +139,6 @@ type
     TGraph64        = specialize TGIntWeightGraph<Integer, TInt64Weight, Integer>;
     TRef            = specialize TGAutoRef<TGraph>;
     THelper         = specialize TGOrdinalArrayHelper<Integer>;
-    TGlobalNetState = TGraph64.TGlobalNetState;
   const
     WEIGHTS_ARRAY: array of TIntArray  = ((0, 1, 0, 5, 2, 0), (1, 0, 1, 6, 3, 1), (0, 1, 0, 5, 2, 0),
                                           (5, 6, 5, 0, 4, 5), (2, 3, 2, 4, 0, 2), (0, 1, 0, 5, 2, 0));
@@ -2248,7 +2247,7 @@ end;
 
 function TWeightedGraphTest.GenerateTestWGr3: TGraph64;
 var
-  I, J: Integer;
+  I: Integer;
 begin
   Result := TGraph64.Create;//TestWGr3.png
   for I := 0 to 7 do
