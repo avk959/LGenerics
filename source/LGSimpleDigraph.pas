@@ -839,6 +839,7 @@ var
   v: TVertex;
 begin
   Clear;
+  EnsureCapacity(aGraph.VertexCount);
   Title := aGraph.Title;
   Description.Assign(aGraph.FDescription);
   for v in aGraph.Vertices do
