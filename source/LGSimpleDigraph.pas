@@ -1272,21 +1272,25 @@ var
   s, d: TVertex;
 begin
   Tmp := TGSimpleDiGraph.Create;
-  for e in Edges do
-    begin
-      s := Items[e.Source];
-      d := Items[e.Destination];
-      if not aGraph.ContainsEdge(s, d) then
-        Tmp.AddEdge(s, d, e.Data);
-    end;
-  for e in aGraph.Edges do
-    begin
-      s := aGraph[e.Source];
-      d := aGraph[e.Destination];
-      if not ContainsEdge(s, d) then
-        Tmp.AddEdge(s, d, e.Data);
-    end;
-  AssignGraph(Tmp);
+  try
+    for e in Edges do
+      begin
+        s := Items[e.Source];
+        d := Items[e.Destination];
+        if not aGraph.ContainsEdge(s, d) then
+          Tmp.AddEdge(s, d, e.Data);
+      end;
+    for e in aGraph.Edges do
+      begin
+        s := aGraph[e.Source];
+        d := aGraph[e.Destination];
+        if not ContainsEdge(s, d) then
+          Tmp.AddEdge(s, d, e.Data);
+      end;
+    AssignGraph(Tmp);
+  finally
+    Tmp.Free;
+  end;
 end;
 
 function TGSimpleDiGraph.InDegree(constref aVertex: TVertex): SizeInt;
@@ -1877,19 +1881,23 @@ var
   e: TEdge;
 begin
   Tmp := TGFlowChart.Create;
-  Tmp.Title := Title;
-  Tmp.Description.Assign(Description);
-  for s in Vertices do
-    if aChart.ContainsVertex(s) then
-      Tmp.AddVertex(s);
-  for e in Edges do
-    begin
-      s := Items[e.Source];
-      d := Items[e.Destination];
-      if aChart.ContainsEdge(s, d) then
-        Tmp.AddEdge(s, d);
-    end;
-  AssignGraph(Tmp);
+  try
+    Tmp.Title := Title;
+    Tmp.Description.Assign(Description);
+    for s in Vertices do
+      if aChart.ContainsVertex(s) then
+        Tmp.AddVertex(s);
+    for e in Edges do
+      begin
+        s := Items[e.Source];
+        d := Items[e.Destination];
+        if aChart.ContainsEdge(s, d) then
+          Tmp.AddEdge(s, d);
+      end;
+    AssignGraph(Tmp);
+  finally
+    Tmp.Free;
+  end;
 end;
 
 { TGDigraphDotWriter }

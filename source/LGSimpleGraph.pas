@@ -2357,23 +2357,27 @@ var
   s, d: TVertex;
 begin
   Tmp := TGSimpleGraph.Create;
-  Tmp.Title := Title;
-  Tmp.Description.Assign(Description);
-  for e in {%H-}DistinctEdges do
-    begin
-      s := Items[e.Source];
-      d := Items[e.Destination];
-      if not aGraph.ContainsEdge(s, d) then
-        Tmp.AddEdge(s, d, e.Data);
-    end;
-  for e in aGraph{%H-}.DistinctEdges do
-    begin
-      s := aGraph[e.Source];
-      d := aGraph[e.Destination];
-      if not ContainsEdge(s, d) then
-        Tmp.AddEdge(s, d, e.Data);
-    end;
-  AssignGraph(Tmp);
+  try
+    Tmp.Title := Title;
+    Tmp.Description.Assign(Description);
+    for e in {%H-}DistinctEdges do
+      begin
+        s := Items[e.Source];
+        d := Items[e.Destination];
+        if not aGraph.ContainsEdge(s, d) then
+          Tmp.AddEdge(s, d, e.Data);
+      end;
+    for e in aGraph{%H-}.DistinctEdges do
+      begin
+        s := aGraph[e.Source];
+        d := aGraph[e.Destination];
+        if not ContainsEdge(s, d) then
+          Tmp.AddEdge(s, d, e.Data);
+      end;
+    AssignGraph(Tmp);
+  finally
+    Tmp.Free;
+  end;
 end;
 
 function TGSimpleGraph.Degree(constref aVertex: TVertex): SizeInt;
@@ -3625,19 +3629,23 @@ var
   e: TEdge;
 begin
   Tmp := TGChart.Create;
-  Tmp.Title := Title;
-  Tmp.Description.Assign(Description);
-  for s in Vertices do
-    if aChart.ContainsVertex(s) then
-      Tmp.AddVertex(s);
-  for e in DistinctEdges do
-    begin
-      s := Items[e.Source];
-      d := Items[e.Destination];
-      if aChart.ContainsEdge(s, d) then
-        Tmp.AddEdge(s, d);
-    end;
-  AssignGraph(Tmp);
+  try
+    Tmp.Title := Title;
+    Tmp.Description.Assign(Description);
+    for s in Vertices do
+      if aChart.ContainsVertex(s) then
+        Tmp.AddVertex(s);
+    for e in DistinctEdges do
+      begin
+        s := Items[e.Source];
+        d := Items[e.Destination];
+        if aChart.ContainsEdge(s, d) then
+          Tmp.AddEdge(s, d);
+      end;
+    AssignGraph(Tmp);
+  finally
+    Tmp.Free;
+  end;
 end;
 
 { TIntChart }
