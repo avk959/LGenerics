@@ -130,7 +130,7 @@ type
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
   { symmetric difference }
-    procedure SymmDifferenceOf(aGraph: TGSimpleDiGraph);
+    procedure SetSymmDifferenceOf(aGraph: TGSimpleDiGraph);
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
@@ -1274,7 +1274,7 @@ begin
   Result.AssignReverse(Self);
 end;
 
-procedure TGSimpleDiGraph.SymmDifferenceOf(aGraph: TGSimpleDiGraph);
+procedure TGSimpleDiGraph.SetSymmDifferenceOf(aGraph: TGSimpleDiGraph);
 var
   Tmp: TGSimpleDiGraph;
   e: TEdge;
@@ -1282,6 +1282,8 @@ var
 begin
   Tmp := TGSimpleDiGraph.Create;
   try
+    Tmp.Title := Title;
+    Tmp.Description.Assign(Description);
     for e in Edges do
       begin
         s := Items[e.Source];
