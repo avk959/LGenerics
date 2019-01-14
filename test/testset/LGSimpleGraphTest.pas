@@ -1990,7 +1990,7 @@ begin
   AssertTrue(g.IsEmpty);
   g2 := GenerateStar;
   try
-    g.SetUnionOf(g2);
+    g.SetSymmDifferenceOf(g2);
   finally
     g2.Free;
   end;
