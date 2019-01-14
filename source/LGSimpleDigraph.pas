@@ -107,6 +107,7 @@ type
     function  GetDensity: Double; inline;
     function  CreateSkeleton: TSkeleton;
     procedure AssignGraph(aGraph: TGSimpleDiGraph);
+    procedure AssignReverse(aGraph: TGSimpleDiGraph);
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
     function  TopoSort: TIntArray;
@@ -832,6 +833,20 @@ begin
     end;
 end;
 
+procedure TGSimpleDiGraph.AssignReverse(aGraph: TGSimpleDiGraph);
+var
+  e: TEdge;
+  v: TVertex;
+begin
+  Clear;
+  Title := aGraph.Title;
+  Description.Assign(aGraph.FDescription);
+  for v in aGraph.Vertices do
+    AddVertex(v);
+  for e in aGraph.Edges do
+    AddEdge(aGraph[e.Destination], aGraph[e.Source], e.Data);
+end;
+
 function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 var
   Stack: TSimpleStack;
@@ -1254,15 +1269,9 @@ begin
 end;
 
 function TGSimpleDiGraph.Reverse: TGSimpleDiGraph;
-var
-  e: TEdge;
-  v: TVertex;
 begin
   Result := TGSimpleDiGraph.Create;
-  for v in Vertices do
-    Result.AddVertex(v);
-  for e in Edges do
-    Result.AddEdgeI(e.Destination, e.Source, e.Data);
+  Result.AssignReverse(Self);
 end;
 
 procedure TGSimpleDiGraph.SymmDifferenceOf(aGraph: TGSimpleDiGraph);
@@ -1840,7 +1849,8 @@ end;
 
 function TGFlowChart.Reverse: TGFlowChart;
 begin
-  Result := inherited Reverse as TGFlowChart;
+  Result := TGFlowChart.Create;
+  Result.AssignReverse(Self);
 end;
 
 procedure TGFlowChart.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
@@ -1972,7 +1982,8 @@ end;
 
 function TIntFlowChart.Reverse: TIntFlowChart;
 begin
-  Result := inherited Reverse as TIntFlowChart;
+  Result := TIntFlowChart.Create;
+  Result.AssignReverse(Self);
 end;
 
 procedure TIntFlowChart.SaveToStream(aStream: TStream);
@@ -2056,7 +2067,8 @@ end;
 
 function TStrFlowChart.Reverse: TStrFlowChart;
 begin
-  Result := inherited Reverse as TStrFlowChart;
+  Result := TStrFlowChart.Create;
+  Result.AssignReverse(Self);
 end;
 
 procedure TStrFlowChart.SaveToStream(aStream: TStream);
@@ -2316,7 +2328,8 @@ end;
 
 function TGWeightedDiGraph.Reverse: TGWeightedDiGraph;
 begin
-  Result := inherited Reverse as TGWeightedDiGraph;
+  Result := TGWeightedDiGraph.Create;
+  Result.AssignReverse(Self);
 end;
 
 function TGWeightedDiGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
@@ -2773,7 +2786,8 @@ end;
 
 function TGIntWeightDiGraph.Reverse: TGIntWeightDiGraph;
 begin
-  Result := inherited Reverse as TGIntWeightDiGraph;
+  Result := TGIntWeightDiGraph.Create;
+  Result.AssignReverse(Self);
 end;
 
 function TGIntWeightDiGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
