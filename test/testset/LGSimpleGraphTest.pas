@@ -467,7 +467,7 @@ var
   g: TGraph;
   Raised: Boolean = False;
 begin
-  g := Ref;
+  g := {%H-}Ref;
   g.AddEdges([1, 2]);
   AssertTrue(g.Degree(1) = 1);
   AssertTrue(g.Degree(2) = 1);
