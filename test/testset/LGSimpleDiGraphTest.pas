@@ -473,6 +473,9 @@ begin
   g := Ref;
   for I := 0 to Pred(g.VertexCount) do
     AssertFalse(g.ContainsCycle(I, Cycle));
+  g.AddEdge(12, 3);
+  AssertTrue(g.ContainsCycle(0, Cycle));
+  AssertFalse(Cycle.IsEmpty);
 end;
 
 procedure TSimpleDiGraphTest.ContainsEulerianCycle;
