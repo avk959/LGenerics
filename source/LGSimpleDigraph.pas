@@ -156,10 +156,10 @@ type
     if True then aCycle will contain indices of the vertices of the cycle }
     function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
-    function  ContainsEulerianCycle: Boolean;//todo: else from specified source
+    function  ContainsEulerianCycle: Boolean;
     function  FindEulerianCycle: TIntArray;
   { returns count of the strong connected components; the corresponding element of the
-    aCompIds will contain its component index(used Gabow's algorithm) }
+    aCompIds will contain its component index; used Gabow's algorithm }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
   { creates internal reachability matrix }
     procedure FillReachabilityMatrix;
