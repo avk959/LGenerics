@@ -864,6 +864,7 @@ begin
   PreOrd[aRoot] := 0;
   Counter := 1;
   Stack.Push(aRoot);
+  InStack[aRoot] := True;
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
       begin
@@ -907,6 +908,7 @@ begin
         PreOrd[I] := Counter;
         Inc(Counter);
         Stack.Push(I);
+        InStack[I] := True;
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
