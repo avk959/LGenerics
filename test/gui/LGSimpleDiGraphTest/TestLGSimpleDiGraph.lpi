@@ -23,7 +23,7 @@
           <SearchPaths>
             <IncludeFiles Value="$(ProjOutDir);..\..\..\source\include"/>
             <OtherUnitFiles Value="..\..\testset;..\..\..\source"/>
-            <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+            <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Parsing>
             <SyntaxOptions>
@@ -96,7 +96,7 @@
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\..\..\source\include"/>
       <OtherUnitFiles Value="..\..\testset;..\..\..\source"/>
-      <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <CodeGeneration>
       <SmartLinkUnit Value="True"/>
@@ -119,7 +119,7 @@
     </Linking>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="5">
+    <Exceptions Count="6">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>
@@ -135,6 +135,9 @@
       <Item5>
         <Name Value="ERangeError"/>
       </Item5>
+      <Item6>
+        <Name Value="EAssertionFailedError"/>
+      </Item6>
     </Exceptions>
   </Debugging>
 </CONFIG>
