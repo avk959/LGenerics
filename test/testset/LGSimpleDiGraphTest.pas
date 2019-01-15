@@ -49,6 +49,7 @@ type
     procedure FindEulerianCycle;
     procedure FindStrongComponents;
     procedure FindStrongComponents1;
+    procedure FindStrongComponents2;
   end;
 
 implementation
@@ -551,6 +552,22 @@ var
 begin
   {%H-}Ref.Instance := GenerateTestDigr2;
   g := Ref;
+  AssertTrue(g.FindStrongComponents(Ids) = 1);
+  AssertTrue(Ids.Length = g.VertexCount);
+  for I in Ids do
+    AssertTrue(I = 0);
+end;
+
+procedure TSimpleDiGraphTest.FindStrongComponents2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Ids: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
   AssertTrue(g.FindStrongComponents(Ids) = 1);
   AssertTrue(Ids.Length = g.VertexCount);
   for I in Ids do
