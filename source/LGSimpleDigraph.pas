@@ -1562,7 +1562,7 @@ end;
 function TGSimpleDiGraph.FindInnerCenter: TIntArray;
 var
   Queue, Dist, Eccs: TIntArray;
-  Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
+  Radius, I, J, d, qHead, qTail: SizeInt;
   p: PAdjItem;
 begin
   if IsEmpty then
@@ -1573,7 +1573,6 @@ begin
   else
     if FindStrongComponents(Eccs) <> 1 then
       exit(nil);
-  Radius := VertexCount;
   Queue.Length := VertexCount;
   Dist.Length := VertexCount;
   Eccs := CreateIntArray;
@@ -1581,7 +1580,6 @@ begin
     begin
       System.FillChar(Pointer(Dist)^, VertexCount * SizeOf(SizeInt), $ff);
       Dist[I] := 0;
-      Ecc := 0;
       qHead := 0;
       qTail := 0;
       Queue[qTail] := I;
@@ -1597,15 +1595,15 @@ begin
                 Inc(qTail);
                 d := Succ(Dist[J]);
                 Dist[p^.Key] := d;
-                if Ecc < d then
-                  Ecc := d;
-                if d > Eccs[J] then
-                  Eccs[J] := d;
+                if d > Eccs[p^.Key] then
+                  Eccs[p^.Key] := d;
               end;
         end;
-      if Ecc < Radius then
-        Radius := Ecc;
     end;
+  Radius := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if Eccs[I] < Radius then
+      Radius := Eccs[I];
   Result{%H-}.Length := VertexCount;
   J := 0;
   for I := 0 to Pred(VertexCount) do
