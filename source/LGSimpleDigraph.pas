@@ -158,11 +158,11 @@ type
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCycle: Boolean;
     function  FindEulerianCycle: TIntArray;
-  { returns count of the strong connected components; the corresponding element of the
-    aCompIds will contain its component index; used Gabow's algorithm }
+  { returns count of the strong connected components; the corresponding element aCompIds
+    will contain its component index; used Gabow's algorithm }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
   { creates internal reachability matrix }
-    procedure FillReachabilityMatrix;
+    procedure BuildReachabilityMatrix;
   { creates internal reachability matrix using pre-calculated results of FindStrongComponents }
     procedure FillReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt);
   { returns True, radus and diameter, if graph is strongly connected, False otherwise }
@@ -1487,7 +1487,7 @@ begin
   Result := SearchForStrongComponents(aCompIds);
 end;
 
-procedure TGSimpleDiGraph.FillReachabilityMatrix;
+procedure TGSimpleDiGraph.BuildReachabilityMatrix;
 var
   Ids: TIntArray;
   ScCount: SizeInt;
@@ -1501,7 +1501,15 @@ end;
 procedure TGSimpleDiGraph.FillReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt);
 var
   m: TSquareBitMatrix;
+  I: SizeInt;
 begin
+  if aScIds.Length <> VertexCount then
+    ;
+  if SizeUInt(aScCount) >= SizeUInt(VertexCount) then
+    ;
+  for I in aScIds do
+    if SizeUInt(I) >= SizeUInt(aScCount) then
+      ;
   if aScCount = 1 then
     begin
       m := TSquareBitMatrix.Create(aScCount);
