@@ -52,7 +52,7 @@ type
       function  GetSize: SizeInt; inline;
       procedure Clear; inline;
     public
-      constructor Create(constref aMatrix: TSquareBitMatrix; constref aIds: TIntArray);
+      constructor Create(const aMatrix: TSquareBitMatrix; const aIds: TIntArray);
       function  IsEmpty: Boolean; inline;
       function  Reachable(aSrc, aDst: SizeInt): Boolean; inline;
       property  Size: SizeInt read GetSize;
@@ -163,8 +163,9 @@ type
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
   { creates internal reachability matrix }
     procedure BuildReachabilityMatrix;
-  { creates internal reachability matrix using pre-calculated results of FindStrongComponents }
-    procedure FillReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt);
+  { attempts to create an internal reachability matrix using precomputed FindStrongComponents results;
+    todo: doubtful method? }
+    function  TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
   { returns True, radus and diameter, if graph is strongly connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns True and indices of the central vertices in aCenter,
@@ -584,7 +585,7 @@ begin
     end;
 end;
 
-constructor TGSimpleDiGraph.TReachabilityMatrix.Create(constref aMatrix: TSquareBitMatrix; constref aIds: TIntArray);
+constructor TGSimpleDiGraph.TReachabilityMatrix.Create(const aMatrix: TSquareBitMatrix; const aIds: TIntArray);
 begin
   FMatrix := aMatrix;
   FIds := aIds;
@@ -1097,6 +1098,12 @@ var
   AdjEnums: TAdjEnumArray;
   I, J, Counter, Curr, Next, CurrId, NextId: SizeInt;
 begin
+  if aScCount = 1 then
+    begin
+      m := TSquareBitMatrix.Create(aScCount);
+      m[0, 0] := True;
+      exit(TReachabilityMatrix.Create(m, aScIds));
+    end;
   Stack := TSimpleStack.Create(VertexCount);
   IdParents := CreateIntArray(aScCount, -1);
   IdOrd := CreateIntArray(aScCount, -1);
@@ -1495,29 +1502,24 @@ begin
   if IsEmpty or ReachabilityValid then
     exit;
   ScCount := SearchForStrongComponents(Ids);
-  FillReachabilityMatrix(Ids, ScCount);
+  FReachabilityMatrix := GetReachabilityMatrix(Ids, ScCount);
 end;
 
-procedure TGSimpleDiGraph.FillReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt);
+function TGSimpleDiGraph.TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
 var
-  m: TSquareBitMatrix;
   I: SizeInt;
 begin
+  if IsEmpty or ReachabilityValid then
+    exit(False);
   if aScIds.Length <> VertexCount then
-    ;
+    exit(False);
   if SizeUInt(aScCount) >= SizeUInt(VertexCount) then
-    ;
+    exit(False);
   for I in aScIds do
     if SizeUInt(I) >= SizeUInt(aScCount) then
-      ;
-  if aScCount = 1 then
-    begin
-      m := TSquareBitMatrix.Create(aScCount);
-      m[0, 0] := True;
-      FReachabilityMatrix := TReachabilityMatrix.Create(m, aScIds);
-      exit;
-    end;
-  FReachabilityMatrix := GetReachabilityMatrix(aScIds, aScCount);
+      exit(False);
+  Result := True;
+  FReachabilityMatrix := GetReachabilityMatrix(System.Copy(aScIds), aScCount);
 end;
 
 function TGSimpleDiGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
