@@ -664,13 +664,15 @@ var
   Ref: TRef;
   g: TGraph;
   c: TIntArray;
+  I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestDigr1;
   g := Ref;
   g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
   c := g.FindInnerCenter;
-  AssertTrue(c.Length = 1);
-  AssertTrue(c[0] = 6);
+  AssertTrue(c.Length = 3);
+  for I in [9, 11, 12] do
+    AssertTrue(THelper.SequentSearch(c, I) <> NULL_INDEX);
 end;
 
 
