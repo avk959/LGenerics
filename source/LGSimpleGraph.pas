@@ -134,7 +134,6 @@ type
     procedure SearchForFundamentalsCycles(out aCycles: TIntArrayVector);
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
-    function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
     function  CreateDegreeArray: TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
@@ -1972,50 +1971,6 @@ begin
   if aCycleLens.Count <> {%H-}CyclomaticNumber then
     raise EGraphError.Create(SEInternalDataInconsist);
   TIntVectorHelper.Sort(aCycleLens);
-end;
-
-function TGSimpleGraph.DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
-var
-  Queue, Dist: TIntArray;
-  VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
-  p: PAdjItem;
-begin
-  VertCount := VertexCount;
-  aRadius := VertCount;
-  aDiameter := 0;
-  Queue.Length := VertCount;
-  Dist.Length := VertCount;
-  Result{%H-}.Length := VertCount;
-  for I := 0 to Pred(VertCount) do
-    begin
-      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
-      Dist[I] := 0;
-      Ecc := 0;
-      qHead := 0;
-      qTail := 0;
-      Queue[qTail] := I;
-      Inc(qTail);
-      while qHead < qTail do
-        begin
-          J := Queue[qHead];
-          Inc(qHead);
-          for p in AdjLists[J]^ do
-            if Dist[p^.Key] = NULL_INDEX then
-              begin
-                Queue[qTail] := p^.Key;
-                Inc(qTail);
-                d := Succ(Dist[J]);
-                if Ecc < d then
-                  Ecc := d;
-                Dist[p^.Key] := d;
-              end;
-        end;
-      Result[I] := Ecc;
-      if Ecc < aRadius then
-        aRadius := Ecc;
-      if Ecc > aDiameter then
-        aDiameter := Ecc;
-    end;
 end;
 
 function TGSimpleGraph.CreateDegreeArray: TIntArray;

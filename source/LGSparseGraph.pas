@@ -281,6 +281,7 @@ type
     procedure AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
     procedure AssignTree(aGraph: TGSparseGraph; const aTree: TIntArray);
     procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
+    function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
     function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; virtual; abstract;
@@ -1528,6 +1529,49 @@ begin
   Clear;
   for e in aEdges do
     AddEdge(aGraph[e.Source], aGraph[e.Destination], aGraph.GetEdgeDataPtr(e.Source, e.Destination)^);
+end;
+
+function TGSparseGraph.DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
+var
+  Queue, Dist: TIntArray;
+  I, Ecc, J, d, qHead, qTail: SizeInt;
+  p: PAdjItem;
+begin
+  aRadius := VertexCount;
+  aDiameter := 0;
+  Queue.Length := VertexCount;
+  Dist.Length := VertexCount;
+  Result{%H-}.Length := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      System.FillChar(Pointer(Dist)^, VertexCount * SizeOf(SizeInt), $ff);
+      Dist[I] := 0;
+      Ecc := 0;
+      qHead := 0;
+      qTail := 0;
+      Queue[qTail] := I;
+      Inc(qTail);
+      while qHead < qTail do
+        begin
+          J := Queue[qHead];
+          Inc(qHead);
+          for p in AdjLists[J]^ do
+            if Dist[p^.Key] = NULL_INDEX then
+              begin
+                Queue[qTail] := p^.Key;
+                Inc(qTail);
+                d := Succ(Dist[J]);
+                if Ecc < d then
+                  Ecc := d;
+                Dist[p^.Key] := d;
+              end;
+        end;
+      Result[I] := Ecc;
+      if Ecc < aRadius then
+        aRadius := Ecc;
+      if Ecc > aDiameter then
+        aDiameter := Ecc;
+    end;
 end;
 
 class function TGSparseGraph.cMin(L, R: TCost): TCost;
