@@ -50,6 +50,11 @@ type
     procedure FindStrongComponents;
     procedure FindStrongComponents1;
     procedure FindStrongComponents2;
+    procedure BuildReachabilityMatrix;
+    procedure BuildReachabilityMatrix1;
+    procedure FindMetrics;
+    procedure FindCenter;
+    procedure FindInnerCenter;
   end;
 
 implementation
@@ -572,6 +577,100 @@ begin
   AssertTrue(Ids.Length = g.VertexCount);
   for I in Ids do
     AssertTrue(I = 0);
+end;
+
+procedure TSimpleDiGraphTest.BuildReachabilityMatrix;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.ReachabilityValid);
+  g.BuildReachabilityMatrix;
+  AssertFalse(g.ReachabilityValid);
+  Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertFalse(g.ReachabilityValid);
+  g.BuildReachabilityMatrix;
+  AssertTrue(g.ReachabilityValid);
+  AssertTrue(g.PathExists(0, 12));
+  AssertTrue(g.PathExists(0, 10));
+  AssertFalse(g.PathExists(12, 0));
+  AssertFalse(g.PathExists(10, 0));
+  AssertFalse(g.PathExists(0, 7));
+  AssertFalse(g.PathExists(0, 8));
+  AssertFalse(g.PathExists(7, 0));
+  AssertFalse(g.PathExists(8, 0));
+  AssertTrue(g.PathExists(7, 12));
+  AssertTrue(g.PathExists(7, 10));
+end;
+
+procedure TSimpleDiGraphTest.BuildReachabilityMatrix1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
+  AssertFalse(g.ReachabilityValid);
+  g.BuildReachabilityMatrix;
+  AssertTrue(g.ReachabilityValid);
+  AssertTrue(g.PathExists(0, 12));
+  AssertTrue(g.PathExists(0, 10));
+  AssertTrue(g.PathExists(12, 0));
+  AssertTrue(g.PathExists(10, 0));
+  AssertTrue(g.PathExists(0, 7));
+  AssertTrue(g.PathExists(0, 8));
+  AssertTrue(g.PathExists(7, 0));
+  AssertTrue(g.PathExists(8, 0));
+  AssertTrue(g.PathExists(7, 12));
+  AssertTrue(g.PathExists(7, 10));
+end;
+
+procedure TSimpleDiGraphTest.FindMetrics;
+var
+  Ref: TRef;
+  g: TGraph;
+  r, d: SizeInt;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindMetrics(r, d));
+  Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertFalse(g.FindMetrics(r, d));
+  g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
+  AssertTrue(g.FindMetrics(r, d));
+  AssertTrue(r = 3);
+  AssertTrue(d = 7);
+end;
+
+procedure TSimpleDiGraphTest.FindCenter;
+var
+  Ref: TRef;
+  g: TGraph;
+  c: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
+  c := g.FindCenter;
+  AssertTrue(c.Length = 1);
+  AssertTrue(c[0] = 0);
+end;
+
+procedure TSimpleDiGraphTest.FindInnerCenter;
+var
+  Ref: TRef;
+  g: TGraph;
+  c: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
+  c := g.FindInnerCenter;
+  AssertTrue(c.Length = 1);
+  AssertTrue(c[0] = 6);
 end;
 
 
