@@ -54,7 +54,6 @@ type
     procedure BuildReachabilityMatrix1;
     procedure FindMetrics;
     procedure FindCenter;
-    procedure FindInnerCenter;
   end;
 
 implementation
@@ -658,23 +657,6 @@ begin
   AssertTrue(c.Length = 1);
   AssertTrue(c[0] = 0);
 end;
-
-procedure TSimpleDiGraphTest.FindInnerCenter;
-var
-  Ref: TRef;
-  g: TGraph;
-  c: TIntArray;
-  I: SizeInt;
-begin
-  {%H-}Ref.Instance := GenerateTestDigr1;
-  g := Ref;
-  g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
-  c := g.FindInnerCenter;
-  AssertTrue(c.Length = 3);
-  for I in [9, 11, 12] do
-    AssertTrue(THelper.SequentSearch(c, I) <> NULL_INDEX);
-end;
-
 
 
 initialization

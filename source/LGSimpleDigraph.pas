@@ -170,8 +170,6 @@ type
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
     function  FindCenter: TIntArray;
-  { returns array of indices of the inner central vertices, if graph is strongly connected, nil otherwise }
-    function  FindInnerCenter: TIntArray;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -1548,62 +1546,6 @@ begin
     if FindStrongComponents(Eccs) <> 1 then
       exit(nil);
   Eccs := DoFindMetrics(Radius, Diam);
-  Result{%H-}.Length := VertexCount;
-  J := 0;
-  for I := 0 to Pred(VertexCount) do
-    if Eccs[I] = Radius then
-      begin
-        Result[J] := I;
-        Inc(J);
-      end;
-  Result.Length := J;
-end;
-
-function TGSimpleDiGraph.FindInnerCenter: TIntArray;
-var
-  Queue, Dist, Eccs: TIntArray;
-  Radius, I, J, d, qHead, qTail: SizeInt;
-  p: PAdjItem;
-begin
-  if IsEmpty then
-    exit(nil);
-  if ReachabilityValid then
-    if FReachabilityMatrix.Size <> 1 then
-      exit(nil) else
-  else
-    if FindStrongComponents(Eccs) <> 1 then
-      exit(nil);
-  Queue.Length := VertexCount;
-  Dist.Length := VertexCount;
-  Eccs := CreateIntArray;
-  for I := 0 to Pred(VertexCount) do
-    begin
-      System.FillChar(Pointer(Dist)^, VertexCount * SizeOf(SizeInt), $ff);
-      Dist[I] := 0;
-      qHead := 0;
-      qTail := 0;
-      Queue[qTail] := I;
-      Inc(qTail);
-      while qHead < qTail do
-        begin
-          J := Queue[qHead];
-          Inc(qHead);
-          for p in AdjLists[J]^ do
-            if Dist[p^.Key] = NULL_INDEX then
-              begin
-                Queue[qTail] := p^.Key;
-                Inc(qTail);
-                d := Succ(Dist[J]);
-                Dist[p^.Key] := d;
-                if d > Eccs[p^.Key] then
-                  Eccs[p^.Key] := d;
-              end;
-        end;
-    end;
-  Radius := VertexCount;
-  for I := 0 to Pred(VertexCount) do
-    if Eccs[I] < Radius then
-      Radius := Eccs[I];
   Result{%H-}.Length := VertexCount;
   J := 0;
   for I := 0 to Pred(VertexCount) do
