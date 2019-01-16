@@ -168,12 +168,10 @@ type
     function  TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
   { returns True, radus and diameter, if graph is strongly connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
-  { returns True and indices of the central vertices in aCenter,
-    if graph is strongly connected, False otherwise }
-    function  FindCenter(out aCenter: TIntArray): Boolean;
-  { returns True and indices of the inner central vertices in aCenter,
-    if graph is strongly connected, False otherwise }
-    function  FindInnerCenter(out aCenter: TIntArray): Boolean;
+  { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
+    function  FindCenter: TIntArray;
+  { returns array of indices of the inner central vertices, if graph is strongly connected, nil otherwise }
+    function  FindInnerCenter: TIntArray;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -1524,127 +1522,64 @@ end;
 
 function TGSimpleDiGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
 var
-  Queue, Dist: TIntArray;
-  VertCount, I, Ecc, J, d, qHead, qTail: SizeInt;
-  p: PAdjItem;
+  Dist: TIntArray;
 begin
   if IsEmpty then
     exit(False);
-  I := FindStrongComponents(Dist);
-  if I > 1 then
-    exit(False);
-  VertCount := VertexCount;
-  aRadius := VertCount;
-  aDiameter := 0;
-  Queue.Length := VertCount;
-  Dist.Length := VertCount;
-  for I := 0 to Pred(VertCount) do
-    begin
-      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
-      Dist[I] := 0;
-      Ecc := 0;
-      qHead := 0;
-      qTail := 0;
-      Queue[qTail] := I;
-      Inc(qTail);
-      while qHead < qTail do
-        begin
-          J := Queue[qHead];
-          Inc(qHead);
-          for p in AdjLists[J]^ do
-            if Dist[p^.Key] = NULL_INDEX then
-              begin
-                Queue[qTail] := p^.Key;
-                Inc(qTail);
-                d := Succ(Dist[J]);
-                Dist[p^.Key] := d;
-                if Ecc < d then
-                  Ecc := d;
-              end;
-        end;
-      if Ecc < aRadius then
-        aRadius := Ecc;
-      if Ecc > aDiameter then
-        aDiameter := Ecc;
-    end;
-  Result := True;
+  if ReachabilityValid then
+    Result := FReachabilityMatrix.Size = 1
+  else
+    Result := FindStrongComponents(Dist) = 1;
+  if Result then
+    DoFindMetrics(aRadius, aDiameter);
 end;
 
-function TGSimpleDiGraph.FindCenter(out aCenter: TIntArray): Boolean;
+function TGSimpleDiGraph.FindCenter: TIntArray;
 var
-  Queue, Dist, Eccs: TIntArray;
-  VertCount, Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
-  p: PAdjItem;
+  Eccs: TIntArray;
+  I, J, Radius, Diam: SizeInt;
 begin
   if IsEmpty then
-    exit(False);
-  I := FindStrongComponents(Dist);
-  if I > 1 then
-    exit(False);
-  VertCount := VertexCount;
-  Radius := VertCount;
-  Queue.Length := VertCount;
-  Dist.Length := VertCount;
-  Eccs.Length := VertCount;
-  for I := 0 to Pred(VertCount) do
-    begin
-      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
-      Dist[I] := 0;
-      Ecc := 0;
-      qHead := 0;
-      qTail := 0;
-      Queue[qTail] := I;
-      Inc(qTail);
-      while qHead < qTail do
-        begin
-          J := Queue[qHead];
-          Inc(qHead);
-          for p in AdjLists[J]^ do
-            if Dist[p^.Key] = NULL_INDEX then
-              begin
-                Queue[qTail] := p^.Key;
-                Inc(qTail);
-                d := Succ(Dist[J]);
-                Dist[p^.Key] := d;
-                if Ecc < d then
-                  Ecc := d;
-              end;
-        end;
-      Eccs[I] := Ecc;
-      if Ecc < Radius then
-        Radius := Ecc;
-    end;
-  aCenter.Length := VertCount;
+    exit(nil);
+  if ReachabilityValid then
+    if FReachabilityMatrix.Size <> 1 then
+      exit(nil) else
+  else
+    if FindStrongComponents(Eccs) <> 1 then
+      exit(nil);
+  Eccs := DoFindMetrics(Radius, Diam);
+  Result{%H-}.Length := VertexCount;
   J := 0;
-  for I := 0 to Pred(VertCount) do
+  for I := 0 to Pred(VertexCount) do
     if Eccs[I] = Radius then
       begin
-        aCenter[J] := I;
+        Result[J] := I;
         Inc(J);
       end;
-  aCenter.Length := J;
-  Result := True;
+  Result.Length := J;
 end;
 
-function TGSimpleDiGraph.FindInnerCenter(out aCenter: TIntArray): Boolean;
+function TGSimpleDiGraph.FindInnerCenter: TIntArray;
 var
   Queue, Dist, Eccs: TIntArray;
-  VertCount, Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
+  Radius, I, Ecc, J, d, qHead, qTail: SizeInt;
   p: PAdjItem;
 begin
   if IsEmpty then
-    exit(False);
-  I := FindStrongComponents(Dist);
-  if I > 1 then
-    exit(False);
-  VertCount := VertexCount;
-  Radius := VertCount;
-  Queue.Length := VertCount;
-  Dist.Length := VertCount;
-  Eccs := CreateIntArray(0);
-  for I := 0 to Pred(VertCount) do
+    exit(nil);
+  if ReachabilityValid then
+    if FReachabilityMatrix.Size <> 1 then
+      exit(nil) else
+  else
+    if FindStrongComponents(Eccs) <> 1 then
+      exit(nil);
+  Radius := VertexCount;
+  Queue.Length := VertexCount;
+  Dist.Length := VertexCount;
+  Eccs := CreateIntArray;
+  for I := 0 to Pred(VertexCount) do
     begin
-      System.FillChar(Pointer(Dist)^, VertCount * SizeOf(SizeInt), $ff);
+      System.FillChar(Pointer(Dist)^, VertexCount * SizeOf(SizeInt), $ff);
       Dist[I] := 0;
       Ecc := 0;
       qHead := 0;
@@ -1664,23 +1599,22 @@ begin
                 Dist[p^.Key] := d;
                 if Ecc < d then
                   Ecc := d;
-                if Dist[p^.Key] > Eccs[p^.Key] then
-                  Eccs[p^.Key] := Dist[p^.Key];
+                if d > Eccs[J] then
+                  Eccs[J] := d;
               end;
         end;
       if Ecc < Radius then
         Radius := Ecc;
     end;
-  aCenter.Length := VertCount;
+  Result{%H-}.Length := VertexCount;
   J := 0;
-  for I := 0 to Pred(VertCount) do
+  for I := 0 to Pred(VertexCount) do
     if Eccs[I] = Radius then
       begin
-        aCenter[J] := I;
+        Result[J] := I;
         Inc(J);
       end;
-  aCenter.Length := J;
-  Result := True;
+  Result.Length := J;
 end;
 
 function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
