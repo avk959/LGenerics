@@ -80,16 +80,20 @@ type
     procedure EccentricityDirect;
   end;
 
+  { TTspTest }
+
   TTspTest = class(TTestCase)
   private
   type
     TSolver = specialize TGMetricTspHelper<Integer>;
 
-    function CreateAsymmMatrix: TSolver.TTspMatrix;
-    function CreateSymmMatrix: TSolver.TTspMatrix;
+    function CreateBr17: TSolver.TTspMatrix;
+    function CreateSymm8: TSolver.TTspMatrix;
+    function CreateGr17: TSolver.TTspMatrix;
   published
     procedure Asymmetric;
     procedure Symmetric;
+    procedure Symmetric1;
   end;
 
 implementation
@@ -915,7 +919,7 @@ end;
 
 { TTspTest }
 
-function TTspTest.CreateAsymmMatrix: TSolver.TTspMatrix;
+function TTspTest.CreateBr17: TSolver.TTspMatrix;
 begin
   //br17 from TSPLib, optimal tour cost is 39:
   Result := [
@@ -935,11 +939,23 @@ begin
     [5,   3,  0, 72, 72, 48, 48, 24, 24,  3,  3,  5,  3,  0, 48, 48, 24],
     [8,   8, 50,  6,  6,  0,  0,  8,  8,  8,  8,  8,  8, 50,  0,  0,  8],
     [8,   8, 50,  6,  6,  0,  0,  8,  8,  8,  8,  8,  8, 50,  0,  0,  8],
-    [5,   5, 26, 12, 12,  8,  8,  0,  0,  5,  5,  5,  5, 26,  8,  8,  0]
-  ]
+    [5,   5, 26, 12, 12,  8,  8,  0,  0,  5,  5,  5,  5, 26,  8,  8,  0]];
 end;
 
-function TTspTest.CreateSymmMatrix: TSolver.TTspMatrix;
+function TTspTest.CreateSymm8: TSolver.TTspMatrix;
+begin
+  Result := [       //optimal tour cost is 70     - 0  5  7  4  1  2  6  3  0
+    [ 0, 15, 14,  8, 22, 11,  6,  3],              //11 10  4 12  7 13  5  8
+    [15,  0,  7,  9, 12, 14, 26, 23],
+    [14,  7,  0, 17, 21, 19, 13, 10],
+    [ 8,  9, 17,  0, 15, 16,  5, 20],
+    [22, 12, 21, 15,  0, 18, 12,  4],
+    [11, 14, 19, 16, 18,  0, 23, 10],
+    [ 6, 26, 13,  5, 12, 23,  0, 14],
+    [ 3, 23, 10, 20,  4, 10, 14,  0]];
+end;
+
+function TTspTest.CreateGr17: TSolver.TTspMatrix;
 begin
   //gr17 from TSPLib, optimal tour cost is 2085:
   Result := [
@@ -959,8 +975,7 @@ begin
     [211, 466,  74, 182, 243, 105, 150, 108, 326, 336, 184, 391, 145,   0,  57, 426,  96],
     [268, 420,  53, 239, 199, 123, 207, 165, 383, 240, 140, 448, 202,  57,   0, 483, 153],
     [246, 745, 472, 237, 528, 364, 332, 349, 202, 685, 542, 157, 289, 426, 483,   0, 336],
-    [121, 518, 142,  84, 297,  35,  29,  36, 236, 390, 238, 301,  55,  96, 153, 336,   0]
-  ];
+    [121, 518, 142,  84, 297,  35,  29,  36, 236, 390, 238, 301,  55,  96, 153, 336,   0]];
 end;
 
 procedure TTspTest.Asymmetric;
@@ -970,7 +985,7 @@ var
   Cost: Integer;
   Exact: Boolean;
 begin
-  m := CreateAsymmMatrix;
+  m := CreateBr17;
   Exact := TSolver.FindExact(m, Tour, Cost, 30);
   AssertTrue(Exact);
   AssertTrue(TSolver.GetTotalCost(m, Tour) = Cost);
@@ -984,7 +999,21 @@ var
   Cost: Integer;
   Exact: Boolean;
 begin
-  m := CreateSymmMatrix;
+  m := CreateSymm8;
+  Exact := TSolver.FindExact(m, Tour, Cost, 30);
+  AssertTrue(Exact);
+  AssertTrue(TSolver.GetTotalCost(m, Tour) = Cost);
+  AssertTrue(Cost = 70);
+end;
+
+procedure TTspTest.Symmetric1;
+var
+  m: TSolver.TTspMatrix;
+  Tour: TIntArray;
+  Cost: Integer;
+  Exact: Boolean;
+begin
+  m := CreateGr17;
   Exact := TSolver.FindExact(m, Tour, Cost, 30);
   AssertTrue(Exact);
   AssertTrue(TSolver.GetTotalCost(m, Tour) = Cost);
