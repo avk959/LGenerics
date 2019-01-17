@@ -3404,7 +3404,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     if AdjLists[I]^.Count < 2 then
       exit(False);
-  Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles);
+  Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles) and aCycles.NonEmpty;
 end;
 
 function TGSimpleGraph.IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
@@ -3463,7 +3463,7 @@ begin
       end;
   if (LeafCount = 2) and not (AdjLists[aSourceIdx]^.Count < 2) then
     exit(False);
-  Result := Helper.FindPaths(Self, aSourceIdx, aCount, aTimeOut, @aPaths);
+  Result := Helper.FindPaths(Self, aSourceIdx, aCount, aTimeOut, @aPaths) and aPaths.NonEmpty;
 end;
 
 function TGSimpleGraph.IsHamiltonPath(const aTestPath: TIntArray; aSourceIdx: SizeInt): Boolean;
