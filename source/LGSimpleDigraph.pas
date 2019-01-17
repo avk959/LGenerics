@@ -158,6 +158,8 @@ type
     function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCycle: Boolean;
     function  FindEulerianCycle: TIntArray;
+  { checks whether the graph is stongly connected; an empty graph is considered disconnected }
+    function  IsStrongConnected: Boolean;
   { returns count of the strong connected components; the corresponding element aCompIds
     will contain its component index; used Gabow's algorithm }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
@@ -1478,7 +1480,16 @@ begin
     end;
 end;
 
+function TGSimpleDiGraph.IsStrongConnected: Boolean;
+var
+  Dummy: TIntArray;
+begin
+  Result := FindStrongComponents(Dummy) = 1;
+end;
+
 function TGSimpleDiGraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
+var
+  m: TSquareBitMatrix;
 begin
   if IsEmpty then
     exit(0);
@@ -1493,6 +1504,12 @@ begin
       exit(FReachabilityMatrix.Size);
     end;
   Result := SearchForStrongComponents(aCompIds);
+  if Result = 1 then
+    begin
+      m := TSquareBitMatrix.Create(1);
+      m[0, 0] := True;
+      FReachabilityMatrix := TReachabilityMatrix.Create(m, aCompIds);
+    end;
 end;
 
 procedure TGSimpleDiGraph.BuildReachabilityMatrix;
@@ -1524,15 +1541,8 @@ begin
 end;
 
 function TGSimpleDiGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
-var
-  Dist: TIntArray;
 begin
-  if IsEmpty then
-    exit(False);
-  if ReachabilityValid then
-    Result := FReachabilityMatrix.Size = 1
-  else
-    Result := FindStrongComponents(Dist) = 1;
+  Result := IsStrongConnected;
   if Result then
     DoFindMetrics(aRadius, aDiameter);
 end;
@@ -1542,14 +1552,8 @@ var
   Eccs: TIntArray;
   I, J, Radius, Diam: SizeInt;
 begin
-  if IsEmpty then
+  if not IsStrongConnected then
     exit(nil);
-  if ReachabilityValid then
-    if FReachabilityMatrix.Size <> 1 then
-      exit(nil) else
-  else
-    if FindStrongComponents(Eccs) <> 1 then
-      exit(nil);
   Eccs := DoFindMetrics(Radius, Diam);
   Result{%H-}.Length := VertexCount;
   J := 0;
@@ -1567,14 +1571,8 @@ var
   Eccs: TIntArray;
   I, J, Radius, Diam: SizeInt;
 begin
-  if IsEmpty then
+  if not IsStrongConnected then
     exit(nil);
-  if ReachabilityValid then
-    if FReachabilityMatrix.Size <> 1 then
-      exit(nil) else
-  else
-    if FindStrongComponents(Eccs) <> 1 then
-      exit(nil);
   Eccs := DoFindMetrics(Radius, Diam);
   Result{%H-}.Length := VertexCount;
   J := 0;
@@ -1714,7 +1712,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     if (FNodeList[I].Tag = 0) or FNodeList[I].AdjList.IsEmpty then
       exit(False);
-  Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles);
+  Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles) and aCycles.NonEmpty;
 end;
 
 function TGSimpleDiGraph.IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
@@ -1765,7 +1763,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     if (I <> aSrcIdx) and (I <> aDstIdx) and ((FNodeList[I].Tag = 0) or FNodeList[I].AdjList.IsEmpty) then
       exit(False);
-  Result := Helper.FindPaths(Self, aSrcIdx, aDstIdx, aCount, aTimeOut, @aPaths);
+  Result := Helper.FindPaths(Self, aSrcIdx, aDstIdx, aCount, aTimeOut, @aPaths) and aPaths.NonEmpty;
 end;
 
 function TGSimpleDiGraph.IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx, aDstIdx: SizeInt): Boolean;
