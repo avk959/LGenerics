@@ -170,12 +170,15 @@ type
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
     function  FindCenter: TIntArray;
+  { returns array of indices of the peripheral vertices, if graph is strongly connected, nil otherwise }
+    function  FindPeripheral: TIntArray;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
 
-  { returns array of vertex indices in topological order, without any acyclic checks }
+  { returns array of indices of the vertices in topological order, without any acyclic checks }
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
+    function  IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
     function  IsDag: Boolean;
   { for an acyclic graph returns an array containing in the corresponding components the length of
     the longest path from aSrc to it (in sense 'edges count'), or -1 if it is unreachable from aSrc }
@@ -1557,20 +1560,85 @@ begin
   Result.Length := J;
 end;
 
+function TGSimpleDiGraph.FindPeripheral: TIntArray;
+var
+  Eccs: TIntArray;
+  I, J, Radius, Diam: SizeInt;
+begin
+  if IsEmpty then
+    exit(nil);
+  if ReachabilityValid then
+    if FReachabilityMatrix.Size <> 1 then
+      exit(nil) else
+  else
+    if FindStrongComponents(Eccs) <> 1 then
+      exit(nil);
+  Eccs := DoFindMetrics(Radius, Diam);
+  Result{%H-}.Length := VertexCount;
+  J := 0;
+  for I := 0 to Pred(VertexCount) do
+    if Eccs[I] = Diam then
+      begin
+        Result[J] := I;
+        Inc(J);
+      end;
+  Result.Length := J;
+end;
+
 function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
 begin
   if IsEmpty then
     exit(nil);
+  if VertexCount = 1 then
+    exit([0]);
   Result := TopoSort;
   if aOrder = soDesc then
     TIntHelper.Reverse(Result);
 end;
 
+function TGSimpleDiGraph.IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
+var
+  TestCopy: TIntArray;
+  vSet: TBitVector;
+  I, J: SizeInt;
+begin
+  if aTestSet.Length <> VertexCount then
+    exit(False);
+  if VertexCount < 2 then
+    exit(True);
+  vSet.Size := VertexCount;
+  for I in aTestSet do
+    begin
+      if SizeUInt(I) >= SizeUInt(VertexCount) then
+        exit(False);
+      if vSet[I] then
+        exit(False);
+      vSet[I] := True;
+    end;
+  if aSortOrder = soDesc then
+    TestCopy := TIntHelper.CreateReverseCopy(aTestSet)
+  else
+    TestCopy := aTestSet;
+  if ReachabilityValid then
+    begin
+      for I := 0 to Pred(VertexCount) do
+        for J := 0 to Pred(I) do
+          if FReachabilityMatrix.Reachable(TestCopy[I], TestCopy[J]) then
+            exit(False);
+    end
+  else
+    begin
+      for I := 0 to Pred(VertexCount) do
+        for J := 0 to Pred(I) do
+          if CheckPathExists(TestCopy[I], TestCopy[J]) then
+            exit(False);
+    end;
+  Result := True;
+end;
+
 function TGSimpleDiGraph.IsDag: Boolean;
 begin
-  if IsEmpty then
-    exit(False);
-  if VertexCount = 1 then
+  if VertexCount < 2 then
     exit(True);
   Result := not CycleExists;
 end;
