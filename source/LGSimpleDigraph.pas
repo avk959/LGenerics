@@ -180,16 +180,18 @@ type
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
     function  IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
     function  IsDag: Boolean;
-  { for an acyclic graph returns an array containing in the corresponding components the length of
-    the longest path from aSrc to it (in sense 'edges count'), or -1 if it is unreachable from aSrc }
+  { does not checks if a graph is acyclic;
+    returns an array containing in the corresponding components the length of the longest path
+    from aSrc to it (in sense 'edges count'), or -1 if it is unreachable from aSrc }
     function  DagLongestPathsMap(constref aSrc: TVertex): TIntArray; inline;
     function  DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
   { same as above and in aPathTree returns paths }
     function  DagLongestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
     function  DagLongestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
-  { for an acyclic graph returns an array containing in the corresponding components the length of
+  { does not checks if a graph is acyclic;
+    returns an array containing in the corresponding components the length of
     the longest path starting with it(in sense 'edges count') }
-    function  DagLongesPaths: TIntArray;
+    function  DagLongestPaths: TIntArray;
 {**********************************************************************************************************
   some NP-hard problem utilities
 ***********************************************************************************************************}
@@ -1651,6 +1653,8 @@ end;
 function TGSimpleDiGraph.DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
 begin
   CheckIndexRange(aSrc);
+  if VertexCount = 1 then
+    exit([0]);
   Result := GetDagLongestPaths(aSrc);
 end;
 
@@ -1662,14 +1666,23 @@ end;
 function TGSimpleDiGraph.DagLongestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
 begin
   CheckIndexRange(aSrc);
+  if VertexCount = 1 then
+    begin
+      aPathTree := [NULL_INDEX];
+      exit([0]);
+    end;
   Result := GetDagLongestPaths(aSrc, aPathTree);
 end;
 
-function TGSimpleDiGraph.DagLongesPaths: TIntArray;
+function TGSimpleDiGraph.DagLongestPaths: TIntArray;
 var
   TopoOrd: TIntArray;
   I, J, d: SizeInt;
 begin
+  if IsEmpty then
+    exit(nil);
+  if VertexCount = 1 then
+    exit([0]);
   TopoOrd := TopologicalSort(soDesc);
   Result := CreateIntArray(0);
   for I := 1 to Pred(VertexCount) do
