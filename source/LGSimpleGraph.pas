@@ -361,7 +361,7 @@ type
   { returns True if aTestCycle is Hamiltonian cycle starting from the vertex with index aSourceIdx }
     function  IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
   { tries to return in aPaths the specified number of Hamiltonian paths
-    from the vertex aSrc to vertex aDst; if aCount <= 0, then all paths are returned;
+    from the vertex aSrc; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
     the timeout in seconds; at the end of the timeout False will be returned }
     function  FindHamiltonPaths(constref aSource: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
