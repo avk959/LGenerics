@@ -46,7 +46,6 @@
               <UseHeaptrc Value="True"/>
               <TrashVariables Value="True"/>
               <StripSymbols Value="True"/>
-              <UseExternalDbgSyms Value="True"/>
             </Debugging>
             <Options>
               <Win32>

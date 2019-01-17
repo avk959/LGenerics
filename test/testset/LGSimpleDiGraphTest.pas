@@ -24,6 +24,7 @@ type
 
     function  GenerateTestDigr1: TGraph;
     function  GenerateTestDigr2: TGraph;
+    function  GenerateTestDigr3: TGraph;
   published
     procedure AddVertices;
     procedure SaveToStream;
@@ -54,6 +55,17 @@ type
     procedure BuildReachabilityMatrix1;
     procedure FindMetrics;
     procedure FindCenter;
+    procedure FindPeripheral;
+    procedure IsDag;
+    procedure TopologicalSort;
+    procedure DagLongestPathsMap;
+    procedure DagLongestPathsMap1;
+    procedure DagLongestPaths;
+    procedure FindHamiltonCycles;
+    procedure FindHamiltonCycles1;
+    procedure FindHamiltonCycles2;
+    procedure FindHamiltonPaths;
+    procedure FindHamiltonPaths1;
   end;
 
 implementation
@@ -71,6 +83,13 @@ begin
   Result := TGraph.Create;  //TestDigr2.png
   Result.AddVertexRange(0, 8);
   Result.AddEdges([0, 1, 1, 2, 2, 3, 3, 0, 1, 5, 5, 3, 3, 4, 4, 1, 0, 6, 6, 7, 7, 8, 8, 0]);
+end;
+
+function TSimpleDiGraphTest.GenerateTestDigr3: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(0, 5);
+  Result.AddEdges([0, 1,  1, 1,  1, 2,  1, 4,  2, 0,  2, 3,  3, 2,  3, 5,  4, 2, 4, 3,  5, 0,  5, 1,  5, 2]);
 end;
 
 procedure TSimpleDiGraphTest.AddVertices;
@@ -655,7 +674,221 @@ begin
   g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
   c := g.FindCenter;
   AssertTrue(c.Length = 1);
+  AssertTrue(g.Eccentricity(c[0]) = 3);
   AssertTrue(c[0] = 0);
+end;
+
+procedure TSimpleDiGraphTest.FindPeripheral;
+var
+  Ref: TRef;
+  g: TGraph;
+  p: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
+  p := g.FindPeripheral;
+  AssertTrue(p.Length.ToString, p.Length = 1);
+  AssertTrue(g.Eccentricity(p[0]) = 7);
+  AssertTrue(p[0].ToString, p[0] = 2);
+end;
+
+procedure TSimpleDiGraphTest.IsDag;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.IsDag);
+  Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  AssertFalse(g.IsDag);
+  Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertTrue(g.IsDag);
+  g.AddEdge(0, 1);
+  AssertTrue(g.IsDag);
+  g.AddEdge(12, 3);
+  AssertFalse(g.IsDag);
+  g.RemoveEdge(12, 3);
+  AssertTrue(g.IsDag);
+end;
+
+procedure TSimpleDiGraphTest.TopologicalSort;
+var
+  Ref: TRef;
+  g: TGraph;
+  Sorted: TIntArray;
+begin
+  g := {%H-}Ref;
+  Sorted := g.TopologicalSort;
+  AssertTrue(g.IsTopoSorted(Sorted, soAsc));
+  Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  Sorted := g.TopologicalSort;
+  AssertFalse(g.IsTopoSorted(Sorted, soAsc));
+  Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Sorted := g.TopologicalSort;
+  AssertTrue(g.IsTopoSorted(Sorted, soAsc));
+  Sorted := g.TopologicalSort(soDesc);
+  AssertTrue(g.IsTopoSorted(Sorted, soDesc));
+  g.AddEdge(12, 3);
+  Sorted := g.TopologicalSort;
+  AssertFalse(g.IsTopoSorted(Sorted, soAsc));
+end;
+
+procedure TSimpleDiGraphTest.DagLongestPathsMap;
+var
+  Ref: TRef;
+  g: TGraph;
+  Map: TIntArray;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(1);
+  Map := g.DagLongestPathsMap(1);
+  AssertTrue(Map.Length = 1);
+  AssertTrue(Map[0] = 0);
+  Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Map := g.DagLongestPathsMap(0);
+  AssertTrue(Map.Length = g.VertexCount);
+  AssertTrue(Map[0] = 0);
+  AssertTrue(Map[1] = 1);
+  AssertTrue(Map[2] = 1);
+  AssertTrue(Map[3] = 2);
+  AssertTrue(Map[4] = 3);
+  AssertTrue(Map[5] = 3);
+  AssertTrue(Map[6] = 1);
+  AssertTrue(Map[7] = -1);
+  AssertTrue(Map[8] = -1);
+  AssertTrue(Map[9] = 4);
+  AssertTrue(Map[10] = 5);
+  AssertTrue(Map[11] = 5);
+  AssertTrue(Map[12] = 6);
+end;
+
+procedure TSimpleDiGraphTest.DagLongestPathsMap1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Map: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Map := g.DagLongestPathsMap(6);
+  AssertTrue(Map.Length = g.VertexCount);
+  AssertTrue(Map[0] = -1);
+  AssertTrue(Map[1] = -1);
+  AssertTrue(Map[2] = -1);
+  AssertTrue(Map[3] = -1);
+  AssertTrue(Map[4] = 1);
+  AssertTrue(Map[5] = -1);
+  AssertTrue(Map[6] = 0);
+  AssertTrue(Map[7] = -1);
+  AssertTrue(Map[8] = -1);
+  AssertTrue(Map[9] = 2);
+  AssertTrue(Map[10] = 3);
+  AssertTrue(Map[11] = 3);
+  AssertTrue(Map[12] = 4);
+end;
+
+procedure TSimpleDiGraphTest.DagLongestPaths;
+var
+  Ref: TRef;
+  g: TGraph;
+  Map: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Map := g.DagLongestPaths;
+  AssertTrue(Map.Length = g.VertexCount);
+  AssertTrue(Map[0] = 6);
+  AssertTrue(Map[1] = 0);
+  AssertTrue(Map[2] = 5);
+  AssertTrue(Map[3] = 4);
+  AssertTrue(Map[4] = 3);
+  AssertTrue(Map[5] = 0);
+  AssertTrue(Map[6] = 4);
+  AssertTrue(Map[7] = 5);
+  AssertTrue(Map[8] = 6);
+  AssertTrue(Map[9] = 2);
+  AssertTrue(Map[10] = 0);
+  AssertTrue(Map[11] = 1);
+  AssertTrue(Map[12] = 0);
+end;
+
+procedure TSimpleDiGraphTest.FindHamiltonCycles;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cycles: TIntArrayVector;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertFalse(g.FindHamiltonCycles(1, 0, Cycles, 10));
+end;
+
+procedure TSimpleDiGraphTest.FindHamiltonCycles1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cycles: TIntArrayVector;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  AssertFalse(g.FindHamiltonCycles(1, 0, Cycles, 10));
+end;
+
+procedure TSimpleDiGraphTest.FindHamiltonCycles2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Cycles: TIntArrayVector;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(1);
+  AssertFalse(g.FindHamiltonCycles(1, 0, Cycles, 10));
+  Ref.Instance := GenerateTestDigr3;
+  g := Ref;
+  AssertTrue(g.FindHamiltonCycles(0, 0, Cycles, 10));
+  AssertTrue(Cycles.Count = 2);
+  AssertTrue(g.IsHamiltonCycle(Cycles[0], g.IndexOf(0)));
+  AssertTrue(g.IsHamiltonCycle(Cycles[1], g.IndexOf(0)));
+  AssertTrue(g.FindHamiltonCycles(4, 0, Cycles, 10));
+  AssertTrue(Cycles.Count = 2);
+  AssertTrue(g.IsHamiltonCycle(Cycles[0], g.IndexOf(4)));
+  AssertTrue(g.IsHamiltonCycle(Cycles[1], g.IndexOf(4)));
+  AssertTrue(g.FindHamiltonCycles(4, 1, Cycles, 10));
+  AssertTrue(Cycles.Count = 1);
+end;
+
+procedure TSimpleDiGraphTest.FindHamiltonPaths;
+var
+  Ref: TRef;
+  g: TGraph;
+  Paths: TIntArrayVector;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(1);
+  AssertFalse(g.FindHamiltonPaths(1, 0, Paths, 10));
+  Ref.Instance := GenerateTestDigr3;
+  g := Ref;
+  AssertTrue(g.FindHamiltonPaths(0, 0, Paths, 10));
+  AssertTrue(Paths.Count = 2);
+  AssertTrue(g.IsHamiltonPath(Paths[0], g.IndexOf(0)));
+  AssertTrue(g.IsHamiltonPath(Paths[1], g.IndexOf(0)));
+end;
+
+procedure TSimpleDiGraphTest.FindHamiltonPaths1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Paths: TIntArrayVector;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  AssertFalse(g.FindHamiltonPaths(0, 0, Paths, 10));
 end;
 
 
