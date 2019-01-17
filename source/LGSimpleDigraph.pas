@@ -1744,19 +1744,31 @@ begin
   Result := FindHamiltonPathsI(IndexOf(aSrc), aCount, aPaths, aTimeOut);
 end;
 
-function TGSimpleDiGraph.FindHamiltonPathsI(aSrcIdx, aCount: SizeInt; out aPaths: TIntArrayVector; aTimeOut: Integer
-  ): Boolean;
+function TGSimpleDiGraph.FindHamiltonPathsI(aSrcIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
+  aTimeOut: Integer): Boolean;
 var
   Helper: THamiltonian;
-  I: SizeInt;
+  I, SnkCount: SizeInt;
 begin
   CheckIndexRange(aSrcIdx);
   {%H-}aPaths.Clear;
   if VertexCount < 2 then
     exit(False);
+  if FNodeList[aSrcIdx].AdjList.IsEmpty then
+    exit(False);
+  SnkCount := 0;
   for I := 0 to Pred(VertexCount) do
-    if (I <> aSrcIdx) and ((FNodeList[I].Tag = 0) or FNodeList[I].AdjList.IsEmpty) then
-      exit(False);
+    if I <> aSrcIdx then
+      begin
+        if FNodeList[I].Tag = 0  then
+          exit(False);
+        if FNodeList[I].AdjList.IsEmpty then
+          begin
+            if SnkCount > 0 then
+              exit(False);
+            Inc(SnkCount);
+          end;
+      end;
   Result := Helper.FindPaths(Self, aSrcIdx, aCount, aTimeOut, @aPaths);
 end;
 
