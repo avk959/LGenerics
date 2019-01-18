@@ -260,7 +260,6 @@ type
     function  FindInitSolution: Boolean;
     procedure InitPhase;
     procedure Discharge(aNode: PNode);
-    procedure RemoveScaleFactor;
     procedure Execute;
     function  GetTotalCost: TCost;
     function  CreateEdges(out aTotalCost: TCost): TEdgeArray;

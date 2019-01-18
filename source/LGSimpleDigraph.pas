@@ -868,7 +868,7 @@ begin
     if AdjEnums[aRoot].MoveNext then
       begin
         Next := AdjEnums[aRoot].Current;
-        if PreOrd[Next] = -1 then
+        if PreOrd[Next] = NULL_INDEX then
           begin
             Parents[Next] := aRoot;
             PreOrd[Next] := Counter;
@@ -902,7 +902,7 @@ begin
   InStack.Size := VertexCount;
   Counter := 0;
   for I := 0 to Pred(VertexCount) do
-    if PreOrd[I] = -1 then
+    if PreOrd[I] = NULL_INDEX then
       begin
         PreOrd[I] := Counter;
         Inc(Counter);
@@ -912,7 +912,7 @@ begin
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if PreOrd[Next] = -1 then
+              if PreOrd[Next] = NULL_INDEX then
                 begin
                   PreOrd[Next] := Counter;
                   InStack[Next] := True;
@@ -1046,7 +1046,7 @@ begin
   Counter := 0;
   Result := 0;
   for I := 0 to Pred(VertexCount) do
-    if PreOrd[I] = -1 then
+    if PreOrd[I] = NULL_INDEX then
       begin
         PreOrd[I] := Counter;
         Inc(Counter);
@@ -1057,7 +1057,7 @@ begin
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if PreOrd[Next] = -1 then
+              if PreOrd[Next] = NULL_INDEX then
                 begin
                   PreOrd[Next] := Counter;
                   Inc(Counter);
@@ -1066,7 +1066,7 @@ begin
                   PathStack.Push(Next);
                 end
               else
-                if aIds[Next] = -1 then
+                if aIds[Next] = NULL_INDEX then
                   while PreOrd[PathStack.Peek] > PreOrd[Next] do
                     PathStack.Pop;
             end
@@ -1103,8 +1103,8 @@ begin
       exit(TReachabilityMatrix.Create(m, aScIds));
     end;
   Stack := TSimpleStack.Create(VertexCount);
-  IdParents := CreateIntArray(aScCount, -1);
-  IdOrd := CreateIntArray(aScCount, -1);
+  IdParents := CreateIntArray(aScCount, NULL_INDEX);
+  IdOrd := CreateIntArray(aScCount, NULL_INDEX);
   Visited.Size := VertexCount;
   IdVisited.Size := aScCount;
   AdjEnums := CreateAdjEnumArray;
@@ -1115,7 +1115,7 @@ begin
       begin
         Visited[I] := True;
         Stack.Push(I);
-        if IdOrd[aScIds[I]] = -1 then
+        if IdOrd[aScIds[I]] = NULL_INDEX then
           begin
             IdOrd[aScIds[I]] := Counter;
             Inc(Counter);
@@ -1134,7 +1134,7 @@ begin
                   begin
                     Visited[Next] := True;
                     Stack.Push(Next);
-                    if IdOrd[NextId] = -1 then
+                    if IdOrd[NextId] = NULL_INDEX then
                       begin
                         IdOrd[NextId] := Counter;
                         IdParents[NextId] := CurrId;

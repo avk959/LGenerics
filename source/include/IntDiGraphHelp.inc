@@ -1519,15 +1519,6 @@ begin
     end;
 end;
 
-procedure TGIntWeightDiGraph.TCsMcfHelper.RemoveScaleFactor;
-var
-  I: SizeInt;
-begin
-  for I := 0 to Pred(System.High(FArcs)) do
-    if FArcs[I].IsForward then
-      FArcs[I].Cost := FArcs[I].Cost div FScaleFactor;
-end;
-
 procedure TGIntWeightDiGraph.TCsMcfHelper.Execute;
 var
   Node: PNode;
@@ -1545,7 +1536,6 @@ begin
         Discharge(Node{%H-});
       end;
   until FEpsilon = 1;
-  RemoveScaleFactor;
 end;
 
 function TGIntWeightDiGraph.TCsMcfHelper.GetTotalCost: TCost;
@@ -1560,7 +1550,7 @@ begin
       while CurrArc < FNodes[Succ(I)].FirstArc do
         begin
           if CurrArc^.IsForward then
-            Result += CurrArc^.Reverse^.ResCap * CurrArc^.Cost;
+            Result += CurrArc^.Reverse^.ResCap * (CurrArc^.Cost div FScaleFactor);
           Inc(CurrArc);
         end;
     end;
@@ -1584,7 +1574,7 @@ begin
             begin
               Dst := CurrArc^.Target - PNode(FNodes);
               w := CurrArc^.Reverse^.ResCap;
-              aTotalCost += w * CurrArc^.Cost;
+              aTotalCost += w * (CurrArc^.Cost div FScaleFactor);
               Result[J] := TWeightEdge.Create(I, Dst, w);
               Inc(J);
             end;
