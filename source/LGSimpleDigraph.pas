@@ -2297,7 +2297,8 @@ end;
 
 function TGWeightedDiGraph.Clone: TGWeightedDiGraph;
 begin
-  Result := inherited Clone as TGWeightedDiGraph;
+  Result := TGWeightedDiGraph.Create;
+  Result.AssignGraph(Self);
 end;
 
 function TGWeightedDiGraph.Reverse: TGWeightedDiGraph;
