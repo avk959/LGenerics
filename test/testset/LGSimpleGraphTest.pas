@@ -19,8 +19,8 @@ type
   TSimpleGraphTest = class(TTestCase)
   private
   type
-    TGraph  = TIntChart;
-    TRef    = specialize TGAutoRef<TGraph>;
+    TGraph = TIntChart;
+    TRef   = specialize TGAutoRef<TGraph>;
 
   var
     FSetVector: TIntArrayVector;
@@ -134,12 +134,12 @@ type
   TWeightedGraphTest = class(TTestCase)
   private
   type
-    TIntWeight      = specialize TGSimpleWeight<Integer>;
-    TInt64Weight    = specialize TGSimpleWeight<Int64>;
-    TGraph          = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
-    TGraph64        = specialize TGIntWeightGraph<Integer, TInt64Weight, Integer>;
-    TRef            = specialize TGAutoRef<TGraph>;
-    THelper         = specialize TGOrdinalArrayHelper<Integer>;
+    TIntWeight   = specialize TGSimpleWeight<Integer>;
+    TInt64Weight = specialize TGSimpleWeight<Int64>;
+    TGraph       = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
+    TGraph64     = specialize TGIntWeightGraph<Integer, TInt64Weight, Integer>;
+    TRef         = specialize TGAutoRef<TGraph>;
+    THelper      = specialize TGOrdinalArrayHelper<Integer>;
   const
     WEIGHTS_ARRAY: array of TIntArray  = ((0, 1, 0, 5, 2, 0), (1, 0, 1, 6, 3, 1), (0, 1, 0, 5, 2, 0),
                                           (5, 6, 5, 0, 4, 5), (2, 3, 2, 4, 0, 2), (0, 1, 0, 5, 2, 0));
