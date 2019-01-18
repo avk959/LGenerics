@@ -2289,7 +2289,10 @@ begin
       Result := aCycle <> nil;
     end
   else
-    Result := False;
+    begin
+      aCycle := nil;
+      Result := False;
+    end;
 end;
 
 function TGWeightedDiGraph.Clone: TGWeightedDiGraph;
