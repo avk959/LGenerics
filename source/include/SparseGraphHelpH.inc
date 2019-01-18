@@ -497,6 +497,7 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
+  { inplace Bellman-Ford-Moore algorithm }
     class function  BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
   { inplace Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
