@@ -5572,55 +5572,7 @@ begin
   Result := [];
 end;
 
-class function TGWeightHelper.SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
-  out aWeights: TWeightArray): SizeInt;
-var
-  Queue: TIntDeque;
-  Dist: TIntArray;
-  InQueue: TGraph.TBitVector;
-  Curr, Next, Top, d, VertCount: SizeInt;
-  p: TGraph.PAdjItem;
-begin
-  VertCount := g.VertexCount;
-  aWeights := CreateWeightArray(VertCount);
-  Dist := g.CreateIntArray;
-  aTree := g.CreateIntArray;
-  {%H-}Queue.EnsureCapacity(VertCount);
-  InQueue.Size := VertCount;
-  aWeights[aSrc] := 0;
-  Dist[aSrc] := 0;
-  Curr := aSrc;
-  repeat
-    InQueue[Curr] := False;
-    if (aTree[Curr] <> NULL_INDEX) and InQueue[aTree[Curr]] then
-      continue;
-    d := Succ(Dist[Curr]);
-    for p in g.AdjLists[Curr]^ do
-      begin
-        Next := p^.Destination;
-        if aWeights[Curr] + p^.Data.Weight < aWeights[Next] then
-          //todo: need some kind of protection from overflow ?
-          begin
-            aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
-            aTree[Next] := Curr;
-            if (Next = aSrc) or (d >= VertCount) then
-              exit(Next);
-            Dist[Next] := d;
-            if not InQueue[Next] then
-              begin
-                if Queue.TryPeekFirst(Top) and (aWeights[Next] < aWeights[{%H-}Top]) then
-                  Queue.PushFirst(Next)
-                else
-                  Queue.PushLast(Next);
-                InQueue[Next] := True;
-              end;
-          end;
-      end;
-  until not Queue{%H-}.TryPopFirst(Curr);
-  Result := NULL_INDEX;
-end;
-
-class function TGWeightHelper.Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
+class function TGWeightHelper.BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
   v1, v2: TBoolVector;

@@ -497,11 +497,7 @@ type
     class function  DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray; static;
   { A* pathfinding algorithm }
     class function  AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray; static;
-  { modification of Bellman-Ford-Moore algorithm(aka SPFA), faster on random graps;
-    en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm }
-    class function  SpfaBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
-                    static;
-    class function  Spfa2Base(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
+    class function  BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray; out aWeights: TWeightArray): SizeInt;
                     static;
   { inplace Bellman-Ford-Moore algorithm with Tarjan subtree disassembly,
     faster negative cycle detection }
