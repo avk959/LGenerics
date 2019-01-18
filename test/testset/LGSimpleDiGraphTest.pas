@@ -68,6 +68,35 @@ type
     procedure FindHamiltonPaths1;
   end;
 
+  { TWeightedDigraphTest }
+
+  TWeightedDigraphTest = class(TTestCase)
+  private
+  type
+    TIntWeight = specialize TGSimpleWeight<Integer>;
+    TGraph     = specialize TGWeightedDigraph<Integer, Integer, TIntWeight, Integer>;
+    TRef       = specialize TGAutoRef<TGraph>;
+    THelper    = specialize TGOrdinalArrayHelper<Integer>;
+    TSearch    = specialize TGNumArrayHelper<SizeInt>;
+
+    function  GenerateTestWDigr1: TGraph;
+  published
+    procedure ContainsNegWeightEdge;
+    procedure ContainsNegCycle;
+    procedure MinPathsMap;
+    procedure MinPathsMap1;
+    procedure FindMinPathsMap;
+    procedure FindMinPathsMap1;
+    procedure FindMinPathsMap3;
+    procedure FindMinPathsMap4;
+    procedure MinPath;
+    procedure MinPath1;
+    procedure FindMinPath;
+    procedure FindMinPath1;
+    procedure FindMinPath2;
+    procedure FindMinPath3;
+  end;
+
 implementation
 
 function TSimpleDiGraphTest.GenerateTestDigr1: TGraph;
@@ -886,14 +915,340 @@ var
   g: TGraph;
   Paths: TIntArrayVector;
 begin
-  {%H-}Ref.Instance := GenerateTestDigr2;
+  {%H-}Ref.Instance := GenerateTestDigr3;
   g := Ref;
-  AssertFalse(g.FindHamiltonPaths(0, 0, Paths, 10));
+  g.RemoveEdge(5, 0);
+  g.RemoveEdge(5, 1);
+  g.RemoveEdge(2, 0);
+  AssertTrue(g.FindHamiltonPaths(0, 0, Paths, 10));
+  AssertTrue(Paths.Count = 1);
+  AssertTrue(g.IsHamiltonPath(Paths[0], g.IndexOf(0)));
+  AssertFalse(g.FindHamiltonPaths(1, 0, Paths, 10));
+end;
+
+{ TWeightedDigraphTest }
+
+function TWeightedDigraphTest.GenerateTestWDigr1: TGraph;
+var
+  I: Integer;
+begin
+  Result := TGraph.Create; //TestWDigr1.png
+  for I in [0..5] do
+    Result.AddVertex(I);
+  Result.AddEdge(0, 1, TIntWeight.Create(10));
+  Result.AddEdge(1, 2, TIntWeight.Create(110));
+  Result.AddEdge(1, 3, TIntWeight.Create(15));
+  Result.AddEdge(1, 4, TIntWeight.Create(100));
+  Result.AddEdge(3, 5, TIntWeight.Create(20));
+  Result.AddEdge(5, 4, TIntWeight.Create(25));
+  Result.AddEdge(4, 3, TIntWeight.Create(110));
+  Result.AddEdge(4, 2, TIntWeight.Create(30));
+  Result.AddEdge(2, 0, TIntWeight.Create(35));
+end;
+
+procedure TWeightedDigraphTest.ContainsNegWeightEdge;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.ContainsNegWeightEdge);
+  Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  AssertFalse(g.ContainsNegWeightEdge);
+  g.SetEdgeData(4, 3, TIntWeight.Create(-1));
+  AssertTrue(g.ContainsNegWeightEdge);
+end;
+
+procedure TWeightedDigraphTest.ContainsNegCycle;
+var
+  Ref: TRef;
+  g: TGraph;
+  c: TIntArray;
+  I: SizeInt;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.ContainsNegCycle(0, c)
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  c := [1];
+  AssertFalse(g.ContainsNegCycle(0, c));
+  AssertTrue(c = nil);
+  g.SetEdgeData(4, 3, TIntWeight.Create(-30));
+  AssertFalse(g.ContainsNegCycle(0, c));
+  g.SetEdgeData(4, 3, TIntWeight.Create(-50));
+  AssertTrue(g.ContainsNegCycle(0, c));
+  AssertTrue(c.Length = 4);
+  for I in [3..5] do
+    AssertTrue(TSearch.SequentSearch(c, I) <> NULL_INDEX);
+end;
+
+procedure TWeightedDigraphTest.MinPathsMap;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TWeightArray;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.MinPathsMap(0);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  m := g.MinPathsMap(0);
+  AssertTrue(Length(m) = g.VertexCount);
+  AssertTrue(THelper.Same(m, [0, 10, 100, 25, 70, 45]));
+  g.SetEdgeData(1, 4, TIntWeight.Create(5));
+  g.SetEdgeData(4, 3, TIntWeight.Create(5));
+  m := g.MinPathsMap(0);
+  AssertTrue(THelper.Same(m, [0, 10, 45, 20, 15, 40]));
+end;
+
+procedure TWeightedDigraphTest.MinPathsMap1;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TWeightArray;
+  p: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  m := g.MinPathsMap(0, p);
+  AssertTrue(THelper.Same(m, [0, 10, 100, 25, 70, 45]));
+  AssertTrue(p.Length = g.VertexCount);
+  AssertTrue(TSearch.Same(p, [-1, 0, 4, 1, 5, 3]));
+  g.SetEdgeData(1, 4, TIntWeight.Create(5));
+  g.SetEdgeData(4, 3, TIntWeight.Create(5));
+  m := g.MinPathsMap(0, p);
+  AssertTrue(THelper.Same(m, [0, 10, 45, 20, 15, 40]));
+  AssertTrue(TSearch.Same(p, [-1, 0, 4, 4, 1, 3]));
+end;
+
+procedure TWeightedDigraphTest.FindMinPathsMap;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TWeightArray;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.FindMinPathsMap(0, m);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  AssertTrue(g.FindMinPathsMap(0, m));
+  AssertTrue(Length(m) = g.VertexCount);
+  AssertTrue(THelper.Same(m, [0, 10, 100, 25, 70, 45]));
+  g.SetEdgeData(1, 4, TIntWeight.Create(5));
+  g.SetEdgeData(4, 3, TIntWeight.Create(5));
+  AssertTrue(g.FindMinPathsMap(0, m));
+  AssertTrue(THelper.Same(m, [0, 10, 45, 20, 15, 40]));
+end;
+
+procedure TWeightedDigraphTest.FindMinPathsMap1;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TWeightArray;
+  p: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  AssertTrue(g.FindMinPathsMap(0, p, m));
+  AssertTrue(THelper.Same(m, [0, 10, 100, 25, 70, 45]));
+  AssertTrue(p.Length = g.VertexCount);
+  AssertTrue(TSearch.Same(p, [-1, 0, 4, 1, 5, 3]));
+  g.SetEdgeData(1, 4, TIntWeight.Create(5));
+  g.SetEdgeData(4, 3, TIntWeight.Create(5));
+  AssertTrue(g.FindMinPathsMap(0, p, m));
+  AssertTrue(THelper.Same(m, [0, 10, 45, 20, 15, 40]));
+  AssertTrue(TSearch.Same(p, [-1, 0, 4, 4, 1, 3]));
+end;
+
+procedure TWeightedDigraphTest.FindMinPathsMap3;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TWeightArray;
+  p: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  g.SetEdgeData(1, 4, TIntWeight.Create(-5));
+  g.SetEdgeData(4, 3, TIntWeight.Create(-5));
+  AssertTrue(g.FindMinPathsMap(0, p, m));
+  AssertTrue(THelper.Same(m, [0, 10, 35, 0, 5, 20]));
+  AssertTrue(TSearch.Same(p, [-1, 0, 4, 4, 1, 3]));
+end;
+
+procedure TWeightedDigraphTest.FindMinPathsMap4;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TWeightArray;
+  p: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  g.SetEdgeData(1, 4, TIntWeight.Create(5));
+  g.SetEdgeData(4, 3, TIntWeight.Create(-50));
+  AssertFalse(g.FindMinPathsMap(0, p, m));
+  AssertTrue(m = nil);
+  AssertTrue(p.Length = 4);
+  for I in [3..5] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+end;
+
+procedure TWeightedDigraphTest.MinPath;
+var
+  Ref: TRef;
+  g: TGraph;
+  p: TIntArray;
+  w: Integer;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.MinPath(0, 1, w);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  g.AddVertex(1);
+  g.AddVertex(2);
+  p := g.MinPath(1, 2, w);
+  AssertTrue(w = g.InfWeight);
+  AssertTrue(p.IsEmpty);
+end;
+
+procedure TWeightedDigraphTest.MinPath1;
+var
+  Ref: TRef;
+  g: TGraph;
+  p: TIntArray;
+  I: SizeInt;
+  w: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  p := g.MinPath(0, 5, w);
+  AssertTrue(w = 45);
+  AssertTrue(p.Length = 4);
+  for I in [0, 1, 3, 5] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+  g.SetEdgeData(1, 4, TIntWeight.Create(2));
+  g.SetEdgeData(4, 3, TIntWeight.Create(3));
+  p := g.MinPath(0, 5, w);
+  AssertTrue(w = 35);
+  AssertTrue(p.Length = 5);
+  for I in [0, 1, 3, 4, 5] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+end;
+
+procedure TWeightedDigraphTest.FindMinPath;
+var
+  Ref: TRef;
+  g: TGraph;
+  p: TIntArray;
+  w: Integer;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.FindMinPath(0, 1, p, w);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  g.AddVertex(1);
+  AssertTrue(g.FindMinPath(1, 1, p, w));
+  AssertTrue(w = 0);
+  AssertTrue(p.IsEmpty);
+  g.AddVertex(2);
+  AssertFalse(g.FindMinPath(1, 2, p, w));
+  AssertTrue(w = g.InfWeight);
+  AssertTrue(p.IsEmpty);
+end;
+
+procedure TWeightedDigraphTest.FindMinPath1;
+var
+  Ref: TRef;
+  g: TGraph;
+  p: TIntArray;
+  I: SizeInt;
+  w: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  AssertTrue(g.FindMinPath(0, 5, p, w));
+  AssertTrue(w = 45);
+  AssertTrue(p.Length = 4);
+  for I in [0, 1, 3, 5] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+  g.SetEdgeData(1, 4, TIntWeight.Create(2));
+  g.SetEdgeData(4, 3, TIntWeight.Create(3));
+  AssertTrue(g.FindMinPath(0, 5, p, w));
+  AssertTrue(w = 35);
+  AssertTrue(p.Length = 5);
+  for I in [0, 1, 3, 4, 5] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+end;
+
+procedure TWeightedDigraphTest.FindMinPath2;
+var
+  Ref: TRef;
+  g: TGraph;
+  p: TIntArray;
+  I: SizeInt;
+  w: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  g.SetEdgeData(1, 4, TIntWeight.Create(-10));
+  g.SetEdgeData(4, 3, TIntWeight.Create(-10));
+  AssertTrue(g.FindMinPath(0, 5, p, w));
+  AssertTrue(w = 10);
+  AssertTrue(p.Length = 5);
+  for I in [0, 1, 3, 4, 5] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+end;
+
+procedure TWeightedDigraphTest.FindMinPath3;
+var
+  Ref: TRef;
+  g: TGraph;
+  p: TIntArray;
+  I: SizeInt;
+  w: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  g.SetEdgeData(1, 4, TIntWeight.Create(-100));
+  AssertFalse(g.FindMinPath(0, 5, p, w));
+  AssertTrue(w = 0);
+  AssertTrue(p.Length = 5);
+  for I in [0, 1, 2, 4] do
+    AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
 end;
 
 
 initialization
-
   RegisterTest(TSimpleDiGraphTest);
+  RegisterTest(TWeightedDigraphTest);
 end.
 
