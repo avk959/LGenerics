@@ -78,18 +78,18 @@ type
     FSource,
     FSink: PNode;
     FNodeCount,
-    FMaxLevel,                // maximal level
-    FMaxActiveLevel,          // maximal level with excessed node
-    FMinActiveLevel: SizeInt; // minimal level with excessed node
-    procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
-    procedure CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight);
+    FMaxLevel,                // max level
+    FMaxActiveLevel,          // max level with excessed node
+    FMinActiveLevel: SizeInt; // min level with excessed node
+    procedure CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+    procedure CreateResidualNetCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight);
     procedure ClearLabels;
     procedure GlobalRelabel;
     procedure RemoveGap(aLayer: SizeInt);
     function  Push(aNode: PNode): Boolean;
     procedure Relabel(aNode: PNode);
     procedure Execute;
-    function  CreateEdges: TEdgeArray;
+    function  CreateArcFlows: TEdgeArray;
     function  RecoverFlow: TEdgeArray;
   public
     function  GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
@@ -136,12 +136,12 @@ type
     FEpsilon: TWeight;
     FScaleFactor,
     FNodeCount: SizeInt;
-    procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+    procedure CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
     procedure ClearLabels;
     function  BuildLevelGraph: Boolean;
     function  FindBlockingFlow(aRoot: PNode; aFlow: TWeight): TWeight;
     function  Execute: TWeight;
-    function  CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
+    function  CreateArcFlows(aGraph: TGIntWeightDiGraph): TEdgeArray;
   public
     function  GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
     function  GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
@@ -188,7 +188,7 @@ type
     FGraph: TGIntWeightDiGraph;
     FRequestFlow: TWeight;
     FNodeCount: SizeInt;
-    procedure CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
+    procedure CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap);
     procedure SearchInit;
     function  ReweightGraph: Boolean;
@@ -196,7 +196,7 @@ type
     function  PushFlow(aRestFlow: TWeight): TWeight;
     function  Execute: TWeight;
     function  GetTotalCost: TCost;
-    function  CreateEdges(out aTotalCost: TCost): TEdgeArray;
+    function  CreateArcFlows(out aTotalCost: TCost): TEdgeArray;
   public
     function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;
@@ -252,7 +252,7 @@ type
     FScaleFactor,
     FEpsilon: TCost;
     FNodeCount: SizeInt;
-    procedure CreateResidualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
+    procedure CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap);
     function  IndexOf(aNode: PNode): SizeInt; inline;
     function  PriceUpdate: Boolean;
@@ -262,7 +262,7 @@ type
     procedure Discharge(aNode: PNode);
     procedure Execute;
     function  GetTotalCost: TCost;
-    function  CreateEdges(out aTotalCost: TCost): TEdgeArray;
+    function  CreateArcFlows(out aTotalCost: TCost): TEdgeArray;
   public
     function  GetMinCostFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap; out aTotalCost: TCost): TWeight;

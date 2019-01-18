@@ -139,7 +139,7 @@ end;
 
 { TGIntWeightDiGraph.THPrHelper }
 
-procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+procedure TGIntWeightDiGraph.THPrHelper.CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -193,7 +193,7 @@ begin
   System.SetLength(FQueue, FNodeCount);
 end;
 
-procedure TGIntWeightDiGraph.THPrHelper.CreateResudualGraphCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+procedure TGIntWeightDiGraph.THPrHelper.CreateResidualNetCap(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight);
 var
   CurrArcIdx: TIntArray;
@@ -424,7 +424,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.THPrHelper.CreateEdges: TEdgeArray;
+function TGIntWeightDiGraph.THPrHelper.CreateArcFlows: TEdgeArray;
 var
   I, J: SizeInt;
   CurrArc: PArc;
@@ -588,12 +588,12 @@ begin
           CurrNode := CurrNode^.OrderNext;
       until False;
     end;
-  Result := CreateEdges;
+  Result := CreateArcFlows;
 end;
 
 function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt): TWeight;
 begin
-  CreateResudualGraph(aGraph, aSource, aSink);
+  CreateResidualNet(aGraph, aSource, aSink);
   Execute;
   Result := FSink^.Excess;
 end;
@@ -601,7 +601,7 @@ end;
 function TGIntWeightDiGraph.THPrHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
-  CreateResudualGraphCap(aGraph, aSource, aSink, MAX_WEIGHT);
+  CreateResidualNetCap(aGraph, aSource, aSink, MAX_WEIGHT);
   Execute;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -613,7 +613,7 @@ function TGIntWeightDiGraph.THPrHelper.GetMinCut(aGraph: TGIntWeightDiGraph; aSo
 var
   I, J: SizeInt;
 begin
-  CreateResudualGraph(aGraph, aSource, aSink);
+  CreateResidualNet(aGraph, aSource, aSink);
   Execute;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -635,7 +635,7 @@ function TGIntWeightDiGraph.THPrHelper.GetFlow(aGraph: TGIntWeightDiGraph; aSour
 var
   e: TWeightEdge;
 begin
-  CreateResudualGraphCap(aGraph, aSource, aSink, aReqFlow);
+  CreateResidualNetCap(aGraph, aSource, aSink, aReqFlow);
   Execute;
   FLevels := nil;
   Result := FSink^.Excess;
@@ -676,7 +676,7 @@ end;
 
 { TGIntWeightDiGraph.TDinitzHelper }
 
-procedure TGIntWeightDiGraph.TDinitzHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
+procedure TGIntWeightDiGraph.TDinitzHelper.CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt);
 var
   CurrArcIdx: TIntArray;
   I, J: SizeInt;
@@ -810,7 +810,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TDinitzHelper.CreateEdges(aGraph: TGIntWeightDiGraph): TEdgeArray;
+function TGIntWeightDiGraph.TDinitzHelper.CreateArcFlows(aGraph: TGIntWeightDiGraph): TEdgeArray;
 var
   I, J: SizeInt;
   CurrArc: PArc;
@@ -836,16 +836,16 @@ end;
 function TGIntWeightDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource,
   aSink: SizeInt): TWeight;
 begin
-  CreateResudualGraph(aGraph, aSource, aSink);
+  CreateResidualNet(aGraph, aSource, aSink);
   Result := Execute;
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.GetMaxFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   out a: TEdgeArray): TWeight;
 begin
-  CreateResudualGraph(aGraph, aSource, aSink);
+  CreateResidualNet(aGraph, aSource, aSink);
   Result := Execute;
-  a := CreateEdges(aGraph);
+  a := CreateArcFlows(aGraph);
 end;
 
 function TGIntWeightDiGraph.TDinitzHelper.GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
@@ -853,7 +853,7 @@ function TGIntWeightDiGraph.TDinitzHelper.GetMinCut(aGraph: TGIntWeightDiGraph; 
 var
   I, J: SizeInt;
 begin
-  CreateResudualGraph(aGraph, aSource, aSink);
+  CreateResidualNet(aGraph, aSource, aSink);
   Result := Execute;
   System.SetLength(s, ARRAY_INITIAL_SIZE);
   J := 0;
@@ -896,7 +896,7 @@ end;
 
 { TGIntWeightDiGraph.TSspMcfHelper }
 
-procedure TGIntWeightDiGraph.TSspMcfHelper.CreateResudualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+procedure TGIntWeightDiGraph.TSspMcfHelper.CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; var aCosts: TEdgeCostMap);
 var
   CurrArcIdx: TIntArray;
@@ -1148,7 +1148,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TSspMcfHelper.CreateEdges(out aTotalCost: TCost): TEdgeArray;
+function TGIntWeightDiGraph.TSspMcfHelper.CreateArcFlows(out aTotalCost: TCost): TEdgeArray;
 var
   I, J, Dst: SizeInt;
   CurrArc: PArc;
@@ -1183,7 +1183,7 @@ begin
       Result := 0;
       raise EGraphError.Create(SEMethodNotApplicable);
     end;
-  CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
+  CreateResidualNet(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := Execute;
   if Result > 0 then
     aTotalCost := GetTotalCost;
@@ -1197,10 +1197,10 @@ begin
       Result := 0;
       raise EGraphError.Create(SEMethodNotApplicable);
     end;
-  CreateResudualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
+  CreateResidualNet(aGraph, aSource, aSink, aReqFlow, aCosts);
   Result := Execute;
   if Result > 0 then
-    a := CreateEdges(aTotalCost);
+    a := CreateArcFlows(aTotalCost);
 end;
 
 { TGIntWeightDiGraph.TCsMcfHelper.TArc }
@@ -1249,7 +1249,7 @@ end;
 
 { TGIntWeightDiGraph.TCsMcfHelper }
 
-procedure TGIntWeightDiGraph.TCsMcfHelper.CreateResidualGraph(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+procedure TGIntWeightDiGraph.TCsMcfHelper.CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
   aReqFlow: TWeight; var aCosts: TEdgeCostMap);
 var
   CurrArcIdx: TIntArray;
@@ -1556,7 +1556,7 @@ begin
     end;
 end;
 
-function TGIntWeightDiGraph.TCsMcfHelper.CreateEdges(out aTotalCost: TCost): TEdgeArray;
+function TGIntWeightDiGraph.TCsMcfHelper.CreateArcFlows(out aTotalCost: TCost): TEdgeArray;
 var
   I, J, Dst: SizeInt;
   CurrArc: PArc;
@@ -1591,7 +1591,7 @@ begin
       Result := 0;
       raise EGraphError.Create(SEMethodNotApplicable);
     end;
-  CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
+  CreateResidualNet(aGraph, aSource, aSink, aReqFlow, aCosts);
   if not FindInitSolution then
     exit(0);
   Execute;
@@ -1607,12 +1607,12 @@ begin
       Result := 0;
       raise EGraphError.Create(SEMethodNotApplicable);
     end;
-  CreateResidualGraph(aGraph, aSource, aSink, aReqFlow, aCosts);
+  CreateResidualNet(aGraph, aSource, aSink, aReqFlow, aCosts);
   if not FindInitSolution then
     exit(0);
   Execute;
   Result := FResultFlow;
-  a := CreateEdges(aTotalCost);
+  a := CreateArcFlows(aTotalCost);
 end;
 
 
