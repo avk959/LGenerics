@@ -2643,7 +2643,7 @@ end;
 function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  GetDagMinPaths(aSrc, Result);
+  GetDagMinPaths(aSrc, Result{%H-});
 end;
 
 function TGWeightedDiGraph.DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -2654,7 +2654,7 @@ end;
 function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
-  GetDagMinPaths(aSrc, aPathTree, Result);
+  GetDagMinPaths(aSrc, aPathTree{%H-}, Result{%H-});
 end;
 
 function TGWeightedDiGraph.FindDagAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
@@ -2668,7 +2668,7 @@ begin
   System.SetLength(aPaths, VertexCount, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
-      GetDagMinPaths(I, Parents, Weights);
+      GetDagMinPaths(I, Parents{%H-}, Weights{%H-});
       for J := 0 to Pred(VertexCount) do
         aPaths[I, J] := TApspCell.Create(Weights[J], Parents[J]);
     end;
@@ -2692,8 +2692,6 @@ begin
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-var
-  I: SizeInt;
 begin
   CheckIndexRange(aSrc);
   Result := GetDagMaxPaths(aSrc, aPathTree);
