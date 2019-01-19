@@ -2639,7 +2639,7 @@ function TGSimpleGraph.IsAcyclic: Boolean;
 begin
   if VertexCount < 3 then
     exit(True);
-  if ConnectedValid then
+  if ConnectedValid and Connected then
     exit(IsTree);
   Result := CheckAcyclic;
 end;
