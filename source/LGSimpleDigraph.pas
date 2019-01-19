@@ -128,6 +128,8 @@ type
     procedure Clear; override;
     function  Clone: TGSimpleDiGraph;
     function  Reverse: TGSimpleDiGraph;
+  { returns a subgraph induced by the vertices whose indices are contained in the array aVertexList }
+    function  InducedSubgraph(const aVertexList: TIntArray): TGSimpleDiGraph;
   { symmetric difference }
     procedure SetSymmDifferenceOf(aGraph: TGSimpleDiGraph);
 {**********************************************************************************************************
@@ -162,6 +164,9 @@ type
   { returns count of the strong connected components; the corresponding element aCompIds
     will contain its component index; used Gabow's algorithm }
     function  FindStrongComponents(out aCompIds: TIntArray): SizeInt;
+  { returns array of indices of a strongly connected component that contains aVertex }
+    function  GetStrongComponent(constref aVertex: TVertex): TIntArray; inline;
+    function  GetStrongComponentI(aIndex: SizeInt): TIntArray;
   { creates internal reachability matrix }
     procedure BuildReachabilityMatrix;
   { attempts to create an internal reachability matrix using precomputed FindStrongComponents results;
@@ -236,6 +241,7 @@ type
   public
     function  Clone: TGFlowChart;
     function  Reverse: TGFlowChart;
+    function  InducedSubgraph(const aVertexList: TIntArray): TGFlowChart;
     procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
     procedure SaveToFile(const aFileName: string; aOnWriteVertex: TOnWriteVertex);
@@ -252,6 +258,8 @@ type
     constructor Create;
   end;
 
+  { TIntFlowChart }
+
   TIntFlowChart = class(specialize TGFlowChart<Integer, Integer>)
   protected
     procedure WriteVertex(aStream: TStream; constref aValue: Integer);
@@ -259,6 +267,7 @@ type
   public
     function  Clone: TIntFlowChart;
     function  Reverse: TIntFlowChart;
+    function  InducedSubgraph(const aVertexList: TIntArray): TIntFlowChart;
     procedure SaveToStream(aStream: TStream);
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
@@ -284,6 +293,7 @@ type
   public
     function  Clone: TStrFlowChart;
     function  Reverse: TStrFlowChart;
+    function  InducedSubgraph(const aVertexList: TIntArray): TStrFlowChart;
     procedure SaveToStream(aStream: TStream);
     procedure LoadFromStream(aStream: TStream);
     procedure SaveToFile(const aFileName: string);
@@ -351,6 +361,7 @@ type
 ***********************************************************************************************************}
     function Clone: TGWeightedDiGraph;
     function Reverse: TGWeightedDiGraph;
+    function InducedSubgraph(const aVertexList: TIntArray): TGWeightedDiGraph;
 {**********************************************************************************************************
   shortest path problem utilities
 ***********************************************************************************************************}
@@ -460,9 +471,9 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-
     function Clone: TGIntWeightDiGraph;
     function Reverse: TGIntWeightDiGraph;
+    function InducedSubgraph(const aVertexList: TIntArray): TGIntWeightDiGraph;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -1282,6 +1293,12 @@ begin
   Result.AssignReverse(Self);
 end;
 
+function TGSimpleDiGraph.InducedSubgraph(const aVertexList: TIntArray): TGSimpleDiGraph;
+begin
+  Result := TGSimpleDiGraph.Create;
+  Result.AssignVertexList(Self, aVertexList);
+end;
+
 procedure TGSimpleDiGraph.SetSymmDifferenceOf(aGraph: TGSimpleDiGraph);
 var
   Tmp: TGSimpleDiGraph;
@@ -1505,6 +1522,41 @@ begin
       m[0, 0] := True;
       FReachabilityMatrix := TReachabilityMatrix.Create(m, aCompIds);
     end;
+end;
+
+function TGSimpleDiGraph.GetStrongComponent(constref aVertex: TVertex): TIntArray;
+begin
+  Result := GetStrongComponentI(IndexOf(aVertex));
+end;
+
+function TGSimpleDiGraph.GetStrongComponentI(aIndex: SizeInt): TIntArray;
+var
+  Ids: TIntArray;
+  I, J, ScCount: SizeInt;
+begin
+  CheckIndexRange(aIndex);
+  if VertexCount = 1 then
+    exit([0]);
+  if ReachabilityValid then
+    begin
+      ScCount := FReachabilityMatrix.Size;
+      if ScCount > 1 then
+        Ids := FReachabilityMatrix.FIds
+      else
+        exit(CreateIntArrayRange);
+    end
+  else
+    ScCount := SearchForStrongComponents(Ids);
+  aIndex := Ids[aIndex];
+  Result{%H-}.Length := VertexCount;
+  J := 0;
+  for I := 0 to System.High(Ids) do
+    if Ids[I] = aIndex then
+      begin
+        Result[J] := I;
+        Inc(J);
+      end;
+  Result.Length := J;
 end;
 
 procedure TGSimpleDiGraph.BuildReachabilityMatrix;
@@ -1824,6 +1876,12 @@ begin
   Result.AssignReverse(Self);
 end;
 
+function TGFlowChart.InducedSubgraph(const aVertexList: TIntArray): TGFlowChart;
+begin
+  Result := TGFlowChart.Create;
+  Result.AssignVertexList(Self, aVertexList);
+end;
+
 procedure TGFlowChart.SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
 begin
   inherited SaveToStream(aStream, aOnWriteVertex, @WriteData);
@@ -1957,6 +2015,12 @@ begin
   Result.AssignReverse(Self);
 end;
 
+function TIntFlowChart.InducedSubgraph(const aVertexList: TIntArray): TIntFlowChart;
+begin
+  Result := TIntFlowChart.Create;
+  Result.AssignVertexList(Self, aVertexList);
+end;
+
 procedure TIntFlowChart.SaveToStream(aStream: TStream);
 begin
   inherited SaveToStream(aStream, @WriteVertex);
@@ -2040,6 +2104,12 @@ function TStrFlowChart.Reverse: TStrFlowChart;
 begin
   Result := TStrFlowChart.Create;
   Result.AssignReverse(Self);
+end;
+
+function TStrFlowChart.InducedSubgraph(const aVertexList: TIntArray): TStrFlowChart;
+begin
+  Result := TStrFlowChart.Create;
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 procedure TStrFlowChart.SaveToStream(aStream: TStream);
@@ -2305,6 +2375,12 @@ function TGWeightedDiGraph.Reverse: TGWeightedDiGraph;
 begin
   Result := TGWeightedDiGraph.Create;
   Result.AssignReverse(Self);
+end;
+
+function TGWeightedDiGraph.InducedSubgraph(const aVertexList: TIntArray): TGWeightedDiGraph;
+begin
+  Result := TGWeightedDiGraph.Create;
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 function TGWeightedDiGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
@@ -2761,6 +2837,12 @@ function TGIntWeightDiGraph.Reverse: TGIntWeightDiGraph;
 begin
   Result := TGIntWeightDiGraph.Create;
   Result.AssignReverse(Self);
+end;
+
+function TGIntWeightDiGraph.InducedSubgraph(const aVertexList: TIntArray): TGIntWeightDiGraph;
+begin
+  Result := TGIntWeightDiGraph.Create;
+  Result.AssignVertexList(Self, aVertexList);
 end;
 
 function TGIntWeightDiGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
