@@ -5575,30 +5575,27 @@ end;
 class function TGWeightHelper.BfmBase(g: TGraph; aSrc: SizeInt; out aTree: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
-  v1, v2: TBoolVector;
+  CurrPass, NextPass: TBoolVector;
   Dist: TIntArray;
   Curr, Next, VertCount, d: SizeInt;
-  CurrPass, NextPass: ^TBoolVector;
   p: TGraph.PAdjItem;
 begin
   VertCount := g.VertexCount;
   aWeights := CreateWeightArray(VertCount);
   Dist := g.CreateIntArray;
   aTree := g.CreateIntArray;
-  v1.Size := VertCount;
-  v2.Size := VertCount;
+  CurrPass.Size := VertCount;
+  NextPass.Size := VertCount;
   aWeights[aSrc] := 0;
-  v2[aSrc] := True;
+  NextPass[aSrc] := True;
   Dist[aSrc] := 0;
-  CurrPass := @v1;
-  NextPass := @v2;
   repeat
-    p := Pointer(CurrPass);
-    CurrPass := NextPass;
-    NextPass := Pointer(p);
-    for Curr in CurrPass^ do
+    CurrPass.SwapBits(NextPass);
+    for Curr in CurrPass do
       begin
-        CurrPass^[Curr] := False;
+        CurrPass[Curr] := False;
+        if Dist[Curr] >= VertCount then
+          exit(Curr);
         d := Succ(Dist[Curr]);
         for p in g.AdjLists[Curr]^ do
           begin
@@ -5607,14 +5604,14 @@ begin
               begin
                 aWeights[Next] := aWeights[Curr] + p^.Data.Weight;
                 aTree[Next] := Curr;
-                if (Next = aSrc) or (d >= VertCount) then
+                if Next = aSrc then
                   exit(Next);
                 Dist[Next] := d;
-                NextPass^[Next] := True;
+                NextPass[Next] := True;
               end;
           end;
       end;
-  until NextPass^.IsEmpty;
+  until NextPass.IsEmpty;
   Result := NULL_INDEX;
 end;
 
