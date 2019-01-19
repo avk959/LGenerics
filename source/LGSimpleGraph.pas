@@ -97,6 +97,7 @@ type
     function  CountPop(aTag: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+    function  CheckAcyclic: Boolean;
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -216,6 +217,8 @@ type
     in this case aCycle will contain indices of the vertices of the found cycle }
     function  ContainsCycle(constref aVertex: TVertex; out aCycle: TIntArray): Boolean; inline;
     function  ContainsCycleI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
+  { checks whether the graph is acyclic; an empty graph is considered acyclic }
+    function  IsAcyclic: Boolean;
   { checks whether exists Eulerian path; if exists only path, then
     aFirstOdd will contains index of first vertex with odd degree, otherwise -1 }
     function  ContainsEulerianPath(out aFirstOdd: SizeInt): Boolean;
@@ -958,6 +961,43 @@ begin
     else
       Stack.Pop;
   Result := False;
+end;
+
+function TGSimpleGraph.CheckAcyclic: Boolean;
+var
+  Stack: TSimpleStack;
+  AdjEnums: TAdjEnumArray;
+  Parents: TIntArray;
+  Visited: TBitVector;
+  I, Curr, Next: SizeInt;
+begin
+  Stack := TSimpleStack.Create(VertexCount);
+  AdjEnums := CreateAdjEnumArray;
+  Parents := CreateIntArray;
+  Visited.Size := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    if not Visited[I] then
+      begin
+        Visited[I] := True;
+        {%H-}Stack.Push(I);
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[Curr].MoveNext then
+            begin
+              Next := AdjEnums[Curr].Current;
+              if not Visited[Next] then
+                begin
+                  Visited[Next] := True;
+                  Parents[Next] := Curr;
+                  Stack.Push(Next);
+                end
+              else
+                if Parents[Curr] <> Next then
+                  exit(False);
+            end
+          else
+            Stack.Pop;
+      end;
+  Result := True;
 end;
 
 function TGSimpleGraph.GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -2593,6 +2633,15 @@ begin
   if ConnectedValid and IsTree then
     exit(False);
   Result := CycleExists(aIndex, aCycle);
+end;
+
+function TGSimpleGraph.IsAcyclic: Boolean;
+begin
+  if VertexCount < 3 then
+    exit(True);
+  if ConnectedValid then
+    exit(IsTree);
+  Result := CheckAcyclic;
 end;
 
 function TGSimpleGraph.ContainsEulerianPath(out aFirstOdd: SizeInt): Boolean;
