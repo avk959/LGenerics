@@ -388,6 +388,7 @@ type
     procedure SetBits; inline;
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
+    procedure SwapBits(var aVector: TBoolVector);
   { returns the lowest index of the set bit, -1, if no bit is set }
     function  Bsf: SizeInt;
   { returns the highest index of the set bit, -1, if no bit is set }
@@ -2132,6 +2133,15 @@ end;
 function TBoolVector.NonEmpty: Boolean;
 begin
   Result := not IsEmpty;
+end;
+
+procedure TBoolVector.SwapBits(var aVector: TBoolVector);
+var
+  tmp: TBits;
+begin
+  tmp := FBits;
+  FBits := aVector.FBits;
+  aVector.FBits := tmp;
 end;
 
 function TBoolVector.Bsf: SizeInt;
