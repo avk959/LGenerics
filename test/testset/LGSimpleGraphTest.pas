@@ -80,6 +80,7 @@ type
     procedure IsComplete;
     procedure IsRegular;
     procedure ContainsCycle;
+    procedure IsAcyclic;
     procedure ContainsEulerianPath;
     procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
@@ -1118,6 +1119,25 @@ begin
   g := Ref;
   AssertTrue(g.ContainsCycle(1, Cycle));
   AssertTrue(System.Length(Cycle) = Succ(g.VertexCount));
+end;
+
+procedure TSimpleGraphTest.IsAcyclic;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.IsAcyclic);
+  g.AddVertex(1);
+  AssertTrue(g.IsAcyclic);
+  g.AddVertexRange(2, 4);
+  g.AddEdges([1, 2, 2, 3, 3, 4]);
+  AssertTrue(g.IsAcyclic);
+  g.AddEdge(1, 4);
+  AssertFalse(g.IsAcyclic);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsAcyclic);
 end;
 
 procedure TSimpleGraphTest.ContainsEulerianPath;
