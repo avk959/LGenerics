@@ -270,7 +270,7 @@ procedure TArrayHelpUtilTest.AppendToEmpty;
 var
   a: TIntArray;
 begin
-  TIntHelper.Append(10, a);
+  TIntHelper.Append(a, 10);
   AssertTrue(System.Length(a) = 1);
   AssertTrue(a[0] = 10);
 end;
@@ -281,10 +281,10 @@ var
   I: Integer;
 begin
   a := TIntArray.Create(0,1,2,3);
-  TIntHelper.Append(4, a);
-  TIntHelper.Append(5, a);
-  TIntHelper.Append(6, a);
-  TIntHelper.Append(7, a);
+  TIntHelper.Append(a, 4);
+  TIntHelper.Append(a, 5);
+  TIntHelper.Append(a, 6);
+  TIntHelper.Append(a, 7);
   AssertTrue(System.Length(a) = 8);
   for I := 0 to 7 do
     AssertTrue(a[I] = I);
