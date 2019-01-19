@@ -6051,7 +6051,8 @@ begin
       {%H-}Stack.Push(aDst);
       aDst := aMatrix[aSrc, aDst].Predecessor;
     until aDst = aSrc;
-  Stack.Push(aDst);
+  if Stack.NonEmpty then
+    Stack.Push(aDst);
   Result{%H-}.Length := Stack.Count;
   aDst := 0;
   for aSrc in Stack.Reverse do
