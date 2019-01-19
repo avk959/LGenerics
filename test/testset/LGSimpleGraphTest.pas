@@ -2594,7 +2594,7 @@ procedure TWeightedGraphTest.FindAllPairMinPaths;
 var
   Ref: TRef;
   g: TGraph;
-  m: g.TApspMatrix;
+  m: TGraph.TApspMatrix;
 begin
   g := {%H-}Ref;
   AssertTrue(g.FindAllPairMinPaths(m));
@@ -2611,7 +2611,7 @@ procedure TWeightedGraphTest.FindAllPairMinPaths1;
 var
   Ref: TRef;
   g: TGraph;
-  m: g.TApspMatrix;
+  m: TGraph.TApspMatrix;
 begin
   {%H-}Ref.Instance := GenerateTestWGr1;
   g := Ref;
@@ -2624,7 +2624,7 @@ procedure TWeightedGraphTest.FindAllPairMinPaths2;
 var
   Ref: TRef;
   g: TGraph;
-  m: g.TApspMatrix;
+  m: TGraph.TApspMatrix;
   Path: TIntArray;
   I, J: Integer;
 begin
