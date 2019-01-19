@@ -108,7 +108,8 @@ type
     class function  CreateReverseCopy(constref A: array of T): TArray; static;
     class function  CreateMerge(constref L, R: array of T): TArray; static;
     class function  CreateRandomShuffle(constref A: array of T): TArray; static;
-    class function  Append(constref aValue: T; var A: TArray): SizeInt;
+    class procedure Fill(var A: array of T; constref aValue: T); static;
+    class function  Append(var A: TArray; constref aValue: T): SizeInt; static;
   { if aSrc <> aDst appends aSrc to aDst, sets aSrc to nil and returns count of merged elements,
     otherwise returns 0}
     class function  Merge(var aDst, aSrc: TArray): SizeInt; static;
@@ -1146,7 +1147,15 @@ begin
   RandomShuffle(Result);
 end;
 
-class function TGArrayHelpUtil.Append(constref aValue: T; var A: TArray): SizeInt;
+class procedure TGArrayHelpUtil.Fill(var A: array of T; constref aValue: T);
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(A) do
+    A[I] := aValue;
+end;
+
+class function TGArrayHelpUtil.Append(var A: TArray; constref aValue: T): SizeInt;
 begin
   Result := System.Length(A);
   System.SetLength(A, Succ(Result));
