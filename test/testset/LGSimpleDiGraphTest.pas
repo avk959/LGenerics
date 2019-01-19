@@ -30,6 +30,7 @@ type
     procedure SaveToStream;
     procedure Clone;
     procedure Reverse;
+    procedure InducedSubgraph;
     procedure SymmDifferenceOf;
     procedure SymmDifferenceOf1;
     procedure SymmDifferenceOf2;
@@ -48,9 +49,11 @@ type
     procedure ContainsEulerianCycle;
     procedure ContainsEulerianCycle1;
     procedure FindEulerianCycle;
+    procedure IsStrongConnected;
     procedure FindStrongComponents;
     procedure FindStrongComponents1;
     procedure FindStrongComponents2;
+    procedure GetStrongComponent;
     procedure BuildReachabilityMatrix;
     procedure BuildReachabilityMatrix1;
     procedure FindMetrics;
@@ -80,6 +83,7 @@ type
     TSearch    = specialize TGNumArrayHelper<SizeInt>;
 
     function  GenerateTestWDigr1: TGraph;
+    function  GenerateTestWDigr2: TGraph;
   published
     procedure ContainsNegWeightEdge;
     procedure ContainsNegCycle;
@@ -95,6 +99,9 @@ type
     procedure FindMinPath1;
     procedure FindMinPath2;
     procedure FindMinPath3;
+    procedure FindAllPairMinPaths;
+    procedure FindAllPairMinPaths1;
+    procedure FindAllPairMinPaths2;
   end;
 
 implementation
@@ -229,6 +236,33 @@ begin
     AssertTrue(g.ContainsEdge(g2[e.Destination], g2[e.Source]));
   AssertTrue(g2.Title = Title);
   AssertTrue(g2.Description.Text = Description);
+end;
+
+procedure TSimpleDiGraphTest.InducedSubgraph;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertTrue(g.VertexCount = 13);
+  {%H-}Ref2.Instance := g.InducedSubgraph([]);
+  g2 := Ref2;
+  AssertTrue(g2.IsEmpty);
+  Ref2.Instance := g.InducedSubgraph([3]);
+  g2 := Ref2;
+  AssertTrue(g2.VertexCount = 1);
+  AssertTrue(g2.ContainsVertex(3));
+  AssertTrue(g2.EdgeCount = 0);
+  Ref2.Instance := g.InducedSubgraph([0, 1, 2, 3, 4]);
+  g2 := Ref2;
+  AssertTrue(g2.VertexCount = 5);
+  AssertTrue(g2.EdgeCount = 5);
+  AssertTrue(g2.ContainsEdge(0, 1));
+  AssertTrue(g2.ContainsEdge(0, 2));
+  AssertTrue(g2.ContainsEdge(0, 3));
+  AssertTrue(g2.ContainsEdge(2, 3));
+  AssertTrue(g2.ContainsEdge(3, 4));
 end;
 
 procedure TSimpleDiGraphTest.SymmDifferenceOf;
@@ -577,6 +611,23 @@ begin
     AssertTrue(g.ContainsEdgeI(Cycle[I], Cycle[Succ(I)]));
 end;
 
+procedure TSimpleDiGraphTest.IsStrongConnected;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.IsStrongConnected);
+  Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  AssertTrue(g.IsStrongConnected);
+  Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertFalse(g.IsStrongConnected);
+  g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
+  AssertTrue(g.IsStrongConnected);
+end;
+
 procedure TSimpleDiGraphTest.FindStrongComponents;
 var
   Ref: TRef;
@@ -624,6 +675,34 @@ begin
   AssertTrue(Ids.Length = g.VertexCount);
   for I in Ids do
     AssertTrue(I = 0);
+end;
+
+procedure TSimpleDiGraphTest.GetStrongComponent;
+var
+  Ref: TRef;
+  g: TGraph;
+  c: TIntArray;
+  I: SizeInt;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.GetStrongComponent(0);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  c := g.GetStrongComponent(3);
+  AssertTrue(c.Length = g.VertexCount);
+  for I := 0 to Pred(g.VertexCount) do
+    AssertTrue(c[I] = I);
+  Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  c := g.GetStrongComponent(3);
+  AssertTrue(c.Length = 1);
+  AssertTrue(c[0] = 3);
 end;
 
 procedure TSimpleDiGraphTest.BuildReachabilityMatrix;
@@ -946,6 +1025,32 @@ begin
   Result.AddEdge(2, 0, TIntWeight.Create(35));
 end;
 
+function TWeightedDigraphTest.GenerateTestWDigr2: TGraph;
+var
+  I: Integer;
+begin
+  Result := TGraph.Create; //TestWDigr2.png
+  for I := 0 to 12 do
+    Result.AddVertex(I);
+  Result.AddEdge(0, 1, TIntWeight.Create(4));
+  Result.AddEdge(0, 2, TIntWeight.Create(5));
+  Result.AddEdge(0, 3, TIntWeight.Create(6));
+  Result.AddEdge(0, 5, TIntWeight.Create(7));
+  Result.AddEdge(0, 6, TIntWeight.Create(2));
+  Result.AddEdge(2, 3, TIntWeight.Create(3));
+  Result.AddEdge(3, 5, TIntWeight.Create(5));
+  Result.AddEdge(3, 4, TIntWeight.Create(7));
+  Result.AddEdge(6, 4, TIntWeight.Create(4));
+  Result.AddEdge(4, 9, TIntWeight.Create(3));
+  Result.AddEdge(6, 9, TIntWeight.Create(5));
+  Result.AddEdge(7, 6, TIntWeight.Create(3));
+  Result.AddEdge(8, 7, TIntWeight.Create(2));
+  Result.AddEdge(9, 10, TIntWeight.Create(11));
+  Result.AddEdge(9, 11, TIntWeight.Create(3));
+  Result.AddEdge(9, 12, TIntWeight.Create(8));
+  Result.AddEdge(11, 12, TIntWeight.Create(3));
+end;
+
 procedure TWeightedDigraphTest.ContainsNegWeightEdge;
 var
   Ref: TRef;
@@ -1244,6 +1349,65 @@ begin
   AssertTrue(p.Length = 5);
   for I in [0, 1, 2, 4] do
     AssertTrue(TSearch.SequentSearch(p, I) <> NULL_INDEX);
+end;
+
+procedure TWeightedDigraphTest.FindAllPairMinPaths;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TApspMatrix;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.FindAllPairMinPaths(m));
+  AssertTrue(m = nil);
+  g.AddVertex(1);
+  AssertTrue(g.FindAllPairMinPaths(m));
+  AssertTrue(Length(m) = 1);
+  AssertTrue(Length(m[0]) = 1);
+  AssertTrue(m[0][0].Weight = 0);
+  AssertTrue(m[0][0].Predecessor = -1);
+end;
+
+procedure TWeightedDigraphTest.FindAllPairMinPaths1;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TApspMatrix;
+  Map: TGraph.TWeightArray;
+  Path, Path2: TIntArray;
+  I, J: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr2;
+  g := Ref;
+  AssertTrue(g.FindAllPairMinPaths(m));
+  AssertTrue(Length(m) = g.VertexCount);
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(Length(m[I]) = g.VertexCount);
+      Map := g.MinPathsMap(I);
+      for J := 0 to Pred(g.VertexCount) do
+        AssertTrue(m[I, J].Weight = Map[J]);
+    end;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path := g.ExtractMinPath(0, I, m);
+      Path2 := g.MinPath(0, I, J);
+      AssertTrue(TSearch.Same(Path, Path2));
+    end;
+end;
+
+procedure TWeightedDigraphTest.FindAllPairMinPaths2;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TApspMatrix;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr2;
+  g := Ref;
+  g.AddEdge(12, 0, TIntWeight.Create(-20));
+  AssertFalse(g.FindAllPairMinPaths(m));
+  AssertTrue(Length(m) = 1);
+  AssertTrue(Length(m[0]) = 1);
 end;
 
 
