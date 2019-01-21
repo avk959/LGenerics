@@ -102,6 +102,20 @@ type
     procedure FindAllPairMinPaths;
     procedure FindAllPairMinPaths1;
     procedure FindAllPairMinPaths2;
+    procedure FindEccentricity;
+    procedure FindEccentricity1;
+    procedure FindWeightedMetrics;
+    procedure FindWeightedMetrics1;
+    procedure FindWeightedCenter;
+    procedure DagMinPathsMap;
+    procedure DagMinPathsMap1;
+    procedure FindDagAllPairMinPaths;
+    procedure FindDagAllPairMinPaths1;
+    procedure FindDagAllPairMinPaths2;
+    procedure DagMaxPathsMap;
+    procedure DagMaxPathsMap1;
+    procedure DagMaxPaths;
+    procedure DagMaxPaths1;
   end;
 
 implementation
@@ -762,6 +776,10 @@ var
 begin
   g := {%H-}Ref;
   AssertFalse(g.FindMetrics(r, d));
+  g.AddVertex(1);
+  AssertTrue(g.FindMetrics(r, d));
+  AssertTrue(r = 0);
+  AssertTrue(d = 0);
   Ref.Instance := GenerateTestDigr1;
   g := Ref;
   AssertFalse(g.FindMetrics(r, d));
@@ -796,9 +814,9 @@ begin
   g := Ref;
   g.AddEdges([0, 8, 1, 6, 5, 9, 10, 0, 12, 0]);
   p := g.FindPeripheral;
-  AssertTrue(p.Length.ToString, p.Length = 1);
+  AssertTrue(p.Length = 1);
   AssertTrue(g.Eccentricity(p[0]) = 7);
-  AssertTrue(p[0].ToString, p[0] = 2);
+  AssertTrue(p[0] = 2);
 end;
 
 procedure TSimpleDiGraphTest.IsDag;
@@ -1408,6 +1426,235 @@ begin
   AssertFalse(g.FindAllPairMinPaths(m));
   AssertTrue(Length(m) = 1);
   AssertTrue(Length(m[0]) = 1);
+end;
+
+procedure TWeightedDigraphTest.FindEccentricity;
+var
+  Ref: TRef;
+  g: TGraph;
+  Ecc: Integer;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.FindEccentricity(0, Ecc)
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  g.AddVertex(1);
+  Ecc := 5;
+  AssertTrue(g.FindEccentricity(1, Ecc));
+  AssertTrue(Ecc = 0);
+  Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  g.SetEdgeData(1, 4, TIntWeight.Create(-80));
+  Ecc := 5;
+  AssertFalse(g.FindEccentricity(0, Ecc));
+  AssertTrue(Ecc = 0);
+end;
+
+procedure TWeightedDigraphTest.FindEccentricity1;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, Ecc: Integer;
+const
+  ECCENTR: array[0..5] of Integer = (100, 125, 105, 120, 110, 115);
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(g.FindEccentricity(I, Ecc));
+      AssertTrue(Ecc = ECCENTR[I]);
+    end;
+end;
+
+procedure TWeightedDigraphTest.FindWeightedMetrics;
+var
+  Ref: TRef;
+  g: TGraph;
+  r, d: Integer;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindWeightedMetrics(r, d));
+  Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  g.SetEdgeData(1, 4, TIntWeight.Create(-80));
+  AssertFalse(g.FindWeightedMetrics(r, d));
+end;
+
+procedure TWeightedDigraphTest.FindWeightedMetrics1;
+var
+  Ref: TRef;
+  g: TGraph;
+  r, d: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  AssertTrue(g.FindWeightedMetrics(r, d));
+  AssertTrue(r = 100);
+  AssertTrue(d = 125);
+end;
+
+procedure TWeightedDigraphTest.FindWeightedCenter;
+var
+  Ref: TRef;
+  g: TGraph;
+  c: TIntArray;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindWeightedCenter(c));
+  Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  AssertTrue(g.FindWeightedCenter(c));
+  AssertTrue(c.Length = 1);
+  AssertTrue(c[0] = 0);
+  g.SetEdgeData(1, 4, TIntWeight.Create(-80));
+  AssertFalse(g.FindWeightedCenter(c));
+end;
+
+procedure TWeightedDigraphTest.DagMinPathsMap;
+var
+  Ref: TRef;
+  g: TGraph;
+  Raised: Boolean = False;
+begin
+  g := {%H-}Ref;
+  try
+    g.DagMinPathsMap(0)
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  AssertTrue(g.DagMinPathsMap(0) = nil);
+end;
+
+procedure TWeightedDigraphTest.DagMinPathsMap1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Map: TGraph.TWeightArray;
+  Path: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr2;
+  g := Ref;
+  Map := g.DagMinPathsMap(0, Path);
+  AssertTrue(Length(Map) = g.VertexCount);
+  AssertTrue(Path.Length = g.VertexCount);
+  AssertTrue(THelper.Same(Map, [0, 4, 5, 6, 6, 7, 2, MaxInt, MaxInt, 7, 18, 10, 13]));
+  AssertTrue(TSearch.Same(Path, [-1, 0, 0, 0, 6, 0, 0, -1, -1, 6, 9, 9, 11]));
+end;
+
+procedure TWeightedDigraphTest.FindDagAllPairMinPaths;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TApspMatrix;
+begin
+  g := {%H-}Ref;
+  m := [[TGraph.TApspCell.Create(0, -1)]];
+  AssertFalse(g.FindDagAllPairMinPaths(m));
+  AssertTrue(m = nil);
+end;
+
+procedure TWeightedDigraphTest.FindDagAllPairMinPaths1;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TApspMatrix;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  m := [[TGraph.TApspCell.Create(0, -1)]];
+  AssertFalse(g.FindDagAllPairMinPaths(m));
+  AssertTrue(m = nil);
+end;
+
+procedure TWeightedDigraphTest.FindDagAllPairMinPaths2;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TApspMatrix;
+  Map: TGraph.TWeightArray;
+  Path, Path2: TIntArray;
+  I, J: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr2;
+  g := Ref;
+  AssertTrue(g.FindDagAllPairMinPaths(m));
+  AssertTrue(Length(m) = g.VertexCount);
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(Length(m[I]) = g.VertexCount);
+      Map := g.MinPathsMap(I);
+      for J := 0 to Pred(g.VertexCount) do
+        AssertTrue(m[I, J].Weight = Map[J]);
+    end;
+  for I := 1 to Pred(g.VertexCount) do
+    begin
+      Path := g.ExtractMinPath(0, I, m);
+      Path2 := g.MinPath(0, I, J);
+      AssertTrue(TSearch.Same(Path, Path2));
+    end;
+end;
+
+procedure TWeightedDigraphTest.DagMaxPathsMap;
+var
+  Ref: TRef;
+  g: TGraph;
+  Map: TGraph.TWeightArray;
+  Path: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  Map := g.DagMaxPathsMap(0, Path);
+  AssertTrue(Map = nil);
+  AssertTrue(Path <> nil);
+end;
+
+procedure TWeightedDigraphTest.DagMaxPathsMap1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Map: TGraph.TWeightArray;
+  Path: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr2;
+  g := Ref;
+  Map := g.DagMaxPathsMap(0, Path);
+  AssertTrue(Length(Map) = g.VertexCount);
+  AssertTrue(Path.Length = g.VertexCount);
+  AssertTrue(THelper.Same(Map, [0, 4, 5, 8, 15, 13, 2, LongInt.NEGINF_VALUE, LongInt.NEGINF_VALUE, 18, 29, 21, 26]));
+  AssertTrue(TSearch.Same(Path, [-1, 0, 0, 2, 3, 3, 0, -1, -1, 4, 9, 9, 9]));
+end;
+
+procedure TWeightedDigraphTest.DagMaxPaths;
+var
+  Ref: TRef;
+  g: TGraph;
+  Map: TGraph.TWeightArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  Map := g.DagMaxPaths;
+  AssertTrue(Map = nil);
+end;
+
+procedure TWeightedDigraphTest.DagMaxPaths1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Map: TGraph.TWeightArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr2;
+  g := Ref;
+  Map := g.DagMaxPaths;
+  AssertTrue(Length(Map) = g.VertexCount);
+  AssertTrue(THelper.Same(Map, [29, 0, 24, 21, 14, 0, 18, 21, 23, 11, 0, 3, 0]));
 end;
 
 
