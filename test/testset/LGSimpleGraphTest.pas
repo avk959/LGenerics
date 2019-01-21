@@ -140,15 +140,19 @@ type
     TGraph       = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
     TGraph64     = specialize TGIntWeightGraph<Integer, TInt64Weight, Integer>;
     TRef         = specialize TGAutoRef<TGraph>;
-    THelper      = specialize TGOrdinalArrayHelper<Integer>;
+    TIntHelper   = specialize TGOrdinalArrayHelper<Integer>;
+    THelper      = specialize TGOrdinalArrayHelper<SizeInt>;
   const
-    WEIGHTS_ARRAY: array of TIntArray  = ((0, 1, 0, 5, 2, 0), (1, 0, 1, 6, 3, 1), (0, 1, 0, 5, 2, 0),
-                                          (5, 6, 5, 0, 4, 5), (2, 3, 2, 4, 0, 2), (0, 1, 0, 5, 2, 0));
-    PATHTREE_ARRAY: array of TIntArray = ((-1, 2, 0, 2, 5, 2), (2, -1, 1, 2, 5, 2), (2, 2, -1, 2, 5, 2),
-                                          (2, 2, 3, -1, 3, 2), (2, 2, 5, 4, -1, 4), (2, 2, 5, 2, 5, -1));
-    PATHS_FROM_0: array of TIntArray   = ((0, 2, 1), (0, 2), (0, 2, 3), (0, 2, 5, 4), (0, 2, 5));
+    WEIGHTS_ARRAY: array of TGraph.TWeightArray  = (
+               (0, 1, 0, 5, 2, 0), (1, 0, 1, 6, 3, 1), (0, 1, 0, 5, 2, 0),
+               (5, 6, 5, 0, 4, 5), (2, 3, 2, 4, 0, 2), (0, 1, 0, 5, 2, 0));
+    PATHTREE_ARRAY: array of TIntArray = (
+               (-1, 2, 0, 2, 5, 2), (2, -1, 1, 2, 5, 2), (2, 2, -1, 2, 5, 2),
+               (2, 2, 3, -1, 3, 2), (2, 2, 5, 4, -1, 4), (2, 2, 5, 2, 5, -1));
+    PATHS_FROM_0: array of TIntArray   = (
+               (0, 2, 1), (0, 2), (0, 2, 3), (0, 2, 5, 4), (0, 2, 5));
 
-    ECCENTR: TIntArray = (5, 6, 5, 6, 4, 5);
+    ECCENTR: TGraph.TWeightArray = (5, 6, 5, 6, 4, 5);
 
     function  GenerateTestWGr1: TGraph;
     function  GenerateTestWGr2: TGraph;
@@ -1490,8 +1494,8 @@ begin
   AssertTrue(Length(Cross) = 2);
   if Cross[0].Source = 4 then
     begin
-      AssertTrue(Cross[0].Destination.ToString, Cross[0].Destination = 6);
-      AssertTrue(Cross[1].Source.ToString, Cross[1].Source = 6);
+      AssertTrue(Cross[0].Destination = 6);
+      AssertTrue(Cross[1].Source = 6);
       AssertTrue(Cross[1].Destination = 8);
     end
   else
@@ -1960,7 +1964,7 @@ begin
   {%H-}Ref.Instance := GenerateWheel;
   g := Ref;
   AssertTrue(g.FindHamiltonPaths(1, 0, Paths, 5));
-  AssertTrue(Paths.Count.ToString, Paths.Count = 22);
+  AssertTrue(Paths.Count = 22);
   for I := 0 to Pred(Paths.Count) do
     AssertTrue(g.IsHamiltonPath(Paths[I], g.IndexOf(1)));
   AssertTrue(g.FindHamiltonPaths(1, 1, Paths, 5));
@@ -2033,7 +2037,7 @@ begin
   finally
     g2.Free;
   end;
-  AssertTrue(g.VertexCount.ToString, g.VertexCount = 12);
+  AssertTrue(g.VertexCount = 12);
   AssertTrue(g.IsWheel(Hub));
   AssertTrue(Hub = 0);
 end;
@@ -2349,7 +2353,7 @@ procedure TWeightedGraphTest.MinPathsMap;
 var
   Ref: TRef;
   g: TGraph;
-  Weights: TIntArray;
+  Weights: TGraph.TWeightArray;
   Raised: Boolean = False;
 begin
   g := {%H-}Ref;
@@ -2361,7 +2365,7 @@ begin
   AssertTrue(Raised);
   g.AddVertex(1);
   Weights := g.MinPathsMap(1);
-  AssertTrue(Weights.Length = 1);
+  AssertTrue(Length(Weights) = 1);
   AssertTrue(Weights[0] = 0);
 end;
 
@@ -2369,7 +2373,7 @@ procedure TWeightedGraphTest.MinPathsMap1;
 var
   Ref: TRef;
   g: TGraph;
-  Weights: TIntArray;
+  Weights: TGraph.TWeightArray;
   I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestWGr2;
@@ -2377,7 +2381,7 @@ begin
   for I := 0 to Pred(g.VertexCount) do
     begin
       Weights := g.MinPathsMap(I);
-      AssertTrue(THelper.Same(Weights, WEIGHTS_ARRAY[I]))
+      AssertTrue(TIntHelper.Same(Weights, WEIGHTS_ARRAY[I]))
     end;
 end;
 
@@ -2401,7 +2405,7 @@ procedure TWeightedGraphTest.FindMinPathsMap;
 var
   Ref: TRef;
   g: TGraph;
-  Weights: TIntArray;
+  Weights: TGraph.TWeightArray;
   Raised: Boolean = False;
 begin
   g := {%H-}Ref;
@@ -2413,7 +2417,7 @@ begin
   AssertTrue(Raised);
   g.AddVertex(1);
   AssertTrue(g.FindMinPathsMap(1, Weights));
-  AssertTrue(Weights.Length = 1);
+  AssertTrue(Length(Weights) = 1);
   AssertTrue(Weights[0] = 0);
 end;
 
@@ -2421,7 +2425,7 @@ procedure TWeightedGraphTest.FindMinPathsMap1;
 var
   Ref: TRef;
   g: TGraph;
-  Weights: TIntArray;
+  Weights: TGraph.TWeightArray;
   I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestWGr2;
@@ -2429,7 +2433,7 @@ begin
   for I := 0 to Pred(g.VertexCount) do
     begin
       AssertTrue(g.FindMinPathsMap(I, Weights));
-      AssertTrue(THelper.Same(Weights, WEIGHTS_ARRAY[I]))
+      AssertTrue(TIntHelper.Same(Weights, WEIGHTS_ARRAY[I]))
     end;
 end;
 
@@ -2437,7 +2441,8 @@ procedure TWeightedGraphTest.FindMinPathsMap2;
 var
   Ref: TRef;
   g: TGraph;
-  Weights, PathTree: TIntArray;
+  Weights: TGraph.TWeightArray;
+  PathTree: TIntArray;
   I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestWGr2;
@@ -2453,7 +2458,7 @@ procedure TWeightedGraphTest.FindMinPathsMap3;
 var
   Ref: TRef;
   g: TGraph;
-  Weights: TIntArray;
+  Weights: TGraph.TWeightArray;
   I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestWGr1;
@@ -2466,7 +2471,8 @@ procedure TWeightedGraphTest.FindMinPathsMap4;
 var
   Ref: TRef;
   g: TGraph;
-  Weights, PathTree: TIntArray;
+  Weights: TGraph.TWeightArray;
+  PathTree: TIntArray;
   I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestWGr1;
