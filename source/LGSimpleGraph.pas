@@ -4248,10 +4248,8 @@ var
   I: SizeInt;
   w: TWeight;
 begin
-  if IsEmpty then
-    exit(False);
-  Result := FindMinPathsMapI(aIndex, Weights);
   aValue := 0;
+  Result := FindMinPathsMapI(aIndex, Weights);
   if not Result then
     exit;
   for I := 0 to System.High(Weights) do

@@ -2562,8 +2562,6 @@ var
   I: SizeInt;
   w: TWeight;
 begin
-  if IsEmpty then
-    exit(False);
   aValue := 0;
   Result := FindMinPathsMapI(aIndex, Weights);
   if not Result then
