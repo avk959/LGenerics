@@ -2564,10 +2564,10 @@ var
 begin
   if IsEmpty then
     exit(False);
+  aValue := 0;
   Result := FindMinPathsMapI(aIndex, Weights);
   if not Result then
     exit;
-  aValue := 0;
   for I := 0 to System.High(Weights) do
     begin
       w := Weights[I];
