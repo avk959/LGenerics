@@ -2582,6 +2582,8 @@ var
   I, J: SizeInt;
   Ecc, w: TWeight;
 begin
+  aRadius := TWeight.INF_VALUE;
+  aDiameter := TWeight.INF_VALUE;
   if IsEmpty then
     exit(False);
   I := FindStrongComponents(Ids);
@@ -2592,9 +2594,8 @@ begin
   if not Result then
     exit;
   Weights := nil;
-  Bfmt := TWeightHelper.TBfmt.Create(Self, True);
-  aRadius := TWeight.INF_VALUE;
   aDiameter := 0;
+  Bfmt := TWeightHelper.TBfmt.Create(Self, True);
   for I := 0 to Pred(VertexCount) do
     begin
       Bfmt.Sssp(I);
