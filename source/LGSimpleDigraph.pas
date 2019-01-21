@@ -186,17 +186,17 @@ type
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
     function  IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
     function  IsDag: Boolean;
-  { does not checks if a graph is acyclic;
-    returns an array containing in the corresponding components the length of the longest path
-    from aSrc to it (in sense 'edges count'), or -1 if it is unreachable from aSrc }
+  { returns an array containing in the corresponding components the length of the longest path
+    from aSrc to it (in sense 'edges count'), or -1 if it is unreachable from aSrc if a graph is acyclic,
+    otherwise returns nil }
     function  DagLongestPathsMap(constref aSrc: TVertex): TIntArray; inline;
     function  DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
-  { same as above and in aPathTree returns paths }
+  { same as above and in aPathTree returns paths or cycle }
     function  DagLongestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray; inline;
     function  DagLongestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
-  { does not checks if a graph is acyclic;
-    returns an array containing in the corresponding components the length of
-    the longest path starting with it(in sense 'edges count') }
+  { returns an array containing in the corresponding components the length of
+    the longest path starting with it(in sense 'edges count'), if a graph is acyclic,
+    otherwise returns nil }
     function  DagLongestPaths: TIntArray;
 {**********************************************************************************************************
   some NP-hard problem utilities
@@ -433,20 +433,21 @@ type
     otherwise returns nil }
     function DagMinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
-  { same as above and in aPathTree returns paths }
+  { same as above and in aPathTree returns paths or cycle }
     function DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
   { APSP for acyclic graph }
     function FindDagAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
-  { for an acyclic graph returns an array containing in the corresponding components the maximum weight of
-    the path from aSrc to it, or NegInfWeight if it is unreachable from aSrc }
+  { returns an array containing in the corresponding components the maximum weight of
+    the path from aSrc to it, or NegInfWeight if it is unreachable from aSrc, if graph is acyclic,
+    otherwise returns nil }
     function DagMaxPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
-  { same as above and in aPathTree returns paths }
+  { same as above and in aPathTree returns paths, or cycle }
     function DagMaxPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray; inline;
     function DagMaxPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-  { for an acyclic graph returns an array containing in the corresponding components the maximal weight of
-    the path starting with it }
+  { returns an array containing in the corresponding components the maximal weight of
+    the path starting with it, if graph is acyclic, otherwise returns nil }
     function DagMaxPaths: TWeightArray;
   end;
 
@@ -1694,10 +1695,14 @@ begin
 end;
 
 function TGSimpleDiGraph.DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
+var
+  c: TIntArray;
 begin
   CheckIndexRange(aSrc);
   if VertexCount = 1 then
     exit([0]);
+  if FindCycle(aSrc, c) then
+    exit(nil);
   Result := GetDagLongestPaths(aSrc);
 end;
 
@@ -1714,6 +1719,8 @@ begin
       aPathTree := [NULL_INDEX];
       exit([0]);
     end;
+  if FindCycle(aSrc, aPathTree) then
+    exit(nil);
   Result := GetDagLongestPaths(aSrc, aPathTree);
 end;
 
@@ -1726,6 +1733,8 @@ begin
     exit(nil);
   if VertexCount = 1 then
     exit([0]);
+  if CycleExists then
+    exit(nil);
   TopoOrd := TopologicalSort(soDesc);
   Result := CreateIntArray(0);
   for I := 1 to Pred(VertexCount) do
@@ -2681,11 +2690,9 @@ begin
 end;
 
 function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
-var
-  c: TIntArray;
 begin
   CheckIndexRange(aSrc);
-  if FindCycle(aSrc, c) then
+  if FindCycle(aSrc, aPathTree) then
     exit(nil);
   GetDagMinPaths(aSrc, aPathTree{%H-}, Result{%H-});
 end;
@@ -2696,7 +2703,10 @@ var
   Parents: TIntArray;
   I, J: SizeInt;
 begin
+  aPaths := nil;
   if IsEmpty then
+    exit(False);
+  if CycleExists then
     exit(False);
   System.SetLength(aPaths, VertexCount, VertexCount);
   for I := 0 to Pred(VertexCount) do
@@ -2714,8 +2724,12 @@ begin
 end;
 
 function TGWeightedDiGraph.DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
+var
+  c: TIntArray;
 begin
   CheckIndexRange(aSrc);
+  if FindCycle(aSrc, c) then
+    exit(nil);
   Result := GetDagMaxPaths(aSrc);
 end;
 
@@ -2727,6 +2741,8 @@ end;
 function TGWeightedDiGraph.DagMaxPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
+  if FindCycle(aSrc, aPathTree) then
+    exit(nil);
   Result := GetDagMaxPaths(aSrc, aPathTree);
 end;
 
@@ -2738,6 +2754,12 @@ var
   p: PAdjItem;
   pList: PAdjList;
 begin
+  if IsEmpty then
+    exit(nil);
+  if VertexCount = 1 then
+    exit([TWeight(0)]);
+  if CycleExists then
+    exit(nil);
   TopoOrd := TopologicalSort(soDesc);
   Result := TWeightHelper.CreateWeightArrayZ(VertexCount);
   for I := 1 to Pred(VertexCount) do

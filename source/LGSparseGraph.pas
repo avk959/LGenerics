@@ -4903,10 +4903,10 @@ end;
 
 { TGWeightHelper.TApspCell }
 
-constructor TGWeightHelper.TApspCell.Create(aWeight: TWeight; aSource: SizeInt);
+constructor TGWeightHelper.TApspCell.Create(aWeight: TWeight; aPred: SizeInt);
 begin
   Weight := aWeight;
-  Predecessor := aSource;
+  Predecessor := aPred;
 end;
 
 { TGWeightHelper.THungarian }

@@ -410,7 +410,7 @@ type
     TApspCell = record
       Weight: TWeight;
       Predecessor: SizeInt;
-      constructor Create(aWeight: TWeight; aSource: SizeInt);
+      constructor Create(aWeight: TWeight; aPred: SizeInt);
     end;
 
     TGraph        = specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>;
