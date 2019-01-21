@@ -428,8 +428,9 @@ type
   DAG utilities
 ***********************************************************************************************************}
   { SSSP for an acyclic graph;
-    returns an array containing in the corresponding components the maximum weight of
-    the path from aSrc to it, or InfWeight if it is unreachable from aSrc }
+    returns an array containing in the corresponding components the minimum weight of
+    the path from aSrc to it, or InfWeight if it is unreachable, if graph is acyclic,
+    otherwise returns nil }
     function DagMinPathsMap(constref aSrc: TVertex): TWeightArray; inline;
     function DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
   { same as above and in aPathTree returns paths }
@@ -2665,8 +2666,12 @@ begin
 end;
 
 function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
+var
+  c: TIntArray;
 begin
   CheckIndexRange(aSrc);
+  if FindCycle(aSrc, c) then
+    exit(nil);
   GetDagMinPaths(aSrc, Result{%H-});
 end;
 
@@ -2676,8 +2681,12 @@ begin
 end;
 
 function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+var
+  c: TIntArray;
 begin
   CheckIndexRange(aSrc);
+  if FindCycle(aSrc, c) then
+    exit(nil);
   GetDagMinPaths(aSrc, aPathTree{%H-}, Result{%H-});
 end;
 
