@@ -2620,6 +2620,7 @@ var
   I, J: SizeInt;
   Radius, Ecc, w: TWeight;
 begin
+  aCenter := nil;
   if IsEmpty then
     exit(False);
   I := FindStrongComponents(Ids);

@@ -4303,6 +4303,7 @@ var
   I, J: SizeInt;
   Radius, Ecc, w: TWeight;
 begin
+  aCenter := nil;
   if not Connected then
     exit(False);
   Result := TWeightHelper.BfmtReweight(Self, Eccs) < 0;
