@@ -424,9 +424,6 @@ type
   { returns False if is not strongly connected or exists negative weight cycle,
     otherwise returns True and indices of the central vertices in aCenter }
     function FindWeightedCenter(out aCenter: TIntArray): Boolean;
-  { returns False if is not strongly connected or exists negative weight cycle,
-    otherwise returns True and indices of the inner central vertices in aCenter }
-    function FindInnerWeightedCenter(out aCenter: TIntArray): Boolean;
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -2647,55 +2644,6 @@ begin
                 Ecc := w;
             end;
       Eccs[I] := Ecc;
-      if Ecc < Radius then
-        Radius := Ecc;
-    end;
-  aCenter.Length := VertexCount;
-  J := 0;
-  for I := 0 to Pred(VertexCount) do
-    if Eccs[I] <= Radius then
-      begin
-        aCenter[J] := I;
-        Inc(J);
-      end;
-  aCenter.Length := J;
-end;
-
-function TGWeightedDiGraph.FindInnerWeightedCenter(out aCenter: TIntArray): Boolean;
-var
-  Bfmt: TWeightHelper.TBfmt;
-  Eccs: TWeightArray;
-  Ids: TIntArray;
-  I, J: SizeInt;
-  Radius, Ecc, w: TWeight;
-begin
-  if IsEmpty then
-    exit(False);
-  I := FindStrongComponents(Ids);
-  if I > 1 then
-    exit(False);
-  Ids := nil;
-  Result := TWeightHelper.BfmtReweight(Self, Eccs) < 0;
-  if not Result then
-    exit;
-  for I := 0 to Pred(VertexCount) do
-    Eccs[I] := 0;
-  Bfmt := TWeightHelper.TBfmt.Create(Self, True);
-  Radius := TWeight.INF_VALUE;
-  for I := 0 to Pred(VertexCount) do
-    begin
-      Bfmt.Sssp(I);
-      Ecc := 0;
-      with Bfmt do
-        for J := 0 to Pred(VertexCount) do
-          if I <> J then
-            begin
-              w := Nodes[J].Weight;
-              if (w < TWeight.INF_VALUE) and (w > Ecc) then
-                Ecc := w;
-              if w > Eccs[J] then
-                Eccs[J] := w;
-            end;
       if Ecc < Radius then
         Radius := Ecc;
     end;
