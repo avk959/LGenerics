@@ -4708,22 +4708,22 @@ function TGIntWeightGraph.FindMinWeightBipMatch(out aMatch: TEdgeArray): Boolean
 var
   w, g: TIntArray;
 begin
-  aMatch := nil;
-  if not IsBipartite(w, g) then
-    exit(False);
-  aMatch := TWeightHelper.MinBipMatch(Self, w, g);
-  Result := True;
+  Result := IsBipartite(w, g);
+  if Result then
+    aMatch := TWeightHelper.MinBipMatch(Self, w, g)
+  else
+    aMatch := nil;
 end;
 
 function TGIntWeightGraph.FindMaxWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 var
   w, g: TIntArray;
 begin
-  aMatch := nil;
-  if not IsBipartite(w, g) then
-    exit(False);
-  aMatch := TWeightHelper.MaxBipMatch(Self, w, g);
-  Result := True;
+  Result := IsBipartite(w, g);
+  if Result then
+    aMatch := TWeightHelper.MaxBipMatch(Self, w, g)
+  else
+    aMatch := nil;
 end;
 
 function TGIntWeightGraph.MinWeightCutSW(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
