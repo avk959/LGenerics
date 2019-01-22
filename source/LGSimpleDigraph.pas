@@ -3034,8 +3034,8 @@ var
   I: SizeInt;
 begin
   aValue := 0;
-  aCut.S := [];
-  aCut.T := [];
+  aCut.S := nil;
+  aCut.T := nil;
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
   Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
