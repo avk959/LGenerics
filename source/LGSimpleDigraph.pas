@@ -2929,9 +2929,8 @@ var
 begin
   aFlow := 0;
   Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
-  if Result <> nsOk then
-    exit;
-  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
+  if Result = nsOk then
+    aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
 end;
 
 function TGIntWeightDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight;
@@ -2948,9 +2947,8 @@ begin
   aFlow := 0;
   a := nil;
   Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
-  if Result <> nsOk then
-    exit;
-  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
+  if Result = nsOk then
+    aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
 end;
 
 function TGIntWeightDiGraph.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
@@ -2964,9 +2962,8 @@ var
 begin
   aFlow := 0;
   Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
-  if Result <> nsOk then
-    exit;
-  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
+  if Result = nsOk then
+    aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
 end;
 
 function TGIntWeightDiGraph.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight;
@@ -2983,9 +2980,8 @@ begin
   aFlow := 0;
   a := nil;
   Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
-  if Result <> nsOk then
-    exit;
-  aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
+  if Result = nsOk then
+    aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
 end;
 
 function TGIntWeightDiGraph.IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight;
