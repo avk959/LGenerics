@@ -349,6 +349,8 @@ type
     class function NegInfWeight: TWeight; static; inline;
     class function wMin(L, R: TWeight): TWeight; static; inline;
     class function wMax(L, R: TWeight): TWeight; static; inline;
+    class function TotalWeight(const aEdges: TEdgeArray): TWeight; static;
+    class function EdgeArray2IntEdgeArray(const a: TEdgeArray): TIntEdgeArray; static;
   { returns True if exists arc with negative weight }
     function ContainsNegWeightEdge: Boolean;
   { checks whether exists any negative weight cycle in subgraph that reachable from a aRoot;
@@ -2340,6 +2342,28 @@ begin
     Result := L
   else
     Result := R;
+end;
+
+class function TGWeightedDiGraph.TotalWeight(const aEdges: TEdgeArray): TWeight;
+var
+  e: TWeightEdge;
+begin
+  Result := TWeight(0);
+  for e in aEdges do
+    Result += e.Weight;
+end;
+
+class function TGWeightedDiGraph.EdgeArray2IntEdgeArray(const a: TEdgeArray): TIntEdgeArray;
+var
+  I: SizeInt = 0;
+  e: TWeightEdge;
+begin
+  System.SetLength(Result, System.Length(a));
+  for e in a do
+    begin
+      Result[I] := TIntEdge.Create(e.Source, e.Destination);
+      Inc(I);
+    end;
 end;
 
 function TGWeightedDiGraph.ContainsNegWeightEdge: Boolean;
