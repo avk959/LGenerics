@@ -76,14 +76,22 @@ type
   TWeightedDigraphTest = class(TTestCase)
   private
   type
-    TIntWeight = specialize TGSimpleWeight<Integer>;
-    TGraph     = specialize TGWeightedDigraph<Integer, Integer, TIntWeight, Integer>;
-    TRef       = specialize TGAutoRef<TGraph>;
-    THelper    = specialize TGOrdinalArrayHelper<Integer>;
-    TSearch    = specialize TGNumArrayHelper<SizeInt>;
+    TIntWeight   = specialize TGSimpleWeight<Integer>;
+    TInt64Weight = specialize TGSimpleWeight<Int64>;
+    TGraph       = specialize TGWeightedDigraph<Integer, Integer, TIntWeight, Integer>;
+    TGraph64     = specialize TGIntWeightDigraph<Integer, TInt64Weight, Integer>;
+    TRef         = specialize TGAutoRef<TGraph>;
+    TRef64       = specialize TGAutoRef<TGraph64>;
+    THelper      = specialize TGOrdinalArrayHelper<Integer>;
+    TSearch      = specialize TGNumArrayHelper<SizeInt>;
 
     function  GenerateTestWDigr1: TGraph;
     function  GenerateTestWDigr2: TGraph;
+    function  GenerateTestWDigrBip1: TGraph64;
+    function  GenerateTestWDigr3: TGraph64;
+    function  GenerateTestWDigr4: TGraph64;
+    function  GenerateCostFun3: TCostEdgeArray;
+    function  GenerateCostFun4: TCostEdgeArray;
   published
     procedure ContainsNegWeightEdge;
     procedure ContainsNegCycle;
@@ -116,6 +124,27 @@ type
     procedure DagMaxPathsMap1;
     procedure DagMaxPaths;
     procedure DagMaxPaths1;
+    procedure FindMinWeightBipMatch;
+    procedure FindMinWeightBipMatch1;
+    procedure FindMaxWeightBipMatch;
+    procedure FindMaxWeightBipMatch1;
+    procedure FindMaxFlowPr;
+    procedure FindMaxFlowPr1;
+    procedure FindMaxFlowPr2;
+    procedure FindMaxFlowD;
+    procedure FindMaxFlowD1;
+    procedure FindMinSTCutPr;
+    procedure FindMinSTCutPr1;
+    procedure FindMinSTCutD;
+    procedure FindMinSTCutD1;
+    procedure FindMinCostFlowSsp;
+    procedure FindMinCostFlowSsp1;
+    procedure FindMinCostFlowSsp2;
+    procedure FindMinCostFlowSsp3;
+    procedure FindMinCostFlowCs;
+    procedure FindMinCostFlowCs1;
+    procedure FindMinCostFlowCs2;
+    procedure FindMinCostFlowCs3;
   end;
 
 implementation
@@ -1069,6 +1098,109 @@ begin
   Result.AddEdge(11, 12, TIntWeight.Create(3));
 end;
 
+function TWeightedDigraphTest.GenerateTestWDigrBip1: TGraph64;
+var
+  I: Integer;
+begin
+  Result := TGraph64.Create;  // min match weight = 58, max match weight = 270
+  for I := 1 to 12 do
+    Result.AddVertex(I);
+  Result.AddEdge(1, 2, TInt64Weight.Create(92));
+  Result.AddEdge(1, 4, TInt64Weight.Create(17));
+  Result.AddEdge(1, 6, TInt64Weight.Create(8));
+  Result.AddEdge(1, 8, TInt64Weight.Create(60));
+  Result.AddEdge(3, 2, TInt64Weight.Create(10));
+  Result.AddEdge(3, 4, TInt64Weight.Create(24));
+  Result.AddEdge(3, 6, TInt64Weight.Create(28));
+  Result.AddEdge(3, 8, TInt64Weight.Create(3));
+  Result.AddEdge(3, 10, TInt64Weight.Create(13));
+  Result.AddEdge(5, 4, TInt64Weight.Create(39));
+  Result.AddEdge(5, 6, TInt64Weight.Create(52));
+  Result.AddEdge(5, 8, TInt64Weight.Create(68));
+  Result.AddEdge(5, 10, TInt64Weight.Create(4));
+  Result.AddEdge(5, 12, TInt64Weight.Create(79));
+  Result.AddEdge(7, 6, TInt64Weight.Create(8));
+  Result.AddEdge(7, 8, TInt64Weight.Create(20));
+  Result.AddEdge(7, 10, TInt64Weight.Create(72));
+  Result.AddEdge(7, 12, TInt64Weight.Create(27));
+  Result.AddEdge(9, 8, TInt64Weight.Create(24));
+  Result.AddEdge(9, 10, TInt64Weight.Create(6));
+  Result.AddEdge(9, 12, TInt64Weight.Create(14));
+  Result.AddEdge(11, 10, TInt64Weight.Create(43));
+  Result.AddEdge(11, 8, TInt64Weight.Create(5));
+end;
+
+function TWeightedDigraphTest.GenerateTestWDigr3: TGraph64;
+var
+  I: Integer;
+begin
+  Result := TGraph64.Create; //TestWDigr3.png   source := 0; sink = 12; maxflow = 5 mincost = 11
+  for I := 0 to 12 do
+    Result.AddVertex(I);
+  Result.AddEdge(0, 1, TInt64Weight.Create(1));
+  Result.AddEdge(0, 2, TInt64Weight.Create(1));
+  Result.AddEdge(0, 3, TInt64Weight.Create(1));
+  Result.AddEdge(0, 4, TInt64Weight.Create(1));
+  Result.AddEdge(0, 5, TInt64Weight.Create(1));
+  Result.AddEdge(1, 6, TInt64Weight.Create(1));
+  Result.AddEdge(1, 7, TInt64Weight.Create(1));
+  Result.AddEdge(1, 8, TInt64Weight.Create(1));
+  Result.AddEdge(2, 6, TInt64Weight.Create(1));
+  Result.AddEdge(2, 7, TInt64Weight.Create(1));
+  Result.AddEdge(3, 6, TInt64Weight.Create(1));
+  Result.AddEdge(4, 6, TInt64Weight.Create(1));
+  Result.AddEdge(4, 7, TInt64Weight.Create(1));
+  Result.AddEdge(5, 6, TInt64Weight.Create(1));
+  Result.AddEdge(5, 7, TInt64Weight.Create(1));
+  Result.AddEdge(5, 8, TInt64Weight.Create(1));
+  Result.AddEdge(6, 9, TInt64Weight.Create(1));
+  Result.AddEdge(7, 10, TInt64Weight.Create(2));
+  Result.AddEdge(8, 11, TInt64Weight.Create(3));
+  Result.AddEdge(9, 12, TInt64Weight.Create(100));
+  Result.AddEdge(10, 12, TInt64Weight.Create(100));
+  Result.AddEdge(11, 12, TInt64Weight.Create(100));
+end;
+
+function TWeightedDigraphTest.GenerateTestWDigr4: TGraph64;
+var
+  I: Integer;
+begin
+  Result := TGraph64.Create; //TestWDigr4.png   source := 0; sink = 6; maxflow = 40 - mincost = 1296
+  for I := 0 to 6 do         //                                        maxflow = 20 - mincost = 474
+    Result.AddVertex(I);     // from Christofides
+  Result.AddEdge(0, 1, TInt64Weight.Create(16));
+  Result.AddEdge(0, 2, TInt64Weight.Create(11));
+  Result.AddEdge(0, 3, TInt64Weight.Create(13));
+  Result.AddEdge(1, 2, TInt64Weight.Create(18));
+  Result.AddEdge(1, 4, TInt64Weight.Create(17));
+  Result.AddEdge(1, 5, TInt64Weight.Create(16));
+  Result.AddEdge(2, 3, TInt64Weight.Create(19));
+  Result.AddEdge(2, 4, TInt64Weight.Create(12));
+  Result.AddEdge(3, 5, TInt64Weight.Create(10));
+  Result.AddEdge(3, 6, TInt64Weight.Create(5));
+  Result.AddEdge(4, 6, TInt64Weight.Create(22));
+  Result.AddEdge(5, 6, TInt64Weight.Create(16));
+end;
+
+function TWeightedDigraphTest.GenerateCostFun3: TCostEdgeArray;
+begin
+  Result := [
+    TCostEdge.Create(0, 1, 0),  TCostEdge.Create(0, 2, 0),  TCostEdge.Create(0, 3, 0),  TCostEdge.Create(0, 4, 0),
+    TCostEdge.Create(0, 5, 0),  TCostEdge.Create(1, 6, 1),  TCostEdge.Create(1, 7, 2),  TCostEdge.Create(1, 8,  3),
+    TCostEdge.Create(2, 6, 1),  TCostEdge.Create(2, 7, 2),  TCostEdge.Create(3, 6, 1),  TCostEdge.Create(4, 6,  1),
+    TCostEdge.Create(4, 7, 2),  TCostEdge.Create(5, 6, 1),  TCostEdge.Create(5, 7, 2),  TCostEdge.Create(5, 8, 3),
+    TCostEdge.Create(6, 9, 0),  TCostEdge.Create(7, 10, 0), TCostEdge.Create(8, 11, 0), TCostEdge.Create(9, 12, 0),
+    TCostEdge.Create(10,12, 0), TCostEdge.Create(11, 12, 0)];
+end;
+
+function TWeightedDigraphTest.GenerateCostFun4: TCostEdgeArray;
+begin
+  Result := [TCostEdge.Create(0, 1, 7), TCostEdge.Create(0, 2, 13), TCostEdge.Create(0, 3, 28),
+             TCostEdge.Create(1, 2, 4), TCostEdge.Create(1, 4, 25), TCostEdge.Create(1, 5, 10),
+             TCostEdge.Create(2, 3, 5), TCostEdge.Create(2, 4, 6), TCostEdge.Create(3, 5, 3),
+             TCostEdge.Create(3, 6, 7), TCostEdge.Create(4, 6, 5), TCostEdge.Create(5, 6, 12)];
+end;
+
 procedure TWeightedDigraphTest.ContainsNegWeightEdge;
 var
   Ref: TRef;
@@ -1655,6 +1787,421 @@ begin
   Map := g.DagMaxPaths;
   AssertTrue(Length(Map) = g.VertexCount);
   AssertTrue(THelper.Same(Map, [29, 0, 24, 21, 14, 0, 18, 21, 23, 11, 0, 3, 0]));
+end;
+
+procedure TWeightedDigraphTest.FindMinWeightBipMatch;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  m: TGraph.TEdgeArray;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindMinWeightBipMatch(m));
+  g.AddVertex(1);
+  AssertFalse(g.FindMinWeightBipMatch(m));
+  g.AddVertex(2);
+  AssertTrue(g.FindMinWeightBipMatch(m));
+  AssertTrue(m = nil);
+  Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  AssertFalse(g.FindMinWeightBipMatch(m));
+end;
+
+procedure TWeightedDigraphTest.FindMinWeightBipMatch1;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  m: TGraph.TEdgeArray;
+  im: TIntEdgeArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigrBip1;
+  g := Ref;
+  AssertTrue(g.FindMinWeightBipMatch(m));
+  im := g.EdgeArray2IntEdgeArray(m);
+  AssertTrue(g.IsMaxMatching(im));
+  AssertTrue(g.IsPerfectMatching(im));
+  AssertTrue(g.TotalWeight(m) = 58);
+end;
+
+procedure TWeightedDigraphTest.FindMaxWeightBipMatch;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  m: TGraph.TEdgeArray;
+begin
+  g := {%H-}Ref;
+  AssertFalse(g.FindMaxWeightBipMatch(m));
+  g.AddVertex(1);
+  AssertFalse(g.FindMaxWeightBipMatch(m));
+  g.AddVertex(2);
+  AssertTrue(g.FindMaxWeightBipMatch(m));
+  AssertTrue(m = nil);
+  Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  AssertFalse(g.FindMaxWeightBipMatch(m));
+end;
+
+procedure TWeightedDigraphTest.FindMaxWeightBipMatch1;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  m: TGraph.TEdgeArray;
+  im: TIntEdgeArray;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigrBip1;
+  g := Ref;
+  AssertTrue(g.FindMaxWeightBipMatch(m));
+  im := g.EdgeArray2IntEdgeArray(m);
+  AssertTrue(g.IsMaxMatching(im));
+  AssertTrue(g.IsPerfectMatching(im));
+  AssertTrue(g.TotalWeight(m) = 270);
+end;
+
+procedure TWeightedDigraphTest.FindMaxFlowPr;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  Flow: Int64;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(1);
+  g.AddVertex(2);
+  AssertTrue(g.FindMaxFlowPr(1, 2, Flow) = nsInvalidSource);
+  g.AddEdge(1, 2, TInt64Weight.Create(1));
+  g.AddVertex(3);
+  AssertTrue(g.FindMaxFlowPr(1, 3, Flow) = nsInvalidSink);
+  g.AddEdge(2, 3, TInt64Weight.Create(-2));
+  AssertTrue(g.FindMaxFlowPr(1, 3, Flow) = nsNegCapacity);
+  g.SetEdgeData(2, 3, TInt64Weight.Create(0));
+  AssertTrue(g.FindMaxFlowPr(1, 3, Flow) = nsSinkUnreachable);
+end;
+
+procedure TWeightedDigraphTest.FindMaxFlowPr1;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  ArcFlows: TGraph64.TEdgeArray;
+  Flow: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr3;
+  g := Ref;
+  AssertTrue(g.FindMaxFlowPr(0, 12, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 5);
+  AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
+end;
+
+procedure TWeightedDigraphTest.FindMaxFlowPr2;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  ArcFlows: TGraph64.TEdgeArray;
+  Flow: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  AssertTrue(g.FindMaxFlowPr(0, 6, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 40);
+  AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
+end;
+
+procedure TWeightedDigraphTest.FindMaxFlowD;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  ArcFlows: TGraph64.TEdgeArray;
+  Flow: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr3;
+  g := Ref;
+  AssertTrue(g.FindMaxFlowD(0, 12, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 5);
+  AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
+end;
+
+procedure TWeightedDigraphTest.FindMaxFlowD1;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  ArcFlows: TGraph64.TEdgeArray;
+  Flow: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  AssertTrue(g.FindMaxFlowD(0, 6, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 40);
+  AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
+end;
+
+procedure TWeightedDigraphTest.FindMinSTCutPr;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  Cut: TGraph64.TStCut;
+  Value: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr3;
+  g := Ref;
+  AssertTrue(g.FindMinSTCutPr(0, 12, Value, Cut) = nsOk);
+  AssertTrue(Value = 5);
+  AssertTrue(Cut.S.Length + Cut.T.Length = g.VertexCount);
+  if Cut.S.Length = 1 then
+    begin
+      AssertTrue(Cut.T.Length = 12);
+      AssertTrue(Cut.S[0] = 0);
+    end
+  else
+    begin
+      AssertTrue(Cut.S.Length = 11);
+      AssertTrue(Cut.T.Length = 1);
+      AssertTrue(Cut.T[0] = 0);
+    end;
+end;
+
+procedure TWeightedDigraphTest.FindMinSTCutPr1;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  Cut: TGraph64.TStCut;
+  Value: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  AssertTrue(g.FindMinSTCutPr(0, 6, Value, Cut) = nsOk);
+  AssertTrue(Value = 40);
+  AssertTrue(Cut.S.Length + Cut.T.Length = g.VertexCount);
+  if Cut.S.Length = 1 then
+    begin
+      AssertTrue(Cut.T.Length.ToString, Cut.T.Length = 6);
+      AssertTrue(Cut.S[0] = 0);
+    end
+  else
+    begin
+      AssertTrue(Cut.S.Length = 6);
+      AssertTrue(Cut.T.Length = 1);
+      AssertTrue(Cut.T[0] = 0);
+    end;
+end;
+
+procedure TWeightedDigraphTest.FindMinSTCutD;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  Cut: TGraph64.TStCut;
+  Value: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr3;
+  g := Ref;
+  AssertTrue(g.FindMinSTCutD(0, 12, Value, Cut) = nsOk);
+  AssertTrue(Value = 5);
+  AssertTrue(Cut.S.Length + Cut.T.Length = g.VertexCount);
+  if Cut.S.Length = 1 then
+    begin
+      AssertTrue(Cut.T.Length = 12);
+      AssertTrue(Cut.S[0] = 0);
+    end
+  else
+    begin
+      AssertTrue(Cut.S.Length = 11);
+      AssertTrue(Cut.T.Length = 1);
+      AssertTrue(Cut.T[0] = 0);
+    end;
+end;
+
+procedure TWeightedDigraphTest.FindMinSTCutD1;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  Cut: TGraph64.TStCut;
+  Value: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  AssertTrue(g.FindMinSTCutD(0, 6, Value, Cut) = nsOk);
+  AssertTrue(Value = 40);
+  AssertTrue(Cut.S.Length + Cut.T.Length = g.VertexCount);
+  if Cut.S.Length = 1 then
+    begin
+      AssertTrue(Cut.T.Length.ToString, Cut.T.Length = 6);
+      AssertTrue(Cut.S[0] = 0);
+    end
+  else
+    begin
+      AssertTrue(Cut.S.Length = 6);
+      AssertTrue(Cut.T.Length = 1);
+      AssertTrue(Cut.T[0] = 0);
+    end;
+end;
+
+procedure TWeightedDigraphTest.FindMinCostFlowSsp;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  Flow: Int64;
+  Cost: TCost;
+  CostFunc: TCostEdgeArray;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(0);
+  g.AddVertex(1);
+  Flow := -2;
+  AssertTrue(g.FindMinCostFlowSsp(0, 1, nil, Flow, Cost) = mcfNoFlowRequired);
+  Flow := 2;
+  AssertTrue(g.FindMinCostFlowSsp(0, 1, nil, Flow, Cost) = mcfInvalidNet);
+  g.AddEdge(0, 1, TInt64Weight.Create(4));
+  Flow := 2;
+  AssertTrue(g.FindMinCostFlowSsp(0, 1, nil, Flow, Cost) = mcfInvalidCost);
+  g.AddVertex(2);
+  g.AddVertex(3);
+  g.AddEdge(1, 2, TInt64Weight.Create(4));
+  g.AddEdge(2, 1, TInt64Weight.Create(4));
+  g.AddEdge(2, 3, TInt64Weight.Create(4));
+  CostFunc :=
+    [TCostEdge.Create(0, 1, 3), TCostEdge.Create(1, 2, -7), TCostEdge.Create(2, 1, -8), TCostEdge.Create(2, 3, 3)];
+  Flow := 4;
+  AssertTrue(g.FindMinCostFlowSsp(0, 3, CostFunc, Flow, Cost) = mcfNegCycle);
+end;
+
+procedure TWeightedDigraphTest.FindMinCostFlowSsp1;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  CostFunc: TCostEdgeArray;
+  Flows: TGraph64.TEdgeArray;
+  Flow: Int64;
+  Cost: TCost;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr3;
+  g := Ref;
+  CostFunc := GenerateCostFun3;
+  Flow := 1000;
+  AssertTrue(g.FindMinCostFlowSsp(0, 12, CostFunc, Flow, Cost, Flows) = mcfOk);
+  AssertTrue(Flow = 5);
+  AssertTrue(Cost = 11);
+  AssertTrue(g.IsMcfFeasible(0, 12, CostFunc, Flows, Flow, Cost));
+end;
+
+procedure TWeightedDigraphTest.FindMinCostFlowSsp2;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  CostFunc: TCostEdgeArray;
+  Flows: TGraph64.TEdgeArray;
+  Flow: Int64;
+  Cost: TCost;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  CostFunc := GenerateCostFun4;
+  Flow := 1000;
+  AssertTrue(g.FindMinCostFlowSsp(0, 6, CostFunc, Flow, Cost, Flows) = mcfOk);
+  AssertTrue(Flow = 40);
+  AssertTrue(Cost = 1296);
+  AssertTrue(g.IsMcfFeasible(0, 6, CostFunc, Flows, Flow, Cost));
+end;
+
+procedure TWeightedDigraphTest.FindMinCostFlowSsp3;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  CostFunc: TCostEdgeArray;
+  Flows: TGraph64.TEdgeArray;
+  Flow: Int64;
+  Cost: TCost;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  CostFunc := GenerateCostFun4;
+  Flow := 20;
+  AssertTrue(g.FindMinCostFlowSsp(0, 6, CostFunc, Flow, Cost, Flows) = mcfOk);
+  AssertTrue(Flow = 20);
+  AssertTrue(Cost = 474);
+  AssertTrue(g.IsMcfFeasible(0, 6, CostFunc, Flows, Flow, Cost));
+end;
+
+procedure TWeightedDigraphTest.FindMinCostFlowCs;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  Flow: Int64;
+  Cost: TCost;
+  CostFunc: TCostEdgeArray;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(0);
+  g.AddVertex(1);
+  Flow := -2;
+  AssertTrue(g.FindMinCostFlowCs(0, 1, nil, Flow, Cost) = mcfNoFlowRequired);
+  Flow := 2;
+  AssertTrue(g.FindMinCostFlowCs(0, 1, nil, Flow, Cost) = mcfInvalidNet);
+  g.AddEdge(0, 1, TInt64Weight.Create(4));
+  Flow := 2;
+  AssertTrue(g.FindMinCostFlowCs(0, 1, nil, Flow, Cost) = mcfInvalidCost);
+  g.AddVertex(2);
+  g.AddVertex(3);
+  g.AddEdge(1, 2, TInt64Weight.Create(4));
+  g.AddEdge(2, 1, TInt64Weight.Create(4));
+  g.AddEdge(2, 3, TInt64Weight.Create(4));
+  CostFunc :=
+    [TCostEdge.Create(0, 1, 3), TCostEdge.Create(1, 2, -7), TCostEdge.Create(2, 1, -8), TCostEdge.Create(2, 3, 3)];
+  Flow := 4;
+  AssertTrue(g.FindMinCostFlowCs(0, 3, CostFunc, Flow, Cost) = mcfNegCycle);
+end;
+
+procedure TWeightedDigraphTest.FindMinCostFlowCs1;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  CostFunc: TCostEdgeArray;
+  Flows: TGraph64.TEdgeArray;
+  Flow: Int64;
+  Cost: TCost;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr3;
+  g := Ref;
+  CostFunc := GenerateCostFun3;
+  Flow := 1000;
+  AssertTrue(g.FindMinCostFlowCs(0, 12, CostFunc, Flow, Cost, Flows) = mcfOk);
+  AssertTrue(Flow = 5);
+  AssertTrue(Cost = 11);
+  AssertTrue(g.IsMcfFeasible(0, 12, CostFunc, Flows, Flow, Cost));
+end;
+
+procedure TWeightedDigraphTest.FindMinCostFlowCs2;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  CostFunc: TCostEdgeArray;
+  Flows: TGraph64.TEdgeArray;
+  Flow: Int64;
+  Cost: TCost;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  CostFunc := GenerateCostFun4;
+  Flow := 1000;
+  AssertTrue(g.FindMinCostFlowCs(0, 6, CostFunc, Flow, Cost, Flows) = mcfOk);
+  AssertTrue(Flow = 40);
+  AssertTrue(Cost = 1296);
+  AssertTrue(g.IsMcfFeasible(0, 6, CostFunc, Flows, Flow, Cost));
+end;
+
+procedure TWeightedDigraphTest.FindMinCostFlowCs3;
+var
+  Ref: TRef64;
+  g: TGraph64;
+  CostFunc: TCostEdgeArray;
+  Flows: TGraph64.TEdgeArray;
+  Flow: Int64;
+  Cost: TCost;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr4;
+  g := Ref;
+  CostFunc := GenerateCostFun4;
+  Flow := 20;
+  AssertTrue(g.FindMinCostFlowCs(0, 6, CostFunc, Flow, Cost, Flows) = mcfOk);
+  AssertTrue(Flow = 20);
+  AssertTrue(Cost = 474);
+  AssertTrue(g.IsMcfFeasible(0, 6, CostFunc, Flows, Flow, Cost));
 end;
 
 
