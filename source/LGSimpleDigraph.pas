@@ -477,12 +477,12 @@ type
   matching utilities
 ***********************************************************************************************************}
 
-  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and minimum weight }
-    function FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
-  { returns False if graph is not bipartite, otherwise in aMatch returns the matching of
-    the maximum cardinality and maximum weight }
-    function FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
+  { returns True and the matching of the maximum cardinality and minimum weight
+    if graph is bipartite, otherwise returns False }
+    function FindMinWeightBipMatch(out aMatch: TEdgeArray): Boolean;
+  { returns True and the matching of the maximum cardinality and maximum weight
+    if graph is bipartite, otherwise returns False }
+    function FindMaxWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 {**********************************************************************************************************
   networks utilities treat the weight of the arc as its capacity
 ***********************************************************************************************************}
@@ -2824,24 +2824,24 @@ begin
   Result.AssignVertexList(Self, aVertexList);
 end;
 
-function TGIntWeightDiGraph.FindBipartiteMinWeightMatching(out aMatch: TEdgeArray): Boolean;
+function TGIntWeightDiGraph.FindMinWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 var
   w, g: TIntArray;
 begin
-  if not IsBipartite(w, g) then
-    exit(False);
-  aMatch := TWeightHelper.MinBipMatch(Self, w, g);
-  Result := True;
+  aMatch := nil;
+  Result := IsBipartite(w, g);
+  if Result then
+    aMatch := TWeightHelper.MinBipMatch(Self, w, g);
 end;
 
-function TGIntWeightDiGraph.FindBipartiteMaxWeightMatching(out aMatch: TEdgeArray): Boolean;
+function TGIntWeightDiGraph.FindMaxWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 var
   w, g: TIntArray;
 begin
-  if not IsBipartite(w, g) then
-    exit(False);
-  aMatch := TWeightHelper.MaxBipMatch(Self, w, g);
-  Result := True;
+  aMatch := nil;
+  Result := IsBipartite(w, g);
+  if Result then
+    aMatch := TWeightHelper.MaxBipMatch(Self, w, g);
 end;
 
 function TGIntWeightDiGraph.GetNetworkState(constref aSource, aSink: TVertex): TNetworkState;
