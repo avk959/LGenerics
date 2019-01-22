@@ -429,7 +429,7 @@ var
   I, J: SizeInt;
   CurrArc: PArc;
 begin
-  System.SetLength(Result, Pred(System.Length(FArcs)) div 2);
+  System.SetLength(Result{%H-}, Pred(System.Length(FArcs)) div 2);
   J := 0;
   for I := 0 to Pred(FNodeCount) do
     begin
@@ -617,9 +617,9 @@ begin
   Execute;
   FLevels := nil;
   Result := FSink^.Excess;
-  System.SetLength(s, ARRAY_INITIAL_SIZE);
+  System.SetLength(s{%H-}, ARRAY_INITIAL_SIZE);
   J := 0;
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     if FNodes[I].Distance = FNodeCount then
       begin
         if System.Length(s) = J then
@@ -684,7 +684,7 @@ var
   Cap: TWeight;
 begin
   FNodeCount := aGraph.VertexCount;
-  System.SetLength(CurrArcIdx, FNodeCount);
+  System.SetLength(CurrArcIdx{%H-}, FNodeCount);
   J := 0;
   for I := 0 to System.High(CurrArcIdx) do
     begin
@@ -815,7 +815,7 @@ var
   I, J: SizeInt;
   CurrArc: PArc;
 begin
-  System.SetLength(Result, aGraph.EdgeCount);
+  System.SetLength(Result{%H-}, aGraph.EdgeCount);
   J := 0;
   for I := 0 to Pred(FNodeCount) do
     begin
@@ -855,9 +855,9 @@ var
 begin
   CreateResidualNet(aGraph, aSource, aSink);
   Result := Execute;
-  System.SetLength(s, ARRAY_INITIAL_SIZE);
+  System.SetLength(s{%H-}, ARRAY_INITIAL_SIZE);
   J := 0;
-  for I := 0 to System.High(FNodes) do
+  for I := 0 to Pred(FNodeCount) do
     if FNodes[I].Distance <> NULL_INDEX then
       begin
         if System.Length(s) = J then
