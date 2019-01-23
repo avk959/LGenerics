@@ -1971,7 +1971,7 @@ begin
   AssertTrue(Cut.S.Length + Cut.T.Length = g.VertexCount);
   if Cut.S.Length = 1 then
     begin
-      AssertTrue(Cut.T.Length.ToString, Cut.T.Length = 6);
+      AssertTrue(Cut.T.Length = 6);
       AssertTrue(Cut.S[0] = 0);
     end
   else
@@ -2021,7 +2021,7 @@ begin
   AssertTrue(Cut.S.Length + Cut.T.Length = g.VertexCount);
   if Cut.S.Length = 1 then
     begin
-      AssertTrue(Cut.T.Length.ToString, Cut.T.Length = 6);
+      AssertTrue(Cut.T.Length = 6);
       AssertTrue(Cut.S[0] = 0);
     end
   else

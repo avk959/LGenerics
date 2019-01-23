@@ -364,17 +364,17 @@ begin
   m.Instance.Clear;
   AssertTrue(m.Instance.Count = 0);
   for I := 1 to 100 do
-    m.Instance[(I * 23).ToString] := I * 47;
+    m.Instance[IntToStr(I * 23)] := I * 47;
   AssertTrue(m.Instance.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 47);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 47);
   for I := 1 to 100 do
-    m.Instance[(I * 23).ToString] := I * 53;
+    m.Instance[IntToStr(I * 23)] := I * 53;
   AssertTrue(m.Instance.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 53);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 53);
   try
     I := m.Instance['22'];
   except
@@ -390,7 +390,7 @@ begin
   AssertTrue(m.Instance.GetValueDef('17') = 0);
   AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
   for I := 1 to 100 do
-    m.Instance.Remove((I * 23).ToString);
+    m.Instance.Remove(IntToStr(I * 23));
   AssertTrue(m.Instance.Count = 0);
 end;
 
@@ -727,17 +727,17 @@ begin
   m.Instance.Clear;
   AssertTrue(m.Instance.Count = 0);
   for I := 1 to 100 do
-    m.Instance[(I * 23).ToString] := I * 47;
+    m.Instance[IntToStr(I * 23)] := I * 47;
   AssertTrue(m.Instance.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 47);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 47);
   for I := 1 to 100 do
-    m.Instance[(I * 23).ToString] := I * 53;
+    m.Instance[IntToStr(I * 23)] := I * 53;
   AssertTrue(m.Instance.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 53);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 53);
   try
     I := m.Instance['22'];
   except
@@ -753,7 +753,7 @@ begin
   AssertTrue(m.Instance.GetValueDef('17') = 0);
   AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
   for I := 1 to 100 do
-    m.Instance.Remove((I * 23).ToString);
+    m.Instance.Remove(IntToStr(I * 23));
   AssertTrue(m.Instance.Count = 0);
 end;
 
@@ -1060,17 +1060,17 @@ begin
   m.Instance.Clear;
   AssertTrue(m.Instance.Count = 0);
   for I := 1 to 100 do
-    m.Instance[(I * 23).ToString] := I * 47;
+    m.Instance[IntToStr(I * 23)] := I * 47;
   AssertTrue(m.Instance.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 47);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 47);
   for I := 1 to 100 do
-    m.Instance[(I * 23).ToString] := I * 53;
+    m.Instance[IntToStr(I * 23)] := I * 53;
   AssertTrue(m.Instance.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 53);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 53);
   try
     I := m.Instance['22'];
   except
@@ -1086,7 +1086,7 @@ begin
   AssertTrue(m.Instance.GetValueDef('17') = 0);
   AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
   for I := 1 to 100 do
-    m.Instance.Remove((I * 23).ToString);
+    m.Instance.Remove(IntToStr(I * 23));
   AssertTrue(m.Instance.Count = 0);
 end;
 
@@ -1423,17 +1423,17 @@ begin
   m.Instance.Clear;
   AssertTrue(m.Instance.Count = 0);
   for I := 1 to 100 do
-    m.Instance[(I * 23).ToString] := I * 47;
+    m.Instance[IntToStr(I * 23)] := I * 47;
   AssertTrue(m.Instance.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 47);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 47);
   for I := 1 to 100 do
-    m.Instance[(I * 23).ToString] := I * 53;
+    m.Instance[IntToStr(I * 23)] := I * 53;
   AssertTrue(m.Instance.Count = 100);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 53);
   for I := 1 to 100 do
-    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+    AssertTrue(m.Instance[IntToStr(I * 23)] = I * 53);
   try
     I := m.Instance['22'];
   except
@@ -1449,7 +1449,7 @@ begin
   AssertTrue(m.Instance.GetValueDef('17') = 0);
   AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
   for I := 1 to 100 do
-    m.Instance.Remove((I * 23).ToString);
+    m.Instance.Remove(IntToStr(I * 23));
   AssertTrue(m.Instance.Count = 0);
 end;
 
