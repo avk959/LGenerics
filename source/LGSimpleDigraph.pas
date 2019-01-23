@@ -1765,9 +1765,11 @@ begin
   {%H-}aCycles.Clear;
   if VertexCount < 2 then
     exit(False);
-  for I := 0 to Pred(VertexCount) do
-    if (FNodeList[I].Tag = 0) or FNodeList[I].AdjList.IsEmpty then
-      exit(False);
+  if not IsStrongConnected then
+    exit(False);
+  //for I := 0 to Pred(VertexCount) do
+  //  if (FNodeList[I].Tag = 0) or FNodeList[I].AdjList.IsEmpty then
+  //    exit(False);
   Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles);
 end;
 
