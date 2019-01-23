@@ -1047,7 +1047,7 @@ begin
   FSource^.Parent := nil;
   Result := FSink^.Parent <> nil;
 end;
-
+{$PUSH}{$MACRO ON}
 function TGIntWeightDiGraph.TSspMcfHelper.FindAugmentPath: Boolean;
 var
   Node, NextNode: PNode;
@@ -1055,6 +1055,11 @@ var
   I: SizeInt;
   Item: TCostItem;
   NodePrice, RelaxPrice: TCost;
+{$DEFINE UpdateNextNode :=
+  NextNode^.PathMinCap := wMin(Node^.PathMinCap, Arc^.ResCap);
+  NextNode^.Parent := Node;
+  NextNode^.PathArc := Arc
+}
 begin
   FInQueue.ClearBits;
   FReached.ClearBits;
@@ -1081,18 +1086,14 @@ begin
                 RelaxPrice := NodePrice + Arc^.Cost - NextNode^.Price;
                 if not FInQueue[I] then
                   begin
-                    NextNode^.PathMinCap := wMin(Node^.PathMinCap, Arc^.ResCap);
-                    NextNode^.Parent := Node;
-                    NextNode^.PathArc := Arc;
+                    UpdateNextNode;
                     FQueue.Enqueue(I, TCostItem.Create(I, RelaxPrice));
                     FInQueue[I] := True;
                   end
                 else
                   if RelaxPrice < FQueue.HeadPtr(I)^.Cost then
                     begin
-                      NextNode^.PathMinCap := wMin(Node^.PathMinCap, Arc^.ResCap);
-                      NextNode^.Parent := Node;
-                      NextNode^.PathArc := Arc;
+                      UpdateNextNode;
                       FQueue.Update(I, TCostItem.Create(I, RelaxPrice));
                     end;
               end;
@@ -1105,8 +1106,9 @@ begin
   if Result then
     for I in FReached do
       FNodes[I].Price -= Item.Cost;
+{$UNDEF UpdateNextNode}
 end;
-
+{$POP}
 function TGIntWeightDiGraph.TSspMcfHelper.PushFlow(aRestFlow: TWeight): TWeight;
 var
   Node: PNode;
