@@ -126,8 +126,8 @@ end;
 
 procedure TfrmMain.btFuturesClick(Sender: TObject);
 type
-  TFunc   = specialize TGAsyncFunc<TDWordArray, Boolean>;
-  TFuture = specialize TGFuture<Boolean>;
+  TMonadic = specialize TGAsyncMonadic<TDWordArray, Boolean>;
+  TFuture  = specialize TGFuture<Boolean>;
 var
   Futures: array[1..PieceCount]of TFuture;
   Data: TTestData;
@@ -139,9 +139,9 @@ begin
   FTimer.Start;
   ////////////////////
   for I := 1 to PieceCount do
-    Futures[I] := TFunc.Call(@Sort, Data[I]);
+    Futures[I] := TMonadic.Call(@Sort, Data[I]);
   for I := 1 to PieceCount do
-    Futures[I].GetValue.OrElse(True);
+    Futures[I].OptValue.OrElse(True);
   //////////////////
   FTimer.Stop;
   Elapsed := FTimer.Elapsed;
@@ -195,29 +195,29 @@ end;
 
 procedure TfrmMain.btFutures1Click(Sender: TObject);
 type
-  TFunc   = specialize TGAsync3AFunc<TDWordArray, Integer, Integer, Integer>;
-  TFuture = specialize TGFuture<Integer>;
+  TTriadic = specialize TGAsyncTriadic<TDWordArray, Integer, Integer, Integer>;
+  TFuture    = specialize TGFuture<Integer>;
 var
   p1, p2, p3, p4, p5, p6:  TFuture;
   Data: TDWordArray;
   Elapsed: Extended;
   ChankSize: Integer;
 begin
-  TTaskExecutor.EnsureThreadCount(4);
+  TDefaultExecutor.EnsureThreadCount(4);
   Data := CreateBigArray;
   ChankSize := Length(Data) div 4;
   FTimer.Clear;
   FTimer.Start;
   ////////////////////////////////////////////////////////////////
-  p1 := TFunc.Call(@SortLeft, Data, 0, Pred(ChankSize));
-  p2 := TFunc.Call(@SortRight, Data, ChankSize, Pred(ChankSize*2));
-  p3 := TFunc.Call(@SortLeft, Data, ChankSize*2, Pred(ChankSize*3));
-  p4 := TFunc.Call(@SortRight, Data, ChankSize*3, High(Data));
+  p1 := TTriadic.Call(@SortLeft, Data, 0, Pred(ChankSize));
+  p2 := TTriadic.Call(@SortRight, Data, ChankSize, Pred(ChankSize*2));
+  p3 := TTriadic.Call(@SortLeft, Data, ChankSize*2, Pred(ChankSize*3));
+  p4 := TTriadic.Call(@SortRight, Data, ChankSize*3, High(Data));
 
-  p5 := TFunc.Call(@MergeSortLeft, Data, p1.Value, p2.Value);
-  p6 := TFunc.Call(@MergeSortRight, Data, p3.Value, p4.Value);
+  p5 := TTriadic.Call(@MergeSortLeft, Data, p1.Value, p2.Value);
+  p6 := TTriadic.Call(@MergeSortRight, Data, p3.Value, p4.Value);
 
-  TFunc.Call(@MergeSortLeft, Data, p5.Value, p6.Value).Value;
+  TTriadic.Call(@MergeSortLeft, Data, p5.Value, p6.Value).Value;
   ////////////////////////////////////////////////////////////////
   FTimer.Stop;
   Elapsed := FTimer.Elapsed;
