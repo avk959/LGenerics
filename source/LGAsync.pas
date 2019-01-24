@@ -509,6 +509,7 @@ end;
 
 class operator TGFuture.Finalize(var f: TGFuture);
 begin
+  f.Cancel;
   f.WaitFor;
 end;
 
@@ -523,13 +524,18 @@ end;
 
 function TGFuture.Cancel: Boolean;
 begin
-  FTask.Cancel;
-  Result := FTask.State = tsCancelled;
-  if Result then
+  if Assigned(FTask) and (FState = fsPending) then
     begin
-      FState := fsCancelled;
-      FTask := nil;
-    end;
+      FTask.Cancel;
+      Result := FTask.State = tsCancelled;
+      if Result then
+        begin
+          FState := fsCancelled;
+          FTask := nil;
+        end;
+    end
+  else
+    Result := False;
 end;
 
 function TGFuture.Value: T;
