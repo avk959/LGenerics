@@ -148,7 +148,7 @@ type
     function  GetMinCut(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
   end;
 
-  { TSspMcfHelper: Busacker-Gowen successive shortest path minimum-cost flow algorithm with
+  { TSspMcfHelper: Busacker-Gowen's successive shortest path minimum-cost flow algorithm with
     potentials; Syslo, Deo, Kowalik "Discrete Optimization Algorithms: With Pascal Programs" }
   TSspMcfHelper = record
   strict private

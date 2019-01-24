@@ -547,7 +547,7 @@ type
     param aCosts specifies arc cost function, negative costs allows;
     returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
     no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
-    total flow cost in aTotalCost }
+    total flow cost in aTotalCost; used Busacker-Gowen's algorithm }
     function FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
              var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState; inline;
     function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
