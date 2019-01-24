@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Miscellaneous classes and utils.                                        *
 *                                                                           *
-*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -39,9 +39,9 @@ uses
 
 type
 
-  { TGCustomTimSort: base ancestor class;
+  { TGTimSortAnc: base ancestor class;
     Free Pascal port of java timsort implementation }
-  generic TGCustomTimSort<T> = class
+  generic TGTimSortAnc<T> = class
   public
   type
     TItem      = T;
@@ -88,7 +88,7 @@ type
   { TGTimSortBase
       functor TCmpRel (comparision relation) must provide:
         class function Compare([const[ref]] L, R: T): SizeInt }
-  generic TGTimSortBase<T, TCmpRel> = class(specialize TGCustomTimSort<T>)
+  generic TGTimSortBase<T, TCmpRel> = class(specialize TGTimSortAnc<T>)
   protected
   type
     TTimSort = object(TTimSortBase)
@@ -124,7 +124,7 @@ type
   generic TGTimSort<T> = class(specialize TGTimSortBase<T, T>);
 
   { TGComparableTimSort assumes that type T has defined comparision operators }
-  generic TGComparableTimSort<T> = class(specialize TGCustomTimSort<T>)
+  generic TGComparableTimSort<T> = class(specialize TGTimSortAnc<T>)
   protected
   type
     TTimSort = object(TTimSortBase)
@@ -157,7 +157,7 @@ type
   end;
 
   { TGRegularTimSort: TimSort with regular comparator }
-  generic TGRegularTimSort<T> = class(specialize TGCustomTimSort<T>)
+  generic TGRegularTimSort<T> = class(specialize TGTimSortAnc<T>)
   public
   type
     TCompare = specialize TGCompare<T>;
@@ -196,7 +196,7 @@ type
   end;
 
   { TGDelegatedTimSort: TimSort with delegated comparator }
-  generic TGDelegatedTimSort<T> = class(specialize TGCustomTimSort<T>)
+  generic TGDelegatedTimSort<T> = class(specialize TGTimSortAnc<T>)
   public
   type
     TOnCompare = specialize TGOnCompare<T>;
@@ -235,7 +235,7 @@ type
   end;
 
   { TGNestedTimSort: TimSort with nested comparator }
-  generic TGNestedTimSort<T> = class(specialize TGCustomTimSort<T>)
+  generic TGNestedTimSort<T> = class(specialize TGTimSortAnc<T>)
   public
   type
     TNestCompare = specialize TGNestCompare<T>;
@@ -525,9 +525,9 @@ begin
   Result := System.Copy(Options, 0, System.Length(Options)) ;
 end;
 
-{ TGCustomTimSort.TTimSortBase }
+{ TGTimSortAnc.TTimSortBase }
 
-procedure TGCustomTimSort.TTimSortBase.PushRun(aBase, aCount: SizeInt);
+procedure TGTimSortAnc.TTimSortBase.PushRun(aBase, aCount: SizeInt);
 var
   I: SizeInt;
 begin
@@ -539,14 +539,14 @@ begin
   FStack[I].Count := aCount;
 end;
 
-function TGCustomTimSort.TTimSortBase.EnsureBufferSize(aSize: SizeInt): PItem;
+function TGTimSortAnc.TTimSortBase.EnsureBufferSize(aSize: SizeInt): PItem;
 begin
   if aSize > System.Length(FBuffer) then
     System.SetLength(FBuffer, LGUtils.RoundUpTwoPower(aSize));
   Result := Pointer(FBuffer);
 end;
 
-procedure TGCustomTimSort.TTimSortBase.Init(A: PItem);
+procedure TGTimSortAnc.TTimSortBase.Init(A: PItem);
 begin
   FData := A;
   FStackSize := 0;
@@ -557,7 +557,7 @@ begin
     System.SetLength(FStack, MERGE_STACK_INIT_SIZE);
 end;
 
-procedure TGCustomTimSort.TTimSortBase.Swap(Base1, Len1, Base2, Len2: SizeInt);
+procedure TGTimSortAnc.TTimSortBase.Swap(Base1, Len1, Base2, Len2: SizeInt);
 var
   LocB: PItem;
 begin
@@ -577,7 +577,7 @@ begin
     end;
 end;
 
-class function TGCustomTimSort.TTimSortBase.MinRunLen(aTotalSize: SizeInt): SizeInt;
+class function TGTimSortAnc.TTimSortBase.MinRunLen(aTotalSize: SizeInt): SizeInt;
 var
   s: SizeInt;
 begin
@@ -591,7 +591,7 @@ begin
     Result := aTotalSize;
 end;
 
-class procedure TGCustomTimSort.TTimSortBase.DoReverse(p: PItem; R: SizeInt);
+class procedure TGTimSortAnc.TTimSortBase.DoReverse(p: PItem; R: SizeInt);
 var
   v0, v1, v2, v3: TFake;
   L: SizeInt;

@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Generic simple directed graph implementation.                           *
 *                                                                           *
-*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -1759,7 +1759,7 @@ function TGSimpleDiGraph.FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aC
   aTimeOut: Integer): Boolean;
 var
   Helper: THamiltonian;
-  I: SizeInt;
+  //I: SizeInt;
 begin
   CheckIndexRange(aSourceIdx);
   {%H-}aCycles.Clear;
