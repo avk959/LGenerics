@@ -3,7 +3,7 @@
 *   This file is part of the LGenerics package.                             *
 *   Brief and dirty futures implementation.                                 *
 *                                                                           *
-*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -37,43 +37,51 @@ uses
   Classes,
   SysUtils,
   LGUtils,
-  LGDeque,
+  LGQueue,
   LGVector,
   LGFunction,
   LGStrConst;
 
 type
 
-  TAbstractAsyncTask = class abstract
+  { TAsyncTask }
+
+  TAsyncTask = class abstract
+  public
+  type
+    TTaskState = (tsPending, tsExecuting, tsFinished, tsCancelled);
+
   strict private
+    FAwait: PRtlEvent;
     FException: Exception;
-    FExecAwait: PRtlEvent;
-    FCancelled: Boolean;
-    FStarted: Boolean;
-  private
-    procedure Cancel; inline;
-    function  GetCancelled: Boolean; inline;
-    function  GetStarted: Boolean; inline;
+    FState: TTaskState;
   strict protected
     procedure DoExecute; virtual; abstract;
   public
     destructor Destroy; override;
     procedure AfterConstruction; override;
+    procedure Cancel;
     procedure Execute;
     procedure WaitFor;
-    property  Started: Boolean read GetStarted;
-    property  Cancelled: Boolean read GetCancelled;
     property  FatalException: Exception read FException;
+    property  State: TTaskState read FState;
   end;
 
-  generic TGAsyncTask<T> = class abstract(TAbstractAsyncTask)
+  generic TGAsyncTask<T> = class abstract(TAsyncTask)
   strict protected
     FResult: T; //To be setted inside overriden DoExecute
   public
     property Result: T read FResult;
   end;
 
-  TFutureState = (fsPending, fsCancelled, fsResolveError, fsResolved);
+{$PUSH}{$INTERFACES CORBA}
+  IExecutor = interface
+  ['{49381C21-82D6-456E-93A2-B8E0DC4B34BA}']
+    procedure EnqueueTask(aTask: TAsyncTask);
+  end;
+{$POP}
+
+  TFutureState = (fsPending, fsExecuting, fsFinished, fsResolved, fsFatal, fsCancelled);
 
   { TGFuture: takes over the management of the inner async task }
   generic TGFuture<T> = record
@@ -91,16 +99,17 @@ type
     FState: TFutureState;
     procedure Resolve;
   private
-    procedure Start(aTask: TTask);  inline;
-    class operator Finalize(var f: TGFuture); inline;
+    function GetState: TFutureState;
+    procedure Start(aTask: TTask; aEx: IExecutor);
+    class operator Finalize(var f: TGFuture);
   public
-    function  WaitFor: TFutureState; inline;
+    function  WaitFor: TFutureState;
   { may be impossible, if task already started }
     function  Cancel: Boolean;
-  { will raise exception if resolving failed }
+  { raises exception if resolving failed }
     function  Value: T;
-    function  GetValue: TOptional; inline;
-    property  State: TFutureState read FState;
+    function  OptValue: TOptional;
+    property  State: TFutureState read GetState;
   end;
 
   { TGAsyncProc incapsulates method without arguments(which returns void), True indicates execution success }
@@ -115,7 +124,7 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aProc: TProcedure): TFuture; static;
+    class function Call(aProc: TProcedure; aEx: IExecutor = nil): TFuture; static;
     constructor Create(aProc: TProcedure);
   end;
 
@@ -130,12 +139,12 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aTask: IExecutable): TFuture; static;
+    class function Run(aTask: IExecutable; aEx: IExecutor = nil): TFuture; static;
     constructor Create(aTask: IExecutable);
   end;
 
-  { TGAsyncCollable incapsulates IGCallable}
-  generic TGAsyncCollable<T> = class(specialize TGAsyncTask<T>)
+  { TGAsyncCallable incapsulates IGCallable}
+  generic TGAsyncCallable<T> = class(specialize TGAsyncTask<T>)
   public
   type
     ICallable = specialize IGCallable<T>;
@@ -146,7 +155,7 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aTask: ICallable): TFuture; static;
+    class function Run(aTask: ICallable; aEx: IExecutor = nil): TFuture; static;
     constructor Create(aTask: ICallable);
   end;
 
@@ -162,12 +171,12 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction): TFuture; static;
+    class function Call(aFunc: TFunction; aEx: IExecutor = nil): TFuture; static;
     constructor Create(aFunc: TFunction);
   end;
 
-  { TGAsyncNestedFunc incapsulates nested niladic function (without arguments) }
-  generic TGAsyncNestedFunc<T> = class(specialize TGAsyncTask<T>)
+  { TGAsyncNested incapsulates nested niladic function (without arguments) }
+  generic TGAsyncNested<T> = class(specialize TGAsyncTask<T>)
   public
   type
     TFunction = function: T is nested;
@@ -178,12 +187,12 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction): TFuture; static;
+    class function Call(aFunc: TFunction; aEx: IExecutor = nil): TFuture; static;
     constructor Create(aFunc: TFunction);
   end;
 
-  { TGAsyncNAFunc incapsulates regular niladic function (without arguments) }
-  generic TGAsyncNAFunc<T> = class(specialize TGAsyncTask<T>)
+  { TGAsyncNiladic incapsulates regular niladic function (without arguments) }
+  generic TGAsyncNiladic<T> = class(specialize TGAsyncTask<T>)
   strict protected
   public
   type
@@ -195,19 +204,19 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction): TFuture; static;
+    class function Call(aFunc: TFunction; aEx: IExecutor = nil): TFuture; static;
     constructor Create(aFunc: TFunction);
   end;
 
-  { TGAsyncFunc incapsulates regular monadic function (with one argument) }
-  generic TGAsyncFunc<T, TResult> = class(specialize TGAsyncTask<TResult>)
+  { TGAsyncMonadic incapsulates regular monadic function (with one argument) }
+  generic TGAsyncMonadic<T, TResult> = class(specialize TGAsyncTask<TResult>)
   strict protected
   type
-    TCall = specialize TGDefferedCall<T, TResult>;
+    TCall = specialize TGDeferMonadic<T, TResult>;
 
   public
   type
-    TFunction = TCall.TFunction;
+    TFunction = TCall.TFun;
     TFuture   = specialize TGFuture<TResult>;
 
   strict private
@@ -215,19 +224,19 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; constref v: T): TFuture; static;
+    class function Call(aFunc: TFunction; constref v: T; e: IExecutor = nil): TFuture; static;
     constructor Create(aFunc: TFunction; constref v: T);
   end;
 
-  { TGAsync2AFunc incapsulates regular dyadic function (with two arguments) }
-  generic TGAsync2AFunc<T1, T2, TResult> = class(specialize TGAsyncTask<TResult>)
+  { TGAsyncDyadic incapsulates regular dyadic function (with two arguments) }
+  generic TGAsyncDyadic<T1, T2, TResult> = class(specialize TGAsyncTask<TResult>)
   strict protected
   type
-    TCall = specialize TGDefferedCall2A<T1, T2, TResult>;
+    TCall = specialize TGDeferDyadic<T1, T2, TResult>;
 
   public
   type
-    TFunction = TCall.TFunction;
+    TFunction = TCall.TFun;
     TFuture   = specialize TGFuture<TResult>;
 
   strict private
@@ -235,19 +244,19 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; constref v1: T1; constref v2: T2): TFuture; static;
+    class function Call(aFunc: TFunction; constref v1: T1; constref v2: T2; e: IExecutor = nil): TFuture; static;
     constructor Create(aFunc: TFunction; constref v1: T1; constref v2: T2);
   end;
 
-  { TGAsync3AFunc incapsulates regular triadic function (with three arguments) }
-  generic TGAsync3AFunc<T1, T2, T3, TResult> = class(specialize TGAsyncTask<TResult>)
+  { TGAsyncTriadic incapsulates regular triadic function (with three arguments) }
+  generic TGAsyncTriadic<T1, T2, T3, TResult> = class(specialize TGAsyncTask<TResult>)
   strict protected
   type
-    TCall = specialize TGDefferedCall3A<T1, T2, T3, TResult>;
+    TCall = specialize TGDeferTriadic<T1, T2, T3, TResult>;
 
   public
   type
-    TFunction = TCall.TFunction;
+    TFunction = TCall.TFun;
     TFuture   = specialize TGFuture<TResult>;
 
   strict private
@@ -255,21 +264,22 @@ type
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3): TFuture; static;
+    class function Call(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3;
+                        e: IExecutor = nil): TFuture; static;
     constructor Create(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3);
   end;
 
-  { TTaskExecutor executes futures in its own thread pool.
+  { TDefaultExecutor executes futures in its own thread pool.
     Enqueue procedure is threadsafe, so futures may use other futures.
     Resizing of thread pool is not threadsafe, so MUST be done from main thread. }
-  TTaskExecutor = class
+  TDefaultExecutor = class(TObject, IExecutor)
   protected
   type
 
     TTaskQueue = class
     strict private
     type
-      TQueue = specialize TGLiteDeque<TAbstractAsyncTask>;
+      TQueue = specialize TGLiteQueue<TAsyncTask>;
 
     var
       FQueue: TQueue;
@@ -287,9 +297,8 @@ type
       procedure Clear;
       procedure Close;
       procedure Open;
-      procedure Enqueue(aTask: TAbstractAsyncTask);
-      function  Dequeue(out aTask: TAbstractAsyncTask): Boolean;
-      function  Cancel(aTask: TAbstractAsyncTask): Boolean;
+      procedure Enqueue(aTask: TAsyncTask);
+      function  Dequeue(out aTask: TAsyncTask): Boolean;
     end;
 
     TWorkThread = class(TThread)
@@ -309,24 +318,23 @@ type
     function  AddThread: TWorkThread;
     procedure PoolGrow(aValue: Integer);
     procedure PoolShrink(aValue: Integer);
-    procedure EnqueueTask(aTask: TAbstractAsyncTask); inline;
+    procedure EnqueueTask(aTask: TAsyncTask); inline;
     procedure TerminatePool;
     procedure FinalizePool; inline;
-    function  CancelTask(aTask: TAbstractAsyncTask): Boolean; inline;
     class constructor InitNil;
     class destructor  DoneQueue;
     class function    GetThreadCount: Integer; static; inline;
     class procedure   SetThreadCount(aValue: Integer); static; inline;
   class var
-    CFExecutor: TTaskExecutor; // CF -> Class Field
+    CFExecutor: TDefaultExecutor; // CF -> Class Field
 
   public
   const
     DEFAULT_THREAD_COUNT = 4;
 
     class procedure EnsureThreadCount(aValue: Integer); static;
-    class procedure Enqueue(aTask: TAbstractAsyncTask); static; inline;
-    class function  Cancel(aTask: TAbstractAsyncTask): Boolean; inline;
+    class procedure Enqueue(aTask: TAsyncTask); static; inline;
+    class function  Instance: IExecutor; static;
     constructor Create; overload;
     constructor Create(aThreadCount: Integer); overload;
     destructor  Destroy; override;
@@ -401,82 +409,68 @@ type
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TAbstractAsyncTask }
+{ TAsyncTask }
 
-procedure TAbstractAsyncTask.Cancel;
+procedure TAsyncTask.Cancel;
 begin
-  FCancelled := True;
+  if FState = tsPending then
+    FState := tsCancelled;
 end;
 
-function TAbstractAsyncTask.GetCancelled: Boolean;
+destructor TAsyncTask.Destroy;
 begin
-  WriteBarrier;
-  Result := FCancelled;
-end;
-
-function TAbstractAsyncTask.GetStarted: Boolean;
-begin
-  WriteBarrier;
-  Result := FStarted;
-end;
-
-destructor TAbstractAsyncTask.Destroy;
-begin
-  System.RtlEventDestroy(FExecAwait);
-  FExecAwait := nil;
+  System.RtlEventDestroy(FAwait);
+  FAwait := nil;
   inherited;
 end;
 
-procedure TAbstractAsyncTask.AfterConstruction;
+procedure TAsyncTask.AfterConstruction;
 begin
   inherited;
-  FExecAwait := System.RtlEventCreate;
+  FAwait := System.RtlEventCreate;
 end;
 
-procedure TAbstractAsyncTask.Execute;
+procedure TAsyncTask.Execute;
 begin
-  if not Cancelled then
+  if FState = tsPending then
     begin
-      FStarted := True;
+      FState := tsExecuting;
       try
         DoExecute;
       except
         on e: Exception do
-           FException := Exception(System.AcquireExceptionObject);
+          FException := Exception(System.AcquireExceptionObject);
       end;
+      FState := tsFinished;
     end;
-  System.RtlEventSetEvent(FExecAwait);
+  System.RtlEventSetEvent(FAwait);
 end;
 
-procedure TAbstractAsyncTask.WaitFor;
+procedure TAsyncTask.WaitFor;
 begin
-  if Cancelled then
-    exit;
-  System.RtlEventWaitFor(FExecAwait);
+  System.RtlEventWaitFor(FAwait);
 end;
 
 { TGFuture }
 
 procedure TGFuture.Resolve;
 var
-  e: Exception;
+  e: Exception = nil;
 begin
   if Assigned(FTask) then
     try
       FTask.WaitFor;
-      if not FTask.Cancelled then
+      if State <> fsCancelled then
         begin
           e := FTask.FatalException;
           if Assigned(e) then
-            FState := fsResolveError
+            FState := fsFatal
           else
             begin
               FState := fsResolved;
               FTaskResult := FTask.Result;
             end;
-        end
-      else
-        FState := fsCancelled;
+        end;
     finally
       FreeAndNil(FTask);
       if Assigned(e) then
@@ -484,11 +478,24 @@ begin
     end;
 end;
 
-procedure TGFuture.Start(aTask: TTask);
+function TGFuture.GetState: TFutureState;
+begin
+  if (FState < fsResolved) and Assigned(FTask) then
+    case FTask.State of
+      tsExecuting: FState := fsExecuting;
+      tsFinished:  FState := fsFinished;
+      tsCancelled: FState := fsCancelled;
+    end;
+  Result := FState;
+end;
+
+procedure TGFuture.Start(aTask: TTask; aEx: IExecutor);
 begin
   FTask := aTask;
   FState := fsPending;
-  TTaskExecutor.Enqueue(FTask);
+  if aEx = nil then
+    aEx := TDefaultExecutor.Instance;
+  aEx.EnqueueTask(FTask);
 end;
 
 class operator TGFuture.Finalize(var f: TGFuture);
@@ -498,36 +505,31 @@ end;
 
 function TGFuture.WaitFor: TFutureState;
 begin
-  try Resolve except end;
-  Result := State;
+  try
+    Resolve;
+  except
+  end;
+  Result := FState;
 end;
 
 function TGFuture.Cancel: Boolean;
 begin
-  if (State = fsPending) and not FTask.Started then
-    begin
-      Result := TTaskExecutor.Cancel(FTask);
-      if Result then
-        begin
-          FreeAndNil(FTask);
-          FState := fsCancelled;
-        end;
-    end
-  else
-    Result := False;
+  FTask.Cancel;
+  Result := FTask.State = tsCancelled;
+  if Result then
+    FState := fsCancelled;
 end;
 
 function TGFuture.Value: T;
 begin
   case State of
-    fsPending:      Resolve;
-    fsResolveError,
-    fsCancelled:    raise ELGFuture.Create(SEResultUnknown);
+    fsPending..fsFinished:       Resolve;
+    fsFatal, fsCancelled: raise ELGFuture.Create(SEResultUnknown);
   end;
   Result := FTaskResult;
 end;
 
-function TGFuture.GetValue: TOptional;
+function TGFuture.OptValue: TOptional;
 begin
   if WaitFor = fsResolved then
     Result.Assign(FTaskResult);
@@ -537,17 +539,18 @@ end;
 
 procedure TGAsyncProc.DoExecute;
 begin
-  FProc;
-  FResult := True;
+  FProc();
+  FResult := FatalException = nil;
 end;
 
-class function TGAsyncProc.Call(aProc: TProcedure): TFuture;
+class function TGAsyncProc.Call(aProc: TProcedure; aEx: IExecutor): TFuture;
 begin
-  Result{%H-}.Start(TGAsyncProc.Create(aProc));
+  Result{%H-}.Start(TGAsyncProc.Create(aProc), aEx);
 end;
 
 constructor TGAsyncProc.Create(aProc: TProcedure);
 begin
+  inherited Create;
   FProc := aProc;
 end;
 
@@ -556,33 +559,35 @@ end;
 procedure TAsyncExecutable.DoExecute;
 begin
   FTask.Execute;
-  FResult := True;
+  FResult := FatalException = nil;
 end;
 
-class function TAsyncExecutable.Call(aTask: IExecutable): TFuture;
+class function TAsyncExecutable.Run(aTask: IExecutable; aEx: IExecutor): TFuture;
 begin
-  Result{%H-}.Start(TAsyncExecutable.Create(aTask));
+  Result{%H-}.Start(TAsyncExecutable.Create(aTask), aEx);
 end;
 
 constructor TAsyncExecutable.Create(aTask: IExecutable);
 begin
+  inherited Create;
   FTask := aTask;
 end;
 
-{ TGAsyncCollable }
+{ TGAsyncCallable }
 
-procedure TGAsyncCollable.DoExecute;
+procedure TGAsyncCallable.DoExecute;
 begin
   FResult := FTask.Call;
 end;
 
-class function TGAsyncCollable.Call(aTask: ICallable): TFuture;
+class function TGAsyncCallable.Run(aTask: ICallable; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncCollable.Create(aTask));
+  Result.Start(TGAsyncCallable.Create(aTask), aEx);
 end;
 
-constructor TGAsyncCollable.Create(aTask: ICallable);
+constructor TGAsyncCallable.Create(aTask: ICallable);
 begin
+  inherited Create;
   FTask := aTask;
 end;
 
@@ -593,125 +598,132 @@ begin
   FResult := FFunc();
 end;
 
-class function TGAsyncMethod.Call(aFunc: TFunction): TFuture;
+class function TGAsyncMethod.Call(aFunc: TFunction; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncMethod.Create(aFunc));
+  Result.Start(TGAsyncMethod.Create(aFunc), aEx);
 end;
 
 constructor TGAsyncMethod.Create(aFunc: TFunction);
 begin
+  inherited Create;
   FFunc := aFunc;
 end;
 
-{ TGAsyncNestedFunc }
+{ TGAsyncNested }
 
-procedure TGAsyncNestedFunc.DoExecute;
+procedure TGAsyncNested.DoExecute;
 begin
   FResult := FFunc();
 end;
 
-class function TGAsyncNestedFunc.Call(aFunc: TFunction): TFuture;
+class function TGAsyncNested.Call(aFunc: TFunction; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncNestedFunc.Create(aFunc));
+  Result.Start(TGAsyncNested.Create(aFunc), aEx);
 end;
 
-constructor TGAsyncNestedFunc.Create(aFunc: TFunction);
+constructor TGAsyncNested.Create(aFunc: TFunction);
 begin
+  inherited Create;
   FFunc := aFunc;
 end;
 
-{ TGAsyncNAFunc }
+{ TGAsyncNiladic }
 
-procedure TGAsyncNAFunc.DoExecute;
+procedure TGAsyncNiladic.DoExecute;
 begin
   FResult := FFunc();
 end;
 
-class function TGAsyncNAFunc.Call(aFunc: TFunction): TFuture;
+class function TGAsyncNiladic.Call(aFunc: TFunction; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncNAFunc.Create(aFunc));
+  Result.Start(TGAsyncNiladic.Create(aFunc), aEx);
 end;
 
-constructor TGAsyncNAFunc.Create(aFunc: TFunction);
+constructor TGAsyncNiladic.Create(aFunc: TFunction);
 begin
+  inherited Create;
   FFunc := aFunc;
 end;
 
-{ TGAsyncFunc }
+{ TGAsyncMonadic }
 
-procedure TGAsyncFunc.DoExecute;
+procedure TGAsyncMonadic.DoExecute;
 begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncFunc.Call(aFunc: TFunction; constref v: T): TFuture;
+class function TGAsyncMonadic.Call(aFunc: TFunction; constref v: T; e: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncFunc.Create(aFunc, v));
+  Result{%H-}.Start(TGAsyncMonadic.Create(aFunc, v), e);
 end;
 
-constructor TGAsyncFunc.Create(aFunc: TFunction; constref v: T);
+constructor TGAsyncMonadic.Create(aFunc: TFunction; constref v: T);
 begin
+  inherited Create;
   FCall := TCall.Construct(aFunc, v);
 end;
 
-{ TGAsync2AFunc }
+{ TGAsyncDyadic }
 
-procedure TGAsync2AFunc.DoExecute;
+procedure TGAsyncDyadic.DoExecute;
 begin
   FResult := FCall.Call;
 end;
 
-class function TGAsync2AFunc.Call(aFunc: TFunction; constref v1: T1; constref v2: T2): TFuture;
+class function TGAsyncDyadic.Call(aFunc: TFunction; constref v1: T1; constref v2: T2; e: IExecutor): TFuture;
 begin
-  Result.Start(TGAsync2AFunc.Create(aFunc, v1, v2));
+  Result.Start(TGAsyncDyadic.Create(aFunc, v1, v2), e);
 end;
 
-constructor TGAsync2AFunc.Create(aFunc: TFunction; constref v1: T1; constref v2: T2);
+constructor TGAsyncDyadic.Create(aFunc: TFunction; constref v1: T1; constref v2: T2);
 begin
+  inherited Create;
   FCall := TCall.Construct(aFunc, v1, v2);
 end;
 
-{ TGAsync3AFunc }
+{ TGAsyncTriadic }
 
-procedure TGAsync3AFunc.DoExecute;
+procedure TGAsyncTriadic.DoExecute;
 begin
   FResult := FCall.Call;
 end;
 
-class function TGAsync3AFunc.Call(aFunc: TFunction; constref v1: T1; constref v2: T2;
-  constref v3: T3): TFuture;
+class function TGAsyncTriadic.Call(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3;
+  e: IExecutor): TFuture;
 begin
-  Result.Start(TGAsync3AFunc.Create(aFunc, v1, v2, v3));
+  Result{%H-}.Start(TGAsyncTriadic.Create(aFunc, v1, v2, v3), e);
 end;
 
-constructor TGAsync3AFunc.Create(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3);
+constructor TGAsyncTriadic.Create(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3);
 begin
+  inherited Create;
   FCall := TCall.Construct(aFunc, v1, v2, v3);
 end;
 
-{ TTaskExecutor.TTaskQueue }
+{ TDefaultExecutor.TTaskQueue }
 
-procedure TTaskExecutor.TTaskQueue.Lock;
+procedure TDefaultExecutor.TTaskQueue.Lock;
 begin
   System.EnterCriticalSection(FLock);
 end;
 
-procedure TTaskExecutor.TTaskQueue.UnLock;
+procedure TDefaultExecutor.TTaskQueue.UnLock;
 begin
   System.LeaveCriticalSection(FLock);
 end;
 
-procedure TTaskExecutor.TTaskQueue.Signaled;
+procedure TDefaultExecutor.TTaskQueue.Signaled;
 begin
   System.RtlEventSetEvent(FReadAwait);
 end;
 
-constructor TTaskExecutor.TTaskQueue.Create;
+constructor TDefaultExecutor.TTaskQueue.Create;
 begin
+  inherited;
   System.InitCriticalSection(FLock);
 end;
 
-destructor TTaskExecutor.TTaskQueue.Destroy;
+destructor TDefaultExecutor.TTaskQueue.Destroy;
 begin
   Lock;
   try
@@ -725,15 +737,15 @@ begin
   end;
 end;
 
-procedure TTaskExecutor.TTaskQueue.AfterConstruction;
+procedure TDefaultExecutor.TTaskQueue.AfterConstruction;
 begin
   inherited;
   FReadAwait := System.RtlEventCreate;
 end;
 
-procedure TTaskExecutor.TTaskQueue.Clear;
+procedure TDefaultExecutor.TTaskQueue.Clear;
 var
-  Task: TAbstractAsyncTask;
+  Task: TAsyncTask;
 begin
   Lock;
   try
@@ -745,7 +757,7 @@ begin
   end;
 end;
 
-procedure TTaskExecutor.TTaskQueue.Close;
+procedure TDefaultExecutor.TTaskQueue.Close;
 begin
   Lock;
   try
@@ -756,7 +768,7 @@ begin
   end;
 end;
 
-procedure TTaskExecutor.TTaskQueue.Open;
+procedure TDefaultExecutor.TTaskQueue.Open;
 begin
   Lock;
   try
@@ -766,25 +778,25 @@ begin
   end;
 end;
 
-procedure TTaskExecutor.TTaskQueue.Enqueue(aTask: TAbstractAsyncTask);
+procedure TDefaultExecutor.TTaskQueue.Enqueue(aTask: TAsyncTask);
 begin
   Lock;
   try
-    FQueue.PushLast(aTask);
+    FQueue.Enqueue(aTask);
     Signaled;
   finally
     UnLock;
   end;
 end;
 
-function TTaskExecutor.TTaskQueue.Dequeue(out aTask: TAbstractAsyncTask): Boolean;
+function TDefaultExecutor.TTaskQueue.Dequeue(out aTask: TAsyncTask): Boolean;
 begin
   System.RtlEventWaitFor(FReadAwait);
   Lock;
   try
     if not Closed then
       begin
-        Result := FQueue.TryPopFirst(aTask);
+        Result := FQueue.TryDequeue(aTask);
         if FQueue.NonEmpty then
          Signaled;
       end
@@ -798,65 +810,44 @@ begin
   end;
 end;
 
-function TTaskExecutor.TTaskQueue.Cancel(aTask: TAbstractAsyncTask): Boolean;
-var
-  I: Integer;
-begin
-  Lock;
-  try
-    Result := False;
-    for I := 0 to Pred(FQueue.Count) do
-      if FQueue[I] = aTask then
-        begin
-          aTask.Cancel;
-          FQueue.Delete(I);
-          Result := True;
-          break;
-        end;
-    Signaled; // ???
-  finally
-    UnLock;
-  end;
-end;
+{ TDefaultExecutor.TWorkThread }
 
-{ TTaskExecutor.TWorkThread }
-
-constructor TTaskExecutor.TWorkThread.Create(aQueue: TTaskQueue);
+constructor TDefaultExecutor.TWorkThread.Create(aQueue: TTaskQueue);
 begin
   inherited Create(True);
   FQueue := aQueue;
 end;
 
-procedure TTaskExecutor.TWorkThread.Execute;
+procedure TDefaultExecutor.TWorkThread.Execute;
 var
-  CurrTask: TAbstractAsyncTask;
+  CurrTask: TAsyncTask;
 begin
   while not Terminated do
     if FQueue.Dequeue(CurrTask) then
       CurrTask.Execute;
 end;
 
-{ TTaskExecutor }
+{ TDefaultExecutor }
 
-function TTaskExecutor.ThreadPoolCount: Integer;
+function TDefaultExecutor.ThreadPoolCount: Integer;
 begin
   Result := FThreadPool.Count;
 end;
 
-function TTaskExecutor.AddThread: TWorkThread;
+function TDefaultExecutor.AddThread: TWorkThread;
 begin
   Result := TWorkThread.Create(FTaskQueue);
   FThreadPool.Add(Result);
   Result.Start;
 end;
 
-procedure TTaskExecutor.PoolGrow(aValue: Integer);
+procedure TDefaultExecutor.PoolGrow(aValue: Integer);
 begin
   while FThreadPool.Count < aValue do
     AddThread;
 end;
 
-procedure TTaskExecutor.PoolShrink(aValue: Integer);
+procedure TDefaultExecutor.PoolShrink(aValue: Integer);
 begin
   if aValue < 1 then
     aValue := 1;
@@ -865,12 +856,12 @@ begin
   PoolGrow(aValue);
 end;
 
-procedure TTaskExecutor.EnqueueTask(aTask: TAbstractAsyncTask);
+procedure TDefaultExecutor.EnqueueTask(aTask: TAsyncTask);
 begin
   FTaskQueue.Enqueue(aTask);
 end;
 
-procedure TTaskExecutor.TerminatePool;
+procedure TDefaultExecutor.TerminatePool;
 var
   Thread: TWorkThread;
 begin
@@ -885,28 +876,23 @@ begin
     end;
 end;
 
-procedure TTaskExecutor.FinalizePool;
+procedure TDefaultExecutor.FinalizePool;
 begin
   TerminatePool;
   FThreadPool.Clear;
 end;
 
-function TTaskExecutor.CancelTask(aTask: TAbstractAsyncTask): Boolean;
-begin
-  Result := FTaskQueue.Cancel(aTask);
-end;
-
-class constructor TTaskExecutor.InitNil;
+class constructor TDefaultExecutor.InitNil;
 begin
   CFExecutor := nil;
 end;
 
-class destructor TTaskExecutor.DoneQueue;
+class destructor TDefaultExecutor.DoneQueue;
 begin
   FreeAndNil(CFExecutor);
 end;
 
-class function TTaskExecutor.GetThreadCount: Integer; static;
+class function TDefaultExecutor.GetThreadCount: Integer; static;
 begin
   if Assigned(CFExecutor) then
     Result := CFExecutor.ThreadPoolCount
@@ -914,7 +900,7 @@ begin
     Result := 0;
 end;
 
-class procedure TTaskExecutor.SetThreadCount(aValue: Integer);
+class procedure TDefaultExecutor.SetThreadCount(aValue: Integer);
 begin
   if aValue > ThreadCount then
     EnsureThreadCount(aValue)
@@ -923,31 +909,30 @@ begin
       CFExecutor.PoolShrink(aValue);
 end;
 
-class procedure TTaskExecutor.EnsureThreadCount(aValue: Integer);
+class procedure TDefaultExecutor.EnsureThreadCount(aValue: Integer);
 begin
   if aValue > ThreadCount then
     if not Assigned(CFExecutor) then
-      CFExecutor := TTaskExecutor.Create(aValue)
+      CFExecutor := TDefaultExecutor.Create(aValue)
     else
       CFExecutor.PoolGrow(aValue);
 end;
 
-class procedure TTaskExecutor.Enqueue(aTask: TAbstractAsyncTask);
+class procedure TDefaultExecutor.Enqueue(aTask: TAsyncTask);
 begin
   if not Assigned(CFExecutor) then
-    CFExecutor := TTaskExecutor.Create;
+    CFExecutor := TDefaultExecutor.Create;
   CFExecutor.EnqueueTask(aTask);
 end;
 
-class function TTaskExecutor.Cancel(aTask: TAbstractAsyncTask): Boolean;
+class function TDefaultExecutor.Instance: IExecutor;
 begin
-  if Assigned(CFExecutor) then
-    Result := CFExecutor.CancelTask(aTask)
-  else
-    Result := False;
+  if not Assigned(CFExecutor) then
+    CFExecutor := TDefaultExecutor.Create;
+  Result := IExecutor(CFExecutor);
 end;
 
-constructor TTaskExecutor.Create;
+constructor TDefaultExecutor.Create;
 begin
   if TThread.ProcessorCount > DEFAULT_THREAD_COUNT then
     Create(TThread.ProcessorCount)
@@ -955,7 +940,7 @@ begin
     Create(DEFAULT_THREAD_COUNT);
 end;
 
-constructor TTaskExecutor.Create(aThreadCount: Integer);
+constructor TDefaultExecutor.Create(aThreadCount: Integer);
 begin
   FTaskQueue := TTaskQueue.Create;
   if aThreadCount > 0 then
@@ -964,7 +949,7 @@ begin
     PoolGrow(1);
 end;
 
-destructor TTaskExecutor.Destroy;
+destructor TDefaultExecutor.Destroy;
 begin
   FTaskQueue.Clear;
   FinalizePool;
