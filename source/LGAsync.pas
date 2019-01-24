@@ -44,8 +44,6 @@ uses
 
 type
 
-  { TAsyncTask }
-
   TAsyncTask = class abstract
   public
   type
@@ -55,6 +53,7 @@ type
     FAwait: PRtlEvent;
     FException: Exception;
     FState: TTaskState;
+    procedure AsyncFree;
   strict protected
     procedure DoExecute; virtual; abstract;
   public
@@ -159,36 +158,36 @@ type
     constructor Create(aTask: ICallable);
   end;
 
-  { TGAsyncMethod incapsulates method without arguments(which returns T) }
+  { TGAsyncMethod incapsulates niladic method(without arguments which returns T) }
   generic TGAsyncMethod<T> = class(specialize TGAsyncTask<T>)
   public
   type
-    TFunction = function: T of object;
-    TFuture   = specialize TGFuture<T>;
+    TFun    = function: T of object;
+    TFuture = specialize TGFuture<T>;
 
   strict private
-    FFunc: TFunction;
+    FFun: TFun;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; aEx: IExecutor = nil): TFuture; static;
-    constructor Create(aFunc: TFunction);
+    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
+    constructor Create(aFun: TFun);
   end;
 
-  { TGAsyncNested incapsulates nested niladic function (without arguments) }
-  generic TGAsyncNested<T> = class(specialize TGAsyncTask<T>)
+  { TGAsyncNestFun incapsulates nested niladic function (without arguments) }
+  generic TGAsyncNestFun<T> = class(specialize TGAsyncTask<T>)
   public
   type
-    TFunction = function: T is nested;
-    TFuture   = specialize TGFuture<T>;
+    TFun    = function: T is nested;
+    TFuture = specialize TGFuture<T>;
 
   strict private
-    FFunc: TFunction;
+    FFun: TFun;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; aEx: IExecutor = nil): TFuture; static;
-    constructor Create(aFunc: TFunction);
+    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
+    constructor Create(aFun: TFun);
   end;
 
   { TGAsyncNiladic incapsulates regular niladic function (without arguments) }
@@ -196,16 +195,16 @@ type
   strict protected
   public
   type
-    TFunction = function: T;
-    TFuture   = specialize TGFuture<T>;
+    TFun    = function: T;
+    TFuture = specialize TGFuture<T>;
 
   strict private
-    FFunc: TFunction;
+    FFun: TFun;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; aEx: IExecutor = nil): TFuture; static;
-    constructor Create(aFunc: TFunction);
+    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
+    constructor Create(aFun: TFun);
   end;
 
   { TGAsyncMonadic incapsulates regular monadic function (with one argument) }
@@ -216,16 +215,16 @@ type
 
   public
   type
-    TFunction = TCall.TFun;
-    TFuture   = specialize TGFuture<TResult>;
+    TFun    = TCall.TFun;
+    TFuture = specialize TGFuture<TResult>;
 
   strict private
     FCall: TCall;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; constref v: T; e: IExecutor = nil): TFuture; static;
-    constructor Create(aFunc: TFunction; constref v: T);
+    class function Call(aFun: TFun; constref v: T; aEx: IExecutor = nil): TFuture; static;
+    constructor Create(aFun: TFun; constref v: T);
   end;
 
   { TGAsyncDyadic incapsulates regular dyadic function (with two arguments) }
@@ -236,16 +235,16 @@ type
 
   public
   type
-    TFunction = TCall.TFun;
-    TFuture   = specialize TGFuture<TResult>;
+    TFun    = TCall.TFun;
+    TFuture = specialize TGFuture<TResult>;
 
   strict private
     FCall: TCall;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; constref v1: T1; constref v2: T2; e: IExecutor = nil): TFuture; static;
-    constructor Create(aFunc: TFunction; constref v1: T1; constref v2: T2);
+    class function Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor = nil): TFuture; static;
+    constructor Create(aFun: TFun; constref v1: T1; constref v2: T2);
   end;
 
   { TGAsyncTriadic incapsulates regular triadic function (with three arguments) }
@@ -256,17 +255,17 @@ type
 
   public
   type
-    TFunction = TCall.TFun;
-    TFuture   = specialize TGFuture<TResult>;
+    TFun    = TCall.TFun;
+    TFuture = specialize TGFuture<TResult>;
 
   strict private
     FCall: TCall;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3;
-                        e: IExecutor = nil): TFuture; static;
-    constructor Create(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3);
+    class function Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
+                        aEx: IExecutor = nil): TFuture; static;
+    constructor Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
   end;
 
   { TDefaultExecutor executes futures in its own thread pool.
@@ -417,6 +416,11 @@ begin
     FState := tsCancelled;
 end;
 
+procedure TAsyncTask.AsyncFree;
+begin
+  Free;
+end;
+
 destructor TAsyncTask.Destroy;
 begin
   System.RtlEventDestroy(FAwait);
@@ -435,15 +439,19 @@ begin
   if FState = tsPending then
     begin
       FState := tsExecuting;
+      WriteBarrier;
       try
         DoExecute;
       except
         on e: Exception do
           FException := Exception(System.AcquireExceptionObject);
       end;
+      WriteBarrier;
       FState := tsFinished;
     end;
   System.RtlEventSetEvent(FAwait);
+  if FState = tsCancelled then
+    TThread.Queue(TThread.CurrentThread, @AsyncFree);
 end;
 
 procedure TAsyncTask.WaitFor;
@@ -457,19 +465,16 @@ procedure TGFuture.Resolve;
 var
   e: Exception = nil;
 begin
-  if Assigned(FTask) then
+  if Assigned(FTask) and (State < fsResolved) then
     try
       FTask.WaitFor;
-      if State <> fsCancelled then
+      e := FTask.FatalException;
+      if Assigned(e) then
+        FState := fsFatal
+      else
         begin
-          e := FTask.FatalException;
-          if Assigned(e) then
-            FState := fsFatal
-          else
-            begin
-              FState := fsResolved;
-              FTaskResult := FTask.Result;
-            end;
+          FState := fsResolved;
+          FTaskResult := FTask.Result;
         end;
     finally
       FreeAndNil(FTask);
@@ -480,11 +485,15 @@ end;
 
 function TGFuture.GetState: TFutureState;
 begin
-  if (FState < fsResolved) and Assigned(FTask) then
-    case FTask.State of
-      tsExecuting: FState := fsExecuting;
-      tsFinished:  FState := fsFinished;
-      tsCancelled: FState := fsCancelled;
+  if Assigned(FTask) and (FState < fsResolved) then
+    try
+      case FTask.State of
+        tsExecuting: FState := fsExecuting;
+        tsFinished:  FState := fsFinished;
+      end;
+    except
+      FState := fsCancelled;
+      FTask := nil;
     end;
   Result := FState;
 end;
@@ -517,14 +526,21 @@ begin
   FTask.Cancel;
   Result := FTask.State = tsCancelled;
   if Result then
-    FState := fsCancelled;
+    begin
+      FState := fsCancelled;
+      FTask := nil;
+    end;
 end;
 
 function TGFuture.Value: T;
 begin
   case State of
-    fsPending..fsFinished:       Resolve;
-    fsFatal, fsCancelled: raise ELGFuture.Create(SEResultUnknown);
+    fsPending..fsFinished:
+      Resolve;
+    fsFatal:
+      raise ELGFuture.Create(SEResultUnknownFatal);
+    fsCancelled:
+      raise ELGFuture.Create(SEResultUnknownCancel);
   end;
   Result := FTaskResult;
 end;
@@ -595,54 +611,54 @@ end;
 
 procedure TGAsyncMethod.DoExecute;
 begin
-  FResult := FFunc();
+  FResult := FFun();
 end;
 
-class function TGAsyncMethod.Call(aFunc: TFunction; aEx: IExecutor): TFuture;
+class function TGAsyncMethod.Call(aFun: TFun; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncMethod.Create(aFunc), aEx);
+  Result.Start(TGAsyncMethod.Create(aFun), aEx);
 end;
 
-constructor TGAsyncMethod.Create(aFunc: TFunction);
+constructor TGAsyncMethod.Create(aFun: TFun);
 begin
   inherited Create;
-  FFunc := aFunc;
+  FFun := aFun;
 end;
 
 { TGAsyncNested }
 
-procedure TGAsyncNested.DoExecute;
+procedure TGAsyncNestFun.DoExecute;
 begin
-  FResult := FFunc();
+  FResult := FFun();
 end;
 
-class function TGAsyncNested.Call(aFunc: TFunction; aEx: IExecutor): TFuture;
+class function TGAsyncNestFun.Call(aFun: TFun; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncNested.Create(aFunc), aEx);
+  Result.Start(TGAsyncNestFun.Create(aFun), aEx);
 end;
 
-constructor TGAsyncNested.Create(aFunc: TFunction);
+constructor TGAsyncNestFun.Create(aFun: TFun);
 begin
   inherited Create;
-  FFunc := aFunc;
+  FFun := aFun;
 end;
 
 { TGAsyncNiladic }
 
 procedure TGAsyncNiladic.DoExecute;
 begin
-  FResult := FFunc();
+  FResult := FFun();
 end;
 
-class function TGAsyncNiladic.Call(aFunc: TFunction; aEx: IExecutor): TFuture;
+class function TGAsyncNiladic.Call(aFun: TFun; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncNiladic.Create(aFunc), aEx);
+  Result.Start(TGAsyncNiladic.Create(aFun), aEx);
 end;
 
-constructor TGAsyncNiladic.Create(aFunc: TFunction);
+constructor TGAsyncNiladic.Create(aFun: TFun);
 begin
   inherited Create;
-  FFunc := aFunc;
+  FFun := aFun;
 end;
 
 { TGAsyncMonadic }
@@ -652,15 +668,15 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncMonadic.Call(aFunc: TFunction; constref v: T; e: IExecutor): TFuture;
+class function TGAsyncMonadic.Call(aFun: TFun; constref v: T; aEx: IExecutor): TFuture;
 begin
-  Result{%H-}.Start(TGAsyncMonadic.Create(aFunc, v), e);
+  Result{%H-}.Start(TGAsyncMonadic.Create(aFun, v), aEx);
 end;
 
-constructor TGAsyncMonadic.Create(aFunc: TFunction; constref v: T);
+constructor TGAsyncMonadic.Create(aFun: TFun; constref v: T);
 begin
   inherited Create;
-  FCall := TCall.Construct(aFunc, v);
+  FCall := TCall.Construct(aFun, v);
 end;
 
 { TGAsyncDyadic }
@@ -670,15 +686,15 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncDyadic.Call(aFunc: TFunction; constref v1: T1; constref v2: T2; e: IExecutor): TFuture;
+class function TGAsyncDyadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncDyadic.Create(aFunc, v1, v2), e);
+  Result.Start(TGAsyncDyadic.Create(aFun, v1, v2), aEx);
 end;
 
-constructor TGAsyncDyadic.Create(aFunc: TFunction; constref v1: T1; constref v2: T2);
+constructor TGAsyncDyadic.Create(aFun: TFun; constref v1: T1; constref v2: T2);
 begin
   inherited Create;
-  FCall := TCall.Construct(aFunc, v1, v2);
+  FCall := TCall.Construct(aFun, v1, v2);
 end;
 
 { TGAsyncTriadic }
@@ -688,16 +704,16 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncTriadic.Call(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3;
-  e: IExecutor): TFuture;
+class function TGAsyncTriadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
+  aEx: IExecutor): TFuture;
 begin
-  Result{%H-}.Start(TGAsyncTriadic.Create(aFunc, v1, v2, v3), e);
+  Result{%H-}.Start(TGAsyncTriadic.Create(aFun, v1, v2, v3), aEx);
 end;
 
-constructor TGAsyncTriadic.Create(aFunc: TFunction; constref v1: T1; constref v2: T2; constref v3: T3);
+constructor TGAsyncTriadic.Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
 begin
   inherited Create;
-  FCall := TCall.Construct(aFunc, v1, v2, v3);
+  FCall := TCall.Construct(aFun, v1, v2, v3);
 end;
 
 { TDefaultExecutor.TTaskQueue }
