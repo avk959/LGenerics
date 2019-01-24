@@ -43,7 +43,8 @@ resourcestring
   SEValueAlreadyExist      = 'Value already exists';
   SEKeyAlreadyExist        = 'Key already exists';
   SEThreadTimeOut          = 'Thread timeout exceeded';
-  SEResultUnknown          = 'Result is unknown';
+  SEResultUnknownFatal     = 'Result is unknown due to fatal exception';
+  SEResultUnknownCancel    = 'Result is unknown due to task cancelled';
   SECellNotFoundFmt        = 'Specified cell of %s not found';
   SEEdgeNotFoundFmt        = 'Edge (%d, %d) not found';
   SECallbackMissed         = 'Callback missed';
