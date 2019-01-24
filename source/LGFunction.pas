@@ -2,7 +2,7 @@
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
 *                                                                           *
-*   Copyright(c) 2018 A.Koverdyaev(avk)                                     *
+*   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
 *   under the terms of the Apache License, Version 2.0;                     *
@@ -148,49 +148,51 @@ type
     class function Right(e: IXEnumerable; f: TNestFold; constref y0: Y): Y; static;
   end;
   { monadic regular function }
-  generic TGFunction<T, TResult> = function(constref v: T): TResult;
+  generic TGMonadic<T, TResult> = function(constref v: T): TResult;
   { dyadic regular function }
-  generic TGFunction2A<T1, T2, TResult> = function(constref v1: T1; constref v2: T2): TResult;
+  generic TGDyadic<T1, T2, TResult> = function(constref v1: T1; constref v2: T2): TResult;
   { triadic regular function }
-  generic TGFunction3A<T1, T2, T3, TResult> = function(constref v1: T1; constref v2: T2; constref v3: T3): TResult;
+  generic TGTriadic<T1, T2, T3, TResult> = function(constref v1: T1; constref v2: T2; constref v3: T3): TResult;
 
-  generic TGDefferedCall<T, TResult> = record
+  generic TGDeferMonadic<T, TResult> = record
   public
   type
-    TFunction = specialize TGFunction<T, TResult>;
+    TFun = specialize TGMonadic<T, TResult>;
+
   strict private
-    FStoredFunc: TFunction;
+    FCall: TFun;
     FParam: T;
   public
-    class function Construct(aFunc: TFunction; constref v: T): TGDefferedCall; static;
+    class function Construct(aFun: TFun; constref v: T): TGDeferMonadic; static;
     function Call: TResult; inline;
   end;
 
-  generic TGDefferedCall2A<T1, T2, TResult> = record
+  generic TGDeferDyadic<T1, T2, TResult> = record
   public
   type
-    TFunction = specialize TGFunction2A<T1, T2, TResult>;
+    TFun = specialize TGDyadic<T1, T2, TResult>;
+
   strict private
-    FStoredFunc: TFunction;
+    FCall: TFun;
     FParam1: T1;
     FParam2: T2;
   public
-    class function Construct(aFunc: TFunction; constref v1: T1; constref v2: T2): TGDefferedCall2A; static;
+    class function Construct(aFun: TFun; constref v1: T1; constref v2: T2): TGDeferDyadic; static;
     function Call: TResult; inline;
   end;
 
-  generic TGDefferedCall3A<T1, T2, T3, TResult> = record
+  generic TGDeferTriadic<T1, T2, T3, TResult> = record
   public
   type
-    TFunction = specialize TGFunction3A<T1, T2, T3, TResult>;
+    TFun = specialize TGTriadic<T1, T2, T3, TResult>;
+
   strict private
-    FStoredFunc: TFunction;
+    FCall: TFun;
     FParam1: T1;
     FParam2: T2;
     FParam3: T3;
   public
-    class function Construct(aFunc: TFunction; constref v1: T1; constref v2: T2;
-                             constref v3: T3): TGDefferedCall3A; static;
+    class function Construct(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3): TGDeferTriadic; static;
     function Call: TResult; inline;
   end;
 
@@ -464,47 +466,47 @@ begin
     Result := f(v, Result);
 end;
 
-{ TGDefferedCall }
+{ TGDeferMonadic }
 
-class function TGDefferedCall.Construct(aFunc: TFunction; constref v: T): TGDefferedCall;
+class function TGDeferMonadic.Construct(aFun: TFun; constref v: T): TGDeferMonadic;
 begin
-  Result.FStoredFunc := aFunc;
+  Result.FCall := aFun;
   Result.FParam := v;
 end;
 
-function TGDefferedCall.Call: TResult;
+function TGDeferMonadic.Call: TResult;
 begin
-  Result := FStoredFunc(FParam);
+  Result := FCall(FParam);
 end;
 
-{ TGDefferedCall2A }
+{ TGDeferDyadic }
 
-class function TGDefferedCall2A.Construct(aFunc: TFunction; constref v1: T1; constref v2: T2): TGDefferedCall2A;
+class function TGDeferDyadic.Construct(aFun: TFun; constref v1: T1; constref v2: T2): TGDeferDyadic;
 begin
-  Result.FStoredFunc := aFunc;
+  Result.FCall := aFun;
   Result.FParam1 := v1;
   Result.FParam2 := v2;
 end;
 
-function TGDefferedCall2A.Call: TResult;
+function TGDeferDyadic.Call: TResult;
 begin
-  Result := FStoredFunc(FParam1, FParam2);
+  Result := FCall(FParam1, FParam2);
 end;
 
-{ TGDefferedCall3A }
+{ TGDeferTriadic }
 
-class function TGDefferedCall3A.Construct(aFunc: TFunction; constref v1: T1; constref v2: T2;
-  constref v3: T3): TGDefferedCall3A;
+class function TGDeferTriadic.Construct(aFun: TFun; constref v1: T1; constref v2: T2;
+  constref v3: T3): TGDeferTriadic;
 begin
-  Result.FStoredFunc := aFunc;
+  Result.FCall := aFun;
   Result.FParam1 := v1;
   Result.FParam2 := v2;
   Result.FParam3 := v3;
 end;
 
-function TGDefferedCall3A.Call: TResult;
+function TGDeferTriadic.Call: TResult;
 begin
-  Result := FStoredFunc(FParam1, FParam2, FParam3);
+  Result := FCall(FParam1, FParam2, FParam3);
 end;
 
 end.
