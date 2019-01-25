@@ -58,8 +58,8 @@ type
       property  Size: SizeInt read GetSize;
     end;
 
-    { THamiltonian }
-    THamiltonian = object
+    { THamiltonSearch }
+    THamiltonSearch = object
     strict private
     type
       TOnCheckNode  = procedure (aIndex: SizeInt) of object;
@@ -121,6 +121,33 @@ type
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
   public
+  type
+    TIncomingArc = record
+      Source: SizeInt;     //index of source vertex
+      Data:  TEdgeData;
+    end;
+
+    TIncomingEnumerator = record
+    private
+      FEnum: TEdgeEnumerator;
+      FIndex,
+      FInCount: SizeInt;
+      FCurrArc: TIncomingArc;
+      function  GetCurrent: TIncomingArc; inline;
+    public
+      function  MoveNext: Boolean;
+      property  Current: TIncomingArc read GetCurrent;
+    end;
+
+    TIncomingArcs = record
+    private
+      FGraph: TGSimpleDiGraph;
+      FTarget: SizeInt;
+    public
+      constructor Create(aGraph: TGSimpleDiGraph; aDst: SizeInt);
+      function GetEnumerator: TIncomingEnumerator; inline;
+    end;
+
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -150,6 +177,9 @@ type
     function  IsSinkI(aIndex: SizeInt): Boolean;
     function  SourceCount: SizeInt;
     function  SinkCount: SizeInt;
+  { enumerates incoming arcs, slow }
+    function  IncomingArcs(constref aVertex: TVertex): TIncomingArcs; inline;
+    function  IncomingArcsI(aIndex: SizeInt): TIncomingArcs;
   { checks whether the aDst is reachable from the aSrc(each vertex is reachable from itself) }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
@@ -495,12 +525,12 @@ type
     function GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow, if result = nsOk, 0 otherwise;
-    used PR algorithm }
+    used push/relabel algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState; inline;
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
   { returns state of network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow and flows through the arcs
-    in array a, if result = nsOk, 0 and nil otherwise; used PR algorithm }
+    in array a, if result = nsOk, 0 and nil otherwise; used push/relabel algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
     function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
@@ -528,7 +558,7 @@ type
 
   { returns state of the network with aSource as source and aSink as sink;
     returns value of the minimum cut in aValue and vertex partition in aCut,
-    if result = nsOk, otherwise 0 and empty partition; used PR algorithm }
+    if result = nsOk, otherwise 0 and empty partition; used push/relabel algorithm }
     function FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
     function FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
@@ -615,9 +645,9 @@ begin
   Result := FMatrix[FIds[aSrc], FIds[aDst]];
 end;
 
-{ TGSimpleDiGraph.THamiltonian.TAdjList }
+{ TGSimpleDiGraph.THamiltonSearch.TAdjList }
 
-constructor TGSimpleDiGraph.THamiltonian.TAdjList.Create(aDegree, aVertexCount: SizeInt; aAdjList: PAdjList);
+constructor TGSimpleDiGraph.THamiltonSearch.TAdjList.Create(aDegree, aVertexCount: SizeInt; aAdjList: PAdjList);
 var
   p: PAdjItem;
 begin
@@ -627,9 +657,9 @@ begin
     OutList[p^.Key] := True;
 end;
 
-{ TGSimpleDiGraph.THamiltonian }
+{ TGSimpleDiGraph.THamiltonSearch }
 
-procedure TGSimpleDiGraph.THamiltonian.Init(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+procedure TGSimpleDiGraph.THamiltonSearch.Init(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector);
 var
   I: SizeInt;
@@ -653,13 +683,13 @@ begin
   FStartTime := Now;
 end;
 
-function TGSimpleDiGraph.THamiltonian.TimeToFinish: Boolean;
+function TGSimpleDiGraph.THamiltonSearch.TimeToFinish: Boolean;
 begin
   FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
   Result := FCancelled or FDone;
 end;
 
-function TGSimpleDiGraph.THamiltonian.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+function TGSimpleDiGraph.THamiltonSearch.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
 var
   I, Degree, MinDegree: SizeInt;
 begin
@@ -677,7 +707,7 @@ begin
   Result := aValue <> NULL_INDEX;
 end;
 
-procedure TGSimpleDiGraph.THamiltonian.CheckIsCycle(aNode: SizeInt);
+procedure TGSimpleDiGraph.THamiltonSearch.CheckIsCycle(aNode: SizeInt);
 begin
   if FMatrix[aNode].OutList[FSource] then
     begin
@@ -689,14 +719,14 @@ begin
     end;
 end;
 
-procedure TGSimpleDiGraph.THamiltonian.CheckIsPath(aNode: SizeInt);
+procedure TGSimpleDiGraph.THamiltonSearch.CheckIsPath(aNode: SizeInt);
 begin
   FPaths^.Add(FStack.ToArray);
   Inc(FFound);
   FDone := FDone or (FFound >= FRequired);
 end;
 
-procedure TGSimpleDiGraph.THamiltonian.SearchFor(aNode: SizeInt);
+procedure TGSimpleDiGraph.THamiltonSearch.SearchFor(aNode: SizeInt);
 var
   Cand, Saved: TBoolVector;
   I: SizeInt;
@@ -740,7 +770,7 @@ begin
     FCheckNode(aNode);
 end;
 
-procedure TGSimpleDiGraph.THamiltonian.ExecuteCycles;
+procedure TGSimpleDiGraph.THamiltonSearch.ExecuteCycles;
 var
   I: SizeInt;
 begin
@@ -760,7 +790,7 @@ begin
     end;
 end;
 
-procedure TGSimpleDiGraph.THamiltonian.ExecutePaths;
+procedure TGSimpleDiGraph.THamiltonSearch.ExecutePaths;
 var
   I: SizeInt;
 begin
@@ -779,7 +809,7 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.THamiltonian.FindCycles(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+function TGSimpleDiGraph.THamiltonSearch.FindCycles(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
@@ -787,12 +817,57 @@ begin
   Result := not FCancelled and pv^.NonEmpty;
 end;
 
-function TGSimpleDiGraph.THamiltonian.FindPaths(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+function TGSimpleDiGraph.THamiltonSearch.FindPaths(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
   ExecutePaths;
   Result := not FCancelled and pv^.NonEmpty;
+end;
+
+{ TGSimpleDiGraph.TIncomingEnumerator }
+
+function TGSimpleDiGraph.TIncomingEnumerator.GetCurrent: TIncomingArc;
+begin
+  Result := FCurrArc;
+end;
+
+function TGSimpleDiGraph.TIncomingEnumerator.MoveNext: Boolean;
+var
+  e: TEdge;
+begin
+  if FInCount < 1 then
+    exit(False);
+  repeat
+    if not FEnum.MoveNext then
+      exit(False);
+    e := FEnum.Current;
+    if e.Destination = FIndex then
+      begin
+        FCurrArc.Source := e.Source;
+        FCurrArc.Data := e.Data;
+        Dec(FInCount);
+        exit(True);
+      end;
+  until False;
+end;
+
+{ TGSimpleDiGraph.TIncomingArcs }
+
+constructor TGSimpleDiGraph.TIncomingArcs.Create(aGraph: TGSimpleDiGraph; aDst: SizeInt);
+begin
+  FGraph := aGraph;
+  FTarget := aDst;
+end;
+
+function TGSimpleDiGraph.TIncomingArcs.GetEnumerator: TIncomingEnumerator;
+begin
+  Result.FEnum.FList := Pointer(FGraph.FNodeList);
+  Result.FEnum.FLastIndex := Pred(FGraph.VertexCount);
+  Result.FEnum.FCurrIndex := -1;
+  Result.FEnum.FEnumDone := True;
+  Result.FIndex := FTarget;
+  Result.FInCount := FGraph.FNodeList[FTarget].Tag;
 end;
 
 { TGSimpleDiGraph }
@@ -1415,6 +1490,17 @@ begin
       Inc(Result);
 end;
 
+function TGSimpleDiGraph.IncomingArcs(constref aVertex: TVertex): TIncomingArcs;
+begin
+  Result := IncomingArcsI(IndexOf(aVertex));
+end;
+
+function TGSimpleDiGraph.IncomingArcsI(aIndex: SizeInt): TIncomingArcs;
+begin
+  CheckIndexRange(aIndex);
+  Result := TIncomingArcs.Create(Self, aIndex);
+end;
+
 function TGSimpleDiGraph.PathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := PathExistsI(IndexOf(aSrc), IndexOf(aDst));
@@ -1758,7 +1844,7 @@ end;
 function TGSimpleDiGraph.FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
-  Helper: THamiltonian;
+  Helper: THamiltonSearch;
   //I: SizeInt;
 begin
   CheckIndexRange(aSourceIdx);
@@ -1810,7 +1896,7 @@ end;
 function TGSimpleDiGraph.FindHamiltonPathsI(aSrcIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
-  Helper: THamiltonian;
+  Helper: THamiltonSearch;
   I, SnkCount: SizeInt;
 begin
   CheckIndexRange(aSrcIdx);
