@@ -20,14 +20,13 @@
 {
   The futures concept describes an asynchronous single-execution pattern.
   Result is requested at an early stage of execution, but becomes available after it is received.
-
   This implementation implies that futures are intended for use from the main thread.
 }
 
 unit LGAsync;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}{$WARN 6058 off}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -53,7 +52,6 @@ type
     FAwait: PRtlEvent;
     FException: Exception;
     FState: TTaskState;
-    procedure AsyncFree;
   strict protected
     procedure DoExecute; virtual; abstract;
   public
@@ -416,11 +414,6 @@ begin
     FState := tsCancelled;
 end;
 
-procedure TAsyncTask.AsyncFree;
-begin
-  Free;
-end;
-
 destructor TAsyncTask.Destroy;
 begin
   System.RtlEventDestroy(FAwait);
@@ -451,7 +444,7 @@ begin
     end;
   System.RtlEventSetEvent(FAwait);
   if FState = tsCancelled then
-    TThread.Queue(TThread.CurrentThread, @AsyncFree);
+    TThread.Queue(TThread.CurrentThread, @Free);
 end;
 
 procedure TAsyncTask.WaitFor;
