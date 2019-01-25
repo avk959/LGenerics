@@ -42,6 +42,8 @@ type
     procedure Degree;
     procedure IsSource;
     procedure IsSink;
+    procedure IncomingArcs;
+    procedure IncomingArcs1;
     procedure PathExists;
     procedure PathExists1;
     procedure ContainsCycle;
@@ -539,6 +541,46 @@ begin
   AssertTrue(g.IsSink(2));
   AssertTrue(g.IsSink(3));
   AssertTrue(g.IsSink(4));
+end;
+
+procedure TSimpleDiGraphTest.IncomingArcs;
+var
+  Ref: TRef;
+  g: TGraph;
+  a: TGraph.TIncomingArc;
+  c: SizeInt;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(1);
+  c := 0;
+  for a in g.IncomingArcs(1) do
+    Inc(c);
+  AssertTrue(c = 0);
+  g.AddEdge(2, 1);
+  for a in g.IncomingArcs(1) do
+    Inc(c);
+  AssertTrue(c.ToString, c = 1);
+end;
+
+procedure TSimpleDiGraphTest.IncomingArcs1;
+var
+  Ref: TRef;
+  g: TGraph;
+  a: TGraph.TIncomingArc;
+  I, c: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr3;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      c := 0;
+      for a in g.IncomingArcsI(I) do
+        begin
+          Inc(c);
+          AssertTrue(g.ContainsEdgeI(a.Source, I));
+        end;
+      AssertTrue(c = g.InDegreeI(I));
+    end;
 end;
 
 procedure TSimpleDiGraphTest.PathExists;
