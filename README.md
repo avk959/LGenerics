@@ -7,7 +7,7 @@
   - open and compile package LGenerics/packages/LGenerics.lpk.
   
   - add LGenerics package to project dependencies.
-##### Implemented primitives:
+#### Implemented primitives:
   - stack(unit LGStack)
   - queue(unit LGQueue)
   - deque(unit LGDeque)
@@ -31,10 +31,11 @@
   - disjoint set(unit LGHashSet)
   - sparse labeled undirected graph(unit LGSimpleGraph)
   - sparse labeled directed graph(unit LGSimpleDigraph)
+
   **features**:
   - extended IEnumearble interface
   - *lite* containers based on advanced records
-##### Implemented graph features:
+#### Implemented graph features:
   - core functions:
     + vertices/edges addition/removal/query/enumeration, edge contraction, degree
     + load/save to own binary format, primitive export to DOT format
@@ -69,7 +70,7 @@
     + maximum flow: push/relabel, capacity scaling Dinitz
     + minimum-cost flow: Busacker-Gowen, cost scaling push/relabel algorithm
     + global minimum cut: Stoer–Wagner, Nagamochi-Ibaraki    
-##### Algorithms on arrays and vectors(mostly unit LGArrayHelpers):
+#### Algorithms on arrays and vectors(mostly unit LGArrayHelpers):
   - reverse, right/left cyclic shifts
   - permutations
   - binary search
