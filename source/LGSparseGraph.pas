@@ -292,15 +292,15 @@ type
   public
   type
     TEdge = record
-      Source,
-      Destination: SizeInt;
+      Source,               //index of source vertex
+      Destination: SizeInt; //index of target vertex
       Data:  TEdgeData;
       constructor Create(aSrc: SizeInt; p: PAdjItem);
       constructor Create(aSrc, aDst: SizeInt; constref d: TEdgeData);
     end;
 
     TIncidentEdge = record
-      Destination: SizeInt;
+      Destination: SizeInt; //index of target vertex
       Data:  TEdgeData;
     end;
 
@@ -406,7 +406,7 @@ type
     function  AddVertex(constref aVertex: TVertex): Boolean; inline;
   { returns count of added vertices }
     function  AddVertices(const aVertices: TVertexArray): SizeInt;
-  { removes vertex aVertex from graph; raises EGraphError if not contains aVertex }
+  { removes vertex aVertex from graph, slow; raises EGraphError if not contains aVertex }
     procedure RemoveVertex(constref aVertex: TVertex); inline;
     procedure RemoveVertexI(aIndex: SizeInt);
     function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
@@ -423,8 +423,8 @@ type
     otherwise returns False }
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
-  { if contains an edge (aSrc, aDst) then contracts it and returns True(vertex aSrc remains, aDst is removed),
-    otherwise returns False }
+  { if contains an edge (aSrc, aDst) then contracts it and returns True(aSrc remains, aDst removes);
+    otherwise returns False, slow }
     function  ContractEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContractEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
