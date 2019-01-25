@@ -31,7 +31,7 @@
     </CompilerOptions>
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
-    <Version Minor="4" Release="1"/>
+    <Version Minor="5" Release="1"/>
     <Files Count="45">
       <Item1>
         <Filename Value="..\source\LGUtils.pas"/>
