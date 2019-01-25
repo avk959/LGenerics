@@ -961,7 +961,7 @@ begin
   FSink^.Parent := nil;
 end;
 
-function TGIntWeightDiGraph.TSspMcfHelper.ReweightGraph: Boolean;
+function TGIntWeightDiGraph.TSspMcfHelper.SetNodePrices: Boolean;
 var
   Queue, TreePrev, TreeNext, Level: TIntArray;
   Active: TBitVector;
@@ -1125,7 +1125,7 @@ end;
 function TGIntWeightDiGraph.TSspMcfHelper.Execute: TWeight;
 begin
   Result := 0;
-  if not ReweightGraph then
+  if not SetNodePrices then
     exit;
   repeat
     Result += PushFlow(FRequestFlow - Result);

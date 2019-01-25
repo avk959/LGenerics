@@ -191,7 +191,7 @@ type
     procedure CreateResidualNet(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; aReqFlow: TWeight;
               var aCosts: TEdgeCostMap);
     procedure SearchInit;
-    function  ReweightGraph: Boolean;
+    function  SetNodePrices: Boolean;
     function  FindAugmentPath: Boolean;
     function  PushFlow(aRestFlow: TWeight): TWeight;
     function  Execute: TWeight;
