@@ -3435,7 +3435,7 @@ end;
 function TGSimpleGraph.FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
-  Helper: THamiltonian;
+  Helper: THamiltonSearch;
   I: SizeInt;
 begin
   CheckIndexRange(aSourceIdx);
@@ -3495,7 +3495,7 @@ end;
 function TGSimpleGraph.FindHamiltonPathsI(aSourceIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
-  Helper: THamiltonian;
+  Helper: THamiltonSearch;
   I, LeafCount: SizeInt;
 begin
   CheckIndexRange(aSourceIdx);
