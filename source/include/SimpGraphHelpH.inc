@@ -176,8 +176,8 @@ type
     function Execute(aGraph: TGSimpleGraph; out aColors: TIntArray): SizeInt;
   end;
 
-  { THamiltonian }
-  THamiltonian = object
+  { THamiltonSearch }
+  THamiltonSearch = object
   strict private
   type
     TOnCheckNode = procedure (aIndex: SizeInt) of object;

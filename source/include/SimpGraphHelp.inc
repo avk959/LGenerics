@@ -1028,9 +1028,9 @@ begin
     end;
 end;
 
-{ TGSimpleGraph.THamiltonian }
+{ TGSimpleGraph.THamiltonSearch }
 
-procedure TGSimpleGraph.THamiltonian.Init(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+procedure TGSimpleGraph.THamiltonSearch.Init(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector);
 begin
   FSource := aSrc;
@@ -1050,13 +1050,13 @@ begin
   FStartTime := Now;
 end;
 
-function TGSimpleGraph.THamiltonian.TimeToFinish: Boolean;
+function TGSimpleGraph.THamiltonSearch.TimeToFinish: Boolean;
 begin
   FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
   Result := FCancelled or FDone;
 end;
 
-function TGSimpleGraph.THamiltonian.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+function TGSimpleGraph.THamiltonSearch.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
 var
   I, Degree, MinDegree: SizeInt;
 begin
@@ -1074,7 +1074,7 @@ begin
   Result := aValue <> NULL_INDEX;
 end;
 
-procedure TGSimpleGraph.THamiltonian.CheckIsCycle(aNode: SizeInt);
+procedure TGSimpleGraph.THamiltonSearch.CheckIsCycle(aNode: SizeInt);
 begin
   if FMatrix[aNode][FSource] then
     begin
@@ -1086,14 +1086,14 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.THamiltonian.CheckIsPath(aNode: SizeInt);
+procedure TGSimpleGraph.THamiltonSearch.CheckIsPath(aNode: SizeInt);
 begin
   FPaths^.Add(FStack.ToArray);
   Inc(FFound);
   FDone := FDone or (FFound >= FRequired);
 end;
 
-procedure TGSimpleGraph.THamiltonian.SearchFor(aNode: SizeInt);
+procedure TGSimpleGraph.THamiltonSearch.SearchFor(aNode: SizeInt);
 var
   Cand, Saved: TBoolVector;
   I: SizeInt;
@@ -1133,7 +1133,7 @@ begin
     FOnCheckNode(aNode);
 end;
 
-procedure TGSimpleGraph.THamiltonian.ExecuteCycles;
+procedure TGSimpleGraph.THamiltonSearch.ExecuteCycles;
 var
   I: SizeInt;
 begin
@@ -1153,7 +1153,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.THamiltonian.ExecutePaths;
+procedure TGSimpleGraph.THamiltonSearch.ExecutePaths;
 var
   I: SizeInt;
 begin
@@ -1172,7 +1172,7 @@ begin
     end;
 end;
 
-function TGSimpleGraph.THamiltonian.FindCycles(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+function TGSimpleGraph.THamiltonSearch.FindCycles(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
@@ -1180,7 +1180,7 @@ begin
   Result := not FCancelled and pv^.NonEmpty;
 end;
 
-function TGSimpleGraph.THamiltonian.FindPaths(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+function TGSimpleGraph.THamiltonSearch.FindPaths(aGraph: TGSimpleGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
