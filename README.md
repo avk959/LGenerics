@@ -83,7 +83,7 @@
   - timsort(unit LGMiscUtils)
   - counting sort
   - ...
-##### Other:
+#### Other:
   - non-cryptogarphic hashes(unit LGHash):
     + Yann Collet's xxHash32, xxHash64
     + Austin Appleby's MurmurHash2, MurmurHash2A, MurmurHash3_x86_32, MurmurHash64A
