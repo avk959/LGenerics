@@ -434,13 +434,14 @@ type
     function  AddEdges(const aVertexList: array of Integer): Integer;
   end;
 
+  { TGraphDotWriter }
+
   generic TGraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
     specialize TGAbstractDotWriter<TVertex, TEdgeData, TEqRel>)
   protected
   type
     TSimpleGraph = specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>;
-
-    function Graph2Dot(aGraph: TGraph): string; override;
+    procedure WriteEdges(aGraph: TGraph; aList: TStrings) override;
   public
     constructor Create;
   end;
@@ -3796,48 +3797,18 @@ end;
 
 { TGraphDotWriter }
 
-function TGraphDotWriter.Graph2Dot(aGraph: TGraph): string;
+procedure TGraphDotWriter.WriteEdges(aGraph: TGraph; aList: TStrings);
 var
-  s: utf8string;
-  I: SizeInt;
   e: TGraph.TEdge;
+  s: string;
 begin
-  if aGraph.Title <> '' then
-    s := '"' + aGraph.Title + '"'
-  else
-    s := 'Untitled';
-  with TStringList.Create do
-    try
-      SkipLastLineBreak := True;
-      WriteBOM := False;
-      DefaultEncoding := TEncoding.UTF8;
-      Add(FGraphMark + s + ' {');
-      if ShowTitle then
-        Add('label=' + s + ';');
-      Add(DIRECTS[Direction]);
-      if Assigned(OnStartWrite) then
-        begin
-          s := OnStartWrite(aGraph);
-          Add(s);
-        end;
-      if Assigned(OnWriteVertex) then
-        for I := 0 to Pred(aGraph.VertexCount) do
-          begin
-            s := OnWriteVertex(aGraph, I);
-            Add(s);
-          end;
-        for e in (aGraph as TSimpleGraph).DistinctEdges do
-          begin
-            if Assigned(OnWriteEdge) then
-              s := OnWriteEdge(aGraph, e)
-            else
-              s := DefaultWriteEdge(aGraph, e);
-            Add(s);
-          end;
-      Add('}');
-      Result := Text;
-    finally
-      Free;
+  for e in (aGraph as TSimpleGraph).DistinctEdges do
+    begin
+      if Assigned(OnWriteEdge) then
+        s := OnWriteEdge(aGraph, e)
+      else
+        s := DefaultWriteEdge(aGraph, e);
+      aList.Add(s);
     end;
 end;
 
