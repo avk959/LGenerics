@@ -154,8 +154,7 @@ type
     end;
 
   strict private
-    FIterationCount: LongInt;
-    function  GetInIteration: Boolean; inline;
+    FInIteration: Boolean;
   protected
     procedure CapacityExceedError(aValue: SizeInt); inline;
     procedure AccessEmptyError; inline;
@@ -171,7 +170,7 @@ type
     procedure DoTrimToFit; virtual; abstract;
     procedure DoEnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure CopyItems(aBuffer: PItem); virtual;
-    property  InIteration: Boolean read GetInIteration;
+    property  InIteration: Boolean read FInIteration;
   public
     function  GetEnumerator: TCustomEnumerator; override;
     function  ToArray: TArray; override;
@@ -398,17 +397,16 @@ type
     property  Counts[const aValue: T]: SizeInt read GetKeyCount write SetKeyCount; default;
   end;
 
-  TCustomIterable = class
+  TSimpleIterable = class
   private
-    FIterationCount: LongInt;
-    function  GetInIteration: Boolean; inline;
+    FInIteration: Boolean;
   protected
     procedure CapacityExceedError(aValue: SizeInt); inline;
     procedure UpdateLockError; inline;
     procedure CheckInIteration; inline;
     procedure BeginIteration; inline;
     procedure EndIteration; inline;
-    property  InIteration: Boolean read GetInIteration;
+    property  InIteration: Boolean read FInIteration;
   end;
 
   TMapObjectOwns   = (moOwnsKeys, moOwnsValues);
@@ -419,7 +417,7 @@ type
 
   type
   { TGAbstractMap: map abstract ancestor class  }
-  generic TGAbstractMap<TKey, TValue> = class abstract(TCustomIterable, specialize IGMap<TKey, TValue>)
+  generic TGAbstractMap<TKey, TValue> = class abstract(TSimpleIterable, specialize IGMap<TKey, TValue>)
   {must be  generic TGAbstractMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
@@ -558,7 +556,7 @@ type
   end;
 
   { TGAbstractMultiMap: multimap abstract ancestor class }
-  generic TGAbstractMultiMap<TKey, TValue> = class abstract(TCustomIterable)
+  generic TGAbstractMultiMap<TKey, TValue> = class abstract(TSimpleIterable)
   {must be  generic TGAbstractMultiMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
@@ -1451,11 +1449,6 @@ end;
 
 { TGAbstractContainer }
 
-function TGAbstractContainer.GetInIteration: Boolean;
-begin
-  Result := Boolean(LongBool(FIterationCount));
-end;
-
 procedure TGAbstractContainer.CapacityExceedError(aValue: SizeInt);
 begin
   raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
@@ -1484,12 +1477,12 @@ end;
 
 procedure TGAbstractContainer.BeginIteration;
 begin
-  InterlockedIncrement(FIterationCount);
+  FInIteration := True;
 end;
 
 procedure TGAbstractContainer.EndIteration;
 begin
-  InterlockedDecrement(FIterationCount);
+  FInIteration := False;
 end;
 
 procedure TGAbstractContainer.CopyItems(aBuffer: PItem);
@@ -2274,37 +2267,32 @@ begin
   Result := GetEntries;
 end;
 
-{ TCustomIterable }
+{ TSimpleIterable }
 
-function TCustomIterable.GetInIteration: Boolean;
-begin
-  Result := Boolean(LongBool(FIterationCount));
-end;
-
-procedure TCustomIterable.CapacityExceedError(aValue: SizeInt);
+procedure TSimpleIterable.CapacityExceedError(aValue: SizeInt);
 begin
   raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
 end;
 
-procedure TCustomIterable.UpdateLockError;
+procedure TSimpleIterable.UpdateLockError;
 begin
   raise ELGUpdateLock.CreateFmt(SECantUpdDuringIterFmt, [ClassName]);
 end;
 
-procedure TCustomIterable.CheckInIteration;
+procedure TSimpleIterable.CheckInIteration;
 begin
   if InIteration then
     UpdateLockError;
 end;
 
-procedure TCustomIterable.BeginIteration;
+procedure TSimpleIterable.BeginIteration;
 begin
-  InterlockedIncrement(FIterationCount);
+  FInIteration := True;
 end;
 
-procedure TCustomIterable.EndIteration;
+procedure TSimpleIterable.EndIteration;
 begin
-  InterlockedDecrement(FIterationCount);
+  FInIteration := False;
 end;
 
 { TGAbstractMap.TExtractHelper }
