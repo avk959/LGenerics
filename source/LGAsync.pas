@@ -46,12 +46,12 @@ type
   TAsyncTask = class abstract
   public
   type
-    TTaskState = (tsPending, tsExecuting, tsFinished, tsCancelled);
+    TAsyncTaskState = (atsPending, atsExecuting, atsFinished, atsCancelled);
 
   strict private
     FAwait: PRtlEvent;
     FException: Exception;
-    FState: TTaskState;
+    FState: TAsyncTaskState;
   strict protected
     procedure DoExecute; virtual; abstract;
   public
@@ -61,7 +61,7 @@ type
     procedure Execute;
     procedure WaitFor;
     property  FatalException: Exception read FException;
-    property  State: TTaskState read FState;
+    property  State: TAsyncTaskState read FState;
   end;
 
   generic TGAsyncTask<T> = class abstract(TAsyncTask)
@@ -172,8 +172,8 @@ type
     constructor Create(aFun: TFun);
   end;
 
-  { TGAsyncNestFun incapsulates nested niladic function (without arguments) }
-  generic TGAsyncNestFun<T> = class(specialize TGAsyncTask<T>)
+  { TGAsyncNested incapsulates nested niladic function (without arguments) }
+  generic TGAsyncNested<T> = class(specialize TGAsyncTask<T>)
   public
   type
     TFun    = function: T is nested;
@@ -410,8 +410,8 @@ implementation
 
 procedure TAsyncTask.Cancel;
 begin
-  if FState = tsPending then
-    FState := tsCancelled;
+  if FState = atsPending then
+    FState := atsCancelled;
 end;
 
 destructor TAsyncTask.Destroy;
@@ -429,9 +429,9 @@ end;
 
 procedure TAsyncTask.Execute;
 begin
-  if FState = tsPending then
+  if FState = atsPending then
     begin
-      FState := tsExecuting;
+      FState := atsExecuting;
       WriteBarrier;
       try
         DoExecute;
@@ -440,10 +440,10 @@ begin
           FException := Exception(System.AcquireExceptionObject);
       end;
       WriteBarrier;
-      FState := tsFinished;
+      FState := atsFinished;
     end;
   System.RtlEventSetEvent(FAwait);
-  if FState = tsCancelled then
+  if FState = atsCancelled then
     TThread.Queue(TThread.CurrentThread, @Free);
 end;
 
@@ -481,8 +481,8 @@ begin
   if Assigned(FTask) and (FState < fsResolved) then
     try
       case FTask.State of
-        tsExecuting: FState := fsExecuting;
-        tsFinished:  FState := fsFinished;
+        atsExecuting: FState := fsExecuting;
+        atsFinished:  FState := fsFinished;
       end;
     except
       FState := fsCancelled;
@@ -520,7 +520,7 @@ begin
   if Assigned(FTask) and (FState = fsPending) then
     begin
       FTask.Cancel;
-      Result := FTask.State = tsCancelled;
+      Result := FTask.State = atsCancelled;
       if Result then
         begin
           FState := fsCancelled;
@@ -626,17 +626,17 @@ end;
 
 { TGAsyncNested }
 
-procedure TGAsyncNestFun.DoExecute;
+procedure TGAsyncNested.DoExecute;
 begin
   FResult := FFun();
 end;
 
-class function TGAsyncNestFun.Call(aFun: TFun; aEx: IExecutor): TFuture;
+class function TGAsyncNested.Call(aFun: TFun; aEx: IExecutor): TFuture;
 begin
-  Result.Start(TGAsyncNestFun.Create(aFun), aEx);
+  Result.Start(TGAsyncNested.Create(aFun), aEx);
 end;
 
-constructor TGAsyncNestFun.Create(aFun: TFun);
+constructor TGAsyncNested.Create(aFun: TFun);
 begin
   inherited Create;
   FFun := aFun;
