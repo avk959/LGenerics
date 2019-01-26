@@ -76,7 +76,7 @@ type
       functor TValueEqRel(value equality relation) must provide:
         class function HashCode([const[ref]] v: TValue): SizeInt;
         class function Equal([const[ref]] L, R: TValue): Boolean;  }
-  generic TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(TCustomIterable,
+  generic TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(TSimpleIterable,
     specialize IGMap<TKey, TValue>, specialize IGInverseMap<TKey, TValue>)
   {must be  generic TGHashBiMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
