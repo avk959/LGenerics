@@ -544,12 +544,14 @@ type
     FOnStartWrite: TOnStartWrite;
     FOnWriteVertex: TOnWriteVertex;
     FOnWriteEdge: TOnWriteEdge;
+    FShowTitle: Boolean;
     function Graph2Dot(aGraph: TGraph): utf8string; virtual; abstract;
     function DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; virtual;
   public
     procedure SaveToStream(aGraph: TGraph; aStream: TStream);
     procedure SaveToFile(aGraph: TGraph; const aFileName: string);
     property Direction: TWriteDirection read FDirection write FDirection;
+    property ShowTitle: Boolean read FShowTitle write FShowTitle;
     property OnStartWrite: TOnStartWrite read FOnStartWrite write FOnStartWrite;
     property OnWriteVertex: TOnWriteVertex read FOnWriteVertex write FOnWriteVertex;
     property OnWriteEdge: TOnWriteEdge read FOnWriteEdge write FOnWriteEdge;

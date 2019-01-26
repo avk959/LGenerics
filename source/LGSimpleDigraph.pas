@@ -2054,6 +2054,8 @@ begin
       WriteBOM := False;
       DefaultEncoding := TEncoding.UTF8;
       Add(FGraphMark + s + ' {');
+      if ShowTitle then
+        Add('label="' + s + '";');
       Add(DIRECTS[Direction]);
       if Assigned(OnStartWrite) then
         begin
