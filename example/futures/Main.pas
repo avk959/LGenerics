@@ -23,7 +23,7 @@ type
     Label1: TLabel;
     Label2: TLabel;
     lbResultTime: TLabel;
-    lbParallelResult: TLabel;
+    lbResultTime1: TLabel;
     PageControl1: TPageControl;
     TabSheet1: TTabSheet;
     TabSheet2: TTabSheet;
@@ -45,6 +45,7 @@ const
 
 type
   TDWordArray = array of DWord;
+  PDWordArray = ^TDWordArray;
   TTestData   = array[1..PieceCount] of TDWordArray;
   TSortHelper = specialize TGComparableArrayHelper<DWord>;
 
@@ -117,19 +118,17 @@ begin
     ShowMessage('Sequential sort failed');
 end;
 
-
-function Sort(constref a: TDWordArray): Boolean;
+function Sort(constref a: PDWordArray): Boolean;
 begin
-  TSortHelper.Sort(a);
+  TSortHelper.Sort(a^);
   Result := True;
 end;
 
 procedure TfrmMain.btFuturesClick(Sender: TObject);
 type
-  TMonadic = specialize TGAsyncMonadic<TDWordArray, Boolean>;
-  TFuture  = specialize TGFuture<Boolean>;
+  TMonadic = specialize TGAsyncMonadic<PDWordArray, Boolean>;
 var
-  Futures: array[1..PieceCount]of TFuture;
+  Futures: array[1..PieceCount] of TMonadic.TFuture;
   Data: TTestData;
   Elapsed: Extended;
   I: Integer;
@@ -139,9 +138,9 @@ begin
   FTimer.Start;
   ////////////////////
   for I := 1 to PieceCount do
-    Futures[I] := TMonadic.Call(@Sort, Data[I]);
+    Futures[I] := TMonadic.Call(@Sort, @Data[I]);
   for I := 1 to PieceCount do
-    Futures[I].OptValue.OrElse(True);
+    Futures[I].OptValue.OrElseDefault;
   //////////////////
   FTimer.Stop;
   Elapsed := FTimer.Elapsed;
@@ -163,42 +162,41 @@ begin
   ////////////////////
   FTimer.Stop;
   Elapsed := FTimer.Elapsed;
-  lbParallelResult.Caption := FloatToStr(Round(Elapsed*100000)/100000) + ' s';
+  lbResultTime1.Caption := FloatToStr(Round(Elapsed*100000)/100000) + ' s';
   if not TSortHelper.IsStrictAscending(Data) then
     ShowMessage('Sequential sort failed');
 end;
 
 
-function SortLeft(constref a: TDWordArray; constref aFrom, aTo: Integer): Integer;
+function SortLeft(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
 begin
-  TSortHelper.Sort(a[aFrom..aTo]);
+  TSortHelper.Sort(a^[aFrom..aTo]);
   Result := aFrom;
 end;
 
-function SortRight(constref a: TDWordArray; constref aFrom, aTo: Integer): Integer;
+function SortRight(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
 begin
-  TSortHelper.Sort(a[aFrom..aTo]);
+  TSortHelper.Sort(a^[aFrom..aTo]);
   Result := aTo;
 end;
 
-function MergeSortLeft(constref a: TDWordArray; constref aFrom, aTo: Integer): Integer;
+function MergeSortLeft(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
 begin
-  TSortHelper.MergeSort(a[aFrom..aTo]);
+  TSortHelper.MergeSort(a^[aFrom..aTo]);
   Result := aFrom;
 end;
 
-function MergeSortRight(constref a: TDWordArray; constref aFrom, aTo: Integer): Integer;
+function MergeSortRight(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
 begin
-  TSortHelper.MergeSort(a[aFrom..aTo]);
+  TSortHelper.MergeSort(a^[aFrom..aTo]);
   Result := aTo;
 end;
 
 procedure TfrmMain.btFutures1Click(Sender: TObject);
 type
-  TTriadic = specialize TGAsyncTriadic<TDWordArray, Integer, Integer, Integer>;
-  TFuture    = specialize TGFuture<Integer>;
+  TTriadic = specialize TGAsyncTriadic<PDWordArray, Integer, Integer, Integer>;
 var
-  p1, p2, p3, p4, p5, p6:  TFuture;
+  p1, p2, p3, p4, p5, p6: specialize TGFuture<Integer>;
   Data: TDWordArray;
   Elapsed: Extended;
   ChankSize: Integer;
@@ -209,19 +207,19 @@ begin
   FTimer.Clear;
   FTimer.Start;
   ////////////////////////////////////////////////////////////////
-  p1 := TTriadic.Call(@SortLeft, Data, 0, Pred(ChankSize));
-  p2 := TTriadic.Call(@SortRight, Data, ChankSize, Pred(ChankSize*2));
-  p3 := TTriadic.Call(@SortLeft, Data, ChankSize*2, Pred(ChankSize*3));
-  p4 := TTriadic.Call(@SortRight, Data, ChankSize*3, High(Data));
+  p1 := TTriadic.Call(@SortLeft, @Data, 0, Pred(ChankSize));
+  p2 := TTriadic.Call(@SortRight, @Data, ChankSize, Pred(ChankSize*2));
+  p3 := TTriadic.Call(@SortLeft, @Data, ChankSize*2, Pred(ChankSize*3));
+  p4 := TTriadic.Call(@SortRight, @Data, ChankSize*3, High(Data));
 
-  p5 := TTriadic.Call(@MergeSortLeft, Data, p1.Value, p2.Value);
-  p6 := TTriadic.Call(@MergeSortRight, Data, p3.Value, p4.Value);
+  p5 := TTriadic.Call(@MergeSortLeft, @Data, p1.Value, p2.Value);
+  p6 := TTriadic.Call(@MergeSortRight, @Data, p3.Value, p4.Value);
 
-  TTriadic.Call(@MergeSortLeft, Data, p5.Value, p6.Value).Value;
+  TTriadic.Call(@MergeSortLeft, @Data, p5.Value, p6.Value).Value;
   ////////////////////////////////////////////////////////////////
   FTimer.Stop;
   Elapsed := FTimer.Elapsed;
-  lbParallelResult.Caption := FloatToStr(Round(Elapsed*100000)/100000) + ' s';
+  lbResultTime1.Caption := FloatToStr(Round(Elapsed*100000)/100000) + ' s';
   if not TSortHelper.IsStrictAscending(Data) then
     ShowMessage('Sort with futures failed');
 end;
