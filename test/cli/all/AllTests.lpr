@@ -3,7 +3,7 @@ program AllTests;
 {$mode objfpc}{$H+}
 
 uses
-  Classes, consoletestrunner,
+  Classes, SysUtils, consoletestrunner,
   LGUtilsTest,
   LGArrayHelpUtilTest,
   LGBaseArrayHelperTest,
