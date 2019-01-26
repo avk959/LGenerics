@@ -25,7 +25,7 @@ type
     function  GenerateTestDigr1: TGraph;
     function  GenerateTestDigr2: TGraph;
     function  GenerateTestDigr3: TGraph;
-    function  GenerateRandomDigr(aSize, aDeg: Integer): TGraph;
+    function  GenerateRandomGraph(aSize, aDeg: Integer): TGraph;
   published
     procedure AddVertices;
     procedure SaveToStream;
@@ -175,7 +175,7 @@ begin
   Result.AddEdges([0, 1,  1, 1,  1, 2,  1, 4,  2, 0,  2, 3,  3, 2,  3, 5,  4, 2, 4, 3,  5, 0,  5, 1,  5, 2]);
 end;
 
-function TSimpleDiGraphTest.GenerateRandomDigr(aSize, aDeg: Integer): TGraph;
+function TSimpleDiGraphTest.GenerateRandomGraph(aSize, aDeg: Integer): TGraph;
 var
   s, d: Integer;
 begin
@@ -872,9 +872,10 @@ const
   Size = 100;
   Deg  = 3;
 begin
-  {%H-}Ref.Instance := GenerateRandomDigr(Size, Deg);
-  g := Ref;
-  AssertFalse(g.IsStrongConnected);
+  repeat
+    {%H-}Ref.Instance := GenerateRandomGraph(Size, Deg);
+    g := Ref;
+  until not g.IsStrongConnected;
   {%H-}Ref2.Instance := g.Clone;
   g2 := Ref2;
   g.BuildReachabilityMatrix;
