@@ -25,6 +25,7 @@ type
     function  GenerateTestDigr1: TGraph;
     function  GenerateTestDigr2: TGraph;
     function  GenerateTestDigr3: TGraph;
+    function  GenerateRandomDigr(aSize, aDeg: Integer): TGraph;
   published
     procedure AddVertices;
     procedure SaveToStream;
@@ -58,6 +59,7 @@ type
     procedure GetStrongComponent;
     procedure BuildReachabilityMatrix;
     procedure BuildReachabilityMatrix1;
+    procedure BuildReachabilityMatrix2;
     procedure FindMetrics;
     procedure FindCenter;
     procedure FindPeripheral;
@@ -171,6 +173,28 @@ begin
   Result := TGraph.Create;
   Result.AddVertexRange(0, 5);
   Result.AddEdges([0, 1,  1, 1,  1, 2,  1, 4,  2, 0,  2, 3,  3, 2,  3, 5,  4, 2, 4, 3,  5, 0,  5, 1,  5, 2]);
+end;
+
+function TSimpleDiGraphTest.GenerateRandomDigr(aSize, aDeg: Integer): TGraph;
+var
+  s, d: Integer;
+begin
+  Result := TGraph.Create;
+  if aSize < 1 then
+    exit;
+  if aDeg > Pred(aSize) then
+    aDeg := Pred(aSize);
+  for s := 0 to Pred(aSize) do
+    Result.AddVertex(s);
+  repeat
+    s := Random(aSize);
+    repeat
+      d := Random(aSize)
+    until d <> s;
+    Result.AddEdge(s, d);
+    if Result.EdgeCount >= aSize * aDeg then
+      exit;
+  until False;
 end;
 
 procedure TSimpleDiGraphTest.AddVertices;
@@ -837,6 +861,27 @@ begin
   AssertTrue(g.PathExists(8, 0));
   AssertTrue(g.PathExists(7, 12));
   AssertTrue(g.PathExists(7, 10));
+end;
+
+procedure TSimpleDiGraphTest.BuildReachabilityMatrix2;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+  I, J: SizeInt;
+const
+  Size = 100;
+  Deg  = 3;
+begin
+  {%H-}Ref.Instance := GenerateRandomDigr(Size, Deg);
+  g := Ref;
+  AssertFalse(g.IsStrongConnected);
+  {%H-}Ref2.Instance := g.Clone;
+  g2 := Ref2;
+  g.BuildReachabilityMatrix;
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if I <> J then
+        AssertFalse(g.PathExists(I, J) xor g2.PathExists(I, J));
 end;
 
 procedure TSimpleDiGraphTest.FindMetrics;
