@@ -283,7 +283,7 @@ type
   generic TGDigraphDotWriter<TVertex, TEdgeData, TEqRel> = class(
     specialize TGAbstractDotWriter<TVertex, TEdgeData, TEqRel>)
   protected
-    function Graph2Dot(aGraph: TGraph): utf8string; override;
+    function Graph2Dot(aGraph: TGraph): string; override;
   public
     constructor Create;
   end;
@@ -311,7 +311,7 @@ type
 
   TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TEmptyRec, Integer>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
 
   { TStrFlowChart
@@ -335,7 +335,7 @@ type
 
   TStrFlowChartDotWriter = class(specialize TGDigraphDotWriter<string, TEmptyRec, string>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
 
   { TGWeightedDiGraph implements simple sparse directed weighted graph based on adjacency lists;
@@ -2038,9 +2038,9 @@ end;
 
 { TGDigraphDotWriter }
 
-function TGDigraphDotWriter.Graph2Dot(aGraph: TGraph): utf8string;
+function TGDigraphDotWriter.Graph2Dot(aGraph: TGraph): string;
 var
-  s: utf8string;
+  s: string;
   I: SizeInt;
   e: TGraph.TEdge;
 begin
@@ -2055,7 +2055,7 @@ begin
       DefaultEncoding := TEncoding.UTF8;
       Add(FGraphMark + s + ' {');
       if ShowTitle then
-        Add('label="' + s + '";');
+        Add('label=' + s + ';');
       Add(DIRECTS[Direction]);
       if Assigned(OnStartWrite) then
         begin
@@ -2164,7 +2164,7 @@ end;
 
 { TIntFlowChartDotWriter }
 
-function TIntFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+function TIntFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
 begin
   Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]) + ';';
 end;
@@ -2246,7 +2246,7 @@ end;
 
 { TStrFlowChartDotWriter }
 
-function TStrFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+function TStrFlowChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
 begin
   Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '";';
 end;

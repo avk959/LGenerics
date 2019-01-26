@@ -539,14 +539,14 @@ type
     DIRECTS: array[TWriteDirection] of utf8string = ('rankdir=TB;', 'rankdir=LR;');
   var
     FGraphMark,
-    FEdgeMark: utf8string;
+    FEdgeMark: string;
     FDirection: TWriteDirection;
     FOnStartWrite: TOnStartWrite;
     FOnWriteVertex: TOnWriteVertex;
     FOnWriteEdge: TOnWriteEdge;
     FShowTitle: Boolean;
-    function Graph2Dot(aGraph: TGraph): utf8string; virtual; abstract;
-    function DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; virtual;
+    function Graph2Dot(aGraph: TGraph): string; virtual; abstract;
+    function DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): string; virtual;
   public
     procedure SaveToStream(aGraph: TGraph; aStream: TStream);
     procedure SaveToFile(aGraph: TGraph; const aFileName: string);
@@ -2574,7 +2574,7 @@ end;
 
 { TGAbstractDotWriter }
 
-function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
 begin
   Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
 end;

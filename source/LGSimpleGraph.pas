@@ -440,14 +440,14 @@ type
   type
     TSimpleGraph = specialize TGSimpleGraph<TVertex, TEdgeData, TEqRel>;
 
-    function Graph2Dot(aGraph: TGraph): utf8string; override;
+    function Graph2Dot(aGraph: TGraph): string; override;
   public
     constructor Create;
   end;
 
   TIntChartDotWriter = class(specialize TGraphDotWriter<Integer, TEmptyRec, Integer>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
 
   { TStrChart
@@ -474,7 +474,7 @@ type
 
   TStrChartDotWriter = class(specialize TGraphDotWriter<string, TEmptyRec, string>)
   protected
-    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string; override;
+    function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
 
   { TGWeightedGraph implements simple sparse undirected weighed graph based on adjacency lists;
@@ -3796,7 +3796,7 @@ end;
 
 { TGraphDotWriter }
 
-function TGraphDotWriter.Graph2Dot(aGraph: TGraph): utf8string;
+function TGraphDotWriter.Graph2Dot(aGraph: TGraph): string;
 var
   s: utf8string;
   I: SizeInt;
@@ -3813,7 +3813,7 @@ begin
       DefaultEncoding := TEncoding.UTF8;
       Add(FGraphMark + s + ' {');
       if ShowTitle then
-        Add('label="' + s + '";');
+        Add('label=' + s + ';');
       Add(DIRECTS[Direction]);
       if Assigned(OnStartWrite) then
         begin
@@ -3849,7 +3849,7 @@ end;
 
 { TIntChartDotWriter }
 
-function TIntChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+function TIntChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
 begin
   Result := IntToStr(aGraph[aEdge.Source]) + FEdgeMark + IntToStr(aGraph[aEdge.Destination]) + ';';
 end;
@@ -3951,7 +3951,7 @@ end;
 
 { TStrChartDotWriter }
 
-function TStrChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): utf8string;
+function TStrChartDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
 begin
   Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '";';
 end;
