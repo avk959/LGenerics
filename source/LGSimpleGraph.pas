@@ -3802,7 +3802,7 @@ var
   e: TGraph.TEdge;
   s: string;
 begin
-  for e in (aGraph as TSimpleGraph).DistinctEdges do
+  for e in TSimpleGraph(aGraph).DistinctEdges do
     begin
       if Assigned(OnWriteEdge) then
         s := OnWriteEdge(aGraph, e)
