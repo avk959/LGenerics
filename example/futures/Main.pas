@@ -140,7 +140,7 @@ begin
   for I := 1 to PieceCount do
     Futures[I] := TMonadic.Call(@Sort, @Data[I]);
   for I := 1 to PieceCount do
-    Futures[I].OptValue.OrElseDefault;
+    Futures[I].WaitFor;
   //////////////////
   FTimer.Stop;
   Elapsed := FTimer.Elapsed;
