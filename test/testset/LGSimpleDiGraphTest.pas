@@ -583,7 +583,7 @@ begin
   g.AddEdge(2, 1);
   for a in g.IncomingArcs(1) do
     Inc(c);
-  AssertTrue(c.ToString, c = 1);
+  AssertTrue(c = 1);
 end;
 
 procedure TSimpleDiGraphTest.IncomingArcs1;
