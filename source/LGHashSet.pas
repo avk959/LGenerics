@@ -41,14 +41,14 @@ type
   generic TGAbstractHashSet<T> = class abstract(specialize TGAbstractSet<T>)
   public
   type
-    TCustomHashSet = specialize TGAbstractHashSet<T>;
+    TAbstractHashSet = specialize TGAbstractHashSet<T>;
 
   protected
   type
-    THashTable           = specialize TGAbstractHashTable<T, TEntry>;
-    THashTableClass      = class of THashTable;
-    THashSetClass        = class of TCustomHashSet;
-    TSearchResult        = THashTable.TSearchResult;
+    THashTable      = specialize TGAbstractHashTable<T, TEntry>;
+    THashTableClass = class of THashTable;
+    THashSetClass   = class of TAbstractHashSet;
+    TSearchResult   = THashTable.TSearchResult;
 
     TEnumerator = class(TContainerEnumerator)
     private
@@ -56,7 +56,7 @@ type
     protected
       function  GetCurrent: T; override;
     public
-      constructor Create(hs: TCustomHashSet);
+      constructor Create(hs: TAbstractHashSet);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -64,7 +64,7 @@ type
 
     TDistinctEnumerable = class(specialize TGEnumCursor<T>)
     protected
-      FSet: TCustomHashSet;
+      FSet: TAbstractHashSet;
     public
       constructor Create(e: TCustomEnumerator; aSetClass: THashSetClass);
       destructor Destroy; override;
@@ -112,10 +112,10 @@ type
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of T);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEnumerable);
-    constructor CreateCopy(aSet: TCustomHashSet);
+    constructor CreateCopy(aSet: TAbstractHashSet);
     destructor Destroy; override;
     function  Contains(constref aValue: T): Boolean; override;
-    function  Clone: TCustomHashSet; override;
+    function  Clone: TAbstractHashSet; override;
     property  LoadFactor: Single read GetLoadFactor write SetLoadFactor;
     property  FillRatio: Single read GetFillRatio;
   { The number of elements that can be written without rehashing }
@@ -518,7 +518,7 @@ begin
   Result := FEnum.GetCurrent^.Key;
 end;
 
-constructor TGAbstractHashSet.TEnumerator.Create(hs: TCustomHashSet);
+constructor TGAbstractHashSet.TEnumerator.Create(hs: TAbstractHashSet);
 begin
   inherited Create(hs);
   FEnum := hs.FTable.GetEnumerator;
@@ -719,8 +719,8 @@ var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TCustomHashSet then
-    CreateCopy(TCustomHashSet(o))
+  if o is TAbstractHashSet then
+    CreateCopy(TAbstractHashSet(o))
   else
     begin
       if o is TAbstractSet then
@@ -788,7 +788,7 @@ begin
   DoAddAll(e);
 end;
 
-constructor TGAbstractHashSet.CreateCopy(aSet: TCustomHashSet);
+constructor TGAbstractHashSet.CreateCopy(aSet: TAbstractHashSet);
 begin
   if aSet.GetClass = GetClass then
     FTable := aSet.FTable.Clone
@@ -813,7 +813,7 @@ begin
   Result := FTable.Find(aValue, sr) <> nil;
 end;
 
-function TGAbstractHashSet.Clone: TCustomHashSet;
+function TGAbstractHashSet.Clone: TAbstractHashSet;
 begin
   Result := GetClass.CreateCopy(Self);
 end;

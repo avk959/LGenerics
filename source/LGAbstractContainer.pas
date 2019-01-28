@@ -154,7 +154,8 @@ type
     end;
 
   strict private
-    FInIteration: Boolean;
+    FItCounter: Integer;
+    function  GetInIteration: Boolean; inline;
   protected
     procedure CapacityExceedError(aValue: SizeInt); inline;
     procedure AccessEmptyError; inline;
@@ -170,7 +171,7 @@ type
     procedure DoTrimToFit; virtual; abstract;
     procedure DoEnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure CopyItems(aBuffer: PItem); virtual;
-    property  InIteration: Boolean read FInIteration;
+    property  InIteration: Boolean read GetInIteration;
   public
     function  GetEnumerator: TCustomEnumerator; override;
     function  ToArray: TArray; override;
@@ -397,16 +398,19 @@ type
     property  Counts[const aValue: T]: SizeInt read GetKeyCount write SetKeyCount; default;
   end;
 
+  { TSimpleIterable }
+
   TSimpleIterable = class
   private
-    FInIteration: Boolean;
+    FItCounter: Integer;
+    function  GetInIteration: Boolean; inline;
   protected
     procedure CapacityExceedError(aValue: SizeInt); inline;
     procedure UpdateLockError; inline;
     procedure CheckInIteration; inline;
     procedure BeginIteration; inline;
     procedure EndIteration; inline;
-    property  InIteration: Boolean read FInIteration;
+    property  InIteration: Boolean read GetInIteration;
   end;
 
   TMapObjectOwns   = (moOwnsKeys, moOwnsValues);
@@ -422,7 +426,7 @@ type
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
-    TCustomMap       = specialize TGAbstractMap<TKey, TValue>;
+    TAbstractMap     = specialize TGAbstractMap<TKey, TValue>;
     TEntry           = specialize TGMapEntry<TKey, TValue>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IValueEnumerable = specialize IGEnumerable<TValue>;
@@ -453,25 +457,25 @@ type
 
     TCustomKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
     protected
-      FOwner: TCustomMap;
+      FOwner: TAbstractMap;
     public
-      constructor Create(aMap: TCustomMap);
+      constructor Create(aMap: TAbstractMap);
       destructor Destroy; override;
     end;
 
     TCustomValueEnumerable = class(specialize TGAutoEnumerable<TValue>)
     protected
-      FOwner: TCustomMap;
+      FOwner: TAbstractMap;
     public
-      constructor Create(aMap: TCustomMap);
+      constructor Create(aMap: TAbstractMap);
       destructor Destroy; override;
     end;
 
     TCustomEntryEnumerable = class(specialize TGAutoEnumerable<TEntry>)
     protected
-      FOwner: TCustomMap;
+      FOwner: TAbstractMap;
     public
-      constructor Create(aMap: TCustomMap);
+      constructor Create(aMap: TAbstractMap);
       destructor Destroy; override;
     end;
 
@@ -545,7 +549,7 @@ type
     function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
     function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
     procedure RetainAll({%H-}c: IKeyCollection);
-    function  Clone: TCustomMap; virtual; abstract;
+    function  Clone: TAbstractMap; virtual; abstract;
     function  Keys: IKeyEnumerable;
     function  Values: IValueEnumerable;
     function  Entries: IEntryEnumerable;
@@ -575,12 +579,12 @@ type
     protected
       function GetCount: SizeInt; virtual; abstract;
     public
-      function  GetEnumerator: TCustomValueEnumerator; virtual; abstract;
-      function  ToArray: TValueArray;
-      function  Contains(constref aValue: TValue): Boolean; virtual; abstract;
-      function  Add(constref aValue: TValue): Boolean; virtual; abstract;
-      function  Remove(constref aValue: TValue): Boolean; virtual; abstract;
-      property  Count: SizeInt read GetCount;
+      function GetEnumerator: TCustomValueEnumerator; virtual; abstract;
+      function ToArray: TValueArray;
+      function Contains(constref aValue: TValue): Boolean; virtual; abstract;
+      function Add(constref aValue: TValue): Boolean; virtual; abstract;
+      function Remove(constref aValue: TValue): Boolean; virtual; abstract;
+      property Count: SizeInt read GetCount;
     end;
 
     TMMEntry = record
@@ -709,7 +713,7 @@ type
       constructor Create(constref aCol: TCol; constref aValue: TValue);
     end;
 
-    TCustomTable2D      = TGAbstractTable2D;
+    TAbstractTable2D    = TGAbstractTable2D;
     TValueArray         = array of TValue;
     IValueEnumerable    = specialize IGEnumerable<TValue>;
     IColEnumerable      = specialize IGEnumerable<TCol>;
@@ -1449,6 +1453,11 @@ end;
 
 { TGAbstractContainer }
 
+function TGAbstractContainer.GetInIteration: Boolean;
+begin
+  Result := Boolean(LongBool(FItCounter));
+end;
+
 procedure TGAbstractContainer.CapacityExceedError(aValue: SizeInt);
 begin
   raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
@@ -1477,12 +1486,12 @@ end;
 
 procedure TGAbstractContainer.BeginIteration;
 begin
-  FInIteration := True;
+  Inc(FItCounter);
 end;
 
 procedure TGAbstractContainer.EndIteration;
 begin
-  FInIteration := False;
+  Dec(FItCounter);
 end;
 
 procedure TGAbstractContainer.CopyItems(aBuffer: PItem);
@@ -2269,6 +2278,11 @@ end;
 
 { TSimpleIterable }
 
+function TSimpleIterable.GetInIteration: Boolean;
+begin
+  Result := Boolean(LongBool(FItCounter));
+end;
+
 procedure TSimpleIterable.CapacityExceedError(aValue: SizeInt);
 begin
   raise ELGCapacityExceed.CreateFmt(SEClassCapacityExceedFmt, [ClassName, aValue]);
@@ -2287,12 +2301,12 @@ end;
 
 procedure TSimpleIterable.BeginIteration;
 begin
-  FInIteration := True;
+  Inc(FItCounter);
 end;
 
 procedure TSimpleIterable.EndIteration;
 begin
-  FInIteration := False;
+  Dec(FItCounter);
 end;
 
 { TGAbstractMap.TExtractHelper }
@@ -2322,7 +2336,7 @@ end;
 
 { TGAbstractMap.TCustomKeyEnumerable }
 
-constructor TGAbstractMap.TCustomKeyEnumerable.Create(aMap: TCustomMap);
+constructor TGAbstractMap.TCustomKeyEnumerable.Create(aMap: TAbstractMap);
 begin
   inherited Create;
   FOwner := aMap;
@@ -2336,7 +2350,7 @@ end;
 
 { TGAbstractMap.TCustomValueEnumerable }
 
-constructor TGAbstractMap.TCustomValueEnumerable.Create(aMap: TCustomMap);
+constructor TGAbstractMap.TCustomValueEnumerable.Create(aMap: TAbstractMap);
 begin
   inherited Create;
   FOwner := aMap;
@@ -2350,7 +2364,7 @@ end;
 
 { TGAbstractMap.TCustomEntryEnumerable }
 
-constructor TGAbstractMap.TCustomEntryEnumerable.Create(aMap: TCustomMap);
+constructor TGAbstractMap.TCustomEntryEnumerable.Create(aMap: TAbstractMap);
 begin
   inherited Create;
   FOwner := aMap;

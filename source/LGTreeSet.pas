@@ -40,7 +40,7 @@ type
   generic TGAbstractTreeSet<T> = class abstract(specialize TGAbstractSet<T>)
   public
   type
-    TCustomTreeSet = specialize TGAbstractTreeSet<T>;
+    TAbstractTreeSet = specialize TGAbstractTreeSet<T>;
 
   protected
   type
@@ -52,7 +52,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: T; override;
     public
-      constructor Create(aSet: TCustomTreeSet);
+      constructor Create(aSet: TAbstractTreeSet);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -63,7 +63,7 @@ type
       FEnum: TTree.TEnumerator;
       function  GetCurrent: T; override;
     public
-      constructor Create(aSet: TCustomTreeSet);
+      constructor Create(aSet: TAbstractTreeSet);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -74,7 +74,7 @@ type
       FEnum: TTree.TEnumeratorAt;
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aLowBound: T; aSet: TCustomTreeSet; aInclusive: Boolean);
+      constructor Create(constref aLowBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -118,12 +118,12 @@ type
     function Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
        virtual; abstract;
   { returns sorted set whose items are strictly less than(if not aInclusive) aHighBound }
-    function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TCustomTreeSet; virtual; abstract;
+    function HeadSet(constref aHighBound: T; aInclusive: Boolean = False): TAbstractTreeSet; virtual; abstract;
   { returns sorted set whose items are greater than or equal(if aInclusive) to aLowBound}
-    function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TCustomTreeSet; virtual; abstract;
+    function TailSet(constref aLowBound: T; aInclusive: Boolean = True): TAbstractTreeSet; virtual; abstract;
   { returns sorted set whose items are greater than or equal to aLowBound and strictly less than
     aHighBound(by default) }
-    function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TCustomTreeSet;
+    function SubSet(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TAbstractTreeSet;
        virtual; abstract;
   end;
 
@@ -143,14 +143,14 @@ type
       FDone: Boolean;
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aHighBound: T; aSet: TCustomTreeSet; aInclusive: Boolean); overload;
+      constructor Create(constref aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TRangeEnumerable = class(THeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: T; aSet: TCustomTreeSet; aBounds: TRangeBounds); overload;
+      constructor Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
     end;
 
     class function DoCompare(constref L, R: T): SizeInt; static;
@@ -191,14 +191,14 @@ type
     protected
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aHighBound: T; aSet: TCustomTreeSet; aInclusive: Boolean); overload;
+      constructor Create(constref aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TRangeEnumerable = class(THeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: T; aSet: TCustomTreeSet; aBounds: TRangeBounds); overload;
+      constructor Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
     end;
 
     class function DoCompare(constref L, R: T): SizeInt; static;
@@ -260,14 +260,14 @@ type
     protected
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aHighBound: T; aSet: TCustomTreeSet; aInclusive: Boolean); overload;
+      constructor Create(constref aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TRangeEnumerable = class(THeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: T; aSet: TCustomTreeSet; aBounds: TRangeBounds); overload;
+      constructor Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
     end;
 
   public
@@ -326,14 +326,14 @@ type
       FDone: Boolean;
       function  GetCurrent: T; override;
     public
-      constructor Create(constref aHighBound: T; aSet: TCustomTreeSet; aInclusive: Boolean); overload;
+      constructor Create(constref aHighBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean); overload;
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
 
     TRangeEnumerable = class(THeadEnumerable)
-      constructor Create(constref aLowBound, aHighBound: T; aSet: TCustomTreeSet; aBounds: TRangeBounds); overload;
+      constructor Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet; aBounds: TRangeBounds); overload;
     end;
 
   public
@@ -608,7 +608,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGAbstractTreeSet.TEnumerator.Create(aSet: TCustomTreeSet);
+constructor TGAbstractTreeSet.TEnumerator.Create(aSet: TAbstractTreeSet);
 begin
   inherited Create(aSet);
   FEnum := aSet.FTree.GetEnumerator;
@@ -637,7 +637,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGAbstractTreeSet.TReverseEnumerable.Create(aSet: TCustomTreeSet);
+constructor TGAbstractTreeSet.TReverseEnumerable.Create(aSet: TAbstractTreeSet);
 begin
   inherited Create(aSet);
   FEnum := aSet.FTree.GetReverseEnumerator;
@@ -666,7 +666,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGAbstractTreeSet.TTailEnumerable.Create(constref aLowBound: T; aSet: TCustomTreeSet;
+constructor TGAbstractTreeSet.TTailEnumerable.Create(constref aLowBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -882,7 +882,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGBaseTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TCustomTreeSet;
+constructor TGBaseTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -916,7 +916,7 @@ end;
 
 { TGBaseTreeSet.TRangeEnumerable }
 
-constructor TGBaseTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TCustomTreeSet;
+constructor TGBaseTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
   aBounds: TRangeBounds);
 begin
   inherited Create(aSet);
@@ -1026,7 +1026,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGComparableTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TCustomTreeSet;
+constructor TGComparableTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -1060,8 +1060,8 @@ end;
 
 { TGComparableTreeSet.TRangeEnumerable }
 
-constructor TGComparableTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T;
-  aSet: TCustomTreeSet; aBounds: TRangeBounds);
+constructor TGComparableTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
+  aBounds: TRangeBounds);
 begin
   inherited Create(aSet);
   FEnum := aSet.FTree.GetEnumeratorAt(aLowBound, rbLow in aBounds);
@@ -1260,7 +1260,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGRegularTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TCustomTreeSet;
+constructor TGRegularTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -1295,7 +1295,7 @@ end;
 
 { TGRegularTreeSet.TRangeEnumerable }
 
-constructor TGRegularTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TCustomTreeSet;
+constructor TGRegularTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
   aBounds: TRangeBounds);
 begin
   inherited Create(aSet);
@@ -1485,7 +1485,7 @@ begin
   Result := FEnum.Current^.Data.Key;
 end;
 
-constructor TGDelegatedTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TCustomTreeSet;
+constructor TGDelegatedTreeSet.THeadEnumerable.Create(constref aHighBound: T; aSet: TAbstractTreeSet;
   aInclusive: Boolean);
 begin
   inherited Create(aSet);
@@ -1520,7 +1520,7 @@ end;
 
 { TGDelegatedTreeSet.TRangeEnumerable }
 
-constructor TGDelegatedTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TCustomTreeSet;
+constructor TGDelegatedTreeSet.TRangeEnumerable.Create(constref aLowBound, aHighBound: T; aSet: TAbstractTreeSet;
   aBounds: TRangeBounds);
 begin
   inherited Create(aSet);

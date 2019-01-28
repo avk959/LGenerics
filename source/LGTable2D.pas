@@ -160,12 +160,12 @@ type
       LOAD_FACTOR    = 0.65; //todo: why ???
 
     var
-      FTable: TCustomTable2D;
+      FTable: TAbstractTable2D;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
     public
-      constructor Create(aTable: TCustomTable2D);
+      constructor Create(aTable: TAbstractTable2D);
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; override;
@@ -233,7 +233,7 @@ type
       end;
 
     var
-      FTable: TCustomTable2D;
+      FTable: TAbstractTable2D;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
@@ -313,12 +313,12 @@ type
       INITIAL_CAPACITY = 8;
 
     var
-      FTable: TCustomTable2D;
+      FTable: TAbstractTable2D;
       FMap: TRowMapTable;
     protected
       function  GetCount: SizeInt; override;
     public
-      constructor Create(aTable: TCustomTable2D);
+      constructor Create(aTable: TAbstractTable2D);
       destructor Destroy; override;
       function  GetEnumerator: TRowDataEnumerator; override;
       procedure TrimToFit; override;
@@ -644,7 +644,7 @@ begin
   Result := FMap.Count;
 end;
 
-constructor TGHashTable2D.TRowMap.Create(aTable: TCustomTable2D);
+constructor TGHashTable2D.TRowMap.Create(aTable: TAbstractTable2D);
 begin
   FMap := TRowMapTable.Create(INITIAL_CAPACITY, LOAD_FACTOR);
   FTable := aTable;
@@ -912,7 +912,7 @@ begin
   Result := FMap.Count;
 end;
 
-constructor TGListTable2D.TRowMap.Create(aTable: TCustomTable2D);
+constructor TGListTable2D.TRowMap.Create(aTable: TAbstractTable2D);
 begin
   FMap := TRowMapTable.Create(INITIAL_CAPACITY);
   FTable := aTable;
