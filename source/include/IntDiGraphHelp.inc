@@ -1439,16 +1439,16 @@ procedure TGIntWeightDiGraph.TCsMcfHelper.InitPhase;
 var
   Arc: PArc;
   I, J: SizeInt;
-  PriceI: TCost;
+  Price: TCost;
 begin
   for I := 0 to Pred(FNodeCount) do
     begin
       Arc := FNodes[I].FirstArc;
-      PriceI := FNodes[I].Price;
+      Price := FNodes[I].Price;
       while Arc < FNodes[Succ(I)].FirstArc do
         begin
           J := IndexOf(Arc^.Target);
-          if (Arc^.ResCap > 0) and (PriceI + Arc^.Cost - FNodes[J].Price <= -FEpsilon) then
+          if (Arc^.ResCap > 0) and (Price + Arc^.Cost - FNodes[J].Price <= -FEpsilon) then
             Arc^.PushAll;
           Inc(Arc);
         end;
