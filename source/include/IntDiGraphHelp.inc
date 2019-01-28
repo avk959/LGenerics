@@ -1318,7 +1318,7 @@ end;
 function TGIntWeightDiGraph.TCsMcfHelper.PriceUpdate: Boolean;
 var
   Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
-  InQueue, Active: TBitVector;
+  InQueue, Active: TBoolVector;
   Curr, Next, Prev, Post, Test, CurrLevel, qLen, qHead, qTail: SizeInt;
   CurrArc: PArc;
   NodePrice: TCost;
@@ -1340,11 +1340,11 @@ begin
     begin
       Parents[Curr] := FNodeCount;
       TreePrev[Curr] := FNodeCount;
-      InQueue[Curr] := True;
-      Active[Curr] := True;
       Queue[qTail] := Curr;
       Inc(qTail);
     end;
+  InQueue.InitRange(FNodeCount);
+  Active.InitRange(FNodeCount);
   while qHead <> qTail do
     begin
       Curr := Queue[qHead];
