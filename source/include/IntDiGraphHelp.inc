@@ -1331,8 +1331,8 @@ begin
   Parents.Length := qLen;
   TreePrev.Length := qLen;
   Queue.Length := qLen;
-  Active.Size := FNodeCount;
-  InQueue.Size := FNodeCount;
+  //Active.Size := FNodeCount;
+  //InQueue.Size := FNodeCount;
   Parents[FNodeCount] := FNodeCount;
   TreePrev[FNodeCount] := FNodeCount;
   TreeNext[FNodeCount] := FNodeCount;
