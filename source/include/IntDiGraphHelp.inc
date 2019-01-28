@@ -1325,14 +1325,11 @@ var
 begin
   qLen := Succ(FNodeCount);
   qHead := 0;
-  qTail := 0;
   TreeNext := FGraph.CreateIntArray(qLen, NULL_INDEX);
   Level := FGraph.CreateIntArray(qLen, NULL_INDEX);
   Parents.Length := qLen;
   TreePrev.Length := qLen;
   Queue.Length := qLen;
-  //Active.Size := FNodeCount;
-  //InQueue.Size := FNodeCount;
   Parents[FNodeCount] := FNodeCount;
   TreePrev[FNodeCount] := FNodeCount;
   TreeNext[FNodeCount] := FNodeCount;
@@ -1340,9 +1337,9 @@ begin
     begin
       Parents[Curr] := FNodeCount;
       TreePrev[Curr] := FNodeCount;
-      Queue[qTail] := Curr;
-      Inc(qTail);
+      Queue[Curr] := Curr;
     end;
+  qTail := FNodeCount;
   InQueue.InitRange(FNodeCount);
   Active.InitRange(FNodeCount);
   while qHead <> qTail do
