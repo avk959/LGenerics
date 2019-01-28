@@ -1325,20 +1325,11 @@ var
 begin
   qLen := Succ(FNodeCount);
   qHead := 0;
+  Queue := TIntHelper.CreateRange(0, FNodeCount);
+  Parents := FGraph.CreateIntArray(qLen, FNodeCount);
+  TreePrev := FGraph.CreateIntArray(qLen, FNodeCount);
   TreeNext := FGraph.CreateIntArray(qLen, NULL_INDEX);
   Level := FGraph.CreateIntArray(qLen, NULL_INDEX);
-  Parents.Length := qLen;
-  TreePrev.Length := qLen;
-  Queue.Length := qLen;
-  Parents[FNodeCount] := FNodeCount;
-  TreePrev[FNodeCount] := FNodeCount;
-  TreeNext[FNodeCount] := FNodeCount;
-  for Curr := 0 to Pred(FNodeCount) do
-    begin
-      Parents[Curr] := FNodeCount;
-      TreePrev[Curr] := FNodeCount;
-      Queue[Curr] := Curr;
-    end;
   qTail := FNodeCount;
   InQueue.InitRange(FNodeCount);
   Active.InitRange(FNodeCount);
