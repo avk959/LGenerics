@@ -3668,48 +3668,43 @@ end;
 
 procedure TIntChart.LoadDIMACSAscii(const aFileName: string);
 type
-  TReaderRef = specialize TGAutoRef<TTextFileReader>;
+  TReadRef = specialize TGAutoRef<TTextFileReader>;
 var
-  ReaderRef: TReaderRef;
+  rRef: TReadRef;
   Reader: TTextFileReader;
   Line, ParseLine, Elem: string;
   I: SizeInt;
-  CurrEdge: array[0..1] of SizeInt;
+  CurrEdge: array[1..2] of SizeInt;
 begin
-  Reader := ReaderRef;
+  Reader := rRef;
   if not Reader.Open(aFileName) then
     raise EGraphError.CreateFmt(SEUnableOpenFileFmt, [aFileName]);
   Clear;
   for Line in Reader do
     begin
       ParseLine := Trim(Line);
-      if ParseLine.IsEmpty then
-        continue;
-      case LowerCase(ParseLine)[1] of
-        'c':
-          begin
-            Description.Add(System.Copy(ParseLine, 3, System.Length(ParseLine)));
-            continue;
-          end;
-        'e':
-          begin
-            I := 0;
-            for Elem in ParseLine.SplitSB([' ']) do
-              begin
-                if LowerCase(Elem) = 'e' then
-                  continue;
-                CurrEdge[I] := StrToInt(Elem);
-                if I = 1 then
-                  break;
-                Inc(I);
-              end;
-            if I = 0 then
-              begin
-                Clear;
-                raise EGraphError.Create(SEUnexpectEol);
-              end;
-            AddEdge(CurrEdge[0], CurrEdge[1]);
-          end;
+      if not ParseLine.IsEmpty then
+        case ParseLine[1] of
+          'c': Description.Add(System.Copy(ParseLine, 3, System.Length(ParseLine)));
+          'e':
+            begin
+              I := 0;
+              for Elem in ParseLine.SplitSB([' ', 'e']) do
+                begin
+                  Inc(I);
+                  case I of
+                    1, 2: CurrEdge[I] := StrToInt(Elem);
+                  else
+                    break;
+                  end;
+                end;
+              if I < 2 then
+                begin
+                  Clear;
+                  raise EGraphError.Create(SEUnexpectEol);
+                end;
+              AddEdge(CurrEdge[1], CurrEdge[2]);
+            end;
       end;
     end;
 end;
