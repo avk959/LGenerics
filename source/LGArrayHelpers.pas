@@ -71,7 +71,6 @@ type
     //to supress unnecessary refcounting
     TFake      = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
     TFakeArray = array of TFake;
-    //TOptional  = specialize TGOptional<T>;
     TSortSplit = record
       Left,
       Right: SizeInt;
