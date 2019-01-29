@@ -256,7 +256,7 @@ type
               var aCosts: TEdgeCostMap);
     function  IndexOf(aNode: PNode): SizeInt; inline;
     function  PriceUpdate: Boolean;
-    procedure FindRequiredFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out m: TWeightArcMap);
+    function  FindRequiredFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt; out m: TWeightArcMap): Boolean;
     function  FindInitSolution: Boolean;
     procedure InitPhase;
     procedure Discharge(aNode: PNode);

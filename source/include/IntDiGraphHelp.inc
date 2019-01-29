@@ -1394,12 +1394,13 @@ begin
   Result := True;
 end;
 
-procedure TGIntWeightDiGraph.TCsMcfHelper.FindRequiredFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
-  out m: TWeightArcMap);
+function TGIntWeightDiGraph.TCsMcfHelper.FindRequiredFlow(aGraph: TGIntWeightDiGraph; aSource, aSink: SizeInt;
+  out m: TWeightArcMap): Boolean;
 var
   Helper: THPrHelper;
 begin
   FResultFlow := Helper.GetFlow(aGraph, aSource, aSink, FRequestFlow, m);
+  Result := FResultFlow > 0;
 end;
 
 function TGIntWeightDiGraph.TCsMcfHelper.FindInitSolution: Boolean;
@@ -1411,8 +1412,7 @@ begin
   FResultFlow := 0;
   if not PriceUpdate then
     exit(False);
-  FindRequiredFlow(FGraph, IndexOf(FSource), IndexOf(FSink), ArcMap);
-  if FResultFlow = 0 then
+  if not FindRequiredFlow(FGraph, IndexOf(FSource), IndexOf(FSink), ArcMap) then
     exit(False);
   FSource^.Excess += FResultFlow;
   FSink^.Excess -= FResultFlow;
@@ -1441,6 +1441,7 @@ var
   I, J: SizeInt;
   Price: TCost;
 begin
+  FInQueue.ClearBits;
   for I := 0 to Pred(FNodeCount) do
     begin
       Arc := FNodes[I].FirstArc;
