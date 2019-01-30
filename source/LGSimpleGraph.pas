@@ -3689,7 +3689,7 @@ begin
           'e':
             begin
               I := 0;
-              for Elem in ParseLine.SplitSB([' ', 'e']) do
+              for Elem in ParseLine.Words([' ', 'e']) do
                 begin
                   Inc(I);
                   case I of

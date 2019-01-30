@@ -37,12 +37,12 @@ const
   sFinished        = 'rwstat finished';
 
 var
-  OutFileName: string = 'stdout';
-  InFileNames: TStringArray = nil;
+  OutFile: string = 'stdout';
+  InFiles: TStringArray = nil;
   AllowModifiers: Boolean = False;
-  InputText: specialize TGAutoRef<TTextFileReader>;
-  Counter: TCounter;
-  Dict: TDictionary;
+  ReadRef: specialize TGAutoRef<TTextFileReader>;
+  CountRef: TCounter;
+  DictRef: TDictionary;
 
 function ParamsFound: Boolean;
 var
@@ -54,13 +54,18 @@ begin
     case Opt.Kind of
       pkOption, pkLongOption:
         case Opt.Key of
-          'h', 'help': exit(False);
-          'm', 'modifiers': AllowModifiers := True;
-          'o', 'output':  if Opt.Value <> '' then OutFileName := Opt.Value;
+          'h', 'help':
+            exit(False);
+          'm', 'modifiers':
+            AllowModifiers := True;
+          'o', 'output':
+            if Opt.Value <> '' then
+              OutFile := Opt.Value;
         end;
-      pkArgument: InFileNames.Add(Opt.Value);
+      pkArgument:
+        InFiles.Add(Opt.Value);
     end;
-  Result := Length(InFileNames) > 0;
+  Result := Length(InFiles) > 0;
 end;
 
 procedure ProcessFiles;
@@ -77,36 +82,36 @@ var
   end;
   function IsReservedWord(constref aValue: string): Boolean;
   begin
-    Result := Dict.Contains(aValue);
+    Result := DictRef.Contains(aValue);
   end;
 var
   FileName, CurrLine: string;
   Item: TCountItem;
 begin
-  Dict.AddAll([{$I reswords.inc}]);
+  DictRef.AddAll([{$I reswords.inc}]);
   if AllowModifiers then
-    Dict.AddAll([{$I modifiers.inc}]);
+    DictRef.AddAll([{$I modifiers.inc}]);
 
-  for FileName in InFileNames do
-    if InputText.Instance.Open(FileName) then //LoadText ???
-      for CurrLine in InputText.Instance do
-        Counter.AddAll(CurrLine.SplitSB.Map(@ToLower).Select(@IsReservedWord))
+  for FileName in InFiles do
+    if ReadRef.Instance.Open(FileName) then
+      for CurrLine in ReadRef.Instance do
+        CountRef.AddAll(CurrLine.Words.Map(@ToLower).Select(@IsReservedWord))
     else
       WriteLn(Format(sFailedOpenFmt, [FileName]));
 
-  with TTextFileWriter.Create(OutFileName) do
+  with TTextFileWriter.Create(OutFile) do
     try
       if IsOpen then
-        for Item in THelper.Sorted(Counter.ToEntryArray, @CompareItem) do
+        for Item in THelper.Sorted(CountRef.ToEntryArray, @CompareItem) do
           WriteLn(OutFile^, Item.Count,  #9, Item.Key)
       else
-        WriteLn(Format(sFailedCreateFmt, [OutFileName]));
+        WriteLn(Format(sFailedCreateFmt, [OutFile]));
     finally
       Free;
     end;
   Writeln('total words:             ', TotalCount);
-  Writeln('total reserved words:    ', Counter.Count);
-  Writeln('distinct reserved words: ', Counter.EntryCount);
+  Writeln('total reserved words:    ', CountRef.Count);
+  Writeln('distinct reserved words: ', CountRef.EntryCount);
   Writeln(sFinished);
 end;
 

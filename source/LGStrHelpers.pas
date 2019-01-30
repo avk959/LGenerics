@@ -39,8 +39,7 @@ type
   TAnsiStrHelper = type helper(TAStrHelper) for ansistring
   private
   type
-
-    TEnumerable = class(specialize TGAutoEnumerable<string>)
+    TStrEnumerable = class(specialize TGAutoEnumerable<string>)
     private
       FString: string;
       FStartIndex,
@@ -58,6 +57,7 @@ type
   public
   type
     IStrEnumerable = specialize IGEnumerable<string>;
+
   const
     WhiteSpaces = [#0..' '];
     AsciiDelimiters = [#0..#255] - ['a'..'z', 'A'..'Z', '0'..'9', '_'];
@@ -65,14 +65,13 @@ type
     function StripChar(aChar: AnsiChar): ansistring;
     function StripChars(constref aChars: TSysCharSet): ansistring;
     // only single byte delimiters allowed
-    function SplitSB(constref aDelimiters: TSysCharSet = AsciiDelimiters): IStrEnumerable; inline;
+    function Words(constref aDelimiters: TSysCharSet = AsciiDelimiters): IStrEnumerable; inline;
   end;
 
   TRegexMatch = class
   protected
   type
-
-    TEnumerable = class(specialize TGAutoEnumerable<string>)
+    TStrEnumerable = class(specialize TGAutoEnumerable<string>)
     private
       FRegex: TRegExpr;
       FInputString: string;
@@ -94,6 +93,7 @@ type
   public
   type
     IStrEnumerable = specialize IGEnumerable<string>;
+
     constructor Create;
     constructor Create(const aRegExpression: string);
     constructor Create(const aRegExpression, aModifierStr: string);
@@ -106,9 +106,9 @@ type
 implementation
 {$Q-}{$B-}{$COPERATORS ON}
 
-{ TAnsiStrHelper.TEnumerable }
+{ TAnsiStrHelper.TStrEnumerable }
 
-function TAnsiStrHelper.TEnumerable.GetCurrent: string;
+function TAnsiStrHelper.TStrEnumerable.GetCurrent: string;
 begin
   if FFound then
     Result := System.Copy(FString, FStartIndex, FCurrIndex - FStartIndex)
@@ -116,7 +116,7 @@ begin
     Result := '';
 end;
 
-constructor TAnsiStrHelper.TEnumerable.Create(const aValue: string; const aDelimiters: TSysCharSet);
+constructor TAnsiStrHelper.TStrEnumerable.Create(const aValue: string; const aDelimiters: TSysCharSet);
 begin
   inherited Create;
   FString := aValue;
@@ -125,7 +125,7 @@ begin
   FCurrIndex := 1;
 end;
 
-function TAnsiStrHelper.TEnumerable.MoveNext: Boolean;
+function TAnsiStrHelper.TStrEnumerable.MoveNext: Boolean;
 var
   I, Len: SizeInt;
   WordFound: Boolean;
@@ -157,7 +157,7 @@ begin
     Result := False;
 end;
 
-procedure TAnsiStrHelper.TEnumerable.Reset;
+procedure TAnsiStrHelper.TStrEnumerable.Reset;
 begin
   FStartIndex := 1;
   FCurrIndex := 1;
@@ -219,26 +219,26 @@ begin
   SetLength(Result, J);
 end;
 
-function TAnsiStrHelper.SplitSB(constref aDelimiters: TSysCharSet): IStrEnumerable;
+function TAnsiStrHelper.Words(constref aDelimiters: TSysCharSet): IStrEnumerable;
 begin
-  Result := TEnumerable.Create(Self, aDelimiters);
+  Result := TStrEnumerable.Create(Self, aDelimiters);
 end;
 
-{ TRegexMatch.TEnumerable }
+{ TRegexMatch.TStrEnumerable }
 
-function TRegexMatch.TEnumerable.GetCurrent: string;
+function TRegexMatch.TStrEnumerable.GetCurrent: string;
 begin
   Result := FRegex.Match[0];
 end;
 
-constructor TRegexMatch.TEnumerable.Create(aRegex: TRegExpr; const s: string);
+constructor TRegexMatch.TStrEnumerable.Create(aRegex: TRegExpr; const s: string);
 begin
   inherited Create;
   FRegex := aRegex;
   FInputString := s;
 end;
 
-function TRegexMatch.TEnumerable.MoveNext: Boolean;
+function TRegexMatch.TStrEnumerable.MoveNext: Boolean;
 begin
   if FInCycle then
     Result := FRegex.ExecNext
@@ -249,7 +249,7 @@ begin
     end;
 end;
 
-procedure TRegexMatch.TEnumerable.Reset;
+procedure TRegexMatch.TStrEnumerable.Reset;
 begin
   FInCycle := False;
 end;
@@ -300,7 +300,7 @@ end;
 
 function TRegexMatch.Matches(const aValue: string): IStrEnumerable;
 begin
-  Result := TEnumerable.Create(FRegex, aValue);
+  Result := TStrEnumerable.Create(FRegex, aValue);
 end;
 
 end.
