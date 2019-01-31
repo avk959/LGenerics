@@ -360,9 +360,9 @@ type
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
     function  Insert(constref aValue: T): THandle; inline;  // O(1)
-    function  HPeek: THandle; inline;                       // O(1)
-    function  TryHPeek(out aHandle: THandle): Boolean; inline;
-    function  Value(aHandle: THandle): T; inline;
+    function  PeekHandle: THandle; inline;                  // O(1)
+    function  TryPeekHandle(out aHandle: THandle): Boolean; inline;
+    function  ValueOf(aHandle: THandle): T; inline;
     procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1) IncreaseKey
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
   { note: after Merge all handles from aQueue will remain valid if aQueue has same ClassType }
@@ -598,9 +598,9 @@ type
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
     function  Insert(constref aValue: T): THandle; inline;  // O(1)
-    function  HPeek: THandle; inline;                       // O(1)
-    function  TryHPeek(out aValue: THandle): Boolean; inline;
-    function  Value(aHandle: THandle): T; inline;
+    function  PeekHandle: THandle; inline;                  // O(1)
+    function  TryPeekHandle(out aValue: THandle): Boolean; inline;
+    function  ValueOf(aHandle: THandle): T; inline;
     procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              IncreaseKey
                                                                     //amortized O(logN) DecreaseKey
     function  Remove(aHandle: THandle): T;                      // amortized O(logN)
@@ -713,9 +713,9 @@ type
     function  Peek: T;                                      // O(1)
     function  TryPeek(out aValue: T): Boolean;
     function  Insert(constref aValue: T): THandle; inline;  // O(1)
-    function  HPeek: THandle; inline;                       // O(1)
-    function  TryHPeek(out aValue: THandle): Boolean; inline;
-    function  Value(aHandle: THandle): T; inline;
+    function  PeekHandle: THandle; inline;                  // O(1)
+    function  TryPeekHandle(out aValue: THandle): Boolean; inline;
+    function  ValueOf(aHandle: THandle): T; inline;
     procedure Update(aHandle: THandle; constref aValue: T); inline; //O(1)              DecreaseKey
                                                                     //amortized O(logN) IncreaseKey
     function  Remove(aHandle: THandle): T;                  // amortized O(logN)
@@ -2181,20 +2181,20 @@ begin
   Result := {%H-}THandle(DoEnqueue(aValue));
 end;
 
-function TGCustomPairingHeap.HPeek: THandle;
+function TGCustomPairingHeap.PeekHandle: THandle;
 begin
   CheckEmpty;
   Result := {%H-}THandle(FRoot);
 end;
 
-function TGCustomPairingHeap.TryHPeek(out aHandle: THandle): Boolean;
+function TGCustomPairingHeap.TryPeekHandle(out aHandle: THandle): Boolean;
 begin
   Result := ElemCount > 0;
   if Result then
     aHandle := {%H-}THandle(FRoot);
 end;
 
-function TGCustomPairingHeap.Value(aHandle: THandle): T;
+function TGCustomPairingHeap.ValueOf(aHandle: THandle): T;
 begin
   Result := {%H-}PNode(aHandle)^.Data;
 end;
@@ -3532,20 +3532,20 @@ begin
   Result := {%H-}THandle(p);
 end;
 
-function TGLitePairingHeap.HPeek: THandle;
+function TGLitePairingHeap.PeekHandle: THandle;
 begin
   CheckEmpty;
   Result := {%H-}THandle(FRoot);
 end;
 
-function TGLitePairingHeap.TryHPeek(out aValue: THandle): Boolean;
+function TGLitePairingHeap.TryPeekHandle(out aValue: THandle): Boolean;
 begin
   Result := NonEmpty;
   if Result then
     aValue := {%H-}THandle(FRoot);
 end;
 
-function TGLitePairingHeap.Value(aHandle: THandle): T;
+function TGLitePairingHeap.ValueOf(aHandle: THandle): T;
 begin
   Result := {%H-}PNode(aHandle)^.Data;
 end;
@@ -4040,20 +4040,20 @@ begin
   Result := {%H-}THandle(p);
 end;
 
-function TGLiteComparablePairHeapMin.HPeek: THandle;
+function TGLiteComparablePairHeapMin.PeekHandle: THandle;
 begin
   CheckEmpty;
   Result := {%H-}THandle(FRoot);
 end;
 
-function TGLiteComparablePairHeapMin.TryHPeek(out aValue: THandle): Boolean;
+function TGLiteComparablePairHeapMin.TryPeekHandle(out aValue: THandle): Boolean;
 begin
   Result := NonEmpty;
   if Result then
     aValue := {%H-}THandle(FRoot);
 end;
 
-function TGLiteComparablePairHeapMin.Value(aHandle: THandle): T;
+function TGLiteComparablePairHeapMin.ValueOf(aHandle: THandle): T;
 begin
   Result := {%H-}PNode(aHandle)^.Data;
 end;

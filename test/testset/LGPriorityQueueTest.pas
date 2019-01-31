@@ -579,7 +579,7 @@ begin
       end;
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     TIntHelper.RandomShuffle(a);
 
@@ -587,12 +587,12 @@ begin
       {%H-}q.Update(h[I], a[I]);
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     I := 0;
     while q.NonEmpty do
       begin
-        Handle := q{%H-}.HPeek;
+        Handle := q{%H-}.PeekHandle;
         a[I] := q.Remove(Handle);
         Inc(I);
       end;
@@ -724,7 +724,7 @@ begin
       end;
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     TIntHelper.RandomShuffle(a);
 
@@ -732,12 +732,12 @@ begin
       {%H-}q.Update(h[I], a[I]);
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     I := 0;
     while q.NonEmpty do
       begin
-        Handle := q{%H-}.HPeek;
+        Handle := q{%H-}.PeekHandle;
         a[I] := q.Remove(Handle);
         Inc(I);
       end;
@@ -869,7 +869,7 @@ begin
       end;
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     TIntHelper.RandomShuffle(a);
 
@@ -877,12 +877,12 @@ begin
       {%H-}q.Update(h[I], a[I]);
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     I := 0;
     while q.NonEmpty do
       begin
-        Handle := q{%H-}.HPeek;
+        Handle := q{%H-}.PeekHandle;
         a[I] := q.Remove(Handle);
         Inc(I);
       end;
@@ -1014,7 +1014,7 @@ begin
       end;
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     TIntHelper.RandomShuffle(a);
 
@@ -1022,12 +1022,12 @@ begin
       {%H-}q.Update(h[I], a[I]);
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     I := 0;
     while q.NonEmpty do
       begin
-        Handle := q{%H-}.HPeek;
+        Handle := q{%H-}.PeekHandle;
         a[I] := q.Remove(Handle);
         Inc(I);
       end;
@@ -1159,7 +1159,7 @@ begin
       end;
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     TIntHelper.RandomShuffle(a);
 
@@ -1167,12 +1167,12 @@ begin
       {%H-}q.Update(h[I], a[I]);
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     I := 0;
     while q.NonEmpty do
       begin
-        Handle := q{%H-}.HPeek;
+        Handle := q{%H-}.PeekHandle;
         a[I] := q.Remove(Handle);
         Inc(I);
       end;
@@ -1272,7 +1272,7 @@ begin
       end;
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     TIntHelper.RandomShuffle(a);
 
@@ -1280,12 +1280,12 @@ begin
       {%H-}q.Update(h[I], a[I]);
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     I := 0;
     while q.NonEmpty do
       begin
-        Handle := q{%H-}.HPeek;
+        Handle := q{%H-}.PeekHandle;
         a[I] := q.Remove(Handle);
         Inc(I);
       end;
@@ -1417,7 +1417,7 @@ begin
       end;
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     TIntHelper.RandomShuffle(a);
 
@@ -1425,12 +1425,12 @@ begin
       {%H-}q.Update(h[I], a[I]);
 
     for I := 0 to System.High(a) do
-      AssertTrue(q.Value(h[I]) = a[I]);
+      AssertTrue(q.ValueOf(h[I]) = a[I]);
 
     I := 0;
     while q.NonEmpty do
       begin
-        Handle := q{%H-}.HPeek;
+        Handle := q{%H-}.PeekHandle;
         a[I] := q.Remove(Handle);
         Inc(I);
       end;
@@ -1523,7 +1523,7 @@ begin
     end;
 
   for I := 0 to System.High(a) do
-    AssertTrue(q.Value(h[I]) = a[I]);
+    AssertTrue(q.ValueOf(h[I]) = a[I]);
 
   TIntHelper.RandomShuffle(a);
 
@@ -1531,12 +1531,12 @@ begin
     {%H-}q.Update(h[I], a[I]);
 
   for I := 0 to System.High(a) do
-    AssertTrue(q.Value(h[I]) = a[I]);
+    AssertTrue(q.ValueOf(h[I]) = a[I]);
 
   I := 0;
   while q.NonEmpty do
     begin
-      Handle := q{%H-}.HPeek;
+      Handle := q{%H-}.PeekHandle;
       a[I] := q.Remove(Handle);
       Inc(I);
     end;
@@ -1644,7 +1644,7 @@ begin
     end;
 
   for I := 0 to System.High(a) do
-    AssertTrue(q.Value(h[I]) = a[I]);
+    AssertTrue(q.ValueOf(h[I]) = a[I]);
 
   TIntHelper.RandomShuffle(a);
 
@@ -1652,12 +1652,12 @@ begin
     {%H-}q.Update(h[I], a[I]);
 
   for I := 0 to System.High(a) do
-    AssertTrue(q.Value(h[I]) = a[I]);
+    AssertTrue(q.ValueOf(h[I]) = a[I]);
 
   I := 0;
   while q.NonEmpty do
     begin
-      Handle := q{%H-}.HPeek;
+      Handle := q{%H-}.PeekHandle;
       a[I] := q.Remove(Handle);
       Inc(I);
     end;

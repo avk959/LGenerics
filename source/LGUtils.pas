@@ -247,7 +247,7 @@ type
     function  TryPeek(out aValue: T): Boolean;
   end;
 
-  THandle = SysUtils.THandle;
+  THandle = type SizeUInt;
 
 const
   INVALID_HANDLE = THandle(-1);
@@ -257,9 +257,9 @@ type
   IGPriorityQueue<T> = interface(IGQueue<T>)
   ['{39ADFF1D-018D-423B-A16A-8942B06D0A76}']
     function  Insert(constref aValue: T): THandle;
-    function  HPeek: THandle;
-    function  TryHPeek(out aValue: THandle): Boolean;
-    function  Value(h: THandle): T;
+    function  PeekHandle: THandle;
+    function  TryPeekHandle(out aValue: THandle): Boolean;
+    function  ValueOf(h: THandle): T;
     procedure Update(h: THandle; constref aValue: T);
     function  Remove(h: THandle): T;
   { only another entity can be merged, aQueue will be cleared after Merge }
