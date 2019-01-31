@@ -189,12 +189,13 @@ type
     private
       FMatrix: TSquareBitMatrix;
       function GetSize: SizeInt; inline;
+      function GetAdjacent(aSrc, aDst: SizeInt): Boolean; inline;
     public
       class function MaxSize: SizeInt; static; inline;
       constructor Create(constref aMatrix: TSquareBitMatrix);
       function IsEmpty: Boolean; inline;
-      function Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
       property Size: SizeInt read GetSize;
+      property Adjacent[aSrc, aDst: SizeInt]: Boolean read GetAdjacent; default;
     end;
 
   protected
@@ -1016,6 +1017,17 @@ begin
   Result := FMatrix.FSize;
 end;
 
+function TGSparseGraph.TAdjacencyMatrix.GetAdjacent(aSrc, aDst: SizeInt): Boolean;
+begin
+  if SizeUInt(aSrc) < SizeUInt(FMatrix.FSize) then
+      if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
+        Result := FMatrix{%H-}[aSrc, aDst]
+      else
+        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
+  else
+    raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
+end;
+
 class function TGSparseGraph.TAdjacencyMatrix.MaxSize: SizeInt;
 begin
   Result := TSquareBitMatrix.MaxSize;
@@ -1029,17 +1041,6 @@ end;
 function TGSparseGraph.TAdjacencyMatrix.IsEmpty: Boolean;
 begin
   Result := FMatrix.Size = 0;
-end;
-
-function TGSparseGraph.TAdjacencyMatrix.Adjacent(aSrc, aDst: SizeInt): Boolean;
-begin
-  if SizeUInt(aSrc) < SizeUInt(FMatrix.FSize) then
-      if SizeUInt(aDst) < SizeUInt(FMatrix.FSize) then
-        Result := FMatrix{%H-}[aSrc, aDst]
-      else
-        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aDst])
-  else
-    raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
 end;
 
 {$I SparseGraphIntSet.inc}
