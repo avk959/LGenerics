@@ -32,7 +32,7 @@ uses
   typinfo,
   variants,
   LGUtils,
-  LgHash;
+  LGHash;
 
 type
 
