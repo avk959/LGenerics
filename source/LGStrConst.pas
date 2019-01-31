@@ -59,6 +59,7 @@ resourcestring
   SEStrLenExceedFmt        = 'Maximum string length exceeded(%d)';
   SEBitMatrixSizeExceedFmt = 'Maximum bit matrix size exceeded(%d)';
   SEUnableOpenFileFmt      = 'Failed to open file "%s"';
+  SEUnableOpenFileFmt3     = 'Failed to open file "%s":' + LineEnding + 'exception %s with message "%s"';
   SEUnexpectEol            = 'Unexpected end of line';
   SEStreamSizeExceedFmt    = 'Maximum stream size exceeded(%d)';
   SEMethodNotApplicable    = 'Method is not applicable';

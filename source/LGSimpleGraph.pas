@@ -3678,7 +3678,7 @@ var
 begin
   Reader := rRef;
   if not Reader.Open(aFileName) then
-    raise EGraphError.CreateFmt(SEUnableOpenFileFmt, [aFileName]);
+    raise EGraphError.CreateFmt(SEUnableOpenFileFmt3, [aFileName, Reader.ExceptionClass, Reader.ExceptionMessage]);
   Clear;
   for Line in Reader do
     begin
