@@ -160,6 +160,7 @@ type
     function  GenerateTestWGrBip1: TGraph64;
     function  GenerateTestWGr3: TGraph64;
   published
+    procedure SetEdgeData;
     procedure ContainsNegWeightEdge;
     procedure ContainsNegCycle;
     procedure ContainsNegCycle1;
@@ -960,14 +961,14 @@ begin
   for I := 0 to Pred(g.VertexCount) do
     for J := 0 to Pred(g.VertexCount) do
       if I <> J then
-        AssertFalse(g.AdjacentI(I, J) xor m.Adjacent(I, J));
+        AssertFalse(g.AdjacentI(I, J) xor m[I, J]);
   Ref.Instance := GenerateC125Clique;
   g := Ref;
   m := g.CreateAdjacencyMatrix;
   for I := 0 to Pred(g.VertexCount) do
     for J := 0 to Pred(g.VertexCount) do
       if I <> J then
-        AssertFalse(g.AdjacentI(I, J) xor m.Adjacent(I, J));
+        AssertFalse(g.AdjacentI(I, J) xor m[I, J]);
 end;
 
 procedure TSimpleGraphTest.IsTree;
@@ -2298,6 +2299,21 @@ begin
   Result.AddEdgeI(4, 6, TInt64Weight.Create(60));
   Result.AddEdgeI(5, 7, TInt64Weight.Create(60));
   Result.AddEdgeI(6, 7, TInt64Weight.Create(100));
+end;
+
+procedure TWeightedGraphTest.SetEdgeData;
+var
+  Ref: TRef;
+  g: TGraph;
+  e: TGraph.TEdge;
+begin
+  {%H-}Ref.Instance := GenerateTestWGr1;
+  g := Ref;
+  AssertTrue(g.EdgeCount = 9);
+  for e in g.DistinctEdges do
+    AssertTrue(g.SetEdgeData(e.Source, e.Destination, TIntWeight.Create(5)));
+  for e in g.Edges do
+    AssertTrue(e.Data.Weight = 5);
 end;
 
 procedure TWeightedGraphTest.ContainsNegWeightEdge;
