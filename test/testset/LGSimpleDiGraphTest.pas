@@ -97,6 +97,7 @@ type
     function  GenerateCostFun3: TCostEdgeArray;
     function  GenerateCostFun4: TCostEdgeArray;
   published
+    procedure SetEdgeData;
     procedure ContainsNegWeightEdge;
     procedure ContainsNegCycle;
     procedure MinPathsMap;
@@ -1287,6 +1288,21 @@ begin
              TCostEdge.Create(1, 2, 4), TCostEdge.Create(1, 4, 25), TCostEdge.Create(1, 5, 10),
              TCostEdge.Create(2, 3, 5), TCostEdge.Create(2, 4, 6), TCostEdge.Create(3, 5, 3),
              TCostEdge.Create(3, 6, 7), TCostEdge.Create(4, 6, 5), TCostEdge.Create(5, 6, 12)];
+end;
+
+procedure TWeightedDigraphTest.SetEdgeData;
+var
+  Ref: TRef;
+  g: TGraph;
+  e: TGraph.TEdge;
+begin
+  {%H-}Ref.Instance := GenerateTestWDigr1;
+  g := Ref;
+  AssertTrue(g.EdgeCount = 9);
+  for e in g.Edges do
+    AssertTrue(g.SetEdgeData(e.Source, e.Destination, TIntWeight.Create(0)));
+  for e in g.Edges do
+    AssertTrue(e.Data.Weight = 0);
 end;
 
 procedure TWeightedDigraphTest.ContainsNegWeightEdge;
