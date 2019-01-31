@@ -329,7 +329,7 @@ type
     function  GetCount: SizeInt; override;
     function  GetCapacity: SizeInt; override;
     procedure CopyItems(aBuffer: PItem); override;
-    function  DoGetEnumerator: TCustomEnumerator; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
@@ -1954,7 +1954,7 @@ begin
     end;
 end;
 
-function TGCustomPairingHeap.DoGetEnumerator: TCustomEnumerator;
+function TGCustomPairingHeap.DoGetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;

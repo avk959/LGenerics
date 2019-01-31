@@ -76,7 +76,7 @@
     function  AppendContainer(aContainer: TAbstractContainer): SizeInt;
     function  AppendEnumerable(e: IEnumerable): SizeInt;
     function  GetReverse: IEnumerable;
-    function  DoGetEnumerator: TCustomEnumerator; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure CopyItems(aBuffer: PItem); override;
@@ -220,7 +220,7 @@
     function  AppendEnumerable(e: IEnumerable): SizeInt;
     function  ExtractHead: T;
   { iterates items from head to tail }
-    function  DoGetEnumerator: TCustomEnumerator; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;

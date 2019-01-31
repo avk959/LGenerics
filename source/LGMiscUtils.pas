@@ -278,7 +278,7 @@ type
   TTextFileReader = class sealed(specialize TGEnumerable<string>)
   private
   type
-    TEnumerator = class(TCustomEnumerator)
+    TEnumerator = class(TSpecEnumerator)
     private
       FReader: TTextFileReader;
     protected

@@ -202,7 +202,7 @@ begin
   Result := TReverseEnum.Create(Self);
 end;
 
-function TGCustomArrayContainer.DoGetEnumerator: TCustomEnumerator;
+function TGCustomArrayContainer.DoGetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;
@@ -719,7 +719,7 @@ begin
     FHead := 0;
 end;
 
-function TGCustomRingArrayBuffer.DoGetEnumerator: TCustomEnumerator;
+function TGCustomRingArrayBuffer.DoGetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;
@@ -856,7 +856,7 @@ end;
 
 function TGLiteRingDynBuffer.TMutables.GetEnumerator: TMutableEnumerator;
 begin
-  Result := FBuffer^.GetMutableEnumerator;
+  Result := FBuffer{%H-}^.GetMutableEnumerator;
 end;
 
 { TGLiteRingDynBuffer.TReverseEnumerator }

@@ -39,25 +39,25 @@ type
   generic TGEnumerable<T> = class abstract(TObject, specialize IGEnumerable<T>, IObjInstance)
   public
   type
-    TCustomEnumerable = specialize TGEnumerable<T>;
-    TCustomEnumerator = specialize TGCustomEnumerator<T>;
-    IEnumerable       = specialize IGEnumerable<T>;
-    TOptional         = specialize TGOptional<T>;
-    TArray            = specialize TGArray<T>;
-    TCompare          = specialize TGCompare<T>;
-    TOnCompare        = specialize TGOnCompare<T>;
-    TNestCompare      = specialize TGNestCompare<T>;
-    TTest             = specialize TGTest<T>;
-    TOnTest           = specialize TGOnTest<T>;
-    TNestTest         = specialize TGNestTest<T>;
-    TMapFunc          = specialize TGMapFunc<T, T>;
-    TOnMap            = specialize TGOnMap<T, T>;
-    TNestMap          = specialize TGNestMap<T, T>;
-    TFold             = specialize TGFold<T, T>;
-    TOnFold           = specialize TGOnFold<T, T>;
-    TNestFold         = specialize TGNestFold<T, T>;
-    TDefaults         = specialize TGDefaults<T>;
-    TItem             = T;
+    TSpecEnumerable = specialize TGEnumerable<T>;
+    TSpecEnumerator = specialize TGEnumerator<T>;
+    IEnumerable     = specialize IGEnumerable<T>;
+    TOptional       = specialize TGOptional<T>;
+    TArray          = specialize TGArray<T>;
+    TCompare        = specialize TGCompare<T>;
+    TOnCompare      = specialize TGOnCompare<T>;
+    TNestCompare    = specialize TGNestCompare<T>;
+    TTest           = specialize TGTest<T>;
+    TOnTest         = specialize TGOnTest<T>;
+    TNestTest       = specialize TGNestTest<T>;
+    TMapFunc        = specialize TGMapFunc<T, T>;
+    TOnMap          = specialize TGOnMap<T, T>;
+    TNestMap        = specialize TGNestMap<T, T>;
+    TFold           = specialize TGFold<T, T>;
+    TOnFold         = specialize TGOnFold<T, T>;
+    TNestFold       = specialize TGNestFold<T, T>;
+    TDefaults       = specialize TGDefaults<T>;
+    TItem           = T;
 
   protected
   type
@@ -65,7 +65,7 @@ type
 
     function  _GetRef: TObject; inline;
   public
-    function GetEnumerator: TCustomEnumerator;  virtual; abstract;
+    function GetEnumerator: TSpecEnumerator;  virtual; abstract;
   { enumerates elements in reverse order }
     function Reverse: IEnumerable; virtual;
     function ToArray: TArray; virtual;
@@ -137,7 +137,7 @@ type
     TFake = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
     TFakeArray = array of TFake;
 
-    TContainerEnumerator = class(specialize TGCustomEnumerator<T>)
+    TContainerEnumerator = class(specialize TGEnumerator<T>)
     strict protected
       FOwner: TAbstractContainer;
     public
@@ -166,14 +166,14 @@ type
     procedure EndIteration; inline;
     function  GetCount: SizeInt; virtual; abstract;
     function  GetCapacity: SizeInt; virtual; abstract;
-    function  DoGetEnumerator: TCustomEnumerator;  virtual; abstract;
+    function  DoGetEnumerator: TSpecEnumerator;  virtual; abstract;
     procedure DoClear; virtual; abstract;
     procedure DoTrimToFit; virtual; abstract;
     procedure DoEnsureCapacity(aValue: SizeInt); virtual; abstract;
     procedure CopyItems(aBuffer: PItem); virtual;
     property  InIteration: Boolean read GetInIteration;
   public
-    function  GetEnumerator: TCustomEnumerator; override;
+    function  GetEnumerator: TSpecEnumerator; override;
     function  ToArray: TArray; override;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -573,7 +573,7 @@ type
 
   protected
   type
-    TCustomValueEnumerator = specialize TGCustomEnumerator<TValue>;
+    TCustomValueEnumerator = specialize TGEnumerator<TValue>;
 
     TCustomValueSet = class abstract
     protected
@@ -613,7 +613,7 @@ type
     protected
       FOwner: TGAbstractMultiMap;
     public
-      constructor Create(e: TCustomEnumerator; aMap: TGAbstractMultiMap);
+      constructor Create(e: TSpecEnumerator; aMap: TGAbstractMultiMap);
       destructor Destroy; override;
     end;
 
@@ -721,7 +721,7 @@ type
     IRowDataEnumerable  = specialize IGEnumerable<TRowData>;
     IColDataEnumerable  = specialize IGEnumerable<TColData>;
     ICellDataEnumerable = specialize IGEnumerable<TCellData>;
-    TRowDataEnumerator  = class abstract(specialize TGCustomEnumerator<TRowData>);
+    TRowDataEnumerator  = class abstract(specialize TGEnumerator<TRowData>);
 
 {$PUSH}{$INTERFACES CORBA}
     IRowMap = interface
@@ -893,7 +893,7 @@ end;
 
 function TGEnumerable.FindFirst(out aValue: T): Boolean;
 var
-  e: TCustomEnumerator;
+  e: TSpecEnumerator;
 begin
   e := GetEnumerator;
   try
@@ -915,7 +915,7 @@ end;
 
 function TGEnumerable.FindLast(out aValue: T): Boolean;
 var
-  e: TCustomEnumerator;
+  e: TSpecEnumerator;
 begin
   e := GetEnumerator;
   try
@@ -1508,7 +1508,7 @@ begin
     end;
 end;
 
-function TGAbstractContainer.GetEnumerator: TCustomEnumerator;
+function TGAbstractContainer.GetEnumerator: TSpecEnumerator;
 begin
   BeginIteration;
   Result := DoGetEnumerator;
@@ -2757,7 +2757,7 @@ end;
 
 { TGAbstractMultiMap.TCustomValueCursor }
 
-constructor TGAbstractMultiMap.TCustomValueCursor.Create(e: TCustomEnumerator; aMap: TGAbstractMultiMap);
+constructor TGAbstractMultiMap.TCustomValueCursor.Create(e: TSpecEnumerator; aMap: TGAbstractMultiMap);
 begin
   inherited Create(e);
   FOwner := aMap;

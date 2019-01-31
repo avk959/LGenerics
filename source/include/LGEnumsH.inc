@@ -19,7 +19,7 @@
 
   //IGEnumerable special descendents
 
-  generic TGAutoEnumerable<T> = class abstract(specialize TGCustomEnumerator<T>, specialize IGEnumerable<T>)
+  generic TGAutoEnumerable<T> = class abstract(specialize TGEnumerator<T>, specialize IGEnumerable<T>)
   protected
   type
     TEnumerable = class(specialize TGEnumerable<T>, specialize IGEnumerable<T>, IObjInstance)
@@ -27,13 +27,13 @@
       FOwner: TGAutoEnumerable;
     public
       constructor Create(e: TGAutoEnumerable);
-      function GetEnumerator: TCustomEnumerator; override;
+      function GetEnumerator: TSpecEnumerator; override;
     end;
 
   public
   type
-    IEnumerable = TEnumerable.IEnumerable;
-    TCustomEnumerator = TEnumerable.TCustomEnumerator;
+    IEnumerable     = TEnumerable.IEnumerable;
+    TSpecEnumerator = TEnumerable.TSpecEnumerator;
 
   protected
   var
@@ -46,10 +46,10 @@
 
   generic TGEnumCursor<T> = class(specialize TGAutoEnumerable<T>)
   protected
-    FEnum: TCustomEnumerator;
+    FEnum: TSpecEnumerator;
     function  GetCurrent: T; override;
   public
-    constructor Create(e: TCustomEnumerator);
+    constructor Create(e: TSpecEnumerator);
     destructor  Destroy; override;
     function  MoveNext: Boolean; override;
     procedure Reset; override;
@@ -63,7 +63,7 @@
   private
     FTest: TTest;
   public
-    constructor Create(e: TCustomEnumerator; aTest: TTest);
+    constructor Create(e: TSpecEnumerator; aTest: TTest);
     function MoveNext: Boolean; override;
   end;
 
@@ -75,7 +75,7 @@
   private
     FTest: TOnTest;
   public
-    constructor Create(e: TCustomEnumerator; aTest: TOnTest);
+    constructor Create(e: TSpecEnumerator; aTest: TOnTest);
     function MoveNext: Boolean; override;
   end;
 
@@ -87,7 +87,7 @@
   private
     FTest: TNestTest;
   public
-    constructor Create(e: TCustomEnumerator; aTest: TNestTest);
+    constructor Create(e: TSpecEnumerator; aTest: TNestTest);
     function MoveNext: Boolean; override;
   end;
 
@@ -99,7 +99,7 @@
   private
     FMap: TMapFunc;
   public
-    constructor Create(e: TCustomEnumerator; aMap: TMapFunc);
+    constructor Create(e: TSpecEnumerator; aMap: TMapFunc);
     function GetCurrent: T; override;
   end;
 
@@ -111,7 +111,7 @@
   private
     FMap: TOnMap;
   public
-    constructor Create(e: TCustomEnumerator; aMap: TOnMap);
+    constructor Create(e: TSpecEnumerator; aMap: TOnMap);
     function GetCurrent: T; override;
   end;
 
@@ -123,7 +123,7 @@
   private
     FMap: TNestMap;
   public
-    constructor Create(e: TCustomEnumerator; aMap: TNestMap);
+    constructor Create(e: TSpecEnumerator; aMap: TNestMap);
     function GetCurrent: T; override;
   end;
 
@@ -133,7 +133,7 @@
     FSkipped: SizeInt;
     procedure Skip; inline;
   public
-    constructor Create(e: TCustomEnumerator; aCount: SizeInt);
+    constructor Create(e: TSpecEnumerator; aCount: SizeInt);
     procedure Reset; override;
   end;
 
@@ -142,7 +142,7 @@
     FLimit,
     FCurrent: SizeInt;
   public
-    constructor Create(e: TCustomEnumerator; aCount: SizeInt);
+    constructor Create(e: TSpecEnumerator; aCount: SizeInt);
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
@@ -189,7 +189,7 @@
     procedure Reset; override;
   end;
 
-  generic TGArrayEnumerator<T> = class(specialize TGCustomEnumerator<T>)
+  generic TGArrayEnumerator<T> = class(specialize TGEnumerator<T>)
   public
   type
     TArray = specialize TGArray<T>;

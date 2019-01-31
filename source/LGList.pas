@@ -136,7 +136,7 @@ type
     function  GetCapacity: SizeInt; override;
     procedure SetRejectDuplicates(aValue: Boolean);
     procedure DoClear; override;
-    function  DoGetEnumerator: TCustomEnumerator; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure CopyItems(aBuffer: PItem); override;
@@ -1038,7 +1038,7 @@ begin
   FCount := 0;
 end;
 
-function TGBaseSortedList.DoGetEnumerator: TCustomEnumerator;
+function TGBaseSortedList.DoGetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;

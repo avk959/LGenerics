@@ -110,7 +110,7 @@ type
     FTree: TTree;
     procedure EntryRemoved(p: PEntry);
     function  GetCapacity: SizeInt; override;
-    function  DoGetEnumerator: TCustomEnumerator; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
@@ -566,7 +566,7 @@ begin
   Result := FTree.Capacity;
 end;
 
-function TGAbstractTreeMultiSet.DoGetEnumerator: TCustomEnumerator;
+function TGAbstractTreeMultiSet.DoGetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;

@@ -63,7 +63,7 @@ type
     TOnTest          = specialize TGOnTest<TKey>;
     TNestTest        = specialize TGNestTest<TKey>;
     TEntryTest       = function(p: PEntry): Boolean of object;
-    TEntryEnumerator = specialize TGCustomEnumerator<PEntry>;
+    TEntryEnumerator = specialize TGEnumerator<PEntry>;
 
     TSearchResult = record
       case Integer of

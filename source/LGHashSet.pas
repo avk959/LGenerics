@@ -66,7 +66,7 @@ type
     protected
       FSet: TAbstractHashSet;
     public
-      constructor Create(e: TCustomEnumerator; aSetClass: THashSetClass);
+      constructor Create(e: TSpecEnumerator; aSetClass: THashSetClass);
       destructor Destroy; override;
       function  MoveNext: Boolean; override;
       procedure Reset; override;
@@ -80,7 +80,7 @@ type
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  DoGetEnumerator: TCustomEnumerator; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
@@ -542,7 +542,7 @@ end;
 
 { TGAbstractHashSet.TDistinctEnumerable }
 
-constructor TGAbstractHashSet.TDistinctEnumerable.Create(e: TCustomEnumerator; aSetClass: THashSetClass);
+constructor TGAbstractHashSet.TDistinctEnumerable.Create(e: TSpecEnumerator; aSetClass: THashSetClass);
 begin
   inherited Create(e);
   FSet := aSetClass.Create;
@@ -601,7 +601,7 @@ begin
   FTable.LoadFactor := aValue;
 end;
 
-function TGAbstractHashSet.DoGetEnumerator: TCustomEnumerator;
+function TGAbstractHashSet.DoGetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;

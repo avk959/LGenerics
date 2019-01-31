@@ -57,7 +57,7 @@ type
       procedure Reset; override;
     end;
 
-    TEnumeratorX = specialize TGCustomEnumerator<X>;
+    TEnumeratorX = specialize TGEnumerator<X>;
 
     TEnumCursor = class abstract(specialize TGAutoEnumerable<Y>)
     protected

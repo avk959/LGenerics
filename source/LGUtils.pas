@@ -120,7 +120,7 @@ type
     property Instance: T read GetInstance write SetInstance;
   end;
 
-  TGCustomEnumerator<T> = class abstract
+  TGEnumerator<T> = class abstract
   protected
     function  GetCurrent: T; virtual; abstract;
   public
@@ -149,7 +149,7 @@ type
 
   IGEnumerable<T> = interface(IObjInstance)
   ['{92F9FDFC-BEA4-4968-A033-7A90C05DDA60}']
-    function GetEnumerator: TGCustomEnumerator<T>;
+    function GetEnumerator: TGEnumerator<T>;
   { enumerates elements in reverse order }
     function Reverse: IGEnumerable<T>;
     function ToArray: TGArray<T>;

@@ -93,7 +93,7 @@ type
     procedure SetLoadFactor(aValue: Single); inline;
     function  GetExpandTreshold: SizeInt; inline;
     function  GetCapacity: SizeInt; override;
-    function  DoGetEnumerator: TCustomEnumerator; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
@@ -597,7 +597,7 @@ begin
   Result := FTable.Capacity;
 end;
 
-function TGAbstractHashMultiSet.DoGetEnumerator: TCustomEnumerator;
+function TGAbstractHashMultiSet.DoGetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;

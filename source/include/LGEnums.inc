@@ -22,7 +22,7 @@ begin
   FOwner := e;
 end;
 
-function TGAutoEnumerable.TEnumerable.GetEnumerator: TCustomEnumerator;
+function TGAutoEnumerable.TEnumerable.GetEnumerator: TSpecEnumerator;
 begin
   FOwner.Reset;
   Result := FOwner;
@@ -48,7 +48,7 @@ begin
   Result := FEnum.GetCurrent;
 end;
 
-constructor TGEnumCursor.Create(e: TCustomEnumerator);
+constructor TGEnumCursor.Create(e: TSpecEnumerator);
 begin
   inherited Create;
   FEnum := e;
@@ -81,7 +81,7 @@ begin
   until Result;
 end;
 
-constructor TGEnumRegularFilter.Create(e: TCustomEnumerator; aTest: TTest);
+constructor TGEnumRegularFilter.Create(e: TSpecEnumerator; aTest: TTest);
 begin
   inherited Create(e);
   FTest := aTest;
@@ -89,7 +89,7 @@ end;
 
 { TGEnumDelegatedFilter }
 
-constructor TGEnumDelegatedFilter.Create(e: TCustomEnumerator; aTest: TOnTest);
+constructor TGEnumDelegatedFilter.Create(e: TSpecEnumerator; aTest: TOnTest);
 begin
   inherited Create(e);
   FTest := aTest;
@@ -106,7 +106,7 @@ end;
 
 { TGEnumNestedFilter }
 
-constructor TGEnumNestedFilter.Create(e: TCustomEnumerator; aTest: TNestTest);
+constructor TGEnumNestedFilter.Create(e: TSpecEnumerator; aTest: TNestTest);
 begin
   inherited Create(e);
   FTest := aTest;
@@ -123,7 +123,7 @@ end;
 
 { TGEnumRegularMap }
 
-constructor TGEnumRegularMap.Create(e: TCustomEnumerator; aMap: TMapFunc);
+constructor TGEnumRegularMap.Create(e: TSpecEnumerator; aMap: TMapFunc);
 begin
   inherited Create(e);
   FMap := aMap;
@@ -136,7 +136,7 @@ end;
 
 { TGEnumDelegatedMap }
 
-constructor TGEnumDelegatedMap.Create(e: TCustomEnumerator; aMap: TOnMap);
+constructor TGEnumDelegatedMap.Create(e: TSpecEnumerator; aMap: TOnMap);
 begin
   inherited Create(e);
   FMap := aMap;
@@ -149,7 +149,7 @@ end;
 
 { TGEnumNestedMap }
 
-constructor TGEnumNestedMap.Create(e: TCustomEnumerator; aMap: TNestMap);
+constructor TGEnumNestedMap.Create(e: TSpecEnumerator; aMap: TNestMap);
 begin
   inherited Create(e);
   FMap := aMap;
@@ -168,7 +168,7 @@ begin
     Inc(FSkipped);
 end;
 
-constructor TGSkipEnumerable.Create(e: TCustomEnumerator; aCount: SizeInt);
+constructor TGSkipEnumerable.Create(e: TSpecEnumerator; aCount: SizeInt);
 begin
   inherited Create(e);
   FSkipCount := aCount;
@@ -184,7 +184,7 @@ end;
 
 { TGLimitEnumerable }
 
-constructor TGLimitEnumerable.Create(e: TCustomEnumerator; aCount: SizeInt);
+constructor TGLimitEnumerable.Create(e: TSpecEnumerator; aCount: SizeInt);
 begin
   inherited Create(e);
   FLimit := aCount;

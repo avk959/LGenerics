@@ -84,7 +84,7 @@ type
     FTree: TTree;
     function  GetCount: SizeInt; override;
     function  GetCapacity: SizeInt; override;
-    function  DoGetEnumerator: TCustomEnumerator; override;
+    function  DoGetEnumerator: TSpecEnumerator; override;
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
@@ -701,7 +701,7 @@ begin
   Result := FTree.Capacity;
 end;
 
-function TGAbstractTreeSet.DoGetEnumerator: TCustomEnumerator;
+function TGAbstractTreeSet.DoGetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;
