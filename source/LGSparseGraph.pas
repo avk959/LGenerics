@@ -190,6 +190,7 @@ type
       FMatrix: TSquareBitMatrix;
       function GetSize: SizeInt; inline;
     public
+      class function MaxSize: SizeInt; static; inline;
       constructor Create(constref aMatrix: TSquareBitMatrix);
       function IsEmpty: Boolean; inline;
       function Adjacent(aSrc, aDst: SizeInt): Boolean; inline;
@@ -403,7 +404,7 @@ type
 ***********************************************************************************************************}
   { returns True and vertex index, if it was added, False otherwise }
     function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; inline;
-    function  AddVertex(constref aVertex: TVertex): Boolean; inline;
+    function  AddVertex(constref aVertex: TVertex): Boolean;
   { returns count of added vertices }
     function  AddVertices(const aVertices: TVertexArray): SizeInt;
   { removes vertex aVertex from graph, slow; raises EGraphError if not contains aVertex }
@@ -449,7 +450,7 @@ type
     function  IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
     function  VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
   { returns adjacency matrix;
-    warning: maximum matrix size limited, see MaxBitMatrixSize }
+    warning: maximum matrix size limited, see TAdjacencyMatrix.MaxSize }
     function  CreateAdjacencyMatrix: TAdjacencyMatrix;
   { test whether the graph is bipartite;
     the graph can be disconnected (in this case it consists of a number of connected
@@ -1015,6 +1016,11 @@ begin
   Result := FMatrix.FSize;
 end;
 
+class function TGSparseGraph.TAdjacencyMatrix.MaxSize: SizeInt;
+begin
+  Result := TSquareBitMatrix.MaxSize;
+end;
+
 constructor TGSparseGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
 begin
   FMatrix := aMatrix;
@@ -1400,6 +1406,8 @@ var
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
+  if AdjLists[aSrc]^.Contains(aDst) then
+    exit(True);
   System.SetLength(Queue, VertexCount);
   Visited.Size := VertexCount;
   Queue[qTail] := aSrc;
@@ -1408,11 +1416,11 @@ begin
     begin
       aSrc := Queue[qHead];
       Inc(qHead);
-      if aSrc = aDst then
-        exit(True);
       for p in AdjLists[aSrc]^ do
         if not Visited[p^.Destination] then
           begin
+            if p^.Destination = aDst then
+              exit(True);
             Queue[qTail] := p^.Destination;
             Inc(qTail);
             Visited[p^.Destination] := True;
@@ -2085,15 +2093,15 @@ end;
 function TGSparseGraph.CreateAdjacencyMatrix: TAdjacencyMatrix;
 var
   m: TSquareBitMatrix;
-  s, d: SizeInt;
+  I: SizeInt;
+  p: PAdjItem;
 begin
   if IsEmpty then
     exit(Default(TAdjacencyMatrix));
   m := TSquareBitMatrix.Create(VertexCount);
-  for s := 0 to Pred(VertexCount) do
-    for d := 0 to Pred(VertexCount) do
-      if (s <> d) and AdjLists[s]^.Contains(d) then
-        m[s, d] := True;
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      m[I, p^.Destination] := True;
   Result := TAdjacencyMatrix.Create(m);
 end;
 
@@ -2717,8 +2725,8 @@ begin
   Result := aCost;
   for I := 0 to Pred(aSize) do
     begin
-      aRowRed[I] := T(0);
-      aColRed[I] := T(0);
+      aRowRed[I] := 0;
+      aColRed[I] := 0;
     end;
   //////////////////
   for I := 0 to Pred(aSize) do  // reduce rows
@@ -2727,10 +2735,10 @@ begin
       for J := 0 to Pred(aSize) do
         begin
           MinVal := vMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
-          if MinVal <= T(0) then
+          if MinVal <= 0 then
             break;
         end;
-      if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+      if (MinVal <= 0) or (MinVal = T.INF_VALUE) then
         continue;
       for J := 0 to Pred(aSize) do
         if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
@@ -2747,10 +2755,10 @@ begin
       for I := 0 to Pred(aSize) do
         begin
           MinVal := vMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
-          if MinVal <= T(0) then
+          if MinVal <= 0 then
             break;
         end;
-      if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+      if (MinVal <= 0) or (MinVal = T.INF_VALUE) then
         continue;
       for I := 0 to Pred(aSize) do
         if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
@@ -2788,7 +2796,7 @@ begin
     for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
-        if CurrVal > T(0) then
+        if CurrVal > 0 then
           if CurrVal < RowMin[I].Value then
             RowMin[I].Value := CurrVal else
         else
@@ -2814,7 +2822,7 @@ begin
           for I in FZeros[J] do
             if RowMin[I].Value < MinVal then
               MinVal := RowMin[I].Value;
-          if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+          if (MinVal <= 0) or (MinVal = T.INF_VALUE) then
             continue;
           for I := 0 to Pred(aSize) do
             if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
@@ -2846,7 +2854,7 @@ begin
         else
           if ColMin[J].ZeroFlag then
             begin
-              ColMin[J].Value := T(0);
+              ColMin[J].Value := 0;
               FZeros[I][J] := False;
               break;
             end
@@ -2866,7 +2874,7 @@ begin
           for J in FZeros[I] do
             if ColMin[J].Value < MinVal then
               MinVal := ColMin[J].Value;
-          if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+          if (MinVal <= 0) or (MinVal = T.INF_VALUE) then
             continue;
           for J := 0 to Pred(aSize) do
             if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
@@ -2909,7 +2917,7 @@ begin
     for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
-        if CurrVal > T(0) then
+        if CurrVal > 0 then
           begin
             if CurrVal < RowMin[I].Value then
               RowMin[I].Value := CurrVal;
@@ -2920,11 +2928,11 @@ begin
           begin
             FZeros[I][J] := True;
             if RowMin[I].ZeroFlag then
-              RowMin[I].Value := T(0)
+              RowMin[I].Value := 0
             else
               RowMin[I].ZeroFlag := True;
             if ColMin[J].ZeroFlag then
-              ColMin[J].Value := T(0)
+              ColMin[J].Value := 0
             else
               ColMin[J].ZeroFlag := True;
           end;
@@ -3003,7 +3011,7 @@ begin
             //////////
             Search(aSize, aCost, aRows, aCols);
             //////////
-            m[SaveRow * MxSize + SaveCol] := T(0);
+            m[SaveRow * MxSize + SaveCol] := 0;
           end;
       end
     else
@@ -3053,7 +3061,7 @@ begin
   for I := 0 to Pred(FMatrixSize) do
     Rows[I] := I;
   Cols := System.Copy(Rows);
-  Search(FMatrixSize, T(0), PInt(Rows), PInt(Cols));
+  Search(FMatrixSize, 0, PInt(Rows), PInt(Cols));
   CopyBest(aTour, aCost);
   Result := not FCancelled;
 end;
@@ -3071,8 +3079,8 @@ begin
   Result := aCost;
   for I := 0 to Pred(aSize) do
     begin
-      aRowRed[I] := T(0);
-      aColRed[I] := T(0);
+      aRowRed[I] := 0;
+      aColRed[I] := 0;
     end;
   //////////////////
   for I := 0 to Pred(aSize) do  // reduce rows
@@ -3081,10 +3089,10 @@ begin
       for J := 0 to Pred(aSize) do
         begin
           MinVal := vMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
-          if MinVal <= T(0) then
+          if MinVal <= 0 then
             break;
         end;
-      if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+      if (MinVal <= 0) or (MinVal = T.INF_VALUE) then
         continue;
       for J := 0 to Pred(aSize) do
         if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
@@ -3101,10 +3109,10 @@ begin
       for I := 0 to Pred(aSize) do
         begin
           MinVal := vMin(MinVal, m[aRows[I] * MxSize + aCols[J]]);
-          if MinVal <= T(0) then
+          if MinVal <= 0 then
             break;
         end;
-      if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+      if (MinVal <= 0) or (MinVal = T.INF_VALUE) then
         continue;
       for I := 0 to Pred(aSize) do
         if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
@@ -3124,7 +3132,7 @@ var
   m: PItem;
 begin
   Result := Reduce(aSize, aCost, aRows, aCols, aRowRed, aColRed);
-  if (aSize <= ADV_CUTOFF) or (Result >= FUpBound) then
+  if (aSize <= ADV_CUTOFF) or (Result * Factor >= FUpBound) then
     exit;
   m := PItem(FMatrix);
   RowMin := PMinData(FRowMin);
@@ -3142,7 +3150,7 @@ begin
     for J := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
-        if CurrVal > T(0) then
+        if CurrVal > 0 then
           if CurrVal < RowMin[I].Value then
             RowMin[I].Value := CurrVal else
         else
@@ -3168,7 +3176,7 @@ begin
           for I in FZeros[J] do
             if RowMin[I].Value < MinVal then
               MinVal := RowMin[I].Value;
-          if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+          if (MinVal <= 0) or (MinVal = T.INF_VALUE) then
             continue;
           for I := 0 to Pred(aSize) do
             if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
@@ -3194,13 +3202,13 @@ begin
     for I := 0 to Pred(aSize) do
       begin
         CurrVal := m[aRows[I] * MxSize + aCols[J]];
-        if CurrVal > T(0) then
+        if CurrVal > 0 then
           if CurrVal < ColMin[J].Value then
             ColMin[J].Value := CurrVal else
         else
           if ColMin[J].ZeroFlag then
             begin
-              ColMin[J].Value := T(0);
+              ColMin[J].Value := 0;
               FZeros[I][J] := False;
               break;
             end
@@ -3220,7 +3228,7 @@ begin
           for J in FZeros[I] do
             if ColMin[J].Value < MinVal then
               MinVal := ColMin[J].Value;
-          if (MinVal <= T(0)) or (MinVal = T.INF_VALUE) then
+          if (MinVal <= 0) or (MinVal = T.INF_VALUE) then
             continue;
           for J := 0 to Pred(aSize) do
             if m[aRows[I] * MxSize + aCols[J]] < T.INF_VALUE then
@@ -3296,7 +3304,7 @@ begin
             //////////
             Search(aSize, aCost, aRows, aCols);
             //////////
-            m[SaveRow * MxSize + SaveCol] := T(0);
+            m[SaveRow * MxSize + SaveCol] := 0;
           end;
       end
     else
@@ -3329,7 +3337,7 @@ begin
   for I := 0 to Pred(FMatrixSize) do
     Rows[I] := I;
   Cols := System.Copy(Rows);
-  Search(FMatrixSize, T(0), PInt(Rows), PInt(Cols));
+  Search(FMatrixSize, 0, PInt(Rows), PInt(Cols));
   CopyBest(aTour, aCost);
   Result := not FCancelled;
 end;
@@ -3496,7 +3504,7 @@ var
 begin
   Len := System.High(aTour);
   repeat
-    MaxGain := T(0);
+    MaxGain := 0;
     L := NULL_INDEX;
     R := NULL_INDEX;
     for I := 0 to Len - 3 do
@@ -3513,9 +3521,9 @@ begin
               end;
           end;
       end;
-    if MaxGain > T(0) then
+    if MaxGain > 0 then
       TIntHelper.Reverse(aTour[L+1..R]);
-  until MaxGain <= T(0);
+  until MaxGain <= 0;
   aCost := GetTotalCost(m, aTour);
 end;
 
@@ -3683,7 +3691,7 @@ class function TGTspHelper.GetTotalCost(const m: TTspMatrix; const aTour: TIntAr
 var
   I: SizeInt;
 begin
-  Result := T(0);
+  Result := 0;
   for I := 0 to Pred(System.High(aTour)) do
     Result += m[aTour[I], aTour[Succ(I)]];
 end;
@@ -3911,15 +3919,15 @@ begin
   System.SetLength(Self, aValue);
 end;
 
-class function TIntArrayHelper.Construct(aLength: SizeInt; aInitValue: SizeInt): TIntArray;
+class function TIntArrayHelper.Construct(aLength: SizeInt; aFillValue: SizeInt): TIntArray;
 begin
   System.SetLength(Result, aLength);
 {$IF DEFINED(CPU64)}
-  System.FillQWord(Pointer(Result)^, aLength, QWord(aInitValue));
+  System.FillQWord(Pointer(Result)^, aLength, QWord(aFillValue));
 {$ELSEIF DEFINED(CPU32)}
-  System.FillDWord(Pointer(Result)^, aLength, DWord(aInitValue));
+  System.FillDWord(Pointer(Result)^, aLength, DWord(aFillValue));
 {$ELSE}
-  System.FillWord(Pointer(Result)^, aLength, Word(aInitValue));
+  System.FillWord(Pointer(Result)^, aLength, Word(aFillValue));
 {$ENDIF}
 end;
 

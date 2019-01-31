@@ -116,7 +116,7 @@ begin
         FSize := aSize;
         s := Succ((FSize * FSize) shr INT_SIZE_LOG);
         System.SetLength(FBits, s);
-        System.FillChar(FBits[0], s * SizeOf(SizeUInt), 0);
+        System.FillChar(Pointer(FBits)^, s * SizeOf(SizeUInt), 0);
       end
     else
       raise EGraphError.CreateFmt(SEBitMatrixSizeExceedFmt, [aSize]);
