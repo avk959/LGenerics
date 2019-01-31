@@ -1506,7 +1506,9 @@ begin
             end;
           aNode^.Price -= MinPrice + FEpsilon;
           aNode^.Reset;
-        end;
+        end
+      else
+        aNode^.Price -= FEpsilon; //todo: ???
     end;
 end;
 
