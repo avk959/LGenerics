@@ -68,6 +68,8 @@ type
     procedure AdjVerticesIDirect;
     procedure Vertices;
     procedure VerticesDirect;
+    procedure CreateAdjacencyMatrix;
+    procedure CreateAdjacencyMatrixDirect;
     procedure IsBipartite;
     procedure IsBipartiteDirect;
     procedure DfsTraversal;
@@ -718,6 +720,42 @@ begin
   for Vert in g.Vertices do
     Inc(I);
   AssertTrue(I = 4);
+end;
+
+procedure TSparseGraphTest.CreateAdjacencyMatrix;
+var
+  Ref: TGraphRef;
+  g: TGraph;
+  m: TGraph.TAdjacencyMatrix;
+  I, J: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  m := g.CreateAdjacencyMatrix;
+  AssertTrue(g.VertexCount = 13);
+  AssertTrue(m.Size = g.VertexCount);
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if I <> J then
+        AssertFalse(g.ContainsEdgeI(I, J) xor m[I, J]);
+end;
+
+procedure TSparseGraphTest.CreateAdjacencyMatrixDirect;
+var
+  Ref: TDiGraphRef;
+  g: TDiGraph;
+  m: TDiGraph.TAdjacencyMatrix;
+  I, J: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  m := g.CreateAdjacencyMatrix;
+  AssertTrue(g.VertexCount = 13);
+  AssertTrue(m.Size = g.VertexCount);
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if I <> J then
+        AssertFalse(g.ContainsEdgeI(I, J) xor m[I, J]);
 end;
 
 procedure TSparseGraphTest.IsBipartite;
