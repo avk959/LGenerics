@@ -362,6 +362,7 @@ type
       FEnumDone: Boolean;
       function  GetCurrent: TEdge;
     public
+      constructor Create(aGraph: TGSparseGraph);
       function  MoveNext: Boolean;
       procedure Reset;
       property  Current: TEdge read GetCurrent;
@@ -371,7 +372,7 @@ type
     private
       FGraph: TGSparseGraph;
     public
-      function GetEnumerator: TEdgeEnumerator;
+      function GetEnumerator: TEdgeEnumerator; inline;
     end;
 
   public
@@ -1131,7 +1132,7 @@ constructor TGSparseGraph.TVertexEnumerator.Create(aGraph: TGSparseGraph);
 begin
   FNodeList := Pointer(aGraph.FNodeList);
   FLastIndex := Pred(aGraph.VertexCount);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGSparseGraph.TVertexEnumerator.MoveNext: Boolean;
@@ -1144,7 +1145,7 @@ end;
 
 procedure TGSparseGraph.TVertexEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGSparseGraph.TVertices }
@@ -1164,6 +1165,14 @@ end;
 function TGSparseGraph.TEdgeEnumerator.GetCurrent: TEdge;
 begin
   Result := TEdge.Create(FCurrIndex, FEnum.Current);
+end;
+
+constructor TGSparseGraph.TEdgeEnumerator.Create(aGraph: TGSparseGraph);
+begin
+  FList := Pointer(aGraph.FNodeList);
+  FLastIndex := Pred(aGraph.VertexCount);
+  FCurrIndex := NULL_INDEX;
+  FEnumDone := True;
 end;
 
 function TGSparseGraph.TEdgeEnumerator.MoveNext: Boolean;
@@ -1191,10 +1200,7 @@ end;
 
 function TGSparseGraph.TEdges.GetEnumerator: TEdgeEnumerator;
 begin
-  Result.FList := Pointer(FGraph.FNodeList);
-  Result.FLastIndex := Pred(FGraph.VertexCount);
-  Result.FCurrIndex := -1;
-  Result.FEnumDone := True;
+  Result := TEdgeEnumerator.Create(FGraph);
 end;
 
 { TGSparseGraph }

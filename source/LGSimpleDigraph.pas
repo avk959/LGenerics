@@ -129,12 +129,15 @@ type
 
     TIncomingEnumerator = record
     private
-      FEnum: TEdgeEnumerator;
-      FIndex,
+      FGraph: TGSimpleDiGraph;
+      FTarget,
+      FCurrIndex,
+      FLastIndex,
       FInCount: SizeInt;
       FCurrArc: TIncomingArc;
       function  GetCurrent: TIncomingArc; inline;
     public
+      constructor Create(aGraph: TGSimpleDiGraph; aTarget: SizeInt);
       function  MoveNext: Boolean;
       property  Current: TIncomingArc read GetCurrent;
     end;
@@ -612,8 +615,6 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
-uses
-  bufstream;
 
 { TGSimpleDiGraph.TReachabilityMatrix }
 
@@ -834,23 +835,32 @@ begin
   Result := FCurrArc;
 end;
 
+constructor TGSimpleDiGraph.TIncomingEnumerator.Create(aGraph: TGSimpleDiGraph; aTarget: SizeInt);
+begin
+  FGraph := aGraph;
+  FTarget := aTarget;
+  FCurrIndex := NULL_INDEX;
+  FLastIndex := Pred(aGraph.VertexCount);
+  FInCount := aGraph.FNodeList[aTarget].Tag;
+end;
+
 function TGSimpleDiGraph.TIncomingEnumerator.MoveNext: Boolean;
 var
-  e: TEdge;
+  I: SizeInt;
+  p: PAdjItem;
 begin
-  if FInCount < 1 then
-    exit(False);
   repeat
-    if not FEnum.MoveNext then
+    if (FInCount < 1) or (FCurrIndex >= FLastIndex) then
       exit(False);
-    e := FEnum.Current;
-    if e.Destination = FIndex then
-      begin
-        FCurrArc.Source := e.Source;
-        FCurrArc.Data := e.Data;
-        Dec(FInCount);
-        exit(True);
-      end;
+    Inc(FCurrIndex);
+    for p in FGraph.AdjLists[FCurrIndex]^ do
+      if p^.Destination = FTarget then
+        begin
+          FCurrArc.Source := FCurrIndex;
+          FCurrArc.Data := p^.Data;
+          Dec(FInCount);
+          exit(True);
+        end;
   until False;
 end;
 
@@ -864,12 +874,7 @@ end;
 
 function TGSimpleDiGraph.TIncomingArcs.GetEnumerator: TIncomingEnumerator;
 begin
-  Result.FEnum.FList := Pointer(FGraph.FNodeList);
-  Result.FEnum.FLastIndex := Pred(FGraph.VertexCount);
-  Result.FEnum.FCurrIndex := -1;
-  Result.FEnum.FEnumDone := True;
-  Result.FIndex := FTarget;
-  Result.FInCount := FGraph.FNodeList[FTarget].Tag;
+  Result := TIncomingEnumerator.Create(FGraph, FTarget);
 end;
 
 { TGSimpleDiGraph }
