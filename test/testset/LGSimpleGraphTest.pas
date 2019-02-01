@@ -139,7 +139,7 @@ type
     TIntWeight   = specialize TGSimpleWeight<Integer>;
     TInt64Weight = specialize TGSimpleWeight<Int64>;
     TGraph       = specialize TGWeightedGraph<Integer, Integer, TIntWeight, Integer>;
-    TGraph64     = specialize TGIntWeightGraph<Integer, TInt64Weight, Integer>;
+    TGraph64     = specialize TGWeightedGraph64<Integer, TInt64Weight, Integer>;
     TRef         = specialize TGAutoRef<TGraph>;
     TIntHelper   = specialize TGOrdinalArrayHelper<Integer>;
     THelper      = specialize TGOrdinalArrayHelper<SizeInt>;
