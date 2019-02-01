@@ -160,7 +160,7 @@ type
     class function Right(e: IXEnumerable; f: TNestFold): TOptional; static;
   end;
 
-  generic TGenerator<TState, TResult> = class(specialize TGEnumerable<TResult>)
+  generic TGUnboundGenerator<TState, TResult> = class(specialize TGEnumerable<TResult>)
   public
   type
     TGetNext = function(var aState: TState): TResult;
@@ -169,11 +169,11 @@ type
   type
     TEnumerator = class(specialize TGAutoEnumerable<TResult>)
     private
-      FOwner: TGenerator;
+      FOwner: TGUnboundGenerator;
     protected
       function GetCurrent: TResult; override;
     public
-      constructor Create(aOwner: TGenerator);
+      constructor Create(aOwner: TGUnboundGenerator);
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
@@ -182,7 +182,34 @@ type
     FState: TState;
     FGetNext: TGetNext;
   public
-    constructor Create(constref aState: TState; aGetNext: TGetNext);
+    constructor Create(constref aInitState: TState; aGetNext: TGetNext);
+    function GetEnumerator: TSpecEnumerator; override;
+  end;
+
+  generic TGGenerator<TState, TResult> = class(specialize TGEnumerable<TResult>)
+  public
+  type
+    TGetNext = function(var aState: TState; out aResult: TResult): Boolean;
+
+  private
+  type
+    TEnumerator = class(specialize TGAutoEnumerable<TResult>)
+    private
+      FOwner: TGGenerator;
+    protected
+      function GetCurrent: TResult; override;
+    public
+      constructor Create(aOwner: TGGenerator);
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+  var
+    FState: TState;
+    FResult: TResult;
+    FGetNext: TGetNext;
+  public
+    constructor Create(constref aInitState: TState; aGetNext: TGetNext);
     function GetEnumerator: TSpecEnumerator; override;
   end;
 
@@ -635,45 +662,80 @@ var
 begin
   ReduceEnum;
 end;
-{$UNDEF FoldArray}
-{$UNDEF ReduceArray}
-{$UNDEF FoldEnum}
-{$UNDEF ReduceEnum}
+{$UNDEF FoldArray}{$UNDEF ReduceArray}{$UNDEF FoldEnum}{$UNDEF ReduceEnum}
 {$POP}
-{ TGenerator.TEnumerator }
 
-function TGenerator.TEnumerator.GetCurrent: TResult;
+{ TGUnboundGenerator.TEnumerator }
+
+function TGUnboundGenerator.TEnumerator.GetCurrent: TResult;
 begin
   Result := FOwner.FGetNext(FOwner.FState);
 end;
 
-constructor TGenerator.TEnumerator.Create(aOwner: TGenerator);
+constructor TGUnboundGenerator.TEnumerator.Create(aOwner: TGUnboundGenerator);
 begin
   inherited Create;
   FOwner := aOwner;
 end;
 
-function TGenerator.TEnumerator.MoveNext: Boolean;
+function TGUnboundGenerator.TEnumerator.MoveNext: Boolean;
 begin
   Result := True;
 end;
 
-procedure TGenerator.TEnumerator.Reset;
+procedure TGUnboundGenerator.TEnumerator.Reset;
 begin
 end;
 
-{ TGenerator }
+{ TGUnboundGenerator }
 
-function TGenerator.GetEnumerator: TSpecEnumerator;
+constructor TGUnboundGenerator.Create(constref aInitState: TState; aGetNext: TGetNext);
+begin
+  inherited Create;
+  FState := aInitState;
+  FGetNext := aGetNext;
+end;
+
+function TGUnboundGenerator.GetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;
 
-constructor TGenerator.Create(constref aState: TState; aGetNext: TGetNext);
+{ TGGenerator.TEnumerator }
+
+function TGGenerator.TEnumerator.GetCurrent: TResult;
+begin
+  Result := FOwner.FResult;
+end;
+
+constructor TGGenerator.TEnumerator.Create(aOwner: TGGenerator);
 begin
   inherited Create;
-  FState := aState;
+  FOwner := aOwner;
+end;
+
+function TGGenerator.TEnumerator.MoveNext: Boolean;
+begin
+  Result := FOwner.FGetNext(FOwner.FState, FOwner.FResult);
+end;
+
+procedure TGGenerator.TEnumerator.Reset;
+begin
+end;
+
+{ TGGenerator }
+
+constructor TGGenerator.Create(constref aInitState: TState; aGetNext: TGetNext);
+begin
+  inherited Create;
+  FState := aInitState;
   FGetNext := aGetNext;
+  FResult := Default(TResult);
+end;
+
+function TGGenerator.GetEnumerator: TSpecEnumerator;
+begin
+  Result := TEnumerator.Create(Self);
 end;
 
 { TGDeferMonadic }
