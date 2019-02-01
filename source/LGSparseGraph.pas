@@ -191,7 +191,6 @@ type
       function GetSize: SizeInt; inline;
       function GetAdjacent(aSrc, aDst: SizeInt): Boolean; inline;
     public
-      class function MaxSize: SizeInt; static; inline;
       constructor Create(constref aMatrix: TSquareBitMatrix);
       function IsEmpty: Boolean; inline;
       property Size: SizeInt read GetSize;
@@ -296,14 +295,14 @@ type
     TEdge = record
       Source,               //index of source vertex
       Destination: SizeInt; //index of target vertex
-      Data:  TEdgeData;
+      Data: TEdgeData;
       constructor Create(aSrc: SizeInt; p: PAdjItem);
       constructor Create(aSrc, aDst: SizeInt; constref d: TEdgeData);
     end;
 
     TIncidentEdge = record
       Destination: SizeInt; //index of target vertex
-      Data:  TEdgeData;
+      Data: TEdgeData;
     end;
 
     TAdjVertices = record
@@ -381,7 +380,7 @@ type
 ***********************************************************************************************************}
     class function cMin(L, R: TCost): TCost; static; inline;
     class function cMax(L, R: TCost): TCost; static; inline;
-    class function MaxBitMatrixSize: SizeInt; static; inline;
+    class function BitMatrixSizeMax: SizeInt; static; inline;
     class function TreePathTo(const aTree: TIntArray; aValue: SizeInt): TIntArray; static;
     class function TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
     class function TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
@@ -451,7 +450,7 @@ type
     function  IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
     function  VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
   { returns adjacency matrix;
-    warning: maximum matrix size limited, see TAdjacencyMatrix.MaxSize }
+    warning: maximum matrix size limited, see TBitMatrixSizeMax }
     function  CreateAdjacencyMatrix: TAdjacencyMatrix;
   { test whether the graph is bipartite;
     the graph can be disconnected (in this case it consists of a number of connected
@@ -1028,11 +1027,6 @@ begin
     raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt, [aSrc])
 end;
 
-class function TGSparseGraph.TAdjacencyMatrix.MaxSize: SizeInt;
-begin
-  Result := TSquareBitMatrix.MaxSize;
-end;
-
 constructor TGSparseGraph.TAdjacencyMatrix.Create(constref aMatrix: TSquareBitMatrix);
 begin
   FMatrix := aMatrix;
@@ -1607,7 +1601,7 @@ begin
     Result := R;
 end;
 
-class function TGSparseGraph.MaxBitMatrixSize: SizeInt;
+class function TGSparseGraph.BitMatrixSizeMax: SizeInt;
 begin
   Result := TSquareBitMatrix.MaxSize;
 end;

@@ -675,7 +675,7 @@ end;
 constructor TGAsyncMonadic.Create(aFun: TFun; constref v: T);
 begin
   inherited Create;
-  FCall := TCall.Construct(aFun, v);
+  FCall := TCall.Create(aFun, v);
 end;
 
 { TGAsyncDyadic }
@@ -693,7 +693,7 @@ end;
 constructor TGAsyncDyadic.Create(aFun: TFun; constref v1: T1; constref v2: T2);
 begin
   inherited Create;
-  FCall := TCall.Construct(aFun, v1, v2);
+  FCall := TCall.Create(aFun, v1, v2);
 end;
 
 { TGAsyncTriadic }
@@ -712,7 +712,7 @@ end;
 constructor TGAsyncTriadic.Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
 begin
   inherited Create;
-  FCall := TCall.Construct(aFun, v1, v2, v3);
+  FCall := TCall.Create(aFun, v1, v2, v3);
 end;
 
 { TDefaultExecutor.TTaskQueue }

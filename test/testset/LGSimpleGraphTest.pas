@@ -66,6 +66,7 @@ type
     procedure SubgraphFromEdges2;
     procedure CreateLineGraph;
     procedure DistinctEdges;
+    procedure CreateComplementMatrix;
     procedure EnsureConnected;
     procedure EnsureConnected2;
     procedure PathExists;
@@ -818,6 +819,32 @@ begin
   for e in g.DistinctEdges do
     Inc(I);
   AssertTrue(I = 22);
+end;
+
+procedure TSimpleGraphTest.CreateComplementMatrix;
+var
+  Ref: TRef;
+  g: TGraph;
+  m: TGraph.TAdjacencyMatrix;
+  I, J: SizeInt;
+begin
+  g := {%H-}Ref;
+  m := g.CreateComplementMatrix;
+  AssertTrue(m.IsEmpty);
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  AssertTrue(g.VertexCount = 20);
+  m := g.CreateComplementMatrix;
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if I <> J then
+        AssertTrue(g.AdjacentI(I, J) xor m[I, J]);
+  Ref.Instance := GenerateTestGr5Compl;
+  g := Ref;
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if I <> J then
+        AssertFalse(g.AdjacentI(I, J) xor m[I, J]);
 end;
 
 procedure TSimpleGraphTest.EnsureConnected;

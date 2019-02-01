@@ -46,7 +46,6 @@ type
 
   strict private
   type
-
     TArrayCursor = class abstract(specialize TGAutoEnumerable<Y>)
     protected
       FArray: TArrayX;
@@ -118,9 +117,9 @@ type
     end;
 
   public
-    class function Apply(constref a: TArrayX; f: TMapFunc): IEnumerableY; static; inline;
-    class function Apply(constref a: TArrayX; f: TOnMap): IEnumerableY; static; inline;
-    class function Apply(constref a: TArrayX; f: TNestMap): IEnumerableY; static; inline;
+    class function Apply(const a: TArrayX; f: TMapFunc): IEnumerableY; static; inline;
+    class function Apply(const a: TArrayX; f: TOnMap): IEnumerableY; static; inline;
+    class function Apply(const a: TArrayX; f: TNestMap): IEnumerableY; static; inline;
     class function Apply(e: IEnumerableX; f: TMapFunc): IEnumerableY; static; inline;
     class function Apply(e: IEnumerableX; f: TOnMap): IEnumerableY; static; inline;
     class function Apply(e: IEnumerableX; f: TNestMap): IEnumerableY; static; inline;
@@ -133,20 +132,60 @@ type
     TFold        = specialize TGFold<X, Y>;
     TOnFold      = specialize TGOnFold<X, Y>;
     TNestFold    = specialize TGNestFold<X, Y>;
+    TOptional    = specialize TGOptional<Y>;
 
-    class function Left(constref a: array of X; f: TFold; constref y0: Y): Y; static;
-    class function Left(constref a: array of X; f: TOnFold; constref y0: Y): Y; static;
-    class function Left(constref a: array of X; f: TNestFold; constref y0: Y): Y; static;
+    class function Left(const a: array of X; f: TFold; constref y0: Y): Y; static;
+    class function Left(const a: array of X; f: TFold): TOptional; static;
+    class function Left(const a: array of X; f: TOnFold; constref y0: Y): Y; static;
+    class function Left(const a: array of X; f: TOnFold): TOptional; static;
+    class function Left(const a: array of X; f: TNestFold; constref y0: Y): Y; static;
+    class function Left(const a: array of X; f: TNestFold): TOptional; static;
     class function Left(e: IXEnumerable; f: TFold; constref y0: Y): Y; static;
+    class function Left(e: IXEnumerable; f: TFold): TOptional; static;
     class function Left(e: IXEnumerable; f: TOnFold; constref y0: Y): Y; static;
+    class function Left(e: IXEnumerable; f: TOnFold): TOptional; static;
     class function Left(e: IXEnumerable; f: TNestFold; constref y0: Y): Y; static;
-    class function Right(constref a: array of X; f: TFold; constref y0: Y): Y; static;
-    class function Right(constref a: array of X; f: TOnFold; constref y0: Y): Y; static;
-    class function Right(constref a: array of X; f: TNestFold; constref y0: Y): Y; static;
+    class function Left(e: IXEnumerable; f: TNestFold): TOptional; static;
+    class function Right(const a: array of X; f: TFold; constref y0: Y): Y; static;
+    class function Right(const a: array of X; f: TFold): TOptional; static;
+    class function Right(const a: array of X; f: TOnFold; constref y0: Y): Y; static;
+    class function Right(const a: array of X; f: TOnFold): TOptional; static;
+    class function Right(const a: array of X; f: TNestFold; constref y0: Y): Y; static;
+    class function Right(const a: array of X; f: TNestFold): TOptional; static;
     class function Right(e: IXEnumerable; f: TFold; constref y0: Y): Y; static;
+    class function Right(e: IXEnumerable; f: TFold): TOptional; static;
     class function Right(e: IXEnumerable; f: TOnFold; constref y0: Y): Y; static;
+    class function Right(e: IXEnumerable; f: TOnFold): TOptional; static;
     class function Right(e: IXEnumerable; f: TNestFold; constref y0: Y): Y; static;
+    class function Right(e: IXEnumerable; f: TNestFold): TOptional; static;
   end;
+
+  generic TGenerator<TState, TResult> = class(specialize TGEnumerable<TResult>)
+  public
+  type
+    TGetNext = function(var aState: TState): TResult;
+
+  private
+  type
+    TEnumerator = class(specialize TGAutoEnumerable<TResult>)
+    private
+      FOwner: TGenerator;
+    protected
+      function GetCurrent: TResult; override;
+    public
+      constructor Create(aOwner: TGenerator);
+      function  MoveNext: Boolean; override;
+      procedure Reset; override;
+    end;
+
+  var
+    FState: TState;
+    FGetNext: TGetNext;
+  public
+    constructor Create(constref aState: TState; aGetNext: TGetNext);
+    function GetEnumerator: TSpecEnumerator; override;
+  end;
+
   { monadic regular function }
   generic TGMonadic<T, TResult> = function(constref v: T): TResult;
   { dyadic regular function }
@@ -163,7 +202,7 @@ type
     FCall: TFun;
     FParam: T;
   public
-    class function Construct(aFun: TFun; constref v: T): TGDeferMonadic; static;
+    constructor Create(aFun: TFun; constref v: T);
     function Call: TResult; inline;
   end;
 
@@ -177,7 +216,7 @@ type
     FParam1: T1;
     FParam2: T2;
   public
-    class function Construct(aFun: TFun; constref v1: T1; constref v2: T2): TGDeferDyadic; static;
+    constructor Create(aFun: TFun; constref v1: T1; constref v2: T2);
     function Call: TResult; inline;
   end;
 
@@ -192,7 +231,7 @@ type
     FParam2: T2;
     FParam3: T3;
   public
-    class function Construct(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3): TGDeferTriadic; static;
+    constructor Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
     function Call: TResult; inline;
   end;
 
@@ -323,17 +362,17 @@ end;
 
 { TGMapping }
 
-class function TGMapping.Apply(constref a: TArrayX; f: TMapFunc): IEnumerableY;
+class function TGMapping.Apply(const a: TArrayX; f: TMapFunc): IEnumerableY;
 begin
   Result := TArrayRegularMap.Create(a, f);
 end;
 
-class function TGMapping.Apply(constref a: TArrayX; f: TOnMap): IEnumerableY;
+class function TGMapping.Apply(const a: TArrayX; f: TOnMap): IEnumerableY;
 begin
   Result := TArrayDelegatedMap.Create(a, f);
 end;
 
-class function TGMapping.Apply(constref a: TArrayX; f: TNestMap): IEnumerableY;
+class function TGMapping.Apply(const a: TArrayX; f: TNestMap): IEnumerableY;
 begin
   Result := TArrayNestedMap.Create(a, f);
 end;
@@ -354,124 +393,295 @@ begin
 end;
 
 { TGFolding }
-
-class function TGFolding.Left(constref a: array of X; f: TFold; constref y0: Y): Y;
+{$PUSH}{$MACRO ON}
+{$DEFINE FoldArray :=
+  Result := y0;
+  for v in a do
+    Result := f(v, Result)
+}
+{$DEFINE ReduceArray :=
+  if System.Length(a) > 0 then
+    begin
+      v := a[0];
+      for I := 1 to System.High(a) do
+        v := f(a[I], v);
+      Result := v;
+    end
+}
+class function TGFolding.Left(const a: array of X; f: TFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in a do
-    Result := f(v, Result);
+  FoldArray;
 end;
 
-class function TGFolding.Left(constref a: array of X; f: TOnFold; constref y0: Y): Y;
+class function TGFolding.Left(const a: array of X; f: TFold): TOptional;
+var
+  v: X;
+  I: SizeInt;
+begin
+  ReduceArray;
+end;
+
+class function TGFolding.Left(const a: array of X; f: TOnFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in a do
-    Result := f(v, Result);
+  FoldArray;
 end;
 
-class function TGFolding.Left(constref a: array of X; f: TNestFold; constref y0: Y): Y;
+class function TGFolding.Left(const a: array of X; f: TOnFold): TOptional;
+var
+  v: X;
+  I: SizeInt;
+begin
+  ReduceArray;
+end;
+
+class function TGFolding.Left(const a: array of X; f: TNestFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in a do
-    Result := f(v, Result);
+  FoldArray;
 end;
 
+class function TGFolding.Left(const a: array of X; f: TNestFold): TOptional;
+var
+  v: X;
+  I: SizeInt;
+begin
+  ReduceArray;
+end;
+{$DEFINE FoldEnum :=
+  Result := y0;
+  for v in e do
+    Result := f(v, Result)
+}
+{$DEFINE ReduceEnum :=
+  with e.GetEnumerator do
+    try
+      if MoveNext then
+        begin
+          v := Current;
+          while MoveNext do
+            v := f(Current, v);
+          Result := v;
+        end;
+    finally
+      Free;
+    end
+}
 class function TGFolding.Left(e: IXEnumerable; f: TFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in e do
-    Result := f(v, Result);
+  FoldEnum;
+end;
+
+class function TGFolding.Left(e: IXEnumerable; f: TFold): TOptional;
+var
+  v: X;
+begin
+  ReduceEnum;
 end;
 
 class function TGFolding.Left(e: IXEnumerable; f: TOnFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in e do
-    Result := f(v, Result);
+  FoldEnum;
+end;
+
+class function TGFolding.Left(e: IXEnumerable; f: TOnFold): TOptional;
+var
+  v: X;
+begin
+  ReduceEnum;
 end;
 
 class function TGFolding.Left(e: IXEnumerable; f: TNestFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in e do
-    Result := f(v, Result);
+  FoldEnum;
 end;
 
-class function TGFolding.Right(constref a: array of X; f: TFold; constref y0: Y): Y;
+class function TGFolding.Left(e: IXEnumerable; f: TNestFold): TOptional;
+var
+  v: X;
+begin
+  ReduceEnum;
+end;
+{$PUSH}{$MACRO ON}
+{$DEFINE FoldArray :=
+  Result := y0;
+  for I := System.High(a) downto 0 do
+    Result := f(a[I], Result)
+}
+{$DEFINE ReduceArray :=
+  if System.Length(a) > 0 then
+    begin
+      I := System.High(a);
+      v := a[I];
+      for I := Pred(I) downto 0 do
+        v := f(a[I], v);
+      Result := v;
+    end
+}
+class function TGFolding.Right(const a: array of X; f: TFold; constref y0: Y): Y;
 var
   v: X;
   I: SizeInt;
 begin
-  Result := y0;
-  for I := System.High(a) downto 0 do
-    Result := f(a[I], Result);
+  FoldArray;
 end;
 
-class function TGFolding.Right(constref a: array of X; f: TOnFold; constref y0: Y): Y;
+class function TGFolding.Right(const a: array of X; f: TFold): TOptional;
 var
   v: X;
   I: SizeInt;
 begin
-  Result := y0;
-  for I := System.High(a) downto 0 do
-    Result := f(a[I], Result);
+  ReduceArray;
 end;
 
-class function TGFolding.Right(constref a: array of X; f: TNestFold; constref y0: Y): Y;
+class function TGFolding.Right(const a: array of X; f: TOnFold; constref y0: Y): Y;
 var
   v: X;
   I: SizeInt;
 begin
-  Result := y0;
-  for I := System.High(a) downto 0 do
-    Result := f(a[I], Result);
+  FoldArray;
 end;
 
+class function TGFolding.Right(const a: array of X; f: TOnFold): TOptional;
+var
+  v: X;
+  I: SizeInt;
+begin
+  ReduceArray;
+end;
+
+class function TGFolding.Right(const a: array of X; f: TNestFold; constref y0: Y): Y;
+var
+  v: X;
+  I: SizeInt;
+begin
+  FoldArray;
+end;
+
+class function TGFolding.Right(const a: array of X; f: TNestFold): TOptional;
+var
+  v: X;
+  I: SizeInt;
+begin
+  ReduceArray;
+end;
+{$DEFINE FoldEnum :=
+  Result := y0;
+  for v in e.Reverse do
+    Result := f(v, Result)
+}
+{$DEFINE ReduceEnum :=
+  with e.Reverse.GetEnumerator do
+    try
+      if MoveNext then
+        begin
+          v := Current;
+          while MoveNext do
+            v := f(Current, v);
+          Result := v;
+        end;
+    finally
+      Free;
+    end
+}
 class function TGFolding.Right(e: IXEnumerable; f: TFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in e.Reverse do
-    Result := f(v, Result);
+  FoldEnum;
+end;
+
+class function TGFolding.Right(e: IXEnumerable; f: TFold): TOptional;
+var
+  v: X;
+begin
+  ReduceEnum;
 end;
 
 class function TGFolding.Right(e: IXEnumerable; f: TOnFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in e.Reverse do
-    Result := f(v, Result);
+  FoldEnum;
+end;
+
+class function TGFolding.Right(e: IXEnumerable; f: TOnFold): TOptional;
+var
+  v: X;
+begin
+  ReduceEnum;
 end;
 
 class function TGFolding.Right(e: IXEnumerable; f: TNestFold; constref y0: Y): Y;
 var
   v: X;
 begin
-  Result := y0;
-  for v in e.Reverse do
-    Result := f(v, Result);
+  FoldEnum;
+end;
+
+class function TGFolding.Right(e: IXEnumerable; f: TNestFold): TOptional;
+var
+  v: X;
+begin
+  ReduceEnum;
+end;
+{$UNDEF FoldArray}
+{$UNDEF ReduceArray}
+{$UNDEF FoldEnum}
+{$UNDEF ReduceEnum}
+{$POP}
+{ TGenerator.TEnumerator }
+
+function TGenerator.TEnumerator.GetCurrent: TResult;
+begin
+  Result := FOwner.FGetNext(FOwner.FState);
+end;
+
+constructor TGenerator.TEnumerator.Create(aOwner: TGenerator);
+begin
+  inherited Create;
+  FOwner := aOwner;
+end;
+
+function TGenerator.TEnumerator.MoveNext: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TGenerator.TEnumerator.Reset;
+begin
+end;
+
+{ TGenerator }
+
+function TGenerator.GetEnumerator: TSpecEnumerator;
+begin
+  Result := TEnumerator.Create(Self);
+end;
+
+constructor TGenerator.Create(constref aState: TState; aGetNext: TGetNext);
+begin
+  inherited Create;
+  FState := aState;
+  FGetNext := aGetNext;
 end;
 
 { TGDeferMonadic }
 
-class function TGDeferMonadic.Construct(aFun: TFun; constref v: T): TGDeferMonadic;
+constructor TGDeferMonadic.Create(aFun: TFun; constref v: T);
 begin
-  Result.FCall := aFun;
-  Result.FParam := v;
+  FCall := aFun;
+  FParam := v;
 end;
 
 function TGDeferMonadic.Call: TResult;
@@ -481,11 +691,11 @@ end;
 
 { TGDeferDyadic }
 
-class function TGDeferDyadic.Construct(aFun: TFun; constref v1: T1; constref v2: T2): TGDeferDyadic;
+constructor TGDeferDyadic.Create(aFun: TFun; constref v1: T1; constref v2: T2);
 begin
-  Result.FCall := aFun;
-  Result.FParam1 := v1;
-  Result.FParam2 := v2;
+  FCall := aFun;
+  FParam1 := v1;
+  FParam2 := v2;
 end;
 
 function TGDeferDyadic.Call: TResult;
@@ -495,13 +705,12 @@ end;
 
 { TGDeferTriadic }
 
-class function TGDeferTriadic.Construct(aFun: TFun; constref v1: T1; constref v2: T2;
-  constref v3: T3): TGDeferTriadic;
+constructor TGDeferTriadic.Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
 begin
-  Result.FCall := aFun;
-  Result.FParam1 := v1;
-  Result.FParam2 := v2;
-  Result.FParam3 := v3;
+  FCall := aFun;
+  FParam1 := v1;
+  FParam2 := v2;
+  FParam3 := v3;
 end;
 
 function TGDeferTriadic.Call: TResult;

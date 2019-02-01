@@ -53,6 +53,7 @@ type
   public
     class function MaxSize: SizeInt; static; inline;
     constructor Create(aSize: SizeInt);
+    constructor CreateAndSet(aSize: SizeInt);
     procedure ClearBits; inline;
     procedure Clear; inline;
     property  Size: SizeInt read GetSize;

@@ -122,6 +122,22 @@ begin
       raise EGraphError.CreateFmt(SEBitMatrixSizeExceedFmt, [aSize]);
 end;
 
+constructor TGSparseGraph.TSquareBitMatrix.CreateAndSet(aSize: SizeInt);
+var
+  s: SizeInt;
+begin
+  if aSize > 0 then
+    if aSize <= MaxSize then
+      begin
+        FSize := aSize;
+        s := Succ((FSize * FSize) shr INT_SIZE_LOG);
+        System.SetLength(FBits, s);
+        System.FillChar(Pointer(FBits)^, s * SizeOf(SizeUInt), $ff);
+      end
+    else
+      raise EGraphError.CreateFmt(SEBitMatrixSizeExceedFmt, [aSize]);
+end;
+
 procedure TGSparseGraph.TSquareBitMatrix.ClearBits;
 begin
   System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);

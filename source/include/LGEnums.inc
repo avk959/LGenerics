@@ -217,7 +217,7 @@ begin
   Result := FArray[FCurrIndex];
 end;
 
-constructor TGArrayCursor.Create(constref a: TArray);
+constructor TGArrayCursor.Create(const a: TArray);
 begin
   FEnumerable := TArrayEnumerable.Create(Self);
   FArray := a;
@@ -250,7 +250,7 @@ begin
   Result := FArray[FCurrIndex];
 end;
 
-constructor TGArrayReverse.Create(constref a: TArray);
+constructor TGArrayReverse.Create(const a: TArray);
 begin
   FEnumerable := TArrayEnumerable.Create(Self);
   FArray := a;
@@ -275,7 +275,7 @@ begin
   Result := FArray[FPosition];
 end;
 
-constructor TGArrayEnumerator.Create(constref a: TArray);
+constructor TGArrayEnumerator.Create(const a: TArray);
 begin
   FArray := a;
   FLast := System.High(a);

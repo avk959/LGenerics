@@ -184,8 +184,8 @@ type
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
     function  DistinctEdges: TDistinctEdges; inline;
   { returns adjacency matrix of the complement graph;
-    warning: maximum matrix size limited, see MaxBitMatrixSize }
-    function  ComplementMatrix: TAdjacencyMatrix;
+    warning: maximum matrix size limited, see BitMatrixSizeMax }
+    function  CreateComplementMatrix: TAdjacencyMatrix;
   { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
     function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
     function  LocalClusteringI(aIndex: SizeInt): Double;
@@ -2402,18 +2402,18 @@ begin
   Result.FGraph := Self;
 end;
 
-function TGSimpleGraph.ComplementMatrix: TAdjacencyMatrix;
+function TGSimpleGraph.CreateComplementMatrix: TAdjacencyMatrix;
 var
   m: TSquareBitMatrix;
-  s, d: SizeInt;
+  I: SizeInt;
+  p: PAdjItem;
 begin
   if IsEmpty then
     exit(Default(TAdjacencyMatrix));
-  m := TSquareBitMatrix.Create(VertexCount);
-  for s := 0 to Pred(VertexCount) do
-    for d := 0 to Pred(VertexCount) do
-      if (s <> d) and not FNodeList[s].AdjList.Contains(d) then
-        m[s, d] := True;
+  m := TSquareBitMatrix.CreateAndSet(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      m[I, p^.Destination] := False;
   Result := TAdjacencyMatrix.Create(m);
 end;
 

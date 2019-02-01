@@ -163,7 +163,7 @@
     FCurrIndex: SizeInt;
     function  GetCurrent: T; override;
   public
-    constructor Create(constref a: TArray);
+    constructor Create(const a: TArray);
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
@@ -184,7 +184,7 @@
     FCurrIndex: SizeInt;
     function  GetCurrent: T; override;
   public
-    constructor Create(constref a: TArray);
+    constructor Create(const a: TArray);
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
@@ -200,7 +200,7 @@
     FLast: SizeInt;
     function  GetCurrent: T; override;
   public
-    constructor Create(constref a: TArray);
+    constructor Create(const a: TArray);
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
