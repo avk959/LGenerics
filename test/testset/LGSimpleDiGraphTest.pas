@@ -1260,17 +1260,17 @@ begin
   for I := 0 to 6 do
     Result.AddVertex(I);
   Result.AddEdge(0, 1, TInt64Weight.Create(16));
-  Result.AddEdge(0, 2, TInt64Weight.Create(11));
-  Result.AddEdge(0, 3, TInt64Weight.Create(13));
-  Result.AddEdge(1, 2, TInt64Weight.Create(18));
-  Result.AddEdge(1, 4, TInt64Weight.Create(17));
-  Result.AddEdge(1, 5, TInt64Weight.Create(16));
-  Result.AddEdge(2, 3, TInt64Weight.Create(19));
-  Result.AddEdge(2, 4, TInt64Weight.Create(12));
-  Result.AddEdge(3, 5, TInt64Weight.Create(10));
-  Result.AddEdge(3, 6, TInt64Weight.Create(5));
-  Result.AddEdge(4, 6, TInt64Weight.Create(22));
-  Result.AddEdge(5, 6, TInt64Weight.Create(16));
+  Result.AddEdge(0, 3, TInt64Weight.Create(11));
+  Result.AddEdge(0, 5, TInt64Weight.Create(13));
+  Result.AddEdge(1, 2, TInt64Weight.Create(17));
+  Result.AddEdge(1, 3, TInt64Weight.Create(18));
+  Result.AddEdge(1, 4, TInt64Weight.Create(16));
+  Result.AddEdge(2, 6, TInt64Weight.Create(22));
+  Result.AddEdge(3, 2, TInt64Weight.Create(12));
+  Result.AddEdge(3, 5, TInt64Weight.Create(19));
+  Result.AddEdge(4, 6, TInt64Weight.Create(16));
+  Result.AddEdge(5, 4, TInt64Weight.Create(10));
+  Result.AddEdge(5, 6, TInt64Weight.Create(5));
 end;
 
 function TWeightedDigraphTest.GenerateTestCostNet1: TCostNet;
@@ -1313,17 +1313,17 @@ begin
   for I := 0 to 6 do         //                    flow = 20: mincost = 474
     Result.AddVertex(I);
   Result.AddEdge(0, 1, TCostPair.Create(16, 7));
-  Result.AddEdge(0, 2, TCostPair.Create(11, 13));
-  Result.AddEdge(0, 3, TCostPair.Create(13, 28));
-  Result.AddEdge(1, 2, TCostPair.Create(18, 4));
-  Result.AddEdge(1, 4, TCostPair.Create(17, 25));
-  Result.AddEdge(1, 5, TCostPair.Create(16, 10));
-  Result.AddEdge(2, 3, TCostPair.Create(19, 5));
-  Result.AddEdge(2, 4, TCostPair.Create(12, 6));
-  Result.AddEdge(3, 5, TCostPair.Create(10, 3));
-  Result.AddEdge(3, 6, TCostPair.Create(5, 7));
-  Result.AddEdge(4, 6, TCostPair.Create(22, 5));
-  Result.AddEdge(5, 6, TCostPair.Create(16, 12));
+  Result.AddEdge(0, 3, TCostPair.Create(11, 13));
+  Result.AddEdge(0, 5, TCostPair.Create(13, 28));
+  Result.AddEdge(1, 2, TCostPair.Create(17, 25));
+  Result.AddEdge(1, 3, TCostPair.Create(18, 4));
+  Result.AddEdge(1, 4, TCostPair.Create(16, 10));
+  Result.AddEdge(2, 6, TCostPair.Create(22, 5));
+  Result.AddEdge(3, 2, TCostPair.Create(12, 6));
+  Result.AddEdge(3, 5, TCostPair.Create(19, 5));
+  Result.AddEdge(4, 6, TCostPair.Create(16, 12));
+  Result.AddEdge(5, 4, TCostPair.Create(10, 3));
+  Result.AddEdge(5, 6, TCostPair.Create(5, 7));
 end;
 
 procedure TWeightedDigraphTest.SetEdgeData;
