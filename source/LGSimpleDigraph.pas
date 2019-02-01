@@ -38,11 +38,11 @@ uses
 type
   TSortOrder = LGUtils.TSortOrder;
 
-  { TGSimpleDiGraph implements simple sparse directed graph based on adjacency lists;
+  { TGSimpleDigraph implements simple sparse directed graph based on adjacency lists;
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleDiGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>)
+  generic TGSimpleDigraph<TVertex, TEdgeData, TEqRel> = class(specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
     TReachabilityMatrix = record
@@ -85,7 +85,7 @@ type
       FTimeOut: Integer;
       FDone,
       FCancelled: Boolean;
-      procedure Init(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
+      procedure Init(aGraph: TGSimpleDigraph; aSrc, aCount: SizeInt; aTimeOut: Integer; pv: PIntArrayVector);
       function  TimeToFinish: Boolean; inline;
       function  SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
       procedure CheckIsCycle(aNode: SizeInt);
@@ -94,9 +94,9 @@ type
       procedure ExecuteCycles;
       procedure ExecutePaths;
     public
-      function  FindCycles(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+      function  FindCycles(aGraph: TGSimpleDigraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
                 pv: PIntArrayVector): Boolean;
-      function  FindPaths(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+      function  FindPaths(aGraph: TGSimpleDigraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
                 pv: PIntArrayVector): Boolean;
     end;
 
@@ -105,8 +105,8 @@ type
     function  GetReachabilityValid: Boolean; inline;
     function  GetDensity: Double; inline;
     function  CreateSkeleton: TSkeleton;
-    procedure AssignGraph(aGraph: TGSimpleDiGraph);
-    procedure AssignReverse(aGraph: TGSimpleDiGraph);
+    procedure AssignGraph(aGraph: TGSimpleDigraph);
+    procedure AssignReverse(aGraph: TGSimpleDigraph);
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
     function  TopoSort: TIntArray;
@@ -129,7 +129,7 @@ type
 
     TIncomingEnumerator = record
     private
-      FGraph: TGSimpleDiGraph;
+      FGraph: TGSimpleDigraph;
       FTarget,
       FCurrIndex,
       FLastIndex,
@@ -137,17 +137,17 @@ type
       FCurrArc: TIncomingArc;
       function  GetCurrent: TIncomingArc; inline;
     public
-      constructor Create(aGraph: TGSimpleDiGraph; aTarget: SizeInt);
+      constructor Create(aGraph: TGSimpleDigraph; aTarget: SizeInt);
       function  MoveNext: Boolean;
       property  Current: TIncomingArc read GetCurrent;
     end;
 
     TIncomingArcs = record
     private
-      FGraph: TGSimpleDiGraph;
+      FGraph: TGSimpleDigraph;
       FTarget: SizeInt;
     public
-      constructor Create(aGraph: TGSimpleDiGraph; aDst: SizeInt);
+      constructor Create(aGraph: TGSimpleDigraph; aDst: SizeInt);
       function GetEnumerator: TIncomingEnumerator; inline;
     end;
 
@@ -156,12 +156,12 @@ type
 ***********************************************************************************************************}
 
     procedure Clear; override;
-    function  Clone: TGSimpleDiGraph;
-    function  Reverse: TGSimpleDiGraph;
+    function  Clone: TGSimpleDigraph;
+    function  Reverse: TGSimpleDigraph;
   { returns a subgraph induced by the vertices whose indices are contained in the array aVertexList }
-    function  InducedSubgraph(const aVertexList: TIntArray): TGSimpleDiGraph;
+    function  InducedSubgraph(const aVertexList: TIntArray): TGSimpleDigraph;
   { symmetric difference }
-    procedure SetSymmDifferenceOf(aGraph: TGSimpleDiGraph);
+    procedure SetSymmDifferenceOf(aGraph: TGSimpleDigraph);
 {**********************************************************************************************************
   structural management utilities
 ***********************************************************************************************************}
@@ -267,7 +267,7 @@ type
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGFlowChart<TVertex, TEqRel> = class(specialize TGSimpleDiGraph<TVertex, TEmptyRec, TEqRel>)
+  generic TGFlowChart<TVertex, TEqRel> = class(specialize TGSimpleDigraph<TVertex, TEmptyRec, TEqRel>)
   private
     procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
     procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
@@ -343,7 +343,7 @@ type
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
 
-  { TGWeightedDiGraph implements simple sparse directed weighted graph based on adjacency lists;
+  { TGWeightedDigraph implements simple sparse directed weighted graph based on adjacency lists;
 
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
@@ -353,8 +353,8 @@ type
 
       TWeight must be one of predefined signed numeric types;
       properties MinValue, MaxValue used as infinity weight values }
-  generic TGWeightedDiGraph<TVertex, TWeight, TEdgeData, TEqRel> = class(
-     specialize TGSimpleDiGraph<TVertex, TEdgeData, TEqRel>)
+  generic TGWeightedDigraph<TVertex, TWeight, TEdgeData, TEqRel> = class(
+     specialize TGSimpleDigraph<TVertex, TEdgeData, TEqRel>)
   protected
   type
     TWeightHelper = specialize TGWeightHelper<TVertex, TWeight, TEdgeData, TEqRel>;
@@ -396,9 +396,9 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-    function Clone: TGWeightedDiGraph;
-    function Reverse: TGWeightedDiGraph;
-    function InducedSubgraph(const aVertexList: TIntArray): TGWeightedDiGraph;
+    function Clone: TGWeightedDigraph;
+    function Reverse: TGWeightedDigraph;
+    function InducedSubgraph(const aVertexList: TIntArray): TGWeightedDigraph;
 {**********************************************************************************************************
   shortest path problem utilities
 ***********************************************************************************************************}
@@ -488,9 +488,9 @@ type
     function DagMaxPaths: TWeightArray;
   end;
 
-  { TGIntWeightDiGraph specializes TWeight with Int64 }
-  generic TGIntWeightDiGraph<TVertex, TEdgeData, TEqRel> = class(
-     specialize TGWeightedDiGraph<TVertex, Int64, TEdgeData, TEqRel>)
+  { TGDirectInt64Net specializes TWeight with Int64 }
+  generic TGDirectInt64Net<TVertex, TEdgeData, TEqRel> = class(
+     specialize TGWeightedDigraph<TVertex, Int64, TEdgeData, TEqRel>)
   public
   type
     TWeight = Int64;
@@ -500,16 +500,14 @@ type
     MAX_WEIGHT = High(Int64);
     MIN_WEIGHT = Low(Int64);
 
-    {$I IntDiGraphHelpH.inc}
-
-     function IsCostsCorrect(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
+    {$I MaxFlowH.inc}
   public
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-    function Clone: TGIntWeightDiGraph;
-    function Reverse: TGIntWeightDiGraph;
-    function InducedSubgraph(const aVertexList: TIntArray): TGIntWeightDiGraph;
+    function Clone: TGDirectInt64Net;
+    function Reverse: TGDirectInt64Net;
+    function InducedSubgraph(const aVertexList: TIntArray): TGDirectInt64Net;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -571,59 +569,77 @@ type
     if result = nsOk, otherwise 0 and empty partition; used Dinitz's algorithm with recursive DFS }
     function FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
     function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
-  { aCosts specifies arc cost function, negative costs allows;
-    returns True if function defined correctly(except negative cycles), False otherwise }
-    function IsProperCosts(const aCosts: TCostEdgeArray): Boolean;
+  end;
+
+  TCostPair = record
+    Weight: Int64;
+    Cost: TCost;
+    constructor Create(aWeight: Int64; aCost: TCost);
+  end;
+
+  { TGCostedInt64Net:  TEdgeData must provide arc cost function -
+      field/property/function Cost: TCost; }
+  generic TGCostedInt64Net<TVertex, TEdgeData, TEqRel> = class(
+    specialize TGDirectInt64Net<TVertex, TEdgeData, TEqRel>)
+  protected
+    {$I McfH.inc}
+  public
+{**********************************************************************************************************
+ class management utilities
+***********************************************************************************************************}
+   function Clone: TGCostedInt64Net;
+   function Reverse: TGCostedInt64Net;
+   function InducedSubgraph(const aVertexList: TIntArray): TGCostedInt64Net;
 
   type
-    TMcfState = (mcfOk, mcfNoFlowRequired, mcfInvalidNet, mcfInvalidCost, mcfNegCycle);
+    TMcfState = (mcfOk, mcfNoFlowRequired, mcfInvalidNet, mcfNegCycle);
 
-  { param aReqFlow specifies required flow > 0(MAX_WEIGHT means maximum flow is required);
-    param aCosts specifies arc cost function, negative costs allows;
-    returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
-    no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
-    total flow cost in aTotalCost; used Busacker-Gowen's algorithm }
-    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-             var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState; inline;
-    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-             var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
+  { negative costs allows;
+    param aReqFlow specifies required flow > 0(MAX_WEIGHT means maximum flow is required);
+    returns mcfOk if aNeedFlow > 0 and network valid and no negative cycle found,
+    returns flow = min(aReqFlow, maxflow) in aReqFlow and total flow cost in aTotalCost;
+    used Busacker-Gowen's algorithm }
+    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+             out aTotalCost: TCost): TMcfState; inline;
+    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+             out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
-    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-             var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
-    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-             var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
-  { param aReqFlow specifies the required flow > 0(MAX_WEIGHT means maximum flow is required);
-    param aCosts specifies arc cost function, negative costs allows;
-    returns mcfOk if aNeedFlow > 0 and network is correct and arc cost function is correct and
-    no negative cycle found, returns flow = min(aReqFlow, maxflow) in aReqFlow and
-    total flow cost in aTotalCost; used cost scaling algorithm }
-    function FindMinCostFlowCs(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-             var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState; inline;
-    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-             var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
+    function FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight; out aTotalCost: TCost;
+             out aArcFlows: TEdgeArray): TMcfState; inline;
+    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight; out aTotalCost: TCost;
+             out aArcFlows: TEdgeArray): TMcfState;
+  { negative costs allows;
+    param aReqFlow specifies the required flow > 0(MAX_WEIGHT means maximum flow is required);
+    returns mcfOk if aNeedFlow > 0 and network valid and no negative cycle found,
+    returns flow = min(aReqFlow, maxflow) in aReqFlow and total flow cost in aTotalCost;
+    used cost scaling algorithm }
+    function FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+             out aTotalCost: TCost): TMcfState; inline;
+    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+             out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
-    function FindMinCostFlowCs(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-             var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState; inline;
-    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-             var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
+    function FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight; out aTotalCost: TCost;
+             out aArcFlows: TEdgeArray): TMcfState; inline;
+    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight; out aTotalCost: TCost;
+             out aArcFlows: TEdgeArray): TMcfState;
   {  }
-    function IsMcfFeasible(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-             const aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean; inline;
-    function IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-             const aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
+    function IsMcfFeasible(constref aSource, aSink: TVertex; const aArcFlows: TEdgeArray; aFlow: TWeight;
+             aTotalCost: TCost): Boolean; inline;
+    function IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; const aArcFlows: TEdgeArray; aFlow: TWeight;
+             aTotalCost: TCost): Boolean;
   end;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
-{ TGSimpleDiGraph.TReachabilityMatrix }
+{ TGSimpleDigraph.TReachabilityMatrix }
 
-function TGSimpleDiGraph.TReachabilityMatrix.GetSize: SizeInt;
+function TGSimpleDigraph.TReachabilityMatrix.GetSize: SizeInt;
 begin
   Result := FMatrix.Size;
 end;
 
-procedure TGSimpleDiGraph.TReachabilityMatrix.Clear;
+procedure TGSimpleDigraph.TReachabilityMatrix.Clear;
 begin
   if FMatrix.Size > 0 then
     begin
@@ -632,25 +648,25 @@ begin
     end;
 end;
 
-constructor TGSimpleDiGraph.TReachabilityMatrix.Create(const aMatrix: TSquareBitMatrix; const aIds: TIntArray);
+constructor TGSimpleDigraph.TReachabilityMatrix.Create(const aMatrix: TSquareBitMatrix; const aIds: TIntArray);
 begin
   FMatrix := aMatrix;
   FIds := aIds;
 end;
 
-function TGSimpleDiGraph.TReachabilityMatrix.IsEmpty: Boolean;
+function TGSimpleDigraph.TReachabilityMatrix.IsEmpty: Boolean;
 begin
   Result := FMatrix.Size = 0;
 end;
 
-function TGSimpleDiGraph.TReachabilityMatrix.Reachable(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDigraph.TReachabilityMatrix.Reachable(aSrc, aDst: SizeInt): Boolean;
 begin
   Result := FMatrix[FIds[aSrc], FIds[aDst]];
 end;
 
-{ TGSimpleDiGraph.THamiltonSearch.TAdjList }
+{ TGSimpleDigraph.THamiltonSearch.TAdjList }
 
-constructor TGSimpleDiGraph.THamiltonSearch.TAdjList.Create(aDegree, aVertexCount: SizeInt; aAdjList: PAdjList);
+constructor TGSimpleDigraph.THamiltonSearch.TAdjList.Create(aDegree, aVertexCount: SizeInt; aAdjList: PAdjList);
 var
   p: PAdjItem;
 begin
@@ -660,9 +676,9 @@ begin
     OutList[p^.Key] := True;
 end;
 
-{ TGSimpleDiGraph.THamiltonSearch }
+{ TGSimpleDigraph.THamiltonSearch }
 
-procedure TGSimpleDiGraph.THamiltonSearch.Init(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+procedure TGSimpleDigraph.THamiltonSearch.Init(aGraph: TGSimpleDigraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector);
 var
   I: SizeInt;
@@ -686,13 +702,13 @@ begin
   FStartTime := Now;
 end;
 
-function TGSimpleDiGraph.THamiltonSearch.TimeToFinish: Boolean;
+function TGSimpleDigraph.THamiltonSearch.TimeToFinish: Boolean;
 begin
   FCancelled := FCancelled or (SecondsBetween(Now, FStartTime) >= FTimeOut);
   Result := FCancelled or FDone;
 end;
 
-function TGSimpleDiGraph.THamiltonSearch.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
+function TGSimpleDigraph.THamiltonSearch.SelectMin(constref v: TBoolVector; out aValue: SizeInt): Boolean;
 var
   I, Degree, MinDegree: SizeInt;
 begin
@@ -710,7 +726,7 @@ begin
   Result := aValue <> NULL_INDEX;
 end;
 
-procedure TGSimpleDiGraph.THamiltonSearch.CheckIsCycle(aNode: SizeInt);
+procedure TGSimpleDigraph.THamiltonSearch.CheckIsCycle(aNode: SizeInt);
 begin
   if FMatrix[aNode].OutList[FSource] then
     begin
@@ -722,14 +738,14 @@ begin
     end;
 end;
 
-procedure TGSimpleDiGraph.THamiltonSearch.CheckIsPath(aNode: SizeInt);
+procedure TGSimpleDigraph.THamiltonSearch.CheckIsPath(aNode: SizeInt);
 begin
   FPaths^.Add(FStack.ToArray);
   Inc(FFound);
   FDone := FDone or (FFound >= FRequired);
 end;
 
-procedure TGSimpleDiGraph.THamiltonSearch.SearchFor(aNode: SizeInt);
+procedure TGSimpleDigraph.THamiltonSearch.SearchFor(aNode: SizeInt);
 var
   Cand, Saved: TBoolVector;
   I: SizeInt;
@@ -773,7 +789,7 @@ begin
     FCheckNode(aNode);
 end;
 
-procedure TGSimpleDiGraph.THamiltonSearch.ExecuteCycles;
+procedure TGSimpleDigraph.THamiltonSearch.ExecuteCycles;
 var
   I: SizeInt;
 begin
@@ -793,7 +809,7 @@ begin
     end;
 end;
 
-procedure TGSimpleDiGraph.THamiltonSearch.ExecutePaths;
+procedure TGSimpleDigraph.THamiltonSearch.ExecutePaths;
 var
   I: SizeInt;
 begin
@@ -812,7 +828,7 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.THamiltonSearch.FindCycles(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+function TGSimpleDigraph.THamiltonSearch.FindCycles(aGraph: TGSimpleDigraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
@@ -820,7 +836,7 @@ begin
   Result := not FCancelled and pv^.NonEmpty;
 end;
 
-function TGSimpleDiGraph.THamiltonSearch.FindPaths(aGraph: TGSimpleDiGraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
+function TGSimpleDigraph.THamiltonSearch.FindPaths(aGraph: TGSimpleDigraph; aSrc, aCount: SizeInt; aTimeOut: Integer;
   pv: PIntArrayVector): Boolean;
 begin
   Init(aGraph, aSrc, aCount, aTimeOut, pv);
@@ -828,14 +844,14 @@ begin
   Result := not FCancelled and pv^.NonEmpty;
 end;
 
-{ TGSimpleDiGraph.TIncomingEnumerator }
+{ TGSimpleDigraph.TIncomingEnumerator }
 
-function TGSimpleDiGraph.TIncomingEnumerator.GetCurrent: TIncomingArc;
+function TGSimpleDigraph.TIncomingEnumerator.GetCurrent: TIncomingArc;
 begin
   Result := FCurrArc;
 end;
 
-constructor TGSimpleDiGraph.TIncomingEnumerator.Create(aGraph: TGSimpleDiGraph; aTarget: SizeInt);
+constructor TGSimpleDigraph.TIncomingEnumerator.Create(aGraph: TGSimpleDigraph; aTarget: SizeInt);
 begin
   FGraph := aGraph;
   FTarget := aTarget;
@@ -844,9 +860,8 @@ begin
   FInCount := aGraph.FNodeList[aTarget].Tag;
 end;
 
-function TGSimpleDiGraph.TIncomingEnumerator.MoveNext: Boolean;
+function TGSimpleDigraph.TIncomingEnumerator.MoveNext: Boolean;
 var
-  I: SizeInt;
   p: PAdjItem;
 begin
   repeat
@@ -864,22 +879,22 @@ begin
   until False;
 end;
 
-{ TGSimpleDiGraph.TIncomingArcs }
+{ TGSimpleDigraph.TIncomingArcs }
 
-constructor TGSimpleDiGraph.TIncomingArcs.Create(aGraph: TGSimpleDiGraph; aDst: SizeInt);
+constructor TGSimpleDigraph.TIncomingArcs.Create(aGraph: TGSimpleDigraph; aDst: SizeInt);
 begin
   FGraph := aGraph;
   FTarget := aDst;
 end;
 
-function TGSimpleDiGraph.TIncomingArcs.GetEnumerator: TIncomingEnumerator;
+function TGSimpleDigraph.TIncomingArcs.GetEnumerator: TIncomingEnumerator;
 begin
   Result := TIncomingEnumerator.Create(FGraph, FTarget);
 end;
 
-{ TGSimpleDiGraph }
+{ TGSimpleDigraph }
 
-function TGSimpleDiGraph.GetDensity: Double;
+function TGSimpleDigraph.GetDensity: Double;
 begin
   if NonEmpty then
     Result := Double(EdgeCount)/(Double(VertexCount) * Double(Pred(VertexCount)))
@@ -887,12 +902,12 @@ begin
     Result := 0.0;
 end;
 
-function TGSimpleDiGraph.GetReachabilityValid: Boolean;
+function TGSimpleDigraph.GetReachabilityValid: Boolean;
 begin
   Result := NonEmpty and not FReachabilityMatrix.IsEmpty;
 end;
 
-function TGSimpleDiGraph.CreateSkeleton: TSkeleton;
+function TGSimpleDigraph.CreateSkeleton: TSkeleton;
 var
   I: SizeInt;
 begin
@@ -902,7 +917,7 @@ begin
     Result[I]^.AssignList(AdjLists[I]);
 end;
 
-procedure TGSimpleDiGraph.AssignGraph(aGraph: TGSimpleDiGraph);
+procedure TGSimpleDigraph.AssignGraph(aGraph: TGSimpleDigraph);
 var
   I: SizeInt;
 begin
@@ -926,7 +941,7 @@ begin
     end;
 end;
 
-procedure TGSimpleDiGraph.AssignReverse(aGraph: TGSimpleDiGraph);
+procedure TGSimpleDigraph.AssignReverse(aGraph: TGSimpleDigraph);
 var
   e: TEdge;
   v: TVertex;
@@ -941,7 +956,7 @@ begin
     AddEdge(aGraph[e.Destination], aGraph[e.Source], e.Data);
 end;
 
-function TGSimpleDiGraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+function TGSimpleDigraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -982,7 +997,7 @@ begin
   Result := False;
 end;
 
-function TGSimpleDiGraph.CycleExists: Boolean;
+function TGSimpleDigraph.CycleExists: Boolean;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -1023,7 +1038,7 @@ begin
   Result := False;
 end;
 
-function TGSimpleDiGraph.TopoSort: TIntArray;
+function TGSimpleDigraph.TopoSort: TIntArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -1058,7 +1073,7 @@ begin
       end;
 end;
 
-function TGSimpleDiGraph.GetDagLongestPaths(aSrc: SizeInt): TIntArray;
+function TGSimpleDigraph.GetDagLongestPaths(aSrc: SizeInt): TIntArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -1089,7 +1104,7 @@ begin
       Stack.Pop;
 end;
 
-function TGSimpleDiGraph.GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray): TIntArray;
+function TGSimpleDigraph.GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray): TIntArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -1124,7 +1139,7 @@ begin
       Stack.Pop;
 end;
 
-function TGSimpleDiGraph.SearchForStrongComponents(out aIds: TIntArray): SizeInt;
+function TGSimpleDigraph.SearchForStrongComponents(out aIds: TIntArray): SizeInt;
 var
   Stack, VtxStack, PathStack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
@@ -1180,7 +1195,7 @@ begin
       end;
 end;
 
-function TGSimpleDiGraph.GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
+function TGSimpleDigraph.GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
 var
   Stack: TSimpleStack;
   Visited, IdVisited: TBitVector;
@@ -1259,7 +1274,7 @@ begin
   Result := TReachabilityMatrix.Create(m, aScIds);
 end;
 
-function TGSimpleDiGraph.DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
+function TGSimpleDigraph.DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
 begin
   Result := not FindOrAdd(aVertex, aIndex);
   if Result then
@@ -1269,7 +1284,7 @@ begin
     end;
 end;
 
-procedure TGSimpleDiGraph.DoRemoveVertex(aIndex: SizeInt);
+procedure TGSimpleDigraph.DoRemoveVertex(aIndex: SizeInt);
 var
   I, J: SizeInt;
   p: ^TAdjItem;
@@ -1296,7 +1311,7 @@ begin
   FReachabilityMatrix.Clear;
 end;
 
-function TGSimpleDiGraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleDigraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
@@ -1309,7 +1324,7 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDigraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
@@ -1322,7 +1337,7 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
+function TGSimpleDigraph.DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
 var
   p: PAdjItem;
 begin
@@ -1332,7 +1347,7 @@ begin
     p^.Data := aValue;
 end;
 
-procedure TGSimpleDiGraph.DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData);
+procedure TGSimpleDigraph.DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData);
 var
   s, d: Integer;
   e: TEdge;
@@ -1347,17 +1362,17 @@ begin
     end;
 end;
 
-procedure TGSimpleDiGraph.Clear;
+procedure TGSimpleDigraph.Clear;
 begin
   inherited;
   FReachabilityMatrix.Clear;
 end;
 
-function TGSimpleDiGraph.Clone: TGSimpleDiGraph;
+function TGSimpleDigraph.Clone: TGSimpleDigraph;
 var
   I: SizeInt;
 begin
-  Result := TGSimpleDiGraph.Create;
+  Result := TGSimpleDigraph.Create;
   Result.FCount := VertexCount;
   Result.FEdgeCount := EdgeCount;
   Result.FTitle := Title;
@@ -1370,25 +1385,25 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.Reverse: TGSimpleDiGraph;
+function TGSimpleDigraph.Reverse: TGSimpleDigraph;
 begin
-  Result := TGSimpleDiGraph.Create;
+  Result := TGSimpleDigraph.Create;
   Result.AssignReverse(Self);
 end;
 
-function TGSimpleDiGraph.InducedSubgraph(const aVertexList: TIntArray): TGSimpleDiGraph;
+function TGSimpleDigraph.InducedSubgraph(const aVertexList: TIntArray): TGSimpleDigraph;
 begin
-  Result := TGSimpleDiGraph.Create;
+  Result := TGSimpleDigraph.Create;
   Result.AssignVertexList(Self, aVertexList);
 end;
 
-procedure TGSimpleDiGraph.SetSymmDifferenceOf(aGraph: TGSimpleDiGraph);
+procedure TGSimpleDigraph.SetSymmDifferenceOf(aGraph: TGSimpleDigraph);
 var
-  Tmp: TGSimpleDiGraph;
+  Tmp: TGSimpleDigraph;
   e: TEdge;
   s, d: TVertex;
 begin
-  Tmp := TGSimpleDiGraph.Create;
+  Tmp := TGSimpleDigraph.Create;
   try
     Tmp.Title := Title;
     Tmp.Description.Assign(Description);
@@ -1412,72 +1427,72 @@ begin
   end;
 end;
 
-function TGSimpleDiGraph.InDegree(constref aVertex: TVertex): SizeInt;
+function TGSimpleDigraph.InDegree(constref aVertex: TVertex): SizeInt;
 begin
   Result := InDegreeI(IndexOf(aVertex));
 end;
 
-function TGSimpleDiGraph.InDegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDigraph.InDegreeI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].Tag;
 end;
 
-function TGSimpleDiGraph.OutDegree(constref aVertex: TVertex): SizeInt;
+function TGSimpleDigraph.OutDegree(constref aVertex: TVertex): SizeInt;
 begin
   Result := OutDegreeI(IndexOf(aVertex));
 end;
 
-function TGSimpleDiGraph.OutDegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDigraph.OutDegreeI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].AdjList.Count;
 end;
 
-function TGSimpleDiGraph.Degree(constref aVertex: TVertex): SizeInt;
+function TGSimpleDigraph.Degree(constref aVertex: TVertex): SizeInt;
 begin
   Result := DegreeI(IndexOf(aVertex));
 end;
 
-function TGSimpleDiGraph.DegreeI(aIndex: SizeInt): SizeInt;
+function TGSimpleDigraph.DegreeI(aIndex: SizeInt): SizeInt;
 begin
   CheckIndexRange(aIndex);
   Result := FNodeList[aIndex].AdjList.Count + FNodeList[aIndex].Tag;
 end;
 
-function TGSimpleDiGraph.Isolated(constref aVertex: TVertex): Boolean;
+function TGSimpleDigraph.Isolated(constref aVertex: TVertex): Boolean;
 begin
   Result := Degree(aVertex) = 0;
 end;
 
-function TGSimpleDiGraph.IsolatedI(aIndex: SizeInt): Boolean;
+function TGSimpleDigraph.IsolatedI(aIndex: SizeInt): Boolean;
 begin
   Result := DegreeI(aIndex) = 0;
 end;
 
-function TGSimpleDiGraph.IsSource(constref aVertex: TVertex): Boolean;
+function TGSimpleDigraph.IsSource(constref aVertex: TVertex): Boolean;
 begin
   Result := IsSourceI(IndexOf(aVertex));
 end;
 
-function TGSimpleDiGraph.IsSourceI(aIndex: SizeInt): Boolean;
+function TGSimpleDigraph.IsSourceI(aIndex: SizeInt): Boolean;
 begin
   CheckIndexRange(aIndex);
   Result := (FNodeList[aIndex].AdjList.Count <> 0) and (FNodeList[aIndex].Tag = 0);
 end;
 
-function TGSimpleDiGraph.IsSink(constref aVertex: TVertex): Boolean;
+function TGSimpleDigraph.IsSink(constref aVertex: TVertex): Boolean;
 begin
   Result := IsSinkI(IndexOf(aVertex));
 end;
 
-function TGSimpleDiGraph.IsSinkI(aIndex: SizeInt): Boolean;
+function TGSimpleDigraph.IsSinkI(aIndex: SizeInt): Boolean;
 begin
   CheckIndexRange(aIndex);
   Result := (FNodeList[aIndex].AdjList.Count = 0) and (FNodeList[aIndex].Tag <> 0);
 end;
 
-function TGSimpleDiGraph.SourceCount: SizeInt;
+function TGSimpleDigraph.SourceCount: SizeInt;
 var
   I: SizeInt;
 begin
@@ -1487,7 +1502,7 @@ begin
       Inc(Result);
 end;
 
-function TGSimpleDiGraph.SinkCount: SizeInt;
+function TGSimpleDigraph.SinkCount: SizeInt;
 var
   I: SizeInt;
 begin
@@ -1497,23 +1512,23 @@ begin
       Inc(Result);
 end;
 
-function TGSimpleDiGraph.IncomingArcs(constref aVertex: TVertex): TIncomingArcs;
+function TGSimpleDigraph.IncomingArcs(constref aVertex: TVertex): TIncomingArcs;
 begin
   Result := IncomingArcsI(IndexOf(aVertex));
 end;
 
-function TGSimpleDiGraph.IncomingArcsI(aIndex: SizeInt): TIncomingArcs;
+function TGSimpleDigraph.IncomingArcsI(aIndex: SizeInt): TIncomingArcs;
 begin
   CheckIndexRange(aIndex);
   Result := TIncomingArcs.Create(Self, aIndex);
 end;
 
-function TGSimpleDiGraph.PathExists(constref aSrc, aDst: TVertex): Boolean;
+function TGSimpleDigraph.PathExists(constref aSrc, aDst: TVertex): Boolean;
 begin
   Result := PathExistsI(IndexOf(aSrc), IndexOf(aDst));
 end;
 
-function TGSimpleDiGraph.PathExistsI(aSrc, aDst: SizeInt): Boolean;
+function TGSimpleDigraph.PathExistsI(aSrc, aDst: SizeInt): Boolean;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -1524,12 +1539,12 @@ begin
   Result := CheckPathExists(aSrc, aDst);
 end;
 
-function TGSimpleDiGraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
+function TGSimpleDigraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
 begin
   Result := ContainsCycleI(IndexOf(aRoot), aCycle);
 end;
 
-function TGSimpleDiGraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+function TGSimpleDigraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
 begin
   CheckIndexRange(aRoot);
   if VertexCount < 2 then
@@ -1539,7 +1554,7 @@ begin
   Result := System.Length(aCycle) <> 0;
 end;
 
-function TGSimpleDiGraph.ContainsEulerianCycle: Boolean;
+function TGSimpleDigraph.ContainsEulerianCycle: Boolean;
 var
   I, d: SizeInt;
 begin
@@ -1555,7 +1570,7 @@ begin
   Result := d > 0;
 end;
 
-function TGSimpleDiGraph.FindEulerianCycle: TIntArray;
+function TGSimpleDigraph.FindEulerianCycle: TIntArray;
 var
   g: TSkeleton;
   Stack, Path: TIntStack;
@@ -1586,14 +1601,14 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.IsStrongConnected: Boolean;
+function TGSimpleDigraph.IsStrongConnected: Boolean;
 var
   Dummy: TIntArray;
 begin
   Result := FindStrongComponents(Dummy) = 1;
 end;
 
-function TGSimpleDiGraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
+function TGSimpleDigraph.FindStrongComponents(out aCompIds: TIntArray): SizeInt;
 var
   m: TSquareBitMatrix;
 begin
@@ -1618,12 +1633,12 @@ begin
     end;
 end;
 
-function TGSimpleDiGraph.GetStrongComponent(constref aVertex: TVertex): TIntArray;
+function TGSimpleDigraph.GetStrongComponent(constref aVertex: TVertex): TIntArray;
 begin
   Result := GetStrongComponentI(IndexOf(aVertex));
 end;
 
-function TGSimpleDiGraph.GetStrongComponentI(aIndex: SizeInt): TIntArray;
+function TGSimpleDigraph.GetStrongComponentI(aIndex: SizeInt): TIntArray;
 var
   Ids: TIntArray;
   I, J, ScCount: SizeInt;
@@ -1653,7 +1668,7 @@ begin
   Result.Length := J;
 end;
 
-procedure TGSimpleDiGraph.BuildReachabilityMatrix;
+procedure TGSimpleDigraph.BuildReachabilityMatrix;
 var
   Ids: TIntArray;
   ScCount: SizeInt;
@@ -1664,7 +1679,7 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(Ids, ScCount);
 end;
 
-function TGSimpleDiGraph.TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
+function TGSimpleDigraph.TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
 var
   I: SizeInt;
 begin
@@ -1681,14 +1696,14 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(System.Copy(aScIds), aScCount);
 end;
 
-function TGSimpleDiGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
+function TGSimpleDigraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
 begin
   Result := IsStrongConnected;
   if Result then
     DoFindMetrics(aRadius, aDiameter);
 end;
 
-function TGSimpleDiGraph.FindCenter: TIntArray;
+function TGSimpleDigraph.FindCenter: TIntArray;
 var
   Eccs: TIntArray;
   I, J, Radius, Diam: SizeInt;
@@ -1707,7 +1722,7 @@ begin
   Result.Length := J;
 end;
 
-function TGSimpleDiGraph.FindPeripheral: TIntArray;
+function TGSimpleDigraph.FindPeripheral: TIntArray;
 var
   Eccs: TIntArray;
   I, J, Radius, Diam: SizeInt;
@@ -1726,7 +1741,7 @@ begin
   Result.Length := J;
 end;
 
-function TGSimpleDiGraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
+function TGSimpleDigraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
 begin
   if IsEmpty then
     exit(nil);
@@ -1737,7 +1752,7 @@ begin
     TIntHelper.Reverse(Result);
 end;
 
-function TGSimpleDiGraph.IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
+function TGSimpleDigraph.IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
 var
   TestCopy: TIntArray;
   vSet: TBitVector;
@@ -1777,19 +1792,19 @@ begin
   Result := True;
 end;
 
-function TGSimpleDiGraph.IsDag: Boolean;
+function TGSimpleDigraph.IsDag: Boolean;
 begin
   if VertexCount < 2 then
     exit(True);
   Result := not CycleExists;
 end;
 
-function TGSimpleDiGraph.DagLongestPathsMap(constref aSrc: TVertex): TIntArray;
+function TGSimpleDigraph.DagLongestPathsMap(constref aSrc: TVertex): TIntArray;
 begin
   Result := DagLongestPathsMapI(IndexOf(aSrc));
 end;
 
-function TGSimpleDiGraph.DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
+function TGSimpleDigraph.DagLongestPathsMapI(aSrc: SizeInt): TIntArray;
 var
   c: TIntArray;
 begin
@@ -1801,12 +1816,12 @@ begin
   Result := GetDagLongestPaths(aSrc);
 end;
 
-function TGSimpleDiGraph.DagLongestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
+function TGSimpleDigraph.DagLongestPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TIntArray;
 begin
   Result := DagLongestPathsMapI(IndexOf(aSrc), aPathTree);
 end;
 
-function TGSimpleDiGraph.DagLongestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
+function TGSimpleDigraph.DagLongestPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TIntArray;
 begin
   CheckIndexRange(aSrc);
   if VertexCount = 1 then
@@ -1819,7 +1834,7 @@ begin
   Result := GetDagLongestPaths(aSrc, aPathTree);
 end;
 
-function TGSimpleDiGraph.DagLongestPaths: TIntArray;
+function TGSimpleDigraph.DagLongestPaths: TIntArray;
 var
   TopoOrd: TIntArray;
   I, J, d: SizeInt;
@@ -1842,13 +1857,13 @@ begin
         end;
 end;
 
-function TGSimpleDiGraph.FindHamiltonCycles(constref aSource: TVertex; aCount: SizeInt;
+function TGSimpleDigraph.FindHamiltonCycles(constref aSource: TVertex; aCount: SizeInt;
   out aCycles: TIntArrayVector; aTimeOut: Integer): Boolean;
 begin
   Result := FindHamiltonCyclesI(IndexOf(aSource), aCount, aCycles, aTimeOut);
 end;
 
-function TGSimpleDiGraph.FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
+function TGSimpleDigraph.FindHamiltonCyclesI(aSourceIdx, aCount: SizeInt; out aCycles: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
   Helper: THamiltonSearch;
@@ -1866,7 +1881,7 @@ begin
   Result := Helper.FindCycles(Self, aSourceIdx, aCount, aTimeOut, @aCycles);
 end;
 
-function TGSimpleDiGraph.IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
+function TGSimpleDigraph.IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
@@ -1894,13 +1909,13 @@ begin
   Result := True;
 end;
 
-function TGSimpleDiGraph.FindHamiltonPaths(constref aSrc: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
+function TGSimpleDigraph.FindHamiltonPaths(constref aSrc: TVertex; aCount: SizeInt; out aPaths: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 begin
   Result := FindHamiltonPathsI(IndexOf(aSrc), aCount, aPaths, aTimeOut);
 end;
 
-function TGSimpleDiGraph.FindHamiltonPathsI(aSrcIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
+function TGSimpleDigraph.FindHamiltonPathsI(aSrcIdx, aCount: SizeInt; out aPaths: TIntArrayVector;
   aTimeOut: Integer): Boolean;
 var
   Helper: THamiltonSearch;
@@ -1928,7 +1943,7 @@ begin
   Result := Helper.FindPaths(Self, aSrcIdx, aCount, aTimeOut, @aPaths);
 end;
 
-function TGSimpleDiGraph.IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx: SizeInt): Boolean;
+function TGSimpleDigraph.IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx: SizeInt): Boolean;
 var
   VertSet: TBitVector;
   I, Curr, Next: SizeInt;
@@ -2228,9 +2243,9 @@ begin
   Result := '"' + aGraph[aEdge.Source] + '"' + FEdgeMark + '"' + aGraph[aEdge.Destination] + '";';
 end;
 
-{ TGWeightedDiGraph }
+{ TGWeightedDigraph }
 
-function TGWeightedDiGraph.CreateEdgeArray: TEdgeArray;
+function TGWeightedDigraph.CreateEdgeArray: TEdgeArray;
 var
   I: SizeInt = 0;
   e: TEdge;
@@ -2243,7 +2258,7 @@ begin
     end;
 end;
 
-procedure TGWeightedDiGraph.GetDagMinPaths(aSrc: SizeInt; var aWeights: TWeightArray);
+procedure TGWeightedDigraph.GetDagMinPaths(aSrc: SizeInt; var aWeights: TWeightArray);
 var
   Queue: TIntArray;
   Visited: TBitVector;
@@ -2280,7 +2295,7 @@ begin
     end;
 end;
 
-procedure TGWeightedDiGraph.GetDagMinPaths(aSrc: SizeInt; var aTree: TIntArray; var aWeights: TWeightArray);
+procedure TGWeightedDigraph.GetDagMinPaths(aSrc: SizeInt; var aTree: TIntArray; var aWeights: TWeightArray);
 var
   Queue: TIntArray;
   Curr, Next: SizeInt;
@@ -2317,7 +2332,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
+function TGWeightedDigraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArrayEx;
@@ -2352,7 +2367,7 @@ begin
       Stack.Pop;
 end;
 
-function TGWeightedDiGraph.GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArrayEx;
@@ -2385,17 +2400,17 @@ begin
       Stack.Pop;
 end;
 
-class function TGWeightedDiGraph.InfWeight: TWeight;
+class function TGWeightedDigraph.InfWeight: TWeight;
 begin
   Result := TWeight.INF_VALUE;
 end;
 
-class function TGWeightedDiGraph.NegInfWeight: TWeight;
+class function TGWeightedDigraph.NegInfWeight: TWeight;
 begin
   Result := TWeight.NEGINF_VALUE;
 end;
 
-class function TGWeightedDiGraph.wMin(L, R: TWeight): TWeight;
+class function TGWeightedDigraph.wMin(L, R: TWeight): TWeight;
 begin
   if L <= R then
     Result := L
@@ -2403,7 +2418,7 @@ begin
     Result := R;
 end;
 
-class function TGWeightedDiGraph.wMax(L, R: TWeight): TWeight;
+class function TGWeightedDigraph.wMax(L, R: TWeight): TWeight;
 begin
   if L >= R then
     Result := L
@@ -2411,7 +2426,7 @@ begin
     Result := R;
 end;
 
-class function TGWeightedDiGraph.TotalWeight(const aEdges: TEdgeArray): TWeight;
+class function TGWeightedDigraph.TotalWeight(const aEdges: TEdgeArray): TWeight;
 var
   e: TWeightEdge;
 begin
@@ -2420,7 +2435,7 @@ begin
     Result += e.Weight;
 end;
 
-class function TGWeightedDiGraph.EdgeArray2IntEdgeArray(const a: TEdgeArray): TIntEdgeArray;
+class function TGWeightedDigraph.EdgeArray2IntEdgeArray(const a: TEdgeArray): TIntEdgeArray;
 var
   I: SizeInt = 0;
   e: TWeightEdge;
@@ -2433,7 +2448,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.ContainsNegWeightEdge: Boolean;
+function TGWeightedDigraph.ContainsNegWeightEdge: Boolean;
 var
   e: TEdge;
 begin
@@ -2443,12 +2458,12 @@ begin
   Result := False;
 end;
 
-function TGWeightedDiGraph.ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
+function TGWeightedDigraph.ContainsNegCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
 begin
   Result := ContainsNegCycleI(IndexOf(aRoot), aCycle);
 end;
 
-function TGWeightedDiGraph.ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
+function TGWeightedDigraph.ContainsNegCycleI(aRootIdx: SizeInt; out aCycle: TIntArray): Boolean;
 begin
   CheckIndexRange(aRootIdx);
   if VertexCount > 1 then
@@ -2463,30 +2478,30 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.Clone: TGWeightedDiGraph;
+function TGWeightedDigraph.Clone: TGWeightedDigraph;
 begin
-  Result := TGWeightedDiGraph.Create;
+  Result := TGWeightedDigraph.Create;
   Result.AssignGraph(Self);
 end;
 
-function TGWeightedDiGraph.Reverse: TGWeightedDiGraph;
+function TGWeightedDigraph.Reverse: TGWeightedDigraph;
 begin
-  Result := TGWeightedDiGraph.Create;
+  Result := TGWeightedDigraph.Create;
   Result.AssignReverse(Self);
 end;
 
-function TGWeightedDiGraph.InducedSubgraph(const aVertexList: TIntArray): TGWeightedDiGraph;
+function TGWeightedDigraph.InducedSubgraph(const aVertexList: TIntArray): TGWeightedDigraph;
 begin
-  Result := TGWeightedDiGraph.Create;
+  Result := TGWeightedDigraph.Create;
   Result.AssignVertexList(Self, aVertexList);
 end;
 
-function TGWeightedDiGraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
+function TGWeightedDigraph.MinPathsMap(constref aSrc: TVertex): TWeightArray;
 begin
   Result := MinPathsMapI(IndexOf(aSrc));
 end;
 
-function TGWeightedDiGraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
+function TGWeightedDigraph.MinPathsMapI(aSrc: SizeInt): TWeightArray;
 begin
   CheckIndexRange(aSrc);
   if VertexCount > 1 then
@@ -2495,12 +2510,12 @@ begin
     Result := [TWeight(0)];
 end;
 
-function TGWeightedDiGraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.MinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := MinPathsMapI(IndexOf(aSrc), aPathTree);
 end;
 
-function TGWeightedDiGraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.MinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
   if VertexCount > 1 then
@@ -2512,12 +2527,12 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
+function TGWeightedDigraph.MinPath(constref aSrc, aDst: TVertex; out aWeight: TWeight): TIntArray;
 begin
   Result := MinPathI(IndexOf(aSrc), IndexOf(aDst), aWeight);
 end;
 
-function TGWeightedDiGraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
+function TGWeightedDigraph.MinPathI(aSrc, aDst: SizeInt; out aWeight: TWeight): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -2530,13 +2545,13 @@ begin
     Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
-function TGWeightedDiGraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
+function TGWeightedDigraph.MinPathAStar(constref aSrc, aDst: TVertex; out aWeight: TWeight;
   aEst: TEstimate): TIntArray;
 begin
   Result := MinPathAStarI(IndexOf(aSrc), IndexOf(aDst), aWeight, aEst);
 end;
 
-function TGWeightedDiGraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
+function TGWeightedDigraph.MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: TWeight; aEst: TEstimate): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -2552,13 +2567,13 @@ begin
       Result := TWeightHelper.DijkstraPath(Self, aSrc, aDst, aWeight);
 end;
 
-function TGWeightedDiGraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
+function TGWeightedDigraph.FindMinPath(constref aSrc, aDst: TVertex; out aPath: TIntArray;
   out aWeight: TWeight): Boolean;
 begin
   Result := FindMinPathI(IndexOf(aSrc), IndexOf(aDst), aPath, aWeight);
 end;
 
-function TGWeightedDiGraph.FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
+function TGWeightedDigraph.FindMinPathI(aSrc, aDst: SizeInt; out aPath: TIntArray; out aWeight: TWeight): Boolean;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -2572,12 +2587,12 @@ begin
     Result := TWeightHelper.BfmtPath(Self, aSrc, aDst, aPath, aWeight);
 end;
 
-function TGWeightedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
+function TGWeightedDigraph.FindMinPathsMap(constref aSrc: TVertex; out aWeights: TWeightArray): Boolean;
 begin
   Result := FindMinPathsMapI(IndexOf(aSrc), aWeights);
 end;
 
-function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
+function TGWeightedDigraph.FindMinPathsMapI(aSrc: SizeInt; out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
   if VertexCount > 1 then
@@ -2589,13 +2604,13 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
+function TGWeightedDigraph.FindMinPathsMap(constref aSrc: TVertex; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 begin
   Result := FindMinPathsMapI(IndexOf(aSrc), aPaths, aWeights);
 end;
 
-function TGWeightedDiGraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray;
+function TGWeightedDigraph.FindMinPathsMapI(aSrc: SizeInt; out aPaths: TIntArray;
   out aWeights: TWeightArray): Boolean;
 begin
   CheckIndexRange(aSrc);
@@ -2609,12 +2624,12 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.CreateWeightsMatrix: TWeightMatrix;
+function TGWeightedDigraph.CreateWeightsMatrix: TWeightMatrix;
 begin
   Result := TWeightHelper.CreateWeightsMatrix(Self);
 end;
 
-function TGWeightedDiGraph.FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
+function TGWeightedDigraph.FindAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
 begin
   if VertexCount > 1 then
     if Density <= DENSE_CUTOFF then
@@ -2634,12 +2649,12 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.ExtractMinPath(constref aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray;
+function TGWeightedDigraph.ExtractMinPath(constref aSrc, aDst: TVertex; const aPaths: TApspMatrix): TIntArray;
 begin
   Result := ExtractMinPathI(IndexOf(aSrc), IndexOf(aDst), aPaths);
 end;
 
-function TGWeightedDiGraph.ExtractMinPathI(aSrc, aDst: SizeInt; const aPaths: TApspMatrix): TIntArray;
+function TGWeightedDigraph.ExtractMinPathI(aSrc, aDst: SizeInt; const aPaths: TApspMatrix): TIntArray;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);
@@ -2649,12 +2664,12 @@ begin
     Result := TWeightHelper.ExtractMinPath(aSrc, aDst, aPaths);
 end;
 
-function TGWeightedDiGraph.FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean;
+function TGWeightedDigraph.FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean;
 begin
   Result := FindEccentricityI(IndexOf(aVertex), aValue);
 end;
 
-function TGWeightedDiGraph.FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
+function TGWeightedDigraph.FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
 var
   Weights: TWeightArray;
   I: SizeInt;
@@ -2672,7 +2687,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.FindWeightedMetrics(out aRadius, aDiameter: TWeight): Boolean;
+function TGWeightedDigraph.FindWeightedMetrics(out aRadius, aDiameter: TWeight): Boolean;
 var
   Bfmt: TWeightHelper.TBfmt;
   Weights: TWeightArray;
@@ -2713,7 +2728,7 @@ begin
     end;
 end;
 
-function TGWeightedDiGraph.FindWeightedCenter(out aCenter: TIntArray): Boolean;
+function TGWeightedDigraph.FindWeightedCenter(out aCenter: TIntArray): Boolean;
 var
   Bfmt: TWeightHelper.TBfmt;
   Eccs: TWeightArray;
@@ -2760,12 +2775,12 @@ begin
   aCenter.Length := J;
 end;
 
-function TGWeightedDiGraph.DagMinPathsMap(constref aSrc: TVertex): TWeightArray;
+function TGWeightedDigraph.DagMinPathsMap(constref aSrc: TVertex): TWeightArray;
 begin
   Result := DagMinPathsMapI(IndexOf(aSrc));
 end;
 
-function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
+function TGWeightedDigraph.DagMinPathsMapI(aSrc: SizeInt): TWeightArray;
 var
   c: TIntArray;
 begin
@@ -2775,12 +2790,12 @@ begin
   GetDagMinPaths(aSrc, Result{%H-});
 end;
 
-function TGWeightedDiGraph.DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := DagMinPathsMapI(IndexOf(aSrc), aPathTree);
 end;
 
-function TGWeightedDiGraph.DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
   if FindCycle(aSrc, aPathTree) then
@@ -2788,7 +2803,7 @@ begin
   GetDagMinPaths(aSrc, aPathTree{%H-}, Result{%H-});
 end;
 
-function TGWeightedDiGraph.FindDagAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
+function TGWeightedDigraph.FindDagAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
 var
   Weights: TWeightArray;
   Parents: TIntArray;
@@ -2809,12 +2824,12 @@ begin
   Result := True;
 end;
 
-function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
+function TGWeightedDigraph.DagMaxPathsMap(constref aSrc: TVertex): TWeightArray;
 begin
   Result := DagMaxPathsMapI(IndexOf(aSrc));
 end;
 
-function TGWeightedDiGraph.DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
+function TGWeightedDigraph.DagMaxPathsMapI(aSrc: SizeInt): TWeightArray;
 var
   c: TIntArray;
 begin
@@ -2824,12 +2839,12 @@ begin
   Result := GetDagMaxPaths(aSrc);
 end;
 
-function TGWeightedDiGraph.DagMaxPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.DagMaxPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
 begin
   Result := DagMaxPathsMapI(IndexOf(aSrc), aPathTree);
 end;
 
-function TGWeightedDiGraph.DagMaxPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
+function TGWeightedDigraph.DagMaxPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
   if FindCycle(aSrc, aPathTree) then
@@ -2837,7 +2852,7 @@ begin
   Result := GetDagMaxPaths(aSrc, aPathTree);
 end;
 
-function TGWeightedDiGraph.DagMaxPaths: TWeightArray;
+function TGWeightedDigraph.DagMaxPaths: TWeightArray;
 var
   TopoOrd: TIntArray;
   I, J: SizeInt;
@@ -2869,53 +2884,29 @@ begin
     end;
 end;
 
-{$I IntDiGraphHelp.inc}
+{$I MaxFlow.inc}
 
-{ TGIntWeightDiGraph }
+{ TGDirectInt64Net }
 
-function TGIntWeightDiGraph.IsCostsCorrect(constref aCosts: TCostEdgeArray; out aMap: TEdgeCostMap): Boolean;
-var
-  Arc: TCostEdge;
-  vCount: SizeUInt;
+function TGDirectInt64Net.Clone: TGDirectInt64Net;
 begin
-  aMap.Clear;
-  if IsEmpty then
-    exit(aCosts = nil);
-  if System.Length(aCosts) <> EdgeCount then
-    exit(False);
-  vCount := SizeUInt(VertexCount);
-  aMap.EnsureCapacity(EdgeCount);
-  for Arc in aCosts do
-    begin
-      if (SizeUInt(Arc.Source) >= vCount) or (SizeUInt(Arc.Destination) >= vCount) then //invalid arc
-        exit(False);
-      if not AdjLists[Arc.Source]^.Contains(Arc.Destination) then //no such arc
-        exit(False);
-      if not aMap.Add(Arc.Edge, Arc.Cost) then //contains duplicates
-        exit(False);
-    end;
-  Result := True;
-end;
-
-function TGIntWeightDiGraph.Clone: TGIntWeightDiGraph;
-begin
-  Result := TGIntWeightDiGraph.Create;
+  Result := TGDirectInt64Net.Create;
   Result.AssignGraph(Self);
 end;
 
-function TGIntWeightDiGraph.Reverse: TGIntWeightDiGraph;
+function TGDirectInt64Net.Reverse: TGDirectInt64Net;
 begin
-  Result := TGIntWeightDiGraph.Create;
+  Result := TGDirectInt64Net.Create;
   Result.AssignReverse(Self);
 end;
 
-function TGIntWeightDiGraph.InducedSubgraph(const aVertexList: TIntArray): TGIntWeightDiGraph;
+function TGDirectInt64Net.InducedSubgraph(const aVertexList: TIntArray): TGDirectInt64Net;
 begin
-  Result := TGIntWeightDiGraph.Create;
+  Result := TGDirectInt64Net.Create;
   Result.AssignVertexList(Self, aVertexList);
 end;
 
-function TGIntWeightDiGraph.FindMinWeightBipMatch(out aMatch: TEdgeArray): Boolean;
+function TGDirectInt64Net.FindMinWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 var
   w, g: TIntArray;
 begin
@@ -2925,7 +2916,7 @@ begin
     aMatch := TWeightHelper.MinBipMatch(Self, w, g);
 end;
 
-function TGIntWeightDiGraph.FindMaxWeightBipMatch(out aMatch: TEdgeArray): Boolean;
+function TGDirectInt64Net.FindMaxWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 var
   w, g: TIntArray;
 begin
@@ -2935,12 +2926,12 @@ begin
     aMatch := TWeightHelper.MaxBipMatch(Self, w, g);
 end;
 
-function TGIntWeightDiGraph.GetNetworkState(constref aSource, aSink: TVertex): TNetworkState;
+function TGDirectInt64Net.GetNetworkState(constref aSource, aSink: TVertex): TNetworkState;
 begin
   Result := GetNetworkStateI(IndexOf(aSource), IndexOf(aSink));
 end;
 
-function TGIntWeightDiGraph.GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
+function TGDirectInt64Net.GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
 var
   Queue: TIntArray;
   Visited: TBitVector;
@@ -2985,12 +2976,12 @@ begin
   Result := nsOk;
 end;
 
-function TGIntWeightDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
+function TGDirectInt64Net.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
 begin
   Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow);
 end;
 
-function TGIntWeightDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
+function TGDirectInt64Net.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
 var
   Helper: THPrHelper;
 begin
@@ -3000,13 +2991,13 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
 end;
 
-function TGIntWeightDiGraph.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight;
+function TGDirectInt64Net.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 begin
   Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
-function TGIntWeightDiGraph.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
+function TGDirectInt64Net.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 var
   Helper: THPrHelper;
@@ -3018,12 +3009,12 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
 end;
 
-function TGIntWeightDiGraph.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
+function TGDirectInt64Net.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
 begin
   Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow);
 end;
 
-function TGIntWeightDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
+function TGDirectInt64Net.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
 var
   Helper: TDinitzHelper;
 begin
@@ -3033,13 +3024,13 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
 end;
 
-function TGIntWeightDiGraph.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight;
+function TGDirectInt64Net.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 begin
   Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
-function TGIntWeightDiGraph.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
+function TGDirectInt64Net.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 var
   Helper: TDinitzHelper;
@@ -3051,13 +3042,13 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
 end;
 
-function TGIntWeightDiGraph.IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight;
+function TGDirectInt64Net.IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight;
   const a: TEdgeArray): Boolean;
 begin
   Result := IsFeasibleFlowI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
-function TGIntWeightDiGraph.IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight;
+function TGDirectInt64Net.IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight;
   const a: TEdgeArray): Boolean;
 var
   v: array of TWeight;
@@ -3087,13 +3078,13 @@ begin
   Result := True;
 end;
 
-function TGIntWeightDiGraph.FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight;
+function TGDirectInt64Net.FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight;
   out aCut: TStCut): TNetworkState;
 begin
   Result := FindMinSTCutPrI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
 end;
 
-function TGIntWeightDiGraph.FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
+function TGDirectInt64Net.FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): TNetworkState;
 var
   Helper: THPrHelper;
@@ -3115,13 +3106,13 @@ begin
   aCut.T := TmpSet.ToArray;
 end;
 
-function TGIntWeightDiGraph.FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight;
+function TGDirectInt64Net.FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight;
   out aCut: TStCut): TNetworkState;
 begin
   Result := FindMinSTCutDI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
 end;
 
-function TGIntWeightDiGraph.FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
+function TGDirectInt64Net.FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
   out aCut: TStCut): TNetworkState;
 var
   Helper: TDinitzHelper;
@@ -3143,49 +3134,66 @@ begin
   aCut.T := TmpSet.ToArray;
 end;
 
-function TGIntWeightDiGraph.IsProperCosts(const aCosts: TCostEdgeArray): Boolean;
-var
-  m: TEdgeCostMap;
+{ TCostPair }
+
+constructor TCostPair.Create(aWeight: Int64; aCost: TCost);
 begin
-  Result := IsCostsCorrect(aCosts, m);
+  Weight := aWeight;
+  Cost := aCost;
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
+{$I Mcf.inc}
+
+function TGCostedInt64Net.Clone: TGCostedInt64Net;
 begin
-  Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost);
+  Result := TGCostedInt64Net.Create;
+  Result.AssignGraph(Self);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
+function TGCostedInt64Net.Reverse: TGCostedInt64Net;
+begin
+  Result := TGCostedInt64Net.Create;
+  Result.AssignReverse(Self);
+end;
+
+function TGCostedInt64Net.InducedSubgraph(const aVertexList: TIntArray): TGCostedInt64Net;
+begin
+  Result := TGCostedInt64Net.Create;
+  Result.AssignVertexList(Self, aVertexList);
+end;
+
+function TGCostedInt64Net.FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+  out aTotalCost: TCost): TMcfState;
+begin
+  Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost);
+end;
+
+function TGCostedInt64Net.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+  out aTotalCost: TCost): TMcfState;
 var
   Helper: TSspMcfHelper;
-  CostMap: TEdgeCostMap;
 begin
   aTotalCost := 0;
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(mcfInvalidNet);
-  if not IsCostsCorrect(aCosts, CostMap) then
-    exit(mcfInvalidCost);
-  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost);
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, aTotalCost);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowSsp(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
+function TGCostedInt64Net.FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+  out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 begin
-  Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, aArcFlows);
+  Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost, aArcFlows);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
+function TGCostedInt64Net.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+  out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 var
   Helper: TSspMcfHelper;
-  CostMap: TEdgeCostMap;
 begin
   aTotalCost := 0;
   aArcFlows := nil;
@@ -3193,50 +3201,44 @@ begin
     exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(mcfInvalidNet);
-  if not IsCostsCorrect(aCosts, CostMap) then
-    exit(mcfInvalidCost);
-  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost, aArcFlows);
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, aTotalCost, aArcFlows);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
+function TGCostedInt64Net.FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+  out aTotalCost: TCost): TMcfState;
 begin
-  Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost);
+  Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost): TMcfState;
+function TGCostedInt64Net.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+  out aTotalCost: TCost): TMcfState;
 var
   Helper: TCsMcfHelper;
-  CostMap: TEdgeCostMap;
 begin
   aTotalCost := 0;
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(mcfInvalidNet);
-  if not IsCostsCorrect(aCosts, CostMap) then
-    exit(mcfInvalidCost);
-  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost);
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, aTotalCost);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowCs(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
+function TGCostedInt64Net.FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
+  out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 begin
-  Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aCosts, aReqFlow, aTotalCost, aArcFlows);
+  Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost, aArcFlows);
 end;
 
-function TGIntWeightDiGraph.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-  var aReqFlow: TWeight; out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
+function TGCostedInt64Net.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+  out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 var
   Helper: TCsMcfHelper;
-  CostMap: TEdgeCostMap;
 begin
   aTotalCost := 0;
   aArcFlows := nil;
@@ -3244,24 +3246,21 @@ begin
     exit(mcfNoFlowRequired);
   if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
     exit(mcfInvalidNet);
-  if not IsCostsCorrect(aCosts, CostMap) then
-    exit(mcfInvalidCost);
-  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, CostMap, aTotalCost, aArcFlows);
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, aTotalCost, aArcFlows);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
 end;
 
-function TGIntWeightDiGraph.IsMcfFeasible(constref aSource, aSink: TVertex; const aCosts: TCostEdgeArray;
-  const aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
+function TGCostedInt64Net.IsMcfFeasible(constref aSource, aSink: TVertex; const aArcFlows: TEdgeArray;
+  aFlow: TWeight; aTotalCost: TCost): Boolean;
 begin
-  Result := IsMcfFeasibleI(IndexOf(aSource), IndexOf(aSink), aCosts, aArcFlows, aFlow, aTotalCost);
+  Result := IsMcfFeasibleI(IndexOf(aSource), IndexOf(aSink), aArcFlows, aFlow, aTotalCost);
 end;
 
-function TGIntWeightDiGraph.IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; const aCosts: TCostEdgeArray;
-  const aArcFlows: TEdgeArray; aFlow: TWeight; aTotalCost: TCost): Boolean;
+function TGCostedInt64Net.IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; const aArcFlows: TEdgeArray;
+  aFlow: TWeight; aTotalCost: TCost): Boolean;
 var
-  CostMap: TEdgeCostMap;
   v: array of TWeight;
   e: TWeightEdge;
   d: TEdgeData;
@@ -3271,8 +3270,6 @@ begin
   CheckIndexRange(aSrcIndex);
   CheckIndexRange(aSinkIndex);
   if System.Length(aArcFlows) <> EdgeCount then
-    exit(False);
-  if not IsCostsCorrect(aCosts, CostMap) then
     exit(False);
   v := TWeightHelper.CreateWeightArrayZ(VertexCount);
   v[aSrcIndex] += aFlow;
@@ -3286,7 +3283,7 @@ begin
         exit(False);
       v[e.Source] -= e.Weight;
       v[e.Destination] += e.Weight;
-      Cost += e.Weight * CostMap[e.Edge];
+      Cost += e.Weight * d.Cost;
     end;
   for I := 0 to System.High(v) do
     if v[I] <> 0 then

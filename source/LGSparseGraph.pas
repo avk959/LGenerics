@@ -86,20 +86,10 @@ type
     function Key: TIntEdge; inline;
   end;
 
-  TCostEdge = record
-    Source,
-    Destination: SizeInt;
-    Cost: TCost;
-    constructor Create(aSrc, aDst: SizeInt; aCost: TCost);
-    function Edge: TIntEdge; inline;
-  end;
-
-  TEdgeCostMap          = specialize TGLiteHashMapLP<TIntEdge, TCost, TIntEdge>;
   TIntArrayVectorHelper = specialize TGDelegatedVectorHelper<TIntArray>;
   TIntEdgeVector        = specialize TGLiteVector<TIntEdge>;
   TIntEdgeArray         = array of TIntEdge;
   TEdgeArrayVector      = specialize TGLiteVector<TIntEdgeArray>;
-  TCostEdgeArray        = array of TCostEdge;
 
   TGraphMagic           = string[8];
 
@@ -788,20 +778,6 @@ end;
 function TIntEdge.Key: TIntEdge;
 begin
   Result := Self;
-end;
-
-{ TCostEdge }
-
-constructor TCostEdge.Create(aSrc, aDst: SizeInt; aCost: TCost);
-begin
-  Source := aSrc;
-  Destination := aDst;
-  Cost := aCost;
-end;
-
-function TCostEdge.Edge: TIntEdge;
-begin
-  Result := TIntEdge.Create(Source, Destination);
 end;
 
 { TGAdjItem }

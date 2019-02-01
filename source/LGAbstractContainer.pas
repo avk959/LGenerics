@@ -123,7 +123,7 @@ type
     function Fold(aFold: TNestFold): TOptional;
   end;
 
-{$I LGEnumsH.inc}
+{$I EnumsH.inc}
 
   { TGAbstractContainer: container abstract ancestor class }
   generic TGAbstractContainer<T> = class abstract(specialize TGEnumerable<T>, specialize IGContainer<T>)
@@ -184,7 +184,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-{$I LGDynBufferH.inc}
+{$I DynBufferH.inc}
 
   { TGAbstractCollection: collection abstract ancestor class}
   generic TGAbstractCollection<T> = class abstract(specialize TGAbstractContainer<T>, specialize IGCollection<T>)
@@ -1422,7 +1422,7 @@ begin
     end;
 end;
 
-{$I LGEnums.inc}
+{$I Enums.inc}
 
 { TGAbstractContainer.TGContainerEnumerator }
 
@@ -1552,7 +1552,7 @@ begin
   DoEnsureCapacity(aValue);
 end;
 
-{$I LGDynBuffer.inc}
+{$I DynBuffer.inc}
 
 { TGAbstractCollection }
 

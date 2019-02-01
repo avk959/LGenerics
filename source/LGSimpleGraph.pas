@@ -640,9 +640,8 @@ type
     function  MinPathAStarI(aSrc, aDst: SizeInt; out aWeight: ValReal; aHeur: TEstimate = nil): TIntArray;
   end;
 
-  { TGWeightedGraph64 specializes TWeight with Int64 }
-  generic TGWeightedGraph64<TVertex, TEdgeData, TEqRel> = class(
-    specialize TGWeightedGraph<TVertex, Int64, TEdgeData, TEqRel>)
+  { TGInt64Net specializes TWeight with Int64 }
+  generic TGInt64Net<TVertex, TEdgeData, TEqRel>=class(specialize TGWeightedGraph<TVertex, Int64, TEdgeData, TEqRel>)
   public
   type
     TWeight = Int64;
@@ -652,7 +651,7 @@ type
     MAX_WEIGHT = High(Int64);
     MIN_WEIGHT = Low(Int64);
 
-    {$I IntGraphHelpH.inc}
+    {$I GlobMinCutH.inc}
 
     function GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
     function GetTrivialMinCut(out aCut: TWeight): Boolean;
@@ -661,12 +660,12 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-    function SeparateGraph(constref aVertex: TVertex): TGWeightedGraph64;
-    function SeparateGraphI(aIndex: SizeInt): TGWeightedGraph64;
-    function InducedSubgraph(const aVertexList: TIntArray): TGWeightedGraph64;
-    function SubgraphFromTree(const aTree: TIntArray): TGWeightedGraph64;
-    function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGWeightedGraph64;
-    function Clone: TGWeightedGraph64;
+    function SeparateGraph(constref aVertex: TVertex): TGInt64Net;
+    function SeparateGraphI(aIndex: SizeInt): TGInt64Net;
+    function InducedSubgraph(const aVertexList: TIntArray): TGInt64Net;
+    function SubgraphFromTree(const aTree: TIntArray): TGInt64Net;
+    function SubgraphFromEdges(const aEdges: TIntEdgeArray): TGInt64Net;
+    function Clone: TGInt64Net;
 {**********************************************************************************************************
   matching utilities
 ***********************************************************************************************************}
@@ -4525,11 +4524,11 @@ begin
     Result := inherited MinPathAStarI(aSrc, aDst, aWeight, aHeur);
 end;
 
-{$I IntGraphHelp.inc}
+{$I GlobMinCut.inc}
 
-{ TGWeightedGraph64 }
+{ TGInt64Net }
 
-function TGWeightedGraph64.GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
+function TGInt64Net.GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeight): Boolean;
 var
   d: TEdgeData;
 begin
@@ -4550,7 +4549,7 @@ begin
   Result := False;
 end;
 
-function TGWeightedGraph64.GetTrivialMinCut(out aCut: TWeight): Boolean;
+function TGInt64Net.GetTrivialMinCut(out aCut: TWeight): Boolean;
 var
   d: TEdgeData;
 begin
@@ -4569,7 +4568,7 @@ begin
   Result := False;
 end;
 
-function TGWeightedGraph64.StoerWagner(out aCut: TIntSet): TWeight;
+function TGInt64Net.StoerWagner(out aCut: TIntSet): TWeight;
 var
   Queue: TPairHeapMax;
   g: array of TSWAdjList;
@@ -4641,45 +4640,45 @@ begin
     end;
 end;
 
-function TGWeightedGraph64.SeparateGraph(constref aVertex: TVertex): TGWeightedGraph64;
+function TGInt64Net.SeparateGraph(constref aVertex: TVertex): TGInt64Net;
 begin
   Result := SeparateGraphI(IndexOf(aVertex));
 end;
 
-function TGWeightedGraph64.SeparateGraphI(aIndex: SizeInt): TGWeightedGraph64;
+function TGInt64Net.SeparateGraphI(aIndex: SizeInt): TGInt64Net;
 begin
-  Result := TGWeightedGraph64.Create;
+  Result := TGInt64Net.Create;
   if SeparateCount > 1 then
     Result.AssignSeparate(Self, aIndex)
   else
     Result.AssignGraph(Self);
 end;
 
-function TGWeightedGraph64.InducedSubgraph(const aVertexList: TIntArray): TGWeightedGraph64;
+function TGInt64Net.InducedSubgraph(const aVertexList: TIntArray): TGInt64Net;
 begin
-  Result := TGWeightedGraph64.Create;
+  Result := TGInt64Net.Create;
   Result.AssignVertexList(Self, aVertexList);
 end;
 
-function TGWeightedGraph64.SubgraphFromTree(const aTree: TIntArray): TGWeightedGraph64;
+function TGInt64Net.SubgraphFromTree(const aTree: TIntArray): TGInt64Net;
 begin
-  Result := TGWeightedGraph64.Create;
+  Result := TGInt64Net.Create;
   Result.AssignTree(Self, aTree);
 end;
 
-function TGWeightedGraph64.SubgraphFromEdges(const aEdges: TIntEdgeArray): TGWeightedGraph64;
+function TGInt64Net.SubgraphFromEdges(const aEdges: TIntEdgeArray): TGInt64Net;
 begin
-  Result := TGWeightedGraph64.Create;
+  Result := TGInt64Net.Create;
   Result.AssignEdges(Self, aEdges);
 end;
 
-function TGWeightedGraph64.Clone: TGWeightedGraph64;
+function TGInt64Net.Clone: TGInt64Net;
 begin
-  Result := TGWeightedGraph64.Create;
+  Result := TGInt64Net.Create;
   Result.AssignGraph(Self);
 end;
 
-function TGWeightedGraph64.FindMinWeightBipMatch(out aMatch: TEdgeArray): Boolean;
+function TGInt64Net.FindMinWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 var
   w, g: TIntArray;
 begin
@@ -4689,7 +4688,7 @@ begin
     aMatch := TWeightHelper.MinBipMatch(Self, w, g);
 end;
 
-function TGWeightedGraph64.FindMaxWeightBipMatch(out aMatch: TEdgeArray): Boolean;
+function TGInt64Net.FindMaxWeightBipMatch(out aMatch: TEdgeArray): Boolean;
 var
   w, g: TIntArray;
 begin
@@ -4699,7 +4698,7 @@ begin
     aMatch := TWeightHelper.MaxBipMatch(Self, w, g);
 end;
 
-function TGWeightedGraph64.MinWeightCutSW(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
+function TGInt64Net.MinWeightCutSW(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
 var
   Cut: TIntSet;
   B: TBoolVector;
@@ -4726,7 +4725,7 @@ begin
   Result := gnsOk;
 end;
 
-function TGWeightedGraph64.MinWeightCutNI(out aCutWeight: TWeight): TGlobalNetState;
+function TGInt64Net.MinWeightCutNI(out aCutWeight: TWeight): TGlobalNetState;
 var
   Helper: TNIMinCutHelper;
   e: TEdge;
@@ -4743,7 +4742,7 @@ begin
   Result := gnsOk;
 end;
 
-function TGWeightedGraph64.MinWeightCutNI(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
+function TGInt64Net.MinWeightCutNI(out aCut: TCut; out aCutWeight: TWeight): TGlobalNetState;
 var
   Helper: TNIMinCutHelper;
   Cut: TIntSet;
@@ -4770,7 +4769,7 @@ begin
   Result := gnsOk;
 end;
 
-function TGWeightedGraph64.MinWeightCutNI(out aCut: TCut; out aCrossEdges: TEdgeArray): TGlobalNetState;
+function TGInt64Net.MinWeightCutNI(out aCut: TCut; out aCrossEdges: TEdgeArray): TGlobalNetState;
 var
   Helper: TNIMinCutHelper;
   Cut: TIntSet;

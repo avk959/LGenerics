@@ -17,17 +17,17 @@
 *                                                                           *
 *****************************************************************************}
 
-{ TGWeightedGraph64.TNIMinCutHelper.TNiEdge }
+{ TGInt64Net.TNIMinCutHelper.TNiEdge }
 
-constructor TGWeightedGraph64.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight);
+constructor TGInt64Net.TNIMinCutHelper.TNiEdge.Create(aTarget: SizeInt; w: TWeight);
 begin
   Target := aTarget;
   Weight := w;
 end;
 
-{ TGWeightedGraph64.TNIMinCutHelper }
+{ TGInt64Net.TNIMinCutHelper }
 
-procedure TGWeightedGraph64.TNIMinCutHelper.ClearMarks;
+procedure TGInt64Net.TNIMinCutHelper.ClearMarks;
 var
   I: SizeInt;
   p: TNiAdjList.PEntry;
@@ -37,7 +37,7 @@ begin
       p^.Scanned := False;
 end;
 
-procedure TGWeightedGraph64.TNIMinCutHelper.Init(aGraph: TGWeightedGraph64);
+procedure TGInt64Net.TNIMinCutHelper.Init(aGraph: TGInt64Net);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -56,7 +56,7 @@ begin
   FCuts := nil;
 end;
 
-procedure TGWeightedGraph64.TNIMinCutHelper.Init2(aGraph: TGWeightedGraph64);
+procedure TGInt64Net.TNIMinCutHelper.Init2(aGraph: TGInt64Net);
 var
   I: SizeInt;
   p: PAdjItem;
@@ -77,7 +77,7 @@ begin
   FBestCut := MAX_WEIGHT;
 end;
 
-procedure TGWeightedGraph64.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
+procedure TGInt64Net.TNIMinCutHelper.ShrinkEdge(aSource, aTarget: SizeInt);
 var
   I: SizeInt;
   p: PNiEdge;
@@ -104,7 +104,7 @@ begin
     end;
 end;
 
-procedure TGWeightedGraph64.TNIMinCutHelper.ScanFirstSearch;
+procedure TGInt64Net.TNIMinCutHelper.ScanFirstSearch;
 var
   I: SizeInt;
   p: PNiEdge;
@@ -138,7 +138,7 @@ begin
     end;
 end;
 
-procedure TGWeightedGraph64.TNIMinCutHelper.Shrink;
+procedure TGInt64Net.TNIMinCutHelper.Shrink;
 var
   I: SizeInt;
   p: PNiEdge;
@@ -154,7 +154,7 @@ begin
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
-function TGWeightedGraph64.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph64): TWeight;
+function TGInt64Net.TNIMinCutHelper.GetMinCut(aGraph: TGInt64Net): TWeight;
 begin
   Init(aGraph);
   while FExistNodes.PopCount >= 2 do
@@ -162,7 +162,7 @@ begin
   Result := FBestCut;
 end;
 
-function TGWeightedGraph64.TNIMinCutHelper.GetMinCut(aGraph: TGWeightedGraph64; out aCut: TIntSet): TWeight;
+function TGInt64Net.TNIMinCutHelper.GetMinCut(aGraph: TGInt64Net; out aCut: TIntSet): TWeight;
 begin
   Init2(aGraph);
   while FExistNodes.PopCount >= 2 do

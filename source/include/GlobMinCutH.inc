@@ -48,12 +48,12 @@ type
     FBestSet: TIntSet;
     FBestCut: TWeight;
     procedure ClearMarks;
-    procedure Init(aGraph: TGWeightedGraph64);
-    procedure Init2(aGraph: TGWeightedGraph64);
+    procedure Init(aGraph: TGInt64Net);
+    procedure Init2(aGraph: TGInt64Net);
     procedure ShrinkEdge(aSource, aTarget: SizeInt);
     procedure ScanFirstSearch;
     procedure Shrink;
   public
-    function  GetMinCut(aGraph: TGWeightedGraph64): TWeight;
-    function  GetMinCut(aGraph: TGWeightedGraph64; out aCut: TIntSet): TWeight;
+    function  GetMinCut(aGraph: TGInt64Net): TWeight;
+    function  GetMinCut(aGraph: TGInt64Net; out aCut: TIntSet): TWeight;
   end;
