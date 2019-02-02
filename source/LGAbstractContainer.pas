@@ -129,7 +129,7 @@ type
   generic TGAbstractContainer<T> = class abstract(specialize TGEnumerable<T>, specialize IGContainer<T>)
   public
   type
-    TAbstractContainer = specialize TGAbstractContainer<T>;
+    TSpecContainer = specialize TGAbstractContainer<T>;
 
   protected
   type
@@ -139,17 +139,17 @@ type
 
     TContainerEnumerator = class(specialize TGEnumerator<T>)
     strict protected
-      FOwner: TAbstractContainer;
+      FOwner: TSpecContainer;
     public
-      constructor Create(c: TAbstractContainer);
+      constructor Create(c: TSpecContainer);
       destructor Destroy; override;
     end;
 
     TContainerEnumerable = class(specialize TGAutoEnumerable<T>)
     strict protected
-      FOwner: TAbstractContainer;
+      FOwner: TSpecContainer;
     public
-      constructor Create(c: TAbstractContainer);
+      constructor Create(c: TSpecContainer);
       destructor Destroy; override;
     end;
 
@@ -190,8 +190,8 @@ type
   generic TGAbstractCollection<T> = class abstract(specialize TGAbstractContainer<T>, specialize IGCollection<T>)
   public
   type
-    TAbstractCollection = specialize TGAbstractCollection<T>;
-    ICollection         = specialize IGCollection<T>;
+    TSpecCollection = specialize TGAbstractCollection<T>;
+    ICollection     = specialize IGCollection<T>;
 
   protected
     function  DoAdd(constref aValue: T): Boolean; virtual; abstract;
@@ -238,7 +238,7 @@ type
     function  ExtractIf(aTest: TNestTest): TArray;
   { will contain only those elements that are simultaneously contained in self and aCollection }
     procedure RetainAll(aCollection: ICollection);
-    function  Clone: TAbstractCollection; virtual; abstract;
+    function  Clone: TSpecCollection; virtual; abstract;
   end;
 
   generic TGThreadCollection<T> = class
@@ -266,7 +266,7 @@ type
   generic TGAbstractSet<T> = class abstract(specialize TGAbstractCollection<T>)
   public
   type
-    TAbstractSet = specialize TGAbstractSet<T>;
+    TSpecSet = specialize TGAbstractSet<T>;
 
   protected
   type
@@ -286,16 +286,16 @@ type
     end;
 
     function  DoAddAll(e: IEnumerable): SizeInt; override; overload;
-    procedure DoSymmetricSubtract(aSet: TAbstractSet);
+    procedure DoSymmetricSubtract(aSet: TSpecSet);
   public
-    function  IsSuperset(aSet: TAbstractSet): Boolean;
-    function  IsSubset(aSet: TAbstractSet): Boolean; inline;
-    function  IsEqual(aSet: TAbstractSet): Boolean;
-    function  Intersecting(aSet: TAbstractSet): Boolean; inline;
-    procedure Intersect(aSet: TAbstractSet);
-    procedure Join(aSet: TAbstractSet);
-    procedure Subtract(aSet: TAbstractSet);
-    procedure SymmetricSubtract(aSet: TAbstractSet);
+    function  IsSuperset(aSet: TSpecSet): Boolean;
+    function  IsSubset(aSet: TSpecSet): Boolean; inline;
+    function  IsEqual(aSet: TSpecSet): Boolean;
+    function  Intersecting(aSet: TSpecSet): Boolean; inline;
+    procedure Intersect(aSet: TSpecSet);
+    procedure Join(aSet: TSpecSet);
+    procedure Subtract(aSet: TSpecSet);
+    procedure SymmetricSubtract(aSet: TSpecSet);
   end;
 
   generic TGMultiSetEntry<T> = record
@@ -307,9 +307,9 @@ type
   generic TGAbstractMultiSet<T> = class abstract(specialize TGAbstractCollection<T>)
   public
   type
-    TEntry            = specialize TGMultiSetEntry<T>;
-    TAbstractMultiSet = specialize TGAbstractMultiSet<T>;
-    IEntryEnumerable  = specialize IGEnumerable<TEntry>;
+    TEntry           = specialize TGMultiSetEntry<T>;
+    TSpecMultiSet    = specialize TGAbstractMultiSet<T>;
+    IEntryEnumerable = specialize IGEnumerable<TEntry>;
 
   protected
   type
@@ -327,7 +327,7 @@ type
 
     TIntersectHelper = object
       FSet,
-      FOtherSet: TAbstractMultiSet;
+      FOtherSet: TSpecMultiSet;
       function OnIntersect(p: PEntry): Boolean;
     end;
 
@@ -344,16 +344,16 @@ type
     function  DoDoubleEntryCounters: SizeInt; virtual; abstract;
     function  GetDistinct: IEnumerable; virtual; abstract;  // distinct keys
     function  GetEntries: IEntryEnumerable; virtual; abstract;
-    procedure DoIntersect(aSet: TAbstractMultiSet); virtual; abstract;
+    procedure DoIntersect(aSet: TSpecMultiSet); virtual; abstract;
 
     function  GetCount: SizeInt; override;
     procedure DoJoinEntry(constref e: TEntry);
     procedure DoAddEntry(constref e: TEntry);
     function  GetKeyCount(const aKey: T): SizeInt;
     procedure SetKeyCount(const aKey: T; aValue: SizeInt);
-    procedure DoArithAdd(aSet: TAbstractMultiSet);
-    procedure DoArithSubtract(aSet: TAbstractMultiSet);
-    procedure DoSymmSubtract(aSet: TAbstractMultiSet);
+    procedure DoArithAdd(aSet: TSpecMultiSet);
+    procedure DoArithSubtract(aSet: TSpecMultiSet);
+    procedure DoSymmSubtract(aSet: TSpecMultiSet);
 
     function  DoAdd(constref aKey: T): Boolean; override;
     function  DoAddAll(e: IEnumerable): SizeInt; override; overload;
@@ -363,31 +363,31 @@ type
     function  Contains(constref aValue: T): Boolean; override;
   { returns True if multiplicity of an any key in self is greater then or equal to
     the multiplicity of that key in aSet }
-    function  IsSuperMultiSet(aSet: TAbstractMultiSet): Boolean;
+    function  IsSuperMultiSet(aSet: TSpecMultiSet): Boolean;
   { returns True if multiplicity of an any key in aSet is greater then or equal to
     the multiplicity of that key in self }
-    function  IsSubMultiSet(aSet: TAbstractMultiSet): Boolean;
+    function  IsSubMultiSet(aSet: TSpecMultiSet): Boolean;
   { returns True if the multiplicity of an any key in self is equal to the multiplicity of that key in aSet }
-    function  IsEqual(aSet: TAbstractMultiSet): Boolean;
-    function  Intersecting(aSet: TAbstractMultiSet): Boolean;
+    function  IsEqual(aSet: TSpecMultiSet): Boolean;
+    function  Intersecting(aSet: TSpecMultiSet): Boolean;
   { will contain only those keys that are simultaneously contained in self and in aSet;
     the multiplicity of a key becomes equal to the MINIMUM of the multiplicities of a key in self and aSet }
-    procedure Intersect(aSet: TAbstractMultiSet);
+    procedure Intersect(aSet: TSpecMultiSet);
   { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the MAXIMUM of the multiplicities of
     a key in self and aSet }
-    procedure Join(aSet: TAbstractMultiSet);
+    procedure Join(aSet: TSpecMultiSet);
   { will contain all keys that are contained in self or in aSet;
     the multiplicity of a key will become equal to the SUM of the multiplicities of a key in self and aSet }
-    procedure ArithmeticAdd(aSet: TAbstractMultiSet);
+    procedure ArithmeticAdd(aSet: TSpecMultiSet);
   { will contain only those keys whose multiplicity is greater then the multiplicity
     of that key in aSet; the multiplicity of a key will become equal to the difference of multiplicities
     of a key in self and aSet }
-    procedure ArithmeticSubtract(aSet: TAbstractMultiSet);
+    procedure ArithmeticSubtract(aSet: TSpecMultiSet);
   { will contain only those keys whose multiplicity is not equal to the multiplicity
     of that key in aSet; the multiplicity of a key will become equal to absolute value of difference
     of the multiplicities of a key in self and aSet }
-    procedure SymmetricSubtract(aSet: TAbstractMultiSet);
+    procedure SymmetricSubtract(aSet: TSpecMultiSet);
   { enumerates underlying set - distinct keys only }
     function  Distinct: IEnumerable;
     function  Entries: IEntryEnumerable;
@@ -426,7 +426,7 @@ type
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
-    TAbstractMap     = specialize TGAbstractMap<TKey, TValue>;
+    TSpecMap         = specialize TGAbstractMap<TKey, TValue>;
     TEntry           = specialize TGMapEntry<TKey, TValue>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
     IValueEnumerable = specialize IGEnumerable<TValue>;
@@ -443,7 +443,7 @@ type
 
   protected
   type
-    PEntry          = ^TEntry;
+    PEntry = ^TEntry;
 
     TExtractHelper = object
     private
@@ -457,25 +457,25 @@ type
 
     TCustomKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
     protected
-      FOwner: TAbstractMap;
+      FOwner: TSpecMap;
     public
-      constructor Create(aMap: TAbstractMap);
+      constructor Create(aMap: TSpecMap);
       destructor Destroy; override;
     end;
 
     TCustomValueEnumerable = class(specialize TGAutoEnumerable<TValue>)
     protected
-      FOwner: TAbstractMap;
+      FOwner: TSpecMap;
     public
-      constructor Create(aMap: TAbstractMap);
+      constructor Create(aMap: TSpecMap);
       destructor Destroy; override;
     end;
 
     TCustomEntryEnumerable = class(specialize TGAutoEnumerable<TEntry>)
     protected
-      FOwner: TAbstractMap;
+      FOwner: TSpecMap;
     public
-      constructor Create(aMap: TAbstractMap);
+      constructor Create(aMap: TSpecMap);
       destructor Destroy; override;
     end;
 
@@ -549,7 +549,7 @@ type
     function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
     function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
     procedure RetainAll({%H-}c: IKeyCollection);
-    function  Clone: TAbstractMap; virtual; abstract;
+    function  Clone: TSpecMap; virtual; abstract;
     function  Keys: IKeyEnumerable;
     function  Values: IValueEnumerable;
     function  Entries: IEntryEnumerable;
@@ -573,13 +573,13 @@ type
 
   protected
   type
-    TCustomValueEnumerator = specialize TGEnumerator<TValue>;
+    TSpecValueEnumerator = specialize TGEnumerator<TValue>;
 
-    TCustomValueSet = class abstract
+    TAbstractValueSet = class abstract
     protected
       function GetCount: SizeInt; virtual; abstract;
     public
-      function GetEnumerator: TCustomValueEnumerator; virtual; abstract;
+      function GetEnumerator: TSpecValueEnumerator; virtual; abstract;
       function ToArray: TValueArray;
       function Contains(constref aValue: TValue): Boolean; virtual; abstract;
       function Add(constref aValue: TValue): Boolean; virtual; abstract;
@@ -589,7 +589,7 @@ type
 
     TMMEntry = record
       Key: TKey;
-      Values: TCustomValueSet;
+      Values: TAbstractValueSet;
     end;
     PMMEntry = ^TMMEntry;
 
@@ -713,7 +713,7 @@ type
       constructor Create(constref aCol: TCol; constref aValue: TValue);
     end;
 
-    TAbstractTable2D    = TGAbstractTable2D;
+    TSpecTable2D        = TGAbstractTable2D;
     TValueArray         = array of TValue;
     IValueEnumerable    = specialize IGEnumerable<TValue>;
     IColEnumerable      = specialize IGEnumerable<TCol>;
@@ -769,10 +769,10 @@ type
     end;
     PRowEntry = ^TRowEntry;
 
-    TCustomValueEnumerable    = class abstract(specialize TGAutoEnumerable<TValue>);
-    TCustomRowDataEnumerable  = class abstract(specialize TGAutoEnumerable<TRowData>);
-    TCustomColDataEnumerable  = class abstract(specialize TGAutoEnumerable<TColData>);
-    TCustomCellDataEnumerable = class abstract(specialize TGAutoEnumerable<TCellData>);
+    TAutoValueEnumerable    = class abstract(specialize TGAutoEnumerable<TValue>);
+    TAutoRowDataEnumerable  = class abstract(specialize TGAutoEnumerable<TRowData>);
+    TAutoColDataEnumerable  = class abstract(specialize TGAutoEnumerable<TColData>);
+    TAutoCellDataEnumerable = class abstract(specialize TGAutoEnumerable<TCellData>);
 
   var
     FCellCount: SizeInt;
@@ -1426,7 +1426,7 @@ end;
 
 { TGAbstractContainer.TGContainerEnumerator }
 
-constructor TGAbstractContainer.TContainerEnumerator.Create(c: TAbstractContainer);
+constructor TGAbstractContainer.TContainerEnumerator.Create(c: TSpecContainer);
 begin
   FOwner := c;
 end;
@@ -1439,7 +1439,7 @@ end;
 
 { TGAbstractContainer.TContainerEnumerable }
 
-constructor TGAbstractContainer.TContainerEnumerable.Create(c: TAbstractContainer);
+constructor TGAbstractContainer.TContainerEnumerable.Create(c: TSpecContainer);
 begin
   inherited Create;
   FOwner := c;
@@ -1875,7 +1875,7 @@ begin
     Result := 0;
 end;
 
-procedure TGAbstractSet.DoSymmetricSubtract(aSet: TAbstractSet);
+procedure TGAbstractSet.DoSymmetricSubtract(aSet: TSpecSet);
 var
   v: T;
 begin
@@ -1889,7 +1889,7 @@ begin
     Clear;
 end;
 
-function TGAbstractSet.IsSuperset(aSet: TAbstractSet): Boolean;
+function TGAbstractSet.IsSuperset(aSet: TSpecSet): Boolean;
 begin
   if aSet <> Self then
     begin
@@ -1902,12 +1902,12 @@ begin
     Result := True;
 end;
 
-function TGAbstractSet.IsSubset(aSet: TAbstractSet): Boolean;
+function TGAbstractSet.IsSubset(aSet: TSpecSet): Boolean;
 begin
   Result := aSet.IsSuperset(Self);
 end;
 
-function TGAbstractSet.IsEqual(aSet: TAbstractSet): Boolean;
+function TGAbstractSet.IsEqual(aSet: TSpecSet): Boolean;
 begin
   if aSet <> Self then
     Result := (Count = aSet.Count) and ContainsAll(aSet)
@@ -1915,27 +1915,27 @@ begin
     Result := True;
 end;
 
-function TGAbstractSet.Intersecting(aSet: TAbstractSet): Boolean;
+function TGAbstractSet.Intersecting(aSet: TSpecSet): Boolean;
 begin
   Result := ContainsAny(aSet);
 end;
 
-procedure TGAbstractSet.Intersect(aSet: TAbstractSet);
+procedure TGAbstractSet.Intersect(aSet: TSpecSet);
 begin
   RetainAll(aSet);
 end;
 
-procedure TGAbstractSet.Join(aSet: TAbstractSet);
+procedure TGAbstractSet.Join(aSet: TSpecSet);
 begin
   AddAll(aSet);
 end;
 
-procedure TGAbstractSet.Subtract(aSet: TAbstractSet);
+procedure TGAbstractSet.Subtract(aSet: TSpecSet);
 begin
   RemoveAll(aSet);
 end;
 
-procedure TGAbstractSet.SymmetricSubtract(aSet: TAbstractSet);
+procedure TGAbstractSet.SymmetricSubtract(aSet: TSpecSet);
 begin
   CheckInIteration;
   DoSymmetricSubtract(aSet);
@@ -2071,7 +2071,7 @@ begin
     end;
 end;
 
-procedure TGAbstractMultiSet.DoArithAdd(aSet: TAbstractMultiSet);
+procedure TGAbstractMultiSet.DoArithAdd(aSet: TSpecMultiSet);
 var
   e: TEntry;
 begin
@@ -2082,7 +2082,7 @@ begin
     DoDoubleEntryCounters;
 end;
 
-procedure TGAbstractMultiSet.DoArithSubtract(aSet: TAbstractMultiSet);
+procedure TGAbstractMultiSet.DoArithSubtract(aSet: TSpecMultiSet);
 var
   e: TEntry;
 begin
@@ -2093,7 +2093,7 @@ begin
     Clear;
 end;
 
-procedure TGAbstractMultiSet.DoSymmSubtract(aSet: TAbstractMultiSet);
+procedure TGAbstractMultiSet.DoSymmSubtract(aSet: TSpecMultiSet);
 var
   e: TEntry;
 begin
@@ -2121,10 +2121,10 @@ var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TAbstractMultiSet then
+  if o is TSpecMultiSet then
     begin
       Result := ElemCount;
-      DoArithAdd(TAbstractMultiSet(o));
+      DoArithAdd(TSpecMultiSet(o));
       Result := ElemCount - Result;
     end
   else
@@ -2141,10 +2141,10 @@ var
   v: T;
 begin
   o := e._GetRef;
-  if o is TAbstractMultiSet then
+  if o is TSpecMultiSet then
     begin
       Result := ElemCount;
-      DoArithSubtract(TAbstractMultiSet(o));
+      DoArithSubtract(TSpecMultiSet(o));
       Result -= ElemCount;
     end
   else
@@ -2160,7 +2160,7 @@ begin
   Result := FindEntry(aValue) <> nil;
 end;
 
-function TGAbstractMultiSet.IsSuperMultiSet(aSet: TAbstractMultiSet): Boolean;
+function TGAbstractMultiSet.IsSuperMultiSet(aSet: TSpecMultiSet): Boolean;
 var
   e: TEntry;
 begin
@@ -2180,7 +2180,7 @@ begin
     Result := True;
 end;
 
-function TGAbstractMultiSet.IsSubMultiSet(aSet: TAbstractMultiSet): Boolean;
+function TGAbstractMultiSet.IsSubMultiSet(aSet: TSpecMultiSet): Boolean;
 var
   e: TEntry;
 begin
@@ -2200,7 +2200,7 @@ begin
     Result := True;
 end;
 
-function TGAbstractMultiSet.IsEqual(aSet: TAbstractMultiSet): Boolean;
+function TGAbstractMultiSet.IsEqual(aSet: TSpecMultiSet): Boolean;
 var
   e: TEntry;
 begin
@@ -2220,12 +2220,12 @@ begin
     Result := True;
 end;
 
-function TGAbstractMultiSet.Intersecting(aSet: TAbstractMultiSet): Boolean;
+function TGAbstractMultiSet.Intersecting(aSet: TSpecMultiSet): Boolean;
 begin
   Result := ContainsAny(aSet.Distinct);
 end;
 
-procedure TGAbstractMultiSet.Intersect(aSet: TAbstractMultiSet);
+procedure TGAbstractMultiSet.Intersect(aSet: TSpecMultiSet);
 begin
   if aSet <> Self then
     begin
@@ -2234,7 +2234,7 @@ begin
     end;
 end;
 
-procedure TGAbstractMultiSet.Join(aSet: TAbstractMultiSet);
+procedure TGAbstractMultiSet.Join(aSet: TSpecMultiSet);
 var
   e: TEntry;
 begin
@@ -2246,19 +2246,19 @@ begin
     end;
 end;
 
-procedure TGAbstractMultiSet.ArithmeticAdd(aSet: TAbstractMultiSet);
+procedure TGAbstractMultiSet.ArithmeticAdd(aSet: TSpecMultiSet);
 begin
   CheckInIteration;
   DoArithAdd(aSet);
 end;
 
-procedure TGAbstractMultiSet.ArithmeticSubtract(aSet: TAbstractMultiSet);
+procedure TGAbstractMultiSet.ArithmeticSubtract(aSet: TSpecMultiSet);
 begin
   CheckInIteration;
   DoArithSubtract(aSet);
 end;
 
-procedure TGAbstractMultiSet.SymmetricSubtract(aSet: TAbstractMultiSet);
+procedure TGAbstractMultiSet.SymmetricSubtract(aSet: TSpecMultiSet);
 begin
   CheckInIteration;
   DoSymmSubtract(aSet);
@@ -2336,7 +2336,7 @@ end;
 
 { TGAbstractMap.TCustomKeyEnumerable }
 
-constructor TGAbstractMap.TCustomKeyEnumerable.Create(aMap: TAbstractMap);
+constructor TGAbstractMap.TCustomKeyEnumerable.Create(aMap: TSpecMap);
 begin
   inherited Create;
   FOwner := aMap;
@@ -2350,7 +2350,7 @@ end;
 
 { TGAbstractMap.TCustomValueEnumerable }
 
-constructor TGAbstractMap.TCustomValueEnumerable.Create(aMap: TAbstractMap);
+constructor TGAbstractMap.TCustomValueEnumerable.Create(aMap: TSpecMap);
 begin
   inherited Create;
   FOwner := aMap;
@@ -2364,7 +2364,7 @@ end;
 
 { TGAbstractMap.TCustomEntryEnumerable }
 
-constructor TGAbstractMap.TCustomEntryEnumerable.Create(aMap: TAbstractMap);
+constructor TGAbstractMap.TCustomEntryEnumerable.Create(aMap: TSpecMap);
 begin
   inherited Create;
   FOwner := aMap;
@@ -2700,9 +2700,9 @@ begin
   Result := GetEntries;
 end;
 
-{ TGAbstractMultiMap.TCustomValueSet }
+{ TGAbstractMultiMap.TAbstractValueSet }
 
-function TGAbstractMultiMap.TCustomValueSet.ToArray: TValueArray;
+function TGAbstractMultiMap.TAbstractValueSet.ToArray: TValueArray;
 var
   I, Len: SizeInt;
 begin

@@ -723,8 +723,8 @@ begin
     CreateCopy(TAbstractHashSet(o))
   else
     begin
-      if o is TAbstractSet then
-        Create(TAbstractSet(o).Count)
+      if o is TSpecSet then
+        Create(TSpecSet(o).Count)
       else
         Create;
       DoAddAll(e);
@@ -764,8 +764,8 @@ var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TAbstractSet then
-    Create(TAbstractSet(o).Count, aLoadFactor)
+  if o is TSpecSet then
+    Create(TSpecSet(o).Count, aLoadFactor)
   else
     Create(aLoadFactor);
   DoAddAll(e);

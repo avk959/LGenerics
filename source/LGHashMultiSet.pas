@@ -106,7 +106,7 @@ type
     function  DoDoubleEntryCounters: SizeInt; override;
     function  GetDistinct: IEnumerable; override;  // distinct keys
     function  GetEntries: IEntryEnumerable; override;
-    procedure DoIntersect(aSet: TAbstractMultiSet); override;
+    procedure DoIntersect(aSet: TSpecMultiSet); override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -217,7 +217,7 @@ type
     function  DoRemove(constref aKey: T): Boolean; override;
     procedure DoClear; override;
     procedure EntryRemoved(p: PEntry);
-    procedure DoIntersect(aSet: TAbstractMultiSet); override;
+    procedure DoIntersect(aSet: TSpecMultiSet); override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -749,7 +749,7 @@ begin
   Result := TEntryEnumerable.Create(Self);
 end;
 
-procedure TGAbstractHashMultiSet.DoIntersect(aSet: TAbstractMultiSet);
+procedure TGAbstractHashMultiSet.DoIntersect(aSet: TSpecMultiSet);
 var
   I{%H-}: TIntersectHelper;
 begin
@@ -844,8 +844,8 @@ begin
     CreateCopy(TAbstractHashMultiSet(o))
   else
     begin
-      if o is TAbstractMultiSet then
-        Create(TAbstractMultiSet(o).EntryCount)
+      if o is TSpecMultiSet then
+        Create(TSpecMultiSet(o).EntryCount)
       else
         Create;
       DoAddAll(e);
@@ -885,8 +885,8 @@ var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TAbstractMultiSet then
-    Create(TAbstractMultiSet(o).EntryCount, aLoadFactor)
+  if o is TSpecMultiSet then
+    Create(TSpecMultiSet(o).EntryCount, aLoadFactor)
   else
     Create(aLoadFactor);
   DoAddAll(e);
@@ -1059,7 +1059,7 @@ begin
     p^.Key.Free;
 end;
 
-procedure TGCustomObjectHashMultiSet.DoIntersect(aSet: TAbstractMultiSet);
+procedure TGCustomObjectHashMultiSet.DoIntersect(aSet: TSpecMultiSet);
 var
   {%H-}I: TIntersectHelper;
 begin

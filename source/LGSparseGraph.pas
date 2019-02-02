@@ -38,7 +38,6 @@ uses
   LGVector,
   LGHashTable,
   LGHash,
-  LGHashMap,
   LGStrConst;
 
 type

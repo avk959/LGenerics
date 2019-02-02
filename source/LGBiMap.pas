@@ -82,7 +82,7 @@ type
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
-    THashBiMap       = specialize TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel>;
+    TSpecBiMap       = specialize TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel>;
     TEntry           = specialize TGMapEntry<TKey, TValue>;
     TInverseEntry    = specialize TGMapEntry<TValue, TKey>;
     IKeyEnumerable   = specialize IGEnumerable<TKey>;
@@ -262,7 +262,7 @@ type
     function  RemoveValues(e: IValueEnumerable): SizeInt;
     procedure RetainAll(c: IKeyCollection);
     procedure RetainAll(c: IValueCollection);
-    function  Clone: THashBiMap; virtual;
+    function  Clone: TSpecBiMap; virtual;
     function  Keys: IKeyEnumerable;
     function  Values: IValueEnumerable;
     function  Entries: IEntryEnumerable;
@@ -1241,9 +1241,9 @@ begin
   DoRetainAllVal(c);
 end;
 
-function TGHashBiMap.Clone: THashBiMap;
+function TGHashBiMap.Clone: TSpecBiMap;
 begin
-  Result := THashBiMap.CreateCopy(Self);
+  Result := TSpecBiMap.CreateCopy(Self);
 end;
 
 function TGHashBiMap.Keys: IKeyEnumerable;

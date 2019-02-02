@@ -47,7 +47,7 @@ type
     procedure SetItem(aIndex: SizeInt; const aValue: T); virtual;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
     function  InsertArray(aIndex: SizeInt; constref a: array of T): SizeInt;
-    function  InsertContainer(aIndex: SizeInt; aContainer: TAbstractContainer): SizeInt;
+    function  InsertContainer(aIndex: SizeInt; aContainer: TSpecContainer): SizeInt;
     function  InsertEnum(aIndex: SizeInt; e: IEnumerable): SizeInt;
     procedure FastSwap(L, R: SizeInt); inline;
     function  ExtractItem(aIndex: SizeInt): T;
@@ -930,7 +930,7 @@ begin
     Result := AppendArray(a);
 end;
 
-function TGVector.InsertContainer(aIndex: SizeInt; aContainer: TAbstractContainer): SizeInt;
+function TGVector.InsertContainer(aIndex: SizeInt; aContainer: TSpecContainer): SizeInt;
 var
   v: T;
 begin
@@ -965,8 +965,8 @@ var
   o: TObject;
 begin
   o := e._GetRef;
-  if o is TAbstractContainer then
-    Result := InsertContainer(aIndex, TAbstractContainer(o))
+  if o is TSpecContainer then
+    Result := InsertContainer(aIndex, TSpecContainer(o))
   else
     Result := InsertArray(aIndex, e.ToArray);
 end;

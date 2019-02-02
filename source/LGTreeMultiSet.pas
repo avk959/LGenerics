@@ -123,7 +123,7 @@ type
     function  DoDoubleEntryCounters: SizeInt; override;
     function  GetDistinct: IEnumerable; override;
     function  GetEntries: IEntryEnumerable; override;
-    procedure DoIntersect(aSet: TAbstractMultiSet); override;
+    procedure DoIntersect(aSet: TSpecMultiSet); override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -268,7 +268,7 @@ type
     function  DoRemove(constref aKey: T): Boolean; override;
     procedure DoClear; override;
     procedure EntryRemoved(p: PEntry);
-    procedure DoIntersect(aSet: TAbstractMultiSet); override;
+    procedure DoIntersect(aSet: TSpecMultiSet); override;
     function  DoRemoveIf(aTest: TTest): SizeInt; override;
     function  DoRemoveIf(aTest: TOnTest): SizeInt; override;
     function  DoRemoveIf(aTest: TNestTest): SizeInt; override;
@@ -717,7 +717,7 @@ begin
   Result := TEntryEnumerable.Create(Self);
 end;
 
-procedure TGAbstractTreeMultiSet.DoIntersect(aSet: TAbstractMultiSet);
+procedure TGAbstractTreeMultiSet.DoIntersect(aSet: TSpecMultiSet);
 var
   {%H-}I: TIntersectHelper;
 begin
@@ -968,8 +968,8 @@ begin
     CreateCopy(TGBaseTreeMultiSet(o))
   else
     begin
-      if o is TAbstractMultiSet then
-        Create(TAbstractMultiSet(o).EntryCount)
+      if o is TSpecMultiSet then
+        Create(TSpecMultiSet(o).EntryCount)
       else
         Create;
       DoAddAll(e);
@@ -1153,8 +1153,8 @@ begin
     CreateCopy(TGComparableTreeMultiSet(o))
   else
     begin
-      if o is TAbstractMultiSet then
-        Create(TAbstractMultiSet(o).EntryCount)
+      if o is TSpecMultiSet then
+        Create(TSpecMultiSet(o).EntryCount)
       else
         Create;
       DoAddAll(e);
@@ -1288,7 +1288,7 @@ begin
     p^.Key.Free;
 end;
 
-procedure TGObjectTreeMultiSet.DoIntersect(aSet: TAbstractMultiSet);
+procedure TGObjectTreeMultiSet.DoIntersect(aSet: TSpecMultiSet);
 var
   {%H-}I: TIntersectHelper;
 begin
@@ -1352,8 +1352,8 @@ begin
   else
     begin
       OwnsObjects := aOwnsObjects;
-      if o is TAbstractMultiSet then
-        Create(TAbstractMultiSet(o).EntryCount)
+      if o is TSpecMultiSet then
+        Create(TSpecMultiSet(o).EntryCount)
       else
         Create;
       DoAddAll(e);

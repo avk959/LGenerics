@@ -340,7 +340,7 @@ type
     function  FindLeftmost: PNode;
     function  FindRightmost: PNode;
     function  EnqueueArray(constref a: array of T): SizeInt;
-    function  EnqueueContainer(c: TAbstractContainer): SizeInt;
+    function  EnqueueContainer(c: TSpecContainer): SizeInt;
     function  EnqueueEnum(e: IEnumerable): SizeInt;
     function  DoEnqueue(constref aValue: T): PNode; virtual; abstract;
     procedure DoUpdate(aNode: PNode; constref aValue: T); virtual; abstract;
@@ -2067,7 +2067,7 @@ begin
     end;
 end;
 
-function TGCustomPairingHeap.EnqueueContainer(c: TAbstractContainer): SizeInt;
+function TGCustomPairingHeap.EnqueueContainer(c: TSpecContainer): SizeInt;
 var
   v: T;
 begin
@@ -2135,8 +2135,8 @@ begin
   if not InIteration then
     begin
       o := e._GetRef;
-      if o is TAbstractContainer then
-        Result := EnqueueContainer(TAbstractContainer(o))
+      if o is TSpecContainer then
+        Result := EnqueueContainer(TSpecContainer(o))
       else
         Result := EnqueueEnum(e);
     end
@@ -2221,7 +2221,7 @@ begin
   if o <> Self then
     begin
       CheckInIteration;
-      TAbstractContainer(o).CheckInIteration;
+      TSpecContainer(o).CheckInIteration;
       if o is TCustomPairingHeap then
         Result := DoMergeHeap(TCustomPairingHeap(o))
       else

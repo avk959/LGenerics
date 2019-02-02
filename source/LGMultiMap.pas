@@ -59,7 +59,7 @@ type
 
     TValueEnumerable = class(TCustomValueEnumerable)
     protected
-      FValueEnum: TCustomValueEnumerator;
+      FValueEnum: TSpecValueEnumerator;
       FEntryEnum: THashTable.TEnumerator;
       function  GetCurrent: TValue; override;
     public
@@ -71,7 +71,7 @@ type
 
     TEntryEnumerable = class(TCustomEntryEnumerable)
     protected
-      FValueEnum: TCustomValueEnumerator;
+      FValueEnum: TSpecValueEnumerator;
       FEntryEnum: THashTable.TEnumerator;
       function  GetCurrent: TEntry; override;
     public
@@ -103,7 +103,7 @@ type
     function  GetKeys: IKeyEnumerable; override;
     function  GetValues: IValueEnumerable; override;
     function  GetEntries: IEntryEnumerable; override;
-    function  CreateValueSet: TCustomValueSet; virtual; abstract;
+    function  CreateValueSet: TAbstractValueSet; virtual; abstract;
   public
     class function DefaultLoadFactor: Single; inline;
     class function MaxLoadFactor: Single; inline;
@@ -135,10 +135,10 @@ type
   type
     TTable = specialize TGHashTableLP<TValue, TValEntry, TValueEqRel>;
 
-    TValueSet = class(TCustomValueSet)
+    TValueSet = class(TAbstractValueSet)
     protected
     type
-      TEnumerator = class(TCustomValueEnumerator)
+      TEnumerator = class(TSpecValueEnumerator)
       protected
         FEnum: TTable.TEnumerator;
         function  GetCurrent: TValue; override;
@@ -158,14 +158,14 @@ type
     public
       constructor Create;
       destructor Destroy; override;
-      function  GetEnumerator: TCustomValueEnumerator; override;
+      function  GetEnumerator: TSpecValueEnumerator; override;
       function  Contains(constref aValue: TValue): Boolean; override;
       function  Add(constref aValue: TValue): Boolean; override;
       function  Remove(constref aValue: TValue): Boolean; override;
     end;
 
     function GetUniqueValues: Boolean; override;
-    function CreateValueSet: TCustomValueSet; override;
+    function CreateValueSet: TAbstractValueSet; override;
   public
     destructor Destroy; override;
   end;
@@ -198,12 +198,12 @@ type
     TNodeManager = specialize TGPageNodeManager<TNode>;
     PNodeManager = ^TNodeManager;
 
-    TValueSet = class(TCustomValueSet)
+    TValueSet = class(TAbstractValueSet)
     protected
     type
       TTree = specialize TGAvlTree2<TValue, TValEntry, TNodeManager, TValueCmpRel>;
 
-      TEnumerator = class(TCustomValueEnumerator)
+      TEnumerator = class(TSpecValueEnumerator)
       protected
         FEnum: TTree.TEnumerator;
         function  GetCurrent: TValue; override;
@@ -219,7 +219,7 @@ type
     public
       constructor Create(aNodeManager: TNodeManager);
       destructor Destroy; override;
-      function  GetEnumerator: TCustomValueEnumerator; override;
+      function  GetEnumerator: TSpecValueEnumerator; override;
       function  Contains(constref aValue: TValue): Boolean; override;
       function  Add(constref aValue: TValue): Boolean; override;
       function  Remove(constref aValue: TValue): Boolean; override;
@@ -229,7 +229,7 @@ type
     procedure DoClear; override;
     procedure DoTrimToFit; override;
     function  GetUniqueValues: Boolean; override;
-    function  CreateValueSet: TCustomValueSet; override;
+    function  CreateValueSet: TAbstractValueSet; override;
   public
     constructor Create;
     constructor Create(constref a: array of TEntry);
@@ -265,10 +265,10 @@ type
   type
     TValList = specialize TGSortedList2<TValue, TValueCmpRel>;
 
-    TValueSet = class(TCustomValueSet)
+    TValueSet = class(TAbstractValueSet)
     protected
     type
-      TEnumerator = class(TCustomValueEnumerator)
+      TEnumerator = class(TSpecValueEnumerator)
       protected
         FEnum: TValList.TEnumerator;
         function  GetCurrent: TValue; override;
@@ -286,7 +286,7 @@ type
     public
       constructor Create;
       destructor Destroy; override;
-      function  GetEnumerator: TCustomValueEnumerator; override;
+      function  GetEnumerator: TSpecValueEnumerator; override;
       procedure TrimToFit;
       function  Contains(constref aValue: TValue): Boolean; override;
       function  Add(constref aValue: TValue): Boolean; override;
@@ -295,7 +295,7 @@ type
 
     procedure DoTrimToFit; override;
     function  GetUniqueValues: Boolean; override;
-    function  CreateValueSet: TCustomValueSet; override;
+    function  CreateValueSet: TAbstractValueSet; override;
   public
     destructor Destroy; override;
   end;
@@ -583,7 +583,7 @@ begin
       begin
         if not FEntryEnum.MoveNext then
           exit(False);
-        FValueEnum := TCustomValueSet(FEntryEnum.Current^.Values).GetEnumerator;
+        FValueEnum := TAbstractValueSet(FEntryEnum.Current^.Values).GetEnumerator;
       end;
     Result := FValueEnum.MoveNext;
     if not Result then
@@ -786,7 +786,7 @@ begin
   inherited;
 end;
 
-function TGHashMultiMap.TValueSet.GetEnumerator: TCustomValueEnumerator;
+function TGHashMultiMap.TValueSet.GetEnumerator: TSpecValueEnumerator;
 begin
   Result := TEnumerator.Create(FTable);
 end;
@@ -822,7 +822,7 @@ begin
   Result := True;
 end;
 
-function TGHashMultiMap.CreateValueSet: TCustomValueSet;
+function TGHashMultiMap.CreateValueSet: TAbstractValueSet;
 begin
   Result := TValueSet.Create;
 end;
@@ -874,7 +874,7 @@ begin
   inherited;
 end;
 
-function TGTreeMultiMap.TValueSet.GetEnumerator: TCustomValueEnumerator;
+function TGTreeMultiMap.TValueSet.GetEnumerator: TSpecValueEnumerator;
 begin
   Result := TEnumerator.Create(FTree);
 end;
@@ -918,7 +918,7 @@ begin
   Result := True;
 end;
 
-function TGTreeMultiMap.CreateValueSet: TCustomValueSet;
+function TGTreeMultiMap.CreateValueSet: TAbstractValueSet;
 begin
   Result := TValueSet.Create(FNodeManager);
 end;
@@ -1011,7 +1011,7 @@ begin
   inherited;
 end;
 
-function TGListMultiMap.TValueSet.GetEnumerator: TCustomValueEnumerator;
+function TGListMultiMap.TValueSet.GetEnumerator: TSpecValueEnumerator;
 begin
   Result := TEnumerator.Create(Self);
 end;
@@ -1053,7 +1053,7 @@ begin
   Result := False;
 end;
 
-function TGListMultiMap.CreateValueSet: TCustomValueSet;
+function TGListMultiMap.CreateValueSet: TAbstractValueSet;
 begin
   Result := TValueSet.Create;
 end;

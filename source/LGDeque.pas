@@ -46,7 +46,7 @@ type
     function  PeekTail: T; inline;
     function  ExtractTail: T;
     function  AddArray2Head(constref a: array of T): SizeInt;
-    function  AddContainer2Head(aContainer: TAbstractContainer): SizeInt;
+    function  AddContainer2Head(aContainer: TSpecContainer): SizeInt;
     function  AddEnum2Head(e: IEnumerable): SizeInt;
     function  InternalIndex(aIndex: SizeInt): SizeInt; inline;
     function  FastGetItem(aIndex: SizeInt): T; inline;
@@ -493,7 +493,7 @@ begin
     end;
 end;
 
-function TGDeque.AddContainer2Head(aContainer: TAbstractContainer): SizeInt;
+function TGDeque.AddContainer2Head(aContainer: TSpecContainer): SizeInt;
 var
   HeadPos, c: SizeInt;
   v: T;
@@ -730,8 +730,8 @@ begin
   if not InIteration then
     begin
       o := e._GetRef;
-      if o is TAbstractContainer then
-        Result := AddContainer2Head(TAbstractContainer(o))
+      if o is TSpecContainer then
+        Result := AddContainer2Head(TSpecContainer(o))
       else
         Result := AddEnum2Head(e);
     end

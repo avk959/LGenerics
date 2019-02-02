@@ -962,8 +962,8 @@ begin
     CreateCopy(TGBaseTreeSet(o))
   else
     begin
-      if o is TAbstractSet then
-        Create(TAbstractSet(o).Count)
+      if o is TSpecSet then
+        Create(TSpecSet(o).Count)
       else
         Create;
       DoAddAll(e);
@@ -1112,8 +1112,8 @@ begin
     CreateCopy(TGComparableTreeSet(o))
   else
     begin
-      if o is TAbstractSet then
-        Create(TAbstractSet(o).Count)
+      if o is TSpecSet then
+        Create(TSpecSet(o).Count)
       else
         Create;
       DoAddAll(e);

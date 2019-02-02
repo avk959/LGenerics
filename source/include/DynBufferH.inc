@@ -73,7 +73,7 @@
     function  Append(constref aValue: T): SizeInt; inline;
     function  AppendArray(constref a: array of T): SizeInt;
     function  AppendEnum(e: IEnumerable): SizeInt;
-    function  AppendContainer(aContainer: TAbstractContainer): SizeInt;
+    function  AppendContainer(aContainer: TSpecContainer): SizeInt;
     function  AppendEnumerable(e: IEnumerable): SizeInt;
     function  GetReverse: IEnumerable;
     function  DoGetEnumerator: TSpecEnumerator; override;
@@ -215,7 +215,7 @@
     procedure ItemAdding; inline;
     procedure Append(constref aValue: T);
     function  AppendArray(constref a: array of T): SizeInt;
-    function  AppendContainer(aContainer: TAbstractContainer): SizeInt;
+    function  AppendContainer(aContainer: TSpecContainer): SizeInt;
     function  AppendEnum(e: IEnumerable): SizeInt;
     function  AppendEnumerable(e: IEnumerable): SizeInt;
     function  ExtractHead: T;
