@@ -1085,7 +1085,7 @@ class function TGArrayHelpUtil.CreateCopy(constref A: array of T): TArray;
 begin
   System.SetLength(Result, System.Length(A));
   if System.Length(Result) > 0 then
-    CopyItems(@A[0], @Result[0], System.Length(Result));
+    CopyItems(@A[0], PItem(Result), System.Length(Result));
 end;
 
 class function TGArrayHelpUtil.CreateReverseCopy(constref A: array of T): TArray;
