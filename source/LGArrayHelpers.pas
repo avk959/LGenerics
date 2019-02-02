@@ -750,36 +750,9 @@ type
                     static;
   end;
 
-  { TGNumArrayHelper: for numeric types only }
-  generic TGNumArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
+  { TGSimpleArrayHelper: for simple types only }
+  generic TGSimpleArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   private
-  type
-    TRange = record
-    strict private
-      FCurrent,
-      FLast,
-      FStep: T;
-      FInLoop: Boolean;
-    public
-      constructor Create(aFirst, aLast, aStep: T);
-      function GetEnumerator: TRange; inline;
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
-    TDownRange = record
-    strict private
-      FCurrent,
-      FLast,
-      FStep: T;
-      FInLoop: Boolean;
-    public
-      constructor Create(aFirst, aLast, aStep: T);
-      function GetEnumerator: TDownRange; inline;
-      function MoveNext: Boolean; inline;
-      property Current: T read FCurrent;
-    end;
-
     class function  CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
     class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -871,18 +844,50 @@ type
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   { copies only distinct values from A }
     class function  SelectDistinct(constref A: array of T): TArray; static;
-  { loop from aStart to aFinal with step aStep;
-    if aStep > T(0) then iteration count = Max(0, Int((aFinal - aStart + aStep)/aStep)),
+  end;
+
+  { TGNumArrayHelper: for numeric types only }
+  generic TGNumArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
+  private
+  type
+    TRange = record
+    strict private
+      FCurrent,
+      FLast,
+      FStep: T;
+      FInLoop: Boolean;
+    public
+      constructor Create(aFirst, aLast, aStep: T);
+      function GetEnumerator: TRange; inline;
+      function MoveNext: Boolean; inline;
+      property Current: T read FCurrent;
+    end;
+
+    TDownRange = record
+    strict private
+      FCurrent,
+      FLast,
+      FStep: T;
+      FInLoop: Boolean;
+    public
+      constructor Create(aFirst, aLast, aStep: T);
+      function GetEnumerator: TDownRange; inline;
+      function MoveNext: Boolean; inline;
+      property Current: T read FCurrent;
+    end;
+  public
+  { loop from aFrom to aTo with step aStep;
+    if aStep > T(0) then iteration count = Max(0, Int((aTo - aFrom + aStep)/aStep)),
     otherwise 0 }
-    class function Range(aStart, aFinal: T; aStep: T = T(1)): TRange; static; inline;
-  { loop from aStart down to aFinal with step aStep;
-    if aStep > T(0) then iteration count = Max(0, Int((aStart - aFinal + aStep)/aStep)),
+    class function Range(aFrom, aTo: T; aStep: T = T(1)): TRange; static; inline;
+  { loop from aFrom down to aDownTo with step aStep;
+    if aStep > T(0) then iteration count = Max(0, Int((aFrom - aDownTo + aStep)/aStep)),
     otherwise 0 }
-    class function DownRange(aStart, aFinal: T; aStep: T = T(1)): TDownRange; static; inline;
+    class function DownRange(aFrom, aDownTo: T; aStep: T = T(1)): TDownRange; static; inline;
   end;
 
   { TGOrdinalArrayHelper: for ordinal types only }
-  generic TGOrdinalArrayHelper<T> = class(specialize TGNumArrayHelper<T>)
+  generic TGOrdinalArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
   private
   type
     TMonotonicity = (moAsc, moDesc, moConst, moNone);
@@ -8194,69 +8199,9 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
-{ TGNumArrayHelper.TRange }
+{ TGSimpleArrayHelper }
 
-constructor TGNumArrayHelper.TRange.Create(aFirst, aLast, aStep: T);
-begin
-  FCurrent := aFirst;
-  FLast := aLast;
-  FStep := aStep;
-  FInLoop := False;
-end;
-
-function TGNumArrayHelper.TRange.GetEnumerator: TRange;
-begin
-  Result := Self;
-end;
-
-function TGNumArrayHelper.TRange.MoveNext: Boolean;
-begin
-  if FInLoop then
-    begin
-      Result := FLast - FCurrent >= FStep;
-      if Result then
-        FCurrent += FStep;
-    end
-  else
-    begin
-      Result := (FCurrent <= FLast) and (FStep > T(0));
-      FInLoop := True;
-    end;
-end;
-
-{ TGNumArrayHelper.TDownRange }
-
-constructor TGNumArrayHelper.TDownRange.Create(aFirst, aLast, aStep: T);
-begin
-  FCurrent := aFirst;
-  FLast := aLast;
-  FStep := aStep;
-  FInLoop := False;
-end;
-
-function TGNumArrayHelper.TDownRange.GetEnumerator: TDownRange;
-begin
-  Result := Self;
-end;
-
-function TGNumArrayHelper.TDownRange.MoveNext: Boolean;
-begin
-  if FInLoop then
-    begin
-      Result := FCurrent - FLast >= FStep;
-      if Result then
-        FCurrent -= FStep;
-    end
-  else
-    begin
-      Result := (FCurrent >= FLast) and (FStep > T(0));
-      FInLoop := True;
-    end;
-end;
-
-{ TGNumArrayHelper }
-
-class function TGNumArrayHelper.CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt;
+class function TGSimpleArrayHelper.CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt;
 begin
   Result := L;
   while (Result < R) and (A[Result] = A[Succ(Result)]) do
@@ -8276,7 +8221,7 @@ begin
     end;
 end;
 
-class procedure TGNumArrayHelper.InsertionSort(var A: array of T; L, R: SizeInt);
+class procedure TGSimpleArrayHelper.InsertionSort(var A: array of T; L, R: SizeInt);
 var
   I, J: SizeInt;
   v: T;
@@ -8294,7 +8239,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
@@ -8343,7 +8288,7 @@ begin
         exit(L);
 end;
 
-class function TGNumArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+class function TGSimpleArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
 var
   L, M: SizeInt;
 begin
@@ -8377,7 +8322,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+class function TGSimpleArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
 var
   L, M: SizeInt;
 begin
@@ -8411,7 +8356,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+class function TGSimpleArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
 begin
   //here R must be >= 0;
   if A[0] < A[R] then   //ascending
@@ -8433,7 +8378,7 @@ begin
       end;
 end;
 
-class procedure TGNumArrayHelper.DoHeapSort(A: PItem; R: SizeInt);
+class procedure TGSimpleArrayHelper.DoHeapSort(A: PItem; R: SizeInt);
 var
   I, Curr, Next: SizeInt;
   v: T;
@@ -8483,7 +8428,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.QSplitR(var A: array of T; L, R: SizeInt): TSortSplit;
+class function TGSimpleArrayHelper.QSplitR(var A: array of T; L, R: SizeInt): TSortSplit;
 var
   v, Pivot: T;
 begin
@@ -8508,7 +8453,7 @@ begin
   Result.Right := L;
 end;
 
-class procedure TGNumArrayHelper.DoQSort(var A: array of T; L, R: SizeInt);
+class procedure TGSimpleArrayHelper.DoQSort(var A: array of T; L, R: SizeInt);
 begin
   while R - L > QUICK_INSERT_CUTOFF do
     with QSplitR(A, L, R) do
@@ -8526,7 +8471,7 @@ begin
     InsertionSort(A, L, R);
 end;
 
-class function TGNumArrayHelper.MedianOf3(const v1, v2, v3: T): T;
+class function TGSimpleArrayHelper.MedianOf3(const v1, v2, v3: T): T;
 begin
   Result := v2;
   if v1 < Result then
@@ -8551,7 +8496,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.GetMo9Pivot(constref A: array of T; L, R: SizeInt): T;
+class function TGSimpleArrayHelper.GetMo9Pivot(constref A: array of T; L, R: SizeInt): T;
 begin
   if R - L > MEDIAN_OF9_CUTOFF then
     begin
@@ -8565,7 +8510,7 @@ begin
     Result := MedianOf3(A[L], A[L + Succ(R - L) shr 1], A[R]);
 end;
 
-class function TGNumArrayHelper.QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit;
+class function TGSimpleArrayHelper.QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit;
 var
   v, Pivot: T;
 begin
@@ -8589,7 +8534,7 @@ begin
   Result.Right := L;
 end;
 
-class procedure TGNumArrayHelper.DoIntroSort(var A: array of T; L, R, Ttl: SizeInt);
+class procedure TGSimpleArrayHelper.DoIntroSort(var A: array of T; L, R, Ttl: SizeInt);
 begin
   if R - L > QUICK_INSERT_CUTOFF then
     if Ttl > 0 then
@@ -8605,7 +8550,7 @@ begin
       InsertionSort(A, L, R);
 end;
 
-class function TGNumArrayHelper.DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit;
+class function TGSimpleArrayHelper.DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit;
 var
   v, Pivot1, Pivot2: T;
   pL, pR, I: SizeInt;
@@ -8676,7 +8621,7 @@ EndLoop:
   Result.Right := pR + 1;
 end;
 
-class procedure TGNumArrayHelper.DoDPQSort(var A: array of T; L, R: SizeInt);
+class procedure TGSimpleArrayHelper.DoDPQSort(var A: array of T; L, R: SizeInt);
 begin
   if R - L > DPQ_INSERT_CUTOFF then
     with DPQSplit(A, L, R) do
@@ -8691,7 +8636,7 @@ begin
       InsertionSort(A, L, R);
 end;
 
-class procedure TGNumArrayHelper.DoSwap(p: PItem; L, R: SizeInt);
+class procedure TGSimpleArrayHelper.DoSwap(p: PItem; L, R: SizeInt);
 var
   v: T;
 begin
@@ -8700,7 +8645,7 @@ begin
   p[R] := v;
 end;
 
-class procedure TGNumArrayHelper.DoReverse(var A: array of T; L, R: SizeInt);
+class procedure TGSimpleArrayHelper.DoReverse(var A: array of T; L, R: SizeInt);
 var
   v0, v1, v2, v3: T;
 begin
@@ -8752,7 +8697,7 @@ begin
   end;
 end;
 
-class function TGNumArrayHelper.QSelectR(var A: array of T; N: SizeInt): T;
+class function TGSimpleArrayHelper.QSelectR(var A: array of T; N: SizeInt): T;
 var
   L, R, pL, pR: SizeInt;
   v, Pivot: T;
@@ -8792,7 +8737,7 @@ begin
   Result := A[N];
 end;
 
-class procedure TGNumArrayHelper.Reverse(var A: array of T);
+class procedure TGSimpleArrayHelper.Reverse(var A: array of T);
 var
   R: SizeInt;
 begin
@@ -8801,7 +8746,7 @@ begin
     DoReverse(A, 0, R);
 end;
 
-class procedure TGNumArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
+class procedure TGSimpleArrayHelper.RotateLeft(var A: array of T; aDist: SizeInt);
 var
   Len: SizeInt;
 begin
@@ -8815,7 +8760,7 @@ begin
   DoReverse(A, 0, Pred(Len));
 end;
 
-class procedure TGNumArrayHelper.RotateRight(var A: array of T; aDist: SizeInt);
+class procedure TGSimpleArrayHelper.RotateRight(var A: array of T; aDist: SizeInt);
 begin
   if (aDist = 0) or (Abs(aDist) >= System.Length(A)) then
     exit;
@@ -8825,7 +8770,7 @@ begin
     RotateLeft(A, -aDist)
 end;
 
-class function TGNumArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.SequentSearch(constref A: array of T; constref aValue: T): SizeInt;
 begin
   for Result := 0 to System.High(A) do
     if aValue = A[Result] then
@@ -8833,14 +8778,14 @@ begin
   Result := -1;
 end;
 
-class function TGNumArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
 begin
   Result := High(A);
   if Result >= 0 then
     Result := DoBinSearch(@A[0], Result, aValue);
 end;
 
-class function TGNumArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
+class function TGSimpleArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
 var
   hi: SizeInt;
 begin
@@ -8854,7 +8799,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
+class function TGSimpleArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -8875,7 +8820,7 @@ begin
     Result := R;
 end;
 
-class function TGNumArrayHelper.IndexOfMax(constref A: array of T): SizeInt;
+class function TGSimpleArrayHelper.IndexOfMax(constref A: array of T): SizeInt;
 var
   R, I: SizeInt;
   v: T;
@@ -8896,7 +8841,7 @@ begin
     Result := R;
 end;
 
-class function TGNumArrayHelper.GetMin(constref A: array of T): TOptional;
+class function TGSimpleArrayHelper.GetMin(constref A: array of T): TOptional;
 var
   v: T;
 begin
@@ -8904,7 +8849,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNumArrayHelper.GetMax(constref A: array of T): TOptional;
+class function TGSimpleArrayHelper.GetMax(constref A: array of T): TOptional;
 var
   v: T;
 begin
@@ -8912,7 +8857,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNumArrayHelper.FindMin(constref A: array of T; out aValue: T): Boolean;
+class function TGSimpleArrayHelper.FindMin(constref A: array of T; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -8927,7 +8872,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.FindMax(constref A: array of T; out aValue: T): Boolean;
+class function TGSimpleArrayHelper.FindMax(constref A: array of T; out aValue: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -8942,7 +8887,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean;
+class function TGSimpleArrayHelper.FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -8961,7 +8906,7 @@ begin
     end;
 end;
 
-class function TGNumArrayHelper.FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T): Boolean;
+class function TGSimpleArrayHelper.FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T): Boolean;
 var
   R: SizeInt;
 begin
@@ -8976,7 +8921,7 @@ begin
   Result := True;
 end;
 
-class function TGNumArrayHelper.NthSmallest(var A: array of T; N: SizeInt): TOptional;
+class function TGSimpleArrayHelper.NthSmallest(var A: array of T; N: SizeInt): TOptional;
 var
   v: T;
 begin
@@ -8984,12 +8929,12 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNumArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean;
+class function TGSimpleArrayHelper.FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean;
 begin
   Result := FindNthSmallest(CreateCopy(A), N, aValue);
 end;
 
-class function TGNumArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt): TOptional;
+class function TGSimpleArrayHelper.NthSmallestND(constref A: array of T; N: SizeInt): TOptional;
 var
   v: T;
 begin
@@ -8997,7 +8942,7 @@ begin
     Result.Assign(v);
 end;
 
-class function TGNumArrayHelper.NextPermutation2Asc(var A: array of T): Boolean;
+class function TGSimpleArrayHelper.NextPermutation2Asc(var A: array of T): Boolean;
 var
   I, J, R: SizeInt;
 begin
@@ -9020,7 +8965,7 @@ begin
   Result := True;
 end;
 
-class function TGNumArrayHelper.NextPermutation2Desc(var A: array of T): Boolean;
+class function TGSimpleArrayHelper.NextPermutation2Desc(var A: array of T): Boolean;
 var
   I, J, R: SizeInt;
 begin
@@ -9043,7 +8988,7 @@ begin
   Result := True;
 end;
 
-class function TGNumArrayHelper.IsNonDescending(constref A: array of T): Boolean;
+class function TGSimpleArrayHelper.IsNonDescending(constref A: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -9053,7 +8998,7 @@ begin
   Result := True;
 end;
 
-class function TGNumArrayHelper.IsStrictAscending(constref A: array of T): Boolean;
+class function TGSimpleArrayHelper.IsStrictAscending(constref A: array of T): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -9069,7 +9014,7 @@ begin
     Result := False;
 end;
 
-class function TGNumArrayHelper.IsNonAscending(constref A: array of T): Boolean;
+class function TGSimpleArrayHelper.IsNonAscending(constref A: array of T): Boolean;
 var
   I: SizeInt;
 begin
@@ -9079,7 +9024,7 @@ begin
   Result := True;
 end;
 
-class function TGNumArrayHelper.IsStrictDescending(constref A: array of T): Boolean;
+class function TGSimpleArrayHelper.IsStrictDescending(constref A: array of T): Boolean;
 var
   I, R: SizeInt;
 begin
@@ -9095,7 +9040,7 @@ begin
     Result := False;
 end;
 
-class function TGNumArrayHelper.Same(constref A, B: array of T): Boolean;
+class function TGSimpleArrayHelper.Same(constref A, B: array of T): Boolean;
 var
   R, I: SizeInt;
 begin
@@ -9108,7 +9053,7 @@ begin
   Result := True;
 end;
 
-class procedure TGNumArrayHelper.QuickSort(var A: array of T; o: TSortOrder);
+class procedure TGSimpleArrayHelper.QuickSort(var A: array of T; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -9125,7 +9070,7 @@ begin
         Reverse(A);
 end;
 
-class procedure TGNumArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
+class procedure TGSimpleArrayHelper.IntroSort(var A: array of T; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -9142,7 +9087,7 @@ begin
         Reverse(A);
 end;
 
-class procedure TGNumArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
+class procedure TGSimpleArrayHelper.DualPivotQuickSort(var A: array of T; o: TSortOrder);
 var
   R: SizeInt;
 begin
@@ -9159,18 +9104,18 @@ begin
         Reverse(A);
 end;
 
-class procedure TGNumArrayHelper.Sort(var A: array of T; o: TSortOrder);
+class procedure TGSimpleArrayHelper.Sort(var A: array of T; o: TSortOrder);
 begin
   IntroSort(A, o);
 end;
 
-class function TGNumArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
+class function TGSimpleArrayHelper.Sorted(constref A: array of T; o: TSortOrder): TArray;
 begin
   Result := CreateCopy(A);
   Sort(Result, o);
 end;
 
-class function TGNumArrayHelper.SelectDistinct(constref A: array of T): TArray;
+class function TGSimpleArrayHelper.SelectDistinct(constref A: array of T): TArray;
 var
   I, J, Hi: SizeInt;
 begin
@@ -9190,14 +9135,74 @@ begin
   System.SetLength(Result, Succ(I));
 end;
 
-class function TGNumArrayHelper.Range(aStart, aFinal: T; aStep: T): TRange;
+{ TGNumArrayHelper.TRange }
+
+constructor TGNumArrayHelper.TRange.Create(aFirst, aLast, aStep: T);
 begin
-  Result := TRange.Create(aStart, aFinal, aStep);
+  FCurrent := aFirst;
+  FLast := aLast;
+  FStep := aStep;
+  FInLoop := False;
 end;
 
-class function TGNumArrayHelper.DownRange(aStart, aFinal: T; aStep: T): TDownRange;
+function TGNumArrayHelper.TRange.GetEnumerator: TRange;
 begin
-  Result := TDownRange.Create(aStart, aFinal, aStep);
+  Result := Self;
+end;
+
+function TGNumArrayHelper.TRange.MoveNext: Boolean;
+begin
+  if FInLoop then
+    begin
+      Result := FLast - FCurrent >= FStep;
+      if Result then
+        FCurrent += FStep;
+    end
+  else
+    begin
+      Result := (FCurrent <= FLast) and (FStep > T(0));
+      FInLoop := True;
+    end;
+end;
+
+{ TGNumArrayHelper.TDownRange }
+
+constructor TGNumArrayHelper.TDownRange.Create(aFirst, aLast, aStep: T);
+begin
+  FCurrent := aFirst;
+  FLast := aLast;
+  FStep := aStep;
+  FInLoop := False;
+end;
+
+function TGNumArrayHelper.TDownRange.GetEnumerator: TDownRange;
+begin
+  Result := Self;
+end;
+
+function TGNumArrayHelper.TDownRange.MoveNext: Boolean;
+begin
+  if FInLoop then
+    begin
+      Result := FCurrent - FLast >= FStep;
+      if Result then
+        FCurrent -= FStep;
+    end
+  else
+    begin
+      Result := (FCurrent >= FLast) and (FStep > T(0));
+      FInLoop := True;
+    end;
+end;
+
+class function TGNumArrayHelper.Range(aFrom, aTo: T; aStep: T): TRange;
+begin
+  Result := TRange.Create(aFrom, aTo, aStep);
+end;
+
+class function TGNumArrayHelper.DownRange(aFrom, aDownTo: T; aStep: T): TDownRange;
+begin
+  Result := TDownRange.Create(aFrom, aDownTo, aStep);
 end;
 
 { TGOrdinalArrayHelper }
