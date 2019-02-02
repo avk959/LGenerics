@@ -393,6 +393,8 @@ type
     function  Bsf: SizeInt;
   { returns the highest index of the set bit, -1, if no bit is set }
     function  Bsr: SizeInt;
+  { returns the lowest index of the open bit, -1, if all bits are set }
+    function  Lob: SizeInt;
     function  Intersecting(constref aValue: TBoolVector): Boolean;
   { returns the number of bits in the intersection with aValue }
     function  IntersectionPop(constref aValue: TBoolVector): SizeInt;
@@ -2161,6 +2163,16 @@ begin
   for I := System.High(FBits) downto 0 do
     if FBits[I] <> 0 then
       exit(I shl INT_SIZE_LOG + BsrValue(FBits[I]));
+  Result := -1;
+end;
+
+function TBoolVector.Lob: SizeInt;
+var
+  I: SizeInt;
+begin
+  for I := 0 to System.High(FBits) do
+    if FBits[I] <> High(SizeUInt) then
+      exit(I shl INT_SIZE_LOG + BsfValue(not FBits[I]));
   Result := -1;
 end;
 
