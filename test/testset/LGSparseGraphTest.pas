@@ -1,6 +1,7 @@
 unit LGSparseGraphTest;
 
 {$mode objfpc}{$H+}
+{$MODESWITCH NESTEDPROCVARS}
 
 interface
 
@@ -73,9 +74,13 @@ type
     procedure IsBipartite;
     procedure IsBipartiteDirect;
     procedure DfsTraversal;
+    procedure DfsTraversalNest;
     procedure DfsTraversalDirect;
+    procedure DfsTraversalDirectNest;
     procedure BfsTraversal;
+    procedure BfsTraversalNest;
     procedure BfsTraversalDirect;
+    procedure BfsTraversalDirectNest;
     procedure ShortestPaths;
     procedure ShortestPathsDirect;
     procedure Eccentricity;
@@ -821,6 +826,37 @@ begin
   AssertTrue(FDone.IsEmpty);
 end;
 
+procedure TSparseGraphTest.DfsTraversalNest;
+var
+  Ref: TGraphRef;
+  g: TGraph;
+  vCount: SizeInt;
+  Found,
+  Done: TBoolVector;
+  function VertFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+  begin
+    Found[aNode] := False;
+    Result := True;
+  end;
+  function VertDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+  begin
+    Done[aIndex] := False;
+    Result := True;
+  end;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  vCount := g.VertexCount;
+  AssertTrue(vCount = 13);
+  Found.InitRange(vCount);
+  Done.InitRange(vCount);
+  AssertTrue(Found.PopCount = vCount);
+  AssertTrue(Done.PopCount = vCount);
+  AssertTrue(g.DfsTraversal(0, @VertFound, @VertDone) = vCount);
+  AssertTrue(Found.IsEmpty);
+  AssertTrue(Done.IsEmpty);
+end;
+
 procedure TSparseGraphTest.DfsTraversalDirect;
 var
   Ref: TDiGraphRef;
@@ -844,6 +880,41 @@ begin
   AssertTrue(FDone[8]);
 end;
 
+procedure TSparseGraphTest.DfsTraversalDirectNest;
+var
+  Ref: TDiGraphRef;
+  g: TDiGraph;
+  vCount: SizeInt;
+  Found,
+  Done: TBoolVector;
+  function VertFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+  begin
+    Found[aNode] := False;
+    Result := True;
+  end;
+  function VertDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+  begin
+    Done[aIndex] := False;
+    Result := True;
+  end;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  vCount := g.VertexCount;
+  AssertTrue(vCount = 13);
+  Found.InitRange(vCount);
+  Done.InitRange(vCount);
+  AssertTrue(Found.PopCount = vCount);
+  AssertTrue(Done.PopCount = vCount);
+  AssertTrue(g.DfsTraversal(0, @VertFound, @VertDone) = vCount - 2);
+  AssertTrue(Found.PopCount = 2);
+  AssertTrue(Found[7]);
+  AssertTrue(Found[8]);
+  AssertTrue(Done.PopCount = 2);
+  AssertTrue(Done[7]);
+  AssertTrue(Done[8]);
+end;
+
 procedure TSparseGraphTest.BfsTraversal;
 var
   Ref: TGraphRef;
@@ -857,9 +928,41 @@ begin
   FFound.InitRange(vCount);
   FDone.InitRange(vCount);
   AssertTrue(FFound.PopCount = vCount);
+  AssertTrue(FDone.PopCount = vCount);
   AssertTrue(g.BfsTraversal(0, @vFound, @vDone) = vCount);
   AssertTrue(FFound.IsEmpty);
   AssertTrue(FDone.IsEmpty);
+end;
+
+procedure TSparseGraphTest.BfsTraversalNest;
+var
+  Ref: TGraphRef;
+  g: TGraph;
+  vCount: SizeInt;
+  Found,
+  Done: TBoolVector;
+  function VertFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+  begin
+    Found[aNode] := False;
+    Result := True;
+  end;
+  function VertDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+  begin
+    Done[aIndex] := False;
+    Result := True;
+  end;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  vCount := g.VertexCount;
+  AssertTrue(vCount = 13);
+  Found.InitRange(vCount);
+  Done.InitRange(vCount);
+  AssertTrue(Found.PopCount = vCount);
+  AssertTrue(Done.PopCount = vCount);
+  AssertTrue(g.BfsTraversal(0, @VertFound, @VertDone) = vCount);
+  AssertTrue(Found.IsEmpty);
+  AssertTrue(Done.IsEmpty);
 end;
 
 procedure TSparseGraphTest.BfsTraversalDirect;
@@ -874,6 +977,8 @@ begin
   AssertTrue(vCount = 13);
   FFound.InitRange(vCount);
   FDone.InitRange(vCount);
+  AssertTrue(FFound.PopCount = vCount);
+  AssertTrue(FDone.PopCount = vCount);
   AssertTrue(g.BfsTraversal(0, @vFound, @vDone) = vCount - 2);
   AssertTrue(FFound.PopCount = 2);
   AssertTrue(FFound[7]);
@@ -881,6 +986,41 @@ begin
   AssertTrue(FDone.PopCount = 2);
   AssertTrue(FDone[7]);
   AssertTrue(FDone[8]);
+end;
+
+procedure TSparseGraphTest.BfsTraversalDirectNest;
+var
+  Ref: TDiGraphRef;
+  g: TDiGraph;
+  vCount: SizeInt;
+  Found,
+  Done: TBoolVector;
+  function VertFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+  begin
+    Found[aNode] := False;
+    Result := True;
+  end;
+  function VertDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+  begin
+    Done[aIndex] := False;
+    Result := True;
+  end;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  vCount := g.VertexCount;
+  AssertTrue(vCount = 13);
+  Found.InitRange(vCount);
+  Done.InitRange(vCount);
+  AssertTrue(Found.PopCount = vCount);
+  AssertTrue(Done.PopCount = vCount);
+  AssertTrue(g.BfsTraversal(0, @VertFound, @VertDone) = vCount - 2);
+  AssertTrue(Found.PopCount = 2);
+  AssertTrue(Found[7]);
+  AssertTrue(Found[8]);
+  AssertTrue(Done.PopCount = 2);
+  AssertTrue(Done[7]);
+  AssertTrue(Done[8]);
 end;
 
 procedure TSparseGraphTest.ShortestPaths;
