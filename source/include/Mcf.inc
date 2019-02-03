@@ -665,7 +665,7 @@ var
   NeedUpdate: Boolean = True;
 begin
   repeat
-    FEpsilon := cMax(FEpsilon div ALPHA, 1);
+    FEpsilon := CostMax(FEpsilon div ALPHA, 1);
     if NeedUpdate then
       PriceUpdate;
     InitPhase;

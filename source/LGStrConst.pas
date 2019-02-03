@@ -66,6 +66,7 @@ resourcestring
   SEInputMatrixTrivial     = 'Input matrix is trivial';
   SENonSquareInputMatrix   = 'Input matrix is not square';
   SEInputMatrixNegElem     = 'Input matrix contains negative element';
+  SEInvalidTreeInst        = 'Invalid tree instance';
 
 implementation
 

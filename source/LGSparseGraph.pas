@@ -253,6 +253,7 @@ type
     end;
 
     TAdjEnumArray = array of TAdjEnumerator;
+
   protected
     function  GetEdgeDataPtr(aSrc, aDst: SizeInt): PEdgeData; inline;
     procedure CheckIndexRange(aIndex: SizeInt);
@@ -276,6 +277,8 @@ type
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; virtual; abstract;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
+    class function TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
+    class function TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
   public
   type
     TEdge = record
@@ -365,12 +368,11 @@ type
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
-    class function cMin(L, R: TCost): TCost; static; inline;
-    class function cMax(L, R: TCost): TCost; static; inline;
+    class function CostMin(L, R: TCost): TCost; static; inline;
+    class function CostMax(L, R: TCost): TCost; static; inline;
     class function BitMatrixSizeMax: SizeInt; static; inline;
+  { returns path from tree root to aValue }
     class function TreePathTo(const aTree: TIntArray; aValue: SizeInt): TIntArray; static;
-    class function TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
-    class function TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -1563,7 +1565,54 @@ begin
     end;
 end;
 
-class function TGSparseGraph.cMin(L, R: TCost): TCost;
+class function TGSparseGraph.TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
+var
+  v: TIntVector;
+  I, Len: SizeInt;
+begin
+  I := aTo;
+  Len := System.Length(aTree);
+  while I >= 0 do
+    begin
+      if I < System.Length(aTree) then
+        v.Add(I)
+      else
+        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+      if I = aFrom then
+        break;
+      I := aTree[I];
+      Dec(Len);
+      if Len < 0 then
+        raise EGraphError.Create(SEInvalidTreeInst);
+    end;
+  v.Add(aTo);
+  Result := v.ToArray;
+  TIntHelper.Reverse(Result);
+end;
+
+class function TGSparseGraph.TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
+var
+  I, Len: SizeInt;
+begin
+  Result := 0;
+  I := aTo;
+  Len := System.Length(aTree);
+  while I >= 0 do
+    begin
+      if I < System.Length(aTree) then
+        Inc(Result)
+      else
+        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
+      if I = aFrom then
+        break;
+      I := aTree[I];
+      Dec(Len);
+      if Len < 0 then
+        raise EGraphError.Create(SEInvalidTreeInst);
+    end;
+end;
+
+class function TGSparseGraph.CostMin(L, R: TCost): TCost;
 begin
   if L <= R then
     Result := L
@@ -1571,7 +1620,7 @@ begin
     Result := R;
 end;
 
-class function TGSparseGraph.cMax(L, R: TCost): TCost;
+class function TGSparseGraph.CostMax(L, R: TCost): TCost;
 begin
   if L >= R then
     Result := L
@@ -1587,7 +1636,9 @@ end;
 class function TGSparseGraph.TreePathTo(const aTree: TIntArray; aValue: SizeInt): TIntArray;
 var
   v: TIntVector;
+  Len: SizeInt;
 begin
+  Len := System.Length(aTree);
   while aValue >= 0 do
     begin
       if aValue < System.Length(aTree) then
@@ -1595,48 +1646,12 @@ begin
       else
         raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[aValue]);
       aValue := aTree[aValue];
+      Dec(Len);
+      if Len < 0 then
+        raise EGraphError.Create(SEInvalidTreeInst);
     end;
   Result := v.ToArray;
   TIntHelper.Reverse(Result);
-end;
-
-class function TGSparseGraph.TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
-var
-  I: SizeInt;
-  v: TIntVector;
-begin
-  I := aTo;
-  while I >= 0 do
-    begin
-      if I < System.Length(aTree) then
-        v.Add(I)
-      else
-        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
-      if I = aFrom then
-        break;
-      I := aTree[I];
-    end;
-  v.Add(aTo);
-  Result := v.ToArray;
-  TIntHelper.Reverse(Result);
-end;
-
-class function TGSparseGraph.TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
-var
-  I: SizeInt;
-begin
-  Result := 0;
-  I := aTo;
-  while I >= 0 do
-    begin
-      if I < System.Length(aTree) then
-        Inc(Result)
-      else
-        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
-      if I = aFrom then
-        break;
-      I := aTree[I];
-    end;
 end;
 
 constructor TGSparseGraph.Create;
