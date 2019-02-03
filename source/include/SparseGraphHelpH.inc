@@ -541,5 +541,7 @@ type
     class function  MaxBipMatch(aGraph: TGraph; const w, g: TIntArray): TEdgeArray; static;
   end;
 
+  function CostMin(L, R: TCost): TCost; inline;
+  function CostMax(L, R: TCost): TCost; inline;
 
 

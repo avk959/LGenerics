@@ -59,7 +59,9 @@ type
   TIntDeque        = specialize TGLiteDeque<SizeInt>;
 
   TOnNodeVisit     = function (aSender: TObject; aIndex: SizeInt): Boolean of object;
+  TNestNodeVisit   = function (aSender: TObject; aIndex: SizeInt): Boolean is nested;
   TOnNodeFound     = function (aSender: TObject; aNode, aParent: SizeInt): Boolean of object;
+  TNestNodeFound   = function (aSender: TObject; aNode, aParent: SizeInt): Boolean is nested;
   TOnSetFound      = procedure(const aSet: TIntArray; var aCancel: Boolean) of object;
   TCost            = Int64;
   TVertexColor     = type Byte;
@@ -368,11 +370,11 @@ type
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
-    class function CostMin(L, R: TCost): TCost; static; inline;
-    class function CostMax(L, R: TCost): TCost; static; inline;
     class function BitMatrixSizeMax: SizeInt; static; inline;
   { returns path from tree root to aValue }
     class function TreePathTo(const aTree: TIntArray; aValue: SizeInt): TIntArray; static;
+    function IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
+    function VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -436,8 +438,6 @@ type
     function  GetEdgeDataI(aSrc, aDst: SizeInt; out aValue: TEdgeData): Boolean;
     function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
     function  SetEdgeDataI(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean;
-    function  IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
-    function  VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
   { returns adjacency matrix;
     warning: maximum matrix size limited, see TBitMatrixSizeMax }
     function  CreateAdjacencyMatrix: TAdjacencyMatrix;
@@ -468,6 +468,8 @@ type
     if aOnFound or aOnDone returns False then traversal stops }
     function DfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt; inline;
     function DfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt;
+    function DfsTraversal(constref aRoot: TVertex; aOnFound: TNestNodeFound; aOnDone: TNestNodeVisit): SizeInt; inline;
+    function DfsTraversalI(aRoot: SizeInt; aOnFound: TNestNodeFound; aOnDone: TNestNodeVisit): SizeInt;
   { returns the DFS traversal tree(forest, if not connected) started from vertex with index 0;
     each element of Result contains the index of its parent in tree(or -1 if it is root) }
     function DfsTree: TIntArray;
@@ -476,6 +478,8 @@ type
     if aOnFound or aOnDone returns False then traversal stops}
     function BfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt; inline;
     function BfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt;
+    function BfsTraversal(constref aRoot: TVertex; aOnFound: TNestNodeFound; aOnDone: TNestNodeVisit): SizeInt; inline;
+    function BfsTraversalI(aRoot: SizeInt; aOnFound: TNestNodeFound; aOnDone: TNestNodeVisit): SizeInt;
   { returns the BFS traversal tree(forest, if not connected) started from vertex with index 0;
     each element of Result contains the index of its parent (or -1 if it is root) }
     function BfsTree: TIntArray;
@@ -744,6 +748,22 @@ implementation
 
 uses
   bufstream;
+
+function CostMin(L, R: TCost): TCost;
+begin
+  if L <= R then
+    Result := L
+  else
+    Result := R;
+end;
+
+function CostMax(L, R: TCost): TCost;
+begin
+  if L >= R then
+    Result := L
+  else
+    Result := R;
+end;
 
 { TIntEdge }
 
@@ -1612,22 +1632,6 @@ begin
     end;
 end;
 
-class function TGSparseGraph.CostMin(L, R: TCost): TCost;
-begin
-  if L <= R then
-    Result := L
-  else
-    Result := R;
-end;
-
-class function TGSparseGraph.CostMax(L, R: TCost): TCost;
-begin
-  if L >= R then
-    Result := L
-  else
-    Result := R;
-end;
-
 class function TGSparseGraph.BitMatrixSizeMax: SizeInt;
 begin
   Result := TSquareBitMatrix.MaxSize;
@@ -1667,6 +1671,24 @@ destructor TGSparseGraph.Destroy;
 begin
   FDescription.Free;
   inherited;
+end;
+
+function TGSparseGraph.IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, aIdxPath.Length);
+  for I := 0 to Pred(aIdxPath.Length) do
+    Result[I] := Items[aIdxPath[I]];
+end;
+
+function TGSparseGraph.VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
+var
+  I: SizeInt;
+begin
+  Result{%H-}.Length := System.Length(aVertPath);
+  for I := 0 to Pred(Result.Length) do
+    Result[I] := IndexOf(aVertPath[I]);
 end;
 
 function TGSparseGraph.IsEmpty: Boolean;
@@ -2060,24 +2082,6 @@ begin
     Result := False;
 end;
 
-function TGSparseGraph.IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
-var
-  I: SizeInt;
-begin
-  System.SetLength(Result, aIdxPath.Length);
-  for I := 0 to Pred(aIdxPath.Length) do
-    Result[I] := Items[aIdxPath[I]];
-end;
-
-function TGSparseGraph.VertexPath2IndexPath(const aVertPath: TVertexArray): TIntArray;
-var
-  I: SizeInt;
-begin
-  Result{%H-}.Length := System.Length(aVertPath);
-  for I := 0 to Pred(Result.Length) do
-    Result[I] := IndexOf(aVertPath[I]);
-end;
-
 function TGSparseGraph.CreateAdjacencyMatrix: TAdjacencyMatrix;
 var
   m: TSquareBitMatrix;
@@ -2244,7 +2248,7 @@ function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFo
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnFound, aOnDone);
 end;
-
+{$PUSH}{$MACRO ON}
 function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound; aOnDone: TOnNodeVisit): SizeInt;
 var
   Stack: TIntArray;
@@ -2253,6 +2257,7 @@ var
   Next: SizeInt;
   sTop: SizeInt = -1;
 begin
+{$DEFINE DfsWithVisitors :=
   Result := 0;
   CheckIndexRange(aRoot);
   Inc(Result);
@@ -2286,9 +2291,27 @@ begin
             exit;
           Dec(sTop);
         end;
-    end;
+    end}
+  DfsWithVisitors;
 end;
 
+function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnFound: TNestNodeFound;
+  aOnDone: TNestNodeVisit): SizeInt;
+begin
+  Result := DfsTraversalI(IndexOf(aRoot), aOnFound, aOnDone);
+end;
+
+function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnFound: TNestNodeFound; aOnDone: TNestNodeVisit): SizeInt;
+var
+  Stack: TIntArray;
+  Visited: TBitVector;
+  AdjEnums: TAdjEnumArray;
+  Next: SizeInt;
+  sTop: SizeInt = -1;
+begin
+  DfsWithVisitors;
+end;
+{$UNDEF DfsWithVisitors}{$POP}
 function TGSparseGraph.DfsTree: TIntArray;
 var
   Stack: TSimpleStack;
@@ -2327,7 +2350,7 @@ function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFo
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnFound, aOnDone);
 end;
-
+{$PUSH}{$MACRO ON}
 function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound; aOnDone: TOnNodeVisit): SizeInt;
 var
   Queue: TIntArray;
@@ -2336,6 +2359,7 @@ var
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
+{$DEFINE BfsWithVisitors :=
   Result := 0;
   CheckIndexRange(aRoot);
   Inc(Result);
@@ -2362,9 +2386,27 @@ begin
           end;
       if Assigned(aOnDone) and not aOnDone(Self, aRoot) then
         exit;
-    end;
+    end}
+  BfsWithVisitors;
 end;
 
+function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnFound: TNestNodeFound;
+  aOnDone: TNestNodeVisit): SizeInt;
+begin
+  Result := BfsTraversalI(IndexOf(aRoot), aOnFound, aOnDone);
+end;
+
+function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnFound: TNestNodeFound; aOnDone: TNestNodeVisit): SizeInt;
+var
+  Queue: TIntArray;
+  Visited: TBitVector;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  BfsWithVisitors;
+end;
+{$UNDEF BfsWithVisitors}{$POP}
 function TGSparseGraph.BfsTree: TIntArray;
 var
   Queue: TIntArray;
