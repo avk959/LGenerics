@@ -110,8 +110,9 @@ type
   generic TGAdjList<T> = record   //for internal use only
   public
   type
-    TAdjItem = specialize TGAdjItem<T>;
-    PAdjItem = ^TAdjItem;
+    TAdjItem      = specialize TGAdjItem<T>;
+    PAdjItem      = ^TAdjItem;
+    TAdjItemArray = array of TAdjItem;
 
     TEnumerator = record
     private
@@ -124,11 +125,7 @@ type
     end;
 
   private
-  type
-    TAdjItemArray = array of TAdjItem;
-
-  var
-    FList: TAdjItemArray;
+    FItems: TAdjItemArray;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     procedure Expand; inline;
@@ -804,12 +801,12 @@ end;
 
 function TGAdjList.GetCapacity: SizeInt;
 begin
-  Result := System.Length(FList);
+  Result := System.Length(FItems);
 end;
 
 procedure TGAdjList.Expand;
 begin
-  System.SetLength(FList, Capacity + GRAPH_ADJLIST_GROW);
+  System.SetLength(FItems, Capacity + GRAPH_ADJLIST_GROW);
 end;
 
 function TGAdjList.DoFind(aValue: SizeInt): SizeInt;
@@ -817,19 +814,19 @@ var
   I: SizeInt;
 begin
   for I := 0 to Pred(Count) do
-    if FList[I].Destination = aValue then
+    if FItems[I].Destination = aValue then
       exit(I);
   Result := NULL_INDEX;
 end;
 
 procedure TGAdjList.DoRemove(aIndex: SizeInt);
 begin
-  FList[aIndex] := Default(TAdjItem);
+  FItems[aIndex] := Default(TAdjItem);
   Dec(FCount);
   if aIndex < Count then
     begin
-      FList[aIndex] := FList[Count];
-      FList[Count] := Default(TAdjItem);
+      FItems[aIndex] := FItems[Count];
+      FItems[Count] := Default(TAdjItem);
     end;
 end;
 
@@ -840,19 +837,19 @@ end;
 
 class operator TGAdjList.Copy(constref aSrc: TGAdjList; var aDst: TGAdjList);
 begin
-  aDst.FList := System.Copy(aSrc.FList);
+  aDst.FItems := System.Copy(aSrc.FItems);
   aDst.FCount := aSrc.Count;
 end;
 
 function TGAdjList.GetEnumerator: TEnumerator;
 begin
-  Result.pCurr := PAdjItem(Pointer(FList)) - Ord(Count > 0);
-  Result.pLast := PAdjItem(Pointer(FList)) + Pred(Count) and (-SizeInt(Count > 0));
+  Result.pCurr := PAdjItem(Pointer(FItems)) - Ord(Count > 0);
+  Result.pLast := PAdjItem(Pointer(FItems)) + Pred(Count) and (-SizeInt(Count > 0));
 end;
 
 function TGAdjList.ToArray: TAdjItemArray;
 begin
-  Result := System.Copy(FList, 0, Count);
+  Result := System.Copy(FItems, 0, Count);
 end;
 
 function TGAdjList.IsEmpty: Boolean;
@@ -867,7 +864,7 @@ end;
 
 procedure TGAdjList.Clear;
 begin
-  FList := nil;
+  FItems := nil;
   FCount := 0;
 end;
 
@@ -876,13 +873,13 @@ var
   I: SizeInt;
 begin
   for I := 0 to Pred(Count) do
-    FList[I] := Default(TAdjItem);
+    FItems[I] := Default(TAdjItem);
   FCount := 0;
 end;
 
 procedure TGAdjList.TrimToFit;
 begin
-  System.SetLength(FList, Count);
+  System.SetLength(FItems, Count);
 end;
 
 function TGAdjList.Contains(aDst: SizeInt): Boolean;
@@ -901,9 +898,9 @@ begin
   for I := 0 to Pred(aList.Count) do
     begin
       Found := False;
-      v := aList.FList[I].Key;
+      v := aList.FItems[I].Key;
       for J := 0 to Pred(Count) do
-        if FList[J].Key = v then
+        if FItems[J].Key = v then
           begin
             Found := True;
             break;
@@ -930,7 +927,7 @@ begin
       Pos := Count;
       Inc(FCount);
     end;
-  p := @FList[Pos];
+  p := @FItems[Pos];
 end;
 
 function TGAdjList.Find(aDst: SizeInt): PAdjItem;
@@ -942,7 +939,7 @@ begin
     begin
       Pos := DoFind(aDst);
       if Pos >= 0 then
-        Result := @FList[Pos];
+        Result := @FItems[Pos];
     end;
 end;
 
@@ -950,7 +947,7 @@ function TGAdjList.FindFirst(out aValue: SizeInt): Boolean;
 begin
   Result := Count <> 0;
   if Result then
-    aValue := FList[0].Destination;
+    aValue := FItems[0].Destination;
 end;
 
 function TGAdjList.Add(constref aItem: TAdjItem): Boolean;
@@ -963,7 +960,7 @@ begin
     begin
       if Count >= Capacity then
         Expand;
-      FList[Count] := aItem;
+      FItems[Count] := aItem;
       Inc(FCount);
     end;
 end;
