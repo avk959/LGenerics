@@ -285,8 +285,8 @@ type
       Source,               //index of source vertex
       Destination: SizeInt; //index of target vertex
       Data: TEdgeData;
-      constructor Create(aSrc: SizeInt; p: PAdjItem);
-      constructor Create(aSrc, aDst: SizeInt; constref d: TEdgeData);
+      constructor Create(aSrc: SizeInt; aItem: PAdjItem);
+      constructor Create(aSrc, aDst: SizeInt; constref aData: TEdgeData);
     end;
 
     TIncidentEdge = record
@@ -1027,18 +1027,18 @@ end;
 
 { TGSparseGraph.TEdge }
 
-constructor TGSparseGraph.TEdge.Create(aSrc: SizeInt; p: PAdjItem);
+constructor TGSparseGraph.TEdge.Create(aSrc: SizeInt; aItem: PAdjItem);
 begin
   Source := aSrc;
-  Destination := p^.Destination;
-  Data := p^.Data;
+  Destination := aItem^.Destination;
+  Data := aItem^.Data;
 end;
 
-constructor TGSparseGraph.TEdge.Create(aSrc, aDst: SizeInt; constref d: TEdgeData);
+constructor TGSparseGraph.TEdge.Create(aSrc, aDst: SizeInt; constref aData: TEdgeData);
 begin
   Source := aSrc;
   Destination := aDst;
-  Data := d;
+  Data := aData;
 end;
 
 { TGSparseGraph.TAdjEnumerator }
