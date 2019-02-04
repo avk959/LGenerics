@@ -279,8 +279,8 @@ type
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; virtual; abstract;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
-    class function TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
-    class function TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
+    class function TreeExtractCycle(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
+    class function TreeCycleLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
   public
   type
     TEdge = record
@@ -1585,7 +1585,7 @@ begin
     end;
 end;
 
-class function TGSparseGraph.TreePathFromTo(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
+class function TGSparseGraph.TreeExtractCycle(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
 var
   v: TIntVector;
   I, Len: SizeInt;
@@ -1610,7 +1610,7 @@ begin
   TIntHelper.Reverse(Result);
 end;
 
-class function TGSparseGraph.TreePathLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
+class function TGSparseGraph.TreeCycleLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
 var
   I, Len: SizeInt;
 begin

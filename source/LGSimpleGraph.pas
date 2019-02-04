@@ -161,7 +161,7 @@ type
   { returns copy of the source graph }
     function  Clone: TGSimpleGraph;
   { returns graph of connected component that contains aVertex }
-    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph;
+    function  SeparateGraph(constref aVertex: TVertex): TGSimpleGraph; //todo: CreateSeparateGraph ???
     function  SeparateGraphI(aIndex: SizeInt): TGSimpleGraph;
   { returns a subgraph induced by the vertices whose indices are contained in the array aVertexList }
     function  InducedSubgraph(const aVertexList: TIntArray): TGSimpleGraph;
@@ -954,7 +954,7 @@ begin
         else
           if Parents[aRoot] <> Next then
             begin
-              aCycle := TreePathFromTo(Parents, Next, aRoot);
+              aCycle := TreeExtractCycle(Parents, Next, aRoot);
               exit(True);
             end;
       end
@@ -1959,7 +1959,7 @@ begin
                 end
               else
                 if (Parents[Curr] <> Next) and EdgeSet.Add(Curr, Next) then
-                  aCycles.Add(TreePathFromTo(Parents, Next, Curr));
+                  aCycles.Add(TreeExtractCycle(Parents, Next, Curr));
             end
           else
             Stack.Pop;
@@ -1996,7 +1996,7 @@ begin
                 end
               else
                 if (Parents[Curr] <> Next) and EdgeSet.Add(Curr, Next) then
-                  aCycleLens.Add(TreePathLen(Parents, Next, Curr));
+                  aCycleLens.Add(TreeCycleLen(Parents, Next, Curr));
             end
           else
             Stack.Pop;

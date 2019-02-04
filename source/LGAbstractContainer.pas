@@ -561,7 +561,7 @@ type
 
   { TGAbstractMultiMap: multimap abstract ancestor class }
   generic TGAbstractMultiMap<TKey, TValue> = class abstract(TSimpleIterable)
-  {must be  generic TGAbstractMultiMap<TKey, TValue> = class abstract(
+  {must be generic TGAbstractMultiMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
   type
