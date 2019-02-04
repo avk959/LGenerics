@@ -4,7 +4,7 @@
   Started as a self-education project, it now seems quite comfortable and fast.
   In order to use it (FPC 3.1.1 and higher and Lazarus 1.9.0 and higher):
   
-  - open and compile package LGenerics/packages/LGenerics.lpk.
+  - open and compile package lgenerics/LGenerics.lpk.
   
   - add LGenerics package to project dependencies.
 #### Implemented primitives:
