@@ -21,13 +21,16 @@
       <FormatVersion Value="2"/>
       <Modes Count="0"/>
     </RunParams>
-    <RequiredPackages Count="2">
+    <RequiredPackages Count="3">
       <Item1>
-        <PackageName Value="LCLBase"/>
+        <PackageName Value="LGenerics"/>
       </Item1>
       <Item2>
-        <PackageName Value="FCL"/>
+        <PackageName Value="LCLBase"/>
       </Item2>
+      <Item3>
+        <PackageName Value="FCL"/>
+      </Item3>
     </RequiredPackages>
     <Units Count="31">
       <Unit0>
@@ -163,8 +166,8 @@
       <Filename Value="bin\$(TargetCPU)-$(TargetOS)/AllTests"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir);..\..\testset;..\..\..\source\include"/>
-      <OtherUnitFiles Value="..\..\testset;..\..\..\source"/>
+      <IncludeFiles Value="$(ProjOutDir)"/>
+      <OtherUnitFiles Value="..\..\testset"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <CodeGeneration>

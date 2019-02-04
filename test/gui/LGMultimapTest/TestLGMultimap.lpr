@@ -3,7 +3,7 @@ program TestLGMultimap;
 {$mode objfpc}{$H+}
 
 uses
-  Interfaces, Forms, LGMultiMap, GuiTestRunner, LGMultimapTest;
+  Interfaces, Forms, GuiTestRunner, LGMultimapTest;
 
 {$R *.res}
 
