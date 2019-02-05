@@ -114,9 +114,6 @@ type
     FBits: TBits;
     function  GetBit(aIndex: SizeInt): Boolean; inline;
     procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
-    class function  BsfValue(aValue: SizeUInt): SizeInt; static; inline;
-    class function  BsrValue(aValue: SizeUInt): SizeInt; static; inline;
-    class procedure ClearBit(aIndex: SizeInt; var aValue: SizeUInt); static; inline;
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
@@ -127,9 +124,9 @@ type
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
   { returns index of the least significant bit }
-    function  Bsf: SizeInt; inline;
+    function  Bsf: SizeInt;
   { returns index of the most significant bit }
-    function  Bsr: SizeInt; inline;
+    function  Bsr: SizeInt;
     function  Intersecting(constref aValue: TBits256): Boolean;
   { returns the number of bits in the intersection with aValue }
     function  IntersectionPop(constref aValue: TBits256): SizeInt;
@@ -139,11 +136,11 @@ type
     procedure Join(constref aValue: TBits256);
     function  Union(constref aValue: TBits256): TBits256; inline;
     procedure Subtract(constref aValue: TBits256); inline;
-    function  Difference(constref aValue: TBits256): TBits256; inline;
+    function  Difference(constref aValue: TBits256): TBits256;
     procedure Intersect(constref aValue: TBits256); inline;
-    function  Intersection(constref aValue: TBits256): TBits256; inline;
+    function  Intersection(constref aValue: TBits256): TBits256;
   { returns count of set bits }
-    function  PopCount: SizeInt; inline;
+    function  PopCount: SizeInt;
     property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 

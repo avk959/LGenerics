@@ -157,10 +157,10 @@ type
     FItCounter: Integer;
     function  GetInIteration: Boolean; inline;
   protected
-    procedure CapacityExceedError(aValue: SizeInt); inline;
-    procedure AccessEmptyError; inline;
-    procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
-    procedure UpdateLockError; inline;
+    procedure CapacityExceedError(aValue: SizeInt);
+    procedure AccessEmptyError;
+    procedure IndexOutOfBoundError(aIndex: SizeInt);
+    procedure UpdateLockError;
     procedure CheckInIteration; inline;
     procedure BeginIteration;
     procedure EndIteration;

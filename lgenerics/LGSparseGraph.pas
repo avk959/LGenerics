@@ -24,7 +24,7 @@ unit LGSparseGraph;
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 {$INLINE ON}{$WARN 6058 off : }
-
+{$WARN 5024 off : Parameter "$1" not used}
 interface
 
 uses
@@ -394,7 +394,7 @@ type
   structural management utilities
 ***********************************************************************************************************}
   { returns True and vertex index, if it was added, False otherwise }
-    function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; inline;
+    function  AddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean;
     function  AddVertex(constref aVertex: TVertex): Boolean;
   { returns count of added vertices }
     function  AddVertices(const aVertices: TVertexArray): SizeInt;
@@ -414,14 +414,14 @@ type
   { if contains an edge (aSrc, aDst) then removes it and returns True,
     otherwise returns False }
     function  RemoveEdge(constref aSrc, aDst: TVertex): Boolean; inline;
-    function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
+    function  RemoveEdgeI(aSrc, aDst: SizeInt): Boolean;
   { if contains an edge (aSrc, aDst) then contracts it and returns True(aSrc remains, aDst removes);
     otherwise returns False, slow }
     function  ContractEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContractEdgeI(aSrc, aDst: SizeInt): Boolean;
     function  ContainsEdge(constref aSrc, aDst: TVertex): Boolean; inline;
     function  ContainsEdgeI(aSrc, aDst: SizeInt): Boolean;
-    function  IndexOf(constref aVertex: TVertex): SizeInt; inline;
+    function  IndexOf(constref aVertex: TVertex): SizeInt;
     function  Adjacent(constref aSrc, aDst: TVertex): Boolean; inline;
     function  AdjacentI(aSrc, aDst: SizeInt): Boolean;
   { enumerates indices of adjacent vertices of aVertex }
@@ -544,7 +544,7 @@ type
     function  Graph2Dot(aGraph: TGraph): string; virtual;
     procedure WriteEdges(aGraph: TGraph; aList: TStrings) virtual; abstract;
     function  DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): string; virtual;
-    function  SizeDefined: Boolean; inline;
+    function  SizeDefined: Boolean;
   public
     procedure SaveToStream(aGraph: TGraph; aStream: TStream);
     procedure SaveToFile(aGraph: TGraph; const aFileName: string);
@@ -4517,7 +4517,8 @@ end;
 constructor TGPairHeapMin.Create(aSize: SizeInt);
 begin
   System.SetLength(FNodeList, aSize);
-  MakeEmpty;
+  FRoot := nil;
+  FCount := 0;
 end;
 
 procedure TGPairHeapMin.MakeEmpty;
@@ -4670,7 +4671,8 @@ end;
 constructor TGPairHeapMax.Create(aSize: SizeInt);
 begin
   System.SetLength(FNodeList, aSize);
-  MakeEmpty;
+  FRoot := nil;
+  FCount := 0;
 end;
 
 procedure TGPairHeapMax.MakeEmpty;

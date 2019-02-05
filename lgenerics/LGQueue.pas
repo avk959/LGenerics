@@ -690,7 +690,8 @@ end;
 
 class operator TGLiteObjectQueue.Finalize(var q: TGLiteObjectQueue);
 begin
-  q.Clear;
+  q.CheckFreeItems;
+  q.FQueue.Clear;
 end;
 
 class operator TGLiteObjectQueue.Copy(constref aSrc: TGLiteObjectQueue; var aDst: TGLiteObjectQueue);

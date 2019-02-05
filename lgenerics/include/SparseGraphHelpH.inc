@@ -233,7 +233,7 @@ type
     procedure ExtractNode(aNode: PNode);
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
-    class procedure CutNode(aNode: PNode); static; inline;
+    class procedure CutNode(aNode: PNode); static;
   public
   type
     PItem = ^T;
@@ -269,12 +269,12 @@ type
     FRoot: PNode;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    function  NewNode(constref aValue: T; aHandle: SizeInt): PNode; inline;
+    function  NewNode(constref aValue: T; aHandle: SizeInt): PNode;
     function  DequeueItem: T;
     procedure RootMerge(aNode: PNode); inline;
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
-    class procedure CutNode(aNode: PNode); static; inline;
+    class procedure CutNode(aNode: PNode); static;
   public
   type
     PItem = ^T;
@@ -384,12 +384,12 @@ type
     TWeightItem = record
       Index: SizeInt;
       Weight: TWeight;
-      class operator = (constref L, R: TWeightItem): Boolean; inline;
-      class operator <>(constref L, R: TWeightItem): Boolean; inline;
-      class operator > (constref L, R: TWeightItem): Boolean; inline;
-      class operator < (constref L, R: TWeightItem): Boolean; inline;
-      class operator >=(constref L, R: TWeightItem): Boolean; inline;
-      class operator <=(constref L, R: TWeightItem): Boolean; inline;
+      class operator = (constref L, R: TWeightItem): Boolean;
+      class operator <>(constref L, R: TWeightItem): Boolean;
+      class operator > (constref L, R: TWeightItem): Boolean;
+      class operator < (constref L, R: TWeightItem): Boolean;
+      class operator >=(constref L, R: TWeightItem): Boolean;
+      class operator <=(constref L, R: TWeightItem): Boolean;
       constructor Create(aIndex: SizeInt; w: TWeight);
       property Key: SizeInt read Index;
     end;
@@ -398,12 +398,12 @@ type
       Index: SizeInt;
       Rank,
       Weight: TWeight;
-      class operator = (constref L, R: TRankItem): Boolean; inline;
-      class operator <>(constref L, R: TRankItem): Boolean; inline;
-      class operator > (constref L, R: TRankItem): Boolean; inline;
-      class operator < (constref L, R: TRankItem): Boolean; inline;
-      class operator >=(constref L, R: TRankItem): Boolean; inline;
-      class operator <=(constref L, R: TRankItem): Boolean; inline;
+      class operator = (constref L, R: TRankItem): Boolean;
+      class operator <>(constref L, R: TRankItem): Boolean;
+      class operator > (constref L, R: TRankItem): Boolean;
+      class operator < (constref L, R: TRankItem): Boolean;
+      class operator >=(constref L, R: TRankItem): Boolean;
+      class operator <=(constref L, R: TRankItem): Boolean;
       constructor Create(aIndex: SizeInt; aRank, aWeight: TWeight);
     end;
 
@@ -520,11 +520,11 @@ type
     class function  JohnsonApsp(aGraph: TGraph; out aPaths: TApspMatrix): Boolean; static;
     class function  BfmtApsp(aGraph: TGraph; aDirect: Boolean; out aPaths: TApspMatrix): Boolean; static;
   { creates array of length aLen and fills with InfWeight }
-    class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static; inline;
+    class function  CreateWeightArray(aLen: SizeInt): TWeightArray; static;
   { creates array of length aLen and fills array with NegInfWeight }
-    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static; inline;
+    class function  CreateWeightArrayNI(aLen: SizeInt): TWeightArray; static;
   { creates array of length aLen and fills array with ZeroWeight }
-    class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static; inline;
+    class function  CreateWeightArrayZ(aLen: SizeInt): TWeightArray; static;
   { resizes array to length aLen and fills array with aValue }
     class procedure ResizeAndFill(var a: TWeightArray; aLen: SizeInt; aValue: TWeight); static;
     class function  CreateWeightsMatrix(aGraph: TGraph): TWeightMatrix; static;

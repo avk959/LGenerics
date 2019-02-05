@@ -20,8 +20,7 @@
 unit LGSimpleGraph;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
-{$WARN 5024 off : Parameter "$1" not used}
+{$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 

@@ -48,11 +48,11 @@ type
     function  AddArray2Head(constref a: array of T): SizeInt;
     function  AddContainer2Head(aContainer: TSpecContainer): SizeInt;
     function  AddEnum2Head(e: IEnumerable): SizeInt;
-    function  InternalIndex(aIndex: SizeInt): SizeInt; inline;
-    function  FastGetItem(aIndex: SizeInt): T; inline;
-    procedure FastSetItem(aIndex: SizeInt; aValue: T); inline;
+    function  InternalIndex(aIndex: SizeInt): SizeInt;
+    function  FastGetItem(aIndex: SizeInt): T;
+    procedure FastSetItem(aIndex: SizeInt; aValue: T);
     procedure FastSwap(L, R: SizeInt);
-    function  GetItem(aIndex: SizeInt): T; inline;
+    function  GetItem(aIndex: SizeInt): T;
     procedure SetItem(aIndex: SizeInt; const aValue: T); virtual;
     procedure ShiftHeadRight(aToIndex: SizeInt);
     procedure ShiftHeadLeft(aFromIndex: SizeInt);
@@ -64,10 +64,10 @@ type
   public
     procedure PushFirst(constref aValue: T); inline;
     function  PushAllFirst(constref a: array of T): SizeInt;
-    function  PushAllFirst(e: IEnumerable): SizeInt; inline;
-    procedure PushLast(constref aValue: T); inline;
+    function  PushAllFirst(e: IEnumerable): SizeInt;
+    procedure PushLast(constref aValue: T);
     function  PushAllLast(constref a: array of T): SizeInt;
-    function  PushAllLast(e: IEnumerable): SizeInt; inline;
+    function  PushAllLast(e: IEnumerable): SizeInt;
   { EXTRACTS element from the head of deque; will raise ELGAccessEmpty if inctance is empty;
     will raise ELGUpdateLock if instance in iteration }
     function  PopFirst: T;
@@ -1174,7 +1174,7 @@ end;
 procedure TGLiteDeque.InsertItem(aIndex: SizeInt; aValue: T);
 begin
   if aIndex = 0 then
-    PushFirst(aValue)
+    FBuffer.PushFirst(aValue)
   else
     if aIndex = Count then
       FBuffer.PushLast(aValue)

@@ -98,7 +98,8 @@ end;
 
 class operator TGSparseGraph.TSquareBitMatrix.Initialize(var aMatrix: TSquareBitMatrix);
 begin
-  aMatrix.Clear;
+  aMatrix.FBits := nil;
+  aMatrix.FSize := 0;
 end;
 
 class function TGSparseGraph.TSquareBitMatrix.MaxSize: SizeInt;
@@ -165,8 +166,7 @@ begin
     begin
       FLimbIndex := I shr INT_SIZE_LOG;
       FBitIndex := I and INT_SIZE_MASK;
-      FCurrLimb := FValue^.FBits[FLimbIndex];
-      TBits256.ClearBit(FBitIndex, FCurrLimb);
+      FCurrLimb := FValue^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
       Result := True;
     end
   else
@@ -181,10 +181,16 @@ function TGSparseGraph.TBits256.TEnumerator.MoveNext: Boolean;
 begin
   if FInCycle then
     repeat
-      FBitIndex := TBits256.BsfValue(FCurrLimb);
+      {$IF DEFINED(CPU64)}
+        FBitIndex := ShortInt(BsfQWord(FCurrLimb));
+      {$ELSEIF DEFINED(CPU32)}
+        FBitIndex := ShortInt(BsfDWord(FCurrLimb));
+      {$ELSE}
+        FBitIndex := ShortInt(BsfWord(FCurrLimb));
+      {$ENDIF}
       Result := FBitIndex >= 0;
       if Result then
-        TBits256.ClearBit(FBitIndex, FCurrLimb)
+        FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex)
       else
         begin
           if FLimbIndex >= Pred(LIMB_COUNT) then
@@ -216,8 +222,7 @@ begin
     begin
       FLimbIndex := I shr INT_SIZE_LOG;
       FBitIndex := I and INT_SIZE_MASK;
-      FCurrLimb := FValue^.FBits[FLimbIndex];
-      TBits256.ClearBit(FBitIndex, FCurrLimb);
+      FCurrLimb := FValue^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
       Result := True;
     end
   else
@@ -232,10 +237,16 @@ function TGSparseGraph.TBits256.TReverseEnumerator.MoveNext: Boolean;
 begin
   if FInCycle then
     repeat
-      FBitIndex := TBits256.BsrValue(FCurrLimb);
+      {$IF DEFINED(CPU64)}
+        FBitIndex := ShortInt(BsrQWord(FCurrLimb));
+      {$ELSEIF DEFINED(CPU32)}
+        FBitIndex := ShortInt(BsrDWord(FCurrLimb));
+      {$ELSE}
+        FBitIndex := ShortInt(BsrWord(FCurrLimb));
+      {$ENDIF}
       Result := FBitIndex >= 0;
       if Result then
-        TBits256.ClearBit(FBitIndex, FCurrLimb)
+        FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex)
       else
         begin
           if FLimbIndex <= 0 then
@@ -276,33 +287,6 @@ begin
       FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
-class function TGSparseGraph.TBits256.BsfValue(aValue: SizeUInt): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := ShortInt(BsfQWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  Result := ShortInt(BsfDWord(aValue));
-{$ELSE}
-  Result := ShortInt(BsfWord(aValue));
-{$ENDIF}
-end;
-
-class function TGSparseGraph.TBits256.BsrValue(aValue: SizeUInt): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := ShortInt(BsrQWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  Result := ShortInt(BsrDWord(aValue));
-{$ELSE}
-  Result := ShortInt(BsrWord(aValue));
-{$ENDIF}
-end;
-
-class procedure TGSparseGraph.TBits256.ClearBit(aIndex: SizeInt; var aValue: SizeUInt);
-begin
-  aValue := aValue and not (SizeUInt(1) shl aIndex);
-end;
-
 function TGSparseGraph.TBits256.GetEnumerator: TEnumerator;
 begin
   Result.FValue := @Self;
@@ -318,7 +302,13 @@ procedure TGSparseGraph.TBits256.InitRange(aRange: SizeInt);
 var
   msb: SizeInt;
 begin
-  InitZero;
+{$IF DEFINED(CPU64)}
+  System.FillQWord(FBits[0], LIMB_COUNT, 0);
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(FBits[0], LIMB_COUNT, 0);
+{$ELSE}
+  System.FillWord(FBits[0], LIMB_COUNT, 0);
+{$ENDIF}
   if aRange > 0 then
     begin
       msb := aRange and INT_SIZE_MASK;
@@ -374,7 +364,14 @@ var
 begin
   for I := 0 to Pred(LIMB_COUNT) do
     if FBits[I] <> 0 then
-      exit(I shl INT_SIZE_LOG + BsfValue(FBits[I]));
+      exit(
+        {$IF DEFINED(CPU64)}
+          I shl INT_SIZE_LOG + ShortInt(BsfQWord(FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}
+          I shl INT_SIZE_LOG + ShortInt(BsfDWord(FBits[I]))
+        {$ELSE}
+          I shl INT_SIZE_LOG + ShortInt(BsfWord(FBits[I]))
+        {$ENDIF});
   Result := -1;
 end;
 
@@ -384,7 +381,14 @@ var
 begin
   for I := Pred(LIMB_COUNT) downto 0 do
     if FBits[I] <> 0 then
-      exit(I shl INT_SIZE_LOG + BsrValue(FBits[I]));
+      exit(
+        {$IF DEFINED(CPU64)}
+          I shl INT_SIZE_LOG + ShortInt(BsrQWord(FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}
+          I shl INT_SIZE_LOG + ShortInt(BsrDWord(FBits[I]))
+        {$ELSE}
+          I shl INT_SIZE_LOG + ShortInt(BsrWord(FBits[I]))
+        {$ENDIF});
   Result := -1;
 end;
 

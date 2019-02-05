@@ -140,8 +140,8 @@ type
     procedure DoTrimToFit; override;
     procedure DoEnsureCapacity(aValue: SizeInt); override;
     procedure CopyItems(aBuffer: PItem); override;
-    function  GetItem(aIndex: SizeInt): T; inline;
-    procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
+    function  GetItem(aIndex: SizeInt): T;
+    procedure SetItem(aIndex: SizeInt; const aValue: T);
     procedure DoSetItem(aIndex: SizeInt; const aValue: T); virtual;
     procedure RemoveDuplicates;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
@@ -160,7 +160,6 @@ type
     function  DoAddAll(e: IEnumerable): SizeInt; override; overload;
     function  IndexInRange(aIndex: SizeInt): Boolean; inline;
     procedure CheckIndexRange(aIndex: SizeInt); inline;
-    function  ListCapacity: SizeInt; inline;
     function  GetReverse: IEnumerable;
     procedure Expand(aValue: SizeInt);
     procedure ItemAdding; inline;
@@ -713,8 +712,8 @@ type
     function  NonEmpty: Boolean; inline;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    function  Contains(constref aValue: T): Boolean; inline;
-    function  NonContains(constref aValue: T): Boolean; inline;
+    function  Contains(constref aValue: T): Boolean;
+    function  NonContains(constref aValue: T): Boolean;
     function  IndexOf(constref aValue: T): SizeInt; inline;
     function  CountOf(constref aValue: T): SizeInt; inline;
   { returns index of the element added }
@@ -1045,13 +1044,13 @@ end;
 
 procedure TGBaseSortedList.DoTrimToFit;
 begin
-  if ListCapacity > ElemCount then
+  if System.Length(FItems) > ElemCount then
     System.SetLength(FItems, ElemCount);
 end;
 
 procedure TGBaseSortedList.DoEnsureCapacity(aValue: SizeInt);
 begin
-  if aValue > ListCapacity then
+  if aValue > System.Length(FItems) then
     Expand(aValue);
 end;
 
@@ -1402,11 +1401,6 @@ begin
    IndexOutOfBoundError(aIndex);
 end;
 
-function TGBaseSortedList.ListCapacity: SizeInt;
-begin
-  Result := System.Length(FItems);
-end;
-
 function TGBaseSortedList.GetReverse: IEnumerable;
 begin
   Result := TReverseEnumerable.Create(Self);
@@ -1429,7 +1423,7 @@ end;
 
 procedure TGBaseSortedList.ItemAdding;
 begin
-  if ElemCount = ListCapacity then
+  if ElemCount = System.Length(FItems) then
     Expand(Succ(ElemCount));
 end;
 
@@ -1576,7 +1570,7 @@ end;
 constructor TGBaseSortedList.Create(constref a: array of T);
 begin
   FItems := THelper.CreateCopy(a);
-  FCount := ListCapacity;
+  FCount := System.Length(FItems);
   if ElemCount > 0 then
     THelper.Sort(FItems);
 end;
@@ -1584,7 +1578,7 @@ end;
 constructor TGBaseSortedList.Create(e: IEnumerable);
 begin
   FItems := e.ToArray;
-  FCount := ListCapacity;
+  FCount := System.Length(FItems);
   if ElemCount > 0 then
     THelper.Sort(FItems);
 end;
@@ -1601,7 +1595,7 @@ begin
   if RejectDuplicates then
     begin
       FItems := THelper.SelectDistinct(a);
-      FCount := ListCapacity;
+      FCount := System.Length(FItems);
     end
   else
     Create(a);
@@ -1613,7 +1607,7 @@ begin
   if RejectDuplicates then
     begin
       FItems := THelper.SelectDistinct(e.ToArray);
-      FCount := ListCapacity;
+      FCount := System.Length(FItems);
     end
   else
     Create(e);

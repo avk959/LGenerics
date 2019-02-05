@@ -165,10 +165,10 @@ type
       Index,
       WDegree,
       Degree: SizeInt;
-      class operator > (constref L, R: TNode): Boolean; inline;
-      class operator < (constref L, R: TNode): Boolean; inline;
-      class operator >=(constref L, R: TNode): Boolean; inline;
-      class operator <=(constref L, R: TNode): Boolean; inline;
+      class operator > (constref L, R: TNode): Boolean;
+      class operator < (constref L, R: TNode): Boolean;
+      class operator >=(constref L, R: TNode): Boolean;
+      class operator <=(constref L, R: TNode): Boolean;
       constructor Create(aIndex, aDegree: SizeInt);
     end;
     TQueue = specialize TGPairHeapMax<TNode>;

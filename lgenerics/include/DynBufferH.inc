@@ -315,9 +315,9 @@
     // do not check count !!!
     function  PopHead: T;
     // do not check count !!!
-    function  PopTail: T; inline;
+    function  PopTail: T;
     procedure CapacityExceedError(aValue: SizeInt);
-    procedure AccessEmptyError; inline;
+    procedure AccessEmptyError;
     procedure CheckEmpty; inline;
     class operator Initialize(var b: TGLiteRingDynBuffer);
     class operator Copy(constref aSrc: TGLiteRingDynBuffer; var aDst: TGLiteRingDynBuffer); inline;
@@ -338,17 +338,17 @@
     function  GetReverseEnumerator: TReverseEnumerator;
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
-    function  ToArray: TArray; inline;
+    function  ToArray: TArray;
     procedure PushLast(constref aValue: T);
-    procedure PushFirst(constref aValue: T); inline;
-    function  PopFirst: T; inline;
-    function  TryPopFirst(out aValue: T): Boolean; inline;
-    function  PopLast: T; inline;
-    function  TryPopLast(out aValue: T): Boolean; inline;
+    procedure PushFirst(constref aValue: T);
+    function  PopFirst: T;
+    function  TryPopFirst(out aValue: T): Boolean;
+    function  PopLast: T;
+    function  TryPopLast(out aValue: T): Boolean;
     function  PeekFirst: T; inline;
-    function  TryPeekFirst(out aValue: T): Boolean; inline;
+    function  TryPeekFirst(out aValue: T): Boolean;
     function  PeekLast: T; inline;
-    function  TryPeekLast(out aValue: T): Boolean; inline;
+    function  TryPeekLast(out aValue: T): Boolean;
     property  Head: SizeInt read FHead;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
