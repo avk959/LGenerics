@@ -162,9 +162,9 @@
     procedure Clear; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
-    function  GetEnumerator: TEnumerator; inline;
-    function  GetMutableEnumerator: TMutableEnumerator; inline;
-    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetEnumerator: TEnumerator;
+    function  GetMutableEnumerator: TMutableEnumerator;
+    function  GetReverseEnumerator: TReverseEnumerator;
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
@@ -316,7 +316,7 @@
     function  PopHead: T; inline;
     // do not check count !!!
     function  PopTail: T; inline;
-    procedure CapacityExceedError(aValue: SizeInt); inline;
+    procedure CapacityExceedError(aValue: SizeInt);
     procedure AccessEmptyError; inline;
     procedure CheckEmpty; inline;
     class operator Initialize(var b: TGLiteRingDynBuffer);
@@ -324,7 +324,7 @@
   public
     FItems: TArray;
     // do not check bounds !!!
-    function  InternalIndex(aIndex: SizeInt): SizeInt; inline;
+    function  InternalIndex(aIndex: SizeInt): SizeInt;
     // do not check bounds !!!
     function  FastGetItem(aIndex: SizeInt): T; inline;
     // do not check bounds !!!
@@ -334,8 +334,8 @@
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  GetEnumerator: TEnumerator; inline;
-    function  GetMutableEnumerator: TMutableEnumerator; inline;
-    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetMutableEnumerator: TMutableEnumerator;
+    function  GetReverseEnumerator: TReverseEnumerator;
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
