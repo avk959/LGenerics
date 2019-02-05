@@ -1376,7 +1376,6 @@ begin
 end;
 
 procedure TGComparableAvlTree.InsertNode(aNode: PNode);
-// If there are already exist nodes with the same value it will be inserted rightmost
 var
   ParentNode: PNode;
 begin
@@ -1544,7 +1543,6 @@ begin
 end;
 
 procedure TGRegularAvlTree.InsertNode(aNode: PNode);
-// If there are already exist nodes with the same value it will be inserted rightmost
 var
   ParentNode: PNode;
 begin
@@ -1729,7 +1727,6 @@ begin
 end;
 
 procedure TGDelegatedAvlTree.InsertNode(aNode: PNode);
-// If there are already exist nodes with the same value it will be inserted rightmost
 var
   ParentNode: PNode;
 begin
