@@ -20,7 +20,7 @@
 unit LGVector;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -369,9 +369,6 @@ type
     function  GetSize: SizeInt; inline;
     procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
     procedure SetSize(aValue: SizeInt);
-    class function  BsfValue(aValue: SizeUInt): SizeInt; static; inline;
-    class function  BsrValue(aValue: SizeUInt): SizeInt; static; inline;
-    class procedure ClearBit(aIndex: SizeInt; var aValue: SizeUInt); static; inline;
     class operator  Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
   public
   type
@@ -1901,8 +1898,7 @@ begin
     begin
       FLimbIndex := I shr INT_SIZE_LOG;
       FBitIndex := I and INT_SIZE_MASK;
-      FCurrLimb := FValue^.FBits[FLimbIndex];
-      TBoolVector.ClearBit(FBitIndex, FCurrLimb);
+      FCurrLimb := FValue^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
       Result := True;
     end
   else
@@ -1917,10 +1913,16 @@ function TBoolVector.TEnumerator.MoveNext: Boolean;
 begin
   if FInCycle then
     repeat
-      FBitIndex := TBoolVector.BsfValue(FCurrLimb);
+      {$IF DEFINED(CPU64)}
+        FBitIndex := ShortInt(BsfQWord(FCurrLimb));
+      {$ELSEIF DEFINED(CPU32)}
+        FBitIndex := ShortInt(BsfDWord(FCurrLimb));
+      {$ELSE}
+        FBitIndex := ShortInt(BsfWord(FCurrLimb));
+      {$ENDIF}
       Result := FBitIndex >= 0;
       if Result then
-        TBoolVector.ClearBit(FBitIndex, FCurrLimb)
+        FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex)
       else
         begin
           if FLimbIndex >= System.High(FValue^.FBits) then
@@ -1952,8 +1954,7 @@ begin
     begin
       FLimbIndex := I shr INT_SIZE_LOG;
       FBitIndex := I and INT_SIZE_MASK;
-      FCurrLimb := FValue^.FBits[FLimbIndex];
-      TBoolVector.ClearBit(FBitIndex, FCurrLimb);
+      FCurrLimb := FValue^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);;
       Result := True;
     end
   else
@@ -1968,10 +1969,16 @@ function TBoolVector.TReverseEnumerator.MoveNext: Boolean;
 begin
   if FInCycle then
     repeat
-      FBitIndex := TBoolVector.BsrValue(FCurrLimb);
+      {$IF DEFINED(CPU64)}
+        FBitIndex := ShortInt(BsrQWord(FCurrLimb));
+      {$ELSEIF DEFINED(CPU32)}
+        FBitIndex := ShortInt(BsrDWord(FCurrLimb));
+      {$ELSE}
+        FBitIndex := ShortInt(BsrWord(FCurrLimb));
+      {$ENDIF}
       Result := FBitIndex >= 0;
       if Result then
-        TBoolVector.ClearBit(FBitIndex, FCurrLimb)
+        FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex)
       else
         begin
           if FLimbIndex <= 0 then
@@ -2036,33 +2043,6 @@ begin
       System.SetLength(FBits, aValue);
       System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
     end;
-end;
-
-class function TBoolVector.BsfValue(aValue: SizeUInt): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := ShortInt(BsfQWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  Result := ShortInt(BsfDWord(aValue));
-{$ELSE}
-  Result := ShortInt(BsfWord(aValue));
-{$ENDIF}
-end;
-
-class function TBoolVector.BsrValue(aValue: SizeUInt): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := ShortInt(BsrQWord(aValue));
-{$ELSEIF DEFINED(CPU32)}
-  Result := ShortInt(BsrDWord(aValue));
-{$ELSE}
-  Result := ShortInt(BsrWord(aValue));
-{$ENDIF}
-end;
-
-class procedure TBoolVector.ClearBit(aIndex: SizeInt; var aValue: SizeUInt);
-begin
-  aValue := aValue and not (SizeUInt(1) shl aIndex);
 end;
 
 class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
@@ -2152,7 +2132,14 @@ var
 begin
   for I := 0 to System.High(FBits) do
     if FBits[I] <> 0 then
-      exit(I shl INT_SIZE_LOG + BsfValue(FBits[I]));
+      exit(
+        {$IF DEFINED(CPU64)}
+          I shl INT_SIZE_LOG + ShortInt(BsfQWord(FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}
+          I shl INT_SIZE_LOG + ShortInt(BsfDWord(FBits[I]))
+        {$ELSE}
+          I shl INT_SIZE_LOG + ShortInt(BsfWord(FBits[I]))
+        {$ENDIF});
   Result := -1;
 end;
 
@@ -2162,7 +2149,14 @@ var
 begin
   for I := System.High(FBits) downto 0 do
     if FBits[I] <> 0 then
-      exit(I shl INT_SIZE_LOG + BsrValue(FBits[I]));
+      exit(
+        {$IF DEFINED(CPU64)}
+          I shl INT_SIZE_LOG + ShortInt(BsrQWord(FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}
+          I shl INT_SIZE_LOG + ShortInt(BsrDWord(FBits[I]))
+        {$ELSE}
+          I shl INT_SIZE_LOG + ShortInt(BsrWord(FBits[I]))
+        {$ENDIF});
   Result := -1;
 end;
 
@@ -2172,7 +2166,14 @@ var
 begin
   for I := 0 to System.High(FBits) do
     if FBits[I] <> High(SizeUInt) then
-      exit(I shl INT_SIZE_LOG + BsfValue(not FBits[I]));
+      exit(
+        {$IF DEFINED(CPU64)}
+          I shl INT_SIZE_LOG + ShortInt(BsrQWord(not FBits[I]))
+        {$ELSEIF DEFINED(CPU32)}
+          I shl INT_SIZE_LOG + ShortInt(BsrDWord(not FBits[I]))
+        {$ELSE}
+          I shl INT_SIZE_LOG + ShortInt(BsrWord(not FBits[I]))
+        {$ENDIF});
   Result := -1;
 end;
 

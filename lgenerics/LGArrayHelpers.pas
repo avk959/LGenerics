@@ -94,7 +94,7 @@ type
       FStack: TRunArray;
       FStackSize: SizeInt;
       procedure PushRun(aBase, aCount: SizeInt);
-      function  EnsureBufferCapacity(aSize: SizeInt): PItem; inline;
+      function  EnsureBufferCapacity(aSize: SizeInt): PItem;
       procedure Init(A: PItem);
       class function  MinRunLen(aTotalSize: SizeInt): SizeInt; static;
     end;
