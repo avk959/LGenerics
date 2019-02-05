@@ -157,7 +157,7 @@ procedure TArrayHelpUtilTest.CreateReverseCopyOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.CreateReverseCopy(a) = nil);
+  AssertTrue(TIntHelper.CreateReverseCopy(a{%H-}) = nil);
 end;
 
 procedure TArrayHelpUtilTest.CreateReverseCopyOfStatic1;
@@ -198,7 +198,7 @@ procedure TArrayHelpUtilTest.CreateMergeCopyOfBothEmpty;
 var
   a, L, R: TIntArray;
 begin
-  a := TIntHelper.CreateMerge(L, R);
+  a := TIntHelper.CreateMerge(L{%H-}, R{%H-});
   AssertTrue(a = nil);
 end;
 
@@ -206,7 +206,7 @@ procedure TArrayHelpUtilTest.CreateMergeCopyOfLEmptyRStatic7;
 var
   a, L: TIntArray;
 begin
-  a := TIntHelper.CreateMerge(L, IntSrc7);
+  a := TIntHelper.CreateMerge(L{%H-}, IntSrc7);
   AssertTrue(TCompHelper.Same(IntSrc7, a));
 end;
 
@@ -214,7 +214,7 @@ procedure TArrayHelpUtilTest.CreateMergeCopyOfLStatic7REmpty;
 var
   a, R: TIntArray;
 begin
-  a := TIntHelper.CreateMerge(IntSrc7, R);
+  a := TIntHelper.CreateMerge(IntSrc7, R{%H-});
   AssertTrue(TCompHelper.Same(IntSrc7, a));
 end;
 
@@ -222,7 +222,7 @@ procedure TArrayHelpUtilTest.CreateMergeCopyOfLEmptyRDyn7;
 var
   a, L: TIntArray;
 begin
-  a := TIntHelper.CreateMerge(L, TIntHelper.CreateCopy(IntSrc7));
+  a := TIntHelper.CreateMerge(L{%H-}, TIntHelper.CreateCopy(IntSrc7));
   AssertTrue(TCompHelper.Same(IntSrc7, a));
 end;
 
@@ -230,7 +230,7 @@ procedure TArrayHelpUtilTest.CreateMergeCopyOfLDyn7REmpty;
 var
   a, R: TIntArray;
 begin
-  a := TIntHelper.CreateMerge(TIntHelper.CreateCopy(IntSrc7), R);
+  a := TIntHelper.CreateMerge(TIntHelper.CreateCopy(IntSrc7), R{%H-});
   AssertTrue(TCompHelper.Same(IntSrc7, a));
 end;
 
@@ -270,7 +270,7 @@ procedure TArrayHelpUtilTest.AppendToEmpty;
 var
   a: TIntArray;
 begin
-  TIntHelper.Append(a, 10);
+  TIntHelper.Append(a{%H-}, 10);
   AssertTrue(System.Length(a) = 1);
   AssertTrue(a[0] = 10);
 end;
@@ -295,7 +295,7 @@ var
   Dst, Src: TIntArray;
   MergedCount: SizeInt;
 begin
-  MergedCount := TIntHelper.Merge(Dst, Src);
+  MergedCount := TIntHelper.Merge(Dst{%H-}, Src{%H-});
   AssertTrue(MergedCount = 0);
   AssertTrue(Dst = nil);
   AssertTrue(Src = nil);
@@ -306,7 +306,7 @@ var
   Dst, Src: TIntArray;
 begin
   Src := TIntHelper.CreateCopy(IntSrc7);
-  AssertTrue( TIntHelper.Merge(Dst, Src) = 7);
+  AssertTrue( TIntHelper.Merge(Dst{%H-}, Src) = 7);
   AssertTrue(TCompHelper.Same(IntSrc7, Dst));
   AssertTrue(Src = nil);
 end;
@@ -316,7 +316,7 @@ var
   Dst, Src: TIntArray;
 begin
   Dst := TIntHelper.CreateCopy(IntSrc7);
-  AssertTrue( TIntHelper.Merge(Dst, Src) = 0);
+  AssertTrue( TIntHelper.Merge(Dst, Src{%H-}) = 0);
   AssertTrue(TCompHelper.Same(IntSrc7, Dst));
   AssertTrue(Src = nil);
 end;
@@ -345,7 +345,7 @@ procedure TArrayHelpUtilTest.SplitEmpty;
 var
   a, r: TIntArray;
 begin
-  r := TIntHelper.Split(a, 0);
+  r := TIntHelper.Split(a{%H-}, 0);
   AssertTrue(r = nil);
 end;
 
@@ -403,7 +403,7 @@ procedure TArrayHelpUtilTest.ExtractEmpty;
 var
   a, r: TIntArray;
 begin
-  r := TIntHelper.Extract(a, 0, 0);
+  r := TIntHelper.Extract(a{%H-}, 0, 0);
   AssertTrue(r = nil);
 end;
 
@@ -475,7 +475,7 @@ procedure TArrayHelpUtilTest.ReverseEmpty;
 var
   a: TIntArray;
 begin
-  TIntHelper.Reverse(a);
+  TIntHelper.Reverse(a{%H-});
   AssertTrue(a = nil);
 end;
 
@@ -621,7 +621,7 @@ procedure TArrayHelpUtilTest.RandomShuffleEmpty;
 var
   a: TIntArray;
 begin
-  TIntHelper.RandomShuffle(a);
+  TIntHelper.RandomShuffle(a{%H-});
   AssertTrue(a = nil);
 end;
 

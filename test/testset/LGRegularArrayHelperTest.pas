@@ -28,7 +28,7 @@ type
     TIntPairs    = specialize TGArray<TIntPair>;
 
     TPairIdxCmp  = class
-      class function Compare(const L, R: TIntPair): SizeInt; static; inline;
+      class function Compare(const L, R: TIntPair): SizeInt; static;
     end;
 
     TPairDataHelper = specialize TGRegularArrayHelper<TIntPair>;
@@ -452,7 +452,7 @@ procedure TRegularArrayHelperTest.SequentSearchEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.SequentSearch(a, 13, @IntCmp) = -1);
+  AssertTrue(TIntHelper.SequentSearch(a{%H-}, 13, @IntCmp) = -1);
 end;
 
 procedure TRegularArrayHelperTest.SequentSearchStaticSuccess1;
@@ -489,7 +489,7 @@ procedure TRegularArrayHelperTest.BinarySearchEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.BinarySearch(a, 13, @IntCmp) = -1);
+  AssertTrue(TIntHelper.BinarySearch(a{%H-}, 13, @IntCmp) = -1);
 end;
 
 procedure TRegularArrayHelperTest.BinarySearchStaticSuccess1;
@@ -602,7 +602,7 @@ procedure TRegularArrayHelperTest.IndexOfMinEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IndexOfMin(a, @IntCmp) = -1);
+  AssertTrue(TIntHelper.IndexOfMin(a{%H-}, @IntCmp) = -1);
 end;
 
 procedure TRegularArrayHelperTest.IndexOfMinStatic1;
@@ -639,7 +639,7 @@ procedure TRegularArrayHelperTest.IndexOfMaxEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IndexOfMax(a, @IntCmp) = -1);
+  AssertTrue(TIntHelper.IndexOfMax(a{%H-}, @IntCmp) = -1);
 end;
 
 procedure TRegularArrayHelperTest.IndexOfMaxStatic1;
@@ -676,7 +676,7 @@ procedure TRegularArrayHelperTest.GetMinOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.GetMin(a, @IntCmp).Assigned);
+  AssertFalse(TIntHelper.GetMin(a{%H-}, @IntCmp).Assigned);
 end;
 
 procedure TRegularArrayHelperTest.GetMinOfStatic1;
@@ -713,7 +713,7 @@ procedure TRegularArrayHelperTest.GetMaxOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.GetMax(a, @IntCmp).Assigned);
+  AssertFalse(TIntHelper.GetMax(a{%H-}, @IntCmp).Assigned);
 end;
 
 procedure TRegularArrayHelperTest.GetMaxOfStatic1;
@@ -751,7 +751,7 @@ var
   a: TIntArray;
   m: Integer;
 begin
-  AssertFalse(TIntHelper.FindMin(a, m, @IntCmp));
+  AssertFalse(TIntHelper.FindMin(a{%H-}, m, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.FindMinOfStatic1;
@@ -807,7 +807,7 @@ var
   a: TIntArray;
   m: Integer;
 begin
-  AssertFalse(TIntHelper.FindMax(a, m, @IntCmp));
+  AssertFalse(TIntHelper.FindMax(a{%H-}, m, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.FindMaxOfStatic1;
@@ -863,7 +863,7 @@ var
   a: TIntArray;
   mn, mx: Integer;
 begin
-  AssertFalse(TIntHelper.FindMinMax(a, mn, mx, @IntCmp));
+  AssertFalse(TIntHelper.FindMinMax(a{%H-}, mn, mx, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.FindMinMaxOfStatic1;
@@ -925,7 +925,7 @@ var
   a: TIntArray;
   v: Integer;
 begin
-  AssertFalse(TIntHelper.FindNthSmallest(a, 1, v, @IntCmp));
+  AssertFalse(TIntHelper.FindNthSmallest(a{%H-}, 1, v, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.FindNthSmallestOfStatic1;
@@ -1169,7 +1169,7 @@ procedure TRegularArrayHelperTest.NthSmallestOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NthSmallest(a, 1, @IntCmp).Assigned);
+  AssertFalse(TIntHelper.NthSmallest(a{%H-}, 1, @IntCmp).Assigned);
 end;
 
 procedure TRegularArrayHelperTest.NthSmallestOfStatic1;
@@ -1451,7 +1451,7 @@ procedure TRegularArrayHelperTest.NextPermutation2AscOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NextPermutation2Asc(a, @IntCmp));
+  AssertFalse(TIntHelper.NextPermutation2Asc(a{%H-}, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.NextPermutation2AscOfStatic1;
@@ -1598,7 +1598,7 @@ procedure TRegularArrayHelperTest.NextPermutation2DescOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NextPermutation2Desc(a, @IntCmp));
+  AssertFalse(TIntHelper.NextPermutation2Desc(a{%H-}, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.NextPermutation2DescOfStatic1;
@@ -1751,7 +1751,7 @@ procedure TRegularArrayHelperTest.IsNonDescendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IsNonDescending(a, @IntCmp));
+  AssertTrue(TIntHelper.IsNonDescending(a{%H-}, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.IsNonDescendingOfStatic1;
@@ -1834,7 +1834,7 @@ procedure TRegularArrayHelperTest.IsStrictAscendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.IsStrictAscending(a, @IntCmp));
+  AssertFalse(TIntHelper.IsStrictAscending(a{%H-}, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.IsStrictAscendingOfStatic1;
@@ -1881,7 +1881,7 @@ procedure TRegularArrayHelperTest.IsNonAscendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IsNonAscending(a, @IntCmp));
+  AssertTrue(TIntHelper.IsNonAscending(a{%H-}, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.IsNonAscendingOfStatic1;
@@ -1962,7 +1962,7 @@ procedure TRegularArrayHelperTest.IsStrictDescendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.IsStrictDescending(a, @IntCmp));
+  AssertFalse(TIntHelper.IsStrictDescending(a{%H-}, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.IsStrictDescendingOfStatic1;
@@ -2017,7 +2017,7 @@ procedure TRegularArrayHelperTest.SameOfEmpty;
 var
   a, b: TIntArray;
 begin
-  AssertTrue(TIntHelper.Same(a, b, @IntCmp));
+  AssertTrue(TIntHelper.Same(a{%H-}, b{%H-}, @IntCmp));
 end;
 
 procedure TRegularArrayHelperTest.SameOfStatic1Success;
@@ -2100,7 +2100,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.QuickSort(a, @IntCmp);
+  TIntHelper.QuickSort(a{%H-}, @IntCmp);
   AssertTrue(a = nil);
 end;
 
@@ -2409,7 +2409,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.IntroSort(a, @IntCmp);
+  TIntHelper.IntroSort(a{%H-}, @IntCmp);
   AssertTrue(a = nil);
 end;
 
@@ -2646,7 +2646,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.DualPivotQuickSort(a, @IntCmp);
+  TIntHelper.DualPivotQuickSort(a{%H-}, @IntCmp);
   AssertTrue(a = nil);
 end;
 
@@ -2883,7 +2883,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.MergeSort(a, @IntCmp);
+  TIntHelper.MergeSort(a{%H-}, @IntCmp);
   AssertTrue(a = nil);
 end;
 

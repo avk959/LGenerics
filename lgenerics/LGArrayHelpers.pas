@@ -20,7 +20,7 @@
 unit LGArrayHelpers;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -101,7 +101,7 @@ type
 
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure DoReverse(p: PItem; R: SizeInt); static;
-    class procedure DoSwap(p: PItem; L, R: SizeInt); static; inline;
+    //class procedure DoSwap(p: PItem; L, R: SizeInt); static; inline;
   public
     class function  CreateCopy(constref A: array of T): TArray; static;
     class function  CreateReverseCopy(constref A: array of T): TArray; static;
@@ -1072,14 +1072,14 @@ begin
   end;
 end;
 
-class procedure TGArrayHelpUtil.DoSwap(p: PItem; L, R: SizeInt);
-var
-  v: TFake;
-begin
-  v := TFake(p[L]);
-  TFake(p[L]) := TFake(p[R]);
-  TFake(p[R]) := v;
-end;
+//class procedure TGArrayHelpUtil.DoSwap(p: PItem; L, R: SizeInt);
+//var
+//  v: TFake;
+//begin
+//  v := TFake(p[L]);
+//  TFake(p[L]) := TFake(p[R]);
+//  TFake(p[R]) := v;
+//end;
 
 class function TGArrayHelpUtil.CreateCopy(constref A: array of T): TArray;
 begin
@@ -2669,6 +2669,7 @@ end;
 class function TGBaseArrayHelper.NextPermutation2Asc(var A: array of T): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -2682,7 +2683,9 @@ begin
   for I := R downto 0 do
     if TCmpRel.Compare(A[J], A[I]) > 0 then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -2692,6 +2695,7 @@ end;
 class function TGBaseArrayHelper.NextPermutation2Desc(var A: array of T): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -2705,7 +2709,9 @@ begin
   for I := R downto 0 do
     if TCmpRel.Compare(A[J], A[I]) < 0 then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -3977,6 +3983,7 @@ end;
 class function TGComparableArrayHelper.NextPermutation2Asc(var A: array of T): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -3990,7 +3997,9 @@ begin
   for I := R downto 0 do
     if A[J] > A[I] then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -4000,6 +4009,7 @@ end;
 class function TGComparableArrayHelper.NextPermutation2Desc(var A: array of T): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -4013,7 +4023,9 @@ begin
   for I := R downto 0 do
     if A[J] < A[I] then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -5315,6 +5327,7 @@ end;
 class function TGRegularArrayHelper.NextPermutation2Asc(var A: array of T; c: TCompare): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -5328,7 +5341,9 @@ begin
   for I := R downto 0 do
     if c(A[J], A[I]) > 0 then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -5338,6 +5353,7 @@ end;
 class function TGRegularArrayHelper.NextPermutation2Desc(var A: array of T; c: TCompare): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -5351,7 +5367,9 @@ begin
   for I := R downto 0 do
     if c(A[J], A[I]) < 0 then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -6655,6 +6673,7 @@ end;
 class function TGDelegatedArrayHelper.NextPermutation2Asc(var A: array of T; c: TOnCompare): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -6668,7 +6687,9 @@ begin
   for I := R downto 0 do
     if c(A[J], A[I]) > 0 then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -6678,6 +6699,7 @@ end;
 class function TGDelegatedArrayHelper.NextPermutation2Desc(var A: array of T; c: TOnCompare): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -6691,7 +6713,9 @@ begin
   for I := R downto 0 do
     if c(A[J], A[I]) < 0 then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -7994,6 +8018,7 @@ end;
 class function TGNestedArrayHelper.NextPermutation2Asc(var A: array of T; c: TNestCompare): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -8007,7 +8032,9 @@ begin
   for I := R downto 0 do
     if c(A[J], A[I]) > 0 then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));
@@ -8017,6 +8044,7 @@ end;
 class function TGNestedArrayHelper.NextPermutation2Desc(var A: array of T; c: TNestCompare): Boolean;
 var
   I, J, R: SizeInt;
+  v: TFake;
 begin
   R := System.High(A);
   J := -1;
@@ -8030,7 +8058,9 @@ begin
   for I := R downto 0 do
     if c(A[J], A[I]) < 0 then
       begin
-        DoSwap(@A[0], I, J);
+        v := TFake(A[I]);
+        TFake(A[I]) := TFake(A[J]);
+        TFake(A[J]) := v;
         break;
       end;
   DoReverse(@A[Succ(J)], R - Succ(J));

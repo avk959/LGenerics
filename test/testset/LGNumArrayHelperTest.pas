@@ -585,7 +585,7 @@ procedure TNumArrayHelperTest.BinarySearchEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.BinarySearch(a, 13) = -1);
+  AssertTrue(TIntHelper.BinarySearch(a{%H-}, 13) = -1);
 end;
 
 procedure TNumArrayHelperTest.BinarySearchStaticSuccess1;
@@ -698,7 +698,7 @@ procedure TNumArrayHelperTest.IndexOfMinEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IndexOfMin(a) = -1);
+  AssertTrue(TIntHelper.IndexOfMin(a{%H-}) = -1);
 end;
 
 procedure TNumArrayHelperTest.IndexOfMinStatic1;
@@ -735,7 +735,7 @@ procedure TNumArrayHelperTest.IndexOfMaxEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IndexOfMax(a) = -1);
+  AssertTrue(TIntHelper.IndexOfMax(a{%H-}) = -1);
 end;
 
 procedure TNumArrayHelperTest.IndexOfMaxStatic1;
@@ -772,7 +772,7 @@ procedure TNumArrayHelperTest.GetMinOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.GetMin(a).Assigned);
+  AssertFalse(TIntHelper.GetMin(a{%H-}).Assigned);
 end;
 
 procedure TNumArrayHelperTest.GetMinOfStatic1;
@@ -809,7 +809,7 @@ procedure TNumArrayHelperTest.GetMaxOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.GetMax(a).Assigned);
+  AssertFalse(TIntHelper.GetMax(a{%H-}).Assigned);
 end;
 
 procedure TNumArrayHelperTest.GetMaxOfStatic1;
@@ -847,7 +847,7 @@ var
   a: TIntArray;
   m: Integer;
 begin
-  AssertFalse(TIntHelper.FindMin(a, m));
+  AssertFalse(TIntHelper.FindMin(a{%H-}, m));
 end;
 
 procedure TNumArrayHelperTest.FindMinOfStatic1;
@@ -903,7 +903,7 @@ var
   a: TIntArray;
   m: Integer;
 begin
-  AssertFalse(TIntHelper.FindMax(a, m));
+  AssertFalse(TIntHelper.FindMax(a{%H-}, m));
 end;
 
 procedure TNumArrayHelperTest.FindMaxOfStatic1;
@@ -959,7 +959,7 @@ var
   a: TIntArray;
   mn, mx: Integer;
 begin
-  AssertFalse(TIntHelper.FindMinMax(a, mn, mx));
+  AssertFalse(TIntHelper.FindMinMax(a{%H-}, mn, mx));
 end;
 
 procedure TNumArrayHelperTest.FindMinMaxOfStatic1;
@@ -1021,7 +1021,7 @@ var
   a: TIntArray;
   v: Integer;
 begin
-  AssertFalse(TIntHelper.FindNthSmallest(a, 1, v));
+  AssertFalse(TIntHelper.FindNthSmallest(a{%H-}, 1, v));
 end;
 
 procedure TNumArrayHelperTest.FindNthSmallestOfStatic1;
@@ -1265,7 +1265,7 @@ procedure TNumArrayHelperTest.NthSmallestOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NthSmallest(a, 1).Assigned);
+  AssertFalse(TIntHelper.NthSmallest(a{%H-}, 1).Assigned);
 end;
 
 procedure TNumArrayHelperTest.NthSmallestOfStatic1;
@@ -1547,7 +1547,7 @@ procedure TNumArrayHelperTest.NextPermutation2AscOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NextPermutation2Asc(a));
+  AssertFalse(TIntHelper.NextPermutation2Asc(a{%H-}));
 end;
 
 procedure TNumArrayHelperTest.NextPermutation2AscOfStatic1;
@@ -1694,7 +1694,7 @@ procedure TNumArrayHelperTest.NextPermutation2DescOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NextPermutation2Desc(a));
+  AssertFalse(TIntHelper.NextPermutation2Desc(a{%H-}));
 end;
 
 procedure TNumArrayHelperTest.NextPermutation2DescOfStatic1;
@@ -1847,7 +1847,7 @@ procedure TNumArrayHelperTest.IsNonDescendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IsNonDescending(a));
+  AssertTrue(TIntHelper.IsNonDescending(a{%H-}));
 end;
 
 procedure TNumArrayHelperTest.IsNonDescendingOfStatic1;
@@ -1930,7 +1930,7 @@ procedure TNumArrayHelperTest.IsStrictAscendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.IsStrictAscending(a));
+  AssertFalse(TIntHelper.IsStrictAscending(a{%H-}));
 end;
 
 procedure TNumArrayHelperTest.IsStrictAscendingOfStatic1;
@@ -1977,7 +1977,7 @@ procedure TNumArrayHelperTest.IsNonAscendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IsNonAscending(a));
+  AssertTrue(TIntHelper.IsNonAscending(a{%H-}));
 end;
 
 procedure TNumArrayHelperTest.IsNonAscendingOfStatic1;
@@ -2058,7 +2058,7 @@ procedure TNumArrayHelperTest.IsStrictDescendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.IsStrictDescending(a));
+  AssertFalse(TIntHelper.IsStrictDescending(a{%H-}));
 end;
 
 procedure TNumArrayHelperTest.IsStrictDescendingOfStatic1;
@@ -2113,7 +2113,7 @@ procedure TNumArrayHelperTest.SameOfEmpty;
 var
   a, b: TIntArray;
 begin
-  AssertTrue(TIntHelper.Same(a, b));
+  AssertTrue(TIntHelper.Same(a{%H-}, b{%H-}));
 end;
 
 procedure TNumArrayHelperTest.SameOfStatic1Success;
@@ -2196,7 +2196,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.QuickSort(a);
+  TIntHelper.QuickSort(a{%H-});
   AssertTrue(a = nil);
 end;
 
@@ -2505,7 +2505,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.IntroSort(a);
+  TIntHelper.IntroSort(a{%H-});
   AssertTrue(a = nil);
 end;
 
@@ -2742,7 +2742,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.DualPivotQuickSort(a);
+  TIntHelper.DualPivotQuickSort(a{%H-});
   AssertTrue(a = nil);
 end;
 
@@ -3138,7 +3138,6 @@ end;
 
 procedure TOrdArrayHelperTest.SortAsc;
 var
-  I: Integer;
   a, b: TIntArray;
 begin
   a := THelper.CreateRange(0, 1000);
@@ -3151,7 +3150,6 @@ end;
 
 procedure TOrdArrayHelperTest.SortDesc;
 var
-  I: Integer;
   a, b: TIntArray;
 begin
   a := THelper.CreateRange(0, 1000);

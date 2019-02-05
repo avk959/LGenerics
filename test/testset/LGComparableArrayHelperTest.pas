@@ -24,18 +24,18 @@ type
     TIntPair    = record
       Data,
       Index: Integer;
-      class operator =(const L, R: TIntPair): Boolean; inline;
-      class operator <(const L, R: TIntPair): Boolean; inline;
-      class operator >(const L, R: TIntPair): Boolean; inline;
-      class operator <=(const L, R: TIntPair): Boolean; inline;
-      class operator >=(const L, R: TIntPair): Boolean; inline;
-      class operator <>(const L, R: TIntPair): Boolean; inline;
+      class operator =(const L, R: TIntPair): Boolean;
+      class operator <(const L, R: TIntPair): Boolean;
+      class operator >(const L, R: TIntPair): Boolean;
+      class operator <=(const L, R: TIntPair): Boolean;
+      class operator >=(const L, R: TIntPair): Boolean;
+      class operator <>(const L, R: TIntPair): Boolean;
     end;
 
     TIntPairs    = specialize TGArray<TIntPair>;
 
     TPairIdxCmp  = class
-      class function Compare(const L, R: TIntPair): SizeInt; static; inline;
+      class function Compare(const L, R: TIntPair): SizeInt; static;
     end;
 
     TPairDataHelper = specialize TGComparableArrayHelper<TIntPair>;
@@ -461,7 +461,7 @@ procedure TComparableArrayHelperTest.SequentSearchEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.SequentSearch(a, 13) = -1);
+  AssertTrue(TIntHelper.SequentSearch(a{%H-}, 13) = -1);
 end;
 
 procedure TComparableArrayHelperTest.SequentSearchStaticSuccess1;
@@ -498,7 +498,7 @@ procedure TComparableArrayHelperTest.BinarySearchEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.BinarySearch(a, 13) = -1);
+  AssertTrue(TIntHelper.BinarySearch(a{%H-}, 13) = -1);
 end;
 
 procedure TComparableArrayHelperTest.BinarySearchStaticSuccess1;
@@ -611,7 +611,7 @@ procedure TComparableArrayHelperTest.IndexOfMinEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IndexOfMin(a) = -1);
+  AssertTrue(TIntHelper.IndexOfMin(a{%H-}) = -1);
 end;
 
 procedure TComparableArrayHelperTest.IndexOfMinStatic1;
@@ -648,7 +648,7 @@ procedure TComparableArrayHelperTest.IndexOfMaxEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IndexOfMax(a) = -1);
+  AssertTrue(TIntHelper.IndexOfMax(a{%H-}) = -1);
 end;
 
 procedure TComparableArrayHelperTest.IndexOfMaxStatic1;
@@ -685,7 +685,7 @@ procedure TComparableArrayHelperTest.GetMinOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.GetMin(a).Assigned);
+  AssertFalse(TIntHelper.GetMin(a{%H-}).Assigned);
 end;
 
 procedure TComparableArrayHelperTest.GetMinOfStatic1;
@@ -722,7 +722,7 @@ procedure TComparableArrayHelperTest.GetMaxOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.GetMax(a).Assigned);
+  AssertFalse(TIntHelper.GetMax(a{%H-}).Assigned);
 end;
 
 procedure TComparableArrayHelperTest.GetMaxOfStatic1;
@@ -760,7 +760,7 @@ var
   a: TIntArray;
   m: Integer;
 begin
-  AssertFalse(TIntHelper.FindMin(a, m));
+  AssertFalse(TIntHelper.FindMin(a{%H-}, m));
 end;
 
 procedure TComparableArrayHelperTest.FindMinOfStatic1;
@@ -816,7 +816,7 @@ var
   a: TIntArray;
   m: Integer;
 begin
-  AssertFalse(TIntHelper.FindMax(a, m));
+  AssertFalse(TIntHelper.FindMax(a{%H-}, m));
 end;
 
 procedure TComparableArrayHelperTest.FindMaxOfStatic1;
@@ -872,7 +872,7 @@ var
   a: TIntArray;
   mn, mx: Integer;
 begin
-  AssertFalse(TIntHelper.FindMinMax(a, mn, mx));
+  AssertFalse(TIntHelper.FindMinMax(a{%H-}, mn, mx));
 end;
 
 procedure TComparableArrayHelperTest.FindMinMaxOfStatic1;
@@ -934,7 +934,7 @@ var
   a: TIntArray;
   v: Integer;
 begin
-  AssertFalse(TIntHelper.FindNthSmallest(a, 1, v));
+  AssertFalse(TIntHelper.FindNthSmallest(a{%H-}, 1, v));
 end;
 
 procedure TComparableArrayHelperTest.FindNthSmallestOfStatic1;
@@ -1178,7 +1178,7 @@ procedure TComparableArrayHelperTest.NthSmallestOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NthSmallest(a, 1).Assigned);
+  AssertFalse(TIntHelper.NthSmallest(a{%H-}, 1).Assigned);
 end;
 
 procedure TComparableArrayHelperTest.NthSmallestOfStatic1;
@@ -1460,7 +1460,7 @@ procedure TComparableArrayHelperTest.NextPermutation2AscOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NextPermutation2Asc(a));
+  AssertFalse(TIntHelper.NextPermutation2Asc(a{%H-}));
 end;
 
 procedure TComparableArrayHelperTest.NextPermutation2AscOfStatic1;
@@ -1607,7 +1607,7 @@ procedure TComparableArrayHelperTest.NextPermutation2DescOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NextPermutation2Desc(a));
+  AssertFalse(TIntHelper.NextPermutation2Desc(a{%H-}));
 end;
 
 procedure TComparableArrayHelperTest.NextPermutation2DescOfStatic1;
@@ -1760,7 +1760,7 @@ procedure TComparableArrayHelperTest.IsNonDescendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IsNonDescending(a));
+  AssertTrue(TIntHelper.IsNonDescending(a{%H-}));
 end;
 
 procedure TComparableArrayHelperTest.IsNonDescendingOfStatic1;
@@ -1843,7 +1843,7 @@ procedure TComparableArrayHelperTest.IsStrictAscendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.IsStrictAscending(a));
+  AssertFalse(TIntHelper.IsStrictAscending(a{%H-}));
 end;
 
 procedure TComparableArrayHelperTest.IsStrictAscendingOfStatic1;
@@ -1890,7 +1890,7 @@ procedure TComparableArrayHelperTest.IsNonAscendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IsNonAscending(a));
+  AssertTrue(TIntHelper.IsNonAscending(a{%H-}));
 end;
 
 procedure TComparableArrayHelperTest.IsNonAscendingOfStatic1;
@@ -1971,7 +1971,7 @@ procedure TComparableArrayHelperTest.IsStrictDescendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.IsStrictDescending(a));
+  AssertFalse(TIntHelper.IsStrictDescending(a{%H-}));
 end;
 
 procedure TComparableArrayHelperTest.IsStrictDescendingOfStatic1;
@@ -2026,7 +2026,7 @@ procedure TComparableArrayHelperTest.SameOfEmpty;
 var
   a, b: TIntArray;
 begin
-  AssertTrue(TIntHelper.Same(a, b));
+  AssertTrue(TIntHelper.Same(a{%H-}, b{%H-}));
 end;
 
 procedure TComparableArrayHelperTest.SameOfStatic1Success;
@@ -2109,7 +2109,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.QuickSort(a);
+  TIntHelper.QuickSort(a{%H-});
   AssertTrue(a = nil);
 end;
 
@@ -2418,7 +2418,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.IntroSort(a);
+  TIntHelper.IntroSort(a{%H-});
   AssertTrue(a = nil);
 end;
 
@@ -2655,7 +2655,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.DualPivotQuickSort(a);
+  TIntHelper.DualPivotQuickSort(a{%H-});
   AssertTrue(a = nil);
 end;
 
@@ -2892,7 +2892,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.MergeSort(a);
+  TIntHelper.MergeSort(a{%H-});
   AssertTrue(a = nil);
 end;
 

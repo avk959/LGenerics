@@ -28,7 +28,7 @@ type
     TIntPairs    = specialize TGArray<TIntPair>;
 
     TPairIdxCmp  = class
-      class function Compare(const L, R: TIntPair): SizeInt; static; inline;
+      class function Compare(const L, R: TIntPair): SizeInt; static;
     end;
 
     TPairDataHelper = specialize TGDelegatedArrayHelper<TIntPair>;
@@ -455,7 +455,7 @@ procedure TDelegatedArrayHelperTest.SequentSearchEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.SequentSearch(a, 13, @IntCmp) = -1);
+  AssertTrue(TIntHelper.SequentSearch(a{%H-}, 13, @IntCmp) = -1);
 end;
 
 procedure TDelegatedArrayHelperTest.SequentSearchStaticSuccess1;
@@ -492,7 +492,7 @@ procedure TDelegatedArrayHelperTest.BinarySearchEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.BinarySearch(a, 13, @IntCmp) = -1);
+  AssertTrue(TIntHelper.BinarySearch(a{%H-}, 13, @IntCmp) = -1);
 end;
 
 procedure TDelegatedArrayHelperTest.BinarySearchStaticSuccess1;
@@ -605,7 +605,7 @@ procedure TDelegatedArrayHelperTest.IndexOfMinEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IndexOfMin(a, @IntCmp) = -1);
+  AssertTrue(TIntHelper.IndexOfMin(a{%H-}, @IntCmp) = -1);
 end;
 
 procedure TDelegatedArrayHelperTest.IndexOfMinStatic1;
@@ -642,7 +642,7 @@ procedure TDelegatedArrayHelperTest.IndexOfMaxEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IndexOfMax(a, @IntCmp) = -1);
+  AssertTrue(TIntHelper.IndexOfMax(a{%H-}, @IntCmp) = -1);
 end;
 
 procedure TDelegatedArrayHelperTest.IndexOfMaxStatic1;
@@ -679,7 +679,7 @@ procedure TDelegatedArrayHelperTest.GetMinOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.GetMin(a, @IntCmp).Assigned);
+  AssertFalse(TIntHelper.GetMin(a{%H-}, @IntCmp).Assigned);
 end;
 
 procedure TDelegatedArrayHelperTest.GetMinOfStatic1;
@@ -716,7 +716,7 @@ procedure TDelegatedArrayHelperTest.GetMaxOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.GetMax(a, @IntCmp).Assigned);
+  AssertFalse(TIntHelper.GetMax(a{%H-}, @IntCmp).Assigned);
 end;
 
 procedure TDelegatedArrayHelperTest.GetMaxOfStatic1;
@@ -754,7 +754,7 @@ var
   a: TIntArray;
   m: Integer;
 begin
-  AssertFalse(TIntHelper.FindMin(a, m, @IntCmp));
+  AssertFalse(TIntHelper.FindMin(a{%H-}, m, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.FindMinOfStatic1;
@@ -810,7 +810,7 @@ var
   a: TIntArray;
   m: Integer;
 begin
-  AssertFalse(TIntHelper.FindMax(a, m, @IntCmp));
+  AssertFalse(TIntHelper.FindMax(a{%H-}, m, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.FindMaxOfStatic1;
@@ -866,7 +866,7 @@ var
   a: TIntArray;
   mn, mx: Integer;
 begin
-  AssertFalse(TIntHelper.FindMinMax(a, mn, mx, @IntCmp));
+  AssertFalse(TIntHelper.FindMinMax(a{%H-}, mn, mx, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.FindMinMaxOfStatic1;
@@ -928,7 +928,7 @@ var
   a: TIntArray;
   v: Integer;
 begin
-  AssertFalse(TIntHelper.FindNthSmallest(a, 1, v, @IntCmp));
+  AssertFalse(TIntHelper.FindNthSmallest(a{%H-}, 1, v, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.FindNthSmallestOfStatic1;
@@ -1172,7 +1172,7 @@ procedure TDelegatedArrayHelperTest.NthSmallestOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NthSmallest(a, 1, @IntCmp).Assigned);
+  AssertFalse(TIntHelper.NthSmallest(a{%H-}, 1, @IntCmp).Assigned);
 end;
 
 procedure TDelegatedArrayHelperTest.NthSmallestOfStatic1;
@@ -1454,7 +1454,7 @@ procedure TDelegatedArrayHelperTest.NextPermutation2AscOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NextPermutation2Asc(a, @IntCmp));
+  AssertFalse(TIntHelper.NextPermutation2Asc(a{%H-}, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.NextPermutation2AscOfStatic1;
@@ -1601,7 +1601,7 @@ procedure TDelegatedArrayHelperTest.NextPermutation2DescOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.NextPermutation2Desc(a, @IntCmp));
+  AssertFalse(TIntHelper.NextPermutation2Desc(a{%H-}, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.NextPermutation2DescOfStatic1;
@@ -1754,7 +1754,7 @@ procedure TDelegatedArrayHelperTest.IsNonDescendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IsNonDescending(a, @IntCmp));
+  AssertTrue(TIntHelper.IsNonDescending(a{%H-}, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.IsNonDescendingOfStatic1;
@@ -1837,7 +1837,7 @@ procedure TDelegatedArrayHelperTest.IsStrictAscendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.IsStrictAscending(a, @IntCmp));
+  AssertFalse(TIntHelper.IsStrictAscending(a{%H-}, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.IsStrictAscendingOfStatic1;
@@ -1884,7 +1884,7 @@ procedure TDelegatedArrayHelperTest.IsNonAscendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertTrue(TIntHelper.IsNonAscending(a, @IntCmp));
+  AssertTrue(TIntHelper.IsNonAscending(a{%H-}, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.IsNonAscendingOfStatic1;
@@ -1965,7 +1965,7 @@ procedure TDelegatedArrayHelperTest.IsStrictDescendingOfEmpty;
 var
   a: TIntArray;
 begin
-  AssertFalse(TIntHelper.IsStrictDescending(a, @IntCmp));
+  AssertFalse(TIntHelper.IsStrictDescending(a{%H-}, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.IsStrictDescendingOfStatic1;
@@ -2020,7 +2020,7 @@ procedure TDelegatedArrayHelperTest.SameOfEmpty;
 var
   a, b: TIntArray;
 begin
-  AssertTrue(TIntHelper.Same(a, b, @IntCmp));
+  AssertTrue(TIntHelper.Same(a{%H-}, b{%H-}, @IntCmp));
 end;
 
 procedure TDelegatedArrayHelperTest.SameOfStatic1Success;
@@ -2103,7 +2103,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.QuickSort(a, @IntCmp);
+  TIntHelper.QuickSort(a{%H-}, @IntCmp);
   AssertTrue(a = nil);
 end;
 
@@ -2412,7 +2412,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.IntroSort(a, @IntCmp);
+  TIntHelper.IntroSort(a{%H-}, @IntCmp);
   AssertTrue(a = nil);
 end;
 
@@ -2649,7 +2649,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.DualPivotQuickSort(a, @IntCmp);
+  TIntHelper.DualPivotQuickSort(a{%H-}, @IntCmp);
   AssertTrue(a = nil);
 end;
 
@@ -2886,7 +2886,7 @@ var
   a: TIntArray;
 begin
   //should not crash
-  TIntHelper.MergeSort(a, @IntCmp);
+  TIntHelper.MergeSort(a{%H-}, @IntCmp);
   AssertTrue(a = nil);
 end;
 
