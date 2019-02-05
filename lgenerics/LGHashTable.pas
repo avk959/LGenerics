@@ -735,7 +735,7 @@ type
       function  GetCurrent: PEntry; inline;
     public
       function  MoveNext: Boolean;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: PEntry read GetCurrent;
     end;
 
@@ -748,7 +748,7 @@ type
       constructor Create(aTable: PHashTable);
       function  MoveNext: Boolean;
       procedure RemoveCurrent; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: PEntry read GetCurrent;
     end;
 
@@ -764,14 +764,13 @@ type
     function  DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
     class function HashCode(aValue: TKey): SizeInt; static; inline;
-    class function CalcShift(aListSize: SizeInt): SizeInt; static; inline;
-    class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
+    class function NewList(aCapacity: SizeInt): TNodeList; static;
     class constructor Init;
     class operator Initialize(var ht: TGLiteIntHashTable);
     class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable); inline;
   public
-    function  GetEnumerator: TEnumerator; inline;
-    function  GetRemovableEnumerator: TRemovableEnumerator; inline;
+    function  GetEnumerator: TEnumerator;
+    function  GetRemovableEnumerator: TRemovableEnumerator;
     procedure Clear;
     procedure MakeEmpty;
     procedure EnsureCapacity(aValue: SizeInt);
@@ -3683,7 +3682,13 @@ var
   List: TNodeList;
 begin
   List := NewList(aNewCapacity);
-  FShift := CalcShift(aNewCapacity);
+{$IF DEFINED(CPU64)}
+  FShift := 64 - BsrQWord(QWord(aNewCapacity));
+{$ELSEIF DEFINED(CPU32)}
+  FShift := 32 - BsrDWord(DWord(aNewCapacity));
+{$ELSE}
+  FShift := 16 - BsrWord(Word(aNewCapacity));
+{$ENDIF}
   Rehash(List);
   FList := List;
 end;
@@ -3753,17 +3758,6 @@ begin
   Result := SizeInt(aValue) * SizeInt($9e3779b9);
 {$ELSE}
   Result := SizeInt(aValue) * SizeInt($9e37);
-{$ENDIF}
-end;
-
-class function TGLiteIntHashTable.CalcShift(aListSize: SizeInt): SizeInt;
-begin
-{$IF DEFINED(CPU64)}
-  Result := 64 - BsrQWord(QWord(aListSize));
-{$ELSEIF DEFINED(CPU32)}
-  Result := 32 - BsrDWord(DWord(aListSize));
-{$ELSE}
-  Result := 16 - BsrWord(Word(aListSize));
 {$ENDIF}
 end;
 
