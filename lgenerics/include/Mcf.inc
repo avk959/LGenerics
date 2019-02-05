@@ -585,7 +585,7 @@ end;
 procedure TGCostedInt64Net.TCsMcfHelper.InitPhase;
 var
   Arc: PArc;
-  I, J: SizeInt;
+  I: SizeInt;
   Price: TCost;
 begin
   FInQueue.ClearBits;
@@ -595,8 +595,7 @@ begin
       Price := FNodes[I].Price;
       while Arc < FNodes[Succ(I)].FirstArc do
         begin
-          J := IndexOf(Arc^.Target);
-          if (Arc^.ResCap > 0) and (Price + Arc^.Cost - FNodes[J].Price <= -FEpsilon) then
+          if (Arc^.ResCap > 0) and (Price + Arc^.Cost - FNodes[IndexOf(Arc^.Target)].Price <= -FEpsilon) then
             Arc^.PushAll;
           Inc(Arc);
         end;
