@@ -20,7 +20,7 @@
 unit LGAbstractContainer;
 
 {$MODE OBJFPC}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -162,8 +162,8 @@ type
     procedure IndexOutOfBoundError(aIndex: SizeInt); inline;
     procedure UpdateLockError; inline;
     procedure CheckInIteration; inline;
-    procedure BeginIteration; inline;
-    procedure EndIteration; inline;
+    procedure BeginIteration;
+    procedure EndIteration;
     function  GetCount: SizeInt; virtual; abstract;
     function  GetCapacity: SizeInt; virtual; abstract;
     function  DoGetEnumerator: TSpecEnumerator;  virtual; abstract;

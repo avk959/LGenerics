@@ -105,7 +105,7 @@
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -117,7 +117,7 @@
       function  GetCurrent: PItem; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: PItem read GetCurrent;
     end;
 
@@ -136,7 +136,7 @@
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -159,7 +159,7 @@
     FCount: SizeInt;
     procedure CheckEmpty; inline;
     procedure ItemAdding; inline;
-    procedure Clear; inline;
+    procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  GetEnumerator: TEnumerator;
@@ -253,7 +253,7 @@
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -313,7 +313,7 @@
     function  TailIndex: SizeInt; inline;
     procedure ItemAdding; inline;
     // do not check count !!!
-    function  PopHead: T; inline;
+    function  PopHead: T;
     // do not check count !!!
     function  PopTail: T; inline;
     procedure CapacityExceedError(aValue: SizeInt);
