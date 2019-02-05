@@ -20,7 +20,7 @@
 unit LGHashMap;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}
 {$MODESWITCH NESTEDPROCVARS}
 {$MODESWITCH ADVANCEDRECORDS}
 

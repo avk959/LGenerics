@@ -22,7 +22,7 @@ unit LGStrHelpers;
 {$mode objfpc}{$H+}
 {$MODESWITCH TYPEHELPERS}
 {$MODESWITCH ADVANCEDRECORDS}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}
 
 interface
 
