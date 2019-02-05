@@ -421,6 +421,8 @@ type
     procedure ObjectSetSymmetricSubtract;
   end;
 
+  { TLiteHashSetTest }
+
   TLiteHashSetTest = class(TTestClass)
   private
   type
@@ -460,6 +462,17 @@ type
     procedure IsEqual;
     procedure Intersecting;
     procedure SymmetricSubtract;
+
+    procedure Include;
+    procedure Include1;
+    procedure Exclude;
+    procedure Exclude1;
+    procedure Intersection;
+    procedure Intersection1;
+    procedure SymmetricDifference;
+    procedure SymmetricDifference1;
+    procedure Equality;
+    procedure Contains;
   end;
 
   TGDisjointSetUnionTest = class(TTestCase)
@@ -5085,13 +5098,13 @@ var
 begin
   s.AddAll(IntArray21);
   s11.AddAll(IntArray11);
-  AssertTrue(s.Intersecting(s){%H-});
-  AssertTrue(s.Intersecting(s11){%H-});
-  AssertTrue(s11.Intersecting(s){%H-});
+  AssertTrue(s.Intersecting(s));
+  AssertTrue(s.Intersecting(s11));
+  AssertTrue(s11.Intersecting(s));
   s.Clear;
   s.AddAll(IntArray10);
-  AssertFalse(s.Intersecting(s11){%H-});
-  AssertFalse(s11.Intersecting(s){%H-});
+  AssertFalse(s.Intersecting(s11));
+  AssertFalse(s11.Intersecting(s));
 end;
 
 procedure TLiteHashSetTest.SymmetricSubtract;
@@ -5101,7 +5114,7 @@ begin
   s.AddAll(IntArray21);
   s1.AddAll(IntArray21);
   s.SymmetricSubtract(s1);
-  AssertTrue('s count = ' + s.Count.ToString, s.IsEmpty);
+  AssertTrue(s.IsEmpty);
   s.AddAll(IntArray21);
   s1.Clear;
   s.SymmetricSubtract(s1);
@@ -5120,6 +5133,235 @@ begin
   s.SymmetricSubtract(s1);
   AssertTrue(s.Count = 21);
   AssertTrue(s.ContainsAll(IntArray21));
+end;
+
+procedure TLiteHashSetTest.Include;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 + s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 + s2;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+
+  AssertTrue(s2.AddAll(IntArray11) = Length(IntArray11));
+  s3 := s1 + s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+end;
+
+procedure TLiteHashSetTest.Include1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 + s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 + s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 + s2;
+  AssertTrue(s1.Count = 10);
+  AssertTrue(s1.ContainsAll(IntArray10));
+
+  s2 := s1 + s2;
+  AssertTrue(s2.Count = 10);
+  AssertTrue(s2.ContainsAll(IntArray10));
+
+  s1.Clear;
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  s2 := s1 + s2;
+  AssertTrue(s2.Count = 21);
+  AssertTrue(s2.ContainsAll(IntArray21));
+end;
+
+procedure TLiteHashSetTest.Exclude;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 - s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 - s2;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+
+  AssertTrue(s2.AddAll(IntArray21) = Length(IntArray21));
+  s3 := s2 - s1;
+  AssertTrue(s3.Count = 11);
+  AssertTrue(s3.ContainsAll(IntArray11));
+end;
+
+procedure TLiteHashSetTest.Exclude1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 - s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 - s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 - s2;
+  AssertTrue(s1.Count = 10);
+  AssertTrue(s1.ContainsAll(IntArray10));
+
+  s2 := s1 - s2;
+  AssertTrue(s2.Count = 10);
+  AssertTrue(s2.ContainsAll(IntArray10));
+
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  s2 := s1 - s2;
+  AssertTrue(s2.Count = 11);
+  AssertTrue(s2.ContainsAll(IntArray11));
+end;
+
+procedure TLiteHashSetTest.Intersection;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray11) = Length(IntArray11));
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s2 * s1;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+end;
+
+procedure TLiteHashSetTest.Intersection1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 * s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 * s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 * s2;
+  AssertTrue(s1.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray10) = Length(IntArray10));
+  s2 := s1 * s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  AssertTrue(s2.AddAll(IntArray21) = Length(IntArray21));
+  s2 := s1 * s2;
+  AssertTrue(s2.Count = 11);
+  AssertTrue(s2.ContainsAll(IntArray11));
+end;
+
+procedure TLiteHashSetTest.SymmetricDifference;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 >< s2;
+  AssertTrue(s3.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  s3 := s1 >< s2;
+  AssertTrue(s3.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.Clear;
+  s3 := s1 >< s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  s2.AddAll(IntArray10);
+  s3 := s1 >< s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+end;
+
+procedure TLiteHashSetTest.SymmetricDifference1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 >< s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 >< s2;
+  AssertTrue(s2.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  s1 := s1 >< s2;
+  AssertTrue(s1.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.Clear;
+  s2 := s1 >< s2;
+  AssertTrue(s2.Count = 21);
+  AssertTrue(s2.ContainsAll(IntArray21));
+
+  s1.Clear;
+  s2.Clear;
+  s1.AddAll(IntArray11);
+  s2.AddAll(IntArray10);
+  s1 := s1 >< s2;
+  AssertTrue(s1.Count = 21);
+  AssertTrue(s1.ContainsAll(IntArray21));
+end;
+
+procedure TLiteHashSetTest.Equality;
+var
+  s1, s2: TSet;
+begin
+  AssertTrue(s1 = s1);
+  AssertTrue(s2 = s2);
+  AssertTrue(s1 = s2);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  AssertTrue(s2 = s2);
+  AssertTrue(s2 = s1);
+  AssertTrue(s1 = s2);
+  AssertTrue(s1 = s1);
+
+  s1.Remove(11);
+  AssertFalse(s2 = s1);
+  AssertFalse(s1 = s2);
+end;
+
+procedure TLiteHashSetTest.Contains;
+var
+  s1, s2: TSet;
+begin
+  AssertTrue(s1 <= s2);
+  AssertTrue(s2 <= s1);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+
+  AssertTrue(s2 <= s1);
+  AssertTrue(s1 <= s2);
+  AssertTrue(s2 <= s2);
+
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  AssertTrue(s1 <= s2);
+  AssertFalse(s2 <= s1);
 end;
 
 { TGDisjointSetUnionTest }
