@@ -317,6 +317,8 @@ type
     procedure ObjectSetSymmetricSubtract;
   end;
 
+  { TLiteTreeSetTest }
+
   TLiteTreeSetTest = class(TTestCase)
   private
   type
@@ -364,6 +366,17 @@ type
 
     procedure FindFloor;
     procedure FindCeil;
+
+    procedure Include;
+    procedure Include1;
+    procedure Exclude;
+    procedure Exclude1;
+    procedure Intersection;
+    procedure Intersection1;
+    procedure SymmetricDifference;
+    procedure SymmetricDifference1;
+    procedure Equality;
+    procedure Contains;
   end;
 
 implementation
@@ -3941,6 +3954,235 @@ begin
   AssertTrue(I = 27);
   AssertTrue(s.FindCeil(27, I, False));
   AssertTrue(I = 30);
+end;
+
+procedure TLiteTreeSetTest.Include;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 + s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 + s2;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+
+  AssertTrue(s2.AddAll(IntArray11) = Length(IntArray11));
+  s3 := s1 + s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+end;
+
+procedure TLiteTreeSetTest.Include1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 + s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 + s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 + s2;
+  AssertTrue(s1.Count = 10);
+  AssertTrue(s1.ContainsAll(IntArray10));
+
+  s2 := s1 + s2;
+  AssertTrue(s2.Count = 10);
+  AssertTrue(s2.ContainsAll(IntArray10));
+
+  s1.Clear;
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  s2 := s1 + s2;
+  AssertTrue(s2.Count = 21);
+  AssertTrue(s2.ContainsAll(IntArray21));
+end;
+
+procedure TLiteTreeSetTest.Exclude;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 - s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 - s2;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+
+  AssertTrue(s2.AddAll(IntArray21) = Length(IntArray21));
+  s3 := s2 - s1;
+  AssertTrue(s3.Count = 11);
+  AssertTrue(s3.ContainsAll(IntArray11));
+end;
+
+procedure TLiteTreeSetTest.Exclude1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 - s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 - s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 - s2;
+  AssertTrue(s1.Count = 10);
+  AssertTrue(s1.ContainsAll(IntArray10));
+
+  s2 := s1 - s2;
+  AssertTrue(s2.Count = 10);
+  AssertTrue(s2.ContainsAll(IntArray10));
+
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  s2 := s1 - s2;
+  AssertTrue(s2.Count = 11);
+  AssertTrue(s2.ContainsAll(IntArray11));
+end;
+
+procedure TLiteTreeSetTest.Intersection;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray11) = Length(IntArray11));
+  s3 := s1 * s2;
+  AssertTrue(s3.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray10) = Length(IntArray10));
+  s3 := s2 * s1;
+  AssertTrue(s3.Count = 10);
+  AssertTrue(s3.ContainsAll(IntArray10));
+end;
+
+procedure TLiteTreeSetTest.Intersection1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 * s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 * s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray10) = Length(IntArray10));
+  s1 := s1 * s2;
+  AssertTrue(s1.IsEmpty);
+
+  AssertTrue(s2.AddAll(IntArray10) = Length(IntArray10));
+  s2 := s1 * s2;
+  AssertTrue(s2.IsEmpty);
+
+  AssertTrue(s1.AddAll(IntArray11) = Length(IntArray11));
+  AssertTrue(s2.AddAll(IntArray21) = Length(IntArray21));
+  s2 := s1 * s2;
+  AssertTrue(s2.Count = 11);
+  AssertTrue(s2.ContainsAll(IntArray11));
+end;
+
+procedure TLiteTreeSetTest.SymmetricDifference;
+var
+  s1, s2, s3: TSet;
+begin
+  s3 := s1 >< s2;
+  AssertTrue(s3.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  s3 := s1 >< s2;
+  AssertTrue(s3.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.Clear;
+  s3 := s1 >< s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  s2.AddAll(IntArray10);
+  s3 := s1 >< s2;
+  AssertTrue(s3.Count = 21);
+  AssertTrue(s3.ContainsAll(IntArray21));
+end;
+
+procedure TLiteTreeSetTest.SymmetricDifference1;
+var
+  s1, s2: TSet;
+begin
+  s1 := s1 >< s2;
+  AssertTrue(s1.IsEmpty);
+
+  s2 := s1 >< s2;
+  AssertTrue(s2.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  s1 := s1 >< s2;
+  AssertTrue(s1.IsEmpty);
+
+  s1.AddAll(IntArray21);
+  s2.Clear;
+  s2 := s1 >< s2;
+  AssertTrue(s2.Count = 21);
+  AssertTrue(s2.ContainsAll(IntArray21));
+
+  s1.Clear;
+  s2.Clear;
+  s1.AddAll(IntArray11);
+  s2.AddAll(IntArray10);
+  s1 := s1 >< s2;
+  AssertTrue(s1.Count = 21);
+  AssertTrue(s1.ContainsAll(IntArray21));
+end;
+
+procedure TLiteTreeSetTest.Equality;
+var
+  s1, s2: TSet;
+begin
+  AssertTrue(s1 = s1);
+  AssertTrue(s2 = s2);
+  AssertTrue(s1 = s2);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+  AssertTrue(s2 = s2);
+  AssertTrue(s2 = s1);
+  AssertTrue(s1 = s2);
+  AssertTrue(s1 = s1);
+
+  s1.Remove(11);
+  AssertFalse(s2 = s1);
+  AssertFalse(s1 = s2);
+end;
+
+procedure TLiteTreeSetTest.Contains;
+var
+  s1, s2: TSet;
+begin
+  AssertTrue(s1 <= s2);
+  AssertTrue(s2 <= s1);
+
+  s1.AddAll(IntArray21);
+  s2.AddAll(IntArray21);
+
+  AssertTrue(s2 <= s1);
+  AssertTrue(s1 <= s2);
+  AssertTrue(s2 <= s2);
+
+  s1.Clear;
+  s1.AddAll(IntArray11);
+  AssertTrue(s1 <= s2);
+  AssertFalse(s2 <= s1);
 end;
 
 initialization
