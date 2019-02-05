@@ -144,10 +144,10 @@ type
     FLess,
     FGreater: SizeInt;
   public
-    class function HashCode(constref aValue: TOrdIntPair): SizeInt; static; inline;
-    class function Equal(constref L, R: TOrdIntPair): Boolean; static; inline;
+    class function HashCode(constref aValue: TOrdIntPair): SizeInt; static;
+    class function Equal(constref L, R: TOrdIntPair): Boolean; static;
     constructor Create(L, R: SizeInt);
-    function Key: TOrdIntPair; inline;
+    function Key: TOrdIntPair;
     property Left: SizeInt read FLess;
     property Right: SizeInt read FGreater;
   end;
