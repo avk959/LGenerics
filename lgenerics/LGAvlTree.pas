@@ -21,7 +21,7 @@
 unit LGAvlTree;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 {$PACKRECORDS DEFAULT}
@@ -450,7 +450,6 @@ implementation
 {$IFNDEF CPU16}
 function TGCustomAvlTree.TNode.GetBalance: SizeInt;
 begin
-  Assert((FParent and 3) <> 0, Format('Inconsistent internal Balance value(%d)', [FParent and 3]));
   Result := (FParent and 3) - 2;
 end;
 
@@ -461,15 +460,11 @@ end;
 
 procedure TGCustomAvlTree.TNode.SetBalance(aValue: SizeInt);
 begin
-  Assert(((aValue + 2) >= 1) and ((aValue + 2) <= 3),
-    Format('Inconsistent input Balance value(%d) in '+{$I %CURRENTROUTINE%}, [aValue]));
   FParent := (FParent and not SizeInt(3)) or ((aValue + 2) and 3);
 end;
 
 procedure TGCustomAvlTree.TNode.SetParent(aValue: PNode);
 begin
-  Assert({%H-}SizeUint(aValue) and 3 = 0,
-    Format('Unaligned input Parent value($%x) in '+{$I %CURRENTROUTINE%}, [aValue]));
   FParent := {%H-}SizeInt(aValue) or (FParent and 3);
 end;
 
