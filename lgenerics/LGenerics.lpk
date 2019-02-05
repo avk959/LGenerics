@@ -31,233 +31,196 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="1"/>
-    <Files Count="49">
+    <Files Count="47">
       <Item1>
         <Filename Value="LGAbstractContainer.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="LGAbstractContainer"/>
       </Item1>
       <Item2>
         <Filename Value="LGArrayHelpers.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="LGArrayHelpers"/>
       </Item2>
       <Item3>
         <Filename Value="LGAsync.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="LGAsync"/>
       </Item3>
       <Item4>
         <Filename Value="LGAvlTree.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="LGAvlTree"/>
       </Item4>
       <Item5>
         <Filename Value="LGBiMap.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="LGBiMap"/>
       </Item5>
       <Item6>
         <Filename Value="LGDeque.pas"/>
-        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="LGDeque"/>
       </Item6>
       <Item7>
-        <Filename Value="LGenerics.lpk"/>
-        <Type Value="Text"/>
+        <Filename Value="LGFunction.pas"/>
+        <UnitName Value="LGFunction"/>
       </Item7>
       <Item8>
-        <Filename Value="LGenerics.pas"/>
-        <UnitName Value="LGenerics"/>
+        <Filename Value="LGHash.pas"/>
+        <UnitName Value="LGHash"/>
       </Item8>
       <Item9>
-        <Filename Value="LGFunction.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGFunction"/>
+        <Filename Value="LGHashMap.pas"/>
+        <UnitName Value="LGHashMap"/>
       </Item9>
       <Item10>
-        <Filename Value="LGHash.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGHash"/>
+        <Filename Value="LGHashMultiSet.pas"/>
+        <UnitName Value="LGHashMultiSet"/>
       </Item10>
       <Item11>
-        <Filename Value="LGHashMap.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGHashMap"/>
+        <Filename Value="LGHashSet.pas"/>
+        <UnitName Value="LGHashSet"/>
       </Item11>
       <Item12>
-        <Filename Value="LGHashMultiSet.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGHashMultiSet"/>
+        <Filename Value="LGHashTable.pas"/>
+        <UnitName Value="LGHashTable"/>
       </Item12>
       <Item13>
-        <Filename Value="LGHashSet.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGHashSet"/>
+        <Filename Value="LGHelpers.pas"/>
+        <UnitName Value="LGHelpers"/>
       </Item13>
       <Item14>
-        <Filename Value="LGHashTable.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGHashTable"/>
-      </Item14>
-      <Item15>
-        <Filename Value="LGHelpers.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGHelpers"/>
-      </Item15>
-      <Item16>
         <Filename Value="LGList.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="LGList"/>
+      </Item14>
+      <Item15>
+        <Filename Value="LGMiscUtils.pas"/>
+        <UnitName Value="LGMiscUtils"/>
+      </Item15>
+      <Item16>
+        <Filename Value="LGMultiMap.pas"/>
+        <UnitName Value="LGMultiMap"/>
       </Item16>
       <Item17>
-        <Filename Value="LGMiscUtils.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGMiscUtils"/>
+        <Filename Value="LGPriorityQueue.pas"/>
+        <UnitName Value="LGPriorityQueue"/>
       </Item17>
       <Item18>
-        <Filename Value="LGMultiMap.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGMultiMap"/>
+        <Filename Value="LGQueue.pas"/>
+        <UnitName Value="LGQueue"/>
       </Item18>
       <Item19>
-        <Filename Value="LGPriorityQueue.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGPriorityQueue"/>
+        <Filename Value="LGSimpleDigraph.pas"/>
+        <UnitName Value="LGSimpleDigraph"/>
       </Item19>
       <Item20>
-        <Filename Value="LGQueue.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGQueue"/>
+        <Filename Value="LGSimpleGraph.pas"/>
+        <UnitName Value="LGSimpleGraph"/>
       </Item20>
       <Item21>
-        <Filename Value="LGSimpleDigraph.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGSimpleDigraph"/>
+        <Filename Value="LGSparseGraph.pas"/>
+        <UnitName Value="LGSparseGraph"/>
       </Item21>
       <Item22>
-        <Filename Value="LGSimpleGraph.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGSimpleGraph"/>
+        <Filename Value="LGStack.pas"/>
+        <UnitName Value="LGStack"/>
       </Item22>
       <Item23>
-        <Filename Value="LGSparseGraph.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGSparseGraph"/>
+        <Filename Value="LGStrConst.pas"/>
+        <UnitName Value="LGStrConst"/>
       </Item23>
       <Item24>
-        <Filename Value="LGStack.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGStack"/>
+        <Filename Value="LGStrHelpers.pas"/>
+        <UnitName Value="LGStrHelpers"/>
       </Item24>
       <Item25>
-        <Filename Value="LGStrConst.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGStrConst"/>
+        <Filename Value="LGTable2D.pas"/>
+        <UnitName Value="LGTable2D"/>
       </Item25>
       <Item26>
-        <Filename Value="LGStrHelpers.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGStrHelpers"/>
+        <Filename Value="LGTreeMap.pas"/>
+        <UnitName Value="LGTreeMap"/>
       </Item26>
       <Item27>
-        <Filename Value="LGTable2D.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGTable2D"/>
+        <Filename Value="LGTreeMultiSet.pas"/>
+        <UnitName Value="LGTreeMultiSet"/>
       </Item27>
       <Item28>
-        <Filename Value="LGTreeMap.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGTreeMap"/>
+        <Filename Value="LGTreeSet.pas"/>
+        <UnitName Value="LGTreeSet"/>
       </Item28>
       <Item29>
-        <Filename Value="LGTreeMultiSet.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGTreeMultiSet"/>
+        <Filename Value="LGUtils.pas"/>
+        <UnitName Value="LGUtils"/>
       </Item29>
       <Item30>
-        <Filename Value="LGTreeSet.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGTreeSet"/>
+        <Filename Value="LGVector.pas"/>
+        <UnitName Value="LGVector"/>
       </Item30>
       <Item31>
-        <Filename Value="LGUtils.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGUtils"/>
+        <Filename Value="include\DynBuffer.inc"/>
+        <Type Value="Include"/>
       </Item31>
       <Item32>
-        <Filename Value="LGVector.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="LGVector"/>
+        <Filename Value="include\DynBufferH.inc"/>
+        <Type Value="Include"/>
       </Item32>
       <Item33>
-        <Filename Value="include\DynBuffer.inc"/>
+        <Filename Value="include\Enums.inc"/>
         <Type Value="Include"/>
       </Item33>
       <Item34>
-        <Filename Value="include\DynBufferH.inc"/>
+        <Filename Value="include\EnumsH.inc"/>
         <Type Value="Include"/>
       </Item34>
       <Item35>
-        <Filename Value="include\Enums.inc"/>
+        <Filename Value="include\GlobMinCut.inc"/>
         <Type Value="Include"/>
       </Item35>
       <Item36>
-        <Filename Value="include\EnumsH.inc"/>
+        <Filename Value="include\GlobMinCutH.inc"/>
         <Type Value="Include"/>
       </Item36>
       <Item37>
-        <Filename Value="include\GlobMinCut.inc"/>
+        <Filename Value="include\MaxFlow.inc"/>
         <Type Value="Include"/>
       </Item37>
       <Item38>
-        <Filename Value="include\GlobMinCutH.inc"/>
+        <Filename Value="include\MaxFlowH.inc"/>
         <Type Value="Include"/>
       </Item38>
       <Item39>
-        <Filename Value="include\MaxFlow.inc"/>
+        <Filename Value="include\Mcf.inc"/>
         <Type Value="Include"/>
       </Item39>
       <Item40>
-        <Filename Value="include\MaxFlowH.inc"/>
+        <Filename Value="include\McfH.inc"/>
         <Type Value="Include"/>
       </Item40>
       <Item41>
-        <Filename Value="include\Mcf.inc"/>
+        <Filename Value="include\SimpGraphHelp.inc"/>
         <Type Value="Include"/>
       </Item41>
       <Item42>
-        <Filename Value="include\McfH.inc"/>
+        <Filename Value="include\SimpGraphHelpH.inc"/>
         <Type Value="Include"/>
       </Item42>
       <Item43>
-        <Filename Value="include\SimpGraphHelp.inc"/>
+        <Filename Value="include\SparseGraphBitHelp.inc"/>
         <Type Value="Include"/>
       </Item43>
       <Item44>
-        <Filename Value="include\SimpGraphHelpH.inc"/>
+        <Filename Value="include\SparseGraphBitHelpH.inc"/>
         <Type Value="Include"/>
       </Item44>
       <Item45>
-        <Filename Value="include\SparseGraphBitHelp.inc"/>
+        <Filename Value="include\SparseGraphHelpH.inc"/>
         <Type Value="Include"/>
       </Item45>
       <Item46>
-        <Filename Value="include\SparseGraphBitHelpH.inc"/>
+        <Filename Value="include\SparseGraphIntSet.inc"/>
         <Type Value="Include"/>
       </Item46>
       <Item47>
-        <Filename Value="include\SparseGraphHelpH.inc"/>
-        <Type Value="Include"/>
-      </Item47>
-      <Item48>
-        <Filename Value="include\SparseGraphIntSet.inc"/>
-        <Type Value="Include"/>
-      </Item48>
-      <Item49>
         <Filename Value="include\SparseGraphIntSetH.inc"/>
         <Type Value="Include"/>
-      </Item49>
+      </Item47>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>
