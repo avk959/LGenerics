@@ -363,8 +363,8 @@ type
     private
       FEnum: TTableLP.TEnumerator;
       function  GetCurrent: T; inline;
-      procedure Init(constref aSet: TGLiteHashSetLP); inline;
     public
+      constructor Create(constref aSet: TGLiteHashSetLP);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -1299,7 +1299,7 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-procedure TGLiteHashSetLP.TEnumerator.Init(constref aSet: TGLiteHashSetLP);
+constructor TGLiteHashSetLP.TEnumerator.Create(constref aSet: TGLiteHashSetLP);
 begin
   FEnum := aSet.FTable.GetEnumerator;
 end;
@@ -1436,7 +1436,7 @@ end;
 
 function TGLiteHashSetLP.GetEnumerator: TEnumerator;
 begin
-  Result.Init(Self);
+  Result := TEnumerator.Create(Self);
 end;
 
 function TGLiteHashSetLP.ToArray: TArray;
