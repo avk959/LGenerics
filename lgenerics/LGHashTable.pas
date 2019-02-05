@@ -141,13 +141,11 @@ type
 
   var
     FList: TNodeList;
-    class function NodeUsed(constref aNode: TNode): Boolean; static; inline;
-    class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
+    class function NewList(aCapacity: SizeInt): TNodeList; static;
     procedure AllocList(aCapacity: SizeInt); override;
     function  GetCapacity: SizeInt; override;
-    function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
-    procedure UpdateExpandTreshold; inline;
+    procedure UpdateExpandTreshold;
     procedure Rehash(var aTarget: TNodeList); virtual;
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
@@ -304,12 +302,11 @@ type
     FNodeManager: TNodeManager;
     procedure AllocList(aCapacity: SizeInt); override;
     function  GetCapacity: SizeInt; override;
-    function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
     function  NewNode: PNode; inline;
     procedure DisposeNode(aNode: PNode); inline;
     procedure ClearChainList;
-    procedure UpdateExpandTreshold; inline;
+    procedure UpdateExpandTreshold;
     procedure Rehash(var aTarget: TChainList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
@@ -395,18 +392,17 @@ type
     FNodeManager: TNodeManager;
     procedure AllocList(aCapacity: SizeInt); override;
     function  GetCapacity: SizeInt; override;
-    function  ListCapacity: SizeInt; inline;
     procedure SetLoadFactor(aValue: Single); override;
     function  NewNode: PNode; inline;
     procedure DisposeNode(aNode: PNode); inline;
     procedure ClearList;
-    procedure UpdateExpandTreshold; inline;
+    procedure UpdateExpandTreshold;
     procedure Rehash(var aTarget: TChainList);
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  DoAdd(aKeyHash: SizeInt): PNode;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
-    procedure DoRemove(constref aPos: TSearchResult); inline;
+    procedure DoRemove(constref aPos: TSearchResult);
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; override;
   public
     class function DefaultLoadFactor: Single; override;
@@ -592,9 +588,9 @@ type
     FExpandTreshold: SizeInt;
     FLoadFactor: Single;
     function  RestrictLoadFactor(aValue: Single): Single; inline;
-    procedure UpdateExpandTreshold; inline;
+    procedure UpdateExpandTreshold;
     procedure SetLoadFactor(aValue: Single);
-    function  GetCapacity: SizeInt; inline;
+    function  GetCapacity: SizeInt;
     function  GetFillRatio: Single; inline;
     procedure AllocList(aCapacity: SizeInt);
     procedure Rehash(var aTarget: TNodeList);
@@ -815,7 +811,7 @@ end;
 
 function TGAbstractHashTable.RestrictLoadFactor(aValue: Single): Single;
 begin
-  Result := Math.Min(Math.Max(aValue, MinLoadFactor), MaxLoadFactor);
+  Result := Math.Min(Math.Max(aValue, MIN_LOAD_FACTOR), MaxLoadFactor);
 end;
 
 class function TGAbstractHashTable.MinLoadFactor: Single;
@@ -877,7 +873,7 @@ begin
     if FCurrIndex >= FLastIndex then
       exit(False);
     Inc(FCurrIndex);
-    Result := NodeUsed(FList[FCurrIndex]);
+    Result := FList[FCurrIndex].Hash and USED_FLAG <> 0;
   until Result;
 end;
 
@@ -887,11 +883,6 @@ begin
 end;
 
 { TGOpenAddressing }
-
-class function TGOpenAddressing.NodeUsed(constref aNode: TNode): Boolean;
-begin
-  Result := (aNode.Hash and USED_FLAG) <> 0;
-end;
 
 class function TGOpenAddressing.NewList(aCapacity: SizeInt): TNodeList;
 begin
@@ -915,11 +906,6 @@ end;
 
 function TGOpenAddressing.GetCapacity: SizeInt;
 begin
-  Result := ListCapacity;
-end;
-
-function TGOpenAddressing.ListCapacity: SizeInt;
-begin
   Result := System.Length(FList);
 end;
 
@@ -937,8 +923,8 @@ end;
 
 procedure TGOpenAddressing.UpdateExpandTreshold;
 begin
-  if ListCapacity < MAX_CAPACITY then
-    FExpandTreshold := Trunc(ListCapacity * FLoadFactor)
+  if System.Length(FList) < MAX_CAPACITY then
+    FExpandTreshold := Trunc(System.Length(FList) * FLoadFactor)
   else
     FExpandTreshold := High(SizeInt);
 end;
@@ -952,7 +938,7 @@ begin
       Mask := System.High(aTarget);
       for I := 0 to System.High(FList) do
         begin
-          if NodeUsed(FList[I]) then
+          if FList[I].Hash and USED_FLAG <> 0 then
             begin
               h := FList[I].Hash and Mask;
               for J := 0 to Mask do
@@ -984,7 +970,7 @@ procedure TGOpenAddressing.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := ListCapacity;
+  OldCapacity := System.Length(FList);
   if OldCapacity > 0 then
     begin
       NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
@@ -1068,7 +1054,7 @@ begin
   if aValue <= MAX_CAPACITY then
     begin
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
-      if NewCapacity <> ListCapacity then
+      if NewCapacity <> System.Length(FList) then
         Resize(NewCapacity);
     end
   else
@@ -1082,7 +1068,7 @@ begin
   if Count > 0 then
     begin
       NewCapacity := EstimateCapacity(Count, LoadFactor);
-      if NewCapacity < ListCapacity then
+      if NewCapacity < System.Length(FList) then
         Resize(NewCapacity);
     end
   else
@@ -1206,7 +1192,7 @@ begin
   if Count > 0 then
     begin
       I := 0;
-      while I <= Pred(ListCapacity) do
+      while I <= Pred(System.Length(FList)) do
         if (FList[I].Hash <> 0) and aTest(FList[I].Data.Key) then
           begin
             if aOnRemove <> nil then
@@ -1227,7 +1213,7 @@ begin
   if Count > 0 then
     begin
       I := 0;
-      while I <= Pred(ListCapacity) do
+      while I <= Pred(System.Length(FList)) do
         if (FList[I].Hash <> 0) and aTest(FList[I].Data.Key) then
           begin
             if aOnRemove <> nil then
@@ -1248,7 +1234,7 @@ begin
   if Count > 0 then
     begin
       I := 0;
-      while I <= Pred(ListCapacity) do
+      while I <= Pred(System.Length(FList)) do
         if (FList[I].Hash <> 0) and aTest(FList[I].Data.Key) then
           begin
             if aOnRemove <> nil then
@@ -1269,7 +1255,7 @@ begin
   if Count > 0 then
     begin
       I := 0;
-      while I <= Pred(ListCapacity) do
+      while I <= Pred(System.Length(FList)) do
         if (FList[I].Hash <> 0) and aTest(@FList[I].Data) then
           begin
             if aOnRemove <> nil then
@@ -1311,7 +1297,7 @@ end;
 
 procedure TGOpenAddrTombstones.ClearTombstones;
 begin
-  Resize(ListCapacity);
+  Resize(System.Length(FList));
 end;
 
 function TGOpenAddrTombstones.FindOrAdd(constref aKey: TKey; out e: PEntry; out aRes: TSearchResult): Boolean;
@@ -1355,9 +1341,9 @@ begin
   if Count > 0 then
     begin
       I := 0;
-      while I <= Pred(ListCapacity) do
+      while I <= Pred(System.Length(FList)) do
         begin
-          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
+          if (FList[I].Hash and USED_FLAG <> 0) and aTest(FList[I].Data.Key) then
             begin
               if aOnRemove <> nil then
                 aOnRemove(@FList[I].Data);
@@ -1377,9 +1363,9 @@ begin
   if Count > 0 then
     begin
       I := 0;
-      while I <= Pred(ListCapacity) do
+      while I <= Pred(System.Length(FList)) do
         begin
-          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
+          if (FList[I].Hash and USED_FLAG <> 0) and aTest(FList[I].Data.Key) then
             begin
               if aOnRemove <> nil then
                 aOnRemove(@FList[I].Data);
@@ -1399,9 +1385,9 @@ begin
   if Count > 0 then
     begin
       I := 0;
-      while I <= Pred(ListCapacity) do
+      while I <= Pred(System.Length(FList)) do
         begin
-          if NodeUsed(FList[I]) and aTest(FList[I].Data.Key) then
+          if (FList[I].Hash and USED_FLAG <> 0) and aTest(FList[I].Data.Key) then
             begin
               if aOnRemove <> nil then
                 aOnRemove(@FList[I].Data);
@@ -1421,9 +1407,9 @@ begin
   if Count > 0 then
     begin
       I := 0;
-      while I <= Pred(ListCapacity) do
+      while I <= Pred(System.Length(FList)) do
         begin
-          if NodeUsed(FList[I]) and aTest(@FList[I].Data) then
+          if (FList[I].Hash and USED_FLAG <> 0 ) and aTest(@FList[I].Data) then
             begin
               if aOnRemove <> nil then
                 aOnRemove(@FList[I].Data);
@@ -1595,11 +1581,6 @@ end;
 
 function TGOrderedHashTable.GetCapacity: SizeInt;
 begin
-  Result := ListCapacity;
-end;
-
-function TGOrderedHashTable.ListCapacity: SizeInt;
-begin
   Result := System.Length(FList);
 end;
 
@@ -1651,8 +1632,8 @@ end;
 
 procedure TGOrderedHashTable.UpdateExpandTreshold;
 begin
-  if ListCapacity < MAX_CAPACITY then
-    FExpandTreshold := Trunc(ListCapacity * LoadFactor)
+  if System.Length(FList) < MAX_CAPACITY then
+    FExpandTreshold := Trunc(System.Length(FList) * LoadFactor)
   else
     FExpandTreshold := High(SizeInt);
 end;
@@ -1694,7 +1675,7 @@ procedure TGOrderedHashTable.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := ListCapacity;
+  OldCapacity := System.Length(FList);
   if OldCapacity > 0 then
     begin
       NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
@@ -1837,7 +1818,7 @@ function TGOrderedHashTable.Clone: TAbstractHashTable;
 var
   CurrNode, AddedNode: PNode;
 begin
-  Result := TGOrderedHashTable.Create(ListCapacity, LoadFactor);
+  Result := TGOrderedHashTable.Create(System.Length(FList), LoadFactor);
   CurrNode := FHead;
   while CurrNode <> nil do
     begin
@@ -1855,7 +1836,7 @@ begin
     begin
       FNodeManager.EnsureFreeCount(aValue - Count);
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
-      if NewCapacity <> ListCapacity then
+      if NewCapacity <> System.Length(FList) then
         Resize(NewCapacity);
     end;
 end;
@@ -1867,7 +1848,7 @@ begin
   if Count > 0 then
     begin
       NewCapacity := EstimateCapacity(Count, LoadFactor);
-      if NewCapacity < ListCapacity then
+      if NewCapacity < System.Length(FList) then
         Resize(NewCapacity);
       FNodeManager.ClearFreeList;
     end
@@ -2103,11 +2084,6 @@ end;
 
 function TGChainHashTable.GetCapacity: SizeInt;
 begin
-  Result := ListCapacity;
-end;
-
-function TGChainHashTable.ListCapacity: SizeInt;
-begin
   Result := System.Length(FList);
 end;
 
@@ -2160,8 +2136,8 @@ end;
 
 procedure TGChainHashTable.UpdateExpandTreshold;
 begin
-  if ListCapacity < MAX_CAPACITY then
-    FExpandTreshold := Trunc(ListCapacity * LoadFactor)
+  if System.Length(FList) < MAX_CAPACITY then
+    FExpandTreshold := Trunc(System.Length(FList) * LoadFactor)
   else
     FExpandTreshold := High(SizeInt);
 end;
@@ -2203,7 +2179,7 @@ procedure TGChainHashTable.Expand;
 var
   NewCapacity, OldCapacity: SizeInt;
 begin
-  OldCapacity := ListCapacity;
+  OldCapacity := System.Length(FList);
   if OldCapacity > 0 then
     begin
       NewCapacity := Math.Min(MAX_CAPACITY, OldCapacity shl 1);
@@ -2335,7 +2311,7 @@ var
   AddedNode, CurrNode: PNode;
   I: SizeInt;
 begin
-  Result := TGChainHashTable.Create(ListCapacity, LoadFactor);
+  Result := TGChainHashTable.Create(System.Length(FList), LoadFactor);
   for I := 0 to System.High(FList) do
     begin
       CurrNode := FList[I];
@@ -2356,7 +2332,7 @@ begin
     begin
       FNodeManager.EnsureFreeCount(aValue - Count);
       NewCapacity := EstimateCapacity(aValue, LoadFactor);
-      if NewCapacity <> ListCapacity then
+      if NewCapacity <> System.Length(FList) then
         Resize(NewCapacity);
     end;
 end;
@@ -2368,7 +2344,7 @@ begin
   if Count > 0 then
     begin
       NewCapacity := EstimateCapacity(Count, LoadFactor);
-      if NewCapacity < ListCapacity then
+      if NewCapacity < System.Length(FList) then
         Resize(NewCapacity);
       FNodeManager.ClearFreeList;
     end
@@ -2444,7 +2420,7 @@ var
 begin
   Result := 0;
   if Count > 0 then
-    for I := 0 to Pred(ListCapacity) do
+    for I := 0 to Pred(System.Length(FList)) do
       begin
         CurrNode := FList[I];
         PrevNode := nil;
@@ -2476,7 +2452,7 @@ var
 begin
   Result := 0;
   if Count > 0 then
-    for I := 0 to Pred(ListCapacity) do
+    for I := 0 to Pred(System.Length(FList)) do
       begin
         CurrNode := FList[I];
         PrevNode := nil;
@@ -2508,7 +2484,7 @@ var
 begin
   Result := 0;
   if Count > 0 then
-    for I := 0 to Pred(ListCapacity) do
+    for I := 0 to Pred(System.Length(FList)) do
       begin
         CurrNode := FList[I];
         PrevNode := nil;
@@ -2540,7 +2516,7 @@ var
 begin
   Result := 0;
   if Count > 0 then
-    for I := 0 to Pred(ListCapacity) do
+    for I := 0 to Pred(System.Length(FList)) do
       begin
         CurrNode := FList[I];
         PrevNode := nil;
@@ -3042,7 +3018,7 @@ begin
   if aValue <> LoadFactor then
     begin
       FLoadFactor := aValue;
-      {%H-}UpdateExpandTreshold;
+      UpdateExpandTreshold;
       if Count >= ExpandTreshold then
         Expand;
     end;

@@ -427,8 +427,8 @@ type
   { will contain only those elements that are simultaneously contained in self and aCollection/aSet }
     procedure RetainAll(aCollection: ICollection);
     procedure RetainAll(constref aSet: TGLiteHashSetLP);
-    function  IsSuperset(constref aSet: TGLiteHashSetLP): Boolean; inline;
-    function  IsSubset(constref aSet: TGLiteHashSetLP): Boolean; inline;
+    function  IsSuperset(constref aSet: TGLiteHashSetLP): Boolean;
+    function  IsSubset(constref aSet: TGLiteHashSetLP): Boolean;
     function  IsEqual(constref aSet: TGLiteHashSetLP): Boolean;
     function  Intersecting(constref aSet: TGLiteHashSetLP): Boolean;
     procedure Intersect(constref aSet: TGLiteHashSetLP);
@@ -1416,7 +1416,7 @@ end;
 
 class operator TGLiteHashSetLP.<=(constref L, R: TGLiteHashSetLP): Boolean;
 begin
-  Result := L{%H-}.IsSubset(R);
+  Result := L.IsSubset(R);
 end;
 
 function TGLiteHashSetLP.DefaultLoadFactor: Single;
