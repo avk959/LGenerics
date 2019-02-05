@@ -20,7 +20,7 @@
 unit LGHashTable;
 
 {$mode objfpc}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
 
@@ -465,8 +465,8 @@ type
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-      procedure Init(constref aList: TNodeList); inline;
     public
+      constructor Create(constref aList: TNodeList);
       function  MoveNext: Boolean;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
@@ -477,8 +477,8 @@ type
       FEnum: TEnumerator;
       FTable: TGHashTableLP;
       function  GetCurrent: PEntry; inline;
-      procedure Init(aTable: TGHashTableLP); inline;
     public
+      constructor Create(aTable: TGHashTableLP);
       function  MoveNext: Boolean;
       procedure RemoveCurrent; inline;
       procedure Reset; inline;
@@ -566,8 +566,8 @@ type
       FCurrIndex,
       FLastIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-      procedure Init(constref aList: TNodeList); inline;
     public
+      constructor Create(constref aList: TNodeList);
       function  MoveNext: Boolean;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
@@ -578,8 +578,8 @@ type
       FEnum: TEnumerator;
       FTable: PLiteHashTableLP;
       function  GetCurrent: PEntry; inline;
-      procedure Init(aTable: PLiteHashTableLP); inline;
     public
+      constructor Create(aTable: PLiteHashTableLP);
       function  MoveNext: Boolean;
       procedure RemoveCurrent; inline;
       procedure Reset; inline;
@@ -602,7 +602,7 @@ type
     procedure Expand;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
+    class function NewList(aCapacity: SizeInt): TNodeList; static;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteHashTableLP);
@@ -613,8 +613,8 @@ type
     MAX_LOAD_FACTOR: Single     = 0.90;
     MIN_LOAD_FACTOR: Single     = 0.25;
 
-    function  GetEnumerator: TEnumerator; inline;
-    function  GetRemovableEnumerator: TRemovableEnumerator; inline;
+    function  GetEnumerator: TEnumerator;
+    function  GetRemovableEnumerator: TRemovableEnumerator;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
@@ -662,8 +662,8 @@ type
       FLastIndex,
       FCurrIndex: SizeInt;
       function  GetCurrent: PEntry; inline;
-      procedure Init(constref aTable: TGLiteChainHashTable);
     public
+      constructor Create(constref aTable: TGLiteChainHashTable);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: PEntry read GetCurrent;
@@ -748,8 +748,8 @@ type
       FEnum: TEnumerator;
       FTable: PHashTable;
       function  GetCurrent: PEntry; inline;
-      procedure Init(aTable: PHashTable); inline;
     public
+      constructor Create(aTable: PHashTable);
       function  MoveNext: Boolean;
       procedure RemoveCurrent; inline;
       procedure Reset; inline;
@@ -2572,7 +2572,7 @@ begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-procedure TGHashTableLP.TEnumerator.Init(constref aList: TNodeList);
+constructor TGHashTableLP.TEnumerator.Create(constref aList: TNodeList);
 begin
   FList := Pointer(aList);
   FLastIndex := System.High(aList);
@@ -2601,7 +2601,7 @@ begin
   Result := FEnum.Current;
 end;
 
-procedure TGHashTableLP.TRemovableEnumerator.Init(aTable: TGHashTableLP);
+constructor TGHashTableLP.TRemovableEnumerator.Create(aTable: TGHashTableLP);
 begin
   FTable := aTable;
   FEnum := aTable.GetEnumerator;
@@ -2858,12 +2858,12 @@ end;
 
 function TGHashTableLP.GetEnumerator: TEnumerator;
 begin
-  Result.Init(FList);
+  Result := TEnumerator.Create(FList);
 end;
 
 function TGHashTableLP.GetRemovableEnumerator: TRemovableEnumerator;
 begin
-  Result.Init(Self);
+  Result := TRemovableEnumerator.Create(Self);
 end;
 
 procedure TGHashTableLP.Clear;
@@ -2970,7 +2970,7 @@ begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-procedure TGLiteHashTableLP.TEnumerator.Init(constref aList: TNodeList);
+constructor TGLiteHashTableLP.TEnumerator.Create(constref aList: TNodeList);
 begin
   FList := Pointer(aList);
   FLastIndex := System.High(aList);
@@ -2999,7 +2999,7 @@ begin
   Result := FEnum.Current;
 end;
 
-procedure TGLiteHashTableLP.TRemovableEnumerator.Init(aTable: PLiteHashTableLP);
+constructor TGLiteHashTableLP.TRemovableEnumerator.Create(aTable: PLiteHashTableLP);
 begin
   FTable := aTable;
   FEnum := aTable^.GetEnumerator;
@@ -3217,12 +3217,12 @@ end;
 
 function TGLiteHashTableLP.GetEnumerator: TEnumerator;
 begin
-  Result{%H-}.Init(FList);
+  Result := TEnumerator.Create(FList);
 end;
 
 function TGLiteHashTableLP.GetRemovableEnumerator: TRemovableEnumerator;
 begin
-  Result{%H-}.Init(@Self);
+  Result := TRemovableEnumerator.Create(@Self);
 end;
 
 procedure TGLiteHashTableLP.Clear;
@@ -3329,7 +3329,7 @@ begin
   Result := @FList[FCurrIndex].Data;
 end;
 
-procedure TGLiteChainHashTable.TEnumerator.Init(constref aTable: TGLiteChainHashTable);
+constructor TGLiteChainHashTable.TEnumerator.Create(constref aTable: TGLiteChainHashTable);
 begin
   FList := aTable.FNodeList;
   FLastIndex := Pred(aTable.Count);
@@ -3512,7 +3512,7 @@ end;
 
 function TGLiteChainHashTable.GetEnumerator: TEnumerator;
 begin
-  Result.Init(Self);
+  Result := TEnumerator.Create(Self);
 end;
 
 procedure TGLiteChainHashTable.Clear;
@@ -3641,7 +3641,7 @@ begin
   Result := FEnum.Current;
 end;
 
-procedure TGLiteIntHashTable.TRemovableEnumerator.Init(aTable: PHashTable);
+constructor TGLiteIntHashTable.TRemovableEnumerator.Create(aTable: PHashTable);
 begin
   FTable := aTable;
   FEnum := aTable^.GetEnumerator;
@@ -3825,7 +3825,7 @@ end;
 
 function TGLiteIntHashTable.GetRemovableEnumerator: TRemovableEnumerator;
 begin
-  Result{%H-}.Init(@Self);
+  Result := TRemovableEnumerator.Create(@Self);
 end;
 
 procedure TGLiteIntHashTable.Clear;

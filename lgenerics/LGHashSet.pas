@@ -20,7 +20,7 @@
 unit LGHashSet;
 
 {$MODE OBJFPC}{$H+}
-{$INLINE ON}{$WARN 6058 off : }
+{$INLINE ON}
 {$MODESWITCH NESTEDPROCVARS}
 {$MODESWITCH ADVANCEDRECORDS}
 
@@ -388,7 +388,7 @@ type
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
     function  MinLoadFactor: Single; inline;
-    function  GetEnumerator: TEnumerator; inline;
+    function  GetEnumerator: TEnumerator;
     function  ToArray: TArray;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
@@ -401,8 +401,8 @@ type
     function  AddAll(constref a: array of T): SizeInt;
     function  AddAll(e: IEnumerable): SizeInt;
     function  AddAll(constref aSet: TGLiteHashSetLP): SizeInt;
-    function  Contains(constref aValue: T): Boolean; inline;
-    function  NonContains(constref aValue: T): Boolean; inline;
+    function  Contains(constref aValue: T): Boolean;
+    function  NonContains(constref aValue: T): Boolean;
     function  ContainsAny(constref a: array of T): Boolean;
     function  ContainsAny(e: IEnumerable): Boolean;
     function  ContainsAny(constref aSet: TGLiteHashSetLP): Boolean;
@@ -430,8 +430,8 @@ type
     function  IsSuperset(constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  IsSubset(constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  IsEqual(constref aSet: TGLiteHashSetLP): Boolean;
-    function  Intersecting(constref aSet: TGLiteHashSetLP): Boolean; inline;
-    procedure Intersect(constref aSet: TGLiteHashSetLP); inline;
+    function  Intersecting(constref aSet: TGLiteHashSetLP): Boolean;
+    procedure Intersect(constref aSet: TGLiteHashSetLP);
     procedure Join(constref aSet: TGLiteHashSetLP);
     procedure Subtract(constref aSet: TGLiteHashSetLP);
     procedure SymmetricSubtract(constref aSet: TGLiteHashSetLP);
