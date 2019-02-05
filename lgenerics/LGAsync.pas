@@ -410,6 +410,7 @@ implementation
 
 procedure TAsyncTask.Cancel;
 begin
+  WriteBarrier;
   if FState = atsPending then
     FState := atsCancelled;
 end;
@@ -429,20 +430,20 @@ end;
 
 procedure TAsyncTask.Execute;
 begin
+  WriteBarrier;
   if FState = atsPending then
     begin
       FState := atsExecuting;
-      WriteBarrier;
       try
         DoExecute;
       except
         on e: Exception do
           FException := Exception(System.AcquireExceptionObject);
       end;
-      WriteBarrier;
       FState := atsFinished;
     end;
   System.RtlEventSetEvent(FAwait);
+  WriteBarrier;
   if FState = atsCancelled then
     TThread.Queue(TThread.CurrentThread, @Free);
 end;
