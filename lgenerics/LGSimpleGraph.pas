@@ -23,7 +23,6 @@ unit LGSimpleGraph;
 {$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
-
 interface
 
 uses

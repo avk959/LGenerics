@@ -151,7 +151,7 @@
   private
     function  GetCapacity: SizeInt; inline;
     procedure Expand(aValue: SizeInt);
-    procedure AccessEmptyError; inline;
+    procedure AccessEmptyError;
     class operator Initialize(var b: TGLiteDynBuffer);
     class operator Copy(constref aSrc: TGLiteDynBuffer; var aDst: TGLiteDynBuffer); inline;
   public
