@@ -1327,7 +1327,6 @@ end;
 procedure TGLiteMultiMapTest.AddValuesArray;
 var
   m: TMultiMap;
-  s: string;
 begin
   m.AddAll(Array12);
   AssertTrue(m.AddValues('fish', ArrayFish4) = 4);
@@ -1342,7 +1341,6 @@ end;
 procedure TGLiteMultiMapTest.AddValuesEnum;
 var
   m: TMultiMap;
-  s: string;
 begin
   m.AddAll(Array12);
   AssertTrue(m.AddValues('fish', TStrCursor.Create(TStrHelper.CreateCopy(ArrayFish4))) = 4);
