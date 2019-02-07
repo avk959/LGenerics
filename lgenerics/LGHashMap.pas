@@ -111,16 +111,16 @@ type
     class function MaxLoadFactor: Single; inline;
     class function MinLoadFactor: Single; inline;
     constructor Create;
-    constructor Create(constref a: array of TEntry);
+    constructor Create(const a: array of TEntry);
     constructor Create(e: IEntryEnumerable);
     constructor Create(aCapacity: SizeInt);
-    constructor Create(aCapacity: SizeInt; constref a: array of TEntry);
+    constructor Create(aCapacity: SizeInt; const a: array of TEntry);
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable);
     constructor Create(aLoadFactor: Double);
-    constructor Create(aLoadFactor: Single; constref a: array of TEntry);
+    constructor Create(aLoadFactor: Single; const a: array of TEntry);
     constructor Create(aLoadFactor: Single; e: IEntryEnumerable);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of TEntry);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of TEntry);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEntryEnumerable);
     constructor CreateCopy(aMap: TAbstractHashMap);
     destructor Destroy; override;
@@ -236,13 +236,13 @@ type
     constructor Create(constref a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; constref a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aCapacity: SizeInt; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aLoadFactor: Single; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aLoadFactor: Single; constref a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
+    constructor Create(aLoadFactor: Single; const a: array of TEntry; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aLoadFactor: Single; e: IEntryEnumerable; aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; aOwns: TMapObjOwnership = OWNS_BOTH);
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of TEntry;
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of TEntry;
                        aOwns: TMapObjOwnership = OWNS_BOTH);
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single; e: IEntryEnumerable;
                        aOwns: TMapObjOwnership = OWNS_BOTH);
@@ -379,14 +379,6 @@ type
       function GetEnumerator: TValueEnumerator; inline;
     end;
 
-    TEntries = record
-    private
-      FMap: PLiteHashMapLP;
-      procedure Init(aMap: PLiteHashMapLP); inline;
-    public
-      function GetEnumerator: TEntryEnumerator; inline;
-    end;
-
   private
     FTable: TTableLP;
     function  GetCount: SizeInt; inline;
@@ -423,22 +415,22 @@ type
   { returns True if e.Key added, False otherwise }
     function  AddOrSetValue(constref e: TEntry): Boolean; inline;
   { will add only entries which keys are absent in map }
-    function  AddAll(constref a: array of TEntry): SizeInt;
+    function  AddAll(const a: array of TEntry): SizeInt;
     function  AddAll(e: IEntryEnumerable): SizeInt;
     function  AddAll(constref aMap: TGLiteHashMapLP): SizeInt;
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean; inline;
     function  Contains(constref aKey: TKey): Boolean; inline;
     function  NonContains(constref aKey: TKey): Boolean; inline;
-    function  ContainsAny(constref a: array of TKey): Boolean;
+    function  ContainsAny(const a: array of TKey): Boolean;
     function  ContainsAny(e: IKeyEnumerable): Boolean;
     function  ContainsAny(constref aMap: TGLiteHashMapLP): Boolean;
-    function  ContainsAll(constref a: array of TKey): Boolean;
+    function  ContainsAll(const a: array of TKey): Boolean;
     function  ContainsAll(e: IKeyEnumerable): Boolean;
     function  ContainsAll(constref aMap: TGLiteHashMapLP): Boolean;
   { returns True if entry removed }
     function  Remove(constref aKey: TKey): Boolean; inline;
-    function  RemoveAll(constref a: array of TKey): SizeInt;
+    function  RemoveAll(const a: array of TKey): SizeInt;
     function  RemoveAll(e: IKeyEnumerable): SizeInt;
     function  RemoveAll(constref aMap: TGLiteHashMapLP): SizeInt;
     function  RemoveIf(aTest: TKeyTest): SizeInt;
@@ -451,7 +443,6 @@ type
     procedure RetainAll(aCollection: IKeyCollection);
     function  Keys: TKeys; inline;
     function  Values: TValues; inline;
-    function  Entries: TEntries; inline;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   { reading will raise ELGMapError if an aKey is not present in map }
@@ -706,7 +697,7 @@ begin
   FTable := GetTableClass.Create;
 end;
 
-constructor TGAbstractHashMap.Create(constref a: array of TEntry);
+constructor TGAbstractHashMap.Create(const a: array of TEntry);
 begin
   FTable := GetTableClass.Create;
   DoAddAll(a);
@@ -723,7 +714,7 @@ begin
   FTable := GetTableClass.Create(aCapacity);
 end;
 
-constructor TGAbstractHashMap.Create(aCapacity: SizeInt; constref a: array of TEntry);
+constructor TGAbstractHashMap.Create(aCapacity: SizeInt; const a: array of TEntry);
 begin
   FTable := GetTableClass.Create(aCapacity);
   DoAddAll(a);
@@ -740,7 +731,7 @@ begin
   FTable := GetTableClass.Create(aLoadFactor);
 end;
 
-constructor TGAbstractHashMap.Create(aLoadFactor: Single; constref a: array of TEntry);
+constructor TGAbstractHashMap.Create(aLoadFactor: Single; const a: array of TEntry);
 begin
   FTable := GetTableClass.Create(aLoadFactor);
   DoAddAll(a);
@@ -757,7 +748,7 @@ begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
 end;
 
-constructor TGAbstractHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of TEntry);
+constructor TGAbstractHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of TEntry);
 begin
   FTable := GetTableClass.Create(aCapacity, aLoadFactor);
   DoAddAll(a);
@@ -998,7 +989,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGCustomObjectHashMap.Create(aCapacity: SizeInt; constref a: array of TEntry;
+constructor TGCustomObjectHashMap.Create(aCapacity: SizeInt; const a: array of TEntry;
   aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, a);
@@ -1017,7 +1008,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGCustomObjectHashMap.Create(aLoadFactor: Single; constref a: array of TEntry;
+constructor TGCustomObjectHashMap.Create(aLoadFactor: Single; const a: array of TEntry;
   aOwns: TMapObjOwnership);
 begin
   inherited Create(aLoadFactor, a);
@@ -1036,7 +1027,7 @@ begin
   SetOwnership(aOwns);
 end;
 
-constructor TGCustomObjectHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single; constref a: array of TEntry;
+constructor TGCustomObjectHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single; const a: array of TEntry;
   aOwns: TMapObjOwnership);
 begin
   inherited Create(aCapacity, aLoadFactor, a);
@@ -1235,18 +1226,6 @@ begin
   Result{%H-}.Init(FMap^);
 end;
 
-{ TGLiteHashMapLP.TEntries }
-
-procedure TGLiteHashMapLP.TEntries.Init(aMap: PLiteHashMapLP);
-begin
-  FMap := aMap;
-end;
-
-function TGLiteHashMapLP.TEntries.GetEnumerator: TEntryEnumerator;
-begin
-  Result{%H-}.Init(FMap^);
-end;
-
 { TGLiteHashMapLP }
 
 function TGLiteHashMapLP.GetCount: SizeInt;
@@ -1415,7 +1394,7 @@ begin
   p^.Value := e.Value;
 end;
 
-function TGLiteHashMapLP.AddAll(constref a: array of TEntry): SizeInt;
+function TGLiteHashMapLP.AddAll(const a: array of TEntry): SizeInt;
 var
   e: TEntry;
 begin
@@ -1440,7 +1419,7 @@ begin
   if @AMap = @Self then
     exit(0);
   Result := 0;
-  for e in aMap.Entries do
+  for e in aMap do
     Result += Ord(Add(e));
 end;
 
@@ -1459,7 +1438,7 @@ begin
   Result := Find(aKey) = nil;
 end;
 
-function TGLiteHashMapLP.ContainsAny(constref a: array of TKey): Boolean;
+function TGLiteHashMapLP.ContainsAny(const a: array of TKey): Boolean;
 var
   k: TKey;
 begin
@@ -1491,7 +1470,7 @@ begin
   Result := False;
 end;
 
-function TGLiteHashMapLP.ContainsAll(constref a: array of TKey): Boolean;
+function TGLiteHashMapLP.ContainsAll(const a: array of TKey): Boolean;
 var
   k: TKey;
 begin
@@ -1528,7 +1507,7 @@ begin
   Result := FTable.Remove(aKey);
 end;
 
-function TGLiteHashMapLP.RemoveAll(constref a: array of TKey): SizeInt;
+function TGLiteHashMapLP.RemoveAll(const a: array of TKey): SizeInt;
 var
   k: TKey;
 begin
@@ -1693,11 +1672,6 @@ begin
 end;
 
 function TGLiteHashMapLP.Values: TValues;
-begin
-  Result{%H-}.Init(@Self);
-end;
-
-function TGLiteHashMapLP.Entries: TEntries;
 begin
   Result{%H-}.Init(@Self);
 end;

@@ -233,7 +233,6 @@ type
 {.$DEFINE ORDEREDHASHTABLE_ENABLE_PAGEDNODEMANAGER}{ if uncomment define, TGOrderedHashTable
                                                      will use TGPageNodeManager }
   { TGOrderedHashTable }
-
   generic TGOrderedHashTable<TKey, TEntry, TEqRel> = class(specialize TGAbstractHashTable<TKey, TEntry>)
   public
   type
@@ -348,7 +347,6 @@ type
 {.$DEFINE CHAINHASHTABLE_ENABLE_PAGEDNODEMANAGER}{ if uncomment define, TGChainHashTable
                                                    will use TGPageNodeManager }
   { TGChainHashTable }
-
   generic TGChainHashTable<TKey, TEntry, TEqRel> = class(specialize TGAbstractHashTable<TKey, TEntry>)
   public
   type
@@ -639,35 +637,20 @@ type
     PEntry = ^TEntry;
 
     TNode = record
-      Hash,
-      Next: SizeInt;
+      Next,
+      Hash: SizeInt;
       Data: TEntry;
     end;
     PNode = ^TNode;
 
-    TNodeList  = array of TNode;
-
+  private
+  type
+    TNodeList     = array of TNode;
+    TChainList    = array of SizeInt;
     TSearchResult = record
       Index,
       PrevIndex: SizeInt;
     end;
-
-    TEnumerator = record
-    private
-      FList: TNodeList;
-      FLastIndex,
-      FCurrIndex: SizeInt;
-      function  GetCurrent: PEntry; inline;
-    public
-      constructor Create(constref aTable: TGLiteChainHashTable);
-      function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
-      property  Current: PEntry read GetCurrent;
-    end;
-
-  private
-  type
-    TChainList = array of SizeInt;
 
   var
     FNodeList: TNodeList;
@@ -688,14 +671,12 @@ type
     class operator Initialize(var ht: TGLiteChainHashTable);
     class operator Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
   public
-    function  GetEnumerator: TEnumerator; inline;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aIndex: SizeInt): Boolean;
     function  Find(constref aKey: TKey; out aIndex: SizeInt): PEntry;
     function  Remove(constref aKey: TKey): Boolean;
-    procedure RemoveAt(constref aPos: TSearchResult); inline;
     procedure RemoveIndex(aIndex: SizeInt); inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -863,7 +844,7 @@ constructor TGOpenAddressing.TEnumerator.Create(constref aList: TNodeList);
 begin
   FList := Pointer(aList);
   FLastIndex := System.High(aList);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGOpenAddressing.TEnumerator.MoveNext: Boolean;
@@ -878,7 +859,7 @@ end;
 
 procedure TGOpenAddressing.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGOpenAddressing }
@@ -2039,7 +2020,7 @@ constructor TGChainHashTable.TEnumerator.Create(constref aList: TChainList);
 begin
   FList := aList;
   FLastIndex := High(aList);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGChainHashTable.TEnumerator.MoveNext: Boolean;
@@ -2062,7 +2043,7 @@ end;
 procedure TGChainHashTable.TEnumerator.Reset;
 begin
   FCurrNode := nil;
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGChainHashTable }
@@ -2551,7 +2532,7 @@ constructor TGHashTableLP.TEnumerator.Create(constref aList: TNodeList);
 begin
   FList := Pointer(aList);
   FLastIndex := System.High(aList);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGHashTableLP.TEnumerator.MoveNext: Boolean;
@@ -2566,7 +2547,7 @@ end;
 
 procedure TGHashTableLP.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGHashTableLP.TRemovableEnumerator }
@@ -2949,7 +2930,7 @@ constructor TGLiteHashTableLP.TEnumerator.Create(constref aList: TNodeList);
 begin
   FList := Pointer(aList);
   FLastIndex := System.High(aList);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGLiteHashTableLP.TEnumerator.MoveNext: Boolean;
@@ -2964,7 +2945,7 @@ end;
 
 procedure TGLiteHashTableLP.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGLiteHashTableLP.TRemovableEnumerator }
@@ -3297,31 +3278,6 @@ begin
     DoRemove(aPos);
 end;
 
-{ TGLiteChainHashTable.TEnumerator }
-
-function TGLiteChainHashTable.TEnumerator.GetCurrent: PEntry;
-begin
-  Result := @FList[FCurrIndex].Data;
-end;
-
-constructor TGLiteChainHashTable.TEnumerator.Create(constref aTable: TGLiteChainHashTable);
-begin
-  FList := aTable.FNodeList;
-  FLastIndex := Pred(aTable.Count);
-  FCurrIndex := -1;
-end;
-
-function TGLiteChainHashTable.TEnumerator.MoveNext: Boolean;
-begin
-  Result := FCurrIndex < FLastIndex;
-  FCurrIndex += Ord(Result);
-end;
-
-procedure TGLiteChainHashTable.TEnumerator.Reset;
-begin
-  FCurrIndex := -1;
-end;
-
 { TGLiteChainHashTable }
 
 function TGLiteChainHashTable.GetCapacity: SizeInt;
@@ -3454,7 +3410,8 @@ begin
   Dec(FCount);
   if aPos.Index < Count then
     begin
-      System.Move(FNodeList[Count], FNodeList[aPos.Index], SizeOf(TNode));
+      //System.Move(FNodeList[Count], FNodeList[aPos.Index], SizeOf(TNode));
+      FNodeList[aPos.Index] := FNodeList[Count];
       System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
       FixChain(Count, aPos.Index);
     end;
@@ -3467,7 +3424,8 @@ begin
   Dec(FCount);
   if aIndex < Count then
     begin
-      System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
+      //System.Move(FNodeList[Count], FNodeList[aIndex], SizeOf(TNode));
+      FNodeList[aIndex] := FNodeList[Count];
       System.FillChar(FNodeList[Count], SizeOf(TNode), 0);
       FixChain(Count, aIndex);
     end;
@@ -3483,11 +3441,6 @@ begin
   aDst.FNodeList := System.Copy(aSrc.FNodeList);
   aDst.FChainList := System.Copy(aSrc.FChainList);
   aDst.FCount := aSrc.Count;
-end;
-
-function TGLiteChainHashTable.GetEnumerator: TEnumerator;
-begin
-  Result := TEnumerator.Create(Self);
 end;
 
 procedure TGLiteChainHashTable.Clear;
@@ -3571,14 +3524,6 @@ begin
     Result := False;
 end;
 
-procedure TGLiteChainHashTable.RemoveAt(constref aPos: TSearchResult);
-begin
-  if (aPos.Index >= 0) and (aPos.Index < Count) then
-    DoRemove(aPos)
-  else
-    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aPos.Index]);
-end;
-
 procedure TGLiteChainHashTable.RemoveIndex(aIndex: SizeInt);
 begin
   if (aIndex >= 0) and (aIndex < Count) then
@@ -3606,7 +3551,7 @@ end;
 
 procedure TGLiteIntHashTable.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGLiteIntHashTable.TRemovableEnumerator }
@@ -3790,7 +3735,7 @@ function TGLiteIntHashTable.GetEnumerator: TEnumerator;
 begin
   Result.FList := Pointer(FList);
   Result.FLastIndex := System.High(FList);
-  Result.FCurrIndex := -1;
+  Result.FCurrIndex := NULL_INDEX;
 end;
 
 function TGLiteIntHashTable.GetRemovableEnumerator: TRemovableEnumerator;

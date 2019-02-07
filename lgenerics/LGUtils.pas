@@ -435,7 +435,7 @@ type
     class operator Finalize(var nm: TGJoinableNodeManager<TNode>);
   public
     function  NewNode: PNode;
-    procedure DisposeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode);
     procedure FreeNode(aNode: PNode); inline;
     procedure EnsureFreeCount(aCount: SizeInt);
     procedure ClearFreeList;
@@ -474,7 +474,7 @@ type
     class operator Finalize(var nm: TGJoinablePageNodeManager<TNode>);
   public
     function  NewNode: PNode;
-    procedure DisposeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode);
     procedure FreeNode(aNode: PNode); inline;
     procedure EnsureFreeCount(aCount: SizeInt);
     procedure ClearFreeList;
