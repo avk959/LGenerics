@@ -1676,8 +1676,6 @@ end;
 
 function TGDelegatedTreeMap.SubMap(constref aLowBound, aHighBound: TKey;
   aIncludeBounds: TRangeBounds): TGDelegatedTreeMap;
-var
-  k: TKey;
 begin
   Result := TGDelegatedTreeMap.Create(Comparator);
   with TKeyRangeEnumerable.Create(aLowBound, aHighBound, Self, aIncludeBounds) do

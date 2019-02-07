@@ -290,7 +290,7 @@ type
       procedure Init(aTree: TGAvlTree2);
     public
       function  MoveNext: Boolean;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: PEntry read GetCurrent;
     end;
 
@@ -393,7 +393,7 @@ type
       procedure Init(aTree: PAvlTree);
     public
       function  MoveNext: Boolean;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: PEntry read GetCurrent;
     end;
 

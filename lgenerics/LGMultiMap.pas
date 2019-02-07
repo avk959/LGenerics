@@ -1516,8 +1516,6 @@ begin
 end;
 
 procedure TGLiteHashMultiMap.Add(constref aKey: TKey; constref aValue: TValue);
-var
-  h: SizeInt;
 begin
   if Count = Capacity then
     Expand;

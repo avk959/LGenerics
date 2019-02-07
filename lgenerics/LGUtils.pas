@@ -376,7 +376,7 @@ type
     destructor Destroy; override;
     function  NewNode: PNode;
     procedure DisposeNode(aNode: PNode); inline;
-    procedure FreeNode(aNode: PNode); inline;
+    procedure FreeNode(aNode: PNode);
     procedure EnsureFreeCount(aCount: SizeInt);
     procedure ClearFreeList;
     procedure Clear; inline;
@@ -411,7 +411,7 @@ type
   public
     destructor Destroy; override;
     function  NewNode: PNode;
-    procedure DisposeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode);
     procedure FreeNode(aNode: PNode); inline;
     procedure EnsureFreeCount(aCount: SizeInt);
     procedure ClearFreeList;
@@ -435,8 +435,8 @@ type
     class operator Finalize(var nm: TGJoinableNodeManager<TNode>);
   public
     function  NewNode: PNode;
-    procedure DisposeNode(aNode: PNode);
-    procedure FreeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode); inline;
+    procedure FreeNode(aNode: PNode);
     procedure EnsureFreeCount(aCount: SizeInt);
     procedure ClearFreeList;
     procedure Clear; inline;
@@ -474,8 +474,8 @@ type
     class operator Finalize(var nm: TGJoinablePageNodeManager<TNode>);
   public
     function  NewNode: PNode;
-    procedure DisposeNode(aNode: PNode);
-    procedure FreeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode); inline;
+    procedure FreeNode(aNode: PNode);
     procedure EnsureFreeCount(aCount: SizeInt);
     procedure ClearFreeList;
     procedure Clear;

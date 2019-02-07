@@ -793,7 +793,6 @@ end;
 
 function TGTreeTable2D.TRowMap.TryGetValue(constref aCol: TCol; out aValue: TValue): Boolean;
 var
-  Pos: SizeInt;
   p: PNode;
 begin
   p := FMap.Find(aCol);
@@ -804,7 +803,6 @@ end;
 
 function TGTreeTable2D.TRowMap.Add(constref aCol: TCol; constref aValue: TValue): Boolean;
 var
-  Pos: SizeInt;
   p: PNode;
 begin
   Result := not FMap.FindOrAdd(aCol, p);
@@ -817,7 +815,6 @@ end;
 
 procedure TGTreeTable2D.TRowMap.AddOrSetValue(const aCol: TCol; const aValue: TValue);
 var
-  Pos: SizeInt;
   p: PNode;
 begin
   if not FMap.FindOrAdd(aCol, p) then

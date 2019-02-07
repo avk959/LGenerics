@@ -111,10 +111,10 @@ type
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     procedure Push(constref aValue: T); inline;
-    function  Pop: T; inline;
-    function  TryPop(out aValue: T): Boolean; inline;
-    function  Peek: T; inline;
-    function  TryPeek(out aValue: T): Boolean; inline;
+    function  Pop: T;
+    function  TryPop(out aValue: T): Boolean;
+    function  Peek: T;
+    function  TryPeek(out aValue: T): Boolean;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;

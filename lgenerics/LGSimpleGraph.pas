@@ -180,7 +180,7 @@ type
     function  DegreeI(aIndex: SizeInt): SizeInt;
     function  Isolated(constref aVertex: TVertex): Boolean; inline;
     function  IsolatedI(aIndex: SizeInt): Boolean; inline;
-    function  DistinctEdges: TDistinctEdges; inline;
+    function  DistinctEdges: TDistinctEdges;
   { returns adjacency matrix of the complement graph;
     warning: maximum matrix size limited, see BitMatrixSizeMax }
     function  CreateComplementMatrix: TAdjacencyMatrix;
@@ -206,7 +206,7 @@ type
     function  IsStar(out aHub: SizeInt): Boolean;
     function  IsCycle: Boolean;
     function  IsWheel(out aHub: SizeInt): Boolean;
-    function  IsComplete: Boolean; inline;
+    function  IsComplete: Boolean;
   { checks whether the graph is regular(that is, the degrees of all its vertices are equal);
     an empty graph is considered regular }
     function  IsRegular(out aDegree: SizeInt): Boolean;
@@ -1405,7 +1405,7 @@ begin
   aColors := nil;
   if IsEmpty then
     exit(True);
-  if {%H-}IsComplete then
+  if IsComplete then
     begin
       aColors.Length := VertexCount;
       for I := 0 to Pred(VertexCount) do
@@ -2353,14 +2353,14 @@ begin
   try
     Tmp.Title := Title;
     Tmp.Description.Assign(Description);
-    for e in {%H-}DistinctEdges do
+    for e in DistinctEdges do
       begin
         s := Items[e.Source];
         d := Items[e.Destination];
         if not aGraph.ContainsEdge(s, d) then
           Tmp.AddEdge(s, d, e.Data);
       end;
-    for e in aGraph{%H-}.DistinctEdges do
+    for e in aGraph.DistinctEdges do
       begin
         s := aGraph[e.Source];
         d := aGraph[e.Destination];
@@ -4702,7 +4702,6 @@ var
   B: TBoolVector;
   I: SizeInt;
   e: TEdge;
-  d: TEdgeData;
 begin
   aCutWeight := 0;
   aCut.A := nil;

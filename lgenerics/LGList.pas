@@ -373,7 +373,7 @@ type
       FHighBound: SizeInt;
       procedure Init(aList: PLiteSortedList; aHighBound: SizeInt); inline;
     public
-      function GetEnumerator: THeadEnumerator; inline;
+      function GetEnumerator: THeadEnumerator;
     end;
 
     TTailEnumerator = record
@@ -469,7 +469,7 @@ type
   { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
     function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail;
   { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
-    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
+    function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange;
     function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGLiteSortedList;
     function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGLiteSortedList;
     function  SubList(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TGLiteSortedList;

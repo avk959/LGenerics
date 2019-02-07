@@ -381,7 +381,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
+    function  NonEmpty: Boolean;
     procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
@@ -1328,7 +1328,7 @@ function TGSparseGraph.Remove(constref v: TVertex): Boolean;
 var
   ToRemove: SizeInt;
 begin
-  if {%H-}NonEmpty then
+  if NonEmpty then
     begin
       ToRemove := Find(v);
       Result := ToRemove >= 0;

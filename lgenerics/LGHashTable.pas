@@ -496,7 +496,7 @@ type
     procedure Expand;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    class function NewList(aCapacity: SizeInt): TNodeList; static; inline;
+    class function NewList(aCapacity: SizeInt): TNodeList; static;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
   public
@@ -3484,6 +3484,7 @@ var
   sr: TSearchResult;
 begin
   h := TKeyEqRel.HashCode(aKey);
+  sr.Index := NULL_INDEX;
   if Count > 0 then
     Result := DoFind(aKey, h, sr)
   else

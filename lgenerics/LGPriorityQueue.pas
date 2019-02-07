@@ -381,7 +381,7 @@ type
     function  DoRemove(aNode: PNode): T; override;
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
-    class function DoMerge(L, R: PNode): PNode; static; inline;
+    class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
     class function DoCompare(constref L, R: T): SizeInt; static;
   public
@@ -417,7 +417,7 @@ type
     function  DoRemove(aNode: PNode): T; override;
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
-    class function DoMerge(L, R: PNode): PNode; static; inline;
+    class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
   public
     constructor Create;
@@ -437,7 +437,7 @@ type
     function  DoRemove(aNode: PNode): T; override;
     function  DoDequeue: T; override;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; override;
-    class function DoMerge(L, R: PNode): PNode; static; inline;
+    class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
   public
     constructor Create;
@@ -450,7 +450,7 @@ type
   generic TGRegularPairHeap<T> = class(specialize TGCustomPairingHeap<T>)
   protected
     FCompare: TCompare;
-    function  DoMerge(L, R: PNode): PNode; inline;
+    function  DoMerge(L, R: PNode): PNode;
     procedure RootMerge(aNode: PNode); inline;
     function  TwoPassMerge(aNode: PNode): PNode;
     procedure DoExtract(aNode: PNode);
@@ -474,7 +474,7 @@ type
   generic TGDelegatedPairHeap<T> = class(specialize TGCustomPairingHeap<T>)
   protected
     FCompare: TOnCompare;
-    function  DoMerge(L, R: PNode): PNode; inline;
+    function  DoMerge(L, R: PNode): PNode;
     procedure RootMerge(aNode: PNode); inline;
     function  TwoPassMerge(aNode: PNode): PNode;
     procedure DoExtract(aNode: PNode);
@@ -559,7 +559,7 @@ type
     FNodeManager: TNodeManager;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator;
     function  FindLeftmost: PNode;
     function  FindRightmost: PNode;
     procedure RemoveNodeWithChilds(aNode: PNode);
@@ -572,11 +572,11 @@ type
     procedure ExtractNode(aNode: PNode);
     function  RemoveNode(aNode: PNode): T;
     procedure CheckEmpty; inline;
-    procedure AccessEmptyError; inline;
+    procedure AccessEmptyError;
     class operator  Initialize(var h: TGLitePairingHeap);
     class operator  Finalize(var h: TGLitePairingHeap);
     class operator  Copy(constref aSrc: TGLitePairingHeap; var aDst: TGLitePairingHeap);
-    class function  NodeMerge(L, R: PNode): PNode; static; inline; //inline ???
+    class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
     class function  DoCompare(constref L, R: T): SizeInt; static;
@@ -584,15 +584,15 @@ type
   type
     TComparator = specialize TGCompare<T>;
     function  Comparator: TComparator;
-    function  GetEnumerator: TEnumerator; inline;
-    function  Reverse: TReverse; inline;
+    function  GetEnumerator: TEnumerator;
+    function  Reverse: TReverse;
     function  ToArray: TArray;
     procedure Clear; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
-    procedure Enqueue(constref aValue: T); inline;          // O(1)
+    procedure Enqueue(constref aValue: T);                  // O(1)
     function  Dequeue: T;                                   // amortized O(logN)
     function  TryDequeue(out aValue: T): Boolean;
     function  Peek: T;                                      // O(1)
@@ -681,7 +681,7 @@ type
     procedure ClearTree;
     function  NewNode(constref aValue: T): PNode; inline;
     procedure DisposeNode(aNode: PNode); inline;
-    procedure RootMerge(aNode: PNode); inline;
+    procedure RootMerge(aNode: PNode);
     function  DequeueItem: T;
     procedure UpdateNode(aNode: PNode; constref aValue: T); inline;
     procedure ExtractNode(aNode: PNode);
@@ -3367,7 +3367,8 @@ end;
 
 class operator TGLitePairingHeap.Finalize(var h: TGLitePairingHeap);
 begin
-  h.Clear;
+  h.ClearTree;
+  h.FNodeManager.Clear;
 end;
 
 class operator TGLitePairingHeap.Copy(constref aSrc: TGLitePairingHeap; var aDst: TGLitePairingHeap);
