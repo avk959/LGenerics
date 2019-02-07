@@ -28,7 +28,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; {%H-}aState: TGridDrawState);
-    procedure sgCellsPrepareCanvas(Sender: TObject; aCol, aRow: Integer; aState: TGridDrawState);
+    procedure sgCellsPrepareCanvas(Sender: TObject; aCol, aRow: Integer; {%H-}aState: TGridDrawState);
   private
   type
     THelper   = specialize TGOrdinalArrayHelper<SizeInt>;
@@ -112,9 +112,8 @@ var
   a: array[0..15] of SizeInt;
 begin
   Result := TIntChart.Create;
-  for I := 1 to 256 do
-    Result.AddVertex(I);
-  //lines
+  Result.AddVertexRange(1, 256);
+  //rows
   K := 1;
   while K < 256 do
     begin
