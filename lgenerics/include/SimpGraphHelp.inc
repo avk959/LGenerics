@@ -1088,6 +1088,7 @@ end;
 
 procedure TGSimpleGraph.THamiltonSearch.CheckIsPath(aNode: SizeInt);
 begin
+  Assert(aNode = aNode); //to supress hints
   FPaths^.Add(FStack.ToArray);
   Inc(FFound);
   FDone := FDone or (FFound >= FRequired);

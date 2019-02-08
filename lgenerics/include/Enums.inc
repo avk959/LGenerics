@@ -221,7 +221,7 @@ constructor TGArrayCursor.Create(const a: TArray);
 begin
   FEnumerable := TArrayEnumerable.Create(Self);
   FArray := a;
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGArrayCursor.MoveNext: Boolean;
@@ -232,7 +232,7 @@ end;
 
 procedure TGArrayCursor.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGArrayReverse.TArrayEnumerable }
@@ -279,7 +279,7 @@ constructor TGArrayEnumerator.Create(const a: TArray);
 begin
   FArray := a;
   FLast := System.High(a);
-  FPosition := -1;
+  FPosition := NULL_INDEX;
 end;
 
 function TGArrayEnumerator.MoveNext: Boolean;
@@ -290,5 +290,5 @@ end;
 
 procedure TGArrayEnumerator.Reset;
 begin
-  FPosition := -1;
+  FPosition := NULL_INDEX;
 end;

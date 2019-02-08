@@ -119,7 +119,6 @@ end;
 procedure TGDirectInt64Net.THPrHelper.TLevel.Clear(aLabel: SizeInt);
 var
   Next: PNode;
-  I: SizeInt;
 begin
   Next := TopActive;
   while Next <> nil do

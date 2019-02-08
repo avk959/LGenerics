@@ -102,7 +102,7 @@ end;
 
 function TGSparseGraph.TIntSet.NonEmpty: Boolean;
 begin
-  Result := Count <> 0;
+  Result := Count > 0;
 end;
 
 procedure TGSparseGraph.TIntSet.MakeEmpty;
@@ -160,7 +160,7 @@ begin
   for I := 0 to Pred(Count) do
     if FItems[I] = aValue then
       exit(I);
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 function TGSparseGraph.TIntSet.Add(aValue: SizeInt): Boolean;

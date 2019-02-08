@@ -274,7 +274,7 @@ type
     function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
-    function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; virtual; abstract;
+    function  DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean; virtual; abstract;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; virtual; abstract;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; virtual; abstract;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
@@ -404,12 +404,12 @@ type
     function  ContainsVertex(constref aVertex: TVertex): Boolean; inline;
   { if does not contain aSrc or aDst vertices, they will be added;
     returns True if the edge is added, False, if such an edge already exists }
-    function  AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+    function  AddEdge(constref aSrc, aDst: TVertex; constref aData: TEdgeData): Boolean;
   { adds edge with default data }
     function  AddEdge(constref aSrc, aDst: TVertex): Boolean; inline;
   { returns True if the edge is added, False, if such an edge already exists;
     raises EGraphError if aSrc or aDst out of range }
-    function  AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+    function  AddEdgeI(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
     function  AddEdgeI(aSrc, aDst: SizeInt): Boolean; inline;
   { if contains an edge (aSrc, aDst) then removes it and returns True,
     otherwise returns False }
@@ -1909,7 +1909,7 @@ begin
   Result := IndexOf(aVertex) >= 0;
 end;
 
-function TGSparseGraph.AddEdge(constref aSrc, aDst: TVertex; aData: TEdgeData): Boolean;
+function TGSparseGraph.AddEdge(constref aSrc, aDst: TVertex; constref aData: TEdgeData): Boolean;
 var
   SrcIdx, DstIdx: SizeInt;
 begin
@@ -1923,7 +1923,7 @@ begin
   Result := AddEdge(aSrc, aDst, Default(TEdgeData));
 end;
 
-function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSparseGraph.AddEdgeI(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
 begin
   CheckIndexRange(aSrc);
   CheckIndexRange(aDst);

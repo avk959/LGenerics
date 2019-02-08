@@ -286,7 +286,7 @@ end;
 
 procedure TGLiteDynBuffer.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGLiteDynBuffer.TMutableEnumerator }
@@ -304,7 +304,7 @@ end;
 
 procedure TGLiteDynBuffer.TMutableEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGLiteDynBuffer.TReverseEnumerator }
@@ -410,14 +410,14 @@ function TGLiteDynBuffer.GetEnumerator: TEnumerator;
 begin
   Result.FItems := FItems;
   Result.FLast := Pred(FCount);
-  Result.FCurrIndex := -1;
+  Result.FCurrIndex := NULL_INDEX;
 end;
 
 function TGLiteDynBuffer.GetMutableEnumerator: TMutableEnumerator;
 begin
   Result.FItems := FItems;
   Result.FLast := Pred(FCount);
-  Result.FCurrIndex := -1;
+  Result.FCurrIndex := NULL_INDEX;
 end;
 
 function TGLiteDynBuffer.GetReverseEnumerator: TReverseEnumerator;

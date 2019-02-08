@@ -116,7 +116,7 @@ type
     function  GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; override;
     procedure DoRemoveVertex(aIndex: SizeInt); override;
-    function  DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean; override;
+    function  DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean; override;
     function  DoRemoveEdge(aSrc, aDst: SizeInt): Boolean; override;
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; override;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); override;
@@ -740,6 +740,7 @@ end;
 
 procedure TGSimpleDigraph.THamiltonSearch.CheckIsPath(aNode: SizeInt);
 begin
+  Assert(aNode = aNode); //to supress hints
   FPaths^.Add(FStack.ToArray);
   Inc(FFound);
   FDone := FDone or (FFound >= FRequired);
@@ -1311,7 +1312,7 @@ begin
   FReachabilityMatrix.Clear;
 end;
 
-function TGSimpleDigraph.DoAddEdge(aSrc, aDst: SizeInt; aData: TEdgeData): Boolean;
+function TGSimpleDigraph.DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
 begin
   if aSrc = aDst then
     exit(False);
