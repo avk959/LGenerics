@@ -452,7 +452,7 @@ type
     class constructor Init;
     class operator Initialize(var m: TGLiteHashMultiMap);
     class operator Copy(constref aSrc: TGLiteHashMultiMap; var aDst: TGLiteHashMultiMap);
-    class procedure CapacityExceedError(aValue: SizeInt); static; inline;
+    class procedure CapacityExceedError(aValue: SizeInt); static;
   public
     function  GetEnumerator: TEntryEnumerator; inline;
     function  ToArray: TEntryArray;

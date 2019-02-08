@@ -219,10 +219,10 @@ type
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit;
-    function  Contains(constref aKey: TKey): Boolean; inline;
-    function  NonContains(constref aKey: TKey): Boolean; inline;
-    function  ContainsValue(constref aValue: TValue): Boolean; inline;
-    function  NonContainsValue(constref aValue: TValue): Boolean; inline;
+    function  Contains(constref aKey: TKey): Boolean;
+    function  NonContains(constref aKey: TKey): Boolean;
+    function  ContainsValue(constref aValue: TValue): Boolean;
+    function  NonContainsValue(constref aValue: TValue): Boolean;
   { will raise ELGMapError if not contains aKey }
     function  GetValue(const aKey: TKey): TValue; inline;
   { will raise ELGMapError if not contains aKey }

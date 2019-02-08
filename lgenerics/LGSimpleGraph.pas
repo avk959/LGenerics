@@ -202,7 +202,7 @@ type
     function  GetSeparateI(aIndex: SizeInt): TIntArray;
   { returns in the result array the vectors of indices of all connected components }
     function  FindSeparates: TIntVectorArray;
-    function  IsTree: Boolean; inline;
+    function  IsTree: Boolean;
     function  IsStar(out aHub: SizeInt): Boolean;
     function  IsCycle: Boolean;
     function  IsWheel(out aHub: SizeInt): Boolean;
@@ -210,7 +210,7 @@ type
   { checks whether the graph is regular(that is, the degrees of all its vertices are equal);
     an empty graph is considered regular }
     function  IsRegular(out aDegree: SizeInt): Boolean;
-    function  CyclomaticNumber: SizeInt; inline;
+    function  CyclomaticNumber: SizeInt;
   { returns True if exists any cycle in the aVertex connected component,
     in this case aCycle will contain indices of the vertices of the found cycle }
     function  ContainsCycle(constref aVertex: TVertex; out aCycle: TIntArray): Boolean; inline;

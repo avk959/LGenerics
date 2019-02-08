@@ -303,7 +303,7 @@ type
     FCount: SizeInt;
     FNodeManager: TNodeManager;
     function  NewNode: PNode;
-    procedure DisposeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode);
     procedure ClearTree; inline;
     function  GetHighest: PNode;
     function  GetLowest: PNode;

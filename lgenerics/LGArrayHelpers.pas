@@ -195,7 +195,7 @@ type
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt); static;
-    class function  MedianOf3(constref v1, v2, v3: T): T; static; inline;
+    class function  MedianOf3(constref v1, v2, v3: T): T; static;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;

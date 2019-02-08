@@ -405,8 +405,8 @@ type
     FItCounter: Integer;
     function  GetInIteration: Boolean; inline;
   protected
-    procedure CapacityExceedError(aValue: SizeInt); inline;
-    procedure UpdateLockError; inline;
+    procedure CapacityExceedError(aValue: SizeInt);
+    procedure UpdateLockError;
     procedure CheckInIteration; inline;
     procedure BeginIteration; inline;
     procedure EndIteration; inline;

@@ -321,10 +321,10 @@ type
       FEnum: TTableLP.TEnumerator;
       FCurrKeyCount: SizeInt;
       function  GetCurrent: T; inline;
-      procedure Init(constref aSet: TGLiteHashMultiSetLP); inline;
     public
+      constructor Create(constref aSet: TGLiteHashMultiSetLP);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -332,10 +332,10 @@ type
     private
       FEnum: TTableLP.TEnumerator;
       function  GetCurrent: T; inline;
-      procedure Init(constref aSet: TGLiteHashMultiSetLP); inline;
     public
+      constructor Create(constref aSet: TGLiteHashMultiSetLP);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -343,26 +343,26 @@ type
     private
       FEnum: TTableLP.TEnumerator;
       function  GetCurrent: TEntry; inline;
-      procedure Init(constref aSet: TGLiteHashMultiSetLP); inline;
     public
+      constructor Create(constref aSet: TGLiteHashMultiSetLP);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: TEntry read GetCurrent;
     end;
 
     TDistinct = record
     private
       FMultiset: PMultiSet;
-      procedure Init(aSet: PMultiSet); inline;
     public
+      constructor Create(aSet: PMultiSet);
       function GetEnumerator: TDistinctEnumerator;
     end;
 
     TEntries = record
     private
       FMultiset: PMultiSet;
-      procedure Init(aSet: PMultiSet); inline;
     public
+      constructor Create(aSet: PMultiSet);
       function GetEnumerator: TEntryEnumerator;
     end;
 
@@ -375,8 +375,8 @@ type
     function  GetFillRatio: Single; inline;
     function  GetLoadFactor: Single; inline;
     procedure SetLoadFactor(aValue: Single); inline;
-    function  GetDistinctEnumerator: TDistinctEnumerator; inline;
-    function  GetEntryEnumerator: TEntryEnumerator; inline;
+    function  GetDistinctEnumerator: TDistinctEnumerator;
+    function  GetEntryEnumerator: TEntryEnumerator;
     function  Find(constref aKey: T): PEntry; inline;
     function  FindOrAdd(constref aKey: T; out p: PEntry): Boolean;
     function  GetKeyCount(const aKey: T): SizeInt;
@@ -1264,7 +1264,7 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-procedure TGLiteHashMultiSetLP.TEnumerator.Init(constref aSet: TGLiteHashMultiSetLP);
+constructor TGLiteHashMultiSetLP.TEnumerator.Create(constref aSet: TGLiteHashMultiSetLP);
 begin
   FEnum := aSet.FTable.GetEnumerator;
   FCurrKeyCount := 0;
@@ -1295,7 +1295,7 @@ begin
   Result := FEnum.Current^.Key;
 end;
 
-procedure TGLiteHashMultiSetLP.TDistinctEnumerator.Init(constref aSet: TGLiteHashMultiSetLP);
+constructor TGLiteHashMultiSetLP.TDistinctEnumerator.Create(constref aSet: TGLiteHashMultiSetLP);
 begin
   FEnum := aSet.FTable.GetEnumerator;
 end;
@@ -1317,7 +1317,7 @@ begin
   Result := FEnum.Current^;
 end;
 
-procedure TGLiteHashMultiSetLP.TEntryEnumerator.Init(constref aSet: TGLiteHashMultiSetLP);
+constructor TGLiteHashMultiSetLP.TEntryEnumerator.Create(constref aSet: TGLiteHashMultiSetLP);
 begin
   FEnum := aSet.FTable.GetEnumerator;
 end;
@@ -1334,7 +1334,7 @@ end;
 
 { TGLiteHashMultiSetLP.TDistinct }
 
-procedure TGLiteHashMultiSetLP.TDistinct.Init(aSet: PMultiSet);
+constructor TGLiteHashMultiSetLP.TDistinct.Create(aSet: PMultiSet);
 begin
   FMultiset := aSet;
 end;
@@ -1346,7 +1346,7 @@ end;
 
 { TGLiteHashMultiSetLP.TEntries }
 
-procedure TGLiteHashMultiSetLP.TEntries.Init(aSet: PMultiSet);
+constructor TGLiteHashMultiSetLP.TEntries.Create(aSet: PMultiSet);
 begin
   FMultiset := aSet;
 end;
@@ -1390,12 +1390,12 @@ end;
 
 function TGLiteHashMultiSetLP.GetDistinctEnumerator: TDistinctEnumerator;
 begin
-  Result.Init(Self);
+  Result := TDistinctEnumerator.Create(Self);
 end;
 
 function TGLiteHashMultiSetLP.GetEntryEnumerator: TEntryEnumerator;
 begin
-  Result.Init(Self);
+  Result := TEntryEnumerator.Create(Self);
 end;
 
 function TGLiteHashMultiSetLP.Find(constref aKey: T): PEntry;
@@ -1483,17 +1483,17 @@ end;
 
 function TGLiteHashMultiSetLP.GetEnumerator: TEnumerator;
 begin
-  Result.Init(Self);
+  Result := TEnumerator.Create(Self);
 end;
 
 function TGLiteHashMultiSetLP.Distinct: TDistinct;
 begin
-  Result.Init(@Self);
+  Result := TDistinct.Create(@Self);
 end;
 
 function TGLiteHashMultiSetLP.Entries: TEntries;
 begin
-  Result.Init(@Self);
+  Result := TEntries.Create(@Self);
 end;
 
 function TGLiteHashMultiSetLP.ToArray: TArray;

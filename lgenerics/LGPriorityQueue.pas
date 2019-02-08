@@ -666,7 +666,7 @@ type
     private
       FHeap: PGLitePairingHeap;
     public
-      function GetEnumerator: TReverseEnumerator; inline;
+      function GetEnumerator: TReverseEnumerator;
     end;
 
   private
@@ -674,24 +674,24 @@ type
     FNodeManager: TNodeManager;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
-    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator;
     function  FindLeftmost: PNode;
     function  FindRightmost: PNode;
     procedure RemoveNodeWithChilds(aNode: PNode);
     procedure ClearTree;
     function  NewNode(constref aValue: T): PNode; inline;
     procedure DisposeNode(aNode: PNode); inline;
-    procedure RootMerge(aNode: PNode);
+    procedure RootMerge(aNode: PNode); inline;
     function  DequeueItem: T;
     procedure UpdateNode(aNode: PNode; constref aValue: T); inline;
     procedure ExtractNode(aNode: PNode);
     function  RemoveNode(aNode: PNode): T;
     procedure CheckEmpty; inline;
-    procedure AccessEmptyError; inline;
+    procedure AccessEmptyError;
     class operator  Initialize(var h: TGLiteComparablePairHeapMin);
     class operator  Finalize(var h: TGLiteComparablePairHeapMin);
     class operator  Copy(constref aSrc: TGLiteComparablePairHeapMin; var aDst: TGLiteComparablePairHeapMin);
-    class function  NodeMerge(L, R: PNode): PNode; static; inline;
+    class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
     class function  DoCompare(constref L, R: T): SizeInt; static;
@@ -699,15 +699,15 @@ type
   type
     TComparator = specialize TGCompare<T>;
     function  Comparator: TComparator;
-    function  GetEnumerator: TEnumerator; inline;
+    function  GetEnumerator: TEnumerator;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray;
     procedure Clear; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure EnsureCapacity(aValue: SizeInt);
     procedure TrimToFit; inline;
-    procedure Enqueue(constref aValue: T); inline;          // O(1)
+    procedure Enqueue(constref aValue: T);                  // O(1)
     function  Dequeue: T;                                   // amortized O(logN)
     function  TryDequeue(out aValue: T): Boolean;
     function  Peek: T;                                      // O(1)
@@ -3869,7 +3869,8 @@ end;
 
 class operator TGLiteComparablePairHeapMin.Finalize(var h: TGLiteComparablePairHeapMin);
 begin
-  h.Clear;
+  h.ClearTree;
+  h.FNodeManager.Clear;
 end;
 
 class operator TGLiteComparablePairHeapMin.Copy(constref aSrc: TGLiteComparablePairHeapMin;

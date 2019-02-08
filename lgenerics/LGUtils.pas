@@ -808,7 +808,9 @@ end;
 
 procedure TGPageNodeManager<TNode>.DisposeNode(aNode: PNode);
 begin
-  FreeNode(aNode);
+  aNode^.NextLink := FFreeListHead;
+  FFreeListHead := aNode;
+  Inc(FFreeCount);
 end;
 
 procedure TGPageNodeManager<TNode>.FreeNode(aNode: PNode);

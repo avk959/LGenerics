@@ -392,7 +392,7 @@ type
     function  GetCapacity: SizeInt; override;
     procedure SetLoadFactor(aValue: Single); override;
     function  NewNode: PNode; inline;
-    procedure DisposeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode);
     procedure ClearList;
     procedure UpdateExpandTreshold;
     procedure Rehash(var aTarget: TChainList);

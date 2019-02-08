@@ -63,9 +63,9 @@ type
       TopIdle: PNode;     // head of doubly linked list of the nodes with zero excess
       function  IsEmpty: Boolean; inline;
       procedure AddActive(aNode: PNode); inline;
-      procedure AddIdle(aNode: PNode); inline;
+      procedure AddIdle(aNode: PNode);
       procedure Activate(aNode: PNode); inline;
-      procedure RemoveIdle(aNode: PNode); inline;
+      procedure RemoveIdle(aNode: PNode);
       procedure Clear(aLabel: SizeInt);
     end;
 

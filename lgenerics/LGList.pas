@@ -159,10 +159,10 @@ type
     function  DoAddAll(constref a: array of T): SizeInt; override; overload;
     function  DoAddAll(e: IEnumerable): SizeInt; override; overload;
     function  IndexInRange(aIndex: SizeInt): Boolean; inline;
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    procedure CheckIndexRange(aIndex: SizeInt);
     function  GetReverse: IEnumerable;
     procedure Expand(aValue: SizeInt);
-    procedure ItemAdding; inline;
+    procedure ItemAdding;
     function  ExtractItem(aIndex: SizeInt): T;
     function  DeleteItem(aIndex: SizeInt): T; virtual;
     function  DoDeleteRange(aIndex, aCount: SizeInt): SizeInt; virtual;
@@ -190,12 +190,11 @@ type
   { returns insert index, -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; override;
-    function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
   { returns index of any occurrence of aValue, -1 if there are no such element }
-    function  IndexOf(constref aValue: T): SizeInt; inline;
+    function  IndexOf(constref aValue: T): SizeInt;
   { returns index of leftest occurrence of aValue, -1 if there are no such element }
     function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
@@ -257,7 +256,7 @@ type
     procedure ItemAdding; inline;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
     procedure RemoveItem(aIndex: SizeInt);
-    procedure CapacityExceedError(aValue: SizeInt); inline;
+    procedure CapacityExceedError(aValue: SizeInt);
   public
     constructor CreateEmpty;
     constructor CreateEmpty(aAllowDuplicates: Boolean);
@@ -266,7 +265,7 @@ type
     constructor Create(aCapacity: SizeInt; aAllowDuplicates: Boolean);
     destructor  Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
-    procedure Clear; inline;
+    procedure Clear;
     function  EnsureCapacity(aValue: SizeInt): Boolean; inline;
     procedure TrimToFit; inline;
     function  Add(constref aValue: T): Boolean;
@@ -314,7 +313,7 @@ type
     procedure ItemAdding; inline;
     procedure InsertItem(aIndex: SizeInt; constref aValue: TEntry);
     procedure RemoveItem(aIndex: SizeInt);
-    procedure CapacityExceedError(aValue: SizeInt); inline;
+    procedure CapacityExceedError(aValue: SizeInt);
   public
     constructor CreateEmpty;
     constructor CreateEmpty(aAllowDuplicates: Boolean);
@@ -323,7 +322,7 @@ type
     constructor Create(aCapacity: SizeInt; aAllowDuplicates: Boolean);
     destructor  Destroy; override;
     function  GetEnumerator: TEnumerator; inline;
-    procedure Clear; inline;
+    procedure Clear; //inline;
     function  EnsureCapacity(aValue: SizeInt): Boolean; inline;
     procedure TrimToFit; inline;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
@@ -360,10 +359,10 @@ type
       FCurrIndex,
       FLast: SizeInt;
       function  GetCurrent: T; inline;
-      procedure Init(constref aList: TGLiteSortedList; aLastIndex: SizeInt); inline;
     public
+      constructor Create(constref aList: TGLiteSortedList; aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -371,8 +370,8 @@ type
     private
       FList: PLiteSortedList;
       FHighBound: SizeInt;
-      procedure Init(aList: PLiteSortedList; aHighBound: SizeInt); inline;
     public
+      constructor Create(aList: PLiteSortedList; aHighBound: SizeInt);
       function GetEnumerator: THeadEnumerator;
     end;
 
@@ -383,11 +382,11 @@ type
       FStart,
       FLast: SizeInt;
       function  GetCurrent: T; inline;
-      procedure Init(constref aList: TGLiteSortedList; aStartIndex: SizeInt);
-      procedure Init(constref aList: TGLiteSortedList; aStartIndex, aLastIndex: SizeInt);
     public
+      constructor Create(constref aList: TGLiteSortedList; aStartIndex: SizeInt);
+      constructor Create(constref aList: TGLiteSortedList; aStartIndex, aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
+      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -395,8 +394,8 @@ type
     private
       FList: PLiteSortedList;
       FLowBound: SizeInt;
-      procedure Init(aList: PLiteSortedList; aLowBound: SizeInt); inline;
     public
+      constructor Create(aList: PLiteSortedList; aLowBound: SizeInt);
       function GetEnumerator: TTailEnumerator;
     end;
 
@@ -405,8 +404,8 @@ type
       FList: PLiteSortedList;
       FLowBound,
       FHighBound: SizeInt;
-      procedure Init(aList: PLiteSortedList; aLowBound, aHighBound: SizeInt); inline;
     public
+      constructor Create(aList: PLiteSortedList; aLowBound, aHighBound: SizeInt);
       function GetEnumerator: TTailEnumerator;
     end;
 
@@ -427,17 +426,17 @@ type
     function  NearestGT(constref aValue: T): SizeInt;
     function  LeftmostGE(constref aValue: T): SizeInt;
     function  SelectDistinctArray(constref a: array of T): TArray;
-    function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator; inline;
-    function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator; inline;
-    function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator; inline;
+    function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
+    function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator;
+    function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator;
     class operator Initialize(var lst: TGLiteSortedList);
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
+    function  IsEmpty: Boolean;
+    function  NonEmpty: Boolean;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  FindMin(out aValue: T): Boolean;
@@ -453,7 +452,7 @@ type
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
   { returns index of any occurrence of aValue, -1 if there are no such element }
-    function  IndexOf(constref aValue: T): SizeInt; inline;
+    function  IndexOf(constref aValue: T): SizeInt;
   { returns index of leftest occurrence of aValue, -1 if there are no such element }
     function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
@@ -502,8 +501,8 @@ type
       FCurrIndex,
       FLast: SizeInt;
       function  GetCurrent: T; inline;
-      procedure Init(constref aList: TSortedList; aLastIndex: SizeInt); inline;
     public
+      constructor Create(constref aList: TSortedList; aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -513,8 +512,8 @@ type
     private
       FList: PSortedList;
       FHighBound: SizeInt;
-      procedure Init(aList: PSortedList; aHighBound: SizeInt); inline;
     public
+      constructor Create(aList: PSortedList; aHighBound: SizeInt);
       function GetEnumerator: THeadEnumerator; inline;
     end;
 
@@ -525,9 +524,9 @@ type
       FStart,
       FLast: SizeInt;
       function  GetCurrent: T; inline;
-      procedure Init(constref aList: TSortedList; aStartIndex: SizeInt);
-      procedure Init(constref aList: TSortedList; aStartIndex, aLastIndex: SizeInt);
     public
+      constructor Create(constref aList: TSortedList; aStartIndex: SizeInt);
+      constructor Create(constref aList: TSortedList; aStartIndex, aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: T read GetCurrent;
@@ -537,8 +536,8 @@ type
     private
       FList: PSortedList;
       FLowBound: SizeInt;
-      procedure Init(aList: PSortedList; aLowBound: SizeInt); inline;
     public
+      constructor Create(aList: PSortedList; aLowBound: SizeInt);
       function GetEnumerator: TTailEnumerator;
     end;
 
@@ -547,8 +546,8 @@ type
       FList: PSortedList;
       FLowBound,
       FHighBound: SizeInt;
-      procedure Init(aList: PSortedList; aLowBound, aHighBound: SizeInt); inline;
     public
+      constructor Create(aList: PSortedList; aLowBound, aHighBound: SizeInt);
       function GetEnumerator: TTailEnumerator;
     end;
 
@@ -569,17 +568,17 @@ type
     function  NearestGT(constref aValue: T): SizeInt;
     function  LeftmostGE(constref aValue: T): SizeInt;
     function  SelectDistinctArray(constref a: array of T): TArray;
-    function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator; inline;
-    function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator; inline;
-    function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator; inline;
+    function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
+    function  GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator;
+    function  GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator;
     class operator Initialize(var lst: TGLiteComparableSortedList);
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
+    function  IsEmpty: Boolean;
+    function  NonEmpty: Boolean;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  FindMin(out aValue: T): Boolean;
@@ -594,7 +593,7 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
-    function  IndexOf(constref aValue: T): SizeInt; inline;
+    function  IndexOf(constref aValue: T): SizeInt;
   { returns index of leftest occurrence of aValue, -1 if there are no such element }
     function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
@@ -700,7 +699,7 @@ type
     function  DoRemove(constref aValue: T): Boolean;
   { returns True if aValue found, False otherwise }
     function  FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
-    class procedure CapacityExceedError(aValue: SizeInt); static; inline;
+    class procedure CapacityExceedError(aValue: SizeInt); static;
     class operator Initialize(var hl: TGLiteHashList);
     class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
   public
@@ -714,7 +713,7 @@ type
     procedure TrimToFit;
     function  Contains(constref aValue: T): Boolean;
     function  NonContains(constref aValue: T): Boolean;
-    function  IndexOf(constref aValue: T): SizeInt; inline;
+    function  IndexOf(constref aValue: T): SizeInt;
     function  CountOf(constref aValue: T): SizeInt; inline;
   { returns index of the element added }
     function  Add(constref aValue: T): SizeInt; inline;
@@ -826,7 +825,7 @@ type
     procedure TrimToFit;
     function  Contains(constref aKey: TKey): Boolean; inline;
     function  NonContains(constref aKey: TKey): Boolean; inline;
-    function  IndexOf(constref aKey: TKey): SizeInt; inline;
+    function  IndexOf(constref aKey: TKey): SizeInt;
     function  CountOf(constref aKey: TKey): SizeInt; inline;
     function  Add(constref e: TEntry): SizeInt; inline;
     function  AddAll(constref a: array of TEntry): SizeInt;
@@ -1655,11 +1654,6 @@ begin
   Result := IndexOf(aValue) >= 0;
 end;
 
-function TGBaseSortedList.NonContains(constref aValue: T): Boolean;
-begin
-  Result := IndexOf(aValue) < 0;
-end;
-
 procedure TGBaseSortedList.Delete(aIndex: SizeInt);
 begin
   CheckInIteration;
@@ -2235,7 +2229,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-procedure TGLiteSortedList.THeadEnumerator.Init(constref aList: TGLiteSortedList; aLastIndex: SizeInt);
+constructor TGLiteSortedList.THeadEnumerator.Create(constref aList: TGLiteSortedList; aLastIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
   FLast := aLastIndex;
@@ -2255,7 +2249,7 @@ end;
 
 { TGLiteSortedList.THead }
 
-procedure TGLiteSortedList.THead.Init(aList: PLiteSortedList; aHighBound: SizeInt);
+constructor TGLiteSortedList.THead.Create(aList: PLiteSortedList; aHighBound: SizeInt);
 begin
   FList := aList;
   FHighBound := aHighBound;
@@ -2273,7 +2267,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-procedure TGLiteSortedList.TTailEnumerator.Init(constref aList: TGLiteSortedList; aStartIndex: SizeInt);
+constructor TGLiteSortedList.TTailEnumerator.Create(constref aList: TGLiteSortedList; aStartIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
   FLast := Pred(aList.Count);
@@ -2281,7 +2275,7 @@ begin
   FCurrIndex := FStart;
 end;
 
-procedure TGLiteSortedList.TTailEnumerator.Init(constref aList: TGLiteSortedList; aStartIndex,
+constructor TGLiteSortedList.TTailEnumerator.Create(constref aList: TGLiteSortedList; aStartIndex,
   aLastIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
@@ -2303,7 +2297,7 @@ end;
 
 { TGLiteSortedList.TTail }
 
-procedure TGLiteSortedList.TTail.Init(aList: PLiteSortedList; aLowBound: SizeInt);
+constructor TGLiteSortedList.TTail.Create(aList: PLiteSortedList; aLowBound: SizeInt);
 begin
   FList := aList;
   FLowBound := aLowBound;
@@ -2316,7 +2310,7 @@ end;
 
 { TGLiteSortedList.TRange }
 
-procedure TGLiteSortedList.TRange.Init(aList: PLiteSortedList; aLowBound, aHighBound: SizeInt);
+constructor TGLiteSortedList.TRange.Create(aList: PLiteSortedList; aLowBound, aHighBound: SizeInt);
 begin
   FList := aList;
   FLowBound := aLowBound;
@@ -2536,17 +2530,17 @@ end;
 
 function TGLiteSortedList.GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
 begin
-  Result.Init(Self, aHighBound);
+  Result := THeadEnumerator.Create(Self, aHighBound);
 end;
 
 function TGLiteSortedList.GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator;
 begin
-  Result.Init(Self, aLowBound);
+  Result := TTailEnumerator.Create(Self, aLowBound);
 end;
 
 function TGLiteSortedList.GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator;
 begin
-  Result.Init(Self, aLowBound, aHighBound);
+  Result := TTailEnumerator.Create(Self, aLowBound, aHighBound);
 end;
 
 class operator TGLiteSortedList.Initialize(var lst: TGLiteSortedList);
@@ -2781,7 +2775,7 @@ end;
 
 function TGLiteSortedList.Head(constref aHighBound: T; aInclusive: Boolean): THead;
 begin
-  Result{%H-}.Init(@Self, IndexOfFloor(aHighBound, aInclusive));
+  Result := THead.Create(@Self, IndexOfFloor(aHighBound, aInclusive));
 end;
 
 function TGLiteSortedList.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
@@ -2791,7 +2785,7 @@ begin
   StartIdx := IndexOfCeil(ALowBound, aInclusive);
   if StartIdx < 0 then
     StartIdx := Count;
-  Result{%H-}.Init(@Self, StartIdx);
+  Result := TTail.Create(@Self, StartIdx);
 end;
 
 function TGLiteSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
@@ -2801,7 +2795,7 @@ begin
   StartIdx := IndexOfCeil(ALowBound, rbLow in aIncludeBounds);
   if StartIdx < 0 then
     StartIdx := Count;
-  Result{%H-}.Init(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
+  Result := TRange.Create(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
 end;
 
 function TGLiteSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TGLiteSortedList;
@@ -2856,7 +2850,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-procedure TGLiteComparableSortedList.THeadEnumerator.Init(constref aList: TSortedList; aLastIndex: SizeInt);
+constructor TGLiteComparableSortedList.THeadEnumerator.Create(constref aList: TSortedList; aLastIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
   FLast := aLastIndex;
@@ -2876,7 +2870,7 @@ end;
 
 { TGLiteComparableSortedList.THead }
 
-procedure TGLiteComparableSortedList.THead.Init(aList: PSortedList; aHighBound: SizeInt);
+constructor TGLiteComparableSortedList.THead.Create(aList: PSortedList; aHighBound: SizeInt);
 begin
   FList := aList;
   FHighBound := aHighBound;
@@ -2894,7 +2888,7 @@ begin
   Result := FItems[FCurrIndex];
 end;
 
-procedure TGLiteComparableSortedList.TTailEnumerator.Init(constref aList: TSortedList; aStartIndex: SizeInt);
+constructor TGLiteComparableSortedList.TTailEnumerator.Create(constref aList: TSortedList; aStartIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
   FLast := Pred(aList.Count);
@@ -2902,7 +2896,7 @@ begin
   FCurrIndex := FStart;
 end;
 
-procedure TGLiteComparableSortedList.TTailEnumerator.Init(constref aList: TSortedList; aStartIndex,
+constructor TGLiteComparableSortedList.TTailEnumerator.Create(constref aList: TSortedList; aStartIndex,
   aLastIndex: SizeInt);
 begin
   FItems := aList.FBuffer.FItems;
@@ -2924,7 +2918,7 @@ end;
 
 { TGLiteComparableSortedList.TTail }
 
-procedure TGLiteComparableSortedList.TTail.Init(aList: PSortedList; aLowBound: SizeInt);
+constructor TGLiteComparableSortedList.TTail.Create(aList: PSortedList; aLowBound: SizeInt);
 begin
   FList := aList;
   FLowBound := aLowBound;
@@ -2937,7 +2931,7 @@ end;
 
 { TGLiteComparableSortedList.TRange }
 
-procedure TGLiteComparableSortedList.TRange.Init(aList: PSortedList; aLowBound, aHighBound: SizeInt);
+constructor TGLiteComparableSortedList.TRange.Create(aList: PSortedList; aLowBound, aHighBound: SizeInt);
 begin
   FList := aList;
   FLowBound := aLowBound;
@@ -3155,17 +3149,17 @@ end;
 
 function TGLiteComparableSortedList.GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
 begin
-  Result.Init(Self, aHighBound);
+  Result := THeadEnumerator.Create(Self, aHighBound);
 end;
 
 function TGLiteComparableSortedList.GetTailEnumerator(aLowBound: SizeInt): TTailEnumerator;
 begin
-  Result.Init(Self, aLowBound);
+  Result := TTailEnumerator.Create(Self, aLowBound);
 end;
 
 function TGLiteComparableSortedList.GetRangeEnumerator(aLowBound, aHighBound: SizeInt): TTailEnumerator;
 begin
-  Result.Init(Self, aLowBound, aHighBound);
+  Result := TTailEnumerator.Create(Self, aLowBound, aHighBound);
 end;
 
 class operator TGLiteComparableSortedList.Initialize(var lst: TGLiteComparableSortedList);
@@ -3400,7 +3394,7 @@ end;
 
 function TGLiteComparableSortedList.Head(constref aHighBound: T; aInclusive: Boolean): THead;
 begin
-  Result{%H-}.Init(@Self, IndexOfFloor(aHighBound, aInclusive));
+  Result := THead.Create(@Self, IndexOfFloor(aHighBound, aInclusive));
 end;
 
 function TGLiteComparableSortedList.Tail(constref aLowBound: T; aInclusive: Boolean): TTail;
@@ -3410,7 +3404,7 @@ begin
   StartIdx := IndexOfCeil(ALowBound, aInclusive);
   if StartIdx < 0 then
     StartIdx := Count;
-  Result{%H-}.Init(@Self, StartIdx);
+  Result := TTail.Create(@Self, StartIdx);
 end;
 
 function TGLiteComparableSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds): TRange;
@@ -3420,7 +3414,7 @@ begin
   StartIdx := IndexOfCeil(ALowBound, rbLow in aIncludeBounds);
   if StartIdx < 0 then
     StartIdx := Count;
-  Result{%H-}.Init(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
+  Result := TRange.Create(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
 end;
 
 function TGLiteComparableSortedList.HeadList(constref aHighBound: T; aInclusive: Boolean): TGLiteComparableSortedList;

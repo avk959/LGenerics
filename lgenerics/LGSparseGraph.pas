@@ -654,7 +654,7 @@ type
       procedure OptEdges(const m: TTspMatrix; var aTour: TIntArray; var aCost: T);
     end;
 
-    class function  vMin(L, R: T): T; static; inline;
+    class function  vMin(L, R: T): T; static; //inline;
   { returns True if matrix m is symmetric;
     raises exception if m is not proper matrix }
     class function  CheckMatrixProper(const m: TTspMatrix): Boolean; static;
