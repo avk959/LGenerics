@@ -2977,7 +2977,7 @@ begin
   AssertTrue(w = 110);
   AssertTrue(Cut.A.Length + Cut.B.Length = g.VertexCount);
   AssertTrue(Cut.A.Length = 4);
-  if Cut.A[0] in [0..3] then
+  if Cut.A[0] <= 3 then
     begin
       for I in [0..3] do
         AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
@@ -3007,7 +3007,7 @@ begin
   AssertTrue(g.MinWeightCutSW(Cut, w) = gnsOk);
   AssertTrue(w = 105);
   AssertTrue(Cut.A.Length + Cut.B.Length = g.VertexCount);
-  if Cut.A[0] in [0..5] then
+  if Cut.A[0] <= 5 then
     begin
       for I in [0..5] do
         AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
@@ -3087,7 +3087,7 @@ begin
   AssertTrue(w = 110);
   AssertTrue(Cut.A.Length + Cut.B.Length = g.VertexCount);
   AssertTrue(Cut.A.Length = 4);
-  if Cut.A[0] in [0..3] then
+  if Cut.A[0] <= 3 then
     begin
       for I in [0..3] do
         AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);
@@ -3117,7 +3117,7 @@ begin
   AssertTrue(g.MinWeightCutNI(Cut, w) = gnsOk);
   AssertTrue(w = 105);
   AssertTrue(Cut.A.Length + Cut.B.Length = g.VertexCount);
-  if Cut.A[0] in [0..5] then
+  if Cut.A[0] <= 5 then
     begin
       for I in [0..5] do
         AssertTrue(THelper.SequentSearch(Cut.A, I) <> NULL_INDEX);

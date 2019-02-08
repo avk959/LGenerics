@@ -52,19 +52,19 @@ type
   TAStrHelper = type helper(TStringHelper) for ansistring
     class function HashCode(constref aValue: ansistring): SizeInt; static; inline;
     class function Equal(constref L, R: ansistring): Boolean; static; inline;
-    class function Compare(constref L, R: ansistring): SizeInt; static; inline;
+    class function Compare(constref L, R: ansistring): SizeInt; static;
   end;
 
   TWStrHelper = type helper for widestring
     class function HashCode(constref aValue: widestring): SizeInt; static; inline;
     class function Equal(constref L, R: widestring): Boolean; static; inline;
-    class function Compare(constref L, R: widestring): SizeInt; static; inline;
+    class function Compare(constref L, R: widestring): SizeInt; static;
   end;
 
   TUStrHelper = type helper for unicodestring
     class function HashCode(constref aValue: unicodestring): SizeInt; static; inline;
     class function Equal(constref L, R: unicodestring): Boolean; static; inline;
-    class function Compare(constref L, R: unicodestring): SizeInt; static; inline;
+    class function Compare(constref L, R: unicodestring): SizeInt; static;
   end;
 
   TShortStrHelper = type helper for shortstring

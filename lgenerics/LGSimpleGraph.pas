@@ -4536,7 +4536,7 @@ function TGInt64Net.GetTrivialMinCut(out aCutSet: TIntSet; out aCutWeight: TWeig
 var
   d: TEdgeData;
 begin
-  {%H-}aCutSet.MakeEmpty;
+  aCutSet := Default(TIntSet);
   if not Connected or (VertexCount < 2) then
     begin
       aCutWeight := 0;
