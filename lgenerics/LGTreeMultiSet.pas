@@ -724,6 +724,7 @@ begin
   I.FSet := Self;
   I.FOtherSet := aSet;
   FTree.RemoveIf(@I.OnIntersect, @EntryRemoved);
+  Assert(@I = @I);//to supress hints
 end;
 
 function TGAbstractTreeMultiSet.DoRemoveIf(aTest: TTest): SizeInt;
@@ -1295,6 +1296,7 @@ begin
   I.FSet := Self;
   I.FOtherSet := aSet;
   FTree.RemoveIf(@I.OnIntersect, @EntryRemoved);
+  Assert(@I = @I);//to supress hints
 end;
 
 function TGObjectTreeMultiSet.DoRemoveIf(aTest: TTest): SizeInt;

@@ -2490,9 +2490,10 @@ var
   I, J, Tag: SizeInt;
 begin
   CheckIndexRange(aIndex);
+  Result := nil;
   if SeparateCount > 1 then
     begin
-      Result{%H-}.Length := VertexCount;
+      Result.Length := VertexCount;
       Tag := SeparateTag(aIndex);
       J := 0;
       for I := 0 to Pred(VertexCount) do
@@ -2782,9 +2783,10 @@ var
   v: TIntHashSet;
 begin
   CheckIndexRange(aIndex);
+  v := Default(TIntHashSet);
   if VertexCount > 2 then
     begin
-      SearchForCutVertices(aIndex, v{%H-});
+      SearchForCutVertices(aIndex, v);
       Result := v.ToArray;
     end
   else
@@ -2804,6 +2806,7 @@ var
 begin
   Result := 0;
   CheckIndexRange(aIndex);
+  NewEdges := Default(TIntEdgeVector);
   if VertexCount < 3 then
     exit;
   SearchForBiconnect(aIndex, NewEdges{%H-});
@@ -2867,7 +2870,8 @@ begin
   Result := EnsureConnected(aOnAddEdge);
   if VertexCount < 3 then
     exit;
-  SearchForBiconnect(0, NewEdges{%H-});
+  NewEdges := Default(TIntEdgeVector);
+  SearchForBiconnect(0, NewEdges);
   d := Default(TEdgeData);
   for e in NewEdges do
     begin
@@ -2889,8 +2893,9 @@ var
   Eccs: TIntArray;
   I, J, Radius, Diam: SizeInt;
 begin
+  Result := nil;
   if not Connected then
-    exit(nil);
+    exit;
   Eccs := DoFindMetrics(Radius, Diam);
   Result{%H-}.Length := VertexCount;
   J := 0;
@@ -2908,8 +2913,9 @@ var
   Eccs: TIntArray;
   I, J, Radius, Diam: SizeInt;
 begin
+  Result := nil;
   if not Connected then
-    exit(nil);
+    exit;
   Eccs := DoFindMetrics(Radius, Diam);
   Result{%H-}.Length := VertexCount;
   J := 0;

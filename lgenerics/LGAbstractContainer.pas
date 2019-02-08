@@ -2677,6 +2677,7 @@ end;
 
 procedure TGAbstractMap.RetainAll(c: IKeyCollection);
 begin
+  Assert(c = c); //to supress hints
   CheckInIteration;
   DoRemoveIf(@c.NonContains);
 end;

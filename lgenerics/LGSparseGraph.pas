@@ -1548,11 +1548,12 @@ var
   I, Ecc, J, d, qHead, qTail: SizeInt;
   p: PAdjItem;
 begin
+  Result := nil;
   aRadius := VertexCount;
   aDiameter := 0;
   Queue.Length := VertexCount;
   Dist.Length := VertexCount;
-  Result{%H-}.Length := VertexCount;
+  Result.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
     begin
       System.FillChar(Pointer(Dist)^, VertexCount * SizeOf(SizeInt), $ff);
@@ -1686,7 +1687,8 @@ function TGSparseGraph.VertexPath2IndexPath(const aVertPath: TVertexArray): TInt
 var
   I: SizeInt;
 begin
-  Result{%H-}.Length := System.Length(aVertPath);
+  Result := nil;
+  Result.Length := System.Length(aVertPath);
   for I := 0 to Pred(Result.Length) do
     Result[I] := IndexOf(aVertPath[I]);
 end;
@@ -2746,8 +2748,8 @@ end;
 
 function TGTspHelper.TBbTsp.Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
 var
-  I, J, Curr, MxSize: Integer;
-  MinVal, CurrVal: T;
+  I, J, MxSize: Integer;
+  MinVal: T;
   m: PItem;
 begin
   m := PItem(FMatrix);
@@ -2927,7 +2929,7 @@ end;
 function TGTspHelper.TBbTsp.SelectNext(aSize: Integer; aRows, aCols: PInt; out aRowIdx, aColIdx: Integer): T;
 var
   I, J, MxSize: Integer;
-  MinVal, CurrVal: T;
+  CurrVal: T;
   RowMin, ColMin: PMinData;
   m: PItem;
 begin
@@ -3100,8 +3102,8 @@ end;
 
 function TGTspHelper.TApproxBbTsp.Reduce(aSize: Integer; aCost: T; aRows, aCols: PInt; aRowRed, aColRed: PItem): T;
 var
-  I, J, Curr, MxSize: Integer;
-  MinVal, CurrVal: T;
+  I, J, MxSize: Integer;
+  MinVal: T;
   m: PItem;
 begin
   m := PItem(FMatrix);
@@ -3579,10 +3581,11 @@ var
   Len, I, J, K, Source, Target, Curr, Next, Farthest: SizeInt;
   InsCost, MaxCost, Cost, TotalCost: T;
 begin
+  Result := nil;
   Len := System.Length(m);
   aCost := T.INF_VALUE;
   Tour.Length := Len;
-  Result{%H-}.Length := Succ(Len);
+  Result.Length := Succ(Len);
   for K := 0 to Pred(Len) do
     begin
       Unvisit.InitRange(Len);
@@ -6140,6 +6143,7 @@ class function TGWeightHelper.ExtractMinPath(aSrc, aDst: SizeInt; const aMatrix:
 var
   Stack: TIntStack;
 begin
+  Result := nil;
   if aMatrix[aSrc, aDst].Weight < TWeight.INF_VALUE then
     repeat
       {%H-}Stack.Push(aDst);
@@ -6147,7 +6151,7 @@ begin
     until aDst = aSrc;
   if Stack.NonEmpty then
     Stack.Push(aDst);
-  Result{%H-}.Length := Stack.Count;
+  Result.Length := Stack.Count;
   aDst := 0;
   for aSrc in Stack.Reverse do
     begin

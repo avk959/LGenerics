@@ -1643,6 +1643,7 @@ var
   Ids: TIntArray;
   I, J, ScCount: SizeInt;
 begin
+  Result := nil;
   CheckIndexRange(aIndex);
   if VertexCount = 1 then
     exit([0]);
@@ -1657,7 +1658,7 @@ begin
   else
     ScCount := SearchForStrongComponents(Ids);
   aIndex := Ids[aIndex];
-  Result{%H-}.Length := VertexCount;
+  Result.Length := VertexCount;
   J := 0;
   for I := 0 to System.High(Ids) do
     if Ids[I] = aIndex then
@@ -1708,10 +1709,11 @@ var
   Eccs: TIntArray;
   I, J, Radius, Diam: SizeInt;
 begin
+  Result := nil;
   if not IsStrongConnected then
-    exit(nil);
+    exit;
   Eccs := DoFindMetrics(Radius, Diam);
-  Result{%H-}.Length := VertexCount;
+  Result.Length := VertexCount;
   J := 0;
   for I := 0 to Pred(VertexCount) do
     if Eccs[I] = Radius then
@@ -1727,10 +1729,11 @@ var
   Eccs: TIntArray;
   I, J, Radius, Diam: SizeInt;
 begin
+  Result := nil;
   if not IsStrongConnected then
-    exit(nil);
+    exit;
   Eccs := DoFindMetrics(Radius, Diam);
-  Result{%H-}.Length := VertexCount;
+  Result.Length := VertexCount;
   J := 0;
   for I := 0 to Pred(VertexCount) do
     if Eccs[I] = Diam then
@@ -2785,9 +2788,10 @@ var
   c: TIntArray;
 begin
   CheckIndexRange(aSrc);
+  Result := nil;
   if FindCycle(aSrc, c) then
-    exit(nil);
-  GetDagMinPaths(aSrc, Result{%H-});
+    exit;
+  GetDagMinPaths(aSrc, Result);
 end;
 
 function TGWeightedDigraph.DagMinPathsMap(constref aSrc: TVertex; out aPathTree: TIntArray): TWeightArray;
@@ -2798,9 +2802,10 @@ end;
 function TGWeightedDigraph.DagMinPathsMapI(aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 begin
   CheckIndexRange(aSrc);
+  Result := nil;
   if FindCycle(aSrc, aPathTree) then
-    exit(nil);
-  GetDagMinPaths(aSrc, aPathTree{%H-}, Result{%H-});
+    exit;
+  GetDagMinPaths(aSrc, aPathTree{%H-}, Result);
 end;
 
 function TGWeightedDigraph.FindDagAllPairMinPaths(out aPaths: TApspMatrix): Boolean;
@@ -2814,10 +2819,12 @@ begin
     exit(False);
   if CycleExists then
     exit(False);
+  Parents := nil;
+  Weights := nil;
   System.SetLength(aPaths, VertexCount, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
-      GetDagMinPaths(I, Parents{%H-}, Weights{%H-});
+      GetDagMinPaths(I, Parents, Weights);
       for J := 0 to Pred(VertexCount) do
         aPaths[I, J] := TApspCell.Create(Weights[J], Parents[J]);
     end;

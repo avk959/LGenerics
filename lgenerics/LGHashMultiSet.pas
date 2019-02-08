@@ -756,6 +756,7 @@ begin
   I.FSet := Self;
   I.FOtherSet := aSet;
   FTable.RemoveIf(@I.OnIntersect, @EntryRemoved);
+  Assert(@I = @I);//to supress hints
 end;
 
 function TGAbstractHashMultiSet.DoRemoveIf(aTest: TTest): SizeInt;
@@ -1066,6 +1067,7 @@ begin
   I.FSet := Self;
   I.FOtherSet := aSet;
   FTable.RemoveIf(@I.OnIntersect, @EntryRemoved);
+  Assert(@I = @I);//to supress hints
 end;
 
 function TGCustomObjectHashMultiSet.DoRemoveIf(aTest: TTest): SizeInt;

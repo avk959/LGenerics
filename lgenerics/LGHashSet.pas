@@ -1732,7 +1732,7 @@ end;
 
 procedure TGLiteHashSetLP.RetainAll(aCollection: ICollection);
 begin
-  with FTable{%H-}.GetRemovableEnumerator do
+  with FTable.GetRemovableEnumerator do
     while MoveNext do
       if aCollection.NonContains(Current^.Key) then
         RemoveCurrent;
@@ -1741,7 +1741,7 @@ end;
 procedure TGLiteHashSetLP.RetainAll(constref aSet: TGLiteHashSetLP);
 begin
   if @aSet <> @Self then
-    with FTable{%H-}.GetRemovableEnumerator do
+    with FTable.GetRemovableEnumerator do
       while MoveNext do
         if aSet.NonContains(Current^.Key) then
           RemoveCurrent;
@@ -1765,7 +1765,7 @@ begin
     begin
       if Count <> aSet.Count then
         exit(False);
-      for {%H-}v in aSet do
+      for v in aSet do
         if NonContains(v) then
           exit(False);
       Result := True;
@@ -1780,7 +1780,7 @@ var
 begin
   if @aSet <> @Self then
     begin
-      for {%H-}v in aSet do
+      for v in aSet do
         if Contains(v) then
           exit(True);
       Result := False;
@@ -1799,7 +1799,7 @@ var
   v: T;
 begin
   if @aSet <> @Self then
-    for {%H-}v in aSet do
+    for v in aSet do
       Add(v);
 end;
 
@@ -1808,7 +1808,7 @@ var
   v: T;
 begin
   if @aSet <> @Self then
-    for {%H-}v in aSet do
+    for v in aSet do
       Remove(v)
   else
     Clear;
@@ -1820,7 +1820,7 @@ var
 begin
   if @aSet <> @Self then
     begin
-      for {%H-}v in aSet do
+      for v in aSet do
         if not Remove(v) then
           Add(v)
     end
