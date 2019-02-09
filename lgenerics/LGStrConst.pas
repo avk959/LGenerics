@@ -40,9 +40,9 @@ resourcestring
   SECantAcceptNegCountFmt  = 'The %s''s TEntry.Count can not accept negative value';
   SECantAcceptNegCount     = 'Can not accept negative TEntry.Count value';
   SEInternalDataInconsist  = 'Internal data inconsistency';
+  SEInvalidInputFmt        = 'Invalid input parameter "%s" value()';
   SEValueAlreadyExist      = 'Value already exists';
   SEKeyAlreadyExist        = 'Key already exists';
-  SEThreadTimeOut          = 'Thread timeout exceeded';
   SEResultUnknownFatal     = 'Result is unknown due to fatal exception';
   SEResultUnknownCancel    = 'Result is unknown due to task cancelled';
   SECellNotFoundFmt        = 'Specified cell of %s not found';

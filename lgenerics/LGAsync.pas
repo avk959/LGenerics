@@ -42,16 +42,16 @@ uses
   LGStrConst;
 
 type
-
   TAsyncTask = class abstract
   public
   type
-    TAsyncTaskState = (atsPending, atsExecuting, atsFinished, atsCancelled);
+    TState = (tsPending, tsExecuting, tsFinished, tsCancelled);
 
   strict private
+    FState: DWord;
     FAwait: PRtlEvent;
     FException: Exception;
-    FState: TAsyncTaskState;
+    function GetState: TState; inline;
   strict protected
     procedure DoExecute; virtual; abstract;
   public
@@ -61,7 +61,7 @@ type
     procedure Execute;
     procedure WaitFor;
     property  FatalException: Exception read FException;
-    property  State: TAsyncTaskState read FState;
+    property  State: TState read GetState;
   end;
 
   generic TGAsyncTask<T> = class abstract(TAsyncTask)
@@ -338,12 +338,15 @@ type
     class property ThreadCount: Integer read GetThreadCount write SetThreadCount;
   end;
 
-  { TGBlockingChannel }
+const
+  DEFAULT_CHAN_SIZE = 256;
 
-  generic TGBlockingChannel<T, TSize> = class //todo: replace in unit ???
+type
+
+  generic TGBlockChannel<T> = class
   strict protected
   type
-    TBuffer = array[0..Pred(TSize.Size)] of T;
+    TBuffer = array of T;
 
   var
     FBuffer: TBuffer;
@@ -354,24 +357,16 @@ type
     FHead: SizeInt;
     FActive: Boolean;
     function  GetCapacity: SizeInt; inline;
-    procedure Lock; inline;
-    procedure UnLock; inline;
-    procedure SignalRead; inline;
-    procedure SignalWrite; inline;
     procedure SendData(constref aValue: T);
     function  ReceiveData: T;
     function  TailIndex: SizeInt; inline;
     procedure Enqueue(constref aValue: T);
     function  Dequeue: T;
-    function  CanWrite: Boolean; inline;
-    function  CanRead: Boolean; inline;
-    procedure Panic; inline;
-    procedure CheckCanRead; inline;
-    procedure CheckCanWrite; inline;
+    procedure Panic;
     procedure CleanupBuffer; virtual;
     property  Head: SizeInt read FHead;
   public
-    constructor Create;
+    constructor Create(aSize: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
     procedure AfterConstruction; override;
     function  Send(constref aValue: T): Boolean;
@@ -384,24 +379,17 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TGObjectBlockingChannel }
+  { TGObjBlockChannel }
 
-  generic TGObjectBlockingChannel<T: class; TSize> = class(specialize TGBlockingChannel<T, TSize>)
+  generic TGObjBlockChannel<T: class> = class(specialize TGBlockChannel<T>)
   strict private
     FOwnsObjects: Boolean;
   strict protected
     procedure CleanupBuffer; override;
   public
-    constructor Create(aOwnsObjects: Boolean = True);
+    constructor Create(aSize: SizeInt = DEFAULT_CHAN_SIZE; aOwnsObjects: Boolean = True);
     property OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
-
-  TDefaultSize = class sealed
-  const
-    Size = 256;
-  end;
-
-  generic TGDefaultChannel<T> = class(specialize TGBlockingChannel<T, TDefaultSize>);
 
 implementation
 {$B-}{$COPERATORS ON}
@@ -410,9 +398,12 @@ implementation
 
 procedure TAsyncTask.Cancel;
 begin
-  WriteBarrier;
-  if FState = atsPending then
-    FState := atsCancelled;
+  InterlockedCompareExchange(FState, DWord(tsCancelled), DWord(tsPending));
+end;
+
+function TAsyncTask.GetState: TState;
+begin
+  Result := TState(FState);
 end;
 
 destructor TAsyncTask.Destroy;
@@ -430,21 +421,18 @@ end;
 
 procedure TAsyncTask.Execute;
 begin
-  WriteBarrier;
-  if FState = atsPending then
+  if InterlockedCompareExchange(FState, DWord(tsExecuting), DWord(tsPending)) = DWord(tsPending) then
     begin
-      FState := atsExecuting;
       try
         DoExecute;
       except
         on e: Exception do
           FException := Exception(System.AcquireExceptionObject);
       end;
-      FState := atsFinished;
+      InterlockedIncrement(FState);
     end;
   System.RtlEventSetEvent(FAwait);
-  WriteBarrier;
-  if FState = atsCancelled then
+  if State = tsCancelled then
     TThread.Queue(TThread.CurrentThread, @Free);
 end;
 
@@ -482,8 +470,8 @@ begin
   if Assigned(FTask) and (FState < fsResolved) then
     try
       case FTask.State of
-        atsExecuting: FState := fsExecuting;
-        atsFinished:  FState := fsFinished;
+        tsExecuting: FState := fsExecuting;
+        tsFinished:  FState := fsFinished;
       end;
     except
       FState := fsCancelled;
@@ -521,7 +509,7 @@ begin
   if Assigned(FTask) and (FState = fsPending) then
     begin
       FTask.Cancel;
-      Result := FTask.State = atsCancelled;
+      Result := FTask.State = tsCancelled;
       if Result then
         begin
           FState := fsCancelled;
@@ -973,66 +961,48 @@ begin
   inherited;
 end;
 
-{ TGBlockingChannel }
+{ TGBlockChannel }
 
-function TGBlockingChannel.GetCapacity: SizeInt;
+function TGBlockChannel.GetCapacity: SizeInt;
 begin
-  Result := TSize.Size;
+  Result := System.Length(FBuffer);
 end;
 
-procedure TGBlockingChannel.Lock;
-begin
-  System.EnterCriticalSection(FLock);
-end;
-
-procedure TGBlockingChannel.UnLock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
-
-procedure TGBlockingChannel.SignalRead;
-begin
-  System.RtlEventSetEvent(FReadAwait);
-end;
-
-procedure TGBlockingChannel.SignalWrite;
-begin
-  System.RtlEventSetEvent(FWriteAwait);
-end;
-
-procedure TGBlockingChannel.SendData(constref aValue: T);
+procedure TGBlockChannel.SendData(constref aValue: T);
 begin
   Enqueue(aValue);
-  SignalRead;
-  if CanWrite then
-    SignalWrite;
+  System.RtlEventSetEvent(FReadAwait);
+  if Count < Capacity then
+    System.RtlEventSetEvent(FWriteAwait);
 end;
 
-function TGBlockingChannel.ReceiveData: T;
+function TGBlockChannel.ReceiveData: T;
 begin
   Result := Dequeue;
-  SignalWrite;
-  if CanRead then
-    SignalRead;
+  System.RtlEventSetEvent(FWriteAwait);
+  if Count > 0 then
+    System.RtlEventSetEvent(FReadAwait);
 end;
 
-function TGBlockingChannel.TailIndex: SizeInt;
+function TGBlockChannel.TailIndex: SizeInt;
 begin
   Result := Head + Count;
   if Result >= Capacity then
     Result -= Capacity;
 end;
 
-procedure TGBlockingChannel.Enqueue(constref aValue: T);
+procedure TGBlockChannel.Enqueue(constref aValue: T);
 begin
-  CheckCanWrite;
+  if Count >= Capacity then
+    Panic;
   FBuffer[TailIndex] := aValue;
   Inc(FCount);
 end;
 
-function TGBlockingChannel.Dequeue: T;
+function TGBlockChannel.Dequeue: T;
 begin
-  CheckCanRead;
+  if Count = 0 then
+    Panic;
   Result := FBuffer[Head];
   FBuffer[Head] := Default(T);
   Inc(FHead);
@@ -1041,34 +1011,12 @@ begin
     FHead := 0;
 end;
 
-function TGBlockingChannel.CanWrite: Boolean;
-begin
-  Result := Count < Capacity;
-end;
-
-function TGBlockingChannel.CanRead: Boolean;
-begin
-  Result := Count > 0;
-end;
-
-procedure TGBlockingChannel.Panic;
+procedure TGBlockChannel.Panic;
 begin
   raise ELGPanic.Create(SEInternalDataInconsist);
 end;
 
-procedure TGBlockingChannel.CheckCanRead;
-begin
-  if Count = 0 then
-    Panic;
-end;
-
-procedure TGBlockingChannel.CheckCanWrite;
-begin
-  if Count >= Capacity then
-    Panic;
-end;
-
-procedure TGBlockingChannel.CleanupBuffer;
+procedure TGBlockChannel.CleanupBuffer;
 var
   I: SizeInt;
 begin
@@ -1076,17 +1024,22 @@ begin
     FBuffer[I] := Default(T);
 end;
 
-constructor TGBlockingChannel.Create;
+constructor TGBlockChannel.Create(aSize: SizeInt);
 begin
-  System.FillChar(FBuffer, SizeOf(FBuffer), 0);
-  System.InitCriticalSection(FLock);
-  FActive := True;
+  if aSize > 0 then
+    begin
+      System.SetLength(FBuffer, aSize);
+      System.InitCriticalSection(FLock);
+      FActive := True;
+    end
+  else
+    raise ELGPanic.CreateFmt(SEInvalidInputFmt, ['aSize', IntToStr(aSize)]);
 end;
 
-destructor TGBlockingChannel.Destroy;
+destructor TGBlockChannel.Destroy;
 begin
   Close;
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     CleanupBuffer;
     System.RtlEventDestroy(FWriteAwait);
@@ -1095,96 +1048,96 @@ begin
     FReadAwait := nil;
     inherited;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
     System.DoneCriticalSection(FLock);
   end;
 end;
 
-procedure TGBlockingChannel.AfterConstruction;
+procedure TGBlockChannel.AfterConstruction;
 begin
   inherited;
   FWriteAwait := System.RtlEventCreate;
   FReadAwait  := System.RtlEventCreate;
-  SignalWrite;
+  System.RtlEventSetEvent(FWriteAwait);
 end;
 
-function TGBlockingChannel.Send(constref aValue: T): Boolean;
+function TGBlockChannel.Send(constref aValue: T): Boolean;
 begin
   System.RtlEventWaitFor(FWriteAwait);
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     if Active then
       begin
-        Result := CanWrite;
+        Result := Count < Capacity;
         if Result then
           SendData(aValue);
       end
     else
       begin
         Result := False;
-        SignalWrite;
+        System.RtlEventSetEvent(FWriteAwait);
       end;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
-function TGBlockingChannel.Receive(out aValue: T): Boolean;
+function TGBlockChannel.Receive(out aValue: T): Boolean;
 begin
   System.RtlEventWaitFor(FReadAwait);
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     if Active then
       begin
-        Result := CanRead;
+        Result := Count > 0;
         if Result then
           aValue := ReceiveData;
       end
     else
       begin
         Result := False;
-        SignalRead;
+        System.RtlEventSetEvent(FReadAwait);
       end;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
-procedure TGBlockingChannel.Close;
+procedure TGBlockChannel.Close;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     if Active then
       begin
         FActive := False;
-        SignalRead;
-        SignalWrite;
+        System.RtlEventSetEvent(FReadAwait);
+        System.RtlEventSetEvent(FWriteAwait);
       end;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
-procedure TGBlockingChannel.Open;
+procedure TGBlockChannel.Open;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     if not Active then
       begin
         FActive := True;
         if Count > 0 then
-          SignalRead;
+          System.RtlEventSetEvent(FReadAwait);
         if Count < Capacity then
-          SignalWrite;
+          System.RtlEventSetEvent(FWriteAwait);
       end;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
-{ TGObjectBlockingChannel }
+{ TGObjBlockChannel }
 
-procedure TGObjectBlockingChannel.CleanupBuffer;
+procedure TGObjBlockChannel.CleanupBuffer;
 var
   I: Integer;
 begin
@@ -1193,9 +1146,9 @@ begin
       FBuffer[I].Free;
 end;
 
-constructor TGObjectBlockingChannel.Create(aOwnsObjects: Boolean);
+constructor TGObjBlockChannel.Create(aSize: SizeInt; aOwnsObjects: Boolean);
 begin
-  inherited Create;
+  inherited Create(aSize);
   FOwnsObjects := aOwnsObjects;
 end;
 
