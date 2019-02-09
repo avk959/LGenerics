@@ -483,7 +483,6 @@ end;
 procedure TGFuture.Start(aTask: TTask; aEx: IExecutor);
 begin
   FTask := aTask;
-  FState := fsPending;
   if aEx = nil then
     aEx := TDefaultExecutor.Instance;
   aEx.EnqueueTask(FTask);
@@ -549,7 +548,8 @@ end;
 
 class function TGAsyncProc.Call(aProc: TProcedure; aEx: IExecutor): TFuture;
 begin
-  Result{%H-}.Start(TGAsyncProc.Create(aProc), aEx);
+  Result := Default(TFuture);
+  Result.Start(TGAsyncProc.Create(aProc), aEx);
 end;
 
 constructor TGAsyncProc.Create(aProc: TProcedure);
@@ -568,7 +568,8 @@ end;
 
 class function TAsyncExecutable.Run(aTask: IExecutable; aEx: IExecutor): TFuture;
 begin
-  Result{%H-}.Start(TAsyncExecutable.Create(aTask), aEx);
+  Result := Default(TFuture);
+  Result.Start(TAsyncExecutable.Create(aTask), aEx);
 end;
 
 constructor TAsyncExecutable.Create(aTask: IExecutable);
@@ -586,6 +587,7 @@ end;
 
 class function TGAsyncCallable.Run(aTask: ICallable; aEx: IExecutor): TFuture;
 begin
+  Result := Default(TFuture);
   Result.Start(TGAsyncCallable.Create(aTask), aEx);
 end;
 
@@ -604,6 +606,7 @@ end;
 
 class function TGAsyncMethod.Call(aFun: TFun; aEx: IExecutor): TFuture;
 begin
+  Result := Default(TFuture);
   Result.Start(TGAsyncMethod.Create(aFun), aEx);
 end;
 
@@ -622,6 +625,7 @@ end;
 
 class function TGAsyncNested.Call(aFun: TFun; aEx: IExecutor): TFuture;
 begin
+  Result := Default(TFuture);
   Result.Start(TGAsyncNested.Create(aFun), aEx);
 end;
 
@@ -640,6 +644,7 @@ end;
 
 class function TGAsyncNiladic.Call(aFun: TFun; aEx: IExecutor): TFuture;
 begin
+  Result := Default(TFuture);
   Result.Start(TGAsyncNiladic.Create(aFun), aEx);
 end;
 
@@ -658,7 +663,8 @@ end;
 
 class function TGAsyncMonadic.Call(aFun: TFun; constref v: T; aEx: IExecutor): TFuture;
 begin
-  Result{%H-}.Start(TGAsyncMonadic.Create(aFun, v), aEx);
+  Result := Default(TFuture);
+  Result.Start(TGAsyncMonadic.Create(aFun, v), aEx);
 end;
 
 constructor TGAsyncMonadic.Create(aFun: TFun; constref v: T);
@@ -676,6 +682,7 @@ end;
 
 class function TGAsyncDyadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor): TFuture;
 begin
+  Result := Default(TFuture);
   Result.Start(TGAsyncDyadic.Create(aFun, v1, v2), aEx);
 end;
 
@@ -695,7 +702,8 @@ end;
 class function TGAsyncTriadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
   aEx: IExecutor): TFuture;
 begin
-  Result{%H-}.Start(TGAsyncTriadic.Create(aFun, v1, v2, v3), aEx);
+  Result := Default(TFuture);
+  Result.Start(TGAsyncTriadic.Create(aFun, v1, v2, v3), aEx);
 end;
 
 constructor TGAsyncTriadic.Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
