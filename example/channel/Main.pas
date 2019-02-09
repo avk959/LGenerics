@@ -10,12 +10,7 @@ uses
 
 type
 
-  TSize = class
-  const
-    Size = 64;
-  end;
-
-  TChannel = specialize TGBlockingChannel<string, TSize>;
+  TChannel = specialize TGBlockChannel<string>;
 
   TSender = class(TThread)
   private
@@ -55,6 +50,10 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
+  const
+    CHAN_SIZE = 64;
+
+  var
     FChannel: TChannel;
     MassageNumber: Integer;
     FProducer: TSender;
@@ -137,7 +136,7 @@ procedure TfrmMain.FormCreate(Sender: TObject);
 begin
   Caption := 'Channel test';
   MassageNumber := 1;
-  FChannel := TChannel.Create;
+  FChannel := TChannel.Create(CHAN_SIZE);
 end;
 
 procedure TfrmMain.btStartSenderClick(Sender: TObject);
