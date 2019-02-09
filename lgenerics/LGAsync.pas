@@ -366,7 +366,7 @@ type
     procedure CleanupBuffer; virtual;
     property  Head: SizeInt read FHead;
   public
-    constructor Create(aSize: SizeInt = DEFAULT_CHAN_SIZE);
+    constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
     procedure AfterConstruction; override;
     function  Send(constref aValue: T): Boolean;
@@ -389,6 +389,39 @@ type
   public
     constructor Create(aSize: SizeInt = DEFAULT_CHAN_SIZE; aOwnsObjects: Boolean = True);
     property OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
+  end;
+
+  { TGListenThread: T is the type of message }
+  generic TGListenThread<T> = class abstract
+  private
+  type
+    TChannel = specialize TGBlockChannel<T>;
+
+    TWorker = class(TThread)
+    private
+      FChannel: TChannel;
+      FOwner: TGListenThread;
+    protected
+      procedure Execute; override;
+    public
+      constructor Create(aOwner: TGListenThread; aChannel: TChannel);
+    end;
+
+  private
+    FChannel: TChannel;
+    FWorker: TWorker;
+    function GetCapacity: SizeInt;
+    function GetUnhandledCount: SizeInt;
+  protected
+    procedure HandleMessage(constref aMessage: T); virtual; abstract;
+  public
+    constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
+    destructor Destroy; override;
+    procedure AfterConstruction; override;
+    procedure BeforeDestruction; override;
+    procedure Send(constref aMessage: T);
+    property  UnhandledCount: SizeInt read GetUnhandledCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -1032,16 +1065,16 @@ begin
     FBuffer[I] := Default(T);
 end;
 
-constructor TGBlockChannel.Create(aSize: SizeInt);
+constructor TGBlockChannel.Create(aCapacity: SizeInt);
 begin
-  if aSize > 0 then
+  if aCapacity > 0 then
     begin
-      System.SetLength(FBuffer, aSize);
+      System.SetLength(FBuffer, aCapacity);
       System.InitCriticalSection(FLock);
       FActive := True;
     end
   else
-    raise ELGPanic.CreateFmt(SEInvalidInputFmt, ['aSize', IntToStr(aSize)]);
+    raise ELGPanic.CreateFmt(SEInvalidInputFmt, ['aSize', IntToStr(aCapacity)]);
 end;
 
 destructor TGBlockChannel.Destroy;
@@ -1158,6 +1191,67 @@ constructor TGObjBlockChannel.Create(aSize: SizeInt; aOwnsObjects: Boolean);
 begin
   inherited Create(aSize);
   FOwnsObjects := aOwnsObjects;
+end;
+
+{ TGListenThread.TWorker }
+
+procedure TGListenThread.TWorker.Execute;
+var
+  Message: T;
+begin
+  while not Terminated and FChannel.Receive(Message) do
+    FOwner.HandleMessage(Message);
+end;
+
+constructor TGListenThread.TWorker.Create(aOwner: TGListenThread; aChannel: TChannel);
+begin
+  inherited Create(True);
+  FOwner := aOwner;
+  FChannel := aChannel;
+  FreeOnTerminate := True;
+end;
+
+
+{ TGListenThread }
+
+function TGListenThread.GetCapacity: SizeInt;
+begin
+  Result := FChannel.Capacity;
+end;
+
+function TGListenThread.GetUnhandledCount: SizeInt;
+begin
+  Result := FChannel.Count;
+end;
+
+constructor TGListenThread.Create(aCapacity: SizeInt);
+begin
+  FChannel := TChannel.Create(aCapacity);
+  FWorker := TWorker.Create(Self, FChannel);
+end;
+
+destructor TGListenThread.Destroy;
+begin
+  FChannel.Free;
+  inherited;
+end;
+
+procedure TGListenThread.AfterConstruction;
+begin
+  inherited;
+  FWorker.Start;
+end;
+
+procedure TGListenThread.BeforeDestruction;
+begin
+  FWorker.Terminate;
+  FChannel.Close;
+  inherited;
+end;
+
+procedure TGListenThread.Send(constref aMessage: T);
+begin
+  FChannel.Send(aMessage);
 end;
 
 end.
