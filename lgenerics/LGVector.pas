@@ -138,12 +138,12 @@ type
     FVector: TVector;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
+    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
   { returns reference to encapsulated vector, after use this reference one must call UnLock }
-    function  Lock: TVector;
-    procedure Unlock; inline;
+    function  Lock(out aHolder: TCSLockHolder): TVector;
     procedure Clear;
     function  Add(constref aValue: T): SizeInt;
     function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
@@ -221,11 +221,11 @@ type
     FVector: TVector;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
+    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
-    function  Lock: PVector;
-    procedure Unlock; inline;
+    function  Lock(out aHolder: TCSLockHolder): PVector;
     procedure Clear;
     function  Add(constref aValue: T): SizeInt;
     function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
@@ -306,11 +306,11 @@ type
     FVector: TVector;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
+    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
-    function  Lock: PVector;
-    procedure Unlock; inline;
+    function  Lock(out aHolder: TCSLockHolder): PVector;
     procedure Clear;
     function  Add(constref aValue: T): SizeInt;
     function  TryInsert(aIndex: SizeInt; constref aValue: T): Boolean;
@@ -1246,6 +1246,11 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
+procedure TGThreadVector.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 constructor TGThreadVector.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -1264,15 +1269,11 @@ begin
   end;
 end;
 
-function TGThreadVector.Lock: TVector;
+function TGThreadVector.Lock(out aHolder: TCSLockHolder): TVector;
 begin
   Result := FVector;
   DoLock;
-end;
-
-procedure TGThreadVector.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
+  aHolder := TCSLockHolder.Create(@FLOck);
 end;
 
 procedure TGThreadVector.Clear;
@@ -1569,10 +1570,11 @@ begin
   end;
 end;
 
-function TGLiteThreadVector.Lock: PVector;
+function TGLiteThreadVector.Lock(out aHolder: TCSLockHolder): PVector;
 begin
   Result := @FVector;
   DoLock;
+  aHolder := TCSLockHolder.Create(@FLock);
 end;
 
 procedure TGLiteThreadVector.Unlock;
@@ -1804,6 +1806,11 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
+procedure TGLiteThreadObjectVector.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 constructor TGLiteThreadObjectVector.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -1821,15 +1828,11 @@ begin
   end;
 end;
 
-function TGLiteThreadObjectVector.Lock: PVector;
+function TGLiteThreadObjectVector.Lock(out aHolder: TCSLockHolder): PVector;
 begin
   Result := @FVector;
   DoLock;
-end;
-
-procedure TGLiteThreadObjectVector.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
+  aHolder := TCSLockHolder.Create(@FLock);
 end;
 
 procedure TGLiteThreadObjectVector.Clear;
