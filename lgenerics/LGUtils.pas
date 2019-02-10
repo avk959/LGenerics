@@ -317,7 +317,7 @@ type
     function  RemoveAll(constref a: array of T): SizeInt; overload;
   { returns count of removed elements }
     function  RemoveAll(e: IGEnumerable<T>): SizeInt; overload;
-  { will contain only those elements that are simultaneously contained in self and aCollection }
+  { will contain only those elements that are simultaneously contained in self and c }
     procedure RetainAll(c: IGCollection<T>);
   end;
 
@@ -327,7 +327,7 @@ type
     constructor Create(constref aKey: TKey; constref aValue: TValue);
   end;
 
-  //todo: -> IGSet
+  //todo: -> IGSet ???
 
   IGMap<TKey, TValue> = interface{(IGContainer<TGMapEntry<TKey, TValue>>)}
   ['{67DBDBD2-D54C-4E6E-9BE6-ACDA0A40B63F}']
@@ -482,6 +482,14 @@ type
     procedure Join(var nm: TGJoinablePageNodeManager<TNode>);
     property  FreeCount: SizeInt read FFreeCount;
     property  PagesAllocated: SizeInt read FPageCount;
+  end;
+
+  TCSLockHolder = record
+  private
+    FLock: PRTLCriticalSection;
+    class operator Finalize(var clh: TCsLockHolder);
+  public
+    constructor Create(aLock: PRTLCriticalSection);
   end;
 
 var
@@ -1068,6 +1076,18 @@ begin
           nm.FFreeListTail := nil;
         end;
     end;
+end;
+
+{ TCSLockHolder }
+
+class operator TCSLockHolder.Finalize(var clh: TCsLockHolder);
+begin
+  System.LeaveCriticalSection(clh.FLock^);
+end;
+
+constructor TCSLockHolder.Create(aLock: PRTLCriticalSection);
+begin
+  FLock := aLock;
 end;
 
 end.
