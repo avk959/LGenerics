@@ -600,7 +600,7 @@ type
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteHashTableLP);
-    class operator Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP); inline;
+    class operator Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP);
   public
   const
     DEFAULT_LOAD_FACTOR: Single = 0.55;
@@ -748,7 +748,7 @@ type
     class function NewList(aCapacity: SizeInt): TNodeList; static;
     class constructor Init;
     class operator Initialize(var ht: TGLiteIntHashTable);
-    class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable); inline;
+    class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable);
   public
     function  GetEnumerator: TEnumerator;
     function  GetRemovableEnumerator: TRemovableEnumerator;

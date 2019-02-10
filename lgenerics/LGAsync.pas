@@ -471,7 +471,8 @@ end;
 
 procedure TAsyncTask.WaitFor;
 begin
-  System.RtlEventWaitFor(FAwait);
+  if State <> tsCancelled then   //////////
+    System.RtlEventWaitFor(FAwait);
 end;
 
 { TGFuture }
