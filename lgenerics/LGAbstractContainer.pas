@@ -363,10 +363,10 @@ type
     function  Contains(constref aValue: T): Boolean; override;
   { returns True if multiplicity of an any key in self is greater then or equal to
     the multiplicity of that key in aSet }
-    function  IsSuperMultiSet(aSet: TSpecMultiSet): Boolean;
+    function  IsSuperSet(aSet: TSpecMultiSet): Boolean;
   { returns True if multiplicity of an any key in aSet is greater then or equal to
     the multiplicity of that key in self }
-    function  IsSubMultiSet(aSet: TSpecMultiSet): Boolean;
+    function  IsSubSet(aSet: TSpecMultiSet): Boolean;
   { returns True if the multiplicity of an any key in self is equal to the multiplicity of that key in aSet }
     function  IsEqual(aSet: TSpecMultiSet): Boolean;
     function  Intersecting(aSet: TSpecMultiSet): Boolean;
@@ -2160,7 +2160,7 @@ begin
   Result := FindEntry(aValue) <> nil;
 end;
 
-function TGAbstractMultiSet.IsSuperMultiSet(aSet: TSpecMultiSet): Boolean;
+function TGAbstractMultiSet.IsSuperSet(aSet: TSpecMultiSet): Boolean;
 var
   e: TEntry;
 begin
@@ -2180,7 +2180,7 @@ begin
     Result := True;
 end;
 
-function TGAbstractMultiSet.IsSubMultiSet(aSet: TSpecMultiSet): Boolean;
+function TGAbstractMultiSet.IsSubSet(aSet: TSpecMultiSet): Boolean;
 var
   e: TEntry;
 begin

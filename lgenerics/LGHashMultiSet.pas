@@ -427,10 +427,10 @@ type
     procedure RetainAll(aCollection: ICollection);
   { returns True if multiplicity of an any key in self is greater then or equal to
     the multiplicity of that key in aSet }
-    function  IsSuperMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean; inline;
+    function  IsSuperSet(constref aSet: TGLiteHashMultiSetLP): Boolean; inline;
   { returns True if multiplicity of an any key in aSet is greater then or equal to
     the multiplicity of that key in self }
-    function  IsSubMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean; inline;
+    function  IsSubSet(constref aSet: TGLiteHashMultiSetLP): Boolean; inline;
   { returns True if the multiplicity of an any key in self is equal to the multiplicity of that key in aSet }
     function  IsEqual(constref aSet: TGLiteHashMultiSetLP): Boolean;
     function  Intersecting(constref aSet: TGLiteHashMultiSetLP): Boolean;
@@ -1863,12 +1863,12 @@ begin
   RemoveIf(@aCollection.NonContains);
 end;
 
-function TGLiteHashMultiSetLP.IsSuperMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
+function TGLiteHashMultiSetLP.IsSuperSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
 begin
   Result := ContainsAll(aSet);
 end;
 
-function TGLiteHashMultiSetLP.IsSubMultiSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
+function TGLiteHashMultiSetLP.IsSubSet(constref aSet: TGLiteHashMultiSetLP): Boolean;
 begin
   Result := aSet.ContainsAll(Self);
 end;
