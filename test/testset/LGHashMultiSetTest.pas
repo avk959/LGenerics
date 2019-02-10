@@ -98,8 +98,8 @@ type
     procedure Retain_1;
     procedure RetainSelf;
 
-    procedure IsSuperMultiset;
-    procedure IsSubMultiset;
+    procedure IsSuperset;
+    procedure IsSubset;
     procedure IsEqual;
     procedure Intersecting;
     procedure Intersect;
@@ -183,8 +183,8 @@ type
     procedure Retain_1;
     procedure RetainSelf;
 
-    procedure IsSuperMultiset;
-    procedure IsSubMultiset;
+    procedure IsSuperset;
+    procedure IsSubset;
     procedure IsEqual;
     procedure Intersecting;
     procedure Intersect;
@@ -268,8 +268,8 @@ type
     procedure Retain_1;
     procedure RetainSelf;
 
-    procedure IsSuperMultiset;
-    procedure IsSubMultiset;
+    procedure IsSuperset;
+    procedure IsSubset;
     procedure IsEqual;
     procedure Intersecting;
     procedure Intersect;
@@ -353,8 +353,8 @@ type
     procedure Retain_1;
     procedure RetainSelf;
 
-    procedure IsSuperMultiset;
-    procedure IsSubMultiset;
+    procedure IsSuperset;
+    procedure IsSubset;
     procedure IsEqual;
     procedure Intersecting;
     procedure Intersect;
@@ -418,8 +418,8 @@ type
     procedure Retain;
     procedure Retain_1;
 
-    procedure IsSuperMultiset;
-    procedure IsSubMultiset;
+    procedure IsSuperset;
+    procedure IsSubset;
     procedure IsEqual;
     procedure Intersecting;
     procedure Intersect;
@@ -1004,46 +1004,46 @@ begin
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
 end;
 
-procedure THashMultisetLPTest.IsSuperMultiset;
+procedure THashMultisetLPTest.IsSuperset;
 var
   ms, ms1: TAutoMultiSet;
 begin
   ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   ms1.Instance := TMultiSet.Create(ms.Instance);
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSuperMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms.Instance));
   ms1.Instance.Remove(IntArray21[1]);
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertFalse(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertFalse(ms1.Instance.IsSuperSet(ms.Instance));
   ms1.Instance.Clear;
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertFalse(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertFalse(ms1.Instance.IsSuperSet(ms.Instance));
   ms.Instance.Clear;
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
 end;
 
-procedure THashMultisetLPTest.IsSubMultiset;
+procedure THashMultisetLPTest.IsSubset;
 var
   ms, ms1: TAutoMultiSet;
 begin
   ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   ms1.Instance := TMultiSet.Create(ms.Instance);
-  AssertTrue(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSubMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms.Instance));
   ms1.Instance.Remove(IntArray21[1]);
-  AssertFalse(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
+  AssertFalse(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   ms1.Instance.Clear;
-  AssertFalse(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
+  AssertFalse(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   ms.Instance.Clear;
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSubMultiset(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
 end;
 
 procedure THashMultisetLPTest.IsEqual;
@@ -2129,46 +2129,46 @@ begin
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
 end;
 
-procedure THashMultisetLPTTest.IsSuperMultiset;
+procedure THashMultisetLPTTest.IsSuperset;
 var
   ms, ms1: TAutoMultiSet;
 begin
   ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   ms1.Instance := TMultiSet.Create(ms.Instance);
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSuperMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms.Instance));
   ms1.Instance.Remove(IntArray21[1]);
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertFalse(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertFalse(ms1.Instance.IsSuperSet(ms.Instance));
   ms1.Instance.Clear;
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertFalse(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertFalse(ms1.Instance.IsSuperSet(ms.Instance));
   ms.Instance.Clear;
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
 end;
 
-procedure THashMultisetLPTTest.IsSubMultiset;
+procedure THashMultisetLPTTest.IsSubset;
 var
   ms, ms1: TAutoMultiSet;
 begin
   ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   ms1.Instance := TMultiSet.Create(ms.Instance);
-  AssertTrue(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSubMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms.Instance));
   ms1.Instance.Remove(IntArray21[1]);
-  AssertFalse(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
+  AssertFalse(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   ms1.Instance.Clear;
-  AssertFalse(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
+  AssertFalse(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   ms.Instance.Clear;
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSubMultiset(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
 end;
 
 procedure THashMultisetLPTTest.IsEqual;
@@ -3251,46 +3251,46 @@ begin
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
 end;
 
-procedure THashMultisetQPTest.IsSuperMultiset;
+procedure THashMultisetQPTest.IsSuperset;
 var
   ms, ms1: TAutoMultiSet;
 begin
   ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   ms1.Instance := TMultiSet.Create(ms.Instance);
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSuperMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms.Instance));
   ms1.Instance.Remove(IntArray21[1]);
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertFalse(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertFalse(ms1.Instance.IsSuperSet(ms.Instance));
   ms1.Instance.Clear;
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertFalse(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertFalse(ms1.Instance.IsSuperSet(ms.Instance));
   ms.Instance.Clear;
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
 end;
 
-procedure THashMultisetQPTest.IsSubMultiset;
+procedure THashMultisetQPTest.IsSubset;
 var
   ms, ms1: TAutoMultiSet;
 begin
   ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   ms1.Instance := TMultiSet.Create(ms.Instance);
-  AssertTrue(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSubMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms.Instance));
   ms1.Instance.Remove(IntArray21[1]);
-  AssertFalse(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
+  AssertFalse(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   ms1.Instance.Clear;
-  AssertFalse(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
+  AssertFalse(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   ms.Instance.Clear;
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSubMultiset(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
 end;
 
 procedure THashMultisetQPTest.IsEqual;
@@ -4380,46 +4380,46 @@ begin
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
 end;
 
-procedure TChainHashMultisetTest.IsSuperMultiset;
+procedure TChainHashMultisetTest.IsSuperset;
 var
   ms, ms1: TAutoMultiSet;
 begin
   ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   ms1.Instance := TMultiSet.Create(ms.Instance);
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSuperMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms.Instance));
   ms1.Instance.Remove(IntArray21[1]);
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertFalse(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertFalse(ms1.Instance.IsSuperSet(ms.Instance));
   ms1.Instance.Clear;
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertFalse(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertFalse(ms1.Instance.IsSuperSet(ms.Instance));
   ms.Instance.Clear;
-  AssertTrue(ms.Instance.IsSuperMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSuperMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
 end;
 
-procedure TChainHashMultisetTest.IsSubMultiset;
+procedure TChainHashMultisetTest.IsSubset;
 var
   ms, ms1: TAutoMultiSet;
 begin
   ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   ms1.Instance := TMultiSet.Create(ms.Instance);
-  AssertTrue(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSubMultiset(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms.Instance));
   ms1.Instance.Remove(IntArray21[1]);
-  AssertFalse(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
+  AssertFalse(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   ms1.Instance.Clear;
-  AssertFalse(ms.Instance.IsSubMultiset(ms1.Instance));
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
+  AssertFalse(ms.Instance.IsSubSet(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   ms.Instance.Clear;
-  AssertTrue(ms1.Instance.IsSubMultiset(ms.Instance));
-  AssertTrue(ms.Instance.IsSubMultiset(ms1.Instance));
+  AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
+  AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
 end;
 
 procedure TChainHashMultisetTest.IsEqual;
@@ -5318,46 +5318,46 @@ begin
   AssertTrue(ms.IsEmpty);
 end;
 
-procedure TLiteHashMultisetLPTest.IsSuperMultiset;
+procedure TLiteHashMultisetLPTest.IsSuperset;
 var
   ms, ms1: TMultiSet;
 begin
   ms.AddAll(IntArray21);
   ms.AddAll(IntArray21);
   ms1.AddAll(ms);
-  AssertTrue(ms.IsSuperMultiset(ms1));
-  AssertTrue(ms1.IsSuperMultiset(ms));
-  AssertTrue(ms.IsSuperMultiset(ms));
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertTrue(ms1.IsSuperSet(ms));
+  AssertTrue(ms.IsSuperSet(ms));
   ms1.Remove(IntArray21[1]);
-  AssertTrue(ms.IsSuperMultiset(ms1));
-  AssertFalse(ms1.IsSuperMultiset(ms));
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertFalse(ms1.IsSuperSet(ms));
   ms1.Clear;
-  AssertTrue(ms.IsSuperMultiset(ms1));
-  AssertFalse(ms1.IsSuperMultiset(ms));
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertFalse(ms1.IsSuperSet(ms));
   ms.Clear;
-  AssertTrue(ms.IsSuperMultiset(ms1));
-  AssertTrue(ms1.IsSuperMultiset(ms));
+  AssertTrue(ms.IsSuperSet(ms1));
+  AssertTrue(ms1.IsSuperSet(ms));
 end;
 
-procedure TLiteHashMultisetLPTest.IsSubMultiset;
+procedure TLiteHashMultisetLPTest.IsSubset;
 var
   ms, ms1: TMultiSet;
 begin
   ms.AddAll(IntArray21);
   ms.AddAll(IntArray21);
   ms1.AddAll(ms);
-  AssertTrue(ms.IsSubMultiset(ms1));
-  AssertTrue(ms1.IsSubMultiset(ms));
-  AssertTrue(ms.IsSubMultiset(ms));
+  AssertTrue(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
+  AssertTrue(ms.IsSubSet(ms));
   ms1.Remove(IntArray21[1]);
-  AssertFalse(ms.IsSubMultiset(ms1));
-  AssertTrue(ms1.IsSubMultiset(ms));
+  AssertFalse(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
   ms1.Clear;
-  AssertFalse(ms.IsSubMultiset(ms1));
-  AssertTrue(ms1.IsSubMultiset(ms));
+  AssertFalse(ms.IsSubSet(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
   ms.Clear;
-  AssertTrue(ms1.IsSubMultiset(ms));
-  AssertTrue(ms.IsSubMultiset(ms1));
+  AssertTrue(ms1.IsSubSet(ms));
+  AssertTrue(ms.IsSubSet(ms1));
 end;
 
 procedure TLiteHashMultisetLPTest.IsEqual;
