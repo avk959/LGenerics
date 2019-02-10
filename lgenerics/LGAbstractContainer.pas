@@ -250,11 +250,11 @@ type
     FCollection: ICollection;
     FLock: TRTLCriticalSection;
     procedure Lock; inline;
+    procedure Unlock; inline;
   public
     constructor Create(aCollection: ICollection);
     destructor Destroy; override;
-    function  LockCollection: ICollection;
-    procedure Unlock; inline;
+    function  LockCollection(out aHolder: TCSLockHolder): ICollection;
     procedure Clear;
     function  Contains(constref aValue: T): Boolean;
     function  NonContains(constref aValue: T): Boolean;
@@ -1755,6 +1755,11 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
+procedure TGThreadCollection.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 constructor TGThreadCollection.Create(aCollection: ICollection);
 begin
   System.InitCriticalSection(FLock);
@@ -1773,15 +1778,11 @@ begin
   end;
 end;
 
-function TGThreadCollection.LockCollection: ICollection;
+function TGThreadCollection.LockCollection(out aHolder: TCSLockHolder): ICollection;
 begin
   Result := FCollection;
   Lock;
-end;
-
-procedure TGThreadCollection.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
+  aHolder := TCSLockHolder.Create(@FLock);
 end;
 
 procedure TGThreadCollection.Clear;
