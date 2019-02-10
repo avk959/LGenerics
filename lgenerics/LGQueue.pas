@@ -70,6 +70,7 @@ type
     FQueue: IQueue;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
+    procedure Unlock; inline;
   public
     constructor Create(aQueue: IQueue);
     destructor Destroy; override;
@@ -77,8 +78,7 @@ type
     procedure Enqueue(constref aValue: T);
     function  TryDequeue(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
-    function  Lock: IQueue;
-    procedure Unlock; inline;
+    function  Lock(out aHolder: TCSLockHolder): IQueue;
   end;
 
   generic TGLiteQueue<T> = record
@@ -124,6 +124,7 @@ type
     FQueue: TQueue;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
+    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
@@ -131,11 +132,10 @@ type
     procedure Enqueue(constref aValue: T);
     function  TryDequeue(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
-    function  Lock: PQueue;
-    procedure Unlock; inline;
+    function  Lock(out aHolder: TCSLockHolder): PQueue;
   end;
 
-  generic TGLiteWaitableQueue<T> = class
+  generic TGLiteBlockQueue<T> = class
   public
   type
     TQueue = specialize TGLiteQueue<T>;
@@ -206,6 +206,7 @@ type
     FQueue: TQueue;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
+    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
@@ -213,8 +214,7 @@ type
     procedure Enqueue(constref aValue: T);
     function  TryDequeue(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
-    function  Lock: PQueue;
-    procedure Unlock; inline;
+    function  Lock(out aHolder: TCSLockHolder): PQueue;
   end;
 
 implementation
@@ -325,6 +325,11 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
+procedure TGThreadQueue.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 constructor TGThreadQueue.Create(aQueue: IQueue);
 begin
   System.InitCriticalSection(FLock);
@@ -383,15 +388,11 @@ begin
   end;
 end;
 
-function TGThreadQueue.Lock: IQueue;
+function TGThreadQueue.Lock(out aHolder: TCSLockHolder): IQueue;
 begin
   Result := FQueue;
   DoLock;
-end;
-
-procedure TGThreadQueue.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
+  aHolder := TCSLockHolder.Create(@FLock);
 end;
 
 { TGLiteQueue }
@@ -483,6 +484,11 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
+procedure TGLiteThreadQueue.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 constructor TGLiteThreadQueue.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -540,40 +546,36 @@ begin
   end;
 end;
 
-function TGLiteThreadQueue.Lock: PQueue;
+function TGLiteThreadQueue.Lock(out aHolder: TCSLockHolder): PQueue;
 begin
   Result := @FQueue;
   DoLock;
+  aHolder := TCSLockHolder.Create(@FLock);
 end;
 
-procedure TGLiteThreadQueue.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
+{ TGLiteBlockQueue }
 
-{ TGLiteWaitableQueue }
-
-procedure TGLiteWaitableQueue.Lock;
+procedure TGLiteBlockQueue.Lock;
 begin
   System.EnterCriticalSection(FLock);
 end;
 
-procedure TGLiteWaitableQueue.UnLock;
+procedure TGLiteBlockQueue.UnLock;
 begin
   System.LeaveCriticalSection(FLock);
 end;
 
-procedure TGLiteWaitableQueue.Signaled;
+procedure TGLiteBlockQueue.Signaled;
 begin
   System.RtlEventSetEvent(FReadAwait);
 end;
 
-constructor TGLiteWaitableQueue.Create;
+constructor TGLiteBlockQueue.Create;
 begin
   System.InitCriticalSection(FLock);
 end;
 
-destructor TGLiteWaitableQueue.Destroy;
+destructor TGLiteBlockQueue.Destroy;
 begin
   Lock;
   try
@@ -587,13 +589,13 @@ begin
   end;
 end;
 
-procedure TGLiteWaitableQueue.AfterConstruction;
+procedure TGLiteBlockQueue.AfterConstruction;
 begin
   inherited;
   FReadAwait  := System.RtlEventCreate;
 end;
 
-procedure TGLiteWaitableQueue.Clear;
+procedure TGLiteBlockQueue.Clear;
 begin
   Lock;
   try
@@ -603,7 +605,7 @@ begin
   end;
 end;
 
-procedure TGLiteWaitableQueue.Enqueue(constref aValue: T);
+procedure TGLiteBlockQueue.Enqueue(constref aValue: T);
 begin
   Lock;
   try
@@ -614,7 +616,7 @@ begin
   end;
 end;
 
-function TGLiteWaitableQueue.Dequeue: T;
+function TGLiteBlockQueue.Dequeue: T;
 begin
   System.RtlEventWaitFor(FReadAwait);
   Lock;
@@ -627,7 +629,7 @@ begin
   end;
 end;
 
-function TGLiteWaitableQueue.TryDequeue(out aValue: T): Boolean;
+function TGLiteBlockQueue.TryDequeue(out aValue: T): Boolean;
 begin
   Lock;
   try
@@ -639,7 +641,7 @@ begin
   end;
 end;
 
-function TGLiteWaitableQueue.Peek: T;
+function TGLiteBlockQueue.Peek: T;
 begin
   System.RtlEventWaitFor(FReadAwait);
   Lock;
@@ -652,7 +654,7 @@ begin
   end;
 end;
 
-function TGLiteWaitableQueue.TryPeek(out aValue: T): Boolean;
+function TGLiteBlockQueue.TryPeek(out aValue: T): Boolean;
 begin
   Lock;
   try
@@ -776,6 +778,11 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
+procedure TGLiteThreadObjectQueue.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 constructor TGLiteThreadObjectQueue.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -833,15 +840,11 @@ begin
   end;
 end;
 
-function TGLiteThreadObjectQueue.Lock: PQueue;
+function TGLiteThreadObjectQueue.Lock(out aHolder: TCSLockHolder): PQueue;
 begin
   Result := @FQueue;
   DoLock;
-end;
-
-procedure TGLiteThreadObjectQueue.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
+  aHolder := TCSLockHolder.Create(@FLock);
 end;
 
 end.
