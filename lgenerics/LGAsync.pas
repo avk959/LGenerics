@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Brief and dirty futures implementation.                                 *
+*   Some asynchronous stuff.                                                *
 *                                                                           *
 *   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
 *                                                                           *
@@ -17,12 +17,6 @@
 *  limitations under the License.                                           *
 *                                                                           *
 *****************************************************************************}
-{
-  The futures concept describes an asynchronous single-execution pattern.
-  Result is requested at an early stage of execution, but becomes available after it is received.
-  This implementation implies that futures are intended for use from the main thread.
-}
-
 unit LGAsync;
 
 {$mode objfpc}{$H+}
@@ -78,10 +72,30 @@ type
   end;
 {$POP}
 
+{
+  The futures concept describes an asynchronous single-execution pattern.
+  Result is requested at an early stage of execution, but becomes available after it is received.
+  This implementation implies that futures are intended for use from the main thread.
+}
+
   TFutureState = (fsPending, fsExecuting, fsFinished, fsResolved, fsFatal, fsCancelled);
 
+{$PUSH}{$INTERFACES COM}
+  generic IGFuture<T> = interface
+  ['{87217C99-9D75-46CC-837A-44624C60C004}']
+    function GetState: TFutureState;
+    function  WaitFor: TFutureState;
+  { may be impossible, if task already started }
+    function  Cancel: Boolean;
+  { raises exception if resolving failed }
+    function  Value: T;
+    function  Optional: specialize TGOptional<T>;
+    property  State: TFutureState read GetState;
+  end;
+{$POP}
+
   { TGFuture: takes over the management of the inner async task }
-  generic TGFuture<T> = record
+  generic TGFuture<T> = class(TInterfacedObject, specialize IGFuture<T>)
   public
   type
     TOptional = specialize TGOptional<T>;
@@ -95,17 +109,17 @@ type
     FTaskResult: T;
     FState: TFutureState;
     procedure Resolve;
-  private
+  protected
     function GetState: TFutureState;
-    procedure Start(aTask: TTask; aEx: IExecutor);
-    class operator Finalize(var f: TGFuture);
   public
+    constructor Create(aTask: TTask; aEx: IExecutor);
+    destructor Destroy; override;
     function  WaitFor: TFutureState;
   { may be impossible, if task already started }
     function  Cancel: Boolean;
   { raises exception if resolving failed }
     function  Value: T;
-    function  OptValue: TOptional;
+    function  Optional: TOptional;
     property  State: TFutureState read GetState;
   end;
 
@@ -114,14 +128,14 @@ type
   public
   type
     TProcedure = procedure of object;
-    TFuture    = specialize TGFuture<Boolean>;
+    IFuture    = specialize IGFuture<Boolean>;
 
   strict private
     FProc: TProcedure;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aProc: TProcedure; aEx: IExecutor = nil): TFuture; static;
+    class function Call(aProc: TProcedure; aEx: IExecutor = nil): IFuture; static;
     constructor Create(aProc: TProcedure);
   end;
 
@@ -129,14 +143,14 @@ type
   TAsyncExecutable = class(specialize TGAsyncTask<Boolean>)
   public
   type
-    TFuture = specialize TGFuture<Boolean>;
+    IFuture = specialize IGFuture<Boolean>;
 
   strict private
     FTask: IExecutable;
   strict protected
     procedure DoExecute; override;
   public
-    class function Run(aTask: IExecutable; aEx: IExecutor = nil): TFuture; static;
+    class function Run(aTask: IExecutable; aEx: IExecutor = nil): IFuture; static;
     constructor Create(aTask: IExecutable);
   end;
 
@@ -145,14 +159,14 @@ type
   public
   type
     ICallable = specialize IGCallable<T>;
-    TFuture   = specialize TGFuture<T>;
+    IFuture   = specialize IGFuture<T>;
 
   strict private
     FTask: ICallable;
   strict protected
     procedure DoExecute; override;
   public
-    class function Run(aTask: ICallable; aEx: IExecutor = nil): TFuture; static;
+    class function Run(aTask: ICallable; aEx: IExecutor = nil): IFuture; static;
     constructor Create(aTask: ICallable);
   end;
 
@@ -161,14 +175,14 @@ type
   public
   type
     TFun    = function: T of object;
-    TFuture = specialize TGFuture<T>;
+    IFuture = specialize IGFuture<T>;
 
   strict private
     FFun: TFun;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
+    class function Call(aFun: TFun; aEx: IExecutor = nil): IFuture; static;
     constructor Create(aFun: TFun);
   end;
 
@@ -177,14 +191,14 @@ type
   public
   type
     TFun    = function: T is nested;
-    TFuture = specialize TGFuture<T>;
+    IFuture = specialize IGFuture<T>;
 
   strict private
     FFun: TFun;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
+    class function Call(aFun: TFun; aEx: IExecutor = nil): IFuture; static;
     constructor Create(aFun: TFun);
   end;
 
@@ -194,14 +208,14 @@ type
   public
   type
     TFun    = function: T;
-    TFuture = specialize TGFuture<T>;
+    IFuture = specialize IGFuture<T>;
 
   strict private
     FFun: TFun;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; aEx: IExecutor = nil): TFuture; static;
+    class function Call(aFun: TFun; aEx: IExecutor = nil): IFuture; static;
     constructor Create(aFun: TFun);
   end;
 
@@ -214,14 +228,14 @@ type
   public
   type
     TFun    = TCall.TFun;
-    TFuture = specialize TGFuture<TResult>;
+    IFuture = specialize IGFuture<TResult>;
 
   strict private
     FCall: TCall;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; constref v: T; aEx: IExecutor = nil): TFuture; static;
+    class function Call(aFun: TFun; constref v: T; aEx: IExecutor = nil): IFuture; static;
     constructor Create(aFun: TFun; constref v: T);
   end;
 
@@ -234,14 +248,14 @@ type
   public
   type
     TFun    = TCall.TFun;
-    TFuture = specialize TGFuture<TResult>;
+    IFuture = specialize IGFuture<TResult>;
 
   strict private
     FCall: TCall;
   strict protected
     procedure DoExecute; override;
   public
-    class function Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor = nil): TFuture; static;
+    class function Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor = nil): IFuture; static;
     constructor Create(aFun: TFun; constref v1: T1; constref v2: T2);
   end;
 
@@ -254,7 +268,7 @@ type
   public
   type
     TFun    = TCall.TFun;
-    TFuture = specialize TGFuture<TResult>;
+    IFuture = specialize IGFuture<TResult>;
 
   strict private
     FCall: TCall;
@@ -262,7 +276,7 @@ type
     procedure DoExecute; override;
   public
     class function Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
-                        aEx: IExecutor = nil): TFuture; static;
+                        aEx: IExecutor = nil): IFuture; static;
     constructor Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
   end;
 
@@ -514,18 +528,20 @@ begin
   Result := FState;
 end;
 
-procedure TGFuture.Start(aTask: TTask; aEx: IExecutor);
+constructor TGFuture.Create(aTask: TTask; aEx: IExecutor);
 begin
+  inherited Create;
   FTask := aTask;
   if aEx = nil then
     aEx := TDefaultExecutor.Instance;
   aEx.EnqueueTask(FTask);
 end;
 
-class operator TGFuture.Finalize(var f: TGFuture);
+destructor TGFuture.Destroy;
 begin
-  f.Cancel;
-  f.WaitFor;
+  Cancel;
+  WaitFor;
+  inherited;
 end;
 
 function TGFuture.WaitFor: TFutureState;
@@ -566,7 +582,7 @@ begin
   Result := FTaskResult;
 end;
 
-function TGFuture.OptValue: TOptional;
+function TGFuture.Optional: TOptional;
 begin
   if WaitFor = fsResolved then
     Result.Assign(FTaskResult);
@@ -580,10 +596,9 @@ begin
   FResult := FatalException = nil;
 end;
 
-class function TGAsyncProc.Call(aProc: TProcedure; aEx: IExecutor): TFuture;
+class function TGAsyncProc.Call(aProc: TProcedure; aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TGAsyncProc.Create(aProc), aEx);
+  Result := specialize TGFuture<Boolean>.Create(TGAsyncProc.Create(aProc), aEx);
 end;
 
 constructor TGAsyncProc.Create(aProc: TProcedure);
@@ -600,10 +615,9 @@ begin
   FResult := FatalException = nil;
 end;
 
-class function TAsyncExecutable.Run(aTask: IExecutable; aEx: IExecutor): TFuture;
+class function TAsyncExecutable.Run(aTask: IExecutable; aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TAsyncExecutable.Create(aTask), aEx);
+  Result := specialize TGFuture<Boolean>.Create(TAsyncExecutable.Create(aTask), aEx);
 end;
 
 constructor TAsyncExecutable.Create(aTask: IExecutable);
@@ -619,10 +633,9 @@ begin
   FResult := FTask.Call;
 end;
 
-class function TGAsyncCallable.Run(aTask: ICallable; aEx: IExecutor): TFuture;
+class function TGAsyncCallable.Run(aTask: ICallable; aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TGAsyncCallable.Create(aTask), aEx);
+  Result := specialize TGFuture<T>.Create(TGAsyncCallable.Create(aTask), aEx);
 end;
 
 constructor TGAsyncCallable.Create(aTask: ICallable);
@@ -638,10 +651,9 @@ begin
   FResult := FFun();
 end;
 
-class function TGAsyncMethod.Call(aFun: TFun; aEx: IExecutor): TFuture;
+class function TGAsyncMethod.Call(aFun: TFun; aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TGAsyncMethod.Create(aFun), aEx);
+  Result := specialize TGFuture<T>.Create(TGAsyncMethod.Create(aFun), aEx);
 end;
 
 constructor TGAsyncMethod.Create(aFun: TFun);
@@ -657,10 +669,9 @@ begin
   FResult := FFun();
 end;
 
-class function TGAsyncNested.Call(aFun: TFun; aEx: IExecutor): TFuture;
+class function TGAsyncNested.Call(aFun: TFun; aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TGAsyncNested.Create(aFun), aEx);
+  Result := specialize TGFuture<T>.Create(TGAsyncNested.Create(aFun), aEx);
 end;
 
 constructor TGAsyncNested.Create(aFun: TFun);
@@ -676,10 +687,9 @@ begin
   FResult := FFun();
 end;
 
-class function TGAsyncNiladic.Call(aFun: TFun; aEx: IExecutor): TFuture;
+class function TGAsyncNiladic.Call(aFun: TFun; aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TGAsyncNiladic.Create(aFun), aEx);
+  Result := specialize TGFuture<T>.Create(TGAsyncNiladic.Create(aFun), aEx);
 end;
 
 constructor TGAsyncNiladic.Create(aFun: TFun);
@@ -695,10 +705,9 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncMonadic.Call(aFun: TFun; constref v: T; aEx: IExecutor): TFuture;
+class function TGAsyncMonadic.Call(aFun: TFun; constref v: T; aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TGAsyncMonadic.Create(aFun, v), aEx);
+  Result := specialize TGFuture<TResult>.Create(TGAsyncMonadic.Create(aFun, v), aEx);
 end;
 
 constructor TGAsyncMonadic.Create(aFun: TFun; constref v: T);
@@ -714,10 +723,9 @@ begin
   FResult := FCall.Call;
 end;
 
-class function TGAsyncDyadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor): TFuture;
+class function TGAsyncDyadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TGAsyncDyadic.Create(aFun, v1, v2), aEx);
+  Result := specialize TGFuture<TResult>.Create(TGAsyncDyadic.Create(aFun, v1, v2), aEx);
 end;
 
 constructor TGAsyncDyadic.Create(aFun: TFun; constref v1: T1; constref v2: T2);
@@ -734,10 +742,9 @@ begin
 end;
 
 class function TGAsyncTriadic.Call(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3;
-  aEx: IExecutor): TFuture;
+  aEx: IExecutor): IFuture;
 begin
-  Result := Default(TFuture);
-  Result.Start(TGAsyncTriadic.Create(aFun, v1, v2, v3), aEx);
+  Result := specialize TGFuture<TResult>.Create(TGAsyncTriadic.Create(aFun, v1, v2, v3), aEx);
 end;
 
 constructor TGAsyncTriadic.Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
