@@ -543,7 +543,7 @@ type
     FShowTitle: Boolean;
     function  Graph2Dot(aGraph: TGraph): string; virtual;
     procedure WriteEdges(aGraph: TGraph; aList: TStrings) virtual; abstract;
-    function  DefaultWriteEdge({%H-}aGraph: TGraph; constref aEdge: TGraph.TEdge): string; virtual;
+    function  DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; virtual;
     function  SizeDefined: Boolean;
   public
     procedure SaveToStream(aGraph: TGraph; aStream: TStream);
@@ -2663,6 +2663,7 @@ end;
 
 function TGAbstractDotWriter.DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string;
 begin
+  Assert(aGraph = aGraph);
   Result := IntToStr(aEdge.Source) + FEdgeMark + IntToStr(aEdge.Destination);
 end;
 

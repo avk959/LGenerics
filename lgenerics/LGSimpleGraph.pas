@@ -2180,9 +2180,7 @@ end;
 
 function TGSimpleGraph.DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
 begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
+  Result := not (aSrc = aDst) and FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
   if Result then
     begin
       if FNodeList[aDst].AdjList.Add(TAdjItem.Create(aSrc, aData)) then
@@ -2201,9 +2199,7 @@ end;
 
 function TGSimpleGraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FNodeList[aSrc].AdjList.Remove(aDst);
+  Result := not (aSrc = aDst) and FNodeList[aSrc].AdjList.Remove(aDst);
   if Result then
     begin
       FNodeList[aDst].AdjList.Remove(aSrc);

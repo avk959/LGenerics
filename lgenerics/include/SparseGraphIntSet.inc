@@ -395,7 +395,7 @@ end;
 function TGSparseGraph.TSkeleton.ContainsEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc >= 0) and (aSrc < VertexCount) then
-    Result := FAdjLists[aSrc].Contains(aDst)
+    Result := not (aSrc = aDst) and FAdjLists[aSrc].Contains(aDst)
   else
     Result := False;
 end;
@@ -404,7 +404,7 @@ function TGSparseGraph.TSkeleton.AddEdge(aSrc, aDst: SizeInt): Boolean;
 begin
   if (aSrc < 0) or (aSrc >= VertexCount) or (aDst < 0) or (aDst >= VertexCount) then
     exit(False);
-  Result := FAdjLists[aSrc].Add(aDst);
+  Result := not (aSrc = aDst) and FAdjLists[aSrc].Add(aDst);
   if Result then
     begin
       if not Directed then
@@ -415,9 +415,7 @@ end;
 
 function TGSparseGraph.TSkeleton.RemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FAdjLists[aSrc].Remove(aDst);
+  Result := not (aSrc = aDst) and FAdjLists[aSrc].Remove(aDst);
   if Result then
     begin
       if not Directed then

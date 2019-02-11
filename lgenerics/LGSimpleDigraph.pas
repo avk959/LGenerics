@@ -1314,9 +1314,7 @@ end;
 
 function TGSimpleDigraph.DoAddEdge(aSrc, aDst: SizeInt; constref aData: TEdgeData): Boolean;
 begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
+  Result := not (aSrc = aDst) and FNodeList[aSrc].AdjList.Add(TAdjItem.Create(aDst, aData));
   if Result then
     begin
       Inc(FNodeList[aDst].Tag);
@@ -1327,9 +1325,7 @@ end;
 
 function TGSimpleDigraph.DoRemoveEdge(aSrc, aDst: SizeInt): Boolean;
 begin
-  if aSrc = aDst then
-    exit(False);
-  Result := FNodeList[aSrc].AdjList.Remove(aDst);
+  Result := not (aSrc = aDst) and FNodeList[aSrc].AdjList.Remove(aDst);
   if Result then
     begin
       Dec(FNodeList[aDst].Tag);
