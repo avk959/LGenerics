@@ -241,6 +241,8 @@ type
     function  Clone: TSpecCollection; virtual; abstract;
   end;
 
+  { TGThreadCollection }
+
   generic TGThreadCollection<T> = class
   public
   type
@@ -249,9 +251,10 @@ type
   private
     FCollection: ICollection;
     FLock: TRTLCriticalSection;
+    FOwnsColl: Boolean;
     procedure Lock; inline;
   public
-    constructor Create(aCollection: ICollection);
+    constructor Create(aCollection: ICollection; aOwnsCollection: Boolean = True);
     destructor Destroy; override;
     function  LockCollection: ICollection;
     procedure Unlock; inline;
@@ -1755,17 +1758,20 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
-constructor TGThreadCollection.Create(aCollection: ICollection);
+constructor TGThreadCollection.Create(aCollection: ICollection; aOwnsCollection: Boolean);
 begin
   System.InitCriticalSection(FLock);
   FCollection := aCollection;
+  FOwnsColl := aOwnsCollection;
 end;
 
 destructor TGThreadCollection.Destroy;
 begin
   Lock;
   try
-    FCollection._GetRef.Free;
+    if FOwnsColl then
+      FCollection._GetRef.Free;
+    FCollection := nil;
     inherited;
   finally
     UnLock;
