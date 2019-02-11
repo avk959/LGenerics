@@ -84,13 +84,13 @@ type
   generic IGFuture<T> = interface
   ['{87217C99-9D75-46CC-837A-44624C60C004}']
     function GetState: TFutureState;
-    function  WaitFor: TFutureState;
+    function WaitFor: TFutureState;
   { may be impossible, if task already started }
-    function  Cancel: Boolean;
+    function Cancel: Boolean;
   { raises exception if resolving failed }
-    function  Value: T;
-    function  Optional: specialize TGOptional<T>;
-    property  State: TFutureState read GetState;
+    function Value: T;
+    function Optional: specialize TGOptional<T>;
+    property State: TFutureState read GetState;
   end;
 {$POP}
 
@@ -114,13 +114,13 @@ type
   public
     constructor Create(aTask: TTask; aEx: IExecutor);
     destructor Destroy; override;
-    function  WaitFor: TFutureState;
+    function WaitFor: TFutureState;
   { may be impossible, if task already started }
-    function  Cancel: Boolean;
+    function Cancel: Boolean;
   { raises exception if resolving failed }
-    function  Value: T;
-    function  Optional: TOptional;
-    property  State: TFutureState read GetState;
+    function Value: T;
+    function Optional: TOptional;
+    property State: TFutureState read GetState;
   end;
 
   { TGAsyncProc incapsulates method without arguments(which returns void), True indicates execution success }
@@ -407,34 +407,49 @@ type
 
   { TGListenThread: T is the type of message }
   generic TGListenThread<T> = class abstract
+  public
+  type
+  {$PUSH}{$INTERFACES CORBA}
+    IThread = interface
+    ['{F75F0E98-08B5-4A7A-B431-C2A2383BDD1D}']
+      function  GetThreadID: TThreadID;
+      function  GetHandle: TThreadID;
+      procedure Synchronize(AMethod: TThreadMethod);
+      property  ThreadID: TThreadID read GetThreadID;
+      property  Handle: TThreadID read GetHandle;
+    end;
+  {$POP}
   private
   type
     TChannel = specialize TGBlockChannel<T>;
 
-    TWorker = class(TThread)
+    TWorker = class(TThread, IThread)
     private
       FChannel: TChannel;
       FOwner: TGListenThread;
     protected
+      function  GetThreadID: TThreadID;
+      function  GetHandle: TThreadID;
       procedure Execute; override;
     public
       constructor Create(aOwner: TGListenThread; aChannel: TChannel);
     end;
 
-  private
+  strict private
     FChannel: TChannel;
     FWorker: TWorker;
     function GetCapacity: SizeInt;
-    function GetUnhandledCount: SizeInt;
+    function GetUnhandled: SizeInt;
   protected
-    procedure HandleMessage(constref aMessage: T); virtual; abstract;
+    // must be *pure*
+    procedure HandleMessage(aThread: IThread; constref aMessage: T); virtual; abstract;
   public
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
     procedure Send(constref aMessage: T);
-    property  UnhandledCount: SizeInt read GetUnhandledCount;
+    property  Unhandled: SizeInt read GetUnhandled;
     property  Capacity: SizeInt read GetCapacity;
   end;
 
@@ -485,7 +500,7 @@ end;
 
 procedure TAsyncTask.WaitFor;
 begin
-  if State <> tsCancelled then   //////////
+  if State <> tsCancelled then
     System.RtlEventWaitFor(FAwait);
 end;
 
@@ -1203,12 +1218,22 @@ end;
 
 { TGListenThread.TWorker }
 
+function TGListenThread.TWorker.GetThreadID: TThreadID;
+begin
+  Result := ThreadID;
+end;
+
+function TGListenThread.TWorker.GetHandle: TThreadID;
+begin
+  Result := Handle;
+end;
+
 procedure TGListenThread.TWorker.Execute;
 var
   Message: T;
 begin
   while not Terminated and FChannel.Receive(Message) do
-    FOwner.HandleMessage(Message);
+    FOwner.HandleMessage(Self, Message);
 end;
 
 constructor TGListenThread.TWorker.Create(aOwner: TGListenThread; aChannel: TChannel);
@@ -1227,7 +1252,7 @@ begin
   Result := FChannel.Capacity;
 end;
 
-function TGListenThread.GetUnhandledCount: SizeInt;
+function TGListenThread.GetUnhandled: SizeInt;
 begin
   Result := FChannel.Count;
 end;
