@@ -171,7 +171,7 @@ type
     DEFAULT_LOAD_FACTOR: Single = 0.55;
     MAX_LOAD_FACTOR: Single     = 0.90;
 
-    class function NextProbe(aPrevPos, {%H-}aIndex: SizeInt): SizeInt; static; inline;
+    class function NextProbe(aPrevPos, aIndex: SizeInt): SizeInt; static; inline;
   end;
 
   { TGOpenAddrLP implements open addressing hash table with linear probing(step = 1) }
@@ -1119,6 +1119,7 @@ end;
 
 class function TLPSeq.NextProbe(aPrevPos, aIndex: SizeInt): SizeInt;
 begin
+  Assert(aIndex = aIndex);
   Result := Succ(aPrevPos);
 end;
 
