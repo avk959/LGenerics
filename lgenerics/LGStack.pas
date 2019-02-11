@@ -318,6 +318,7 @@ begin
   DoLock;
   try
     FStack._GetRef.Free;
+    FStack := nil;
     inherited;
   finally
     UnLock;

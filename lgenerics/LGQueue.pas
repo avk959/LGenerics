@@ -335,6 +335,7 @@ begin
   DoLock;
   try
     FQueue._GetRef.Free;
+    FQueue := nil;
     inherited;
   finally
     UnLock;

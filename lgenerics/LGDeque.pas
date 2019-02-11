@@ -946,6 +946,7 @@ begin
   DoLock;
   try
     FDeque._GetRef.Free;
+    FDeque := nil;
     inherited;
   finally
     UnLock;
