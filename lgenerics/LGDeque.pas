@@ -131,7 +131,6 @@ type
     FDeque: IDeque;
     FLock: TRtlCriticalSection;
     procedure DoLock; inline;
-    procedure Unlock; inline;
   public
     constructor Create(aDeque: IDeque);
     destructor Destroy; override;
@@ -142,7 +141,8 @@ type
     function  TryPopLast(out aValue: T): Boolean;
     function  TryPeekFirst(out aValue: T): Boolean;
     function  TryPeekLast(out aValue: T): Boolean;
-    function  Lock(out aHolder: TCSLockHolder): IDeque;
+    function  Lock: IDeque;
+    procedure Unlock; inline;
   end;
 
   generic TGLiteDeque<T> = record
@@ -228,7 +228,6 @@ type
     FDeque: TDeque;
     FLock: TRtlCriticalSection;
     procedure DoLock; inline;
-    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
@@ -239,7 +238,8 @@ type
     function  TryPopLast(out aValue: T): Boolean;
     function  TryPeekFirst(out aValue: T): Boolean;
     function  TryPeekLast(out aValue: T): Boolean;
-    function  Lock(out aHolder: TCSLockHolder): PDeque;
+    function  Lock: PDeque;
+    procedure Unlock; inline;
   end;
 
   { TGLiteObjectDeque notes:
@@ -321,7 +321,6 @@ type
     FDeque: TDeque;
     FLock: TRtlCriticalSection;
     procedure DoLock; inline;
-    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
@@ -332,7 +331,8 @@ type
     function  TryPopLast(out aValue: T): Boolean;
     function  TryPeekFirst(out aValue: T): Boolean;
     function  TryPeekLast(out aValue: T): Boolean;
-    function  Lock(out aHolder: TCSLockHolder): PDeque;
+    function  Lock: PDeque;
+    procedure Unlock; inline;
   end;
 
   { TGDequeHelpUtil }
@@ -935,11 +935,6 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
-procedure TGThreadDeque.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
-
 constructor TGThreadDeque.Create(aDeque: IDeque);
 begin
   System.InitCriticalSection(FLock);
@@ -1028,11 +1023,15 @@ begin
   end;
 end;
 
-function TGThreadDeque.Lock(out aHolder: TCSLockHolder): IDeque;
+function TGThreadDeque.Lock: IDeque;
 begin
   Result := FDeque;
   DoLock;
-  aHolder := TCSLockHolder.Create(@FLock);
+end;
+
+procedure TGThreadDeque.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
 end;
 
 { TGLiteDeque }
@@ -1351,11 +1350,6 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
-procedure TGLiteThreadDeque.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
-
 constructor TGLiteThreadDeque.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -1443,11 +1437,15 @@ begin
   end;
 end;
 
-function TGLiteThreadDeque.Lock(out aHolder: TCSLockHolder): PDeque;
+function TGLiteThreadDeque.Lock: PDeque;
 begin
   Result := @FDeque;
   DoLock;
-  aHolder := TCSLockHolder.Create(@FLock);
+end;
+
+procedure TGLiteThreadDeque.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
 end;
 
 { TGLiteObjectDeque }
@@ -1646,11 +1644,6 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
-procedure TGLiteThreadObjectDeque.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
-
 constructor TGLiteThreadObjectDeque.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -1738,11 +1731,15 @@ begin
   end;
 end;
 
-function TGLiteThreadObjectDeque.Lock(out aHolder: TCSLockHolder): PDeque;
+function TGLiteThreadObjectDeque.Lock: PDeque;
 begin
   Result := @FDeque;
   DoLock;
-  aHolder := TCSLockHolder.Create(@FLock);
+end;
+
+procedure TGLiteThreadObjectDeque.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
 end;
 
 { TGDequeHelpUtil }

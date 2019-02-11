@@ -72,7 +72,6 @@ type
     FStack: IStack;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
-    procedure Unlock; inline;
   public
     constructor Create(aStack: IStack);
     destructor Destroy; override;
@@ -80,7 +79,8 @@ type
     procedure Push(constref aValue: T);
     function  TryPop(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
-    function  Lock(out aHolder: TCSLockHolder): IStack;
+    function  Lock: IStack;
+    procedure Unlock; inline;
   end;
 
   generic TGLiteStack<T> = record
@@ -129,7 +129,6 @@ type
     FStack: TStack;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
-    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
@@ -137,7 +136,8 @@ type
     procedure Push(constref aValue: T);
     function  TryPop(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
-    function  Lock(out aHolder: TCSLockHolder): PStack;
+    function  Lock: PStack;
+    procedure Unlock; inline;
   end;
 
   generic TGLiteObjectStack<T: class> = record
@@ -189,7 +189,6 @@ type
     FStack: TStack;
     FLock: TRTLCriticalSection;
     procedure DoLock; inline;
-    procedure Unlock; inline;
   public
     constructor Create;
     destructor Destroy; override;
@@ -197,7 +196,8 @@ type
     procedure Push(constref aValue: T);
     function  TryPop(out aValue: T): Boolean;
     function  TryPeek(out aValue: T): Boolean;
-    function  Lock(out aHolder: TCSLockHolder): PStack;
+    function  Lock: PStack;
+    procedure Unlock; inline;
   end;
 
 
@@ -307,11 +307,6 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
-procedure TGThreadStack.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
-
 constructor TGThreadStack.Create(aStack: IStack);
 begin
   System.InitCriticalSection(FLock);
@@ -370,11 +365,15 @@ begin
   end;
 end;
 
-function TGThreadStack.Lock(out aHolder: TCSLockHolder): IStack;
+function TGThreadStack.Lock: IStack;
 begin
   Result := FStack;
   DoLock;
-  aHolder := TCSLockHolder.Create(@FLock);
+end;
+
+procedure TGThreadStack.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
 end;
 
 { TGLiteStack }
@@ -474,11 +473,6 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
-procedure TGLiteThreadStack.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
-
 constructor TGLiteThreadStack.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -536,11 +530,15 @@ begin
   end;
 end;
 
-function TGLiteThreadStack.Lock(out aHolder: TCSLockHolder): PStack;
+function TGLiteThreadStack.Lock: PStack;
 begin
   Result := @FStack;
   DoLock;
-  aHolder := TCSLockHolder.Create(@FLock);
+end;
+
+procedure TGLiteThreadStack.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
 end;
 
 { TGLiteObjectStack }
@@ -656,11 +654,6 @@ begin
   System.EnterCriticalSection(FLock);
 end;
 
-procedure TGLiteThreadObjectStack.Unlock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
-
 constructor TGLiteThreadObjectStack.Create;
 begin
   System.InitCriticalSection(FLock);
@@ -718,11 +711,15 @@ begin
   end;
 end;
 
-function TGLiteThreadObjectStack.Lock(out aHolder: TCSLockHolder): PStack;
+function TGLiteThreadObjectStack.Lock: PStack;
 begin
   Result := @FStack;
   DoLock;
-  aHolder := TCSLockHolder.Create(@FLock);
+end;
+
+procedure TGLiteThreadObjectStack.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
 end;
 
 end.

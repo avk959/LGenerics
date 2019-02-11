@@ -484,14 +484,6 @@ type
     property  PagesAllocated: SizeInt read FPageCount;
   end;
 
-  TCSLockHolder = record
-  private
-    FLock: PRTLCriticalSection;
-    class operator Finalize(var clh: TCsLockHolder);
-  public
-    constructor Create(aLock: PRTLCriticalSection);
-  end;
-
 var
   BoolRandSeed: DWord = 0;
 
@@ -1076,18 +1068,6 @@ begin
           nm.FFreeListTail := nil;
         end;
     end;
-end;
-
-{ TCSLockHolder }
-
-class operator TCSLockHolder.Finalize(var clh: TCsLockHolder);
-begin
-  System.LeaveCriticalSection(clh.FLock^);
-end;
-
-constructor TCSLockHolder.Create(aLock: PRTLCriticalSection);
-begin
-  FLock := aLock;
 end;
 
 end.
