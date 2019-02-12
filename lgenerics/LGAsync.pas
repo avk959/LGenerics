@@ -36,6 +36,7 @@ uses
   LGStrConst;
 
 type
+  TThreadExceptionEvent = procedure(aThreed: TThread; e: Exception) of object;
 
   TAsyncTask = class abstract
   public
@@ -423,6 +424,7 @@ type
       property  Handle: TThreadID read GetHandle;
     end;
   {$POP}
+
   private
   type
     TChannel = specialize TGBlockChannel<T>;
@@ -442,10 +444,12 @@ type
   strict private
     FChannel: TChannel;
     FWorker: TWorker;
+    FOnException: TThreadExceptionEvent;
     function GetCapacity: SizeInt;
     function GetUnhandled: SizeInt;
   protected
-    // must be *pure*
+    procedure DoException(aThreed: TThread; e: Exception);
+    //to be overriden
     procedure HandleMessage(aThread: IThread; constref aMessage: T); virtual; abstract;
   public
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
@@ -455,6 +459,7 @@ type
     procedure Send(constref aMessage: T);
     property  Unhandled: SizeInt read GetUnhandled;
     property  Capacity: SizeInt read GetCapacity;
+    property  OnException: TThreadExceptionEvent read FOnException write FOnException;
   end;
 
 implementation
@@ -1244,7 +1249,12 @@ var
   Message: T;
 begin
   while not Terminated and FChannel.Receive(Message) do
-    FOwner.HandleMessage(Self, Message);
+    try
+      FOwner.HandleMessage(Self, Message);
+    except
+      on e: Exception do
+        FOwner.DoException(Self, Exception(System.AcquireExceptionObject));
+    end;
 end;
 
 constructor TGListenThread.TWorker.Create(aOwner: TGListenThread; aChannel: TChannel);
@@ -1266,6 +1276,12 @@ end;
 function TGListenThread.GetUnhandled: SizeInt;
 begin
   Result := FChannel.Count;
+end;
+
+procedure TGListenThread.DoException(aThreed: TThread; e: Exception);
+begin
+  if FOnException <> nil then
+    FOnException(aThreed, e);
 end;
 
 constructor TGListenThread.Create(aCapacity: SizeInt);
