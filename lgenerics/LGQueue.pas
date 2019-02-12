@@ -144,8 +144,8 @@ type
     FQueue: TQueue;
     FLock: TRTLCriticalSection;
     FReadAwait: PRtlEvent;
-    procedure Lock; inline;
-    procedure UnLock; inline;
+    function  GetCapacity: SizeInt;
+    function  GetCount: SizeInt;
   public
     constructor Create;
     destructor Destroy; override;
@@ -156,6 +156,8 @@ type
     function  TryDequeue(out aValue: T): Boolean;
     function  Peek: T;
     function  TryPeek(out aValue: T): Boolean;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 
   generic TGLiteObjectQueue<T: class> = record
@@ -553,14 +555,24 @@ end;
 
 { TGLiteBlockQueue }
 
-procedure TGLiteBlockQueue.Lock;
+function TGLiteBlockQueue.GetCapacity: SizeInt;
 begin
   System.EnterCriticalSection(FLock);
+  try
+    Result := FQueue.Capacity;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
 end;
 
-procedure TGLiteBlockQueue.UnLock;
+function TGLiteBlockQueue.GetCount: SizeInt;
 begin
-  System.LeaveCriticalSection(FLock);
+  System.EnterCriticalSection(FLock);
+  try
+    Result := FQueue.Count;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
 end;
 
 constructor TGLiteBlockQueue.Create;
@@ -570,14 +582,14 @@ end;
 
 destructor TGLiteBlockQueue.Destroy;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     System.RtlEventDestroy(FReadAwait);
     FReadAwait := nil;
     Finalize(FQueue);
     inherited;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
     System.DoneCriticalSection(FLock);
   end;
 end;
@@ -590,67 +602,67 @@ end;
 
 procedure TGLiteBlockQueue.Clear;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     FQueue.Clear;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 procedure TGLiteBlockQueue.Enqueue(constref aValue: T);
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     FQueue.Enqueue(aValue);
     System.RtlEventSetEvent(FReadAwait);
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 function TGLiteBlockQueue.Dequeue: T;
 begin
   System.RtlEventWaitFor(FReadAwait);
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     Result := FQueue.Dequeue;
     if FQueue.NonEmpty then
       System.RtlEventSetEvent(FReadAwait);
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 function TGLiteBlockQueue.TryDequeue(out aValue: T): Boolean;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     Result := FQueue.TryDequeue(aValue);
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 function TGLiteBlockQueue.Peek: T;
 begin
   System.RtlEventWaitFor(FReadAwait);
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     Result := FQueue.Peek;
     System.RtlEventSetEvent(FReadAwait);
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 function TGLiteBlockQueue.TryPeek(out aValue: T): Boolean;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     Result := FQueue.TryPeek(aValue);
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
