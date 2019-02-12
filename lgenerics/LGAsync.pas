@@ -290,68 +290,71 @@ type
     Resizing of thread pool is not threadsafe, so MUST be done from main thread. }
   TDefaultExecutor = class
   private
-   type
-     TTaskQueue = class
-     strict private
-     type
-       TQueue = specialize TGLiteQueue<TAsyncTask>;
+  type
+    TTaskQueue = class
+    strict private
+    type
+      TQueue = specialize TGLiteQueue<TAsyncTask>;
 
-     var
-       FQueue: TQueue;
-       FReadAwait: PRtlEvent;
-       FLock: TRtlCriticalSection;
-       FClosed: Boolean;
-     public
-       constructor Create;
-       destructor Destroy; override;
-       procedure AfterConstruction; override;
-       procedure Clear;
-       procedure Close;
-       procedure Open;
-       procedure Enqueue(aTask: TAsyncTask);
-       function  Dequeue(out aTask: TAsyncTask): Boolean;
-     end;
+    var
+      FQueue: TQueue;
+      FReadAwait: PRtlEvent;
+      FLock: TRtlCriticalSection;
+      FClosed: Boolean;
+    public
+      constructor Create;
+      destructor Destroy; override;
+      procedure AfterConstruction; override;
+      procedure Clear;
+      procedure Close;
+      procedure Open;
+      procedure Enqueue(aTask: TAsyncTask);
+      function  Dequeue(out aTask: TAsyncTask): Boolean;
+      function  GetCount: SizeInt; // not syncronized
+    end;
 
-     TWorkThread = class(TThread)
-     strict private
-       FQueue: TTaskQueue;
-     public
-       constructor Create(aQueue: TTaskQueue);
-       procedure Execute; override;
-     end;
+    TWorkThread = class(TThread)
+    strict private
+      FQueue: TTaskQueue;
+    public
+      constructor Create(aQueue: TTaskQueue);
+      procedure Execute; override;
+    end;
 
-     TThreadPool = specialize TGLiteVector<TWorkThread>;
+    TThreadPool = specialize TGLiteVector<TWorkThread>;
 
-     TExecutor = class(TObject, IExecutor)
-     private
-       FTaskQueue: TTaskQueue;
-       FThreadPool: TThreadPool;
-       function  ThreadCount: Integer; inline;
-       function  AddThread: TWorkThread;
-       procedure PoolGrow(aValue: Integer);
-       procedure PoolShrink(aValue: Integer);
-       procedure EnqueueTask(aTask: TAsyncTask); inline;
-       procedure TerminatePool;
-       procedure FinalizePool; inline;
-     public
-       constructor Create; overload;
-       constructor Create(aThreadCount: Integer); overload;
-       destructor  Destroy; override;
-     end;
+    TExecutor = class(TObject, IExecutor)
+    private
+      FTaskQueue: TTaskQueue;
+      FThreadPool: TThreadPool;
+      function  ThreadCount: Integer; inline;
+      function  AddThread: TWorkThread;
+      procedure PoolGrow(aValue: Integer);
+      procedure PoolShrink(aValue: Integer);
+      procedure TerminatePool;
+      procedure FinalizePool; inline;
+    public
+      constructor Create; overload;
+      constructor Create(aThreadCount: Integer); overload;
+      destructor  Destroy; override;
+      procedure EnqueueTask(aTask: TAsyncTask);
+      function  Unhandled: SizeInt;
+    end;
 
-     class constructor InitNil;
-     class destructor  DoneQueue;
-     class function    GetThreadCount: Integer; static; inline;
-     class procedure   SetThreadCount(aValue: Integer); static;
-   class var
-     CFExecutor: TExecutor; // CF -> Class Field
+    class constructor Init;
+    class destructor  Done;
+    class function    GetThreadCount: Integer; static; inline;
+    class procedure   SetThreadCount(aValue: Integer); static;
+  class var
+    CFExecutor: TExecutor; // CF -> Class Field
 
-   public
-     class procedure EnsureThreadCount(aValue: Integer); static;
-     class procedure Enqueue(aTask: TAsyncTask); static;
-     class function  GetInstance: IExecutor; static;
-     class property  ThreadCount: Integer read GetThreadCount write SetThreadCount;
-   end;
+  public
+    class procedure EnsureThreadCount(aValue: Integer); static;
+    class procedure Enqueue(aTask: TAsyncTask); static;
+    class function  GetInstance: IExecutor; static;
+    class function  UnhandledCount: SizeInt;
+    class property  ThreadCount: Integer read GetThreadCount write SetThreadCount;
+  end;
 
 const
   DEFAULT_CHAN_SIZE = 256;
@@ -863,6 +866,11 @@ begin
   end;
 end;
 
+function TDefaultExecutor.TTaskQueue.GetCount: SizeInt;
+begin
+  Result := FQueue.Count;
+end;
+
 { TDefaultExecutor.TWorkThread }
 
 constructor TDefaultExecutor.TWorkThread.Create(aQueue: TTaskQueue);
@@ -907,11 +915,6 @@ begin
   TerminatePool;
   FTaskQueue.Open;
   PoolGrow(aValue);
-end;
-
-procedure TDefaultExecutor.TExecutor.EnqueueTask(aTask: TAsyncTask);
-begin
-  FTaskQueue.Enqueue(aTask);
 end;
 
 procedure TDefaultExecutor.TExecutor.TerminatePool;
@@ -960,14 +963,24 @@ begin
   inherited;
 end;
 
+procedure TDefaultExecutor.TExecutor.EnqueueTask(aTask: TAsyncTask);
+begin
+  FTaskQueue.Enqueue(aTask);
+end;
+
+function TDefaultExecutor.TExecutor.Unhandled: SizeInt;
+begin
+  Result := FTaskQueue.GetCount;
+end;
+
 { TDefaultExecutor }
 
-class constructor TDefaultExecutor.InitNil;
+class constructor TDefaultExecutor.Init;
 begin
   CFExecutor := nil;
 end;
 
-class destructor TDefaultExecutor.DoneQueue;
+class destructor TDefaultExecutor.Done;
 begin
   FreeAndNil(CFExecutor);
 end;
@@ -981,11 +994,14 @@ begin
 end;
 
 class procedure TDefaultExecutor.SetThreadCount(aValue: Integer);
+var
+  CurrCount: Integer;
 begin
-  if (aValue > ThreadCount) or not Assigned(CFExecutor) then
+  CurrCount := ThreadCount;
+  if aValue > CurrCount then
     EnsureThreadCount(aValue)
   else
-    if aValue > 0 then
+    if (aValue > 0) and (aValue < CurrCount) then
       CFExecutor.PoolShrink(aValue);
 end;
 
@@ -1010,6 +1026,14 @@ begin
   if not Assigned(CFExecutor) then
     CFExecutor := TExecutor.Create;
   Result := CFExecutor;
+end;
+
+class function TDefaultExecutor.UnhandledCount: SizeInt;
+begin
+  if Assigned(CFExecutor) then
+    Result := CFExecutor.Unhandled
+  else
+    Result := 0;
 end;
 
 { TGBlockChannel }
