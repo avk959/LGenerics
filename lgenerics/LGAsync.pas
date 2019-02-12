@@ -281,77 +281,77 @@ type
     constructor Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
   end;
 
+const
+  DEFAULT_POOL_SIZE = 4;
+
+type
   { TDefaultExecutor executes futures in its own thread pool.
     Enqueue procedure is threadsafe, so futures may use other futures.
     Resizing of thread pool is not threadsafe, so MUST be done from main thread. }
-  TDefaultExecutor = class(TObject, IExecutor)
-  protected
-  type
+  TDefaultExecutor = class
+  private
+   type
+     TTaskQueue = class
+     strict private
+     type
+       TQueue = specialize TGLiteQueue<TAsyncTask>;
 
-    TTaskQueue = class
-    strict private
-    type
-      TQueue = specialize TGLiteQueue<TAsyncTask>;
+     var
+       FQueue: TQueue;
+       FReadAwait: PRtlEvent;
+       FLock: TRtlCriticalSection;
+       FClosed: Boolean;
+     public
+       constructor Create;
+       destructor Destroy; override;
+       procedure AfterConstruction; override;
+       procedure Clear;
+       procedure Close;
+       procedure Open;
+       procedure Enqueue(aTask: TAsyncTask);
+       function  Dequeue(out aTask: TAsyncTask): Boolean;
+     end;
 
-    var
-      FQueue: TQueue;
-      FReadAwait: PRtlEvent;
-      FLock: TRtlCriticalSection;
-      FClosed: Boolean;
-      procedure Lock; inline;
-      procedure UnLock; inline;
-      procedure Signaled; inline;
-      property  Closed: Boolean read FClosed;
-    public
-      constructor Create;
-      destructor Destroy; override;
-      procedure AfterConstruction; override;
-      procedure Clear;
-      procedure Close;
-      procedure Open;
-      procedure Enqueue(aTask: TAsyncTask);
-      function  Dequeue(out aTask: TAsyncTask): Boolean;
-    end;
+     TWorkThread = class(TThread)
+     strict private
+       FQueue: TTaskQueue;
+     public
+       constructor Create(aQueue: TTaskQueue);
+       procedure Execute; override;
+     end;
 
-    TWorkThread = class(TThread)
-    strict private
-      FQueue: TTaskQueue;
-    public
-      constructor Create(aQueue: TTaskQueue);
-      procedure Execute; override;
-    end;
+     TThreadPool = specialize TGLiteVector<TWorkThread>;
 
-    TThreadPool = specialize TGLiteVector<TWorkThread>;
+     TExecutor = class(TObject, IExecutor)
+     private
+       FTaskQueue: TTaskQueue;
+       FThreadPool: TThreadPool;
+       function  ThreadCount: Integer; inline;
+       function  AddThread: TWorkThread;
+       procedure PoolGrow(aValue: Integer);
+       procedure PoolShrink(aValue: Integer);
+       procedure EnqueueTask(aTask: TAsyncTask); inline;
+       procedure TerminatePool;
+       procedure FinalizePool; inline;
+     public
+       constructor Create; overload;
+       constructor Create(aThreadCount: Integer); overload;
+       destructor  Destroy; override;
+     end;
 
-  var
-    FTaskQueue: TTaskQueue;
-    FThreadPool: TThreadPool;
-    function  ThreadPoolCount: Integer; inline;
-    function  AddThread: TWorkThread;
-    procedure PoolGrow(aValue: Integer);
-    procedure PoolShrink(aValue: Integer);
-    procedure EnqueueTask(aTask: TAsyncTask); inline;
-    procedure TerminatePool;
-    procedure FinalizePool; inline;
-    class constructor InitNil;
-    class destructor  DoneQueue;
-    class function    GetThreadCount: Integer; static; inline;
-    class procedure   SetThreadCount(aValue: Integer); static; inline;
-  class var
-    CFExecutor: TDefaultExecutor; // CF -> Class Field
+     class constructor InitNil;
+     class destructor  DoneQueue;
+     class function    GetThreadCount: Integer; static; inline;
+     class procedure   SetThreadCount(aValue: Integer); static;
+   class var
+     CFExecutor: TExecutor; // CF -> Class Field
 
-  public
-  const
-    DEFAULT_THREAD_COUNT = 4;
-
-    class procedure EnsureThreadCount(aValue: Integer); static;
-    class procedure Enqueue(aTask: TAsyncTask); static; inline;
-    class function  GetInstance: IExecutor; static;
-    constructor Create; overload;
-    constructor Create(aThreadCount: Integer); overload;
-    destructor  Destroy; override;
-    class property ThreadCount: Integer read GetThreadCount write SetThreadCount;
-  end;
+   public
+     class procedure EnsureThreadCount(aValue: Integer); static;
+     class procedure Enqueue(aTask: TAsyncTask); static;
+     class function  GetInstance: IExecutor; static;
+     class property  ThreadCount: Integer read GetThreadCount write SetThreadCount;
+   end;
 
 const
   DEFAULT_CHAN_SIZE = 256;
@@ -770,21 +770,6 @@ end;
 
 { TDefaultExecutor.TTaskQueue }
 
-procedure TDefaultExecutor.TTaskQueue.Lock;
-begin
-  System.EnterCriticalSection(FLock);
-end;
-
-procedure TDefaultExecutor.TTaskQueue.UnLock;
-begin
-  System.LeaveCriticalSection(FLock);
-end;
-
-procedure TDefaultExecutor.TTaskQueue.Signaled;
-begin
-  System.RtlEventSetEvent(FReadAwait);
-end;
-
 constructor TDefaultExecutor.TTaskQueue.Create;
 begin
   inherited;
@@ -793,14 +778,14 @@ end;
 
 destructor TDefaultExecutor.TTaskQueue.Destroy;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     Finalize(FQueue);
     System.RtlEventDestroy(FReadAwait);
     FReadAwait := nil;
     inherited;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
     System.DoneCriticalSection(FLock);
   end;
 end;
@@ -815,66 +800,66 @@ procedure TDefaultExecutor.TTaskQueue.Clear;
 var
   Task: TAsyncTask;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     for Task in FQueue do
       Task.Cancel;
     FQueue.Clear;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 procedure TDefaultExecutor.TTaskQueue.Close;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     FClosed := True;
-    Signaled;
+    System.RtlEventSetEvent(FReadAwait);
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 procedure TDefaultExecutor.TTaskQueue.Open;
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     FClosed := False;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 procedure TDefaultExecutor.TTaskQueue.Enqueue(aTask: TAsyncTask);
 begin
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
     FQueue.Enqueue(aTask);
-    Signaled;
+    System.RtlEventSetEvent(FReadAwait);
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
 function TDefaultExecutor.TTaskQueue.Dequeue(out aTask: TAsyncTask): Boolean;
 begin
   System.RtlEventWaitFor(FReadAwait);
-  Lock;
+  System.EnterCriticalSection(FLock);
   try
-    if not Closed then
+    if not FClosed then
       begin
         Result := FQueue.TryDequeue(aTask);
         if FQueue.NonEmpty then
-         Signaled;
+         System.RtlEventSetEvent(FReadAwait);
       end
     else
       begin
         Result := False;
-        Signaled;
+        System.RtlEventSetEvent(FReadAwait);
       end;
   finally
-    UnLock;
+    System.LeaveCriticalSection(FLock);
   end;
 end;
 
@@ -895,27 +880,27 @@ begin
       CurrTask.Execute;
 end;
 
-{ TDefaultExecutor }
+{ TDefaultExecutor.TExecutor }
 
-function TDefaultExecutor.ThreadPoolCount: Integer;
+function TDefaultExecutor.TExecutor.ThreadCount: Integer;
 begin
   Result := FThreadPool.Count;
 end;
 
-function TDefaultExecutor.AddThread: TWorkThread;
+function TDefaultExecutor.TExecutor.AddThread: TWorkThread;
 begin
   Result := TWorkThread.Create(FTaskQueue);
   FThreadPool.Add(Result);
   Result.Start;
 end;
 
-procedure TDefaultExecutor.PoolGrow(aValue: Integer);
+procedure TDefaultExecutor.TExecutor.PoolGrow(aValue: Integer);
 begin
   while FThreadPool.Count < aValue do
     AddThread;
 end;
 
-procedure TDefaultExecutor.PoolShrink(aValue: Integer);
+procedure TDefaultExecutor.TExecutor.PoolShrink(aValue: Integer);
 begin
   if aValue < 1 then
     aValue := 1;
@@ -924,31 +909,58 @@ begin
   PoolGrow(aValue);
 end;
 
-procedure TDefaultExecutor.EnqueueTask(aTask: TAsyncTask);
+procedure TDefaultExecutor.TExecutor.EnqueueTask(aTask: TAsyncTask);
 begin
   FTaskQueue.Enqueue(aTask);
 end;
 
-procedure TDefaultExecutor.TerminatePool;
+procedure TDefaultExecutor.TExecutor.TerminatePool;
 var
-  Thread: TWorkThread;
+  CurrThread: TWorkThread;
 begin
-  for Thread in FThreadPool.Reverse do
-    Thread.Terminate;
+  for CurrThread in FThreadPool.Reverse do
+    CurrThread.Terminate;
   FTaskQueue.Close;
   while FThreadPool.Count > 0 do
     begin
-      Thread := FThreadPool.Extract(Pred(FThreadPool.Count));
-      Thread.WaitFor;
-      Thread.Free;
+      CurrThread := FThreadPool.Extract(Pred(FThreadPool.Count));
+      CurrThread.WaitFor;
+      CurrThread.Free;
     end;
 end;
 
-procedure TDefaultExecutor.FinalizePool;
+procedure TDefaultExecutor.TExecutor.FinalizePool;
 begin
   TerminatePool;
   FThreadPool.Clear;
 end;
+
+constructor TDefaultExecutor.TExecutor.Create;
+begin
+  if TThread.ProcessorCount > DEFAULT_POOL_SIZE then
+    Create(TThread.ProcessorCount)
+  else
+    Create(DEFAULT_POOL_SIZE);
+end;
+
+constructor TDefaultExecutor.TExecutor.Create(aThreadCount: Integer);
+begin
+  FTaskQueue := TTaskQueue.Create;
+  if aThreadCount > 0 then
+    PoolGrow(aThreadCount)
+  else
+    PoolGrow(1);
+end;
+
+destructor TDefaultExecutor.TExecutor.Destroy;
+begin
+  FTaskQueue.Clear;
+  FinalizePool;
+  FTaskQueue.Free;
+  inherited;
+end;
+
+{ TDefaultExecutor }
 
 class constructor TDefaultExecutor.InitNil;
 begin
@@ -960,20 +972,20 @@ begin
   FreeAndNil(CFExecutor);
 end;
 
-class function TDefaultExecutor.GetThreadCount: Integer; static;
+class function TDefaultExecutor.GetThreadCount: Integer;
 begin
   if Assigned(CFExecutor) then
-    Result := CFExecutor.ThreadPoolCount
+    Result := CFExecutor.ThreadCount
   else
     Result := 0;
 end;
 
 class procedure TDefaultExecutor.SetThreadCount(aValue: Integer);
 begin
-  if aValue > ThreadCount then
+  if (aValue > ThreadCount) or not Assigned(CFExecutor) then
     EnsureThreadCount(aValue)
   else
-    if Assigned(CFExecutor) then
+    if aValue > 0 then
       CFExecutor.PoolShrink(aValue);
 end;
 
@@ -981,7 +993,7 @@ class procedure TDefaultExecutor.EnsureThreadCount(aValue: Integer);
 begin
   if aValue > ThreadCount then
     if not Assigned(CFExecutor) then
-      CFExecutor := TDefaultExecutor.Create(aValue)
+      CFExecutor := TExecutor.Create(aValue)
     else
       CFExecutor.PoolGrow(aValue);
 end;
@@ -989,40 +1001,15 @@ end;
 class procedure TDefaultExecutor.Enqueue(aTask: TAsyncTask);
 begin
   if not Assigned(CFExecutor) then
-    CFExecutor := TDefaultExecutor.Create;
+    CFExecutor := TExecutor.Create;
   CFExecutor.EnqueueTask(aTask);
 end;
 
 class function TDefaultExecutor.GetInstance: IExecutor;
 begin
   if not Assigned(CFExecutor) then
-    CFExecutor := TDefaultExecutor.Create;
-  Result := IExecutor(CFExecutor);
-end;
-
-constructor TDefaultExecutor.Create;
-begin
-  if TThread.ProcessorCount > DEFAULT_THREAD_COUNT then
-    Create(TThread.ProcessorCount)
-  else
-    Create(DEFAULT_THREAD_COUNT);
-end;
-
-constructor TDefaultExecutor.Create(aThreadCount: Integer);
-begin
-  FTaskQueue := TTaskQueue.Create;
-  if aThreadCount > 0 then
-    PoolGrow(aThreadCount)
-  else
-    PoolGrow(1);
-end;
-
-destructor TDefaultExecutor.Destroy;
-begin
-  FTaskQueue.Clear;
-  FinalizePool;
-  FTaskQueue.Free;
-  inherited;
+    CFExecutor := TExecutor.Create;
+  Result := CFExecutor;
 end;
 
 { TGBlockChannel }
