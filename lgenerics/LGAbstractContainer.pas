@@ -187,7 +187,8 @@ type
 {$I DynBufferH.inc}
 
   { TGAbstractCollection: collection abstract ancestor class}
-  generic TGAbstractCollection<T> = class abstract(specialize TGAbstractContainer<T>, specialize IGCollection<T>)
+  generic TGAbstractCollection<T> = class abstract(specialize TGAbstractContainer<T>, specialize IGCollection<T>,
+    specialize IGReadOnlyCollection<T>)
   public
   type
     TSpecCollection = specialize TGAbstractCollection<T>;
@@ -242,7 +243,6 @@ type
   end;
 
   { TGThreadCollection }
-
   generic TGThreadCollection<T> = class
   public
   type
@@ -258,6 +258,33 @@ type
     destructor Destroy; override;
     function  LockCollection: ICollection;
     procedure Unlock; inline;
+    procedure Clear;
+    function  Contains(constref aValue: T): Boolean;
+    function  NonContains(constref aValue: T): Boolean;
+    function  Add(constref aValue: T): Boolean;
+    function  Remove(constref aValue: T): Boolean;
+  end;
+
+  { TGThreadRWCollection }
+  generic TGThreadRWCollection<T> = class
+  private
+  type
+    TCollection = specialize TGAbstractCollection<T>;
+
+  var
+    FCollection: TCollection;
+    FRWLock: TMultiReadExclusiveWriteSynchronizer;
+  public
+  type
+    IRoCollection = specialize IGReadOnlyCollection<T>;
+    ICollection   = TCollection.ICollection;
+
+    constructor Create(aCollection: specialize TGAbstractCollection<T>);
+    destructor Destroy; override;
+    function  ReadCollection: IRoCollection;
+    procedure EndRead; inline;
+    function  WriteCollection: ICollection;
+    procedure EndWrite; inline;
     procedure Clear;
     function  Contains(constref aValue: T): Boolean;
     function  NonContains(constref aValue: T): Boolean;
@@ -828,7 +855,7 @@ type
   end;
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 { TGEnumerable }
 
@@ -1812,12 +1839,7 @@ end;
 
 function TGThreadCollection.NonContains(constref aValue: T): Boolean;
 begin
-  Lock;
-  try
-    Result := FCollection.NonContains(aValue);
-  finally
-    UnLock;
-  end;
+  Result := not Contains(aValue);
 end;
 
 function TGThreadCollection.Add(constref aValue: T): Boolean;
@@ -1837,6 +1859,94 @@ begin
     Result := FCollection.Remove(aValue);
   finally
     UnLock;
+  end;
+end;
+
+{ TGThreadRWCollection }
+
+constructor TGThreadRWCollection.Create(aCollection: specialize TGAbstractCollection<T>);
+begin
+  FRWLock := TMultiReadExclusiveWriteSynchronizer.Create;
+  FCollection := aCollection;
+end;
+
+destructor TGThreadRWCollection.Destroy;
+begin
+  FRWLock.BeginWrite;
+  try
+    FCollection.Free;
+    FCollection := nil;
+    inherited;
+  finally
+    FRWLock.EndWrite;
+    FRWLock.Free;
+  end;
+end;
+
+function TGThreadRWCollection.ReadCollection: IRoCollection;
+begin
+  FRWLock.BeginRead;
+  Result := FCollection;
+end;
+
+procedure TGThreadRWCollection.EndRead;
+begin
+  FRWLock.EndRead;
+end;
+
+function TGThreadRWCollection.WriteCollection: ICollection;
+begin
+  FRWLock.BeginWrite;
+  Result := FCollection;
+end;
+
+procedure TGThreadRWCollection.EndWrite;
+begin
+  FRWLock.EndWrite;
+end;
+
+procedure TGThreadRWCollection.Clear;
+begin
+  FRWLock.BeginWrite;
+  try
+    FCollection.Clear;
+  finally
+    FRWLock.EndWrite;
+  end;
+end;
+
+function TGThreadRWCollection.Contains(constref aValue: T): Boolean;
+begin
+  FRWLock.BeginRead;
+  try
+    Result := FCollection.Contains(aValue);
+  finally
+    FRWLock.EndRead;
+  end;
+end;
+
+function TGThreadRWCollection.NonContains(constref aValue: T): Boolean;
+begin
+  Result := not Contains(aValue);
+end;
+
+function TGThreadRWCollection.Add(constref aValue: T): Boolean;
+begin
+  FRWLock.BeginWrite;
+  try
+    Result := FCollection.Add(aValue);
+  finally
+    FRWLock.EndWrite;
+  end;
+end;
+
+function TGThreadRWCollection.Remove(constref aValue: T): Boolean;
+begin
+  FRWLock.BeginWrite;
+  try
+    Result := FCollection.Remove(aValue);
+  finally
+    FRWLock.EndWrite;
   end;
 end;
 
