@@ -36,6 +36,7 @@ uses
   LGStrConst;
 
 type
+
   TAsyncTask = class abstract
   public
   type
@@ -51,7 +52,7 @@ type
   public
     destructor Destroy; override;
     procedure AfterConstruction; override;
-    procedure Cancel;
+    function  Cancel: Boolean;
     procedure Execute;
     procedure WaitFor;
     property  FatalException: Exception read FException;
@@ -345,7 +346,7 @@ type
 
     class procedure EnsureThreadCount(aValue: Integer); static;
     class procedure Enqueue(aTask: TAsyncTask); static; inline;
-    class function  Instance: IExecutor; static;
+    class function  GetInstance: IExecutor; static;
     constructor Create; overload;
     constructor Create(aThreadCount: Integer); overload;
     destructor  Destroy; override;
@@ -458,9 +459,9 @@ implementation
 
 { TAsyncTask }
 
-procedure TAsyncTask.Cancel;
+function TAsyncTask.Cancel: Boolean;
 begin
-  InterlockedCompareExchange(FState, DWord(tsCancelled), DWord(tsPending));
+  Result := InterlockedCompareExchange(FState, DWord(tsCancelled), DWord(tsPending)) = DWord(tsPending);
 end;
 
 function TAsyncTask.GetState: TState;
@@ -548,7 +549,7 @@ begin
   inherited Create;
   FTask := aTask;
   if aEx = nil then
-    aEx := TDefaultExecutor.Instance;
+    aEx := TDefaultExecutor.GetInstance;
   aEx.EnqueueTask(FTask);
 end;
 
@@ -572,8 +573,7 @@ function TGFuture.Cancel: Boolean;
 begin
   if Assigned(FTask) and (FState = fsPending) then
     begin
-      FTask.Cancel;
-      Result := FTask.State = tsCancelled;
+      Result := FTask.Cancel;
       if Result then
         begin
           FState := fsCancelled;
@@ -993,7 +993,7 @@ begin
   CFExecutor.EnqueueTask(aTask);
 end;
 
-class function TDefaultExecutor.Instance: IExecutor;
+class function TDefaultExecutor.GetInstance: IExecutor;
 begin
   if not Assigned(CFExecutor) then
     CFExecutor := TDefaultExecutor.Create;
