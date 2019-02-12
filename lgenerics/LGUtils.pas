@@ -321,6 +321,22 @@ type
     procedure RetainAll(c: IGCollection<T>);
   end;
 
+  IGReadOnlyCollection<T> = interface(IGEnumerable<T>)
+  ['{D0DDB482-819A-438B-BF33-B6EF21A6A9A5}']
+    function  GetCount: SizeInt;
+    function  GetCapacity: SizeInt;
+    function  IsEmpty: Boolean;
+    function  NonEmpty: Boolean;
+    function  Contains(constref aValue: T): Boolean;
+    function  NonContains(constref aValue: T): Boolean;
+    function  ContainsAny(constref a: array of T): Boolean; overload;
+    function  ContainsAny(e: IGEnumerable<T>): Boolean; overload;
+    function  ContainsAll(constref a: array of T): Boolean; overload;
+    function  ContainsAll(e: IGEnumerable<T>): Boolean; overload;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
+
   TGMapEntry<TKey, TValue> = record
     Key: TKey;
     Value: TValue;
@@ -356,7 +372,7 @@ type
     function  Values: IGEnumerable<TValue>;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
-  { reading will raise ELGMapError if an aKey is not present in map }
+  { reading will raise exception if an aKey is not present in map }
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
 {$POP}
