@@ -415,8 +415,7 @@ type
   public
   type
   {$PUSH}{$INTERFACES CORBA}
-    IThread = interface
-    ['{F75F0E98-08B5-4A7A-B431-C2A2383BDD1D}']
+    IWorkThread = interface
       function  GetThreadID: TThreadID;
       function  GetHandle: TThreadID;
       procedure Synchronize(AMethod: TThreadMethod);
@@ -429,7 +428,7 @@ type
   type
     TChannel = specialize TGBlockChannel<T>;
 
-    TWorker = class(TThread, IThread)
+    TWorker = class(TThread, IWorkThread)
     private
       FChannel: TChannel;
       FOwner: TGListenThread;
@@ -449,8 +448,8 @@ type
     function GetUnhandled: SizeInt;
   protected
     procedure DoException(aThreed: TThread; e: Exception);
-    //to be overriden
-    procedure HandleMessage(aThread: IThread; constref aMessage: T); virtual; abstract;
+    //to be overriden in descendants
+    procedure HandleMessage(aThread: IWorkThread; constref aMessage: T); virtual; abstract;
   public
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
