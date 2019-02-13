@@ -153,7 +153,6 @@ type
     procedure Clear;
     procedure Enqueue(constref aValue: T);
     function  Dequeue: T;
-    function  TryDequeue(out aValue: T): Boolean;
     function  Peek: T;
     function  TryPeek(out aValue: T): Boolean;
     property  Count: SizeInt read GetCount;
@@ -629,16 +628,6 @@ begin
     Result := FQueue.Dequeue;
     if FQueue.NonEmpty then
       System.RtlEventSetEvent(FReadAwait);
-  finally
-    System.LeaveCriticalSection(FLock);
-  end;
-end;
-
-function TGLiteBlockQueue.TryDequeue(out aValue: T): Boolean;
-begin
-  System.EnterCriticalSection(FLock);
-  try
-    Result := FQueue.TryDequeue(aValue);
   finally
     System.LeaveCriticalSection(FLock);
   end;
