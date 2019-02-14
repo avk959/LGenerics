@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Some asynchronous stuff.                                                *
+*   Some asynchronous promitives.                                           *
 *                                                                           *
 *   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
 *                                                                           *
@@ -435,6 +435,7 @@ type
     IWorkThread = interface
       function  GetThreadID: TThreadID;
       function  GetHandle: TThreadID;
+      procedure Queue(aMethod: TThreadMethod);
       procedure Synchronize(AMethod: TThreadMethod);
       property  ThreadID: TThreadID read GetThreadID;
       property  Handle: TThreadID read GetHandle;
@@ -461,8 +462,8 @@ type
     FChannel: TChannel;
     FWorker: TWorker;
     FOnException: TThreadExceptionEvent;
-    function GetCapacity: SizeInt;
-    function GetUnhandled: SizeInt;
+    function  GetCapacity: SizeInt;
+    function  GetUnhandled: SizeInt;
   protected
     procedure DoException(aThreed: TThread; e: Exception);
     //to be overriden in descendants
@@ -1293,7 +1294,10 @@ end;
 procedure TGListenThread.DoException(aThreed: TThread; e: Exception);
 begin
   if FOnException <> nil then
-    FOnException(aThreed, e);
+    try
+      FOnException(aThreed, e);
+    except
+    end;
 end;
 
 constructor TGListenThread.Create(aCapacity: SizeInt);
