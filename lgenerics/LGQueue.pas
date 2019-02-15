@@ -82,8 +82,12 @@ type
   end;
 
   generic TGLiteQueue<T> = record
+  private
   type
-    TBuffer     = specialize TGLiteRingDynBuffer<T>;
+    TBuffer = specialize TGLiteRingDynBuffer<T>;
+
+  public
+  type
     TEnumerator = TBuffer.TEnumerator;
     TMutables   = TBuffer.TMutables;
     TReverse    = TBuffer.TReverse;
@@ -215,6 +219,34 @@ type
     function  TryPeek(out aValue: T): Boolean;
     function  Lock: PQueue;
     procedure Unlock; inline;
+  end;
+
+  { TGLiteThreadQueueSL: spinlock based concurrent queue }
+  generic TGLiteThreadQueueSL<T> = record
+  private
+  type
+    TBuffer = specialize TGLiteRingDynBuffer<T>;
+
+  public
+  type
+    TArray = array of T;
+
+  private
+    FLock: TSpinLock;
+    FBuffer: TBuffer;
+    function  GetCapacity: SizeInt;
+    function  GetCount: SizeInt;
+  public
+    function  ToArray: TArray;
+    procedure Clear;
+    function  IsEmpty: Boolean;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure TrimToFit;
+    procedure Enqueue(constref aValue: T);
+    function  TryDequeue(out aValue: T): Boolean;
+    function  TryPeek(out aValue: T): Boolean; inline;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -835,6 +867,108 @@ end;
 procedure TGLiteThreadObjectQueue.Unlock;
 begin
   System.LeaveCriticalSection(FLock);
+end;
+
+{ TGLiteThreadQueueSL }
+
+function TGLiteThreadQueueSL.GetCapacity: SizeInt;
+begin
+  FLock.Lock;
+  try
+    Result := FBuffer.Capacity;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+function TGLiteThreadQueueSL.GetCount: SizeInt;
+begin
+  FLock.Lock;
+  try
+    Result := FBuffer.FCount;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+function TGLiteThreadQueueSL.ToArray: TArray;
+begin
+  FLock.Lock;
+  try
+    Result := FBuffer.ToArray;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+procedure TGLiteThreadQueueSL.Clear;
+begin
+  FLock.Lock;
+  try
+    FBuffer.Clear;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+function TGLiteThreadQueueSL.IsEmpty: Boolean;
+begin
+  FLock.Lock;
+  try
+    Result := FBuffer.FCount = 0;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+procedure TGLiteThreadQueueSL.EnsureCapacity(aValue: SizeInt);
+begin
+  FLock.Lock;
+  try
+    FBuffer.EnsureCapacity(aValue);
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+procedure TGLiteThreadQueueSL.TrimToFit;
+begin
+  FLock.Lock;
+  try
+    FBuffer.TrimToFit;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+procedure TGLiteThreadQueueSL.Enqueue(constref aValue: T);
+begin
+  FLock.Lock;
+  try
+    FBuffer.PushLast(aValue);
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+function TGLiteThreadQueueSL.TryDequeue(out aValue: T): Boolean;
+begin
+  FLock.Lock;
+  try
+    Result := FBuffer.TryPopFirst(aValue);
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+function TGLiteThreadQueueSL.TryPeek(out aValue: T): Boolean;
+begin
+  FLock.Lock;
+  try
+    Result := FBuffer.TryPeekFirst(aValue);
+  finally
+    FLock.Unlock;
+  end;
 end;
 
 end.
