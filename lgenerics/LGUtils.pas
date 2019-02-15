@@ -500,6 +500,22 @@ type
     property  PagesAllocated: SizeInt read FPageCount;
   end;
 
+{$PUSH}{$PACKRECORDS DEFAULT}
+  TSpinLock = record
+  private
+  const
+    CACHE_PAD_SIZE = 15;
+  var
+    FState: DWord;
+    FCacheLinePad: array[1..CACHE_PAD_SIZE] of DWord;
+    class operator Initialize(var sl: TSpinLock);
+  public
+    procedure Lock; inline;
+    function  TryLock: Boolean; inline;
+    procedure Unlock; inline;
+  end;
+{$POP}
+
 var
   BoolRandSeed: DWord = 0;
 
@@ -1084,6 +1100,32 @@ begin
           nm.FFreeListTail := nil;
         end;
     end;
+end;
+
+{ TSpinLock }
+
+class operator TSpinLock.Initialize(var sl: TSpinLock);
+begin
+  sl.FState := 0;
+  Assert(SizeOf(sl.FCacheLinePad) = TSpinLock.CACHE_PAD_SIZE);//to supress hints
+end;
+
+procedure TSpinLock.Lock;
+begin
+  while Boolean(InterlockedExchange(FState, DWord(1))) do
+    ThreadSwitch;
+end;
+
+function TSpinLock.TryLock: Boolean;
+begin
+  Result := not Boolean(InterlockedExchange(FState, DWord(1)));
+end;
+
+procedure TSpinLock.Unlock;
+begin
+  InterlockedExchange(FState, DWord(0));
+  //FState := 0;
+  //ReadWriteBarrier;
 end;
 
 end.
