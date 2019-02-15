@@ -52,8 +52,6 @@ type
   end;
 {$POP}
 
-  { TAsyncTask }
-
   TAsyncTask = class abstract(TInterfacedObject, IAsyncTask)
   strict private
     FAwait: PRtlEvent;
@@ -604,7 +602,7 @@ procedure TGFuture.Cancel;
 begin
   if Assigned(FTask) and (FState < fsResolved) then
     begin
-      FTask := nil;
+      FTask := nil;  //todo: exception leak ???
       FState := fsCancelled;
     end;
 end;
