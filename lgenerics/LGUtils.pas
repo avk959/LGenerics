@@ -110,7 +110,7 @@ type
   private
     FInstance: T;
     function  GetInstance: T; inline;
-    procedure SetInstance(aValue: T); inline;
+    procedure SetInstance(aValue: T); inline;   //todo: need to ban copying?
     class operator Initialize(var a: TGAutoRef<T>); inline;
     class operator Finalize(var a: TGAutoRef<T>); inline;
   public
