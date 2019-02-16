@@ -274,6 +274,8 @@ type
   var
     FCollection: TCollection;
     FRWLock: TMultiReadExclusiveWriteSynchronizer;
+    function GetCapacity: SizeInt;
+    function GetCount: SizeInt;
   public
   type
     IRoCollection = specialize IGReadOnlyCollection<T>;
@@ -290,6 +292,8 @@ type
     function  NonContains(constref aValue: T): Boolean;
     function  Add(constref aValue: T): Boolean;
     function  Remove(constref aValue: T): Boolean;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 
   { TGAbstractSet: set abstract ancestor class }
@@ -1863,6 +1867,26 @@ begin
 end;
 
 { TGThreadRWCollection }
+
+function TGThreadRWCollection.GetCapacity: SizeInt;
+begin
+  FRWLock.BeginRead;
+  try
+    Result := FCollection.Capacity;
+  finally
+    FRWLock.EndRead;
+  end;
+end;
+
+function TGThreadRWCollection.GetCount: SizeInt;
+begin
+  FRWLock.BeginRead;
+  try
+    Result := FCollection.Count;
+  finally
+    FRWLock.EndRead;
+  end;
+end;
 
 constructor TGThreadRWCollection.Create(aCollection: specialize TGAbstractCollection<T>);
 begin
