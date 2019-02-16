@@ -64,6 +64,22 @@ type
   { reading will raise ELGMapError if an aKey is not present in map }
     property  Items[const aKey: TValue]: TKey read GetValue write AddOrSetValue; default;
   end;
+
+  generic IGInverseReadOnlyMap<TKey, TValue> = interface
+  ['{E4B4DE39-209C-4AB0-8F31-A8B1C1CFF654}']
+    function  GetCount: SizeInt;
+    function  GetCapacity: SizeInt;
+    function  IsEmpty: Boolean;
+    function  TryGetValue(constref aKey: TValue; out aValue: TKey): Boolean;
+    function  GetValueDef(constref aKey: TValue; constref aDefault: TKey = Default(TKey)): TKey;
+    function  Contains(constref aKey: TValue): Boolean;
+    function  Keys: specialize IGEnumerable<TValue>;
+    function  Values: specialize IGEnumerable<TKey>;
+  { if uncomment it compiles but blocks Lazarus CodeTools }
+    //function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
 {$POP}
 
   { TGHashBiMap implements bijective map(i.e. a one-to-one correspondence between keys and values)
@@ -77,7 +93,8 @@ type
         class function HashCode([const[ref]] v: TValue): SizeInt;
         class function Equal([const[ref]] L, R: TValue): Boolean;  }
   generic TGHashBiMap<TKey, TValue, TKeyEqRel, TValueEqRel> = class(TSimpleIterable,
-    specialize IGMap<TKey, TValue>, specialize IGInverseMap<TKey, TValue>)
+    specialize IGMap<TKey, TValue>, specialize IGInverseMap<TKey, TValue>,
+    specialize IGReadOnlyMap<TKey, TValue>, specialize IGInverseReadOnlyMap<TKey, TValue>)
   {must be  generic TGHashBiMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
@@ -94,6 +111,7 @@ type
     IKeyCollection   = specialize IGCollection<TKey>;
     IValueCollection = specialize IGCollection<TValue>;
     IInverseMap      = specialize IGInverseMap<TKey, TValue>;
+    IInverseRoMap    = specialize IGInverseReadOnlyMap<TKey, TValue>;
 
   protected
   type
@@ -280,6 +298,13 @@ type
     function  IInverseMap.RetainAll     = RetainAll;
     function  IInverseMap.Keys          = Values;
     function  IInverseMap.Values        = Keys;
+
+    function  IInverseRoMap.Contains    = ContainsValue;
+    function  IInverseRoMap.TryGetValue = TryGetKey;
+    function  IInverseRoMap.GetValueDef = GetKeyDef;
+    function  IInverseRoMap.Keys        = Values;
+    function  IInverseRoMap.Values      = Keys;
+
   public
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
