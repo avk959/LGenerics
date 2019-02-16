@@ -242,7 +242,7 @@ type
     function  Clone: TSpecCollection; virtual; abstract;
   end;
 
-  { TGThreadCollection }
+  { TGThreadCollection: mutex based concurrent collection }
   generic TGThreadCollection<T> = class
   public
   type
@@ -263,25 +263,30 @@ type
     function  NonContains(constref aValue: T): Boolean;
     function  Add(constref aValue: T): Boolean;
     function  Remove(constref aValue: T): Boolean;
+    property  OwnsCollection: Boolean read FOwnsColl;
   end;
 
-  { TGThreadRWCollection }
+  { TGThreadRWCollection: RWLock based concurrent collection }
   generic TGThreadRWCollection<T> = class
+  public
+  type
+    ICollection = specialize IGCollection<T>;
+
   private
   type
     TCollection = specialize TGAbstractCollection<T>;
 
   var
-    FCollection: TCollection;
+    FCollection: ICollection;
     FRWLock: TMultiReadExclusiveWriteSynchronizer;
+    FOwnsColl: Boolean;
     function GetCapacity: SizeInt;
     function GetCount: SizeInt;
   public
   type
     IRoCollection = specialize IGReadOnlyCollection<T>;
-    ICollection   = TCollection.ICollection;
 
-    constructor Create(aCollection: specialize TGAbstractCollection<T>);
+    constructor Create(aCollection: ICollection; aOwnsCollection: Boolean = True);
     destructor Destroy; override;
     function  ReadCollection: IRoCollection;
     procedure EndRead; inline;
@@ -294,6 +299,7 @@ type
     function  Remove(constref aValue: T): Boolean;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
+    property  OwnsCollection: Boolean read FOwnsColl;
   end;
 
   { TGAbstractSet: set abstract ancestor class }
@@ -1800,7 +1806,7 @@ destructor TGThreadCollection.Destroy;
 begin
   Lock;
   try
-    if FOwnsColl then
+    if OwnsCollection then
       FCollection._GetRef.Free;
     FCollection := nil;
     inherited;
@@ -1888,17 +1894,19 @@ begin
   end;
 end;
 
-constructor TGThreadRWCollection.Create(aCollection: specialize TGAbstractCollection<T>);
+constructor TGThreadRWCollection.Create(aCollection: ICollection; aOwnsCollection: Boolean);
 begin
   FRWLock := TMultiReadExclusiveWriteSynchronizer.Create;
   FCollection := aCollection;
+  FOwnsColl := aOwnsCollection;
 end;
 
 destructor TGThreadRWCollection.Destroy;
 begin
   FRWLock.BeginWrite;
   try
-    FCollection.Free;
+    if OwnsCollection then
+      FCollection._GetRef.Free;
     FCollection := nil;
     inherited;
   finally
@@ -1910,7 +1918,7 @@ end;
 function TGThreadRWCollection.ReadCollection: IRoCollection;
 begin
   FRWLock.BeginRead;
-  Result := FCollection;
+  Result := TCollection(FCollection._GetRef);
 end;
 
 procedure TGThreadRWCollection.EndRead;
