@@ -3666,16 +3666,14 @@ begin
 end;
 
 procedure TIntChart.LoadDIMACSAscii(const aFileName: string);
-type
-  TReadRef = specialize TGAutoRef<TTextFileReader>;
 var
-  rRef: TReadRef;
+  Ref: specialize TGAutoRef<TTextFileReader>;
   Reader: TTextFileReader;
   Line, ParseLine, Elem: string;
   I: SizeInt;
   CurrEdge: array[1..2] of SizeInt;
 begin
-  Reader := rRef;
+  Reader := {%H-}Ref;
   if not Reader.Open(aFileName) then
     raise EGraphError.CreateFmt(SEUnableOpenFileFmt3, [aFileName, Reader.ExceptionClass, Reader.ExceptionMessage]);
   Clear;
