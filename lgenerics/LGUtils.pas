@@ -352,7 +352,6 @@ type
     function  GetCapacity: SizeInt;
     function  GetValue(const aKey: TKey): TValue;
     function  IsEmpty: Boolean;
-    function  NonEmpty: Boolean;
     procedure Clear;
     procedure EnsureCapacity(aValue: SizeInt);
   { free unused memory if possible }
@@ -365,15 +364,33 @@ type
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
     function  Contains(constref aKey: TKey): Boolean;
-    function  Extract(constref aKey: TKey; out v: TValue): Boolean;
+    function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
     function  Remove(constref aKey: TKey): Boolean;
-    procedure RetainAll(c: IGCollection<TKey>);
+    procedure RetainAll(aCollection: IGCollection<TKey>);
     function  Keys: IGEnumerable<TKey>;
     function  Values: IGEnumerable<TValue>;
+  { if uncomment it compiles but blocks Lazarus CodeTools }
+    //function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   { reading will raise exception if an aKey is not present in map }
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
+  end;
+
+  IGReadOnlyMap<TKey, TValue> = interface
+  ['{08561616-8E8B-4DBA-AEDB-DE14C5FA9403}']
+    function  GetCount: SizeInt;
+    function  GetCapacity: SizeInt;
+    function  IsEmpty: Boolean;
+    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue;
+    function  Contains(constref aKey: TKey): Boolean;
+    function  Keys: IGEnumerable<TKey>;
+    function  Values: IGEnumerable<TValue>;
+  { if uncomment it compiles but blocks Lazarus CodeTools }
+    //function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 {$POP}
 
