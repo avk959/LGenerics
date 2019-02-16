@@ -260,7 +260,6 @@ type
     procedure Unlock; inline;
     procedure Clear;
     function  Contains(constref aValue: T): Boolean;
-    function  NonContains(constref aValue: T): Boolean;
     function  Add(constref aValue: T): Boolean;
     function  Remove(constref aValue: T): Boolean;
     property  OwnsCollection: Boolean read FOwnsColl;
@@ -292,9 +291,7 @@ type
     procedure EndRead; inline;
     function  WriteCollection: ICollection;
     procedure EndWrite; inline;
-    procedure Clear;
     function  Contains(constref aValue: T): Boolean;
-    function  NonContains(constref aValue: T): Boolean;
     function  Add(constref aValue: T): Boolean;
     function  Remove(constref aValue: T): Boolean;
     property  Count: SizeInt read GetCount;
@@ -461,7 +458,8 @@ type
 
   type
   { TGAbstractMap: map abstract ancestor class  }
-  generic TGAbstractMap<TKey, TValue> = class abstract(TSimpleIterable, specialize IGMap<TKey, TValue>)
+  generic TGAbstractMap<TKey, TValue> = class abstract(TSimpleIterable, specialize IGMap<TKey, TValue>,
+    specialize IGReadOnlyMap<TKey, TValue>)
   {must be  generic TGAbstractMap<TKey, TValue> = class abstract(
               specialize TGContainer<specialize TGMapEntry<TKey, TValue>>), but :( ... see #0033788}
   public
@@ -588,7 +586,7 @@ type
     function  ExtractIf(aTest: TKeyTest): TEntryArray;
     function  ExtractIf(aTest: TOnKeyTest): TEntryArray;
     function  ExtractIf(aTest: TNestKeyTest): TEntryArray;
-    procedure RetainAll({%H-}c: IKeyCollection);
+    procedure RetainAll({%H-}aCollection: IKeyCollection);
     function  Clone: TSpecMap; virtual; abstract;
     function  Keys: IKeyEnumerable;
     function  Values: IValueEnumerable;
@@ -597,6 +595,47 @@ type
     property  Capacity: SizeInt read GetCapacity;
   { reading will raise ELGMapError if an aKey is not present in map }
     property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
+  end;
+
+  { TGThreadRWMap: RWLock based concurrent map }
+  generic TGThreadRWMap<TKey, TValue> = class
+  public
+  type
+    IMap = specialize IGMap<TKey, TValue>;
+
+  private
+  type
+    TMap = specialize TGAbstractMap<TKey, TValue>;
+
+  var
+    FMap: IMap;
+    FRWLock: TMultiReadExclusiveWriteSynchronizer;
+    FOwnsMap: Boolean;
+    function  GetCount: SizeInt;
+    function  GetCapacity: SizeInt;
+  public
+  type
+    IRoMap = specialize IGReadOnlyMap<TKey, TValue>;
+
+    constructor Create(aMap: IMap; aOwnsMap: Boolean = True);
+    destructor Destroy; override;
+    function  ReadMap: IRoMap;
+    procedure EndRead; inline;
+    function  WriteMap: IMap;
+    procedure EndWrite; inline;
+  { returns True and add TEntry(aKey, aValue) only if not contains aKey }
+    function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+    procedure AddOrSetValue(const aKey: TKey; constref aValue: TValue);
+    function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+    function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue;
+  { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
+    function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+    function  Contains(constref aKey: TKey): Boolean;
+    function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
+    function  Remove(constref aKey: TKey): Boolean;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  OwnsMap: Boolean read FOwnsMap;
   end;
 
   { TGAbstractMultiMap: multimap abstract ancestor class }
@@ -1847,11 +1886,6 @@ begin
   end;
 end;
 
-function TGThreadCollection.NonContains(constref aValue: T): Boolean;
-begin
-  Result := not Contains(aValue);
-end;
-
 function TGThreadCollection.Add(constref aValue: T): Boolean;
 begin
   Lock;
@@ -1937,16 +1971,6 @@ begin
   FRWLock.EndWrite;
 end;
 
-procedure TGThreadRWCollection.Clear;
-begin
-  FRWLock.BeginWrite;
-  try
-    FCollection.Clear;
-  finally
-    FRWLock.EndWrite;
-  end;
-end;
-
 function TGThreadRWCollection.Contains(constref aValue: T): Boolean;
 begin
   FRWLock.BeginRead;
@@ -1955,11 +1979,6 @@ begin
   finally
     FRWLock.EndRead;
   end;
-end;
-
-function TGThreadRWCollection.NonContains(constref aValue: T): Boolean;
-begin
-  Result := not Contains(aValue);
 end;
 
 function TGThreadRWCollection.Add(constref aValue: T): Boolean;
@@ -2823,11 +2842,11 @@ begin
   Result := DoExtractIf(aTest);
 end;
 
-procedure TGAbstractMap.RetainAll(c: IKeyCollection);
+procedure TGAbstractMap.RetainAll(aCollection: IKeyCollection);
 begin
-  Assert(c = c); //to supress hints
+  Assert(aCollection = aCollection); //to supress hints
   CheckInIteration;
-  DoRemoveIf(@c.NonContains);
+  DoRemoveIf(@aCollection.NonContains);
 end;
 
 
@@ -2847,6 +2866,151 @@ function TGAbstractMap.Entries: IEntryEnumerable;
 begin
   BeginIteration;
   Result := GetEntries;
+end;
+
+{ TGThreadRWMap }
+
+function TGThreadRWMap.GetCount: SizeInt;
+begin
+  FRWLock.BeginRead;
+  try
+    Result := FMap.Count;
+  finally
+    FRWLock.EndRead;
+  end;
+end;
+
+function TGThreadRWMap.GetCapacity: SizeInt;
+begin
+  FRWLock.BeginRead;
+  try
+    Result := FMap.Capacity;
+  finally
+    FRWLock.EndRead;
+  end;
+end;
+
+constructor TGThreadRWMap.Create(aMap: IMap; aOwnsMap: Boolean);
+begin
+  FRWLock := TMultiReadExclusiveWriteSynchronizer.Create;
+  FMap := aMap;
+  FOwnsMap := aOwnsMap;
+end;
+
+destructor TGThreadRWMap.Destroy;
+begin
+  FRWLock.BeginWrite;
+  try
+    if OwnsMap then
+      FMap._GetRef.Free;
+    FMap := nil;
+    inherited;
+  finally
+    FRWLock.EndWrite;
+    FRWLock.Free;
+  end;
+end;
+
+function TGThreadRWMap.ReadMap: IRoMap;
+begin
+  FRWLock.BeginRead;
+  Result := TMap(FMap._GetRef);
+end;
+
+procedure TGThreadRWMap.EndRead;
+begin
+  FRWLock.EndRead;
+end;
+
+function TGThreadRWMap.WriteMap: IMap;
+begin
+  FRWLock.BeginWrite;
+  Result := FMap;
+end;
+
+procedure TGThreadRWMap.EndWrite;
+begin
+  FRWLock.EndWrite;
+end;
+
+function TGThreadRWMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
+begin
+  FRWLock.BeginWrite;
+  try
+    Result := FMap.Add(aKey, aValue);
+  finally
+    FRWLock.EndWrite;
+  end;
+end;
+
+procedure TGThreadRWMap.AddOrSetValue(const aKey: TKey; constref aValue: TValue);
+begin
+  FRWLock.BeginWrite;
+  try
+    FMap.AddOrSetValue(aKey, aValue);
+  finally
+    FRWLock.EndWrite;
+  end;
+end;
+
+function TGThreadRWMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
+begin
+  FRWLock.BeginRead;
+  try
+    Result := FMap.TryGetValue(aKey, aValue);
+  finally
+    FRWLock.EndRead;
+  end;
+end;
+
+function TGThreadRWMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+begin
+  FRWLock.BeginRead;
+  try
+    Result := FMap.GetValueDef(aKey, aDefault);
+  finally
+    FRWLock.EndRead;
+  end;
+end;
+
+function TGThreadRWMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
+begin
+  FRWLock.BeginWrite;
+  try
+    Result := FMap.Replace(aKey, aNewValue);
+  finally
+    FRWLock.EndWrite;
+  end;
+end;
+
+function TGThreadRWMap.Contains(constref aKey: TKey): Boolean;
+begin
+  FRWLock.BeginRead;
+  try
+    Result := FMap.Contains(aKey);
+  finally
+    FRWLock.EndRead;
+  end;
+end;
+
+function TGThreadRWMap.Extract(constref aKey: TKey; out aValue: TValue): Boolean;
+begin
+  FRWLock.BeginWrite;
+  try
+    Result := FMap.Extract(aKey, aValue);
+  finally
+    FRWLock.EndWrite;
+  end;
+end;
+
+function TGThreadRWMap.Remove(constref aKey: TKey): Boolean;
+begin
+  FRWLock.BeginWrite;
+  try
+    Result := FMap.Remove(aKey);
+  finally
+    FRWLock.EndWrite;
+  end;
 end;
 
 { TGAbstractMultiMap.TAbstractValueSet }
