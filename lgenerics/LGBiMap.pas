@@ -73,6 +73,7 @@ type
     function  TryGetValue(constref aKey: TValue; out aValue: TKey): Boolean;
     function  GetValueDef(constref aKey: TValue; constref aDefault: TKey = Default(TKey)): TKey;
     function  Contains(constref aKey: TValue): Boolean;
+    function  NonContains(constref aKey: TValue): Boolean;
     function  Keys: specialize IGEnumerable<TValue>;
     function  Values: specialize IGEnumerable<TKey>;
   { if uncomment it compiles but blocks Lazarus CodeTools }
@@ -304,6 +305,7 @@ type
     function  IInverseRoMap.GetValueDef = GetKeyDef;
     function  IInverseRoMap.Keys        = Values;
     function  IInverseRoMap.Values      = Keys;
+    function  IInverseRoMap.NonContains = NonContainsValue;
 
   public
     property  Count: SizeInt read FCount;
