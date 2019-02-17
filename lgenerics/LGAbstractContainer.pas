@@ -252,6 +252,7 @@ type
     FCollection: ICollection;
     FLock: TRTLCriticalSection;
     FOwnsColl: Boolean;
+  protected
     procedure Lock; inline;
   public
     constructor Create(aCollection: ICollection; aOwnsCollection: Boolean = True);
@@ -281,6 +282,9 @@ type
     FOwnsColl: Boolean;
     function GetCapacity: SizeInt;
     function GetCount: SizeInt;
+  protected
+    procedure BeginRead; inline;
+    procedure BeginWrite; inline;
   public
   type
     IRoCollection = specialize IGReadOnlyCollection<T>;
@@ -572,6 +576,7 @@ type
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
     function  Contains(constref aKey: TKey): Boolean; inline;
+    function  NonContains(constref aKey: TKey): Boolean;
     function  ContainsAny(constref a: array of TKey): Boolean;
     function  ContainsAny(e: IKeyEnumerable): Boolean;
     function  ContainsAll(constref a: array of TKey): Boolean;
@@ -613,6 +618,9 @@ type
     FOwnsMap: Boolean;
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
+  protected
+    procedure BeginRead; inline;
+    procedure BeginWrite; inline;
   public
   type
     IRoMap = specialize IGReadOnlyMap<TKey, TValue>;
@@ -1928,6 +1936,16 @@ begin
   end;
 end;
 
+procedure TGThreadRWCollection.BeginRead;
+begin
+  FRWLock.BeginRead;
+end;
+
+procedure TGThreadRWCollection.BeginWrite;
+begin
+  FRWLock.BeginWrite;
+end;
+
 constructor TGThreadRWCollection.Create(aCollection: ICollection; aOwnsCollection: Boolean);
 begin
   FRWLock := TMultiReadExclusiveWriteSynchronizer.Create;
@@ -2736,6 +2754,11 @@ begin
   Result := Find(aKey) <> nil;
 end;
 
+function TGAbstractMap.NonContains(constref aKey: TKey): Boolean;
+begin
+  Result := not Contains(aKey);
+end;
+
 function TGAbstractMap.ContainsAny(constref a: array of TKey): Boolean;
 var
   k: TKey;
@@ -2888,6 +2911,16 @@ begin
   finally
     FRWLock.EndRead;
   end;
+end;
+
+procedure TGThreadRWMap.BeginRead;
+begin
+  FRWLock.BeginRead;
+end;
+
+procedure TGThreadRWMap.BeginWrite;
+begin
+  FRWLock.BeginWrite;
 end;
 
 constructor TGThreadRWMap.Create(aMap: IMap; aOwnsMap: Boolean);
