@@ -249,6 +249,26 @@ type
     property  Capacity: SizeInt read GetCapacity;
   end;
 
+  { TGLiteThreadBoundQueueSL: spinlock based concurrent bounded queue }
+  generic TGLiteThreadBoundQueueSL<T> = record
+  strict private
+    FBuffer: array of T;
+    FSize,
+    Fhead,
+    FTail: SizeInt;
+    FLock: TSpinLock;
+    function GetCapacity: SizeInt; inline;
+    function CalcCount: SizeInt; inline;
+    function GetCount: SizeInt;
+  public
+    constructor Create(aSize: SizeInt);
+    function Enqueue(constref aValue: T): Boolean;
+    function TryDequeue(out aValue: T): Boolean;
+    function TryPeek(out aValue: T): Boolean;
+    property Count: SizeInt read GetCount;
+    property Capacity: SizeInt read GetCapacity;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -966,6 +986,87 @@ begin
   FLock.Lock;
   try
     Result := FBuffer.TryPeekFirst(aValue);
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+{ TLiteThreadBoundQueueSL }
+
+function TGLiteThreadBoundQueueSL.GetCapacity: SizeInt;
+begin
+  Result := FSize;
+end;
+
+function TGLiteThreadBoundQueueSL.CalcCount: SizeInt;
+begin
+  Result := FTail - FHead;
+  if Result < 0 then
+    Result += FSize;
+end;
+
+function TGLiteThreadBoundQueueSL.GetCount: SizeInt;
+begin
+  FLock.Lock;
+  try
+    Result := CalcCount;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+constructor TGLiteThreadBoundQueueSL.Create(aSize: SizeInt);
+begin
+  if aSize < DEFAULT_CONTAINER_CAPACITY then
+    aSize := DEFAULT_CONTAINER_CAPACITY;
+  System.SetLength(FBuffer, aSize);
+  FSize := aSize;
+  Fhead := 0;
+  FTail := 0;
+end;
+
+function TGLiteThreadBoundQueueSL.Enqueue(constref aValue: T): Boolean;
+begin
+  FLock.Lock;
+  try
+    Result := CalcCount < FSize;
+    if Result then
+      begin
+        FBuffer[FTail] := aValue;
+        Inc(FTail);
+        if FTail = FSize then
+          FTail := 0;
+      end;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+function TGLiteThreadBoundQueueSL.TryDequeue(out aValue: T): Boolean;
+begin
+  FLock.Lock;
+  try
+    Result := CalcCount > 0;
+    if Result then
+      begin
+        aValue := FBuffer[FHead];
+        FBuffer[FHead] := Default(T);
+        Inc(FHead);
+        if FHead = FSize then
+          FHead := 0;
+      end;
+  finally
+    FLock.Unlock;
+  end;
+end;
+
+function TGLiteThreadBoundQueueSL.TryPeek(out aValue: T): Boolean;
+begin
+  FLock.Lock;
+  try
+    Result := CalcCount > 0;
+    if Result then
+      aValue := FBuffer[FHead];
   finally
     FLock.Unlock;
   end;
