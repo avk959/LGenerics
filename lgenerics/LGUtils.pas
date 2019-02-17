@@ -326,7 +326,6 @@ type
     function  GetCount: SizeInt;
     function  GetCapacity: SizeInt;
     function  IsEmpty: Boolean;
-    function  NonEmpty: Boolean;
     function  Contains(constref aValue: T): Boolean;
     function  NonContains(constref aValue: T): Boolean;
     function  ContainsAny(constref a: array of T): Boolean; overload;
@@ -342,8 +341,6 @@ type
     Value: TValue;
     constructor Create(constref aKey: TKey; constref aValue: TValue);
   end;
-
-  //todo: -> IGSet ???
 
   IGMap<TKey, TValue> = interface{(IGContainer<TGMapEntry<TKey, TValue>>)}
   ['{67DBDBD2-D54C-4E6E-9BE6-ACDA0A40B63F}']
@@ -364,6 +361,7 @@ type
   { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
     function  Contains(constref aKey: TKey): Boolean;
+    function  NonContains(constref aKey: TKey): Boolean;
     function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
     function  Remove(constref aKey: TKey): Boolean;
     procedure RetainAll(aCollection: IGCollection<TKey>);
@@ -385,6 +383,7 @@ type
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue;
     function  Contains(constref aKey: TKey): Boolean;
+    function  NonContains(constref aKey: TKey): Boolean;
     function  Keys: IGEnumerable<TKey>;
     function  Values: IGEnumerable<TValue>;
   { if uncomment it compiles but blocks Lazarus CodeTools }
