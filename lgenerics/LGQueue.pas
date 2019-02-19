@@ -254,11 +254,11 @@ type
   strict private
     FBuffer: array of T;
     FSize,
-    Fhead,
-    FTail: SizeInt;
+    FTail,
+    FCount: SizeInt;
     FLock: TSpinLock;
     function GetCapacity: SizeInt; inline;
-    function CalcCount: SizeInt; inline;
+    function GetHead: SizeInt; inline;
     function GetCount: SizeInt;
   public
     constructor Create(aSize: SizeInt);
@@ -998,9 +998,9 @@ begin
   Result := FSize;
 end;
 
-function TGLiteThreadBoundQueueSL.CalcCount: SizeInt;
+function TGLiteThreadBoundQueueSL.GetHead: SizeInt;
 begin
-  Result := FTail - FHead;
+  Result := FTail - FCount;
   if Result < 0 then
     Result += FSize;
 end;
@@ -1009,7 +1009,7 @@ function TGLiteThreadBoundQueueSL.GetCount: SizeInt;
 begin
   FLock.Lock;
   try
-    Result := CalcCount;
+    Result := FCount;
   finally
     FLock.Unlock;
   end;
@@ -1021,19 +1021,19 @@ begin
     aSize := DEFAULT_CONTAINER_CAPACITY;
   System.SetLength(FBuffer, aSize);
   FSize := aSize;
-  Fhead := 0;
   FTail := 0;
+  FCount := 0;
 end;
 
 function TGLiteThreadBoundQueueSL.Enqueue(constref aValue: T): Boolean;
 begin
   FLock.Lock;
   try
-    Result := CalcCount < FSize;
+    Result := FCount < FSize;
     if Result then
       begin
         FBuffer[FTail] := aValue;
-        Inc(FTail);
+        Inc(FCount);
         if FTail = FSize then
           FTail := 0;
       end;
@@ -1043,17 +1043,18 @@ begin
 end;
 
 function TGLiteThreadBoundQueueSL.TryDequeue(out aValue: T): Boolean;
+var
+  h: SizeInt;
 begin
   FLock.Lock;
   try
-    Result := CalcCount > 0;
+    Result := FCount > 0;
     if Result then
       begin
-        aValue := FBuffer[FHead];
-        FBuffer[FHead] := Default(T);
-        Inc(FHead);
-        if FHead = FSize then
-          FHead := 0;
+        h := GetHead;
+        aValue := FBuffer[h];
+        Dec(FCount);
+        FBuffer[h] := Default(T);
       end;
   finally
     FLock.Unlock;
@@ -1064,9 +1065,9 @@ function TGLiteThreadBoundQueueSL.TryPeek(out aValue: T): Boolean;
 begin
   FLock.Lock;
   try
-    Result := CalcCount > 0;
+    Result := FCount > 0;
     if Result then
-      aValue := FBuffer[FHead];
+      aValue := FBuffer[GetHead];
   finally
     FLock.Unlock;
   end;
