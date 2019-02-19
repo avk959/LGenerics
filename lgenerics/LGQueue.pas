@@ -253,7 +253,6 @@ type
   generic TGLiteThreadBoundQueueSL<T> = record
   strict private
     FBuffer: array of T;
-    FSize,
     FTail,
     FCount: SizeInt;
     FLock: TSpinLock;
@@ -995,14 +994,14 @@ end;
 
 function TGLiteThreadBoundQueueSL.GetCapacity: SizeInt;
 begin
-  Result := FSize;
+  Result := System.Length(FBuffer);
 end;
 
 function TGLiteThreadBoundQueueSL.GetHead: SizeInt;
 begin
   Result := FTail - FCount;
   if Result < 0 then
-    Result += FSize;
+    Result += Capacity;
 end;
 
 function TGLiteThreadBoundQueueSL.GetCount: SizeInt;
@@ -1020,7 +1019,6 @@ begin
   if aSize < DEFAULT_CONTAINER_CAPACITY then
     aSize := DEFAULT_CONTAINER_CAPACITY;
   System.SetLength(FBuffer, aSize);
-  FSize := aSize;
   FTail := 0;
   FCount := 0;
 end;
@@ -1029,12 +1027,12 @@ function TGLiteThreadBoundQueueSL.Enqueue(constref aValue: T): Boolean;
 begin
   FLock.Lock;
   try
-    Result := FCount < FSize;
+    Result := FCount < Capacity;
     if Result then
       begin
         FBuffer[FTail] := aValue;
         Inc(FCount);
-        if FTail = FSize then
+        if FTail = Capacity then
           FTail := 0;
       end;
   finally
