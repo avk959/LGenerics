@@ -518,7 +518,7 @@ type
 
 {$PUSH}{$PACKRECORDS DEFAULT}
   TSpinLock = record
-  private
+  strict private
   const
     CACHE_PAD_SIZE = 15;
   var
