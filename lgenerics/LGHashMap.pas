@@ -2474,6 +2474,7 @@ begin
           Node := Next;
         end;
     end;
+  FChainList := nil;
 end;
 
 function TGThreadFGHashMap.LockSlot(constref aKey: TKey; out aHash: SizeInt): Integer;
