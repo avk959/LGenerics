@@ -634,7 +634,7 @@ type
     function  LockSlot(constref aKey: TKey; out aHash: SizeInt): Integer;
     function  Find(constref aKey: TKey; aSlot: Integer; aHash: SizeInt): PNode;
     function  ExtractNode(constref aKey: TKey; aSlot: Integer; aHash: SizeInt): PNode;
-    procedure CheckExpand;
+    procedure CheckNeedExpand;
     procedure Expand;
   public
   const
@@ -2525,15 +2525,15 @@ begin
     end;
 end;
 
-procedure TGThreadFGHashMap.CheckExpand;
+procedure TGThreadFGHashMap.CheckNeedExpand;
 var
   Len: Integer;
 begin
-  if FCount > Succ(Trunc(System.Length(FChainList) * FLoadFactor)) then
+  if Count > Succ(Trunc(System.Length(FChainList) * FLoadFactor)) then
     begin
       FTableLock.BeginWrite;
       try
-        if FCount > Succ(Trunc(System.Length(FChainList) * FLoadFactor)) then
+        if Count > Succ(Trunc(System.Length(FChainList) * FLoadFactor)) then
           Expand;
         finally
           FTableLock.EndWrite;
@@ -2630,7 +2630,7 @@ begin
     FChainList[Slot].Unlock;
   end;
   if Result then
-    CheckExpand;
+    CheckNeedExpand;
 end;
 
 procedure TGThreadFGHashMap.AddOrSetValue(const aKey: TKey; constref aValue: TValue);
@@ -2656,7 +2656,7 @@ begin
     FChainList[Slot].Unlock;
   end;
   if Added then
-    CheckExpand;
+    CheckNeedExpand;
 end;
 
 function TGThreadFGHashMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
