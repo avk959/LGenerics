@@ -35,8 +35,6 @@ uses
   LGStrConst;
 
 type
-  TThreadExceptionEvent = procedure(aThreed: TThread; e: Exception) of object;
-
   TAsyncTaskState = (atsPending, atsExecuting, atsFinished);
 
 {$PUSH}{$INTERFACES COM}
@@ -425,10 +423,15 @@ type
     property OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
-  { TGListenThread: T is the type of message }
+  generic TGOnThreadMsgException<T> = procedure(constref aMsg: T; aThreed: TThread; e: Exception) of object;
+
+  { TGListenThread: thread that has its own blocking message channel;
+    T is the type of message }
   generic TGListenThread<T> = class abstract
   public
   type
+    TOnException = specialize TGOnThreadMsgException<T>;
+
   {$PUSH}{$INTERFACES CORBA}
     IWorkThread = interface
       function  GetThreadID: TThreadID;
@@ -459,22 +462,24 @@ type
   strict private
     FChannel: TChannel;
     FWorker: TWorker;
-    FOnException: TThreadExceptionEvent;
+    FOnException: TOnException;
     function  GetCapacity: SizeInt;
-    function  GetUnhandled: SizeInt;
+    function  GetEnqueued: SizeInt;
   protected
-    procedure DoException(aThreed: TThread; e: Exception);
+    procedure DoException(constref aMsg: T; aThreed: TThread; e: Exception);
     //to be overriden in descendants
     procedure HandleMessage(aThread: IWorkThread; constref aMessage: T); virtual; abstract;
   public
+  { param aCapacity specifies capacity of channel }
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
     procedure Send(constref aMessage: T);
-    property  Unhandled: SizeInt read GetUnhandled;
+  { returns the number of messages in the queue }
+    property  Enqueued: SizeInt read GetEnqueued;
     property  Capacity: SizeInt read GetCapacity;
-    property  OnException: TThreadExceptionEvent read FOnException write FOnException;
+    property  OnException: TOnException read FOnException write FOnException;
   end;
 
 implementation
@@ -1267,7 +1272,7 @@ begin
     except
       on e: Exception do
         if FOwner.OnException <> nil then
-          FOwner.DoException(Self, Exception(System.AcquireExceptionObject));
+          FOwner.DoException(Message, Self, Exception(System.AcquireExceptionObject));
     end;
 end;
 
@@ -1287,16 +1292,16 @@ begin
   Result := FChannel.Capacity;
 end;
 
-function TGListenThread.GetUnhandled: SizeInt;
+function TGListenThread.GetEnqueued: SizeInt;
 begin
   Result := FChannel.Count;
 end;
 
-procedure TGListenThread.DoException(aThreed: TThread; e: Exception);
+procedure TGListenThread.DoException(constref aMsg: T; aThreed: TThread; e: Exception);
 begin
   if FOnException <> nil then
     try
-      FOnException(aThreed, e);
+      FOnException(aMsg, aThreed, e);
     except
     end;
 end;
