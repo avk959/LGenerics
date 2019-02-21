@@ -2543,7 +2543,7 @@ end;
 
 procedure TGThreadFGHashMap.Expand;
 var
-  I, Len, NewLen: Integer;
+  I, Len: Integer;
   Node, Next: PNode;
   Head: PNode = nil;
 begin
@@ -2563,19 +2563,19 @@ begin
           end;
         FChainList[I].Head := nil;
       end;
-     NewLen := Len * 2;
-     System.SetLength(FChainList, NewLen);
+     Len *= 2;
+     System.SetLength(FChainList, Len);
      Node := Head;
      while Node <> nil do
        begin
-         I := Node^.Hash and Pred(NewLen);
+         I := Node^.Hash and Pred(Len);
          Next := Node^.Next;
          Node^.Next := FChainList[I].Head;
          FChainList[I].Head := Node;
          Node := Next;
        end;
   finally
-    for I := Pred(Len) downto 0 do
+    for I := Pred(Len shr 1) downto 0 do
       FChainList[I].Unlock;
   end;
 end;

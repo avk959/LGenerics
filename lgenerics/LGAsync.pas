@@ -447,7 +447,7 @@ type
       property  Priority: TThreadPriority read GetPriority write SetPriority;
     end;
   {$POP}
-  private
+  strict private
   type
     TChannel = specialize TGBlockChannel<T>;
 
@@ -463,7 +463,7 @@ type
       constructor Create(aOwner: TGListenThread; aChannel: TChannel; aStackSize: SizeUInt);
     end;
 
-  strict private
+  var
     FChannel: TChannel;
     FWorker: TWorker;
     function  GetCapacity: SizeInt;
@@ -487,7 +487,7 @@ type
 
   { TThreadPool }
   TThreadPool = class
-  private
+  strict private
   type
     TChannel = specialize TGBlockChannel<IExecutable>;
 
@@ -503,9 +503,9 @@ type
       constructor Create(aOwner: TThreadPool; aChannel: TChannel; aStackSize: SizeUInt);
     end;
 
-  TPool = specialize TGLiteVector<TWorker>;
+    TPool = specialize TGLiteVector<TWorker>;
 
-  strict private
+  var
     FChannel: TChannel;
     FPool: TPool;
     FStackSize: SizeInt;
