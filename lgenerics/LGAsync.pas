@@ -447,9 +447,6 @@ type
       property  Priority: TThreadPriority read GetPriority write SetPriority;
     end;
   {$POP}
-
-    TOnException = procedure(constref aMsg: T; aThreed: IWorkThread; e: Exception) of object;
-
   private
   type
     TChannel = specialize TGBlockChannel<T>;
@@ -469,12 +466,12 @@ type
   strict private
     FChannel: TChannel;
     FWorker: TWorker;
-    FOnException: TOnException;
     function  GetCapacity: SizeInt;
     function  GetEnqueued: SizeInt;
   protected
-    procedure DoException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
-    //to be overriden in descendants
+  { by default do nothing }
+    procedure HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception); virtual;
+  { to be overriden in descendants }
     procedure HandleMessage(constref aMessage: T; aThread: IWorker); virtual; abstract;
   public
   { param aCapacity specifies capacity of inner channel }
@@ -483,10 +480,57 @@ type
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
     procedure Send(constref aMessage: T);
-  { returns the number of messages in the queue }
+  { returns the number of messages in the inner channel }
     property  Enqueued: SizeInt read GetEnqueued;
     property  Capacity: SizeInt read GetCapacity;
-    property  OnException: TOnException read FOnException write FOnException;
+  end;
+
+  { TThreadPool }
+  TThreadPool = class
+  private
+  type
+    TChannel = specialize TGBlockChannel<IExecutable>;
+
+    TWorker = class(TThread, IWorkThread)
+    private
+      FChannel: TChannel;
+      FOwner: TThreadPool;
+    protected
+      function  GetThreadID: TThreadID;
+      function  GetHandle: TThreadID;
+      procedure Execute; override;
+    public
+      constructor Create(aOwner: TThreadPool; aChannel: TChannel; aStackSize: SizeUInt);
+    end;
+
+  TPool = specialize TGLiteVector<TWorker>;
+
+  strict private
+    FChannel: TChannel;
+    FPool: TPool;
+    FStackSize: SizeInt;
+    FLock: TRtlCriticalSection;
+    function  GetCapacity: SizeInt;
+    function  GetEnqueued: SizeInt;
+    function  GetThreadCount: SizeInt;
+    procedure SetThreadCount(aValue: SizeInt);
+    function  AddThread: TWorker;
+    procedure PoolGrow(aValue: SizeInt);
+    procedure PoolShrink(aValue: SizeInt);
+    procedure TerminatePool;
+  protected
+  { by default do nothing }
+    procedure HandleException(aThreed: IWorkThread; e: Exception); virtual;
+  public
+    constructor Create(aThreadCount: SizeInt = DEFAULT_POOL_SIZE; aQueueCapacity: SizeInt = DEFAULT_CHAN_SIZE;
+                       aThreadStackSize: SizeUInt = DefaultStackSize);
+    destructor Destroy; override;
+    procedure EnsureThreadCount(aValue: SizeInt);
+    procedure EnqueueTask(aTask: IExecutable);
+  { returns the number of tasks in the inner channel }
+    property  Enqueued: SizeInt read GetEnqueued;
+    property  ThreadCount: SizeInt read GetThreadCount write SetThreadCount;
+    property  Capacity: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -1277,9 +1321,7 @@ begin
     try
       FOwner.HandleMessage(Message, Self);
     except
-      on e: Exception do
-        if FOwner.OnException <> nil then
-          FOwner.DoException(Message, Self, Exception(System.AcquireExceptionObject));
+      FOwner.HandleException(Message, Self, Exception(System.AcquireExceptionObject));
     end;
 end;
 
@@ -1304,13 +1346,9 @@ begin
   Result := FChannel.Count;
 end;
 
-procedure TGListenThread.DoException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
+procedure TGListenThread.HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
 begin
-  if FOnException <> nil then
-    try
-      FOnException(aMsg, aThreed, e);
-    except
-    end;
+  ReleaseExceptionObject;
 end;
 
 constructor TGListenThread.Create(aCapacity: SizeInt; aStackSize: SizeUInt);
@@ -1341,6 +1379,158 @@ end;
 procedure TGListenThread.Send(constref aMessage: T);
 begin
   FChannel.Send(aMessage);
+end;
+
+{ TThreadPool.TWorker }
+
+function TThreadPool.TWorker.GetThreadID: TThreadID;
+begin
+  Result := ThreadID;
+end;
+
+function TThreadPool.TWorker.GetHandle: TThreadID;
+begin
+  Result := Handle;
+end;
+
+procedure TThreadPool.TWorker.Execute;
+var
+  CurrTask: IExecutable = nil;
+begin
+  while not Terminated and FChannel.Receive(CurrTask) do
+    try
+      CurrTask.Execute;
+    except
+      FOwner.HandleException(Self, Exception(System.AcquireExceptionObject));
+    end;
+end;
+
+constructor TThreadPool.TWorker.Create(aOwner: TThreadPool; aChannel: TChannel; aStackSize: SizeUInt);
+begin
+  inherited Create(True, aStackSize);
+  FOwner := aOwner;
+  FChannel := aChannel;
+end;
+
+{ TThreadPool }
+
+function TThreadPool.GetCapacity: SizeInt;
+begin
+  Result := FChannel.Capacity;
+end;
+
+function TThreadPool.GetEnqueued: SizeInt;
+begin
+  Result := FChannel.Count;
+end;
+
+function TThreadPool.GetThreadCount: SizeInt;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Result := FPool.Count;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPool.SetThreadCount(aValue: SizeInt);
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if aValue > FPool.Count then
+      PoolGrow(aValue)
+    else
+      if (aValue > 0) and (aValue < FPool.Count) then
+        PoolShrink(aValue);
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TThreadPool.AddThread: TWorker;
+begin
+  Result := TWorker.Create(Self, FChannel, FStackSize);
+  FPool.Add(Result);
+  Result.Start;
+end;
+
+procedure TThreadPool.PoolGrow(aValue: SizeInt);
+begin
+  while FPool.Count < aValue do
+    AddThread;
+end;
+
+procedure TThreadPool.PoolShrink(aValue: SizeInt);
+begin
+  if aValue < 1 then
+    aValue := 1;
+  TerminatePool;
+  FChannel.Open;
+  PoolGrow(aValue);
+end;
+
+procedure TThreadPool.TerminatePool;
+var
+  Thread: TWorker;
+begin
+  for Thread in FPool.Reverse do
+    Thread.Terminate;
+  FChannel.Close;
+  while FPool.NonEmpty do
+    begin
+      Thread := FPool.Extract(Pred(FPool.Count));
+      Thread.WaitFor;
+      Thread.Free;
+    end;
+end;
+
+procedure TThreadPool.HandleException(aThreed: IWorkThread; e: Exception);
+begin
+  ReleaseExceptionObject;
+  Assert(aThreed = aThreed);
+  Assert(e = e);
+end;
+
+constructor TThreadPool.Create(aThreadCount: SizeInt; aQueueCapacity: SizeInt; aThreadStackSize: SizeUInt);
+begin
+  System.InitCriticalSection(FLock);
+  FStackSize := aThreadStackSize;
+  FChannel := TChannel.Create(aQueueCapacity);
+  if aThreadCount > 0 then
+    PoolGrow(aThreadCount)
+  else
+    PoolGrow(1);
+end;
+
+destructor TThreadPool.Destroy;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    TerminatePool;
+    FPool.Clear;
+    FChannel.Free;
+    inherited;
+  finally
+    System.LeaveCriticalSection(FLock);
+    System.DoneCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPool.EnsureThreadCount(aValue: SizeInt);
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if aValue > FPool.Count then
+      PoolGrow(aValue)
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPool.EnqueueTask(aTask: IExecutable);
+begin
+  FChannel.Send(aTask);
 end;
 
 end.
