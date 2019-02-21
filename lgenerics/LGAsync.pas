@@ -425,8 +425,8 @@ type
 
   generic TGOnThreadMsgException<T> = procedure(constref aMsg: T; aThreed: TThread; e: Exception) of object;
 
-  { TGListenThread: thread that has its own blocking message channel;
-    T is the type of message }
+  { TGListenThread abstract ancestor class;
+    thread that has its own blocking message channel; T is the type of message }
   generic TGListenThread<T> = class abstract
   public
   type
@@ -436,10 +436,13 @@ type
     IWorkThread = interface
       function  GetThreadID: TThreadID;
       function  GetHandle: TThreadID;
+      function  GetPriority: TThreadPriority;
+      procedure SetPriority(aValue: TThreadPriority);
       procedure Queue(aMethod: TThreadMethod);
       procedure Synchronize(AMethod: TThreadMethod);
       property  ThreadID: TThreadID read GetThreadID;
       property  Handle: TThreadID read GetHandle;
+      property  Priority: TThreadPriority read GetPriority write SetPriority;
     end;
   {$POP}
 
@@ -456,7 +459,7 @@ type
       function  GetHandle: TThreadID;
       procedure Execute; override;
     public
-      constructor Create(aOwner: TGListenThread; aChannel: TChannel);
+      constructor Create(aOwner: TGListenThread; aChannel: TChannel; aStackSize: SizeUInt);
     end;
 
   strict private
@@ -468,10 +471,10 @@ type
   protected
     procedure DoException(constref aMsg: T; aThreed: TThread; e: Exception);
     //to be overriden in descendants
-    procedure HandleMessage(aThread: IWorkThread; constref aMessage: T); virtual; abstract;
+    procedure HandleMessage(constref aMessage: T; aThread: IWorkThread); virtual; abstract;
   public
-  { param aCapacity specifies capacity of channel }
-    constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
+  { param aCapacity specifies capacity of inner channel }
+    constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE; aStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
@@ -1268,7 +1271,7 @@ var
 begin
   while not Terminated and FChannel.Receive(Message) do
     try
-      FOwner.HandleMessage(Self, Message);
+      FOwner.HandleMessage(Message, Self);
     except
       on e: Exception do
         if FOwner.OnException <> nil then
@@ -1276,9 +1279,9 @@ begin
     end;
 end;
 
-constructor TGListenThread.TWorker.Create(aOwner: TGListenThread; aChannel: TChannel);
+constructor TGListenThread.TWorker.Create(aOwner: TGListenThread; aChannel: TChannel; aStackSize: SizeUInt);
 begin
-  inherited Create(True);
+  inherited Create(True, aStackSize);
   FOwner := aOwner;
   FChannel := aChannel;
   FreeOnTerminate := True;
@@ -1306,10 +1309,10 @@ begin
     end;
 end;
 
-constructor TGListenThread.Create(aCapacity: SizeInt);
+constructor TGListenThread.Create(aCapacity: SizeInt; aStackSize: SizeUInt);
 begin
   FChannel := TChannel.Create(aCapacity);
-  FWorker := TWorker.Create(Self, FChannel);
+  FWorker := TWorker.Create(Self, FChannel, aStackSize);
 end;
 
 destructor TGListenThread.Destroy;
