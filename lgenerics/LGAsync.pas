@@ -423,15 +423,11 @@ type
     property OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
-  generic TGOnThreadMsgException<T> = procedure(constref aMsg: T; aThreed: TThread; e: Exception) of object;
-
   { TGListenThread abstract ancestor class;
     thread that has its own blocking message channel; T is the type of message }
   generic TGListenThread<T> = class abstract
   public
   type
-    TOnException = specialize TGOnThreadMsgException<T>;
-
   {$PUSH}{$INTERFACES CORBA}
     IWorkThread = interface
       function  GetThreadID: TThreadID;
@@ -445,6 +441,8 @@ type
       property  Priority: TThreadPriority read GetPriority write SetPriority;
     end;
   {$POP}
+
+    TOnException = procedure(constref aMsg: T; aThreed: IWorkThread; e: Exception) of object;
 
   private
   type
@@ -469,7 +467,7 @@ type
     function  GetCapacity: SizeInt;
     function  GetEnqueued: SizeInt;
   protected
-    procedure DoException(constref aMsg: T; aThreed: TThread; e: Exception);
+    procedure DoException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
     //to be overriden in descendants
     procedure HandleMessage(constref aMessage: T; aThread: IWorkThread); virtual; abstract;
   public
@@ -1300,7 +1298,7 @@ begin
   Result := FChannel.Count;
 end;
 
-procedure TGListenThread.DoException(constref aMsg: T; aThreed: TThread; e: Exception);
+procedure TGListenThread.DoException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
 begin
   if FOnException <> nil then
     try
