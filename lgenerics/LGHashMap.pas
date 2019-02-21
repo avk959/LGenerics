@@ -2535,9 +2535,9 @@ begin
       try
         if Count > Succ(Trunc(System.Length(FChainList) * FLoadFactor)) then
           Expand;
-        finally
-          FTableLock.EndWrite;
-        end;
+      finally
+        FTableLock.EndWrite;
+      end;
     end;
 end;
 
