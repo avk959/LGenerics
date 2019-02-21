@@ -485,6 +485,7 @@ implementation
 function TAsyncTask.GetException: Exception;
 begin
   Result := FException;
+  FException := nil;
 end;
 
 function TAsyncTask.GetState: TAsyncTaskState;
@@ -501,6 +502,7 @@ destructor TAsyncTask.Destroy;
 begin
   System.RtlEventDestroy(FAwait);
   FAwait := nil;
+  FException.Free;
   inherited;
 end;
 
@@ -602,7 +604,7 @@ procedure TGFuture.Cancel;
 begin
   if Assigned(FTask) and (FState < fsResolved) then
     begin
-      FTask := nil;  //todo: exception leak ???
+      FTask := nil;
       FState := fsCancelled;
     end;
 end;
@@ -1264,7 +1266,8 @@ begin
       FOwner.HandleMessage(Self, Message);
     except
       on e: Exception do
-        FOwner.DoException(Self, Exception(System.AcquireExceptionObject));
+        if FOwner.OnException <> nil then
+          FOwner.DoException(Self, Exception(System.AcquireExceptionObject));
     end;
 end;
 
