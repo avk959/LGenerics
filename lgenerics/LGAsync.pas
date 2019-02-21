@@ -423,21 +423,27 @@ type
     property OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
+{$PUSH}{$INTERFACES CORBA}
+  IWorkThread = interface
+  ['{2C1E3FEF-C538-4506-A0A1-02C0B535B22F}']
+    function  GetThreadID: TThreadID;
+    function  GetHandle: TThreadID;
+    procedure Queue(aMethod: TThreadMethod);
+    procedure Synchronize(AMethod: TThreadMethod);
+    property  ThreadID: TThreadID read GetThreadID;
+    property  Handle: TThreadID read GetHandle;
+  end;
+{$POP}
+
   { TGListenThread abstract ancestor class;
     thread that has its own blocking message channel; T is the type of message }
   generic TGListenThread<T> = class abstract
   public
   type
   {$PUSH}{$INTERFACES CORBA}
-    IWorkThread = interface
-      function  GetThreadID: TThreadID;
-      function  GetHandle: TThreadID;
+    IWorker = interface(IWorkThread)
       function  GetPriority: TThreadPriority;
       procedure SetPriority(aValue: TThreadPriority);
-      procedure Queue(aMethod: TThreadMethod);
-      procedure Synchronize(AMethod: TThreadMethod);
-      property  ThreadID: TThreadID read GetThreadID;
-      property  Handle: TThreadID read GetHandle;
       property  Priority: TThreadPriority read GetPriority write SetPriority;
     end;
   {$POP}
@@ -448,7 +454,7 @@ type
   type
     TChannel = specialize TGBlockChannel<T>;
 
-    TWorker = class(TThread, IWorkThread)
+    TWorker = class(TThread, IWorkThread, IWorker)
     private
       FChannel: TChannel;
       FOwner: TGListenThread;
@@ -469,7 +475,7 @@ type
   protected
     procedure DoException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
     //to be overriden in descendants
-    procedure HandleMessage(constref aMessage: T; aThread: IWorkThread); virtual; abstract;
+    procedure HandleMessage(constref aMessage: T; aThread: IWorker); virtual; abstract;
   public
   { param aCapacity specifies capacity of inner channel }
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE; aStackSize: SizeUInt = DefaultStackSize);
