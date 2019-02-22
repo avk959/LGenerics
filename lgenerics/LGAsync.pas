@@ -438,20 +438,11 @@ type
   { TGListenThread abstract ancestor class;
     thread that has its own blocking message channel; T is the type of message }
   generic TGListenThread<T> = class abstract
-  public
-  type
-  {$PUSH}{$INTERFACES CORBA}
-    IWorker = interface(IWorkThread)
-      function  GetPriority: TThreadPriority;
-      procedure SetPriority(aValue: TThreadPriority);
-      property  Priority: TThreadPriority read GetPriority write SetPriority;
-    end;
-  {$POP}
   strict private
   type
     TChannel = specialize TGBlockChannel<T>;
 
-    TWorker = class(TThread, IWorkThread, IWorker)
+    TWorker = class(TThread, IWorkThread)
     private
       FChannel: TChannel;
       FOwner: TGListenThread;
@@ -468,11 +459,13 @@ type
     FWorker: TWorker;
     function  GetCapacity: SizeInt;
     function  GetEnqueued: SizeInt;
+    function  GetPriority: TThreadPriority;
+    procedure SetPriority(aValue: TThreadPriority);
   protected
   { by default do nothing }
     procedure HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception); virtual;
   { to be overriden in descendants }
-    procedure HandleMessage(constref aMessage: T; aThread: IWorker); virtual; abstract;
+    procedure HandleMessage(constref aMessage: T; aThread: IWorkThread); virtual; abstract;
   public
   { param aCapacity specifies capacity of inner channel }
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE; aStackSize: SizeUInt = DefaultStackSize);
@@ -483,6 +476,7 @@ type
   { returns the number of messages in the inner channel }
     property  Enqueued: SizeInt read GetEnqueued;
     property  Capacity: SizeInt read GetCapacity;
+    property  Priority: TThreadPriority read GetPriority write SetPriority;
   end;
 
   { TThreadPool }
@@ -512,7 +506,9 @@ type
     FLock: TRtlCriticalSection;
     function  GetCapacity: SizeInt;
     function  GetEnqueued: SizeInt;
+    function GetPriority: TThreadPriority;
     function  GetThreadCount: SizeInt;
+    procedure SetPriority(aValue: TThreadPriority);
     procedure SetThreadCount(aValue: SizeInt);
     function  AddThread: TWorker;
     procedure PoolGrow(aValue: SizeInt);
@@ -527,9 +523,10 @@ type
     destructor Destroy; override;
     procedure EnsureThreadCount(aValue: SizeInt);
     procedure EnqueueTask(aTask: IExecutable);
+    property  ThreadCount: SizeInt read GetThreadCount write SetThreadCount;
+    property  ThreadPriority: TThreadPriority read GetPriority write SetPriority;
   { returns the number of tasks in the inner channel }
     property  Enqueued: SizeInt read GetEnqueued;
-    property  ThreadCount: SizeInt read GetThreadCount write SetThreadCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
 
@@ -1346,6 +1343,19 @@ begin
   Result := FChannel.Count;
 end;
 
+function TGListenThread.GetPriority: TThreadPriority;
+begin
+  Result := tpIdle;
+  if FWorker <> nil then
+    Result := FWorker.Priority;
+end;
+
+procedure TGListenThread.SetPriority(aValue: TThreadPriority);
+begin
+  if FWorker <> nil then
+    FWorker.Priority := aValue;
+end;
+
 procedure TGListenThread.HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
 begin
   ReleaseExceptionObject;
@@ -1359,6 +1369,7 @@ end;
 
 destructor TGListenThread.Destroy;
 begin
+  FWorker := nil;
   FChannel.Free;
   inherited;
 end;
@@ -1424,11 +1435,37 @@ begin
   Result := FChannel.Count;
 end;
 
+function TThreadPool.GetPriority: TThreadPriority;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Result := tpIdle;
+    if FPool.NonEmpty then
+      Result := FPool[0].Priority;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
 function TThreadPool.GetThreadCount: SizeInt;
 begin
   System.EnterCriticalSection(FLock);
   try
     Result := FPool.Count;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPool.SetPriority(aValue: TThreadPriority);
+var
+  Thread: TThread;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if FPool.NonEmpty and (aValue <> FPool[0].Priority) then
+      for Thread in FPool do
+        Thread.Priority := aValue;
   finally
     System.LeaveCriticalSection(FLock);
   end;
@@ -1501,6 +1538,7 @@ begin
     PoolGrow(aThreadCount)
   else
     PoolGrow(1);
+  ReadWriteBarrier;
 end;
 
 destructor TThreadPool.Destroy;
