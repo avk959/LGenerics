@@ -2680,9 +2680,20 @@ begin
 end;
 
 function TGThreadFGHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
+var
+  Hash: SizeInt;
+  Slot: Integer;
+  Node: PNode;
 begin
-  if not TryGetValue(aKey, Result) then
-    Result := aDefault;
+  Result := aDefault;
+  Slot := LockSlot(aKey, Hash);
+  try
+    Node := Find(aKey, Slot, Hash);
+    if Node <> nil then
+      Result := Node^.Value;
+  finally
+    FChainList[Slot].Unlock;
+  end;
 end;
 
 function TGThreadFGHashMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
