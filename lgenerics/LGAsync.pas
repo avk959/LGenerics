@@ -35,28 +35,14 @@ uses
   LGStrConst;
 
 type
-  TAsyncTaskState = (atsPending, atsExecuting, atsFinished);
 
-{$PUSH}{$INTERFACES COM}
-  IAsyncTask = interface
-  ['{4122B5EC-40CF-421D-AFB8-23534663C24E}']
-    function  GetException: Exception;
-    function  GetState: TAsyncTaskState;
-    function  GetRefCount: Integer;
-    procedure Execute;
-    procedure WaitFor;
-    property  FatalException: Exception read GetException;
-    property  State: TAsyncTaskState read GetState;
-  end;
-{$POP}
-
-  TAsyncTask = class abstract(TInterfacedObject, IAsyncTask)
+  { TAsyncTask }
+  TAsyncTask = class abstract(TInterfacedObject, ITask, IAsyncTask)
   strict private
     FAwait: PRtlEvent;
     FException: Exception;
     FState: DWord;
   strict protected
-    function  GetException: Exception;
     function  GetState: TAsyncTaskState; inline;
     function  GetRefCount: Integer;
     procedure DoExecute; virtual; abstract;
@@ -65,8 +51,7 @@ type
     procedure AfterConstruction; override;
     procedure Execute;
     procedure WaitFor;
-    property  FatalException: Exception read GetException;
-    property  State: TAsyncTaskState read GetState;
+    function  FatalException: Exception;
   end;
 
 {$PUSH}{$INTERFACES CORBA}
@@ -155,19 +140,19 @@ type
     constructor Create(aProc: TProcedure);
   end;
 
-  { TAsyncExecutable incapsulates IExecutable, True indicates execution success }
+  { TAsyncExecutable incapsulates ITask, True indicates execution success }
   TAsyncExecutable = class(specialize TGAsyncTask<Boolean>)
   public
   type
     IFuture = specialize IGFuture<Boolean>;
 
   strict private
-    FTask: IExecutable;
+    FTask: ITask;
   strict protected
     procedure DoExecute; override;
   public
-    class function Run(aTask: IExecutable; aEx: IExecutor = nil): IFuture; static;
-    constructor Create(aTask: IExecutable);
+    class function Run(aTask: ITask; aEx: IExecutor = nil): IFuture; static;
+    constructor Create(aTask: ITask);
   end;
 
   { TGAsyncCallable incapsulates IGCallable}
@@ -473,17 +458,17 @@ type
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
     procedure Send(constref aMessage: T);
+    property  Priority: TThreadPriority read GetPriority write SetPriority;
   { returns the number of messages in the inner channel }
     property  Enqueued: SizeInt read GetEnqueued;
     property  Capacity: SizeInt read GetCapacity;
-    property  Priority: TThreadPriority read GetPriority write SetPriority;
   end;
 
-  { TThreadPool }
+  { TThreadPool simply thread pool engine }
   TThreadPool = class
   strict private
   type
-    TChannel = specialize TGBlockChannel<IExecutable>;
+    TChannel = specialize TGBlockChannel<ITask>;
 
     TWorker = class(TThread, IWorkThread)
     private
@@ -506,11 +491,9 @@ type
     FLock: TRtlCriticalSection;
     function  GetCapacity: SizeInt;
     function  GetEnqueued: SizeInt;
-    function GetPriority: TThreadPriority;
     function  GetThreadCount: SizeInt;
-    procedure SetPriority(aValue: TThreadPriority);
     procedure SetThreadCount(aValue: SizeInt);
-    function  AddThread: TWorker;
+    procedure AddThread;
     procedure PoolGrow(aValue: SizeInt);
     procedure PoolShrink(aValue: SizeInt);
     procedure TerminatePool;
@@ -522,9 +505,8 @@ type
                        aThreadStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure EnsureThreadCount(aValue: SizeInt);
-    procedure EnqueueTask(aTask: IExecutable);
+    procedure EnqueueTask(aTask: ITask);
     property  ThreadCount: SizeInt read GetThreadCount write SetThreadCount;
-    property  ThreadPriority: TThreadPriority read GetPriority write SetPriority;
   { returns the number of tasks in the inner channel }
     property  Enqueued: SizeInt read GetEnqueued;
     property  Capacity: SizeInt read GetCapacity;
@@ -534,12 +516,6 @@ implementation
 {$B-}{$COPERATORS ON}
 
 { TAsyncTask }
-
-function TAsyncTask.GetException: Exception;
-begin
-  Result := FException;
-  FException := nil;
-end;
 
 function TAsyncTask.GetState: TAsyncTaskState;
 begin
@@ -583,6 +559,12 @@ begin
   System.RtlEventWaitFor(FAwait);
 end;
 
+function TAsyncTask.FatalException: Exception;
+begin
+  Result := FException;
+  FException := nil;
+end;
+
 { TGAsyncTask }
 
 function TGAsyncTask.GetResult: T;
@@ -618,9 +600,9 @@ function TGFuture.GetState: TFutureState;
 begin
   if Assigned(FTask) and (FState < fsResolved) then
     try
-      case FTask.State of
-        atsExecuting: FState := fsExecuting;
-        atsFinished:  FState := fsFinished;
+      case FTask.GetState of
+        astExecuting: FState := fsExecuting;
+        astFinished:  FState := fsFinished;
       end;
     except
       FState := fsCancelled;
@@ -708,12 +690,12 @@ begin
   FResult := FatalException = nil;
 end;
 
-class function TAsyncExecutable.Run(aTask: IExecutable; aEx: IExecutor): IFuture;
+class function TAsyncExecutable.Run(aTask: ITask; aEx: IExecutor): IFuture;
 begin
   Result := specialize TGFuture<Boolean>.Create(TAsyncExecutable.Create(aTask), aEx);
 end;
 
-constructor TAsyncExecutable.Create(aTask: IExecutable);
+constructor TAsyncExecutable.Create(aTask: ITask);
 begin
   inherited Create;
   FTask := aTask;
@@ -1406,7 +1388,7 @@ end;
 
 procedure TThreadPool.TWorker.Execute;
 var
-  CurrTask: IExecutable = nil;
+  CurrTask: ITask = nil;
 begin
   while not Terminated and FChannel.Receive(CurrTask) do
     try
@@ -1435,37 +1417,11 @@ begin
   Result := FChannel.Count;
 end;
 
-function TThreadPool.GetPriority: TThreadPriority;
-begin
-  System.EnterCriticalSection(FLock);
-  try
-    Result := tpIdle;
-    if FPool.NonEmpty then
-      Result := FPool[0].Priority;
-  finally
-    System.LeaveCriticalSection(FLock);
-  end;
-end;
-
 function TThreadPool.GetThreadCount: SizeInt;
 begin
   System.EnterCriticalSection(FLock);
   try
     Result := FPool.Count;
-  finally
-    System.LeaveCriticalSection(FLock);
-  end;
-end;
-
-procedure TThreadPool.SetPriority(aValue: TThreadPriority);
-var
-  Thread: TThread;
-begin
-  System.EnterCriticalSection(FLock);
-  try
-    if FPool.NonEmpty and (aValue <> FPool[0].Priority) then
-      for Thread in FPool do
-        Thread.Priority := aValue;
   finally
     System.LeaveCriticalSection(FLock);
   end;
@@ -1485,11 +1441,12 @@ begin
   end;
 end;
 
-function TThreadPool.AddThread: TWorker;
+procedure TThreadPool.AddThread;
+var
+  I: SizeInt;
 begin
-  Result := TWorker.Create(Self, FChannel, FStackSize);
-  FPool.Add(Result);
-  Result.Start;
+  I := FPool.Add(TWorker.Create(Self, FChannel, FStackSize));
+  FPool[I].Start;
 end;
 
 procedure TThreadPool.PoolGrow(aValue: SizeInt);
@@ -1566,7 +1523,7 @@ begin
   end;
 end;
 
-procedure TThreadPool.EnqueueTask(aTask: IExecutable);
+procedure TThreadPool.EnqueueTask(aTask: ITask);
 begin
   FChannel.Send(aTask);
 end;
