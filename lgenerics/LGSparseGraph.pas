@@ -196,10 +196,10 @@ type
     {$I SparseGraphIntSetH.inc}
 
     TNode = record
-      Hash,
-      Next: SizeInt;
-      AdjList: TAdjList;
       Vertex: TVertex;
+      AdjList: TAdjList;
+      Hash,
+      Next,
       Tag: SizeInt;
       procedure Assign(constref aSrc: TNode);
     end;
@@ -287,8 +287,8 @@ type
       Source,               //index of source vertex
       Destination: SizeInt; //index of target vertex
       Data: TEdgeData;
-      constructor Create(aSrc: SizeInt; aItem: PAdjItem);
-      constructor Create(aSrc, aDst: SizeInt; constref aData: TEdgeData);
+      constructor Create(aSrc: SizeInt; aItem: PAdjItem); overload;
+      constructor Create(aSrc, aDst: SizeInt; constref aData: TEdgeData); overload;
     end;
 
     TIncidentEdge = record
@@ -1038,10 +1038,10 @@ end;
 
 procedure TGSparseGraph.TNode.Assign(constref aSrc: TNode);
 begin
+  Vertex := aSrc.Vertex;
+  AdjList := aSrc.AdjList;
   Hash := aSrc.Hash;
   Next := aSrc.Next;
-  AdjList := aSrc.AdjList;
-  Vertex := aSrc.Vertex;
   Tag := aSrc.Tag;
 end;
 
