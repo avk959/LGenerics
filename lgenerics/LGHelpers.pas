@@ -238,6 +238,10 @@ type
     class function Equal(constref L, R: TPoint): Boolean; static; inline;
   end;
 
+  TPrioTaskHelper = type helper for IPriorityTask
+    class function Compare(L, R: IPriorityTask): SizeInt; static; inline;
+  end;
+
   PTypeInfo = TypInfo.PTypeInfo;
   PTypeData = TypInfo.PTypeData;
 
@@ -1060,7 +1064,14 @@ end;
 
 class function TPointHelper.Equal(constref L, R: TPoint): Boolean;
 begin
-  Result := L = R;;
+  Result := L = R;
+end;
+
+{ TPrioTaskHelper }
+
+class function TPrioTaskHelper.Compare(L, R: IPriorityTask): SizeInt;
+begin
+  Result := SizeInt(L.GetPriority) - SizeInt(R.GetPriority);
 end;
 
 function CompareShortInt(constref L, R: ShortInt): SizeInt;
