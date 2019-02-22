@@ -167,6 +167,7 @@ type
     TEnumerator = TBuffer.TEnumerator;
     TReverse    = TBuffer.TReverse;
     TArray      = TBuffer.TArray;
+
   strict private
   type
     TFake = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
@@ -183,6 +184,7 @@ type
   public
   type
     TComparator = specialize TGCompare<T>;
+    constructor Create(aCapacity: SizeInt);
     function  Comparator: TComparator; inline;
     function  GetEnumerator: TEnumerator; inline;
     function  Reverse: TReverse; inline;
@@ -1448,6 +1450,16 @@ end;
 class function TGLiteBinHeap.DoCompare(constref L, R: T): SizeInt;
 begin
   Result := TCmpRel.Compare(L, R);
+end;
+
+constructor TGLiteBinHeap.Create(aCapacity: SizeInt);
+begin
+  if aCapacity > 0 then
+    begin
+      FBuffer.FCount := aCapacity;
+      FBuffer.TrimToFit;
+      FBuffer.FCount := 0;
+    end;
 end;
 
 function TGLiteBinHeap.Comparator: TComparator;
