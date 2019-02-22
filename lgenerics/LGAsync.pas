@@ -420,6 +420,12 @@ type
   end;
 {$POP}
 
+  TWorkThread = class(TThread, IWorkThread)
+  protected
+    function  GetThreadID: TThreadID;
+    function  GetHandle: TThreadID;
+  end;
+
   { TGListenThread abstract ancestor class;
     thread that has its own blocking message channel; T is the type of message }
   generic TGListenThread<T> = class abstract
@@ -427,13 +433,11 @@ type
   type
     TChannel = specialize TGBlockChannel<T>;
 
-    TWorker = class(TThread, IWorkThread)
+    TWorker = class(TWorkThread)
     private
       FChannel: TChannel;
       FOwner: TGListenThread;
     protected
-      function  GetThreadID: TThreadID;
-      function  GetHandle: TThreadID;
       procedure Execute; override;
     public
       constructor Create(aOwner: TGListenThread; aChannel: TChannel; aStackSize: SizeUInt);
@@ -470,13 +474,11 @@ type
   type
     TChannel = specialize TGBlockChannel<ITask>;
 
-    TWorker = class(TThread, IWorkThread)
+    TWorker = class(TWorkThread)
     private
       FChannel: TChannel;
       FOwner: TThreadPool;
     protected
-      function  GetThreadID: TThreadID;
-      function  GetHandle: TThreadID;
       procedure Execute; override;
     public
       constructor Create(aOwner: TThreadPool; aChannel: TChannel; aStackSize: SizeUInt);
@@ -1280,17 +1282,19 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-{ TGListenThread.TWorker }
+{ TWorkThread }
 
-function TGListenThread.TWorker.GetThreadID: TThreadID;
+function TWorkThread.GetThreadID: TThreadID;
 begin
   Result := ThreadID;
 end;
 
-function TGListenThread.TWorker.GetHandle: TThreadID;
+function TWorkThread.GetHandle: TThreadID;
 begin
   Result := Handle;
 end;
+
+{ TGListenThread.TWorker }
 
 procedure TGListenThread.TWorker.Execute;
 var
@@ -1375,16 +1379,6 @@ begin
 end;
 
 { TThreadPool.TWorker }
-
-function TThreadPool.TWorker.GetThreadID: TThreadID;
-begin
-  Result := ThreadID;
-end;
-
-function TThreadPool.TWorker.GetHandle: TThreadID;
-begin
-  Result := Handle;
-end;
 
 procedure TThreadPool.TWorker.Execute;
 var
