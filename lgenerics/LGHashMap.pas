@@ -631,9 +631,9 @@ type
     function  NewNode(constref aKey: TKey; constref aValue: TValue; aHash: SizeInt): PNode;
     procedure FreeNode(aNode: PNode);
     procedure ClearChainList;
-    function  LockSlot(constref aKey: TKey; out aHash: SizeInt): Integer;
-    function  Find(constref aKey: TKey; aSlot: Integer; aHash: SizeInt): PNode;
-    function  ExtractNode(constref aKey: TKey; aSlot: Integer; aHash: SizeInt): PNode;
+    function  LockChain(constref aKey: TKey; out aHash: SizeInt): Integer;
+    function  Find(constref aKey: TKey; aChain: Integer; aHash: SizeInt): PNode;
+    function  ExtractNode(constref aKey: TKey; aChain: Integer; aHash: SizeInt): PNode;
     procedure CheckNeedExpand;
     procedure Expand;
   public
@@ -2477,7 +2477,7 @@ begin
   FChainList := nil;
 end;
 
-function TGThreadFGHashMap.LockSlot(constref aKey: TKey; out aHash: SizeInt): Integer;
+function TGThreadFGHashMap.LockChain(constref aKey: TKey; out aHash: SizeInt): Integer;
 begin
   aHash := TKeyEqRel.HashCode(aKey);
   FTableLock.BeginRead;
@@ -2489,12 +2489,12 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.Find(constref aKey: TKey; aSlot: Integer; aHash: SizeInt): PNode;
+function TGThreadFGHashMap.Find(constref aKey: TKey; aChain: Integer; aHash: SizeInt): PNode;
 var
   Node: PNode;
 begin
   Result := nil;
-  Node := FChainList[aSlot].Head;
+  Node := FChainList[aChain].Head;
   while Node <> nil do
     begin
       if (Node^.Hash = aHash) and TKeyEqRel.Equal(Node^.Key, aKey) then
@@ -2503,12 +2503,12 @@ begin
     end;
 end;
 
-function TGThreadFGHashMap.ExtractNode(constref aKey: TKey; aSlot: Integer; aHash: SizeInt): PNode;
+function TGThreadFGHashMap.ExtractNode(constref aKey: TKey; aChain: Integer; aHash: SizeInt): PNode;
 var
   Node: PNode;
   Prev: PNode = nil;
 begin
-  Node := FChainList[aSlot].Head;
+  Node := FChainList[aChain].Head;
   Result := nil;
   while Node <> nil do
     begin
@@ -2518,7 +2518,7 @@ begin
           if Prev <> nil then
             Prev^.Next := Node^.Next
           else
-            FChainList[aSlot].Head := Node^.Next;
+            FChainList[aChain].Head := Node^.Next;
         end;
       Prev := Node;
       Node := Node^.Next;
@@ -2612,22 +2612,22 @@ end;
 function TGThreadFGHashMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
 var
   Hash: SizeInt;
-  Slot: Integer;
+  Chain: Integer;
   Node: PNode;
 begin
   Result := False;
-  Slot := LockSlot(aKey, Hash);
+  Chain := LockChain(aKey, Hash);
   try
-    Node := Find(aKey, Slot, Hash);
+    Node := Find(aKey, Chain, Hash);
     if Node = nil then
       begin
         Node := NewNode(aKey, aValue, Hash);
-        Node^.Next := FChainList[Slot].Head;
-        FChainList[Slot].Head := Node;
+        Node^.Next := FChainList[Chain].Head;
+        FChainList[Chain].Head := Node;
         Result := True;
       end;
   finally
-    FChainList[Slot].Unlock;
+    FChainList[Chain].Unlock;
   end;
   if Result then
     CheckNeedExpand;
@@ -2636,24 +2636,24 @@ end;
 procedure TGThreadFGHashMap.AddOrSetValue(const aKey: TKey; constref aValue: TValue);
 var
   Hash: SizeInt;
-  Slot: Integer;
+  Chain: Integer;
   Node: PNode;
   Added: Boolean = False;
 begin
-  Slot := LockSlot(aKey, Hash);
+  Chain := LockChain(aKey, Hash);
   try
-    Node := Find(aKey, Slot, Hash);
+    Node := Find(aKey, Chain, Hash);
     if Node = nil then
       begin
         Node := NewNode(aKey, aValue, Hash);
-        Node^.Next := FChainList[Slot].Head;
-        FChainList[Slot].Head := Node;
+        Node^.Next := FChainList[Chain].Head;
+        FChainList[Chain].Head := Node;
         Added := True;
       end
     else
       Node^.Value := aValue;
   finally
-    FChainList[Slot].Unlock;
+    FChainList[Chain].Unlock;
   end;
   if Added then
     CheckNeedExpand;
@@ -2662,83 +2662,83 @@ end;
 function TGThreadFGHashMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
 var
   Hash: SizeInt;
-  Slot: Integer;
+  Chain: Integer;
   Node: PNode;
 begin
   Result := False;
-  Slot := LockSlot(aKey, Hash);
+  Chain := LockChain(aKey, Hash);
   try
-    Node := Find(aKey, Slot, Hash);
+    Node := Find(aKey, Chain, Hash);
     if Node <> nil then
       begin
         aValue := Node^.Value;
         Result := True;
       end;
   finally
-    FChainList[Slot].Unlock;
+    FChainList[Chain].Unlock;
   end;
 end;
 
 function TGThreadFGHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
 var
   Hash: SizeInt;
-  Slot: Integer;
+  Chain: Integer;
   Node: PNode;
 begin
   Result := aDefault;
-  Slot := LockSlot(aKey, Hash);
+  Chain := LockChain(aKey, Hash);
   try
-    Node := Find(aKey, Slot, Hash);
+    Node := Find(aKey, Chain, Hash);
     if Node <> nil then
       Result := Node^.Value;
   finally
-    FChainList[Slot].Unlock;
+    FChainList[Chain].Unlock;
   end;
 end;
 
 function TGThreadFGHashMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
 var
   Hash: SizeInt;
-  Slot: Integer;
+  Chain: Integer;
   Node: PNode;
 begin
   Result := False;
-  Slot := LockSlot(aKey, Hash);
+  Chain := LockChain(aKey, Hash);
   try
-    Node := Find(aKey, Slot, Hash);
+    Node := Find(aKey, Chain, Hash);
     if Node <> nil then
       begin
         Node^.Value := aNewValue;
         Result := True;
       end;
   finally
-    FChainList[Slot].Unlock;
+    FChainList[Chain].Unlock;
   end;
 end;
 
 function TGThreadFGHashMap.Contains(constref aKey: TKey): Boolean;
 var
   Hash: SizeInt;
-  Slot: Integer;
+  Chain: Integer;
 begin
-  Slot := LockSlot(aKey, Hash);
+  Chain := LockChain(aKey, Hash);
   try
-    Result := Find(aKey, Slot, Hash) <> nil;
+    Result := Find(aKey, Chain, Hash) <> nil;
   finally
-    FChainList[Slot].Unlock;
+    FChainList[Chain].Unlock;
   end;
 end;
 
 function TGThreadFGHashMap.Extract(constref aKey: TKey; out aValue: TValue): Boolean;
 var
   Hash: SizeInt;
-  Slot: Integer;
+  Chain: Integer;
   Node: PNode;
 begin
   Result := False;
-  Slot := LockSlot(aKey, Hash);
+  Chain := LockChain(aKey, Hash);
   try
-    Node := ExtractNode(aKey, Slot, Hash);
+    Node := ExtractNode(aKey, Chain, Hash);
     if Node <> nil then
       begin
         aValue := Node^.Value;
@@ -2746,27 +2746,27 @@ begin
         Result := True;
       end;
   finally
-    FChainList[Slot].Unlock;
+    FChainList[Chain].Unlock;
   end;
 end;
 
 function TGThreadFGHashMap.Remove(constref aKey: TKey): Boolean;
 var
   Hash: SizeInt;
-  Slot: Integer;
+  Chain: Integer;
   Node: PNode;
 begin
   Result := False;
-  Slot := LockSlot(aKey, Hash);
+  Chain := LockChain(aKey, Hash);
   try
-    Node := ExtractNode(aKey, Slot, Hash);
+    Node := ExtractNode(aKey, Chain, Hash);
     if Node <> nil then
       begin
         FreeNode(Node);
         Result := True;
       end;
   finally
-    FChainList[Slot].Unlock;
+    FChainList[Chain].Unlock;
   end;
 end;
 
