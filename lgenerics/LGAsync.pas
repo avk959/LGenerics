@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Some asynchronous promitives.                                           *
+*   Some asynchronous primitives.                                           *
 *                                                                           *
 *   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
 *                                                                           *
