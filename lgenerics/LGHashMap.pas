@@ -626,7 +626,7 @@ type
     FChainList: array of TChain;
     FCount: Integer;
     FLoadFactor: Single;
-    FTableLock: TMultiReadExclusiveWriteSynchronizer;
+    FGlobLock: TMultiReadExclusiveWriteSynchronizer;
   class var
     function  NewNode(constref aKey: TKey; constref aValue: TValue; aHash: SizeInt): PNode;
     procedure FreeNode(aNode: PNode);
@@ -651,6 +651,7 @@ type
     function  Contains(constref aKey: TKey): Boolean;
     function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
     function  Remove(constref aKey: TKey): Boolean;
+  { for estimate purpose only }
     property  Count: Integer read FCount;
     property  LoadFactor: Single read FLoadFactor;
   end;
@@ -2480,12 +2481,12 @@ end;
 function TGThreadFGHashMap.LockChain(constref aKey: TKey; out aHash: SizeInt): Integer;
 begin
   aHash := TKeyEqRel.HashCode(aKey);
-  FTableLock.BeginRead;
+  FGlobLock.BeginRead;
   try
     Result := aHash and System.High(FChainList);
     FChainList[Result].Lock;
   finally
-    FTableLock.EndRead;
+    FGlobLock.EndRead;
   end;
 end;
 
@@ -2531,12 +2532,12 @@ var
 begin
   if Count > Succ(Trunc(System.Length(FChainList) * FLoadFactor)) then
     begin
-      FTableLock.BeginWrite;
+      FGlobLock.BeginWrite;
       try
         if Count > Succ(Trunc(System.Length(FChainList) * FLoadFactor)) then
           Expand;
       finally
-        FTableLock.EndWrite;
+        FGlobLock.EndWrite;
       end;
     end;
 end;
@@ -2594,18 +2595,18 @@ begin
     aCapacity := DEFAULT_CONTAINER_CAPACITY;
   RealCap := RoundUpTwoPower(aCapacity);
   System.SetLength(FChainList, RealCap);
-  FTableLock := TMultiReadExclusiveWriteSynchronizer.Create;
+  FGlobLock := TMultiReadExclusiveWriteSynchronizer.Create;
 end;
 
 destructor TGThreadFGHashMap.Destroy;
 begin
-  FTableLock.BeginWrite;
+  FGlobLock.BeginWrite;
   try
     ClearChainList;
     inherited;
   finally
-    FTableLock.EndWrite;
-    FTableLock.Free;
+    FGlobLock.EndWrite;
+    FGlobLock.Free;
   end;
 end;
 
