@@ -31,6 +31,7 @@ uses
   LGUtils,
   LGQueue,
   LGVector,
+  LGPriorityQueue,
   LGFunction,
   LGStrConst;
 
@@ -427,7 +428,7 @@ type
   end;
 
   { TGListenThread abstract ancestor class;
-    thread that has its own blocking message channel; T is the type of message }
+    thread that has its own blocking message queue; T is the type of message }
   generic TGListenThread<T> = class abstract
   strict private
   type
@@ -450,25 +451,29 @@ type
     function  GetEnqueued: SizeInt;
     function  GetPriority: TThreadPriority;
     procedure SetPriority(aValue: TThreadPriority);
+    function  GetThreadID: TThreadID;
+    function  GetHandle: TThreadID;
   protected
   { by default do nothing }
     procedure HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception); virtual;
   { to be overriden in descendants }
     procedure HandleMessage(constref aMessage: T; aThread: IWorkThread); virtual; abstract;
   public
-  { param aCapacity specifies capacity of inner channel }
+  { param aCapacity specifies capacity of inner queue }
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE; aStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
     procedure Send(constref aMessage: T);
     property  Priority: TThreadPriority read GetPriority write SetPriority;
-  { returns the number of messages in the inner channel }
+    property  ThreadID: TThreadID read GetThreadID;
+    property  Handle: TThreadID read GetHandle;
+  { returns the number of messages in the inner queue }
     property  Enqueued: SizeInt read GetEnqueued;
     property  Capacity: SizeInt read GetCapacity;
   end;
 
-  { TThreadPool simply thread pool engine }
+  { TThreadPool: simple thread pool with a bounded task queue }
   TThreadPool = class
   strict private
   type
@@ -503,13 +508,85 @@ type
   { by default do nothing }
     procedure HandleException(aThreed: IWorkThread; e: Exception); virtual;
   public
-    constructor Create(aThreadCount: SizeInt = DEFAULT_POOL_SIZE; aQueueCapacity: SizeInt = DEFAULT_CHAN_SIZE;
+    constructor Create(aThreadCount: SizeInt = 0; aQueueCapacity: SizeInt = DEFAULT_CHAN_SIZE;
                        aThreadStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure EnsureThreadCount(aValue: SizeInt);
     procedure EnqueueTask(aTask: ITask);
     property  ThreadCount: SizeInt read GetThreadCount write SetThreadCount;
-  { returns the number of tasks in the inner channel }
+  { returns the number of tasks in the inner queue; for estimate purpose only }
+    property  Enqueued: SizeInt read GetEnqueued;
+    property  Capacity: SizeInt read GetCapacity;
+  end;
+
+  { TThreadPoolPrio: simple thread pool with a bounded task queue and with
+    respect for the priority of the task }
+  TThreadPoolPrio = class
+  private
+  type
+    TQueue = specialize TGLiteBinHeap<IPriorityTask, IPriorityTask>;
+
+    TBlockQueue = class
+    private
+      FQueue: TQueue;
+      FLock: TRtlCriticalSection;
+      FWriteAwait,
+      FReadAwait: PRtlEvent;
+      FCapacity: SizeInt;
+      FActive: Boolean;
+      function  GetCount: SizeInt; inline;
+      function  GetCapacity: SizeInt; inline;
+      procedure EnqueueTask(aTask: IPriorityTask);
+      function  DequeueTask: IPriorityTask;
+    public
+      constructor Create(aCapacity: SizeInt);
+      destructor Destroy; override;
+      procedure AfterConstruction; override;
+      function  TryEnqueue(aTask: IPriorityTask): Boolean;
+      function  TryDequeue(out aTask: IPriorityTask): Boolean;
+      procedure Close;
+      procedure Open;
+      property  Active: Boolean read FActive;
+      property  Count: SizeInt read GetCount;
+      property  Capacity: SizeInt read GetCapacity;
+    end;
+
+    TWorker = class(TWorkThread)
+    private
+      FQueue: TBlockQueue;
+      FOwner: TThreadPoolPrio;
+    protected
+      procedure Execute; override;
+    public
+      constructor Create(aOwner: TThreadPoolPrio; aQueue: TBlockQueue; aStackSize: SizeUInt);
+    end;
+
+    TPool = specialize TGLiteVector<TWorker>;
+
+  var
+    FQueue: TBlockQueue;
+    FPool: TPool;
+    FStackSize: SizeInt;
+    FLock: TRtlCriticalSection;
+    function  GetCapacity: SizeInt;
+    function  GetEnqueued: SizeInt;
+    function  GetThreadCount: SizeInt;
+    procedure SetThreadCount(aValue: SizeInt);
+    procedure AddThread;
+    procedure PoolGrow(aValue: SizeInt);
+    procedure PoolShrink(aValue: SizeInt);
+    procedure TerminatePool;
+  protected
+  { by default do nothing }
+    procedure HandleException(aThreed: IWorkThread; e: Exception); virtual;
+  public
+    constructor Create(aThreadCount: SizeInt = 0; aQueueCapacity: SizeInt = DEFAULT_CHAN_SIZE;
+                       aThreadStackSize: SizeUInt = DefaultStackSize);
+    destructor Destroy; override;
+    procedure EnsureThreadCount(aValue: SizeInt);
+    procedure EnqueueTask(aTask: IPriorityTask);
+    property  ThreadCount: SizeInt read GetThreadCount write SetThreadCount;
+  { returns the number of tasks in the inner queue; for estimate purpose only }
     property  Enqueued: SizeInt read GetEnqueued;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -1342,6 +1419,20 @@ begin
     FWorker.Priority := aValue;
 end;
 
+function TGListenThread.GetThreadID: TThreadID;
+begin
+  Result := 0;
+  if FWorker <> nil then
+    Result := FWorker.ThreadID;
+end;
+
+function TGListenThread.GetHandle: TThreadID;
+begin
+  Result := 0;
+  if FWorker <> nil then
+    Result := FWorker.Handle;
+end;
+
 procedure TGListenThread.HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception);
 begin
   ReleaseExceptionObject;
@@ -1428,7 +1519,7 @@ begin
     if aValue > FPool.Count then
       PoolGrow(aValue)
     else
-      if (aValue > 0) and (aValue < FPool.Count) then
+      if aValue < FPool.Count then
         PoolShrink(aValue);
   finally
     System.LeaveCriticalSection(FLock);
@@ -1482,14 +1573,18 @@ end;
 
 constructor TThreadPool.Create(aThreadCount: SizeInt; aQueueCapacity: SizeInt; aThreadStackSize: SizeUInt);
 begin
-  System.InitCriticalSection(FLock);
   FStackSize := aThreadStackSize;
+  if aQueueCapacity < DEFAULT_CONTAINER_CAPACITY then
+    aQueueCapacity := DEFAULT_CONTAINER_CAPACITY;
   FChannel := TChannel.Create(aQueueCapacity);
   if aThreadCount > 0 then
     PoolGrow(aThreadCount)
   else
-    PoolGrow(1);
-  ReadWriteBarrier;
+    begin
+      aThreadCount := TThread.ProcessorCount;
+      PoolGrow(aThreadCount);
+    end;
+  System.InitCriticalSection(FLock);
 end;
 
 destructor TThreadPool.Destroy;
@@ -1520,6 +1615,289 @@ end;
 procedure TThreadPool.EnqueueTask(aTask: ITask);
 begin
   FChannel.Send(aTask);
+end;
+
+{ TThreadPoolPrio.TBlockQueue }
+
+function TThreadPoolPrio.TBlockQueue.GetCount: SizeInt;
+begin
+  Result := FQueue.Count;
+end;
+
+function TThreadPoolPrio.TBlockQueue.GetCapacity: SizeInt;
+begin
+  Result := FCapacity;
+end;
+
+procedure TThreadPoolPrio.TBlockQueue.EnqueueTask(aTask: IPriorityTask);
+begin
+  FQueue.Enqueue(aTask);
+  System.RtlEventSetEvent(FReadAwait);
+  if Count < Capacity then
+    System.RtlEventSetEvent(FWriteAwait);
+end;
+
+function TThreadPoolPrio.TBlockQueue.DequeueTask: IPriorityTask;
+begin
+  Result := FQueue.Dequeue;
+  System.RtlEventSetEvent(FWriteAwait);
+  if Count > 0 then
+    System.RtlEventSetEvent(FReadAwait);
+end;
+
+constructor TThreadPoolPrio.TBlockQueue.Create(aCapacity: SizeInt);
+begin
+  FCapacity := aCapacity;
+  FQueue.EnsureCapacity(aCapacity);
+  FActive := True;
+  System.InitCriticalSection(FLock);
+end;
+
+destructor TThreadPoolPrio.TBlockQueue.Destroy;
+begin
+  Close;
+  System.EnterCriticalSection(FLock);
+  try
+    FQueue.Clear;
+    System.RtlEventDestroy(FWriteAwait);
+    FWriteAwait := nil;
+    System.RtlEventDestroy(FReadAwait);
+    FReadAwait := nil;
+    inherited;
+  finally
+    System.LeaveCriticalSection(FLock);
+    System.DoneCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPoolPrio.TBlockQueue.AfterConstruction;
+begin
+  inherited;
+  FWriteAwait := System.RtlEventCreate;
+  FReadAwait  := System.RtlEventCreate;
+  System.RtlEventSetEvent(FWriteAwait);
+end;
+
+function TThreadPoolPrio.TBlockQueue.TryEnqueue(aTask: IPriorityTask): Boolean;
+begin
+  System.RtlEventWaitFor(FWriteAwait);
+  System.EnterCriticalSection(FLock);
+  try
+    if Active then
+      begin
+        Result := Count < Capacity;
+        if Result then
+          EnqueueTask(aTask);
+      end
+    else
+      begin
+        Result := False;
+        System.RtlEventSetEvent(FWriteAwait);
+      end;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TThreadPoolPrio.TBlockQueue.TryDequeue(out aTask: IPriorityTask): Boolean;
+begin
+  System.RtlEventWaitFor(FReadAwait);
+  System.EnterCriticalSection(FLock);
+  try
+    if Active then
+      begin
+        Result := Count > 0;
+        if Result then
+          aTask := DequeueTask;
+      end
+    else
+      begin
+        Result := False;
+        System.RtlEventSetEvent(FReadAwait);
+      end;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPoolPrio.TBlockQueue.Close;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if Active then
+      begin
+        FActive := False;
+        System.RtlEventSetEvent(FReadAwait);
+        System.RtlEventSetEvent(FWriteAwait);
+      end;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPoolPrio.TBlockQueue.Open;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if not Active then
+      begin
+        FActive := True;
+        if Count > 0 then
+          System.RtlEventSetEvent(FReadAwait);
+        if Count < Capacity then
+          System.RtlEventSetEvent(FWriteAwait);
+      end;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+{ TThreadPoolPrio.TWorker }
+
+procedure TThreadPoolPrio.TWorker.Execute;
+var
+  CurrTask: IPriorityTask = nil;
+begin
+  while not Terminated and FQueue.TryDequeue(CurrTask) do
+    try
+      CurrTask.Execute;
+    except
+      FOwner.HandleException(Self, Exception(System.AcquireExceptionObject));
+    end;
+end;
+
+constructor TThreadPoolPrio.TWorker.Create(aOwner: TThreadPoolPrio; aQueue: TBlockQueue; aStackSize: SizeUInt);
+begin
+  inherited Create(True, aStackSize);
+  FOwner := aOwner;
+  FQueue := aQueue;
+end;
+
+{ TThreadPoolPrio }
+
+function TThreadPoolPrio.GetCapacity: SizeInt;
+begin
+  Result := FQueue.Capacity;
+end;
+
+function TThreadPoolPrio.GetEnqueued: SizeInt;
+begin
+  Result := FQueue.Count;
+end;
+
+function TThreadPoolPrio.GetThreadCount: SizeInt;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    Result := FPool.Count;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPoolPrio.SetThreadCount(aValue: SizeInt);
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if aValue > FPool.Count then
+      PoolGrow(aValue)
+    else
+      if aValue < FPool.Count then
+        PoolShrink(aValue);
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPoolPrio.AddThread;
+var
+  I: SizeInt;
+begin
+  I := FPool.Add(TWorker.Create(Self, FQueue, FStackSize));
+  FPool[I].Start;
+end;
+
+procedure TThreadPoolPrio.PoolGrow(aValue: SizeInt);
+begin
+  while FPool.Count < aValue do
+    AddThread;
+end;
+
+procedure TThreadPoolPrio.PoolShrink(aValue: SizeInt);
+begin
+  if aValue < 1 then
+    aValue := 1;
+  TerminatePool;
+  FQueue.Open;
+  PoolGrow(aValue);
+end;
+
+procedure TThreadPoolPrio.TerminatePool;
+var
+  Thread: TWorker;
+begin
+  for Thread in FPool.Reverse do
+    Thread.Terminate;
+  FQueue.Close;
+  while FPool.NonEmpty do
+    begin
+      Thread := FPool.Extract(Pred(FPool.Count));
+      Thread.WaitFor;
+      Thread.Free;
+    end;
+end;
+
+procedure TThreadPoolPrio.HandleException(aThreed: IWorkThread; e: Exception);
+begin
+  ReleaseExceptionObject;
+  Assert(aThreed = aThreed);
+  Assert(e = e);
+end;
+
+constructor TThreadPoolPrio.Create(aThreadCount: SizeInt; aQueueCapacity: SizeInt; aThreadStackSize: SizeUInt);
+begin
+  FStackSize := aThreadStackSize;
+  if aQueueCapacity < DEFAULT_CONTAINER_CAPACITY then
+    aQueueCapacity := DEFAULT_CONTAINER_CAPACITY;
+  FQueue := TBlockQueue.Create(aQueueCapacity);
+  if aThreadCount > 0 then
+    PoolGrow(aThreadCount)
+  else
+    begin
+      aThreadCount := TThread.ProcessorCount;
+      PoolGrow(aThreadCount);
+    end;
+  System.InitCriticalSection(FLock);
+end;
+
+destructor TThreadPoolPrio.Destroy;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    TerminatePool;
+    FPool.Clear;
+    FQueue.Free;
+    inherited;
+  finally
+    System.LeaveCriticalSection(FLock);
+    System.DoneCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPoolPrio.EnsureThreadCount(aValue: SizeInt);
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if aValue > FPool.Count then
+      PoolGrow(aValue)
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+procedure TThreadPoolPrio.EnqueueTask(aTask: IPriorityTask);
+begin
+  FQueue.TryEnqueue(aTask);
 end;
 
 end.
