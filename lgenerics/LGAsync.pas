@@ -505,6 +505,8 @@ type
     procedure PoolShrink(aValue: SizeInt);
     procedure TerminatePool;
   protected
+    procedure Lock; inline;
+    procedure Unlock; inline;
   { by default do nothing }
     procedure HandleException(aThreed: IWorkThread; e: Exception); virtual;
   public
@@ -577,6 +579,8 @@ type
     procedure PoolShrink(aValue: SizeInt);
     procedure TerminatePool;
   protected
+    procedure Lock; inline;
+    procedure Unlock; inline;
   { by default do nothing }
     procedure HandleException(aThreed: IWorkThread; e: Exception); virtual;
   public
@@ -1564,6 +1568,16 @@ begin
     end;
 end;
 
+procedure TBoundThreadPool.Lock;
+begin
+  System.EnterCriticalSection(FLock);
+end;
+
+procedure TBoundThreadPool.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
+end;
+
 procedure TBoundThreadPool.HandleException(aThreed: IWorkThread; e: Exception);
 begin
   ReleaseExceptionObject;
@@ -1845,6 +1859,16 @@ begin
       Thread.WaitFor;
       Thread.Free;
     end;
+end;
+
+procedure TBoundPrioThreadPool.Lock;
+begin
+  System.EnterCriticalSection(FLock);
+end;
+
+procedure TBoundPrioThreadPool.Unlock;
+begin
+  System.LeaveCriticalSection(FLock);
 end;
 
 procedure TBoundPrioThreadPool.HandleException(aThreed: IWorkThread; e: Exception);
