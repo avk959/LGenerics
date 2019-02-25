@@ -42,10 +42,11 @@ type
   strict private
     FAwait: PRtlEvent;
     FException: Exception;
-    FState: DWord;
+    FState: SizeUInt;
   strict protected
     function  GetState: TAsyncTaskState; inline;
     function  GetRefCount: Integer;
+  { to override in descendants }
     procedure DoExecute; virtual; abstract;
   public
     destructor Destroy; override;
@@ -607,7 +608,7 @@ end;
 
 function TAsyncTask.GetRefCount: Integer;
 begin
-  Result := RefCount;
+  Result := FRefCount;
 end;
 
 destructor TAsyncTask.Destroy;
@@ -626,14 +627,22 @@ end;
 
 procedure TAsyncTask.Execute;
 begin
+{$IFDEF CPU64}
+  InterlockedIncrement64(FState);
+{$ELSE CPU64}
   InterlockedIncrement(FState);
+{$ENDIF CPU64}
   try
     DoExecute;
   except
     on e: Exception do
       FException := Exception(System.AcquireExceptionObject);
   end;
+{$IFDEF CPU64}
+  InterlockedIncrement64(FState);
+{$ELSE CPU64}
   InterlockedIncrement(FState);
+{$ENDIF CPU64}
   System.RtlEventSetEvent(FAwait);
 end;
 
