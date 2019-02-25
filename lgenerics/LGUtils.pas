@@ -141,21 +141,6 @@ type
   ['{24E2498F-3849-4995-9FEC-D82F90D34B1F}']
     function GetPriority: TTaskPriority;
   end;
-
-  TAsyncTaskState = (astPending, astExecuting, astFinished);
-
-  IAsyncTask = interface(ITask)
-  ['{4122B5EC-40CF-421D-AFB8-23534663C24E}']
-    function  GetRefCount: Integer;
-    function  GetState: TAsyncTaskState;
-    procedure WaitFor;
-    function  FatalException: Exception;
-  end;
-
-  IGCallable<T> = interface
-  ['{EF605AA3-4E0F-4C52-9A75-5068D94ECDAF}']
-    function Call: T;
-  end;
 {$POP}
 
 {$PUSH}{$INTERFACES CORBA}

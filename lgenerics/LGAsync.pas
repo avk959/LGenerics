@@ -37,6 +37,47 @@ uses
 
 type
 
+  TAsyncTaskState = (astPending, astExecuting, astFinished);
+  TFutureState    = (fsPending, fsExecuting, fsFinished, fsResolved, fsFatal, fsCancelled);
+
+{$PUSH}{$INTERFACES COM}
+  IAsyncTask = interface(ITask)
+  ['{4122B5EC-40CF-421D-AFB8-23534663C24E}']
+    function  GetRefCount: Integer;
+    function  GetState: TAsyncTaskState;
+    procedure WaitFor;
+    function  FatalException: Exception;
+  end;
+
+  generic IGCallable<T> = interface
+  ['{EF605AA3-4E0F-4C52-9A75-5068D94ECDAF}']
+    function Call: T;
+  end;
+
+  generic IGAsyncTask<T> = interface(IAsyncTask)
+  ['{29B0A51F-346F-449F-A232-50697E7B5166}']
+    function GetResult: T;
+  end;
+
+  generic IGFuture<T> = interface
+  ['{87217C99-9D75-46CC-837A-44624C60C004}']
+    function  GetState: TFutureState;
+    function  WaitFor: TFutureState;
+    procedure Cancel;
+  { raises exception if resolving failed }
+    function  Value: T;
+    function  Optional: specialize TGOptional<T>;
+    property  State: TFutureState read GetState;
+  end;
+{$POP}
+
+{$PUSH}{$INTERFACES CORBA}
+  IExecutor = interface
+  ['{49381C21-82D6-456E-93A2-B8E0DC4B34BA}']
+    procedure EnqueueTask(aTask: IAsyncTask);
+  end;
+{$POP}
+
   { TAsyncTask }
   TAsyncTask = class abstract(TInterfacedObject, ITask, IAsyncTask)
   strict private
@@ -56,13 +97,6 @@ type
     function  FatalException: Exception;
   end;
 
-{$PUSH}{$INTERFACES CORBA}
-  generic IGAsyncTask<T> = interface(IAsyncTask)
-  ['{29B0A51F-346F-449F-A232-50697E7B5166}']
-    function GetResult: T;
-  end;
-{$POP}
-
   generic TGAsyncTask<T> = class abstract(TAsyncTask, specialize IGAsyncTask<T>)
   strict protected
     FResult: T; //to be setted inside overriden DoExecute
@@ -71,33 +105,11 @@ type
     property Result: T read GetResult;
   end;
 
-{$PUSH}{$INTERFACES CORBA}
-  IExecutor = interface
-  ['{49381C21-82D6-456E-93A2-B8E0DC4B34BA}']
-    procedure EnqueueTask(aTask: IAsyncTask);
-  end;
-{$POP}
-
 {
   The futures concept describes an asynchronous single-execution pattern.
   Result is requested at an early stage of execution, but becomes available after it is received.
   This implementation implies that futures are intended for use from the main thread.
 }
-  TFutureState = (fsPending, fsExecuting, fsFinished, fsResolved, fsFatal, fsCancelled);
-
-{$PUSH}{$INTERFACES COM}
-  generic IGFuture<T> = interface
-  ['{87217C99-9D75-46CC-837A-44624C60C004}']
-    function  GetState: TFutureState;
-    function  WaitFor: TFutureState;
-    procedure Cancel;
-  { raises exception if resolving failed }
-    function  Value: T;
-    function  Optional: specialize TGOptional<T>;
-    property  State: TFutureState read GetState;
-  end;
-{$POP}
-
   { TGFuture: takes over the management of the inner async task }
   generic TGFuture<T> = class(TInterfacedObject, specialize IGFuture<T>)
   public
