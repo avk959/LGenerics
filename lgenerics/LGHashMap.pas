@@ -614,7 +614,7 @@ type
 
     TChain = record
     strict private
-      FState: DWord;
+      FState: SizeUInt;
       class operator Initialize(var c: TChain);
     public
       Head: PNode;
@@ -624,16 +624,17 @@ type
 
   var
     FChainList: array of TChain;
-    FCount: Integer;
+    FCount: SizeInt;
     FLoadFactor: Single;
     FGlobLock: TMultiReadExclusiveWriteSynchronizer;
   class var
     function  NewNode(constref aKey: TKey; constref aValue: TValue; aHash: SizeInt): PNode;
     procedure FreeNode(aNode: PNode);
+    function  GetCapacity: SizeInt;
     procedure ClearChainList;
-    function  LockChain(constref aKey: TKey; out aHash: SizeInt): Integer;
-    function  Find(constref aKey: TKey; aChain: Integer; aHash: SizeInt): PNode;
-    function  ExtractNode(constref aKey: TKey; aChain: Integer; aHash: SizeInt): PNode;
+    function  LockChain(constref aKey: TKey; out aHash: SizeInt): SizeInt;
+    function  Find(constref aKey: TKey; aChain: SizeInt; aHash: SizeInt): PNode;
+    function  ExtractNode(constref aKey: TKey; aChain: SizeInt; aHash: SizeInt): PNode;
     procedure CheckNeedExpand;
     procedure Expand;
   public
@@ -652,7 +653,8 @@ type
     function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
     function  Remove(constref aKey: TKey): Boolean;
   { for estimate purpose only }
-    property  Count: Integer read FCount;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor;
   end;
 
@@ -2429,13 +2431,21 @@ end;
 
 procedure TGThreadFGHashMap.TChain.Lock;
 begin
-  while Boolean(InterlockedExchange(FState, DWord(1))) do
+{$IFDEF CPU64}
+  while Boolean(InterlockedExchange64(FState, SizeUInt(1))) do
+{$ELSE CPU64}
+  while Boolean(InterlockedExchange(FState, SizeUInt(1))) do
+{$ENDIF CPU64}
     ThreadSwitch;
 end;
 
 procedure TGThreadFGHashMap.TChain.Unlock;
 begin
-  InterlockedExchange(FState, DWord(0));
+{$IFDEF CPU64}
+  InterlockedExchange64(FState, SizeUInt(0));
+{$ELSE CPU64}
+  InterlockedExchange(FState, SizeUInt(0));
+{$ENDIF CPU64}
 end;
 
 { TGThreadFGHashMap }
@@ -2446,7 +2456,11 @@ begin
   Result^.Hash := aHash;
   Result^.Key := aKey;
   Result^.Value := aValue;
+{$IFDEF CPU64}
+  InterlockedIncrement64(FCount);
+{$ELSE CPU64}
   InterlockedIncrement(FCount);
+{$ENDIF CPU64}
 end;
 
 procedure TGThreadFGHashMap.FreeNode(aNode: PNode);
@@ -2455,14 +2469,28 @@ begin
     begin
       aNode^ := Default(TNode);
       Dispose(aNode);
+    {$IFDEF CPU64}
+      InterlockedDecrement64(FCount);
+    {$ELSE CPU64}
       InterlockedDecrement(FCount);
+    {$ENDIF CPU64}
     end;
+end;
+
+function TGThreadFGHashMap.GetCapacity: SizeInt;
+begin
+  FGlobLock.BeginRead;
+  try
+    Result := System.Length(FChainList);
+  finally
+    FGlobLock.EndRead;
+  end;
 end;
 
 procedure TGThreadFGHashMap.ClearChainList;
 var
   Node, Next: PNode;
-  I: Integer;
+  I: SizeInt;
 begin
   for I := 0 to System.High(FChainList) do
     begin
@@ -2478,7 +2506,7 @@ begin
   FChainList := nil;
 end;
 
-function TGThreadFGHashMap.LockChain(constref aKey: TKey; out aHash: SizeInt): Integer;
+function TGThreadFGHashMap.LockChain(constref aKey: TKey; out aHash: SizeInt): SizeInt;
 begin
   aHash := TKeyEqRel.HashCode(aKey);
   FGlobLock.BeginRead;
@@ -2490,7 +2518,7 @@ begin
   end;
 end;
 
-function TGThreadFGHashMap.Find(constref aKey: TKey; aChain: Integer; aHash: SizeInt): PNode;
+function TGThreadFGHashMap.Find(constref aKey: TKey; aChain: SizeInt; aHash: SizeInt): PNode;
 var
   Node: PNode;
 begin
@@ -2504,7 +2532,7 @@ begin
     end;
 end;
 
-function TGThreadFGHashMap.ExtractNode(constref aKey: TKey; aChain: Integer; aHash: SizeInt): PNode;
+function TGThreadFGHashMap.ExtractNode(constref aKey: TKey; aChain: SizeInt; aHash: SizeInt): PNode;
 var
   Node: PNode;
   Prev: PNode = nil;
@@ -2527,8 +2555,6 @@ begin
 end;
 
 procedure TGThreadFGHashMap.CheckNeedExpand;
-var
-  Len: Integer;
 begin
   if Count > Succ(Trunc(System.Length(FChainList) * FLoadFactor)) then
     begin
@@ -2544,7 +2570,7 @@ end;
 
 procedure TGThreadFGHashMap.Expand;
 var
-  I, Len: Integer;
+  I, Len: SizeInt;
   Node, Next: PNode;
   Head: PNode = nil;
 begin
@@ -2612,8 +2638,7 @@ end;
 
 function TGThreadFGHashMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
 var
-  Hash: SizeInt;
-  Chain: Integer;
+  Chain, Hash: SizeInt;
   Node: PNode;
 begin
   Result := False;
@@ -2636,8 +2661,7 @@ end;
 
 procedure TGThreadFGHashMap.AddOrSetValue(const aKey: TKey; constref aValue: TValue);
 var
-  Hash: SizeInt;
-  Chain: Integer;
+  Chain, Hash: SizeInt;
   Node: PNode;
   Added: Boolean = False;
 begin
@@ -2662,8 +2686,7 @@ end;
 
 function TGThreadFGHashMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
 var
-  Hash: SizeInt;
-  Chain: Integer;
+  Chain, Hash: SizeInt;
   Node: PNode;
 begin
   Result := False;
@@ -2682,8 +2705,7 @@ end;
 
 function TGThreadFGHashMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
 var
-  Hash: SizeInt;
-  Chain: Integer;
+  Chain, Hash: SizeInt;
   Node: PNode;
 begin
   Result := aDefault;
@@ -2699,8 +2721,7 @@ end;
 
 function TGThreadFGHashMap.Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
 var
-  Hash: SizeInt;
-  Chain: Integer;
+  Chain, Hash: SizeInt;
   Node: PNode;
 begin
   Result := False;
@@ -2719,8 +2740,7 @@ end;
 
 function TGThreadFGHashMap.Contains(constref aKey: TKey): Boolean;
 var
-  Hash: SizeInt;
-  Chain: Integer;
+  Chain, Hash: SizeInt;
 begin
   Chain := LockChain(aKey, Hash);
   try
@@ -2732,8 +2752,7 @@ end;
 
 function TGThreadFGHashMap.Extract(constref aKey: TKey; out aValue: TValue): Boolean;
 var
-  Hash: SizeInt;
-  Chain: Integer;
+  Chain, Hash: SizeInt;
   Node: PNode;
 begin
   Result := False;
@@ -2753,8 +2772,7 @@ end;
 
 function TGThreadFGHashMap.Remove(constref aKey: TKey): Boolean;
 var
-  Hash: SizeInt;
-  Chain: Integer;
+  Chain, Hash: SizeInt;
   Node: PNode;
 begin
   Result := False;
