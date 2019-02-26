@@ -1682,8 +1682,8 @@ end;
 
 constructor TBoundPrioThreadPool.TBlockQueue.Create(aCapacity: SizeInt);
 begin
-  FCapacity := aCapacity;
   FQueue.EnsureCapacity(aCapacity);
+  FCapacity := FQueue.Capacity;
   FActive := True;
   System.InitCriticalSection(FLock);
 end;
