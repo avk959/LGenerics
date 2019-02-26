@@ -397,6 +397,7 @@ type
     procedure CleanupBuffer; virtual;
     property  Head: SizeInt read FHead;
   public
+  { the creation is not thread-save }
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
     procedure AfterConstruction; override;
@@ -472,7 +473,8 @@ type
   { to be overriden in descendants }
     procedure HandleMessage(constref aMessage: T; aThread: IWorkThread); virtual; abstract;
   public
-  { param aCapacity specifies capacity of inner queue }
+  { the creation/desruction is not thread-save;
+    param aCapacity specifies capacity of inner queue }
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE; aStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure AfterConstruction; override;
@@ -523,6 +525,7 @@ type
   { by default do nothing }
     procedure HandleException(aThreed: IWorkThread; e: Exception); virtual;
   public
+  { the creation is not thread-save }
     constructor Create(aThreadCount: SizeInt = 0; aQueueCapacity: SizeInt = DEFAULT_CHAN_SIZE;
                        aThreadStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
@@ -597,6 +600,7 @@ type
   { by default do nothing }
     procedure HandleException(aThreed: IWorkThread; e: Exception); virtual;
   public
+  { the creation is not thread-save }
     constructor Create(aThreadCount: SizeInt = 0; aQueueCapacity: SizeInt = DEFAULT_CHAN_SIZE;
                        aThreadStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
@@ -1258,14 +1262,11 @@ end;
 
 constructor TGBlockChannel.Create(aCapacity: SizeInt);
 begin
-  if aCapacity > 0 then
-    begin
-      System.SetLength(FBuffer, aCapacity);
-      System.InitCriticalSection(FLock);
-      FActive := True;
-    end
-  else
-    raise ELGPanic.CreateFmt(SEInvalidInputFmt, ['aSize', IntToStr(aCapacity)]);
+  if aCapacity < DEFAULT_CONTAINER_CAPACITY then
+    aCapacity := DEFAULT_CONTAINER_CAPACITY;
+  System.SetLength(FBuffer, aCapacity);
+  System.InitCriticalSection(FLock);
+  FActive := True;
 end;
 
 destructor TGBlockChannel.Destroy;
