@@ -658,9 +658,9 @@ type
     property  LoadFactor: Single read FLoadFactor;
   end;
 
-  { TGThreadFGHashMap: fine-grained concurrent map attempt;
+  { TGThreadHashMapFG: fine-grained concurrent map attempt;
     it assumes that type TKey implements TKeyEqRel }
-  generic TGHashMapFG<TKey, TValue> = class(specialize TGThreadFGHashMap<TKey, TValue, TKey>);
+  generic TGThreadHashMapFG<TKey, TValue> = class(specialize TGThreadFGHashMap<TKey, TValue, TKey>);
 
 implementation
 {$B-}{$COPERATORS ON}
