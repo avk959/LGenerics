@@ -5,8 +5,9 @@ unit LGHashMapTest;
 
 interface
 uses
-  SysUtils, fpcunit, testregistry,
+  Classes, SysUtils, fpcunit, testregistry,
   LGUtils,
+  LGArrayHelpers,
   LGAbstractContainer,
   LGHashMap,
   LGHashSet;
@@ -159,6 +160,39 @@ type
     procedure Str_1;
     procedure Str_2;
     procedure StrRetain;
+  end;
+
+  THashMapFGTest = class(TTestCase)
+  private
+  type
+    TMap    = specialize TGThreadHashMapFG<Integer, Integer>;
+    TArray  = array of Integer;
+    THelper = specialize TGOrdinalArrayHelper<Integer>;
+
+    TWorker = class(TThread)
+    private
+      FMap: TMap;
+      FData: TArray;
+      FIndex: Integer;
+      FFlag,
+      FResult: PInteger;
+    public
+      constructor Create(aMap: TMap; const aData: TArray; aIndex: Integer; aFlagValue, aResult: PInteger);
+    end;
+
+    TAdder = class(TWorker)
+    protected
+      procedure Execute; override;
+    end;
+
+    TRemover = class(TWorker)
+    protected
+      procedure Execute; override;
+    end;
+
+  published
+    procedure Add;
+    procedure Remove;
   end;
 
   function CreateIntArray(aSize: Integer): TIntEntryArray;
@@ -1677,11 +1711,126 @@ begin
   AssertTrue(m.Count = 0);
 end;
 
+{ THashMapFGTest.TWorker }
+
+constructor THashMapFGTest.TWorker.Create(aMap: TMap; const aData: TArray; aIndex: Integer; aFlagValue,
+  aResult: PInteger);
+begin
+  inherited Create(True);
+  FreeOnTerminate := True;
+  FMap := aMap;
+  FData := aData;
+  FIndex := aIndex;
+  FFlag := aFlagValue;
+  FResult := aResult;
+end;
+
+{ THashMapFGTest.TAdder }
+
+procedure THashMapFGTest.TAdder.Execute;
+var
+  I: Integer;
+  Added: Integer = 0;
+begin
+  for I in FData do
+    Added += Ord(FMap.Add(I, I));
+  FResult[FIndex] := Added;
+  InterlockedIncrement(FFlag^);
+  Terminate;
+end;
+
+{ THashMapFGTest.TRemover }
+
+procedure THashMapFGTest.TRemover.Execute;
+var
+  I: Integer;
+  Removed: Integer = 0;
+begin
+  for I in FData do
+    Removed += Ord(FMap.Remove(I));
+  FResult[FIndex] := Removed;
+  InterlockedIncrement(FFlag^);
+  Terminate;
+end;
+
+{ THashMapFGTest }
+
+procedure THashMapFGTest.Add;
+const
+  TestSize    = 100000;
+  ThreadCount = 4;
+  function CreateTestArray: TArray;
+  begin
+    Result := THelper.CreateRange(1, TestSize);
+    THelper.RandomShuffle(Result);
+  end;
+var
+  map: TMap;
+  TestArray: array[0..Pred(ThreadCount)] of TArray;
+  ThreadArray: array[0..Pred(ThreadCount)] of TAdder;
+  Results: array[0..Pred(ThreadCount)] of Integer;
+  I, Total: Integer;
+  Finished: Integer = 0;
+begin
+  for I := 0 to Pred(ThreadCount) do
+    TestArray[I] := CreateTestArray;
+  map := TMap.Create(0);
+  for I := 0 to Pred(ThreadCount) do
+    ThreadArray[I] := TAdder.Create(map, TestArray[I], I, @Finished, @Results[0]);
+  for I := 0 to Pred(ThreadCount) do
+    ThreadArray[I].Start;
+  while Finished < ThreadCount do
+    Sleep(50);
+  AssertTrue(map.Count = TestSize);
+  map.Free;
+  Total := 0;
+  for I in Results do
+    Total += I;
+  AssertTrue(Total = TestSize);
+end;
+
+procedure THashMapFGTest.Remove;
+const
+  TestSize    = 100000;
+  ThreadCount = 4;
+  function CreateTestArray: TArray;
+  begin
+    Result := THelper.CreateRange(1, TestSize);
+    THelper.RandomShuffle(Result);
+  end;
+var
+  map: TMap;
+  TestArray: array[0..Pred(ThreadCount)] of TArray;
+  ThreadArray: array[0..Pred(ThreadCount)] of TRemover;
+  Results: array[0..Pred(ThreadCount)] of Integer;
+  I, Total: Integer;
+  Finished: Integer = 0;
+begin
+  map := TMap.Create(TestSize);
+  for I := 1 to TestSize do
+    map.Add(I, I);
+  for I := 0 to Pred(ThreadCount) do
+    TestArray[I] := CreateTestArray;
+  for I := 0 to Pred(ThreadCount) do
+    ThreadArray[I] := TRemover.Create(map, TestArray[I], I, @Finished, @Results[0]);
+  for I := 0 to Pred(ThreadCount) do
+    ThreadArray[I].Start;
+  while Finished < ThreadCount do
+    Sleep(50);
+  AssertTrue(map.Count = 0);
+  map.Free;
+  Total := 0;
+  for I in Results do
+    Total += I;
+  AssertTrue(Total = TestSize);
+end;
+
 initialization
   RegisterTest(THashMapLPTest);
   RegisterTest(THashMapLPTTest);
   RegisterTest(THashMapQPTest);
   RegisterTest(TChainHashMapTest);
   RegisterTest(TLiteHashMapLPTest);
+  RegisterTest(THashMapFGTest);
 end.
 
