@@ -639,8 +639,8 @@ type
     procedure Expand;
   public
   const
-    MIN_LOAD_FACTOR: Single     = 1.0;
-    MAX_LOAD_FACTOR: Single     = 8.0;
+    MIN_LOAD_FACTOR: Single = 1.0;
+    MAX_LOAD_FACTOR: Single = 8.0;
 
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single = 2.0);
     destructor Destroy; override;
