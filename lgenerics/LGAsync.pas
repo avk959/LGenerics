@@ -374,6 +374,8 @@ const
 
 type
 
+  { TGBlockChannel }
+
   generic TGBlockChannel<T> = class
   strict protected
   type
@@ -401,8 +403,14 @@ type
     constructor Create(aCapacity: SizeInt = DEFAULT_CHAN_SIZE);
     destructor Destroy; override;
     procedure AfterConstruction; override;
+  { blocking method }
     function  Send(constref aValue: T): Boolean;
+  { non blocking method }
+    function  TrySend(constref aValue: T): Boolean;
+  { blocking method }
     function  Receive(out aValue: T): Boolean;
+  { non blocking method }
+    function  TryReceive(out aValue: T): Boolean;
     procedure Close;
     procedure Open;
   { if is not Active then Send and Receive will always return False without blocking }
@@ -441,7 +449,7 @@ type
     function  GetHandle: TThreadID;
   end;
 
-  { TGListenThread abstract ancestor class;
+  { TGListenThread abstract ancestor class:
     thread that has its own blocking message queue; T is the type of message }
   generic TGListenThread<T> = class abstract
   strict private
@@ -479,7 +487,10 @@ type
     destructor Destroy; override;
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
+  { blocking method }
     procedure Send(constref aMessage: T);
+  { non blocking method }
+    function  TrySend(constref aMessage: T): Boolean;
     property  Priority: TThreadPriority read GetPriority write SetPriority;
     property  ThreadID: TThreadID read GetThreadID;
     property  Handle: TThreadID read GetHandle;
@@ -530,7 +541,10 @@ type
                        aThreadStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure EnsureThreadCount(aValue: SizeInt);
+  { blocking method }
     procedure EnqueueTask(aTask: ITask);
+  { non blocking method }
+    function  TryEnqueueTask(aTask: ITask): Boolean;
     property  ThreadCount: SizeInt read GetThreadCount write SetThreadCount;
   { returns the number of tasks in the inner queue; for estimate purpose only }
     property  Enqueued: SizeInt read GetEnqueued;
@@ -561,6 +575,7 @@ type
       destructor Destroy; override;
       procedure AfterConstruction; override;
       function  TryEnqueue(aTask: IPriorityTask): Boolean;
+      function  TryDoEnqueue(aTask: IPriorityTask): Boolean;
       function  TryDequeue(out aTask: IPriorityTask): Boolean;
       procedure Close;
       procedure Open;
@@ -605,7 +620,10 @@ type
                        aThreadStackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure EnsureThreadCount(aValue: SizeInt);
+  { blocking method }
     procedure EnqueueTask(aTask: IPriorityTask);
+  { non blocking method }
+    function  TryEnqueueTask(aTask: IPriorityTask): Boolean;
     property  ThreadCount: SizeInt read GetThreadCount write SetThreadCount;
   { returns the number of tasks in the inner queue; for estimate purpose only }
     property  Enqueued: SizeInt read GetEnqueued;
@@ -1315,6 +1333,23 @@ begin
   end;
 end;
 
+function TGBlockChannel.TrySend(constref aValue: T): Boolean;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if Active then
+      begin
+        Result := Count < Capacity;
+        if Result then
+          SendData(aValue);
+      end
+    else
+      Result := False;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
 function TGBlockChannel.Receive(out aValue: T): Boolean;
 begin
   System.RtlEventWaitFor(FReadAwait);
@@ -1331,6 +1366,23 @@ begin
         Result := False;
         System.RtlEventSetEvent(FReadAwait);
       end;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TGBlockChannel.TryReceive(out aValue: T): Boolean;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if Active then
+      begin
+        Result := Count > 0;
+        if Result then
+          aValue := ReceiveData;
+      end
+    else
+      Result := False;
   finally
     System.LeaveCriticalSection(FLock);
   end;
@@ -1495,6 +1547,11 @@ begin
   FChannel.Send(aMessage);
 end;
 
+function TGListenThread.TrySend(constref aMessage: T): Boolean;
+begin
+  Result := FChannel.TrySend(aMessage);
+end;
+
 { TBoundThreadPool.TWorker }
 
 procedure TBoundThreadPool.TWorker.Execute;
@@ -1653,6 +1710,11 @@ begin
   FChannel.Send(aTask);
 end;
 
+function TBoundThreadPool.TryEnqueueTask(aTask: ITask): Boolean;
+begin
+  Result := FChannel.TrySend(aTask);
+end;
+
 { TBoundPrioThreadPool.TBlockQueue }
 
 function TBoundPrioThreadPool.TBlockQueue.GetCount: SizeInt;
@@ -1730,6 +1792,23 @@ begin
         Result := False;
         System.RtlEventSetEvent(FWriteAwait);
       end;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TBoundPrioThreadPool.TBlockQueue.TryDoEnqueue(aTask: IPriorityTask): Boolean;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if Active then
+      begin
+        Result := Count < Capacity;
+        if Result then
+          EnqueueTask(aTask);
+      end
+    else
+      Result := False;
   finally
     System.LeaveCriticalSection(FLock);
   end;
@@ -1944,6 +2023,11 @@ end;
 procedure TBoundPrioThreadPool.EnqueueTask(aTask: IPriorityTask);
 begin
   FQueue.TryEnqueue(aTask);
+end;
+
+function TBoundPrioThreadPool.TryEnqueueTask(aTask: IPriorityTask): Boolean;
+begin
+  Result := FQueue.TryDoEnqueue(aTask);
 end;
 
 end.
