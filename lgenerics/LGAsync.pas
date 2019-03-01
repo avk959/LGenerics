@@ -380,6 +380,11 @@ type
   strict protected
   type
     TBuffer = array of T;
+    {$IFDEF CPU16}
+    TBool = WordBool;
+    {$ELSE CPU16}
+    TBool = LongBool;
+    {$ENDIF CPU16}
 
   var
     FBuffer: TBuffer;
@@ -387,15 +392,16 @@ type
     FWriteAwait,
     FReadAwait: PRtlEvent;
     FCount,
-    FHead: SizeInt;
+    FHead,
+    FWaiting: SizeInt;
     FActive: Boolean;
+    procedure IncWaiting; inline;
+    procedure DecWaiting; inline;
+    function  GetWaiting: Boolean; inline;
     function  GetCapacity: SizeInt; inline;
     procedure SendData(constref aValue: T);
     function  ReceiveData: T;
-    function  TailIndex: SizeInt; inline;
-    procedure Enqueue(constref aValue: T);
-    function  Dequeue: T;
-    procedure Panic;
+    function  TailIndex: SizeInt;
     procedure CleanupBuffer; virtual;
     property  Head: SizeInt read FHead;
   public
@@ -415,6 +421,8 @@ type
     procedure Open;
   { if is not Active then Send and Receive will always return False without blocking }
     property  Active: Boolean read FActive;
+  { returns True if some thread is waiting for a message }
+    property  Waiting: Boolean read GetWaiting;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -1217,6 +1225,29 @@ end;
 
 { TGBlockChannel }
 
+procedure TGBlockChannel.IncWaiting;
+begin
+{$IFDEF CPU64}
+  InterlockedIncrement64(FWaiting);
+{$ELSE CPU64}
+  InterlockedIncrement(FWaiting);
+{$ENDIF CPU64}
+end;
+
+procedure TGBlockChannel.DecWaiting;
+begin
+{$IFDEF CPU64}
+  InterlockedDecrement64(FWaiting);
+{$ELSE CPU64}
+  InterlockedDecrement(FWaiting);
+{$ENDIF CPU64}
+end;
+
+function TGBlockChannel.GetWaiting: Boolean;
+begin
+  Result := TBool(FWaiting);
+end;
+
 function TGBlockChannel.GetCapacity: SizeInt;
 begin
   Result := System.Length(FBuffer);
@@ -1224,7 +1255,8 @@ end;
 
 procedure TGBlockChannel.SendData(constref aValue: T);
 begin
-  Enqueue(aValue);
+  FBuffer[TailIndex] := aValue;
+  Inc(FCount);
   System.RtlEventSetEvent(FReadAwait);
   if Count < Capacity then
     System.RtlEventSetEvent(FWriteAwait);
@@ -1232,7 +1264,12 @@ end;
 
 function TGBlockChannel.ReceiveData: T;
 begin
-  Result := Dequeue;
+  Result := FBuffer[Head];
+  FBuffer[Head] := Default(T);
+  Inc(FHead);
+  Dec(FCount);
+  if Head = Capacity then
+    FHead := 0;
   System.RtlEventSetEvent(FWriteAwait);
   if Count > 0 then
     System.RtlEventSetEvent(FReadAwait);
@@ -1243,31 +1280,6 @@ begin
   Result := Head + Count;
   if Result >= Capacity then
     Result -= Capacity;
-end;
-
-procedure TGBlockChannel.Enqueue(constref aValue: T);
-begin
-  if Count >= Capacity then
-    Panic;
-  FBuffer[TailIndex] := aValue;
-  Inc(FCount);
-end;
-
-function TGBlockChannel.Dequeue: T;
-begin
-  if Count = 0 then
-    Panic;
-  Result := FBuffer[Head];
-  FBuffer[Head] := Default(T);
-  Inc(FHead);
-  Dec(FCount);
-  if Head = Capacity then
-    FHead := 0;
-end;
-
-procedure TGBlockChannel.Panic;
-begin
-  raise ELGPanic.Create(SEInternalDataInconsist);
 end;
 
 procedure TGBlockChannel.CleanupBuffer;
@@ -1352,9 +1364,11 @@ end;
 
 function TGBlockChannel.Receive(out aValue: T): Boolean;
 begin
+  IncWaiting;
   System.RtlEventWaitFor(FReadAwait);
   System.EnterCriticalSection(FLock);
   try
+    DecWaiting;
     if Active then
       begin
         Result := Count > 0;
