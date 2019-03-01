@@ -57,7 +57,6 @@ type
   TGOnFold<X, Y>        = function(constref L: X; constref R: Y): Y of object;
   TGNestFold<X, Y>      = function(constref L: X; constref R: Y): Y is nested;
 
-  ELGPanic              = class(Exception);
   ELGCapacityExceed     = class(Exception);
   ELGAccessEmpty        = class(Exception);
   ELGOptional           = class(Exception);
