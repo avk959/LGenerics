@@ -488,6 +488,7 @@ type
     procedure HandleException(constref aMsg: T; aThreed: IWorkThread; e: Exception); virtual;
   { to be overriden in descendants }
     procedure HandleMessage(constref aMessage: T; aThread: IWorkThread); virtual; abstract;
+    class function CreateChannel(aCapacity: SizeInt): TChannel; virtual;
   public
   { the creation/desruction is not thread-save;
     param aCapacity specifies capacity of inner queue }
@@ -1530,9 +1531,14 @@ begin
   ReleaseExceptionObject;
 end;
 
+class function TGListenThread.CreateChannel(aCapacity: SizeInt): TChannel;
+begin
+  Result := TChannel.Create(aCapacity);
+end;
+
 constructor TGListenThread.Create(aCapacity: SizeInt; aStackSize: SizeUInt);
 begin
-  FChannel := TChannel.Create(aCapacity);
+  FChannel := CreateChannel(aCapacity);
   FWorker := TWorker.Create(Self, FChannel, aStackSize);
 end;
 
