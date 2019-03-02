@@ -1226,7 +1226,7 @@ end;
 procedure TGBlockChannel.IncWaiting;
 begin
 {$IFDEF CPU64}
-  InterlockedIncrement64(FWaiting);
+  InterlockedIncrement64(FWait);
 {$ELSE CPU64}
   InterlockedIncrement(FWait);
 {$ENDIF CPU64}
@@ -1235,7 +1235,7 @@ end;
 procedure TGBlockChannel.DecWaiting;
 begin
 {$IFDEF CPU64}
-  InterlockedDecrement64(FWaiting);
+  InterlockedDecrement64(FWait);
 {$ELSE CPU64}
   InterlockedDecrement(FWait);
 {$ENDIF CPU64}
