@@ -731,7 +731,7 @@ begin
       end;
     except
       FState := fsCancelled;
-      System.FillChar(FTask, SizeOf(FTask), 0);
+      Pointer(FTask) := nil;
     end;
   Result := FState;
 end;
