@@ -47,6 +47,8 @@ type
     function  GetState: TAsyncTaskState;
     procedure WaitFor;
     function  FatalException: Exception;
+    property  RefCount: Integer read GetRefCount;
+    property  State: TAsyncTaskState read GetState;
   end;
 
   generic IGCallable<T> = interface
@@ -57,6 +59,7 @@ type
   generic IGAsyncTask<T> = interface(IAsyncTask)
   ['{29B0A51F-346F-449F-A232-50697E7B5166}']
     function GetResult: T;
+    property Result: T read GetResult;
   end;
 
   generic IGFuture<T> = interface
@@ -66,7 +69,7 @@ type
     procedure Cancel;
   { raises exception if resolving failed }
     function  Value: T;
-    function  Optional: specialize TGOptional<T>;
+    function  GetValue: specialize TGOptional<T>;
     property  State: TFutureState read GetState;
   end;
 {$POP}
@@ -134,7 +137,7 @@ type
     procedure Cancel;
   { raises exception if resolving failed }
     function  Value: T;
-    function  Optional: TOptional;
+    function  GetValue: TOptional;
     property  State: TFutureState read GetState;
   end;
 
@@ -390,11 +393,11 @@ type
     FWriteAwait,
     FReadAwait: PRtlEvent;
     FCapacity,
-    FWaiting: SizeInt;
+    FWait: SizeInt;
     FActive: Boolean;
     procedure IncWaiting; inline;
     procedure DecWaiting; inline;
-    function  GetWaiting: Boolean; inline;
+    function  GetWait: Boolean; inline;
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
     procedure SendData(constref aValue: T);
@@ -420,7 +423,7 @@ type
   { if is not Active then Send and Receive will always return False without blocking }
     property  Active: Boolean read FActive;
   { returns True if some thread is waiting for a message }
-    property  Waiting: Boolean read GetWaiting;
+    property  WaitSend: Boolean read GetWait;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -709,7 +712,7 @@ begin
       else
         begin
           FState := fsResolved;
-          FTaskResult := FTask.GetResult;
+          FTaskResult := FTask.Result;
         end;
     finally
       FTask := nil;
@@ -779,7 +782,7 @@ begin
   Result := FTaskResult;
 end;
 
-function TGFuture.Optional: TOptional;
+function TGFuture.GetValue: TOptional;
 begin
   if WaitFor = fsResolved then
     Result.Assign(FTaskResult);
@@ -1223,7 +1226,7 @@ begin
 {$IFDEF CPU64}
   InterlockedIncrement64(FWaiting);
 {$ELSE CPU64}
-  InterlockedIncrement(FWaiting);
+  InterlockedIncrement(FWait);
 {$ENDIF CPU64}
 end;
 
@@ -1232,13 +1235,13 @@ begin
 {$IFDEF CPU64}
   InterlockedDecrement64(FWaiting);
 {$ELSE CPU64}
-  InterlockedDecrement(FWaiting);
+  InterlockedDecrement(FWait);
 {$ENDIF CPU64}
 end;
 
-function TGBlockChannel.GetWaiting: Boolean;
+function TGBlockChannel.GetWait: Boolean;
 begin
-  Result := TBool(FWaiting);
+  Result := TBool(FWait);
 end;
 
 function TGBlockChannel.GetCapacity: SizeInt;
