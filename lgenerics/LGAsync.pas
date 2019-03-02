@@ -113,7 +113,7 @@ type
   Result is requested at an early stage of execution, but becomes available after it is received.
   This implementation implies that futures are intended for use from the main thread.
 }
-  { TGFuture: takes over the management of the inner async task }  //todo: avoid future or task
+  { TGFuture: takes over the management of the inner async task }
   generic TGFuture<T> = class(TInterfacedObject, specialize IGFuture<T>)
   public
   type
@@ -725,7 +725,7 @@ function TGFuture.GetState: TFutureState;
 begin
   if Assigned(FTask) and (FState < fsResolved) then
     try
-      case FTask.GetState of
+      case FTask.State of
         astExecuting: FState := fsExecuting;
         astFinished:  FState := fsFinished;
       end;
