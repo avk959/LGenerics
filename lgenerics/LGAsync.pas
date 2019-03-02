@@ -792,8 +792,9 @@ end;
 
 procedure TGAsyncProc.DoExecute;
 begin
+  FResult := False;
   FProc();
-  FResult := FatalException = nil;
+  FResult := True;
 end;
 
 class function TGAsyncProc.Call(aProc: TProcedure; aEx: IExecutor): IFuture;
@@ -811,8 +812,9 @@ end;
 
 procedure TAsyncExecutable.DoExecute;
 begin
+  FResult := False;
   FTask.Execute;
-  FResult := FatalException = nil;
+  FResult := True;
 end;
 
 class function TAsyncExecutable.Run(aTask: ITask; aEx: IExecutor): IFuture;
