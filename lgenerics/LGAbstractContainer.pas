@@ -482,6 +482,7 @@ type
     TValueOptional   = specialize TGOptional<TValue>;
     TKeyCollection   = specialize TGAbstractCollection<TKey>;
     IKeyCollection   = specialize IGCollection<TKey>;
+    PValue           = ^TValue;
 
   protected
   type
@@ -563,6 +564,7 @@ type
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
   { returns Value mapped to aKey or aDefault }
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue; inline;
+    function  GetMutValue(constref aKey: TKey): PValue;
   { returns True and add TEntry(aKey, aValue) only if not contains aKey }
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
   { returns True and add e only if not contains e.Key }
@@ -2700,6 +2702,16 @@ function TGAbstractMap.GetValueDef(constref aKey: TKey; constref aDefault: TValu
 begin
   if not TryGetValue(aKey, Result) then
     Result := aDefault;
+end;
+
+function TGAbstractMap.GetMutValue(constref aKey: TKey): PValue;
+var
+  e: PEntry;
+begin
+  Result := nil;
+  e := Find(aKey);
+  if e <> nil then
+    Result := @e^.Value;
 end;
 
 function TGAbstractMap.Add(constref aKey: TKey; constref aValue: TValue): Boolean;
