@@ -382,21 +382,15 @@ type
   strict protected
   type
     IQueue = specialize IGQueue<T>;
-    {$IFDEF CPU16}
-    TBool = WordBool;
-    {$ELSE CPU16}
-    TBool = LongBool;
-    {$ENDIF CPU16}
+
   var
     FQueue: IQueue;
     FLock: TRtlCriticalSection;
     FWriteAwait,
     FReadAwait: PRtlEvent;
-    FCapacity,
-    FWait: SizeInt;
+    FCapacity: SizeInt;
+    FWait: Integer;
     FActive: Boolean;
-    procedure IncWaiting; inline;
-    procedure DecWaiting; inline;
     function  GetWait: Boolean; inline;
     function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
@@ -1223,27 +1217,9 @@ begin
   Result := FQueue.Count;
 end;
 
-procedure TGBlockChannel.IncWaiting;
-begin
-{$IFDEF CPU64}
-  InterlockedIncrement64(FWait);
-{$ELSE CPU64}
-  InterlockedIncrement(FWait);
-{$ENDIF CPU64}
-end;
-
-procedure TGBlockChannel.DecWaiting;
-begin
-{$IFDEF CPU64}
-  InterlockedDecrement64(FWait);
-{$ELSE CPU64}
-  InterlockedDecrement(FWait);
-{$ENDIF CPU64}
-end;
-
 function TGBlockChannel.GetWait: Boolean;
 begin
-  Result := TBool(FWait);
+  Result := LongBool(FWait);
 end;
 
 function TGBlockChannel.GetCapacity: SizeInt;
@@ -1345,11 +1321,11 @@ end;
 
 function TGBlockChannel.Receive(out aValue: T): Boolean;
 begin
-  IncWaiting;
+  InterlockedIncrement(FWait);
   System.RtlEventWaitFor(FReadAwait);
   System.EnterCriticalSection(FLock);
   try
-    DecWaiting;
+    InterlockedDecrement(FWait);
     Result := Active;
     if Result then
       aValue := ReceiveData
