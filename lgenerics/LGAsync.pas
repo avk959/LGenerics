@@ -375,7 +375,7 @@ type
 
 const
   DEFAULT_CHAN_SIZE = 256;
-  CHAN_SIZE_UNBOUND = High(SizeInt);
+  UNBOUND_CHAN_SIZE = High(SizeInt);
 
 type
 
@@ -414,7 +414,7 @@ type
   { non blocking method }
     function  TryReceive(out aValue: T): Boolean;
   { returns the number of messages in the queue, -1 if not active }
-    function  Peek: SizeInt;
+    function  PeekCount: SizeInt;
     procedure Close;
     procedure Open;
   { if is not Active then Send and Receive will always return False without blocking }
@@ -1250,7 +1250,7 @@ begin
   if aCapacity <= 0 then
     begin
       FQueue := CreateQueue(DEFAULT_CONTAINER_CAPACITY);
-      FCapacity := CHAN_SIZE_UNBOUND;
+      FCapacity := UNBOUND_CHAN_SIZE;
     end
   else
     begin
@@ -1350,7 +1350,7 @@ begin
   end;
 end;
 
-function TGBlockChannel.Peek: SizeInt;
+function TGBlockChannel.PeekCount: SizeInt;
 begin
   System.EnterCriticalSection(FLock);
   try
@@ -1469,7 +1469,7 @@ end;
 
 function TGListenThread.GetEnqueued: SizeInt;
 begin
-  Result := FChannel.Peek;
+  Result := FChannel.PeekCount;
 end;
 
 function TGListenThread.GetPriority: TThreadPriority;
@@ -1575,7 +1575,7 @@ end;
 
 function TThreadPool.GetEnqueued: SizeInt;
 begin
-  Result := FChannel.Peek;
+  Result := FChannel.PeekCount;
 end;
 
 function TThreadPool.GetThreadCount: SizeInt;
@@ -1736,7 +1736,7 @@ end;
 
 function TPrioThreadPool.GetEnqueued: SizeInt;
 begin
-  Result := FChannel.Peek;
+  Result := FChannel.PeekCount;
 end;
 
 function TPrioThreadPool.GetThreadCount: SizeInt;
