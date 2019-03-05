@@ -368,6 +368,7 @@ type
     class procedure EnsureThreadCount(aValue: Integer); static;
     class procedure Enqueue(aTask: IAsyncTask); static;
     class function  GetInstance: IExecutor; static;
+  { for estimate purpose only }
     class function  UnhandledCount: SizeInt;
     class property  ThreadCount: Integer read GetThreadCount write SetThreadCount;
   end;
@@ -1468,7 +1469,7 @@ end;
 
 function TGListenThread.GetEnqueued: SizeInt;
 begin
-  Result := FChannel.Count;
+  Result := FChannel.Peek;
 end;
 
 function TGListenThread.GetPriority: TThreadPriority;
@@ -1574,7 +1575,7 @@ end;
 
 function TThreadPool.GetEnqueued: SizeInt;
 begin
-  Result := FChannel.Count;
+  Result := FChannel.Peek;
 end;
 
 function TThreadPool.GetThreadCount: SizeInt;
@@ -1735,7 +1736,7 @@ end;
 
 function TPrioThreadPool.GetEnqueued: SizeInt;
 begin
-  Result := FChannel.Count;
+  Result := FChannel.Peek;
 end;
 
 function TPrioThreadPool.GetThreadCount: SizeInt;
