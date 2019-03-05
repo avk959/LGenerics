@@ -374,6 +374,7 @@ type
 
 const
   DEFAULT_CHAN_SIZE = 256;
+  CHAN_SIZE_UNBOUND = High(SizeInt);
 
 type
 
@@ -392,7 +393,6 @@ type
     FWait: Integer;
     FActive: Boolean;
     function  GetWait: Boolean; inline;
-    function  GetCount: SizeInt; inline;
     function  GetCapacity: SizeInt; inline;
     procedure SendData(constref aValue: T);
     function  ReceiveData: T;
@@ -412,13 +412,14 @@ type
     function  Receive(out aValue: T): Boolean;
   { non blocking method }
     function  TryReceive(out aValue: T): Boolean;
+  { returns the number of messages in the queue, -1 if not active }
+    function  Peek: SizeInt;
     procedure Close;
     procedure Open;
   { if is not Active then Send and Receive will always return False without blocking }
     property  Active: Boolean read FActive;
   { returns True if some thread is waiting for a message }
     property  WaitSend: Boolean read GetWait;
-    property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
 
@@ -1212,11 +1213,6 @@ end;
 
 { TGBlockChannel }
 
-function TGBlockChannel.GetCount: SizeInt;
-begin
-  Result := FQueue.Count;
-end;
-
 function TGBlockChannel.GetWait: Boolean;
 begin
   Result := LongBool(FWait);
@@ -1231,7 +1227,7 @@ procedure TGBlockChannel.SendData(constref aValue: T);
 begin
   FQueue.Enqueue(aValue);
   System.RtlEventSetEvent(FReadAwait);
-  if Count < Capacity then
+  if FQueue.Count < Capacity then
     System.RtlEventSetEvent(FWriteAwait);
 end;
 
@@ -1239,7 +1235,7 @@ function TGBlockChannel.ReceiveData: T;
 begin
   Result := FQueue.Dequeue;
   System.RtlEventSetEvent(FWriteAwait);
-  if Count > 0 then
+  if FQueue.Count > 0 then
     System.RtlEventSetEvent(FReadAwait);
 end;
 
@@ -1253,7 +1249,7 @@ begin
   if aCapacity <= 0 then
     begin
       FQueue := CreateQueue(DEFAULT_CONTAINER_CAPACITY);
-      FCapacity := High(SizeInt);
+      FCapacity := CHAN_SIZE_UNBOUND;
     end
   else
     begin
@@ -1309,7 +1305,7 @@ begin
   System.EnterCriticalSection(FLock);
   try
     Result := False;
-    if Active and (Count < Capacity) then
+    if Active and (FQueue.Count < Capacity) then
       begin
         SendData(aValue);
         Result := True;
@@ -1341,13 +1337,26 @@ begin
   System.EnterCriticalSection(FLock);
   try
     Result := False;
-    if Active and (Count > 0) then
+    if Active and (FQueue.Count > 0) then
       begin
         aValue := ReceiveData;
         Result := True;
       end
     else
       Result := False;
+  finally
+    System.LeaveCriticalSection(FLock);
+  end;
+end;
+
+function TGBlockChannel.Peek: SizeInt;
+begin
+  System.EnterCriticalSection(FLock);
+  try
+    if Active then
+      Result := FQueue.Count
+    else
+      Result := NULL_INDEX;
   finally
     System.LeaveCriticalSection(FLock);
   end;
@@ -1375,9 +1384,9 @@ begin
     if not Active then
       begin
         FActive := True;
-        if Count > 0 then
+        if FQueue.Count > 0 then
           System.RtlEventSetEvent(FReadAwait);
-        if Count < Capacity then
+        if FQueue.Count < Capacity then
           System.RtlEventSetEvent(FWriteAwait);
       end;
   finally
