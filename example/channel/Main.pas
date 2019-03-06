@@ -56,15 +56,12 @@ type
   var
     FChannel: TChannel;
     MassageNumber: Integer;
-    FProducer: TSender;
-    FConsumer: TReceiver;
+    FSender: TSender;
+    FReceiver: TReceiver;
     procedure StartSend;
     procedure StopSend;
     procedure StartReceive;
     procedure StopReceive;
-    procedure Cleanup;
-  public
-
   end;
 
 var
@@ -86,7 +83,6 @@ constructor TSender.Create(aChannel: TChannel);
 begin
   inherited Create(True);
   FChannel := aChannel;
-  FreeOnTerminate := True;
 end;
 
 procedure TSender.Execute;
@@ -94,15 +90,16 @@ var
   I: Integer;
 begin
   I := frmMain.MassageNumber;
-  repeat
-    FCurrData := I.ToString;
-    if FChannel.Send(FCurrData) then
-      begin
-        Synchronize(@UpdateLabel);
-        Inc(I);
-        Sleep(20);
-      end;
-  until Terminated;
+  while not Terminated do
+    begin
+      FCurrData := I.ToString;
+      if FChannel.Send(FCurrData) then
+        begin
+          Synchronize(@UpdateLabel);
+          Inc(I);
+          Sleep(20);
+        end;
+    end;
   frmMain.MassageNumber := I;
 end;
 
@@ -117,7 +114,6 @@ constructor TReceiver.Create(aChannel: TChannel);
 begin
   inherited Create(True);
   FChannel := aChannel;
-  FreeOnTerminate := True;
 end;
 
 procedure TReceiver.Execute;
@@ -161,58 +157,51 @@ end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
 begin
-  Cleanup;
+  StopSend;
+  StopReceive;
   FChannel.Free;
 end;
 
 procedure TfrmMain.StartSend;
 begin
-  if Assigned(FProducer) then
-    exit;
-  FProducer := TSender.Create(FChannel);
-  FProducer.Start;
+  if not Assigned(FSender) then
+    begin
+      FSender := TSender.Create(FChannel);
+      FSender.Start;
+    end;
 end;
 
 procedure TfrmMain.StopSend;
 begin
-  if Assigned(FProducer) then
+  if Assigned(FSender) then
     begin
-      FProducer.Terminate;
+      FSender.Terminate;
       FChannel.Close;
-      Sleep(10);
+      FSender.WaitFor;
+      FreeAndNil(FSender);
       FChannel.Open;
-      FProducer := nil;
     end;
 end;
 
 procedure TfrmMain.StartReceive;
 begin
-  if Assigned(FConsumer) then
-    exit;
-  FConsumer := TReceiver.Create(FChannel);
-  FConsumer.Start;
+  if not Assigned(FReceiver) then
+    begin
+      FReceiver := TReceiver.Create(FChannel);
+      FReceiver.Start;
+    end;
 end;
 
 procedure TfrmMain.StopReceive;
 begin
-  if Assigned(FConsumer) then
+  if Assigned(FReceiver) then
     begin
-      FConsumer.Terminate;
+      FReceiver.Terminate;
       FChannel.Close;
-      Sleep(50);
+      FReceiver.WaitFor;
+      FreeAndNil(FReceiver);
       FChannel.Open;
-      FConsumer := nil;
     end;
-end;
-
-procedure TfrmMain.Cleanup;
-begin
-  if Assigned(FProducer) then
-    FProducer.Terminate;
-  if Assigned(FConsumer) then
-    FConsumer.Terminate;
-  FChannel.Close;
-  Sleep(100);
 end;
 
 end.
