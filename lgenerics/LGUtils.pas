@@ -528,6 +528,7 @@ type
     class operator Initialize(var sl: TSpinLock);
   public
     procedure Lock; inline;
+    procedure LockTts;
     function  TryLock: Boolean; inline;
     procedure Unlock; inline;
   end;
@@ -1131,6 +1132,15 @@ procedure TSpinLock.Lock;
 begin
   while Boolean(InterlockedExchange(FState, DWord(1))) do
     ThreadSwitch;
+end;
+
+procedure TSpinLock.LockTts;
+begin
+  repeat
+    while Boolean(FState) do;
+    if not Boolean(InterlockedExchange(FState, DWord(1))) then
+      exit;
+  until False;
 end;
 
 function TSpinLock.TryLock: Boolean;
