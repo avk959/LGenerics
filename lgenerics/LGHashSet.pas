@@ -1512,7 +1512,7 @@ begin
   if @aSet <> @Self then
     begin
       Result := 0;
-      for {%H-}v in aSet do
+      for v in aSet do
         Result += Ord(Add(v));
     end
   else
