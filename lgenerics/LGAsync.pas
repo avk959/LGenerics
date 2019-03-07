@@ -1291,9 +1291,13 @@ begin
   System.RtlEventWaitFor(FWriteAwait);
   System.EnterCriticalSection(FLock);
   try
-    Result := Active;
-    if Result then
-      SendData(aValue)
+    Result := False;
+    if Active then
+      if FQueue.Count < Capacity then
+        begin
+          SendData(aValue);
+          Result := True;
+        end else
     else
       System.RtlEventSetEvent(FWriteAwait);
   finally
@@ -1323,9 +1327,13 @@ begin
   System.EnterCriticalSection(FLock);
   try
     InterlockedDecrement(FWait);
-    Result := Active;
-    if Result then
-      aValue := ReceiveData
+    Result := False;
+    if Active then
+      if FQueue.NonEmpty then
+        begin
+          aValue := ReceiveData;
+          Result := True;
+        end else
     else
       System.RtlEventSetEvent(FReadAwait);
   finally
@@ -1338,13 +1346,11 @@ begin
   System.EnterCriticalSection(FLock);
   try
     Result := False;
-    if Active and (FQueue.Count > 0) then
+    if Active and FQueue.NonEmpty then
       begin
         aValue := ReceiveData;
         Result := True;
-      end
-    else
-      Result := False;
+      end;
   finally
     System.LeaveCriticalSection(FLock);
   end;
