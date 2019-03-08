@@ -4128,8 +4128,9 @@ end;
 function TIntHashSet.Add(aValue: SizeInt): Boolean;
 var
   p: PEntry;
+  Pos: SizeInt;
 begin
-  Result := not FTable.FindOrAdd(aValue, p);
+  Result := not FTable.FindOrAdd(aValue, p, Pos);
   if Result then
     p^.Key := aValue;
 end;
@@ -4751,8 +4752,9 @@ end;
 procedure TGJoinableHashList.Add(constref aValue: TEntry);
 var
   p: PEntry;
+  Pos: SizeInt;
 begin
-  if FTable.FindOrAdd(aValue.Key, p) then
+  if FTable.FindOrAdd(aValue.Key, p, Pos) then
     p^.Weight += aValue.Weight
   else
     p^ := aValue;
