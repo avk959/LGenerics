@@ -743,7 +743,6 @@ type
     procedure Resize(aNewCapacity: SizeInt);
     procedure Expand;
     function  DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
-    function  DoFindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
     procedure DoRemove(aIndex: SizeInt);
     class function HashCode(aValue: TKey): SizeInt; static; //inline;
     class function NewList(aCapacity: SizeInt): TNodeList; static;
@@ -759,9 +758,6 @@ type
     procedure TrimToFit;
     function  Contains(aKey: TKey): Boolean; inline;
   { returns True if aKey found, otherwise insert garbage entry and return False }
-    function  FindOrAdd(aKey: TKey; out e: PEntry): Boolean;
-  { returns True if aKey found, otherwise insert garbage entry and return False;
-    if aKey found then returns entry index in aPos(otherwise -1) }
     function  FindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
     function  Find(aKey: TKey): PEntry;
     function  FindFirstKey(out aKey: TKey): Boolean;
@@ -3677,36 +3673,6 @@ begin
     end;
 end;
 
-function TGLiteIntHashTable.DoFindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
-var
-  Hash: SizeInt;
-begin
-  if FList = nil then
-    Resize(DEFAULT_CONTAINER_CAPACITY);
-  Hash := HashCode(aKey) or USED_FLAG;
-  aPos := DoFind(aKey, Hash);
-  Result := aPos >= 0;
-  if not Result then
-    begin
-      if Count >= ExpandTreshold then
-        begin
-          Expand;
-          aPos := DoFind(aKey, Hash);
-        end;
-      if aPos <> SLOT_NOT_FOUND then
-        begin
-          aPos := not aPos;
-          FList[aPos].Hash := Hash;
-          Inc(FCount);
-        end
-      else
-        raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [Succ(Count)]);
-    end;
-  e := @FList[aPos].Data;
-  if not Result then
-    aPos := NULL_INDEX;
-end;
-
 procedure TGLiteIntHashTable.DoRemove(aIndex: SizeInt);
 var
   h, Gap, Mask: SizeInt;
@@ -3832,16 +3798,32 @@ begin
   Result := Find(aKey) <> nil;
 end;
 
-function TGLiteIntHashTable.FindOrAdd(aKey: TKey; out e: PEntry): Boolean;
-var
-  Pos: SizeInt;
-begin
-  Result := DoFindOrAdd(aKey, e, Pos);
-end;
-
 function TGLiteIntHashTable.FindOrAdd(aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
+var
+  Hash: SizeInt;
 begin
-  Result := DoFindOrAdd(aKey, e, aPos);
+  if FList = nil then
+    Resize(DEFAULT_CONTAINER_CAPACITY);
+  Hash := HashCode(aKey) or USED_FLAG;
+  aPos := DoFind(aKey, Hash);
+  Result := aPos >= 0;
+  if not Result then
+    begin
+      if Count >= ExpandTreshold then
+        begin
+          Expand;
+          aPos := DoFind(aKey, Hash);
+        end;
+      if aPos <> SLOT_NOT_FOUND then
+        begin
+          aPos := not aPos;
+          FList[aPos].Hash := Hash;
+          Inc(FCount);
+        end
+      else
+        raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [Succ(Count)]);
+    end;
+  e := @FList[aPos].Data;
 end;
 
 function TGLiteIntHashTable.Find(aKey: TKey): PEntry;
