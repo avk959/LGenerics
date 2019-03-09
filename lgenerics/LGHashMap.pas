@@ -2570,7 +2570,7 @@ end;
 
 procedure TGThreadFGHashMap.Expand;
 var
-  I, Len: SizeInt;
+  I, Len, Mask: SizeInt;
   Node, Next: PNode;
   Head: PNode = nil;
 begin
@@ -2590,19 +2590,19 @@ begin
           end;
         FSlotList[I].Head := nil;
       end;
-     Len *= 2;
-     System.SetLength(FSlotList, Len);
+     Mask := Pred(Len * 2);
+     System.SetLength(FSlotList, Succ(Mask));
      Node := Head;
      while Node <> nil do
        begin
-         I := Node^.Hash and Pred(Len);
+         I := Node^.Hash and Mask;
          Next := Node^.Next;
          Node^.Next := FSlotList[I].Head;
          FSlotList[I].Head := Node;
          Node := Next;
        end;
   finally
-    for I := Pred(Len shr 1) downto 0 do
+    for I := Pred(Len) downto 0 do
       FSlotList[I].Unlock;
   end;
 end;
