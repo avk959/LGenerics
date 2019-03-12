@@ -687,18 +687,18 @@ type
   { best of nearest neighbour starting from every vertex;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindGreedyFastNn(const m: TTspMatrix; out aCost: T): TIntArray; static;
-  { best of nearest neighbour + 2-opt local search starting from every vertex +
-    3-opt local search at the end; applicable only for symmetric matrices;
+  { returns best of nearest neighbour + 2-opt local search starting from every vertex +
+    3-opt local search at the end if matrix is symmetric;
     returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
-  { best of farthest insertion starting from every vertex + 3-opt local search at the end;
-    applicable only for symmetric matrices;
+  { returns best of farthest insertion starting from every vertex + 3-opt local search at the end
+    if matrix is symmetric;
     returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
-  { best of farthest insertion + 3-opt local search, starting from every vertex;
-    applicable only for symmetric matrices;
+  { returns best of farthest insertion + 3-opt local search, starting from every vertex
+    if matrix is symmetric;
     returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
     will raise EGraphError if m is not proper TSP matrix }
     class function FindSlowGreedy3Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
