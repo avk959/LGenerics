@@ -384,7 +384,7 @@ type
     function  NonEmpty: Boolean;
     procedure Clear; virtual;
     procedure EnsureCapacity(aValue: SizeInt);
-    procedure TrimToFit; inline;
+    procedure TrimToFit;
   { saves graph in its own binary format }
     procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex; aOnWriteData: TOnWriteData);
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex; aOnReadData: TOnReadData);
