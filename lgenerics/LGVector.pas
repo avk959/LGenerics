@@ -423,6 +423,8 @@ type
     TEqualityCompare = THelper.TEqualCompare;
     TVector          = class(specialize TGVector<T>);
     TLiteVector      = specialize TGLiteVector<T>;
+    class procedure SwapItems(v: TVector; L, R: SizeInt); static;
+    class procedure SwapItems(var v: TLiteVector; L, R: SizeInt); static; inline;
     class procedure Reverse(v: TVector); static; inline;
     class procedure Reverse(var v: TLiteVector); static; inline;
     class procedure RandomShuffle(v: TVector); static; inline;
@@ -2336,6 +2338,17 @@ begin
 end;
 
 { TGVectorHelpUtil }
+
+class procedure TGVectorHelpUtil.SwapItems(v: TVector; L, R: SizeInt);
+begin
+  v.CheckInIteration;
+  THelper.SwapItems(v.FItems[0..Pred(v.ElemCount)], L, R);
+end;
+
+class procedure TGVectorHelpUtil.SwapItems(var v: TLiteVector; L, R: SizeInt);
+begin
+  THelper.SwapItems(v.FBuffer.FItems[0..Pred(v.Count)], L, R);
+end;
 
 class procedure TGVectorHelpUtil.Reverse(v: TVector);
 begin
