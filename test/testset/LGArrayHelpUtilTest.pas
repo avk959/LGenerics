@@ -12,6 +12,8 @@ uses
 
 type
 
+  { TArrayHelpUtilTest }
+
   TArrayHelpUtilTest = class(TTestCase)
   private
   type
@@ -24,6 +26,8 @@ type
     ReverseIntSrc10: array[2..11] of Integer = (-1, -29, 0, 13, 1, -199, 21, 117, -15, 10);
     MergedIntSrc: array[1..14] of Integer    = (101, 0, -11, -27, 127, 1, 0, 10, -15, 117, 21, -199, 1, 13);
   published
+    procedure SwapItems;
+    procedure SwapItems1;
     procedure CreateCopyOfEmpty;
     procedure CreateCopyOfStatic10;
     procedure CreateCopyOfDyn10;
@@ -101,6 +105,41 @@ const
   IntSrc7: array[0..6] of Integer = (101, 0, -11, -27, 127, 1, 0);
 
 { TArrayHelpUtilTest }
+
+procedure TArrayHelpUtilTest.SwapItems;
+var
+  a: TIntArray = nil;
+  Raised: Boolean = False;
+begin
+  a := [1, 2, 3];
+  try
+    TIntHelper.SwapItems(a, 0, 3);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  Raised := False;
+
+  try
+    TIntHelper.SwapItems(a, 4, 1);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TArrayHelpUtilTest.SwapItems1;
+var
+  a: TIntArray = nil;
+begin
+  a := [1, 2, 3, 4, 5];
+  TIntHelper.SwapItems(a, 0, 4);
+  AssertTrue(a[0] = 5);
+  AssertTrue(a[4] = 1);
+  TIntHelper.SwapItems(a, 1, 3);
+  AssertTrue(a[1] = 4);
+  AssertTrue(a[3] = 2);
+end;
 
 procedure TArrayHelpUtilTest.CreateCopyOfEmpty;
 var
