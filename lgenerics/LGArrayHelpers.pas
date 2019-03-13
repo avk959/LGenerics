@@ -30,7 +30,8 @@ uses
 
   SysUtils, math,
   LGUtils,
-  {%H-}LGHelpers;
+  {%H-}LGHelpers,
+  LGStrConst;
 
 type
 
@@ -101,8 +102,8 @@ type
 
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure DoReverse(p: PItem; R: SizeInt); static;
-    //class procedure DoSwap(p: PItem; L, R: SizeInt); static; inline;
   public
+    class procedure SwapItems(var A: array of T; L, R: SizeInt); static;
     class function  CreateCopy(constref A: array of T): TArray; static;
     class function  CreateReverseCopy(constref A: array of T): TArray; static;
     class function  CreateMerge(constref L, R: array of T): TArray; static;
@@ -1072,14 +1073,22 @@ begin
   end;
 end;
 
-//class procedure TGArrayHelpUtil.DoSwap(p: PItem; L, R: SizeInt);
-//var
-//  v: TFake;
-//begin
-//  v := TFake(p[L]);
-//  TFake(p[L]) := TFake(p[R]);
-//  TFake(p[R]) := v;
-//end;
+class procedure TGArrayHelpUtil.SwapItems(var A: array of T; L, R: SizeInt);
+var
+  v: TFake;
+begin
+  if SizeUInt(L) < SizeUInt(System.Length(A)) then
+    if SizeUInt(R) < SizeUInt(System.Length(A)) then
+      begin
+        v := TFake(A[L]);
+        TFake(A[L]) := TFake(A[R]);
+        TFake(A[R]) := v;
+      end
+    else
+      raise EArgumentException.CreateFmt(SEArrIndexOutOfBoundsFmt, [R])
+  else
+    raise EArgumentException.CreateFmt(SEArrIndexOutOfBoundsFmt, [L]);
+end;
 
 class function TGArrayHelpUtil.CreateCopy(constref A: array of T): TArray;
 begin
