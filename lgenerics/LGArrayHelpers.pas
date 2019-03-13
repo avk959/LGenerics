@@ -103,6 +103,8 @@ type
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure DoReverse(p: PItem; R: SizeInt); static;
   public
+  { swaps the elements of A with the indices L and R;
+    raises EArgumentException if L or R is out of bounds }
     class procedure SwapItems(var A: array of T; L, R: SizeInt); static;
     class function  CreateCopy(constref A: array of T): TArray; static;
     class function  CreateReverseCopy(constref A: array of T): TArray; static;
