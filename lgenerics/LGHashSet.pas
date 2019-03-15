@@ -1776,8 +1776,6 @@ begin
 end;
 
 function TGLiteHashSetLP.Intersecting(constref aSet: TGLiteHashSetLP): Boolean;
-var
-  v: T;
 begin
   if @aSet <> @Self then
     Result := ContainsAny(aSet)
