@@ -357,7 +357,7 @@ type
     class procedure EnsureThreadCount(aValue: Integer); static;
     class procedure Enqueue(aTask: IAsyncTask); static;
   { for estimate purpose only }
-    class function  UnhandledCount: SizeInt;
+    class function  UnhandledCount: SizeInt; static;
     class property  ThreadCount: Integer read GetThreadCount write SetThreadCount;
   end;
 
