@@ -126,7 +126,7 @@ procedure TfrmMain.btFuturesClick(Sender: TObject);
 type
   TMonadic = specialize TGAsyncMonadic<PDWordArray, Boolean>;
 var
-  Futures: array[1..PieceCount] of TMonadic.IFuture;
+  Futures: array[1..PieceCount] of TMonadic.TFuture;
   Data: TTestData;
   I: Integer;
 begin
@@ -190,7 +190,7 @@ procedure TfrmMain.btFutures1Click(Sender: TObject);
 type
   TTriadic = specialize TGAsyncTriadic<PDWordArray, Integer, Integer, Integer>;
 var
-  p1, p2, p3, p4, p5, p6: specialize IGFuture<Integer>;
+  p1, p2, p3, p4, p5, p6: specialize TGFuture<Integer>;
   Data: TDWordArray;
   ChankSize: Integer;
 begin
