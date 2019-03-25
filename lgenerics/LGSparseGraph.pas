@@ -5234,17 +5234,9 @@ begin
       end;
 end;
 
-procedure TGWeightHelper.THungarian.CorrectPhi(aDelta: TWeight);
-var
-  I: SizeInt;
-begin
-  for I in FVisited do
-    FPhi[I] += aDelta;
-end;
-
 procedure TGWeightHelper.THungarian.ExecuteMin;
 var
-  Count: SizeInt;
+  I, Count: SizeInt;
   Delta: TWeight;
 begin
   Delta := TWeight.INF_VALUE;
@@ -5255,13 +5247,14 @@ begin
     until Count = 0;
     if not (Delta < TWeight.INF_VALUE) then
       break;
-    CorrectPhi(Delta);
+    for I in FVisited do
+      FPhi[I] += Delta;
   until False;
 end;
 
 procedure TGWeightHelper.THungarian.ExecuteMax;
 var
-  Count: SizeInt;
+  I, Count: SizeInt;
   Delta: TWeight;
 begin
   Delta := TWeight.NEGINF_VALUE;
@@ -5272,7 +5265,8 @@ begin
     until Count = 0;
     if not (Delta > TWeight.NEGINF_VALUE) then
       break;
-    CorrectPhi(Delta);
+    for I in FVisited do
+      FPhi[I] += Delta;
   until False;
 end;
 

@@ -441,7 +441,6 @@ type
       procedure AlternatePath(aRoot: SizeInt);
       function  TryAugmentMin(var aDelta: TWeight): SizeInt;
       function  TryAugmentMax(var aDelta: TWeight): SizeInt;
-      procedure CorrectPhi(aDelta: TWeight); inline;
       procedure ExecuteMin;
       procedure ExecuteMax;
       function  CreateEdges: TEdgeArray;
