@@ -3669,9 +3669,9 @@ procedure TIntChart.LoadDIMACSAscii(const aFileName: string);
 var
   Ref: specialize TGAutoRef<TTextFileReader>;
   Reader: TTextFileReader;
-  Line, ParseLine, Elem: string;
-  I: SizeInt;
-  CurrEdge: array[1..2] of SizeInt;
+  Line, ParseLine: string;
+  Src, Dst: SizeInt;
+  Symb: AnsiChar;
 begin
   Reader := {%H-}Ref;
   if not Reader.Open(aFileName) then
@@ -3680,27 +3680,13 @@ begin
   for Line in Reader do
     begin
       ParseLine := Trim(Line);
-      if not ParseLine.IsEmpty then
+      if ParseLine <> '' then
         case ParseLine[1] of
           'c': Description.Add(System.Copy(ParseLine, 3, System.Length(ParseLine)));
           'e':
             begin
-              I := 0;
-              for Elem in ParseLine.Words([' ', 'e']) do
-                begin
-                  Inc(I);
-                  case I of
-                    1, 2: CurrEdge[I] := StrToInt(Elem);
-                  else
-                    break;
-                  end;
-                end;
-              if I < 2 then
-                begin
-                  Clear;
-                  raise EGraphError.Create(SEUnexpectEol);
-                end;
-              AddEdge(CurrEdge[1], CurrEdge[2]);
+              ReadStr(ParseLine, Symb, Src, Dst);
+              AddEdge(Src, Dst);
             end;
       end;
     end;
