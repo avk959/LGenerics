@@ -31,7 +31,7 @@ uses
   Classes,
   SysUtils,
   math,
-  FileUtil,
+  LazFileUtils,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -4983,12 +4983,12 @@ end;
 
 class function TTextFileReader.FileExists(const aFileName: string): Boolean;
 begin
-  Result := SysUtils.FileExists(aFileName);
+  Result := FileExistsUtf8(aFileName);
 end;
 
 class function TTextFileReader.FileSize(const aFileName: string): Int64;
 begin
-  Result := FileUtil.FileSize(aFileName);
+  Result := FileSizeUtf8(aFileName);
 end;
 
 constructor TTextFileReader.Create;
