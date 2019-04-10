@@ -615,7 +615,7 @@ type
     TSlot = record
     strict private
       FState: SizeUInt;
-      class operator Initialize(var c: TSlot);
+      class operator Initialize(var aSlot: TSlot);
     public
       Head: PNode;
       procedure Lock; inline;
@@ -652,7 +652,7 @@ type
     function  Contains(constref aKey: TKey): Boolean;
     function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
     function  Remove(constref aKey: TKey): Boolean; virtual;
-  { for estimate purpose only }
+  { Count for estimate purpose only }
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor;
@@ -2423,10 +2423,10 @@ end;
 
 { TGThreadFGHashMap.TSlot }
 
-class operator TGThreadFGHashMap.TSlot.Initialize(var c: TSlot);
+class operator TGThreadFGHashMap.TSlot.Initialize(var aSlot: TSlot);
 begin
-  c.FState := 0;
-  c.Head := nil;
+  aSlot.FState := 0;
+  aSlot.Head := nil;
 end;
 
 procedure TGThreadFGHashMap.TSlot.Lock;
