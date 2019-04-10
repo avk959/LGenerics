@@ -651,7 +651,7 @@ type
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
     function  Contains(constref aKey: TKey): Boolean;
     function  Extract(constref aKey: TKey; out aValue: TValue): Boolean;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Remove(constref aKey: TKey): Boolean; virtual;
   { for estimate purpose only }
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
