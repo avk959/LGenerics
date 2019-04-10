@@ -37,7 +37,7 @@ uses
 
 type
 
-  { TGAbstractHashMap: common abstract ancestor class to implement hashmap }
+  { TGAbstractHashMap: common abstract hashmap ancestor class }
   generic TGAbstractHashMap<TKey, TValue> = class abstract(specialize TGAbstractMap<TKey, TValue>)
   protected
   type
