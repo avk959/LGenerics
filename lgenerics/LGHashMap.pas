@@ -2548,6 +2548,7 @@ begin
             Prev^.Next := Node^.Next
           else
             FSlotList[aSlotIdx].Head := Node^.Next;
+          exit;
         end;
       Prev := Node;
       Node := Node^.Next;
