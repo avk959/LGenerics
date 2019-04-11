@@ -162,10 +162,14 @@ type
     procedure StrRetain;
   end;
 
+  { THashMapFGTest }
+
   THashMapFGTest = class(TTestCase)
   private
   type
     TMap    = specialize TGThreadHashMapFG<Integer, Integer>;
+    TMapRef = specialize TGAutoRef<TMap>;
+    TEntry  = TMap.TEntry;
     TArray  = array of Integer;
     THelper = specialize TGOrdinalArrayHelper<Integer>;
 
@@ -191,6 +195,11 @@ type
     end;
 
   published
+    procedure SimpleAdd;
+    procedure AddOrSetValue;
+    procedure GetValueDef;
+    procedure Replace;
+    procedure SimpleRemove;
     procedure Add;
     procedure Remove;
   end;
@@ -1754,6 +1763,130 @@ begin
 end;
 
 { THashMapFGTest }
+
+procedure THashMapFGTest.SimpleAdd;
+var
+  map: TMap;
+  ref: TMapRef;
+begin
+  map := {%H-}ref;
+  AssertTrue(map.Count = 0);
+
+  AssertTrue(map.Add(-1, -2));
+  AssertTrue(map.Count = 1);
+  AssertTrue(map.Contains(-1));
+  AssertTrue(map[-1] = -2);
+
+  AssertTrue(map.Add(TEntry.Create(0, -1)));
+  AssertTrue(map.Count = 2);
+  AssertTrue(map.Contains(0));
+  AssertTrue(map[0] = -1);
+
+  AssertTrue(map.Add(1, 1));
+  AssertTrue(map.Count = 3);
+  AssertTrue(map.Contains(1));
+  AssertTrue(map[1] = 1);
+
+  AssertFalse(map.Add(0, 2));
+  AssertTrue(map.Count = 3);
+  AssertTrue(map[0] = -1);
+
+  AssertFalse(map.Add(TEntry.Create(-1, 5)));
+  AssertTrue(map.Count = 3);
+  AssertTrue(map[-1] = -2);
+end;
+
+procedure THashMapFGTest.AddOrSetValue;
+var
+  map: TMap;
+  ref: TMapRef;
+begin
+  map := {%H-}ref;
+  AssertTrue(map.Count = 0);
+
+  map.AddOrSetValue(0, -2);
+  AssertTrue(map.Contains(0));
+  AssertTrue(map.Count = 1);
+  AssertTrue(map[0] = -2);
+
+  map.AddOrSetValue(5, 5);
+  AssertTrue(map.Contains(5));
+  AssertTrue(map.Count = 2);
+  AssertTrue(map[5] = 5);
+
+  map.AddOrSetValue(0, 0);
+  AssertTrue(map.Count = 2);
+  AssertTrue(map[0] = 0);
+
+  map.AddOrSetValue(5, 10);
+  AssertTrue(map.Count = 2);
+  AssertTrue(map[5] = 10);
+end;
+
+procedure THashMapFGTest.GetValueDef;
+var
+  map: TMap;
+  ref: TMapRef;
+begin
+  map := {%H-}ref;
+  AssertTrue(map.GetValueDef(0, -2) = -2);
+  AssertTrue(map.GetValueDef(1, 5) = 5);
+
+  map.AddOrSetValue(4, -4);
+  AssertTrue(map.GetValueDef(4, -1) = -4);
+end;
+
+procedure THashMapFGTest.Replace;
+var
+  map: TMap;
+  ref: TMapRef;
+begin
+  map := {%H-}ref;
+  AssertTrue(map.Count = 0);
+
+  map.AddOrSetValue(-1, -5);
+  map.AddOrSetValue(0, -1);
+  map.AddOrSetValue(1, 5);
+  map.AddOrSetValue(5, 5);
+  AssertTrue(map.Count = 4);
+
+  AssertFalse(map.Replace(-2, 2));
+  AssertFalse(map.Replace(2, 2));
+
+  AssertTrue(map.Replace(-1, -7));
+  AssertTrue(map[-1] = -7);
+
+  AssertTrue(map.Replace(0, 2));
+  AssertTrue(map[0] = 2);
+
+  AssertTrue(map.Replace(1, 3));
+  AssertTrue(map[1] = 3);
+
+  AssertTrue(map.Replace(5, 7));
+  AssertTrue(map[5] = 7);
+end;
+
+procedure THashMapFGTest.SimpleRemove;
+var
+  map: TMap;
+  ref: TMapRef;
+  I: Integer;
+begin
+  map := {%H-}ref;
+  AssertTrue(map.Count = 0);
+
+  for I := 0 to 99 do
+    AssertTrue(map.Add(I, I));
+  AssertTrue(map.Count = 100);
+
+  for I := 100 to 150 do
+    AssertFalse(map.Remove(I));
+  AssertTrue(map.Count = 100);
+
+  for I := 0 to 99 do
+    AssertTrue(map.Remove(I));
+  AssertTrue(map.Count = 0);
+end;
 
 procedure THashMapFGTest.Add;
 const
