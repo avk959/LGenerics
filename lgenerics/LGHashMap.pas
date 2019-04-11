@@ -602,6 +602,10 @@ type
         class function HashCode([const[ref]] aValue: TKey): SizeInt;
         class function Equal([const[ref]] L, R: TKey): Boolean; }
   generic TGThreadFGHashMap<TKey, TValue, TKeyEqRel> = class
+  public
+  type
+    TEntry = specialize TGMapEntry<TKey, TValue>;
+
   private
   type
     PNode = ^TNode;
@@ -637,15 +641,20 @@ type
     function  ExtractNode(constref aKey: TKey; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
     procedure CheckNeedExpand;
     procedure Expand;
+    function  GetValue(const aKey: TKey): TValue;
   public
   const
-    MIN_LOAD_FACTOR: Single = 1.0;
-    MAX_LOAD_FACTOR: Single = 8.0;
+    MIN_LOAD_FACTOR: Single     = 1.0;
+    MAX_LOAD_FACTOR: Single     = 8.0;
+    DEFAULT_LOAD_FACTOR: Single = 2.0;
 
+    constructor Create;
     constructor Create(aCapacity: SizeInt; aLoadFactor: Single = 2.0);
     destructor Destroy; override;
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
-    procedure AddOrSetValue(const aKey: TKey; constref aValue: TValue);
+    function  Add(constref e: TEntry): Boolean; inline;
+    procedure AddOrSetValue(const aKey: TKey; const aValue: TValue);
+    procedure AddOrSetValue(constref e: TEntry); inline;
     function  TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
     function  GetValueDef(constref aKey: TKey; constref aDefault: TValue = Default(TValue)): TValue;
     function  Replace(constref aKey: TKey; constref aNewValue: TValue): Boolean;
@@ -656,6 +665,8 @@ type
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  LoadFactor: Single read FLoadFactor;
+  { reading returns Default(TValue) if an aKey is not present in map }
+    property  Items[const aKey: TKey]: TValue read GetValue write AddOrSetValue; default;
   end;
 
   { TGThreadHashMapFG: fine-grained concurrent map attempt;
@@ -2608,6 +2619,29 @@ begin
   end;
 end;
 
+function TGThreadFGHashMap.GetValue(const aKey: TKey): TValue;
+var
+  SlotIdx, Hash: SizeInt;
+  Node: PNode;
+begin
+  Result := Default(TValue);
+  SlotIdx := LockSlot(aKey, Hash);
+  try
+    Node := Find(aKey, SlotIdx, Hash);
+    if Node <> nil then
+      Result := Node^.Value;
+  finally
+    FSlotList[SlotIdx].Unlock;
+  end;
+end;
+
+constructor TGThreadFGHashMap.Create;
+begin
+  FLoadFactor := DEFAULT_LOAD_FACTOR;
+  System.SetLength(FSlotList, DEFAULT_CONTAINER_CAPACITY);
+  FGlobLock := TMultiReadExclusiveWriteSynchronizer.Create;
+end;
+
 constructor TGThreadFGHashMap.Create(aCapacity: SizeInt; aLoadFactor: Single);
 var
   RealCap: SizeInt;
@@ -2660,7 +2694,12 @@ begin
     CheckNeedExpand;
 end;
 
-procedure TGThreadFGHashMap.AddOrSetValue(const aKey: TKey; constref aValue: TValue);
+function TGThreadFGHashMap.Add(constref e: TEntry): Boolean;
+begin
+  Result := Add(e.Key, e.Value);
+end;
+
+procedure TGThreadFGHashMap.AddOrSetValue(const aKey: TKey; const aValue: TValue);
 var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
@@ -2683,6 +2722,11 @@ begin
   end;
   if Added then
     CheckNeedExpand;
+end;
+
+procedure TGThreadFGHashMap.AddOrSetValue(constref e: TEntry);
+begin
+  AddOrSetValue(e.Key, e.Value);
 end;
 
 function TGThreadFGHashMap.TryGetValue(constref aKey: TKey; out aValue: TValue): Boolean;
