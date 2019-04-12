@@ -631,7 +631,6 @@ type
     FCount: SizeInt;
     FLoadFactor: Single;
     FGlobLock: TMultiReadExclusiveWriteSynchronizer;
-  class var
     function  NewNode(constref aKey: TKey; constref aValue: TValue; aHash: SizeInt): PNode;
     procedure FreeNode(aNode: PNode);
     function  GetCapacity: SizeInt;
