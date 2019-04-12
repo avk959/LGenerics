@@ -2213,7 +2213,6 @@ function TGThreadFGHashSet.Find(constref aValue: T; aSlotIdx: SizeInt; aHash: Si
 var
   Node: PNode;
 begin
-  Result := nil;
   Node := FSlotList[aSlotIdx].Head;
   while Node <> nil do
     begin
@@ -2221,6 +2220,7 @@ begin
         exit(Node);
       Node := Node^.Next;
     end;
+  Result := nil;
 end;
 
 function TGThreadFGHashSet.RemoveNode(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
@@ -2229,21 +2229,20 @@ var
   Prev: PNode = nil;
 begin
   Node := FSlotList[aSlotIdx].Head;
-  Result := nil;
   while Node <> nil do
     begin
       if (Node^.Hash = aHash) and TEqRel.Equal(Node^.Value, aValue) then
         begin
-          Result := Node;
           if Prev <> nil then
             Prev^.Next := Node^.Next
           else
             FSlotList[aSlotIdx].Head := Node^.Next;
-          exit;
+          exit(Node);
         end;
       Prev := Node;
       Node := Node^.Next;
     end;
+  Result := nil;
 end;
 
 procedure TGThreadFGHashSet.CheckNeedExpand;
