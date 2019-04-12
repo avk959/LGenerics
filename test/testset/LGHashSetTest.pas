@@ -5,7 +5,7 @@ unit LGHashSetTest;
 
 interface
 uses
-  SysUtils, fpcunit, testregistry,
+  Classes, SysUtils, fpcunit, testregistry,
   LGUtils,
   LGAbstractContainer,
   LGHashSet,
@@ -495,6 +495,42 @@ type
     procedure InDiffSets;
     procedure InDiffSetsI;
     procedure Reset;
+  end;
+
+  THashSetFGTest = class(TTestCase)
+  private
+  type
+    TSet    = specialize TGThreadHashSetFG<Integer>;
+    TSetRef = specialize TGAutoRef<TSet>;
+    TArray  = array of Integer;
+    THelper = specialize TGOrdinalArrayHelper<Integer>;
+
+    TWorker = class(TThread)
+    private
+      FSet: TSet;
+      FData: TArray;
+      FIndex: Integer;
+      FFlag,
+      FResult: PInteger;
+    public
+      constructor Create(aSet: TSet; const aData: TArray; aIndex: Integer; aFlagValue, aResult: PInteger);
+    end;
+
+    TAdder = class(TWorker)
+    protected
+      procedure Execute; override;
+    end;
+
+    TRemover = class(TWorker)
+    protected
+      procedure Execute; override;
+    end;
+
+  published
+    procedure SimpleAdd;
+    procedure SimpleRemove;
+    procedure Add;
+    procedure Remove;
   end;
 
 implementation
@@ -5565,6 +5601,169 @@ begin
   AssertFalse(d.InSameSet('str0', 'str2'));
 end;
 
+{ THashSetFGTest.TWorker }
+
+constructor THashSetFGTest.TWorker.Create(aSet: TSet; const aData: TArray; aIndex: Integer; aFlagValue,
+  aResult: PInteger);
+begin
+  inherited Create(True);
+  FreeOnTerminate := True;
+  FSet := aSet;
+  FData := aData;
+  FIndex := aIndex;
+  FFlag := aFlagValue;
+  FResult := aResult;
+end;
+
+{ THashSetFGTest.TAdder }
+
+procedure THashSetFGTest.TAdder.Execute;
+var
+  I: Integer;
+  Added: Integer = 0;
+begin
+  for I in FData do
+    Added += Ord(FSet.Add(I));
+  FResult[FIndex] := Added;
+  InterlockedIncrement(FFlag^);
+  Terminate;
+end;
+
+{ THashSetFGTest.TRemover }
+
+procedure THashSetFGTest.TRemover.Execute;
+var
+  I: Integer;
+  Removed: Integer = 0;
+begin
+  for I in FData do
+    Removed += Ord(FSet.Remove(I));
+  FResult[FIndex] := Removed;
+  InterlockedIncrement(FFlag^);
+  Terminate;
+end;
+
+{ THashSetFGTest }
+
+procedure THashSetFGTest.SimpleAdd;
+var
+  s: TSet;
+  ref: TSetRef;
+begin
+  s := {%H-}ref;
+  AssertTrue(s.Count = 0);
+
+  AssertTrue(s.Add(-1));
+  AssertTrue(s.Count = 1);
+  AssertTrue(s.Contains(-1));
+
+  AssertTrue(s.Add(0));
+  AssertTrue(s.Count = 2);
+  AssertTrue(s.Contains(0));
+
+  AssertTrue(s.Add(1));
+  AssertTrue(s.Count = 3);
+  AssertTrue(s.Contains(1));
+
+  AssertFalse(s.Add(0));
+  AssertTrue(s.Count = 3);
+
+  AssertFalse(s.Add(-1));
+  AssertTrue(s.Count = 3);
+end;
+
+procedure THashSetFGTest.SimpleRemove;
+var
+  s: TSet;
+  ref: TSetRef;
+  I: Integer;
+begin
+  s := {%H-}ref;
+  AssertTrue(s.Count = 0);
+
+  for I := 0 to 99 do
+    AssertTrue(s.Add(I));
+  AssertTrue(s.Count = 100);
+
+  for I := 100 to 150 do
+    AssertFalse(s.Remove(I));
+  AssertTrue(s.Count = 100);
+
+  for I := 0 to 99 do
+    AssertTrue(s.Remove(I));
+  AssertTrue(s.Count = 0);
+end;
+
+procedure THashSetFGTest.Add;
+const
+  TestSize    = 100000;
+  ThreadCount = 4;
+  function CreateTestArray: TArray;
+  begin
+    Result := THelper.CreateRange(1, TestSize);
+    THelper.RandomShuffle(Result);
+  end;
+var
+  s: TSet;
+  TestArray: array[0..Pred(ThreadCount)] of TArray;
+  ThreadArray: array[0..Pred(ThreadCount)] of TAdder;
+  Results: array[0..Pred(ThreadCount)] of Integer;
+  I, Total: Integer;
+  Finished: Integer = 0;
+begin
+  for I := 0 to Pred(ThreadCount) do
+    TestArray[I] := CreateTestArray;
+  s := TSet.Create;
+  for I := 0 to Pred(ThreadCount) do
+    ThreadArray[I] := TAdder.Create(s, TestArray[I], I, @Finished, @Results[0]);
+  for I := 0 to Pred(ThreadCount) do
+    ThreadArray[I].Start;
+  while Finished < ThreadCount do
+    Sleep(50);
+  AssertTrue(s.Count = TestSize);
+  s.Free;
+  Total := 0;
+  for I in Results do
+    Total += I;
+  AssertTrue(Total = TestSize);
+end;
+
+procedure THashSetFGTest.Remove;
+const
+  TestSize    = 100000;
+  ThreadCount = 4;
+  function CreateTestArray: TArray;
+  begin
+    Result := THelper.CreateRange(1, TestSize);
+    THelper.RandomShuffle(Result);
+  end;
+var
+  s: TSet;
+  TestArray: array[0..Pred(ThreadCount)] of TArray;
+  ThreadArray: array[0..Pred(ThreadCount)] of TRemover;
+  Results: array[0..Pred(ThreadCount)] of Integer;
+  I, Total: Integer;
+  Finished: Integer = 0;
+begin
+  s := TSet.Create(TestSize);
+  for I := 1 to TestSize do
+    s.Add(I);
+  for I := 0 to Pred(ThreadCount) do
+    TestArray[I] := CreateTestArray;
+  for I := 0 to Pred(ThreadCount) do
+    ThreadArray[I] := TRemover.Create(s, TestArray[I], I, @Finished, @Results[0]);
+  for I := 0 to Pred(ThreadCount) do
+    ThreadArray[I].Start;
+  while Finished < ThreadCount do
+    Sleep(50);
+  AssertTrue(s.Count = 0);
+  s.Free;
+  Total := 0;
+  for I in Results do
+    Total += I;
+  AssertTrue(Total = TestSize);
+end;
+
 initialization
   RegisterTest(THashSetLPTest);
   RegisterTest(THashSetLPTTest);
@@ -5573,5 +5772,6 @@ initialization
   RegisterTest(TOrdHashSetTest);
   RegisterTest(TLiteHashSetTest);
   RegisterTest(TGDisjointSetUnionTest);
+  RegisterTest(THashSetFGTest);
 end.
 
