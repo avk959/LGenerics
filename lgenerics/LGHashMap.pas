@@ -2674,16 +2674,15 @@ var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
 begin
-  Result := False;
   SlotIdx := LockSlot(aKey, Hash);
   try
     Node := Find(aKey, SlotIdx, Hash);
-    if Node = nil then
+    Result := Node = nil;
+    if Result then
       begin
         Node := NewNode(aKey, aValue, Hash);
         Node^.Next := FSlotList[SlotIdx].Head;
         FSlotList[SlotIdx].Head := Node;
-        Result := True;
       end;
   finally
     FSlotList[SlotIdx].Unlock;
@@ -2732,15 +2731,12 @@ var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
 begin
-  Result := False;
   SlotIdx := LockSlot(aKey, Hash);
   try
     Node := Find(aKey, SlotIdx, Hash);
-    if Node <> nil then
-      begin
-        aValue := Node^.Value;
-        Result := True;
-      end;
+    Result := Node <> nil;
+    if Result then
+      aValue := Node^.Value;
   finally
     FSlotList[SlotIdx].Unlock;
   end;
@@ -2767,15 +2763,12 @@ var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
 begin
-  Result := False;
   SlotIdx := LockSlot(aKey, Hash);
   try
     Node := Find(aKey, SlotIdx, Hash);
-    if Node <> nil then
-      begin
-        Node^.Value := aNewValue;
-        Result := True;
-      end;
+    Result := Node <> nil;
+    if Result then
+      Node^.Value := aNewValue;
   finally
     FSlotList[SlotIdx].Unlock;
   end;
@@ -2798,15 +2791,14 @@ var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
 begin
-  Result := False;
   SlotIdx := LockSlot(aKey, Hash);
   try
     Node := ExtractNode(aKey, SlotIdx, Hash);
-    if Node <> nil then
+    Result := Node <> nil;
+    if Result then
       begin
         aValue := Node^.Value;
         FreeNode(Node);
-        Result := True;
       end;
   finally
     FSlotList[SlotIdx].Unlock;
@@ -2818,15 +2810,12 @@ var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
 begin
-  Result := False;
   SlotIdx := LockSlot(aKey, Hash);
   try
     Node := ExtractNode(aKey, SlotIdx, Hash);
-    if Node <> nil then
-      begin
-        FreeNode(Node);
-        Result := True;
-      end;
+    Result := Node <> nil;
+    if Result then
+      FreeNode(Node);
   finally
     FSlotList[SlotIdx].Unlock;
   end;

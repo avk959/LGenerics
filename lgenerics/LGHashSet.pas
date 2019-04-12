@@ -2339,16 +2339,15 @@ var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
 begin
-  Result := False;
   SlotIdx := LockSlot(aValue, Hash);
   try
     Node := Find(aValue, SlotIdx, Hash);
-    if Node = nil then
+    Result := Node = nil;
+    if Result then
       begin
         Node := NewNode(aValue, Hash);
         Node^.Next := FSlotList[SlotIdx].Head;
         FSlotList[SlotIdx].Head := Node;
-        Result := True;
       end;
   finally
     FSlotList[SlotIdx].Unlock;
@@ -2374,15 +2373,12 @@ var
   SlotIdx, Hash: SizeInt;
   Node: PNode;
 begin
-  Result := False;
   SlotIdx := LockSlot(aValue, Hash);
   try
     Node := RemoveNode(aValue, SlotIdx, Hash);
-    if Node <> nil then
-      begin
-        FreeNode(Node);
-        Result := True;
-      end;
+    Result := Node <> nil;
+    if Result then
+      FreeNode(Node);
   finally
     FSlotList[SlotIdx].Unlock;
   end;
