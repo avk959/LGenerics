@@ -508,6 +508,65 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem; default;
   end;
 
+  { TGThreadFGHashSet: fine-grained concurrent set;
+      functor TEqRel(equality relation) must provide:
+        class function HashCode([const[ref]] aValue: T): SizeInt;
+        class function Equal([const[ref]] L, R: T): Boolean; }
+  generic TGThreadFGHashSet<T, TEqRel> = class
+  private
+  type
+    PNode = ^TNode;
+    TNode = record
+      Hash: SizeInt;
+      Value: T;
+      Next: PNode;
+    end;
+
+    TSlot = record
+    strict private
+      FState: SizeUInt;
+      class operator Initialize(var aSlot: TSlot);
+    public
+      Head: PNode;
+      procedure Lock; inline;
+      procedure Unlock; inline;
+    end;
+
+  var
+    FSlotList: array of TSlot;
+    FCount: SizeInt;
+    FLoadFactor: Single;
+    FGlobLock: TMultiReadExclusiveWriteSynchronizer;
+    function  NewNode(constref aValue: T; aHash: SizeInt): PNode;
+    procedure FreeNode(aNode: PNode);
+    function  GetCapacity: SizeInt;
+    procedure ClearChainList;
+    function  LockSlot(constref aValue: T; out aHash: SizeInt): SizeInt;
+    function  Find(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    function  RemoveNode(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+    procedure CheckNeedExpand;
+    procedure Expand;
+  public
+  const
+    MIN_LOAD_FACTOR: Single     = 1.0;
+    MAX_LOAD_FACTOR: Single     = 8.0;
+    DEFAULT_LOAD_FACTOR: Single = 2.0;
+
+    constructor Create;
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single = 2.0);
+    destructor Destroy; override;
+    function  Add(constref aValue: T): Boolean;
+    function  Contains(constref aValue: T): Boolean;
+    function  Remove(constref aValue: T): Boolean; virtual;
+    property  Count: SizeInt read FCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  LoadFactor: Single read FLoadFactor;
+  end;
+
+  { TGThreadHashSetFG: fine-grained concurrent set attempt;
+    it assumes that type T implements TEqRel }
+  generic TGThreadHashSetFG<T> = class(specialize TGThreadFGHashSet<T, T>);
+
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -2052,6 +2111,282 @@ begin
   else
     FDsu[R] := L;
   Result := True;
+end;
+
+{ TGThreadFGHashSet.TSlot }
+
+class operator TGThreadFGHashSet.TSlot.Initialize(var aSlot: TSlot);
+begin
+  aSlot.FState := 0;
+  aSlot.Head := nil;
+end;
+
+procedure TGThreadFGHashSet.TSlot.Lock;
+begin
+{$IFDEF CPU64}
+  while Boolean(InterlockedExchange64(FState, SizeUInt(1))) do
+{$ELSE CPU64}
+  while Boolean(InterlockedExchange(FState, SizeUInt(1))) do
+{$ENDIF CPU64}
+    ThreadSwitch;
+end;
+
+procedure TGThreadFGHashSet.TSlot.Unlock;
+begin
+{$IFDEF CPU64}
+  InterlockedExchange64(FState, SizeUInt(0));
+{$ELSE CPU64}
+  InterlockedExchange(FState, SizeUInt(0));
+{$ENDIF CPU64}
+end;
+
+{ TGThreadFGHashSet }
+
+function TGThreadFGHashSet.NewNode(constref aValue: T; aHash: SizeInt): PNode;
+begin
+  New(Result);
+  Result^.Hash := aHash;
+  Result^.Value := aValue;
+{$IFDEF CPU64}
+  InterlockedIncrement64(FCount);
+{$ELSE CPU64}
+  InterlockedIncrement(FCount);
+{$ENDIF CPU64}
+end;
+
+procedure TGThreadFGHashSet.FreeNode(aNode: PNode);
+begin
+  if aNode <> nil then
+    begin
+      aNode^.Value := Default(T);
+      Dispose(aNode);
+    {$IFDEF CPU64}
+      InterlockedDecrement64(FCount);
+    {$ELSE CPU64}
+      InterlockedDecrement(FCount);
+    {$ENDIF CPU64}
+    end;
+end;
+
+function TGThreadFGHashSet.GetCapacity: SizeInt;
+begin
+  FGlobLock.BeginRead;
+  try
+    Result := System.Length(FSlotList);
+  finally
+    FGlobLock.EndRead;
+  end;
+end;
+
+procedure TGThreadFGHashSet.ClearChainList;
+var
+  Node, Next: PNode;
+  I: SizeInt;
+begin
+  for I := 0 to System.High(FSlotList) do
+    begin
+      Node := FSlotList[I].Head;
+      while Node <> nil do
+        begin
+          Next := Node^.Next;
+          Node^.Value := Default(T);
+          Dispose(Node);
+          Node := Next;
+        end;
+    end;
+  FSlotList := nil;
+end;
+
+function TGThreadFGHashSet.LockSlot(constref aValue: T; out aHash: SizeInt): SizeInt;
+begin
+  aHash := TEqRel.HashCode(aValue);
+  FGlobLock.BeginRead;
+  try
+    Result := aHash and System.High(FSlotList);
+    FSlotList[Result].Lock;
+  finally
+    FGlobLock.EndRead;
+  end;
+end;
+
+function TGThreadFGHashSet.Find(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+var
+  Node: PNode;
+begin
+  Result := nil;
+  Node := FSlotList[aSlotIdx].Head;
+  while Node <> nil do
+    begin
+      if (Node^.Hash = aHash) and TEqRel.Equal(Node^.Value, aValue) then
+        exit(Node);
+      Node := Node^.Next;
+    end;
+end;
+
+function TGThreadFGHashSet.RemoveNode(constref aValue: T; aSlotIdx: SizeInt; aHash: SizeInt): PNode;
+var
+  Node: PNode;
+  Prev: PNode = nil;
+begin
+  Node := FSlotList[aSlotIdx].Head;
+  Result := nil;
+  while Node <> nil do
+    begin
+      if (Node^.Hash = aHash) and TEqRel.Equal(Node^.Value, aValue) then
+        begin
+          Result := Node;
+          if Prev <> nil then
+            Prev^.Next := Node^.Next
+          else
+            FSlotList[aSlotIdx].Head := Node^.Next;
+          exit;
+        end;
+      Prev := Node;
+      Node := Node^.Next;
+    end;
+end;
+
+procedure TGThreadFGHashSet.CheckNeedExpand;
+begin
+  if Count > Succ(Trunc(System.Length(FSlotList) * FLoadFactor)) then
+    begin
+      FGlobLock.BeginWrite;
+      try
+        if Count > Succ(Trunc(System.Length(FSlotList) * FLoadFactor)) then
+          Expand;
+      finally
+        FGlobLock.EndWrite;
+      end;
+    end;
+end;
+
+procedure TGThreadFGHashSet.Expand;
+var
+  I, Len, Mask: SizeInt;
+  Node, Next: PNode;
+  Head: PNode = nil;
+begin
+  Len := System.Length(FSlotList);
+  for I := 0 to Pred(Len) do
+    FSlotList[I].Lock;
+  try
+    for I := 0 to Pred(Len) do
+      begin
+        Node := FSlotList[I].Head;
+        while Node <> nil do
+          begin
+            Next := Node^.Next;
+            Node^.Next := Head;
+            Head := Node;
+            Node := Next;
+          end;
+        FSlotList[I].Head := nil;
+      end;
+     Mask := Pred(Len * 2);
+     System.SetLength(FSlotList, Succ(Mask));
+     Node := Head;
+     while Node <> nil do
+       begin
+         I := Node^.Hash and Mask;
+         Next := Node^.Next;
+         Node^.Next := FSlotList[I].Head;
+         FSlotList[I].Head := Node;
+         Node := Next;
+       end;
+  finally
+    for I := Pred(Len) downto 0 do
+      FSlotList[I].Unlock;
+  end;
+end;
+
+constructor TGThreadFGHashSet.Create;
+begin
+  FLoadFactor := DEFAULT_LOAD_FACTOR;
+  System.SetLength(FSlotList, DEFAULT_CONTAINER_CAPACITY);
+  FGlobLock := TMultiReadExclusiveWriteSynchronizer.Create;
+end;
+
+constructor TGThreadFGHashSet.Create(aCapacity: SizeInt; aLoadFactor: Single);
+var
+  RealCap: SizeInt;
+begin
+  if aLoadFactor < MIN_LOAD_FACTOR then
+    aLoadFactor := MIN_LOAD_FACTOR
+  else
+    if aLoadFactor > MAX_LOAD_FACTOR then
+      aLoadFactor := MAX_LOAD_FACTOR;
+  FLoadFactor := aLoadFactor;
+  if aCapacity < DEFAULT_CONTAINER_CAPACITY then
+    aCapacity := DEFAULT_CONTAINER_CAPACITY;
+  RealCap := RoundUpTwoPower(aCapacity);
+  System.SetLength(FSlotList, RealCap);
+  FGlobLock := TMultiReadExclusiveWriteSynchronizer.Create;
+end;
+
+destructor TGThreadFGHashSet.Destroy;
+begin
+  FGlobLock.BeginWrite;
+  try
+    ClearChainList;
+    inherited;
+  finally
+    FGlobLock.EndWrite;
+    FGlobLock.Free;
+  end;
+end;
+
+function TGThreadFGHashSet.Add(constref aValue: T): Boolean;
+var
+  SlotIdx, Hash: SizeInt;
+  Node: PNode;
+begin
+  Result := False;
+  SlotIdx := LockSlot(aValue, Hash);
+  try
+    Node := Find(aValue, SlotIdx, Hash);
+    if Node = nil then
+      begin
+        Node := NewNode(aValue, Hash);
+        Node^.Next := FSlotList[SlotIdx].Head;
+        FSlotList[SlotIdx].Head := Node;
+        Result := True;
+      end;
+  finally
+    FSlotList[SlotIdx].Unlock;
+  end;
+  if Result then
+    CheckNeedExpand;
+end;
+
+function TGThreadFGHashSet.Contains(constref aValue: T): Boolean;
+var
+  SlotIdx, Hash: SizeInt;
+begin
+  SlotIdx := LockSlot(aValue, Hash);
+  try
+    Result := Find(aValue, SlotIdx, Hash) <> nil;
+  finally
+    FSlotList[SlotIdx].Unlock;
+  end;
+end;
+
+function TGThreadFGHashSet.Remove(constref aValue: T): Boolean;
+var
+  SlotIdx, Hash: SizeInt;
+  Node: PNode;
+begin
+  Result := False;
+  SlotIdx := LockSlot(aValue, Hash);
+  try
+    Node := RemoveNode(aValue, SlotIdx, Hash);
+    if Node <> nil then
+      begin
+        FreeNode(Node);
+        Result := True;
+      end;
+  finally
+    FSlotList[SlotIdx].Unlock;
+  end;
 end;
 
 end.
