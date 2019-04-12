@@ -33,55 +33,13 @@ uses
 
 type
 
-{$PUSH}{$INTERFACES CORBA}
-  generic IGInverseMap<TKey, TValue> = interface
+  generic IGInverseMap<TKey, TValue> = interface(specialize IGMap<TValue, TKey>)
   ['{12C18769-51E6-4FA8-8AC7-904B46B86D9F}']
-    function  _GetRef: TObject;
-    function  GetCount: SizeInt;
-    function  GetCapacity: SizeInt;
-    function  GetValue(const aKey: TValue): TKey;
-    function  IsEmpty: Boolean;
-    function  NonEmpty: Boolean;
-    procedure Clear;
-    procedure EnsureCapacity(aValue: SizeInt);
-  { free unused memory if possible }
-    procedure TrimToFit;
-  { returns True and add TEntry(aKey, aValue) only if not contains aKey }
-    function  Add(constref aKey: TValue; constref aValue: TKey): Boolean; overload;
-    procedure AddOrSetValue(const aKey: TValue; const aValue: TKey); overload;
-    function  TryGetValue(constref aKey: TValue; out aValue: TKey): Boolean;
-    function  GetValueDef(constref aKey: TValue; constref aDefault: TKey = Default(TKey)): TKey;
-  { returns True and map aNewValue to aKey only if contains aKey, False otherwise }
-    function  Replace(constref aKey: TValue; constref aNewValue: TKey): Boolean;
-    function  Contains(constref aKey: TValue): Boolean;
-    function  Extract(constref aKey: TValue; out v: TKey): Boolean;
-    function  Remove(constref aKey: TValue): Boolean;
-    procedure RetainAll(c: specialize IGCollection<TValue>);
-    function  Keys: specialize IGEnumerable<TValue>;
-    function  Values: specialize IGEnumerable<TKey>;
-    property  Count: SizeInt read GetCount;
-    property  Capacity: SizeInt read GetCapacity;
-  { reading will raise ELGMapError if an aKey is not present in map }
-    property  Items[const aKey: TValue]: TKey read GetValue write AddOrSetValue; default;
   end;
 
-  generic IGInverseReadOnlyMap<TKey, TValue> = interface
+  generic IGInverseReadOnlyMap<TKey, TValue> = interface(specialize IGReadOnlyMap<TValue, TKey>)
   ['{E4B4DE39-209C-4AB0-8F31-A8B1C1CFF654}']
-    function  GetCount: SizeInt;
-    function  GetCapacity: SizeInt;
-    function  IsEmpty: Boolean;
-    function  TryGetValue(constref aKey: TValue; out aValue: TKey): Boolean;
-    function  GetValueDef(constref aKey: TValue; constref aDefault: TKey = Default(TKey)): TKey;
-    function  Contains(constref aKey: TValue): Boolean;
-    function  NonContains(constref aKey: TValue): Boolean;
-    function  Keys: specialize IGEnumerable<TValue>;
-    function  Values: specialize IGEnumerable<TKey>;
-  { if uncomment it compiles but blocks Lazarus CodeTools }
-    //function  Entries: IGEnumerable<TGMapEntry<TKey, TValue>>;
-    property  Count: SizeInt read GetCount;
-    property  Capacity: SizeInt read GetCapacity;
   end;
-{$POP}
 
   { TGHashBiMap implements bijective map(i.e. a one-to-one correspondence between keys and values)
      on top of hashtable;
