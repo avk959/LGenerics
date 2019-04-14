@@ -96,6 +96,11 @@ type
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
     function  CycleExists(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CheckAcyclic: Boolean;
+    class function FindPerfElimOrd(const g: TBoolMatrix; out aOrd: TIntArray;
+                   out aClique: TIntSet): Boolean; static;
+  { returns True and the reverse Perfect Elimination Order if it exists }
+    function  FindPerfElimOrdBm(out aOrd: TIntArray; out aClique: TIntSet): Boolean;
+    function  FindPerfElimOrd(out aOrd: TIntArray; out aClique: TIntSet): Boolean;
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -217,6 +222,8 @@ type
     function  ContainsCycleI(aIndex: SizeInt; out aCycle: TIntArray): Boolean;
   { checks whether the graph is acyclic; an empty graph is considered acyclic }
     function  IsAcyclic: Boolean;
+  { returns True and the reverse perfect elimination order in aRevPeo, if graph is chordal }
+    function  IsChordal(out aRevPeo: TIntArray): Boolean;
   { checks whether exists Eulerian path; if exists only path, then
     aFirstOdd will contains index of first vertex with odd degree, otherwise -1 }
     function  ContainsEulerianPath(out aFirstOdd: SizeInt): Boolean;
@@ -995,6 +1002,109 @@ begin
           else
             Stack.Pop;
       end;
+  Result := True;
+end;
+
+class function TGSimpleGraph.FindPerfElimOrd(const g: TBoolMatrix; out aOrd: TIntArray;
+  out aClique: TIntSet): Boolean;
+var
+  Queue: TINodePqMax;
+  InQueue: TBitVector;
+  Lefts: TIntSet;
+  I, J, Len, Dst: SizeInt;
+  Node: TIntNode;
+  AdjLst: TBoolVector;
+begin
+  Len := System.Length(g);
+  Queue := TINodePqMax.Create(Len);
+  InQueue.ExpandTrue(Len);
+  for I := 0 to Pred(Len)do
+    Queue.Enqueue(I, TIntNode.Create(I, 0));
+  aOrd.Length := Len;
+  I := 0;
+  aClique.MakeEmpty;
+  while Queue.TryDequeue(Node) do
+    begin
+      InQueue[{%H-}Node.Index] := False;
+      aOrd[I] := Node.Index;
+      Inc(I);
+      {%H-}Lefts.MakeEmpty;
+      for Dst in g[Node.Index] do
+        if InQueue[Dst] then
+          begin
+            J := Queue.ItemPtr(Dst)^.Data;
+            Queue.Update(Dst, TIntNode.Create(Dst, Succ(J)));
+          end
+        else
+          begin
+            AdjLst := g[Dst];
+            for J in Lefts do
+              if not AdjLst[J] then
+                begin
+                  aOrd := nil;
+                  exit(False);
+                end;
+            Lefts.Add(Dst);
+          end;
+      Lefts.Add(Node.Index);
+      if Lefts.Count > aClique.Count then
+        aClique.Assign(Lefts);
+    end;
+  Result := True;
+end;
+
+function TGSimpleGraph.FindPerfElimOrdBm(out aOrd: TIntArray; out aClique: TIntSet): Boolean;
+var
+  m: TBoolMatrix;
+begin
+  m := CreateBoolMatrix;
+  Result := FindPerfElimOrd(m, aOrd, aClique);
+end;
+
+function TGSimpleGraph.FindPerfElimOrd(out aOrd: TIntArray; out aClique: TIntSet): Boolean;
+var
+  Queue: TINodePqMax;
+  InQueue: TBitVector;
+  Lefts: TIntSet;
+  I, J: SizeInt;
+  Node: TIntNode;
+  AdjLst: PAdjList;
+  p: PAdjItem;
+begin
+  Queue := TINodePqMax.Create(VertexCount);
+  InQueue.ExpandTrue(VertexCount);
+  for I := 0 to Pred(VertexCount)do
+    Queue.Enqueue(I, TIntNode.Create(I, 0));
+  aOrd.Length := VertexCount;
+  I := 0;
+  {%H-}aClique.MakeEmpty;
+  while Queue.TryDequeue(Node) do
+    begin
+      InQueue[{%H-}Node.Index] := False;
+      aOrd[I] := Node.Index;
+      Inc(I);
+      {%H-}Lefts.MakeEmpty;
+      for p in AdjLists[Node.Index]^ do
+        if InQueue[p^.Key] then
+          begin
+            J := Queue.ItemPtr(p^.Key)^.Data;
+            Queue.Update(p^.Key, TIntNode.Create(p^.Key, Succ(J)));
+          end
+        else
+          begin
+            AdjLst := AdjLists[p^.Key];
+            for J in Lefts do
+              if not AdjLst^.Contains(J) then
+                begin
+                  aOrd := nil;
+                  exit(False);
+                end;
+            Lefts.Add(p^.Key);
+          end;
+      Lefts.Add(Node.Index);
+      if Lefts.Count > aClique.Count then
+        aClique.Assign(Lefts);
+    end;
   Result := True;
 end;
 
@@ -2637,6 +2747,16 @@ begin
   if ConnectedValid and Connected then
     exit(IsTree);
   Result := CheckAcyclic;
+end;
+
+function TGSimpleGraph.IsChordal(out aRevPeo: TIntArray): Boolean;
+var
+  Dummy: TIntSet;
+begin
+  if VertexCount > COMMON_BP_CUTOFF then
+    Result := FindPerfElimOrd(aRevPeo, Dummy)
+  else
+    Result := FindPerfElimOrdBm(aRevPeo, Dummy);
 end;
 
 function TGSimpleGraph.ContainsEulerianPath(out aFirstOdd: SizeInt): Boolean;
