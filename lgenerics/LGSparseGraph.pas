@@ -4408,7 +4408,7 @@ begin
   Result := FHeap[FHandle2Index[aHandle]];
 end;
 
-function TGBinHeapMin.HeadPtr(aHandle: SizeInt): PItem;
+function TGBinHeapMin.ItemPtr(aHandle: SizeInt): PItem;
 begin
   Result := @FHeap[FHandle2Index[aHandle]];
 end;
@@ -4578,7 +4578,7 @@ begin
   Result := FNodeList[aHandle].Data;
 end;
 
-function TGPairHeapMin.HeadPtr(aHandle: SizeInt): PItem;
+function TGPairHeapMin.ItemPtr(aHandle: SizeInt): PItem;
 begin
   Result := @FNodeList[aHandle].Data;
 end;
@@ -4727,7 +4727,7 @@ begin
   Result := FNodeList[aHandle].Data;
 end;
 
-function TGPairHeapMax.HeadPtr(aHandle: SizeInt): PItem;
+function TGPairHeapMax.ItemPtr(aHandle: SizeInt): PItem;
 begin
   Result := @FNodeList[aHandle].Data;
 end;
@@ -5540,7 +5540,7 @@ begin
             InQueue[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
+          if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
             Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
   until not Queue.TryDequeue(Item);
 end;
@@ -5571,7 +5571,7 @@ begin
             InQueue[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
+          if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
             begin
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               aPathTree[p^.Key] := Item.Index;
@@ -5609,7 +5609,7 @@ begin
             InQueue[p^.Key] := True;
           end
         else
-          if p^.Data.Weight + Item.Weight < Queue.HeadPtr(p^.Key)^.Weight then
+          if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
             begin
               Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
               Parents[p^.Key] := Item.Index;
@@ -5654,7 +5654,7 @@ begin
               InQueue[p^.Key] := True;
             end
           else
-            if Relax < Queue.HeadPtr(p^.Key)^.Weight then
+            if Relax < Queue.ItemPtr(p^.Key)^.Weight then
               begin
                 Queue.Update(p^.Key, TRankItem.Create(
                   p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
@@ -6026,7 +6026,7 @@ begin
                   InQueue[p^.Key] := True;
                 end
               else
-                if Relax < Queue.HeadPtr(p^.Key)^.Weight then
+                if Relax < Queue.ItemPtr(p^.Key)^.Weight then
                   begin
                     Queue.Update(p^.Key, TWeightItem.Create(p^.Key, Relax));
                     Parents[p^.Key] := Item.Index;

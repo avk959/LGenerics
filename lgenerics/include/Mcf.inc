@@ -239,7 +239,7 @@ begin
                     FInQueue[I] := True;
                   end
                 else
-                  if RelaxPrice < FQueue.HeadPtr(I)^.Cost then
+                  if RelaxPrice < FQueue.ItemPtr(I)^.Cost then
                     begin
                       UpdateNextNode;
                       FQueue.Update(I, TCostItem.Create(I, RelaxPrice));

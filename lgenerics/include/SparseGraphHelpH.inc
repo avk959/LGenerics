@@ -203,7 +203,7 @@ type
     procedure Enqueue(aHandle: SizeInt; constref aValue: T);
     procedure Update(aHandle: SizeInt; constref aNewValue: T);
     function  Peek(aHandle: SizeInt): T; inline;
-    function  HeadPtr(aHandle: SizeInt): PItem; inline;
+    function  ItemPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -245,7 +245,7 @@ type
     procedure Update(aHandle: SizeInt; constref aNewValue: T);
     procedure Remove(aHandle: SizeInt); inline;
     function  Peek(aHandle: SizeInt): T; inline;
-    function  HeadPtr(aHandle: SizeInt): PItem; inline;
+    function  ItemPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -285,7 +285,7 @@ type
     procedure Enqueue(aHandle: SizeInt; constref aValue: T); inline;
     procedure Update(aHandle: SizeInt; constref aNewValue: T);
     function  Peek(aHandle: SizeInt): T; inline;
-    function  HeadPtr(aHandle: SizeInt): PItem; inline;
+    function  ItemPtr(aHandle: SizeInt): PItem; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;

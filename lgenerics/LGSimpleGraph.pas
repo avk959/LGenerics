@@ -4342,7 +4342,7 @@ begin
                   InQueue[p^.Key] := True;
                 end
               else
-                if p^.Data.Weight < Queue.HeadPtr(p^.Key)^.Weight then
+                if p^.Data.Weight < Queue.ItemPtr(p^.Key)^.Weight then
                   begin
                     Queue.Update(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
                     Result[p^.Key] := Curr;
