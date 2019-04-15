@@ -19,9 +19,9 @@ type
   TSimpleGraphTest = class(TTestCase)
   private
   type
-    TGraph = TIntChart;
-    TRef   = specialize TGAutoRef<TGraph>;
-
+    TGraph  = TIntChart;
+    TRef    = specialize TGAutoRef<TGraph>;
+    THelper = specialize TGOrdinalArrayHelper<Integer>;
   var
     FSetVector: TIntArrayVector;
     FCallCount: Integer;
@@ -34,8 +34,10 @@ type
     function  GenerateStar: TGraph;
     function  GenerateCycle: TGraph;
     function  GenerateCycle11: TGraph;
+    function  GenerateCycle7: TGraph;
     function  GenerateWheel: TGraph;
     function  GenerateComplete: TGraph;
+    function  GenerateWikiChordal: TGraph;
     function  GenerateTestGrBip1: TGraph;
     function  GenerateTestTriangles: TGraph;
     function  GenerateC125Clique: TGraph;
@@ -82,6 +84,8 @@ type
     procedure IsRegular;
     procedure ContainsCycle;
     procedure IsAcyclic;
+    procedure IsChordal;
+    procedure IsChordal1;
     procedure ContainsEulerianPath;
     procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
@@ -294,6 +298,13 @@ begin
   Result.AddEdges([2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 2, 12]);
 end;
 
+function TSimpleGraphTest.GenerateCycle7: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 7);
+  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 1]);
+end;
+
 function TSimpleGraphTest.GenerateWheel: TGraph;
 begin
   //see Wheel.png
@@ -313,6 +324,15 @@ begin
     for J := 0 to Pred(Result.VertexCount) do
       if I > J then
         Result.AddEdgeI(I, J);
+end;
+
+function TSimpleGraphTest.GenerateWikiChordal: TGraph;
+begin
+  //https://en.wikipedia.org/wiki/Chordal_graph
+  // a - 1, b - 2, c - 3, d - 4, e - 5, f - 6, g - 7, h - 8,
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 8);
+  Result.AddEdges([1, 2, 1, 3, 2, 3, 2, 5, 2, 6, 2, 7, 3, 4, 3, 5, 4, 5, 5, 7, 5, 8, 6, 7, 7, 8]);
 end;
 
 function TSimpleGraphTest.GenerateTestGrBip1: TGraph;
@@ -1170,6 +1190,43 @@ begin
   Ref.Instance := GenerateTestGr1;
   g := Ref;
   AssertFalse(g.IsAcyclic);
+end;
+
+procedure TSimpleGraphTest.IsChordal;
+var
+  Ref: TRef;
+  g: TGraph;
+  peo: TIntArray;
+  I: Integer;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.IsChordal(peo));
+  AssertTrue(peo.IsEmpty);
+  Ref.Instance := GenerateCycle7;
+  g := Ref;
+  AssertTrue(g.IsCycle);
+  AssertFalse(g.IsChordal(peo));
+  AssertTrue(peo.IsEmpty);
+  g.AddEdges([1, 3, 1, 4, 1, 5, 1, 6]);
+  AssertTrue(g.IsChordal(peo));
+  AssertTrue(peo.Length = g.VertexCount);
+  for I := 0 to Pred(g.VertexCount) do
+    AssertTrue(THelper.SequentSearch(peo, I) >= 0);
+  g.RemoveEdge(1, 6);
+  AssertFalse(g.IsChordal(peo));
+end;
+
+procedure TSimpleGraphTest.IsChordal1;
+var
+  Ref: TRef;
+  g: TGraph;
+  peo: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateWikiChordal;
+  g := Ref;
+  AssertTrue(g.IsChordal(peo));
+  g.RemoveEdge(2, 5);
+  AssertFalse(g.IsChordal(peo));
 end;
 
 procedure TSimpleGraphTest.ContainsEulerianPath;
