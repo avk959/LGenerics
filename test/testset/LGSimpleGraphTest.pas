@@ -21,7 +21,7 @@ type
   type
     TGraph  = TIntChart;
     TRef    = specialize TGAutoRef<TGraph>;
-    THelper = specialize TGOrdinalArrayHelper<Integer>;
+    THelper = specialize TGOrdinalArrayHelper<SizeInt>;
   var
     FSetVector: TIntArrayVector;
     FCallCount: Integer;
