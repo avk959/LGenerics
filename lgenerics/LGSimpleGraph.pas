@@ -1022,7 +1022,7 @@ begin
     Queue.Enqueue(I, TIntNode.Create(I, 0));
   aOrd.Length := Len;
   I := 0;
-  aClique.MakeEmpty;
+  {%H-}aClique.MakeEmpty;
   while Queue.TryDequeue(Node) do
     begin
       InQueue[{%H-}Node.Index] := False;
@@ -1042,6 +1042,7 @@ begin
               if not AdjLst[J] then
                 begin
                   aOrd := nil;
+                  aClique.Clear;
                   exit(False);
                 end;
             Lefts.Add(Dst);
@@ -1097,6 +1098,7 @@ begin
               if not AdjLst^.Contains(J) then
                 begin
                   aOrd := nil;
+                  aClique.Clear;
                   exit(False);
                 end;
             Lefts.Add(p^.Key);
