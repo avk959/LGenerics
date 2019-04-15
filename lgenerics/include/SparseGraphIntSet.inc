@@ -37,9 +37,9 @@ begin
   System.SetLength(FItems, System.Length(FItems) + GRAPH_ADJLIST_GROW);
 end;
 
-class operator TGSparseGraph.TIntSet.Initialize(var aList: TIntSet);
+class operator TGSparseGraph.TIntSet.Initialize(var aSet: TIntSet);
 begin
-  aList.FCount := 0;
+  aSet.FCount := 0;
 end;
 
 procedure TGSparseGraph.TIntSet.InitRange(aRange: SizeInt);
@@ -68,11 +68,11 @@ begin
   Result := System.Copy(FItems, 0, Count);
 end;
 
-procedure TGSparseGraph.TIntSet.Assign(constref aValue: TIntSet);
+procedure TGSparseGraph.TIntSet.Assign(constref aSet: TIntSet);
 begin
-  FCount := aValue.Count;
+  FCount := aSet.Count;
   if Count <> 0 then
-    FItems := System.Copy(aValue.FItems, 0, Count);
+    FItems := System.Copy(aSet.FItems, 0, Count);
 end;
 
 procedure TGSparseGraph.TIntSet.AssignArray(constref a: TIntArray);
@@ -93,6 +93,12 @@ begin
       FItems[I] := p^.Destination;
       Inc(I);
     end;
+end;
+
+procedure TGSparseGraph.TIntSet.Clear;
+begin
+  FItems := nil;
+  FCount := 0;
 end;
 
 function TGSparseGraph.TIntSet.IsEmpty: Boolean;
@@ -127,24 +133,24 @@ begin
   Result := Find(aValue) >= 0;
 end;
 
-function TGSparseGraph.TIntSet.ContainsAny(constref aValue: TIntSet): Boolean;
+function TGSparseGraph.TIntSet.ContainsAny(constref aSet: TIntSet): Boolean;
 var
   I: SizeInt;
 begin
   if NonEmpty then
-    for I in aValue do
+    for I in aSet do
       if Contains(I) then
         exit(True);
   Result := False;
 end;
 
-function TGSparseGraph.TIntSet.ContainsAll(constref aValue: TIntSet): Boolean;
+function TGSparseGraph.TIntSet.ContainsAll(constref aSet: TIntSet): Boolean;
 var
   I: SizeInt;
 begin
-  if Count >= aValue.Count then
+  if Count >= aSet.Count then
     begin
-      for I in aValue do
+      for I in aSet do
         if not Contains(I) then
           exit(False);
       Result := True;
@@ -185,12 +191,12 @@ begin
   Result := Count - Result;
 end;
 
-function TGSparseGraph.TIntSet.Join(constref aValue: TIntSet): SizeInt;
+function TGSparseGraph.TIntSet.Join(constref aSet: TIntSet): SizeInt;
 var
   I: SizeInt;
 begin
   Result := 0;
-  for I in aValue do
+  for I in aSet do
     Result += Ord(Add(I));
 end;
 
@@ -237,15 +243,15 @@ begin
     end;
 end;
 
-procedure TGSparseGraph.TIntSet.Subtract(constref aValue: TIntSet);
+procedure TGSparseGraph.TIntSet.Subtract(constref aSet: TIntSet);
 var
   I, Pos: SizeInt;
 begin
-  if aValue.NonEmpty then
+  if aSet.NonEmpty then
     begin
       Pos := 0;
       for I := 0 to Pred(Count) do
-        if aValue.Contains(FItems[I]) then
+        if aSet.Contains(FItems[I]) then
           Dec(FCount)
         else
           begin
@@ -255,15 +261,15 @@ begin
     end;
 end;
 
-procedure TGSparseGraph.TIntSet.Subtract(PList: PAdjList);
+procedure TGSparseGraph.TIntSet.Subtract(aList: PAdjList);
 var
   I, Pos: SizeInt;
 begin
-  if PList^.NonEmpty then
+  if aList^.NonEmpty then
     begin
       Pos := 0;
       for I := 0 to Pred(Count) do
-        if PList^.Contains(FItems[I]) then
+        if aList^.Contains(FItems[I]) then
           Dec(FCount)
         else
           begin
@@ -273,21 +279,21 @@ begin
     end;
 end;
 
-function TGSparseGraph.TIntSet.Difference(constref aValue: TIntSet): TIntSet;
+function TGSparseGraph.TIntSet.Difference(constref aSet: TIntSet): TIntSet;
 begin
   Result.Assign(Self);
-  Result.Subtract(aValue);
+  Result.Subtract(aSet);
 end;
 
-procedure TGSparseGraph.TIntSet.Intersect(constref aValue: TIntSet);
+procedure TGSparseGraph.TIntSet.Intersect(constref aSet: TIntSet);
 var
   I, Pos: SizeInt;
 begin
-  if aValue.NonEmpty then
+  if aSet.NonEmpty then
     begin
       Pos := 0;
       for I := 0 to Pred(Count) do
-        if aValue.Contains(FItems[I]) then
+        if aSet.Contains(FItems[I]) then
           begin
             FItems[Pos] := FItems[I];
             Inc(Pos);
@@ -299,27 +305,27 @@ begin
     MakeEmpty;
 end;
 
-function TGSparseGraph.TIntSet.Intersection(constref aValue: TIntSet): TIntSet;
+function TGSparseGraph.TIntSet.Intersection(constref aSet: TIntSet): TIntSet;
 begin
   Result.Assign(Self);
-  Result.Intersect(aValue);
+  Result.Intersect(aSet);
 end;
 
-function TGSparseGraph.TIntSet.IntersectionCount(constref aValue: TIntSet): SizeInt;
+function TGSparseGraph.TIntSet.IntersectionCount(constref aSet: TIntSet): SizeInt;
 var
   I: SizeInt;
 begin
   Result := 0;
-  for I in aValue do
+  for I in aSet do
     Result += Ord(Contains(I));
 end;
 
-function TGSparseGraph.TIntSet.IntersectionCount(PList: PAdjList): SizeInt;
+function TGSparseGraph.TIntSet.IntersectionCount(aList: PAdjList): SizeInt;
 var
   p: PAdjItem;
 begin
   Result := 0;
-  for p in PList^ do
+  for p in aList^ do
     Result += Ord(Contains(p^.Destination));
 end;
 

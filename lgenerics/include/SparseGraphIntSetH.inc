@@ -24,7 +24,7 @@ type
     FCount: SizeInt;
     procedure Expand; inline;
     function  GetItem(aIndex: SizeInt): SizeInt; inline;
-    class operator Initialize(var aList: TIntSet);
+    class operator Initialize(var aSet: TIntSet);
   public
   type
     TEnumerator = record
@@ -40,35 +40,36 @@ type
     procedure InitRange(aRange: SizeInt);
     function  GetEnumerator: TEnumerator; inline;
     function  ToArray: TIntArray; inline;
-    procedure Assign(constref aValue: TIntSet);
+    procedure Assign(constref aSet: TIntSet);
     procedure AssignArray(constref a: TIntArray);
     procedure AssignList(aList: PAdjList);
+    procedure Clear;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
     procedure MakeEmpty; inline;
     function  FindFirst(out aValue: SizeInt): Boolean;
     function  Contains(aValue: SizeInt): Boolean; inline;
-    function  ContainsAny(constref aValue: TIntSet): Boolean;
-    function  ContainsAll(constref aValue: TIntSet): Boolean;
+    function  ContainsAny(constref aSet: TIntSet): Boolean;
+    function  ContainsAll(constref aSet: TIntSet): Boolean;
     function  Find(aValue: SizeInt): SizeInt;
     function  Add(aValue: SizeInt): Boolean;
     function  Add(constref a: TIntArray): SizeInt;
-    function  Join(constref aValue: TIntSet): SizeInt;
+    function  Join(constref aSet: TIntSet): SizeInt;
     procedure Push(aValue: SizeInt); inline;
     function  Pop: SizeInt; inline;
     function  TryPop(out aValue: SizeInt): Boolean; inline;
     function  Last: SizeInt; inline;
   { preserves the order of the elements }
-    procedure Subtract(constref aValue: TIntSet);
-    procedure Subtract(PList: PAdjList);
-    function  Difference(constref aValue: TIntSet): TIntSet; inline;
+    procedure Subtract(constref aSet: TIntSet);
+    procedure Subtract(aList: PAdjList);
+    function  Difference(constref aSet: TIntSet): TIntSet; inline;
   { preserves the order of the elements }
-    procedure Intersect(constref aValue: TIntSet);
-    function  Intersection(constref aValue: TIntSet): TIntSet; inline;
+    procedure Intersect(constref aSet: TIntSet);
+    function  Intersection(constref aSet: TIntSet): TIntSet; inline;
   { returns the number of elements in the intersection with aValue }
-    function  IntersectionCount(constref aValue: TIntSet): SizeInt;
+    function  IntersectionCount(constref aSet: TIntSet): SizeInt;
   { returns the number of elements in the intersection with PList }
-    function  IntersectionCount(PList: PAdjList): SizeInt;
+    function  IntersectionCount(aList: PAdjList): SizeInt;
     function  Remove(aValue: SizeInt): Boolean;
   { preserves the order of the elements }
     procedure Delete(aValue: SizeInt);
