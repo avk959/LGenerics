@@ -366,7 +366,7 @@ procedure TBaseTreeMultisetTest.TestCreate;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.Count = 0);
+  AssertTrue({%H-}ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity >= DEFAULT_CONTAINER_CAPACITY);
 end;
 
@@ -375,7 +375,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray11);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.Capacity >= 11);
   for I in IntArray11 do
@@ -389,7 +389,7 @@ var
   e: IEnumerable;
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
-  ms.Instance := TMultiSet.Create(e);
+  {%H-}ms.Instance := TMultiSet.Create(e);
   AssertTrue(ms.Instance.Count = 11);
   for I in IntArray11 do
     AssertTrue(ms.Instance.Contains(I));
@@ -399,7 +399,7 @@ procedure TBaseTreeMultisetTest.CreateCapacity0;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(0);
+  {%H-}ms.Instance := TMultiSet.Create(0);
   AssertTrue(ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity = 0);
 end;
@@ -408,7 +408,7 @@ procedure TBaseTreeMultisetTest.CreateCapacity5;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(5);
+  {%H-}ms.Instance := TMultiSet.Create(5);
   AssertTrue(ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity >= 5);
 end;
@@ -417,7 +417,7 @@ procedure TBaseTreeMultisetTest.Clear;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray11);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.Capacity >= DEFAULT_CONTAINER_CAPACITY);
   ms.Instance.Clear;
@@ -430,7 +430,7 @@ var
   ms: TAutoMultiSet;
   c: SizeInt;
 begin
-  c := ms.Instance.Capacity;
+  c := {%H-}ms.Instance.Capacity;
   ms.Instance.EnsureCapacity(c - 1);
   AssertTrue(ms.Instance.Capacity = c);
 end;
@@ -440,7 +440,7 @@ var
   ms: TAutoMultiSet;
   c: SizeInt;
 begin
-  c := ms.Instance.Capacity;
+  c := {%H-}ms.Instance.Capacity;
   ms.Instance.EnsureCapacity(c + 1);
   AssertTrue(ms.Instance.Capacity > c);
 end;
@@ -449,7 +449,7 @@ procedure TBaseTreeMultisetTest.Add;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.Count = 0);
+  AssertTrue({%H-}ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Add(1));
   AssertTrue(ms.Instance.Count = 1);
   AssertTrue(ms.Instance.Contains(1));
@@ -473,7 +473,7 @@ var
   I: Integer;
 begin
   for I := 1 to 100 do
-    AssertTrue(ms.Instance.Add(I));
+    AssertTrue({%H-}ms.Instance.Add(I));
   AssertTrue(ms.Instance.Count = 100);
   for I := 1 to 100 do
     AssertTrue(ms.Instance.Add(I));
@@ -491,7 +491,7 @@ procedure TBaseTreeMultisetTest.AddArray;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.AddAll(IntArray21) = System.Length(IntArray21));
+  AssertTrue({%H-}ms.Instance.AddAll(IntArray21) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21));
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
@@ -507,7 +507,7 @@ var
   e: IEnumerable;
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21));
-  AssertTrue(ms.Instance.AddAll(e) = System.Length(IntArray21));
+  AssertTrue({%H-}ms.Instance.AddAll(e) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21));
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
@@ -522,8 +522,8 @@ procedure TBaseTreeMultisetTest.AddSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance.AddAll(IntArray21);
-  AssertTrue(ms.Instance.AddAll(ms.Instance) = System.Length(IntArray21));
+  {%H-}ms.Instance.AddAll(IntArray21);
+  AssertTrue({%H-}ms.Instance.AddAll(ms.Instance) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21) * 2);
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
 end;
@@ -534,7 +534,7 @@ var
   c: SizeInt;
 begin
   c := System.Length(IntArray21) * 2;
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = c);
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
@@ -557,7 +557,7 @@ procedure TBaseTreeMultisetTest.RemoveArray;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveAll(IntArray11) = 11);
   AssertTrue(ms.Instance.Count = 31);
@@ -572,7 +572,7 @@ var
   ms: TAutoMultiSet;
   e: IEnumerable;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
   AssertTrue(ms.Instance.RemoveAll(e) = 11);
@@ -588,7 +588,7 @@ procedure TBaseTreeMultisetTest.RemoveSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveAll(ms.Instance) = 42);
   AssertTrue(ms.Instance.IsEmpty);
@@ -599,7 +599,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEvenInt) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -613,7 +613,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEven) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -631,7 +631,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEvenInt) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -646,13 +646,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEvenInt);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e);
+  {%H-}ms1.Instance := TMultiSet.Create(e);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -665,13 +665,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEven);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e);
+  {%H-}ms1.Instance := TMultiSet.Create(e);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -688,13 +688,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEvenInt);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e);
+  {%H-}ms1.Instance := TMultiSet.Create(e);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -706,9 +706,9 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
   AssertTrue(ms.Instance.Count = 42);
   ms.Instance.RetainAll(ms1.Instance);
   AssertTrue(ms.Instance.Count = 22);
@@ -721,10 +721,10 @@ procedure TBaseTreeMultisetTest.Retain_1;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray10);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray10);
   ms.Instance.AddAll(IntArray10);
   AssertTrue(ms.Instance.Count = 20);
-  ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
   ms.Instance.RetainAll(ms1.Instance);
   AssertTrue(ms.Instance.IsEmpty);
 end;
@@ -733,7 +733,7 @@ procedure TBaseTreeMultisetTest.RetainSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = 42);
   ms.Instance.RetainAll(ms.Instance);
@@ -745,9 +745,9 @@ procedure TBaseTreeMultisetTest.IsSuperset;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance);
   AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
   AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
   AssertTrue(ms.Instance.IsSuperSet(ms.Instance));
@@ -766,9 +766,9 @@ procedure TBaseTreeMultisetTest.IsSubset;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance);
   AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
   AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   AssertTrue(ms.Instance.IsSubSet(ms.Instance));
@@ -787,9 +787,9 @@ procedure TBaseTreeMultisetTest.IsEqual;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
   AssertTrue(ms1.Instance.IsEqual(ms.Instance));
   AssertTrue(ms.Instance.IsEqual(ms.Instance));
@@ -806,8 +806,8 @@ procedure TBaseTreeMultisetTest.Intersecting;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
-  ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
   AssertTrue(ms.Instance.Intersecting(ms.Instance));
   AssertTrue(ms.Instance.Intersecting(ms1.Instance));
   ms.Instance := TMultiSet.Create(IntArray10);
@@ -820,10 +820,10 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = 42);
-  ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
   ms1.Instance.AddAll([-4, -3, -2, -1, 0]);
   ms.Instance.Intersect(ms1.Instance);
   AssertTrue(ms.Instance.Count = 11);
@@ -836,8 +836,8 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11);
-  ms.Instance.Join(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance.Join(ms1.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
 
   ms1.Instance := TMultiSet.Create(IntArray10);
@@ -855,8 +855,8 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11);
-  ms.Instance.ArithmeticAdd(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance.ArithmeticAdd(ms1.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
   ms.Instance.AddAll(IntArray10);
   ms.Instance.ArithmeticAdd(ms1.Instance);
@@ -875,8 +875,8 @@ procedure TBaseTreeMultisetTest.ArithmeticSubtract;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11);
-  ms.Instance.ArithmeticSubtract(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance.ArithmeticSubtract(ms1.Instance);
   AssertTrue(ms.Instance.IsEmpty);
   ms.Instance.AddAll(IntArray10);
   ms.Instance.ArithmeticSubtract(ms1.Instance);
@@ -896,8 +896,8 @@ procedure TBaseTreeMultisetTest.SymmetricSubtract;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11);
-  ms.Instance.SymmetricSubtract(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance.SymmetricSubtract(ms1.Instance);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   ms.Instance.AddAll(IntArray10);
@@ -925,7 +925,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := I;
   TIntHelper.RandomShuffle(a);
-  ms.Instance := TMultiSet.Create(a);
+  {%H-}ms.Instance := TMultiSet.Create(a);
   AssertTrue(ms.Instance.Head(0).None);
   AssertTrue(ms.Instance.Head(0, True).Total = 1);
   AssertTrue(ms.Instance.Head(80).Total = 80);
@@ -942,7 +942,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := I;
   TIntHelper.RandomShuffle(a);
-  ms.Instance := TMultiSet.Create(a);
+  {%H-}ms.Instance := TMultiSet.Create(a);
   AssertTrue(ms.Instance.Tail(99).Total = 1);
   AssertTrue(ms.Instance.Tail(99, False).None);
   AssertTrue(ms.Instance.Tail(30).Total = 70);
@@ -978,7 +978,7 @@ var
   I: Integer;
 begin
   for I := 1 to 16 do
-    ms.Instance.Add(I * 3);
+    {%H-}ms.Instance.Add(I * 3);
   AssertFalse(ms.Instance.FindFloor(2, I));
   AssertFalse(ms.Instance.FindFloor(3, I));
   AssertTrue(ms.Instance.FindFloor(3, I, True));
@@ -1003,7 +1003,7 @@ var
   I: Integer;
 begin
   for I := 1 to 16 do
-    ms.Instance.Add(I * 3);
+    {%H-}ms.Instance.Add(I * 3);
   AssertTrue(ms.Instance.FindCeil(48, I));
   AssertTrue(I = 48);
   AssertFalse(ms.Instance.FindCeil(48, I, False));
@@ -1034,7 +1034,7 @@ begin
   for I := 0 to System.High(a) do
     begin
       a[I] := TTestObj.Create(Counter.Increment);
-      ms.Instance.Add(a[I]);
+      {%H-}ms.Instance.Add(a[I]);
     end;
   AssertTrue(ms.Instance.Count = TestSize);
   ms.Instance.AddAll(a);
@@ -1063,7 +1063,7 @@ begin
   TestSize := 56;
   Counter := Default(TCounter);
   for I := 1 to TestSize do
-    ms.Instance.Add(TTestObj.Create(Counter.Increment));
+    {%H-}ms.Instance.Add(TTestObj.Create(Counter.Increment));
   AssertTrue(ms.Instance.Count = TestSize);
   a := ms.Instance.ToArray;
   AssertTrue(System.Length(a) = TestSize);
@@ -1089,7 +1089,7 @@ begin
   TestSize := 52;
   Counter := Default(TCounter);
   for I := 1 to TestSize do
-    ms.Instance.Add(TTestObj.Create(Counter.Increment));
+    {%H-}ms.Instance.Add(TTestObj.Create(Counter.Increment));
   AssertTrue(ms.Instance.Count = TestSize);
   a := ms.Instance.ToArray;
   AssertTrue(System.Length(a) = TestSize);
@@ -1113,7 +1113,7 @@ begin
   TestSize := 100;
   Counter := Default(TCounter);
   for I := 1 to TestSize do
-    ms.Instance.Add(TTestObj.Create(Counter.Increment));
+    {%H-}ms.Instance.Add(TTestObj.Create(Counter.Increment));
   ms.Instance.AddAll(ms.Instance);
   AssertTrue(ms.Instance.Count = TestSize * 2);
   AssertTrue(ms.Instance.RemoveAll(ms.Instance) = TestSize * 2);
@@ -1296,12 +1296,12 @@ begin
   TestSize := 100;
   Counter := Default(TCounter);
   System.SetLength(a{%H-}, TestSize);
-  s1.Instance := TObjSet.Create(False);
+  {%H-}s1.Instance := TObjSet.Create(False);
 
   for I := 0 to System.High(a) do
     a[I] := TTestObj.Create(Counter.Increment);
   s1.Instance.AddAll(a);
-  ms.Instance.AddAll(a);
+  {%H-}ms.Instance.AddAll(a);
   ms.Instance.AddAll(a);
   for I := 1 to TestSize do
     ms.Instance.Add(TTestObj.Create(Counter.Increment));
@@ -1328,7 +1328,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := TTestObj.Create(Counter.Increment);
 
-  ms.Instance.AddAll(a);
+  {%H-}ms.Instance.AddAll(a);
   ms.Instance.AddAll(a);
 
   for o in a do
@@ -1340,7 +1340,7 @@ begin
   AssertTrue(Counter.Count = 0);
   AssertTrue(ms.Instance.Count = TestSize * 3);
 
-  ms1.Instance.OwnsObjects := False;
+  {%H-}ms1.Instance.OwnsObjects := False;
   AssertTrue(ms1.Instance.AddAll(a) = TestSize);
 
   ms.Instance.Intersect(ms1.Instance);
@@ -1366,11 +1366,11 @@ begin
   for I := 0 to System.High(a) do
     a[I] := TTestObj.Create(Counter.Increment);
 
-  ms.Instance.AddAll(a);
+  {%H-}ms.Instance.AddAll(a);
   ms.Instance.AddAll(a);
   ms.Instance.AddAll(a);
 
-  ms1.Instance.OwnsObjects := False;
+  {%H-}ms1.Instance.OwnsObjects := False;
 
   ms1.Instance.AddAll(a);
 
@@ -1408,12 +1408,12 @@ begin
   Counter := Default(TCounter);
 
   for I := 1 to TestSize do
-    ms.Instance.Add(TTestObj.Create(Counter.Increment));
+    {%H-}ms.Instance.Add(TTestObj.Create(Counter.Increment));
   ms.Instance.AddAll(ms.Instance);
   ms.Instance.OwnsObjects := False;
 
   for I := 1 to TestSize do
-    ms1.Instance.Add(TTestObj.Create(Counter.Increment));
+    {%H-}ms1.Instance.Add(TTestObj.Create(Counter.Increment));
   ms1.Instance.OwnsObjects := False;
 
   AssertTrue(Counter.Count = 0);
@@ -1456,7 +1456,7 @@ procedure TComparableTreeMultisetTest.TestCreate;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.Count = 0);
+  AssertTrue({%H-}ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity >= DEFAULT_CONTAINER_CAPACITY);
 end;
 
@@ -1465,7 +1465,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray11);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.Capacity >= 11);
   for I in IntArray11 do
@@ -1479,7 +1479,7 @@ var
   e: IEnumerable;
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
-  ms.Instance := TMultiSet.Create(e);
+  {%H-}ms.Instance := TMultiSet.Create(e);
   AssertTrue(ms.Instance.Count = 11);
   for I in IntArray11 do
     AssertTrue(ms.Instance.Contains(I));
@@ -1489,7 +1489,7 @@ procedure TComparableTreeMultisetTest.CreateCapacity0;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(0);
+  {%H-}ms.Instance := TMultiSet.Create(0);
   AssertTrue(ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity = 0);
 end;
@@ -1498,7 +1498,7 @@ procedure TComparableTreeMultisetTest.CreateCapacity5;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(5);
+  {%H-}ms.Instance := TMultiSet.Create(5);
   AssertTrue(ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity >= 5);
 end;
@@ -1507,7 +1507,7 @@ procedure TComparableTreeMultisetTest.Clear;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray11);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.Capacity >= DEFAULT_CONTAINER_CAPACITY);
   ms.Instance.Clear;
@@ -1520,7 +1520,7 @@ var
   ms: TAutoMultiSet;
   c: SizeInt;
 begin
-  c := ms.Instance.Capacity;
+  c := {%H-}ms.Instance.Capacity;
   ms.Instance.EnsureCapacity(c - 1);
   AssertTrue(ms.Instance.Capacity = c);
 end;
@@ -1530,7 +1530,7 @@ var
   ms: TAutoMultiSet;
   c: SizeInt;
 begin
-  c := ms.Instance.Capacity;
+  c := {%H-}ms.Instance.Capacity;
   ms.Instance.EnsureCapacity(c + 1);
   AssertTrue(ms.Instance.Capacity > c);
 end;
@@ -1539,7 +1539,7 @@ procedure TComparableTreeMultisetTest.Add;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.Count = 0);
+  AssertTrue({%H-}ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Add(1));
   AssertTrue(ms.Instance.Count = 1);
   AssertTrue(ms.Instance.Contains(1));
@@ -1563,7 +1563,7 @@ var
   I: Integer;
 begin
   for I := 1 to 100 do
-    AssertTrue(ms.Instance.Add(I));
+    AssertTrue({%H-}ms.Instance.Add(I));
   AssertTrue(ms.Instance.Count = 100);
   for I := 1 to 100 do
     AssertTrue(ms.Instance.Add(I));
@@ -1581,7 +1581,7 @@ procedure TComparableTreeMultisetTest.AddArray;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.AddAll(IntArray21) = System.Length(IntArray21));
+  AssertTrue({%H-}ms.Instance.AddAll(IntArray21) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21));
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
@@ -1597,7 +1597,7 @@ var
   e: IEnumerable;
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21));
-  AssertTrue(ms.Instance.AddAll(e) = System.Length(IntArray21));
+  AssertTrue({%H-}ms.Instance.AddAll(e) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21));
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
@@ -1612,7 +1612,7 @@ procedure TComparableTreeMultisetTest.AddSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance.AddAll(IntArray21);
+  {%H-}ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.AddAll(ms.Instance) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21) * 2);
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
@@ -1624,7 +1624,7 @@ var
   c: SizeInt;
 begin
   c := System.Length(IntArray21) * 2;
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = c);
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
@@ -1647,7 +1647,7 @@ procedure TComparableTreeMultisetTest.RemoveArray;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveAll(IntArray11) = 11);
   AssertTrue(ms.Instance.Count = 31);
@@ -1662,7 +1662,7 @@ var
   ms: TAutoMultiSet;
   e: IEnumerable;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
   AssertTrue(ms.Instance.RemoveAll(e) = 11);
@@ -1678,7 +1678,7 @@ procedure TComparableTreeMultisetTest.RemoveSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveAll(ms.Instance) = 42);
   AssertTrue(ms.Instance.IsEmpty);
@@ -1689,7 +1689,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEvenInt) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -1703,7 +1703,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEven) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -1721,7 +1721,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEvenInt) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -1736,13 +1736,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEvenInt);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e);
+  {%H-}ms1.Instance := TMultiSet.Create(e);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -1755,13 +1755,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEven);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e);
+  {%H-}ms1.Instance := TMultiSet.Create(e);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -1778,13 +1778,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEvenInt);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e);
+  {%H-}ms1.Instance := TMultiSet.Create(e);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -1796,9 +1796,9 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
   AssertTrue(ms.Instance.Count = 42);
   ms.Instance.RetainAll(ms1.Instance);
   AssertTrue(ms.Instance.Count = 22);
@@ -1811,10 +1811,10 @@ procedure TComparableTreeMultisetTest.Retain_1;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray10);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray10);
   ms.Instance.AddAll(IntArray10);
   AssertTrue(ms.Instance.Count = 20);
-  ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
   ms.Instance.RetainAll(ms1.Instance);
   AssertTrue(ms.Instance.IsEmpty);
 end;
@@ -1823,7 +1823,7 @@ procedure TComparableTreeMultisetTest.RetainSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = 42);
   ms.Instance.RetainAll(ms.Instance);
@@ -1835,9 +1835,9 @@ procedure TComparableTreeMultisetTest.IsSuperset;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance);
   AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
   AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
   AssertTrue(ms.Instance.IsSuperSet(ms.Instance));
@@ -1856,9 +1856,9 @@ procedure TComparableTreeMultisetTest.IsSubset;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance);
   AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
   AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   AssertTrue(ms.Instance.IsSubSet(ms.Instance));
@@ -1877,9 +1877,9 @@ procedure TComparableTreeMultisetTest.IsEqual;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
   AssertTrue(ms1.Instance.IsEqual(ms.Instance));
   AssertTrue(ms.Instance.IsEqual(ms.Instance));
@@ -1896,8 +1896,8 @@ procedure TComparableTreeMultisetTest.Intersecting;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
-  ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
   AssertTrue(ms.Instance.Intersecting(ms.Instance));
   AssertTrue(ms.Instance.Intersecting(ms1.Instance));
   ms.Instance := TMultiSet.Create(IntArray10);
@@ -1910,10 +1910,10 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = 42);
-  ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
   ms1.Instance.AddAll([-4, -3, -2, -1, 0]);
   ms.Instance.Intersect(ms1.Instance);
   AssertTrue(ms.Instance.Count = 11);
@@ -1926,8 +1926,8 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11);
-  ms.Instance.Join(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance.Join(ms1.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
 
   ms1.Instance := TMultiSet.Create(IntArray10);
@@ -1945,8 +1945,8 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11);
-  ms.Instance.ArithmeticAdd(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance.ArithmeticAdd(ms1.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
   ms.Instance.AddAll(IntArray10);
   ms.Instance.ArithmeticAdd(ms1.Instance);
@@ -1965,8 +1965,8 @@ procedure TComparableTreeMultisetTest.ArithmeticSubtract;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11);
-  ms.Instance.ArithmeticSubtract(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance.ArithmeticSubtract(ms1.Instance);
   AssertTrue(ms.Instance.IsEmpty);
   ms.Instance.AddAll(IntArray10);
   ms.Instance.ArithmeticSubtract(ms1.Instance);
@@ -1986,8 +1986,8 @@ procedure TComparableTreeMultisetTest.SymmetricSubtract;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11);
-  ms.Instance.SymmetricSubtract(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11);
+  {%H-}ms.Instance.SymmetricSubtract(ms1.Instance);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   ms.Instance.AddAll(IntArray10);
@@ -2015,7 +2015,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := I;
   TIntHelper.RandomShuffle(a);
-  ms.Instance := TMultiSet.Create(a);
+  {%H-}ms.Instance := TMultiSet.Create(a);
   AssertTrue(ms.Instance.Head(0).None);
   AssertTrue(ms.Instance.Head(0, True).Total = 1);
   AssertTrue(ms.Instance.Head(80).Total = 80);
@@ -2032,7 +2032,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := I;
   TIntHelper.RandomShuffle(a);
-  ms.Instance := TMultiSet.Create(a);
+  {%H-}ms.Instance := TMultiSet.Create(a);
   AssertTrue(ms.Instance.Tail(99).Total = 1);
   AssertTrue(ms.Instance.Tail(99, False).None);
   AssertTrue(ms.Instance.Tail(30).Total = 70);
@@ -2068,7 +2068,7 @@ var
   I: Integer;
 begin
   for I := 1 to 16 do
-    ms.Instance.Add(I * 3);
+    {%H-}ms.Instance.Add(I * 3);
   AssertFalse(ms.Instance.FindFloor(2, I));
   AssertFalse(ms.Instance.FindFloor(3, I));
   AssertTrue(ms.Instance.FindFloor(3, I, True));
@@ -2093,7 +2093,7 @@ var
   I: Integer;
 begin
   for I := 1 to 16 do
-    ms.Instance.Add(I * 3);
+    {%H-}ms.Instance.Add(I * 3);
   AssertTrue(ms.Instance.FindCeil(48, I));
   AssertTrue(I = 48);
   AssertFalse(ms.Instance.FindCeil(48, I, False));
@@ -2125,7 +2125,7 @@ procedure TRegularTreeMultisetTest.TestCreate;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.Count = 0);
+  AssertTrue({%H-}ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity >= DEFAULT_CONTAINER_CAPACITY);
 end;
 
@@ -2134,7 +2134,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.Capacity >= 11);
   for I in IntArray11 do
@@ -2148,7 +2148,7 @@ var
   e: IEnumerable;
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
-  ms.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Count = 11);
   for I in IntArray11 do
     AssertTrue(ms.Instance.Contains(I));
@@ -2158,7 +2158,7 @@ procedure TRegularTreeMultisetTest.CreateCapacity0;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(0, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(0, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity = 0);
 end;
@@ -2167,7 +2167,7 @@ procedure TRegularTreeMultisetTest.CreateCapacity5;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(5, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(5, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity >= 5);
 end;
@@ -2176,7 +2176,7 @@ procedure TRegularTreeMultisetTest.Clear;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.Capacity >= DEFAULT_CONTAINER_CAPACITY);
   ms.Instance.Clear;
@@ -2189,7 +2189,7 @@ var
   ms: TAutoMultiSet;
   c: SizeInt;
 begin
-  c := ms.Instance.Capacity;
+  c := {%H-}ms.Instance.Capacity;
   ms.Instance.EnsureCapacity(c - 1);
   AssertTrue(ms.Instance.Capacity = c);
 end;
@@ -2199,7 +2199,7 @@ var
   ms: TAutoMultiSet;
   c: SizeInt;
 begin
-  c := ms.Instance.Capacity;
+  c := {%H-}ms.Instance.Capacity;
   ms.Instance.EnsureCapacity(c + 1);
   AssertTrue(ms.Instance.Capacity > c);
 end;
@@ -2208,7 +2208,7 @@ procedure TRegularTreeMultisetTest.Add;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.Count = 0);
+  AssertTrue({%H-}ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Add(1));
   AssertTrue(ms.Instance.Count = 1);
   AssertTrue(ms.Instance.Contains(1));
@@ -2232,7 +2232,7 @@ var
   I: Integer;
 begin
   for I := 1 to 100 do
-    AssertTrue(ms.Instance.Add(I));
+    AssertTrue({%H-}ms.Instance.Add(I));
   AssertTrue(ms.Instance.Count = 100);
   for I := 1 to 100 do
     AssertTrue(ms.Instance.Add(I));
@@ -2250,7 +2250,7 @@ procedure TRegularTreeMultisetTest.AddArray;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.AddAll(IntArray21) = System.Length(IntArray21));
+  AssertTrue({%H-}ms.Instance.AddAll(IntArray21) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21));
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
@@ -2266,7 +2266,7 @@ var
   e: IEnumerable;
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21));
-  AssertTrue(ms.Instance.AddAll(e) = System.Length(IntArray21));
+  AssertTrue({%H-}ms.Instance.AddAll(e) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21));
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
@@ -2281,7 +2281,7 @@ procedure TRegularTreeMultisetTest.AddSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance.AddAll(IntArray21);
+  {%H-}ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.AddAll(ms.Instance) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21) * 2);
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
@@ -2293,7 +2293,7 @@ var
   c: SizeInt;
 begin
   c := System.Length(IntArray21) * 2;
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = c);
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
@@ -2316,7 +2316,7 @@ procedure TRegularTreeMultisetTest.RemoveArray;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveAll(IntArray11) = 11);
   AssertTrue(ms.Instance.Count = 31);
@@ -2331,7 +2331,7 @@ var
   ms: TAutoMultiSet;
   e: IEnumerable;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
   AssertTrue(ms.Instance.RemoveAll(e) = 11);
@@ -2347,7 +2347,7 @@ procedure TRegularTreeMultisetTest.RemoveSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveAll(ms.Instance) = 42);
   AssertTrue(ms.Instance.IsEmpty);
@@ -2358,7 +2358,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEvenInt) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -2372,7 +2372,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEven) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -2390,7 +2390,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEvenInt) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -2405,13 +2405,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEvenInt);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.Compare);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -2424,13 +2424,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEven);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.Compare);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -2447,13 +2447,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEvenInt);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.Compare);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -2465,9 +2465,9 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Count = 42);
   ms.Instance.RetainAll(ms1.Instance);
   AssertTrue(ms.Instance.Count = 22);
@@ -2480,10 +2480,10 @@ procedure TRegularTreeMultisetTest.Retain_1;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray10, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray10, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray10);
   AssertTrue(ms.Instance.Count = 20);
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
   ms.Instance.RetainAll(ms1.Instance);
   AssertTrue(ms.Instance.IsEmpty);
 end;
@@ -2492,7 +2492,7 @@ procedure TRegularTreeMultisetTest.RetainSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = 42);
   ms.Instance.RetainAll(ms.Instance);
@@ -2504,9 +2504,9 @@ procedure TRegularTreeMultisetTest.IsSuperset;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
   AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
   AssertTrue(ms.Instance.IsSuperSet(ms.Instance));
@@ -2525,9 +2525,9 @@ procedure TRegularTreeMultisetTest.IsSubset;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
   AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   AssertTrue(ms.Instance.IsSubSet(ms.Instance));
@@ -2546,9 +2546,9 @@ procedure TRegularTreeMultisetTest.IsEqual;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
   AssertTrue(ms1.Instance.IsEqual(ms.Instance));
   AssertTrue(ms.Instance.IsEqual(ms.Instance));
@@ -2565,8 +2565,8 @@ procedure TRegularTreeMultisetTest.Intersecting;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Intersecting(ms.Instance));
   AssertTrue(ms.Instance.Intersecting(ms1.Instance));
   ms.Instance := TMultiSet.Create(IntArray10, specialize TGDefaults<Integer>.Compare);
@@ -2579,10 +2579,10 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.Compare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = 42);
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
   ms1.Instance.AddAll([-4, -3, -2, -1, 0]);
   ms.Instance.Intersect(ms1.Instance);
   AssertTrue(ms.Instance.Count = 11);
@@ -2595,8 +2595,8 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
-  ms.Instance.Join(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance.Join(ms1.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
 
   ms1.Instance := TMultiSet.Create(IntArray10, specialize TGDefaults<Integer>.Compare);
@@ -2614,8 +2614,8 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
-  ms.Instance.ArithmeticAdd(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance.ArithmeticAdd(ms1.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
   ms.Instance.AddAll(IntArray10);
   ms.Instance.ArithmeticAdd(ms1.Instance);
@@ -2634,8 +2634,8 @@ procedure TRegularTreeMultisetTest.ArithmeticSubtract;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
-  ms.Instance.ArithmeticSubtract(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance.ArithmeticSubtract(ms1.Instance);
   AssertTrue(ms.Instance.IsEmpty);
   ms.Instance.AddAll(IntArray10);
   ms.Instance.ArithmeticSubtract(ms1.Instance);
@@ -2655,8 +2655,8 @@ procedure TRegularTreeMultisetTest.SymmetricSubtract;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
-  ms.Instance.SymmetricSubtract(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance.SymmetricSubtract(ms1.Instance);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   ms.Instance.AddAll(IntArray10);
@@ -2684,7 +2684,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := I;
   TIntHelper.RandomShuffle(a);
-  ms.Instance := TMultiSet.Create(a, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(a, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Head(0).None);
   AssertTrue(ms.Instance.Head(0, True).Total = 1);
   AssertTrue(ms.Instance.Head(80).Total = 80);
@@ -2701,7 +2701,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := I;
   TIntHelper.RandomShuffle(a);
-  ms.Instance := TMultiSet.Create(a, specialize TGDefaults<Integer>.Compare);
+  {%H-}ms.Instance := TMultiSet.Create(a, specialize TGDefaults<Integer>.Compare);
   AssertTrue(ms.Instance.Tail(99).Total = 1);
   AssertTrue(ms.Instance.Tail(99, False).None);
   AssertTrue(ms.Instance.Tail(30).Total = 70);
@@ -2737,7 +2737,7 @@ var
   I: Integer;
 begin
   for I := 1 to 16 do
-    ms.Instance.Add(I * 3);
+    {%H-}ms.Instance.Add(I * 3);
   AssertFalse(ms.Instance.FindFloor(2, I));
   AssertFalse(ms.Instance.FindFloor(3, I));
   AssertTrue(ms.Instance.FindFloor(3, I, True));
@@ -2762,7 +2762,7 @@ var
   I: Integer;
 begin
   for I := 1 to 16 do
-    ms.Instance.Add(I * 3);
+    {%H-}ms.Instance.Add(I * 3);
   AssertTrue(ms.Instance.FindCeil(48, I));
   AssertTrue(I = 48);
   AssertFalse(ms.Instance.FindCeil(48, I, False));
@@ -2794,7 +2794,7 @@ procedure TDelegatedTreeMultisetTest.TestCreate;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.Count = 0);
+  AssertTrue({%H-}ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity >= DEFAULT_CONTAINER_CAPACITY);
 end;
 
@@ -2803,7 +2803,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.Capacity >= 11);
   for I in IntArray11 do
@@ -2817,7 +2817,7 @@ var
   e: IEnumerable;
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
-  ms.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Count = 11);
   for I in IntArray11 do
     AssertTrue(ms.Instance.Contains(I));
@@ -2827,7 +2827,7 @@ procedure TDelegatedTreeMultisetTest.CreateCapacity0;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(0, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(0, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity = 0);
 end;
@@ -2836,7 +2836,7 @@ procedure TDelegatedTreeMultisetTest.CreateCapacity5;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(5, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(5, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Capacity >= 5);
 end;
@@ -2845,7 +2845,7 @@ procedure TDelegatedTreeMultisetTest.Clear;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.Capacity >= DEFAULT_CONTAINER_CAPACITY);
   ms.Instance.Clear;
@@ -2858,7 +2858,7 @@ var
   ms: TAutoMultiSet;
   c: SizeInt;
 begin
-  c := ms.Instance.Capacity;
+  c := {%H-}ms.Instance.Capacity;
   ms.Instance.EnsureCapacity(c - 1);
   AssertTrue(ms.Instance.Capacity = c);
 end;
@@ -2868,7 +2868,7 @@ var
   ms: TAutoMultiSet;
   c: SizeInt;
 begin
-  c := ms.Instance.Capacity;
+  c := {%H-}ms.Instance.Capacity;
   ms.Instance.EnsureCapacity(c + 1);
   AssertTrue(ms.Instance.Capacity > c);
 end;
@@ -2877,7 +2877,7 @@ procedure TDelegatedTreeMultisetTest.Add;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.Count = 0);
+  AssertTrue({%H-}ms.Instance.Count = 0);
   AssertTrue(ms.Instance.Add(1));
   AssertTrue(ms.Instance.Count = 1);
   AssertTrue(ms.Instance.Contains(1));
@@ -2904,7 +2904,7 @@ var
   I: Integer;
 begin
   for I := 1 to 100 do
-    AssertTrue(ms.Instance.Add(I));
+    AssertTrue({%H-}ms.Instance.Add(I));
   AssertTrue(ms.Instance.Count = 100);
   for I := 1 to 100 do
     AssertTrue(ms.Instance.Add(I));
@@ -2922,7 +2922,7 @@ procedure TDelegatedTreeMultisetTest.AddArray;
 var
   ms: TAutoMultiSet;
 begin
-  AssertTrue(ms.Instance.AddAll(IntArray21) = System.Length(IntArray21));
+  AssertTrue({%H-}ms.Instance.AddAll(IntArray21) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21));
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
@@ -2938,7 +2938,7 @@ var
   e: IEnumerable;
 begin
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray21));
-  AssertTrue(ms.Instance.AddAll(e) = System.Length(IntArray21));
+  AssertTrue({%H-}ms.Instance.AddAll(e) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21));
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
   AssertTrue(ms.Instance.ContainsAll(IntArray21));
@@ -2953,7 +2953,7 @@ procedure TDelegatedTreeMultisetTest.AddSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance.AddAll(IntArray21);
+  {%H-}ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.AddAll(ms.Instance) = System.Length(IntArray21));
   AssertTrue(ms.Instance.Count = System.Length(IntArray21) * 2);
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
@@ -2965,7 +2965,7 @@ var
   c: SizeInt;
 begin
   c := System.Length(IntArray21) * 2;
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = c);
   AssertTrue(ms.Instance.EntryCount = System.Length(IntArray21));
@@ -2988,7 +2988,7 @@ procedure TDelegatedTreeMultisetTest.RemoveArray;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveAll(IntArray11) = 11);
   AssertTrue(ms.Instance.Count = 31);
@@ -3003,7 +3003,7 @@ var
   ms: TAutoMultiSet;
   e: IEnumerable;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
   AssertTrue(ms.Instance.RemoveAll(e) = 11);
@@ -3019,7 +3019,7 @@ procedure TDelegatedTreeMultisetTest.RemoveSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveAll(ms.Instance) = 42);
   AssertTrue(ms.Instance.IsEmpty);
@@ -3030,7 +3030,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEvenInt) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -3044,7 +3044,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEven) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -3062,7 +3062,7 @@ var
   ms: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.RemoveIf(@IsEvenInt) = 20);
   AssertTrue(ms.Instance.Count = 22);
@@ -3077,13 +3077,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEvenInt);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.OnCompare);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -3096,13 +3096,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEven);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.OnCompare);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -3119,13 +3119,13 @@ var
   e: TIntArray;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   e := ms.Instance.ExtractIf(@IsEvenInt);
   AssertTrue(ms.Instance.Count = 22);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   AssertTrue(System.Length(e) = 20);
-  ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(e, specialize TGDefaults<Integer>.OnCompare);
   for I in IntArray11 do
     AssertTrue(ms.Instance[I] = 2);
   for I in IntArray10 do
@@ -3137,9 +3137,9 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Count = 42);
   ms.Instance.RetainAll(ms1.Instance);
   AssertTrue(ms.Instance.Count = 22);
@@ -3152,10 +3152,10 @@ procedure TDelegatedTreeMultisetTest.Retain_1;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray10, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray10, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray10);
   AssertTrue(ms.Instance.Count = 20);
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.RetainAll(ms1.Instance);
   AssertTrue(ms.Instance.IsEmpty);
 end;
@@ -3164,7 +3164,7 @@ procedure TDelegatedTreeMultisetTest.RetainSelf;
 var
   ms: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = 42);
   ms.Instance.RetainAll(ms.Instance);
@@ -3176,9 +3176,9 @@ procedure TDelegatedTreeMultisetTest.IsSuperset;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.IsSuperSet(ms1.Instance));
   AssertTrue(ms1.Instance.IsSuperSet(ms.Instance));
   AssertTrue(ms.Instance.IsSuperSet(ms.Instance));
@@ -3197,9 +3197,9 @@ procedure TDelegatedTreeMultisetTest.IsSubset;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.IsSubSet(ms1.Instance));
   AssertTrue(ms1.Instance.IsSubSet(ms.Instance));
   AssertTrue(ms.Instance.IsSubSet(ms.Instance));
@@ -3218,9 +3218,9 @@ procedure TDelegatedTreeMultisetTest.IsEqual;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
-  ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(ms.Instance, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
   AssertTrue(ms1.Instance.IsEqual(ms.Instance));
   AssertTrue(ms.Instance.IsEqual(ms.Instance));
@@ -3237,8 +3237,8 @@ procedure TDelegatedTreeMultisetTest.Intersecting;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Intersecting(ms.Instance));
   AssertTrue(ms.Instance.Intersecting(ms1.Instance));
   ms.Instance := TMultiSet.Create(IntArray10, specialize TGDefaults<Integer>.OnCompare);
@@ -3251,10 +3251,10 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(IntArray21, specialize TGDefaults<Integer>.OnCompare);
   ms.Instance.AddAll(IntArray21);
   AssertTrue(ms.Instance.Count = 42);
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
   ms1.Instance.AddAll([-4, -3, -2, -1, 0]);
   ms.Instance.Intersect(ms1.Instance);
   AssertTrue(ms.Instance.Count = 11);
@@ -3267,8 +3267,8 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
-  ms.Instance.Join(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance.Join(ms1.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
 
   ms1.Instance := TMultiSet.Create(IntArray10, specialize TGDefaults<Integer>.OnCompare);
@@ -3286,8 +3286,8 @@ var
   ms, ms1: TAutoMultiSet;
   I: Integer;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
-  ms.Instance.ArithmeticAdd(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance.ArithmeticAdd(ms1.Instance);
   AssertTrue(ms.Instance.IsEqual(ms1.Instance));
   ms.Instance.AddAll(IntArray10);
   ms.Instance.ArithmeticAdd(ms1.Instance);
@@ -3306,8 +3306,8 @@ procedure TDelegatedTreeMultisetTest.ArithmeticSubtract;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
-  ms.Instance.ArithmeticSubtract(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance.ArithmeticSubtract(ms1.Instance);
   AssertTrue(ms.Instance.IsEmpty);
   ms.Instance.AddAll(IntArray10);
   ms.Instance.ArithmeticSubtract(ms1.Instance);
@@ -3327,8 +3327,8 @@ procedure TDelegatedTreeMultisetTest.SymmetricSubtract;
 var
   ms, ms1: TAutoMultiSet;
 begin
-  ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
-  ms.Instance.SymmetricSubtract(ms1.Instance);
+  {%H-}ms1.Instance := TMultiSet.Create(IntArray11, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance.SymmetricSubtract(ms1.Instance);
   AssertTrue(ms.Instance.Count = 11);
   AssertTrue(ms.Instance.ContainsAll(IntArray11));
   ms.Instance.AddAll(IntArray10);
@@ -3356,7 +3356,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := I;
   TIntHelper.RandomShuffle(a);
-  ms.Instance := TMultiSet.Create(a, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(a, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Head(0).None);
   AssertTrue(ms.Instance.Head(0, True).Total = 1);
   AssertTrue(ms.Instance.Head(80).Total = 80);
@@ -3373,7 +3373,7 @@ begin
   for I := 0 to System.High(a) do
     a[I] := I;
   TIntHelper.RandomShuffle(a);
-  ms.Instance := TMultiSet.Create(a, specialize TGDefaults<Integer>.OnCompare);
+  {%H-}ms.Instance := TMultiSet.Create(a, specialize TGDefaults<Integer>.OnCompare);
   AssertTrue(ms.Instance.Tail(99).Total = 1);
   AssertTrue(ms.Instance.Tail(99, False).None);
   AssertTrue(ms.Instance.Tail(30).Total = 70);
@@ -3409,7 +3409,7 @@ var
   I: Integer;
 begin
   for I := 1 to 16 do
-    ms.Instance.Add(I * 3);
+    {%H-}ms.Instance.Add(I * 3);
   AssertFalse(ms.Instance.FindFloor(2, I));
   AssertFalse(ms.Instance.FindFloor(3, I));
   AssertTrue(ms.Instance.FindFloor(3, I, True));
@@ -3434,7 +3434,7 @@ var
   I: Integer;
 begin
   for I := 1 to 16 do
-    ms.Instance.Add(I * 3);
+    {%H-}ms.Instance.Add(I * 3);
   AssertTrue(ms.Instance.FindCeil(48, I));
   AssertTrue(I = 48);
   AssertFalse(ms.Instance.FindCeil(48, I, False));
