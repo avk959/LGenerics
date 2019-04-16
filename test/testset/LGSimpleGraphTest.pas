@@ -36,6 +36,7 @@ type
     function  GenerateCycle11: TGraph;
     function  GenerateCycle7: TGraph;
     function  GenerateWheel: TGraph;
+    function  GenerateWheel6: TGraph;
     function  GenerateComplete: TGraph;
     function  GenerateWikiChordal: TGraph;
     function  GenerateTestGrBip1: TGraph;
@@ -86,6 +87,7 @@ type
     procedure IsAcyclic;
     procedure IsChordal;
     procedure IsChordal1;
+    procedure IsChordal2;
     procedure ContainsEulerianPath;
     procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
@@ -312,6 +314,14 @@ begin
   Result.AddVertexRange(1, 12);
   Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 8, 1, 9, 1, 10, 1, 11, 1, 12]);
   Result.AddEdges([2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 2, 12]);
+end;
+
+function TSimpleGraphTest.GenerateWheel6: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 7);
+  Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7]);
+  Result.AddEdges([2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 2]);
 end;
 
 function TSimpleGraphTest.GenerateComplete: TGraph;
@@ -1227,6 +1237,21 @@ begin
   AssertTrue(g.IsChordal(peo));
   g.RemoveEdge(2, 5);
   AssertFalse(g.IsChordal(peo));
+end;
+
+procedure TSimpleGraphTest.IsChordal2;
+var
+  Ref: TRef;
+  g: TGraph;
+  peo: TIntArray;
+  I: Integer;
+begin
+  {%H-}Ref.Instance := GenerateWheel6;
+  g := Ref;
+  AssertTrue(g.IsWheel(I));
+  AssertFalse(g.IsChordal(peo));
+  g.AddEdges([2, 4, 2, 5, 2, 6]);
+  AssertTrue(g.IsChordal(peo));
 end;
 
 procedure TSimpleGraphTest.ContainsEulerianPath;
