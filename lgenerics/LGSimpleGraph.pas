@@ -259,7 +259,7 @@ type
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True and the list of vertex indices in the perfect elimination order(reverse)
-    in aRevPeo, if graph is chordal, False otherwise }
+    in aRevPeo, if graph is chordal, False otherwise; the empty graph is considered chordal }
     function  IsChordal(out aRevPeo: TIntArray): Boolean;
   { returns True, radus and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
@@ -1047,7 +1047,7 @@ begin
                 MaxOrd := Idx2Ord[p^.Key];
                 Last := p^.Key;
               end;
-            Lefts.Add(p^.Key);
+            Lefts.Push(p^.Key);
           end;
       if Last <> NULL_INDEX then
         begin
@@ -3351,10 +3351,14 @@ begin
 end;
 
 function TGSimpleGraph.FindMaxClique(out aExact: Boolean; aTimeOut: Integer): TIntArray;
+var
+  Clique: TIntSet;
 begin
   aExact := True;
   if IsEmpty then
     exit(nil);
+  if FindChordalMaxClique(Clique) then
+    exit(Clique.ToArray);
   if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
     Result := GetMaxClique(aTimeOut, aExact)
   else
