@@ -39,6 +39,7 @@ type
     function  GenerateWheel6: TGraph;
     function  GenerateComplete: TGraph;
     function  GenerateWikiChordal: TGraph;
+    function  GenerateChordal8: TGraph;
     function  GenerateTestGrBip1: TGraph;
     function  GenerateTestTriangles: TGraph;
     function  GenerateC125Clique: TGraph;
@@ -88,6 +89,7 @@ type
     procedure IsChordal;
     procedure IsChordal1;
     procedure IsChordal2;
+    procedure IsChordal3;
     procedure ContainsEulerianPath;
     procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
@@ -117,6 +119,7 @@ type
     procedure ListAllCliques1;
     procedure ListAllCliques2;
     procedure FindMaxClique;
+    procedure FindMaxClique1;
     procedure GreedyMaxClique;
     procedure VertexColoring;
     procedure IsKColorable;
@@ -343,6 +346,16 @@ begin
   Result := TGraph.Create;
   Result.AddVertexRange(1, 8);
   Result.AddEdges([1, 2, 1, 3, 2, 3, 2, 5, 2, 6, 2, 7, 3, 4, 3, 5, 4, 5, 5, 7, 5, 8, 6, 7, 7, 8]);
+end;
+
+function TSimpleGraphTest.GenerateChordal8: TGraph;
+begin
+  //see Chordal8.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 8);
+  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 1, 3, 1, 4, 2, 4, 2, 5, 3, 5, //C5
+                   1, 6, 1, 7, 2, 7, 2, 6, 6, 7,                               //C4
+                   3, 8, 4, 8]);
 end;
 
 function TSimpleGraphTest.GenerateTestGrBip1: TGraph;
@@ -1254,6 +1267,17 @@ begin
   AssertTrue(g.IsChordal(peo));
 end;
 
+procedure TSimpleGraphTest.IsChordal3;
+var
+  Ref: TRef;
+  g: TGraph;
+  peo: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateChordal8;
+  g := Ref;
+  AssertTrue(g.IsChordal(peo));
+end;
+
 procedure TSimpleGraphTest.ContainsEulerianPath;
 var
   Ref: TRef;
@@ -1878,6 +1902,11 @@ begin
   Clique := g.FindMaxClique(Exact, 10);
   AssertTrue(Exact);
   AssertTrue(Clique.IsEmpty);
+  g.AddVertex(1);
+  Clique := g.FindMaxClique(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = 1);
+  AssertTrue(g[Clique[0]] = 1);
   Ref.Instance := GenerateComplete;
   g := Ref;
   Clique := g.FindMaxClique(Exact, 10);
@@ -1895,6 +1924,23 @@ begin
   AssertTrue(Exact);
   AssertTrue(Clique.Length = 34);
   AssertTrue(g.IsMaxClique(Clique));
+end;
+
+procedure TSimpleGraphTest.FindMaxClique1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Clique: TIntArray;
+  Exact: Boolean;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateChordal8;
+  g := Ref;
+  Clique := g.FindMaxClique(Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = 5);
+  for I := 1 to 5 do
+    AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
 end;
 
 procedure TSimpleGraphTest.GreedyMaxClique;
