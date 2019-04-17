@@ -101,6 +101,7 @@ type
     in this case returns this order (reverse) in aOrd and max clique in aClique }
     function  FindPerfElimOrd(aOnNodeDone: TOnNodeDone; out aOrd: TIntArray): Boolean;
     function  FindChordalMaxClique(out aClique: TIntSet): Boolean;
+    function  FindChordalMis(out aMis: TIntSet): Boolean;
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -1081,6 +1082,30 @@ begin
   Result := FindPerfElimOrd(@NodeDone, Dummy);
   if not Result then
     aClique.Clear;
+end;
+
+function TGSimpleGraph.FindChordalMis(out aMis: TIntSet): Boolean;
+var
+  Peo: TIntArray;
+  Visited: TBitVector;
+  I, Curr: SizeInt;
+  p: PAdjItem;
+begin
+  aMis.Clear;
+  Result := FindPerfElimOrd(nil, Peo);
+  if Result then
+    begin
+      Visited.Size := VertexCount;
+      for I := Pred(VertexCount) downto 0 do
+        begin
+          Curr := Peo[I];
+          if Visited[Curr] then
+            continue;
+          aMis.Push(Curr);
+          for p in AdjLists[Curr]^ do
+            Visited[p^.Key] := True;
+        end;
+    end;
 end;
 
 function TGSimpleGraph.GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -3172,12 +3197,15 @@ end;
 function TGSimpleGraph.FindMIS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
 var
   w, g: TIntArray;
+  Mis: TIntSet;
 begin
   aExact := True;
   if IsEmpty then
     exit(nil);
   if VertexCount < 2 then
     exit([0]);
+  if FindChordalMis(Mis) then
+    exit(Mis.ToArray);
   if IsBipartite(w, g) then
     Result := GetMaxIsBipartite(w, g)
   else
