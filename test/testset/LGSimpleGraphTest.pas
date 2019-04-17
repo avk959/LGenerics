@@ -37,6 +37,7 @@ type
     function  GenerateCycle7: TGraph;
     function  GenerateWheel: TGraph;
     function  GenerateWheel6: TGraph;
+    function  GenerateTree: TGraph;
     function  GenerateComplete: TGraph;
     function  GenerateWikiChordal: TGraph;
     function  GenerateChordal8: TGraph;
@@ -79,6 +80,7 @@ type
     procedure FindSeparates;
     procedure CreateAdjacencyMatrix;
     procedure IsTree;
+    procedure IsTree1;
     procedure IsStar;
     procedure IsCycle;
     procedure IsWheel;
@@ -115,6 +117,8 @@ type
     procedure ListAllMIS1;
     procedure ListAllMIS2;
     procedure FindMIS;
+    procedure FindMIS1;
+    procedure FindMIS2;
     procedure GreedyMIS;
     procedure ListAllCliques1;
     procedure ListAllCliques2;
@@ -325,6 +329,14 @@ begin
   Result.AddVertexRange(1, 7);
   Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7]);
   Result.AddEdges([2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 2]);
+end;
+
+function TSimpleGraphTest.GenerateTree: TGraph;
+begin
+  //see Tree.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 12);
+  Result.AddEdges([1, 2, 1, 3, 1, 4, 2, 5, 2, 6, 2, 7, 3, 8, 3, 9, 3, 10, 4, 11, 4, 12]);
 end;
 
 function TSimpleGraphTest.GenerateComplete: TGraph;
@@ -1066,6 +1078,16 @@ begin
   finally
     g2.Free;
   end;
+end;
+
+procedure TSimpleGraphTest.IsTree1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTree;
+  g := Ref;
+  AssertTrue(g.IsTree);
 end;
 
 procedure TSimpleGraphTest.IsStar;
@@ -1813,11 +1835,6 @@ begin
   Mis := g.FindMIS(Exact, 10);
   AssertTrue(Exact);
   AssertTrue(Mis.IsEmpty);
-  Ref.Instance := GenerateComplete;
-  g := Ref;
-  Mis := g.FindMIS(Exact, 10);
-  AssertTrue(Exact);
-  AssertTrue(Mis.Length = 1);
   Ref.Instance := GenerateTestGr5;
   g := Ref;
   Mis := g.FindMIS(Exact, 10);
@@ -1829,6 +1846,42 @@ begin
   Mis := g.FindMIS(Exact, 10);
   AssertTrue(Exact);
   AssertTrue(Mis.Length = 34);
+  AssertTrue(g.IsMIS(Mis));
+end;
+
+procedure TSimpleGraphTest.FindMIS1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mis: TIntArray;
+  Exact: Boolean;
+begin
+  {%H-}Ref.Instance := GenerateComplete;
+  g := Ref;
+  Mis := g.FindMIS(Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 1);
+  AssertTrue(g.IsMIS(Mis));
+  Ref.Instance := GenerateChordal8;
+  g := Ref;
+  Mis := g.FindMIS(Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 3);
+  AssertTrue(g.IsMIS(Mis));
+end;
+
+procedure TSimpleGraphTest.FindMIS2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mis: TIntArray;
+  Exact: Boolean;
+begin
+  {%H-}Ref.Instance := GenerateTree;
+  g := Ref;
+  Mis := g.FindMIS(Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 9);
   AssertTrue(g.IsMIS(Mis));
 end;
 
@@ -1931,7 +1984,7 @@ var
   Ref: TRef;
   g: TGraph;
   Clique: TIntArray;
-  Exact: Boolean;
+  Exact: Boolean = False;
   I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateChordal8;
@@ -1940,6 +1993,15 @@ begin
   AssertTrue(Exact);
   AssertTrue(Clique.Length = 5);
   for I := 1 to 5 do
+    AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
+  g.RemoveEdge(2, 4);
+  g.RemoveEdge(2, 5);
+  AssertTrue(g.IsChordal(Clique));
+  Exact := False;
+  Clique := g.FindMaxClique(Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = 4);
+  for I in [1, 2, 6, 7] do
     AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
 end;
 
