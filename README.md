@@ -2,7 +2,7 @@
 
   Collection of generic algorithms and data structures entirely written in/for FPC and Lazarus. 
   Started as a self-education project, it now seems quite comfortable and fast.
-  In order to use it (FPC 3.1.1 and higher and Lazarus 1.9.0 and higher):
+  In order to use it (FPC 3.3.1 and higher and Lazarus 1.9.0 and higher):
   
   - open and compile package lgenerics/LGenerics.lpk.
   
@@ -65,11 +65,11 @@
   - single source shortest paths: 
     + Dijkstra with pairing heap, A*, Bellman-Ford-Moor with Tarjan's subtree disassembly(BFMT)
   - all pairs shortest paths: 
-    + Floyd–Warshall, Johnson, BFMT  
+    + Floydâ€“Warshall, Johnson, BFMT  
   - networks:
     + maximum flow: push/relabel, capacity scaling Dinitz
     + minimum-cost flow: Busacker-Gowen, cost scaling push/relabel algorithm
-    + global minimum cut: Stoer–Wagner, Nagamochi-Ibaraki    
+    + global minimum cut: Stoerâ€“Wagner, Nagamochi-Ibaraki    
 #### Algorithms on arrays and vectors(mostly unit LGArrayHelpers):
   - reverse, right/left cyclic shifts
   - permutations
