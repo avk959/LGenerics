@@ -147,7 +147,7 @@ const
   IsBuiltFmt = 'graph is built with %d vertices and %d edges in %d milliseconds';
 begin
   mmResult.Append('');
-  mmResult.Append('started to build the new graph, please wait...');
+  mmResult.Append('started building a new graph, please wait...');
   StartTime := Time;
   BuildGraph;
   Elapsed := MilliSecondsBetween(Time, StartTime);
@@ -207,17 +207,17 @@ begin
     exit;
   if not Graph.ContainsVertex(CurrSource) then
     begin
-      mmResult.Append('sourse word does not found');
+      mmResult.Append('sourse word not found');
       exit;
     end;
   if not Graph.ContainsVertex(CurrTarget) then
     begin
-      mmResult.Append('target word does not found');
+      mmResult.Append('target word not found');
       exit;
     end;
   if not Graph.PathExists(CurrSource, CurrTarget) then
     begin
-      mmResult.Append('ladder does not found');
+      mmResult.Append('ladder not found');
       exit;
     end;
   mmResult.Append(Format(SearchFmt, [CurrSource, CurrTarget]));
@@ -228,7 +228,7 @@ begin
   if Length(Path) > 0 then
     PrintPath(Path)
   else
-    mmResult.Append('ladder does not found');
+    mmResult.Append('ladder not found');
 end;
 
 procedure TfrmMain.DisableControls;
