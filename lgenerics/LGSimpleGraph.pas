@@ -99,9 +99,10 @@ type
     function  CheckAcyclic: Boolean;
   { returns True if there exists a perfect elimination order in the graph;
     in this case returns this order (reverse) in aOrd and max clique in aClique }
-    function  FindPerfElimOrd(aOnNodeDone: TOnNodeDone; out aOrd: TIntArray): Boolean;
+    function  FindPerfElimOrd(aOnNodeDone: TOnNodeDone; out aPeoSeq: TIntArray): Boolean;
     function  FindChordalMaxClique(out aClique: TIntSet): Boolean;
     function  FindChordalMis(out aMis: TIntSet): Boolean;
+    function  FindChordalColoring(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -1007,13 +1008,13 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindPerfElimOrd(aOnNodeDone: TOnNodeDone; out aOrd: TIntArray): Boolean;
+function TGSimpleGraph.FindPerfElimOrd(aOnNodeDone: TOnNodeDone; out aPeoSeq: TIntArray): Boolean;
 var
   Queue: TINodePqMax;
   InQueue: TBitVector;
-  Idx2Ord: TIntArray;
+  Index2Ord: TIntArray;
   Lefts: TIntSet;
-  I, J, MaxOrd, Last: SizeInt;
+  I, J, MaxOrd, Nearest: SizeInt;
   Node: TIntNode;
   AdjLst: PAdjList;
   p: PAdjItem;
@@ -1023,40 +1024,38 @@ begin
   InQueue.ExpandTrue(VertexCount);
   for I := 0 to Pred(VertexCount)do
     Queue.Enqueue(I, TIntNode.Create(I, 0));
-  aOrd.Length := VertexCount;
-  Idx2Ord.Length := VertexCount;
+  aPeoSeq.Length := VertexCount;
+  Index2Ord.Length := VertexCount;
   I := 0;
   while Queue.TryDequeue(Node) do
     begin
       InQueue[{%H-}Node.Index] := False;
-      aOrd[I] := Node.Index;
-      Idx2Ord[Node.Index] := I;
+      aPeoSeq[I] := Node.Index;
+      Index2Ord[Node.Index] := I;
       Inc(I);
       MaxOrd := NULL_INDEX;
-      Last := NULL_INDEX;
+      Nearest := NULL_INDEX;
       {%H-}Lefts.MakeEmpty;
       for p in AdjLists[Node.Index]^ do
         if InQueue[p^.Key] then
-          begin
-            J := Queue.ItemPtr(p^.Key)^.Data;
-            Queue.Update(p^.Key, TIntNode.Create(p^.Key, Succ(J)));
-          end
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Succ(Queue.ItemPtr(p^.Key)^.Data)))
         else
           begin
-            if Idx2Ord[p^.Key] > MaxOrd then
+            J := Index2Ord[p^.Key];
+            if J > MaxOrd then
               begin
-                MaxOrd := Idx2Ord[p^.Key];
-                Last := p^.Key;
+                MaxOrd := J;
+                Nearest := p^.Key;
               end;
             Lefts.Push(p^.Key);
           end;
-      if Last <> NULL_INDEX then
+      if Nearest <> NULL_INDEX then
         begin
-          AdjLst := AdjLists[Last];
+          AdjLst := AdjLists[Nearest];
           for J in Lefts do
-            if (J <> Last) and not AdjLst^.Contains(J) then
+            if (J <> Nearest) and not AdjLst^.Contains(J) then
               begin
-                aOrd := nil;
+                aPeoSeq := nil;
                 exit(False);
               end;
         end;
@@ -1106,6 +1105,43 @@ begin
             Visited[p^.Key] := True;
         end;
     end;
+end;
+
+function TGSimpleGraph.FindChordalColoring(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
+  procedure NodeDone(aIndex: SizeInt; aLefts: TIntSet);
+  begin
+    aIndex := Succ(aLefts.Count);
+    if aIndex > aMaxColor then
+      aMaxColor := aIndex;
+  end;
+var
+  PeoSeq: TIntArray;
+  OnLeft: TBitVector;
+  AvailColors: TBoolVector;
+  I, Curr: SizeInt;
+  p: PAdjItem;
+begin
+  aMaxColor := 0;
+  aColors := nil;
+  Result := FindPerfElimOrd(@NodeDone, PeoSeq);
+  if Result then
+    begin
+      aColors.Length := VertexCount;
+      OnLeft.Size := VertexCount;
+      for I := 0 to Pred(VertexCount) do
+        begin
+          Curr := PeoSeq[I];
+          AvailColors.InitRange(Succ(aMaxColor));
+          AvailColors[0] := False;
+          for p in AdjLists[Curr]^ do
+            if OnLeft[p^.Key] then
+              AvailColors[aColors[p^.Key]] := False;
+          aColors[Curr] := AvailColors.Bsf;
+          OnLeft[Curr] := True;
+        end;
+    end
+  else
+    aMaxColor := 0;
 end;
 
 function TGSimpleGraph.GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -1511,7 +1547,7 @@ var
   Cols: TColorArray;
   I, Hub: SizeInt;
 begin
-  aMaxColor := 0;
+  aMaxColor := 1;
   aColors := nil;
   if IsEmpty then
     exit(True);
@@ -1544,23 +1580,11 @@ begin
     end;
   if IsWheel(Hub) then
     begin
-      if Hub <> 0 then
-        I := 0
-      else
-        I := 1;
-      if not CycleExists(I, Cycle) then
-        exit(False); //todo: internal error ???
-      aColors.Length := VertexCount;
-      aColors[Hub] := 1;
-      for I := 0 to VertexCount - 3 do
-        aColors[Cycle[I]] := Ord(Odd(I)) + 2;
-      if Odd(VertexCount) then
-        aMaxColor := 3
-      else
-        aMaxColor := 4;
-      aColors[Cycle[VertexCount - 2]] := aMaxColor;
+      aMaxColor := GreedyColorRlf(aColors);
       exit(True);
     end;
+  if FindChordalColoring(aMaxColor, aColors) then
+    exit(True);
   Result := False;
 end;
 
@@ -3458,7 +3482,7 @@ end;
 
 function TGSimpleGraph.VertexColoring(out aColors: TIntArray; out aExact: Boolean; aTimeOut: Integer): SizeInt;
 begin
-  //todo: planar graphs, chordal graphs ?
+  //todo: planar graphs ?
   if ColorTrivial(Result, aColors) then
     aExact := True
   else
@@ -3472,13 +3496,23 @@ function TGSimpleGraph.IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOu
 var
   K: SizeInt;
 begin
-  if (aK <= 0) or IsEmpty then
+  if aK <= 0 then
     exit(tlFalse);
+  if IsEmpty then
+    exit(tlTrue);
   if aK >= VertexCount then
     begin
       aColors := TIntHelper.CreateRange(1, VertexCount);
       exit(tlTrue);
     end;
+  if ColorTrivial(K, aColors) then
+    if K <= aK then
+      exit(tlTrue)
+    else
+      begin
+        aColors := nil;
+        exit(tlFalse);
+      end;
   K := GreedyVertexColoringRlf(aColors);
   if K <= aK then
     exit(tlTrue);
@@ -3511,7 +3545,7 @@ begin
   if IsEmpty then
     begin
       aColors := nil;
-      exit(0);
+      exit(1);
     end;
   if IsComplete then
     begin
