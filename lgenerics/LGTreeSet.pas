@@ -2347,6 +2347,7 @@ var
   List: TTree.TNodeList;
   I, J: SizeInt;
 begin
+  Result := nil;
   if NonEmpty then
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
@@ -2365,9 +2366,7 @@ begin
         else
           Inc(I);
       System.SetLength(Result, J);
-    end
-  else
-    Result := nil;
+    end;
 end;
 
 function TGLiteTreeSet.ExtractIf(aTest: TOnTest): TArray;
@@ -2375,6 +2374,7 @@ var
   List: TTree.TNodeList;
   I, J: SizeInt;
 begin
+  Result := nil;
   if NonEmpty then
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
@@ -2393,9 +2393,7 @@ begin
         else
           Inc(I);
       System.SetLength(Result, J);
-    end
-  else
-    Result := nil;
+    end;
 end;
 
 function TGLiteTreeSet.ExtractIf(aTest: TNestTest): TArray;
@@ -2403,6 +2401,7 @@ var
   List: TTree.TNodeList;
   I, J: SizeInt;
 begin
+  Result := nil;
   if NonEmpty then
     begin
       System.SetLength(Result, ARRAY_INITIAL_SIZE);
@@ -2421,9 +2420,7 @@ begin
         else
           Inc(I);
       System.SetLength(Result, J);
-    end
-  else
-    Result := nil;
+    end;
 end;
 
 procedure TGLiteTreeSet.RetainAll(aCollection: ICollection);
