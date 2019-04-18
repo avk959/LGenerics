@@ -35,11 +35,11 @@ type
     TSolution = array[0..255] of SizeInt;
     TSeed     = array[1..16] of SizeInt;
   var
-    Graph: TIntChart;
+    CellGraph: TIntChart;
     Solution,
     Clues: TSolution;
     SaveColor: TColor;
-    function  GenSudokuGraph: TIntChart;
+    function  CreateCellGraph: TIntChart;
     function  CreateColorArray: TIntArray;
     function  CreateRangeArray: TIntArray;
     procedure CreateClues;
@@ -69,13 +69,13 @@ begin
   for I := 1 to Pred(sgCells.ColCount) do
     sgCells.Cells[I, 0] := I.ToString;
   SaveColor := sgCells.Font.Color;
-  Graph := GenSudokuGraph;
+  CellGraph := CreateCellGraph;
   Randomize;
 end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
 begin
-  Graph.Free;
+  CellGraph.Free;
 end;
 
 procedure TfrmMain.sgCellsDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
@@ -106,7 +106,7 @@ begin
     sgCells.Canvas.Font.Color := clBlue;
 end;
 
-function TfrmMain.GenSudokuGraph: TIntChart;
+function TfrmMain.CreateCellGraph: TIntChart;
 var
   I, J, K, I1, J1, I2: SizeInt;
   a: array[0..15] of SizeInt;
@@ -166,17 +166,14 @@ end;
 
 function TfrmMain.CreateColorArray: TIntArray;
 begin
-  Result{%H-}.Length := 256;
-  FillChar(Pointer(Result)^, SizeOf(SizeInt) * Result.Length, 0);
+  Result := TIntArray.Construct(256, 0);
 end;
 
 function TfrmMain.CreateRangeArray: TIntArray;
 var
   I: SizeInt;
 begin
-  Result{%H-}.Length := 256;
-  for I := 0 to High(Result) do
-    Result[I] := I;
+  Result := THelper.CreateRange(0, 255);
 end;
 
 procedure TfrmMain.CreateClues;
@@ -211,13 +208,13 @@ begin
   Colors := CreateColorArray;
   NewSeed(Seed{%H-});
   for I := Low(Seed) to High(Seed) do
-    Colors[Graph.IndexOf(I)] := Seed[I];
+    Colors[CellGraph.IndexOf(I)] := Seed[I];
 
   OldCursor := Screen.Cursor;
   Screen.Cursor := crHourGlass;
   Application.ProcessMessages;
   try
-    Result := Graph.CompleteColoring(16, Colors, 5);//wait for at most 5s
+    Result := CellGraph.CompleteColoring(16, Colors, 5);//wait for at most 5s
   finally
     Screen.Cursor := OldCursor;
   end;
