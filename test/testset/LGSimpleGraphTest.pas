@@ -126,6 +126,8 @@ type
     procedure FindMaxClique1;
     procedure GreedyMaxClique;
     procedure VertexColoring;
+    procedure VertexColoring1;
+    procedure VertexColoring2;
     procedure IsKColorable;
     procedure CompleteColoring;
     procedure FindHamiltonCycles;
@@ -1146,6 +1148,10 @@ begin
   g := Ref;
   AssertTrue(g.IsWheel(Hub));
   AssertTrue(g[Hub] = 1);
+  Ref.Instance := GenerateWheel6;
+  g := Ref;
+  AssertTrue(g.IsWheel(Hub));
+  AssertTrue(g[Hub] = 1);
 end;
 
 procedure TSimpleGraphTest.IsComplete;
@@ -2036,31 +2042,91 @@ var
   g: TGraph;
   Colors: TIntArray;
   ColCount: SizeInt;
-  Exact: Boolean;
+  Exact: Boolean = False;
 begin
   g := {%H-}Ref;
   ColCount := g.VertexColoring(Colors, Exact, 5);
   AssertTrue(Exact);
-  AssertTrue(ColCount = 0);
+  AssertTrue(ColCount = 1);
   Ref.Instance := GenerateComplete;
   g := Ref;
+  Exact := False;
   ColCount := g.VertexColoring(Colors, Exact, 5);
   AssertTrue(Exact);
   AssertTrue(ColCount = g.VertexCount);
   AssertTrue(g.IsProperVertexColoring(Colors));
   Ref.Instance := GenerateTestGrBip1;
   g := Ref;
+  Exact := False;
   ColCount := g.VertexColoring(Colors, Exact, 5);
   AssertTrue(Exact);
   AssertTrue(ColCount = 2);
   AssertTrue(g.IsProperVertexColoring(Colors));
   Ref.Instance := GenerateQueen6_6;
   g := Ref;
+  Exact := False;
   ColCount := g.GreedyVertexColoringRlf(Colors);
-  AssertTrue(ColCount > 7);
+  AssertTrue(ColCount >= 7);
   ColCount := g.VertexColoring(Colors, Exact, 5);
   AssertTrue(Exact);
   AssertTrue(ColCount = 7);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+end;
+
+procedure TSimpleGraphTest.VertexColoring1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Colors: TIntArray;
+  ColCount: SizeInt;
+  Exact: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateCycle;
+  g := Ref;
+  ColCount := g.VertexColoring(Colors, Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(ColCount = 2);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateCycle7;
+  g := Ref;
+  Exact := False;
+  ColCount := g.VertexColoring(Colors, Exact, 0);
+  AssertTrue(ColCount = 3);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  Exact := False;
+  ColCount := g.VertexColoring(Colors, Exact, 0);
+  AssertTrue(ColCount = 4);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateWheel6;
+  g := Ref;
+  Exact := False;
+  ColCount := g.VertexColoring(Colors, Exact, 0);
+  AssertTrue(ColCount.ToString, ColCount = 3);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+end;
+
+procedure TSimpleGraphTest.VertexColoring2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Colors: TIntArray;
+  ColCount: SizeInt;
+  Exact: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateWikiChordal;
+  g := Ref;
+  ColCount := g.VertexColoring(Colors, Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(ColCount = 3);
+  AssertTrue(g.IsProperVertexColoring(Colors));
+  Ref.Instance := GenerateChordal8;
+  g := Ref;
+  Exact := False;
+  ColCount := g.VertexColoring(Colors, Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(ColCount = 5);
   AssertTrue(g.IsProperVertexColoring(Colors));
 end;
 
@@ -2073,7 +2139,7 @@ var
 begin
   g := {%H-}Ref;
   Colorable := g.IsKColorable(3, Colors, 5);
-  AssertTrue(Colorable = tlFalse);
+  AssertTrue(Colorable = tlTrue);
   Ref.Instance := GenerateTestGrBip1;
   g := Ref;
   Colorable := g.IsKColorable(1, Colors, 5);
