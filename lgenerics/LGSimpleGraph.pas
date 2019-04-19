@@ -261,7 +261,7 @@ type
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
   { returns True and the list of vertex indices in the perfect elimination order(reverse)
-    in aRevPeo, if graph is chordal, False otherwise; the empty graph is considered chordal }
+    in aRevPeo, if graph is chordal, False otherwise; an empty graph is considered chordal }
     function  IsChordal(out aRevPeo: TIntArray): Boolean;
   { returns True, radus and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
