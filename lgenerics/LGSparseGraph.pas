@@ -691,7 +691,7 @@ type
     3-opt local search at the end if matrix is symmetric;
     returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
     will raise EGraphError if m is not proper TSP matrix }
-    class function FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
+    class function FindSlowGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray; static;
   { returns best of farthest insertion starting from every vertex + 3-opt local search at the end
     if matrix is symmetric;
     returns best of nearest neighbour starting from every vertex, if matrix is asymmetric;
@@ -3751,7 +3751,7 @@ begin
     Ls2Opt(m, Result, aCost);
 end;
 
-class function TGTspHelper.FindGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray;
+class function TGTspHelper.FindSlowGreedy2Opt(const m: TTspMatrix; out aCost: T): TIntArray;
 begin
   if CheckMatrixProper(m) then
     begin
