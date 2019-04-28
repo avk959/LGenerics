@@ -643,12 +643,12 @@ type
     function  GetValue(const aKey: TKey): TValue;
   public
   const
-    MIN_LOAD_FACTOR: Single     = 1.0;
+    MIN_LOAD_FACTOR: Single     = 0.5;
     MAX_LOAD_FACTOR: Single     = 8.0;
-    DEFAULT_LOAD_FACTOR: Single = 2.0;
+    DEFAULT_LOAD_FACTOR: Single = 1.0;
 
     constructor Create;
-    constructor Create(aCapacity: SizeInt; aLoadFactor: Single = 2.0);
+    constructor Create(aCapacity: SizeInt; aLoadFactor: Single = 1.0);
     destructor Destroy; override;
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;
     function  Add(constref e: TEntry): Boolean; inline;
