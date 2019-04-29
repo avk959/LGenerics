@@ -106,6 +106,8 @@ type
     function  GetMaxCliqueBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxCliqueBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMaxClique(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMaxCliqueConnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMaxCliqueDisconnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GreedyMatching: TIntEdgeArray;
     function  GreedyMatching2: TIntEdgeArray;
     procedure ListCliquesBP(aOnFind: TOnSetFound);
@@ -1163,6 +1165,65 @@ var
   Helper: TCliqueHelper;
 begin
   Result := Helper.MaxClique(Self, aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GetMaxCliqueConnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+var
+  Clique: TIntSet;
+  I: SizeInt;
+begin
+  if IsComplete then
+    exit(TIntHelper.CreateRange(0, Pred(VertexCount)));
+  if IsBipartite then
+    begin
+      if not AdjLists[0]^.FindFirst(I) then
+        raise EGraphError.Create(SEInternalDataInconsist);
+      exit([0, I]);
+    end;
+  if FindChordalMaxClique(Clique) then
+    exit(Clique.ToArray);
+  if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
+    Result := GetMaxClique(aTimeOut, aExact)
+  else
+    if VertexCount > TBits256.BITNESS then
+      Result := GetMaxCliqueBP(aTimeOut, aExact)
+    else
+      Result := GetMaxCliqueBP256(aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GetMaxCliqueDisconnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+var
+  Separates: TIntVectorArray;
+  g: TGSimpleGraph;
+  CurrClique: TIntArray;
+  I: SizeInt;
+  TimeOut: Integer;
+  StartTime: TDateTime;
+  Exact: Boolean;
+begin
+  aExact := False;
+  TimeOut := aTimeOut and System.High(Integer);
+  StartTime := Now;
+  Result := GreedyMaxClique;
+  if SecondsBetween(Now, StartTime) < TimeOut then
+    begin
+      Separates := FindSeparates;
+      for I := 0 to System.High(Separates) do
+        if Separates[I].Count > Result.Length then
+          begin
+            g := InducedSubgraph(Separates[I].ToArray);
+            try
+              CurrClique := g.FindMaxClique(Exact, TimeOut - SecondsBetween(Now, StartTime));
+              if CurrClique.Length > Result.Length then
+                Result := CurrClique;
+            finally
+              g.Free;
+            end;
+            if not Exact then
+              exit;
+          end;
+      aExact := True;
+    end;
 end;
 
 function TGSimpleGraph.GreedyMatching: TIntEdgeArray;
@@ -3403,26 +3464,20 @@ begin
 end;
 
 function TGSimpleGraph.FindMaxClique(out aExact: Boolean; aTimeOut: Integer): TIntArray;
-var
-  Clique: TIntSet;
 begin
   aExact := True;
   if IsEmpty then
     exit(nil);
-  if FindChordalMaxClique(Clique) then
-    exit(Clique.ToArray);
-  if (VertexCount >= COMMON_BP_CUTOFF) or (Density <= MAXCLIQUE_BP_DENSITY_CUTOFF) then
-    Result := GetMaxClique(aTimeOut, aExact)
+  if Connected then
+    Result := GetMaxCliqueConnected(aTimeOut, aExact)
   else
-    if VertexCount > TBits256.BITNESS then
-      Result := GetMaxCliqueBP(aTimeOut, aExact)
-    else
-      Result := GetMaxCliqueBP256(aTimeOut, aExact);
+    Result := GetMaxCliqueDisconnected(aTimeOut, aExact);
 end;
 
 function TGSimpleGraph.GreedyMaxClique: TIntArray;
 var
   Cand, Stack, Q: TIntSet;
+  AdjList: PAdjList;
   I, J: SizeInt;
 begin
   if IsEmpty then
@@ -3432,8 +3487,9 @@ begin
     begin
       I := Cand.Pop;
       {%H-}Stack.Push(I);
+      AdjList := AdjLists[I];
       for J in Cand do
-        if AdjLists[I]^.Contains(J) then
+        if AdjList^.Contains(J) then
           {%H-}Q.Push(J);
       Cand.Assign(Q);
       Q.MakeEmpty;
