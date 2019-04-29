@@ -41,6 +41,7 @@ type
     function  GenerateComplete: TGraph;
     function  GenerateWikiChordal: TGraph;
     function  GenerateChordal8: TGraph;
+    function  GenerateDisconnected: TGraph;
     function  GenerateTestGrBip1: TGraph;
     function  GenerateTestTriangles: TGraph;
     function  GenerateC125Clique: TGraph;
@@ -124,6 +125,7 @@ type
     procedure ListAllCliques2;
     procedure FindMaxClique;
     procedure FindMaxClique1;
+    procedure FindMaxClique2;
     procedure GreedyMaxClique;
     procedure VertexColoring;
     procedure VertexColoring1;
@@ -370,6 +372,17 @@ begin
   Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 1, 3, 1, 4, 2, 4, 2, 5, 3, 5, //C5
                    1, 6, 1, 7, 2, 7, 2, 6, 6, 7,                               //C4
                    3, 8, 4, 8]);
+end;
+
+function TSimpleGraphTest.GenerateDisconnected: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 15);
+  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 1, 3, 1, 4, 2, 4, 2, 5, 3, 5, //C5
+                   6, 7, 7, 8, 8, 9, 9, 6, 6, 8, 7, 9,                         //C4
+                   10, 11, 11, 12, 12, 10,                                     //C3
+                   13, 14                                                      //C2
+                   ]);
 end;
 
 function TSimpleGraphTest.GenerateTestGrBip1: TGraph;
@@ -2009,6 +2022,33 @@ begin
   AssertTrue(Clique.Length = 4);
   for I in [1, 2, 6, 7] do
     AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
+end;
+
+procedure TSimpleGraphTest.FindMaxClique2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Clique: TIntArray;
+  Exact: Boolean = False;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateDisconnected;
+  g := Ref;
+  Clique := g.FindMaxClique(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = 5);
+  for I := 1 to 5 do
+    AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
+  g.RemoveEdge(1, 3);
+  g.RemoveEdge(2, 4);
+  g.RemoveEdge(3, 5);
+  Clique := g.FindMaxClique(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = 4);
+  for I := 6 to 9 do
+    AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
+  g.RemoveEdge(2, 4);
+  g.RemoveEdge(3, 5);
 end;
 
 procedure TSimpleGraphTest.GreedyMaxClique;
