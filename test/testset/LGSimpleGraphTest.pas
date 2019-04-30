@@ -120,6 +120,7 @@ type
     procedure FindMIS;
     procedure FindMIS1;
     procedure FindMIS2;
+    procedure FindMIS3;
     procedure GreedyMIS;
     procedure ListAllCliques1;
     procedure ListAllCliques2;
@@ -1901,6 +1902,27 @@ begin
   Mis := g.FindMIS(Exact, 0);
   AssertTrue(Exact);
   AssertTrue(Mis.Length = 9);
+  AssertTrue(g.IsMIS(Mis));
+end;
+
+procedure TSimpleGraphTest.FindMIS3;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mis: TIntArray;
+  Exact: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateDisconnected;
+  g := Ref;
+  Mis := g.FindMIS(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 5);
+  AssertTrue(g.IsMIS(Mis));
+  g.RemoveEdge(1, 3);
+  g.RemoveEdge(1, 4);
+  Mis := g.FindMIS(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 6);
   AssertTrue(g.IsMIS(Mis));
 end;
 
