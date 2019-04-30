@@ -1200,7 +1200,7 @@ var
   Separates: TIntVectorArray;
   g: TGSimpleGraph;
   CurrClique: TIntArray;
-  I: SizeInt;
+  I, J, Curr: SizeInt;
   TimeOut: Integer;
   StartTime: TDateTime;
   Exact: Boolean;
@@ -1219,7 +1219,15 @@ begin
             try
               CurrClique := g.FindMaxClique(Exact, TimeOut - SecondsBetween(Now, StartTime));
               if CurrClique.Length > Result.Length then
-                Result := CurrClique;
+                begin
+                  Curr := 0;
+                  Result.Length := CurrClique.Length;
+                  for J in CurrClique do
+                    begin
+                      Result[Curr] := IndexOf(g[J]);
+                      Inc(Curr);
+                    end;
+                end;
             finally
               g.Free;
             end;
@@ -1482,8 +1490,8 @@ function TGSimpleGraph.GetMisDisconnected(aTimeOut: Integer; out aExact: Boolean
 var
   Separates: TIntVectorArray;
   g: TGSimpleGraph;
-  CurrMis: TIntArray;
-  I: SizeInt;
+  CurrMis, Mis: TIntArray;
+  I, J, Curr: SizeInt;
   TimeOut: Integer;
   StartTime: TDateTime;
   Exact: Boolean;
@@ -1492,7 +1500,7 @@ begin
   TimeOut := aTimeOut and System.High(Integer);
   StartTime := Now;
   Result := GreedyMis;
-  CurrMis := nil;
+  Mis := nil;
   if SecondsBetween(Now, StartTime) < TimeOut then
     begin
       Separates := FindSeparates;
@@ -1500,15 +1508,22 @@ begin
         begin
           g := InducedSubgraph(Separates[I].ToArray);
           try
-            CurrMis += g.FindMis(Exact, TimeOut - SecondsBetween(Now, StartTime));
+            CurrMis := g.FindMis(Exact, TimeOut - SecondsBetween(Now, StartTime));
+            Curr := Mis.Length;
+            Mis.Length := Curr + CurrMis.Length;
+            for J in CurrMis do
+              begin
+                Mis[Curr] := IndexOf(g[J]);
+                Inc(Curr);
+              end;
           finally
             g.Free;
           end;
           if not Exact then
             exit;
         end;
-      if CurrMis.Length > Result.Length then
-        Result := CurrMis;
+      if Mis.Length > Result.Length then
+        Result := Mis;
       aExact := True;
     end;
 end;
