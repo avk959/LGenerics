@@ -3377,6 +3377,7 @@ function TGSimpleGraph.IsMIS(const aTestSet: TIntArray): Boolean;
 var
   TestIS, Remain: TBoolVector;
   I, J: SizeInt;
+  AdjList: PAdjList;
   AdjFound: Boolean;
 begin
   if System.Length(aTestSet) = 0 then
@@ -3391,17 +3392,21 @@ begin
       TestIS[I] := True;
     end;
   for I in aTestSet do
-    for J in aTestSet do
-      if (I <> J) and AdjacentI(I, J) then //contains adjacent vertices -> is not independent
-        exit(False);
+    begin
+      AdjList := AdjLists[I];
+      for J in aTestSet do
+        if AdjList^.Contains(J) then //contains adjacent vertices -> is not independent
+          exit(False);
+    end;
   Remain.InitRange(VertexCount);
   Remain.Subtract(TestIS);
   Finalize(TestIS);
   for I in Remain do
     begin
       AdjFound := False;
+      AdjList := AdjLists[I];
       for J in aTestSet do
-        if AdjacentI(I, J) then
+        if AdjList^.Contains(J) then
           begin
             AdjFound := True;
             break;
