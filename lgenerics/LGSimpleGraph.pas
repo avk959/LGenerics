@@ -23,6 +23,8 @@ unit LGSimpleGraph;
 {$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
 {$MODESWITCH NESTEDPROCVARS}
+{$MODESWITCH ARRAYOPERATORS}
+
 interface
 
 uses
@@ -114,9 +116,11 @@ type
     procedure ListCliquesBP256(aOnFind: TOnSetFound);
     procedure ListCliques(aOnFind: TOnSetFound);
   { returns max independent set in the bipartite graph }
-    function  GetMaxIsBipartite(const w, g: TIntArray): TIntArray;
-    function  GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
-    function  GetMaxIsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMisBipartite(const w, g: TIntArray): TIntArray;
+    function  GetMisBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMisBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMisConnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+    function  GetMisDisconnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     procedure ListIsBP(aOnFind: TOnSetFound);
     procedure ListIsBP256(aOnFind: TOnSetFound);
     function  GetGreedyMis: TIntArray;
@@ -1345,7 +1349,7 @@ begin
   Helper.ListCliques(Self, aOnFind);
 end;
 
-function TGSimpleGraph.GetMaxIsBipartite(const w, g: TIntArray): TIntArray;
+function TGSimpleGraph.GetMisBipartite(const w, g: TIntArray): TIntArray;
 var
   Helper: THKMatch;
   Lefts, LeftsVisit, LeftsFree, RightsUnvisit: TBoolVector;
@@ -1443,18 +1447,70 @@ begin
     end;
 end;
 
-function TGSimpleGraph.GetMaxIsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+function TGSimpleGraph.GetMisBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPCliqueIsHelper;
 begin
   Result := Helper.MaxIS(Self, aTimeOut, aExact);
 end;
 
-function TGSimpleGraph.GetMaxIsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+function TGSimpleGraph.GetMisBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
 var
   Helper: TBPCliqueIsHelper256;
 begin
   Result := Helper.MaxIS(Self, aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GetMisConnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+var
+  w, g: TIntArray;
+  Mis: TIntSet;
+begin
+  if IsComplete then
+    exit([0]);
+  if IsBipartite(w, g) then
+    exit(GetMisBipartite(w, g));
+  if FindChordalMis(Mis) then
+    exit(Mis.ToArray);
+  if VertexCount > TBits256.BITNESS then
+    Result := GetMisBP(aTimeOut, aExact)
+  else
+    Result := GetMisBP256(aTimeOut, aExact);
+end;
+
+function TGSimpleGraph.GetMisDisconnected(aTimeOut: Integer; out aExact: Boolean): TIntArray;
+var
+  Separates: TIntVectorArray;
+  g: TGSimpleGraph;
+  CurrMis: TIntArray;
+  I: SizeInt;
+  TimeOut: Integer;
+  StartTime: TDateTime;
+  Exact: Boolean;
+begin
+  aExact := False;
+  TimeOut := aTimeOut and System.High(Integer);
+  StartTime := Now;
+  Result := GreedyMis;
+  CurrMis := nil;
+  if SecondsBetween(Now, StartTime) < TimeOut then
+    begin
+      Separates := FindSeparates;
+      for I := 0 to System.High(Separates) do
+        begin
+          g := InducedSubgraph(Separates[I].ToArray);
+          try
+            CurrMis += g.FindMis(Exact, TimeOut - SecondsBetween(Now, StartTime));
+          finally
+            g.Free;
+          end;
+          if not Exact then
+            exit;
+        end;
+      if CurrMis.Length > Result.Length then
+        Result := CurrMis;
+      aExact := True;
+    end;
 end;
 
 procedure TGSimpleGraph.ListIsBP(aOnFind: TOnSetFound);
@@ -3280,24 +3336,14 @@ begin
 end;
 
 function TGSimpleGraph.FindMIS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
-var
-  w, g: TIntArray;
-  Mis: TIntSet;
 begin
   aExact := True;
   if IsEmpty then
     exit(nil);
-  if VertexCount < 2 then
-    exit([0]);
-  if FindChordalMis(Mis) then
-    exit(Mis.ToArray);
-  if IsBipartite(w, g) then
-    Result := GetMaxIsBipartite(w, g)
+  if Connected then
+    Result := GetMisConnected(aTimeOut, aExact)
   else
-    if VertexCount > TBits256.BITNESS then
-      Result := GetMaxIsBP(aTimeOut, aExact)
-    else
-      Result := GetMaxIsBP256(aTimeOut, aExact);
+    Result := GetMisDisconnected(aTimeOut, aExact)
 end;
 
 function TGSimpleGraph.GreedyMIS: TIntArray;
