@@ -3461,6 +3461,7 @@ function TGSimpleGraph.IsMDS(const aTestSet: TIntArray): Boolean;
 var
   TestMds, Remain: TBoolVector;
   I, J, K: SizeInt;
+  AdjList: PAdjList;
   AdjFound: Boolean;
 begin
   if IsEmpty then
@@ -3481,9 +3482,10 @@ begin
   Finalize(TestMds);
   for I in Remain do
     begin
+      AdjList := AdjLists[I];
       AdjFound := False;
       for J in aTestSet do
-        if AdjacentI(I, J) then
+        if AdjList^.Contains(J) then
           begin
             AdjFound := True;
             break;
@@ -3497,9 +3499,10 @@ begin
       Remain[I] := True;        //test aTestSet without I
       for K in Remain do
         begin
+          AdjList := AdjLists[K];
           AdjFound := False;
           for J in aTestSet do
-            if (J <> I) and AdjacentI(K, J) then
+            if (J <> I) and AdjList^.Contains(J) then
               begin
                 AdjFound := True;
                 break;
@@ -3567,6 +3570,7 @@ function TGSimpleGraph.IsMaxClique(const aTestClique: TIntArray): Boolean;
 var
   TestClique, Remain: TBoolVector;
   I, J: SizeInt;
+  AdjList: PAdjList;
   AdjFound: Boolean;
 begin
   if System.Length(aTestClique) = 0 then
@@ -3581,17 +3585,21 @@ begin
       TestClique[I] := True;
     end;
   for I in aTestClique do
-    for J in aTestClique do
-      if (I <> J) and not AdjacentI(I, J) then //contains nonadjacent vertices -> is not clique
-        exit(False);
+    begin
+      AdjList := AdjLists[I];
+      for J in aTestClique do
+        if (I <> J) and not AdjList^.Contains(J) then //contains nonadjacent vertices -> is not clique
+          exit(False);
+    end;
   Remain.InitRange(VertexCount);
   Remain.Subtract(TestClique);
   Finalize(TestClique);
   for I in Remain do
     begin
+      AdjList := AdjLists[I];
       AdjFound := True;
       for J in aTestClique do
-        if not AdjacentI(I, J) then
+        if not AdjList^.Contains(J) then
           begin
             AdjFound := False;
             break;
