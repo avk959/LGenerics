@@ -381,6 +381,27 @@ begin
   Extend(Sub, Cand);
 end;
 
+{ TGSimpleGraph.TMvcHelper }
+
+procedure TGSimpleGraph.TMvcHelper.SetFound(const aSet: TIntArray; var aCancel: Boolean);
+var
+  Mvc: TIntArray;
+  I: SizeInt;
+begin
+  FVertexSet.InitRange(FNodeCount);
+  for I in aSet do
+    FVertexSet[I] := False;
+  Mvc := FVertexSet.ToArray;
+  if not Mvc.IsEmpty then
+    FOnFind(Mvc, aCancel)
+end;
+
+procedure TGSimpleGraph.TMvcHelper.Init(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
+begin
+  FNodeCount := aGraph.VertexCount;
+  FOnFind := aOnFind;
+end;
+
 procedure TGSimpleGraph.TCliqueHelper.GreedyColor(constref aCand: TIntSet; var aColOrd, aColors: TIntArray);
 var
   P, Q: TIntSet;

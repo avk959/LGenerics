@@ -314,8 +314,7 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
-  { lists all maximal independent vertex sets;
-    will raise exception if aOnFindSet is not assigned;
+  { lists all maximal independent vertex sets; will raise exception if aOnFound is not assigned;
     setting aCancel to True in aOnFound will result in an exit from the method }
     procedure ListAllMIS(aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found maximum independent set;
@@ -324,18 +323,17 @@ type
     will be set to False }
     function  FindMIS(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMIS: TIntArray;
-  { returns True if aTestSet contains indices of the some maximal independent vertex set, False otherwise }
-    function  IsMIS(const aTestSet: TIntArray): Boolean;
+  { returns True if aTestMis contains indices of the some maximal independent vertex set, False otherwise }
+    function  IsMIS(const aTestMis: TIntArray): Boolean;
   { returns indices of the vertices of the some found minimum dominating vertex set;
     worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout the best
     recent solution will be returned, and aExact will be set to False }
     function  FindMDS(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
     function  GreedyMDS: TIntArray;
-  { returns True if aTestSet contains indices of the some minimal dominating vertex set, False otherwise }
-    function  IsMDS(const aTestSet: TIntArray): Boolean;
-  { lists all maximal cliques;
-    will raise exception if aOnFindClique is not assigned;
+  { returns True if aTestMds contains indices of the some minimal dominating vertex set, False otherwise }
+    function  IsMDS(const aTestMds: TIntArray): Boolean;
+  { lists all maximal cliques; will raise exception if aOnFound is not assigned;
     setting aCancel to True in aOnFound will result in an exit from the method }
     procedure ListAllCliques(aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found maximum clique;
@@ -346,6 +344,17 @@ type
     function  GreedyMaxClique: TIntArray;
   { returns True if aTestClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(const aTestClique: TIntArray): Boolean;
+  { lists all minimal vertex covers; will raise exception if aOnFound is not assigned;
+    setting aCancel to True in aOnFound will result in an exit from the method }
+    procedure ListAllMVC(aOnFound: TOnSetFound);
+  { returns indices of the vertices of the some found minimum vertex cover;
+    worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
+    at the end of the timeout the best recent solution will be returned, and aExact
+    will be set to False }
+    function  FindMVC(out aExact: Boolean; aTimeOut: Integer = WAIT_INFINITE): TIntArray;
+    function  GreedyMVC: TIntArray;
+  { returns True if aTestMvc contains indices of the some minimal vertex cover, False otherwise }
+    function  IsMVC(const aTestMvc: TIntArray): Boolean;
   { returns count of used colors(chromatic number, if aExact); returns colors of the vertices
     in corresponding components of aColors; worst case time cost of exact solution O*(k^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout,
@@ -1441,7 +1450,7 @@ begin
   Lefts.Size := 0;
   LeftsFree.Size := 0;
 
-  System.SetLength(Result, LeftsVisit.PopCount + RightsUnvisit.PopCount);
+  Result.Length := LeftsVisit.PopCount + RightsUnvisit.PopCount;
   I := 0;
   for Curr in LeftsVisit do
     begin
@@ -3373,17 +3382,17 @@ begin
     Result := GetGreedyMisBP;
 end;
 
-function TGSimpleGraph.IsMIS(const aTestSet: TIntArray): Boolean;
+function TGSimpleGraph.IsMIS(const aTestMis: TIntArray): Boolean;
 var
   TestIS, Remain: TBoolVector;
   I, J: SizeInt;
   AdjList: PAdjList;
   AdjFound: Boolean;
 begin
-  if System.Length(aTestSet) = 0 then
-    exit(False);
+  if IsEmpty then
+    exit(aTestMis.IsEmpty);
   TestIS.Size := VertexCount;
-  for I in aTestSet do
+  for I in aTestMis do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
@@ -3391,10 +3400,10 @@ begin
         exit(False);
       TestIS[I] := True;
     end;
-  for I in aTestSet do
+  for I in aTestMis do
     begin
       AdjList := AdjLists[I];
-      for J in aTestSet do
+      for J in aTestMis do
         if AdjList^.Contains(J) then //contains adjacent vertices -> is not independent
           exit(False);
     end;
@@ -3405,13 +3414,13 @@ begin
     begin
       AdjFound := False;
       AdjList := AdjLists[I];
-      for J in aTestSet do
+      for J in aTestMis do
         if AdjList^.Contains(J) then
           begin
             AdjFound := True;
             break;
           end;
-      if not AdjFound then //I can be added to aTestSet -> aTestSet is not maximal
+      if not AdjFound then //I can be added to aTestMis -> aTestMis is not maximal
         exit(False);
     end;
   Result := True;
@@ -3457,7 +3466,7 @@ begin
     Result := GetGreedyMinIsBP;
 end;
 
-function TGSimpleGraph.IsMDS(const aTestSet: TIntArray): Boolean;
+function TGSimpleGraph.IsMDS(const aTestMds: TIntArray): Boolean;
 var
   TestMds, Remain: TBoolVector;
   I, J, K: SizeInt;
@@ -3465,11 +3474,11 @@ var
   AdjFound: Boolean;
 begin
   if IsEmpty then
-    exit(False);
-  if System.Length(aTestSet) = 0 then
+    exit(aTestMds.IsEmpty);
+  if System.Length(aTestMds) = 0 then
     exit(False);
   TestMds.Size := VertexCount;
-  for I in aTestSet do
+  for I in aTestMds do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
@@ -3484,7 +3493,7 @@ begin
     begin
       AdjList := AdjLists[I];
       AdjFound := False;
-      for J in aTestSet do
+      for J in aTestMds do
         if AdjList^.Contains(J) then
           begin
             AdjFound := True;
@@ -3494,20 +3503,20 @@ begin
         exit(False);
     end;
 
-  for I in aTestSet do
+  for I in aTestMds do
     begin
-      Remain[I] := True;        //test aTestSet without I
+      Remain[I] := True;        //test aTestMds without I
       for K in Remain do
         begin
           AdjList := AdjLists[K];
           AdjFound := False;
-          for J in aTestSet do
+          for J in aTestMds do
             if (J <> I) and AdjList^.Contains(J) then
               begin
                 AdjFound := True;
                 break;
               end;
-          if not AdjFound then //exists vertex nonadjacent with aTestSet without I
+          if not AdjFound then //exists vertex nonadjacent with aTestMds without I
             break;
         end;
       if AdjFound then         //is not minimal
@@ -3573,8 +3582,8 @@ var
   AdjList: PAdjList;
   AdjFound: Boolean;
 begin
-  if System.Length(aTestClique) = 0 then
-    exit(False);
+  if IsEmpty then
+    exit(aTestClique.IsEmpty);
   TestClique.Size := VertexCount;
   for I in aTestClique do
     begin
@@ -3606,6 +3615,86 @@ begin
           end;
       if AdjFound then // I can be added to clique -> clique is not maximal
         exit(False);
+    end;
+  Result := True;
+end;
+
+procedure TGSimpleGraph.ListAllMVC(aOnFound: TOnSetFound);
+var
+  Helper: TMvcHelper;
+begin
+  if VertexCount < 2 then
+    exit;
+  if aOnFound = nil then
+    raise EGraphError.Create(SECallbackMissed);
+  Helper.Init(Self, aOnFound);
+  ListAllMIS(@Helper.SetFound);
+end;
+
+function TGSimpleGraph.FindMVC(out aExact: Boolean; aTimeOut: Integer): TIntArray;
+var
+  VertSet: TBoolVector;
+  I: SizeInt;
+begin
+  if VertexCount < 2 then
+    exit(nil);
+  Result := FindMIS(aExact, aTimeOut);
+  VertSet.InitRange(VertexCount);
+  for I in Result do
+    VertSet[I] := False;
+  Result := VertSet.ToArray;
+end;
+
+function TGSimpleGraph.GreedyMVC: TIntArray;
+var
+  VertSet: TBoolVector;
+  I: SizeInt;
+begin
+  if VertexCount < 2 then
+    exit(nil);
+  Result := GreedyMIS;
+  VertSet.InitRange(VertexCount);
+  for I in Result do
+    VertSet[I] := False;
+  Result := VertSet.ToArray;
+end;
+
+function TGSimpleGraph.IsMVC(const aTestMvc: TIntArray): Boolean;
+var
+  TestCover: TBoolVector;
+  I, J: SizeInt;
+  p: PAdjItem;
+  Covered: Boolean;
+begin
+  if IsEmpty then
+    exit(aTestMvc.IsEmpty);
+  TestCover.Size := VertexCount;
+  for I in aTestMvc do
+    begin
+      if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
+        exit(False);
+      if TestCover[I] then //contains duplicates -> is not set
+        exit(False);
+      TestCover[I] := True;
+    end;
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if (p^.Key > I) and not(TestCover[I] or TestCover[p^.Key]) then
+        exit(False);  //contains uncovered edge -> is not cover
+  for I in aTestMvc do
+    begin
+      TestCover[I] := False;
+      Covered := True;
+      for J := 0 to Pred(VertexCount) do
+        for p in AdjLists[J]^ do
+          if (p^.Key > J) and not (TestCover[J] or TestCover[p^.Key]) then
+            begin
+              Covered := False;
+              break;
+            end;
+      if Covered then
+        exit(False);  //I can be removed from cover -> cover is not minimal
+      TestCover[I] := True;
     end;
   Result := True;
 end;
@@ -3695,20 +3784,20 @@ end;
 
 function TGSimpleGraph.IsProperVertexColoring(const aTestColors: TIntArray): Boolean;
 var
-  sCol, dCol: SizeInt;
-  e: TEdge;
+  Color, I: SizeInt;
+  p: PAdjItem;
 begin
   if IsEmpty then
     exit(aTestColors = nil);
   if aTestColors.Length <> VertexCount then
     exit(False);
-  for e in DistinctEdges do
-    begin
-      sCol := aTestColors[e.Source];
-      dCol := aTestColors[e.Destination];
-      if (sCol < 1) or (sCol > VertexCount) or (dCol < 1) or (dCol > VertexCount) or (sCol = dCol) then
+  for Color in aTestColors do
+    if (Color < 1) or (Color > VertexCount) then
+      exit(False);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if (p^.Key > I) and (aTestColors[I] = aTestColors[p^.Key]) then
         exit(False);
-    end;
   Result := True;
 end;
 

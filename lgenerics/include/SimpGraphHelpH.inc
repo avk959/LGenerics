@@ -75,6 +75,16 @@ type
     procedure ListMIS(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
   end;
 
+  TMvcHelper = object
+  private
+    FVertexSet: TBoolVector;
+    FOnFind: TOnSetFound;
+    FNodeCount: SizeInt;
+    procedure SetFound(const aSet: TIntArray; var aCancel: Boolean);
+  public
+    procedure Init(aGraph: TGSimpleGraph; aOnFind: TOnSetFound);
+  end;
+
   TCliqueHelper = object(TNodeSearch)
   strict private
     FMatrix: TSkeleton;
