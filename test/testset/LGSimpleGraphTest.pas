@@ -128,6 +128,13 @@ type
     procedure FindMaxClique1;
     procedure FindMaxClique2;
     procedure GreedyMaxClique;
+    procedure ListAllMVC1;
+    procedure ListAllMVC2;
+    procedure FindMVC;
+    procedure FindMVC1;
+    procedure FindMVC2;
+    procedure FindMVC3;
+    procedure GreedyMVC;
     procedure VertexColoring;
     procedure VertexColoring1;
     procedure VertexColoring2;
@@ -1939,6 +1946,7 @@ begin
   g := Ref;
   Mis := g.GreedyMIS;
   AssertTrue(Mis.Length > 0);
+  AssertTrue(g.IsMIS(Mis));
   Ref.Instance := GenerateTestGr5;
   g := Ref;
   Mis := g.GreedyMIS;
@@ -2096,6 +2104,158 @@ begin
   Clique := g.GreedyMaxClique;
   AssertTrue(Clique.Length > 0);
   AssertTrue(g.IsMaxClique(Clique));
+end;
+
+procedure TSimpleGraphTest.ListAllMVC1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  FSetVector.Clear;
+  g.ListAllMVC(@SetFound);
+  AssertTrue(FSetVector.IsEmpty);
+  g.AddVertex(1);
+  g.ListAllMVC(@SetFound);
+  AssertTrue(FSetVector.IsEmpty);
+  g.AddVertex(2);
+  g.ListAllMVC(@SetFound);
+  AssertTrue(FSetVector.IsEmpty);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  g.ListAllMVC(@SetFound2);
+  AssertTrue(FSetVector.Count = 1);
+  AssertTrue(g.IsMVC(FSetVector[0]));
+end;
+
+procedure TSimpleGraphTest.ListAllMVC2;
+var
+  Ref: TRef;
+  g: TGraph;
+  CurrSet: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  FSetVector.Clear;
+  g.ListAllMVC(@SetFound);
+  AssertTrue(FSetVector.Count = 295);
+  for CurrSet in FSetVector do
+    begin
+      AssertTrue(not CurrSet.IsEmpty and (CurrSet.Length <= 14));
+      AssertTrue(g.IsMVC(CurrSet));
+    end;
+end;
+
+procedure TSimpleGraphTest.FindMVC;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mvc: TIntArray;
+  Exact: Boolean;
+begin
+  g := {%H-}Ref;
+  Mvc := g.FindMVC(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.IsEmpty);
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  Mvc := g.FindMVC(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.Length = 12);
+  AssertTrue(g.IsMVC(Mvc));
+  Ref.Instance := GenerateC125Mis;
+  g := Ref;
+  Mvc := g.FindMVC(Exact, 10);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.Length = 91);
+  AssertTrue(g.IsMVC(Mvc));
+end;
+
+procedure TSimpleGraphTest.FindMVC1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mvc: TIntArray;
+  Exact: Boolean;
+begin
+  {%H-}Ref.Instance := GenerateComplete;
+  g := Ref;
+  Mvc := g.FindMVC(Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.Length = g.VertexCount - 1);
+  AssertTrue(g.IsMVC(Mvc));
+  Ref.Instance := GenerateChordal8;
+  g := Ref;
+  Mvc := g.FindMVC(Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.Length = 5);
+  AssertTrue(g.IsMVC(Mvc));
+end;
+
+procedure TSimpleGraphTest.FindMVC2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mvc: TIntArray;
+  Exact: Boolean;
+begin
+  {%H-}Ref.Instance := GenerateTree;
+  g := Ref;
+  Mvc := g.FindMVC(Exact, 0);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.Length = 3);
+  AssertTrue(g.IsMVC(Mvc));
+end;
+
+procedure TSimpleGraphTest.FindMVC3;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mvc: TIntArray;
+  Exact: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateDisconnected;
+  g := Ref;
+  Mvc := g.FindMVC(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.Length = 10);
+  AssertTrue(g.IsMVC(Mvc));
+  g.RemoveEdge(1, 3);
+  g.RemoveEdge(1, 4);
+  Mvc := g.FindMVC(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.Length = 9);
+  AssertTrue(g.IsMVC(Mvc));
+end;
+
+procedure TSimpleGraphTest.GreedyMVC;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mvc: TIntArray;
+begin
+  g := {%H-}Ref;
+  Mvc := g.GreedyMVC;
+  AssertTrue(Mvc.IsEmpty);
+  g.AddVertex(1);
+  g.AddVertex(2);
+  Mvc := g.GreedyMVC;
+  AssertTrue(Mvc.IsEmpty);
+  Ref.Instance := GenerateComplete;
+  g := Ref;
+  Mvc := g.GreedyMVC;
+  AssertTrue(Mvc.Length > 0);
+  AssertTrue(g.IsMVC(Mvc));
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  Mvc := g.GreedyMVC;
+  AssertTrue(Mvc.Length > 0);
+  AssertTrue(g.IsMVC(Mvc));
+  Ref.Instance := GenerateC125Mis;
+  g := Ref;
+  Mvc := g.GreedyMVC;
+  AssertTrue(Mvc.Length > 0);
+  AssertTrue(g.IsMVC(Mvc));
 end;
 
 procedure TSimpleGraphTest.VertexColoring;
