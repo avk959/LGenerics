@@ -3967,7 +3967,7 @@ end;
 
 function TIntArrayHelper.IsEmpty: Boolean;
 begin
-  Result := Length = 0;
+  Result := Self = nil;
 end;
 
 function TIntArrayHelper.Copy: TIntArray;
