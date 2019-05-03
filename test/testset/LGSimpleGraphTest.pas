@@ -41,6 +41,7 @@ type
     function  GenerateComplete: TGraph;
     function  GenerateWikiChordal: TGraph;
     function  GenerateChordal8: TGraph;
+    function  GenerateChordal8Compl: TGraph;
     function  GenerateDisconnected: TGraph;
     function  GenerateTestGrBip1: TGraph;
     function  GenerateTestTriangles: TGraph;
@@ -121,12 +122,16 @@ type
     procedure FindMIS1;
     procedure FindMIS2;
     procedure FindMIS3;
+    procedure FindMIS4;
     procedure GreedyMIS;
     procedure ListAllCliques1;
     procedure ListAllCliques2;
+    procedure ListAllCliques3;
+    procedure ListAllCliques4;
     procedure FindMaxClique;
     procedure FindMaxClique1;
     procedure FindMaxClique2;
+    procedure FindMaxClique3;
     procedure GreedyMaxClique;
     procedure ListAllMVC1;
     procedure ListAllMVC2;
@@ -134,6 +139,7 @@ type
     procedure FindMVC1;
     procedure FindMVC2;
     procedure FindMVC3;
+    procedure FindMVC4;
     procedure GreedyMVC;
     procedure VertexColoring;
     procedure VertexColoring1;
@@ -379,7 +385,27 @@ begin
   Result.AddVertexRange(1, 8);
   Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 1, 3, 1, 4, 2, 4, 2, 5, 3, 5, //C5
                    1, 6, 1, 7, 2, 7, 2, 6, 6, 7,                               //C4
-                   3, 8, 4, 8]);
+                   3, 8, 4, 8]);                                               //C3
+end;
+
+function TSimpleGraphTest.GenerateChordal8Compl: TGraph;
+var
+  g: TGraph;
+  I, J: SizeInt;
+begin
+  // Chordal8 complement
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 8);
+  g := GenerateChordal8;
+  try
+    for I := 1 to 8 do
+      for J := 1 to 8 do
+        if I <> J then
+          if not g.Adjacent(I, J) then
+            Result.AddEdge(I, J);
+  finally
+    g.Free;
+  end;
 end;
 
 function TSimpleGraphTest.GenerateDisconnected: TGraph;
@@ -1933,6 +1959,21 @@ begin
   AssertTrue(g.IsMIS(Mis));
 end;
 
+procedure TSimpleGraphTest.FindMIS4;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mis: TIntArray;
+  Exact: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateChordal8Compl;
+  g := Ref;
+  Mis := g.FindMIS(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Mis.Length = 5);
+  AssertTrue(g.IsMIS(Mis));
+end;
+
 procedure TSimpleGraphTest.GreedyMIS;
 var
   Ref: TRef;
@@ -1993,6 +2034,42 @@ begin
     end;
 end;
 
+procedure TSimpleGraphTest.ListAllCliques3;
+var
+  Ref: TRef;
+  g: TGraph;
+  CurrSet: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateChordal8;
+  g := Ref;
+  FSetVector.Clear;
+  g.ListAllCliques(@SetFound);
+  AssertTrue(FSetVector.Count = 3);
+  for CurrSet in FSetVector do
+    begin
+      AssertTrue(not CurrSet.IsEmpty and (CurrSet.Length <= 5));
+      AssertTrue(g.IsMaxClique(CurrSet));
+    end;
+end;
+
+procedure TSimpleGraphTest.ListAllCliques4;
+var
+  Ref: TRef;
+  g: TGraph;
+  CurrSet: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateChordal8Compl;
+  g := Ref;
+  FSetVector.Clear;
+  g.ListAllCliques(@SetFound);
+  AssertTrue(FSetVector.Count = 8);
+  for CurrSet in FSetVector do
+    begin
+      AssertTrue(not CurrSet.IsEmpty and (CurrSet.Length <= 3));
+      AssertTrue(g.IsMaxClique(CurrSet));
+    end;
+end;
+
 procedure TSimpleGraphTest.FindMaxClique;
 var
   Ref: TRef;
@@ -2041,6 +2118,7 @@ begin
   Clique := g.FindMaxClique(Exact, 0);
   AssertTrue(Exact);
   AssertTrue(Clique.Length = 5);
+  AssertTrue(g.IsMaxClique(Clique));
   for I := 1 to 5 do
     AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
   g.RemoveEdge(2, 4);
@@ -2050,6 +2128,7 @@ begin
   Clique := g.FindMaxClique(Exact, 0);
   AssertTrue(Exact);
   AssertTrue(Clique.Length = 4);
+  AssertTrue(g.IsMaxClique(Clique));
   for I in [1, 2, 6, 7] do
     AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
 end;
@@ -2067,6 +2146,7 @@ begin
   Clique := g.FindMaxClique(Exact, 5);
   AssertTrue(Exact);
   AssertTrue(Clique.Length = 5);
+  AssertTrue(g.IsMaxClique(Clique));
   for I := 1 to 5 do
     AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
   g.RemoveEdge(1, 3);
@@ -2075,10 +2155,24 @@ begin
   Clique := g.FindMaxClique(Exact, 5);
   AssertTrue(Exact);
   AssertTrue(Clique.Length = 4);
+  AssertTrue(g.IsMaxClique(Clique));
   for I := 6 to 9 do
     AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
-  g.RemoveEdge(2, 4);
-  g.RemoveEdge(3, 5);
+end;
+
+procedure TSimpleGraphTest.FindMaxClique3;
+var
+  Ref: TRef;
+  g: TGraph;
+  Clique: TIntArray;
+  Exact: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateChordal8Compl;
+  g := Ref;
+  Clique := g.FindMaxClique(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Clique.Length = 3);
+  AssertTrue(g.IsMaxClique(Clique));
 end;
 
 procedure TSimpleGraphTest.GreedyMaxClique;
@@ -2225,6 +2319,21 @@ begin
   Mvc := g.FindMVC(Exact, 5);
   AssertTrue(Exact);
   AssertTrue(Mvc.Length = 9);
+  AssertTrue(g.IsMVC(Mvc));
+end;
+
+procedure TSimpleGraphTest.FindMVC4;
+var
+  Ref: TRef;
+  g: TGraph;
+  Mvc: TIntArray;
+  Exact: Boolean = False;
+begin
+  {%H-}Ref.Instance := GenerateChordal8Compl;
+  g := Ref;
+  Mvc := g.FindMVC(Exact, 5);
+  AssertTrue(Exact);
+  AssertTrue(Mvc.Length = 3);
   AssertTrue(g.IsMVC(Mvc));
 end;
 
