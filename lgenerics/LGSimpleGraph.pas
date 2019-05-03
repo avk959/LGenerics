@@ -50,7 +50,7 @@ type
   protected
   type
     TSortByDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
-    TOnNodeDone         = procedure(aNodeIndex: SizeInt; aLefts: TIntSet) is nested;
+    TOnNodeDone         = procedure(aNodeIndex: SizeInt; const aLefts: TIntSet) is nested;
 
     {$I SimpGraphHelpH.inc}
 
@@ -101,7 +101,7 @@ type
     function  CheckAcyclic: Boolean;
   { returns True if there exists a perfect elimination order in the graph;
     in this case returns this order (reverse) in aOrd and max clique in aClique }
-    function  FindPerfElimOrd(aOnNodeDone: TOnNodeDone; out aPeoSeq: TIntArray): Boolean;
+    function  FindPerfectElimOrd(aOnNodeDone: TOnNodeDone; out aPeoSeq: TIntArray): Boolean;
     function  FindChordalMaxClique(out aClique: TIntSet): Boolean;
     function  FindChordalMis(out aMis: TIntSet): Boolean;
     function  FindChordalColoring(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
@@ -1023,7 +1023,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindPerfElimOrd(aOnNodeDone: TOnNodeDone; out aPeoSeq: TIntArray): Boolean;
+function TGSimpleGraph.FindPerfectElimOrd(aOnNodeDone: TOnNodeDone; out aPeoSeq: TIntArray): Boolean;
 var
   Queue: TINodePqMax;
   InQueue: TBitVector;
@@ -1081,7 +1081,7 @@ begin
 end;
 
 function TGSimpleGraph.FindChordalMaxClique(out aClique: TIntSet): Boolean;
-  procedure NodeDone(aIndex: SizeInt; aLefts: TIntSet);
+  procedure NodeDone(aIndex: SizeInt; const aLefts: TIntSet);
   begin
     if aLefts.Count > Pred(aClique.Count) then
       begin
@@ -1093,7 +1093,7 @@ var
   Dummy: TIntArray;
 begin
   aClique.Clear;
-  Result := FindPerfElimOrd(@NodeDone, Dummy);
+  Result := FindPerfectElimOrd(@NodeDone, Dummy);
   if not Result then
     aClique.Clear;
 end;
@@ -1106,7 +1106,7 @@ var
   p: PAdjItem;
 begin
   aMis.Clear;
-  Result := FindPerfElimOrd(nil, Peo);
+  Result := FindPerfectElimOrd(nil, Peo);
   if Result then
     begin
       Visited.Size := VertexCount;
@@ -1123,7 +1123,7 @@ begin
 end;
 
 function TGSimpleGraph.FindChordalColoring(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
-  procedure NodeDone(aIndex: SizeInt; aLefts: TIntSet);
+  procedure NodeDone(aIndex: SizeInt; const aLefts: TIntSet);
   begin
     aIndex := Succ(aLefts.Count);
     if aIndex > aMaxColor then
@@ -1138,7 +1138,7 @@ var
 begin
   aMaxColor := 0;
   aColors := nil;
-  Result := FindPerfElimOrd(@NodeDone, PeoSeq);
+  Result := FindPerfectElimOrd(@NodeDone, PeoSeq);
   if Result then
     begin
       aColors.Length := VertexCount;
@@ -3154,7 +3154,7 @@ end;
 
 function TGSimpleGraph.IsChordal(out aRevPeo: TIntArray): Boolean;
 begin
-  Result := FindPerfElimOrd(nil, aRevPeo);
+  Result := FindPerfectElimOrd(nil, aRevPeo);
 end;
 
 function TGSimpleGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
@@ -3527,6 +3527,8 @@ begin
 end;
 
 procedure TGSimpleGraph.ListAllCliques(aOnFound: TOnSetFound);
+var
+  Peo: TIntArray;
 begin
   if IsEmpty then
     exit;
