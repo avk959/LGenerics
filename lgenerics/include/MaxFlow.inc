@@ -631,8 +631,6 @@ end;
 
 function TGDirectInt64Net.THPrHelper.GetFlow(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt;
   aReqFlow: TWeight; out a: TEdgeArray): TWeight;
-var
-  e: TWeightEdge;
 begin
   CreateResidualNetCap(aGraph, aSource, aSink, aReqFlow);
   Execute;
