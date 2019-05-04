@@ -96,6 +96,8 @@ type
     function  GetMaxFlow(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
     function  GetMinCut(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
     function  GetFlow(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt; aReqFlow: TWeight;
+              out a: TEdgeArray): TWeight;
+    function  GetFlowMap(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt; aReqFlow: TWeight;
               out m: TWeightArcMap): TWeight;
   end;
 
@@ -141,11 +143,14 @@ type
     function  BuildLevelGraph: Boolean;
     function  FindBlockingFlow(aRoot: PNode; aFlow: TWeight): TWeight;
     function  Execute: TWeight;
+    function  Execute(aReqFlow: TWeight): TWeight;
     function  CreateArcFlows(aGraph: TGDirectInt64Net): TEdgeArray;
   public
     function  GetMaxFlow(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt): TWeight;
     function  GetMaxFlow(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt; out a: TEdgeArray): TWeight;
     function  GetMinCut(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt; out s: TIntArray): TWeight;
+    function  GetFlow(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt; aReqFlow: TWeight;
+              out a: TEdgeArray): TWeight;
   end;
 
 

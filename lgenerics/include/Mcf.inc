@@ -546,7 +546,7 @@ function TGCostedInt64Net.TCsMcfHelper.FindRequiredFlow(aGraph: TGCostedInt64Net
 var
   Helper: THPrHelper;
 begin
-  FResultFlow := Helper.GetFlow(aGraph, aSource, aSink, FRequestFlow, m);
+  FResultFlow := Helper.GetFlowMap(aGraph, aSource, aSink, FRequestFlow, m);
   Result := FResultFlow > 0;
 end;
 

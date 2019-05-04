@@ -537,6 +537,13 @@ type
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
     function FindMaxFlowPrI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+  { returns state of network with aSource as source and aSink as sink;
+    param aFlow specifies required flow > 0; returns flow through the network
+    as (Min(required flow, maximum flow)) in aFlow and flows through the arcs
+    in array a if result = nsOk and aFlow > 0, 0 and nil otherwise; used push/relabel algorithm }
+    function FindFlowPr(constref aSource, aSink: TVertex; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+             inline;
+    function FindFlowPrI(aSrcIdx, aSinkIdx: SizeInt; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow, if result = nsOk, 0 otherwise;
     used Dinitz's algorithm with recursive DFS }
@@ -548,7 +555,15 @@ type
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
     function FindMaxFlowDI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
-  {  }
+  { returns state of network with aSource as source and aSink as sink;
+    param aFlow specifies required flow > 0; returns flow through the network
+    as (Min(required flow, maximum flow)) in aFlow and flows through the arcs
+    in array a if result = nsOk and aFlow > 0, 0 and nil otherwise;
+    used Dinitz's algorithm with recursive DFS }
+    function FindFlowD(constref aSource, aSink: TVertex; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+             inline;
+    function FindFlowDI(aSrcIdx, aSinkIdx: SizeInt; var aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+    {  }
     function IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight; const a: TEdgeArray): Boolean;
     function IsFeasibleFlowI(aSrcIdx, aSinkIdx: SizeInt; aFlow: TWeight; const a: TEdgeArray): Boolean;
 
@@ -3013,6 +3028,25 @@ begin
     aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx, a);
 end;
 
+function TGDirectInt64Net.FindFlowPr(constref aSource, aSink: TVertex; var aFlow: TWeight;
+  out a: TEdgeArray): TNetworkState;
+begin
+  Result := FindFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
+end;
+
+function TGDirectInt64Net.FindFlowPrI(aSrcIdx, aSinkIdx: SizeInt; var aFlow: TWeight;
+  out a: TEdgeArray): TNetworkState;
+var
+  Helper: THPrHelper;
+begin
+  a := nil;
+  if aFlow < 0 then
+    aFlow := 0;
+  Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
+  if (Result = nsOk) and (aFlow > 0) then
+    aFlow := Helper.GetFlow(Self, aSrcIdx, aSinkIdx, aFlow, a);
+end;
+
 function TGDirectInt64Net.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
 begin
   Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow);
@@ -3044,6 +3078,25 @@ begin
   Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
   if Result = nsOk then
     aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx, a);
+end;
+
+function TGDirectInt64Net.FindFlowD(constref aSource, aSink: TVertex; var aFlow: TWeight;
+  out a: TEdgeArray): TNetworkState;
+begin
+  Result := FindFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
+end;
+
+function TGDirectInt64Net.FindFlowDI(aSrcIdx, aSinkIdx: SizeInt; var aFlow: TWeight;
+  out a: TEdgeArray): TNetworkState;
+var
+  Helper: TDinitzHelper;
+begin
+  a := nil;
+  if aFlow < 0 then
+    aFlow := 0;
+  Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
+  if (Result = nsOk) and (aFlow > 0) then
+    aFlow := Helper.GetFlow(Self, aSrcIdx, aSinkIdx, aFlow, a);
 end;
 
 function TGDirectInt64Net.IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight;

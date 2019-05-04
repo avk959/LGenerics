@@ -630,6 +630,18 @@ begin
 end;
 
 function TGDirectInt64Net.THPrHelper.GetFlow(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt;
+  aReqFlow: TWeight; out a: TEdgeArray): TWeight;
+var
+  e: TWeightEdge;
+begin
+  CreateResidualNetCap(aGraph, aSource, aSink, aReqFlow);
+  Execute;
+  FLevels := nil;
+  Result := FSink^.Excess;
+  a := RecoverFlow;
+end;
+
+function TGDirectInt64Net.THPrHelper.GetFlowMap(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt;
   aReqFlow: TWeight; out m: TWeightArcMap): TWeight;
 var
   e: TWeightEdge;
@@ -809,6 +821,26 @@ begin
     end;
 end;
 
+function TGDirectInt64Net.TDinitzHelper.Execute(aReqFlow: TWeight): TWeight;
+var
+  Flow: TWeight;
+begin
+  Result := 0;
+  while FEpsilon > 0 do
+    begin
+      FEpsilon := FEpsilon div FScaleFactor;
+      while BuildLevelGraph do
+        begin
+          repeat
+            Flow := FindBlockingFlow(FSource, aReqFlow - Result);
+            Result += Flow;
+          until Flow = 0;
+          if Result >= aReqFlow then
+            exit;
+        end;
+    end;
+end;
+
 function TGDirectInt64Net.TDinitzHelper.CreateArcFlows(aGraph: TGDirectInt64Net): TEdgeArray;
 var
   I, J: SizeInt;
@@ -865,6 +897,14 @@ begin
         Inc(J);
       end;
   System.SetLength(s, J);
+end;
+
+function TGDirectInt64Net.TDinitzHelper.GetFlow(aGraph: TGDirectInt64Net; aSource, aSink: SizeInt;
+  aReqFlow: TWeight; out a: TEdgeArray): TWeight;
+begin
+  CreateResidualNet(aGraph, aSource, aSink);
+  Result := Execute(aReqFlow);
+  a := CreateArcFlows(aGraph);
 end;
 
 
