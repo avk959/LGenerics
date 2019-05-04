@@ -138,8 +138,12 @@ type
     procedure FindMaxFlowPr;
     procedure FindMaxFlowPr1;
     procedure FindMaxFlowPr2;
+    procedure FindFlowPr;
+    procedure FindFlowPr1;
     procedure FindMaxFlowD;
     procedure FindMaxFlowD1;
+    procedure FindFlowD;
+    procedure FindFlowD1;
     procedure FindMinSTCutPr;
     procedure FindMinSTCutPr1;
     procedure FindMinSTCutD;
@@ -2044,6 +2048,52 @@ begin
   AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
 end;
 
+procedure TWeightedDigraphTest.FindFlowPr;
+var
+  Ref: TNetRef;
+  g: TNet;
+  ArcFlows: TNet.TEdgeArray;
+  Flow: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestNet1;
+  g := Ref;
+  Flow := -3;
+  AssertTrue(g.FindFlowPr(0, 12, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 0);
+  AssertTrue(ArcFlows = nil);
+  Flow := 3;
+  AssertTrue(g.FindFlowPr(0, 12, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow.ToString, Flow = 3);
+  AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
+  Flow := 7;
+  AssertTrue(g.FindFlowPr(0, 12, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow.ToString, Flow = 5);
+  AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
+end;
+
+procedure TWeightedDigraphTest.FindFlowPr1;
+var
+  Ref: TNetRef;
+  g: TNet;
+  ArcFlows: TNet.TEdgeArray;
+  Flow: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestNet2;
+  g := Ref;
+  Flow := 15;
+  AssertTrue(g.FindFlowPr(0, 6, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 15);
+  AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
+  Flow := 35;
+  AssertTrue(g.FindFlowPr(0, 6, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 35);
+  AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
+  Flow := 50;
+  AssertTrue(g.FindFlowPr(0, 6, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 40);
+  AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
+end;
+
 procedure TWeightedDigraphTest.FindMaxFlowD;
 var
   Ref: TNetRef;
@@ -2068,6 +2118,52 @@ begin
   {%H-}Ref.Instance := GenerateTestNet2;
   g := Ref;
   AssertTrue(g.FindMaxFlowD(0, 6, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 40);
+  AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
+end;
+
+procedure TWeightedDigraphTest.FindFlowD;
+var
+  Ref: TNetRef;
+  g: TNet;
+  ArcFlows: TNet.TEdgeArray;
+  Flow: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestNet1;
+  g := Ref;
+  Flow := -3;
+  AssertTrue(g.FindFlowD(0, 12, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 0);
+  AssertTrue(ArcFlows = nil);
+  Flow := 3;
+  AssertTrue(g.FindFlowD(0, 12, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow.ToString, Flow = 3);
+  AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
+  Flow := 7;
+  AssertTrue(g.FindFlowD(0, 12, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow.ToString, Flow = 5);
+  AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
+end;
+
+procedure TWeightedDigraphTest.FindFlowD1;
+var
+  Ref: TNetRef;
+  g: TNet;
+  ArcFlows: TNet.TEdgeArray;
+  Flow: Int64;
+begin
+  {%H-}Ref.Instance := GenerateTestNet2;
+  g := Ref;
+  Flow := 15;
+  AssertTrue(g.FindFlowD(0, 6, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 15);
+  AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
+  Flow := 35;
+  AssertTrue(g.FindFlowD(0, 6, Flow, ArcFlows) = nsOk);
+  AssertTrue(Flow = 35);
+  AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
+  Flow := 50;
+  AssertTrue(g.FindFlowD(0, 6, Flow, ArcFlows) = nsOk);
   AssertTrue(Flow = 40);
   AssertTrue(g.IsFeasibleFlow(0, 6, Flow, ArcFlows));
 end;
