@@ -525,32 +525,32 @@ type
     TNetworkState = (nsOk, nsTrivial, nsInvalidSource, nsInvalidSink, nsNegCapacity, nsSinkUnreachable);
 
     function GetNetworkState(constref aSource, aSink: TVertex): TNetworkState; inline;
-    function GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
+    function GetNetworkStateI(aSrcIdx, aSinkIdx: SizeInt): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow, if result = nsOk, 0 otherwise;
     used push/relabel algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState; inline;
-    function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
+    function FindMaxFlowPrI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight): TNetworkState;
   { returns state of network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow and flows through the arcs
     in array a, if result = nsOk, 0 and nil otherwise; used push/relabel algorithm }
     function FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
-    function FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+    function FindMaxFlowPrI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow, if result = nsOk, 0 otherwise;
     used Dinitz's algorithm with recursive DFS }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState; inline;
-    function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
+    function FindMaxFlowDI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight): TNetworkState;
   { returns state of network with aSource as source and aSink as sink;
     returns maximum flow through the network in aFlow and flows through the arcs
     in array a, if result = nsOk, 0 and nil otherwise; used Dinitz's algorithm with recursive DFS }
     function FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
              inline;
-    function FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
+    function FindMaxFlowDI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight; out a: TEdgeArray): TNetworkState;
   {  }
     function IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight; const a: TEdgeArray): Boolean;
-    function IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight; const a: TEdgeArray): Boolean;
+    function IsFeasibleFlowI(aSrcIdx, aSinkIdx: SizeInt; aFlow: TWeight; const a: TEdgeArray): Boolean;
 
   type
     //s-t vertex partition
@@ -563,12 +563,12 @@ type
     returns value of the minimum cut in aValue and vertex partition in aCut,
     if result = nsOk, otherwise 0 and empty partition; used push/relabel algorithm }
     function FindMinSTCutPr(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
-    function FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
+    function FindMinSTCutPrI(aSrcIdx, aSinkIdx: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
   { returns state of the network with aSource as source and aSink as sink;
     returns value of the minimum cut in aValue and vertex partition in aCut,
     if result = nsOk, otherwise 0 and empty partition; used Dinitz's algorithm with recursive DFS }
     function FindMinSTCutD(constref aSource, aSink: TVertex; out aValue: TWeight; out aCut: TStCut): TNetworkState;
-    function FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
+    function FindMinSTCutDI(aSrcIdx, aSinkIdx: SizeInt; out aValue: TWeight; out aCut: TStCut): TNetworkState;
   end;
 
   TCostPair = record
@@ -601,12 +601,12 @@ type
     used Busacker-Gowen's algorithm }
     function FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
              out aTotalCost: TCost): TMcfState; inline;
-    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+    function FindMinCostFlowSspI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight;
              out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
     function FindMinCostFlowSsp(constref aSource, aSink: TVertex; var aReqFlow: TWeight; out aTotalCost: TCost;
              out aArcFlows: TEdgeArray): TMcfState; inline;
-    function FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight; out aTotalCost: TCost;
+    function FindMinCostFlowSspI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight; out aTotalCost: TCost;
              out aArcFlows: TEdgeArray): TMcfState;
   { negative costs allows;
     param aReqFlow specifies the required flow > 0(MAX_WEIGHT means maximum flow is required);
@@ -615,17 +615,17 @@ type
     used cost scaling algorithm }
     function FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight;
              out aTotalCost: TCost): TMcfState; inline;
-    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+    function FindMinCostFlowCsI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight;
              out aTotalCost: TCost): TMcfState;
   { same as above and in addition returns flows through the arcs in array aArcFlows }
     function FindMinCostFlowCs(constref aSource, aSink: TVertex; var aReqFlow: TWeight; out aTotalCost: TCost;
              out aArcFlows: TEdgeArray): TMcfState; inline;
-    function FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight; out aTotalCost: TCost;
+    function FindMinCostFlowCsI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight; out aTotalCost: TCost;
              out aArcFlows: TEdgeArray): TMcfState;
   {  }
     function IsMcfFeasible(constref aSource, aSink: TVertex; const aArcFlows: TEdgeArray; aFlow: TWeight;
              aTotalCost: TCost): Boolean; inline;
-    function IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; const aArcFlows: TEdgeArray; aFlow: TWeight;
+    function IsMcfFeasibleI(aSrcIdx, aSinkIdx: SizeInt; const aArcFlows: TEdgeArray; aFlow: TWeight;
              aTotalCost: TCost): Boolean;
   end;
 
@@ -2935,7 +2935,7 @@ begin
   Result := GetNetworkStateI(IndexOf(aSource), IndexOf(aSink));
 end;
 
-function TGDirectInt64Net.GetNetworkStateI(aSrcIndex, aSinkIndex: SizeInt): TNetworkState;
+function TGDirectInt64Net.GetNetworkStateI(aSrcIdx, aSinkIdx: SizeInt): TNetworkState;
 var
   Queue: TIntArray;
   Visited: TBitVector;
@@ -2945,18 +2945,18 @@ var
   qTail: SizeInt = 0;
   SinkFound: Boolean = False;
 begin
-  CheckIndexRange(aSrcIndex);
-  CheckIndexRange(aSinkIndex);
+  CheckIndexRange(aSrcIdx);
+  CheckIndexRange(aSinkIdx);
   if VertexCount < 2 then
     exit(nsTrivial);
-  if not IsSourceI(aSrcIndex) then
+  if not IsSourceI(aSrcIdx) then
     exit(nsInvalidSource);
-  if not IsSinkI(aSinkIndex) then
+  if not IsSinkI(aSinkIdx) then
     exit(nsInvalidSink);
   Queue := CreateIntArray;
   Visited.Size := VertexCount;
-  Visited[aSrcIndex] := True;
-  Queue[qTail] := aSrcIndex;
+  Visited[aSrcIdx] := True;
+  Queue[qTail] := aSrcIdx;
   Inc(qTail);
   while qHead < qTail do
     begin
@@ -2971,7 +2971,7 @@ begin
               Queue[qTail] := p^.Destination;
               Inc(qTail);
               Visited[p^.Destination] := True;
-              SinkFound := SinkFound or (p^.Destination = aSinkIndex);
+              SinkFound := SinkFound or (p^.Destination = aSinkIdx);
             end;
         end;
     end;
@@ -2985,14 +2985,14 @@ begin
   Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow);
 end;
 
-function TGDirectInt64Net.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
+function TGDirectInt64Net.FindMaxFlowPrI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight): TNetworkState;
 var
   Helper: THPrHelper;
 begin
   aFlow := 0;
-  Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
+  Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
   if Result = nsOk then
-    aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
+    aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx);
 end;
 
 function TGDirectInt64Net.FindMaxFlowPr(constref aSource, aSink: TVertex; out aFlow: TWeight;
@@ -3001,16 +3001,16 @@ begin
   Result := FindMaxFlowPrI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
-function TGDirectInt64Net.FindMaxFlowPrI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
+function TGDirectInt64Net.FindMaxFlowPrI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 var
   Helper: THPrHelper;
 begin
   aFlow := 0;
   a := nil;
-  Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
+  Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
   if Result = nsOk then
-    aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
+    aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx, a);
 end;
 
 function TGDirectInt64Net.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight): TNetworkState;
@@ -3018,14 +3018,14 @@ begin
   Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow);
 end;
 
-function TGDirectInt64Net.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight): TNetworkState;
+function TGDirectInt64Net.FindMaxFlowDI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight): TNetworkState;
 var
   Helper: TDinitzHelper;
 begin
   aFlow := 0;
-  Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
+  Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
   if Result = nsOk then
-    aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex);
+    aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx);
 end;
 
 function TGDirectInt64Net.FindMaxFlowD(constref aSource, aSink: TVertex; out aFlow: TWeight;
@@ -3034,16 +3034,16 @@ begin
   Result := FindMaxFlowDI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
-function TGDirectInt64Net.FindMaxFlowDI(aSrcIndex, aSinkIndex: SizeInt; out aFlow: TWeight;
+function TGDirectInt64Net.FindMaxFlowDI(aSrcIdx, aSinkIdx: SizeInt; out aFlow: TWeight;
   out a: TEdgeArray): TNetworkState;
 var
   Helper: TDinitzHelper;
 begin
   aFlow := 0;
   a := nil;
-  Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
+  Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
   if Result = nsOk then
-    aFlow := Helper.GetMaxFlow(Self, aSrcIndex, aSinkIndex, a);
+    aFlow := Helper.GetMaxFlow(Self, aSrcIdx, aSinkIdx, a);
 end;
 
 function TGDirectInt64Net.IsFeasibleFlow(constref aSource, aSink: TVertex; aFlow: TWeight;
@@ -3052,7 +3052,7 @@ begin
   Result := IsFeasibleFlowI(IndexOf(aSource), IndexOf(aSink), aFlow, a);
 end;
 
-function TGDirectInt64Net.IsFeasibleFlowI(aSrcIndex, aSinkIndex: SizeInt; aFlow: TWeight;
+function TGDirectInt64Net.IsFeasibleFlowI(aSrcIdx, aSinkIdx: SizeInt; aFlow: TWeight;
   const a: TEdgeArray): Boolean;
 var
   v: array of TWeight;
@@ -3060,13 +3060,13 @@ var
   d: TEdgeData;
   I: SizeInt;
 begin
-  CheckIndexRange(aSrcIndex);
-  CheckIndexRange(aSinkIndex);
+  CheckIndexRange(aSrcIdx);
+  CheckIndexRange(aSinkIdx);
   if System.Length(a) <> EdgeCount then
     exit(False);
   v := TWeightHelper.CreateWeightArrayZ(VertexCount);
-  v[aSrcIndex] += aFlow;
-  v[aSinkIndex] -= aFlow;
+  v[aSrcIdx] += aFlow;
+  v[aSinkIdx] -= aFlow;
   for e in a do
     begin
       if not GetEdgeDataI(e.Source, e.Destination, d) then
@@ -3088,7 +3088,7 @@ begin
   Result := FindMinSTCutPrI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
 end;
 
-function TGDirectInt64Net.FindMinSTCutPrI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
+function TGDirectInt64Net.FindMinSTCutPrI(aSrcIdx, aSinkIdx: SizeInt; out aValue: TWeight;
   out aCut: TStCut): TNetworkState;
 var
   Helper: THPrHelper;
@@ -3098,12 +3098,12 @@ begin
   aValue := 0;
   aCut.S := nil;
   aCut.T := nil;
-  CheckIndexRange(aSrcIndex);
-  CheckIndexRange(aSinkIndex);
-  Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
+  CheckIndexRange(aSrcIdx);
+  CheckIndexRange(aSinkIdx);
+  Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
   if Result <> nsOk then
     exit;
-  aValue := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
+  aValue := Helper.GetMinCut(Self, aSrcIdx, aSinkIdx, aCut.S);
   TmpSet.InitRange(VertexCount);
   for I in aCut.S do
     TmpSet[I] := False;
@@ -3116,7 +3116,7 @@ begin
   Result := FindMinSTCutDI(IndexOf(aSource), IndexOf(aSink), aValue, aCut);
 end;
 
-function TGDirectInt64Net.FindMinSTCutDI(aSrcIndex, aSinkIndex: SizeInt; out aValue: TWeight;
+function TGDirectInt64Net.FindMinSTCutDI(aSrcIdx, aSinkIdx: SizeInt; out aValue: TWeight;
   out aCut: TStCut): TNetworkState;
 var
   Helper: TDinitzHelper;
@@ -3126,12 +3126,12 @@ begin
   aValue := 0;
   aCut.S := [];
   aCut.T := [];
-  CheckIndexRange(aSrcIndex);
-  CheckIndexRange(aSinkIndex);
-  Result := GetNetworkStateI(aSrcIndex, aSinkIndex);
+  CheckIndexRange(aSrcIdx);
+  CheckIndexRange(aSinkIdx);
+  Result := GetNetworkStateI(aSrcIdx, aSinkIdx);
   if Result <> nsOk then
     exit;
-  aValue := Helper.GetMinCut(Self, aSrcIndex, aSinkIndex, aCut.S);
+  aValue := Helper.GetMinCut(Self, aSrcIdx, aSinkIdx, aCut.S);
   TmpSet.InitRange(VertexCount);
   for I in aCut.S do
     TmpSet[I] := False;
@@ -3172,7 +3172,7 @@ begin
   Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost);
 end;
 
-function TGCostedInt64Net.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+function TGCostedInt64Net.FindMinCostFlowSspI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight;
   out aTotalCost: TCost): TMcfState;
 var
   Helper: TSspMcfHelper;
@@ -3180,9 +3180,9 @@ begin
   aTotalCost := 0;
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
+  if GetNetworkStateI(aSrcIdx, aSinkIdx) <> nsOk then
     exit(mcfInvalidNet);
-  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, aTotalCost);
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIdx, aSinkIdx, aReqFlow, aTotalCost);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
@@ -3194,7 +3194,7 @@ begin
   Result := FindMinCostFlowSspI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost, aArcFlows);
 end;
 
-function TGCostedInt64Net.FindMinCostFlowSspI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+function TGCostedInt64Net.FindMinCostFlowSspI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight;
   out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 var
   Helper: TSspMcfHelper;
@@ -3203,9 +3203,9 @@ begin
   aArcFlows := nil;
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
+  if GetNetworkStateI(aSrcIdx, aSinkIdx) <> nsOk then
     exit(mcfInvalidNet);
-  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, aTotalCost, aArcFlows);
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIdx, aSinkIdx, aReqFlow, aTotalCost, aArcFlows);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
@@ -3217,7 +3217,7 @@ begin
   Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost);
 end;
 
-function TGCostedInt64Net.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+function TGCostedInt64Net.FindMinCostFlowCsI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight;
   out aTotalCost: TCost): TMcfState;
 var
   Helper: TCsMcfHelper;
@@ -3225,9 +3225,9 @@ begin
   aTotalCost := 0;
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
+  if GetNetworkStateI(aSrcIdx, aSinkIdx) <> nsOk then
     exit(mcfInvalidNet);
-  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, aTotalCost);
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIdx, aSinkIdx, aReqFlow, aTotalCost);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
@@ -3239,7 +3239,7 @@ begin
   Result := FindMinCostFlowCsI(IndexOf(aSource), IndexOf(aSink), aReqFlow, aTotalCost, aArcFlows);
 end;
 
-function TGCostedInt64Net.FindMinCostFlowCsI(aSrcIndex, aSinkIndex: SizeInt; var aReqFlow: TWeight;
+function TGCostedInt64Net.FindMinCostFlowCsI(aSrcIdx, aSinkIdx: SizeInt; var aReqFlow: TWeight;
   out aTotalCost: TCost; out aArcFlows: TEdgeArray): TMcfState;
 var
   Helper: TCsMcfHelper;
@@ -3248,9 +3248,9 @@ begin
   aArcFlows := nil;
   if aReqFlow < 1 then
     exit(mcfNoFlowRequired);
-  if GetNetworkStateI(aSrcIndex, aSinkIndex) <> nsOk then
+  if GetNetworkStateI(aSrcIdx, aSinkIdx) <> nsOk then
     exit(mcfInvalidNet);
-  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIndex, aSinkIndex, aReqFlow, aTotalCost, aArcFlows);
+  aReqFlow := Helper.GetMinCostFlow(Self, aSrcIdx, aSinkIdx, aReqFlow, aTotalCost, aArcFlows);
   if aReqFlow = 0 then
     exit(mcfNegCycle);
   Result := mcfOk;
@@ -3262,7 +3262,7 @@ begin
   Result := IsMcfFeasibleI(IndexOf(aSource), IndexOf(aSink), aArcFlows, aFlow, aTotalCost);
 end;
 
-function TGCostedInt64Net.IsMcfFeasibleI(aSrcIndex, aSinkIndex: SizeInt; const aArcFlows: TEdgeArray;
+function TGCostedInt64Net.IsMcfFeasibleI(aSrcIdx, aSinkIdx: SizeInt; const aArcFlows: TEdgeArray;
   aFlow: TWeight; aTotalCost: TCost): Boolean;
 var
   v: array of TWeight;
@@ -3271,13 +3271,13 @@ var
   Cost: TCost;
   I: SizeInt;
 begin
-  CheckIndexRange(aSrcIndex);
-  CheckIndexRange(aSinkIndex);
+  CheckIndexRange(aSrcIdx);
+  CheckIndexRange(aSinkIdx);
   if System.Length(aArcFlows) <> EdgeCount then
     exit(False);
   v := TWeightHelper.CreateWeightArrayZ(VertexCount);
-  v[aSrcIndex] += aFlow;
-  v[aSinkIndex] -= aFlow;
+  v[aSrcIdx] += aFlow;
+  v[aSinkIdx] -= aFlow;
   Cost := 0;
   for e in aArcFlows do
     begin
