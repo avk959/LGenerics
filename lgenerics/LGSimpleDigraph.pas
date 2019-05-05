@@ -222,10 +222,14 @@ type
   DAG utilities
 ***********************************************************************************************************}
 
-  { returns array of vertex indices in topological order, does not performs any acyclic checks }
+  { returns array of vertex indices in topological order, does not performs any acyclic checks;
+    sort order soAsc implies that all arcs are directed from left to right,
+    soDesc - on the contrary, from right to left }
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
   { returns True and array of vertex indices in topological order in aSorted,
-    if a graph is acyclic, False and nil otherwise }
+    if a graph is acyclic, False and nil otherwise;
+    sort order soAsc implies that all arcs are directed from left to right,
+    soDesc - from right to left }
     function  TopologicalSort(out aSorted: TIntArray; aOrder: TSortOrder = soAsc): Boolean;
     function  IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder = soAsc): Boolean;
     function  IsDag: Boolean;
