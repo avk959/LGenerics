@@ -65,6 +65,7 @@ type
     procedure FindPeripheral;
     procedure IsDag;
     procedure TopologicalSort;
+    procedure TopologicalSort1;
     procedure DagLongestPathsMap;
     procedure DagLongestPathsMap1;
     procedure DagLongestPaths;
@@ -972,20 +973,42 @@ var
 begin
   g := {%H-}Ref;
   Sorted := g.TopologicalSort;
-  AssertTrue(g.IsTopoSorted(Sorted, soAsc));
+  AssertTrue(g.IsTopoSorted(Sorted));
   Ref.Instance := GenerateTestDigr2;
   g := Ref;
   Sorted := g.TopologicalSort;
-  AssertFalse(g.IsTopoSorted(Sorted, soAsc));
+  AssertFalse(g.IsTopoSorted(Sorted));
   Ref.Instance := GenerateTestDigr1;
   g := Ref;
   Sorted := g.TopologicalSort;
-  AssertTrue(g.IsTopoSorted(Sorted, soAsc));
+  AssertTrue(g.IsTopoSorted(Sorted));
   Sorted := g.TopologicalSort(soDesc);
   AssertTrue(g.IsTopoSorted(Sorted, soDesc));
   g.AddEdge(12, 3);
   Sorted := g.TopologicalSort;
-  AssertFalse(g.IsTopoSorted(Sorted, soAsc));
+  AssertFalse(g.IsTopoSorted(Sorted));
+end;
+
+procedure TSimpleDigraphTest.TopologicalSort1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Sorted: TIntArray;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.TopologicalSort(Sorted));
+  AssertTrue(g.IsTopoSorted(Sorted, soDesc));
+  Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  AssertFalse(g.TopologicalSort(Sorted));
+  Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertTrue(g.TopologicalSort(Sorted));
+  AssertTrue(g.IsTopoSorted(Sorted));
+  AssertTrue(g.TopologicalSort(Sorted, soDesc));
+  AssertTrue(g.IsTopoSorted(Sorted, soDesc));
+  g.AddEdge(4, 0);
+  AssertFalse(g.TopologicalSort(Sorted));
 end;
 
 procedure TSimpleDigraphTest.DagLongestPathsMap;
