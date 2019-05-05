@@ -110,6 +110,7 @@ type
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
     function  TopoSort: TIntArray;
+    function  TopoSort(out a: TIntArray): Boolean;
     function  GetDagLongestPaths(aSrc: SizeInt): TIntArray;
     function  GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray): TIntArray;
     function  SearchForStrongComponents(out aIds: TIntArray): SizeInt;
@@ -205,6 +206,12 @@ type
   { attempts to create an internal reachability matrix using precomputed FindStrongComponents results;
     todo: doubtful method? }
     function  TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
+  { returns True if a graph is flowgraph, False otherwise;
+    will raise an exception if it does not contain the vertex aRoot;
+    a ﬂowgraph G = (V, A, r) is a directed graph where every vertex in V is reachable from a
+    distinguished root vertex r ∈ V }
+    function  IsFlowGraph(constref aRoot: TVertex): Boolean; inline;
+    function  IsFlowGraphI(aRootIdx: SizeInt): Boolean;
   { returns True, radus and diameter, if graph is strongly connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
@@ -215,9 +222,12 @@ type
   DAG utilities
 ***********************************************************************************************************}
 
-  { returns array of indices of the vertices in topological order, without any acyclic checks }
+  { returns array of vertex indices in topological order, does not performs any acyclic checks }
     function  TopologicalSort(aOrder: TSortOrder = soAsc): TIntArray;
-    function  IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
+  { returns True and array of vertex indices in topological order in aSorted,
+    if a graph is acyclic, False and nil otherwise }
+    function  TopologicalSort(out aSorted: TIntArray; aOrder: TSortOrder = soAsc): Boolean;
+    function  IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder = soAsc): Boolean;
     function  IsDag: Boolean;
   { returns an array containing in the corresponding components the length of the longest path
     from aSrc to it (in sense 'edges count'), or -1 if it is unreachable from aSrc if a graph is acyclic,
@@ -1089,6 +1099,51 @@ begin
       end;
 end;
 
+function TGSimpleDigraph.TopoSort(out a: TIntArray): Boolean;
+var
+  Stack: TSimpleStack;
+  PreOrd: TIntArray;
+  AdjEnums: TAdjEnumArray;
+  PreCounter, PostCounter, I, Curr, Next: SizeInt;
+begin
+  AdjEnums := CreateAdjEnumArray;
+  Stack := TSimpleStack.Create(VertexCount);
+  a := CreateIntArray;
+  PreOrd := CreateIntArray;
+  PreCounter := 0;
+  PostCounter := Pred(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    if PreOrd[I] = NULL_INDEX then
+      begin
+        PreOrd[I] := PreCounter;
+        Inc(PreCounter);
+        Stack.Push(I);
+        while Stack.TryPeek(Curr) do
+          if AdjEnums[{%H-}Curr].MoveNext then
+            begin
+              Next := AdjEnums[Curr].Current;
+              if PreOrd[Next] = NULL_INDEX then
+                begin
+                  PreOrd[Next] := PreCounter;
+                  Inc(PreCounter);
+                  Stack.Push(Next);
+                end
+              else
+                if (PreOrd[Curr] >= PreOrd[Next]) and (a[Next] = NULL_INDEX) then
+                  begin
+                    a := nil;
+                    exit(False);
+                  end;
+            end
+          else
+            begin
+              a[PostCounter] := Stack.Pop;
+              Dec(PostCounter);
+            end;
+      end;
+  Result := True;
+end;
+
 function TGSimpleDigraph.GetDagLongestPaths(aSrc: SizeInt): TIntArray;
 var
   Stack: TSimpleStack;
@@ -1709,6 +1764,16 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(System.Copy(aScIds), aScCount);
 end;
 
+function TGSimpleDigraph.IsFlowGraph(constref aRoot: TVertex): Boolean;
+begin
+  Result := IsFlowGraphI(IndexOf(aRoot));
+end;
+
+function TGSimpleDigraph.IsFlowGraphI(aRootIdx: SizeInt): Boolean;
+begin
+  Result := BfsTraversalI(aRootIdx) = VertexCount;
+end;
+
 function TGSimpleDigraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
 begin
   Result := IsStrongConnected;
@@ -1767,43 +1832,60 @@ begin
     TIntHelper.Reverse(Result);
 end;
 
+function TGSimpleDigraph.TopologicalSort(out aSorted: TIntArray; aOrder: TSortOrder): Boolean;
+begin
+  aSorted := nil;
+  Result := True;
+  if IsEmpty then
+    exit;
+  if VertexCount = 1 then
+    begin
+      aSorted := [0];
+      exit;
+    end;
+  Result := TopoSort(aSorted);
+  if Result and (aOrder = soDesc) then
+    TIntHelper.Reverse(aSorted);
+end;
+
 function TGSimpleDigraph.IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
 var
-  TestCopy: TIntArray;
-  vSet: TBitVector;
+  Visited: TBitVector;
   I, J: SizeInt;
+  p: PAdjItem;
 begin
   if aTestSet.Length <> VertexCount then
     exit(False);
   if VertexCount < 2 then
     exit(True);
-  vSet.Size := VertexCount;
+  Visited.Size := VertexCount;
   for I in aTestSet do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then
         exit(False);
-      if vSet[I] then
+      if Visited[I] then
         exit(False);
-      vSet[I] := True;
+      Visited[I] := True;
     end;
-  if aSortOrder = soDesc then
-    TestCopy := TIntHelper.CreateReverseCopy(aTestSet)
-  else
-    TestCopy := aTestSet;
-  if ReachabilityValid then
-    begin
-      for I := 0 to Pred(VertexCount) do
-        for J := 0 to Pred(I) do
-          if FReachabilityMatrix.Reachable(TestCopy[I], TestCopy[J]) then
+  Visited.ClearBits;
+  if aSortOrder = soAsc then
+    for I := 0 to Pred(VertexCount) do
+      begin
+        J := aTestSet[I];
+        for p in AdjLists[J]^ do
+          if Visited[p^.Key] then
             exit(False);
-    end
+        Visited[J] := True;
+      end
   else
-    begin
-      for I := 0 to Pred(VertexCount) do
-        for J := 0 to Pred(I) do
-          if CheckPathExists(TestCopy[I], TestCopy[J]) then
+    for I := Pred(VertexCount) downto 0 do
+      begin
+        J := aTestSet[I];
+        for p in AdjLists[J]^ do
+          if Visited[p^.Key] then
             exit(False);
-    end;
+        Visited[J] := True;
+      end;
   Result := True;
 end;
 
