@@ -3527,8 +3527,6 @@ begin
 end;
 
 procedure TGSimpleGraph.ListAllCliques(aOnFound: TOnSetFound);
-var
-  Peo: TIntArray;
 begin
   if IsEmpty then
     exit;

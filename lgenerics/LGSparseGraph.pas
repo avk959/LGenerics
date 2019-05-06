@@ -1403,7 +1403,7 @@ var
 begin
   if AdjLists[aSrc]^.Contains(aDst) then
     exit(True);
-  System.SetLength(Queue, VertexCount);
+  System.SetLength(Queue{%H-}, VertexCount);
   Visited.Size := VertexCount;
   Queue[qTail] := aSrc;
   Inc(qTail);
@@ -1429,7 +1429,7 @@ var
   I: SizeInt;
   p: PAdjItem;
 begin
-  System.SetLength(Result, VertexCount);
+  System.SetLength(Result{%H-}, VertexCount);
   for I := 0 to System.High(Result) do
     begin
       Result[I].Size := VertexCount;
@@ -1455,7 +1455,7 @@ end;
 
 function TGSparseGraph.CreateColorArray: TColorArray;
 begin
-  System.SetLength(Result, VertexCount);
+  System.SetLength(Result{%H-}, VertexCount);
   System.FillChar(Pointer(Result)^, VertexCount, 0);
 end;
 
@@ -1463,7 +1463,7 @@ function TGSparseGraph.CreateAdjEnumArray: TAdjEnumArray;
 var
   I: SizeInt;
 begin
-  System.SetLength(Result, VertexCount);
+  System.SetLength(Result{%H-}, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Result[I].FEnum := AdjLists[I]^.GetEnumerator;
 end;
@@ -1472,7 +1472,7 @@ function TGSparseGraph.CreateAdjEnumArrayEx: TAdjEnumArrayEx;
 var
   I: SizeInt;
 begin
-  System.SetLength(Result, VertexCount);
+  System.SetLength(Result{%H-}, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Result[I] := AdjLists[I]^.GetEnumerator;
 end;
@@ -1551,8 +1551,8 @@ begin
   Result := nil;
   aRadius := VertexCount;
   aDiameter := 0;
-  Queue.Length := VertexCount;
-  Dist.Length := VertexCount;
+  {%H-}Queue.Length := VertexCount;
+  {%H-}Dist.Length := VertexCount;
   Result.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
     begin
@@ -1678,7 +1678,7 @@ function TGSparseGraph.IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexA
 var
   I: SizeInt;
 begin
-  System.SetLength(Result, aIdxPath.Length);
+  System.SetLength(Result{%H-}, aIdxPath.Length);
   for I := 0 to Pred(aIdxPath.Length) do
     Result[I] := Items[aIdxPath[I]];
 end;
@@ -1811,14 +1811,14 @@ begin
     //read title
     if Header.TitleLen > 0 then
       begin
-        System.SetLength(gTitle, Header.TitleLen);
+        System.SetLength(gTitle{%H-}, Header.TitleLen);
         rbs.ReadBuffer(Pointer(gTitle)^, Header.TitleLen);
         FTitle := gTitle;
       end;
     //read description
     if Header.DescriptionLen > 0 then
       begin
-        System.SetLength(Descr, Header.DescriptionLen);
+        System.SetLength(Descr{%H-}, Header.DescriptionLen);
         rbs.ReadBuffer(Pointer(Descr)^, Header.DescriptionLen);
         Description.Text := Descr;
       end;
@@ -1968,7 +1968,7 @@ begin
   if Deg > 0 then
     begin
       I := 0;
-      System.SetLength(DstEdges, Deg);
+      System.SetLength(DstEdges{%H-}, Deg);
       for p in pList^ do
         begin
           DstEdges[I].Destination := p^.Destination;
@@ -2117,7 +2117,7 @@ var
 begin
   if VertexCount < 2 then
     exit(False);
-  System.SetLength(Queue, VertexCount);
+  System.SetLength(Queue{%H-}, VertexCount);
   aColors := CreateColorArray;
   for I := 0 to System.High(aColors) do
     if aColors[I] = vcNone then
@@ -2158,8 +2158,8 @@ begin
   Result := IsBipartite(Colors);
   if not Result then
     exit;
-  System.SetLength(aWhites, VertexCount);
-  System.SetLength(aGrays, VertexCount);
+  System.SetLength(aWhites{%H-}, VertexCount);
+  System.SetLength(aGrays{%H-}, VertexCount);
   WhiteIdx := 0;
   GrayIdx := 0;
   I := 0;
@@ -2263,8 +2263,9 @@ begin
   Result := 0;
   CheckIndexRange(aRoot);
   Inc(Result);
-  if Assigned(aOnFound) and not aOnFound(Self, aRoot, NULL_INDEX) then
-    exit;
+  if Assigned(aOnFound) then
+    if not aOnFound(Self, aRoot, NULL_INDEX) then
+      exit;
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   {%H-}Stack := CreateIntArray;
@@ -2280,8 +2281,9 @@ begin
           if not Visited[Next] then
             begin
               Inc(Result);
-              if Assigned(aOnFound) and not aOnFound(Self, Next, aRoot) then
-                exit;
+              if Assigned(aOnFound) then
+                if not aOnFound(Self, Next, aRoot) then
+                  exit;
               Visited[Next] := True;
               Inc(sTop);
               Stack[sTop] := Next;
@@ -2289,8 +2291,9 @@ begin
         end
       else
         begin
-          if Assigned(aOnDone) and not aOnDone(Self, Stack[sTop]) then
-            exit;
+          if Assigned(aOnDone) then
+            if not aOnDone(Self, Stack[sTop]) then
+              exit;
           Dec(sTop);
         end;
     end}
@@ -2365,8 +2368,9 @@ begin
   Result := 0;
   CheckIndexRange(aRoot);
   Inc(Result);
-  if Assigned(aOnFound) and not aOnFound(Self, aRoot, NULL_INDEX) then
-    exit;
+  if Assigned(aOnFound) then
+    if not aOnFound(Self, aRoot, NULL_INDEX) then
+      exit;
   Visited.Size := VertexCount;
   Queue.Length := VertexCount;
   Visited[aRoot] := True;
@@ -2380,14 +2384,16 @@ begin
         if not Visited[p^.Destination] then
           begin
             Inc(Result);
-            if Assigned(aOnFound) and not aOnFound(Self, p^.Destination, aRoot) then
-              exit;
+            if Assigned(aOnFound) then
+              if not aOnFound(Self, p^.Destination, aRoot) then
+                exit;
             Queue[qTail] := p^.Destination;
             Inc(qTail);
             Visited[p^.Destination] := True;
           end;
-      if Assigned(aOnDone) and not aOnDone(Self, aRoot) then
-        exit;
+      if Assigned(aOnDone) then
+        if not aOnDone(Self, aRoot) then
+          exit;
     end}
   BfsWithVisitors;
 end;
