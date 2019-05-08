@@ -43,7 +43,7 @@ uses
 type
 
   EGraphError      = class(Exception); //???
-  TEmptyRec        = record end;
+  TEmptyData       = record end;
 
   TIntArray        = array of SizeInt;
   TShortArray      = array of ShortInt;

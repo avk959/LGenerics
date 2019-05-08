@@ -22,6 +22,7 @@ unit LGSimpleDigraph;
 {$mode objfpc}{$H+}
 {$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
+{$MODESWITCH NESTEDPROCVARS}
 
 interface
 
@@ -206,12 +207,17 @@ type
   { attempts to create an internal reachability matrix using precomputed FindStrongComponents results;
     todo: doubtful method? }
     function  TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
-  { returns True if a graph is flowgraph, False otherwise;
-    will raise an exception if it does not contain the vertex aRoot;
+  { returns True if graph is flowgraph, False otherwise;
+    will raise an exception if it does not contain the vertex aSource;
     a ﬂowgraph G = (V, A, r) is a directed graph where every vertex in V is reachable from a
     distinguished root vertex r ∈ V }
-    function  IsFlowGraph(constref aRoot: TVertex): Boolean; inline;
-    function  IsFlowGraphI(aRootIdx: SizeInt): Boolean;
+    function  IsFlowGraph(constref aSource: TVertex): Boolean; inline;
+    function  IsFlowGraphI(aSrcIdx: SizeInt): Boolean;
+  { returns True if graph is flowgraph, otherwise returns False and list
+    of indices of unreachable vertices in aMissed;
+    will raise an exception if it does not contain the vertex aSource }
+    function  IsFlowGraph(constref aSource: TVertex; out aMissed: TIntArray): Boolean; inline;
+    function  IsFlowGraphI(aSrcIdx: SizeInt; out aMissed: TIntArray): Boolean;
   { returns True, radus and diameter, if graph is strongly connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
@@ -281,10 +287,10 @@ type
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGFlowChart<TVertex, TEqRel> = class(specialize TGSimpleDigraph<TVertex, TEmptyRec, TEqRel>)
+  generic TGFlowChart<TVertex, TEqRel> = class(specialize TGSimpleDigraph<TVertex, TEmptyData, TEqRel>)
   private
-    procedure ReadData(aStream: TStream; out aValue: TEmptyRec);
-    procedure WriteData(aStream: TStream; constref aValue: TEmptyRec);
+    procedure ReadData(aStream: TStream; out aValue: TEmptyData);
+    procedure WriteData(aStream: TStream; constref aValue: TEmptyData);
   public
     function  Clone: TGFlowChart;
     function  Reverse: TGFlowChart;
@@ -328,7 +334,7 @@ type
     function  AddEdges(const aVertexList: array of Integer): Integer;
   end;
 
-  TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TEmptyRec, Integer>)
+  TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TEmptyData, Integer>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
@@ -352,7 +358,7 @@ type
     function  AddEdges(const aVertexList: array of string): Integer;
   end;
 
-  TStrFlowChartDotWriter = class(specialize TGDigraphDotWriter<string, TEmptyRec, string>)
+  TStrFlowChartDotWriter = class(specialize TGDigraphDotWriter<string, TEmptyData, string>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
@@ -1768,14 +1774,52 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(System.Copy(aScIds), aScCount);
 end;
 
-function TGSimpleDigraph.IsFlowGraph(constref aRoot: TVertex): Boolean;
+function TGSimpleDigraph.IsFlowGraph(constref aSource: TVertex): Boolean;
 begin
-  Result := IsFlowGraphI(IndexOf(aRoot));
+  Result := IsFlowGraphI(IndexOf(aSource));
 end;
 
-function TGSimpleDigraph.IsFlowGraphI(aRootIdx: SizeInt): Boolean;
+function TGSimpleDigraph.IsFlowGraphI(aSrcIdx: SizeInt): Boolean;
 begin
-  Result := BfsTraversalI(aRootIdx) = VertexCount;
+  Result := BfsTraversalI(aSrcIdx) = VertexCount;
+end;
+
+function TGSimpleDigraph.IsFlowGraph(constref aSource: TVertex; out aMissed: TIntArray): Boolean;
+begin
+  Result := IsFlowGraphI(IndexOf(aSource), aMissed);
+end;
+
+function TGSimpleDigraph.IsFlowGraphI(aSrcIdx: SizeInt; out aMissed: TIntArray): Boolean;
+var
+  Queue: TIntArray;
+  UnVisited: TBoolVector;
+  p: PAdjItem;
+  qHead: SizeInt = 0;
+  qTail: SizeInt = 0;
+begin
+  Result := False;
+  aMissed := nil;
+  CheckIndexRange(aSrcIdx);
+  UnVisited.InitRange(VertexCount);
+  Queue.Length := VertexCount;
+  UnVisited[aSrcIdx] := False;
+  Queue[qTail] := aSrcIdx;
+  Inc(qTail);
+  while qHead < qTail do
+    begin
+      aSrcIdx := Queue[qHead];
+      Inc(qHead);
+      for p in AdjLists[aSrcIdx]^ do
+        if UnVisited[p^.Key] then
+          begin
+            Queue[qTail] := p^.Key;
+            Inc(qTail);
+            UnVisited[p^.Key] := False;
+          end;
+    end;
+  Result := UnVisited.IsEmpty;
+  if not Result then
+    aMissed := UnVisited.ToArray;
 end;
 
 function TGSimpleDigraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
@@ -2074,12 +2118,12 @@ end;
 
 { TGFlowChart }
 
-procedure TGFlowChart.ReadData(aStream: TStream; out aValue: TEmptyRec);
+procedure TGFlowChart.ReadData(aStream: TStream; out aValue: TEmptyData);
 begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
-procedure TGFlowChart.WriteData(aStream: TStream; constref aValue: TEmptyRec);
+procedure TGFlowChart.WriteData(aStream: TStream; constref aValue: TEmptyData);
 begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;
