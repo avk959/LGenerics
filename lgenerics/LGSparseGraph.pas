@@ -464,7 +464,9 @@ type
 ***********************************************************************************************************}
 
   { returns count of visited vertices during the DFS traversal;
-    aOnFound calls after next WHITE vertex found, aOnDone calls after vertex done }
+    aOnFound calls after next WHITE vertex found,
+    aOnVisit calls after visiting an already visited vertex,
+    aOnDone calls after vertex done }
     function DfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFound = nil;
                           aOnVisit: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt; inline;
     function DfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound = nil;
@@ -474,11 +476,12 @@ type
     function DfsTraversalI(aRoot: SizeInt; aOnFound, aOnVisit: TNestNodeFound;
                           aOnDone: TNestNodeVisit): SizeInt;
   { returns the DFS traversal tree(forest, if not connected) started from vertex with index 0;
-    each element of Result contains the index of its parent in tree(or -1 if it is root) }
+    each element of Result contains the index of its parent in tree(or -1 if it is a root) }
     function DfsTree: TIntArray;
   { returns count of visited vertices during the BFS traversal;
-    aOnFound calls after vertex found, aOnDone calls after vertex done;
-    if aOnFound or aOnDone returns False then traversal stops}
+    aOnFound calls after next WHITE vertex found,
+    aOnVisit calls after visiting an already visited vertex,
+    aOnDone calls after vertex done }
     function BfsTraversal(constref aRoot: TVertex; aOnFound: TOnNodeFound = nil;
                           aOnVisit: TOnNodeFound = nil; aOnDone: TOnNodeVisit = nil): SizeInt; inline;
     function BfsTraversalI(aRoot: SizeInt; aOnFound: TOnNodeFound = nil;
@@ -488,7 +491,7 @@ type
     function BfsTraversalI(aRoot: SizeInt; aOnFound, aOnVisit: TNestNodeFound;
                           aOnDone: TNestNodeVisit): SizeInt;
   { returns the BFS traversal tree(forest, if not connected) started from vertex with index 0;
-    each element of Result contains the index of its parent (or -1 if it is root) }
+    each element of Result contains the index of its parent (or -1 if it is a root) }
     function BfsTree: TIntArray;
 
 {**********************************************************************************************************
