@@ -34,8 +34,8 @@ type
     function  GenerateTestDigrBip1: TDiGraph;
     function  GenerateTestGr1: TGraph;
     function  GenerateTestDigr1: TDiGraph;
-    function  vFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
-    function  vDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+    procedure vFound(aNode, {%H-}aParent: SizeInt);
+    procedure vDone(aIndex: SizeInt);
   published
     procedure IsEmpty;
     procedure IsEmptyDirect;
@@ -141,16 +141,14 @@ begin
                    8, 7, 9, 10, 9, 11, 9, 12, 11, 12]);
 end;
 
-function TSparseGraphTest.vFound(aSender: TObject; aNode, aParent: SizeInt): Boolean;
+procedure TSparseGraphTest.vFound(aNode, aParent: SizeInt);
 begin
   FFound[aNode] := False;
-  Result := True;
 end;
 
-function TSparseGraphTest.vDone(aSender: TObject; aIndex: SizeInt): Boolean;
+procedure TSparseGraphTest.vDone(aIndex: SizeInt);
 begin
   FDone[aIndex] := False;
-  Result := True;
 end;
 
 procedure TSparseGraphTest.IsEmpty;
@@ -821,7 +819,7 @@ begin
   FDone.InitRange(vCount);
   AssertTrue(FFound.PopCount = vCount);
   AssertTrue(FDone.PopCount = vCount);
-  AssertTrue(g.DfsTraversal(0, @vFound, @vDone) = vCount);
+  AssertTrue(g.DfsTraversal(0, @vFound, nil, @vDone) = vCount);
   AssertTrue(FFound.IsEmpty);
   AssertTrue(FDone.IsEmpty);
 end;
@@ -833,15 +831,13 @@ var
   vCount: SizeInt;
   Found,
   Done: TBoolVector;
-  function VertFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+  procedure VertFound(aNode, {%H-}aParent: SizeInt);
   begin
     Found[aNode] := False;
-    Result := True;
   end;
-  function VertDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+  procedure VertDone(aIndex: SizeInt);
   begin
     Done[aIndex] := False;
-    Result := True;
   end;
 begin
   {%H-}Ref.Instance := GenerateTestGr1;
@@ -852,7 +848,7 @@ begin
   Done.InitRange(vCount);
   AssertTrue(Found.PopCount = vCount);
   AssertTrue(Done.PopCount = vCount);
-  AssertTrue(g.DfsTraversal(0, @VertFound, @VertDone) = vCount);
+  AssertTrue(g.DfsTraversal(0, @VertFound, nil, @VertDone) = vCount);
   AssertTrue(Found.IsEmpty);
   AssertTrue(Done.IsEmpty);
 end;
@@ -871,7 +867,7 @@ begin
   FDone.InitRange(vCount);
   AssertTrue(FFound.PopCount = vCount);
   AssertTrue(FDone.PopCount = vCount);
-  AssertTrue(g.DfsTraversal(0, @vFound, @vDone) = vCount - 2);
+  AssertTrue(g.DfsTraversal(0, @vFound, nil, @vDone) = vCount - 2);
   AssertTrue(FFound.PopCount = 2);
   AssertTrue(FFound[7]);
   AssertTrue(FFound[8]);
@@ -887,15 +883,13 @@ var
   vCount: SizeInt;
   Found,
   Done: TBoolVector;
-  function VertFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+  procedure VertFound(aNode, {%H-}aParent: SizeInt);
   begin
     Found[aNode] := False;
-    Result := True;
   end;
-  function VertDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+  procedure VertDone(aIndex: SizeInt);
   begin
     Done[aIndex] := False;
-    Result := True;
   end;
 begin
   {%H-}Ref.Instance := GenerateTestDigr1;
@@ -906,7 +900,7 @@ begin
   Done.InitRange(vCount);
   AssertTrue(Found.PopCount = vCount);
   AssertTrue(Done.PopCount = vCount);
-  AssertTrue(g.DfsTraversal(0, @VertFound, @VertDone) = vCount - 2);
+  AssertTrue(g.DfsTraversal(0, @VertFound, nil, @VertDone) = vCount - 2);
   AssertTrue(Found.PopCount = 2);
   AssertTrue(Found[7]);
   AssertTrue(Found[8]);
@@ -929,7 +923,7 @@ begin
   FDone.InitRange(vCount);
   AssertTrue(FFound.PopCount = vCount);
   AssertTrue(FDone.PopCount = vCount);
-  AssertTrue(g.BfsTraversal(0, @vFound, @vDone) = vCount);
+  AssertTrue(g.BfsTraversal(0, @vFound, nil, @vDone) = vCount);
   AssertTrue(FFound.IsEmpty);
   AssertTrue(FDone.IsEmpty);
 end;
@@ -941,15 +935,13 @@ var
   vCount: SizeInt;
   Found,
   Done: TBoolVector;
-  function VertFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+  procedure VertFound(aNode, {%H-}aParent: SizeInt);
   begin
     Found[aNode] := False;
-    Result := True;
   end;
-  function VertDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+  procedure VertDone(aIndex: SizeInt);
   begin
     Done[aIndex] := False;
-    Result := True;
   end;
 begin
   {%H-}Ref.Instance := GenerateTestGr1;
@@ -960,7 +952,7 @@ begin
   Done.InitRange(vCount);
   AssertTrue(Found.PopCount = vCount);
   AssertTrue(Done.PopCount = vCount);
-  AssertTrue(g.BfsTraversal(0, @VertFound, @VertDone) = vCount);
+  AssertTrue(g.BfsTraversal(0, @VertFound, nil, @VertDone) = vCount);
   AssertTrue(Found.IsEmpty);
   AssertTrue(Done.IsEmpty);
 end;
@@ -979,7 +971,7 @@ begin
   FDone.InitRange(vCount);
   AssertTrue(FFound.PopCount = vCount);
   AssertTrue(FDone.PopCount = vCount);
-  AssertTrue(g.BfsTraversal(0, @vFound, @vDone) = vCount - 2);
+  AssertTrue(g.BfsTraversal(0, @vFound, nil, @vDone) = vCount - 2);
   AssertTrue(FFound.PopCount = 2);
   AssertTrue(FFound[7]);
   AssertTrue(FFound[8]);
@@ -995,15 +987,13 @@ var
   vCount: SizeInt;
   Found,
   Done: TBoolVector;
-  function VertFound({%H-}aSender: TObject; aNode, {%H-}aParent: SizeInt): Boolean;
+  procedure VertFound(aNode, {%H-}aParent: SizeInt);
   begin
     Found[aNode] := False;
-    Result := True;
   end;
-  function VertDone({%H-}aSender: TObject; aIndex: SizeInt): Boolean;
+  procedure VertDone(aIndex: SizeInt);
   begin
     Done[aIndex] := False;
-    Result := True;
   end;
 begin
   {%H-}Ref.Instance := GenerateTestDigr1;
@@ -1014,7 +1004,7 @@ begin
   Done.InitRange(vCount);
   AssertTrue(Found.PopCount = vCount);
   AssertTrue(Done.PopCount = vCount);
-  AssertTrue(g.BfsTraversal(0, @VertFound, @VertDone) = vCount - 2);
+  AssertTrue(g.BfsTraversal(0, @VertFound, nil, @VertDone) = vCount - 2);
   AssertTrue(Found.PopCount = 2);
   AssertTrue(Found[7]);
   AssertTrue(Found[8]);
