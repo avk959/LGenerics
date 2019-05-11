@@ -1032,19 +1032,6 @@ begin
   g := Ref;
   AssertTrue(g.FindDomTree(0, Tree) = g.VertexCount);
   AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 2, 3, 3, 3, 2, 2, 8, 9, 9, 11, 0])));
-  //testSet[6].correctIdoms.push_back(0);
-  // testSet[6].correctIdoms.push_back(1);
-  // testSet[6].correctIdoms.push_back(2);
-  // testSet[6].correctIdoms.push_back(3);
-  // testSet[6].correctIdoms.push_back(3);
-  // testSet[6].correctIdoms.push_back(3);
-  // testSet[6].correctIdoms.push_back(2);
-  // testSet[6].correctIdoms.push_back(2);
-  // testSet[6].correctIdoms.push_back(8);
-  // testSet[6].correctIdoms.push_back(9);
-  // testSet[6].correctIdoms.push_back(9);
-  // testSet[6].correctIdoms.push_back(11);
-  // testSet[6].correctIdoms.push_back(0);
 end;
 
 procedure TSimpleDigraphTest.IsDag;
