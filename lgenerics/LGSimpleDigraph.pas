@@ -2011,7 +2011,7 @@ begin
           Next := Curr;
           while Next <> aDomTree[I] do
             begin
-              DomFronts[Next].Push(I);
+              DomFronts[Next].Add(I);
               Next := aDomTree[Next];
               if Next = NULL_INDEX then
                 break;
