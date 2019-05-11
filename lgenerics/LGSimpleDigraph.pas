@@ -110,6 +110,7 @@ type
     procedure AssignReverse(aGraph: TGSimpleDigraph);
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
+    function  GetDomTree(aSrc: SizeInt; out aPreds: TIntSetArray; out aTree: TIntArray): SizeInt;
     function  TopoSort: TIntArray;
     function  TopoSort(out a: TIntArray): Boolean;
     function  GetDagLongestPaths(aSrc: SizeInt): TIntArray;
@@ -207,10 +208,20 @@ type
   { attempts to create an internal reachability matrix using precomputed FindStrongComponents results;
     todo: doubtful method? }
     function  TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
+  { returns True, radus and diameter, if graph is strongly connected, False otherwise }
+    function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
+  { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
+    function  FindCenter: TIntArray;
+  { returns array of indices of the peripheral vertices, if graph is strongly connected, nil otherwise }
+    function  FindPeripheral: TIntArray;
+{**********************************************************************************************************
+  flowgraph utilities
+***********************************************************************************************************}
+
   { returns True if graph is flowgraph, False otherwise;
     will raise an exception if it does not contain the vertex aSource;
     a ﬂowgraph G = (V, A, r) is a directed graph where every vertex in V is reachable from a
-    distinguished root vertex r ∈ V }
+    distinguished root vertex r }
     function  IsFlowGraph(constref aSource: TVertex): Boolean; inline;
     function  IsFlowGraphI(aSrcIdx: SizeInt): Boolean;
   { returns True if graph is flowgraph, otherwise returns False and list
@@ -218,12 +229,21 @@ type
     will raise an exception if it does not contain the vertex aSource }
     function  IsFlowGraph(constref aSource: TVertex; out aMissed: TIntArray): Boolean; inline;
     function  IsFlowGraphI(aSrcIdx: SizeInt; out aMissed: TIntArray): Boolean;
-  { returns True, radus and diameter, if graph is strongly connected, False otherwise }
-    function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
-  { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
-    function  FindCenter: TIntArray;
-  { returns array of indices of the peripheral vertices, if graph is strongly connected, nil otherwise }
-    function  FindPeripheral: TIntArray;
+  { returns dominator tree size and dominator tree in aTree in flowgraph rooted by aSource;
+    will raise an exception if it does not contain the vertex aSource;
+    each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
+    or is unreachable from aSource; used amazingly simple iterative algorithm from
+    Cooper, Harvey and Kennedy "A Simple, Fast Dominance Algorithm" }
+    function  FindDomTree(constref aSource: TVertex; out aTree: TIntArray): SizeInt; inline;
+    function  FindDomTreeI(aSrcIdx: SizeInt; out aTree: TIntArray): SizeInt;
+  { extracts Dom(aVertex) from dominator tree aTree }
+    function  ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray; inline;
+    function  ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
+  { returns dominance frontiers and dominator tree in aDomTree;
+    will raise an exception if it does not contain the vertex aSource }
+    function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TIntArray): TIntMatrix; inline;
+    function  FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TIntArray): TIntMatrix;
+
 {**********************************************************************************************************
   DAG utilities
 ***********************************************************************************************************}
@@ -1074,6 +1094,70 @@ begin
   Result := False;
 end;
 
+function TGSimpleDigraph.GetDomTree(aSrc: SizeInt; out aPreds: TIntSetArray; out aTree: TIntArray): SizeInt;
+var
+  PostOrd, Idx2Ord: TIntArray;
+  Counter: SizeInt = 0;
+  procedure NodeFound(aNode, aParent: SizeInt);
+  begin
+    aTree[aNode] := aParent;
+    aPreds[aNode].Push(aParent);
+  end;
+  procedure NodeVisit(aNode, aParent: SizeInt);
+  begin
+    aPreds[aNode].Push(aParent);
+  end;
+  procedure NodeDone(aIndex: SizeInt);
+  begin
+    PostOrd[Counter] := aIndex;
+    Inc(Counter);
+  end;
+  function Nca(aLeft, aRight: SizeInt): SizeInt;
+  begin
+    while aLeft <> aRight do
+      begin
+        while Idx2Ord[aLeft] < Idx2Ord[aRight] do
+          aLeft := aTree[aLeft];
+        while Idx2Ord[aRight] < Idx2Ord[aLeft] do
+          aRight := aTree[aRight];
+      end;
+    Result := aLeft;
+  end;
+var
+  I, Curr, Prev, IDom: SizeInt;
+  Ready: Boolean;
+begin
+  aPreds := nil;
+  aTree := CreateIntArray;
+  PostOrd := CreateIntArray;
+  System.SetLength(aPreds, VertexCount);
+  Result := DfsTraversalI(aSrc, @NodeFound, @NodeVisit, @NodeDone);
+  if Result <> Counter then
+    raise EGraphError.Create(SEInternalDataInconsist);
+  Dec(Counter);
+  Idx2Ord := CreateIntArray;
+  for I := 0 to Counter do
+    Idx2Ord[PostOrd[I]] := I;
+  aTree[aSrc] := aSrc;
+  repeat
+    Ready := True;
+    for I := Pred(Counter) downto 0 do
+      begin
+        Curr := PostOrd[I];
+        IDom := aTree[Curr];
+        for Prev in aPreds[Curr] do
+          if aTree[Curr] <> Prev then
+            IDom := Nca(Prev, IDom);
+        if aTree[Curr] <> IDom then
+          begin
+            aTree[Curr] := IDom;
+            Ready := False;
+          end;
+      end;
+  until Ready;
+  aTree[aSrc] := NULL_INDEX;
+end;
+
 function TGSimpleDigraph.TopoSort: TIntArray;
 var
   Stack: TSimpleStack;
@@ -1774,6 +1858,53 @@ begin
   FReachabilityMatrix := GetReachabilityMatrix(System.Copy(aScIds), aScCount);
 end;
 
+function TGSimpleDigraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
+begin
+  Result := IsStrongConnected;
+  if Result then
+    DoFindMetrics(aRadius, aDiameter);
+end;
+
+function TGSimpleDigraph.FindCenter: TIntArray;
+var
+  Eccs: TIntArray;
+  I, J, Radius, Diam: SizeInt;
+begin
+  Result := nil;
+  if not IsStrongConnected then
+    exit;
+  Eccs := DoFindMetrics(Radius, Diam);
+  Result.Length := VertexCount;
+  J := 0;
+  for I := 0 to Pred(VertexCount) do
+    if Eccs[I] = Radius then
+      begin
+        Result[J] := I;
+        Inc(J);
+      end;
+  Result.Length := J;
+end;
+
+function TGSimpleDigraph.FindPeripheral: TIntArray;
+var
+  Eccs: TIntArray;
+  I, J, Radius, Diam: SizeInt;
+begin
+  Result := nil;
+  if not IsStrongConnected then
+    exit;
+  Eccs := DoFindMetrics(Radius, Diam);
+  Result.Length := VertexCount;
+  J := 0;
+  for I := 0 to Pred(VertexCount) do
+    if Eccs[I] = Diam then
+      begin
+        Result[J] := I;
+        Inc(J);
+      end;
+  Result.Length := J;
+end;
+
 function TGSimpleDigraph.IsFlowGraph(constref aSource: TVertex): Boolean;
 begin
   Result := IsFlowGraphI(IndexOf(aSource));
@@ -1822,51 +1953,73 @@ begin
     aMissed := UnVisited.ToArray;
 end;
 
-function TGSimpleDigraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
+function TGSimpleDigraph.FindDomTree(constref aSource: TVertex; out aTree: TIntArray): SizeInt;
 begin
-  Result := IsStrongConnected;
-  if Result then
-    DoFindMetrics(aRadius, aDiameter);
+  Result := FindDomTreeI(IndexOf(aSource), aTree);
 end;
 
-function TGSimpleDigraph.FindCenter: TIntArray;
+function TGSimpleDigraph.FindDomTreeI(aSrcIdx: SizeInt; out aTree: TIntArray): SizeInt;
 var
-  Eccs: TIntArray;
-  I, J, Radius, Diam: SizeInt;
+  Preds: TIntSetArray;
 begin
-  Result := nil;
-  if not IsStrongConnected then
-    exit;
-  Eccs := DoFindMetrics(Radius, Diam);
-  Result.Length := VertexCount;
-  J := 0;
-  for I := 0 to Pred(VertexCount) do
-    if Eccs[I] = Radius then
-      begin
-        Result[J] := I;
-        Inc(J);
-      end;
-  Result.Length := J;
+  aTree := nil;
+  Result := 0;
+  CheckIndexRange(aSrcIdx);
+  Result := GetDomTree(aSrcIdx, Preds, aTree);
 end;
 
-function TGSimpleDigraph.FindPeripheral: TIntArray;
-var
-  Eccs: TIntArray;
-  I, J, Radius, Diam: SizeInt;
+function TGSimpleDigraph.ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray;
 begin
+  Result := ExtractDomSetI(IndexOf(aVertex), aDomTree);
+end;
+
+function TGSimpleDigraph.ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
+var
+  DomSet: TIntSet;
+begin
+  if aDomTree.Length <> VertexCount then
+    raise EGraphError.Create(SEInvalidTreeInst);
+  repeat
+    CheckIndexRange(aVertexIdx);
+    if {%H-}DomSet.Contains(aVertexIdx) then
+      raise EGraphError.Create(SEInvalidTreeInst);
+    DomSet.Push(aVertexIdx);
+    aVertexIdx := aDomTree[aVertexIdx];
+  until aVertexIdx = NULL_INDEX;
+  Result := DomSet.ToArray;
+end;
+
+function TGSimpleDigraph.FindDomFrontiers(constref aSource: TVertex; out aDomTree: TIntArray): TIntMatrix;
+begin
+  Result := FindDomFrontiersI(IndexOf(aSource), aDomTree);
+end;
+
+function TGSimpleDigraph.FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TIntArray): TIntMatrix;
+var
+  Preds, DomFronts: TIntSetArray;
+  I, Curr, Next: SizeInt;
+begin
+  aDomTree := nil;
   Result := nil;
-  if not IsStrongConnected then
-    exit;
-  Eccs := DoFindMetrics(Radius, Diam);
-  Result.Length := VertexCount;
-  J := 0;
+  CheckIndexRange(aSrcIdx);
+  GetDomTree(aSrcIdx, Preds, aDomTree);
+  System.SetLength(DomFronts, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    if Eccs[I] = Diam then
-      begin
-        Result[J] := I;
-        Inc(J);
-      end;
-  Result.Length := J;
+    if (aDomTree[I] <> NULL_INDEX) and (Preds[I].Count > 1) then
+      for Curr in Preds[I] do
+        begin
+          Next := Curr;
+          while Next <> aDomTree[I] do
+            begin
+              DomFronts[Next].Push(I);
+              Next := aDomTree[Next];
+              if Next = NULL_INDEX then
+                break;
+            end;
+        end;
+  System.SetLength(Result, VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Result[I] := DomFronts[I].ToArray;
 end;
 
 function TGSimpleDigraph.TopologicalSort(aOrder: TSortOrder): TIntArray;
@@ -2486,7 +2639,6 @@ var
   p: PAdjItem;
   w: TWeight;
 begin
-  //todo: why DFS ???
   AdjEnums := CreateAdjEnumArrayEx;
   Stack := TSimpleStack.Create(VertexCount);
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
