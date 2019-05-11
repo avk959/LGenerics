@@ -804,6 +804,7 @@ var
   Queue: TIntQueue;
   Visited: TBitVector;
   I, Curr, Next: SizeInt;
+  p: PAdjItem;
 begin
   if ConnectedValid then
     exit;
@@ -822,14 +823,17 @@ begin
         Curr := I;
         Visited[Curr] := True;
         repeat
-          for Next in AdjVerticesI(Curr) do
-            if not Visited[Next] then
-              begin
-                Visited[Next] := True;
-                Queue.Enqueue(Next);
-                if SeparateJoin(Curr, Next) then
-                  Dec(FCompCount);
-              end;
+          for p in AdjLists[Curr]^ do
+            begin
+              Next := p^.Key;
+              if not Visited[Next] then
+                begin
+                  Visited[Next] := True;
+                  Queue.Enqueue(Next);
+                  if SeparateJoin(Curr, Next) then
+                    Dec(FCompCount);
+                end;
+            end;
         until not Queue{%H-}.TryDequeue(Curr);
       end;
   FConnected := FCompCount = 1;
