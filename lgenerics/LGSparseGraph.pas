@@ -34,7 +34,6 @@ uses
   LGArrayHelpers,
   LGStack,
   LGQueue,
-  LGDeque,
   LGVector,
   LGHashTable,
   LGHash,
@@ -56,7 +55,6 @@ type
   TIntVectorArray  = array of TIntVector;
   TIntStack        = specialize TGLiteStack<SizeInt>;
   TIntQueue        = specialize TGLiteQueue<SizeInt>;
-  TIntDeque        = specialize TGLiteDeque<SizeInt>;
 
   TOnNodeVisit     = procedure(aIndex: SizeInt) of object;
   TNestNodeVisit   = procedure(aIndex: SizeInt) is nested;
@@ -3995,6 +3993,17 @@ end;
 function TIntArrayHelper.Copy: TIntArray;
 begin
   Result := System.Copy(Self);
+end;
+
+procedure TIntArrayHelper.Fill(aValue: SizeInt);
+begin
+{$IF DEFINED(CPU64)}
+  System.FillQWord(Pointer(Self)^, System.Length(Self), QWord(aValue));
+{$ELSEIF DEFINED(CPU32)}
+  System.FillDWord(Pointer(Self)^, System.Length(Self), DWord(aValue));
+{$ELSE}
+  System.FillWord(Pointer(Self)^, System.Length(Self), Word(aValue));
+{$ENDIF}
 end;
 
 { TGSimpleWeight }

@@ -27,9 +27,10 @@ type
     procedure SetLength(aValue: SizeInt); inline;
   public
     class function Construct(aLength: SizeInt; aFillValue: SizeInt = 0): TIntArray; static; inline;
-    function IsEmpty: Boolean; inline;
-    function Copy: TIntArray; inline;
-    property Length: SizeInt read GetLenght write SetLength;
+    function  IsEmpty: Boolean; inline;
+    function  Copy: TIntArray; inline;
+    procedure Fill(aValue: SizeInt);
+    property  Length: SizeInt read GetLenght write SetLength;
   end;
 
   TLGSmallIntHelper = type helper(TGSmallIntHelper) for SmallInt

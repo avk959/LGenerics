@@ -79,9 +79,11 @@ type
   end;
   PIntSet = ^TIntSet;
 
+  TIntSetArray = array of TIntSet;
+
   TSkeleton = record
   private
-    FAdjLists: array of TIntSet;
+    FAdjLists: TIntSetArray;
     FEdgeCount: SizeInt;
     FDirected: Boolean;
     function  GetAdjList(aIndex: SizeInt): PIntSet; inline;
