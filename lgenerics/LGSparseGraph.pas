@@ -45,6 +45,7 @@ type
   TEmptyData       = record end;
 
   TIntArray        = array of SizeInt;
+  TIntMatrix       = array of array of SizeInt;
   TShortArray      = array of ShortInt;
   TIntHelper       = specialize TGOrdinalArrayHelper<SizeInt>;
   TIntVector       = specialize TGLiteVector<SizeInt>;
