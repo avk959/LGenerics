@@ -25,6 +25,8 @@ type
     function  GenerateTestDigr1: TGraph;
     function  GenerateTestDigr2: TGraph;
     function  GenerateTestDigr3: TGraph;
+    function  GenerateTestDigr4: TGraph;
+    function  GenerateTestDigr5: TGraph;
     function  GenerateRandomGraph(aSize, aDeg: Integer): TGraph;
   published
     procedure AddVertices;
@@ -63,6 +65,11 @@ type
     procedure FindMetrics;
     procedure FindCenter;
     procedure FindPeripheral;
+    procedure IsFlowGraph;
+    procedure IsFlowGraph1;
+    procedure IsFlowGraph2;
+    procedure FindDomTree;
+    procedure FindDomTree1;
     procedure IsDag;
     procedure TopologicalSort;
     procedure TopologicalSort1;
@@ -178,9 +185,25 @@ end;
 
 function TSimpleDigraphTest.GenerateTestDigr3: TGraph;
 begin
-  Result := TGraph.Create;
+  Result := TGraph.Create; //TestDigr3.png
   Result.AddVertexRange(0, 5);
   Result.AddEdges([0, 1,  1, 1,  1, 2,  1, 4,  2, 0,  2, 3,  3, 2,  3, 5,  4, 2, 4, 3,  5, 0,  5, 1,  5, 2]);
+end;
+
+function TSimpleDigraphTest.GenerateTestDigr4: TGraph;
+begin
+  Result := TGraph.Create; //TestDigr4.png - from Tarjan's paper
+  Result.AddVertexRange(0, 12);
+  Result.AddEdges([0, 1, 0, 2, 0, 3, 1, 4, 2, 1, 2, 4, 2, 5, 3, 6, 3, 7, 4, 12, 5, 8, 6, 9, 7, 9, 7, 10,
+                   8, 5, 8, 11, 9, 11, 10, 9, 11, 0, 11, 9, 12, 8]);
+end;
+
+function TSimpleDigraphTest.GenerateTestDigr5: TGraph;
+begin
+  Result := TGraph.Create; //TestDigr5.png - from Cytron's paper, fig. 9
+  Result.AddVertexRange(0, 13);
+  Result.AddEdges([0, 1, 0, 13, 1, 2, 2, 3, 2, 7, 3, 4, 3, 5, 4, 6, 5, 6, 6, 8, 7, 8, 8, 9, 9, 10, 9, 11,
+                   10, 11, 11, 9, 11, 12, 12, 2, 12, 13]);
 end;
 
 function TSimpleDigraphTest.GenerateRandomGraph(aSize, aDeg: Integer): TGraph;
@@ -942,6 +965,86 @@ begin
   AssertTrue(p.Length = 1);
   AssertTrue(g.Eccentricity(p[0]) = 7);
   AssertTrue(p[0] = 2);
+end;
+
+procedure TSimpleDigraphTest.IsFlowGraph;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertFalse(g.IsFlowGraph(0));
+  g.AddEdge(0, 8);
+  AssertTrue(g.IsFlowGraph(0));
+  AssertFalse(g.IsFlowGraph(8));
+  g.AddEdge(8, 0);
+  AssertTrue(g.IsFlowGraph(8));
+end;
+
+procedure TSimpleDigraphTest.IsFlowGraph1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Missed: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  AssertFalse(g.IsFlowGraph(0, Missed));
+  I := g.IndexOf(8);
+  AssertTrue(THelper.SequentSearch(Missed, I) <> NULL_INDEX);
+  I := g.IndexOf(7);
+  AssertTrue(THelper.SequentSearch(Missed, I) <> NULL_INDEX);
+end;
+
+procedure TSimpleDigraphTest.IsFlowGraph2;
+var
+  Ref: TRef;
+  g: TGraph;
+  I: Integer;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  for I in g.Vertices do
+    AssertTrue(g.IsFlowGraph(I));
+end;
+
+procedure TSimpleDigraphTest.FindDomTree;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr4;
+  g := Ref;
+  AssertTrue(g.FindDomTree(0, Tree) = g.VertexCount);
+  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 3, 3, 0, 0, 7, 0, 4])));
+end;
+
+procedure TSimpleDigraphTest.FindDomTree1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr5;
+  g := Ref;
+  AssertTrue(g.FindDomTree(0, Tree) = g.VertexCount);
+  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 2, 3, 3, 3, 2, 2, 8, 9, 9, 11, 0])));
+  //testSet[6].correctIdoms.push_back(0);
+  // testSet[6].correctIdoms.push_back(1);
+  // testSet[6].correctIdoms.push_back(2);
+  // testSet[6].correctIdoms.push_back(3);
+  // testSet[6].correctIdoms.push_back(3);
+  // testSet[6].correctIdoms.push_back(3);
+  // testSet[6].correctIdoms.push_back(2);
+  // testSet[6].correctIdoms.push_back(2);
+  // testSet[6].correctIdoms.push_back(8);
+  // testSet[6].correctIdoms.push_back(9);
+  // testSet[6].correctIdoms.push_back(9);
+  // testSet[6].correctIdoms.push_back(11);
+  // testSet[6].correctIdoms.push_back(0);
 end;
 
 procedure TSimpleDigraphTest.IsDag;
