@@ -70,6 +70,8 @@ type
     procedure IsFlowGraph2;
     procedure FindDomTree;
     procedure FindDomTree1;
+    procedure FindDomTree2;
+    procedure FindDomTree3;
     procedure IsDag;
     procedure TopologicalSort;
     procedure TopologicalSort1;
@@ -259,7 +261,7 @@ begin
   AssertTrue(g.EdgeCount = 17);
   g.Title := Title;
   g.Description.Text := Description;
-  g2 := Ref2;
+  g2 := {%H-}Ref2;
   Stream := TMemoryStream.Create;
   try
     g.SaveToStream(Stream);
@@ -1015,10 +1017,12 @@ var
   Ref: TRef;
   g: TGraph;
   Tree: TIntArray;
+  I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestDigr4;
   g := Ref;
-  AssertTrue(g.FindDomTree(0, Tree) = g.VertexCount);
+  Tree := g.FindDomTree(0, I);
+  AssertTrue(I = g.VertexCount);
   AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 3, 3, 0, 0, 7, 0, 4])));
 end;
 
@@ -1027,11 +1031,45 @@ var
   Ref: TRef;
   g: TGraph;
   Tree: TIntArray;
+  I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestDigr5;
   g := Ref;
-  AssertTrue(g.FindDomTree(0, Tree) = g.VertexCount);
+  Tree := g.FindDomTree(0, I);
+  AssertTrue(I = g.VertexCount);
   AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 2, 3, 3, 3, 2, 2, 8, 9, 9, 11, 0])));
+end;
+
+procedure TSimpleDigraphTest.FindDomTree2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Tree := g.FindDomTree(0, I);
+  AssertTrue(I = g.VertexCount - 2);
+  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 0, -1, -1, 0, 9, 9, 9])));
+  g.AddEdge(0, 8);
+  Tree := g.FindDomTree(0, I);
+  AssertTrue(I = g.VertexCount);
+  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 0, 8, 0, 0, 9, 9, 9])));
+end;
+
+procedure TSimpleDigraphTest.FindDomTree3;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  Tree := g.FindDomTree(0, I);
+  AssertTrue(I = g.VertexCount);
+  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 1, 3, 1, 0, 6, 7])));
 end;
 
 procedure TSimpleDigraphTest.IsDag;
