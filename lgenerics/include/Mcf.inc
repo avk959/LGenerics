@@ -111,17 +111,19 @@ end;
 
 function TGCostedInt64Net.TSspMcfHelper.SetNodePrices: Boolean;
 var
-  Queue, TreePrev, TreeNext, Level: TIntArray;
+  Buf: TIntArray;
   Active: TBitVector;
+  Queue, TreePrev, TreeNext, Level: PSizeInt;
   Curr, Next, Prev, Post, Test, CurrLevel, qHead, qTail: SizeInt;
   CurrArc: PArc;
   NodePrice: TCost;
 begin
   SearchInit;
-  TreePrev := FGraph.CreateIntArray;
-  TreeNext := FGraph.CreateIntArray;
-  Level := FGraph.CreateIntArray;
-  Queue.Length := FNodeCount;
+  Buf := TIntArray.Construct(FGraph.VertexCount * 4, NULL_INDEX);
+  Queue := Pointer(Buf);
+  TreePrev := Queue + FGraph.VertexCount;
+  TreeNext := TreePrev + FGraph.VertexCount;
+  Level := TreeNext + FGraph.VertexCount;
   Active.Size := FNodeCount;
   qHead := 0;
   qTail := 0;

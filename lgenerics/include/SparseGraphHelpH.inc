@@ -188,9 +188,10 @@ type
     THeap = array of T;
 
   var
+    FBuffer: TIntArray;
     FHeap: THeap;
-    FHandle2Index: TIntArray;
-    FIndex2Handle: TIntArray;
+    FHandle2Index,
+    FIndex2Handle: PSizeInt;
     FCount: SizeInt;
     function  GetCapacity: SizeInt; inline;
     procedure FloatUp(aIndex: SizeInt);
@@ -427,16 +428,16 @@ type
     THungarian = record
     strict private
       FGraph: TGraph;
+      FBuffer: TIntArray;
       FMates,
       FParents,
-      FQueue: TIntArray;
+      FQueue: PSizeInt;
       FPhi: TWeightArray;
       FWhites,
       FVisited: TBoolVector;
       FMatchCount: SizeInt;
       procedure Match(aNode, aMate: SizeInt); inline;
-      procedure Init(aGraph: TGraph; const w, g: TIntArray);
-      procedure InitMax(aGraph: TGraph; const w, g: TIntArray);
+      procedure Init(aGraph: TGraph; const w, g: TIntArray; AsMax: Boolean);
       function  FindAugmentPathMin(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
       function  FindAugmentPathMax(aRoot: SizeInt; var aDelta: TWeight): SizeInt;
       procedure AlternatePath(aRoot: SizeInt);

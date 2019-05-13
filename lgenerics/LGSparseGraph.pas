@@ -4309,7 +4309,7 @@ end;
 
 function TGBinHeapMin.GetCapacity: SizeInt;
 begin
-  Result := System.Length(FIndex2Handle);
+  Result := System.Length(FHeap);
 end;
 
 procedure TGBinHeapMin.FloatUp(aIndex: SizeInt);
@@ -4379,9 +4379,10 @@ begin
   FCount := 0;
   if aSize > 0 then
     begin
-      System.SetLength(FHandle2Index, aSize);
       System.SetLength(FHeap, aSize);
-      System.SetLength(FIndex2Handle, aSize);
+      FBuffer := TIntArray.Construct(aSize * 2, NULL_INDEX);
+      FHandle2Index := Pointer(FBuffer);
+      FIndex2Handle := FHandle2Index + aSize;
     end;
 end;
 
@@ -5049,7 +5050,7 @@ begin
   FMates[aMate] := aNode;
 end;
 
-procedure TGWeightHelper.THungarian.Init(aGraph: TGraph; const w, g: TIntArray);
+procedure TGWeightHelper.THungarian.Init(aGraph: TGraph; const w, g: TIntArray; AsMax: Boolean);
 var
   I: SizeInt;
   ew: TWeight;
@@ -5066,52 +5067,32 @@ begin
       FWhites[I] := True;
 
   FPhi := CreateWeightArrayZ(aGraph.VertexCount);
-  for I in FWhites do
-    begin
-      ew := TWeight.INF_VALUE;
-      for p in aGraph.AdjLists[I]^ do
-        if p^.Data.Weight < ew then
-          ew := p^.Data.Weight;
-      FPhi[I] := ew;
-    end;
-
-  FMates := aGraph.CreateIntArray;
-  FParents := aGraph.CreateIntArray;
-  FQueue := aGraph.CreateIntArray;
-  FVisited.Size := aGraph.VertexCount;
-end;
-
-procedure TGWeightHelper.THungarian.InitMax(aGraph: TGraph; const w, g: TIntArray);
-var
-  I: SizeInt;
-  ew: TWeight;
-  p: TGraph.PAdjItem;
-begin
-  FGraph := aGraph;
-  FMatchCount := 0;
-  FWhites.Size := aGraph.VertexCount;
-  if w.Length <= g.Length then
-    for I in w do
-      FWhites[I] := True
+  if AsMax then
+    for I in FWhites do
+      begin
+        ew := TWeight.NEGINF_VALUE;
+        for p in aGraph.AdjLists[I]^ do
+          if p^.Data.Weight > ew then
+            ew := p^.Data.Weight;
+        FPhi[I] := ew;
+      end
   else
-    for I in g do
-      FWhites[I] := True;
+    for I in FWhites do
+      begin
+        ew := TWeight.INF_VALUE;
+        for p in aGraph.AdjLists[I]^ do
+          if p^.Data.Weight < ew then
+            ew := p^.Data.Weight;
+        FPhi[I] := ew;
+      end;
 
-  FPhi := CreateWeightArrayZ(aGraph.VertexCount);
-  for I in FWhites do
-    begin
-      ew := TWeight.NEGINF_VALUE;
-      for p in aGraph.AdjLists[I]^ do
-        if p^.Data.Weight > ew then
-          ew := p^.Data.Weight;
-      FPhi[I] := ew;
-    end;
-
-  FMates := aGraph.CreateIntArray;
-  FParents := aGraph.CreateIntArray;
-  FQueue := aGraph.CreateIntArray;
+  FBuffer := TIntArray.Construct(aGraph.VertexCount * 3, NULL_INDEX);
+  FQueue := Pointer(FBuffer);
+  FMates := FQueue + aGraph.VertexCount;
+  FParents := FMates + aGraph.VertexCount;
   FVisited.Size := aGraph.VertexCount;
 end;
+
 {$PUSH}{$MACRO ON}
 {$DEFINE EnqueueNext :=
 begin
@@ -5232,7 +5213,7 @@ var
 begin
   aDelta := TWeight.INF_VALUE;
   Result := 0;
-  System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
+  System.FillChar(FParents^, FGraph.VertexCount * SizeOf(SizeInt), $ff);
   FVisited.ClearBits;
   for I in FWhites do
     if FMates[I] = NULL_INDEX then
@@ -5252,7 +5233,7 @@ var
 begin
   aDelta := TWeight.NEGINF_VALUE;
   Result := 0;
-  System.FillChar(Pointer(FParents)^, FParents.Length * SizeOf(SizeInt), $ff);
+  System.FillChar(FParents^, FGraph.VertexCount * SizeOf(SizeInt), $ff);
   FVisited.ClearBits;
   for I in FWhites do
     if FMates[I] = NULL_INDEX then
@@ -5321,14 +5302,14 @@ end;
 
 function TGWeightHelper.THungarian.MinMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 begin
-  Init(aGraph, w, g);
+  Init(aGraph, w, g, False);
   ExecuteMin;
   Result := CreateEdges;
 end;
 
 function TGWeightHelper.THungarian.MaxMatching(aGraph: TGraph; const w, g: TIntArray): TEdgeArray;
 begin
-  InitMax(aGraph, w, g);
+  Init(aGraph, w, g, True);
   ExecuteMax;
   Result := CreateEdges;
 end;
@@ -5744,8 +5725,9 @@ end;
 class function TGWeightHelper.BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: TIntArray;
   out aWeights: TWeightArray): SizeInt;
 var
-  Queue, TreePrev, TreeNext, Level: TIntArray;
+  Buf: TIntArray;
   InQueue, Active: TGraph.TBitVector;
+  Queue, TreePrev, TreeNext, Level: PSizeInt;
   Curr, Next, Prev, Post, Test, CurrLevel, vCount: SizeInt;
   CurrWeight: TWeight;
   p: TGraph.PAdjItem;
@@ -5753,11 +5735,12 @@ var
   qTail: SizeInt = 0;
 begin
   vCount := g.VertexCount;
-  Queue.Length := vCount;
+  Buf := TIntArray.Construct(vCount * 4, NULL_INDEX);
   aParents := g.CreateIntArray;
-  TreePrev := g.CreateIntArray;
-  TreeNext := g.CreateIntArray;
-  Level := g.CreateIntArray;
+  Queue := Pointer(Buf);
+  TreePrev := Queue + vCount;
+  TreeNext := TreePrev + vCount;
+  Level := TreeNext + vCount;
   InQueue.Size := vCount;
   Active.Size := vCount;
   aWeights := CreateWeightArray(vCount);
@@ -5831,21 +5814,23 @@ end;
 
 class function TGWeightHelper.BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt;
 var
-  Queue, Parents, TreePrev, TreeNext, Level: TIntArray;
+  Buf: TIntArray;
   InQueue, Active: TGraph.TBitVector;
+  Queue, Parents, TreePrev, TreeNext, Level: PSizeInt;
   Curr, Next, Prev, Post, Test, CurrLevel, vCount: SizeInt;
   CurrWeight: TWeight;
   p: TGraph.PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
 begin
-  vCount := Succ(g.VertexCount);
   Test := g.VertexCount;
-  Queue.Length := vCount;
-  Parents := g.CreateIntArray(vCount, NULL_INDEX);
-  TreePrev := g.CreateIntArray(vCount, NULL_INDEX);
-  TreeNext := g.CreateIntArray(vCount, NULL_INDEX);
-  Level := g.CreateIntArray(vCount, NULL_INDEX);
+  vCount := Succ(Test);
+  Buf := TIntArray.Construct(vCount * 5, NULL_INDEX);
+  Queue := Pointer(Buf);
+  Parents := Queue + vCount;
+  TreePrev := Parents + vCount;
+  TreeNext := TreePrev + vCount; ;
+  Level := TreeNext + vCount;
   InQueue.Size := vCount;
   Active.Size := vCount;
   aWeights := CreateWeightArrayZ(vCount);
