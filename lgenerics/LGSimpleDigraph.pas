@@ -111,6 +111,10 @@ type
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
     function  GetDomTree(aSrc: SizeInt; out aSize: SizeInt; out aPreds: TIntSetArray): TIntArray;
+  { returns dominator tree, its size in aSize, array of incoming arcs in aPreds numbering in DFS preorder,
+    maps preorder->index and index->preoreder in aOrd2Idx and aIdx2Ord }
+    function  GetDomTreeSnca(aSrc: SizeInt; out aSize: SizeInt; out aPreds: TIntSetArray;
+              out aOrd2Idx, aIdx2Ord: TIntArray): TIntArray;
     function  TopoSort: TIntArray;
     function  TopoSort(out a: TIntArray): Boolean;
     function  GetDagLongestPaths(aSrc: SizeInt): TIntArray;
@@ -220,13 +224,11 @@ type
 
   { returns True if graph is flowgraph, False otherwise;
     will raise an exception if it does not contain the vertex aSource;
-    a ﬂowgraph G = (V, A, r) is a directed graph where every vertex in V is reachable from a
-    distinguished root vertex r }
+    a ﬂowgraph G = (V, A, r) is a directed graph where every vertex in V is reachable
+    from a distinguished root vertex r }
     function  IsFlowGraph(constref aSource: TVertex): Boolean; inline;
     function  IsFlowGraphI(aSrcIdx: SizeInt): Boolean;
-  { returns True if graph is flowgraph, otherwise returns False and list
-    of indices of unreachable vertices in aMissed;
-    will raise an exception if it does not contain the vertex aSource }
+  { same as above, and besides, returns a list of unreached vertices in aMissed }
     function  IsFlowGraph(constref aSource: TVertex; out aMissed: TIntArray): Boolean; inline;
     function  IsFlowGraphI(aSrcIdx: SizeInt; out aMissed: TIntArray): Boolean;
   { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
@@ -236,10 +238,17 @@ type
     Cooper, Harvey and Kennedy "A Simple, Fast Dominance Algorithm" }
     function  FindDomTree(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
+  { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
+    will raise an exception if it does not contain the vertex aSource;
+    each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
+    or is unreachable from aSource; used SNCA algorithm from
+    L. Georgiadis "Linear-Time Algorithms for Dominators and Related Problems" }
+    function  FindDomTreeSnca(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
+    function  FindDomTreeSncaI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
   { extracts Dom(aVertex) from dominator tree aTree }
     function  ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray; inline;
     function  ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
-  { returns dominance frontiers and dominator tree in aDomTree;
+  { returns dominance frontiers and dominator tree in aDomTree(used SNCA algorithm);
     will raise an exception if it does not contain the vertex aSource }
     function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TIntArray): TIntMatrix; inline;
     function  FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TIntArray): TIntMatrix;
@@ -1096,11 +1105,11 @@ end;
 
 function TGSimpleDigraph.GetDomTree(aSrc: SizeInt; out aSize: SizeInt; out aPreds: TIntSetArray): TIntArray;
 var
-  Tree, PostOrd, Idx2Ord: TIntArray;
-  Counter: SizeInt = 0;
+  Parents, PostOrd, Idx2Ord, Doms: TIntArray;
+  Counter: SizeInt absolute aSize;
   procedure NodeFound(aNode, aParent: SizeInt);
   begin
-    Tree[aNode] := aParent;
+    Parents[aNode] := aParent;
     aPreds[aNode].Push(aParent);
   end;
   procedure NodeVisit(aNode, aParent: SizeInt);
@@ -1116,46 +1125,156 @@ var
   begin
     while aLeft <> aRight do
       begin
-        while Idx2Ord[aLeft] < Idx2Ord[aRight] do
-          aLeft := Tree[aLeft];
-        while Idx2Ord[aRight] < Idx2Ord[aLeft] do
-          aRight := Tree[aRight];
+        while aLeft < aRight do
+          aLeft := Doms[aLeft];
+        while aRight < aLeft do
+          aRight := Doms[aRight];
       end;
     Result := aLeft;
   end;
 var
-  I, Curr, Prev, IDom: SizeInt;
+  I, J, IDom: SizeInt;
   Ready: Boolean;
 begin
   aPreds := nil;
-  Tree := CreateIntArray;
+  Counter := 0;
+  Parents := CreateIntArray;
   PostOrd := CreateIntArray;
   System.SetLength(aPreds, VertexCount);
   aSize := DfsTraversalI(aSrc, @NodeFound, @NodeVisit, @NodeDone);
-  Counter -= 2;
   Idx2Ord := CreateIntArray;
-  for I := 0 to Succ(Counter) do
+  for I := 0 to Pred(Counter) do
     Idx2Ord[PostOrd[I]] := I;
-  Tree[aSrc] := aSrc;
+  Doms := CreateIntArray;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      J := Parents[I];
+      if J <> NULL_INDEX then
+        Doms[Idx2Ord[I]] := Idx2Ord[J];
+    end;
+  Doms[Pred(Counter)] := Pred(Counter);
   repeat
     Ready := True;
-    for I := Counter downto 0 do
+    for I := Counter - 2 downto 0 do
       begin
-        Curr := PostOrd[I];
         IDom := NULL_INDEX;
-        for Prev in aPreds[Curr] do
+        for J in aPreds[PostOrd[I]] do
           if IDom <> NULL_INDEX then
-            IDom := Nca(Prev, IDom)
+            IDom := Nca(Idx2Ord[J], IDom)
           else
-            IDom := Prev;
-        if Tree[Curr] <> IDom then
+            IDom := Idx2Ord[J];
+        if Doms[I] <> IDom then
           begin
-            Tree[Curr] := IDom;
+            Doms[I] := IDom;
             Ready := False;
           end;
       end;
   until Ready;
-  Result := Tree;
+  for I := 0 to Pred(Counter) do
+    Parents[PostOrd[I]] :=  PostOrd[Doms[I]];
+  Parents[aSrc] := aSrc;
+  Result := Parents;
+end;
+
+function TGSimpleDigraph.GetDomTreeSnca(aSrc: SizeInt; out aSize: SizeInt; out aPreds: TIntSetArray; out
+  aOrd2Idx, aIdx2Ord: TIntArray): TIntArray;
+var
+  Parents: TIntArray;
+  Counter: SizeInt absolute aSize;
+  procedure Dfs(From: SizeInt);
+  var
+    Stack: TIntArray;
+    AdjEnums: TAdjEnumArray;
+    FromOrd, Next: SizeInt;
+    sTop: SizeInt = -1;
+  begin
+    AdjEnums := CreateAdjEnumArray;
+    aIdx2Ord[From] := 0;
+    Counter := 1;
+    {%H-}Stack := CreateIntArray;
+    Inc(sTop);
+    Stack[sTop] := From;
+    while sTop >= 0 do
+      begin
+        From := Stack[sTop];
+        FromOrd := aIdx2Ord[From];
+        if AdjEnums[From].MoveNext then
+          begin
+            Next := AdjEnums[From].Current;
+            if aIdx2Ord[Next] = NULL_INDEX then
+              begin
+                aIdx2Ord[Next] := Counter;
+                Parents[Counter] := FromOrd;
+                Inc(sTop);
+                Inc(Counter);
+                Stack[sTop] := Next;
+              end;
+            aPreds[aIdx2Ord[Next]].Push(FromOrd);
+          end
+        else
+          Dec(sTop);
+      end
+  end;
+var
+  Labels, SemiDoms, IDoms: TIntArray;
+  procedure Compress(aLeft, aRight: SizeInt);
+  var
+    Node: SizeInt;
+  begin
+    Node := Parents[aLeft];
+    if Node > aRight then
+      Compress(Node, aRight);
+    if Labels[Node] < Labels[aLeft] then
+      Labels[aLeft] := Labels[Node];
+    Parents[aLeft] := Parents[Node];
+  end;
+var
+  I, Prev, Dom: SizeInt;
+begin
+  aPreds := nil;
+  aIdx2Ord := nil;
+  aOrd2Idx := nil;
+  aIdx2Ord := CreateIntArray;
+  Parents := CreateIntArray;
+  System.SetLength(aPreds, VertexCount);
+  Dfs(aSrc);
+  aOrd2Idx := CreateIntArray;
+  for I := 0 to Pred(VertexCount) do
+    if aIdx2Ord[I] <> NULL_INDEX then
+      aOrd2Idx[aIdx2Ord[I]] := I;
+  Labels := CreateIntArrayRange;
+  SemiDoms := Labels.Copy;
+  IDoms.Length := VertexCount;
+  Parents[0] := 0;
+  for I := Pred(Counter) downto 1 do
+    begin
+      IDoms[I] := Parents[I];
+      for Prev in aPreds[I] do
+        begin
+          if Prev <= I then
+            Dom := Prev
+          else
+            begin
+              Compress(Prev, I);
+              Dom := Labels[Prev];
+            end;
+          if SemiDoms[Dom] < SemiDoms[I] then
+            SemiDoms[I] := SemiDoms[Dom];
+        end;
+      Labels[I] := SemiDoms[I];
+    end;
+  IDoms[0] := 0;
+  Parents.Fill(NULL_INDEX);
+  for I := 1 to Pred(Counter) do
+    begin
+      Dom := IDoms[I];
+      while Dom > SemiDoms[I] do
+        Dom := IDoms[Dom];
+      IDoms[I] := Dom;
+      Parents[aOrd2Idx[I]] := aOrd2Idx[Dom];
+    end;
+  Parents[aSrc] := aSrc;
+  Result := Parents;
 end;
 
 function TGSimpleDigraph.TopoSort: TIntArray;
@@ -1963,9 +2082,24 @@ var
   Preds: TIntSetArray;
 begin
   Result := nil;
-  aSize := 0;
   CheckIndexRange(aSrcIdx);
   Result := GetDomTree(aSrcIdx, aSize, Preds);
+  Result[aSrcIdx] := NULL_INDEX;
+end;
+
+function TGSimpleDigraph.FindDomTreeSnca(constref aSource: TVertex; out aSize: SizeInt): TIntArray;
+begin
+  Result := FindDomTreeSncaI(IndexOf(aSource), aSize);
+end;
+
+function TGSimpleDigraph.FindDomTreeSncaI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
+var
+  Preds: TIntSetArray;
+  Ord2Idx, Idx2Ord: TIntArray;
+begin
+  Result := nil;
+  CheckIndexRange(aSrcIdx);
+  Result := GetDomTreeSnca(aSrcIdx, aSize, Preds, Ord2Idx, Idx2Ord);
   Result[aSrcIdx] := NULL_INDEX;
 end;
 
@@ -1998,24 +2132,29 @@ end;
 function TGSimpleDigraph.FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TIntArray): TIntMatrix;
 var
   Preds, DomFronts: TIntSetArray;
-  I, Curr, Next: SizeInt;
+  Ord2Idx, Idx2Ord: TIntArray;
+  I, PreOrd, Curr, Next: SizeInt;
 begin
   aDomTree := nil;
   Result := nil;
   CheckIndexRange(aSrcIdx);
-  aDomTree := GetDomTree(aSrcIdx, I, Preds);
+  aDomTree := GetDomTreeSnca(aSrcIdx, I, Preds, Ord2Idx, Idx2Ord);
   System.SetLength(DomFronts, VertexCount);
   for I := 0 to Pred(VertexCount) do
-    if (I <> aSrcIdx) and (Preds[I].Count > 1) then
-      for Curr in Preds[I] do
-        begin
-          Next := Curr;
-          while Next <> aDomTree[I] do
+    if I <> aSrcIdx then
+      begin
+        PreOrd := Idx2Ord[I];
+        if Preds[PreOrd].Count > 1 then
+          for Curr in Preds[PreOrd] do
             begin
-              DomFronts[Next].Add(I);
-              Next := aDomTree[Next];
+              Next := Ord2Idx[Curr];
+              while (Next <> aDomTree[I]) and (Next <> I) do
+                begin
+                  DomFronts[Next].Add(I);
+                  Next := aDomTree[Next];
+                end;
             end;
-        end;
+      end;
   aDomTree[aSrcIdx] := NULL_INDEX;
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
