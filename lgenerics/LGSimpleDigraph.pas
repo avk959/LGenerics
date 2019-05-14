@@ -245,6 +245,10 @@ type
     L. Georgiadis "Linear-Time Algorithms for Dominators and Related Problems" }
     function  FindDomTreeSnca(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeSncaI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
+    { todo: compact data structure to answer queries:
+            1. is x dominate y            - O(1) ?
+            2. which nodes dominate x     - O(k<n)
+            3. which nodes x dominated by - O(k<n) }
   { extracts Dom(aVertex) from dominator tree aTree, including aVertex }
     function  ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray; inline;
     function  ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
@@ -1191,7 +1195,7 @@ var
     AdjEnums := CreateAdjEnumArray;
     aIdx2Ord[From] := 0;
     Counter := 1;
-    {%H-}Stack := CreateIntArray;
+    {%H-}Stack.Length := VertexCount;
     Inc(sTop);
     Stack[sTop] := From;
     while sTop >= 0 do
