@@ -223,7 +223,7 @@ type
 ***********************************************************************************************************}
 
   { returns True if graph is flowgraph, False otherwise;
-    will raise an exception if it does not contain the vertex aSource;
+    raises an exception if it does not contain the vertex aSource;
     a ﬂowgraph G = (V, A, r) is a directed graph where every vertex in V is reachable
     from a distinguished root vertex r }
     function  IsFlowGraph(constref aSource: TVertex): Boolean; inline;
@@ -232,24 +232,24 @@ type
     function  IsFlowGraph(constref aSource: TVertex; out aMissed: TIntArray): Boolean; inline;
     function  IsFlowGraphI(aSrcIdx: SizeInt; out aMissed: TIntArray): Boolean;
   { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
-    will raise an exception if it does not contain the vertex aSource;
+    raises an exception if it does not contain the vertex aSource;
     each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
     or is unreachable from aSource; used amazingly simple iterative algorithm from
     Cooper, Harvey and Kennedy "A Simple, Fast Dominance Algorithm" }
     function  FindDomTree(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
   { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
-    will raise an exception if it does not contain the vertex aSource;
+    raises an exception if it does not contain the vertex aSource;
     each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
     or is unreachable from aSource; used SNCA algorithm from
     L. Georgiadis "Linear-Time Algorithms for Dominators and Related Problems" }
     function  FindDomTreeSnca(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeSncaI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
-  { extracts Dom(aVertex) from dominator tree aTree }
+  { extracts Dom(aVertex) from dominator tree aTree, including aVertex }
     function  ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray; inline;
     function  ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
   { returns dominance frontiers and dominator tree in aDomTree(used SNCA algorithm);
-    will raise an exception if it does not contain the vertex aSource }
+    raises an exception if it does not contain the vertex aSource }
     function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TIntArray): TIntMatrix; inline;
     function  FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TIntArray): TIntMatrix;
 
@@ -1107,12 +1107,12 @@ function TGSimpleDigraph.GetDomTree(aSrc: SizeInt; out aSize: SizeInt; out aPred
 var
   Parents, PostOrd, Idx2Ord, Doms: TIntArray;
   Counter: SizeInt absolute aSize;
-  procedure NodeFound(aNode, aParent: SizeInt);
+  procedure NodeWhite(aNode, aParent: SizeInt);
   begin
     Parents[aNode] := aParent;
     aPreds[aNode].Push(aParent);
   end;
-  procedure NodeVisit(aNode, aParent: SizeInt);
+  procedure NodeGray(aNode, aParent: SizeInt);
   begin
     aPreds[aNode].Push(aParent);
   end;
@@ -1141,7 +1141,7 @@ begin
   Parents := CreateIntArray;
   PostOrd := CreateIntArray;
   System.SetLength(aPreds, VertexCount);
-  aSize := DfsTraversalI(aSrc, @NodeFound, @NodeVisit, @NodeDone);
+  aSize := DfsTraversalI(aSrc, @NodeWhite, @NodeGray, @NodeDone);
   Idx2Ord := CreateIntArray;
   for I := 0 to Pred(Counter) do
     Idx2Ord[PostOrd[I]] := I;
@@ -2111,16 +2111,20 @@ end;
 function TGSimpleDigraph.ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
 var
   DomSet: TIntSet;
+  Len: SizeInt;
 begin
   if aDomTree.Length <> VertexCount then
     raise EGraphError.Create(SEInvalidTreeInst);
+  Len := VertexCount;
   repeat
-    CheckIndexRange(aVertexIdx);
-    if {%H-}DomSet.Contains(aVertexIdx) then
+    if SizeUInt(aVertexIdx) >= SizeUInt(VertexCount) then
       raise EGraphError.Create(SEInvalidTreeInst);
-    DomSet.Push(aVertexIdx);
+    {%H-}DomSet.Push(aVertexIdx);
+    Dec(Len);
+    if Len < 0 then
+      raise EGraphError.Create(SEInvalidTreeInst);
     aVertexIdx := aDomTree[aVertexIdx];
-  until aVertexIdx = NULL_INDEX;
+  until aVertexIdx < 0;
   Result := DomSet.ToArray;
 end;
 
