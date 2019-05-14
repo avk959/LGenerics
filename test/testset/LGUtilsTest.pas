@@ -46,6 +46,7 @@ type
     procedure Instance;
     procedure Assign;
     procedure Destruction;
+    procedure Destruction1;
   end;
 
   TGOptionalTest = class(TTestCase)
@@ -217,6 +218,33 @@ begin
   AssertTrue(Counter = 1);
   Test;
   AssertTrue(Counter = 2);
+end;
+
+procedure TAutoRefTest.Destruction1;
+var
+  IsAssigned: Boolean = False;
+  procedure Test;
+  var
+    Ref: specialize TGAutoRef<TObject>;
+    Inst: TObject = nil;
+  begin
+    Inst := {%H-}Ref;
+    try
+      IsAssigned := Assigned(Inst);
+      exit;
+    finally
+    end;
+  end;
+var
+  Raised: Boolean = False;
+begin
+  try
+    Test;
+  except
+    Raised := True;
+  end;
+  AssertTrue(IsAssigned);
+  AssertFalse(Raised);
 end;
 
 { TGOptionalTest }
