@@ -3640,6 +3640,7 @@ var
   VertSet: TBoolVector;
   I: SizeInt;
 begin
+  aExact := True;
   if VertexCount < 2 then
     exit(nil);
   Result := FindMIS(aExact, aTimeOut);

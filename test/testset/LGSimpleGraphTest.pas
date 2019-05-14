@@ -1332,7 +1332,7 @@ var
   Ref: TRef;
   g: TGraph;
   peo: TIntArray;
-  I: Integer;
+  I: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateWheel6;
   g := Ref;
@@ -2434,7 +2434,7 @@ begin
   g := Ref;
   Exact := False;
   ColCount := g.VertexColoring(Colors, Exact, 0);
-  AssertTrue(ColCount.ToString, ColCount = 3);
+  AssertTrue(ColCount = 3);
   AssertTrue(g.IsProperVertexColoring(Colors));
 end;
 

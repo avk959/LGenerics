@@ -1359,7 +1359,7 @@ begin
   AssertTrue(Length(DomFront[2]) = 1); //12
   AssertTrue(DomFront[2, 0] = 12);
 
-  AssertTrue(Length(DomFront[3]).ToString,Length(DomFront[3]) = 3); //6, 8, 11
+  AssertTrue(Length(DomFront[3]) = 3); //6, 8, 11
   AssertTrue(THelper.SequentSearch(DomFront[3], 6) >= 0);
   AssertTrue(THelper.SequentSearch(DomFront[3], 8) >= 0);
   AssertTrue(THelper.SequentSearch(DomFront[3], 11) >= 0);
@@ -2536,11 +2536,11 @@ begin
   AssertTrue(ArcFlows = nil);
   Flow := 3;
   AssertTrue(g.FindFlowPr(0, 12, Flow, ArcFlows) = nsOk);
-  AssertTrue(Flow.ToString, Flow = 3);
+  AssertTrue(Flow = 3);
   AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
   Flow := 7;
   AssertTrue(g.FindFlowPr(0, 12, Flow, ArcFlows) = nsOk);
-  AssertTrue(Flow.ToString, Flow = 5);
+  AssertTrue(Flow = 5);
   AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
 end;
 
@@ -2610,11 +2610,11 @@ begin
   AssertTrue(ArcFlows = nil);
   Flow := 3;
   AssertTrue(g.FindFlowD(0, 12, Flow, ArcFlows) = nsOk);
-  AssertTrue(Flow.ToString, Flow = 3);
+  AssertTrue(Flow = 3);
   AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
   Flow := 7;
   AssertTrue(g.FindFlowD(0, 12, Flow, ArcFlows) = nsOk);
-  AssertTrue(Flow.ToString, Flow = 5);
+  AssertTrue(Flow = 5);
   AssertTrue(g.IsFeasibleFlow(0, 12, Flow, ArcFlows));
 end;
 
