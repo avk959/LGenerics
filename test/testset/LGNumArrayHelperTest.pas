@@ -12,6 +12,8 @@ uses
 
 type
 
+  { TNumArrayHelperTest }
+
   TNumArrayHelperTest = class(TTestCase)
   private
   type
@@ -53,6 +55,11 @@ type
     procedure BinarySearchStaticSuccess20_1;
     procedure BinarySearchStaticUnsuccess20;
     procedure BinarySearchStaticUnsuccess20_1;
+    procedure BinarySearchStaticSuccess20_2;
+    procedure BinarySearchStaticSuccess20_3;
+    procedure BinarySearchStaticUnsuccessEqual10;
+    procedure BinarySearchStaticSuccessEqual10;
+
     procedure BinarySearchDynSuccess1;
     procedure BinarySearchDynUnsuccess1;
     procedure BinarySearchDynSuccess2;
@@ -63,6 +70,10 @@ type
     procedure BinarySearchDynSuccess20_1;
     procedure BinarySearchDynUnsuccess20;
     procedure BinarySearchDynUnsuccess20_1;
+    procedure BinarySearchDynSuccess20_2;
+    procedure BinarySearchDynSuccess20_3;
+    procedure BinarySearchDynUnsuccessEqual10;
+    procedure BinarySearchDynSuccessEqual10;
 
     procedure IndexOfMinEmpty;
     procedure IndexOfMinStatic1;
@@ -641,6 +652,26 @@ begin
   AssertTrue(TIntHelper.BinarySearch(IntSorted20, 9) = -1);
 end;
 
+procedure TNumArrayHelperTest.BinarySearchStaticSuccess20_2;
+begin
+  AssertTrue(TIntHelper.BinarySearch(IntSorted20, -5) = 0);
+end;
+
+procedure TNumArrayHelperTest.BinarySearchStaticSuccess20_3;
+begin
+  AssertTrue(TIntHelper.BinarySearch(IntSorted20, 17) = 13);
+end;
+
+procedure TNumArrayHelperTest.BinarySearchStaticUnsuccessEqual10;
+begin
+  AssertTrue(TIntHelper.BinarySearch(IntEqual10, 5) = -1);
+end;
+
+procedure TNumArrayHelperTest.BinarySearchStaticSuccessEqual10;
+begin
+  AssertTrue(TIntHelper.BinarySearch(IntEqual10, 9) = 0);
+end;
+
 procedure TNumArrayHelperTest.BinarySearchDynSuccess1;
 begin
   AssertTrue(TIntHelper.BinarySearch(TIntHelper.CreateCopy(IntSrc10[3..3]), -15) = 0);
@@ -692,6 +723,26 @@ end;
 procedure TNumArrayHelperTest.BinarySearchDynUnsuccess20_1;
 begin
   AssertTrue(TIntHelper.BinarySearch(TIntHelper.CreateCopy(IntSorted20), 9) = -1);
+end;
+
+procedure TNumArrayHelperTest.BinarySearchDynSuccess20_2;
+begin
+  AssertTrue(TIntHelper.BinarySearch(TIntHelper.CreateCopy(IntSorted20), -5) = 0);
+end;
+
+procedure TNumArrayHelperTest.BinarySearchDynSuccess20_3;
+begin
+  AssertTrue(TIntHelper.BinarySearch(TIntHelper.CreateCopy(IntSorted20), 17) = 13);
+end;
+
+procedure TNumArrayHelperTest.BinarySearchDynUnsuccessEqual10;
+begin
+  AssertTrue(TIntHelper.BinarySearch(TIntHelper.CreateCopy(IntEqual10), 5) = -1);
+end;
+
+procedure TNumArrayHelperTest.BinarySearchDynSuccessEqual10;
+begin
+  AssertTrue(TIntHelper.BinarySearch(TIntHelper.CreateCopy(IntEqual10), 9) = 0);
 end;
 
 procedure TNumArrayHelperTest.IndexOfMinEmpty;
