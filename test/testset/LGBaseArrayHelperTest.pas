@@ -72,11 +72,18 @@ type
     procedure BinarySearchPosStaticSuccess20_1;
     procedure BinarySearchPosStaticSuccess20_2;
     procedure BinarySearchPosStaticSuccess20_3;
+    procedure BinarySearchPosStaticSuccessEqual10;
 
+    procedure BinarySearchPosDynEmpty;
+    procedure BinarySearchPosDynSingle;
+    procedure BinarySearchPosDynSingle_1;
+    procedure BinarySearchPosDynSingle_2;
     procedure BinarySearchPosStaticUnsuccess20;
     procedure BinarySearchPosStaticUnsuccess20_1;
     procedure BinarySearchPosStaticUnsuccess20_2;
     procedure BinarySearchPosStaticUnsuccess20_3;
+    procedure BinarySearchPosStaticUnuccessEqual10;
+    procedure BinarySearchPosStaticUnuccessEqual10_1;
 
     procedure BinarySearchStaticUnsuccess20;
     procedure BinarySearchStaticUnsuccess20_1;
@@ -592,16 +599,16 @@ end;
 
 procedure TBaseArrayHelperTest.BinarySearchPosStaticSuccess20;
 var
-  sr: TIntHelper.TSearchResult;
+  sr: TSearchResult;
 begin
   sr := TIntHelper.BinarySearchPos(IntSorted20, 28);
-  AssertTrue((sr.FoundIndex = 15) or (sr.FoundIndex = 16));
+  AssertTrue(sr.FoundIndex = 16);
   AssertTrue(sr.InsertIndex = Succ(sr.FoundIndex));
 end;
 
 procedure TBaseArrayHelperTest.BinarySearchPosStaticSuccess20_1;
 var
-  sr: TIntHelper.TSearchResult;
+  sr: TSearchResult;
 begin
   sr := TIntHelper.BinarySearchPos(InOrderSrc21, 20);
   AssertTrue(sr.FoundIndex = 20);
@@ -611,7 +618,7 @@ end;
 procedure TBaseArrayHelperTest.BinarySearchPosStaticSuccess20_2;
 var
   a: TIntArray;
-  sr: TIntHelper.TSearchResult;
+  sr: TSearchResult;
 begin
   a := TIntHelper.CreateReverseCopy(InOrderSrc21);
   sr := TIntHelper.BinarySearchPos(a, 20);
@@ -621,25 +628,70 @@ end;
 
 procedure TBaseArrayHelperTest.BinarySearchPosStaticSuccess20_3;
 var
-  sr: TIntHelper.TSearchResult;
+  sr: TSearchResult;
 begin
   sr := TIntHelper.BinarySearchPos(IntDescSorted20, 10);
-  AssertTrue((sr.FoundIndex = 3) or (sr.FoundIndex = 4));
+  AssertTrue(sr.FoundIndex = 4);
   AssertTrue(sr.InsertIndex = Succ(sr.FoundIndex));
+end;
+
+procedure TBaseArrayHelperTest.BinarySearchPosStaticSuccessEqual10;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos(IntEqual10, 9);
+  AssertTrue(sr.FoundIndex = 9);
+  AssertTrue(sr.InsertIndex = Succ(sr.FoundIndex));
+end;
+
+procedure TBaseArrayHelperTest.BinarySearchPosDynEmpty;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos([], 7);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 0);
+end;
+
+procedure TBaseArrayHelperTest.BinarySearchPosDynSingle;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos([3], 7);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 1);
+end;
+
+procedure TBaseArrayHelperTest.BinarySearchPosDynSingle_1;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos([3], 0);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 0);
+end;
+
+procedure TBaseArrayHelperTest.BinarySearchPosDynSingle_2;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos([3], 3);
+  AssertTrue(sr.FoundIndex = 0);
+  AssertTrue(sr.InsertIndex = 1);
 end;
 
 procedure TBaseArrayHelperTest.BinarySearchPosStaticUnsuccess20;
 var
-  sr: TIntHelper.TSearchResult;
+  sr: TSearchResult;
 begin
   sr := TIntHelper.BinarySearchPos(IntSorted20, 41);
   AssertTrue(sr.FoundIndex = -1);
-  AssertTrue(Format('here %d', [sr.InsertIndex]), sr.InsertIndex = 20);
+  AssertTrue(sr.InsertIndex = 20);
 end;
 
 procedure TBaseArrayHelperTest.BinarySearchPosStaticUnsuccess20_1;
 var
-  sr: TIntHelper.TSearchResult;
+  sr: TSearchResult;
 begin
   sr := TIntHelper.BinarySearchPos(InOrderSrc21, -1);
   AssertTrue(sr.FoundIndex = -1);
@@ -649,7 +701,7 @@ end;
 procedure TBaseArrayHelperTest.BinarySearchPosStaticUnsuccess20_2;
 var
   a: TIntArray;
-  sr: TIntHelper.TSearchResult;
+  sr: TSearchResult;
 begin
   a := TIntHelper.CreateReverseCopy(InOrderSrc21);
   sr := TIntHelper.BinarySearchPos(a, 21);
@@ -659,11 +711,29 @@ end;
 
 procedure TBaseArrayHelperTest.BinarySearchPosStaticUnsuccess20_3;
 var
-  sr: TIntHelper.TSearchResult;
+  sr: TSearchResult;
 begin
   sr := TIntHelper.BinarySearchPos(IntDescSorted20, 17);
   AssertTrue(sr.FoundIndex = -1);
   AssertTrue(sr.InsertIndex = 1);
+end;
+
+procedure TBaseArrayHelperTest.BinarySearchPosStaticUnuccessEqual10;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos(IntEqual10, 5);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 0);
+end;
+
+procedure TBaseArrayHelperTest.BinarySearchPosStaticUnuccessEqual10_1;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos(IntEqual10, 11);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 10);
 end;
 
 procedure TBaseArrayHelperTest.BinarySearchStaticUnsuccess20;
