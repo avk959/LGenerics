@@ -64,7 +64,7 @@ type
     procedure AddEnum;
     procedure RejectDuplicates;
     procedure IndexOf;
-    procedure FirstIndexOf;
+    procedure IndexOf1;
     procedure CountOf;
     procedure Remove;
     procedure RemoveArray;
@@ -103,7 +103,7 @@ type
     procedure TrimToFit;
     procedure RejectDuplicates;
     procedure IndexOf;
-    procedure FirstIndexOf;
+    procedure IndexOf1;
     procedure CountOf;
     procedure Remove;
     procedure Insert;
@@ -129,7 +129,7 @@ type
     procedure TrimToFit;
     procedure RejectDuplicates;
     procedure IndexOf;
-    procedure FirstIndexOf;
+    procedure IndexOf1;
     procedure CountOf;
     procedure Remove;
     procedure Insert;
@@ -394,7 +394,7 @@ begin
   AssertTrue(lst.Instance.IndexOf(22) = -1);
 end;
 
-procedure TGSortedListTest.FirstIndexOf;
+procedure TGSortedListTest.IndexOf1;
 var
   lst: TAutoList;
   I: Integer;
@@ -404,9 +404,9 @@ begin
   lst.Instance.AddAll(IntArray21);
   AssertTrue(lst.Instance.Count = Length(IntArray21) * 3);
   for I in IntArray21 do
-    AssertTrue(lst.Instance.FirstIndexOf(I) = (I - 1) * 3);
-  AssertTrue(lst.Instance.FirstIndexOf(0) = -1);
-  AssertTrue(lst.Instance.FirstIndexOf(22) = -1);
+    AssertTrue(lst.Instance.IndexOf(I) = (I - 1) * 3);
+  AssertTrue(lst.Instance.IndexOf(0) = -1);
+  AssertTrue(lst.Instance.IndexOf(22) = -1);
 end;
 
 procedure TGSortedListTest.CountOf;
@@ -899,7 +899,7 @@ begin
   AssertTrue(lst.IndexOf(22) = -1);
 end;
 
-procedure TLiteSortedListTest.FirstIndexOf;
+procedure TLiteSortedListTest.IndexOf1;
 var
   lst: TIntList;
   I: Integer;
@@ -912,9 +912,9 @@ begin
     end;
   AssertTrue(lst.Count = Length(IntArray21) * 3);
   for I in IntArray21 do
-    AssertTrue(lst.FirstIndexOf(I) = (I - 1) * 3);
-  AssertTrue(lst.FirstIndexOf(0) = -1);
-  AssertTrue(lst.FirstIndexOf(22) = -1);
+    AssertTrue(lst.IndexOf(I) = (I - 1) * 3);
+  AssertTrue(lst.IndexOf(0) = -1);
+  AssertTrue(lst.IndexOf(22) = -1);
 end;
 
 procedure TLiteSortedListTest.CountOf;
@@ -1280,7 +1280,7 @@ begin
   AssertTrue(lst.IndexOf(22) = -1);
 end;
 
-procedure TLiteComparableSortedListTest.FirstIndexOf;
+procedure TLiteComparableSortedListTest.IndexOf1;
 var
   lst: TIntList;
   I: Integer;
@@ -1293,9 +1293,9 @@ begin
     end;
   AssertTrue(lst.Count = Length(IntArray21) * 3);
   for I in IntArray21 do
-    AssertTrue(lst.FirstIndexOf(I) = (I - 1) * 3);
-  AssertTrue(lst.FirstIndexOf(0) = -1);
-  AssertTrue(lst.FirstIndexOf(22) = -1);
+    AssertTrue(lst.IndexOf(I) = (I - 1) * 3);
+  AssertTrue(lst.IndexOf(0) = -1);
+  AssertTrue(lst.IndexOf(22) = -1);
 end;
 
 procedure TLiteComparableSortedListTest.CountOf;
