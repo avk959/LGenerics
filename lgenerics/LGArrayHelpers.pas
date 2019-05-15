@@ -35,7 +35,13 @@ uses
 
 type
 
-  TSortOrder   = LGUtils.TSortOrder;
+  TSortOrder    = LGUtils.TSortOrder;
+
+  TSearchResult = record
+    FoundIndex,
+    InsertIndex: SizeInt;
+    constructor Create(aFoundIndex, aInsertIndex: SizeInt);
+  end;
   {.$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT  :for test purpose only}
 
   { TGArrayHelpUtil }
@@ -55,11 +61,6 @@ type
     TFold             = specialize TGFold<T, T>;
     TOnFold           = specialize TGOnFold<T, T>;
     TNestFold         = specialize TGNestFold<T, T>;
-
-    TSearchResult = record
-      FoundIndex,
-      InsertIndex: SizeInt;
-    end;
 
   protected
   const
@@ -210,9 +211,8 @@ type
     class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
-    returns position for insertion in Result.InsertIndex(-1 if array is empty);
-    in case of array of single element or constant array assumes ascending state }
+  { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
+    returns position for insertion in Result.InsertIndex }
     class function  BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult; static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
     class function  IndexOfMin(constref A: array of T): SizeInt; static;
@@ -323,9 +323,8 @@ type
     class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
-    returns position for insertion in Result.InsertIndex(-1 if array is empty);
-    in case of array of single element or constant array assumes ascending state }
+  { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
+    returns position for insertion in Result.InsertIndex }
     class function  BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult; static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
     class function  IndexOfMin(constref A: array of T): SizeInt; static;
@@ -443,9 +442,8 @@ type
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TCompare): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T; c: TCompare): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
-    returns position for insertion in Result.InsertIndex(-1 if array is empty);
-    in case of array of single element or constant array assumes ascending state }
+  { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
+    returns position for insertion in Result.InsertIndex }
     class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TCompare): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
@@ -565,9 +563,8 @@ type
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TOnCompare): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T; c: TOnCompare): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
-    returns position for insertion in Result.InsertIndex(-1 if array is empty);
-    in case of array of single element or constant array assumes ascending state }
+  { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
+    returns position for insertion in Result.InsertIndex }
     class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TOnCompare): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
@@ -687,9 +684,8 @@ type
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TNestCompare): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T; c: TNestCompare): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
-    returns position for insertion in Result.InsertIndex(-1 if array is empty);
-    in case of array of single element or constant array assumes ascending state }
+  { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
+    returns position for insertion in Result.InsertIndex }
     class function  BinarySearchPos(constref A: array of T; constref aValue: T; c: TNestCompare): TSearchResult;
                     static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
@@ -787,9 +783,8 @@ type
     class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
   { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
-    returns position for insertion in Result.InsertIndex(-1 if array is empty);
-    in case of array of single element or constant array assumes ascending state }
+  { returns 0-based rightmost position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
+    returns position for insertion in Result.InsertIndex }
     class function  BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult; static;
   { returns 0-based position of minimal value in A, -1 if A is empty }
     class function  IndexOfMin(constref A: array of T): SizeInt; static;
@@ -912,6 +907,14 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}{$GOTO ON}
+
+{ TSearchResult }
+
+constructor TSearchResult.Create(aFoundIndex, aInsertIndex: SizeInt);
+begin
+  FoundIndex := aFoundIndex;
+  InsertIndex := aInsertIndex;
+end;
 
 { TGArrayHelpUtil.TMergeSortBase }
 
@@ -2112,7 +2115,7 @@ begin
       end
     else           //constant
       if TCmpRel.Compare(A[L], aValue) = 0 then
-        exit(L);
+        Result := L;
 end;
 
 class function TGBaseArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
@@ -2189,26 +2192,81 @@ end;
 
 class function TGBaseArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
 var
-  Cmp: SizeInt;
+  L, M, c: SizeInt;
 begin
   //here R must be >= 0;
-  Cmp := TCmpRel.Compare(A[R], A[0]);
-  if Cmp > 0 then   //ascending
-    Result := DoBinSearchPosA(A, R, aValue)
+  Result.FoundIndex := NULL_INDEX;
+  L := 0;
+  c := TCmpRel.Compare(A[R], A[0]);
+  if c > 0 then  //ascending
+    begin
+      if TCmpRel.Compare(A[L], aValue) > 0 then
+        begin
+          Result.InsertIndex := 0;
+          exit;
+        end
+      else
+        if TCmpRel.Compare(A[R], aValue) < 0 then
+          begin
+            Result.InsertIndex := Succ(R);
+            exit;
+          end;
+      while L < R do
+        begin
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if TCmpRel.Compare(A[M], aValue) > 0 then
+            R := M
+          else
+            L := Succ(M);
+        end;
+      Result.InsertIndex := R;
+      if TCmpRel.Compare(A[R], aValue) = 0 then
+        Result := TSearchResult.Create(R, Succ(R))
+      else
+        if R > 0 then
+          if TCmpRel.Compare(A[Pred(R)], aValue) = 0 then
+            Result.FoundIndex := Pred(R);
+    end
   else
-    if Cmp < 0 then //descending
-      Result := DoBinSearchPosD(A, R, aValue)
-    else            //constant
+    if c < 0 then  //descending
       begin
-        Cmp := TCmpRel.Compare(aValue, A[R]);
-        Result.FoundIndex := -1;
-        if Cmp < 0 then
-           Result.InsertIndex := 0
+        if TCmpRel.Compare(A[L], aValue) < 0 then
+          begin
+            Result.InsertIndex := 0;
+            exit;
+          end
+        else
+          if TCmpRel.Compare(A[R], aValue) > 0 then
+            begin
+              Result.InsertIndex := Succ(R);
+              exit;
+            end;
+        while L < R do
+          begin
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if TCmpRel.Compare(A[M], aValue) < 0 then
+              R := M
+            else
+              L := Succ(M);
+          end;
+        Result.InsertIndex := R;
+        if TCmpRel.Compare(A[R], aValue) = 0 then
+          Result := TSearchResult.Create(R, Succ(R))
+        else
+          if R > 0 then
+            if TCmpRel.Compare(A[Pred(R)], aValue) = 0 then
+              Result.FoundIndex := Pred(R);
+      end
+    else           //constant
+      begin
+        c := TCmpRel.Compare(A[L], aValue);
+        if c > 0 then
+          Result.InsertIndex := 0
         else
           begin
             Result.InsertIndex := Succ(R);
-            if Cmp = 0 then
-              Result.FoundIndex := 0;
+            if c = 0 then
+              Result.FoundIndex := R;
           end;
       end;
 end;
@@ -2509,23 +2567,20 @@ end;
 
 class function TGBaseArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
 begin
-  Result := High(A);
+  Result := System.High(A);
   if Result >= 0 then
     Result := DoBinSearch(@A[0], Result, aValue);
 end;
 
 class function TGBaseArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
 var
-  hi: SizeInt;
+  R: SizeInt;
 begin
-  hi := High(A);
-  if hi >= 0 then
-    Result := DoBinSearchPos(@A[0], hi, aValue)
+  R := System.High(A);
+  if R >= 0 then
+    Result := DoBinSearchPos(@A[0], R, aValue)
   else
-    begin
-      Result.FoundIndex := hi;
-      Result.InsertIndex := hi;
-    end;
+    Result := TSearchResult.Create(R, 0);
 end;
 
 class function TGBaseArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
@@ -3499,25 +3554,80 @@ begin
 end;
 
 class function TGComparableArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+var
+  L, M: SizeInt;
 begin
   //here R must be >= 0;
-  if A[0] < A[R] then   //ascending
-    Result := DoBinSearchPosA(A, R, aValue)
-  else
-    if A[0] > A[R] then //descending
-      Result := DoBinSearchPosD(A, R, aValue)
-    else                //constant
-      begin
-        Result.FoundIndex := -1;
-        if A[R] > aValue then
-           Result.InsertIndex := 0
-        else
+  Result.FoundIndex := NULL_INDEX;
+  L := 0;
+  if A[R] > A[0] then  //ascending
+    begin
+      if A[L] > aValue then
+        begin
+          Result.InsertIndex := 0;
+          exit;
+        end
+      else
+        if A[R] < aValue then
           begin
             Result.InsertIndex := Succ(R);
-            if A[R] = aValue then
-              Result.FoundIndex := 0;
+            exit;
           end;
-      end;
+      while L < R do
+        begin
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if A[M] > aValue then
+            R := M
+          else
+            L := Succ(M);
+        end;
+      Result.InsertIndex := R;
+      if A[R] = aValue then
+        Result := TSearchResult.Create(R, Succ(R))
+      else
+        if R > 0 then
+          if A[Pred(R)] = aValue then
+            Result.FoundIndex := Pred(R);
+    end
+  else
+    if A[R] < A[0] then  //descending
+      begin
+        if A[L] < aValue then
+          begin
+            Result.InsertIndex := 0;
+            exit;
+          end
+        else
+          if A[R] > aValue then
+            begin
+              Result.InsertIndex := Succ(R);
+              exit;
+            end;
+        while L < R do
+          begin
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if A[M] < aValue then
+              R := M
+            else
+              L := Succ(M);
+          end;
+        Result.InsertIndex := R;
+        if A[R] = aValue then
+          Result := TSearchResult.Create(R, Succ(R))
+        else
+          if R > 0 then
+            if A[Pred(R)] = aValue then
+              Result.FoundIndex := Pred(R);
+      end
+    else           //constant
+      if A[L] > aValue then
+        Result.InsertIndex := 0
+      else
+        begin
+          Result.InsertIndex := Succ(R);
+          if A[L] = aValue then
+            Result.FoundIndex := R;
+        end;
 end;
 
 class procedure TGComparableArrayHelper.DoHeapSort(A: PItem; R: SizeInt);
@@ -3823,16 +3933,13 @@ end;
 
 class function TGComparableArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
 var
-  hi: SizeInt;
+  R: SizeInt;
 begin
-  hi := High(A);
-  if hi >= 0 then
-    Result := DoBinSearchPos(@A[0], hi, aValue)
+  R := System.High(A);
+  if R >= 0 then
+    Result := DoBinSearchPos(@A[0], R, aValue)
   else
-    begin
-      Result.FoundIndex := hi;
-      Result.InsertIndex := hi;
-    end;
+    Result := TSearchResult.Create(R, 0);
 end;
 
 class function TGComparableArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
@@ -4831,26 +4938,81 @@ end;
 class function TGRegularArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
   c: TCompare): TSearchResult;
 var
-  Cmp: SizeInt;
+  L, M, Cmp: SizeInt;
 begin
   //here R must be >= 0;
+  Result.FoundIndex := NULL_INDEX;
+  L := 0;
   Cmp := c(A[R], A[0]);
-  if Cmp > 0 then   //ascending
-    Result := DoBinSearchPosA(A, R, aValue, c)
+  if Cmp > 0 then  //ascending
+    begin
+      if c(A[L], aValue) > 0 then
+        begin
+          Result.InsertIndex := 0;
+          exit;
+        end
+      else
+        if c(A[R], aValue) < 0 then
+          begin
+            Result.InsertIndex := Succ(R);
+            exit;
+          end;
+      while L < R do
+        begin
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if c(A[M], aValue) > 0 then
+            R := M
+          else
+            L := Succ(M);
+        end;
+      Result.InsertIndex := R;
+      if c(A[R], aValue) = 0 then
+        Result := TSearchResult.Create(R, Succ(R))
+      else
+        if R > 0 then
+          if c(A[Pred(R)], aValue) = 0 then
+            Result.FoundIndex := Pred(R);
+    end
   else
-    if Cmp < 0 then //descending
-      Result := DoBinSearchPosD(A, R, aValue, c)
-    else            //constant
+    if Cmp < 0 then  //descending
       begin
-        Cmp := c(aValue, A[R]);
-        Result.FoundIndex := -1;
-        if Cmp < 0 then
-           Result.InsertIndex := 0
+        if c(A[L], aValue) < 0 then
+          begin
+            Result.InsertIndex := 0;
+            exit;
+          end
+        else
+          if c(A[R], aValue) > 0 then
+            begin
+              Result.InsertIndex := Succ(R);
+              exit;
+            end;
+        while L < R do
+          begin
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if c(A[M], aValue) < 0 then
+              R := M
+            else
+              L := Succ(M);
+          end;
+        Result.InsertIndex := R;
+        if c(A[R], aValue) = 0 then
+          Result := TSearchResult.Create(R, Succ(R))
+        else
+          if R > 0 then
+            if c(A[Pred(R)], aValue) = 0 then
+              Result.FoundIndex := Pred(R);
+      end
+    else           //constant
+      begin
+        Cmp := c(A[L], aValue);
+        if Cmp > 0 then
+          Result.InsertIndex := 0
         else
           begin
             Result.InsertIndex := Succ(R);
             if Cmp = 0 then
-              Result.FoundIndex := 0;
+              Result.FoundIndex := R;
           end;
       end;
 end;
@@ -5160,16 +5322,13 @@ end;
 class function TGRegularArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
   c: TCompare): TSearchResult;
 var
-  hi: SizeInt;
+  R: SizeInt;
 begin
-  hi := High(A);
-  if hi >= 0 then
-    Result := DoBinSearchPos(@A[0], hi, aValue, c)
+  R := System.High(A);
+  if R >= 0 then
+    Result := DoBinSearchPos(@A[0], R, aValue, c)
   else
-    begin
-      Result.FoundIndex := hi;
-      Result.InsertIndex := hi;
-    end;
+    Result := TSearchResult.Create(R, 0);
 end;
 
 class function TGRegularArrayHelper.IndexOfMin(constref A: array of T; c: TCompare): SizeInt;
@@ -6170,26 +6329,81 @@ end;
 class function TGDelegatedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
   c: TOnCompare): TSearchResult;
 var
-  Cmp: SizeInt;
+  L, M, Cmp: SizeInt;
 begin
   //here R must be >= 0;
+  Result.FoundIndex := NULL_INDEX;
+  L := 0;
   Cmp := c(A[R], A[0]);
-  if Cmp > 0 then   //ascending
-    Result := DoBinSearchPosA(A, R, aValue, c)
+  if Cmp > 0 then  //ascending
+    begin
+      if c(A[L], aValue) > 0 then
+        begin
+          Result.InsertIndex := 0;
+          exit;
+        end
+      else
+        if c(A[R], aValue) < 0 then
+          begin
+            Result.InsertIndex := Succ(R);
+            exit;
+          end;
+      while L < R do
+        begin
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if c(A[M], aValue) > 0 then
+            R := M
+          else
+            L := Succ(M);
+        end;
+      Result.InsertIndex := R;
+      if c(A[R], aValue) = 0 then
+        Result := TSearchResult.Create(R, Succ(R))
+      else
+        if R > 0 then
+          if c(A[Pred(R)], aValue) = 0 then
+            Result.FoundIndex := Pred(R);
+    end
   else
-    if Cmp < 0 then //descending
-      Result := DoBinSearchPosD(A, R, aValue, c)
-    else            //constant
+    if Cmp < 0 then  //descending
       begin
-        Cmp := c(aValue, A[R]);
-        Result.FoundIndex := -1;
-        if Cmp < 0 then
-           Result.InsertIndex := 0
+        if c(A[L], aValue) < 0 then
+          begin
+            Result.InsertIndex := 0;
+            exit;
+          end
+        else
+          if c(A[R], aValue) > 0 then
+            begin
+              Result.InsertIndex := Succ(R);
+              exit;
+            end;
+        while L < R do
+          begin
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if c(A[M], aValue) < 0 then
+              R := M
+            else
+              L := Succ(M);
+          end;
+        Result.InsertIndex := R;
+        if c(A[R], aValue) = 0 then
+          Result := TSearchResult.Create(R, Succ(R))
+        else
+          if R > 0 then
+            if c(A[Pred(R)], aValue) = 0 then
+              Result.FoundIndex := Pred(R);
+      end
+    else           //constant
+      begin
+        Cmp := c(A[L], aValue);
+        if Cmp > 0 then
+          Result.InsertIndex := 0
         else
           begin
             Result.InsertIndex := Succ(R);
             if Cmp = 0 then
-              Result.FoundIndex := 0;
+              Result.FoundIndex := R;
           end;
       end;
 end;
@@ -6499,16 +6713,13 @@ end;
 class function TGDelegatedArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
   c: TOnCompare): TSearchResult;
 var
-  hi: SizeInt;
+  R: SizeInt;
 begin
-  hi := High(A);
-  if hi >= 0 then
-    Result := DoBinSearchPos(@A[0], hi, aValue, c)
+  R := System.High(A);
+  if R >= 0 then
+    Result := DoBinSearchPos(@A[0], R, aValue, c)
   else
-    begin
-      Result.FoundIndex := hi;
-      Result.InsertIndex := hi;
-    end;
+    Result := TSearchResult.Create(R, 0);
 end;
 
 class function TGDelegatedArrayHelper.IndexOfMin(constref A: array of T; c: TOnCompare): SizeInt;
@@ -7510,26 +7721,81 @@ end;
 class function TGNestedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
   c: TNestCompare): TSearchResult;
 var
-  Cmp: SizeInt;
+  L, M, Cmp: SizeInt;
 begin
   //here R must be >= 0;
+  Result.FoundIndex := NULL_INDEX;
+  L := 0;
   Cmp := c(A[R], A[0]);
-  if Cmp > 0 then   //ascending
-    Result := DoBinSearchPosA(A, R, aValue, c)
+  if Cmp > 0 then  //ascending
+    begin
+      if c(A[L], aValue) > 0 then
+        begin
+          Result.InsertIndex := 0;
+          exit;
+        end
+      else
+        if c(A[R], aValue) < 0 then
+          begin
+            Result.InsertIndex := Succ(R);
+            exit;
+          end;
+      while L < R do
+        begin
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if c(A[M], aValue) > 0 then
+            R := M
+          else
+            L := Succ(M);
+        end;
+      Result.InsertIndex := R;
+      if c(A[R], aValue) = 0 then
+        Result := TSearchResult.Create(R, Succ(R))
+      else
+        if R > 0 then
+          if c(A[Pred(R)], aValue) = 0 then
+            Result.FoundIndex := Pred(R);
+    end
   else
-    if Cmp < 0 then //descending
-      Result := DoBinSearchPosD(A, R, aValue, c)
-    else            //constant
+    if Cmp < 0 then  //descending
       begin
-        Cmp := c(aValue, A[R]);
-        Result.FoundIndex := -1;
-        if Cmp < 0 then
-           Result.InsertIndex := 0
+        if c(A[L], aValue) < 0 then
+          begin
+            Result.InsertIndex := 0;
+            exit;
+          end
+        else
+          if c(A[R], aValue) > 0 then
+            begin
+              Result.InsertIndex := Succ(R);
+              exit;
+            end;
+        while L < R do
+          begin
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if c(A[M], aValue) < 0 then
+              R := M
+            else
+              L := Succ(M);
+          end;
+        Result.InsertIndex := R;
+        if c(A[R], aValue) = 0 then
+          Result := TSearchResult.Create(R, Succ(R))
+        else
+          if R > 0 then
+            if c(A[Pred(R)], aValue) = 0 then
+              Result.FoundIndex := Pred(R);
+      end
+    else           //constant
+      begin
+        Cmp := c(A[L], aValue);
+        if Cmp > 0 then
+          Result.InsertIndex := 0
         else
           begin
             Result.InsertIndex := Succ(R);
             if Cmp = 0 then
-              Result.FoundIndex := 0;
+              Result.FoundIndex := R;
           end;
       end;
 end;
@@ -7838,16 +8104,13 @@ end;
 class function TGNestedArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T;
   c: TNestCompare): TSearchResult;
 var
-  hi: SizeInt;
+  R: SizeInt;
 begin
-  hi := High(A);
-  if hi >= 0 then
-    Result := DoBinSearchPos(@A[0], hi, aValue, c)
+  R := System.High(A);
+  if R >= 0 then
+    Result := DoBinSearchPos(@A[0], R, aValue, c)
   else
-    begin
-      Result.FoundIndex := hi;
-      Result.InsertIndex := hi;
-    end;
+    Result := TSearchResult.Create(R, 0);
 end;
 
 class function TGNestedArrayHelper.IndexOfMin(constref A: array of T; c: TNestCompare): SizeInt;
@@ -8361,25 +8624,80 @@ begin
 end;
 
 class function TGSimpleArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
+var
+  L, M: SizeInt;
 begin
   //here R must be >= 0;
-  if A[0] < A[R] then   //ascending
-    Result := DoBinSearchPosA(A, R, aValue)
-  else
-    if A[0] > A[R] then //descending
-      Result := DoBinSearchPosD(A, R, aValue)
-    else                //constant
-      begin
-        Result.FoundIndex := -1;
-        if A[R] > aValue then
-           Result.InsertIndex := 0
-        else
+  Result.FoundIndex := NULL_INDEX;
+  L := 0;
+  if A[R] > A[0] then  //ascending
+    begin
+      if A[L] > aValue then
+        begin
+          Result.InsertIndex := 0;
+          exit;
+        end
+      else
+        if A[R] < aValue then
           begin
             Result.InsertIndex := Succ(R);
-            if A[R] = aValue then
-              Result.FoundIndex := 0;
+            exit;
           end;
-      end;
+      while L < R do
+        begin
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if A[M] > aValue then
+            R := M
+          else
+            L := Succ(M);
+        end;
+      Result.InsertIndex := R;
+      if A[R] = aValue then
+        Result := TSearchResult.Create(R, Succ(R))
+      else
+        if R > 0 then
+          if A[Pred(R)] = aValue then
+            Result.FoundIndex := Pred(R);
+    end
+  else
+    if A[R] < A[0] then  //descending
+      begin
+        if A[L] < aValue then
+          begin
+            Result.InsertIndex := 0;
+            exit;
+          end
+        else
+          if A[R] > aValue then
+            begin
+              Result.InsertIndex := Succ(R);
+              exit;
+            end;
+        while L < R do
+          begin
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if A[M] < aValue then
+              R := M
+            else
+              L := Succ(M);
+          end;
+        Result.InsertIndex := R;
+        if A[R] = aValue then
+          Result := TSearchResult.Create(R, Succ(R))
+        else
+          if R > 0 then
+            if A[Pred(R)] = aValue then
+              Result.FoundIndex := Pred(R);
+      end
+    else           //constant
+      if A[L] > aValue then
+        Result.InsertIndex := 0
+      else
+        begin
+          Result.InsertIndex := Succ(R);
+          if A[L] = aValue then
+            Result.FoundIndex := R;
+        end;
 end;
 
 class procedure TGSimpleArrayHelper.DoHeapSort(A: PItem; R: SizeInt);
@@ -8791,16 +9109,13 @@ end;
 
 class function TGSimpleArrayHelper.BinarySearchPos(constref A: array of T; constref aValue: T): TSearchResult;
 var
-  hi: SizeInt;
+  R: SizeInt;
 begin
-  hi := High(A);
-  if hi >= 0 then
-    Result := DoBinSearchPos(@A[0], hi, aValue)
+  R := System.High(A);
+  if R >= 0 then
+    Result := DoBinSearchPos(@A[0], R, aValue)
   else
-    begin
-      Result.FoundIndex := hi;
-      Result.InsertIndex := hi;
-    end;
+    Result := TSearchResult.Create(R, 0);
 end;
 
 class function TGSimpleArrayHelper.IndexOfMin(constref A: array of T): SizeInt;
