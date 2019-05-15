@@ -131,7 +131,7 @@ type
     the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
     class procedure RandomShuffle(var A: array of T); static;
-  { returns 0-based position of aValue in array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TEqualCompare): SizeInt;
                     static;
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TOnEqualCompare): SizeInt;
@@ -203,12 +203,12 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt); static;
-  { QuickSelect with random pivot, does not checks indexes }
+  { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
-  { returns 0-based position of aValue in array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
   { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex(-1 if array is empty);
@@ -316,12 +316,12 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt); static;
-  { QuickSelect with random pivot, does not checks indexes }
+  { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt): T; static;
   public
-  { returns 0-based position of aValue in array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
   { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex(-1 if array is empty);
@@ -436,12 +436,12 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TCompare); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TCompare): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt; c: TCompare); static;
-  { QuickSelect with random pivot, does not checks indexes }
+  { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TCompare): T; static;
   public
-  { returns 0-based position of aValue in array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TCompare): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T; c: TCompare): SizeInt; static;
   { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex(-1 if array is empty);
@@ -558,12 +558,12 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnCompare); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt; c: TOnCompare); static;
-  { QuickSelect with random pivot, does not checks indexes }
+  { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TOnCompare): T; static;
   public
-  { returns 0-based position of aValue in array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TOnCompare): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T; c: TOnCompare): SizeInt; static;
   { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex(-1 if array is empty);
@@ -680,12 +680,12 @@ type
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestCompare); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit; static;
     class procedure DoDPQSort(A: PItem; R: SizeInt; c: TNestCompare); static;
-  { QuickSelect with random pivot, does not checks indexes }
+  { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(A: PItem; R, N: SizeInt; c: TNestCompare): T; static;
   public
-  { returns 0-based position of aValue in array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T; c: TNestCompare): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T; c: TNestCompare): SizeInt; static;
   { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex(-1 if array is empty);
@@ -773,7 +773,7 @@ type
     class procedure DoDPQSort(var A: array of T; L, R: SizeInt); static;
     class procedure DoSwap(p: PItem; L, R: SizeInt); static; inline;
     class procedure DoReverse(var A: array of T; L, R: SizeInt); static;
-  { QuickSelect with random pivot, does not checks indexes }
+  { QuickSelect with random pivot, does not checks indices }
     class function  QSelectR(var A: array of T; N: SizeInt): T; static;
   public
     class procedure Reverse(var A: array of T); static;
@@ -783,9 +783,9 @@ type
   { cyclic shift of array elements by aDist positions to the right;
     the case if Abs(aDist) > Length(A) is ignored }
     class procedure RotateRight(var A: array of T; aDist: SizeInt); static;
-  { returns 0-based position of aValue in array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in array A, -1 if not found }
     class function  SequentSearch(constref A: array of T; constref aValue: T): SizeInt; static;
-  { returns 0-based position of aValue in SORTED array A, -1 if not found }
+  { returns 0-based leftmost position of aValue in SORTED array A, -1 if not found }
     class function  BinarySearch(constref A: array of T; constref aValue: T): SizeInt; static;
   { returns 0-based position of aValue in SORTED array A in Result.FoundIndex(-1 if not found);
     returns position for insertion in Result.InsertIndex(-1 if array is empty);
@@ -905,7 +905,7 @@ type
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonicity; static;
   public
     class function CreateRange(aFrom, aTo: T): TArray; static;
-  { will use counting sort if possible }
+  { uses counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
@@ -2074,23 +2074,20 @@ var
   L, M, c: SizeInt;
 begin
   //here R must be >= 0;
-  Result := -1;
+  Result := NULL_INDEX;
   L := 0;
   c := TCmpRel.Compare(A[R], A[0]);
   if c > 0 then  //ascending
     begin
+      if (TCmpRel.Compare(A[L], aValue) > 0) or (TCmpRel.Compare(A[R], aValue) < 0) then
+        exit;
       while L < R do
         begin
-          M := L + (R - L) shr 1;
-          c := TCmpRel.Compare(A[M], aValue);
-          if c < 0 then
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if TCmpRel.Compare(A[M], aValue) < 0 then
             L := Succ(M)
           else
-            begin
-              if c = 0 then
-                exit(M);
-              R := M;
-            end;
+            R := M;
         end;
       //here L >= R
       if TCmpRel.Compare(A[R], aValue) = 0 then
@@ -2099,18 +2096,15 @@ begin
   else
     if c < 0 then  //descending
       begin
+        if (TCmpRel.Compare(A[L], aValue) < 0) or (TCmpRel.Compare(A[R], aValue) > 0) then
+          exit;
         while L < R do
           begin
-            M := L + ((R - L) shr 1);
-            c := TCmpRel.Compare(A[M], aValue);
-            if c > 0 then
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if TCmpRel.Compare(A[M], aValue) > 0 then
               L := Succ(M)
             else
-              begin
-                if c = 0 then
-                  exit(M);
-                R := M;
-              end;
+              R := M;
           end;
         //here L >= R
         if TCmpRel.Compare(A[R], aValue) = 0 then
@@ -3398,21 +3392,19 @@ var
   L, M: SizeInt;
 begin
   //here R must be >= 0;
-  Result := -1;
+  Result := NULL_INDEX;
   L := 0;
   if A[R] > A[L] then  //ascending
     begin
+      if (A[L] > aValue) or (A[R] < aValue) then
+        exit;
       while L < R do
         begin
-          M := L + (R - L) shr 1;
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
           if A[M] < aValue then
             L := Succ(M)
           else
-            begin
-              if A[M] = aValue then
-                exit(M);
-              R := M;
-            end;
+            R := M;
         end;
       //here L >= R
       if A[R] = aValue then
@@ -3423,15 +3415,11 @@ begin
       begin
         while L < R do
           begin
-            M := L + ((R - L) shr 1);
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
             if A[M] > aValue then
               L := Succ(M)
             else
-              begin
-                if A[M] = aValue then
-                  exit(M);
-                R := M;
-              end;
+              R := M;
           end;
         //here L >= R
         if A[R] = aValue then
@@ -4725,23 +4713,20 @@ var
   L, M, Cmp: SizeInt;
 begin
   //here R must be >= 0;
-  Result := -1;
+  Result := NULL_INDEX;
   L := 0;
   Cmp := c(A[R], A[0]);
   if Cmp > 0 then  //ascending
     begin
+      if (c(A[L], aValue) > 0) or (c(A[R], aValue) < 0) then
+        exit;
       while L < R do
         begin
-          M := L + (R - L) shr 1;
-          Cmp := c(A[M], aValue);
-          if Cmp < 0 then
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if c(A[M], aValue) < 0 then
             L := Succ(M)
           else
-            begin
-              if Cmp = 0 then
-                exit(M);
-              R := M;
-            end;
+            R := M;
         end;
       //here L >= R
       if c(A[R], aValue) = 0 then
@@ -4750,18 +4735,15 @@ begin
   else
     if Cmp < 0 then  //descending
       begin
+        if (c(A[L], aValue) < 0) or (c(A[R], aValue) > 0) then
+          exit;
         while L < R do
           begin
-            M := L + ((R - L) shr 1);
-            Cmp := c(A[M], aValue);
-            if Cmp > 0 then
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if c(A[M], aValue) > 0 then
               L := Succ(M)
             else
-              begin
-                if Cmp = 0 then
-                  exit(M);
-                R := M;
-              end;
+              R := M;
           end;
         //here L >= R
         if c(A[R], aValue) = 0 then
@@ -6070,23 +6052,20 @@ var
   L, M, Cmp: SizeInt;
 begin
   //here R must be >= 0;
-  Result := -1;
+  Result := NULL_INDEX;
   L := 0;
   Cmp := c(A[R], A[0]);
   if Cmp > 0 then  //ascending
     begin
+      if (c(A[L], aValue) > 0) or (c(A[R], aValue) < 0) then
+        exit;
       while L < R do
         begin
-          M := L + (R - L) shr 1;
-          Cmp := c(A[M], aValue);
-          if Cmp < 0 then
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if c(A[M], aValue) < 0 then
             L := Succ(M)
           else
-            begin
-              if Cmp = 0 then
-                exit(M);
-              R := M;
-            end;
+            R := M;
         end;
       //here L >= R
       if c(A[R], aValue) = 0 then
@@ -6095,18 +6074,15 @@ begin
   else
     if Cmp < 0 then  //descending
       begin
+        if (c(A[L], aValue) < 0) or (c(A[R], aValue) > 0) then
+          exit;
         while L < R do
           begin
-            M := L + ((R - L) shr 1);
-            Cmp := c(A[M], aValue);
-            if Cmp > 0 then
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if c(A[M], aValue) > 0 then
               L := Succ(M)
             else
-              begin
-                if Cmp = 0 then
-                  exit(M);
-                R := M;
-              end;
+              R := M;
           end;
         //here L >= R
         if c(A[R], aValue) = 0 then
@@ -7416,23 +7392,20 @@ var
   L, M, Cmp: SizeInt;
 begin
   //here R must be >= 0;
-  Result := -1;
+  Result := NULL_INDEX;
   L := 0;
   Cmp := c(A[R], A[L]);
   if Cmp > 0 then  //ascending
     begin
+      if (c(A[L], aValue) > 0) or (c(A[R], aValue) < 0) then
+        exit;
       while L < R do
         begin
-          M := L + (R - L) shr 1;
-          Cmp := c(A[M], aValue);
-          if Cmp < 0 then
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+          if c(A[M], aValue) < 0 then
             L := Succ(M)
           else
-            begin
-              if Cmp = 0 then
-                exit(M);
-              R := M;
-            end;
+            R := M;
         end;
       //here L >= R
       if c(A[R], aValue) = 0 then
@@ -7441,18 +7414,15 @@ begin
   else
     if Cmp < 0 then  //descending
       begin
+        if (c(A[L], aValue) < 0) or (c(A[R], aValue) > 0) then
+          exit;
         while L < R do
           begin
-            M := L + ((R - L) shr 1);
-            Cmp := c(A[M], aValue);
-            if Cmp > 0 then
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+            if c(A[M], aValue) > 0 then
               L := Succ(M)
             else
-              begin
-                if Cmp = 0 then
-                  exit(M);
-                R := M;
-              end;
+              R := M;
           end;
         //here L >= R
         if c(A[R], aValue) = 0 then
@@ -8282,21 +8252,19 @@ var
   L, M: SizeInt;
 begin
   //here R must be >= 0;
-  Result := -1;
+  Result := NULL_INDEX;
   L := 0;
   if A[R] > A[L] then  //ascending
     begin
+      if (A[L] > aValue) or (A[R] < aValue) then
+        exit;
       while L < R do
         begin
-          M := L + (R - L) shr 1;
+          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
           if A[M] < aValue then
             L := Succ(M)
           else
-            begin
-              if A[M] = aValue then
-                exit(M);
-              R := M;
-            end;
+            R := M;
         end;
       //here L >= R
       if A[R] = aValue then
@@ -8305,17 +8273,15 @@ begin
   else
     if A[R] < A[L] then  //descending
       begin
+        if (A[L] < aValue) or (A[R] > aValue) then
+          exit;
         while L < R do
           begin
-            M := L + ((R - L) shr 1);
+            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
             if A[M] > aValue then
               L := Succ(M)
             else
-              begin
-                if A[M] = aValue then
-                  exit(M);
-                R := M;
-              end;
+              R := M;
           end;
         //here L >= R
         if A[R] = aValue then
