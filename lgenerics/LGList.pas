@@ -193,10 +193,8 @@ type
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
-  { returns index of any occurrence of aValue, -1 if there are no such element }
+  { returns index of leftmost occurrence of aValue, -1 if there are no such element }
     function  IndexOf(constref aValue: T): SizeInt;
-  { returns index of leftest occurrence of aValue, -1 if there are no such element }
-    function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
     function  CountOf(constref aValue: T): SizeInt;
   { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
@@ -451,10 +449,8 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
-  { returns index of any occurrence of aValue, -1 if there are no such element }
+  { returns index of leftmost occurrence of aValue, -1 if there are no such element }
     function  IndexOf(constref aValue: T): SizeInt;
-  { returns index of leftest occurrence of aValue, -1 if there are no such element }
-    function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
     function  CountOf(constref aValue: T): SizeInt;
   { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
@@ -593,9 +589,8 @@ type
     function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
+  { returns index of leftmost occurrence of aValue, -1 if there are no such element }
     function  IndexOf(constref aValue: T): SizeInt;
-  { returns index of leftest occurrence of aValue, -1 if there are no such element }
-    function  FirstIndexOf(constref aValue: T): SizeInt;
   { returns count of occurrences of aValue, 0 if there are no such element }
     function  CountOf(constref aValue: T): SizeInt;
   { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
@@ -857,7 +852,7 @@ begin
   inherited Create(aList);
   FItems := aList.FItems;
   FLast := Pred(aList.ElemCount);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGBaseSortedList.TEnumerator.MoveNext: Boolean;
@@ -868,7 +863,7 @@ end;
 
 procedure TGBaseSortedList.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGBaseSortedList.TReverseEnumerable }
@@ -909,7 +904,7 @@ begin
   inherited Create(aList);
   FItems := aList.FItems;
   FLast := aLastIndex;
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGBaseSortedList.THeadEnumerable.MoveNext: Boolean;
@@ -920,7 +915,7 @@ end;
 
 procedure TGBaseSortedList.THeadEnumerable.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGBaseSortedList.TTailEnumerable }
@@ -969,7 +964,7 @@ procedure TGBaseSortedList.TRecEnumerator.Init(aList: TSortedList);
 begin
   FItems := aList.FItems;
   FLast := Pred(aList.ElemCount);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGBaseSortedList.TRecEnumerator.MoveNext: Boolean;
@@ -980,7 +975,7 @@ end;
 
 procedure TGBaseSortedList.TRecEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGBaseSortedList.TExtractHelper }
@@ -1073,7 +1068,7 @@ end;
 
 procedure TGBaseSortedList.DoSetItem(aIndex: SizeInt; const aValue: T);
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
   c: SizeInt;
 begin
   c := TCmpRel.Compare(aValue, FItems[aIndex]);
@@ -1083,7 +1078,7 @@ begin
       if ElemCount > 1 then
         begin
           sr := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue);
-          if (sr.FoundIndex > -1) and RejectDuplicates then
+          if (sr.FoundIndex > NULL_INDEX) and RejectDuplicates then
             exit;
           FItems[aIndex] := Default(T);  ///////////////
           if sr.InsertIndex > aIndex then
@@ -1131,12 +1126,12 @@ end;
 
 function TGBaseSortedList.DoAdd(constref aValue: T): Boolean;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if ElemCount > 0 then
     begin
       sr := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue);
-      if (sr.FoundIndex > -1) and RejectDuplicates then
+      if (sr.FoundIndex >= 0) and RejectDuplicates then
         exit(False);
       InsertItem(sr.InsertIndex, aValue);
     end
@@ -1147,13 +1142,13 @@ end;
 
 function TGBaseSortedList.DoInsert(constref aValue: T): SizeInt;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if ElemCount > 0 then
     begin
       sr := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue);
-      if (sr.FoundIndex > -1) and RejectDuplicates then
-        exit(-1);
+      if (sr.FoundIndex >= 0) and RejectDuplicates then
+        exit(NULL_INDEX);
       Result := sr.InsertIndex;
     end
   else
@@ -1166,7 +1161,7 @@ var
   Removed: SizeInt;
 begin
   Removed := IndexOf(aValue);
-  Result := Removed > -1;
+  Result := Removed >= 0;
   if Result then
     DeleteItem(Removed);
 end;
@@ -1176,7 +1171,7 @@ var
   Extracted: SizeInt;
 begin
   Extracted := IndexOf(aValue);
-  Result := Extracted > -1;
+  Result := Extracted >= 0;
   if Result then
     ExtractItem(Extracted);
 end;
@@ -1339,10 +1334,10 @@ begin
   if ElemCount = 0 then
     exit;
   Hi := System.High(Result);
-  I := -1;
+  I := NULL_INDEX;
   for J := 0 to Hi do
     begin
-      if IndexOf(Result[J]) > -1 then
+      if IndexOf(Result[J]) >= 0 then
         continue;
       Inc(I);
       if J > I then
@@ -1465,7 +1460,7 @@ end;
 function TGBaseSortedList.NearestLT(constref aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[0]) <= 0) then
-    exit(-1);
+    exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) > 0 then
      exit(Pred(ElemCount));
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) = 0 then
@@ -1489,7 +1484,7 @@ end;
 function TGBaseSortedList.RightmostLE(constref aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[0]) < 0) then
-    exit(-1);
+    exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) >= 0 then
     exit(Pred(ElemCount));
   //here such element exist in FItems and not first nor last
@@ -1506,7 +1501,7 @@ end;
 function TGBaseSortedList.NearestGT(constref aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) >= 0) then
-    exit(-1);
+    exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[0]) < 0 then
     exit(0);
   //here such element exist in FItems and not first nor last
@@ -1523,7 +1518,7 @@ end;
 function TGBaseSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
   if ElemCount = 0 then
-    exit(-1);
+    exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[0]) <= 0 then
     exit(0);
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) = 0 then
@@ -1680,16 +1675,7 @@ begin
   if ElemCount > 0 then
     Result := THelper.BinarySearch(FItems[0..Pred(ElemCount)], aValue)
   else
-    Result := -1;
-end;
-
-function TGBaseSortedList.FirstIndexOf(constref aValue: T): SizeInt;
-begin
-  if ElemCount = 0 then
-    exit(-1);
-  Result := THelper.BinarySearch(FItems[0..Pred(ElemCount)], aValue);
-  while (Result > 0) and (TCmpRel.Compare(aValue, FItems[Pred(Result)]) = 0) do
-    Dec(Result);
+    Result := NULL_INDEX;
 end;
 
 function TGBaseSortedList.CountOf(constref aValue: T): SizeInt;
@@ -1698,12 +1684,10 @@ var
 begin
   if ElemCount = 0 then
     exit(0);
-  LastIdx := THelper.BinarySearch(FItems[0..Pred(ElemCount)], aValue);
-  if LastIdx < 0 then
+  FirstIdx := THelper.BinarySearch(FItems[0..Pred(ElemCount)], aValue);
+  if FirstIdx < 0 then
     exit(0);
-  FirstIdx := LastIdx;
-  while (FirstIdx > 0) and (TCmpRel.Compare(aValue, FItems[Pred(FirstIdx)]) = 0) do
-    Dec(FirstIdx);
+  LastIdx := FirstIdx;
   while (LastIdx < Pred(ElemCount)) and (TCmpRel.Compare(aValue, FItems[Succ(LastIdx)]) = 0) do
     Inc(LastIdx);
   Result := Succ(LastIdx - FirstIdx);
@@ -1816,7 +1800,7 @@ constructor TGSortedList2.TEnumerator.Create(aList: TGSortedList2);
 begin
   FList := aList.FItems;
   FLastIndex := Pred(aList.Count);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGSortedList2.TEnumerator.MoveNext: Boolean;
@@ -1827,7 +1811,7 @@ end;
 
 procedure TGSortedList2.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGSortedList2 }
@@ -1951,7 +1935,7 @@ end;
 
 function TGSortedList2.Add(constref aValue: T): Boolean;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if Count > 0 then
     begin
@@ -2006,7 +1990,7 @@ constructor TGSortedListTable.TEnumerator.Create(aTable: TGSortedListTable);
 begin
   FList := aTable.FItems;
   FLastIndex := Pred(aTable.Count);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGSortedListTable.TEnumerator.MoveNext: Boolean;
@@ -2017,7 +2001,7 @@ end;
 
 procedure TGSortedListTable.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGSortedListTable }
@@ -2142,7 +2126,7 @@ end;
 
 function TGSortedListTable.FindOrAdd(constref aKey: TKey; out e: PEntry; out aPos: SizeInt): Boolean;
 var
-  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  sr: TSearchResult;
   Entry: TEntry;
 begin
   Entry.Key := aKey;
@@ -2183,7 +2167,7 @@ end;
 
 function TGSortedListTable.Add(constref aKey: TKey): PEntry;
 var
-  sr: specialize TGBaseArrayHelper<TEntry, TEntryCmpRel>.TSearchResult;
+  sr: TSearchResult;
   Entry: TEntry;
 begin
   Result := nil;
@@ -2233,7 +2217,7 @@ constructor TGLiteSortedList.THeadEnumerator.Create(constref aList: TGLiteSorted
 begin
   FItems := aList.FBuffer.FItems;
   FLast := aLastIndex;
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGLiteSortedList.THeadEnumerator.MoveNext: Boolean;
@@ -2244,7 +2228,7 @@ end;
 
 procedure TGLiteSortedList.THeadEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGLiteSortedList.THead }
@@ -2347,7 +2331,7 @@ end;
 
 procedure TGLiteSortedList.DoSetItem(aIndex: SizeInt; const aValue: T);
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
   c: SizeInt;
 begin
   c := TCmpRel.Compare(aValue, FBuffer.FItems[aIndex]);
@@ -2429,7 +2413,7 @@ end;
 function TGLiteSortedList.NearestLT(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[0]) <= 0) then
-    exit(-1);
+    exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) > 0 then
      exit(Pred(Count));
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) = 0 then
@@ -2453,7 +2437,7 @@ end;
 function TGLiteSortedList.RightmostLE(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[0]) < 0) then
-    exit(-1);
+    exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) >= 0 then
     exit(Pred(Count));
   //here such element exist in FBuffer.FItems and not first nor last
@@ -2470,7 +2454,7 @@ end;
 function TGLiteSortedList.NearestGT(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) >= 0) then
-    exit(-1);
+    exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[0]) < 0 then
     exit(0);
   //here such element exist in FBuffer.FItems and not first nor last
@@ -2487,7 +2471,7 @@ end;
 function TGLiteSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
   if Count = 0 then
-    exit(-1);
+    exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[0]) <= 0 then
     exit(0);
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) = 0 then
@@ -2516,10 +2500,10 @@ begin
   if IsEmpty then
     exit;
   Hi := System.High(Result);
-  I := -1;
+  I := NULL_INDEX;
   for J := 0 to Hi do
     begin
-      if IndexOf(Result[J]) > -1 then
+      if IndexOf(Result[J]) >= 0 then
         continue;
       Inc(I);
       if J > I then
@@ -2604,12 +2588,12 @@ end;
 
 function TGLiteSortedList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if NonEmpty then
     begin
       sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
-      Result := sr.FoundIndex > -1;
+      Result := sr.FoundIndex >= 0;
       if Result then
         aIndex := sr.FoundIndex;
     end
@@ -2627,12 +2611,12 @@ end;
 
 function TGLiteSortedList.Add(constref aValue: T): Boolean;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if NonEmpty then
     begin
       sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
-      if (sr.FoundIndex > -1) and RejectDuplicates then
+      if (sr.FoundIndex >= 0) and RejectDuplicates then
         exit(False);
       InsertItem(sr.InsertIndex, aValue);
     end
@@ -2677,20 +2661,20 @@ var
   ToRemove: SizeInt;
 begin
   ToRemove := IndexOf(aValue);
-  Result := ToRemove > -1;
+  Result := ToRemove >= 0;
   if Result then
     DeleteItem(ToRemove);
 end;
 
 function TGLiteSortedList.Insert(constref aValue: T): SizeInt;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if NonEmpty then
     begin
       sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
-      if (sr.FoundIndex > -1) and RejectDuplicates then
-        exit(-1);
+      if (sr.FoundIndex >= 0) and RejectDuplicates then
+        exit(NULL_INDEX);
       Result := sr.InsertIndex;
     end
   else
@@ -2728,16 +2712,7 @@ begin
   if NonEmpty then
     Result := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue)
   else
-    Result := -1;
-end;
-
-function TGLiteSortedList.FirstIndexOf(constref aValue: T): SizeInt;
-begin
-  if IsEmpty then
-    exit(-1);
-  Result := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
-  while (Result > 0) and (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Result)]) = 0) do
-    Dec(Result);
+    Result := NULL_INDEX;
 end;
 
 function TGLiteSortedList.CountOf(constref aValue: T): SizeInt;
@@ -2746,12 +2721,10 @@ var
 begin
   if IsEmpty then
     exit(0);
-  LastIdx := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
-  if LastIdx < 0 then
+  FirstIdx := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
+  if FirstIdx < 0 then
     exit(0);
-  FirstIdx := LastIdx;
-  while (FirstIdx > 0) and (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(FirstIdx)]) = 0) do
-    Dec(FirstIdx);
+  LastIdx := FirstIdx;
   while (LastIdx < Pred(Count)) and (TCmpRel.Compare(aValue, FBuffer.FItems[Succ(LastIdx)]) = 0) do
     Inc(LastIdx);
   Result := Succ(LastIdx - FirstIdx);
@@ -2854,7 +2827,7 @@ constructor TGLiteComparableSortedList.THeadEnumerator.Create(constref aList: TS
 begin
   FItems := aList.FBuffer.FItems;
   FLast := aLastIndex;
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGLiteComparableSortedList.THeadEnumerator.MoveNext: Boolean;
@@ -2865,7 +2838,7 @@ end;
 
 procedure TGLiteComparableSortedList.THeadEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGLiteComparableSortedList.THead }
@@ -2968,7 +2941,7 @@ end;
 
 procedure TGLiteComparableSortedList.DoSetItem(aIndex: SizeInt; const aValue: T);
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if aValue <> FBuffer.FItems[aIndex] then
     begin
@@ -3048,7 +3021,7 @@ end;
 function TGLiteComparableSortedList.NearestLT(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (aValue <= FBuffer.FItems[0]) then
-    exit(-1);
+    exit(NULL_INDEX);
   if aValue > FBuffer.FItems[Pred(Count)] then
      exit(Pred(Count));
   if aValue = FBuffer.FItems[Pred(Count)] then
@@ -3072,7 +3045,7 @@ end;
 function TGLiteComparableSortedList.RightmostLE(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (aValue < FBuffer.FItems[0]) then
-    exit(-1);
+    exit(NULL_INDEX);
   if aValue >= FBuffer.FItems[Pred(Count)] then
     exit(Pred(Count));
   //here such element exist in FBuffer.FItems and not first nor last
@@ -3089,7 +3062,7 @@ end;
 function TGLiteComparableSortedList.NearestGT(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (aValue >= FBuffer.FItems[Pred(Count)]) then
-    exit(-1);
+    exit(NULL_INDEX);
   if aValue < FBuffer.FItems[0] then
     exit(0);
   //here such element exist in FBuffer.FItems and not first nor last
@@ -3106,7 +3079,7 @@ end;
 function TGLiteComparableSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
   if Count = 0 then
-    exit(-1);
+    exit(NULL_INDEX);
   if aValue <= FBuffer.FItems[0] then
     exit(0);
   if aValue = FBuffer.FItems[Pred(Count)] then
@@ -3135,10 +3108,10 @@ begin
   if IsEmpty then
     exit;
   Hi := System.High(Result);
-  I := -1;
+  I := NULL_INDEX;
   for J := 0 to Hi do
     begin
-      if IndexOf(Result[J]) > -1 then
+      if IndexOf(Result[J]) >= 0 then
         continue;
       Inc(I);
       if J > I then
@@ -3223,12 +3196,12 @@ end;
 
 function TGLiteComparableSortedList.FindOrAdd(constref aValue: T; out aIndex: SizeInt): Boolean;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if NonEmpty then
     begin
       sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
-      Result := sr.FoundIndex > -1;
+      Result := sr.FoundIndex >= 0;
       if Result then
         aIndex := sr.FoundIndex;
     end
@@ -3246,12 +3219,12 @@ end;
 
 function TGLiteComparableSortedList.Add(constref aValue: T): Boolean;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if NonEmpty then
     begin
       sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
-      if (sr.FoundIndex > -1) and RejectDuplicates then
+      if (sr.FoundIndex >= 0) and RejectDuplicates then
         exit(False);
       InsertItem(sr.InsertIndex, aValue);
     end
@@ -3296,20 +3269,20 @@ var
   ToRemove: SizeInt;
 begin
   ToRemove := IndexOf(aValue);
-  Result := ToRemove > -1;
+  Result := ToRemove >= 0;
   if Result then
     DeleteItem(ToRemove);
 end;
 
 function TGLiteComparableSortedList.Insert(constref aValue: T): SizeInt;
 var
-  sr: THelper.TSearchResult;
+  sr: TSearchResult;
 begin
   if NonEmpty then
     begin
       sr := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue);
-      if (sr.FoundIndex > -1) and RejectDuplicates then
-        exit(-1);
+      if (sr.FoundIndex >= 0) and RejectDuplicates then
+        exit(NULL_INDEX);
       Result := sr.InsertIndex;
     end
   else
@@ -3347,16 +3320,7 @@ begin
   if NonEmpty then
     Result := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue)
   else
-    Result := -1;
-end;
-
-function TGLiteComparableSortedList.FirstIndexOf(constref aValue: T): SizeInt;
-begin
-  if IsEmpty then
-    exit(-1);
-  Result := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
-  while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)]) do
-    Dec(Result);
+    Result := NULL_INDEX;
 end;
 
 function TGLiteComparableSortedList.CountOf(constref aValue: T): SizeInt;
@@ -3365,12 +3329,10 @@ var
 begin
   if IsEmpty then
     exit(0);
-  LastIdx := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
-  if LastIdx < 0 then
+  FirstIdx := THelper.BinarySearch(FBuffer.FItems[0..Pred(Count)], aValue);
+  if FirstIdx < 0 then
     exit(0);
-  FirstIdx := LastIdx;
-  while (FirstIdx > 0) and (aValue = FBuffer.FItems[Pred(FirstIdx)]) do
-    Dec(FirstIdx);
+  LastIdx := FirstIdx;
   while (LastIdx < Pred(Count)) and (aValue = FBuffer.FItems[Succ(LastIdx)]) do
     Inc(LastIdx);
   Result := Succ(LastIdx - FirstIdx);
@@ -3473,7 +3435,7 @@ constructor TGLiteHashList.TEnumerator.Create(constref aList: TGLiteHashList);
 begin
   FList := aList.FNodeList;
   FLastIndex := System.High(FList);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGLiteHashList.TEnumerator.MoveNext: Boolean;
@@ -3484,7 +3446,7 @@ end;
 
 procedure TGLiteHashList.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGLiteHashList.TReverseEnumerator }
@@ -3952,7 +3914,7 @@ procedure TGLiteHashList2.TEnumerator.Init(constref aList: TGLiteHashList2);
 begin
   FList := aList.FNodeList;
   FLastIndex := System.High(FList);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 function TGLiteHashList2.TEnumerator.MoveNext: Boolean;
@@ -3963,7 +3925,7 @@ end;
 
 procedure TGLiteHashList2.TEnumerator.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGLiteHashList2.TReverseEnumerator }
