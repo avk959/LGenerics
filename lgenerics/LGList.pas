@@ -1463,7 +1463,6 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) > 0 then
     exit(Pred(ElemCount));
-  //here such element exist in FItems and not first
   Result := THelper.BiSearchLeftA(@FItems[0], Pred(ElemCount), aValue);
   if TCmpRel.Compare(FItems[Result], aValue) = 0 then
     Dec(Result);
@@ -1475,7 +1474,6 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) >= 0 then
     exit(Pred(ElemCount));
-  //here such element exist in FItems and not last
   Result := THelper.BiSearchRightA(@FItems[0], Pred(ElemCount), aValue);
   if TCmpRel.Compare(FItems[Result], aValue) > 0 then
     Dec(Result);
@@ -1487,7 +1485,6 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[0]) < 0 then
     exit(0);
-  //here such element exist in FItems
   Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
 end;
 
@@ -1497,7 +1494,6 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[0]) <= 0 then
     exit(0);
-  //here such element exist in FItems and not first
   Result := THelper.BiSearchLeftA(@FItems[0], Pred(ElemCount), aValue);
 end;
 
@@ -2378,7 +2374,6 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) > 0 then
      exit(Pred(Count));
-  //here such element exist in FItems and not first
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
   if TCmpRel.Compare(FBuffer.FItems[Result], aValue) = 0 then
     Dec(Result);
@@ -2390,7 +2385,6 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) >= 0 then
     exit(Pred(Count));
-  //here such element exist in FItems and not last
   Result := THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue);
   if TCmpRel.Compare(FBuffer.FItems[Result], aValue) > 0 then
     Dec(Result);
@@ -2402,7 +2396,6 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[0]) < 0 then
     exit(0);
-  //here such element exist in FBuffer.FItems and not first nor last
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
 end;
 
@@ -2412,7 +2405,6 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[0]) <= 0 then
     exit(0);
-  //here such element exist in FBuffer.FItems and not first
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
 end;
 
@@ -2948,7 +2940,6 @@ begin
     exit(NULL_INDEX);
   if aValue > FBuffer.FItems[Pred(Count)] then
      exit(Pred(Count));
-  //here such element exist in FItems and not first
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
   if FBuffer.FItems[Result] = aValue then
     Dec(Result);
@@ -2960,7 +2951,6 @@ begin
     exit(NULL_INDEX);
   if aValue >= FBuffer.FItems[Pred(Count)] then
     exit(Pred(Count));
-  //here such element exist in FItems and not last
   Result := THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue);
   if FBuffer.FItems[Result] > aValue then
     Dec(Result);
@@ -2972,7 +2962,6 @@ begin
     exit(NULL_INDEX);
   if aValue < FBuffer.FItems[0] then
     exit(0);
-  //here such element exist in FBuffer.FItems and not first nor last
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
 end;
 
@@ -2982,7 +2971,6 @@ begin
     exit(NULL_INDEX);
   if aValue <= FBuffer.FItems[0] then
     exit(0);
-  //here such element exist in FBuffer.FItems and not first
   Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
 end;
 
