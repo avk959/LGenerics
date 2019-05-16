@@ -167,9 +167,9 @@ type
     function  DeleteItem(aIndex: SizeInt): T; virtual;
     function  DoDeleteRange(aIndex, aCount: SizeInt): SizeInt; virtual;
     function  GetRecEnumerator: TRecEnumerator; inline; //for internal use
-    function  NearestLT(constref aValue: T): SizeInt;
+    function  RightmostLT(constref aValue: T): SizeInt;
     function  RightmostLE(constref aValue: T): SizeInt;
-    function  NearestGT(constref aValue: T): SizeInt;
+    function  LeftmostGT(constref aValue: T): SizeInt;
     function  LeftmostGE(constref aValue: T): SizeInt;
     property  ElemCount: SizeInt read FCount;
   public
@@ -187,27 +187,27 @@ type
     function  ToArray: TArray; override;
     function  FindMin(out aValue: T): Boolean;
     function  FindMax(out aValue: T): Boolean;
-  { returns insert index, -1 if element is not inserted }
+  { returns insert position or -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; override;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
-  { returns index of leftmost occurrence of aValue, -1 if there are no such element }
+  { returns the index of the leftmost occurrence of aValue, -1 if there is no such element }
     function  IndexOf(constref aValue: T): SizeInt;
-  { returns count of occurrences of aValue, 0 if there are no such element }
+  { returns the count of occurrences of aValue, 0 if there is no such element }
     function  CountOf(constref aValue: T): SizeInt;
-  { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
-    returns -1 if there are no such element }
+  { returns the leftmost index of the nearest element that is greater then or equal to
+    aValue(depending on aInclusive), or -1 if there is no such element }
     function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt;
-  { returns index of element whose value less then aValue (or equal to aValue, depending on aInclusive);
-    returns -1 if there are no such element }
+  { returns the rightmost index of the nearest element that is less then aValue
+    (or equal to aValue, depending on aInclusive), or -1 if there is no such element }
     function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt;
-  { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
+  { enumerates values that are strictly less than(if not aInclusive) aHighBound }
     function  Head(constref aHighBound: T; aInclusive: Boolean = False): IEnumerable;
-  { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
+  { enumerates values that are greater than or equal to(if aInclusive) aLowBound }
     function  Tail(constref aLowBound: T; aInclusive: Boolean = True): IEnumerable;
-  { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
+  { enumerates values that are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
     function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): IEnumerable;
     function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TSortedList;
     function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TSortedList;
@@ -419,9 +419,9 @@ type
     function  DeleteItem(aIndex: SizeInt): T; inline;
     procedure RemoveDuplicates;
     procedure SetRejectDuplicates(aValue: Boolean);
-    function  NearestLT(constref aValue: T): SizeInt;
+    function  RightmostLT(constref aValue: T): SizeInt;
     function  RightmostLE(constref aValue: T): SizeInt;
-    function  NearestGT(constref aValue: T): SizeInt;
+    function  LeftmostGT(constref aValue: T): SizeInt;
     function  LeftmostGE(constref aValue: T): SizeInt;
     function  SelectDistinctArray(constref a: array of T): TArray;
     function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
@@ -443,27 +443,27 @@ type
     function  Add(constref aValue: T): Boolean;
     function  AddAll(constref a: array of T): SizeInt;
     function  Remove(constref aValue: T): Boolean;
-  { returns insert index, -1 if element is not inserted }
+  { returns insert position or -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
     function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
-  { returns index of leftmost occurrence of aValue, -1 if there are no such element }
+  { returns the index of the leftmost occurrence of aValue, -1 if there is no such element }
     function  IndexOf(constref aValue: T): SizeInt;
-  { returns count of occurrences of aValue, 0 if there are no such element }
+  { returns the count of occurrences of aValue, 0 if there is no such element }
     function  CountOf(constref aValue: T): SizeInt;
-  { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
-    returns -1 if there are no such element }
+  { returns the leftmost index of the nearest element that is greater then or equal to
+    aValue(depending on aInclusive), or -1 if there is no such element }
     function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt; inline;
-  { returns index of element whose value less then aValue (or equal to aValue, depending on aInclusive);
-    returns -1 if there are no such element }
+  { returns the rightmost index of the nearest element that is less then aValue
+    (or equal to aValue, depending on aInclusive), or -1 if there is no such element }
     function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt; inline;
-  { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
+  { enumerates values that are strictly less than(if not aInclusive) aHighBound }
     function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
-  { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
+  { enumerates values that are greater than or equal to(if aInclusive) aLowBound }
     function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail;
-  { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
+  { enumerates values that are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
     function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange;
     function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGLiteSortedList;
     function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGLiteSortedList;
@@ -559,9 +559,9 @@ type
     function  DeleteItem(aIndex: SizeInt): T; inline;
     procedure RemoveDuplicates;
     procedure SetRejectDuplicates(aValue: Boolean);
-    function  NearestLT(constref aValue: T): SizeInt;
+    function  RightmostLT(constref aValue: T): SizeInt;
     function  RightmostLE(constref aValue: T): SizeInt;
-    function  NearestGT(constref aValue: T): SizeInt;
+    function  LeftmostGT(constref aValue: T): SizeInt;
     function  LeftmostGE(constref aValue: T): SizeInt;
     function  SelectDistinctArray(constref a: array of T): TArray;
     function  GetHeadEnumerator(aHighBound: SizeInt): THeadEnumerator;
@@ -583,27 +583,27 @@ type
     function  Add(constref aValue: T): Boolean;
     function  AddAll(constref a: array of T): SizeInt;
     function  Remove(constref aValue: T): Boolean;
-  { returns insert index, -1 if element is not inserted }
+  { returns insert position or -1 if element is not inserted }
     function  Insert(constref aValue: T): SizeInt;
     function  Contains(constref aValue: T): Boolean; inline;
     function  NonContains(constref aValue: T): Boolean; inline;
     procedure Delete(aIndex: SizeInt);
     function  TryDelete(aIndex: SizeInt): Boolean;
-  { returns index of leftmost occurrence of aValue, -1 if there are no such element }
+  { returns the index of the leftmost occurrence of aValue, -1 if there is no such element }
     function  IndexOf(constref aValue: T): SizeInt;
-  { returns count of occurrences of aValue, 0 if there are no such element }
+  { returns the count of occurrences of aValue, 0 if there is no such element }
     function  CountOf(constref aValue: T): SizeInt;
-  { returns index of element whose value greater then or equal to aValue (depending on aInclusive);
-    returns -1 if there are no such element }
+  { returns the leftmost index of the nearest element that is greater then or equal to
+    aValue(depending on aInclusive), or -1 if there is no such element }
     function  IndexOfCeil(constref aValue: T; aInclusive: Boolean = True): SizeInt; inline;
-  { returns index of element whose value less then aValue (or equal to aValue, depending on aInclusive);
-    returns -1 if there are no such element }
+  { returns the rightmost index of the nearest element that is less then aValue
+    (or equal to aValue, depending on aInclusive), or -1 if there is no such element }
     function  IndexOfFloor(constref aValue: T; aInclusive: Boolean = False): SizeInt; inline;
-  { enumerates values whose are strictly less than(if not aInclusive) aHighBound }
+  { enumerates values that are strictly less than(if not aInclusive) aHighBound }
     function  Head(constref aHighBound: T; aInclusive: Boolean = False): THead; inline;
-  { enumerates values whose are greater than or equal to(if aInclusive) aLowBound }
+  { enumerates values that are greater than or equal to(if aInclusive) aLowBound }
     function  Tail(constref aLowBound: T; aInclusive: Boolean = True): TTail;
-  { enumerates values whose are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
+  { enumerates values that are greater than or equal to aLowBound and strictly less than aHighBound(by default)}
     function  Range(constref aLowBound, aHighBound: T; aIncludeBounds: TRangeBounds = [rbLow]): TRange; inline;
     function  HeadList(constref aHighBound: T; aInclusive: Boolean = False): TGLiteComparableSortedList;
     function  TailList(constref aLowBound: T; aInclusive: Boolean = True): TGLiteComparableSortedList;
@@ -1457,28 +1457,16 @@ begin
   Result.Init(Self);
 end;
 
-function TGBaseSortedList.NearestLT(constref aValue: T): SizeInt;
+function TGBaseSortedList.RightmostLT(constref aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[0]) <= 0) then
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) > 0 then
-     exit(Pred(ElemCount));
-  if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) = 0 then
-    begin
-      Result := Pred(ElemCount) - 1;
-      while (Result > 0) and (TCmpRel.Compare(aValue, FItems[Pred(Result)]) = 0) do
-        Dec(Result);
-      exit;
-    end;
-  //here such element exist in FItems and not first nor last
-  Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
-  if TCmpRel.Compare(FItems[Result], aValue) >= 0 then
-    repeat
-      Dec(Result)
-    until TCmpRel.Compare(FItems[Result], aValue) < 0
-  else // < 0
-    while TCmpRel.Compare(FItems[Succ(Result)], aValue) < 0 do
-      Inc(Result);
+    exit(Pred(ElemCount));
+  //here such element exist in FItems and not first
+  Result := THelper.BiSearchLeftA(@FItems[0], Pred(ElemCount), aValue);
+  if TCmpRel.Compare(FItems[Result], aValue) = 0 then
+    Dec(Result);
 end;
 
 function TGBaseSortedList.RightmostLE(constref aValue: T): SizeInt;
@@ -1487,56 +1475,30 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) >= 0 then
     exit(Pred(ElemCount));
-  //here such element exist in FItems and not first nor last
-  Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
+  //here such element exist in FItems and not last
+  Result := THelper.BiSearchRightA(@FItems[0], Pred(ElemCount), aValue);
   if TCmpRel.Compare(FItems[Result], aValue) > 0 then
-    repeat
-      Dec(Result)
-    until TCmpRel.Compare(FItems[Result], aValue) <= 0
-  else // <= 0
-    while TCmpRel.Compare(FItems[Succ(Result)], aValue) <= 0 do
-      Inc(Result);
+    Dec(Result);
 end;
 
-function TGBaseSortedList.NearestGT(constref aValue: T): SizeInt;
+function TGBaseSortedList.LeftmostGT(constref aValue: T): SizeInt;
 begin
   if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) >= 0) then
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[0]) < 0 then
     exit(0);
-  //here such element exist in FItems and not first nor last
+  //here such element exist in FItems
   Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
-  if TCmpRel.Compare(FItems[Result], aValue) <= 0 then
-    repeat
-      Inc(Result)
-    until TCmpRel.Compare(FItems[Result], aValue) > 0
-  else // > 0
-    while TCmpRel.Compare(FItems[Pred(Result)], aValue) > 0 do
-      Dec(Result);
 end;
 
 function TGBaseSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if ElemCount = 0 then
+  if (ElemCount = 0) or (TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) > 0) then
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FItems[0]) <= 0 then
     exit(0);
-  if TCmpRel.Compare(aValue, FItems[Pred(ElemCount)]) = 0 then
-    begin
-      Result := Pred(ElemCount);
-      while (Result > 0) and (TCmpRel.Compare(aValue, FItems[Pred(Result)]) = 0) do
-        Dec(Result);
-      exit;
-    end;
-  //here such element exist in FItems and not first nor last
-  Result := THelper.BinarySearchPos(FItems[0..Pred(ElemCount)], aValue).InsertIndex;
-  if TCmpRel.Compare(FItems[Result], aValue) < 0 then
-    repeat
-      Inc(Result)
-    until TCmpRel.Compare(FItems[Result], aValue) >= 0
-  else // >=
-    while TCmpRel.Compare(FItems[Pred(Result)], aValue) >= 0 do
-      Dec(Result);
+  //here such element exist in FItems and not first
+  Result := THelper.BiSearchLeftA(@FItems[0], Pred(ElemCount), aValue);
 end;
 
 constructor TGBaseSortedList.CreateEmpty;
@@ -1698,7 +1660,7 @@ begin
   if aInclusive then
     Result := LeftmostGE(aValue)
   else
-    Result := NearestGT(aValue);
+    Result := LeftmostGT(aValue);
 end;
 
 function TGBaseSortedList.IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt;
@@ -1706,7 +1668,7 @@ begin
   if aInclusive then
     Result := RightmostLE(aValue)
   else
-    Result := NearestLT(aValue);
+    Result := RightmostLT(aValue);
 end;
 
 function TGBaseSortedList.Head(constref aHighBound: T; aInclusive: Boolean): IEnumerable;
@@ -2410,28 +2372,16 @@ begin
     end;
 end;
 
-function TGLiteSortedList.NearestLT(constref aValue: T): SizeInt;
+function TGLiteSortedList.RightmostLT(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[0]) <= 0) then
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) > 0 then
      exit(Pred(Count));
-  if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) = 0 then
-    begin
-      Result := Pred(Count) - 1;
-      while (Result > 0) and (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Result)]) = 0) do
-        Dec(Result);
-      exit;
-    end;
-  //here such element exist in FBuffer.FItems and not first nor last
-  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
-  if TCmpRel.Compare(FBuffer.FItems[Result], aValue) >= 0 then
-    repeat
-      Dec(Result)
-    until TCmpRel.Compare(FBuffer.FItems[Result], aValue) < 0
-  else // < 0
-    while TCmpRel.Compare(FBuffer.FItems[Succ(Result)], aValue) < 0 do
-      Inc(Result);
+  //here such element exist in FItems and not first
+  Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
+  if TCmpRel.Compare(FBuffer.FItems[Result], aValue) = 0 then
+    Dec(Result);
 end;
 
 function TGLiteSortedList.RightmostLE(constref aValue: T): SizeInt;
@@ -2440,18 +2390,13 @@ begin
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) >= 0 then
     exit(Pred(Count));
-  //here such element exist in FBuffer.FItems and not first nor last
-  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
+  //here such element exist in FItems and not last
+  Result := THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue);
   if TCmpRel.Compare(FBuffer.FItems[Result], aValue) > 0 then
-    repeat
-      Dec(Result)
-    until TCmpRel.Compare(FBuffer.FItems[Result], aValue) <= 0
-  else // <= 0
-    while TCmpRel.Compare(FBuffer.FItems[Succ(Result)], aValue) <= 0 do
-      Inc(Result);
+    Dec(Result);
 end;
 
-function TGLiteSortedList.NearestGT(constref aValue: T): SizeInt;
+function TGLiteSortedList.LeftmostGT(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) >= 0) then
     exit(NULL_INDEX);
@@ -2459,37 +2404,16 @@ begin
     exit(0);
   //here such element exist in FBuffer.FItems and not first nor last
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
-  if TCmpRel.Compare(FBuffer.FItems[Result], aValue) <= 0 then
-    repeat
-      Inc(Result)
-    until TCmpRel.Compare(FBuffer.FItems[Result], aValue) > 0
-  else // > 0
-    while TCmpRel.Compare(FBuffer.FItems[Pred(Result)], aValue) > 0 do
-      Dec(Result);
 end;
 
 function TGLiteSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if Count = 0 then
+  if (Count = 0) or (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) > 0) then
     exit(NULL_INDEX);
   if TCmpRel.Compare(aValue, FBuffer.FItems[0]) <= 0 then
     exit(0);
-  if TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Count)]) = 0 then
-    begin
-      Result := Pred(Count);
-      while (Result > 0) and (TCmpRel.Compare(aValue, FBuffer.FItems[Pred(Result)]) = 0) do
-        Dec(Result);
-      exit;
-    end;
-  //here such element exist in FBuffer.FItems and not first nor last
-  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
-  if TCmpRel.Compare(FBuffer.FItems[Result], aValue) < 0 then
-    repeat
-      Inc(Result)
-    until TCmpRel.Compare(FBuffer.FItems[Result], aValue) >= 0
-  else
-    while TCmpRel.Compare(FBuffer.FItems[Pred(Result)], aValue) >= 0 do
-      Dec(Result);
+  //here such element exist in FBuffer.FItems and not first
+  Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
 end;
 
 function TGLiteSortedList.SelectDistinctArray(constref a: array of T): TArray;
@@ -2735,7 +2659,7 @@ begin
   if aInclusive then
     Result := LeftmostGE(aValue)
   else
-    Result := NearestGT(aValue);
+    Result := LeftmostGT(aValue);
 end;
 
 function TGLiteSortedList.IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt;
@@ -2743,7 +2667,7 @@ begin
   if aInclusive then
     Result := RightmostLE(aValue)
   else
-    Result := NearestLT(aValue);
+    Result := RightmostLT(aValue);
 end;
 
 function TGLiteSortedList.Head(constref aHighBound: T; aInclusive: Boolean): THead;
@@ -3018,28 +2942,16 @@ begin
     end;
 end;
 
-function TGLiteComparableSortedList.NearestLT(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.RightmostLT(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (aValue <= FBuffer.FItems[0]) then
     exit(NULL_INDEX);
   if aValue > FBuffer.FItems[Pred(Count)] then
      exit(Pred(Count));
-  if aValue = FBuffer.FItems[Pred(Count)] then
-    begin
-      Result := Pred(Count) - 1;
-      while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)]) do
-        Dec(Result);
-      exit;
-    end;
-  //here such element exist in FBuffer.FItems and not first nor last
-  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
-  if FBuffer.FItems[Result] >= aValue then
-    repeat
-      Dec(Result)
-    until FBuffer.FItems[Result] < aValue
-  else // < 0
-    while FBuffer.FItems[Succ(Result)] < aValue do
-      Inc(Result);
+  //here such element exist in FItems and not first
+  Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
+  if FBuffer.FItems[Result] = aValue then
+    Dec(Result);
 end;
 
 function TGLiteComparableSortedList.RightmostLE(constref aValue: T): SizeInt;
@@ -3048,18 +2960,13 @@ begin
     exit(NULL_INDEX);
   if aValue >= FBuffer.FItems[Pred(Count)] then
     exit(Pred(Count));
-  //here such element exist in FBuffer.FItems and not first nor last
-  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
+  //here such element exist in FItems and not last
+  Result := THelper.BiSearchRightA(@FBuffer.FItems[0], Pred(Count), aValue);
   if FBuffer.FItems[Result] > aValue then
-    repeat
-      Dec(Result)
-    until FBuffer.FItems[Result] <= aValue
-  else // <= 0
-    while FBuffer.FItems[Succ(Result)] <= aValue do
-      Inc(Result);
+    Dec(Result);
 end;
 
-function TGLiteComparableSortedList.NearestGT(constref aValue: T): SizeInt;
+function TGLiteComparableSortedList.LeftmostGT(constref aValue: T): SizeInt;
 begin
   if IsEmpty or (aValue >= FBuffer.FItems[Pred(Count)]) then
     exit(NULL_INDEX);
@@ -3067,37 +2974,16 @@ begin
     exit(0);
   //here such element exist in FBuffer.FItems and not first nor last
   Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
-  if FBuffer.FItems[Result] <= aValue then
-    repeat
-      Inc(Result)
-    until FBuffer.FItems[Result] > aValue
-  else // > 0
-    while FBuffer.FItems[Pred(Result)] > aValue do
-      Dec(Result);
 end;
 
 function TGLiteComparableSortedList.LeftmostGE(constref aValue: T): SizeInt;
 begin
-  if Count = 0 then
+  if (Count = 0) or (aValue > FBuffer.FItems[Pred(Count)]) then
     exit(NULL_INDEX);
   if aValue <= FBuffer.FItems[0] then
     exit(0);
-  if aValue = FBuffer.FItems[Pred(Count)] then
-    begin
-      Result := Pred(Count);
-      while (Result > 0) and (aValue = FBuffer.FItems[Pred(Result)]) do
-        Dec(Result);
-      exit;
-    end;
-  //here such element exist in FBuffer.FItems and not first nor last
-  Result := THelper.BinarySearchPos(FBuffer.FItems[0..Pred(Count)], aValue).InsertIndex;
-  if FBuffer.FItems[Result] < aValue then
-    repeat
-      Inc(Result)
-    until FBuffer.FItems[Result] >= aValue
-  else //>=
-    while FBuffer.FItems[Pred(Result)] >= aValue do
-      Dec(Result);
+  //here such element exist in FBuffer.FItems and not first
+  Result := THelper.BiSearchLeftA(@FBuffer.FItems[0], Pred(Count), aValue);
 end;
 
 function TGLiteComparableSortedList.SelectDistinctArray(constref a: array of T): TArray;
@@ -3343,7 +3229,7 @@ begin
   if aInclusive then
     Result := LeftmostGE(aValue)
   else
-    Result := NearestGT(aValue);
+    Result := LeftmostGT(aValue);
 end;
 
 function TGLiteComparableSortedList.IndexOfFloor(constref aValue: T; aInclusive: Boolean): SizeInt;
@@ -3351,7 +3237,7 @@ begin
   if aInclusive then
     Result := RightmostLE(aValue)
   else
-    Result := NearestLT(aValue);
+    Result := RightmostLT(aValue);
 end;
 
 function TGLiteComparableSortedList.Head(constref aHighBound: T; aInclusive: Boolean): THead;
