@@ -46,7 +46,7 @@ type
     procedure Instance;
     procedure Assign;
     procedure Destruction;
-    procedure Destruction1;
+    procedure Destruction1; //related to #0034772
   end;
 
   TGOptionalTest = class(TTestCase)
