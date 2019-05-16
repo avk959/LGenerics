@@ -43,6 +43,8 @@ type
 
   TObjArray  = specialize TGArray<TTestObj>;
 
+  { TGSortedListTest }
+
   TGSortedListTest = class(TTestCase)
   private
   type
@@ -85,11 +87,18 @@ type
     procedure RetainAll_1;
     procedure RetainAllSelf;
     procedure Head;
+    procedure Head1;
     procedure Tail;
+    procedure Tail1;
     procedure Range;
+    procedure Range1;
     procedure FindFloor;
+    procedure FindFloor1;
     procedure FindCeil;
+    procedure FindCeil1;
   end;
+
+  { TLiteSortedListTest }
 
   TLiteSortedListTest = class(TTestCase)
   private
@@ -111,11 +120,18 @@ type
     procedure DeleteOutOfBounds;
     procedure TryDelete;
     procedure Head;
+    procedure Head1;
     procedure Tail;
+    procedure Tail1;
     procedure Range;
+    procedure Range1;
     procedure FindFloor;
+    procedure FindFloor1;
     procedure FindCeil;
+    procedure FindCeil1;
   end;
+
+  { TLiteComparableSortedListTest }
 
   TLiteComparableSortedListTest = class(TTestCase)
   private
@@ -137,10 +153,15 @@ type
     procedure DeleteOutOfBounds;
     procedure TryDelete;
     procedure Head;
+    procedure Head1;
     procedure Tail;
+    procedure Tail1;
     procedure Range;
+    procedure Range1;
     procedure FindFloor;
+    procedure FindFloor1;
     procedure FindCeil;
+    procedure FindCeil1;
   end;
 
   TLiteHashListTest = class(TTestCase)
@@ -723,12 +744,33 @@ begin
   AssertTrue(I = 81);
 end;
 
+procedure TGSortedListTest.Head1;
+var
+  lst: TAutoList;
+  I, J: Integer;
+begin
+  AssertTrue(lst.Instance.Head(5).None);
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Instance.Add(J);
+  AssertTrue(lst.Instance.Count = 24);
+  AssertTrue(lst.Instance.Head(0).None);
+  AssertTrue(lst.Instance.Head(1).None);
+  AssertTrue(lst.Instance.Head(1, True).Total = 3);
+  AssertTrue(lst.Instance.Head(5).Total = 12);
+  AssertTrue(lst.Instance.Head(5, True).Total = 15);
+  AssertTrue(lst.Instance.Head(8).Total = 21);
+  AssertTrue(lst.Instance.Head(8, True).Total = 24);
+  AssertTrue(lst.Instance.Head(9).Total = 24);
+end;
+
 procedure TGSortedListTest.Tail;
 var
   lst: TAutoList;
   a: TIntArray;
   I, J: Integer;
 begin
+  AssertTrue(lst.Instance.Tail(9).None);
   System.SetLength(a, 100);
   for I := 0 to System.High(a) do
     a[I] := I;
@@ -746,12 +788,32 @@ begin
   AssertTrue(lst.Instance.Tail(30, False).Total = 69);
 end;
 
+procedure TGSortedListTest.Tail1;
+var
+  lst: TAutoList;
+  I, J: Integer;
+begin
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Instance.Add(J);
+  AssertTrue(lst.Instance.Count = 24);
+  AssertTrue(lst.Instance.Tail(9).None);
+  AssertTrue(lst.Instance.Tail(8).Total = 3);
+  AssertTrue(lst.Instance.Tail(8, False).None);
+  AssertTrue(lst.Instance.Tail(5).Total = 12);
+  AssertTrue(lst.Instance.Tail(5, False).Total = 9);
+  AssertTrue(lst.Instance.Tail(1, False).Total = 21);
+  AssertTrue(lst.Instance.Tail(1).Total = 24);
+  AssertTrue(lst.Instance.Tail(0, True).Total = 24);
+end;
+
 procedure TGSortedListTest.Range;
 var
   lst: TAutoList;
   a: TIntArray;
   I, J: Integer;
 begin
+  AssertTrue(lst.Instance.Range(1, 5).None);
   System.SetLength(a, 100);
   for I := 0 to System.High(a) do
     a[I] := I;
@@ -772,6 +834,25 @@ begin
   AssertTrue(lst.Instance.Range(10, 90, BOUNDS_BOTH).Total = 81);
 end;
 
+procedure TGSortedListTest.Range1;
+var
+  lst: TAutoList;
+  I, J: Integer;
+begin
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Instance.Add(J);
+  AssertTrue(lst.Instance.Count = 24);
+  AssertTrue(lst.Instance.Range(9, 10).None);
+  AssertTrue(lst.Instance.Range(8, 8, BOUNDS_BOTH).Total = 3);
+  AssertTrue(lst.Instance.Range(8, 8).None);
+  AssertTrue(lst.Instance.Range(5, 7).Total = 6);
+  AssertTrue(lst.Instance.Range(5, 7, BOUNDS_BOTH).Total = 9);
+  AssertTrue(lst.Instance.Range(1, 8).Total = 21);
+  AssertTrue(lst.Instance.Range(1, 8, BOUNDS_BOTH).Total = 24);
+  AssertTrue(lst.Instance.Range(0, 9).Total = 24);
+end;
+
 procedure TGSortedListTest.FindFloor;
 var
   lst: TAutoList;
@@ -780,11 +861,33 @@ begin
   for I := 0 to 15 do
     lst.Instance.Add(I);
   AssertTrue(lst.Instance.IndexOfFloor(-2) = -1);
+  AssertTrue(lst.Instance.IndexOfFloor(0) = -1);
+  AssertTrue(lst.Instance.IndexOfFloor(0, True) = 0);
   AssertTrue(lst.Instance.IndexOfFloor(3) = 2);
   AssertTrue(lst.Instance.IndexOfFloor(3, True) = 3);
   AssertTrue(lst.Instance.IndexOfFloor(15) = 14);
   AssertTrue(lst.Instance.IndexOfFloor(15, True) = 15);
   AssertTrue(lst.Instance.IndexOfFloor(20) = 15);
+end;
+
+procedure TGSortedListTest.FindFloor1;
+var
+  lst: TAutoList;
+  I: Integer;
+begin
+  for I := 0 to 15 do
+    lst.Instance.Add(I);
+  lst.Instance.AddAll(lst.Instance);
+  lst.Instance.AddAll(lst.Instance);
+  AssertTrue(lst.Instance.Count = 64);
+  AssertTrue(lst.Instance.IndexOfFloor(-2) = -1);
+  AssertTrue(lst.Instance.IndexOfFloor(0) = -1);
+  AssertTrue(lst.Instance.IndexOfFloor(0, True) = 3);
+  AssertTrue(lst.Instance.IndexOfFloor(3) = Pred(3*4));
+  AssertTrue(lst.Instance.IndexOfFloor(3, True) = Pred(4*4));
+  AssertTrue(lst.Instance.IndexOfFloor(15) = Pred(15*4));
+  AssertTrue(lst.Instance.IndexOfFloor(15, True) = Pred(16*4));
+  AssertTrue(lst.Instance.IndexOfFloor(20) = 63);
 end;
 
 procedure TGSortedListTest.FindCeil;
@@ -800,6 +903,26 @@ begin
   AssertTrue(lst.Instance.IndexOfCeil(0, False) = 1);
   AssertTrue(lst.Instance.IndexOfCeil(10) = 10);
   AssertTrue(lst.Instance.IndexOfCeil(10, False) = 11);
+  AssertTrue(lst.Instance.IndexOfCeil(-1) = 0);
+end;
+
+procedure TGSortedListTest.FindCeil1;
+var
+  lst: TAutoList;
+  I: Integer;
+begin
+  for I := 0 to 15 do
+    lst.Instance.Add(I);
+  lst.Instance.AddAll(lst.Instance);
+  lst.Instance.AddAll(lst.Instance);
+  AssertTrue(lst.Instance.Count = 64);
+  AssertTrue(lst.Instance.IndexOfCeil(15) = 15*4);
+  AssertTrue(lst.Instance.IndexOfCeil(15, False) = -1);
+  AssertTrue(lst.Instance.IndexOfCeil(0) = 0);
+  AssertTrue(lst.Instance.IndexOfCeil(0, False) = 1*4);
+  AssertTrue(lst.Instance.IndexOfCeil(10) = 10*4);
+  AssertTrue(lst.Instance.IndexOfCeil(10, False) = 11*4);
+  AssertTrue(lst.Instance.IndexOfCeil(-1) = 0);
 end;
 
 { TLiteSortedListTest }
@@ -1090,6 +1213,67 @@ begin
   AssertTrue(I = 81);
 end;
 
+procedure TLiteSortedListTest.Head1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  J := 0;
+  for I in lst.Head(5) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Add(J);
+  AssertTrue(lst.Count = 24);
+
+  J := 0;
+  for I in lst.Head(0) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Head(1) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Head(1, True) do
+    Inc(J);
+  AssertTrue(J = 3);
+
+  J := 0;
+  for I in lst.Head(5) do
+    begin
+     AssertTrue(I < 5);
+     Inc(J);
+    end;
+  AssertTrue(J = 12);
+
+  J := 0;
+  for I in lst.Head(5, True) do
+    begin
+     AssertTrue(I <= 5);
+     Inc(J);
+    end;
+  AssertTrue(J = 15);
+
+  J := 0;
+  for I in lst.Head(8) do
+    begin
+     AssertTrue(I < 8);
+     Inc(J);
+    end;
+  AssertTrue(J = 21);
+
+  J := 0;
+  for I in lst.Head(8, True) do
+    begin
+     AssertTrue(I <= 8);
+     Inc(J);
+    end;
+  AssertTrue(J = 24);
+end;
+
 procedure TLiteSortedListTest.Tail;
 var
   lst: TIntList;
@@ -1117,6 +1301,72 @@ begin
       Inc(I);
     end;
   AssertTrue(I = 100);
+end;
+
+procedure TLiteSortedListTest.Tail1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  J := 0;
+  for I in lst.Tail(0) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Add(J);
+  AssertTrue(lst.Count = 24);
+
+  J := 0;
+  for I in lst.Tail(9) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Tail(8, False) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Tail(8) do
+    Inc(J);
+  AssertTrue(J = 3);
+
+  J := 0;
+  for I in lst.Tail(5) do
+    begin
+      AssertTrue(I >= 5);
+      Inc(J);
+    end;
+  AssertTrue(J = 12);
+
+  J := 0;
+  for I in lst.Tail(5, False) do
+    begin
+      AssertTrue(I > 5);
+      Inc(J);
+    end;
+  AssertTrue(J = 9);
+
+  J := 0;
+  for I in lst.Tail(1) do
+    begin
+      AssertTrue(I >= 1);
+      Inc(J);
+    end;
+  AssertTrue(J = 24);
+
+  J := 0;
+  for I in lst.Tail(1, False) do
+    begin
+      AssertTrue(I > 1);
+      Inc(J);
+    end;
+  AssertTrue(J = 21);
+
+  J := 0;
+  for I in lst.Tail(0, False) do
+    Inc(J);
+  AssertTrue(J = 24);
 end;
 
 procedure TLiteSortedListTest.Range;
@@ -1153,6 +1403,75 @@ begin
   AssertTrue(I = 90);
 end;
 
+procedure TLiteSortedListTest.Range1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  J := 0;
+  for I in lst.Range(0, 5) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Add(J);
+  AssertTrue(lst.Count = 24);
+
+  J := 0;
+  for I in lst.Range(9, 10) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Range(8, 8) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Range(8, 8, BOUNDS_BOTH) do
+    begin
+      AssertTrue(I = 8);
+      Inc(J);
+    end;
+  AssertTrue(J = 3);
+
+  J := 0;
+  for I in lst.Range(5, 7) do
+    begin
+      AssertTrue((I >= 5) and (I < 7));
+      Inc(J);
+    end;
+  AssertTrue(J = 6);
+
+  J := 0;
+  for I in lst.Range(5, 7, BOUNDS_BOTH) do
+    begin
+      AssertTrue((I >= 5) and (I <= 7));
+      Inc(J);
+    end;
+  AssertTrue(J = 9);
+
+  J := 0;
+  for I in lst.Range(1, 8) do
+    begin
+      AssertTrue((I >= 1) and (I < 8));
+      Inc(J);
+    end;
+  AssertTrue(J = 21);
+
+  J := 0;
+  for I in lst.Range(1, 8, BOUNDS_BOTH) do
+    begin
+      AssertTrue((I >= 1) and (I <= 8));
+      Inc(J);
+    end;
+  AssertTrue(J = 24);
+
+  J := 0;
+  for I in lst.Range(0, 9) do
+    Inc(J);
+  AssertTrue(J = 24);
+end;
+
 procedure TLiteSortedListTest.FindFloor;
 var
   lst: TIntList;
@@ -1168,6 +1487,25 @@ begin
   AssertTrue(lst.IndexOfFloor(20) = 15);
 end;
 
+procedure TLiteSortedListTest.FindFloor1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  for J in [1..4] do
+    for I := 0 to 15 do
+      lst.Add(I);
+  AssertTrue(lst.Count = 64);
+  AssertTrue(lst.IndexOfFloor(-2) = -1);
+  AssertTrue(lst.IndexOfFloor(0) = -1);
+  AssertTrue(lst.IndexOfFloor(0, True) = 3);
+  AssertTrue(lst.IndexOfFloor(3) = Pred(3*4));
+  AssertTrue(lst.IndexOfFloor(3, True) = Pred(4*4));
+  AssertTrue(lst.IndexOfFloor(15) = Pred(15*4));
+  AssertTrue(lst.IndexOfFloor(15, True) = Pred(16*4));
+  AssertTrue(lst.IndexOfFloor(20) = 63);
+end;
+
 procedure TLiteSortedListTest.FindCeil;
 var
   lst: TIntList;
@@ -1181,6 +1519,24 @@ begin
   AssertTrue(lst.IndexOfCeil(0, False) = 1);
   AssertTrue(lst.IndexOfCeil(10) = 10);
   AssertTrue(lst.IndexOfCeil(10, False) = 11);
+end;
+
+procedure TLiteSortedListTest.FindCeil1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  for J in [1..4] do
+    for I := 0 to 15 do
+      lst.Add(I);
+  AssertTrue(lst.Count = 64);
+  AssertTrue(lst.IndexOfCeil(15) = 15*4);
+  AssertTrue(lst.IndexOfCeil(15, False) = -1);
+  AssertTrue(lst.IndexOfCeil(0) = 0);
+  AssertTrue(lst.IndexOfCeil(0, False) = 1*4);
+  AssertTrue(lst.IndexOfCeil(10) = 10*4);
+  AssertTrue(lst.IndexOfCeil(10, False) = 11*4);
+  AssertTrue(lst.IndexOfCeil(-1) = 0);
 end;
 
 { TLiteComparableSortedListTest }
@@ -1471,6 +1827,67 @@ begin
   AssertTrue(I = 81);
 end;
 
+procedure TLiteComparableSortedListTest.Head1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  J := 0;
+  for I in lst.Head(5) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Add(J);
+  AssertTrue(lst.Count = 24);
+
+  J := 0;
+  for I in lst.Head(0) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Head(1) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Head(1, True) do
+    Inc(J);
+  AssertTrue(J = 3);
+
+  J := 0;
+  for I in lst.Head(5) do
+    begin
+     AssertTrue(I < 5);
+     Inc(J);
+    end;
+  AssertTrue(J = 12);
+
+  J := 0;
+  for I in lst.Head(5, True) do
+    begin
+     AssertTrue(I <= 5);
+     Inc(J);
+    end;
+  AssertTrue(J = 15);
+
+  J := 0;
+  for I in lst.Head(8) do
+    begin
+     AssertTrue(I < 8);
+     Inc(J);
+    end;
+  AssertTrue(J = 21);
+
+  J := 0;
+  for I in lst.Head(8, True) do
+    begin
+     AssertTrue(I <= 8);
+     Inc(J);
+    end;
+  AssertTrue(J = 24);
+end;
+
 procedure TLiteComparableSortedListTest.Tail;
 var
   lst: TIntList;
@@ -1498,6 +1915,72 @@ begin
       Inc(I);
     end;
   AssertTrue(I = 100);
+end;
+
+procedure TLiteComparableSortedListTest.Tail1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  J := 0;
+  for I in lst.Tail(0) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Add(J);
+  AssertTrue(lst.Count = 24);
+
+  J := 0;
+  for I in lst.Tail(9) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Tail(8, False) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Tail(8) do
+    Inc(J);
+  AssertTrue(J = 3);
+
+  J := 0;
+  for I in lst.Tail(5) do
+    begin
+      AssertTrue(I >= 5);
+      Inc(J);
+    end;
+  AssertTrue(J = 12);
+
+  J := 0;
+  for I in lst.Tail(5, False) do
+    begin
+      AssertTrue(I > 5);
+      Inc(J);
+    end;
+  AssertTrue(J = 9);
+
+  J := 0;
+  for I in lst.Tail(1) do
+    begin
+      AssertTrue(I >= 1);
+      Inc(J);
+    end;
+  AssertTrue(J = 24);
+
+  J := 0;
+  for I in lst.Tail(1, False) do
+    begin
+      AssertTrue(I > 1);
+      Inc(J);
+    end;
+  AssertTrue(J = 21);
+
+  J := 0;
+  for I in lst.Tail(0, False) do
+    Inc(J);
+  AssertTrue(J = 24);
 end;
 
 procedure TLiteComparableSortedListTest.Range;
@@ -1534,6 +2017,75 @@ begin
   AssertTrue(I = 90);
 end;
 
+procedure TLiteComparableSortedListTest.Range1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  J := 0;
+  for I in lst.Range(0, 5) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I := 0 to 2 do
+    for J := 1 to 8 do
+      lst.Add(J);
+  AssertTrue(lst.Count = 24);
+
+  J := 0;
+  for I in lst.Range(9, 10) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Range(8, 8) do
+    Inc(J);
+  AssertTrue(J = 0);
+
+  for I in lst.Range(8, 8, BOUNDS_BOTH) do
+    begin
+      AssertTrue(I = 8);
+      Inc(J);
+    end;
+  AssertTrue(J = 3);
+
+  J := 0;
+  for I in lst.Range(5, 7) do
+    begin
+      AssertTrue((I >= 5) and (I < 7));
+      Inc(J);
+    end;
+  AssertTrue(J = 6);
+
+  J := 0;
+  for I in lst.Range(5, 7, BOUNDS_BOTH) do
+    begin
+      AssertTrue((I >= 5) and (I <= 7));
+      Inc(J);
+    end;
+  AssertTrue(J = 9);
+
+  J := 0;
+  for I in lst.Range(1, 8) do
+    begin
+      AssertTrue((I >= 1) and (I < 8));
+      Inc(J);
+    end;
+  AssertTrue(J = 21);
+
+  J := 0;
+  for I in lst.Range(1, 8, BOUNDS_BOTH) do
+    begin
+      AssertTrue((I >= 1) and (I <= 8));
+      Inc(J);
+    end;
+  AssertTrue(J = 24);
+
+  J := 0;
+  for I in lst.Range(0, 9) do
+    Inc(J);
+  AssertTrue(J = 24);
+end;
+
 procedure TLiteComparableSortedListTest.FindFloor;
 var
   lst: TIntList;
@@ -1549,6 +2101,25 @@ begin
   AssertTrue(lst.IndexOfFloor(20) = 15);
 end;
 
+procedure TLiteComparableSortedListTest.FindFloor1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  for J in [1..4] do
+    for I := 0 to 15 do
+      lst.Add(I);
+  AssertTrue(lst.Count = 64);
+  AssertTrue(lst.IndexOfFloor(-2) = -1);
+  AssertTrue(lst.IndexOfFloor(0) = -1);
+  AssertTrue(lst.IndexOfFloor(0, True) = 3);
+  AssertTrue(lst.IndexOfFloor(3) = Pred(3*4));
+  AssertTrue(lst.IndexOfFloor(3, True) = Pred(4*4));
+  AssertTrue(lst.IndexOfFloor(15) = Pred(15*4));
+  AssertTrue(lst.IndexOfFloor(15, True) = Pred(16*4));
+  AssertTrue(lst.IndexOfFloor(20) = 63);
+end;
+
 procedure TLiteComparableSortedListTest.FindCeil;
 var
   lst: TIntList;
@@ -1562,6 +2133,24 @@ begin
   AssertTrue(lst.IndexOfCeil(0, False) = 1);
   AssertTrue(lst.IndexOfCeil(10) = 10);
   AssertTrue(lst.IndexOfCeil(10, False) = 11);
+end;
+
+procedure TLiteComparableSortedListTest.FindCeil1;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  for J in [1..4] do
+    for I := 0 to 15 do
+      lst.Add(I);
+  AssertTrue(lst.Count = 64);
+  AssertTrue(lst.IndexOfCeil(15) = 15*4);
+  AssertTrue(lst.IndexOfCeil(15, False) = -1);
+  AssertTrue(lst.IndexOfCeil(0) = 0);
+  AssertTrue(lst.IndexOfCeil(0, False) = 1*4);
+  AssertTrue(lst.IndexOfCeil(10) = 10*4);
+  AssertTrue(lst.IndexOfCeil(10, False) = 11*4);
+  AssertTrue(lst.IndexOfCeil(-1) = 0);
 end;
 
 { TLiteHashListTest }
