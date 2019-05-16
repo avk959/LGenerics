@@ -84,6 +84,11 @@ type
     procedure BinarySearchDynUnsuccessEqual10;
     procedure BinarySearchDynSuccessEqual10;
 
+    procedure BinarySearchPos;
+    procedure BinarySearchPos1;
+    procedure BinarySearchPos2;
+    procedure BinarySearchPos3;
+
     procedure IndexOfMinEmpty;
     procedure IndexOfMinStatic1;
     procedure IndexOfMinStatic2;
@@ -656,6 +661,77 @@ end;
 procedure TComparableArrayHelperTest.BinarySearchDynSuccessEqual10;
 begin
   AssertTrue(TIntHelper.BinarySearch(TIntHelper.CreateCopy(IntEqual10), 9) = 0);
+end;
+
+procedure TComparableArrayHelperTest.BinarySearchPos;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos([], 0);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 0);
+  sr := TIntHelper.BinarySearchPos([1], 0);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 0);
+  sr := TIntHelper.BinarySearchPos([1], 2);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 1);
+  sr := TIntHelper.BinarySearchPos([1], 1);
+  AssertTrue(sr.FoundIndex = 0);
+  AssertTrue(sr.InsertIndex = 1);
+end;
+
+procedure TComparableArrayHelperTest.BinarySearchPos1;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos(IntEqual10, 5);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 0);
+  sr := TIntHelper.BinarySearchPos(IntEqual10, 10);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 10);
+  sr := TIntHelper.BinarySearchPos(IntEqual10, 9);
+  AssertTrue(sr.FoundIndex = 9);
+  AssertTrue(sr.InsertIndex = 10);
+end;
+
+procedure TComparableArrayHelperTest.BinarySearchPos2;
+var
+  sr: TSearchResult;
+begin
+  sr := TIntHelper.BinarySearchPos(IntSorted20, -6);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 0);
+  sr := TIntHelper.BinarySearchPos(IntSorted20, 41);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 20);
+  sr := TIntHelper.BinarySearchPos(IntSorted20, -5);
+  AssertTrue(sr.FoundIndex = 1);
+  AssertTrue(sr.InsertIndex = 2);
+  sr := TIntHelper.BinarySearchPos(IntSorted20, 4);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 7);
+end;
+
+procedure TComparableArrayHelperTest.BinarySearchPos3;
+var
+  sr: TSearchResult;
+  a: array of Integer;
+begin
+  a := TIntHelper.CreateReverseCopy(IntSorted20);
+  sr := TIntHelper.BinarySearchPos(a, -6);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 20);
+  sr := TIntHelper.BinarySearchPos(a, 41);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 0);
+  sr := TIntHelper.BinarySearchPos(a, -5);
+  AssertTrue(sr.FoundIndex = 19);
+  AssertTrue(sr.InsertIndex = 20);
+  sr := TIntHelper.BinarySearchPos(a, 4);
+  AssertTrue(sr.FoundIndex = -1);
+  AssertTrue(sr.InsertIndex = 13);
 end;
 
 procedure TComparableArrayHelperTest.IndexOfMinEmpty;
