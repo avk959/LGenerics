@@ -192,9 +192,11 @@ type
 
     class function  CountRun2Asc(A: PItem; R: SizeInt): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
-    class function  DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
@@ -304,9 +306,11 @@ type
 
     class function  CountRun2Asc(A: PItem; R: SizeInt): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
-    class function  DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
@@ -420,11 +424,11 @@ type
 
     class function  CountRun2Asc(A: PItem; R: SizeInt; c: TCompare): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TCompare); static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
     class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt; static;
-    class function  DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): TSearchResult;
-                    static;
-    class function  DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): TSearchResult;
-                    static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TCompare); static;
@@ -541,11 +545,11 @@ type
 
     class function  CountRun2Asc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TOnCompare); static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
     class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): SizeInt; static;
-    class function  DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): TSearchResult;
-                    static;
-    class function  DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): TSearchResult;
-                    static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TOnCompare): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TOnCompare); static;
@@ -662,11 +666,16 @@ type
 
     class function  CountRun2Asc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt; c: TNestCompare); static;
+
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt;
+                    static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt;
+                    static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt;
+                    static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt;
+                    static;
     class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): SizeInt; static;
-    class function  DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): TSearchResult;
-                    static;
-    class function  DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): TSearchResult;
-                    static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T; c: TNestCompare): TSearchResult;
                     static;
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TNestCompare); static;
@@ -754,9 +763,11 @@ type
   private
     class function  CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
+    class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
+    class function  BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
-    class function  DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
-    class function  DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
     class function  DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult; static;
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(var A: array of T; L, R: SizeInt): TSortSplit; static;
@@ -2072,135 +2083,110 @@ begin
     end;
 end;
 
+class function TGBaseArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if TCmpRel.Compare(A[M], aValue) < 0 then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGBaseArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if TCmpRel.Compare(A[M], aValue) > 0 then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGBaseArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if TCmpRel.Compare(A[M], aValue) > 0 then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+
+end;
+
+class function TGBaseArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if TCmpRel.Compare(A[M], aValue) < 0 then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
 class function TGBaseArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
 var
-  L, M, c: SizeInt;
+  c: SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  L := 0;
   c := TCmpRel.Compare(A[R], A[0]);
   if c > 0 then  //ascending
     begin
-      if (TCmpRel.Compare(A[L], aValue) > 0) or (TCmpRel.Compare(A[R], aValue) < 0) then
+      if (TCmpRel.Compare(A[0], aValue) > 0) or (TCmpRel.Compare(A[R], aValue) < 0) then
         exit;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if TCmpRel.Compare(A[M], aValue) < 0 then
-            L := Succ(M)
-          else
-            R := M;
-        end;
-      //here L >= R
+      R := BiSearchLeftA(A, R, aValue);
       if TCmpRel.Compare(A[R], aValue) = 0 then
         Result := R;
     end
   else
     if c < 0 then  //descending
       begin
-        if (TCmpRel.Compare(A[L], aValue) < 0) or (TCmpRel.Compare(A[R], aValue) > 0) then
+        if (TCmpRel.Compare(A[0], aValue) < 0) or (TCmpRel.Compare(A[R], aValue) > 0) then
           exit;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if TCmpRel.Compare(A[M], aValue) > 0 then
-              L := Succ(M)
-            else
-              R := M;
-          end;
-        //here L >= R
+        R := BiSearchLeftD(A, R, aValue);
         if TCmpRel.Compare(A[R], aValue) = 0 then
           Result := R;
       end
     else           //constant
-      if TCmpRel.Compare(A[L], aValue) = 0 then
-        Result := L;
-end;
-
-class function TGBaseArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M, Cmp: SizeInt;
-begin
-  //here exists at least 2 ascending elements;
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      Cmp := TCmpRel.Compare(A[M], aValue);
-      if Cmp < 0 then
-        L := Succ(M)
-      else
-        begin
-          if Cmp = 0 then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  Cmp := TCmpRel.Compare(aValue, A[R]);
-  if Cmp < 0 then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if Cmp = 0 then
-        Result.FoundIndex := R;
-    end;
-end;
-
-class function TGBaseArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M, Cmp: SizeInt;
-begin
-  //here exists at least 2 descending elements
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      Cmp := TCmpRel.Compare(A[M], aValue);
-      if Cmp > 0 then
-        L := Succ(M)
-      else
-        begin
-          if Cmp = 0 then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  Cmp := TCmpRel.Compare(aValue, A[R]);
-  if Cmp > 0 then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if Cmp = 0 then
-        Result.FoundIndex := R;
-    end;
+      if TCmpRel.Compare(A[0], aValue) = 0 then
+        Result := 0;
 end;
 
 class function TGBaseArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
 var
-  L, M, c: SizeInt;
+  c: SizeInt;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  L := 0;
   c := TCmpRel.Compare(A[R], A[0]);
   if c > 0 then  //ascending
     begin
-      if TCmpRel.Compare(A[L], aValue) > 0 then
+      if TCmpRel.Compare(A[0], aValue) > 0 then
         begin
           Result.InsertIndex := 0;
           exit;
@@ -2211,14 +2197,7 @@ begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if TCmpRel.Compare(A[M], aValue) > 0 then
-            R := M
-          else
-            L := Succ(M);
-        end;
+      R := BiSearchRightA(A, R, aValue);
       Result.InsertIndex := R;
       if TCmpRel.Compare(A[R], aValue) = 0 then
         Result := TSearchResult.Create(R, Succ(R))
@@ -2230,7 +2209,7 @@ begin
   else
     if c < 0 then  //descending
       begin
-        if TCmpRel.Compare(A[L], aValue) < 0 then
+        if TCmpRel.Compare(A[0], aValue) < 0 then
           begin
             Result.InsertIndex := 0;
             exit;
@@ -2241,14 +2220,7 @@ begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if TCmpRel.Compare(A[M], aValue) < 0 then
-              R := M
-            else
-              L := Succ(M);
-          end;
+        R := BiSearchRightD(A, R, aValue);
         Result.InsertIndex := R;
         if TCmpRel.Compare(A[R], aValue) = 0 then
           Result := TSearchResult.Create(R, Succ(R))
@@ -2259,7 +2231,7 @@ begin
       end
     else           //constant
       begin
-        c := TCmpRel.Compare(A[L], aValue);
+        c := TCmpRel.Compare(A[0], aValue);
         if c > 0 then
           Result.InsertIndex := 0
         else
@@ -3442,127 +3414,103 @@ begin
     end;
 end;
 
-class function TGComparableArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGComparableArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if A[M] < aValue then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGComparableArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if A[M] > aValue then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGComparableArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if A[M] > aValue then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGComparableArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if A[M] < aValue then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGComparableArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  L := 0;
-  if A[R] > A[L] then  //ascending
+  if A[R] > A[0] then  //ascending
     begin
-      if (A[L] > aValue) or (A[R] < aValue) then
+      if (A[0] > aValue) or (A[R] < aValue) then
         exit;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if A[M] < aValue then
-            L := Succ(M)
-          else
-            R := M;
-        end;
-      //here L >= R
+      R := BiSearchLeftA(A, R, aValue);
       if A[R] = aValue then
         Result := R;
     end
   else
-    if A[R] < A[L] then  //descending
+    if A[R] < A[0] then  //descending
       begin
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if A[M] > aValue then
-              L := Succ(M)
-            else
-              R := M;
-          end;
-        //here L >= R
+        if (A[0] < aValue) or (A[R] > aValue) then
+          exit;
+        R := BiSearchLeftD(A, R, aValue);
         if A[R] = aValue then
           Result := R;
       end
     else              //constant
-      if A[L] = aValue then
-        Result := L;
-end;
-
-class function TGComparableArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M: SizeInt;
-begin
-  //here exists at least 2 ascending elements;
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      if A[M] < aValue then
-        L := Succ(M)
-      else
-        begin
-          if A[M] = aValue then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  if aValue < A[R] then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if aValue = A[R] then
-        Result.FoundIndex := R;
-    end;
-end;
-
-class function TGComparableArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M: SizeInt;
-begin
-  //here exists at least 2 descending elements
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      if A[M] > aValue then
-        L := Succ(M)
-      else
-        begin
-          if A[M] = aValue then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  if aValue > A[R] then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if aValue = A[R] then
-        Result.FoundIndex := R;
-    end;
+      if A[0] = aValue then
+        Result := 0;
 end;
 
 class function TGComparableArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M: SizeInt;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  L := 0;
   if A[R] > A[0] then  //ascending
     begin
-      if A[L] > aValue then
+      if A[0] > aValue then
         begin
           Result.InsertIndex := 0;
           exit;
@@ -3573,14 +3521,7 @@ begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if A[M] > aValue then
-            R := M
-          else
-            L := Succ(M);
-        end;
+      R := BiSearchRightA(A, R, aValue);
       Result.InsertIndex := R;
       if A[R] = aValue then
         Result := TSearchResult.Create(R, Succ(R))
@@ -3592,7 +3533,7 @@ begin
   else
     if A[R] < A[0] then  //descending
       begin
-        if A[L] < aValue then
+        if A[0] < aValue then
           begin
             Result.InsertIndex := 0;
             exit;
@@ -3603,14 +3544,7 @@ begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if A[M] < aValue then
-              R := M
-            else
-              L := Succ(M);
-          end;
+        R := BiSearchRightD(A, R, aValue);
         Result.InsertIndex := R;
         if A[R] = aValue then
           Result := TSearchResult.Create(R, Succ(R))
@@ -3620,12 +3554,12 @@ begin
               Result.FoundIndex := Pred(R);
       end
     else           //constant
-      if A[L] > aValue then
+      if A[0] > aValue then
         Result.InsertIndex := 0
       else
         begin
           Result.InsertIndex := Succ(R);
-          if A[L] = aValue then
+          if A[0] = aValue then
             Result.FoundIndex := R;
         end;
 end;
@@ -4815,138 +4749,114 @@ begin
     end;
 end;
 
+class function TGRegularArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
+  c: TCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) < 0 then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGRegularArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
+  c: TCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) > 0 then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGRegularArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
+  c: TCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) > 0 then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGRegularArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
+  c: TCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) < 0 then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
 class function TGRegularArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T; c: TCompare): SizeInt;
 var
-  L, M, Cmp: SizeInt;
+  Cmp: SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  L := 0;
   Cmp := c(A[R], A[0]);
   if Cmp > 0 then  //ascending
     begin
-      if (c(A[L], aValue) > 0) or (c(A[R], aValue) < 0) then
+      if (c(A[0], aValue) > 0) or (c(A[R], aValue) < 0) then
         exit;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if c(A[M], aValue) < 0 then
-            L := Succ(M)
-          else
-            R := M;
-        end;
-      //here L >= R
+      R := BiSearchLeftA(A, R, aValue, c);
       if c(A[R], aValue) = 0 then
         Result := R;
     end
   else
     if Cmp < 0 then  //descending
       begin
-        if (c(A[L], aValue) < 0) or (c(A[R], aValue) > 0) then
+        if (c(A[0], aValue) < 0) or (c(A[R], aValue) > 0) then
           exit;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if c(A[M], aValue) > 0 then
-              L := Succ(M)
-            else
-              R := M;
-          end;
-        //here L >= R
+        R := BiSearchLeftD(A, R, aValue, c);
         if c(A[R], aValue) = 0 then
           Result := R;
       end
-    else              //constant
-      if c(A[L], aValue) = 0 then
-        exit(L);
-end;
-
-class function TGRegularArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TCompare): TSearchResult;
-var
-  L, M, Cmp: SizeInt;
-begin
-  //here exists at least 2 ascending elements;
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      Cmp := c(A[M], aValue);
-      if Cmp < 0 then
-        L := Succ(M)
-      else
-        begin
-          if Cmp = 0 then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  Cmp := c(aValue, A[R]);
-  if Cmp < 0 then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if Cmp = 0 then
-        Result.FoundIndex := R;
-    end;
-end;
-
-class function TGRegularArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TCompare): TSearchResult;
-var
-  L, M, Cmp: SizeInt;
-begin
-  //here exists at least 2 descending elements
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      Cmp := c(A[M], aValue);
-      if Cmp > 0 then
-        L := Succ(M)
-      else
-        begin
-          if Cmp = 0 then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  Cmp := c(aValue, A[R]);
-  if Cmp > 0 then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if Cmp = 0 then
-        Result.FoundIndex := R;
-    end;
+    else           //constant
+      if c(A[0], aValue) = 0 then
+        Result := 0;
 end;
 
 class function TGRegularArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
   c: TCompare): TSearchResult;
 var
-  L, M, Cmp: SizeInt;
+  Cmp: SizeInt;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  L := 0;
   Cmp := c(A[R], A[0]);
   if Cmp > 0 then  //ascending
     begin
-      if c(A[L], aValue) > 0 then
+      if c(A[0], aValue) > 0 then
         begin
           Result.InsertIndex := 0;
           exit;
@@ -4957,14 +4867,7 @@ begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if c(A[M], aValue) > 0 then
-            R := M
-          else
-            L := Succ(M);
-        end;
+      R := BiSearchRightA(A, R, aValue, c);
       Result.InsertIndex := R;
       if c(A[R], aValue) = 0 then
         Result := TSearchResult.Create(R, Succ(R))
@@ -4976,7 +4879,7 @@ begin
   else
     if Cmp < 0 then  //descending
       begin
-        if c(A[L], aValue) < 0 then
+        if c(A[0], aValue) < 0 then
           begin
             Result.InsertIndex := 0;
             exit;
@@ -4987,14 +4890,7 @@ begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if c(A[M], aValue) < 0 then
-              R := M
-            else
-              L := Succ(M);
-          end;
+        R := BiSearchRightD(A, R, aValue, c);
         Result.InsertIndex := R;
         if c(A[R], aValue) = 0 then
           Result := TSearchResult.Create(R, Succ(R))
@@ -5005,7 +4901,7 @@ begin
       end
     else           //constant
       begin
-        Cmp := c(A[L], aValue);
+        Cmp := c(A[0], aValue);
         if Cmp > 0 then
           Result.InsertIndex := 0
         else
@@ -6205,139 +6101,115 @@ begin
     end;
 end;
 
+class function TGDelegatedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
+  c: TOnCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) < 0 then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGDelegatedArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
+  c: TOnCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) > 0 then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGDelegatedArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
+  c: TOnCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) > 0 then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGDelegatedArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
+  c: TOnCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) < 0 then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
 class function TGDelegatedArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T;
   c: TOnCompare): SizeInt;
 var
-  L, M, Cmp: SizeInt;
+  Cmp: SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  L := 0;
   Cmp := c(A[R], A[0]);
   if Cmp > 0 then  //ascending
     begin
-      if (c(A[L], aValue) > 0) or (c(A[R], aValue) < 0) then
+      if (c(A[0], aValue) > 0) or (c(A[R], aValue) < 0) then
         exit;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if c(A[M], aValue) < 0 then
-            L := Succ(M)
-          else
-            R := M;
-        end;
-      //here L >= R
+      R := BiSearchLeftA(A, R, aValue, c);
       if c(A[R], aValue) = 0 then
         Result := R;
     end
   else
     if Cmp < 0 then  //descending
       begin
-        if (c(A[L], aValue) < 0) or (c(A[R], aValue) > 0) then
+        if (c(A[0], aValue) < 0) or (c(A[R], aValue) > 0) then
           exit;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if c(A[M], aValue) > 0 then
-              L := Succ(M)
-            else
-              R := M;
-          end;
-        //here L >= R
+        R := BiSearchLeftD(A, R, aValue, c);
         if c(A[R], aValue) = 0 then
           Result := R;
       end
-    else              //constant
-      if c(A[L], aValue) = 0 then
-        exit(L);
-end;
-
-class function TGDelegatedArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TOnCompare): TSearchResult;
-var
-  L, M, Cmp: SizeInt;
-begin
-  //here exists at least 2 ascending elements;
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      Cmp := c(A[M], aValue);
-      if Cmp < 0 then
-        L := Succ(M)
-      else
-        begin
-          if Cmp = 0 then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  Cmp := c(aValue, A[R]);
-  if Cmp < 0 then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if Cmp = 0 then
-        Result.FoundIndex := R;
-    end;
-end;
-
-class function TGDelegatedArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TOnCompare): TSearchResult;
-var
-  L, M, Cmp: SizeInt;
-begin
-  //here exists at least 2 descending elements
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      Cmp := c(A[M], aValue);
-      if Cmp > 0 then
-        L := Succ(M)
-      else
-        begin
-          if Cmp = 0 then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  Cmp := c(aValue, A[R]);
-  if Cmp > 0 then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if Cmp = 0 then
-        Result.FoundIndex := R;
-    end;
+    else           //constant
+      if c(A[0], aValue) = 0 then
+        Result := 0;
 end;
 
 class function TGDelegatedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
   c: TOnCompare): TSearchResult;
 var
-  L, M, Cmp: SizeInt;
+  Cmp: SizeInt;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  L := 0;
   Cmp := c(A[R], A[0]);
   if Cmp > 0 then  //ascending
     begin
-      if c(A[L], aValue) > 0 then
+      if c(A[0], aValue) > 0 then
         begin
           Result.InsertIndex := 0;
           exit;
@@ -6348,14 +6220,7 @@ begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if c(A[M], aValue) > 0 then
-            R := M
-          else
-            L := Succ(M);
-        end;
+      R := BiSearchRightA(A, R, aValue, c);
       Result.InsertIndex := R;
       if c(A[R], aValue) = 0 then
         Result := TSearchResult.Create(R, Succ(R))
@@ -6367,7 +6232,7 @@ begin
   else
     if Cmp < 0 then  //descending
       begin
-        if c(A[L], aValue) < 0 then
+        if c(A[0], aValue) < 0 then
           begin
             Result.InsertIndex := 0;
             exit;
@@ -6378,14 +6243,7 @@ begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if c(A[M], aValue) < 0 then
-              R := M
-            else
-              L := Succ(M);
-          end;
+        R := BiSearchRightD(A, R, aValue, c);
         Result.InsertIndex := R;
         if c(A[R], aValue) = 0 then
           Result := TSearchResult.Create(R, Succ(R))
@@ -6396,7 +6254,7 @@ begin
       end
     else           //constant
       begin
-        Cmp := c(A[L], aValue);
+        Cmp := c(A[0], aValue);
         if Cmp > 0 then
           Result.InsertIndex := 0
         else
@@ -7597,139 +7455,115 @@ begin
     end;
 end;
 
+class function TGNestedArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T;
+  c: TNestCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) < 0 then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGNestedArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T;
+  c: TNestCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) > 0 then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGNestedArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T;
+  c: TNestCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) > 0 then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGNestedArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T;
+  c: TNestCompare): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if c(A[M], aValue) < 0 then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
 class function TGNestedArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T;
   c: TNestCompare): SizeInt;
 var
-  L, M, Cmp: SizeInt;
+  Cmp: SizeInt;
 begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  L := 0;
-  Cmp := c(A[R], A[L]);
+  Cmp := c(A[R], A[0]);
   if Cmp > 0 then  //ascending
     begin
-      if (c(A[L], aValue) > 0) or (c(A[R], aValue) < 0) then
+      if (c(A[0], aValue) > 0) or (c(A[R], aValue) < 0) then
         exit;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if c(A[M], aValue) < 0 then
-            L := Succ(M)
-          else
-            R := M;
-        end;
-      //here L >= R
+      R := BiSearchLeftA(A, R, aValue, c);
       if c(A[R], aValue) = 0 then
         Result := R;
     end
   else
     if Cmp < 0 then  //descending
       begin
-        if (c(A[L], aValue) < 0) or (c(A[R], aValue) > 0) then
+        if (c(A[0], aValue) < 0) or (c(A[R], aValue) > 0) then
           exit;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if c(A[M], aValue) > 0 then
-              L := Succ(M)
-            else
-              R := M;
-          end;
-        //here L >= R
+        R := BiSearchLeftD(A, R, aValue, c);
         if c(A[R], aValue) = 0 then
           Result := R;
       end
-    else              //constant
-      if c(A[L], aValue) = 0 then
-        exit(L);
-end;
-
-class function TGNestedArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T;
-  c: TNestCompare): TSearchResult;
-var
-  L, M, Cmp: SizeInt;
-begin
-  //here exists at least 2 ascending elements;
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      Cmp := c(A[M], aValue);
-      if Cmp < 0 then
-        L := Succ(M)
-      else
-        begin
-          if Cmp = 0 then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  Cmp := c(aValue, A[R]);
-  if Cmp < 0 then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if Cmp = 0 then
-        Result.FoundIndex := R;
-    end;
-end;
-
-class function TGNestedArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T;
-  c: TNestCompare): TSearchResult;
-var
-  L, M, Cmp: SizeInt;
-begin
-  //here exists at least 2 descending elements
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      Cmp := c(A[M], aValue);
-      if Cmp > 0 then
-        L := Succ(M)
-      else
-        begin
-          if Cmp = 0 then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  Cmp := c(aValue, A[R]);
-  if Cmp > 0 then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if Cmp = 0 then
-        Result.FoundIndex := R;
-    end;
+    else           //constant
+      if c(A[0], aValue) = 0 then
+        Result := 0;
 end;
 
 class function TGNestedArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T;
   c: TNestCompare): TSearchResult;
 var
-  L, M, Cmp: SizeInt;
+  Cmp: SizeInt;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  L := 0;
   Cmp := c(A[R], A[0]);
   if Cmp > 0 then  //ascending
     begin
-      if c(A[L], aValue) > 0 then
+      if c(A[0], aValue) > 0 then
         begin
           Result.InsertIndex := 0;
           exit;
@@ -7740,14 +7574,7 @@ begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if c(A[M], aValue) > 0 then
-            R := M
-          else
-            L := Succ(M);
-        end;
+      R := BiSearchRightA(A, R, aValue, c);
       Result.InsertIndex := R;
       if c(A[R], aValue) = 0 then
         Result := TSearchResult.Create(R, Succ(R))
@@ -7759,7 +7586,7 @@ begin
   else
     if Cmp < 0 then  //descending
       begin
-        if c(A[L], aValue) < 0 then
+        if c(A[0], aValue) < 0 then
           begin
             Result.InsertIndex := 0;
             exit;
@@ -7770,14 +7597,7 @@ begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if c(A[M], aValue) < 0 then
-              R := M
-            else
-              L := Succ(M);
-          end;
+        R := BiSearchRightD(A, R, aValue, c);
         Result.InsertIndex := R;
         if c(A[R], aValue) = 0 then
           Result := TSearchResult.Create(R, Succ(R))
@@ -7788,7 +7608,7 @@ begin
       end
     else           //constant
       begin
-        Cmp := c(A[L], aValue);
+        Cmp := c(A[0], aValue);
         if Cmp > 0 then
           Result.InsertIndex := 0
         else
@@ -8510,129 +8330,103 @@ begin
     end;
 end;
 
-class function TGSimpleArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+class function TGSimpleArrayHelper.BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
 var
   L, M: SizeInt;
 begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if A[M] < aValue then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGSimpleArrayHelper.BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if A[M] > aValue then
+        L := Succ(M)
+      else
+        R := M;
+    end;
+  Result := R;
+end;
+
+class function TGSimpleArrayHelper.BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if A[M] > aValue then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGSimpleArrayHelper.BiSearchRightD(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+var
+  L, M: SizeInt;
+begin
+  L := 0;
+  while L < R do
+    begin
+      {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+      if A[M] < aValue then
+        R := M
+      else
+        L := Succ(M);
+    end;
+  Result := R;
+end;
+
+class function TGSimpleArrayHelper.DoBinSearch(A: PItem; R: SizeInt; constref aValue: T): SizeInt;
+begin
   //here R must be >= 0;
   Result := NULL_INDEX;
-  L := 0;
-  if A[R] > A[L] then  //ascending
+  if A[R] > A[0] then  //ascending
     begin
-      if (A[L] > aValue) or (A[R] < aValue) then
+      if (A[0] > aValue) or (A[R] < aValue) then
         exit;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if A[M] < aValue then
-            L := Succ(M)
-          else
-            R := M;
-        end;
-      //here L >= R
+      R := BiSearchLeftA(A, R, aValue);
       if A[R] = aValue then
         Result := R;
     end
   else
-    if A[R] < A[L] then  //descending
+    if A[R] < A[0] then  //descending
       begin
-        if (A[L] < aValue) or (A[R] > aValue) then
+        if (A[0] < aValue) or (A[R] > aValue) then
           exit;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if A[M] > aValue then
-              L := Succ(M)
-            else
-              R := M;
-          end;
-        //here L >= R
+        R := BiSearchLeftD(A, R, aValue);
         if A[R] = aValue then
           Result := R;
       end
     else              //constant
-      if A[L] = aValue then
-        exit(L);
-end;
-
-class function TGSimpleArrayHelper.DoBinSearchPosA(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M: SizeInt;
-begin
-  //here exists at least 2 ascending elements;
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      if A[M] < aValue then
-        L := Succ(M)
-      else
-        begin
-          if A[M] = aValue then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  if aValue < A[R] then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if aValue = A[R] then
-        Result.FoundIndex := R;
-    end;
-end;
-
-class function TGSimpleArrayHelper.DoBinSearchPosD(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M: SizeInt;
-begin
-  //here exists at least 2 descending elements
-  Result.FoundIndex := -1;
-  L := 0;
-  while L < R do
-    begin
-      M := L + (R - L) shr 1;
-      if A[M] > aValue then
-        L := Succ(M)
-      else
-        begin
-          if A[M] = aValue then
-            begin
-              Result.FoundIndex := M;
-              Result.InsertIndex := Succ(M);
-              exit;
-            end;
-          R := M;
-        end;
-    end;
-  //here L >= R
-  if aValue > A[R] then
-    Result.InsertIndex := R
-  else
-    begin
-      Result.InsertIndex := Succ(R);
-      if aValue = A[R] then
-        Result.FoundIndex := R;
-    end;
+      if A[0] = aValue then
+        Result := 0;
 end;
 
 class function TGSimpleArrayHelper.DoBinSearchPos(A: PItem; R: SizeInt; constref aValue: T): TSearchResult;
-var
-  L, M: SizeInt;
 begin
   //here R must be >= 0;
   Result.FoundIndex := NULL_INDEX;
-  L := 0;
   if A[R] > A[0] then  //ascending
     begin
-      if A[L] > aValue then
+      if A[0] > aValue then
         begin
           Result.InsertIndex := 0;
           exit;
@@ -8643,14 +8437,7 @@ begin
             Result.InsertIndex := Succ(R);
             exit;
           end;
-      while L < R do
-        begin
-          {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-          if A[M] > aValue then
-            R := M
-          else
-            L := Succ(M);
-        end;
+      R := BiSearchRightA(A, R, aValue);
       Result.InsertIndex := R;
       if A[R] = aValue then
         Result := TSearchResult.Create(R, Succ(R))
@@ -8662,7 +8449,7 @@ begin
   else
     if A[R] < A[0] then  //descending
       begin
-        if A[L] < aValue then
+        if A[0] < aValue then
           begin
             Result.InsertIndex := 0;
             exit;
@@ -8673,14 +8460,7 @@ begin
               Result.InsertIndex := Succ(R);
               exit;
             end;
-        while L < R do
-          begin
-            {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
-            if A[M] < aValue then
-              R := M
-            else
-              L := Succ(M);
-          end;
+        R := BiSearchRightD(A, R, aValue);
         Result.InsertIndex := R;
         if A[R] = aValue then
           Result := TSearchResult.Create(R, Succ(R))
@@ -8690,12 +8470,12 @@ begin
               Result.FoundIndex := Pred(R);
       end
     else           //constant
-      if A[L] > aValue then
+      if A[0] > aValue then
         Result.InsertIndex := 0
       else
         begin
           Result.InsertIndex := Succ(R);
-          if A[L] = aValue then
+          if A[0] = aValue then
             Result.FoundIndex := R;
         end;
 end;
