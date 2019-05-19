@@ -269,7 +269,7 @@ type
   { returns True and the list of vertex indices in the perfect elimination order(reverse)
     in aRevPeo, if graph is chordal, False otherwise; an empty graph is considered chordal }
     function  IsChordal(out aRevPeo: TIntArray): Boolean;
-  { returns True, radus and diameter, if graph is connected, False otherwise }
+  { returns True, radius and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is connected, nil otherwise }
     function  FindCenter: TIntArray;
@@ -616,7 +616,7 @@ type
     function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
-    returns True and weighted radus and diameter of the graph }
+    returns True and weighted radius and diameter of the graph }
     function FindWeightedMetrics(out aRadius, aDiameter: TWeight): Boolean;
   { returns False if is not connected or exists negative weight cycle, otherwise
     returns True and indices of the central vertices in aCenter }
