@@ -2255,7 +2255,7 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnWhite, aOnGray: TOnNodeFound;
+function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnWhite: TOnNodeFound; aOnGray: TOnNodeFound;
   aOnDone: TOnNodeVisit): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
@@ -2268,19 +2268,18 @@ var
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Next: SizeInt;
-  sTop: SizeInt = -1;
+  sTop: SizeInt = 0;
 begin
 {$DEFINE DfsWithVisitors :=
   Result := 0;
   CheckIndexRange(aRoot);
-  Inc(Result);
   if Assigned(aOnWhite) then
     aOnWhite(aRoot, NULL_INDEX);
+  Inc(Result);
   Visited.Size := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   {%H-}Stack := CreateIntArray;
   Visited[aRoot] := True;
-  Inc(sTop);
   Stack[sTop] := aRoot;
   while sTop >= 0 do
     begin
@@ -2307,7 +2306,7 @@ begin
             aOnDone(Stack[sTop]);
           Dec(sTop);
         end;
-    end}
+    end }
   DfsWithVisitors;
 end;
 
@@ -2324,7 +2323,7 @@ var
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Next: SizeInt;
-  sTop: SizeInt = -1;
+  sTop: SizeInt = 0;
 begin
   DfsWithVisitors;
 end;
@@ -2345,7 +2344,7 @@ begin
   for I := 0 to Pred(VertexCount) do
     if not Visited[I] then
       begin
-        {%H-}Stack.Push(I);
+        Stack.Push(I);
         Visited[I] := True;
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
@@ -2408,7 +2407,7 @@ begin
             aOnGray(p^.Destination, aRoot);
       if Assigned(aOnDone) then
         aOnDone(aRoot);
-    end}
+    end }
   BfsWithVisitors;
 end;
 
