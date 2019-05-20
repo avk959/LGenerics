@@ -1,6 +1,7 @@
 unit LGSimpleDiGraphTest;
 
 {$mode objfpc}{$H+}
+{$MODESWITCH NESTEDPROCVARS}
 
 interface
 
@@ -23,12 +24,18 @@ type
     THelper = specialize TGOrdinalArrayHelper<SizeInt>;
 
     function  GenerateTestDigr1: TGraph;
+    function  TestDigr1DomTree: TIntArray;
     function  GenerateTestDigr2: TGraph;
+    function  TestDigr2DomTree: TIntArray;
     function  GenerateTestDigr3: TGraph;
     function  GenerateTestDigr4: TGraph;
+    function  TestDigr4DomTree: TIntArray;
     function  GenerateTestDigr5: TGraph;
+    function  TestDigr5DomTree: TIntArray;
     function  GenerateTestDigr6: TGraph;
+    function  TestDigr6DomTree: TIntArray;
     function  GenerateRandomGraph(aSize, aDeg: Integer): TGraph;
+    function  CreateDfsTree(g: TGraph; aSrc: Integer): TIntArray;
   published
     procedure AddVertices;
     procedure SaveToStream;
@@ -50,6 +57,8 @@ type
     procedure IncomingArcs1;
     procedure PathExists;
     procedure PathExists1;
+    procedure ReachableFrom;
+    procedure ReachableFrom1;
     procedure ContainsCycle;
     procedure ContainsCycle1;
     procedure ContainsEulerianCycle;
@@ -81,6 +90,10 @@ type
     procedure FindDomTreeSnca3;
     procedure FindDomTreeSnca4;
     procedure FindDomTreeSnca5;
+    procedure IsDomTree;
+    procedure IsDomTree1;
+    procedure IsDomTree2;
+    procedure IsDomTree3;
     procedure FindDomFrontiers;
     procedure FindDomFrontiers1;
     procedure FindDomFrontiers2;
@@ -191,11 +204,21 @@ begin
                    8, 7, 9, 10, 9, 11, 9, 12, 11, 12]);
 end;
 
+function TSimpleDigraphTest.TestDigr1DomTree: TIntArray;
+begin
+  Result := [-1, 0, 0, 0, 0, 0, 0, -1, -1, 0, 9, 9, 9];
+end;
+
 function TSimpleDigraphTest.GenerateTestDigr2: TGraph;
 begin
   Result := TGraph.Create;  //TestDigr2.png
   Result.AddVertexRange(0, 8);
   Result.AddEdges([0, 1, 1, 2, 2, 3, 3, 0, 1, 5, 5, 3, 3, 4, 4, 1, 0, 6, 6, 7, 7, 8, 8, 0]);
+end;
+
+function TSimpleDigraphTest.TestDigr2DomTree: TIntArray;
+begin
+  Result := [-1, 0, 1, 1, 3, 1, 0, 6, 7];
 end;
 
 function TSimpleDigraphTest.GenerateTestDigr3: TGraph;
@@ -213,6 +236,11 @@ begin
                    8, 5, 8, 11, 9, 11, 10, 9, 11, 0, 11, 9, 12, 8]);
 end;
 
+function TSimpleDigraphTest.TestDigr4DomTree: TIntArray;
+begin
+  Result := [-1, 0, 0, 0, 0, 0, 3, 3, 0, 0, 7, 0, 4];
+end;
+
 function TSimpleDigraphTest.GenerateTestDigr5: TGraph;
 begin
   Result := TGraph.Create; //TestDigr5.png - from Cytron's paper, fig. 9
@@ -221,12 +249,22 @@ begin
                    10, 11, 11, 9, 11, 12, 12, 2, 12, 13]);
 end;
 
+function TSimpleDigraphTest.TestDigr5DomTree: TIntArray;
+begin
+  Result := [-1, 0, 1, 2, 3, 3, 3, 2, 2, 8, 9, 9, 11, 0];
+end;
+
 function TSimpleDigraphTest.GenerateTestDigr6: TGraph;
 begin
   Result := TGraph.Create; //TestDigr6.png
   Result.AddVertexRange(0, 12);
   Result.AddEdges([0, 1, 0, 2, 1, 3, 1, 6, 2, 4, 2, 7, 3, 5, 3, 6, 4, 7, 4, 2, 5, 8, 5, 10, 6, 9,7, 12,
                    8, 11, 9, 8, 10, 11, 11, 1, 11, 12]);
+end;
+
+function TSimpleDigraphTest.TestDigr6DomTree: TIntArray;
+begin
+  Result := [-1, 0, 0, 1, 2, 3, 1, 2, 1, 6, 5, 1, 0];
 end;
 
 function TSimpleDigraphTest.GenerateRandomGraph(aSize, aDeg: Integer): TGraph;
@@ -249,6 +287,19 @@ begin
     if Result.EdgeCount >= aSize * aDeg then
       exit;
   until False;
+end;
+
+function TSimpleDigraphTest.CreateDfsTree(g: TGraph; aSrc: Integer): TIntArray;
+var
+  Parents: TIntArray;
+  procedure OnWhite(aNode, aParent: SizeInt);
+  begin
+    Parents[aNode] := aParent;
+  end;
+begin
+  Parents := TIntArray.Construct(g.VertexCount, NULL_INDEX);
+  g.DfsTraversalI(aSrc, @OnWhite, nil, nil);
+  Result := Parents;
 end;
 
 procedure TSimpleDigraphTest.AddVertices;
@@ -692,6 +743,46 @@ begin
   AssertFalse(g.PathExists(0, 8));
 end;
 
+procedure TSimpleDigraphTest.ReachableFrom;
+var
+  Ref: TRef;
+  g: TGraph;
+  Reachable: TIntArray;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(1);
+  Reachable := g.ReachableFrom(1);
+  AssertTrue(Reachable.Length = 1);
+  AssertTrue(Reachable[0] = 0);
+  g.AddVertex(2);
+  Reachable := g.ReachableFrom(1);
+  AssertTrue(Reachable.Length = 1);
+  AssertTrue(Reachable[0] = 0);
+  g.AddEdge(1, 2);
+  Reachable := g.ReachableFrom(1);
+  AssertTrue(Reachable.Length = 2);
+  AssertTrue(THelper.Same(Reachable, [0, 1]));
+end;
+
+procedure TSimpleDigraphTest.ReachableFrom1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Reachable: TIntArray;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Reachable := g.ReachableFrom(0);
+  AssertTrue(Reachable.Length = 11);
+  for I in [0..6, 9..12] do
+    AssertTrue(THelper.SequentSearch(Reachable, I) >= 0);
+  Reachable := g.ReachableFrom(7);
+  AssertTrue(Reachable.Length = 7);
+  for I in [4, 6, 7, 9..12] do
+    AssertTrue(THelper.SequentSearch(Reachable, I) >= 0);
+end;
+
 procedure TSimpleDigraphTest.ContainsCycle;
 var
   Ref: TRef;
@@ -1058,7 +1149,7 @@ begin
   g := Ref;
   Tree := g.FindDomTree(0, I);
   AssertTrue(I = g.VertexCount);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 3, 3, 0, 0, 7, 0, 4])));
+  AssertTrue(THelper.Same(Tree, TestDigr4DomTree));
 end;
 
 procedure TSimpleDigraphTest.FindDomTree2;
@@ -1072,7 +1163,7 @@ begin
   g := Ref;
   Tree := g.FindDomTree(0, I);
   AssertTrue(I = g.VertexCount);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 2, 3, 3, 3, 2, 2, 8, 9, 9, 11, 0])));
+  AssertTrue(THelper.Same(Tree, TestDigr5DomTree));
 end;
 
 procedure TSimpleDigraphTest.FindDomTree3;
@@ -1086,7 +1177,7 @@ begin
   g := Ref;
   Tree := g.FindDomTree(0, I);
   AssertTrue(I = g.VertexCount - 2);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 0, -1, -1, 0, 9, 9, 9])));
+  AssertTrue(THelper.Same(Tree, TestDigr1DomTree));
   g.AddEdge(0, 8);
   Tree := g.FindDomTree(0, I);
   AssertTrue(I = g.VertexCount);
@@ -1104,7 +1195,7 @@ begin
   g := Ref;
   Tree := g.FindDomTree(0, I);
   AssertTrue(I = g.VertexCount);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 1, 3, 1, 0, 6, 7])));
+  AssertTrue(THelper.Same(Tree, TestDigr2DomTree));
 end;
 
 procedure TSimpleDigraphTest.FindDomTree5;
@@ -1118,7 +1209,7 @@ begin
   g := Ref;
   Tree := g.FindDomTree(0, I);
   AssertTrue(I = g.VertexCount);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 1, 2, 3, 1, 2, 1, 6, 5, 1, 0])));
+  AssertTrue(THelper.Same(Tree, TestDigr6DomTree));
 end;
 
 procedure TSimpleDigraphTest.FindDomTreeSnca;
@@ -1146,7 +1237,7 @@ begin
   g := Ref;
   Tree := g.FindDomTreeSnca(0, I);
   AssertTrue(I = g.VertexCount);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 3, 3, 0, 0, 7, 0, 4])));
+  AssertTrue(THelper.Same(Tree, TestDigr4DomTree));
 end;
 
 procedure TSimpleDigraphTest.FindDomTreeSnca2;
@@ -1160,7 +1251,7 @@ begin
   g := Ref;
   Tree := g.FindDomTreeSnca(0, I);
   AssertTrue(I = g.VertexCount);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 2, 3, 3, 3, 2, 2, 8, 9, 9, 11, 0])));
+  AssertTrue(THelper.Same(Tree, TestDigr5DomTree));
 end;
 
 procedure TSimpleDigraphTest.FindDomTreeSnca3;
@@ -1174,7 +1265,7 @@ begin
   g := Ref;
   Tree := g.FindDomTreeSnca(0, I);
   AssertTrue(I = g.VertexCount - 2);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 0, -1, -1, 0, 9, 9, 9])));
+  AssertTrue(THelper.Same(Tree, TestDigr1DomTree));
   g.AddEdge(0, 8);
   Tree := g.FindDomTreeSnca(0, I);
   AssertTrue(I = g.VertexCount);
@@ -1192,7 +1283,7 @@ begin
   g := Ref;
   Tree := g.FindDomTreeSnca(0, I);
   AssertTrue(I = g.VertexCount);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 1, 3, 1, 0, 6, 7])));
+  AssertTrue(THelper.Same(Tree, TestDigr2DomTree));
 end;
 
 procedure TSimpleDigraphTest.FindDomTreeSnca5;
@@ -1206,7 +1297,69 @@ begin
   g := Ref;
   Tree := g.FindDomTreeSnca(0, I);
   AssertTrue(I = g.VertexCount);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 1, 2, 3, 1, 2, 1, 6, 5, 1, 0])));
+  AssertTrue(THelper.Same(Tree, TestDigr6DomTree));
+end;
+
+procedure TSimpleDigraphTest.IsDomTree;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray = nil;
+begin
+  g := {%H-}Ref;
+  g.AddVertex(0);
+  AssertFalse(g.IsDomTree(Tree, 0));
+  Tree := [0];
+  AssertFalse(g.IsDomTree(Tree, 0));
+  Tree := [0, 1];
+  AssertFalse(g.IsDomTree(Tree, 0));
+  Tree := [-1];
+  AssertTrue(g.IsDomTree(Tree, 0));
+end;
+
+procedure TSimpleDigraphTest.IsDomTree1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray = nil;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Tree := CreateDfsTree(g, 0);
+  AssertFalse(g.IsDomTree(Tree, 0));
+  Tree := TestDigr1DomTree;
+  AssertTrue(g.IsDomTree(Tree, 0));
+  Tree[11] := 8;
+  AssertFalse(g.IsDomTree(Tree, 0));
+end;
+
+procedure TSimpleDigraphTest.IsDomTree2;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray = nil;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr2;
+  g := Ref;
+  Tree := TestDigr2DomTree;
+  AssertTrue(g.IsDomTree(Tree, 0));
+  Tree[2] := 0;
+  AssertFalse(g.IsDomTree(Tree, 0));
+end;
+
+procedure TSimpleDigraphTest.IsDomTree3;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TIntArray = nil;
+  I: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr3;
+  g := Ref;
+  Tree := g.FindDomTreeSnca(0, I);
+  AssertTrue(g.IsDomTree(Tree, 0));
+  Tree := g.FindDomTreeSnca(2, I);
+  AssertTrue(g.IsDomTree(Tree, 2));
 end;
 
 procedure TSimpleDigraphTest.FindDomFrontiers;
@@ -1234,7 +1387,7 @@ begin
   {%H-}Ref.Instance := GenerateTestDigr4;
   g := Ref;
   DomFront := g.FindDomFrontiers(0, Tree);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 0, 0, 0, 3, 3, 0, 0, 7, 0, 4])));
+  AssertTrue(THelper.Same(Tree, TestDigr4DomTree));
   AssertTrue(Length(DomFront) = g.VertexCount);
 
   AssertTrue(DomFront[0] = nil);
@@ -1289,7 +1442,7 @@ begin
   {%H-}Ref.Instance := GenerateTestDigr5;
   g := Ref;
   DomFront := g.FindDomFrontiers(0, Tree);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 1, 2, 3, 3, 3, 2, 2, 8, 9, 9, 11, 0])));
+  AssertTrue(THelper.Same(Tree, TestDigr5DomTree));
   AssertTrue(Length(DomFront) = g.VertexCount);
 
   AssertTrue(DomFront[0] = nil);
@@ -1348,7 +1501,7 @@ begin
   {%H-}Ref.Instance := GenerateTestDigr6;
   g := Ref;
   DomFront := g.FindDomFrontiers(0, Tree);
-  AssertTrue(THelper.Same(Tree, TIntArray([-1, 0, 0, 1, 2, 3, 1, 2, 1, 6, 5, 1, 0])));
+  AssertTrue(THelper.Same(Tree, TestDigr6DomTree));
   AssertTrue(Length(DomFront) = g.VertexCount);
 
   AssertTrue(DomFront[0] = nil);
