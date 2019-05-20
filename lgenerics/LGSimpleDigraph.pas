@@ -111,10 +111,11 @@ type
     function  FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
     function  CycleExists: Boolean;
     function  GetDomTree(aSrc: SizeInt; out aSize: SizeInt; out aPreds: TIntSetArray): TIntArray;
-  { returns dominator tree, its size in aSize, array of incoming arcs in aPreds numbering in DFS preorder,
-    maps preorder->index and index->preoreder in aOrd2Idx and aIdx2Ord }
+  { returns dominator tree, its size in aSize, array of incoming arcs in aPreds, numbering in DFS preorder,
+    maps preorder->index and index->preorder in aOrd2Idx and aIdx2Ord }
     function  GetDomTreeSnca(aSrc: SizeInt; out aSize: SizeInt; out aPreds: TIntSetArray;
               out aOrd2Idx, aIdx2Ord: TIntArray): TIntArray;
+    function  TestIsDomTree(aTree: TIntArray; aSrc: SizeInt): Boolean;
     function  TopoSort: TIntArray;
     function  TopoSort(out a: TIntArray): Boolean;
     function  GetDagLongestPaths(aSrc: SizeInt): TIntArray;
@@ -144,7 +145,6 @@ type
       FCurrArc: TIncomingArc;
       function  GetCurrent: TIncomingArc; inline;
     public
-      constructor Create(aGraph: TGSimpleDigraph; aTarget: SizeInt);
       function  MoveNext: Boolean;
       property  Current: TIncomingArc read GetCurrent;
     end;
@@ -154,7 +154,6 @@ type
       FGraph: TGSimpleDigraph;
       FTarget: SizeInt;
     public
-      constructor Create(aGraph: TGSimpleDigraph; aDst: SizeInt);
       function GetEnumerator: TIncomingEnumerator; inline;
     end;
 
@@ -193,10 +192,13 @@ type
   { checks whether the aDst is reachable from the aSrc(each vertex is reachable from itself) }
     function  PathExists(constref aSrc, aDst: TVertex): Boolean; inline;
     function  PathExistsI(aSrc, aDst: SizeInt): Boolean;
-  { checks whether exists any cycle in subgraph that reachable from a aRoot;
-    if True then aCycle will contain indices of the vertices of the cycle }
-    function  ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean; inline;
-    function  ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+  { returns the list of indices of the vertices reachable from aSource(including aSource) }
+    function  ReachableFrom(constref aSource: TVertex): TIntArray; inline;
+    function  ReachableFromI(aSrcIdx: SizeInt): TIntArray;
+  { checks whether exists any cycle in subgraph that reachable from a aSource;
+    if True then aCycle will contain indices of the vertices of that cycle }
+    function  ContainsCycle(constref aSource: TVertex; out aCycle: TIntArray): Boolean; inline;
+    function  ContainsCycleI(aSrcIdx: SizeInt; out aCycle: TIntArray): Boolean;
     function  ContainsEulerianCycle: Boolean;
     function  FindEulerianCycle: TIntArray;
   { checks whether the graph is stongly connected; an empty graph is considered disconnected }
@@ -212,7 +214,7 @@ type
   { attempts to create an internal reachability matrix using precomputed FindStrongComponents results;
     todo: doubtful method? }
     function  TryBuildReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): Boolean;
-  { returns True, radus and diameter, if graph is strongly connected, False otherwise }
+  { returns True, radius and diameter, if graph is strongly connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is strongly connected, nil otherwise }
     function  FindCenter: TIntArray;
@@ -241,10 +243,13 @@ type
   { returns dominator tree and its size in aSize of a flowgraph rooted by aSource;
     raises an exception if it does not contain the vertex aSource;
     each element aTree[J] is immediate dominator of J'th vertex or -1, if J'th vertex is root,
-    or is unreachable from aSource; used SNCA algorithm from
-    L. Georgiadis "Linear-Time Algorithms for Dominators and Related Problems" }
+    or is unreachable from aSource; used Georgiadis's Semi-NCA algorithm }
     function  FindDomTreeSnca(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeSncaI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
+  { returns True if aTree is dominator tree rooted by aSource;
+    todo: more efficient algorithm? }
+    function  IsDomTree(const aTree: TIntArray; constref aSource: TVertex): Boolean; inline;
+    function  IsDomTreeI(const aTree: TIntArray; aSrcIdx: SizeInt): Boolean;
     { todo: compact data structure to answer queries:
             1. is x dominate y            - O(1) ?
             2. which nodes dominate x     - O(k<n)
@@ -252,6 +257,9 @@ type
   { extracts Dom(aVertex) from dominator tree aTree, including aVertex }
     function  ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray; inline;
     function  ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
+
+  //type TDomTree = record  end;
+
   { returns dominance frontiers and dominator tree in aDomTree(used SNCA algorithm);
     raises an exception if it does not contain the vertex aSource }
     function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TIntArray): TIntMatrix; inline;
@@ -509,7 +517,7 @@ type
     function FindEccentricity(constref aVertex: TVertex; out aValue: TWeight): Boolean; inline;
     function FindEccentricityI(aIndex: SizeInt; out aValue: TWeight): Boolean;
   { returns False if is not strongly connected or exists negative weight cycle,
-    otherwise returns True and weighted radus and diameter of the graph }
+    otherwise returns True and weighted radius and diameter of the graph }
     function FindWeightedMetrics(out aRadius, aDiameter: TWeight): Boolean;
   { returns False if is not strongly connected or exists negative weight cycle,
     otherwise returns True and indices of the central vertices in aCenter }
@@ -920,15 +928,6 @@ begin
   Result := FCurrArc;
 end;
 
-constructor TGSimpleDigraph.TIncomingEnumerator.Create(aGraph: TGSimpleDigraph; aTarget: SizeInt);
-begin
-  FGraph := aGraph;
-  FTarget := aTarget;
-  FCurrIndex := NULL_INDEX;
-  FLastIndex := Pred(aGraph.VertexCount);
-  FInCount := aGraph.FNodeList[aTarget].Tag;
-end;
-
 function TGSimpleDigraph.TIncomingEnumerator.MoveNext: Boolean;
 var
   p: PAdjItem;
@@ -950,15 +949,13 @@ end;
 
 { TGSimpleDigraph.TIncomingArcs }
 
-constructor TGSimpleDigraph.TIncomingArcs.Create(aGraph: TGSimpleDigraph; aDst: SizeInt);
-begin
-  FGraph := aGraph;
-  FTarget := aDst;
-end;
-
 function TGSimpleDigraph.TIncomingArcs.GetEnumerator: TIncomingEnumerator;
 begin
-  Result := TIncomingEnumerator.Create(FGraph, FTarget);
+  Result.FGraph := FGraph;
+  Result.FTarget := FTarget;
+  Result.FCurrIndex := NULL_INDEX;
+  Result.FLastIndex := Pred(FGraph.VertexCount);
+  Result.FInCount := FGraph.FNodeList[FTarget].Tag;
 end;
 
 { TGSimpleDigraph }
@@ -1111,16 +1108,18 @@ function TGSimpleDigraph.GetDomTree(aSrc: SizeInt; out aSize: SizeInt; out aPred
 var
   Parents, PostOrd, Idx2Ord, Doms: TIntArray;
   Counter: SizeInt absolute aSize;
-  procedure NodeWhite(aNode, aParent: SizeInt);
+  procedure OnWhite(aNode, aParent: SizeInt);
   begin
     Parents[aNode] := aParent;
-    aPreds[aNode].Push(aParent);
+    if aNode <> aSrc then
+      aPreds[aNode].Push(aParent);
   end;
-  procedure NodeGray(aNode, aParent: SizeInt);
+  procedure OnGray(aNode, aParent: SizeInt);
   begin
-    aPreds[aNode].Push(aParent);
+    if aNode <> aSrc then
+      aPreds[aNode].Push(aParent);
   end;
-  procedure NodeDone(aIndex: SizeInt);
+  procedure OnDone(aIndex: SizeInt);
   begin
     PostOrd[Counter] := aIndex;
     Inc(Counter);
@@ -1145,7 +1144,7 @@ begin
   Parents := CreateIntArray;
   PostOrd := CreateIntArray;
   System.SetLength(aPreds, VertexCount);
-  aSize := DfsTraversalI(aSrc, @NodeWhite, @NodeGray, @NodeDone);
+  DfsTraversalI(aSrc, @OnWhite, @OnGray, @OnDone);
   Idx2Ord := CreateIntArray;
   for I := 0 to Pred(Counter) do
     Idx2Ord[PostOrd[I]] := I;
@@ -1174,7 +1173,7 @@ begin
           end;
       end;
   until Ready;
-  for I := 0 to Pred(Counter) do
+  for I := 0 to Counter - 2 do
     Parents[PostOrd[I]] :=  PostOrd[Doms[I]];
   Parents[aSrc] := aSrc;
   Result := Parents;
@@ -1189,31 +1188,30 @@ var
   var
     Stack: TIntArray;
     AdjEnums: TAdjEnumArray;
-    FromOrd, Next: SizeInt;
-    sTop: SizeInt = -1;
+    Next, sTop: SizeInt;
   begin
     AdjEnums := CreateAdjEnumArray;
     aIdx2Ord[From] := 0;
     Counter := 1;
     {%H-}Stack.Length := VertexCount;
-    Inc(sTop);
+    sTop := 0;
     Stack[sTop] := From;
     while sTop >= 0 do
       begin
         From := Stack[sTop];
-        FromOrd := aIdx2Ord[From];
         if AdjEnums[From].MoveNext then
           begin
             Next := AdjEnums[From].Current;
             if aIdx2Ord[Next] = NULL_INDEX then
               begin
                 aIdx2Ord[Next] := Counter;
-                Parents[Counter] := FromOrd;
+                Parents[Counter] := aIdx2Ord[From];
                 Inc(sTop);
                 Inc(Counter);
                 Stack[sTop] := Next;
               end;
-            aPreds[aIdx2Ord[Next]].Push(FromOrd);
+            if Next <> aSrc then
+              aPreds[aIdx2Ord[Next]].Push(aIdx2Ord[From]);
           end
         else
           Dec(sTop);
@@ -1248,14 +1246,13 @@ begin
       aOrd2Idx[aIdx2Ord[I]] := I;
   Labels := CreateIntArrayRange;
   SemiDoms := Labels.Copy;
-  IDoms.Length := VertexCount;
   Parents[0] := 0;
+  IDoms := Parents.Copy;
   for I := Pred(Counter) downto 1 do
     begin
-      IDoms[I] := Parents[I];
       for Prev in aPreds[I] do
         begin
-          if Prev <= I then
+          if Prev < I then
             Dom := Prev
           else
             begin
@@ -1267,7 +1264,6 @@ begin
         end;
       Labels[I] := SemiDoms[I];
     end;
-  IDoms[0] := 0;
   Parents.Fill(NULL_INDEX);
   for I := 1 to Pred(Counter) do
     begin
@@ -1279,6 +1275,100 @@ begin
     end;
   Parents[aSrc] := aSrc;
   Result := Parents;
+end;
+
+function TGSimpleDigraph.TestIsDomTree(aTree: TIntArray; aSrc: SizeInt): Boolean;
+var
+  TreeSize: SizeInt;
+  function InputIsTree: Boolean;
+  var
+    TestTree: TIntSetArray;
+    Queue: TIntArray;
+    InTree: TBoolVector;
+    I, Curr, Next, qHead, qTail: SizeInt;
+  begin
+    System.SetLength(TestTree, VertexCount);
+    InTree.Size := VertexCount;
+    TreeSize := 1;
+    for I := 0 to Pred(VertexCount) do
+      begin
+        Curr := aTree[I];
+        if Curr >= 0 then
+          begin
+            if (Curr >= VertexCount) or (Curr = I) then
+              exit(False);
+            if not TestTree[Curr].Add(I) then
+              exit(False);
+            InTree[I] := True;
+            Inc(TreeSize);
+          end;
+      end;
+    Queue.Length := VertexCount;
+    qHead := 0;
+    qTail := 1;
+    Queue[0] := aSrc;
+    while qHead < qTail do
+      begin
+        Curr := Queue[qHead];
+        Inc(qHead);
+        for Next in TestTree[Curr] do
+          if InTree[Next] then
+            begin
+              InTree[Next] := False;
+              Queue[qTail] := Next;
+              Inc(qTail);
+            end;
+      end;
+    Result := InTree.IsEmpty;
+  end;
+var
+  Preds: TIntSetArray;
+  Idx2Ord, Ord2Idx: TIntArray;
+  Counter: SizeInt = 0;
+  procedure OnWhite(aNode, aParent: SizeInt);
+  begin
+    if aNode <> aSrc then
+      Preds[aNode].Push(aParent);
+  end;
+  procedure OnGray(aNode, aParent: SizeInt);
+  begin
+    if aNode <> aSrc then
+      Preds[aNode].Push(aParent);
+  end;
+  procedure OnDone(aIndex: SizeInt);
+  begin
+    Ord2Idx[Counter] := aIndex;
+    Inc(Counter);
+  end;
+  function Nca(aLeft, aRight: SizeInt): SizeInt;
+  begin
+    while aLeft <> aRight do
+      begin
+        while Idx2Ord[aLeft] < Idx2Ord[aRight] do
+          aLeft := aTree[aLeft];
+        while Idx2Ord[aRight] < Idx2Ord[aLeft] do
+          aRight := aTree[aRight];
+      end;
+    Result := aLeft;
+  end;
+var
+  I, Prev: SizeInt;
+begin
+  if not InputIsTree() then
+    exit(False);
+  Ord2Idx := CreateIntArray;
+  System.SetLength(Preds, VertexCount);
+  if DfsTraversalI(aSrc, @OnWhite, @OnGray, @OnDone) <> TreeSize then
+    exit(False);
+  Idx2Ord := CreateIntArray;
+  for I := 0 to Pred(Counter) do
+    Idx2Ord[Ord2Idx[I]] := I;
+  aTree[aSrc] := aSrc;
+  for I := 0 to Pred(VertexCount) do
+    for Prev in Preds[I] do
+      if Nca(aTree[I], Prev) <> aTree[I] then
+        exit(False);
+  Result := True;
 end;
 
 function TGSimpleDigraph.TopoSort: TIntArray;
@@ -1804,7 +1894,8 @@ end;
 function TGSimpleDigraph.IncomingArcsI(aIndex: SizeInt): TIncomingArcs;
 begin
   CheckIndexRange(aIndex);
-  Result := TIncomingArcs.Create(Self, aIndex);
+  Result.FGraph := Self;
+  Result.FTarget := aIndex;
 end;
 
 function TGSimpleDigraph.PathExists(constref aSrc, aDst: TVertex): Boolean;
@@ -1823,18 +1914,41 @@ begin
   Result := CheckPathExists(aSrc, aDst);
 end;
 
-function TGSimpleDigraph.ContainsCycle(constref aRoot: TVertex; out aCycle: TIntArray): Boolean;
+function TGSimpleDigraph.ReachableFrom(constref aSource: TVertex): TIntArray;
 begin
-  Result := ContainsCycleI(IndexOf(aRoot), aCycle);
+  Result := ReachableFromI(IndexOf(aSource));
 end;
 
-function TGSimpleDigraph.ContainsCycleI(aRoot: SizeInt; out aCycle: TIntArray): Boolean;
+function TGSimpleDigraph.ReachableFromI(aSrcIdx: SizeInt): TIntArray;
+var
+  Reachable: TIntArray = nil;
+  Counter: SizeInt = 0;
+  procedure OnWhite(aNode, aParent: SizeInt);
+  begin
+    Assert(aParent = aParent);
+    Reachable[Counter] := aNode;
+    Inc(Counter);
+  end;
 begin
-  CheckIndexRange(aRoot);
+  CheckIndexRange(aSrcIdx);
+  Reachable.Length := VertexCount;
+  BfsTraversalI(aSrcIdx, @OnWhite, nil, nil);
+  Reachable.Length := Counter;
+  Result := Reachable;
+end;
+
+function TGSimpleDigraph.ContainsCycle(constref aSource: TVertex; out aCycle: TIntArray): Boolean;
+begin
+  Result := ContainsCycleI(IndexOf(aSource), aCycle);
+end;
+
+function TGSimpleDigraph.ContainsCycleI(aSrcIdx: SizeInt; out aCycle: TIntArray): Boolean;
+begin
+  CheckIndexRange(aSrcIdx);
   if VertexCount < 2 then
     exit(False);
   aCycle := nil;
-  FindCycle(aRoot, aCycle);
+  FindCycle(aSrcIdx, aCycle);
   Result := System.Length(aCycle) <> 0;
 end;
 
@@ -2054,6 +2168,8 @@ begin
   Result := False;
   aMissed := nil;
   CheckIndexRange(aSrcIdx);
+  if VertexCount < 2 then
+    exit(True);
   UnVisited.InitRange(VertexCount);
   Queue.Length := VertexCount;
   UnVisited[aSrcIdx] := False;
@@ -2087,6 +2203,11 @@ var
 begin
   Result := nil;
   CheckIndexRange(aSrcIdx);
+  if VertexCount < 2 then
+    begin
+      aSize := 1;
+      exit([NULL_INDEX]);
+    end;
   Result := GetDomTree(aSrcIdx, aSize, Preds);
   Result[aSrcIdx] := NULL_INDEX;
 end;
@@ -2103,8 +2224,31 @@ var
 begin
   Result := nil;
   CheckIndexRange(aSrcIdx);
+  if VertexCount < 2 then
+    begin
+      aSize := 1;
+      exit([NULL_INDEX]);
+    end;
   Result := GetDomTreeSnca(aSrcIdx, aSize, Preds, Ord2Idx, Idx2Ord);
   Result[aSrcIdx] := NULL_INDEX;
+end;
+
+function TGSimpleDigraph.IsDomTree(const aTree: TIntArray; constref aSource: TVertex): Boolean;
+begin
+  Result := IsDomTreeI(aTree, IndexOf(aSource));
+end;
+
+function TGSimpleDigraph.IsDomTreeI(const aTree: TIntArray; aSrcIdx: SizeInt): Boolean;
+begin
+  Result := False;
+  CheckIndexRange(aSrcIdx);
+  if aTree.Length <> VertexCount then
+    exit(False);
+  if aTree[aSrcIdx] <> NULL_INDEX then
+    exit(False);
+  if VertexCount < 2 then
+    exit(True);
+  Result := TestIsDomTree(aTree, aSrcIdx);
 end;
 
 function TGSimpleDigraph.ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray;
