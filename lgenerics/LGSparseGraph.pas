@@ -300,7 +300,6 @@ type
       FGraph: TGSparseGraph;
       FSource: SizeInt;
     public
-      constructor Create(aGraph: TGSparseGraph; aSource: SizeInt);
       function GetEnumerator: TAdjEnumerator; inline;
     end;
 
@@ -318,7 +317,6 @@ type
       FGraph: TGSparseGraph;
       FSource: SizeInt;
     public
-      constructor Create(aGraph: TGSparseGraph; aSource: SizeInt);
       function GetEnumerator: TIncidentEnumerator; inline;
     end;
 
@@ -329,7 +327,6 @@ type
       FLastIndex: SizeInt;
       function  GetCurrent: TVertex;
     public
-      constructor Create(aGraph: TGSparseGraph);
       function  MoveNext: Boolean; inline;
       procedure Reset; inline;
       property  Current: TVertex read GetCurrent;
@@ -339,7 +336,6 @@ type
     private
       FGraph: TGSparseGraph;
     public
-      constructor Create(aGraph: TGSparseGraph);
       function GetEnumerator: TVertexEnumerator; inline;
     end;
 
@@ -352,7 +348,6 @@ type
       FEnumDone: Boolean;
       function  GetCurrent: TEdge;
     public
-      constructor Create(aGraph: TGSparseGraph);
       function  MoveNext: Boolean;
       procedure Reset;
       property  Current: TEdge read GetCurrent;
@@ -1084,12 +1079,6 @@ end;
 
 { TGSparseGraph.TAdjVertices }
 
-constructor TGSparseGraph.TAdjVertices.Create(aGraph: TGSparseGraph; aSource: SizeInt);
-begin
-  FGraph := aGraph;
-  FSource := aSource;
-end;
-
 function TGSparseGraph.TAdjVertices.GetEnumerator: TAdjEnumerator;
 begin
   Result.FEnum := FGraph.AdjLists[FSource]^.GetEnumerator;
@@ -1113,12 +1102,6 @@ end;
 
 { TGSparseGraph.TIncidentEdges }
 
-constructor TGSparseGraph.TIncidentEdges.Create(aGraph: TGSparseGraph; aSource: SizeInt);
-begin
-  FGraph := aGraph;
-  FSource := aSource;
-end;
-
 function TGSparseGraph.TIncidentEdges.GetEnumerator: TIncidentEnumerator;
 begin
   Result.FEnum := FGraph.AdjLists[FSource]^.GetEnumerator;
@@ -1129,13 +1112,6 @@ end;
 function TGSparseGraph.TVertexEnumerator.GetCurrent: TVertex;
 begin
   Result := FNodeList[FCurrIndex].Vertex;
-end;
-
-constructor TGSparseGraph.TVertexEnumerator.Create(aGraph: TGSparseGraph);
-begin
-  FNodeList := Pointer(aGraph.FNodeList);
-  FLastIndex := Pred(aGraph.VertexCount);
-  FCurrIndex := NULL_INDEX;
 end;
 
 function TGSparseGraph.TVertexEnumerator.MoveNext: Boolean;
@@ -1153,14 +1129,11 @@ end;
 
 { TGSparseGraph.TVertices }
 
-constructor TGSparseGraph.TVertices.Create(aGraph: TGSparseGraph);
-begin
-  FGraph := aGraph;
-end;
-
 function TGSparseGraph.TVertices.GetEnumerator: TVertexEnumerator;
 begin
-  Result := TVertexEnumerator.Create(FGraph);
+  Result.FNodeList := Pointer(FGraph.FNodeList);
+  Result.FLastIndex := Pred(FGraph.VertexCount);
+  Result.FCurrIndex := NULL_INDEX;
 end;
 
 { TGSparseGraph.TEdgeEnumerator }
@@ -1168,14 +1141,6 @@ end;
 function TGSparseGraph.TEdgeEnumerator.GetCurrent: TEdge;
 begin
   Result := TEdge.Create(FCurrIndex, FEnum.Current);
-end;
-
-constructor TGSparseGraph.TEdgeEnumerator.Create(aGraph: TGSparseGraph);
-begin
-  FList := Pointer(aGraph.FNodeList);
-  FLastIndex := Pred(aGraph.VertexCount);
-  FCurrIndex := NULL_INDEX;
-  FEnumDone := True;
 end;
 
 function TGSparseGraph.TEdgeEnumerator.MoveNext: Boolean;
@@ -1203,7 +1168,10 @@ end;
 
 function TGSparseGraph.TEdges.GetEnumerator: TEdgeEnumerator;
 begin
-  Result := TEdgeEnumerator.Create(FGraph);
+  Result.FList := Pointer(FGraph.FNodeList);
+  Result.FLastIndex := Pred(FGraph.VertexCount);
+  Result.FCurrIndex := NULL_INDEX;
+  Result.FEnumDone := True;
 end;
 
 { TGSparseGraph }
@@ -2036,7 +2004,8 @@ end;
 function TGSparseGraph.AdjVerticesI(aIndex: SizeInt): TAdjVertices;
 begin
   CheckIndexRange(aIndex);
-  Result := TAdjVertices.Create(Self, aIndex);
+  Result.FGraph := Self;
+  Result.FSource := aIndex;
 end;
 
 function TGSparseGraph.IncidentEdges(constref aVertex: TVertex): TIncidentEdges;
@@ -2047,12 +2016,13 @@ end;
 function TGSparseGraph.IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
 begin
   CheckIndexRange(aIndex);
-  Result := TIncidentEdges.Create(Self, aIndex);
+  Result.FGraph := Self;
+  Result.FSource := aIndex;
 end;
 
 function TGSparseGraph.Vertices: TVertices;
 begin
-  Result := TVertices.Create(Self);
+  Result.FGraph := Self;
 end;
 
 function TGSparseGraph.Edges: TEdges;
