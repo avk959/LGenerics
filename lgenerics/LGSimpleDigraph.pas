@@ -333,7 +333,7 @@ type
   { used iterative algorithm }
     function  CreateDomTree(constref aSource: TVertex): TDomTree; inline;
     function  CreateDomTreeI(aSrcIdx: SizeInt): TDomTree;
-  { Semi-NCA algorithm }
+  { used Semi-NCA algorithm }
     function  CreateDomTreeSnca(constref aSource: TVertex): TDomTree; inline;
     function  CreateDomTreeSncaI(aSrcIdx: SizeInt): TDomTree;
   { returns dominance frontiers and dominator tree in aDomTree(used SNCA algorithm);
