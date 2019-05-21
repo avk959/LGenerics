@@ -157,6 +157,81 @@ type
       function GetEnumerator: TIncomingEnumerator; inline;
     end;
 
+    TDomTree = record
+    private
+    type
+      TNode = record
+        InTime,
+        OutTime,
+        Next: SizeInt;
+      end;
+      TNodeList = array of TNode;
+
+    const
+      INIT_LEN = 4;
+      SDomTree = 'DomTree';
+
+    var
+      FNodeList: TNodeList;
+      FTree: TIntArray;
+      FRoot,
+      FSize: SizeInt;
+      function  Count: SizeUInt; inline;
+      procedure Dfs;
+      function  GetIDom(aIndex: SizeInt): SizeInt;
+      procedure Init(const aTree: TIntArray; aRoot: SizeInt);
+    public
+    type
+
+      TDomSetEnumerator = record
+      private
+        FTree: TIntArray;
+        FCurr: SizeInt;
+      public
+        function MoveNext: Boolean; inline;
+        property Current: SizeInt read FCurr;
+      end;
+
+      TDominatedEnumerator = record
+      private
+        FNodeList: TNodeList;
+        FCurr,
+        FRootTime: SizeInt;
+      public
+        function MoveNext: Boolean;
+        property Current: SizeInt read FCurr;
+      end;
+
+      TDomSet = record
+      private
+        FTree: TIntArray;
+        FIndex: SizeInt;
+      public
+        function GetEnumerator: TDomSetEnumerator;
+      end;
+
+      TDominated = record
+      private
+        FNodeList: TNodeList;
+        FIndex: SizeInt;
+      public
+        function GetEnumerator: TDominatedEnumerator;
+      end;
+
+    { returns True if aDom dominates aValue }
+      function Dominates(aDom, aValue: SizeInt): Boolean;
+    { enumerates dominators of aValue(excluding aValue) }
+      function DomSetOf(aValue: SizeInt): TDomSet;
+    { returns dominator set of aValue(excluding aValue) }
+      function ExtractDomSet(aValue: SizeInt): TIntArray;
+    { enumerates vertices dominated by aValue(excluding aValue) }
+      function DominatedBy(aValue: SizeInt): TDominated;
+    { returns vertex set dominated by aValue(excluding aValue) }
+      function ExtractDominated(aValue: SizeInt): TIntArray;
+      property IDom[aIndex: SizeInt]: SizeInt read GetIDom; default;
+      property Size: SizeInt read FSize;
+    end;
+
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -250,20 +325,19 @@ type
     todo: more efficient algorithm? }
     function  IsDomTree(const aTree: TIntArray; constref aSource: TVertex): Boolean; inline;
     function  IsDomTreeI(const aTree: TIntArray; aSrcIdx: SizeInt): Boolean;
-    { todo: compact data structure to answer queries:
-            1. is x dominate y            - O(1) ?
-            2. which nodes dominate x     - O(k<n)
-            3. which nodes x dominated by - O(k<n) }
   { extracts Dom(aVertex) from dominator tree aTree, including aVertex }
     function  ExtractDomSet(constref aVertex: TVertex; const aDomTree: TIntArray): TIntArray; inline;
     function  ExtractDomSetI(aVertexIdx: SizeInt; const aDomTree: TIntArray): TIntArray;
-
-  //type TDomTree = record  end;
-
+  { used iterative algorithm }
+    function  CreateDomTree(constref aSource: TVertex): TDomTree; inline;
+    function  CreateDomTreeI(aSrcIdx: SizeInt): TDomTree;
+  { Semi-NCA algorithm }
+    function  CreateDomTreeSnca(constref aSource: TVertex): TDomTree; inline;
+    function  CreateDomTreeSncaI(aSrcIdx: SizeInt): TDomTree;
   { returns dominance frontiers and dominator tree in aDomTree(used SNCA algorithm);
     raises an exception if it does not contain the vertex aSource }
-    function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TIntArray): TIntMatrix; inline;
-    function  FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TIntArray): TIntMatrix;
+    function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TDomTree): TIntMatrix; inline;
+    function FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TDomTree): TIntMatrix;
 
 {**********************************************************************************************************
   DAG utilities
@@ -956,6 +1030,203 @@ begin
   Result.FCurrIndex := NULL_INDEX;
   Result.FLastIndex := Pred(FGraph.VertexCount);
   Result.FInCount := FGraph.FNodeList[FTarget].Tag;
+end;
+
+{ TGSimpleDigraph.TDomTree.TDomSetEnumerator }
+
+function TGSimpleDigraph.TDomTree.TDomSetEnumerator.MoveNext: Boolean;
+begin
+  Result := FTree[FCurr] >= 0;
+  if Result then
+    FCurr := FTree[FCurr];
+end;
+
+{ TGSimpleDigraph.TDomTree.TDominatedEnumerator }
+
+function TGSimpleDigraph.TDomTree.TDominatedEnumerator.MoveNext: Boolean;
+var
+  Next: SizeInt;
+begin
+  Result := FNodeList[FCurr].Next >= 0;
+  if Result then
+    begin
+      Next := FNodeList[FCurr].Next;
+      if FNodeList[Next].OutTime > FRootTime then
+        exit(False);
+      FCurr := Next;
+    end;
+end;
+
+{ TGSimpleDigraph.TDomTree.TDomSet }
+
+function TGSimpleDigraph.TDomTree.TDomSet.GetEnumerator: TDomSetEnumerator;
+begin
+  Result.FTree := FTree;
+  Result.FCurr := FIndex;
+end;
+
+{ TGSimpleDigraph.TDomTree.TDominated }
+
+function TGSimpleDigraph.TDomTree.TDominated.GetEnumerator: TDominatedEnumerator;
+begin
+  Result.FNodeList := FNodeList;
+  Result.FCurr := FIndex;
+  Result.FRootTime := FNodeList[FIndex].OutTime;
+end;
+
+{ TGSimpleDigraph.TDomTree }
+
+function TGSimpleDigraph.TDomTree.Count: SizeUInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+procedure TGSimpleDigraph.TDomTree.Dfs;
+var
+  TmpTree: TIntSetArray = nil;
+  AdjEnums: array of TIntSet.TEnumerator = nil;
+  Stack: TIntArray = nil;
+  Curr, Prev, Next, sTop, Counter: SizeInt;
+begin
+  System.SetLength(TmpTree, FTree.Length);
+  for Curr := 0 to System.High(TmpTree) do
+    begin
+      Prev := FTree[Curr];
+      if Prev >= 0 then
+        TmpTree[Prev].Push(Curr);
+    end;
+  System.SetLength(AdjEnums, System.Length(TmpTree));
+  for Curr := 0 to System.High(TmpTree) do
+    AdjEnums[Curr] := TmpTree[Curr].GetEnumerator;
+  Counter := 1;
+  FSize := 1;
+  sTop := 0;
+  Stack.Length := FTree.Length;
+  Stack[0] := FRoot;
+  FNodeList[FRoot].InTime := 0;
+  Prev := FRoot;
+  while sTop >= 0 do
+    begin
+      Curr := Stack[sTop];
+      if AdjEnums[Curr].MoveNext then
+        begin
+          Next := AdjEnums[Curr].Current;
+          if FNodeList[Next].InTime = NULL_INDEX then
+            begin
+              FNodeList[Next].InTime := Counter;
+              FNodeList[Prev].Next := Next;
+              Prev := Next;
+              Inc(sTop);
+              Stack[sTop] := Next;
+              Inc(Counter);
+              Inc(FSize);
+            end;
+        end
+      else
+        begin
+          FNodeList[Curr].OutTime := Counter;
+          Dec(sTop);
+          Inc(Counter);
+        end;
+    end;
+end;
+
+function TGSimpleDigraph.TDomTree.GetIDom(aIndex: SizeInt): SizeInt;
+begin
+  if SizeUInt(aIndex) >= Count then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aIndex]);
+  Result := FTree[aIndex];
+end;
+
+procedure TGSimpleDigraph.TDomTree.Init(const aTree: TIntArray; aRoot: SizeInt);
+var
+  I: SizeInt;
+begin
+  FTree := aTree;
+  FRoot := aRoot;
+  System.SetLength(FNodeList, FTree.Length);
+  for I := 0 to System.High(FNodeList) do
+    begin
+      FNodeList[I].InTime := NULL_INDEX;
+      FNodeList[I].OutTime := NULL_INDEX;
+      FNodeList[I].Next := NULL_INDEX;
+    end;
+  Dfs;
+end;
+
+function TGSimpleDigraph.TDomTree.Dominates(aDom, aValue: SizeInt): Boolean;
+begin
+  if SizeUInt(aDom) >= Count then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aDom])
+  else
+    if SizeUInt(aValue) >= Count then
+      raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
+  if aDom <> aValue then
+    Result := (FNodeList[aDom].InTime < FNodeList[aValue].InTime) and
+              (FNodeList[aDom].OutTime > FNodeList[aValue].OutTime)
+  else
+    Result := True;
+end;
+
+function TGSimpleDigraph.TDomTree.DomSetOf(aValue: SizeInt): TDomSet;
+begin
+  if SizeUInt(aValue) >= Count then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
+  Result.FTree := FTree;
+  Result.FIndex := aValue;
+end;
+
+function TGSimpleDigraph.TDomTree.ExtractDomSet(aValue: SizeInt): TIntArray;
+var
+  I, Curr: SizeInt;
+begin
+  Result := nil;
+  if SizeUInt(aValue) >= Count then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
+  Result.Length := INIT_LEN;
+  Curr := FTree[aValue];
+  I := 0;
+  while Curr >= 0 do
+    begin
+      if Result.Length = I then
+        Result.Length := I shl 1;
+      Result[I] := Curr;
+      Curr := FTree[Curr];
+      Inc(I);
+    end;
+  Result.Length := I;
+end;
+
+function TGSimpleDigraph.TDomTree.DominatedBy(aValue: SizeInt): TDominated;
+begin
+  if SizeUInt(aValue) >= Count then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
+  Result.FNodeList := FNodeList;
+  Result.FIndex := aValue;
+end;
+
+function TGSimpleDigraph.TDomTree.ExtractDominated(aValue: SizeInt): TIntArray;
+var
+  I, Next, RootTime: SizeInt;
+begin
+  Result := nil;
+  if SizeUInt(aValue) >= Count then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
+  I := 0;
+  Result.Length := INIT_LEN;
+  RootTime := FNodeList[aValue].OutTime;
+  while FNodeList[aValue].Next >= 0 do
+    begin
+      Next := FNodeList[aValue].Next;
+      if FNodeList[Next].OutTime > RootTime then
+        break;
+      if Result.Length = I then
+        Result.Length := I shl 1;
+      Result[I] := Next;
+      aValue := Next;
+      Inc(I);
+    end;
+  Result.Length := I;
 end;
 
 { TGSimpleDigraph }
@@ -2276,21 +2547,51 @@ begin
   Result := DomSet.ToArray;
 end;
 
-function TGSimpleDigraph.FindDomFrontiers(constref aSource: TVertex; out aDomTree: TIntArray): TIntMatrix;
+function TGSimpleDigraph.CreateDomTree(constref aSource: TVertex): TDomTree;
+begin
+  Result := CreateDomTreeI(IndexOf(aSource));
+end;
+
+function TGSimpleDigraph.CreateDomTreeI(aSrcIdx: SizeInt): TDomTree;
+var
+  Tree: TIntArray;
+  I: SizeInt;
+begin
+  Result := Default(TDomTree);
+  Tree := FindDomTreeI(aSrcIdx, I);
+  Result.Init(Tree, aSrcIdx);
+end;
+
+function TGSimpleDigraph.CreateDomTreeSnca(constref aSource: TVertex): TDomTree;
+begin
+  Result := CreateDomTreeSncaI(IndexOf(aSource));
+end;
+
+function TGSimpleDigraph.CreateDomTreeSncaI(aSrcIdx: SizeInt): TDomTree;
+var
+  Tree: TIntArray;
+  I: SizeInt;
+begin
+  Result := Default(TDomTree);
+  Tree := FindDomTreeSncaI(aSrcIdx, I);
+  Result.Init(Tree, aSrcIdx);
+end;
+
+function TGSimpleDigraph.FindDomFrontiers(constref aSource: TVertex; out aDomTree: TDomTree): TIntMatrix;
 begin
   Result := FindDomFrontiersI(IndexOf(aSource), aDomTree);
 end;
 
-function TGSimpleDigraph.FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TIntArray): TIntMatrix;
+function TGSimpleDigraph.FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TDomTree): TIntMatrix;
 var
   Preds, DomFronts: TIntSetArray;
-  Ord2Idx, Idx2Ord: TIntArray;
+  Ord2Idx, Idx2Ord, Tree: TIntArray;
   I, PreOrd, Curr, Next: SizeInt;
 begin
-  aDomTree := nil;
+  aDomTree := Default(TDomTree);
   Result := nil;
   CheckIndexRange(aSrcIdx);
-  aDomTree := GetDomTreeSnca(aSrcIdx, I, Preds, Ord2Idx, Idx2Ord);
+  Tree := GetDomTreeSnca(aSrcIdx, I, Preds, Ord2Idx, Idx2Ord);
   System.SetLength(DomFronts, VertexCount);
   for I := 0 to Pred(VertexCount) do
     if I <> aSrcIdx then
@@ -2300,14 +2601,16 @@ begin
           for Curr in Preds[PreOrd] do
             begin
               Next := Ord2Idx[Curr];
-              while (Next <> aDomTree[I]) and (Next <> I) do
+              while (Next <> Tree[I]) and (Next <> I) do
                 begin
                   DomFronts[Next].Add(I);
-                  Next := aDomTree[Next];
+                  Next := Tree[Next];
                 end;
             end;
       end;
-  aDomTree[aSrcIdx] := NULL_INDEX;
+  Tree[aSrcIdx] := NULL_INDEX;
+  aDomTree.Init(Tree, aSrcIdx);
+  Tree := nil;
   System.SetLength(Result, VertexCount);
   for I := 0 to Pred(VertexCount) do
     Result[I] := DomFronts[I].ToArray;
