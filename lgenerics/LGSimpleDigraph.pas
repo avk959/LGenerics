@@ -218,8 +218,8 @@ type
         function GetEnumerator: TDominatedEnumerator;
       end;
 
-    { returns True if aDom dominates aValue }
-      function Dominates(aDom, aValue: SizeInt): Boolean;
+    { returns True if aLeft dominates aRight }
+      function Dominates(aLeft, aRight: SizeInt): Boolean;
     { enumerates dominators of aValue(excluding aValue) }
       function DomSetOf(aValue: SizeInt): TDomSet;
     { returns dominator set of aValue(excluding aValue) }
@@ -1149,16 +1149,16 @@ begin
   Dfs;
 end;
 
-function TGSimpleDigraph.TDomTree.Dominates(aDom, aValue: SizeInt): Boolean;
+function TGSimpleDigraph.TDomTree.Dominates(aLeft, aRight: SizeInt): Boolean;
 begin
-  if SizeUInt(aDom) >= Count then
-    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aDom])
+  if SizeUInt(aLeft) >= Count then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aLeft])
   else
-    if SizeUInt(aValue) >= Count then
-      raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
-  if aDom <> aValue then
-    Result := (FNodeList[aDom].InTime < FNodeList[aValue].InTime) and
-              (FNodeList[aDom].OutTime > FNodeList[aValue].OutTime)
+    if SizeUInt(aRight) >= Count then
+      raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aRight]);
+  if aLeft <> aRight then
+    Result := (FNodeList[aLeft].InTime < FNodeList[aRight].InTime) and
+              (FNodeList[aLeft].OutTime > FNodeList[aRight].OutTime)
   else
     Result := True;
 end;
