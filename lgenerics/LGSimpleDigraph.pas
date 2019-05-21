@@ -339,7 +339,7 @@ type
   { returns dominance frontiers and dominator tree in aDomTree(used SNCA algorithm);
     raises an exception if it does not contain the vertex aSource }
     function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TDomTree): TIntMatrix; inline;
-    function FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TDomTree): TIntMatrix;
+    function  FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TDomTree): TIntMatrix;
 
 {**********************************************************************************************************
   DAG utilities
@@ -1141,18 +1141,11 @@ begin
 end;
 
 procedure TGSimpleDigraph.TDomTree.Init(const aTree: TIntArray; aRoot: SizeInt);
-var
-  I: SizeInt;
 begin
   FTree := aTree;
   FRoot := aRoot;
   System.SetLength(FNodeList, FTree.Length);
-  for I := 0 to System.High(FNodeList) do
-    begin
-      FNodeList[I].InTime := NULL_INDEX;
-      FNodeList[I].OutTime := NULL_INDEX;
-      FNodeList[I].Next := NULL_INDEX;
-    end;
+  System.FillChar(Pointer(FNodeList)^, SizeOf(TNode) * System.Length(FNodeList), $ff);
   Dfs;
 end;
 
