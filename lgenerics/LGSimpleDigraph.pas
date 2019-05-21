@@ -228,7 +228,9 @@ type
       function DominatedBy(aValue: SizeInt): TDominated;
     { returns vertex set dominated by aValue(excluding aValue) }
       function ExtractDominated(aValue: SizeInt): TIntArray;
+      function InTree(aValue: SizeInt): Boolean;
       property IDom[aIndex: SizeInt]: SizeInt read GetIDom; default;
+      property Root: SizeInt read FRoot;
       property Size: SizeInt read FSize;
     end;
 
@@ -1227,6 +1229,16 @@ begin
       Inc(I);
     end;
   Result.Length := I;
+end;
+
+function TGSimpleDigraph.TDomTree.InTree(aValue: SizeInt): Boolean;
+begin
+  if SizeUInt(aValue) >= Count then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
+  if aValue <> Root then
+    Result := FTree[aValue] >= 0
+  else
+    Result := True;
 end;
 
 { TGSimpleDigraph }
