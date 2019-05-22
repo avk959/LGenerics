@@ -1158,10 +1158,9 @@ end;
 function TGSimpleDigraph.TDomTree.Dominates(aLeft, aRight: SizeInt): Boolean;
 begin
   if SizeUInt(aLeft) >= SizeUInt(Count) then
-    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aLeft])
-  else
-    if SizeUInt(aRight) >= SizeUInt(Count) then
-      raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aRight]);
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aLeft]);
+  if SizeUInt(aRight) >= SizeUInt(Count) then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aRight]);
   if aLeft <> aRight then
     Result := (FNodeList[aLeft].InTime < FNodeList[aRight].InTime) and
               (FNodeList[aLeft].OutTime > FNodeList[aRight].OutTime)
@@ -1233,10 +1232,9 @@ end;
 function TGSimpleDigraph.TDomTree.NcDom(aLeft, aRight: SizeInt): SizeInt;
 begin
   if SizeUInt(aLeft) >= SizeUInt(Count) then
-    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aLeft])
-  else
-    if SizeUInt(aRight) >= SizeUInt(Count) then
-      raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aRight]);
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aLeft]);
+  if SizeUInt(aRight) >= SizeUInt(Count) then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aRight]);
   if aLeft = aRight then
     exit(aLeft);
   if (FNodeList[aLeft].InTime >= 0) and (FNodeList[aRight].InTime >= 0) then
@@ -1258,7 +1256,7 @@ function TGSimpleDigraph.TDomTree.InTree(aValue: SizeInt): Boolean;
 begin
   if SizeUInt(aValue) >= SizeUInt(Count) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
-  Result := FNodeList[aValue].InTime >= 0
+  Result := FNodeList[aValue].InTime >= 0;
 end;
 
 { TGSimpleDigraph }
