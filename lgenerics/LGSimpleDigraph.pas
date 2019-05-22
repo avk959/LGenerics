@@ -229,7 +229,7 @@ type
     { returns vertex set dominated by the vertex with index aValue(excluding aValue) }
       function ExtractDominated(aValue: SizeInt): TIntArray;
     { returns index of the nearest vertex that dominates the vertices with indices
-      aLeft and aRight, or -1, if aLeft or aRight is not in dominator tree }
+      aLeft and aRight, or -1, if there is no such vertex }
       function NcDom(aLeft, aRight: SizeInt): SizeInt;
     { returns True if the vertex with index aValue is in dominator tree }
       function InTree(aValue: SizeInt): Boolean;
