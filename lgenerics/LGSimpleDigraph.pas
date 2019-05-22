@@ -176,7 +176,7 @@ type
       FTree: TIntArray;
       FRoot,
       FSize: SizeInt;
-      function  Count: SizeUInt; inline;
+      function  GetCount: SizeInt; inline;
       procedure Dfs;
       function  GetIDom(aIndex: SizeInt): SizeInt;
       procedure Init(const aTree: TIntArray; aRoot: SizeInt);
@@ -218,20 +218,26 @@ type
         function GetEnumerator: TDominatedEnumerator;
       end;
 
-    { returns True if aLeft dominates aRight }
+    { returns True if the vertex with index aLeft dominates the vertex with index aRight }
       function Dominates(aLeft, aRight: SizeInt): Boolean;
-    { enumerates dominators of aValue(excluding aValue) }
+    { enumerates dominators of the vertex with index aValue(excluding aValue) }
       function DomSetOf(aValue: SizeInt): TDomSet;
-    { returns dominator set of aValue(excluding aValue) }
+    { returns dominator set of the vertex with index aValue(excluding aValue) }
       function ExtractDomSet(aValue: SizeInt): TIntArray;
-    { enumerates vertices dominated by aValue(excluding aValue) }
+    { enumerates vertices dominated by the vertex with index aValue(excluding aValue) }
       function DominatedBy(aValue: SizeInt): TDominated;
-    { returns vertex set dominated by aValue(excluding aValue) }
+    { returns vertex set dominated by the vertex with index aValue(excluding aValue) }
       function ExtractDominated(aValue: SizeInt): TIntArray;
+    { returns index of the nearest vertex that dominates the vertices with indices
+      aLeft and aRight, or -1, if aLeft or aRight is not in dominator tree }
+      function NcDom(aLeft, aRight: SizeInt): SizeInt;
+    { returns True if the vertex with index aValue is in dominator tree }
       function InTree(aValue: SizeInt): Boolean;
+    { index of immediate dominator of the vertex with index aIndex }
       property IDom[aIndex: SizeInt]: SizeInt read GetIDom; default;
       property Root: SizeInt read FRoot;
-      property Size: SizeInt read FSize;
+      property TreeSize: SizeInt read FSize;
+      property Count: SizeInt read GetCount;
     end;
 
 {**********************************************************************************************************
@@ -1078,7 +1084,7 @@ end;
 
 { TGSimpleDigraph.TDomTree }
 
-function TGSimpleDigraph.TDomTree.Count: SizeUInt;
+function TGSimpleDigraph.TDomTree.GetCount: SizeInt;
 begin
   Result := System.Length(FNodeList);
 end;
@@ -1135,7 +1141,7 @@ end;
 
 function TGSimpleDigraph.TDomTree.GetIDom(aIndex: SizeInt): SizeInt;
 begin
-  if SizeUInt(aIndex) >= Count then
+  if SizeUInt(aIndex) >= SizeUInt(Count) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aIndex]);
   Result := FTree[aIndex];
 end;
@@ -1151,10 +1157,10 @@ end;
 
 function TGSimpleDigraph.TDomTree.Dominates(aLeft, aRight: SizeInt): Boolean;
 begin
-  if SizeUInt(aLeft) >= Count then
+  if SizeUInt(aLeft) >= SizeUInt(Count) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aLeft])
   else
-    if SizeUInt(aRight) >= Count then
+    if SizeUInt(aRight) >= SizeUInt(Count) then
       raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aRight]);
   if aLeft <> aRight then
     Result := (FNodeList[aLeft].InTime < FNodeList[aRight].InTime) and
@@ -1165,7 +1171,7 @@ end;
 
 function TGSimpleDigraph.TDomTree.DomSetOf(aValue: SizeInt): TDomSet;
 begin
-  if SizeUInt(aValue) >= Count then
+  if SizeUInt(aValue) >= SizeUInt(Count) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
   Result.FTree := FTree;
   Result.FIndex := aValue;
@@ -1176,7 +1182,7 @@ var
   I, Curr: SizeInt;
 begin
   Result := nil;
-  if SizeUInt(aValue) >= Count then
+  if SizeUInt(aValue) >= SizeUInt(Count) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
   Result.Length := INIT_LEN;
   Curr := FTree[aValue];
@@ -1194,7 +1200,7 @@ end;
 
 function TGSimpleDigraph.TDomTree.DominatedBy(aValue: SizeInt): TDominated;
 begin
-  if SizeUInt(aValue) >= Count then
+  if SizeUInt(aValue) >= SizeUInt(Count) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
   Result.FNodeList := FNodeList;
   Result.FIndex := aValue;
@@ -1205,7 +1211,7 @@ var
   I, Next, RootTime: SizeInt;
 begin
   Result := nil;
-  if SizeUInt(aValue) >= Count then
+  if SizeUInt(aValue) >= SizeUInt(Count) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
   I := 0;
   Result.Length := INIT_LEN;
@@ -1224,14 +1230,35 @@ begin
   Result.Length := I;
 end;
 
+function TGSimpleDigraph.TDomTree.NcDom(aLeft, aRight: SizeInt): SizeInt;
+begin
+  if SizeUInt(aLeft) >= SizeUInt(Count) then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aLeft])
+  else
+    if SizeUInt(aRight) >= SizeUInt(Count) then
+      raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aRight]);
+  if aLeft = aRight then
+    exit(aLeft);
+  if (FNodeList[aLeft].InTime >= 0) and (FNodeList[aRight].InTime >= 0) then
+    begin
+      while FNodeList[aLeft].InTime <> FNodeList[aRight].InTime do
+        begin
+          while FNodeList[aLeft].InTime > FNodeList[aRight].InTime do
+            aLeft := FTree[aLeft];
+          while FNodeList[aRight].InTime > FNodeList[aLeft].InTime do
+            aRight := FTree[aRight];
+        end;
+      Result := aLeft;
+    end
+  else
+    Result := NULL_INDEX;
+end;
+
 function TGSimpleDigraph.TDomTree.InTree(aValue: SizeInt): Boolean;
 begin
-  if SizeUInt(aValue) >= Count then
+  if SizeUInt(aValue) >= SizeUInt(Count) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [SDomTree, aValue]);
-  if aValue <> Root then
-    Result := FTree[aValue] >= 0
-  else
-    Result := True;
+  Result := FNodeList[aValue].InTime >= 0
 end;
 
 { TGSimpleDigraph }
