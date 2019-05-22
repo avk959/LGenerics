@@ -99,6 +99,8 @@ type
     procedure CreateDomTree2;
     procedure CreateDomTree3;
     procedure CreateDomTree4;
+    procedure CreateDomTree5;
+    procedure CreateDomTree6;
     procedure FindDomFrontiers;
     procedure FindDomFrontiers1;
     procedure FindDomFrontiers2;
@@ -1376,7 +1378,7 @@ begin
   g := {%H-}Ref;
   g.AddVertex(0);
   Tree := g.CreateDomTree(0);
-  AssertTrue(Tree.Size = g.VertexCount);
+  AssertTrue(Tree.TreeSize = g.VertexCount);
   AssertTrue(Tree.Dominates(0, 0));
   AssertTrue(Tree.ExtractDomSet(0) = nil);
   AssertTrue(Tree.ExtractDominated(0) = nil);
@@ -1395,10 +1397,10 @@ begin
   g := Ref;
   Tree := g.CreateDomTree(0);
   Tmp := TestDigr5DomTree;
-  AssertTrue(Tree.Size = 14);
-  for I := 0 to Pred(Tree.Size) do
+  AssertTrue(Tree.TreeSize = 14);
+  for I := 0 to Pred(Tree.TreeSize) do
     AssertTrue(Tree[I] = Tmp[I]);
-  for I := 1 to Pred(Tree.Size) do
+  for I := 1 to Pred(Tree.TreeSize) do
     AssertTrue(Tree.Dominates(0, I));
   AssertTrue(Tree.Dominates(1, 12));
   AssertFalse(Tree.Dominates(1, 13));
@@ -1431,7 +1433,7 @@ var
   g: TGraph;
   Tree: TGraph.TDomTree;
   Tmp: TIntArray;
-  I, J: SizeInt;
+  I, J, K: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestDigr5;
   g := Ref;
@@ -1443,7 +1445,9 @@ begin
   Tmp := [0, 1, 2, 8, 9, 11];
   for I in Tree.DomSetOf(12) do
     begin
-      AssertTrue(THelper.SequentSearch(Tmp, I) >= 0);
+      K := THelper.SequentSearch(Tmp, I);
+      AssertTrue(K >= 0);
+      Tmp[K] := NULL_INDEX;
       Inc(J);
     end;
   AssertTrue(J = 6);
@@ -1451,15 +1455,16 @@ begin
   Tmp := [0, 1];
   for I in Tree.DomSetOf(2) do
     begin
-      AssertTrue(THelper.SequentSearch(Tmp, I) >= 0);
+      K := THelper.SequentSearch(Tmp, I);
+      Tmp[K] := NULL_INDEX;
+      AssertTrue(K >= 0);
       Inc(J);
     end;
   AssertTrue(J = 2);
   J := 0;
-  Tmp := [0];
   for I in Tree.DomSetOf(13) do
     begin
-      AssertTrue(THelper.SequentSearch(Tmp, I) >= 0);
+      AssertTrue(I = 0);
       Inc(J);
     end;
   AssertTrue(J = 1);
@@ -1471,7 +1476,7 @@ var
   g: TGraph;
   Tree: TGraph.TDomTree;
   Tmp: TIntArray;
-  I, J: SizeInt;
+  I, J, K: SizeInt;
 begin
   {%H-}Ref.Instance := GenerateTestDigr5;
   g := Ref;
@@ -1498,7 +1503,9 @@ begin
   Tmp := [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
   for I in Tree.DominatedBy(0) do
     begin
-      AssertTrue(THelper.SequentSearch(Tmp, I) >= 0);
+      K := THelper.SequentSearch(Tmp, I);
+      Tmp[K] := NULL_INDEX;
+      AssertTrue(K >= 0);
       Inc(J);
     end;
   AssertTrue(J = 13);
@@ -1506,7 +1513,9 @@ begin
   Tmp := [9, 10, 11, 12];
   for I in Tree.DominatedBy(8) do
     begin
-      AssertTrue(THelper.SequentSearch(Tmp, I) >= 0);
+      K := THelper.SequentSearch(Tmp, I);
+      Tmp[K] := NULL_INDEX;
+      AssertTrue(K >= 0);
       Inc(J);
     end;
   AssertTrue(J = 4);
@@ -1529,6 +1538,39 @@ begin
     AssertTrue(Tree.InTree(I));
 end;
 
+procedure TSimpleDigraphTest.CreateDomTree5;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TGraph.TDomTree;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr5;
+  g := Ref;
+  Tree := g.CreateDomTree(0);
+  AssertTrue(Tree.NcDom(3, 12) = 2);
+  AssertTrue(Tree.NcDom(4, 10) = 2);
+  AssertTrue(Tree.NcDom(2, 6) = 2);
+  AssertTrue(Tree.NcDom(1, 12) = 1);
+  AssertTrue(Tree.NcDom(5, 13) = 0);
+end;
+
+procedure TSimpleDigraphTest.CreateDomTree6;
+var
+  Ref: TRef;
+  g: TGraph;
+  Tree: TGraph.TDomTree;
+begin
+  {%H-}Ref.Instance := GenerateTestDigr1;
+  g := Ref;
+  Tree := g.CreateDomTree(0);
+  AssertTrue(Tree.NcDom(3, 4) = 0);
+  AssertTrue(Tree.NcDom(12, 10) = 9);
+  AssertTrue(Tree.NcDom(4, 5) = 0);
+  AssertTrue(Tree.NcDom(7, 6) = -1);
+  AssertTrue(Tree.NcDom(8, 4) = -1);
+  AssertTrue(Tree.NcDom(7, 8) = -1);
+end;
+
 procedure TSimpleDigraphTest.FindDomFrontiers;
 var
   Ref: TRef;
@@ -1539,7 +1581,7 @@ begin
   g := {%H-}Ref;
   g.AddVertex(0);
   DomFront := g.FindDomFrontiers(0, Tree);
-  AssertTrue(Tree.Size = 1);
+  AssertTrue(Tree.TreeSize = 1);
   AssertTrue(Tree[0] = NULL_INDEX);
   AssertTrue(Length(DomFront) = g.VertexCount);
   AssertTrue(DomFront[0] = nil);
@@ -1558,7 +1600,7 @@ begin
   g := Ref;
   DomFront := g.FindDomFrontiers(0, Tree);
   Tmp := TestDigr4DomTree;
-  AssertTrue(Tree.Size = Tmp.Length);
+  AssertTrue(Tree.TreeSize = Tmp.Length);
   for I := 0 to Pred(Tmp.Length) do
     AssertTrue(THelper.SequentSearch(Tmp, Tree[I]) >= 0);
   AssertTrue(Length(DomFront) = g.VertexCount);
@@ -1618,7 +1660,7 @@ begin
   g := Ref;
   DomFront := g.FindDomFrontiers(0, Tree);
   Tmp := TestDigr5DomTree;
-  AssertTrue(Tree.Size = Tmp.Length);
+  AssertTrue(Tree.TreeSize = Tmp.Length);
   for I := 0 to Pred(Tmp.Length) do
     AssertTrue(THelper.SequentSearch(Tmp, Tree[I]) >= 0);
   AssertTrue(Length(DomFront) = g.VertexCount);
@@ -1682,7 +1724,7 @@ begin
   g := Ref;
   DomFront := g.FindDomFrontiers(0, Tree);
   Tmp := TestDigr6DomTree;
-  AssertTrue(Tree.Size = Tmp.Length);
+  AssertTrue(Tree.TreeSize = Tmp.Length);
   for I := 0 to Pred(Tmp.Length) do
     AssertTrue(THelper.SequentSearch(Tmp, Tree[I]) >= 0);
   AssertTrue(Length(DomFront) = g.VertexCount);
