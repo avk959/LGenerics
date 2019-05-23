@@ -147,6 +147,7 @@ type
     procedure SearchForFundamentalsCyclesLen(out aCycleLens: TIntVector);
     procedure FindFundamentalCyclesLen(out aCycleLens: TIntVector);
     function  CreateDegreeArray: TIntArray;
+    function  CreateSortDegreeArray(o: TSortOrder): TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
     function  SortComplementByWidth: TIntArray;
@@ -163,7 +164,7 @@ type
 {**********************************************************************************************************
   auxiliary utilities
 ***********************************************************************************************************}
-    class function MayBeEqual(L, R: TGSimpleGraph): Boolean;
+    class function MayBeIsomorphic(L, R: TGSimpleGraph): Boolean;
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
@@ -223,6 +224,9 @@ type
   { checks whether the graph is regular(that is, the degrees of all its vertices are equal);
     an empty graph is considered regular }
     function  IsRegular(out aDegree: SizeInt): Boolean;
+  { returns True and the list of vertex indices in the perfect elimination order(reverse)
+    in aRevPeo, if graph is chordal, False otherwise; an empty graph is considered chordal }
+    function  IsChordal(out aRevPeo: TIntArray): Boolean;
     function  CyclomaticNumber: SizeInt;
   { returns True if exists any cycle in the aVertex connected component,
     in this case aCycle will contain indices of the vertices of the found cycle }
@@ -266,9 +270,6 @@ type
   { if the graph is not empty, then make graph biconnected, adding, if necessary, new edges;
     returns count of added edges; if aOnAddEdge is nil then new edges will use default data value }
     function  EnsureBiconnected(aOnAddEdge: TOnAddEdge): SizeInt;
-  { returns True and the list of vertex indices in the perfect elimination order(reverse)
-    in aRevPeo, if graph is chordal, False otherwise; an empty graph is considered chordal }
-    function  IsChordal(out aRevPeo: TIntArray): Boolean;
   { returns True, radius and diameter, if graph is connected, False otherwise }
     function  FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
   { returns array of indices of the central vertices, if graph is connected, nil otherwise }
@@ -2294,16 +2295,22 @@ function TGSimpleGraph.CreateDegreeArray: TIntArray;
 var
   I: SizeInt;
 begin
-  Result := CreateIntArray;
+  Result{%H-}.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
     Result[I] := AdjLists[I]^.Count;
+end;
+
+function TGSimpleGraph.CreateSortDegreeArray(o: TSortOrder): TIntArray;
+begin
+  Result := CreateDegreeArray;
+  TIntHelper.Sort(Result, o);
 end;
 
 function TGSimpleGraph.CreateComplementDegreeArray: TIntArray;
 var
   I: SizeInt;
 begin
-  Result := CreateIntArray;
+  Result{%H-}.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
     Result[I] := VertexCount - AdjLists[I]^.Count;
 end;
@@ -2515,7 +2522,7 @@ begin
     end;
 end;
 
-class function TGSimpleGraph.MayBeEqual(L, R: TGSimpleGraph): Boolean;
+class function TGSimpleGraph.MayBeIsomorphic(L, R: TGSimpleGraph): Boolean;
 var
   fcL, fcR: TIntVector;
   I: SizeInt;
@@ -2527,9 +2534,9 @@ begin
   else
     if R.IsEmpty then
       exit(False);
-  if L.VertexCount <> R.VertexCount then
+  if (L.VertexCount <> R.VertexCount) or (L.EdgeCount <> R.EdgeCount) then
     exit(False);
-  if L.EdgeCount <> R.EdgeCount then
+  if not TIntHelper.Same(L.CreateSortDegreeArray(soAsc), R.CreateSortDegreeArray(soAsc)) then
     exit(False);
   L.FindFundamentalCyclesLen(fcL);
   R.FindFundamentalCyclesLen(fcR);
@@ -2889,6 +2896,13 @@ begin
   Result := True;
 end;
 
+function TGSimpleGraph.IsChordal(out aRevPeo: TIntArray): Boolean;
+begin
+  if VertexCount < 4 then
+    exit(True);
+  Result := FindPerfectElimOrd(nil, aRevPeo);
+end;
+
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
 begin
   Result := EdgeCount - VertexCount + SeparateCount;
@@ -3154,11 +3168,6 @@ begin
         aOnAddEdge(Items[e.Source], Items[e.Destination], d);
       Result += Ord(AddEdgeI(e.Source, e.Destination, d));
     end;
-end;
-
-function TGSimpleGraph.IsChordal(out aRevPeo: TIntArray): Boolean;
-begin
-  Result := FindPerfectElimOrd(nil, aRevPeo);
 end;
 
 function TGSimpleGraph.FindMetrics(out aRadius, aDiameter: SizeInt): Boolean;
