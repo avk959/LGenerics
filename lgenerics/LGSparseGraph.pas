@@ -225,8 +225,8 @@ type
     FChainList: TChainList;
     FCount,
     FEdgeCount: SizeInt;
-    FTitle: string;
-    FDescription: TStrings;
+    FTitle,
+    FDescription: string;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): TVertex; inline;
     function  GetAdjList(aIndex: SizeInt): PAdjList; inline;
@@ -278,8 +278,8 @@ type
     function  DoSetEdgeData(aSrc, aDst: SizeInt; constref aValue: TEdgeData): Boolean; virtual; abstract;
     procedure DoWriteEdges(aStream: TStream; aOnWriteData: TOnWriteData); virtual; abstract;
     property  AdjLists[aIndex: SizeInt]: PAdjList read GetAdjList;
-    class function TreeExtractCycle(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray; static;
-    class function TreeCycleLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt; static;
+    class function TreeExtractCycle(const aTree: TIntArray; aJoin, aPred: SizeInt): TIntArray; static;
+    class function TreeCycleLen(const aTree: TIntArray; aJoin, aPred: SizeInt): SizeInt; static;
   public
   type
     TEdge = record
@@ -372,8 +372,6 @@ type
 {**********************************************************************************************************
   class management utilities
 ***********************************************************************************************************}
-    constructor Create;
-    destructor Destroy; override;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean;
     procedure Clear; virtual;
@@ -515,7 +513,7 @@ type
 ***********************************************************************************************************}
 
     property Title: string read FTitle write FTitle;
-    property Description: TStrings read FDescription;
+    property Description: string read FDescription write FDescription;
     property VertexCount: SizeInt read FCount;
     property EdgeCount: SizeInt read FEdgeCount;
     property Capacity: SizeInt read GetCapacity;
@@ -1563,51 +1561,43 @@ begin
     end;
 end;
 
-class function TGSparseGraph.TreeExtractCycle(const aTree: TIntArray; aFrom, aTo: SizeInt): TIntArray;
+class function TGSparseGraph.TreeExtractCycle(const aTree: TIntArray; aJoin, aPred: SizeInt): TIntArray;
 var
-  v: TIntVector;
-  I, Len: SizeInt;
+  Cycle: TIntVector;
+  I, J: SizeInt;
 begin
-  I := aTo;
-  Len := System.Length(aTree);
-  while I >= 0 do
-    begin
-      if I < System.Length(aTree) then
-        v.Add(I)
-      else
-        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
-      if I = aFrom then
-        break;
-      I := aTree[I];
-      Dec(Len);
-      if Len < 0 then
-        raise EGraphError.Create(SEInvalidTreeInst);
-    end;
-  v.Add(aTo);
-  Result := v.ToArray;
-  TIntHelper.Reverse(Result);
+  I := aPred;
+  J := System.Length(aTree);
+  repeat
+    Cycle.Add(I);
+    if I = aJoin then
+      break;
+    I := aTree[I];
+    Dec(J);
+    if J < 0 then
+      raise EGraphError.Create(SEInternalDataInconsist);
+  until False;
+  Cycle.Add(aPred);
+  TIntVectorHelper.Reverse(Cycle);
+  Result := Cycle.ToArray;
 end;
 
-class function TGSparseGraph.TreeCycleLen(const aTree: TIntArray; aFrom, aTo: SizeInt): SizeInt;
+class function TGSparseGraph.TreeCycleLen(const aTree: TIntArray; aJoin, aPred: SizeInt): SizeInt;
 var
-  I, Len: SizeInt;
+  I, J: SizeInt;
 begin
   Result := 0;
-  I := aTo;
-  Len := System.Length(aTree);
-  while I >= 0 do
-    begin
-      if I < System.Length(aTree) then
-        Inc(Result)
-      else
-        raise EGraphError.CreateFmt(SEIndexOutOfBoundsFmt,[I]);
-      if I = aFrom then
-        break;
-      I := aTree[I];
-      Dec(Len);
-      if Len < 0 then
-        raise EGraphError.Create(SEInvalidTreeInst);
-    end;
+  I := aPred;
+  J := System.Length(aTree);
+  repeat
+    Inc(Result);
+    if I = aJoin then
+      break;
+    I := aTree[I];
+    Dec(J);
+    if J < 0 then
+      raise EGraphError.Create(SEInternalDataInconsist);
+  until False;
 end;
 
 class function TGSparseGraph.BitMatrixSizeMax: SizeInt;
@@ -1634,21 +1624,6 @@ begin
     end;
   Result := v.ToArray;
   TIntHelper.Reverse(Result);
-end;
-
-constructor TGSparseGraph.Create;
-begin
-  FDescription := TStringList.Create;
-  FDescription.WriteBOM := False;
-  FDescription.SkipLastLineBreak := True;
-  FDescription.DefaultEncoding := TEncoding.UTF8;
-  Title := 'Untitled';
-end;
-
-destructor TGSparseGraph.Destroy;
-begin
-  FDescription.Free;
-  inherited;
 end;
 
 function TGSparseGraph.IndexPath2VertexPath(const aIdxPath: TIntArray): TVertexArray;
@@ -1687,7 +1662,7 @@ begin
   FCount := 0;
   FEdgeCount := 0;
   FTitle := '';
-  FDescription.Clear;
+  FDescription := '';
 end;
 
 procedure TGSparseGraph.EnsureCapacity(aValue: SizeInt);
@@ -1739,17 +1714,15 @@ begin
     Header.Version := GRAPH_HEADER_VERSION;
     gTitle := Title;
     Header.TitleLen := System.Length(gTitle);
-    Descr := Description.Text;
+    Descr := Description.Replace(sLineBreak, #10);
     Header.DescriptionLen := System.Length(Descr);
     Header.VertexCount := VertexCount;
     Header.EdgeCount := EdgeCount;
     wbs.WriteBuffer(Header, SizeOf(Header));
     //write title
-    if Header.TitleLen > 0 then
-      wbs.WriteBuffer(Pointer(gTitle)^, Header.TitleLen);
+    wbs.WriteBuffer(Pointer(gTitle)^, Header.TitleLen);
     //write description
-    if Header.DescriptionLen > 0 then
-      wbs.WriteBuffer(Pointer(Descr)^, Header.DescriptionLen);
+    wbs.WriteBuffer(Pointer(Descr)^, Header.DescriptionLen);
     //write Items, but does not save any info about connected
     //this should allow transfer data between directed/undirected graphs ???
     for I := 0 to Pred(Header.VertexCount) do
@@ -1797,7 +1770,7 @@ begin
       begin
         System.SetLength(Descr{%H-}, Header.DescriptionLen);
         rbs.ReadBuffer(Pointer(Descr)^, Header.DescriptionLen);
-        Description.Text := Descr;
+        Description := StringReplace(Descr, #10, SLineBreak, [rfReplaceAll]);
       end;
     //read Items
     for I := 0 to Pred(Header.VertexCount) do

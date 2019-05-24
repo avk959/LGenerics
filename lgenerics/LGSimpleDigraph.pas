@@ -1292,7 +1292,7 @@ begin
   FCount := aGraph.VertexCount;
   FEdgeCount := aGraph.EdgeCount;
   FTitle := aGraph.Title;
-  FDescription.Assign(aGraph.FDescription);
+  FDescription := aGraph.Description;
   if aGraph.NonEmpty then
     begin
       FChainList := System.Copy(aGraph.FChainList);
@@ -1316,7 +1316,7 @@ begin
   Clear;
   EnsureCapacity(aGraph.VertexCount);
   Title := aGraph.Title;
-  Description.Assign(aGraph.FDescription);
+  Description := aGraph.Description;
   for v in aGraph.Vertices do
     AddVertex(v);
   for e in aGraph.Edges do
@@ -2081,7 +2081,7 @@ begin
   Tmp := TGSimpleDigraph.Create;
   try
     Tmp.Title := Title;
-    Tmp.Description.Assign(Description);
+    Tmp.Description := Description;
     for e in Edges do
       begin
         s := Items[e.Source];
@@ -2963,7 +2963,7 @@ begin
   Tmp := TGFlowChart.Create;
   try
     Tmp.Title := Title;
-    Tmp.Description.Assign(Description);
+    Tmp.Description := Description;
     for s in Vertices do
       if aChart.ContainsVertex(s) then
         Tmp.AddVertex(s);

@@ -339,7 +339,7 @@ begin
   AssertTrue(g.VertexCount = 13);
   AssertTrue(g.EdgeCount = 17);
   g.Title := Title;
-  g.Description.Text := Description;
+  g.Description := Description;
   g2 := {%H-}Ref2;
   Stream := TMemoryStream.Create;
   try
@@ -356,7 +356,7 @@ begin
   for e in g2.Edges do
     AssertTrue(g.ContainsEdgeI(e.Source, e.Destination));
   AssertTrue(g2.Title = Title);
-  AssertTrue(g2.Description.Text = Description);
+  AssertTrue(g2.Description = Description);
 end;
 
 procedure TSimpleDigraphTest.Clone;
@@ -370,8 +370,8 @@ begin
   {%H-}Ref2.Instance := g.Clone;
   g2 := Ref2;
   AssertTrue(g2.IsEmpty);
-  AssertTrue(g2.Title = 'Untitled');
-  AssertTrue(g2.Description.Text = '');
+  AssertTrue(g2.Title = '');
+  AssertTrue(g2.Description = '');
   Title := 'Test graph';
   Description := 'for testing purposes';
   Ref.Instance := GenerateTestDigr1;
@@ -379,7 +379,7 @@ begin
   AssertTrue(g.VertexCount = 13);
   AssertTrue(g.EdgeCount = 17);
   g.Title := Title;
-  g.Description.Text := Description;
+  g.Description := Description;
   Ref2.Instance := g.Clone;
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 13);
@@ -389,7 +389,7 @@ begin
   for e in g2.Edges do
     AssertTrue(g.ContainsEdgeI(e.Source, e.Destination));
   AssertTrue(g2.Title = Title);
-  AssertTrue(g2.Description.Text = Description);
+  AssertTrue(g2.Description = Description);
 end;
 
 procedure TSimpleDigraphTest.Reverse;
@@ -406,7 +406,7 @@ begin
   AssertTrue(g.VertexCount = 13);
   AssertTrue(g.EdgeCount = 17);
   g.Title := Title;
-  g.Description.Text := Description;
+  g.Description := Description;
   {%H-}Ref2.Instance := g.Reverse;
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 13);
@@ -416,7 +416,7 @@ begin
   for e in g2.Edges do
     AssertTrue(g.ContainsEdge(g2[e.Destination], g2[e.Source]));
   AssertTrue(g2.Title = Title);
-  AssertTrue(g2.Description.Text = Description);
+  AssertTrue(g2.Description = Description);
 end;
 
 procedure TSimpleDigraphTest.InducedSubgraph;
@@ -457,7 +457,7 @@ begin
   Description := 'for testing purposes';
   g := {%H-}Ref;
   g.Title := Title;
-  g.Description.Text := Description;
+  g.Description := Description;
   g2 := {%H-}Ref2;
   g.SetSymmDifferenceOf(g2);
   AssertTrue(g.IsEmpty);
@@ -467,7 +467,7 @@ begin
   AssertTrue(g.VertexCount = 13);
   AssertTrue(g.EdgeCount = 17);
   AssertTrue(g.Title = Title);
-  AssertTrue(g.Description.Text = Description);
+  AssertTrue(g.Description = Description);
   for e in g.Edges do
     AssertTrue(g2.ContainsEdge(g[e.Source], g[e.Destination]));
 end;

@@ -873,7 +873,7 @@ begin
   FEdgeCount := aGraph.EdgeCount;
   FCompCount := aGraph.FCompCount;
   FTitle := aGraph.Title;
-  FDescription.Assign(aGraph.FDescription);
+  FDescription := aGraph.FDescription;
   FConnected := aGraph.Connected;
   FConnectedValid := aGraph.ConnectedValid;
   if aGraph.NonEmpty then
@@ -2529,12 +2529,9 @@ var
 begin
   if L = R then
     exit(True);
-  if L.IsEmpty then
-    exit(L.IsEmpty)
-  else
-    if R.IsEmpty then
-      exit(False);
   if (L.VertexCount <> R.VertexCount) or (L.EdgeCount <> R.EdgeCount) then
+    exit(False);
+  if L.SeparateCount <> R.SeparateCount then
     exit(False);
   if not TIntHelper.Same(L.CreateSortDegreeArray(soAsc), R.CreateSortDegreeArray(soAsc)) then
     exit(False);
@@ -2634,7 +2631,7 @@ begin
   Tmp := TGSimpleGraph.Create;
   try
     Tmp.Title := Title;
-    Tmp.Description.Assign(Description);
+    Tmp.Description := Description;
     for e in DistinctEdges do
       begin
         s := Items[e.Source];
@@ -2840,7 +2837,7 @@ function TGSimpleGraph.IsCycle: Boolean;
 var
   d: SizeInt;
 begin
-  if (VertexCount = EdgeCount) and Connected and IsRegular(d) then
+  if (VertexCount >= 3) and (VertexCount = EdgeCount) and Connected and IsRegular(d) then
     Result := d = 2
   else
     Result := False;
@@ -4024,7 +4021,7 @@ begin
   Tmp := TGChart.Create;
   try
     Tmp.Title := Title;
-    Tmp.Description.Assign(Description);
+    Tmp.Description := Description;
     for s in Vertices do
       if aChart.ContainsVertex(s) then
         Tmp.AddVertex(s);
@@ -4071,7 +4068,12 @@ begin
       ParseLine := Trim(Line);
       if ParseLine <> '' then
         case ParseLine[1] of
-          'c': Description.Add(System.Copy(ParseLine, 3, System.Length(ParseLine)));
+          'c':
+            if Description <> '' then
+              Description := Description + SLineBreak +
+                            System.Copy(ParseLine, 3, System.Length(ParseLine))
+            else
+              Description := System.Copy(ParseLine, 3, System.Length(ParseLine));
           'e':
             begin
               ReadStr(ParseLine, Symb, Src, Dst);

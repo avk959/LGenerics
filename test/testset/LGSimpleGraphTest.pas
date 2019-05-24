@@ -525,7 +525,7 @@ begin
   AssertTrue(g.VertexCount = 13);
   AssertTrue(g.EdgeCount = 17);
   g.Title := Title;
-  g.Description.Text := Description;
+  g.Description := Description;
   g2 := Ref2;
   Stream := TMemoryStream.Create;
   try
@@ -542,7 +542,7 @@ begin
   for e in g2.Edges do
     AssertTrue(g.ContainsEdgeI(e.Source, e.Destination));
   AssertTrue(g2.Title = Title);
-  AssertTrue(g2.Description.Text = Description);
+  AssertTrue(g2.Description = Description);
 end;
 
 procedure TSimpleGraphTest.Clone;
@@ -559,7 +559,7 @@ begin
   AssertTrue(g.VertexCount = 13);
   AssertTrue(g.EdgeCount = 17);
   g.Title := Title;
-  g.Description.Text := Description;
+  g.Description := Description;
   {%H-}Ref2.Instance := g.Clone;
   g2 := Ref2;
   AssertTrue(g2.VertexCount = 13);
@@ -569,7 +569,7 @@ begin
   for e in g2.Edges do
     AssertTrue(g.ContainsEdgeI(e.Source, e.Destination));
   AssertTrue(g2.Title = Title);
-  AssertTrue(g2.Description.Text = Description);
+  AssertTrue(g2.Description = Description);
 end;
 
 procedure TSimpleGraphTest.Degree;
