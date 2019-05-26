@@ -712,6 +712,7 @@ begin
       case FTask.State of
         astExecuting: FState := fsExecuting;
         astFinished:  FState := fsFinished;
+      else
       end;
     except
       FState := fsCancelled;
@@ -762,6 +763,7 @@ begin
       raise ELGFuture.Create(SEResultUnknownFatal);
     fsCancelled:
       raise ELGFuture.Create(SEResultUnknownCancel);
+  else
   end;
   Result := FTaskResult;
 end;
