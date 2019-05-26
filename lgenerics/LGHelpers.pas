@@ -1607,10 +1607,6 @@ begin
         CFEqualCompare := TEqualCompare(@QWordEqual);
         CFHashCode := THashCode(@HashQWord);
       end;
-  else
-    CFCompare := TCompare(@CompareBin);
-    CFEqualCompare := TEqualCompare(@EqualBin);
-    CFHashCode := THashCode(@HashBin);
   end;
 end;
 
@@ -1647,10 +1643,6 @@ begin
         CFEqualCompare := TEqualCompare(@CurrencyEqual);
         CFHashCode := THashCode(@HashCurrency);
       end;
-  else
-    CFCompare := TCompare(@CompareBin);
-    CFEqualCompare := TEqualCompare(@EqualBin);
-    CFHashCode := THashCode(@HashBin);
   end;
 end;
 
