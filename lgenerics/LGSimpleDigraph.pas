@@ -1409,17 +1409,20 @@ function TGSimpleDigraph.GetDomTree(aSrc: SizeInt; out aSize: SizeInt; out aPred
 var
   Parents, PostOrd, Idx2Ord, Doms: TIntArray;
   Counter: SizeInt absolute aSize;
+
   procedure OnWhite(aNode, aParent: SizeInt);
   begin
     Parents[aNode] := aParent;
     if aNode <> aSrc then
       aPreds[aNode].Push(aParent);
   end;
+
   procedure OnGray(aNode, aParent: SizeInt);
   begin
     if aNode <> aSrc then
       aPreds[aNode].Push(aParent);
   end;
+
   procedure OnDone(aIndex: SizeInt);
   begin
     PostOrd[Counter] := aIndex;
@@ -1436,8 +1439,9 @@ var
       end;
     Result := aLeft;
   end;
+
 var
-  I, J, IDom: SizeInt;
+  I, J, IDom, Prev: SizeInt;
   Ready: Boolean;
 begin
   aPreds := nil;
@@ -1460,19 +1464,24 @@ begin
   repeat
     Ready := True;
     for I := Counter - 2 downto 0 do
-      begin
-        IDom := NULL_INDEX;
-        for J in aPreds[PostOrd[I]] do
-          if IDom <> NULL_INDEX then
-            IDom := Nca(Idx2Ord[J], IDom)
-          else
-            IDom := Idx2Ord[J];
-        if Doms[I] <> IDom then
-          begin
-            Doms[I] := IDom;
-            Ready := False;
-          end;
-      end;
+      if Doms[I] <> 0 then
+        begin
+          IDom := 0;
+          for J in aPreds[PostOrd[I]] do
+            begin
+              Prev := Idx2Ord[J];
+              if Prev <> 0 then
+                if IDom <> 0 then
+                  IDom := Nca(Prev, IDom)
+                else
+                  IDom := Prev;
+            end;
+          if Doms[I] <> IDom then
+            begin
+              Doms[I] := IDom;
+              Ready := False;
+            end;
+        end;
   until Ready;
   for I := 0 to Counter - 2 do
     Parents[PostOrd[I]] :=  PostOrd[Doms[I]];
