@@ -1485,6 +1485,7 @@ function TGSimpleDigraph.GetDomTreeSnca(aSrc: SizeInt; out aSize: SizeInt; out a
 var
   Parents: TIntArray;
   Counter: SizeInt absolute aSize;
+
   procedure Dfs(From: SizeInt);
   var
     Stack: TIntArray;
@@ -1518,19 +1519,24 @@ var
           Dec(sTop);
       end
   end;
+
 var
   Labels, SemiDoms, IDoms: TIntArray;
+
   procedure Compress(aLeft, aRight: SizeInt);
   var
     Node: SizeInt;
   begin
     Node := Parents[aLeft];
     if Node > aRight then
-      Compress(Node, aRight);
-    if Labels[Node] < Labels[aLeft] then
-      Labels[aLeft] := Labels[Node];
-    Parents[aLeft] := Parents[Node];
+      begin
+        Compress(Node, aRight);
+        if Labels[Node] < Labels[aLeft] then
+          Labels[aLeft] := Labels[Node];
+        Parents[aLeft] := Parents[Node];
+      end;
   end;
+
 var
   I, Prev, Dom: SizeInt;
 begin
