@@ -1428,6 +1428,7 @@ var
     PostOrd[Counter] := aIndex;
     Inc(Counter);
   end;
+
   function Nca(aLeft, aRight: SizeInt): SizeInt;
   begin
     while aLeft <> aRight do
@@ -1470,11 +1471,10 @@ begin
           for J in aPreds[PostOrd[I]] do
             begin
               Prev := Idx2Ord[J];
-              if Prev <> 0 then
-                if IDom <> 0 then
-                  IDom := Nca(Prev, IDom)
-                else
-                  IDom := Prev;
+              if IDom <> 0 then
+                IDom := Nca(Prev, IDom)
+              else
+                IDom := Prev;
             end;
           if Doms[I] <> IDom then
             begin
