@@ -45,7 +45,7 @@ type
   TEmptyData       = record end;
 
   TIntArray        = array of SizeInt;
-  TIntMatrix       = array of array of SizeInt;
+  TIntMatrix       = array of TIntArray;
   TShortArray      = array of ShortInt;
   TIntHelper       = specialize TGOrdinalArrayHelper<SizeInt>;
   TIntVector       = specialize TGLiteVector<SizeInt>;
@@ -190,7 +190,7 @@ type
     TAdjList           = specialize TGAdjList<TEdgeData>;
     PAdjList           = ^TAdjList;
     TAdjItemEnumerator = TAdjList.TEnumerator;
-    TAdjEnumArrayEx    = array of TAdjItemEnumerator;
+    TAdjItemEnumArray  = array of TAdjItemEnumerator;
 
     {$I SparseGraphIntSetH.inc}
 
@@ -265,7 +265,7 @@ type
     function  CreateIntArrayRange: TIntArray; inline;
     function  CreateColorArray: TColorArray;
     function  CreateAdjEnumArray: TAdjEnumArray;
-    function  CreateAdjEnumArrayEx: TAdjEnumArrayEx;
+    function  CreateAdjItemEnumArray: TAdjItemEnumArray;
     function  PathToNearestFrom(aSrc: SizeInt; constref aTargets: TIntArray): TIntArray;
     procedure AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
     procedure AssignTree(aGraph: TGSparseGraph; const aTree: TIntArray);
@@ -1443,7 +1443,7 @@ begin
     Result[I].FEnum := AdjLists[I]^.GetEnumerator;
 end;
 
-function TGSparseGraph.CreateAdjEnumArrayEx: TAdjEnumArrayEx;
+function TGSparseGraph.CreateAdjItemEnumArray: TAdjItemEnumArray;
 var
   I: SizeInt;
 begin
@@ -2198,7 +2198,7 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
+function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnWhite, aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
