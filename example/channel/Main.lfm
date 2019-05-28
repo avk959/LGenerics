@@ -10,7 +10,6 @@ object frmMain: TfrmMain
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   Position = poScreenCenter
-  LCLVersion = '2.1.0.0'
   object btStartSender: TButton
     Left = 16
     Height = 29
@@ -58,7 +57,7 @@ object frmMain: TfrmMain
     Width = 106
     Anchors = [akTop, akRight]
     AutoSize = False
-    Caption = 'empty'
+    Caption = '0'
     ParentColor = False
   end
   object lbReceivedData: TLabel
@@ -68,15 +67,15 @@ object frmMain: TfrmMain
     Width = 106
     Anchors = [akTop, akRight]
     AutoSize = False
-    Caption = 'empty'
+    Caption = '0'
     ParentColor = False
   end
   object Label1: TLabel
     Left = 36
     Height = 19
     Top = 36
-    Width = 48
-    Caption = 'Sended:'
+    Width = 30
+    Caption = 'Sent:'
     ParentColor = False
   end
   object Label2: TLabel
