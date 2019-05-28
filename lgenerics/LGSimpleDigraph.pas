@@ -115,7 +115,7 @@ type
     maps preorder->index and index->preorder in aOrd2Idx and aIdx2Ord }
     function  GetDomTreeSnca(aSrc: SizeInt; out aSize: SizeInt; out aPreds: TIntSetArray;
               out aOrd2Idx, aIdx2Ord: TIntArray): TIntArray;
-    function  TestIsDomTree(aTree: TIntArray; aSrc: SizeInt): Boolean;
+    function  TestIsDomTree(const aTree: TIntArray; aSrc: SizeInt): Boolean;
     function  TopoSort: TIntArray;
     function  TopoSort(out a: TIntArray): Boolean;
     function  GetDagLongestPaths(aSrc: SizeInt): TIntArray;
@@ -330,7 +330,7 @@ type
     function  FindDomTreeSnca(constref aSource: TVertex; out aSize: SizeInt): TIntArray; inline;
     function  FindDomTreeSncaI(aSrcIdx: SizeInt; out aSize: SizeInt): TIntArray;
   { returns True if aTree is dominator tree rooted by aSource;
-    todo: more efficient algorithm? }
+    todo: this checks only necessity but not sufficiency }
     function  IsDomTree(const aTree: TIntArray; constref aSource: TVertex): Boolean; inline;
     function  IsDomTreeI(const aTree: TIntArray; aSrcIdx: SizeInt): Boolean;
   { extracts Dom(aVertex) from dominator tree aTree, including aVertex }
@@ -342,7 +342,7 @@ type
   { used Semi-NCA algorithm }
     function  CreateDomTreeSnca(constref aSource: TVertex): TDomTree; inline;
     function  CreateDomTreeSncaI(aSrcIdx: SizeInt): TDomTree;
-  { returns dominance frontiers and dominator tree in aDomTree(used SNCA algorithm);
+  { returns dominance frontiers and dominator tree in aDomTree(used Semi-NCA algorithm);
     raises an exception if it does not contain the vertex aSource }
     function  FindDomFrontiers(constref aSource: TVertex; out aDomTree: TDomTree): TIntMatrix; inline;
     function  FindDomFrontiersI(aSrcIdx: SizeInt; out aDomTree: TDomTree): TIntMatrix;
@@ -1593,98 +1593,99 @@ begin
   Result := Parents;
 end;
 
-function TGSimpleDigraph.TestIsDomTree(aTree: TIntArray; aSrc: SizeInt): Boolean;
+function TGSimpleDigraph.TestIsDomTree(const aTree: TIntArray; aSrc: SizeInt): Boolean;
 var
-  TreeSize: SizeInt;
-  function InputIsTree: Boolean;
+  TestTree: TIntSetArray = nil;
+  PreOrd: TIntArray = nil;
+  SubTreeSize: TIntArray = nil;
+  Visited: TBoolVector;
+  Counter: SizeInt = 0;
+
+  function IsRootedTree: Boolean;
   var
-    TestTree: TIntSetArray;
-    Queue: TIntArray;
-    InTree: TBoolVector;
-    I, Curr, Next, qHead, qTail: SizeInt;
+    Parents: TIntArray;
+
+    procedure Dfs(aNode: SizeInt);
+    var
+      Next: SizeInt;
+    begin
+      for Next in TestTree[aNode] do
+        if PreOrd[Next] = NULL_INDEX then
+          begin
+            Visited[Next] := True;
+            Parents[Next] := aNode;
+            SubTreeSize[Next] := 1;
+            PreOrd[Next] := Counter;
+            Inc(Counter);
+            Dfs(Next);
+          end;
+      if Parents[aNode] <> NULL_INDEX then
+        SubTreeSize[Parents[aNode]] += SubTreeSize[aNode];
+    end;
+
+  var
+    I, Prev: SizeInt;
+    TreeSize: SizeInt = 1;
   begin
     System.SetLength(TestTree, VertexCount);
-    InTree.Size := VertexCount;
-    TreeSize := 1;
     for I := 0 to Pred(VertexCount) do
       begin
-        Curr := aTree[I];
-        if Curr >= 0 then
+        Prev := aTree[I];
+        if Prev >= 0 then
           begin
-            if (Curr >= VertexCount) or (Curr = I) then
+            if (Prev >= VertexCount) or (Prev = I) then
               exit(False);
-            if not TestTree[Curr].Add(I) then
-              exit(False);
-            InTree[I] := True;
+            TestTree[Prev].Push(I);
             Inc(TreeSize);
           end;
       end;
-    Queue.Length := VertexCount;
-    qHead := 0;
-    qTail := 1;
-    Queue[0] := aSrc;
-    while qHead < qTail do
-      begin
-        Curr := Queue[qHead];
-        Inc(qHead);
-        for Next in TestTree[Curr] do
-          if InTree[Next] then
-            begin
-              InTree[Next] := False;
-              Queue[qTail] := Next;
-              Inc(qTail);
-            end;
-      end;
-    Result := InTree.IsEmpty;
-  end;
-var
-  Preds: TIntSetArray;
-  Idx2Ord, Ord2Idx: TIntArray;
-  Counter: SizeInt = 0;
-  procedure OnWhite(aNode, aParent: SizeInt);
-  begin
-    if aNode <> aSrc then
-      Preds[aNode].Push(aParent);
-  end;
-  procedure OnGray(aNode, aParent: SizeInt);
-  begin
-    if aNode <> aSrc then
-      Preds[aNode].Push(aParent);
-  end;
-  procedure OnDone(aIndex: SizeInt);
-  begin
-    Ord2Idx[Counter] := aIndex;
+    PreOrd := CreateIntArray;
+    SubTreeSize := CreateIntArray(0);
+    Parents := CreateIntArray;
+    Visited.Size := VertexCount;
+    SubTreeSize[aSrc] := 1;
+    Visited[aSrc] := True;
+    PreOrd[aSrc] := Counter;
     Inc(Counter);
+    Dfs(aSrc);
+    Result := SubTreeSize[aSrc] = TreeSize;
   end;
-  function Nca(aLeft, aRight: SizeInt): SizeInt;
-  begin
-    while aLeft <> aRight do
-      begin
-        while Idx2Ord[aLeft] < Idx2Ord[aRight] do
-          aLeft := aTree[aLeft];
-        while Idx2Ord[aRight] < Idx2Ord[aLeft] do
-          aRight := aTree[aRight];
-      end;
-    Result := aLeft;
-  end;
+
 var
-  I, Prev: SizeInt;
+  DfsMatchTree: Boolean = True;
+  HasParentProp: Boolean = True;
+
+  procedure OnWhite(aNode, aParent: SizeInt);
+  var
+    Dom: SizeInt;
+  begin
+    DfsMatchTree := DfsMatchTree and Visited[aNode];
+    if aNode <> aSrc then
+      begin
+        Dom := aTree[aNode];
+        HasParentProp := HasParentProp and ((PreOrd[Dom] <= PreOrd[aParent]) and
+                        (PreOrd[aParent] < PreOrd[Dom] + SubTreeSize[Dom]));
+      end;
+  end;
+
+  procedure OnGray(aNode, aParent: SizeInt);
+  var
+    Dom: SizeInt;
+  begin
+    if aNode <> aSrc then
+      begin
+        Dom := aTree[aNode];
+        HasParentProp := HasParentProp and ((PreOrd[Dom] <= PreOrd[aParent]) and
+                        (PreOrd[aParent] < PreOrd[Dom] + SubTreeSize[Dom]));
+      end;
+  end;
+
 begin
-  if not InputIsTree() then
+  if not IsRootedTree() then
     exit(False);
-  Ord2Idx := CreateIntArray;
-  System.SetLength(Preds, VertexCount);
-  if DfsTraversalI(aSrc, @OnWhite, @OnGray, @OnDone) <> TreeSize then
+  if DfsTraversalI(aSrc, @OnWhite, @OnGray, nil) <> SubTreeSize[aSrc] then
     exit(False);
-  Idx2Ord := CreateIntArray;
-  for I := 0 to Pred(Counter) do
-    Idx2Ord[Ord2Idx[I]] := I;
-  aTree[aSrc] := aSrc;
-  for I := 0 to Pred(VertexCount) do
-    for Prev in Preds[I] do
-      if Nca(aTree[I], Prev) <> aTree[I] then
-        exit(False);
-  Result := True;
+  Result := DfsMatchTree and HasParentProp;
 end;
 
 function TGSimpleDigraph.TopoSort: TIntArray;
@@ -3272,13 +3273,13 @@ end;
 function TGWeightedDigraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
 var
   Stack: TSimpleStack;
-  AdjEnums: TAdjEnumArrayEx;
+  AdjEnums: TAdjItemEnumArray;
   Visited: TBitVector;
   Curr, Next: SizeInt;
   p: PAdjItem;
   w: TWeight;
 begin
-  AdjEnums := CreateAdjEnumArrayEx;
+  AdjEnums := CreateAdjItemEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
   Visited.Size := VertexCount;
@@ -3306,13 +3307,13 @@ end;
 function TGWeightedDigraph.GetDagMaxPaths(aSrc: SizeInt; out aTree: TIntArray): TWeightArray;
 var
   Stack: TSimpleStack;
-  AdjEnums: TAdjEnumArrayEx;
+  AdjEnums: TAdjItemEnumArray;
   Curr, Next: SizeInt;
   p: PAdjItem;
   w: TWeight;
 begin
   //todo: why DFS ???
-  AdjEnums := CreateAdjEnumArrayEx;
+  AdjEnums := CreateAdjItemEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
   aTree := CreateIntArray;
