@@ -50,7 +50,7 @@ type
   protected
   type
     TSortByDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
-    TOnNodeDone         = procedure(aNodeIndex: SizeInt; const aLefts: TIntSet) is nested;
+    TSpecNodeDone       = procedure(aNodeIndex: SizeInt; const aLefts: TIntSet) is nested;
 
     {$I SimpGraphHelpH.inc}
 
@@ -101,7 +101,7 @@ type
     function  CheckAcyclic: Boolean;
   { returns True if there exists a perfect elimination order in the graph;
     in this case returns this order (reverse) in aOrd and max clique in aClique }
-    function  FindPerfectElimOrd(aOnNodeDone: TOnNodeDone; out aPeoSeq: TIntArray): Boolean;
+    function  FindPerfectElimOrd(aOnNodeDone: TSpecNodeDone; out aPeoSeq: TIntArray): Boolean;
     function  FindChordalMaxClique(out aClique: TIntSet): Boolean;
     function  FindChordalMis(out aMis: TIntSet): Boolean;
     function  FindChordalColoring(out aMaxColor: SizeInt; out aColors: TIntArray): Boolean;
@@ -1028,7 +1028,7 @@ begin
   Result := True;
 end;
 
-function TGSimpleGraph.FindPerfectElimOrd(aOnNodeDone: TOnNodeDone; out aPeoSeq: TIntArray): Boolean;
+function TGSimpleGraph.FindPerfectElimOrd(aOnNodeDone: TSpecNodeDone; out aPeoSeq: TIntArray): Boolean;
 var
   Queue: TINodePqMax;
   InQueue: TBitVector;
