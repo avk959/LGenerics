@@ -114,6 +114,8 @@ type
     function  TryDequeue(out aValue: T): Boolean; inline;
     function  Peek: T; inline;
     function  TryPeek(out aValue: T): Boolean; inline;
+    function  PeekItem: PItem; inline;
+    function  TryPeekItem(out aValue: PItem): Boolean; inline;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -526,6 +528,16 @@ end;
 function TGLiteQueue.TryPeek(out aValue: T): Boolean;
 begin
   Result := FBuffer.TryPeekFirst(aValue);
+end;
+
+function TGLiteQueue.PeekItem: PItem;
+begin
+  Result := FBuffer.PeekFirstItem;
+end;
+
+function TGLiteQueue.TryPeekItem(out aValue: PItem): Boolean;
+begin
+  Result := FBuffer.TryPeekFirstItem(aValue);
 end;
 
 { TGLiteThreadQueue }
