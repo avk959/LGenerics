@@ -1915,4 +1915,549 @@ begin
   aCut.Assign(FBestSet);
 end;
 
+{ TGSimpleGraph.TPlanarHelper.TArc }
+
+constructor TGSimpleGraph.TPlanarHelper.TArc.Create(aSource, aTarget: PNode);
+begin
+  Source := aSource;
+  Target := aTarget;
+  LowPt := NULL_INDEX;
+  NestingDepth := NULL_INDEX;
+  LowPtArc := nil;
+  Ref := nil;
+  Side := 1;
+end;
+
+function TGSimpleGraph.TPlanarHelper.TArc.Sign: ShortInt;
+begin
+  if Ref <> nil then
+    begin
+      Side *= Ref^.Sign;
+      Ref := nil;
+    end;
+  Result := Side;
+end;
+
+{ TGSimpleGraph.TPlanarHelper.TArcCmp }
+
+class function TGSimpleGraph.TPlanarHelper.TArcCmp.Compare(constref L, R: PArc): SizeInt;
+begin
+  if L^.NestingDepth > R^.NestingDepth then
+    Result := 1
+  else
+    if L^.NestingDepth < R^.NestingDepth then
+      Result := -1
+    else
+      Result := 0;
+end;
+
+{ TGSimpleGraph.TPlanarHelper.TNode }
+
+constructor TGSimpleGraph.TPlanarHelper.TNode.Create(aFirstArc: SizeInt);
+begin
+  FirstArc := aFirstArc;
+  Height := NULL_INDEX;
+  ParentArc := nil;
+end;
+
+{ TGSimpleGraph.TPlanarHelper.TInterval }
+
+constructor TGSimpleGraph.TPlanarHelper.TInterval.Create(aLowArc, aHighArc: PArc);
+begin
+  LowA := aLowArc;
+  HighA := aHighArc;
+end;
+
+function TGSimpleGraph.TPlanarHelper.TInterval.IsEmpty: Boolean;
+begin
+  Result := (LowA = nil) or (HighA = nil);
+end;
+
+function TGSimpleGraph.TPlanarHelper.TInterval.Conflicting(aArc: PArc): Boolean;
+begin
+  if IsEmpty then
+    exit(False);
+  Result := HighA^.LowPt > aArc^.LowPt;
+end;
+
+{ TGSimpleGraph.TPlanarHelper.TConflictPair }
+
+constructor TGSimpleGraph.TPlanarHelper.TConflictPair.Create(constref aRight: TInterval);
+begin
+  Left := Default(TInterval);
+  Right := aRight;
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.TConflictPair.Swap;
+var
+  Tmp: TInterval;
+begin
+  Tmp := Left;
+  Left := Right;
+  Right := Tmp;
+end;
+
+function TGSimpleGraph.TPlanarHelper.TConflictPair.Lowest: SizeInt;
+begin
+  if Left.IsEmpty then
+    exit(Right.LowA^.LowPt);
+  if Right.IsEmpty then
+    exit(Left.LowA^.LowPt);
+  Result := TPlanarHelper.Min(Left.LowA^.LowPt, Right.LowA^.LowPt);
+end;
+
+{ TGSimpleGraph.TPlanarHelper }
+
+function TGSimpleGraph.TPlanarHelper.NodeIdx(aNode: PNode): SizeInt;
+begin
+  Result := aNode - PNode(FNodes);
+end;
+
+function TGSimpleGraph.TPlanarHelper.ArcIdx(aArc: PArc): SizeInt;
+begin
+  Result := aArc - PArc(FArcs);
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.CreateDigraph;
+var
+  Arcs: array of record Target, Reverse: SizeInt; Passed, Used: Boolean end;
+  NodeArcs: TIntArray = nil;
+  Visited: TBitVector;
+
+  procedure Dfs(aRootIdx: SizeInt);
+  var
+    I: SizeInt;
+  begin
+    for I := NodeArcs[aRootIdx] to NodeArcs[aRootIdx+1]-1 do
+      if not Arcs[I].Passed then
+        begin
+          Arcs[I].Passed := True;
+          Arcs[I].Used := True;
+          Arcs[Arcs[I].Reverse].Passed := True;
+          if not Visited[Arcs[I].Target] then
+            begin
+              Visited[Arcs[I].Target] := True;
+              Dfs(Arcs[I].Target);
+            end;
+        end;
+  end;
+
+var
+  I, J, Curr, CurrRev: SizeInt;
+  p: PAdjItem;
+begin
+  NodeArcs.Length := FGraph.VertexCount;
+  Curr := 0;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    begin
+      NodeArcs[I] := Curr;
+      Curr += FGraph.AdjLists[I]^.Count;
+    end;
+  System.SetLength(Arcs, FGraph.EdgeCount * 2);
+  for I := 0 to Pred(FGraph.VertexCount) do
+    for p in FGraph.AdjLists[I]^ do
+      if p^.Key > I then
+        begin
+          Curr := NodeArcs[I];
+          CurrRev := NodeArcs[p^.Key];
+          Arcs[Curr].Target := p^.Key;
+          Arcs[Curr].Reverse := CurrRev;
+          Arcs[Curr].Passed := False;
+          Arcs[Curr].Used := False;
+          Arcs[CurrRev].Target := I;
+          Arcs[CurrRev].Reverse := Curr;
+          Arcs[CurrRev].Passed := False;
+          Arcs[CurrRev].Used := False;
+          Inc(NodeArcs[I]);
+          Inc(NodeArcs[p^.Key]);
+        end;
+
+  NodeArcs.Length := Succ(FGraph.VertexCount);
+  Curr := 0;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    begin
+      NodeArcs[I] := Curr;
+      Curr += FGraph.AdjLists[I]^.Count;
+    end;
+  NodeArcs[FGraph.VertexCount] := Curr;
+  Visited.Size := FGraph.VertexCount;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    if not Visited[I] then
+      begin
+        FRoots.Add(I);
+        Visited[I] := True;
+        Dfs(I);
+      end;
+
+  System.SetLength(FNodes, Succ(FGraph.VertexCount));
+  System.SetLength(FArcs, FGraph.EdgeCount);
+  System.SetLength(FSortedArcs, FGraph.EdgeCount);
+  J := 0;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    begin
+      FNodes[I] := TNode.Create(J);
+      for Curr := NodeArcs[I] to NodeArcs[I+1]-1 do
+        if Arcs[Curr].Used then
+          begin
+            FArcs[J] := TArc.Create(@FNodes[I], @FNodes[Arcs[Curr].Target]);
+            FSortedArcs[J] := @FArcs[J];
+            Inc(J);
+          end;
+    end;
+  FNodes[FGraph.VertexCount] := TNode.Create(J);
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.Dfs1(aRootIdx: SizeInt);
+var
+  Arc, ParentArc: PArc;
+  Next: PNode;
+  I, RootHeight: SizeInt;
+begin
+  ParentArc := FNodes[aRootIdx].ParentArc;
+  RootHeight := FNodes[aRootIdx].Height;
+  for I := FNodes[aRootIdx].FirstArc to FNodes[aRootIdx+1].FirstArc-1 do
+    begin
+      Arc := FSortedArcs[I];
+      Arc^.LowPt := RootHeight;
+      FLowPt2[ArcIdx(Arc)] := RootHeight;
+      Next := Arc^.Target;
+      if Next^.Height = NULL_INDEX then //tree arc
+        begin
+          Next^.ParentArc := Arc;
+          Next^.Height := Succ(RootHeight);
+          Dfs1(NodeIdx(Next));
+        end
+      else
+        Arc^.LowPt := Next^.Height;
+
+      Arc^.NestingDepth := Arc^.LowPt shl 1;
+      if FLowPt2[ArcIdx(Arc)] < RootHeight then    // chordal
+        Inc(Arc^.NestingDepth);
+
+      if ParentArc <> nil then               // node is not dfs tree root
+        if Arc^.LowPt < ParentArc^.LowPt then
+          begin
+            FLowPt2[ArcIdx(ParentArc)] := Min(ParentArc^.LowPt, FLowPt2[ArcIdx(Arc)]);
+            ParentArc^.LowPt := Arc^.LowPt;
+          end
+        else
+          if Arc^.LowPt > ParentArc^.LowPt then
+            FLowPt2[ArcIdx(ParentArc)] := Min(FLowPt2[ArcIdx(ParentArc)], Arc^.LowPt)
+          else
+            FLowPt2[ArcIdx(ParentArc)] := Min(FLowPt2[ArcIdx(ParentArc)], FLowPt2[ArcIdx(Arc)]);
+    end;
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.CreateOrientation;
+var
+  I: SizeInt;
+begin
+  CreateDigraph;
+  FLowPt2.Length := FGraph.EdgeCount;
+  for I in FRoots do
+    begin
+      FNodes[I].Height := 0;
+      Dfs1(I);
+    end;
+  FLowPt2 := nil;
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.SortAdjLists;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(System.High(FNodes)) do
+    TSortHelper.Sort(FSortedArcs[FNodes[I].FirstArc..FNodes[I+1].FirstArc-1]);
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.Dfs2(aRootIdx: SizeInt);
+var
+  Arc, ParentArc, hL, hR: PArc;
+  I: SizeInt;
+begin
+  ParentArc := FNodes[aRootIdx].ParentArc;
+  for I := FNodes[aRootIdx].FirstArc to FNodes[aRootIdx+1].FirstArc-1 do
+    begin
+      Arc := FSortedArcs[I];
+      FStackBottom[ArcIdx(Arc)] := FPairStack.Count;
+      if Arc = Arc^.Target^.ParentArc then  // tree arc
+        begin
+          Dfs2(NodeIdx(Arc^.Target));
+          if not FPlanar then
+            exit;
+        end
+      else
+        begin
+          Arc^.LowPtArc := Arc;
+          FPairStack.Push(TConflictPair.Create(TInterval.Create(Arc, Arc)));
+        end;
+      if Arc^.LowPt < FNodes[aRootIdx].Height then //has return arc
+        if I <> FNodes[aRootIdx].FirstArc then
+          begin
+            AddConstraints(ParentArc, Arc);
+            if not FPlanar then
+              exit;
+          end
+        else
+          ParentArc^.LowPtArc := Arc^.LowPtArc;
+    end;
+  if ParentArc <> nil then   // node is not tree root
+    begin
+      TrimBackArcs(ParentArc^.Source);
+      if ParentArc^.LowPt < ParentArc^.Source^.Height then // ParentArc has return arc
+        begin
+          with FPairStack.PeekItem^ do
+            begin
+              hL := Left.HighA;
+              hR := Right.HighA;
+            end;
+          if (hL <> nil) and ((hR = nil) or (hL^.LowPt > hR^.LowPt)) then
+            ParentArc^.Ref := hL
+          else
+            ParentArc^.Ref := hR;
+        end;
+    end;
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.AddConstraints(aParentArc, aArc: PArc);
+var
+  P, Q: TConflictPair;
+  pTop: PConflictPair = nil;
+begin
+  P := Default(TConflictPair);
+  // merge return arcs of aArc into P.Right
+  repeat
+    Q := FPairStack.Pop;
+    if not Q.Left.IsEmpty then
+      Q.Swap;
+    if not Q.Left.IsEmpty then
+      begin
+        FPlanar := False;
+        exit;
+      end;
+    if Q.Right.LowA^.LowPt > aParentArc^.LowPt then // merge intervals
+      begin
+        if P.Right.IsEmpty then  // topmost interval
+          P.Right.HighA := Q.Right.HighA
+        else
+          P.Right.LowA^.Ref := Q.Right.HighA;
+        P.Right.LowA := Q.Right.LowA;
+      end
+    else  // align
+      Q.Right.LowA^.Ref := aParentArc^.LowPtArc;
+  until FPairStack.Count = FStackBottom[ArcIdx(aArc)];
+  // merge conflicting return arcs of prev(aArc) into P.Left
+  while FPairStack.TryPeekItem(pTop) do
+    begin
+      if not(pTop^.Left.Conflicting(aArc) or pTop^.Right.Conflicting(aArc)) then
+        break;
+      Q := FPairStack.Pop;
+      if Q.Right.Conflicting(aArc) then
+        Q.Swap;
+      if Q.Right.Conflicting(aArc) then
+        begin
+          FPlanar := False;
+          exit;
+        end;
+      // merge interval below lowpt(aArc) into P.Right
+      P.Right.LowA^.Ref := Q.Right.HighA;
+      if Q.Right.LowA <> nil then
+        P.Right.LowA := Q.Right.LowA;
+      if P.Left.IsEmpty then    // topmost interval
+        P.Left.HighA := Q.Left.HighA
+      else
+        P.Left.LowA^.Ref := Q.Left.HighA;
+      P.Left.LowA := Q.Left.LowA;
+    end;
+  if not(P.Left.IsEmpty and P.Right.IsEmpty) then
+    FPairStack.Push(P);
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.TrimBackArcs(aNode: PNode);
+var
+  P: TConflictPair;
+  pTop: PConflictPair = nil;
+begin
+  while FPairStack.TryPeekItem(pTop) do
+    begin
+      if pTop^.Lowest <> aNode^.Height then
+        break;
+      P := FPairStack.Pop;
+      if P.Left.LowA <> nil then
+        P.Left.LowA^.Side := -1;
+    end;
+  if FPairStack.NonEmpty then //one more conflict pair to consider
+    begin
+      P := FPairStack.Pop;
+      // trim left interval
+      while (P.Left.HighA <> nil) and (P.Left.HighA^.Target = aNode) do
+        P.Left.HighA := P.Left.HighA^.Ref;
+      if (P.Left.HighA = nil) and (P.Left.LowA <> nil) then
+        begin
+          P.Left.LowA^.Ref := P.Right.LowA;
+          P.Left.LowA^.Side := -1;
+          P.Left.LowA := nil;
+        end;
+      // trim right interval
+      while (P.Right.HighA <> nil) and (P.Right.HighA^.Target = aNode) do
+        P.Right.HighA := P.Right.HighA^.Ref;
+      if (P.Right.HighA = nil) and (P.Right.LowA <> nil) then
+        begin
+          P.Right.LowA^.Ref := P.Left.LowA;
+          P.Right.LowA^.Side := -1;
+          P.Right.LowA := nil;
+        end;
+      FPairStack.Push(P);
+    end;
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.TestLrPartition;
+var
+  I: SizeInt;
+begin
+  SortAdjLists;
+  FStackBottom.Length := System.Length(FArcs);
+  for I in FRoots do
+    begin
+      Dfs2(I);
+      if not FPlanar then
+        break;
+    end;
+  FStackBottom := nil;
+end;
+
+function TGSimpleGraph.TPlanarHelper.CreateEmbedding: TIntMatrix;
+var
+  LeftRef: TIntArray = nil;
+  RightRef: TIntArray = nil;
+
+  procedure Dfs(aRootIdx: SizeInt);
+  var
+    I, Src, Dst: SizeInt;
+  begin
+    for I := FNodes[aRootIdx].FirstArc to FNodes[aRootIdx+1].FirstArc-1 do
+      begin
+        Dst := NodeIdx(FSortedArcs[I]^.Target);
+        Src := NodeIdx(FSortedArcs[I]^.Source);
+        if FSortedArcs[I] = FNodes[Dst].ParentArc then  // tree arc
+          begin
+            InsertFirst(Result[Dst], Src);
+            LeftRef[aRootIdx] := Dst;
+            RightRef[aRootIdx] := Dst;
+            Dfs(Dst);
+          end
+        else
+          if FSortedArcs[I]^.Side = 1 then
+            InsertAfter(Result[Dst], RightRef[Dst], Src)
+          else
+            begin
+              InsertBefore(Result[Dst], LeftRef[Dst], Src);
+              LeftRef[Dst] := Src;
+            end;
+      end;
+  end;
+
+var
+  I, J, K: SizeInt;
+begin
+  Result := nil;
+
+  for I := 0 to System.High(FArcs) do
+    FArcs[I].NestingDepth *= FArcs[I].Sign;
+  SortAdjLists;
+
+  System.SetLength(Result, FGraph.VertexCount);
+  for I := 0 to System.High(Result) do
+    begin
+      Result[I] := TIntArray.Construct(FGraph.AdjLists[I]^.Count, NULL_INDEX);
+      K := 0;
+      for J := FNodes[I].FirstArc to FNodes[I+1].FirstArc-1 do
+        begin
+          Result[I, K] := NodeIdx(FSortedArcs[J]^.Target);
+          Inc(K);
+        end;
+    end;
+
+  LeftRef.Length := FGraph.VertexCount;
+  RightRef.Length := FGraph.VertexCount;
+  for I in FRoots do
+    Dfs(I);
+end;
+
+class function TGSimpleGraph.TPlanarHelper.Min(L, R: SizeInt): SizeInt;
+begin
+  if R < L then
+    Result := R
+  else
+    Result := L;
+end;
+
+class procedure TGSimpleGraph.TPlanarHelper.InsertFirst(var a: TIntArray; aValue: SizeInt);
+var
+  I: SizeInt = 0;
+begin
+  while a[I] <> NULL_INDEX do
+    Inc(I);
+  System.Move(a[0], a[1], I * SizeOf(SizeInt));
+  a[0] := aValue;
+end;
+
+class procedure TGSimpleGraph.TPlanarHelper.InsertBefore(var a: TIntArray; aRef, aValue: SizeInt);
+var
+  I, Pos, Cnt: SizeInt;
+begin
+  Pos := NULL_INDEX;
+  Cnt := 0;
+  for I := 0 to Pred(System.Length(a)) do
+    if a[I] = aRef then
+      Pos := I
+    else
+      if a[I] = NULL_INDEX then
+        begin
+          Cnt := I;
+          break;
+        end;
+  System.Move(a[Pos], a[Pos+1], (Cnt - Pos) * SizeOf(SizeInt));
+  a[Pos] := aValue;
+end;
+
+class procedure TGSimpleGraph.TPlanarHelper.InsertAfter(var a: TIntArray; aRef, aValue: SizeInt);
+var
+  I, Pos, Cnt: SizeInt;
+begin
+  Pos := NULL_INDEX;
+  Cnt := 0;
+  for I := 0 to Pred(System.Length(a)) do
+    if a[I] = aRef then
+      Pos := I
+    else
+      if a[I] = NULL_INDEX then
+        begin
+          Cnt := I;
+          break;
+        end;
+  if a[Pos+1] <> NULL_INDEX then
+    System.Move(a[Pos+1], a[Pos+2], Pred(Cnt - Pos) * SizeOf(SizeInt));
+  a[Pos+1] := aValue;
+end;
+
+function TGSimpleGraph.TPlanarHelper.GraphIsPlanarR(aGraph: TGSimpleGraph): Boolean;
+begin
+  FPlanar := True;
+  FGraph := aGraph;
+  CreateOrientation;
+  TestLrPartition;
+  Result := FPlanar;
+end;
+
+function TGSimpleGraph.TPlanarHelper.GraphIsPlanarR(aGraph: TGSimpleGraph; out aEmbed: TIntMatrix): Boolean;
+begin
+  aEmbed := nil;
+  Result := GraphIsPlanarR(aGraph);
+  if not Result then
+    exit;
+  aEmbed := CreateEmbedding;
+end;
+
+
 

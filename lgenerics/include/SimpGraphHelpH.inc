@@ -352,3 +352,83 @@ type
     function  Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
   end;
 
+  { TPlanarHelper: planarity testing algorithm and combinatorial embedding extraction
+    based on the FMR Left-Right Planarity Test from
+    Ulrik Brandes: "The Left-Right Planarity Test" }
+  TPlanarHelper = record
+  private
+  type
+    PNode = ^TNode;
+    PArc  = ^TArc;
+
+    TArc = record
+      Source,
+      Target: PNode;
+      LowPt,
+      NestingDepth: SizeInt;
+      LowPtArc,
+      Ref: PArc;
+      Side: ShortInt;
+      constructor Create(aSource, aTarget: PNode);
+      function Sign: ShortInt;
+    end;
+
+    TArcCmp = class
+      class function Compare(constref L, R: PArc): SizeInt; static;
+    end;
+
+    TNode = record
+      FirstArc,
+      Height: SizeInt;
+      ParentArc: PArc;
+      constructor Create(aFirstArc: SizeInt);
+    end;
+
+    TInterval = record
+      LowA,
+      HighA: PArc;
+      constructor Create(aLowArc, aHighArc: PArc);
+      function IsEmpty: Boolean; inline;
+      function Conflicting(aArc: PArc): Boolean;
+    end;
+
+    TConflictPair = record
+      Left,
+      Right: TInterval;
+      constructor Create(constref aRight: TInterval);
+      procedure Swap;
+      function  Lowest: SizeInt;
+    end;
+    PConflictPair = ^TConflictPair;
+
+    TPairStack  = specialize TGLiteStack<TConflictPair>;
+    TSortHelper = specialize TGBaseArrayHelper<PArc, TArcCmp>;
+  var
+    FNodes: array of TNode;
+    FArcs: array of TArc;
+    FSortedArcs: array of PArc;
+    FLowPt2, FStackBottom: TIntArray;
+    FPairStack: TPairStack;
+    FRoots: TIntVector;
+    FGraph: TGSimpleGraph;
+    FPlanar: Boolean;
+    function  NodeIdx(aNode: PNode): SizeInt; inline;
+    function  ArcIdx(aArc: PArc): SizeInt; inline;
+    procedure CreateDigraph;
+    procedure Dfs1(aRootIdx: SizeInt);
+    procedure CreateOrientation;
+    procedure SortAdjLists;
+    procedure Dfs2(aRootIdx: SizeInt);
+    procedure AddConstraints(aParentArc, aArc: PArc);
+    procedure TrimBackArcs(aNode: PNode);
+    procedure TestLrPartition;
+    function  CreateEmbedding: TIntMatrix;
+    class function  Min(L, R: SizeInt): SizeInt; static;
+    class procedure InsertFirst(var a: TIntArray; aValue: SizeInt); static;
+    class procedure InsertBefore(var a: TIntArray; aRef, aValue: SizeInt); static;
+    class procedure InsertAfter(var a: TIntArray; aRef, aValue: SizeInt); static;
+  public
+    function  GraphIsPlanarR(aGraph: TGSimpleGraph): Boolean;
+    function  GraphIsPlanarR(aGraph: TGSimpleGraph; out aEmbed: TIntMatrix): Boolean;
+  end;
+

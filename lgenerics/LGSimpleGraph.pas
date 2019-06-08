@@ -32,6 +32,7 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
+  LGStack,
   LGVector,
   LGQueue,
   LGSparseGraph,
@@ -225,8 +226,19 @@ type
     an empty graph is considered regular }
     function  IsRegular(out aDegree: SizeInt): Boolean;
   { returns True and the list of vertex indices in the perfect elimination order(reverse)
-    in aRevPeo, if graph is chordal, False otherwise; an empty graph is considered chordal }
+    in aRevPeo, if graph is chordal, otherwise returns False and nil;
+    an empty graph is considered chordal }
     function  IsChordal(out aRevPeo: TIntArray): Boolean;
+  { returns True if graph is planar, an empty graph is considered planar;
+    used FMR algorithm(recursive variant);
+    todo: nonrecursive variant }
+    function  IsPlanarR: Boolean;
+  { returns True and the planar embedding in aEmbedding, if graph is planar,
+    otherwise returns False and nil; used FMR algorithm(recursive variant);
+    todo: more efficient and convenient data structure for embedding;
+    todo: Kuratowski subdivision extraction;
+    todo: nonrecursive variant }
+    function  IsPlanarR(out aEmbedding: TIntMatrix): Boolean;
     function  CyclomaticNumber: SizeInt;
   { returns True if exists any cycle in the aVertex connected component,
     in this case aCycle will contain indices of the vertices of the found cycle }
@@ -887,7 +899,7 @@ end;
 
 procedure TGSimpleGraph.AssignSeparate(aGraph: TGSimpleGraph; aIndex: SizeInt);
 var
-  v: TIntArray;
+  v: TIntArray = nil;
   I, J, Tag: SizeInt;
 begin
   v.Length := aGraph.SeparatePopI(aIndex);
@@ -1032,13 +1044,14 @@ function TGSimpleGraph.FindPerfectElimOrd(aOnNodeDone: TSpecNodeDone; out aPeoSe
 var
   Queue: TINodePqMax;
   InQueue: TBitVector;
-  Index2Ord: TIntArray;
+  Index2Ord: TIntArray = nil;
   Lefts: TIntSet;
   I, J, MaxOrd, Nearest: SizeInt;
   Node: TIntNode;
   AdjLst: PAdjList;
   p: PAdjItem;
 begin
+  aPeoSeq := nil;
   //max cardinality search
   Queue := TINodePqMax.Create(VertexCount);
   InQueue.ExpandTrue(VertexCount);
@@ -1833,7 +1846,7 @@ var
   Achromatic, CurrIS: TBoolVector;
   Node: TIntNode;
   I: SizeInt;
-  pItem: PAdjItem;
+  p: PAdjItem;
 begin
   System.SetLength(Nodes, VertexCount);
   for I := 0 to Pred(VertexCount) do
@@ -1854,11 +1867,11 @@ begin
             CurrIS[Node.Index] := False;
             Achromatic[Node.Index] := False;
             aColors[Node.Index] := Result;
-            for pItem in AdjLists[Node.Index]^ do
-              if Achromatic[pItem^.Key] then
+            for p in AdjLists[Node.Index]^ do
+              if Achromatic[p^.Key] then
                 begin
-                  Dec(Nodes[pItem^.Key].Data);
-                  CurrIS[pItem^.Key] := False;
+                  Dec(Nodes[p^.Key].Data);
+                  CurrIS[p^.Key] := False;
                 end;
           end;
     end;
@@ -2898,6 +2911,44 @@ begin
   if VertexCount < 4 then
     exit(True);
   Result := FindPerfectElimOrd(nil, aRevPeo);
+end;
+
+function TGSimpleGraph.IsPlanarR: Boolean;
+var
+  Helper: TPlanarHelper;
+begin
+  if (VertexCount > 4) and (EdgeCount > VertexCount * 3 - 6) then
+    exit(False);
+  if VertexCount > 4 then
+    Result := Helper.GraphIsPlanarR(Self)
+  else
+    Result := True;
+end;
+
+function TGSimpleGraph.IsPlanarR(out aEmbedding: TIntMatrix): Boolean;
+var
+  Helper: TPlanarHelper;
+begin
+  aEmbedding := nil;
+  Result := True;
+  if IsEmpty then
+    exit;
+  if VertexCount = 1 then
+    begin
+      aEmbedding := [[]];
+      exit;
+    end;
+  if VertexCount = 2 then
+    begin
+      if Connected then
+        aEmbedding := [[1], [0]]
+      else
+        aEmbedding := [[], []];
+      exit;
+    end;
+  if EdgeCount > VertexCount * 3 - 6 then
+    exit(False);
+  Result := Helper.GraphIsPlanarR(Self, aEmbedding);
 end;
 
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
