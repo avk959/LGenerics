@@ -8,6 +8,8 @@ uses
   Classes, SysUtils, fpcunit, testregistry, math,
   LGUtils,
   LGArrayHelpers,
+  LGVector,
+  LGHashSet,
   LGSparseGraph,
   LGSimpleGraph;
 
@@ -42,6 +44,11 @@ type
     function  GenerateWikiChordal: TGraph;
     function  GenerateChordal8: TGraph;
     function  GenerateChordal8Compl: TGraph;
+    function  GenerateChordal10: TGraph;
+    function  GenerateK5: TGraph;
+    function  GenerateK33: TGraph;
+    function  GeneratePetersen: TGraph;
+    function  GenerateGoldnerHarary: TGraph;
     function  GenerateDisconnected: TGraph;
     function  GenerateTestGrBip1: TGraph;
     function  GenerateTestTriangles: TGraph;
@@ -94,6 +101,14 @@ type
     procedure IsChordal1;
     procedure IsChordal2;
     procedure IsChordal3;
+    procedure IsChordal4;
+    procedure IsPlanarR;
+    procedure IsPlanarR1;
+    procedure IsPlanarR2;
+    procedure IsPlanarR3;
+    procedure IsPlanarR4;
+    procedure IsPlanarR5;
+    procedure PlanarEmbedding;
     procedure ContainsEulerianPath;
     procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
@@ -406,6 +421,48 @@ begin
   finally
     g.Free;
   end;
+end;
+
+function TSimpleGraphTest.GenerateChordal10: TGraph;
+begin
+  //see Chordal10.png
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 10);
+  Result.AddEdges([1, 2, 1, 3, 2, 3, 2, 4, 3, 4, 3, 5, 3, 6, 4, 5, 4, 6, 5, 6,
+                   7, 8, 7, 9, 8, 9, 7, 10, 8, 10, 9, 10]);
+end;
+
+function TSimpleGraphTest.GenerateK5: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 5);
+  Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 5, 2, 3, 2, 4, 2, 5, 3, 4, 3, 5, 4, 5]);
+end;
+
+function TSimpleGraphTest.GenerateK33: TGraph;
+begin
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 6);
+  Result.AddEdges([1, 2, 1, 4, 1, 6, 3, 2, 3, 4, 3, 6, 5, 2, 5, 4, 5, 6]);
+end;
+
+function TSimpleGraphTest.GeneratePetersen: TGraph;
+begin
+  //https://en.wikipedia.org/wiki/Petersen_graph
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 10);
+  Result.AddEdges([1, 2, 1, 5, 1, 6, 2, 3, 2, 7, 3, 4, 3, 8, 4, 5, 4, 9, 5, 10,
+                   6, 8, 6, 9, 7, 9, 7, 10, 8, 10]);
+end;
+
+function TSimpleGraphTest.GenerateGoldnerHarary: TGraph;
+begin
+  //https://en.wikipedia.org/wiki/Goldner–Harary_graph
+  Result := TGraph.Create;
+  Result.AddVertexRange(1, 11);
+  Result.AddEdges([1, 2, 1, 3, 1, 4, 1, 5, 1, 7, 1, 8, 1, 10, 1, 11, 2, 3, 2, 4, 2, 6, 2, 7,
+                   2, 9, 2, 10, 2, 11, 3, 4, 4, 5, 4, 6, 4, 7, 5, 7, 6, 7, 7, 8, 7, 9, 7, 10,
+                   8, 10, 9, 10, 10, 11]);
 end;
 
 function TSimpleGraphTest.GenerateDisconnected: TGraph;
@@ -1312,6 +1369,9 @@ begin
     AssertTrue(THelper.SequentSearch(peo, I) >= 0);
   g.RemoveEdge(1, 6);
   AssertFalse(g.IsChordal(peo));
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertFalse(g.IsChordal(peo));
 end;
 
 procedure TSimpleGraphTest.IsChordal1;
@@ -1351,6 +1411,236 @@ begin
   {%H-}Ref.Instance := GenerateChordal8;
   g := Ref;
   AssertTrue(g.IsChordal(peo));
+end;
+
+procedure TSimpleGraphTest.IsChordal4;
+var
+  Ref: TRef;
+  g: TGraph;
+  peo: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateChordal10;
+  g := Ref;
+  AssertTrue(g.IsChordal(peo));
+end;
+
+procedure TSimpleGraphTest.IsPlanarR;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.IsPlanarR);
+  g.AddVertex(0);
+  AssertTrue(g.IsPlanarR);
+  g.AddVertex(1);
+  AssertTrue(g.IsPlanarR);
+  g.AddEdge(0, 1);
+  AssertTrue(g.IsPlanarR);
+  g.AddVertex(2);
+  AssertTrue(g.IsPlanarR);
+  g.AddEdge(2, 1);
+  g.AddEdge(0, 2);
+  AssertTrue(g.IsPlanarR);
+  g.AddVertex(3);
+  AssertTrue(g.IsPlanarR);
+  g.AddEdge(3, 0);
+  g.AddEdge(3, 1);
+  g.AddEdge(3, 2);
+  AssertTrue(g.IsPlanarR);
+end;
+
+procedure TSimpleGraphTest.IsPlanarR1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateTree;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Ref.Instance := GenerateChordal10;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+end;
+
+procedure TSimpleGraphTest.IsPlanarR2;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, J: Integer;
+begin
+  {%H-}Ref.Instance := GenerateK5;
+  g := Ref;
+  AssertFalse(g.IsPlanarR);
+  for I := 1 to 5 do
+    for J := 1 to 5 do
+      if I > J then
+        begin
+          g.RemoveEdge(I, J);
+          AssertTrue(g.IsPlanarR);
+          g.AddEdge(I, J);
+          AssertFalse(g.IsPlanarR);
+        end;
+  g.RemoveEdge(1, 2);
+  g.RemoveEdge(2, 3);
+  g.RemoveEdge(3, 4);
+  g.RemoveEdge(4, 5);
+  g.RemoveEdge(1, 5);
+  g.AddEdges([1, 6, 2, 6, 2, 7, 3, 7, 3, 8, 4, 8, 4, 9, 5, 9, 5, 10, 1, 10]);
+  AssertFalse(g.IsPlanarR);
+end;
+
+procedure TSimpleGraphTest.IsPlanarR3;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, J: Integer;
+begin
+  {%H-}Ref.Instance := GenerateK33;
+  g := Ref;
+  AssertFalse(g.IsPlanarR);
+  for I := 1 to 6 do
+    for J := 1 to 6 do
+      if (I > J) and g.ContainsEdge(I, J) then
+        begin
+          g.RemoveEdge(I, J);
+          AssertTrue(g.IsPlanarR);
+          g.AddEdge(I, J);
+          AssertFalse(g.IsPlanarR);
+        end;
+  g.RemoveEdge(1, 2);
+  g.RemoveEdge(1, 4);
+  g.RemoveEdge(1, 6);
+  g.RemoveEdge(3, 2);
+  g.RemoveEdge(3, 4);
+  g.RemoveEdge(3, 6);
+  g.RemoveEdge(5, 2);
+  g.RemoveEdge(5, 4);
+  g.RemoveEdge(5, 6);
+  g.AddEdges([1, 7, 2, 7, 1, 8, 4, 8, 1, 9, 6, 9,
+              3, 10, 2, 10, 3, 11, 4, 11, 3, 12, 6, 12,
+              5, 13, 2, 13, 5, 14, 4, 14, 5, 15, 6, 15]);
+  AssertFalse(g.IsPlanarR);
+end;
+
+procedure TSimpleGraphTest.IsPlanarR4;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GeneratePetersen;
+  g := Ref;
+  AssertFalse(g.IsPlanarR);
+end;
+
+procedure TSimpleGraphTest.IsPlanarR5;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, J, Count: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateGoldnerHarary;
+  g := Ref;
+  AssertTrue(g.IsPlanarR);
+  Count := 0;
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if (I <> J) and not g.ContainsEdgeI(I, J) then
+        begin
+          g.AddEdgeI(I, J);
+          AssertFalse(g.IsPlanarR);
+          g.RemoveEdgeI(I, J);
+          AssertTrue(g.IsPlanarR);
+          Inc(Count);
+        end;
+  AssertTrue(Count > 0);
+end;
+
+procedure TSimpleGraphTest.PlanarEmbedding;
+var
+  Ref: TRef;
+  g: TGraph;
+  vSet: TBoolVector;
+  eSet: specialize TGLiteHashSetLp<TIntEdge, TIntEdge>;
+  Emb: TIntMatrix;
+  I, J, ReversePos, First, Enter, Src, Dst, FaceCount: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateK33;
+  g := Ref;
+  g.IsPlanarR(Emb);
+  AssertTrue(Emb = nil);
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  AssertTrue(g.IsPlanarR(Emb));
+  //test if Emb is isomorphic to g
+  AssertTrue(Length(Emb) = g.VertexCount);
+  vSet.Size := g.VertexCount;
+  for I := 0 to Pred(g.VertexCount) do
+    begin
+      AssertTrue(Emb[I].Length = g.DegreeI(I));
+      vSet.ClearBits;
+      for J in Emb[I] do
+        begin
+          AssertFalse(vSet[J]);
+          vSet[J] := True;
+          AssertTrue(g.ContainsEdgeI(I, J));
+        end;
+    end;
+  //test if Emb is embedding
+  FaceCount := 0;
+  for I := 0 to Pred(g.VertexCount) - 1 do
+    for J := 0 to High(Emb[I]) do
+      if not eSet.Contains(TIntEdge.Create(I, Emb[I, J])) then
+        begin
+          First := I;
+          Src := I;
+          Dst := Emb[I, J];
+          if J = High(Emb[I]) then
+            Enter := Emb[I, 0]
+          else
+            Enter := Emb[I, Succ(J)];
+          eSet.Add(TIntEdge.Create(Src, Dst));
+          while (Dst <> First) or (Src <> Enter) do
+            begin
+              ReversePos := 0;
+              while Emb[Dst, ReversePos] <> Src do
+                Inc(ReversePos);
+              Src := Dst;
+              if ReversePos > 0 then
+                Dst := Emb[Dst, Pred(ReversePos)]
+              else
+                Dst := Emb[Dst, High(Emb[Dst])];
+              AssertTrue(eSet.Add(TIntEdge.Create(Src, Dst)));
+            end;
+          Inc(FaceCount);
+        end;
+  AssertTrue(eSet.Count = g.EdgeCount * 2);
+  //test if FaceCount satisfies Euler's formula
+  AssertTrue(Length(Emb) + FaceCount - eSet.Count div 2 = 2);
 end;
 
 procedure TSimpleGraphTest.ContainsEulerianPath;
