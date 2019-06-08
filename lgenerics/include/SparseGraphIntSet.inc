@@ -42,6 +42,12 @@ begin
   aSet.FCount := 0;
 end;
 
+procedure TGSparseGraph.TIntSet.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue > System.Length(FItems) then
+    System.SetLength(FItems, aValue);
+end;
+
 procedure TGSparseGraph.TIntSet.InitRange(aRange: SizeInt);
 var
   I: SizeInt;

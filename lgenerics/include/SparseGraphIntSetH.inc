@@ -18,6 +18,7 @@
 *****************************************************************************}
 
 type
+
   TIntSet = record
   private
     FItems: TIntArray;
@@ -37,6 +38,7 @@ type
       property  Current: SizeInt read GetCurrent;
     end;
 
+    procedure EnsureCapacity(aValue: SizeInt);
     procedure InitRange(aRange: SizeInt);
     function  GetEnumerator: TEnumerator; inline;
     function  ToArray: TIntArray; inline;

@@ -4180,6 +4180,11 @@ begin
   Result := FTable.Count;
 end;
 
+procedure TIntPairSet.EnsureCapacity(aValue: SizeInt);
+begin
+  FTable.EnsureCapacity(aValue);
+end;
+
 procedure TIntPairSet.Clear;
 begin
   FTable.Clear;

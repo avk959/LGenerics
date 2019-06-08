@@ -19,8 +19,6 @@
 
 type
 
-  { TIntArrayHelper }
-
   TIntArrayHelper = type helper for TIntArray
   private
     function  GetLenght: SizeInt; inline;
@@ -163,6 +161,7 @@ type
     FTable: TTable;
     function GetCount: SizeInt; inline;
   public
+    procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure Clear; inline;
     function  Contains(L, R: SizeInt): Boolean; inline;
     function  Add(L, R: SizeInt): Boolean;
