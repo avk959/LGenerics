@@ -198,10 +198,14 @@ type
     function  TryPopLast(out aValue: T): Boolean; inline;
   { examines element in the head of deque; will raise ELGAccessEmpty if inctance is empty }
     function  PeekFirst: T; inline;
-    function  TryPeekFirst(out aValue: T): Boolean;
+    function  TryPeekFirst(out aValue: T): Boolean; inline;
+    function  PeekFirstItem: PItem; inline;
+    function  TryPeekFirstItem(out aValue: PItem): Boolean; inline;
   { examines element in the tail of deque; will raise ELGAccessEmpty if inctance is empty }
     function  PeekLast: T; inline;
     function  TryPeekLast(out aValue: T): Boolean; inline;
+    function  PeekLastItem: PItem; inline;
+    function  TryPeekLastItem(out aValue: PItem): Boolean; inline;
   { inserts aValue into position aIndex;
     will raise ELGListError if aIndex out of bounds(aIndex = Count  is allowed) }
     procedure Insert(aIndex: SizeInt; constref aValue: T);
@@ -1304,6 +1308,16 @@ begin
   Result := FBuffer.TryPeekFirst(aValue);
 end;
 
+function TGLiteDeque.PeekFirstItem: PItem;
+begin
+  Result := FBuffer.PeekFirstItem;
+end;
+
+function TGLiteDeque.TryPeekFirstItem(out aValue: PItem): Boolean;
+begin
+  Result := FBuffer.TryPeekFirstItem(aValue);
+end;
+
 function TGLiteDeque.PeekLast: T;
 begin
   Result := FBuffer.PeekLast;
@@ -1312,6 +1326,16 @@ end;
 function TGLiteDeque.TryPeekLast(out aValue: T): Boolean;
 begin
   Result := FBuffer.TryPeekLast(aValue);
+end;
+
+function TGLiteDeque.PeekLastItem: PItem;
+begin
+  Result := FBuffer.PeekLastItem;
+end;
+
+function TGLiteDeque.TryPeekLastItem(out aValue: PItem): Boolean;
+begin
+  Result := FBuffer.TryPeekLastItem(aValue);
 end;
 
 procedure TGLiteDeque.Insert(aIndex: SizeInt; constref aValue: T);
