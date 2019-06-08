@@ -99,7 +99,7 @@ type
   private
     FBuffer: TBuffer;
     function  GetCapacity: SizeInt; inline;
-    function  PopItem: T; inline;
+    function  PopItem: T;
   public
     function  GetEnumerator: TEnumerator; inline;
     function  Mutables: TMutables; inline;
@@ -115,6 +115,8 @@ type
     function  TryPop(out aValue: T): Boolean;
     function  Peek: T;
     function  TryPeek(out aValue: T): Boolean;
+    function  PeekItem: PItem;
+    function  TryPeekItem(out aValue: PItem): Boolean;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -418,12 +420,12 @@ end;
 
 function TGLiteStack.IsEmpty: Boolean;
 begin
-  Result := FBuffer.Count = 0;
+  Result := Count = 0;
 end;
 
 function TGLiteStack.NonEmpty: Boolean;
 begin
-  Result := FBuffer.Count <> 0;
+  Result := Count > 0;
 end;
 
 procedure TGLiteStack.EnsureCapacity(aValue: SizeInt);
@@ -449,7 +451,7 @@ end;
 
 function TGLiteStack.TryPop(out aValue: T): Boolean;
 begin
-  Result := NonEmpty;
+  Result := Count > 0;
   if Result then
     aValue := PopItem;
 end;
@@ -462,9 +464,22 @@ end;
 
 function TGLiteStack.TryPeek(out aValue: T): Boolean;
 begin
-  Result := NonEmpty;
+  Result := Count > 0;
   if Result then
     aValue := FBuffer.FItems[Pred(Count)];
+end;
+
+function TGLiteStack.PeekItem: PItem;
+begin
+  FBuffer.CheckEmpty;
+  Result := @FBuffer.FItems[Pred(Count)];
+end;
+
+function TGLiteStack.TryPeekItem(out aValue: PItem): Boolean;
+begin
+  Result := Count > 0;
+  if Result then
+    aValue := @FBuffer.FItems[Pred(Count)];
 end;
 
 { TGLiteThreadStack }
