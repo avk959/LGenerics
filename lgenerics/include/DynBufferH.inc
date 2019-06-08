@@ -168,7 +168,7 @@
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
-    function  PushLast(constref aValue: T): SizeInt; inline;
+    function  PushLast(constref aValue: T): SizeInt;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
@@ -346,9 +346,13 @@
     function  PopLast: T;
     function  TryPopLast(out aValue: T): Boolean;
     function  PeekFirst: T; inline;
+    function  PeekFirstItem: PItem; inline;
     function  TryPeekFirst(out aValue: T): Boolean;
+    function  TryPeekFirstItem(out aValue: PItem): Boolean;
     function  PeekLast: T; inline;
     function  TryPeekLast(out aValue: T): Boolean;
+    function  PeekLastItem: PItem; inline;
+    function  TryPeekLastItem(out aValue: PItem): Boolean;
     property  Head: SizeInt read FHead;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;

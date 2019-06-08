@@ -1211,11 +1211,24 @@ begin
   Result := FItems[Head];
 end;
 
+function TGLiteRingDynBuffer.PeekFirstItem: PItem;
+begin
+  CheckEmpty;
+  Result := @FItems[Head];
+end;
+
 function TGLiteRingDynBuffer.TryPeekFirst(out aValue: T): Boolean;
 begin
   Result := Count > 0;
   if Result then
     aValue := FItems[Head];
+end;
+
+function TGLiteRingDynBuffer.TryPeekFirstItem(out aValue: PItem): Boolean;
+begin
+  Result := Count > 0;
+  if Result then
+    aValue := @FItems[Head];
 end;
 
 function TGLiteRingDynBuffer.PeekLast: T;
@@ -1229,6 +1242,19 @@ begin
   Result := Count > 0;
   if Result then
     aValue := FItems[TailIndex];
+end;
+
+function TGLiteRingDynBuffer.PeekLastItem: PItem;
+begin
+  CheckEmpty;
+  Result := @FItems[TailIndex];
+end;
+
+function TGLiteRingDynBuffer.TryPeekLastItem(out aValue: PItem): Boolean;
+begin
+  Result := Count > 0;
+  if Result then
+    aValue := @FItems[TailIndex];
 end;
 
 
