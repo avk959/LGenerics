@@ -37,6 +37,7 @@ uses
   LGVector,
   LGHashTable,
   LGHash,
+  LGHashSet,
   LGStrConst;
 
 type
@@ -61,6 +62,8 @@ type
   TNestNodeDone    = procedure(aIndex: SizeInt) is nested;
   TOnNextNode      = procedure(aNode, aParent: SizeInt) of object;
   TNestNextNode    = procedure(aNode, aParent: SizeInt) is nested;
+  TOnPassEdge      = procedure(aSrc, aDst: SizeInt) of object;
+  TNestPassEdge    = procedure(aSrc, aDst: SizeInt) is nested;
   TOnSetFound      = procedure(const aSet: TIntArray; var aCancel: Boolean) of object;
   TCost            = Int64;
   TVertexColor     = type Byte;
@@ -80,8 +83,8 @@ type
   TIntEdge = packed record
     Source,
     Destination: SizeInt;
-    class function HashCode(constref aValue: TIntEdge): SizeInt; static; inline;
-    class function Equal(constref L, R: TIntEdge): Boolean; static; inline;
+    class function HashCode(constref aValue: TIntEdge): SizeInt; static;
+    class function Equal(constref L, R: TIntEdge): Boolean; static;
     constructor Create(aSrc, aDst: SizeInt);
     function Key: TIntEdge; inline;
   end;
@@ -90,6 +93,7 @@ type
   TIntEdgeVector        = specialize TGLiteVector<TIntEdge>;
   TIntEdgeArray         = array of TIntEdge;
   TEdgeArrayVector      = specialize TGLiteVector<TIntEdgeArray>;
+  TIntEdgeHashSet       = specialize TGLiteHashSetLp<TIntEdge, TIntEdge>;
 
   TGraphMagic           = string[8];
 
