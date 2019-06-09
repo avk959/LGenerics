@@ -47,7 +47,99 @@ type
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>)
+  generic TGSimpleGraph<TVertex, TEdgeData, TEqRel> = class(
+    specialize TGSparseGraph<TVertex, TEdgeData, TEqRel>)
+  public
+  type
+    {TPlanarEmbedding: representation of a combinatorial embedding }
+    TPlanarEmbedding = record
+    private
+    type
+      THalfEdge = record
+        Source,
+        Target,
+        Prev,
+        Next: SizeInt;
+      end;
+
+      PHalfEdge     = ^THalfEdge;
+      THalfEdgeList = array of THalfEdge;
+
+      TAdjCwEnumerator = record
+      private
+        FList: THalfEdgeList;
+        CurrEdge,
+        FirstEdge: SizeInt;
+        function  GetCurrent: SizeInt; inline;
+      public
+        function  MoveNext: Boolean;
+        property  Current: SizeInt read GetCurrent;
+      end;
+
+      TEdgeEnumerator = record
+      private
+        FList: THalfEdgeList;
+        CurrEdge: SizeInt;
+        function  GetCurrent: TIntEdge; inline;
+      public
+        function  MoveNext: Boolean; inline;
+        property  Current: TIntEdge read GetCurrent;
+      end;
+
+    var
+      FEdgeList: THalfEdgeList;
+      FNodeList: TIntArray;
+      FComponents: TIntVectorArray;
+      FCounter: SizeInt;
+      function  GetNodeCount: SizeInt; inline;
+      function  GetEdgeCount: SizeInt; inline;
+      function  GetCompCount: SizeInt; inline;
+      function  GetCompPop(aIndex: SizeInt): SizeInt;
+      function  GetComponent(aIndex: SizeInt): TIntArray;
+      procedure Init(aNodeCount, aEdgeCount, aCompCount: SizeInt);
+      procedure Init1;
+      procedure Init2(aConn: Boolean);
+      function  CreateEdge(aSrc, aDst: SizeInt): SizeInt;
+      function  GetReverse(aEdge: SizeInt): SizeInt; inline;
+      function  AddEdge(aSrc, aDst: SizeInt): SizeInt;
+      procedure InsertFirst(aEdge: SizeInt);
+      procedure InsertAfter(aEdge, aRef: SizeInt);
+      procedure InsertBefore(aEdge, aRef: SizeInt);
+      function  FindEdge(aSrc, aDst: SizeInt): SizeInt;
+      function  NextFaceEdge(aEdgeIdx: SizeInt): SizeInt;
+    public
+    type
+      TAdjNodesCw = record
+      private
+        List: THalfEdgeList;
+        FirstEdge: SizeInt;
+      public
+        function GetEnumerator: TAdjCwEnumerator; inline;
+      end;
+
+      TEdges = record
+      private
+        FList: THalfEdgeList;
+      public
+        function GetEnumerator: TEdgeEnumerator; inline;
+      end;
+
+      function IsEmpty: Boolean; inline;
+      function AdjNodesCw(aNode: SizeInt): TAdjNodesCw;
+      function Edges: TEdges; inline;
+      function ContainsEdge(aSrc, aDst: SizeInt): Boolean; inline;
+      function ContainsEdge(constref aEdge: TIntEdge): Boolean; inline;
+      function FindFirstEdge(aNode: SizeInt; out aEdge: TIntEdge): Boolean;
+      function NextFaceEdge(constref aEdge: TIntEdge): TIntEdge;
+      function TraverseFace(constref aEdge: TIntEdge; aOnPassEdge: TOnPassEdge = nil): TIntArray;
+      function TraverseFace(constref aEdge: TIntEdge; aOnPassEdge: TNestPassEdge): TIntArray;
+      property NodeCount: SizeInt read GetNodeCount;
+      property EdgeCount: SizeInt read GetEdgeCount;
+      property ComponentCount: SizeInt read GetCompCount;
+      property ComponentPop[aIndex: SizeInt]: SizeInt read GetCompPop;
+      property Components[aIndex: SizeInt]: TIntArray read GetComponent; default;
+    end;
+
   protected
   type
     TSortByDegreeHelper = specialize TGDelegatedArrayHelper<SizeInt>;
@@ -89,7 +181,7 @@ type
     function  SeparateTag(aIndex: SizeInt): SizeInt;
     function  SeparateJoin(L, R: SizeInt): Boolean;
     procedure ValidateConnected;
-    function  GetConnected: Boolean; inline;
+    function  GetConnected: Boolean; //inline;
     function  GetDensity: Double; inline;
     function  CreateSkeleton: TSkeleton;
     procedure AssignGraph(aGraph: TGSimpleGraph);
@@ -230,15 +322,16 @@ type
     an empty graph is considered chordal }
     function  IsChordal(out aRevPeo: TIntArray): Boolean;
   { returns True if graph is planar, an empty graph is considered planar;
-    used FMR algorithm(recursive variant);
+    used FMR Left-Right planarity algorithm(recursive variant);
     todo: nonrecursive variant }
     function  IsPlanarR: Boolean;
   { returns True and the planar embedding in aEmbedding, if graph is planar,
-    otherwise returns False and nil; used FMR algorithm(recursive variant);
-    todo: more efficient and convenient data structure for embedding;
+    otherwise returns False and nil; used FMR Left-Right planarity algorithm(recursive variant);
     todo: Kuratowski subdivision extraction;
     todo: nonrecursive variant }
-    function  IsPlanarR(out aEmbedding: TIntMatrix): Boolean;
+    function  IsPlanarR(out aEmbedding: TPlanarEmbedding): Boolean;
+  { returns True if aEmbedding is proper embedding }
+    function  IsEmbedding(constref aEmbedding: TPlanarEmbedding): Boolean;
     function  CyclomaticNumber: SizeInt;
   { returns True if exists any cycle in the aVertex connected component,
     in this case aCycle will contain indices of the vertices of the found cycle }
@@ -738,6 +831,378 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
+
+{ TGSimpleGraph.TPlanarEmbedding.TAdjCwEnumerator }
+
+function TGSimpleGraph.TPlanarEmbedding.TAdjCwEnumerator.GetCurrent: SizeInt;
+begin
+  Result := FList[CurrEdge].Target;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.TAdjCwEnumerator.MoveNext: Boolean;
+var
+  Next: SizeInt;
+begin
+  if CurrEdge >= 0 then
+    begin
+      Next := FList[CurrEdge].Next;
+      Result := Next <> FirstEdge;
+      if Result then
+        CurrEdge := Next;
+    end
+  else
+    begin
+      Result := FirstEdge <> NULL_INDEX;
+      if Result then
+        CurrEdge := FirstEdge;
+    end;
+end;
+
+{ TGSimpleGraph.TPlanarEmbedding.TEdgeEnumerator }
+
+function TGSimpleGraph.TPlanarEmbedding.TEdgeEnumerator.GetCurrent: TIntEdge;
+begin
+  with FList[CurrEdge] do
+    Result := TIntEdge.Create(Source, Target);
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.TEdgeEnumerator.MoveNext: Boolean;
+begin
+  Result := CurrEdge < System.Length(FList) - 2;
+  if Result then
+    CurrEdge += 2;
+end;
+
+{ TGSimpleGraph.TPlanarEmbedding.TAdjNodesCw }
+
+function TGSimpleGraph.TPlanarEmbedding.TAdjNodesCw.GetEnumerator: TAdjCwEnumerator;
+begin
+  Result.FList := List;
+  Result.FirstEdge := FirstEdge;
+  Result.CurrEdge := NULL_INDEX;
+end;
+
+{ TGSimpleGraph.TPlanarEmbedding.TEdges }
+
+function TGSimpleGraph.TPlanarEmbedding.TEdges.GetEnumerator: TEdgeEnumerator;
+begin
+  Result.FList := FList;
+  Result.CurrEdge := -2;
+end;
+
+{ TGSimpleGraph.TPlanarEmbedding }
+
+function TGSimpleGraph.TPlanarEmbedding.GetNodeCount: SizeInt;
+begin
+  Result := System.Length(FNodeList);
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.GetEdgeCount: SizeInt;
+begin
+  Result := System.Length(FEdgeList) shr 1;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.GetCompCount: SizeInt;
+begin
+  Result := System.Length(FComponents);
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.GetCompPop(aIndex: SizeInt): SizeInt;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(ComponentCount) then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aIndex]);
+  Result := FComponents[aIndex].Count;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.GetComponent(aIndex: SizeInt): TIntArray;
+begin
+  if SizeUInt(aIndex) >= SizeUInt(ComponentCount) then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aIndex]);
+  Result := FComponents[aIndex].ToArray;
+end;
+
+procedure TGSimpleGraph.TPlanarEmbedding.Init(aNodeCount, aEdgeCount, aCompCount: SizeInt);
+begin
+  FNodeList := TIntArray.Construct(aNodeCount, NULL_INDEX);
+  System.SetLength(FEdgeList, aEdgeCount shl 1);
+  System.SetLength(FComponents, aCompCount);
+  FCounter := 0;
+end;
+
+procedure TGSimpleGraph.TPlanarEmbedding.Init1;
+begin
+  FNodeList := [-1];
+  System.SetLength(FComponents, 1);
+  FComponents[0].Add(0);
+end;
+
+procedure TGSimpleGraph.TPlanarEmbedding.Init2(aConn: Boolean);
+begin
+  if aConn then
+    begin
+      FNodeList := [-1, -1];
+      System.SetLength(FComponents, 1);
+      FComponents[0].Add(0);
+      FComponents[0].Add(1);
+      System.SetLength(FEdgeList, 2);
+      AddEdge(0, 1);
+      InsertFirst(1);
+    end
+  else
+    begin
+      FNodeList := [-1, -1];
+      System.SetLength(FComponents, 2);
+      FComponents[0].Add(0);
+      FComponents[1].Add(1);
+    end;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.CreateEdge(aSrc, aDst: SizeInt): SizeInt;
+begin
+  if FCounter > System.Length(FEdgeList) - 2 then
+    raise EGraphError.Create(SEInternalDataInconsist + ' in TEmbedding');
+  Result := FCounter;
+  FCounter += 2;
+  with FEdgeList[Result] do
+    begin
+      Source := aSrc;
+      Target := aDst;
+    end;
+  with FEdgeList[Succ(Result)] do
+    begin
+      Source := aDst;
+      Target := aSrc;
+    end;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.GetReverse(aEdge: SizeInt): SizeInt;
+begin
+  Result := Succ(aEdge) - (aEdge and 1) shl 1;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.AddEdge(aSrc, aDst: SizeInt): SizeInt;
+var
+  NewEdge, First, Last: SizeInt;
+begin
+  NewEdge := CreateEdge(aSrc, aDst);
+  First := FNodeList[aSrc];
+  if First <> NULL_INDEX then
+    begin
+      Last := FEdgeList[First].Prev;
+      FEdgeList[NewEdge].Prev := Last;
+      FEdgeList[NewEdge].Next := First;
+      FEdgeList[Last].Next := NewEdge;
+      FEdgeList[First].Prev := NewEdge;
+    end
+  else
+    begin
+      FEdgeList[NewEdge].Prev := NewEdge;
+      FEdgeList[NewEdge].Next := NewEdge;
+      FNodeList[aSrc] := NewEdge;
+    end;
+  Result := NewEdge;
+end;
+
+procedure TGSimpleGraph.TPlanarEmbedding.InsertFirst(aEdge: SizeInt);
+var
+  Src, First, Last: SizeInt;
+begin
+  Src := FEdgeList[aEdge].Source;
+  First := FNodeList[Src];
+  if First <> NULL_INDEX then
+    begin
+      Last := FEdgeList[First].Prev;
+      FEdgeList[aEdge].Prev := Last;
+      FEdgeList[aEdge].Next := First;
+      FEdgeList[First].Prev := aEdge;
+      FEdgeList[Last].Next := aEdge;
+    end
+  else
+    begin
+      FEdgeList[aEdge].Prev := aEdge;
+      FEdgeList[aEdge].Next := aEdge;
+    end;
+  FNodeList[Src] := aEdge;
+end;
+
+procedure TGSimpleGraph.TPlanarEmbedding.InsertAfter(aEdge, aRef: SizeInt);
+var
+  Next: SizeInt;
+begin
+  Next := FEdgeList[aRef].Next;
+  FEdgeList[aRef].Next := aEdge;
+  FEdgeList[Next].Prev := aEdge;
+  FEdgeList[aEdge].Prev := aRef;
+  FEdgeList[aEdge].Next := Next;
+end;
+
+procedure TGSimpleGraph.TPlanarEmbedding.InsertBefore(aEdge, aRef: SizeInt);
+var
+  Prev: SizeInt;
+begin
+  Prev := FEdgeList[aRef].Prev;
+  FEdgeList[aRef].Prev := aEdge;
+  FEdgeList[Prev].Next := aEdge;
+  FEdgeList[aEdge].Next := aRef;
+  FEdgeList[aEdge].Prev := Prev;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.FindEdge(aSrc, aDst: SizeInt): SizeInt;
+var
+  First, Curr: SizeInt;
+  c: SizeUInt;
+begin
+  Result := NULL_INDEX;
+  c := SizeUInt(NodeCount);
+  if (SizeUInt(aSrc) < c) and (SizeUInt(aDst) < c) then
+    begin
+      First := FNodeList[aSrc];
+      Curr := First;
+      while FEdgeList[Curr].Target <> aDst do
+        begin
+          Curr := FEdgeList[Curr].Next;
+          if Curr = First then
+            break;
+        end;
+      if FEdgeList[Curr].Target = aDst then
+        Result := Curr;
+    end;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.NextFaceEdge(aEdgeIdx: SizeInt): SizeInt;
+begin
+  Result := FEdgeList[GetReverse(aEdgeIdx)].Prev;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.IsEmpty: Boolean;
+begin
+  Result := FNodeList = nil;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.AdjNodesCw(aNode: SizeInt): TAdjNodesCw;
+begin
+  if SizeUInt(aNode) >= SizeUInt(NodeCount) then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aNode]);
+  Result.List := FEdgeList;
+  Result.FirstEdge := FNodeList[aNode];
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.Edges: TEdges;
+begin
+  Result.FList := FEdgeList;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.ContainsEdge(aSrc, aDst: SizeInt): Boolean;
+begin
+  Result := FindEdge(aSrc, aDst) <> NULL_INDEX;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.ContainsEdge(constref aEdge: TIntEdge): Boolean;
+begin
+  Result := ContainsEdge(aEdge.Source, aEdge.Destination);
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.FindFirstEdge(aNode: SizeInt; out aEdge: TIntEdge): Boolean;
+var
+  First: SizeInt;
+begin
+  if SizeUInt(aNode) >= SizeUInt(NodeCount) then
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aNode]);
+  First := FNodeList[aNode];
+  Result := First <> NULL_INDEX;
+  if Result then
+    with FEdgeList[First] do
+      aEdge := TIntEdge.Create(Source, Target)
+  else
+    aEdge := TIntEdge.Create(NULL_INDEX, NULL_INDEX);
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.NextFaceEdge(constref aEdge: TIntEdge): TIntEdge;
+var
+  Curr: SizeInt;
+begin
+  Curr := FindEdge(aEdge.Source, aEdge.Destination);
+  if Curr = NULL_INDEX then
+    raise EGraphError.CreateFmt(SENoSuchEdgeFmt, [aEdge.Source, aEdge.Destination]);
+  with FEdgeList[NextFaceEdge(Curr)] do
+    Result := TIntEdge.Create(Source, Target);
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.TraverseFace(constref aEdge: TIntEdge;
+  aOnPassEdge: TOnPassEdge): TIntArray;
+var
+  Path: TIntVector;
+  FirstArc, EnterArc, CurrArc, PrevArc: SizeInt;
+begin
+  Result := nil;
+  FirstArc := FindEdge(aEdge.Source, aEdge.Destination);
+  if FirstArc = NULL_INDEX then
+    raise EGraphError.CreateFmt(SENoSuchEdgeFmt, [aEdge.Source, aEdge.Destination]);
+  if aOnPassEdge <> nil then
+    aOnPassEdge(aEdge.Source, aEdge.Destination);
+  Path.Add(aEdge.Source);
+  Path.Add(aEdge.Destination);
+  EnterArc := GetReverse(FEdgeList[FirstArc].Next);
+  PrevArc := FirstArc;
+  CurrArc := NextFaceEdge(PrevArc);
+  with FEdgeList[CurrArc] do
+    begin
+      if aOnPassEdge <> nil then
+        aOnPassEdge(Source, Target);
+      Path.Add(Target);
+    end;
+  while CurrArc <> EnterArc do
+    begin
+      PrevArc := CurrArc;
+      CurrArc := NextFaceEdge(PrevArc);
+      with FEdgeList[CurrArc] do
+        begin
+          if aOnPassEdge <> nil then
+            aOnPassEdge(Source, Target);
+          Path.Add(Target);
+        end;
+    end;
+  Path.Add(aEdge.Source);
+  Result := Path.ToArray;
+end;
+
+function TGSimpleGraph.TPlanarEmbedding.TraverseFace(constref aEdge: TIntEdge;
+  aOnPassEdge: TNestPassEdge): TIntArray;
+var
+  Path: TIntVector;
+  FirstArc, EnterArc, CurrArc, PrevArc: SizeInt;
+begin
+  Result := nil;
+  FirstArc := FindEdge(aEdge.Source, aEdge.Destination);
+  if FirstArc = NULL_INDEX then
+    raise EGraphError.CreateFmt(SENoSuchEdgeFmt, [aEdge.Source, aEdge.Destination]);
+  if aOnPassEdge <> nil then
+    aOnPassEdge(aEdge.Source, aEdge.Destination);
+  Path.Add(aEdge.Source);
+  Path.Add(aEdge.Destination);
+  EnterArc := GetReverse(FEdgeList[FirstArc].Next);
+  PrevArc := FirstArc;
+  CurrArc := NextFaceEdge(PrevArc);
+  with FEdgeList[CurrArc] do
+    begin
+      if aOnPassEdge <> nil then
+        aOnPassEdge(Source, Target);
+      Path.Add(Target);
+    end;
+  while CurrArc <> EnterArc do
+    begin
+      PrevArc := CurrArc;
+      CurrArc := NextFaceEdge(PrevArc);
+      with FEdgeList[CurrArc] do
+        begin
+          if aOnPassEdge <> nil then
+            aOnPassEdge(Source, Target);
+          Path.Add(Target);
+        end;
+    end;
+  Path.Add(aEdge.Source);
+  Result := Path.ToArray;
+end;
 
 {$I SimpGraphHelp.inc}
 
@@ -2925,30 +3390,76 @@ begin
     Result := True;
 end;
 
-function TGSimpleGraph.IsPlanarR(out aEmbedding: TIntMatrix): Boolean;
+function TGSimpleGraph.IsPlanarR(out aEmbedding: TPlanarEmbedding): Boolean;
 var
   Helper: TPlanarHelper;
 begin
-  aEmbedding := nil;
+  aEmbedding := Default(TPlanarEmbedding);
   Result := True;
   if IsEmpty then
     exit;
-  if VertexCount = 1 then
-    begin
-      aEmbedding := [[]];
-      exit;
-    end;
-  if VertexCount = 2 then
-    begin
-      if Connected then
-        aEmbedding := [[1], [0]]
-      else
-        aEmbedding := [[], []];
-      exit;
-    end;
-  if EdgeCount > VertexCount * 3 - 6 then
+  if (VertexCount > 2) and (EdgeCount > VertexCount * 3 - 6) then
     exit(False);
   Result := Helper.GraphIsPlanarR(Self, aEmbedding);
+end;
+
+function TGSimpleGraph.IsEmbedding(constref aEmbedding: TPlanarEmbedding): Boolean;
+var
+  eSet: TIntEdgeHashSet;
+  FaceOk: Boolean;
+  procedure OnPass(aSrc, aDst: SizeInt);
+  begin
+    FaceOk := FaceOk and eSet.Add(TIntEdge.Create(aSrc, aDst));
+  end;
+var
+  I, J, Cnt, Comp, NodeCnt, EdgeCnt, FaceCnt: SizeInt;
+  AdjList: PAdjList;
+begin
+  if (aEmbedding.NodeCount <> VertexCount) or (aEmbedding.EdgeCount <> EdgeCount) then
+    exit(False);
+  if aEmbedding.ComponentCount <> SeparateCount then
+    exit(False);
+
+  for I := 0 to Pred(VertexCount) do
+    begin
+      AdjList := AdjLists[I];
+      Cnt := 0;
+      for J in aEmbedding.AdjNodesCw(I) do
+        begin
+          if not AdjList^.Contains(J) then
+            exit(False);
+          Inc(Cnt);
+        end;
+      if AdjList^.Count <> Cnt then
+        exit(False);
+    end;
+
+  for Comp := 0 to Pred(aEmbedding.ComponentCount) do
+    begin
+      NodeCnt := aEmbedding.ComponentPop[Comp];
+      if NodeCnt < 2 then
+        continue;
+      FaceCnt := 0;
+      EdgeCnt := 0;
+      for I in aEmbedding[Comp] do
+        for J in aEmbedding.AdjNodesCw(I) do
+          begin
+            Inc(EdgeCnt);
+            if not eSet.Contains(TIntEdge.Create(I, J)) then
+              begin
+                Inc(FaceCnt);
+                FaceOk := True;
+                aEmbedding.TraverseFace(TIntEdge.Create(I, J), @OnPass);
+                if not FaceOk then
+                  exit(False);
+              end;
+          end;
+      //check if FaceCnt satisfies Euler's formula
+      if not NodeCnt + FaceCnt - EdgeCnt div 2 = 2 then
+        exit(False);
+    end;
+
+  Result := True;
 end;
 
 function TGSimpleGraph.CyclomaticNumber: SizeInt;

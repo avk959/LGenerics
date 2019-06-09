@@ -2008,12 +2008,12 @@ end;
 
 { TGSimpleGraph.TPlanarHelper }
 
-function TGSimpleGraph.TPlanarHelper.NodeIdx(aNode: PNode): SizeInt;
+function TGSimpleGraph.TPlanarHelper.GetNodeIdx(aNode: PNode): SizeInt;
 begin
   Result := aNode - PNode(FNodes);
 end;
 
-function TGSimpleGraph.TPlanarHelper.ArcIdx(aArc: PArc): SizeInt;
+function TGSimpleGraph.TPlanarHelper.GetArcIdx(aArc: PArc): SizeInt;
 begin
   Result := aArc - PArc(FArcs);
 end;
@@ -2119,32 +2119,32 @@ begin
     begin
       Arc := FSortedArcs[I];
       Arc^.LowPt := RootHeight;
-      FLowPt2[ArcIdx(Arc)] := RootHeight;
+      FLowPt2[GetArcIdx(Arc)] := RootHeight;
       Next := Arc^.Target;
       if Next^.Height = NULL_INDEX then //tree arc
         begin
           Next^.ParentArc := Arc;
           Next^.Height := Succ(RootHeight);
-          Dfs1(NodeIdx(Next));
+          Dfs1(GetNodeIdx(Next));
         end
       else
         Arc^.LowPt := Next^.Height;
 
       Arc^.NestingDepth := Arc^.LowPt shl 1;
-      if FLowPt2[ArcIdx(Arc)] < RootHeight then    // chordal
+      if FLowPt2[GetArcIdx(Arc)] < RootHeight then    // chordal
         Inc(Arc^.NestingDepth);
 
       if ParentArc <> nil then               // node is not dfs tree root
         if Arc^.LowPt < ParentArc^.LowPt then
           begin
-            FLowPt2[ArcIdx(ParentArc)] := Min(ParentArc^.LowPt, FLowPt2[ArcIdx(Arc)]);
+            FLowPt2[GetArcIdx(ParentArc)] := Min(ParentArc^.LowPt, FLowPt2[GetArcIdx(Arc)]);
             ParentArc^.LowPt := Arc^.LowPt;
           end
         else
           if Arc^.LowPt > ParentArc^.LowPt then
-            FLowPt2[ArcIdx(ParentArc)] := Min(FLowPt2[ArcIdx(ParentArc)], Arc^.LowPt)
+            FLowPt2[GetArcIdx(ParentArc)] := Min(FLowPt2[GetArcIdx(ParentArc)], Arc^.LowPt)
           else
-            FLowPt2[ArcIdx(ParentArc)] := Min(FLowPt2[ArcIdx(ParentArc)], FLowPt2[ArcIdx(Arc)]);
+            FLowPt2[GetArcIdx(ParentArc)] := Min(FLowPt2[GetArcIdx(ParentArc)], FLowPt2[GetArcIdx(Arc)]);
     end;
 end;
 
@@ -2179,10 +2179,10 @@ begin
   for I := FNodes[aRootIdx].FirstArc to FNodes[aRootIdx+1].FirstArc-1 do
     begin
       Arc := FSortedArcs[I];
-      FStackBottom[ArcIdx(Arc)] := FPairStack.Count;
+      FStackBottom[GetArcIdx(Arc)] := FPairStack.Count;
       if Arc = Arc^.Target^.ParentArc then  // tree arc
         begin
-          Dfs2(NodeIdx(Arc^.Target));
+          Dfs2(GetNodeIdx(Arc^.Target));
           if not FPlanar then
             exit;
         end
@@ -2245,7 +2245,7 @@ begin
       end
     else  // align
       Q.Right.LowA^.Ref := aParentArc^.LowPtArc;
-  until FPairStack.Count = FStackBottom[ArcIdx(aArc)];
+  until FPairStack.Count = FStackBottom[GetArcIdx(aArc)];
   // merge conflicting return arcs of prev(aArc) into P.Left
   while FPairStack.TryPeekItem(pTop) do
     begin
@@ -2326,62 +2326,60 @@ begin
   FStackBottom := nil;
 end;
 
-function TGSimpleGraph.TPlanarHelper.CreateEmbedding: TIntMatrix;
+procedure TGSimpleGraph.TPlanarHelper.CreateEmbedding(out aEmbed: TPlanarEmbedding);
 var
   LeftRef: TIntArray = nil;
   RightRef: TIntArray = nil;
+  CompIndex: SizeInt = 0;
 
   procedure Dfs(aRootIdx: SizeInt);
   var
-    I, Src, Dst: SizeInt;
+    Arc: PArc;
+    I, EnterArc, Dst: SizeInt;
   begin
+    aEmbed.FComponents[CompIndex].Add(aRootIdx);
     for I := FNodes[aRootIdx].FirstArc to FNodes[aRootIdx+1].FirstArc-1 do
       begin
-        Dst := NodeIdx(FSortedArcs[I]^.Target);
-        Src := NodeIdx(FSortedArcs[I]^.Source);
-        if FSortedArcs[I] = FNodes[Dst].ParentArc then  // tree arc
+        Arc := FSortedArcs[I];
+        Dst := GetNodeIdx(Arc^.Target);
+        EnterArc := aEmbed.GetReverse(Arc^.LowPt);
+        if Arc = FNodes[Dst].ParentArc then  // tree arc
           begin
-            InsertFirst(Result[Dst], Src);
-            LeftRef[aRootIdx] := Dst;
-            RightRef[aRootIdx] := Dst;
+            aEmbed.InsertFirst(EnterArc);
+            LeftRef[aRootIdx] := Arc^.LowPt;
+            RightRef[aRootIdx] := Arc^.LowPt;
             Dfs(Dst);
           end
         else
-          if FSortedArcs[I]^.Side = 1 then
-            InsertAfter(Result[Dst], RightRef[Dst], Src)
+          if Arc^.Side = 1 then
+            aEmbed.InsertAfter(EnterArc, RightRef[Dst])
           else
             begin
-              InsertBefore(Result[Dst], LeftRef[Dst], Src);
-              LeftRef[Dst] := Src;
+              aEmbed.InsertBefore(EnterArc, LeftRef[Dst]);
+              LeftRef[Dst] := EnterArc;
             end;
       end;
   end;
 
 var
-  I, J, K: SizeInt;
+  I, J: SizeInt;
 begin
-  Result := nil;
-
   for I := 0 to System.High(FArcs) do
     FArcs[I].NestingDepth *= FArcs[I].Sign;
   SortAdjLists;
 
-  System.SetLength(Result, FGraph.VertexCount);
-  for I := 0 to System.High(Result) do
-    begin
-      Result[I] := TIntArray.Construct(FGraph.AdjLists[I]^.Count, NULL_INDEX);
-      K := 0;
-      for J := FNodes[I].FirstArc to FNodes[I+1].FirstArc-1 do
-        begin
-          Result[I, K] := NodeIdx(FSortedArcs[J]^.Target);
-          Inc(K);
-        end;
-    end;
+  aEmbed.Init(FGraph.VertexCount, FGraph.EdgeCount, FRoots.Count);
+  for I := 0 to Pred(aEmbed.NodeCount) do
+    for J := FNodes[I].FirstArc to FNodes[I+1].FirstArc-1 do
+      FSortedArcs[J]^.LowPt := aEmbed.AddEdge(I, GetNodeIdx(FSortedArcs[J]^.Target));
 
-  LeftRef.Length := FGraph.VertexCount;
-  RightRef.Length := FGraph.VertexCount;
+  LeftRef.Length := aEmbed.NodeCount;
+  RightRef.Length := aEmbed.NodeCount;
   for I in FRoots do
-    Dfs(I);
+    begin
+      Dfs(I);
+      Inc(CompIndex);
+    end;
 end;
 
 class function TGSimpleGraph.TPlanarHelper.Min(L, R: SizeInt): SizeInt;
@@ -2390,55 +2388,6 @@ begin
     Result := R
   else
     Result := L;
-end;
-
-class procedure TGSimpleGraph.TPlanarHelper.InsertFirst(var a: TIntArray; aValue: SizeInt);
-var
-  I: SizeInt = 0;
-begin
-  while a[I] <> NULL_INDEX do
-    Inc(I);
-  System.Move(a[0], a[1], I * SizeOf(SizeInt));
-  a[0] := aValue;
-end;
-
-class procedure TGSimpleGraph.TPlanarHelper.InsertBefore(var a: TIntArray; aRef, aValue: SizeInt);
-var
-  I, Pos, Cnt: SizeInt;
-begin
-  Pos := NULL_INDEX;
-  Cnt := 0;
-  for I := 0 to Pred(System.Length(a)) do
-    if a[I] = aRef then
-      Pos := I
-    else
-      if a[I] = NULL_INDEX then
-        begin
-          Cnt := I;
-          break;
-        end;
-  System.Move(a[Pos], a[Pos+1], (Cnt - Pos) * SizeOf(SizeInt));
-  a[Pos] := aValue;
-end;
-
-class procedure TGSimpleGraph.TPlanarHelper.InsertAfter(var a: TIntArray; aRef, aValue: SizeInt);
-var
-  I, Pos, Cnt: SizeInt;
-begin
-  Pos := NULL_INDEX;
-  Cnt := 0;
-  for I := 0 to Pred(System.Length(a)) do
-    if a[I] = aRef then
-      Pos := I
-    else
-      if a[I] = NULL_INDEX then
-        begin
-          Cnt := I;
-          break;
-        end;
-  if a[Pos+1] <> NULL_INDEX then
-    System.Move(a[Pos+1], a[Pos+2], Pred(Cnt - Pos) * SizeOf(SizeInt));
-  a[Pos+1] := aValue;
 end;
 
 function TGSimpleGraph.TPlanarHelper.GraphIsPlanarR(aGraph: TGSimpleGraph): Boolean;
@@ -2450,13 +2399,24 @@ begin
   Result := FPlanar;
 end;
 
-function TGSimpleGraph.TPlanarHelper.GraphIsPlanarR(aGraph: TGSimpleGraph; out aEmbed: TIntMatrix): Boolean;
+function TGSimpleGraph.TPlanarHelper.GraphIsPlanarR(aGraph: TGSimpleGraph;
+  out aEmbed: TPlanarEmbedding): Boolean;
 begin
-  aEmbed := nil;
-  Result := GraphIsPlanarR(aGraph);
-  if not Result then
-    exit;
-  aEmbed := CreateEmbedding;
+  if aGraph.VertexCount > 2 then
+    begin
+      Result := GraphIsPlanarR(aGraph);
+      if not Result then
+        exit;
+      CreateEmbedding(aEmbed);
+    end
+  else
+    begin
+      if aGraph.VertexCount = 1 then
+        aEmbed.Init1
+      else
+        aEmbed.Init2(aGraph.Connected);
+      Result := True;
+    end;
 end;
 
 

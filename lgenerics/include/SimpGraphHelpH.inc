@@ -353,8 +353,8 @@ type
   end;
 
   { TPlanarHelper: planarity testing algorithm and combinatorial embedding extraction
-    based on the FMR Left-Right Planarity Test from
-    Ulrik Brandes: "The Left-Right Planarity Test" }
+    based on the Left-Right Planarity Test(de Fraysseix, Ossona de Mendez, and Rosenstiehl)
+    from Ulrik Brandes: "The Left-Right Planarity Test" }
   TPlanarHelper = record
   private
   type
@@ -412,8 +412,8 @@ type
     FRoots: TIntVector;
     FGraph: TGSimpleGraph;
     FPlanar: Boolean;
-    function  NodeIdx(aNode: PNode): SizeInt; inline;
-    function  ArcIdx(aArc: PArc): SizeInt; inline;
+    function  GetNodeIdx(aNode: PNode): SizeInt; inline;
+    function  GetArcIdx(aArc: PArc): SizeInt; inline;
     procedure CreateDigraph;
     procedure Dfs1(aRootIdx: SizeInt);
     procedure CreateOrientation;
@@ -422,13 +422,10 @@ type
     procedure AddConstraints(aParentArc, aArc: PArc);
     procedure TrimBackArcs(aNode: PNode);
     procedure TestLrPartition;
-    function  CreateEmbedding: TIntMatrix;
+    procedure CreateEmbedding(out aEmbed: TPlanarEmbedding);
     class function  Min(L, R: SizeInt): SizeInt; static;
-    class procedure InsertFirst(var a: TIntArray; aValue: SizeInt); static;
-    class procedure InsertBefore(var a: TIntArray; aRef, aValue: SizeInt); static;
-    class procedure InsertAfter(var a: TIntArray; aRef, aValue: SizeInt); static;
   public
     function  GraphIsPlanarR(aGraph: TGSimpleGraph): Boolean;
-    function  GraphIsPlanarR(aGraph: TGSimpleGraph; out aEmbed: TIntMatrix): Boolean;
+    function  GraphIsPlanarR(aGraph: TGSimpleGraph; out aEmbed: TPlanarEmbedding): Boolean;
   end;
 
