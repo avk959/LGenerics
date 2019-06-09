@@ -102,13 +102,15 @@ type
     procedure IsChordal2;
     procedure IsChordal3;
     procedure IsChordal4;
+    procedure IsChordal5;
     procedure IsPlanarR;
     procedure IsPlanarR1;
     procedure IsPlanarR2;
     procedure IsPlanarR3;
     procedure IsPlanarR4;
     procedure IsPlanarR5;
-    procedure PlanarEmbedding;
+    procedure PlanarEmbeddingR;
+    procedure PlanarEmbeddingR1;
     procedure ContainsEulerianPath;
     procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
@@ -1424,6 +1426,17 @@ begin
   AssertTrue(g.IsChordal(peo));
 end;
 
+procedure TSimpleGraphTest.IsChordal5;
+var
+  Ref: TRef;
+  g: TGraph;
+  peo: TIntArray;
+begin
+  {%H-}Ref.Instance := GenerateGoldnerHarary;
+  g := Ref;
+  AssertTrue(g.IsChordal(peo));
+end;
+
 procedure TSimpleGraphTest.IsPlanarR;
 var
   Ref: TRef;
@@ -1580,67 +1593,77 @@ begin
   AssertTrue(Count > 0);
 end;
 
-procedure TSimpleGraphTest.PlanarEmbedding;
+procedure TSimpleGraphTest.PlanarEmbeddingR;
 var
   Ref: TRef;
   g: TGraph;
-  vSet: TBoolVector;
-  eSet: specialize TGLiteHashSetLp<TIntEdge, TIntEdge>;
-  Emb: TIntMatrix;
-  I, J, ReversePos, First, Enter, Src, Dst, FaceCount: SizeInt;
+  Emb: TGraph.TPlanarEmbedding;
+  e: TIntEdge;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(Emb.IsEmpty);
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddVertex(1);
+  AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(Emb.NodeCount = 1);
+  AssertTrue(Emb.EdgeCount = 0);
+  AssertTrue(Emb.ComponentCount = 1);
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddVertex(2);
+  AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(Emb.NodeCount = 2);
+  AssertTrue(Emb.EdgeCount = 0);
+  AssertTrue(Emb.ComponentCount = 2);
+  AssertFalse(Emb.FindFirstEdge(g.IndexOf(1), e));
+  AssertFalse(Emb.FindFirstEdge(g.IndexOf(2), e));
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddEdge(1, 2);
+  AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(Emb.NodeCount = 2);
+  AssertTrue(Emb.EdgeCount = 1);
+  AssertTrue(Emb.ComponentCount = 1);
+  AssertTrue(Emb.FindFirstEdge(g.IndexOf(1), e));
+  AssertTrue(TIntEdge.Equal(e, TIntEdge.Create(g.IndexOf(1), g.IndexOf(2))));
+  AssertTrue(Emb.FindFirstEdge(g.IndexOf(2), e));
+  AssertTrue(TIntEdge.Equal(e, TIntEdge.Create(g.IndexOf(2), g.IndexOf(1))));
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddVertex(3);
+  AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(Emb.NodeCount = 3);
+  AssertTrue(Emb.EdgeCount = 1);
+  AssertTrue(Emb.ComponentCount = 2);
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddEdge(1, 3);
+  AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(Emb.NodeCount = 3);
+  AssertTrue(Emb.EdgeCount = 2);
+  AssertTrue(Emb.ComponentCount = 1);
+  AssertTrue(g.IsEmbedding(Emb));
+end;
+
+procedure TSimpleGraphTest.PlanarEmbeddingR1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Emb: TGraph.TPlanarEmbedding;
 begin
   {%H-}Ref.Instance := GenerateK33;
   g := Ref;
   g.IsPlanarR(Emb);
-  AssertTrue(Emb = nil);
+  AssertTrue(Emb.IsEmpty);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(g.IsEmbedding(Emb));
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(g.IsEmbedding(Emb));
   Ref.Instance := GenerateTestGr3;
   g := Ref;
   AssertTrue(g.IsPlanarR(Emb));
-  //test if Emb is isomorphic to g
-  AssertTrue(Length(Emb) = g.VertexCount);
-  vSet.Size := g.VertexCount;
-  for I := 0 to Pred(g.VertexCount) do
-    begin
-      AssertTrue(Emb[I].Length = g.DegreeI(I));
-      vSet.ClearBits;
-      for J in Emb[I] do
-        begin
-          AssertFalse(vSet[J]);
-          vSet[J] := True;
-          AssertTrue(g.ContainsEdgeI(I, J));
-        end;
-    end;
-  //test if Emb is embedding
-  FaceCount := 0;
-  for I := 0 to Pred(g.VertexCount) - 1 do
-    for J := 0 to High(Emb[I]) do
-      if not eSet.Contains(TIntEdge.Create(I, Emb[I, J])) then
-        begin
-          First := I;
-          Src := I;
-          Dst := Emb[I, J];
-          if J = High(Emb[I]) then
-            Enter := Emb[I, 0]
-          else
-            Enter := Emb[I, Succ(J)];
-          eSet.Add(TIntEdge.Create(Src, Dst));
-          while (Dst <> First) or (Src <> Enter) do
-            begin
-              ReversePos := 0;
-              while Emb[Dst, ReversePos] <> Src do
-                Inc(ReversePos);
-              Src := Dst;
-              if ReversePos > 0 then
-                Dst := Emb[Dst, Pred(ReversePos)]
-              else
-                Dst := Emb[Dst, High(Emb[Dst])];
-              AssertTrue(eSet.Add(TIntEdge.Create(Src, Dst)));
-            end;
-          Inc(FaceCount);
-        end;
-  AssertTrue(eSet.Count = g.EdgeCount * 2);
-  //test if FaceCount satisfies Euler's formula
-  AssertTrue(Length(Emb) + FaceCount - eSet.Count div 2 = 2);
+  AssertTrue(g.IsEmbedding(Emb));
 end;
 
 procedure TSimpleGraphTest.ContainsEulerianPath;
