@@ -67,6 +67,7 @@ resourcestring
   SENonSquareInputMatrix   = 'Input matrix is not square';
   SEInputMatrixNegElem     = 'Input matrix contains negative element';
   SEInvalidTreeInst        = 'Invalid tree instance';
+  SENoSuchEdgeFmt          = 'No such edge (%d, %d)';
 
 implementation
 
