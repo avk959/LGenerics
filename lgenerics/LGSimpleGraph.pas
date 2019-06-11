@@ -62,7 +62,6 @@ type
         Next: SizeInt;
       end;
 
-      PHalfEdge     = ^THalfEdge;
       THalfEdgeList = array of THalfEdge;
 
       TAdjCwEnumerator = record
@@ -322,15 +321,17 @@ type
     an empty graph is considered chordal }
     function  IsChordal(out aRevPeo: TIntArray): Boolean;
   { returns True if graph is planar, an empty graph is considered planar;
-    used FMR Left-Right planarity algorithm(recursive variant);
-    todo: nonrecursive variant }
+    used FMR Left-Right planarity algorithm }
+    function  IsPlanar: Boolean;
+  { same as above, recursive variant }
     function  IsPlanarR: Boolean;
   { returns True and the planar embedding in aEmbedding, if graph is planar,
-    otherwise returns False and nil; used FMR Left-Right planarity algorithm(recursive variant);
-    todo: Kuratowski subdivision extraction;
-    todo: nonrecursive variant }
+    otherwise returns False and nil; used FMR Left-Right planarity algorithm;
+    todo: Kuratowski subdivision extraction? }
+    function  IsPlanar(out aEmbedding: TPlanarEmbedding): Boolean;
+  { same as above, recursive variant }
     function  IsPlanarR(out aEmbedding: TPlanarEmbedding): Boolean;
-  { returns True if aEmbedding is proper embedding }
+  { returns True if aEmbedding is proper planar embedding }
     function  IsEmbedding(constref aEmbedding: TPlanarEmbedding): Boolean;
     function  CyclomaticNumber: SizeInt;
   { returns True if exists any cycle in the aVertex connected component,
@@ -3378,6 +3379,18 @@ begin
   Result := FindPerfectElimOrd(nil, aRevPeo);
 end;
 
+function TGSimpleGraph.IsPlanar: Boolean;
+var
+  Helper: TPlanarHelper;
+begin
+  if (VertexCount > 4) and (EdgeCount > VertexCount * 3 - 6) then
+    exit(False);
+  if VertexCount > 4 then
+    Result := Helper.GraphIsPlanar(Self)
+  else
+    Result := True;
+end;
+
 function TGSimpleGraph.IsPlanarR: Boolean;
 var
   Helper: TPlanarHelper;
@@ -3390,6 +3403,27 @@ begin
     Result := True;
 end;
 
+function TGSimpleGraph.IsPlanar(out aEmbedding: TPlanarEmbedding): Boolean;
+var
+  Helper: TPlanarHelper;
+begin
+  aEmbedding := Default(TPlanarEmbedding);
+  Result := True;
+  if IsEmpty then
+    exit;
+  if VertexCount < 3 then
+    begin
+      if VertexCount = 1 then
+        aEmbedding.Init1
+      else
+        aEmbedding.Init2(Connected);
+      exit;
+    end;
+  if (VertexCount > 2) and (EdgeCount > VertexCount * 3 - 6) then
+    exit(False);
+  Result := Helper.GraphIsPlanar(Self, aEmbedding);
+end;
+
 function TGSimpleGraph.IsPlanarR(out aEmbedding: TPlanarEmbedding): Boolean;
 var
   Helper: TPlanarHelper;
@@ -3398,6 +3432,14 @@ begin
   Result := True;
   if IsEmpty then
     exit;
+  if VertexCount < 3 then
+    begin
+      if VertexCount = 1 then
+        aEmbedding.Init1
+      else
+        aEmbedding.Init2(Connected);
+      exit;
+    end;
   if (VertexCount > 2) and (EdgeCount > VertexCount * 3 - 6) then
     exit(False);
   Result := Helper.GraphIsPlanarR(Self, aEmbedding);
@@ -3409,7 +3451,9 @@ var
   FaceOk: Boolean;
   procedure OnPass(aSrc, aDst: SizeInt);
   begin
-    FaceOk := FaceOk and eSet.Add(TIntEdge.Create(aSrc, aDst));
+    FaceOk := FaceOk and ContainsEdgeI(aSrc, aDst);
+    if FaceOk then
+      FaceOk := FaceOk and eSet.Add(TIntEdge.Create(aSrc, aDst));
   end;
 var
   I, J, Cnt, Comp, NodeCnt, EdgeCnt, FaceCnt: SizeInt;
@@ -3418,6 +3462,11 @@ begin
   if (aEmbedding.NodeCount <> VertexCount) or (aEmbedding.EdgeCount <> EdgeCount) then
     exit(False);
   if aEmbedding.ComponentCount <> SeparateCount then
+    exit(False);
+  Cnt := 0;
+  for I := 0 to Pred(aEmbedding.ComponentCount) do
+    Cnt += aEmbedding.ComponentPop[I];
+  if Cnt <> aEmbedding.NodeCount then
     exit(False);
 
   for I := 0 to Pred(VertexCount) do
@@ -3454,6 +3503,8 @@ begin
                   exit(False);
               end;
           end;
+      if Odd(EdgeCnt) then
+        exit(False);
       //check if FaceCnt satisfies Euler's formula
       if not NodeCnt + FaceCnt - EdgeCnt div 2 = 2 then
         exit(False);

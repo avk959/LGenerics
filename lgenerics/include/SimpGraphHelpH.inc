@@ -414,18 +414,24 @@ type
     FPlanar: Boolean;
     function  GetNodeIdx(aNode: PNode): SizeInt; inline;
     function  GetArcIdx(aArc: PArc): SizeInt; inline;
+    procedure CreateDigraphR;
     procedure CreateDigraph;
-    procedure Dfs1(aRootIdx: SizeInt);
+    procedure Dfs1R(aRootIdx: SizeInt);
+    procedure CreateOrientationR;
     procedure CreateOrientation;
     procedure SortAdjLists;
-    procedure Dfs2(aRootIdx: SizeInt);
+    procedure Dfs2R(aRootIdx: SizeInt);
     procedure AddConstraints(aParentArc, aArc: PArc);
     procedure TrimBackArcs(aNode: PNode);
+    procedure TestLrPartitionR;
     procedure TestLrPartition;
+    procedure CreateEmbeddingR(out aEmbed: TPlanarEmbedding);
     procedure CreateEmbedding(out aEmbed: TPlanarEmbedding);
     class function  Min(L, R: SizeInt): SizeInt; static;
   public
     function  GraphIsPlanarR(aGraph: TGSimpleGraph): Boolean;
     function  GraphIsPlanarR(aGraph: TGSimpleGraph; out aEmbed: TPlanarEmbedding): Boolean;
+    function  GraphIsPlanar(aGraph: TGSimpleGraph): Boolean;
+    function  GraphIsPlanar(aGraph: TGSimpleGraph; out aEmbed: TPlanarEmbedding): Boolean;
   end;
 

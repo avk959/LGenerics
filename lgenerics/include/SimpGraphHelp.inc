@@ -2018,7 +2018,7 @@ begin
   Result := aArc - PArc(FArcs);
 end;
 
-procedure TGSimpleGraph.TPlanarHelper.CreateDigraph;
+procedure TGSimpleGraph.TPlanarHelper.CreateDigraphR;
 var
   Arcs: array of record Target, Reverse: SizeInt; Passed, Used: Boolean end;
   NodeArcs: TIntArray = nil;
@@ -2046,7 +2046,7 @@ var
   I, J, Curr, CurrRev: SizeInt;
   p: PAdjItem;
 begin
-  NodeArcs.Length := FGraph.VertexCount;
+  NodeArcs.Length := Succ(FGraph.VertexCount);
   Curr := 0;
   for I := 0 to Pred(FGraph.VertexCount) do
     begin
@@ -2072,7 +2072,6 @@ begin
           Inc(NodeArcs[p^.Key]);
         end;
 
-  NodeArcs.Length := Succ(FGraph.VertexCount);
   Curr := 0;
   for I := 0 to Pred(FGraph.VertexCount) do
     begin
@@ -2107,7 +2106,111 @@ begin
   FNodes[FGraph.VertexCount] := TNode.Create(J);
 end;
 
-procedure TGSimpleGraph.TPlanarHelper.Dfs1(aRootIdx: SizeInt);
+procedure TGSimpleGraph.TPlanarHelper.CreateDigraph;
+var
+  Arcs: array of record Target, Reverse: SizeInt; Passed, Used: Boolean end;
+  NodeArcs: array of record FirstArc, CurrArc: SizeInt end;
+  Visited: TBitVector;
+
+  procedure Dfs(aRootIdx: SizeInt);
+  var
+    Stack: TIntArray = nil;
+    I, CurrNode: SizeInt;
+    sTop: SizeInt = 0;
+  begin
+    Stack.Length := FGraph.VertexCount;
+    Stack[0] := aRootIdx;
+    while sTop >= 0 do
+      begin
+        CurrNode := Stack[sTop];
+        if NodeArcs[CurrNode].CurrArc < NodeArcs[CurrNode+1].FirstArc then
+          begin
+            I := NodeArcs[CurrNode].CurrArc;
+            if not Arcs[I].Passed then
+              begin
+                Arcs[I].Passed := True;
+                Arcs[I].Used := True;
+                Arcs[Arcs[I].Reverse].Passed := True;
+                if not Visited[Arcs[I].Target] then
+                  begin
+                    Visited[Arcs[I].Target] := True;
+                    Inc(sTop);
+                    Stack[sTop] := Arcs[I].Target;
+                  end;
+              end;
+            Inc(NodeArcs[CurrNode].CurrArc);
+          end
+        else
+          Dec(sTop);;
+      end;
+  end;
+
+var
+  I, J, Curr, CurrRev: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(NodeArcs, Succ(FGraph.VertexCount));
+  Curr := 0;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    begin
+      NodeArcs[I].FirstArc := Curr;
+      Curr += FGraph.AdjLists[I]^.Count;
+    end;
+  System.SetLength(Arcs, FGraph.EdgeCount * 2);
+  for I := 0 to Pred(FGraph.VertexCount) do
+    for p in FGraph.AdjLists[I]^ do
+      if p^.Key > I then
+        begin
+          Curr := NodeArcs[I].FirstArc;
+          CurrRev := NodeArcs[p^.Key].FirstArc;
+          Arcs[Curr].Target := p^.Key;
+          Arcs[Curr].Reverse := CurrRev;
+          Arcs[Curr].Passed := False;
+          Arcs[Curr].Used := False;
+          Arcs[CurrRev].Target := I;
+          Arcs[CurrRev].Reverse := Curr;
+          Arcs[CurrRev].Passed := False;
+          Arcs[CurrRev].Used := False;
+          Inc(NodeArcs[I].FirstArc);
+          Inc(NodeArcs[p^.Key].FirstArc);
+        end;
+
+  Curr := 0;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    begin
+      NodeArcs[I].FirstArc := Curr;
+      NodeArcs[I].CurrArc := Curr;
+      Curr += FGraph.AdjLists[I]^.Count;
+    end;
+  NodeArcs[FGraph.VertexCount].FirstArc := Curr;
+  Visited.Size := FGraph.VertexCount;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    if not Visited[I] then
+      begin
+        FRoots.Add(I);
+        Visited[I] := True;
+        Dfs(I);
+      end;
+
+  System.SetLength(FNodes, Succ(FGraph.VertexCount));
+  System.SetLength(FArcs, FGraph.EdgeCount);
+  System.SetLength(FSortedArcs, FGraph.EdgeCount);
+  J := 0;
+  for I := 0 to Pred(FGraph.VertexCount) do
+    begin
+      FNodes[I] := TNode.Create(J);
+      for Curr := NodeArcs[I].FirstArc to NodeArcs[I+1].FirstArc-1 do
+        if Arcs[Curr].Used then
+          begin
+            FArcs[J] := TArc.Create(@FNodes[I], @FNodes[Arcs[Curr].Target]);
+            FSortedArcs[J] := @FArcs[J];
+            Inc(J);
+          end;
+    end;
+  FNodes[FGraph.VertexCount] := TNode.Create(J);
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.Dfs1R(aRootIdx: SizeInt);
 var
   Arc, ParentArc: PArc;
   Next: PNode;
@@ -2125,16 +2228,16 @@ begin
         begin
           Next^.ParentArc := Arc;
           Next^.Height := Succ(RootHeight);
-          Dfs1(GetNodeIdx(Next));
+          Dfs1R(GetNodeIdx(Next));
         end
       else
         Arc^.LowPt := Next^.Height;
 
       Arc^.NestingDepth := Arc^.LowPt shl 1;
-      if FLowPt2[GetArcIdx(Arc)] < RootHeight then    // chordal
+      if FLowPt2[GetArcIdx(Arc)] < RootHeight then // chordal
         Inc(Arc^.NestingDepth);
 
-      if ParentArc <> nil then               // node is not dfs tree root
+      if ParentArc <> nil then // node is not dfs tree root
         if Arc^.LowPt < ParentArc^.LowPt then
           begin
             FLowPt2[GetArcIdx(ParentArc)] := Min(ParentArc^.LowPt, FLowPt2[GetArcIdx(Arc)]);
@@ -2148,16 +2251,113 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TPlanarHelper.CreateOrientation;
+procedure TGSimpleGraph.TPlanarHelper.CreateOrientationR;
 var
   I: SizeInt;
 begin
-  CreateDigraph;
+  CreateDigraphR;
   FLowPt2.Length := FGraph.EdgeCount;
   for I in FRoots do
     begin
       FNodes[I].Height := 0;
-      Dfs1(I);
+      Dfs1R(I);
+    end;
+  FLowPt2 := nil;
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.CreateOrientation;
+  procedure Dfs(aRootIdx: SizeInt);
+  var
+    Stack: TIntArray = nil;
+    CurrArc: TIntArray = nil;
+    Arc, ParentArc: PArc;
+    Next: PNode;
+    I, CurrNode, ParentHeight: SizeInt;
+    sTop: SizeInt = 0;
+  begin
+    Stack.Length := Pred(System.Length(FNodes));
+    CurrArc.Length := Pred(System.Length(FNodes));
+    for I := 0 to System.High(CurrArc) do
+      CurrArc[I] := FNodes[I].FirstArc;
+    Stack[0] := aRootIdx;
+    while sTop >= 0 do
+      begin
+        CurrNode := Stack[sTop];
+        if CurrArc[CurrNode] < FNodes[CurrNode+1].FirstArc then
+          begin
+            Arc := FSortedArcs[CurrArc[CurrNode]];
+            ParentArc := FNodes[CurrNode].ParentArc;
+            ParentHeight := FNodes[CurrNode].Height;
+            Arc^.LowPt := ParentHeight;
+            FLowPt2[GetArcIdx(Arc)] := ParentHeight;
+            Next := Arc^.Target;
+            if Next^.Height = NULL_INDEX then //tree arc
+              begin
+                Next^.ParentArc := Arc;
+                Next^.Height := Succ(ParentHeight);
+                Inc(sTop);
+                Stack[sTop] := GetNodeIdx(Next);
+              end
+            else
+              begin
+                Arc^.LowPt := Next^.Height;
+
+                Arc^.NestingDepth := Arc^.LowPt shl 1;
+                if FLowPt2[GetArcIdx(Arc)] < ParentHeight then // chordal
+                  Inc(Arc^.NestingDepth);
+
+                if ParentArc <> nil then // node is not dfs tree root
+                  if Arc^.LowPt < ParentArc^.LowPt then
+                    begin
+                      FLowPt2[GetArcIdx(ParentArc)] := Min(ParentArc^.LowPt, FLowPt2[GetArcIdx(Arc)]);
+                      ParentArc^.LowPt := Arc^.LowPt;
+                    end
+                  else
+                    if Arc^.LowPt > ParentArc^.LowPt then
+                      FLowPt2[GetArcIdx(ParentArc)] := Min(FLowPt2[GetArcIdx(ParentArc)], Arc^.LowPt)
+                    else
+                      FLowPt2[GetArcIdx(ParentArc)] := Min(FLowPt2[GetArcIdx(ParentArc)],
+                                                           FLowPt2[GetArcIdx(Arc)]);
+              end;
+            Inc(CurrArc[CurrNode]);
+          end
+        else
+          begin
+            Dec(sTop);
+            if FNodes[CurrNode].ParentArc = nil then
+              continue;
+            Arc := FNodes[CurrNode].ParentArc;
+            ParentArc := Arc^.Source^.ParentArc;
+            ParentHeight := Arc^.Source^.Height;
+
+            Arc^.NestingDepth := Arc^.LowPt shl 1;
+            if FLowPt2[GetArcIdx(Arc)] < ParentHeight then // chordal
+              Inc(Arc^.NestingDepth);
+
+            if ParentArc <> nil then
+              if Arc^.LowPt < ParentArc^.LowPt then
+                begin
+                  FLowPt2[GetArcIdx(ParentArc)] := Min(ParentArc^.LowPt, FLowPt2[GetArcIdx(Arc)]);
+                  ParentArc^.LowPt := Arc^.LowPt;
+                end
+              else
+                if Arc^.LowPt > ParentArc^.LowPt then
+                  FLowPt2[GetArcIdx(ParentArc)] := Min(FLowPt2[GetArcIdx(ParentArc)], Arc^.LowPt)
+                else
+                  FLowPt2[GetArcIdx(ParentArc)] := Min(FLowPt2[GetArcIdx(ParentArc)],
+                                                       FLowPt2[GetArcIdx(Arc)]);
+          end;
+      end;
+  end;
+var
+  I: SizeInt;
+begin
+  CreateDigraphR;
+  FLowPt2.Length := FGraph.EdgeCount;
+  for I in FRoots do
+    begin
+      FNodes[I].Height := 0;
+      Dfs(I);
     end;
   FLowPt2 := nil;
 end;
@@ -2170,7 +2370,7 @@ begin
     TSortHelper.Sort(FSortedArcs[FNodes[I].FirstArc..FNodes[I+1].FirstArc-1]);
 end;
 
-procedure TGSimpleGraph.TPlanarHelper.Dfs2(aRootIdx: SizeInt);
+procedure TGSimpleGraph.TPlanarHelper.Dfs2R(aRootIdx: SizeInt);
 var
   Arc, ParentArc, hL, hR: PArc;
   I: SizeInt;
@@ -2182,7 +2382,7 @@ begin
       FStackBottom[GetArcIdx(Arc)] := FPairStack.Count;
       if Arc = Arc^.Target^.ParentArc then  // tree arc
         begin
-          Dfs2(GetNodeIdx(Arc^.Target));
+          Dfs2R(GetNodeIdx(Arc^.Target));
           if not FPlanar then
             exit;
         end
@@ -2205,7 +2405,7 @@ begin
     begin
       TrimBackArcs(ParentArc^.Source);
       if ParentArc^.LowPt < ParentArc^.Source^.Height then // ParentArc has return arc
-        begin
+        begin   //SetParentRef
           with FPairStack.PeekItem^ do
             begin
               hL := Left.HighA;
@@ -2311,7 +2511,7 @@ begin
     end;
 end;
 
-procedure TGSimpleGraph.TPlanarHelper.TestLrPartition;
+procedure TGSimpleGraph.TPlanarHelper.TestLrPartitionR;
 var
   I: SizeInt;
 begin
@@ -2319,14 +2519,125 @@ begin
   FStackBottom.Length := System.Length(FArcs);
   for I in FRoots do
     begin
-      Dfs2(I);
+      Dfs2R(I);
       if not FPlanar then
         break;
     end;
   FStackBottom := nil;
 end;
 
-procedure TGSimpleGraph.TPlanarHelper.CreateEmbedding(out aEmbed: TPlanarEmbedding);
+procedure TGSimpleGraph.TPlanarHelper.TestLrPartition;
+  procedure Dfs(aRootIdx: SizeInt);
+  var
+    Stack: TIntArray = nil;
+    CurrArc: TIntArray = nil;
+    Arc, ParentArc, hL, hR: PArc;
+    I, CurrNode: SizeInt;
+    sTop: SizeInt = 0;
+  begin
+    Stack.Length := Pred(System.Length(FNodes));
+    CurrArc.Length := Pred(System.Length(FNodes));
+    for I := 0 to System.High(CurrArc) do
+      CurrArc[I] := FNodes[I].FirstArc;
+    Stack[0] := aRootIdx;
+    while sTop >= 0 do
+      begin
+        CurrNode := Stack[sTop];
+        if CurrArc[CurrNode] < FNodes[CurrNode+1].FirstArc then
+          begin
+            Arc := FSortedArcs[CurrArc[CurrNode]];
+            FStackBottom[GetArcIdx(Arc)] := FPairStack.Count;
+            if Arc = Arc^.Target^.ParentArc then  // tree arc
+              begin
+                Inc(sTop);
+                Stack[sTop] := GetNodeIdx(Arc^.Target);
+              end
+            else
+              begin
+                Arc^.LowPtArc := Arc;
+                FPairStack.Push(TConflictPair.Create(TInterval.Create(Arc, Arc)));
+                ParentArc := FNodes[CurrNode].ParentArc;
+                if Arc^.LowPt < FNodes[CurrNode].Height then //has return arc
+                  if CurrArc[CurrNode] <> FNodes[CurrNode].FirstArc then
+                    begin
+                      AddConstraints(ParentArc, Arc);
+                      if not FPlanar then
+                        exit;
+                    end
+                  else
+                    ParentArc^.LowPtArc := Arc^.LowPtArc;
+                if ParentArc <> nil then
+                  if CurrArc[CurrNode] = FNodes[CurrNode+1].FirstArc-1 then
+                    begin
+                      TrimBackArcs(ParentArc^.Source);
+                      if ParentArc^.LowPt < ParentArc^.Source^.Height then // ParentArc has return arc
+                        begin
+                          with FPairStack.PeekItem^ do
+                            begin
+                              hL := Left.HighA;
+                              hR := Right.HighA;
+                            end;
+                          if (hL <> nil) and ((hR = nil) or (hL^.LowPt > hR^.LowPt)) then
+                            ParentArc^.Ref := hL
+                          else
+                            ParentArc^.Ref := hR;
+                        end;
+                    end;
+              end;
+            Inc(CurrArc[CurrNode]);
+          end
+        else
+          begin
+            Dec(sTop);
+            if FNodes[CurrNode].ParentArc = nil then
+              continue;
+            Arc := FNodes[CurrNode].ParentArc;
+            ParentArc := Arc^.Source^.ParentArc;
+            if Arc^.LowPt < Arc^.Source^.Height then //has return arc
+              if Arc <> FSortedArcs[Arc^.Source^.FirstArc] then ///////
+                begin
+                  AddConstraints(ParentArc, Arc);
+                  if not FPlanar then
+                    exit;
+                end
+              else
+                ParentArc^.LowPtArc := Arc^.LowPtArc;
+
+            if ParentArc <> nil then
+              if CurrArc[GetNodeIdx(Arc^.Source)] = FNodes[GetNodeIdx(Arc^.Source)+1].FirstArc then
+                begin
+                  TrimBackArcs(ParentArc^.Source);
+                  if ParentArc^.LowPt < ParentArc^.Source^.Height then // ParentArc has return arc
+                    begin
+                      with FPairStack.PeekItem^ do
+                        begin
+                          hL := Left.HighA;
+                          hR := Right.HighA;
+                        end;
+                      if (hL <> nil) and ((hR = nil) or (hL^.LowPt > hR^.LowPt)) then
+                        ParentArc^.Ref := hL
+                      else
+                        ParentArc^.Ref := hR;
+                    end;
+                end;
+          end;
+      end;
+  end;
+var
+  I: SizeInt;
+begin
+  SortAdjLists;
+  FStackBottom.Length := System.Length(FArcs);
+  for I in FRoots do
+    begin
+      Dfs(I);
+      if not FPlanar then
+        break;
+    end;
+  FStackBottom := nil;
+end;
+
+procedure TGSimpleGraph.TPlanarHelper.CreateEmbeddingR(out aEmbed: TPlanarEmbedding);
 var
   LeftRef: TIntArray = nil;
   RightRef: TIntArray = nil;
@@ -2382,6 +2693,79 @@ begin
     end;
 end;
 
+procedure TGSimpleGraph.TPlanarHelper.CreateEmbedding(out aEmbed: TPlanarEmbedding);
+var
+  LeftRef: TIntArray = nil;
+  RightRef: TIntArray = nil;
+  CompIndex: SizeInt = 0;
+
+  procedure Dfs(aRootIdx: SizeInt);
+  var
+    Stack: TIntArray = nil;
+    CurrArc: TIntArray = nil;
+    Arc: PArc;
+    I, CurrNode, EnterArc, Dst: SizeInt;
+    sTop: SizeInt = 0;
+  begin
+    Stack.Length := Pred(System.Length(FNodes));
+    CurrArc.Length := Pred(System.Length(FNodes));
+    for I := 0 to System.High(CurrArc) do
+      CurrArc[I] := FNodes[I].FirstArc;
+    Stack[0] := aRootIdx;
+    while sTop >= 0 do
+      begin
+        CurrNode := Stack[sTop];
+        if CurrArc[CurrNode] < FNodes[CurrNode+1].FirstArc then
+          begin
+            Arc := FSortedArcs[CurrArc[CurrNode]];
+            Dst := GetNodeIdx(Arc^.Target);
+            EnterArc := aEmbed.GetReverse(Arc^.LowPt);
+            if Arc = FNodes[Dst].ParentArc then  // tree arc
+              begin
+                aEmbed.InsertFirst(EnterArc);
+                LeftRef[CurrNode] := Arc^.LowPt;
+                RightRef[CurrNode] := Arc^.LowPt;
+                aEmbed.FComponents[CompIndex].Add(Dst);
+                Inc(sTop);
+                Stack[sTop] := Dst;
+              end
+            else
+              if Arc^.Side = 1 then
+                aEmbed.InsertAfter(EnterArc, RightRef[Dst])
+              else
+                begin
+                  aEmbed.InsertBefore(EnterArc, LeftRef[Dst]);
+                  LeftRef[Dst] := EnterArc;
+                end;
+            Inc(CurrArc[CurrNode]);
+          end
+        else
+          Dec(sTop);
+      end;
+  end;
+
+var
+  I, J: SizeInt;
+begin
+  for I := 0 to System.High(FArcs) do
+    FArcs[I].NestingDepth *= FArcs[I].Sign;
+  SortAdjLists;
+
+  aEmbed.Init(FGraph.VertexCount, FGraph.EdgeCount, FRoots.Count);
+  for I := 0 to Pred(aEmbed.NodeCount) do
+    for J := FNodes[I].FirstArc to FNodes[I+1].FirstArc-1 do
+      FSortedArcs[J]^.LowPt := aEmbed.AddEdge(I, GetNodeIdx(FSortedArcs[J]^.Target));
+
+  LeftRef.Length := aEmbed.NodeCount;
+  RightRef.Length := aEmbed.NodeCount;
+  for I in FRoots do
+    begin
+      aEmbed.FComponents[CompIndex].Add(I);
+      Dfs(I);
+      Inc(CompIndex);
+    end;
+end;
+
 class function TGSimpleGraph.TPlanarHelper.Min(L, R: SizeInt): SizeInt;
 begin
   if R < L then
@@ -2394,29 +2778,36 @@ function TGSimpleGraph.TPlanarHelper.GraphIsPlanarR(aGraph: TGSimpleGraph): Bool
 begin
   FPlanar := True;
   FGraph := aGraph;
-  CreateOrientation;
-  TestLrPartition;
+  CreateOrientationR;
+  TestLrPartitionR;
   Result := FPlanar;
 end;
 
 function TGSimpleGraph.TPlanarHelper.GraphIsPlanarR(aGraph: TGSimpleGraph;
   out aEmbed: TPlanarEmbedding): Boolean;
 begin
-  if aGraph.VertexCount > 2 then
-    begin
-      Result := GraphIsPlanarR(aGraph);
-      if not Result then
-        exit;
-      CreateEmbedding(aEmbed);
-    end
-  else
-    begin
-      if aGraph.VertexCount = 1 then
-        aEmbed.Init1
-      else
-        aEmbed.Init2(aGraph.Connected);
-      Result := True;
-    end;
+  if not GraphIsPlanarR(aGraph) then
+    exit(False);
+  CreateEmbeddingR(aEmbed);
+  Result := True;
+end;
+
+function TGSimpleGraph.TPlanarHelper.GraphIsPlanar(aGraph: TGSimpleGraph): Boolean;
+begin
+  FPlanar := True;
+  FGraph := aGraph;
+  CreateOrientation;
+  TestLrPartition;
+  Result := FPlanar;
+end;
+
+function TGSimpleGraph.TPlanarHelper.GraphIsPlanar(aGraph: TGSimpleGraph;
+  out aEmbed: TPlanarEmbedding): Boolean;
+begin
+  if not GraphIsPlanar(aGraph) then
+    exit(False);
+  CreateEmbedding(aEmbed);
+  Result := True;
 end;
 
 
