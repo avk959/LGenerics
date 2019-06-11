@@ -111,6 +111,14 @@ type
     procedure IsPlanarR5;
     procedure PlanarEmbeddingR;
     procedure PlanarEmbeddingR1;
+    procedure IsPlanar;
+    procedure IsPlanar1;
+    procedure IsPlanar2;
+    procedure IsPlanar3;
+    procedure IsPlanar4;
+    procedure IsPlanar5;
+    procedure PlanarEmbedding;
+    procedure PlanarEmbedding1;
     procedure ContainsEulerianPath;
     procedure ContainsEulerianCycle;
     procedure FindEulerianPath;
@@ -1518,6 +1526,7 @@ begin
           g.AddEdge(I, J);
           AssertFalse(g.IsPlanarR);
         end;
+  //bisect edges
   g.RemoveEdge(1, 2);
   g.RemoveEdge(2, 3);
   g.RemoveEdge(3, 4);
@@ -1545,6 +1554,7 @@ begin
           g.AddEdge(I, J);
           AssertFalse(g.IsPlanarR);
         end;
+  //bisect edges
   g.RemoveEdge(1, 2);
   g.RemoveEdge(1, 4);
   g.RemoveEdge(1, 6);
@@ -1663,6 +1673,237 @@ begin
   Ref.Instance := GenerateTestGr3;
   g := Ref;
   AssertTrue(g.IsPlanarR(Emb));
+  AssertTrue(g.IsEmbedding(Emb));
+end;
+
+procedure TSimpleGraphTest.IsPlanar;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.IsPlanar);
+  g.AddVertex(0);
+  AssertTrue(g.IsPlanar);
+  g.AddVertex(1);
+  AssertTrue(g.IsPlanar);
+  g.AddEdge(0, 1);
+  AssertTrue(g.IsPlanar);
+  g.AddVertex(2);
+  AssertTrue(g.IsPlanar);
+  g.AddEdge(2, 1);
+  g.AddEdge(0, 2);
+  AssertTrue(g.IsPlanar);
+  g.AddVertex(3);
+  AssertTrue(g.IsPlanar);
+  g.AddEdge(3, 0);
+  g.AddEdge(3, 1);
+  g.AddEdge(3, 2);
+  AssertTrue(g.IsPlanar);
+end;
+
+procedure TSimpleGraphTest.IsPlanar1;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateCycle;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateStar;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateWheel;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateTree;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Ref.Instance := GenerateChordal10;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+end;
+
+procedure TSimpleGraphTest.IsPlanar2;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, J: Integer;
+begin
+  {%H-}Ref.Instance := GenerateK5;
+  g := Ref;
+  AssertFalse(g.IsPlanar);
+  for I := 1 to 5 do
+    for J := 1 to 5 do
+      if I > J then
+        begin
+          g.RemoveEdge(I, J);
+          AssertTrue(g.IsPlanar);
+          g.AddEdge(I, J);
+          AssertFalse(g.IsPlanar);
+        end;
+  //bisect edges
+  g.RemoveEdge(1, 2);
+  g.RemoveEdge(2, 3);
+  g.RemoveEdge(3, 4);
+  g.RemoveEdge(4, 5);
+  g.RemoveEdge(1, 5);
+  g.AddEdges([1, 6, 2, 6, 2, 7, 3, 7, 3, 8, 4, 8, 4, 9, 5, 9, 5, 10, 1, 10]);
+  AssertFalse(g.IsPlanar);
+end;
+
+procedure TSimpleGraphTest.IsPlanar3;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, J: Integer;
+begin
+  {%H-}Ref.Instance := GenerateK33;
+  g := Ref;
+  AssertFalse(g.IsPlanar);
+  for I := 1 to 6 do
+    for J := 1 to 6 do
+      if (I > J) and g.ContainsEdge(I, J) then
+        begin
+          g.RemoveEdge(I, J);
+          AssertTrue(g.IsPlanar);
+          g.AddEdge(I, J);
+          AssertFalse(g.IsPlanar);
+        end;
+  //bisect edges
+  g.RemoveEdge(1, 2);
+  g.RemoveEdge(1, 4);
+  g.RemoveEdge(1, 6);
+  g.RemoveEdge(3, 2);
+  g.RemoveEdge(3, 4);
+  g.RemoveEdge(3, 6);
+  g.RemoveEdge(5, 2);
+  g.RemoveEdge(5, 4);
+  g.RemoveEdge(5, 6);
+  g.AddEdges([1, 7, 2, 7, 1, 8, 4, 8, 1, 9, 6, 9,
+              3, 10, 2, 10, 3, 11, 4, 11, 3, 12, 6, 12,
+              5, 13, 2, 13, 5, 14, 4, 14, 5, 15, 6, 15]);
+  AssertFalse(g.IsPlanarR);
+end;
+
+procedure TSimpleGraphTest.IsPlanar4;
+var
+  Ref: TRef;
+  g: TGraph;
+begin
+  {%H-}Ref.Instance := GeneratePetersen;
+  g := Ref;
+  AssertFalse(g.IsPlanar);
+end;
+
+procedure TSimpleGraphTest.IsPlanar5;
+var
+  Ref: TRef;
+  g: TGraph;
+  I, J, Count: SizeInt;
+begin
+  {%H-}Ref.Instance := GenerateGoldnerHarary;
+  g := Ref;
+  AssertTrue(g.IsPlanar);
+  Count := 0;
+  for I := 0 to Pred(g.VertexCount) do
+    for J := 0 to Pred(g.VertexCount) do
+      if (I <> J) and not g.ContainsEdgeI(I, J) then
+        begin
+          g.AddEdgeI(I, J);
+          AssertFalse(g.IsPlanar);
+          g.RemoveEdgeI(I, J);
+          AssertTrue(g.IsPlanar);
+          Inc(Count);
+        end;
+  AssertTrue(Count > 0);
+end;
+
+procedure TSimpleGraphTest.PlanarEmbedding;
+var
+  Ref: TRef;
+  g: TGraph;
+  Emb: TGraph.TPlanarEmbedding;
+  e: TIntEdge;
+begin
+  g := {%H-}Ref;
+  AssertTrue(g.IsPlanar(Emb));
+  AssertTrue(Emb.IsEmpty);
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddVertex(1);
+  AssertTrue(g.IsPlanar(Emb));
+  AssertTrue(Emb.NodeCount = 1);
+  AssertTrue(Emb.EdgeCount = 0);
+  AssertTrue(Emb.ComponentCount = 1);
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddVertex(2);
+  AssertTrue(g.IsPlanar(Emb));
+  AssertTrue(Emb.NodeCount = 2);
+  AssertTrue(Emb.EdgeCount = 0);
+  AssertTrue(Emb.ComponentCount = 2);
+  AssertFalse(Emb.FindFirstEdge(g.IndexOf(1), e));
+  AssertFalse(Emb.FindFirstEdge(g.IndexOf(2), e));
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddEdge(1, 2);
+  AssertTrue(g.IsPlanar(Emb));
+  AssertTrue(Emb.NodeCount = 2);
+  AssertTrue(Emb.EdgeCount = 1);
+  AssertTrue(Emb.ComponentCount = 1);
+  AssertTrue(Emb.FindFirstEdge(g.IndexOf(1), e));
+  AssertTrue(TIntEdge.Equal(e, TIntEdge.Create(g.IndexOf(1), g.IndexOf(2))));
+  AssertTrue(Emb.FindFirstEdge(g.IndexOf(2), e));
+  AssertTrue(TIntEdge.Equal(e, TIntEdge.Create(g.IndexOf(2), g.IndexOf(1))));
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddVertex(3);
+  AssertTrue(g.IsPlanar(Emb));
+  AssertTrue(Emb.NodeCount = 3);
+  AssertTrue(Emb.EdgeCount = 1);
+  AssertTrue(Emb.ComponentCount = 2);
+  AssertTrue(g.IsEmbedding(Emb));
+  g.AddEdge(1, 3);
+  AssertTrue(g.IsPlanar(Emb));
+  AssertTrue(Emb.NodeCount = 3);
+  AssertTrue(Emb.EdgeCount = 2);
+  AssertTrue(Emb.ComponentCount = 1);
+  AssertTrue(g.IsEmbedding(Emb));
+end;
+
+procedure TSimpleGraphTest.PlanarEmbedding1;
+var
+  Ref: TRef;
+  g: TGraph;
+  Emb: TGraph.TPlanarEmbedding;
+begin
+  {%H-}Ref.Instance := GenerateK33;
+  g := Ref;
+  g.IsPlanar(Emb);
+  AssertTrue(Emb.IsEmpty);
+  Ref.Instance := GenerateTestGr1;
+  g := Ref;
+  AssertTrue(g.IsPlanar(Emb));
+  AssertTrue(g.IsEmbedding(Emb));
+  Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.IsPlanar(Emb));
+  AssertTrue(g.IsEmbedding(Emb));
+  Ref.Instance := GenerateTestGr3;
+  g := Ref;
+  AssertTrue(g.IsPlanar(Emb));
   AssertTrue(g.IsEmbedding(Emb));
 end;
 
