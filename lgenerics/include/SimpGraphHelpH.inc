@@ -412,8 +412,8 @@ type
     FRoots: TIntVector;
     FGraph: TGSimpleGraph;
     FPlanar: Boolean;
-    function  GetNodeIdx(aNode: PNode): SizeInt; inline;
-    function  GetArcIdx(aArc: PArc): SizeInt; inline;
+    function  IdxOfNode(aNode: PNode): SizeInt; inline;
+    function  IdxOfArc(aArc: PArc): SizeInt; inline;
     procedure CreateDigraphR;
     procedure CreateDigraph;
     procedure Dfs1R(aRootIdx: SizeInt);
