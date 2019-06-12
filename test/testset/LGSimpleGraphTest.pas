@@ -2677,6 +2677,7 @@ begin
     AssertTrue(THelper.SequentSearch(Clique, g.IndexOf(I)) <> NULL_INDEX);
   g.RemoveEdge(2, 4);
   g.RemoveEdge(2, 5);
+  g.RemoveEdge(3, 5);
   AssertTrue(g.IsChordal(Clique));
   Exact := False;
   Clique := g.FindMaxClique(Exact, 0);
