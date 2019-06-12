@@ -1,4 +1,4 @@
-## LGenerics
+﻿## LGenerics
 
   Collection of generic algorithms and data structures entirely written in/for FPC and Lazarus. 
   Started as a self-education project, it now seems quite comfortable and fast.
@@ -18,10 +18,13 @@
   - sorted list(unit LGList)
   - hashed list - array based list with the ability to fast search by key(unit LGList)  
   - hashset(unit LGHashSet)
+  - fine-grained concurrent hashset(unit LGHashSet)
   - sorted set(unit LGTreeSet)
   - hash multiset(unit LGHashMultiSet)
+  - fine-grained concurrent hashmultiset(unit LGHashMultiSet)
   - sorted multiset(unit LGTreeMultiSet)
   - hashmap(unit LGHashMap)
+  - fine-grained concurrent hashmap(unit LGHashMap)
   - sorted map(unit LGTreeMap)
   - hash multimap(unit LGMultiMap)
   - tree multimap(unit LGMultiMap)
@@ -40,7 +43,7 @@
     + vertices/edges addition/removal/query/enumeration, edge contraction, degree
     + load/save to own binary format, primitive export to DOT format
   - connectivity:
-    + connected/strongly connected components, bipartite detection 
+    + connected/strongly connected components, bipartite detection
     + articulation points, bridges, biconnected components 
     + edge-connectivity 
   - traversals:
@@ -49,14 +52,18 @@
     + topological sort
   - operations: 
     + induced subgraphs, complement, reverse, union, intersect, symmetric difference,
+  - chordality testing
+  - planarity testing: FMR Left-Right Planarity algorithm
   - distance within graph: 
     + eccentricity, radius, diameter, center, periphery 
   - matching:
     + maximum cardinality matching on bipartite/arbitrary graphs  
     + minimum/maximum weight matching on bipartite graphs
+  - dominators in flowgraps: simple iterative and Semi-NCA algorithms
   - some suggestions for NP-hard problems: 
-    + maximum independent set, independent sets enumeration 
+    + maximum independent set, maximal independent sets enumeration 
     + maximum clique, cliques enumeration
+    + minimum vertex cover, minimal vertex covers enumeration
     + vertex coloring, approximations and exact
     + minimum dominating set
     + Hamiltonian cycles and paths
