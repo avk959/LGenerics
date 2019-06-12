@@ -172,8 +172,6 @@ type
   TIntNode = record
     Index,
     Data: SizeInt;
-    class operator = (constref L, R: TIntNode): Boolean; inline;
-    class operator <>(constref L, R: TIntNode): Boolean; inline;
     class operator > (constref L, R: TIntNode): Boolean; inline;
     class operator < (constref L, R: TIntNode): Boolean; inline;
     class operator >=(constref L, R: TIntNode): Boolean; inline;

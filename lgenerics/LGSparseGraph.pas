@@ -4220,34 +4220,36 @@ end;
 
 { TIntNode }
 
-class operator TIntNode. = (constref L, R: TIntNode): Boolean;
-begin
-  Result := L.Data = R.Data;
-end;
-
-class operator TIntNode.<>(constref L, R: TIntNode): Boolean;
-begin
-  Result := L.Data <> R.Data;
-end;
-
 class operator TIntNode.>(constref L, R: TIntNode): Boolean;
 begin
-  Result := L.Data > R.Data;
+  if L.Data = R.Data then
+    Result := L.Index > R.Index
+  else
+    Result := L.Data > R.Data;
 end;
 
 class operator TIntNode.<(constref L, R: TIntNode): Boolean;
 begin
-  Result := L.Data < R.Data;
+  if L.Data = R.Data then
+    Result := L.Index < R.Index
+  else
+    Result := L.Data < R.Data;
 end;
 
 class operator TIntNode.>=(constref L, R: TIntNode): Boolean;
 begin
-  Result := L.Data >= R.Data;
+  if L.Data = R.Data then
+    Result := L.Index > R.Index
+  else
+    Result := L.Data > R.Data;
 end;
 
 class operator TIntNode.<=(constref L, R: TIntNode): Boolean;
 begin
-  Result := L.Data <= R.Data;
+  if L.Data = R.Data then
+    Result := L.Index < R.Index
+  else
+    Result := L.Data < R.Data;
 end;
 
 constructor TIntNode.Create(aIndex, aData: SizeInt);
