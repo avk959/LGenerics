@@ -2793,42 +2793,29 @@ end;
 
 function TGSimpleGraph.SortNodesByWidth(o: TSortOrder): TIntArray;
 var
-  I, J: SizeInt;
-  List, Stack: TIntSet;
-  m: TBoolMatrix;
+  Queue: TINodePqMin;
+  List: TIntArray = nil;
+  InQueue: TBitVector;
+  Item: TIntNode = (Index: -1; Data: -1);
+  I: SizeInt;
+  p: PAdjItem;
 begin
-  Result := CreateDegreeArray;
-  List.InitRange(VertexCount);
-  if VertexCount > COMMON_BP_CUTOFF then
-    while List.NonEmpty do
-      begin
-        I := List[0];
-        for J in List do
-          if Result[J] < Result[I] then
-            I := J;
-        {%H-}Stack.Push(I);
-        List.Remove(I);
-        for J in List do
-          if AdjLists[I]^.Contains(J) then
-            Dec(Result[J]);
-      end
-  else
+  Queue := TINodePqMin.Create(VertexCount);
+  List.Length := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
+  InQueue.ExpandTrue(VertexCount);
+  I := 0;
+  while Queue.TryDequeue(Item) do
     begin
-      m := CreateBoolMatrix;
-      while List.NonEmpty do
-        begin
-          I := List[0];
-          for J in List do
-            if Result[J] < Result[I] then
-              I := J;
-          {%H-}Stack.Push(I);
-          List.Remove(I);
-          for J in List do
-            if m[I][J] then
-              Dec(Result[J]);
-        end;
+      List[I] := Item.Index;
+      Inc(I);
+      InQueue[Item.Index] := False;
+      for p in AdjLists[Item.Index]^ do
+        if InQueue[p^.Key] then
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
     end;
-  Result := Stack.ToArray;
+  Result := List;
   if o = soDesc then
     TIntHelper.Reverse(Result);
 end;
