@@ -108,7 +108,7 @@ type
       function  NextFaceEdge(aEdgeIdx: SizeInt): SizeInt;
     public
     type
-      TAdjNodesCw = record
+      TAdjListCw = record
       private
         List: THalfEdgeList;
         FirstEdge: SizeInt;
@@ -124,7 +124,7 @@ type
       end;
 
       function IsEmpty: Boolean; inline;
-      function AdjNodesCw(aNode: SizeInt): TAdjNodesCw;
+      function AdjListCw(aNode: SizeInt): TAdjListCw;
       function Edges: TEdges; inline;
       function ContainsEdge(aSrc, aDst: SizeInt): Boolean; inline;
       function ContainsEdge(constref aEdge: TIntEdge): Boolean; inline;
@@ -841,15 +841,12 @@ begin
 end;
 
 function TGSimpleGraph.TPlanarEmbedding.TAdjCwEnumerator.MoveNext: Boolean;
-var
-  Next: SizeInt;
 begin
   if CurrEdge >= 0 then
     begin
-      Next := FList[CurrEdge].Next;
-      Result := Next <> FirstEdge;
+      Result := FList[CurrEdge].Next <> FirstEdge;
       if Result then
-        CurrEdge := Next;
+        CurrEdge := FList[CurrEdge].Next;
     end
   else
     begin
@@ -874,9 +871,9 @@ begin
     CurrEdge += 2;
 end;
 
-{ TGSimpleGraph.TPlanarEmbedding.TAdjNodesCw }
+{ TGSimpleGraph.TPlanarEmbedding.TAdjListCw }
 
-function TGSimpleGraph.TPlanarEmbedding.TAdjNodesCw.GetEnumerator: TAdjCwEnumerator;
+function TGSimpleGraph.TPlanarEmbedding.TAdjListCw.GetEnumerator: TAdjCwEnumerator;
 begin
   Result.FList := List;
   Result.FirstEdge := FirstEdge;
@@ -1080,7 +1077,7 @@ begin
   Result := FNodeList = nil;
 end;
 
-function TGSimpleGraph.TPlanarEmbedding.AdjNodesCw(aNode: SizeInt): TAdjNodesCw;
+function TGSimpleGraph.TPlanarEmbedding.AdjListCw(aNode: SizeInt): TAdjListCw;
 begin
   if SizeUInt(aNode) >= SizeUInt(NodeCount) then
     raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aNode]);
@@ -3473,7 +3470,7 @@ begin
     begin
       AdjList := AdjLists[I];
       Cnt := 0;
-      for J in aEmbedding.AdjNodesCw(I) do
+      for J in aEmbedding.AdjListCw(I) do
         begin
           if not AdjList^.Contains(J) then
             exit(False);
@@ -3491,7 +3488,7 @@ begin
       FaceCnt := 0;
       EdgeCnt := 0;
       for I in aEmbedding[Comp] do
-        for J in aEmbedding.AdjNodesCw(I) do
+        for J in aEmbedding.AdjListCw(I) do
           begin
             Inc(EdgeCnt);
             if not eSet.Contains(TIntEdge.Create(I, J)) then
