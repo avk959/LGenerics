@@ -43,7 +43,7 @@
     + vertices/edges addition/removal/query/enumeration, edge contraction, degree
     + load/save to own binary format, primitive export to DOT format
   - connectivity:
-    + connected/strongly connected components, bipartite detection
+    + connected/strongly connected components, bipartite detection, degeneracy, k-core
     + articulation points, bridges, biconnected components 
     + edge-connectivity 
   - traversals:
