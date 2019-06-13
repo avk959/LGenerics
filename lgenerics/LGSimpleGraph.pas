@@ -290,9 +290,6 @@ type
   { returns adjacency matrix of the complement graph;
     warning: maximum matrix size limited, see BitMatrixSizeMax }
     function  CreateComplementMatrix: TAdjacencyMatrix;
-  { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
-    function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
-    function  LocalClusteringI(aIndex: SizeInt): Double;
   { if the graph is not empty, then make graph connected, adding, if necessary, new edges
     from the vertex with the index 0; returns count of added edges;
     if aOnAddEdge = nil then new edges will use default data value }
@@ -303,7 +300,7 @@ type
   { returns number of vertices(population) in the connected component that contains aVertex }
     function  SeparatePop(constref aVertex: TVertex): SizeInt; inline;
     function  SeparatePopI(aIndex: SizeInt): SizeInt;
-  { returns array of indices of connected component that contains aVertex }
+  { returns array of indices of the connected component that contains aVertex }
     function  GetSeparate(constref aVertex: TVertex): TIntArray; inline;
     function  GetSeparateI(aIndex: SizeInt): TIntArray;
   { returns in the result array the vectors of indices of all connected components }
@@ -333,6 +330,19 @@ type
     function  IsPlanarR(out aEmbedding: TPlanarEmbedding): Boolean;
   { returns True if aEmbedding is proper planar embedding }
     function  IsEmbedding(constref aEmbedding: TPlanarEmbedding): Boolean;
+  { returns degeneracy of graph, -1 if graph is empty;
+    the degeneracy of a graph G is the least k, such that every induced subgraph of G contains
+    a vertex with degree d <= k }
+    function  Degeneracy: SizeInt;
+  { same as above and in array aCores returns the degrees of the corresponding vertices,
+    such that if aDegs[I] = k, then vertex I belongs to the k-core and not to the (k+1)-core }
+    function  Degeneracy(out aDegs: TIntArray): SizeInt;
+  { returns array of indices of the k-core(k-cores if graph is not connected) }
+    function  KCore(aK: SizeInt): TIntArray;
+  { returns local clustering coefficient of the aVertex: how close its neighbours are to being a clique }
+    function  LocalClustering(constref aVertex: TVertex): ValReal; inline;
+    function  LocalClusteringI(aIndex: SizeInt): Double;
+  { returns count of independent cycles }
     function  CyclomaticNumber: SizeInt;
   { returns True if exists any cycle in the aVertex connected component,
     in this case aCycle will contain indices of the vertices of the found cycle }
@@ -3156,31 +3166,6 @@ begin
   Result := TAdjacencyMatrix.Create(m);
 end;
 
-function TGSimpleGraph.LocalClustering(constref aVertex: TVertex): ValReal;
-begin
-  Result := LocalClusteringI(IndexOf(aVertex));
-end;
-
-function TGSimpleGraph.LocalClusteringI(aIndex: SizeInt): Double;
-var
-  I, J, Counter, d: SizeInt;
-  pList: PAdjList;
-begin
-  CheckIndexRange(aIndex);
-  d := DegreeI(aIndex);
-  if d <= 1 then
-    exit(0.0);
-  Counter := 0;
-  for I in AdjVerticesI(aIndex) do
-    begin
-      pList := AdjLists[I];
-      for J in AdjVerticesI(aIndex) do
-        if I <> J then
-          Counter += Ord(pList^.Contains(J));
-    end;
-  Result := Double(Counter) / (Double(d) * Double(Pred(d)));
-end;
-
 function TGSimpleGraph.EnsureConnected(aOnAddEdge: TOnAddEdge): SizeInt;
 begin
   Result := 0;
@@ -3495,6 +3480,114 @@ begin
     end;
 
   Result := True;
+end;
+
+function TGSimpleGraph.Degeneracy: SizeInt;
+var
+  Queue: TINodePqMin;
+  InQueue: TBitVector;
+  Item: TIntNode = (Index: -1; Data: -1);
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then
+    exit(NULL_INDEX);
+  Result := 0;
+  Queue := TINodePqMin.Create(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
+  InQueue.ExpandTrue(VertexCount);
+  while Queue.TryDequeue(Item) do
+    begin
+      if Item.Data > Result then
+        Result := Item.Data;
+      InQueue[Item.Index] := False;
+      for p in AdjLists[Item.Index]^ do
+        if InQueue[p^.Key] then
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
+    end;
+end;
+
+function TGSimpleGraph.Degeneracy(out aDegs: TIntArray): SizeInt;
+var
+  Queue: TINodePqMin;
+  InQueue: TBitVector;
+  Item: TIntNode = (Index: -1; Data: -1);
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  aDegs := nil;
+  if IsEmpty then
+    exit(NULL_INDEX);
+  Result := 0;
+  Queue := TINodePqMin.Create(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
+  InQueue.ExpandTrue(VertexCount);
+  aDegs.Length := VertexCount;
+  while Queue.TryDequeue(Item) do
+    begin
+      if Item.Data > Result then
+        Result := Item.Data;
+      aDegs[Item.Index] := Result;
+      InQueue[Item.Index] := False;
+      for p in AdjLists[Item.Index]^ do
+        if InQueue[p^.Key] then
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
+    end;
+end;
+
+function TGSimpleGraph.KCore(aK: SizeInt): TIntArray;
+var
+  Queue: TINodePqMin;
+  InQueue: TBoolVector;
+  Item: TIntNode = (Index: -1; Data: -1);
+  I: SizeInt;
+  p: PAdjItem;
+begin
+  if IsEmpty then
+    exit(nil);
+  if aK <= 0 then
+    exit(CreateIntArrayRange);
+  Queue := TINodePqMin.Create(VertexCount);
+  for I := 0 to Pred(VertexCount) do
+    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
+  InQueue.InitRange(VertexCount);
+  while Queue.TryDequeue(Item) do
+    begin
+      if Item.Data >= aK then
+        break;
+      InQueue[Item.Index] := False;
+      for p in AdjLists[Item.Index]^ do
+        if InQueue[p^.Key] then
+          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
+    end;
+  Result := InQueue.ToArray;
+end;
+
+function TGSimpleGraph.LocalClustering(constref aVertex: TVertex): ValReal;
+begin
+  Result := LocalClusteringI(IndexOf(aVertex));
+end;
+
+function TGSimpleGraph.LocalClusteringI(aIndex: SizeInt): Double;
+var
+  I, J, Counter, d: SizeInt;
+  pList: PAdjList;
+begin
+  CheckIndexRange(aIndex);
+  d := DegreeI(aIndex);
+  if d <= 1 then
+    exit(0.0);
+  Counter := 0;
+  for I in AdjVerticesI(aIndex) do
+    begin
+      pList := AdjLists[I];
+      for J in AdjVerticesI(aIndex) do
+        if I <> J then
+          Counter += Ord(pList^.Contains(J));
+    end;
+  Result := Double(Counter) / (Double(d) * Double(Pred(d)));
 end;
 
 function TGSimpleGraph.CyclomaticNumber: SizeInt;
