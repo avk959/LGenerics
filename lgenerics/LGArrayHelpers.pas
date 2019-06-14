@@ -28,7 +28,7 @@ interface
 
 uses
 
-  SysUtils, math,
+  SysUtils, math, typinfo,
   LGUtils,
   {%H-}LGHelpers,
   LGStrConst;
@@ -900,6 +900,7 @@ type
   private
   type
     TMonotonicity = (moAsc, moDesc, moConst, moNone);
+    TGetAllow     = function(aMin, aMax: T; aLen: SizeInt): Boolean;
 
   const
   {$IFDEF CPU16}
@@ -909,8 +910,13 @@ type
   {$ENDIF CPU16}
     class procedure CountSort(var A: array of T; aMinValue, aMaxValue: T); static;
     class function  Scan(var A: array of T; out aMinValue, aMaxValue: T): TMonotonicity; static;
+    class function  AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
+    class function  AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean; static;
+    class constructor Init;
+  class var
+    CountSortAllow: TGetAllow;
   public
-    class function CreateRange(aFrom, aTo: T): TArray; static;
+    class function  CreateRange(aFrom, aTo: T): TArray; static;
   { uses counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
@@ -9379,6 +9385,36 @@ begin
       until I > R;
     end;
 end;
+{$PUSH}{$Q-}
+class function TGOrdinalArrayHelper.AllowCsSigned(aMin, aMax: T; aLen: SizeInt): Boolean;
+var
+  Sum: Int64;      //todo: any tuning needed ???
+begin
+  Sum := Int64(aMin) + COUNTSORT_CUTOFF;
+  if Sum < aMin then
+    Result := (Int64(aMax) - Int64(aMin)) shr 3 <= aLen
+  else
+    Result := (aMax <= Sum) and ((Int64(aMax) - Int64(aMin)) shr 3 <= aLen);
+end;
+
+class function TGOrdinalArrayHelper.AllowCsUnsigned(aMin, aMax: T; aLen: SizeInt): Boolean;
+var
+  Sum: QWord;      //todo: any tuning needed ???
+begin
+  Sum := QWord(aMin) + COUNTSORT_CUTOFF;
+  if Sum < aMin then
+    Result := (QWord(aMax) - QWord(aMin)) shr 3 <= aLen
+  else
+    Result := (aMax <= Sum) and ((QWord(aMax) - QWord(aMin)) shr 3 <= aLen);
+end;
+{$POP}
+class constructor TGOrdinalArrayHelper.Init;
+begin
+  if GetTypeData(System.TypeInfo(T))^.OrdType in [otSByte, otSWord, otSLong, otSQWord] then
+    CountSortAllow := @AllowCsSigned
+  else
+    CountSortAllow := @AllowCsUnsigned;
+end;
 
 class function TGOrdinalArrayHelper.CreateRange(aFrom, aTo: T): TArray;
 var
@@ -9398,11 +9434,17 @@ var
   R: SizeInt;
   vMin, vMax: T;
   Mono: TMonotonicity;
-  Len: Int64;
 begin
   R := System.High(A);
   if R > 0 then
     begin
+      if R <= HEAP_INSERT_CUTOFF then
+        begin
+          InsertionSort(A, 0, R);
+          if aOrder = soDesc then
+            Reverse(A);
+          exit;
+        end;
       Mono := Scan(A, vMin, vMax);
       if Mono < moNone then
         begin
@@ -9411,8 +9453,7 @@ begin
         end
       else
         begin
-          Len := Int64(vMax) - Int64(vMin);
-          if (Len <= COUNTSORT_CUTOFF) and (Len shr 3 <= Succ(R)) then //todo: any tuning needed
+          if CountSortAllow(vMin, vMax, Succ(R)) then
             CountSort(A, vMin, vMax)
           else
             DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
