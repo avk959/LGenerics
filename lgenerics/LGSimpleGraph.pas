@@ -3002,9 +3002,8 @@ var
 begin
   if L = R then
     exit(True);
-  if (L.VertexCount <> R.VertexCount) or (L.EdgeCount <> R.EdgeCount) then
-    exit(False);
-  if L.SeparateCount <> R.SeparateCount then
+  if (L.VertexCount <> R.VertexCount) or (L.EdgeCount <> R.EdgeCount) or
+     (L.SeparateCount <> R.SeparateCount) then
     exit(False);
   if not TIntHelper.Same(L.CreateSortDegreeArray(soAsc), R.CreateSortDegreeArray(soAsc)) then
     exit(False);

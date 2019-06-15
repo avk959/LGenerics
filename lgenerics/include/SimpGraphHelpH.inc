@@ -352,11 +352,14 @@ type
     function  Execute(aGraph: TGSimpleGraph; out aCut: TIntSet): SizeInt;
   end;
 
-  { TPlanarHelper: planarity testing algorithm and combinatorial embedding extraction
-    based on the Left-Right Planarity Test(de Fraysseix, Ossona de Mendez, and Rosenstiehl)
-    from Ulrik Brandes: "The Left-Right Planarity Test" }
+  { TPlanarHelper: planarity testing algorithm and planar embedding construction
+    based on the FMR Left-Right Planarity Test(de Fraysseix, Ossona de Mendez, and Rosenstiehl),
+    well described in Ulrik Brandes: "The Left-Right Planarity Test" }
   TPlanarHelper = record
   private
+  const
+    LEFT_SIDE  = -1;
+    RIGHT_SIDE = 1;
   type
     PNode = ^TNode;
     PArc  = ^TArc;

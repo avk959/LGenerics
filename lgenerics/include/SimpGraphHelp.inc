@@ -1925,7 +1925,7 @@ begin
   NestingDepth := NULL_INDEX;
   LowPtArc := nil;
   Ref := nil;
-  Side := 1;
+  Side := RIGHT_SIDE;
 end;
 
 function TGSimpleGraph.TPlanarHelper.TArc.Sign: ShortInt;
@@ -2141,7 +2141,7 @@ var
             Inc(NodeArcs[CurrNode].CurrArc);
           end
         else
-          Dec(sTop);;
+          Dec(sTop);
       end;
   end;
 
@@ -2484,7 +2484,7 @@ begin
         break;
       P := FPairStack.Pop;
       if P.Left.LowA <> nil then
-        P.Left.LowA^.Side := -1;
+        P.Left.LowA^.Side := LEFT_SIDE;
     end;
   if FPairStack.NonEmpty then //one more conflict pair to consider
     begin
@@ -2495,7 +2495,7 @@ begin
       if (P.Left.HighA = nil) and (P.Left.LowA <> nil) then
         begin
           P.Left.LowA^.Ref := P.Right.LowA;
-          P.Left.LowA^.Side := -1;
+          P.Left.LowA^.Side := LEFT_SIDE;
           P.Left.LowA := nil;
         end;
       // trim right interval
@@ -2504,7 +2504,7 @@ begin
       if (P.Right.HighA = nil) and (P.Right.LowA <> nil) then
         begin
           P.Right.LowA^.Ref := P.Left.LowA;
-          P.Right.LowA^.Side := -1;
+          P.Right.LowA^.Side := LEFT_SIDE;
           P.Right.LowA := nil;
         end;
       FPairStack.Push(P);
@@ -2651,7 +2651,7 @@ var
             Dfs(Dst);
           end
         else
-          if Arc^.Side = 1 then
+          if Arc^.Side = RIGHT_SIDE then
             aEmbed.InsertAfter(EnterArc, RightRef[Dst])
           else
             begin
@@ -2719,7 +2719,7 @@ var
                 Stack[sTop] := Dst;
               end
             else
-              if Arc^.Side = 1 then
+              if Arc^.Side = RIGHT_SIDE then
                 aEmbed.InsertAfter(EnterArc, RightRef[Dst])
               else
                 begin
