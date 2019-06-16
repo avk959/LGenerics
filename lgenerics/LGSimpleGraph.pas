@@ -235,9 +235,11 @@ type
     procedure SearchForBicomponent(aRoot: SizeInt; var aComp: TEdgeArrayVector);
     function  BridgeExists: Boolean;
     procedure SearchForBridges(var aBridges: TIntEdgeVector);
-    procedure SearchForFundamentalCycles(out aCycles: TIntArrayVector);
-    procedure SearchForFundamentalCyclesLen(out aCycleLens: TIntVector);
-    procedure GetFundamentalCyclesVector(out aVector: TIntVector);
+    procedure SearchForCycleBasis(out aCycles: TIntArrayVector);
+    procedure SearchForCycleBasisVector(out aVector: TIntVector);
+  { finds some system of fundamental cycles and returns their length vector,
+    sorted in non-descending order}
+    procedure GetCycleBasisVector(out aVector: TIntVector);
     function  CreateDegreeVector(o: TSortOrder): TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
@@ -2692,7 +2694,7 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.SearchForFundamentalCycles(out aCycles: TIntArrayVector);
+procedure TGSimpleGraph.SearchForCycleBasis(out aCycles: TIntArrayVector);
 var
   Stack: TSimpleStack;
   Visited: TBitVector;
@@ -2729,14 +2731,15 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.SearchForFundamentalCyclesLen(out aCycleLens: TIntVector);
+procedure TGSimpleGraph.SearchForCycleBasisVector(out aVector: TIntVector);
 var
   Stack: TSimpleStack;
   Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
   EdgeSet: TIntPairSet;
-  I, Curr, Next: SizeInt;
+  I, Next: SizeInt;
+  Curr: SizeInt = -1;
 begin
   Visited.Size := VertexCount;
   Stack := TSimpleStack.Create(VertexCount);
@@ -2748,7 +2751,7 @@ begin
         Visited[I] := True;
         Stack.Push(I);
         while Stack.TryPeek(Curr) do
-          if AdjEnums[{%H-}Curr].MoveNext then
+          if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
               if not Visited[Next] then
@@ -2759,31 +2762,34 @@ begin
                 end
               else
                 if (Parents[Curr] <> Next) and EdgeSet.Add(Curr, Next) then
-                  aCycleLens.Add(TreeCycleLen(Parents, Next, Curr));
+                  aVector.Add(TreeCycleLen(Parents, Next, Curr));
             end
           else
             Stack.Pop;
       end;
 end;
 
-procedure TGSimpleGraph.GetFundamentalCyclesVector(out aVector: TIntVector);
+procedure TGSimpleGraph.GetCycleBasisVector(out aVector: TIntVector);
 begin
-  if {%H-}IsTree then
+  aVector.Clear;
+  if IsTree then
     exit;
-  SearchForFundamentalCyclesLen(aVector);
-  if aVector.Count <> {%H-}CyclomaticNumber then
+  SearchForCycleBasisVector(aVector);
+  if aVector.Count <> CyclomaticNumber then
     raise EGraphError.Create(SEInternalDataInconsist);
   TIntVectorHelper.Sort(aVector);
 end;
 
 function TGSimpleGraph.CreateDegreeVector(o: TSortOrder): TIntArray;
 var
+  v: TIntArray = nil;
   I: SizeInt;
 begin
-  Result{%H-}.Length := VertexCount;
+  v.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
-    Result[I] := AdjLists[I]^.Count;
-  TIntHelper.Sort(Result, o);
+    v[I] := AdjLists[I]^.Count;
+  TIntHelper.Sort(v, o);
+  Result := v;
 end;
 
 function TGSimpleGraph.CreateComplementDegreeArray: TIntArray;
@@ -3006,8 +3012,8 @@ begin
     exit(False);
   if not TIntHelper.Same(L.CreateDegreeVector(soAsc), R.CreateDegreeVector(soAsc)) then
     exit(False);
-  L.GetFundamentalCyclesVector(fcL);
-  R.GetFundamentalCyclesVector(fcR);
+  L.GetCycleBasisVector(fcL);
+  R.GetCycleBasisVector(fcR);
   if fcL.Count <> fcR.Count then
     exit(False);
   for I := 0 to Pred(fcL.Count) do
@@ -3728,7 +3734,7 @@ begin
   Result := Default(TIntArrayVector);
   if IsTree then
     exit;
-  SearchForFundamentalCycles(Result);
+  SearchForCycleBasis(Result);
   if Result.Count <> CyclomaticNumber then
     raise EGraphError.Create(SEInternalDataInconsist);
   TIntArrayVectorHelper.Sort(Result, @CmpIntArrayLen);
