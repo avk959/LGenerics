@@ -411,9 +411,9 @@ begin
   //see Chordal8.png
   Result := TGraph.Create;
   Result.AddVertexRange(1, 8);
-  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 1, 3, 1, 4, 2, 4, 2, 5, 3, 5, //C5
-                   1, 6, 1, 7, 2, 7, 2, 6, 6, 7,                               //C4
-                   3, 8, 4, 8]);                                               //C3
+  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 1, 3, 1, 4, 2, 4, 2, 5, 3, 5, //K5
+                   1, 6, 1, 7, 2, 7, 2, 6, 6, 7,                               //K4
+                   3, 8, 4, 8]);                                               //K3
 end;
 
 function TSimpleGraphTest.GenerateChordal8Compl: TGraph;
@@ -492,10 +492,10 @@ function TSimpleGraphTest.GenerateDisconnected: TGraph;
 begin
   Result := TGraph.Create;
   Result.AddVertexRange(1, 15);
-  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 1, 3, 1, 4, 2, 4, 2, 5, 3, 5, //C5
-                   6, 7, 7, 8, 8, 9, 9, 6, 6, 8, 7, 9,                         //C4
-                   10, 11, 11, 12, 12, 10,                                     //C3
-                   13, 14                                                      //C2
+  Result.AddEdges([1, 2, 2, 3, 3, 4, 4, 5, 5, 1, 1, 3, 1, 4, 2, 4, 2, 5, 3, 5, //K5
+                   6, 7, 7, 8, 8, 9, 9, 6, 6, 8, 7, 9,                         //K4
+                   10, 11, 11, 12, 12, 10,                                     //K3
+                   13, 14                                                      //K2
                    ]);
 end;
 
