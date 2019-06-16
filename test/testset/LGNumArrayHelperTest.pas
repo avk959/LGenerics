@@ -384,6 +384,10 @@ type
     procedure SortDesc;
     procedure SortAsc577;
     procedure SortDesc577;
+{$IFDEF CPU64}
+    procedure SortInt64Asc;
+    procedure SortInt64Desc;
+{$ENDIF CPU64}
   end;
 
 
@@ -3311,6 +3315,55 @@ begin
   THelper.Sort(a, soDesc);
   AssertTrue(THelper.IsNonAscending(a));
 end;
+{$IFDEF CPU64}
+procedure TOrdArrayHelperTest.SortInt64Asc;
+type
+  TInt64Helper = specialize TGOrdinalArrayHelper<Int64>;
+var
+  a, a1, b: array of Int64;
+  I: Integer;
+begin
+  System.SetLength(a, 1000);
+  for I := 0 to System.High(a) do
+    a[I] := High(Int64) - Random(10000);
+  a1 := Copy(a);
+  TInt64Helper.QuickSort(a1);
+  b := TInt64Helper.Sorted(a);
+  AssertFalse(TInt64Helper.Same(a, b));
+  AssertTrue(TInt64Helper.Same(a1, b));
+  a[0] := High(Int64);
+  a[999] := Low(Int64);
+  a1 := Copy(a);
+  TInt64Helper.QuickSort(a1);
+  b := TInt64Helper.Sorted(a);
+  AssertFalse(TInt64Helper.Same(a, b));
+  AssertTrue(TInt64Helper.Same(a1, b));
+end;
+
+procedure TOrdArrayHelperTest.SortInt64Desc;
+type
+  TInt64Helper = specialize TGOrdinalArrayHelper<Int64>;
+var
+  a, a1, b: TInt64Helper.TArray;
+  I: Integer;
+begin
+  System.SetLength(a, 1000);
+  for I := 0 to System.High(a) do
+    a[I] := High(Int64) - Random(10000);
+  a1 := Copy(a);
+  TInt64Helper.QuickSort(a1, soDesc);
+  b := TInt64Helper.Sorted(a, soDesc);
+  AssertFalse(TInt64Helper.Same(a, b));
+  AssertTrue(TInt64Helper.Same(a1, b));
+  a[0] := High(Int64);
+  a[999] := Low(Int64);
+  a1 := Copy(a);
+  TInt64Helper.QuickSort(a1, soDesc);
+  b := TInt64Helper.Sorted(a, soDesc);
+  AssertFalse(TInt64Helper.Same(a, b));
+  AssertTrue(TInt64Helper.Same(a1, b));
+end;
+{$ENDIF CPU64}
 
 initialization
 
