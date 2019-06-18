@@ -4471,7 +4471,7 @@ end;
 function TGSimpleGraph.CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
 var
   Helper: TExactColor;
-  I: SizeInt;
+  I, ICol: SizeInt;
   p: PAdjItem;
 begin
   if aMaxColor <= 0 then
@@ -4482,10 +4482,19 @@ begin
     if (I < 0) or (I > aMaxColor) then
       exit(False);
   for I := 0 to Pred(VertexCount) do
-    for p in AdjLists[I]^ do
-      if p^.Key > I then
-        if ((aColors[I] > 0) or (aColors[p^.Key] > 0)) and (aColors[I] = aColors[p^.Key]) then
-          exit(False);
+    begin
+      if aColors[I] = 0 then
+        continue;
+      ICol := aColors[I];
+      for p in AdjLists[I]^ do
+        if p^.Key > I  then
+          begin
+            if aColors[p^.Key] = 0 then
+              continue;
+            if aColors[p^.Key] = ICol then
+              exit(False);
+          end;
+    end;
   Result := Helper.Complete(Self, aMaxColor, aTimeOut, aColors);
 end;
 
