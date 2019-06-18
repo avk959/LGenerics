@@ -241,6 +241,7 @@ type
     sorted in non-descending order}
     procedure GetCycleBasisVector(out aVector: TIntVector);
     function  CreateDegreeVector(o: TSortOrder): TIntArray;
+    function  CreateNeibDegreeVector(o: TSortOrder): TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
     function  SortComplementByWidth: TIntArray;
@@ -2792,6 +2793,24 @@ begin
   Result := v;
 end;
 
+function TGSimpleGraph.CreateNeibDegreeVector(o: TSortOrder): TIntArray;
+var
+  v: TIntArray = nil;
+  I, d: SizeInt;
+  p: PAdjItem;
+begin
+  v.Length := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    begin
+      d := 0;
+      for p in AdjLists[I]^ do
+        d += p^.Key;
+      v[I] := d;
+    end;
+  TIntHelper.Sort(v, o);
+  Result := v;
+end;
+
 function TGSimpleGraph.CreateComplementDegreeArray: TIntArray;
 var
   I: SizeInt;
@@ -2996,9 +3015,9 @@ begin
 end;
 
 class function TGSimpleGraph.MayBeIsomorphic(L, R: TGSimpleGraph): Boolean;
-var
-  fcL, fcR: TIntVector;
-  I: SizeInt;
+//var
+//  fcL, fcR: TIntVector;
+//  I: SizeInt;
 begin
   if L = R then
     exit(True);
@@ -3012,13 +3031,15 @@ begin
     exit(False);
   if not TIntHelper.Same(L.CreateDegreeVector(soAsc), R.CreateDegreeVector(soAsc)) then
     exit(False);
-  L.GetCycleBasisVector(fcL);
-  R.GetCycleBasisVector(fcR);
-  if fcL.Count <> fcR.Count then
+  if not TIntHelper.Same(L.CreateNeibDegreeVector(soAsc), R.CreateNeibDegreeVector(soAsc)) then
     exit(False);
-  for I := 0 to Pred(fcL.Count) do
-    if fcL[I] <> fcR[I] then
-      exit(False);
+  //L.GetCycleBasisVector(fcL);
+  //R.GetCycleBasisVector(fcR);
+  //if fcL.Count <> fcR.Count then
+  //  exit(False);
+  //for I := 0 to Pred(fcL.Count) do
+  //  if fcL[I] <> fcR[I] then
+  //    exit(False);
   Result := True;
 end;
 
@@ -4451,6 +4472,7 @@ function TGSimpleGraph.CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArr
 var
   Helper: TExactColor;
   I: SizeInt;
+  p: PAdjItem;
 begin
   if aMaxColor <= 0 then
     exit(False);
@@ -4459,6 +4481,11 @@ begin
   for I in aColors do
     if (I < 0) or (I > aMaxColor) then
       exit(False);
+  for I := 0 to Pred(VertexCount) do
+    for p in AdjLists[I]^ do
+      if p^.Key > I then
+        if ((aColors[I] > 0) or (aColors[p^.Key] > 0)) and (aColors[I] = aColors[p^.Key]) then
+          exit(False);
   Result := Helper.Complete(Self, aMaxColor, aTimeOut, aColors);
 end;
 
