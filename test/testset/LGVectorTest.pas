@@ -220,7 +220,13 @@ type
     procedure ObjectVector;
   end;
 
+  { TBoolVectorTest }
+
   TBoolVectorTest = class(TTestCase)
+  private
+  type
+    TIntVector = specialize TGLiteVector<SizeInt>;
+
   published
     procedure Size;
     procedure GetBitOutOfBounds;
@@ -240,11 +246,16 @@ type
     procedure Bsr;
     procedure Intersecting;
     procedure IntersectionPop;
+    procedure IntersectionPop1;
     procedure Contains;
     procedure JoinGain;
+    procedure JoinGain1;
     procedure Join;
+    procedure Join1;
     procedure Subtract;
+    procedure Subtract1;
     procedure Intersect;
+    procedure Intersect1;
   end;
 
 implementation
@@ -1876,12 +1887,12 @@ procedure TBoolVectorTest.Size;
 var
   v: TBoolVector;
 begin
-  AssertTrue({%H-}v.Size = 0);
-  v.Size := 15;
-  AssertTrue(v.Size = BitSizeOf(SizeUInt));
-  v.Size := 1005;
+  AssertTrue({%H-}v.Capacity = 0);
+  v.Capacity := 15;
+  AssertTrue(v.Capacity = BitSizeOf(SizeUInt));
+  v.Capacity := 1005;
   AssertTrue(
-    v.Size = (1005 div BitSizeOf(SizeUInt) + Ord(1005 mod BitSizeOf(SizeUInt) <> 0)) * BitSizeOf(SizeUInt));
+    v.Capacity = (1005 div BitSizeOf(SizeUInt) + Ord(1005 mod BitSizeOf(SizeUInt) <> 0)) * BitSizeOf(SizeUInt));
 end;
 
 procedure TBoolVectorTest.GetBitOutOfBounds;
@@ -1899,7 +1910,7 @@ begin
   AssertTrue(Raised);
 
   Raised := False;
-  v.Size := 64;
+  v.Capacity := 64;
   try
     Bit := v[64];
   except
@@ -1914,7 +1925,7 @@ var
   v: TBoolVector;
   I: SizeInt;
 begin
-  v.Size := 64;
+  v.Capacity := 64;
   for I := 0 to 63 do
     AssertFalse(v[I]);
 end;
@@ -1934,7 +1945,7 @@ begin
   AssertTrue(Raised);
 
   Raised := False;
-  v.Size := 64;
+  v.Capacity := 64;
   try
     v[64] := True;
   except
@@ -1949,7 +1960,7 @@ var
   v: TBoolVector;
   I: SizeInt;
 begin
-  v.Size := 64;
+  v.Capacity := 64;
   for I := 0 to 63 do
     begin
       AssertFalse(v[I]);
@@ -1964,7 +1975,7 @@ var
   I: SizeInt;
 begin
   AssertTrue(v.PopCount = 0);
-  v.Size := 64;
+  v.Capacity := 64;
   AssertTrue(v.PopCount = 0);
   v[10] := True;
   AssertTrue(v.PopCount = 1);
@@ -1981,9 +1992,9 @@ var
   I: SizeInt;
 begin
   v.InitRange(-10);
-  AssertTrue(v.Size = 0);
+  AssertTrue(v.Capacity = 0);
   v.InitRange(56);
-  AssertTrue(v.Size = 64);
+  AssertTrue(v.Capacity = 64);
   for I := 0 to 55 do
     AssertTrue(v[I]);
   for I := 56 to 63 do
@@ -1993,25 +2004,23 @@ end;
 procedure TBoolVectorTest.GetEnumerator;
 var
   v: TBoolVector;
+  Data: TIntVector;
   I, Counter: SizeInt;
 begin
   Counter := 0;
   for I in {%H-}v do
     Inc(Counter);
   AssertTrue(Counter = 0);
-  v.Size := 64;
-  v[5] := True;
-  v[21] := True;
-  v[37] := True;
-  v[55] := True;
+  v.Capacity := 128;
+  for I in {%H-}v do
+    Inc(Counter);
+  AssertTrue(Counter = 0);
+  Data.AddAll([5, 21, 37, 55, 67, 91, 112, 123]);
+  for I in Data do
+    v[I] := True;
   for I in v do
     begin
-      case Counter of
-        0: AssertTrue(I = 5);
-        1: AssertTrue(I = 21);
-        2: AssertTrue(I = 37);
-        3: AssertTrue(I = 55);
-      end;
+      AssertTrue(I = Data[Counter]);
       Inc(Counter);
     end;
 end;
@@ -2019,25 +2028,23 @@ end;
 procedure TBoolVectorTest.Reverse;
 var
   v: TBoolVector;
+  Data: TIntVector;
   I, Counter: SizeInt;
 begin
   Counter := 0;
   for I in {%H-}v.Reverse do
     Inc(Counter);
   AssertTrue(Counter = 0);
-  v.Size := 64;
-  v[5] := True;
-  v[21] := True;
-  v[37] := True;
-  v[55] := True;
+  v.Capacity := 128;
+  for I in {%H-}v.Reverse do
+    Inc(Counter);
+  AssertTrue(Counter = 0);
+  Data.AddAll([5, 21, 37, 55, 67, 91, 112, 123]);
+  for I in Data do
+    v[I] := True;
   for I in v.Reverse do
     begin
-      case Counter of
-        0: AssertTrue(I = 55);
-        1: AssertTrue(I = 37);
-        2: AssertTrue(I = 21);
-        3: AssertTrue(I = 5);
-      end;
+      AssertTrue(I = Data[Pred(Data.Count) - Counter]);
       Inc(Counter);
     end;
 end;
@@ -2048,8 +2055,8 @@ var
   I: Integer;
   a, r: array of SizeInt;
 begin
-  a := [3, 17, 29, 44, 59];
-  v.Size := 64;
+  a := [3, 17, 29, 44, 59, 63];
+  v.Capacity := 64;
   for I in a do
     v[I] := True;
   r := v.ToArray;
@@ -2062,8 +2069,8 @@ var
   I: SizeInt;
 begin
   {%H-}v.SetBits;
-  AssertTrue(v.Size = 0);
-  v.Size := 64;
+  AssertTrue(v.Capacity = 0);
+  v.Capacity := 64;
   v.SetBits;
   for I := 0 to 63 do
     AssertTrue(v[I]);
@@ -2088,7 +2095,7 @@ var
   v: TBoolVector;
 begin
   AssertTrue(v.IsEmpty);
-  v.Size := 64;
+  v.Capacity := 64;
   AssertTrue(v.IsEmpty);
   v[5] := True;
   AssertFalse(v.IsEmpty);
@@ -2099,7 +2106,7 @@ var
   v: TBoolVector;
 begin
   AssertFalse(v.NonEmpty);
-  v.Size := 64;
+  v.Capacity := 64;
   AssertFalse(v.NonEmpty);
   v[5] := True;
   AssertTrue(v.NonEmpty);
@@ -2111,12 +2118,12 @@ var
   I: Integer;
 begin
   AssertTrue(v.Bsf = -1);
-  v.Size := 120;
+  v.Capacity := 120;
   AssertTrue(v.Bsf = -1);
   v[5] := True;
   v[55] := True;
   AssertTrue(v.Bsf = 5);
-  for I := 0 to Pred(v.Size) do
+  for I := 0 to Pred(v.Capacity) do
     begin
       v[I] := True;
       AssertTrue(v.Bsf = I);
@@ -2130,13 +2137,13 @@ var
   I: Integer;
 begin
   AssertTrue(v.Bsr = -1);
-  v.Size := 120;
+  v.Capacity := 120;
   AssertTrue(v.Bsr = -1);
   v[25] := True;
   v[75] := True;
   AssertTrue(v.Bsr = 75);
   v.ClearBits;
-  for I := 0 to Pred(v.Size) do
+  for I := 0 to Pred(v.Capacity) do
     begin
       v[I] := True;
       AssertTrue(v.Bsr = I);
@@ -2150,8 +2157,12 @@ var
 begin
   AssertFalse(v1.Intersecting(v2{%H-}));
   AssertFalse(v2.Intersecting(v1));
-  v1.Size := 120;
-  v2.Size := 250;
+  AssertFalse(v1.Intersecting(v1));
+  AssertFalse(v2.Intersecting(v2));
+  v1.Capacity := 120;
+  v2.Capacity := 250;
+  AssertFalse(v1.Intersecting(v1));
+  AssertFalse(v2.Intersecting(v2));
   AssertFalse(v1.Intersecting(v2));
   AssertFalse(v2.Intersecting(v1));
   v1[10] := True;
@@ -2161,6 +2172,8 @@ begin
   v1[110] := True;
   AssertTrue(v1.Intersecting(v2));
   AssertTrue(v2.Intersecting(v1));
+  AssertTrue(v1.Intersecting(v1));
+  AssertTrue(v2.Intersecting(v2));
 end;
 
 procedure TBoolVectorTest.IntersectionPop;
@@ -2169,18 +2182,52 @@ var
 begin
   AssertTrue(v1.IntersectionPop(v2{%H-}) = 0);
   AssertTrue(v2.IntersectionPop(v1) = 0);
-  v1.Size := 120;
-  v2.Size := 250;
+  v1.Capacity := 120;
+  v2.Capacity := 250;
   AssertTrue(v1.IntersectionPop(v2) = 0);
   AssertTrue(v2.IntersectionPop(v1) = 0);
   v1[10] := True;
   v2[110] := True;
+  v2[125] := True;
   AssertTrue(v1.IntersectionPop(v2) = 0);
   AssertTrue(v2.IntersectionPop(v1) = 0);
   v1[110] := True;
   v2[10] := True;
   AssertTrue(v1.IntersectionPop(v2) = 2);
   AssertTrue(v2.IntersectionPop(v1) = 2);
+
+  AssertTrue(v1.IntersectionPop(v1) = 2);
+  AssertTrue(v2.IntersectionPop(v2) = 3);
+end;
+
+procedure TBoolVectorTest.IntersectionPop1;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.Capacity := 160;
+  v2.Capacity := 170;
+  v1[11] := True;
+  v1[129] := True;
+  v2[11] := True;
+  v2[110] := True;
+  v2[169] := True;
+  AssertTrue(v1.IntersectionPop(v2) = 1);
+  v2[129] := True;
+  AssertTrue(v1.IntersectionPop(v2) = 2);
+  v1.Capacity := 192;
+  v2.Capacity := 202;
+  v1[168] := True;
+  v2[201] := True;
+  AssertTrue(v1.IntersectionPop(v2) = 2);
+  v2[168] := True;
+  AssertTrue(v1.IntersectionPop(v2) = 3);
+  v1.Capacity := 224;
+  v2.Capacity := 234;
+  v1[218] := True;
+  v2[233] := True;
+  AssertTrue(v1.IntersectionPop(v2) = 3);
+  v2[218] := True;
+  AssertTrue(v1.IntersectionPop(v2) = 4);
 end;
 
 procedure TBoolVectorTest.Contains;
@@ -2189,18 +2236,20 @@ var
 begin
   AssertTrue(v1.Contains(v2{%H-}));
   AssertTrue(v2.Contains(v1));
-  v1.Size := 120;
-  v2.Size := 250;
-  AssertTrue(v1.Contains(v2{%H-}));
+  v1.Capacity := 120;
+  v2.Capacity := 250;
+  AssertTrue(v1.Contains(v2));
   AssertTrue(v2.Contains(v1));
+  AssertTrue(v1.Contains(v1));
+  AssertTrue(v2.Contains(v2));
   v1[10] := True;
-  AssertTrue(v1.Contains(v2{%H-}));
+  AssertTrue(v1.Contains(v2));
   AssertFalse(v2.Contains(v1));
   v2[10] := True;
-  AssertTrue(v1.Contains(v2{%H-}));
+  AssertTrue(v1.Contains(v2));
   AssertTrue(v2.Contains(v1));
   v2[110] := True;
-  AssertFalse(v1.Contains(v2{%H-}));
+  AssertFalse(v1.Contains(v2));
   AssertTrue(v2.Contains(v1));
 end;
 
@@ -2210,17 +2259,60 @@ var
 begin
   AssertTrue(v1.JoinGain(v2{%H-}) = 0);
   AssertTrue(v2.JoinGain(v1) = 0);
-  v1.Size := 120;
-  v2.Size := 250;
+  v1.Capacity := 120;
+  v2.Capacity := 250;
   AssertTrue(v1.JoinGain(v2) = 0);
   AssertTrue(v2.JoinGain(v1) = 0);
+  AssertTrue(v1.JoinGain(v1) = 0);
+  AssertTrue(v2.JoinGain(v2) = 0);
   v1[10] := True;
   v2[110] := True;
   AssertTrue(v1.JoinGain(v2) = 1);
   AssertTrue(v2.JoinGain(v1) = 1);
+  v2[240] := True;
+  AssertTrue(v1.JoinGain(v2) = 2);
+  AssertTrue(v2.JoinGain(v1) = 1);
+  AssertTrue(v1.JoinGain(v1) = 0);
+  AssertTrue(v2.JoinGain(v2) = 0);
   v1[110] := True;
   v2[10] := True;
-  AssertTrue(v1.JoinGain(v2) = 0);
+  AssertTrue(v1.JoinGain(v2) = 1);
+  AssertTrue(v2.JoinGain(v1) = 0);
+end;
+
+procedure TBoolVectorTest.JoinGain1;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.Capacity := 160;
+  v2.Capacity := 170;
+  v1[11] := True;
+  v1[129] := True;
+  v2[11] := True;
+  v2[110] := True;
+  v2[169] := True;
+  AssertTrue(v1.JoinGain(v2) = 2);
+  AssertTrue(v2.JoinGain(v1) = 1);
+  v2[129] := True;
+  AssertTrue(v1.JoinGain(v2) = 2);
+  AssertTrue(v2.JoinGain(v1) = 0);
+  v1.Capacity := 192;
+  v2.Capacity := 202;
+  v1[168] := True;
+  v2[201] := True;
+  AssertTrue(v1.JoinGain(v2) = 3);
+  AssertTrue(v2.JoinGain(v1) = 1);
+  v2[168] := True;
+  AssertTrue(v1.JoinGain(v2) = 3);
+  AssertTrue(v2.JoinGain(v1) = 0);
+  v1.Capacity := 224;
+  v2.Capacity := 234;
+  v1[218] := True;
+  v2[233] := True;
+  AssertTrue(v1.JoinGain(v2) = 4);
+  AssertTrue(v2.JoinGain(v1) = 1);
+  v2[218] := True;
+   AssertTrue(v1.JoinGain(v2) = 4);
   AssertTrue(v2.JoinGain(v1) = 0);
 end;
 
@@ -2228,39 +2320,71 @@ procedure TBoolVectorTest.Join;
 var
   v1, v2: TBoolVector;
 begin
-  v2.Size := 256;
+  v2.Capacity := 256;
   v1.Join(v2);
-  AssertTrue(v1.Size = 0);
+  AssertTrue(v1.Capacity = 0);
   AssertTrue(v1.IsEmpty);
   v2.Join(v1);
-  AssertTrue(v2.Size = 256);
+  AssertTrue(v2.Capacity = 256);
   AssertTrue(v2.IsEmpty);
   v2[127] := True;
   v1.Join(v2);
-  AssertTrue(v1.Size = 128);
+  AssertTrue(v1.Capacity = 128);
   AssertTrue(v1[127]);
   v1[110] := True;
   v2.Join(v1);
-  AssertTrue(v2.Size = 256);
+  AssertTrue(v2.Capacity = 256);
   AssertTrue(v2[110]);
   v2[255] := True;
   v1.Join(v2);
-  AssertTrue(v1.Size = 256);
+  AssertTrue(v1.Capacity = 256);
   AssertTrue(v1[110]);
   AssertTrue(v1[255]);
+end;
+
+procedure TBoolVectorTest.Join1;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.Capacity := 160;
+  v2.Capacity := 170;
+  v1[11] := True;
+  v1[129] := True;
+  v2[11] := True;
+  v2[110] := True;
+  v2[169] := True;
+  v1.Join(v2);
+  AssertTrue(v1.Capacity = v2.Capacity);
+  AssertTrue(v1.PopCount = 4);
+  AssertTrue(v1[11]);
+  AssertTrue(v1[110]);
+  AssertTrue(v1[129]);
+  AssertTrue(v1[169]);
+  v2.Capacity := 224;
+  v2[170] := True;
+  v2[221] := True;
+  v1.Join(v2);
+  AssertTrue(v1.Capacity = v2.Capacity);
+  AssertTrue(v1.PopCount = 6);
+  AssertTrue(v1[11]);
+  AssertTrue(v1[110]);
+  AssertTrue(v1[129]);
+  AssertTrue(v1[169]);
+  AssertTrue(v1[170]);
+  AssertTrue(v1[221]);
 end;
 
 procedure TBoolVectorTest.Subtract;
 var
   v1, v2: TBoolVector;
 begin
-  v1.Size := 128;
-  v2.Size := 256;
+  v1.Capacity := 128;
+  v2.Capacity := 256;
   v1.Subtract(v2);
-  AssertTrue(v1.Size = 128);
+  AssertTrue(v1.Capacity = 128);
   AssertTrue(v1.IsEmpty);
   v2.Subtract(v1);
-  AssertTrue(v2.Size = 256);
+  AssertTrue(v2.Capacity = 256);
   AssertTrue(v2.IsEmpty);
   v1[110] := True;
   v2[250] := True;
@@ -2279,12 +2403,44 @@ begin
   AssertFalse(v1[115]);
 end;
 
+procedure TBoolVectorTest.Subtract1;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.Capacity := 160;
+  v2.Capacity := 170;
+  v1[11] := True;
+  v1[129] := True;
+  v2[11] := True;
+  v2[110] := True;
+  v2[169] := True;
+  v1.Subtract(v2);
+  AssertTrue(v1.PopCount = 1);
+  AssertTrue(v1[129]);
+  v2.Subtract(v1);
+  AssertTrue(v2.PopCount = 3);
+  AssertTrue(v2[11]);
+  AssertTrue(v2[110]);
+  AssertTrue(v2[169]);
+  v2[190] := True;
+  v1.Capacity := 224;
+  v1[11] := True;
+  v1[110] := True;
+  v1[129] := True;
+  v1[169] := True;
+  v1[190] := True;
+  v2.Subtract(v1);
+  AssertTrue(v2.IsEmpty);
+  v1.Subtract(v1);
+  AssertTrue(v1.IsEmpty);
+end;
+
 procedure TBoolVectorTest.Intersect;
 var
   v1, v2: TBoolVector;
 begin
-  v1.Size := 128;
-  v2.Size := 256;
+  v1.Capacity := 128;
+  v2.Capacity := 256;
   v1[110] := True;
   v2[250] := True;
   v1.Intersect(v2);
@@ -2296,6 +2452,33 @@ begin
   v2.Intersect(v1);
   AssertTrue(v2.PopCount = 1);
   AssertTrue(v2[110]);
+end;
+
+procedure TBoolVectorTest.Intersect1;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.Capacity := 160;
+  v2.Capacity := 170;
+  v1[11] := True;
+  v1[129] := True;
+  v2[11] := True;
+  v2[110] := True;
+  v2[152] := True;
+  v2[169] := True;
+  v1.Intersect(v1);
+  AssertTrue(v1.PopCount = 2);
+  AssertTrue(v1[11]);
+  AssertTrue(v1[129]);
+  v1.Intersect(v2);
+  AssertTrue(v1.PopCount = 1);
+  AssertTrue(v1[11]);
+  v1.Capacity := 180;
+  v1[169] := True;
+  v2.Intersect(v1);
+  AssertTrue(v2.PopCount = 2);
+  AssertTrue(v2[11]);
+  AssertTrue(v2[169]);
 end;
 
 initialization
