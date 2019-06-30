@@ -829,7 +829,7 @@ var
   p: PAdjItem;
 begin
   InDegree := aDegree;
-  OutList.Size := aVertexCount;
+  OutList.Capacity := aVertexCount;
   for p in aAdjList^ do
     OutList[p^.Key] := True;
 end;
@@ -917,7 +917,7 @@ begin
       if FMatrix[aNode].OutList.IntersectionPop(FVacant) > 0 then
         begin
           Cand := FMatrix[aNode].OutList.Intersection(FVacant);
-          Saved.Size := FNodeCount;
+          Saved.Capacity := FNodeCount;
           for I in Cand do
             begin
               Saved[I] := FMatrix[I].OutList[aNode];
@@ -1642,7 +1642,7 @@ var
     PreOrd := CreateIntArray;
     SubTreeSize := CreateIntArray(0);
     Parents := CreateIntArray;
-    Visited.Size := VertexCount;
+    Visited.Capacity := VertexCount;
     SubTreeSize[aSrc] := 1;
     Visited[aSrc] := True;
     PreOrd[aSrc] := Counter;
