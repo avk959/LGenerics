@@ -65,6 +65,8 @@ type
   TOnPassEdge      = procedure(aSrc, aDst: SizeInt) of object;
   TNestPassEdge    = procedure(aSrc, aDst: SizeInt) is nested;
   TOnSetFound      = procedure(const aSet: TIntArray; var aCancel: Boolean) of object;
+  TNodeMapTest     = function(aNode, aImage: SizeInt): Boolean of object;
+  TNestNodeMapTest = function(aNode, aImage: SizeInt): Boolean is nested;
   TCost            = Int64;
   TVertexColor     = type Byte;
 
@@ -98,7 +100,7 @@ type
   TGraphMagic           = string[8];
 
 const
-  GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';
+  GRAPH_MAGIC: TGraphMagic = 'LGrphTyp';  //'LGraph'
   GRAPH_HEADER_VERSION     = 2;
   GRAPH_ADJLIST_GROW       = 8;
   DENSE_CUTOFF             = 0.7;  //???
@@ -145,6 +147,7 @@ type
     function  NonEmpty: Boolean; inline;
     procedure Clear;
     procedure MakeEmpty;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
     function  Contains(aDst: SizeInt): Boolean; inline;
     function  ContainsAll(constref aList: TGAdjList): Boolean;
@@ -152,6 +155,7 @@ type
     function  Find(aDst: SizeInt): PAdjItem;
     function  FindFirst(out aValue: SizeInt): Boolean;
     function  Add(constref aItem: TAdjItem): Boolean;
+    procedure Append(constref aItem: TAdjItem);
     function  Remove(aDst: SizeInt): Boolean; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
@@ -213,7 +217,7 @@ type
 
     TStreamHeader = packed record
       Magic: TGraphMagic;
-      Version: Byte;
+      Version: Byte;       // word ???
       TitleLen,
       DescriptionLen: Word;
       VertexCount,
@@ -274,6 +278,7 @@ type
     procedure AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
     procedure AssignTree(aGraph: TGSparseGraph; const aTree: TIntArray);
     procedure AssignEdges(aGraph: TGSparseGraph; const aEdges: TIntEdgeArray);
+    function  IsNodePermutation(const aMap: TIntArray): Boolean;
     function  DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
     function  DoAddVertex(constref aVertex: TVertex; out aIndex: SizeInt): Boolean; virtual; abstract;
     procedure DoRemoveVertex(aIndex: SizeInt); virtual; abstract;
@@ -321,7 +326,7 @@ type
       FGraph: TGSparseGraph;
       FSource: SizeInt;
     public
-      function GetEnumerator: TIncidentEnumerator; inline;
+      function GetEnumerator: TIncidentEnumerator;
     end;
 
     TVertexEnumerator = record
@@ -331,7 +336,7 @@ type
       FLastIndex: SizeInt;
       function  GetCurrent: TVertex;
     public
-      function  MoveNext: Boolean; inline;
+      function  MoveNext: Boolean;
       procedure Reset; inline;
       property  Current: TVertex read GetCurrent;
     end;
@@ -340,7 +345,7 @@ type
     private
       FGraph: TGSparseGraph;
     public
-      function GetEnumerator: TVertexEnumerator; inline;
+      function GetEnumerator: TVertexEnumerator;
     end;
 
     TEdgeEnumerator = record
@@ -350,7 +355,7 @@ type
       FCurrIndex,
       FLastIndex: SizeInt;
       FEnumDone: Boolean;
-      function  GetCurrent: TEdge;
+      function  GetCurrent: TEdge; inline;
     public
       function  MoveNext: Boolean;
       procedure Reset;
@@ -361,7 +366,7 @@ type
     private
       FGraph: TGSparseGraph;
     public
-      function GetEnumerator: TEdgeEnumerator; inline;
+      function GetEnumerator: TEdgeEnumerator;
     end;
 
   public
@@ -427,9 +432,9 @@ type
     function  IncidentEdges(constref aVertex: TVertex): TIncidentEdges; inline;
     function  IncidentEdgesI(aIndex: SizeInt): TIncidentEdges;
   { enumerates all vertices }
-    function  Vertices: TVertices; inline;
+    function  Vertices: TVertices;
   { enumerates all edges }
-    function  Edges: TEdges; inline;
+    function  Edges: TEdges;
     function  GetEdgeData(constref aSrc, aDst: TVertex; out aValue: TEdgeData): Boolean; inline;
     function  GetEdgeDataI(aSrc, aDst: SizeInt; out aValue: TEdgeData): Boolean;
     function  SetEdgeData(constref aSrc, aDst: TVertex; constref aValue: TEdgeData): Boolean; inline;
@@ -905,6 +910,12 @@ begin
   FCount := 0;
 end;
 
+procedure TGAdjList.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue > Capacity then
+    System.SetLength(FItems, aValue);
+end;
+
 procedure TGAdjList.TrimToFit;
 begin
   System.SetLength(FItems, Count);
@@ -991,6 +1002,14 @@ begin
       FItems[Count] := aItem;
       Inc(FCount);
     end;
+end;
+
+procedure TGAdjList.Append(constref aItem: TAdjItem);
+begin
+  if Count >= Capacity then
+    Expand;
+  FItems[Count] := aItem;
+  Inc(FCount);
 end;
 
 function TGAdjList.Remove(aDst: SizeInt): Boolean;
@@ -1411,7 +1430,7 @@ begin
   System.SetLength(Result{%H-}, VertexCount);
   for I := 0 to System.High(Result) do
     begin
-      Result[I].Size := VertexCount;
+      Result[I].Capacity := VertexCount;
       for p in AdjLists[I]^ do
         Result[I][p^.Key] := True;
     end;
@@ -1481,20 +1500,20 @@ end;
 
 procedure TGSparseGraph.AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
 var
-  VertSet: TBitVector;
+  vSet: TBitVector;
   I: SizeInt;
   p: PAdjItem;
 begin
   Clear;
-  VertSet.Size := aGraph.VertexCount;
+  vSet.Size := aGraph.VertexCount;
   for I in aList do
     begin
       {%H-}AddVertex(aGraph[I]);
-      VertSet[I] := True;
+      vSet[I] := True;
     end;
   for I in aList do
     for p in aGraph.AdjLists[I]^ do
-      if VertSet[p^.Key] then
+      if vSet[p^.Key] then
         AddEdge(aGraph[I], aGraph[p^.Key], p^.Data);
 end;
 
@@ -1519,6 +1538,28 @@ begin
   Clear;
   for e in aEdges do
     AddEdge(aGraph[e.Source], aGraph[e.Destination], aGraph.GetEdgeDataPtr(e.Source, e.Destination)^);
+end;
+
+function TGSparseGraph.IsNodePermutation(const aMap: TIntArray): Boolean;
+var
+  vSet: TBitVector;
+  I, Curr: SizeInt;
+  vCount: SizeUInt;
+begin
+  if aMap.Length <> VertexCount then
+    exit(False);
+  vSet.Size := VertexCount;
+  vCount := SizeUInt(VertexCount);
+  for I := 0 to System.High(aMap) do
+    begin
+      Curr := aMap[I];
+      if SizeUInt(Curr) >= vCount then
+        exit(False);
+      if vSet[Curr] then
+        exit(False);
+      vSet[Curr] := True;
+    end;
+  Result := True;
 end;
 
 function TGSparseGraph.DoFindMetrics(out aRadius, aDiameter: SizeInt): TIntArray;
@@ -2202,13 +2243,13 @@ begin
   Result := vFree.IsEmpty;
 end;
 
-function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnWhite, aOnGray: TOnNextNode;
+function TGSparseGraph.DfsTraversal(constref aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := DfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
 end;
 {$PUSH}{$MACRO ON}
-function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TOnNextNode;
+function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 var
   Stack: TIntArray;
@@ -2309,13 +2350,13 @@ begin
       end;
 end;
 
-function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnWhite, aOnGray: TOnNextNode;
+function TGSparseGraph.BfsTraversal(constref aRoot: TVertex; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 begin
   Result := BfsTraversalI(IndexOf(aRoot), aOnWhite, aOnGray, aOnDone);
 end;
 {$PUSH}{$MACRO ON}
-function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TOnNextNode;
+function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode; aOnGray: TOnNextNode;
   aOnDone: TOnNodeDone): SizeInt;
 var
   Queue: TIntArray;
@@ -2703,7 +2744,7 @@ begin
   System.SetLength(FColMin, FMatrixSize);
   System.SetLength(FZeros, FMatrixSize);
   for I := 0 to Pred(FMatrixSize) do
-    FZeros[I].Size := FMatrixSize;
+    FZeros[I].Capacity := FMatrixSize;
   FStartTime := Now;
   FCancelled := False;
 end;
@@ -5011,7 +5052,7 @@ var
 begin
   FGraph := aGraph;
   FMatchCount := 0;
-  FWhites.Size := aGraph.VertexCount;
+  FWhites.Capacity := aGraph.VertexCount;
   if w.Length <= g.Length then
     for I in w do
       FWhites[I] := True
@@ -5043,7 +5084,7 @@ begin
   FQueue := Pointer(FBuffer);
   FMates := FQueue + aGraph.VertexCount;
   FParents := FMates + aGraph.VertexCount;
-  FVisited.Size := aGraph.VertexCount;
+  FVisited.Capacity := aGraph.VertexCount;
 end;
 
 {$PUSH}{$MACRO ON}
@@ -5644,8 +5685,8 @@ begin
   aWeights := CreateWeightArray(VertCount);
   Dist := g.CreateIntArray;
   aTree := g.CreateIntArray;
-  CurrPass.Size := VertCount;
-  NextPass.Size := VertCount;
+  CurrPass.Capacity := VertCount;
+  NextPass.Capacity := VertCount;
   aWeights[aSrc] := 0;
   NextPass[aSrc] := True;
   Dist[aSrc] := 0;
