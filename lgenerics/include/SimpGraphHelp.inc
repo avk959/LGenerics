@@ -117,7 +117,7 @@ begin
   System.SetLength(FMatrix, aGraph.VertexCount);
   for I := 0 to Pred(aGraph.VertexCount) do
     begin
-      FMatrix[I].Size := aGraph.VertexCount;
+      FMatrix[I].Capacity := aGraph.VertexCount;
       p := aGraph.AdjLists[FNodes[I]];
       for J := 0 to Pred(aGraph.VertexCount) do
         if (I <> J) and (p^.Contains(FNodes[J]) xor aComplement) then
@@ -152,9 +152,10 @@ begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
   SortMatrixByWidth(aGraph, False);
+  //SortMatrixByDegree(aGraph, False);
   FRecentBest := aGraph.GreedyMaxClique;
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSet.Size := aGraph.VertexCount;
+  FCurrSet.Capacity := aGraph.VertexCount;
   Extend(Cand);
   Result := FRecentBest;
   aExact := not FCancelled;
@@ -171,7 +172,7 @@ begin
   SortMatrixByWidth(aGraph, True);
   FRecentBest := aGraph.GreedyMIS;
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSet.Size := aGraph.VertexCount;
+  FCurrSet.Capacity := aGraph.VertexCount;
   Extend(Cand);
   Result := FRecentBest;
   aExact := not FCancelled;
@@ -184,7 +185,7 @@ begin
   SortMatrixByDegree(aGraph, False);
   Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSet.Size := aGraph.VertexCount;
+  FCurrSet.Capacity := aGraph.VertexCount;
   FOnFind := aOnFind;
   FCancelled := False;
   Extend(Sub, Cand);
@@ -197,7 +198,7 @@ begin
   SortMatrixByDegree(aGraph, True);
   Sub.InitRange(aGraph.VertexCount);
   Cand.InitRange(aGraph.VertexCount);
-  FCurrSet.Size := aGraph.VertexCount;
+  FCurrSet.Capacity := aGraph.VertexCount;
   FOnFind := aOnFind;
   FCancelled := False;
   Extend(Sub, Cand);
@@ -521,10 +522,10 @@ begin
   FNodes := aGraph.SortNodesByDegree(soDesc);
   System.SetLength(FMatrix, System.Length(FNodes));
   aCand.InitRange(FNodes.Length);
-  FCurrSet.Size := FNodes.Length;
+  FCurrSet.Capacity := FNodes.Length;
   for I := 0 to System.High(FNodes) do
     begin
-      FMatrix[I].Size := FNodes.Length;
+      FMatrix[I].Capacity := FNodes.Length;
       pList := aGraph.AdjLists[FNodes[I]];
       Degree := 0;
       for J := 0 to System.High(FNodes) do
@@ -774,11 +775,6 @@ begin
   Inc(Degree);
 end;
 
-function TGSimpleGraph.TExactColor.TNode.Available(aColor: Integer): Boolean;
-begin
-  Result := AdjColors[Pred(aColor)] = 0;
-end;
-
 { TGSimpleGraph.TExactColor }
 
 function TGSimpleGraph.TExactColor.InitLowBound: SizeInt;
@@ -822,13 +818,16 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.TExactColor.PickColor(aIndex, aColor: SizeInt);
+function TGSimpleGraph.TExactColor.PickColor(aIndex, aColor: SizeInt): Boolean;
 var
   p: PAdjItem;
 begin
+  if FNodes[aIndex].AdjColors[Pred(aColor)] <> 0 then
+    exit(False);
   FColorMap[aIndex] := aColor;
   for p in FGraph.AdjLists[aIndex]^ do
     FNodes[p^.Key].NeighbPickColor(aColor);
+  Result := True;
 end;
 
 procedure TGSimpleGraph.TExactColor.DropColor(aIndex, aColor: SizeInt);
@@ -857,41 +856,36 @@ begin
   Result := aNode >= 0;
 end;
 
-procedure TGSimpleGraph.TExactColor.CheckSolution(aMaxColor: SizeInt);
-begin
-  if aMaxColor < FUpBound then
-    begin
-      FUpBound := aMaxColor;
-      FRecentBest := System.Copy(FColorMap);
-    end;
-end;
-
-function TGSimpleGraph.TExactColor.DSatur(aMaxColor: SizeInt): SizeInt;
+procedure TGSimpleGraph.TExactColor.DSatur(aMaxColor: SizeInt);
 var
   CurrNode, Color: SizeInt;
 begin
   if TimeOut or (aMaxColor >= FUpBound) or (FUpBound <= FLowBound) then
-    exit(FUpBound);
+    exit;
   if not SelectNext(CurrNode) then
-    exit(aMaxColor);
+    begin
+      if aMaxColor < FUpBound then
+        begin
+          FUpBound := aMaxColor;
+          FRecentBest := System.Copy(FColorMap);
+        end;
+      exit;
+    end;
   FAchromatic[CurrNode] := False;
   for Color := 1 to aMaxColor do
-    if FNodes[CurrNode].Available(Color) then
+    if PickColor(CurrNode, Color) then
       begin
-        PickColor(CurrNode, Color);
-        CheckSolution(DSatur(aMaxColor));
+        DSatur(aMaxColor);
         DropColor(CurrNode, Color);
         if aMaxColor >= FUpBound  then
           break;
       end;
-  if aMaxColor < Pred(FUpBound) then
+  if (aMaxColor < Pred(FUpBound)) and PickColor(CurrNode, Succ(aMaxColor)) then
     begin
-      PickColor(CurrNode, Succ(aMaxColor));
-      CheckSolution(DSatur(Succ(aMaxColor)));
+      DSatur(Succ(aMaxColor));
       DropColor(CurrNode, Succ(aMaxColor));
     end;
   FAchromatic[CurrNode] := True;
-  Result := FUpBound;
 end;
 
 function TGSimpleGraph.TExactColor.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
@@ -905,7 +899,7 @@ begin
   FUpBound := FGraph.GreedyColorRlf(FRecentBest);
   FLowBound := InitLowBound;
   if not FCancelled and (FLowBound < FUpBound) then
-    CheckSolution(DSatur(FLowBound));
+    DSatur(FLowBound);
   aExact := not FCancelled;
   Result := FUpBound;
   aColors := FRecentBest;
@@ -925,7 +919,7 @@ begin
   FStartTime := Now;
   Lb := InitLowBound;
   if (Lb < FUpBound) and not FCancelled then
-    CheckSolution(DSatur(Lb));
+    DSatur(Lb);
   if FLowBound >= FUpBound then
     begin
       aColors := FRecentBest;
@@ -950,7 +944,7 @@ begin
   FStartTime := Now;
   FColorMap := System.Copy(aColors);
   InitComplete;
-  CheckSolution(DSatur(FLowBound));
+  DSatur(FLowBound);
   Result := not FCancelled and (FLowBound >= FUpBound);
   if Result then
     aColors := FRecentBest;
@@ -1013,7 +1007,7 @@ begin
     Nodes[I] := TNode.Create(I, aGraph.AdjLists[I]^.Count);
   aColors.Length := aGraph.VertexCount;
   Achromatic.InitRange(aGraph.VertexCount);
-  InQueue.Size := aGraph.VertexCount;
+  InQueue.Capacity := aGraph.VertexCount;
   Queue := TQueue.Create(aGraph.VertexCount);
   Result := 0;
   while Achromatic.NonEmpty do
@@ -1128,7 +1122,7 @@ begin
       if FMatrix[aNode].Intersecting(FVacant) then
         begin
           Cand := FMatrix[aNode].Intersection(FVacant);
-          Saved.Size := FNodeCount;
+          Saved.Capacity := FNodeCount;
           for I in Cand do
             begin
               Saved[I] := FMatrix[I][aNode];
@@ -1390,7 +1384,7 @@ var
 begin
   FMatchCount := 0;
   FGraph := aGraph;
-  FWhites.Size := aGraph.VertexCount;
+  FWhites.Capacity := aGraph.VertexCount;
   FVisited.Size := aGraph.VertexCount;
   if System.Length(w) <= System.Length(g) then
     for I in w do
@@ -1817,7 +1811,7 @@ begin
     FCuts := nil;
   FQueue := TQueue.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
+  FInQueue.Capacity := aGraph.VertexCount;
   FBestCut := High(SizeInt);
 end;
 
@@ -2352,7 +2346,7 @@ procedure TGSimpleGraph.TPlanarHelper.CreateOrientation;
 var
   I: SizeInt;
 begin
-  CreateDigraphR;
+  CreateDigraph;
   FLowPt2.Length := FGraph.EdgeCount;
   for I in FRoots do
     begin
@@ -2798,6 +2792,5 @@ begin
   CreateEmbedding(aEmbed);
   Result := True;
 end;
-
 
 

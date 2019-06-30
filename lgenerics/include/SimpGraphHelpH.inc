@@ -143,7 +143,6 @@ type
       constructor Create(aDegree, aUpperBound: SizeInt);
       procedure NeighbPickColor(aColor: Integer); inline;
       procedure NeighbDropColor(aColor: Integer); inline;
-      function  Available(aColor: Integer): Boolean; inline;
     end;
 
   var
@@ -156,11 +155,10 @@ type
     FNodeCount: SizeInt;
     function  InitLowBound: SizeInt;
     procedure InitComplete;
-    procedure PickColor(aIndex, aColor: SizeInt);
+    function  PickColor(aIndex, aColor: SizeInt): Boolean;
     procedure DropColor(aIndex, aColor: SizeInt);
     function  SelectNext(out aNode: SizeInt): Boolean;
-    procedure CheckSolution(aMaxColor: SizeInt); inline;
-    function  DSatur(aMaxColor: SizeInt): SizeInt;
+    procedure DSatur(aMaxColor: SizeInt);
   public
     function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function IsColorable(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
@@ -437,4 +435,5 @@ type
     function  GraphIsPlanar(aGraph: TGSimpleGraph): Boolean;
     function  GraphIsPlanar(aGraph: TGSimpleGraph; out aEmbed: TPlanarEmbedding): Boolean;
   end;
+
 
