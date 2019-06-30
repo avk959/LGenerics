@@ -181,7 +181,7 @@
 
   var
     FArray: TArray;
-    FCurrIndex: SizeInt;
+    FPosition: SizeInt;
     function  GetCurrent: T; override;
   public
     constructor Create(const a: TArray);

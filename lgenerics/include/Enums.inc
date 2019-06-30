@@ -247,25 +247,25 @@ end;
 
 function TGArrayReverse.GetCurrent: T;
 begin
-  Result := FArray[FCurrIndex];
+  Result := FArray[FPosition];
 end;
 
 constructor TGArrayReverse.Create(const a: TArray);
 begin
   FEnumerable := TArrayEnumerable.Create(Self);
   FArray := a;
-  FCurrIndex := System.Length(a);
+  FPosition := System.Length(a);
 end;
 
 function TGArrayReverse.MoveNext: Boolean;
 begin
-  Result := FCurrIndex > System.Low(FArray);
-  FCurrIndex -= Ord(Result);
+  Result := FPosition > System.Low(FArray);
+  FPosition -= Ord(Result);
 end;
 
 procedure TGArrayReverse.Reset;
 begin
-  FCurrIndex := System.Length(FArray);
+  FPosition := System.Length(FArray);
 end;
 
 { TGArrayEnumerator }
