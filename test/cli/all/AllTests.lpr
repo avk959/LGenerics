@@ -3,6 +3,9 @@ program AllTests;
 {$mode objfpc}{$H+}
 
 uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
   Classes, SysUtils, consoletestrunner,
   LGUtilsTest,
   LGArrayHelpUtilTest,
