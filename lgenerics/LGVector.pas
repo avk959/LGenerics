@@ -326,11 +326,10 @@ type
 
     TEnumerator = record
     private
-      FValue: PBoolVector;
+      FVector: PBoolVector;
       FBitIndex,
       FLimbIndex: SizeInt;
       FCurrLimb: SizeUInt;
-      FInCycle: Boolean;
       function GetCurrent: SizeInt; inline;
       function FindFirst: Boolean;
     public
@@ -340,13 +339,12 @@ type
 
     TReverseEnumerator = record
     private
-      FValue: PBoolVector;
+      FVector: PBoolVector;
       FBitIndex,
       FLimbIndex: SizeInt;
       FCurrLimb: SizeUInt;
-      FInCycle: Boolean;
       function GetCurrent: SizeInt; inline;
-      function FindFirst: Boolean;
+      function FindLast: Boolean;
     public
       function MoveNext: Boolean;
       property Current: SizeInt read GetCurrent;
@@ -354,7 +352,7 @@ type
 
     TReverse = record
     private
-      FValue: PBoolVector;
+      FVector: PBoolVector;
     public
       function GetEnumerator: TReverseEnumerator; inline;
     end;
@@ -366,10 +364,10 @@ type
   var
     FBits: TBits;
     function  GetBit(aIndex: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt; inline;
+    function  GetCapacity: SizeInt; inline;
     procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
-    procedure SetSize(aValue: SizeInt);
-    class operator  Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
+    procedure SetCapacity(aValue: SizeInt);
+    class operator Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
   public
   type
     TIntArray = array of SizeInt;
@@ -405,7 +403,7 @@ type
     procedure Intersect(constref aValue: TBoolVector);
     function  Intersection(constref aValue: TBoolVector): TBoolVector; inline;
   { currently size can only grow and is always multiple of BitsizeOf(SizeUInt) }
-    property  Size: SizeInt read GetSize write SetSize;
+    property  Capacity: SizeInt read GetCapacity write SetCapacity;
   { returns count of set bits }
     function  PopCount: SizeInt;
   { read/write bit with (index < 0) or (index >= Size) will raise exception }
@@ -1893,27 +1891,21 @@ end;
 
 function TBoolVector.TEnumerator.FindFirst: Boolean;
 var
-  I: SizeInt;
+  FirstBit: SizeInt;
 begin
-  I := FValue^.Bsf;
-  if I >= 0 then
+  FirstBit := FVector^.Bsf;
+  Result := FirstBit >= 0;
+  if Result then
     begin
-      FLimbIndex := I shr INT_SIZE_LOG;
-      FBitIndex := I and INT_SIZE_MASK;
-      FCurrLimb := FValue^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
-      Result := True;
-    end
-  else
-    begin
-      FLimbIndex := System.Length(FValue^.FBits);
-      FBitIndex := BitsizeOf(SizeUInt);
-      Result := False;
+      FLimbIndex := FirstBit shr INT_SIZE_LOG;
+      FBitIndex := FirstBit and INT_SIZE_MASK;
+      FCurrLimb := FVector^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
     end;
 end;
 
 function TBoolVector.TEnumerator.MoveNext: Boolean;
 begin
-  if FInCycle then
+  if FLimbIndex >= 0 then
     repeat
       {$IF DEFINED(CPU64)}
         FBitIndex := ShortInt(BsfQWord(FCurrLimb));
@@ -1927,17 +1919,14 @@ begin
         FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex)
       else
         begin
-          if FLimbIndex >= System.High(FValue^.FBits) then
+          if FLimbIndex >= Pred(System.Length(FVector^.FBits)) then
             exit(False);
           Inc(FLimbIndex);
-          FCurrLimb := FValue^.FBits[FLimbIndex];
+          FCurrLimb := FVector^.FBits[FLimbIndex];
         end;
     until Result
   else
-    begin
-      Result := FindFirst;
-      FInCycle := True;
-    end;
+    Result := FindFirst;
 end;
 
 { TBoolVector.TReverseEnumerator }
@@ -1947,29 +1936,23 @@ begin
   Result := FLimbIndex shl INT_SIZE_LOG + FBitIndex;
 end;
 
-function TBoolVector.TReverseEnumerator.FindFirst: Boolean;
+function TBoolVector.TReverseEnumerator.FindLast: Boolean;
 var
-  I: SizeInt;
+  LastBit: SizeInt;
 begin
-  I := FValue^.Bsr;
-  if I >= 0 then
+  LastBit := FVector^.Bsr;
+  Result := LastBit >= 0;
+  if Result then
     begin
-      FLimbIndex := I shr INT_SIZE_LOG;
-      FBitIndex := I and INT_SIZE_MASK;
-      FCurrLimb := FValue^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);;
-      Result := True;
-    end
-  else
-    begin
-      FLimbIndex := -1;
-      FBitIndex := BitsizeOf(SizeUInt);
-      Result := False;
+      FLimbIndex := LastBit shr INT_SIZE_LOG;
+      FBitIndex := LastBit and INT_SIZE_MASK;
+      FCurrLimb := FVector^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
     end;
 end;
 
 function TBoolVector.TReverseEnumerator.MoveNext: Boolean;
 begin
-  if FInCycle then
+  if FLimbIndex >= 0 then
     repeat
       {$IF DEFINED(CPU64)}
         FBitIndex := ShortInt(BsrQWord(FCurrLimb));
@@ -1986,22 +1969,20 @@ begin
           if FLimbIndex <= 0 then
             exit(False);
           Dec(FLimbIndex);
-          FCurrLimb := FValue^.FBits[FLimbIndex];
+          FCurrLimb := FVector^.FBits[FLimbIndex];
         end;
     until Result
   else
-    begin
-      Result := FindFirst;
-      FInCycle := True;
-    end;
+    Result := FindLast;
 end;
 
 { TBoolVector.TReverse }
 
 function TBoolVector.TReverse.GetEnumerator: TReverseEnumerator;
 begin
-  Result.FValue := FValue;
-  Result.FInCycle := False;
+  Result.FVector := FVector;
+  Result.FLimbIndex := NULL_INDEX;
+  Result.FBitIndex := NULL_INDEX;
 end;
 
 { TBoolVector }
@@ -2014,7 +1995,7 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TBoolVector.GetSize: SizeInt;
+function TBoolVector.GetCapacity: SizeInt;
 begin
   Result := System.Length(FBits) shl INT_SIZE_LOG;
 end;
@@ -2034,16 +2015,16 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-procedure TBoolVector.SetSize(aValue: SizeInt);
+procedure TBoolVector.SetCapacity(aValue: SizeInt);
 var
-  OldLen: SizeInt;
+  OldCapacity: SizeInt;
 begin
-  OldLen := Size;
-  if aValue > OldLen then
+  OldCapacity := Capacity;
+  if aValue > OldCapacity then
     begin
       aValue := aValue shr INT_SIZE_LOG + Ord(aValue and INT_SIZE_MASK <> 0);
       System.SetLength(FBits, aValue);
-      System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
+      System.FillChar(FBits[OldCapacity], (aValue - OldCapacity) * SizeOf(SizeUInt), 0);
     end;
 end;
 
@@ -2070,13 +2051,14 @@ end;
 
 function TBoolVector.GetEnumerator: TEnumerator;
 begin
-  Result.FValue := @Self;
-  Result.FInCycle := False;
+  Result.FVector := @Self;
+  Result.FLimbIndex := NULL_INDEX;
+  Result.FBitIndex := NULL_INDEX;
 end;
 
 function TBoolVector.Reverse: TReverse;
 begin
-  Result.FValue := @Self;
+  Result.FVector := @Self;
 end;
 
 function TBoolVector.ToArray: TIntArray;
@@ -2094,14 +2076,12 @@ end;
 
 procedure TBoolVector.ClearBits;
 begin
-  if FBits <> nil then
-    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
+  System.FillChar(Pointer(FBits)^, System.Length(FBits) * SizeOf(SizeUInt), 0);
 end;
 
 procedure TBoolVector.SetBits;
 begin
-  if FBits <> nil then
-    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), $ff);
+  System.FillChar(Pointer(FBits)^, System.Length(FBits) * SizeOf(SizeUInt), $ff);
 end;
 
 function TBoolVector.IsEmpty: Boolean;
@@ -2142,7 +2122,7 @@ begin
         {$ELSE}
           I shl INT_SIZE_LOG + ShortInt(BsfWord(FBits[I]))
         {$ENDIF});
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 function TBoolVector.Bsr: SizeInt;
@@ -2159,7 +2139,7 @@ begin
         {$ELSE}
           I shl INT_SIZE_LOG + ShortInt(BsrWord(FBits[I]))
         {$ENDIF});
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 function TBoolVector.Lob: SizeInt;
@@ -2176,13 +2156,15 @@ begin
         {$ELSE}
           I shl INT_SIZE_LOG + ShortInt(BsrWord(not FBits[I]))
         {$ENDIF});
-  Result := -1;
+  Result := NULL_INDEX;
 end;
 
 function TBoolVector.Intersecting(constref aValue: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
+  if @Self = @aValue then
+    exit(NonEmpty);
   for I := 0 to Math.Min(System.High(FBits), System.High(aValue.FBits)) do
     if FBits[I] and aValue.FBits[I] <> 0 then
       exit(True);
@@ -2193,7 +2175,9 @@ function TBoolVector.IntersectionPop(constref aValue: TBoolVector): SizeInt;
 var
   I, Len: SizeInt;
 begin
-  Len := Math.Min(System.High(FBits), System.High(aValue.FBits));
+  if @Self = @aValue then
+    exit(PopCount);
+  Len := Math.Min(System.Length(FBits), System.Length(aValue.FBits));
   I := 0;
   Result := 0;
   while I <= Len - 4 do
@@ -2204,14 +2188,26 @@ begin
                 SizeInt(PopCnt(FBits[I+3] and aValue.FBits[I+3]));
       Inc(I, 4);
     end;
-  for I := I to Len do
-    Result += SizeInt(PopCnt(FBits[I] and aValue.FBits[I]));
+  case Len - I of
+    1:
+      Result += SizeInt(PopCnt(FBits[I] and aValue.FBits[I]));
+    2:
+      Result += SizeInt(PopCnt(FBits[I  ] and aValue.FBits[I  ])) +
+                SizeInt(PopCnt(FBits[I+1] and aValue.FBits[I+1]));
+    3:
+      Result += SizeInt(PopCnt(FBits[I  ] and aValue.FBits[I  ])) +
+                SizeInt(PopCnt(FBits[I+1] and aValue.FBits[I+1])) +
+                SizeInt(PopCnt(FBits[I+2] and aValue.FBits[I+2]));
+  else
+  end;
 end;
 
 function TBoolVector.Contains(constref aValue: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
+  if @Self = @aValue then
+    exit(True);
   for I := 0 to Math.Min(System.High(FBits), System.High(aValue.FBits)) do
     if FBits[I] or aValue.FBits[I] <> FBits[I] then
       exit(False);
@@ -2225,7 +2221,9 @@ function TBoolVector.JoinGain(constref aValue: TBoolVector): SizeInt;
 var
   I, Len: SizeInt;
 begin
-  Len := Math.Min(System.High(FBits), System.High(aValue.FBits));
+  if @Self = @aValue then
+    exit(0);
+  Len := Math.Min(System.Length(FBits), System.Length(aValue.FBits));
   I := 0;
   Result := 0;
   while I <= Len - 4 do
@@ -2236,11 +2234,27 @@ begin
                 SizeInt(PopCnt(not FBits[I+3] and aValue.FBits[I+3]));
       Inc(I, 4);
     end;
-  while I <= Len do
-    begin
-      Result += SizeInt(PopCnt(not FBits[I] and aValue.FBits[I]));
-      Inc(I);
-    end;
+  case Len - I of
+    1:
+      begin
+        Result += SizeInt(PopCnt(not FBits[I] and aValue.FBits[I]));
+        I += 1;
+      end;
+    2:
+      begin
+        Result += SizeInt(PopCnt(not FBits[I  ] and aValue.FBits[I  ])) +
+                  SizeInt(PopCnt(not FBits[I+1] and aValue.FBits[I+1]));
+        I += 2;
+      end;
+    3:
+      begin
+        Result += SizeInt(PopCnt(not FBits[I  ] and aValue.FBits[I  ])) +
+                  SizeInt(PopCnt(not FBits[I+1] and aValue.FBits[I+1])) +
+                  SizeInt(PopCnt(not FBits[I+2] and aValue.FBits[I+2]));
+        I += 3;
+      end;
+  else
+  end;
   for I := I to System.High(aValue.FBits) do
     Result += SizeInt(PopCnt(aValue.FBits[I]));
 end;
@@ -2249,10 +2263,12 @@ procedure TBoolVector.Join(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
+  if @Self = @aValue then
+    exit;
   I := Succ(aValue.Bsr);
-  if I > Size then
-    Size := I;
-  Len := Pred(I shr INT_SIZE_LOG + Ord(I and INT_SIZE_MASK <> 0));
+  if I > Capacity then
+    Capacity := I;
+  Len := I shr INT_SIZE_LOG + Ord(I and INT_SIZE_MASK <> 0);
   I := 0;
   while I <= Len - 4 do
     begin
@@ -2262,8 +2278,22 @@ begin
       FBits[I+3] := FBits[I+3] or aValue.FBits[I+3];
       Inc(I, 4);
     end;
-  for I := I to Len do
-    FBits[I] := FBits[I] or aValue.FBits[I];
+  case Len - I of
+    1:
+      FBits[I  ] := FBits[I  ] or aValue.FBits[I];
+    2:
+      begin
+        FBits[I  ] := FBits[I  ] or aValue.FBits[I  ];
+        FBits[I+1] := FBits[I+1] or aValue.FBits[I+1];
+      end;
+    3:
+      begin
+        FBits[I  ] := FBits[I  ] or aValue.FBits[I  ];
+        FBits[I+1] := FBits[I+1] or aValue.FBits[I+1];
+        FBits[I+2] := FBits[I+2] or aValue.FBits[I+2];
+      end;
+  else
+  end;
 end;
 
 function TBoolVector.Union(constref aValue: TBoolVector): TBoolVector;
@@ -2276,7 +2306,12 @@ procedure TBoolVector.Subtract(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
-  Len := Math.Min(System.High(FBits), System.High(aValue.FBits));
+  if @Self = @aValue then
+    begin
+      ClearBits;
+      exit;
+    end;
+  Len := Math.Min(System.Length(FBits), System.Length(aValue.FBits));
   I := 0;
   while I <= Len - 4 do
     begin
@@ -2286,8 +2321,22 @@ begin
       FBits[I+3] := FBits[I+3] and not aValue.FBits[I+3];
       Inc(I, 4);
     end;
-  for I := I to Len do
-    FBits[I] := FBits[I] and not aValue.FBits[I];
+  case Len - I of
+    1:
+      FBits[I  ] := FBits[I  ] and not aValue.FBits[I];
+    2:
+      begin
+        FBits[I  ] := FBits[I  ] and not aValue.FBits[I  ];
+        FBits[I+1] := FBits[I+1] and not aValue.FBits[I+1];
+      end;
+    3:
+      begin
+        FBits[I  ] := FBits[I  ] and not aValue.FBits[I  ];
+        FBits[I+1] := FBits[I+1] and not aValue.FBits[I+1];
+        FBits[I+2] := FBits[I+2] and not aValue.FBits[I+2];
+      end;
+  else
+  end;
 end;
 
 function TBoolVector.Difference(constref aValue: TBoolVector): TBoolVector;
@@ -2300,7 +2349,9 @@ procedure TBoolVector.Intersect(constref aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
-  Len := Math.Min(System.High(FBits), System.High(aValue.FBits));
+  if @Self = @aValue then
+    exit;
+  Len := Math.Min(System.Length(FBits), System.Length(aValue.FBits));
   I := 0;
   while I <= Len - 4 do
     begin
@@ -2310,9 +2361,23 @@ begin
       FBits[I+3] := FBits[I+3] and aValue.FBits[I+3];
       Inc(I, 4);
     end;
-  for I := I to Len do
-    FBits[I] := FBits[I] and aValue.FBits[I];
-  for I := Succ(Len) to System.High(FBits) do
+  case Len - I of
+    1:
+      FBits[I  ] := FBits[I  ] and aValue.FBits[I];
+    2:
+      begin
+        FBits[I  ] := FBits[I  ] and aValue.FBits[I  ];
+        FBits[I+1] := FBits[I+1] and aValue.FBits[I+1];
+      end;
+    3:
+      begin
+        FBits[I  ] := FBits[I  ] and aValue.FBits[I  ];
+        FBits[I+1] := FBits[I+1] and aValue.FBits[I+1];
+        FBits[I+2] := FBits[I+2] and aValue.FBits[I+2];
+      end;
+  else
+  end;
+  for I := Len to System.High(FBits) do
     FBits[I] := 0;
 end;
 
@@ -2324,17 +2389,27 @@ end;
 
 function TBoolVector.PopCount: SizeInt;
 var
-  I: SizeInt = 0;
+  I, Len: SizeInt;
 begin
+  Len := System.Length(FBits);
+  I := 0;
   Result := 0;
-  while I <= System.High(FBits) - 4 do
+  while I <= Len - 4 do
     begin
       Result += SizeInt(PopCnt(FBits[I  ])) + SizeInt(PopCnt(FBits[I+1])) +
                 SizeInt(PopCnt(FBits[I+2])) + SizeInt(PopCnt(FBits[I+3]));
       Inc(I, 4);
     end;
-  for I := I to  System.High(FBits) do
-    Result += SizeInt(PopCnt(FBits[I]));
+  case Len - I of
+    1:
+      Result += SizeInt(PopCnt(FBits[I]));
+    2:
+      Result += SizeInt(PopCnt(FBits[I])) + SizeInt(PopCnt(FBits[I+1]));
+    3:
+      Result += SizeInt(PopCnt(FBits[I])) + SizeInt(PopCnt(FBits[I+1])) +
+                SizeInt(PopCnt(FBits[I+2]));
+  else
+  end;
 end;
 
 { TGVectorHelpUtil }
