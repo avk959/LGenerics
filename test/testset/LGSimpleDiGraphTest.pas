@@ -10,7 +10,7 @@ uses
   LGUtils,
   LGArrayHelpers,
   LGSparseGraph,
-  LGSimpleDiGraph;
+  LGSimpleDigraph;
 
 type
 
