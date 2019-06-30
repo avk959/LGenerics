@@ -916,7 +916,8 @@ type
   class var
     CountSortAllow: TGetAllow;
   public
-    class function  CreateRange(aFrom, aTo: T): TArray; static;
+    class function  CreateRange(aFirst, aLast: T): TArray; static;
+    class function  CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray; static;
   { uses counting sort if possible }
     class procedure Sort(var A: array of T; aOrder: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
@@ -9416,17 +9417,23 @@ begin
     CountSortAllow := @AllowCsUnsigned;
 end;
 
-class function TGOrdinalArrayHelper.CreateRange(aFrom, aTo: T): TArray;
+class function TGOrdinalArrayHelper.CreateRange(aFirst, aLast: T): TArray;
 var
   I: T;
   J: SizeInt = 0;
 begin
-  System.SetLength(Result, Succ(aTo - aFrom));
-  for I := aFrom to aTo do
+  System.SetLength(Result, Succ(aLast - aFirst));
+  for I := aFirst to aLast do
     begin
       Result[J] := I;
       Inc(J);
     end;
+end;
+
+class function TGOrdinalArrayHelper.CreateRandomRangePermutation(aRangeFirst, aRangeLast: T): TArray;
+begin
+  Result := CreateRange(aRangeFirst, aRangeLast);
+  RandomShuffle(Result);
 end;
 
 class procedure TGOrdinalArrayHelper.Sort(var A: array of T; aOrder: TSortOrder);
