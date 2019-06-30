@@ -170,8 +170,6 @@ begin
 end;
 
 function TfrmMain.CreateRangeArray: TIntArray;
-var
-  I: SizeInt;
 begin
   Result := THelper.CreateRange(0, 255);
 end;
@@ -259,7 +257,7 @@ begin
         begin
           if Clues[I] > 0 then
             begin
-              sgCells.Cells[Col, Row] := Clues[I].ToString;
+              sgCells.Cells[Col, Row] := IntToStr(Clues[I]);
               sgCells.Objects[Col, Row] := TObject(Clues[I]);
             end
           else
@@ -282,7 +280,7 @@ begin
   for Col := 1 to Pred(sgCells.ColCount) do
     for Row := 1 to Pred(sgCells.RowCount) do
       begin
-        sgCells.Cells[Col, Row] := Solution[I].ToString;
+        sgCells.Cells[Col, Row] := IntToStr(Solution[I]);
         Inc(I);
       end;
 end;
