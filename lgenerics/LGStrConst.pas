@@ -68,6 +68,7 @@ resourcestring
   SEInputMatrixNegElem     = 'Input matrix contains negative element';
   SEInvalidTreeInst        = 'Invalid tree instance';
   SENoSuchEdgeFmt          = 'No such edge (%d, %d)';
+  SEInputIsNotProperPermut = 'Input array is not proper permutation';
 
 implementation
 
