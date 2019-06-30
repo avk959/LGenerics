@@ -54,6 +54,9 @@ type
     {TPlanarEmbedding: representation of a combinatorial embedding }
     TPlanarEmbedding = record
     private
+    const
+      DEFAUL_INCREMENT = 2;
+      TYPE_NAME        = 'TPlanarEmbedding';
     type
       THalfEdge = record
         Source,
@@ -185,7 +188,7 @@ type
     function  CreateSkeleton: TSkeleton;
     procedure AssignGraph(aGraph: TGSimpleGraph);
     procedure AssignSeparate(aGraph: TGSimpleGraph; aIndex: SizeInt);
-    function  GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
+    procedure AssignPermutation(aGraph: TGSimpleGraph; const aMap: TIntArray);
     function  GetSeparateCount: SizeInt;
     function  CountPop(aTag: SizeInt): SizeInt;
     function  MakeConnected(aOnAddEdge: TOnAddEdge): SizeInt;
@@ -239,9 +242,10 @@ type
     procedure SearchForCycleBasisVector(out aVector: TIntVector);
   { finds some system of fundamental cycles and returns their length vector,
     sorted in non-descending order}
-    procedure GetCycleBasisVector(out aVector: TIntVector);
-    function  CreateDegreeVector(o: TSortOrder): TIntArray;
-    function  CreateNeibDegreeVector(o: TSortOrder): TIntArray;
+    function  GetCycleBasisVector: TIntArray;
+    function  CreateDegreeVector: TIntArray;
+  { may raise integer overflow }
+    function  CreateNeighDegreeVector: TIntArray;
     function  CreateComplementDegreeArray: TIntArray;
     function  SortNodesByWidth(o: TSortOrder): TIntArray;
     function  SortComplementByWidth: TIntArray;
@@ -276,6 +280,8 @@ type
     function  SubgraphFromTree(const aTree: TIntArray): TGSimpleGraph;
   { returns a graph constructed from the edges provided by the aEdges }
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TGSimpleGraph;
+  { }
+    function  CreatePermutation(const aMap: TIntArray): TGSimpleGraph;
   { returns line graph constucted from self }
     function  CreateLineGraph: TLineGraph;
   { symmetric difference }
@@ -505,7 +511,7 @@ type
               aTimeOut: Integer = WAIT_INFINITE): Boolean;
   { returns True if aTestCycle is Hamiltonian cycle starting from the vertex with index aSourceIdx }
     function  IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
-  { tries to return in aPaths the specified number of Hamiltonian paths
+  { tries to return in aPaths the specified number of Hamiltonian paths, starting
     from the vertex aSrc; if aCount <= 0, then all paths are returned;
     if aCount > 0, then Min(aCount, total) cycles are returned; aTimeOut specifies
     the timeout in seconds; at the end of the timeout False will be returned }
@@ -544,6 +550,7 @@ type
     function  InducedSubgraph(const aVertexList: TIntArray): TGChart;
     function  SubgraphFromTree(const aTree: TIntArray): TGChart;
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TGChart;
+    function  CreatePermutation(const aMap: TIntArray): TGChart;
     function  Clone: TGChart;
     procedure SaveToStream(aStream: TStream; aOnWriteVertex: TOnWriteVertex);
     procedure LoadFromStream(aStream: TStream; aOnReadVertex: TOnReadVertex);
@@ -564,6 +571,7 @@ type
     function  InducedSubgraph(const aVertexList: TIntArray): TIntChart;
     function  SubgraphFromTree(const aTree: TIntArray): TIntChart;
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TIntChart;
+    function  CreatePermutation(const aMap: TIntArray): TIntChart;
     function  Clone: TIntChart;
     procedure SaveToStream(aStream: TStream);
     procedure LoadFromStream(aStream: TStream);
@@ -605,6 +613,7 @@ type
     function  InducedSubgraph(const aVertexList: TIntArray): TStrChart;
     function  SubgraphFromTree(const aTree: TIntArray): TStrChart;
     function  SubgraphFromEdges(const aEdges: TIntEdgeArray): TStrChart;
+    function  CreatePermutation(const aMap: TIntArray): TStrChart;
     function  Clone: TStrChart;
     procedure SaveToStream(aStream: TStream);
     procedure LoadFromStream(aStream: TStream);
@@ -878,9 +887,9 @@ end;
 
 function TGSimpleGraph.TPlanarEmbedding.TEdgeEnumerator.MoveNext: Boolean;
 begin
-  Result := CurrEdge < System.Length(FList) - 2;
+  Result := CurrEdge < System.Length(FList) - DEFAUL_INCREMENT;
   if Result then
-    CurrEdge += 2;
+    CurrEdge += DEFAUL_INCREMENT;
 end;
 
 { TGSimpleGraph.TPlanarEmbedding.TAdjListCw }
@@ -897,7 +906,7 @@ end;
 function TGSimpleGraph.TPlanarEmbedding.TEdges.GetEnumerator: TEdgeEnumerator;
 begin
   Result.FList := FList;
-  Result.CurrEdge := -2;
+  Result.CurrEdge := -DEFAUL_INCREMENT;
 end;
 
 { TGSimpleGraph.TPlanarEmbedding }
@@ -920,14 +929,14 @@ end;
 function TGSimpleGraph.TPlanarEmbedding.GetCompPop(aIndex: SizeInt): SizeInt;
 begin
   if SizeUInt(aIndex) >= SizeUInt(ComponentCount) then
-    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aIndex]);
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [TYPE_NAME, aIndex]);
   Result := FComponents[aIndex].Count;
 end;
 
 function TGSimpleGraph.TPlanarEmbedding.GetComponent(aIndex: SizeInt): TIntArray;
 begin
   if SizeUInt(aIndex) >= SizeUInt(ComponentCount) then
-    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aIndex]);
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [TYPE_NAME, aIndex]);
   Result := FComponents[aIndex].ToArray;
 end;
 
@@ -941,7 +950,7 @@ end;
 
 procedure TGSimpleGraph.TPlanarEmbedding.Init1;
 begin
-  FNodeList := [-1];
+  FNodeList := [NULL_INDEX];
   System.SetLength(FComponents, 1);
   FComponents[0].Add(0);
 end;
@@ -950,18 +959,18 @@ procedure TGSimpleGraph.TPlanarEmbedding.Init2(aConn: Boolean);
 begin
   if aConn then
     begin
-      FNodeList := [-1, -1];
+      FNodeList := [NULL_INDEX, NULL_INDEX];
       System.SetLength(FComponents, 1);
       FComponents[0].Add(0);
       FComponents[0].Add(1);
-      System.SetLength(FEdgeList, 2);
+      System.SetLength(FEdgeList, DEFAUL_INCREMENT);
       AddEdge(0, 1);
       InsertFirst(1);
     end
   else
     begin
-      FNodeList := [-1, -1];
-      System.SetLength(FComponents, 2);
+      FNodeList := [NULL_INDEX, NULL_INDEX];
+      System.SetLength(FComponents, DEFAUL_INCREMENT);
       FComponents[0].Add(0);
       FComponents[1].Add(1);
     end;
@@ -969,10 +978,10 @@ end;
 
 function TGSimpleGraph.TPlanarEmbedding.CreateEdge(aSrc, aDst: SizeInt): SizeInt;
 begin
-  if FCounter > System.Length(FEdgeList) - 2 then
-    raise EGraphError.Create(SEInternalDataInconsist + ' in TEmbedding');
+  if FCounter > System.Length(FEdgeList) - DEFAUL_INCREMENT then
+    raise EGraphError.Create(SEInternalDataInconsist + ' in ' + TYPE_NAME);
   Result := FCounter;
-  FCounter += 2;
+  FCounter += DEFAUL_INCREMENT;
   with FEdgeList[Result] do
     begin
       Source := aSrc;
@@ -1092,7 +1101,7 @@ end;
 function TGSimpleGraph.TPlanarEmbedding.AdjListCw(aNode: SizeInt): TAdjListCw;
 begin
   if SizeUInt(aNode) >= SizeUInt(NodeCount) then
-    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aNode]);
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [TYPE_NAME, aNode]);
   Result.List := FEdgeList;
   Result.FirstEdge := FNodeList[aNode];
 end;
@@ -1117,7 +1126,7 @@ var
   First: SizeInt;
 begin
   if SizeUInt(aNode) >= SizeUInt(NodeCount) then
-    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, ['TEmbedding', aNode]);
+    raise EGraphError.CreateFmt(SEClassIdxOutOfBoundsFmt, [TYPE_NAME, aNode]);
   First := FNodeList[aNode];
   Result := First <> NULL_INDEX;
   if Result then
@@ -1389,24 +1398,37 @@ begin
   AssignVertexList(aGraph, v);
 end;
 
-function TGSimpleGraph.GetSeparateGraph(aIndex: SizeInt): TGSimpleGraph;
+procedure TGSimpleGraph.AssignPermutation(aGraph: TGSimpleGraph; const aMap: TIntArray);
 var
-  I, J: SizeInt;
-  d: TEdgeData;
+  I, IMap, KeyMap: SizeInt;
+  p: PAdjItem;
 begin
-  Result := TGSimpleGraph.Create;
-  J := SeparateTag(aIndex);
+  if not aGraph.IsNodePermutation(aMap) then
+    raise EGraphError.Create(SEInputIsNotProperPermut);
+  Clear;
+  EnsureCapacity(aGraph.VertexCount);
+  for I := 0 to Pred(aGraph.VertexCount) do
+    DoAddVertex(aGraph.FNodeList[I].Vertex, IMap);
   for I := 0 to Pred(VertexCount) do
-    if SeparateTag(I) = J then
-       {%H-}Result.AddVertex(Items[I]);
-  for I := 0 to Pred(Result.VertexCount) do
-    for J := Succ(I) to Pred(Result.VertexCount) do
-      if Adjacent(Result[I], Result[J]) then
-        begin
-          if not GetEdgeData(Result[I], Result[J], d) then
-            raise EGraphError.Create(SEInternalDataInconsist);
-          Result.AddEdgeI(I, J, d);
-        end;
+    AdjLists[aMap[I]]^.EnsureCapacity(aGraph.AdjLists[I]^.Count);
+  for I := 0 to Pred(VertexCount) do
+    begin
+      IMap := aMap[I];
+      for p in aGraph.AdjLists[I]^ do
+        if p^.Key > I then
+          begin
+            KeyMap := aMap[p^.Key];
+            ////DoAddEdge(IMap, KeyMap, p^.Data);
+            FNodeList[IMap].AdjList.Append(TAdjItem.Create(KeyMap, p^.Data));
+            FNodeList[KeyMap].AdjList.Append(TAdjItem.Create(IMap, p^.Data));
+            Inc(FEdgeCount);
+            if SeparateJoin(IMap, KeyMap) then
+              begin
+                Dec(FCompCount);
+                FConnected := FCompCount = 1;
+              end;
+          end;
+    end;
 end;
 
 function TGSimpleGraph.GetSeparateCount: SizeInt;
@@ -1871,10 +1893,10 @@ var
   I, Curr, Next: SizeInt;
   CurrInLefts: Boolean;
 begin
-  Lefts.Size := VertexCount;
-  LeftsVisit.Size := VertexCount;
-  LeftsFree.Size := VertexCount;
-  RightsUnvisit.Size := VertexCount;
+  Lefts.Capacity := VertexCount;
+  LeftsVisit.Capacity := VertexCount;
+  LeftsFree.Capacity := VertexCount;
+  RightsUnvisit.Capacity := VertexCount;
   if System.Length(w) < System.Length(g) then
     begin
       for I in w do
@@ -1940,8 +1962,8 @@ begin
     end;
 
   Match := nil;
-  Lefts.Size := 0;
-  LeftsFree.Size := 0;
+  Lefts.Capacity := 0;
+  LeftsFree.Capacity := 0;
 
   Result.Length := LeftsVisit.PopCount + RightsUnvisit.PopCount;
   I := 0;
@@ -2107,7 +2129,7 @@ begin
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
-      J := 0;
+      J := NULL_INDEX;
       MaxPop := 0;
       for I in Cand do
         begin
@@ -2136,7 +2158,7 @@ begin
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
-      J := 0;
+      J := NULL_INDEX;
       MaxPop := 0;
       for I in Cand do
         begin
@@ -2770,18 +2792,21 @@ begin
       end;
 end;
 
-procedure TGSimpleGraph.GetCycleBasisVector(out aVector: TIntVector);
+function TGSimpleGraph.GetCycleBasisVector: TIntArray;
+var
+  v: TIntVector;
 begin
-  aVector.Clear;
+  Result := nil;
   if IsTree then
     exit;
-  SearchForCycleBasisVector(aVector);
-  if aVector.Count <> CyclomaticNumber then
+  SearchForCycleBasisVector(v);
+  if v.Count <> CyclomaticNumber then
     raise EGraphError.Create(SEInternalDataInconsist);
-  TIntVectorHelper.Sort(aVector);
+  Result := v.ToArray;
+  TIntHelper.Sort(Result);
 end;
 
-function TGSimpleGraph.CreateDegreeVector(o: TSortOrder): TIntArray;
+function TGSimpleGraph.CreateDegreeVector: TIntArray;
 var
   v: TIntArray = nil;
   I: SizeInt;
@@ -2789,25 +2814,28 @@ begin
   v.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
     v[I] := AdjLists[I]^.Count;
-  TIntHelper.Sort(v, o);
+  TIntHelper.Sort(v);
   Result := v;
 end;
 
-function TGSimpleGraph.CreateNeibDegreeVector(o: TSortOrder): TIntArray;
+function TGSimpleGraph.CreateNeighDegreeVector: TIntArray;
 var
   v: TIntArray = nil;
-  I, d: SizeInt;
+  I: SizeInt;
+  DegSum: Int64;
   p: PAdjItem;
 begin
-  v.Length := VertexCount;
+  System.SetLength(v, VertexCount);
   for I := 0 to Pred(VertexCount) do
     begin
-      d := 0;
+      DegSum := 0;
       for p in AdjLists[I]^ do
-        d += p^.Key;
-      v[I] := d;
+      {$PUSH}{$Q+}
+        DegSum += AdjLists[p^.Key]^.Count;
+      {$POP}
+      v[I] := DegSum;
     end;
-  TIntHelper.Sort(v, o);
+  TIntHelper.Sort(v);
   Result := v;
 end;
 
@@ -3015,12 +3043,9 @@ begin
 end;
 
 class function TGSimpleGraph.MayBeIsomorphic(L, R: TGSimpleGraph): Boolean;
-//var
-//  fcL, fcR: TIntVector;
-//  I: SizeInt;
+var
+  I, J: SizeInt;
 begin
-  if L = R then
-    exit(True);
   if L.IsEmpty then
     exit(R.IsEmpty)
   else
@@ -3029,17 +3054,22 @@ begin
   if (L.VertexCount <> R.VertexCount) or (L.EdgeCount <> R.EdgeCount) or
      (L.SeparateCount <> R.SeparateCount) then
     exit(False);
-  if not TIntHelper.Same(L.CreateDegreeVector(soAsc), R.CreateDegreeVector(soAsc)) then
-    exit(False);
-  if not TIntHelper.Same(L.CreateNeibDegreeVector(soAsc), R.CreateNeibDegreeVector(soAsc)) then
-    exit(False);
-  //L.GetCycleBasisVector(fcL);
-  //R.GetCycleBasisVector(fcR);
-  //if fcL.Count <> fcR.Count then
-  //  exit(False);
-  //for I := 0 to Pred(fcL.Count) do
-  //  if fcL[I] <> fcR[I] then
-  //    exit(False);
+  if L.IsRegular(I) then
+    begin
+      if not R.IsRegular(J) then
+        exit(False);
+      if I <> J then
+        exit(False);
+      if not TIntHelper.Same(L.GetCycleBasisVector, R.GetCycleBasisVector) then
+        exit(False);
+    end
+  else
+    begin
+      if not TIntHelper.Same(L.CreateDegreeVector, R.CreateDegreeVector) then
+        exit(False);
+      if not TIntHelper.Same(L.CreateNeighDegreeVector, R.CreateNeighDegreeVector) then
+        exit(False);
+    end;
   Result := True;
 end;
 
@@ -3093,6 +3123,12 @@ function TGSimpleGraph.SubgraphFromEdges(const aEdges: TIntEdgeArray): TGSimpleG
 begin
   Result := TGSimpleGraph.Create;
   Result.AssignEdges(Self, aEdges);
+end;
+
+function TGSimpleGraph.CreatePermutation(const aMap: TIntArray): TGSimpleGraph;
+begin
+  Result := TGSimpleGraph.Create;
+  Result.AssignPermutation(Self, aMap);
 end;
 
 function TGSimpleGraph.CreateLineGraph: TLineGraph;
@@ -3977,7 +4013,7 @@ begin
     end;
   if aCut.A.Length <= aCut.B.Length then
     begin
-      Left.Size := VertexCount;
+      Left.Capacity := VertexCount;
       Right.InitRange(VertexCount);
       for I in aCut.A do
         begin
@@ -3987,7 +4023,7 @@ begin
     end
   else
     begin
-      Right.Size := VertexCount;
+      Right.Capacity := VertexCount;
       Left.InitRange(VertexCount);
       for I in aCut.B do
         begin
@@ -4116,7 +4152,7 @@ var
 begin
   if IsEmpty then
     exit(aTestMis.IsEmpty);
-  TestIS.Size := VertexCount;
+  TestIS.Capacity := VertexCount;
   for I in aTestMis do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
@@ -4202,7 +4238,7 @@ begin
     exit(aTestMds.IsEmpty);
   if System.Length(aTestMds) = 0 then
     exit(False);
-  TestMds.Size := VertexCount;
+  TestMds.Capacity := VertexCount;
   for I in aTestMds do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
@@ -4309,7 +4345,7 @@ var
 begin
   if IsEmpty then
     exit(aTestClique.IsEmpty);
-  TestClique.Size := VertexCount;
+  TestClique.Capacity := VertexCount;
   for I in aTestClique do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
@@ -4394,7 +4430,7 @@ var
 begin
   if IsEmpty then
     exit(aTestMvc.IsEmpty);
-  TestCover.Size := VertexCount;
+  TestCover.Capacity := VertexCount;
   for I in aTestMvc do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
@@ -4471,7 +4507,7 @@ end;
 function TGSimpleGraph.CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
 var
   Helper: TExactColor;
-  I, ICol: SizeInt;
+  I: SizeInt;
   p: PAdjItem;
 begin
   if aMaxColor <= 0 then
@@ -4482,19 +4518,10 @@ begin
     if (I < 0) or (I > aMaxColor) then
       exit(False);
   for I := 0 to Pred(VertexCount) do
-    begin
-      if aColors[I] = 0 then
-        continue;
-      ICol := aColors[I];
+    if aColors[I] > 0 then
       for p in AdjLists[I]^ do
-        if p^.Key > I  then
-          begin
-            if aColors[p^.Key] = 0 then
-              continue;
-            if aColors[p^.Key] = ICol then
-              exit(False);
-          end;
-    end;
+        if (p^.Key > I) and (aColors[p^.Key] = aColors[I])  then
+          exit(False);
   Result := Helper.Complete(Self, aMaxColor, aTimeOut, aColors);
 end;
 
@@ -4705,6 +4732,12 @@ begin
   Result.AssignEdges(Self, aEdges);
 end;
 
+function TGChart.CreatePermutation(const aMap: TIntArray): TGChart;
+begin
+  Result := TGChart.Create;
+  Result.AssignPermutation(Self, aMap);
+end;
+
 function TGChart.Clone: TGChart;
 begin
   Result := TGChart.Create;
@@ -4845,6 +4878,12 @@ begin
   Result.AssignEdges(Self, aEdges);
 end;
 
+function TIntChart.CreatePermutation(const aMap: TIntArray): TIntChart;
+begin
+  Result := TIntChart.Create;
+  Result.AssignPermutation(Self, aMap);
+end;
+
 function TIntChart.Clone: TIntChart;
 begin
   Result := TIntChart.Create;
@@ -4978,6 +5017,12 @@ function TStrChart.SubgraphFromEdges(const aEdges: TIntEdgeArray): TStrChart;
 begin
   Result := TStrChart.Create;
   Result.AssignEdges(Self, aEdges);
+end;
+
+function TStrChart.CreatePermutation(const aMap: TIntArray): TStrChart;
+begin
+  Result := TStrChart.Create;
+  Result.AssignPermutation(Self, aMap);
 end;
 
 function TStrChart.Clone: TStrChart;
@@ -5697,7 +5742,7 @@ begin
     Cuts[I].Add(I);
   Queue := TPairHeapMax.Create(VertexCount);
   vRemains.InitRange(VertexCount);
-  vInQueue.Size := VertexCount;
+  vInQueue.Capacity := VertexCount;
   Result := MAX_WEIGHT;
   //n-1 phases
   for Phase := 1 to Pred(VertexCount) do
@@ -5896,7 +5941,7 @@ begin
   Helper.GetMinCut(Self, Cut);
   if Cut.Count <= VertexCount shr 1 then
     begin
-      Left.Size := VertexCount;
+      Left.Capacity := VertexCount;
       Right.InitRange(VertexCount);
       for I in Cut do
         begin
@@ -5906,7 +5951,7 @@ begin
     end
   else
     begin
-      Right.Size := VertexCount;
+      Right.Capacity := VertexCount;
       Left.InitRange(VertexCount);
       for I in Cut do
         begin
