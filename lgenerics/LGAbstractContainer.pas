@@ -64,8 +64,9 @@ type
     PItem = ^T;
 
     function  _GetRef: TObject; inline;
+    procedure Discard;
   public
-    function GetEnumerator: TSpecEnumerator;  virtual; abstract;
+    function GetEnumerator: TSpecEnumerator; virtual; abstract;
   { enumerates elements in reverse order }
     function Reverse: IEnumerable; virtual;
     function ToArray: TArray; virtual;
@@ -921,6 +922,11 @@ begin
   Result := Self;
 end;
 
+procedure TGEnumerable.Discard;
+begin
+  GetEnumerator.Free;
+end;
+
 function TGEnumerable.Reverse: IEnumerable;
 begin
   Result := specialize TGArrayReverse<T>.Create(ToArray);
@@ -1662,8 +1668,14 @@ var
   v: T;
 begin
   Result := 0;
-  for v in a do
-    Result += Ord(DoRemove(v));
+  if NonEmpty then
+    for v in a do
+      if DoRemove(v) then
+        begin
+          Inc(Result);
+          if Count = 0 then
+            exit;
+        end;
 end;
 
 function TGAbstractCollection.DoRemoveAll(e: IEnumerable): SizeInt;
@@ -1675,8 +1687,18 @@ begin
   if o <> Self then
     begin
       Result := 0;
-      for v in e do
-        Result += Ord(DoRemove(v));
+      if NonEmpty then
+        for v in e do
+          begin
+            if DoRemove(v) then
+              begin
+                Inc(Result);
+                if Count = 0 then
+                  exit;
+              end;
+          end
+      else
+        e.Discard;
     end
   else
     begin
@@ -1704,7 +1726,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
@@ -1718,9 +1740,10 @@ function TGAbstractCollection.ContainsAny(constref a: array of T): Boolean;
 var
   v: T;
 begin
-  for v in a do
-    if Contains(v) then
-      exit(True);
+  if NonEmpty then
+    for v in a do
+      if Contains(v) then
+        exit(True);
   Result := False;
 end;
 
@@ -1730,13 +1753,18 @@ var
 begin
   if e._GetRef <> Self then
     begin
-      for v in e do
-        if Contains(v) then
-          exit(True);
+      if NonEmpty then
+        begin
+          for v in e do
+            if Contains(v) then
+              exit(True);
+        end
+      else
+        e.Discard;
       Result := False;
     end
   else
-    Result := not IsEmpty;
+    Result := NonEmpty;
 end;
 
 function TGAbstractCollection.ContainsAll(constref a: array of T): Boolean;
@@ -1744,7 +1772,7 @@ var
   v: T;
 begin
   for v in a do
-    if NonContains(v) then
+    if not Contains(v) then
       exit(False);
   Result := True;
 end;
@@ -1779,7 +1807,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
@@ -2641,8 +2669,11 @@ var
   k: TKey;
 begin
   Result := 0;
-  for k in e do
-    Result += Ord(DoRemove(k));
+  if NonEmpty then
+    for k in e do
+      Result += Ord(DoRemove(k))
+  else
+    e.Discard;
 end;
 
 function TGAbstractMap.ToArray: TEntryArray;
@@ -2773,9 +2804,14 @@ function TGAbstractMap.ContainsAny(e: IKeyEnumerable): Boolean;
 var
   k: TKey;
 begin
-  for k in e do
-    if Contains(k) then
-      exit(True);
+  if NonEmpty then
+    begin
+      for k in e do
+        if Contains(k) then
+          exit(True);
+    end
+  else
+    e.Discard;
   Result := False;
 end;
 
@@ -2818,7 +2854,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
