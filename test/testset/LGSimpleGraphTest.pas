@@ -79,6 +79,8 @@ type
     procedure SubgraphFromTree;
     procedure SubgraphFromEdges1;
     procedure SubgraphFromEdges2;
+    procedure CreatePermutation;
+    procedure CreatePermutation1;
     procedure CreateLineGraph;
     procedure DistinctEdges;
     procedure CreateComplementMatrix;
@@ -950,6 +952,61 @@ begin
   AssertTrue(g2.ContainsVertex(3));
   AssertTrue(g2.ContainsVertex(4));
   AssertTrue(g2.ContainsVertex(7));
+end;
+
+procedure TSimpleGraphTest.CreatePermutation;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+  IMap: TIntArray;
+  InverseMap: TIntArray = nil;
+  I: SizeInt;
+  e: TGraph.TEdge;
+begin
+  {%H-}Ref.Instance := GenerateC125Mis;
+  g := Ref;
+  IMap := THelper.CreateRandomRangePermutation(0, Pred(g.VertexCount));
+  {%H-}Ref2.Instance := g.CreatePermutation(IMap);
+  InverseMap.Length := IMap.Length;
+  for I := 0 to High(InverseMap) do
+    InverseMap[IMap[I]] := I;
+  Ref2.Instance := Ref2.Instance.CreatePermutation(InverseMap);
+  g2 := Ref2;
+  AssertTrue(g2.VertexCount = g.VertexCount);
+  AssertTrue(g2.EdgeCount = g.EdgeCount);
+  for I := 0 to Pred(g.VertexCount) do
+    AssertTrue(g.DegreeI(I) = g2.DegreeI(I));
+  for e in g.DistinctEdges do
+    AssertTrue(g2.ContainsEdgeI(e.Source, e.Destination));
+end;
+
+procedure TSimpleGraphTest.CreatePermutation1;
+var
+  Ref, Ref2: TRef;
+  g, g2: TGraph;
+  IMap: TIntArray;
+  InverseMap: TIntArray = nil;
+  I: SizeInt;
+  e: TGraph.TEdge;
+begin
+  {%H-}Ref.Instance := GenerateTestGr2;
+  g := Ref;
+  AssertTrue(g.SeparateCount = 2);
+  IMap := THelper.CreateRandomRangePermutation(0, Pred(g.VertexCount));
+  {%H-}Ref2.Instance := g.CreatePermutation(IMap);
+  AssertTrue(Ref2.Instance.SeparateCount = 2);
+  InverseMap.Length := IMap.Length;
+  for I := 0 to High(InverseMap) do
+    InverseMap[IMap[I]] := I;
+  Ref2.Instance := Ref2.Instance.CreatePermutation(InverseMap);
+  g2 := Ref2;
+  AssertTrue(g2.VertexCount = g.VertexCount);
+  AssertTrue(g2.EdgeCount = g.EdgeCount);
+  AssertTrue(g2.SeparateCount = g.SeparateCount);
+  for I := 0 to Pred(g.VertexCount) do
+    AssertTrue(g.DegreeI(I) = g2.DegreeI(I));
+  for e in g.DistinctEdges do
+    AssertTrue(g2.ContainsEdgeI(e.Source, e.Destination));
 end;
 
 procedure TSimpleGraphTest.CreateLineGraph;
