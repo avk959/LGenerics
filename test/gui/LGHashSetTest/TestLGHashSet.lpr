@@ -3,6 +3,9 @@ program TestLGHashSet;
 {$mode objfpc}{$H+}
 
 uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
   Interfaces, Forms, LGHashSetTest, GuiTestRunner;
 
 {$R *.res}
