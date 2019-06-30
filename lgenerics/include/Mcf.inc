@@ -94,7 +94,7 @@ begin
   FNodes[FNodeCount].PathMinCap := 0;
 
   FInQueue.Size := FNodeCount;
-  FReached.Size := FNodeCount;
+  FReached.Capacity := FNodeCount;
   FQueue := THeap.Create(FNodeCount);
 end;
 

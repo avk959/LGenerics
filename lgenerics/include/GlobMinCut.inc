@@ -51,7 +51,7 @@ begin
     end;
   FQueue := TPairHeapMax.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
+  FInQueue.Capacity := aGraph.VertexCount;
   FBestCut := MAX_WEIGHT;
   FCuts := nil;
 end;
@@ -73,7 +73,7 @@ begin
     FCuts[I].Add(I);
   FQueue := TPairHeapMax.Create(aGraph.VertexCount);
   FExistNodes.InitRange(aGraph.VertexCount);
-  FInQueue.Size := aGraph.VertexCount;
+  FInQueue.Capacity := aGraph.VertexCount;
   FBestCut := MAX_WEIGHT;
 end;
 
