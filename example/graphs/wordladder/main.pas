@@ -152,7 +152,7 @@ begin
   BuildGraph;
   Elapsed := MilliSecondsBetween(Time, StartTime);
   mmResult.Append(Format(IsBuiltFmt,[Graph.VertexCount, Graph.EdgeCount, Elapsed]));
-  mmResult.Append('separate component count = ' + Graph.SeparateCount.ToString);
+  mmResult.Append('separate component count = ' + IntToStr(Graph.SeparateCount));
 end;
 
 function TfrmMain.InputValid: Boolean;
