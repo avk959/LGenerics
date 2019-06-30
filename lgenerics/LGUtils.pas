@@ -150,62 +150,63 @@ type
 
   IGEnumerable<T> = interface(IObjInstance)
   ['{92F9FDFC-BEA4-4968-A033-7A90C05DDA60}']
-    function GetEnumerator: TGEnumerator<T>;
+    function  GetEnumerator: TGEnumerator<T>;
+    procedure Discard;
   { enumerates elements in reverse order }
-    function Reverse: IGEnumerable<T>;
-    function ToArray: TGArray<T>;
-    function Any: Boolean; overload;
-    function None: Boolean;  overload;
-    function Total: SizeInt; overload;
-    function FindFirst(out aValue: T): Boolean;
-    function First: TGOptional<T>;
-    function FindLast(out aValue: T): Boolean;
-    function Last: TGOptional<T>;
-    function FindMin(out aValue: T; c: TGCompare<T>): Boolean; overload;
-    function FindMin(out aValue: T; c: TGOnCompare<T>): Boolean; overload;
-    function FindMin(out aValue: T; c: TGNestCompare<T>): Boolean; overload;
-    function Min(c: TGCompare<T>): TGOptional<T>; overload;
-    function Min(c: TGOnCompare<T>): TGOptional<T>; overload;
-    function Min(c: TGNestCompare<T>): TGOptional<T>; overload;
-    function FindMax(out aValue: T; c: TGCompare<T>): Boolean; overload;
-    function FindMax(out aValue: T; c: TGOnCompare<T>): Boolean; overload;
-    function FindMax(out aValue: T; c: TGNestCompare<T>): Boolean; overload;
-    function Max(c: TGCompare<T>): TGOptional<T>; overload;
-    function Max(c: TGOnCompare<T>): TGOptional<T>; overload;
-    function Max(c: TGNestCompare<T>): TGOptional<T>; overload;
-    function Skip(aCount: SizeInt): IGEnumerable<T>;
-    function Limit(aCount: SizeInt): IGEnumerable<T>;
-    function Sorted(c: TGCompare<T>): IGEnumerable<T>; overload;
-    function Sorted(c: TGOnCompare<T>): IGEnumerable<T>; overload;
-    function Sorted(c: TGNestCompare<T>): IGEnumerable<T>; overload;
-    function Select(p: TGTest<T>): IGEnumerable<T>; overload;
-    function Select(p: TGOnTest<T>): IGEnumerable<T>; overload;
-    function Select(p: TGNestTest<T>): IGEnumerable<T>; overload;
-    function Any(p: TGTest<T>): Boolean; overload;
-    function Any(p: TGOnTest<T>): Boolean; overload;
-    function Any(p: TGNestTest<T>): Boolean; overload;
-    function None(p: TGTest<T>): Boolean; overload;
-    function None(p: TGOnTest<T>): Boolean; overload;
-    function None(p: TGNestTest<T>): Boolean; overload;
-    function All(p: TGTest<T>): Boolean; overload;
-    function All(p: TGOnTest<T>): Boolean; overload;
-    function All(p: TGNestTest<T>): Boolean; overload;
-    function Total(p: TGTest<T>): SizeInt; overload;
-    function Total(p: TGOnTest<T>): SizeInt; overload;
-    function Total(p: TGNestTest<T>): SizeInt; overload;
-    function Distinct(c: TGCompare<T>): IGEnumerable<T>; overload;
-    function Distinct(c: TGOnCompare<T>): IGEnumerable<T>; overload;
-    function Distinct(c: TGNestCompare<T>): IGEnumerable<T>; overload;
-    function Map(f: TGMapFunc<T, T>): IGEnumerable<T>; overload;
-    function Map(f: TGOnMap<T, T>): IGEnumerable<T>; overload;
-    function Map(f: TGNestMap<T, T>): IGEnumerable<T>; overload;
+    function  Reverse: IGEnumerable<T>;
+    function  ToArray: TGArray<T>;
+    function  Any: Boolean; overload;
+    function  None: Boolean;  overload;
+    function  Total: SizeInt; overload;
+    function  FindFirst(out aValue: T): Boolean;
+    function  First: TGOptional<T>;
+    function  FindLast(out aValue: T): Boolean;
+    function  Last: TGOptional<T>;
+    function  FindMin(out aValue: T; c: TGCompare<T>): Boolean; overload;
+    function  FindMin(out aValue: T; c: TGOnCompare<T>): Boolean; overload;
+    function  FindMin(out aValue: T; c: TGNestCompare<T>): Boolean; overload;
+    function  Min(c: TGCompare<T>): TGOptional<T>; overload;
+    function  Min(c: TGOnCompare<T>): TGOptional<T>; overload;
+    function  Min(c: TGNestCompare<T>): TGOptional<T>; overload;
+    function  FindMax(out aValue: T; c: TGCompare<T>): Boolean; overload;
+    function  FindMax(out aValue: T; c: TGOnCompare<T>): Boolean; overload;
+    function  FindMax(out aValue: T; c: TGNestCompare<T>): Boolean; overload;
+    function  Max(c: TGCompare<T>): TGOptional<T>; overload;
+    function  Max(c: TGOnCompare<T>): TGOptional<T>; overload;
+    function  Max(c: TGNestCompare<T>): TGOptional<T>; overload;
+    function  Skip(aCount: SizeInt): IGEnumerable<T>;
+    function  Limit(aCount: SizeInt): IGEnumerable<T>;
+    function  Sorted(c: TGCompare<T>): IGEnumerable<T>; overload;
+    function  Sorted(c: TGOnCompare<T>): IGEnumerable<T>; overload;
+    function  Sorted(c: TGNestCompare<T>): IGEnumerable<T>; overload;
+    function  Select(p: TGTest<T>): IGEnumerable<T>; overload;
+    function  Select(p: TGOnTest<T>): IGEnumerable<T>; overload;
+    function  Select(p: TGNestTest<T>): IGEnumerable<T>; overload;
+    function  Any(p: TGTest<T>): Boolean; overload;
+    function  Any(p: TGOnTest<T>): Boolean; overload;
+    function  Any(p: TGNestTest<T>): Boolean; overload;
+    function  None(p: TGTest<T>): Boolean; overload;
+    function  None(p: TGOnTest<T>): Boolean; overload;
+    function  None(p: TGNestTest<T>): Boolean; overload;
+    function  All(p: TGTest<T>): Boolean; overload;
+    function  All(p: TGOnTest<T>): Boolean; overload;
+    function  All(p: TGNestTest<T>): Boolean; overload;
+    function  Total(p: TGTest<T>): SizeInt; overload;
+    function  Total(p: TGOnTest<T>): SizeInt; overload;
+    function  Total(p: TGNestTest<T>): SizeInt; overload;
+    function  Distinct(c: TGCompare<T>): IGEnumerable<T>; overload;
+    function  Distinct(c: TGOnCompare<T>): IGEnumerable<T>; overload;
+    function  Distinct(c: TGNestCompare<T>): IGEnumerable<T>; overload;
+    function  Map(f: TGMapFunc<T, T>): IGEnumerable<T>; overload;
+    function  Map(f: TGOnMap<T, T>): IGEnumerable<T>; overload;
+    function  Map(f: TGNestMap<T, T>): IGEnumerable<T>; overload;
   { left-associative linear fold }
-    function Fold(f: TGFold<T, T>; constref v0: T): T; overload;
-    function Fold(f: TGFold<T, T>): TGOptional<T>; overload;
-    function Fold(f: TGOnFold<T, T>; constref v0: T): T; overload;
-    function Fold(f: TGOnFold<T, T>): TGOptional<T>; overload;
-    function Fold(f: TGNestFold<T, T>; constref v0: T): T; overload;
-    function Fold(f: TGNestFold<T, T>): TGOptional<T>; overload;
+    function  Fold(f: TGFold<T, T>; constref v0: T): T; overload;
+    function  Fold(f: TGFold<T, T>): TGOptional<T>; overload;
+    function  Fold(f: TGOnFold<T, T>; constref v0: T): T; overload;
+    function  Fold(f: TGOnFold<T, T>): TGOptional<T>; overload;
+    function  Fold(f: TGNestFold<T, T>; constref v0: T): T; overload;
+    function  Fold(f: TGNestFold<T, T>): TGOptional<T>; overload;
   end;
 
   IGContainer<T> = interface(IGEnumerable<T>)
@@ -636,21 +637,18 @@ end;
 
 class function TGOptional<T>.ValueIsNil(constref aValue): Boolean;
 begin
-  if Nilable then
-    case CFTypeKind of
-      System.tkMethod:       Result := Pointer(aValue) = nil;
-      System.tkInterface:    Result := Pointer(aValue) = nil;
-      System.tkClass:        Result := TObject(aValue) = nil;
-      System.tkDynArray:     Result := Pointer(aValue) = nil;
-      System.tkInterfaceRaw: Result := Pointer(aValue) = nil;
-      System.tkProcVar:      Result := Pointer(aValue) = nil;
-      System.tkClassRef:     Result := TClass(aValue)  = nil;
-      System.tkPointer:      Result := Pointer(aValue) = nil;
-    else //todo: what about Variants ?
-      Result := False;
-    end
-  else
-    Result := False;
+  case CFTypeKind of
+    System.tkMethod:       exit(Pointer(aValue) = nil);
+    System.tkInterface:    exit(Pointer(aValue) = nil);
+    System.tkClass:        exit(TObject(aValue) = nil);
+    System.tkDynArray:     exit(Pointer(aValue) = nil);
+    System.tkInterfaceRaw: exit(Pointer(aValue) = nil);
+    System.tkProcVar:      exit(Pointer(aValue) = nil);
+    System.tkClassRef:     exit(TClass(aValue)  = nil);
+    System.tkPointer:      exit(Pointer(aValue) = nil);
+  else //todo: what about Variants ?
+  end;
+  Result := False;
 end;
 
 class operator TGOptional<T>.Implicit(constref aValue: T): TGOptional<T>;
@@ -665,11 +663,10 @@ end;
 
 procedure TGOptional<T>.Assign(constref aValue: T);
 begin
-  if not ValueIsNil((@aValue)^) then
-    begin
-      FAssigned := True;
-      FValue := aValue;
-    end;
+  if CFNilable and ValueIsNil((@aValue)^) then
+    exit;
+  FAssigned := True;
+  FValue := aValue;
 end;
 
 function TGOptional<T>.OrElseDefault: T;
