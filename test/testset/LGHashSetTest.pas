@@ -1760,6 +1760,7 @@ procedure THashSetLPTTest.RemoveArray;
 var
   s: TAutoSet;
 begin
+  AssertTrue(s.Instance.RemoveAll(IntArray11) = 0);
   s.Instance := TSet.Create(IntArray21);
   AssertTrue(s.Instance.RemoveAll(IntArray11) = 11);
   AssertTrue(s.Instance.Count = 10);
@@ -1770,6 +1771,7 @@ var
   s: TAutoSet;
   e: IIntEnumerable;
 begin
+  AssertTrue(s.Instance.RemoveAll(TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11))) = 0);
   e := TIntArrayCursor.Create(TIntHelper.CreateCopy(IntArray11));
   s.Instance := TSet.Create(IntArray21);
   AssertTrue(s.Instance.RemoveAll(e) = 11);
