@@ -486,14 +486,15 @@ type
     the best recent solution will be returned, and aExact will be set to False }
     function  VertexColoring(out aColors: TIntArray; out aExact: Boolean;
               aTimeOut: Integer = WAIT_INFINITE): SizeInt;
-  { returns tlTrue if exist the vertex coloring which uses at most aK of colors;
+  { returns tlTrue and colors of the vertices in corresponding components of aColors,
+    if exist the vertex coloring which uses at most aK of colors;
     aTimeOut specifies the timeout in seconds; at the end of the timeout tlUnknown will be returned }
     function  IsKColorable(aK: SizeInt; out aColors: TIntArray; aTimeOut: Integer = WAIT_INFINITE): TTriLean;
-  { returns True if it is possible to complete the coloring using no more colors than aMaxColor
-    and using predefined colors specified in aColors;
-    aTimeOut specifies the timeout in seconds; at the end of the timeout False will be returned }
-    function  CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray;
-              aTimeOut: Integer = WAIT_INFINITE): Boolean;
+  { returns tlTrue if it is possible to complete the coloring using predefined colors specified
+    in aColors and at most aK of colors; aTimeOut specifies the timeout in seconds;
+    at the end of the timeout tlUnknown will be returned }
+    function  IsKColorableCompl(aK: SizeInt; var aColors: TIntArray;
+              aTimeOut: Integer = WAIT_INFINITE): TTriLean;
   { returns count of colors; returns colors of the vertices in corresponding components of aColors;
     used RLF greedy coloring algorithm }
     function  GreedyVertexColoringRlf(out aColors: TIntArray): SizeInt;
@@ -4504,25 +4505,25 @@ begin
     Result := ColorableDisconnected(aK, aTimeOut, aColors);
 end;
 
-function TGSimpleGraph.CompleteColoring(aMaxColor: SizeInt; var aColors: TIntArray; aTimeOut: Integer): Boolean;
+function TGSimpleGraph.IsKColorableCompl(aK: SizeInt; var aColors: TIntArray; aTimeOut: Integer): TTriLean;
 var
   Helper: TExactColor;
   I: SizeInt;
   p: PAdjItem;
 begin
-  if aMaxColor <= 0 then
-    exit(False);
+  if aK <= 0 then
+    exit(tlFalse);
   if aColors.Length <> VertexCount then
-    exit(False);
+    exit(tlFalse);
   for I in aColors do
-    if (I < 0) or (I > aMaxColor) then
-      exit(False);
+    if (I < 0) or (I > aK) then
+      exit(tlFalse);
   for I := 0 to Pred(VertexCount) do
     if aColors[I] > 0 then
       for p in AdjLists[I]^ do
         if (p^.Key > I) and (aColors[p^.Key] = aColors[I])  then
-          exit(False);
-  Result := Helper.Complete(Self, aMaxColor, aTimeOut, aColors);
+          exit(tlFalse);
+  Result := Helper.Complete(Self, aK, aTimeOut, aColors);
 end;
 
 function TGSimpleGraph.GreedyVertexColoringRlf(out aColors: TIntArray): SizeInt;

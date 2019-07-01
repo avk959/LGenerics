@@ -162,7 +162,7 @@ type
   public
     function Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray; out aExact: Boolean): SizeInt;
     function IsColorable(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer; out aColors: TIntArray): TTriLean;
-    function Complete(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer; var aColors: TIntArray): Boolean;
+    function Complete(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer; var aColors: TIntArray): TTriLean;
   end;
 
   { TGreedyColorRlf }

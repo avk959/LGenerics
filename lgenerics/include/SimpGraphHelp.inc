@@ -933,7 +933,7 @@ begin
 end;
 
 function TGSimpleGraph.TExactColor.Complete(aGraph: TGSimpleGraph; aK: SizeInt; aTimeOut: Integer;
-  var aColors: TIntArray): Boolean;
+  var aColors: TIntArray): TTriLean;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FNodeCount := aGraph.VertexCount;
@@ -945,9 +945,16 @@ begin
   FColorMap := System.Copy(aColors);
   InitComplete;
   DSatur(FLowBound);
-  Result := not FCancelled and (FLowBound >= FUpBound);
-  if Result then
-    aColors := FRecentBest;
+  if FLowBound >= FUpBound then
+    begin
+      aColors := FRecentBest;
+      Result := tlTrue;
+    end
+  else
+    if not FCancelled then
+      Result := tlFalse
+    else
+      Result := tlUnknown;
 end;
 
 { TGSimpleGraph.TGreedyColorRlf.TNode }
