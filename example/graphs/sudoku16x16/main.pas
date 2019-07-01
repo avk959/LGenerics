@@ -9,6 +9,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, Grids, Spin, StdCtrls,
+  LGUtils,
   LGArrayHelpers,
   LGSparseGraph,
   LGSimpleGraph;
@@ -212,7 +213,7 @@ begin
   Screen.Cursor := crHourGlass;
   Application.ProcessMessages;
   try
-    Result := CellGraph.CompleteColoring(16, Colors, 5);//wait for at most 5s
+    Result := CellGraph.IsKColorableCompl(16, Colors, 5) = tlTrue;//wait for at most 5s
   finally
     Screen.Cursor := OldCursor;
   end;
