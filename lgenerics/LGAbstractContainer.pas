@@ -1687,18 +1687,13 @@ begin
   if o <> Self then
     begin
       Result := 0;
-      if NonEmpty then
-        for v in e do
+      for v in e do
+        if DoRemove(v) then
           begin
-            if DoRemove(v) then
-              begin
-                Inc(Result);
-                if Count = 0 then
-                  exit;
-              end;
-          end
-      else
-        e.Discard;
+            Inc(Result);
+            if Count = 0 then
+              exit;
+          end;
     end
   else
     begin
