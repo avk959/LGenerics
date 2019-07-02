@@ -244,6 +244,7 @@ type
     procedure NonEmpty;
     procedure Bsf;
     procedure Bsr;
+    procedure Lob;
     procedure Intersecting;
     procedure IntersectionPop;
     procedure IntersectionPop1;
@@ -2149,6 +2150,26 @@ begin
       AssertTrue(v.Bsr = I);
       v[I] := False;
     end;
+end;
+
+procedure TBoolVectorTest.Lob;
+var
+  v: TBoolVector;
+  I: Integer;
+begin
+  AssertTrue(v.Lob = -1);
+  v.Capacity := 120;
+  AssertTrue(v.Lob = 0);
+  v.SetBits;
+  AssertTrue(v.Lob = -1);
+  v.ClearBits;
+  for I := 0 to v.Capacity - 2 do
+    begin
+      v[I] := True;
+      AssertTrue(v.Lob = Succ(I));
+    end;
+  v[120] := False;
+  AssertTrue(v.Lob = 120);
 end;
 
 procedure TBoolVectorTest.Intersecting;
