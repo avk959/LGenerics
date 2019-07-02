@@ -2150,11 +2150,11 @@ begin
     if FBits[I] <> High(SizeUInt) then
       exit(
         {$IF DEFINED(CPU64)}
-          I shl INT_SIZE_LOG + ShortInt(BsrQWord(not FBits[I]))
+          I shl INT_SIZE_LOG + ShortInt(BsfQWord(not FBits[I]))
         {$ELSEIF DEFINED(CPU32)}
-          I shl INT_SIZE_LOG + ShortInt(BsrDWord(not FBits[I]))
+          I shl INT_SIZE_LOG + ShortInt(BsfQWord(not FBits[I]))
         {$ELSE}
-          I shl INT_SIZE_LOG + ShortInt(BsrWord(not FBits[I]))
+          I shl INT_SIZE_LOG + ShortInt(BsfQWord(not FBits[I]))
         {$ENDIF});
   Result := NULL_INDEX;
 end;
