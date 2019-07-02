@@ -406,7 +406,7 @@ type
     property  Capacity: SizeInt read GetCapacity write SetCapacity;
   { returns count of set bits }
     function  PopCount: SizeInt;
-  { read/write bit with (index < 0) or (index >= Size) will raise exception }
+  { read/write bit with (index < 0) or (index >= Capacity) will raise exception }
     property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
   end;
 
