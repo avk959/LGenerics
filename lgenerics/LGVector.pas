@@ -379,6 +379,7 @@ type
     function  Reverse: TReverse; inline;
   { returns an array containing the indices of the set bits }
     function  ToArray: TIntArray;
+    procedure Clear; inline;
     procedure ClearBits; inline;
     procedure SetBits; inline;
     function  IsEmpty: Boolean;
@@ -2072,6 +2073,11 @@ begin
       Result[Pos] := I;
       Inc(Pos);
     end;
+end;
+
+procedure TBoolVector.Clear;
+begin
+  FBits := nil;
 end;
 
 procedure TBoolVector.ClearBits;
