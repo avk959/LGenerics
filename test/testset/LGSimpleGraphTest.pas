@@ -178,7 +178,9 @@ type
     procedure IsKColorableCompl;
     procedure FindHamiltonCycles;
     procedure FindHamiltonPaths;
+    procedure ListDomSets;
     procedure FindMDS;
+    procedure GreedyMDS;
 
     procedure SetSymmDifferenceOf;
     procedure SetSymmDifferenceOf2;
@@ -3311,6 +3313,39 @@ begin
   AssertTrue(g.IsHamiltonPath(Paths[1], g.IndexOf(1)));
 end;
 
+procedure TSimpleGraphTest.ListDomSets;
+var
+  Ref: TRef;
+  g: TGraph;
+  ds: TIntArray;
+begin
+  g := {%H-}Ref;
+  FSetVector.Clear;
+  g.ListDomSets(5, @SetFound);
+  AssertTrue(FSetVector.IsEmpty);
+  Ref.Instance := GenerateTestGr5;
+  g := Ref;
+  g.ListDomSets(5, @SetFound);
+  AssertTrue(FSetVector.IsEmpty);
+  g.ListDomSets(6, @SetFound);
+  AssertTrue(FSetVector.Count = 10);
+  for ds in FSetVector do
+    AssertTrue(g.IsMDS(ds));
+  FSetVector.Clear;
+  g.AddVertex(21);
+  g.AddVertex(22);
+  g.ListDomSets(6, @SetFound);
+  AssertTrue(FSetVector.IsEmpty);
+  g.ListDomSets(8, @SetFound);
+  AssertTrue(FSetVector.Count = 10);
+  for ds in FSetVector do
+    begin
+      AssertTrue(g.IsMDS(ds));
+      AssertTrue(THelper.SequentSearch(ds, g.IndexOf(21)) >= 0);
+      AssertTrue(THelper.SequentSearch(ds, g.IndexOf(22)) >= 0);
+    end;
+end;
+
 procedure TSimpleGraphTest.FindMDS;
 var
   Ref: TRef;
@@ -3330,6 +3365,22 @@ begin
   Mds := g.FindMDS(Exact, 5);
   AssertTrue(Mds.Length = 6);
   AssertTrue(g.IsMDS(Mds));
+end;
+
+procedure TSimpleGraphTest.GreedyMDS;
+var
+  Ref: TRef;
+  g: TGraph;
+  ds: TIntArray;
+begin
+  g := {%H-}Ref;
+  ds := g.GreedyMDS;
+  AssertTrue(ds.IsEmpty);
+  Ref.Instance := GenerateC125Mis;
+  g := Ref;
+  ds := g.GreedyMDS;
+  AssertFalse(ds.IsEmpty);
+  AssertTrue(g.IsMDS(ds));
 end;
 
 procedure TSimpleGraphTest.SetSymmDifferenceOf;
