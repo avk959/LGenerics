@@ -451,10 +451,10 @@ type
     function  GreedyMIS: TIntArray;
   { returns True if aTestMis contains indices of the some maximal independent vertex set, False otherwise }
     function  IsMIS(const aTestMis: TIntArray): Boolean;
-  { lists all the dominating vertex sets(not necessary minimal) with a size of
-    no more then AtMostSetSize; will raise an exception if aOnFound is not assigned;
+  { lists all the dominating vertex sets(not necessary minimal) with the number
+    of elements at most AtMostSize; will raise an exception if aOnFound is not assigned;
     setting aCancel to True in aOnFound will exit the method }
-    procedure ListDomSets(AtMostSetSize: SizeInt; aOnFound: TOnSetFound);
+    procedure ListDomSets(AtMostSize: SizeInt; aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found minimum dominating vertex set;
     worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout the best
@@ -4269,13 +4269,13 @@ begin
   Result := True;
 end;
 
-procedure TGSimpleGraph.ListDomSets(AtMostSetSize: SizeInt; aOnFound: TOnSetFound);
+procedure TGSimpleGraph.ListDomSets(AtMostSize: SizeInt; aOnFound: TOnSetFound);
 begin
   if IsEmpty then
     exit;
   if aOnFound = nil then
     raise EGraphError.Create(SECallbackMissed);
-  DoListDomSets(AtMostSetSize, aOnFound);
+  DoListDomSets(AtMostSize, aOnFound);
 end;
 
 function TGSimpleGraph.FindMDS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
