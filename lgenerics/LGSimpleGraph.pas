@@ -222,6 +222,7 @@ type
     function  GetGreedyMisBP: TIntArray;
     function  GetGreedyMinIs: TIntArray;
     function  GetGreedyMinIsBP: TIntArray;
+    procedure DoListDomSets(aMaxSize: SizeInt; aOnFind: TOnSetFound);
     function  GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMdsBP256(aTimeOut: Integer; out aExact: Boolean): TIntArray;
     function  GetMds(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -439,8 +440,8 @@ type
   some NP-hard problem utilities
 ***********************************************************************************************************}
 
-  { lists all maximal independent vertex sets; will raise exception if aOnFound is not assigned;
-    setting aCancel to True in aOnFound will result in an exit from the method }
+  { lists all maximal independent vertex sets; will raise an exception if aOnFound is not assigned;
+    setting aCancel to True in aOnFound will exit the method }
     procedure ListAllMIS(aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found maximum independent set;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
@@ -450,6 +451,10 @@ type
     function  GreedyMIS: TIntArray;
   { returns True if aTestMis contains indices of the some maximal independent vertex set, False otherwise }
     function  IsMIS(const aTestMis: TIntArray): Boolean;
+  { lists all the dominating vertex sets(not necessary minimal) with a size of
+    no more then AtMostSetSize; will raise an exception if aOnFound is not assigned;
+    setting aCancel to True in aOnFound will exit the method }
+    procedure ListDomSets(AtMostSetSize: SizeInt; aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found minimum dominating vertex set;
     worst case time cost of exact solution O*(2^n);
     aTimeOut specifies the timeout in seconds; at the end of the timeout the best
@@ -458,8 +463,8 @@ type
     function  GreedyMDS: TIntArray;
   { returns True if aTestMds contains indices of the some minimal dominating vertex set, False otherwise }
     function  IsMDS(const aTestMds: TIntArray): Boolean;
-  { lists all maximal cliques; will raise exception if aOnFound is not assigned;
-    setting aCancel to True in aOnFound will result in an exit from the method }
+  { lists all maximal cliques; will raise an exception if aOnFound is not assigned;
+    setting aCancel to True in aOnFound will exit the method }
     procedure ListAllCliques(aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found maximum clique;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
@@ -469,8 +474,8 @@ type
     function  GreedyMaxClique: TIntArray;
   { returns True if aTestClique contains indices of the some maximal clique, False otherwise }
     function  IsMaxClique(const aTestClique: TIntArray): Boolean;
-  { lists all minimal vertex covers; will raise exception if aOnFound is not assigned;
-    setting aCancel to True in aOnFound will result in an exit from the method }
+  { lists all minimal vertex covers; will raise an exception if aOnFound is not assigned;
+    setting aCancel to True in aOnFound will exit the method }
     procedure ListAllMVC(aOnFound: TOnSetFound);
   { returns indices of the vertices of the some found minimum vertex cover;
     worst case time cost of exact solution O*(3^n/3); aTimeOut specifies the timeout in seconds;
@@ -2175,6 +2180,82 @@ begin
       {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
+end;
+
+procedure TGSimpleGraph.DoListDomSets(aMaxSize: SizeInt; aOnFind: TOnSetFound);
+var
+  Columns, Blocks: TBoolMatrix;
+  CurrSet, Tested: TBoolVector;
+  NodeCount: SizeInt;
+  Cancelled: Boolean;
+  procedure InitMsc;
+  var
+    Excluded: TBoolVector;
+    I, J: SizeInt;
+  begin
+    NodeCount := VertexCount;
+    CurrSet.Capacity := NodeCount;
+    Tested.Capacity := NodeCount;
+    Columns := CreateBoolMatrix;
+    for I := 0 to Pred(NodeCount) do
+      begin
+        Columns[I][I] := True;
+        if Columns[I].PopCount = 1 then
+          CurrSet[I] := True;
+      end;
+    Excluded.Capacity := NodeCount;
+    for I := 0 to Pred(NodeCount) do
+      if not CurrSet[I] then
+        for J := 0 to Pred(NodeCount) do
+          if (J <> I) and Columns[J].Contains(Columns[I]) then
+            begin
+              Excluded[I] := True;
+              break;
+            end;
+    System.SetLength(Blocks, NodeCount);
+    for I := 0 to Pred(NodeCount) do
+      if not CurrSet[I] then
+        begin
+          Blocks[I].Capacity := NodeCount;
+          for J := 0 to Pred(NodeCount) do
+            if Columns[J][I] and not Excluded[J] then
+              Blocks[I][J] := True;
+        end;
+  end;
+  procedure Extend(const aUnivers: TBoolVector);
+  var
+    LocTested: TBoolVector;
+    I, Next: SizeInt;
+  begin
+    if aUnivers.PopCount < NodeCount then
+      begin
+        if CurrSet.PopCount >= aMaxSize then
+          exit;
+        LocTested.Capacity := NodeCount;
+        Next := aUnivers.Lob;
+        for I in Blocks[Next] do
+          if not(CurrSet[I] or Tested[I]) then
+            begin
+              CurrSet[I] := True;
+              Tested[I] := True;
+              LocTested[I] := True;
+              Extend(aUnivers.Union(Columns[I]));
+              if Cancelled then
+                exit;
+              CurrSet[I] := False;
+            end;
+        Tested.Subtract(LocTested);
+      end
+    else
+      aOnFind(CurrSet.ToArray, Cancelled);
+  end;
+var
+  Uni: TBoolVector;
+begin
+  Cancelled := False;
+  InitMsc;
+  Uni := CurrSet;
+  Extend(Uni);
 end;
 
 function TGSimpleGraph.GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
@@ -4186,6 +4267,15 @@ begin
         exit(False);
     end;
   Result := True;
+end;
+
+procedure TGSimpleGraph.ListDomSets(AtMostSetSize: SizeInt; aOnFound: TOnSetFound);
+begin
+  if IsEmpty then
+    exit;
+  if aOnFound = nil then
+    raise EGraphError.Create(SECallbackMissed);
+  DoListDomSets(AtMostSetSize, aOnFound);
 end;
 
 function TGSimpleGraph.FindMDS(out aExact: Boolean; aTimeOut: Integer): TIntArray;
