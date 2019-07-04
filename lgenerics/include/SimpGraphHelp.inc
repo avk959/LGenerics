@@ -113,18 +113,29 @@ end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
 var
-  I, J: SizeInt;
-  p: PAdjList;
+  Idx2Ord: TIntArray = nil;
+  I: SizeInt;
+  p: PAdjItem;
 begin
+  Idx2Ord.Length := FNodes.Length;
+  for I := 0 to System.High(FNodes) do
+    Idx2Ord[FNodes[I]] := I;
   System.SetLength(FMatrix, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    begin
-      FMatrix[I].Capacity := aGraph.VertexCount;
-      p := aGraph.AdjLists[FNodes[I]];
-      for J := 0 to Pred(aGraph.VertexCount) do
-        if (I <> J) and (p^.Contains(FNodes[J]) xor aComplement) then
-          FMatrix[I][J] := True;
-    end;
+  if aComplement then
+    for I := 0 to Pred(aGraph.VertexCount) do
+      begin
+        FMatrix[I].InitRange(aGraph.VertexCount);
+        FMatrix[I][I] := False;
+        for p in aGraph.AdjLists[FNodes[I]]^ do
+          FMatrix[I][Idx2Ord[p^.Key]] := False;
+      end
+  else
+    for I := 0 to Pred(aGraph.VertexCount) do
+      begin
+        FMatrix[I].Capacity := aGraph.VertexCount;
+        for p in aGraph.AdjLists[FNodes[I]]^ do
+          FMatrix[I][Idx2Ord[p^.Key]] := True;
+      end;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper.SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -239,17 +250,17 @@ procedure TGSimpleGraph.TBPCliqueIsHelper256.Extend(var aCand: TBits256);
 var
   NewCand: TBits256;
   ColOrd, Colors: TIntArray;
-  I, J, ItemCount: SizeInt;
+  I, J, CandCount: SizeInt;
 begin
   if aCand.NonEmpty then
     begin
       if TimeOut then
         exit;
-      ItemCount := aCand.PopCount;
-      ColOrd.Length := ItemCount;
-      Colors.Length := ItemCount;
+      CandCount := aCand.PopCount;
+      ColOrd.Length := CandCount;
+      Colors.Length := CandCount;
       GreedyColor(aCand, ColOrd, Colors);
-      for I := Pred(ItemCount) downto 0 do
+      for I := Pred(CandCount) downto 0 do
         begin
           if Colors[I] + FCurrSet.PopCount <= FRecentBest.Length then
             exit;
@@ -294,18 +305,29 @@ end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.FillMatrix(aGraph: TGSimpleGraph; aComplement: Boolean);
 var
-  I, J: SizeInt;
-  pA: PAdjList;
+  Idx2Ord: TIntArray = nil;
+  I: SizeInt;
+  p: PAdjItem;
 begin
+  Idx2Ord.Length := FNodes.Length;
+  for I := 0 to System.High(FNodes) do
+    Idx2Ord[FNodes[I]] := I;
   System.SetLength(FMatrix, aGraph.VertexCount);
-  for I := 0 to Pred(aGraph.VertexCount) do
-    begin
-      pA := aGraph.AdjLists[FNodes[I]];
-      FMatrix[I].InitZero;
-      for J := 0 to Pred(aGraph.VertexCount) do
-        if (I <> J) and (pA^.Contains(FNodes[J]) xor aComplement) then
-          FMatrix[I][J] := True;
-    end;
+  if aComplement then
+    for I := 0 to Pred(aGraph.VertexCount) do
+      begin
+        FMatrix[I].InitRange(aGraph.VertexCount);
+        FMatrix[I][I] := False;
+        for p in aGraph.AdjLists[FNodes[I]]^ do
+          FMatrix[I][Idx2Ord[p^.Key]] := False;
+      end
+  else
+    for I := 0 to Pred(aGraph.VertexCount) do
+      begin
+        FMatrix[I].InitZero;
+        for p in aGraph.AdjLists[FNodes[I]]^ do
+          FMatrix[I][Idx2Ord[p^.Key]] := True;
+      end;
 end;
 
 procedure TGSimpleGraph.TBPCliqueIsHelper256.SortMatrixByWidth(aGraph: TGSimpleGraph; aComplement: Boolean);
@@ -522,24 +544,26 @@ end;
 
 procedure TGSimpleGraph.TBPDomSetHelper.FillMatrix(aGraph: TGSimpleGraph; out aCand: TBoolVector);
 var
-  I, J, Degree: SizeInt;
-  pList: PAdjList;
+  Idx2Ord: TIntArray = nil;
+  I, Degree: SizeInt;
+  p: PAdjItem;
 begin
   FNodes := aGraph.SortNodesByDegree(soDesc);
+  Idx2Ord.Length := FNodes.Length;
+  for I := 0 to System.High(FNodes) do
+    Idx2Ord[FNodes[I]] := I;
   System.SetLength(FMatrix, System.Length(FNodes));
   aCand.InitRange(FNodes.Length);
   FCurrSet.Capacity := FNodes.Length;
   for I := 0 to System.High(FNodes) do
     begin
       FMatrix[I].Capacity := FNodes.Length;
-      pList := aGraph.AdjLists[FNodes[I]];
       Degree := 0;
-      for J := 0 to System.High(FNodes) do
-        if (I <> J) and pList^.Contains(FNodes[J]) then
-          begin
-            FMatrix[I][J] := True;
-            Inc(Degree);
-          end;
+      for p in aGraph.AdjLists[FNodes[I]]^ do
+        begin
+          FMatrix[I][Idx2Ord[p^.Key]] := True;
+          Inc(Degree);
+        end;
       if Degree = 0 then
         begin
           FCurrSet[FNodes[I]] := True;
@@ -624,24 +648,26 @@ end;
 
 procedure TGSimpleGraph.TBPDomSetHelper256.FillMatrix(aGraph: TGSimpleGraph; out aCand: TBits256);
 var
-  I, J, Degree: SizeInt;
-  pList: PAdjList;
+  Idx2Ord: TIntArray = nil;
+  I, Degree: SizeInt;
+  p: PAdjItem;
 begin
   FNodes := aGraph.SortNodesByDegree(soDesc);
+  Idx2Ord.Length := FNodes.Length;
+  for I := 0 to System.High(FNodes) do
+    Idx2Ord[FNodes[I]] := I;
   System.SetLength(FMatrix, System.Length(FNodes));
   aCand.InitRange(FNodes.Length);
   FCurrSet.InitZero;
   for I := 0 to System.High(FNodes) do
     begin
       FMatrix[I].InitZero;
-      pList := aGraph.AdjLists[FNodes[I]];
       Degree := 0;
-      for J := 0 to System.High(FNodes) do
-        if (I <> J) and pList^.Contains(FNodes[J]) then
-          begin
-            FMatrix[I][J] := True;
-            Inc(Degree);
-          end;
+      for p in aGraph.AdjLists[FNodes[I]]^ do
+        begin
+          FMatrix[I][Idx2Ord[p^.Key]] := True;
+          Inc(Degree);
+        end;
       if Degree = 0 then
         begin
           FCurrSet[FNodes[I]] := True;
@@ -666,7 +692,10 @@ begin
       I := NULL_INDEX;
       for J in aCand do
         if not FTested[J] then
-          I := J;
+          begin
+            I := J;
+            break;
+          end;
       if I = NULL_INDEX then
         exit;
       LocTested := FTested;
