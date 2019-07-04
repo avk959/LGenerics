@@ -2218,7 +2218,7 @@ var
         begin
           Blocks[I].Capacity := NodeCount;
           for J := 0 to Pred(NodeCount) do
-            if Columns[J][I] and not Excluded[J] then
+            if not Excluded[J] and Columns[J][I] then
               Blocks[I][J] := True;
         end;
   end;
@@ -2231,20 +2231,19 @@ var
       begin
         if CurrSet.PopCount >= aMaxSize then
           exit;
-        LocTested.Capacity := NodeCount;
+        LocTested := Tested;
         Next := aUnivers.Lob;
         for I in Blocks[Next] do
           if not(CurrSet[I] or Tested[I]) then
             begin
               CurrSet[I] := True;
               Tested[I] := True;
-              LocTested[I] := True;
               Extend(aUnivers.Union(Columns[I]));
               if Cancelled then
                 exit;
               CurrSet[I] := False;
             end;
-        Tested.Subtract(LocTested);
+        Tested.Intersect(LocTested);
       end
     else
       aOnFind(CurrSet.ToArray, Cancelled);
