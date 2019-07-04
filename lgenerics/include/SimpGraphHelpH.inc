@@ -102,7 +102,8 @@ type
   TBPDomSetHelper = object(TNodeSearch) // BP -> bit-parallel
   strict private
     FMatrix: TBoolMatrix;
-    FCurrSet: TBoolVector;
+    FCurrSet,
+    FTested: TBoolVector;
     FNodes: TIntArray;
     procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBoolVector);
     procedure Extend(const aCand: TBoolVector);
@@ -114,7 +115,8 @@ type
   TBPDomSetHelper256 = object(TNodeSearch) // BP -> bit-parallel
   strict private
     FMatrix: TBitMatrix256;
-    FCurrSet: TBits256;
+    FCurrSet,
+    FTested: TBits256;
     FNodes: TIntArray;
     procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBits256);
     procedure Extend(constref aCand: TBits256);

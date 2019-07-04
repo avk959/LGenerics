@@ -58,17 +58,17 @@ procedure TGSimpleGraph.TBPCliqueIsHelper.Extend(var aCand: TBoolVector);
 var
   NewCand: TBoolVector;
   ColOrd, Colors: TIntArray;
-  I, J, ItemCount: SizeInt;
+  I, J, CandCount: SizeInt;
 begin
   if aCand.NonEmpty then
     begin
       if TimeOut then
         exit;
-      ItemCount := aCand.PopCount;
-      ColOrd.Length := ItemCount;
-      Colors.Length := ItemCount;
+      CandCount := aCand.PopCount;
+      ColOrd.Length := CandCount;
+      Colors.Length := CandCount;
       GreedyColor(aCand, ColOrd, Colors);
-      for I := Pred(ItemCount) downto 0 do
+      for I := Pred(CandCount) downto 0 do
         begin
           if Colors[I] + FCurrSet.PopCount <= FRecentBest.Length then
             exit;
@@ -78,6 +78,8 @@ begin
           NewCand := aCand.Intersection(FMatrix[J]);
           Extend(NewCand);
           FCurrSet[FNodes[J]] := False;
+          if FCancelled then
+            break;
         end;
     end
   else
@@ -90,8 +92,6 @@ var
   NewSub, NewCand: TBoolVector;
   I: SizeInt;
 begin
-  if FCancelled then
-    exit;
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
@@ -103,6 +103,8 @@ begin
             FCurrSet[FNodes[I]] := True;
             Extend(NewSub, NewCand);
             FCurrSet[FNodes[I]] := False;
+            if FCancelled then
+              break;
           end;
     end
   else
@@ -257,6 +259,8 @@ begin
           NewCand := aCand.Intersection(FMatrix[J]);
           Extend(NewCand);
           FCurrSet[FNodes[J]] := False;
+          if FCancelled then
+            break;
         end;
     end
   else
@@ -269,8 +273,6 @@ var
   NewSub, NewCand: TBits256;
   I: SizeInt;
 begin
-  if FCancelled then
-    exit;
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
@@ -282,6 +284,8 @@ begin
             FCurrSet[FNodes[I]] := True;
             Extend(NewSub, NewCand);
             FCurrSet[FNodes[I]] := False;
+            if FCancelled then
+              break;
           end;
     end
   else
@@ -451,6 +455,8 @@ begin
           NewCand := aCand.Intersection(FMatrix[J]^);
           Extend(NewCand);
           FCurrSet.Pop;
+          if FCancelled then
+            break;
         end;
     end
   else
@@ -463,8 +469,6 @@ var
   NewSub, NewCand: TIntSet;
   I: SizeInt;
 begin
-  if FCancelled then
-    exit;
   if aSub.NonEmpty then
     begin
       if aCand.NonEmpty then
@@ -476,6 +480,8 @@ begin
             FCurrSet.Push(FNodes[I]);
             Extend(NewSub, NewCand);
             FCurrSet.Pop;
+            if FCancelled then
+              break;
           end;
     end
   else
@@ -540,11 +546,12 @@ begin
           aCand[I] := False;
         end;
     end;
+  FTested.Capacity := FNodes.Length;
 end;
 
 procedure TGSimpleGraph.TBPDomSetHelper.Extend(const aCand: TBoolVector);
 var
-  NewCand: TBoolVector;
+  NewCand, LocTested: TBoolVector;
   I, J, Count: SizeInt;
 begin
   if aCand.NonEmpty then
@@ -554,31 +561,44 @@ begin
         exit;
       if TimeOut then
         exit;
-      I := aCand.Bsf;
+      I := NULL_INDEX;
+      for J in aCand do
+        if not FTested[J] then
+          begin
+            I := J;
+            break;
+          end;
+      if I = NULL_INDEX then
+        exit;
+      LocTested := FTested;
+      FTested[I] := True;
       NewCand := aCand.Difference(FMatrix[I]);
       NewCand[I] := False;
       FCurrSet[FNodes[I]] := True;
       Extend(NewCand);
       FCurrSet[FNodes[I]] := False;
-      if Count >= Pred(FRecentBest.Length) then
-        exit;
-      for J in aCand.Intersection(FMatrix[I]) do
-        begin
-          NewCand := aCand.Difference(FMatrix[J]);
-          NewCand[J] := False;
-          FCurrSet[FNodes[J]] := True;
-          Extend(NewCand);
-          if Count < FRecentBest.Length - 2 then
-            begin
-              NewCand.Subtract(FMatrix[I]);
-              FCurrSet[FNodes[I]] := True;
-              Extend(NewCand);
-              FCurrSet[FNodes[I]] := False;
-            end;
-          FCurrSet[FNodes[J]] := False;
-          if Count >= Pred(FRecentBest.Length) then
-            exit;
-        end;
+      if (Count < Pred(FRecentBest.Length)) and not FCancelled then
+        for J in aCand.Intersection(FMatrix[I]) do
+          begin
+            if FTested[J] then
+              continue;
+            FTested[J] := True;
+            NewCand := aCand.Difference(FMatrix[J]);
+            NewCand[J] := False;
+            FCurrSet[FNodes[J]] := True;
+            Extend(NewCand);
+            if (Count < FRecentBest.Length - 2) and not FCancelled then
+              begin
+                NewCand.Subtract(FMatrix[I]);
+                FCurrSet[FNodes[I]] := True;
+                Extend(NewCand);
+                FCurrSet[FNodes[I]] := False;
+              end;
+            FCurrSet[FNodes[J]] := False;
+            if (Count >= Pred(FRecentBest.Length)) or FCancelled then
+              break;
+          end;
+      FTested.Intersect(LocTested);
     end
   else
     if FCurrSet.PopCount < FRecentBest.Length then
@@ -628,11 +648,12 @@ begin
           aCand[I] := False;
         end;
     end;
+  FTested.InitZero;
 end;
 
 procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aCand: TBits256);
 var
-  NewCand: TBits256;
+  NewCand, LocTested: TBits256;
   I, J, Count: SizeInt;
 begin
   if aCand.NonEmpty then
@@ -642,31 +663,41 @@ begin
         exit;
       if TimeOut then
         exit;
-      I := aCand.Bsf;
+      I := NULL_INDEX;
+      for J in aCand do
+        if not FTested[J] then
+          I := J;
+      if I = NULL_INDEX then
+        exit;
+      LocTested := FTested;
+      FTested[I] := True;
       NewCand := aCand.Difference(FMatrix[I]);
       NewCand[I] := False;
       FCurrSet[FNodes[I]] := True;
       Extend(NewCand);
       FCurrSet[FNodes[I]] := False;
-      if Count >= Pred(FRecentBest.Length) then
-        exit;
-      for J in aCand.Intersection(FMatrix[I]) do
-        begin
-          NewCand := aCand.Difference(FMatrix[J]);
-          NewCand[J] := False;
-          FCurrSet[FNodes[J]] := True;
-          Extend(NewCand);
-          if (Count < FRecentBest.Length - 2){ and (I < J)} then
-            begin
-              NewCand.Subtract(FMatrix[I]);
-              FCurrSet[FNodes[I]] := True;
-              Extend(NewCand);
-              FCurrSet[FNodes[I]] := False;
-            end;
-          FCurrSet[FNodes[J]] := False;
-          if Count >= Pred(FRecentBest.Length) then
-            exit;
-        end;
+      if (Count < Pred(FRecentBest.Length)) and not FCancelled then
+        for J in aCand.Intersection(FMatrix[I]) do
+          begin
+            if FTested[J] then
+              continue;
+            FTested[J] := True;
+            NewCand := aCand.Difference(FMatrix[J]);
+            NewCand[J] := False;
+            FCurrSet[FNodes[J]] := True;
+            Extend(NewCand);
+            if (Count < FRecentBest.Length - 2) and not FCancelled then
+              begin
+                NewCand.Subtract(FMatrix[I]);
+                FCurrSet[FNodes[I]] := True;
+                Extend(NewCand);
+                FCurrSet[FNodes[I]] := False;
+              end;
+            FCurrSet[FNodes[J]] := False;
+            if (Count >= Pred(FRecentBest.Length)) or FCancelled then
+              break;
+          end;
+      FTested.Intersect(LocTested);
     end
   else
     if FCurrSet.PopCount < FRecentBest.Length then
@@ -708,7 +739,7 @@ begin
       NewCand.Delete(I);
       Extend(NewCand);
       FCurrSet.Pop;
-      if FCurrSet.Count >= FRecentBest.Length - 1 then
+      if (FCurrSet.Count >= FRecentBest.Length - 1) or FCancelled then
         exit;
       for J in aCand.Intersection(FMatrix[I]^) do
         begin
@@ -716,7 +747,7 @@ begin
           NewCand := aCand.Difference(FMatrix[J]^);
           NewCand.Delete(J);
           Extend(NewCand);
-          if FCurrSet.Count < FRecentBest.Length - 1 then
+          if (FCurrSet.Count < FRecentBest.Length - 1) and not FCancelled then
             begin
               FCurrSet.Push(I);
               NewCand.Subtract(FMatrix[I]^);
@@ -724,7 +755,7 @@ begin
               FCurrSet.Pop;
             end;
           FCurrSet.Pop;
-          if FCurrSet.Count >= FRecentBest.Length - 1 then
+          if (FCurrSet.Count >= FRecentBest.Length - 1) or FCancelled then
             exit;
         end;
     end
