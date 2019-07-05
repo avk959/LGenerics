@@ -138,23 +138,31 @@ type
   TExactColor = object(TNodeSearch)
   strict private
   type
+    PNode = ^TNode;
+    TLink = PNode;
+    PLink  = ^TLink;
+
     TNode = record
       Saturation,
-      Degree: Integer;
+      Degree,
+      NeighbCount: Integer;
+      EdgeList: PLink;
       AdjColors: array of Integer;
-      constructor Create(aDegree, aUpperBound: SizeInt);
+      constructor Create(aDegree, aUpperBound: SizeInt; aEdgeList: PLink);
       procedure NeighbPickColor(aColor: Integer); inline;
       procedure NeighbDropColor(aColor: Integer); inline;
     end;
 
   var
     FNodes: array of TNode;
+    FEdgeList: array of TLink;
     FAchromatic: TBoolVector;
     FColorMap: TIntArray;
     FGraph: TGSimpleGraph;
     FLowBound,
     FUpBound,
     FNodeCount: SizeInt;
+    procedure CreateStaticGraph;
     function  InitLowBound: SizeInt;
     procedure InitComplete;
     function  PickColor(aIndex, aColor: SizeInt): Boolean;

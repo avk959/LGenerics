@@ -813,10 +813,12 @@ end;
 
 { TGSimpleGraph.TExactColor.TNode }
 
-constructor TGSimpleGraph.TExactColor.TNode.Create(aDegree, aUpperBound: SizeInt);
+constructor TGSimpleGraph.TExactColor.TNode.Create(aDegree, aUpperBound: SizeInt; aEdgeList: PLink);
 begin
   Degree := aDegree;
   Saturation := 0;
+  NeighbCount := aDegree;
+  EdgeList := aEdgeList;
   System.SetLength(AdjColors, aUpperBound);
   System.FillChar(Pointer(AdjColors)^, aUpperBound * SizeOf(Integer), 0);
 end;
@@ -837,6 +839,25 @@ end;
 
 { TGSimpleGraph.TExactColor }
 
+procedure TGSimpleGraph.TExactColor.CreateStaticGraph;
+var
+  I, J: SizeInt;
+  p: PAdjItem;
+begin
+  System.SetLength(FNodes, FNodeCount);
+  System.SetLength(FEdgeList, FGraph.EdgeCount * 2);
+  J := 0;
+  for I := 0 to System.High(FNodes) do
+    begin
+      FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpBound), @FEdgeList[J]);
+      for p in FGraph.AdjLists[I]^ do
+        begin
+          FEdgeList[J] := @FNodes[p^.Key];
+          Inc(J);
+        end;
+    end;
+end;
+
 function TGSimpleGraph.TExactColor.InitLowBound: SizeInt;
 var
   Clique: TIntArray;
@@ -848,9 +869,7 @@ begin
   FCancelled := not Exact;
   if FCancelled or (Result >= FUpBound) then
     exit;
-  System.SetLength(FNodes, FNodeCount);
-  for I := 0 to System.High(FNodes) do
-    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpBound));
+  CreateStaticGraph;
   FColorMap := FGraph.CreateIntArray(0);
   FAchromatic.InitRange(FNodeCount);
   J := 1;
@@ -866,9 +885,7 @@ procedure TGSimpleGraph.TExactColor.InitComplete;
 var
   I: SizeInt;
 begin
-  System.SetLength(FNodes, FNodeCount);
-  for I := 0 to System.High(FNodes) do
-    FNodes[I] := TNode.Create(FGraph.AdjLists[I]^.Count, Pred(FUpBound));
+  CreateStaticGraph;
   FAchromatic.InitRange(FNodeCount);
   for I := 0 to System.High(FColorMap) do
     if FColorMap[I] > 0 then
@@ -880,23 +897,25 @@ end;
 
 function TGSimpleGraph.TExactColor.PickColor(aIndex, aColor: SizeInt): Boolean;
 var
-  p: PAdjItem;
+  I: SizeInt;
 begin
   if FNodes[aIndex].AdjColors[Pred(aColor)] <> 0 then
     exit(False);
   FColorMap[aIndex] := aColor;
-  for p in FGraph.AdjLists[aIndex]^ do
-    FNodes[p^.Key].NeighbPickColor(aColor);
+  with FNodes[aIndex] do
+    for I := 0 to Pred(NeighbCount) do
+      EdgeList[I]^.NeighbPickColor(aColor);
   Result := True;
 end;
 
 procedure TGSimpleGraph.TExactColor.DropColor(aIndex, aColor: SizeInt);
 var
-  p: PAdjItem;
+  I: SizeInt;
 begin
   FColorMap[aIndex] := 0;
-  for p in FGraph.AdjLists[aIndex]^ do
-    FNodes[p^.Key].NeighbDropColor(aColor);
+  with FNodes[aIndex] do
+    for I := 0 to Pred(NeighbCount) do
+      EdgeList[I]^.NeighbDropColor(aColor);
 end;
 
 function TGSimpleGraph.TExactColor.SelectNext(out aNode: SizeInt): Boolean;
