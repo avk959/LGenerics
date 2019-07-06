@@ -570,12 +570,11 @@ begin
           aCand[I] := False;
         end;
     end;
-  FTested.Capacity := FNodes.Length;
 end;
 
-procedure TGSimpleGraph.TBPDomSetHelper.Extend(const aCand: TBoolVector);
+procedure TGSimpleGraph.TBPDomSetHelper.Extend(const aCand, aTested: TBoolVector);
 var
-  NewCand, LocTested: TBoolVector;
+  NewCand, NewTested: TBoolVector;
   I, J, Count: SizeInt;
 begin
   if aCand.NonEmpty then
@@ -587,42 +586,41 @@ begin
         exit;
       I := NULL_INDEX;
       for J in aCand do
-        if not FTested[J] then
+        if not aTested[J] then
           begin
             I := J;
             break;
           end;
       if I = NULL_INDEX then
         exit;
-      LocTested := FTested;
-      FTested[I] := True;
+      NewTested := aTested;
+      NewTested[I] := True;
       NewCand := aCand.Difference(FMatrix[I]);
       NewCand[I] := False;
       FCurrSet[FNodes[I]] := True;
-      Extend(NewCand);
+      Extend(NewCand, NewTested);
       FCurrSet[FNodes[I]] := False;
       if (Count < Pred(FRecentBest.Length)) and not FCancelled then
         for J in aCand.Intersection(FMatrix[I]) do
           begin
-            if FTested[J] then
+            if NewTested[J] then
               continue;
-            FTested[J] := True;
+            NewTested[J] := True;
             NewCand := aCand.Difference(FMatrix[J]);
             NewCand[J] := False;
             FCurrSet[FNodes[J]] := True;
-            Extend(NewCand);
+            Extend(NewCand, NewTested);
             if (Count < FRecentBest.Length - 2) and not FCancelled then
               begin
                 NewCand.Subtract(FMatrix[I]);
                 FCurrSet[FNodes[I]] := True;
-                Extend(NewCand);
+                Extend(NewCand, NewTested);
                 FCurrSet[FNodes[I]] := False;
               end;
             FCurrSet[FNodes[J]] := False;
             if (Count >= Pred(FRecentBest.Length)) or FCancelled then
               break;
           end;
-      FTested.Intersect(LocTested);
     end
   else
     if FCurrSet.PopCount < FRecentBest.Length then
@@ -632,14 +630,15 @@ end;
 function TGSimpleGraph.TBPDomSetHelper.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
-  Cand: TBoolVector;
+  Cand, Tested: TBoolVector;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
   FStartTime := Now;
   FillMatrix(aGraph, Cand);
   FRecentBest := aGraph.GreedyMDS;
-  Extend(Cand);
+  Tested.Capacity := aGraph.VertexCount;
+  Extend(Cand, Tested);
   aExact := not FCancelled;
   Result := FRecentBest;
 end;
@@ -674,12 +673,11 @@ begin
           aCand[I] := False;
         end;
     end;
-  FTested.InitZero;
 end;
 
-procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aCand: TBits256);
+procedure TGSimpleGraph.TBPDomSetHelper256.Extend(constref aCand, aTested: TBits256);
 var
-  NewCand, LocTested: TBits256;
+  NewCand, NewTested: TBits256;
   I, J, Count: SizeInt;
 begin
   if aCand.NonEmpty then
@@ -691,42 +689,42 @@ begin
         exit;
       I := NULL_INDEX;
       for J in aCand do
-        if not FTested[J] then
+        if not aTested[J] then
           begin
             I := J;
             break;
           end;
       if I = NULL_INDEX then
         exit;
-      LocTested := FTested;
-      FTested[I] := True;
+      NewTested := aTested;
+      NewTested[I] := True;
       NewCand := aCand.Difference(FMatrix[I]);
       NewCand[I] := False;
       FCurrSet[FNodes[I]] := True;
-      Extend(NewCand);
+      Extend(NewCand, NewTested);
       FCurrSet[FNodes[I]] := False;
       if (Count < Pred(FRecentBest.Length)) and not FCancelled then
         for J in aCand.Intersection(FMatrix[I]) do
           begin
-            if FTested[J] then
+            if NewTested[J] then
               continue;
-            FTested[J] := True;
+            NewTested[J] := True;
             NewCand := aCand.Difference(FMatrix[J]);
             NewCand[J] := False;
             FCurrSet[FNodes[J]] := True;
-            Extend(NewCand);
+            Extend(NewCand, NewTested);
             if (Count < FRecentBest.Length - 2) and not FCancelled then
               begin
                 NewCand.Subtract(FMatrix[I]);
                 FCurrSet[FNodes[I]] := True;
-                Extend(NewCand);
+                Extend(NewCand, NewTested);
                 FCurrSet[FNodes[I]] := False;
               end;
             FCurrSet[FNodes[J]] := False;
             if (Count >= Pred(FRecentBest.Length)) or FCancelled then
               break;
           end;
-      FTested.Intersect(LocTested);
+
     end
   else
     if FCurrSet.PopCount < FRecentBest.Length then
@@ -736,14 +734,15 @@ end;
 function TGSimpleGraph.TBPDomSetHelper256.MinDomSet(aGraph: TGSimpleGraph; aTimeOut: Integer;
   out aExact: Boolean): TIntArray;
 var
-  Cand: TBits256;
+  Cand, Tested: TBits256;
 begin
   FTimeOut := aTimeOut and System.High(Integer);
   FCancelled := False;
   FStartTime := Now;
   FillMatrix(aGraph, Cand);
   FRecentBest := aGraph.GreedyMDS;
-  Extend(Cand);
+  {%H-}Tested.InitZero;
+  Extend(Cand, Tested);
   aExact := not FCancelled;
   Result := FRecentBest;
 end;
