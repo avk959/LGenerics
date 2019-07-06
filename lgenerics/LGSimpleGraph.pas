@@ -2185,7 +2185,7 @@ end;
 procedure TGSimpleGraph.DoListDomSets(aMaxSize: SizeInt; aOnFind: TOnSetFound);
 var
   Columns, Blocks: TBoolMatrix;
-  CurrSet, Tested: TBoolVector;
+  CurrSet: TBoolVector;
   NodeCount: SizeInt;
   Cancelled: Boolean;
   procedure InitMsc;
@@ -2195,7 +2195,6 @@ var
   begin
     NodeCount := VertexCount;
     CurrSet.Capacity := NodeCount;
-    Tested.Capacity := NodeCount;
     Columns := CreateBoolMatrix;
     for I := 0 to Pred(NodeCount) do
       begin
@@ -2222,39 +2221,39 @@ var
               Blocks[I][J] := True;
         end;
   end;
-  procedure Extend(const aUnivers: TBoolVector);
+  procedure Extend(const aUnivers, aTested: TBoolVector);
   var
-    LocTested: TBoolVector;
+    NewTested: TBoolVector;
     I, Next: SizeInt;
   begin
     if aUnivers.PopCount < NodeCount then
       begin
         if CurrSet.PopCount >= aMaxSize then
           exit;
-        LocTested := Tested;
         Next := aUnivers.Lob;
+        NewTested := aTested;
         for I in Blocks[Next] do
-          if not(CurrSet[I] or Tested[I]) then
+          if not(CurrSet[I] or aTested[I]) then
             begin
               CurrSet[I] := True;
-              Tested[I] := True;
-              Extend(aUnivers.Union(Columns[I]));
+              NewTested[I] := True;
+              Extend(aUnivers.Union(Columns[I]), NewTested);
               if Cancelled then
                 exit;
               CurrSet[I] := False;
             end;
-        Tested.Intersect(LocTested);
       end
     else
       aOnFind(CurrSet.ToArray, Cancelled);
   end;
 var
-  Uni: TBoolVector;
+  Uni, Tested: TBoolVector;
 begin
   Cancelled := False;
   InitMsc;
   Uni := CurrSet;
-  Extend(Uni);
+  Tested.Capacity := VertexCount;
+  Extend(Uni, Tested);
 end;
 
 function TGSimpleGraph.GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
