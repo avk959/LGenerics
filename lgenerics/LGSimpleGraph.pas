@@ -2186,7 +2186,7 @@ procedure TGSimpleGraph.DoListDomSets(aMaxSize: SizeInt; aOnFind: TOnSetFound);
 var
   Columns, Blocks: TBoolMatrix;
   CurrSet: TBoolVector;
-  NodeCount: SizeInt;
+  NodeCount, CurrCount: SizeInt;
   Cancelled: Boolean;
   procedure InitMsc;
   var
@@ -2220,40 +2220,44 @@ var
             if not Excluded[J] and Columns[J][I] then
               Blocks[I][J] := True;
         end;
+    CurrCount := CurrSet.PopCount;
   end;
-  procedure Extend(const aUnivers, aTested: TBoolVector);
+  procedure Extend(const aCand, aTested: TBoolVector);
   var
     NewTested: TBoolVector;
     I, Next: SizeInt;
   begin
-    if aUnivers.PopCount < NodeCount then
+    if aCand.NonEmpty then
       begin
-        if CurrSet.PopCount >= aMaxSize then
+        if CurrCount >= aMaxSize then
           exit;
-        Next := aUnivers.Lob;
+        Next := aCand.Bsf;
         NewTested := aTested;
         for I in Blocks[Next] do
-          if not(CurrSet[I] or aTested[I]) then
+          if not aTested[I] then
             begin
               CurrSet[I] := True;
               NewTested[I] := True;
-              Extend(aUnivers.Union(Columns[I]), NewTested);
+              Inc(CurrCount);
+              Extend(aCand.Difference(Columns[I]), NewTested);
               if Cancelled then
                 exit;
               CurrSet[I] := False;
+              Dec(CurrCount);
             end;
       end
     else
       aOnFind(CurrSet.ToArray, Cancelled);
   end;
 var
-  Uni, Tested: TBoolVector;
+  Cand, Tested: TBoolVector;
 begin
   Cancelled := False;
   InitMsc;
-  Uni := CurrSet;
+  Cand.InitRange(VertexCount);
+  Cand.Subtract(CurrSet{%H-});
   Tested.Capacity := VertexCount;
-  Extend(Uni, Tested);
+  Extend(Cand, Tested);
 end;
 
 function TGSimpleGraph.GetMdsBP(aTimeOut: Integer; out aExact: Boolean): TIntArray;
