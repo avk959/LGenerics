@@ -33,6 +33,7 @@ type
     FCurrSet: TBoolVector;
     FNodes: TIntArray;
     FOnFind: TOnSetFound;
+    FCurrCount: SizeInt;
     procedure GreedyColor(constref aCand: TBoolVector; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBoolVector); // in Bron-Kerbosch terminlogy
     procedure Extend(var aSub, aCand: TBoolVector);
@@ -62,6 +63,7 @@ type
     FCurrSet: TBits256;
     FNodes: TIntArray;
     FOnFind: TOnSetFound;
+    FCurrCount: SizeInt;
     procedure GreedyColor(constref aCand: TBits256; var aColOrd, aColors: TIntArray);
     procedure Extend(var aCand: TBits256);
     procedure Extend(var aSub, aCand: TBits256);
@@ -104,6 +106,7 @@ type
     FMatrix: TBoolMatrix;
     FCurrSet: TBoolVector;
     FNodes: TIntArray;
+    FCurrCount: SizeInt;
     procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBoolVector);
     procedure Extend(const aCand, aTested: TBoolVector);
   public
@@ -116,6 +119,7 @@ type
     FMatrix: TBitMatrix256;
     FCurrSet: TBits256;
     FNodes: TIntArray;
+    FCurrCount: SizeInt;
     procedure FillMatrix(aGraph: TGSimpleGraph; out aCand: TBits256);
     procedure Extend(constref aCand, aTested: TBits256);
   public
