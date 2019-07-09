@@ -2898,4 +2898,55 @@ begin
   Result := True;
 end;
 
+{ TGSimpleGraph.TSbWNode }
 
+class operator TGSimpleGraph.TSbWNode.>(constref L, R: TSbWNode): Boolean;
+begin
+  if L.WDegree = R.WDegree then
+    if L.Degree = R.Degree then
+      Result := L.Index > R.Index
+    else
+      Result := L.Degree > R.Degree
+  else
+    Result := L.WDegree > R.WDegree;
+end;
+
+class operator TGSimpleGraph.TSbWNode.<(constref L, R: TSbWNode): Boolean;
+begin
+  if L.WDegree = R.WDegree then
+    if L.Degree = R.Degree then
+      Result := L.Index < R.Index
+    else
+      Result := L.Degree < R.Degree
+  else
+    Result := L.WDegree < R.WDegree;
+end;
+
+class operator TGSimpleGraph.TSbWNode.>=(constref L, R: TSbWNode): Boolean;
+begin
+  if L.WDegree = R.WDegree then
+    if L.Degree = R.Degree then
+      Result := L.Index > R.Index
+    else
+      Result := L.Degree > R.Degree
+  else
+    Result := L.WDegree > R.WDegree;
+end;
+
+class operator TGSimpleGraph.TSbWNode.<=(constref L, R: TSbWNode): Boolean;
+begin
+  if L.WDegree = R.WDegree then
+    if L.Degree = R.Degree then
+      Result := L.Index < R.Index
+    else
+      Result := L.Degree < R.Degree
+  else
+    Result := L.WDegree < R.WDegree;
+end;
+
+constructor TGSimpleGraph.TSbWNode.Create(aIndex, aWDegree, aDegree: SizeInt);
+begin
+  Index := aIndex;
+  WDegree := aWDegree;
+  Degree := aDegree;
+end;

@@ -448,4 +448,15 @@ type
     function  GraphIsPlanar(aGraph: TGSimpleGraph; out aEmbed: TPlanarEmbedding): Boolean;
   end;
 
+  TSbWNode = record
+    Index,
+    WDegree,
+    Degree: SizeInt;
+    class operator > (constref L, R: TSbWNode): Boolean; inline;
+    class operator < (constref L, R: TSbWNode): Boolean; inline;
+    class operator >=(constref L, R: TSbWNode): Boolean; inline;
+    class operator <=(constref L, R: TSbWNode): Boolean; inline;
+    constructor Create(aIndex, aWDegree, aDegree: SizeInt);
+  end;
+
 
