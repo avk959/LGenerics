@@ -2934,17 +2934,17 @@ end;
 
 function TGSimpleGraph.SortNodesByWidth(o: TSortOrder): TIntArray;
 var
-  Queue: TINodePqMin;
+  Queue: specialize TGPairHeapMin<TSbWNode>;
   List: TIntArray = nil;
   InQueue: TBitVector;
-  Item: TIntNode = (Index: -1; Data: -1);
+  Item: TSbWNode = (Index: -1; WDegree: -1; Degree: -1;);
   I: SizeInt;
   p: PAdjItem;
 begin
-  Queue := TINodePqMin.Create(VertexCount);
+  Queue := specialize TGPairHeapMin<TSbWNode>.Create(VertexCount);
   List.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
-    Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
+    Queue.Enqueue(I, TSbWNode.Create(I, AdjLists[I]^.Count, AdjLists[I]^.Count));
   InQueue.ExpandTrue(VertexCount);
   I := 0;
   while Queue.TryDequeue(Item) do
@@ -2954,7 +2954,8 @@ begin
       InQueue[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
         if InQueue[p^.Key] then
-          Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
+          with Queue.ItemPtr(p^.Key)^ do
+            Queue.Update(p^.Key, TSbWNode.Create(Index, Pred(WDegree), Degree));
     end;
   Result := List;
   if o = soDesc then
