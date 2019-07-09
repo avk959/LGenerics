@@ -2957,50 +2957,82 @@ begin
           with Queue.ItemPtr(p^.Key)^ do
             Queue.Update(p^.Key, TSbWNode.Create(Index, Pred(WDegree), Degree));
     end;
-  Result := List;
   if o = soDesc then
-    TIntHelper.Reverse(Result);
+    TIntHelper.Reverse(List);
+  Result := List;
 end;
 
 function TGSimpleGraph.SortComplementByWidth: TIntArray;
-var
-  I, J: SizeInt;
-  List, Stack: TIntSet;
-  m: TBoolMatrix;
-begin
-  Result := CreateComplementDegreeArray;
-  List.InitRange(VertexCount);
-  if VertexCount > COMMON_BP_CUTOFF then
+  procedure CommSort;
+  var
+    List, Stack: TIntSet;
+    vList: TIntArray;
+    I, J: SizeInt;
+  begin
+    vList := CreateComplementDegreeArray;
+    List.InitRange(VertexCount);
     while List.NonEmpty do
       begin
         I := List[0];
         for J in List do
-          if Result[J] < Result[I] then
+          if vList[J] < vList[I] then
             I := J;
         {%H-}Stack.Push(I);
         List.Remove(I);
         for J in List do
           if not AdjLists[I]^.Contains(J) then
             Dec(Result[J]);
-      end
+      end;
+    Result := Stack.ToArray;
+    TIntHelper.Reverse(Result);
+  end;
+  procedure BpSort;
+  var
+    Queue: specialize TGPairHeapMin<TSbWNode>;
+    m: TBoolMatrix;
+    List: TIntArray = nil;
+    InQueue: TBitVector;
+    Item: TSbWNode = (Index: -1; WDegree: -1; Degree: -1;);
+    I, J: SizeInt;
+    p: PAdjItem;
+  begin
+    System.SetLength(m, VertexCount);
+    for I := 0 to Pred(VertexCount) do //create complement matrix
+      begin
+        m[I].InitRange(VertexCount);
+        m[I][I] := False;
+        for p in AdjLists[I]^ do
+          m[I][p^.Key] := False;
+      end;
+    Queue := specialize TGPairHeapMin<TSbWNode>.Create(VertexCount);
+    List.Length := VertexCount;
+    for I := 0 to Pred(VertexCount) do
+      begin
+        J := m[I].PopCount;
+        Queue.Enqueue(I, TSbWNode.Create(I, J, J));
+      end;
+    InQueue.ExpandTrue(VertexCount);
+    I := 0;
+    while Queue.TryDequeue(Item) do
+      begin
+        List[I] := Item.Index;
+        Inc(I);
+        InQueue[Item.Index] := False;
+        for J in m[Item.Index] do
+          if InQueue[J] then
+            with Queue.ItemPtr(J)^ do
+              Queue.Update(J, TSbWNode.Create(Index, Pred(WDegree), Degree));
+      end;
+    TIntHelper.Reverse(List);
+    Result := List;
+  end;
+
+begin
+  Result := nil;
+  if VertexCount > COMMON_BP_CUTOFF then
+    CommSort
   else
-    begin
-      m := CreateBoolMatrix;
-      while List.NonEmpty do
-        begin
-          I := List[0];
-          for J in List do
-            if Result[J] < Result[I] then
-              I := J;
-          {%H-}Stack.Push(I);
-          List.Remove(I);
-          for J in List do
-            if not m[I][J] then
-              Dec(Result[J]);
-        end
-    end;
-  Result := Stack.ToArray;
-  TIntHelper.Reverse(Result);
+    BpSort;
 end;
 
 function TGSimpleGraph.SortNodesByDegree(o: TSortOrder): TIntArray;
