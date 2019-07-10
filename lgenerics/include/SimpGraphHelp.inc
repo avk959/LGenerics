@@ -918,13 +918,14 @@ function TGSimpleGraph.TExactColor.PickColor(aIndex, aColor: SizeInt): Boolean;
 var
   I: SizeInt;
 begin
-  if FNodes[aIndex].AdjColors[Pred(aColor)] <> 0 then
-    exit(False);
-  FColorMap[aIndex] := aColor;
-  with FNodes[aIndex] do
-    for I := 0 to Pred(NeighbCount) do
-      EdgeList[I]^.NeighbPickColor(aColor);
-  Result := True;
+  Result := FNodes[aIndex].AdjColors[Pred(aColor)] = 0;
+  if Result then
+    begin
+      FColorMap[aIndex] := aColor;
+      with FNodes[aIndex] do
+        for I := 0 to Pred(NeighbCount) do
+          EdgeList[I]^.NeighbPickColor(aColor);
+    end;
 end;
 
 procedure TGSimpleGraph.TExactColor.DropColor(aIndex, aColor: SizeInt);
@@ -941,7 +942,6 @@ function TGSimpleGraph.TExactColor.SelectNext(out aNode: SizeInt): Boolean;
 var
   I, MaxSat: Integer;
 begin
-  //todo: priority queue ?
   MaxSat := NULL_INDEX;
   aNode := NULL_INDEX;
   for I in FAchromatic do
