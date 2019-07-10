@@ -4478,11 +4478,11 @@ function TGSimpleGraph.GreedyMaxClique: TIntArray;
     Cand := m[I];
     while Cand.NonEmpty do
       begin
-        MaxPop := NULL_INDEX;
+        MaxPop := 0;
         J := NULL_INDEX;
         for I in Cand do
           begin
-            Pop := Cand.IntersectionPop(m[I]);
+            Pop := Succ(Cand.IntersectionPop(m[I]));
             if Pop > MaxPop then
               begin
                 MaxPop := Pop;
