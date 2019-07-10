@@ -4502,10 +4502,10 @@ begin
   Result := nil;
   if IsEmpty then
     exit;
-  //if VertexCount > COMMON_BP_CUTOFF then
+  if VertexCount > COMMON_BP_CUTOFF then
     CommGreedy
-  //else
-  //  BpGreedy;
+  else
+    BpGreedy;
 end;
 
 function TGSimpleGraph.IsMaxClique(const aTestClique: TIntArray): Boolean;
