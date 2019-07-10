@@ -4440,26 +4440,72 @@ begin
 end;
 
 function TGSimpleGraph.GreedyMaxClique: TIntArray;
-var
-  Cand, Stack, Q: TIntSet;
-  AdjList: PAdjList;
-  I, J: SizeInt;
+  procedure CommGreedy;
+  var
+    Cand, Stack, Q: TIntSet;
+    AdjList: PAdjList;
+    I, J: SizeInt;
+  begin
+    Cand.AssignArray(SortNodesByWidth(soAsc));
+    while Cand.NonEmpty do
+      begin
+        I := Cand.Pop;
+        {%H-}Stack.Push(I);
+        AdjList := AdjLists[I];
+        for J in Cand do
+          if AdjList^.Contains(J) then
+            {%H-}Q.Push(J);
+        Cand.Assign(Q);
+        Q.MakeEmpty;
+      end;
+    Result := Stack.ToArray;
+  end;
+  procedure BpGreedy;
+  var
+    m: TBoolMatrix;
+    vOrd, Idx2Ord: TIntArray;
+    Stack: TIntSet;
+    Cand: TBoolVector;
+    I, J, Pop, MaxPop: SizeInt;
+  begin
+    vOrd := SortNodesByWidth(soAsc);
+    System.SetLength(Idx2Ord, VertexCount);
+    for I := 0 to Pred(VertexCount) do
+      Idx2Ord[vOrd[I]] := I;
+    m := CreateBoolMatrix;
+    I := vOrd[Pred(VertexCount)];
+    {%H-}Stack.Push(I);
+    Cand := m[I];
+    while Cand.NonEmpty do
+      begin
+        MaxPop := NULL_INDEX;
+        J := NULL_INDEX;
+        for I in Cand do
+          begin
+            Pop := Cand.IntersectionPop(m[I]);
+            if Pop > MaxPop then
+              begin
+                MaxPop := Pop;
+                J := I;
+              end
+            else
+              if (Pop = MaxPop) and (J >= 0) then
+                if  Idx2Ord[I] > Idx2Ord[J] then
+                  J := I;
+          end;
+        Stack.Push(J);
+        Cand.Intersect(m[J]);
+      end;
+    Result := Stack.ToArray;
+  end;
 begin
+  Result := nil;
   if IsEmpty then
-    exit(nil);
-  Cand.AssignArray(SortNodesByWidth(soAsc));
-  while Cand.NonEmpty do
-    begin
-      I := Cand.Pop;
-      {%H-}Stack.Push(I);
-      AdjList := AdjLists[I];
-      for J in Cand do
-        if AdjList^.Contains(J) then
-          {%H-}Q.Push(J);
-      Cand.Assign(Q);
-      Q.MakeEmpty;
-    end;
-  Result := Stack.ToArray;
+    exit;
+  //if VertexCount > COMMON_BP_CUTOFF then
+    CommGreedy
+  //else
+  //  BpGreedy;
 end;
 
 function TGSimpleGraph.IsMaxClique(const aTestClique: TIntArray): Boolean;
