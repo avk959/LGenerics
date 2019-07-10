@@ -1187,7 +1187,6 @@ begin
         for I := aIndex to Pred(aIndex + Result) do
           FItems[I].Free;
       FCount -= Result;
-      //todo: watch later (@FItems[aIndex + Result])^
       System.Move((@FItems[aIndex + Result])^, FItems[aIndex], SizeOf(T) * (ElemCount - aIndex));
     end;
 end;
@@ -1198,7 +1197,6 @@ var
 begin
   RCount := ElemCount - aIndex;
   Result := TGObjectVector.Create(RCount, OwnsObjects);
-  //todo: watch later (@FItems[aIndex])^
   System.Move((@FItems[aIndex])^, Result.FItems[0], SizeOf(T) * RCount);
   Result.FCount := RCount;
   FCount -= RCount;
