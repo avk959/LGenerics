@@ -3312,7 +3312,6 @@ var
   p: PAdjItem;
   w: TWeight;
 begin
-  //todo: why DFS ???
   AdjEnums := CreateAdjItemEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
