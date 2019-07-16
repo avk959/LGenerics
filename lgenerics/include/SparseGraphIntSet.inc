@@ -311,6 +311,26 @@ begin
     MakeEmpty;
 end;
 
+procedure TGSparseGraph.TIntSet.Intersect(aList: PAdjList);
+var
+  I, Pos: SizeInt;
+begin
+  if aList^.NonEmpty then
+    begin
+      Pos := 0;
+      for I := 0 to Pred(Count) do
+        if aList^.Contains(FItems[I]) then
+          begin
+            FItems[Pos] := FItems[I];
+            Inc(Pos);
+          end
+        else
+          Dec(FCount);
+    end
+  else
+    MakeEmpty;
+end;
+
 function TGSparseGraph.TIntSet.Intersection(constref aSet: TIntSet): TIntSet;
 begin
   Result.Assign(Self);

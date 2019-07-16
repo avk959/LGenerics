@@ -67,6 +67,7 @@ type
     function  Difference(constref aSet: TIntSet): TIntSet; inline;
   { preserves the order of the elements }
     procedure Intersect(constref aSet: TIntSet);
+    procedure Intersect(aList: PAdjList);
     function  Intersection(constref aSet: TIntSet): TIntSet; inline;
   { returns the number of elements in the intersection with aValue }
     function  IntersectionCount(constref aSet: TIntSet): SizeInt;
