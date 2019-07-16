@@ -1484,7 +1484,7 @@ begin
         end;
   until Ready;
   for I := 0 to Counter - 2 do
-    Parents[PostOrd[I]] :=  PostOrd[Doms[I]];
+    Parents[PostOrd[I]] := PostOrd[Doms[I]];
   Parents[aSrc] := aSrc;
   Result := Parents;
 end;
