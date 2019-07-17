@@ -317,11 +317,8 @@ type
     property InFile: PText read GetFile;
   end;
 
-  { TTextFileWrite is small wrapper around TextFile with buffered write as a bonus;
+  { TTextFileWriter is small wrapper around TextFile with buffered write as a bonus;
      it understand 'Output', 'StdOut' and 'StdErr' as file names in case-insensitive manner }
-
-  { TTextFileWriter }
-
   TTextFileWriter = class sealed
   private
   const
