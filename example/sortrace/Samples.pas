@@ -185,7 +185,7 @@ begin
   // only k values in random order; aka Few Unique for small k;
   r := DWord.MaxValue div K;
   for I := 0 to System.High(a) do
-    a[I] := DWord(Random(K)) * r;
+    a[I] := DWord(Random(Integer(K))) * r;
 end;
 
 procedure TSampleClassHelper.GenKEqualTeeth(var a: TUIntSample; K: DWord);
@@ -305,13 +305,13 @@ end;
 
 procedure TSampleClassHelper.GenKExchange(var a: TUIntSample; K: DWord);
 var
-  I, J, L: SizeInt;
-  c, r: DWord;
+  I, J, L, c: SizeInt;
+  r: DWord;
 begin
   { an array A is said to be a k-exchange array if it becomes sorted after no more
     than exchanges of k pairs elements in A }
   c := System.Length(a);
-  r := DWord.MaxValue div c;
+  r := DWord.MaxValue div DWord(c);
   for I := 0 to System.High(a) do
     a[I] := DWord(I) * r;
   for I := 1 to SizeInt(K) do
