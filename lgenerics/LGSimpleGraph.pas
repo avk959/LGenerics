@@ -2080,8 +2080,8 @@ begin
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
-      J := 0;
-      MinPop := VertexCount;
+      J := NULL_INDEX;
+      MinPop := Succ(VertexCount);
       for I in Cand do
         begin
           CurrPop := Succ(Cand.IntersectionCount(AdjLists[I]));
@@ -2109,8 +2109,8 @@ begin
   Cand.InitRange(VertexCount);
   while Cand.NonEmpty do
     begin
-      J := 0;
-      MinPop := VertexCount;
+      J := NULL_INDEX;
+      MinPop := Succ(VertexCount);
       for I in Cand do
         begin
           CurrPop := Succ(Cand.IntersectionPop(Matrix[I]));
@@ -4440,72 +4440,81 @@ begin
 end;
 
 function TGSimpleGraph.GreedyMaxClique: TIntArray;
+var
+  vOrd, Idx2Ord: TIntArray;
+  Stack: TIntSet;
+  I, J, Cnt, MaxCnt: SizeInt;
   procedure CommGreedy;
   var
-    Cand, Stack, Q: TIntSet;
-    AdjList: PAdjList;
-    I, J: SizeInt;
+    Cand: TIntSet;
   begin
-    Cand.AssignArray(SortNodesByWidth(soAsc));
+    I := vOrd[Pred(VertexCount)];
+    {%H-}Stack.Push(I);
+    Cand.AssignList(AdjLists[I]);
     while Cand.NonEmpty do
       begin
-        I := Cand.Pop;
-        {%H-}Stack.Push(I);
-        AdjList := AdjLists[I];
-        for J in Cand do
-          if AdjList^.Contains(J) then
-            {%H-}Q.Push(J);
-        Cand.Assign(Q);
-        Q.MakeEmpty;
+        MaxCnt := 0;
+        J := NULL_INDEX;
+        for I in Cand do
+          begin
+            Cnt := Succ(Cand.IntersectionCount(AdjLists[I]));
+            if Cnt > MaxCnt then
+              begin
+                MaxCnt := Cnt;
+                J := I;
+              end
+            else
+              if (Cnt = MaxCnt) and (J >= 0) then
+                if Idx2Ord[I] > Idx2Ord[J] then
+                  J := I;
+          end;
+        Stack.Push(J);
+        Cand.Intersect(AdjLists[J]);
       end;
-    Result := Stack.ToArray;
   end;
   procedure BpGreedy;
   var
     m: TBoolMatrix;
-    vOrd, Idx2Ord: TIntArray;
-    Stack: TIntSet;
     Cand: TBoolVector;
-    I, J, Pop, MaxPop: SizeInt;
   begin
-    vOrd := SortNodesByWidth(soAsc);
-    System.SetLength(Idx2Ord, VertexCount);
-    for I := 0 to Pred(VertexCount) do
-      Idx2Ord[vOrd[I]] := I;
     m := CreateBoolMatrix;
     I := vOrd[Pred(VertexCount)];
     {%H-}Stack.Push(I);
     Cand := m[I];
     while Cand.NonEmpty do
       begin
-        MaxPop := 0;
+        MaxCnt := 0;
         J := NULL_INDEX;
         for I in Cand do
           begin
-            Pop := Succ(Cand.IntersectionPop(m[I]));
-            if Pop > MaxPop then
+            Cnt := Succ(Cand.IntersectionPop(m[I]));
+            if Cnt > MaxCnt then
               begin
-                MaxPop := Pop;
+                MaxCnt := Cnt;
                 J := I;
               end
             else
-              if (Pop = MaxPop) and (J >= 0) then
-                if  Idx2Ord[I] > Idx2Ord[J] then
+              if (Cnt = MaxCnt) and (J >= 0) then
+                if Idx2Ord[I] > Idx2Ord[J] then
                   J := I;
           end;
         Stack.Push(J);
         Cand.Intersect(m[J]);
       end;
-    Result := Stack.ToArray;
   end;
 begin
   Result := nil;
   if IsEmpty then
     exit;
+  vOrd := SortNodesByWidth(soAsc);
+  Idx2Ord.Length := VertexCount;
+  for I := 0 to Pred(VertexCount) do
+    Idx2Ord[vOrd[I]] := I;
   if VertexCount > COMMON_BP_CUTOFF then
     CommGreedy
   else
     BpGreedy;
+  Result := {%H-}Stack.ToArray;
 end;
 
 function TGSimpleGraph.IsMaxClique(const aTestClique: TIntArray): Boolean;
