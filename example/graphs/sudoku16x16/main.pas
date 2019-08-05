@@ -213,7 +213,7 @@ begin
   Screen.Cursor := crHourGlass;
   Application.ProcessMessages;
   try
-    Result := CellGraph.IsKColorableCompl(16, Colors, 5) = tlTrue;//wait for at most 5s
+    Result := CellGraph.IsKColorCompletable(16, Colors, 5) = tlTrue;//wait for at most 5s
   finally
     Screen.Cursor := OldCursor;
   end;
