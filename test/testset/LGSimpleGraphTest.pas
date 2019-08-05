@@ -175,7 +175,7 @@ type
     procedure VertexColoring1;
     procedure VertexColoring2;
     procedure IsKColorable;
-    procedure IsKColorableCompl;
+    procedure IsKColorCompletable;
     procedure FindHamiltonCycles;
     procedure FindHamiltonPaths;
     procedure ListDomSets;
@@ -3209,7 +3209,7 @@ begin
   AssertTrue(g.IsProperVertexColoring(Colors));
 end;
 
-procedure TSimpleGraphTest.IsKColorableCompl;
+procedure TSimpleGraphTest.IsKColorCompletable;
 var
   Ref: TRef;
   g: TGraph;
@@ -3222,7 +3222,7 @@ begin
   Colors.Length := g.VertexCount;
   for I := 0 to Pred(g.VertexCount) do
     Colors[I] := g.VertexCount - I;
-  Done := g.IsKColorableCompl(g.VertexCount, Colors, 5) <> tlUnknown;
+  Done := g.IsKColorCompletable(g.VertexCount, Colors, 5) <> tlUnknown;
   AssertTrue(Done);
   for I := 0 to Pred(g.VertexCount) do
     AssertTrue(Colors[I] = g.VertexCount - I);
@@ -3234,7 +3234,7 @@ begin
   Colors[g.IndexOf(1)] := 7;
   Colors[g.IndexOf(2)] := 5;
   Colors[g.IndexOf(3)] := 3;
-  Done := g.IsKColorableCompl(7, Colors, 5) <> tlUnknown;
+  Done := g.IsKColorCompletable(7, Colors, 5) <> tlUnknown;
   AssertTrue(Done);
   AssertTrue(Colors[g.IndexOf(1)] = 7);
   AssertTrue(Colors[g.IndexOf(2)] = 5);
@@ -3243,7 +3243,7 @@ begin
   FillChar(Pointer(Colors)^, Colors.Length * SizeOf(SizeInt), 0);
   Colors[g.IndexOf(1)] := 5;
   Colors[g.IndexOf(2)] := 5;
-  AssertTrue(g.IsKColorableCompl(7, Colors, 5) = tlFalse);
+  AssertTrue(g.IsKColorCompletable(7, Colors, 5) = tlFalse);
 end;
 
 procedure TSimpleGraphTest.FindHamiltonCycles;
