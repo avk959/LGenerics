@@ -45,6 +45,8 @@ type
   published
     procedure Instance;
     procedure Assign;
+    procedure Explicit;
+    procedure Copy;
     procedure Destruction;
     procedure Destruction1; //related to #0034772
   end;
@@ -191,6 +193,31 @@ begin
   List := {%H-}Ref;
   AssertTrue(Assigned(List));
   AssertTrue(List.Count = 0);
+end;
+
+procedure TAutoRefTest.Explicit;
+var
+  Ref: specialize TGAutoRef<TStringList>;
+begin
+  AssertTrue(TStringList(Ref).Count = 0);
+  AssertTrue(TStringList(Ref).Add('line') = 0);
+  AssertTrue(TStringList(Ref).Count = 1);
+  AssertTrue(TStringList(Ref)[0] = 'line');
+end;
+
+procedure TAutoRefTest.Copy;
+var
+  Ref1, Ref2: specialize TGAutoRef<TStringList>;
+  Rased: Boolean = False;
+begin
+  AssertTrue(TStringList(Ref1).Count = 0);
+  try
+    Ref2 := Ref1;
+  except
+    on e: EInvalidOpException do
+      Rased := True;
+  end;
+  AssertTrue(Rased);
 end;
 
 procedure TAutoRefTest.Destruction;
