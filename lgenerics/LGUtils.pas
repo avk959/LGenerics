@@ -93,6 +93,8 @@ type
     class operator Initialize(var o: TGOptional<T>); inline;
   public
     class operator Implicit(constref aValue: T): TGOptional<T>; inline;
+    class operator Implicit(constref aOpt: TGOptional<T>): T; inline;
+    class operator Explicit(constref aOpt: TGOptional<T>): T; inline;
     procedure Assign(constref aValue: T);
     function  OrElseDefault: T; inline;
     function  OrElse(constref aValue: T): T; inline;
@@ -105,17 +107,19 @@ type
   { TGAutoRef: the simplest way to get a class instance with limited lifetime;
     the instance that TGAutoRef owns will be automatically destroyed when it leaves the scope;
     class T must provide default constructor without parameters }
-  TGAutoRef<T: class> = record
+  TGAutoRef<T: class, constructor> = record
   private
     FInstance: T;
-    function  GetInstance: T; inline;
-    procedure SetInstance(aValue: T); inline;   //todo: need to ban copying?
+    function  GetInstance: T;
+    procedure SetInstance(aValue: T); inline;
     class operator Initialize(var a: TGAutoRef<T>); inline;
     class operator Finalize(var a: TGAutoRef<T>); inline;
+    class operator Copy(constref aSrc: TGAutoRef<T>; var aDst: TGAutoRef<T>);
   public
   type
     TInstance = T;
     class operator Implicit(var a: TGAutoRef<T>): T; inline;
+    class operator Explicit(var a: TGAutoRef<T>): T; inline;
     property Instance: T read GetInstance write SetInstance;
   end;
 
@@ -651,14 +655,24 @@ begin
   Result := False;
 end;
 
+class operator TGOptional<T>.Initialize(var o: TGOptional<T>);
+begin
+  o.FAssigned := False;
+end;
+
 class operator TGOptional<T>.Implicit(constref aValue: T): TGOptional<T>;
 begin
   Result.Assign(aValue);
 end;
 
-class operator TGOptional<T>.Initialize(var o: TGOptional<T>);
+class operator TGOptional<T>.Implicit(constref aOpt: TGOptional<T>): T;
 begin
-  o.FAssigned := False;
+  Result := aOpt.Value;
+end;
+
+class operator TGOptional<T>.Explicit(constref aOpt: TGOptional<T>): T;
+begin
+  Result := aOpt.Value;
 end;
 
 procedure TGOptional<T>.Assign(constref aValue: T);
@@ -703,8 +717,11 @@ end;
 
 procedure TGAutoRef<T>.SetInstance(aValue: T);
 begin
-  FInstance.Free;
-  FInstance := aValue;
+  if aValue <> FInstance then
+    begin
+      FInstance.Free;
+      FInstance := aValue;
+    end;
 end;
 
 class operator TGAutoRef<T>.Initialize(var a: TGAutoRef<T>);
@@ -717,7 +734,18 @@ begin
   a.FInstance.Free;
 end;
 
+class operator TGAutoRef<T>.Copy(constref aSrc: TGAutoRef<T>; var aDst: TGAutoRef<T>);
+begin
+  raise EInvalidOpException.Create('TGAutoRef copying forbidden');
+  Assert(aSrc.FInstance <> aDst.FInstance); //shut down compiler
+end;
+
 class operator TGAutoRef<T>.Implicit(var a: TGAutoRef<T>): T;
+begin
+  Result := a.Instance;
+end;
+
+class operator TGAutoRef<T>.Explicit(var a: TGAutoRef<T>): T;
 begin
   Result := a.Instance;
 end;
