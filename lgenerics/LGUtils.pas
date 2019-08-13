@@ -106,7 +106,8 @@ type
 
   { TGAutoRef: the simplest way to get a class instance with limited lifetime;
     the instance that TGAutoRef owns will be automatically destroyed when it leaves the scope;
-    class T must provide default constructor without parameters }
+    class T must provide default constructor without parameters;
+    copying a record will raise EInvalidOpException }
   TGAutoRef<T: class, constructor> = record
   private
     FInstance: T;
@@ -736,8 +737,8 @@ end;
 
 class operator TGAutoRef<T>.Copy(constref aSrc: TGAutoRef<T>; var aDst: TGAutoRef<T>);
 begin
-  raise EInvalidOpException.Create('TGAutoRef copying forbidden');
-  Assert(aSrc.FInstance <> aDst.FInstance); //shut down compiler
+  if @aSrc <> @aDst then
+    raise EInvalidOpException.Create('TGAutoRef copying forbidden');
 end;
 
 class operator TGAutoRef<T>.Implicit(var a: TGAutoRef<T>): T;
