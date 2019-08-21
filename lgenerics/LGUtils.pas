@@ -104,9 +104,10 @@ type
     class property Nilable: Boolean read CFNilable;
   end;
 
-  { TGAutoRef: the simplest way to get a class instance with limited lifetime;
-    the instance that TGAutoRef owns will be automatically destroyed when it leaves the scope;
-    class T must provide default constructor without parameters;
+  { TGAutoRef: the easy way to get a class instance with limited lifetime;
+    An instance owned by TGAutoRef will be automatically created upon first request
+    and will automatically be destroyed upon leaving the scope;
+    class T must provide default parameterless constructor;
     copying a record will raise EInvalidOpException }
   TGAutoRef<T: class, constructor> = record
   private
@@ -122,6 +123,24 @@ type
     class operator Implicit(var a: TGAutoRef<T>): T; inline;
     class operator Explicit(var a: TGAutoRef<T>): T; inline;
     property Instance: T read GetInstance write SetInstance;
+  end;
+
+  { TGUniqRef: like TGAutoRef provides a class instance with a limited lifetime,
+    it does not require T to have a parameterless constructor, and does not automatically
+    create an instance; copying a record will raise EInvalidOpException }
+  TGUniqRef<T: class> = record
+  private
+    FInstance: T;
+    procedure SetInstance(aValue: T); inline;
+    class operator Initialize(var u: TGUniqRef<T>); inline;
+    class operator Finalize(var u: TGUniqRef<T>); inline;
+    class operator Copy(constref aSrc: TGUniqRef<T>; var aDst: TGUniqRef<T>);
+  public
+  type
+    TInstance = T;
+    class operator Implicit(var u: TGUniqRef<T>): T; inline;
+    class operator Explicit(var u: TGUniqRef<T>): T; inline;
+    property Instance: T read FInstance write SetInstance;
   end;
 
   TGEnumerator<T> = class abstract
@@ -749,6 +768,41 @@ end;
 class operator TGAutoRef<T>.Explicit(var a: TGAutoRef<T>): T;
 begin
   Result := a.Instance;
+end;
+
+procedure TGUniqRef<T>.SetInstance(aValue: T);
+begin
+  if aValue <> FInstance then
+    begin
+      FInstance.Free;
+      FInstance := aValue;
+    end;
+end;
+
+class operator TGUniqRef<T>.Initialize(var u: TGUniqRef<T>);
+begin
+  u.FInstance := T(nil);
+end;
+
+class operator TGUniqRef<T>.Finalize(var u: TGUniqRef<T>);
+begin
+  u.FInstance.Free;
+end;
+
+class operator TGUniqRef<T>.Copy(constref aSrc: TGUniqRef<T>; var aDst: TGUniqRef<T>);
+begin
+  if @aSrc <> @aDst then
+    raise EInvalidOpException.Create('TGUniqRef copying forbidden');
+end;
+
+class operator TGUniqRef<T>.Implicit(var u: TGUniqRef<T>): T;
+begin
+  Result := u.Instance;
+end;
+
+class operator TGUniqRef<T>.Explicit(var u: TGUniqRef<T>): T;
+begin
+  Result := u.Instance;
 end;
 
 { TGMapEntry }
