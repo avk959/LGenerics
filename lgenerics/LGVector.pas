@@ -39,9 +39,6 @@ uses
 type
 
   generic TGVector<T> = class(specialize TGCustomArrayContainer<T>)
-  public
-  type
-    TVector = specialize TGVector<T>;
   protected
     function  GetItem(aIndex: SizeInt): T; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T); virtual;
@@ -54,7 +51,7 @@ type
     function  ExtractRange(aIndex, aCount: SizeInt): TArray;
     function  DeleteItem(aIndex: SizeInt): T; virtual;
     function  DeleteRange(aIndex, aCount: SizeInt): SizeInt; virtual;
-    function  DoSplit(aIndex: SizeInt): TVector;
+    function  DoSplit(aIndex: SizeInt): TGVector;
   public
   { appends aValue and returns it index; will raise ELGUpdateLock if instance in iteration }
     function  Add(constref aValue: T): SizeInt;
@@ -98,18 +95,15 @@ type
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt;
   { will raise ELGListError if aIndex out of bounds;
     will raise ELGUpdateLock if instance in iteration}
-    function  Split(aIndex: SizeInt): TVector;
+    function  Split(aIndex: SizeInt): TGVector;
   { will return False if aIndex out of bounds or instance in iteration }
-    function  TrySplit(aIndex: SizeInt; out aValue: TVector): Boolean;
+    function  TrySplit(aIndex: SizeInt; out aValue: TGVector): Boolean;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
   end;
 
   { TGObjectVector
     note: for equality comparision of items uses TObjectHelper from LGHelpers }
   generic TGObjectVector<T: class> = class(specialize TGVector<T>)
-  public
-  type
-    TObjectVector = specialize TGObjectVector<T>;
   private
     FOwnsObjects: Boolean;
   protected
@@ -117,16 +111,16 @@ type
     procedure DoClear; override;
     function  DeleteItem(aIndex: SizeInt): T; override;
     function  DeleteRange(aIndex, aCount: SizeInt): SizeInt; override;
-    function  DoSplit(aIndex: SizeInt): TObjectVector;
+    function  DoSplit(aIndex: SizeInt): TGObjectVector;
   public
     constructor Create(aOwnsObjects: Boolean = True);
     constructor Create(aCapacity: SizeInt; aOwnsObjects: Boolean = True);
     constructor Create(constref A: array of T; aOwnsObjects: Boolean = True);
     constructor Create(e: IEnumerable; aOwnsObjects: Boolean = True);
   { will raise EArgumentOutOfRangeException if aIndex out of bounds }
-    function  Split(aIndex: SizeInt): TObjectVector;
+    function  Split(aIndex: SizeInt): TGObjectVector;
   { will return False if aIndex out of bounds }
-    function  TrySplit(aIndex: SizeInt; out aValue: TObjectVector): Boolean;
+    function  TrySplit(aIndex: SizeInt; out aValue: TGObjectVector): Boolean;
     property  OwnsObjects: Boolean read FOwnsObjects write FOwnsObjects;
   end;
 
@@ -1026,7 +1020,7 @@ begin
     end;
 end;
 
-function TGVector.DoSplit(aIndex: SizeInt): TVector;
+function TGVector.DoSplit(aIndex: SizeInt): TGVector;
 var
   RCount: SizeInt;
 begin
@@ -1132,14 +1126,14 @@ begin
   Result := DeleteRange(aIndex, aCount);
 end;
 
-function TGVector.Split(aIndex: SizeInt): TVector;
+function TGVector.Split(aIndex: SizeInt): TGVector;
 begin
   CheckInIteration;
   CheckIndexRange(aIndex);
   Result := DoSplit(aIndex);
 end;
 
-function TGVector.TrySplit(aIndex: SizeInt; out aValue: TVector): Boolean;
+function TGVector.TrySplit(aIndex: SizeInt; out aValue: TGVector): Boolean;
 begin
   Result := not InIteration and IndexInRange(aIndex);
   if Result then
@@ -1191,7 +1185,7 @@ begin
     end;
 end;
 
-function TGObjectVector.DoSplit(aIndex: SizeInt): TObjectVector;
+function TGObjectVector.DoSplit(aIndex: SizeInt): TGObjectVector;
 var
   RCount: SizeInt;
 begin
@@ -1226,14 +1220,14 @@ begin
   FOwnsObjects := aOwnsObjects;
 end;
 
-function TGObjectVector.Split(aIndex: SizeInt): TObjectVector;
+function TGObjectVector.Split(aIndex: SizeInt): TGObjectVector;
 begin
   CheckInIteration;
   CheckIndexRange(aIndex);
   Result := DoSplit(aIndex);
 end;
 
-function TGObjectVector.TrySplit(aIndex: SizeInt; out aValue: TObjectVector): Boolean;
+function TGObjectVector.TrySplit(aIndex: SizeInt; out aValue: TGObjectVector): Boolean;
 begin
   Result := not InIteration and (aIndex >= 0) and (aIndex < ElemCount);
   if Result then
@@ -2036,12 +2030,13 @@ procedure TBoolVector.InitRange(aRange: SizeInt);
 var
   msb: SizeInt;
 begin
-  FBits := nil;
+  //FBits := nil;
   if aRange > 0 then
     begin
       msb := aRange and INT_SIZE_MASK;
       aRange := aRange shr INT_SIZE_LOG  + Ord(msb <> 0);
-      System.SetLength(FBits, aRange);
+      if aRange <> Length(FBits) then
+        System.SetLength(FBits, aRange);
       System.FillChar(FBits[0], aRange * SizeOf(SizeUInt), $ff);
       if msb <> 0 then
         FBits[Pred(aRange)] := FBits[Pred(aRange)] shr (BitsizeOf(SizeUint) - msb);
