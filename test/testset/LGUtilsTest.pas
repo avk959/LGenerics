@@ -31,6 +31,8 @@ type
     procedure RoundUp2TwoPowerAll;
   end;
 
+  { TAutoRefTest }
+
   TAutoRefTest = class(TTestCase)
   private
   type
@@ -44,11 +46,31 @@ type
     end;
   published
     procedure Instance;
-    procedure Assign;
+    procedure Implicit;
+    procedure Explicit;
+    procedure Copy;
+    procedure ByValue;
+    procedure Destruction;
+    procedure Destruction1; //related to #0034772
+  end;
+
+  TUniqRefTest = class(TTestCase)
+  private
+  type
+    TProc = procedure is nested;
+    TTestClass = class
+    private
+      FProc: TProc;
+    public
+      constructor Create(aProc: TProc);
+      destructor Destroy; override;
+    end;
+  published
+    procedure Instance;
+    procedure Implicit;
     procedure Explicit;
     procedure Copy;
     procedure Destruction;
-    procedure Destruction1; //related to #0034772
   end;
 
   TGOptionalTest = class(TTestCase)
@@ -185,7 +207,7 @@ begin
   AssertTrue(List.Count = 0);
 end;
 
-procedure TAutoRefTest.Assign;
+procedure TAutoRefTest.Implicit;
 var
   Ref: specialize TGAutoRef<TStringList>;
   List: TStringList = nil;
@@ -218,6 +240,11 @@ begin
       Rased := True;
   end;
   AssertTrue(Rased);
+end;
+
+procedure TAutoRefTest.ByValue;
+begin
+
 end;
 
 procedure TAutoRefTest.Destruction;
@@ -272,6 +299,47 @@ begin
   end;
   AssertTrue(IsAssigned);
   AssertFalse(Raised);
+end;
+
+{ TUniqRefTest.TTestClass }
+
+constructor TUniqRefTest.TTestClass.Create(aProc: TProc);
+begin
+  FProc := aProc;
+end;
+
+destructor TUniqRefTest.TTestClass.Destroy;
+begin
+  if FProc <> nil then
+    FProc();
+  inherited;
+end;
+
+{ TUniqRefTest }
+
+procedure TUniqRefTest.Instance;
+begin
+
+end;
+
+procedure TUniqRefTest.Implicit;
+begin
+
+end;
+
+procedure TUniqRefTest.Explicit;
+begin
+
+end;
+
+procedure TUniqRefTest.Copy;
+begin
+
+end;
+
+procedure TUniqRefTest.Destruction;
+begin
+
 end;
 
 { TGOptionalTest }
@@ -430,6 +498,7 @@ initialization
 
   RegisterTest(TCommonFunctionTest);
   RegisterTest(TAutoRefTest);
+  RegisterTest(TUniqRefTest);
   RegisterTest(TGOptionalTest);
 
 end.

@@ -110,26 +110,33 @@ type
     class T must provide default parameterless constructor;
     copying a record will raise EInvalidOpException }
   TGAutoRef<T: class, constructor> = record
-  private
+  strict private
     FInstance: T;
+    FOwnsInstance: Boolean;
     function  GetInstance: T;
     procedure SetInstance(aValue: T); inline;
     class operator Initialize(var a: TGAutoRef<T>); inline;
     class operator Finalize(var a: TGAutoRef<T>); inline;
     class operator Copy(constref aSrc: TGAutoRef<T>; var aDst: TGAutoRef<T>);
+    class operator AddRef(var a: TGAutoRef<T>); inline;
   public
   type
     TInstance = T;
     class operator Implicit(var a: TGAutoRef<T>): T; inline;
     class operator Explicit(var a: TGAutoRef<T>): T; inline;
+    function HasInstance: Boolean; inline;
+  { transfers ownership of an instance to aRef;
+    will raise EInvalidOpException if it does not own the instance }
+    procedure OwnMove(var aRef: TGAutoRef<T>);
     property Instance: T read GetInstance write SetInstance;
+    property OwnsInstance: Boolean read FOwnsInstance;
   end;
 
   { TGUniqRef: like TGAutoRef provides a class instance with a limited lifetime,
     it does not require T to have a parameterless constructor, and does not automatically
     create an instance; copying a record will raise EInvalidOpException }
   TGUniqRef<T: class> = record
-  private
+  strict private
     FInstance: T;
     procedure SetInstance(aValue: T); inline;
     class operator Initialize(var u: TGUniqRef<T>); inline;
@@ -731,7 +738,10 @@ end;
 function TGAutoRef<T>.GetInstance: T;
 begin
   if not Assigned(FInstance) then
-    FInstance := T.Create;
+    begin
+      FInstance := T.Create;
+      FOwnsInstance := True;
+    end;
   Result := FInstance;
 end;
 
@@ -741,23 +751,31 @@ begin
     begin
       FInstance.Free;
       FInstance := aValue;
+      FOwnsInstance := True;
     end;
 end;
 
 class operator TGAutoRef<T>.Initialize(var a: TGAutoRef<T>);
 begin
   a.FInstance := Default(T);
+  a.FOwnsInstance := False;
 end;
 
 class operator TGAutoRef<T>.Finalize(var a: TGAutoRef<T>);
 begin
-  a.FInstance.Free;
+  if a.OwnsInstance then
+    a.FInstance.Free;
 end;
 
 class operator TGAutoRef<T>.Copy(constref aSrc: TGAutoRef<T>; var aDst: TGAutoRef<T>);
 begin
   if @aSrc <> @aDst then
-    raise EInvalidOpException.Create('TGAutoRef copying forbidden');
+    raise EInvalidOpException.Create(SECopyInadmissible);
+end;
+
+class operator TGAutoRef<T>.AddRef(var a: TGAutoRef<T>);
+begin
+  a.FOwnsInstance := False;
 end;
 
 class operator TGAutoRef<T>.Implicit(var a: TGAutoRef<T>): T;
@@ -768,6 +786,25 @@ end;
 class operator TGAutoRef<T>.Explicit(var a: TGAutoRef<T>): T;
 begin
   Result := a.Instance;
+end;
+
+function TGAutoRef<T>.HasInstance: Boolean;
+begin
+  Result := Assigned(FInstance);
+end;
+
+procedure TGAutoRef<T>.OwnMove(var aRef: TGAutoRef<T>);
+begin
+  if not Assigned(FInstance) then
+    exit;
+  if OwnsInstance then
+    begin
+      aRef.Instance := FInstance;
+      FInstance := Default(T);
+      FOwnsInstance := False;
+    end
+  else
+    raise EInvalidOpException.Create(SEOwnRequired);
 end;
 
 procedure TGUniqRef<T>.SetInstance(aValue: T);
