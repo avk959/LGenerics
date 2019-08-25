@@ -51,7 +51,7 @@ type
 
   var
     FTestRef: TTestRef;
-    procedure CallByValue(aRef: TTestRef);
+    procedure CallByValue(aRef: TTestRef; aValue: Integer);
     procedure CallByValue2(aRef: TTestRef);
     procedure CallAsVar(var aRef: TTestRef; aValue: Integer);
     procedure CallAsOut(out aRef: TTestRef; aProc: TProc; aValue: Integer);
@@ -76,23 +76,49 @@ type
     procedure Destruction1; //related to #0034772
   end;
 
+  { TUniqRefTest }
+
   TUniqRefTest = class(TTestCase)
   private
   type
+
     TProc = procedure is nested;
     TTestClass = class
     private
       FProc: TProc;
+      FValue: Integer;
     public
       constructor Create(aProc: TProc);
       destructor Destroy; override;
+      property Value: Integer read FValue write FValue;
+      property OnDestroy: TProc read FProc write FProc;
+
     end;
+    TTestRef = specialize TGUniqRef<TTestClass>;
+
+  var
+    FTestRef: TTestRef;
+    procedure CallByValue(aRef: TTestRef; aValue: Integer);
+    procedure CallByValue2(aRef: TTestRef);
+    procedure CallAsVar(var aRef: TTestRef; aValue: Integer);
+    procedure CallAsOut(out aRef: TTestRef; aProc: TProc; aValue: Integer);
+    procedure CallAsConst(const aRef: TTestRef);
+    procedure CallAsConstref(constref aRef: TTestRef);
+    procedure RefOwnMoveFail(aRef1: TTestRef; out aRef2: TTestRef);
+    procedure RefOwnMove(var aRef1: TTestRef; out aRef2: TTestRef);
   published
     procedure Instance;
     procedure Implicit;
     procedure Explicit;
     procedure Copy;
-    procedure Destruction;
+    procedure PassByValue;
+    procedure PassAsVar;
+    procedure PassAsOut;
+    procedure PassAsConst;
+    procedure PassAsConstref;
+    procedure HasInstance;
+    procedure OwnMove;
+    procedure OwnMoveFail;
   end;
 
   TGOptionalTest = class(TTestCase)
@@ -219,9 +245,10 @@ end;
 
 { TAutoRefTest }
 
-procedure TAutoRefTest.CallByValue(aRef: TTestRef);
+procedure TAutoRefTest.CallByValue(aRef: TTestRef; aValue: Integer);
 begin
   AssertFalse(aRef.OwnsInstance);
+  TTestClass(aRef).Value := aValue;
 end;
 
 procedure TAutoRefTest.CallByValue2(aRef: TTestRef);
@@ -248,6 +275,7 @@ end;
 
 procedure TAutoRefTest.CallAsOut(out aRef: TTestRef; aProc: TProc; aValue: Integer);
 begin
+  AssertFalse({%H-}aRef.HasInstance);
   aRef.Instance := TTestClass.Create;
   TTestClass(aRef).OnDestroy := aProc;
   TTestClass(aRef).Value := aValue;
@@ -265,12 +293,12 @@ end;
 
 procedure TAutoRefTest.RefOwnMoveFail(aRef1: TTestRef; out aRef2: TTestRef);
 begin
-  aRef1.OwnMove(aRef2);
+  aRef1.OwnMove(aRef2{%H-});
 end;
 
 procedure TAutoRefTest.RefOwnMove(var aRef1: TTestRef; out aRef2: TTestRef);
 begin
-  aRef1.OwnMove(aRef2);
+  aRef1.OwnMove(aRef2{%H-});
 end;
 
 procedure TAutoRefTest.Instance;
@@ -330,9 +358,10 @@ var
 begin
   TTestClass(Ref).OnDestroy := @IncCounter;
 
-  CallByValue(Ref);
+  CallByValue(Ref, -5);
 
   AssertTrue(Counter = 0);
+  AssertTrue(TTestClass(Ref).Value = -5);
 
   CallByValue2(Ref);
 
@@ -432,9 +461,11 @@ procedure TAutoRefTest.HasInstance;
 var
   Ref: specialize TGAutoRef<TStringList>;
 begin
-  AssertFalse(Ref.HasInstance);
+  AssertFalse({%H-}Ref.HasInstance);
   AssertTrue(TStringList(Ref).Count = 0);
   AssertTrue(Ref.HasInstance);
+  Ref.Instance := nil;
+  AssertFalse(Ref.HasInstance);
 end;
 
 procedure TAutoRefTest.OwnMove;
@@ -452,14 +483,11 @@ begin
   RefOwnMove(Ref, FTestRef);
 
   AssertFalse(Ref.HasInstance);
-  TTestClass(Ref).OnDestroy := @IncCounter;
   AssertTrue(Counter = 0);
-  Ref.Instance := nil;
-  AssertTrue(Counter = 1);
 
   AssertTrue(FTestRef.HasInstance);
   FTestRef.Instance := nil;
-  AssertTrue(Counter = 2);
+  AssertTrue(Counter = 1);
 end;
 
 procedure TAutoRefTest.OwnMoveFail;
@@ -475,6 +503,7 @@ begin
     Raised := True;
   end;
   AssertTrue(Raised);
+  AssertTrue(TTestClass(Ref).Value = 2);
 end;
 
 procedure TAutoRefTest.Destruction;
@@ -547,29 +576,268 @@ end;
 
 { TUniqRefTest }
 
-procedure TUniqRefTest.Instance;
+procedure TUniqRefTest.CallByValue(aRef: TTestRef; aValue: Integer);
 begin
+  AssertFalse(aRef.OwnsInstance);
+  TTestClass(aRef).Value := aValue;
+end;
 
+procedure TUniqRefTest.CallByValue2(aRef: TTestRef);
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+begin
+  AssertFalse(aRef.OwnsInstance);
+  aRef.Instance := TTestClass.Create(@IncCounter);
+  AssertTrue(aRef.OwnsInstance);
+  aRef.Instance := Default(TTestClass);
+  AssertTrue(Counter = 1);
+end;
+
+procedure TUniqRefTest.CallAsVar(var aRef: TTestRef; aValue: Integer);
+begin
+  AssertTrue(aRef.OwnsInstance);
+  TTestClass(aRef).Value := aValue;
+end;
+
+procedure TUniqRefTest.CallAsOut(out aRef: TTestRef; aProc: TProc; aValue: Integer);
+begin
+  AssertFalse({%H-}aRef.HasInstance);
+  aRef.Instance := TTestClass.Create(aProc);
+  TTestClass(aRef).Value := aValue;
+end;
+
+procedure TUniqRefTest.CallAsConst(const aRef: TTestRef);
+begin
+  AssertTrue(aRef.OwnsInstance);
+end;
+
+procedure TUniqRefTest.CallAsConstref(constref aRef: TTestRef);
+begin
+  AssertTrue(aRef.OwnsInstance);
+end;
+
+procedure TUniqRefTest.RefOwnMoveFail(aRef1: TTestRef; out aRef2: TTestRef);
+begin
+  aRef1.OwnMove(aRef2{%H-});
+end;
+
+procedure TUniqRefTest.RefOwnMove(var aRef1: TTestRef; out aRef2: TTestRef);
+begin
+  aRef1.OwnMove(aRef2{%H-});
+end;
+
+procedure TUniqRefTest.Instance;
+var
+  Ref: specialize TGUniqRef<TStringList>;
+begin
+  AssertFalse(Assigned({%H-}Ref.Instance));
+  Ref.Instance := TStringList.Create;
+  AssertTrue(Assigned(Ref.Instance));
+  AssertTrue(Ref.Instance.Count = 0);
 end;
 
 procedure TUniqRefTest.Implicit;
+var
+  Ref: specialize TGUniqRef<TStringList>;
+  List: TStringList = nil;
 begin
-
+  List := {%H-}Ref;
+  AssertFalse(Assigned(List));
+  Ref.Instance := TStringList.Create;
+  List := Ref;
+  AssertTrue(List.Count = 0);
 end;
 
 procedure TUniqRefTest.Explicit;
+var
+  Ref: specialize TGUniqRef<TStringList>;
 begin
-
+  {%H-}Ref.Instance := TStringList.Create;
+  AssertTrue(TStringList(Ref).Count = 0);
+  AssertTrue(TStringList(Ref).Add('line') = 0);
+  AssertTrue(TStringList(Ref).Count = 1);
+  AssertTrue(TStringList(Ref)[0] = 'line');
 end;
 
 procedure TUniqRefTest.Copy;
+var
+  Ref1, Ref2: specialize TGUniqRef<TStringList>;
+  Rased: Boolean = False;
 begin
-
+  Ref1.Instance := TStringList.Create;
+  AssertTrue(TStringList(Ref1).Count = 0);
+  try
+    Ref2 := Ref1;
+  except
+    on e: EInvalidOpException do
+      Rased := True;
+  end;
+  AssertTrue(Rased);
 end;
 
-procedure TUniqRefTest.Destruction;
+procedure TUniqRefTest.PassByValue;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGUniqRef<TTestClass>;
 begin
+  {%H-}Ref.Instance := TTestClass.Create(@IncCounter);
 
+  CallByValue(Ref, -5);
+
+  AssertTrue(Counter = 0);
+  AssertTrue(TTestClass(Ref).Value = -5);
+
+  CallByValue2(Ref);
+
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TUniqRefTest.PassAsVar;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGUniqRef<TTestClass>;
+begin
+  {%H-}Ref.Instance := TTestClass.Create(@IncCounter);
+  AssertTrue(TTestClass(Ref).Value = 0);
+
+  CallAsVar(Ref, 15);
+
+  AssertTrue(TTestClass(Ref).Value = 15);
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TUniqRefTest.PassAsOut;
+var
+  Counter1: Integer = 0;
+  Counter2: Integer = 0;
+  procedure IncCounter1;
+  begin
+    Inc(Counter1);
+  end;
+  procedure IncCounter2;
+  begin
+    Inc(Counter2);
+  end;
+var
+  Ref: specialize TGUniqRef<TTestClass>;
+begin
+  {%H-}Ref.Instance := TTestClass.Create(@IncCounter1);
+  AssertTrue(TTestClass(Ref).Value = 0);
+
+  CallAsOut(Ref, @IncCounter2, 25);
+
+  AssertTrue(Counter1 = 1);
+  AssertTrue(Counter2 = 0);
+  AssertTrue(TTestClass(Ref).Value = 25);
+  Ref.Instance := nil;
+  AssertTrue(Counter1 = 1);
+  AssertTrue(Counter2 = 1);
+end;
+
+procedure TUniqRefTest.PassAsConst;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGUniqRef<TTestClass>;
+begin
+  {%H-}Ref.Instance := TTestClass.Create(@IncCounter);
+
+  CallAsConst(Ref);
+
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TUniqRefTest.PassAsConstref;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGUniqRef<TTestClass>;
+begin
+  {%H-}Ref.Instance := TTestClass.Create(@IncCounter);
+
+  CallAsConstref(Ref);
+
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TUniqRefTest.HasInstance;
+var
+  Ref: specialize TGUniqRef<TStringList>;
+begin
+  AssertFalse({%H-}Ref.HasInstance);
+  Ref.Instance := TStringList.Create;
+  AssertTrue(Ref.HasInstance);
+  Ref.Instance := nil;
+  AssertFalse(Ref.HasInstance);
+end;
+
+procedure TUniqRefTest.OwnMove;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGUniqRef<TTestClass>;
+begin
+  {%H-}Ref.Instance := TTestClass.Create(@IncCounter);
+
+  RefOwnMove(Ref, FTestRef);
+
+  AssertFalse(Ref.HasInstance);
+  AssertTrue(Counter = 0);
+
+  AssertTrue(FTestRef.HasInstance);
+  FTestRef.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TUniqRefTest.OwnMoveFail;
+var
+  Ref: specialize TGUniqRef<TTestClass>;
+  Raised: Boolean = False;
+begin
+  {%H-}Ref.Instance := TTestClass.Create(nil);
+  TTestClass(Ref).Value := 2;
+
+  try
+    RefOwnMoveFail(Ref, FTestRef);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  AssertTrue(TTestClass(Ref).Value = 2);
 end;
 
 { TGOptionalTest }
