@@ -36,20 +36,42 @@ type
   TAutoRefTest = class(TTestCase)
   private
   type
+
     TProc = procedure is nested;
     TTestClass = class
     private
       FProc: TProc;
+      FValue: Integer;
     public
       destructor Destroy; override;
+      property Value: Integer read FValue write FValue;
       property OnDestroy: TProc read FProc write FProc;
     end;
+    TTestRef = specialize TGAutoRef<TTestClass>;
+
+  var
+    FTestRef: TTestRef;
+    procedure CallByValue(aRef: TTestRef);
+    procedure CallByValue2(aRef: TTestRef);
+    procedure CallAsVar(var aRef: TTestRef; aValue: Integer);
+    procedure CallAsOut(out aRef: TTestRef; aProc: TProc; aValue: Integer);
+    procedure CallAsConst(const aRef: TTestRef);
+    procedure CallAsConstref(constref aRef: TTestRef);
+    procedure RefOwnMoveFail(aRef1: TTestRef; out aRef2: TTestRef);
+    procedure RefOwnMove(var aRef1: TTestRef; out aRef2: TTestRef);
   published
     procedure Instance;
     procedure Implicit;
     procedure Explicit;
     procedure Copy;
-    procedure ByValue;
+    procedure PassByValue;
+    procedure PassAsVar;
+    procedure PassAsOut;
+    procedure PassAsConst;
+    procedure PassAsConstref;
+    procedure HasInstance;
+    procedure OwnMove;
+    procedure OwnMoveFail;
     procedure Destruction;
     procedure Destruction1; //related to #0034772
   end;
@@ -197,6 +219,60 @@ end;
 
 { TAutoRefTest }
 
+procedure TAutoRefTest.CallByValue(aRef: TTestRef);
+begin
+  AssertFalse(aRef.OwnsInstance);
+end;
+
+procedure TAutoRefTest.CallByValue2(aRef: TTestRef);
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+begin
+  AssertFalse(aRef.OwnsInstance);
+  aRef.Instance := TTestClass.Create;
+  TTestClass(aRef).OnDestroy := @IncCounter;
+  AssertTrue(aRef.OwnsInstance);
+  aRef.Instance := Default(TTestClass);
+  AssertTrue(Counter = 1);
+end;
+
+procedure TAutoRefTest.CallAsVar(var aRef: TTestRef; aValue: Integer);
+begin
+  AssertTrue(aRef.OwnsInstance);
+  TTestClass(aRef).Value := aValue;
+end;
+
+procedure TAutoRefTest.CallAsOut(out aRef: TTestRef; aProc: TProc; aValue: Integer);
+begin
+  aRef.Instance := TTestClass.Create;
+  TTestClass(aRef).OnDestroy := aProc;
+  TTestClass(aRef).Value := aValue;
+end;
+
+procedure TAutoRefTest.CallAsConst(const aRef: TTestRef);
+begin
+  AssertTrue(aRef.OwnsInstance);
+end;
+
+procedure TAutoRefTest.CallAsConstref(constref aRef: TTestRef);
+begin
+  AssertTrue(aRef.OwnsInstance);
+end;
+
+procedure TAutoRefTest.RefOwnMoveFail(aRef1: TTestRef; out aRef2: TTestRef);
+begin
+  aRef1.OwnMove(aRef2);
+end;
+
+procedure TAutoRefTest.RefOwnMove(var aRef1: TTestRef; out aRef2: TTestRef);
+begin
+  aRef1.OwnMove(aRef2);
+end;
+
 procedure TAutoRefTest.Instance;
 var
   Ref: specialize TGAutoRef<TStringList>;
@@ -242,9 +318,163 @@ begin
   AssertTrue(Rased);
 end;
 
-procedure TAutoRefTest.ByValue;
+procedure TAutoRefTest.PassByValue;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGAutoRef<TTestClass>;
 begin
+  TTestClass(Ref).OnDestroy := @IncCounter;
 
+  CallByValue(Ref);
+
+  AssertTrue(Counter = 0);
+
+  CallByValue2(Ref);
+
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TAutoRefTest.PassAsVar;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGAutoRef<TTestClass>;
+begin
+  TTestClass(Ref).OnDestroy := @IncCounter;
+  AssertTrue(TTestClass(Ref).Value = 0);
+
+  CallAsVar(Ref, 15);
+
+  AssertTrue(TTestClass(Ref).Value = 15);
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TAutoRefTest.PassAsOut;
+var
+  Counter1: Integer = 0;
+  Counter2: Integer = 0;
+  procedure IncCounter1;
+  begin
+    Inc(Counter1);
+  end;
+  procedure IncCounter2;
+  begin
+    Inc(Counter2);
+  end;
+var
+  Ref: specialize TGAutoRef<TTestClass>;
+begin
+  TTestClass(Ref).OnDestroy := @IncCounter1;
+  AssertTrue(TTestClass(Ref).Value = 0);
+
+  CallAsOut(Ref, @IncCounter2, 25);
+
+  AssertTrue(Counter1 = 1);
+  AssertTrue(Counter2 = 0);
+  AssertTrue(TTestClass(Ref).Value = 25);
+  Ref.Instance := nil;
+  AssertTrue(Counter1 = 1);
+  AssertTrue(Counter2 = 1);
+end;
+
+procedure TAutoRefTest.PassAsConst;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGAutoRef<TTestClass>;
+begin
+  TTestClass(Ref).OnDestroy := @IncCounter;
+
+  CallAsConst(Ref);
+
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TAutoRefTest.PassAsConstref;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGAutoRef<TTestClass>;
+begin
+  TTestClass(Ref).OnDestroy := @IncCounter;
+
+  CallAsConstref(Ref);
+
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+end;
+
+procedure TAutoRefTest.HasInstance;
+var
+  Ref: specialize TGAutoRef<TStringList>;
+begin
+  AssertFalse(Ref.HasInstance);
+  AssertTrue(TStringList(Ref).Count = 0);
+  AssertTrue(Ref.HasInstance);
+end;
+
+procedure TAutoRefTest.OwnMove;
+var
+  Counter: Integer = 0;
+  procedure IncCounter;
+  begin
+    Inc(Counter);
+  end;
+var
+  Ref: specialize TGAutoRef<TTestClass>;
+begin
+  TTestClass(Ref).OnDestroy := @IncCounter;
+
+  RefOwnMove(Ref, FTestRef);
+
+  AssertFalse(Ref.HasInstance);
+  TTestClass(Ref).OnDestroy := @IncCounter;
+  AssertTrue(Counter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Counter = 1);
+
+  AssertTrue(FTestRef.HasInstance);
+  FTestRef.Instance := nil;
+  AssertTrue(Counter = 2);
+end;
+
+procedure TAutoRefTest.OwnMoveFail;
+var
+  Ref: specialize TGAutoRef<TTestClass>;
+  Raised: Boolean = False;
+begin
+  TTestClass(Ref).Value := 2;
+
+  try
+    RefOwnMoveFail(Ref, FTestRef);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
 end;
 
 procedure TAutoRefTest.Destruction;
