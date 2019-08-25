@@ -128,8 +128,8 @@ type
   { transfers ownership of an instance to aRef;
     will raise EInvalidOpException if it does not own the instance }
     procedure OwnMove(var aRef: TGAutoRef<T>);
-    property Instance: T read GetInstance write SetInstance;
-    property OwnsInstance: Boolean read FOwnsInstance;
+    property  Instance: T read GetInstance write SetInstance;
+    property  OwnsInstance: Boolean read FOwnsInstance;
   end;
 
   { TGUniqRef: like TGAutoRef provides a class instance with a limited lifetime,
@@ -138,16 +138,23 @@ type
   TGUniqRef<T: class> = record
   strict private
     FInstance: T;
+    FOwnsInstance: Boolean;
     procedure SetInstance(aValue: T); inline;
     class operator Initialize(var u: TGUniqRef<T>); inline;
     class operator Finalize(var u: TGUniqRef<T>); inline;
     class operator Copy(constref aSrc: TGUniqRef<T>; var aDst: TGUniqRef<T>);
+    class operator AddRef(var u: TGUniqRef<T>); inline;
   public
   type
     TInstance = T;
     class operator Implicit(var u: TGUniqRef<T>): T; inline;
     class operator Explicit(var u: TGUniqRef<T>): T; inline;
-    property Instance: T read FInstance write SetInstance;
+    function HasInstance: Boolean; inline;
+  { transfers ownership of an instance to aRef;
+    will raise EInvalidOpException if it does not own the instance }
+    procedure OwnMove(var aRef: TGUniqRef<T>);
+    property  Instance: T read FInstance write SetInstance;
+    property  OwnsInstance: Boolean read FOwnsInstance;
   end;
 
   TGEnumerator<T> = class abstract
@@ -740,7 +747,7 @@ begin
   if not Assigned(FInstance) then
     begin
       FInstance := T.Create;
-      FOwnsInstance := True;
+      FOwnsInstance := Assigned(FInstance);
     end;
   Result := FInstance;
 end;
@@ -749,9 +756,10 @@ procedure TGAutoRef<T>.SetInstance(aValue: T);
 begin
   if aValue <> FInstance then
     begin
-      FInstance.Free;
+      if OwnsInstance then
+        FInstance.Free;
       FInstance := aValue;
-      FOwnsInstance := True;
+      FOwnsInstance := Assigned(FInstance);
     end;
 end;
 
@@ -811,25 +819,34 @@ procedure TGUniqRef<T>.SetInstance(aValue: T);
 begin
   if aValue <> FInstance then
     begin
-      FInstance.Free;
+      if OwnsInstance then
+        FInstance.Free;
       FInstance := aValue;
+      FOwnsInstance := Assigned(FInstance);
     end;
 end;
 
 class operator TGUniqRef<T>.Initialize(var u: TGUniqRef<T>);
 begin
-  u.FInstance := T(nil);
+  u.FInstance := Default(T);
+  u.FOwnsInstance := False;
 end;
 
 class operator TGUniqRef<T>.Finalize(var u: TGUniqRef<T>);
 begin
-  u.FInstance.Free;
+  if u.OwnsInstance then
+    u.FInstance.Free;
 end;
 
 class operator TGUniqRef<T>.Copy(constref aSrc: TGUniqRef<T>; var aDst: TGUniqRef<T>);
 begin
   if @aSrc <> @aDst then
-    raise EInvalidOpException.Create('TGUniqRef copying forbidden');
+    raise EInvalidOpException.Create(SECopyInadmissible);
+end;
+
+class operator TGUniqRef<T>.AddRef(var u: TGUniqRef<T>);
+begin
+  u.FOwnsInstance := False;
 end;
 
 class operator TGUniqRef<T>.Implicit(var u: TGUniqRef<T>): T;
@@ -840,6 +857,25 @@ end;
 class operator TGUniqRef<T>.Explicit(var u: TGUniqRef<T>): T;
 begin
   Result := u.Instance;
+end;
+
+function TGUniqRef<T>.HasInstance: Boolean;
+begin
+  Result := Assigned(FInstance);
+end;
+
+procedure TGUniqRef<T>.OwnMove(var aRef: TGUniqRef<T>);
+begin
+  if not Assigned(FInstance) then
+    exit;
+  if OwnsInstance then
+    begin
+      aRef.Instance := FInstance;
+      FInstance := Default(T);
+      FOwnsInstance := False;
+    end
+  else
+    raise EInvalidOpException.Create(SEOwnRequired);
 end;
 
 { TGMapEntry }
