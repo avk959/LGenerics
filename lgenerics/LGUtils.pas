@@ -115,6 +115,7 @@ type
     FOwnsInstance: Boolean;
     function  GetInstance: T;
     procedure SetInstance(aValue: T); inline;
+    function  Release: T;
     class operator Initialize(var a: TGAutoRef<T>); inline;
     class operator Finalize(var a: TGAutoRef<T>); inline;
     class operator Copy(constref aSrc: TGAutoRef<T>; var aDst: TGAutoRef<T>);
@@ -124,7 +125,11 @@ type
     TInstance = T;
     class operator Implicit(var a: TGAutoRef<T>): T; inline;
     class operator Explicit(var a: TGAutoRef<T>): T; inline;
-    function HasInstance: Boolean; inline;
+    function  HasInstance: Boolean; inline;
+  { frees the instance it owns }
+    procedure Clear; inline;
+  { returns the instance it owns and stops ownership }
+    function  ReleaseInstance: T; inline;
   { transfers ownership of an instance to aRef;
     will raise EInvalidOpException if it does not own the instance }
     procedure OwnMove(var aRef: TGAutoRef<T>);
@@ -140,6 +145,7 @@ type
     FInstance: T;
     FOwnsInstance: Boolean;
     procedure SetInstance(aValue: T); inline;
+    function  Release: T;
     class operator Initialize(var u: TGUniqRef<T>); inline;
     class operator Finalize(var u: TGUniqRef<T>); inline;
     class operator Copy(constref aSrc: TGUniqRef<T>; var aDst: TGUniqRef<T>);
@@ -149,12 +155,41 @@ type
     TInstance = T;
     class operator Implicit(var u: TGUniqRef<T>): T; inline;
     class operator Explicit(var u: TGUniqRef<T>): T; inline;
-    function HasInstance: Boolean; inline;
+    function  HasInstance: Boolean; inline;
+  { frees the instance it owns }
+    procedure Clear; inline;
+  { returns the instance it owns and stops ownership }
+    function  ReleaseInstance: T; inline;
   { transfers ownership of an instance to aRef;
     will raise EInvalidOpException if it does not own the instance }
     procedure OwnMove(var aRef: TGUniqRef<T>);
     property  Instance: T read FInstance write SetInstance;
     property  OwnsInstance: Boolean read FOwnsInstance;
+  end;
+
+  { TGSharedRefA: intended to be shared a single instance by several TGSharedRef entities using
+    ARC, the instance will be automatically destroyed when the reference count becomes zero;
+    to automatically create an instance, class T must provide default parameterless constructor }
+  TGSharedRefA<T: class, constructor> = record
+  private
+    FInstance: T;
+    FRefCount: PInteger;
+    procedure InitInstance(aValue: T);
+    function  GetInstance: T;
+    procedure SetInstance(aValue: T);
+    class operator Initialize(var s: TGSharedRefA<T>); inline;
+    class operator Finalize(var s: TGSharedRefA<T>);
+    class operator Copy(constref aSrc: TGSharedRefA<T>; var aDst: TGSharedRefA<T>); inline;
+    class operator AddRef(var s: TGSharedRefA<T>); inline;
+  public
+  type
+    TInstance = T;
+    class operator Implicit(var s: TGSharedRefA<T>): T; inline;
+    class operator Explicit(var s: TGSharedRefA<T>): T; inline;
+    function  HasInstance: Boolean; inline;
+    procedure Release;
+    function  RefCount: Integer; inline;
+    property  Instance: T read GetInstance write SetInstance;
   end;
 
   TGEnumerator<T> = class abstract
@@ -763,6 +798,13 @@ begin
     end;
 end;
 
+function TGAutoRef<T>.Release: T;
+begin
+  Result := FInstance;
+  FInstance := Default(T);
+  FOwnsInstance := False;
+end;
+
 class operator TGAutoRef<T>.Initialize(var a: TGAutoRef<T>);
 begin
   a.FInstance := Default(T);
@@ -801,16 +843,27 @@ begin
   Result := Assigned(FInstance);
 end;
 
+procedure TGAutoRef<T>.Clear;
+begin
+  if OwnsInstance then
+    FInstance.Free;
+  FInstance := Default(T);
+  FOwnsInstance := False;
+end;
+
+function TGAutoRef<T>.ReleaseInstance: T;
+begin
+  if not OwnsInstance then
+    exit(nil);
+  Result := Release;
+end;
+
 procedure TGAutoRef<T>.OwnMove(var aRef: TGAutoRef<T>);
 begin
   if not Assigned(FInstance) then
     exit;
   if OwnsInstance then
-    begin
-      aRef.Instance := FInstance;
-      FInstance := Default(T);
-      FOwnsInstance := False;
-    end
+    aRef.Instance := Release
   else
     raise EInvalidOpException.Create(SEOwnRequired);
 end;
@@ -824,6 +877,13 @@ begin
       FInstance := aValue;
       FOwnsInstance := Assigned(FInstance);
     end;
+end;
+
+function TGUniqRef<T>.Release: T;
+begin
+  Result := FInstance;
+  FInstance := Default(T);
+  FOwnsInstance := False;
 end;
 
 class operator TGUniqRef<T>.Initialize(var u: TGUniqRef<T>);
@@ -864,18 +924,118 @@ begin
   Result := Assigned(FInstance);
 end;
 
+procedure TGUniqRef<T>.Clear;
+begin
+  if OwnsInstance then
+    FInstance.Free;
+  FInstance := Default(T);
+  FOwnsInstance := False;
+end;
+
+function TGUniqRef<T>.ReleaseInstance: T;
+begin
+  if not OwnsInstance then
+    exit(nil);
+  Result := Release;
+end;
+
 procedure TGUniqRef<T>.OwnMove(var aRef: TGUniqRef<T>);
 begin
   if not Assigned(FInstance) then
     exit;
   if OwnsInstance then
-    begin
-      aRef.Instance := FInstance;
-      FInstance := Default(T);
-      FOwnsInstance := False;
-    end
+    aRef.Instance := Release
   else
     raise EInvalidOpException.Create(SEOwnRequired);
+end;
+
+{ TGSharedRefA<T> }
+
+procedure TGSharedRefA<T>.InitInstance(aValue: T);
+begin
+  FInstance := aValue;
+  if aValue <> nil then
+    begin
+      New(FRefCount);
+      FRefCount^ := 1;
+    end;
+end;
+
+function TGSharedRefA<T>.GetInstance: T;
+begin
+  if FRefCount = nil then
+    InitInstance(T.Create);
+  Result := FInstance;
+end;
+
+procedure TGSharedRefA<T>.SetInstance(aValue: T);
+begin
+  if aValue <> FInstance then
+    begin
+      Release;
+      InitInstance(aValue);
+    end;
+end;
+
+class operator TGSharedRefA<T>.Initialize(var s: TGSharedRefA<T>);
+begin
+  s.FRefCount := nil;
+end;
+
+class operator TGSharedRefA<T>.Finalize(var s: TGSharedRefA<T>);
+begin
+  s.Release;
+end;
+
+class operator TGSharedRefA<T>.Copy(constref aSrc: TGSharedRefA<T>; var aDst: TGSharedRefA<T>);
+begin
+  aDst.Release;
+  if aSrc.FRefCount <> nil then
+    InterLockedIncrement(aSrc.FRefCount^);
+  aDst.FInstance := aSrc.Instance;
+  aDst.FRefCount := aSrc.FRefCount;
+end;
+
+class operator TGSharedRefA<T>.AddRef(var s: TGSharedRefA<T>);
+begin
+  if s.FRefCount <> nil then
+    InterLockedIncrement(s.FRefCount^);
+end;
+
+class operator TGSharedRefA<T>.Implicit(var s: TGSharedRefA<T>): T;
+begin
+  Result := s.Instance;
+end;
+
+class operator TGSharedRefA<T>.Explicit(var s: TGSharedRefA<T>): T;
+begin
+  Result := s.Instance;
+end;
+
+function TGSharedRefA<T>.HasInstance: Boolean;
+begin
+  Result := FRefCount <> nil;
+end;
+
+procedure TGSharedRefA<T>.Release;
+begin
+  if FRefCount <> nil then
+    begin
+      if InterlockedDecrement(FRefCount^) = 0 then
+        begin
+          Dispose(FRefCount);
+          FInstance.Free;
+        end;
+      FRefCount := nil;
+    end;
+end;
+
+function TGSharedRefA<T>.RefCount: Integer;
+begin
+  if FRefCount <> nil then
+    Result := FRefCount^
+  else
+    Result := 0;
 end;
 
 { TGMapEntry }
