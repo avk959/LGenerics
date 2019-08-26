@@ -70,6 +70,7 @@ type
     procedure PassAsConst;
     procedure PassAsConstref;
     procedure HasInstance;
+    procedure ReleaseInstance;
     procedure OwnMove;
     procedure OwnMoveFail;
     procedure Destruction;
@@ -117,8 +118,53 @@ type
     procedure PassAsConst;
     procedure PassAsConstref;
     procedure HasInstance;
+    procedure ReleaseInstance;
     procedure OwnMove;
     procedure OwnMoveFail;
+  end;
+
+  { TSharedRefATest }
+
+  TSharedRefATest = class(TTestCase)
+  private
+  type
+
+    TProc = procedure of object;
+    TTestClass = class
+    private
+      FProc: TProc;
+      FValue: Integer;
+    public
+      destructor Destroy; override;
+      property Value: Integer read FValue write FValue;
+      property OnDestroy: TProc read FProc write FProc;
+
+    end;
+    TTestRef = specialize TGSharedRefA<TTestClass>;
+
+  var
+    FTestRef: TTestRef;
+    FCounter: Integer;
+    procedure IncCounter;
+    procedure CallByValue(aRef: TTestRef; aValue: Integer);
+    procedure CallByValue2(aRef: TTestRef);
+    procedure CallByValue3(aRef: TTestRef; aValue: Integer);
+    procedure CallAsVar(var aRef: TTestRef; aValue: Integer);
+    procedure CallAsOut(out aRef: TTestRef; aValue: Integer);
+    procedure CallAsConst(const aRef: TTestRef);
+    procedure CallAsConstref(constref aRef: TTestRef);
+  published
+    procedure Instance;
+    procedure Implicit;
+    procedure Explicit;
+    procedure CopyRefCount;
+    procedure PassByValue;
+    procedure PassAsVar;
+    procedure PassAsOut;
+    procedure PassAsConst;
+    procedure PassAsConstref;
+    procedure HasInstance;
+    procedure Release;
   end;
 
   TGOptionalTest = class(TTestCase)
@@ -468,6 +514,21 @@ begin
   AssertFalse(Ref.HasInstance);
 end;
 
+procedure TAutoRefTest.ReleaseInstance;
+var
+  Ref: specialize TGAutoRef<TStringList>;
+  List: TStringList;
+begin
+  TStringList(Ref).Add('line');
+  AssertTrue(TStringList(Ref).Count = 1);
+  AssertTrue(Ref.HasInstance);
+  List := Ref.ReleaseInstance;
+  AssertFalse(Ref.HasInstance);
+  AssertTrue(List.Count = 1);
+  AssertTrue(List[0] = 'line');
+  List.Free;
+end;
+
 procedure TAutoRefTest.OwnMove;
 var
   Counter: Integer = 0;
@@ -801,6 +862,22 @@ begin
   AssertFalse(Ref.HasInstance);
 end;
 
+procedure TUniqRefTest.ReleaseInstance;
+var
+  Ref: specialize TGUniqRef<TStringList>;
+  List: TStringList;
+begin
+  {%H-}Ref.Instance := TStringList.Create;
+  TStringList(Ref).Add('line');
+  AssertTrue(TStringList(Ref).Count = 1);
+  AssertTrue(Ref.HasInstance);
+  List := Ref.ReleaseInstance;
+  AssertFalse(Ref.HasInstance);
+  AssertTrue(List.Count = 1);
+  AssertTrue(List[0] = 'line');
+  List.Free;
+end;
+
 procedure TUniqRefTest.OwnMove;
 var
   Counter: Integer = 0;
@@ -838,6 +915,247 @@ begin
   end;
   AssertTrue(Raised);
   AssertTrue(TTestClass(Ref).Value = 2);
+end;
+
+{ TSharedRefATest.TTestClass }
+
+destructor TSharedRefATest.TTestClass.Destroy;
+begin
+  if FProc <> nil then
+    FProc;
+  inherited;
+end;
+
+{ TSharedRefATest }
+
+procedure TSharedRefATest.IncCounter;
+begin
+  Inc(FCounter);
+end;
+
+procedure TSharedRefATest.CallByValue(aRef: TTestRef; aValue: Integer);
+begin
+  AssertTrue(aRef.RefCount = 2);
+  TTestClass(aRef).Value := aValue;
+end;
+
+procedure TSharedRefATest.CallByValue2(aRef: TTestRef);
+begin
+  FTestRef := aRef;
+  AssertTrue(aRef.RefCount = 3);
+end;
+
+procedure TSharedRefATest.CallByValue3(aRef: TTestRef; aValue: Integer);
+begin
+  aRef.Instance := TTestClass.Create;
+  TTestClass(aRef).Value := aValue;
+end;
+
+procedure TSharedRefATest.CallAsVar(var aRef: TTestRef; aValue: Integer);
+begin
+  AssertTrue(aRef.RefCount = 1);
+  aRef.Instance := TTestClass.Create;
+  TTestClass(aRef).OnDestroy := @IncCounter;
+  TTestClass(aRef).Value := aValue;
+end;
+
+procedure TSharedRefATest.CallAsOut(out aRef: TTestRef; aValue: Integer);
+begin
+  AssertTrue(aRef.RefCount = 0);
+  TTestClass(aRef).OnDestroy := @IncCounter;
+  TTestClass(aRef).Value := aValue;
+end;
+
+procedure TSharedRefATest.CallAsConst(const aRef: TTestRef);
+begin
+  AssertTrue(aRef.RefCount = 1);
+end;
+
+procedure TSharedRefATest.CallAsConstref(constref aRef: TTestRef);
+begin
+  AssertTrue(aRef.RefCount = 1);
+end;
+
+procedure TSharedRefATest.Instance;
+var
+  Ref: specialize TGSharedRefA<TStringList>;
+begin
+  AssertTrue(Assigned({%H-}Ref.Instance));
+  AssertTrue(Ref.Instance.Count = 0);
+end;
+
+procedure TSharedRefATest.Implicit;
+var
+  Ref: specialize TGSharedRefA<TStringList>;
+  List: TStringList = nil;
+begin
+  List := {%H-}Ref;
+  AssertTrue(Assigned(List));
+  AssertTrue(List.Count = 0);
+end;
+
+procedure TSharedRefATest.Explicit;
+var
+  Ref: specialize TGSharedRefA<TStringList>;
+begin
+  AssertTrue(TStringList(Ref).Count = 0);
+  AssertTrue(TStringList(Ref).Add('line') = 0);
+  AssertTrue(TStringList(Ref).Count = 1);
+  AssertTrue(TStringList(Ref)[0] = 'line');
+end;
+
+procedure TSharedRefATest.CopyRefCount;
+var
+  Ref, Ref2: specialize TGSharedRefA<TTestClass>;
+begin
+  FCounter := 0;
+  AssertTrue({%H-}Ref.RefCount = 0);
+  AssertTrue(Assigned(Ref.Instance));
+  TTestClass(Ref).OnDestroy := @IncCounter;
+  AssertTrue(Ref.RefCount = 1);
+  AssertTrue({%H-}Ref2.RefCount = 0);
+  Ref2 := Ref;
+  AssertTrue(Ref.RefCount = 2);
+  AssertTrue(Ref2.RefCount = 2);
+  FTestRef := Ref2;
+  AssertTrue(Ref.RefCount = 3);
+  AssertTrue(Ref2.RefCount = 3);
+  AssertTrue(FTestRef.RefCount = 3);
+  FTestRef.Instance := nil;
+  AssertTrue(Ref.RefCount = 2);
+  AssertTrue(Ref2.RefCount = 2);
+  AssertTrue(FTestRef.RefCount = 0);
+  AssertTrue(FCounter = 0);
+  Ref2.Instance := nil;
+  AssertTrue(Ref.RefCount = 1);
+  AssertTrue(Ref2.RefCount = 0);
+  AssertTrue(FCounter = 0);
+  Ref.Instance := nil;
+  AssertTrue(Ref.RefCount = 0);
+  AssertTrue(FCounter = 1);
+end;
+
+procedure TSharedRefATest.PassByValue;
+var
+  Ref: specialize TGSharedRefA<TTestClass>;
+begin
+  TTestClass(Ref).Value := -5;
+
+  CallByValue(Ref, 5);
+
+  AssertTrue(Ref.RefCount = 1);
+  AssertTrue(TTestClass(Ref).Value = 5);
+  FCounter := 0;
+  TTestClass(Ref).OnDestroy := @IncCounter;
+
+  CallByValue2(Ref);
+
+  AssertTrue(FCounter = 0);
+  AssertTrue(Ref.RefCount = 2);
+  AssertTrue(TTestClass(Ref).Value = 5);
+  FTestRef.Instance := nil;
+  AssertTrue(Ref.RefCount = 1);
+
+  CallByValue3(Ref, 15);
+
+  AssertTrue(Ref.RefCount = 1);
+  AssertTrue(FCounter = 0);
+  AssertTrue(TTestClass(Ref).Value = 5);
+end;
+
+procedure TSharedRefATest.PassAsVar;
+var
+  Ref: specialize TGSharedRefA<TTestClass>;
+begin
+  FCounter := 0;
+  TTestClass(Ref).OnDestroy := @IncCounter;
+
+  CallAsVar(Ref, 111);
+
+  AssertTrue(FCounter = 1);
+  AssertTrue(TTestClass(Ref).Value = 111);
+end;
+
+procedure TSharedRefATest.PassAsOut;
+var
+  Ref: specialize TGSharedRefA<TTestClass>;
+begin
+  FCounter := 0;
+  TTestClass(Ref).OnDestroy := @IncCounter;
+
+  CallAsOut(Ref, 111);
+
+  AssertTrue(FCounter = 1);
+  AssertTrue(Ref.RefCount = 1);
+  AssertTrue(TTestClass(Ref).Value = 111);
+end;
+
+procedure TSharedRefATest.PassAsConst;
+var
+  Ref: specialize TGSharedRefA<TTestClass>;
+begin
+  FCounter := 0;
+  TTestClass(Ref).OnDestroy := @IncCounter;
+
+  CallAsConst(Ref);
+
+  AssertTrue(FCounter = 0);
+end;
+
+procedure TSharedRefATest.PassAsConstref;
+var
+  Ref: specialize TGSharedRefA<TTestClass>;
+begin
+  FCounter := 0;
+  TTestClass(Ref).OnDestroy := @IncCounter;
+
+  CallAsConstref(Ref);
+
+  AssertTrue(FCounter = 0);
+end;
+
+procedure TSharedRefATest.HasInstance;
+var
+  Ref: specialize TGSharedRefA<TStringList>;
+begin
+  AssertFalse({%H-}Ref.HasInstance);
+  AssertTrue(TStringList(Ref).Count = 0);
+  AssertTrue(Ref.HasInstance);
+  Ref.Instance := nil;
+  AssertFalse(Ref.HasInstance);
+end;
+
+procedure TSharedRefATest.Release;
+var
+  Ref, Ref2: specialize TGSharedRefA<TTestClass>;
+begin
+  FCounter := 0;
+  AssertTrue({%H-}Ref.RefCount = 0);
+  Ref.Release;
+  AssertTrue({%H-}Ref.RefCount = 0);
+  AssertTrue(FCounter = 0);
+  TTestClass(Ref).OnDestroy := @IncCounter;
+  AssertTrue(Ref.RefCount = 1);
+  AssertTrue({%H-}Ref2.RefCount = 0);
+  Ref2 := Ref;
+  AssertTrue(Ref.RefCount = 2);
+  AssertTrue(Ref2.RefCount = 2);
+  FTestRef := Ref2;
+  AssertTrue(Ref.RefCount = 3);
+  AssertTrue(Ref2.RefCount = 3);
+  AssertTrue(FTestRef.RefCount = 3);
+  FTestRef.Release;
+  AssertTrue(Ref.RefCount = 2);
+  AssertTrue(Ref2.RefCount = 2);
+  AssertTrue(FTestRef.RefCount = 0);
+  AssertTrue(FCounter = 0);
+  Ref2.Release;
+  AssertTrue(Ref.RefCount = 1);
+  AssertTrue(Ref2.RefCount = 0);
+  AssertTrue(FCounter = 0);
+  Ref.Release;
+  AssertTrue(Ref.RefCount = 0);
+  AssertTrue(FCounter = 1);
 end;
 
 { TGOptionalTest }
@@ -997,6 +1315,7 @@ initialization
   RegisterTest(TCommonFunctionTest);
   RegisterTest(TAutoRefTest);
   RegisterTest(TUniqRefTest);
+  RegisterTest(TSharedRefATest);
   RegisterTest(TGOptionalTest);
 
 end.
