@@ -10,52 +10,94 @@ type
 
   TMyClass = class
   private
-    FCreated: Boolean;
+  class var
+    Counter: Integer;
+  var
+    FNumber: Integer;
+    class constructor Init;
   public
     constructor Create;
     destructor Destroy; override;
-    procedure IsHere;
+    procedure Show;
+    property Number: Integer read FNumber;
   end;
 
+class constructor TMyClass.Init;
+begin
+  Counter := 1;
+end;
 
 constructor TMyClass.Create;
 begin
-  FCreated := True;
+  FNumber := Counter;
+  Inc(Counter);
+  WriteLn('Number ', Number, ' created');
 end;
 
 destructor TMyClass.Destroy;
 begin
-  WriteLn(' destroyed');
+  WriteLn('Number ', Number, ' destroyed');
   inherited;
+end;
+
+procedure TMyClass.Show;
+begin
+  WriteLn('Number ', Number, ' here')
+end;
+
+procedure Show(aInst: TMyClass);
+begin
+  aInst.Show;
 end;
 
 procedure Test1;
 var
   Ref: specialize TGAutoRef<TMyClass>;
-  c: TMyClass;
 begin
-  c := {%H-}Ref;
-  c.IsHere;
+  Show(Ref);
 end;
 
 procedure Test2;
 var
   Ref: specialize TGAutoRef<TMyClass>;
 begin
-  {%H-}Ref.Instance.IsHere;
+  TMyClass(Ref).Show;
 end;
 
-procedure TMyClass.IsHere;
+procedure Test3;
+var
+  Ref: specialize TGAutoRef<TMyClass>;
+  c: TMyClass = nil;
 begin
-  if (Self <> nil) and FCreated then
-    WriteLn(' created')
-  else
-    WriteLn(' error!');
+  c := {%H-}Ref;
+  c.Show;
+end;
+
+var
+  Inst: TMyClass = nil;
+
+procedure Test4;
+var
+  Ref: specialize TGAutoRef<TMyClass>;
+begin
+  WriteLn('Check if Ref has instance: ', {%H-}Ref.HasInstance);
+  WriteLn('Let it create instance:');
+  TMyClass(Ref).Show;
+  WriteLn('We want to get Ref''s instance');
+  Inst := Ref.ReleaseInstance;
+  WriteLn('Check if Ref has an instance: ', Ref.HasInstance);
+  Ref.Clear;
+  WriteLn('Check if we have an instance: ');
+  Inst.Show;
 end;
 
 begin
   Test1;
+  Test3;
   Test2;
+  Test4;
+  WriteLn('Free the instance yourself:');
+  Inst.Free;
   ReadLn;
 end.
 
