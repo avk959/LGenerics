@@ -83,7 +83,7 @@ begin
   WriteLn('Check if Ref has instance: ', {%H-}Ref.HasInstance);
   WriteLn('Let it create instance:');
   TMyClass(Ref).Show;
-  WriteLn('We want to get Ref''s instance');
+  WriteLn('We want to take Ref''s instance');
   Inst := Ref.ReleaseInstance;
   WriteLn('Check if Ref has an instance: ', Ref.HasInstance);
   Ref.Clear;
