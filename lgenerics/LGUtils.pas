@@ -167,9 +167,9 @@ type
     property  OwnsInstance: Boolean read FOwnsInstance;
   end;
 
-  { TGSharedRefA: intended to be shared a single instance by several TGSharedRef entities using
-    ARC, the instance will be automatically destroyed when the reference count becomes zero;
-    to automatically create an instance, class T must provide default parameterless constructor }
+  { TGSharedRefA(A - Auto create): intended to be shared a single instance by several TGSharedRefA
+    entities using ARC, the instance will be automatically destroyed when the reference count becomes
+    zero; to automatically create an instance, class T must provide default parameterless constructor }
   TGSharedRefA<T: class, constructor> = record
   private
     FInstance: T;
@@ -186,6 +186,31 @@ type
     TInstance = T;
     class operator Implicit(var s: TGSharedRefA<T>): T; inline;
     class operator Explicit(var s: TGSharedRefA<T>): T; inline;
+    function  HasInstance: Boolean; inline;
+    procedure Release;
+    function  RefCount: Integer; inline;
+    property  Instance: T read GetInstance write SetInstance;
+  end;
+
+  { TGSharedRef: like TGSharedRefA intended to be shared a single instance by several TGSharedRef
+    entities using ARC; it does not require T to have a parameterless constructor, and does not
+    automatically create an instance }
+  TGSharedRef<T: class, constructor> = record
+  private
+    FInstance: T;
+    FRefCount: PInteger;
+    procedure InitInstance(aValue: T);
+    function  GetInstance: T;
+    procedure SetInstance(aValue: T);
+    class operator Initialize(var s: TGSharedRef<T>); inline;
+    class operator Finalize(var s: TGSharedRef<T>);
+    class operator Copy(constref aSrc: TGSharedRef<T>; var aDst: TGSharedRef<T>); inline;
+    class operator AddRef(var s: TGSharedRef<T>); inline;
+  public
+  type
+    TInstance = T;
+    class operator Implicit(var s: TGSharedRef<T>): T; inline;
+    class operator Explicit(var s: TGSharedRef<T>): T; inline;
     function  HasInstance: Boolean; inline;
     procedure Release;
     function  RefCount: Integer; inline;
@@ -980,6 +1005,7 @@ end;
 class operator TGSharedRefA<T>.Initialize(var s: TGSharedRefA<T>);
 begin
   s.FRefCount := nil;
+  s.FInstance := Default(T);
 end;
 
 class operator TGSharedRefA<T>.Finalize(var s: TGSharedRefA<T>);
@@ -991,9 +1017,11 @@ class operator TGSharedRefA<T>.Copy(constref aSrc: TGSharedRefA<T>; var aDst: TG
 begin
   aDst.Release;
   if aSrc.FRefCount <> nil then
-    InterLockedIncrement(aSrc.FRefCount^);
-  aDst.FInstance := aSrc.Instance;
-  aDst.FRefCount := aSrc.FRefCount;
+    begin
+      InterLockedIncrement(aSrc.FRefCount^);
+      aDst.FRefCount := aSrc.FRefCount;
+      aDst.FInstance := aSrc.Instance;
+    end;
 end;
 
 class operator TGSharedRefA<T>.AddRef(var s: TGSharedRefA<T>);
@@ -1031,6 +1059,98 @@ begin
 end;
 
 function TGSharedRefA<T>.RefCount: Integer;
+begin
+  if FRefCount <> nil then
+    Result := FRefCount^
+  else
+    Result := 0;
+end;
+
+{ TGSharedRef<T> }
+
+procedure TGSharedRef<T>.InitInstance(aValue: T);
+begin
+  FInstance := aValue;
+  if aValue <> nil then
+    begin
+      New(FRefCount);
+      FRefCount^ := 1;
+    end;
+end;
+
+function TGSharedRef<T>.GetInstance: T;
+begin
+  if FRefCount = nil then
+    exit(Default(T));
+  Result := FInstance;
+end;
+
+procedure TGSharedRef<T>.SetInstance(aValue: T);
+begin
+  if aValue <> FInstance then
+    begin
+      Release;
+      InitInstance(aValue);
+    end;
+end;
+
+class operator TGSharedRef<T>.Initialize(var s: TGSharedRef<T>);
+begin
+  s.FRefCount := nil;
+  s.FInstance := Default(T);
+end;
+
+class operator TGSharedRef<T>.Finalize(var s: TGSharedRef<T>);
+begin
+  s.Release;
+end;
+
+class operator TGSharedRef<T>.Copy(constref aSrc: TGSharedRef<T>; var aDst: TGSharedRef<T>);
+begin
+  aDst.Release;
+  if aSrc.FRefCount <> nil then
+    begin
+      InterLockedIncrement(aSrc.FRefCount^);
+      aDst.FRefCount := aSrc.FRefCount;
+      aDst.FInstance := aSrc.Instance;
+    end;
+end;
+
+class operator TGSharedRef<T>.AddRef(var s: TGSharedRef<T>);
+begin
+  if s.FRefCount <> nil then
+    InterLockedIncrement(s.FRefCount^);
+end;
+
+class operator TGSharedRef<T>.Implicit(var s: TGSharedRef<T>): T;
+begin
+  Result := s.Instance;
+end;
+
+class operator TGSharedRef<T>.Explicit(var s: TGSharedRef<T>): T;
+begin
+  Result := s.Instance;
+end;
+
+function TGSharedRef<T>.HasInstance: Boolean;
+begin
+  Result := FRefCount <> nil;
+end;
+
+procedure TGSharedRef<T>.Release;
+begin
+  if FRefCount <> nil then
+    begin
+      if InterlockedDecrement(FRefCount^) = 0 then
+        begin
+          Dispose(FRefCount);
+          FInstance.Free;
+        end;
+      FRefCount := nil;
+    end;
+end;
+
+function TGSharedRef<T>.RefCount: Integer;
 begin
   if FRefCount <> nil then
     Result := FRefCount^
