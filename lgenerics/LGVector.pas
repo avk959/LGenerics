@@ -362,6 +362,8 @@ type
     procedure SetCapacity(aValue: SizeInt);
     procedure SetBit(aIndex: SizeInt; aValue: Boolean);
     procedure SetBitUncheck(aIndex: SizeInt; aValue: Boolean); inline;
+  { returns count of significant limbs }
+    function  SignLimbCount: SizeInt;
     class operator Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
   public
   type
@@ -2048,6 +2050,13 @@ begin
                                       not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
+function TBoolVector.SignLimbCount: SizeInt;
+begin
+  Result := System.Length(FBits);
+  while (Result > 0) and (FBits[Pred(Result)] = 0) do
+    Dec(Result);
+end;
+
 class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
 begin
   aDst.FBits := System.Copy(aSrc.FBits);
@@ -2332,10 +2341,9 @@ var
 begin
   if @Self = @aValue then
     exit;
-  I := Succ(aValue.Bsr);
-  if I > Capacity then
-    Capacity := I;
-  Len := I shr INT_SIZE_LOG + Ord(I and INT_SIZE_MASK <> 0);
+  Len := aValue.SignLimbCount;
+  if Len > System.Length(FBits) then
+    System.SetLength(FBits,  Len);;
   I := 0;
   while I <= Len - 4 do
     begin
