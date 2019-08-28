@@ -240,11 +240,14 @@ type
     procedure ToArray;
     procedure SetBits;
     procedure ClearBits;
+    procedure ToggleBits;
     procedure IsEmpty;
     procedure NonEmpty;
+    procedure All;
     procedure Bsf;
     procedure Bsr;
     procedure Lob;
+    procedure ToggleBit;
     procedure Intersecting;
     procedure IntersectionPop;
     procedure IntersectionPop1;
@@ -257,6 +260,8 @@ type
     procedure Subtract1;
     procedure Intersect;
     procedure Intersect1;
+    procedure DisjunctJoin;
+    procedure Equals;
   end;
 
 implementation
@@ -1966,8 +1971,8 @@ begin
     begin
       AssertFalse(v[I]);
       v[I] := True;
-      AssertTrue(v[I]);
     end;
+  AssertTrue(v.All);
 end;
 
 procedure TBoolVectorTest.PopCount;
@@ -2082,13 +2087,28 @@ var
   v: TBoolVector;
   I: SizeInt;
 begin
-  v.InitRange(60);
+  v.Capacity := 60;
   v.SetBits;
   for I := 0 to 59 do
     AssertTrue(v[I]);
   v.ClearBits;
   for I := 0 to 59 do
     AssertFalse(v[I]);
+end;
+
+procedure TBoolVectorTest.ToggleBits;
+var
+  v: TBoolVector;
+  I: SizeInt;
+begin
+  v.Capacity := 128;
+  for I := 0 to Pred(v.Capacity div 2) do
+    v[I * 2] := True;
+  v.ToggleBits;
+  for I := 0 to Pred(v.Capacity div 2) do
+    AssertFalse(v[I * 2]);
+  for I := 0 to Pred(v.Capacity div 2) do
+    AssertTrue(v[I * 2 + 1]);
 end;
 
 procedure TBoolVectorTest.IsEmpty;
@@ -2111,6 +2131,19 @@ begin
   AssertFalse(v.NonEmpty);
   v[5] := True;
   AssertTrue(v.NonEmpty);
+end;
+
+procedure TBoolVectorTest.All;
+var
+  v: TBoolVector;
+begin
+  v.InitRange(256);
+  AssertTrue(v.All);
+  v.Capacity := 2000;
+  v.SetBits;
+  AssertTrue(v.All);
+  v[100] := False;
+  AssertFalse(v.All);
 end;
 
 procedure TBoolVectorTest.Bsf;
@@ -2170,6 +2203,22 @@ begin
     end;
   v[120] := False;
   AssertTrue(v.Lob = 120);
+end;
+
+procedure TBoolVectorTest.ToggleBit;
+var
+  v: TBoolVector;
+begin
+  v.Capacity := 120;
+  AssertFalse(v.ToggleBit(110));
+  AssertTrue(v[110]);
+  AssertTrue(v.ToggleBit(110));
+  AssertFalse(v[110]);
+
+  AssertFalse(v.UncToggleBit(111));
+  AssertTrue(v[111]);
+  AssertTrue(v.UncToggleBit(111));
+  AssertFalse(v[111]);
 end;
 
 procedure TBoolVectorTest.Intersecting;
@@ -2500,6 +2549,56 @@ begin
   AssertTrue(v2.PopCount = 2);
   AssertTrue(v2[11]);
   AssertTrue(v2[169]);
+end;
+
+procedure TBoolVectorTest.DisjunctJoin;
+var
+  v1, v2: TBoolVector;
+begin
+  v1.DisjunctJoin(v2{%H-});
+  AssertTrue(v1.Capacity = 0);
+  v1.Capacity := 128;
+  v2.Capacity := 256;
+  v1[0] := True;
+  v2[128] := True;
+  v1.DisjunctJoin(v2);
+  AssertTrue(v1.Capacity = 256);
+  AssertTrue(v1.PopCount = 2);
+  AssertTrue(v1[0]);
+  AssertTrue(v1[128]);
+  v1.DisjunctJoin(v1);
+  AssertTrue(v1.IsEmpty);
+  v1[1] := True;
+  v1[127] := True;
+  v2[127] := True;
+  v1.DisjunctJoin(v2);
+  AssertTrue(v1.PopCount = 2);
+  AssertTrue(v1[1]);
+  AssertTrue(v1[128]);
+
+  v1.Capacity := 512;
+  v1[500] := True;
+  v1.DisjunctJoin(v2);
+  AssertTrue(v1.PopCount = 3);
+  AssertTrue(v1[1]);
+  AssertTrue(v1[127]);
+  AssertTrue(v1[500])
+end;
+
+procedure TBoolVectorTest.Equals;
+var
+  v1, v2: TBoolVector;
+begin
+  AssertTrue(v1.Equals(v1{%H-}));
+  AssertTrue(v1.Equals(v2{%H-}));
+  v1.Capacity := 128;
+  AssertFalse(v1.Equals(v2));
+  v2.Capacity := 128;
+  AssertTrue(v1.Equals(v2));
+  v1[100] := True;
+  AssertFalse(v1.Equals(v2));
+  v2[100] := True;
+  AssertTrue(v1.Equals(v2));
 end;
 
 initialization
