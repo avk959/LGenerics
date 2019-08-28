@@ -2073,7 +2073,7 @@ begin
       aRange := aRange shr INT_SIZE_LOG  + Ord(msb <> 0);
       if aRange <> Length(FBits) then
         System.SetLength(FBits, aRange);
-      System.FillChar(FBits[0], aRange * SizeOf(SizeUInt), $ff);
+      System.FillChar(Pointer(FBits)^, aRange * SizeOf(SizeUInt), $ff);
       if msb <> 0 then
         FBits[Pred(aRange)] := FBits[Pred(aRange)] shr (BitsizeOf(SizeUint) - msb);
     end;
