@@ -317,17 +317,19 @@ type
   TBoolVector = record
   public
   type
+
     TEnumerator = record
     private
       FVector: PBoolVector;
       FBitIndex,
       FLimbIndex: SizeInt;
       FCurrLimb: SizeUInt;
-      function GetCurrent: SizeInt; inline;
-      function FindFirst: Boolean;
+      function  GetCurrent: SizeInt; inline;
+      function  FindFirst: Boolean;
+      procedure Init(aVector: PBoolVector);
     public
-      function MoveNext: Boolean; inline;
-      property Current: SizeInt read GetCurrent;
+      function  MoveNext: Boolean; inline;
+      property  Current: SizeInt read GetCurrent;
     end;
 
     TReverseEnumerator = record
@@ -336,11 +338,12 @@ type
       FBitIndex,
       FLimbIndex: SizeInt;
       FCurrLimb: SizeUInt;
-      function GetCurrent: SizeInt; inline;
-      function FindLast: Boolean;
+      function  GetCurrent: SizeInt; inline;
+      function  FindLast: Boolean;
+      procedure Init(aVector: PBoolVector);
     public
-      function MoveNext: Boolean;
-      property Current: SizeInt read GetCurrent;
+      function  MoveNext: Boolean;
+      property  Current: SizeInt read GetCurrent;
     end;
 
     TReverse = record
@@ -1912,6 +1915,13 @@ begin
     end;
 end;
 
+procedure TBoolVector.TEnumerator.Init(aVector: PBoolVector);
+begin
+  FVector := aVector;
+  FLimbIndex := NULL_INDEX;
+  FBitIndex := NULL_INDEX;
+end;
+
 function TBoolVector.TEnumerator.MoveNext: Boolean;
 begin
   if FLimbIndex >= 0 then
@@ -1959,6 +1969,13 @@ begin
     end;
 end;
 
+procedure TBoolVector.TReverseEnumerator.Init(aVector: PBoolVector);
+begin
+  FVector := aVector;
+  FLimbIndex := NULL_INDEX;
+  FBitIndex := NULL_INDEX;
+end;
+
 function TBoolVector.TReverseEnumerator.MoveNext: Boolean;
 begin
   if FLimbIndex >= 0 then
@@ -1989,9 +2006,7 @@ end;
 
 function TBoolVector.TReverse.GetEnumerator: TReverseEnumerator;
 begin
-  Result.FVector := FVector;
-  Result.FLimbIndex := NULL_INDEX;
-  Result.FBitIndex := NULL_INDEX;
+  Result.Init(FVector);
 end;
 
 { TBoolVector }
@@ -2081,9 +2096,7 @@ end;
 
 function TBoolVector.GetEnumerator: TEnumerator;
 begin
-  Result.FVector := @Self;
-  Result.FLimbIndex := NULL_INDEX;
-  Result.FBitIndex := NULL_INDEX;
+  Result.Init(@Self);
 end;
 
 function TBoolVector.Reverse: TReverse;
