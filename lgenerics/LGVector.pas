@@ -312,12 +312,11 @@ type
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
 
+  PBoolVector = ^TBoolVector;
   { TBoolVector: size is always a multiple of the bitness }
   TBoolVector = record
   public
   type
-    PBoolVector = ^TBoolVector;
-
     TEnumerator = record
     private
       FVector: PBoolVector;
@@ -357,10 +356,12 @@ type
 
   var
     FBits: TBits;
-    function  GetBit(aIndex: SizeInt): Boolean; inline;
     function  GetCapacity: SizeInt; inline;
-    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
+    function  GetBit(aIndex: SizeInt): Boolean; inline;
+    function  GetBitUncheck(aIndex: SizeInt): Boolean; inline;
     procedure SetCapacity(aValue: SizeInt);
+    procedure SetBit(aIndex: SizeInt; aValue: Boolean);
+    procedure SetBitUncheck(aIndex: SizeInt; aValue: Boolean); inline;
     class operator Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
   public
   type
@@ -376,15 +377,23 @@ type
     procedure Clear; inline;
     procedure ClearBits; inline;
     procedure SetBits; inline;
+    procedure ToggleBits;
     function  IsEmpty: Boolean;
     function  NonEmpty: Boolean; inline;
     procedure SwapBits(var aVector: TBoolVector);
+    function  All: Boolean;
   { returns the lowest index of the set bit, -1, if no bit is set }
     function  Bsf: SizeInt;
   { returns the highest index of the set bit, -1, if no bit is set }
     function  Bsr: SizeInt;
   { returns the lowest index of the open bit, -1, if all bits are set }
     function  Lob: SizeInt;
+  { changes the bit[aIndex] value to True if it was False and to False if it was True;
+    returns old value; checks aIndex range }
+    function  ToggleBit(aIndex: SizeInt): Boolean;
+  { changes the bit[aIndex] value to True if it was False and to False if it was True;
+    returns old value; does not checks aIndex range}
+    function  UncToggleBit(aIndex: SizeInt): Boolean; inline;
     function  Intersecting(constref aValue: TBoolVector): Boolean;
   { returns the number of bits in the intersection with aValue }
     function  IntersectionPop(constref aValue: TBoolVector): SizeInt;
@@ -397,12 +406,17 @@ type
     function  Difference(constref aValue: TBoolVector): TBoolVector; inline;
     procedure Intersect(constref aValue: TBoolVector);
     function  Intersection(constref aValue: TBoolVector): TBoolVector; inline;
-  { currently size can only grow and is always multiple of BitsizeOf(SizeUInt) }
+    procedure DisjunctJoin(constref aValue: TBoolVector);
+    function  SymmDifference(constref aValue: TBoolVector): TBoolVector;
+    function  Equals(constref aValue: TBoolVector): Boolean;
+  { currently Capacity is always multiple of BitsizeOf(SizeUInt) }
     property  Capacity: SizeInt read GetCapacity write SetCapacity;
   { returns count of set bits }
     function  PopCount: SizeInt;
-  { read/write bit with (index < 0) or (index >= Capacity) will raise exception }
+  { checks aIndex range }
     property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
+  { does not checks aIndex range }
+    property  UncBits[aIndex: SizeInt]: Boolean read GetBitUncheck write SetBitUncheck;
   end;
 
   { TGVectorHelpUtil }
@@ -875,7 +889,7 @@ type
   end;
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 { TGVector }
 
@@ -1980,6 +1994,11 @@ end;
 
 { TBoolVector }
 
+function TBoolVector.GetCapacity: SizeInt;
+begin
+  Result := System.Length(FBits) shl INT_SIZE_LOG;
+end;
+
 function TBoolVector.GetBit(aIndex: SizeInt): Boolean;
 begin
   if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
@@ -1988,24 +2007,9 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
-function TBoolVector.GetCapacity: SizeInt;
+function TBoolVector.GetBitUncheck(aIndex: SizeInt): Boolean;
 begin
-  Result := System.Length(FBits) shl INT_SIZE_LOG;
-end;
-
-procedure TBoolVector.SetBit(aIndex: SizeInt; aValue: Boolean);
-begin
-  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
-    begin
-      if aValue then
-        FBits[aIndex shr INT_SIZE_LOG] :=
-          FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
-      else
-        FBits[aIndex shr INT_SIZE_LOG] :=
-          FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
-    end
-  else
-    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
 end;
 
 procedure TBoolVector.SetCapacity(aValue: SizeInt);
@@ -2013,12 +2017,35 @@ var
   OldCapacity: SizeInt;
 begin
   OldCapacity := Capacity;
-  if aValue > OldCapacity then
+  if aValue <> OldCapacity then
     begin
       aValue := aValue shr INT_SIZE_LOG + Ord(aValue and INT_SIZE_MASK <> 0);
       System.SetLength(FBits, aValue);
-      System.FillChar(FBits[OldCapacity], (aValue - OldCapacity) * SizeOf(SizeUInt), 0);
+      //System.FillChar(FBits[OldCapacity], (aValue - OldCapacity) * SizeOf(SizeUInt), 0);
     end;
+end;
+
+procedure TBoolVector.SetBit(aIndex: SizeInt; aValue: Boolean);
+begin
+  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
+    if aValue then
+      FBits[aIndex shr INT_SIZE_LOG] := FBits[aIndex shr INT_SIZE_LOG] or
+                                        (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+    else
+      FBits[aIndex shr INT_SIZE_LOG] := FBits[aIndex shr INT_SIZE_LOG] and
+                                        not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+procedure TBoolVector.SetBitUncheck(aIndex: SizeInt; aValue: Boolean);
+begin
+  if aValue then
+    FBits[aIndex shr INT_SIZE_LOG] := FBits[aIndex shr INT_SIZE_LOG] or
+                                      (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+  else
+    FBits[aIndex shr INT_SIZE_LOG] := FBits[aIndex shr INT_SIZE_LOG] and
+                                      not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
 class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
@@ -2083,6 +2110,14 @@ begin
   System.FillChar(Pointer(FBits)^, System.Length(FBits) * SizeOf(SizeUInt), $ff);
 end;
 
+procedure TBoolVector.ToggleBits;
+var
+  I: SizeInt;
+begin
+  for I := 0 to Pred(Length(FBits)) do
+    FBits[I] := not FBits[I];
+end;
+
 function TBoolVector.IsEmpty: Boolean;
 var
   I: SizeUInt;
@@ -2105,6 +2140,16 @@ begin
   tmp := FBits;
   FBits := aVector.FBits;
   aVector.FBits := tmp;
+end;
+
+function TBoolVector.All: Boolean;
+var
+  I: SizeUInt;
+begin
+  for I in FBits do
+    if I <> High(SizeUInt) then
+      exit(False);
+  Result := True;
 end;
 
 function TBoolVector.Bsf: SizeInt;
@@ -2156,6 +2201,29 @@ begin
           I shl INT_SIZE_LOG + ShortInt(BsfQWord(not FBits[I]))
         {$ENDIF});
   Result := NULL_INDEX;
+end;
+
+function TBoolVector.ToggleBit(aIndex: SizeInt): Boolean;
+begin
+  if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
+    begin
+      Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
+      FBits[aIndex shr INT_SIZE_LOG] :=
+        FBits[aIndex shr INT_SIZE_LOG] xor (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
+    end
+  else
+    raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TBoolVector.UncToggleBit(aIndex: SizeInt): Boolean;
+var
+  LimbIdx: SizeInt;
+  Mask: SizeUInt;
+begin
+  LimbIdx := aIndex shr INT_SIZE_LOG;
+  Mask := SizeUInt(1) shl (aIndex and INT_SIZE_MASK);
+  Result := FBits[LimbIdx] and Mask <> 0;
+  FBits[LimbIdx] := FBits[LimbIdx] xor Mask;
 end;
 
 function TBoolVector.Intersecting(constref aValue: TBoolVector): Boolean;
@@ -2386,20 +2454,65 @@ begin
   Result.Intersect(aValue);
 end;
 
+procedure TBoolVector.DisjunctJoin(constref aValue: TBoolVector);
+var
+  I, MinLen: SizeInt;
+begin
+  if @Self = @aValue then
+    begin
+      ClearBits;
+      exit;
+    end;
+  MinLen := Math.Min(System.Length(FBits), System.Length(aValue.FBits));
+  if System.Length(FBits) < System.Length(aValue.FBits) then
+    System.SetLength(FBits,  System.Length(aValue.FBits));
+  for I := 0 to Pred(MinLen) do
+    FBits[I] := FBits[I] xor aValue.FBits[I];
+  for I := MinLen to Pred(System.Length(aValue.FBits)) do
+    FBits[I] := aValue.FBits[I];
+end;
+
+function TBoolVector.SymmDifference(constref aValue: TBoolVector): TBoolVector;
+begin
+  if System.Length(FBits) >= System.Length(aValue.FBits) then
+    begin
+      Result := Self;
+      Result.DisjunctJoin(aValue);
+    end
+  else
+    begin
+      Result := aValue;
+      Result.DisjunctJoin(Self);
+    end;
+end;
+
+function TBoolVector.Equals(constref aValue: TBoolVector): Boolean;
+var
+  I: SizeInt;
+begin
+  if @Self = @aValue then
+    exit(True);
+  if System.Length(FBits) <> System.Length(aValue.FBits) then
+    exit(False);
+  for I := 0 to Pred(System.Length(FBits)) do
+    if FBits[I] <> aValue.FBits[I] then
+      exit(False);
+  Result := True;
+end;
+
 function TBoolVector.PopCount: SizeInt;
 var
-  I, Len: SizeInt;
+  I: SizeInt;
 begin
-  Len := System.Length(FBits);
   I := 0;
   Result := 0;
-  while I <= Len - 4 do
+  while I <= System.Length(FBits) - 4 do
     begin
       Result += SizeInt(PopCnt(FBits[I  ])) + SizeInt(PopCnt(FBits[I+1])) +
                 SizeInt(PopCnt(FBits[I+2])) + SizeInt(PopCnt(FBits[I+3]));
       Inc(I, 4);
     end;
-  case Len - I of
+  case System.Length(FBits) - I of
     1:
       Result += SizeInt(PopCnt(FBits[I]));
     2:
