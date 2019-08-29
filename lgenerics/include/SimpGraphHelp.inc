@@ -44,8 +44,8 @@ begin
       while Q.NonEmpty do
         begin
           J := Q.Bsf;
-          P[J] := False;
-          Q[J] := False;
+          P.UncBits[J] := False;
+          Q.UncBits[J] := False;
           Q.Subtract(FMatrix[J]);
           aColOrd[I] := J;
           aColors[I] := ColorClass;
@@ -74,14 +74,14 @@ begin
           if Colors[I] + FCurrCount <= FRecentBest.Length then
             exit;
           J := ColOrd[I];
-          aCand[J] := False;
-          FCurrSet[FNodes[J]] := True;
+          aCand.UncBits[J] := False;
+          FCurrSet.UncBits[FNodes[J]] := True;
           NewCand := aCand.Intersection(FMatrix[J]);
           Inc(FCurrCount);
           Extend(NewCand);
           if FCancelled then
             break;
-          FCurrSet[FNodes[J]] := False;
+          FCurrSet.UncBits[FNodes[J]] := False;
           Dec(FCurrCount);
         end;
     end
@@ -100,14 +100,14 @@ begin
       if aCand.NonEmpty then
         for I in aCand.Difference(FMatrix[aSub.Bsf]) do
           begin
-            aCand[I] := False;
+            aCand.UncBits[I] := False;
             NewCand := aCand.Intersection(FMatrix[I]);
             NewSub := aSub.Intersection(FMatrix[I]);
-            FCurrSet[FNodes[I]] := True;
+            FCurrSet.UncBits[FNodes[I]] := True;
             Extend(NewSub, NewCand);
             if FCancelled then
               break;
-            FCurrSet[FNodes[I]] := False;
+            FCurrSet.UncBits[FNodes[I]] := False;
           end;
     end
   else
@@ -128,16 +128,16 @@ begin
     for I := 0 to Pred(aGraph.VertexCount) do
       begin
         FMatrix[I].InitRange(aGraph.VertexCount);
-        FMatrix[I][I] := False;
+        FMatrix[I].UncBits[I] := False;
         for p in aGraph.AdjLists[FNodes[I]]^ do
-          FMatrix[I][Idx2Ord[p^.Key]] := False;
+          FMatrix[I].UncBits[Idx2Ord[p^.Key]] := False;
       end
   else
     for I := 0 to Pred(aGraph.VertexCount) do
       begin
         FMatrix[I].Capacity := aGraph.VertexCount;
         for p in aGraph.AdjLists[FNodes[I]]^ do
-          FMatrix[I][Idx2Ord[p^.Key]] := True;
+          FMatrix[I].UncBits[Idx2Ord[p^.Key]] := True;
       end;
 end;
 
@@ -426,7 +426,7 @@ var
 begin
   FVertexSet.InitRange(FNodeCount);
   for I in aSet do
-    FVertexSet[I] := False;
+    FVertexSet.UncBits[I] := False;
   Mvc := FVertexSet.ToArray;
   if not Mvc.IsEmpty then
     FOnFind(Mvc, aCancel)
@@ -570,13 +570,13 @@ begin
       Degree := 0;
       for p in aGraph.AdjLists[FNodes[I]]^ do
         begin
-          FMatrix[I][Idx2Ord[p^.Key]] := True;
+          FMatrix[I].UncBits[Idx2Ord[p^.Key]] := True;
           Inc(Degree);
         end;
       if Degree = 0 then
         begin
-          FCurrSet[FNodes[I]] := True;
-          aCand[I] := False;
+          FCurrSet.UncBits[FNodes[I]] := True;
+          aCand.UncBits[I] := False;
         end;
     end;
 end;
@@ -594,7 +594,7 @@ begin
         exit;
       I := NULL_INDEX;
       for J in aCand do
-        if not aTested[J] then
+        if not aTested.UncBits[J] then
           begin
             I := J;
             break;
@@ -602,37 +602,37 @@ begin
       if I = NULL_INDEX then
         exit;
       NewTested := aTested;
-      NewTested[I] := True;
+      NewTested.UncBits[I] := True;
       NewCand := aCand.Difference(FMatrix[I]);
-      NewCand[I] := False;
-      FCurrSet[FNodes[I]] := True;
+      NewCand.UncBits[I] := False;
+      FCurrSet.UncBits[FNodes[I]] := True;
       Inc(FCurrCount);
       Extend(NewCand, NewTested);
-      FCurrSet[FNodes[I]] := False;
+      FCurrSet.UncBits[FNodes[I]] := False;
       Dec(FCurrCount);
       if (FCurrCount < Pred(FRecentBest.Length)) and not FCancelled then
         for J in aCand.Intersection(FMatrix[I]) do
           begin
-            if NewTested[J] then
+            if NewTested.UncBits[J] then
               continue;
-            NewTested[J] := True;
+            NewTested.UncBits[J] := True;
             NewCand := aCand.Difference(FMatrix[J]);
-            NewCand[J] := False;
-            FCurrSet[FNodes[J]] := True;
+            NewCand.UncBits[J] := False;
+            FCurrSet.UncBits[FNodes[J]] := True;
             Inc(FCurrCount);
             Extend(NewCand, NewTested);
             if (FCurrCount < Pred(FRecentBest.Length)) and not FCancelled then
               begin
                 NewCand.Subtract(FMatrix[I]);
-                FCurrSet[FNodes[I]] := True;
+                FCurrSet.UncBits[FNodes[I]] := True;
                 Inc(FCurrCount);
                 Extend(NewCand, NewTested);
-                FCurrSet[FNodes[I]] := False;
+                FCurrSet.UncBits[FNodes[I]] := False;
                 Dec(FCurrCount);
               end;
             if (FCurrCount >= FRecentBest.Length) or FCancelled then
               break;
-            FCurrSet[FNodes[J]] := False;
+            FCurrSet.UncBits[FNodes[J]] := False;
             Dec(FCurrCount);
           end;
     end
@@ -894,7 +894,7 @@ begin
   J := 1;
   for I in Clique do
     begin
-      FAchromatic[I] := False;
+      FAchromatic.UncBits[I] := False;
       PickColor(I, J);
       Inc(J);
     end;
@@ -909,7 +909,7 @@ begin
   for I := 0 to System.High(FColorMap) do
     if FColorMap[I] > 0 then
       begin
-        FAchromatic[I] := False;
+        FAchromatic.UncBits[I] := False;
         PickColor(I, FColorMap[I]);
       end;
 end;
@@ -969,7 +969,7 @@ begin
         end;
       exit;
     end;
-  FAchromatic[CurrNode] := False;
+  FAchromatic.UncBits[CurrNode] := False;
   for Color := 1 to aMaxColor do
     if PickColor(CurrNode, Color) then
       begin
@@ -983,7 +983,7 @@ begin
       DSatur(Succ(aMaxColor));
       DropColor(CurrNode, Succ(aMaxColor));
     end;
-  FAchromatic[CurrNode] := True;
+  FAchromatic.UncBits[CurrNode] := True;
 end;
 
 function TGSimpleGraph.TExactColor.Colorize(aGraph: TGSimpleGraph; aTimeOut: Integer; out aColors: TIntArray;
@@ -1124,19 +1124,19 @@ begin
         Queue.Enqueue(I, Nodes[I]);
       while Queue.TryDequeue(CurrNode) do
         begin
-          InQueue[CurrNode.Index] := False;
-          if CurrIS[CurrNode.Index] then
+          InQueue.UncBits[CurrNode.Index] := False;
+          if CurrIS.UncBits[CurrNode.Index] then
             begin
-              CurrIS[CurrNode.Index] := False;
-              Achromatic[CurrNode.Index] := False;
+              CurrIS.UncBits[CurrNode.Index] := False;
+              Achromatic.UncBits[CurrNode.Index] := False;
               aColors[CurrNode.Index] := Result;
               for p in aGraph.AdjLists[CurrNode.Index]^ do
-                if Achromatic[p^.Key] then
+                if Achromatic.UncBits[p^.Key] then
                   begin
                     Dec(Nodes[p^.Key].Degree);
-                    CurrIS[p^.Key] := False;
+                    CurrIS.UncBits[p^.Key] := False;
                     for pAdj in aGraph.AdjLists[p^.Key]^ do
-                      if InQueue[pAdj^.Key] then
+                      if InQueue.UncBits[pAdj^.Key] then
                         begin
                           NextNode := Queue.Peek(pAdj^.Key);
                           Inc(NextNode.WDegree);
@@ -1196,7 +1196,7 @@ end;
 
 procedure TGSimpleGraph.THamiltonSearch.CheckIsCycle(aNode: SizeInt);
 begin
-  if FMatrix[aNode][FSource] then
+  if FMatrix[aNode].UncBits[FSource] then
     begin
       FStack.Push(FSource);
       FPaths^.Add(FStack.ToArray);
@@ -1230,24 +1230,24 @@ begin
           Saved.Capacity := FNodeCount;
           for I in Cand do
             begin
-              Saved[I] := FMatrix[I][aNode];
-              FMatrix[I][aNode] := False;
+              Saved.UncBits[I] := FMatrix[I].UncBits[aNode];
+              FMatrix[I].UncBits[aNode] := False;
             end;
           /////////////////////////////
           while SelectMin(Cand, I) do
             begin
-              Cand[I] := False;
+              Cand.UncBits[I] := False;
               FStack.Push(I);
-              FVacant[I] := False;
+              FVacant.UncBits[I] := False;
               SearchFor(I);
               if TimeToFinish then
                 exit;
-              FVacant[I] := True;
+              FVacant.UncBits[I] := True;
               FStack.Pop;
             end;
           /////////////////////////////
           for I in Saved do
-            FMatrix[I][aNode] := True;
+            FMatrix[I].UncBits[aNode] := True;
         end;
     end
   else
@@ -1258,17 +1258,17 @@ procedure TGSimpleGraph.THamiltonSearch.ExecuteCycles;
 var
   I: SizeInt;
 begin
-  FVacant[FSource] := False;
+  FVacant.UncBits[FSource] := False;
   FStack.Push(FSource);
   FOnCheckNode := @CheckIsCycle;
   for I in FMatrix[FSource] do
     begin
       FStack.Push(I);
-      FVacant[I] := False;
+      FVacant.UncBits[I] := False;
       SearchFor(I);
       if TimeToFinish then
         break;
-      FVacant[I] := True;
+      FVacant.UncBits[I] := True;
       FStack.Pop;
       //FMatrix[I][FSource] := False;
     end;
@@ -1278,17 +1278,17 @@ procedure TGSimpleGraph.THamiltonSearch.ExecutePaths;
 var
   I: SizeInt;
 begin
-  FVacant[FSource] := False;
+  FVacant.UncBits[FSource] := False;
   FStack.Push(FSource);
   FOnCheckNode := @CheckIsPath;
   for I in FMatrix[FSource] do
     begin
       FStack.Push(I);
-      FVacant[I] := False;
+      FVacant.UncBits[I] := False;
       SearchFor(I);
       if TimeToFinish then
         break;
-      FVacant[I] := True;
+      FVacant.UncBits[I] := True;
       FStack.Pop;
     end;
 end;
@@ -1490,13 +1490,13 @@ begin
   FMatchCount := 0;
   FGraph := aGraph;
   FWhites.Capacity := aGraph.VertexCount;
-  FVisited.Size := aGraph.VertexCount;
+  FVisited.Capacity := aGraph.VertexCount;
   if System.Length(w) <= System.Length(g) then
     for I in w do
-      FWhites[I] := True
+      FWhites.UncBits[I] := True
   else
     for I in g do
-      FWhites[I] := True;
+      FWhites.UncBits[I] := True;
   FMates := aGraph.CreateIntArray;
   FParents := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
@@ -1522,12 +1522,12 @@ begin
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
-      if FWhites[Curr] then
+      if FWhites.UncBits[Curr] then
         begin
           for p in FGraph.AdjLists[Curr]^ do
             begin
               Next := p^.Destination;
-              if (FMates[Curr] = Next) or FVisited[Next] then
+              if (FMates[Curr] = Next) or FVisited.UncBits[Next] then
                 continue;
               if FMates[Next] = NULL_INDEX then
                 begin
@@ -1628,14 +1628,14 @@ begin
   FLcaUsed.ClearBits;
   repeat
     L := FBase[L];
-    FLcaUsed[L] := True;
+    FLcaUsed.UncBits[L] := True;
     if FMates[L] = NULL_INDEX then
         break;
     L := FParents[FMates[L]];
   until False;
   repeat
     R := FBase[R];
-    if FLcaUsed[R] then
+    if FLcaUsed.UncBits[R] then
       exit(R);
      R := FParents[FMates[R]];
   until False;
@@ -1646,8 +1646,8 @@ procedure TGSimpleGraph.TEdMatchHelper.MarkPath(aNode, aBloss, aChild: SizeInt);
 begin
   while FBase[aBloss] <> aBloss do
     begin
-      FBlossoms[FBase[aNode]] := True;
-      FBlossoms[FBase[FMates[aNode]]] := True;
+      FBlossoms.UncBits[FBase[aNode]] := True;
+      FBlossoms.UncBits[FBase[FMates[aNode]]] := True;
       FParents[aNode] := aChild;
       aChild := FMates[aNode];
       aNode := FParents[FMates[aNode]];
@@ -1664,7 +1664,7 @@ begin
   FVisited.ClearBits;
   ClearParents;
   ClearBase;
-  FVisited[aRoot] := True;
+  FVisited.UncBits[aRoot] := True;
   FQueue[qTail] := aRoot;
   Inc(qTail);
   while qHead < qTail do
@@ -1683,12 +1683,12 @@ begin
       	      MarkPath(Curr, CurrBase, Next);
       	      MarkPath(Next, CurrBase, Curr);
               for I := 0 to System.High(FBase) do
-                if FBlossoms[FBase[I]] then
+                if FBlossoms.UncBits[FBase[I]] then
                   begin
                     FBase[I] := CurrBase;
-                    if not FVisited[I] then
+                    if not FVisited.UncBits[I] then
                       begin
-                        FVisited[I] := True;
+                        FVisited.UncBits[I] := True;
                         FQueue[qTail] := I;
                         Inc(qTail);
                       end;
@@ -1704,7 +1704,7 @@ begin
                     exit(True);
                   end;
                 Next := FMates[Next];
-                FVisited[Next] := True;
+                FVisited.UncBits[Next] := True;
                 FQueue[qTail] := Next;
                 Inc(qTail);
               end;
@@ -1747,9 +1747,9 @@ begin
   FBase := aGraph.CreateIntArray;
   FParents := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
-  FVisited.Size := aGraph.VertexCount;
-  FLcaUsed.Size := aGraph.VertexCount;
-  FBlossoms.Size := aGraph.VertexCount;
+  FVisited.Capacity := aGraph.VertexCount;
+  FLcaUsed.Capacity := aGraph.VertexCount;
+  FBlossoms.Capacity := aGraph.VertexCount;
   for e in aGraph.GreedyMatching2 do
     begin
       Match(e.Source, e.Destination);
@@ -1790,7 +1790,7 @@ var
   qTail: SizeInt = 0;
 begin
   FInTree.ClearBits;
-  FInTree[aSource] := True;
+  FInTree.UncBits[aSource] := True;
   FQueue[qTail] := aSource;
   Inc(qTail);
   while qHead < qTail do
@@ -1798,7 +1798,7 @@ begin
       Curr := FQueue[qHead];
       Inc(qHead);
       for p in FGraph.AdjLists[Curr]^ do
-        if not FInTree[p^.Destination] then
+        if not FInTree.UncBits[p^.Destination] then
           begin
             Next := p^.Destination;
             Mate := FMates[Next];
@@ -1829,7 +1829,7 @@ begin
                       if Tmp <> aSource then
                         continue;
                     end;
-                  FInTree[Next] := True;
+                  FInTree.UncBits[Next] := True;
                   FGrannies[Mate] := Curr;
                   FQueue[qTail] := Mate;
                   Inc(qTail);
@@ -1847,7 +1847,7 @@ begin
   FMates := aGraph.CreateIntArray;
   FGrannies := aGraph.CreateIntArray;
   FQueue := aGraph.CreateIntArray;
-  FInTree.Size := aGraph.VertexCount;
+  FInTree.Capacity := aGraph.VertexCount;
   for e in aGraph.GreedyMatching do
     begin
       Match(e.Source, e.Destination);
@@ -1938,7 +1938,7 @@ begin
       FGraph[I].Add(Edge);
     end;
   Finalize(FGraph[aTarget]);
-  FExistNodes[aTarget] := False;
+  FExistNodes.UncBits[aTarget] := False;
   if FCuts <> nil then
     begin
       while FCuts[aTarget].TryPop(I) do
@@ -1960,9 +1960,9 @@ begin
   while FQueue.Count > 1 do
     begin
       I := FQueue.Dequeue.Index;
-      FInQueue[I] := False;
+      FInQueue.UncBits[I] := False;
       for p in FGraph[I] do
-        if FInQueue[p^.Target] then
+        if FInQueue.UncBits[p^.Target] then
           begin
             Item := FQueue.Peek(p^.Target);
             Item.Data += p^.Weight;
@@ -1972,7 +1972,7 @@ begin
           end;
     end;
   Item := FQueue.Dequeue;
-  FInQueue[Item.Index] := False;
+  FInQueue.UncBits[Item.Index] := False;
   if Item.Data < FBestCut then
     begin
       FBestCut := Item.Data;
@@ -1993,7 +1993,7 @@ begin
       if p^.Scanned and (p^.ScanRank >= FBestCut) then
         FEdgeQueue.Enqueue(TOrdIntPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
-    if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
+    if FExistNodes.UncBits[Pair.Left] and FExistNodes.UncBits[Pair.Right] then
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 
@@ -2121,7 +2121,7 @@ procedure TGSimpleGraph.TPlanarHelper.CreateDigraphR;
 var
   Arcs: array of record Target, Reverse: SizeInt; Passed, Used: Boolean end;
   NodeArcs: TIntArray = nil;
-  Visited: TBitVector;
+  Visited: TBoolVector;
 
   procedure Dfs(aRootIdx: SizeInt);
   var
@@ -2133,9 +2133,9 @@ var
           Arcs[I].Passed := True;
           Arcs[I].Used := True;
           Arcs[Arcs[I].Reverse].Passed := True;
-          if not Visited[Arcs[I].Target] then
+          if not Visited.UncBits[Arcs[I].Target] then
             begin
-              Visited[Arcs[I].Target] := True;
+              Visited.UncBits[Arcs[I].Target] := True;
               Dfs(Arcs[I].Target);
             end;
         end;
@@ -2178,12 +2178,12 @@ begin
       Curr += FGraph.AdjLists[I]^.Count;
     end;
   NodeArcs[FGraph.VertexCount] := Curr;
-  Visited.Size := FGraph.VertexCount;
+  Visited.Capacity := FGraph.VertexCount;
   for I := 0 to Pred(FGraph.VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
         FRoots.Add(I);
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         Dfs(I);
       end;
 
@@ -2209,7 +2209,7 @@ procedure TGSimpleGraph.TPlanarHelper.CreateDigraph;
 var
   Arcs: array of record Target, Reverse: SizeInt; Passed, Used: Boolean end;
   NodeArcs: array of record FirstArc, CurrArc: SizeInt end;
-  Visited: TBitVector;
+  Visited: TBoolVector;
 
   procedure Dfs(aRootIdx: SizeInt);
   var
@@ -2230,9 +2230,9 @@ var
                 Arcs[I].Passed := True;
                 Arcs[I].Used := True;
                 Arcs[Arcs[I].Reverse].Passed := True;
-                if not Visited[Arcs[I].Target] then
+                if not Visited.UncBits[Arcs[I].Target] then
                   begin
-                    Visited[Arcs[I].Target] := True;
+                    Visited.UncBits[Arcs[I].Target] := True;
                     Inc(sTop);
                     Stack[sTop] := Arcs[I].Target;
                   end;
@@ -2282,12 +2282,12 @@ begin
       Curr += FGraph.AdjLists[I]^.Count;
     end;
   NodeArcs[FGraph.VertexCount].FirstArc := Curr;
-  Visited.Size := FGraph.VertexCount;
+  Visited.Capacity := FGraph.VertexCount;
   for I := 0 to Pred(FGraph.VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
         FRoots.Add(I);
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         Dfs(I);
       end;
 

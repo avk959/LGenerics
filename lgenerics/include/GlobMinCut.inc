@@ -95,7 +95,7 @@ begin
       FGraph[I].Add(Edge);
     end;
   Finalize(FGraph[aTarget]);
-  FExistNodes[aTarget] := False;
+  FExistNodes.UncBits[aTarget] := False;
   if FCuts <> nil then
     begin
       while FCuts[aTarget].TryPop(I) do
@@ -117,9 +117,9 @@ begin
   while FQueue.Count > 1 do
     begin
       I := FQueue.Dequeue.Index;
-      FInQueue[I] := False;
+      FInQueue.UncBits[I] := False;
       for p in FGraph[I] do
-        if FInQueue[p^.Target] then
+        if FInQueue.UncBits[p^.Target] then
           begin
             Item := FQueue.Peek(p^.Target);
             Item.Weight += p^.Weight;
@@ -129,7 +129,7 @@ begin
           end;
     end;
   Item := FQueue.Dequeue;
-  FInQueue[Item.Index] := False;
+  FInQueue.UncBits[Item.Index] := False;
   if Item.Weight < FBestCut then
     begin
       FBestCut := Item.Weight;
@@ -150,7 +150,7 @@ begin
       if p^.Scanned and (p^.ScanRank >= FBestCut) then
         FEdgeQueue.Enqueue(TOrdIntPair.Create(I, p^.Target));
   while FEdgeQueue.TryDequeue(Pair) do
-    if FExistNodes[Pair.Left] and FExistNodes[Pair.Right] then
+    if FExistNodes.UncBits[Pair.Left] and FExistNodes.UncBits[Pair.Right] then
       ShrinkEdge(Pair.Left, Pair.Right);
 end;
 

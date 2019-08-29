@@ -1305,7 +1305,7 @@ end;
 procedure TGSimpleGraph.ValidateConnected;
 var
   Queue: TIntQueue;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   I, Curr, Next: SizeInt;
   p: PAdjItem;
 begin
@@ -1317,21 +1317,21 @@ begin
       FConnectedValid := True;
       exit;
     end;
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   FCompCount := VertexCount;
   ResetTags;
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
         Curr := I;
-        Visited[Curr] := True;
+        Visited.UncBits[Curr] := True;
         repeat
           for p in AdjLists[Curr]^ do
             begin
               Next := p^.Key;
-              if not Visited[Next] then
+              if not Visited.UncBits[Next] then
                 begin
-                  Visited[Next] := True;
+                  Visited.UncBits[Next] := True;
                   Queue.Enqueue(Next);
                   if SeparateJoin(Curr, Next) then
                     Dec(FCompCount);
@@ -1475,22 +1475,22 @@ var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   Next: SizeInt;
 begin
   Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
-  Visited.Size := VertexCount;
-  Visited[aRoot] := True;
+  Visited.Capacity := VertexCount;
+  Visited.UncBits[aRoot] := True;
   {%H-}Stack.Push(aRoot);
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
       begin
         Next := AdjEnums[aRoot].Current;
-        if not Visited[Next] then
+        if not Visited.UncBits[Next] then
           begin
-            Visited[Next] := True;
+            Visited.UncBits[Next] := True;
             Parents[Next] := aRoot;
             Stack.Push(Next);
           end
@@ -1511,25 +1511,25 @@ var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   I, Curr, Next: SizeInt;
 begin
   Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         {%H-}Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if not Visited[Next] then
+              if not Visited.UncBits[Next] then
                 begin
-                  Visited[Next] := True;
+                  Visited.UncBits[Next] := True;
                   Parents[Next] := Curr;
                   Stack.Push(Next);
                 end
@@ -1546,7 +1546,7 @@ end;
 function TGSimpleGraph.FindPerfectElimOrd(aOnNodeDone: TSpecNodeDone; out aPeoSeq: TIntArray): Boolean;
 var
   Queue: TINodePqMax;
-  InQueue: TBitVector;
+  InQueue: TBoolVector;
   Index2Ord: TIntArray = nil;
   Lefts: TIntSet;
   I, J, MaxOrd, Nearest: SizeInt;
@@ -1557,7 +1557,7 @@ begin
   aPeoSeq := nil;
   //max cardinality search
   Queue := TINodePqMax.Create(VertexCount);
-  InQueue.ExpandTrue(VertexCount);
+  InQueue.InitRange(VertexCount);
   for I := 0 to Pred(VertexCount)do
     Queue.Enqueue(I, TIntNode.Create(I, 0));
   aPeoSeq.Length := VertexCount;
@@ -1565,7 +1565,7 @@ begin
   I := 0;
   while Queue.TryDequeue(Node) do
     begin
-      InQueue[{%H-}Node.Index] := False;
+      InQueue.UncBits[{%H-}Node.Index] := False;
       aPeoSeq[I] := Node.Index;
       Index2Ord[Node.Index] := I;
       Inc(I);
@@ -1573,7 +1573,7 @@ begin
       Nearest := NULL_INDEX;
       {%H-}Lefts.MakeEmpty;
       for p in AdjLists[Node.Index]^ do
-        if InQueue[p^.Key] then
+        if InQueue.UncBits[p^.Key] then
           Queue.Update(p^.Key, TIntNode.Create(p^.Key, Succ(Queue.ItemPtr(p^.Key)^.Data)))
         else
           begin
@@ -1622,7 +1622,7 @@ end;
 function TGSimpleGraph.FindChordalMis(out aMis: TIntSet): Boolean;
 var
   Peo: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   I, Curr: SizeInt;
   p: PAdjItem;
 begin
@@ -1630,15 +1630,15 @@ begin
   Result := FindPerfectElimOrd(nil, Peo);
   if Result then
     begin
-      Visited.Size := VertexCount;
+      Visited.Capacity := VertexCount;
       for I := Pred(VertexCount) downto 0 do
         begin
           Curr := Peo[I];
-          if Visited[Curr] then
+          if Visited.UncBits[Curr] then
             continue;
           aMis.Push(Curr);
           for p in AdjLists[Curr]^ do
-            Visited[p^.Key] := True;
+            Visited.UncBits[p^.Key] := True;
         end;
     end;
 end;
@@ -1652,7 +1652,7 @@ function TGSimpleGraph.FindChordalColoring(out aMaxColor: SizeInt; out aColors: 
   end;
 var
   PeoSeq: TIntArray;
-  OnLeft: TBitVector;
+  OnLeft: TBoolVector;
   AvailColors: TBoolVector;
   I, Curr: SizeInt;
   p: PAdjItem;
@@ -1663,17 +1663,17 @@ begin
   if Result then
     begin
       aColors.Length := VertexCount;
-      OnLeft.Size := VertexCount;
+      OnLeft.Capacity := VertexCount;
       for I := 0 to Pred(VertexCount) do
         begin
           Curr := PeoSeq[I];
           AvailColors.InitRange(Succ(aMaxColor));
-          AvailColors[0] := False;
+          AvailColors.UncBits[0] := False;
           for p in AdjLists[Curr]^ do
-            if OnLeft[p^.Key] then
-              AvailColors[aColors[p^.Key]] := False;
+            if OnLeft.UncBits[p^.Key] then
+              AvailColors.UncBits[aColors[p^.Key]] := False;
           aColors[Curr] := AvailColors.Bsf;
-          OnLeft[Curr] := True;
+          OnLeft.UncBits[Curr] := True;
         end;
     end
   else
@@ -1771,31 +1771,31 @@ end;
 function TGSimpleGraph.GreedyMatching: TIntEdgeArray;
 var
   Nodes: TIntArray;
-  Matched: TBitVector;
+  Matched: TBoolVector;
   CurrPos, Size, Curr, Next: SizeInt;
   p: PAdjItem;
 begin
   Nodes := SortNodesByDegree(soAsc);
-  Matched.Size := VertexCount;
+  Matched.Capacity := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   CurrPos := 0;
   Size := 0;
   while CurrPos < VertexCount do
     begin
-      if not Matched[Nodes[CurrPos]] then
+      if not Matched.UncBits[Nodes[CurrPos]] then
         begin
           Curr := Nodes[CurrPos];
           Next := NULL_INDEX;
           for p in AdjLists[Curr]^ do // find adjacent non matched node
-            if not Matched[p^.Destination] then
+            if not Matched.UncBits[p^.Destination] then
               begin
                 Next := p^.Destination;
                 break;
               end;
           if Next <> NULL_INDEX then // node found
             begin
-              Matched[Curr] := True;
-              Matched[Next] := True;
+              Matched.UncBits[Curr] := True;
+              Matched.UncBits[Next] := True;
               if System.Length(Result) = Size then
                 System.SetLength(Result, Size shl 1);
               Result[Size] := TIntEdge.Create(Curr, Next);
@@ -1810,7 +1810,7 @@ end;
 function TGSimpleGraph.GreedyMatching2: TIntEdgeArray;
 var
   Nodes: TINodePqMin;
-  Matched: TBitVector;
+  Matched: TBoolVector;
   Node: TIntNode;
   Size, I, Deg, s, d: SizeInt;
   p: PAdjItem;
@@ -1818,11 +1818,11 @@ begin
   Nodes := TINodePqMin.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
     {%H-}Nodes.Enqueue(I, TIntNode.Create(I, DegreeI(I)));
-  Matched.Size := VertexCount;
+  Matched.Capacity := VertexCount;
   System.SetLength(Result, ARRAY_INITIAL_SIZE);
   Size := 0;
   while Nodes.TryDequeue(Node) do
-    if not Matched[{%H-}Node.Index] then
+    if not Matched.UncBits[{%H-}Node.Index] then
       begin
         s := Node.Index;
         d := NULL_INDEX;
@@ -1830,7 +1830,7 @@ begin
         for p in AdjLists[s]^ do // find adjacent node with min degree
           begin
             I := p^.Destination;
-            if not Matched[I] then
+            if not Matched.UncBits[I] then
               begin
                 Node := Nodes.Peek(I);
                 if  Node.Data < Deg then
@@ -1847,15 +1847,15 @@ begin
             for p in AdjLists[d]^ do
               begin
                 I := p^.Destination;
-                if (I <> s) and not Matched[I] then
+                if (I <> s) and not Matched.UncBits[I] then
                   begin
                     Node := Nodes.Peek(I);
                     Dec(Node.Data);
                     Nodes.Update(I, Node);
                   end;
               end;
-            Matched[s] := True;
-            Matched[d] := True;
+            Matched.UncBits[s] := True;
+            Matched.UncBits[d] := True;
             Nodes.Remove(d);
             if System.Length(Result) = Size then
               System.SetLength(Result, Size shl 1);
@@ -1890,11 +1890,10 @@ end;
 function TGSimpleGraph.GetMisBipartite(const w, g: TIntArray): TIntArray;
 var
   Helper: THKMatch;
-  Lefts, LeftsVisit, LeftsFree, RightsUnvisit: TBoolVector;
+  Lefts, LeftsVisit, LeftsFree, RightsUnvisit, Visited: TBoolVector;
   Match: TIntArray;
   e: TIntEdge;
   Stack: TIntStack;
-  Visited: TBitVector;
   AdjEnums: TAdjEnumArray;
   I, Curr, Next: SizeInt;
   CurrInLefts: Boolean;
@@ -1907,22 +1906,22 @@ begin
     begin
       for I in w do
         begin
-          Lefts[I] := True;
-          LeftsFree[I] := True;
+          Lefts.UncBits[I] := True;
+          LeftsFree.UncBits[I] := True;
         end;
       for I in g do
-        RightsUnvisit[I] := True;
+        RightsUnvisit.UncBits[I] := True;
     end
   else
     if System.Length(w) > System.Length(g) then
       begin
         for I in g do
           begin
-            Lefts[I] := True;
-            LeftsFree[I] := True;
+            Lefts.UncBits[I] := True;
+            LeftsFree.UncBits[I] := True;
           end;
         for I in w do
-          RightsUnvisit[I] := True;
+          RightsUnvisit.UncBits[I] := True;
       end
     else
       exit(w); ////
@@ -1930,28 +1929,28 @@ begin
   Match := CreateIntArray;
   for e in Helper.MaxMatching(Self, w, g) do
     begin
-      LeftsFree[e.Source] := False;
-      LeftsFree[e.Destination] := False;
+      LeftsFree.UncBits[e.Source] := False;
+      LeftsFree.UncBits[e.Destination] := False;
       Match[e.Source] := e.Destination;
       Match[e.Destination] := e.Source;
     end;
 
   //find nodes that not belong min vertex cover
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   for I in LeftsFree do
     begin
       {%H-}Stack.Push(I);
-      Visited[I] := True;
+      Visited.UncBits[I] := True;
       while Stack.TryPeek(Curr) do
         begin
-          CurrInLefts := Lefts[Curr];
+          CurrInLefts := Lefts.UncBits[Curr];
           if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if not Visited[Next] then
+              if not Visited.UncBits[Next] then
                 begin
-                  Visited[Next] := True;
+                  Visited.UncBits[Next] := True;
                   if CurrInLefts xor (Match[Curr] = Next) then
                     Stack.Push(Next);
                 end;
@@ -1960,9 +1959,9 @@ begin
             begin
               Stack.Pop;
               if CurrInLefts then
-                LeftsVisit[Curr] := True
+                LeftsVisit.UncBits[Curr] := True
               else
-                RightsUnvisit[Curr] := False;
+                RightsUnvisit.UncBits[Curr] := False;
             end;
         end;
     end;
@@ -2120,7 +2119,7 @@ begin
               J := I;
             end;
         end;
-      Cand[J] := False;
+      Cand.UncBits[J] := False;
       Cand.Subtract(Matrix[J]);
       {%H-}Stack.Push(J);
     end;
@@ -2176,7 +2175,7 @@ begin
             end;
         end;
       Cand.Subtract(Matrix[J]);
-      Cand[J] := False;
+      Cand.UncBits[J] := False;
       {%H-}Stack.Push(J);
     end;
   Result := Stack.ToArray;
@@ -2198,27 +2197,27 @@ var
     Columns := CreateBoolMatrix;
     for I := 0 to Pred(NodeCount) do
       begin
-        Columns[I][I] := True;
+        Columns[I].UncBits[I] := True;
         if Columns[I].PopCount = 1 then
-          CurrSet[I] := True;
+          CurrSet.UncBits[I] := True;
       end;
     Excluded.Capacity := NodeCount;
     for I := 0 to Pred(NodeCount) do
-      if not CurrSet[I] then
+      if not CurrSet.UncBits[I] then
         for J := 0 to Pred(NodeCount) do
           if (J <> I) and Columns[J].Contains(Columns[I]) then
             begin
-              Excluded[I] := True;
+              Excluded.UncBits[I] := True;
               break;
             end;
     System.SetLength(Blocks, NodeCount);
     for I := 0 to Pred(NodeCount) do
-      if not CurrSet[I] then
+      if not CurrSet.UncBits[I] then
         begin
           Blocks[I].Capacity := NodeCount;
           for J := 0 to Pred(NodeCount) do
-            if not Excluded[J] and Columns[J][I] then
-              Blocks[I][J] := True;
+            if not Excluded.UncBits[J] and Columns[J].UncBits[I] then
+              Blocks[I].UncBits[J] := True;
         end;
     CurrCount := CurrSet.PopCount;
   end;
@@ -2234,15 +2233,15 @@ var
         Next := aCand.Bsf;
         NewTested := aTested;
         for I in Blocks[Next] do
-          if not aTested[I] then
+          if not aTested.UncBits[I] then
             begin
-              CurrSet[I] := True;
-              NewTested[I] := True;
+              CurrSet.UncBits[I] := True;
+              NewTested.UncBits[I] := True;
               Inc(CurrCount);
               Extend(aCand.Difference(Columns[I]), NewTested);
               if Cancelled then
                 exit;
-              CurrSet[I] := False;
+              CurrSet.UncBits[I] := False;
               Dec(CurrCount);
             end;
       end
@@ -2443,16 +2442,16 @@ begin
       for I in Achromatic do
         {%H-}Queue.Enqueue(I, Nodes[I]);
       while Queue.TryDequeue(Node) do
-        if CurrIS[Node.Index] then
+        if CurrIS.UncBits[Node.Index] then
           begin
-            CurrIS[Node.Index] := False;
-            Achromatic[Node.Index] := False;
+            CurrIS.UncBits[Node.Index] := False;
+            Achromatic.UncBits[Node.Index] := False;
             aColors[Node.Index] := Result;
             for p in AdjLists[Node.Index]^ do
-              if Achromatic[p^.Key] then
+              if Achromatic.UncBits[p^.Key] then
                 begin
                   Dec(Nodes[p^.Key].Data);
-                  CurrIS[p^.Key] := False;
+                  CurrIS.UncBits[p^.Key] := False;
                 end;
           end;
     end;
@@ -2804,28 +2803,28 @@ end;
 procedure TGSimpleGraph.SearchForCycleBasis(out aCycles: TIntArrayVector);
 var
   Stack: TSimpleStack;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
   EdgeSet: TIntPairSet;
   I, Curr, Next: SizeInt;
 begin
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if not Visited[Next] then
+              if not Visited.UncBits[Next] then
                 begin
-                  Visited[Next] := True;
+                  Visited.UncBits[Next] := True;
                   Parents[Next] := Curr;
                   Stack.Push(Next);
                 end
@@ -2841,29 +2840,29 @@ end;
 procedure TGSimpleGraph.SearchForCycleBasisVector(out aVector: TIntVector);
 var
   Stack: TSimpleStack;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   AdjEnums: TAdjEnumArray;
   Parents: TIntArray;
   EdgeSet: TIntPairSet;
   I, Next: SizeInt;
   Curr: SizeInt = -1;
 begin
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   Stack := TSimpleStack.Create(VertexCount);
   AdjEnums := CreateAdjEnumArray;
   Parents := CreateIntArray;
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if not Visited[Next] then
+              if not Visited.UncBits[Next] then
                 begin
-                  Visited[Next] := True;
+                  Visited.UncBits[Next] := True;
                   Parents[Next] := Curr;
                   Stack.Push(Next);
                 end
@@ -2936,7 +2935,7 @@ function TGSimpleGraph.SortNodesByWidth(o: TSortOrder): TIntArray;
 var
   Queue: specialize TGPairHeapMin<TSbWNode>;
   List: TIntArray = nil;
-  InQueue: TBitVector;
+  InQueue: TBoolVector;
   Item: TSbWNode = (Index: -1; WDegree: -1; Degree: -1;);
   I: SizeInt;
   p: PAdjItem;
@@ -2945,15 +2944,15 @@ begin
   List.Length := VertexCount;
   for I := 0 to Pred(VertexCount) do
     Queue.Enqueue(I, TSbWNode.Create(I, AdjLists[I]^.Count, AdjLists[I]^.Count));
-  InQueue.ExpandTrue(VertexCount);
+  InQueue.InitRange(VertexCount);
   I := 0;
   while Queue.TryDequeue(Item) do
     begin
       List[I] := Item.Index;
       Inc(I);
-      InQueue[Item.Index] := False;
+      InQueue.UncBits[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
-        if InQueue[p^.Key] then
+        if InQueue.UncBits[p^.Key] then
           with Queue.ItemPtr(p^.Key)^ do
             Queue.Update(p^.Key, TSbWNode.Create(Index, Pred(WDegree), Degree));
     end;
@@ -2991,7 +2990,7 @@ function TGSimpleGraph.SortComplementByWidth: TIntArray;
     Queue: specialize TGPairHeapMin<TSbWNode>;
     m: TBoolMatrix;
     List: TIntArray = nil;
-    InQueue: TBitVector;
+    InQueue: TBoolVector;
     Item: TSbWNode = (Index: -1; WDegree: -1; Degree: -1;);
     I, J: SizeInt;
     p: PAdjItem;
@@ -3000,9 +2999,9 @@ function TGSimpleGraph.SortComplementByWidth: TIntArray;
     for I := 0 to Pred(VertexCount) do //create complement matrix
       begin
         m[I].InitRange(VertexCount);
-        m[I][I] := False;
+        m[I].UncBits[I] := False;
         for p in AdjLists[I]^ do
-          m[I][p^.Key] := False;
+          m[I].UncBits[p^.Key] := False;
       end;
     Queue := specialize TGPairHeapMin<TSbWNode>.Create(VertexCount);
     List.Length := VertexCount;
@@ -3011,15 +3010,15 @@ function TGSimpleGraph.SortComplementByWidth: TIntArray;
         J := m[I].PopCount;
         Queue.Enqueue(I, TSbWNode.Create(I, J, J));
       end;
-    InQueue.ExpandTrue(VertexCount);
+    InQueue.InitRange(VertexCount);
     I := 0;
     while Queue.TryDequeue(Item) do
       begin
         List[I] := Item.Index;
         Inc(I);
-        InQueue[Item.Index] := False;
+        InQueue.UncBits[Item.Index] := False;
         for J in m[Item.Index] do
-          if InQueue[J] then
+          if InQueue.UncBits[J] then
             with Queue.ItemPtr(J)^ do
               Queue.Update(J, TSbWNode.Create(Index, Pred(WDegree), Degree));
       end;
@@ -3663,7 +3662,7 @@ end;
 function TGSimpleGraph.Degeneracy: SizeInt;
 var
   Queue: TINodePqMin;
-  InQueue: TBitVector;
+  InQueue: TBoolVector;
   Item: TIntNode = (Index: -1; Data: -1);
   I: SizeInt;
   p: PAdjItem;
@@ -3674,14 +3673,14 @@ begin
   Queue := TINodePqMin.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
     Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
-  InQueue.ExpandTrue(VertexCount);
+  InQueue.InitRange(VertexCount);
   while Queue.TryDequeue(Item) do
     begin
       if Item.Data > Result then
         Result := Item.Data;
-      InQueue[Item.Index] := False;
+      InQueue.UncBits[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
-        if InQueue[p^.Key] then
+        if InQueue.UncBits[p^.Key] then
           Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
     end;
 end;
@@ -3689,7 +3688,7 @@ end;
 function TGSimpleGraph.Degeneracy(out aDegs: TIntArray): SizeInt;
 var
   Queue: TINodePqMin;
-  InQueue: TBitVector;
+  InQueue: TBoolVector;
   Item: TIntNode = (Index: -1; Data: -1);
   I: SizeInt;
   p: PAdjItem;
@@ -3701,16 +3700,16 @@ begin
   Queue := TINodePqMin.Create(VertexCount);
   for I := 0 to Pred(VertexCount) do
     Queue.Enqueue(I, TIntNode.Create(I, AdjLists[I]^.Count));
-  InQueue.ExpandTrue(VertexCount);
+  InQueue.InitRange(VertexCount);
   aDegs.Length := VertexCount;
   while Queue.TryDequeue(Item) do
     begin
       if Item.Data > Result then
         Result := Item.Data;
       aDegs[Item.Index] := Result;
-      InQueue[Item.Index] := False;
+      InQueue.UncBits[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
-        if InQueue[p^.Key] then
+        if InQueue.UncBits[p^.Key] then
           Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
     end;
 end;
@@ -3735,9 +3734,9 @@ begin
     begin
       if Item.Data >= aK then
         break;
-      InQueue[Item.Index] := False;
+      InQueue.UncBits[Item.Index] := False;
       for p in AdjLists[Item.Index]^ do
-        if InQueue[p^.Key] then
+        if InQueue.UncBits[p^.Key] then
           Queue.Update(p^.Key, TIntNode.Create(p^.Key, Pred(Queue.ItemPtr(p^.Key)^.Data)));
     end;
   Result := InQueue.ToArray;
@@ -4111,7 +4110,7 @@ begin
   Result := Helper.Execute(Self, Cut);
   B.InitRange(VertexCount);
   for I in Cut do
-    B[I] := False;
+    B.UncBits[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := B.ToArray;
 end;
@@ -4134,8 +4133,8 @@ begin
       Right.InitRange(VertexCount);
       for I in aCut.A do
         begin
-          Left[I] := True;
-          Right[I] := False;
+          Left.UncBits[I] := True;
+          Right.UncBits[I] := False;
         end;
     end
   else
@@ -4144,15 +4143,15 @@ begin
       Left.InitRange(VertexCount);
       for I in aCut.B do
         begin
-          Right[I] := True;
-          Left[I] := False;
+          Right.UncBits[I] := True;
+          Left.UncBits[I] := False;
         end;
     end;
   J := 0;
   System.SetLength(aCrossEdges, Result);
   for I in Left do
     for p in AdjLists[I]^ do
-      if Right[p^.Destination] then
+      if Right.UncBits[p^.Destination] then
         begin
           if I < p^.Destination then
             aCrossEdges[J] := TIntEdge.Create(I, p^.Destination)
@@ -4274,9 +4273,9 @@ begin
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if TestIS[I] then  //contains duplicates -> is not set
+      if TestIS.UncBits[I] then  //contains duplicates -> is not set
         exit(False);
-      TestIS[I] := True;
+      TestIS.UncBits[I] := True;
     end;
   for I in aTestMis do
     begin
@@ -4369,9 +4368,9 @@ begin
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if TestMds[I] then         //contains duplicates -> is not set
+      if TestMds.UncBits[I] then         //contains duplicates -> is not set
         exit(False);
-      TestMds[I] := True;
+      TestMds.UncBits[I] := True;
     end;
   Remain.InitRange(VertexCount);
   Remain.Subtract(TestMds);
@@ -4392,7 +4391,7 @@ begin
 
   for I in aTestMds do
     begin
-      Remain[I] := True;        //test aTestMds without I
+      Remain.UncBits[I] := True; //test aTestMds without I
       for K in Remain do
         begin
           AdjList := AdjLists[K];
@@ -4408,7 +4407,7 @@ begin
         end;
       if AdjFound then         //is not minimal
         exit(False);
-      Remain[I] := False;
+      Remain.UncBits[I] := False;
     end;
   Result := True;
 end;
@@ -4531,9 +4530,9 @@ begin
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if TestClique[I] then //contains duplicates -> is not set
+      if TestClique.UncBits[I] then //contains duplicates -> is not set
         exit(False);
-      TestClique[I] := True;
+      TestClique.UncBits[I] := True;
     end;
   for I in aTestClique do
     begin
@@ -4584,7 +4583,7 @@ begin
   Result := FindMIS(aExact, aTimeOut);
   VertSet.InitRange(VertexCount);
   for I in Result do
-    VertSet[I] := False;
+    VertSet.UncBits[I] := False;
   Result := VertSet.ToArray;
 end;
 
@@ -4598,7 +4597,7 @@ begin
   Result := GreedyMIS;
   VertSet.InitRange(VertexCount);
   for I in Result do
-    VertSet[I] := False;
+    VertSet.UncBits[I] := False;
   Result := VertSet.ToArray;
 end;
 
@@ -4616,28 +4615,28 @@ begin
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then //contains garbage
         exit(False);
-      if TestCover[I] then //contains duplicates -> is not set
+      if TestCover.UncBits[I] then //contains duplicates -> is not set
         exit(False);
-      TestCover[I] := True;
+      TestCover.UncBits[I] := True;
     end;
   for I := 0 to Pred(VertexCount) do
     for p in AdjLists[I]^ do
-      if (p^.Key > I) and not(TestCover[I] or TestCover[p^.Key]) then
+      if (p^.Key > I) and not(TestCover.UncBits[I] or TestCover.UncBits[p^.Key]) then
         exit(False);  //contains uncovered edge -> is not cover
   for I in aTestMvc do
     begin
-      TestCover[I] := False;
+      TestCover.UncBits[I] := False;
       Covered := True;
       for J := 0 to Pred(VertexCount) do
         for p in AdjLists[J]^ do
-          if (p^.Key > J) and not (TestCover[J] or TestCover[p^.Key]) then
+          if (p^.Key > J) and not (TestCover.UncBits[J] or TestCover.UncBits[p^.Key]) then
             begin
               Covered := False;
               break;
             end;
       if Covered then
         exit(False);  //I can be removed from cover -> cover is not minimal
-      TestCover[I] := True;
+      TestCover.UncBits[I] := True;
     end;
   Result := True;
 end;
@@ -4782,7 +4781,7 @@ end;
 
 function TGSimpleGraph.IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
 var
-  VertSet: TBitVector;
+  VertSet: TBoolVector;
   I, Curr, Next: SizeInt;
 begin
   CheckIndexRange(aSourceIdx);
@@ -4792,18 +4791,18 @@ begin
     exit(False);
   if (aTestCycle[0] <> aSourceIdx) or (aTestCycle[VertexCount] <> aSourceIdx) then
     exit(False);
-  VertSet.Size := VertexCount;
+  VertSet.Capacity := VertexCount;
   Next := aSourceIdx;
-  VertSet[aSourceIdx] := True;
+  VertSet.UncBits[aSourceIdx] := True;
   for I := 1 to Pred(VertexCount) do
     begin
       Curr := Next;
       Next := aTestCycle[I];
       if SizeUInt(Next) >= SizeUInt(VertexCount) then
         exit(False);
-      if VertSet[Next] then
+      if VertSet.UncBits[Next] then
         exit(False);
-      VertSet[Next] := True;
+      VertSet.UncBits[Next] := True;
       if not AdjLists[Curr]^.Contains(Next) then
         exit(False);
     end;
@@ -4841,7 +4840,7 @@ end;
 
 function TGSimpleGraph.IsHamiltonPath(const aTestPath: TIntArray; aSourceIdx: SizeInt): Boolean;
 var
-  VertSet: TBitVector;
+  VertSet: TBoolVector;
   I, Curr, Next: SizeInt;
 begin
   CheckIndexRange(aSourceIdx);
@@ -4851,18 +4850,18 @@ begin
     exit(False);
   if aTestPath[0] <> aSourceIdx then
     exit(False);
-  VertSet.Size := VertexCount;
+  VertSet.Capacity := VertexCount;
   Next := aSourceIdx;
-  VertSet[aSourceIdx] := True;
+  VertSet.UncBits[aSourceIdx] := True;
   for I := 1 to Pred(VertexCount) do
     begin
       Curr := Next;
       Next := aTestPath[I];
       if SizeUInt(Next) >= SizeUInt(VertexCount) then
         exit(False);
-      if VertSet[Next] then
+      if VertSet.UncBits[Next] then
         exit(False);
-      VertSet[Next] := True;
+      VertSet.UncBits[Next] := True;
       if not AdjLists[Curr]^.Contains(Next) then
         exit(False);
     end;
@@ -5661,32 +5660,31 @@ end;
 function TGWeightedGraph.MinSpanningTreePrim(out aTotalWeight: TWeight): TIntArray;
 var
   Queue: TPairingHeap;
-  Reached,
-  InQueue: TBitVector;
+  Reached, InQueue: TBoolVector;
   I, Curr: SizeInt;
   Item: TWeightItem;
   p: PAdjItem;
 begin
   Result := CreateIntArray;
   Queue := TPairingHeap.Create(VertexCount);
-  Reached.Size := VertexCount;
-  InQueue.Size := VertexCount;
+  Reached.Capacity := VertexCount;
+  InQueue.Capacity := VertexCount;
   aTotalWeight := 0;
   for I := 0 to Pred(VertexCount) do
-    if not Reached[I] then
+    if not Reached.UncBits[I] then
       begin
         Item := TWeightItem.Create(I, 0);
         repeat
           Curr := Item.Index;
           aTotalWeight += Item.Weight;
-          Reached[Curr] := True;
+          Reached.UncBits[Curr] := True;
           for p in AdjLists[Curr]^ do
-            if not Reached[p^.Key] then
-              if not InQueue[p^.Key] then
+            if not Reached.UncBits[p^.Key] then
+              if not InQueue.UncBits[p^.Key] then
                 begin
                   Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight));
                   Result[p^.Key] := Curr;
-                  InQueue[p^.Key] := True;
+                  InQueue.UncBits[p^.Key] := True;
                 end
               else
                 if p^.Data.Weight < Queue.ItemPtr(p^.Key)^.Weight then
@@ -5934,9 +5932,9 @@ begin
       while Queue.Count > 1 do
         begin
           Prev := Queue.Dequeue.Index;
-          vInQueue[Prev] := False;
+          vInQueue.UncBits[Prev] := False;
           for pItem in g[Prev] do
-            if vInQueue[pItem^.Index] then
+            if vInQueue.UncBits[pItem^.Index] then
               begin
                 NextItem := Queue.Peek(pItem^.Index);
                 NextItem.Weight += pItem^.Weight;
@@ -5945,7 +5943,7 @@ begin
         end;
       NextItem := Queue.Dequeue;
       Last := NextItem.Index;
-      vInQueue[NextItem.Index] := False;
+      vInQueue.UncBits[NextItem.Index] := False;
       if Result > NextItem.Weight then
         begin
           Result := NextItem.Weight;
@@ -5954,7 +5952,7 @@ begin
       while Cuts[Last].TryPop(I) do
         Cuts[Prev].Push(I);
       Finalize(Cuts[Last]);
-      vRemains[Last] := False;
+      vRemains.UncBits[Last] := False;
       //merge last two vertices, remain Prev
       g[Prev].Remove(Last);
       g[Last].Remove(Prev);
@@ -6049,7 +6047,7 @@ begin
   aCutWeight := StoerWagner(Cut);
   B.InitRange(VertexCount);
   for I in Cut do
-    B[I] := False;
+    B.UncBits[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := B.ToArray;
   Result := gnsOk;
@@ -6093,7 +6091,7 @@ begin
   aCutWeight := Helper.GetMinCut(Self, Cut);
   Total.InitRange(VertexCount);
   for I in Cut do
-    Total[I] := False;
+    Total.UncBits[I] := False;
   aCut.A := Cut.ToArray;
   aCut.B := Total.ToArray;
   Result := gnsOk;
@@ -6126,8 +6124,8 @@ begin
       Right.InitRange(VertexCount);
       for I in Cut do
         begin
-          Left[I] := True;
-          Right[I] := False;
+          Left.UncBits[I] := True;
+          Right.UncBits[I] := False;
         end;
     end
   else
@@ -6136,8 +6134,8 @@ begin
       Left.InitRange(VertexCount);
       for I in Cut do
         begin
-          Right[I] := True;
-          Left[I] := False;
+          Right.UncBits[I] := True;
+          Left.UncBits[I] := False;
         end;
     end;
   aCut.A := Left.ToArray;
@@ -6147,7 +6145,7 @@ begin
   d := Default(TEdgeData);
   for I in Left do
     for p in AdjLists[I]^ do
-      if Right[p^.Destination] then
+      if Right.UncBits[p^.Destination] then
         begin
           GetEdgeDataI(I, p^.Destination, d);
           if I < p^.Destination then

@@ -270,7 +270,7 @@ type
     FMates,
     FParents,
     FQueue: TIntArray;
-    FVisited: TBitVector;
+    FVisited: TBoolVector;
     FWhites: TBoolVector;
     FMatchCount: SizeInt;
     procedure Match(aNode, aMate: SizeInt); inline;
@@ -293,7 +293,7 @@ type
     FQueue: TIntArray;
     FVisited,
     FLcaUsed,
-    FBlossoms: TBitVector;
+    FBlossoms: TBoolVector;
     FMatchCount: SizeInt;
     procedure Match(aNode, aMate: SizeInt); inline;
     procedure ClearBase; inline;
@@ -316,7 +316,7 @@ type
     FMates,
     FGrannies,
     FQueue: TIntArray;
-    FInTree: TBitVector;
+    FInTree: TBoolVector;
     FMatchCount: SizeInt;
     procedure Match(aNode, aMate: SizeInt); inline;
     procedure FindAugmentPath(aSource: SizeInt);
