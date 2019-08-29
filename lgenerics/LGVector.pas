@@ -313,7 +313,7 @@ type
   end;
 
   PBoolVector = ^TBoolVector;
-  { TBoolVector: size is always a multiple of the bitness }
+  { TBoolVector: capacity is always a multiple of the bitness }
   TBoolVector = record
   public
   type
