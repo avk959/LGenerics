@@ -261,7 +261,7 @@ type
     procedure Intersect;
     procedure Intersect1;
     procedure DisjunctJoin;
-    procedure Equals;
+    procedure TestEquals;
   end;
 
 implementation
@@ -2585,7 +2585,7 @@ begin
   AssertTrue(v1[500])
 end;
 
-procedure TBoolVectorTest.Equals;
+procedure TBoolVectorTest.TestEquals;
 var
   v1, v2: TBoolVector;
 begin
