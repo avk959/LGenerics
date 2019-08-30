@@ -2019,14 +2019,14 @@ end;
 function TBoolVector.GetBit(aIndex: SizeInt): Boolean;
 begin
   if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
-    Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0
+    Result := FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK)) <> 0
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 function TBoolVector.GetBitUncheck(aIndex: SizeInt): Boolean;
 begin
-  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
+  Result := FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK)) <> 0;
 end;
 
 procedure TBoolVector.SetCapacity(aValue: SizeInt);
@@ -2047,10 +2047,10 @@ begin
   if SizeUInt(aIndex) < SizeUInt(System.Length(FBits) shl INT_SIZE_LOG) then
     if aValue then
       FBits[aIndex shr INT_SIZE_LOG] := FBits[aIndex shr INT_SIZE_LOG] or
-                                        (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+                                        SizeUInt(1) shl (aIndex and INT_SIZE_MASK)
     else
       FBits[aIndex shr INT_SIZE_LOG] := FBits[aIndex shr INT_SIZE_LOG] and
-                                        not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+                                        not(SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
@@ -2059,10 +2059,10 @@ procedure TBoolVector.SetBitUncheck(aIndex: SizeInt; aValue: Boolean);
 begin
   if aValue then
     FBits[aIndex shr INT_SIZE_LOG] := FBits[aIndex shr INT_SIZE_LOG] or
-                                      (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
+                                      SizeUInt(1) shl (aIndex and INT_SIZE_MASK)
   else
     FBits[aIndex shr INT_SIZE_LOG] := FBits[aIndex shr INT_SIZE_LOG] and
-                                      not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
+                                      not(SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
 end;
 
 function TBoolVector.SignLimbCount: SizeInt;
