@@ -831,7 +831,7 @@ begin
   InDegree := aDegree;
   OutList.Capacity := aVertexCount;
   for p in aAdjList^ do
-    OutList[p^.Key] := True;
+    OutList.UncBits[p^.Key] := True;
 end;
 
 { TGSimpleDigraph.THamiltonSearch }
@@ -886,7 +886,7 @@ end;
 
 procedure TGSimpleDigraph.THamiltonSearch.CheckIsCycle(aNode: SizeInt);
 begin
-  if FMatrix[aNode].OutList[FSource] then
+  if FMatrix[aNode].OutList.UncBits[FSource] then
     begin
       FStack.Push(FSource);
       FPaths^.Add(FStack.ToArray);
@@ -920,26 +920,26 @@ begin
           Saved.Capacity := FNodeCount;
           for I in Cand do
             begin
-              Saved[I] := FMatrix[I].OutList[aNode];
-              FMatrix[I].OutList[aNode] := False;
-              Dec(FMatrix[I].InDegree, Ord(Saved[I]));
+              Saved.UncBits[I] := FMatrix[I].OutList.UncBits[aNode];
+              FMatrix[I].OutList.UncBits[aNode] := False;
+              Dec(FMatrix[I].InDegree, Ord(Saved.UncBits[I]));
             end;
           /////////////////////////////
           while SelectMin(Cand, I) do
             begin
-              Cand[I] := False;
+              Cand.UncBits[I] := False;
               FStack.Push(I);
-              FVacant[I] := False;
+              FVacant.UncBits[I] := False;
               SearchFor(I);
               if TimeToFinish then
                 exit;
-              FVacant[I] := True;
+              FVacant.UncBits[I] := True;
               FStack.Pop;
             end;
           /////////////////////////////
           for I in Saved do
             begin
-              FMatrix[I].OutList[aNode] := True;
+              FMatrix[I].OutList.UncBits[aNode] := True;
               Inc(FMatrix[I].InDegree);
             end;
         end;
@@ -952,19 +952,19 @@ procedure TGSimpleDigraph.THamiltonSearch.ExecuteCycles;
 var
   I: SizeInt;
 begin
-  FVacant[FSource] := False;
+  FVacant.UncBits[FSource] := False;
   FStack.Push(FSource);
   FCheckNode := @CheckIsCycle;
   for I in FMatrix[FSource].OutList do
     begin
       FStack.Push(I);
-      FVacant[I] := False;
+      FVacant.UncBits[I] := False;
       SearchFor(I);
       if TimeToFinish then
         break;
-      FVacant[I] := True;
+      FVacant.UncBits[I] := True;
       FStack.Pop;
-      FMatrix[I].OutList[FSource] := False;
+      FMatrix[I].OutList.UncBits[FSource] := False;
     end;
 end;
 
@@ -972,17 +972,17 @@ procedure TGSimpleDigraph.THamiltonSearch.ExecutePaths;
 var
   I: SizeInt;
 begin
-  FVacant[FSource] := False;
+  FVacant.UncBits[FSource] := False;
   FStack.Push(FSource);
   FCheckNode := @CheckIsPath;
   for I in FMatrix[FSource].OutList do
     begin
       FStack.Push(I);
-      FVacant[I] := False;
+      FVacant.UncBits[I] := False;
       SearchFor(I);
       if TimeToFinish then
         break;
-      FVacant[I] := True;
+      FVacant.UncBits[I] := True;
       FStack.Pop;
     end;
 end;
@@ -1327,7 +1327,7 @@ function TGSimpleDigraph.FindCycle(aRoot: SizeInt; out aCycle: TIntArray): Boole
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  InStack: TBitVector;
+  InStack: TBoolVector;
   PreOrd, Parents: TIntArray;
   Counter, Next: SizeInt;
 begin
@@ -1335,11 +1335,11 @@ begin
   Stack := TSimpleStack.Create(VertexCount);
   PreOrd := CreateIntArray;
   Parents := CreateIntArray;
-  InStack.Size := VertexCount;
+  InStack.Capacity := VertexCount;
   PreOrd[aRoot] := 0;
   Counter := 1;
   Stack.Push(aRoot);
-  InStack[aRoot] := True;
+  InStack.UncBits[aRoot] := True;
   while Stack.TryPeek(aRoot) do
     if AdjEnums[aRoot].MoveNext then
       begin
@@ -1348,19 +1348,19 @@ begin
           begin
             Parents[Next] := aRoot;
             PreOrd[Next] := Counter;
-            InStack[Next] := True;
+            InStack.UncBits[Next] := True;
             Inc(Counter);
             Stack.Push(Next);
           end
         else
-          if (PreOrd[aRoot] >= PreOrd[Next]) and InStack[Next] then
+          if (PreOrd[aRoot] >= PreOrd[Next]) and InStack.UncBits[Next] then
             begin
               aCycle := TreeExtractCycle(Parents, Next, aRoot);
               exit(True);
             end;
       end
     else
-      InStack[Stack.Pop{%H-}] := False;
+      InStack.UncBits[Stack.Pop{%H-}] := False;
   Result := False;
 end;
 
@@ -1368,14 +1368,14 @@ function TGSimpleDigraph.CycleExists: Boolean;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  InStack: TBitVector;
+  InStack: TBoolVector;
   PreOrd: TIntArray;
   Counter, I, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   PreOrd := CreateIntArray;
-  InStack.Size := VertexCount;
+  InStack.Capacity := VertexCount;
   Counter := 0;
   for I := 0 to Pred(VertexCount) do
     if PreOrd[I] = NULL_INDEX then
@@ -1383,7 +1383,7 @@ begin
         PreOrd[I] := Counter;
         Inc(Counter);
         Stack.Push(I);
-        InStack[I] := True;
+        InStack.UncBits[I] := True;
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
@@ -1391,16 +1391,16 @@ begin
               if PreOrd[Next] = NULL_INDEX then
                 begin
                   PreOrd[Next] := Counter;
-                  InStack[Next] := True;
+                  InStack.UncBits[Next] := True;
                   Inc(Counter);
                   Stack.Push(Next);
                 end
               else
-                if (PreOrd[Curr] >= PreOrd[Next]) and InStack[Next] then
+                if (PreOrd[Curr] >= PreOrd[Next]) and InStack.UncBits[Next] then
                   exit(True);
             end
           else
-            InStack[Stack.Pop{%H-}] := False;
+            InStack.UncBits[Stack.Pop{%H-}] := False;
       end;
   Result := False;
 end;
@@ -1612,7 +1612,7 @@ var
       for Next in TestTree[aNode] do
         if PreOrd[Next] = NULL_INDEX then
           begin
-            Visited[Next] := True;
+            Visited.UncBits[Next] := True;
             Parents[Next] := aNode;
             SubTreeSize[Next] := 1;
             PreOrd[Next] := Counter;
@@ -1644,7 +1644,7 @@ var
     Parents := CreateIntArray;
     Visited.Capacity := VertexCount;
     SubTreeSize[aSrc] := 1;
-    Visited[aSrc] := True;
+    Visited.UncBits[aSrc] := True;
     PreOrd[aSrc] := Counter;
     Inc(Counter);
     Dfs(aSrc);
@@ -1659,7 +1659,7 @@ var
   var
     Dom: SizeInt;
   begin
-    DfsMatchTree := DfsMatchTree and Visited[aNode];
+    DfsMatchTree := DfsMatchTree and Visited.UncBits[aNode];
     if aNode <> aSrc then
       begin
         Dom := aTree[aNode];
@@ -1692,26 +1692,26 @@ function TGSimpleDigraph.TopoSort: TIntArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   Counter, I, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   Result := CreateIntArray;
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   Counter := Pred(VertexCount);
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         Stack.Push(I);
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if not Visited[Next] then
+              if not Visited.UncBits[Next] then
                 begin
-                  Visited[Next] := True;
+                  Visited.UncBits[Next] := True;
                   Stack.Push(Next);
                 end;
             end
@@ -1772,23 +1772,23 @@ function TGSimpleDigraph.GetDagLongestPaths(aSrc: SizeInt): TIntArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   d, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   Result := CreateIntArray;
-  Visited.Size := VertexCount;
-  Visited[aSrc] := True;
+  Visited.Capacity := VertexCount;
+  Visited.UncBits[aSrc] := True;
   Result[aSrc] := 0;
   Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
         Next := AdjEnums[Curr].Current;
-        if not Visited[Next] then
+        if not Visited.UncBits[Next] then
           begin
-            Visited[Next] := True;
+            Visited.UncBits[Next] := True;
             d := Succ(Result[Curr]);
             if d > Result[Next] then
               Result[Next] := d;
@@ -1803,24 +1803,24 @@ function TGSimpleDigraph.GetDagLongestPaths(aSrc: SizeInt; out aTree: TIntArray)
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   d, Curr, Next: SizeInt;
 begin
   AdjEnums := CreateAdjEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   Result := CreateIntArray;
   aTree := CreateIntArray;
-  Visited.Size := VertexCount;
-  Visited[aSrc] := True;
+  Visited.Capacity := VertexCount;
+  Visited.UncBits[aSrc] := True;
   Result[aSrc] := 0;
   {%H-}Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
     if AdjEnums[{%H-}Curr].MoveNext then
       begin
         Next := AdjEnums[Curr].Current;
-        if not Visited[Next] then
+        if not Visited.UncBits[Next] then
           begin
-            Visited[Next] := True;
+            Visited.UncBits[Next] := True;
             d := Succ(Result[Curr]);
             if d > Result[Next] then
               begin
@@ -1893,7 +1893,7 @@ end;
 function TGSimpleDigraph.GetReachabilityMatrix(const aScIds: TIntArray; aScCount: SizeInt): TReachabilityMatrix;
 var
   Stack: TSimpleStack;
-  Visited, IdVisited: TBitVector;
+  Visited, IdVisited: TBoolVector;
   IdParents, IdOrd: TIntArray;
   m: TSquareBitMatrix;
   Pairs: TIntPairSet;
@@ -1909,15 +1909,15 @@ begin
   Stack := TSimpleStack.Create(VertexCount);
   IdParents := CreateIntArray(aScCount, NULL_INDEX);
   IdOrd := CreateIntArray(aScCount, NULL_INDEX);
-  Visited.Size := VertexCount;
-  IdVisited.Size := aScCount;
+  Visited.Capacity := VertexCount;
+  IdVisited.Capacity := aScCount;
   AdjEnums := CreateAdjEnumArray;
   Counter := 0;
   m := TSquareBitMatrix.Create(aScCount);
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         Stack.Push(I);
         if IdOrd[aScIds[I]] = NULL_INDEX then
           begin
@@ -1934,9 +1934,9 @@ begin
                 m[CurrId, NextId] := True;
                 if IdOrd[CurrId] < IdOrd[NextId] then
                   continue;
-                if not Visited[Next] then
+                if not Visited.UncBits[Next] then
                   begin
-                    Visited[Next] := True;
+                    Visited.UncBits[Next] := True;
                     Stack.Push(Next);
                     if IdOrd[NextId] = NULL_INDEX then
                       begin
@@ -1954,9 +1954,9 @@ begin
             else
               begin
                 Next := aScIds[Stack.Pop];
-                if not IdVisited[Next] then
+                if not IdVisited.UncBits[Next] then
                   begin
-                    IdVisited[Next] := True;
+                    IdVisited.UncBits[Next] := True;
                     Curr := IdParents[Next];
                     if Curr <> -1 then
                       for J := 0 to Pred(aScCount) do
@@ -2489,7 +2489,7 @@ begin
     exit(True);
   UnVisited.InitRange(VertexCount);
   Queue.Length := VertexCount;
-  UnVisited[aSrcIdx] := False;
+  UnVisited.UncBits[aSrcIdx] := False;
   Queue[qTail] := aSrcIdx;
   Inc(qTail);
   while qHead < qTail do
@@ -2497,11 +2497,11 @@ begin
       aSrcIdx := Queue[qHead];
       Inc(qHead);
       for p in AdjLists[aSrcIdx]^ do
-        if UnVisited[p^.Key] then
+        if UnVisited.UncBits[p^.Key] then
           begin
             Queue[qTail] := p^.Key;
             Inc(qTail);
-            UnVisited[p^.Key] := False;
+            UnVisited.UncBits[p^.Key] := False;
           end;
     end;
   Result := UnVisited.IsEmpty;
@@ -2691,7 +2691,7 @@ end;
 
 function TGSimpleDigraph.IsTopoSorted(const aTestSet: TIntArray; aSortOrder: TSortOrder): Boolean;
 var
-  Visited: TBitVector;
+  Visited: TBoolVector;
   I, J: SizeInt;
   p: PAdjItem;
 begin
@@ -2699,14 +2699,14 @@ begin
     exit(False);
   if VertexCount < 2 then
     exit(True);
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   for I in aTestSet do
     begin
       if SizeUInt(I) >= SizeUInt(VertexCount) then
         exit(False);
-      if Visited[I] then
+      if Visited.UncBits[I] then
         exit(False);
-      Visited[I] := True;
+      Visited.UncBits[I] := True;
     end;
   Visited.ClearBits;
   if aSortOrder = soAsc then
@@ -2714,18 +2714,18 @@ begin
       begin
         J := aTestSet[I];
         for p in AdjLists[J]^ do
-          if Visited[p^.Key] then
+          if Visited.UncBits[p^.Key] then
             exit(False);
-        Visited[J] := True;
+        Visited.UncBits[J] := True;
       end
   else
     for I := Pred(VertexCount) downto 0 do
       begin
         J := aTestSet[I];
         for p in AdjLists[J]^ do
-          if Visited[p^.Key] then
+          if Visited.UncBits[p^.Key] then
             exit(False);
-        Visited[J] := True;
+        Visited.UncBits[J] := True;
       end;
   Result := True;
 end;
@@ -2821,7 +2821,7 @@ end;
 
 function TGSimpleDigraph.IsHamiltonCycle(const aTestCycle: TIntArray; aSourceIdx: SizeInt): Boolean;
 var
-  VertSet: TBitVector;
+  VertSet: TBoolVector;
   I, Curr, Next: SizeInt;
 begin
   CheckIndexRange(aSourceIdx);
@@ -2829,18 +2829,18 @@ begin
     exit(False);
   if (aTestCycle[0] <> aSourceIdx) or (aTestCycle[VertexCount] <> aSourceIdx) then
     exit(False);
-  VertSet.Size := VertexCount;
+  VertSet.Capacity := VertexCount;
   Next := aSourceIdx;
-  VertSet[aSourceIdx] := True;
+  VertSet.UncBits[aSourceIdx] := True;
   for I := 1 to Pred(VertexCount) do
     begin
       Curr := Next;
       Next := aTestCycle[I];
       if SizeUInt(Next) >= SizeUInt(VertexCount) then
         exit(False);
-      if VertSet[Next] then
+      if VertSet.UncBits[Next] then
         exit(False);
-      VertSet[Next] := True;
+      VertSet.UncBits[Next] := True;
       if not AdjLists[Curr]^.Contains(Next) then
         exit(False);
     end;
@@ -2883,7 +2883,7 @@ end;
 
 function TGSimpleDigraph.IsHamiltonPath(const aTestPath: TIntArray; aSrcIdx: SizeInt): Boolean;
 var
-  VertSet: TBitVector;
+  VertSet: TBoolVector;
   I, Curr, Next: SizeInt;
 begin
   CheckIndexRange(aSrcIdx);
@@ -2891,18 +2891,18 @@ begin
     exit(False);
   if aTestPath[0] <> aSrcIdx then
     exit(False);
-  VertSet.Size := VertexCount;
+  VertSet.Capacity := VertexCount;
   Next := aSrcIdx;
-  VertSet[aSrcIdx] := True;
+  VertSet.UncBits[aSrcIdx] := True;
   for I := 1 to Pred(VertexCount) do
     begin
       Curr := Next;
       Next := aTestPath[I];
       if SizeUInt(Next) >= SizeUInt(VertexCount) then
         exit(False);
-      if VertSet[Next] then
+      if VertSet.UncBits[Next] then
         exit(False);
-      VertSet[Next] := True;
+      VertSet.UncBits[Next] := True;
       if not AdjLists[Curr]^.Contains(Next) then
         exit(False);
     end;
@@ -3199,7 +3199,7 @@ end;
 procedure TGWeightedDigraph.GetDagMinPaths(aSrc: SizeInt; var aWeights: TWeightArray);
 var
   Queue: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   Curr, Next: SizeInt;
   w: TWeight;
   p: PAdjItem;
@@ -3208,8 +3208,8 @@ var
 begin
   Queue := CreateIntArray;
   TWeightHelper.ResizeAndFill(aWeights, VertexCount, TWeight.INF_VALUE);
-  Visited.Size := VertexCount;
-  Visited[aSrc] := True;
+  Visited.Capacity := VertexCount;
+  Visited.UncBits[aSrc] := True;
   aWeights[aSrc] := 0;
   Queue[qTail] := aSrc;
   Inc(qTail);
@@ -3220,9 +3220,9 @@ begin
       for p in AdjLists[Curr]^ do
         begin
           Next := p^.Key;
-          if not Visited[Next] then
+          if not Visited.UncBits[Next] then
             begin
-              Visited[Next] := True;
+              Visited.UncBits[Next] := True;
               Queue[qTail] := Next;
               Inc(qTail);
             end;
@@ -3274,7 +3274,7 @@ function TGWeightedDigraph.GetDagMaxPaths(aSrc: SizeInt): TWeightArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjItemEnumArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   Curr, Next: SizeInt;
   p: PAdjItem;
   w: TWeight;
@@ -3282,8 +3282,8 @@ begin
   AdjEnums := CreateAdjItemEnumArray;
   Stack := TSimpleStack.Create(VertexCount);
   Result := TWeightHelper.CreateWeightArrayNI(VertexCount);
-  Visited.Size := VertexCount;
-  Visited[aSrc] := True;
+  Visited.Capacity := VertexCount;
+  Visited.UncBits[aSrc] := True;
   Result[aSrc] := 0;
   Stack.Push(aSrc);
   while Stack.TryPeek(Curr) do
@@ -3291,9 +3291,9 @@ begin
       begin
         p := AdjEnums[Curr].Current;
         Next := p^.Key;
-        if not Visited[Next] then
+        if not Visited.UncBits[Next] then
           begin
-            Visited[Next] := True;
+            Visited.UncBits[Next] := True;
             Stack.Push(Next);
           end;
         w := Result[Curr] + p^.Data.Weight;
@@ -3874,7 +3874,7 @@ end;
 function TGDirectInt64Net.GetNetworkStateI(aSrcIdx, aSinkIdx: SizeInt): TNetworkState;
 var
   Queue: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   Curr: SizeInt;
   p: PAdjItem;
   qHead: SizeInt = 0;
@@ -3890,8 +3890,8 @@ begin
   if not IsSinkI(aSinkIdx) then
     exit(nsInvalidSink);
   Queue := CreateIntArray;
-  Visited.Size := VertexCount;
-  Visited[aSrcIdx] := True;
+  Visited.Capacity := VertexCount;
+  Visited.UncBits[aSrcIdx] := True;
   Queue[qTail] := aSrcIdx;
   Inc(qTail);
   while qHead < qTail do
@@ -3902,11 +3902,11 @@ begin
         begin
           if p^.Data.Weight < 0 then // network can not contain arcs with negative capacity
             exit(nsNegCapacity);
-          if not Visited[p^.Destination] and (p^.Data.Weight > 0) then
+          if not Visited.UncBits[p^.Destination] and (p^.Data.Weight > 0) then
             begin
               Queue[qTail] := p^.Destination;
               Inc(qTail);
-              Visited[p^.Destination] := True;
+              Visited.UncBits[p^.Destination] := True;
               SinkFound := SinkFound or (p^.Destination = aSinkIdx);
             end;
         end;
@@ -4080,7 +4080,7 @@ begin
   aValue := Helper.GetMinCut(Self, aSrcIdx, aSinkIdx, aCut.S);
   TmpSet.InitRange(VertexCount);
   for I in aCut.S do
-    TmpSet[I] := False;
+    TmpSet.UncBits[I] := False;
   aCut.T := TmpSet.ToArray;
 end;
 
@@ -4108,7 +4108,7 @@ begin
   aValue := Helper.GetMinCut(Self, aSrcIdx, aSinkIdx, aCut.S);
   TmpSet.InitRange(VertexCount);
   for I in aCut.S do
-    TmpSet[I] := False;
+    TmpSet.UncBits[I] := False;
   aCut.T := TmpSet.ToArray;
 end;
 

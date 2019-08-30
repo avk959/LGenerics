@@ -93,7 +93,7 @@ begin
   FNodes[FNodeCount].Price := 0;
   FNodes[FNodeCount].PathMinCap := 0;
 
-  FInQueue.Size := FNodeCount;
+  FInQueue.Capacity := FNodeCount;
   FReached.Capacity := FNodeCount;
   FQueue := THeap.Create(FNodeCount);
 end;
@@ -112,7 +112,7 @@ end;
 function TGCostedInt64Net.TSspMcfHelper.SetNodePrices: Boolean;
 var
   Buf: TIntArray;
-  Active: TBitVector;
+  Active: TBoolVector;
   Queue, TreePrev, TreeNext, Level: PSizeInt;
   Curr, Next, Prev, Post, Test, CurrLevel, qHead, qTail: SizeInt;
   CurrArc: PArc;
@@ -124,7 +124,7 @@ begin
   TreePrev := Queue + FGraph.VertexCount;
   TreeNext := TreePrev + FGraph.VertexCount;
   Level := TreeNext + FGraph.VertexCount;
-  Active.Size := FNodeCount;
+  Active.Capacity := FNodeCount;
   qHead := 0;
   qTail := 0;
   FSource^.Parent := FSource;
@@ -133,16 +133,17 @@ begin
   TreeNext[Next] := Next;
   Queue[qTail] := Next;
   Inc(qTail);
-  Active[Next] := True;
+  Active.UncBits[Next] := True;
   while qHead <> qTail do
     begin
       Curr := Queue[qHead];
       Inc(qHead);
       if qHead = FNodeCount then
         qHead := 0;
-      FInQueue[Curr] := False;
-      if not Active[Curr] then
+      FInQueue.UncBits[Curr] := False;
+      if not Active.UncBits[Curr] then
         continue;
+      Active.UncBits[Curr] := False; /////////////
       CurrArc := FNodes[Curr].FirstArc;
       NodePrice := FNodes[Curr].Price;
       while CurrArc < FNodes[Succ(Curr)].FirstArc do
@@ -165,7 +166,7 @@ begin
                         CurrLevel += Level[Test];
                         TreePrev[Test] := NULL_INDEX;
                         Level[Test] := NULL_INDEX;
-                        Active[Test] := False;
+                        Active.UncBits[Test] := False;
                         Test := TreeNext[Test];
                       until CurrLevel < 0;
                       Dec(Level[FNodes[Next].Parent - PNode(FNodes)]);
@@ -180,15 +181,15 @@ begin
                   TreePrev[Next] := Curr;
                   TreeNext[Next] := Post;
                   TreePrev[Post] := Next;
-                  if not FInQueue[Next] then
+                  if not FInQueue.UncBits[Next] then
                     begin
                       Queue[qTail] := Next;
                       Inc(qTail);
                       if qTail = FNodeCount then
                         qTail := 0;
-                      FInQueue[Next] := True;
+                      FInQueue.UncBits[Next] := True;
                     end;
-                  Active[Next] := True;
+                  Active.UncBits[Next] := True;
                 end;
             end;
           Inc(CurrArc);
@@ -220,7 +221,7 @@ begin
   repeat
     Node := @FNodes[Item.Index];
     FNodes[Item.Index].Price += Item.Cost;
-    FReached[Item.Index] := True;
+    FReached.UncBits[Item.Index] := True;
     if Node = FSink then
       break;
     Arc := Node^.FirstArc;
@@ -231,14 +232,14 @@ begin
           begin
             NextNode := Arc^.Target;
             I := NextNode - PNode(FNodes);
-            if not FReached[I] then
+            if not FReached.UncBits[I] then
               begin
                 RelaxPrice := NodePrice + Arc^.Cost - NextNode^.Price;
-                if not FInQueue[I] then
+                if not FInQueue.UncBits[I] then
                   begin
                     UpdateNextNode;
                     FQueue.Enqueue(I, TCostItem.Create(I, RelaxPrice));
-                    FInQueue[I] := True;
+                    FInQueue.UncBits[I] := True;
                   end
                 else
                   if RelaxPrice < FQueue.ItemPtr(I)^.Cost then
@@ -252,7 +253,7 @@ begin
       end;
   until not FQueue.TryDequeue(Item);
 
-  Result := FReached[FSink - PNode(FNodes)];
+  Result := FReached.UncBits[FSink - PNode(FNodes)];
   if Result then
     for I in FReached do
       FNodes[I].Price -= Item.Cost;
@@ -455,7 +456,7 @@ begin
   FNodes[FNodeCount].Price := 0;
   FNodes[FNodeCount].Excess := 0;
 
-  FInQueue.Size := FNodeCount;
+  FInQueue.Capacity := FNodeCount;
   FQueue.EnsureCapacity(FNodeCount);
 end;
 
@@ -488,9 +489,10 @@ begin
       Inc(qHead);
       if qHead = qLen then
         qHead := 0;
-      InQueue[Curr] := False;
-      if not Active[Curr] then
+      InQueue.UncBits[Curr] := False;
+      if not Active.UncBits[Curr] then
         continue;
+      Active.UncBits[Curr] := False; /////////////
       CurrArc := FNodes[Curr].FirstArc;
       NodePrice := FNodes[Curr].Price;
       while CurrArc < FNodes[Succ(Curr)].FirstArc do
@@ -512,7 +514,7 @@ begin
                         CurrLevel += Level[Test];
                         TreePrev[Test] := NULL_INDEX;
                         Level[Test] := NULL_INDEX;
-                        Active[Test] := False;
+                        Active.UncBits[Test] := False;
                         Test := TreeNext[Test];
                       until CurrLevel < 0;
                       Dec(Level[Parents[Next]]);
@@ -526,15 +528,15 @@ begin
                   TreePrev[Next] := Curr;
                   TreeNext[Next] := Post;
                   TreePrev[Post] := Next;
-                  if not InQueue[Next] then
+                  if not InQueue.UncBits[Next] then
                     begin
                       Queue[qTail] := Next;
                       Inc(qTail);
                       if qTail = qLen then
                         qTail := 0;
-                      InQueue[Next] := True;
+                      InQueue.UncBits[Next] := True;
                     end;
-                  Active[Next] := True;
+                  Active.UncBits[Next] := True;
                 end;
             end;
           Inc(CurrArc);
@@ -607,7 +609,7 @@ begin
       begin
         FNodes[I].Reset;
         FQueue.Enqueue(@FNodes[I]);
-        FInQueue[I] := True;
+        FInQueue.UncBits[I] := True;
       end;
 end;
 
@@ -629,10 +631,10 @@ begin
               if NodePrice + Arc^.Cost - NextNode^.Price < 0 then
                 begin
                   Arc^.Push(wMin(aNode^.Excess, Arc^.ResCap));
-                  if (NextNode^.Excess > 0) and not FInQueue[IndexOf(NextNode)] then
+                  if (NextNode^.Excess > 0) and not FInQueue.UncBits[IndexOf(NextNode)] then
                     begin
                       FQueue.Enqueue(NextNode);
-                      FInQueue[IndexOf(NextNode)] := True;
+                      FInQueue.UncBits[IndexOf(NextNode)] := True;
                     end;
                 end;
             end;
@@ -673,7 +675,7 @@ begin
     NeedUpdate := FQueue.NonEmpty;
     while FQueue.TryDequeue(Node) do
       begin
-        FInQueue[IndexOf(Node)] := False;
+        FInQueue.UncBits[IndexOf(Node)] := False;
         Discharge(Node{%H-});
       end;
   until FEpsilon = 1;

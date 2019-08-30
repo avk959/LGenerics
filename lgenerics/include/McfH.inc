@@ -51,7 +51,7 @@ type
     FNodes: array of TNode;
     FArcs: array of TArc;
     FQueue: THeap;
-    FInQueue: TBitVector;
+    FInQueue: TBoolVector;
     FReached: TBoolVector;
     FSource,
     FSink: PNode;
@@ -112,7 +112,7 @@ type
     FNodes: array of TNode;
     FArcs: array of TArc;
     FQueue: TQueue;
-    FInQueue: TBitVector;
+    FInQueue: TBoolVector;
     FGraph: TGCostedInt64Net;
     FSource,
     FSink: PNode;
