@@ -18,27 +18,6 @@
 *****************************************************************************}
 
 type
-  TBitVector = record
-  private
-  type
-    TBits = array of SizeUInt;
-  var
-    FBits: TBits;
-    function  GetBit(aIndex: SizeInt): Boolean; inline;
-    function  GetSize: SizeInt; inline;
-    procedure SetBit(aIndex: SizeInt; aValue: Boolean); inline;
-    procedure SetSize(aValue: SizeInt);
-  public
-  { clears all bits }
-    procedure ClearBits; inline;
-  { sets all new bits }
-    procedure ExpandTrue(aSize: SizeInt);
-  { size can only grow and is always multiple of BitsizeOf(SizeUInt) }
-    property  Size: SizeInt read GetSize write SetSize;
-  { indices does not checks }
-    property  Bits[aIndex: SizeInt]: Boolean read GetBit write SetBit; default;
-  end;
-
   TSquareBitMatrix = record
   private
   type

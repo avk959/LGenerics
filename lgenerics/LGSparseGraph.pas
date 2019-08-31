@@ -1394,7 +1394,7 @@ end;
 function TGSparseGraph.CheckPathExists(aSrc, aDst: SizeInt): Boolean;
 var
   Queue: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   p: PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -1402,7 +1402,7 @@ begin
   if AdjLists[aSrc]^.Contains(aDst) then
     exit(True);
   System.SetLength(Queue{%H-}, VertexCount);
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   Queue[qTail] := aSrc;
   Inc(qTail);
   while qHead < qTail do
@@ -1410,13 +1410,13 @@ begin
       aSrc := Queue[qHead];
       Inc(qHead);
       for p in AdjLists[aSrc]^ do
-        if not Visited[p^.Destination] then
+        if not Visited.UncBits[p^.Destination] then
           begin
             if p^.Destination = aDst then
               exit(True);
             Queue[qTail] := p^.Destination;
             Inc(qTail);
-            Visited[p^.Destination] := True;
+            Visited.UncBits[p^.Destination] := True;
           end;
     end;
   Result := False;
@@ -1432,7 +1432,7 @@ begin
     begin
       Result[I].Capacity := VertexCount;
       for p in AdjLists[I]^ do
-        Result[I][p^.Key] := True;
+        Result[I].UncBits[p^.Key] := True;
     end;
 end;
 
@@ -1500,20 +1500,20 @@ end;
 
 procedure TGSparseGraph.AssignVertexList(aGraph: TGSparseGraph; const aList: TIntArray);
 var
-  vSet: TBitVector;
+  vSet: TBoolVector;
   I: SizeInt;
   p: PAdjItem;
 begin
   Clear;
-  vSet.Size := aGraph.VertexCount;
+  vSet.Capacity := aGraph.VertexCount;
   for I in aList do
     begin
       {%H-}AddVertex(aGraph[I]);
-      vSet[I] := True;
+      vSet.UncBits[I] := True;
     end;
   for I in aList do
     for p in aGraph.AdjLists[I]^ do
-      if vSet[p^.Key] then
+      if vSet.UncBits[p^.Key] then
         AddEdge(aGraph[I], aGraph[p^.Key], p^.Data);
 end;
 
@@ -1542,22 +1542,22 @@ end;
 
 function TGSparseGraph.IsNodePermutation(const aMap: TIntArray): Boolean;
 var
-  vSet: TBitVector;
+  vSet: TBoolVector;
   I, Curr: SizeInt;
   vCount: SizeUInt;
 begin
   if aMap.Length <> VertexCount then
     exit(False);
-  vSet.Size := VertexCount;
+  vSet.Capacity := VertexCount;
   vCount := SizeUInt(VertexCount);
   for I := 0 to System.High(aMap) do
     begin
       Curr := aMap[I];
       if SizeUInt(Curr) >= vCount then
         exit(False);
-      if vSet[Curr] then
+      if vSet.UncBits[Curr] then
         exit(False);
-      vSet[Curr] := True;
+      vSet.UncBits[Curr] := True;
     end;
   Result := True;
 end;
@@ -2199,16 +2199,16 @@ begin
         exit(False);
       if not AdjLists[e.Source]^.Contains(e.Destination) then //contains garbage
         exit(False);
-      if not vFree[e.Source] then  //contains adjacent edges -> not matching
+      if not vFree.UncBits[e.Source] then  //contains adjacent edges -> not matching
         exit(False);
-      vFree[e.Source] := False;
-      if not vFree[e.Destination] then  //contains adjacent edges -> not matching
+      vFree.UncBits[e.Source] := False;
+      if not vFree.UncBits[e.Destination] then  //contains adjacent edges -> not matching
         exit(False);
-      vFree[e.Destination] := False;
+      vFree.UncBits[e.Destination] := False;
     end;
   for I in vFree do
     for J in AdjVerticesI(I) do
-      if vFree[J] then  // is not maximal
+      if vFree.UncBits[J] then  // is not maximal
         exit(False);
   Result := True;
 end;
@@ -2233,12 +2233,12 @@ begin
         exit(False);
       if not AdjLists[e.Source]^.Contains(e.Destination) then //contains garbage
         exit(False);
-      if not vFree[e.Source] then  //contains adjacent edges -> not matching
+      if not vFree.UncBits[e.Source] then  //contains adjacent edges -> not matching
         exit(False);
-      vFree[e.Source] := False;
-      if not vFree[e.Destination] then  //contains adjacent edges -> not matching
+      vFree.UncBits[e.Source] := False;
+      if not vFree.UncBits[e.Destination] then  //contains adjacent edges -> not matching
         exit(False);
-      vFree[e.Destination] := False;
+      vFree.UncBits[e.Destination] := False;
     end;
   Result := vFree.IsEmpty;
 end;
@@ -2253,7 +2253,7 @@ function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode; aOnG
   aOnDone: TOnNodeDone): SizeInt;
 var
   Stack: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   AdjEnums: TAdjEnumArray;
   Next: SizeInt;
   sTop: SizeInt = 0;
@@ -2264,10 +2264,10 @@ begin
   if Assigned(aOnWhite) then
     aOnWhite(aRoot, NULL_INDEX);
   Inc(Result);
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   AdjEnums := CreateAdjEnumArray;
   {%H-}Stack := CreateIntArray;
-  Visited[aRoot] := True;
+  Visited.UncBits[aRoot] := True;
   Stack[sTop] := aRoot;
   while sTop >= 0 do
     begin
@@ -2275,12 +2275,12 @@ begin
       if AdjEnums[aRoot].MoveNext then
         begin
           Next := AdjEnums[aRoot].Current;
-          if not Visited[Next] then
+          if not Visited.UncBits[Next] then
             begin
               Inc(Result);
               if Assigned(aOnWhite) then
                 aOnWhite(Next, aRoot);
-              Visited[Next] := True;
+              Visited.UncBits[Next] := True;
               Inc(sTop);
               Stack[sTop] := Next;
             end
@@ -2308,7 +2308,7 @@ function TGSparseGraph.DfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNex
   aOnDone: TNestNodeDone): SizeInt;
 var
   Stack: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   AdjEnums: TAdjEnumArray;
   Next: SizeInt;
   sTop: SizeInt = 0;
@@ -2320,7 +2320,7 @@ function TGSparseGraph.DfsTree: TIntArray;
 var
   Stack: TSimpleStack;
   AdjEnums: TAdjEnumArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   I, Curr, Next: SizeInt;
 begin
   if IsEmpty then
@@ -2328,20 +2328,20 @@ begin
   Stack := TSimpleStack.Create(VertexCount);
   Result := CreateIntArray;
   AdjEnums := CreateAdjEnumArray;
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
         Stack.Push(I);
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         while Stack.TryPeek(Curr) do
           if AdjEnums[{%H-}Curr].MoveNext then
             begin
               Next := AdjEnums[Curr].Current;
-              if not Visited[Next] then
+              if not Visited.UncBits[Next] then
                 begin
                   Result[Next] := Curr;
-                  Visited[Next] := True;
+                  Visited.UncBits[Next] := True;
                   Stack.Push(Next);
                 end;
             end
@@ -2360,7 +2360,7 @@ function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite: TOnNextNode; aOnG
   aOnDone: TOnNodeDone): SizeInt;
 var
   Queue: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   p: PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -2371,9 +2371,9 @@ begin
   Inc(Result);
   if Assigned(aOnWhite) then
     aOnWhite(aRoot, NULL_INDEX);
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   Queue.Length := VertexCount;
-  Visited[aRoot] := True;
+  Visited.UncBits[aRoot] := True;
   Queue[qTail] := aRoot;
   Inc(qTail);
   while qHead < qTail do
@@ -2381,14 +2381,14 @@ begin
       aRoot := Queue[qHead];
       Inc(qHead);
       for p in AdjLists[aRoot]^ do
-        if not Visited[p^.Destination] then
+        if not Visited.UncBits[p^.Destination] then
           begin
             Inc(Result);
             if Assigned(aOnWhite) then
               aOnWhite(p^.Destination, aRoot);
             Queue[qTail] := p^.Destination;
             Inc(qTail);
-            Visited[p^.Destination] := True;
+            Visited.UncBits[p^.Destination] := True;
           end
         else
           if Assigned(aOnGray) then
@@ -2409,7 +2409,7 @@ function TGSparseGraph.BfsTraversalI(aRoot: SizeInt; aOnWhite, aOnGray: TNestNex
   aOnDone: TNestNodeDone): SizeInt;
 var
   Queue: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   p: PAdjItem;
   qHead: SizeInt = 0;
   qTail: SizeInt = 0;
@@ -2420,7 +2420,7 @@ end;
 function TGSparseGraph.BfsTree: TIntArray;
 var
   Queue: TIntArray;
-  Visited: TBitVector;
+  Visited: TBoolVector;
   I, Curr, Next: SizeInt;
   p: PAdjItem;
   qHead: SizeInt = 0;
@@ -2429,14 +2429,14 @@ begin
   if IsEmpty then
     exit(nil);
   Queue.Length := VertexCount;
-  Visited.Size := VertexCount;
+  Visited.Capacity := VertexCount;
   Result := CreateIntArray;
   for I := 0 to Pred(VertexCount) do
-    if not Visited[I] then
+    if not Visited.UncBits[I] then
       begin
         Queue[qTail] := I;
         Inc(qTail);
-        Visited[I] := True;
+        Visited.UncBits[I] := True;
         while qHead < qTail do
           begin
             Curr := Queue[qHead];
@@ -2444,10 +2444,10 @@ begin
             for p in AdjLists[Curr]^ do
               begin
                 Next := p^.Destination;
-                if not Visited[Next] then
+                if not Visited.UncBits[Next] then
                   begin
                     Result[Next] := Curr;
-                    Visited[Next] := True;
+                    Visited.UncBits[Next] := True;
                     Queue[qTail] := Next;
                     Inc(qTail);
                   end;
@@ -2844,13 +2844,13 @@ begin
           if RowMin[I].ZeroFlag then
             begin
               RowMin[I].Value := T(0);
-              FZeros[J][I] := False;
+              FZeros[J].UncBits[I] := False;
               break;
             end
           else
             begin
               RowMin[I].ZeroFlag := True;
-              FZeros[J][I] := True;
+              FZeros[J].UncBits[I] := True;
             end;
       end;
   ///////////////
@@ -2896,13 +2896,13 @@ begin
           if ColMin[J].ZeroFlag then
             begin
               ColMin[J].Value := 0;
-              FZeros[I][J] := False;
+              FZeros[I].UncBits[J] := False;
               break;
             end
           else
             begin
               ColMin[J].ZeroFlag := True;
-              FZeros[I][J] := True;
+              FZeros[I].UncBits[J] := True;
             end;
       end;
   /////////////
@@ -2967,7 +2967,7 @@ begin
           end
         else
           begin
-            FZeros[I][J] := True;
+            FZeros[I].UncBits[J] := True;
             if RowMin[I].ZeroFlag then
               RowMin[I].Value := 0
             else
@@ -3198,13 +3198,13 @@ begin
           if RowMin[I].ZeroFlag then
             begin
               RowMin[I].Value := T(0);
-              FZeros[J][I] := False;
+              FZeros[J].UncBits[I] := False;
               break;
             end
           else
             begin
               RowMin[I].ZeroFlag := True;
-              FZeros[J][I] := True;
+              FZeros[J].UncBits[I] := True;
             end;
       end;
   ///////////////
@@ -3250,13 +3250,13 @@ begin
           if ColMin[J].ZeroFlag then
             begin
               ColMin[J].Value := 0;
-              FZeros[I][J] := False;
+              FZeros[I].UncBits[J] := False;
               break;
             end
           else
             begin
               ColMin[J].ZeroFlag := True;
-              FZeros[I][J] := True;
+              FZeros[I].UncBits[J] := True;
             end;
       end;
   /////////////
@@ -3599,7 +3599,7 @@ begin
     begin
       Unvisit.InitRange(Len);
       Tour[K] := K;
-      Unvisit[K] := False;
+      Unvisit.UncBits[K] := False;
       CurrRow := System.Copy(m[K]);
       TotalCost := 0;
       MaxCost := T.NEGINF_VALUE;
@@ -3628,7 +3628,7 @@ begin
           Tour[Farthest] := Target;
           Tour[Source] := Farthest;
           TotalCost += InsCost;
-          Unvisit[Farthest] := False;
+          Unvisit.UncBits[Farthest] := False;
           MaxCost := T.NEGINF_VALUE;
           for J in Unvisit do
             begin
@@ -3674,7 +3674,7 @@ begin
     begin
       Unvisit.InitRange(Len);
       Tour[0] := K;
-      Unvisit[K] := False;
+      Unvisit.UncBits[K] := False;
       Curr := K;
       I := 1;
       while Unvisit.NonEmpty do
@@ -3691,7 +3691,7 @@ begin
             end;
           Curr := Next;
           Tour[I] := Next;
-          Unvisit[Next] := False;
+          Unvisit.UncBits[Next] := False;
           Inc(I);
         end;
       Tour[I] := K;
@@ -5055,10 +5055,10 @@ begin
   FWhites.Capacity := aGraph.VertexCount;
   if w.Length <= g.Length then
     for I in w do
-      FWhites[I] := True
+      FWhites.UncBits[I] := True
   else
     for I in g do
-      FWhites[I] := True;
+      FWhites.UncBits[I] := True;
 
   FPhi := CreateWeightArrayZ(aGraph.VertexCount);
   if AsMax then
@@ -5109,9 +5109,9 @@ begin
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
-      FVisited[Curr] := True;
+      FVisited.UncBits[Curr] := True;
       CurrPhi := FPhi[Curr];
-      if FWhites[Curr] then
+      if FWhites.UncBits[Curr] then
         for p in FGraph.AdjLists[Curr]^ do
           begin
             Next := p^.Destination;
@@ -5126,7 +5126,7 @@ begin
                     exit(Next);
                   end
                 else
-                  if not FVisited[Next] then
+                  if not FVisited.UncBits[Next] then
                     EnqueueNext;
               end
             else
@@ -5156,9 +5156,9 @@ begin
     begin
       Curr := FQueue[qHead];
       Inc(qHead);
-      FVisited[Curr] := True;
+      FVisited.UncBits[Curr] := True;
       CurrPhi := FPhi[Curr];
-      if FWhites[Curr] then
+      if FWhites.UncBits[Curr] then
         for p in FGraph.AdjLists[Curr]^ do
           begin
             Next := p^.Destination;
@@ -5173,7 +5173,7 @@ begin
                     exit(Next);
                   end
                 else
-                  if not FVisited[Next] then
+                  if not FVisited.UncBits[Next] then
                     EnqueueNext;
               end
             else
@@ -5385,8 +5385,8 @@ begin
   FNodeCount := aGraph.VertexCount;
   CopyGraph(aDirected);
   System.SetLength(FQueue, FNodeCount);
-  FInQueue.Size := FNodeCount;
-  FActive.Size := FNodeCount;
+  FInQueue.Capacity := FNodeCount;
+  FActive.Capacity := FNodeCount;
 end;
 
 function TGWeightHelper.TBfmt.IndexOf(aNode: PNode): SizeInt;
@@ -5405,7 +5405,7 @@ var
 begin
   NodeCount := FNodeCount;
   SsspInit(aSrc);
-  FActive[aSrc] := True;
+  FActive.UncBits[aSrc] := True;
   FQueue[qTail] := @Nodes[aSrc];
   Inc(qTail);
   while qHead <> qTail do
@@ -5415,10 +5415,10 @@ begin
       if qHead = NodeCount then
         qHead := 0;
       I := IndexOf(CurrNode);
-      FInQueue[I] := False;
-      if not FActive[I] then
+      FInQueue.UncBits[I] := False;
+      if not FActive.UncBits[I] then
         continue;
-      FActive[I] := False;
+      FActive.UncBits[I] := False;
       CurrArc := CurrNode^.FirstArc;
       CurrWeight := CurrNode^.Weight;
       while CurrArc < (CurrNode + 1)^.FirstArc do
@@ -5436,7 +5436,7 @@ begin
                     Level += TestNode^.Level;
                     TestNode^.TreePrev := nil;
                     TestNode^.Level := NULL_INDEX;
-                    FActive[IndexOf(TestNode)] := False;
+                    FActive.UncBits[IndexOf(TestNode)] := False;
                     TestNode := TestNode^.TreeNext;
                   until Level < 0;
                   Dec(NextNode^.Parent^.Level);
@@ -5451,15 +5451,15 @@ begin
               NextNode^.TreeNext := PostNode;
               PostNode^.TreePrev := NextNode;
               I := IndexOf(NextNode);
-              if not FInQueue[I] then
+              if not FInQueue.UncBits[I] then
                 begin
                   FQueue[qTail] := NextNode;
                   Inc(qTail);
                   if qTail = NodeCount then
                     qTail := 0;
-                  FInQueue[I] := True;
+                  FInQueue.UncBits[I] := True;
                 end;
-              FActive[I] := True;
+              FActive.UncBits[I] := True;
             end;
           Inc(CurrArc);
         end;
@@ -5526,25 +5526,24 @@ end;
 class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt): TWeightArray;
 var
   Queue: TPairHeap;
-  Reached,
-  InQueue: TGraph.TBitVector;
+  Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
   Queue := TPairHeap.Create(g.VertexCount);
-  Reached.Size := g.VertexCount;
-  InQueue.Size := g.VertexCount;
+  Reached.Capacity := g.VertexCount;
+  InQueue.Capacity := g.VertexCount;
   Item := TWeightItem.Create(aSrc, 0);
   repeat
     Result[Item.Index] := Item.Weight;
-    Reached[Item.Index] := True;
+    Reached.UncBits[Item.Index] := True;
     for p in g.AdjLists[Item.Index]^ do
-      if not Reached[p^.Key] then
-        if not InQueue[p^.Key] then
+      if not Reached.UncBits[p^.Key] then
+        if not InQueue.UncBits[p^.Key] then
           begin
             Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
-            InQueue[p^.Key] := True;
+            InQueue.UncBits[p^.Key] := True;
           end
         else
           if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
@@ -5555,27 +5554,26 @@ end;
 class function TGWeightHelper.DijkstraSssp(g: TGraph; aSrc: SizeInt; out aPathTree: TIntArray): TWeightArray;
 var
   Queue: TPairHeap;
-  Reached,
-  InQueue: TGraph.TBitVector;
+  Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Result := CreateWeightArray(g.VertexCount);
   Queue := TPairHeap.Create(g.VertexCount);
   aPathTree := g.CreateIntArray;
-  Reached.Size := g.VertexCount;
-  InQueue.Size := g.VertexCount;
+  Reached.Capacity := g.VertexCount;
+  InQueue.Capacity := g.VertexCount;
   Item := TWeightItem.Create(aSrc, 0);
   repeat
     Result[Item.Index] := Item.Weight;
-    Reached[Item.Index] := True;
+    Reached.UncBits[Item.Index] := True;
     for p in g.AdjLists[Item.Index]^ do
-      if not Reached[p^.Key] then
-        if not InQueue[p^.Key] then
+      if not Reached.UncBits[p^.Key] then
+        if not InQueue.UncBits[p^.Key] then
           begin
             Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
             aPathTree[p^.Key] := Item.Index;
-            InQueue[p^.Key] := True;
+            InQueue.UncBits[p^.Key] := True;
           end
         else
           if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
@@ -5590,15 +5588,14 @@ class function TGWeightHelper.DijkstraPath(g: TGraph; aSrc, aDst: SizeInt; out a
 var
   Queue: TBinHeap;
   Parents: TIntArray;
-  Reached,
-  InQueue: TGraph.TBitVector;
+  Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   p: TGraph.PAdjItem;
 begin
   Queue := TBinHeap.Create(g.VertexCount);
   Parents := g.CreateIntArray;
-  Reached.Size := g.VertexCount;
-  InQueue.Size := g.VertexCount;
+  Reached.Capacity := g.VertexCount;
+  InQueue.Capacity := g.VertexCount;
   Item := TWeightItem.Create(aSrc, 0);
   repeat
     if Item.Index = aDst then
@@ -5606,14 +5603,14 @@ begin
         aWeight := Item.Weight;
         exit(g.TreePathTo(Parents, aDst));
       end;
-    Reached[Item.Index] := True;
+    Reached.UncBits[Item.Index] := True;
     for p in g.AdjLists[Item.Index]^ do
-      if not Reached[p^.Key] then
-        if not InQueue[p^.Key] then
+      if not Reached.UncBits[p^.Key] then
+        if not InQueue.UncBits[p^.Key] then
           begin
             Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, p^.Data.Weight + Item.Weight));
             Parents[p^.Key] := Item.Index;
-            InQueue[p^.Key] := True;
+            InQueue.UncBits[p^.Key] := True;
           end
         else
           if p^.Data.Weight + Item.Weight < Queue.ItemPtr(p^.Key)^.Weight then
@@ -5631,16 +5628,15 @@ class function TGWeightHelper.AStar(g: TGraph; aSrc, aDst: SizeInt; out aWeight:
 var
   Queue: TAStarHeap;
   Parents: TIntArray;
-  Reached,
-  InQueue: TGraph.TBitVector;
+  Reached, InQueue: TBoolVector;
   Item: TRankItem;
   Relax: TWeight;
   p: TGraph.PAdjItem;
 begin
   Queue := TAStarHeap.Create(g.VertexCount);
   Parents := g.CreateIntArray;
-  Reached.Size := g.VertexCount;
-  InQueue.Size := g.VertexCount;
+  Reached.Capacity := g.VertexCount;
+  InQueue.Capacity := g.VertexCount;
   Item := TRankItem.Create(aSrc, aEst(g.Items[aSrc], g.Items[aDst]), 0);
   repeat
     if {%H-}Item.Index = aDst then
@@ -5648,17 +5644,17 @@ begin
         aWeight := Item.Weight;
         exit(g.TreePathTo(Parents, aDst));
       end;
-    Reached[Item.Index] := True;
+    Reached.UncBits[Item.Index] := True;
     for p in g.AdjLists[Item.Index]^ do
-      if not Reached[p^.Key] then
+      if not Reached.UncBits[p^.Key] then
         begin
           Relax := p^.Data.Weight + Item.Weight;
-          if not InQueue[p^.Key] then
+          if not InQueue.UncBits[p^.Key] then
             begin
               Queue.Enqueue(p^.Key, TRankItem.Create(
                 p^.Key, Relax + aEst(g.Items[p^.Key], g.Items[aDst]), Relax));
               Parents[p^.Key] := Item.Index;
-              InQueue[p^.Key] := True;
+              InQueue.UncBits[p^.Key] := True;
             end
           else
             if Relax < Queue.ItemPtr(p^.Key)^.Weight then
@@ -5688,13 +5684,13 @@ begin
   CurrPass.Capacity := VertCount;
   NextPass.Capacity := VertCount;
   aWeights[aSrc] := 0;
-  NextPass[aSrc] := True;
+  NextPass.UncBits[aSrc] := True;
   Dist[aSrc] := 0;
   repeat
     CurrPass.SwapBits(NextPass);
     for Curr in CurrPass do
       begin
-        CurrPass[Curr] := False;
+        CurrPass.UncBits[Curr] := False;
         if Dist[Curr] >= VertCount then
           exit(Curr);
         d := Succ(Dist[Curr]);
@@ -5708,7 +5704,7 @@ begin
                 if Next = aSrc then
                   exit(Next);
                 Dist[Next] := d;
-                NextPass[Next] := True;
+                NextPass.UncBits[Next] := True;
               end;
           end;
       end;
@@ -5720,7 +5716,7 @@ class function TGWeightHelper.BfmtBase(g: TGraph; aSrc: SizeInt; out aParents: T
   out aWeights: TWeightArray): SizeInt;
 var
   Buf: TIntArray;
-  InQueue, Active: TGraph.TBitVector;
+  InQueue, Active: TBoolVector;
   Queue, TreePrev, TreeNext, Level: PSizeInt;
   Curr, Next, Prev, Post, Test, CurrLevel, vCount: SizeInt;
   CurrWeight: TWeight;
@@ -5735,14 +5731,14 @@ begin
   TreePrev := Queue + vCount;
   TreeNext := TreePrev + vCount;
   Level := TreeNext + vCount;
-  InQueue.Size := vCount;
-  Active.Size := vCount;
+  InQueue.Capacity := vCount;
+  Active.Capacity := vCount;
   aWeights := CreateWeightArray(vCount);
   aWeights[aSrc] := 0;
   aParents[aSrc] := aSrc;
   TreePrev[aSrc] := aSrc;
   TreeNext[aSrc] := aSrc;
-  Active[aSrc] := True;
+  Active.UncBits[aSrc] := True;
   Queue[qTail] := aSrc;
   Inc(qTail);
   while qHead <> qTail do
@@ -5751,10 +5747,10 @@ begin
       Inc(qHead);
       if qHead = vCount then
         qHead := 0;
-      InQueue[Curr] := False;
-      if not Active[Curr] then
+      InQueue.UncBits[Curr] := False;
+      if not Active.UncBits[Curr] then
         continue;
-      Active[Curr] := False;
+      Active.UncBits[Curr] := False;
       CurrWeight := aWeights[Curr];
       for p in g.AdjLists[Curr]^ do
         begin
@@ -5776,7 +5772,7 @@ begin
                     CurrLevel += Level[Test];
                     TreePrev[Test] := NULL_INDEX;
                     Level[Test] := NULL_INDEX;
-                    Active[Test] := False;
+                    Active.UncBits[Test] := False;
                     Test := TreeNext[Test];
                   until CurrLevel < 0;
                   Dec(Level[aParents[Next]]);
@@ -5790,15 +5786,15 @@ begin
               TreePrev[Next] := Curr;
               TreeNext[Next] := Post;
               TreePrev[Post] := Next;
-              if not InQueue[Next] then
+              if not InQueue.UncBits[Next] then
                 begin
                   Queue[qTail] := Next;
                   Inc(qTail);
                   if qTail = vCount then
                     qTail := 0;
-                  InQueue[Next] := True;
+                  InQueue.UncBits[Next] := True;
                 end;
-              Active[Next] := True;
+              Active.UncBits[Next] := True;
             end;
         end;
     end;
@@ -5809,7 +5805,7 @@ end;
 class function TGWeightHelper.BfmtReweight(g: TGraph; out aWeights: TWeightArray): SizeInt;
 var
   Buf: TIntArray;
-  InQueue, Active: TGraph.TBitVector;
+  InQueue, Active: TBoolVector;
   Queue, Parents, TreePrev, TreeNext, Level: PSizeInt;
   Curr, Next, Prev, Post, Test, CurrLevel, vCount: SizeInt;
   CurrWeight: TWeight;
@@ -5825,8 +5821,8 @@ begin
   TreePrev := Parents + vCount;
   TreeNext := TreePrev + vCount; ;
   Level := TreeNext + vCount;
-  InQueue.Size := vCount;
-  Active.Size := vCount;
+  InQueue.Capacity := vCount;
+  Active.Capacity := vCount;
   aWeights := CreateWeightArrayZ(vCount);
   Parents[Test] := Test;
   TreePrev[Test] := Test;
@@ -5835,8 +5831,8 @@ begin
     begin
       Parents[Curr] := Pred(vCount);
       TreePrev[Curr] := Pred(vCount);
-      InQueue[Curr] := True;
-      Active[Curr] := True;
+      InQueue.UncBits[Curr] := True;
+      Active.UncBits[Curr] := True;
       Queue[qTail] := Curr;
       Inc(qTail);
     end;
@@ -5846,10 +5842,10 @@ begin
       Inc(qHead);
       if qHead = vCount then
         qHead := 0;
-      InQueue[Curr] := False;
-      if not Active[Curr] then
+      InQueue.UncBits[Curr] := False;
+      if not Active.UncBits[Curr] then
         continue;
-      Active[Curr] := False;
+      Active.UncBits[Curr] := False;
       CurrWeight := aWeights[Curr];
       for p in g.AdjLists[Curr]^ do
         begin
@@ -5871,7 +5867,7 @@ begin
                     CurrLevel += Level[Test];
                     TreePrev[Test] := NULL_INDEX;
                     Level[Test] := NULL_INDEX;
-                    Active[Test] := False;
+                    Active.UncBits[Test] := False;
                     Test := TreeNext[Test];
                   until CurrLevel < 0;
                   Dec(Level[Parents[Next]]);
@@ -5885,15 +5881,15 @@ begin
               TreePrev[Next] := Curr;
               TreeNext[Next] := Post;
               TreePrev[Post] := Next;
-              if not InQueue[Next] then
+              if not InQueue.UncBits[Next] then
                 begin
                   Queue[qTail] := Next;
                   Inc(qTail);
                   if qTail = vCount then
                     qTail := 0;
-                  InQueue[Next] := True;
+                  InQueue.UncBits[Next] := True;
                 end;
-              Active[Next] := True;
+              Active.UncBits[Next] := True;
             end;
         end;
     end;
@@ -5997,7 +5993,7 @@ var
   Queue: TPairHeap;
   Parents: TIntArray;
   Phi, Weights: TWeightArray;
-  Reached, InQueue: TGraph.TBitVector;
+  Reached, InQueue: TBoolVector;
   Item: TWeightItem;
   Relax: TWeight;
   I, J, VertCount: SizeInt;
@@ -6013,8 +6009,8 @@ begin
   Parents.Length := VertCount;
   System.SetLength(Weights, VertCount);
   Queue := TPairHeap.Create(VertCount);
-  Reached.Size := VertCount;
-  InQueue.Size := VertCount;
+  Reached.Capacity := VertCount;
+  InQueue.Capacity := VertCount;
   System.SetLength(aPaths, VertCount, VertCount);
   for I := 0 to Pred(VertCount) do
     begin
@@ -6024,17 +6020,17 @@ begin
       Parents[I] := I;
       repeat
         Weights[Item.Index] := Item.Weight;
-        Reached[Item.Index] := True;
-        InQueue[Item.Index] := False;
+        Reached.UncBits[Item.Index] := True;
+        InQueue.UncBits[Item.Index] := False;
         for p in aGraph.AdjLists[Item.Index]^ do
           begin
             Relax := Item.Weight + p^.Data.Weight + Phi[Item.Index] - Phi[p^.Key];
-            if not Reached[p^.Key] then
-              if not InQueue[p^.Key] then
+            if not Reached.UncBits[p^.Key] then
+              if not InQueue.UncBits[p^.Key] then
                 begin
                   Queue.Enqueue(p^.Key, TWeightItem.Create(p^.Key, Relax));
                   Parents[p^.Key] := Item.Index;
-                  InQueue[p^.Key] := True;
+                  InQueue.UncBits[p^.Key] := True;
                 end
               else
                 if Relax < Queue.ItemPtr(p^.Key)^.Weight then
@@ -6113,11 +6109,11 @@ begin
     begin
       Empties.InitRange(VertCount);
       Result[I, I] := 0;
-      Empties[I] := False;
+      Empties.UncBits[I] := False;
       for p in aGraph.AdjLists[I]^ do
         begin
           Result[I, p^.Key] := p^.Data.Weight;
-          Empties[p^.Key] := False;
+          Empties.UncBits[p^.Key] := False;
         end;
       for J in Empties do
         Result[I, J] := TWeight.INF_VALUE;
@@ -6136,11 +6132,11 @@ begin
     begin
       Empties.InitRange(VertCount);
       Result[I, I] := TApspCell.Create(0, I);
-      Empties[I] := False;
+      Empties.UncBits[I] := False;
       for p in aGraph.AdjLists[I]^ do
         begin
           Result[I, p^.Key] := TApspCell.Create(p^.Data.Weight, I);
-          Empties[p^.Key] := False;
+          Empties.UncBits[p^.Key] := False;
         end;
       for J in Empties do
         Result[I, J] := TApspCell.Create(TWeight.INF_VALUE, I);

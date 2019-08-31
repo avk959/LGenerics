@@ -17,60 +17,6 @@
 *                                                                           *
 *****************************************************************************}
 
-{ TGSparseGraph.TBitVector }
-
-function TGSparseGraph.TBitVector.GetBit(aIndex: SizeInt): Boolean;
-begin
-  Result := (FBits[aIndex shr INT_SIZE_LOG] and (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))) <> 0;
-end;
-
-function TGSparseGraph.TBitVector.GetSize: SizeInt;
-begin
-  Result := System.Length(FBits) shl INT_SIZE_LOG;
-end;
-
-procedure TGSparseGraph.TBitVector.SetBit(aIndex: SizeInt; aValue: Boolean);
-begin
-  if aValue then
-    FBits[aIndex shr INT_SIZE_LOG] :=
-    FBits[aIndex shr INT_SIZE_LOG] or (SizeUInt(1) shl (aIndex and INT_SIZE_MASK))
-  else
-    FBits[aIndex shr INT_SIZE_LOG] :=
-    FBits[aIndex shr INT_SIZE_LOG] and not (SizeUInt(1) shl (aIndex and INT_SIZE_MASK));
-end;
-
-procedure TGSparseGraph.TBitVector.SetSize(aValue: SizeInt);
-var
-  OldLen: SizeInt;
-begin
-  OldLen := Size;
-  if aValue > OldLen then
-    begin
-      aValue := aValue shr INT_SIZE_LOG + Ord(aValue and INT_SIZE_MASK <> 0);
-      System.SetLength(FBits, aValue);
-      System.FillChar(FBits[OldLen], (aValue - OldLen) * SizeOf(SizeUInt), 0);
-    end;
-end;
-
-procedure TGSparseGraph.TBitVector.ClearBits;
-begin
-  if FBits <> nil then
-    System.FillChar(FBits[0], System.Length(FBits) * SizeOf(SizeUInt), 0);
-end;
-
-procedure TGSparseGraph.TBitVector.ExpandTrue(aSize: SizeInt);
-var
-  OldLen: SizeInt;
-begin
-  OldLen := Size;
-  if aSize > OldLen then
-    begin
-      aSize := Succ(aSize shr INT_SIZE_LOG);
-      System.SetLength(FBits, aSize);
-      System.FillChar(FBits[OldLen], (aSize - OldLen) * SizeOf(SizeUInt), $ff);
-    end;
-end;
-
 { TGSparseGraph.TSquareBitMatrix }
 
 function TGSparseGraph.TSquareBitMatrix.GetBit(I, J: SizeInt): Boolean;

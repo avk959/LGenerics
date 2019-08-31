@@ -478,7 +478,7 @@ type
       FArcs: array of TArc;
       FQueue: array of PNode;
       FInQueue,
-      FActive: TGraph.TBitVector;
+      FActive: TBoolVector;
       FGraph: TGraph;
       FNodeCount: SizeInt;
       procedure CopyGraph(aDirected: Boolean);
