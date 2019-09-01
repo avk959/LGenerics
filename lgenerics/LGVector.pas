@@ -149,11 +149,12 @@ type
   private
   type
     TBuffer = specialize TGLiteDynBuffer<T>;
+    TFake   = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(SizeOf(T))] of Byte{$ELSE}T{$ENDIF};
 
   public
   type
     TEnumerator = TBuffer.TEnumerator;
-    TMutables    = TBuffer.TMutables;
+    TMutables   = TBuffer.TMutables;
     TReverse    = TBuffer.TReverse;
     PItem       = TBuffer.PItem;
     TArray      = TBuffer.TArray;
@@ -162,7 +163,8 @@ type
     FBuffer: TBuffer;
     function  GetCapacity: SizeInt; inline;
     function  GetItem(aIndex: SizeInt): T; inline;
-    function  GetMutable(aIndex: SizeInt): PItem;
+    function  GetMutable(aIndex: SizeInt): PItem; inline;
+    function  GetUncMutable(aIndex: SizeInt): PItem; inline;
     procedure SetItem(aIndex: SizeInt; const aValue: T); inline;
     procedure InsertItem(aIndex: SizeInt; constref aValue: T);
     function  DeleteItem(aIndex: SizeInt): T;
@@ -199,10 +201,16 @@ type
     returns count of deleted elements;
     will raise ELGListError if aIndex out of bounds }
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt; inline;
+  { swaps items with indices aIdx1 and aIdx2; will raise ELGListError if any index out of bounds }
+    procedure Swap(aIdx1, aIdx2: SizeInt);
+  { does not checks indices range }
+    procedure UncSwap(aIdx1, aIdx2: SizeInt); inline;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
     property  Mutable[aIndex: SizeInt]: PItem read GetMutable;
+  { does not checks aIndex range }
+    property  UncMutable[aIndex: SizeInt]: PItem read GetUncMutable;
   end;
 
   generic TGLiteThreadVector<T> = class
@@ -1360,6 +1368,11 @@ begin
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
+function TGLiteVector.GetUncMutable(aIndex: SizeInt): PItem;
+begin
+  Result := @FBuffer.FItems[aIndex];
+end;
+
 procedure TGLiteVector.SetItem(aIndex: SizeInt; const aValue: T);
 begin
   if SizeUInt(aIndex) < SizeUInt(Count) then
@@ -1555,6 +1568,32 @@ begin
     Result := DeleteRange(aIndex, aCount)
   else
     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+procedure TGLiteVector.Swap(aIdx1, aIdx2: SizeInt);
+var
+  Tmp: TFake;
+begin
+   if SizeUInt(aIdx1) < SizeUInt(Count) then
+     if SizeUInt(aIdx2) < SizeUInt(Count) then
+       begin
+         Tmp := TFake(FBuffer.FItems[aIdx1]);
+         TFake(FBuffer.FItems[aIdx1]) := TFake(FBuffer.FItems[aIdx2]);
+         TFake(FBuffer.FItems[aIdx2]) := Tmp;
+       end
+     else
+       raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIdx2])
+   else
+     raise ELGListError.CreateFmt(SEIndexOutOfBoundsFmt, [aIdx1]);
+end;
+
+procedure TGLiteVector.UncSwap(aIdx1, aIdx2: SizeInt);
+var
+  Tmp: TFake;
+begin
+  Tmp := TFake(FBuffer.FItems[aIdx1]);
+  TFake(FBuffer.FItems[aIdx1]) := TFake(FBuffer.FItems[aIdx2]);
+  TFake(FBuffer.FItems[aIdx2]) := Tmp;
 end;
 
 { TGLiteThreadVector }
@@ -2157,11 +2196,11 @@ end;
 
 procedure TBoolVector.SwapBits(var aVector: TBoolVector);
 var
-  tmp: TBits;
+  tmp: Pointer;
 begin
-  tmp := FBits;
-  FBits := aVector.FBits;
-  aVector.FBits := tmp;
+  tmp := Pointer(FBits);
+  Pointer(FBits) := Pointer(aVector.FBits);
+  Pointer(aVector.FBits) := tmp;
 end;
 
 function TBoolVector.All: Boolean;
