@@ -142,12 +142,12 @@ type
   TGLiteVectorTest = class(TTestCase)
   private
   type
-    TIntVector     = specialize TGLiteVector<Integer>;
-    TStrVector     = specialize TGLiteVector<string>;
-    TIntArray      = specialize TGArray<Integer>;
-    TStrArray      = specialize TGArray<string>;
-    TIntHelper     = specialize TGComparableArrayHelper<Integer>;
-    TProc          = procedure is nested;
+    TIntVector = specialize TGLiteVector<Integer>;
+    TStrVector = specialize TGLiteVector<string>;
+    TIntArray  = specialize TGArray<Integer>;
+    TStrArray  = specialize TGArray<string>;
+    TIntHelper = specialize TGComparableArrayHelper<Integer>;
+    TProc      = procedure is nested;
 
     TTestObj = class
     private
@@ -214,13 +214,15 @@ type
     procedure DeleteAll_1;
     procedure DeleteAll_2;
     procedure DeleteAllStr;
+    procedure Swap;
+    procedure Swap1;
 
     procedure Mutables;
+    procedure Mutable;
+    procedure UncMutable;
 
     procedure ObjectVector;
   end;
-
-  { TBoolVectorTest }
 
   TBoolVectorTest = class(TTestCase)
   private
@@ -243,6 +245,7 @@ type
     procedure ToggleBits;
     procedure IsEmpty;
     procedure NonEmpty;
+    procedure SwapBits;
     procedure All;
     procedure Bsf;
     procedure Bsr;
@@ -1840,7 +1843,64 @@ begin
   AssertTrue(I = 30);
 end;
 
+procedure TGLiteVectorTest.Swap;
+var
+  v: TStrVector;
+  I: Integer;
+begin
+  for I := 0 to 31 do
+    {%H-}v.Add('string ' + I.ToString);
+  v.Swap(3, 11);
+  AssertTrue(v[3] = 'string 11');
+  AssertTrue(v[11] = 'string 3');
+  v.Swap(11, 3);
+  AssertTrue(v[3] = 'string 3');
+  AssertTrue(v[11] = 'string 11');
+  v.UncSwap(3, 11);
+  AssertTrue(v[3] = 'string 11');
+  AssertTrue(v[11] = 'string 3');
+  v.UncSwap(11, 3);
+  AssertTrue(v[3] = 'string 3');
+  AssertTrue(v[11] = 'string 11');
+end;
+
+procedure TGLiteVectorTest.Swap1;
+var
+  v: TStrVector;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  for I := 0 to 11 do
+    {%H-}v.Add('string ' + I.ToString);
+  try
+    v.Swap(-1, 11);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  Raised := False;
+  try
+    v.Swap(3, 12);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
 procedure TGLiteVectorTest.Mutables;
+var
+  v: TIntVector;
+  I: Integer;
+  p: TIntVector.PItem;
+begin
+  v.AddAll(IntArray21);
+  for p in v.Mutables do
+    Inc(p^);
+  for I := 0 to 20 do
+    AssertTrue(v{%H-}[I] = I + 2);
+end;
+
+procedure TGLiteVectorTest.Mutable;
 var
   v: TIntVector;
   I: Integer;
@@ -1854,6 +1914,23 @@ begin
     end;
   for I := 0 to 20 do
     AssertTrue(v{%H-}[I] = I + 2);
+end;
+
+procedure TGLiteVectorTest.UncMutable;
+var
+  v: TStrVector;
+  I: Integer;
+  p: TStrVector.PItem;
+begin
+  for I := 0 to 31 do
+    {%H-}v.Add('string ' + I.ToString);
+  for I := 0 to Pred(v.Count) do
+    begin
+      p := v.Mutable[I];
+      p^ := 'string ' + (I*2).ToString;
+    end;
+  for I := 0 to Pred(v.Count) do
+    AssertTrue(v[I] = 'string ' + (I*2).ToString);
 end;
 
 procedure TGLiteVectorTest.ObjectVector;
@@ -2131,6 +2208,23 @@ begin
   AssertFalse(v.NonEmpty);
   v[5] := True;
   AssertTrue(v.NonEmpty);
+end;
+
+procedure TBoolVectorTest.SwapBits;
+var
+  v1, v2: TBoolVector;
+begin
+  v2.InitRange(120);
+  v1.SwapBits(v2);
+  AssertTrue(v1.PopCount = 120);
+  AssertTrue(v2.IsEmpty);
+  v1.ClearBits;
+  v1[11] := True;
+  v2.Capacity := 32;
+  v2[31] := True;
+  v2.SwapBits(v1);
+  AssertTrue(v1[31]);
+  AssertTrue(v2[11]);
 end;
 
 procedure TBoolVectorTest.All;
