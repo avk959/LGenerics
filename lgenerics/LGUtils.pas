@@ -219,8 +219,7 @@ type
     property  Instance: T read GetInstance write SetInstance;
   end;
 
-  { TGCowPtr: provides a ARC pointer to (value)data on the heap with
-    copy-on-write semantics(if necessary) }
+  { TGCowPtr: provides a ARC pointer to data on the heap with copy-on-write semantics(if necessary) }
   TGCowPtr<T> = record
   public
   type
@@ -235,12 +234,12 @@ type
   var
     FInstance: PInstance;
     function  GetAllocated: Boolean; inline;
+    function  GetRefCount: Integer;
     function  GetPtr: PValue; inline;
     function  GetReadPtr: PValue; inline;
-    function  GetRefCount: Integer;
-    function  GetWritePtr: PValue; inline;
+    function  GetWritePtr: PValue;
     function  GetValue: T; inline;
-    procedure SetValue(const aValue: T); inline;
+    procedure SetValue(const aValue: T);
     class operator Initialize(var cp: TGCowPtr<T>); inline;
     class operator Finalize(var cp: TGCowPtr<T>); inline;
     class operator Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>); inline;
@@ -1204,6 +1203,14 @@ begin
   Result := FInstance <> nil;
 end;
 
+function TGCowPtr<T>.GetRefCount: Integer;
+begin
+  if FInstance <> nil then
+    Result := FInstance^.RefCount
+  else
+    Result := 0;
+end;
+
 function TGCowPtr<T>.GetPtr: PValue;
 begin
   if FInstance = nil then
@@ -1220,15 +1227,33 @@ begin
   Result := GetPtr;
 end;
 
-function TGCowPtr<T>.GetRefCount: Integer;
+function TGCowPtr<T>.GetWritePtr: PValue;
+var
+  v: T;
+  HasCopy: Boolean = False;
 begin
-  if FInstance <> nil then
-    Result := FInstance^.RefCount
-  else
-    Result := 0;
+  if (FInstance <> nil) and (FInstance^.RefCount > 1) then
+    begin
+      v := FInstance^.Value;
+      HasCopy := True;
+      if InterlockedDecrement(FInstance^.RefCount) = 0 then
+        begin
+          FInstance^.Value := Default(T);
+          FreeMem(FInstance);
+        end;
+      FInstance := nil;
+    end;
+  Result := GetPtr;
+  if HasCopy then
+    Result^ := v;
 end;
 
-function TGCowPtr<T>.GetWritePtr: PValue;
+function TGCowPtr<T>.GetValue: T;
+begin
+  Result := GetPtr^;
+end;
+
+procedure TGCowPtr<T>.SetValue(const aValue: T);
 begin
   if (FInstance <> nil) and (FInstance^.RefCount > 1) then
     begin
@@ -1239,17 +1264,7 @@ begin
         end;
       FInstance := nil;
     end;
-  Result := GetPtr;
-end;
-
-function TGCowPtr<T>.GetValue: T;
-begin
-  Result := GetPtr^;
-end;
-
-procedure TGCowPtr<T>.SetValue(const aValue: T);
-begin
-  GetWritePtr^ := aValue;
+  GetPtr^ := aValue;
 end;
 
 class operator TGCowPtr<T>.Initialize(var cp: TGCowPtr<T>);
