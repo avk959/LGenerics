@@ -246,7 +246,6 @@ type
     class operator AddRef(var cp: TGCowPtr<T>); inline;
   public
     class operator Implicit(var cp: TGCowPtr<T>): T; inline;
-    class operator Explicit(var cp: TGCowPtr<T>): T; inline;
     procedure Release;
     property  Allocated: Boolean read GetAllocated;
     property  RefCount: Integer read GetRefCount;
@@ -1294,11 +1293,6 @@ begin
 end;
 
 class operator TGCowPtr<T>.Implicit(var cp: TGCowPtr<T>): T;
-begin
-  Result := cp.GetPtr^;
-end;
-
-class operator TGCowPtr<T>.Explicit(var cp: TGCowPtr<T>): T;
 begin
   Result := cp.GetPtr^;
 end;
