@@ -176,6 +176,7 @@ type
     FRefCount: PInteger;
     procedure InitInstance(aValue: T);
     function  GetInstance: T;
+    function  GetRefCount: Integer; inline;
     procedure SetInstance(aValue: T);
     class operator Initialize(var s: TGSharedRefA<T>); inline;
     class operator Finalize(var s: TGSharedRefA<T>);
@@ -188,7 +189,7 @@ type
     class operator Explicit(var s: TGSharedRefA<T>): T; inline;
     function  HasInstance: Boolean; inline;
     procedure Release;
-    function  RefCount: Integer; inline;
+    property  RefCount: Integer read GetRefCount;
     property  Instance: T read GetInstance write SetInstance;
   end;
 
@@ -201,6 +202,7 @@ type
     FRefCount: PInteger;
     procedure InitInstance(aValue: T);
     function  GetInstance: T;
+    function  GetRefCount: Integer; inline;
     procedure SetInstance(aValue: T);
     class operator Initialize(var s: TGSharedRef<T>); inline;
     class operator Finalize(var s: TGSharedRef<T>);
@@ -213,8 +215,45 @@ type
     class operator Explicit(var s: TGSharedRef<T>): T; inline;
     function  HasInstance: Boolean; inline;
     procedure Release;
-    function  RefCount: Integer; inline;
+    property  RefCount: Integer read GetRefCount;
     property  Instance: T read GetInstance write SetInstance;
+  end;
+
+  { TGCowPtr: provides a ARC pointer to (value)data on the heap with
+    copy-on-write semantics(if necessary) }
+  TGCowPtr<T> = record
+  public
+  type
+    PValue = ^T;
+  private
+  type
+    TInstance = record
+      RefCount: Integer;
+      Value: T;
+    end;
+    PInstance = ^TInstance;
+  var
+    FInstance: PInstance;
+    function  GetAllocated: Boolean; inline;
+    function  GetPtr: PValue; inline;
+    function  GetReadPtr: PValue; inline;
+    function  GetRefCount: Integer;
+    function  GetWritePtr: PValue; inline;
+    function  GetValue: T; inline;
+    procedure SetValue(const aValue: T); inline;
+    class operator Initialize(var cp: TGCowPtr<T>); inline;
+    class operator Finalize(var cp: TGCowPtr<T>); inline;
+    class operator Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>); inline;
+    class operator AddRef(var cp: TGCowPtr<T>); inline;
+  public
+    class operator Implicit(var cp: TGCowPtr<T>): T; inline;
+    class operator Explicit(var cp: TGCowPtr<T>): T; inline;
+    procedure Release;
+    property  Allocated: Boolean read GetAllocated;
+    property  RefCount: Integer read GetRefCount;
+    property  ReadPtr: PValue read GetReadPtr;
+    property  WritePtr: PValue read GetWritePtr;
+    property  Value: T read GetValue write SetValue;
   end;
 
   TGEnumerator<T> = class abstract
@@ -993,6 +1032,14 @@ begin
   Result := FInstance;
 end;
 
+function TGSharedRefA<T>.GetRefCount: Integer;
+begin
+  if FRefCount <> nil then
+    Result := FRefCount^
+  else
+    Result := 0;
+end;
+
 procedure TGSharedRefA<T>.SetInstance(aValue: T);
 begin
   if aValue <> FInstance then
@@ -1058,14 +1105,6 @@ begin
     end;
 end;
 
-function TGSharedRefA<T>.RefCount: Integer;
-begin
-  if FRefCount <> nil then
-    Result := FRefCount^
-  else
-    Result := 0;
-end;
-
 { TGSharedRef<T> }
 
 procedure TGSharedRef<T>.InitInstance(aValue: T);
@@ -1083,6 +1122,14 @@ begin
   if FRefCount = nil then
     exit(Default(T));
   Result := FInstance;
+end;
+
+function TGSharedRef<T>.GetRefCount: Integer;
+begin
+  if FRefCount <> nil then
+    Result := FRefCount^
+  else
+    Result := 0;
 end;
 
 procedure TGSharedRef<T>.SetInstance(aValue: T);
@@ -1150,12 +1197,108 @@ begin
     end;
 end;
 
-function TGSharedRef<T>.RefCount: Integer;
+{ TGCowPtr }
+
+function TGCowPtr<T>.GetAllocated: Boolean;
 begin
-  if FRefCount <> nil then
-    Result := FRefCount^
+  Result := FInstance <> nil;
+end;
+
+function TGCowPtr<T>.GetPtr: PValue;
+begin
+  if FInstance = nil then
+    begin
+      FInstance := GetMem(SizeOf(TInstance));
+      FInstance^.RefCount := 1;
+      FillChar(FInstance^.Value, SizeOf(T), 0);
+    end;
+  Result := @FInstance^.Value;
+end;
+
+function TGCowPtr<T>.GetReadPtr: PValue;
+begin
+  Result := GetPtr;
+end;
+
+function TGCowPtr<T>.GetRefCount: Integer;
+begin
+  if FInstance <> nil then
+    Result := FInstance^.RefCount
   else
     Result := 0;
+end;
+
+function TGCowPtr<T>.GetWritePtr: PValue;
+begin
+  if (FInstance <> nil) and (FInstance^.RefCount > 1) then
+    begin
+      if InterlockedDecrement(FInstance^.RefCount) = 0 then
+        begin
+          FInstance^.Value := Default(T);
+          FreeMem(FInstance);
+        end;
+      FInstance := nil;
+    end;
+  Result := GetPtr;
+end;
+
+function TGCowPtr<T>.GetValue: T;
+begin
+  Result := GetPtr^;
+end;
+
+procedure TGCowPtr<T>.SetValue(const aValue: T);
+begin
+  GetWritePtr^ := aValue;
+end;
+
+class operator TGCowPtr<T>.Initialize(var cp: TGCowPtr<T>);
+begin
+  cp.FInstance := nil;
+end;
+
+class operator TGCowPtr<T>.Finalize(var cp: TGCowPtr<T>);
+begin
+  cp.Release;
+end;
+
+class operator TGCowPtr<T>.Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>);
+begin
+  aDst.Release;
+  if aSrc.FInstance <> nil then
+    begin
+      InterLockedIncrement(aSrc.FInstance^.RefCount);
+      aDst.FInstance := aSrc.FInstance;
+    end;
+end;
+
+class operator TGCowPtr<T>.AddRef(var cp: TGCowPtr<T>);
+begin
+  if cp.FInstance <> nil then
+    InterLockedIncrement(cp.FInstance^.RefCount);
+end;
+
+class operator TGCowPtr<T>.Implicit(var cp: TGCowPtr<T>): T;
+begin
+  Result := cp.GetPtr^;
+end;
+
+class operator TGCowPtr<T>.Explicit(var cp: TGCowPtr<T>): T;
+begin
+  Result := cp.GetPtr^;
+end;
+
+procedure TGCowPtr<T>.Release;
+begin
+  if FInstance <> nil then
+    begin
+      if InterlockedDecrement(FInstance^.RefCount) = 0 then
+        begin
+          FInstance^.Value := Default(T);
+          FreeMem(FInstance);
+        end;
+      FInstance := nil;
+    end;
 end;
 
 { TGMapEntry }
