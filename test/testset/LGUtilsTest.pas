@@ -212,6 +212,38 @@ type
     procedure Release;
   end;
 
+  { TCowPtrTest }
+
+  TCowPtrTest = class(TTestCase)
+  private
+  type
+    TTestColor = (tcBlack, tcRed, tcYellow, tcGreen, tcBlue, tcWhite);
+    TTestRec = record
+      Name: string[50];
+      Color: TTestColor;
+      Count: Integer;
+    end;
+
+    TTestPtr = specialize TGCowPtr<TTestRec>;
+  const
+    CONST_REC: TTestRec = (Name: 'CONST_REC'; Color: tcWhite; Count: 1);
+  var
+    FTestPtr: TTestPtr;
+    procedure CallByValue(aPtr: TTestPtr; aColor: TTestColor; aCount: Integer);
+    procedure CallByValue2(aSrc: TTestPtr; aCount: Integer; out aDst: TTestPtr);
+    procedure CallAsVar(var aPtr: TTestPtr; aColor: TTestColor; aCount: Integer);
+  published
+    procedure Allocated;
+    procedure Implicit;
+    procedure CopyRefCount;
+    procedure ReadPtr;
+    procedure WritePtr;
+    procedure PassByValue;
+    procedure PassAsVar;
+    procedure Release;
+    procedure Value;
+  end;
+
   TGOptionalTest = class(TTestCase)
   private
   type
@@ -1633,6 +1665,219 @@ begin
   AssertTrue(Raised);
 end;
 
+{ TCowPtrTest }
+
+procedure TCowPtrTest.CallByValue(aPtr: TTestPtr; aColor: TTestColor; aCount: Integer);
+var
+  p: TTestPtr.PValue;
+begin
+  AssertTrue(aPtr.RefCount > 1);
+  p := aPtr.WritePtr;
+  p^.Name := '';
+  p^.Color := aColor;
+  p^.Count := aCount;
+end;
+
+procedure TCowPtrTest.CallByValue2(aSrc: TTestPtr; aCount: Integer; out aDst: TTestPtr);
+begin
+  AssertTrue(aSrc.RefCount > 1);
+  AssertTrue(aDst.RefCount = 0);
+  aSrc.WritePtr^.Count := aCount;
+  aDst := aSrc;
+end;
+
+procedure TCowPtrTest.CallAsVar(var aPtr: TTestPtr; aColor: TTestColor; aCount: Integer);
+var
+  p: TTestPtr.PValue;
+begin
+  AssertTrue(aPtr.RefCount = 1);
+  p := aPtr.WritePtr;
+  p^.Name := '';
+  p^.Color := aColor;
+  p^.Count := aCount;
+end;
+
+procedure TCowPtrTest.Allocated;
+var
+  Ptr: TTestPtr;
+  p: TTestPtr.PValue = nil;
+begin
+  AssertFalse({%H-}Ptr.Allocated);
+  p := Ptr.ReadPtr;
+  AssertTrue(Ptr.Allocated);
+  AssertTrue(p <> nil);
+end;
+
+procedure TCowPtrTest.Implicit;
+var
+  Ptr: TTestPtr;
+  Rec: TTestRec;
+begin
+  Rec := CONST_REC;
+  AssertTrue(Rec.Name = CONST_REC.Name);
+  AssertTrue(Rec.Color = CONST_REC.Color);
+  AssertTrue(Rec.Count = CONST_REC.Count);
+  Rec := {%H-}Ptr;
+  AssertTrue(Ptr.Allocated);
+  AssertTrue(Rec.Name = '');
+  AssertTrue(Rec.Color = tcBlack);
+  AssertTrue(Rec.Count = 0);
+end;
+
+procedure TCowPtrTest.CopyRefCount;
+var
+  Ptr, Ptr2: TTestPtr;
+begin
+  AssertTrue({%H-}Ptr.RefCount = 0);
+  Ptr2 := Ptr;
+  AssertTrue(Ptr2.RefCount = 0);
+  AssertFalse(Ptr2.Allocated);
+
+  Ptr.Value := CONST_REC;
+  AssertTrue(Ptr.Allocated);
+  AssertTrue(Ptr.RefCount = 1);
+
+  Ptr2 := Ptr;
+  AssertTrue(Ptr.RefCount = 2);
+  AssertTrue(Ptr2.RefCount = 2);
+
+  FTestPtr := Ptr2;
+  AssertTrue(Ptr.RefCount = 3);
+  AssertTrue(Ptr2.RefCount = 3);
+  AssertTrue(FTestPtr.RefCount = 3);
+end;
+
+procedure TCowPtrTest.ReadPtr;
+var
+  Ptr, Ptr2: TTestPtr;
+begin
+  Ptr.Value := CONST_REC;
+  Ptr2 := Ptr;
+  AssertTrue(Ptr.RefCount = 2);
+  AssertTrue(Ptr2.RefCount = 2);
+  Ptr.ReadPtr^.Name := 'New name';
+  AssertTrue(Ptr.RefCount = 2);
+  AssertTrue(Ptr2.RefCount = 2);
+  AssertTrue(Ptr2.ReadPtr^.Name = 'New name');
+end;
+
+procedure TCowPtrTest.WritePtr;
+var
+  Ptr, Ptr2: TTestPtr;
+begin
+  Ptr.WritePtr^ := CONST_REC;
+  Ptr2 := Ptr;
+  AssertTrue(Ptr.RefCount = 2);
+  AssertTrue(Ptr2.RefCount = 2);
+  Ptr.WritePtr^.Name := 'New name';
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue(Ptr2.RefCount = 1);
+  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
+  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+  AssertTrue(Ptr2.ReadPtr^.Name = CONST_REC.Name);
+end;
+
+procedure TCowPtrTest.PassByValue;
+var
+  Ptr, Ptr2: TTestPtr;
+begin
+  Ptr.WritePtr^ := CONST_REC;
+
+  CallByValue(Ptr, tcBlue, 3);
+
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
+  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
+  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+
+  CallByValue2(Ptr, 3, Ptr2);
+
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue(Ptr2.RefCount = 1);
+  AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
+  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
+  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+  AssertTrue(Ptr2.ReadPtr^.Name = CONST_REC.Name);
+  AssertTrue(Ptr2.ReadPtr^.Color = CONST_REC.Color);
+  AssertTrue(Ptr2.ReadPtr^.Count = 3);
+end;
+
+procedure TCowPtrTest.PassAsVar;
+var
+  Ptr: TTestPtr;
+begin
+  Ptr.WritePtr^ := CONST_REC;
+
+  CallAsVar(Ptr, tcRed, 7);
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue(Ptr.ReadPtr^.Name = '');
+  AssertTrue(Ptr.ReadPtr^.Color = tcRed);
+  AssertTrue(Ptr.ReadPtr^.Count = 7);
+end;
+
+procedure TCowPtrTest.Release;
+var
+  Ptr, Ptr2: TTestPtr;
+begin
+  AssertTrue({%H-}Ptr.RefCount = 0);
+  Ptr.Release;
+  AssertTrue({%H-}Ptr.RefCount = 0);
+
+  Ptr.WritePtr^ := CONST_REC;
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue({%H-}Ptr2.RefCount = 0);
+
+  Ptr2 := Ptr;
+  AssertTrue(Ptr.RefCount = 2);
+  AssertTrue(Ptr2.RefCount = 2);
+
+  FTestPtr := Ptr2;
+  AssertTrue(Ptr.RefCount = 3);
+  AssertTrue(Ptr2.RefCount = 3);
+  AssertTrue(FTestPtr.RefCount = 3);
+
+  FTestPtr.Release;
+  AssertTrue(Ptr.RefCount = 2);
+  AssertTrue(Ptr2.RefCount = 2);
+  AssertTrue(FTestPtr.RefCount = 0);
+
+  Ptr2.Release;
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue(Ptr2.RefCount = 0);
+
+  Ptr.Release;
+  AssertTrue(Ptr.RefCount = 0);
+end;
+
+procedure TCowPtrTest.Value;
+var
+  Ptr, Ptr2: TTestPtr;
+  Rec: TTestRec;
+begin
+  Rec := CONST_REC;
+  Ptr.Value := Rec;
+  AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
+  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
+  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+
+  Ptr2 := Ptr;
+  Rec := Ptr.Value;
+  AssertTrue(Rec.Name = CONST_REC.Name);
+  AssertTrue(Rec.Color = CONST_REC.Color);
+  AssertTrue(Rec.Count = CONST_REC.Count);
+
+  Rec.Name := 'New name';
+  Rec.Color := tcGreen;
+  Rec.Count := 5;
+  Ptr2.Value := Rec;
+  AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
+  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
+  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+  AssertTrue(Ptr2.ReadPtr^.Name = 'New name');
+  AssertTrue(Ptr2.ReadPtr^.Color = tcGreen);
+  AssertTrue(Ptr2.ReadPtr^.Count = 5);
+end;
+
 initialization
 
   RegisterTest(TCommonFunctionTest);
@@ -1640,6 +1885,7 @@ initialization
   RegisterTest(TUniqRefTest);
   RegisterTest(TSharedRefATest);
   RegisterTest(TSharedRefTest);
+  RegisterTest(TCowPtrTest);
   RegisterTest(TGOptionalTest);
 
 end.
