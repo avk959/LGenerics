@@ -219,7 +219,7 @@ type
     property  Instance: T read GetInstance write SetInstance;
   end;
 
-  { TGCowPtr: provides a ARC pointer to data on the heap with copy-on-write semantics(if necessary) }
+  { TGCowPtr: provides an ARC pointer to data on the heap with copy-on-write semantics(if necessary) }
   TGCowPtr<T> = record
   public
   type
@@ -235,22 +235,26 @@ type
     FInstance: PInstance;
     function  GetAllocated: Boolean; inline;
     function  GetRefCount: Integer;
-    function  GetPtr: PValue; inline;
+    function  GetPtr: PValue;
+    procedure DoRelease; inline;
     function  GetReadPtr: PValue; inline;
     function  GetWritePtr: PValue;
     function  GetValue: T; inline;
-    procedure SetValue(const aValue: T);
+    procedure SetValue(const aValue: T); inline;
     class operator Initialize(var cp: TGCowPtr<T>); inline;
     class operator Finalize(var cp: TGCowPtr<T>); inline;
     class operator Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>); inline;
     class operator AddRef(var cp: TGCowPtr<T>); inline;
   public
     class operator Implicit(var cp: TGCowPtr<T>): T; inline;
-    procedure Release;
+    procedure Release; inline;
     property  Allocated: Boolean read GetAllocated;
     property  RefCount: Integer read GetRefCount;
+  { use ReadPtr to read data value, or to write/modify data value if COW is not required }
     property  ReadPtr: PValue read GetReadPtr;
+  { use WritePtr to write/modify data value if COW is required }
     property  WritePtr: PValue read GetWritePtr;
+  { SetValue always uses COW }
     property  Value: T read GetValue write SetValue;
   end;
 
@@ -1221,6 +1225,16 @@ begin
   Result := @FInstance^.Value;
 end;
 
+procedure TGCowPtr<T>.DoRelease;
+begin
+  if InterlockedDecrement(FInstance^.RefCount) = 0 then
+    begin
+      FInstance^.Value := Default(T);
+      FreeMem(FInstance);
+    end;
+  FInstance := nil;
+end;
+
 function TGCowPtr<T>.GetReadPtr: PValue;
 begin
   Result := GetPtr;
@@ -1235,12 +1249,7 @@ begin
     begin
       v := FInstance^.Value;
       HasCopy := True;
-      if InterlockedDecrement(FInstance^.RefCount) = 0 then
-        begin
-          FInstance^.Value := Default(T);
-          FreeMem(FInstance);
-        end;
-      FInstance := nil;
+      DoRelease;
     end;
   Result := GetPtr;
   if HasCopy then
@@ -1255,14 +1264,7 @@ end;
 procedure TGCowPtr<T>.SetValue(const aValue: T);
 begin
   if (FInstance <> nil) and (FInstance^.RefCount > 1) then
-    begin
-      if InterlockedDecrement(FInstance^.RefCount) = 0 then
-        begin
-          FInstance^.Value := Default(T);
-          FreeMem(FInstance);
-        end;
-      FInstance := nil;
-    end;
+    DoRelease;
   GetPtr^ := aValue;
 end;
 
@@ -1300,14 +1302,7 @@ end;
 procedure TGCowPtr<T>.Release;
 begin
   if FInstance <> nil then
-    begin
-      if InterlockedDecrement(FInstance^.RefCount) = 0 then
-        begin
-          FInstance^.Value := Default(T);
-          FreeMem(FInstance);
-        end;
-      FInstance := nil;
-    end;
+    DoRelease;
 end;
 
 { TGMapEntry }
