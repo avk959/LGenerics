@@ -934,27 +934,22 @@ end;
 
 function TGEnumerable.ToArray: TArray;
 var
-  I, Len: SizeInt;
+  I: SizeInt = 0;
 begin
-  Len := ARRAY_INITIAL_SIZE;
-  SetLength(Result, ARRAY_INITIAL_SIZE);
-  I := 0;
+  System.SetLength(Result, ARRAY_INITIAL_SIZE);
   with GetEnumerator do
     try
       while MoveNext do
         begin
-          if I = Len then
-            begin
-              Len += Len;
-              SetLength(Result, Len);
-            end;
+          if I = System.Length(Result) then
+            System.SetLength(Result, I + I);
           Result[I] := Current;
           Inc(I);
         end;
     finally
       Free;
     end;
-  SetLength(Result, I);
+  System.SetLength(Result, I);
 end;
 
 function TGEnumerable.Any: Boolean;
