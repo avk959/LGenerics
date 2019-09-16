@@ -1039,7 +1039,7 @@ end;
 
 procedure TSharedRefATest.CallAsOut(out aRef: TTestRef; aValue: Integer);
 begin
-  AssertTrue(aRef.RefCount = 0);
+  AssertTrue({%H-}aRef.RefCount = 0);
   TTestClass(aRef).OnDestroy := @IncCounter;
   TTestClass(aRef).Value := aValue;
 end;
@@ -1751,7 +1751,7 @@ procedure TCowPtrTest.ReadPtr;
 var
   Ptr, Ptr2: TTestPtr;
 begin
-  Ptr.Value := CONST_REC;
+  {%H-}Ptr.Value := CONST_REC;
   Ptr2 := Ptr;
   AssertTrue(Ptr.RefCount = 2);
   AssertTrue(Ptr2.RefCount = 2);
@@ -1855,7 +1855,7 @@ var
   Rec: TTestRec;
 begin
   Rec := CONST_REC;
-  Ptr.Value := Rec;
+  {%H-}Ptr.Value := Rec;
   AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
   AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
   AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
