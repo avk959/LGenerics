@@ -236,18 +236,18 @@ type
     function  GetAllocated: Boolean; inline;
     function  GetRefCount: Integer;
     function  GetPtr: PValue;
-    procedure DoRelease; inline;
+    procedure DoRelease;
     function  GetReadPtr: PValue; inline;
     function  GetWritePtr: PValue;
     function  GetValue: T; inline;
     procedure SetValue(const aValue: T); inline;
     class operator Initialize(var cp: TGCowPtr<T>); inline;
     class operator Finalize(var cp: TGCowPtr<T>); inline;
-    class operator Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>); inline;
+    class operator Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>);
     class operator AddRef(var cp: TGCowPtr<T>); inline;
   public
     class operator Implicit(var cp: TGCowPtr<T>): T; inline;
-    procedure Release; inline;
+    procedure Release;
     property  Allocated: Boolean read GetAllocated;
     property  RefCount: Integer read GetRefCount;
   { use ReadPtr to read data value, or to write/modify data value if COW is not required }
