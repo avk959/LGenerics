@@ -377,6 +377,7 @@ type
     procedure SymmetricDifference1;
     procedure Equality;
     procedure Contains;
+    procedure TestIn;
   end;
 
 implementation
@@ -4183,6 +4184,17 @@ begin
   s1.AddAll(IntArray11);
   AssertTrue(s1 <= s2);
   AssertFalse(s2 <= s1);
+end;
+
+procedure TLiteTreeSetTest.TestIn;
+var
+  s: TSet;
+begin
+  AssertFalse(10 in s);
+  s.AddAll(IntArray21);
+  AssertTrue(10 in s);
+  AssertFalse(0 in s);
+  AssertFalse(22 in s);
 end;
 
 initialization
