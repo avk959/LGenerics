@@ -527,6 +527,7 @@ type
     class operator ><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
     class operator =(constref L, R: TGLiteTreeSet): Boolean; inline;
     class operator <=(constref L, R: TGLiteTreeSet): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean; inline;
     function  GetEnumerator: TEnumerator;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray;
@@ -2064,6 +2065,11 @@ begin
         Result := L;
         Result.SymmetricSubtract(R);
       end;
+end;
+
+class operator TGLiteTreeSet.in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean;
+begin
+  Result := aSet.Contains(aValue);
 end;
 
 class operator TGLiteTreeSet. = (constref L, R: TGLiteTreeSet): Boolean;
