@@ -32,6 +32,7 @@ uses
   LGMultimapTest,
   LGBiMapTest,
   LGTable2DTest,
+  LGRootTreeTest,
   LGSparseGraphTest,
   LGSimpleGraphTest,
   LGSimpleDiGraphTest;
