@@ -385,6 +385,7 @@ type
     class operator ><(constref L, R: TGLiteHashSetLP): TGLiteHashSetLP;
     class operator =(constref L, R: TGLiteHashSetLP): Boolean; inline;
     class operator <=(constref L, R: TGLiteHashSetLP): Boolean; inline;
+    class operator in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean; inline;
     function  DefaultLoadFactor: Single; inline;
     function  MaxLoadFactor: Single; inline;
     function  MinLoadFactor: Single; inline;
@@ -1466,6 +1467,11 @@ begin
         Result := L;
         Result.SymmetricSubtract(R);
       end;
+end;
+
+class operator TGLiteHashSetLP.in(constref aValue: T; constref aSet: TGLiteHashSetLP): Boolean;
+begin
+  Result := aSet.Contains(aValue);
 end;
 
 class operator TGLiteHashSetLP. = (constref L, R: TGLiteHashSetLP): Boolean;
