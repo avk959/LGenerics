@@ -31,7 +31,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="1"/>
-    <Files Count="47">
+    <Files Count="48">
       <Item1>
         <Filename Value="LGAbstractContainer.pas"/>
         <UnitName Value="LGAbstractContainer"/>
@@ -221,6 +221,10 @@
         <Filename Value="include\SparseGraphIntSetH.inc"/>
         <Type Value="Include"/>
       </Item47>
+      <Item48>
+        <Filename Value="LGRootTree.pas"/>
+        <UnitName Value="LGRootTree"/>
+      </Item48>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>
