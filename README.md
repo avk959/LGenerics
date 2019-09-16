@@ -32,6 +32,7 @@
   - bijective map(unit LGBiMap)
   - sparse 2D table(unit LGTable2D)
   - disjoint set(unit LGHashSet)
+  - rooted tree(unit LGRootTree)
   - sparse labeled undirected graph(unit LGSimpleGraph)
   - sparse labeled directed graph(unit LGSimpleDigraph)
 
