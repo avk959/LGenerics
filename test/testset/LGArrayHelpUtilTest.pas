@@ -52,6 +52,8 @@ type
     procedure CreateMergeCopyOfLDyn7RStatic7;
     procedure CreateMergeCopyOfLDyn7RDyn7;
 
+    procedure Resize;
+
     procedure AppendToEmpty;
     procedure Append;
 
@@ -303,6 +305,21 @@ var
 begin
   a := TIntHelper.CreateMerge(TIntHelper.CreateCopy(IntSrc7), TIntHelper.CreateCopy(IntSrc10[2..8]));
   AssertTrue(TCompHelper.Same(MergedIntSrc, a));
+end;
+
+procedure TArrayHelpUtilTest.Resize;
+var
+  a: TIntArray = nil;
+  b: TIntArray;
+begin
+  b := TIntHelper.Resize(a, 0);
+  AssertTrue(b = nil);
+  b := TIntHelper.Resize(a, 125);
+  AssertTrue(Pointer(b) = Pointer(a));
+  b := TIntHelper.Resize(a, 225);
+  AssertTrue(Pointer(b) = Pointer(a));
+  b := TIntHelper.Resize(a, 0);
+  AssertTrue(b = nil);
 end;
 
 procedure TArrayHelpUtilTest.AppendToEmpty;
