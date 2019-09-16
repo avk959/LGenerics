@@ -112,6 +112,8 @@ type
     class function  CreateMerge(constref L, R: array of T): TArray; static;
     class function  CreateRandomShuffle(constref A: array of T): TArray; static;
     class procedure Fill(var A: array of T; constref aValue: T); static;
+  { returns resized array }
+    class function  Resize(var A: TArray; aNewSize: SizeInt): TArray; static; inline;
     class function  Append(var A: TArray; constref aValue: T): SizeInt; static;
   { if aSrc <> aDst appends aSrc to aDst, sets aSrc to nil and returns count of merged elements,
     otherwise returns 0}
@@ -1180,6 +1182,12 @@ var
 begin
   for I := 0 to System.High(A) do
     A[I] := aValue;
+end;
+
+class function TGArrayHelpUtil.Resize(var A: TArray; aNewSize: SizeInt): TArray;
+begin
+  System.SetLength(A, aNewSize);
+  Result := A;
 end;
 
 class function TGArrayHelpUtil.Append(var A: TArray; constref aValue: T): SizeInt;
