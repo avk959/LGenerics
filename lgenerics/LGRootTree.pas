@@ -18,7 +18,7 @@
 *                                                                           *
 *****************************************************************************}
 unit LGRootTree;
-                 //todo: LGTree ???
+
 {$mode objfpc}{$H+}
 {$INLINE ON}
 {$MODESWITCH ADVANCEDRECORDS}
@@ -76,7 +76,6 @@ type
     PValue = ^T;
     TArray = array of T;
 
-    { TTreeNode }
     TTreeNode = record
     private
     type
@@ -178,9 +177,9 @@ type
 
     public
       class operator = (L, R: TTreeNode): Boolean; inline;
-    { default enumerator lists the node subtree in BFS order }
+    { default enumerator lists the node subtree in BFS order(level by level) }
       function GetEnumerator: TEnumerator; inline;
-    { returns True if a node pointer is assigned }
+    { returns True if an internal node pointer is assigned }
       function Assigned: Boolean; inline;
     { sets the node pointer to nil }
       procedure Clear; inline;
@@ -190,7 +189,7 @@ type
       function IsLeaf: Boolean; inline;
     { returns the number of children }
       function Degree: SizeInt;
-    { returns the distance between a node and the root }
+    { returns the distance between a node and the root(the root is at level 0) }
       function Level: SizeInt; inline;
     { returns the number of edges on the longest path between a node and a descendant leaf }
       function Height: SizeInt;
