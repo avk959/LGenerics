@@ -51,6 +51,7 @@ type
     procedure TreeNodeGetFirstChild;
     procedure TreeNodeGetSibling;
     procedure TreeNodeInSameTree;
+    procedure TreeNodeDistanceFrom;
     procedure TreeNodeIsDescendant;
     procedure TreeNodeIsAncestor;
     procedure TreeNodeGetLca;
@@ -425,6 +426,18 @@ begin
   AssertTrue(L.InSameTree(R));
   L := Tree2.Root.AddChild;
   AssertFalse(L.InSameTree(R));
+end;
+
+procedure TTestLiteRootTree.TreeNodeDistanceFrom;
+var
+  Tree, Tree2: TTestTree;
+  Node: TTreeNode;
+begin
+  CreateTestTree11(Tree);
+  Node := FindNode(Tree.Root, 3);
+  AssertTrue(Node.DistanceFrom(FindNode(Tree.Root, 9)) = 3);
+  AssertTrue(Node.DistanceFrom(FindNode(Tree.Root, 7)) = 4);
+  AssertTrue(Node.DistanceFrom(Tree2.Root.AddChild) = -1);
 end;
 
 procedure TTestLiteRootTree.TreeNodeIsDescendant;
