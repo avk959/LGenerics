@@ -1124,19 +1124,19 @@ end;
 
 class function TGLiteRootedTree.DoRemoveNode(aNode: PNode): SizeInt;
 var
-  Queue: TQueue;
+  Stack: TNodeStack;
   Curr: PNode = nil;
   Next: PNode;
 begin
-  Queue.Enqueue(aNode);
+  Stack.Push(aNode);
   Result := 0;
-  while Queue.TryDequeue(Curr) do
+  while Stack.TryPop(Curr) do
     begin
       Inc(Result);
       Next := Curr^.Child;
       while Next <> nil do
         begin
-          Queue.Enqueue(Next);
+          Stack.Push(Next);
           Next := Next^.Sibling;
         end;
       FreeNode(Curr);
@@ -1145,19 +1145,19 @@ end;
 
 class function TGLiteRootedTree.DoRemoveNode(aNode: PNode; aBeforeRemove: TNestNodeEvent): SizeInt;
 var
-  Queue: TQueue;
+  Stack: TNodeStack;
   Curr: PNode = nil;
   Next: PNode;
 begin
-  Queue.Enqueue(aNode);
+  Stack.Push(aNode);
   Result := 0;
-  while Queue.TryDequeue(Curr) do
+  while Stack.TryPop(Curr) do
     begin
       Inc(Result);
       Next := Curr^.Child;
       while Next <> nil do
         begin
-          Queue.Enqueue(Next);
+          Stack.Push(Next);
           Next := Next^.Sibling;
         end;
       aBeforeRemove(TTreeNode(Curr));
