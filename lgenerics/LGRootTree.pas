@@ -746,19 +746,19 @@ end;
 
 function TGLiteRootedTree.TTreeNode.Size: SizeInt;
 var
-  Queue: TQueue;
+  Stack: TNodeStack;
   Curr: PNode = nil;
   Next: PNode;
 begin
-  Queue.Enqueue(FNode);
+  Stack.Push(FNode);
   Result := 0;
-  while Queue.TryDequeue(Curr) do
+  while Stack.TryPop(Curr) do
     begin
       Inc(Result);
       Next := Curr^.Child;
       while Next <> nil do
         begin
-          Queue.Enqueue(Next);
+          Stack.Push(Next);
           Next := Next^.Sibling;
         end;
     end;
