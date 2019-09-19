@@ -241,6 +241,7 @@ type
     procedure PassByValue;
     procedure PassAsVar;
     procedure Release;
+    procedure Unique;
     procedure Value;
   end;
 
@@ -1847,6 +1848,50 @@ begin
 
   Ptr.Release;
   AssertTrue(Ptr.RefCount = 0);
+end;
+
+procedure TCowPtrTest.Unique;
+var
+  Ptr, Ptr2: TTestPtr;
+begin
+  {%H-}Ptr.Value := CONST_REC;
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue({%H-}Ptr2.RefCount = 0);
+
+  Ptr2 := Ptr;
+  AssertTrue(Ptr.RefCount = 2);
+  AssertTrue(Ptr2.RefCount = 2);
+
+  FTestPtr := Ptr2;
+  AssertTrue(Ptr.RefCount = 3);
+  AssertTrue(Ptr2.RefCount = 3);
+  AssertTrue(FTestPtr.RefCount = 3);
+
+  Ptr.Unique;
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue(Ptr2.RefCount = 2);
+  AssertTrue(FTestPtr.RefCount = 2);
+
+  Ptr.ReadPtr^.Name := 'New name';
+  Ptr2.Unique;
+  AssertTrue(Ptr.RefCount = 1);
+  AssertTrue(Ptr2.RefCount = 1);
+  AssertTrue(FTestPtr.RefCount = 1);
+
+  Ptr2.ReadPtr^.Color := tcRed;
+  FTestPtr.ReadPtr^.Count := 7;
+
+  AssertTrue(Ptr.ReadPtr^.Name = 'New name');
+  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
+  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+
+  AssertTrue(Ptr2.ReadPtr^.Name = CONST_REC.Name);
+  AssertTrue(Ptr2.ReadPtr^.Color = tcRed);
+  AssertTrue(Ptr2.ReadPtr^.Count = CONST_REC.Count);
+
+  AssertTrue(FTestPtr.ReadPtr^.Name = CONST_REC.Name);
+  AssertTrue(FTestPtr.ReadPtr^.Color = CONST_REC.Color);
+  AssertTrue(FTestPtr.ReadPtr^.Count = 7);
 end;
 
 procedure TCowPtrTest.Value;
