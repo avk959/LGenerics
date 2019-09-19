@@ -233,12 +233,12 @@ type
     PInstance = ^TInstance;
   var
     FInstance: PInstance;
+    procedure NewInstance;
+    procedure ReleaseInstance;
     function  GetAllocated: Boolean; inline;
     function  GetRefCount: Integer;
     function  GetPtr: PValue;
-    procedure DoRelease;
-    function  GetReadPtr: PValue; inline;
-    function  GetWritePtr: PValue;
+    function  GetUniqPtr: PValue;
     function  GetValue: T; inline;
     procedure SetValue(const aValue: T); inline;
     class operator Initialize(var cp: TGCowPtr<T>); inline;
@@ -248,12 +248,14 @@ type
   public
     class operator Implicit(var cp: TGCowPtr<T>): T; inline;
     procedure Release;
+  { ensures that the current ref is unique }
+    procedure Unique;
     property  Allocated: Boolean read GetAllocated;
     property  RefCount: Integer read GetRefCount;
   { use ReadPtr to read data value, or to write/modify data value if COW is not required }
-    property  ReadPtr: PValue read GetReadPtr;
+    property  ReadPtr: PValue read GetPtr;
   { use WritePtr to write/modify data value if COW is required }
-    property  WritePtr: PValue read GetWritePtr;
+    property  WritePtr: PValue read GetUniqPtr;
   { SetValue always uses COW }
     property  Value: T read GetValue write SetValue;
   end;
@@ -1201,6 +1203,23 @@ end;
 
 { TGCowPtr }
 
+procedure TGCowPtr<T>.NewInstance;
+begin
+  FInstance := GetMem(SizeOf(TInstance));
+  FInstance^.RefCount := 1;
+  FillChar(FInstance^.Value, SizeOf(T), 0);
+end;
+
+procedure TGCowPtr<T>.ReleaseInstance;
+begin
+  if InterlockedDecrement(FInstance^.RefCount) = 0 then
+    begin
+      FInstance^.Value := Default(T);
+      FreeMem(FInstance);
+    end;
+  FInstance := nil;
+end;
+
 function TGCowPtr<T>.GetAllocated: Boolean;
 begin
   Result := FInstance <> nil;
@@ -1217,43 +1236,14 @@ end;
 function TGCowPtr<T>.GetPtr: PValue;
 begin
   if FInstance = nil then
-    begin
-      FInstance := GetMem(SizeOf(TInstance));
-      FInstance^.RefCount := 1;
-      FillChar(FInstance^.Value, SizeOf(T), 0);
-    end;
+    NewInstance;
   Result := @FInstance^.Value;
 end;
 
-procedure TGCowPtr<T>.DoRelease;
+function TGCowPtr<T>.GetUniqPtr: PValue;
 begin
-  if InterlockedDecrement(FInstance^.RefCount) = 0 then
-    begin
-      FInstance^.Value := Default(T);
-      FreeMem(FInstance);
-    end;
-  FInstance := nil;
-end;
-
-function TGCowPtr<T>.GetReadPtr: PValue;
-begin
+  Unique;
   Result := GetPtr;
-end;
-
-function TGCowPtr<T>.GetWritePtr: PValue;
-var
-  v: T;
-  HasCopy: Boolean = False;
-begin
-  if (FInstance <> nil) and (FInstance^.RefCount > 1) then
-    begin
-      v := FInstance^.Value;
-      HasCopy := True;
-      DoRelease;
-    end;
-  Result := GetPtr;
-  if HasCopy then
-    Result^ := v;
 end;
 
 function TGCowPtr<T>.GetValue: T;
@@ -1264,7 +1254,7 @@ end;
 procedure TGCowPtr<T>.SetValue(const aValue: T);
 begin
   if (FInstance <> nil) and (FInstance^.RefCount > 1) then
-    DoRelease;
+    ReleaseInstance;
   GetPtr^ := aValue;
 end;
 
@@ -1302,7 +1292,20 @@ end;
 procedure TGCowPtr<T>.Release;
 begin
   if FInstance <> nil then
-    DoRelease;
+    ReleaseInstance;
+end;
+
+procedure TGCowPtr<T>.Unique;
+var
+  Old: PInstance;
+begin
+  if (FInstance <> nil) and (FInstance^.RefCount > 1) then
+    begin
+      InterlockedDecrement(FInstance^.RefCount);
+      Old := FInstance;
+      NewInstance;
+      FInstance^.Value := Old^.Value;
+    end;
 end;
 
 { TGMapEntry }
