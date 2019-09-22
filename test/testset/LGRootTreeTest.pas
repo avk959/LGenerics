@@ -9,6 +9,7 @@ interface
 uses
   SysUtils, fpcunit, testregistry,
   LGUtils,
+  LGArrayHelpers,
   LGStack,
   LGRootTree;
 
@@ -34,7 +35,7 @@ type
     TObjTreeNode = TObjTestTree.TTreeNode;
 
     procedure CreateTestTree11(out aTree: TTestTree);
-    function  GetTestTree11: TTestTree;
+    procedure CreateTestTree10(out aTree: TTestTree);
     procedure CreateRandomTree(out aTree: TTestTree);
     function  FindNode(aRoot: TTreeNode; aValue: Integer): TTreeNode;
   published
@@ -49,6 +50,7 @@ type
     procedure TreeNodeSize;
     procedure TreeNodeGetParent;
     procedure TreeNodeGetFirstChild;
+    procedure TreeNodeGetLastChild;
     procedure TreeNodeGetSibling;
     procedure TreeNodeInSameTree;
     procedure TreeNodeDistanceFrom;
@@ -56,14 +58,17 @@ type
     procedure TreeNodeIsAncestor;
     procedure TreeNodeGetLca;
     procedure TreeNodeAddChild;
+    procedure AddLastChild;
     procedure TreeNodeAddChildTree;
+    procedure TreeNodeAddLastChildTree;
     procedure TreeNodeExtract;
     procedure TreeNodeAncestors;
     procedure TreeNodeChildren;
     procedure TreeNodePreorderTraversal;
     procedure TreeNodePostorderTraversal;
     procedure TreeNodeBfsTraversal;
-    procedure TreeNodeDfsTraversal;
+    procedure TreeNodeDfsTraversalR2L;
+    procedure TreeNodeDfsTraversalL2R;
     procedure TreeEnumerator;
     procedure TreeAssignment;
     procedure TreeClear;
@@ -105,21 +110,37 @@ begin
       10
 }
   aTree.Root.Value := 0;
-  L := aTree.Root.AddChild(1);
   R := aTree.Root.AddChild(2);
-  L.AddChild(3);
+  L := aTree.Root.AddChild(1);
   R.AddChild(4);
   R.AddChild(7);
-  R := L.AddChild(6);
-  L := L.AddChild(5);
-  L.AddChild(8);
-  R := R.AddChild(9);
-  R.AddChild(10);
+  L.AddChild(6).AddChild(9).AddChild(10);
+  L.AddChild(5).AddChild(8);
+  L.AddChild(3);
 end;
 
-function TTestLiteRootTree.GetTestTree11: TTestTree;
+procedure TTestLiteRootTree.CreateTestTree10(out aTree: TTestTree);
+var
+  L, R: TTreeNode;
 begin
-  CreateTestTree11(Result);
+{
+        0
+      / | \
+    1   2   3
+  / | \   / | \
+ 4  5  6 7  8  9
+}
+
+  aTree.Root.Value := 0;
+  R := aTree.Root.AddChild(3);
+  aTree.Root.AddChild(2);
+  L := aTree.Root.AddChild(1);
+  R.AddChild(9);
+  R.AddChild(8);
+  R.AddChild(7);
+  L.AddChild(6);
+  L.AddChild(5);
+  L.AddChild(4);
 end;
 
 procedure TTestLiteRootTree.CreateRandomTree(out aTree: TTestTree);
@@ -392,6 +413,23 @@ begin
   AssertFalse(Child.Assigned);
 end;
 
+procedure TTestLiteRootTree.TreeNodeGetLastChild;
+var
+  Tree: TTestTree;
+  Child: TTreeNode;
+begin
+  {%H-}Child.Clear;
+  AssertFalse(Tree.Root.GetLastChild(Child));
+  AssertFalse(Child.Assigned);
+  CreateTestTree10(Tree);
+  AssertTrue(Tree.Root.GetLastChild(Child));
+  AssertTrue(Child.Value = 3);
+  AssertTrue(Child.GetLastChild(Child));
+  AssertTrue(Child.Value = 9);
+  AssertFalse(FindNode(Tree.Root, 2).GetLastChild(Child));
+  AssertFalse(Child.Assigned);
+end;
+
 procedure TTestLiteRootTree.TreeNodeGetSibling;
 var
   Tree: TTestTree;
@@ -521,6 +559,23 @@ begin
   AssertTrue(Child.Value = 15);
 end;
 
+procedure TTestLiteRootTree.AddLastChild;
+var
+  Tree: TTestTree;
+  Node, Child, Tmp: TTreeNode;
+begin
+  Node := Tree.Root;
+  Child := Node.AddLastChild;
+  AssertTrue(Child.Assigned);
+  AssertTrue(Node.GetLastChild(Tmp));
+  AssertTrue(Tmp = Child);
+  Child := Node.AddLastChild(15);
+  AssertTrue(Child.Assigned);
+  AssertTrue(Node.GetLastChild(Tmp));
+  AssertTrue(Tmp = Child);
+  AssertTrue(Child.Value = 15);
+end;
+
 procedure TTestLiteRootTree.TreeNodeAddChildTree;
 var
   Tree, ChildTree: TTestTree;
@@ -539,6 +594,20 @@ begin
   AssertTrue(Tree.Root.GetFirstChild(Child));
   AssertTrue(Child.Value = 0);
   AssertTrue(Tree.Root.Size = 12);
+end;
+
+procedure TTestLiteRootTree.TreeNodeAddLastChildTree;
+var
+  Tree, ChildTree: TTestTree;
+  Child: TTreeNode;
+begin
+  CreateTestTree10(Tree);
+  CreateTestTree11(ChildTree);
+  Tree.Root.AddLastChildTree(ChildTree);
+  AssertTrue(ChildTree.IsEmpty);
+  AssertTrue(Tree.Count = 21);
+  AssertTrue(Tree.Root.GetLastChild(Child));
+  AssertTrue(Child.Value = 0);
 end;
 
 procedure TTestLiteRootTree.TreeNodeExtract;
@@ -684,7 +753,7 @@ begin
     end;
 end;
 
-procedure TTestLiteRootTree.TreeNodeDfsTraversal;
+procedure TTestLiteRootTree.TreeNodeDfsTraversalR2L;
 var
   Counter: Integer = 0;
   procedure OnGray(aNode: TTreeNode);
@@ -702,10 +771,39 @@ var
   sz: SizeInt;
 begin
   CreateRandomTree(Tree);
-  sz := Tree.Root.DfsTraversal(nil, @OnGray, @OnBlack);
+  sz := Tree.Root.DfsTraversalR2L(nil, @OnGray, @OnBlack);
   AssertTrue(sz = Tree.Root.Size);
   for Node in Tree.Root.PreorderTraversal do
     AssertTrue(Node.Size = Node.Value);
+end;
+
+procedure TTestLiteRootTree.TreeNodeDfsTraversalL2R;
+type
+  THelper = specialize TGOrdinalArrayHelper<Integer>;
+var
+  Counter: Integer = 0;
+  a: array of Integer = nil;
+  procedure OnGray(aNode: TTreeNode);
+  begin
+    a[Counter] := aNode.Value;
+    Inc(Counter);
+  end;
+var
+  Tree: TTestTree;
+const
+  Expect10: array[0..9] of Integer = (0, 1, 4, 5, 6, 2, 3, 7, 8, 9);
+  Expect11: array[0..10] of Integer = (0, 1, 3, 5, 8, 6, 9, 10, 2, 7, 4);
+begin
+  CreateTestTree10(Tree);
+  SetLength(a, 10);
+  AssertTrue(Tree.Root.DfsTraversalL2R(nil, @OnGray, nil) = Tree.Count);
+  AssertTrue(THelper.Same(a, Expect10));
+  Tree.Clear;
+  Counter := 0;
+  SetLength(a, 11);
+  CreateTestTree11(Tree);
+  AssertTrue(Tree.Root.DfsTraversalL2R(nil, @OnGray, nil) = Tree.Count);
+  AssertTrue(THelper.Same(a, Expect11));
 end;
 
 procedure TTestLiteRootTree.TreeEnumerator;
