@@ -31,7 +31,8 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGStack,
-  LGQueue;
+  LGQueue,
+  LGVector;
 
 type
   { TGLiteRootedTree }
@@ -58,18 +59,22 @@ type
       constructor Create(aNode, aCopy: PNode);
     end;
 
-    TLvlNode = record
+    TIdxNode = record
       Node: PNode;
-      Level: SizeInt;
+      Index: SizeInt;
+      property Level: SizeInt read Index write Index;
       constructor Create(aNode: PNode; aLevel: SizeInt);
+      constructor Create(aNode: PNode);
     end;
 
     PVisitNode  = ^TVisitNode;
+    PIdxNode    = ^TIdxNode;
     TVisitStack = specialize TGLiteStack<TVisitNode>;
+    TIdxStack   = specialize TGLiteStack<TIdxNode>;
     TNodeStack  = specialize TGLiteStack<PNode>;
     TQueue      = specialize TGLiteQueue<PNode>;
     TPairQueue  = specialize TGLiteQueue<TNodePair>;
-    TLvlQueue   = specialize TGLiteQueue<TLvlNode>;
+    TIdxQueue   = specialize TGLiteQueue<TIdxNode>;
 
   public
   type
@@ -89,6 +94,8 @@ type
       function  GetRoot: TTreeNode;
       function  GetDepth(out aRoot: PNode): SizeInt;
       class function  AddNodeChild(aNode, aChild: PNode): PNode;  static;
+      class function  FindLastNodeChild(aNode: PNode; out aChild: PNode): Boolean;  static;
+      class function  AddNodeLastChild(aNode, aChild: PNode): PNode;  static;
       class procedure CutFromTree(aNode: PNode); static;
       class operator := (aNode: PNode): TTreeNode; inline;
     public
@@ -175,6 +182,10 @@ type
         function ToArray: TArray;
       end;
 
+    private
+    type
+      TChildEnums = specialize TGLiteVector<TChildEnumerator>;
+
     public
       class operator = (L, R: TTreeNode): Boolean; inline;
     { default enumerator lists the node subtree in BFS order(level by level) }
@@ -201,7 +212,10 @@ type
       function HasChildren: Boolean; inline;
       function HasSibling: Boolean; inline;
       function GetParent(out aParent: TTreeNode): Boolean; inline;
+    { returns True and the leftmost child of the node in aChild if the node has children }
       function GetFirstChild(out aChild: TTreeNode): Boolean; inline;
+    { returns True and the rightmost child of the node in aChild if the node has children }
+      function GetLastChild(out aChild: TTreeNode): Boolean; inline;
       function GetSibling(out aSibling: TTreeNode): Boolean; inline;
     { returns True if the node and aNode belong to the same tree }
       function InSameTree(aNode: TTreeNode): Boolean; inline;
@@ -216,13 +230,20 @@ type
       if the node and aNode belong to the same tree, and neither the node nor aNode is root,
       otherwise returns False }
       function GetLca(aNode: TTreeNode; out aLca: TTreeNode): Boolean;
-    { creates and adds a new child node with a default value }
+    { adds a new leftmost child node with a default value and returns the added node }
       function AddChild: TTreeNode; inline;
-    { creates and adds a new child node with value aValue }
+    { adds a new leftmost child node with value aValue and returns the added node }
       function AddChild(const aValue: T): TTreeNode; inline;
-    { adds the root of aTree to node children, aTree becomes empty;
-      aTree must be non-empty }
+    { adds the root of aTree as the leftmost child node and returns the added node;
+      aTree must be non-empty and becomes empty after adding }
       function AddChildTree(var aTree: TGLiteRootedTree): TTreeNode; inline;
+    { adds a new rightmost child node with a default value and returns the added node }
+      function AddLastChild: TTreeNode; inline;
+    { adds a new rightmost child node with value aValue and returns the added node }
+      function AddLastChild(const aValue: T): TTreeNode; inline;
+    { adds the root of aTree as the rightmost child node and returns the added node;
+      aTree must be non-empty and becomes empty after adding }
+      function AddLastChildTree(var aTree: TGLiteRootedTree): TTreeNode; inline;
     { returns True and a tree with this node as the root in aTree if the node
       is not the root of any tree, otherwise returns False and an empty tree }
       function Extract(out aTree: TGLiteRootedTree): Boolean;
@@ -242,13 +263,22 @@ type
       function BfsTraversal(aOnWhite, aOnGray, aOnBlack: TNodeEvent): SizeInt;
     { ..... }
       function BfsTraversal(aOnWhite, aOnGray, aOnBlack: TNestNodeEvent): SizeInt;
-    { lists the node subtree in depth-first search order; returns the number of nodes found;
+    { lists the node subtree in depth-first right-to-left search order;
+      returns the number of nodes found;
       aOnWhite is called when a node is discovered(if assigned),
       aOnGray is called when a node is visited(if assigned),
       aOnBlack is called when a node is done(if assigned) }
-      function DfsTraversal(aOnWhite, aOnGray, aOnBlack: TNodeEvent): SizeInt;
+      function DfsTraversalR2L(aOnWhite, aOnGray, aOnBlack: TNodeEvent): SizeInt;
     { ..... }
-      function DfsTraversal(aOnWhite, aOnGray, aOnBlack: TNestNodeEvent): SizeInt;
+      function DfsTraversalR2L(aOnWhite, aOnGray, aOnBlack: TNestNodeEvent): SizeInt;
+    { lists the node subtree in depth-first left-to-right search order;
+      returns the number of nodes found;
+      aOnWhite is called when a node is discovered(if assigned),
+      aOnGray is called when a node is visited(if assigned),
+      aOnBlack is called when a node is done(if assigned) }
+      function DfsTraversalL2R(aOnWhite, aOnGray, aOnBlack: TNodeEvent): SizeInt;
+    { ..... }
+      function DfsTraversalL2R(aOnWhite, aOnGray, aOnBlack: TNestNodeEvent): SizeInt;
       property Value: T read GetValue write SetValue;
       property MutValue: PValue read GetMutValue;
     { the root of the tree to which the node belongs }
@@ -346,12 +376,18 @@ begin
   NodeCopy := aCopy;
 end;
 
-{ TGLiteRootedTree.TLvlNode }
+{ TGLiteRootedTree.TIdxNode }
 
-constructor TGLiteRootedTree.TLvlNode.Create(aNode: PNode; aLevel: SizeInt);
+constructor TGLiteRootedTree.TIdxNode.Create(aNode: PNode; aLevel: SizeInt);
 begin
   Node := aNode;
-  Level := aLevel;
+  Index := aLevel;
+end;
+
+constructor TGLiteRootedTree.TIdxNode.Create(aNode: PNode);
+begin
+  Node := aNode;
+  Index := NULL_INDEX;
 end;
 
 { TGLiteRootedTree.TTreeNode.TEnumerator }
@@ -617,6 +653,29 @@ begin
   Result := aChild;
 end;
 
+class function TGLiteRootedTree.TTreeNode.FindLastNodeChild(aNode: PNode; out aChild: PNode): Boolean;
+begin
+  aChild := aNode^.Child;
+  Result := aChild <> nil;
+  if Result then
+    while aChild^.Sibling <> nil do
+      aChild := aChild^.Sibling;
+end;
+
+class function TGLiteRootedTree.TTreeNode.AddNodeLastChild(aNode, aChild: PNode): PNode;
+var
+  LastChild: PNode;
+begin
+  if FindLastNodeChild(aNode, LastChild) then
+    begin
+      aChild^.Parent := aNode;
+      LastChild^.Sibling := aChild;
+      Result := aChild;
+    end
+  else
+    Result := AddNodeChild(aNode, aChild);
+end;
+
 class procedure TGLiteRootedTree.TTreeNode.CutFromTree(aNode: PNode);
 var
   Prev: PNode;
@@ -692,13 +751,13 @@ end;
 
 function TGLiteRootedTree.TTreeNode.Height: SizeInt;
 var
-  Queue: TLvlQueue;
-  Curr: TLvlNode;
+  Queue: TIdxQueue;
+  Curr: TIdxNode;
   Next: PNode;
   h: SizeInt;
 begin
-  Queue.Enqueue(TLvlNode.Create(FNode, 0));
-  Curr := Default(TLvlNode);
+  Queue.Enqueue(TIdxNode.Create(FNode, 0));
+  Curr := Default(TIdxNode);
   Result := 0;
   while Queue.TryDequeue(Curr) do
     begin
@@ -709,7 +768,7 @@ begin
         begin
           h := Succ(Curr.Level);
           repeat
-             Queue.Enqueue(TLvlNode.Create(Next, h));
+             Queue.Enqueue(TIdxNode.Create(Next, h));
              Next := Next^.Sibling;
           until Next = nil;
         end;
@@ -718,14 +777,14 @@ end;
 
 function TGLiteRootedTree.TTreeNode.Width(out aLevel: SizeInt): SizeInt;
 var
-  Queue: TLvlQueue;
-  Curr: TLvlNode;
+  Queue: TIdxQueue;
+  Curr: TIdxNode;
   Next: PNode;
   Lvl: SizeInt;
 begin
   aLevel := GetDepth(Next);
-  Queue.Enqueue(TLvlNode.Create(Next, 0));
-  Curr := Default(TLvlNode);
+  Queue.Enqueue(TIdxNode.Create(Next, 0));
+  Curr := Default(TIdxNode);
   Result := 0;
   while Queue.TryDequeue(Curr) do
     begin
@@ -737,7 +796,7 @@ begin
         begin
           Lvl := Succ(Curr.Level);
           repeat
-             Queue.Enqueue(TLvlNode.Create(Next, Lvl));
+             Queue.Enqueue(TIdxNode.Create(Next, Lvl));
              Next := Next^.Sibling;
           until Next = nil;
         end;
@@ -789,6 +848,11 @@ function TGLiteRootedTree.TTreeNode.GetFirstChild(out aChild: TTreeNode): Boolea
 begin
   aChild.FNode := FNode^.Child;
   Result := aChild.FNode <> nil;
+end;
+
+function TGLiteRootedTree.TTreeNode.GetLastChild(out aChild: TTreeNode): Boolean;
+begin
+  Result := FindLastNodeChild(FNode, aChild.FNode);
 end;
 
 function TGLiteRootedTree.TTreeNode.GetSibling(out aSibling: TTreeNode): Boolean;
@@ -932,6 +996,22 @@ begin
   aTree.FRoot := nil;
 end;
 
+function TGLiteRootedTree.TTreeNode.AddLastChild: TTreeNode;
+begin
+  Result.FNode := AddNodeLastChild(FNode, TGLiteRootedTree.CreateNode);
+end;
+
+function TGLiteRootedTree.TTreeNode.AddLastChild(const aValue: T): TTreeNode;
+begin
+  Result.FNode := AddNodeLastChild(FNode, TGLiteRootedTree.NewNode(aValue));
+end;
+
+function TGLiteRootedTree.TTreeNode.AddLastChildTree(var aTree: TGLiteRootedTree): TTreeNode;
+begin
+  Result.FNode := AddNodeLastChild(FNode, aTree.FRoot);
+  aTree.FRoot := nil;
+end;
+
 function TGLiteRootedTree.TTreeNode.Extract(out aTree: TGLiteRootedTree): Boolean;
 begin
   if IsRoot then
@@ -1017,41 +1097,7 @@ begin
     end;
 end;
 
-function TGLiteRootedTree.TTreeNode.DfsTraversal(aOnWhite, aOnGray, aOnBlack: TNodeEvent): SizeInt;
-var
-  Stack: TVisitStack;
-  Next: PNode;
-  pFlag: PVisitNode = nil;
-begin
-  if aOnWhite <> nil then
-    aOnWhite(TTreeNode(FNode));
-  Stack.Push(TVisitNode.Create(FNode));
-  Result := 0;
-  while Stack.TryPeekItem(pFlag) do
-    if not pFlag^.Visited then
-      begin
-        pFlag^.Visited := True;
-        if aOnGray <> nil then
-          aOnGray(TTreeNode(pFlag^.Node));
-        Next := pFlag^.Node^.Child;
-        while Next <> nil do
-          begin
-            if aOnWhite <> nil then
-              aOnWhite(TTreeNode(Next));
-            Stack.Push(TVisitNode.Create(Next));
-            Next := Next^.Sibling;
-          end;
-      end
-    else
-      begin
-        Stack.Pop;
-        Inc(Result);
-        if aOnBlack <> nil then
-          aOnBlack(TTreeNode(pFlag^.Node));
-      end;
-end;
-
-function TGLiteRootedTree.TTreeNode.DfsTraversal(aOnWhite, aOnGray, aOnBlack: TNestNodeEvent): SizeInt;
+function TGLiteRootedTree.TTreeNode.DfsTraversalR2L(aOnWhite, aOnGray, aOnBlack: TNodeEvent): SizeInt;
 var
   Stack: TVisitStack;
   Next: PNode;
@@ -1083,6 +1129,112 @@ begin
         if aOnBlack <> nil then
           aOnBlack(TTreeNode(Next));
       end;
+end;
+
+function TGLiteRootedTree.TTreeNode.DfsTraversalR2L(aOnWhite, aOnGray, aOnBlack: TNestNodeEvent): SizeInt;
+var
+  Stack: TVisitStack;
+  Next: PNode;
+  pFlag: PVisitNode = nil;
+begin
+  if aOnWhite <> nil then
+    aOnWhite(TTreeNode(FNode));
+  Stack.Push(TVisitNode.Create(FNode));
+  Result := 0;
+  while Stack.TryPeekItem(pFlag) do
+    if not pFlag^.Visited then
+      begin
+        pFlag^.Visited := True;
+        if aOnGray <> nil then
+          aOnGray(TTreeNode(pFlag^.Node));
+        Next := pFlag^.Node^.Child;
+        while Next <> nil do
+          begin
+            if aOnWhite <> nil then
+              aOnWhite(TTreeNode(Next));
+            Stack.Push(TVisitNode.Create(Next));
+            Next := Next^.Sibling;
+          end;
+      end
+    else
+      begin
+        Next := Stack.Pop.Node;
+        Inc(Result);
+        if aOnBlack <> nil then
+          aOnBlack(TTreeNode(Next));
+      end;
+end;
+
+function TGLiteRootedTree.TTreeNode.DfsTraversalL2R(aOnWhite, aOnGray, aOnBlack: TNodeEvent): SizeInt;
+var
+  Stack: TIdxStack;
+  Enums: TChildEnums;
+  Next: PNode;
+  pCurr: PIdxNode = nil;
+begin
+  if aOnWhite <> nil then
+    aOnWhite(TTreeNode(FNode));
+  Stack.Push(TIdxNode.Create(FNode));
+  Result := 0;
+  while Stack.TryPeekItem(pCurr) do
+    begin
+      if pCurr^.Index = NULL_INDEX then
+        begin
+          pCurr^.Index := Enums.Add(TTreeNode(pCurr^.Node).Children.GetEnumerator);
+          if aOnGray <> nil then
+            aOnGray(TTreeNode(pCurr^.Node));
+        end;
+      if Enums.Mutable[pCurr^.Index]^.MoveNext then
+        begin
+          Next := Enums[pCurr^.Index].Current.FNode;
+          if aOnWhite <> nil then
+            aOnWhite(TTreeNode(Next));
+          Stack.Push(TIdxNode.Create(Next));
+        end
+      else
+        begin
+          Next := Stack.Pop.Node;
+          Inc(Result);
+          if aOnBlack <> nil then
+            aOnBlack(TTreeNode(Next));
+        end;
+    end;
+end;
+
+function TGLiteRootedTree.TTreeNode.DfsTraversalL2R(aOnWhite, aOnGray, aOnBlack: TNestNodeEvent): SizeInt;
+var
+  Stack: TIdxStack;
+  Enums: TChildEnums;
+  Next: PNode;
+  pCurr: PIdxNode = nil;
+begin
+  if aOnWhite <> nil then
+    aOnWhite(TTreeNode(FNode));
+  Stack.Push(TIdxNode.Create(FNode));
+  Result := 0;
+  while Stack.TryPeekItem(pCurr) do
+    begin
+      if pCurr^.Index = NULL_INDEX then
+        begin
+          pCurr^.Index := Enums.Add(TTreeNode(pCurr^.Node).Children.GetEnumerator);
+          if aOnGray <> nil then
+            aOnGray(TTreeNode(pCurr^.Node));
+        end;
+      if Enums.Mutable[pCurr^.Index]^.MoveNext then
+        begin
+          Next := Enums.Mutable[pCurr^.Index]^.Current.FNode;
+          if aOnWhite <> nil then
+            aOnWhite(TTreeNode(Next));
+          Stack.Push(TIdxNode.Create(Next));
+        end
+      else
+        begin
+          Next := Stack.Pop.Node;
+          Inc(Result);
+          if aOnBlack <> nil then
+            aOnBlack(TTreeNode(Next));
+        end;
+    end;
 end;
 
 { TGLiteRootedTree }
@@ -1189,6 +1341,7 @@ end;
 class function TGLiteRootedTree.SubTreeCopy(aNode: PNode; out aNodeCopy: PNode): SizeInt;
 var
   Queue: TPairQueue;
+  Stack: TNodeStack;
   CurrPair: TNodePair;
   Next, NodeCopy, NextCopy, Sibling: PNode;
 begin
@@ -1204,14 +1357,18 @@ begin
       Inc(Result);
       Next := CurrPair.Node^.Child;
       NodeCopy := CurrPair.NodeCopy;
-      Sibling := nil;
       while Next <> nil do
         begin
           NextCopy := NewNode(Next^.Value);
           NextCopy^.Parent := NodeCopy;
-          NextCopy^.Sibling := Sibling;
           Queue.Enqueue(TNodePair.Create(Next, NextCopy));
+          Stack.Push(NextCopy);
           Next := Next^.Sibling;
+        end;
+      Sibling := nil;
+      while Stack.TryPop(NextCopy) do
+        begin
+          NextCopy^.Sibling := Sibling;
           Sibling := NextCopy;
         end;
       NodeCopy^.Child := Sibling;
