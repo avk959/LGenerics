@@ -31,8 +31,7 @@ uses
   LGUtils,
   {%H-}LGHelpers,
   LGStack,
-  LGQueue,
-  LGVector;
+  LGQueue;
 
 type
   { TGLiteRootedTree }
@@ -59,22 +58,18 @@ type
       constructor Create(aNode, aCopy: PNode);
     end;
 
-    TIdxNode = record
+    TLvlNode = record
       Node: PNode;
-      Index: SizeInt;
-      property Level: SizeInt read Index write Index;
+      Level: SizeInt;
       constructor Create(aNode: PNode; aLevel: SizeInt);
-      constructor Create(aNode: PNode);
     end;
 
     PVisitNode  = ^TVisitNode;
-    PIdxNode    = ^TIdxNode;
     TVisitStack = specialize TGLiteStack<TVisitNode>;
-    TIdxStack   = specialize TGLiteStack<TIdxNode>;
     TNodeStack  = specialize TGLiteStack<PNode>;
     TQueue      = specialize TGLiteQueue<PNode>;
     TPairQueue  = specialize TGLiteQueue<TNodePair>;
-    TIdxQueue   = specialize TGLiteQueue<TIdxNode>;
+    TLvlQueue   = specialize TGLiteQueue<TLvlNode>;
 
   public
   type
@@ -184,7 +179,14 @@ type
 
     private
     type
-      TChildEnums = specialize TGLiteVector<TChildEnumerator>;
+      TEnumNode = record
+        Node: PNode;
+        Enum: TChildEnumerator;
+        Visited: Boolean;
+        constructor Create(aNode: PNode);
+      end;
+      PEnumNode  = ^TEnumNode;
+      TEnumStack = specialize TGLiteStack<TEnumNode>;
 
     public
       class operator = (L, R: TTreeNode): Boolean; inline;
@@ -376,18 +378,20 @@ begin
   NodeCopy := aCopy;
 end;
 
-{ TGLiteRootedTree.TIdxNode }
+{ TGLiteRootedTree.TLvlNode }
 
-constructor TGLiteRootedTree.TIdxNode.Create(aNode: PNode; aLevel: SizeInt);
+constructor TGLiteRootedTree.TLvlNode.Create(aNode: PNode; aLevel: SizeInt);
 begin
   Node := aNode;
-  Index := aLevel;
+  Level := aLevel;
 end;
 
-constructor TGLiteRootedTree.TIdxNode.Create(aNode: PNode);
+{ TGLiteRootedTree.TTreeNode.TEnumNode }
+
+constructor TGLiteRootedTree.TTreeNode.TEnumNode.Create(aNode: PNode);
 begin
   Node := aNode;
-  Index := NULL_INDEX;
+  Visited := False;
 end;
 
 { TGLiteRootedTree.TTreeNode.TEnumerator }
@@ -751,13 +755,13 @@ end;
 
 function TGLiteRootedTree.TTreeNode.Height: SizeInt;
 var
-  Queue: TIdxQueue;
-  Curr: TIdxNode;
+  Queue: TLvlQueue;
+  Curr: TLvlNode;
   Next: PNode;
   h: SizeInt;
 begin
-  Queue.Enqueue(TIdxNode.Create(FNode, 0));
-  Curr := Default(TIdxNode);
+  Queue.Enqueue(TLvlNode.Create(FNode, 0));
+  Curr := Default(TLvlNode);
   Result := 0;
   while Queue.TryDequeue(Curr) do
     begin
@@ -768,7 +772,7 @@ begin
         begin
           h := Succ(Curr.Level);
           repeat
-             Queue.Enqueue(TIdxNode.Create(Next, h));
+             Queue.Enqueue(TLvlNode.Create(Next, h));
              Next := Next^.Sibling;
           until Next = nil;
         end;
@@ -777,14 +781,14 @@ end;
 
 function TGLiteRootedTree.TTreeNode.Width(out aLevel: SizeInt): SizeInt;
 var
-  Queue: TIdxQueue;
-  Curr: TIdxNode;
+  Queue: TLvlQueue;
+  Curr: TLvlNode;
   Next: PNode;
   Lvl: SizeInt;
 begin
   aLevel := GetDepth(Next);
-  Queue.Enqueue(TIdxNode.Create(Next, 0));
-  Curr := Default(TIdxNode);
+  Queue.Enqueue(TLvlNode.Create(Next, 0));
+  Curr := Default(TLvlNode);
   Result := 0;
   while Queue.TryDequeue(Curr) do
     begin
@@ -796,7 +800,7 @@ begin
         begin
           Lvl := Succ(Curr.Level);
           repeat
-             Queue.Enqueue(TIdxNode.Create(Next, Lvl));
+             Queue.Enqueue(TLvlNode.Create(Next, Lvl));
              Next := Next^.Sibling;
           until Next = nil;
         end;
@@ -1167,29 +1171,29 @@ end;
 
 function TGLiteRootedTree.TTreeNode.DfsTraversalL2R(aOnWhite, aOnGray, aOnBlack: TNodeEvent): SizeInt;
 var
-  Stack: TIdxStack;
-  Enums: TChildEnums;
+  Stack: TEnumStack;
   Next: PNode;
-  pCurr: PIdxNode = nil;
+  pCurr: PEnumNode = nil;
 begin
   if aOnWhite <> nil then
-    aOnWhite(TTreeNode(FNode));
-  Stack.Push(TIdxNode.Create(FNode));
+    aOnWhite(Self);
+  Stack.Push(TEnumNode.Create(FNode));
   Result := 0;
   while Stack.TryPeekItem(pCurr) do
     begin
-      if pCurr^.Index = NULL_INDEX then
+      if not pCurr^.Visited then
         begin
-          pCurr^.Index := Enums.Add(TTreeNode(pCurr^.Node).Children.GetEnumerator);
+          pCurr^.Visited := True;
+          pCurr^.Enum := TTreeNode(pCurr^.Node).Children.GetEnumerator;
           if aOnGray <> nil then
             aOnGray(TTreeNode(pCurr^.Node));
         end;
-      if Enums.Mutable[pCurr^.Index]^.MoveNext then
+      if pCurr^.Enum.MoveNext then
         begin
-          Next := Enums[pCurr^.Index].Current.FNode;
+          Next := pCurr^.Enum.Current.FNode;
           if aOnWhite <> nil then
             aOnWhite(TTreeNode(Next));
-          Stack.Push(TIdxNode.Create(Next));
+          Stack.Push(TEnumNode.Create(Next));
         end
       else
         begin
@@ -1203,29 +1207,29 @@ end;
 
 function TGLiteRootedTree.TTreeNode.DfsTraversalL2R(aOnWhite, aOnGray, aOnBlack: TNestNodeEvent): SizeInt;
 var
-  Stack: TIdxStack;
-  Enums: TChildEnums;
+  Stack: TEnumStack;
   Next: PNode;
-  pCurr: PIdxNode = nil;
+  pCurr: PEnumNode = nil;
 begin
   if aOnWhite <> nil then
-    aOnWhite(TTreeNode(FNode));
-  Stack.Push(TIdxNode.Create(FNode));
+    aOnWhite(Self);
+  Stack.Push(TEnumNode.Create(FNode));
   Result := 0;
   while Stack.TryPeekItem(pCurr) do
     begin
-      if pCurr^.Index = NULL_INDEX then
+      if not pCurr^.Visited then
         begin
-          pCurr^.Index := Enums.Add(TTreeNode(pCurr^.Node).Children.GetEnumerator);
+          pCurr^.Visited := True;
+          pCurr^.Enum := TTreeNode(pCurr^.Node).Children.GetEnumerator;
           if aOnGray <> nil then
             aOnGray(TTreeNode(pCurr^.Node));
         end;
-      if Enums.Mutable[pCurr^.Index]^.MoveNext then
+      if pCurr^.Enum.MoveNext then
         begin
-          Next := Enums.Mutable[pCurr^.Index]^.Current.FNode;
+          Next := pCurr^.Enum.Current.FNode;
           if aOnWhite <> nil then
             aOnWhite(TTreeNode(Next));
-          Stack.Push(TIdxNode.Create(Next));
+          Stack.Push(TEnumNode.Create(Next));
         end
       else
         begin
