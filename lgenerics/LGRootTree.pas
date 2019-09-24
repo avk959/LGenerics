@@ -192,6 +192,7 @@ type
       class operator = (L, R: TTreeNode): Boolean; inline;
     { default enumerator lists the node subtree in BFS order(level by level) }
       function GetEnumerator: TEnumerator; inline;
+      function GetChildEnumerator: TChildEnumerator; inline;
     { returns True if an internal node pointer is assigned }
       function Assigned: Boolean; inline;
     { sets the node pointer to nil }
@@ -713,6 +714,12 @@ begin
   Result.FQueue.Enqueue(FNode);
 end;
 
+function TGLiteRootedTree.TTreeNode.GetChildEnumerator: TChildEnumerator;
+begin
+  Result.FCurrent := nil;
+  Result.FNext := FNode^.Child;
+end;
+
 function TGLiteRootedTree.TTreeNode.Assigned: Boolean;
 begin
   Result := FNode <> nil;
@@ -1173,24 +1180,24 @@ function TGLiteRootedTree.TTreeNode.DfsTraversalL2R(aOnWhite, aOnGray, aOnBlack:
 var
   Stack: TEnumStack;
   Next: PNode;
-  pCurr: PEnumNode = nil;
+  Curr: PEnumNode = nil;
 begin
   if aOnWhite <> nil then
     aOnWhite(Self);
   Stack.Push(TEnumNode.Create(FNode));
   Result := 0;
-  while Stack.TryPeekItem(pCurr) do
+  while Stack.TryPeekItem(Curr) do
     begin
-      if not pCurr^.Visited then
+      if not Curr^.Visited then
         begin
-          pCurr^.Visited := True;
-          pCurr^.Enum := TTreeNode(pCurr^.Node).Children.GetEnumerator;
+          Curr^.Visited := True;
+          Curr^.Enum := TTreeNode(Curr^.Node).GetChildEnumerator;
           if aOnGray <> nil then
-            aOnGray(TTreeNode(pCurr^.Node));
+            aOnGray(TTreeNode(Curr^.Node));
         end;
-      if pCurr^.Enum.MoveNext then
+      if Curr^.Enum.MoveNext then
         begin
-          Next := pCurr^.Enum.Current.FNode;
+          Next := Curr^.Enum.Current.FNode;
           if aOnWhite <> nil then
             aOnWhite(TTreeNode(Next));
           Stack.Push(TEnumNode.Create(Next));
@@ -1209,24 +1216,24 @@ function TGLiteRootedTree.TTreeNode.DfsTraversalL2R(aOnWhite, aOnGray, aOnBlack:
 var
   Stack: TEnumStack;
   Next: PNode;
-  pCurr: PEnumNode = nil;
+  Curr: PEnumNode = nil;
 begin
   if aOnWhite <> nil then
     aOnWhite(Self);
   Stack.Push(TEnumNode.Create(FNode));
   Result := 0;
-  while Stack.TryPeekItem(pCurr) do
+  while Stack.TryPeekItem(Curr) do
     begin
-      if not pCurr^.Visited then
+      if not Curr^.Visited then
         begin
-          pCurr^.Visited := True;
-          pCurr^.Enum := TTreeNode(pCurr^.Node).Children.GetEnumerator;
+          Curr^.Visited := True;
+          Curr^.Enum := TTreeNode(Curr^.Node).GetChildEnumerator;
           if aOnGray <> nil then
-            aOnGray(TTreeNode(pCurr^.Node));
+            aOnGray(TTreeNode(Curr^.Node));
         end;
-      if pCurr^.Enum.MoveNext then
+      if Curr^.Enum.MoveNext then
         begin
-          Next := pCurr^.Enum.Current.FNode;
+          Next := Curr^.Enum.Current.FNode;
           if aOnWhite <> nil then
             aOnWhite(TTreeNode(Next));
           Stack.Push(TEnumNode.Create(Next));
