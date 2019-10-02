@@ -188,11 +188,11 @@ type
       PEnumNode  = ^TEnumNode;
       TEnumStack = specialize TGLiteStack<TEnumNode>;
 
+      function  GetChildEnumerator: TChildEnumerator; inline;
     public
       class operator = (L, R: TTreeNode): Boolean; inline;
     { default enumerator lists the node subtree in BFS order(level by level) }
       function GetEnumerator: TEnumerator; inline;
-      function GetChildEnumerator: TChildEnumerator; inline;
     { returns True if an internal node pointer is assigned }
       function Assigned: Boolean; inline;
     { sets the node pointer to nil }
@@ -703,6 +703,12 @@ begin
   Result.FNode := aNode;
 end;
 
+function TGLiteRootedTree.TTreeNode.GetChildEnumerator: TChildEnumerator;
+begin
+  Result.FCurrent := nil;
+  Result.FNext := FNode^.Child;
+end;
+
 class operator TGLiteRootedTree.TTreeNode.=(L, R: TTreeNode): Boolean;
 begin
   Result := L.FNode = R.FNode;
@@ -712,12 +718,6 @@ function TGLiteRootedTree.TTreeNode.GetEnumerator: TEnumerator;
 begin
   Result.FCurrent := nil;
   Result.FQueue.Enqueue(FNode);
-end;
-
-function TGLiteRootedTree.TTreeNode.GetChildEnumerator: TChildEnumerator;
-begin
-  Result.FCurrent := nil;
-  Result.FNext := FNode^.Child;
 end;
 
 function TGLiteRootedTree.TTreeNode.Assigned: Boolean;
@@ -1197,7 +1197,7 @@ begin
         end;
       if Curr^.Enum.MoveNext then
         begin
-          Next := Curr^.Enum.Current.FNode;
+          Next := Curr^.Enum.FCurrent;
           if aOnWhite <> nil then
             aOnWhite(TTreeNode(Next));
           Stack.Push(TEnumNode.Create(Next));
@@ -1233,7 +1233,7 @@ begin
         end;
       if Curr^.Enum.MoveNext then
         begin
-          Next := Curr^.Enum.Current.FNode;
+          Next := Curr^.Enum.FCurrent;
           if aOnWhite <> nil then
             aOnWhite(TTreeNode(Next));
           Stack.Push(TEnumNode.Create(Next));
