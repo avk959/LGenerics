@@ -53,6 +53,8 @@ type
     procedure CreateMergeCopyOfLDyn7RDyn7;
 
     procedure Resize;
+    procedure CreateAndFill;
+    procedure Fill;
 
     procedure AppendToEmpty;
     procedure Append;
@@ -320,6 +322,37 @@ begin
   AssertTrue(Pointer(b) = Pointer(a));
   b := TIntHelper.Resize(a, 0);
   AssertTrue(b = nil);
+end;
+
+procedure TArrayHelpUtilTest.CreateAndFill;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  a := TIntHelper.CreateAndFill(5, -5);
+  AssertTrue(a = nil);
+  a := TIntHelper.CreateAndFill(5, 0);
+  AssertTrue(a = nil);
+  a := TIntHelper.CreateAndFill(5, 1);
+  AssertTrue(Length(a) = 1);
+  AssertTrue(a[0] = 5);
+  a := TIntHelper.CreateAndFill(-5, 11);
+  AssertTrue(Length(a) = 11);
+  for I := 0 to 10 do
+    AssertTrue(a[I] = -5);
+end;
+
+procedure TArrayHelpUtilTest.Fill;
+var
+  a: TIntArray = nil;
+  I: Integer;
+begin
+  TIntHelper.Fill(a, -3);
+  AssertTrue(a = nil);
+  SetLength(a, 100);
+  TIntHelper.Fill(a, -3);
+  for I := 0 to High(a) do
+    AssertTrue(a[I] = -3);
 end;
 
 procedure TArrayHelpUtilTest.AppendToEmpty;
