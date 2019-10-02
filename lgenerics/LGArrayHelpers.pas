@@ -111,6 +111,7 @@ type
     class function  CreateReverseCopy(constref A: array of T): TArray; static;
     class function  CreateMerge(constref L, R: array of T): TArray; static;
     class function  CreateRandomShuffle(constref A: array of T): TArray; static;
+    class function  CreateAndFill(constref aValue: T; aSize: SizeInt): TArray; static;
     class procedure Fill(var A: array of T; constref aValue: T); static;
   { returns resized array }
     class function  Resize(var A: TArray; aNewSize: SizeInt): TArray; static; inline;
@@ -1176,12 +1177,64 @@ begin
   RandomShuffle(Result);
 end;
 
-class procedure TGArrayHelpUtil.Fill(var A: array of T; constref aValue: T);
+class function TGArrayHelpUtil.CreateAndFill(constref aValue: T; aSize: SizeInt): TArray;
 var
   I: SizeInt;
 begin
-  for I := 0 to System.High(A) do
-    A[I] := aValue;
+  if aSize < 1 then
+    exit(nil);
+  System.SetLength(Result, aSize);
+  I := 0;
+  while I <= aSize - 4 do
+    begin
+      Result[I  ] := aValue;
+      Result[I+1] := aValue;
+      Result[I+2] := aValue;
+      Result[I+3] := aValue;
+      I += 4;
+    end;
+  case aSize - I of
+    1: Result[I] := aValue;
+    2:
+      begin
+        Result[I  ] := aValue;
+        Result[I+1] := aValue;
+      end;
+    3:
+      begin
+        Result[I  ] := aValue;
+        Result[I+1] := aValue;
+        Result[I+2] := aValue;
+      end;
+  end;
+end;
+
+class procedure TGArrayHelpUtil.Fill(var A: array of T; constref aValue: T);
+var
+  I: SizeInt = 0;
+begin
+  while I <= System.Length(A) - 4 do
+    begin
+      A[I  ] := aValue;
+      A[I+1] := aValue;
+      A[I+2] := aValue;
+      A[I+3] := aValue;
+      I += 4;
+    end;
+  case System.Length(A) - I of
+    1: A[I] := aValue;
+    2:
+      begin
+        A[I  ] := aValue;
+        A[I+1] := aValue;
+      end;
+    3:
+      begin
+        A[I  ] := aValue;
+        A[I+1] := aValue;
+        A[I+2] := aValue;
+      end;
+  end;
 end;
 
 class function TGArrayHelpUtil.Resize(var A: TArray; aNewSize: SizeInt): TArray;
