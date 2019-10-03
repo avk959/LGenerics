@@ -141,7 +141,6 @@ type
 
   var
     FList: TNodeList;
-    class function NewList(aCapacity: SizeInt): TNodeList; static;
     procedure AllocList(aCapacity: SizeInt); override;
     function  GetCapacity: SizeInt; override;
     procedure SetLoadFactor(aValue: Single); override;
@@ -496,7 +495,6 @@ type
     procedure Expand;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    class function NewList(aCapacity: SizeInt): TNodeList; static;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
   public
@@ -596,7 +594,6 @@ type
     procedure Expand;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    class function NewList(aCapacity: SizeInt): TNodeList; static;
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteHashTableLP);
@@ -745,7 +742,6 @@ type
     function  DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
     class function HashCode(aValue: TKey): SizeInt; static; //inline;
-    class function NewList(aCapacity: SizeInt): TNodeList; static;
     class constructor Init;
     class operator Initialize(var ht: TGLiteIntHashTable);
     class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable);
@@ -864,12 +860,6 @@ end;
 
 { TGOpenAddressing }
 
-class function TGOpenAddressing.NewList(aCapacity: SizeInt): TNodeList;
-begin
-  System.SetLength(Result, aCapacity);
-  System.FillChar(Pointer(Result)^, aCapacity * NODE_SIZE, 0);
-end;
-
 procedure TGOpenAddressing.AllocList(aCapacity: SizeInt);
 begin
   if aCapacity > 0 then
@@ -880,7 +870,7 @@ begin
     end
   else
     aCapacity := DEFAULT_CONTAINER_CAPACITY;
-  FList := NewList(aCapacity);
+  System.SetLength(FList, aCapacity);
   UpdateExpandTreshold;
 end;
 
@@ -940,7 +930,7 @@ procedure TGOpenAddressing.Resize(aNewCapacity: SizeInt);
 var
   List: TNodeList;
 begin
-  List := NewList(aNewCapacity);
+  System.SetLength(List, aNewCapacity);
   Rehash(List);
   FList := List;
   UpdateExpandTreshold;
@@ -2638,7 +2628,7 @@ begin
     end
   else
     aCapacity := DEFAULT_CONTAINER_CAPACITY;
-  FList := NewList(aCapacity);
+  System.SetLength(FList, aCapacity);
   UpdateExpandTreshold;
 end;
 
@@ -2673,7 +2663,7 @@ procedure TGHashTableLP.Resize(aNewCapacity: SizeInt);
 var
   List: TNodeList;
 begin
-  List := NewList(aNewCapacity);
+  System.SetLength(List, aNewCapacity);
   Rehash(List);
   FList := List;
   UpdateExpandTreshold;
@@ -2741,12 +2731,6 @@ begin
       else
         break;
     end;
-end;
-
-class function TGHashTableLP.NewList(aCapacity: SizeInt): TNodeList;
-begin
-  System.SetLength(Result, aCapacity);
-  System.FillChar(Pointer(Result)^, aCapacity * NODE_SIZE, 0);
 end;
 
 class function TGHashTableLP.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
@@ -3031,7 +3015,7 @@ begin
     end
   else
     aCapacity := DEFAULT_CONTAINER_CAPACITY;
-  FList := NewList(aCapacity);
+  System.SetLength(FList, aCapacity);
   UpdateExpandTreshold;
 end;
 
@@ -3066,7 +3050,7 @@ procedure TGLiteHashTableLP.Resize(aNewCapacity: SizeInt);
 var
   List: TNodeList;
 begin
-  List := NewList(aNewCapacity);
+  System.SetLength(List, aNewCapacity);
   Rehash(List);
   FList := List;
   UpdateExpandTreshold;
@@ -3134,12 +3118,6 @@ begin
       else
         break;
     end;
-end;
-
-class function TGLiteHashTableLP.NewList(aCapacity: SizeInt): TNodeList;
-begin
-  System.SetLength(Result, aCapacity);
-  System.FillChar(Pointer(Result)^, aCapacity * NODE_SIZE, 0);
 end;
 
 class function TGLiteHashTableLP.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
@@ -3628,7 +3606,7 @@ procedure TGLiteIntHashTable.Resize(aNewCapacity: SizeInt);
 var
   List: TNodeList;
 begin
-  List := NewList(aNewCapacity);
+  System.SetLength(List, aNewCapacity);
 {$IF DEFINED(CPU64)}
   FShift := 64 - BsrQWord(QWord(aNewCapacity));
 {$ELSEIF DEFINED(CPU32)}
@@ -3706,12 +3684,6 @@ begin
 {$ELSE}
   Result := SizeInt(aValue) * SizeInt($9e37);
 {$ENDIF}
-end;
-
-class function TGLiteIntHashTable.NewList(aCapacity: SizeInt): TNodeList;
-begin
-  System.SetLength(Result, aCapacity);
-  System.FillChar(Pointer(Result)^, aCapacity * NODE_SIZE, 0);
 end;
 
 class constructor TGLiteIntHashTable.Init;
