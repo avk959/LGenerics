@@ -230,7 +230,7 @@ type
     TIntVector = specialize TGLiteVector<SizeInt>;
 
   published
-    procedure Size;
+    procedure Capacity;
     procedure GetBitOutOfBounds;
     procedure GetBit;
     procedure SetBitOutOfBounds;
@@ -1966,16 +1966,20 @@ end;
 
 { TBoolVectorTest }
 
-procedure TBoolVectorTest.Size;
+procedure TBoolVectorTest.Capacity;
 var
   v: TBoolVector;
 begin
   AssertTrue({%H-}v.Capacity = 0);
+  v.Capacity := -25;
+  AssertTrue(v.Capacity = 0);
   v.Capacity := 15;
   AssertTrue(v.Capacity = BitSizeOf(SizeUInt));
   v.Capacity := 1005;
-  AssertTrue(
-    v.Capacity = (1005 div BitSizeOf(SizeUInt) + Ord(1005 mod BitSizeOf(SizeUInt) <> 0)) * BitSizeOf(SizeUInt));
+  AssertTrue(v.Capacity =
+    (1005 div BitSizeOf(SizeUInt) + Ord(1005 mod BitSizeOf(SizeUInt) <> 0)) * BitSizeOf(SizeUInt));
+  v.Capacity := -5;
+  AssertTrue(v.Capacity = 0);
 end;
 
 procedure TBoolVectorTest.GetBitOutOfBounds;
