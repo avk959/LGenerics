@@ -2069,15 +2069,16 @@ begin
 end;
 
 procedure TBoolVector.SetCapacity(aValue: SizeInt);
-var
-  OldCapacity: SizeInt;
 begin
-  OldCapacity := Capacity;
-  if aValue <> OldCapacity then
+  if aValue < 0 then
+    aValue := 0;
+  if aValue <> Capacity then
     begin
       aValue := aValue shr INT_SIZE_LOG + Ord(aValue and INT_SIZE_MASK <> 0);
-      System.SetLength(FBits, aValue);
-      //System.FillChar(FBits[OldCapacity], (aValue - OldCapacity) * SizeOf(SizeUInt), 0);
+      if aValue <= MAX_CONTAINER_SIZE div SizeOf(SizeUInt) then
+        System.SetLength(FBits, aValue)
+      else
+        raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
     end;
 end;
 
