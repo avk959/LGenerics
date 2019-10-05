@@ -2086,6 +2086,13 @@ begin
     AssertTrue(v[I]);
   for I := 56 to 63 do
     AssertFalse(v[I]);
+
+  v.InitRange(236);
+  AssertTrue(v.Capacity = 256);
+  for I := 0 to 235 do
+    AssertTrue(v.UncBits[I]);
+  for I := 236 to 255 do
+    AssertFalse(v.UncBits[I]);
 end;
 
 procedure TBoolVectorTest.GetEnumerator;
