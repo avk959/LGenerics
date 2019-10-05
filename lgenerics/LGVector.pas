@@ -407,21 +407,21 @@ type
   { changes the bit[aIndex] value to True if it was False and to False if it was True;
     returns old value; does not checks aIndex range}
     function  UncToggleBit(aIndex: SizeInt): Boolean; inline;
-    function  Intersecting(constref aValue: TBoolVector): Boolean;
+    function  Intersecting(const aValue: TBoolVector): Boolean;
   { returns the number of bits in the intersection with aValue }
-    function  IntersectionPop(constref aValue: TBoolVector): SizeInt;
-    function  Contains(constref aValue: TBoolVector): Boolean;
+    function  IntersectionPop(const aValue: TBoolVector): SizeInt;
+    function  Contains(const aValue: TBoolVector): Boolean;
   { returns the number of bits that will be added when union with aValue }
-    function  JoinGain(constref aValue: TBoolVector): SizeInt;
-    procedure Join(constref aValue: TBoolVector);
-    function  Union(constref aValue: TBoolVector): TBoolVector; inline;
-    procedure Subtract(constref aValue: TBoolVector);
-    function  Difference(constref aValue: TBoolVector): TBoolVector; inline;
-    procedure Intersect(constref aValue: TBoolVector);
-    function  Intersection(constref aValue: TBoolVector): TBoolVector; inline;
-    procedure DisjunctJoin(constref aValue: TBoolVector);
-    function  SymmDifference(constref aValue: TBoolVector): TBoolVector;
-    function  Equals(constref aValue: TBoolVector): Boolean;
+    function  JoinGain(const aValue: TBoolVector): SizeInt;
+    procedure Join(const aValue: TBoolVector);
+    function  Union(const aValue: TBoolVector): TBoolVector; inline;
+    procedure Subtract(const aValue: TBoolVector);
+    function  Difference(const aValue: TBoolVector): TBoolVector; inline;
+    procedure Intersect(const aValue: TBoolVector);
+    function  Intersection(const aValue: TBoolVector): TBoolVector; inline;
+    procedure DisjunctJoin(const aValue: TBoolVector);
+    function  SymmDifference(const aValue: TBoolVector): TBoolVector;
+    function  Equals(const aValue: TBoolVector): Boolean;
   { currently Capacity is always multiple of BitsizeOf(SizeUInt) }
     property  Capacity: SizeInt read GetCapacity write SetCapacity;
   { returns count of set bits }
@@ -2288,7 +2288,7 @@ begin
   FBits[LimbIdx] := FBits[LimbIdx] xor Mask;
 end;
 
-function TBoolVector.Intersecting(constref aValue: TBoolVector): Boolean;
+function TBoolVector.Intersecting(const aValue: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
@@ -2300,7 +2300,7 @@ begin
   Result := False;
 end;
 
-function TBoolVector.IntersectionPop(constref aValue: TBoolVector): SizeInt;
+function TBoolVector.IntersectionPop(const aValue: TBoolVector): SizeInt;
 var
   I, Len: SizeInt;
 begin
@@ -2331,7 +2331,7 @@ begin
   end;
 end;
 
-function TBoolVector.Contains(constref aValue: TBoolVector): Boolean;
+function TBoolVector.Contains(const aValue: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
@@ -2346,7 +2346,7 @@ begin
   Result := True;
 end;
 
-function TBoolVector.JoinGain(constref aValue: TBoolVector): SizeInt;
+function TBoolVector.JoinGain(const aValue: TBoolVector): SizeInt;
 var
   I, Len: SizeInt;
 begin
@@ -2388,7 +2388,7 @@ begin
     Result += SizeInt(PopCnt(aValue.FBits[I]));
 end;
 
-procedure TBoolVector.Join(constref aValue: TBoolVector);
+procedure TBoolVector.Join(const aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
@@ -2424,13 +2424,13 @@ begin
   end;
 end;
 
-function TBoolVector.Union(constref aValue: TBoolVector): TBoolVector;
+function TBoolVector.Union(const aValue: TBoolVector): TBoolVector;
 begin
   Result := Self;
   Result.Join(aValue);
 end;
 
-procedure TBoolVector.Subtract(constref aValue: TBoolVector);
+procedure TBoolVector.Subtract(const aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
@@ -2467,13 +2467,13 @@ begin
   end;
 end;
 
-function TBoolVector.Difference(constref aValue: TBoolVector): TBoolVector;
+function TBoolVector.Difference(const aValue: TBoolVector): TBoolVector;
 begin
   Result := Self;
   Result.Subtract(aValue);
 end;
 
-procedure TBoolVector.Intersect(constref aValue: TBoolVector);
+procedure TBoolVector.Intersect(const aValue: TBoolVector);
 var
   I, Len: SizeInt;
 begin
@@ -2509,13 +2509,13 @@ begin
     FBits[I] := 0;
 end;
 
-function TBoolVector.Intersection(constref aValue: TBoolVector): TBoolVector;
+function TBoolVector.Intersection(const aValue: TBoolVector): TBoolVector;
 begin
   Result := Self;
   Result.Intersect(aValue);
 end;
 
-procedure TBoolVector.DisjunctJoin(constref aValue: TBoolVector);
+procedure TBoolVector.DisjunctJoin(const aValue: TBoolVector);
 var
   I, MinLen: SizeInt;
 begin
@@ -2533,7 +2533,7 @@ begin
     FBits[I] := aValue.FBits[I];
 end;
 
-function TBoolVector.SymmDifference(constref aValue: TBoolVector): TBoolVector;
+function TBoolVector.SymmDifference(const aValue: TBoolVector): TBoolVector;
 begin
   if System.Length(FBits) >= System.Length(aValue.FBits) then
     begin
@@ -2547,7 +2547,7 @@ begin
     end;
 end;
 
-function TBoolVector.Equals(constref aValue: TBoolVector): Boolean;
+function TBoolVector.Equals(const aValue: TBoolVector): Boolean;
 var
   I: SizeInt;
 begin
