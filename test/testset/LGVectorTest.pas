@@ -224,6 +224,8 @@ type
     procedure ObjectVector;
   end;
 
+  { TBoolVectorTest }
+
   TBoolVectorTest = class(TTestCase)
   private
   type
@@ -251,6 +253,7 @@ type
     procedure Bsr;
     procedure Lob;
     procedure ToggleBit;
+    procedure CallByValue;
     procedure Intersecting;
     procedure IntersectionPop;
     procedure IntersectionPop1;
@@ -2324,6 +2327,21 @@ begin
   AssertTrue(v[111]);
   AssertTrue(v.UncToggleBit(111));
   AssertFalse(v[111]);
+end;
+
+procedure TBoolVectorTest.CallByValue;
+  procedure Test(aVector: TBoolVector);
+  begin
+    aVector.SetBits;
+    AssertTrue(aVector.All);
+  end;
+var
+  v: TBoolVector;
+begin
+  v.Capacity := 128;
+  AssertTrue(v.IsEmpty);
+  Test(v);
+  AssertTrue(v.IsEmpty);
 end;
 
 procedure TBoolVectorTest.Intersecting;
