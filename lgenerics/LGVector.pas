@@ -375,7 +375,8 @@ type
     procedure SetBitUncheck(aIndex: SizeInt; aValue: Boolean); inline;
   { returns count of significant limbs }
     function  SignLimbCount: SizeInt;
-    class operator Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
+    class operator Copy(constref aSrc: TBoolVector; var aDst: TBoolVector); inline;
+    class operator AddRef(var bv: TBoolVector); inline;
   public
   type
     TIntArray = array of SizeInt;
@@ -2115,6 +2116,11 @@ end;
 class operator TBoolVector.Copy(constref aSrc: TBoolVector; var aDst: TBoolVector);
 begin
   aDst.FBits := System.Copy(aSrc.FBits);
+end;
+
+class operator TBoolVector.AddRef(var bv: TBoolVector);
+begin
+  bv.FBits := System.Copy(bv.FBits);
 end;
 
 procedure TBoolVector.InitRange(aRange: SizeInt);
