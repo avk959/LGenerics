@@ -55,8 +55,12 @@ type
 
     procedure LiteBinHeap;
     procedure LiteBinHeapReverse;
+    procedure LiteBinHeapAssign;
+    procedure LiteBinHeapPassByValue;
     procedure LiteComparableBinHeap;
     procedure LiteComparableBinHeapReverse;
+    procedure LiteComparableBinHeapAssign;
+    procedure LiteComparableBinHeapPassByValue;
 
     procedure BasePairHeapEnqueueAll;
     procedure BasePairHeapUpdate;
@@ -95,11 +99,15 @@ type
     procedure LitePairHeapUpdate;
     procedure LitePairHeapMerge;
     procedure LitePairHeapReverse;
+    procedure LitePairHeapAssign;
+    procedure LitePairHeapPassByValue;
 
     procedure LiteCompareblePairHeapEnqueue;
     procedure LiteCompareblePairHeapUpdate;
     procedure LiteCompareblePairHeapMerge;
     procedure LiteCompareblePairHeapReverse;
+    procedure LiteCompareblePairHeapAssign;
+    procedure LiteCompareblePairHeapPassByValue;
   end;
 
 implementation
@@ -482,6 +490,51 @@ begin
     end;
 end;
 
+procedure TGPriorityQueueTest.LiteBinHeapAssign;
+var
+  h1, h2: TLiteIntBinHeap;
+begin
+  {%H-}h1.Enqueue(1);
+  h1.Enqueue(2);
+  h1.Enqueue(3);
+  AssertTrue(h1.Count = 3);
+  h2 := h1;
+  AssertTrue(h2.Count = 3);
+  h1.Clear;
+  AssertTrue(h1.IsEmpty);
+  AssertTrue(h2.Count = 3);
+  AssertTrue(h2.Dequeue = 3);
+  AssertTrue(h2.Dequeue = 2);
+  AssertTrue(h2.Dequeue = 1);
+  h2.Enqueue(4);
+  h2.Enqueue(5);
+  AssertTrue(h2.Count = 2);
+  h1.Enqueue(6);
+  AssertTrue(h1.Count = 1);
+  h2 := h1;
+  AssertTrue(h1.Dequeue = 6);
+  AssertTrue(h1.IsEmpty);
+  AssertTrue(h2.Count = 1);
+  AssertTrue(h2.Dequeue = 6);
+end;
+
+procedure TGPriorityQueueTest.LiteBinHeapPassByValue;
+  procedure Test(aHeap: TLiteIntBinHeap);
+  begin
+    aHeap.Enqueue(10);
+    aHeap.Enqueue(1);
+    AssertTrue(aHeap.NonEmpty);
+  end;
+var
+  h: TLiteIntBinHeap;
+begin
+  {%H-}h.EnsureCapacity(10);
+  AssertTrue(h.Capacity > 2);
+  AssertTrue(h.IsEmpty);
+  Test(h);
+  AssertTrue(h.IsEmpty);
+end;
+
 procedure TGPriorityQueueTest.LiteComparableBinHeap;
 var
   q: TLiteIntBinHeapMin;
@@ -525,6 +578,51 @@ begin
       AssertTrue(I = a[J]);
       Inc(J);
     end;
+end;
+
+procedure TGPriorityQueueTest.LiteComparableBinHeapAssign;
+var
+  h1, h2: TLiteIntBinHeapMin;
+begin
+  {%H-}h1.Enqueue(1);
+  h1.Enqueue(2);
+  h1.Enqueue(3);
+  AssertTrue(h1.Count = 3);
+  h2 := h1;
+  AssertTrue(h2.Count = 3);
+  h1.Clear;
+  AssertTrue(h1.IsEmpty);
+  AssertTrue(h2.Count = 3);
+  AssertTrue(h2.Dequeue = 1);
+  AssertTrue(h2.Dequeue = 2);
+  AssertTrue(h2.Dequeue = 3);
+  h2.Enqueue(4);
+  h2.Enqueue(5);
+  AssertTrue(h2.Count = 2);
+  h1.Enqueue(6);
+  AssertTrue(h1.Count = 1);
+  h2 := h1;
+  AssertTrue(h1.Dequeue = 6);
+  AssertTrue(h1.IsEmpty);
+  AssertTrue(h2.Count = 1);
+  AssertTrue(h2.Dequeue = 6);
+end;
+
+procedure TGPriorityQueueTest.LiteComparableBinHeapPassByValue;
+  procedure Test(aHeap: TLiteIntBinHeapMin);
+  begin
+    aHeap.Enqueue(10);
+    aHeap.Enqueue(1);
+    AssertTrue(aHeap.NonEmpty);
+  end;
+var
+  h: TLiteIntBinHeapMin;
+begin
+  {%H-}h.EnsureCapacity(10);
+  AssertTrue(h.Capacity > 2);
+  AssertTrue(h.IsEmpty);
+  Test(h);
+  AssertTrue(h.IsEmpty);
 end;
 
 procedure TGPriorityQueueTest.BasePairHeapEnqueueAll;
@@ -1561,13 +1659,11 @@ begin
   AssertTrue(q.Merge(q1) = TestSize);
   AssertTrue(q.Count = TestSize * 2);
   AssertTrue(q1.Count = 0);
-  AssertTrue(q1.Capacity = 0);
   for I := 1 to 119 do
     {%H-}q1.Enqueue(q.Dequeue);
   AssertTrue(q1.Merge(q) = TestSize * 2 - 119);
   AssertTrue(q1.Count = TestSize * 2);
   AssertTrue(q.Count = 0);
-  AssertTrue(q.Capacity = 0);
   System.SetLength(a, q1.Count);
   I := 0;
   while q1.NonEmpty do
@@ -1597,6 +1693,53 @@ begin
       AssertTrue(I = a[J]);
       Inc(J);
     end;
+end;
+
+procedure TGPriorityQueueTest.LitePairHeapAssign;
+var
+  h1, h2: TLiteIntPairingHeap;
+begin
+  {%H-}h1.Enqueue(1);
+  h1.Enqueue(2);
+  h1.Enqueue(3);
+  AssertTrue(h1.Count = 3);
+  h2 := h1;
+  AssertTrue(h2.Count = 3);
+  h1.Clear;
+  AssertTrue(h1.IsEmpty);
+  AssertTrue(h2.Count = 3);
+  AssertTrue(h2.Dequeue = 3);
+  AssertTrue(h2.Dequeue = 2);
+  AssertTrue(h2.Dequeue = 1);
+  h2.Enqueue(4);
+  h2.Enqueue(5);
+  AssertTrue(h2.Count = 2);
+  h1.Enqueue(6);
+  AssertTrue(h1.Count = 1);
+  h2 := h1;
+  AssertTrue(h1.Dequeue = 6);
+  AssertTrue(h1.IsEmpty);
+  AssertTrue(h2.Count = 1);
+  AssertTrue(h2.Dequeue = 6);
+end;
+
+procedure TGPriorityQueueTest.LitePairHeapPassByValue;
+  procedure Test(aHeap: TLiteIntPairingHeap);
+  begin
+    aHeap.Enqueue(10);
+    aHeap.Enqueue(11);
+    aHeap.Enqueue(12);
+  end;
+var
+  h: TLiteIntPairingHeap;
+begin
+  AssertTrue({%H-}h.IsEmpty);
+  h.Enqueue(3);
+  AssertTrue(h.Count = 1);
+  Test(h);
+  AssertTrue(h.Count = 1);
+  AssertTrue(h.Dequeue = 3);
+  AssertTrue(h.IsEmpty);
 end;
 
 procedure TGPriorityQueueTest.LiteCompareblePairHeapEnqueue;
@@ -1682,13 +1825,11 @@ begin
   AssertTrue(q.Merge(q1) = TestSize);
   AssertTrue(q.Count = TestSize * 2);
   AssertTrue(q1.Count = 0);
-  AssertTrue(q1.Capacity = 0);
   for I := 1 to 119 do
     {%H-}q1.Enqueue(q.Dequeue);
   AssertTrue(q1.Merge(q) = TestSize * 2 - 119);
   AssertTrue(q1.Count = TestSize * 2);
   AssertTrue(q.Count = 0);
-  AssertTrue(q.Capacity = 0);
   System.SetLength(a, q1.Count);
   I := 0;
   while q1.NonEmpty do
@@ -1718,6 +1859,53 @@ begin
       AssertTrue(I = a[J]);
       Inc(J);
     end;
+end;
+
+procedure TGPriorityQueueTest.LiteCompareblePairHeapAssign;
+var
+  h1, h2: TLiteIntPairHeapMin;
+begin
+  {%H-}h1.Enqueue(1);
+  h1.Enqueue(2);
+  h1.Enqueue(3);
+  AssertTrue(h1.Count = 3);
+  h2 := h1;
+  AssertTrue(h2.Count = 3);
+  h1.Clear;
+  AssertTrue(h1.IsEmpty);
+  AssertTrue(h2.Count = 3);
+  AssertTrue(h2.Dequeue = 1);
+  AssertTrue(h2.Dequeue = 2);
+  AssertTrue(h2.Dequeue = 3);
+  h2.Enqueue(4);
+  h2.Enqueue(5);
+  AssertTrue(h2.Count = 2);
+  h1.Enqueue(6);
+  AssertTrue(h1.Count = 1);
+  h2 := h1;
+  AssertTrue(h1.Dequeue = 6);
+  AssertTrue(h1.IsEmpty);
+  AssertTrue(h2.Count = 1);
+  AssertTrue(h2.Dequeue = 6);
+end;
+
+procedure TGPriorityQueueTest.LiteCompareblePairHeapPassByValue;
+  procedure Test(aHeap: TLiteIntPairHeapMin);
+  begin
+    aHeap.Enqueue(10);
+    aHeap.Enqueue(11);
+    aHeap.Enqueue(12);
+  end;
+var
+  h: TLiteIntPairHeapMin;
+begin
+  AssertTrue({%H-}h.IsEmpty);
+  h.Enqueue(3);
+  AssertTrue(h.Count = 1);
+  Test(h);
+  AssertTrue(h.Count = 1);
+  AssertTrue(h.Dequeue = 3);
+  AssertTrue(h.IsEmpty);
 end;
 
 initialization
