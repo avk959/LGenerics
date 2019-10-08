@@ -291,8 +291,6 @@ type
       procedure ClearLinks; inline;
       function  Successor: PNode;
       function  Predecessor: PNode;
-      //for node manager
-      property  NextLink: PNode read Child write Child;
     end;
 
     TEnumerator = class(TContainerEnumerator)
@@ -320,11 +318,8 @@ type
       procedure Reset; override;
     end;
 
-    TNodeManager = specialize TGJoinablePageNodeManager<TNode>;
-
   var
     FRoot: PNode;
-    FNodeManager: TNodeManager;
     FCount: SizeInt;
     procedure CheckEmpty; inline;
     function  GetCount: SizeInt; override;
@@ -348,7 +343,6 @@ type
     function  DoRemove(aNode: PNode): T; virtual; abstract;
     function  DoDequeue: T; virtual; abstract;
     function  DoMergeHeap(ph: TCustomPairingHeap): SizeInt; virtual; abstract;
-    property  ElemCount: SizeInt read FCount;
     class procedure CutNode(aNode: PNode); static;
   public
     destructor Destroy; override;
@@ -389,10 +383,8 @@ type
   type
     TComparator = TCompare;
     class function Comparator: TComparator; static; inline;
-    constructor Create;
-    constructor Create(aCapacity: SizeInt);
-    constructor Create(constref A: array of T);
-    constructor Create(e: IEnumerable);
+    constructor Create(constref A: array of T); overload;
+    constructor Create(e: IEnumerable); overload;
   end;
 
   { TGPairingHeap assumes that type T implements TCmpRel}
@@ -421,10 +413,8 @@ type
     class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
   public
-    constructor Create;
-    constructor Create(aCapacity: SizeInt);
-    constructor Create(constref A: array of T);
-    constructor Create(e: IEnumerable);
+    constructor Create(constref A: array of T); overload;
+    constructor Create(e: IEnumerable); overload;
   end;
 
   { TGComparablePairHeapMin: minimizing priority queue, it assumes
@@ -441,10 +431,8 @@ type
     class function DoMerge(L, R: PNode): PNode; static;
     class function TwoPassMerge(aNode: PNode): PNode; static;
   public
-    constructor Create;
-    constructor Create(aCapacity: SizeInt);
-    constructor Create(constref A: array of T);
-    constructor Create(e: IEnumerable);
+    constructor Create(constref A: array of T); overload;
+    constructor Create(e: IEnumerable); overload;
   end;
 
   { TGRegularPairHeap: maximizing priority queue with regular comparator }
@@ -465,7 +453,6 @@ type
     TComparator = TCompare;
     constructor Create;
     constructor Create(c: TComparator);
-    constructor Create(aCapacity: SizeInt; c: TComparator);
     constructor Create(constref A: array of T; c: TComparator);
     constructor Create(e: IEnumerable; c: TComparator);
     function Comparator: TComparator; inline;
@@ -489,7 +476,6 @@ type
     TComparator = TOnCompare;
     constructor Create;
     constructor Create(c: TComparator);
-    constructor Create(aCapacity: SizeInt; c: TComparator);
     constructor Create(constref A: array of T; c: TComparator);
     constructor Create(e: IEnumerable; c: TComparator);
     function Comparator: TComparator; inline;
@@ -513,11 +499,7 @@ type
       procedure ClearLinks; inline;
       function  Successor: PNode;
       function  Predecessor: PNode;
-      //for node manager
-      property  NextLink: PNode read Child write Child;
     end;
-
-    TNodeManager = specialize TGJoinablePageNodeManager<TNode>;
 
   public
   type
@@ -557,16 +539,14 @@ type
 
   private
     FRoot: PNode;
-    FNodeManager: TNodeManager;
     FCount: SizeInt;
-    function  GetCapacity: SizeInt; inline;
     function  GetReverseEnumerator: TReverseEnumerator;
     function  FindLeftmost: PNode;
     function  FindRightmost: PNode;
     procedure RemoveNodeWithChilds(aNode: PNode);
     procedure ClearTree;
     function  NewNode(constref aValue: T): PNode;
-    procedure DisposeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode);
     procedure RootMerge(aNode: PNode); inline;
     function  DequeueItem: T;
     procedure UpdateNode(aNode: PNode; constref aValue: T);
@@ -577,6 +557,7 @@ type
     class operator  Initialize(var h: TGLitePairingHeap);
     class operator  Finalize(var h: TGLitePairingHeap);
     class operator  Copy(constref aSrc: TGLitePairingHeap; var aDst: TGLitePairingHeap);
+    class operator  AddRef(var h: TGLitePairingHeap);
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
@@ -591,8 +572,6 @@ type
     procedure Clear; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure EnsureCapacity(aValue: SizeInt);
-    procedure TrimToFit; inline;
     procedure Enqueue(constref aValue: T);                  // O(1)
     function  Dequeue: T;                                   // amortized O(logN)
     function  TryDequeue(out aValue: T): Boolean;
@@ -608,7 +587,6 @@ type
   { note: after Merge all handles from aHeap will remain valid }
     function  Merge(var aHeap: TGLitePairingHeap): SizeInt;// O(1)
     property  Count: SizeInt read FCount;
-    property  Capacity: SizeInt read GetCapacity;
   end;
 
   { TGLiteComparablePairHeapMin implements minimizing priority queue;
@@ -628,11 +606,8 @@ type
       procedure ClearLinks; inline;
       function  Successor: PNode;
       function  Predecessor: PNode;
-      //for node manager
-      property  NextLink: PNode read Child write Child;
     end;
 
-    TNodeManager = specialize TGJoinablePageNodeManager<TNode>;
 
   public
   type
@@ -672,16 +647,14 @@ type
 
   private
     FRoot: PNode;
-    FNodeManager: TNodeManager;
     FCount: SizeInt;
-    function  GetCapacity: SizeInt; inline;
     function  GetReverseEnumerator: TReverseEnumerator;
     function  FindLeftmost: PNode;
     function  FindRightmost: PNode;
     procedure RemoveNodeWithChilds(aNode: PNode);
     procedure ClearTree;
     function  NewNode(constref aValue: T): PNode; inline;
-    procedure DisposeNode(aNode: PNode); inline;
+    procedure DisposeNode(aNode: PNode);
     procedure RootMerge(aNode: PNode); inline;
     function  DequeueItem: T;
     procedure UpdateNode(aNode: PNode; constref aValue: T); inline;
@@ -692,6 +665,7 @@ type
     class operator  Initialize(var h: TGLiteComparablePairHeapMin);
     class operator  Finalize(var h: TGLiteComparablePairHeapMin);
     class operator  Copy(constref aSrc: TGLiteComparablePairHeapMin; var aDst: TGLiteComparablePairHeapMin);
+    class operator  AddRef(var h: TGLiteComparablePairHeapMin);
     class function  NodeMerge(L, R: PNode): PNode; static;
     class function  TwoPassMerge(aNode: PNode): PNode; static;
     class procedure CutNode(aNode: PNode); static;
@@ -706,8 +680,6 @@ type
     procedure Clear; inline;
     function  IsEmpty: Boolean; inline;
     function  NonEmpty: Boolean; inline;
-    procedure EnsureCapacity(aValue: SizeInt);
-    procedure TrimToFit; inline;
     procedure Enqueue(constref aValue: T);                  // O(1)
     function  Dequeue: T;                                   // amortized O(logN)
     function  TryDequeue(out aValue: T): Boolean;
@@ -723,7 +695,6 @@ type
   { note: after Merge all handles from aHeap will remain valid }
     function  Merge(var aHeap: TGLiteComparablePairHeapMin): SizeInt;// O(1)
     property  Count: SizeInt read FCount;
-    property  Capacity: SizeInt read GetCapacity;
   end;
 
 implementation
@@ -1927,7 +1898,7 @@ end;
 
 procedure TGCustomPairingHeap.CheckEmpty;
 begin
-  if ElemCount = 0 then
+  if FCount = 0 then
     AccessEmptyError;
 end;
 
@@ -1938,7 +1909,7 @@ end;
 
 function TGCustomPairingHeap.GetCapacity: SizeInt;
 begin
-  Result := ElemCount + FNodeManager.FreeCount;
+  Result := FCount;
 end;
 
 procedure TGCustomPairingHeap.CopyItems(aBuffer: PItem);
@@ -1963,25 +1934,21 @@ end;
 procedure TGCustomPairingHeap.DoClear;
 begin
   ClearTree;
-  FNodeManager.Clear;
 end;
 
 procedure TGCustomPairingHeap.DoTrimToFit;
 begin
-  if ElemCount > 0 then
-    FNodeManager.ClearFreeList
-  else
-    FNodeManager.Clear;
 end;
 
 procedure TGCustomPairingHeap.DoEnsureCapacity(aValue: SizeInt);
 begin
-  FNodeManager.EnsureFreeCount(aValue - Capacity);
+  Assert(aValue = aValue);
 end;
 
 function TGCustomPairingHeap.NewNode(constref aValue: T): PNode;
 begin
-  Result := FNodeManager.NewNode;
+  Result := GetMem(SizeOf(TNode));
+  FillChar(Result^, SizeOf(TNode), 0);
   Result^.Data := aValue;
   Inc(FCount);
 end;
@@ -1990,8 +1957,8 @@ procedure TGCustomPairingHeap.DisposeNode(aNode: PNode);
 begin
   if aNode <> nil then
     begin
-      aNode^ := Default(TNode);
-      FNodeManager.FreeNode(aNode);
+      aNode^.Data := Default(T);
+      FreeMem(aNode);
       Dec(FCount);
     end;
 end;
@@ -2010,9 +1977,7 @@ begin
             OldPrev := CurrNode^.Prev;
             OldNode := CurrNode;
             /////////////////////////////////
-            CurrNode^.Data := Default(T);
-            FNodeManager.DisposeNode(CurrNode);
-            Dec(FCount);
+            DisposeNode(CurrNode);
             ////////////////////////////////
             if CurrNode = aNode then
               exit;
@@ -2060,12 +2025,8 @@ var
   v: T;
 begin
   Result := System.Length(a);
-  if Result > 0 then
-    begin
-      DoEnsureCapacity(ElemCount + Result);
-      for v in a do
-        DoEnqueue(v);
-    end;
+  for v in a do
+    DoEnqueue(v);
 end;
 
 function TGCustomPairingHeap.EnqueueContainer(c: TSpecContainer): SizeInt;
@@ -2075,7 +2036,6 @@ begin
   if c <> Self then
     begin
       Result := c.Count;
-      DoEnsureCapacity(ElemCount + Result);
       for v in c do
         DoEnqueue(v);
     end
@@ -2158,7 +2118,7 @@ end;
 
 function TGCustomPairingHeap.TryDequeue(out aValue: T): Boolean;
 begin
-  Result := not InIteration and (ElemCount > 0);
+  Result := not InIteration and (FCount > 0);
   if Result then
     aValue := DoDequeue;
 end;
@@ -2171,7 +2131,7 @@ end;
 
 function TGCustomPairingHeap.TryPeek(out aValue: T): Boolean;
 begin
-  Result := ElemCount > 0;
+  Result := FCount > 0;
   if Result then
     aValue := FRoot^.Data;
 end;
@@ -2190,7 +2150,7 @@ end;
 
 function TGCustomPairingHeap.TryPeekHandle(out aHandle: THandle): Boolean;
 begin
-  Result := ElemCount > 0;
+  Result := FCount > 0;
   if Result then
     aHandle := {%H-}THandle(FRoot);
 end;
@@ -2315,7 +2275,6 @@ begin
     begin
       if ph is TGBasePairingHeap then
         begin
-          FNodeManager.Join(ph.FNodeManager);
           RootMerge(ph.FRoot);
           FCount += Result;
           ph.FCount := 0;
@@ -2380,26 +2339,13 @@ begin
   Result := @DoCompare;
 end;
 
-constructor TGBasePairingHeap.Create;
-begin
-  FNodeManager.EnsureFreeCount(DEFAULT_CONTAINER_CAPACITY);
-end;
-
-constructor TGBasePairingHeap.Create(aCapacity: SizeInt);
-begin
-  if aCapacity > 0 then
-    FNodeManager.EnsureFreeCount(aCapacity);
-end;
-
 constructor TGBasePairingHeap.Create(constref A: array of T);
 begin
-  Create;
   EnqueueAll(A);
 end;
 
 constructor TGBasePairingHeap.Create(e: IEnumerable);
 begin
-  Create;
   EnqueueAll(e);
 end;
 
@@ -2498,7 +2444,6 @@ begin
     begin
       if ph is TGComparablePairHeapMax then
         begin
-          FNodeManager.Join(ph.FNodeManager);
           RootMerge(ph.FRoot);
           FCount += Result;
           ph.FCount := 0;
@@ -2553,26 +2498,13 @@ begin
   Result := DoMerge(Result, aNode);
 end;
 
-constructor TGComparablePairHeapMax.Create;
-begin
-  FNodeManager.EnsureFreeCount(DEFAULT_CONTAINER_CAPACITY);
-end;
-
-constructor TGComparablePairHeapMax.Create(aCapacity: SizeInt);
-begin
-  if aCapacity > 0 then
-    FNodeManager.EnsureFreeCount(aCapacity);
-end;
-
 constructor TGComparablePairHeapMax.Create(constref A: array of T);
 begin
-  Create;
   EnqueueAll(A);
 end;
 
 constructor TGComparablePairHeapMax.Create(e: IEnumerable);
 begin
-  Create;
   EnqueueAll(e);
 end;
 
@@ -2653,7 +2585,6 @@ begin
     begin
       if ph is TGComparablePairHeapMin then
         begin
-          FNodeManager.Join(ph.FNodeManager);
           RootMerge(ph.FRoot);
           FCount += Result;
           ph.FCount := 0;
@@ -2708,26 +2639,13 @@ begin
   Result := DoMerge(Result, aNode);
 end;
 
-constructor TGComparablePairHeapMin.Create;
-begin
-  FNodeManager.EnsureFreeCount(DEFAULT_CONTAINER_CAPACITY);
-end;
-
-constructor TGComparablePairHeapMin.Create(aCapacity: SizeInt);
-begin
-  if aCapacity > 0 then
-    FNodeManager.EnsureFreeCount(aCapacity);
-end;
-
 constructor TGComparablePairHeapMin.Create(constref A: array of T);
 begin
-  Create;
   EnqueueAll(A);
 end;
 
 constructor TGComparablePairHeapMin.Create(e: IEnumerable);
 begin
-  Create;
   EnqueueAll(e);
 end;
 
@@ -2853,7 +2771,6 @@ begin
     begin
       if ph is TGRegularPairHeap then
         begin
-          FNodeManager.Join(ph.FNodeManager);
           RootMerge(ph.FRoot);
           FCount += Result;
           ph.FCount := 0;
@@ -2875,19 +2792,11 @@ end;
 constructor TGRegularPairHeap.Create(c: TComparator);
 begin
   FCompare := c;
-  FNodeManager.EnsureFreeCount(DEFAULT_CONTAINER_CAPACITY);
-end;
-
-constructor TGRegularPairHeap.Create(aCapacity: SizeInt; c: TComparator);
-begin
-  FCompare := c;
-  if aCapacity > 0 then
-    FNodeManager.EnsureFreeCount(aCapacity);
 end;
 
 constructor TGRegularPairHeap.Create(constref A: array of T; c: TComparator);
 begin
-  Create(System.Length(A), c);
+  Create(c);
   EnqueueAll(A);
 end;
 
@@ -3024,7 +2933,6 @@ begin
     begin
       if ph is TGDelegatedPairHeap then
         begin
-          FNodeManager.Join(ph.FNodeManager);
           RootMerge(ph.FRoot);
           FCount += Result;
           ph.FCount := 0;
@@ -3046,14 +2954,6 @@ end;
 constructor TGDelegatedPairHeap.Create(c: TComparator);
 begin
   FCompare := c;
-  FNodeManager.EnsureFreeCount(DEFAULT_CONTAINER_CAPACITY);
-end;
-
-constructor TGDelegatedPairHeap.Create(aCapacity: SizeInt; c: TComparator);
-begin
-  FCompare := c;
-  if aCapacity > 0 then
-    FNodeManager.EnsureFreeCount(aCapacity);
 end;
 
 constructor TGDelegatedPairHeap.Create(constref A: array of T; c: TComparator);
@@ -3196,11 +3096,6 @@ end;
 
 { TGLitePairingHeap }
 
-function TGLitePairingHeap.GetCapacity: SizeInt;
-begin
-  Result := Count + FNodeManager.FreeCount;
-end;
-
 function TGLitePairingHeap.GetReverseEnumerator: TReverseEnumerator;
 begin
   Result.FCurrNode := nil;
@@ -3238,9 +3133,7 @@ begin
             OldPrev := CurrNode^.Prev;
             OldNode := CurrNode;
             /////////////////////////////////
-            CurrNode^.Data := Default(T);
-            FNodeManager.DisposeNode(CurrNode);
-            Dec(FCount);
+            DisposeNode(CurrNode);
             ////////////////////////////////
             if CurrNode = aNode then
               exit;
@@ -3269,7 +3162,8 @@ end;
 
 function TGLitePairingHeap.NewNode(constref aValue: T): PNode;
 begin
-  Result := FNodeManager.NewNode;
+  Result := GetMem(SizeOf(TNode));
+  FillChar(Result^, SizeOf(TNode), 0);
   Result^.Data := aValue;
   Inc(FCount);
 end;
@@ -3278,8 +3172,8 @@ procedure TGLitePairingHeap.DisposeNode(aNode: PNode);
 begin
   if aNode <> nil then
     begin
-      aNode^ := Default(TNode);
-      FNodeManager.FreeNode(aNode);
+      aNode^.Data := Default(T);
+      FreeMem(aNode);
       Dec(FCount);
     end;
 end;
@@ -3363,23 +3257,33 @@ end;
 
 class operator TGLitePairingHeap.Initialize(var h: TGLitePairingHeap);
 begin
-  h := Default(TGLitePairingHeap);
+  h.FRoot := nil;
+  h.FCount := 0;
 end;
 
 class operator TGLitePairingHeap.Finalize(var h: TGLitePairingHeap);
 begin
   h.ClearTree;
-  h.FNodeManager.Clear;
 end;
 
 class operator TGLitePairingHeap.Copy(constref aSrc: TGLitePairingHeap; var aDst: TGLitePairingHeap);
 var
   v: T;
 begin
-  System.FillChar(aDst, SizeOf(aDst), 0);
-  aDst.EnsureCapacity(aSrc.Count);
+  aDst.ClearTree;
   for v in aSrc do
     aDst.Enqueue(v);
+end;
+
+class operator TGLitePairingHeap.AddRef(var h: TGLitePairingHeap);
+var
+  e: TEnumerator;
+begin
+  e := h.GetEnumerator;
+  h.FRoot := nil;
+  h.FCount := 0;
+  while e.MoveNext do
+    h.Enqueue(e.Current);
 end;
 
 class function TGLitePairingHeap.NodeMerge(L, R: PNode): PNode;
@@ -3468,7 +3372,6 @@ end;
 procedure TGLitePairingHeap.Clear;
 begin
   ClearTree;
-  FNodeManager.Clear;
 end;
 
 function TGLitePairingHeap.IsEmpty: Boolean;
@@ -3479,19 +3382,6 @@ end;
 function TGLitePairingHeap.NonEmpty: Boolean;
 begin
   Result := Count <> 0;
-end;
-
-procedure TGLitePairingHeap.EnsureCapacity(aValue: SizeInt);
-begin
-  FNodeManager.EnsureFreeCount(aValue - Capacity);
-end;
-
-procedure TGLitePairingHeap.TrimToFit;
-begin
-  if Count > 0 then
-    FNodeManager.ClearFreeList
-  else
-    FNodeManager.Clear;
 end;
 
 procedure TGLitePairingHeap.Enqueue(constref aValue: T);
@@ -3571,7 +3461,6 @@ begin
   Result := aHeap.Count;
   if Result > 0 then
     begin
-      FNodeManager.Join(aHeap.FNodeManager);
       RootMerge(aHeap.FRoot);
       FCount += Result;
       aHeap.FCount := 0;
@@ -3702,11 +3591,6 @@ end;
 
 { TGLiteComparablePairHeapMin }
 
-function TGLiteComparablePairHeapMin.GetCapacity: SizeInt;
-begin
-  Result := Count + FNodeManager.FreeCount;
-end;
-
 function TGLiteComparablePairHeapMin.GetReverseEnumerator: TReverseEnumerator;
 begin
   Result.FCurrNode := nil;
@@ -3744,9 +3628,7 @@ begin
             OldPrev := CurrNode^.Prev;
             OldNode := CurrNode;
             /////////////////////////////////
-            CurrNode^.Data := Default(T);
-            FNodeManager.DisposeNode(CurrNode);
-            Dec(FCount);
+            DisposeNode(CurrNode);
             ////////////////////////////////
             if CurrNode = aNode then
               exit;
@@ -3775,7 +3657,8 @@ end;
 
 function TGLiteComparablePairHeapMin.NewNode(constref aValue: T): PNode;
 begin
-  Result := FNodeManager.NewNode;
+  Result := GetMem(SizeOf(TNode));
+  FillChar(Result^, SizeOf(TNode), 0);
   Result^.Data := aValue;
   Inc(FCount);
 end;
@@ -3784,8 +3667,8 @@ procedure TGLiteComparablePairHeapMin.DisposeNode(aNode: PNode);
 begin
   if aNode <> nil then
     begin
-      aNode^ := Default(TNode);
-      FNodeManager.FreeNode(aNode);
+      aNode^.Data := Default(T);
+      FreeMem(aNode);
       Dec(FCount);
     end;
 end;
@@ -3865,13 +3748,13 @@ end;
 
 class operator TGLiteComparablePairHeapMin.Initialize(var h: TGLiteComparablePairHeapMin);
 begin
-  h := Default(TGLiteComparablePairHeapMin);
+  h.FRoot := nil;
+  h.FCount := 0;
 end;
 
 class operator TGLiteComparablePairHeapMin.Finalize(var h: TGLiteComparablePairHeapMin);
 begin
   h.ClearTree;
-  h.FNodeManager.Clear;
 end;
 
 class operator TGLiteComparablePairHeapMin.Copy(constref aSrc: TGLiteComparablePairHeapMin;
@@ -3879,10 +3762,20 @@ class operator TGLiteComparablePairHeapMin.Copy(constref aSrc: TGLiteComparableP
 var
   v: T;
 begin
-  System.FillChar(aDst, SizeOf(aDst), 0);
-  aDst.EnsureCapacity(aSrc.Count);
+  aDst.ClearTree;
   for v in aSrc do
     aDst.Enqueue(v);
+end;
+
+class operator TGLiteComparablePairHeapMin.AddRef(var h: TGLiteComparablePairHeapMin);
+var
+  e: TEnumerator;
+begin
+  e := h.GetEnumerator;
+  h.FRoot := nil;
+  h.FCount := 0;
+  while e.MoveNext do
+    h.Enqueue(e.Current);
 end;
 
 class function TGLiteComparablePairHeapMin.NodeMerge(L, R: PNode): PNode;
@@ -3977,7 +3870,6 @@ end;
 procedure TGLiteComparablePairHeapMin.Clear;
 begin
   ClearTree;
-  FNodeManager.Clear;
 end;
 
 function TGLiteComparablePairHeapMin.IsEmpty: Boolean;
@@ -3988,19 +3880,6 @@ end;
 function TGLiteComparablePairHeapMin.NonEmpty: Boolean;
 begin
   Result := Count <> 0;
-end;
-
-procedure TGLiteComparablePairHeapMin.EnsureCapacity(aValue: SizeInt);
-begin
-  FNodeManager.EnsureFreeCount(aValue - Capacity);
-end;
-
-procedure TGLiteComparablePairHeapMin.TrimToFit;
-begin
-  if Count > 0 then
-    FNodeManager.ClearFreeList
-  else
-    FNodeManager.Clear;
 end;
 
 procedure TGLiteComparablePairHeapMin.Enqueue(constref aValue: T);
@@ -4080,7 +3959,6 @@ begin
   Result := aHeap.Count;
   if Result > 0 then
     begin
-      FNodeManager.Join(aHeap.FNodeManager);
       RootMerge(aHeap.FRoot);
       FCount += Result;
       aHeap.FCount := 0;
