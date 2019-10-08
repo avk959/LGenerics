@@ -427,6 +427,7 @@ type
     procedure ArithmeticAdd;
     procedure ArithmeticSubtract;
     procedure SymmetricSubtract;
+    procedure PassByValue;
   end;
 
   TThreadFGHashMultiSetTest = class(TTestCase)
@@ -5527,6 +5528,22 @@ begin
   AssertTrue(ms.Count = 21);
   AssertTrue(ms.ContainsAll(IntArray21));
   ms.SymmetricSubtract(ms1);
+  AssertTrue(ms.IsEmpty);
+end;
+
+procedure TLiteHashMultisetLPTest.PassByValue;
+  procedure Test(aSet: TMultiSet);
+  begin
+    aSet.Add(5);
+    aSet.Add(10);
+    AssertTrue(aSet.NonEmpty);
+  end;
+var
+  ms: TMultiSet;
+begin
+  ms.EnsureCapacity(10);
+  AssertTrue(ms.IsEmpty);
+  Test(ms);
   AssertTrue(ms.IsEmpty);
 end;
 
