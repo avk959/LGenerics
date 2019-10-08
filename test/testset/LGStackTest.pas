@@ -84,6 +84,8 @@ type
     procedure ObjectStack;
   end;
 
+  { TLiteStackTest }
+
   TLiteStackTest = class(TTestCase)
   private
   type
@@ -118,6 +120,8 @@ type
     procedure TryPeek;
     procedure Clear;
     procedure TrimToFit;
+    procedure Assign;
+    procedure PassByValue;
     procedure ObjectStack;
   end;
 
@@ -779,6 +783,54 @@ begin
   s.TrimToFit;
   AssertTrue(s.Count = 30);
   AssertTrue(s.Capacity = 30);
+end;
+
+procedure TLiteStackTest.Assign;
+var
+  s1, s2: TStack;
+begin
+  {%H-}s1.Push(1);
+  s1.Push(2);
+  s1.Push(3);
+  AssertTrue(s1.Count = 3);
+  s2 := s1;
+  AssertTrue(s1.Pop = 3);
+  AssertTrue(s1.Pop = 2);
+  AssertTrue(s1.Pop = 1);
+
+  AssertTrue(s2.Count = 3);
+  AssertTrue(s1.IsEmpty);
+
+  AssertTrue(s2.Pop = 3);
+  AssertTrue(s2.Pop = 2);
+  AssertTrue(s2.Pop = 1);
+  s2.Push(4);
+  s2.Push(5);
+  AssertTrue(s2.Count = 2);
+  s1.Push(6);
+  AssertTrue(s1.Count = 1);
+  s2 := s1;
+  AssertTrue(s1.Pop = 6);
+  AssertTrue(s1.IsEmpty);
+  AssertTrue(s2.Count = 1);
+  AssertTrue(s2.Pop = 6);
+end;
+
+procedure TLiteStackTest.PassByValue;
+  procedure Test(aStack: TStack);
+  begin
+    aStack.Push(10);
+    aStack.Push(1);
+    AssertTrue(aStack.NonEmpty);
+  end;
+var
+  s: TStack;
+begin
+  {%H-}s.EnsureCapacity(10);
+  AssertTrue(s.Capacity > 2);
+  AssertTrue(s.IsEmpty);
+  Test(s);
+  AssertTrue(s.IsEmpty);
 end;
 
 procedure TLiteStackTest.ObjectStack;
