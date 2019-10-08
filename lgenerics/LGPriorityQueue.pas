@@ -3270,6 +3270,8 @@ class operator TGLitePairingHeap.Copy(constref aSrc: TGLitePairingHeap; var aDst
 var
   v: T;
 begin
+  if @aDst = @aSrc then
+    exit;
   aDst.ClearTree;
   for v in aSrc do
     aDst.Enqueue(v);
@@ -3762,6 +3764,8 @@ class operator TGLiteComparablePairHeapMin.Copy(constref aSrc: TGLiteComparableP
 var
   v: T;
 begin
+  if @aDst = @aSrc then
+    exit;
   aDst.ClearTree;
   for v in aSrc do
     aDst.Enqueue(v);
