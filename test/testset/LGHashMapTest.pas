@@ -145,6 +145,7 @@ type
     procedure Str_1;
     procedure Str_2;
     procedure StrRetain;
+    procedure PassByValue;
   end;
 
   TLiteChainHashMapTest = class(TTestCase)
@@ -160,6 +161,7 @@ type
     procedure Str_1;
     procedure Str_2;
     procedure StrRetain;
+    procedure PassByValue;
   end;
 
   { THashMapFGTest }
@@ -1501,6 +1503,21 @@ begin
   AssertTrue(m.Count = 0);
 end;
 
+procedure TLiteHashMapLPTest.PassByValue;
+  procedure Test(aMap: TStrMap);
+  begin
+    aMap.Add('key0', 0);
+    AssertTrue(aMap.NonEmpty);
+  end;
+var
+  m: TStrMap;
+begin
+  m.EnsureCapacity(10);
+  AssertTrue(m.IsEmpty);
+  Test(m);
+  AssertTrue(m.IsEmpty);
+end;
+
 //////////////////////////////
 
 procedure TLiteChainHashMapTest.Int_1;
@@ -1718,6 +1735,21 @@ begin
     AssertTrue(StrOdd(v));
   AssertTrue(m.RemoveAll(s.Instance) = 50);
   AssertTrue(m.Count = 0);
+end;
+
+procedure TLiteChainHashMapTest.PassByValue;
+  procedure Test(aMap: TStrMap);
+  begin
+    aMap.Add('key0', 0);
+    AssertTrue(aMap.NonEmpty);
+  end;
+var
+  m: TStrMap;
+begin
+  m.EnsureCapacity(10);
+  AssertTrue(m.IsEmpty);
+  Test(m);
+  AssertTrue(m.IsEmpty);
 end;
 
 { THashMapFGTest.TWorker }
