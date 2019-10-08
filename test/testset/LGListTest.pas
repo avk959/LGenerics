@@ -129,6 +129,7 @@ type
     procedure FindFloor1;
     procedure FindCeil;
     procedure FindCeil1;
+    procedure PassByValue;
   end;
 
   { TLiteComparableSortedListTest }
@@ -162,6 +163,7 @@ type
     procedure FindFloor1;
     procedure FindCeil;
     procedure FindCeil1;
+    procedure PassByValue;
   end;
 
   TLiteHashListTest = class(TTestCase)
@@ -188,6 +190,7 @@ type
     procedure Insert;
     procedure Delete;
     procedure DeleteOutOfBounds;
+    procedure PassByValue;
   end;
 
 implementation
@@ -1539,6 +1542,22 @@ begin
   AssertTrue(lst.IndexOfCeil(-1) = 0);
 end;
 
+procedure TLiteSortedListTest.PassByValue;
+  procedure Test(aList: TIntList);
+  begin
+    aList.Add(6);
+    aList.Add(2);
+    AssertTrue(aList.NonEmpty);
+  end;
+var
+  lst: TIntList;
+begin
+  lst.EnsureCapacity(12);
+  AssertTrue(lst.IsEmpty);
+  Test(lst);
+  AssertTrue(lst.IsEmpty);
+end;
+
 { TLiteComparableSortedListTest }
 
 procedure TLiteComparableSortedListTest.Add;
@@ -2153,6 +2172,23 @@ begin
   AssertTrue(lst.IndexOfCeil(-1) = 0);
 end;
 
+procedure TLiteComparableSortedListTest.PassByValue;
+  procedure Test(aList: TIntList);
+  begin
+    aList.Add(6);
+    aList.Add(2);
+    AssertTrue(aList.NonEmpty);
+  end;
+var
+  lst: TIntList;
+begin
+  lst.EnsureCapacity(12);
+  AssertTrue(lst.Capacity > 2);
+  AssertTrue(lst.IsEmpty);
+  Test(lst);
+  AssertTrue(lst.IsEmpty);
+end;
+
 { TLiteHashListTest }
 
 procedure TLiteHashListTest.Add;
@@ -2429,6 +2465,23 @@ begin
       Raised := True;
   end;
   AssertTrue(Raised);
+end;
+
+procedure TLiteHashListTest.PassByValue;
+  procedure Test(aList: TIntList);
+  begin
+    aList.Add(6);
+    aList.Add(2);
+    AssertTrue(aList.NonEmpty);
+  end;
+var
+  lst: TIntList;
+begin
+  lst.EnsureCapacity(12);
+  AssertTrue(lst.Capacity > 2);
+  AssertTrue(lst.IsEmpty);
+  Test(lst);
+  AssertTrue(lst.IsEmpty);
 end;
 
 initialization
