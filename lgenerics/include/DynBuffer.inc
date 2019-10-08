@@ -373,6 +373,8 @@ end;
 
 class operator TGLiteDynBuffer.Copy(constref aSrc: TGLiteDynBuffer; var aDst: TGLiteDynBuffer);
 begin
+  if @aDst = @aSrc then
+    exit;
   aDst.FItems := System.Copy(aSrc.FItems, 0, aSrc.Capacity);
   aDst.FCount := aSrc.Count;
 end;
@@ -909,7 +911,7 @@ begin
         aValue :=  DEFAULT_CONTAINER_CAPACITY
       else
         aValue := Math.Min(LGUtils.RoundUpTwoPower(aValue), MAX_CONTAINER_SIZE div SizeOf(T));
-      if (Count > 0) and (Head > 0) then
+      if (Count > 0) and (FHead > 0) then
         Grow(aValue)
       else
         System.SetLength(FItems, aValue);
@@ -926,21 +928,21 @@ begin
   System.SetLength(FItems, aValue);
   ExpandCount := aValue - OldCapacity;
   //so as not to depend on expand policy
-  TailPos := Head + Count;
+  TailPos := FHead + Count;
   if TailPos >= OldCapacity then
     TailPos -= OldCapacity;
-  if TailPos <= Head then   // else nothing to move
+  if TailPos <= FHead then   // else nothing to move
     begin
-      if (TailPos < Succ(OldCapacity - Head)) and (TailPos <= ExpandCount) then
+      if (TailPos < Succ(OldCapacity - FHead)) and (TailPos <= ExpandCount) then
         begin // move tail to tail :)
           System.Move(FItems[0], FItems[OldCapacity], SizeOf(T) * TailPos);
           System.FillChar(FItems[0], SizeOf(T) * TailPos, 0);
         end
       else
         begin // move head to tail
-          ToMove := OldCapacity - Head;
-          System.Move(FItems[Head], FItems[Head + ExpandCount], SizeOf(T) * ToMove);
-          System.FillChar(FItems[Head], SizeOf(T) * Math.Min(ToMove, ExpandCount), 0);
+          ToMove := OldCapacity - FHead;
+          System.Move(FItems[FHead], FItems[FHead + ExpandCount], SizeOf(T) * ToMove);
+          System.FillChar(FItems[FHead], SizeOf(T) * Math.Min(ToMove, ExpandCount), 0);
           FHead += ExpandCount;
         end;
     end;
@@ -951,27 +953,27 @@ var
   OldCapacity, TailPos, ToMove: SizeInt;
 begin
   OldCapacity := Capacity;  //there Count > 0 and Head > 0
-  TailPos := Head + Count;
+  TailPos := FHead + Count;
   if TailPos >= OldCapacity then
     TailPos -= OldCapacity;
-  if (TailPos > Head) then // consecutive
+  if (TailPos > FHead) then // consecutive
     begin
-      System.Move(FItems[Head], FItems[0], SizeOf(T) * Count);
-      if Head >= Count then
-        FillChar(FItems[Head], SizeOf(T) * Count, 0)
+      System.Move(FItems[FHead], FItems[0], SizeOf(T) * Count);
+      if FHead >= Count then
+        FillChar(FItems[FHead], SizeOf(T) * Count, 0)
       else
-        FillChar(FItems[Count], SizeOf(T) * Head, 0);
+        FillChar(FItems[Count], SizeOf(T) * FHead, 0);
       FHead := 0;
     end
   else
-    if TailPos < Head then // else nothing to move
+    if TailPos < FHead then // else nothing to move
       begin
-        ToMove := OldCapacity - Head;
-        System.Move(FItems[Head], FItems[TailPos], SizeOf(T) * ToMove);
-        if Head >= Count then
-          FillChar(FItems[Head], SizeOf(T) * ToMove, 0)
+        ToMove := OldCapacity - FHead;
+        System.Move(FItems[FHead], FItems[TailPos], SizeOf(T) * ToMove);
+        if FHead >= Count then
+          FillChar(FItems[FHead], SizeOf(T) * ToMove, 0)
         else
-          FillChar(FItems[Count], SizeOf(T) * (Head - TailPos), 0);
+          FillChar(FItems[Count], SizeOf(T) * (FHead - TailPos), 0);
         FHead := TailPos;
       end;
   System.SetLength(FItems, Count);
@@ -990,11 +992,11 @@ end;
 
 function TGLiteRingDynBuffer.PopHead: T;
 begin
-  Result := FItems[Head];
-  FItems[Head] := Default(T);
+  Result := FItems[FHead];
+  FItems[FHead] := Default(T);
   Inc(FHead);
   Dec(FCount);
-  if Head = Capacity then
+  if FHead = Capacity then
     FHead := 0;
 end;
 
@@ -1036,12 +1038,12 @@ begin
     exit;
   aDst.FItems := System.Copy(aSrc.FItems, 0, aSrc.Capacity);
   aDst.FCount := aSrc.Count;
-  aDst.FHead := aSrc.Head;
+  aDst.FHead := aSrc.FHead;
 end;
 
 function TGLiteRingDynBuffer.InternalIndex(aIndex: SizeInt): SizeInt;
 begin
-  Result := Head + aIndex;
+  Result := FHead + aIndex;
   if Result >= Capacity then
     Result -= Capacity;
 end;
@@ -1070,7 +1072,7 @@ begin
   if Count > 0 then
     begin
       c := Capacity;
-      h := Head;
+      h := FHead;
       for I := 0 to Pred(Count) do
         begin
           FItems[h] := Default(T);
@@ -1093,7 +1095,7 @@ procedure TGLiteRingDynBuffer.TrimToFit;
 begin
   if Capacity > Count then
     begin
-      if (Count > 0) and (Head > 0) then
+      if (Count > 0) and (FHead > 0) then
         Shrink
       else
         System.SetLength(FItems, Count);
@@ -1105,7 +1107,7 @@ begin
   Result.FItems := FItems;
   Result.FCapacity := Capacity;
   Result.FCount := Count;
-  Result.FHead := Head;
+  Result.FHead := FHead;
   Result.Reset;
 end;
 
@@ -1114,7 +1116,7 @@ begin
   Result.FItems := FItems;
   Result.FCapacity := Capacity;
   Result.FCount := Count;
-  Result.FHead := Head;
+  Result.FHead := FHead;
   Result.Reset;
 end;
 
@@ -1123,7 +1125,7 @@ begin
   Result.FItems := FItems;
   Result.FCapacity := System.Length(FItems);
   Result.FCount := Count;
-  Result.FHead := Head;
+  Result.FHead := FHead;
   Result.Reset;
 end;
 
@@ -1145,7 +1147,7 @@ begin
   if Count > 0 then
     begin
       c := Capacity;
-      h := Head;
+      h := FHead;
       for I := 0 to Pred(Count) do
         begin
           Result[I] := FItems[h];
@@ -1161,7 +1163,7 @@ var
   TailPos, c: SizeInt;
 begin
   ItemAdding;
-  TailPos := Head + Count;
+  TailPos := FHead + Count;
   c := Capacity;
   if TailPos >= c then
     TailPos -= c;
@@ -1173,10 +1175,10 @@ procedure TGLiteRingDynBuffer.PushFirst(constref aValue: T);
 begin
   ItemAdding;
   Dec(FHead);
-  if Head < 0 then
+  if FHead < 0 then
     FHead += Capacity;
   Inc(FCount);
-  FItems[Head] := aValue;
+  FItems[FHead] := aValue;
 end;
 
 function TGLiteRingDynBuffer.PopFirst: T;
@@ -1208,27 +1210,27 @@ end;
 function TGLiteRingDynBuffer.PeekFirst: T;
 begin
   CheckEmpty;
-  Result := FItems[Head];
+  Result := FItems[FHead];
 end;
 
 function TGLiteRingDynBuffer.PeekFirstItem: PItem;
 begin
   CheckEmpty;
-  Result := @FItems[Head];
+  Result := @FItems[FHead];
 end;
 
 function TGLiteRingDynBuffer.TryPeekFirst(out aValue: T): Boolean;
 begin
   Result := Count > 0;
   if Result then
-    aValue := FItems[Head];
+    aValue := FItems[FHead];
 end;
 
 function TGLiteRingDynBuffer.TryPeekFirstItem(out aValue: PItem): Boolean;
 begin
   Result := Count > 0;
   if Result then
-    aValue := @FItems[Head];
+    aValue := @FItems[FHead];
 end;
 
 function TGLiteRingDynBuffer.PeekLast: T;
