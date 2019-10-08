@@ -137,6 +137,7 @@ type
     procedure ObjectSetItem;
     procedure ObjectExtract;
     procedure ObjectDelete;
+    procedure PassByValue;
   end;
 
 implementation
@@ -1435,6 +1436,21 @@ begin
   while d.NonEmpty do
     d.Delete(0);
   AssertTrue(Counter = TestSize);
+end;
+
+procedure TLiteDequeTest.PassByValue;
+  procedure Test(aDecque: TIntDeque);
+  begin
+    aDecque.PushLast(10);
+    aDecque.PushFirst(-10);
+  end;
+var
+  d: TIntDeque;
+begin
+  d.EnsureCapacity(5);
+  AssertTrue(d.IsEmpty);
+  Test(d);
+  AssertTrue(d.IsEmpty);
 end;
 
 initialization
