@@ -3144,10 +3144,13 @@ end;
 
 class operator TGLiteHashTableLP.Copy(constref aSrc: TGLiteHashTableLP; var aDst: TGLiteHashTableLP);
 begin
-  aDst.FList := System.Copy(aSrc.FList, 0, System.Length(aSrc.FList));
-  aDst.FCount := aSrc.Count;
-  aDst.FExpandTreshold := aSrc.ExpandTreshold;
-  aDst.FLoadFactor := aSrc.LoadFactor;
+  if @aSrc <> @aDst then
+    begin
+      aDst.FList := System.Copy(aSrc.FList, 0, System.Length(aSrc.FList));
+      aDst.FCount := aSrc.Count;
+      aDst.FExpandTreshold := aSrc.ExpandTreshold;
+      aDst.FLoadFactor := aSrc.LoadFactor;
+    end;
 end;
 
 function TGLiteHashTableLP.GetEnumerator: TEnumerator;
@@ -3417,9 +3420,12 @@ end;
 
 class operator TGLiteChainHashTable.Copy(constref aSrc: TGLiteChainHashTable; var aDst: TGLiteChainHashTable);
 begin
-  aDst.FNodeList := System.Copy(aSrc.FNodeList);
-  aDst.FChainList := System.Copy(aSrc.FChainList);
-  aDst.FCount := aSrc.Count;
+  if @aSrc <> @aDst then
+    begin
+      aDst.FNodeList := System.Copy(aSrc.FNodeList);
+      aDst.FChainList := System.Copy(aSrc.FChainList);
+      aDst.FCount := aSrc.Count;
+    end;
 end;
 
 procedure TGLiteChainHashTable.Clear;
