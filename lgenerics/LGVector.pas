@@ -388,6 +388,7 @@ type
     function  Reverse: TReverse; inline;
   { returns an array containing the indices of the set bits }
     function  ToArray: TIntArray;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure Clear; inline;
     procedure ClearBits; inline;
     procedure SetBits; inline;
@@ -2161,6 +2162,12 @@ begin
       Result[Pos] := I;
       Inc(Pos);
     end;
+end;
+
+procedure TBoolVector.EnsureCapacity(aValue: SizeInt);
+begin
+  if Capacity < aValue then
+    SetCapacity(aValue);
 end;
 
 procedure TBoolVector.Clear;
