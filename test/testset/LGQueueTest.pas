@@ -146,6 +146,8 @@ type
     procedure TrimToFitStr;
     procedure EnumeratorInt;
     procedure EnumeratorStr;
+    procedure Assign;
+    procedure PassByValue;
     procedure ToArrayInt;
     procedure ToArrayStr;
     procedure ObjectQueue;
@@ -1198,6 +1200,54 @@ begin
       AssertTrue(s = 'string ' + I.ToString);
       Inc(I);
     end;
+end;
+
+procedure TLiteQueueTest.Assign;
+var
+  q1, q2: TIntQueue;
+begin
+  {%H-}q1.Enqueue(1);
+  q1.Enqueue(2);
+  q1.Enqueue(3);
+  AssertTrue(q1.Count = 3);
+  q2 := q1;
+  AssertTrue(q1.Dequeue = 1);
+  AssertTrue(q1.Dequeue = 2);
+  AssertTrue(q1.Dequeue = 3);
+
+  AssertTrue(q2.Count = 3);
+  AssertTrue(q1.IsEmpty);
+
+  AssertTrue(q2.Dequeue = 1);
+  AssertTrue(q2.Dequeue = 2);
+  AssertTrue(q2.Dequeue = 3);
+  q2.Enqueue(4);
+  q2.Enqueue(5);
+  AssertTrue(q2.Count = 2);
+  q1.Enqueue(6);
+  AssertTrue(q1.Count = 1);
+  q2 := q1;
+  AssertTrue(q1.Dequeue = 6);
+  AssertTrue(q1.IsEmpty);
+  AssertTrue(q2.Count = 1);
+  AssertTrue(q2.Dequeue = 6);
+end;
+
+procedure TLiteQueueTest.PassByValue;
+  procedure Test(aQueue: TIntQueue);
+  begin
+    aQueue.Enqueue(10);
+    aQueue.Enqueue(1);
+    AssertTrue(aQueue.NonEmpty);
+  end;
+var
+  q: TIntQueue;
+begin
+  {%q-}q.EnsureCapacity(10);
+  AssertTrue(q.Capacity > 2);
+  AssertTrue(q.IsEmpty);
+  Test(q);
+  AssertTrue(q.IsEmpty);
 end;
 
 procedure TLiteQueueTest.ToArrayInt;
