@@ -302,6 +302,8 @@
       function GetEnumerator: TReverseEnumerator; inline;
     end;
 
+  var
+    FItems: TArray;
   private
     FCount,
     FHead: SizeInt;
@@ -322,7 +324,6 @@
     class operator Initialize(var b: TGLiteRingDynBuffer);
     class operator Copy(constref aSrc: TGLiteRingDynBuffer; var aDst: TGLiteRingDynBuffer); inline;
   public
-    FItems: TArray;
     // do not check bounds !!!
     function  InternalIndex(aIndex: SizeInt): SizeInt;
     // do not check bounds !!!
