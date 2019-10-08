@@ -220,6 +220,7 @@ type
     procedure Mutables;
     procedure Mutable;
     procedure UncMutable;
+    procedure CallByValue;
 
     procedure ObjectVector;
   end;
@@ -242,6 +243,7 @@ type
     procedure GetEnumerator;
     procedure Reverse;
     procedure ToArray;
+    procedure EnsureCapacity;
     procedure SetBits;
     procedure ClearBits;
     procedure ToggleBits;
@@ -1936,6 +1938,33 @@ begin
     AssertTrue(v[I] = 'string ' + (I*2).ToString);
 end;
 
+procedure TGLiteVectorTest.CallByValue;
+  procedure Test(aVector: TIntVector);
+  begin
+    AssertTrue(aVector.IsEmpty);
+    aVector.Add(11);
+    AssertTrue(aVector.NonEmpty);
+  end;
+  procedure Test2(aVector: TIntVector);
+  begin
+    aVector.Add(10);
+    AssertTrue(aVector[aVector.Count - 1] = 10);
+  end;
+var
+  v: TIntVector;
+begin
+  {%H-}v.EnsureCapacity(5);
+  AssertTrue(v.IsEmpty);
+  Test(v);
+  AssertTrue(v.IsEmpty);
+  v.Add(5);
+  AssertTrue(v.Count = 1);
+  AssertTrue(v[0] = 5);
+  Test2(v);
+  AssertTrue(v.Count = 1);
+  AssertTrue(v[0] = 5);
+end;
+
 procedure TGLiteVectorTest.ObjectVector;
 var
   Counter: Integer = 0;
@@ -2160,6 +2189,19 @@ begin
   AssertTrue(specialize TGComparableArrayHelper<SizeInt>.Same(a, r));
 end;
 
+procedure TBoolVectorTest.EnsureCapacity;
+var
+  v: TBoolVector;
+begin
+  AssertTrue({%H-}v.Capacity = 0);
+  v.EnsureCapacity(-5);
+  AssertTrue(v.Capacity = 0);
+  v.EnsureCapacity(155);
+  AssertTrue(v.Capacity >= 155);
+  v.EnsureCapacity(100);
+  AssertTrue(v.Capacity >= 155);
+end;
+
 procedure TBoolVectorTest.SetBits;
 var
   v: TBoolVector;
@@ -2332,15 +2374,23 @@ end;
 procedure TBoolVectorTest.CallByValue;
   procedure Test(aVector: TBoolVector);
   begin
+    aVector.EnsureCapacity(135);
+    aVector[134] := True;
+    AssertTrue(aVector[134]);
+  end;
+  procedure Test2(aVector: TBoolVector);
+  begin
     aVector.SetBits;
     AssertTrue(aVector.All);
   end;
 var
   v: TBoolVector;
 begin
-  v.Capacity := 128;
+  {%H-}v.EnsureCapacity(135);
   AssertTrue(v.IsEmpty);
   Test(v);
+  AssertTrue(v.IsEmpty);
+  Test2(v);
   AssertTrue(v.IsEmpty);
 end;
 
