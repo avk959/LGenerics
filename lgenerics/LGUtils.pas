@@ -1026,12 +1026,15 @@ end;
 
 class operator TGSharedRefA<T>.Copy(constref aSrc: TGSharedRefA<T>; var aDst: TGSharedRefA<T>);
 begin
-  aDst.Release;
-  if aSrc.FRefCount <> nil then
+  if @aSrc <> @aDst then
     begin
-      InterLockedIncrement(aSrc.FRefCount^);
-      aDst.FRefCount := aSrc.FRefCount;
-      aDst.FInstance := aSrc.Instance;
+      aDst.Release;
+      if aSrc.FRefCount <> nil then
+        begin
+          InterLockedIncrement(aSrc.FRefCount^);
+          aDst.FRefCount := aSrc.FRefCount;
+          aDst.FInstance := aSrc.Instance;
+        end;
     end;
 end;
 
@@ -1118,12 +1121,15 @@ end;
 
 class operator TGSharedRef<T>.Copy(constref aSrc: TGSharedRef<T>; var aDst: TGSharedRef<T>);
 begin
-  aDst.Release;
-  if aSrc.FRefCount <> nil then
+  if @aSrc <> @aDst then
     begin
-      InterLockedIncrement(aSrc.FRefCount^);
-      aDst.FRefCount := aSrc.FRefCount;
-      aDst.FInstance := aSrc.Instance;
+      aDst.Release;
+      if aSrc.FRefCount <> nil then
+        begin
+          InterLockedIncrement(aSrc.FRefCount^);
+          aDst.FRefCount := aSrc.FRefCount;
+          aDst.FInstance := aSrc.Instance;
+        end;
     end;
 end;
 
@@ -1230,11 +1236,14 @@ end;
 
 class operator TGCowPtr<T>.Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>);
 begin
-  aDst.Release;
-  if aSrc.FInstance <> nil then
+  if @aSrc <> @aDst then
     begin
-      InterLockedIncrement(aSrc.FInstance^.RefCount);
-      aDst.FInstance := aSrc.FInstance;
+      aDst.Release;
+      if aSrc.FInstance <> nil then
+        begin
+          InterLockedIncrement(aSrc.FInstance^.RefCount);
+          aDst.FInstance := aSrc.FInstance;
+        end;
     end;
 end;
 
