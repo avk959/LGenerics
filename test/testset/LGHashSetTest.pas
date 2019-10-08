@@ -474,6 +474,7 @@ type
     procedure Equality;
     procedure Contains;
     procedure TestIn;
+    procedure PassByValue;
   end;
 
   TGDisjointSetUnionTest = class(TTestCase)
@@ -5412,6 +5413,22 @@ begin
   AssertTrue(10 in s);
   AssertFalse(0 in s);
   AssertFalse(22 in s);
+end;
+
+procedure TLiteHashSetTest.PassByValue;
+  procedure Test(aSet: TSet);
+  begin
+    aSet.Add(2);
+    aSet.Add(-5);
+    AssertTrue(aSet.NonEmpty);
+  end;
+var
+  s: TSet;
+begin
+  s.EnsureCapacity(10);
+  AssertTrue(s.IsEmpty);
+  Test(s);
+  AssertTrue(s.IsEmpty);
 end;
 
 { TGDisjointSetUnionTest }
