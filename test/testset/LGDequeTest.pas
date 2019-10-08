@@ -1447,7 +1447,7 @@ procedure TLiteDequeTest.PassByValue;
 var
   d: TIntDeque;
 begin
-  d.EnsureCapacity(5);
+  {%H-}d.EnsureCapacity(5);
   AssertTrue(d.IsEmpty);
   Test(d);
   AssertTrue(d.IsEmpty);
