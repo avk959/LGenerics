@@ -423,6 +423,7 @@ type
     procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
     property  Root: SizeInt read GetRoot write SetRoot;
     class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
+    class operator AddRef(var aTree: TGLiteAvlTree);
   public
     function  GetEnumerator: TEnumerator;
     procedure Clear; inline;
@@ -3180,7 +3181,13 @@ end;
 
 class operator TGLiteAvlTree.Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
 begin
-  aDst.FNodes := System.Copy(aSrc.FNodes);
+  if @aSrc <> @aDst then
+    aDst.FNodes := System.Copy(aSrc.FNodes);
+end;
+
+class operator TGLiteAvlTree.AddRef(var aTree: TGLiteAvlTree);
+begin
+  aTree.FNodes := System.Copy(aTree.FNodes);
 end;
 
 function TGLiteAvlTree.GetEnumerator: TEnumerator;
