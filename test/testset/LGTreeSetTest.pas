@@ -378,6 +378,8 @@ type
     procedure Equality;
     procedure Contains;
     procedure TestIn;
+    procedure Assign;
+    procedure PassByValue;
   end;
 
 implementation
@@ -4195,6 +4197,42 @@ begin
   AssertTrue(10 in s);
   AssertFalse(0 in s);
   AssertFalse(22 in s);
+end;
+
+procedure TLiteTreeSetTest.Assign;
+var
+  s1, s2: TSet;
+begin
+  s1.Add(1);
+  s1.Add(2);
+  s1.Add(3);
+  AssertTrue(s1.Count = 3);
+  AssertTrue(s2.IsEmpty);
+  s2 := s1;
+  AssertTrue(s2.Count = 3);
+  s1.Clear;
+  AssertTrue(s2.Count = 3);
+  s2.Contains(1);
+  s2.Contains(2);
+  s2.Contains(3);
+  s2 := s1;
+  AssertTrue(s2.IsEmpty);
+end;
+
+procedure TLiteTreeSetTest.PassByValue;
+  procedure Test(aSet: TSet);
+  begin
+    aSet.Add(2);
+    aSet.Add(-5);
+    AssertTrue(aSet.NonEmpty);
+  end;
+var
+  s: TSet;
+begin
+  s.EnsureCapacity(10);
+  AssertTrue(s.IsEmpty);
+  Test(s);
+  AssertTrue(s.IsEmpty);
 end;
 
 initialization
