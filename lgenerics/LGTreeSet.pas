@@ -2006,65 +2006,29 @@ end;
 
 class operator TGLiteTreeSet. + (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
 begin
-  if @Result = @L then
-    Result.Join(R)
-  else
-    if @Result = @R then
-      Result.Join(L)
-    else
-      begin
-        Result := L;
-        Result.Join(R);
-      end;
+  Result := L;
+  Result.Join(R);
 end;
 
 class operator TGLiteTreeSet. - (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
 var
-  tmp: TGLiteTreeSet;
   v: T;
 begin
-  if @Result = @L then
-    Result.Subtract(R)
-  else
-    if @Result = @R then
-      begin
-        for v in L do
-          if R.NonContains(v) then
-            tmp.Add(v);
-        Result := tmp;
-      end
-    else
-      for v in L do
-        if R.NonContains(v) then
-          Result.Add(v);
+  for v in L do
+    if R.NonContains(v) then
+      Result.Add(v);
 end;
 
 class operator TGLiteTreeSet. * (constref L, R: TGLiteTreeSet): TGLiteTreeSet;
 begin
-  if @Result = @L then
-    Result.Intersect(R)
-  else
-    if @Result = @R then
-      Result.Intersect(L)
-    else
-      begin
-        Result := L;
-        Result.Intersect(R);
-      end;
+  Result := L;
+  Result.Intersect(R);
 end;
 
 class operator TGLiteTreeSet.><(constref L, R: TGLiteTreeSet): TGLiteTreeSet;
 begin
-  if @Result = @L then
-    Result.SymmetricSubtract(R)
-  else
-    if @Result = @R then
-      Result.SymmetricSubtract(L)
-    else
-      begin
-        Result := L;
-        Result.SymmetricSubtract(R);
-      end;
+  Result := L;
+  Result.SymmetricSubtract(R);
 end;
 
 class operator TGLiteTreeSet.in(constref aValue: T; constref aSet: TGLiteTreeSet): Boolean;
