@@ -427,12 +427,13 @@ end;
 
 function TGLiteRootedTree.TTreeNode.TAncestorEnumerator.MoveNext: Boolean;
 begin
-  Result := FNext <> nil;
-  if Result then
+  if FNext <> nil then
     begin
       FCurrent := FNext;
       FNext := FNext^.Parent;
+      exit(True);
     end;
+  Result := False;
 end;
 
 { TGLiteRootedTree.TTreeNode.TAncestors }
@@ -468,12 +469,13 @@ end;
 
 function TGLiteRootedTree.TTreeNode.TChildEnumerator.MoveNext: Boolean;
 begin
-  Result := FNext <> nil;
-  if Result then
+  if FNext <> nil then
     begin
       FCurrent := FNext;
       FNext := FNext^.Sibling;
+      exit(True);
     end;
+  Result := False;
 end;
 
 { TGLiteRootedTree.TTreeNode.TChildren }
