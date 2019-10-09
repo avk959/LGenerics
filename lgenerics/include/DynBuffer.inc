@@ -275,54 +275,46 @@ end;
 
 function TGLiteDynBuffer.TEnumerator.GetCurrent: T;
 begin
-  Result := FItems[FCurrIndex];
+  Result := FCurrent^;
 end;
 
 function TGLiteDynBuffer.TEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLast;
-  FCurrIndex += Ord(Result);
-end;
-
-procedure TGLiteDynBuffer.TEnumerator.Reset;
-begin
-  FCurrIndex := NULL_INDEX;
+  if FCurrent < FLast then
+    begin
+      Inc(FCurrent);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteDynBuffer.TMutableEnumerator }
 
-function TGLiteDynBuffer.TMutableEnumerator.GetCurrent: PItem;
-begin
-  Result := @FItems[FCurrIndex];
-end;
-
 function TGLiteDynBuffer.TMutableEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLast;
-  FCurrIndex += Ord(Result);
-end;
-
-procedure TGLiteDynBuffer.TMutableEnumerator.Reset;
-begin
-  FCurrIndex := NULL_INDEX;
+  if FCurrent < FLast then
+    begin
+      Inc(FCurrent);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteDynBuffer.TReverseEnumerator }
 
 function TGLiteDynBuffer.TReverseEnumerator.GetCurrent: T;
 begin
-  Result := FItems[FCurrIndex];
+  Result := FCurrent^;
 end;
 
 function TGLiteDynBuffer.TReverseEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex > 0;
-  FCurrIndex -= Ord(Result);
-end;
-
-procedure TGLiteDynBuffer.TReverseEnumerator.Reset;
-begin
-  FCurrIndex := FCount;
+  if FCurrent > FFirst then
+    begin
+      Dec(FCurrent);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteDynBuffer.TMutables }
@@ -410,23 +402,44 @@ end;
 
 function TGLiteDynBuffer.GetEnumerator: TEnumerator;
 begin
-  Result.FItems := FItems;
-  Result.FLast := Pred(FCount);
-  Result.FCurrIndex := NULL_INDEX;
+  if FCount > 0 then
+    begin
+      Result.FCurrent := PItem(FItems) - 1;
+      Result.FLast := PItem(FItems) + Pred(FCount);
+    end
+  else
+    begin
+      Result.FCurrent := nil;
+      Result.FLast := nil;
+    end;
 end;
 
 function TGLiteDynBuffer.GetMutableEnumerator: TMutableEnumerator;
 begin
-  Result.FItems := FItems;
-  Result.FLast := Pred(FCount);
-  Result.FCurrIndex := NULL_INDEX;
+  if FCount > 0 then
+    begin
+      Result.FCurrent := PItem(FItems) - 1;
+      Result.FLast := PItem(FItems) + Pred(FCount);
+    end
+  else
+    begin
+      Result.FCurrent := nil;
+      Result.FLast := nil;
+    end;
 end;
 
 function TGLiteDynBuffer.GetReverseEnumerator: TReverseEnumerator;
 begin
-  Result.FItems := FItems;
-  Result.FCount := FCount;
-  Result.FCurrIndex := FCount;
+  if FCount > 0 then
+    begin
+      Result.FCurrent := PItem(FItems) + FCount;
+      Result.FFirst := PItem(FItems);
+    end
+  else
+    begin
+      Result.FCurrent := nil;
+      Result.FFirst := nil;
+    end;
 end;
 
 function TGLiteDynBuffer.Mutables: TMutables;
@@ -813,20 +826,15 @@ end;
 
 function TGLiteRingDynBuffer.TEnumerator.MoveNext: Boolean;
 begin
-  Result := FRest > 0;
-  FCurrIndex += Ord(Result);
-  FRest -= Ord(Result);
-  if FCurrIndex = FCapacity then
-    FCurrIndex := 0;
-end;
-
-procedure TGLiteRingDynBuffer.TEnumerator.Reset;
-begin
-  if FHead = 0 then
-    FCurrIndex := Pred(FCapacity)
-  else
-    FCurrIndex := Pred(FHead);
-  FRest := FCount;
+  if FRest > 0 then
+    begin
+      Inc(FCurrIndex);
+      Dec(FRest);
+      if FCurrIndex = FCapacity then
+        FCurrIndex := 0;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteRingDynBuffer.TMutableEnumerator }
@@ -838,20 +846,15 @@ end;
 
 function TGLiteRingDynBuffer.TMutableEnumerator.MoveNext: Boolean;
 begin
-  Result := FRest > 0;
-  FCurrIndex += Ord(Result);
-  FRest -= Ord(Result);
-  if FCurrIndex = FCapacity then
-    FCurrIndex := 0;
-end;
-
-procedure TGLiteRingDynBuffer.TMutableEnumerator.Reset;
-begin
-  if FHead = 0 then
-    FCurrIndex := Pred(FCapacity)
-  else
-    FCurrIndex := Pred(FHead);
-  FRest := FCount;
+  if FRest > 0 then
+    begin
+      Inc(FCurrIndex);
+      Dec(FRest);
+      if FCurrIndex = FCapacity then
+        FCurrIndex := 0;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteRingDynBuffer.TMutables }
@@ -870,22 +873,15 @@ end;
 
 function TGLiteRingDynBuffer.TReverseEnumerator.MoveNext: Boolean;
 begin
-  Result := FRest > 0;
-  if Result then
+  if FRest > 0 then
     begin
       Dec(FCurrIndex);
       Dec(FRest);
       if FCurrIndex < 0 then
         FCurrIndex += FCapacity;
+      exit(True);
     end;
-end;
-
-procedure TGLiteRingDynBuffer.TReverseEnumerator.Reset;
-begin
-  FCurrIndex := FHead + FCount;
-  FRest := FCount;
-  if FCurrIndex >= FCapacity then
-    FCurrIndex -= FCapacity;
+  Result := False;
 end;
 
 { TGLiteRingDynBuffer.TReverse }
@@ -1106,27 +1102,38 @@ function TGLiteRingDynBuffer.GetEnumerator: TEnumerator;
 begin
   Result.FItems := FItems;
   Result.FCapacity := Capacity;
-  Result.FCount := Count;
+  Result.FCount := FCount;
   Result.FHead := FHead;
-  Result.Reset;
+  if FHead = 0 then
+    Result.FCurrIndex := Pred(Capacity)
+  else
+    Result.FCurrIndex := Pred(FHead);
+  Result.FRest := FCount;
 end;
 
 function TGLiteRingDynBuffer.GetMutableEnumerator: TMutableEnumerator;
 begin
   Result.FItems := FItems;
   Result.FCapacity := Capacity;
-  Result.FCount := Count;
+  Result.FCount := FCount;
   Result.FHead := FHead;
-  Result.Reset;
+  if FHead = 0 then
+    Result.FCurrIndex := Pred(Capacity)
+  else
+    Result.FCurrIndex := Pred(FHead);
+  Result.FRest := FCount;
 end;
 
 function TGLiteRingDynBuffer.GetReverseEnumerator: TReverseEnumerator;
 begin
   Result.FItems := FItems;
   Result.FCapacity := System.Length(FItems);
-  Result.FCount := Count;
+  Result.FCount := FCount;
   Result.FHead := FHead;
-  Result.Reset;
+  Result.FCurrIndex := FHead + FCount;
+  Result.FRest := FCount;
+  if Result.FCurrIndex >= Capacity then
+    Result.FCurrIndex -= Capacity;
 end;
 
 function TGLiteRingDynBuffer.Mutables: TMutables;

@@ -99,26 +99,21 @@
 
     TEnumerator = record
     private
-      FItems: TArray;
-      FCurrIndex,
-      FLast: SizeInt;
+      FCurrent,
+      FLast: PItem;
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
     TMutableEnumerator = record
     private
-      FItems: TArray;
-      FCurrIndex,
-      FLast: SizeInt;
-      function  GetCurrent: PItem; inline;
+      FCurrent,
+      FLast: PItem;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset;
-      property  Current: PItem read GetCurrent;
+      property  Current: PItem read FCurrent;
     end;
 
     TMutables = record
@@ -130,13 +125,11 @@
 
     TReverseEnumerator = record
     private
-      FItems: TArray;
-      FCurrIndex,
-      FCount: SizeInt;
+      FCurrent,
+      FFirst: PItem;
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -253,7 +246,6 @@
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -268,7 +260,6 @@
       function  GetCurrent: PItem; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: PItem read GetCurrent;
     end;
 
@@ -290,7 +281,6 @@
       function  GetCurrent: T; inline;
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: T read GetCurrent;
     end;
 
