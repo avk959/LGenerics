@@ -203,7 +203,7 @@ type
     function  DeleteAll(aIndex, aCount: SizeInt): SizeInt; inline;
   { swaps items with indices aIdx1 and aIdx2; will raise ELGListError if any index out of bounds }
     procedure Swap(aIdx1, aIdx2: SizeInt);
-  { does not checks indices range }
+  { does not checks range }
     procedure UncSwap(aIdx1, aIdx2: SizeInt); inline;
     property  Count: SizeInt read FBuffer.FCount;
     property  Capacity: SizeInt read GetCapacity;
