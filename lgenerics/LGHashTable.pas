@@ -289,7 +289,7 @@ type
 {$ENDIF ORDEREDHASHTABLE_ENABLE_PAGEDNODEMANAGER}
 
   const
-    DEFAULT_LOAD_FACTOR: Single = 0.75;
+    DEFAULT_LOAD_FACTOR: Single = 1.0;
     MAX_LOAD_FACTOR: Single     = 4.0;
     MAX_CAPACITY                = (MAX_CONTAINER_SIZE shr 2) div SizeOf(Pointer);
 
@@ -380,7 +380,7 @@ type
     TNodeManager = specialize TGNodeManager<TNode>;
 {$ENDIF CHAINHASHTABLE_ENABLE_PAGEDNODEMANAGER}
   const
-    DEFAULT_LOAD_FACTOR: Single = 0.75;
+    DEFAULT_LOAD_FACTOR: Single = 1.0;
     MAX_LOAD_FACTOR: Single     = 4.0;
     MAX_CAPACITY                = (MAX_CONTAINER_SIZE shr 2) div SizeOf(Pointer);
 
@@ -1857,16 +1857,13 @@ end;
 
 function TGOrderedHashTable.Find(constref aKey: TKey; out aPos: TSearchResult): PEntry;
 begin
+  Result := nil;
   if Count > 0 then
     begin
       aPos := DoFind(aKey, TEqRel.HashCode(aKey));
       if aPos.Node <> nil then
-        Result := @PNode(aPos.Node)^.Data
-      else
-        Result := nil;
-    end
-  else
-    Result := nil;
+        Result := @PNode(aPos.Node)^.Data;
+    end;
 end;
 
 function TGOrderedHashTable.Remove(constref aKey: TKey): Boolean;
@@ -1892,13 +1889,15 @@ begin
       else
         FList[CurrNode^.Hash and System.High(FList)] := CurrNode^.ChainNext;
 
-      if CurrNode^.Prior <> nil then //is not in order head
+      if CurrNode^.Prior <> nil then //is not head
         CurrNode^.Prior^.Next := CurrNode^.Next
       else
         FHead := CurrNode^.Next;
 
-      if CurrNode^.Next <> nil then //is not in order tail
-        CurrNode^.Next^.Prior := CurrNode^.Prior;
+      if CurrNode^.Next <> nil then //is not tail
+        CurrNode^.Next^.Prior := CurrNode^.Prior
+      else
+        FTail := CurrNode^.Prior;
 
       DisposeNode(aPos.Node);
     end;
