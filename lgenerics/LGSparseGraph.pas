@@ -125,10 +125,9 @@ type
     private
       pCurr,
       pLast: PAdjItem;
-      function  GetCurrent: PAdjItem; inline;
     public
       function  MoveNext: Boolean; inline;
-      property  Current: PAdjItem read GetCurrent;
+      property  Current: PAdjItem read pCurr;
     end;
 
   private
@@ -819,15 +818,14 @@ end;
 
 { TGAdjList.TEnumerator }
 
-function TGAdjList.TEnumerator.GetCurrent: PAdjItem;
-begin
-  Result := pCurr;
-end;
-
 function TGAdjList.TEnumerator.MoveNext: Boolean;
 begin
-  Result := pCurr < pLast;
-  pCurr += Ord(Result);
+  if pCurr < pLast then
+    begin
+      Inc(pCurr);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGAdjList }
