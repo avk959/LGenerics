@@ -132,6 +132,38 @@ type
     procedure ObjectMap;
   end;
 
+  { TOrderHashMapTest }
+  TOrderHashMapTest = class(TTestCase)
+  private
+  type
+    TIntMap     = specialize TGOrderedHashMap<Integer, Integer>;
+    TAutoIntMap = specialize TGAutoRef<TIntMap>;
+    TStrMap     = specialize TGOrderedHashMap<string, Integer>;
+    TAutoStrMap = specialize TGAutoRef<TStrMap>;
+    TObjMap     = specialize TGObjOrdHashMap<TTestObj, TTestObj>;
+    TAutoObjMap = specialize TGAutoRef<TObjMap>;
+
+  published
+    procedure Int_1;
+    procedure Int_2;
+    procedure IntRetain;
+    procedure Str_1;
+    procedure Str_2;
+    procedure StrRetain;
+
+    procedure InOrder;
+    procedure FindFirst;
+    procedure FindLast;
+    procedure ExtractFirst;
+    procedure ExtractLast;
+    procedure RemoveFirst;
+    procedure RemoveLast;
+
+    procedure ObjectMap;
+    procedure ObjectOrdMapFirst;
+    procedure ObjectOrdMapLast;
+  end;
+
   TLiteHashMapLPTest = class(TTestCase)
   private
   type
@@ -1286,6 +1318,468 @@ begin
   AssertTrue(Counter.Count = 200);
 end;
 
+{ TOrderHashMapTest }
+
+procedure TOrderHashMapTest.Int_1;
+var
+  m: TAutoIntMap;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  AssertTrue(m.Instance.IsEmpty);
+  m.Instance.Add(1,11);
+  AssertTrue(m.Instance.Count = 1);
+  AssertTrue(m.Instance.Contains(1));
+  AssertTrue(m.Instance[1] = 11);
+  AssertFalse(m.Instance.Contains(2));
+  m.Instance[2] := 22;
+  AssertTrue(m.Instance.Contains(2));
+  AssertTrue(m.Instance[2] = 22);
+  AssertTrue(m.Instance.Count = 2);
+  m.Instance.Clear;
+  AssertTrue(m.Instance.Count = 0);
+  for I := 1 to 100 do
+    m.Instance[I * 23] := I * 47;
+  AssertTrue(m.Instance.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m.Instance[I * 23] = I * 47);
+  for I := 1 to 100 do
+    m.Instance[I * 23] := I * 53;
+  AssertTrue(m.Instance.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m.Instance[I * 23] = I * 53);
+  for I := 1 to 100 do
+    AssertTrue(m.Instance[I * 23] = I * 53);
+  try
+    I := m.Instance[22];
+  except
+    on e: ELGMapError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+  AssertTrue(m.Instance.Remove(23));
+  AssertFalse(m.Instance.Contains(23));
+  AssertFalse(m.Instance.TryGetValue(12, I));
+  AssertTrue(m.Instance.TryGetValue(46, I));
+  AssertTrue(I = 106);
+  AssertTrue(m.Instance.GetValueDef(17) = 0);
+  AssertTrue(m.Instance.GetValueDef(17, 27) = 27);
+  for I := 1 to 100 do
+    m.Instance.Remove(I * 23);
+  AssertTrue(m.Instance.Count = 0);
+end;
+
+procedure TOrderHashMapTest.Int_2;
+var
+  m: TAutoIntMap;
+  I, TestSize: Integer;
+  e: TIntEntryArray;
+  k: TIntKeyArray;
+begin
+  TestSize := 100;
+  e := CreateIntArray(TestSize);
+  System.SetLength(k, TestSize);
+  for I := 0 to System.High(e) do
+    k[I] := e[I].Key;
+  m.Instance.AddAll(e);
+  AssertTrue(m.Instance.Count = TestSize);
+  AssertTrue(m.Instance.ContainsAll(k));
+  AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
+  AssertTrue(m.Instance.Count = 50);
+  AssertTrue(m.Instance.ContainsAll(k[50..99]));
+  AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
+  AssertTrue(m.Instance.Count = 0);
+  m.Instance.AddAll(e);
+  AssertTrue(m.Instance.RemoveIf(@IntOdd) = 50);
+  AssertTrue(m.Instance.Count = 50);
+  for I in m.Instance.Keys do
+    AssertFalse(IntOdd(I));
+  AssertTrue(m.Instance.AddAll(e) = 50);
+  e := m.Instance.ExtractIf(@IntOdd);
+  for I := 0 to System.High(e) do
+    AssertTrue(IntOdd(e[I].Key));
+end;
+
+procedure TOrderHashMapTest.IntRetain;
+var
+  m: TAutoIntMap;
+  s: TAutoIntSet;
+  I, TestSize: Integer;
+  e: TIntEntryArray;
+begin
+  TestSize := 100;
+  e := CreateIntArray(TestSize);
+  I := 1;
+  while I <= System.High(e) do
+    begin
+      s.Instance.Add(e[I].Key);
+      I += 2;
+    end;
+  AssertTrue(s.Instance.Count = 50);
+  m.Instance.AddAll(e);
+  AssertTrue(m.Instance.Count = TestSize);
+  m.Instance.RetainAll(s.Instance);
+  AssertTrue(m.Instance.Count = 50);
+  AssertTrue(m.Instance.ContainsAll(s.Instance));
+  for I in m.Instance.Keys do
+    AssertTrue(IntOdd(I));
+  AssertTrue(m.Instance.RemoveAll(s.Instance) = 50);
+  AssertTrue(m.Instance.Count = 0);
+end;
+
+procedure TOrderHashMapTest.Str_1;
+var
+  m: TAutoStrMap;
+  I: Integer;
+  Raised: Boolean = False;
+begin
+  AssertTrue(m.Instance.IsEmpty);
+  m.Instance.Add('1',11);
+  AssertTrue(m.Instance.Count = 1);
+  AssertTrue(m.Instance.Contains('1'));
+  AssertTrue(m.Instance['1'] = 11);
+  AssertFalse(m.Instance.Contains('2'));
+  m.Instance['2'] := 22;
+  AssertTrue(m.Instance.Contains('2'));
+  AssertTrue(m.Instance['2'] = 22);
+  AssertTrue(m.Instance.Count = 2);
+  m.Instance.Clear;
+  AssertTrue(m.Instance.Count = 0);
+  for I := 1 to 100 do
+    m.Instance[(I * 23).ToString] := I * 47;
+  AssertTrue(m.Instance.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m.Instance[(I * 23).ToString] = I * 47);
+  for I := 1 to 100 do
+    m.Instance[(I * 23).ToString] := I * 53;
+  AssertTrue(m.Instance.Count = 100);
+  for I := 1 to 100 do
+    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+  for I := 1 to 100 do
+    AssertTrue(m.Instance[(I * 23).ToString] = I * 53);
+  try
+    I := m.Instance['22'];
+  except
+    on e: ELGMapError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+  AssertTrue(m.Instance.Remove('23'));
+  AssertFalse(m.Instance.Contains('23'));
+  AssertFalse(m.Instance.TryGetValue('12', I));
+  AssertTrue(m.Instance.TryGetValue('46', I));
+  AssertTrue(I = 106);
+  AssertTrue(m.Instance.GetValueDef('17') = 0);
+  AssertTrue(m.Instance.GetValueDef('17', 27) = 27);
+  for I := 1 to 100 do
+    m.Instance.Remove((I * 23).ToString);
+  AssertTrue(m.Instance.Count = 0);
+end;
+
+procedure TOrderHashMapTest.Str_2;
+var
+  m: TAutoStrMap;
+  I, TestSize: Integer;
+  e: TStrEntryArray;
+  k: TStrKeyArray;
+  s: string;
+begin
+  TestSize := 100;
+  e := CreateStrArray(TestSize);
+  System.SetLength(k, TestSize);
+  for I := 0 to System.High(e) do
+    k[I] := e[I].Key;
+  m.Instance.AddAll(e);
+  AssertTrue(m.Instance.Count = TestSize);
+  AssertTrue(m.Instance.ContainsAll(k));
+  AssertTrue(m.Instance.RemoveAll(k[0..49]) = 50);
+  AssertTrue(m.Instance.Count = 50);
+  AssertTrue(m.Instance.ContainsAll(k[50..99]));
+  AssertTrue(m.Instance.RemoveAll(k[50..99]) = 50);
+  AssertTrue(m.Instance.Count = 0);
+  m.Instance.AddAll(e);
+  AssertTrue(m.Instance.RemoveIf(@StrOdd) = 50);
+  AssertTrue(m.Instance.Count = 50);
+  for s in m.Instance.Keys do
+    AssertFalse(StrOdd(s));
+  AssertTrue(m.Instance.AddAll(e) = 50);
+  e := m.Instance.ExtractIf(@StrOdd);
+  for I := 0 to System.High(e) do
+    AssertTrue(StrOdd(e[I].Key));
+end;
+
+procedure TOrderHashMapTest.StrRetain;
+var
+  m: TAutoStrMap;
+  s: TAutoStrSet;
+  I, TestSize: Integer;
+  e: TStrEntryArray;
+  v: string;
+begin
+  TestSize := 100;
+  e := CreateStrArray(TestSize);
+  I := 1;
+  while I <= System.High(e) do
+    begin
+      s.Instance.Add(e[I].Key);
+      I += 2;
+    end;
+  AssertTrue(s.Instance.Count = 50);
+  m.Instance.AddAll(e);
+  AssertTrue(m.Instance.Count = TestSize);
+  m.Instance.RetainAll(s.Instance);
+  AssertTrue(m.Instance.Count = 50);
+  AssertTrue(m.Instance.ContainsAll(s.Instance));
+  for v in m.Instance.Keys do
+    AssertTrue(StrOdd(v));
+  AssertTrue(m.Instance.RemoveAll(s.Instance) = 50);
+  AssertTrue(m.Instance.Count = 0);
+end;
+
+procedure TOrderHashMapTest.InOrder;
+var
+  m: TAutoIntMap;
+  e: TIntMap.TEntry;
+  I, k: Integer;
+begin
+  for I := 1 to 100 do
+    m.Instance.Add(I, I);
+  AssertTrue(m.Instance.Count = 100);
+  I := 1;
+  for e in m.Instance.Entries do
+    begin
+      AssertTrue(e.Key = I);
+      Inc(I);
+    end;
+  I := 1;
+  for k in m.Instance.Keys do
+    begin
+      AssertTrue(k = I);
+      Inc(I);
+    end;
+  m.Instance.Clear;
+  for I := 100 downto 1 do
+    m.Instance.Add(I, I);
+  I := 100;
+  for e in m.Instance.Entries do
+    begin
+      AssertTrue(e.Key = I);
+      Dec(I);
+    end;
+  I := 100;
+  for k in m.Instance.Keys do
+    begin
+      AssertTrue(k = I);
+      Dec(I);
+    end;
+end;
+
+procedure TOrderHashMapTest.FindFirst;
+var
+  m: TAutoIntMap;
+  e: TIntMap.TEntry;
+  I: Integer;
+begin
+  AssertFalse(m.Instance.FindFirst(e));
+  for I := 1 to 100 do
+    m.Instance.Add(I, I);
+  AssertTrue(m.Instance.Count = 100);
+  for I := 1 to 100 do
+    begin
+      AssertTrue(m.Instance.FindFirst(e));
+      AssertTrue(e.Key = I);
+      m.Instance.Remove(I);
+    end;
+end;
+
+procedure TOrderHashMapTest.FindLast;
+var
+  m: TAutoIntMap;
+  e: TIntMap.TEntry;
+  I: Integer;
+begin
+  AssertFalse(m.Instance.FindLast(e));
+  for I := 1 to 100 do
+    m.Instance.Add(I, I);
+  AssertTrue(m.Instance.Count = 100);
+  for I := 100 downto 1 do
+    begin
+      AssertTrue(m.Instance.FindLast(e));
+      AssertTrue(e.Key = I);
+      m.Instance.Remove(I);
+    end;
+end;
+
+procedure TOrderHashMapTest.ExtractFirst;
+var
+  m: TAutoIntMap;
+  e: TIntMap.TEntry;
+  I: Integer;
+begin
+  AssertFalse(m.Instance.ExtractFirst(e));
+  for I := 1 to 100 do
+    m.Instance.Add(I, I);
+  AssertTrue(m.Instance.Count = 100);
+  for I := 1 to 100 do
+    begin
+      AssertTrue(m.Instance.ExtractFirst(e));
+      AssertTrue(e.Key = I);
+    end;
+end;
+
+procedure TOrderHashMapTest.ExtractLast;
+var
+  m: TAutoIntMap;
+  e: TIntMap.TEntry;
+  I: Integer;
+begin
+  AssertFalse(m.Instance.ExtractLast(e));
+  for I := 1 to 100 do
+    m.Instance.Add(I, I);
+  AssertTrue(m.Instance.Count = 100);
+  for I := 100 downto 1 do
+    begin
+      AssertTrue(m.Instance.ExtractLast(e));
+      AssertTrue(e.Key = I);
+    end;
+end;
+
+procedure TOrderHashMapTest.RemoveFirst;
+var
+  m: TAutoIntMap;
+  e: TIntMap.TEntry;
+  I: Integer;
+begin
+  AssertFalse(m.Instance.RemoveFirst);
+  for I := 1 to 100 do
+    m.Instance.Add(I, I);
+  AssertTrue(m.Instance.Count = 100);
+  for I := 1 to 99 do
+    begin
+      AssertTrue(m.Instance.RemoveFirst);
+      AssertTrue(m.Instance.FindFirst(e));
+      AssertTrue(e.Key = I + 1);
+    end;
+end;
+
+procedure TOrderHashMapTest.RemoveLast;
+var
+  m: TAutoIntMap;
+  e: TIntMap.TEntry;
+  I: Integer;
+begin
+  AssertFalse(m.Instance.RemoveLast);
+  for I := 1 to 100 do
+    m.Instance.Add(I, I);
+  AssertTrue(m.Instance.Count = 100);
+  for I := 100 downto 2 do
+    begin
+      AssertTrue(m.Instance.RemoveLast);
+      AssertTrue(m.Instance.FindLast(e));
+      AssertTrue(e.Key = I - 1);
+    end;
+end;
+
+procedure TOrderHashMapTest.ObjectMap;
+var
+  m: TAutoObjMap;
+  s: TAutoObjSet;
+  I, TestSize: Integer;
+  e: TObjEntryArray;
+  Counter: TCounter;
+begin
+  Counter := Default(TCounter);
+  TestSize := 100;
+  e := CreateObjArray(Counter, TestSize);
+  AssertTrue(Counter.Count = 0);
+  {%H-}m.Instance.AddAll(e);
+  AssertTrue(m.Instance.Count = TestSize);
+  for I := 0 to System.High(e) do
+    AssertTrue(m.Instance.Contains(e[I].Key));
+  for I := 50 to 99 do
+    {%H-}s.Instance.Add(e[I].Key);
+  AssertTrue(s.Instance.Count = 50);
+  AssertTrue(Counter.Count = 0);
+  m.Instance.RetainAll(s.Instance);
+  AssertTrue(m.Instance.Count = 50);
+  AssertTrue(Counter.Count = 100);
+  m.Instance.OwnsKeys := False;
+  m.Instance.Clear;
+  AssertTrue(Counter.Count = 150);
+  s.Instance.Clear;
+  AssertTrue(Counter.Count = 200);
+end;
+
+procedure TOrderHashMapTest.ObjectOrdMapFirst;
+var
+  m: TAutoObjMap;
+  I, TestSize: Integer;
+  eArray: TObjEntryArray;
+  e: TObjMap.TEntry;
+  Counter: TCounter;
+begin
+  Counter := Default(TCounter);
+  TestSize := 100;//must be even
+  eArray := CreateObjArray(Counter, TestSize);
+  AssertTrue(Counter.Count = 0);
+  {%H-}m.Instance.AddAll(eArray);
+  AssertTrue(m.Instance.Count = TestSize);
+  for I := 0 to Pred(TestSize div 2) do
+    begin
+      AssertTrue(m.Instance.ExtractFirst(e));
+      AssertTrue(e.Key = eArray[I].Key);
+      AssertTrue(e.Value = eArray[I].Value);
+    end;
+  AssertTrue(Counter.Count = 0);
+  AssertTrue(m.Instance.Count = TestSize div 2);
+  for I := 0 to Pred(TestSize div 2) do
+    begin
+      eArray[I].Key.Free;
+      eArray[I].Value.Free;
+    end;
+  AssertTrue(Counter.Count = TestSize);
+  for I := 1 to TestSize div 2 do
+    AssertTrue(m.Instance.RemoveFirst);
+  AssertTrue(m.Instance.IsEmpty);
+  AssertTrue(Counter.Count = TestSize * 2);
+end;
+
+procedure TOrderHashMapTest.ObjectOrdMapLast;
+var
+  m: TAutoObjMap;
+  I, J, TestSize: Integer;
+  eArray: TObjEntryArray;
+  e: TObjMap.TEntry;
+  Counter: TCounter;
+begin
+  Counter := Default(TCounter);
+  TestSize := 100;//must be even
+  eArray := CreateObjArray(Counter, TestSize);
+  AssertTrue(Counter.Count = 0);
+  {%H-}m.Instance.AddAll(eArray);
+  AssertTrue(m.Instance.Count = TestSize);
+  J := TestSize;
+  for I := 1 to TestSize div 2  do
+    begin
+      Dec(J);
+      AssertTrue(m.Instance.ExtractLast(e));
+      AssertTrue(e.Key = eArray[J].Key);
+     AssertTrue(e.Value = eArray[J].Value);
+    end;
+  AssertTrue(Counter.Count = 0);
+  AssertTrue(m.Instance.Count = TestSize div 2);
+  for I := Pred(TestSize) downto TestSize div 2  do
+    begin
+      eArray[I].Key.Free;
+      eArray[I].Value.Free;
+    end;
+  AssertTrue(Counter.Count = TestSize);
+  for I := 1 to TestSize div 2 do
+    AssertTrue(m.Instance.RemoveLast);
+  AssertTrue(m.Instance.IsEmpty);
+  AssertTrue(Counter.Count = TestSize * 2);
+end;
+
 procedure TLiteHashMapLPTest.Int_1;
 var
   m: TIntMap;
@@ -1995,6 +2489,7 @@ initialization
   RegisterTest(THashMapLPTTest);
   RegisterTest(THashMapQPTest);
   RegisterTest(TChainHashMapTest);
+  RegisterTest(TOrderHashMapTest);
   RegisterTest(TLiteHashMapLPTest);
   RegisterTest(THashMapFGTest);
 end.
