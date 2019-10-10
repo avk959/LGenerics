@@ -199,9 +199,23 @@ type
   { TGBaseOrderedHashMap implements node based hashmap with predictable iteration order,
     which is the order in which elements were inserted into the set (insertion-order) }
   generic TGBaseOrderedHashMap<TKey, TValue, TKeyEqRel> = class(specialize TGAbstractHashMap<TKey, TValue>)
+  private
+  type
+    TOrdTable = specialize TGOrderedHashTable<TKey, TEntry, TKeyEqRel>;
   protected
     class function GetTableClass: THashTableClass; override;
     class function GetClass: THashMapClass; override;
+  public
+    function FindFirst(out aEntry: TEntry): Boolean;
+    function FindLast(out aEntry: TEntry): Boolean;
+    function FindFirstKey(out aKey: TKey): Boolean;
+    function FindLastKey(out aKey: TKey): Boolean;
+    function FindFirstValue(out aValue: TValue): Boolean;
+    function FindLastValue(out aValue: TValue): Boolean;
+    function ExtractFirst(out aEntry: TEntry): Boolean;
+    function ExtractLast(out aEntry: TEntry): Boolean;
+    function RemoveFirst: Boolean;
+    function RemoveLast: Boolean;
   end;
 
   { TGOrderedHashMap implements node based hashmap with predictable iteration order,
@@ -304,6 +318,30 @@ type
   end;
 
   generic TGObjChainHashMap<TKey, TValue> = class(specialize TGObjectChainHashMap<TKey, TValue, TKey>);
+
+  { TGObjectOrdHashMap }
+  generic TGObjectOrdHashMap<TKey, TValue, TKeyEqRel> = class(specialize TGCustomObjectHashMap<TKey, TValue>)
+  private
+  type
+    TOrdTable = specialize TGOrderedHashTable<TKey, TEntry, TKeyEqRel>;
+  protected
+    class function GetTableClass: THashTableClass; override;
+    class function GetClass: TObjectHashMapClass; override;
+  public
+    function Clone: TGObjectOrdHashMap; override;
+    function FindFirst(out aEntry: TEntry): Boolean;
+    function FindLast(out aEntry: TEntry): Boolean;
+    function FindFirstKey(out aKey: TKey): Boolean;
+    function FindLastKey(out aKey: TKey): Boolean;
+    function FindFirstValue(out aValue: TValue): Boolean;
+    function FindLastValue(out aValue: TValue): Boolean;
+    function ExtractFirst(out aEntry: TEntry): Boolean;
+    function ExtractLast(out aEntry: TEntry): Boolean;
+    function RemoveFirst: Boolean;
+    function RemoveLast: Boolean;
+  end;
+
+  generic TGObjOrdHashMap<TKey, TValue> = class(specialize TGObjectOrdHashMap<TKey, TValue, TKey>);
 
   { TGLiteHashMapLP implements open addressing hashmap with linear probing;
       TKeyEqRel must provide:
@@ -1082,12 +1120,114 @@ end;
 
 class function TGBaseOrderedHashMap.GetTableClass: THashTableClass;
 begin
-  Result := specialize TGOrderedHashTable<TKey, TEntry, TKeyEqRel>;
+  Result := TOrdTable;
 end;
 
 class function TGBaseOrderedHashMap.GetClass: THashMapClass;
 begin
   Result := TGBaseOrderedHashMap;
+end;
+
+function TGBaseOrderedHashMap.FindFirst(out aEntry: TEntry): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aEntry := TOrdTable(FTable).Head^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBaseOrderedHashMap.FindLast(out aEntry: TEntry): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aEntry := TOrdTable(FTable).Tail^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBaseOrderedHashMap.FindFirstKey(out aKey: TKey): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aKey := TOrdTable(FTable).Head^.Data.Key;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBaseOrderedHashMap.FindLastKey(out aKey: TKey): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aKey := TOrdTable(FTable).Tail^.Data.Key;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBaseOrderedHashMap.FindFirstValue(out aValue: TValue): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aValue := TOrdTable(FTable).Head^.Data.Value;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBaseOrderedHashMap.FindLastValue(out aValue: TValue): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aValue := TOrdTable(FTable).Tail^.Data.Value;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGBaseOrderedHashMap.ExtractFirst(out aEntry: TEntry): Boolean;
+var
+  v: TValue;
+begin
+  CheckInIteration;
+  if FTable.Count < 1 then
+    exit(False);
+  aEntry := TOrdTable(FTable).Head^.Data;
+  Result := DoExtract(aEntry.Key, v);
+end;
+
+function TGBaseOrderedHashMap.ExtractLast(out aEntry: TEntry): Boolean;
+var
+  v: TValue;
+begin
+  CheckInIteration;
+  if FTable.Count < 1 then
+    exit(False);
+  aEntry := TOrdTable(FTable).Tail^.Data;
+  Result := DoExtract(aEntry.Key, v);
+end;
+
+function TGBaseOrderedHashMap.RemoveFirst: Boolean;
+var
+  k: TKey;
+begin
+  if FTable.Count < 1 then
+    exit(False);
+  k := TOrdTable(FTable).Head^.Data.Key;
+  Result := DoRemove(k);
+end;
+
+function TGBaseOrderedHashMap.RemoveLast: Boolean;
+var
+  k: TKey;
+begin
+  if FTable.Count < 1 then
+    exit(False);
+  k := TOrdTable(FTable).Tail^.Data.Key;
+  Result := DoRemove(k);
 end;
 
 { TGOrderedHashMap }
@@ -1353,6 +1493,127 @@ end;
 function TGObjectChainHashMap.Clone: TGObjectChainHashMap;
 begin
   Result := TGObjectChainHashMap.CreateCopy(Self);
+end;
+
+{ TGObjectOrdHashMap }
+
+class function TGObjectOrdHashMap.GetTableClass: THashTableClass;
+begin
+  Result := TOrdTable;
+end;
+
+class function TGObjectOrdHashMap.GetClass: TObjectHashMapClass;
+begin
+  Result := TGObjectOrdHashMap;
+end;
+
+function TGObjectOrdHashMap.Clone: TGObjectOrdHashMap;
+begin
+  Result := TGObjectOrdHashMap.CreateCopy(Self);
+end;
+
+function TGObjectOrdHashMap.FindFirst(out aEntry: TEntry): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aEntry := TOrdTable(FTable).Head^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGObjectOrdHashMap.FindLast(out aEntry: TEntry): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aEntry := TOrdTable(FTable).Tail^.Data;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGObjectOrdHashMap.FindFirstKey(out aKey: TKey): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aKey := TOrdTable(FTable).Head^.Data.Key;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGObjectOrdHashMap.FindLastKey(out aKey: TKey): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aKey := TOrdTable(FTable).Tail^.Data.Key;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGObjectOrdHashMap.FindFirstValue(out aValue: TValue): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aValue := TOrdTable(FTable).Head^.Data.Value;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGObjectOrdHashMap.FindLastValue(out aValue: TValue): Boolean;
+begin
+  if FTable.Count > 0 then
+    begin
+      aValue := TOrdTable(FTable).Tail^.Data.Value;
+      exit(True);
+    end;
+  Result := False;
+end;
+
+function TGObjectOrdHashMap.ExtractFirst(out aEntry: TEntry): Boolean;
+var
+  v: TValue;
+begin
+  CheckInIteration;
+  if FTable.Count < 1 then
+    exit(False);
+  aEntry := TOrdTable(FTable).Head^.Data;
+  Result := DoExtract(aEntry.Key, v);
+end;
+
+function TGObjectOrdHashMap.ExtractLast(out aEntry: TEntry): Boolean;
+var
+  v: TValue;
+begin
+  CheckInIteration;
+  if FTable.Count < 1 then
+    exit(False);
+  aEntry := TOrdTable(FTable).Tail^.Data;
+  Result := DoExtract(aEntry.Key, v);
+end;
+
+function TGObjectOrdHashMap.RemoveFirst: Boolean;
+var
+  k: TKey;
+begin
+  CheckInIteration;
+  if FTable.Count < 1 then
+    exit(False);
+  k := TOrdTable(FTable).Head^.Data.Key;
+  Result := DoRemove(k);
+end;
+
+function TGObjectOrdHashMap.RemoveLast: Boolean;
+var
+  k: TKey;
+begin
+  CheckInIteration;
+  if FTable.Count < 1 then
+    exit(False);
+  k := TOrdTable(FTable).Tail^.Data.Key;
+  Result := DoRemove(k);
 end;
 
 { TGLiteHashMapLP.TKeyEnumerator }
