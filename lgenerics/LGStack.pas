@@ -248,9 +248,12 @@ end;
 
 function TGStack.TryPop(out aValue: T): Boolean;
 begin
-  Result := not InIteration and (ElemCount > 0);
-  if Result then
-    aValue := PopItem;
+  if not InIteration and (ElemCount > 0) then
+    begin
+      aValue := PopItem;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGStack.Peek: T;
@@ -261,9 +264,12 @@ end;
 
 function TGStack.TryPeek(out aValue: T): Boolean;
 begin
-  Result := ElemCount > 0;
-  if Result then
-    aValue := FItems[Pred(ElemCount)];
+  if ElemCount > 0 then
+    begin
+      aValue := FItems[Pred(ElemCount)];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGObjectStack }
@@ -464,9 +470,12 @@ end;
 
 function TGLiteStack.TryPeek(out aValue: T): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
-    aValue := FBuffer.FItems[Pred(Count)];
+  if Count > 0 then
+    begin
+      aValue := FBuffer.FItems[Pred(Count)];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGLiteStack.PeekItem: PItem;
@@ -477,9 +486,12 @@ end;
 
 function TGLiteStack.TryPeekItem(out aValue: PItem): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
-    aValue := @FBuffer.FItems[Pred(Count)];
+  if Count > 0 then
+    begin
+      aValue := @FBuffer.FItems[Pred(Count)];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteThreadStack }
