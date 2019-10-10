@@ -780,9 +780,12 @@ end;
 
 function TGDeque.TryPopFirst(out aValue: T): Boolean;
 begin
-  Result := not InIteration and (ElemCount > 0);
-  if Result then
-    aValue := ExtractHead;
+  if not InIteration and (ElemCount > 0) then
+    begin
+      aValue := ExtractHead;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGDeque.PopLast: T;
@@ -794,9 +797,12 @@ end;
 
 function TGDeque.TryPopLast(out aValue: T): Boolean;
 begin
-  Result := not InIteration and (ElemCount > 0);
-  if Result then
-    aValue := ExtractTail;
+  if not InIteration and (ElemCount > 0) then
+    begin
+      aValue := ExtractTail;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGDeque.PeekFirst: T;
@@ -807,9 +813,12 @@ end;
 
 function TGDeque.TryPeekFirst(out aValue: T): Boolean;
 begin
-  Result := ElemCount > 0;
-  if Result then
-    aValue := FItems[Head];
+  if ElemCount > 0 then
+    begin
+      aValue := FItems[Head];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGDeque.PeekLast: T;
@@ -820,9 +829,12 @@ end;
 
 function TGDeque.TryPeekLast(out aValue: T): Boolean;
 begin
-  Result := ElemCount > 0;
-  if Result then
-    aValue := PeekTail;
+  if ElemCount > 0 then
+    begin
+      aValue := PeekTail;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGDeque.Insert(aIndex: SizeInt; constref aValue: T);
