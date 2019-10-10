@@ -1196,9 +1196,12 @@ end;
 
 function TGLiteRingDynBuffer.TryPopFirst(out aValue: T): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
-    aValue := PopHead;
+  if Count > 0 then
+    begin
+      aValue := PopHead;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGLiteRingDynBuffer.PopLast: T;
@@ -1209,9 +1212,12 @@ end;
 
 function TGLiteRingDynBuffer.TryPopLast(out aValue: T): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
-    aValue := PopTail;
+  if Count > 0 then
+    begin
+      aValue := PopTail;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGLiteRingDynBuffer.PeekFirst: T;
@@ -1228,16 +1234,22 @@ end;
 
 function TGLiteRingDynBuffer.TryPeekFirst(out aValue: T): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
-    aValue := FItems[FHead];
+  if Count > 0 then
+    begin
+      aValue := FItems[FHead];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGLiteRingDynBuffer.TryPeekFirstItem(out aValue: PItem): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
-    aValue := @FItems[FHead];
+  if Count > 0 then
+    begin
+      aValue := @FItems[FHead];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGLiteRingDynBuffer.PeekLast: T;
@@ -1248,9 +1260,12 @@ end;
 
 function TGLiteRingDynBuffer.TryPeekLast(out aValue: T): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
-    aValue := FItems[TailIndex];
+  if Count > 0 then
+    begin
+      aValue := FItems[TailIndex];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGLiteRingDynBuffer.PeekLastItem: PItem;
@@ -1261,9 +1276,12 @@ end;
 
 function TGLiteRingDynBuffer.TryPeekLastItem(out aValue: PItem): Boolean;
 begin
-  Result := Count > 0;
-  if Result then
-    aValue := @FItems[TailIndex];
+  if Count > 0 then
+    begin
+      aValue := @FItems[TailIndex];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 
