@@ -308,9 +308,12 @@ end;
 
 function TGQueue.TryDequeue(out aValue: T): Boolean;
 begin
-  Result := not InIteration and (ElemCount > 0);
-  if Result then
-    aValue := ExtractHead;
+  if not InIteration and (ElemCount > 0) then
+    begin
+      aValue := ExtractHead;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGQueue.Peek: T;
@@ -321,9 +324,12 @@ end;
 
 function TGQueue.TryPeek(out aValue: T): Boolean;
 begin
-  Result := ElemCount > 0;
-  if Result then
-    aValue := FItems[Head];
+  if ElemCount > 0 then
+    begin
+      aValue := FItems[Head];
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGObjectQueue }
