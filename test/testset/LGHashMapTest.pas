@@ -152,6 +152,7 @@ type
     procedure StrRetain;
 
     procedure InOrder;
+    procedure UpdateOnHit;
     procedure FindFirst;
     procedure FindLast;
     procedure ExtractFirst;
@@ -1571,6 +1572,25 @@ begin
     begin
       AssertTrue(k = I);
       Dec(I);
+    end;
+end;
+
+procedure TOrderHashMapTest.UpdateOnHit;
+var
+  m: TAutoStrMap;
+  I: Integer;
+  Key, k: string;
+begin
+  for I := 1 to 100 do
+    m.Instance.Add('key ' + I.ToString, I);
+  AssertTrue(m.Instance.Count = 100);
+  m.Instance.UpdateOnHit := True;
+  for I := 1 to 100 do
+    begin
+      Key := 'key ' + I.ToString;
+      AssertTrue(m.Instance.Contains(Key));
+      AssertTrue(m.Instance.FindLastKey(k));
+      AssertTrue(k = Key);
     end;
 end;
 
