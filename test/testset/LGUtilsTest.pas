@@ -1673,7 +1673,7 @@ var
   p: TTestPtr.PValue;
 begin
   AssertTrue(aPtr.RefCount > 1);
-  p := aPtr.WritePtr;
+  p := aPtr.UniqPtr;
   p^.Name := '';
   p^.Color := aColor;
   p^.Count := aCount;
@@ -1683,7 +1683,7 @@ procedure TCowPtrTest.CallByValue2(aSrc: TTestPtr; aCount: Integer; out aDst: TT
 begin
   AssertTrue(aSrc.RefCount > 1);
   AssertTrue(aDst.RefCount = 0);
-  aSrc.WritePtr^.Count := aCount;
+  aSrc.UniqPtr^.Count := aCount;
   aDst := aSrc;
 end;
 
@@ -1692,7 +1692,7 @@ var
   p: TTestPtr.PValue;
 begin
   AssertTrue(aPtr.RefCount = 1);
-  p := aPtr.WritePtr;
+  p := aPtr.UniqPtr;
   p^.Name := '';
   p^.Color := aColor;
   p^.Count := aCount;
@@ -1766,11 +1766,11 @@ procedure TCowPtrTest.WritePtr;
 var
   Ptr, Ptr2: TTestPtr;
 begin
-  Ptr.WritePtr^ := CONST_REC;
+  Ptr.UniqPtr^ := CONST_REC;
   Ptr2 := Ptr;
   AssertTrue(Ptr.RefCount = 2);
   AssertTrue(Ptr2.RefCount = 2);
-  Ptr.WritePtr^.Name := 'New name';
+  Ptr.UniqPtr^.Name := 'New name';
   AssertTrue(Ptr.RefCount = 1);
   AssertTrue(Ptr2.RefCount = 1);
   AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
@@ -1782,7 +1782,7 @@ procedure TCowPtrTest.PassByValue;
 var
   Ptr, Ptr2: TTestPtr;
 begin
-  Ptr.WritePtr^ := CONST_REC;
+  Ptr.UniqPtr^ := CONST_REC;
 
   CallByValue(Ptr, tcBlue, 3);
 
@@ -1807,7 +1807,7 @@ procedure TCowPtrTest.PassAsVar;
 var
   Ptr: TTestPtr;
 begin
-  Ptr.WritePtr^ := CONST_REC;
+  Ptr.UniqPtr^ := CONST_REC;
 
   CallAsVar(Ptr, tcRed, 7);
   AssertTrue(Ptr.RefCount = 1);
@@ -1824,7 +1824,7 @@ begin
   Ptr.Release;
   AssertTrue({%H-}Ptr.RefCount = 0);
 
-  Ptr.WritePtr^ := CONST_REC;
+  Ptr.UniqPtr^ := CONST_REC;
   AssertTrue(Ptr.RefCount = 1);
   AssertTrue({%H-}Ptr2.RefCount = 0);
 
