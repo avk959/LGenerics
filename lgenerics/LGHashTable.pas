@@ -298,6 +298,7 @@ type
     FHead,
     FTail: PNode;
     FNodeManager: TNodeManager;
+    FUpdateOnHit: Boolean;
     procedure AllocList(aCapacity: SizeInt); override;
     function  GetCapacity: SizeInt; override;
     procedure SetLoadFactor(aValue: Single); override;
@@ -310,6 +311,8 @@ type
     procedure Expand;
     function  DoAdd(aKeyHash: SizeInt): PNode;
     function  DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
+    procedure Add2Tail(aNode: PNode);
+    procedure RemoveFromList(aNode: PNode);
     procedure RemoveNode(aNode: PNode);
     class function EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt; override;
   public
@@ -341,6 +344,7 @@ type
     function  GetLast: PEntry;
     property  Head: PNode read FHead;
     property  Tail: PNode read FTail;
+    property  UpdateOnHit: Boolean read FUpdateOnHit write FUpdateOnHit;
   end;
 
 {.$DEFINE CHAINHASHTABLE_ENABLE_PAGEDNODEMANAGER}{ if uncomment define, TGChainHashTable
@@ -770,7 +774,7 @@ const
   SLOT_NOT_FOUND: SizeInt = Low(SizeInt);
 
 implementation
-{$Q-}{$B-}{$COPERATORS ON}
+{$Q-}{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 { TGAbstractHashTable }
 
@@ -1667,13 +1671,7 @@ begin
   Result^.Hash := aKeyHash;
   Result^.ChainNext := FList[I];
   FList[I] := Result;
-  //add node to inorder list
-  if Head = nil then
-    FHead := Result;
-  if Tail <> nil then
-    Tail^.Next := Result;
-  Result^.Prior := Tail;
-  FTail := Result;
+  Add2Tail(Result);
 end;
 
 function TGOrderedHashTable.DoFind(constref aKey: TKey; aKeyHash: SizeInt): TSearchResult;
@@ -1691,6 +1689,37 @@ begin
     end;
   Result.Node := CurrNode;
   Result.PrevNode := PrevNode;
+  if UpdateOnHit and (CurrNode <> nil) and (Count > 1) then
+    begin
+      RemoveFromList(CurrNode);
+      CurrNode^.Prior := nil;
+      CurrNode^.Next := nil;
+      Add2Tail(CurrNode);
+    end;
+end;
+
+procedure TGOrderedHashTable.Add2Tail(aNode: PNode);
+begin
+  //add node to the tail of the list
+  if Head = nil then
+    FHead := aNode;
+  if Tail <> nil then
+    Tail^.Next := aNode;
+  aNode^.Prior := Tail;
+  FTail := aNode;
+end;
+
+procedure TGOrderedHashTable.RemoveFromList(aNode: PNode);
+begin
+  if aNode^.Prior <> nil then //is not head
+    aNode^.Prior^.Next := aNode^.Next
+  else
+    FHead := aNode^.Next;
+
+  if aNode^.Next <> nil then //is not tail
+    aNode^.Next^.Prior := aNode^.Prior
+  else
+    FTail := aNode^.Prior;
 end;
 
 procedure TGOrderedHashTable.RemoveNode(aNode: PNode);
@@ -1714,7 +1743,6 @@ end;
 
 class function TGOrderedHashTable.EstimateCapacity(aCount: SizeInt; aLoadFactor: Single): SizeInt;
 begin
-  //aCount := Math.Min(Math.Max(aCount, 0), MAX_CAPACITY);
   if aCount > 0 then
     Result := LGUtils.RoundUpTwoPower(Math.Min(Ceil64(Double(aCount) / aLoadFactor), MAX_CAPACITY))
   else
@@ -1888,17 +1916,7 @@ begin
         PrevNode^.ChainNext := CurrNode^.ChainNext
       else
         FList[CurrNode^.Hash and System.High(FList)] := CurrNode^.ChainNext;
-
-      if CurrNode^.Prior <> nil then //is not head
-        CurrNode^.Prior^.Next := CurrNode^.Next
-      else
-        FHead := CurrNode^.Next;
-
-      if CurrNode^.Next <> nil then //is not tail
-        CurrNode^.Next^.Prior := CurrNode^.Prior
-      else
-        FTail := CurrNode^.Prior;
-
+      RemoveFromList(CurrNode);
       DisposeNode(aPos.Node);
     end;
 end;
