@@ -233,7 +233,7 @@ type
     PInstance = ^TInstance;
   var
     FInstance: PInstance;
-    procedure NewInstance;
+    function  NewInstance: PInstance;
     procedure ReleaseInstance;
     function  GetAllocated: Boolean; inline;
     function  GetRefCount: Integer;
@@ -254,8 +254,8 @@ type
     property  RefCount: Integer read GetRefCount;
   { use ReadPtr to read data value, or to write/modify data value if COW is not required }
     property  ReadPtr: PValue read GetPtr;
-  { use WritePtr to write/modify data value if COW is required }
-    property  WritePtr: PValue read GetUniqPtr;
+  { use UniqPtr to write/modify data value if COW is required }
+    property  UniqPtr: PValue read GetUniqPtr;
   { SetValue always uses COW }
     property  Value: T read GetValue write SetValue;
   end;
@@ -1169,11 +1169,12 @@ end;
 
 { TGCowPtr }
 
-procedure TGCowPtr<T>.NewInstance;
+function TGCowPtr<T>.NewInstance: PInstance;
 begin
-  FInstance := GetMem(SizeOf(TInstance));
+  FInstance := System.GetMem(SizeOf(TInstance));
   FInstance^.RefCount := 1;
   FillChar(FInstance^.Value, SizeOf(T), 0);
+  Result := FInstance;
 end;
 
 procedure TGCowPtr<T>.ReleaseInstance;
@@ -1181,7 +1182,7 @@ begin
   if InterlockedDecrement(FInstance^.RefCount) = 0 then
     begin
       FInstance^.Value := Default(T);
-      FreeMem(FInstance);
+      System.FreeMem(FInstance);
     end;
   FInstance := nil;
 end;
@@ -1194,9 +1195,8 @@ end;
 function TGCowPtr<T>.GetRefCount: Integer;
 begin
   if FInstance <> nil then
-    Result := FInstance^.RefCount
-  else
-    Result := 0;
+    exit(FInstance^.RefCount);
+  Result := 0;
 end;
 
 function TGCowPtr<T>.GetPtr: PValue;
@@ -1241,8 +1241,8 @@ begin
       aDst.Release;
       if aSrc.FInstance <> nil then
         begin
-          InterLockedIncrement(aSrc.FInstance^.RefCount);
           aDst.FInstance := aSrc.FInstance;
+          InterLockedIncrement(aSrc.FInstance^.RefCount);
         end;
     end;
 end;
@@ -1270,10 +1270,9 @@ var
 begin
   if (FInstance <> nil) and (FInstance^.RefCount > 1) then
     begin
-      InterlockedDecrement(FInstance^.RefCount);
       Old := FInstance;
-      NewInstance;
-      FInstance^.Value := Old^.Value;
+      NewInstance^.Value := Old^.Value;
+      InterlockedDecrement(Old^.RefCount);
     end;
 end;
 
