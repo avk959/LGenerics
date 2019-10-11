@@ -197,11 +197,14 @@ type
   end;
 
   { TGBaseOrderedHashMap implements node based hashmap with predictable iteration order,
-    which is the order in which elements were inserted into the set (insertion-order) }
+    which is the order in which elements were inserted into the map (insertion-order) }
   generic TGBaseOrderedHashMap<TKey, TValue, TKeyEqRel> = class(specialize TGAbstractHashMap<TKey, TValue>)
   private
   type
     TOrdTable = specialize TGOrderedHashTable<TKey, TEntry, TKeyEqRel>;
+
+    function  GetUpdateOnHit: Boolean; inline;
+    procedure SetUpdateOnHit(aValue: Boolean); inline;
   protected
     class function GetTableClass: THashTableClass; override;
     class function GetClass: THashMapClass; override;
@@ -216,10 +219,11 @@ type
     function ExtractLast(out aEntry: TEntry): Boolean;
     function RemoveFirst: Boolean;
     function RemoveLast: Boolean;
+    property UpdateOnHit: Boolean read GetUpdateOnHit write SetUpdateOnHit;
   end;
 
   { TGOrderedHashMap implements node based hashmap with predictable iteration order,
-    which is the order in which elements were inserted into the set (insertion-order);
+    which is the order in which elements were inserted into the map (insertion-order);
     it assumes that type TKey implements TKeyEqRel }
   generic TGOrderedHashMap<TKey, TValue> = class(specialize TGBaseOrderedHashMap<TKey, TValue, TKey>)
     function Clone: TGOrderedHashMap; override;
@@ -324,6 +328,9 @@ type
   private
   type
     TOrdTable = specialize TGOrderedHashTable<TKey, TEntry, TKeyEqRel>;
+
+    function  GetUpdateOnHit: Boolean; inline;
+    procedure SetUpdateOnHit(aValue: Boolean); inline;
   protected
     class function GetTableClass: THashTableClass; override;
     class function GetClass: TObjectHashMapClass; override;
@@ -339,6 +346,7 @@ type
     function ExtractLast(out aEntry: TEntry): Boolean;
     function RemoveFirst: Boolean;
     function RemoveLast: Boolean;
+    property UpdateOnHit: Boolean read GetUpdateOnHit write SetUpdateOnHit;
   end;
 
   generic TGObjOrdHashMap<TKey, TValue> = class(specialize TGObjectOrdHashMap<TKey, TValue, TKey>);
@@ -1118,6 +1126,16 @@ end;
 
 { TGBaseOrderedHashMap }
 
+function TGBaseOrderedHashMap.GetUpdateOnHit: Boolean;
+begin
+  Result := TOrdTable(FTable).UpdateOnHit;
+end;
+
+procedure TGBaseOrderedHashMap.SetUpdateOnHit(aValue: Boolean);
+begin
+  TOrdTable(FTable).UpdateOnHit := aValue;
+end;
+
 class function TGBaseOrderedHashMap.GetTableClass: THashTableClass;
 begin
   Result := TOrdTable;
@@ -1496,6 +1514,16 @@ begin
 end;
 
 { TGObjectOrdHashMap }
+
+function TGObjectOrdHashMap.GetUpdateOnHit: Boolean;
+begin
+  Result := TOrdTable(FTable).UpdateOnHit;
+end;
+
+procedure TGObjectOrdHashMap.SetUpdateOnHit(aValue: Boolean);
+begin
+  TOrdTable(FTable).UpdateOnHit := aValue;
+end;
 
 class function TGObjectOrdHashMap.GetTableClass: THashTableClass;
 begin
