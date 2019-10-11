@@ -661,7 +661,7 @@ const
   procedure RandomizeBoolean;
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 {$PUSH}{$Q-}{$R-}
 function NSB(aValue: SizeUInt): SizeInt;
