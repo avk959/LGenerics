@@ -317,9 +317,9 @@ type
     function  Max(c: TGNestCompare<T>): TGOptional<T>; overload;
     function  Skip(aCount: SizeInt): IGEnumerable<T>;
     function  Limit(aCount: SizeInt): IGEnumerable<T>;
-    function  Sorted(c: TGCompare<T>): IGEnumerable<T>; overload;
-    function  Sorted(c: TGOnCompare<T>): IGEnumerable<T>; overload;
-    function  Sorted(c: TGNestCompare<T>): IGEnumerable<T>; overload;
+    function  Sorted(c: TGCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
+    function  Sorted(c: TGOnCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
+    function  Sorted(c: TGNestCompare<T>; aStable: Boolean = False): IGEnumerable<T>; overload;
     function  Select(p: TGTest<T>): IGEnumerable<T>; overload;
     function  Select(p: TGOnTest<T>): IGEnumerable<T>; overload;
     function  Select(p: TGNestTest<T>): IGEnumerable<T>; overload;
