@@ -36,6 +36,9 @@ uses
   LGStrConst;
 
 type
+
+  { TGEnumerable }
+
   generic TGEnumerable<T> = class abstract(TObject, specialize IGEnumerable<T>, IObjInstance)
   public
   type
@@ -91,9 +94,9 @@ type
     function Max(c: TNestCompare): TOptional;
     function Skip(aCount: SizeInt): IEnumerable; inline;
     function Limit(aCount: SizeInt): IEnumerable; inline;
-    function Sorted(c: TCompare): IEnumerable;
-    function Sorted(c: TOnCompare): IEnumerable;
-    function Sorted(c: TNestCompare): IEnumerable;
+    function Sorted(c: TCompare; aStable: Boolean = False): IEnumerable;
+    function Sorted(c: TOnCompare; aStable: Boolean = False): IEnumerable;
+    function Sorted(c: TNestCompare; aStable: Boolean = False): IEnumerable;
     function Select(aTest: TTest): IEnumerable; inline;
     function Select(aTest: TOnTest): IEnumerable; inline;
     function Select(aTest: TNestTest): IEnumerable; inline;
@@ -1216,30 +1219,39 @@ begin
   Result := specialize TGLimitEnumerable<T>.Create(GetEnumerator, aCount);
 end;
 
-function TGEnumerable.Sorted(c: TCompare): IEnumerable;
+function TGEnumerable.Sorted(c: TCompare; aStable: Boolean): IEnumerable;
 var
   a: TArray;
 begin
   a := ToArray;
-  specialize TGRegularArrayHelper<T>.Sort(a, c);
+  if aStable then
+    specialize TGRegularArrayHelper<T>.MergeSort(a, c)
+  else
+    specialize TGRegularArrayHelper<T>.Sort(a, c);
   Result := specialize TGArrayCursor<T>.Create(a);
 end;
 
-function TGEnumerable.Sorted(c: TOnCompare): IEnumerable;
+function TGEnumerable.Sorted(c: TOnCompare; aStable: Boolean): IEnumerable;
 var
   a: TArray;
 begin
   a := ToArray;
-  specialize TGDelegatedArrayHelper<T>.Sort(a, c);
+  if aStable then
+    specialize TGDelegatedArrayHelper<T>.MergeSort(a, c)
+  else
+    specialize TGDelegatedArrayHelper<T>.Sort(a, c);
   Result := specialize TGArrayCursor<T>.Create(a);
 end;
 
-function TGEnumerable.Sorted(c: TNestCompare): IEnumerable;
+function TGEnumerable.Sorted(c: TNestCompare; aStable: Boolean): IEnumerable;
 var
   a: TArray;
 begin
   a := ToArray;
-  specialize TGNestedArrayHelper<T>.Sort(a, c);
+  if aStable then
+    specialize TGNestedArrayHelper<T>.MergeSort(a, c)
+  else
+    specialize TGNestedArrayHelper<T>.Sort(a, c);
   Result := specialize TGArrayCursor<T>.Create(a);
 end;
 
