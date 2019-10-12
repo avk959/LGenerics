@@ -14,6 +14,10 @@ uses
 
 type
 
+  TPair            = record Key, Value: Integer end;
+  TPairArrayCursor = specialize TGArrayCursor<TPair>;
+  IPairEnumerable  = specialize IGEnumerable<TPair>;
+
   TEnumerableTest = class(TTestCase)
   private
   type
@@ -29,17 +33,30 @@ type
 
   const
 
-    IntStrictInc21: TIntArray21 = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
-    IntStrictDec21: TIntArray21 = (21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1);
+    IntStrictInc21: TIntArray21 = (
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
+    IntStrictDec21: TIntArray21 = (
+      21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1);
     IntEvenInc10: TIntArray10   = (2, 4, 6, 8, 10, 12, 14, 16, 18, 20);
-    IntOddInc11: TIntArray11   = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21);
-    IntMul4Inc21: TIntArray21 = (4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80,
-                                 84);
+    IntOddInc11: TIntArray11    = (1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21);
+    IntMul4Inc21: TIntArray21   = (
+      4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84);
+    Pair35: array[1..35] of TPair = ( //array size must be greater then TGArrayHelpUtil.QUICK_INSERT_CUTOFF
+      //10 15, 19, 23, 27
+      (key: 10;Value: 10),(key: 15;Value: 17),(key: 19;Value: 24),(key: 23;Value: 31),(key: 27;Value: 38),
+      (key: 27;Value: 39),(key: 10;Value: 11),(key: 15;Value: 18),(key: 19;Value: 25),(key: 23;Value: 32),
+      (key: 23;Value: 33),(key: 27;Value: 40),(key: 10;Value: 12),(key: 15;Value: 19),(key: 19;Value: 26),
+      (key: 19;Value: 27),(key: 23;Value: 34),(key: 27;Value: 41),(key: 10;Value: 13),(key: 15;Value: 20),
+      (key: 15;Value: 21),(key: 19;Value: 28),(key: 23;Value: 35),(key: 27;Value: 42),(key: 10;Value: 14),
+      (key: 10;Value: 15),(key: 15;Value: 22),(key: 19;Value: 29),(key: 23;Value: 36),(key: 27;Value: 43),
+      (key: 27;Value: 44),(key: 10;Value: 16),(key: 15;Value: 23),(key: 19;Value: 30),(key: 23;Value: 37));
+
 
     function DoIntCmp(constref L, R: Integer): SizeInt;
     function GetIsEven(constref aValue: Integer): Boolean;
     function DoMulBy4(constref aValue: Integer): Integer;
     function DoAddSquare(constref X, Y: Integer): Integer;
+    function PairCmp(constref L, R: TPair): SizeInt;
   published
     procedure EmptyEnum_ToArray;
     procedure Enum21_ToArray;
@@ -212,6 +229,10 @@ type
     procedure Enum21_FoldNestedWithV0;
     procedure EmptyEnum_FoldNested;
     procedure Enum21_FoldNested;
+
+    procedure SortedRegular;
+    procedure SortedDelegated;
+    procedure SortedNested;
   end;
 
 implementation
@@ -247,6 +268,17 @@ begin
   Result := X * X + Y;
 end;
 
+function PairCompare(constref L, R: TPair): SizeInt;
+begin
+  if L.Key > R.Key then
+    Result := 1
+  else
+    if R.Key > L.Key then
+      Result := -1
+    else
+      Result := 0;
+end;
+
 function TEnumerableTest.DoIntCmp(constref L, R: Integer): SizeInt;
 begin
   {$IFDEF CPU64}
@@ -275,6 +307,17 @@ end;
 function TEnumerableTest.DoAddSquare(constref X, Y: Integer): Integer;
 begin
   Result := X * X + Y;
+end;
+
+function TEnumerableTest.PairCmp(constref L, R: TPair): SizeInt;
+begin
+  if L.Key > R.Key then
+    Result := 1
+  else
+    if R.Key > L.Key then
+      Result := -1
+    else
+      Result := 0;
 end;
 
 procedure TEnumerableTest.EmptyEnum_ToArray;
@@ -1598,6 +1641,102 @@ begin
   o := e.Fold(@AddSquare);
   AssertTrue(o.Assigned);
   AssertTrue(o.Value = 3311);
+end;
+
+procedure TEnumerableTest.SortedRegular;
+type
+  THelper     = specialize TGRegularArrayHelper<TPair>;
+  TNestHelper = specialize TGNestedArrayHelper<TPair>;
+  function ValCmp(constref L, R: TPair): SizeInt;
+  begin
+    if L.Value > R.Value then
+      Result := 1
+    else
+      if R.Value > L.Value then
+        Result := -1
+      else
+        Result := 0;
+  end;
+var
+  e: IPairEnumerable;
+  a: array of TPair;
+begin
+  e := TPairArrayCursor.Create(THelper.CreateCopy(Pair35));
+  a := e.Sorted(@PairCompare).ToArray;
+  AssertTrue(THelper.IsNonDescending(a, @PairCompare));
+  AssertFalse(TNestHelper.IsStrictAscending(a, @ValCmp));
+  a := IPairEnumerable(TPairArrayCursor.Create(THelper.CreateCopy(Pair35)))
+      .Sorted(@PairCompare, True)
+      .ToArray;
+  AssertTrue(THelper.IsNonDescending(a, @PairCompare));
+  AssertTrue(TNestHelper.IsStrictAscending(a, @ValCmp));
+end;
+
+procedure TEnumerableTest.SortedDelegated;
+type
+  THelper     = specialize TGDelegatedArrayHelper<TPair>;
+  TNestHelper = specialize TGNestedArrayHelper<TPair>;
+  function ValCmp(constref L, R: TPair): SizeInt;
+  begin
+    if L.Value > R.Value then
+      Result := 1
+    else
+      if R.Value > L.Value then
+        Result := -1
+      else
+        Result := 0;
+  end;
+var
+  e: IPairEnumerable;
+  a: array of TPair;
+begin
+  e := TPairArrayCursor.Create(THelper.CreateCopy(Pair35));
+  a := e.Sorted(@PairCompare).ToArray;
+  AssertTrue(THelper.IsNonDescending(a, @PairCmp));
+  AssertFalse(TNestHelper.IsStrictAscending(a, @ValCmp));
+  a := IPairEnumerable(TPairArrayCursor.Create(THelper.CreateCopy(Pair35)))
+      .Sorted(@PairCompare, True)
+      .ToArray;
+  AssertTrue(THelper.IsNonDescending(a, @PairCmp));
+  AssertTrue(TNestHelper.IsStrictAscending(a, @ValCmp));
+end;
+
+procedure TEnumerableTest.SortedNested;
+type
+  THelper = specialize TGNestedArrayHelper<TPair>;
+  function KeyCmp(constref L, R: TPair): SizeInt;
+  begin
+    if L.Key > R.Key then
+      Result := 1
+    else
+      if R.Key > L.Key then
+        Result := -1
+      else
+        Result := 0;
+  end;
+  function ValCmp(constref L, R: TPair): SizeInt;
+  begin
+    if L.Value > R.Value then
+      Result := 1
+    else
+      if R.Value > L.Value then
+        Result := -1
+      else
+        Result := 0;
+  end;
+var
+  e: IPairEnumerable;
+  a: array of TPair;
+begin
+  e := TPairArrayCursor.Create(THelper.CreateCopy(Pair35));
+  a := e.Sorted(@PairCompare).ToArray;
+  AssertTrue(THelper.IsNonDescending(a, @KeyCmp));
+  AssertFalse(THelper.IsStrictAscending(a, @ValCmp));
+  a := IPairEnumerable(TPairArrayCursor.Create(THelper.CreateCopy(Pair35)))
+      .Sorted(@PairCompare, True)
+      .ToArray;
+  AssertTrue(THelper.IsNonDescending(a, @KeyCmp));
+  AssertTrue(THelper.IsStrictAscending(a, @ValCmp));
 end;
 
 
