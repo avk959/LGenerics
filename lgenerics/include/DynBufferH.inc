@@ -41,7 +41,7 @@
   end;
 
   generic TGCustomArrayContainer<T> = class abstract(specialize TGCustomArrayBuffer<T>)
-  protected
+  public
   type
     TEnumerator = class(TContainerEnumerator)
     private
@@ -56,7 +56,7 @@
       procedure Reset; override;
     end;
 
-    TReverseEnum = class(TContainerEnumerable)
+    TReverseEnumerator = class(TContainerEnumerable)
     protected
       FItems: TArray;
       FCurrIndex,
@@ -67,7 +67,7 @@
       function  MoveNext: Boolean; override;
       procedure Reset; override;
     end;
-
+  protected
     procedure Expand(aValue: SizeInt);
     procedure ItemAdding; inline;
     function  Append(constref aValue: T): SizeInt; inline;
@@ -166,8 +166,10 @@
     property  Capacity: SizeInt read GetCapacity;
   end;
 
+  { TGCustomRingArrayBuffer }
+
   generic TGCustomRingArrayBuffer<T> = class abstract(specialize TGCustomArrayBuffer<T>)
-  protected
+  public
   type
 
     TEnumerator = class(TContainerEnumerator)
@@ -200,7 +202,7 @@
       procedure Reset; override;
     end;
 
-  var
+  protected
     FHead: SizeInt;
     procedure Expand(aValue: SizeInt);
     procedure Grow(aValue: SizeInt);
