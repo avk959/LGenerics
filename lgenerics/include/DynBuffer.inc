@@ -93,14 +93,14 @@ begin
   FCurrIndex := -1;
 end;
 
-{ TGCustomArrayContainer.TReverseEnum }
+{ TGCustomArrayContainer.TReverseEnumerator }
 
-function TGCustomArrayContainer.TReverseEnum.GetCurrent: T;
+function TGCustomArrayContainer.TReverseEnumerator.GetCurrent: T;
 begin
   Result := FItems[FCurrIndex];
 end;
 
-constructor TGCustomArrayContainer.TReverseEnum.Create(c: TGCustomArrayContainer);
+constructor TGCustomArrayContainer.TReverseEnumerator.Create(c: TGCustomArrayContainer);
 begin
   inherited Create(c);
   FItems := c.FItems;
@@ -108,13 +108,13 @@ begin
   FCurrIndex := FCount;
 end;
 
-function TGCustomArrayContainer.TReverseEnum.MoveNext: Boolean;
+function TGCustomArrayContainer.TReverseEnumerator.MoveNext: Boolean;
 begin
   Result := FCurrIndex > 0;
   FCurrIndex -= Ord(Result);
 end;
 
-procedure TGCustomArrayContainer.TReverseEnum.Reset;
+procedure TGCustomArrayContainer.TReverseEnumerator.Reset;
 begin
   FCurrIndex := FCount;
 end;
@@ -199,7 +199,7 @@ end;
 
 function TGCustomArrayContainer.GetReverse: IEnumerable;
 begin
-  Result := TReverseEnum.Create(Self);
+  Result := TReverseEnumerator.Create(Self);
 end;
 
 function TGCustomArrayContainer.DoGetEnumerator: TSpecEnumerator;
