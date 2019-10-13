@@ -88,17 +88,21 @@ type
 
   public
   type
-    TEnumerator = TBuffer.TEnumerator;
-    TMutables   = TBuffer.TMutables;
-    TReverse    = TBuffer.TReverse;
-    PItem       = TBuffer.PItem;
-    TArray      = TBuffer.TArray;
+    TEnumerator        = TBuffer.TEnumerator;
+    TReverseEnumerator = TBuffer.TReverseEnumerator;
+    TMutableEnumerator = TBuffer.TMutableEnumerator;
+    TMutables          = TBuffer.TMutables;
+    TReverse           = TBuffer.TReverse;
+    PItem              = TBuffer.PItem;
+    TArray             = TBuffer.TArray;
 
   private
     FBuffer: TBuffer;
     function  GetCapacity: SizeInt; inline;
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetMutableEnumerator: TMutableEnumerator; inline;
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
@@ -168,10 +172,11 @@ type
   generic TGLiteObjectQueue<T: class> = record
   strict private
   type
-    TQueue      = specialize TGLiteQueue<T>;
-    TEnumerator = TQueue.TEnumerator;
-    TReverse    = TQueue.TReverse;
-    TArray      = TQueue.TArray;
+    TQueue             = specialize TGLiteQueue<T>;
+    TEnumerator        = TQueue.TEnumerator;
+    TReverseEnumerator = TQueue.TReverseEnumerator;
+    TReverse           = TQueue.TReverse;
+    TArray             = TQueue.TArray;
 
   var
     FQueue: TQueue;
@@ -184,6 +189,7 @@ type
     class operator Copy(constref aSrc: TGLiteObjectQueue; var aDst: TGLiteObjectQueue);
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -464,6 +470,16 @@ end;
 function TGLiteQueue.GetEnumerator: TEnumerator;
 begin
   Result := FBuffer.GetEnumerator;
+end;
+
+function TGLiteQueue.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := FBuffer.GetReverseEnumerator;
+end;
+
+function TGLiteQueue.GetMutableEnumerator: TMutableEnumerator;
+begin
+  Result := FBuffer.GetMutableEnumerator;
 end;
 
 function TGLiteQueue.Mutables: TMutables;
@@ -768,6 +784,11 @@ end;
 function TGLiteObjectQueue.GetEnumerator: TEnumerator;
 begin
   Result := FQueue.GetEnumerator;
+end;
+
+function TGLiteObjectQueue.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := FQueue.GetReverseEnumerator;
 end;
 
 function TGLiteObjectQueue.Reverse: TReverse;
