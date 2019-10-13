@@ -346,10 +346,11 @@ type
 
   public
   type
-    TEnumerator = TBuffer.TEnumerator;
-    TReverse    = TBuffer.TReverse;
-    PItem       = TBuffer.PItem;
-    TArray      = TBuffer.TArray;
+    TEnumerator        = TBuffer.TEnumerator;
+    TReverseEnumerator = TBuffer.TReverseEnumerator;
+    TReverse           = TBuffer.TReverse;
+    PItem              = TBuffer.PItem;
+    TArray             = TBuffer.TArray;
 
     THeadEnumerator = record
     private
@@ -360,7 +361,6 @@ type
     public
       constructor Create(constref aList: TGLiteSortedList; aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
-      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -384,7 +384,6 @@ type
       constructor Create(constref aList: TGLiteSortedList; aStartIndex: SizeInt);
       constructor Create(constref aList: TGLiteSortedList; aStartIndex, aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
-      procedure Reset;
       property  Current: T read GetCurrent;
     end;
 
@@ -430,6 +429,7 @@ type
     class operator Initialize(var lst: TGLiteSortedList);
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -486,10 +486,11 @@ type
 
   public
   type
-    TEnumerator = TBuffer.TEnumerator;
-    TReverse    = TBuffer.TReverse;
-    PItem       = TBuffer.PItem;
-    TArray      = TBuffer.TArray;
+    TEnumerator        = TBuffer.TEnumerator;
+    TReverseEnumerator = TBuffer.TReverseEnumerator;
+    TReverse           = TBuffer.TReverse;
+    PItem              = TBuffer.PItem;
+    TArray             = TBuffer.TArray;
 
     THeadEnumerator = record
     private
@@ -500,7 +501,6 @@ type
     public
       constructor Create(constref aList: TSortedList; aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: T read GetCurrent;
     end;
 
@@ -524,7 +524,6 @@ type
       constructor Create(constref aList: TSortedList; aStartIndex: SizeInt);
       constructor Create(constref aList: TSortedList; aStartIndex, aLastIndex: SizeInt);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: T read GetCurrent;
     end;
 
@@ -570,6 +569,7 @@ type
     class operator Initialize(var lst: TGLiteComparableSortedList);
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -628,6 +628,7 @@ type
       Next: SizeInt;
       Data: T;
     end;
+    PNode = ^TNode;
 
     TNodeList     = array of TNode;
     TChainList    = array of SizeInt;
@@ -640,27 +641,23 @@ type
 
     TEnumerator = record
     private
-      FList: TNodeList;
-      FLastIndex,
-      FCurrIndex: SizeInt;
+      FCurrNode,
+      FLastNode: PNode;
       function  GetCurrent: T; inline;
     public
-      constructor Create(constref aList: TGLiteHashList);
+      constructor Create(aList: PLiteHashList);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: T read GetCurrent;
     end;
 
     TReverseEnumerator = record
     private
-      FList: TNodeList;
-      FCount,
-      FCurrIndex: SizeInt;
+      FCurrNode,
+      FFirstNode: PNode;
       function  GetCurrent: T; inline;
     public
       constructor Create(aList: PLiteHashList);
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: T read GetCurrent;
     end;
 
@@ -699,6 +696,7 @@ type
     class operator Copy(constref aSrc: TGLiteHashList; var aDst: TGLiteHashList);
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  ToArray: TArray;
     function  Reverse: TReverse; inline;
     procedure Clear;
@@ -739,6 +737,7 @@ type
       Next: SizeInt;
       Data: TEntry;
     end;
+    PNode = ^TNode;
 
     TNodeList     = array of TNode;
     TChainList    = array of SizeInt;
@@ -752,27 +751,23 @@ type
 
     TEnumerator = record
     private
-      FList: TNodeList;
-      FLastIndex,
-      FCurrIndex: SizeInt;
+      FCurrNode,
+      FLastNode: PNode;
       function  GetCurrent: TEntry; inline;
-      procedure Init(constref aList: TGLiteHashList2);
+      procedure Init(aList: PLiteHashList);
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: TEntry read GetCurrent;
     end;
 
     TReverseEnumerator = record
     private
-      FList: TNodeList;
-      FCount,
-      FCurrIndex: SizeInt;
+      FCurrNode,
+      FFirstNode: PNode;
       function  GetCurrent: TEntry; inline;
-      procedure Init(constref aList: TGLiteHashList2);
+      procedure Init(aList: PLiteHashList);
     public
       function  MoveNext: Boolean; inline;
-      procedure Reset; inline;
       property  Current: TEntry read GetCurrent;
     end;
 
@@ -811,6 +806,7 @@ type
     class operator Copy(constref aSrc: TGLiteHashList2; var aDst: TGLiteHashList2);
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  ToArray: TEntryArray;
     function  Reverse: TReverse; inline;
     procedure Clear;
@@ -838,7 +834,7 @@ type
   end;
 
 implementation
-{$B-}{$COPERATORS ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}
 
 { TGBaseSortedList.TEnumerator }
 
@@ -2184,11 +2180,6 @@ begin
   FCurrIndex += Ord(Result);
 end;
 
-procedure TGLiteSortedList.THeadEnumerator.Reset;
-begin
-  FCurrIndex := NULL_INDEX;
-end;
-
 { TGLiteSortedList.THead }
 
 constructor TGLiteSortedList.THead.Create(aList: PLiteSortedList; aHighBound: SizeInt);
@@ -2230,11 +2221,6 @@ function TGLiteSortedList.TTailEnumerator.MoveNext: Boolean;
 begin
   Result := FCurrIndex < FLast;
   FCurrIndex += Ord(Result);
-end;
-
-procedure TGLiteSortedList.TTailEnumerator.Reset;
-begin
-  FCurrIndex := FStart;
 end;
 
 { TGLiteSortedList.TTail }
@@ -2451,6 +2437,11 @@ end;
 function TGLiteSortedList.GetEnumerator: TEnumerator;
 begin
   Result := FBuffer.GetEnumerator;
+end;
+
+function TGLiteSortedList.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := FBuffer.GetReverseEnumerator;
 end;
 
 function TGLiteSortedList.Reverse: TReverse;
@@ -2752,11 +2743,6 @@ begin
   FCurrIndex += Ord(Result);
 end;
 
-procedure TGLiteComparableSortedList.THeadEnumerator.Reset;
-begin
-  FCurrIndex := NULL_INDEX;
-end;
-
 { TGLiteComparableSortedList.THead }
 
 constructor TGLiteComparableSortedList.THead.Create(aList: PSortedList; aHighBound: SizeInt);
@@ -2798,11 +2784,6 @@ function TGLiteComparableSortedList.TTailEnumerator.MoveNext: Boolean;
 begin
   Result := FCurrIndex < FLast;
   FCurrIndex += Ord(Result);
-end;
-
-procedure TGLiteComparableSortedList.TTailEnumerator.Reset;
-begin
-  FCurrIndex := FStart;
 end;
 
 { TGLiteComparableSortedList.TTail }
@@ -3017,6 +2998,11 @@ end;
 function TGLiteComparableSortedList.GetEnumerator: TEnumerator;
 begin
   Result := FBuffer.GetEnumerator;
+end;
+
+function TGLiteComparableSortedList.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := FBuffer.GetReverseEnumerator;
 end;
 
 function TGLiteComparableSortedList.Reverse: TReverse;
@@ -3302,50 +3288,62 @@ end;
 
 function TGLiteHashList.TEnumerator.GetCurrent: T;
 begin
-  Result := FList[FCurrIndex].Data;
+  Result := FCurrNode^.Data;
 end;
 
-constructor TGLiteHashList.TEnumerator.Create(constref aList: TGLiteHashList);
+constructor TGLiteHashList.TEnumerator.Create(aList: PLiteHashList);
 begin
-  FList := aList.FNodeList;
-  FLastIndex := System.High(FList);
-  FCurrIndex := NULL_INDEX;
+  if aList^.Count > 0 then
+    begin
+      FCurrNode := PNode(aList^.FNodeList) - 1;
+      FLastNode := FCurrNode + aList^.Count;
+    end
+  else
+    begin
+      FCurrNode := nil;
+      FLastNode := nil;
+    end;
 end;
 
 function TGLiteHashList.TEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLastIndex;
-  FCurrIndex += Ord(Result);
-end;
-
-procedure TGLiteHashList.TEnumerator.Reset;
-begin
-  FCurrIndex := NULL_INDEX;
+  if FCurrNode < FLastNode then
+    begin
+      Inc(FCurrNode);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteHashList.TReverseEnumerator }
 
 function TGLiteHashList.TReverseEnumerator.GetCurrent: T;
 begin
-  Result := FList[FCurrIndex].Data;
+  Result := FCurrNode^.Data;
 end;
 
 constructor TGLiteHashList.TReverseEnumerator.Create(aList: PLiteHashList);
 begin
-  FList := aList^.FNodeList;
-  FCount := aList^.Count;
-  FCurrIndex := FCount;
+  if aList^.Count > 0 then
+    begin
+      FFirstNode := PNode(aList^.FNodeList);
+      FCurrNode := FCurrNode + aList^.Count;
+    end
+  else
+    begin
+      FFirstNode := nil;
+      FCurrNode := nil;
+    end;
 end;
 
 function TGLiteHashList.TReverseEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex > 0;
-  FCurrIndex -= Ord(Result);
-end;
-
-procedure TGLiteHashList.TReverseEnumerator.Reset;
-begin
-  FCurrIndex := FCount;
+  if FCurrNode > FFirstNode then
+    begin
+      Dec(FCurrNode);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteHashList.TReverse }
@@ -3606,7 +3604,12 @@ end;
 
 function TGLiteHashList.GetEnumerator: TEnumerator;
 begin
-  Result := TEnumerator.Create(Self);
+  Result := TEnumerator.Create(@Self);
+end;
+
+function TGLiteHashList.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := TReverseEnumerator.Create(@Self);
 end;
 
 function TGLiteHashList.ToArray: TArray;
@@ -3781,50 +3784,62 @@ end;
 
 function TGLiteHashList2.TEnumerator.GetCurrent: TEntry;
 begin
-  Result := FList[FCurrIndex].Data;
+  Result := FCurrNode^.Data;
 end;
 
-procedure TGLiteHashList2.TEnumerator.Init(constref aList: TGLiteHashList2);
+procedure TGLiteHashList2.TEnumerator.Init(aList: PLiteHashList);
 begin
-  FList := aList.FNodeList;
-  FLastIndex := System.High(FList);
-  FCurrIndex := NULL_INDEX;
+  if aList^.Count > 0 then
+    begin
+      FCurrNode := PNode(aList^.FNodeList) - 1;
+      FLastNode := FCurrNode + aList^.Count;
+    end
+  else
+    begin
+      FCurrNode := nil;
+      FLastNode := nil;
+    end;
 end;
 
 function TGLiteHashList2.TEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLastIndex;
-  FCurrIndex += Ord(Result);
-end;
-
-procedure TGLiteHashList2.TEnumerator.Reset;
-begin
-  FCurrIndex := NULL_INDEX;
+  if FCurrNode < FLastNode then
+    begin
+      Inc(FCurrNode);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteHashList2.TReverseEnumerator }
 
 function TGLiteHashList2.TReverseEnumerator.GetCurrent: TEntry;
 begin
-  Result := FList[FCurrIndex].Data;
+  Result := FCurrNode^.Data;
 end;
 
-procedure TGLiteHashList2.TReverseEnumerator.Init(constref aList: TGLiteHashList2);
+procedure TGLiteHashList2.TReverseEnumerator.Init(aList: PLiteHashList);
 begin
-  FList := aList.FNodeList;
-  FCount := aList.Count;
-  FCurrIndex := FCount;
+  if aList^.Count > 0 then
+    begin
+      FFirstNode := PNode(aList^.FNodeList);
+      FCurrNode := FCurrNode + aList^.Count;
+    end
+  else
+    begin
+      FFirstNode := nil;
+      FCurrNode := nil;
+    end;
 end;
 
 function TGLiteHashList2.TReverseEnumerator.MoveNext: Boolean;
 begin
-  Result := FCurrIndex > 0;
-  FCurrIndex -= Ord(Result);
-end;
-
-procedure TGLiteHashList2.TReverseEnumerator.Reset;
-begin
-  FCurrIndex := FCount;
+  if FCurrNode > FFirstNode then
+    begin
+      Dec(FCurrNode);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGLiteHashList2.TReverse }
@@ -3836,7 +3851,7 @@ end;
 
 function TGLiteHashList2.TReverse.GetEnumerator: TReverseEnumerator;
 begin
-  Result.Init(FList^);
+  Result.Init(FList);
 end;
 
 { TGLiteHashList2 }
@@ -4096,7 +4111,12 @@ end;
 
 function TGLiteHashList2.GetEnumerator: TEnumerator;
 begin
-  Result.Init(Self);
+  Result.Init(@Self);
+end;
+
+function TGLiteHashList2.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result.Init(@Self);
 end;
 
 function TGLiteHashList2.ToArray: TEntryArray;
