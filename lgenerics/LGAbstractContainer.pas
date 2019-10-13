@@ -60,11 +60,8 @@ type
     TNestFold       = specialize TGNestFold<T, T>;
     TDefaults       = specialize TGDefaults<T>;
     TItem           = T;
-
+    PItem           = ^T;
   protected
-  type
-    PItem = ^T;
-
     function  _GetRef: TObject; inline;
     procedure Discard;
   public
