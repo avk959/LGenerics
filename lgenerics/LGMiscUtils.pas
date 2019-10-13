@@ -357,53 +357,15 @@ type
     property OutFile: PText read GetFile;
   end;
 
-  { TGetEnumerable: TEntity must have a GetEnumerator method that returns
-    a value of type TEnumerator; TEnumerator must be a value type }
-  generic TGetEnumerable<T, TEntity, TEnumerator> = class(specialize TGAutoEnumerable<T>)
+  { TGetEnumerable: TEnumerator must be a value type }
+  generic TGetEnumerable<T, TEnumerator> = class(specialize TGAutoEnumerable<T>)
   protected
-  type
-    PEntity = ^TEntity;
-  var
-    FEntity: PEntity;
-    FEnum: TEnumerator;
+    FEnum,
+    FWorkEnum: TEnumerator;
     function GetCurrent: T; override;
   public
-    class function Construct(constref aEntity: TEntity): IEnumerable; inline;
-    constructor Create(constref aEntity: TEntity);
-    function  MoveNext: Boolean; override;
-    procedure Reset; override;
-  end;
-
-  { TGetReverseEnumerable: TEntity must have a GetReverseEnumerator method that returns
-    a value of type TEnumerator; TEnumerator must be a value type }
-  generic TGetReverseEnumerable<T, TEntity, TEnumerator> = class(specialize TGAutoEnumerable<T>)
-  protected
-  type
-    PEntity = ^TEntity;
-  var
-    FEntity: PEntity;
-    FEnum: TEnumerator;
-    function GetCurrent: T; override;
-  public
-    class function Construct(constref aEntity: TEntity): IEnumerable; inline;
-    constructor Create(constref aEntity: TEntity);
-    function  MoveNext: Boolean; override;
-    procedure Reset; override;
-  end;
-
-  { TGetMutableEnumerable: TEntity must have a GetMutableEnumerator method that returns
-    a value of type TEnumerator; TEnumerator must be a value type }
-  generic TGetMutableEnumerable<TPtr, TEntity, TEnumerator> = class(specialize TGAutoEnumerable<TPtr>)
-  protected
-  type
-    PEntity = ^TEntity;
-  var
-    FEntity: PEntity;
-    FEnum: TEnumerator;
-    function GetCurrent: TPtr; override;
-  public
-    class function Construct(constref aEntity: TEntity): IEnumerable; inline;
-    constructor Create(constref aEntity: TEntity);
+    class function Construct(constref aEnum: TEnumerator): IEnumerable; inline;
+    constructor Create(constref aEnum: TEnumerator);
     function  MoveNext: Boolean; override;
     procedure Reset; override;
   end;
@@ -5233,87 +5195,29 @@ end;
 
 function TGetEnumerable.GetCurrent: T;
 begin
-  Result := FEnum.Current;
+  Result := FWorkEnum.Current;
 end;
 
-class function TGetEnumerable.Construct(constref aEntity: TEntity): IEnumerable;
+class function TGetEnumerable.Construct(constref aEnum: TEnumerator): IEnumerable;
 begin
-  Result := TGetEnumerable.Create(aEntity);
+  Result := TGetEnumerable.Create(aEnum);
 end;
 
-constructor TGetEnumerable.Create(constref aEntity: TEntity);
+constructor TGetEnumerable.Create(constref aEnum: TEnumerator);
 begin
   inherited Create;
-  FEntity := @aEntity;
-  FEnum := FEntity^.GetEnumerator;
+  FEnum := aEnum;
+  FWorkEnum := aEnum;
 end;
 
 function TGetEnumerable.MoveNext: Boolean;
 begin
-  Result := FEnum.MoveNext;
+  Result := FWorkEnum.MoveNext;
 end;
 
 procedure TGetEnumerable.Reset;
 begin
-  FEnum := FEntity^.GetEnumerator;
-end;
-
-{ TGetReverseEnumerable }
-
-function TGetReverseEnumerable.GetCurrent: T;
-begin
-  Result := FEnum.Current;
-end;
-
-class function TGetReverseEnumerable.Construct(constref aEntity: TEntity): IEnumerable;
-begin
-  Result := TGetReverseEnumerable.Create(aEntity);
-end;
-
-constructor TGetReverseEnumerable.Create(constref aEntity: TEntity);
-begin
-  inherited Create;
-  FEntity := @aEntity;
-  FEnum := FEntity^.GetReverseEnumerator;
-end;
-
-function TGetReverseEnumerable.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGetReverseEnumerable.Reset;
-begin
-  FEnum := FEntity^.GetReverseEnumerator;
-end;
-
-{ TGetMutableEnumerable }
-
-function TGetMutableEnumerable.GetCurrent: TPtr;
-begin
-  Result := FEnum.Current;
-end;
-
-class function TGetMutableEnumerable.Construct(constref aEntity: TEntity): IEnumerable;
-begin
-  Result := TGetMutableEnumerable.Create(aEntity);
-end;
-
-constructor TGetMutableEnumerable.Create(constref aEntity: TEntity);
-begin
-  inherited Create;
-  FEntity := @aEntity;
-  FEnum := FEntity^.GetMutableEnumerator;
-end;
-
-function TGetMutableEnumerable.MoveNext: Boolean;
-begin
-  Result := FEnum.MoveNext;
-end;
-
-procedure TGetMutableEnumerable.Reset;
-begin
-  FEnum := FEntity^.GetMutableEnumerator;
+  FWorkEnum := FEnum;
 end;
 
 { TGClassEnumerable }
