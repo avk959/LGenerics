@@ -153,11 +153,13 @@ type
 
   public
   type
-    TEnumerator = TBuffer.TEnumerator;
-    TMutables   = TBuffer.TMutables;
-    TReverse    = TBuffer.TReverse;
-    PItem       = TBuffer.PItem;
-    TArray      = TBuffer.TArray;
+    TEnumerator        = TBuffer.TEnumerator;
+    TReverseEnumerator = TBuffer.TReverseEnumerator;
+    TMutableEnumerator = TBuffer.TMutableEnumerator;
+    TMutables          = TBuffer.TMutables;
+    TReverse           = TBuffer.TReverse;
+    PItem              = TBuffer.PItem;
+    TArray             = TBuffer.TArray;
 
   private
     FBuffer: TBuffer;
@@ -172,6 +174,8 @@ type
     function  DeleteRange(aIndex, aCount: SizeInt): SizeInt;
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetMutableEnumerator: TMutableEnumerator; inline;
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
@@ -234,6 +238,8 @@ type
     function  TryDelete(aIndex: SizeInt; out aValue: T): Boolean;
   end;
 
+  { TGLiteObjectVector }
+
   generic TGLiteObjectVector<T: class> = record
   private
   type
@@ -241,9 +247,10 @@ type
 
   public
   type
-    TEnumerator = TVector.TEnumerator;
-    TReverse    = TVector.TReverse;
-    TArray      = TVector.TArray;
+    TEnumerator        = TVector.TEnumerator;
+    TReverseEnumerator = TVector.TReverseEnumerator;
+    TReverse           = TVector.TReverse;
+    TArray             = TVector.TArray;
 
   private
     FVector: TVector;
@@ -260,6 +267,7 @@ type
     PVector = ^TVector;
     function  InnerVector: PVector; inline;
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
     procedure Clear; inline;
@@ -1443,6 +1451,16 @@ begin
   Result := FBuffer.GetEnumerator;
 end;
 
+function TGLiteVector.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := FBuffer.GetReverseEnumerator;
+end;
+
+function TGLiteVector.GetMutableEnumerator: TMutableEnumerator;
+begin
+  Result := FBuffer.GetMutableEnumerator;
+end;
+
 function TGLiteVector.Mutables: TMutables;
 begin
   Result := FBuffer.Mutables;
@@ -1738,6 +1756,11 @@ end;
 function TGLiteObjectVector.GetEnumerator: TEnumerator;
 begin
   Result := FVector.GetEnumerator;
+end;
+
+function TGLiteObjectVector.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := FVector.GetReverseEnumerator;
 end;
 
 function TGLiteObjectVector.Reverse: TReverse;
