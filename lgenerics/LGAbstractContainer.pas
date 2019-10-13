@@ -42,7 +42,6 @@ type
   generic TGEnumerable<T> = class abstract(TObject, specialize IGEnumerable<T>, IObjInstance)
   public
   type
-    TSpecEnumerable = specialize TGEnumerable<T>;
     TSpecEnumerator = specialize TGEnumerator<T>;
     IEnumerable     = specialize IGEnumerable<T>;
     TOptional       = specialize TGOptional<T>;
