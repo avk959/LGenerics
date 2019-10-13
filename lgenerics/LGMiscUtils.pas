@@ -357,6 +357,72 @@ type
     property OutFile: PText read GetFile;
   end;
 
+  { TGetEnumerable: TEntity must have a GetEnumerator method that returns
+    a value of type TEnumerator; TEnumerator must be a value type }
+  generic TGetEnumerable<T, TEntity, TEnumerator> = class(specialize TGAutoEnumerable<T>)
+  protected
+  type
+    PEntity = ^TEntity;
+  var
+    FEntity: PEntity;
+    FEnum: TEnumerator;
+    function GetCurrent: T; override;
+  public
+    class function Construct(constref aEntity: TEntity): IEnumerable; inline;
+    constructor Create(constref aEntity: TEntity);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
+  { TGetReverseEnumerable: TEntity must have a GetReverseEnumerator method that returns
+    a value of type TEnumerator; TEnumerator must be a value type }
+  generic TGetReverseEnumerable<T, TEntity, TEnumerator> = class(specialize TGAutoEnumerable<T>)
+  protected
+  type
+    PEntity = ^TEntity;
+  var
+    FEntity: PEntity;
+    FEnum: TEnumerator;
+    function GetCurrent: T; override;
+  public
+    class function Construct(constref aEntity: TEntity): IEnumerable; inline;
+    constructor Create(constref aEntity: TEntity);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
+  { TGetMutableEnumerable: TEntity must have a GetMutableEnumerator method that returns
+    a value of type TEnumerator; TEnumerator must be a value type }
+  generic TGetMutableEnumerable<TPtr, TEntity, TEnumerator> = class(specialize TGAutoEnumerable<TPtr>)
+  protected
+  type
+    PEntity = ^TEntity;
+  var
+    FEntity: PEntity;
+    FEnum: TEnumerator;
+    function GetCurrent: TPtr; override;
+  public
+    class function Construct(constref aEntity: TEntity): IEnumerable; inline;
+    constructor Create(constref aEntity: TEntity);
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
+  { TGClassEnumerable: class TEntity must have a GetEnumerator method that returns
+    a value of type TEnumerator; TEnumerator must be a class }
+  generic TGClassEnumerable<T, TEntity, TEnumerator> = class(specialize TGAutoEnumerable<T>)
+  protected
+    FEntity: TEntity;
+    FEnum: TEnumerator;
+    function GetCurrent: T; override;
+  public
+    class function Construct(aEntity: TEntity): IEnumerable; inline;
+    constructor Create(aEntity: TEntity);
+    destructor Destroy; override;
+    function  MoveNext: Boolean; override;
+    procedure Reset; override;
+  end;
+
   TParamKind = (pkOption, pkLongOption, pkArgument);
 
   TCmdLineOption = record
@@ -5161,6 +5227,129 @@ begin
   Result := 0;
   for s in e do
     Result += Ord(Add(s));
+end;
+
+{ TGetEnumerable }
+
+function TGetEnumerable.GetCurrent: T;
+begin
+  Result := FEnum.Current;
+end;
+
+class function TGetEnumerable.Construct(constref aEntity: TEntity): IEnumerable;
+begin
+  Result := TGetEnumerable.Create(aEntity);
+end;
+
+constructor TGetEnumerable.Create(constref aEntity: TEntity);
+begin
+  inherited Create;
+  FEntity := @aEntity;
+  FEnum := FEntity^.GetEnumerator;
+end;
+
+function TGetEnumerable.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGetEnumerable.Reset;
+begin
+  FEnum := FEntity^.GetEnumerator;
+end;
+
+{ TGetReverseEnumerable }
+
+function TGetReverseEnumerable.GetCurrent: T;
+begin
+  Result := FEnum.Current;
+end;
+
+class function TGetReverseEnumerable.Construct(constref aEntity: TEntity): IEnumerable;
+begin
+  Result := TGetReverseEnumerable.Create(aEntity);
+end;
+
+constructor TGetReverseEnumerable.Create(constref aEntity: TEntity);
+begin
+  inherited Create;
+  FEntity := @aEntity;
+  FEnum := FEntity^.GetReverseEnumerator;
+end;
+
+function TGetReverseEnumerable.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGetReverseEnumerable.Reset;
+begin
+  FEnum := FEntity^.GetReverseEnumerator;
+end;
+
+{ TGetMutableEnumerable }
+
+function TGetMutableEnumerable.GetCurrent: TPtr;
+begin
+  Result := FEnum.Current;
+end;
+
+class function TGetMutableEnumerable.Construct(constref aEntity: TEntity): IEnumerable;
+begin
+  Result := TGetMutableEnumerable.Create(aEntity);
+end;
+
+constructor TGetMutableEnumerable.Create(constref aEntity: TEntity);
+begin
+  inherited Create;
+  FEntity := @aEntity;
+  FEnum := FEntity^.GetMutableEnumerator;
+end;
+
+function TGetMutableEnumerable.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGetMutableEnumerable.Reset;
+begin
+  FEnum := FEntity^.GetMutableEnumerator;
+end;
+
+{ TGClassEnumerable }
+
+function TGClassEnumerable.GetCurrent: T;
+begin
+  Result := FEnum.Current;
+end;
+
+class function TGClassEnumerable.Construct(aEntity: TEntity): IEnumerable;
+begin
+  Result := TGClassEnumerable.Create(aEntity);
+end;
+
+constructor TGClassEnumerable.Create(aEntity: TEntity);
+begin
+  inherited Create;
+  FEntity := aEntity;
+  FEnum := FEntity.GetEnumerator;
+end;
+
+destructor TGClassEnumerable.Destroy;
+begin
+  FEnum.Free;
+  inherited;
+end;
+
+function TGClassEnumerable.MoveNext: Boolean;
+begin
+  Result := FEnum.MoveNext;
+end;
+
+procedure TGClassEnumerable.Reset;
+begin
+  FEnum.Free;
+  FEnum := FEntity.GetEnumerator;
 end;
 
 end.
