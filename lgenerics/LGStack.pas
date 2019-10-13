@@ -90,11 +90,13 @@ type
 
   public
   type
-    TEnumerator = TBuffer.TEnumerator;
-    TMutables   = TBuffer.TMutables;
-    TReverse    = TBuffer.TReverse;
-    PItem       = TBuffer.PItem;
-    TArray      = TBuffer.TArray;
+    TEnumerator        = TBuffer.TEnumerator;
+    TReverseEnumerator = TBuffer.TReverseEnumerator;
+    TMutableEnumerator = TBuffer.TMutableEnumerator;
+    TMutables          = TBuffer.TMutables;
+    TReverse           = TBuffer.TReverse;
+    PItem              = TBuffer.PItem;
+    TArray             = TBuffer.TArray;
 
   private
     FBuffer: TBuffer;
@@ -102,6 +104,8 @@ type
     function  PopItem: T;
   public
     function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetMutableEnumerator: TMutableEnumerator; inline;
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
@@ -151,7 +155,7 @@ type
   var
     FStack: TStack;
     FOwnsObjects: Boolean;
-    function  GetCapacity: SizeInt; inline;
+    function  GetCapacity: SizeInt;
     function  GetCount: SizeInt; inline;
     procedure CheckFreeItems;
   private
@@ -160,17 +164,19 @@ type
     class operator Copy(constref aSrc: TGLiteObjectStack; var aDst: TGLiteObjectStack);
   public
   type
-    TEnumerator = TStack.TEnumerator;
-    TReverse    = TStack.TReverse;
+    TEnumerator        = TStack.TEnumerator;
+    TReverseEnumerator = TStack.TReverseEnumerator;
+    TReverse           = TStack.TReverse;
 
-    function  GetEnumerator: TEnumerator; inline;
-    function  Reverse: TReverse; inline;
-    function  ToArray: TArray; inline;
+    function  GetEnumerator: TEnumerator;
+    function  GetReverseEnumerator: TReverseEnumerator;
+    function  Reverse: TReverse;
+    function  ToArray: TArray;
     procedure Clear;
-    function  IsEmpty: Boolean; inline;
-    function  NonEmpty: Boolean; inline;
-    procedure EnsureCapacity(aValue: SizeInt); inline;
-    procedure TrimToFit; inline;
+    function  IsEmpty: Boolean;
+    function  NonEmpty: Boolean;
+    procedure EnsureCapacity(aValue: SizeInt);
+    procedure TrimToFit;
     procedure Push(constref aValue: T); inline;
     function  Pop: T; inline;
     function  TryPop(out aValue: T): Boolean; inline;
@@ -399,6 +405,16 @@ begin
   Result := FBuffer.GetEnumerator;
 end;
 
+function TGLiteStack.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := FBuffer.GetReverseEnumerator;
+end;
+
+function TGLiteStack.GetMutableEnumerator: TMutableEnumerator;
+begin
+  Result := FBuffer.GetMutableEnumerator;
+end;
+
 function TGLiteStack.Mutables: TMutables;
 begin
   Result := FBuffer.Mutables;
@@ -612,6 +628,11 @@ end;
 function TGLiteObjectStack.GetEnumerator: TEnumerator;
 begin
   Result := FStack.GetEnumerator;
+end;
+
+function TGLiteObjectStack.GetReverseEnumerator: TReverseEnumerator;
+begin
+  Result := FStack.GetReverseEnumerator;
 end;
 
 function TGLiteObjectStack.Reverse: TReverse;
