@@ -860,7 +860,7 @@ type
 
   { TGNumArrayHelper: for numeric types only }
   generic TGNumArrayHelper<T> = class(specialize TGSimpleArrayHelper<T>)
-  private
+  public
   type
     TRange = record
     strict private
@@ -869,7 +869,7 @@ type
       FStep: T;
       FInLoop: Boolean;
     public
-      constructor Create(aFirst, aLast, aStep: T);
+      constructor Create(aFrom, aTo, aStep: T);
       function GetEnumerator: TRange; inline;
       function MoveNext: Boolean; inline;
       property Current: T read FCurrent;
@@ -882,11 +882,12 @@ type
       FStep: T;
       FInLoop: Boolean;
     public
-      constructor Create(aFirst, aLast, aStep: T);
+      constructor Create(aFrom, aDownTo, aStep: T);
       function GetEnumerator: TDownRange; inline;
       function MoveNext: Boolean; inline;
       property Current: T read FCurrent;
     end;
+
   public
   { loop from aFrom to aTo with step aStep;
     if aStep > T(0) then iteration count = Max(0, Int((aTo - aFrom + aStep)/aStep)),
@@ -9304,10 +9305,10 @@ end;
 
 { TGNumArrayHelper.TRange }
 
-constructor TGNumArrayHelper.TRange.Create(aFirst, aLast, aStep: T);
+constructor TGNumArrayHelper.TRange.Create(aFrom, aTo, aStep: T);
 begin
-  FCurrent := aFirst;
-  FLast := aLast;
+  FCurrent := aFrom;
+  FLast := aTo;
   FStep := aStep;
   FInLoop := False;
 end;
@@ -9334,10 +9335,10 @@ end;
 
 { TGNumArrayHelper.TDownRange }
 
-constructor TGNumArrayHelper.TDownRange.Create(aFirst, aLast, aStep: T);
+constructor TGNumArrayHelper.TDownRange.Create(aFrom, aDownTo, aStep: T);
 begin
-  FCurrent := aFirst;
-  FLast := aLast;
+  FCurrent := aFrom;
+  FLast := aDownTo;
   FStep := aStep;
   FInLoop := False;
 end;
