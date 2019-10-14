@@ -364,7 +364,7 @@ type
     FWorkEnum: TEnumerator;
     function GetCurrent: T; override;
   public
-    class function Construct(constref aEnum: TEnumerator): IEnumerable; inline;
+    class function Construct(constref aEnum: TEnumerator): IEnumerable; static; inline;
     constructor Create(constref aEnum: TEnumerator);
     function  MoveNext: Boolean; override;
     procedure Reset; override;
@@ -378,7 +378,7 @@ type
     FEnum: TEnumerator;
     function GetCurrent: T; override;
   public
-    class function Construct(aEntity: TEntity): IEnumerable; inline;
+    class function Construct(aEntity: TEntity): IEnumerable; static; inline;
     constructor Create(aEntity: TEntity);
     destructor Destroy; override;
     function  MoveNext: Boolean; override;
