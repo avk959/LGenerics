@@ -28,10 +28,12 @@ interface
 
 uses
 
+  Classes,
   SysUtils,
   LGUtils,
   LGHelpers,
   LGAbstractContainer,
+  LGMiscUtils,
   regexpr;
 
 type
@@ -101,6 +103,14 @@ type
     function Matches(const aValue: string): IStrEnumerable; inline;
     property Expression: string read GetExpression write SetExpression;
     property ModifierStr: string read GetModifierStr write SetModifierStr;
+  end;
+
+  TStringListHelper = class helper for TStringList
+  public
+    type
+      IStrEnumerable = specialize IGEnumerable<string>;
+
+    function GetEnumerable: IStrEnumerable; inline;
   end;
 
 implementation
@@ -301,6 +311,13 @@ end;
 function TRegexMatch.Matches(const aValue: string): IStrEnumerable;
 begin
   Result := TStrEnumerable.Create(FRegex, aValue);
+end;
+
+{ TStringListHelper }
+
+function TStringListHelper.GetEnumerable: IStrEnumerable;
+begin
+  Result := specialize TGClassEnumerable<string, TStringList, TStringsEnumerator>.Create(Self);
 end;
 
 end.
