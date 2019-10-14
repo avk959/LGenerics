@@ -2612,18 +2612,24 @@ var
   p: PEntry;
 begin
   p := Find(aKey);
-  Result := p <> nil;
-  if Result then
-    p^.Value := aNewValue;
+  if p <> nil then
+    begin
+      p^.Value := aNewValue;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGAbstractMap.DoAdd(constref aKey: TKey; constref aValue: TValue): Boolean;
 var
   p: PEntry;
 begin
-  Result := not FindOrAdd(aKey, p);
-  if Result then
-    p^.Value := aValue;
+  if not FindOrAdd(aKey, p) then
+    begin
+      p^.Value := aValue;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGAbstractMap.DoAddOrSetValue(const aKey: TKey; const aValue: TValue): Boolean;
@@ -2638,38 +2644,47 @@ function TGAbstractMap.DoAddAll(constref a: array of TEntry): SizeInt;
 var
   e: TEntry;
 begin
-  Result := 0;
+  Result := Count;
   for e in a do
-    Result += Ord(DoAdd(e.Key, e.Value));
+    DoAdd(e.Key, e.Value);
+  Result := Count - Result;
 end;
 
 function TGAbstractMap.DoAddAll(e: IEntryEnumerable): SizeInt;
 var
   Entry: TEntry;
 begin
-  Result := 0;
+  Result := Count;
   if e._GetRef <> Self then
     for Entry in e do
-      Result += Ord(DoAdd(Entry.Key, Entry.Value));
+      DoAdd(Entry.Key, Entry.Value);
+  Result := Count - Result;
 end;
 
 function TGAbstractMap.DoRemoveAll(constref a: array of TKey): SizeInt;
 var
   k: TKey;
 begin
-  Result := 0;
-  for k in a do
-    Result += Ord(DoRemove(k));
+  Result := Count;
+  if Result > 0 then
+    begin
+      for k in a do
+        DoRemove(k);
+      Result -= Count;
+    end;
 end;
 
 function TGAbstractMap.DoRemoveAll(e: IKeyEnumerable): SizeInt;
 var
   k: TKey;
 begin
-  Result := 0;
-  if NonEmpty then
-    for k in e do
-      Result += Ord(DoRemove(k))
+  Result := Count;
+  if Result > 0 then
+    begin
+      for k in e do
+        DoRemove(k);
+      Result -= Count;
+    end
   else
     e.Discard;
 end;
@@ -2720,9 +2735,12 @@ var
   p: PEntry;
 begin
   p := Find(aKey);
-  Result := p <> nil;
-  if Result then
-    aValue := p^.Value;
+  if p <> nil then
+    begin
+      aValue := p^.Value;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 function TGAbstractMap.GetValueDef(constref aKey: TKey; constref aDefault: TValue): TValue;
@@ -2767,7 +2785,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
