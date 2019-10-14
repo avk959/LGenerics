@@ -41,6 +41,7 @@ resourcestring
   SEValueNotFound          = 'Value not found';
   SECantAcceptNegCountFmt  = 'The %s''s TEntry.Count can not accept negative value';
   SECantAcceptNegCount     = 'Can not accept negative TEntry.Count value';
+  SECantAcceptNegLen       = 'Can not accept negative length value';
   SEInternalDataInconsist  = 'Internal data inconsistency';
   SEInvalidInputFmt        = 'Invalid input parameter "%s" value()';
   SEValueAlreadyExist      = 'Value already exists';
