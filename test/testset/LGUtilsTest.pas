@@ -237,7 +237,7 @@ type
     procedure Implicit;
     procedure CopyRefCount;
     procedure ReadPtr;
-    procedure WritePtr;
+    procedure UniqPtr;
     procedure PassByValue;
     procedure PassAsVar;
     procedure Release;
@@ -1700,213 +1700,221 @@ end;
 
 procedure TCowPtrTest.Allocated;
 var
-  Ptr: TTestPtr;
+  v: TTestPtr;
   p: TTestPtr.PValue = nil;
 begin
-  AssertFalse({%H-}Ptr.Allocated);
-  p := Ptr.ReadPtr;
-  AssertTrue(Ptr.Allocated);
+  AssertFalse({%H-}v.Allocated);
+  p := v.Ptr;
+  AssertTrue(v.Allocated);
   AssertTrue(p <> nil);
 end;
 
 procedure TCowPtrTest.Implicit;
 var
-  Ptr: TTestPtr;
+  v: TTestPtr;
   Rec: TTestRec;
+  procedure Test(const aRec: TTestRec);
+  begin
+    AssertTrue(aRec.Name = v.Ptr^.Name);
+    AssertTrue(aRec.Color = v.Ptr^.Color);
+    AssertTrue(aRec.Count = v.Ptr^.Count);
+  end;
 begin
   Rec := CONST_REC;
   AssertTrue(Rec.Name = CONST_REC.Name);
   AssertTrue(Rec.Color = CONST_REC.Color);
   AssertTrue(Rec.Count = CONST_REC.Count);
-  Rec := {%H-}Ptr;
-  AssertTrue(Ptr.Allocated);
+  Rec := {%H-}v;
+  AssertTrue(v.Allocated);
   AssertTrue(Rec.Name = '');
   AssertTrue(Rec.Color = tcBlack);
   AssertTrue(Rec.Count = 0);
+  v.Value := CONST_REC;
+  Test(v);
 end;
 
 procedure TCowPtrTest.CopyRefCount;
 var
-  Ptr, Ptr2: TTestPtr;
+  v, v2: TTestPtr;
 begin
-  AssertTrue({%H-}Ptr.RefCount = 0);
-  Ptr2 := Ptr;
-  AssertTrue(Ptr2.RefCount = 0);
-  AssertFalse(Ptr2.Allocated);
+  AssertTrue({%H-}v.RefCount = 0);
+  v2 := v;
+  AssertTrue(v2.RefCount = 0);
+  AssertFalse(v2.Allocated);
 
-  Ptr.Value := CONST_REC;
-  AssertTrue(Ptr.Allocated);
-  AssertTrue(Ptr.RefCount = 1);
+  v.Value := CONST_REC;
+  AssertTrue(v.Allocated);
+  AssertTrue(v.RefCount = 1);
 
-  Ptr2 := Ptr;
-  AssertTrue(Ptr.RefCount = 2);
-  AssertTrue(Ptr2.RefCount = 2);
+  v2 := v;
+  AssertTrue(v.RefCount = 2);
+  AssertTrue(v2.RefCount = 2);
 
-  FTestPtr := Ptr2;
-  AssertTrue(Ptr.RefCount = 3);
-  AssertTrue(Ptr2.RefCount = 3);
+  FTestPtr := v2;
+  AssertTrue(v.RefCount = 3);
+  AssertTrue(v2.RefCount = 3);
   AssertTrue(FTestPtr.RefCount = 3);
 end;
 
 procedure TCowPtrTest.ReadPtr;
 var
-  Ptr, Ptr2: TTestPtr;
+  v, v2: TTestPtr;
 begin
-  {%H-}Ptr.Value := CONST_REC;
-  Ptr2 := Ptr;
-  AssertTrue(Ptr.RefCount = 2);
-  AssertTrue(Ptr2.RefCount = 2);
-  Ptr.ReadPtr^.Name := 'New name';
-  AssertTrue(Ptr.RefCount = 2);
-  AssertTrue(Ptr2.RefCount = 2);
-  AssertTrue(Ptr2.ReadPtr^.Name = 'New name');
+  {%H-}v.Value := CONST_REC;
+  v2 := v;
+  AssertTrue(v.RefCount = 2);
+  AssertTrue(v2.RefCount = 2);
+  v.Ptr^.Name := 'New name';
+  AssertTrue(v.RefCount = 2);
+  AssertTrue(v2.RefCount = 2);
+  AssertTrue(v2.Ptr^.Name = 'New name');
 end;
 
-procedure TCowPtrTest.WritePtr;
+procedure TCowPtrTest.UniqPtr;
 var
-  Ptr, Ptr2: TTestPtr;
+  v, v2: TTestPtr;
 begin
-  Ptr.UniqPtr^ := CONST_REC;
-  Ptr2 := Ptr;
-  AssertTrue(Ptr.RefCount = 2);
-  AssertTrue(Ptr2.RefCount = 2);
-  Ptr.UniqPtr^.Name := 'New name';
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue(Ptr2.RefCount = 1);
-  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
-  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
-  AssertTrue(Ptr2.ReadPtr^.Name = CONST_REC.Name);
+  v.UniqPtr^ := CONST_REC;
+  v2 := v;
+  AssertTrue(v.RefCount = 2);
+  AssertTrue(v2.RefCount = 2);
+  v.UniqPtr^.Name := 'New name';
+  AssertTrue(v.RefCount = 1);
+  AssertTrue(v2.RefCount = 1);
+  AssertTrue(v.Ptr^.Color = CONST_REC.Color);
+  AssertTrue(v.Ptr^.Count = CONST_REC.Count);
+  AssertTrue(v2.Ptr^.Name = CONST_REC.Name);
 end;
 
 procedure TCowPtrTest.PassByValue;
 var
-  Ptr, Ptr2: TTestPtr;
+  v, v2: TTestPtr;
 begin
-  Ptr.UniqPtr^ := CONST_REC;
+  {%H-}v.Value := CONST_REC;
 
-  CallByValue(Ptr, tcBlue, 3);
+  CallByValue(v, tcBlue, 3);
 
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
-  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
-  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+  AssertTrue(v.RefCount = 1);
+  AssertTrue(v.Ptr^.Name = CONST_REC.Name);
+  AssertTrue(v.Ptr^.Color = CONST_REC.Color);
+  AssertTrue(v.Ptr^.Count = CONST_REC.Count);
 
-  CallByValue2(Ptr, 3, Ptr2);
+  CallByValue2(v, 3, v2);
 
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue(Ptr2.RefCount = 1);
-  AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
-  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
-  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
-  AssertTrue(Ptr2.ReadPtr^.Name = CONST_REC.Name);
-  AssertTrue(Ptr2.ReadPtr^.Color = CONST_REC.Color);
-  AssertTrue(Ptr2.ReadPtr^.Count = 3);
+  AssertTrue(v.RefCount = 1);
+  AssertTrue(v2.RefCount = 1);
+  AssertTrue(v.Ptr^.Name = CONST_REC.Name);
+  AssertTrue(v.Ptr^.Color = CONST_REC.Color);
+  AssertTrue(v.Ptr^.Count = CONST_REC.Count);
+  AssertTrue(v2.Ptr^.Name = CONST_REC.Name);
+  AssertTrue(v2.Ptr^.Color = CONST_REC.Color);
+  AssertTrue(v2.Ptr^.Count = 3);
 end;
 
 procedure TCowPtrTest.PassAsVar;
 var
-  Ptr: TTestPtr;
+  v: TTestPtr;
 begin
-  Ptr.UniqPtr^ := CONST_REC;
+  v.UniqPtr^ := CONST_REC;
 
-  CallAsVar(Ptr, tcRed, 7);
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue(Ptr.ReadPtr^.Name = '');
-  AssertTrue(Ptr.ReadPtr^.Color = tcRed);
-  AssertTrue(Ptr.ReadPtr^.Count = 7);
+  CallAsVar(v, tcRed, 7);
+  AssertTrue(v.RefCount = 1);
+  AssertTrue(v.Ptr^.Name = '');
+  AssertTrue(v.Ptr^.Color = tcRed);
+  AssertTrue(v.Ptr^.Count = 7);
 end;
 
 procedure TCowPtrTest.Release;
 var
-  Ptr, Ptr2: TTestPtr;
+  v, v2: TTestPtr;
 begin
-  AssertTrue({%H-}Ptr.RefCount = 0);
-  Ptr.Release;
-  AssertTrue({%H-}Ptr.RefCount = 0);
+  AssertTrue({%H-}v.RefCount = 0);
+  v.Release;
+  AssertTrue({%H-}v.RefCount = 0);
 
-  Ptr.UniqPtr^ := CONST_REC;
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue({%H-}Ptr2.RefCount = 0);
+  v.UniqPtr^ := CONST_REC;
+  AssertTrue(v.RefCount = 1);
+  AssertTrue({%H-}v2.RefCount = 0);
 
-  Ptr2 := Ptr;
-  AssertTrue(Ptr.RefCount = 2);
-  AssertTrue(Ptr2.RefCount = 2);
+  v2 := v;
+  AssertTrue(v.RefCount = 2);
+  AssertTrue(v2.RefCount = 2);
 
-  FTestPtr := Ptr2;
-  AssertTrue(Ptr.RefCount = 3);
-  AssertTrue(Ptr2.RefCount = 3);
+  FTestPtr := v2;
+  AssertTrue(v.RefCount = 3);
+  AssertTrue(v2.RefCount = 3);
   AssertTrue(FTestPtr.RefCount = 3);
 
   FTestPtr.Release;
-  AssertTrue(Ptr.RefCount = 2);
-  AssertTrue(Ptr2.RefCount = 2);
+  AssertTrue(v.RefCount = 2);
+  AssertTrue(v2.RefCount = 2);
   AssertTrue(FTestPtr.RefCount = 0);
 
-  Ptr2.Release;
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue(Ptr2.RefCount = 0);
+  v2.Release;
+  AssertTrue(v.RefCount = 1);
+  AssertTrue(v2.RefCount = 0);
 
-  Ptr.Release;
-  AssertTrue(Ptr.RefCount = 0);
+  v.Release;
+  AssertTrue(v.RefCount = 0);
 end;
 
 procedure TCowPtrTest.Unique;
 var
-  Ptr, Ptr2: TTestPtr;
+  v, v2: TTestPtr;
 begin
-  {%H-}Ptr.Value := CONST_REC;
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue({%H-}Ptr2.RefCount = 0);
+  {%H-}v.Value := CONST_REC;
+  AssertTrue(v.RefCount = 1);
+  AssertTrue({%H-}v2.RefCount = 0);
 
-  Ptr2 := Ptr;
-  AssertTrue(Ptr.RefCount = 2);
-  AssertTrue(Ptr2.RefCount = 2);
+  v2 := v;
+  AssertTrue(v.RefCount = 2);
+  AssertTrue(v2.RefCount = 2);
 
-  FTestPtr := Ptr2;
-  AssertTrue(Ptr.RefCount = 3);
-  AssertTrue(Ptr2.RefCount = 3);
+  FTestPtr := v2;
+  AssertTrue(v.RefCount = 3);
+  AssertTrue(v2.RefCount = 3);
   AssertTrue(FTestPtr.RefCount = 3);
 
-  Ptr.Unique;
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue(Ptr2.RefCount = 2);
+  v.Unique;
+  AssertTrue(v.RefCount = 1);
+  AssertTrue(v2.RefCount = 2);
   AssertTrue(FTestPtr.RefCount = 2);
 
-  Ptr.ReadPtr^.Name := 'New name';
-  Ptr2.Unique;
-  AssertTrue(Ptr.RefCount = 1);
-  AssertTrue(Ptr2.RefCount = 1);
+  v.Ptr^.Name := 'New name';
+  v2.Unique;
+  AssertTrue(v.RefCount = 1);
+  AssertTrue(v2.RefCount = 1);
   AssertTrue(FTestPtr.RefCount = 1);
 
-  Ptr2.ReadPtr^.Color := tcRed;
-  FTestPtr.ReadPtr^.Count := 7;
+  v2.Ptr^.Color := tcRed;
+  FTestPtr.Ptr^.Count := 7;
 
-  AssertTrue(Ptr.ReadPtr^.Name = 'New name');
-  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
-  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+  AssertTrue(v.Ptr^.Name = 'New name');
+  AssertTrue(v.Ptr^.Color = CONST_REC.Color);
+  AssertTrue(v.Ptr^.Count = CONST_REC.Count);
 
-  AssertTrue(Ptr2.ReadPtr^.Name = CONST_REC.Name);
-  AssertTrue(Ptr2.ReadPtr^.Color = tcRed);
-  AssertTrue(Ptr2.ReadPtr^.Count = CONST_REC.Count);
+  AssertTrue(v2.Ptr^.Name = CONST_REC.Name);
+  AssertTrue(v2.Ptr^.Color = tcRed);
+  AssertTrue(v2.Ptr^.Count = CONST_REC.Count);
 
-  AssertTrue(FTestPtr.ReadPtr^.Name = CONST_REC.Name);
-  AssertTrue(FTestPtr.ReadPtr^.Color = CONST_REC.Color);
-  AssertTrue(FTestPtr.ReadPtr^.Count = 7);
+  AssertTrue(FTestPtr.Ptr^.Name = CONST_REC.Name);
+  AssertTrue(FTestPtr.Ptr^.Color = CONST_REC.Color);
+  AssertTrue(FTestPtr.Ptr^.Count = 7);
 end;
 
 procedure TCowPtrTest.Value;
 var
-  Ptr, Ptr2: TTestPtr;
+  v, v2: TTestPtr;
   Rec: TTestRec;
 begin
   Rec := CONST_REC;
-  {%H-}Ptr.Value := Rec;
-  AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
-  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
-  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
+  {%H-}v.Value := Rec;
+  AssertTrue(v.Ptr^.Name = CONST_REC.Name);
+  AssertTrue(v.Ptr^.Color = CONST_REC.Color);
+  AssertTrue(v.Ptr^.Count = CONST_REC.Count);
 
-  Ptr2 := Ptr;
-  Rec := Ptr.Value;
+  v2 := v;
+  Rec := v.Value;
   AssertTrue(Rec.Name = CONST_REC.Name);
   AssertTrue(Rec.Color = CONST_REC.Color);
   AssertTrue(Rec.Count = CONST_REC.Count);
@@ -1914,13 +1922,13 @@ begin
   Rec.Name := 'New name';
   Rec.Color := tcGreen;
   Rec.Count := 5;
-  Ptr2.Value := Rec;
-  AssertTrue(Ptr.ReadPtr^.Name = CONST_REC.Name);
-  AssertTrue(Ptr.ReadPtr^.Color = CONST_REC.Color);
-  AssertTrue(Ptr.ReadPtr^.Count = CONST_REC.Count);
-  AssertTrue(Ptr2.ReadPtr^.Name = 'New name');
-  AssertTrue(Ptr2.ReadPtr^.Color = tcGreen);
-  AssertTrue(Ptr2.ReadPtr^.Count = 5);
+  v2.Value := Rec;
+  AssertTrue(v.Ptr^.Name = CONST_REC.Name);
+  AssertTrue(v.Ptr^.Color = CONST_REC.Color);
+  AssertTrue(v.Ptr^.Count = CONST_REC.Count);
+  AssertTrue(v2.Ptr^.Name = 'New name');
+  AssertTrue(v2.Ptr^.Color = tcGreen);
+  AssertTrue(v2.Ptr^.Count = 5);
 end;
 
 initialization
