@@ -181,6 +181,7 @@ type
     procedure Clear;
     procedure EnsureCapacity;
     procedure TrimToFit;
+    procedure GetEnumerator;
     procedure ToArray;
     procedure Reverse;
     procedure IndexOf;
@@ -2311,6 +2312,20 @@ begin
   AssertTrue(lst.Capacity = DEFAULT_CONTAINER_CAPACITY);
 end;
 
+procedure TLiteHashListTest.GetEnumerator;
+var
+  lst: TIntList;
+  I, J: Integer;
+begin
+  lst.AddAll(IntArray21);
+  J := 1;
+  for I in lst do
+    begin
+      AssertTrue(I = IntArray21[J]);
+      Inc(J);
+    end;
+end;
+
 procedure TLiteHashListTest.ToArray;
 var
   lst: TIntList;
@@ -2324,16 +2339,14 @@ end;
 procedure TLiteHashListTest.Reverse;
 var
   lst: TIntList;
-  a: TIntArray;
   I, J: Integer;
 begin
   lst.AddAll(IntArray21);
-  a := TIntHelper.CreateReverseCopy(IntArray21);
-  J := 0;
+  J := 21;
   for I in lst.Reverse do
     begin
-      AssertTrue(I = a[J]);
-      Inc(J);
+      AssertTrue(I = IntArray21[J]);
+      Dec(J);
     end;
 end;
 
