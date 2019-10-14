@@ -28,7 +28,9 @@ interface
 uses
 
   SysUtils,
+  Math,
   typinfo,
+  {%H-}Rtti,
   LGStrConst;
 
 type
@@ -258,6 +260,112 @@ type
     property  UniqPtr: PValue read GetUniqPtr;
   { SetValue always uses COW }
     property  Value: T read GetValue write SetValue;
+  end;
+
+  { TGCowDynArray: ARC dynamic array with copy-on-write semantics(if necessary) }
+  TGCowDynArray<T> = record
+  type
+    PItem = ^T;
+  private
+  type
+    TInstance = record
+      FItems: PItem;
+      FLength: SizeInt;
+      FRefCount: Integer;
+    end;
+    PInstance = ^TInstance;
+
+  class var
+    CFIsManaged: Boolean;
+  var
+    FInstance: PInstance;
+    function  NewInstance: PInstance; inline;
+    procedure DoFill(aFrom, aCount: SizeInt; const aValue: T);
+    procedure FinalizeInstance;
+    procedure UniqInstance;
+    procedure ReallocUniq(aNewLen: SizeInt);
+    procedure Realloc(aNewLen: SizeInt);
+    procedure ReallocManaged(aNewLen: SizeInt);
+    function  GetLength: SizeInt; inline;
+    function  GetRefCount: Integer; inline;
+    function  GetItem(aIndex: SizeInt): T; inline;
+    function  GetPtr: PItem; inline;
+    function  GetUniqPtr: PItem;
+    procedure SetLen(aValue: SizeInt);
+    procedure SetItem(aIndex: SizeInt; const aValue: T);
+    function  GetHigh: SizeInt; inline;
+    class constructor Init;
+    class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
+    class operator  Initialize(var a: TGCowDynArray<T>); inline;
+    class operator  Finalize(var a: TGCowDynArray<T>); inline;
+    class operator  Copy(constref aSrc: TGCowDynArray<T>; var aDst: TGCowDynArray<T>);
+    class operator  AddRef(var a: TGCowDynArray<T>); inline;
+  public
+  type
+    TEnumerator = record
+    private
+      FCurrent,
+      FLast: PItem;
+      function GetCurrent: T; inline;
+    public
+      function MoveNext: Boolean; inline;
+      property Current: T read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FCurrent,
+      FFirst: PItem;
+      function GetCurrent: T; inline;
+    public
+      function MoveNext: Boolean; inline;
+      property Current: T read GetCurrent;
+    end;
+
+    TReverse = record
+    private
+      FInstance: PInstance;
+    public
+      function GetEnumerator: TReverseEnumerator; inline;
+    end;
+
+    TMutableEnumerator = record
+    private
+      FCurrent,
+      FLast: PItem;
+    public
+      function MoveNext: Boolean; inline;
+      property Current: PItem read FCurrent;
+    end;
+
+    TMutables = record
+    private
+      FInstance: PInstance;
+    public
+      function GetEnumerator: TMutableEnumerator; inline;
+    end;
+
+  public
+    class property ItemTypeIsManaged: Boolean read CFIsManaged;
+    function  GetEnumerator: TEnumerator; inline;
+    function  GetReverseEnumerator: TReverseEnumerator; inline;
+    function  GetMutableEnumerator: TMutableEnumerator; inline;
+    function  Reverse: TReverse; inline;
+    function  Mutables: TMutables; inline;
+    function  IsEmpty: Boolean; inline;
+    function  NonEmpty: Boolean; inline;
+    procedure Release; inline;
+  { ensures that the current instance is unique }
+    procedure Unique; inline;
+  { sets length to aCount and fills array by aCount values aValue }
+    procedure Fill(aCount: SizeInt; constref aValue: T);
+    function  CreateCopy(aFromIndex, aCount: SizeInt): TGCowDynArray<T>;
+    property  RefCount: Integer read GetRefCount;
+    property  Length: SizeInt read GetLength write SetLen;
+    property  High: SizeInt read GetHigh;
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+    property  Ptr: PItem read GetPtr;
+    property  UniqPtr: PItem read GetUniqPtr;
   end;
 
   TGEnumerator<T> = class abstract
@@ -1274,6 +1382,445 @@ begin
       NewInstance^.Value := Old^.Value;
       InterlockedDecrement(Old^.RefCount);
     end;
+end;
+
+{ TGCowDynArray<T>.TEnumerator }
+
+function TGCowDynArray<T>.TEnumerator.GetCurrent: T;
+begin
+  Result := FCurrent^;
+end;
+
+function TGCowDynArray<T>.TEnumerator.MoveNext: Boolean;
+begin
+  if FCurrent < FLast then
+    begin
+      Inc(FCurrent);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+{ TGCowDynArray<T>.TReverseEnumerator }
+
+function TGCowDynArray<T>.TReverseEnumerator.GetCurrent: T;
+begin
+  Result := FCurrent^;
+end;
+
+function TGCowDynArray<T>.TReverseEnumerator.MoveNext: Boolean;
+begin
+  if FCurrent > FFirst then
+    begin
+      Dec(FCurrent);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+{ TGCowDynArray<T>.TReverse }
+
+function TGCowDynArray<T>.TReverse.GetEnumerator: TReverseEnumerator;
+begin
+  if (FInstance <> nil) and (FInstance^.FItems <> nil) then
+    begin
+      Result.FCurrent := FInstance^.FItems + FInstance^.FLength;
+      Result.FFirst := FInstance^.FItems;
+      exit;
+    end;
+  Result.FCurrent := nil;
+  Result.FFirst := nil;
+end;
+
+{ TGCowDynArray<T>.TMutableEnumerator }
+
+function TGCowDynArray<T>.TMutableEnumerator.MoveNext: Boolean;
+begin
+  if FCurrent < FLast then
+    begin
+      Inc(FCurrent);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+{ TGCowDynArray<T>.TMutables }
+
+function TGCowDynArray<T>.TMutables.GetEnumerator: TMutableEnumerator;
+begin
+  if (FInstance <> nil) and (FInstance^.FItems <> nil) then
+    begin
+      Result.FCurrent := FInstance^.FItems - 1;
+      Result.FLast := FInstance^.FItems + FInstance^.FLength - 1;
+      exit;
+    end;
+  Result.FCurrent := nil;
+  Result.FLast := nil;
+end;
+
+{ TGCowDynArray }
+
+function TGCowDynArray<T>.NewInstance: PInstance;
+begin
+  Result := System.GetMem(SizeOf(TInstance));
+  Result^.FItems := nil;
+  Result^.FLength := 0;
+  Result^.FRefCount := 1;
+end;
+
+procedure TGCowDynArray<T>.DoFill(aFrom, aCount: SizeInt; const aValue: T);
+begin
+  with FInstance^ do
+    begin
+      while aCount >= 4 do
+        begin
+          FItems[aFrom  ] := aValue;
+          FItems[aFrom+1] := aValue;
+          FItems[aFrom+2] := aValue;
+          FItems[aFrom+3] := aValue;
+          aFrom += 4;
+          aCount -= 4;
+        end;
+      case aCount of
+        1: FItems[aFrom] := aValue;
+        2:
+          begin
+            FItems[aFrom  ] := aValue;
+            FItems[aFrom+1] := aValue;
+          end;
+        3:
+          begin
+            FItems[aFrom  ] := aValue;
+            FItems[aFrom+1] := aValue;
+            FItems[aFrom+2] := aValue;
+          end;
+      else
+      end;
+    end;
+end;
+
+procedure TGCowDynArray<T>.FinalizeInstance;
+begin
+  if FInstance^.FItems <> nil then
+    begin
+      if ItemTypeIsManaged then
+        DoFill(0, FInstance^.FLength, Default(T));
+      System.FreeMem(FInstance^.FItems);
+    end;
+  System.FreeMem(FInstance);
+  FInstance := nil;
+end;
+
+procedure TGCowDynArray<T>.UniqInstance;
+var
+  OldInstance: PInstance;
+begin
+  OldInstance := FInstance;
+  FInstance := NewInstance;
+  FInstance^.FLength := OldInstance^.FLength;
+  if FInstance^.FLength > 0 then
+    begin
+      FInstance^.FItems := System.GetMem(FInstance^.FLength * SizeOf(T));
+      if ItemTypeIsManaged then
+        System.FillChar(FInstance^.FItems^, FInstance^.FLength * SizeOf(T), 0);
+      CopyItems(OldInstance^.FItems, FInstance^.FItems, FInstance^.FLength);
+    end;
+  InterlockedDecrement(OldInstance^.FRefCount);
+end;
+
+procedure TGCowDynArray<T>.ReallocUniq(aNewLen: SizeInt);
+var
+  OldInstance: PInstance;
+begin
+  OldInstance := FInstance;
+  FInstance := NewInstance;
+  FInstance^.FLength := aNewLen;
+  if FInstance^.FLength > 0 then
+    begin
+      FInstance^.FItems := System.GetMem(FInstance^.FLength * SizeOf(T));
+      if ItemTypeIsManaged then
+        System.FillChar(FInstance^.FItems^, FInstance^.FLength * SizeOf(T), 0);
+      CopyItems(OldInstance^.FItems, FInstance^.FItems, Math.Min(FInstance^.FLength, OldInstance^.FLength));
+    end;
+  InterlockedDecrement(OldInstance^.FRefCount);
+end;
+
+procedure TGCowDynArray<T>.Realloc(aNewLen: SizeInt);
+begin
+  if ItemTypeIsManaged then
+    ReallocManaged(aNewLen)
+  else
+    FInstance^.FItems := System.ReallocMem(FInstance^.FItems, aNewLen * SizeOf(T));
+  FInstance^.FLength := aNewLen;
+end;
+
+procedure TGCowDynArray<T>.ReallocManaged(aNewLen: SizeInt);
+var
+  Tmp: PItem;
+begin
+  Tmp := System.GetMem(aNewLen * SizeOf(T));
+  with FInstance^ do
+    begin
+      if aNewLen > FLength then
+        begin
+          if FLength <> 0 then
+            begin
+              System.Move(FItems^, Tmp^, FLength * SizeOf(T));
+              System.FillChar(FItems^, FLength * SizeOf(T), 0);
+            end;
+          System.FillChar(Tmp[FLength], (aNewLen - FLength) * SizeOf(T), 0);
+        end
+      else  //aNewLen < aOldLen
+        begin
+          System.Move(FItems^, Tmp^, aNewLen * SizeOf(T));
+          System.FillChar(FItems^, aNewLen * SizeOf(T), 0);
+          DoFill(aNewLen, FLength - aNewLen, Default(T));
+        end;
+      System.FreeMem(FItems);
+      FItems := Tmp;
+    end;
+end;
+
+function TGCowDynArray<T>.GetLength: SizeInt;
+begin
+  if FInstance <> nil then
+    exit(FInstance^.FLength);
+  Result := 0;
+end;
+
+function TGCowDynArray<T>.GetRefCount: Integer;
+begin
+  if FInstance <> nil then
+    exit(FInstance^.FRefCount);
+  Result := 0;
+end;
+
+function TGCowDynArray<T>.GetItem(aIndex: SizeInt): T;
+begin
+  if (FInstance <> nil) and (SizeUInt(aIndex) < SizeUInt(FInstance^.FLength)) then
+    Result := FInstance^.FItems[aIndex]
+  else
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TGCowDynArray<T>.GetPtr: PItem;
+begin
+  if FInstance = nil then
+    FInstance := NewInstance;
+  Result := FInstance^.FItems;
+end;
+
+function TGCowDynArray<T>.GetUniqPtr: PItem;
+begin
+  if FInstance = nil then
+    FInstance := NewInstance
+  else
+    if FInstance^.FRefCount > 1 then
+      UniqInstance;
+  Result := FInstance^.FItems;
+end;
+
+procedure TGCowDynArray<T>.SetLen(aValue: SizeInt);
+begin
+  if aValue <> Length then
+    begin
+      if aValue = 0 then
+        begin
+          Release;
+          exit;
+        end;
+      if aValue > 0 then
+        begin
+          if FInstance = nil then
+            FInstance := NewInstance;
+          if FInstance^.FRefCount > 1 then
+            ReallocUniq(aValue)
+          else
+            Realloc(aValue);
+        end
+      else
+        raise EInvalidOpException.Create(SECantAcceptNegLen);
+    end;
+end;
+
+procedure TGCowDynArray<T>.SetItem(aIndex: SizeInt; const aValue: T);
+begin
+  if (FInstance <> nil) and (SizeUInt(aIndex) < SizeUInt(FInstance^.FLength)) then
+    begin
+      if FInstance^.FRefCount > 1 then
+        UniqInstance;
+      FInstance^.FItems[aIndex] := aValue;
+    end
+  else
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TGCowDynArray<T>.GetHigh: SizeInt;
+begin
+  if FInstance <> nil then
+    exit(Pred(FInstance^.FLength));
+  Result := NULL_INDEX;
+end;
+
+class constructor TGCowDynArray<T>.Init;
+begin
+  CFIsManaged := IsManaged(TypeInfo(T));
+end;
+
+class procedure TGCowDynArray<T>.CopyItems(aSrc, aDst: PItem; aCount: SizeInt);
+var
+  I: SizeInt;
+begin
+  if aCount < 1 then
+    exit;
+  I := 0;
+  while I <= aCount - 4 do
+    begin
+      aDst[I  ] := aSrc[I  ];
+      aDst[I+1] := aSrc[I+1];
+      aDst[I+2] := aSrc[I+2];
+      aDst[I+3] := aSrc[I+3];
+      I += 4;
+    end;
+  case aCount - I of
+    1: aDst[I] := aSrc[I];
+    2:
+      begin
+        aDst[I  ] := aSrc[I  ];
+        aDst[I+1] := aSrc[I+1];
+      end;
+    3:
+      begin
+        aDst[I  ] := aSrc[I  ];
+        aDst[I+1] := aSrc[I+1];
+        aDst[I+2] := aSrc[I+2];
+      end;
+  else
+  end;
+end;
+
+class operator TGCowDynArray<T>.Initialize(var a: TGCowDynArray<T>);
+begin
+  a.FInstance := nil;
+end;
+
+class operator TGCowDynArray<T>.Finalize(var a: TGCowDynArray<T>);
+begin
+  a.Release;
+end;
+
+class operator TGCowDynArray<T>.Copy(constref aSrc: TGCowDynArray<T>; var aDst: TGCowDynArray<T>);
+begin
+  if @aSrc <> @aDst then
+    begin
+      aDst.Release;
+      if aSrc.FInstance <> nil then
+        begin
+          InterLockedIncrement(aSrc.FInstance^.FRefCount);
+          aDst.FInstance := aSrc.FInstance;
+        end;
+    end;
+end;
+
+class operator TGCowDynArray<T>.AddRef(var a: TGCowDynArray<T>);
+begin
+  if a.FInstance <> nil then
+    InterLockedIncrement(a.FInstance^.FRefCount);
+end;
+
+function TGCowDynArray<T>.GetEnumerator: TEnumerator;
+begin
+  if (FInstance <> nil) and (FInstance^.FItems <> nil) then
+    begin
+      Result.FCurrent := FInstance^.FItems - 1;
+      Result.FLast := FInstance^.FItems + FInstance^.FLength - 1;
+      exit;
+    end;
+  Result.FCurrent := nil;
+  Result.FLast := nil;
+end;
+
+function TGCowDynArray<T>.GetReverseEnumerator: TReverseEnumerator;
+begin
+  if (FInstance <> nil) and (FInstance^.FItems <> nil) then
+    begin
+      Result.FCurrent := FInstance^.FItems + FInstance^.FLength;
+      Result.FFirst := FInstance^.FItems;
+      exit;
+    end;
+  Result.FCurrent := nil;
+  Result.FFirst := nil;
+end;
+
+function TGCowDynArray<T>.GetMutableEnumerator: TMutableEnumerator;
+begin
+  if (FInstance <> nil) and (FInstance^.FItems <> nil) then
+    begin
+      Result.FCurrent := FInstance^.FItems - 1;
+      Result.FLast := FInstance^.FItems + FInstance^.FLength - 1;
+      exit;
+    end;
+  Result.FCurrent := nil;
+  Result.FLast := nil;
+end;
+
+function TGCowDynArray<T>.Reverse: TReverse;
+begin
+  Result.FInstance := FInstance;
+end;
+
+function TGCowDynArray<T>.Mutables: TMutables;
+begin
+  Result.FInstance := FInstance;
+end;
+
+function TGCowDynArray<T>.IsEmpty: Boolean;
+begin
+  if FInstance <> nil then
+    exit(FInstance^.FItems = nil);
+  Result := True;
+end;
+
+function TGCowDynArray<T>.NonEmpty: Boolean;
+begin
+  if FInstance <> nil then
+    exit(FInstance^.FItems <> nil);
+  Result := False;
+end;
+
+procedure TGCowDynArray<T>.Release;
+begin
+  if (FInstance <> nil) and (InterlockedDecrement(FInstance^.FRefCount) = 0) then
+    FinalizeInstance;
+end;
+
+procedure TGCowDynArray<T>.Unique;
+begin
+  if (FInstance <> nil) and (FInstance^.FRefCount > 1) then
+    UniqInstance;
+end;
+
+procedure TGCowDynArray<T>.Fill(aCount: SizeInt; constref aValue: T);
+begin
+  Release;
+  if aCount < 1 then
+    exit;
+  Length := aCount;
+  DoFill(0, aCount, aValue);
+end;
+
+function TGCowDynArray<T>.CreateCopy(aFromIndex, aCount: SizeInt): TGCowDynArray<T>;
+var
+  Tmp: PItem;
+begin
+  if aFromIndex < 0 then
+    aFromIndex := 0;
+  Result.Release;
+  if (aFromIndex >= Length) or (aCount < 1) then
+    exit;
+  aCount := Math.Min(aCount, Length - aFromIndex);
+  Result.Length := aCount;
+  CopyItems(FInstance^.FItems + aFromIndex, Result.FInstance^.FItems, aCount);
 end;
 
 { TGMapEntry }
