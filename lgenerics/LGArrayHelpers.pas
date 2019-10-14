@@ -9321,15 +9321,15 @@ function TGNumArrayHelper.TRange.MoveNext: Boolean;
 begin
   if FInLoop then
     begin
-      Result := FLast - FCurrent >= FStep;
-      if Result then
-        FCurrent += FStep;
-    end
-  else
-    begin
-      Result := (FCurrent <= FLast) and (FStep > T(0));
-      FInLoop := True;
+      if FLast - FCurrent >= FStep then
+        begin
+          FCurrent += FStep;
+          exit(True);
+        end;
+      exit(False);
     end;
+  FInLoop := True;
+  Result := (FCurrent <= FLast) and (FStep > T(0));
 end;
 
 { TGNumArrayHelper.TDownRange }
@@ -9351,15 +9351,15 @@ function TGNumArrayHelper.TDownRange.MoveNext: Boolean;
 begin
   if FInLoop then
     begin
-      Result := FCurrent - FLast >= FStep;
-      if Result then
-        FCurrent -= FStep;
-    end
-  else
-    begin
-      Result := (FCurrent >= FLast) and (FStep > T(0));
-      FInLoop := True;
+      if FCurrent - FLast >= FStep then
+        begin
+          FCurrent -= FStep;
+          exit(True);
+        end;
+      exit(False);
     end;
+  FInLoop := True;
+  Result := (FCurrent >= FLast) and (FStep > T(0));
 end;
 
 class function TGNumArrayHelper.Range(aFrom, aTo: T; aStep: T): TRange;
