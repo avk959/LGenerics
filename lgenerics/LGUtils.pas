@@ -252,8 +252,8 @@ type
     procedure Unique;
     property  Allocated: Boolean read GetAllocated;
     property  RefCount: Integer read GetRefCount;
-  { use ReadPtr to read data value, or to write/modify data value if COW is not required }
-    property  ReadPtr: PValue read GetPtr;
+  { use Ptr to read data value, or to write/modify data value if COW is not required }
+    property  Ptr: PValue read GetPtr;
   { use UniqPtr to write/modify data value if COW is required }
     property  UniqPtr: PValue read GetUniqPtr;
   { SetValue always uses COW }
