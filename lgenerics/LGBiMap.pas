@@ -339,7 +339,7 @@ begin
   FOwner := aMap;
   FList := aMap.FNodeList;
   FLastIndex := Pred(aMap.Count);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 destructor TGHashBiMap.TKeyEnumerable.Destroy;
@@ -350,13 +350,17 @@ end;
 
 function TGHashBiMap.TKeyEnumerable.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLastIndex;
-  FCurrIndex += Ord(Result);
+  if FCurrIndex < FLastIndex then
+    begin
+      Inc(FCurrIndex);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGHashBiMap.TKeyEnumerable.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGHashBiMap.TValueEnumerable }
@@ -372,7 +376,7 @@ begin
   FOwner := aMap;
   FList := aMap.FNodeList;
   FLastIndex := Pred(aMap.Count);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 destructor TGHashBiMap.TValueEnumerable.Destroy;
@@ -383,13 +387,17 @@ end;
 
 function TGHashBiMap.TValueEnumerable.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLastIndex;
-  FCurrIndex += Ord(Result);
+  if FCurrIndex < FLastIndex then
+    begin
+      Inc(FCurrIndex);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGHashBiMap.TValueEnumerable.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGHashBiMap.TEntryEnumerable }
@@ -405,7 +413,7 @@ begin
   FOwner := aMap;
   FList := aMap.FNodeList;
   FLastIndex := Pred(aMap.Count);
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 destructor TGHashBiMap.TEntryEnumerable.Destroy;
@@ -416,13 +424,17 @@ end;
 
 function TGHashBiMap.TEntryEnumerable.MoveNext: Boolean;
 begin
-  Result := FCurrIndex < FLastIndex;
-  FCurrIndex += Ord(Result);
+  if FCurrIndex < FLastIndex then
+    begin
+      Inc(FCurrIndex);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGHashBiMap.TEntryEnumerable.Reset;
 begin
-  FCurrIndex := -1;
+  FCurrIndex := NULL_INDEX;
 end;
 
 { TGBiMap }
@@ -1137,7 +1149,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
@@ -1161,7 +1173,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
@@ -1185,7 +1197,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;

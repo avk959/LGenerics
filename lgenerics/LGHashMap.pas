@@ -1232,6 +1232,7 @@ function TGBaseOrderedHashMap.RemoveFirst: Boolean;
 var
   k: TKey;
 begin
+  CheckInIteration;
   if FTable.Count < 1 then
     exit(False);
   k := TOrdTable(FTable).Head^.Data.Key;
@@ -1242,6 +1243,7 @@ function TGBaseOrderedHashMap.RemoveLast: Boolean;
 var
   k: TKey;
 begin
+  CheckInIteration;
   if FTable.Count < 1 then
     exit(False);
   k := TOrdTable(FTable).Tail^.Data.Key;
