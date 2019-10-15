@@ -1671,8 +1671,6 @@ class procedure TGCowDynArray<T>.CopyItems(aSrc, aDst: PItem; aCount: SizeInt);
 var
   I: SizeInt;
 begin
-  if aCount < 1 then
-    exit;
   I := 0;
   while I <= aCount - 4 do
     begin
