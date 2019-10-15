@@ -10,6 +10,7 @@ uses
   Classes, SysUtils, fpcunit, testregistry,
   LGUtils,
   LGVector,
+  LGArrayHelpers,
   LGMiscUtils;
 
 type
@@ -29,6 +30,37 @@ type
     procedure RoundUp2TwoPowerOfOne;
     procedure RoundUp2TwoPowerOfNeg;
     procedure RoundUp2TwoPowerAll;
+  end;
+
+  TGOptionalTest = class(TTestCase)
+  private
+  type
+    TOptional        = specialize TGOptional<Integer>;
+    TStrOptional     = specialize TGOptional<string>;
+    TIntfOptional    = specialize TGOptional<IInterface>;
+    IIntEnumerable   = specialize IGEnumerable<Integer>;
+    TIntfRawOptional = specialize TGOptional<IIntEnumerable>;
+    TIntArray        = specialize TGArray<Integer>;
+    TArrayOptional   = specialize TGOptional<TIntArray>;
+    TIntVector       = specialize TGVector<Integer>;
+    TAutoVector      = specialize TGAutoRef<TIntVector>;
+    EmptyError       = class(Exception);
+  published
+    procedure AssignInteger;
+    procedure AssignString;
+    procedure AssignEmptyString;
+    procedure AssignInterface;
+    procedure AssignNilInterface;
+    procedure AssignInterfaceRaw;
+    procedure AssignNilInterfaceRaw;
+    procedure AssignArray;
+    procedure AssignNilArray;
+    procedure OrElseDefaultInt;
+    procedure OrElseDefaultStr;
+    procedure OrElseInt;
+    procedure OrElseStr;
+    procedure OrElseRaiseInt;
+    procedure OrElseRaiseStr;
   end;
 
   { TAutoRefTest }
@@ -245,35 +277,36 @@ type
     procedure Value;
   end;
 
-  TGOptionalTest = class(TTestCase)
+  { TCowDynArrayTest }
+
+  TCowDynArrayTest = class(TTestCase)
   private
   type
-    TOptional        = specialize TGOptional<Integer>;
-    TStrOptional     = specialize TGOptional<string>;
-    TIntfOptional    = specialize TGOptional<IInterface>;
-    IIntEnumerable   = specialize IGEnumerable<Integer>;
-    TIntfRawOptional = specialize TGOptional<IIntEnumerable>;
-    TIntArray        = specialize TGArray<Integer>;
-    TArrayOptional   = specialize TGOptional<TIntArray>;
-    TIntVector       = specialize TGVector<Integer>;
-    TAutoVector      = specialize TGAutoRef<TIntVector>;
-    EmptyError       = class(Exception);
+    TIntArray  = specialize TGCowDynArray<Integer>;
+    TStrArray  = specialize TGCowDynArray<string>;
+    TIntHelper = specialize TGOrdinalArrayHelper<Integer>;
   published
-    procedure AssignInteger;
-    procedure AssignString;
-    procedure AssignEmptyString;
-    procedure AssignInterface;
-    procedure AssignNilInterface;
-    procedure AssignInterfaceRaw;
-    procedure AssignNilInterfaceRaw;
-    procedure AssignArray;
-    procedure AssignNilArray;
-    procedure OrElseDefaultInt;
-    procedure OrElseDefaultStr;
-    procedure OrElseInt;
-    procedure OrElseStr;
-    procedure OrElseRaiseInt;
-    procedure OrElseRaiseStr;
+    procedure LengthInt;
+    procedure LengthStr;
+    procedure LengthStr2;
+    procedure HighInt;
+    procedure HighStr;
+    procedure EnumeratorInt;
+    procedure EnumeratorStr;
+    procedure ReverseInt;
+    procedure ReverseStr;
+    procedure MutablesInt;
+    procedure MutablesStr;
+    procedure AssignInt;
+    procedure AssignStr;
+    procedure UniqueInt;
+    procedure UniqueStr;
+    procedure FillInt;
+    procedure FillStr;
+    procedure CopyInt;
+    procedure CopyInt2DynArray;
+    procedure SortInt;
+    procedure PassByValue;
   end;
 
 implementation
@@ -356,6 +389,158 @@ begin
       TwoPow := SizeInt(1) shl Succ(I);
       AssertTrue(RoundUpTwoPower(v) = TwoPow);
     end;
+end;
+
+{ TGOptionalTest }
+
+procedure TGOptionalTest.AssignInteger;
+var
+  o: TOptional;
+begin
+  AssertFalse(o.Nilable);
+  AssertFalse({%H-}o.Assigned);
+  o := 115;
+  AssertTrue(o.Assigned);
+  AssertTrue(o.Value = 115);
+  o := 0;
+  AssertTrue(o.Value = 0);
+end;
+
+procedure TGOptionalTest.AssignString;
+var
+  o: TStrOptional;
+begin
+  AssertFalse(o.Nilable);
+  AssertFalse({%H-}o.Assigned);
+  o := 'test string';
+  AssertTrue(o.Assigned);
+  AssertTrue(o.Value = 'test string');
+end;
+
+procedure TGOptionalTest.AssignEmptyString;
+var
+  o: TStrOptional;
+begin
+  AssertFalse({%H-}o.Assigned);
+  o := '';
+  AssertTrue(o.Assigned);
+end;
+
+procedure TGOptionalTest.AssignInterface;
+var
+  o: TIntfOptional;
+begin
+  AssertTrue('Expected Nilable, but got not', o.Nilable);
+  AssertFalse({%H-}o.Assigned);
+  o := TInterfacedObject.Create;
+  AssertTrue(o.Assigned);
+end;
+
+procedure TGOptionalTest.AssignNilInterface;
+var
+  o: TIntfOptional;
+begin
+  AssertFalse({%H-}o.Assigned);
+  o := IInterface(nil);
+  AssertFalse(o.Assigned);
+end;
+
+procedure TGOptionalTest.AssignInterfaceRaw;
+var
+  o: TIntfRawOptional;
+  v: TAutoVector;
+begin
+  AssertTrue(o.Nilable);
+  AssertFalse({%H-}o.Assigned);
+  o := {%H-}v.Instance;
+  AssertTrue(o.Assigned);
+end;
+
+procedure TGOptionalTest.AssignNilInterfaceRaw;
+var
+  o: TIntfRawOptional;
+begin
+  AssertFalse({%H-}o.Assigned);
+  o := IIntEnumerable(nil);
+  AssertFalse(o.Assigned);
+end;
+
+procedure TGOptionalTest.AssignArray;
+var
+  o: TArrayOptional;
+begin
+  AssertTrue(o.Nilable);
+  AssertFalse({%H-}o.Assigned);
+  o := TIntArray([0, 11, 27]);
+  AssertTrue(o.Assigned);
+end;
+
+procedure TGOptionalTest.AssignNilArray;
+var
+  o: TArrayOptional;
+begin
+  o := nil;
+  AssertFalse(o.Assigned);
+end;
+
+procedure TGOptionalTest.OrElseDefaultInt;
+var
+  o: TOptional;
+begin
+  AssertFalse({%H-}o.Assigned);
+  AssertTrue(o.OrElseDefault = 0);
+end;
+
+procedure TGOptionalTest.OrElseDefaultStr;
+var
+  o: TStrOptional;
+begin
+  AssertFalse({%H-}o.Assigned);
+  AssertTrue(o.OrElseDefault = '');
+end;
+
+procedure TGOptionalTest.OrElseInt;
+var
+  o: TOptional;
+begin
+  AssertFalse({%H-}o.Assigned);
+  AssertTrue(o.OrElse(121) = 121);
+end;
+
+procedure TGOptionalTest.OrElseStr;
+var
+  o: TStrOptional;
+begin
+  AssertFalse({%H-}o.Assigned);
+  AssertTrue(o.OrElse('another test string') = 'another test string');
+end;
+
+procedure TGOptionalTest.OrElseRaiseInt;
+var
+  o: TOptional;
+  Raised: Boolean = False;
+begin
+  try
+    o.OrElseRaise(EmptyError);
+  except
+    on e: EmptyError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
+procedure TGOptionalTest.OrElseRaiseStr;
+var
+  o: TStrOptional;
+  Raised: Boolean = False;
+begin
+  try
+    o.OrElseRaise(EmptyError);
+  except
+    on e: EmptyError do
+      Raised := True;
+  end;
+  AssertTrue(Raised);
 end;
 
 { TAutoRefTest.TTestClass }
@@ -1514,158 +1699,6 @@ begin
   AssertTrue(FCounter = 1);
 end;
 
-{ TGOptionalTest }
-
-procedure TGOptionalTest.AssignInteger;
-var
-  o: TOptional;
-begin
-  AssertFalse(o.Nilable);
-  AssertFalse({%H-}o.Assigned);
-  o := 115;
-  AssertTrue(o.Assigned);
-  AssertTrue(o.Value = 115);
-  o := 0;
-  AssertTrue(o.Value = 0);
-end;
-
-procedure TGOptionalTest.AssignString;
-var
-  o: TStrOptional;
-begin
-  AssertFalse(o.Nilable);
-  AssertFalse({%H-}o.Assigned);
-  o := 'test string';
-  AssertTrue(o.Assigned);
-  AssertTrue(o.Value = 'test string');
-end;
-
-procedure TGOptionalTest.AssignEmptyString;
-var
-  o: TStrOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  o := '';
-  AssertTrue(o.Assigned);
-end;
-
-procedure TGOptionalTest.AssignInterface;
-var
-  o: TIntfOptional;
-begin
-  AssertTrue('Expected Nilable, but got not', o.Nilable);
-  AssertFalse({%H-}o.Assigned);
-  o := TInterfacedObject.Create;
-  AssertTrue(o.Assigned);
-end;
-
-procedure TGOptionalTest.AssignNilInterface;
-var
-  o: TIntfOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  o := IInterface(nil);
-  AssertFalse(o.Assigned);
-end;
-
-procedure TGOptionalTest.AssignInterfaceRaw;
-var
-  o: TIntfRawOptional;
-  v: TAutoVector;
-begin
-  AssertTrue(o.Nilable);
-  AssertFalse({%H-}o.Assigned);
-  o := {%H-}v.Instance;
-  AssertTrue(o.Assigned);
-end;
-
-procedure TGOptionalTest.AssignNilInterfaceRaw;
-var
-  o: TIntfRawOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  o := IIntEnumerable(nil);
-  AssertFalse(o.Assigned);
-end;
-
-procedure TGOptionalTest.AssignArray;
-var
-  o: TArrayOptional;
-begin
-  AssertTrue(o.Nilable);
-  AssertFalse({%H-}o.Assigned);
-  o := TIntArray([0, 11, 27]);
-  AssertTrue(o.Assigned);
-end;
-
-procedure TGOptionalTest.AssignNilArray;
-var
-  o: TArrayOptional;
-begin
-  o := nil;
-  AssertFalse(o.Assigned);
-end;
-
-procedure TGOptionalTest.OrElseDefaultInt;
-var
-  o: TOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  AssertTrue(o.OrElseDefault = 0);
-end;
-
-procedure TGOptionalTest.OrElseDefaultStr;
-var
-  o: TStrOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  AssertTrue(o.OrElseDefault = '');
-end;
-
-procedure TGOptionalTest.OrElseInt;
-var
-  o: TOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  AssertTrue(o.OrElse(121) = 121);
-end;
-
-procedure TGOptionalTest.OrElseStr;
-var
-  o: TStrOptional;
-begin
-  AssertFalse({%H-}o.Assigned);
-  AssertTrue(o.OrElse('another test string') = 'another test string');
-end;
-
-procedure TGOptionalTest.OrElseRaiseInt;
-var
-  o: TOptional;
-  Raised: Boolean = False;
-begin
-  try
-    o.OrElseRaise(EmptyError);
-  except
-    on e: EmptyError do
-      Raised := True;
-  end;
-  AssertTrue(Raised);
-end;
-
-procedure TGOptionalTest.OrElseRaiseStr;
-var
-  o: TStrOptional;
-  Raised: Boolean = False;
-begin
-  try
-    o.OrElseRaise(EmptyError);
-  except
-    on e: EmptyError do
-      Raised := True;
-  end;
-  AssertTrue(Raised);
-end;
-
 { TCowPtrTest }
 
 procedure TCowPtrTest.CallByValue(aPtr: TTestPtr; aColor: TTestColor; aCount: Integer);
@@ -1931,15 +1964,391 @@ begin
   AssertTrue(v2.Ptr^.Count = 5);
 end;
 
+{ TCowDynArrayTest }
+
+procedure TCowDynArrayTest.LengthInt;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a.Length = 0);
+  a.Length := 35;
+  AssertTrue(a.Length = 35);
+  for I := 0 to 34 do
+    a[I] := I;
+  for I := 0 to 34 do
+    AssertTrue(a[I] = I);
+  a.Length := 0;
+  AssertTrue(a.Length = 0);
+end;
+
+procedure TCowDynArrayTest.LengthStr;
+var
+  a: TStrArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a.Length = 0);
+  a.Length := 35;
+  AssertTrue(a.Length = 35);
+  for I := 0 to 34 do
+    a[I] := 'str ' + I.ToString;
+  for I := 0 to 34 do
+    AssertTrue(a[I] = 'str ' + I.ToString);
+  a.Length := 0;
+  AssertTrue(a.Length = 0);
+end;
+
+procedure TCowDynArrayTest.LengthStr2;
+var
+  a1, a2: TStrArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a1.Length = 0);
+  a1.Length := 35;
+  AssertTrue(a1.Length = 35);
+  for I := 0 to 34 do
+    a1[I] := 'str ' + I.ToString;
+  a2 := a1;
+  a2.Length := 50;
+  AssertTrue(a2.Length = 50);
+  AssertTrue(a1.Length = 35);
+  for I := 0 to 34 do
+    AssertTrue(a2[I] = 'str ' + I.ToString);
+  for I := 35 to 49 do
+    AssertTrue(a2[I] = '');
+  a1.Length := 0;
+  AssertTrue(a1.Length = 0);
+  AssertTrue(a2.Length = 50);
+end;
+
+procedure TCowDynArrayTest.HighInt;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a.High = -1);
+  a.Length := 25;
+  AssertTrue(a.High = 24);
+  for I := 0 to a.High do
+    a[I] := I;
+  for I := 0 to a.High do
+    AssertTrue(a[I] = I);
+  a.Length := 0;
+  AssertTrue(a.High = -1);
+end;
+
+procedure TCowDynArrayTest.HighStr;
+var
+  a: TStrArray;
+  I: Integer;
+begin
+  AssertTrue({%H-}a.High = -1);
+  a.Length := 25;
+  AssertTrue(a.High = 24);
+  for I := 0 to a.High do
+    a[I] := 'str ' + I.ToString;
+  for I := 0 to a.High do
+    AssertTrue(a[I] = 'str ' + I.ToString);
+  a.Length := 0;
+  AssertTrue(a.High = -1);
+end;
+
+procedure TCowDynArrayTest.EnumeratorInt;
+var
+  a: TIntArray;
+  I, J: Integer;
+begin
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := I;
+  J := 0;
+  for I in a do
+    begin
+      AssertTrue(I = J);
+      Inc(J);
+    end;
+  AssertTrue(J = 55);
+end;
+
+procedure TCowDynArrayTest.EnumeratorStr;
+var
+  a: TStrArray;
+  I: Integer;
+  s: string;
+begin
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := 'str ' + I.ToString;
+  I := 0;
+  for s in a do
+    begin
+      AssertTrue(s = 'str ' + I.ToString);
+      Inc(I);
+    end;
+  AssertTrue(I = 55);
+end;
+
+procedure TCowDynArrayTest.ReverseInt;
+var
+  a: TIntArray;
+  I, J: Integer;
+begin
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := I;
+  J := 55;
+  for I in a.Reverse do
+    begin
+      Dec(J);
+      AssertTrue(I = J);
+    end;
+  AssertTrue(J = 0);
+end;
+
+procedure TCowDynArrayTest.ReverseStr;
+var
+  a: TStrArray;
+  I: Integer;
+  s: string;
+begin
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := 'str ' + I.ToString;
+  I := 55;
+  for s in a.Reverse do
+    begin
+      Dec(I);
+      AssertTrue(s = 'str ' + I.ToString);
+    end;
+  AssertTrue(I = 0);
+end;
+
+procedure TCowDynArrayTest.MutablesInt;
+var
+  a: TIntArray;
+  I: Integer;
+  p: TIntArray.PItem;
+begin
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := I;
+  I := 0;
+  for p in a.Mutables do
+    begin
+      p^ += 3;
+      Inc(I);
+    end;
+  AssertTrue(I = 55);
+  for I := 0 to a.High do
+    AssertTrue(a[I] = I + 3);
+end;
+
+procedure TCowDynArrayTest.MutablesStr;
+var
+  a: TStrArray;
+  I: Integer;
+  p: TStrArray.PItem;
+begin
+  a.Length := 55;
+  for I := 0 to a.High do
+    a[I] := 'str ' + I.ToString;
+  I := 0;
+  for p in a.Mutables do
+    begin
+      p^ += ' test';
+      Inc(I);
+    end;
+  AssertTrue(I = 55);
+  for I := 0 to a.High do
+    a[I] := 'str ' + I.ToString + ' test';
+end;
+
+procedure TCowDynArrayTest.AssignInt;
+var
+  a1, a2: TIntArray;
+  I: Integer;
+begin
+  a1.Length := 30;
+  for I := 0 to a1.High do
+    a1[I] := I;
+  AssertTrue(a1.RefCount = 1);
+  a2 := a1;
+  AssertTrue(a1.RefCount = 2);
+  AssertTrue(a2.RefCount = 2);
+  AssertTrue(a2.Length = 30);
+  for I := 0 to a2.High do
+    AssertTrue(a2[I] = I);
+  a2.Ptr[0] := 105;
+  AssertTrue(a1[0] = 105);
+end;
+
+procedure TCowDynArrayTest.AssignStr;
+var
+  a1, a2: TStrArray;
+  I: Integer;
+begin
+  a1.Length := 30;
+  for I := 0 to a1.High do
+    a1[I] := 'str ' + I.ToString;
+  AssertTrue(a1.RefCount = 1);
+  a2 := a1;
+  AssertTrue(a1.RefCount = 2);
+  AssertTrue(a2.RefCount = 2);
+  AssertTrue(a2.Length = 30);
+  for I := 0 to a2.High do
+    AssertTrue(a2[I] = 'str ' + I.ToString);
+  a2.Ptr[0] := 'str 105';
+  AssertTrue(a1[0] = 'str 105');
+end;
+
+procedure TCowDynArrayTest.UniqueInt;
+var
+  a1, a2: TIntArray;
+  I: Integer;
+begin
+  a1.Length := 30;
+  for I := 0 to a1.High do
+    a1[I] := I;
+  AssertTrue(a1.RefCount = 1);
+  a2 := a1;
+  AssertTrue(a1.RefCount = 2);
+  AssertTrue(a2.RefCount = 2);
+  a2.Unique;
+  AssertTrue(a1.RefCount = 1);
+  AssertTrue(a2.RefCount = 1);
+  AssertTrue(a2.Length = 30);
+  for I := 0 to a2.High do
+    AssertTrue(a2[I] = I);
+  a2.Ptr[0] := 105;
+  AssertFalse(a1[0] = 105);
+end;
+
+procedure TCowDynArrayTest.UniqueStr;
+var
+  a1, a2: TStrArray;
+  I: Integer;
+begin
+  a1.Length := 30;
+  for I := 0 to a1.High do
+    a1[I] := 'str ' + I.ToString;
+  AssertTrue(a1.RefCount = 1);
+  a2 := a1;
+  AssertTrue(a1.RefCount = 2);
+  AssertTrue(a2.RefCount = 2);
+  a2.Unique;
+  AssertTrue(a1.RefCount = 1);
+  AssertTrue(a2.RefCount = 1);
+  AssertTrue(a2.Length = 30);
+  for I := 0 to a2.High do
+    AssertTrue(a2[I] = 'str ' + I.ToString);
+  a2.Ptr[0] := 'str 105';
+  AssertFalse(a1[0] = 'str 105');
+end;
+
+procedure TCowDynArrayTest.FillInt;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  a.Fill(50, 100);
+  AssertTrue(a.Length = 50);
+  for I := 0 to a.High do
+    AssertTrue(a[I] = 100);
+end;
+
+procedure TCowDynArrayTest.FillStr;
+var
+  a: TStrArray;
+  I: Integer;
+begin
+  a.Fill(50, 'test');
+  AssertTrue(a.Length = 50);
+  for I := 0 to a.High do
+    AssertTrue(a[I] = 'test');
+end;
+
+procedure TCowDynArrayTest.CopyInt;
+var
+  a, ac: TIntArray;
+  I: Integer;
+begin
+  a.Length := 45;
+  for I := 0 to a.High do
+    a[I] := I;
+  ac := a.CreateCopy(0, a.Length);
+  AssertTrue(ac.Length = a.Length);
+  for I := 0 to ac.High do
+    AssertTrue(ac[I] = I);
+  ac := a.CreateCopy(10, a.Length);
+  AssertTrue(ac.Length = a.Length - 10);
+  for I := 0 to ac.High do
+    AssertTrue(ac[I] = I + 10);
+end;
+
+procedure TCowDynArrayTest.CopyInt2DynArray;
+var
+  a: TIntArray;
+  ac: array of Integer;
+  I: Integer;
+begin
+  a.Length := 45;
+  for I := 0 to a.High do
+    a[I] := I;
+  ac := TIntHelper.CreateCopy(a.Ptr[0..a.High]);
+  AssertTrue(Length(ac) = a.Length);
+  for I := 0 to High(ac) do
+    AssertTrue(ac[I] = I);
+  ac := TIntHelper.CreateCopy(a.Ptr[10..a.High]);
+  AssertTrue(Length(ac) = a.Length - 10);
+  for I := 10 to a.High do
+    AssertTrue(ac[I - 10] = I);
+end;
+
+procedure TCowDynArrayTest.SortInt;
+var
+  a1, a2: TIntArray;
+  I: Integer;
+begin
+  a1.Length := 245;
+  for I := 0 to a1.High do
+    a1[I] := I;
+  TIntHelper.RandomShuffle(a1.UniqPtr[0..a1.High]);
+  a2 := a1;
+  AssertTrue(a2.Length = 245);
+  AssertFalse(TIntHelper.IsStrictAscending(a1.Ptr[0..a1.High]));
+  AssertFalse(TIntHelper.IsStrictAscending(a2.Ptr[0..a2.High]));
+  TIntHelper.Sort(a1.UniqPtr[0..a1.High]);
+  AssertTrue(TIntHelper.IsStrictAscending(a1.Ptr[0..a1.High]));
+  AssertFalse(TIntHelper.IsStrictAscending(a2.Ptr[0..a2.High]));
+end;
+
+procedure TCowDynArrayTest.PassByValue;
+  procedure Test(a: TIntArray; aRefCount: Integer);
+  begin
+    AssertTrue(a.RefCount = Succ(aRefCount));
+    a.Length := a.Length + 5;
+  end;
+var
+  a: TIntArray;
+  I: Integer;
+begin
+  a.Fill(50, 50);
+  I := a.RefCount;
+  Test(a, I);
+  AssertTrue(a.RefCount = I);
+  AssertTrue(a.Length = 50);
+end;
+
 initialization
 
   RegisterTest(TCommonFunctionTest);
+  RegisterTest(TGOptionalTest);
   RegisterTest(TAutoRefTest);
   RegisterTest(TUniqRefTest);
   RegisterTest(TSharedRefATest);
   RegisterTest(TSharedRefTest);
   RegisterTest(TCowPtrTest);
-  RegisterTest(TGOptionalTest);
+  RegisterTest(TCowDynArrayTest);
 
 end.
 
