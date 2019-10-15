@@ -3102,20 +3102,16 @@ end;
 
 function TGAbstractMultiMap.TAbstractValueSet.ToArray: TValueArray;
 var
-  I, Len: SizeInt;
+  I: SizeInt;
 begin
-  Len := ARRAY_INITIAL_SIZE;
   SetLength(Result, ARRAY_INITIAL_SIZE);
   I := 0;
   with GetEnumerator do
     try
       while MoveNext do
         begin
-          if I = Len then
-            begin
-              Len += Len;
-              SetLength(Result, Len);
-            end;
+          if I = System.Length(Result) then
+            System.SetLength(Result, I * 2);
           Result[I] := Current;
           Inc(I);
         end;
@@ -3385,7 +3381,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
@@ -3426,7 +3422,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
@@ -3444,7 +3440,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
@@ -3469,7 +3465,7 @@ begin
   else
     begin
       Result := 0;
-      e.Any;
+      e.Discard;
       UpdateLockError;
     end;
 end;
