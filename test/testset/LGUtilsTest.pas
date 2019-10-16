@@ -295,8 +295,6 @@ type
     procedure EnumeratorStr;
     procedure ReverseInt;
     procedure ReverseStr;
-    procedure MutablesInt;
-    procedure MutablesStr;
     procedure AssignInt;
     procedure AssignStr;
     procedure UniqueInt;
@@ -2058,10 +2056,13 @@ var
   a: TIntArray;
   I, J: Integer;
 begin
+  J := 0;
+  for I in a do
+    Inc(J);
+  AssertTrue(J = 0);
   a.Length := 55;
   for I := 0 to a.High do
     a[I] := I;
-  J := 0;
   for I in a do
     begin
       AssertTrue(I = J);
@@ -2076,6 +2077,10 @@ var
   I: Integer;
   s: string;
 begin
+  I := 0;
+  for s in a do
+    Inc(I);
+  AssertTrue(I = 0);
   a.Length := 55;
   for I := 0 to a.High do
     a[I] := 'str ' + I.ToString;
@@ -2093,6 +2098,10 @@ var
   a: TIntArray;
   I, J: Integer;
 begin
+  J := 0;
+  for I in a.Reverse do
+    Inc(J);
+  AssertTrue(J = 0);
   a.Length := 55;
   for I := 0 to a.High do
     a[I] := I;
@@ -2111,6 +2120,10 @@ var
   I: Integer;
   s: string;
 begin
+  I := 0;
+  for s in a.Reverse do
+    Inc(I);
+  AssertTrue(I = 0);
   a.Length := 55;
   for I := 0 to a.High do
     a[I] := 'str ' + I.ToString;
@@ -2121,46 +2134,6 @@ begin
       AssertTrue(s = 'str ' + I.ToString);
     end;
   AssertTrue(I = 0);
-end;
-
-procedure TCowDynArrayTest.MutablesInt;
-var
-  a: TIntArray;
-  I: Integer;
-  p: TIntArray.PItem;
-begin
-  a.Length := 55;
-  for I := 0 to a.High do
-    a[I] := I;
-  I := 0;
-  for p in a.Mutables do
-    begin
-      p^ += 3;
-      Inc(I);
-    end;
-  AssertTrue(I = 55);
-  for I := 0 to a.High do
-    AssertTrue(a[I] = I + 3);
-end;
-
-procedure TCowDynArrayTest.MutablesStr;
-var
-  a: TStrArray;
-  I: Integer;
-  p: TStrArray.PItem;
-begin
-  a.Length := 55;
-  for I := 0 to a.High do
-    a[I] := 'str ' + I.ToString;
-  I := 0;
-  for p in a.Mutables do
-    begin
-      p^ += ' test';
-      Inc(I);
-    end;
-  AssertTrue(I = 55);
-  for I := 0 to a.High do
-    a[I] := 'str ' + I.ToString + ' test';
 end;
 
 procedure TCowDynArrayTest.AssignInt;
