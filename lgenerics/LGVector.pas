@@ -1964,16 +1964,23 @@ end;
 
 function TBoolVector.TEnumerator.FindFirst: Boolean;
 var
-  FirstBit: SizeInt;
+  I: SizeInt = 0;
 begin
-  FirstBit := TBoolVector(FBits).Bsf;
-  Result := FirstBit >= 0;
-  if Result then
-    begin
-      FLimbIndex := FirstBit shr INT_SIZE_LOG;
-      FBitIndex := FirstBit and INT_SIZE_MASK;
-      FCurrLimb := FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
-    end;
+  for I := 0 to Pred(System.Length(FBits)) do
+    if FBits[I] <> 0 then
+      begin
+        {$IF DEFINED(CPU64)}
+          FBitIndex := ShortInt(BsfQWord(FBits[I]));
+        {$ELSEIF DEFINED(CPU32)}
+          FBitIndex := ShortInt(BsfDWord(FBits[I]));
+        {$ELSE}
+          FBitIndex := ShortInt(BsfWord(FBits[I]));
+        {$ENDIF};
+        FLimbIndex := I;
+        FCurrLimb := FBits[I] and not(SizeUInt(1) shl FBitIndex);
+        exit(True);
+      end;
+  Result := False;
 end;
 
 procedure TBoolVector.TEnumerator.Init(const aBits: TBits);
@@ -2018,16 +2025,23 @@ end;
 
 function TBoolVector.TReverseEnumerator.FindLast: Boolean;
 var
-  LastBit: SizeInt;
+  I: SizeInt;
 begin
-  LastBit := TBoolVector(FBits).Bsr;
-  Result := LastBit >= 0;
-  if Result then
-    begin
-      FLimbIndex := LastBit shr INT_SIZE_LOG;
-      FBitIndex := LastBit and INT_SIZE_MASK;
-      FCurrLimb := FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
-    end;
+  for I := Pred(System.Length(FBits)) downto 0 do
+    if FBits[I] <> 0 then
+      begin
+        {$IF DEFINED(CPU64)}
+          FBitIndex := ShortInt(BsrQWord(FBits[I]));
+        {$ELSEIF DEFINED(CPU32)}
+          FBitIndex := ShortInt(BsrDWord(FBits[I]));
+        {$ELSE}
+          FBitIndex := ShortInt(BsrWord(FBits[I]));
+        {$ENDIF};
+        FLimbIndex := I;
+        FCurrLimb := FBits[I] and not(SizeUInt(1) shl FBitIndex);
+        exit(True);
+      end;
+  Result := False;
 end;
 
 procedure TBoolVector.TReverseEnumerator.Init(const aBits: TBits);
