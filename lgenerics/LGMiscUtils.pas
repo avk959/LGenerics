@@ -5236,7 +5236,6 @@ constructor TGClassEnumerable.Create(aEntity: TEntity);
 begin
   inherited Create;
   FEntity := aEntity;
-  FEnum := FEntity.GetEnumerator;
 end;
 
 destructor TGClassEnumerable.Destroy;
