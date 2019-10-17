@@ -2099,7 +2099,7 @@ var
   I, J: Integer;
 begin
   J := 0;
-  for I in a.Reverse do
+  for I in {%H-}a.Reverse do
     Inc(J);
   AssertTrue(J = 0);
   a.Length := 55;
