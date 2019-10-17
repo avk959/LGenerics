@@ -406,12 +406,11 @@ begin
     begin
       Result.FCurrent := PItem(FItems) - 1;
       Result.FLast := PItem(FItems) + Pred(FCount);
-    end
-  else
-    begin
-      Result.FCurrent := nil;
-      Result.FLast := nil;
+      Result.FItems := FItems;
+      exit;
     end;
+  Result.FCurrent := nil;
+  Result.FLast := nil;
 end;
 
 function TGLiteDynBuffer.GetMutableEnumerator: TMutableEnumerator;
@@ -420,12 +419,11 @@ begin
     begin
       Result.FCurrent := PItem(FItems) - 1;
       Result.FLast := PItem(FItems) + Pred(FCount);
-    end
-  else
-    begin
-      Result.FCurrent := nil;
-      Result.FLast := nil;
+      Result.FItems := FItems;
+      exit;
     end;
+  Result.FCurrent := nil;
+  Result.FLast := nil;
 end;
 
 function TGLiteDynBuffer.GetReverseEnumerator: TReverseEnumerator;
@@ -434,12 +432,11 @@ begin
     begin
       Result.FCurrent := PItem(FItems) + FCount;
       Result.FFirst := PItem(FItems);
-    end
-  else
-    begin
-      Result.FCurrent := nil;
-      Result.FFirst := nil;
+      Result.FItems := FItems;
+      exit;
     end;
+  Result.FCurrent := nil;
+  Result.FFirst := nil;
 end;
 
 function TGLiteDynBuffer.Mutables: TMutables;
