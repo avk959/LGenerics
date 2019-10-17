@@ -328,47 +328,8 @@ type
     function  TryDelete(aIndex: SizeInt): Boolean;
   end;
 
-  PBoolVector = ^TBoolVector;
   { TBoolVector: capacity is always a multiple of the bitness }
   TBoolVector = record
-  public
-  type
-
-    TEnumerator = record
-    private
-      FVector: PBoolVector;
-      FBitIndex,
-      FLimbIndex: SizeInt;
-      FCurrLimb: SizeUInt;
-      function  GetCurrent: SizeInt; inline;
-      function  FindFirst: Boolean;
-      procedure Init(aVector: PBoolVector);
-    public
-      function  MoveNext: Boolean; inline;
-      property  Current: SizeInt read GetCurrent;
-    end;
-
-    TReverseEnumerator = record
-    private
-      FVector: PBoolVector;
-      FBitIndex,
-      FLimbIndex: SizeInt;
-      FCurrLimb: SizeUInt;
-      function  GetCurrent: SizeInt; inline;
-      function  FindLast: Boolean;
-      procedure Init(aVector: PBoolVector);
-    public
-      function  MoveNext: Boolean;
-      property  Current: SizeInt read GetCurrent;
-    end;
-
-    TReverse = record
-    private
-      FVector: PBoolVector;
-    public
-      function GetEnumerator: TReverseEnumerator; inline;
-    end;
-
   private
   type
     TBits = array of SizeUInt;
@@ -387,8 +348,44 @@ type
     class operator AddRef(var bv: TBoolVector); inline;
   public
   type
+    TEnumerator = record
+    private
+      FBits: TBits;
+      FBitIndex,
+      FLimbIndex: SizeInt;
+      FCurrLimb: SizeUInt;
+      function  GetCurrent: SizeInt; inline;
+      function  FindFirst: Boolean;
+      procedure Init(const aBits: TBits);
+    public
+      function  MoveNext: Boolean; inline;
+      property  Current: SizeInt read GetCurrent;
+    end;
+
+    TReverseEnumerator = record
+    private
+      FBits: TBits;
+      FBitIndex,
+      FLimbIndex: SizeInt;
+      FCurrLimb: SizeUInt;
+      function  GetCurrent: SizeInt; inline;
+      function  FindLast: Boolean;
+      procedure Init(const aBits: TBits);
+    public
+      function  MoveNext: Boolean;
+      property  Current: SizeInt read GetCurrent;
+    end;
+
+    TReverse = record
+    private
+      FBits: TBits;
+    public
+      function GetEnumerator: TReverseEnumerator; inline;
+    end;
+
     TIntArray = array of SizeInt;
 
+  public
     procedure InitRange(aRange: SizeInt);
   { enumerates indices of set bits from lowest to highest }
     function  GetEnumerator: TEnumerator; inline;
@@ -1969,19 +1966,19 @@ function TBoolVector.TEnumerator.FindFirst: Boolean;
 var
   FirstBit: SizeInt;
 begin
-  FirstBit := FVector^.Bsf;
+  FirstBit := TBoolVector(FBits).Bsf;
   Result := FirstBit >= 0;
   if Result then
     begin
       FLimbIndex := FirstBit shr INT_SIZE_LOG;
       FBitIndex := FirstBit and INT_SIZE_MASK;
-      FCurrLimb := FVector^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
+      FCurrLimb := FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
     end;
 end;
 
-procedure TBoolVector.TEnumerator.Init(aVector: PBoolVector);
+procedure TBoolVector.TEnumerator.Init(const aBits: TBits);
 begin
-  FVector := aVector;
+  FBits := aBits;
   FLimbIndex := NULL_INDEX;
   FBitIndex := NULL_INDEX;
 end;
@@ -2002,10 +1999,10 @@ begin
         FCurrLimb := FCurrLimb and not (SizeUInt(1) shl FBitIndex)
       else
         begin
-          if FLimbIndex >= Pred(System.Length(FVector^.FBits)) then
+          if FLimbIndex >= Pred(System.Length(FBits)) then
             exit(False);
           Inc(FLimbIndex);
-          FCurrLimb := FVector^.FBits[FLimbIndex];
+          FCurrLimb := FBits[FLimbIndex];
         end;
     until Result
   else
@@ -2023,19 +2020,19 @@ function TBoolVector.TReverseEnumerator.FindLast: Boolean;
 var
   LastBit: SizeInt;
 begin
-  LastBit := FVector^.Bsr;
+  LastBit := TBoolVector(FBits).Bsr;
   Result := LastBit >= 0;
   if Result then
     begin
       FLimbIndex := LastBit shr INT_SIZE_LOG;
       FBitIndex := LastBit and INT_SIZE_MASK;
-      FCurrLimb := FVector^.FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
+      FCurrLimb := FBits[FLimbIndex] and not (SizeUInt(1) shl FBitIndex);
     end;
 end;
 
-procedure TBoolVector.TReverseEnumerator.Init(aVector: PBoolVector);
+procedure TBoolVector.TReverseEnumerator.Init(const aBits: TBits);
 begin
-  FVector := aVector;
+  FBits := aBits;
   FLimbIndex := NULL_INDEX;
   FBitIndex := NULL_INDEX;
 end;
@@ -2059,7 +2056,7 @@ begin
           if FLimbIndex <= 0 then
             exit(False);
           Dec(FLimbIndex);
-          FCurrLimb := FVector^.FBits[FLimbIndex];
+          FCurrLimb := FBits[FLimbIndex];
         end;
     until Result
   else
@@ -2070,7 +2067,7 @@ end;
 
 function TBoolVector.TReverse.GetEnumerator: TReverseEnumerator;
 begin
-  Result.Init(FVector);
+  Result.Init(FBits);
 end;
 
 { TBoolVector }
@@ -2166,12 +2163,12 @@ end;
 
 function TBoolVector.GetEnumerator: TEnumerator;
 begin
-  Result.Init(@Self);
+  Result.Init(FBits);
 end;
 
 function TBoolVector.Reverse: TReverse;
 begin
-  Result.FVector := @Self;
+  Result.FBits := FBits;
 end;
 
 function TBoolVector.ToArray: TIntArray;
