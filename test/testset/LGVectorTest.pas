@@ -11,7 +11,8 @@ uses
   LGUtils,
   LGAbstractContainer,
   LGVector,
-  LGArrayHelpers;
+  LGArrayHelpers,
+  LGMiscUtils;
 
 type
 
@@ -148,6 +149,7 @@ type
     TStrArray  = specialize TGArray<string>;
     TIntHelper = specialize TGComparableArrayHelper<Integer>;
     TProc      = procedure is nested;
+    IIntEnum   = specialize IGEnumerable<Integer>;
 
     TTestObj = class
     private
@@ -162,6 +164,9 @@ type
   const
     IntArray21: array[1..21] of Integer =
       (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
+
+    function  GetEnum(aCount: Integer): IIntEnum;
+    function  GetReverseEnum(aCount: Integer): IIntEnum;
   published
     procedure IsEmpty;
     procedure NonEmpty;
@@ -217,6 +222,8 @@ type
     procedure Swap;
     procedure Swap1;
 
+    procedure GetEnumerable;
+    procedure GetReverseEnumerable;
     procedure Mutables;
     procedure Mutable;
     procedure UncMutable;
@@ -1283,6 +1290,27 @@ end;
 
 { TGLiteVectorTest }
 
+function TGLiteVectorTest.GetEnum(aCount: Integer): IIntEnum;
+var
+  v: TIntVector;
+  I: Integer;
+begin
+  for I := 0 to Pred(aCount) do
+    v.Add(I);
+  Result := specialize TGetEnumerable<Integer, TIntVector.TEnumerator>.Construct(v.GetEnumerator);
+end;
+
+function TGLiteVectorTest.GetReverseEnum(aCount: Integer): IIntEnum;
+var
+  v: TIntVector;
+  I: Integer;
+begin
+  for I := 0 to Pred(aCount) do
+    v.Add(I);
+  Result :=
+    specialize TGetEnumerable<Integer, TIntVector.TReverseEnumerator>.Construct(v.GetReverseEnumerator);
+end;
+
 procedure TGLiteVectorTest.IsEmpty;
 var
   v: TIntVector;
@@ -1890,6 +1918,44 @@ begin
     Raised := True;
   end;
   AssertTrue(Raised);
+end;
+
+procedure TGLiteVectorTest.GetEnumerable;
+var
+  I, J: Integer;
+begin
+  J := 0;
+  for I in GetEnum(-5) do
+    begin
+      AssertTrue(I = J);
+      Inc(J);
+    end;
+  AssertTrue(J = 0);
+  for I in GetEnum(100) do
+    begin
+      AssertTrue(I = J);
+      Inc(J);
+    end;
+  AssertTrue(J = 100);
+end;
+
+procedure TGLiteVectorTest.GetReverseEnumerable;
+var
+  I, J: Integer;
+begin
+  J := 100;
+  for I in GetReverseEnum(-1) do
+    begin
+      Dec(J);
+      AssertTrue(I = J);
+    end;
+  AssertTrue(J = 100);
+  for I in GetReverseEnum(100) do
+    begin
+      Dec(J);
+      AssertTrue(I = J);
+    end;
+  AssertTrue(J = 0);
 end;
 
 procedure TGLiteVectorTest.Mutables;
