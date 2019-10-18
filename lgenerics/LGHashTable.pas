@@ -1095,12 +1095,13 @@ begin
   if Count > 0 then
     begin
       p := DoFind(aKey, TEqRel.HashCode(aKey));
-      Result := p.FoundIndex >= 0;
-      if Result then
-        DoRemove(p.FoundIndex);
-    end
-  else
-    Result := False;
+      if p.FoundIndex >= 0 then
+        begin
+          DoRemove(p.FoundIndex);
+          exit(True);
+        end;
+    end;
+  Result := False;
 end;
 
 procedure TGOpenAddressing.RemoveAt(constref aPos: TSearchResult);
@@ -1899,9 +1900,12 @@ var
   sr: TSearchResult;
 begin
   sr := DoFind(aKey, TEqRel.HashCode(aKey));
-  Result := sr.Node <> nil;
-  if Result then
-    RemoveAt(sr);
+  if sr.Node <> nil then
+    begin
+      RemoveAt(sr);
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGOrderedHashTable.RemoveAt(constref aPos: TSearchResult);
@@ -3263,12 +3267,13 @@ begin
   if Count > 0 then
     begin
       Pos := DoFind(aKey, TEqRel.HashCode(aKey));
-      Result := Pos >= 0;
-      if Result then
-        DoRemove(Pos);
-    end
-  else
-    Result := False;
+      if Pos >= 0 then
+        begin
+          DoRemove(Pos);
+          exit(True);
+        end;
+    end;
+  Result := False;
 end;
 
 procedure TGLiteHashTableLP.RemoveAt(aPos: SizeInt);
