@@ -244,6 +244,32 @@ type
     procedure Release;
   end;
 
+  { TUniqPtrTest }
+
+  TUniqPtrTest = class(TTestCase)
+  private
+  type
+    TNameRec = record
+      Name: string;
+      Id,
+      Count: Integer;
+    end;
+    TRec = record
+      Value,
+      Id,
+      Count: Integer;
+    end;
+
+  published
+    procedure Allocated;
+    procedure Implicit;
+    procedure OwnsPtr;
+    procedure Clear;
+    procedure Assign;
+    procedure OwnMove;
+    procedure OwnMoveFail;
+  end;
+
   { TCowPtrTest }
 
   TCowPtrTest = class(TTestCase)
@@ -1697,6 +1723,129 @@ begin
   AssertTrue(FCounter = 1);
 end;
 
+{ TUniqPtrTest }
+
+procedure TUniqPtrTest.Allocated;
+var
+  NameRec: specialize TGUniqPtr<TNameRec>;
+  Rec: specialize TGUniqPtr<TRec>;
+begin
+  AssertTrue(NameRec.IsManaged);
+  AssertFalse(Rec.IsManaged);
+  AssertFalse({%H-}NameRec.Allocated);
+  AssertFalse({%H-}Rec.Allocated);
+  NameRec.Ptr^.Name := 'New name';
+  AssertTrue(NameRec.Allocated);
+  AssertTrue(Rec.Ptr^.Count = 0);
+  AssertTrue(Rec.Allocated);
+end;
+
+procedure TUniqPtrTest.Implicit;
+var
+  p: specialize TGUniqPtr<TNameRec>;
+  r: TNameRec;
+begin
+  r := Default(TNameRec);
+  with p.Ptr^ do
+    begin
+      Name := 'Has name';
+      Id := 1;
+      Count := 5;
+    end;
+  r := p;
+  AssertTrue(r.Name = 'Has name');
+  AssertTrue(r.Id = 1);
+  AssertTrue(r.Count = 5);
+end;
+
+procedure TUniqPtrTest.OwnsPtr;
+type
+  PRec = specialize TGUniqPtr<TNameRec>;
+  procedure Test(aRec: PRec);
+  begin
+    AssertFalse(aRec.OwnsPtr);
+  end;
+var
+  p: PRec;
+begin
+  AssertFalse({%H-}p.OwnsPtr);
+  AssertTrue(p.Ptr^.Name = '');
+  AssertTrue(p.OwnsPtr);
+  Test(p);
+end;
+
+procedure TUniqPtrTest.Clear;
+var
+  p: specialize TGUniqPtr<TNameRec>;
+begin
+  AssertTrue(p.Ptr^.Name = '');
+  AssertTrue(p.Allocated);
+  AssertTrue(p.OwnsPtr);
+  p.Clear;
+  AssertFalse(p.Allocated);
+  AssertFalse(p.OwnsPtr);
+end;
+
+procedure TUniqPtrTest.Assign;
+var
+  p1, p2: specialize TGUniqPtr<TNameRec>;
+  Raised: Boolean = False;
+begin
+  AssertTrue(p1.Ptr^.Name = '');
+  AssertTrue(p1.Allocated);
+  AssertTrue(p1.OwnsPtr);
+  try
+    p2 := p1;
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+  AssertFalse(p2.Allocated);
+  AssertFalse(p2.OwnsPtr);
+end;
+
+procedure TUniqPtrTest.OwnMove;
+var
+  p1, p2: specialize TGUniqPtr<TNameRec>;
+begin
+  p1.Ptr^.Name := 'p1 name';
+  AssertTrue(p1.Ptr^.Name = 'p1 name');
+  AssertTrue(p1.Allocated);
+  AssertTrue(p1.OwnsPtr);
+  AssertFalse({%H-}p2.Allocated);
+  AssertFalse(p2.OwnsPtr);
+
+  p1.OwnMove(p2);
+
+  AssertFalse(p1.Allocated);
+  AssertFalse(p1.OwnsPtr);
+  AssertTrue(p2.Allocated);
+  AssertTrue(p2.OwnsPtr);
+  AssertTrue(p2.Ptr^.Name = 'p1 name');
+end;
+
+procedure TUniqPtrTest.OwnMoveFail;
+type
+  PRec = specialize TGUniqPtr<TNameRec>;
+  procedure Test(aSrc: PRec; var aDst: PRec);
+  begin
+    aSrc.OwnMove(aDst);
+  end;
+var
+  p1, p2: specialize TGUniqPtr<TNameRec>;
+  Raised: Boolean = False;
+begin
+  AssertTrue(p1.Ptr^.Name = '');
+  AssertTrue(p1.Allocated);
+  AssertTrue(p1.OwnsPtr);
+  try
+    Test(p1, p2);
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+end;
+
 { TCowPtrTest }
 
 procedure TCowPtrTest.CallByValue(aPtr: TTestPtr; aColor: TTestColor; aCount: Integer);
@@ -2320,6 +2469,7 @@ initialization
   RegisterTest(TUniqRefTest);
   RegisterTest(TSharedRefATest);
   RegisterTest(TSharedRefTest);
+  RegisterTest(TUniqPtrTest);
   RegisterTest(TCowPtrTest);
   RegisterTest(TCowDynArrayTest);
 
