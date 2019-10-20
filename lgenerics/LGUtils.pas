@@ -221,6 +221,39 @@ type
     property  Instance: T read GetInstance write SetInstance;
   end;
 
+  { TGUniqPtr }
+  TGUniqPtr<T> = record
+  public
+  type
+    PValue = ^T;
+  private
+  class var
+    CFIsManaged: Boolean;
+  var
+    FPtr: PValue;
+    FOwnsPtr: Boolean;
+    function  GetAllocated: Boolean; inline;
+    function  GetPtr: PValue;
+    procedure FreePtr; inline;
+    function  GetValue: T; inline;
+    procedure SetValue(const aValue: T); inline;
+    class constructor Init;
+    class operator Initialize(var u: TGUniqPtr<T>); inline;
+    class operator Finalize(var u: TGUniqPtr<T>); inline;
+    class operator Copy(constref aSrc: TGUniqPtr<T>; var aDst: TGUniqPtr<T>);
+    class operator AddRef(var u: TGUniqPtr<T>); inline;
+  public
+    class property IsManaged: Boolean read CFIsManaged;
+    class operator Implicit(var u: TGUniqPtr<T>): T; inline;
+    class operator Explicit(var u: TGUniqPtr<T>): T; inline;
+    procedure Clear;
+    procedure OwnMove(var aPtr: TGUniqPtr<T>);
+    property  Allocated: Boolean read GetAllocated;
+    property  Ptr: PValue read GetPtr;
+    property  OwnsPtr: Boolean read FOwnsPtr;
+    property  Value: T read GetValue write SetValue;
+  end;
+
   { TGCowPtr: provides an ARC pointer to data on the heap with copy-on-write semantics(if necessary) }
   TGCowPtr<T> = record
   public
@@ -233,6 +266,8 @@ type
       Value: T;
     end;
     PInstance = ^TInstance;
+  class var
+    CFIsManaged: Boolean;
   var
     FInstance: PInstance;
     function  NewInstance: PInstance;
@@ -243,12 +278,15 @@ type
     function  GetUniqPtr: PValue;
     function  GetValue: T; inline;
     procedure SetValue(const aValue: T); inline;
+    class constructor Init;
     class operator Initialize(var cp: TGCowPtr<T>); inline;
     class operator Finalize(var cp: TGCowPtr<T>); inline;
     class operator Copy(constref aSrc: TGCowPtr<T>; var aDst: TGCowPtr<T>);
     class operator AddRef(var cp: TGCowPtr<T>); inline;
   public
+    class property IsManaged: Boolean read CFIsManaged;
     class operator Implicit(var cp: TGCowPtr<T>): T; inline;
+    class operator Explicit(var cp: TGCowPtr<T>): T; inline;
     procedure Release;
   { ensures that the current ref is unique }
     procedure Unique;
@@ -1258,6 +1296,104 @@ begin
     end;
 end;
 
+{ TGUniqPtr }
+
+function TGUniqPtr<T>.GetAllocated: Boolean;
+begin
+  Result := FPtr <> nil;
+end;
+
+function TGUniqPtr<T>.GetPtr: PValue;
+begin
+  if FPtr = nil then
+    begin
+      FPtr := GetMem(SizeOf(T));
+      FillChar(FPtr^, SizeOf(T), 0);
+      FOwnsPtr := True;
+    end;
+  Result := FPtr;
+end;
+
+procedure TGUniqPtr<T>.FreePtr;
+begin
+  if OwnsPtr then
+    begin
+      if IsManaged then
+        FPtr^ := Default(T);
+      FreeMem(FPtr);
+    end;
+end;
+
+function TGUniqPtr<T>.GetValue: T;
+begin
+  Result := Ptr^;
+end;
+
+procedure TGUniqPtr<T>.SetValue(const aValue: T);
+begin
+  Ptr^ := aValue;
+end;
+
+class constructor TGUniqPtr<T>.Init;
+begin
+  CFIsManaged := Rtti.IsManaged(TypeInfo(T));
+end;
+
+class operator TGUniqPtr<T>.Initialize(var u: TGUniqPtr<T>);
+begin
+  u.FPtr := nil;
+  u.FOwnsPtr := False;
+end;
+
+class operator TGUniqPtr<T>.Finalize(var u: TGUniqPtr<T>);
+begin
+  u.Clear;
+end;
+
+class operator TGUniqPtr<T>.Copy(constref aSrc: TGUniqPtr<T>; var aDst: TGUniqPtr<T>);
+begin
+  if @aSrc <> @aDst then
+    raise EInvalidOpException.Create(SECopyInadmissible);
+end;
+
+class operator TGUniqPtr<T>.AddRef(var u: TGUniqPtr<T>);
+begin
+  u.FOwnsPtr := False;
+end;
+
+class operator TGUniqPtr<T>.Implicit(var u: TGUniqPtr<T>): T;
+begin
+  Result := u.Ptr^;
+end;
+
+class operator TGUniqPtr<T>.Explicit(var u: TGUniqPtr<T>): T;
+begin
+  Result := u.Ptr^;
+end;
+
+procedure TGUniqPtr<T>.Clear;
+begin
+  FreePtr;
+  FPtr := nil;
+  FOwnsPtr := False;
+end;
+
+procedure TGUniqPtr<T>.OwnMove(var aPtr: TGUniqPtr<T>);
+begin
+  if FPtr = nil then
+    exit;
+  if OwnsPtr then
+    begin
+      aPtr.FreePtr;
+      aPtr.FPtr := FPtr;
+      aPtr.FOwnsPtr := True;
+      FPtr := nil;
+      FOwnsPtr := False;
+    end
+  else
+    raise EInvalidOpException.Create(SEOwnRequired);
+end;
+
 { TGCowPtr }
 
 function TGCowPtr<T>.NewInstance: PInstance;
@@ -1272,7 +1408,8 @@ procedure TGCowPtr<T>.ReleaseInstance;
 begin
   if InterlockedDecrement(FInstance^.RefCount) = 0 then
     begin
-      FInstance^.Value := Default(T);
+      if IsManaged then
+        FInstance^.Value := Default(T);
       System.FreeMem(FInstance);
     end;
   FInstance := nil;
@@ -1315,6 +1452,11 @@ begin
   GetPtr^ := aValue;
 end;
 
+class constructor TGCowPtr<T>.Init;
+begin
+  CFIsManaged := Rtti.IsManaged(TypeInfo(T));
+end;
+
 class operator TGCowPtr<T>.Initialize(var cp: TGCowPtr<T>);
 begin
   cp.FInstance := nil;
@@ -1345,6 +1487,11 @@ begin
 end;
 
 class operator TGCowPtr<T>.Implicit(var cp: TGCowPtr<T>): T;
+begin
+  Result := cp.GetPtr^;
+end;
+
+class operator TGCowPtr<T>.Explicit(var cp: TGCowPtr<T>): T;
 begin
   Result := cp.GetPtr^;
 end;
