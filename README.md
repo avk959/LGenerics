@@ -37,7 +37,7 @@
   - sparse labeled directed graph(unit LGSimpleDigraph)
 
   **features**:
-  - extended IEnumearble interface
+  - extended IEnumearble interface - filtering, mapping, etc.
   - *lite* containers based on advanced records
 #### Implemented graph features:
   - core functions:
