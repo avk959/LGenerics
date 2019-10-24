@@ -213,6 +213,19 @@ type
     function GetEnumerator: TSpecEnumerator; override;
   end;
 
+  generic TGTuple2<T1, T2> = record
+    F1: T1;
+    F2: T2;
+    constructor Create(constref v1: T1; constref v2: T2);
+  end;
+
+  generic TGTuple3<T1, T2, T3> = record
+    F1: T1;
+    F2: T2;
+    F3: T3;
+    constructor Create(constref v1: T1; constref v2: T2; constref v3: T3);
+  end;
+
   { monadic regular function }
   generic TGMonadic<T, TResult> = function(constref v: T): TResult;
   { dyadic regular function }
@@ -223,42 +236,54 @@ type
   generic TGDeferMonadic<T, TResult> = record
   public
   type
-    TFun = specialize TGMonadic<T, TResult>;
+    TFun      = specialize TGMonadic<T, TResult>;
+    TCallData = specialize TGTuple2<TFun, T>;
 
   strict private
-    FCall: TFun;
+    FFun: TFun;
     FParam: T;
   public
     constructor Create(aFun: TFun; constref v: T);
+    constructor Create(constref aData: TCallData);
     function Call: TResult; inline;
   end;
 
   generic TGDeferDyadic<T1, T2, TResult> = record
   public
   type
-    TFun = specialize TGDyadic<T1, T2, TResult>;
+    TFun        = specialize TGDyadic<T1, T2, TResult>;
+    TParamTuple = specialize TGTuple2<T1, T2>;
+    TCallData   = specialize TGTuple2<TFun, TParamTuple>;
 
   strict private
-    FCall: TFun;
+    FFun: TFun;
     FParam1: T1;
     FParam2: T2;
   public
     constructor Create(aFun: TFun; constref v1: T1; constref v2: T2);
+    constructor Create(aFun: TFun; constref aTup: TParamTuple);
+    constructor Create(constref aData: TCallData);
     function Call: TResult; inline;
   end;
+
+  { TGDeferTriadic }
 
   generic TGDeferTriadic<T1, T2, T3, TResult> = record
   public
   type
-    TFun = specialize TGTriadic<T1, T2, T3, TResult>;
+    TFun        = specialize TGTriadic<T1, T2, T3, TResult>;
+    TParamTuple = specialize TGTuple3<T1, T2, T3>;
+    TCallData   = specialize TGTuple2<TFun, TParamTuple>;
 
   strict private
-    FCall: TFun;
+    FFun: TFun;
     FParam1: T1;
     FParam2: T2;
     FParam3: T3;
   public
     constructor Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
+    constructor Create(aFun: TFun; constref aTup: TParamTuple);
+    constructor Create(constref aData: TCallData);
     function Call: TResult; inline;
   end;
 
@@ -738,46 +763,99 @@ begin
   Result := TEnumerator.Create(Self);
 end;
 
+{ TGTuple2 }
+
+constructor TGTuple2.Create(constref v1: T1; constref v2: T2);
+begin
+  F1 := v1;
+  F2 := v2;
+end;
+
+{ TGTuple3 }
+
+constructor TGTuple3.Create(constref v1: T1; constref v2: T2; constref v3: T3);
+begin
+  F1 := v1;
+  F2 := v2;
+  F3 := v3;
+end;
+
 { TGDeferMonadic }
 
 constructor TGDeferMonadic.Create(aFun: TFun; constref v: T);
 begin
-  FCall := aFun;
+  FFun := aFun;
   FParam := v;
+end;
+
+constructor TGDeferMonadic.Create(constref aData: TCallData);
+begin
+  FFun := aData.F1;
+  FParam := aData.F2;
 end;
 
 function TGDeferMonadic.Call: TResult;
 begin
-  Result := FCall(FParam);
+  Result := FFun(FParam);
 end;
 
 { TGDeferDyadic }
 
 constructor TGDeferDyadic.Create(aFun: TFun; constref v1: T1; constref v2: T2);
 begin
-  FCall := aFun;
+  FFun := aFun;
   FParam1 := v1;
   FParam2 := v2;
 end;
 
+constructor TGDeferDyadic.Create(aFun: TFun; constref aTup: TParamTuple);
+begin
+  FFun := aFun;
+  FParam1 := aTup.F1;
+  FParam2 := aTup.F2;
+end;
+
+constructor TGDeferDyadic.Create(constref aData: TCallData);
+begin
+  FFun := aData.F1;
+  FParam1 := aData.F2.F1;
+  FParam2 := aData.F2.F2;
+end;
+
 function TGDeferDyadic.Call: TResult;
 begin
-  Result := FCall(FParam1, FParam2);
+  Result := FFun(FParam1, FParam2);
 end;
 
 { TGDeferTriadic }
 
 constructor TGDeferTriadic.Create(aFun: TFun; constref v1: T1; constref v2: T2; constref v3: T3);
 begin
-  FCall := aFun;
+  FFun := aFun;
   FParam1 := v1;
   FParam2 := v2;
   FParam3 := v3;
 end;
 
+constructor TGDeferTriadic.Create(aFun: TFun; constref aTup: TParamTuple);
+begin
+  FFun := aFun;
+  FParam1 := aTup.F1;
+  FParam2 := aTup.F2;
+  FParam3 := aTup.F3;
+end;
+
+constructor TGDeferTriadic.Create(constref aData: TCallData);
+begin
+  FFun := aData.F1;
+  FParam1 := aData.F2.F1;
+  FParam2 := aData.F2.F2;
+  FParam3 := aData.F2.F3;
+end;
+
 function TGDeferTriadic.Call: TResult;
 begin
-  Result := FCall(FParam1, FParam2, FParam3);
+  Result := FFun(FParam1, FParam2, FParam3);
 end;
 
 end.
