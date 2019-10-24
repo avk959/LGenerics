@@ -34,20 +34,24 @@ type
     procedure btSequential1Click(Sender: TObject);
   private
     FTimer: TEpikTimer;
+    procedure StartTimer;
   public
 
   end;
 
 const
   PieceSize  = 10000;
-  PieceCount = 64;
+  PieceCount = 128;
   BigSize    = 1000000;
 
 type
-  TDWordArray = array of DWord;
-  PDWordArray = ^TDWordArray;
-  TTestData   = array[1..PieceCount] of TDWordArray;
-  TSortHelper = specialize TGComparableArrayHelper<DWord>;
+  TDWordArray  = array of DWord;
+  PDWordArray  = ^TDWordArray;
+  TSmallArray  = array[0..PieceSize - 1] of DWord;
+  PSmallArray  = ^TSmallArray;
+  TTestData    = array of TSmallArray;
+  TSmallArrays = array of PSmallArray;
+  THelper      = specialize TGComparableArrayHelper<DWord>;
 
 
 var
@@ -61,12 +65,10 @@ function CreateData: TTestData;
 var
   I, J: Integer;
 begin
-  for I := 1 to PieceCount do
-    begin
-      SetLength(Result[I], PieceSize);
-      for J := 0 to High(Result[I]) do
-        Result[I][J] := Random(High(DWord));
-    end;
+  SetLength(Result, PieceCount);
+  for I := 0 to Pred(PieceCount) do
+    for J := 0 to Pred(PieceSize) do
+      Result[I, J] := Random(MaxInt);
 end;
 
 function CreateBigArray: TDWordArray;
@@ -76,7 +78,7 @@ begin
   SetLength(Result, BigSize);
   for I := 0 to High(Result) do
     Result[I] := I;
-  TSortHelper.RandomShuffle(Result);
+  THelper.RandomShuffle(Result);
 end;
 
 { TfrmMain }
@@ -86,14 +88,15 @@ begin
   Caption := 'Futures test';
   FTimer := TEpikTimer.Create(Self);
   FTimer.CorrelateTimebases;
+  TDefaultExecutor.EnsureThreadCount(8);
 end;
 
 function DataSorted(constref aData: TTestData): Boolean;
 var
   I: Integer;
 begin
-  for I := 1 to PieceCount do
-    if not TSortHelper.IsNonDescending(aData[I]) then
+  for I := 0 to Pred(PieceCount) do
+    if not THelper.IsNonDescending(aData[I]) then
       exit(False);
   Result :=  True;
 end;
@@ -104,11 +107,10 @@ var
   I: Integer;
 begin
   Data := CreateData;
-  FTimer.Clear;
-  FTimer.Start;
+  StartTimer;
   ////////////////
-  for I := 1 to PieceCount do
-    TSortHelper.Sort(Data[I]);
+  for I := 0 to Pred(PieceCount) do
+    THelper.Sort(Data[I]);
   ////////////////
   FTimer.Stop;
   lbResultTime.Caption := FloatToStr(Round(FTimer.Elapsed*100000)/100000) + ' s';
@@ -116,28 +118,33 @@ begin
     ShowMessage('Sequential sort failed');
 end;
 
-function Sort(constref a: PDWordArray): Boolean;
+function Sort(constref a: PSmallArray): Boolean;
 begin
-  TSortHelper.Sort(a^);
+  THelper.Sort(a^);
   Result := True;
+end;
+
+function CreateDataList(const aData: TTestData): TSmallArrays;
+var
+  I: SizeInt;
+  sa: TSmallArrays = nil;
+begin
+  SetLength(sa, Length(aData));
+  for I := 0 to Pred(Length(aData)) do
+    sa[I] := @aData[I];
+  Result := sa;
 end;
 
 procedure TfrmMain.btFuturesClick(Sender: TObject);
 type
-  TMonadic = specialize TGAsyncMonadic<PDWordArray, Boolean>;
+  TMonadic = specialize TGAsyncMonadic<PSmallArray, Boolean>;
 var
-  Futures: array[1..PieceCount] of TMonadic.TFuture;
   Data: TTestData;
-  I: Integer;
 begin
   Data := CreateData;
-  FTimer.Clear;
-  FTimer.Start;
+  StartTimer;
   ////////////////////
-  for I := 1 to PieceCount do
-    Futures[I] := TMonadic.Call(@Sort, @Data[I]);
-  for I := 1 to PieceCount do
-    Futures[I].WaitFor;
+  TMonadic.Spawn(@Sort, CreateDataList(Data)).WaitFor;
   //////////////////
   FTimer.Stop;
   lbResultTime.Caption := FloatToStr(Round(FTimer.Elapsed*100000)/100000) + ' s';
@@ -150,39 +157,44 @@ var
   Data: TDWordArray;
 begin
   Data := CreateBigArray;
-  FTimer.Clear;
-  FTimer.Start;
+  StartTimer;
   /////////////////////
-  TSortHelper.Sort(Data);
+  THelper.Sort(Data);
   ////////////////////
   FTimer.Stop;
   lbResultTime1.Caption := FloatToStr(Round(FTimer.Elapsed*100000)/100000) + ' s';
-  if not TSortHelper.IsStrictAscending(Data) then
+  if not THelper.IsStrictAscending(Data) then
     ShowMessage('Sequential sort failed');
+end;
+
+procedure TfrmMain.StartTimer;
+begin
+  FTimer.Clear;
+  FTimer.Start;
 end;
 
 
 function SortLeft(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
 begin
-  TSortHelper.Sort(a^[aFrom..aTo]);
+  THelper.Sort(a^[aFrom..aTo]);
   Result := aFrom;
 end;
 
 function SortRight(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
 begin
-  TSortHelper.Sort(a^[aFrom..aTo]);
+  THelper.Sort(a^[aFrom..aTo]);
   Result := aTo;
 end;
 
 function MergeSortLeft(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
 begin
-  TSortHelper.MergeSort(a^[aFrom..aTo]);
+  THelper.MergeSort(a^[aFrom..aTo]);
   Result := aFrom;
 end;
 
 function MergeSortRight(constref a: PDWordArray; constref aFrom, aTo: Integer): Integer;
 begin
-  TSortHelper.MergeSort(a^[aFrom..aTo]);
+  THelper.MergeSort(a^[aFrom..aTo]);
   Result := aTo;
 end;
 
@@ -194,11 +206,9 @@ var
   Data: TDWordArray;
   ChankSize: Integer;
 begin
-  TDefaultExecutor.EnsureThreadCount(4);
   Data := CreateBigArray;
   ChankSize := Length(Data) div 4;
-  FTimer.Clear;
-  FTimer.Start;
+  StartTimer;
   ////////////////////////////////////////////////////////////////
   p1 := TTriadic.Call(@SortLeft, @Data, 0, Pred(ChankSize));
   p2 := TTriadic.Call(@SortRight, @Data, ChankSize, Pred(ChankSize*2));
@@ -212,7 +222,7 @@ begin
   ////////////////////////////////////////////////////////////////
   FTimer.Stop;
   lbResultTime1.Caption := FloatToStr(Round(FTimer.Elapsed*100000)/100000) + ' s';
-  if not TSortHelper.IsStrictAscending(Data) then
+  if not THelper.IsStrictAscending(Data) then
     ShowMessage('Sort with futures failed');
 end;
 
