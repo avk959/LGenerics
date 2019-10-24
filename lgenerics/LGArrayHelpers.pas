@@ -9391,7 +9391,7 @@ begin
   for I := aMaxValue - aMinValue downto 0 do
     if Counts[I] > 0 then
       begin
-        v := T(I + aMinValue);
+        v := T(I) + aMinValue;
         repeat
           A[J] := v;
           Dec(Counts[I]);
