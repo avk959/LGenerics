@@ -745,12 +745,14 @@ end;
 procedure TGCustomRingArrayBuffer.DoTrimToFit;
 begin
   if System.Length(FItems) > ElemCount then
-    begin
-      if (ElemCount > 0) and (Head > 0) then
-        Shrink
-      else
+    if (ElemCount > 0) and (Head > 0) then
+      Shrink
+    else
+      begin
         System.SetLength(FItems, ElemCount);
-    end;
+        if ElemCount = 0 then
+          FHead := 0;
+      end;
 end;
 
 procedure TGCustomRingArrayBuffer.DoEnsureCapacity(aValue: SizeInt);
@@ -1087,12 +1089,14 @@ end;
 procedure TGLiteRingDynBuffer.TrimToFit;
 begin
   if Capacity > Count then
-    begin
-      if (Count > 0) and (FHead > 0) then
-        Shrink
-      else
+    if (Count > 0) and (FHead > 0) then
+      Shrink
+    else
+      begin
         System.SetLength(FItems, Count);
-    end;
+        if Count = 0 then
+          FHead := 0;
+      end;
 end;
 
 function TGLiteRingDynBuffer.GetEnumerator: TEnumerator;
