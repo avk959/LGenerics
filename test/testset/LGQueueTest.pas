@@ -534,6 +534,7 @@ end;
 procedure TGQueueTest.TrimToFit;
 var
   q: TAutoIntQueue;
+  I: Integer;
 begin
   {%H-}q.Instance := TIntQueue.Create(IntArray21);
   AssertTrue(q.Instance.Count = 21);
@@ -541,6 +542,15 @@ begin
   q.Instance.TrimToFit;
   AssertTrue(q.Instance.Count = 21);
   AssertTrue(q.Instance.Capacity = 21);
+
+  while q.Instance.Count < 120 do
+    q.Instance.Enqueue(0);
+  while q.Instance.NonEmpty do
+    q.Instance.Dequeue;
+  q.Instance.TrimToFit;
+  AssertTrue(q.Instance.Capacity = 0);
+  for I := 1 to 150 do
+    q.Instance.Enqueue(I); //should not crash
 end;
 
 procedure TGQueueTest.TrimToFit_1;
@@ -1065,6 +1075,15 @@ begin
   q.TrimToFit;
   AssertTrue(q.Count = 21);
   AssertTrue(q.Capacity = 21);
+
+  while q.Count < 120 do
+    q.Enqueue(0);
+  while q.NonEmpty do
+    q.Dequeue;
+  q.TrimToFit;
+  AssertTrue(q.Capacity = 0);
+  for I := 1 to 150 do
+    q.Enqueue(I); //should not crash
 end;
 
 procedure TLiteQueueTest.TrimToFit_1;
