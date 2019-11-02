@@ -1827,7 +1827,12 @@ end;
 procedure TUniqPtrTest.OwnMoveFail;
 type
   PRec = specialize TGUniqPtr<TNameRec>;
-  procedure Test(aSrc: PRec; var aDst: PRec);
+  procedure Test(p: PRec);
+  begin
+    AssertTrue(p.Allocated);
+    AssertFalse(p.OwnsPtr);
+  end;
+  procedure Test2(aSrc: PRec; var aDst: PRec);
   begin
     aSrc.OwnMove(aDst);
   end;
@@ -1839,7 +1844,7 @@ begin
   AssertTrue(p1.Allocated);
   AssertTrue(p1.OwnsPtr);
   try
-    Test(p1, p2);
+    Test2(p1, p2);
   except
     Raised := True;
   end;
