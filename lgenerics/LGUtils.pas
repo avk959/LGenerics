@@ -198,7 +198,7 @@ type
   { TGSharedRef: like TGSharedRefA intended to be shared a single instance by several TGSharedRef
     entities using ARC; it does not require T to have a parameterless constructor, and does not
     automatically create an instance }
-  TGSharedRef<T: class, constructor> = record
+  TGSharedRef<T: class> = record
   private
     FInstance: T;
     FRefCount: PInteger;
@@ -716,7 +716,7 @@ type
     destructor Destroy; override;
     function  NewNode: PNode;
     procedure DisposeNode(aNode: PNode);
-    procedure FreeNode(aNode: PNode); inline;
+    procedure FreeNode(aNode: PNode);
     procedure EnsureFreeCount(aCount: SizeInt);
     procedure ClearFreeList;
     procedure Clear;
@@ -1113,7 +1113,7 @@ begin
   FInstance := aValue;
   if aValue <> nil then
     begin
-      New(FRefCount);
+      System.New(FRefCount);
       FRefCount^ := 1;
     end;
 end;
@@ -1194,7 +1194,7 @@ begin
     begin
       if InterlockedDecrement(FRefCount^) = 0 then
         begin
-          Dispose(FRefCount);
+          System.Dispose(FRefCount);
           FInstance.Free;
         end;
       FRefCount := nil;
@@ -1208,7 +1208,7 @@ begin
   FInstance := aValue;
   if aValue <> nil then
     begin
-      New(FRefCount);
+      System.New(FRefCount);
       FRefCount^ := 1;
     end;
 end;
@@ -1289,7 +1289,7 @@ begin
     begin
       if InterlockedDecrement(FRefCount^) = 0 then
         begin
-          Dispose(FRefCount);
+          System.Dispose(FRefCount);
           FInstance.Free;
         end;
       FRefCount := nil;
@@ -1307,7 +1307,7 @@ function TGUniqPtr<T>.GetPtr: PValue;
 begin
   if FPtr = nil then
     begin
-      FPtr := GetMem(SizeOf(T));
+      System.New(FPtr);
       FillChar(FPtr^, SizeOf(T), 0);
       FOwnsPtr := True;
     end;
@@ -1320,7 +1320,7 @@ begin
     begin
       if IsManaged then
         FPtr^ := Default(T);
-      FreeMem(FPtr);
+      System.Dispose(FPtr);
     end;
 end;
 
@@ -1398,7 +1398,7 @@ end;
 
 function TGCowPtr<T>.NewInstance: PInstance;
 begin
-  FInstance := System.GetMem(SizeOf(TInstance));
+  System.New(FInstance);
   FInstance^.RefCount := 1;
   FillChar(FInstance^.Value, SizeOf(T), 0);
   Result := FInstance;
@@ -1410,7 +1410,7 @@ begin
     begin
       if IsManaged then
         FInstance^.Value := Default(T);
-      System.FreeMem(FInstance);
+      System.Dispose(FInstance);
     end;
   FInstance := nil;
 end;
@@ -1559,7 +1559,7 @@ end;
 
 function TGCowDynArray<T>.NewInstance: PInstance;
 begin
-  Result := System.GetMem(SizeOf(TInstance));
+  System.New(Result);
   Result^.FItems := nil;
   Result^.FLength := 0;
   Result^.FRefCount := 1;
@@ -1865,7 +1865,7 @@ begin
             FillItems(FInstance^.FItems, FInstance^.FLength, Default(T));
           System.FreeMem(FInstance^.FItems);
         end;
-      System.FreeMem(FInstance);
+      System.Dispose(FInstance);
     end;
   FInstance := nil;
 end;
