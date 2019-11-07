@@ -2,27 +2,37 @@ unit Samples;
 
 {$mode objfpc}{$H+}
 {$modeswitch typehelpers}
+{$modeswitch advancedrecords}
 
 interface
 
 uses
   SysUtils, TypInfo, math, LGArrayHelpers, LGMiscUtils, garrayutils, gutil,
-  Generics.Collections, Generics.Defaults, epiktimer;
+  Generics.Collections, Generics.Defaults, PasPDQSort, epiktimer;
 
 type
 
   TSortAlgo     = (saQuickSort, saIntroSort, saDualPivotQuickSort, saMergeSort, saTimSort,
                    saFclSort,{ fcl-stl TOrderingArrayUtils.Sort }
-                   saGCSort  { Generics.Collections TArrayHelper.Sort } );
+                   saGCSort, { Generics.Collections TArrayHelper.Sort }
+                   saPDQSort { Akira1364's Pascal translation of PDQSort from
+                               https://github.com/Akira13641/PasPDQSort });
   TSampleSize   = (ss1K, ss2K, ss5K, ss10K, ss20K, ss50K, ss01M, ss02M, ss05M, ss1M, ss2M, ss5M);
-  TSampleClass  = (scRandomUInt, scRandomUInt64, scRandomSingle, scRandomDouble, scRandomStr8, scKLimited,
-                  scKEqualTeeth, scKEvenTeeth, scKSharpTeeth, scKDistance, scKExchange);
+  TSampleClass  = (scRandomUInt, scRandomUInt64, scRandomSingle, scRandomDouble, scRandomStr8,
+                   scRandomVec4, scKLimited, scKEqualTeeth, scKEvenTeeth, scKSharpTeeth, scKDistance,
+                   scKExchange);
+
+  TVec4 = record
+    X, Y, Z, W: Double;
+    class function CreateRandom(aRange: Integer): TVec4; static; inline;
+  end;
 
   TUIntSample   = array of DWord;
   TUInt64Sample = array of QWord;
   TSingleSample = array of Single;
   TDoubleSample = array of Double;
   TStr8Sample   = array of string;
+  TVec4Sample   = array of TVec4;
 
   { TSortAlgoHelper }
 
@@ -58,11 +68,13 @@ type
     function  GenSingleSample(aSize: TSampleSize): TSingleSample;
     function  GenDoubleSample(aSize: TSampleSize): TDoubleSample;
     function  GenStr8Sample(aSize: TSampleSize): TStr8Sample;
+    function  GenVec4Sample(aSize: TSampleSize): TVec4Sample;
     function  RunUInt32Test(Algo: TSortAlgo; aSize: TSampleSize; K: SizeInt): Double;
     function  RunSingleTest(Algo: TSortAlgo; aSize: TSampleSize): Double;
     function  RunDoubleTest(Algo: TSortAlgo; aSize: TSampleSize): Double;
     function  RunUInt64Test(Algo: TSortAlgo; aSize: TSampleSize): Double;
     function  RunStr8Test(Algo: TSortAlgo; aSize: TSampleSize): Double;
+    function  RunVec4Test(Algo: TSortAlgo; aSize: TSampleSize): Double;
   public
     function GetName: string;
     function RunTest(Algo: TSortAlgo; aSize: TSampleSize; K: SizeInt): Double;
@@ -102,14 +114,22 @@ begin
     Result[I] := Char(Random(95) + 32);
 end;
 
+class function TVec4.CreateRandom(aRange: Integer): TVec4;
+begin
+  with Result do begin
+    X := Succ(Random(aRange));
+    Y := Succ(Random(aRange));
+    Z := Succ(Random(aRange));
+    W := Succ(Random(aRange));
+  end;
+end;
+
 { TSortAlgoHelper }
 
 function TSortAlgoHelper.GetName: string;
-var
-  r: string;
 begin
-  r := GetEnumName(System.TypeInfo(Self), Ord(Self));
-  Result := Copy(r, 3, Length(r) - 2);
+  WriteStr(Result, Self);
+  Result := Copy(Result, 3, Length(Result) - 2);
 end;
 
 { TSampleSizeHelper }
@@ -369,6 +389,15 @@ begin
     Result[I] := RandomString(8);
 end;
 
+function TSampleClassHelper.GenVec4Sample(aSize: TSampleSize): TVec4Sample;
+var
+  I: SizeInt;
+begin
+  System.SetLength(Result, aSize.ToInt);
+  for I := 0 to System.High(Result) do
+    Result[I] := TVec4.CreateRandom(200000000);
+end;
+
 function TSampleClassHelper.RunUInt32Test(Algo: TSortAlgo; aSize: TSampleSize; K: SizeInt): Double;
 type
   TDWordLess = specialize TLess<DWord>;
@@ -376,6 +405,7 @@ type
   TTimSort   = specialize TGComparableTimSort<DWord>;
   TFclUtils  = specialize TOrderingArrayUtils<TUIntSample, DWord, TDWordLess>;
   TGcHelper  = specialize TArrayHelper<DWord>;
+  TPDQSorter = specialize TComparablePDQSorter<DWord>;
 var
   Data: TUIntSample;
 begin
@@ -390,6 +420,7 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
+    saPDQSort:            TPDQSorter.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -402,6 +433,7 @@ type
   TTimSort    = specialize TGComparableTimSort<Single>;
   TFclUtils   = specialize TOrderingArrayUtils<TSingleSample, Single, TSingleLess>;
   TGcHelper   = specialize TArrayHelper<Single>;
+  TPDQSorter  = specialize TComparablePDQSorter<Single>;
 var
   Data: TSingleSample;
 begin
@@ -416,6 +448,7 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
+    saPDQSort:            TPDQSorter.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -428,6 +461,7 @@ type
   TTimSort    = specialize TGComparableTimSort<Double>;
   TFclUtils   = specialize TOrderingArrayUtils<TDoubleSample, Double, TDoubleLess>;
   TGcHelper   = specialize TArrayHelper<Double>;
+  TPDQSorter  = specialize TComparablePDQSorter<Double>;
 var
   Data: TDoubleSample;
 begin
@@ -442,6 +476,7 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
+    saPDQSort:            TPDQSorter.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -454,6 +489,7 @@ type
   TTimSort   = specialize TGComparableTimSort<QWord>;
   TFclUtils  = specialize TOrderingArrayUtils<TUInt64Sample, QWord, TQWordLess>;
   TGcHelper  = specialize TArrayHelper<QWord>;
+  TPDQSorter = specialize TComparablePDQSorter<QWord>;
 var
   Data: TUInt64Sample;
 begin
@@ -468,13 +504,11 @@ begin
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
+    saPDQSort:            TPDQSorter.Sort(Data);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
 end;
-
-type
-  TGcStrComparer = specialize TComparer<string>;
 
 function StrCmp(constref L, R: string): Integer;
 begin
@@ -489,11 +523,12 @@ end;
 
 function TSampleClassHelper.RunStr8Test(Algo: TSortAlgo; aSize: TSampleSize): Double;
 type
-  TStrLess  = specialize TLess<string>;
-  THelper   = specialize TGComparableArrayHelper<string>;
-  TTimSort  = specialize TGComparableTimSort<string>;
-  TFclUtils = specialize TOrderingArrayUtils<TStr8Sample, string, TStrLess>;
-  TGcHelper = specialize TArrayHelper<string>;
+  TStrLess   = specialize TLess<string>;
+  THelper    = specialize TGComparableArrayHelper<string>;
+  TTimSort   = specialize TGComparableTimSort<string>;
+  TFclUtils  = specialize TOrderingArrayUtils<TStr8Sample, string, TStrLess>;
+  TGcHelper  = specialize TArrayHelper<string>;
+  TPDQSorter = specialize TComparablePDQSorter<string>;
 var
   Data: TStr8Sample;
 begin
@@ -507,7 +542,93 @@ begin
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
-    saGCSort:             TGcHelper.Sort(Data, TGcStrComparer.Construct(@StrCmp));
+    saGCSort:             TGcHelper.Sort(Data, specialize TComparer<string>.Construct(@StrCmp));
+    saPDQSort:            TPDQSorter.Sort(Data);
+  end;
+  Timer.Stop;
+  Result := Timer.Elapsed;
+end;
+
+function Vec4Order(constref A, B: TVec4): Int32;
+var
+  ASum, BSum: Double;
+begin
+  with A do
+    ASum := X + Y + Z + W;
+  with B do
+    BSum := X + Y + Z + W;
+  if ASum > BSum then
+    Result := 1
+  else
+    if ASum < BSum then
+      Result := -1
+    else
+      Result := 0;
+end;
+
+function Vec4Order2(constref A, B: TVec4): SizeInt;
+var ASum, BSum: Double;
+begin
+  with A do
+    ASum := X + Y + Z + W;
+  with B do
+    BSum := X + Y + Z + W;
+  if ASum > BSum then
+    exit(1);
+  if ASum < BSum then
+    exit(-1);
+  Result := 0;
+end;
+
+function Vec4Less(constref A, B: TVec4): Boolean;
+var
+  ASum, BSum: Double;
+begin
+  with A do
+    ASum := X + Y + Z + W;
+  with B do
+    BSum := X + Y + Z + W;
+  Result := ASum < BSum;
+end;
+
+type
+  TVec4Less = record
+    class function c(constref A, B: TVec4): Boolean; static;
+  end;
+
+class function TVec4Less.c(constref A, B: TVec4): Boolean;
+var ASum, BSum: Double;
+begin
+  with A do
+    ASum := X + Y + Z + W;
+  with B do
+    BSum := X + Y + Z + W;
+  Result := ASum < BSum;
+end;
+
+
+function TSampleClassHelper.RunVec4Test(Algo: TSortAlgo; aSize: TSampleSize): Double;
+type
+  THelper    = specialize TGRegularArrayHelper<TVec4>;
+  TTimSort   = specialize TGRegularTimSort<TVec4>;
+  TFclUtils  = specialize TOrderingArrayUtils<TVec4Sample, TVec4, TVec4Less>;
+  TGcHelper  = specialize TArrayHelper<TVec4>;
+  TPDQSorter = specialize TPDQSorter<TVec4>;
+var
+  Data: TVec4Sample;
+begin
+  Data := GenVec4Sample(aSize);
+  Timer.Clear;
+  Timer.Start;
+  case Algo of
+    saQuickSort:          THelper.QuickSort(Data, @Vec4Order2);
+    saIntroSort:          THelper.IntroSort(Data, @Vec4Order2);
+    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data, @Vec4Order2);
+    saMergeSort:          THelper.MergeSort(Data, @Vec4Order2);
+    saTimSort:            TTimSort.Sort(Data, @Vec4Order2);
+    saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
+    saGCSort:             TGcHelper.Sort(Data, specialize TComparer<TVec4>.Construct(@Vec4Order));
+    saPDQSort:            TPDQSorter.Sort(Data, @Vec4Less);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -521,6 +642,7 @@ begin
     scRandomSingle:  Result := 'random Single';
     scRandomDouble:  Result := 'random Double';
     scRandomStr8:    Result := 'random 8-byte string';
+    scRandomVec4:    Result := 'random 4D vector';
     scKLimited:      Result := 'K-limited';
     scKEqualTeeth:   Result := 'K-equal teeth';
     scKEvenTeeth:    Result := 'K-even teeth';
@@ -538,6 +660,7 @@ begin
     scRandomSingle:  Result := RunSingleTest(Algo, aSize);
     scRandomDouble:  Result := RunDoubleTest(Algo, aSize);
     scRandomStr8:    Result := RunStr8Test(Algo, aSize);
+    scRandomVec4:    Result := RunVec4Test(Algo, aSize);
   else
     K := Math.Min(K, aSize.ToInt);
     Result := RunUInt32Test(Algo, aSize, K);

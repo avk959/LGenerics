@@ -1,22 +1,22 @@
 object frmMain: TfrmMain
   Left = 489
-  Height = 425
+  Height = 460
   Top = 250
-  Width = 985
+  Width = 1041
   ActiveControl = btRunSelected
   Caption = 'frmMain'
-  ClientHeight = 425
-  ClientWidth = 985
+  ClientHeight = 460
+  ClientWidth = 1041
   DesignTimePPI = 115
   OnCreate = FormCreate
   Position = poScreenCenter
   ShowHint = True
-  LCLVersion = '1.9.0.0'
+  LCLVersion = '2.0.5.0'
   object MainStatus: TStatusBar
     Left = 0
     Height = 28
-    Top = 397
-    Width = 985
+    Top = 432
+    Width = 1041
     Panels = <    
       item
         Width = 250
@@ -34,23 +34,23 @@ object frmMain: TfrmMain
   end
   object pnMain: TPanel
     Left = 0
-    Height = 397
+    Height = 432
     Top = 0
-    Width = 985
+    Width = 1041
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 397
-    ClientWidth = 985
+    ClientHeight = 432
+    ClientWidth = 1041
     TabOrder = 1
     object pnRight: TPanel
-      Left = 832
-      Height = 397
+      Left = 888
+      Height = 432
       Top = 0
       Width = 153
       Align = alRight
       Anchors = []
       BevelOuter = bvNone
-      ClientHeight = 397
+      ClientHeight = 432
       ClientWidth = 153
       TabOrder = 0
       object Label1: TLabel
@@ -65,7 +65,7 @@ object frmMain: TfrmMain
         Left = 4
         Height = 29
         Hint = '|Start single test for selected sample class'
-        Top = 290
+        Top = 325
         Width = 144
         Anchors = [akBottom]
         Caption = 'Run selected'
@@ -155,7 +155,7 @@ object frmMain: TfrmMain
         Left = 4
         Height = 29
         Hint = 'Cancel running test'
-        Top = 362
+        Top = 397
         Width = 144
         Anchors = [akBottom]
         Caption = 'Cancel'
@@ -170,7 +170,7 @@ object frmMain: TfrmMain
         Left = 4
         Height = 29
         Hint = '|Start tests for all data classes with selected size and K'
-        Top = 322
+        Top = 357
         Width = 144
         Anchors = [akBottom]
         Caption = 'Run all '
@@ -179,8 +179,8 @@ object frmMain: TfrmMain
       end
     end
     object Splitter1: TSplitter
-      Left = 827
-      Height = 397
+      Left = 883
+      Height = 432
       Top = 0
       Width = 5
       Align = alRight
@@ -188,29 +188,29 @@ object frmMain: TfrmMain
     end
     object pnLeft: TPanel
       Left = 0
-      Height = 397
+      Height = 432
       Top = 0
-      Width = 827
+      Width = 883
       Align = alClient
       Anchors = []
       BevelOuter = bvNone
-      ClientHeight = 397
-      ClientWidth = 827
+      ClientHeight = 432
+      ClientWidth = 883
       TabOrder = 2
       object pnGrid: TPanel
         Left = 0
-        Height = 397
+        Height = 432
         Top = 0
-        Width = 827
+        Width = 883
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 397
-        ClientWidth = 827
+        ClientHeight = 432
+        ClientWidth = 883
         TabOrder = 0
         object Label5: TLabel
           Left = 4
           Height = 19
-          Top = 378
+          Top = 413
           Width = 215
           Anchors = [akLeft, akBottom]
           Caption = '  *average time / best average time'
@@ -218,9 +218,9 @@ object frmMain: TfrmMain
         end
         object sgResultView: TStringGrid
           Left = 0
-          Height = 374
+          Height = 409
           Top = 0
-          Width = 827
+          Width = 883
           AlternateColor = 14869218
           Anchors = [akTop, akLeft, akRight, akBottom]
           AutoEdit = False

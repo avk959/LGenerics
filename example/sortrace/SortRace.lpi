@@ -82,10 +82,6 @@
               </Win32>
             </Options>
           </Linking>
-          <Other>
-            <CustomOptions Value="dCPU64
-dCPU64BITS"/>
-          </Other>
         </CompilerOptions>
       </Item3>
     </BuildModes>

@@ -48,16 +48,18 @@ type
     TDoubleHelper = specialize TGComparableArrayHelper<Double>;
     TSingleResult = array[TSortAlgo] of Double;
     TMultiResult  = array[TSampleClass, TSortAlgo] of Double;
+    TControlArray = array of TControl;
   var
     FWaitStatus: string;
     FSingleResult: TSingleResult;
     FMultiResult: TMultiResult;
     FTestRunning,
-    FCancelTest: Boolean;
+    FCancelled: Boolean;
     procedure FillControls;
     procedure FillcbSampleSize;
     procedure FillcbSampleClass;
     procedure FillGridFixedCells;
+    function  GetLockControls: TControlArray;
     procedure DisableControls;
     procedure EnableControls;
     function  GetSampleRow(aClass: TSampleClass): Longint; inline;
@@ -77,7 +79,7 @@ type
     procedure RunCancelled;
   public
     property TestRunning: Boolean read FTestRunning;
-    property CancelTest: Boolean read FCancelTest;
+    property Cancelled: Boolean read FCancelled;
     property WaitStatus: string read FWaitStatus;
   end;
 
@@ -177,26 +179,27 @@ begin
   sgResultView.AutoSizeColumns;
 end;
 
-procedure TfrmMain.DisableControls;
+function TfrmMain.GetLockControls: TControlArray;
 begin
-  btRunSelected.Enabled := False;
-  btRunAll.Enabled := False;
-  cbSampleSize.Enabled := False;
-  cbSampleClass.Enabled := False;
-  seKValue.Enabled := False;
-  seIterationCount.Enabled := False;
+  Result := [btRunSelected, btRunAll, cbSampleSize, cbSampleClass, seKValue, seIterationCount];
+end;
+
+procedure TfrmMain.DisableControls;
+var
+  c: TControl;
+begin
+  for c in GetLockControls do
+    c.Enabled := False;
   btCancel.Enabled := True;
   Application.ProcessMessages;
 end;
 
 procedure TfrmMain.EnableControls;
+var
+  c: TControl;
 begin
-  btRunSelected.Enabled := True;
-  btRunAll.Enabled := True;
-  cbSampleSize.Enabled := True;
-  cbSampleClass.Enabled := True;
-  seKValue.Enabled := True;
-  seIterationCount.Enabled := True;
+  for c in GetLockControls do
+    c.Enabled := True;
   btCancel.Enabled := False;
   Application.ProcessMessages;
 end;
@@ -258,7 +261,7 @@ var
   Algo, WinAlgo: TSortAlgo;
   Sample: TSampleClass;
 begin
-  if CancelTest then
+  if Cancelled then
     exit;
   sgResultView.Clean([gzNormal]);
   Sample := TSampleClass(cbSampleClass.ItemIndex);
@@ -280,7 +283,7 @@ var
   Sample: TSampleClass;
   AverageSum: TSingleResult;
 begin
-  if CancelTest then
+  if Cancelled then
     exit;
   sgResultView.Clean([gzNormal]);
   AverageSum := Default(TSingleResult);
@@ -322,7 +325,7 @@ begin
         begin
           SetStatusText(pnIteration, Format(SIterationFmt, [I]));
           Application.ProcessMessages;
-          if CancelTest then
+          if Cancelled then
             exit;
           TotalTime += aClass.RunTest(Algo, aSize, K);
         end;
@@ -348,7 +351,7 @@ begin
             begin
               SetStatusText(pnIteration, Format(SIterationFmt, [I]));
               Application.ProcessMessages;
-              if CancelTest then
+              if Cancelled then
                 exit;
               TotalTime += Sample.RunTest(Algo, aSize, K);
             end;
@@ -372,13 +375,16 @@ procedure TfrmMain.RunSingleTest;
 begin
   UpdateStatus(True);
   DisableControls;
-  SetStatusText(pnDataSample, Format(SSampleClassFmt, [cbSampleClass.Items[cbSampleClass.ItemIndex]]));
-  SetStatusText(pnDataSize, Format(SSampleSizeFmt, [cbSampleSize.Items[cbSampleSize.ItemIndex]]));
-  FCancelTest := False;
-  DoRunSingleTest(TSampleSize(cbSampleSize.ItemIndex), TSampleClass(cbSampleClass.ItemIndex), seKValue.Value,
-                  seIterationCount.Value);
-  ShowSingleTestResult;
-  EnableControls;
+  try
+    SetStatusText(pnDataSample, Format(SSampleClassFmt, [cbSampleClass.Items[cbSampleClass.ItemIndex]]));
+    SetStatusText(pnDataSize, Format(SSampleSizeFmt, [cbSampleSize.Items[cbSampleSize.ItemIndex]]));
+    FCancelled := False;
+    DoRunSingleTest(TSampleSize(cbSampleSize.ItemIndex), TSampleClass(cbSampleClass.ItemIndex), seKValue.Value,
+                    seIterationCount.Value);
+    ShowSingleTestResult;
+  finally
+    EnableControls;
+  end;
   UpdateStatus(False);
 end;
 
@@ -386,17 +392,20 @@ procedure TfrmMain.RunAllTests;
 begin
   UpdateStatus(True);
   DisableControls;
-  SetStatusText(pnDataSize, Format(SSampleSizeFmt, [cbSampleSize.Items[cbSampleSize.ItemIndex]]));
-  FCancelTest := False;
-  DoRunAllTests(TSampleSize(cbSampleSize.ItemIndex), seKValue.Value, seIterationCount.Value);
-  ShowMultiTestResult;
-  EnableControls;
+  try
+    SetStatusText(pnDataSize, Format(SSampleSizeFmt, [cbSampleSize.Items[cbSampleSize.ItemIndex]]));
+    FCancelled := False;
+    DoRunAllTests(TSampleSize(cbSampleSize.ItemIndex), seKValue.Value, seIterationCount.Value);
+    ShowMultiTestResult;
+  finally
+    EnableControls;
+  end;
   UpdateStatus(False);
 end;
 
 procedure TfrmMain.RunCancelled;
 begin
-  FCancelTest := True;
+  FCancelled := True;
   FWaitStatus := STestCancelled;
 end;
 
