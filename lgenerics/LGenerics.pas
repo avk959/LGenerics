@@ -11,7 +11,7 @@ uses
   LGAbstractContainer, LGArrayHelpers, LGAsync, LGAvlTree, LGBiMap, LGDeque, LGFunction, LGHash, LGHashMap, 
   LGHashMultiSet, LGHashSet, LGHashTable, LGHelpers, LGMiscUtils, LGMultiMap, LGPriorityQueue, LGQueue, 
   LGSimpleDigraph, LGSimpleGraph, LGSparseGraph, LGStack, LGStrConst, LGStrHelpers, LGTable2D, LGTreeMap, 
-  LGTreeMultiSet, LGTreeSet, LGUtils, LGVector, LGRootTree;
+  LGTreeMultiSet, LGTreeSet, LGUtils, LGVector, LGRootTree, LGInt128;
 
 implementation
 
