@@ -1904,7 +1904,7 @@ begin
   case ParseStr(s, prs) of
     prDec:  exit(TryDec2Limbs(prs, aValue));
     prHex:  Hex2Limbs(prs, aValue);
-    prZero: TUInt128(aValue).SetZero;
+    prZero: TUInt128(aValue) := Default(TUInt128);
   else //prNan
     exit(False);
   end;
@@ -3364,7 +3364,7 @@ var
 begin
   if b = 0 then
     begin
-      p^.SetZero;
+      p^ := Default(TInt128);
       exit;
     end;
   ANeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
@@ -3602,7 +3602,7 @@ begin
       TUInt128(Result).Encode(-TLimb(aValue), 0, 0, SIGN_FLAG)
 {$ENDIF USE_LIMB64}
     else
-      TUInt128(Result).SetZero;
+      Result := Default(TInt128);
 end;
 
 class operator TInt128.:=(const aValue: TInt128): Double; inline;
