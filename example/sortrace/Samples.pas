@@ -8,7 +8,7 @@ interface
 
 uses
   SysUtils, TypInfo, math, LGArrayHelpers, LGMiscUtils, garrayutils, gutil,
-  Generics.Collections, Generics.Defaults, PasPDQSort, epiktimer;
+  Generics.Collections, Generics.Defaults, LGHelpers, PasPDQSort, epiktimer;
 
 type
 
@@ -350,7 +350,7 @@ var
 begin
   System.SetLength(Result, aSize.ToInt);
   for I := 0 to System.High(Result) do
-    Result[I] := QWord(Random(Int64.MaxValue));
+    Result[I] := QWord(Random(High(Int64)));
 end;
 
 function TSampleClassHelper.GenSingleSample(aSize: TSampleSize): TSingleSample;
@@ -567,17 +567,8 @@ begin
 end;
 
 function Vec4Order2(constref A, B: TVec4): SizeInt;
-var ASum, BSum: Double;
 begin
-  with A do
-    ASum := X + Y + Z + W;
-  with B do
-    BSum := X + Y + Z + W;
-  if ASum > BSum then
-    exit(1);
-  if ASum < BSum then
-    exit(-1);
-  Result := 0;
+  Result := Double.Compare(A.X + A.Y + A.Z + A.W, B.X + B.Y + B.Z +B.W);
 end;
 
 function Vec4Less(constref A, B: TVec4): Boolean;
