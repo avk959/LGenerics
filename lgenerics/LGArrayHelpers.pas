@@ -8951,7 +8951,7 @@ end;
 
 class function TGSimpleArrayHelper.BinarySearch(constref A: array of T; constref aValue: T): SizeInt;
 begin
-  Result := High(A);
+  Result := System.High(A);
   if Result >= 0 then
     Result := DoBinSearch(@A[0], Result, aValue);
 end;
