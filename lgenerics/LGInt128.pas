@@ -16,7 +16,7 @@ uses
   {$IFDEF CPUX64}
     {$DEFINE USE_LIMB64}
   {$ENDIF CPUX64}
-{$ENDIF}
+{$ENDIF} {.$Q+}{.$R+}
 
 type
 
@@ -831,6 +831,7 @@ class function TUInt128.DoMul(a, b, p: PLimb): TLimb;
 {$IFDEF CPU_INTEL}register; assembler; nostackframe;
   {$IFDEF CPUX64}
 asm
+{$IFOPT Q+}
 {$IFDEF MSWINDOWS}  //a in rcx, b in rdx, p in r8
   sub   rsp, 16
   mov   qword ptr[rsp], rsi
@@ -871,9 +872,44 @@ asm
   mov  rdi, qword ptr[rsp+8]
   add  rsp, 16
 {$ENDIF}
+{$ELSE Q+}
+{$IFDEF MSWINDOWS}  //a in rcx, b in rdx, p in r8
+  sub   rsp, 16
+  mov   qword ptr[rsp], rsi
+  mov   qword ptr[rsp+8], rdi
+
+  mov   rdi, rcx    //rdi <- a
+  mov   rsi, rdx    //rsi <- b
+{$ELSE MSWINDOWS}   //a in rdi, b in rsi, p in rdx
+  mov   r8, rdx     //r8  <- p
+{$ENDIF MSWINDOWS}
+  mov   rcx, qword ptr[rsi]
+
+  mov   rax, qword ptr[rdi]
+  mul   rcx
+  mov   qword ptr[r8], rax
+  mov   r9, rdx
+
+  mov   rax, qword ptr[rdi+8]
+  mul   rcx
+  add   rax, r9
+  mov   qword ptr[r8+8], rax
+/////////////////////////
+  mov   rax, qword ptr[rdi]
+  mul   qword ptr[rsi+8]
+  add   qword ptr[r8+8], rax
+
+  xor   rax, rax
+{$IFDEF MSWINDOWS}
+  mov  rsi, qword ptr[rsp]
+  mov  rdi, qword ptr[rsp+8]
+  add  rsp, 16
+{$ENDIF}
+{$ENDIF Q+}
 end;
   {$ELSE CPUX64}
 asm
+{$IFOPT Q+}
   sub   esp, 24
   mov   [esp   ], ebp
   mov   [esp+ 4], ebx
@@ -883,7 +919,7 @@ asm
   mov   esi, eax                  // esi <- a
   mov   edi, ecx                  // edi <- p
   mov   ecx, edx                  // ecx <- b
-/////////////////////////////////// DoMul by b[0]
+/////////////////////////////////// mul by b[0]
   mov   ebp, [ecx]
 
   mov   eax, [esi]
@@ -914,7 +950,7 @@ asm
   test  edx, edx
   setnz bl
   mov   [esp+16], ebx
-/////////////////////////////////  DoMul by b[1]
+/////////////////////////////////  mul by b[1]
   mov   ebp, [ecx+4]
 
   mov   eax, [esi]
@@ -941,7 +977,7 @@ asm
   test  edx, edx
   setnz bl
   add   [esp+16], ebx
-/////////////////////////////////  DoMul by b[2]
+/////////////////////////////////  mul by b[2]
   mov   ebp, [ecx+8]
 
   mov   eax, [esi]
@@ -960,7 +996,7 @@ asm
   test  edx, edx
   setnz bl
   add   [esp+16], ebx
-/////////////////////////////////  DoMul by b[3]
+/////////////////////////////////  mul by b[3]
   mov   eax, [esi]
   mul   [ecx+12]
   add   [edi+12], eax
@@ -975,6 +1011,89 @@ asm
   mov  esi, [esp+ 8]
   mov  edi, [esp+12]
   add  esp, 24
+{$ELSE Q+}  ///////////////////
+  sub   esp, 16
+  mov   [esp   ], ebp
+  mov   [esp+ 4], ebx
+  mov   [esp+ 8], esi
+  mov   [esp+12], edi
+/////////////////////////////////
+  mov   esi, eax                  // esi <- a
+  mov   edi, ecx                  // edi <- p
+  mov   ecx, edx                  // ecx <- b
+/////////////////////////////////// mul by b[0]
+  mov   ebp, [ecx]
+
+  mov   eax, [esi]
+  mul   ebp
+  mov   [edi], eax
+  mov   ebx, edx      //0
+
+  mov   eax, [esi+4]
+  mul   ebp
+  add   eax, ebx
+  adc   edx, 0
+  mov   [edi+4], eax
+  mov   ebx, edx      //1
+
+  mov   eax, [esi+8]
+  mul   ebp
+  add   eax, ebx
+  adc   edx, 0
+  mov   [edi+8], eax
+  mov   ebx, edx      //2
+
+  mov   eax, [esi+12]
+  mul   ebp
+  add   eax, ebx
+  mov   [edi+12], eax //3
+/////////////////////////////////  mul by b[1]
+  mov   ebp, [ecx+4]
+
+  mov   eax, [esi]
+  mul   ebp
+  add   [edi+4], eax
+  adc   edx, 0
+  mov   ebx, edx      //0
+
+  mov   eax, [esi+4]
+  mul   ebp
+  add   eax, ebx
+  adc   edx, 0
+  add   [edi+8], eax
+  adc   edx, 0
+  mov   ebx, edx      //1
+
+  mov   eax, [esi+8]
+  mul   ebp
+  add   eax, ebx
+  add   [edi+12], eax //2
+/////////////////////////////////  mul by b[2]
+  mov   ebp, [ecx+8]
+
+  mov   eax, [esi]
+  mul   ebp
+  add   [edi+8], eax
+  adc   edx, 0
+  mov   ebx, edx      //0
+
+  mov   eax, [esi+4]
+  mul   ebp
+  add   eax, ebx
+  add   [edi+12], eax //1
+/////////////////////////////////  mul by b[3]
+  mov   eax, [esi]
+  mul   [ecx+12]
+  add   [edi+12], eax
+
+  xor  eax, eax
+///////////////////////////////// epilog
+  mov  ebp, [esp   ]
+  mov  ebx, [esp+ 4]
+  mov  esi, [esp+ 8]
+  mov  edi, [esp+12]
+  add  esp, 16
+{$ENDIF Q+}
 end;
   {$ENDIF CPUX64}
 {$ELSE CPU_INTEL}
@@ -990,7 +1109,9 @@ begin
   p[2] := Digs[0];
   Prod := QWord(a[3]) * QWord(b[0]) + QWord(Digs[1]);
   p[3] := Digs[0];
+{$IFOPT Q+}
   Result := Ord(Digs[1] <> 0);
+{$ENDIF Q+}
 
   Prod := QWord(a[0]) * QWord(b[1]) + QWord(p[1]);
   p[1] := Digs[0];
@@ -998,17 +1119,25 @@ begin
   p[2] := Digs[0];
   Prod := QWord(a[3]) * QWord(b[1]) + QWord(p[3]) + QWord(Digs[1]);
   p[3] := Digs[0];
+{$IFOPT Q+}
   Result += Ord(Digs[1] <> 0);
+{$ENDIF Q+}
 
   Prod := QWord(a[0]) * QWord(b[2]) + QWord(p[2]);
   p[2] := Digs[0];
   Prod := QWord(a[1]) * QWord(b[2]) + QWord(p[3]) + QWord(Digs[1]);
   p[3] := Digs[0];
+{$IFOPT Q+}
   Result += Ord(Digs[1] <> 0);
+{$ENDIF Q+}
 
   Prod := QWord(a[0]) * QWord(b[3]) + QWord(p[3]);
   p[3] := Digs[0];
+{$IFOPT Q+}
   Result += Ord(Digs[1] <> 0);
+{$ELSE Q+}
+  Result := 0;
+{$ENDIF Q+}
 end;
 {$ENDIF CPU_INTEL}
 
