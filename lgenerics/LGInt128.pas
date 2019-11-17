@@ -64,7 +64,7 @@ type
   {$ENDIF USE_LIMB64}
     MAX_LIMB             = High(TLimb);
     BIT_PER_LIMB         = BitSizeOf(TLimb);
-    LIMB_BITSIZE_MASK    = Pred(BIT_PER_LIMB);
+    LIMB_BITSIZE_MASK    = BIT_PER_LIMB - 1;
     DWORD_PER_VALUE      = 4;
     BYTE_PER_VALUE       = 16;
     BIT_PER_VALUE        = 128;
@@ -327,11 +327,11 @@ function TUInt128.GetBit(aIndex: Integer): Boolean;
 begin
 {$IFOPT R+}
   if SizeUInt(aIndex) < SizeUInt(BIT_PER_VALUE) then
-    Result := FLimbs[aIndex shr LIMB_SIZE_LOG] and (SizeUInt(1) shl (aIndex and LIMB_BITSIZE_MASK)) <> 0
+    Result := FLimbs[aIndex shr LIMB_SIZE_LOG] and (TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK)) <> 0
   else
     raise ERangeError.CreateFmt(SListIndexError, [aIndex]);
 {$ELSE R+}
-  Result := FLimbs[aIndex shr LIMB_SIZE_LOG] and (SizeUInt(1) shl (aIndex and LIMB_BITSIZE_MASK)) <> 0;
+  Result := FLimbs[aIndex shr LIMB_SIZE_LOG] and (TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK)) <> 0;
 {$ENDIF R+}
 end;
 
@@ -341,19 +341,19 @@ begin
   if SizeUInt(aIndex) < SizeUInt(BIT_PER_VALUE) then
     if aValue then
       FLimbs[aIndex shr LIMB_SIZE_LOG] := FLimbs[aIndex shr LIMB_SIZE_LOG] or
-                                          SizeUInt(1) shl (aIndex and LIMB_BITSIZE_MASK)
+                                          TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK)
     else
       FLimbs[aIndex shr LIMB_SIZE_LOG] := FLimbs[aIndex shr LIMB_SIZE_LOG] and
-                                          not(SizeUInt(1) shl (aIndex and LIMB_BITSIZE_MASK))
+                                          not(TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK))
   else
     raise ERangeError.CreateFmt(SListIndexError, [aIndex]);
 {$ELSE R+}
   if aValue then
     FLimbs[aIndex shr LIMB_SIZE_LOG] := FLimbs[aIndex shr LIMB_SIZE_LOG] or
-                                        SizeUInt(1) shl (aIndex and LIMB_BITSIZE_MASK)
+                                        TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK)
   else
     FLimbs[aIndex shr LIMB_SIZE_LOG] := FLimbs[aIndex shr LIMB_SIZE_LOG] and
-                                        not(SizeUInt(1) shl (aIndex and LIMB_BITSIZE_MASK))
+                                        not(TLimb(1) shl (aIndex and LIMB_BITSIZE_MASK))
 {$ENDIF R+}
 end;
 
@@ -1277,11 +1277,18 @@ begin  //todo: asm implementation ?
         Result := a[1] shr (BIT_PER_LIMB - BitDist);
       end;
     1:
-      begin
-        r[0] := 0;
-        r[1] := a[0] shl BitDist;
-        Result := a[0] shr (BIT_PER_LIMB - BitDist);
-      end;
+      if BitDist <> 0 then
+        begin
+          r[0] := 0;
+          r[1] := a[0] shl BitDist;
+          Result := a[0] shr (BIT_PER_LIMB - BitDist);
+        end
+      else
+        begin
+          r[0] := 0;
+          r[1] := a[0];
+          Result := 0;
+        end
   else
   end;
 {$ELSE USE_LIMB64}
@@ -1298,32 +1305,59 @@ begin  //todo: asm implementation ?
         Result := a[3] shr (BIT_PER_LIMB - BitDist);
       end;
     1:
-      begin
-        r[0] := 0;
-        r[1] := a[0] shl BitDist;
-        c := a[0] shr (BIT_PER_LIMB - BitDist);
-        r[2] := a[1] shl BitDist or c;
-        c := a[1] shr (BIT_PER_LIMB - BitDist);
-        r[3] := a[2] shl BitDist or c;
-        Result := a[2] shr (BIT_PER_LIMB - BitDist);
-      end;
+      if BitDist <> 0 then
+        begin
+          r[0] := 0;
+          r[1] := a[0] shl BitDist;
+          c := a[0] shr (BIT_PER_LIMB - BitDist);
+          r[2] := a[1] shl BitDist or c;
+          c := a[1] shr (BIT_PER_LIMB - BitDist);
+          r[3] := a[2] shl BitDist or c;
+          Result := a[2] shr (BIT_PER_LIMB - BitDist);
+        end
+      else
+        begin
+          r[0] := 0;
+          r[1] := a[0];
+          r[2] := a[1];
+          r[3] := a[2];
+          Result := 0;
+        end;
     2:
-      begin
-        r[0] := 0;
-        r[1] := 0;
-        r[2] := a[0] shl BitDist;
-        c := a[0] shr (BIT_PER_LIMB - BitDist);
-        r[3] := a[1] shl BitDist or c;
-        Result := a[1] shr (BIT_PER_LIMB - BitDist);
-      end;
+      if BitDist <> 0 then
+        begin
+          r[0] := 0;
+          r[1] := 0;
+          r[2] := a[0] shl BitDist;
+          c := a[0] shr (BIT_PER_LIMB - BitDist);
+          r[3] := a[1] shl BitDist or c;
+          Result := a[1] shr (BIT_PER_LIMB - BitDist);
+        end
+      else
+        begin
+          r[0] := 0;
+          r[1] := 0;
+          r[2] := a[0];
+          r[3] := a[1];
+          Result := 0;
+        end;
     3:
-      begin
-        r[0] := 0;
-        r[1] := 0;
-        r[2] := 0;
-        r[3] := a[0] shl BitDist;
-        Result := a[0] shr (BIT_PER_LIMB - BitDist);
-      end;
+      if BitDist <> 0 then
+        begin
+          r[0] := 0;
+          r[1] := 0;
+          r[2] := 0;
+          r[3] := a[0] shl BitDist;
+          Result := a[0] shr (BIT_PER_LIMB - BitDist);
+        end
+      else
+        begin
+          r[0] := 0;
+          r[1] := 0;
+          r[2] := 0;
+          r[3] := a[0];
+          Result := 0;
+        end
   else
   end;
 {$ENDIF USE_LIMB64}
@@ -1347,11 +1381,18 @@ begin  //todo: asm implementation ?
         Result := a[0] shl (BIT_PER_LIMB - BitDist);
       end;
     1:
-      begin
-        r[1] := 0;
-        r[0] := a[1] shr BitDist;
-        Result := a[1] shl (BIT_PER_LIMB - BitDist);
-      end;
+      if BitDist <> 0 then
+        begin
+          r[1] := 0;
+          r[0] := a[1] shr BitDist;
+          Result := a[1] shl (BIT_PER_LIMB - BitDist);
+        end
+      else
+        begin
+          r[0] := a[1];
+          r[1] := 0;
+          Result := 0;
+        end
   else
   end;
 {$ELSE USE_LIMB64}
@@ -1368,32 +1409,59 @@ begin  //todo: asm implementation ?
         Result := a[0] shl (BIT_PER_LIMB - BitDist);
       end;
     1:
-      begin
-        r[3] := 0;
-        r[2] := a[3] shr BitDist;
-        c := a[3] shl (BIT_PER_LIMB - BitDist);
-        r[1] := a[2] shr BitDist or c;
-        c := a[2] shl (BIT_PER_LIMB - BitDist);
-        r[0] := a[1] shr BitDist or c;
-        Result := a[1] shl (BIT_PER_LIMB - BitDist);
-      end;
+      if BitDist <> 0 then
+        begin
+          r[3] := 0;
+          r[2] := a[3] shr BitDist;
+          c := a[3] shl (BIT_PER_LIMB - BitDist);
+          r[1] := a[2] shr BitDist or c;
+          c := a[2] shl (BIT_PER_LIMB - BitDist);
+          r[0] := a[1] shr BitDist or c;
+          Result := a[1] shl (BIT_PER_LIMB - BitDist);
+        end
+      else
+        begin
+          r[0] := a[1];
+          r[1] := a[2];
+          r[2] := a[3];
+          r[3] := 0;
+          Result := 0;
+        end;
     2:
-      begin
-        r[3] := 0;
-        r[2] := 0;
-        r[1] := a[3] shr BitDist;
-        c := a[3] shl (BIT_PER_LIMB - BitDist);
-        r[0] := a[2] shr BitDist or c;
-        Result := a[2] shl (BIT_PER_LIMB - BitDist);
-      end;
+      if BitDist <> 0 then
+        begin
+          r[3] := 0;
+          r[2] := 0;
+          r[1] := a[3] shr BitDist;
+          c := a[3] shl (BIT_PER_LIMB - BitDist);
+          r[0] := a[2] shr BitDist or c;
+          Result := a[2] shl (BIT_PER_LIMB - BitDist);
+        end
+      else
+        begin
+          r[0] := a[2];
+          r[1] := a[3];
+          r[2] := 0;
+          r[3] := 0;
+          Result := 0;
+        end;
     3:
-      begin
-        r[3] := 0;
-        r[2] := 0;
-        r[1] := 0;
-        r[0] := a[3] shr BitDist;
-        Result := a[3] shl (BIT_PER_LIMB - BitDist);
-      end;
+      if BitDist <> 0 then
+        begin
+          r[3] := 0;
+          r[2] := 0;
+          r[1] := 0;
+          r[0] := a[3] shr BitDist;
+          Result := a[3] shl (BIT_PER_LIMB - BitDist);
+        end
+      else
+        begin
+          r[0] := a[3];
+          r[1] := 0;
+          r[2] := 0;
+          r[3] := 0;
+          Result := 0;
+        end
   else
   end;
 {$ENDIF USE_LIMB64}
