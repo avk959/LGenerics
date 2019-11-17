@@ -22,6 +22,8 @@ type
     procedure PopCount;
     procedure IsTwoPower;
     procedure BitLength;
+    procedure ToStringTest;
+    procedure ToHexString;
     procedure IncValue;
   end;
 
@@ -170,6 +172,47 @@ begin
       AssertTrue(I.BitLength = Succ(J));
       I.Bits[J] := False;
     end;
+end;
+
+procedure TUInt128Test.ToStringTest;
+var
+  I: TUInt128;
+begin
+  I := Default(TUInt128);
+  AssertTrue(I.ToString = '0');
+
+  I := I.Encode(100, 0);
+  AssertTrue(I.ToString = '100');
+
+  I := I.Encode(High(QWord), 0);
+  AssertTrue(I.ToString = '18446744073709551615');
+  I := I.MaxValue;
+  AssertTrue(I.ToString = '340282366920938463463374607431768211455');
+end;
+
+procedure TUInt128Test.ToHexString;
+var
+  I: TUInt128;
+begin
+  I := Default(TUInt128);
+  AssertTrue(I.ToHexString = '00000000000000000000000000000000');
+  AssertTrue(I.ToHexString(True) = '$00000000000000000000000000000000');
+  AssertTrue(I.ToHexString(1) = '0');
+  AssertTrue(I.ToHexString(1, True) = '$0');
+  AssertTrue(I.ToHexString(7) = '0000000');
+  AssertTrue(I.ToHexString(40) = '0000000000000000000000000000000000000000');
+
+  I := I.Encode(High(QWord), 0);
+  AssertTrue(I.ToHexString = '0000000000000000FFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(1) = 'FFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(20) = '0000FFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(22, True) = '$000000FFFFFFFFFFFFFFFF');
+
+  I := I.MaxValue;
+  AssertTrue(I.ToHexString = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(True) = '$FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(22) = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(42, True) = '$0000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 end;
 
 procedure TUInt128Test.IncValue;

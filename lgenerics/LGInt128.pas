@@ -109,10 +109,10 @@ type
     class function  Str2Limb(aValue: PAnsiChar; aCount: Integer): TLimb; static;
     class function  ParseStr(const aValue: string; out aResult: shortstring): TParseResult; static;
     class function  TryParseStr(const s: string; out aValue: TLimbs128): Boolean; static;
-    class function  TryDec2Limbs(const s: shortstring; out aValue: TLimbs128): Boolean; static;
-    class procedure Hex2Limbs(const s: shortstring; out aValue: TLimbs128); static;
-    class function  Limbs2Str(const aValue: TLimbs128): string; static;
-    class function  Limbs2Hex(const aValue: TLimbs128; aMinDigits: Integer; aShowRadix: Boolean): string; static;
+    class function  TryDec2Val(const s: shortstring; out aValue: TLimbs128): Boolean; static;
+    class procedure Hex2Val(const s: shortstring; out aValue: TLimbs128); static;
+    class function  Val2Str(const aValue: TLimbs128): string; static;
+    class function  Val2Hex(const aValue: TLimbs128; aMinDigits: Integer; aShowRadix: Boolean): string; static;
   public
     class operator  = (const L, R: TUInt128): Boolean;
     class operator  <>(const L, R: TUInt128): Boolean;
@@ -2050,8 +2050,8 @@ var
   prs: shortstring;
 begin
   case ParseStr(s, prs) of
-    prDec:  exit(TryDec2Limbs(prs, aValue));
-    prHex:  Hex2Limbs(prs, aValue);
+    prDec:  exit(TryDec2Val(prs, aValue));
+    prHex:  Hex2Val(prs, aValue);
     prZero: TUInt128(aValue) := Default(TUInt128);
   else //prNan
     exit(False);
@@ -2059,7 +2059,7 @@ begin
   Result := True;
 end;
 
-class function TUInt128.TryDec2Limbs(const s: shortstring; out aValue: TLimbs128): Boolean;
+class function TUInt128.TryDec2Val(const s: shortstring; out aValue: TLimbs128): Boolean;
 var
   Len, MulCount, StartPos, I: Integer;
 begin
@@ -2080,7 +2080,7 @@ begin
   Result := True;
 end;
 
-class procedure TUInt128.Hex2Limbs(const s: shortstring; out aValue: TLimbs128);
+class procedure TUInt128.Hex2Val(const s: shortstring; out aValue: TLimbs128);
 var
   I, J, ByteCnt: Integer;
 const
@@ -2104,7 +2104,7 @@ begin
     TUInt128(aValue).Bytes[I] := 0;
 end;
 
-class function TUInt128.Limbs2Str(const aValue: TLimbs128): string;
+class function TUInt128.Val2Str(const aValue: TLimbs128): string;
 var
   q: TLimbs128;
   r: TLimb;
@@ -2138,7 +2138,7 @@ begin
     end;
 end;
 
-class function TUInt128.Limbs2Hex(const aValue: TLimbs128; aMinDigits: Integer; aShowRadix: Boolean): string;
+class function TUInt128.Val2Hex(const aValue: TLimbs128; aMinDigits: Integer; aShowRadix: Boolean): string;
 const
   HexTable: array[0..$0f] of AnsiChar = '0123456789ABCDEF';
 var
@@ -2285,7 +2285,7 @@ end;
 
 class operator TUInt128.:=(const aValue: TUInt128): string;
 begin
-  Result := Limbs2Str(aValue.FLimbs);
+  Result := Val2Str(aValue.FLimbs);
 end;
 
 class operator TUInt128.:=(const aValue: TUInt128): Double;
@@ -2493,14 +2493,12 @@ end;
 class operator TUInt128.*(const L: TUInt128; R: DWord): TUInt128;
 begin
   if R = 0 then
-    Result := Default(TUInt128)
+    exit(Default(TUInt128));
 {$IFOPT Q+}
-  else
-    if DoMulShort(@L, R, @Result) <> 0 then
-      raise EIntOverflow.Create(SIntOverflow);
+  if DoMulShort(@L, R, @Result) <> 0 then
+    raise EIntOverflow.Create(SIntOverflow);
 {$ELSE Q+}
-  else
-    DoMulShort(@L, R, @Result);
+  DoMulShort(@L, R, @Result);
 {$ENDIF Q+}
 end;
 
@@ -2800,17 +2798,17 @@ end;
 
 function TUInt128.ToString: string;
 begin
-  Result := Limbs2Str(FLimbs);
+  Result := Val2Str(FLimbs);
 end;
 
 function TUInt128.ToHexString(aMinDigits: Integer; aShowRadix: Boolean): string;
 begin
-  Result := Limbs2Hex(FLimbs, aMinDigits, aShowRadix);
+  Result := Val2Hex(FLimbs, aMinDigits, aShowRadix);
 end;
 
 function TUInt128.ToHexString(aShowRadix: Boolean): string;
 begin
-  Result := Limbs2Hex(FLimbs, SizeOf(TUInt128) * 2, aShowRadix);
+  Result := Val2Hex(FLimbs, SizeOf(TUInt128) * 2, aShowRadix);
 end;
 
 { TInt128 }
@@ -4155,19 +4153,19 @@ function TInt128.ToString: string;
 begin
   if IsZero then
     exit('0');
-  Result := TUInt128.Limbs2Str(AbsValue.FLimbs);
+  Result := TUInt128.Val2Str(AbsValue.FLimbs);
   if HiLimbMacro and SIGN_FLAG <> 0 then
     System.Insert('-', Result, 1);
 end;
 
 function TInt128.ToHexString(aMinDigits: Integer; aShowRadix: Boolean): string;
 begin
-  Result := TUInt128.Limbs2Hex(GetNormLimbs, aMinDigits, aShowRadix);
+  Result := TUInt128.Val2Hex(GetNormLimbs, aMinDigits, aShowRadix);
 end;
 
 function TInt128.ToHexString(aShowRadix: Boolean): string;
 begin
-  Result := TUInt128.Limbs2Hex(GetNormLimbs, SizeOf(TInt128) * 2, aShowRadix);
+  Result := TUInt128.Val2Hex(GetNormLimbs, SizeOf(TInt128) * 2, aShowRadix);
 end;
 
 end.
