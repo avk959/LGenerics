@@ -3807,14 +3807,10 @@ end;
 class operator TInt128.:=(const aValue: Integer): TInt128;
 begin
   if aValue > 0 then
-    TUInt128(Result).Encode(aValue, 0)
+    TUInt128(Result) := TUInt128.Encode(aValue, 0, 0, 0)
   else
     if aValue < 0 then
-{$IFDEF USE_LIMB64}
-      TUInt128(Result).Encode(-TLimb(aValue), SIGN_FLAG)
-{$ELSE USE_LIMB64}
-      TUInt128(Result).Encode(-TLimb(aValue), 0, 0, SIGN_FLAG)
-{$ENDIF USE_LIMB64}
+      TUInt128(Result) := TUInt128.Encode(-DWord(aValue), 0, 0, $80000000)
     else
       Result := Default(TInt128);
 end;
@@ -4218,11 +4214,14 @@ begin
 end;
 
 function TInt128.ToString: string;
+var
+  tmp: TInt128;
 begin
   if IsZero then
     exit('0');
-  Result := TUInt128.Val2Str(AbsValue.FLimbs);
-  if HiLimbMacro and SIGN_FLAG <> 0 then
+  tmp := AbsValue;
+  Result := TUInt128.Val2Str(tmp.FLimbs);
+  if Self.HiLimbMacro and SIGN_FLAG <> 0 then
     System.Insert('-', Result, 1);
 end;
 
