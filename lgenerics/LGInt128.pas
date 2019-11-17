@@ -4214,13 +4214,10 @@ begin
 end;
 
 function TInt128.ToString: string;
-var
-  tmp: TInt128;
 begin
   if IsZero then
     exit('0');
-  tmp := AbsValue;
-  Result := TUInt128.Val2Str(tmp.FLimbs);
+  Result := TUInt128.Val2Str(AbsValue.FLimbs);
   if Self.HiLimbMacro and SIGN_FLAG <> 0 then
     System.Insert('-', Result, 1);
 end;
