@@ -97,7 +97,9 @@ type
     { simple schoolbook multiplication }
     class function  DoMul(a, b, p: PLimb): TLimb; static;
     class function  DoMulShort(a: PLimb; b: TLimb; p: PLimb): TLimb; static;
+    { does not supports same a and r }
     class function  BitShiftLeft(a, r: PLimb; aDist: Integer): TLimb; static;
+    { does not supports same a and r }
     class function  BitShiftRight(a, r: PLimb; aDist: Integer): TLimb; static;
     { DEK's schoolbook division algorithm }
     class procedure DoDiv(r, d, q: PLimb); static;
