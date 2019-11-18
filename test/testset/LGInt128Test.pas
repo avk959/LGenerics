@@ -34,6 +34,17 @@ type
     procedure DecValue;
     procedure ShiftLeft;
     procedure ShiftRight;
+    procedure NotValue;
+    procedure AndValue;
+    procedure AndDWord;
+    procedure OrValue;
+    procedure OrDWord;
+    procedure XorValue;
+    procedure XorDWord;
+    procedure AddValue;
+    procedure AddDWord;
+    procedure SubValue;
+    procedure SubDWord;
   end;
 
 implementation
@@ -451,6 +462,7 @@ var
   J: Integer;
 begin
   I := TUInt128(1) shl 127;
+  AssertTrue(I.ToHexString = '80000000000000000000000000000000');
   AssertTrue(I shr 0 = I);
   AssertTrue(I shr BitSizeOf(I) = I);
   Expect := 0;
@@ -460,6 +472,155 @@ begin
       AssertTrue(I shr J = Expect);
       Expect.Bits[Pred(BitSizeOf(I)) - J] := False;
     end;
+end;
+
+procedure TUInt128Test.NotValue;
+var
+  I: TUInt128;
+begin
+  I := not Default(TUInt128);
+  AssertTrue(I = I.MaxValue);
+  I := not I;
+  AssertTrue(I.IsZero);
+
+  I := not I.Encode(1, 0, 0, $80000000);
+  AssertTrue((I.DWords[0] = $fffffffe) and (I.DWords[1] = High(DWord)) and
+             (I.DWords[2] = High(DWord)) and (I.DWords[3] = $7fffffff));
+  I := not I;
+  AssertTrue((I.DWords[0] = 1) and (I.DWords[1] = 0) and
+             (I.DWords[2] = 0) and (I.DWords[3] = $80000000));
+end;
+
+procedure TUInt128Test.AndValue;
+var
+  I, J: TUInt128;
+begin
+  I := I.MaxValue and Default(TUInt128);
+  AssertTrue(I.IsZero);
+  J := 1;
+  AssertTrue(I.MaxValue and J = J);
+  J := J shl 127;
+  AssertTrue(I.MaxValue and J = J);
+  AssertTrue(TUInt128(1) and J = 0);
+end;
+
+procedure TUInt128Test.AndDWord;
+var
+  I: TUInt128;
+  d: DWord;
+begin
+  d := 0;
+  AssertTrue(I.MaxValue and d = 0);
+  d := 1;
+  AssertTrue(I.MaxValue and d = 1);
+  d := High(DWord);
+  AssertTrue(I.MaxValue and d = High(DWord));
+  I := Default(TUInt128);
+  AssertTrue(I and d = 0);
+end;
+
+procedure TUInt128Test.OrValue;
+var
+  I: TUInt128;
+begin
+  AssertTrue(I.MaxValue or Default(TUInt128) = I.MaxValue);
+  AssertTrue(TUInt128(1) or Default(TUInt128) = 1);
+  I := TUInt128(1) shl 127;
+  AssertTrue(I or Default(TUInt128) = I);
+end;
+
+procedure TUInt128Test.OrDWord;
+var
+  I: TUInt128;
+  d: DWord = 0;
+begin
+  AssertTrue(I.MaxValue or d = I.MaxValue);
+  d := 1;
+  AssertTrue(Default(TUInt128) or d = 1);
+  d := High(DWord);
+  AssertTrue(Default(TUInt128) or d = d);
+end;
+
+procedure TUInt128Test.XorValue;
+var
+  I, J, ExpectI, ExpectJ: TUInt128;
+begin
+  AssertTrue(I.MaxValue xor Default(TUInt128) = I.MaxValue);
+  AssertTrue(I.MaxValue xor I.MaxValue = 0);
+
+  I := 1;
+  AssertTrue(I xor Default(TUInt128) = 1);
+  AssertTrue(I xor I = 0);
+
+  ExpectI := TUInt128.Encode(1, 1, 1, 1);
+  ExpectJ := TUInt128.Encode(1000, 10, 10000, 100);
+  I := ExpectJ;
+  J := ExpectI;
+  I := I xor J;
+  J := I xor J;
+  I := I xor J;
+  AssertTrue(I = ExpectI);
+  AssertTrue(J = ExpectJ);
+end;
+
+procedure TUInt128Test.XorDWord;
+var
+  I: TUInt128;
+  d: DWord = 0;
+begin
+  AssertTrue(I.MaxValue xor d = I.MaxValue);
+  d := 1;
+  AssertTrue(Default(TUInt128) xor d = 1);
+  d := High(DWord);
+  AssertTrue(I.MaxValue xor d = I.Encode(0, High(DWord), High(DWord), High(DWord)));
+end;
+
+procedure TUInt128Test.AddValue;
+var
+  I: TUInt128;
+begin
+  AssertTrue(Default(TUInt128) + Default(TUInt128) = Default(TUInt128));
+  AssertTrue(Default(TUInt128) + TUInt128(1) = 1);
+  AssertTrue(TUInt128(1) + TUInt128(1) = 2);
+  I := TUInt128.Encode(High(QWord), 0);
+  AssertTrue(I + I = TUInt128.Encode(High(QWord) - 1, 1));
+  I := TUInt128.MaxValue;
+  AssertTrue(I + I = TUInt128.Encode(High(QWord) - 1, High(QWord)));
+  AssertTrue(I + I + TUInt128(2) = 0);
+end;
+
+procedure TUInt128Test.AddDWord;
+var
+  d: DWord = 0;
+begin
+  AssertTrue(Default(TUInt128) + d = Default(TUInt128));
+  d := 1;
+  AssertTrue(Default(TUInt128) + d = 1);
+  d := High(DWord);
+  AssertTrue(Default(TUInt128) + d = High(DWord));
+  AssertTrue(TUInt128(1) + d = TUInt128.Encode(0, 1, 0, 0));
+end;
+
+procedure TUInt128Test.SubValue;
+begin
+  AssertTrue(Default(TUInt128) - Default(TUInt128) = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue - Default(TUInt128) = TUInt128.MaxValue);
+  AssertTrue(TUInt128.MaxValue - TUInt128.MaxValue = 0);
+  AssertTrue(Default(TUInt128) - TUInt128.MaxValue = 1);
+  AssertTrue(TUInt128.MaxValue - TUInt128.Encode(High(QWord), 0) = TUInt128.Encode(0, High(QWord)));
+end;
+
+procedure TUInt128Test.SubDWord;
+var
+  d: DWord = 0;
+begin
+  AssertTrue(Default(TUInt128) - d = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue - d = TUInt128.MaxValue);
+  d := 1;
+  AssertTrue(TUInt128(1) - d = 0);
+  AssertTrue(Default(TUInt128) - d = TUInt128.MaxValue);
+  d := High(DWord);
+  AssertTrue(TUInt128.MaxValue - d = TUInt128.Encode(0, High(DWord), High(DWord), High(DWord)));
 end;
 
 
