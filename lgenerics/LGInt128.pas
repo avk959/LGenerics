@@ -97,10 +97,14 @@ type
     { simple schoolbook multiplication }
     class function  DoMul(a, b, p: PLimb): TLimb; static;
     class function  DoMulShort(a: PLimb; b: TLimb; p: PLimb): TLimb; static;
+    { does not supports same a and r; does not checks if aDist < BIT_PER_LIMB }
+    class function  ShortBitShiftLeft(a, r: PLimb; aDist: Integer): TLimb; static;
+    { does not supports same a and r; does not checks if aDist < BIT_PER_LIMB }
+    class procedure ShortBitShiftRight(a, r: PLimb; aDist: Integer); static;
     { does not supports same a and r }
-    class function  BitShiftLeft(a, r: PLimb; aDist: Integer): TLimb; static;
+    class procedure BitShiftLeft(a, r: PLimb; aDist: Integer); static;
     { does not supports same a and r }
-    class function  BitShiftRight(a, r: PLimb; aDist: Integer): TLimb; static;
+    class procedure BitShiftRight(a, r: PLimb; aDist: Integer); static;
     { DEK's schoolbook division algorithm }
     class procedure DoDiv(r, d, q: PLimb); static;
     class procedure Divide(const a, d: TUInt128; dMsLimbIdx: Integer; out q, r: TUInt128); static;
@@ -551,13 +555,13 @@ begin
   brw := TLimb(a[0] <> 0);
   n[0] := -a[0];
 
-  v := a[1];
-  n[1] := -v - brw;
-  brw := TLimb(v <> 0);
+  v := -a[1];
+  n[1] := v - brw;
+  brw := TLimb(n[1] > v) or TLimb(v <> 0);
 
-  v := a[2];
-  n[2] := -v - brw;
-  brw := TLimb(v <> 0);
+  v := -a[2];
+  n[2] := v - brw;
+  brw := TLimb(n[1] > v) or TLimb(v <> 0);
 
   n[3] := -a[3] - brw;
 end;
@@ -1261,61 +1265,85 @@ begin
 end;
 {$ENDIF CPU_INTEL}
 
-class function TUInt128.BitShiftLeft(a, r: PLimb; aDist: Integer): TLimb;
+class function TUInt128.ShortBitShiftLeft(a, r: PLimb; aDist: Integer): TLimb;
+begin
+  if aDist = 0 then
+    begin
+      PUInt128(r)^ := PUInt128(a)^;
+      exit(0);
+    end;
+{$IFDEF USE_LIMB64}
+  r[0] := a[0] shl aDist;
+  r[1] := a[1] shl aDist or a[0] shr (BIT_PER_LIMB - aDist);
+  Result := a[1] shr (BIT_PER_LIMB - aDist);
+{$ELSE USE_LIMB64}
+  r[0] := a[0] shl aDist;
+  r[1] := a[1] shl aDist or a[0] shr (BIT_PER_LIMB - aDist);
+  r[2] := a[2] shl aDist or a[1] shr (BIT_PER_LIMB - aDist);
+  r[3] := a[3] shl aDist or a[2] shr (BIT_PER_LIMB - aDist);
+  Result := a[3] shr (BIT_PER_LIMB - aDist);
+{$ENDIF USE_LIMB64}
+end;
+
+class procedure TUInt128.ShortBitShiftRight(a, r: PLimb; aDist: Integer);
+begin
+  if aDist = 0 then
+    begin
+      PUInt128(r)^ := PUInt128(a)^;
+      exit;
+    end;
+{$IFDEF USE_LIMB64}
+  r[1] := a[1] shr aDist;
+  r[0] := a[0] shr aDist or a[1] shl (BIT_PER_LIMB - aDist);
+{$ELSE USE_LIMB64}
+  r[3] := a[3] shr aDist;
+  r[2] := a[2] shr aDist or a[3] shl (BIT_PER_LIMB - aDist);
+  r[1] := a[1] shr aDist or a[2] shl (BIT_PER_LIMB - aDist);
+  r[0] := a[0] shr aDist or a[1] shl (BIT_PER_LIMB - aDist);
+{$ENDIF USE_LIMB64}
+end;
+
+class procedure TUInt128.BitShiftLeft(a, r: PLimb; aDist: Integer);
 var
   BitDist: Integer;
-  c: TLimb;
-begin  //todo: asm implementation ?
+begin
   BitDist := aDist and LIMB_BITSIZE_MASK;
   aDist := aDist shr LIMB_SIZE_LOG;
-  Result := 0;
 {$IFDEF USE_LIMB64}
   case aDist of
     0:
       begin
         r[0] := a[0] shl BitDist;
-        c := a[0] shr (BIT_PER_LIMB - BitDist);
-        r[1] := a[1] shl BitDist or c;
-        Result := a[1] shr (BIT_PER_LIMB - BitDist);
+        r[1] := a[1] shl BitDist or a[0] shr (BIT_PER_LIMB - BitDist);
       end;
     1:
       if BitDist <> 0 then
         begin
           r[0] := 0;
           r[1] := a[0] shl BitDist;
-          Result := a[0] shr (BIT_PER_LIMB - BitDist);
         end
       else
         begin
           r[0] := 0;
           r[1] := a[0];
-          Result := 0;
-        end
-  else
+        end;
   end;
 {$ELSE USE_LIMB64}
   case aDist of
     0:
       begin
         r[0] := a[0] shl BitDist;
-        c := a[0] shr (BIT_PER_LIMB - BitDist);
-        r[1] := a[1] shl BitDist or c;
-        c := a[1] shr (BIT_PER_LIMB - BitDist);
-        r[2] := a[2] shl BitDist or c;
-        c := a[2] shr (BIT_PER_LIMB - BitDist);
-        r[3] := a[3] shl BitDist or c;
-        Result := a[3] shr (BIT_PER_LIMB - BitDist);
+        r[1] := a[1] shl BitDist or a[0] shr (BIT_PER_LIMB - BitDist);
+        r[2] := a[2] shl BitDist or a[1] shr (BIT_PER_LIMB - BitDist);
+        r[3] := a[3] shl BitDist or a[2] shr (BIT_PER_LIMB - BitDist);
       end;
     1:
       if BitDist <> 0 then
         begin
           r[0] := 0;
           r[1] := a[0] shl BitDist;
-          c := a[0] shr (BIT_PER_LIMB - BitDist);
-          r[2] := a[1] shl BitDist or c;
-          c := a[1] shr (BIT_PER_LIMB - BitDist);
-          r[3] := a[2] shl BitDist or c;
-          Result := a[2] shr (BIT_PER_LIMB - BitDist);
+          r[2] := a[1] shl BitDist or a[0] shr (BIT_PER_LIMB - BitDist);
+          r[3] := a[2] shl BitDist or a[1] shr (BIT_PER_LIMB - BitDist);
         end
       else
         begin
@@ -1323,7 +1351,6 @@ begin  //todo: asm implementation ?
           r[1] := a[0];
           r[2] := a[1];
           r[3] := a[2];
-          Result := 0;
         end;
     2:
       if BitDist <> 0 then
@@ -1331,9 +1358,7 @@ begin  //todo: asm implementation ?
           r[0] := 0;
           r[1] := 0;
           r[2] := a[0] shl BitDist;
-          c := a[0] shr (BIT_PER_LIMB - BitDist);
-          r[3] := a[1] shl BitDist or c;
-          Result := a[1] shr (BIT_PER_LIMB - BitDist);
+          r[3] := a[1] shl BitDist or a[0] shr (BIT_PER_LIMB - BitDist);
         end
       else
         begin
@@ -1341,7 +1366,6 @@ begin  //todo: asm implementation ?
           r[1] := 0;
           r[2] := a[0];
           r[3] := a[1];
-          Result := 0;
         end;
     3:
       if BitDist <> 0 then
@@ -1350,7 +1374,6 @@ begin  //todo: asm implementation ?
           r[1] := 0;
           r[2] := 0;
           r[3] := a[0] shl BitDist;
-          Result := a[0] shr (BIT_PER_LIMB - BitDist);
         end
       else
         begin
@@ -1358,68 +1381,52 @@ begin  //todo: asm implementation ?
           r[1] := 0;
           r[2] := 0;
           r[3] := a[0];
-          Result := 0;
         end
-  else
   end;
 {$ENDIF USE_LIMB64}
 end;
 
-class function TUInt128.BitShiftRight(a, r: PLimb; aDist: Integer): TLimb;
+class procedure TUInt128.BitShiftRight(a, r: PLimb; aDist: Integer);
 var
   BitDist: Integer;
-  c: TLimb;
-begin  //todo: asm implementation ?
+begin
   BitDist := aDist and LIMB_BITSIZE_MASK;
   aDist := aDist shr LIMB_SIZE_LOG;
-  Result := 0;
 {$IFDEF USE_LIMB64}
   case aDist of
     0:
       begin
         r[1] := a[1] shr BitDist;
-        c := a[1] shl (BIT_PER_LIMB - BitDist);
-        r[0] := a[0] shr BitDist or c;
-        Result := a[0] shl (BIT_PER_LIMB - BitDist);
+        r[0] := a[0] shr BitDist or a[1] shl (BIT_PER_LIMB - BitDist);
       end;
     1:
       if BitDist <> 0 then
         begin
           r[1] := 0;
           r[0] := a[1] shr BitDist;
-          Result := a[1] shl (BIT_PER_LIMB - BitDist);
         end
       else
         begin
           r[0] := a[1];
           r[1] := 0;
-          Result := 0;
-        end
-  else
+        end;
   end;
 {$ELSE USE_LIMB64}
   case aDist of
     0:
       begin
         r[3] := a[3] shr BitDist;
-        c := a[3] shl (BIT_PER_LIMB - BitDist);
-        r[2] := a[2] shr BitDist or c;
-        c := a[2] shl (BIT_PER_LIMB - BitDist);
-        r[1] := a[1] shr BitDist or c;
-        c := a[1] shl (BIT_PER_LIMB - BitDist);
-        r[0] := a[0] shr BitDist or c;
-        Result := a[0] shl (BIT_PER_LIMB - BitDist);
+        r[2] := a[2] shr BitDist or a[3] shl (BIT_PER_LIMB - BitDist);
+        r[1] := a[1] shr BitDist or a[2] shl (BIT_PER_LIMB - BitDist);
+        r[0] := a[0] shr BitDist or a[1] shl (BIT_PER_LIMB - BitDist);
       end;
     1:
       if BitDist <> 0 then
         begin
           r[3] := 0;
           r[2] := a[3] shr BitDist;
-          c := a[3] shl (BIT_PER_LIMB - BitDist);
-          r[1] := a[2] shr BitDist or c;
-          c := a[2] shl (BIT_PER_LIMB - BitDist);
-          r[0] := a[1] shr BitDist or c;
-          Result := a[1] shl (BIT_PER_LIMB - BitDist);
+          r[1] := a[2] shr BitDist or a[3] shl (BIT_PER_LIMB - BitDist);
+          r[0] := a[1] shr BitDist or a[2] shl (BIT_PER_LIMB - BitDist);
         end
       else
         begin
@@ -1427,7 +1434,6 @@ begin  //todo: asm implementation ?
           r[1] := a[2];
           r[2] := a[3];
           r[3] := 0;
-          Result := 0;
         end;
     2:
       if BitDist <> 0 then
@@ -1435,9 +1441,7 @@ begin  //todo: asm implementation ?
           r[3] := 0;
           r[2] := 0;
           r[1] := a[3] shr BitDist;
-          c := a[3] shl (BIT_PER_LIMB - BitDist);
-          r[0] := a[2] shr BitDist or c;
-          Result := a[2] shl (BIT_PER_LIMB - BitDist);
+          r[0] := a[2] shr BitDist or a[3] shl (BIT_PER_LIMB - BitDist);
         end
       else
         begin
@@ -1445,7 +1449,6 @@ begin  //todo: asm implementation ?
           r[1] := a[3];
           r[2] := 0;
           r[3] := 0;
-          Result := 0;
         end;
     3:
       if BitDist <> 0 then
@@ -1454,7 +1457,6 @@ begin  //todo: asm implementation ?
           r[2] := 0;
           r[1] := 0;
           r[0] := a[3] shr BitDist;
-          Result := a[3] shl (BIT_PER_LIMB - BitDist);
         end
       else
         begin
@@ -1462,9 +1464,7 @@ begin  //todo: asm implementation ?
           r[1] := 0;
           r[2] := 0;
           r[3] := 0;
-          Result := 0;
-        end
-  else
+        end;
   end;
 {$ENDIF USE_LIMB64}
 end;
@@ -1830,13 +1830,13 @@ var
 begin
   //normalization
   Shift := NlzLimb(d.FLimbs[dMsLimbIdx]);
-  BitShiftLeft(@d, @tD, Shift);
-  tR[LIMB_PER_VALUE] := BitShiftLeft(@a, @tR, Shift);
+  ShortBitShiftLeft(@d, @tD, Shift);
+  tR[LIMB_PER_VALUE] := ShortBitShiftLeft(@a, @tR, Shift);
   ///////////////////
   q := Default(TUInt128);
   q.FLimbs[0] := Succ(dMsLimbIdx);
   DoDiv(@tR, @tD, @q);
-  BitShiftRight(@tR, @r, Shift);
+  ShortBitShiftRight(@tR, @r, Shift);
 end;
 
 class procedure TUInt128.DivQ(const a, d: TUInt128; dMsLimbIdx: Integer; out q: TUInt128);
@@ -1847,8 +1847,8 @@ var
 begin
   //normalization
   Shift := NlzLimb(d.FLimbs[dMsLimbIdx]);
-  BitShiftLeft(@d, @tD, Shift);
-  tR[LIMB_PER_VALUE] := BitShiftLeft(@a, @tR, Shift);
+  ShortBitShiftLeft(@d, @tD, Shift);
+  tR[LIMB_PER_VALUE] := ShortBitShiftLeft(@a, @tR, Shift);
   ///////////////////
   q := Default(TUInt128);
   q.FLimbs[0] := Succ(dMsLimbIdx);
@@ -1863,12 +1863,12 @@ var
 begin
   //normalization
   Shift := NlzLimb(d.FLimbs[dMsLimbIdx]);
-  BitShiftLeft(@d, @tD, Shift);
-  tR[LIMB_PER_VALUE] := BitShiftLeft(@a, @tR, Shift);
+  ShortBitShiftLeft(@d, @tD, Shift);
+  tR[LIMB_PER_VALUE] := ShortBitShiftLeft(@a, @tR, Shift);
   ///////////////////
   q[0] := Succ(dMsLimbIdx);
   DoDiv(@tR, @tD, @q);
-  BitShiftRight(@tR, @r, Shift);
+  ShortBitShiftRight(@tR, @r, Shift);
 end;
 
 class function TUInt128.DoDivShort(a: PLimb; d: TLimb; q: PLimb): TLimb;
