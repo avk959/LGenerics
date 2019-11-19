@@ -45,6 +45,15 @@ type
     procedure AddDWord;
     procedure SubValue;
     procedure SubDWord;
+    procedure UnaryMinus;
+    procedure MulValue;
+    procedure MulDWord;
+    procedure DivValue;
+    procedure DivDWord;
+    procedure ModValue;
+    procedure ModDWord;
+    procedure DivRemValue;
+    procedure DivRemDWord;
   end;
 
 implementation
@@ -621,6 +630,184 @@ begin
   AssertTrue(Default(TUInt128) - d = TUInt128.MaxValue);
   d := High(DWord);
   AssertTrue(TUInt128.MaxValue - d = TUInt128.Encode(0, High(DWord), High(DWord), High(DWord)));
+end;
+
+procedure TUInt128Test.UnaryMinus;
+var
+  I: TUInt128;
+begin
+  AssertTrue(-Default(TUInt128) = Default(TUInt128));
+  AssertTrue(-TUInt128.MaxValue = 1);
+  I := I.Encode(100, 10, 1, 3);
+  AssertTrue(-I = Default(TUInt128) - I);
+  AssertTrue(-(-I) = I);
+end;
+
+procedure TUInt128Test.MulValue;
+var
+  a, b, p: TUInt128;
+begin
+  AssertTrue(Default(TUInt128) * Default(TUInt128) = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue * Default(TUInt128) = Default(TUInt128));
+  AssertTrue(Default(TUInt128) * TUInt128.MaxValue = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue * TUInt128(1) = TUInt128.MaxValue);
+  AssertTrue(TUInt128(1) * TUInt128.MaxValue = TUInt128.MaxValue);
+  a := '$123456789abcdef';
+  b := 'x10000000000000000';
+  p := '0x123456789abcdef0000000000000000';
+  AssertTrue(a * b = p);
+  a := '17293822565881444215';
+  b := '1387108685230112567';
+  p := '23988411481962661854847013020980949905';
+  AssertTrue(a * b = p);
+end;
+
+procedure TUInt128Test.MulDWord;
+var
+  a, p: TUInt128;
+  d: DWord = 0;
+begin
+  AssertTrue(Default(TUInt128) * d = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue * d = Default(TUInt128));
+  d := 1;
+  AssertTrue(Default(TUInt128) * d = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue * d = TUInt128.MaxValue);
+  a := '$123456789abcdef123456';
+  d := $10000000;
+  p := '$123456789abcdef1234560000000';
+  AssertTrue(a * d = p);
+end;
+
+procedure TUInt128Test.DivValue;
+var
+  a, d, q: TUInt128;
+  raised: Boolean = False;
+begin
+  a := 1;
+  d := Default(TUInt128);
+  try
+    a := a div d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  AssertTrue(Default(TUInt128) div TUInt128.MaxValue = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue div TUInt128(1) = TUInt128.MaxValue);
+  a := '23988411481962661854847013020980949995';
+  AssertTrue(a div TUInt128(1) = a);
+  AssertTrue(a div a = 1);
+
+  a := '0x123456789abcdef123456789abcdef0';
+  d := 'x10000000000000000';
+  q := '$123456789abcdef';
+  AssertTrue(a div d = q);
+
+  a := '23988411481962661854847013020980949995';
+  d := '17293822565881444215';
+  q := '1387108685230112567';
+  AssertTrue(a div d = q);
+end;
+
+procedure TUInt128Test.DivDWord;
+var
+  a, q: TUInt128;
+  d: DWord = 0;
+  raised: Boolean = False;
+begin
+  a := 1;
+  try
+    a := a div d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  d := 1;
+  AssertTrue(Default(TUInt128) div d = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue div d = TUInt128.MaxValue);
+  a := '23988411481962661854847013020980949995';
+  AssertTrue(a div d = a);
+
+  a := '$123456789abcdef123456789abcdef0';
+  d := $10000000;
+  q := '$123456789abcdef123456789';
+  AssertTrue(a div d = q);
+end;
+
+procedure TUInt128Test.ModValue;
+var
+  a, d, r: TUInt128;
+  raised: Boolean = False;
+begin
+  a := 1;
+  d := Default(TUInt128);
+  try
+    a := a mod d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  AssertTrue(Default(TUInt128) mod TUInt128.MaxValue = Default(TUInt128));
+  AssertTrue(TUInt128.MaxValue mod TUInt128(1) = Default(TUInt128));
+  a := '0x123456789abcdef123456789abcdefe7';
+  d := 'x1000000000000000000';
+  r := 'xf123456789abcdefe7';
+  AssertTrue(a mod d = r);
+  AssertTrue(a mod a = 0);
+
+  a := '85070591730234615865843651857942050679';
+  d := '90670358808300873580343';
+  r := '75000038304000606409340';
+  AssertTrue(a mod d = r);
+end;
+
+procedure TUInt128Test.ModDWord;
+var
+  a: TUInt128;
+  d: DWord = 0;
+  raised: Boolean = False;
+begin
+  a := 1;
+  d := 0;
+  try
+    a := a mod d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  d := 1;
+  AssertTrue(TUInt128.MaxValue mod TUInt128(1) = 0);
+  a := '0x123456789abcdef123456789abcdefe7';
+  d := $10000000;
+  AssertTrue(a mod d = $bcdefe7);
+end;
+
+procedure TUInt128Test.DivRemValue;
+var
+  a, d, q, r: TUInt128;
+begin
+  a := '85070591730234615865843651857942050679';
+  d := '90670358808300873580343';
+  TUInt128.DivRem(a, d, q, r);
+  AssertTrue(q = TUInt128('938240378094173'));
+  AssertTrue(r = TUInt128('75000038304000606409340'));
+  AssertTrue(q * d + r = a);
+end;
+
+procedure TUInt128Test.DivRemDWord;
+var
+  a, q: TUInt128;
+  d, r: DWord;
+begin
+  a := '85070591730234615865843651857942050679';
+  d := 3147295697;
+  r := TUInt128.DivRem(a, d, q);
+  AssertTrue(q = TUInt128('27029742331273112615272530542'));
+  AssertTrue(r = 804372905);
+  AssertTrue(q * d + r = a);
 end;
 
 
