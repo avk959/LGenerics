@@ -4085,13 +4085,23 @@ var
   IsNeg: Boolean = False;
   sCopy: string;
 begin
-  sCopy := s;
-  IsNeg := sCopy[1] = '-';
-  if IsNeg then
-    sCopy := System.Copy(sCopy, 2, System.Length(sCopy));
-  Result := TUInt128.TryParseStr(sCopy, aValue.FLimbs);
-  if Result and IsNeg then
-    aValue.HiLimbMacro := aValue.HiLimbMacro or SIGN_FLAG;
+  if s <> '' then
+    begin
+    sCopy := s;
+    IsNeg := sCopy[1] = '-';
+    if IsNeg then
+      sCopy := System.Copy(sCopy, 2, System.Length(sCopy));
+    if TUInt128.TryParseStr(sCopy, aValue.FLimbs) then
+      begin
+        if aValue.HiLimbMacro and SIGN_FLAG = 0 then
+          begin
+            if IsNeg then
+              aValue.HiLimbMacro := aValue.HiLimbMacro or SIGN_FLAG;
+            exit(True);
+          end;
+      end;
+    end;
+  Result := False;
 end;
 
 class function TInt128.Compare(const L, R: TInt128): SizeInt;
