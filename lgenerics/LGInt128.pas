@@ -4054,12 +4054,12 @@ end;
 
 class function TInt128.Encode(aLo, aHi: QWord): TInt128;
 begin
-  TUInt128(Result).Encode(aLo, aHi);
+  Result := TInt128(TUInt128.Encode(aLo, aHi));
 end;
 
 class function TInt128.Encode(v0, v1, v2, v3: DWord): TInt128;
 begin
-  TUInt128(Result).Encode(v0, v1, v2, v3);
+  Result := TInt128(TUInt128.Encode(v0, v1, v2, v3));
 end;
 
 class function TInt128.Random: TInt128;
