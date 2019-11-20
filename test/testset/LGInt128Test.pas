@@ -56,6 +56,25 @@ type
     procedure DivRemDWord;
   end;
 
+  { TInt128Test }
+
+  TInt128Test = class(TTestCase)
+  published
+    procedure Lo_Hi;
+    procedure IsZero;
+    procedure SetZero;
+    procedure IsNegative;
+    procedure IsPositive;
+    procedure Sign;
+    procedure Negate;
+    procedure IsOdd;
+    procedure BitLength;
+    procedure AbsValue;
+    procedure ToStringTest;
+    procedure ToHexString;
+    procedure TryParse;
+  end;
+
 implementation
 
 procedure TUInt128Test.Lo_Hi;
@@ -810,11 +829,256 @@ begin
   AssertTrue(q * d + r = a);
 end;
 
+{ TInt128Test }
 
+procedure TInt128Test.Lo_Hi;
+var
+  I: TInt128;
+begin
+  {%H-}I.DWords[0] := $11111111;
+  I.DWords[1] := $22222222;
+  I.DWords[2] := $33333333;
+  I.DWords[3] := $44444444;
+  AssertTrue(I.Lo = $2222222211111111);
+  AssertTrue(I.Hi = $4444444433333333);
+end;
+
+procedure TInt128Test.IsZero;
+var
+  I: TInt128;
+  J: Integer;
+begin
+  I := Default(TInt128);
+  for J := 0 to Pred(SizeOf(I)) do
+    begin
+      AssertTrue(I.IsZero);
+      I.Bytes[J] := 1;
+      AssertFalse(I.IsZero);
+      I.Bytes[J] := 0;
+    end;
+  I.Bits[127] := True;
+  AssertTrue(I.IsZero);
+end;
+
+procedure TInt128Test.SetZero;
+var
+  I: TInt128;
+  J: Integer;
+begin
+  FillChar(I{%H-}, SizeOf(I), $ff);
+  AssertFalse(I.IsZero);
+  I.SetZero;
+  for J := 0 to 3 do
+    AssertTrue(I.DWords[J] = 0);
+  AssertTrue(I.IsZero);
+end;
+
+procedure TInt128Test.IsNegative;
+var
+  I: TInt128;
+begin
+  I := Default(TInt128);
+  AssertFalse(I.IsNegative);
+  I.Bits[127] := True;
+  AssertFalse(I.IsNegative);
+  I.Bits[0] := True;
+  AssertTrue(I.IsNegative);
+  I.Bits[127] := False;
+  AssertFalse(I.IsNegative);
+end;
+
+procedure TInt128Test.IsPositive;
+var
+  I: TInt128;
+begin
+  I := Default(TInt128);
+  AssertFalse(I.IsPositive);
+  I.Bits[127] := True;
+  AssertFalse(I.IsPositive);
+  I.Bits[0] := True;
+  AssertFalse(I.IsPositive);
+  I.Bits[127] := False;
+  AssertTrue(I.IsPositive);
+end;
+
+procedure TInt128Test.Sign;
+var
+  I: TInt128;
+begin
+  I := Default(TInt128);
+  AssertTrue(I.Sign = 0);
+  I.Bits[127] := True;
+  AssertTrue(I.Sign = 0);
+  I.Bits[0] := True;
+  AssertTrue(I.Sign = -1);
+  I.Bits[127] := False;
+  AssertTrue(I.Sign = 1);
+end;
+
+procedure TInt128Test.Negate;
+var
+  I: TInt128;
+begin
+  I := Default(TInt128);
+  AssertTrue(I.IsZero);
+  I.Negate;
+  AssertTrue(I.IsZero);
+  I := TInt128.Encode(1, 0);
+  AssertTrue(I.IsPositive);
+  AssertFalse(I.IsNegative);
+  I.Negate;
+  AssertFalse(I.IsPositive);
+  AssertTrue(I.IsNegative);
+  I.Negate;
+  AssertTrue(I.IsPositive);
+  AssertFalse(I.IsNegative);
+end;
+
+procedure TInt128Test.IsOdd;
+var
+  I: TInt128;
+begin
+  I := Default(TInt128);
+  AssertFalse(I.IsOdd);
+  I.DWords[0] := 5;
+  AssertTrue(I.IsOdd);
+  I.Negate;
+  AssertTrue(I.IsOdd);
+  I.DWords[0] := 8;
+  AssertFalse(I.IsOdd);
+  I.Negate;
+  AssertFalse(I.IsOdd);
+end;
+
+procedure TInt128Test.BitLength;
+var
+  I: TInt128;
+  J: Integer;
+begin
+  I := Default(TInt128);
+  AssertTrue(I.BitLength = 0);
+  for J := 0 to Pred(BitSizeOf(I)) do
+    begin
+      I.Bits[J] := True;
+      AssertTrue(I.BitLength = Succ(J));
+      I.Bits[J] := False;
+    end;
+  I.Negate;
+  AssertTrue(I.BitLength = 128);
+  for J := 0 to Pred(BitSizeOf(I)) do
+    begin
+      I.Bits[J] := True;
+      AssertTrue(I.BitLength = 128);
+      I.Bits[J] := False;
+    end;
+end;
+
+procedure TInt128Test.AbsValue;
+var
+  I: TInt128;
+begin
+  I := Default(TInt128).AbsValue;
+  AssertTrue((I.DWords[0] = 0) and (I.DWords[1] = 0) and (I.DWords[2] = 0) and (I.DWords[3] = 0));
+  I := TInt128.Encode(1, 1, 1, $80000000);
+  AssertTrue(I.IsNegative);
+  I := I.AbsValue;
+  AssertTrue(I.IsPositive);
+  AssertTrue((I.DWords[0] = 1) and (I.DWords[1] = 1) and (I.DWords[2] = 1) and (I.DWords[3] = 0));
+end;
+
+procedure TInt128Test.ToStringTest;
+var
+  I: TInt128;
+begin
+  I := Default(TInt128);
+  AssertTrue(I.ToString = '0');
+
+  I := I.Encode(100, 0);
+  AssertTrue(I.ToString = '100');
+
+  I := I.Encode(Low(Int64));
+  AssertTrue(I.ToString = '-9223372036854775808');
+  I := I.MaxValue;
+  AssertTrue(I.ToString = '170141183460469231731687303715884105727');
+  I := I.MinValue;
+  AssertTrue(I.ToString = '-170141183460469231731687303715884105727');
+end;
+
+procedure TInt128Test.ToHexString;
+var
+  I: TInt128;
+begin
+  I := Default(TInt128);
+  AssertTrue(I.ToHexString = '00000000000000000000000000000000');
+  AssertTrue(I.ToHexString(True) = '$00000000000000000000000000000000');
+  AssertTrue(I.ToHexString(1) = '0');
+  AssertTrue(I.ToHexString(1, True) = '$0');
+  AssertTrue(I.ToHexString(7) = '0000000');
+  AssertTrue(I.ToHexString(40) = '0000000000000000000000000000000000000000');
+
+  I := I.Encode(High(QWord), 0);
+  AssertTrue(I.ToHexString = '0000000000000000FFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(1) = 'FFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(20) = '0000FFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(22, True) = '$000000FFFFFFFFFFFFFFFF');
+
+  I := I.MaxValue;
+  AssertTrue(I.ToHexString = '7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(True) = '$7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(22) = '7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(42, True) = '$00000000007FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+
+  I := I.MinValue;
+  AssertTrue(I.ToHexString = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(True) = '$FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(22) = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+  AssertTrue(I.ToHexString(42, True) = '$0000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+end;
+
+procedure TInt128Test.TryParse;
+var
+  I: TInt128;
+begin
+  AssertFalse(TInt128.TryParse('', I));
+  AssertFalse(TInt128.TryParse('0x', I));
+  AssertFalse(TInt128.TryParse('x', I));
+  AssertFalse(TInt128.TryParse('-x', I));
+  AssertFalse(TInt128.TryParse('-', I));
+  AssertFalse(TInt128.TryParse('0-', I));
+
+  AssertTrue(TInt128.TryParse('0', I));
+  AssertTrue(I.IsZero);
+
+  AssertTrue(TInt128.TryParse('-0', I));
+  AssertTrue(I.IsZero);
+
+  AssertTrue(TInt128.TryParse('110', I));
+  AssertTrue(I.ToString = '110');
+
+  AssertTrue(TInt128.TryParse('x11f', I));
+  AssertTrue(I.ToHexString(1) = '11F');
+  AssertTrue(TInt128.TryParse('0x11f', I));
+  AssertTrue(I.ToHexString(1) = '11F');
+  AssertTrue(TInt128.TryParse('0X11f', I));
+  AssertTrue(I.ToHexString(1) = '11F');
+
+
+  AssertTrue(TInt128.TryParse('18446744073709551615', I));
+  AssertTrue(I.ToString = '18446744073709551615');
+
+  AssertTrue(TInt128.TryParse('$ffffffffffffffff', I));
+  AssertTrue(I.ToHexString(1) = 'FFFFFFFFFFFFFFFF');
+
+  AssertTrue(TInt128.TryParse('-$ffffffffffffffff', I));
+  AssertTrue(I.ToHexString(1) = '8000000000000000FFFFFFFFFFFFFFFF');
+
+  AssertFalse(TInt128.TryParse('340282366920938463463374607431768211455', I));
+end;
 
 initialization
 
   RegisterTest(TUInt128Test);
+  RegisterTest(TInt128Test);
 
 end.
 
