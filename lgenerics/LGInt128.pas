@@ -3394,11 +3394,11 @@ begin
 
   v := -d[1];
   d[1] := v - b;
-  b := TLimb(v <> 0);
+  b := TLimb(v <> 0) or (TLimb(v > d[1]));
 
   v := -d[2];
   d[2] := v - b;
-  b := TLimb(v <> 0);
+  b := TLimb(v <> 0) or (TLimb(v > d[2]));
 
   d[3] := -d[3] - b;
   Result := 1;
