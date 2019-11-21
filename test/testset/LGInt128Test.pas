@@ -73,6 +73,19 @@ type
     procedure ToStringTest;
     procedure ToHexString;
     procedure TryParse;
+    procedure CompareValue;
+    procedure CompareInt;
+    procedure AssignInt;
+    procedure AssignString;
+    procedure AsString;
+    procedure IncValue;
+    procedure DecValue;
+    procedure ShiftLeft;
+    procedure ShiftRight;
+    procedure NotValue;
+    procedure AndValue;
+    procedure OrValue;
+    procedure XorValue;
   end;
 
 implementation
@@ -1073,6 +1086,373 @@ begin
   AssertTrue(I.ToHexString(1) = '8000000000000000FFFFFFFFFFFFFFFF');
 
   AssertFalse(TInt128.TryParse('340282366920938463463374607431768211455', I));
+end;
+
+procedure TInt128Test.CompareValue;
+var
+  I, J: TInt128;
+begin
+  I := Default(TInt128);
+  J := Default(TInt128);
+  AssertTrue(I = J);
+  AssertTrue(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertFalse(I < J);
+
+  I.Negate;
+  AssertTrue(I = J);
+  AssertTrue(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertFalse(I < J);
+
+
+  I := TInt128.Encode(1, 0);
+  AssertFalse(I = J);
+  AssertTrue(I >= J);
+  AssertTrue(I > J);
+  AssertFalse(I <= J);
+  AssertFalse(I < J);
+
+  I.Negate;
+  AssertFalse(I = J);
+  AssertFalse(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertTrue(I < J);
+
+  I.Negate;
+  J := TInt128.Encode(0, 1);
+  AssertFalse(I = J);
+  AssertFalse(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertTrue(I < J);
+
+  J.Negate;
+  AssertFalse(I = J);
+  AssertTrue(I >= J);
+  AssertTrue(I > J);
+  AssertFalse(I <= J);
+  AssertFalse(I < J);
+
+  I := TInt128.Encode(0, 1);
+  I.Negate;
+  AssertTrue(I = J);
+  AssertTrue(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertFalse(I < J);
+end;
+
+procedure TInt128Test.CompareInt;
+var
+  I: TInt128;
+  J: Integer;
+begin
+  I := Default(TInt128);
+  J := 0;
+  AssertTrue(I = J);
+  AssertTrue(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertFalse(I < J);
+
+  I.Negate;
+  AssertTrue(I = J);
+  AssertTrue(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertFalse(I < J);
+
+  I := TInt128.Encode(1, 0);
+  AssertFalse(I = J);
+  AssertTrue(I >= J);
+  AssertTrue(I > J);
+  AssertFalse(I <= J);
+  AssertFalse(I < J);
+
+  I.Negate;
+  AssertFalse(I = J);
+  AssertFalse(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertTrue(I < J);
+
+  J := -1;
+  AssertTrue(I = J);
+  AssertTrue(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertFalse(I < J);
+
+  I.Negate;
+  J := J.MaxValue;
+  AssertFalse(I = J);
+  AssertFalse(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertTrue(I < J);
+
+  I := TInt128.Encode($80000000, 0);
+  AssertFalse(I = J);
+  AssertTrue(I >= J);
+  AssertTrue(I > J);
+  AssertFalse(I <= J);
+  AssertFalse(I < J);
+
+  I.Negate;
+  J := J.MinValue;
+  AssertTrue(I = J);
+  AssertTrue(I >= J);
+  AssertFalse(I > J);
+  AssertTrue(I <= J);
+  AssertFalse(I < J);
+end;
+
+procedure TInt128Test.AssignInt;
+var
+  I: TInt128;
+  J: Integer;
+begin
+  J := 0;
+  I := J;
+  AssertTrue(I.IsZero);
+
+  J := 100001;
+  I := J;
+  AssertTrue(I.ToString = '100001');
+
+  J := -100001;
+  I := J;
+  AssertTrue(I.ToString = '-100001');
+
+  J := J.MaxValue;
+  I := J;
+  AssertTrue(I.ToString = J.MaxValue.ToString);
+
+  J := J.MinValue;
+  I := J;
+  AssertTrue(I.ToString = J.MinValue.ToString);
+end;
+
+procedure TInt128Test.AssignString;
+var
+  I: TInt128;
+begin
+  I := '0';
+  AssertTrue(I.IsZero);
+
+  I := '10001';
+  AssertTrue(I.ToString = '10001');
+
+  I := '-10001';
+  AssertTrue(I.ToString = '-10001');
+
+  I := '170141183460469231731687303715884105727';
+  AssertTrue(I = I.MaxValue);
+
+  I := '-170141183460469231731687303715884105727';
+  AssertTrue(I = I.MinValue);
+end;
+
+procedure TInt128Test.AsString;
+var
+  I: TInt128;
+  s: string;
+begin
+  I := Default(TInt128);
+  s := I;
+  AssertTrue(s = '0');
+
+  I := I.Encode(10001, 0);
+  s := I;
+  AssertTrue(s = '10001');
+
+  I := I.MaxValue;
+  s := I;
+  AssertTrue(s = '170141183460469231731687303715884105727');
+
+  I := I.MinValue;
+  s := I;
+  AssertTrue(s = '-170141183460469231731687303715884105727');
+end;
+
+procedure TInt128Test.IncValue;
+var
+  I: TInt128;
+  J: Integer;
+begin
+  I := I.Encode(2, 0);
+  I.Negate;
+  AssertTrue(I.IsNegative);
+
+  Inc(I);
+  AssertTrue(I.IsNegative);
+  AssertTrue(I.DWords[0] = 1);
+  for J := 1 to 2 do
+    AssertTrue(I.DWords[J] = 0);
+  AssertTrue(I.DWords[3] = $80000000);
+
+  Inc(I);
+  AssertTrue(I.IsZero);
+
+  Inc(I);
+  AssertTrue(I.DWords[0] = 1);
+  for J := 1 to 3 do
+    AssertTrue(I.DWords[J] = 0);
+  Inc(I);
+  AssertTrue(I.DWords[0] = 2);
+  for J := 1 to 3 do
+    AssertTrue(I.DWords[J] = 0);
+
+  I := I.Encode(High(QWord), 0);
+  Inc(I);
+  for J := 0 to 1 do
+    AssertTrue(I.DWords[J] = 0);
+  AssertTrue(I.DWords[2] = 1);
+  AssertTrue(I.DWords[3] = 0);
+
+  I := I.MaxValue;
+  Inc(I);
+  AssertTrue(I.IsZero);
+end;
+
+procedure TInt128Test.DecValue;
+var
+  I: TInt128;
+  J: Integer;
+begin
+  I := I.Encode(1, 0);
+  Dec(I);
+  AssertTrue(I.IsZero);
+
+  Dec(I);
+  AssertTrue(I.IsNegative);
+  AssertTrue(I.DWords[0] = 1);
+  for J := 1 to 2 do
+    AssertTrue(I.DWords[J] = 0);
+  AssertTrue(I.DWords[3] = $80000000);
+
+  Dec(I);
+  AssertTrue(I.IsNegative);
+  AssertTrue(I.DWords[0] = 2);
+  for J := 1 to 2 do
+    AssertTrue(I.DWords[J] = 0);
+  AssertTrue(I.DWords[3] = $80000000);
+
+  I := I.Encode(0, 1);
+  Dec(I);
+  AssertTrue(I.Hi = 0);
+  AssertTrue(I.Lo = High(QWord));
+
+  I := I.MinValue;
+  Dec(I);
+  AssertTrue(I.IsZero);
+end;
+
+procedure TInt128Test.ShiftLeft;
+var
+  I, Expect: TInt128;
+  J: Integer;
+begin
+  I := Default(TInt128);
+  for J := 1 to Pred(BitSizeOf(I)) do
+    AssertTrue(I shl J = 0);
+  I := 1;
+  AssertTrue(I shl 0 = 1);
+  AssertTrue(I shl BitSizeOf(I) = 1);
+  Expect := 0;
+  for J := 0 to Pred(BitSizeOf(I)) do
+    begin
+      Expect.Bits[J] := True;
+      AssertTrue(I shl J = Expect);
+      Expect.Bits[J] := False;
+    end;
+end;
+
+procedure TInt128Test.ShiftRight;
+var
+  I, Expect: TInt128;
+  J, Last: Integer;
+begin
+  I := TInt128(1) shl 126;
+  AssertTrue(I.ToHexString = '40000000000000000000000000000000');
+  AssertTrue(I shr 0 = I);
+  AssertTrue(I shr BitSizeOf(I) = I);
+  Expect := 0;
+  Last := BitSizeOf(I) - 2;
+  for J := 0 to Last do
+    begin
+      Expect.Bits[Last - J] := True;
+      AssertTrue(I shr J = Expect);
+      Expect.Bits[Last - J] := False;
+    end;
+end;
+
+procedure TInt128Test.NotValue;
+var
+  I: TInt128;
+begin
+  I := not Default(TInt128);
+  AssertTrue(I = I.MinValue);
+  I := not I;
+  AssertTrue(I.IsZero);
+
+  I := not I.Encode(1, 0, 0, $80000000);
+  AssertTrue((I.DWords[0] = $fffffffe) and (I.DWords[1] = High(DWord)) and
+             (I.DWords[2] = High(DWord)) and (I.DWords[3] = $7fffffff));
+  I := not I;
+  AssertTrue((I.DWords[0] = 1) and (I.DWords[1] = 0) and
+             (I.DWords[2] = 0) and (I.DWords[3] = $80000000));
+end;
+
+procedure TInt128Test.AndValue;
+var
+  I, J: TInt128;
+begin
+  I := I.MaxValue and Default(TInt128);
+  AssertTrue(I.IsZero);
+  J := 1;
+  AssertTrue(I.MaxValue and J = J);
+  J := J shl 126;
+  AssertTrue(I.MaxValue and J = J);
+  AssertTrue(J and not J = 0);
+end;
+
+procedure TInt128Test.OrValue;
+var
+  I: TInt128;
+begin
+  AssertTrue(I.MaxValue or Default(TInt128) = I.MaxValue);
+  AssertTrue(TInt128(1) or Default(TInt128) = 1);
+  I := TInt128(1) shl 126;
+  AssertTrue(I or Default(TInt128) = I);
+end;
+
+procedure TInt128Test.XorValue;
+var
+  I, J, ExpectI, ExpectJ: TInt128;
+begin
+  AssertTrue(I.MaxValue xor Default(TInt128) = I.MaxValue);
+  AssertTrue(I.MinValue xor Default(TInt128) = I.MinValue);
+  AssertTrue(I.MaxValue xor I.MaxValue = 0);
+  AssertTrue(I.MinValue xor I.MinValue = 0);
+
+  I := 1;
+  AssertTrue(I xor Default(TInt128) = 1);
+  AssertTrue(I xor I = 0);
+
+  ExpectI := TInt128.Encode(1, 1, 1, 1);
+  ExpectJ := TInt128.Encode(1000, 10, 10000, 100);
+  I := ExpectJ;
+  J := ExpectI;
+  I := I xor J;
+  J := I xor J;
+  I := I xor J;
+  AssertTrue(I = ExpectI);
+  AssertTrue(J = ExpectJ);
 end;
 
 initialization
