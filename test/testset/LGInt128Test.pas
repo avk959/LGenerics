@@ -86,6 +86,11 @@ type
     procedure AndValue;
     procedure OrValue;
     procedure XorValue;
+    procedure AddValue;
+    procedure AddInt;
+    procedure SubValue;
+    procedure SubInt;
+    procedure UnaryMinus;
   end;
 
 implementation
@@ -1453,6 +1458,74 @@ begin
   I := I xor J;
   AssertTrue(I = ExpectI);
   AssertTrue(J = ExpectJ);
+end;
+
+procedure TInt128Test.AddValue;
+var
+  I: TInt128;
+begin
+  AssertTrue(Default(TInt128) + Default(TInt128) = Default(TInt128));
+  AssertTrue(Default(TInt128) + TInt128(1) = 1);
+  AssertTrue(TInt128(-1) + TInt128(1) = 0);
+  AssertTrue(TInt128(1) + TInt128(1) = 2);
+  I := TInt128.Encode(High(QWord), 0);
+  AssertTrue(I + I = TInt128.Encode(High(QWord) - 1, 1));
+  AssertTrue(TInt128.MaxValue + TInt128.MinValue = 0);
+end;
+
+procedure TInt128Test.AddInt;
+var
+  J: TInt128;
+  I: Integer = 0;
+begin
+  AssertTrue(Default(TInt128) + I = Default(TInt128));
+  I := 1;
+  AssertTrue(Default(TInt128) + I = 1);
+  I := -2;
+  AssertTrue(TInt128(1) + I = -1);
+  I := High(Integer);
+  J := Default(TInt128) + I;
+  AssertTrue(J = High(Integer));
+  AssertTrue(TInt128(1) + I = TInt128.Encode($80000000, 0, 0, 0));
+  AssertTrue(J + Low(Integer) = -1);
+end;
+
+procedure TInt128Test.SubValue;
+begin
+  AssertTrue(Default(TInt128) - Default(TInt128) = Default(TInt128));
+  AssertTrue(TInt128.MaxValue - Default(TInt128) = TInt128.MaxValue);
+  AssertTrue(TInt128.MinValue - Default(TInt128) = TInt128.MinValue);
+  AssertTrue(TInt128.MaxValue - TInt128.MaxValue = 0);
+  AssertTrue(TInt128.MinValue - TInt128.MinValue = 0);
+  AssertTrue(Default(TInt128) - TInt128.MaxValue = TInt128.MinValue);
+  AssertTrue(Default(TInt128) - TInt128.MinValue = TInt128.MaxValue);
+  AssertTrue(TInt128.MaxValue - TInt128.Encode(High(QWord), 0) = TInt128.Encode(0, High(QWord) shr 1));
+end;
+
+procedure TInt128Test.SubInt;
+var
+  I: Integer = 0;
+begin
+  AssertTrue(Default(TInt128) - I = Default(TInt128));
+  AssertTrue(TInt128.MaxValue - I = TInt128.MaxValue);
+  AssertTrue(TInt128.MinValue - I = TInt128.MinValue);
+  I := 1;
+  AssertTrue(TInt128(1) - I = 0);
+  AssertTrue(Default(TInt128) - I = -1);
+  AssertTrue(TInt128(-1) - I = -2);
+  I := High(Integer);
+  AssertTrue(TInt128.MaxValue - I = TInt128.Encode($80000000, High(DWord), High(DWord), $7fffffff));
+end;
+
+procedure TInt128Test.UnaryMinus;
+var
+  I: TInt128;
+begin
+  AssertTrue(-Default(TInt128) = Default(TInt128));
+  AssertTrue(-TInt128.MaxValue = TInt128.MinValue);
+  I := I.Encode(100, 10, 1, 3);
+  AssertTrue(-I = Default(TInt128) - I);
+  AssertTrue(-(-I) = I);
 end;
 
 initialization
