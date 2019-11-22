@@ -3242,9 +3242,9 @@ end;
 var
   v, brw: TLimb;
 begin
-  v := a[0];
-  d[0] := v - b[0];
-  brw := TLimb(d[0] > v);
+  v := a[0] - b[0];
+  brw := TLimb(v > a[0]);
+  d[0] := v;
 
   v := a[1] - brw;
   brw := TLimb(v > a[1]);
@@ -3267,11 +3267,11 @@ begin
 
   v := -d[1];
   d[1] := v - brw;
-  brw := TLimb(v <> 0);
+  brw := TLimb(v <> 0) or (TLimb(d[1] > v));
 
   v := -d[2];
   d[2] := v - brw;
-  brw := TLimb(v <> 0);
+  brw := TLimb(v <> 0) or (TLimb(d[2] > v));
 
   d[3] := -d[3] - brw;
 
@@ -3394,11 +3394,11 @@ begin
 
   v := -d[1];
   d[1] := v - b;
-  b := TLimb(v <> 0) or (TLimb(v > d[1]));
+  b := TLimb(v <> 0) or (TLimb(d[1] > v));
 
   v := -d[2];
   d[2] := v - b;
-  b := TLimb(v <> 0) or (TLimb(v > d[2]));
+  b := TLimb(v <> 0) or (TLimb(d[2] > v));
 
   d[3] := -d[3] - b;
   Result := 1;
