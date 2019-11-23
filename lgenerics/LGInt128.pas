@@ -2578,15 +2578,19 @@ var
 begin
   dMsLimbIdx := MsLimbIndex(aD.FLimbs);
   if dMsLimbIdx >= 0 then
-    if dMsLimbIdx = 0 then
-      DoDivShort(@aValue, aD.FLimbs[0], @Result)
-    else
-      case Cmp(aValue.FLimbs, aD.FLimbs) of
-        -1: Result := 0;
-         0: Result := 1;
-      else //1
-        DivQ(aValue, aD, dMsLimbIdx, Result);
-      end
+    begin
+      if @aValue = @aD then
+        exit(TUInt128(1));
+      if dMsLimbIdx = 0 then
+        DoDivShort(@aValue, aD.FLimbs[0], @Result)
+      else
+        case Cmp(aValue.FLimbs, aD.FLimbs) of
+          -1: Result := 0;
+           0: Result := 1;
+        else //1
+          DivQ(aValue, aD, dMsLimbIdx, Result);
+        end;
+    end
   else
     raise EDivByZero.Create(SDivByZero);
 end;
@@ -2598,18 +2602,22 @@ var
 begin
   dMsLimbIdx := MsLimbIndex(aD.FLimbs);
   if dMsLimbIdx >= 0 then
-    if dMsLimbIdx = 0 then
-      begin
-        Result := 0;
-        Result.FLimbs[0] := DoDivShort(@aValue, aD.FLimbs[0], @tmp);
-      end
-    else
-      case Cmp(aValue.FLimbs, aD.FLimbs) of
-        -1: Result := aValue;
-         0: Result := 0;
-      else //1
-        DivR(aValue, aD, dMsLimbIdx, Result);
-      end
+    begin
+      if @aValue = @aD then
+        exit(Default(TUInt128));
+      if dMsLimbIdx = 0 then
+        begin
+          Result := 0;
+          Result.FLimbs[0] := DoDivShort(@aValue, aD.FLimbs[0], @tmp);
+        end
+      else
+        case Cmp(aValue.FLimbs, aD.FLimbs) of
+          -1: Result := aValue;
+           0: Result := 0;
+        else //1
+          DivR(aValue, aD, dMsLimbIdx, Result);
+        end;
+    end
   else
     raise EDivByZero.Create(SDivByZero);
 end;
@@ -2654,26 +2662,34 @@ var
 begin
   dMsLimbIdx := MsLimbIndex(aD.FLimbs);
   if dMsLimbIdx >= 0 then
-    if dMsLimbIdx = 0 then
-      begin
-        aR := 0;
-        aR.FLimbs[0] := DoDivShort(@aValue, aD.FLimbs[0], @aQ);
-      end
-    else
-      case Cmp(aValue.FLimbs, aD.FLimbs) of
-        -1:
-          begin
-            aQ := 0;
-            aR := aValue;
-          end;
-         0:
-           begin
-             aQ := 1;
-             aR := 0;
-           end;
-      else //1
-        Divide(aValue, aD, dMsLimbIdx, aQ, aR);
-      end
+    begin
+      if @aValue = @aD then
+        begin
+          aQ := TUInt128(1);
+          aR := Default(TUInt128);
+          exit;
+        end;
+      if dMsLimbIdx = 0 then
+        begin
+          aR := 0;
+          aR.FLimbs[0] := DoDivShort(@aValue, aD.FLimbs[0], @aQ);
+        end
+      else
+        case Cmp(aValue.FLimbs, aD.FLimbs) of
+          -1:
+            begin
+              aQ := 0;
+              aR := aValue;
+            end;
+           0:
+             begin
+               aQ := 1;
+               aR := 0;
+             end;
+        else //1
+          Divide(aValue, aD, dMsLimbIdx, aQ, aR);
+        end
+    end
   else
     raise EDivByZero.Create(SDivByZero);
 end;
@@ -3614,8 +3630,8 @@ var
   aNeg, dNeg: Boolean;
 begin
   aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
   dNeg := d^.HiLimbMacro and SIGN_FLAG <> 0;
+  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
   d^.HiLimbMacro := d^.HiLimbMacro and SIGN_MASK;
   try
     TUInt128.DivRem(PUInt128(a)^, PUInt128(d)^, PUInt128(q)^, PUInt128(r)^);
@@ -3636,8 +3652,8 @@ var
   aNeg, dNeg: Boolean;
 begin
   aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
   dNeg := d^.HiLimbMacro and SIGN_FLAG <> 0;
+  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
   d^.HiLimbMacro := d^.HiLimbMacro and SIGN_MASK;
   try
     PUInt128(q)^ := PUInt128(a)^ div PUInt128(d)^;
@@ -3656,8 +3672,8 @@ var
   aNeg, dNeg: Boolean;
 begin
   aNeg := a^.HiLimbMacro and SIGN_FLAG <> 0;
-  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
   dNeg := d^.HiLimbMacro and SIGN_FLAG <> 0;
+  a^.HiLimbMacro := a^.HiLimbMacro and SIGN_MASK;
   d^.HiLimbMacro := d^.HiLimbMacro and SIGN_MASK;
   try
     PUInt128(r)^ := PUInt128(a)^ mod PUInt128(d)^;
@@ -3957,12 +3973,12 @@ end;
 
 class operator TInt128.div(const aValue, aD: TInt128): TInt128;
 begin
-  DivQ(@aValue,@aD,@Result);
+  DivQ(@aValue, @aD, @Result);
 end;
 
 class operator TInt128.mod(const aValue, aD: TInt128): TInt128;
 begin
-  DivR(@aValue,@aD,@Result);
+  DivR(@aValue, @aD, @Result);
 end;
 
 class operator TInt128.div(const aValue: TInt128; aD: Integer): TInt128;
@@ -4071,7 +4087,8 @@ end;
 class function TInt128.RandomInRange(const aRange: TInt128): TInt128;
 begin
   Result := TInt128(TUInt128.RandomInRange(TUInt128(aRange.AbsValue)));
-  Result.HiLimbMacro := Result.HiLimbMacro or (aRange.HiLimbMacro and SIGN_FLAG);
+  if aRange.HiLimbMacro and SIGN_FLAG <> 0 then
+    Result.HiLimbMacro := Result.HiLimbMacro or SIGN_FLAG;
 end;
 
 class function TInt128.Parse(const s: string): TInt128;
