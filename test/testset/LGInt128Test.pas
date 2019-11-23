@@ -91,6 +91,14 @@ type
     procedure SubValue;
     procedure SubInt;
     procedure UnaryMinus;
+    procedure MulValue;
+    procedure MulInt;
+    procedure DivValue;
+    procedure DivInt;
+    procedure ModValue;
+    procedure ModInt;
+    procedure DivRemValue;
+    procedure DivRemInt;
   end;
 
 implementation
@@ -729,6 +737,14 @@ begin
   end;
   AssertTrue(raised);
 
+  raised := False;
+  try
+    a := d div d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
   AssertTrue(Default(TUInt128) div TUInt128.MaxValue = Default(TUInt128));
   AssertTrue(TUInt128.MaxValue div TUInt128(1) = TUInt128.MaxValue);
   a := '23988411481962661854847013020980949995';
@@ -786,6 +802,14 @@ begin
   end;
   AssertTrue(raised);
 
+  raised := False;
+  try
+    a := d mod d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
   AssertTrue(Default(TUInt128) mod TUInt128.MaxValue = Default(TUInt128));
   AssertTrue(TUInt128.MaxValue mod TUInt128(1) = Default(TUInt128));
   a := '0x123456789abcdef123456789abcdefe7';
@@ -807,7 +831,6 @@ var
   raised: Boolean = False;
 begin
   a := 1;
-  d := 0;
   try
     a := a mod d;
   except
@@ -816,7 +839,7 @@ begin
   AssertTrue(raised);
 
   d := 1;
-  AssertTrue(TUInt128.MaxValue mod TUInt128(1) = 0);
+  AssertTrue(TUInt128.MaxValue mod d = 0);
   a := '0x123456789abcdef123456789abcdefe7';
   d := $10000000;
   AssertTrue(a mod d = $bcdefe7);
@@ -1526,6 +1549,367 @@ begin
   I := I.Encode(100, 10, 1, 3);
   AssertTrue(-I = Default(TInt128) - I);
   AssertTrue(-(-I) = I);
+end;
+
+procedure TInt128Test.MulValue;
+var
+  a, b, p: TInt128;
+begin
+  AssertTrue(Default(TInt128) * Default(TInt128) = Default(TInt128));
+  AssertTrue(TInt128.MaxValue * Default(TInt128) = Default(TInt128));
+  AssertTrue(TInt128.MinValue * Default(TInt128) = Default(TInt128));
+  AssertTrue(Default(TInt128) * TInt128.MaxValue = Default(TInt128));
+  AssertTrue(Default(TInt128) * TInt128.MinValue = Default(TInt128));
+  AssertTrue(TInt128.MaxValue * TInt128(1) = TInt128.MaxValue);
+  AssertTrue(TInt128.MinValue * TInt128(1) = TInt128.MinValue);
+  AssertTrue(TInt128(1) * TInt128.MaxValue = TInt128.MaxValue);
+  AssertTrue(TInt128(1) * TInt128.MinValue = TInt128.MinValue);
+  a := '$123456789abcdef';
+  b := 'x10000000000000000';
+  p := '0x123456789abcdef0000000000000000';
+  AssertTrue(a * b = p);
+
+  a := '$123456789abcdef';
+  b := '-x10000000000000000';
+  p := '-0x123456789abcdef0000000000000000';
+  AssertTrue(a * b = p);
+
+  a := '-$123456789abcdef';
+  b := '-x10000000000000000';
+  p := '0x123456789abcdef0000000000000000';
+  AssertTrue(a * b = p);
+
+  a := '17293822565881444215';
+  b := '1387108685230112567';
+  p := '23988411481962661854847013020980949905';
+  AssertTrue(a * b = p);
+
+  a := '-17293822565881444215';
+  b := '1387108685230112567';
+  p := '-23988411481962661854847013020980949905';
+  AssertTrue(a * b = p);
+
+  a := '-17293822565881444215';
+  b := '-1387108685230112567';
+  p := '23988411481962661854847013020980949905';
+  AssertTrue(a * b = p);
+end;
+
+procedure TInt128Test.MulInt;
+var
+  a, p: TInt128;
+  b: Integer = 0;
+begin
+  AssertTrue(Default(TInt128) * b = Default(TInt128));
+  AssertTrue(TInt128.MaxValue * b = Default(TInt128));
+  AssertTrue(TInt128.MinValue * b = Default(TInt128));
+  b := 1;
+  AssertTrue(Default(TInt128) * b = Default(TInt128));
+  AssertTrue(TInt128.MaxValue * b = TInt128.MaxValue);
+  AssertTrue(TInt128.MinValue * b = TInt128.MinValue);
+  a := '$123456789abcdef123456';
+  b := $10000000;
+  p := '$123456789abcdef1234560000000';
+  AssertTrue(a * b = p);
+
+  a := '-$123456789abcdef123456';
+  b := $10000000;
+  p := '-$123456789abcdef1234560000000';
+  AssertTrue(a * b = p);
+
+  a := '-$123456789abcdef123456';
+  b := -$10000000;
+  p := '$123456789abcdef1234560000000';
+  AssertTrue(a * b = p);
+end;
+
+procedure TInt128Test.DivValue;
+var
+  a, d, q: TInt128;
+  raised: Boolean = False;
+begin
+  a := 1;
+  d := Default(TInt128);
+  try
+    a := a div d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  raised := False;
+  try
+    a := d div d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  AssertTrue(Default(TInt128) div TInt128.MaxValue = Default(TInt128));
+  AssertTrue(Default(TInt128) div TInt128.MinValue = Default(TInt128));
+  AssertTrue(TInt128.MaxValue div TInt128(1) = TInt128.MaxValue);
+  AssertTrue(TInt128.MaxValue div TInt128(-1) = TInt128.MinValue);
+  AssertTrue(TInt128.MinValue div TInt128(1) = TInt128.MinValue);
+  AssertTrue(TInt128.MinValue div TInt128(-1) = TInt128.MaxValue);
+  a := '23988411481962661854847013020980949995';
+  AssertTrue(a div TInt128(1) = a);
+  AssertTrue(a div a = 1);
+
+  a.Negate;
+  AssertTrue(a div TInt128(1) = a);
+  AssertTrue(a div a = 1);
+
+  a := '0x123456789abcdef123456789abcdef0';
+  d := 'x10000000000000000';
+  q := '$123456789abcdef';
+  AssertTrue(a div d = q);
+
+  a := '-0x123456789abcdef123456789abcdef0';
+  d := 'x10000000000000000';
+  q := '-$123456789abcdef';
+  AssertTrue(a div d = q);
+
+  a := '0x123456789abcdef123456789abcdef0';
+  d := '-x10000000000000000';
+  q := '-$123456789abcdef';
+  AssertTrue(a div d = q);
+
+  a := '-0x123456789abcdef123456789abcdef0';
+  d := '-x10000000000000000';
+  q := '$123456789abcdef';
+  AssertTrue(a div d = q);
+
+  a := '23988411481962661854847013020980949995';
+  d := '17293822565881444215';
+  q := '1387108685230112567';
+  AssertTrue(a div d = q);
+
+  a := '-23988411481962661854847013020980949995';
+  d := '17293822565881444215';
+  q := '-1387108685230112567';
+  AssertTrue(a div d = q);
+
+  a := '23988411481962661854847013020980949995';
+  d := '-17293822565881444215';
+  q := '-1387108685230112567';
+  AssertTrue(a div d = q);
+
+  a := '-23988411481962661854847013020980949995';
+  d := '-17293822565881444215';
+  q := '1387108685230112567';
+  AssertTrue(a div d = q);
+end;
+
+procedure TInt128Test.DivInt;
+var
+  a, q: TInt128;
+  d: Integer = 0;
+  raised: Boolean = False;
+begin
+  a := 1;
+  try
+    a := a div d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  d := 1;
+  AssertTrue(Default(TInt128) div d = Default(TInt128));
+  AssertTrue(TInt128.MaxValue div d = TInt128.MaxValue);
+  AssertTrue(TInt128.MinValue div d = TInt128.MinValue);
+  a := '23988411481962661854847013020980949995';
+  AssertTrue(a div d = a);
+
+  d := -1;
+  AssertTrue(Default(TInt128) div d = Default(TInt128));
+  AssertTrue(TInt128.MaxValue div d = TInt128.MinValue);
+  AssertTrue(TInt128.MinValue div d = TInt128.MaxValue);
+  a := '23988411481962661854847013020980949995';
+  AssertTrue(a div d = -a);
+
+  a := '$123456789abcdef123456789abcdef0';
+  d := $10000000;
+  q := '$123456789abcdef123456789';
+  AssertTrue(a div d = q);
+
+  a := '-$123456789abcdef123456789abcdef0';
+  d := $10000000;
+  q := '-$123456789abcdef123456789';
+  AssertTrue(a div d = q);
+
+  a := '$123456789abcdef123456789abcdef0';
+  d := -$10000000;
+  q := '-$123456789abcdef123456789';
+  AssertTrue(a div d = q);
+
+  a := '-$123456789abcdef123456789abcdef0';
+  d := -$10000000;
+  q := '$123456789abcdef123456789';
+  AssertTrue(a div d = q);
+end;
+
+procedure TInt128Test.ModValue;
+var
+  a, d, r: TInt128;
+  raised: Boolean = False;
+begin
+  a := 1;
+  d := Default(TInt128);
+  try
+    a := a mod d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  raised := False;
+  try
+    a := d div d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  AssertTrue(Default(TInt128) mod TInt128.MaxValue = Default(TInt128));
+  AssertTrue(Default(TInt128) mod TInt128.MinValue = Default(TInt128));
+  AssertTrue(TInt128.MaxValue mod TInt128(1) = Default(TInt128));
+  AssertTrue(TInt128.MinValue mod TInt128(1) = Default(TInt128));
+  AssertTrue(TInt128.MaxValue mod TInt128(-1) = Default(TInt128));
+  AssertTrue(TInt128.MinValue mod TInt128(-1) = Default(TInt128));
+
+  a := '0x123456789abcdef123456789abcdefe7';
+  d := 'x1000000000000000000';
+  r := 'xf123456789abcdefe7';
+  AssertTrue(a mod d = r);
+  AssertTrue(a mod a = 0);
+
+  a.Negate;
+  AssertTrue(a mod a = 0);
+
+  d := 'x1000000000000000000';
+  r := '-xf123456789abcdefe7';
+  AssertTrue(a mod d = r);
+
+  a := '0x123456789abcdef123456789abcdefe7';
+  d := '-x1000000000000000000';
+  r := 'xf123456789abcdefe7';
+  AssertTrue(a mod d = r);
+
+  a := '-0x123456789abcdef123456789abcdefe7';
+  d := '-x1000000000000000000';
+  r := '-xf123456789abcdefe7';
+  AssertTrue(a mod d = r);
+
+  a := '85070591730234615865843651857942050679';
+  d := '90670358808300873580343';
+  r := '75000038304000606409340';
+  AssertTrue(a mod d = r);
+end;
+
+procedure TInt128Test.ModInt;
+var
+  a, r: TInt128;
+  d: Integer = 0;
+  raised: Boolean = False;
+begin
+  a := 1;
+  try
+    a := a mod d;
+  except
+    raised := True;
+  end;
+  AssertTrue(raised);
+
+  d := 1;
+  AssertTrue(TInt128.MaxValue mod d = 0);
+
+  a := '0x123456789abcdef123456789abcdefe7';
+  d := $10000000;
+  r := '$bcdefe7';
+  AssertTrue(a mod d = r);
+
+  a := '0x123456789abcdef123456789abcdefe7';
+  d := -$10000000;
+  r := '$bcdefe7';
+  AssertTrue(a mod d = r);
+
+  a := '-0x123456789abcdef123456789abcdefe7';
+  d := $10000000;
+  r := '-$bcdefe7';
+  AssertTrue(a mod d = r);
+
+  a := '-0x123456789abcdef123456789abcdefe7';
+  d := -$10000000;
+  r := '-$bcdefe7';
+  AssertTrue(a mod d = r);
+end;
+
+procedure TInt128Test.DivRemValue;
+var
+  a, d, q, r: TInt128;
+begin
+  a := '85070591730234615865843651857942050679';
+  d := '90670358808300873580343';
+  TInt128.DivRem(a, d, q, r);
+  AssertTrue(q = TInt128('938240378094173'));
+  AssertTrue(r = TInt128('75000038304000606409340'));
+  AssertTrue(q * d + r = a);
+
+  a := '-85070591730234615865843651857942050679';
+  d := '90670358808300873580343';
+  TInt128.DivRem(a, d, q, r);
+  AssertTrue(q = TInt128('-938240378094173'));
+  AssertTrue(r = TInt128('-75000038304000606409340'));
+  AssertTrue(q * d + r = a);
+
+  a := '85070591730234615865843651857942050679';
+  d := '-90670358808300873580343';
+  TInt128.DivRem(a, d, q, r);
+  AssertTrue(q = TInt128('-938240378094173'));
+  AssertTrue(r = TInt128('75000038304000606409340'));
+  AssertTrue(q * d + r = a);
+
+  a := '-85070591730234615865843651857942050679';
+  d := '-90670358808300873580343';
+  TInt128.DivRem(a, d, q, r);
+  AssertTrue(q = TInt128('938240378094173'));
+  AssertTrue(r = TInt128('-75000038304000606409340'));
+  AssertTrue(q * d + r = a);
+end;
+
+procedure TInt128Test.DivRemInt;
+var
+  a, q: TInt128;
+  d, r: Integer;
+begin
+  a := '85070591730234615865843651857942050679';
+  d := 1987972443;
+  r := TInt128.DivRem(a, d, q);
+  AssertTrue(q = TInt128('42792641331514984116831468502'));
+  AssertTrue(r = 743560293);
+  AssertTrue(q * d + r = a);
+
+  a := '-85070591730234615865843651857942050679';
+  d := 1987972443;
+  r := TInt128.DivRem(a, d, q);
+  AssertTrue(q = TInt128('-42792641331514984116831468502'));
+  AssertTrue(r = -743560293);
+  AssertTrue(q * d + r = a);
+
+  a := '85070591730234615865843651857942050679';
+  d := -1987972443;
+  r := TInt128.DivRem(a, d, q);
+  AssertTrue(q = TInt128('-42792641331514984116831468502'));
+  AssertTrue(r = 743560293);
+  AssertTrue(q * d + r = a);
+
+  a := '-85070591730234615865843651857942050679';
+  d := -1987972443;
+  r := TInt128.DivRem(a, d, q);
+  AssertTrue(q = TInt128('42792641331514984116831468502'));
+  AssertTrue(r = -743560293);
+  AssertTrue(q * d + r = a);
 end;
 
 initialization
