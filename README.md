@@ -98,3 +98,4 @@
   - brief and dirty implementation of futures concept(unit LGAsync)
   - brief channel implementation(unit LGAsync)
   - brief implementation of thread pool(unit LGAsync)
+  - 128-bit integers(unit LGInt128)
