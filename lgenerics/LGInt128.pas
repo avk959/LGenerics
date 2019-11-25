@@ -3203,7 +3203,7 @@ asm
 
   neg  qword ptr[rdx]
   sbb  rax, qword ptr[rdx+8]
-  mov, qword ptr[rdx+8], rax
+  mov  qword ptr[rdx+8], rax
 {$ENDIF MSWINDOWS}
   mov  rax, 1
 @done:
