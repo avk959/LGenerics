@@ -99,6 +99,26 @@ type
     procedure RandomShuffleStatic10;
   end;
 
+  { TSegmentTreeTest }
+
+  TSegmentTreeTest = class(TTestCase)
+  private
+  type
+    TIntAdd     = specialize TGAddMonoid<Integer>;
+    TIntMax     = specialize TGMaxMonoid<Integer>;
+    TIntMin     = specialize TGMinMonoid<Integer>;
+
+    TIntAddTree = specialize TGSegmentTree<Integer, TIntAdd>;
+    TIntMaxTree = specialize TGSegmentTree<Integer, TIntMax>;
+    TIntMinTree = specialize TGSegmentTree<Integer, TIntMin>;
+
+  published
+    procedure CreateTree;
+    procedure AddQuery;
+    procedure MaxQuery;
+    procedure MinQuery;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -791,10 +811,169 @@ begin
   AssertTrue(AllPresent);
 end;
 
+{ TSegmentTreeTest }
 
+procedure TSegmentTreeTest.CreateTree;
+const
+  TestSize = 1000;
+var
+  Tree: TIntAddTree;
+  a: array of Integer;
+  I: Integer;
+begin
+  AssertTrue(TIntAddTree.Identity = 0);
+  AssertTrue(TIntMaxTree.Identity = Low(Integer));
+  AssertTrue(TIntMinTree.Identity = High(Integer));
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  Tree := TIntAddTree.Create(a);
+  AssertTrue(Tree.Count = Length(a));
+  for I := 0 to High(a) do
+    AssertTrue(a[I] = Tree[I]);
+  for I := 0 to Pred(Tree.Count) do
+    Tree[I] := Tree[I] + I;
+  for I := 0 to High(a) do
+    AssertTrue(Tree[I] = a[I] + I);
+end;
+
+procedure TSegmentTreeTest.AddQuery;
+const
+  TestSize = 1000;
+var
+  Tree: TIntAddTree;
+  a: array of Integer;
+  I, J, L, R, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  Tree := TIntAddTree.Create(a);
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1) = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      sum := 0;
+      for J := L to R do
+        sum += a[J];
+      AssertTrue(Tree.RangeQuery(L, R) = sum);
+      AssertTrue(Tree.RangeQuery(R, L) = 0);
+    end;
+
+  for I := 0 to High(a) do
+    begin
+      J := Random(TestSize);
+      a[I] += J;
+      Tree[I] := Tree[I] + J;
+    end;
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1) = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      sum := 0;
+      for J := L to R do
+        sum += a[J];
+      AssertTrue(Tree.RangeQuery(L, R) = sum);
+      AssertTrue(Tree.RangeQuery(R, L) = 0);
+    end;
+end;
+
+procedure TSegmentTreeTest.MaxQuery;
+const
+  TestSize = 1000;
+var
+  Tree: TIntMaxTree;
+  a: array of Integer;
+  I, J, L, R, max: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  Tree := TIntMaxTree.Create(a);
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1) = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      max := Low(Integer);
+      for J := L to R do
+        if a[J] > max then
+          max := a[J];
+      AssertTrue(Tree.RangeQuery(L, R) = max);
+      AssertTrue(Tree.RangeQuery(R, L) = Low(Integer));
+    end;
+
+  for I := 0 to High(a) do
+    begin
+      J := Random(TestSize);
+      a[I] += J;
+      Tree[I] := Tree[I] + J;
+    end;
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1) = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      max := Low(Integer);
+      for J := L to R do
+        if a[J] > max then
+          max := a[J];
+      AssertTrue(Tree.RangeQuery(L, R) = max);
+      AssertTrue(Tree.RangeQuery(R, L) = Low(Integer));
+    end;
+end;
+
+procedure TSegmentTreeTest.MinQuery;
+const
+  TestSize = 1000;
+var
+  Tree: TIntMinTree;
+  a: array of Integer;
+  I, J, L, R, min: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  Tree := TIntMinTree.Create(a);
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1) = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      min := High(Integer);
+      for J := L to R do
+        if a[J] < min then
+          min := a[J];
+      AssertTrue(Tree.RangeQuery(L, R) = min);
+      AssertTrue(Tree.RangeQuery(R, L) = High(Integer));
+    end;
+
+  for I := 0 to High(a) do
+    begin
+      J := Random(TestSize);
+      a[I] += J;
+      Tree[I] := Tree[I] + J;
+    end;
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1) = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      min := High(Integer);
+      for J := L to R do
+        if a[J] < min then
+          min := a[J];
+      AssertTrue(Tree.RangeQuery(L, R) = min);
+      AssertTrue(Tree.RangeQuery(R, L) = High(Integer));
+    end;
+end;
 
 initialization
 
   RegisterTest(TArrayHelpUtilTest);
+  RegisterTest(TSegmentTreeTest);
+
 end.
 
