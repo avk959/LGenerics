@@ -927,6 +927,59 @@ type
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
   end;
 
+  { TGSegmentTree after O(N) preprocessing of a given array of monoid elements allows:
+      - find the value of the monoid function on an arbitrary range of array elements in O(log N);
+      - update the array elements in O(log N);
+        functor TMonoid must provide:
+          field/property/function Identity: T; - neutral element of the monoid;
+          associative dyadic function BinOp([const[ref]] L, R: T): T; }
+  generic TGSegmentTree<T, TMonoid> = record
+  type
+    THelper = specialize TGArrayHelpUtil<T>;
+  var
+    FTree: array of T;
+    FElemCount,
+    FLeafBound: SizeInt;
+    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    function  GetItem(aIndex: SizeInt): T;
+    procedure SetItem(aIndex: SizeInt; const aValue: T);
+    class function GetIdentity: T; static;
+    class operator Initialize(var st: TGSegmentTree); inline;
+  public
+    constructor Create(const a: array of T);
+    function  RangeQuery(L, R: SizeInt): T;
+    property  Count: SizeInt read FElemCount;
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
+    class property Identity: T read GetIdentity;
+  end;
+
+  { TGAddMonoid }
+  generic TGAddMonoid<T> = record
+  private
+    class function GetIdentity: T; static; inline;
+  public
+    class property Identity: T read GetIdentity;
+    class function BinOp(L, R: T): T static; inline;
+  end;
+
+  { TGMaxMonoid }
+  generic TGMaxMonoid<T> = record
+  private
+    class function GetIdentity: T; static; inline;
+  public
+    class property Identity: T read GetIdentity;
+    class function BinOp(L, R: T): T static; inline;
+  end;
+
+  { TGMinMonoid }
+  generic TGMinMonoid<T> = record
+  private
+    class function GetIdentity: T; static; inline;
+  public
+    class property Identity: T read GetIdentity;
+    class function BinOp(L, R: T): T static; inline;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}{$GOTO ON}
 
@@ -9536,6 +9589,136 @@ class function TGOrdinalArrayHelper.Sorted(constref A: array of T; o: TSortOrder
 begin
   Result := CreateCopy(A);
   Sort(Result, o);
+end;
+
+{ TGSegmentTree }
+
+
+procedure TGSegmentTree.CheckIndexRange(aIndex: SizeInt);
+begin
+  if SizeInt(aIndex) >= SizeInt(FElemCount) then
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+function TGSegmentTree.GetItem(aIndex: SizeInt): T;
+begin
+  CheckIndexRange(aIndex);
+  Result := FTree[aIndex + FLeafBound];
+end;
+
+procedure TGSegmentTree.SetItem(aIndex: SizeInt; const aValue: T);
+begin
+  CheckIndexRange(aIndex);
+  aIndex += FLeafBound;
+  FTree[aIndex] := aValue;
+  repeat
+    aIndex := Pred(Succ(aIndex) shr 1);
+    FTree[aIndex] := TMonoid.BinOp(FTree[Succ(aIndex shl 1)], FTree[Succ(aIndex) shl 1]);
+  until aIndex = 0;
+end;
+
+class function TGSegmentTree.GetIdentity: T;
+begin
+  Result := TMonoid.Identity;
+end;
+
+class operator TGSegmentTree.Initialize(var st: TGSegmentTree);
+begin
+  st.FElemCount := 0;
+end;
+
+constructor TGSegmentTree.Create(const a: array of T);
+var
+  I, aLen, Pow2Bound: SizeInt;
+begin
+  aLen := System.Length(a);
+  if aLen = 0 then
+    begin
+      FTree := nil;
+      FElemCount := 0;
+      exit;
+    end;
+  if aLen <= MAX_POSITIVE_POW2 div 2 then
+    begin
+      FElemCount := aLen;
+      Pow2Bound := RoundUpTwoPower(aLen);
+      FLeafBound := Pred(Pow2Bound);
+      System.SetLength(FTree, Pow2Bound * 2);
+      THelper.Fill(FTree[(Pow2Bound + Pred(aLen))..Pred(Pow2Bound * 2)], TMonoid.Identity);
+      Dec(Pow2Bound);
+      for I := 0 to Pred(aLen) do
+        FTree[Pow2Bound + I] := a[I];
+      for I := Pred(Pow2Bound) downto 0 do
+        FTree[I] := TMonoid.BinOp(FTree[Succ(I shl 1)], FTree[Succ(I) shl 1]);
+    end
+  else
+    raise EArgumentException.CreateFmt('Array size is too big(%d)', [aLen]);
+end;
+
+function TGSegmentTree.RangeQuery(L, R: SizeInt): T;
+var
+  vL, vR: T;
+begin
+  CheckIndexRange(L);
+  CheckIndexRange(R);
+  vL := TMonoid.Identity;
+  vR := TMonoid.Identity;
+  L += FLeafBound;
+  R += FLeafBound;
+  while L < R do
+    begin
+      if not Odd(L) then
+        vL := TMonoid.BinOp(vL, FTree[L]);
+      L := L shr 1;
+      if Odd(R) then
+        vR := TMonoid.BinOp(FTree[R], vR);
+      R := Pred(R shr 1);
+    end;
+  if L = R then
+    vL := TMonoid.BinOp(vL, FTree[L]);
+  Result := TMonoid.BinOp(vL, vR);
+end;
+
+{ TGAddMonoid }
+
+class function TGAddMonoid.GetIdentity: T;
+begin
+  Result := Default(T);
+end;
+
+class function TGAddMonoid.BinOp(L, R: T): T;
+begin
+  Result := L + R;
+end;
+
+{ TGMaxMonoid }
+
+class function TGMaxMonoid.GetIdentity: T;
+begin
+  Result := T.MinValue;
+end;
+
+class function TGMaxMonoid.BinOp(L, R: T): T;
+begin
+  if L < R then
+    Result := R
+  else
+    Result := L
+end;
+
+{ TGMinMonoid }
+
+class function TGMinMonoid.GetIdentity: T;
+begin
+  Result := T.MaxValue;
+end;
+
+class function TGMinMonoid.BinOp(L, R: T): T;
+begin
+  if R < L then
+    Result := R
+  else
+    Result := L
 end;
 
 end.
