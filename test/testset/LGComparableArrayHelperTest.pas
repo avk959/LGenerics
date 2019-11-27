@@ -283,6 +283,9 @@ type
     procedure IsStrictDescendingOfDyn21Success;
     procedure IsStrictDescendingOfDyn21Unsuccess;
 
+    procedure InversionCount;
+    procedure InversionCountND;
+
     procedure SameOfEmpty;
     procedure SameOfStatic1Success;
     procedure SameOfStatic1Unsuccess;
@@ -2147,6 +2150,48 @@ end;
 procedure TComparableArrayHelperTest.IsStrictDescendingOfDyn21Unsuccess;
 begin
   AssertFalse(TIntHelper.IsStrictDescending(TIntHelper.CreateReverseCopy(InOrderDblSrc21)));
+end;
+
+procedure TComparableArrayHelperTest.InversionCount;
+const
+  BigSize = 1000;
+var
+  a: TIntArray = nil;
+  I: Integer;
+begin
+  AssertTrue(TIntHelper.InversionCount(a) = 0);
+  a := [5];
+  AssertTrue(TIntHelper.InversionCount(a) = 0);
+  a := [5, 9];
+  AssertTrue(TIntHelper.InversionCount(a) = 0);
+  a := [9, 5];
+  AssertTrue(TIntHelper.InversionCount(a) = 1);
+  a := [9, 5, 2];
+  AssertTrue(TIntHelper.InversionCount(a) = 3);
+  AssertTrue(TIntHelper.IsNonDescending(a));
+  SetLength(a, BigSize);
+  for I := 0 to High(a) do
+    a[I] := I;
+  AssertTrue(TIntHelper.InversionCount(a) = 0);
+  TIntHelper.Reverse(a);
+  AssertTrue(TIntHelper.InversionCount(a) = BigSize*Pred(BigSize) div 2);
+  AssertTrue(TIntHelper.IsStrictAscending(a));
+end;
+
+procedure TComparableArrayHelperTest.InversionCountND;
+const
+  BigSize = 1000;
+var
+  a: TIntArray = nil;
+  b: TIntArray;
+  I: Integer;
+begin
+  SetLength(a, BigSize);
+  for I := 0 to High(a) do
+    a[I] := BigSize - I;
+  b := TIntHelper.CreateCopy(a);
+  AssertTrue(TIntHelper.InversionCountND(b) = BigSize*Pred(BigSize) div 2);
+  AssertTrue(TIntHelper.Same(a, b));
 end;
 
 procedure TComparableArrayHelperTest.SameOfEmpty;
