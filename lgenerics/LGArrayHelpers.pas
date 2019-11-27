@@ -236,19 +236,19 @@ type
     class function  FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  NthSmallest(var A: array of T; N: SizeInt): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  NthSmallestND(constref A: array of T; N: SizeInt): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
@@ -262,6 +262,10 @@ type
     class function  IsNonAscending(constref A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending}
     class function  IsStrictDescending(constref A: array of T): Boolean; static;
+  { returns the number of inversions in A, sorts an array }
+    class function  InversionCount(var A: array of T): Int64; static;
+  { returns the number of inversions in A, nondestructive }
+    class function  InversionCountND(constref A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
@@ -350,19 +354,19 @@ type
     class function  FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  NthSmallest(var A: array of T; N: SizeInt): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  NthSmallestND(constref A: array of T; N: SizeInt): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
@@ -376,6 +380,10 @@ type
     class function  IsNonAscending(constref A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending}
     class function  IsStrictDescending(constref A: array of T): Boolean; static;
+  { returns the number of inversions in A, sorts an array }
+    class function  InversionCount(var A: array of T): Int64; static;
+  { returns the number of inversions in A, nondestructive }
+    class function  InversionCountND(constref A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
@@ -470,19 +478,19 @@ type
     class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TCompare): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TCompare): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  NthSmallest(var A: array of T; N: SizeInt; c: TCompare): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  FindNthSmallestND(constref A: array of T; N: SizeInt; out aValue: T; c: TCompare): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TCompare): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T; c: TCompare): Boolean; static;
@@ -496,6 +504,10 @@ type
     class function  IsNonAscending(constref A: array of T; c: TCompare): Boolean; static;
   { note: an empty array or single element array is never strict descending}
     class function  IsStrictDescending(constref A: array of T; c: TCompare): Boolean; static;
+  { returns the number of inversions in A, sorts an array }
+    class function  InversionCount(var A: array of T; c: TCompare): Int64; static;
+  { returns the number of inversions in A, nondestructive }
+    class function  InversionCountND(constref A: array of T; c: TCompare): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T; c: TCompare): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
@@ -591,19 +603,19 @@ type
     class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TOnCompare): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TOnCompare): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  NthSmallest(var A: array of T; N: SizeInt; c: TOnCompare): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  FindNthSmallestND(constref A: array of T;N: SizeInt; out aValue: T; c: TOnCompare): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TOnCompare): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T; c: TOnCompare): Boolean; static;
@@ -617,6 +629,10 @@ type
     class function  IsNonAscending(constref A: array of T; c: TOnCompare): Boolean; static;
   { note: an empty array or single element array is never strict descending}
     class function  IsStrictDescending(constref A: array of T; c: TOnCompare): Boolean; static;
+  { returns the number of inversions in A, sorts an array }
+    class function  InversionCount(var A: array of T; c: TOnCompare): Int64; static;
+  { returns the number of inversions in A, nondestructive }
+    class function  InversionCountND(constref A: array of T; c: TOnCompare): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T; c: TOnCompare): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
@@ -717,19 +733,19 @@ type
     class function  FindMinMax(constref A: array of T; out aMin, aMax: T; c: TNestCompare): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  FindNthSmallest(var A: array of T; N: SizeInt; out aValue: T; c: TNestCompare): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  NthSmallest(var A: array of T; N: SizeInt; c: TNestCompare): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  FindNthSmallestND(constref A: array of T;N: SizeInt; out aValue: T; c: TNestCompare): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  NthSmallestND(constref A: array of T; N: SizeInt; c: TNestCompare): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T; c: TNestCompare): Boolean; static;
@@ -743,6 +759,10 @@ type
     class function  IsNonAscending(constref A: array of T; c: TNestCompare): Boolean; static;
   { note: an empty array or single element array is never strict descending}
     class function  IsStrictDescending(constref A: array of T; c: TNestCompare): Boolean; static;
+  { returns the number of inversions in A, sorts array }
+    class function  InversionCount(var A: array of T; c: TNestCompare): Int64; static;
+  { returns the number of inversions in A, nondestructive }
+    class function  InversionCountND(constref A: array of T; c: TNestCompare): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T; c: TNestCompare): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
@@ -817,19 +837,19 @@ type
     class function  FindMinMax(constref A: array of T; out aMin, aMax: T): Boolean; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    destuctive: changes order of elements in A }
+    destructive: changes the order of elements in A }
     class function  FindNthSmallest(var  A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is destuctive: changes order of elements in A }
+    is destructive: changes the order of elements in A }
     class function  NthSmallest(var  A: array of T; N: SizeInt): TOptional; static;
   { returns True and A's Nth order statistic(0-based) in aValue if A is nonempty, False otherwise;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  FindNthSmallestND(constref  A: array of T; N: SizeInt; out aValue: T): Boolean; static;
   { returns A's Nth order statistic(0-based) in TOptional.Value if A is nonempty;
     if N < 0 then N sets to 0; if N > High(A) then N sets to High(A);
-    is nondestuctive: creates temp copy of A }
+    is nondestructive: creates a temp copy of A }
     class function  NthSmallestND(constref  A: array of T; N: SizeInt): TOptional; static;
   { returns True if permutation towards nondescending state of A has done, False otherwise }
     class function  NextPermutation2Asc(var A: array of T): Boolean; static;
@@ -843,6 +863,10 @@ type
     class function  IsNonAscending(constref A: array of T): Boolean; static;
   { note: an empty array or single element array is never strict descending}
     class function  IsStrictDescending(constref A: array of T): Boolean; static;
+  { returns the number of inversions in A, sorts array }
+    class function  InversionCount(var A: array of T): Int64; static;
+  { returns the number of inversions in A, nondestructive }
+    class function  InversionCountND(constref A: array of T): Int64; static;
   { returns True if both A and B are identical sequence of elements }
     class function  Same(constref A, B: array of T): Boolean; static;
   { slightly modified optimized quicksort with random pivot selection }
@@ -2924,6 +2948,55 @@ begin
     Result := False;
 end;
 
+class function TGBaseArrayHelper.InversionCount(var A: array of T): Int64;
+var
+  Buf: TArray;
+  function Merge(L, M, R: SizeInt): Int64;
+  var
+    I, J, K: SizeInt;
+  begin
+    I := L;
+    J := Succ(M);
+    Merge := 0;
+    for K := 0 to R - L do
+      if (J > R) or (I <= M) and (TCmpRel.Compare(A[I], A[J]) <= 0) then
+        begin
+          Buf[K] := A[I];
+          Inc(I);
+        end
+      else
+        begin
+          Merge += Succ(M - I);
+          Buf[K] := A[J];
+          Inc(J);
+        end;
+    CopyItems(@Buf[0], @A[L], Succ(R - L));
+  end;
+  function InvCount(L, R: SizeInt): Int64;
+  var
+    M: SizeInt;
+  begin
+    if R <= L then
+      exit(0);
+    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    InvCount := InvCount(L, M);
+    InvCount += InvCount(Succ(M), R);
+    InvCount += Merge(L, M, R);
+  end;
+begin
+  if System.Length(A) > 1 then
+    begin
+      System.SetLength(Buf, System.Length(A));
+      exit(InvCount(0, System.High(A)));
+    end;
+  Result := 0;
+end;
+
+class function TGBaseArrayHelper.InversionCountND(constref A: array of T): Int64;
+begin
+  Result := InversionCount(CreateCopy(A));
+end;
+
 class function TGBaseArrayHelper.Same(constref A, B: array of T): Boolean;
 var
   R, I: SizeInt;
@@ -4244,6 +4317,55 @@ begin
     end
   else
     Result := False;
+end;
+
+class function TGComparableArrayHelper.InversionCount(var A: array of T): Int64;
+var
+  Buf: TArray;
+  function Merge(L, M, R: SizeInt): Int64;
+  var
+    I, J, K: SizeInt;
+  begin
+    I := L;
+    J := Succ(M);
+    Merge := 0;
+    for K := 0 to R - L do
+      if (J > R) or (I <= M) and (A[I] <= A[J]) then
+        begin
+          Buf[K] := A[I];
+          Inc(I);
+        end
+      else
+        begin
+          Merge += Succ(M - I);
+          Buf[K] := A[J];
+          Inc(J);
+        end;
+    CopyItems(@Buf[0], @A[L], Succ(R - L));
+  end;
+  function InvCount(L, R: SizeInt): Int64;
+  var
+    M: SizeInt;
+  begin
+    if R <= L then
+      exit(0);
+    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    InvCount := InvCount(L, M);
+    InvCount += InvCount(Succ(M), R);
+    InvCount += Merge(L, M, R);
+  end;
+begin
+  if System.Length(A) > 1 then
+    begin
+      System.SetLength(Buf, System.Length(A));
+      exit(InvCount(0, System.High(A)));
+    end;
+  Result := 0;
+end;
+
+class function TGComparableArrayHelper.InversionCountND(constref A: array of T): Int64;
+begin
+  Result := InversionCount(CreateCopy(A));
 end;
 
 class function TGComparableArrayHelper.Same(constref A, B: array of T): Boolean;
@@ -5596,6 +5718,55 @@ begin
     end
   else
     Result := False;
+end;
+
+class function TGRegularArrayHelper.InversionCount(var A: array of T; c: TCompare): Int64;
+var
+  Buf: TArray;
+  function Merge(L, M, R: SizeInt): Int64;
+  var
+    I, J, K: SizeInt;
+  begin
+    I := L;
+    J := Succ(M);
+    Merge := 0;
+    for K := 0 to R - L do
+      if (J > R) or (I <= M) and (c(A[I], A[J]) <= 0) then
+        begin
+          Buf[K] := A[I];
+          Inc(I);
+        end
+      else
+        begin
+          Merge += Succ(M - I);
+          Buf[K] := A[J];
+          Inc(J);
+        end;
+    CopyItems(@Buf[0], @A[L], Succ(R - L));
+  end;
+  function InvCount(L, R: SizeInt): Int64;
+  var
+    M: SizeInt;
+  begin
+    if R <= L then
+      exit(0);
+    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    InvCount := InvCount(L, M);
+    InvCount += InvCount(Succ(M), R);
+    InvCount += Merge(L, M, R);
+  end;
+begin
+  if System.Length(A) > 1 then
+    begin
+      System.SetLength(Buf, System.Length(A));
+      exit(InvCount(0, System.High(A)));
+    end;
+  Result := 0;
+end;
+
+class function TGRegularArrayHelper.InversionCountND(constref A: array of T; c: TCompare): Int64;
+begin
+  Result := InversionCount(CreateCopy(A), c);
 end;
 
 class function TGRegularArrayHelper.Same(constref A, B: array of T; c: TCompare): Boolean;
@@ -6952,6 +7123,55 @@ begin
     Result := False;
 end;
 
+class function TGDelegatedArrayHelper.InversionCount(var A: array of T; c: TOnCompare): Int64;
+var
+  Buf: TArray;
+  function Merge(L, M, R: SizeInt): Int64;
+  var
+    I, J, K: SizeInt;
+  begin
+    I := L;
+    J := Succ(M);
+    Merge := 0;
+    for K := 0 to R - L do
+      if (J > R) or (I <= M) and (c(A[I], A[J]) <= 0) then
+        begin
+          Buf[K] := A[I];
+          Inc(I);
+        end
+      else
+        begin
+          Merge += Succ(M - I);
+          Buf[K] := A[J];
+          Inc(J);
+        end;
+    CopyItems(@Buf[0], @A[L], Succ(R - L));
+  end;
+  function InvCount(L, R: SizeInt): Int64;
+  var
+    M: SizeInt;
+  begin
+    if R <= L then
+      exit(0);
+    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    InvCount := InvCount(L, M);
+    InvCount += InvCount(Succ(M), R);
+    InvCount += Merge(L, M, R);
+  end;
+begin
+  if System.Length(A) > 1 then
+    begin
+      System.SetLength(Buf, System.Length(A));
+      exit(InvCount(0, System.High(A)));
+    end;
+  Result := 0;
+end;
+
+class function TGDelegatedArrayHelper.InversionCountND(constref A: array of T; c: TOnCompare): Int64;
+begin
+  Result := InversionCount(CreateCopy(A), c);
+end;
+
 class function TGDelegatedArrayHelper.Same(constref A, B: array of T; c: TOnCompare): Boolean;
 var
   R, I: SizeInt;
@@ -8305,6 +8525,55 @@ begin
     Result := False;
 end;
 
+class function TGNestedArrayHelper.InversionCount(var A: array of T; c: TNestCompare): Int64;
+var
+  Buf: TArray;
+  function Merge(L, M, R: SizeInt): Int64;
+  var
+    I, J, K: SizeInt;
+  begin
+    I := L;
+    J := Succ(M);
+    Merge := 0;
+    for K := 0 to R - L do
+      if (J > R) or (I <= M) and (c(A[I], A[J]) <= 0) then
+        begin
+          Buf[K] := A[I];
+          Inc(I);
+        end
+      else
+        begin
+          Merge += Succ(M - I);
+          Buf[K] := A[J];
+          Inc(J);
+        end;
+    CopyItems(@Buf[0], @A[L], Succ(R - L));
+  end;
+  function InvCount(L, R: SizeInt): Int64;
+  var
+    M: SizeInt;
+  begin
+    if R <= L then
+      exit(0);
+    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    InvCount := InvCount(L, M);
+    InvCount += InvCount(Succ(M), R);
+    InvCount += Merge(L, M, R);
+  end;
+begin
+  if System.Length(A) > 1 then
+    begin
+      System.SetLength(Buf, System.Length(A));
+      exit(InvCount(0, System.High(A)));
+    end;
+  Result := 0;
+end;
+
+class function TGNestedArrayHelper.InversionCountND(constref A: array of T; c: TNestCompare): Int64;
+begin
+  Result := InversionCount(CreateCopy(A), c);
+end;
+
 class function TGNestedArrayHelper.Same(constref A, B: array of T; c: TNestCompare): Boolean;
 var
   R, I: SizeInt;
@@ -9259,6 +9528,55 @@ begin
     end
   else
     Result := False;
+end;
+
+class function TGSimpleArrayHelper.InversionCount(var A: array of T): Int64;
+var
+  Buf: TArray;
+  function Merge(L, M, R: SizeInt): Int64;
+  var
+    I, J, K: SizeInt;
+  begin
+    I := L;
+    J := Succ(M);
+    Merge := 0;
+    for K := 0 to R - L do
+      if (J > R) or (I <= M) and (A[I] <= A[J]) then
+        begin
+          Buf[K] := A[I];
+          Inc(I);
+        end
+      else
+        begin
+          Merge += Succ(M - I);
+          Buf[K] := A[J];
+          Inc(J);
+        end;
+    CopyItems(@Buf[0], @A[L], Succ(R - L));
+  end;
+  function InvCount(L, R: SizeInt): Int64;
+  var
+    M: SizeInt;
+  begin
+    if R <= L then
+      exit(0);
+    {$PUSH}{$Q-}M := (L + R) shr 1;{$POP}
+    InvCount := InvCount(L, M);
+    InvCount += InvCount(Succ(M), R);
+    InvCount += Merge(L, M, R);
+  end;
+begin
+  if System.Length(A) > 1 then
+    begin
+      System.SetLength(Buf, System.Length(A));
+      exit(InvCount(0, System.High(A)));
+    end;
+  Result := 0;
+end;
+
+class function TGSimpleArrayHelper.InversionCountND(constref A: array of T): Int64;
+begin
+  Result := InversionCount(CreateCopy(A));
 end;
 
 class function TGSimpleArrayHelper.Same(constref A, B: array of T): Boolean;
