@@ -788,6 +788,14 @@ const
   function  RoundUpTwoPower(aValue: SizeInt): SizeInt;
   function  NextRandomBoolean: Boolean; inline;
   procedure RandomizeBoolean;
+  { Bob Jenkins small noncryptographic PRNG
+    http://www.burtleburtle.net/bob/rand/smallprng.html }
+  procedure BJSetSeed(aSeed: DWord);
+  procedure BJSetSeed64(aSeed: QWord);
+  procedure BJRandomize;
+  procedure BJRandomize64;
+  function  BJNextRandom: DWord;
+  function  BJNextRandom64: QWord;
 
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}
@@ -835,6 +843,89 @@ end;
 procedure RandomizeBoolean;
 begin
   BoolRandSeed := DWord(GetTickCount64);
+end;
+
+var
+  p: DWord = DWord($F2346B68);
+  q: DWord = DWord($43E345B9);
+  r: DWord = DWord($9BDDD2D5);
+  s: DWord = DWord($B78D029B);
+
+  p64: QWord = QWord($C49205791B1F3E34);
+  q64: QWord = QWord($84988390DCCAC2DA);
+  r64: QWord = QWord($FECAB388259108D9);
+  s64: QWord = QWord($7E7F22F098FB479C);
+
+procedure BJSetSeed(aSeed: DWord);
+var
+  e: DWord;
+  I: Integer;
+begin
+  p := $f1ea5eed;
+  q := aSeed;
+  r := aSeed;
+  s := aSeed;
+  for I := 1 to 20 do
+    begin
+      e := p - RolDWord(q, 23);
+      p := q xor RolDWord(r, 16);
+      q := r + RolDWord(s, 11);
+      r := s + e;
+      s := e + p;
+    end;
+end;
+
+procedure BJSetSeed64(aSeed: QWord);
+var
+  e: QWord;
+  I: Integer;
+begin
+  p64 := $f1ea5eed;
+  q64 := aSeed;
+  r64 := aSeed;
+  s64 := aSeed;
+  for I := 1 to 20 do
+    begin
+      e := p64 - RolQWord(q64, 7);
+      p64 := q64 xor RolQWord(r64, 13);
+      q64 := r64 + RolQWord(s64, 37);
+      r64 := s64 + e;
+      s64 := e + p64;
+    end;
+end;
+
+procedure BJRandomize;
+begin
+  BJSetSeed(GetTickCount64);
+end;
+
+procedure BJRandomize64;
+begin
+  BJSetSeed64(GetTickCount64);
+end;
+
+function BJNextRandom: DWord;
+var
+  e: DWord;
+begin
+  e := p - RolDWord(q, 23);
+  p := q xor RolDWord(r, 16);
+  q := r + RolDWord(s, 11);
+  r := s + e;
+  s := e + p;
+  Result := s;
+end;
+
+function BJNextRandom64: QWord;
+var
+  e: QWord;
+begin
+  e := p64 - RolQWord(q64, 7);
+  p64 := q64 xor RolQWord(r64, 13);
+  q64 := r64 + RolQWord(s64, 37);
+  r64 := s64 + e;
+  s64 := e + p64;
+  Result := s64;
 end;
 {$POP}
 
