@@ -25,7 +25,7 @@ unit LGInt128;
 
 interface
 uses
-  SysUtils, Math, SysConst;
+  SysUtils, Math, SysConst, LGUtils;
 
 {$IFDEF ENDIAN_BIG}
   {$FATAL Big Endian is not supported }
@@ -69,7 +69,6 @@ type
     BYTE_PER_VALUE       = 16;
     BIT_PER_VALUE        = 128;
     VALUE_BITSIZE_MASK   = Pred(BIT_PER_VALUE);
-    DWORD_RANGE: Int64   = Int64($0100000000);
   type
     PLimb                = ^TLimb;
     TLimbs128            = array[0..Pred(LIMB_PER_VALUE)] of TLimb;
@@ -2743,25 +2742,25 @@ end;
 
 class function TUInt128.Random: TUInt128;
 begin
-  Result := Encode(System.Random(DWORD_RANGE), System.Random(DWORD_RANGE),
-                   System.Random(DWORD_RANGE), System.Random(DWORD_RANGE));
+  Result := Encode(BJNextRandom, BJNextRandom, BJNextRandom, BJNextRandom);
 end;
 
 class function TUInt128.RandomInRange(const aRange: TUInt128): TUInt128;
 var
-  HiIdx, Shift, I: Integer;
+  MsDWordIdx, I: Integer;
+  Mask: DWord;
 begin
   if aRange < 2 then
     exit(0);
-  HiIdx := Pred(DWORD_PER_VALUE);
-  while aRange.DWords[HiIdx] = 0 do
-    Dec(HiIdx);
-  Shift := 32 - Succ(BsrDword(aRange.DWords[HiIdx]));
+  MsDWordIdx := Pred(DWORD_PER_VALUE);
+  while aRange.DWords[MsDWordIdx] = 0 do
+    Dec(MsDWordIdx);
   Result := Default(TUInt128);
+  for I := 0 to Pred(MsDWordIdx) do
+    Result.DWords[I] := BJNextRandom;
+  Mask := Pred(DWord(1) shl Succ(BsrDword(aRange.DWords[MsDWordIdx])));
   repeat
-    for I := 0 to HiIdx do
-      Result.DWords[I] := System.Random(DWORD_RANGE);
-    Result.DWords[HiIdx] := (Result.DWords[HiIdx] shl Shift) shr Shift;
+    Result.DWords[MsDWordIdx] := BJNextRandom and Mask;
   until Result < aRange;
 end;
 
