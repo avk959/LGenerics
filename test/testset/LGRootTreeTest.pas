@@ -59,6 +59,7 @@ type
     procedure TreeNodeGetLca;
     procedure TreeNodeAddChild;
     procedure AddLastChild;
+    procedure TreeAsCallParam;
     procedure TreeNodeAddChildTree;
     procedure TreeNodeAddLastChildTree;
     procedure TreeNodeExtract;
@@ -574,6 +575,33 @@ begin
   AssertTrue(Node.GetLastChild(Tmp));
   AssertTrue(Tmp = Child);
   AssertTrue(Child.Value = 15);
+end;
+
+procedure TTestLiteRootTree.TreeAsCallParam;
+  procedure ByValue(aTree: TTestTree);
+  begin
+    Assert(aTree.Count = 10);
+  end;
+  procedure AsVar(var aTree: TTestTree);
+  begin
+    Assert(aTree.Count = 10);
+    aTree.Root.AddChild(10);
+  end;
+  procedure AsConst(const aTree: TTestTree);
+  begin
+    Assert(aTree.Count = 10);
+  end;
+var
+  Tree: TTestTree;
+begin
+  CreateTestTree10(Tree);
+  Assert(Tree.Count = 10);
+  ByValue(Tree);
+  Assert(Tree.Count = 10);
+  AsConst(Tree);
+  Assert(Tree.Count = 10);
+  AsVar(Tree);
+  Assert(Tree.Count = 11);
 end;
 
 procedure TTestLiteRootTree.TreeNodeAddChildTree;
