@@ -295,6 +295,8 @@ type
 
   private
     FRoot: PNode;
+    FOwnsRoot: Boolean;
+    procedure AssignRoot(aNode: PNode);
     function GetRoot: TTreeNode;
     function GetCount: SizeInt; inline;
     function RemoveNode(aNode: TTreeNode; aOnRemove: TNestNodeEvent): SizeInt;
@@ -308,6 +310,7 @@ type
     class operator Initialize(var rt: TGLiteRootedTree); inline;
     class operator Finalize(var rt: TGLiteRootedTree);
     class operator Copy(constref aSrc: TGLiteRootedTree; var aDst: TGLiteRootedTree); inline;
+    class operator AddRef(var rt: TGLiteRootedTree); inline;
   public
     class function CopySubTree(aNode: TTreeNode; out aTree: TGLiteRootedTree): SizeInt; static; inline;
     function  GetEnumerator: TTreeNode.TEnumerator;
@@ -1030,7 +1033,7 @@ begin
   if IsRoot then
     exit(False);
   CutFromTree(FNode);
-  aTree.FRoot := FNode;
+  aTree.AssignRoot(FNode);
   Result := True;
 end;
 
@@ -1252,10 +1255,16 @@ end;
 
 { TGLiteRootedTree }
 
+procedure TGLiteRootedTree.AssignRoot(aNode: PNode);
+begin
+  FRoot := aNode;
+  FOwnsRoot := True;
+end;
+
 function TGLiteRootedTree.GetRoot: TTreeNode;
 begin
   if FRoot = nil then
-    FRoot := CreateNode;
+    AssignRoot(CreateNode);
   Result.FNode := FRoot;
 end;
 
@@ -1282,7 +1291,11 @@ begin
   Result := 0;
   if FRoot <> nil then
     begin
-      Result := DoRemoveNode(FRoot);
+      if FOwnsRoot then
+        begin
+          Result := DoRemoveNode(FRoot);
+          FOwnsRoot := False;
+        end;
       FRoot := nil;
     end;
 end;
@@ -1391,6 +1404,7 @@ end;
 class operator TGLiteRootedTree.Initialize(var rt: TGLiteRootedTree);
 begin
   rt.FRoot := nil;
+  rt.FOwnsRoot := False;
 end;
 
 class operator TGLiteRootedTree.Finalize(var rt: TGLiteRootedTree);
@@ -1402,6 +1416,13 @@ class operator TGLiteRootedTree.Copy(constref aSrc: TGLiteRootedTree; var aDst: 
 begin
   aDst.Clear;
   aSrc.SubTreeCopy(aSrc.FRoot, aDst.FRoot);
+  aDst.FOwnsRoot := True;
+end;
+
+class operator TGLiteRootedTree.AddRef(var rt: TGLiteRootedTree);
+begin
+  if rt.FRoot <> nil then
+    rt.FOwnsRoot := False;
 end;
 
 class function TGLiteRootedTree.CopySubTree(aNode: TTreeNode; out aTree: TGLiteRootedTree): SizeInt;
