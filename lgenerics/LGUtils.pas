@@ -67,6 +67,7 @@ type
   ELGListError          = class(Exception);
   ELGMapError           = class(Exception);
   ELGTableError         = class(Exception);
+  TEmptyData            = record end;
 
 const
   MAX_CONTAINER_SIZE         = Succ(High(SizeInt) shr 2);
