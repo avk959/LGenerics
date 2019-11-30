@@ -90,6 +90,7 @@
   - mergesort
   - timsort(unit LGMiscUtils)
   - counting sort
+  - static segment tree
   - ...
 #### Other:
   - non-cryptogarphic hashes(unit LGHash):
