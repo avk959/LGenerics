@@ -1292,11 +1292,9 @@ begin
   if FRoot <> nil then
     begin
       if FOwnsRoot then
-        begin
-          Result := DoRemoveNode(FRoot);
-          FOwnsRoot := False;
-        end;
+        Result += DoRemoveNode(FRoot);
       FRoot := nil;
+      FOwnsRoot := False;
     end;
 end;
 
