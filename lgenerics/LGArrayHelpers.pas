@@ -9887,7 +9887,7 @@ end;
 
 procedure TGSegmentTree.CheckIndexRange(aIndex: SizeInt);
 begin
-  if SizeInt(aIndex) >= SizeInt(FElemCount) then
+  if SizeUInt(aIndex) >= SizeUInt(FElemCount) then
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
