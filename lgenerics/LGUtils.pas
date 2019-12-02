@@ -749,6 +749,33 @@ type
     property  FreeCount: SizeInt read FFreeCount;
   end;
 
+  { TGAddMonoid }
+  TGAddMonoid<T> = record
+  private
+    class function GetIdentity: T; static; inline;
+  public
+    class property Identity: T read GetIdentity;
+    class function BinOp(L, R: T): T static; inline;
+  end;
+
+  { TGMaxMonoid }
+  TGMaxMonoid<T> = record
+  private
+    class function GetIdentity: T; static; inline;
+  public
+    class property Identity: T read GetIdentity;
+    class function BinOp(L, R: T): T static; inline;
+  end;
+
+  { TGMinMonoid }
+  TGMinMonoid<T> = record
+  private
+    class function GetIdentity: T; static; inline;
+  public
+    class property Identity: T read GetIdentity;
+    class function BinOp(L, R: T): T static; inline;
+  end;
+
 {$PUSH}{$PACKRECORDS DEFAULT}
   TSpinLock = record
   strict private
@@ -2255,6 +2282,48 @@ begin
       nm.FHead := nil;
       nm.FTail := nil;
     end;
+end;
+
+{ TGAddMonoid }
+
+class function TGAddMonoid<T>.GetIdentity: T;
+begin
+  Result := Default(T);
+end;
+
+class function TGAddMonoid<T>.BinOp(L, R: T): T;
+begin
+  Result := L + R;
+end;
+
+{ TGMaxMonoid }
+
+class function TGMaxMonoid<T>.GetIdentity: T;
+begin
+  Result := T.MinValue;
+end;
+
+class function TGMaxMonoid<T>.BinOp(L, R: T): T;
+begin
+  if L < R then
+    Result := R
+  else
+    Result := L
+end;
+
+{ TGMinMonoid }
+
+class function TGMinMonoid<T>.GetIdentity: T;
+begin
+  Result := T.MaxValue;
+end;
+
+class function TGMinMonoid<T>.BinOp(L, R: T): T;
+begin
+  if R < L then
+    Result := R
+  else
+    Result := L
 end;
 
 { TSpinLock }

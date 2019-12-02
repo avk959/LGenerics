@@ -977,33 +977,6 @@ type
     class property Identity: T read GetIdentity;
   end;
 
-  { TGAddMonoid }
-  generic TGAddMonoid<T> = record
-  private
-    class function GetIdentity: T; static; inline;
-  public
-    class property Identity: T read GetIdentity;
-    class function BinOp(L, R: T): T static; inline;
-  end;
-
-  { TGMaxMonoid }
-  generic TGMaxMonoid<T> = record
-  private
-    class function GetIdentity: T; static; inline;
-  public
-    class property Identity: T read GetIdentity;
-    class function BinOp(L, R: T): T static; inline;
-  end;
-
-  { TGMinMonoid }
-  generic TGMinMonoid<T> = record
-  private
-    class function GetIdentity: T; static; inline;
-  public
-    class property Identity: T read GetIdentity;
-    class function BinOp(L, R: T): T static; inline;
-  end;
-
 implementation
 {$B-}{$COPERATORS ON}{$POINTERMATH ON}{$GOTO ON}
 
@@ -9995,48 +9968,6 @@ begin
   if L = R then
     vL := TMonoid.BinOp(vL, FTree[L]);
   Result := TMonoid.BinOp(vL, vR);
-end;
-
-{ TGAddMonoid }
-
-class function TGAddMonoid.GetIdentity: T;
-begin
-  Result := Default(T);
-end;
-
-class function TGAddMonoid.BinOp(L, R: T): T;
-begin
-  Result := L + R;
-end;
-
-{ TGMaxMonoid }
-
-class function TGMaxMonoid.GetIdentity: T;
-begin
-  Result := T.MinValue;
-end;
-
-class function TGMaxMonoid.BinOp(L, R: T): T;
-begin
-  if L < R then
-    Result := R
-  else
-    Result := L
-end;
-
-{ TGMinMonoid }
-
-class function TGMinMonoid.GetIdentity: T;
-begin
-  Result := T.MaxValue;
-end;
-
-class function TGMinMonoid.BinOp(L, R: T): T;
-begin
-  if R < L then
-    Result := R
-  else
-    Result := L
 end;
 
 end.
