@@ -114,6 +114,7 @@ type
 
   published
     procedure CreateTree;
+    procedure Items;
     procedure AddQuery;
     procedure MaxQuery;
     procedure MinQuery;
@@ -835,6 +836,29 @@ begin
     Tree[I] := Tree[I] + I;
   for I := 0 to High(a) do
     AssertTrue(Tree[I] = a[I] + I);
+end;
+
+procedure TSegmentTreeTest.Items;
+var
+  Tree: TIntAddTree;
+  {%H-}I: Integer;
+  Raised: Boolean = False;
+begin
+  Tree := TIntAddTree.Create([2, 3]);
+  try
+    I := Tree[-1];
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
+
+  Raised := False;
+  try
+    I := Tree[2];
+  except
+    Raised := True;
+  end;
+  AssertTrue(Raised);
 end;
 
 procedure TSegmentTreeTest.AddQuery;
