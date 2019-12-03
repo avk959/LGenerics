@@ -4109,12 +4109,9 @@ begin
       sCopy := System.Copy(sCopy, 2, System.Length(sCopy));
     if TUInt128.TryParseStr(sCopy, aValue.FLimbs) then
       begin
-        if aValue.HiLimbMacro and SIGN_FLAG = 0 then
-          begin
-            if IsNeg then
-              aValue.HiLimbMacro := aValue.HiLimbMacro or SIGN_FLAG;
-            exit(True);
-          end;
+        if IsNeg then
+          aValue.Negate;
+        exit(True);
       end;
     end;
   Result := False;
