@@ -755,7 +755,7 @@ type
     class function GetIdentity: T; static; inline;
   public
     class property Identity: T read GetIdentity;
-    class function BinOp(L, R: T): T static; inline;
+    class function BinOp(const L, R: T): T static; inline;
   end;
 
   { TGMaxMonoid }
@@ -764,7 +764,7 @@ type
     class function GetIdentity: T; static; inline;
   public
     class property Identity: T read GetIdentity;
-    class function BinOp(L, R: T): T static; inline;
+    class function BinOp(const L, R: T): T static; inline;
   end;
 
   { TGMinMonoid }
@@ -773,7 +773,7 @@ type
     class function GetIdentity: T; static; inline;
   public
     class property Identity: T read GetIdentity;
-    class function BinOp(L, R: T): T static; inline;
+    class function BinOp(const L, R: T): T static; inline;
   end;
 
 {$PUSH}{$PACKRECORDS DEFAULT}
@@ -2291,7 +2291,7 @@ begin
   Result := Default(T);
 end;
 
-class function TGAddMonoid<T>.BinOp(L, R: T): T;
+class function TGAddMonoid<T>.BinOp(const L, R: T): T;
 begin
   Result := L + R;
 end;
@@ -2303,7 +2303,7 @@ begin
   Result := T.MinValue;
 end;
 
-class function TGMaxMonoid<T>.BinOp(L, R: T): T;
+class function TGMaxMonoid<T>.BinOp(const L, R: T): T;
 begin
   if L < R then
     Result := R
@@ -2318,7 +2318,7 @@ begin
   Result := T.MaxValue;
 end;
 
-class function TGMinMonoid<T>.BinOp(L, R: T): T;
+class function TGMinMonoid<T>.BinOp(const L, R: T): T;
 begin
   if R < L then
     Result := R
