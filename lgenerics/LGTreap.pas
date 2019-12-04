@@ -69,6 +69,7 @@ type
   end;
 
   { TGLiteTreap: BST only;
+    on assignment and when passed by value, the whole treap is copied;
       functor TCmpRel (comparision relation) must provide:
         class function Compare([const[ref]] L, R: TKey): SizeInt; }
   generic TGLiteTreap<TKey, TValue, TCmpRel> = record
@@ -96,10 +97,10 @@ type
 
   private
     FRoot: PNode;
-    FOwnsRoot: Boolean;
-    function GetCount: SizeInt;
-    function GetHeight: SizeInt;
+    function  GetCount: SizeInt;
+    function  GetHeight: SizeInt;
     class function  NewNode(constref aKey: TKey): PNode; static;
+    class function  CopyTree(aRoot: PNode): PNode; static;
   { splits tree of aRoot into two subtrees, where min(R.Key) >= aKey }
     class procedure SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode); static;
     class function  MergeNode(L, R: PNode): PNode; static;
@@ -108,7 +109,7 @@ type
     class operator  Initialize(var aTreap: TGLiteTreap);
     class operator  Finalize(var aTreap: TGLiteTreap);
     class operator  Copy(constref aSrc: TGLiteTreap; var aDst: TGLiteTreap);
-    class operator  AddRef(var aTreap: TGLiteTreap); inline;
+    class operator  AddRef(var aTreap: TGLiteTreap);
   public
     class procedure Split(constref aKey: TKey; var aTreap: TGLiteTreap; out L, R: TGLiteTreap); static;
     function  IsEmpty: Boolean; inline;
@@ -119,7 +120,7 @@ type
     function  Add(constref aKey: TKey): PNode;
     function  Remove(constref aKey: TKey): Boolean;
   { splits treap so that result will contain all elements with keys >= aKey }
-    function  Split(constref aKey: TKey): TGLiteTreap;
+    procedure Split(constref aKey: TKey; out aTreap: TGLiteTreap);
     property  Root: PNode read FRoot;
     property  Count: SizeInt read GetCount;  //O(N)
     property  Height: SizeInt read GetHeight;//O(N)
@@ -127,6 +128,7 @@ type
 
 implementation
 {$B-}{$COPERATORS ON}
+
 { TGBstUtil }
 
 class function TGBstUtil.GetTreeSize(aNode: PNode): SizeInt;
@@ -480,6 +482,19 @@ begin
   Result^.FPrio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
 end;
 
+class function TGLiteTreap.CopyTree(aRoot: PNode): PNode;
+var
+  Tmp: TGLiteTreap;
+  procedure CopyNode(aNode: PNode; var {%H-}aGoOn: Boolean);
+  begin
+    Tmp.Add(aNode^.Key)^.Value := aNode^.Value;
+  end;
+begin
+  TUtil.InOrderTraversal(aRoot, @CopyNode);
+  Result := {%H-}Tmp.FRoot;
+  Tmp.FRoot := nil;
+end;
+
 class procedure TGLiteTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode);
 begin
   if aRoot <> nil then
@@ -534,9 +549,9 @@ begin
           AddNode(aRoot^.FLeft, aNode)
         else
           AddNode(aRoot^.FRight, aNode);
-      exit;
-    end;
-  aRoot := aNode;
+    end
+  else
+    aRoot := aNode;
 end;
 
 
@@ -560,7 +575,6 @@ end;
 class operator TGLiteTreap.Initialize(var aTreap: TGLiteTreap);
 begin
   aTreap.FRoot := nil;
-  aTreap.FOwnsRoot := False;
 end;
 
 class operator TGLiteTreap.Finalize(var aTreap: TGLiteTreap);
@@ -569,23 +583,16 @@ begin
 end;
 
 class operator TGLiteTreap.Copy(constref aSrc: TGLiteTreap; var aDst: TGLiteTreap);
-  procedure CopyNode(aNode: PNode; var {%H-}aGoOn: Boolean);
-  var
-    Node: PNode;
-  begin
-    Node := aDst.Add(aNode^.Key);
-    Node^.Value := aNode^.Value;
-  end;
 begin
   aDst.Clear;
-  if aSrc.FRoot = nil then
-    exit;
-  TUtil.InOrderTraversal(aSrc.FRoot, @CopyNode);
+  if aSrc.FRoot <> nil then
+    aDst.FRoot := CopyTree(aSrc.FRoot);
 end;
 
 class operator TGLiteTreap.AddRef(var aTreap: TGLiteTreap);
 begin
-  aTreap.FOwnsRoot := False;
+  if aTreap.FRoot <> nil then
+    aTreap.FRoot := CopyTree(aTreap.FRoot);
 end;
 
 class procedure TGLiteTreap.Split(constref aKey: TKey; var aTreap: TGLiteTreap; out L, R: TGLiteTreap);
@@ -593,9 +600,7 @@ begin
   if aTreap.FRoot = nil then
     exit;
   SplitNode(aKey, aTreap.FRoot, L.FRoot, R.FRoot);
-  L.FOwnsRoot := L.FRoot <> nil;
-  R.FOwnsRoot := R.FRoot <> nil;
-  aTreap.FOwnsRoot := False;
+  aTreap.FRoot := nil;
 end;
 
 function TGLiteTreap.IsEmpty: Boolean;
@@ -605,10 +610,9 @@ end;
 
 procedure TGLiteTreap.Clear;
 begin
-  if (FRoot <> nil) and FOwnsRoot then
+  if FRoot <> nil then
     TUtil.ClearTree(FRoot);
   FRoot := nil;
-  FOwnsRoot := False;
 end;
 
 function TGLiteTreap.ToArray: TEntryArray;
@@ -664,33 +668,23 @@ function TGLiteTreap.Add(constref aKey: TKey): PNode;
 begin
   Result := NewNode(aKey);
   if FRoot <> nil then
-    begin
-      AddNode(FRoot, Result);
-      exit;
-    end;
-  FRoot := Result;
-  FOwnsRoot := True;
+    AddNode(FRoot, Result)
+  else
+    FRoot := Result;
 end;
 
 function TGLiteTreap.Remove(constref aKey: TKey): Boolean;
 begin
-  if (FRoot <> nil) and RemoveNode(aKey, FRoot) then
-    begin
-      if FRoot = nil then
-        FOwnsRoot := False;
-      exit(True);
-    end;
-  Result := False;
+  if FRoot <> nil then
+    Result := RemoveNode(aKey, FRoot)
+  else
+    Result := False;
 end;
 
-function TGLiteTreap.Split(constref aKey: TKey): TGLiteTreap;
-{%H-}begin
+procedure TGLiteTreap.Split(constref aKey: TKey; out aTreap: TGLiteTreap);
+begin
   if FRoot <> nil then
-    begin
-      SplitNode(aKey, FRoot, FRoot, Result.FRoot);
-      FOwnsRoot := FRoot <> nil;
-      Result.FOwnsRoot := Result.FRoot <> nil;
-    end;
+    SplitNode(aKey, FRoot, FRoot, aTreap.FRoot);
 end;
 
 end.
