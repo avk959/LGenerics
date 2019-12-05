@@ -121,7 +121,7 @@ type
     function  CountOf(constref aKey: TKey): SizeInt;//O(N)
     function  Add(constref aKey: TKey): PNode;      //O(LogN)
     function  Remove(constref aKey: TKey): Boolean; //O(LogN)
-  { splits treap so that result will contain all elements with keys >= aKey }
+  { splits treap so that aTreap will contain all elements with keys >= aKey }
     procedure Split(constref aKey: TKey; out aTreap: TGLiteTreap);//O(LogN)
     property  Root: PNode read FRoot;               //O(1)
     property  Count: SizeInt read GetCount;         //O(N)
@@ -186,7 +186,7 @@ type
     function  CountOf(constref aKey: TKey): SizeInt; //O(LogN)
     function  Add(constref aKey: TKey): PNode;       //O(LogN)
     function  Remove(constref aKey: TKey): Boolean;  //O(LogN)
-  { splits treap so that result will contain all elements with keys >= aKey }
+  { splits treap so that aTreap will contain all elements with keys >= aKey }
     procedure Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);//O(LogN)
     property  Root: PNode read FRoot;                //O(1)
     property  Count: SizeInt read GetCount;          //O(1)
