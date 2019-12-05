@@ -114,18 +114,18 @@ type
     { splits aTreap so that L will contain all keys < aKey and  R will contain all keys >= aKey;
       aTreap becomes empty }
     class procedure Split(constref aKey: TKey; var aTreap: TGLiteTreap; out L, R: TGLiteTreap); static;
-    function  IsEmpty: Boolean; inline;
-    procedure Clear;
-    function  ToArray: TEntryArray;         //O(N)
-    function  Find(constref aKey: TKey): PNode;
+    function  IsEmpty: Boolean; inline;             //O(1)
+    procedure Clear;                                //O(N)
+    function  ToArray: TEntryArray;                 //O(N)
+    function  Find(constref aKey: TKey): PNode;     //O(LogN)
     function  CountOf(constref aKey: TKey): SizeInt;//O(N)
-    function  Add(constref aKey: TKey): PNode;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  Add(constref aKey: TKey): PNode;      //O(LogN)
+    function  Remove(constref aKey: TKey): Boolean; //O(LogN)
   { splits treap so that result will contain all elements with keys >= aKey }
-    procedure Split(constref aKey: TKey; out aTreap: TGLiteTreap);
-    property  Root: PNode read FRoot;
-    property  Count: SizeInt read GetCount;  //O(N)
-    property  Height: SizeInt read GetHeight;//O(N)
+    procedure Split(constref aKey: TKey; out aTreap: TGLiteTreap);//O(LogN)
+    property  Root: PNode read FRoot;               //O(1)
+    property  Count: SizeInt read GetCount;         //O(N)
+    property  Height: SizeInt read GetHeight;       //O(N)
   end;
 
   { TGLiteIdxTreap: BST which allows index access(IOW rank and N-th order statistics)
@@ -178,20 +178,20 @@ type
   { splits aTreap so that L will contain all keys < aKey and  R will contain all keys >= aKey;
     aTreap becomes empty }
     class procedure Split(constref aKey: TKey; var aTreap: TGLiteIdxTreap; out L, R: TGLiteIdxTreap); static;
-    function  IsEmpty: Boolean; inline;
-    procedure Clear;
-    function  ToArray: TEntryArray;         //O(N)
-    function  Find(constref aKey: TKey): PNode;
-    function  IndexOf(constref aKey: TKey): SizeInt; inline;
-    function  CountOf(constref aKey: TKey): SizeInt;
-    function  Add(constref aKey: TKey): PNode;
-    function  Remove(constref aKey: TKey): Boolean;
+    function  IsEmpty: Boolean; inline;              //O(1)
+    procedure Clear;                                 //O(N)
+    function  ToArray: TEntryArray;                  //O(N)
+    function  Find(constref aKey: TKey): PNode;      //O(LogN)
+    function  IndexOf(constref aKey: TKey): SizeInt; inline;//O(LogN)
+    function  CountOf(constref aKey: TKey): SizeInt; //O(LogN)
+    function  Add(constref aKey: TKey): PNode;       //O(LogN)
+    function  Remove(constref aKey: TKey): Boolean;  //O(LogN)
   { splits treap so that result will contain all elements with keys >= aKey }
-    procedure Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);
-    property  Root: PNode read FRoot;
-    property  Count: SizeInt read GetCount;
-    property  Height: SizeInt read GetHeight; //O(N)
-    property  Items[aIndex: SizeInt]: PNode read GetItem; default;
+    procedure Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);//O(LogN)
+    property  Root: PNode read FRoot;                //O(1)
+    property  Count: SizeInt read GetCount;          //O(1)
+    property  Height: SizeInt read GetHeight;        //O(N)
+    property  Items[aIndex: SizeInt]: PNode read GetItem; default;//O(LogN)
   end;
 
 implementation
