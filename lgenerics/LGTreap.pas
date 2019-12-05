@@ -111,6 +111,8 @@ type
     class operator  Copy(constref aSrc: TGLiteTreap; var aDst: TGLiteTreap);
     class operator  AddRef(var aTreap: TGLiteTreap);
   public
+    { splits aTreap so that L will contain all keys < aKey and  R will contain all keys >= aKey;
+      aTreap becomes empty }
     class procedure Split(constref aKey: TKey; var aTreap: TGLiteTreap; out L, R: TGLiteTreap); static;
     function  IsEmpty: Boolean; inline;
     procedure Clear;
@@ -124,6 +126,72 @@ type
     property  Root: PNode read FRoot;
     property  Count: SizeInt read GetCount;  //O(N)
     property  Height: SizeInt read GetHeight;//O(N)
+  end;
+
+  { TGLiteIdxTreap: BST which allows index access(IOW rank and N-th order statistics)
+    on assignment and when passed by value, the whole treap is copied;
+      functor TCmpRel (comparision relation) must provide:
+        class function Compare([const[ref]] L, R: TKey): SizeInt; }
+  generic TGLiteIdxTreap<TKey, TValue, TCmpRel> = record
+  public
+  type
+    PNode = ^TNode;
+    TNode = record
+    private
+      FLeft,
+      FRight: PNode;
+      FKey: TKey;
+      FPrio: SizeUInt;
+      FSize: SizeInt;
+    public
+      Value: TValue;
+      property Left: PNode read FLeft;
+      property Right: PNode read FRight;
+      property Key: TKey read FKey;
+      property Size: SizeInt read FSize;
+    end;
+
+    TUtil       = specialize TGIndexedBstUtil<TKey, TNode, TCmpRel>;
+    TOnVisit    = TUtil.TOnVisit;
+    TNestVisit  = TUtil.TNestVisit;
+    TEntry      = specialize TGMapEntry<TKey, TValue>;
+    TEntryArray = array of TEntry;
+
+  private
+    FRoot: PNode;
+    function  GetCount: SizeInt; inline;
+    function  GetHeight: SizeInt;
+    function  GetItem(aIndex: SizeInt): PNode; inline;
+    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    class function  NewNode(constref aKey: TKey): PNode; static;
+    class function  CopyTree(aRoot: PNode): PNode; static;
+    class procedure UpdateSize(aNode: PNode); static; inline;
+    class procedure SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode); static;
+    class function  MergeNode(L, R: PNode): PNode; static;
+    class procedure AddNode(var aRoot: PNode; aNode: PNode); static;
+    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean; static;
+    class operator  Initialize(var aTreap: TGLiteIdxTreap);
+    class operator  Finalize(var aTreap: TGLiteIdxTreap);
+    class operator  Copy(constref aSrc: TGLiteIdxTreap; var aDst: TGLiteIdxTreap);
+    class operator  AddRef(var aTreap: TGLiteIdxTreap); inline;
+  public
+  { splits aTreap so that L will contain all keys < aKey and  R will contain all keys >= aKey;
+    aTreap becomes empty }
+    class procedure Split(constref aKey: TKey; var aTreap: TGLiteIdxTreap; out L, R: TGLiteIdxTreap); static;
+    function  IsEmpty: Boolean; inline;
+    procedure Clear;
+    function  ToArray: TEntryArray;         //O(N)
+    function  Find(constref aKey: TKey): PNode;
+    function  IndexOf(constref aKey: TKey): SizeInt; inline;
+    function  CountOf(constref aKey: TKey): SizeInt;
+    function  Add(constref aKey: TKey): PNode;
+    function  Remove(constref aKey: TKey): Boolean;
+  { splits treap so that result will contain all elements with keys >= aKey }
+    procedure Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);
+    property  Root: PNode read FRoot;
+    property  Count: SizeInt read GetCount;
+    property  Height: SizeInt read GetHeight; //O(N)
+    property  Items[aIndex: SizeInt]: PNode read GetItem; default;
   end;
 
 implementation
@@ -485,14 +553,24 @@ end;
 class function TGLiteTreap.CopyTree(aRoot: PNode): PNode;
 var
   Tmp: TGLiteTreap;
-  procedure CopyNode(aNode: PNode; var {%H-}aGoOn: Boolean);
+  procedure Visit(aNode: PNode);
   begin
-    Tmp.Add(aNode^.Key)^.Value := aNode^.Value;
+    if aNode <> nil then
+      begin
+        Visit(aNode^.FLeft);
+        Tmp.Add(aNode^.Key)^.Value := aNode^.Value;
+        Visit(aNode^.FRight);
+      end;
   end;
 begin
-  TUtil.InOrderTraversal(aRoot, @CopyNode);
-  Result := {%H-}Tmp.FRoot;
-  Tmp.FRoot := nil;
+  if aRoot <> nil then
+    begin
+      Visit(aRoot);
+      Result := {%H-}Tmp.FRoot;
+      Tmp.FRoot := nil;
+    end
+  else
+    Result := nil;
 end;
 
 class procedure TGLiteTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode);
@@ -619,17 +697,25 @@ function TGLiteTreap.ToArray: TEntryArray;
 var
   a: TEntryArray = nil;
   I: Integer = 0;
-  procedure Visit(aNode: PNode; var {%H-}GoOn: Boolean);
+  procedure Visit(aNode: PNode);
   begin
-    if System.Length(a) = I then
-      System.SetLength(a, I * 2);
-    a[I] := TEntry.Create(aNode^.Key, aNode^.Value);
-    Inc(I);
+    if aNode <> nil then
+      begin
+        Visit(aNode^.FLeft);
+        if System.Length(a) = I then
+          System.SetLength(a, I * 2);
+        a[I] := TEntry.Create(aNode^.Key, aNode^.Value);
+        Inc(I);
+        Visit(aNode^.FRight);
+      end;
   end;
 begin
-  System.SetLength(a, ARRAY_INITIAL_SIZE);
-  TUtil.InOrderTraversal(FRoot, @Visit);
-  System.SetLength(a, I);
+  if FRoot <> nil then
+    begin
+      System.SetLength(a, ARRAY_INITIAL_SIZE);
+      Visit(FRoot);
+      System.SetLength(a, I);
+    end;
   Result := a;
 end;
 
@@ -682,6 +768,295 @@ begin
 end;
 
 procedure TGLiteTreap.Split(constref aKey: TKey; out aTreap: TGLiteTreap);
+begin
+  if FRoot <> nil then
+    SplitNode(aKey, FRoot, FRoot, aTreap.FRoot);
+end;
+
+{ TGLiteIdxTreap }
+
+function TGLiteIdxTreap.GetCount: SizeInt;
+begin
+  Result := TUtil.GetNodeSize(FRoot);
+end;
+
+function TGLiteIdxTreap.GetHeight: SizeInt;
+begin
+  Result := TUtil.GetHeight(FRoot);
+end;
+
+function TGLiteIdxTreap.GetItem(aIndex: SizeInt): PNode;
+begin
+  Result := TUtil.GetByIndex(FRoot, aIndex);
+end;
+
+procedure TGLiteIdxTreap.CheckIndexRange(aIndex: SizeInt);
+begin
+  if SizeUInt(aIndex) >= SizeUInt(TUtil.GetNodeSize(FRoot)) then
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+class function TGLiteIdxTreap.NewNode(constref aKey: TKey): PNode;
+begin
+  Result := System.GetMem(SizeOf(TNode));
+  System.FillChar(Result^, SizeOf(TNode), 0);
+  Result^.FKey := aKey;
+  Result^.FPrio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.FSize := 1;
+end;
+
+class function TGLiteIdxTreap.CopyTree(aRoot: PNode): PNode;
+var
+  Tmp: TGLiteIdxTreap;
+  procedure Visit(aNode: PNode);
+  begin
+    if aNode <> nil then
+      begin
+        Visit(aNode^.FLeft);
+        Tmp.Add(aNode^.Key)^.Value := aNode^.Value;
+        Visit(aNode^.FRight);
+      end;
+  end;
+begin
+  if aRoot <> nil then
+    begin
+      Visit(aRoot);
+      Result := {%H-}Tmp.FRoot;
+      Tmp.FRoot := nil;
+    end
+  else
+    Result := nil;
+end;
+
+class procedure TGLiteIdxTreap.UpdateSize(aNode: PNode);
+begin
+  with aNode^ do
+    begin
+      FSize := 1;
+      if Left <> nil then
+        FSize += Left^.FSize;
+      if Right <> nil then
+        FSize += Right^.FSize;
+    end;
+end;
+
+class procedure TGLiteIdxTreap.SplitNode(constref aKey: TKey; aRoot: PNode; out L, R: PNode);
+begin
+  if aRoot <> nil then
+    begin
+      if TCmpRel.Compare(aRoot^.Key, aKey) < 0 then
+        begin
+          L := aRoot;
+          SplitNode(aKey, L^.FRight, L^.FRight, R);
+        end
+      else
+        begin
+          R := aRoot;
+          SplitNode(aKey, R^.FLeft, L, R^.FLeft);
+        end;
+      UpdateSize(aRoot);
+      exit;
+    end;
+  L := nil;
+  R := nil;
+end;
+
+class function TGLiteIdxTreap.MergeNode(L, R: PNode): PNode;
+begin
+  if L = nil then
+    Result := R
+  else
+    if R = nil then
+      Result := L
+    else
+      begin
+        if L^.FPrio > R^.FPrio then
+          begin
+            L^.FRight := MergeNode(L^.FRight, R);
+            Result := L;
+          end
+        else
+          begin
+            R^.FLeft := MergeNode(L, R^.FLeft);
+            Result := R;
+          end;
+        UpdateSize(Result);
+      end;
+end;
+
+class procedure TGLiteIdxTreap.AddNode(var aRoot: PNode; aNode: PNode);
+begin
+  if aRoot <> nil then
+    begin
+      if aRoot^.FPrio < aNode^.FPrio then
+        begin
+          SplitNode(aNode^.Key, aRoot, aNode^.FLeft, aNode^.FRight);
+          aRoot := aNode;
+        end
+      else
+        if TCmpRel.Compare(aNode^.Key, aRoot^.Key) < 0 then
+          AddNode(aRoot^.FLeft, aNode)
+        else
+          AddNode(aRoot^.FRight, aNode);
+      UpdateSize(aRoot);
+    end
+  else
+    aRoot := aNode;
+end;
+
+class function TGLiteIdxTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean;
+var
+  Found: PNode;
+  c: SizeInt;
+begin
+  if aRoot <> nil then
+    begin
+      c := TCmpRel.Compare(aKey, aRoot^.Key);
+      if c = 0 then
+        begin
+          Found := aRoot;
+          aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
+          TUtil.FreeNode(Found);
+          Result := True;
+        end
+      else
+        begin
+          if c < 0 then
+            Result := RemoveNode(aKey, aRoot^.FLeft)
+          else
+            Result := RemoveNode(aKey, aRoot^.FRight);
+          if Result then
+            UpdateSize(aRoot);
+        end;
+    end
+  else
+    Result := False;
+end;
+
+class operator TGLiteIdxTreap.Initialize(var aTreap: TGLiteIdxTreap);
+begin
+  aTreap.FRoot := nil;
+end;
+
+class operator TGLiteIdxTreap.Finalize(var aTreap: TGLiteIdxTreap);
+begin
+  aTreap.Clear;
+end;
+
+class operator TGLiteIdxTreap.Copy(constref aSrc: TGLiteIdxTreap; var aDst: TGLiteIdxTreap);
+begin
+  aDst.Clear;
+  if aSrc.FRoot <> nil then
+    aDst.FRoot := CopyTree(aSrc.FRoot);
+end;
+
+class operator TGLiteIdxTreap.AddRef(var aTreap: TGLiteIdxTreap);
+begin
+  if aTreap.FRoot <> nil then
+    aTreap.FRoot := CopyTree(aTreap.FRoot);
+end;
+
+class procedure TGLiteIdxTreap.Split(constref aKey: TKey; var aTreap: TGLiteIdxTreap;
+  out L, R: TGLiteIdxTreap);
+begin
+  if aTreap.FRoot = nil then
+    exit;
+  SplitNode(aKey, aTreap.FRoot, L.FRoot, R.FRoot);
+  aTreap.FRoot := nil;
+end;
+
+function TGLiteIdxTreap.IsEmpty: Boolean;
+begin
+  Result := FRoot = nil;
+end;
+
+procedure TGLiteIdxTreap.Clear;
+begin
+  if FRoot <> nil then
+    TUtil.ClearTree(FRoot);
+  FRoot := nil;
+end;
+
+function TGLiteIdxTreap.ToArray: TEntryArray;
+var
+  a: TEntryArray = nil;
+  I: Integer = 0;
+  procedure Visit(aNode: PNode);
+  begin
+    if aNode <> nil then
+      begin
+        Visit(aNode^.FLeft);
+        if System.Length(a) = I then
+          System.SetLength(a, I * 2);
+        a[I] := TEntry.Create(aNode^.Key, aNode^.Value);
+        Inc(I);
+        Visit(aNode^.FRight);
+      end;
+  end;
+begin
+  if FRoot <> nil then
+    begin
+      System.SetLength(a, ARRAY_INITIAL_SIZE);
+      Visit(FRoot);
+      System.SetLength(a, I);
+    end;
+  Result := a;
+end;
+
+function TGLiteIdxTreap.Find(constref aKey: TKey): PNode;
+begin
+  if FRoot <> nil then
+    exit(TUtil.FindKey(FRoot, aKey));
+  Result := nil;
+end;
+
+function TGLiteIdxTreap.IndexOf(constref aKey: TKey): SizeInt;
+begin
+  Result := TUtil.GetKeyIndex(FRoot, aKey);
+end;
+
+function TGLiteIdxTreap.CountOf(constref aKey: TKey): SizeInt;
+var
+  L, M, R, Gt: PNode;
+begin
+  if FRoot <> nil then
+    begin
+      Gt := TUtil.GetGreater(FRoot, aKey);
+      SplitNode(aKey, FRoot, L, R);
+      if Gt <> nil then
+        begin
+          SplitNode(Gt^.Key, R, M, R);
+          Result := TUtil.GetNodeSize(M);
+          FRoot := MergeNode(MergeNode(L, M), R);
+        end
+      else
+        begin
+          Result := TUtil.GetNodeSize(R);
+          FRoot := MergeNode(L, R);
+        end;
+    end
+  else
+    Result := 0;
+end;
+
+function TGLiteIdxTreap.Add(constref aKey: TKey): PNode;
+begin
+  Result := NewNode(aKey);
+  if FRoot <> nil then
+    AddNode(FRoot, Result)
+  else
+    FRoot := Result;
+end;
+
+function TGLiteIdxTreap.Remove(constref aKey: TKey): Boolean;
+begin
+  if FRoot <> nil then
+    Result := RemoveNode(aKey, FRoot)
+  else
+    Result := False;
+end;
+
+procedure TGLiteIdxTreap.Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);
 begin
   if FRoot <> nil then
     SplitNode(aKey, FRoot, FRoot, aTreap.FRoot);
