@@ -1465,10 +1465,12 @@ function TGLiteSegmentTreap.RangeQueryI(L, R: SizeInt): TValue;
 begin
   CheckIndexRange(L);
   CheckIndexRange(R);
-  if R < Pred(FRoot^.Size) then
-    Result := RangeQuery(TUtil.GetByIndex(FRoot, L)^.Key, TUtil.GetByIndex(FRoot, Succ(R))^.Key)
-  else
-    Result := TailQuery(TUtil.GetByIndex(FRoot, L)^.Key);
+  if L <= R then
+    if R < Pred(FRoot^.Size) then
+      exit(RangeQuery(TUtil.GetByIndex(FRoot, L)^.Key, TUtil.GetByIndex(FRoot, Succ(R))^.Key))
+    else
+      exit(TailQuery(TUtil.GetByIndex(FRoot, L)^.Key));
+  Result := TValMonoid.Identity;
 end;
 
 function TGLiteSegmentTreap.RangeQuery(constref L, R: TKey): TValue;
