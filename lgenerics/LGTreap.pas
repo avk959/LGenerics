@@ -219,7 +219,7 @@ end;
 class function TGBstUtil.GetHeight(aNode: PNode): SizeInt;
 begin
   if aNode <> nil then
-    Result := Math.Max(Succ(GetHeight(aNode^.Left)), Succ(GetHeight(aNode^.Right)))
+    Result := Succ(Math.Max(GetHeight(aNode^.Left), GetHeight(aNode^.Right)))
   else
     Result := 0;
 end;
