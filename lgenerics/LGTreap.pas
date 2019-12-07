@@ -239,6 +239,7 @@ type
     class function  MergeNode(L, R: PNode): PNode; static;
     class procedure AddNode(var aRoot: PNode; aNode: PNode); static;
     class function  RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean; static;
+    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode; out aValue: TValue): Boolean; static;
     class operator  Initialize(var aTreap: TGLiteSegmentTreap);
     class operator  Finalize(var aTreap: TGLiteSegmentTreap);
     class operator  Copy(constref aSrc: TGLiteSegmentTreap; var aDst: TGLiteSegmentTreap);
@@ -246,25 +247,26 @@ type
   public
     class procedure Split(constref aKey: TKey; var aTreap: TGLiteSegmentTreap;
                           out L, R: TGLiteSegmentTreap); static;
-    function  IsEmpty: Boolean; inline;                      //O(1)
-    procedure Clear;                                         //O(N)
-    function  ToArray: TEntryArray;                          //O(N)
-    function  Contains(constref aKey: TKey): Boolean;        //O(LogN)
+    function  IsEmpty: Boolean; inline;                        //O(1)
+    procedure Clear;                                           //O(N)
+    function  ToArray: TEntryArray;                            //O(N)
+    function  Contains(constref aKey: TKey): Boolean;          //O(LogN)
     function  Find(constref aKey: TKey; out aValue: TValue): Boolean;    //O(LogN)
-    function  IndexOf(constref aKey: TKey): SizeInt; inline; //O(LogN)
+    function  IndexOf(constref aKey: TKey): SizeInt; inline;   //O(LogN)
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;//O(LogN)
-    function  Add(constref e: TEntry): Boolean; inline;      //O(LogN)
-    function  Remove(constref aKey: TKey): Boolean;          //O(LogN)
+    function  Add(constref e: TEntry): Boolean; inline;        //O(LogN)
+    function  Remove(constref aKey: TKey): Boolean;            //O(LogN)
+    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;  //O(LogN)
     procedure Split(constref aKey: TKey; out aTreap: TGLiteSegmentTreap);//O(LogN)
-    function  RangeQueryI(L, R: SizeInt): TValue;            //O(LogN)
-    function  RangeQuery(constref L, R: TKey): TValue;       //O(LogN)
-    function  HeadQueryI(aIndex: SizeInt): TValue;           //O(LogN)
-    function  HeadQuery(constref aKey: TKey): TValue;        //O(LogN)
-    function  TailQueryI(aIndex: SizeInt): TValue;           //O(LogN)
-    function  TailQuery(constref aKey: TKey): TValue;        //O(LogN)
-    property  Count: SizeInt read GetCount;                  //O(1)
-    property  Height: SizeInt read GetHeight;                //O(N)
-    property  Entries[aIndex: SizeInt]: TEntry read GetEntry;//O(LogN)
+    function  RangeQueryI(L, R: SizeInt): TValue;              //O(LogN)
+    function  RangeQuery(constref L, R: TKey): TValue;         //O(LogN)
+    function  HeadQueryI(aIndex: SizeInt): TValue;             //O(LogN)
+    function  HeadQuery(constref aKey: TKey): TValue;          //O(LogN)
+    function  TailQueryI(aIndex: SizeInt): TValue;             //O(LogN)
+    function  TailQuery(constref aKey: TKey): TValue;          //O(LogN)
+    property  Count: SizeInt read GetCount;                    //O(1)
+    property  Height: SizeInt read GetHeight;                  //O(N)
+    property  Entries[aIndex: SizeInt]: TEntry read GetEntry;  //O(LogN)
   { if not contains aKey then read returns TValMonoid.Identity }
     property  Values[const aKey: TKey]: TValue read GetValue write SetValue; default;//O(LogN)
   end;
@@ -1348,6 +1350,36 @@ begin
     Result := False;
 end;
 
+class function TGLiteSegmentTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out aValue: TValue): Boolean;
+var
+  Found: PNode;
+  c: SizeInt;
+begin
+  if aRoot <> nil then
+    begin
+      c := TCmpRel.Compare(aKey, aRoot^.Key);
+      if c = 0 then
+        begin
+          Found := aRoot;
+          aRoot := MergeNode(aRoot^.Left, aRoot^.Right);
+          aValue := Found^.Value;
+          TUtil.FreeNode(Found);
+          Result := True;
+        end
+      else
+        begin
+          if c < 0 then
+            Result := RemoveNode(aKey, aRoot^.Left, aValue)
+          else
+            Result := RemoveNode(aKey, aRoot^.Right, aValue);
+          if Result then
+            UpdateNode(aRoot);
+        end;
+    end
+  else
+    Result := False;
+end;
+
 class operator TGLiteSegmentTreap.Initialize(var aTreap: TGLiteSegmentTreap);
 begin
   aTreap.FRoot := nil;
@@ -1463,6 +1495,14 @@ function TGLiteSegmentTreap.Remove(constref aKey: TKey): Boolean;
 begin
   if FRoot <> nil  then
     Result := RemoveNode(aKey, FRoot)
+  else
+    Result := False;
+end;
+
+function TGLiteSegmentTreap.Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+begin
+  if FRoot <> nil  then
+    Result := RemoveNode(aKey, FRoot, aValue)
   else
     Result := False;
 end;
