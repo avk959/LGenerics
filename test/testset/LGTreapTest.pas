@@ -30,6 +30,8 @@ type
     procedure CountOfStr;
     procedure Split;
     procedure SplitStr;
+    procedure ToArray;
+    procedure ToArrayStr;
   end;
 
   { TLiteIdxTreapTest }
@@ -54,6 +56,25 @@ type
     procedure IndexOf;
     procedure IndexOfStr;
     procedure Items;
+    procedure ToArray;
+    procedure ToArrayStr;
+  end;
+
+  { TLiteSegmentTreapTest }
+
+  TLiteSegmentTreapTest = class(TTestCase)
+  private
+  type
+    TAddMonoid = specialize TGAddMonoid<Integer>;
+    TIntTreap  = specialize TGLiteSegmentTreap<Integer, Integer, Integer, TAddMonoid>;
+  published
+    procedure IsEmpty;
+    procedure Add;
+    procedure Contains;
+    procedure Remove;
+    procedure Find;
+    procedure Split;
+    procedure IndexOf;
   end;
 
 implementation
@@ -338,6 +359,38 @@ begin
     AssertTrue(Treap2.CountOf(I.ToString) = 2);
   for I in [19..26] do
     AssertTrue(Treap3.CountOf(I.ToString) = 2);
+end;
+
+procedure TLiteTreapTest.ToArray;
+var
+  Treap: TIntTreap;
+  a: array of TIntTreap.TEntry;
+  I: Integer;
+begin
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 0);
+  for I in [1..16] do
+    Treap.Add(I);
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 16);
+  for I in [1..16] do
+    AssertTrue(a[I-1].Key = I);
+end;
+
+procedure TLiteTreapTest.ToArrayStr;
+var
+  Treap: TStrTreap;
+  a: array of TStrTreap.TEntry;
+  I: Integer;
+begin
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 0);
+  for I in [10..26] do
+    Treap.Add(I.ToString);
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 17);
+  for I in [10..26] do
+    AssertTrue(a[I-10].Key = I.ToString);
 end;
 
 { TLiteIdxTreapTest }
@@ -677,11 +730,191 @@ begin
   AssertTrue(Treap[16] = nil);
 end;
 
+procedure TLiteIdxTreapTest.ToArray;
+var
+  Treap: TIntTreap;
+  a: array of TIntTreap.TEntry;
+  I: Integer;
+begin
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 0);
+  for I in [1..16] do
+    Treap.Add(I);
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 16);
+  for I in [1..16] do
+    AssertTrue(a[I-1].Key = I);
+end;
+
+procedure TLiteIdxTreapTest.ToArrayStr;
+var
+  Treap: TStrTreap;
+  a: array of TStrTreap.TEntry;
+  I: Integer;
+begin
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 0);
+  for I in [10..26] do
+    Treap.Add(I.ToString);
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 17);
+  for I in [10..26] do
+    AssertTrue(a[I-10].Key = I.ToString);
+end;
+
+{ TLiteSegmentTreapTest }
+
+procedure TLiteSegmentTreapTest.IsEmpty;
+var
+  Treap: TIntTreap;
+begin
+  AssertTrue({%H-}Treap.IsEmpty);
+  Treap.Add(1, 1);
+  AssertFalse(Treap.IsEmpty);
+end;
+
+procedure TLiteSegmentTreapTest.Add;
+var
+  Treap: TIntTreap;
+  I: Integer;
+begin
+  AssertTrue({%H-}Treap.Count = 0);
+  for I in [1..16] do
+    AssertTrue(Treap.Add(I, I));
+
+  for I in [1..16] do
+    AssertFalse(Treap.Add(I, I + 100));
+
+  AssertTrue(Treap.Count = 16);
+end;
+
+procedure TLiteSegmentTreapTest.Contains;
+var
+  Treap: TIntTreap;
+  I: Integer;
+begin
+  AssertTrue({%H-}Treap.Count = 0);
+  for I in [11..42] do
+    AssertTrue(Treap.Add(I, I));
+  AssertTrue(Treap.Count = 32);
+
+  for I in [1..10] do
+    AssertFalse(Treap.Contains(I));
+  for I in [43..53] do
+    AssertFalse(Treap.Contains(I));
+
+  for I in [11..42] do
+    AssertTrue(Treap.Contains(I));
+end;
+
+procedure TLiteSegmentTreapTest.Remove;
+var
+  Treap: TIntTreap;
+  I, J: Integer;
+begin
+  AssertFalse(Treap.Remove(0));
+  AssertTrue(Treap.Count = 0);
+  for I in [1..16] do
+    Treap.Add(I, I);
+
+  AssertTrue(Treap.Count = 16);
+  AssertFalse(Treap.Remove(0));
+  AssertFalse(Treap.Remove(17));
+  for I in [1..16] do
+    AssertTrue(Treap.Remove(I));
+  AssertTrue(Treap.IsEmpty);
+
+  for I in [1..16] do
+    Treap.Add(I, I + 1);
+  AssertTrue(Treap.Count = 16);
+  for I in [1..16] do
+    begin
+      AssertTrue(Treap.Remove(I, J));
+      AssertTrue(J = I + 1);
+    end;
+  AssertTrue(Treap.IsEmpty);
+end;
+
+procedure TLiteSegmentTreapTest.Find;
+var
+  Treap: TIntTreap;
+  I, J: Integer;
+begin
+  for I in [1..16] do
+    Treap.Add(I, I);
+  AssertFalse(Treap.Find(0, J));
+  for I in [1..16] do
+    begin
+      AssertTrue(Treap.Find(I, J));
+      AssertTrue(J = I);
+    end;
+  for I in [17..32] do
+    AssertFalse(Treap.Find(I, J));
+end;
+
+procedure TLiteSegmentTreapTest.Split;
+var
+  Treap, Treap2, Treap3: TIntTreap;
+  I: Integer;
+begin
+  Treap.Split(1, Treap2);
+  AssertTrue(Treap2.IsEmpty);
+
+  for I in [1..32] do
+    Treap.Add(I, I);
+  AssertTrue(Treap.Count = 32);
+
+  Treap.Split(33, Treap2);
+  AssertTrue(Treap2.IsEmpty);
+
+  Treap.Split(17, Treap2);
+  AssertTrue(Treap.Count = 16);
+  AssertTrue(Treap2.Count = 16);
+  for I in [1..16] do
+    AssertTrue(Treap.Contains(I));
+  for I in [17..32] do
+    AssertTrue(Treap2.Contains(I));
+
+  Treap2.Clear;
+  Treap.Split(0, Treap2);
+  AssertTrue(Treap.IsEmpty);
+  AssertTrue(Treap2.Count = 16);
+
+  for I in [1..32] do
+    Treap.Add(I, I);
+
+  Treap.Split(17, Treap, Treap2, Treap3);
+  AssertTrue(Treap.Count = 0);
+  AssertTrue(Treap2.Count = 16);
+  AssertTrue(Treap3.Count = 16);
+  for I in [1..16] do
+    AssertTrue(Treap2.Contains(I));
+  for I in [17..32] do
+    AssertTrue(Treap3.Contains(I));
+end;
+
+procedure TLiteSegmentTreapTest.IndexOf;
+var
+  Treap: TIntTreap;
+  I: Integer;
+begin
+  for I in [1..16] do
+    AssertTrue({%H-}Treap.IndexOf(I) = -1);
+  for I in [1..16] do
+    Treap.Add(I, I);
+  AssertTrue(Treap.Count = 16);
+  AssertTrue(Treap.IndexOf(0) = -1);
+  for I in [1..16] do
+    AssertTrue(Treap.IndexOf(I) = Pred(I));
+  AssertTrue(Treap.IndexOf(17) = -1);
+end;
+
 
 initialization
 
   RegisterTest(TLiteTreapTest);
   RegisterTest(TLiteIdxTreapTest);
+  RegisterTest(TLiteSegmentTreapTest);
 
 end.
 
