@@ -1061,8 +1061,6 @@ var
     if aNode <> nil then
       begin
         Visit(aNode^.FLeft);
-        if System.Length(a) = I then
-          System.SetLength(a, I * 2);
         a[I] := TEntry.Create(aNode^.Key, aNode^.Value);
         Inc(I);
         Visit(aNode^.FRight);
@@ -1071,9 +1069,8 @@ var
 begin
   if FRoot <> nil then
     begin
-      System.SetLength(a, ARRAY_INITIAL_SIZE);
+      System.SetLength(a, FRoot^.Size);
       Visit(FRoot);
-      System.SetLength(a, I);
     end;
   Result := a;
 end;
@@ -1399,17 +1396,22 @@ function TGLiteSegmentTreap.ToArray: TEntryArray;
 var
   a: TEntryArray = nil;
   I: Integer = 0;
-  procedure Visit(aNode: PNode; var {%H-}GoOn: Boolean);
+  procedure Visit(aNode: PNode);
   begin
-    if System.Length(a) = I then
-      System.SetLength(a, I * 2);
-    a[I] := TEntry.Create(aNode^.Key, aNode^.Value);
-    Inc(I);
+    if aNode <> nil then
+      begin
+        Visit(aNode^.Left);
+        a[I] := TEntry.Create(aNode^.Key, aNode^.Value);
+        Inc(I);
+        Visit(aNode^.Right);
+      end;
   end;
 begin
-  System.SetLength(a, ARRAY_INITIAL_SIZE);
-  TUtil.InOrderTraversal(FRoot, @Visit);
-  System.SetLength(a, I);
+  if FRoot <> nil then
+    begin
+      System.SetLength(a, FRoot^.Size);
+      Visit(FRoot);
+    end;
   Result := a;
 end;
 
