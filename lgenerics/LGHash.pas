@@ -316,7 +316,7 @@ end;
 
 {$DEFINE c1 := QWord($9e3779b185ebca87)}{$DEFINE c2 := QWord($c2b2ae3d27d4eb4f)}
 {$DEFINE c3 := QWord($165667b19e3779f9)}{$DEFINE c4 := QWord($85ebca77c2b2ae63)}
-{$DEFINE c5 := QWord($27d4eb2f165667c5)}
+{$DEFINE c5 := QWord($27d4eb2f165667c5)}{$DEFINE c6 := QWord($60ea27eeadc0b5d6)} //c1+c2
 {$IFDEF FPC_REQUIRES_PROPER_ALIGNMENT}
 class function TxxHash64LE.HashBuf(aBuffer: Pointer; aCount: Int64; aSeed: QWord): QWord;
 var
@@ -326,7 +326,7 @@ var
 begin
   if aCount >= 32 then
     begin
-      v1 := aSeed + c1 + c2;
+      v1 := aSeed + c6;//c1 + c2; due to #0036356
       v2 := aSeed + c2;
       v3 := aSeed;
       v4 := aSeed - c1;
@@ -411,7 +411,7 @@ var
 begin
   if aCount >= 32 then
     begin
-      v1 := aSeed + c1 + c2;
+      v1 := aSeed + c6;//c1 + c2; due to #0036356
       v2 := aSeed + c2;
       v3 := aSeed;
       v4 := aSeed - c1;
