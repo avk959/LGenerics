@@ -258,11 +258,20 @@ type
     function  Remove(constref aKey: TKey): Boolean;            //O(LogN)
     function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;  //O(LogN)
     procedure Split(constref aKey: TKey; out aTreap: TGLiteSegmentTreap);//O(LogN)
+  { returns value of the monoid function on the segment[L, R](indices);
+    raises exception if L or R out of bounds }
     function  RangeQueryI(L, R: SizeInt): TValue;              //O(LogN)
+  { returns value of the monoid function on the half-open interval[L, R) }
     function  RangeQuery(constref L, R: TKey): TValue;         //O(LogN)
+  { returns value of the monoid function on the segment[0, aIndex](indices);
+    raises exception if aIndex out of bounds }
     function  HeadQueryI(aIndex: SizeInt): TValue;             //O(LogN)
+  { returns value of the monoid function on the half-open interval[Lowest key, aKey) }
     function  HeadQuery(constref aKey: TKey): TValue;          //O(LogN)
+  { returns value of the monoid function on the segment[aIndex, Pred(Count)](indices);
+    raises exception if aIndex out of bounds }
     function  TailQueryI(aIndex: SizeInt): TValue;             //O(LogN)
+  { returns value of the monoid function on the segment[aKey, Highest key] }
     function  TailQuery(constref aKey: TKey): TValue;          //O(LogN)
     property  Count: SizeInt read GetCount;                    //O(1)
     property  Height: SizeInt read GetHeight;                  //O(N)
@@ -1212,7 +1221,7 @@ begin
   with aNode^ do
     begin
       Size := 1;
-      CacheVal := TValMonoid.Identity;
+      CacheVal := aNode^.Value;
       if Left <> nil then
         begin
           Size += Left^.Size;
@@ -1230,7 +1239,7 @@ class procedure TGLiteSegmentTreap.UpdateCache(aNode: PNode);
 begin
   with aNode^ do
     begin
-      CacheVal := TValMonoid.Identity;
+      CacheVal := aNode^.Value;
       if Left <> nil then
         CacheVal := TValMonoid.BinOp(CacheVal, Left^.CacheVal);
       if Right <> nil then
@@ -1527,22 +1536,29 @@ end;
 
 function TGLiteSegmentTreap.RangeQuery(constref L, R: TKey): TValue;
 var
-  pL, pR: PNode;
+  pL, pM, pR: PNode;
 begin
   if (FRoot <> nil) and (TCmpRel.Compare(L, R) <= 0) then
     begin
       SplitNode(L, FRoot, pL, pR);
-      SplitNode(R, pR, pL, pR);
-    if pL <> nil then
-      exit(pL^.CacheVal);
-    end;
-  Result := TValMonoid.Identity;
+      SplitNode(R, pR, pM, pR);
+      if pM <> nil then
+        Result := pM^.CacheVal
+      else
+        Result := TValMonoid.Identity;
+      FRoot := MergeNode(MergeNode(pL, pM), pR);
+    end
+  else
+    Result := TValMonoid.Identity;
 end;
 
 function TGLiteSegmentTreap.HeadQueryI(aIndex: SizeInt): TValue;
 begin
   CheckIndexRange(aIndex);
-  Result := HeadQuery(TUtil.GetByIndex(FRoot, aIndex)^.Key);
+  if aIndex < Pred(FRoot^.Size) then
+    Result := HeadQuery(TUtil.GetByIndex(FRoot, Succ(aIndex))^.Key)
+  else
+    Result := FRoot^.CacheVal;
 end;
 
 function TGLiteSegmentTreap.HeadQuery(constref aKey: TKey): TValue;
@@ -1552,10 +1568,14 @@ begin
   if FRoot <> nil then
     begin
       SplitNode(aKey, FRoot, pL, pR);
-    if pL <> nil then
-      exit(pL^.CacheVal);
-    end;
-  Result := TValMonoid.Identity;
+      if pL <> nil then
+        Result := pL^.CacheVal
+      else
+        Result := TValMonoid.Identity;
+      FRoot := MergeNode(pL, pR);
+    end
+  else
+    Result := TValMonoid.Identity;
 end;
 
 function TGLiteSegmentTreap.TailQueryI(aIndex: SizeInt): TValue;
@@ -1568,19 +1588,17 @@ function TGLiteSegmentTreap.TailQuery(constref aKey: TKey): TValue;
 var
   pL, pR: PNode;
 begin
-  if (FRoot <> nil) and (TCmpRel.Compare(TUtil.GetHighest(FRoot)^.Key, aKey) >= 0) then
+  if FRoot <> nil then
     begin
-      pL := TUtil.GetLess(FRoot, aKey);
-      if pL <> nil then
-        begin
-          SplitNode(pL^.Key, FRoot, pL, pR);
-          if pR <> nil then
-            exit(pR^.CacheVal);
-        end
+      SplitNode(aKey, FRoot, pL, pR);
+      if pR <> nil then
+        Result := pR^.CacheVal
       else
-        exit(FRoot^.CacheVal);
-    end;
-  Result := TValMonoid.Identity;
+        Result := TValMonoid.Identity;
+      FRoot := MergeNode(pL, pR);
+    end
+  else
+    Result := TValMonoid.Identity;
 end;
 
 end.
