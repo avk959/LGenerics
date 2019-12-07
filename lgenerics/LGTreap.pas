@@ -250,7 +250,7 @@ type
     procedure Clear;                                         //O(N)
     function  ToArray: TEntryArray;                          //O(N)
     function  Contains(constref aKey: TKey): Boolean;        //O(LogN)
-    function  Find(constref aKey: TKey; out aValue: TValue): Boolean; //O(LogN)
+    function  Find(constref aKey: TKey; out aValue: TValue): Boolean;    //O(LogN)
     function  IndexOf(constref aKey: TKey): SizeInt; inline; //O(LogN)
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;//O(LogN)
     function  Add(constref e: TEntry): Boolean; inline;      //O(LogN)
@@ -1176,14 +1176,24 @@ end;
 class function TGLiteSegmentTreap.CopyTree(aRoot: PNode): PNode;
 var
   Tmp: TGLiteSegmentTreap;
-  procedure CopyNode(aNode: PNode; var {%H-}aGoOn: Boolean);
+  procedure Visit(aNode: PNode);
   begin
-    Tmp.Add(aNode^.Key, aNode^.Value);
+    if aNode <> nil then
+      begin
+        Visit(aNode^.Left);
+        Tmp.Add(aNode^.Key, aNode^.Value);
+        Visit(aNode^.Right);
+      end;
   end;
 begin
-  TUtil.InOrderTraversal(aRoot, @CopyNode);
-  Result := {%H-}Tmp.FRoot;
-  Tmp.FRoot := nil;
+  if aRoot <> nil then
+    begin
+      Visit(aRoot);
+      Result := {%H-}Tmp.FRoot;
+      Tmp.FRoot := nil;
+    end
+  else
+    Result := nil;
 end;
 
 procedure TGLiteSegmentTreap.SetValue(const aKey: TKey; const aValue: TValue);
