@@ -1,6 +1,7 @@
 unit LGArrayHelpUtilTest;
 
 {$mode objfpc}{$H+}
+{$MODESWITCH NESTEDPROCVARS}
 
 interface
 
@@ -112,12 +113,20 @@ type
     TIntMaxTree = specialize TGSegmentTree<Integer, TIntMax>;
     TIntMinTree = specialize TGSegmentTree<Integer, TIntMin>;
 
+    TMaxPos     = specialize TGMaxPos<Integer>;
+    TMaxPosTree = specialize TGSegmentTree<TMaxPos, TMaxPos>;
+
+    TMinPos     = specialize TGMinPos<Integer>;
+    TMinPosTree = specialize TGSegmentTree<TMinPos, TMinPos>;
+
   published
     procedure CreateTree;
     procedure Items;
     procedure AddQuery;
     procedure MaxQuery;
+    procedure MaxQuery2;
     procedure MinQuery;
+    procedure MinQuery2;
   end;
 
 implementation
@@ -949,6 +958,69 @@ begin
     end;
 end;
 
+procedure TSegmentTreeTest.MaxQuery2;
+const
+  TestSize = 1000;
+var
+  Tree: TMaxPosTree;
+  a: array of Integer;
+  I, J, L, R, max, maxpos: Integer;
+  mPos: TMaxPos;
+  procedure GetElem(aIndex: SizeInt; out aElem: TMaxPos);
+  begin
+    aElem.Value := a[aIndex];
+    aElem.Index := aIndex;
+  end;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  Tree := TMaxPosTree.Create(TestSize, @GetElem);
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1).Value = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      max := Low(Integer);
+      maxpos := -1;
+      for J := L to R do
+        if a[J] > max then
+          begin
+            max := a[J];
+            maxpos := J;
+          end;
+      mPos := Tree.RangeQuery(L, R);
+      AssertTrue(mPos.Value = max);
+      AssertTrue(mPos.Index = maxpos);
+    end;
+
+  for I := 0 to High(a) do
+    begin
+      J := Random(TestSize);
+      a[I] += J;
+      mPos := Tree[I];
+      mPos.Value += J;
+      Tree[I] := mPos;
+    end;
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1).Value = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      max := Low(Integer);
+      maxpos := -1;
+      for J := L to R do
+        if a[J] > max then
+          begin
+            max := a[J];
+            maxpos := J;
+          end;
+      mPos := Tree.RangeQuery(L, R);
+      AssertTrue(mPos.Value = max);
+      AssertTrue(mPos.Index = maxpos);
+    end;
+end;
+
 procedure TSegmentTreeTest.MinQuery;
 const
   TestSize = 1000;
@@ -991,6 +1063,69 @@ begin
           min := a[J];
       AssertTrue(Tree.RangeQuery(L, R) = min);
       AssertTrue(Tree.RangeQuery(R, L) = High(Integer));
+    end;
+end;
+
+procedure TSegmentTreeTest.MinQuery2;
+const
+  TestSize = 1000;
+var
+  Tree: TMinPosTree;
+  a: array of Integer;
+  I, J, L, R, min, minpos: Integer;
+  mPos: TMinPos;
+  procedure GetElem(aIndex: SizeInt; out aElem: TMinPos);
+  begin
+    aElem.Value := a[aIndex];
+    aElem.Index := aIndex;
+  end;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  Tree := TMinPosTree.Create(TestSize, @GetElem);
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1).Value = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      min := High(Integer);
+      minpos := -1;
+      for J := L to R do
+        if a[J] < min then
+          begin
+            min := a[J];
+            minpos := J;
+          end;
+      mPos := Tree.RangeQuery(L, R);
+      AssertTrue(mPos.Value = min);
+      AssertTrue(mPos.Index = minpos);
+    end;
+
+  for I := 0 to High(a) do
+    begin
+      J := Random(TestSize);
+      a[I] += J;
+      mPos := Tree[I];
+      mPos.Value += J;
+      Tree[I] := mPos;
+    end;
+  for I := 1 to TestSize do
+    begin
+      AssertTrue(Tree.RangeQuery(I - 1, I - 1).Value = a[I - 1]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      min := High(Integer);
+      minpos := -1;
+      for J := L to R do
+        if a[J] < min then
+          begin
+            min := a[J];
+            minpos := J;
+          end;
+      mPos := Tree.RangeQuery(L, R);
+      AssertTrue(mPos.Value = min);
+      AssertTrue(mPos.Index = minpos);
     end;
 end;
 
