@@ -75,6 +75,9 @@ type
     procedure Find;
     procedure Split;
     procedure IndexOf;
+    procedure ToArray;
+    procedure RangeQueryI;
+    procedure RangeQuery;
   end;
 
 implementation
@@ -907,6 +910,84 @@ begin
   for I in [1..16] do
     AssertTrue(Treap.IndexOf(I) = Pred(I));
   AssertTrue(Treap.IndexOf(17) = -1);
+end;
+
+procedure TLiteSegmentTreapTest.ToArray;
+var
+  Treap: TIntTreap;
+  a: array of TIntTreap.TEntry;
+  I: Integer;
+begin
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = 0);
+  for I in [1..16] do
+    Treap.Add(I, I + 10);
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = Treap.Count);
+  for I in [1..16] do
+    begin
+      AssertTrue(a[I-1].Key = I);
+      AssertTrue(a[I-1].Value = I + 10);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.RangeQueryI;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, L, R, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  for I := 0 to Pred(TestSize) do
+    Treap.Add(I, a[I]);
+
+  sum := 0;
+  for J := 0 to Pred(TestSize) do
+    sum += a[J];
+  AssertTrue(Treap.RangeQueryI(0, Pred(TestSize)) = sum);
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      AssertTrue(Treap.RangeQueryI(I, I) = a[I]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      sum := 0;
+      for J := L to R do
+        sum += a[J];
+      AssertTrue(Treap.RangeQueryI(L, R) = sum);
+      AssertTrue(Treap.RangeQueryI(R, L) = 0);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.RangeQuery;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, L, R, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  for I := 0 to Pred(TestSize) do
+    Treap.Add(I, a[I]);
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      AssertTrue(Treap.RangeQuery(I, I+1) = a[I]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      sum := 0;
+      for J := L to R - 1 do
+        sum += a[J];
+      AssertTrue(Treap.RangeQuery(L, R) = sum);
+      AssertTrue(Treap.RangeQuery(R, L) = 0);
+    end;
 end;
 
 
