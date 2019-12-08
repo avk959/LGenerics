@@ -1011,7 +1011,7 @@ begin
             Result := RemoveNode(aKey, aRoot^.FLeft)
           else
             Result := RemoveNode(aKey, aRoot^.FRight);
-          if Result then
+          if Result and (aRoot <> nil) then
             UpdateSize(aRoot);
         end;
     end
@@ -1174,11 +1174,11 @@ class function TGLiteSegmentTreap.NewNode(constref aKey: TKey; constref aValue: 
 begin
   Result := System.GetMem(SizeOf(TNode));
   System.FillChar(Result^, SizeOf(TNode), 0);
-  Result^.Prio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
   Result^.Key := aKey;
-  Result^.Value := aValue;
-  Result^.CacheVal := TValMonoid.Identity;
+  Result^.Prio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
   Result^.Size := 1;
+  Result^.CacheVal := aValue;
+  Result^.Value := aValue;
 end;
 
 class function TGLiteSegmentTreap.CopyTree(aRoot: PNode): PNode;
@@ -1281,10 +1281,12 @@ begin
           SplitNode(aKey, R^.Left, L, R^.Left);
         end;
       UpdateNode(aRoot);
-      exit;
+    end
+  else
+    begin
+      L := nil;
+      R := nil;
     end;
-  L := nil;
-  R := nil;
 end;
 
 class function TGLiteSegmentTreap.MergeNode(L, R: PNode): PNode;
@@ -1351,7 +1353,7 @@ begin
             Result := RemoveNode(aKey, aRoot^.Left)
           else
             Result := RemoveNode(aKey, aRoot^.Right);
-          if Result then
+          if Result and (aRoot <> nil) then
             UpdateNode(aRoot);
         end;
     end
@@ -1381,7 +1383,7 @@ begin
             Result := RemoveNode(aKey, aRoot^.Left, aValue)
           else
             Result := RemoveNode(aKey, aRoot^.Right, aValue);
-          if Result then
+          if Result and (aRoot <> nil) then
             UpdateNode(aRoot);
         end;
     end
@@ -1538,7 +1540,7 @@ function TGLiteSegmentTreap.RangeQuery(constref L, R: TKey): TValue;
 var
   pL, pM, pR: PNode;
 begin
-  if (FRoot <> nil) and (TCmpRel.Compare(L, R) <= 0) then
+  if (FRoot <> nil) and (TCmpRel.Compare(L, R) < 0) then
     begin
       SplitNode(L, FRoot, pL, pR);
       SplitNode(R, pR, pM, pR);
