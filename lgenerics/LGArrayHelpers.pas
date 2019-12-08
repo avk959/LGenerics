@@ -959,7 +959,9 @@ type
           associative dyadic function BinOp([const[ref]] L, R: T): T; }
   generic TGSegmentTree<T, TMonoid> = record
   type
-    THelper = specialize TGArrayHelpUtil<T>;
+    TOnGetElem   = procedure(aIndex: SizeInt; out aElem: T) of object;
+    TNestGetElem = procedure(aIndex: SizeInt; out aElem: T) is nested;
+    THelper      = specialize TGArrayHelpUtil<T>;
   var
     FTree: array of T;
     FElemCount,
@@ -971,6 +973,8 @@ type
     class operator Initialize(var st: TGSegmentTree); inline;
   public
     constructor Create(const a: array of T);
+    constructor Create(aSize: SizeInt; aOnGetElem: TOnGetElem);
+    constructor Create(aSize: SizeInt; aOnGetElem: TNestGetElem);
     function  RangeQuery(L, R: SizeInt): T;
     property  Count: SizeInt read FElemCount;
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;
@@ -9929,7 +9933,7 @@ begin
       FElemCount := 0;
       exit;
     end;
-  if aLen <= MAX_POSITIVE_POW2 div 2 then
+  if aLen <= MAX_POSITIVE_POW2 div 4 then
     begin
       FElemCount := aLen;
       Pow2Bound := RoundUpTwoPower(aLen);
@@ -9943,7 +9947,67 @@ begin
         FTree[I] := TMonoid.BinOp(FTree[Succ(I shl 1)], FTree[Succ(I) shl 1]);
     end
   else
-    raise EArgumentException.CreateFmt('Array size is too big(%d)', [aLen]);
+    raise EArgumentException.CreateFmt(SEArrayTooBigFmt, [aLen]);
+end;
+
+constructor TGSegmentTree.Create(aSize: SizeInt; aOnGetElem: TOnGetElem);
+var
+  I, Pow2Bound: SizeInt;
+begin
+  if aSize < 1 then
+    begin
+      FTree := nil;
+      FElemCount := 0;
+      exit;
+    end;
+  if aSize <= MAX_POSITIVE_POW2 div 4 then
+    begin
+      FElemCount := aSize;
+      Pow2Bound := RoundUpTwoPower(aSize);
+      FLeafBound := Pred(Pow2Bound);
+      System.SetLength(FTree, Pow2Bound * 2);
+      THelper.Fill(FTree[(Pow2Bound + Pred(aSize))..Pred(Pow2Bound * 2)], TMonoid.Identity);
+      Dec(Pow2Bound);
+      if aOnGetElem <> nil then
+        for I := 0 to Pred(aSize) do
+          aOnGetElem(I, FTree[Pow2Bound + I])
+      else
+        THelper.Fill(FTree[Pow2Bound..(Pow2Bound+aSize)], TMonoid.Identity);
+      for I := Pred(Pow2Bound) downto 0 do
+        FTree[I] := TMonoid.BinOp(FTree[Succ(I shl 1)], FTree[Succ(I) shl 1]);
+    end
+  else
+    raise EArgumentException.CreateFmt(SEArgumentTooBigFmt, ['TGSegmentTree.Create', aSize]);
+end;
+
+constructor TGSegmentTree.Create(aSize: SizeInt; aOnGetElem: TNestGetElem);
+var
+  I, Pow2Bound: SizeInt;
+begin
+  if aSize < 1 then
+    begin
+      FTree := nil;
+      FElemCount := 0;
+      exit;
+    end;
+  if aSize <= MAX_POSITIVE_POW2 div 4 then
+    begin
+      FElemCount := aSize;
+      Pow2Bound := RoundUpTwoPower(aSize);
+      FLeafBound := Pred(Pow2Bound);
+      System.SetLength(FTree, Pow2Bound * 2);
+      THelper.Fill(FTree[(Pow2Bound + Pred(aSize))..Pred(Pow2Bound * 2)], TMonoid.Identity);
+      Dec(Pow2Bound);
+      if aOnGetElem <> nil then
+        for I := 0 to Pred(aSize) do
+          aOnGetElem(I, FTree[Pow2Bound + I])
+      else
+        THelper.Fill(FTree[Pow2Bound..(Pow2Bound+aSize)], TMonoid.Identity);
+      for I := Pred(Pow2Bound) downto 0 do
+        FTree[I] := TMonoid.BinOp(FTree[Succ(I shl 1)], FTree[Succ(I) shl 1]);
+    end
+  else
+    raise EArgumentException.CreateFmt(SEArgumentTooBigFmt, ['TGSegmentTree.Create', aSize]);
 end;
 
 function TGSegmentTree.RangeQuery(L, R: SizeInt): T;
