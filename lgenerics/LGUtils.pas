@@ -755,7 +755,7 @@ type
     class function GetIdentity: T; static; inline;
   public
     class property Identity: T read GetIdentity;
-    class function BinOp(const L, R: T): T static; inline;
+    class function BinOp(const L, R: T): T; static; inline;
   end;
 
   { TGMaxMonoid }
@@ -764,7 +764,7 @@ type
     class function GetIdentity: T; static; inline;
   public
     class property Identity: T read GetIdentity;
-    class function BinOp(const L, R: T): T static; inline;
+    class function BinOp(const L, R: T): T; static; inline;
   end;
 
   { TGMinMonoid }
@@ -773,7 +773,29 @@ type
     class function GetIdentity: T; static; inline;
   public
     class property Identity: T read GetIdentity;
-    class function BinOp(const L, R: T): T static; inline;
+    class function BinOp(const L, R: T): T; static; inline;
+  end;
+
+  { TGMaxPos }
+  TGMaxPos<T>  = record
+  private
+     class function GetIdentity: TGMaxPos<T>; static; inline;
+  public
+    Value,
+    Index: T;
+    class property Identity: TGMaxPos<T> read GetIdentity;
+    class function BinOp(const L, R: TGMaxPos<T>): TGMaxPos<T>; static; inline;
+  end;
+
+  { TGMinPos }
+  TGMinPos<T>  = record
+  private
+     class function GetIdentity: TGMinPos<T>; static; inline;
+  public
+    Value,
+    Index: T;
+    class property Identity: TGMinPos<T> read GetIdentity;
+    class function BinOp(const L, R: TGMinPos<T>): TGMinPos<T>; static; inline;
   end;
 
 {$PUSH}{$PACKRECORDS DEFAULT}
@@ -2324,6 +2346,38 @@ begin
     Result := R
   else
     Result := L
+end;
+
+{ TGMaxPos }
+
+class function TGMaxPos<T>.GetIdentity: TGMaxPos<T>;
+begin
+  Result.Value := T.MinValue;
+  Result.Index := NULL_INDEX;
+end;
+
+class function TGMaxPos<T>.BinOp(const L, R: TGMaxPos<T>): TGMaxPos<T>;
+begin
+  if R.Value > L.Value then
+    Result := R
+  else
+    Result := L;
+end;
+
+{ TGMinPos }
+
+class function TGMinPos<T>.GetIdentity: TGMinPos<T>;
+begin
+  Result.Value := T.MaxValue;
+  Result.Index := NULL_INDEX;
+end;
+
+class function TGMinPos<T>.BinOp(const L, R: TGMinPos<T>): TGMinPos<T>;
+begin
+  if R.Value < L.Value then
+    Result := R
+  else
+    Result := L;
 end;
 
 { TSpinLock }
