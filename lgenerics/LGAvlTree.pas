@@ -42,10 +42,12 @@ type
   public
   type
     PNode = ^TNode;
-
     TNode = record
     private
     {$IFNDEF CPU16}
+    const
+      PTR_MASK = High(SizeUInt) xor 3;
+    var
       Left,
       Right: PNode;
       FParent: SizeInt;
@@ -249,6 +251,9 @@ type
 
   private
   {$IFNDEF CPU16}
+  const
+    PTR_MASK = High(SizeUInt) xor 3;
+  var
     Left,
     Right: PNode;
     FParent: SizeInt;
@@ -455,18 +460,22 @@ begin
 end;
 
 function TGCustomAvlTree.TNode.GetParent: PNode;
+var
+  p: SizeInt absolute Result;
 begin
-  Result := {%H-}Pointer(FParent and not SizeInt(3));
+  p := FParent and SizeInt(PTR_MASK);
 end;
 
 procedure TGCustomAvlTree.TNode.SetBalance(aValue: SizeInt);
 begin
-  FParent := (FParent and not SizeInt(3)) or ((aValue + 2) and 3);
+  FParent := (FParent and SizeInt(PTR_MASK)) or ((aValue + 2) and 3);
 end;
 
 procedure TGCustomAvlTree.TNode.SetParent(aValue: PNode);
+var
+  p: SizeInt absolute aValue;
 begin
-  FParent := {%H-}SizeInt(aValue) or (FParent and 3);
+  FParent := p or (FParent and 3);
 end;
 
 procedure TGCustomAvlTree.TNode.SwapBalance(aNode: PNode);
@@ -474,8 +483,8 @@ var
   b: SizeInt;
 begin
   b := FParent and 3;
-  FParent := (FParent and not SizeInt(3)) or (aNode^.FParent and 3);
-  aNode^.FParent := (aNode^.FParent and not SizeInt(3)) or b;
+  FParent := (FParent and SizeInt(PTR_MASK)) or (aNode^.FParent and 3);
+  aNode^.FParent := (aNode^.FParent and SizeInt(PTR_MASK)) or b;
 end;
 {$ELSE !CPU16}
 procedure TGCustomAvlTree.TNode.SwapBalance(aNode: PNode);
@@ -1877,22 +1886,25 @@ begin
 end;
 
 function TGAvlTreeNode.GetParent: PNode;
+var
+  r: SizeInt absolute Result;
 begin
-  Result := {%H-}Pointer(FParent and not SizeInt(3));
+  r := FParent and SizeInt(PTR_MASK);
 end;
 
 procedure TGAvlTreeNode.SetBalance(aValue: SizeInt);
 begin
   Assert(((aValue + 2) >= 1) and ((aValue + 2) <= 3),
     Format('Inconsistent input Balance value(%d) in '+{$I %CURRENTROUTINE%}, [aValue]));
-  FParent := (FParent and not SizeInt(3)) or ((aValue + 2) and 3);
+  FParent := (FParent and SizeInt(PTR_MASK)) or ((aValue + 2) and 3);
 end;
 
 procedure TGAvlTreeNode.SetParent(aValue: PNode);
+var
+  p: SizeInt absolute aValue;
 begin
-  Assert({%H-}SizeUint(aValue) and 3 = 0,
-    Format('Unaligned input Parent value($%x) in '+{$I %CURRENTROUTINE%}, [aValue]));
-  FParent := {%H-}SizeInt(aValue) or (FParent and 3);
+  Assert(p and 3 = 0, Format('Unaligned input Parent value($%x) in '+{$I %CURRENTROUTINE%}, [aValue]));
+  FParent := p or (FParent and 3);
 end;
 
 procedure TGAvlTreeNode.SwapBalance(aNode: PNode);
@@ -1900,8 +1912,8 @@ var
   b: SizeInt;
 begin
   b := FParent and 3;
-  FParent := (FParent and not SizeInt(3)) or (aNode^.FParent and 3);
-  aNode^.FParent := (aNode^.FParent and not SizeInt(3)) or b;
+  FParent := (FParent and SizeInt(PTR_MASK)) or (aNode^.FParent and 3);
+  aNode^.FParent := (aNode^.FParent and SizeInt(PTR_MASK)) or b;
 end;
 {$ELSE !CPU16}
 procedure TGAvlTreeNode.SwapBalance(aNode: PNode);
