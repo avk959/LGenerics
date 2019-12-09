@@ -78,6 +78,10 @@ type
     procedure ToArray;
     procedure RangeQueryI;
     procedure RangeQuery;
+    procedure HeadQueryI;
+    procedure HeadQuery;
+    procedure TailQueryI;
+    procedure TailQuery;
   end;
 
 implementation
@@ -987,6 +991,98 @@ begin
         sum += a[J];
       AssertTrue(Treap.RangeQuery(L, R) = sum);
       AssertTrue(Treap.RangeQuery(R, L) = 0);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.HeadQueryI;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  for I := 0 to Pred(TestSize) do
+    Treap.Add(I, a[I]);
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      sum := 0;
+      for J := 0 to I do
+        sum += a[J];
+      AssertTrue(Treap.HeadQueryI(I) = sum);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.HeadQuery;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  for I := 0 to Pred(TestSize) do
+    Treap.Add(I, a[I]);
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      sum := 0;
+      for J := 0 to Pred(I) do
+        sum += a[J];
+      AssertTrue(Treap.HeadQuery(I) = sum);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.TailQueryI;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  for I := 0 to Pred(TestSize) do
+    Treap.Add(I, a[I]);
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      sum := 0;
+      for J := I to Pred(TestSize) do
+        sum += a[J];
+      AssertTrue(Treap.TailQueryI(I) = sum);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.TailQuery;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    a[I] := Succ(Random(TestSize));
+  for I := 0 to Pred(TestSize) do
+    Treap.Add(I, a[I]);
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      sum := 0;
+      for J := I to Pred(TestSize) do
+        sum += a[J];
+      AssertTrue(Treap.TailQuery(I) = sum);
     end;
 end;
 
