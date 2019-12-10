@@ -106,6 +106,7 @@ type
     class function  MergeNode(L, R: PNode): PNode; static;
     class procedure AddNode(var aRoot: PNode; aNode: PNode); static;
     class function  RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean; static;
+    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
     class operator  Initialize(var aTreap: TGLiteTreap);
     class operator  Finalize(var aTreap: TGLiteTreap);
     class operator  Copy(constref aSrc: TGLiteTreap; var aDst: TGLiteTreap);
@@ -121,6 +122,7 @@ type
     function  CountOf(constref aKey: TKey): SizeInt;//O(N)
     function  Add(constref aKey: TKey): PNode;      //O(LogN)
     function  Remove(constref aKey: TKey): Boolean; //O(LogN)
+    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean; //O(LogN)
   { splits treap so that aTreap will contain all elements with keys >= aKey }
     procedure Split(constref aKey: TKey; out aTreap: TGLiteTreap);//O(LogN)
     property  Root: PNode read FRoot;               //O(1)
@@ -170,6 +172,7 @@ type
     class function  MergeNode(L, R: PNode): PNode; static;
     class procedure AddNode(var aRoot: PNode; aNode: PNode); static;
     class function  RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean; static;
+    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
     class operator  Initialize(var aTreap: TGLiteIdxTreap);
     class operator  Finalize(var aTreap: TGLiteIdxTreap);
     class operator  Copy(constref aSrc: TGLiteIdxTreap; var aDst: TGLiteIdxTreap);
@@ -186,6 +189,7 @@ type
     function  CountOf(constref aKey: TKey): SizeInt; //O(LogN)
     function  Add(constref aKey: TKey): PNode;       //O(LogN)
     function  Remove(constref aKey: TKey): Boolean;  //O(LogN)
+    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;  //O(LogN)
   { splits treap so that aTreap will contain all elements with keys >= aKey }
     procedure Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);//O(LogN)
     property  Root: PNode read FRoot;                //O(1)
@@ -228,7 +232,7 @@ type
     function  GetValue(const aKey: TKey): TValue;
     function  GetEntry(aIndex: SizeInt): TEntry;
     procedure SetValue(const aKey: TKey; const aValue: TValue);
-    procedure CheckIndexRange(aIndex: SizeInt); inline;
+    procedure CheckIndexRange(aIndex: SizeInt); //inline;
 
     class function  NewNode(constref aKey: TKey; constref aValue: TValue): PNode; static;
     class function  CopyTree(aRoot: PNode): PNode; static;
@@ -239,7 +243,7 @@ type
     class function  MergeNode(L, R: PNode): PNode; static;
     class procedure AddNode(var aRoot: PNode; aNode: PNode); static;
     class function  RemoveNode(constref aKey: TKey; var aRoot: PNode): Boolean; static;
-    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode; out aValue: TValue): Boolean; static;
+    class function  RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean; static;
     class operator  Initialize(var aTreap: TGLiteSegmentTreap);
     class operator  Finalize(var aTreap: TGLiteSegmentTreap);
     class operator  Copy(constref aSrc: TGLiteSegmentTreap; var aDst: TGLiteSegmentTreap);
@@ -280,6 +284,63 @@ type
     property  Values[const aKey: TKey]: TValue read GetValue write SetValue; default;//O(LogN)
   end;
 
+  { TGLiteImplicitTreap: mimics an array with most operations in O(LogN) }
+  generic TGLiteImplicitTreap<T> = record
+  public
+  type
+    TArray = array of T;
+
+  private
+  type
+    PNode = ^TNode;
+    TNode = record
+    private
+      Left,
+      Right: PNode;
+      Prio: SizeUInt;
+      Size: SizeInt;
+      Value: T;
+      property Key: SizeInt read Size;
+    end;
+    TUtil = specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>;
+
+  var
+    FRoot: PNode;
+    function  GetCount: SizeInt; inline;
+    function  GetHeight: SizeInt;
+    function  GetItem(aIndex: SizeInt): T;
+    procedure SetItem(aIndex: SizeInt; const aValue: T);
+    procedure CheckIndexRange(aIndex: SizeInt); //inline;
+    procedure CheckInsertRange(aIndex: SizeInt); //inline;
+    class function  NewNode(constref aValue: T): PNode; static; inline;
+    class function  CopyTree(aRoot: PNode): PNode; static;
+    class procedure UpdateSize(aNode: PNode); static; inline;
+    class procedure SplitNode(aIdx: SizeInt; aRoot: PNode; out L, R: PNode); static;
+    class function  MergeNode(L, R: PNode): PNode; static;
+    class procedure DeleteNode(aIndex: SizeInt; var aRoot: PNode; out aValue: T); static;
+    class operator  Initialize(var aTreap: TGLiteImplicitTreap);
+    class operator  Finalize(var aTreap: TGLiteImplicitTreap);
+    class operator  Copy(constref aSrc: TGLiteImplicitTreap; var aDst: TGLiteImplicitTreap);
+    class operator  AddRef(var aTreap: TGLiteImplicitTreap); inline;
+  public
+    class procedure Split(aIndex: SizeInt; var aTreap: TGLiteImplicitTreap;
+                          out L, R: TGLiteImplicitTreap); static;
+    function  IsEmpty: Boolean; inline;                   //O(1)
+    procedure Clear;                                      //O(N)
+    function  ToArray: TArray;                            //O(N)
+    function  Add(constref aValue: T): SizeInt;           //O(LogN)
+    procedure Insert(aIndex: SizeInt; constref aValue: T);//O(LogN)
+    procedure Insert(aIndex: SizeInt; var aTreap: TGLiteImplicitTreap);
+    function  Delete(aIndex: SizeInt): T;                 //O(LogN)
+    procedure Split(aIndex: SizeInt; out aTreap: TGLiteImplicitTreap);
+    procedure Merge(var aTreap: TGLiteImplicitTreap);     //O(LogN)
+    procedure RotateLeft(aDist: SizeInt);                 //O(LogN)
+    procedure RotateRight(aDist: SizeInt);                //O(LogN)
+    property  Count: SizeInt read GetCount;               //O(1)
+    property  Height: SizeInt read GetHeight;             //O(N)
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;//O(LogN)
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -288,17 +349,17 @@ implementation
 class function TGBstUtil.GetTreeSize(aNode: PNode): SizeInt;
 var
   Size: SizeInt = 0;
-  procedure Traverse(aNode: PNode);
+  procedure Visit(aNode: PNode);
   begin
     if aNode <> nil then
       begin
         Inc(Size);
-        Traverse(aNode^.Left);
-        Traverse(aNode^.Right);
+        Visit(aNode^.Left);
+        Visit(aNode^.Right);
       end;
   end;
 begin
-  Traverse(aNode);
+  Visit(aNode);
   Result := Size;
 end;
 
@@ -649,10 +710,11 @@ var
       end;
   end;
 begin
+  Tmp.Clear;
   if aRoot <> nil then
     begin
       Visit(aRoot);
-      Result := {%H-}Tmp.FRoot;
+      Result := Tmp.FRoot;
       Tmp.FRoot := nil;
     end
   else
@@ -730,6 +792,24 @@ begin
     else
       Found := aRoot;
       aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
+      TUtil.FreeNode(Found);
+      exit(True);
+    end;
+  Result := False;
+end;
+
+class function TGLiteTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
+var
+  Found: PNode;
+begin
+  if aRoot <> nil then
+    case SizeInt(TCmpRel.Compare(aKey, aRoot^.Key)) of
+      System.Low(SizeInt)..-1: exit(RemoveNode(aKey, aRoot^.FLeft, v));
+      1..System.High(SizeInt): exit(RemoveNode(aKey, aRoot^.FRight, v));
+    else
+      Found := aRoot;
+      aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
+      v := Found^.Value;
       TUtil.FreeNode(Found);
       exit(True);
     end;
@@ -853,6 +933,14 @@ begin
     Result := False;
 end;
 
+function TGLiteTreap.Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+begin
+  if FRoot <> nil then
+    Result := RemoveNode(aKey, FRoot, aValue)
+  else
+    Result := False;
+end;
+
 procedure TGLiteTreap.Split(constref aKey: TKey; out aTreap: TGLiteTreap);
 begin
   if FRoot <> nil then
@@ -904,10 +992,11 @@ var
       end;
   end;
 begin
+  Tmp.Clear;
   if aRoot <> nil then
     begin
       Visit(aRoot);
-      Result := {%H-}Tmp.FRoot;
+      Result := Tmp.FRoot;
       Tmp.FRoot := nil;
     end
   else
@@ -1011,6 +1100,36 @@ begin
             Result := RemoveNode(aKey, aRoot^.FLeft)
           else
             Result := RemoveNode(aKey, aRoot^.FRight);
+          if Result and (aRoot <> nil) then
+            UpdateSize(aRoot);
+        end;
+    end
+  else
+    Result := False;
+end;
+
+class function TGLiteIdxTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
+var
+  Found: PNode;
+  c: SizeInt;
+begin
+  if aRoot <> nil then
+    begin
+      c := TCmpRel.Compare(aKey, aRoot^.Key);
+      if c = 0 then
+        begin
+          Found := aRoot;
+          aRoot := MergeNode(aRoot^.FLeft, aRoot^.FRight);
+          v := Found^.Value;
+          TUtil.FreeNode(Found);
+          Result := True;
+        end
+      else
+        begin
+          if c < 0 then
+            Result := RemoveNode(aKey, aRoot^.FLeft, v)
+          else
+            Result := RemoveNode(aKey, aRoot^.FRight, v);
           if Result and (aRoot <> nil) then
             UpdateSize(aRoot);
         end;
@@ -1139,6 +1258,14 @@ begin
     Result := False;
 end;
 
+function TGLiteIdxTreap.Remove(constref aKey: TKey; out aValue: TValue): Boolean;
+begin
+  if FRoot <> nil then
+    Result := RemoveNode(aKey, FRoot, aValue)
+  else
+    Result := False;
+end;
+
 procedure TGLiteIdxTreap.Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);
 begin
   if FRoot <> nil then
@@ -1194,10 +1321,11 @@ var
       end;
   end;
 begin
+  Tmp.Clear;
   if aRoot <> nil then
     begin
       Visit(aRoot);
-      Result := {%H-}Tmp.FRoot;
+      Result := Tmp.FRoot;
       Tmp.FRoot := nil;
     end
   else
@@ -1361,7 +1489,7 @@ begin
     Result := False;
 end;
 
-class function TGLiteSegmentTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out aValue: TValue): Boolean;
+class function TGLiteSegmentTreap.RemoveNode(constref aKey: TKey; var aRoot: PNode; out v: TValue): Boolean;
 var
   Found: PNode;
   c: SizeInt;
@@ -1373,16 +1501,16 @@ begin
         begin
           Found := aRoot;
           aRoot := MergeNode(aRoot^.Left, aRoot^.Right);
-          aValue := Found^.Value;
+          v := Found^.Value;
           TUtil.FreeNode(Found);
           Result := True;
         end
       else
         begin
           if c < 0 then
-            Result := RemoveNode(aKey, aRoot^.Left, aValue)
+            Result := RemoveNode(aKey, aRoot^.Left, v)
           else
-            Result := RemoveNode(aKey, aRoot^.Right, aValue);
+            Result := RemoveNode(aKey, aRoot^.Right, v);
           if Result and (aRoot <> nil) then
             UpdateNode(aRoot);
         end;
@@ -1601,6 +1729,320 @@ begin
     end
   else
     Result := TValMonoid.Identity;
+end;
+
+{ TGLiteImplicitTreap }
+
+function TGLiteImplicitTreap.GetCount: SizeInt;
+begin
+  Result := TUtil.GetNodeSize(FRoot);
+end;
+
+function TGLiteImplicitTreap.GetHeight: SizeInt;
+begin
+  Result := TUtil.GetHeight(FRoot);
+end;
+
+function TGLiteImplicitTreap.GetItem(aIndex: SizeInt): T;
+begin
+  CheckIndexRange(aIndex);
+  Result := TUtil.GetByIndex(FRoot, aIndex)^.Value;
+end;
+
+procedure TGLiteImplicitTreap.SetItem(aIndex: SizeInt; const aValue: T);
+begin
+  CheckIndexRange(aIndex);
+  TUtil.GetByIndex(FRoot, aIndex)^.Value := aValue;
+end;
+
+procedure TGLiteImplicitTreap.CheckIndexRange(aIndex: SizeInt);
+begin
+  if SizeUInt(aIndex) >= SizeUInt(TUtil.GetNodeSize(FRoot)) then
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+procedure TGLiteImplicitTreap.CheckInsertRange(aIndex: SizeInt);
+begin
+  if SizeUInt(aIndex) > SizeUInt(TUtil.GetNodeSize(FRoot)) then
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+class function TGLiteImplicitTreap.NewNode(constref aValue: T): PNode;
+begin
+  Result := System.GetMem(SizeOf(TNode));
+  System.FillChar(Result^, SizeOf(TNode), 0);
+  Result^.Prio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.Size := 1;
+  Result^.Value := aValue;
+end;
+
+class function TGLiteImplicitTreap.CopyTree(aRoot: PNode): PNode;
+var
+  Tmp: TGLiteImplicitTreap;
+  procedure Visit(aNode: PNode);
+  begin
+    if aNode <> nil then
+      begin
+        Visit(aNode^.Left);
+        Tmp.Add(aNode^.Value);
+        Visit(aNode^.Right);
+      end;
+  end;
+begin
+  if aRoot = nil then exit(nil);
+  Tmp.Clear;
+  Visit(aRoot);
+  Result := Tmp.FRoot;
+  Tmp.FRoot := nil;
+end;
+
+class procedure TGLiteImplicitTreap.UpdateSize(aNode: PNode);
+begin
+  with aNode^ do
+    begin
+      Size := 1;
+      if Left <> nil then
+        Size += Left^.Size;
+      if Right <> nil then
+        Size += Right^.Size;
+    end;
+end;
+
+class procedure TGLiteImplicitTreap.SplitNode(aIdx: SizeInt; aRoot: PNode; out L, R: PNode);
+var
+  CurrIdx: SizeInt;
+begin
+  if aRoot <> nil then
+    begin
+      CurrIdx := TUtil.GetNodeSize(aRoot^.Left);
+      if CurrIdx < aIdx then
+        begin
+          L := aRoot;
+          SplitNode(aIdx - Succ(CurrIdx), L^.Right, L^.Right, R);
+        end
+      else
+        begin
+          R := aRoot;
+          SplitNode(aIdx, R^.Left, L, R^.Left);
+        end;
+      UpdateSize(aRoot);
+      exit;
+    end;
+  L := nil;
+  R := nil;
+end;
+
+class function TGLiteImplicitTreap.MergeNode(L, R: PNode): PNode;
+begin
+  if L = nil then
+    Result := R
+  else
+    if R = nil then
+      Result := L
+    else
+      begin
+        if L^.Prio > R^.Prio then
+          begin
+            L^.Right := MergeNode(L^.Right, R);
+            Result := L;
+          end
+        else
+          begin
+            R^.Left := MergeNode(L, R^.Left);
+            Result := R;
+          end;
+        UpdateSize(Result);
+      end;
+end;
+
+class procedure TGLiteImplicitTreap.DeleteNode(aIndex: SizeInt; var aRoot: PNode; out aValue: T);
+var
+  LSize: SizeInt;
+  Found: PNode;
+begin
+  if aRoot <> nil then
+    begin
+      LSize := TUtil.GetNodeSize(aRoot^.Left);
+      if LSize = aIndex then
+        begin
+          Found := aRoot;
+          aRoot := MergeNode(aRoot^.Left, aRoot^.Right);
+          aValue := Found^.Value;
+          TUtil.FreeNode(Found);
+        end
+      else
+        begin
+          if LSize > aIndex then
+            DeleteNode(aIndex, aRoot^.Left, aValue)
+          else
+            DeleteNode(aIndex - Succ(LSize), aRoot^.Right, aValue);
+          UpdateSize(aRoot);
+        end;
+    end;
+end;
+
+class operator TGLiteImplicitTreap.Initialize(var aTreap: TGLiteImplicitTreap);
+begin
+  aTreap.FRoot := nil;
+end;
+
+class operator TGLiteImplicitTreap.Finalize(var aTreap: TGLiteImplicitTreap);
+begin
+  aTreap.Clear;
+end;
+
+class operator TGLiteImplicitTreap.Copy(constref aSrc: TGLiteImplicitTreap; var aDst: TGLiteImplicitTreap);
+begin
+  aDst.Clear;
+  if aSrc.FRoot <> nil then
+    aDst.FRoot := CopyTree(aSrc.FRoot);
+end;
+
+class operator TGLiteImplicitTreap.AddRef(var aTreap: TGLiteImplicitTreap);
+begin
+  if aTreap.FRoot <> nil then
+    aTreap.FRoot := CopyTree(aTreap.FRoot);
+end;
+
+class procedure TGLiteImplicitTreap.Split(aIndex: SizeInt; var aTreap: TGLiteImplicitTreap;
+  out L, R: TGLiteImplicitTreap);
+begin
+  aTreap.CheckIndexRange(aIndex);
+  SplitNode(aIndex, aTreap.FRoot, L.FRoot, R.FRoot);
+  aTreap.FRoot := nil;
+end;
+
+function TGLiteImplicitTreap.IsEmpty: Boolean;
+begin
+  Result := FRoot = nil;
+end;
+
+procedure TGLiteImplicitTreap.Clear;
+begin
+  if FRoot <> nil then
+    TUtil.ClearTree(FRoot);
+  FRoot := nil;
+end;
+
+function TGLiteImplicitTreap.ToArray: TArray;
+var
+  a: TArray = nil;
+  I: Integer = 0;
+  procedure Visit(aNode: PNode);
+  begin
+    if aNode <> nil then
+      begin
+        Visit(aNode^.Left);
+        a[I] := aNode^.Value;
+        Inc(I);
+        Visit(aNode^.Right);
+      end;
+  end;
+begin
+  if FRoot = nil then exit(nil);
+  System.SetLength(a, FRoot^.Size);
+  Visit(FRoot);
+  Result := a;
+end;
+
+function TGLiteImplicitTreap.Add(constref aValue: T): SizeInt;
+begin
+  Result := TUtil.GetNodeSize(FRoot);
+  if FRoot <> nil then
+    FRoot := MergeNode(FRoot, NewNode(aValue))
+  else
+    FRoot := NewNode(aValue);
+end;
+
+procedure TGLiteImplicitTreap.Insert(aIndex: SizeInt; constref aValue: T);
+var
+  L, R: PNode;
+begin
+  CheckInsertRange(aIndex);
+  if FRoot <> nil then
+    if aIndex > 0 then
+      if aIndex < Pred(FRoot^.Size) then
+        begin
+          SplitNode(aIndex, FRoot, L, R);
+          FRoot := MergeNode(MergeNode(L, NewNode(aValue)), R);
+        end
+      else
+        FRoot := MergeNode(FRoot, NewNode(aValue))
+    else
+      FRoot := MergeNode(NewNode(aValue), FRoot)
+  else
+    FRoot := NewNode(aValue);
+end;
+
+procedure TGLiteImplicitTreap.Insert(aIndex: SizeInt; var aTreap: TGLiteImplicitTreap);
+var
+  L, R: PNode;
+begin
+  CheckInsertRange(aIndex);
+  if aTreap.FRoot = nil then
+    exit;
+  if FRoot <> nil then
+    if aIndex > 0 then
+      if aIndex < Pred(FRoot^.Size) then
+        begin
+          SplitNode(aIndex, FRoot, L, R);
+          FRoot := MergeNode(MergeNode(L, aTreap.FRoot), R);
+        end
+      else
+        FRoot := MergeNode(FRoot, aTreap.FRoot)
+    else
+      FRoot := MergeNode(aTreap.FRoot, FRoot)
+  else
+    FRoot := aTreap.FRoot;
+  aTreap.FRoot := nil;
+end;
+
+function TGLiteImplicitTreap.Delete(aIndex: SizeInt): T;
+begin
+  CheckIndexRange(aIndex);
+  DeleteNode(aIndex, FRoot, Result);
+end;
+
+procedure TGLiteImplicitTreap.Split(aIndex: SizeInt; out aTreap: TGLiteImplicitTreap);
+begin
+  CheckIndexRange(aIndex);
+  SplitNode(aIndex, FRoot, FRoot, aTreap.FRoot);
+end;
+
+procedure TGLiteImplicitTreap.Merge(var aTreap: TGLiteImplicitTreap);
+begin
+  FRoot := MergeNode(FRoot, aTreap.FRoot);
+  aTreap.FRoot := nil;
+end;
+
+procedure TGLiteImplicitTreap.RotateLeft(aDist: SizeInt);
+var
+  L, R: PNode;
+  cnt: SizeInt;
+begin
+  if FRoot = nil then exit;
+  cnt := FRoot^.Size;
+  if (aDist = 0) or (Abs(aDist) >= cnt) then
+    exit;
+  if aDist < 0 then
+    aDist += cnt;
+  SplitNode(aDist, FRoot, L, R);
+  FRoot := MergeNode(R, L);
+end;
+
+procedure TGLiteImplicitTreap.RotateRight(aDist: SizeInt);
+var
+  L, R: PNode;
+  cnt: SizeInt;
+begin
+  if FRoot = nil then exit;
+  cnt := FRoot^.Size;
+  if (aDist = 0) or (Abs(aDist) >= cnt) then
+    exit;
+  if aDist < 0 then
+    aDist += cnt;
+  SplitNode(cnt - aDist, FRoot, L, R);
+  FRoot := MergeNode(R, L);
 end;
 
 end.
