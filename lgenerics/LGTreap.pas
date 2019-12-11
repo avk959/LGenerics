@@ -341,6 +341,75 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;//O(LogN)
   end;
 
+  { TGLiteImplSegmentTreap }
+  generic TGLiteImplSegmentTreap<T, TMonoid> = record
+  public
+  type
+    TArray = array of T;
+
+  private
+  type
+    PNode = ^TNode;
+    TNode = record
+    private
+      Left,
+      Right: PNode;
+      Prio: SizeUInt;
+      Size: SizeInt;
+      CacheVal,
+      Value: T;
+      property Key: SizeInt read Size;
+    end;
+    TUtil = specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>;
+
+  var
+    FRoot: PNode;
+    function  GetCount: SizeInt; inline;
+    function  GetHeight: SizeInt;
+    function  GetItem(aIndex: SizeInt): T;
+    procedure SetItem(aIndex: SizeInt; const aValue: T);
+    procedure CheckIndexRange(aIndex: SizeInt); //inline;
+    procedure CheckInsertRange(aIndex: SizeInt); //inline;
+    class function  NewNode(constref aValue: T): PNode; static;
+    class function  CopyTree(aRoot: PNode): PNode; static;
+    class procedure UpdateNode(aNode: PNode); static; inline;
+    class procedure UpdateCache(aNode: PNode); static; inline;
+    class procedure UpdateValue(aIndex: SizeInt; aRoot: PNode; constref aValue: T); static;
+    class procedure SplitNode(aIdx: SizeInt; aRoot: PNode; out L, R: PNode); static;
+    class function  MergeNode(L, R: PNode): PNode; static;
+    class procedure DeleteNode(aIndex: SizeInt; var aRoot: PNode; out aValue: T); static;
+    class operator  Initialize(var aTreap: TGLiteImplSegmentTreap);
+    class operator  Finalize(var aTreap: TGLiteImplSegmentTreap);
+    class operator  Copy(constref aSrc: TGLiteImplSegmentTreap; var aDst: TGLiteImplSegmentTreap);
+    class operator  AddRef(var aTreap: TGLiteImplSegmentTreap); inline;
+  public
+    class procedure Split(aIndex: SizeInt; var aTreap: TGLiteImplSegmentTreap;
+                          out L, R: TGLiteImplSegmentTreap); static;
+    function  IsEmpty: Boolean; inline;                    //O(1)
+    procedure Clear;                                       //O(N)
+    function  ToArray: TArray;                             //O(N)
+    function  Add(constref aValue: T): SizeInt;            //O(LogN)
+    procedure Insert(aIndex: SizeInt; constref aValue: T); //O(LogN)
+    procedure Insert(aIndex: SizeInt; var aTreap: TGLiteImplSegmentTreap);//O(LogN)
+    function  Delete(aIndex: SizeInt): T;                  //O(LogN)
+    procedure Split(aIndex: SizeInt; out aTreap: TGLiteImplSegmentTreap); //O(LogN)
+    procedure Merge(var aTreap: TGLiteImplSegmentTreap);   //O(LogN)
+    procedure RotateLeft(aDist: SizeInt);                  //O(LogN)
+    procedure RotateRight(aDist: SizeInt);                 //O(LogN)
+  { returns value of the monoid function on the segment[L, R];
+    raises exception if L or R out of bounds }
+    function  RangeQuery(L, R: SizeInt): T;                //O(LogN)
+  { returns value of the monoid function on the segment[0, aIndex];
+    raises exception if aIndex out of bounds }
+    function  HeadQuery(aIndex: SizeInt): T;               //O(LogN)
+  { returns value of the monoid function on the segment[aIndex, Pred(Count)];
+    raises exception if aIndex out of bounds }
+    function  TailQuery(aIndex: SizeInt): T;               //O(LogN)
+    property  Count: SizeInt read GetCount;                //O(1)
+    property  Height: SizeInt read GetHeight;              //O(N)
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;//O(LogN)
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}
 
@@ -644,16 +713,16 @@ begin
   while Result <> nil do
     begin
       LSize := GetNodeSize(Result^.Left);
-      if LSize = aIndex then
-        exit
+      if LSize < aIndex then
+        begin
+          Result := Result^.Right;
+          aIndex -= Succ(LSize);
+        end
       else
         if LSize > aIndex then
           Result := Result^.Left
         else
-          begin
-            Result := Result^.Right;
-            aIndex -= Succ(LSize);
-          end;
+          exit;
     end;
 end;
 
@@ -2043,6 +2112,427 @@ begin
     aDist += cnt;
   SplitNode(cnt - aDist, FRoot, L, R);
   FRoot := MergeNode(R, L);
+end;
+
+{ TGLiteImplSegmentTreap }
+
+function TGLiteImplSegmentTreap.GetCount: SizeInt;
+begin
+  Result := TUtil.GetNodeSize(FRoot);
+end;
+
+function TGLiteImplSegmentTreap.GetHeight: SizeInt;
+begin
+  Result := TUtil.GetHeight(FRoot);
+end;
+
+function TGLiteImplSegmentTreap.GetItem(aIndex: SizeInt): T;
+begin
+  CheckIndexRange(aIndex);
+  Result := TUtil.GetByIndex(FRoot, aIndex)^.Value;
+end;
+
+procedure TGLiteImplSegmentTreap.SetItem(aIndex: SizeInt; const aValue: T);
+begin
+  CheckIndexRange(aIndex);
+  UpdateValue(aIndex, FRoot, aValue);
+end;
+
+procedure TGLiteImplSegmentTreap.CheckIndexRange(aIndex: SizeInt);
+begin
+  if SizeUInt(aIndex) >= SizeUInt(TUtil.GetNodeSize(FRoot)) then
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+procedure TGLiteImplSegmentTreap.CheckInsertRange(aIndex: SizeInt);
+begin
+  if SizeUInt(aIndex) > SizeUInt(TUtil.GetNodeSize(FRoot)) then
+    raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
+end;
+
+class function TGLiteImplSegmentTreap.NewNode(constref aValue: T): PNode;
+begin
+  Result := System.GetMem(SizeOf(TNode));
+  System.FillChar(Result^, SizeOf(TNode), 0);
+  Result^.Prio := {$IFDEF CPU64}BJNextRandom64{$ELSE}BJNextRandom{$ENDIF};
+  Result^.Size := 1;
+  Result^.CacheVal := aValue;
+  Result^.Value := aValue;
+end;
+
+class function TGLiteImplSegmentTreap.CopyTree(aRoot: PNode): PNode;
+var
+  Tmp: TGLiteImplSegmentTreap;
+  procedure Visit(aNode: PNode);
+  begin
+    if aNode <> nil then
+      begin
+        Visit(aNode^.Left);
+        Tmp.Add(aNode^.Value);
+        Visit(aNode^.Right);
+      end;
+  end;
+begin
+  Tmp.Clear;
+  if aRoot <> nil then
+    begin
+      Visit(aRoot);
+      Result := Tmp.FRoot;
+      Tmp.FRoot := nil;
+    end
+  else
+    Result := nil;
+end;
+
+class procedure TGLiteImplSegmentTreap.UpdateNode(aNode: PNode);
+begin
+  with aNode^ do
+    begin
+      Size := 1;
+      CacheVal := aNode^.Value;
+      if Left <> nil then
+        begin
+          Size += Left^.Size;
+          CacheVal := TMonoid.BinOp(CacheVal, Left^.CacheVal);
+        end;
+      if Right <> nil then
+        begin
+          Size += Right^.Size;
+          CacheVal := TMonoid.BinOp(CacheVal, Right^.CacheVal);
+        end;
+    end;
+end;
+
+class procedure TGLiteImplSegmentTreap.UpdateCache(aNode: PNode);
+begin
+  with aNode^ do
+    begin
+      CacheVal := aNode^.Value;
+      if Left <> nil then
+        CacheVal := TMonoid.BinOp(CacheVal, Left^.CacheVal);
+      if Right <> nil then
+        CacheVal := TMonoid.BinOp(CacheVal, Right^.CacheVal);
+    end;
+end;
+
+class procedure TGLiteImplSegmentTreap.UpdateValue(aIndex: SizeInt; aRoot: PNode; constref aValue: T);
+var
+  LSize: SizeInt;
+begin
+  if aRoot <> nil then
+    begin
+      LSize := TUtil.GetNodeSize(aRoot^.Left);
+      if LSize = aIndex then
+        aRoot^.Value := aValue
+      else
+        if LSize > aIndex then
+          UpdateValue(aIndex, aRoot^.Left, aValue)
+        else
+          UpdateValue(aIndex - Succ(LSize), aRoot^.Right, aValue);
+      UpdateCache(aRoot);
+    end;
+end;
+
+class procedure TGLiteImplSegmentTreap.SplitNode(aIdx: SizeInt; aRoot: PNode; out L, R: PNode);
+var
+  CurrIdx: SizeInt;
+begin
+  if aRoot <> nil then
+    begin
+      CurrIdx := TUtil.GetNodeSize(aRoot^.Left);
+      if CurrIdx < aIdx then
+        begin
+          L := aRoot;
+          SplitNode(aIdx - Succ(CurrIdx), L^.Right, L^.Right, R);
+        end
+      else
+        begin
+          R := aRoot;
+          SplitNode(aIdx, R^.Left, L, R^.Left);
+        end;
+      UpdateNode(aRoot);
+    end
+  else
+    begin
+      L := nil;
+      R := nil;
+    end;
+end;
+
+class function TGLiteImplSegmentTreap.MergeNode(L, R: PNode): PNode;
+begin
+  if L = nil then
+    Result := R
+  else
+    if R = nil then
+      Result := L
+    else
+      begin
+        if L^.Prio > R^.Prio then
+          begin
+            L^.Right := MergeNode(L^.Right, R);
+            Result := L;
+          end
+        else
+          begin
+            R^.Left := MergeNode(L, R^.Left);
+            Result := R;
+          end;
+        UpdateNode(Result);
+      end;
+end;
+
+class procedure TGLiteImplSegmentTreap.DeleteNode(aIndex: SizeInt; var aRoot: PNode; out aValue: T);
+var
+  LSize: SizeInt;
+  Found: PNode;
+begin
+  if aRoot <> nil then
+    begin
+      LSize := TUtil.GetNodeSize(aRoot^.Left);
+      if LSize = aIndex then
+        begin
+          Found := aRoot;
+          aRoot := MergeNode(aRoot^.Left, aRoot^.Right);
+          aValue := Found^.Value;
+          TUtil.FreeNode(Found);
+        end
+      else
+        begin
+          if LSize > aIndex then
+            DeleteNode(aIndex, aRoot^.Left, aValue)
+          else
+            DeleteNode(aIndex - Succ(LSize), aRoot^.Right, aValue);
+          UpdateNode(aRoot);
+        end;
+    end;
+end;
+
+class operator TGLiteImplSegmentTreap.Initialize(var aTreap: TGLiteImplSegmentTreap);
+begin
+  aTreap.FRoot := nil;
+end;
+
+class operator TGLiteImplSegmentTreap.Finalize(var aTreap: TGLiteImplSegmentTreap);
+begin
+  aTreap.Clear;
+end;
+
+class operator TGLiteImplSegmentTreap.Copy(constref aSrc: TGLiteImplSegmentTreap; var aDst: TGLiteImplSegmentTreap);
+begin
+  aDst.Clear;
+  if aSrc.FRoot <> nil then
+    aDst.FRoot := CopyTree(aSrc.FRoot);
+end;
+
+class operator TGLiteImplSegmentTreap.AddRef(var aTreap: TGLiteImplSegmentTreap);
+begin
+  if aTreap.FRoot <> nil then
+    aTreap.FRoot := CopyTree(aTreap.FRoot);
+end;
+
+class procedure TGLiteImplSegmentTreap.Split(aIndex: SizeInt; var aTreap: TGLiteImplSegmentTreap;
+  out L, R: TGLiteImplSegmentTreap);
+begin
+  aTreap.CheckIndexRange(aIndex);
+  SplitNode(aIndex, aTreap.FRoot, L.FRoot, R.FRoot);
+  aTreap.FRoot := nil;
+end;
+
+function TGLiteImplSegmentTreap.IsEmpty: Boolean;
+begin
+  Result := FRoot = nil;
+end;
+
+procedure TGLiteImplSegmentTreap.Clear;
+begin
+  if FRoot <> nil then
+    TUtil.ClearTree(FRoot);
+  FRoot := nil;
+end;
+
+function TGLiteImplSegmentTreap.ToArray: TArray;
+var
+  a: TArray = nil;
+  I: Integer = 0;
+  procedure Visit(aNode: PNode);
+  begin
+    if aNode <> nil then
+      begin
+        Visit(aNode^.Left);
+        a[I] := aNode^.Value;
+        Inc(I);
+        Visit(aNode^.Right);
+      end;
+  end;
+begin
+  if FRoot <> nil then
+    begin
+      System.SetLength(a, FRoot^.Size);
+      Visit(FRoot);
+    end;
+  Result := a;
+end;
+
+function TGLiteImplSegmentTreap.Add(constref aValue: T): SizeInt;
+begin
+  Result := TUtil.GetNodeSize(FRoot);
+  if FRoot <> nil then
+    FRoot := MergeNode(FRoot, NewNode(aValue))
+  else
+    FRoot := NewNode(aValue);
+end;
+
+procedure TGLiteImplSegmentTreap.Insert(aIndex: SizeInt; constref aValue: T);
+var
+  L, R: PNode;
+begin
+  CheckInsertRange(aIndex);
+  if FRoot <> nil then
+    if aIndex > 0 then
+      if aIndex < Pred(FRoot^.Size) then
+        begin
+          SplitNode(aIndex, FRoot, L, R);
+          FRoot := MergeNode(MergeNode(L, NewNode(aValue)), R);
+        end
+      else
+        FRoot := MergeNode(FRoot, NewNode(aValue))
+    else
+      FRoot := MergeNode(NewNode(aValue), FRoot)
+  else
+    FRoot := NewNode(aValue);
+end;
+
+procedure TGLiteImplSegmentTreap.Insert(aIndex: SizeInt; var aTreap: TGLiteImplSegmentTreap);
+var
+  L, R: PNode;
+begin
+  CheckInsertRange(aIndex);
+  if aTreap.FRoot = nil then
+    exit;
+  if FRoot <> nil then
+    if aIndex > 0 then
+      if aIndex < Pred(FRoot^.Size) then
+        begin
+          SplitNode(aIndex, FRoot, L, R);
+          FRoot := MergeNode(MergeNode(L, aTreap.FRoot), R);
+        end
+      else
+        FRoot := MergeNode(FRoot, aTreap.FRoot)
+    else
+      FRoot := MergeNode(aTreap.FRoot, FRoot)
+  else
+    FRoot := aTreap.FRoot;
+  aTreap.FRoot := nil;
+end;
+
+function TGLiteImplSegmentTreap.Delete(aIndex: SizeInt): T;
+begin
+  CheckIndexRange(aIndex);
+  DeleteNode(aIndex, FRoot, Result);
+end;
+
+procedure TGLiteImplSegmentTreap.Split(aIndex: SizeInt; out aTreap: TGLiteImplSegmentTreap);
+begin
+  CheckIndexRange(aIndex);
+  SplitNode(aIndex, FRoot, FRoot, aTreap.FRoot);
+end;
+
+procedure TGLiteImplSegmentTreap.Merge(var aTreap: TGLiteImplSegmentTreap);
+begin
+  FRoot := MergeNode(FRoot, aTreap.FRoot);
+  aTreap.FRoot := nil;
+end;
+
+procedure TGLiteImplSegmentTreap.RotateLeft(aDist: SizeInt);
+var
+  L, R: PNode;
+  cnt: SizeInt;
+begin
+  if FRoot = nil then
+    exit;
+  cnt := FRoot^.Size;
+  if (aDist = 0) or (Abs(aDist) >= cnt) then
+    exit;
+  if aDist < 0 then
+    aDist += cnt;
+  SplitNode(aDist, FRoot, L, R);
+  FRoot := MergeNode(R, L);
+end;
+
+procedure TGLiteImplSegmentTreap.RotateRight(aDist: SizeInt);
+var
+  L, R: PNode;
+  cnt: SizeInt;
+begin
+  if FRoot = nil then
+    exit;
+  cnt := FRoot^.Size;
+  if (aDist = 0) or (Abs(aDist) >= cnt) then
+    exit;
+  if aDist < 0 then
+    aDist += cnt;
+  SplitNode(cnt - aDist, FRoot, L, R);
+  FRoot := MergeNode(R, L);
+end;
+
+function TGLiteImplSegmentTreap.RangeQuery(L, R: SizeInt): T;
+var
+  pL, pM, pR: PNode;
+begin
+  CheckIndexRange(L);
+  CheckIndexRange(R);
+  if L <= R then
+    if R < Pred(FRoot^.Size) then
+      begin
+        SplitNode(L, FRoot, pL, pR);
+        SplitNode(Succ(R) - L, pR, pM, pR);
+        if pM <> nil then
+           Result := pM^.CacheVal
+        else
+          Result := TMonoid.Identity;
+        FRoot := MergeNode(MergeNode(pL, pM), pR);
+      end
+    else
+       Result := TailQuery(L)
+  else
+    Result := TMonoid.Identity;
+end;
+
+function TGLiteImplSegmentTreap.HeadQuery(aIndex: SizeInt): T;
+var
+  pL, pR: PNode;
+begin
+  CheckIndexRange(aIndex);
+  if aIndex < Pred(FRoot^.Size) then
+    begin
+      SplitNode(Succ(aIndex), FRoot, pL, pR);
+      if pL <> nil then
+        Result := pL^.CacheVal
+      else
+        Result := TMonoid.Identity;
+      FRoot := MergeNode(pL, pR);
+    end
+  else
+    Result := FRoot^.CacheVal;
+end;
+
+function TGLiteImplSegmentTreap.TailQuery(aIndex: SizeInt): T;
+var
+  pL, pR: PNode;
+begin
+  CheckIndexRange(aIndex);
+  if aIndex > 0 then
+    begin
+      SplitNode(aIndex, FRoot, pL, pR);
+      if pR <> nil then
+        Result := pR^.CacheVal
+      else
+        Result := TMonoid.Identity;
+      FRoot := MergeNode(pL, pR);
+    end
+  else
+    Result := FRoot^.CacheVal;
 end;
 
 end.
