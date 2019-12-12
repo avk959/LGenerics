@@ -343,12 +343,13 @@ type
   end;
 
   { TGLiteImplSegmentTreap implements dynamic segment tree, it allows:
-      - add element in O(log N);
+      - add an element to the array in O(log N);
+      - update a single element of an array in O(log N);
+      - add an arbitrary range of elements to the array in O(log N);
       - find the value of the monoid function on an arbitrary range of array elements in O(log N);
-      - update the array elements in O(log N);
       functor TMonoid must provide:
         field/property/function Identity: T; - neutral element of the monoid;
-        associative dyadic function BinOp([const[ref]] L, R: T): TValue; }
+        associative dyadic function BinOp([const[ref]] L, R: T): T; }
   generic TGLiteImplSegmentTreap<T, TMonoid> = record
   public
   type
