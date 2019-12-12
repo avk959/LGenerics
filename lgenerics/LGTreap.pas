@@ -189,9 +189,9 @@ type
     function  CountOf(constref aKey: TKey): SizeInt; //O(LogN)
     function  Add(constref aKey: TKey): PNode;       //O(LogN)
     function  Remove(constref aKey: TKey): Boolean;  //O(LogN)
-    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;  //O(LogN)
+    function  Remove(constref aKey: TKey; out aValue: TValue): Boolean;//O(LogN)
   { splits treap so that aTreap will contain all elements with keys >= aKey }
-    procedure Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);//O(LogN)
+    procedure Split(constref aKey: TKey; out aTreap: TGLiteIdxTreap);  //O(LogN)
     property  Root: PNode read FRoot;                //O(1)
     property  Count: SizeInt read GetCount;          //O(1)
     property  Height: SizeInt read GetHeight;        //O(N)
@@ -204,7 +204,7 @@ type
         class function Compare([const[ref]] L, R: TKey): SizeInt;
       functor TValMonoid must provide:
         field/property/function Identity: TValue; - neutral element of the monoid;
-        associative dyadic function BinOp([const[ref]] L, R: TValue): TValue;}
+        associative dyadic function BinOp([const[ref]] L, R: TValue): TValue; }
   generic TGLiteSegmentTreap<TKey, TValue, TCmpRel, TValMonoid> = record
   public
   type
@@ -333,15 +333,22 @@ type
     procedure Insert(aIndex: SizeInt; var aTreap: TGLiteImplicitTreap);
     function  Delete(aIndex: SizeInt): T;                 //O(LogN)
     procedure Split(aIndex: SizeInt; out aTreap: TGLiteImplicitTreap);
+    procedure Split(aIndex, aCount: SizeInt; out aTreap: TGLiteImplicitTreap);//O(LogN)
     procedure Merge(var aTreap: TGLiteImplicitTreap);     //O(LogN)
     procedure RotateLeft(aDist: SizeInt);                 //O(LogN)
     procedure RotateRight(aDist: SizeInt);                //O(LogN)
     property  Count: SizeInt read GetCount;               //O(1)
     property  Height: SizeInt read GetHeight;             //O(N)
-    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;//O(LogN)
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;  //O(LogN)
   end;
 
-  { TGLiteImplSegmentTreap }
+  { TGLiteImplSegmentTreap implements dynamic segment tree, it allows:
+      - add element in O(log N);
+      - find the value of the monoid function on an arbitrary range of array elements in O(log N);
+      - update the array elements in O(log N);
+      functor TMonoid must provide:
+        field/property/function Identity: T; - neutral element of the monoid;
+        associative dyadic function BinOp([const[ref]] L, R: T): TValue; }
   generic TGLiteImplSegmentTreap<T, TMonoid> = record
   public
   type
@@ -390,9 +397,10 @@ type
     function  ToArray: TArray;                             //O(N)
     function  Add(constref aValue: T): SizeInt;            //O(LogN)
     procedure Insert(aIndex: SizeInt; constref aValue: T); //O(LogN)
-    procedure Insert(aIndex: SizeInt; var aTreap: TGLiteImplSegmentTreap);//O(LogN)
+    procedure Insert(aIndex: SizeInt; var aTreap: TGLiteImplSegmentTreap);       //O(LogN)
     function  Delete(aIndex: SizeInt): T;                  //O(LogN)
-    procedure Split(aIndex: SizeInt; out aTreap: TGLiteImplSegmentTreap); //O(LogN)
+    procedure Split(aIndex: SizeInt; out aTreap: TGLiteImplSegmentTreap);        //O(LogN)
+    procedure Split(aIndex, aCount: SizeInt; out aTreap: TGLiteImplSegmentTreap);//O(LogN)
     procedure Merge(var aTreap: TGLiteImplSegmentTreap);   //O(LogN)
     procedure RotateLeft(aDist: SizeInt);                  //O(LogN)
     procedure RotateRight(aDist: SizeInt);                 //O(LogN)
@@ -407,7 +415,7 @@ type
     function  TailQuery(aIndex: SizeInt): T;               //O(LogN)
     property  Count: SizeInt read GetCount;                //O(1)
     property  Height: SizeInt read GetHeight;              //O(N)
-    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;//O(LogN)
+    property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;     //O(LogN)
   end;
 
 implementation
@@ -2078,6 +2086,27 @@ begin
   SplitNode(aIndex, FRoot, FRoot, aTreap.FRoot);
 end;
 
+procedure TGLiteImplicitTreap.Split(aIndex, aCount: SizeInt; out aTreap: TGLiteImplicitTreap);
+var
+  L, R: PNode;
+begin
+  CheckIndexRange(aIndex);
+  if aCount < 1 then
+    exit;
+  aCount := Math.Min(aCount, FRoot^.Size - aIndex);
+  if aCount < FRoot^.Size then
+    begin
+      SplitNode(aIndex, FRoot, L, R);
+      SplitNode(aCount, R, aTreap.FRoot, R);
+      FRoot := MergeNode(L, R);
+    end
+  else
+    begin
+      aTreap.FRoot := FRoot;
+      FRoot := nil;
+    end;
+end;
+
 procedure TGLiteImplicitTreap.Merge(var aTreap: TGLiteImplicitTreap);
 begin
   FRoot := MergeNode(FRoot, aTreap.FRoot);
@@ -2436,6 +2465,27 @@ procedure TGLiteImplSegmentTreap.Split(aIndex: SizeInt; out aTreap: TGLiteImplSe
 begin
   CheckIndexRange(aIndex);
   SplitNode(aIndex, FRoot, FRoot, aTreap.FRoot);
+end;
+
+procedure TGLiteImplSegmentTreap.Split(aIndex, aCount: SizeInt; out aTreap: TGLiteImplSegmentTreap);
+var
+  L, R: PNode;
+begin
+  CheckIndexRange(aIndex);
+  if aCount < 1 then
+    exit;
+  aCount := Math.Min(aCount, FRoot^.Size - aIndex);
+  if aCount < FRoot^.Size then
+    begin
+      SplitNode(aIndex, FRoot, L, R);
+      SplitNode(aCount, R, aTreap.FRoot, R);
+      FRoot := MergeNode(L, R);
+    end
+  else
+    begin
+      aTreap.FRoot := FRoot;
+      FRoot := nil;
+    end;
 end;
 
 procedure TGLiteImplSegmentTreap.Merge(var aTreap: TGLiteImplSegmentTreap);
