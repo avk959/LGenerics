@@ -103,6 +103,7 @@ type
     procedure Insert;
     procedure Delete;
     procedure Split;
+    procedure Split1;
     procedure Merge;
     procedure ToArray;
     procedure RotateLeft;
@@ -126,6 +127,7 @@ type
     procedure Insert;
     procedure Delete;
     procedure Split;
+    procedure Split1;
     procedure Merge;
     procedure ToArray;
     procedure RotateLeft;
@@ -1299,6 +1301,35 @@ begin
   AssertTrue(Treap2.Count = TestSize div 2);
 end;
 
+procedure TLiteImplicitTreapTest.Split1;
+const
+  TestSize = 1000;
+var
+  Treap, Treap2: TIntTreap;
+  I, J, Size: Integer;
+begin
+  for I := 1 to TestSize do
+    Treap.Add(I);
+  AssertTrue(Treap.Count = TestSize);
+
+  J := TestSize div 4;
+  Size := TestSize div 2;
+  Treap.Split(J, Size, Treap2);
+  AssertTrue(Treap.Count = Size);
+  AssertTrue(Treap2.Count = Size);
+  for I := 0 to Pred(J) do
+    AssertTrue(Treap[I] = Succ(I));
+  for I := J to Pred(Treap.Count) do
+    AssertTrue(Treap[I] = Succ(I) + Size);
+  for I := 0 to Pred(Treap2.Count) do
+    AssertTrue(Treap2[I] = Succ(I) + J );
+
+  Treap.Insert(J, Treap2);
+  for I := 0 to Pred(Treap.Count) do
+    AssertTrue(Treap[I] = Succ(I));
+  AssertTrue(Treap2.IsEmpty);
+end;
+
 procedure TLiteImplicitTreapTest.Merge;
 const
   TestSize = 100;
@@ -1552,6 +1583,35 @@ begin
   Treap.Split(0, Treap2);
   AssertTrue(Treap.IsEmpty);
   AssertTrue(Treap2.Count = TestSize div 2);
+end;
+
+procedure TLiteImplSegmentTreapTest.Split1;
+const
+  TestSize = 1000;
+var
+  Treap, Treap2: TIntTreap;
+  I, J, Size: Integer;
+begin
+  for I := 1 to TestSize do
+    Treap.Add(I);
+  AssertTrue(Treap.Count = TestSize);
+
+  J := TestSize div 4;
+  Size := TestSize div 2;
+  Treap.Split(J, Size, Treap2);
+  AssertTrue(Treap.Count = Size);
+  AssertTrue(Treap2.Count = Size);
+  for I := 0 to Pred(J) do
+    AssertTrue(Treap[I] = Succ(I));
+  for I := J to Pred(Treap.Count) do
+    AssertTrue(Treap[I] = Succ(I) + Size);
+  for I := 0 to Pred(Treap2.Count) do
+    AssertTrue(Treap2[I] = Succ(I) + J );
+
+  Treap.Insert(J, Treap2);
+  for I := 0 to Pred(Treap.Count) do
+    AssertTrue(Treap[I] = Succ(I));
+  AssertTrue(Treap2.IsEmpty);
 end;
 
 procedure TLiteImplSegmentTreapTest.Merge;
