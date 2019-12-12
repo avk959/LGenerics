@@ -749,8 +749,9 @@ type
     property  FreeCount: SizeInt read FFreeCount;
   end;
 
-  { TGAddMonoid }
-  TGAddMonoid<T> = record
+  { TGAddMonoid uses Default(T) as identity;
+    it assumes T has defined operator "+" }
+  TGAddMonoid<T> = class
   private
     class function GetIdentity: T; static; inline;
   public
@@ -758,8 +759,9 @@ type
     class function BinOp(const L, R: T): T; static; inline;
   end;
 
-  { TGMaxMonoid }
-  TGMaxMonoid<T> = record
+  { TGMaxMonoid uses T.MinValue as negative infinity;
+    it assumes T has defined operator "<"  }
+  TGMaxMonoid<T> = class
   private
     class function GetIdentity: T; static; inline;
   public
@@ -767,8 +769,9 @@ type
     class function BinOp(const L, R: T): T; static; inline;
   end;
 
-  { TGMinMonoid }
-  TGMinMonoid<T> = record
+  { TGMinMonoid uses T.MaxValue as infinity;
+    it assumes T has defined operator "<" }
+  TGMinMonoid<T> = class
   private
     class function GetIdentity: T; static; inline;
   public
@@ -776,24 +779,26 @@ type
     class function BinOp(const L, R: T): T; static; inline;
   end;
 
-  { TGMaxPos }
+  { TGMaxPos uses T.MinValue as negative infinity;
+    it assumes T has defined operator "<" }
   TGMaxPos<T>  = record
   private
      class function GetIdentity: TGMaxPos<T>; static; inline;
   public
-    Value,
-    Index: T;
+    Value: T;
+    Index: SizeInt;
     class property Identity: TGMaxPos<T> read GetIdentity;
     class function BinOp(const L, R: TGMaxPos<T>): TGMaxPos<T>; static; inline;
   end;
 
-  { TGMinPos }
+  { TGMinPos uses T.MaxValue as infinity;
+    it assumes T has defined operator "<" }
   TGMinPos<T>  = record
   private
      class function GetIdentity: TGMinPos<T>; static; inline;
   public
-    Value,
-    Index: T;
+    Value: T;
+    Index: SizeInt;
     class property Identity: TGMinPos<T> read GetIdentity;
     class function BinOp(const L, R: TGMinPos<T>): TGMinPos<T>; static; inline;
   end;
