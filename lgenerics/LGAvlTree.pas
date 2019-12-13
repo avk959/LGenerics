@@ -85,11 +85,11 @@ type
 
     TEnumerator = class
     protected
-      FCurrNode: PNode;
+      FCurrNode,
+      FFirstNode: PNode;
       FInCycle: Boolean;
-      FTree: TGCustomAvlTree;
     public
-      constructor Create(aTree: TGCustomAvlTree);
+      constructor Create(aFirstNode: PNode);
       function  MoveNext: Boolean; virtual;
       procedure Reset;
       property  Current: PNode read FCurrNode;
@@ -98,13 +98,6 @@ type
   protected
   type
     TReverseEnumerator = class(TEnumerator)
-      function  MoveNext: Boolean; override;
-    end;
-
-    TEnumeratorAt = class(TEnumerator)
-    public
-      FRootNode: PNode;
-      constructor Create(aRootNode: PNode);
       function  MoveNext: Boolean; override;
     end;
 
@@ -142,7 +135,7 @@ type
     procedure RemoveNode(aNode: PNode); inline;
     function  GetEnumerator: TEnumerator; inline;
     function  GetReverseEnumerator: TEnumerator; inline;
-    function  GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumeratorAt; inline;
+    function  GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumerator; inline;
     function  RemoveIf(aTest: TTest; aOnRemove: TEntryEvent = nil): SizeInt;
     function  RemoveIf(aTest: TOnTest; aOnRemove: TEntryEvent = nil): SizeInt;
     function  RemoveIf(aTest: TNestTest; aOnRemove: TEntryEvent = nil): SizeInt;
@@ -530,26 +523,29 @@ end;
 
 { TGCustomAvlTree.TEnumerator }
 
-constructor TGCustomAvlTree.TEnumerator.Create(aTree: TGCustomAvlTree);
+constructor TGCustomAvlTree.TEnumerator.Create(aFirstNode: PNode);
 begin
-  FTree := aTree;
+  FFirstNode := aFirstNode;
 end;
 
 function TGCustomAvlTree.TEnumerator.MoveNext: Boolean;
 var
-  NextNode: PNode = nil;
+  Node: PNode = nil;
 begin
   if FCurrNode <> nil then
-    NextNode := FCurrNode^.Successor
+    Node := FCurrNode^.Successor
   else
     if not FInCycle then
       begin
-        NextNode := FTree.Lowest;
         FInCycle := True;
+        Node := FFirstNode;
       end;
-  Result := NextNode <> nil;
-  if Result then
-    FCurrNode := NextNode;
+  if Node <> nil then
+    begin
+      FCurrNode := Node;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 procedure TGCustomAvlTree.TEnumerator.Reset;
@@ -562,43 +558,22 @@ end;
 
 function TGCustomAvlTree.TReverseEnumerator.MoveNext: Boolean;
 var
-  NextNode: PNode = nil;
+  Node: PNode = nil;
 begin
   if FCurrNode <> nil then
-    NextNode := FCurrNode^.Predecessor
+    Node := FCurrNode^.Predecessor
   else
     if not FInCycle then
       begin
-        NextNode := FTree.Highest;
         FInCycle := True;
+        Node := FFirstNode;
       end;
-  Result := NextNode <> nil;
-  if Result then
-    FCurrNode := NextNode;
-end;
-
-{ TGCustomAvlTree.TEnumeratorAt }
-
-constructor TGCustomAvlTree.TEnumeratorAt.Create(aRootNode: PNode);
-begin
-  FRootNode := aRootNode;
-end;
-
-function TGCustomAvlTree.TEnumeratorAt.MoveNext: Boolean;
-var
-  NextNode: PNode = nil;
-begin
-  if FCurrNode <> nil then
-    NextNode := FCurrNode^.Successor
-  else
-    if not FInCycle then
-      begin
-        NextNode := FRootNode;
-        FInCycle := True;
-      end;
-  Result := NextNode <> nil;
-  if Result then
-    FCurrNode := NextNode;
+  if Node <> nil then
+    begin
+      FCurrNode := Node;
+      exit(True);
+    end;
+  Result := False;
 end;
 
 { TGCustomAvlTree }
@@ -614,6 +589,7 @@ procedure TGCustomAvlTree.DisposeNode(aNode: PNode);
 begin
   if aNode <> nil then
     begin
+      //if IsManagedType(TNode) then
       aNode^ := Default(TNode);
       FNodeManager.FreeNode(aNode);
       Dec(FCount);
@@ -1078,20 +1054,20 @@ end;
 
 function TGCustomAvlTree.GetEnumerator: TEnumerator;
 begin
-  Result := TEnumerator.Create(Self);
+  Result := TEnumerator.Create(Lowest);
 end;
 
 function TGCustomAvlTree.GetReverseEnumerator: TEnumerator;
 begin
-  Result := TReverseEnumerator.Create(Self);
+  Result := TReverseEnumerator.Create(Highest);
 end;
 
-function TGCustomAvlTree.GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumeratorAt;
+function TGCustomAvlTree.GetEnumeratorAt(constref aKey: TKey; aInclusive: Boolean): TEnumerator;
 begin
   if aInclusive then
-    Result := TEnumeratorAt.Create(FindGreaterOrEqual(aKey))
+    Result := TEnumerator.Create(FindGreaterOrEqual(aKey))
   else
-    Result := TEnumeratorAt.Create(FindGreater(aKey))
+    Result := TEnumerator.Create(FindGreater(aKey))
 end;
 
 function TGCustomAvlTree.RemoveIf(aTest: TTest; aOnRemove: TEntryEvent): SizeInt;
