@@ -33,7 +33,13 @@ uses
   LGStrConst;
 
 type
-  { TGBstUtil }
+  { TGBstUtil - binary search tree utility, it assumes TNode is a record type;
+      TNode must provide:
+        field/property/function Key: TKey;
+        field/property/function Left: ^TNode;
+        field/property/function Right: ^TNode;
+      functor TCmpRel (comparision relation) must provide:
+        function Compare([const[ref]] L, R: TKey): SizeInt; }
   generic TGBstUtil<TKey, TNode, TCmpRel> = class
   public
   type
@@ -60,7 +66,8 @@ type
     class function  PostOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt; static;
   end;
 
-  { TGIndexedBstUtil }
+  { TGIndexedBstUtil assumes TNode has also a field/property/function Size: SizeInt,
+    which is the size of its subtree }
   generic TGIndexedBstUtil<TKey, TNode, TCmpRel> = class(specialize TGBstUtil<TKey, TNode, TCmpRel>)
   public
     class function GetNodeSize(aNode: PNode): SizeInt; static; inline;
@@ -68,10 +75,10 @@ type
     class function GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
   end;
 
-  { TGLiteTreap: BST only;
+  { TGLiteTreap implements randomized Cartesian BST(only);
     on assignment and when passed by value, the whole treap is copied;
       functor TCmpRel (comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TKey): SizeInt; }
+        function Compare([const[ref]] L, R: TKey): SizeInt; }
   generic TGLiteTreap<TKey, TValue, TCmpRel> = record
   public
   type
@@ -130,10 +137,11 @@ type
     property  Height: SizeInt read GetHeight;       //O(N)
   end;
 
-  { TGLiteIdxTreap: BST which allows indexing access(IOW rank and N-th order statistics)
-    on assignment and when passed by value, the whole treap is copied;
-      functor TCmpRel (comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TKey): SizeInt; }
+  { TGLiteIdxTreap implements randomized Cartesian BST which allows indexing access
+      (IOW rank and N-th order statistics)
+      on assignment and when passed by value, the whole treap is copied;
+        functor TCmpRel (comparision relation) must provide:
+          function Compare([const[ref]] L, R: TKey): SizeInt; }
   generic TGLiteIdxTreap<TKey, TValue, TCmpRel> = record
   public
   type
@@ -198,10 +206,11 @@ type
     property  Items[aIndex: SizeInt]: PNode read GetItem; default;//O(LogN)
   end;
 
-  { TGLiteSegmentTreap: BST with unique keys which allows indexing access and allows
-    to find the value of the monoid function on an arbitrary range in O(log N);
+  { TGLiteSegmentTreap implements randomized Cartesian BST with unique keys which allows
+    indexing access and allows find the value of the monoid function on an arbitrary
+    range of keys in O(log N); on assignment and when passed by value, the whole treap is copied;
       functor TCmpRel (comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TKey): SizeInt;
+        function Compare([const[ref]] L, R: TKey): SizeInt;
       functor TValMonoid must provide:
         field/property/function Identity: TValue; - neutral element of the monoid;
         associative dyadic function BinOp([const[ref]] L, R: TValue): TValue; }
@@ -284,7 +293,9 @@ type
     property  Values[const aKey: TKey]: TValue read GetValue write SetValue; default;//O(LogN)
   end;
 
-  { TGLiteImplicitTreap: mimics an array with most operations in O(LogN) }
+  { TGLiteImplicitTreap implements randomized Cartesian tree which mimics
+    an array with most operations in O(LogN); on assignment and when passed by value,
+    the whole treap is copied; }
   generic TGLiteImplicitTreap<T> = record
   public
   type
@@ -342,14 +353,16 @@ type
     property  Items[aIndex: SizeInt]: T read GetItem write SetItem; default;  //O(LogN)
   end;
 
-  { TGLiteImplSegmentTreap implements dynamic segment tree, it allows:
+  { TGLiteImplSegmentTreap implements randomized Cartesian tree which mimics an array;
+    it allows:
       - add an element to the array in O(log N);
       - update a single element of an array in O(log N);
       - add an arbitrary range of elements to the array in O(log N);
       - find the value of the monoid function on an arbitrary range of array elements in O(log N);
       functor TMonoid must provide:
         field/property/function Identity: T; - neutral element of the monoid;
-        associative dyadic function BinOp([const[ref]] L, R: T): T; }
+        associative dyadic function BinOp([const[ref]] L, R: T): T;
+    on assignment and when passed by value, the whole treap is copied; }
   generic TGLiteImplSegmentTreap<T, TMonoid> = record
   public
   type
