@@ -96,7 +96,7 @@ type
 
     TTailEnumerable = class(TContainerEnumerable)
     protected
-      FEnum: TTree.TEnumeratorAt;
+      FEnum: TTree.TEnumerator;
       FCurrKeyCount: SizeInt;
       function  GetCurrent: T; override;
     public

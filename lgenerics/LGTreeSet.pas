@@ -71,7 +71,7 @@ type
 
     TTailEnumerable = class(TContainerEnumerable)
     protected
-      FEnum: TTree.TEnumeratorAt;
+      FEnum: TTree.TEnumerator;
       function  GetCurrent: T; override;
     public
       constructor Create(constref aLowBound: T; aSet: TAbstractTreeSet; aInclusive: Boolean);
