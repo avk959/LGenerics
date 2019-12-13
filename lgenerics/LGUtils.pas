@@ -759,6 +759,17 @@ type
     class function BinOp(const L, R: T): T; static; inline;
   end;
 
+  { TGAddMonoidEx uses Default(T) as ZeroConst;
+    it assumes T also has defined operators "=" and "*" by SizeInt }
+  TGAddMonoidEx<T> = class(TGAddMonoid<T>)
+  private
+    class function GetZeroConst: T; static; inline;
+  public
+    class function AddConst(constref aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
+    class function IsZeroConst(constref aValue: T): Boolean; static; inline;
+    class property ZeroConst: T read GetZeroConst;
+  end;
+
   { TGMaxMonoid uses T.MinValue as negative infinity;
     it assumes T has defined operator "<"  }
   TGMaxMonoid<T> = class
@@ -769,6 +780,17 @@ type
     class function BinOp(const L, R: T): T; static; inline;
   end;
 
+  { TGMaxMonoidEx uses Default(T) as ZeroConst;
+    it assumes T has defined operators "=" and "+"  }
+  TGMaxMonoidEx<T> = class(TGMaxMonoid<T>)
+  private
+    class function GetZeroConst: T; static; inline;
+  public
+    class function AddConst(constref aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
+    class function IsZeroConst(constref aValue: T): Boolean; static; inline;
+    class property ZeroConst: T read GetZeroConst;
+  end;
+
   { TGMinMonoid uses T.MaxValue as infinity;
     it assumes T has defined operator "<" }
   TGMinMonoid<T> = class
@@ -777,6 +799,17 @@ type
   public
     class property Identity: T read GetIdentity;
     class function BinOp(const L, R: T): T; static; inline;
+  end;
+
+  { TGMinMonoidEx uses Default(T) as ZeroConst;
+    it assumes T has defined operators "=" and "+" }
+  TGMinMonoidEx<T> = class(TGMinMonoid<T>)
+  private
+    class function GetZeroConst: T; static; inline;
+  public
+    class function AddConst(constref aValue, aConst: T; aSize: SizeInt = 1): T; static; inline;
+    class function IsZeroConst(constref aValue: T): Boolean; static; inline;
+    class property ZeroConst: T read GetZeroConst;
   end;
 
   { TGMaxPos uses T.MinValue as negative infinity;
@@ -2323,6 +2356,23 @@ begin
   Result := L + R;
 end;
 
+{ TGAddMonoidEx }
+
+class function TGAddMonoidEx<T>.GetZeroConst: T;
+begin
+  Result := Default(T);
+end;
+
+class function TGAddMonoidEx<T>.AddConst(constref aValue, aConst: T; aSize: SizeInt): T;
+begin
+  Result := aValue + aConst * aSize;
+end;
+
+class function TGAddMonoidEx<T>.IsZeroConst(constref aValue: T): Boolean;
+begin
+  Result := aValue = Default(T);
+end;
+
 { TGMaxMonoid }
 
 class function TGMaxMonoid<T>.GetIdentity: T;
@@ -2338,6 +2388,23 @@ begin
     Result := L
 end;
 
+{ TGMaxMonoidEx }
+
+class function TGMaxMonoidEx<T>.GetZeroConst: T;
+begin
+  Result := Default(T);
+end;
+
+class function TGMaxMonoidEx<T>.AddConst(constref aValue, aConst: T; aSize: SizeInt): T;
+begin
+  Result := aValue + aConst;
+end;
+
+class function TGMaxMonoidEx<T>.IsZeroConst(constref aValue: T): Boolean;
+begin
+  Result := aValue = Default(T);
+end;
+
 { TGMinMonoid }
 
 class function TGMinMonoid<T>.GetIdentity: T;
@@ -2351,6 +2418,23 @@ begin
     Result := R
   else
     Result := L
+end;
+
+{ TGMinMonoidEx }
+
+class function TGMinMonoidEx<T>.GetZeroConst: T;
+begin
+  Result := Default(T);
+end;
+
+class function TGMinMonoidEx<T>.AddConst(constref aValue, aConst: T; aSize: SizeInt): T;
+begin
+  Result := aValue + aConst;
+end;
+
+class function TGMinMonoidEx<T>.IsZeroConst(constref aValue: T): Boolean;
+begin
+  Result := aValue = Default(T);
 end;
 
 { TGMaxPos }
