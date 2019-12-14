@@ -118,7 +118,7 @@ type
   type
     TAddMonoid = specialize TGAddMonoid<Integer>;
     TIntTreap  = specialize TGLiteImplSegmentTreap<Integer, TAddMonoid>;
-    THelper   = specialize TGOrdinalArrayHelper<Integer>;
+    THelper    = specialize TGOrdinalArrayHelper<Integer>;
 
   published
     procedure IsEmpty;
@@ -132,6 +132,35 @@ type
     procedure ToArray;
     procedure RotateLeft;
     procedure RotateRight;
+    procedure RangeQuery;
+    procedure HeadQuery;
+    procedure TailQuery;
+    procedure Items;
+  end;
+
+  { TLiteImplicitSegTreapTest }
+
+  TLiteImplicitSegTreapTest = class(TTestCase)
+  private
+  type
+    TAddMonoid = specialize TGAddMonoidEx<Integer>;
+    TIntTreap  = specialize TGLiteImplicitSegTreap<Integer, TAddMonoid>;
+    THelper    = specialize TGOrdinalArrayHelper<Integer>;
+
+  published
+    procedure Add;
+    procedure Clear;
+    procedure Insert;
+    procedure Delete;
+    procedure DeleteRange;
+    procedure Split;
+    procedure SplitRange;
+    procedure Merge;
+    procedure ToArray;
+    procedure RotateLeft;
+    procedure RotateRight;
+    procedure Reverse;
+    procedure RangeUpdate;
     procedure RangeQuery;
     procedure HeadQuery;
     procedure TailQuery;
@@ -1650,6 +1679,7 @@ begin
   for I := 1 to TestSize do
     Treap.Add(I);
   a := Treap.ToArray;
+  AssertTrue(Length(a) = TestSize);
   for I := 1 to TestSize do
     AssertTrue(a[I-1] = I);
 end;
@@ -1757,9 +1787,7 @@ begin
 
   for I := 0 to Pred(TestSize) do
     begin
-      AssertTrue(
-      'I = ' + I.ToString + ', q = ' + Treap.RangeQuery(I, I).ToString +
-      ', a = ' + a[I].ToString, Treap.RangeQuery(I, I) = a[I]);
+      AssertTrue(Treap.RangeQuery(I, I) = a[I]);
       L := Random(TestSize div 2);
       R := TestSize div 2 + Random(TestSize div 2);
       sum := 0;
@@ -1869,6 +1897,465 @@ begin
     end;
 end;
 
+{ TLiteImplicitSegTreapTest }
+
+procedure TLiteImplicitSegTreapTest.Add;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I: Integer;
+begin
+  AssertTrue({%H-}Treap.Count = 0);
+  for I in [1..TestSize] do
+    AssertTrue(Treap.Add(I) = I - 1);
+
+  for I in [1..TestSize] do
+    AssertTrue(Treap[I-1] = I);
+
+  for I in [1..TestSize] do
+    AssertTrue(Treap.Add(I) = I + Pred(TestSize));
+
+  for I in [TestSize..Pred(TestSize * 2)] do
+    AssertTrue(Treap[I] = I - Pred(TestSize));
+
+  AssertTrue(Treap.Count = TestSize * 2);
+end;
+
+procedure TLiteImplicitSegTreapTest.Clear;
+var
+  Treap: TIntTreap;
+  I: Integer;
+begin
+  for I in [1..16] do
+    Treap.Add(I);
+  AssertTrue(Treap.Count = 16);
+  Treap.Clear;
+  AssertTrue(Treap.Count = 0);
+  for I in [1..16] do
+    Treap.Add(I);
+  AssertTrue(Treap.Count = 16);
+end;
+
+procedure TLiteImplicitSegTreapTest.Insert;
+const
+  TestSize = 100;
+var
+  Treap, Treap1: TIntTreap;
+  I: Integer;
+begin
+  for I := 1 to TestSize do
+    Treap.Insert(0, I);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = TestSize - I);
+
+  Treap.Clear;
+  for I := 1 to TestSize do
+    Treap.Insert(Treap.Count, I);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = I + 1);
+
+  for I := TestSize + 1 to TestSize * 2 do
+    Treap1.Insert({%H-}Treap1.Count, I);
+  Treap1.Insert(0, Treap);
+  AssertTrue(Treap1.Count = TestSize * 2);
+  for I := 1 to Treap1.Count do
+    AssertTrue(Treap1[I-1] = I);
+end;
+
+procedure TLiteImplicitSegTreapTest.Delete;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I: Integer;
+begin
+  for I := 0 to Pred(TestSize) do
+    Treap.Add(I);
+  AssertTrue(Treap.Delete(Pred(TestSize)) = Pred(TestSize));
+  I := 0;
+  while not Treap.IsEmpty do
+    begin
+      AssertTrue(Treap.Delete(0) = I);
+      Inc(I);
+    end;
+  AssertTrue(I = Pred(TestSize));
+end;
+
+procedure TLiteImplicitSegTreapTest.DeleteRange;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I: Integer;
+begin
+  for I := 0 to Pred(TestSize) do
+    Treap.Add(I);
+  AssertTrue(Treap.Count = TestSize);
+  AssertTrue(Treap.Delete(Treap.Count div 2, TestSize) = TestSize div 2);
+  AssertTrue(Treap.Count = TestSize div 2);
+  AssertTrue(Treap.Delete(0, TestSize div 4) = TestSize div 4);
+  AssertTrue(Treap.Count = TestSize div 4);
+  AssertTrue(Treap.Delete(0, TestSize) = TestSize div 4);
+  AssertTrue(Treap.IsEmpty);
+end;
+
+procedure TLiteImplicitSegTreapTest.Split;
+const
+  TestSize = 100;
+var
+  Treap, Treap2: TIntTreap;
+  I: Integer;
+begin
+  for I in [1..TestSize] do
+    Treap.Add(I);
+  AssertTrue(Treap.Count = TestSize);
+
+  Treap.Split(TestSize div 2, Treap2);
+  AssertTrue(Treap.Count = TestSize div 2);
+  AssertTrue(Treap2.Count = TestSize div 2);
+
+  Treap2.Clear;
+  Treap.Split(0, Treap2);
+  AssertTrue(Treap.IsEmpty);
+  AssertTrue(Treap2.Count = TestSize div 2);
+end;
+
+procedure TLiteImplicitSegTreapTest.SplitRange;
+const
+  TestSize = 1000;
+var
+  Treap, Treap2: TIntTreap;
+  I, J, Size: Integer;
+begin
+  for I := 1 to TestSize do
+    Treap.Add(I);
+  AssertTrue(Treap.Count = TestSize);
+
+  J := TestSize div 4;
+  Size := TestSize div 2;
+  Treap.Split(J, Size, Treap2);
+  AssertTrue(Treap.Count = Size);
+  AssertTrue(Treap2.Count = Size);
+  for I := 0 to Pred(J) do
+    AssertTrue(Treap[I] = Succ(I));
+  for I := J to Pred(Treap.Count) do
+    AssertTrue(Treap[I] = Succ(I) + Size);
+  for I := 0 to Pred(Treap2.Count) do
+    AssertTrue(Treap2[I] = Succ(I) + J );
+
+  Treap.Insert(J, Treap2);
+  for I := 0 to Pred(Treap.Count) do
+    AssertTrue(Treap[I] = Succ(I));
+  AssertTrue(Treap2.IsEmpty);
+end;
+
+procedure TLiteImplicitSegTreapTest.Merge;
+const
+  TestSize = 100;
+var
+  Treap, Treap1: TIntTreap;
+  I: Integer;
+begin
+  for I := 1 to TestSize do
+    Treap1.Add(I);
+  AssertTrue({%H-}Treap.IsEmpty);
+  Treap.Merge(Treap1);
+  AssertTrue(Treap1.IsEmpty);
+  AssertTrue(Treap.Count = TestSize);
+
+  for I := TestSize + 1 to TestSize * 2 do
+    Treap1.Add(I);
+  Treap.Merge(Treap1);
+  AssertTrue(Treap1.IsEmpty);
+  AssertTrue(Treap.Count = TestSize * 2);
+  for I := 1 to Treap.Count do
+    AssertTrue(Treap[I-1] = I);
+end;
+
+procedure TLiteImplicitSegTreapTest.ToArray;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I: Integer;
+  a: array of Integer;
+begin
+  a := Treap.ToArray;
+  AssertTrue(a = nil);
+  for I := 1 to TestSize do
+    Treap.Add(I);
+  a := Treap.ToArray;
+  AssertTrue(Length(a) = TestSize);
+  for I := 1 to TestSize do
+    AssertTrue(a[I-1] = I);
+end;
+
+procedure TLiteImplicitSegTreapTest.RotateLeft;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I: Integer;
+  a: array of Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 1 to TestSize do
+    begin
+      Treap.Add(I);
+      a[I-1] := I;
+    end;
+
+  Treap.RotateLeft(0);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.RotateLeft(TestSize);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.RotateLeft(TestSize+10);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.RotateLeft(TestSize div 3);
+  THelper.RotateLeft(a, TestSize div 3);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.RotateLeft(-(TestSize div 4));
+  THelper.RotateLeft(a, -(TestSize div 4));
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+end;
+
+procedure TLiteImplicitSegTreapTest.RotateRight;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I: Integer;
+  a: array of Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 1 to TestSize do
+    begin
+      Treap.Add(I);
+      a[I-1] := I;
+    end;
+
+  Treap.RotateRight(0);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.RotateRight(TestSize);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.RotateRight(TestSize+10);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.RotateRight(TestSize div 3);
+  THelper.RotateRight(a, TestSize div 3);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.RotateRight(-(TestSize div 4));
+  THelper.RotateRight(a, -(TestSize div 4));
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+end;
+
+procedure TLiteImplicitSegTreapTest.Reverse;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I: Integer;
+  a: array of Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 1 to TestSize do
+    begin
+      Treap.Add(I);
+      a[I-1] := I;
+    end;
+  Treap.Reverse(TestSize div 3, TestSize div 3);
+  THelper.Reverse(a[(TestSize div 3)..(TestSize div 3 + Pred(TestSize div 3))]);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  Treap.Reverse;
+  THelper.Reverse(a);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+end;
+
+procedure TLiteImplicitSegTreapTest.RangeUpdate;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I, L, R: Integer;
+  a: array of Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 1 to TestSize do
+    begin
+      Treap.Add(I);
+      a[I-1] := I;
+    end;
+
+  L := TestSize div 3;
+  R := L + TestSize div 2;
+
+  Treap.RangeUpdate(L, R, 0);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  for I := L to R do
+    a[I] += 100;
+  Treap.RangeUpdate(L, R, 100);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  for I := 0 to Pred(TestSize) do
+    a[I] -= 200;
+  Treap.RangeUpdate(0, Pred(TestSize), -200);
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+end;
+
+procedure TLiteImplicitSegTreapTest.RangeQuery;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, L, R, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to Pred(TestSize) do
+    begin
+      J := Succ(Random(TestSize));
+      a[I] := J;
+      Treap.Add(J);
+    end;
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  sum := 0;
+  for J := 0 to Pred(TestSize) do
+    begin
+      sum += a[J];
+      AssertTrue(Treap.RangeQuery(0, J) = sum);
+    end;
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      AssertTrue(Treap.RangeQuery(I, I) = a[I]);
+      L := Random(TestSize div 2);
+      R := TestSize div 2 + Random(TestSize div 2);
+      sum := 0;
+      for J := L to R do
+        begin
+          a[J] += 1;
+          sum += a[J];
+        end;
+      Treap.RangeUpdate(L, R, 1);
+      AssertTrue(Treap.RangeQuery(L, R) = sum);
+      AssertTrue(Treap.RangeQuery(R, L) = 0);
+    end;
+end;
+
+procedure TLiteImplicitSegTreapTest.HeadQuery;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    begin
+      J := Succ(Random(TestSize));
+      a[I] := J;
+      Treap.Add(J);
+    end;
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      sum := 0;
+      for J := 0 to I do
+        begin
+          a[J] += 2;
+          sum += a[J];
+        end;
+      Treap.RangeUpdate(0, I, 2);
+      AssertTrue(Treap.HeadQuery(I) = sum);
+    end;
+end;
+
+procedure TLiteImplicitSegTreapTest.TailQuery;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J, sum: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    begin
+      J := Succ(Random(TestSize));
+      a[I] := J;
+      Treap.Add(J);
+    end;
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      sum := 0;
+      for J := I to Pred(TestSize) do
+        begin
+          a[J] += 2;
+          sum += a[J];
+        end;
+      Treap.RangeUpdate(I, Pred(TestSize), 2);
+      AssertTrue(Treap.TailQuery(I) = sum);
+    end;
+end;
+
+procedure TLiteImplicitSegTreapTest.Items;
+const
+  TestSize = 1000;
+var
+  Treap: TIntTreap;
+  a: array of Integer;
+  I, J: Integer;
+begin
+  SetLength(a, TestSize);
+  for I := 0 to High(a) do
+    begin
+      J := Succ(Random(TestSize));
+      a[I] := J;
+      Treap.Add(J);
+    end;
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+
+  for I := 0 to Pred(TestSize) do
+    begin
+      J := Succ(Random(TestSize));
+      a[I] += J;
+      Treap[I] := Treap[I] + J;
+    end;
+
+  for I := 0 to Pred(TestSize) do
+    AssertTrue(Treap[I] = a[I]);
+end;
+
 initialization
 
   RegisterTest(TLiteTreapTest);
@@ -1876,6 +2363,7 @@ initialization
   RegisterTest(TLiteSegmentTreapTest);
   RegisterTest(TLiteImplicitTreapTest);
   RegisterTest(TLiteImplSegmentTreapTest);
+  RegisterTest(TLiteImplicitSegTreapTest);
 
 end.
 
