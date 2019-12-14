@@ -479,7 +479,6 @@ type
       property Reversed: Boolean read GetReversed write SetReversed;
       property Key: SizeInt read GetSize;
     end;
-    TUtil = specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>;
 
   var
     FRoot: PNode;
@@ -2728,23 +2727,25 @@ end;
 
 function TGLiteImplicitSegTreap.GetCount: SizeInt;
 begin
-  Result := TUtil.GetNodeSize(FRoot);
+  Result := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot);
 end;
 
 function TGLiteImplicitSegTreap.GetHeight: SizeInt;
 begin
-  Result := TUtil.GetHeight(FRoot);
+  Result := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetHeight(FRoot);
 end;
 
 procedure TGLiteImplicitSegTreap.CheckIndexRange(aIndex: SizeInt);
 begin
-  if SizeUInt(aIndex) >= SizeUInt(TUtil.GetNodeSize(FRoot)) then
+  if SizeUInt(aIndex) >=
+     SizeUInt(specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot)) then
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
 procedure TGLiteImplicitSegTreap.CheckInsertRange(aIndex: SizeInt);
 begin
-  if SizeUInt(aIndex) > SizeUInt(TUtil.GetNodeSize(FRoot)) then
+  if SizeUInt(aIndex) >
+     SizeUInt(specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot)) then
     raise EArgumentOutOfRangeException.CreateFmt(SEIndexOutOfBoundsFmt, [aIndex]);
 end;
 
@@ -2869,7 +2870,7 @@ begin
   if aRoot <> nil then
     begin
       Push(aRoot);
-      CurrIdx := TUtil.GetNodeSize(aRoot^.Left);
+      CurrIdx := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(aRoot^.Left);
       if CurrIdx < aIdx then
         begin
           L := aRoot;
@@ -2955,7 +2956,7 @@ end;
 procedure TGLiteImplicitSegTreap.Clear;
 begin
   if FRoot <> nil then
-    TUtil.ClearTree(FRoot);
+    specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.ClearTree(FRoot);
   FRoot := nil;
 end;
 
@@ -2984,7 +2985,7 @@ end;
 
 function TGLiteImplicitSegTreap.Add(constref aValue: T): SizeInt;
 begin
-  Result := TUtil.GetNodeSize(FRoot);
+  Result := specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.GetNodeSize(FRoot);
   if FRoot <> nil then
     FRoot := MergeNode(FRoot, NewNode(aValue))
   else
@@ -3030,7 +3031,7 @@ begin
   SplitNode(aIndex, FRoot, L, R);
   SplitNode(1, R, M, R);
   Result := M^.Value;
-  TUtil.FreeNode(M);
+  specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.FreeNode(M);
   FRoot := MergeNode(L, R);
 end;
 
@@ -3045,7 +3046,7 @@ begin
   SplitNode(aIndex, FRoot, L, R);
   SplitNode(aCount, R, M, R);
   Result := M^.Size;
-  TUtil.ClearTree(M);
+  specialize TGIndexedBstUtil<SizeInt, TNode, SizeInt>.ClearTree(M);
   FRoot := MergeNode(L, R);
 end;
 
