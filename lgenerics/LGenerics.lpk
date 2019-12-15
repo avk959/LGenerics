@@ -31,7 +31,7 @@
     <Description Value="Generics algorithms and data structures"/>
     <License Value="Apache License, Version 2.0"/>
     <Version Minor="5" Release="1"/>
-    <Files Count="50">
+    <Files Count="51">
       <Item1>
         <Filename Value="LGAbstractContainer.pas"/>
         <UnitName Value="LGAbstractContainer"/>
@@ -233,6 +233,10 @@
         <Filename Value="LGTreap.pas"/>
         <UnitName Value="LGTreap"/>
       </Item50>
+      <Item51>
+        <Filename Value="LGBstUtils.pas"/>
+        <UnitName Value="LGBstUtils"/>
+      </Item51>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>
