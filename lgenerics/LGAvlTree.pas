@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Generic AVL tree implementations for internal use.                      *
+*   Some generic AVL tree implementations.                                  *
 *   (see https://en.wikipedia.org/wiki/AVL_tree)                            *
 *                                                                           *
 *   Copyright(c) 2018-2019 A.Koverdyaev(avk)                                *
@@ -30,7 +30,7 @@ interface
 
 uses
 
-  SysUtils,
+  SysUtils, Math,
   LGUtils,
   {%H-}LGHelpers,
   LGStrConst;
@@ -355,6 +355,12 @@ type
     end;
 
     TNodeList = array of TNode;
+    TAvlState = (asConsistent,    //Ok
+                 asInvalidLink,   //Invalid BST link
+                 asInvalidKey,    //Invalid BST key
+                 asInvalidHDelta, //right-left height difference exceeds 1
+                 asInvalidBalance //height delta/balance mismatch
+                 );
 
   private
   const
@@ -409,6 +415,8 @@ type
     procedure SwapBalance(L, R: SizeInt); inline;
     function  GetHighest: SizeInt;
     function  GetLowest: SizeInt;
+    function  GetNodeHeight(aNode: SizeInt): SizeInt;
+    function  GetHeight: SizeInt;
     function  FindInsertPos(constref aKey: TKey): SizeInt;
     function  FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
     procedure ReplaceWithSuccessor(aNode: SizeInt);
@@ -419,6 +427,7 @@ type
     procedure BalanceAfterInsert(aNode: SizeInt);
     procedure RemoveNode(aNode: SizeInt);
     procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
+    function  TestNodeState(aNode: SizeInt; var aState: TAvlState): SizeInt;
     property  Root: SizeInt read GetRoot write SetRoot;
     class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
     class operator AddRef(var aTree: TGLiteAvlTree);
@@ -435,11 +444,13 @@ type
     function  FindLessOrEqual(constref aKey: TKey): SizeInt;
     function  FindGreater(constref aKey: TKey): SizeInt;
     function  FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+    function  CheckState: TAvlState;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Lowest: SizeInt read GetLowest;
     property  Highest: SizeInt read GetHighest;
     property  NodeList: TNodeList read FNodes;
+    property  Height: SizeInt read GetHeight;
   end;
 
 implementation
@@ -2578,26 +2589,20 @@ end;
 
 function TGLiteAvlTree.GetCapacity: SizeInt;
 begin
-  if FNodes <> nil then
-    Result := System.High(FNodes)
-  else
-    Result := 0;
+  if FNodes = nil then exit(0);
+  Result := System.High(FNodes);
 end;
 
 function TGLiteAvlTree.GetCount: SizeInt;
 begin
-  if FNodes <> nil then
-    Result := FNodes[0].Left
-  else
-    Result := 0;
+  if FNodes = nil then exit(0);
+  Result := FNodes[0].Left;
 end;
 
 function TGLiteAvlTree.GetRoot: SizeInt;
 begin
-  if FNodes <> nil then
-    Result := FNodes[0].Right
-  else
-    Result := 0;
+  if FNodes = nil then exit(0);
+  Result := FNodes[0].Right;
 end;
 
 procedure TGLiteAvlTree.SetRoot(aValue: SizeInt);
@@ -2749,6 +2754,18 @@ begin
           Curr := FNodes[Curr].Left;
         end;
     end;
+end;
+
+function TGLiteAvlTree.GetNodeHeight(aNode: SizeInt): SizeInt;
+begin
+  if aNode = 0 then exit(0);
+  Result := Succ(Math.Max(GetNodeHeight(FNodes[aNode].Left), GetNodeHeight(FNodes[aNode].Right)));
+end;
+
+function TGLiteAvlTree.GetHeight: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := GetNodeHeight(Root);
 end;
 
 function TGLiteAvlTree.FindInsertPos(constref aKey: TKey): SizeInt;
@@ -3167,6 +3184,53 @@ begin
     end;
 end;
 
+function TGLiteAvlTree.TestNodeState(aNode: SizeInt; var aState: TAvlState): SizeInt;
+var
+  LHeight, RHeight: SizeInt;
+begin
+  if (aNode = 0) or (aState <> asConsistent) then exit(0);
+  if FNodes[aNode].Left <> 0 then
+    begin
+      if FNodes[FNodes[aNode].Left].Parent <> aNode then
+        begin
+          aState := asInvalidLink;
+          exit(0);
+        end;
+      if TKeyCmpRel.Compare(FNodes[FNodes[aNode].Left].Data.Key, FNodes[aNode].Data.Key) >= 0 then
+        begin
+          aState := asInvalidKey;
+          exit(0);
+        end;
+    end;
+  if FNodes[aNode].Right <> 0 then
+    begin
+      if FNodes[FNodes[aNode].Right].Parent <> aNode then
+        begin
+          aState := asInvalidLink;
+          exit(0);
+        end;
+      if TKeyCmpRel.Compare(FNodes[FNodes[aNode].Right].Data.Key, FNodes[aNode].Data.Key) < 0 then
+        begin
+          aState := asInvalidKey;
+          exit(0);
+        end;
+    end;
+  LHeight := TestNodeState(FNodes[aNode].Left, aState);
+  RHeight := TestNodeState(FNodes[aNode].Right, aState);
+  if aState <> asConsistent then exit(0);
+  if Abs(RHeight - LHeight) > 1 then
+    begin
+      aState := asInvalidHDelta;
+      exit(0);
+    end;
+  if FNodes[aNode].Balance <> (RHeight - LHeight) then
+    begin
+      aState := asInvalidBalance;
+      exit(0);
+    end;
+  Result := Succ(Math.Max(LHeight, RHeight));
+end;
+
 class operator TGLiteAvlTree.Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
 begin
   if @aSrc <> @aDst then
@@ -3306,6 +3370,13 @@ begin
       end
     else
       CurrNode := FNodes[CurrNode].Right;
+end;
+
+function TGLiteAvlTree.CheckState: TAvlState;
+begin
+  Result := asConsistent;
+  if Root <> 0 then
+    TestNodeState(Root, Result);
 end;
 
 end.
