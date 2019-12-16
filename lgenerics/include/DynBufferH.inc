@@ -164,7 +164,7 @@
     function  Mutables: TMutables; inline;
     function  Reverse: TReverse; inline;
     function  ToArray: TArray; inline;
-    function  PushLast(constref aValue: T): SizeInt;
+    function  PushLast(constref aValue: T): SizeInt; inline;
     property  Count: SizeInt read FCount;
     property  Capacity: SizeInt read GetCapacity;
   end;
