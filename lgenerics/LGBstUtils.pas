@@ -1,7 +1,7 @@
 {****************************************************************************
 *                                                                           *
 *   This file is part of the LGenerics package.                             *
-*   Some common BST utilities.                                                *
+*   Some common BST utilities.                                              *
 *   Copyright(c) 2019 A.Koverdyaev(avk)                                     *
 *                                                                           *
 *   This code is free software; you can redistribute it and/or modify it    *
