@@ -313,18 +313,18 @@ type
 
     TNode = record
     private
+      Left,
+      Right: SizeInt;
       FParent: SizeInt;
       procedure ClearLinks; inline;
       function  GetBalance: SizeInt; inline;
       function  GetParent: SizeInt; inline;
       procedure SetBalance(aValue: SizeInt); inline;
       procedure SetParent(aValue: SizeInt); inline;
+      property  Parent: SizeInt read GetParent write SetParent;
+      property  Balance: SizeInt read GetBalance write SetBalance;
     public
-      Left,
-      Right: SizeInt;
       Data: TEntry;
-      property Parent: SizeInt read GetParent write SetParent;
-      property Balance: SizeInt read GetBalance write SetBalance;
     end;
 
     TNodeList = array of TNode;
@@ -355,7 +355,7 @@ type
 {$ENDIF}
 
   type
-    PAvlTree  = ^TGLiteAvlTree;
+    PAvlTree   = ^TGLiteAvlTree;
 
   public
   type
@@ -2572,7 +2572,7 @@ begin
   if aNode < Last then
     begin
       System.Move(FNodes[Last], FNodes[aNode], SizeOf(TNode));
-      System.FillChar(FNodes[Last].Data , SizeOf(TEntry), 0); //////////////
+      System.FillChar(FNodes[Last].Data , SizeOf(TEntry), 0);
       if Root = Last then
         Root := aNode;
       Parent := FNodes[aNode].Parent;
