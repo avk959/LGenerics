@@ -26,20 +26,19 @@ unit LGBstUtils;
 interface
 
 uses
-  SysUtils, Math,
+  SysUtils,
   LGUtils,
   {%H-}LGHelpers;
 
 type
-  { TGBstUtil - binary search tree utility, it assumes TNode is a record type and
+
+  { TGBaseBstUtil - binary search tree utility, it assumes TNode is a record type and
     it allocate memory with System.GetMem;
       TNode must provide:
         field/property/function Key: TKey;
         field/property/function Left: ^TNode;
-        field/property/function Right: ^TNode;
-      functor TCmpRel (comparision relation) must provide:
-        function Compare([const[ref]] L, R: TKey): SizeInt; }
-  generic TGBstUtil<TKey, TNode, TCmpRel> = class
+        field/property/function Right: ^TNode; }
+  generic TGBaseBstUtil<TNode> = class
   public
   type
     PNode      = ^TNode;
@@ -50,11 +49,6 @@ type
     class function  GetHeight(aNode: PNode): SizeInt; static;
     class function  GetLowest(aRoot: PNode): PNode; static;
     class function  GetHighest(aRoot: PNode): PNode; static;
-    class function  FindKey(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetLess(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNode;static;
-    class function  GetGreater(aRoot: PNode; constref aKey: TKey): PNode; static;
-    class function  GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): PNode; static;
     class procedure ClearTree(aNode: PNode); static;
     class procedure FreeNode(aNode: PNode); static; inline;
     class function  PreOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt; static;
@@ -63,6 +57,27 @@ type
     class function  InOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt; static;
     class function  PostOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt; static;
     class function  PostOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt; static;
+  end;
+
+  { TGBstUtil - functor TCmpRel (comparision relation) must provide:
+                  function Compare([const[ref]] L, R: TKey): SizeInt; }
+  generic TGBstUtil<TKey, TNode, TCmpRel> = class(specialize TGBaseBstUtil<TNode>)
+  public
+    class function  FindKey(aRoot: PNode; constref aKey: TKey): PNode; static;
+    class function  GetLess(aRoot: PNode; constref aKey: TKey): PNode; static;
+    class function  GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNode;static;
+    class function  GetGreater(aRoot: PNode; constref aKey: TKey): PNode; static;
+    class function  GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): PNode; static;
+  end;
+
+  { TGComparableBstUtil assumes TKey has defined comparison operators }
+  generic TGComparableBstUtil<TKey, TNode> = class(specialize TGBaseBstUtil<TNode>)
+  public
+    class function  FindKey(aRoot: PNode; constref aKey: TKey): PNode; static;
+    class function  GetLess(aRoot: PNode; constref aKey: TKey): PNode; static;
+    class function  GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNode;static;
+    class function  GetGreater(aRoot: PNode; constref aKey: TKey): PNode; static;
+    class function  GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): PNode; static;
   end;
 
   { TGIndexedBstUtil assumes TNode has also a field/property/function Size: SizeInt,
@@ -74,12 +89,24 @@ type
     class function GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
   end;
 
+  { TGIndexedBstUtil assumes TNode has also a field/property/function Size: SizeInt,
+    which is the size of its subtree }
+
+  { TGCmpIndexedBstUtil }
+
+  generic TGCmpIndexedBstUtil<TKey, TNode> = class(specialize TGComparableBstUtil<TKey, TNode>)
+  public
+    class function GetNodeSize(aNode: PNode): SizeInt; static; inline;
+    class function GetByIndex(aRoot: PNode; aIndex: SizeInt): PNode; static;
+    class function GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
+  end;
+
 implementation
 {$B-}{$COPERATORS ON}
 
-{ TGBstUtil }
+{ TGBaseBstUtil }
 
-class function TGBstUtil.GetTreeSize(aNode: PNode): SizeInt;
+class function TGBaseBstUtil.GetTreeSize(aNode: PNode): SizeInt;
 var
   Size: SizeInt = 0;
   procedure Visit(aNode: PNode);
@@ -96,15 +123,21 @@ begin
   Result := Size;
 end;
 
-class function TGBstUtil.GetHeight(aNode: PNode): SizeInt;
+class function TGBaseBstUtil.GetHeight(aNode: PNode): SizeInt;
+var
+  RHeight: SizeInt = 0;
 begin
-  if aNode <> nil then
-    Result := Succ(Math.Max(GetHeight(aNode^.Left), GetHeight(aNode^.Right)))
-  else
-    Result := 0;
+  Result := 0;
+  if aNode = nil then exit;
+  if aNode^.Left <> nil then
+    Result := Succ(GetHeight(aNode^.Left));
+  if aNode^.Right <> nil then
+    RHeight := Succ(GetHeight(aNode^.Right));
+  if RHeight > Result then
+    Result := RHeight;
 end;
 
-class function TGBstUtil.GetLowest(aRoot: PNode): PNode;
+class function TGBaseBstUtil.GetLowest(aRoot: PNode): PNode;
 begin
   Result := aRoot;
   if Result <> nil then
@@ -112,13 +145,178 @@ begin
       Result := Result^.Left;
 end;
 
-class function TGBstUtil.GetHighest(aRoot: PNode): PNode;
+class function TGBaseBstUtil.GetHighest(aRoot: PNode): PNode;
 begin
   Result := aRoot;
   if Result <> nil then
     while Result^.Right <> nil do
       Result := Result^.Right;
 end;
+
+class procedure TGBaseBstUtil.ClearTree(aNode: PNode);
+begin
+  if aNode <> nil then
+    begin
+      ClearTree(aNode^.Left);
+      ClearTree(aNode^.Right);
+      //if IsManagedType(TNode) then
+        aNode^ := Default(TNode);
+      System.FreeMem(aNode);
+    end;
+end;
+
+class procedure TGBaseBstUtil.FreeNode(aNode: PNode);
+begin
+  //if IsManagedType(TNode) then
+    aNode^ := Default(TNode);
+  System.FreeMem(aNode);
+end;
+
+class function TGBaseBstUtil.PreOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt;
+var
+  Visited: SizeInt = 0;
+  Goon: Boolean = True;
+
+  procedure Visit(aNode: PNode);
+  begin
+    if (aNode <> nil) and Goon then
+      begin
+        if aOnVisit <> nil then
+          begin
+            aOnVisit(aNode, Goon);
+            Inc(Visited);
+          end;
+        Visit(aNode^.Left);
+        Visit(aNode^.Right);
+      end;
+  end;
+
+begin
+  Visit(aRoot);
+  Result := Visited;
+end;
+
+class function TGBaseBstUtil.PreOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt;
+var
+  Visited: SizeInt = 0;
+  Goon: Boolean = True;
+
+  procedure Visit(aNode: PNode);
+  begin
+    if (aNode <> nil) and Goon then
+      begin
+        if aOnVisit <> nil then
+          begin
+            aOnVisit(aNode, Goon);
+            Inc(Visited);
+          end;
+        Visit(aNode^.Left);
+        Visit(aNode^.Right);
+      end;
+  end;
+
+begin
+  Visit(aRoot);
+  Result := Visited;
+end;
+
+class function TGBaseBstUtil.InOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt;
+var
+  Visited: SizeInt = 0;
+  Goon: Boolean = True;
+
+  procedure Visit(aNode: PNode);
+  begin
+    if (aNode <> nil) and Goon then
+      begin
+        Visit(aNode^.Left);
+        if (aOnVisit <> nil) and Goon then
+          begin
+            aOnVisit(aNode, Goon);
+            Inc(Visited);
+          end;
+        Visit(aNode^.Right);
+      end;
+  end;
+
+begin
+  Visit(aRoot);
+  Result := Visited;
+end;
+
+class function TGBaseBstUtil.InOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt;
+var
+  Visited: SizeInt = 0;
+  Goon: Boolean = True;
+
+  procedure Visit(aNode: PNode);
+  begin
+    if (aNode <> nil) and Goon then
+      begin
+        Visit(aNode^.Left);
+        if (aOnVisit <> nil) and Goon then
+          begin
+            aOnVisit(aNode, Goon);
+            Inc(Visited);
+          end;
+        Visit(aNode^.Right);
+      end;
+  end;
+
+begin
+  Visit(aRoot);
+  Result := Visited;
+end;
+
+class function TGBaseBstUtil.PostOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt;
+var
+  Visited: SizeInt = 0;
+  Goon: Boolean = True;
+
+  procedure Visit(aNode: PNode);
+  begin
+    if (aNode <> nil) and Goon then
+      begin
+        Visit(aNode^.Left);
+        Visit(aNode^.Right);
+        if (aOnVisit <> nil) and Goon then
+          begin
+            aOnVisit(aNode, Goon);
+            Inc(Visited);
+          end;
+      end;
+  end;
+
+begin
+  Visit(aRoot);
+  Result := Visited;
+end;
+
+class function TGBaseBstUtil.PostOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt;
+var
+  Visited: SizeInt = 0;
+  Goon: Boolean = True;
+
+  procedure Visit(aNode: PNode);
+  begin
+    if (aNode <> nil) and Goon then
+      begin
+        Visit(aNode^.Left);
+        Visit(aNode^.Right);
+        if (aOnVisit <> nil) and Goon then
+          begin
+            aOnVisit(aNode, Goon);
+            Inc(Visited);
+          end;
+      end;
+  end;
+
+begin
+  Visit(aRoot);
+  Result := Visited;
+end;
+
+{ TGBstUtil }
 
 class function TGBstUtil.FindKey(aRoot: PNode; constref aKey: TKey): PNode;
 begin
@@ -184,167 +382,71 @@ begin
       aRoot := aRoot^.Right;
 end;
 
-class procedure TGBstUtil.ClearTree(aNode: PNode);
+{ TGComparableBstUtil }
+
+class function TGComparableBstUtil.FindKey(aRoot: PNode; constref aKey: TKey): PNode;
 begin
-  if aNode <> nil then
-    begin
-      ClearTree(aNode^.Left);
-      ClearTree(aNode^.Right);
-      //if IsManagedType(TNode) then
-        aNode^ := Default(TNode);
-      System.FreeMem(aNode);
-    end;
+  while aRoot <> nil do
+    if aKey < aRoot^.Key then
+      aRoot := aRoot^.Left
+    else
+      if aKey > aRoot^.Key then
+        aRoot := aRoot^.Right
+      else
+        exit(aRoot);
+  Result := aRoot;
 end;
 
-class procedure TGBstUtil.FreeNode(aNode: PNode);
+class function TGComparableBstUtil.GetLess(aRoot: PNode; constref aKey: TKey): PNode;
 begin
-  //if IsManagedType(TNode) then
-    aNode^ := Default(TNode);
-  System.FreeMem(aNode);
-end;
-
-class function TGBstUtil.PreOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt;
-var
-  Visited: SizeInt = 0;
-  Goon: Boolean = True;
-
-  procedure Visit(aNode: PNode);
-  begin
-    if (aNode <> nil) and Goon then
+  Result := nil;
+  while aRoot <> nil do
+    if aKey > aRoot^.Key then
       begin
-        if aOnVisit <> nil then
-          begin
-            aOnVisit(aNode, Goon);
-            Inc(Visited);
-          end;
-        Visit(aNode^.Left);
-        Visit(aNode^.Right);
-      end;
-  end;
-
-begin
-  Visit(aRoot);
-  Result := Visited;
+        Result := aRoot;
+        aRoot := aRoot^.Right;
+      end
+    else
+      aRoot := aRoot^.Left;
 end;
 
-class function TGBstUtil.PreOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt;
-var
-  Visited: SizeInt = 0;
-  Goon: Boolean = True;
-
-  procedure Visit(aNode: PNode);
-  begin
-    if (aNode <> nil) and Goon then
-      begin
-        if aOnVisit <> nil then
-          begin
-            aOnVisit(aNode, Goon);
-            Inc(Visited);
-          end;
-        Visit(aNode^.Left);
-        Visit(aNode^.Right);
-      end;
-  end;
-
+class function TGComparableBstUtil.GetLessOrEqual(aRoot: PNode; constref aKey: TKey): PNode;
 begin
-  Visit(aRoot);
-  Result := Visited;
+  Result := nil;
+  while aRoot <> nil do
+    if aKey >= aRoot^.Key then
+      begin
+        Result := aRoot;
+        aRoot := aRoot^.Right;
+      end
+    else
+      aRoot := aRoot^.Left;
 end;
 
-class function TGBstUtil.InOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt;
-var
-  Visited: SizeInt = 0;
-  Goon: Boolean = True;
-
-  procedure Visit(aNode: PNode);
-  begin
-    if (aNode <> nil) and Goon then
-      begin
-        Visit(aNode^.Left);
-        if (aOnVisit <> nil) and Goon then
-          begin
-            aOnVisit(aNode, Goon);
-            Inc(Visited);
-          end;
-        Visit(aNode^.Right);
-      end;
-  end;
-
+class function TGComparableBstUtil.GetGreater(aRoot: PNode; constref aKey: TKey): PNode;
 begin
-  Visit(aRoot);
-  Result := Visited;
+  Result := nil;
+  while aRoot <> nil do
+    if aKey < aRoot^.Key then
+      begin
+        Result := aRoot;
+        aRoot := aRoot^.Left;
+      end
+    else
+      aRoot := aRoot^.Right;
 end;
 
-class function TGBstUtil.InOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt;
-var
-  Visited: SizeInt = 0;
-  Goon: Boolean = True;
-
-  procedure Visit(aNode: PNode);
-  begin
-    if (aNode <> nil) and Goon then
-      begin
-        Visit(aNode^.Left);
-        if (aOnVisit <> nil) and Goon then
-          begin
-            aOnVisit(aNode, Goon);
-            Inc(Visited);
-          end;
-        Visit(aNode^.Right);
-      end;
-  end;
-
+class function TGComparableBstUtil.GetGreaterOrEqual(aRoot: PNode; constref aKey: TKey): PNode;
 begin
-  Visit(aRoot);
-  Result := Visited;
-end;
-
-class function TGBstUtil.PostOrderTraversal(aRoot: PNode; aOnVisit: TOnVisit): SizeInt;
-var
-  Visited: SizeInt = 0;
-  Goon: Boolean = True;
-
-  procedure Visit(aNode: PNode);
-  begin
-    if (aNode <> nil) and Goon then
+  Result := nil;
+  while aRoot <> nil do
+    if aKey <= aRoot^.Key then
       begin
-        Visit(aNode^.Left);
-        Visit(aNode^.Right);
-        if (aOnVisit <> nil) and Goon then
-          begin
-            aOnVisit(aNode, Goon);
-            Inc(Visited);
-          end;
-      end;
-  end;
-
-begin
-  Visit(aRoot);
-  Result := Visited;
-end;
-
-class function TGBstUtil.PostOrderTraversal(aRoot: PNode; aOnVisit: TNestVisit): SizeInt;
-var
-  Visited: SizeInt = 0;
-  Goon: Boolean = True;
-
-  procedure Visit(aNode: PNode);
-  begin
-    if (aNode <> nil) and Goon then
-      begin
-        Visit(aNode^.Left);
-        Visit(aNode^.Right);
-        if (aOnVisit <> nil) and Goon then
-          begin
-            aOnVisit(aNode, Goon);
-            Inc(Visited);
-          end;
-      end;
-  end;
-
-begin
-  Visit(aRoot);
-  Result := Visited;
+        Result := aRoot;
+        aRoot := aRoot^.Left;
+      end
+    else
+      aRoot := aRoot^.Right;
 end;
 
 { TGIndexedBstUtil }
@@ -391,6 +493,53 @@ begin
     else
       exit(Pos + GetNodeSize(aRoot^.Left));
     end;
+  Result := NULL_INDEX;
+end;
+
+{ TGCmpIndexedBstUtil }
+
+class function TGCmpIndexedBstUtil.GetNodeSize(aNode: PNode): SizeInt;
+begin
+  if aNode = nil then exit(0);
+  Result := aNode^.Size;
+end;
+
+class function TGCmpIndexedBstUtil.GetByIndex(aRoot: PNode; aIndex: SizeInt): PNode;
+var
+  LSize: SizeInt;
+begin
+  while aRoot <> nil do
+    begin
+      LSize := GetNodeSize(aRoot^.Left);
+      if LSize < aIndex then
+        begin
+          aRoot := aRoot^.Right;
+          aIndex -= Succ(LSize);
+        end
+      else
+        if LSize > aIndex then
+          aRoot := aRoot^.Left
+        else
+          exit(aRoot);
+    end;
+  Result := aRoot;
+end;
+
+class function TGCmpIndexedBstUtil.GetKeyIndex(aRoot: PNode; constref aKey: TKey): SizeInt;
+var
+  Pos: SizeInt = 0;
+begin
+  while aRoot <> nil do
+    if aKey < aRoot^.Key then
+      aRoot := aRoot^.Left
+    else
+      if aKey > aRoot^.Key then
+        begin
+          Pos += Succ(GetNodeSize(aRoot^.Left));
+          aRoot := aRoot^.Right;
+        end
+      else
+        exit(Pos + GetNodeSize(aRoot^.Left));
   Result := NULL_INDEX;
 end;
 
