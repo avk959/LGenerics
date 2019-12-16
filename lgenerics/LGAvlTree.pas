@@ -38,44 +38,48 @@ uses
 {.$DEFINE AVLTREE_ENABLE_PAGEDNODEMANAGER}//if uncomment define, will use TGPageNodeManager
 type
 
+  generic TGAvlTreeNode<T> = record
+  private
+  type
+    TSpecNode = TGAvlTreeNode;
+    PNode = ^TSpecNode;
+
+  {$IFNDEF CPU16}
+  const
+    PTR_MASK = High(SizeUInt) xor 3;
+  var
+    Left,
+    Right: PNode;
+    FParent: SizeInt;
+    function  GetBalance: SizeInt; inline;
+    function  GetParent: PNode; inline;
+    procedure SetBalance(aValue: SizeInt); inline;
+    procedure SetParent(aValue: PNode); inline;
+    procedure SwapBalance(aNode: PNode); inline;
+    property  Parent: PNode read GetParent write SetParent;
+    property  {%H-}Balance: SizeInt read GetBalance write SetBalance;
+  {$ELSE !CPU16}
+  var
+    Left,
+    Right,
+    Parent: PNode;
+    Balance: SizeInt;
+    procedure SwapBalance(aNode: PNode); inline;
+  {$ENDIF !CPU16}
+    property {%H-}NextLink: PNode read Left write Left; //for node manager
+  public
+    Data: T;
+    function Successor: PNode;
+    function Predecessor: PNode;
+  end;
+
+  { TGCustomAvlTree }
+
   generic TGCustomAvlTree<TKey, TEntry> = class abstract
   public
   type
-    PNode = ^TNode;
-    TNode = record
-    private
-    {$IFNDEF CPU16}
-    const
-      PTR_MASK = High(SizeUInt) xor 3;
-    var
-      Left,
-      Right: PNode;
-      FParent: SizeInt;
-      function  GetBalance: SizeInt; inline;
-      function  GetParent: PNode; inline;
-      procedure SetBalance(aValue: SizeInt); inline;
-      procedure SetParent(aValue: PNode); inline;
-      procedure SwapBalance(aNode: PNode); inline;
-      property  Parent: PNode read GetParent write SetParent;
-      property  Balance: SizeInt read GetBalance write SetBalance;
-    {$ELSE !CPU16}
-      Left,
-      Right,
-      Parent: PNode;
-      Balance: SizeInt;
-      procedure SwapBalance(aNode: PNode); inline;
-    {$ENDIF !CPU16}
-      property  NextLink: PNode read Left write Left; //for node manager
-    public
-      Data: TEntry;
-      function Successor: PNode;
-      function Predecessor: PNode;
-    end;
-{$IFDEF AVLTREE_ENABLE_PAGEDNODEMANAGER}
-    TNodeManager = specialize TGPageNodeManager<TNode>;
-{$ELSE AVLTREE_ENABLE_PAGEDNODEMANAGER}
-    TNodeManager = specialize TGNodeManager<TNode>;
-{$ENDIF AVLTREE_ENABLE_PAGEDNODEMANAGER}
+    TNode       = specialize TGAvlTreeNode<TEntry>;
+    PNode       = ^TNode;
     PEntry      = ^TEntry;
     TTest       = specialize TGTest<TKey>;
     TOnTest     = specialize TGOnTest<TKey>;
@@ -100,6 +104,11 @@ type
     TReverseEnumerator = class(TEnumerator)
       function  MoveNext: Boolean; override;
     end;
+{$IFDEF AVLTREE_ENABLE_PAGEDNODEMANAGER}
+    TNodeManager = specialize TGPageNodeManager<TNode>;
+{$ELSE AVLTREE_ENABLE_PAGEDNODEMANAGER}
+    TNodeManager = specialize TGNodeManager<TNode>;
+{$ENDIF AVLTREE_ENABLE_PAGEDNODEMANAGER}
 
   var
     FNodeManager: TNodeManager;
@@ -111,6 +120,7 @@ type
     procedure ClearTree;
     function  GetHighest: PNode;
     function  GetLowest: PNode;
+    function  GetHeight: SizeInt;
     function  FindNode(constref aKey: TKey; out aInsertPos: PNode): PNode; virtual; abstract;
     function  FindInsertPos(constref aKey: TKey): PNode; virtual; abstract;
     procedure InsertNode(aNode: PNode); virtual; abstract;
@@ -149,6 +159,7 @@ type
     property  Capacity: SizeInt read GetCapacity;
     property  Lowest: PNode read GetLowest;
     property  Highest: PNode read GetHighest;
+    property  Height: SizeInt read GetHeight;
   end;
 
   { TGAvlTree
@@ -231,44 +242,6 @@ type
     function  FindGreater(constref aKey: TKey): PNode; override;
     function  FindGreaterOrEqual(constref aKey: TKey): PNode; override;
     property  Comparator: TOnCompare read FCompare;
-  end;
-
-  generic TGAvlTreeNode<T> = record
-  private
-  type
-    TAvlTreeNode = specialize TGAvlTreeNode<T>;
-
-  public
-  type
-    PNode = ^TAvlTreeNode;
-
-  private
-  {$IFNDEF CPU16}
-  const
-    PTR_MASK = High(SizeUInt) xor 3;
-  var
-    Left,
-    Right: PNode;
-    FParent: SizeInt;
-    function  GetBalance: SizeInt; inline;
-    function  GetParent: PNode; inline;
-    procedure SetBalance(aValue: SizeInt); inline;
-    procedure SetParent(aValue: PNode); inline;
-    procedure SwapBalance(aNode: PNode); inline;
-  {$ELSE !CPU16}
-    Left,
-    Right,
-    Parent: PNode;
-    Balance: SizeInt;
-    procedure SwapBalance(aNode: PNode); inline;
-  {$ENDIF !CPU16}
-  public
-    Data: T;
-    function Successor: PNode;
-    function Predecessor: PNode;
-    property Parent: PNode read GetParent write SetParent;
-    property Balance: SizeInt read GetBalance write SetBalance;
-    property NextLink: PNode read Left write Left; //for node manager
   end;
 
   { TGAvlTree2: simplified version TGAvlTree }
@@ -436,6 +409,8 @@ type
     procedure Clear; inline;
     procedure EnsureCapacity(aValue: SizeInt); inline;
     procedure TrimToFit; inline;
+  { returns nil if aKey already exists }
+    function  Add(constref aKey: TKey): PEntry;
     function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
     function  Find(constref aKey: TKey): PEntry;
     function  Remove(constref aKey: TKey): Boolean;
@@ -458,31 +433,35 @@ implementation
 
 {$PUSH}{$Q-}
 {$IFNDEF CPU16}
-function TGCustomAvlTree.TNode.GetBalance: SizeInt;
+function TGAvlTreeNode.GetBalance: SizeInt;
 begin
+  Assert((FParent and 3) <> 0, Format('Inconsistent internal Balance value(%d)', [FParent and 3]));
   Result := (FParent and 3) - 2;
 end;
 
-function TGCustomAvlTree.TNode.GetParent: PNode;
+function TGAvlTreeNode.GetParent: PNode;
 var
-  p: SizeInt absolute Result;
+  r: SizeInt absolute Result;
 begin
-  p := FParent and SizeInt(PTR_MASK);
+  r := FParent and SizeInt(PTR_MASK);
 end;
 
-procedure TGCustomAvlTree.TNode.SetBalance(aValue: SizeInt);
+procedure TGAvlTreeNode.SetBalance(aValue: SizeInt);
 begin
+  Assert(((aValue + 2) >= 1) and ((aValue + 2) <= 3),
+    Format('Inconsistent input Balance value(%d) in '+{$I %CURRENTROUTINE%}, [aValue]));
   FParent := (FParent and SizeInt(PTR_MASK)) or ((aValue + 2) and 3);
 end;
 
-procedure TGCustomAvlTree.TNode.SetParent(aValue: PNode);
+procedure TGAvlTreeNode.SetParent(aValue: PNode);
 var
   p: SizeInt absolute aValue;
 begin
+  Assert(p and 3 = 0, Format('Unaligned input Parent value($%x) in '+{$I %CURRENTROUTINE%}, [aValue]));
   FParent := p or (FParent and 3);
 end;
 
-procedure TGCustomAvlTree.TNode.SwapBalance(aNode: PNode);
+procedure TGAvlTreeNode.SwapBalance(aNode: PNode);
 var
   b: SizeInt;
 begin
@@ -491,7 +470,7 @@ begin
   aNode^.FParent := (aNode^.FParent and SizeInt(PTR_MASK)) or b;
 end;
 {$ELSE !CPU16}
-procedure TGCustomAvlTree.TNode.SwapBalance(aNode: PNode);
+procedure TGAvlTreeNode.SwapBalance(aNode: PNode);
 var
   b: SizeInt;
 begin
@@ -502,7 +481,7 @@ end;
 {$ENDIF !CPU16}
 {$POP}
 
-function TGCustomAvlTree.TNode.Successor: PNode;
+function TGAvlTreeNode.Successor: PNode;
 begin
   Result := Right;
   if Result <> nil then
@@ -517,7 +496,7 @@ begin
     end;
 end;
 
-function TGCustomAvlTree.TNode.Predecessor: PNode;
+function TGAvlTreeNode.Predecessor: PNode;
 begin
   Result := Left;
   if Result <> nil then
@@ -633,6 +612,29 @@ begin
   if Result <> nil then
     while Result^.Left <> nil do
       Result := Result^.Left;
+end;
+
+function TGCustomAvlTree.GetHeight: SizeInt;
+  function HeightOf(aNode: PNode): SizeInt;
+  var
+    LHeight, RHeight: SizeInt;
+  begin
+    if aNode^.Left <> nil then
+      LHeight := Succ(HeightOf(aNode^.Left))
+    else
+      LHeight := 0;
+    if aNode^.Right <> nil then
+      RHeight := Succ(HeightOf(aNode^.Right))
+    else
+      RHeight := 0;
+    if RHeight > LHeight then
+      HeightOf := RHeight
+    else
+      HeightOf := LHeight;
+  end;
+begin
+  if FRoot = nil then exit(0);
+  Result := HeightOf(FRoot);
 end;
 
 procedure TGCustomAvlTree.ReplaceWithSuccessor(aNode: PNode);
@@ -1865,84 +1867,6 @@ begin
       Node := Node^.Right;
 end;
 
-{$IFNDEF CPU16}
-function TGAvlTreeNode.GetBalance: SizeInt;
-begin
-  Assert((FParent and 3) <> 0, Format('Inconsistent internal Balance value(%d)', [FParent and 3]));
-  Result := (FParent and 3) - 2;
-end;
-
-function TGAvlTreeNode.GetParent: PNode;
-var
-  r: SizeInt absolute Result;
-begin
-  r := FParent and SizeInt(PTR_MASK);
-end;
-
-procedure TGAvlTreeNode.SetBalance(aValue: SizeInt);
-begin
-  Assert(((aValue + 2) >= 1) and ((aValue + 2) <= 3),
-    Format('Inconsistent input Balance value(%d) in '+{$I %CURRENTROUTINE%}, [aValue]));
-  FParent := (FParent and SizeInt(PTR_MASK)) or ((aValue + 2) and 3);
-end;
-
-procedure TGAvlTreeNode.SetParent(aValue: PNode);
-var
-  p: SizeInt absolute aValue;
-begin
-  Assert(p and 3 = 0, Format('Unaligned input Parent value($%x) in '+{$I %CURRENTROUTINE%}, [aValue]));
-  FParent := p or (FParent and 3);
-end;
-
-procedure TGAvlTreeNode.SwapBalance(aNode: PNode);
-var
-  b: SizeInt;
-begin
-  b := FParent and 3;
-  FParent := (FParent and SizeInt(PTR_MASK)) or (aNode^.FParent and 3);
-  aNode^.FParent := (aNode^.FParent and SizeInt(PTR_MASK)) or b;
-end;
-{$ELSE !CPU16}
-procedure TGAvlTreeNode.SwapBalance(aNode: PNode);
-var
-  b: SizeInt;
-begin
-  b := Balance;
-  Balance := aNode^.Balance;
-  aNode^.Balance := b;
-end;
-{$ENDIF !CPU16}
-
-function TGAvlTreeNode.Successor: PNode;
-begin
-  Result := Right;
-  if Result <> nil then
-    while Result^.Left <> nil do
-      Result := Result^.Left
-  else
-    begin
-      Result := @Self;
-      while (Result^.Parent <> nil) and (Result^.Parent^.Right = Result) do
-        Result := Result^.Parent;
-      Result := Result^.Parent;
-    end;
-end;
-
-function TGAvlTreeNode.Predecessor: PNode;
-begin
-  Result := Left;
-  if Result <> nil then
-    while Result^.Right <> nil do
-      Result := Result^.Right
-  else
-    begin
-      Result := @Self;
-      while (Result^.Parent <> nil) and (Result^.Parent^.Left = Result) do
-        Result := Result^.Parent;
-      Result := Result^.Parent;
-    end;
-end;
-
 { TGAvlTree2.TEnumerator }
 
 function TGAvlTree2.TEnumerator.GetCurrent: PEntry;
@@ -2757,9 +2681,17 @@ begin
 end;
 
 function TGLiteAvlTree.GetNodeHeight(aNode: SizeInt): SizeInt;
+var
+  RHeight: SizeInt = 0;
 begin
-  if aNode = 0 then exit(0);
-  Result := Succ(Math.Max(GetNodeHeight(FNodes[aNode].Left), GetNodeHeight(FNodes[aNode].Right)));
+  Result := 0;
+  if aNode = 0 then exit;
+  if FNodes[aNode].Left <> 0 then
+    Result := Succ(GetNodeHeight(FNodes[aNode].Left));
+  if FNodes[aNode].Right <> 0 then
+    RHeight := Succ(GetNodeHeight(FNodes[aNode].Right));
+  if RHeight > Result then
+    Result := RHeight;
 end;
 
 function TGLiteAvlTree.GetHeight: SizeInt;
@@ -3264,6 +3196,20 @@ begin
     System.SetLength(FNodes, Succ(Count))
   else
     Clear;
+end;
+
+function TGLiteAvlTree.Add(constref aKey: TKey): PEntry;
+var
+  Node, ParentNode: SizeInt;
+begin
+  if FindNode(aKey, ParentNode) = 0 then
+    begin
+      Node := NewNode;
+      FNodes[Node].Data.Key := aKey;
+      InsertNodeAt(Node, ParentNode);
+      exit(@FNodes[Node].Data);
+    end;
+  Result := nil;
 end;
 
 function TGLiteAvlTree.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
