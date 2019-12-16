@@ -4096,6 +4096,11 @@ begin
     raise EConvertError.CreateFmt(SInvalidInteger, [s]);
 end;
 
+procedure TInt128.Negate;
+begin
+  HiLimbMacro := HiLimbMacro xor SIGN_FLAG;
+end;
+
 class function TInt128.TryParse(const s: string; out aValue: TInt128): Boolean;
 var
   IsNeg: Boolean = False;
@@ -4199,11 +4204,6 @@ begin
     exit(1);
 {$ENDIF USE_LIMB64}
   Result := -1;
-end;
-
-procedure TInt128.Negate;
-begin
-  HiLimbMacro := HiLimbMacro xor SIGN_FLAG;
 end;
 
 function TInt128.BitLength: Integer;
