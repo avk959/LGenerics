@@ -66,9 +66,12 @@ begin
 end;
 
 procedure TLiteRbTreeTest.Add;
+const
+  TestSize = 1000;
 var
   Tree: TIntTree;
   p: TIntTree.PNode;
+  I: Integer;
 begin
   AssertTrue({%H-}Tree.IsEmpty);
   p := Tree.Add(1);
@@ -81,6 +84,11 @@ begin
   AssertTrue(p <> nil);
   AssertTrue(p^.Key = 11);
   AssertTrue(Tree.Count = 2);
+
+  for I in THelper.CreateRandomRangePermutation(1, TestSize) do
+    Tree.Add(I);
+  AssertTrue(Tree.Count = TestSize);
+  AssertTrue(Tree.CheckState = rsConsistent);
 end;
 
 procedure TLiteRbTreeTest.GetEnumerator;
@@ -287,9 +295,12 @@ begin
 end;
 
 procedure TLiteComparableRbTreeTest.Add;
+const
+  TestSize = 1000;
 var
   Tree: TIntTree;
   p: TIntTree.PNode;
+  I: Integer;
 begin
   AssertTrue({%H-}Tree.IsEmpty);
   p := Tree.Add(1);
@@ -302,6 +313,11 @@ begin
   AssertTrue(p <> nil);
   AssertTrue(p^.Key = 11);
   AssertTrue(Tree.Count = 2);
+
+  for I in THelper.CreateRandomRangePermutation(1, TestSize) do
+    Tree.Add(I);
+  AssertTrue(Tree.Count = TestSize);
+  AssertTrue(Tree.CheckState = rsConsistent);
 end;
 
 procedure TLiteComparableRbTreeTest.GetEnumerator;
