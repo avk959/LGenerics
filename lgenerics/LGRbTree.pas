@@ -85,7 +85,8 @@ type
 
   { TGLiteRbTree implements the conventional red-black tree;
       functor TCmpRel (comparision relation) must provide:
-        function Compare([const[ref]] L, R: TKey): SizeInt; }
+        function Compare([const[ref]] L, R: TKey): SizeInt;
+    on assignment and when passed by value, the whole treap is copied }
   generic TGLiteRbTree<TKey, TValue, TCmpRel> = record
   public
   type
@@ -159,7 +160,8 @@ type
   end;
 
   { TGLiteComparableRbTree implements the conventional red-black tree;
-    it assumes TKey has defined comparison operators  }
+    it assumes TKey has defined comparison operators;
+    on assignment and when passed by value, the whole treap is copied }
   generic TGLiteComparableRbTree<TKey, TValue> = record
   public
   type
