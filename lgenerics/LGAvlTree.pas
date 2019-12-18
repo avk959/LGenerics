@@ -38,6 +38,13 @@ uses
 {.$DEFINE AVLTREE_ENABLE_PAGEDNODEMANAGER}//if uncomment define, will use TGPageNodeManager
 type
 
+  TAvlTreeState = (asConsistent,    //Ok
+                   asInvalidLink,   //Invalid BST link
+                   asInvalidKey,    //Invalid BST key
+                   asInvalidHDelta, //right-left height difference exceeds 1
+                   asInvalidBalance //height delta/balance mismatch
+                   );
+
   generic TGAvlTreeNode<T> = record
   private
   type
@@ -303,57 +310,55 @@ type
     property  Highest: PNode read GetHighest;
   end;
 
-  { TGLiteAvlTree
-      functor TKeyCmpRel (key comparision relation) must provide:
-        class function Compare([const[ref]] L, R: TKey): SizeInt; }
-  generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
-  public
-  type
-    PEntry = ^TEntry;
-
-    TNode = record
-    private
-      Left,
-      Right: SizeInt;
-      FParent: SizeInt;
-      procedure ClearLinks; inline;
-      function  GetBalance: SizeInt; inline;
-      function  GetParent: SizeInt; inline;
-      procedure SetBalance(aValue: SizeInt); inline;
-      procedure SetParent(aValue: SizeInt); inline;
-      property  Parent: SizeInt read GetParent write SetParent;
-      property  Balance: SizeInt read GetBalance write SetBalance;
-    public
-      Data: TEntry;
-    end;
-
-    TNodeList = array of TNode;
-    TAvlState = (asConsistent,    //Ok
-                 asInvalidLink,   //Invalid BST link
-                 asInvalidKey,    //Invalid BST key
-                 asInvalidHDelta, //right-left height difference exceeds 1
-                 asInvalidBalance //height delta/balance mismatch
-                 );
-
+  generic TTGAvlNode2<T> = record
   private
   const
-{$IF DEFINED(CPU64)}
+  {$IF DEFINED(CPU64)}
     SHIFT: SizeInt        = 62;
     MASK: SizeInt         = SizeInt($c000000000000000);
     NOT_MASK: SizeInt     = not SizeInt($c000000000000000);
     ZERO_BALANCE: SizeInt = SizeInt($8000000000000000);
-{$ELSEIF DEFINED(CPU32)}
+  {$ELSEIF DEFINED(CPU32)}
     SHIFT                 = 30;
     MASK: SizeInt         = SizeInt($c0000000);
     NOT_MASK: SizeInt     = not SizeInt($c0000000);
     ZERO_BALANCE: SizeInt = SizeInt($80000000);
-{$ELSE}
+  {$ELSE}
     SHIFT: SizeInt        = 14;
     MASK: SizeInt         = SizeInt($c000);
     NOT_MASK: SizeInt     = not SizeInt($c000);
     ZERO_BALANCE: SizeInt = SizeInt($8000);
-{$ENDIF}
+  {$ENDIF}
+  var
+    Left,
+    Right: SizeInt;
+    FParent: SizeInt;
+    procedure ClearLinks; inline;
+    function  GetBalance: SizeInt; inline;
+    function  GetParent: SizeInt; inline;
+    procedure SetBalance(aValue: SizeInt); inline;
+    procedure SetParent(aValue: SizeInt); inline;
+    property  {%H-}Parent: SizeInt read GetParent write SetParent;
+    property  {%H-}Balance: SizeInt read GetBalance write SetBalance;
+  public
+    Data: T;
+  end;
 
+  { TGLiteAvlTree
+      functor TKeyCmpRel (key comparision relation) must provide:
+        class function Compare([const[ref]] L, R: TKey): SizeInt;
+    on assignment and when passed by value, the whole treap is copied }
+  generic TGLiteAvlTree<TKey, TEntry, TKeyCmpRel> = record
+  public
+  type
+    PEntry = ^TEntry;
+    TNode  = specialize TTGAvlNode2<TEntry>;
+    PNode  = ^TNode;
+
+    TNodeList = array of TNode;
+
+
+  private
   type
     PAvlTree   = ^TGLiteAvlTree;
 
@@ -400,7 +405,7 @@ type
     procedure BalanceAfterInsert(aNode: SizeInt);
     procedure RemoveNode(aNode: SizeInt);
     procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
-    function  TestNodeState(aNode: SizeInt; var aState: TAvlState): SizeInt;
+    function  TestNodeState(aNode: SizeInt; var aState: TAvlTreeState): SizeInt;
     property  Root: SizeInt read GetRoot write SetRoot;
     class operator Copy(constref aSrc: TGLiteAvlTree; var aDst: TGLiteAvlTree);
     class operator AddRef(var aTree: TGLiteAvlTree);
@@ -419,7 +424,94 @@ type
     function  FindLessOrEqual(constref aKey: TKey): SizeInt;
     function  FindGreater(constref aKey: TKey): SizeInt;
     function  FindGreaterOrEqual(constref aKey: TKey): SizeInt;
-    function  CheckState: TAvlState;
+    function  CheckState: TAvlTreeState;
+    property  Count: SizeInt read GetCount;
+    property  Capacity: SizeInt read GetCapacity;
+    property  Lowest: SizeInt read GetLowest;
+    property  Highest: SizeInt read GetHighest;
+    property  NodeList: TNodeList read FNodes;
+    property  Height: SizeInt read GetHeight;
+  end;
+
+  { TGLiteComparableAvlTree assumes TKey has defined comparison operators;
+    on assignment and when passed by value, the whole treap is copied }
+  generic TGLiteComparableAvlTree<TKey, TEntry> = record
+  public
+  type
+    PEntry = ^TEntry;
+    TNode  = specialize TTGAvlNode2<TEntry>;
+    PNode  = ^TNode;
+
+    TNodeList = array of TNode;
+
+
+  private
+  type
+    PAvlTree   = ^TGLiteComparableAvlTree;
+
+  public
+  type
+
+    TEnumerator = record
+    private
+      FTree: PAvlTree;
+      FCurrNode,
+      FFirstNode: SizeInt;
+      FInCycle: Boolean;
+      function  GetCurrent: PEntry; inline;
+      procedure Init(aTree: PAvlTree);
+    public
+      function  MoveNext: Boolean;
+      procedure Reset;
+      property  Current: PEntry read GetCurrent;
+    end;
+
+  private
+    FNodes: TNodeList;
+    function  GetCapacity: SizeInt; inline;
+    function  GetCount: SizeInt; inline;
+    function  GetRoot: SizeInt; inline;
+    procedure SetRoot(aValue: SizeInt); inline;
+    procedure Expand(aValue: SizeInt);
+    function  NewNode: SizeInt;
+    procedure FreeNode(aNode: SizeInt);
+    function  Successor(aNode: SizeInt): SizeInt;
+    function  Predecessor(aNode: SizeInt): SizeInt;
+    procedure SwapBalance(L, R: SizeInt); inline;
+    function  GetHighest: SizeInt;
+    function  GetLowest: SizeInt;
+    function  GetNodeHeight(aNode: SizeInt): SizeInt;
+    function  GetHeight: SizeInt;
+    function  FindInsertPos(constref aKey: TKey): SizeInt;
+    function  FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+    procedure ReplaceWithSuccessor(aNode: SizeInt);
+    procedure RotateLeft(aNode: SizeInt);
+    procedure RotateRight(aNode: SizeInt);
+    procedure InsertNode(aNode: SizeInt);
+    procedure InsertNodeAt(aNode, aParent: SizeInt);
+    procedure BalanceAfterInsert(aNode: SizeInt);
+    procedure RemoveNode(aNode: SizeInt);
+    procedure BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
+    function  TestNodeState(aNode: SizeInt; var aState: TAvlTreeState): SizeInt;
+    property  Root: SizeInt read GetRoot write SetRoot;
+    class operator Copy(constref aSrc: TGLiteComparableAvlTree; var aDst: TGLiteComparableAvlTree);
+    class operator AddRef(var aTree: TGLiteComparableAvlTree);
+  public
+    function  GetEnumerator: TEnumerator;
+    procedure Clear; inline;
+    procedure EnsureCapacity(aValue: SizeInt); inline;
+    procedure TrimToFit; inline;
+  { returns nil if aKey already exists }
+    function  Add(constref aKey: TKey): PEntry;
+    function  FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+    function  Find(constref aKey: TKey): PEntry;
+    function  Remove(constref aKey: TKey): Boolean;
+    procedure RemoveAt(aIndex: SizeInt); inline;
+    function  FindLess(constref aKey: TKey): SizeInt;
+    function  FindLessOrEqual(constref aKey: TKey): SizeInt;
+    function  FindGreater(constref aKey: TKey): SizeInt;
+    function  FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+    function  CheckState: TAvlTreeState;
     property  Count: SizeInt read GetCount;
     property  Capacity: SizeInt read GetCapacity;
     property  Lowest: SizeInt read GetLowest;
@@ -2444,29 +2536,29 @@ end;
 
 { TGLiteAvlTree.TNode }
 
-procedure TGLiteAvlTree.TNode.ClearLinks;
+procedure TTGAvlNode2.ClearLinks;
 begin
   Left := 0;
   Right := 0;
   FParent := ZERO_BALANCE;
 end;
 
-function TGLiteAvlTree.TNode.GetBalance: SizeInt;
+function TTGAvlNode2.GetBalance: SizeInt;
 begin
   Result := (FParent shr SHIFT) - 2;
 end;
 
-function TGLiteAvlTree.TNode.GetParent: SizeInt;
+function TTGAvlNode2.GetParent: SizeInt;
 begin
   Result := FParent and NOT_MASK;
 end;
 
-procedure TGLiteAvlTree.TNode.SetBalance(aValue: SizeInt);
+procedure TTGAvlNode2.SetBalance(aValue: SizeInt);
 begin
   FParent := (FParent and NOT_MASK) or ((aValue + 2) shl SHIFT);
 end;
 
-procedure TGLiteAvlTree.TNode.SetParent(aValue: SizeInt);
+procedure TTGAvlNode2.SetParent(aValue: SizeInt);
 begin
   FParent := (FParent and MASK) or aValue;
 end;
@@ -2643,9 +2735,9 @@ procedure TGLiteAvlTree.SwapBalance(L, R: SizeInt);
 var
   b: SizeInt;
 begin
-  b := FNodes[L].FParent and MASK;
-  FNodes[L].FParent := (FNodes[L].FParent and NOT_MASK) or (FNodes[R].FParent and MASK);
-  FNodes[R].FParent := (FNodes[R].FParent and NOT_MASK) or b;
+  b := FNodes[L].FParent and TNode.MASK;
+  FNodes[L].FParent := (FNodes[L].FParent and TNode.NOT_MASK) or (FNodes[R].FParent and TNode.MASK);
+  FNodes[R].FParent := (FNodes[R].FParent and TNode.NOT_MASK) or b;
 end;
 
 function TGLiteAvlTree.GetHighest: SizeInt;
@@ -3116,7 +3208,7 @@ begin
     end;
 end;
 
-function TGLiteAvlTree.TestNodeState(aNode: SizeInt; var aState: TAvlState): SizeInt;
+function TGLiteAvlTree.TestNodeState(aNode: SizeInt; var aState: TAvlTreeState): SizeInt;
 var
   LHeight, RHeight: SizeInt;
 begin
@@ -3318,7 +3410,863 @@ begin
       CurrNode := FNodes[CurrNode].Right;
 end;
 
-function TGLiteAvlTree.CheckState: TAvlState;
+function TGLiteAvlTree.CheckState: TAvlTreeState;
+begin
+  Result := asConsistent;
+  if Root <> 0 then
+    TestNodeState(Root, Result);
+end;
+
+
+
+
+
+{ TGLiteComparableAvlTree.TEnumerator }
+
+function TGLiteComparableAvlTree.TEnumerator.GetCurrent: PEntry;
+begin
+  Result := @FTree^.FNodes[FCurrNode].Data;
+end;
+
+procedure TGLiteComparableAvlTree.TEnumerator.Init(aTree: PAvlTree);
+begin
+  FTree := aTree;
+  FFirstNode := aTree^.Lowest;
+  FCurrNode := 0;
+  FInCycle := False;
+end;
+
+function TGLiteComparableAvlTree.TEnumerator.MoveNext: Boolean;
+var
+  NextNode: SizeInt = 0;
+begin
+  if FCurrNode <> 0 then
+    NextNode := FTree^.Successor(FCurrNode)
+  else
+    if not FInCycle then
+      begin
+        NextNode := FFirstNode;
+        FInCycle := True;
+      end;
+  Result := NextNode <> 0;
+  if Result then
+    FCurrNode := NextNode;
+end;
+
+procedure TGLiteComparableAvlTree.TEnumerator.Reset;
+begin
+  FCurrNode := 0;
+  FInCycle := False;
+end;
+
+{ TGLiteComparableAvlTree }
+
+function TGLiteComparableAvlTree.GetCapacity: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := System.High(FNodes);
+end;
+
+function TGLiteComparableAvlTree.GetCount: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := FNodes[0].Left;
+end;
+
+function TGLiteComparableAvlTree.GetRoot: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := FNodes[0].Right;
+end;
+
+procedure TGLiteComparableAvlTree.SetRoot(aValue: SizeInt);
+begin
+  FNodes[0].Right := aValue;
+end;
+
+procedure TGLiteComparableAvlTree.Expand(aValue: SizeInt);
+var
+  OldLen: SizeInt;
+begin
+  //there aValue > Capacity
+  OldLen := System.Length(FNodes);
+  if aValue < DEFAULT_CONTAINER_CAPACITY then
+    System.SetLength(FNodes, DEFAULT_CONTAINER_CAPACITY)
+  else
+    if aValue < MAX_CONTAINER_SIZE div SizeOf(TNode) then
+      System.SetLength(FNodes, LGUtils.RoundUpTwoPower(aValue))
+    else
+      raise ELGCapacityExceed.CreateFmt(SECapacityExceedFmt, [aValue]);
+  if OldLen = 0 then
+    begin
+      FNodes[0].Left := 0;
+      FNodes[0].Right := 0;
+    end;
+end;
+
+function TGLiteComparableAvlTree.NewNode: SizeInt;
+begin
+  if Count = Capacity then
+    Expand(Count + 2);
+  Result := Succ(Count);
+  FNodes[Result].ClearLinks;
+  Inc(FNodes[0].Left);
+end;
+
+procedure TGLiteComparableAvlTree.FreeNode(aNode: SizeInt);
+var
+  Last, Parent, Child: SizeInt;
+begin
+  Last := Count;
+  FNodes[aNode].Data := Default(TEntry);
+  if aNode < Last then
+    begin
+      System.Move(FNodes[Last], FNodes[aNode], SizeOf(TNode));
+      System.FillChar(FNodes[Last].Data , SizeOf(TEntry), 0);
+      if Root = Last then
+        Root := aNode;
+      Parent := FNodes[aNode].Parent;
+      if Parent <> 0 then
+        begin
+          if FNodes[Parent].Left = Last then
+            FNodes[Parent].Left := aNode
+          else
+            FNodes[Parent].Right := aNode;
+        end;
+      Child := FNodes[aNode].Left;
+      if Child <> 0 then
+        FNodes[Child].Parent := aNode;
+      Child := FNodes[aNode].Right;
+      if Child <> 0 then
+        FNodes[Child].Parent := aNode;
+    end;
+  Dec(FNodes[0].Left);
+end;
+
+function TGLiteComparableAvlTree.Successor(aNode: SizeInt): SizeInt;
+var
+  Parent: SizeInt;
+begin
+  if aNode = 0 then
+    exit(aNode);
+  Result := FNodes[aNode].Right;
+  if Result <> 0 then
+    while FNodes[Result].Left <> 0 do
+      Result := FNodes[Result].Left
+  else
+    begin
+      Result := aNode;
+      Parent := FNodes[aNode].Parent;
+      while (Parent <> 0) and (FNodes[Parent].Right = Result) do
+        begin
+          Result := FNodes[Result].Parent;
+          Parent := FNodes[Result].Parent;
+        end;
+      Result := Parent;
+    end;
+end;
+
+function TGLiteComparableAvlTree.Predecessor(aNode: SizeInt): SizeInt;
+var
+  Parent: SizeInt;
+begin
+  if aNode = 0 then
+    exit(aNode);
+  Result := FNodes[aNode].Left;
+  if Result <> 0 then
+    while FNodes[Result].Right <> 0 do
+      Result := FNodes[Result].Right
+  else
+    begin
+      Result := aNode;
+      Parent := FNodes[aNode].Parent;
+      while (Parent <> 0) and (FNodes[Parent].Left = Result) do
+        begin
+          Result := FNodes[Result].Parent;
+          Parent := FNodes[Result].Parent;
+        end;
+      Result := Parent;
+    end;
+end;
+
+procedure TGLiteComparableAvlTree.SwapBalance(L, R: SizeInt);
+var
+  b: SizeInt;
+begin
+  b := FNodes[L].FParent and TNode.MASK;
+  FNodes[L].FParent := (FNodes[L].FParent and TNode.NOT_MASK) or (FNodes[R].FParent and TNode.MASK);
+  FNodes[R].FParent := (FNodes[R].FParent and TNode.NOT_MASK) or b;
+end;
+
+function TGLiteComparableAvlTree.GetHighest: SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  if Result <> 0 then
+    begin
+      Curr := FNodes[Result].Right;
+      while Curr <> 0 do
+        begin
+          Result := Curr;
+          Curr := FNodes[Curr].Right;
+        end;
+    end;
+end;
+
+function TGLiteComparableAvlTree.GetLowest: SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  if Result <> 0 then
+    begin
+      Curr := FNodes[Result].Left;
+      while Curr <> 0 do
+        begin
+          Result := Curr;
+          Curr := FNodes[Curr].Left;
+        end;
+    end;
+end;
+
+function TGLiteComparableAvlTree.GetNodeHeight(aNode: SizeInt): SizeInt;
+var
+  RHeight: SizeInt = 0;
+begin
+  Result := 0;
+  if aNode = 0 then exit;
+  if FNodes[aNode].Left <> 0 then
+    Result := Succ(GetNodeHeight(FNodes[aNode].Left));
+  if FNodes[aNode].Right <> 0 then
+    RHeight := Succ(GetNodeHeight(FNodes[aNode].Right));
+  if RHeight > Result then
+    Result := RHeight;
+end;
+
+function TGLiteComparableAvlTree.GetHeight: SizeInt;
+begin
+  if FNodes = nil then exit(0);
+  Result := GetNodeHeight(Root);
+end;
+
+function TGLiteComparableAvlTree.FindInsertPos(constref aKey: TKey): SizeInt;
+var
+  Curr: SizeInt;
+begin
+  Result := Root;
+  while Result <> 0 do
+    if aKey < FNodes[Result].Data.Key then
+      begin
+        Curr := FNodes[Result].Left;
+        if Curr <> 0 then
+          Result := Curr
+        else
+          break;
+      end
+    else
+      begin
+        Curr := FNodes[Result].Right;
+        if Curr <> 0 then
+          Result := Curr
+        else
+          break;
+      end;
+end;
+
+function TGLiteComparableAvlTree.FindNode(constref aKey: TKey; out aInsertPos: SizeInt): SizeInt;
+begin
+  Result := Root;
+  aInsertPos := 0;
+  while Result <> 0 do
+    begin
+      aInsertPos := Result;
+      if aKey < FNodes[Result].Data.Key then
+        Result := FNodes[Result].Left
+      else
+        if aKey > FNodes[Result].Data.Key then
+          Result := FNodes[Result].Right
+        else
+          break;
+    end;
+end;
+
+procedure TGLiteComparableAvlTree.ReplaceWithSuccessor(aNode: SizeInt);
+var
+  SuccNode, OldParent, OldLeft, OldRight,
+  OldSuccParent, OldSuccLeft, OldSuccRight: SizeInt;
+begin
+  SuccNode := Successor(aNode);
+  SwapBalance(aNode, SuccNode);
+
+  OldParent := FNodes[aNode].Parent;
+  OldLeft := FNodes[aNode].Left;
+  OldRight := FNodes[aNode].Right;
+  OldSuccParent := FNodes[SuccNode].Parent;
+  OldSuccLeft := FNodes[SuccNode].Left;
+  OldSuccRight := FNodes[SuccNode].Right;
+
+  if OldParent <> 0 then
+    begin
+      if FNodes[OldParent].Left = aNode then
+        FNodes[OldParent].Left := SuccNode
+      else
+        FNodes[OldParent].Right := SuccNode;
+    end
+  else
+    Root := SuccNode;
+
+  FNodes[SuccNode].Parent := OldParent;
+
+  if OldSuccParent <> aNode then
+    begin
+      if FNodes[OldSuccParent].Left = SuccNode then
+        FNodes[OldSuccParent].Left := aNode
+      else
+        FNodes[OldSuccParent].Right := aNode;
+      FNodes[SuccNode].Right := OldRight;
+      FNodes[aNode].Parent := OldSuccParent;
+      if OldRight <> 0 then
+        FNodes[OldRight].Parent := SuccNode;
+    end
+  else
+    begin
+      FNodes[SuccNode].Right := aNode;
+      FNodes[aNode].Parent := SuccNode;
+    end;
+
+  FNodes[aNode].Left := OldSuccLeft;
+  if OldSuccLeft <> 0 then
+    FNodes[OldSuccLeft].Parent := aNode;
+  FNodes[aNode].Right := OldSuccRight;
+  if OldSuccRight <> 0 then
+    FNodes[OldSuccRight].Parent := aNode;
+  FNodes[SuccNode].Left := OldLeft;
+  if OldLeft <> 0 then
+    FNodes[OldLeft].Parent := SuccNode;
+end;
+
+procedure TGLiteComparableAvlTree.RotateLeft(aNode: SizeInt);
+var
+  OldParent, OldRight, OldRightLeft: SizeInt;
+begin
+  OldRight := FNodes[aNode].Right;
+  OldRightLeft := FNodes[OldRight].Left;
+  OldParent := FNodes[aNode].Parent;
+  if OldParent <> 0 then
+    begin
+      if FNodes[OldParent].Left = aNode then
+        FNodes[OldParent].Left := OldRight
+      else
+        FNodes[OldParent].Right := OldRight;
+    end
+  else
+    Root := OldRight;
+  FNodes[OldRight].Parent := OldParent;
+  FNodes[aNode].Parent := OldRight;
+  FNodes[aNode].Right := OldRightLeft;
+  if OldRightLeft <> 0 then
+    FNodes[OldRightLeft].Parent := aNode;
+  FNodes[OldRight].Left := aNode;
+end;
+
+procedure TGLiteComparableAvlTree.RotateRight(aNode: SizeInt);
+var
+  OldParent, OldLeft, OldLeftRight: SizeInt;
+begin
+  OldLeft := FNodes[aNode].Left;
+  OldLeftRight := FNodes[OldLeft].Right;
+  OldParent := FNodes[aNode].Parent;
+  if OldParent <> 0 then
+    begin
+      if FNodes[OldParent].Left = aNode then
+        FNodes[OldParent].Left := OldLeft
+      else
+        FNodes[OldParent].Right := OldLeft;
+    end
+  else
+    Root := OldLeft;
+  FNodes[OldLeft].Parent := OldParent;
+  FNodes[aNode].Parent := OldLeft;
+  FNodes[aNode].Left := OldLeftRight;
+  if OldLeftRight <> 0 then
+    FNodes[OldLeftRight].Parent := aNode;
+  FNodes[OldLeft].Right := aNode;
+end;
+
+procedure TGLiteComparableAvlTree.InsertNode(aNode: SizeInt);
+var
+  ParentNode: SizeInt;
+begin
+  if Root <> 0 then
+    begin
+      ParentNode := FindInsertPos(FNodes[aNode].Data.Key);
+      FNodes[aNode].Parent := ParentNode;
+      if FNodes[aNode].Data.Key < FNodes[ParentNode].Data.Key then
+        FNodes[ParentNode].Left := aNode
+      else
+        FNodes[ParentNode].Right := aNode;
+      BalanceAfterInsert(aNode);
+    end
+  else
+    Root := aNode;
+end;
+
+procedure TGLiteComparableAvlTree.InsertNodeAt(aNode, aParent: SizeInt);
+begin
+  if aParent <> 0 then
+    begin
+      FNodes[aNode].Parent := aParent;
+      if FNodes[aNode].Data.Key < FNodes[aParent].Data.Key then
+        FNodes[aParent].Left := aNode
+      else
+        FNodes[aParent].Right := aNode;
+      BalanceAfterInsert(aNode);
+    end
+  else
+    Root := aNode;
+end;
+
+procedure TGLiteComparableAvlTree.BalanceAfterInsert(aNode: SizeInt);
+var
+  OldParent, OldChild: SizeInt;
+begin
+  OldParent := FNodes[aNode].Parent;
+  while OldParent <> 0 do
+    if FNodes[OldParent].Left = aNode then //aNode is left child => we must decrease OldParent.Balance
+      case FNodes[OldParent].Balance of
+        -1:
+          begin
+            if FNodes[aNode].Balance = -1 then
+              begin
+                RotateRight(OldParent);
+                FNodes[aNode].Balance := 0;
+                FNodes[OldParent].Balance := 0;
+              end
+            else
+              begin
+                OldChild := FNodes[aNode].Right;
+                RotateLeft(aNode);
+                RotateRight(OldParent);
+                case FNodes[OldChild].Balance of
+                  -1:
+                    begin
+                      FNodes[aNode].Balance := 0;
+                      FNodes[OldParent].Balance := 1;
+                    end;
+                  0:
+                    begin
+                      FNodes[aNode].Balance := 0;
+                      FNodes[OldParent].Balance := 0
+                    end;
+                else //1
+                  FNodes[aNode].Balance := -1;
+                  FNodes[OldParent].Balance := 0;
+                end;
+                FNodes[OldChild].Balance := 0;
+              end;
+            break;
+          end;
+        0:
+          begin
+            FNodes[OldParent].Balance := -1;
+            aNode := OldParent;
+            OldParent := FNodes[aNode].Parent;
+          end;
+      else //1
+        FNodes[OldParent].Balance := 0;
+        break;
+      end
+    else  // aNode is right child => we must increase OldParent.Balance
+      case FNodes[OldParent].Balance of
+       -1:
+         begin
+           FNodes[OldParent].Balance := 0;
+           break;
+         end;
+        0:
+          begin
+            FNodes[OldParent].Balance := 1;
+            aNode := OldParent;
+            OldParent := FNodes[aNode].Parent;
+          end;
+      else // 1
+        if FNodes[aNode].Balance = 1 then
+          begin
+            RotateLeft(OldParent);
+            FNodes[aNode].Balance := 0;
+            FNodes[OldParent].Balance := 0;
+          end
+        else
+          begin
+            OldChild := FNodes[aNode].Left;
+            RotateRight(aNode);
+            RotateLeft(OldParent);
+            case FNodes[OldChild].Balance of
+              -1:
+                begin
+                  FNodes[aNode].Balance := 1;
+                  FNodes[OldParent].Balance := 0;
+                end;
+              0:
+                begin
+                  FNodes[aNode].Balance := 0;
+                  FNodes[OldParent].Balance := 0;
+                end;
+            else  //1
+              FNodes[aNode].Balance := 0;
+              FNodes[OldParent].Balance := -1
+            end;
+            FNodes[OldChild].Balance := 0;
+          end;
+        break;
+      end;
+end;
+
+procedure TGLiteComparableAvlTree.RemoveNode(aNode: SizeInt);
+var
+  OldParent, Child: SizeInt;
+begin
+  if (FNodes[aNode].Left <> 0) and (FNodes[aNode].Right <> 0) then
+    ReplaceWithSuccessor(aNode);
+  OldParent := FNodes[aNode].Parent;
+  FNodes[aNode].Parent := 0;
+  if FNodes[aNode].Left <> 0 then
+    Child := FNodes[aNode].Left
+  else
+    Child := FNodes[aNode].Right;
+  if Child <> 0 then
+    FNodes[Child].Parent := OldParent;
+  if OldParent <> 0 then
+    begin
+      if FNodes[OldParent].Left = aNode then
+        begin
+          FNodes[OldParent].Left := Child;
+          BalanceAfterRemove(OldParent, Succ(FNodes[OldParent].Balance));
+        end
+      else
+        begin
+          FNodes[OldParent].Right := Child;
+          BalanceAfterRemove(OldParent, Pred(FNodes[OldParent].Balance));
+        end;
+    end
+  else
+    Root := Child;
+  FreeNode(aNode);
+end;
+
+procedure TGLiteComparableAvlTree.BalanceAfterRemove(aNode: SizeInt; aNewBalance: ShortInt);
+var
+  OldParent, Child, ChildOfChild: SizeInt;
+begin
+  while aNode <> 0 do
+    begin
+      OldParent := FNodes[aNode].Parent;
+      case aNewBalance of
+        -2:
+          begin
+            Child := FNodes[aNode].Left;
+            if FNodes[Child].Balance <= 0 then
+              begin
+                RotateRight(aNode);
+                FNodes[aNode].Balance := -Succ(FNodes[Child].Balance);
+                aNewBalance := Succ(FNodes[Child].Balance);
+                aNode := Child;
+                FNodes[Child].Balance := aNewBalance;
+              end
+            else
+              begin
+                ChildOfChild := FNodes[Child].Right;
+                RotateLeft(Child);
+                RotateRight(aNode);
+                case FNodes[ChildOfChild].Balance of
+                  -1:
+                    begin
+                      FNodes[aNode].Balance := 1;
+                      FNodes[Child].Balance := 0;
+                    end;
+                   0:
+                     begin
+                       FNodes[aNode].Balance := 0;
+                       FNodes[Child].Balance := 0;
+                     end;
+                else // 1
+                  FNodes[aNode].Balance := 0;
+                  FNodes[Child].Balance := -1;
+                end;
+                aNode := ChildOfChild;
+                aNewBalance := 0;
+                FNodes[ChildOfChild].Balance := 0;
+              end;
+          end;
+        -1:
+          begin
+            FNodes[aNode].Balance := aNewBalance;
+            break;
+          end;
+         0:
+           begin
+             FNodes[aNode].Balance := aNewBalance;
+             if OldParent <> 0 then
+               begin
+                 if FNodes[OldParent].Left = aNode then
+                   aNewBalance := Succ(FNodes[OldParent].Balance)
+                 else
+                   aNewBalance := Pred(FNodes[OldParent].Balance);
+                 aNode := OldParent;
+               end
+             else
+               break;
+           end;
+         1:
+           begin
+             FNodes[aNode].Balance := aNewBalance;
+             break;
+           end;
+         2:
+           begin
+             Child := FNodes[aNode].Right;
+             if FNodes[Child].Balance >= 0 then
+               begin
+                 RotateLeft(aNode);
+                 FNodes[aNode].Balance := ShortInt(1) - FNodes[Child].Balance;
+                 aNewBalance := Pred(FNodes[Child].Balance);
+                 aNode := Child;
+                 FNodes[Child].Balance := aNewBalance;
+               end
+             else
+               begin
+                 ChildOfChild := FNodes[Child].Left;
+                 RotateRight(Child);
+                 RotateLeft(aNode);
+                 case FNodes[ChildOfChild].Balance of
+                   -1:
+                     begin
+                       FNodes[aNode].Balance := 0;
+                       FNodes[Child].Balance := 1;
+                     end;
+                    0:
+                      begin
+                        FNodes[aNode].Balance := 0;
+                        FNodes[Child].Balance := 0;
+                      end;
+                 else // 1
+                   FNodes[aNode].Balance := -1;
+                   FNodes[Child].Balance := 0;
+                 end;
+                 FNodes[ChildOfChild].Balance := 0;
+                 aNode := ChildOfChild;
+                 aNewBalance := 0;
+               end;
+           end;
+      end;
+    end;
+end;
+
+function TGLiteComparableAvlTree.TestNodeState(aNode: SizeInt; var aState: TAvlTreeState): SizeInt;
+var
+  LHeight, RHeight: SizeInt;
+begin
+  if (aNode = 0) or (aState <> asConsistent) then exit(0);
+  if FNodes[aNode].Left <> 0 then
+    begin
+      if FNodes[FNodes[aNode].Left].Parent <> aNode then
+        begin
+          aState := asInvalidLink;
+          exit(0);
+        end;
+      if FNodes[FNodes[aNode].Left].Data.Key >= FNodes[aNode].Data.Key then
+        begin
+          aState := asInvalidKey;
+          exit(0);
+        end;
+    end;
+  if FNodes[aNode].Right <> 0 then
+    begin
+      if FNodes[FNodes[aNode].Right].Parent <> aNode then
+        begin
+          aState := asInvalidLink;
+          exit(0);
+        end;
+      if FNodes[FNodes[aNode].Right].Data.Key < FNodes[aNode].Data.Key then
+        begin
+          aState := asInvalidKey;
+          exit(0);
+        end;
+    end;
+  LHeight := TestNodeState(FNodes[aNode].Left, aState);
+  RHeight := TestNodeState(FNodes[aNode].Right, aState);
+  if aState <> asConsistent then exit(0);
+  if Abs(RHeight - LHeight) > 1 then
+    begin
+      aState := asInvalidHDelta;
+      exit(0);
+    end;
+  if FNodes[aNode].Balance <> (RHeight - LHeight) then
+    begin
+      aState := asInvalidBalance;
+      exit(0);
+    end;
+  Result := Succ(Math.Max(LHeight, RHeight));
+end;
+
+class operator TGLiteComparableAvlTree.Copy(constref aSrc: TGLiteComparableAvlTree;
+  var aDst: TGLiteComparableAvlTree);
+begin
+  if @aSrc <> @aDst then
+    aDst.FNodes := System.Copy(aSrc.FNodes);
+end;
+
+class operator TGLiteComparableAvlTree.AddRef(var aTree: TGLiteComparableAvlTree);
+begin
+  aTree.FNodes := System.Copy(aTree.FNodes);
+end;
+
+function TGLiteComparableAvlTree.GetEnumerator: TEnumerator;
+begin
+  Result.Init(@Self);
+end;
+
+procedure TGLiteComparableAvlTree.Clear;
+begin
+  FNodes := nil;
+end;
+
+procedure TGLiteComparableAvlTree.EnsureCapacity(aValue: SizeInt);
+begin
+  if aValue > Capacity then
+    Expand(aValue);
+end;
+
+procedure TGLiteComparableAvlTree.TrimToFit;
+begin
+  if Count > 0 then
+    System.SetLength(FNodes, Succ(Count))
+  else
+    Clear;
+end;
+
+function TGLiteComparableAvlTree.Add(constref aKey: TKey): PEntry;
+var
+  Node, ParentNode: SizeInt;
+begin
+  if FindNode(aKey, ParentNode) = 0 then
+    begin
+      Node := NewNode;
+      FNodes[Node].Data.Key := aKey;
+      InsertNodeAt(Node, ParentNode);
+      exit(@FNodes[Node].Data);
+    end;
+  Result := nil;
+end;
+
+function TGLiteComparableAvlTree.FindOrAdd(constref aKey: TKey; out e: PEntry): Boolean;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  Result := Node <> 0;
+  if not Result then
+    begin
+      Node := NewNode;
+      FNodes[Node].Data.Key := aKey;
+      InsertNodeAt(Node, ParentNode);
+    end;
+  e := @FNodes[Node].Data;
+end;
+
+function TGLiteComparableAvlTree.Find(constref aKey: TKey): PEntry;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  if Node <> 0 then
+    Result :=  @FNodes[Node].Data
+  else
+    Result := nil;
+end;
+
+function TGLiteComparableAvlTree.Remove(constref aKey: TKey): Boolean;
+var
+  Node, ParentNode: SizeInt;
+begin
+  Node := FindNode(aKey, ParentNode);
+  Result := Node <> 0;
+  if Result then
+    RemoveNode(Node);
+end;
+
+procedure TGLiteComparableAvlTree.RemoveAt(aIndex: SizeInt);
+begin
+  if aIndex > 0 then
+    RemoveNode(aIndex);
+end;
+
+function TGLiteComparableAvlTree.FindLess(constref aKey: TKey): SizeInt;
+var
+  CurrNode: SizeInt;
+begin
+  CurrNode := Root;
+  Result := 0;
+  while CurrNode <> 0 do
+    if aKey > FNodes[CurrNode].Data.Key then
+      begin
+        Result := CurrNode;
+        CurrNode := FNodes[CurrNode].Right;
+      end
+    else
+      CurrNode := FNodes[CurrNode].Left;
+end;
+
+function TGLiteComparableAvlTree.FindLessOrEqual(constref aKey: TKey): SizeInt;
+var
+  CurrNode: SizeInt;
+begin
+  CurrNode := Root;
+  Result := 0;
+  while CurrNode <> 0 do
+    if aKey >= FNodes[CurrNode].Data.Key then
+      begin
+        Result := CurrNode;
+        CurrNode := FNodes[CurrNode].Right;
+      end
+    else
+      CurrNode := FNodes[CurrNode].Left;
+end;
+
+function TGLiteComparableAvlTree.FindGreater(constref aKey: TKey): SizeInt;
+var
+  CurrNode: SizeInt;
+begin
+  CurrNode := Root;
+  Result := 0;
+  while CurrNode <> 0 do
+    if aKey < FNodes[CurrNode].Data.Key then
+      begin
+        Result := CurrNode;
+        CurrNode := FNodes[CurrNode].Left;
+      end
+    else
+      CurrNode := FNodes[CurrNode].Right;
+end;
+
+function TGLiteComparableAvlTree.FindGreaterOrEqual(constref aKey: TKey): SizeInt;
+var
+  CurrNode: SizeInt;
+begin
+  CurrNode := Root;
+  Result := 0;
+  while CurrNode <> 0 do
+    if aKey <= FNodes[CurrNode].Data.Key then
+      begin
+        Result := CurrNode;
+        CurrNode := FNodes[CurrNode].Left;
+      end
+    else
+      CurrNode := FNodes[CurrNode].Right;
+end;
+
+function TGLiteComparableAvlTree.CheckState: TAvlTreeState;
 begin
   Result := asConsistent;
   if Root <> 0 then
