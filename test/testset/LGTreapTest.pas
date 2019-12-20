@@ -77,6 +77,10 @@ type
     procedure Contains;
     procedure Remove;
     procedure Find;
+    procedure FindLess;
+    procedure FindLessOrEqual;
+    procedure FindGreater;
+    procedure FindGreaterOrEqual;
     procedure Split;
     procedure IndexOf;
     procedure ToArray;
@@ -988,6 +992,70 @@ begin
     AssertFalse(Treap.Find(I, J));
 end;
 
+procedure TLiteSegmentTreapTest.FindLess;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I, J: Integer;
+begin
+  for I in [1..TestSize] do
+    Treap.Add(I, I);
+  for I in [2..TestSize] do
+    begin
+      AssertTrue(Treap.FindLess(I, J));
+      AssertTrue(J = I - 1);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.FindLessOrEqual;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I, J: Integer;
+begin
+  for I in [1..TestSize] do
+    Treap.Add(I, I);
+  for I in [1..TestSize] do
+    begin
+      AssertTrue(Treap.FindLessOrEqual(I, J));
+      AssertTrue(J = I);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.FindGreater;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I, J: Integer;
+begin
+  for I in [1..TestSize] do
+    Treap.Add(I, I);
+  for I in [1..TestSize-1] do
+    begin
+      AssertTrue(Treap.FindGreater(I, J));
+      AssertTrue(J = I + 1);
+    end;
+end;
+
+procedure TLiteSegmentTreapTest.FindGreaterOrEqual;
+const
+  TestSize = 100;
+var
+  Treap: TIntTreap;
+  I, J: Integer;
+begin
+  for I in [1..TestSize] do
+    Treap.Add(I, I);
+  for I in [1..TestSize] do
+    begin
+      AssertTrue(Treap.FindGreaterOrEqual(I, J));
+      AssertTrue(J = I);
+    end;
+end;
+
 procedure TLiteSegmentTreapTest.Split;
 var
   Treap, Treap2, Treap3: TIntTreap;
@@ -1122,6 +1190,8 @@ begin
         sum += a[J];
       AssertTrue(Treap.RangeQuery(L, R) = sum);
       AssertTrue(Treap.RangeQuery(R, L) = 0);
+      Treap.RangeQuery(L, R, J);
+      AssertTrue(J = R - L);
     end;
 end;
 
@@ -1168,6 +1238,8 @@ begin
       for J := 0 to Pred(I) do
         sum += a[J];
       AssertTrue(Treap.HeadQuery(I) = sum);
+      Treap.HeadQuery(I, J);
+      AssertTrue(J = I);
     end;
 end;
 
@@ -1214,6 +1286,8 @@ begin
       for J := I to Pred(TestSize) do
         sum += a[J];
       AssertTrue(Treap.TailQuery(I) = sum);
+      Treap.TailQuery(I, J);
+      AssertTrue(J = TestSize - I);
     end;
 end;
 
