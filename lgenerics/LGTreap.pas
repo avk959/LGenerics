@@ -223,6 +223,10 @@ type
     function  ToArray: TEntryArray;                            //O(N)
     function  Contains(constref aKey: TKey): Boolean;          //O(LogN)
     function  Find(constref aKey: TKey; out aValue: TValue): Boolean;    //O(LogN)
+    function  FindLess(constref aKey: TKey; out aLess: TKey): Boolean;
+    function  FindLessOrEqual(constref aKey: TKey; out aLessOrEq: TKey): Boolean;
+    function  FindGreater(constref aKey: TKey; out aGreater: TKey): Boolean;
+    function  FindGreaterOrEqual(constref aKey: TKey; out aGreaterOrEq: TKey): Boolean;
     function  IndexOf(constref aKey: TKey): SizeInt; inline;   //O(LogN)
     function  Add(constref aKey: TKey; constref aValue: TValue): Boolean;//O(LogN)
     function  Add(constref e: TEntry): Boolean; inline;        //O(LogN)
@@ -234,16 +238,25 @@ type
     function  RangeQueryI(L, R: SizeInt): TValue;              //O(LogN)
   { returns value of the monoid function on the half-open interval[L, R) }
     function  RangeQuery(constref L, R: TKey): TValue;         //O(LogN)
+  { returns value of the monoid function on the half-open interval[L, R)
+    and the number of elements that fit into this interval in aCount }
+    function  RangeQuery(constref L, R: TKey; out aCount: SizeInt): TValue;
   { returns value of the monoid function on the segment[0, aIndex](indices);
     raises exception if aIndex out of bounds }
     function  HeadQueryI(aIndex: SizeInt): TValue;             //O(LogN)
-  { returns value of the monoid function on the half-open interval[Lowest key, aKey) }
+  { returns value of the monoid function on the half-open interval[Lowest(key), aKey) }
     function  HeadQuery(constref aKey: TKey): TValue;          //O(LogN)
+  { returns value of the monoid function on the half-open interval[Lowest(key), aKey)
+    and the number of elements that fit into this interval in aCount }
+    function  HeadQuery(constref aKey: TKey; out aCount: SizeInt): TValue;
   { returns value of the monoid function on the segment[aIndex, Pred(Count)](indices);
     raises exception if aIndex out of bounds }
     function  TailQueryI(aIndex: SizeInt): TValue;             //O(LogN)
-  { returns value of the monoid function on the segment[aKey, Highest key] }
+  { returns value of the monoid function on the segment[aKey, Highest(key)] }
     function  TailQuery(constref aKey: TKey): TValue;          //O(LogN)
+  { returns value of the monoid function on the segment[aKey, Highest(key)]
+    and the number of elements that fit into this interval in aCount }
+    function  TailQuery(constref aKey: TKey; out aCount: SizeInt): TValue;
     property  Count: SizeInt read GetCount;                    //O(1)
     property  Height: SizeInt read GetHeight;                  //O(N)
     property  Entries[aIndex: SizeInt]: TEntry read GetEntry;  //O(LogN)
@@ -1299,7 +1312,7 @@ begin
             Result := RemoveNode(aKey, aRoot^.Left)
           else
             Result := RemoveNode(aKey, aRoot^.Right);
-          if Result and (aRoot <> nil) then
+          if Result then
             UpdateNode(aRoot);
         end;
     end
@@ -1329,7 +1342,7 @@ begin
             Result := RemoveNode(aKey, aRoot^.Left, v)
           else
             Result := RemoveNode(aKey, aRoot^.Right, v);
-          if Result and (aRoot <> nil) then
+          if Result then
             UpdateNode(aRoot);
         end;
     end
@@ -1425,6 +1438,70 @@ begin
   Result := False;
 end;
 
+function TGLiteSegmentTreap.FindLess(constref aKey: TKey; out aLess: TKey): Boolean;
+var
+  Node: PNode;
+begin
+  if FRoot <> nil then
+    begin
+      Node := TUtil.GetLess(FRoot, aKey);
+      if Node <> nil then
+        begin
+          aLess := Node^.Key;
+          exit(True);
+        end;
+    end;
+  Result := False;
+end;
+
+function TGLiteSegmentTreap.FindLessOrEqual(constref aKey: TKey; out aLessOrEq: TKey): Boolean;
+var
+  Node: PNode;
+begin
+  if FRoot <> nil then
+    begin
+      Node := TUtil.GetLessOrEqual(FRoot, aKey);
+      if Node <> nil then
+        begin
+          aLessOrEq := Node^.Key;
+          exit(True);
+        end;
+    end;
+  Result := False;
+end;
+
+function TGLiteSegmentTreap.FindGreater(constref aKey: TKey; out aGreater: TKey): Boolean;
+var
+  Node: PNode;
+begin
+  if FRoot <> nil then
+    begin
+      Node := TUtil.GetGreater(FRoot, aKey);
+      if Node <> nil then
+        begin
+          aGreater := Node^.Key;
+          exit(True);
+        end;
+    end;
+  Result := False;
+end;
+
+function TGLiteSegmentTreap.FindGreaterOrEqual(constref aKey: TKey; out aGreaterOrEq: TKey): Boolean;
+var
+  Node: PNode;
+begin
+  if FRoot <> nil then
+    begin
+      Node := TUtil.GetGreaterOrEqual(FRoot, aKey);
+      if Node <> nil then
+        begin
+          aGreaterOrEq := Node^.Key;
+          exit(True);
+        end;
+    end;
+  Result := False;
+end;
+
 function TGLiteSegmentTreap.IndexOf(constref aKey: TKey): SizeInt;
 begin
   Result := TUtil.GetKeyIndex(FRoot, aKey);
@@ -1500,6 +1577,28 @@ begin
     Result := TValMonoid.Identity;
 end;
 
+function TGLiteSegmentTreap.RangeQuery(constref L, R: TKey; out aCount: SizeInt): TValue;
+var
+  pL, pM, pR: PNode;
+begin
+  aCount := 0;
+  if (FRoot <> nil) and (TCmpRel.Compare(L, R) < 0) then
+    begin
+      SplitNode(L, FRoot, pL, pR);
+      SplitNode(R, pR, pM, pR);
+      if pM <> nil then
+        begin
+          Result := pM^.CacheVal;
+          aCount := pM^.Size;
+        end
+      else
+        Result := TValMonoid.Identity;
+      FRoot := MergeNode(MergeNode(pL, pM), pR);
+    end
+  else
+    Result := TValMonoid.Identity;
+end;
+
 function TGLiteSegmentTreap.HeadQueryI(aIndex: SizeInt): TValue;
 begin
   CheckIndexRange(aIndex);
@@ -1526,6 +1625,27 @@ begin
     Result := TValMonoid.Identity;
 end;
 
+function TGLiteSegmentTreap.HeadQuery(constref aKey: TKey; out aCount: SizeInt): TValue;
+var
+  pL, pR: PNode;
+begin
+  aCount := 0;
+  if FRoot <> nil then
+    begin
+      SplitNode(aKey, FRoot, pL, pR);
+      if pL <> nil then
+        begin
+          Result := pL^.CacheVal;
+          aCount := pL^.Size;
+        end
+      else
+        Result := TValMonoid.Identity;
+      FRoot := MergeNode(pL, pR);
+    end
+  else
+    Result := TValMonoid.Identity;
+end;
+
 function TGLiteSegmentTreap.TailQueryI(aIndex: SizeInt): TValue;
 begin
   CheckIndexRange(aIndex);
@@ -1541,6 +1661,27 @@ begin
       SplitNode(aKey, FRoot, pL, pR);
       if pR <> nil then
         Result := pR^.CacheVal
+      else
+        Result := TValMonoid.Identity;
+      FRoot := MergeNode(pL, pR);
+    end
+  else
+    Result := TValMonoid.Identity;
+end;
+
+function TGLiteSegmentTreap.TailQuery(constref aKey: TKey; out aCount: SizeInt): TValue;
+var
+  pL, pR: PNode;
+begin
+  aCount := 0;
+  if FRoot <> nil then
+    begin
+      SplitNode(aKey, FRoot, pL, pR);
+      if pR <> nil then
+        begin
+          Result := pR^.CacheVal;
+          aCount := pR^.Size;
+        end
       else
         Result := TValMonoid.Identity;
       FRoot := MergeNode(pL, pR);
