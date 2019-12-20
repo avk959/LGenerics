@@ -1084,7 +1084,9 @@ begin
           System.FillChar(FItems[sr.InsertIndex], SizeOf(T), 0);
           FItems[sr.InsertIndex] := aValue;
         end;
-    end;
+    end
+  else
+    FItems[aIndex] := aValue; ///////
 end;
 
 procedure TGBaseSortedList.RemoveDuplicates;
@@ -1684,7 +1686,7 @@ function TGBaseSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBound
 var
   StartIdx: SizeInt;
 begin
-  StartIdx := IndexOfCeil(ALowBound, rbLow in aIncludeBounds);
+  StartIdx := IndexOfCeil(aLowBound, rbLow in aIncludeBounds);
   if StartIdx < 0 then
     StartIdx := ElemCount;
   BeginIteration;
@@ -2294,7 +2296,9 @@ begin
           System.FillChar(FBuffer.FItems[sr.InsertIndex], SizeOf(T), 0);
           FBuffer.FItems[sr.InsertIndex] := aValue;
         end;
-    end;
+    end
+  else
+    FBuffer.FItems[aIndex] := aValue;
 end;
 
 procedure TGLiteSortedList.InsertItem(aIndex: SizeInt; constref aValue: T);
@@ -2672,7 +2676,7 @@ function TGLiteSortedList.Range(constref aLowBound, aHighBound: T; aIncludeBound
 var
   StartIdx: SizeInt;
 begin
-  StartIdx := IndexOfCeil(ALowBound, rbLow in aIncludeBounds);
+  StartIdx := IndexOfCeil(aLowBound, rbLow in aIncludeBounds);
   if StartIdx < 0 then
     StartIdx := Count;
   Result := TRange.Create(@Self, StartIdx, IndexOfFloor(aHighBound, rbHigh in aIncludeBounds));
@@ -2855,7 +2859,9 @@ begin
           System.FillChar(FBuffer.FItems[sr.InsertIndex], SizeOf(T), 0);
           FBuffer.FItems[sr.InsertIndex] := aValue;
         end;
-    end;
+    end
+  else
+    FBuffer.FItems[aIndex] := aValue;
 end;
 
 procedure TGLiteComparableSortedList.InsertItem(aIndex: SizeInt; constref aValue: T);
