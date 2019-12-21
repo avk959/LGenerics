@@ -37,7 +37,8 @@ uses
   LGSimpleGraphTest,
   LGSimpleDiGraphTest,
   LGInt128Test,
-  LGTreapTest;
+  LGTreapTest,
+  LGRbTreeTest;
 
 type
 
