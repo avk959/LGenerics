@@ -1173,6 +1173,7 @@ var
   Treap: TIntTreap;
   a: array of Integer;
   I, J, L, R, sum: Integer;
+  cnt: SizeInt;
 begin
   SetLength(a, TestSize);
   for I := 0 to High(a) do
@@ -1190,8 +1191,8 @@ begin
         sum += a[J];
       AssertTrue(Treap.RangeQuery(L, R) = sum);
       AssertTrue(Treap.RangeQuery(R, L) = 0);
-      Treap.RangeQuery(L, R, J);
-      AssertTrue(J = R - L);
+      Treap.RangeQuery(L, R, cnt);
+      AssertTrue(cnt = R - L);
     end;
 end;
 
@@ -1225,6 +1226,7 @@ var
   Treap: TIntTreap;
   a: array of Integer;
   I, J, sum: Integer;
+  cnt: SizeInt;
 begin
   SetLength(a, TestSize);
   for I := 0 to High(a) do
@@ -1238,8 +1240,8 @@ begin
       for J := 0 to Pred(I) do
         sum += a[J];
       AssertTrue(Treap.HeadQuery(I) = sum);
-      Treap.HeadQuery(I, J);
-      AssertTrue(J = I);
+      Treap.HeadQuery(I, cnt);
+      AssertTrue(cnt = I);
     end;
 end;
 
@@ -1273,6 +1275,7 @@ var
   Treap: TIntTreap;
   a: array of Integer;
   I, J, sum: Integer;
+  cnt: SizeInt;
 begin
   SetLength(a, TestSize);
   for I := 0 to High(a) do
@@ -1286,8 +1289,8 @@ begin
       for J := I to Pred(TestSize) do
         sum += a[J];
       AssertTrue(Treap.TailQuery(I) = sum);
-      Treap.TailQuery(I, J);
-      AssertTrue(J = TestSize - I);
+      Treap.TailQuery(I, cnt);
+      AssertTrue(cnt = TestSize - I);
     end;
 end;
 
