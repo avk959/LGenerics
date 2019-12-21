@@ -1190,7 +1190,7 @@ end;
 function TGAutoRef<T>.ReleaseInstance: T;
 begin
   if not OwnsInstance then
-    exit(nil);
+    exit(Default(T));
   Result := Release;
 end;
 
@@ -1271,7 +1271,7 @@ end;
 function TGUniqRef<T>.ReleaseInstance: T;
 begin
   if not OwnsInstance then
-    exit(nil);
+    exit(Default(T));
   Result := Release;
 end;
 
@@ -1290,7 +1290,7 @@ end;
 procedure TGSharedRefA<T>.InitInstance(aValue: T);
 begin
   FInstance := aValue;
-  if aValue <> nil then
+  if Assigned(aValue) then
     begin
       System.New(FRefCount);
       FRefCount^ := 1;
@@ -1385,7 +1385,7 @@ end;
 procedure TGSharedRef<T>.InitInstance(aValue: T);
 begin
   FInstance := aValue;
-  if aValue <> nil then
+  if Assigned(aValue) then
     begin
       System.New(FRefCount);
       FRefCount^ := 1;
