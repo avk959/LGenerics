@@ -346,7 +346,9 @@ type
 
   const
     NODE_SIZE   = SizeOf(TNode);
-    MAX_CAPACITY: SizeInt  = MAX_CONTAINER_SIZE div NODE_SIZE;
+    {$PUSH}{$J+}
+    MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
+    {$POP}
 
   public
   type
@@ -1384,9 +1386,7 @@ end;
 
 class constructor TGLiteHashMultiMap.Init;
 begin
-{$PUSH}{$J+}
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
 end;
 
 class operator TGLiteHashMultiMap.Initialize(var m: TGLiteHashMultiMap);
