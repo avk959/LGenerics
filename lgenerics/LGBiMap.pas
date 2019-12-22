@@ -87,8 +87,9 @@ type
     TChainList = array of SizeInt;
 
   const
+    {$PUSH}{$J+}
     MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 2) div SizeOf(TNode);
-
+    {$POP}
   type
     TKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
     protected
@@ -955,9 +956,7 @@ end;
 
 class constructor TGHashBiMap.Init;
 begin
-{$PUSH}{$J+}
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
 end;
 
 constructor TGHashBiMap.Create;

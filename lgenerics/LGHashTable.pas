@@ -134,8 +134,9 @@ type
 
   const
     NODE_SIZE             = SizeOf(TNode);
+    {$PUSH}{$J+}
     MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
-
+    {$POP}
   type
     TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
 
@@ -447,8 +448,9 @@ type
   const
     NODE_SIZE             = SizeOf(TNode);
     USED_FLAG: SizeInt    = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
+    {$PUSH}{$J+}
     MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
-
+    {$POP}
   type
     TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
 
@@ -546,8 +548,9 @@ type
   const
     NODE_SIZE             = SizeOf(TNode);
     USED_FLAG: SizeInt    = SizeInt(SizeInt(1) shl Pred(BitSizeOf(SizeInt)));
+    {$PUSH}{$J+}
     MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
-
+    {$POP}
   type
     TFakeNode = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
     PLiteHashTableLP = ^TGLiteHashTableLP;
@@ -699,8 +702,9 @@ type
   const
     NODE_SIZE             = SizeOf(TNode);
     USED_FLAG: SizeInt    = SizeInt(1);
+    {$PUSH}{$J+}
     MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
-
+    {$POP}
   type
     TFakeNode  = {$IFNDEF FPC_REQUIRES_PROPER_ALIGNMENT}array[0..Pred(NODE_SIZE)] of Byte{$ELSE}TNode{$ENDIF};
     PHashTable = ^TGLiteIntHashTable;
@@ -992,9 +996,7 @@ end;
 
 class constructor TGOpenAddressing.Init;
 begin
-{$PUSH}{$J+}
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
 end;
 
 class function TGOpenAddressing.DefaultLoadFactor: Single;
@@ -2764,9 +2766,7 @@ end;
 
 class constructor TGHashTableLP.Init;
 begin
-{$PUSH}{$J+}
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
 end;
 
 class function TGHashTableLP.DefaultLoadFactor: Single;
@@ -3151,9 +3151,7 @@ end;
 
 class constructor TGLiteHashTableLP.Init;
 begin
-{$PUSH}{$J+}
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
 end;
 
 class operator TGLiteHashTableLP.Initialize(var ht: TGLiteHashTableLP);
@@ -3716,9 +3714,7 @@ end;
 
 class constructor TGLiteIntHashTable.Init;
 begin
-{$PUSH}{$J+}
   MAX_CAPACITY := LGUtils.RoundUpTwoPower(MAX_CAPACITY);
-{$POP}
 end;
 
 class operator TGLiteIntHashTable.Initialize(var ht: TGLiteIntHashTable);
