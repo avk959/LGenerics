@@ -133,7 +133,7 @@ type
     end;
 
   const
-    NODE_SIZE             = SizeOf(TNode);
+    NODE_SIZE = SizeOf(TNode);
     {$PUSH}{$J+}
     MAX_CAPACITY: SizeInt = MAX_CONTAINER_SIZE div NODE_SIZE;
     {$POP}

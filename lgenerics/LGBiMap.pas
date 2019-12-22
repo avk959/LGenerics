@@ -88,7 +88,7 @@ type
 
   const
     {$PUSH}{$J+}
-    MAX_CAPACITY: SizeInt  = (MAX_CONTAINER_SIZE shr 2) div SizeOf(TNode);
+    MAX_CAPACITY: SizeInt = (MAX_CONTAINER_SIZE shr 2) div SizeOf(TNode);
     {$POP}
   type
     TKeyEnumerable = class(specialize TGAutoEnumerable<TKey>)
