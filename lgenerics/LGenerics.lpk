@@ -242,11 +242,6 @@
         <UnitName Value="LGRbTree"/>
       </Item52>
     </Files>
-    <RequiredPkgs Count="1">
-      <Item1>
-        <PackageName Value="LCLBase"/>
-      </Item1>
-    </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>
     </UsageOptions>

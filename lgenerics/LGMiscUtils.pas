@@ -28,10 +28,7 @@ interface
 
 uses
 
-  Classes,
-  SysUtils,
-  math,
-  LazFileUtils,
+  Classes, SysUtils, math,
   LGUtils,
   {%H-}LGHelpers,
   LGArrayHelpers,
@@ -5008,12 +5005,17 @@ end;
 
 class function TTextFileReader.FileExists(const aFileName: string): Boolean;
 begin
-  Result := FileExistsUtf8(aFileName);
+  Result := SysUtils.FileExists(aFileName);
 end;
 
 class function TTextFileReader.FileSize(const aFileName: string): Int64;
 begin
-  Result := FileSizeUtf8(aFileName);
+  with TFileStream.Create(aFileName, fmOpenRead) do
+    try
+      Result := Size;
+    finally
+      Free;
+    end;
 end;
 
 constructor TTextFileReader.Create;
