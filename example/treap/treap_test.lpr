@@ -24,6 +24,7 @@ uses
   LGTreap;
 
 const
+  InitSize   = 1000000;
   MaxSize    = 1500000; // maximum size of database
   MaxPay     = 50000;   // maximum possible payment(for data generation)
   PayLimit   = 40000;   // payment threshold of interest
@@ -88,7 +89,7 @@ var
   I: Integer;
   p: TPayment;
 begin
-  for I := 1 to MaxSize do
+  for I := 1 to InitSize do
     begin
       p := GenRandomPay;
       PayList[p.PayTime] := TPayData.Create(p.Pay);
@@ -133,7 +134,7 @@ begin
         begin
           WriteLn('In the period from ', DateTimeToStr(UnixToDateTime(RBegin)),
                   ' to ',DateTimeToStr(UnixToDateTime(REnd)));
-          WriteLn('    Amount = ', CurrToStr(pd.Pay), ', count = ', pd.Count);
+          WriteLn('    amount = ', CurrToStr(pd.Pay), ', count = ', pd.Count);
         end;
 
       UpdateList;
