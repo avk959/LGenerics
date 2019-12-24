@@ -749,7 +749,7 @@ type
     procedure Expand;
     function  DoFind(aKey: TKey; aKeyHash: SizeInt): SizeInt;
     procedure DoRemove(aIndex: SizeInt);
-    class function HashCode(aValue: TKey): SizeInt; static; //inline;
+    class function HashCode(aValue: TKey): SizeInt; static; inline;
     class constructor Init;
     class operator Initialize(var ht: TGLiteIntHashTable);
     class operator Copy(constref aSrc: TGLiteIntHashTable; var aDst: TGLiteIntHashTable);
@@ -3704,7 +3704,7 @@ end;
 class function TGLiteIntHashTable.HashCode(aValue: TKey): SizeInt;
 begin
 {$IF DEFINED(CPU64)}
-  Result := SizeInt(aValue) * SizeInt($9e3779b97f4a7c15);
+  Result := SizeInt(aValue) * SizeInt($9e3779b97f4a7c15); // $fd258f8f3210c68 ???
 {$ELSEIF DEFINED(CPU32)}
   Result := SizeInt(aValue) * SizeInt($9e3779b9);
 {$ELSE}
