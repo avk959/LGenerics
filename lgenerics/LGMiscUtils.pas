@@ -5010,12 +5010,16 @@ end;
 
 class function TTextFileReader.FileSize(const aFileName: string): Int64;
 begin
-  with TFileStream.Create(aFileName, fmOpenRead) do
-    try
-      Result := Size;
-    finally
-      Free;
-    end;
+  try
+    with TFileStream.Create(aFileName, fmOpenRead) do
+      try
+        Result := Size;
+      finally
+        Free;
+      end;
+  except
+    Result := NULL_INDEX;
+  end;
 end;
 
 constructor TTextFileReader.Create;
