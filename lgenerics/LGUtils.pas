@@ -78,7 +78,6 @@ const
   NULL_INDEX: SizeInt        = SizeInt(-1);
 
 type
-
   TGOptional<T> = record
   private
   var
@@ -747,6 +746,36 @@ type
     procedure Clear; inline;
     procedure Join(var nm: TGJoinableNodeManager<TNode>);
     property  FreeCount: SizeInt read FFreeCount;
+  end;
+
+  TGTuple2<T1, T2> = record
+    F1: T1;
+    F2: T2;
+    constructor Create(constref v1: T1; constref v2: T2);
+  end;
+
+  TGTuple3<T1, T2, T3> = record
+    F1: T1;
+    F2: T2;
+    F3: T3;
+    constructor Create(constref v1: T1; constref v2: T2; constref v3: T3);
+  end;
+
+  TGTuple4<T1, T2, T3, T4> = record
+    F1: T1;
+    F2: T2;
+    F3: T3;
+    F4: T4;
+    constructor Create(constref v1: T1; constref v2: T2; constref v3: T3; constref v4: T4);
+  end;
+
+  TGTuple5<T1, T2, T3, T4, T5> = record
+    F1: T1;
+    F2: T2;
+    F3: T3;
+    F4: T4;
+    F5: T5;
+    constructor Create(constref v1: T1; constref v2: T2; constref v3: T3; constref v4: T4; constref v5: T5);
   end;
 
   { TGAddMonoid uses Default(T) as identity;
@@ -2342,6 +2371,46 @@ begin
       nm.FHead := nil;
       nm.FTail := nil;
     end;
+end;
+
+{ TGTuple2 }
+
+constructor TGTuple2<T1, T2>.Create(constref v1: T1; constref v2: T2);
+begin
+  F1 := v1;
+  F2 := v2;
+end;
+
+{ TGTuple3 }
+
+constructor TGTuple3<T1, T2, T3>.Create(constref v1: T1; constref v2: T2; constref v3: T3);
+begin
+  F1 := v1;
+  F2 := v2;
+  F3 := v3;
+end;
+
+{ TGTuple4 }
+
+constructor TGTuple4<T1, T2, T3, T4>.Create(constref v1: T1; constref v2: T2; constref v3: T3;
+  constref v4: T4);
+begin
+  F1 := v1;
+  F2 := v2;
+  F3 := v3;
+  F4 := v4;
+end;
+
+{ TGTuple5 }
+
+constructor TGTuple5<T1, T2, T3, T4, T5>.Create(constref v1: T1; constref v2: T2; constref v3: T3;
+  constref v4: T4; constref v5: T5);
+begin
+  F1 := v1;
+  F2 := v2;
+  F3 := v3;
+  F4 := v4;
+  F5 := v5;
 end;
 
 { TGAddMonoid }

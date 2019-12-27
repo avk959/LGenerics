@@ -213,19 +213,6 @@ type
     function GetEnumerator: TSpecEnumerator; override;
   end;
 
-  generic TGTuple2<T1, T2> = record
-    F1: T1;
-    F2: T2;
-    constructor Create(constref v1: T1; constref v2: T2);
-  end;
-
-  generic TGTuple3<T1, T2, T3> = record
-    F1: T1;
-    F2: T2;
-    F3: T3;
-    constructor Create(constref v1: T1; constref v2: T2; constref v3: T3);
-  end;
-
   { monadic regular function }
   generic TGMonadic<T, TResult> = function(constref v: T): TResult;
   { dyadic regular function }
@@ -761,23 +748,6 @@ end;
 function TGGenerator.GetEnumerator: TSpecEnumerator;
 begin
   Result := TEnumerator.Create(Self);
-end;
-
-{ TGTuple2 }
-
-constructor TGTuple2.Create(constref v1: T1; constref v2: T2);
-begin
-  F1 := v1;
-  F2 := v2;
-end;
-
-{ TGTuple3 }
-
-constructor TGTuple3.Create(constref v1: T1; constref v2: T2; constref v3: T3);
-begin
-  F1 := v1;
-  F2 := v2;
-  F3 := v3;
 end;
 
 { TGDeferMonadic }
