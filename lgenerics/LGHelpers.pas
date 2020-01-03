@@ -509,13 +509,7 @@ begin
 {$IFNDEF CPU16}
   Result := SizeInt(L) - SizeInt(R);
 {$ELSE !CPU16}
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 {$ENDIF !CPU16}
 end;
 
@@ -564,13 +558,7 @@ begin
 {$IFNDEF CPU16}
   Result := SizeInt(L) - SizeInt(R);
 {$ELSE !CPU16}
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 {$ENDIF !CPU16}
 end;
 
@@ -589,13 +577,7 @@ begin
 {$IFNDEF CPU16}
   Result := SizeInt(L) - SizeInt(R);
 {$ELSE !CPU16}
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 {$ENDIF !CPU16}
 end;
 
@@ -614,13 +596,7 @@ begin
 {$IFDEF CPU64}
   Result := SizeInt(L) - SizeInt(R);
 {$ELSE CPU64}
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 {$ENDIF CPU64}
 end;
 
@@ -639,13 +615,7 @@ begin
 {$IFDEF CPU64}
   Result := SizeInt(L) - SizeInt(R);
 {$ELSE CPU64}
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 {$ENDIF CPU64}
 end;
 
@@ -661,13 +631,7 @@ end;
 
 class function TGQWordHelper.Compare(L, R: QWord): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 class function TGInt64Helper.HashCode(aValue: Int64): SizeInt;
@@ -682,13 +646,7 @@ end;
 
 class function TGInt64Helper.Compare(L, R: Int64): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 class function TGNativeUIntHelper.HashCode(aValue: NativeUInt): SizeInt;
@@ -709,13 +667,7 @@ end;
 
 class function TGNativeUIntHelper.Compare(L, R: NativeUInt): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 class function TGNativeIntHelper.HashCode(aValue: NativeInt): SizeInt;
@@ -736,13 +688,7 @@ end;
 
 class function TGNativeIntHelper.Compare(L, R: NativeInt): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 class function TGPointerHelper.HashCode(aValue: Pointer): SizeInt;
@@ -757,13 +703,7 @@ end;
 
 class function TGPointerHelper.Compare(L, R: Pointer): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 function TGSingleHelper.IsZero: Boolean;
@@ -786,13 +726,7 @@ end;
 
 class function TGSingleHelper.Compare(L, R: Single): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 function TGDoubleHelper.IsZero: Boolean;
@@ -815,13 +749,7 @@ end;
 
 class function TGDoubleHelper.Compare(L, R: Double): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 {$ifdef FPC_HAS_TYPE_EXTENDED}
 function TGExtendedHelper.IsZero: Boolean;
@@ -846,13 +774,7 @@ end;
 
 class function TGExtendedHelper.Compare(L, R: Extended): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 {$ENDIF}
 
@@ -870,13 +792,7 @@ end;
 
 class function TCompHelper.Compare(L, R: Comp): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 class function TGDateTimeHelper.HashCode(aValue: TDateTime): SizeInt;
@@ -891,13 +807,7 @@ end;
 
 class function TGDateTimeHelper.Compare(L, R: TDateTime): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 class function TGDateHelper.HashCode(aValue: TDate): SizeInt;
@@ -912,13 +822,7 @@ end;
 
 class function TGDateHelper.Compare(L, R: TDate): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 class function TGTimeHelper.HashCode(aValue: TTime): SizeInt;
@@ -933,13 +837,7 @@ end;
 
 class function TGTimeHelper.Compare(L, R: TTime): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 class function TGCurrencyHelper.HashCode(const aValue: Currency): SizeInt;
@@ -954,13 +852,7 @@ end;
 
 class function TGCurrencyHelper.Compare(const L, R: Currency): SizeInt;
 begin
-  if L > R then
-    Result := 1
-  else
-    if R > L then
-      Result := -1
-    else
-      Result := 0;
+  Result := Ord(L > R) - Ord(L < R);
 end;
 
 function TGCurrencyHelper.ToString: string;
