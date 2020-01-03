@@ -538,6 +538,9 @@ type
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(v: TVector; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var v: TLiteVector; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
@@ -631,6 +634,9 @@ type
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(v: TVector; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var v: TLiteVector; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; o: TSortOrder = soAsc); static; inline;
@@ -717,6 +723,9 @@ type
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
@@ -807,6 +816,9 @@ type
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(v: TVector; c: TOnCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder = soAsc); static; inline;
@@ -897,6 +909,9 @@ type
   { slightly modified Introsort with pseudo-median-of-9 pivot selection }
     class procedure IntroSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
     class procedure IntroSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static;
+    class procedure PDQSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort, inspired by Java Timsort }
     class procedure MergeSort(v: TVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
     class procedure MergeSort(var v: TLiteVector; c: TCompare; o: TSortOrder = soAsc); static; inline;
@@ -3001,6 +3016,19 @@ begin
     THelper.IntroSort(v.FBuffer.FItems[0..Pred(v.Count)], o);
 end;
 
+class procedure TGBaseVectorHelper.PDQSort(v: TVector; o: TSortOrder);
+begin
+   v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.PDQSort(v.FItems[0..Pred(v.ElemCount)], o);
+end;
+
+class procedure TGBaseVectorHelper.PDQSort(var v: TLiteVector; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.PDQSort(v.FBuffer.FItems[0..Pred(v.Count)], o);
+end;
+
 class procedure TGBaseVectorHelper.MergeSort(v: TVector; o: TSortOrder);
 begin
   v.CheckInIteration;
@@ -3382,6 +3410,19 @@ begin
     THelper.IntroSort(v.FBuffer.FItems[0..Pred(v.Count)], o);
 end;
 
+class procedure TGComparableVectorHelper.PDQSort(v: TVector; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.PDQSort(v.FItems[0..Pred(v.ElemCount)], o);
+end;
+
+class procedure TGComparableVectorHelper.PDQSort(var v: TLiteVector; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.PDQSort(v.FBuffer.FItems[0..Pred(v.Count)], o);
+end;
+
 class procedure TGComparableVectorHelper.MergeSort(v: TVector; o: TSortOrder);
 begin
   v.CheckInIteration;
@@ -3718,6 +3759,19 @@ class procedure TGRegularVectorHelper.IntroSort(var v: TLiteVector; c: TCompare;
 begin
   if v.Count > 1 then
     THelper.IntroSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
+end;
+
+class procedure TGRegularVectorHelper.PDQSort(v: TVector; c: TCompare; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.PDQSort(v.FItems[0..Pred(v.ElemCount)], c, o);
+end;
+
+class procedure TGRegularVectorHelper.PDQSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.PDQSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
 class procedure TGRegularVectorHelper.MergeSort(v: TVector; c: TCompare; o: TSortOrder);
@@ -4080,6 +4134,19 @@ begin
     THelper.IntroSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
+class procedure TGDelegatedVectorHelper.PDQSort(v: TVector; c: TOnCompare; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.PDQSort(v.FItems[0..Pred(v.ElemCount)], c, o);
+end;
+
+class procedure TGDelegatedVectorHelper.PDQSort(var v: TLiteVector; c: TOnCompare; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.PDQSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
+end;
+
 class procedure TGDelegatedVectorHelper.MergeSort(v: TVector; c: TOnCompare; o: TSortOrder);
 begin
   v.CheckInIteration;
@@ -4436,6 +4503,19 @@ class procedure TGNestedVectorHelper.IntroSort(var v: TLiteVector; c: TCompare; 
 begin
   if v.Count > 1 then
     THelper.IntroSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
+end;
+
+class procedure TGNestedVectorHelper.PDQSort(v: TVector; c: TCompare; o: TSortOrder);
+begin
+  v.CheckInIteration;
+  if v.ElemCount > 1 then
+    THelper.PDQSort(v.FItems[0..Pred(v.ElemCount)], c, o);
+end;
+
+class procedure TGNestedVectorHelper.PDQSort(var v: TLiteVector; c: TCompare; o: TSortOrder);
+begin
+  if v.Count > 1 then
+    THelper.PDQSort(v.FBuffer.FItems[0..Pred(v.Count)], c, o);
 end;
 
 class procedure TGNestedVectorHelper.MergeSort(v: TVector; c: TCompare; o: TSortOrder);

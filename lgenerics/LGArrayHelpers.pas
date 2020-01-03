@@ -101,6 +101,25 @@ type
       class function  MinRunLen(aTotalSize: SizeInt): SizeInt; static;
     end;
 
+    TPDQSortBase = object
+    public
+    type
+      TPart = specialize TGTuple2<PItem, Boolean>;
+    private
+    const
+      PARTIAL_INSERTION_SORT_LIMIT = 8;
+      INSERTION_SORT_THRESHOLD = 32;
+      BLOCK_SIZE = 128;
+      CACHE_LINE_SIZE = 64;
+      NINTHER_THRESHOLD = 128;
+    var
+      FOffsetsLStorage, FOffsetsRStorage: array[0..Pred(BLOCK_SIZE + CACHE_LINE_SIZE)] of Byte;
+      FOffsetsL, FOffsetsR: PByte;
+      procedure AlignStorage;
+      class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
+                                  aNum: SizeInt; aUseSwaps: Boolean); static;
+    end;
+
     class procedure CopyItems(aSrc, aDst: PItem; aCount: SizeInt); static;
     class procedure DoReverse(p: PItem; R: SizeInt); static;
   public
@@ -193,6 +212,17 @@ type
       class procedure SortDesc(A: PItem; R: SizeInt); static;
     end;
 
+    TPDQSort = object(TPDQSortBase)
+    private
+      class procedure Sort3(A, B, C: PItem); static; inline;
+      function  PartitionRight(aStart, aFinish: PItem): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean);
+      class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
+    public
+      class procedure Sort(aStart, aFinish: PItem); static;
+    end;
+
     class function  CountRun2Asc(A: PItem; R: SizeInt): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -204,7 +234,7 @@ type
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt); static;
-    class function  MedianOf3(constref v1, v2, v3: T): T; static;
+    class function  MedianOf3(constref v1, v2, v3: T): T; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
@@ -274,6 +304,8 @@ type
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort}
@@ -309,6 +341,17 @@ type
     public
       class procedure SortAsc(A: PItem; R: SizeInt); static;
       class procedure SortDesc(A: PItem; R: SizeInt); static;
+    end;
+
+    TPDQSort = object(TPDQSortBase)
+    private
+      class procedure Sort3(A, B, C: PItem); static; inline;
+      function  PartitionRight(aStart, aFinish: PItem): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean);
+      class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
+    public
+      class procedure Sort(aStart, aFinish: PItem); static;
     end;
 
     class function  CountRun2Asc(A: PItem; R: SizeInt): SizeInt; static;
@@ -392,6 +435,8 @@ type
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed dual pivot Quicksort algorithm with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort }
@@ -409,7 +454,6 @@ type
 
   protected
   type
-
     TMergeSort = object(TMergeSortBase)
     private
       FCompare: TCompare;
@@ -431,6 +475,17 @@ type
     public
       class procedure SortAsc(A: PItem; R: SizeInt; c: TCompare); static;
       class procedure SortDesc(A: PItem; R: SizeInt; c: TCompare); static;
+    end;
+
+    TPDQSort = object(TPDQSortBase)
+    private
+      class procedure Sort3(A, B, D: PItem; c: TCompare); static; inline;
+      function  PartitionRight(aStart, aFinish: PItem; c: TCompare): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean; c: TCompare);
+      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TCompare): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem; c: TCompare): PItem; static;
+    public
+      class procedure Sort(aStart, aFinish: PItem; c: TCompare); static;
     end;
 
     class function  CountRun2Asc(A: PItem; R: SizeInt; c: TCompare): SizeInt; static;
@@ -516,6 +571,8 @@ type
     class procedure IntroSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TCompare; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort }
@@ -534,7 +591,6 @@ type
 
   protected
   type
-
     TMergeSort = object(TMergeSortBase)
     protected
       FCompare: TOnCompare;
@@ -556,6 +612,17 @@ type
     public
       class procedure SortAsc(A: PItem; R: SizeInt; c: TOnCompare); static;
       class procedure SortDesc(A: PItem; R: SizeInt; c: TOnCompare); static;
+    end;
+
+    TPDQSort = object(TPDQSortBase)
+    private
+      class procedure Sort3(A, B, D: PItem; c: TOnCompare); static; inline;
+      function  PartitionRight(aStart, aFinish: PItem; c: TOnCompare): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean; c: TOnCompare);
+      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TOnCompare): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem; c: TOnCompare): PItem; static;
+    public
+      class procedure Sort(aStart, aFinish: PItem; c: TOnCompare); static;
     end;
 
     class function  CountRun2Asc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt; static;
@@ -641,6 +708,8 @@ type
     class procedure IntroSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TOnCompare; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort }
@@ -659,7 +728,6 @@ type
 
   protected
   type
-
     TMergeSort = object(TMergeSortBase)
     protected
       FCompare: TNestCompare;
@@ -681,6 +749,17 @@ type
     public
       class procedure SortAsc(A: PItem; R: SizeInt; c: TNestCompare); static;
       class procedure SortDesc(A: PItem; R: SizeInt; c: TNestCompare); static;
+    end;
+
+    TPDQSort = object(TPDQSortBase)
+    private
+      class procedure Sort3(A, B, D: PItem; c: TNestCompare); static;{$ifndef CPU86}inline;{$endif}//todo: ???
+      function  PartitionRight(aStart, aFinish: PItem; c: TNestCompare): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean; c: TNestCompare);
+      class function  PartialInsertionSort(aStart, aFinish: PItem; c: TNestCompare): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem; c: TNestCompare): PItem; static;
+    public
+      class procedure Sort(aStart, aFinish: PItem; c: TNestCompare); static;
     end;
 
     class function  CountRun2Asc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt; static;
@@ -771,6 +850,8 @@ type
     class procedure IntroSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
   { stable, adaptive mergesort inspired by Java Timsort }
     class procedure MergeSort(var A: array of T; c: TNestCompare; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort }
@@ -784,6 +865,20 @@ type
   { TGSimpleArrayHelper: for simple types only }
   generic TGSimpleArrayHelper<T> = class(specialize TGArrayHelpUtil<T>)
   private
+  type
+    TPDQSort = object(TPDQSortBase)
+    private
+      class procedure Sort3(A, B, C: PItem); static; inline;
+      function  PartitionRight(aStart, aFinish: PItem): TPart;
+      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean);
+      class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
+      class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
+      class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
+                                  aNum: SizeInt; aUseSwaps: Boolean); static;
+    public
+      class procedure Sort(aStart, aFinish: PItem); static;
+    end;
+
     class function  CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -875,6 +970,8 @@ type
     class procedure IntroSort(var A: array of T; o: TSortOrder = soAsc); static;
   { slightly modified V.Yaroslavskiy proposed the dual pivot Quicksort algorithm with random pivot selection }
     class procedure DualPivotQuickSort(var A: array of T; o: TSortOrder = soAsc); static;
+  { Pascal translation of Orson Peters' PDQSort algorithm }
+    class procedure PDQSort(var A: array of T; o: TSortOrder = soAsc); static;
   { default sort algorithm, currently it is IntroSort }
     class procedure Sort(var A: array of T; o: TSortOrder = soAsc); static;
     class function  Sorted(constref A: array of T; o: TSortOrder = soAsc): TArray; static;
@@ -982,7 +1079,7 @@ type
   end;
 
 implementation
-{$B-}{$COPERATORS ON}{$POINTERMATH ON}{$GOTO ON}
+{$B-}{$COPERATORS ON}{$POINTERMATH ON}{$GOTO ON}{$TYPEDADDRESS ON}
 
 { TSearchResult }
 
@@ -1035,6 +1132,46 @@ begin
     end
   else
     Result := aTotalSize;
+end;
+
+{ TGArrayHelpUtil.TPDQSortBase }
+
+procedure TGArrayHelpUtil.TPDQSortBase.AlignStorage;
+begin
+  FOffsetsL := Align(@FOffsetsLStorage[0], CACHE_LINE_SIZE);
+  FOffsetsR := Align(@FOffsetsRStorage[0], CACHE_LINE_SIZE);
+end;
+
+class procedure TGArrayHelpUtil.TPDQSortBase.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
+  aNum: SizeInt; aUseSwaps: Boolean);
+var
+  L, R: PItem;
+  I: SizeInt;
+  v: TFake;
+begin
+  if aUseSwaps then
+    for I := 0 to Pred(aNum) do
+      begin
+        v := TFake((aFirst + aOffsetsL[I])^);
+        TFake((aFirst + aOffsetsL[I])^) := TFake((aLast - aOffsetsR[I])^);
+        TFake((aLast - aOffsetsR[I])^) := v;
+      end
+  else
+    if aNum > 0 then
+      begin
+        L := aFirst + aOffsetsL[0];
+        R := aLast - aOffsetsR[0];
+        v := TFake(L^);
+        TFake(L^) := TFake(R^);
+        for I := 1 to Pred(aNum) do
+          begin
+            L := aFirst + aOffsetsL[I];
+            TFake(R^) := TFake(L^);
+            R := aLast - aOffsetsR[I];
+            TFake(L^) := TFake(R^);
+          end;
+        TFake(R^) := v;
+      end;
 end;
 
 { TGArrayHelpUtil }
@@ -2165,6 +2302,414 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R)));
 end;
 
+{ TGBaseArrayHelper.TPDQSort }
+
+function TGBaseArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem): TPart;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, It, PivotPos: PItem;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
+  OffsetsL, OffsetsR: PByte;
+  I: Byte;
+  AlreadyPartitioned: Boolean;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Inc(First) until TCmpRel.Compare(First^, Pivot) >= 0;
+  if First - 1 = aStart then
+    while First < Last do
+      begin
+        Dec(Last);
+        if TCmpRel.Compare(Last^, Pivot) < 0 then
+          break;
+      end
+  else
+    repeat Dec(Last) until TCmpRel.Compare(Last^, Pivot) < 0;
+
+  AlreadyPartitioned := First >= Last;
+
+  if not AlreadyPartitioned then
+    begin
+      v := TFake(First^);
+      TFake(First^) :=  TFake(Last^);
+      TFake(Last^) := v;
+      Inc(First);
+    end;
+
+  OffsetsL := FOffsetsL;
+  OffsetsR := FOffsetsR;
+  NumL := 0;
+  NumR := 0;
+  StartL := 0;
+  StartR := 0;
+  while Last - First > 2 * BLOCK_SIZE do
+    begin
+      if NumL = 0 then
+        begin
+          StartL := 0;
+          It := First;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsL + NumL)^ := I;
+              NumL += PtrInt(TCmpRel.Compare(It^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 1;
+              NumL += PtrInt(TCmpRel.Compare((It + 1)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 2;
+              NumL += PtrInt(TCmpRel.Compare((It + 2)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 3;
+              NumL += PtrInt(TCmpRel.Compare((It + 3)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 4;
+              NumL += PtrInt(TCmpRel.Compare((It + 4)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 5;
+              NumL += PtrInt(TCmpRel.Compare((It + 5)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 6;
+              NumL += PtrInt(TCmpRel.Compare((It + 6)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 7;
+              NumL += PtrInt(TCmpRel.Compare((It + 7)^, Pivot) >= 0);
+              I += 8;
+              It += 8;
+            end;
+        end;
+      if NumR = 0 then
+        begin
+          StartR := 0;
+          It := Last;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsR + NumR)^ := I + 1;
+              NumR += PtrInt(TCmpRel.Compare((It - 1)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 2;
+              NumR += PtrInt(TCmpRel.Compare((It - 2)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 3;
+              NumR += PtrInt(TCmpRel.Compare((It - 3)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 4;
+              NumR += PtrInt(TCmpRel.Compare((It - 4)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 5;
+              NumR += PtrInt(TCmpRel.Compare((It - 5)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 6;
+              NumR += PtrInt(TCmpRel.Compare((It - 6)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 7;
+              NumR += PtrInt(TCmpRel.Compare((It - 7)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 8;
+              NumR += PtrInt(TCmpRel.Compare((It - 8)^, Pivot) < 0);
+              I += 8;
+              It -= 8;
+            end;
+        end;
+      Num := NumL;
+      if NumR < NumL then
+        Num := NumR;
+      SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+      NumL -= Num;
+      NumR -= Num;
+      StartL += Num;
+      StartR += Num;
+      if NumL = 0 then
+        First += BLOCK_SIZE;
+      if NumR = 0 then
+        Last -= BLOCK_SIZE;
+    end;
+  LSize := 0;
+  RSize := 0;
+  if (NumR or NumL) <> 0 then
+    UnknownLeft := (Last - First) - BLOCK_SIZE
+  else
+    UnknownLeft := Last - First;
+  if NumR <> 0 then
+    begin
+      LSize := UnknownLeft;
+      RSize := BLOCK_SIZE;
+    end
+  else
+    if NumL <> 0 then
+      begin
+        LSize := BLOCK_SIZE;
+        RSize := UnknownLeft;
+      end
+    else
+      begin
+        LSize := UnknownLeft div 2;
+        RSize := UnknownLeft - LSize;
+      end;
+  if (UnknownLeft <> 0) and (NumL = 0) then
+    begin
+      StartL := 0;
+      It := First;
+      I := 0;
+      while I < LSize do
+        begin
+          (OffsetsL + NumL)^ := I; Inc(I);
+          NumL += PtrInt(TCmpRel.Compare(It^, Pivot) >= 0);
+          It += 1;
+        end;
+    end;
+  if (UnknownLeft <> 0) and (NumR = 0) then
+    begin
+      StartR := 0;
+      It := Last;
+      I := 0;
+      while I < RSize do
+        begin
+          Inc(I);
+          (OffsetsR + NumR)^ := I;
+          Dec(It);
+          NumR += PtrInt(TCmpRel.Compare(It^, Pivot) < 0);
+        end;
+    end;
+  Num := NumL;
+  if NumR < NumL then
+    Num := NumR;
+  SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+  NumL -= Num;
+  NumR -= Num;
+  StartL += Num;
+  StartR += Num;
+  if NumL = 0 then
+    First += LSize;
+  if NumR = 0 then
+    Last -= RSize;
+  if NumL <> 0 then
+    begin
+      OffsetsL += StartL;
+      while NumL <> 0 do
+        begin
+          NumL -= 1;
+          Dec(Last);
+          v := TFake((First + (OffsetsL + NumL)^)^);
+          TFake((First + (OffsetsL + NumL)^)^) := TFake(Last^);
+          TFake(Last^) := v;
+        end;
+      First := Last;
+    end;
+  if NumR <> 0 then
+    begin
+      OffsetsR += StartR;
+      while NumR <> 0 do
+        begin
+          NumR -= 1;
+          v := TFake((Last - (OffsetsR + NumR)^)^);
+          TFake((Last - (OffsetsR + NumR)^)^) := TFake(First^);
+          TFake(First^) := v;
+          First += 1;
+        end;
+      Last := First;
+    end;
+  PivotPos := First - 1;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := TPart.Create(PivotPos, AlreadyPartitioned);
+end;
+
+class procedure TGBaseArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
+var
+  v: TFake;
+begin
+  if TCmpRel.Compare(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+  if TCmpRel.Compare(C^, B^) < 0 then
+    begin
+      v := TFake(B^);
+      TFake(B^) := TFake(C^);
+      TFake(C^) := v;
+    end;
+  if TCmpRel.Compare(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+end;
+
+procedure TGBaseArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean);
+var
+  PivotPos: PItem;
+  v: TFake;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
+  PartResult: TPart;
+  AlreadyPartitioned, HighlyUnbalanced: Boolean;
+begin
+  while True do
+    begin
+      Size := aFinish - aStart;
+      if Size < INSERTION_SORT_THRESHOLD then
+        begin
+          TGBaseArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart));
+          exit;
+        end;
+      S2 := Size div 2;
+      if Size > NINTHER_THRESHOLD then
+        begin
+          Sort3(aStart, aStart + S2, aFinish - 1);
+          Sort3(aStart + 1, aStart + (S2 - 1), aFinish - 2);
+          Sort3(aStart + 2, aStart + (S2 + 1), aFinish - 3);
+          Sort3(aStart + (S2 - 1), aStart + S2, aStart + (S2 + 1));
+          v := TFake(aStart^);
+          TFake(aStart^) := TFake((aStart + S2)^);
+          TFake((aStart + S2)^) := v;
+        end
+      else
+        Sort3(aStart + S2, aStart, aFinish - 1);
+      if (not aLeftMost) and (TCmpRel.Compare((aStart - 1)^, aStart^) >= 0) then
+        begin
+          aStart := PartitionLeft(aStart, aFinish) + 1;
+          continue;
+        end;
+
+      PartResult := PartitionRight(aStart, aFinish);
+
+      PivotPos := PartResult.F1;
+      AlreadyPartitioned := PartResult.F2;
+      LSize := PivotPos - aStart;
+      RSize := aFinish - (PivotPos + 1);
+      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
+      if HighlyUnbalanced then
+        begin
+          Dec(aMaxDepth);
+          if aMaxDepth = 0 then
+            begin
+              TGBaseArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
+              exit;
+            end;
+          if LSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              LSizeDiv := LSize div 4;
+              v := TFake(aStart^);
+              TFake(aStart^) := TFake((aStart + LSizeDiv)^);
+              TFake((aStart + LSizeDiv)^) := v;
+              v := TFake((PivotPos - 1)^);
+              TFake((PivotPos - 1)^) := TFake((PivotPos - LSizeDiv)^);
+              TFake((PivotPos - LSizeDiv)^) := v;
+              if LSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((aStart + 1)^);
+                  TFake((aStart + 1)^) := TFake((aStart + (LSizeDiv + 1))^);
+                  TFake((aStart + (LSizeDiv + 1))^) := v;
+                  v := TFake((aStart + 2)^);
+                  TFake((aStart + 2)^) := TFake((aStart + (LSizeDiv + 2))^);
+                  TFake((aStart + (LSizeDiv + 2))^) := v;
+                  v := TFake((PivotPos - 2)^);
+                  TFake((PivotPos - 2)^) := TFake((PivotPos - (LSizeDiv + 1))^);
+                  TFake((PivotPos - (LSizeDiv + 1))^) := v;
+                  v := TFake((PivotPos - 3)^);
+                  TFake((PivotPos - 3)^) := TFake((PivotPos - (LSizeDiv + 2))^);
+                  TFake((PivotPos - (LSizeDiv + 2))^) := v;
+                end;
+            end;
+          if RSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              RSizeDiv := RSize div 4;
+              v := TFake((PivotPos + 1)^);
+              TFake((PivotPos + 1)^) := TFake((PivotPos + (1 + RSizeDiv))^);
+              TFake((PivotPos + (1 + RSizeDiv))^) := v;
+              v := TFake((aFinish - 1)^);
+              TFake((aFinish - 1)^) := TFake((aFinish - RSizeDiv)^);
+              TFake((aFinish - RSizeDiv)^) := v;
+              if RSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((PivotPos + 2)^);
+                  TFake((PivotPos + 2)^) := TFake((PivotPos + (2 + RSizeDiv))^);
+                  TFake((PivotPos + (2 + RSizeDiv))^) := v;
+                  v := TFake((PivotPos + 3)^);
+                  TFake((PivotPos + 3)^) := TFake((PivotPos + (3 + RSizeDiv))^);
+                  TFake((PivotPos + (3 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 2)^);
+                  TFake((aFinish - 2)^) := TFake((aFinish - (1 + RSizeDiv))^);
+                  TFake((aFinish - (1 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 3)^);
+                  TFake((aFinish - 3)^) := TFake((aFinish - (2 + RSizeDiv))^);
+                  TFake((aFinish - (2 + RSizeDiv))^) := v;
+                end;
+            end;
+        end
+      else
+        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos) and
+           PartialInsertionSort(PivotPos + 1, aFinish) then exit;
+      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
+      aStart := PivotPos + 1;
+      aLeftMost := False;
+    end;
+end;
+
+class function TGBaseArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+var
+  Limit: PtrUInt;
+  v: TFake;
+  Curr, Sift, Sift1: PItem;
+begin
+  if aStart = aFinish then exit(True);
+  Limit := 0;
+  Curr := aStart + 1;
+  while Curr <> aFinish do
+    begin
+      if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
+      Sift := Curr;
+      Sift1 := Curr - 1;
+      if TCmpRel.Compare(Sift^, Sift1^) < 0 then
+        begin
+          v := TFake(Sift^);
+          repeat
+            TFake(Sift^) := TFake(Sift1^);
+            Dec(Sift);
+            Dec(Sift1);
+          until (Sift = aStart) or (TCmpRel.Compare(T(v), Sift1^) >= 0);
+          TFake(Sift^) := v;
+          Limit += PtrUInt(Curr - Sift);
+        end;
+      Inc(Curr);
+    end;
+  Result := True;
+end;
+
+class function TGBaseArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, PivotPos: PItem;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Dec(Last) until TCmpRel.Compare(Last^, Pivot) >= 0;
+  if Last + 1 = aFinish then
+    while First < Last do
+      begin
+        Inc(First);
+        if TCmpRel.Compare(Pivot, First^) < 0 then
+          break;
+      end
+  else
+    repeat Inc(First) until TCmpRel.Compare(Pivot, First^) < 0;
+
+  while First < Last do
+    begin
+      v := TFake(First^);
+      TFake(First^) := TFake(Last^);
+      TFake(Last^) := v;
+      repeat Dec(Last) until TCmpRel.Compare(Last^, Pivot) >= 0;
+      repeat Inc(First) until TCmpRel.Compare(Pivot, First^) < 0;
+    end;
+  PivotPos := Last;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := PivotPos;
+end;
+
+class procedure TGBaseArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem);
+var
+  Sorter: TPDQSort;
+begin
+  if aStart = aFinish then exit;
+  {%H-}Sorter.AlignStorage;
+  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+end;
 
 { TGBaseArrayHelper }
 
@@ -2522,8 +3067,10 @@ begin
     if Ttl > 0 then
       with QSplitMo9(A, R) do
         begin
-          DoIntroSort(A, Left, Pred(Ttl));
-          DoIntroSort(@A[Right], R - Right, Pred(Ttl));
+          if Left > 0 then
+            DoIntroSort(A, Left, Pred(Ttl));
+          if Right < R then
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl));
         end
     else
       DoHeapSort(A, R)
@@ -3012,7 +3559,7 @@ begin
   if R > 0 then
     if CountRun2Asc(@A[0], R) < R then
       begin
-        DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR);
         if o = soDesc then
           Reverse(A);
       end
@@ -3030,6 +3577,23 @@ begin
     if CountRun2Asc(@A[0], R) < R then
       begin
         DoDPQSort(@A[0], R);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (TCmpRel.Compare(A[0], A[R]) <> 0) then
+        Reverse(A);
+end;
+
+class procedure TGBaseArrayHelper.PDQSort(var A: array of T; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(@A[0], R) < R then
+      begin
+        TPDQSort.Sort(@A[0], @A[R] + 1);
         if o = soDesc then
           Reverse(A);
       end
@@ -3545,6 +4109,415 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R)));
 end;
 
+{ TGComparableArrayHelper.TPDQSort }
+
+function TGComparableArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem): TPart;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, It, PivotPos: PItem;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
+  OffsetsL, OffsetsR: PByte;
+  I: Byte;
+  AlreadyPartitioned: Boolean;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Inc(First) until First^ >= Pivot;
+  if First - 1 = aStart then
+    while First < Last do
+      begin
+        Dec(Last);
+        if Last^ < Pivot then
+          break;
+      end
+  else
+    repeat Dec(Last) until Last^ < Pivot;
+
+  AlreadyPartitioned := First >= Last;
+
+  if not AlreadyPartitioned then
+    begin
+      v := TFake(First^);
+      TFake(First^) :=  TFake(Last^);
+      TFake(Last^) := v;
+      Inc(First);
+    end;
+
+  OffsetsL := FOffsetsL;
+  OffsetsR := FOffsetsR;
+  NumL := 0;
+  NumR := 0;
+  StartL := 0;
+  StartR := 0;
+  while Last - First > 2 * BLOCK_SIZE do
+    begin
+      if NumL = 0 then
+        begin
+          StartL := 0;
+          It := First;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsL + NumL)^ := I;
+              NumL += PtrInt(It^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 1;
+              NumL += PtrInt((It + 1)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 2;
+              NumL += PtrInt((It + 2)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 3;
+              NumL += PtrInt((It + 3)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 4;
+              NumL += PtrInt((It + 4)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 5;
+              NumL += PtrInt((It + 5)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 6;
+              NumL += PtrInt((It + 6)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 7;
+              NumL += PtrInt((It + 7)^ >= Pivot);
+              I += 8;
+              It += 8;
+            end;
+        end;
+      if NumR = 0 then
+        begin
+          StartR := 0;
+          It := Last;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsR + NumR)^ := I + 1;
+              NumR += PtrInt((It - 1)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 2;
+              NumR += PtrInt((It - 2)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 3;
+              NumR += PtrInt((It - 3)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 4;
+              NumR += PtrInt((It - 4)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 5;
+              NumR += PtrInt((It - 5)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 6;
+              NumR += PtrInt((It - 6)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 7;
+              NumR += PtrInt((It - 7)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 8;
+              NumR += PtrInt((It - 8)^ < Pivot);
+              I += 8;
+              It -= 8;
+            end;
+        end;
+      Num := NumL;
+      if NumR < NumL then
+        Num := NumR;
+      SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+      NumL -= Num;
+      NumR -= Num;
+      StartL += Num;
+      StartR += Num;
+      if NumL = 0 then
+        First += BLOCK_SIZE;
+      if NumR = 0 then
+        Last -= BLOCK_SIZE;
+    end;
+  LSize := 0;
+  RSize := 0;
+  if (NumR or NumL) <> 0 then
+    UnknownLeft := (Last - First) - BLOCK_SIZE
+  else
+    UnknownLeft := Last - First;
+  if NumR <> 0 then
+    begin
+      LSize := UnknownLeft;
+      RSize := BLOCK_SIZE;
+    end
+  else
+    if NumL <> 0 then
+      begin
+        LSize := BLOCK_SIZE;
+        RSize := UnknownLeft;
+      end
+    else
+      begin
+        LSize := UnknownLeft div 2;
+        RSize := UnknownLeft - LSize;
+      end;
+  if (UnknownLeft <> 0) and (NumL = 0) then
+    begin
+      StartL := 0;
+      It := First;
+      I := 0;
+      while I < LSize do
+        begin
+          (OffsetsL + NumL)^ := I; Inc(I);
+          NumL += PtrInt(It^ >= Pivot);
+          It += 1;
+        end;
+    end;
+  if (UnknownLeft <> 0) and (NumR = 0) then
+    begin
+      StartR := 0;
+      It := Last;
+      I := 0;
+      while I < RSize do
+        begin
+          Inc(I);
+          (OffsetsR + NumR)^ := I;
+          Dec(It);
+          NumR += PtrInt(It^ < Pivot);
+        end;
+    end;
+  Num := NumL;
+  if NumR < NumL then
+    Num := NumR;
+  SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+  NumL -= Num;
+  NumR -= Num;
+  StartL += Num;
+  StartR += Num;
+  if NumL = 0 then
+    First += LSize;
+  if NumR = 0 then
+    Last -= RSize;
+  if NumL <> 0 then
+    begin
+      OffsetsL += StartL;
+      while NumL <> 0 do
+        begin
+          NumL -= 1;
+          Dec(Last);
+          v := TFake((First + (OffsetsL + NumL)^)^);
+          TFake((First + (OffsetsL + NumL)^)^) := TFake(Last^);
+          TFake(Last^) := v;
+        end;
+      First := Last;
+    end;
+  if NumR <> 0 then
+    begin
+      OffsetsR += StartR;
+      while NumR <> 0 do
+        begin
+          NumR -= 1;
+          v := TFake((Last - (OffsetsR + NumR)^)^);
+          TFake((Last - (OffsetsR + NumR)^)^) := TFake(First^);
+          TFake(First^) := v;
+          First += 1;
+        end;
+      Last := First;
+    end;
+  PivotPos := First - 1;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := TPart.Create(PivotPos, AlreadyPartitioned);
+end;
+
+class procedure TGComparableArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
+var
+  v: TFake;
+begin
+  if B^ < A^ then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+  if C^ < B^ then
+    begin
+      v := TFake(B^);
+      TFake(B^) := TFake(C^);
+      TFake(C^) := v;
+    end;
+  if B^ < A^ then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+end;
+
+procedure TGComparableArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+  aLeftMost: Boolean);
+var
+  PivotPos: PItem;
+  v: TFake;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
+  PartResult: TPart;
+  AlreadyPartitioned, HighlyUnbalanced: Boolean;
+begin
+  while True do
+    begin
+      Size := aFinish - aStart;
+      if Size < INSERTION_SORT_THRESHOLD then
+        begin
+          TGComparableArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart));
+          exit;
+        end;
+      S2 := Size div 2;
+      if Size > NINTHER_THRESHOLD then
+        begin
+          Sort3(aStart, aStart + S2, aFinish - 1);
+          Sort3(aStart + 1, aStart + (S2 - 1), aFinish - 2);
+          Sort3(aStart + 2, aStart + (S2 + 1), aFinish - 3);
+          Sort3(aStart + (S2 - 1), aStart + S2, aStart + (S2 + 1));
+          v := TFake(aStart^);
+          TFake(aStart^) := TFake((aStart + S2)^);
+          TFake((aStart + S2)^) := v;
+        end
+      else
+        Sort3(aStart + S2, aStart, aFinish - 1);
+      if (not aLeftMost) and ((aStart - 1)^ >= aStart^) then
+        begin
+          aStart := PartitionLeft(aStart, aFinish) + 1;
+          continue;
+        end;
+
+      PartResult := PartitionRight(aStart, aFinish);
+
+      PivotPos := PartResult.F1;
+      AlreadyPartitioned := PartResult.F2;
+      LSize := PivotPos - aStart;
+      RSize := aFinish - (PivotPos + 1);
+      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
+      if HighlyUnbalanced then
+        begin
+          Dec(aMaxDepth);
+          if aMaxDepth = 0 then
+            begin
+              TGComparableArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
+              exit;
+            end;
+          if LSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              LSizeDiv := LSize div 4;
+              v := TFake(aStart^);
+              TFake(aStart^) := TFake((aStart + LSizeDiv)^);
+              TFake((aStart + LSizeDiv)^) := v;
+              v := TFake((PivotPos - 1)^);
+              TFake((PivotPos - 1)^) := TFake((PivotPos - LSizeDiv)^);
+              TFake((PivotPos - LSizeDiv)^) := v;
+              if LSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((aStart + 1)^);
+                  TFake((aStart + 1)^) := TFake((aStart + (LSizeDiv + 1))^);
+                  TFake((aStart + (LSizeDiv + 1))^) := v;
+                  v := TFake((aStart + 2)^);
+                  TFake((aStart + 2)^) := TFake((aStart + (LSizeDiv + 2))^);
+                  TFake((aStart + (LSizeDiv + 2))^) := v;
+                  v := TFake((PivotPos - 2)^);
+                  TFake((PivotPos - 2)^) := TFake((PivotPos - (LSizeDiv + 1))^);
+                  TFake((PivotPos - (LSizeDiv + 1))^) := v;
+                  v := TFake((PivotPos - 3)^);
+                  TFake((PivotPos - 3)^) := TFake((PivotPos - (LSizeDiv + 2))^);
+                  TFake((PivotPos - (LSizeDiv + 2))^) := v;
+                end;
+            end;
+          if RSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              RSizeDiv := RSize div 4;
+              v := TFake((PivotPos + 1)^);
+              TFake((PivotPos + 1)^) := TFake((PivotPos + (1 + RSizeDiv))^);
+              TFake((PivotPos + (1 + RSizeDiv))^) := v;
+              v := TFake((aFinish - 1)^);
+              TFake((aFinish - 1)^) := TFake((aFinish - RSizeDiv)^);
+              TFake((aFinish - RSizeDiv)^) := v;
+              if RSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((PivotPos + 2)^);
+                  TFake((PivotPos + 2)^) := TFake((PivotPos + (2 + RSizeDiv))^);
+                  TFake((PivotPos + (2 + RSizeDiv))^) := v;
+                  v := TFake((PivotPos + 3)^);
+                  TFake((PivotPos + 3)^) := TFake((PivotPos + (3 + RSizeDiv))^);
+                  TFake((PivotPos + (3 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 2)^);
+                  TFake((aFinish - 2)^) := TFake((aFinish - (1 + RSizeDiv))^);
+                  TFake((aFinish - (1 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 3)^);
+                  TFake((aFinish - 3)^) := TFake((aFinish - (2 + RSizeDiv))^);
+                  TFake((aFinish - (2 + RSizeDiv))^) := v;
+                end;
+            end;
+        end
+      else
+        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos) and
+           PartialInsertionSort(PivotPos + 1, aFinish) then exit;
+      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
+      aStart := PivotPos + 1;
+      aLeftMost := False;
+    end;
+end;
+
+class function TGComparableArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+var
+  Limit: PtrUInt;
+  v: TFake;
+  Curr, Sift, Sift1: PItem;
+begin
+  if aStart = aFinish then exit(True);
+  Limit := 0;
+  Curr := aStart + 1;
+  while Curr <> aFinish do
+    begin
+      if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
+      Sift := Curr;
+      Sift1 := Curr - 1;
+      if Sift^ < Sift1^ then
+        begin
+          v := TFake(Sift^);
+          repeat
+            TFake(Sift^) := TFake(Sift1^);
+            Dec(Sift);
+            Dec(Sift1);
+          until (Sift = aStart) or (T(v) >= Sift1^);
+          TFake(Sift^) := v;
+          Limit += PtrUInt(Curr - Sift);
+        end;
+      Inc(Curr);
+    end;
+  Result := True;
+end;
+
+class function TGComparableArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+var
+  Pivot: T;
+  Tmp: TFake;
+  First, Last, PivotPos: PItem;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Dec(Last) until Last^ >= Pivot;
+  if Last + 1 = aFinish then
+    while First < Last do
+      begin
+        Inc(First);
+        if Pivot < First^ then
+          break;
+      end
+  else
+    repeat Inc(First) until Pivot < First^;
+
+  while First < Last do
+    begin
+      Tmp := TFake(First^);
+      TFake(First^) := TFake(Last^);
+      TFake(Last^) := Tmp;
+      repeat Dec(Last) until Last^ >= Pivot;
+      repeat Inc(First) until Pivot < First^;
+    end;
+  PivotPos := Last;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := PivotPos;
+end;
+
+class procedure TGComparableArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem);
+var
+  Sorter: TPDQSort;
+begin
+  if aStart = aFinish then exit;
+  {%H-}Sorter.AlignStorage;
+  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
+end;
 
 { TGComparableArrayHelper }
 
@@ -3892,8 +4865,10 @@ begin
     if Ttl > 0 then
       with QSplitMo9(A, R) do
         begin
-          DoIntroSort(A, Left, Pred(Ttl));
-          DoIntroSort(@A[Right], R - Right, Pred(Ttl));
+          if Left > 0 then
+            DoIntroSort(A, Left, Pred(Ttl));
+          if Right < R then
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl));
         end
     else
       DoHeapSort(A, R)
@@ -4383,7 +5358,7 @@ begin
   if R > 0 then
     if CountRun2Asc(@A[0], R) < R then
       begin
-        DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR);
         if o = soDesc then
           Reverse(A);
       end
@@ -4401,6 +5376,23 @@ begin
     if CountRun2Asc(@A[0], R) < R then
       begin
         DoDPQSort(@A[0], R);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
+        Reverse(A);
+end;
+
+class procedure TGComparableArrayHelper.PDQSort(var A: array of T; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(@A[0], R) < R then
+      begin
+        TPDQSort.Sort(@A[0], @A[R] + 1);
         if o = soDesc then
           Reverse(A);
       end
@@ -4930,6 +5922,417 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
+{ TGRegularArrayHelper.TPDQSort }
+
+class procedure TGRegularArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TCompare);
+var
+  v: TFake;
+begin
+  if c(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+  if c(D^, B^) < 0 then
+    begin
+      v := TFake(B^);
+      TFake(B^) := TFake(D^);
+      TFake(D^) := v;
+    end;
+  if c(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+end;
+
+function TGRegularArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TCompare): TPart;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, It, PivotPos: PItem;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
+  OffsetsL, OffsetsR: PByte;
+  I: Byte;
+  AlreadyPartitioned: Boolean;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Inc(First) until c(First^, Pivot) >= 0;
+  if First - 1 = aStart then
+    while First < Last do
+      begin
+        Dec(Last);
+        if c(Last^, Pivot) < 0 then
+          break;
+      end
+  else
+    repeat Dec(Last) until c(Last^, Pivot) < 0;
+
+  AlreadyPartitioned := First >= Last;
+
+  if not AlreadyPartitioned then
+    begin
+      v := TFake(First^);
+      TFake(First^) :=  TFake(Last^);
+      TFake(Last^) := v;
+      Inc(First);
+    end;
+
+  OffsetsL := FOffsetsL;
+  OffsetsR := FOffsetsR;
+  NumL := 0;
+  NumR := 0;
+  StartL := 0;
+  StartR := 0;
+  while Last - First > 2 * BLOCK_SIZE do
+    begin
+      if NumL = 0 then
+        begin
+          StartL := 0;
+          It := First;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsL + NumL)^ := I;
+              NumL += PtrInt(c(It^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 1;
+              NumL += PtrInt(c((It + 1)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 2;
+              NumL += PtrInt(c((It + 2)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 3;
+              NumL += PtrInt(c((It + 3)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 4;
+              NumL += PtrInt(c((It + 4)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 5;
+              NumL += PtrInt(c((It + 5)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 6;
+              NumL += PtrInt(c((It + 6)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 7;
+              NumL += PtrInt(c((It + 7)^, Pivot) >= 0);
+              I += 8;
+              It += 8;
+            end;
+        end;
+      if NumR = 0 then
+        begin
+          StartR := 0;
+          It := Last;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsR + NumR)^ := I + 1;
+              NumR += PtrInt(c((It - 1)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 2;
+              NumR += PtrInt(c((It - 2)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 3;
+              NumR += PtrInt(c((It - 3)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 4;
+              NumR += PtrInt(c((It - 4)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 5;
+              NumR += PtrInt(c((It - 5)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 6;
+              NumR += PtrInt(c((It - 6)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 7;
+              NumR += PtrInt(c((It - 7)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 8;
+              NumR += PtrInt(c((It - 8)^, Pivot) < 0);
+              I += 8;
+              It -= 8;
+            end;
+        end;
+      Num := NumL;
+      if NumR < NumL then
+        Num := NumR;
+      SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+      NumL -= Num;
+      NumR -= Num;
+      StartL += Num;
+      StartR += Num;
+      if NumL = 0 then
+        First += BLOCK_SIZE;
+      if NumR = 0 then
+        Last -= BLOCK_SIZE;
+    end;
+  LSize := 0;
+  RSize := 0;
+  if (NumR or NumL) <> 0 then
+    UnknownLeft := (Last - First) - BLOCK_SIZE
+  else
+    UnknownLeft := Last - First;
+  if NumR <> 0 then
+    begin
+      LSize := UnknownLeft;
+      RSize := BLOCK_SIZE;
+    end
+  else
+    if NumL <> 0 then
+      begin
+        LSize := BLOCK_SIZE;
+        RSize := UnknownLeft;
+      end
+    else
+      begin
+        LSize := UnknownLeft div 2;
+        RSize := UnknownLeft - LSize;
+      end;
+  if (UnknownLeft <> 0) and (NumL = 0) then
+    begin
+      StartL := 0;
+      It := First;
+      I := 0;
+      while I < LSize do
+        begin
+          (OffsetsL + NumL)^ := I; Inc(I);
+          NumL += PtrInt(c(It^, Pivot) >= 0);
+          It += 1;
+        end;
+    end;
+  if (UnknownLeft <> 0) and (NumR = 0) then
+    begin
+      StartR := 0;
+      It := Last;
+      I := 0;
+      while I < RSize do
+        begin
+          Inc(I);
+          (OffsetsR + NumR)^ := I;
+          Dec(It);
+          NumR += PtrInt(c(It^, Pivot) < 0);
+        end;
+    end;
+  Num := NumL;
+  if NumR < NumL then
+    Num := NumR;
+  SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+  NumL -= Num;
+  NumR -= Num;
+  StartL += Num;
+  StartR += Num;
+  if NumL = 0 then
+    First += LSize;
+  if NumR = 0 then
+    Last -= RSize;
+  if NumL <> 0 then
+    begin
+      OffsetsL += StartL;
+      while NumL <> 0 do
+        begin
+          NumL -= 1;
+          Dec(Last);
+          v := TFake((First + (OffsetsL + NumL)^)^);
+          TFake((First + (OffsetsL + NumL)^)^) := TFake(Last^);
+          TFake(Last^) := v;
+        end;
+      First := Last;
+    end;
+  if NumR <> 0 then
+    begin
+      OffsetsR += StartR;
+      while NumR <> 0 do
+        begin
+          NumR -= 1;
+          v := TFake((Last - (OffsetsR + NumR)^)^);
+          TFake((Last - (OffsetsR + NumR)^)^) := TFake(First^);
+          TFake(First^) := v;
+          First += 1;
+        end;
+      Last := First;
+    end;
+  PivotPos := First - 1;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := TPart.Create(PivotPos, AlreadyPartitioned);
+end;
+
+procedure TGRegularArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+  aLeftMost: Boolean; c: TCompare);
+var
+  PivotPos: PItem;
+  v: TFake;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
+  PartResult: TPart;
+  AlreadyPartitioned, HighlyUnbalanced: Boolean;
+begin
+  while True do
+    begin
+      Size := aFinish - aStart;
+      if Size < INSERTION_SORT_THRESHOLD then
+        begin
+          TGRegularArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c);
+          exit;
+        end;
+      S2 := Size div 2;
+      if Size > NINTHER_THRESHOLD then
+        begin
+          Sort3(aStart, aStart + S2, aFinish - 1, c);
+          Sort3(aStart + 1, aStart + (S2 - 1), aFinish - 2, c);
+          Sort3(aStart + 2, aStart + (S2 + 1), aFinish - 3, c);
+          Sort3(aStart + (S2 - 1), aStart + S2, aStart + (S2 + 1), c);
+          v := TFake(aStart^);
+          TFake(aStart^) := TFake((aStart + S2)^);
+          TFake((aStart + S2)^) := v;
+        end
+      else
+        Sort3(aStart + S2, aStart, aFinish - 1, c);
+      if (not aLeftMost) and (c((aStart - 1)^, aStart^) >= 0) then
+        begin
+          aStart := PartitionLeft(aStart, aFinish, c) + 1;
+          continue;
+        end;
+
+      PartResult := PartitionRight(aStart, aFinish, c);
+
+      PivotPos := PartResult.F1;
+      AlreadyPartitioned := PartResult.F2;
+      LSize := PivotPos - aStart;
+      RSize := aFinish - (PivotPos + 1);
+      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
+      if HighlyUnbalanced then
+        begin
+          Dec(aMaxDepth);
+          if aMaxDepth = 0 then
+            begin
+              TGRegularArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
+              exit;
+            end;
+          if LSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              LSizeDiv := LSize div 4;
+              v := TFake(aStart^);
+              TFake(aStart^) := TFake((aStart + LSizeDiv)^);
+              TFake((aStart + LSizeDiv)^) := v;
+              v := TFake((PivotPos - 1)^);
+              TFake((PivotPos - 1)^) := TFake((PivotPos - LSizeDiv)^);
+              TFake((PivotPos - LSizeDiv)^) := v;
+              if LSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((aStart + 1)^);
+                  TFake((aStart + 1)^) := TFake((aStart + (LSizeDiv + 1))^);
+                  TFake((aStart + (LSizeDiv + 1))^) := v;
+                  v := TFake((aStart + 2)^);
+                  TFake((aStart + 2)^) := TFake((aStart + (LSizeDiv + 2))^);
+                  TFake((aStart + (LSizeDiv + 2))^) := v;
+                  v := TFake((PivotPos - 2)^);
+                  TFake((PivotPos - 2)^) := TFake((PivotPos - (LSizeDiv + 1))^);
+                  TFake((PivotPos - (LSizeDiv + 1))^) := v;
+                  v := TFake((PivotPos - 3)^);
+                  TFake((PivotPos - 3)^) := TFake((PivotPos - (LSizeDiv + 2))^);
+                  TFake((PivotPos - (LSizeDiv + 2))^) := v;
+                end;
+            end;
+          if RSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              RSizeDiv := RSize div 4;
+              v := TFake((PivotPos + 1)^);
+              TFake((PivotPos + 1)^) := TFake((PivotPos + (1 + RSizeDiv))^);
+              TFake((PivotPos + (1 + RSizeDiv))^) := v;
+              v := TFake((aFinish - 1)^);
+              TFake((aFinish - 1)^) := TFake((aFinish - RSizeDiv)^);
+              TFake((aFinish - RSizeDiv)^) := v;
+              if RSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((PivotPos + 2)^);
+                  TFake((PivotPos + 2)^) := TFake((PivotPos + (2 + RSizeDiv))^);
+                  TFake((PivotPos + (2 + RSizeDiv))^) := v;
+                  v := TFake((PivotPos + 3)^);
+                  TFake((PivotPos + 3)^) := TFake((PivotPos + (3 + RSizeDiv))^);
+                  TFake((PivotPos + (3 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 2)^);
+                  TFake((aFinish - 2)^) := TFake((aFinish - (1 + RSizeDiv))^);
+                  TFake((aFinish - (1 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 3)^);
+                  TFake((aFinish - 3)^) := TFake((aFinish - (2 + RSizeDiv))^);
+                  TFake((aFinish - (2 + RSizeDiv))^) := v;
+                end;
+            end;
+        end
+      else
+        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
+           PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
+      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost, c);
+      aStart := PivotPos + 1;
+      aLeftMost := False;
+    end;
+end;
+
+class function TGRegularArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
+  c: TCompare): Boolean;
+var
+  Limit: PtrUInt;
+  v: TFake;
+  Curr, Sift, Sift1: PItem;
+begin
+  if aStart = aFinish then exit(True);
+  Limit := 0;
+  Curr := aStart + 1;
+  while Curr <> aFinish do
+    begin
+      if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
+      Sift := Curr;
+      Sift1 := Curr - 1;
+      if c(Sift^, Sift1^) < 0 then
+        begin
+          v := TFake(Sift^);
+          repeat
+            TFake(Sift^) := TFake(Sift1^);
+            Dec(Sift);
+            Dec(Sift1);
+          until (Sift = aStart) or (c(T(v), Sift1^) >= 0);
+          TFake(Sift^) := v;
+          Limit += PtrUInt(Curr - Sift);
+        end;
+      Inc(Curr);
+    end;
+  Result := True;
+end;
+
+class function TGRegularArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem; c: TCompare): PItem;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, PivotPos: PItem;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Dec(Last) until c(Last^, Pivot) >= 0;
+  if Last + 1 = aFinish then
+    while First < Last do
+      begin
+        Inc(First);
+        if c(Pivot, First^) < 0 then
+          break;
+      end
+  else
+    repeat Inc(First) until c(Pivot, First^) < 0;
+
+  while First < Last do
+    begin
+      v := TFake(First^);
+      TFake(First^) := TFake(Last^);
+      TFake(Last^) := v;
+      repeat Dec(Last) until c(Last^, Pivot) >= 0;
+      repeat Inc(First) until c(Pivot, First^) < 0;
+    end;
+  PivotPos := Last;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := PivotPos;
+end;
+
+class procedure TGRegularArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TCompare);
+var
+  Sorter: TPDQSort;
+begin
+  if aStart = aFinish then exit;
+  {%H-}Sorter.AlignStorage;
+  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+end;
+
 { TGRegularArrayHelper }
 
 class function TGRegularArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TCompare): SizeInt;
@@ -5290,8 +6693,10 @@ begin
     if Ttl > 0 then
       with QSplitMo9(A, R, c) do
         begin
-          DoIntroSort(A, Left, Pred(Ttl), c);
-          DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
+          if Left > 0 then
+            DoIntroSort(A, Left, Pred(Ttl), c);
+          if Right < R then
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
         end
     else
       DoHeapSort(A, R, c)
@@ -5784,7 +7189,7 @@ begin
   if R > 0 then
     if CountRun2Asc(@A[0], R, c) < R then
       begin
-        DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR, c);
+        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR, c);
         if o = soDesc then
           Reverse(A);
       end
@@ -5802,6 +7207,23 @@ begin
     if CountRun2Asc(@A[0], R, c) < R then
       begin
         DoDPQSort(@A[0], R, c);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+        Reverse(A);
+end;
+
+class procedure TGRegularArrayHelper.PDQSort(var A: array of T; c: TCompare; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
+        TPDQSort.Sort(@A[0], @A[R] + 1, c);
         if o = soDesc then
           Reverse(A);
       end
@@ -6331,6 +7753,418 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
+{ TGDelegatedArrayHelper.TPDQSort }
+
+class procedure TGDelegatedArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TOnCompare);
+var
+  v: TFake;
+begin
+  if c(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+  if c(D^, B^) < 0 then
+    begin
+      v := TFake(B^);
+      TFake(B^) := TFake(D^);
+      TFake(D^) := v;
+    end;
+  if c(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+end;
+
+function TGDelegatedArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TOnCompare): TPart;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, It, PivotPos: PItem;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
+  OffsetsL, OffsetsR: PByte;
+  I: Byte;
+  AlreadyPartitioned: Boolean;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Inc(First) until c(First^, Pivot) >= 0;
+  if First - 1 = aStart then
+    while First < Last do
+      begin
+        Dec(Last);
+        if c(Last^, Pivot) < 0 then
+          break;
+      end
+  else
+    repeat Dec(Last) until c(Last^, Pivot) < 0;
+
+  AlreadyPartitioned := First >= Last;
+
+  if not AlreadyPartitioned then
+    begin
+      v := TFake(First^);
+      TFake(First^) :=  TFake(Last^);
+      TFake(Last^) := v;
+      Inc(First);
+    end;
+
+  OffsetsL := FOffsetsL;
+  OffsetsR := FOffsetsR;
+  NumL := 0;
+  NumR := 0;
+  StartL := 0;
+  StartR := 0;
+  while Last - First > 2 * BLOCK_SIZE do
+    begin
+      if NumL = 0 then
+        begin
+          StartL := 0;
+          It := First;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsL + NumL)^ := I;
+              NumL += PtrInt(c(It^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 1;
+              NumL += PtrInt(c((It + 1)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 2;
+              NumL += PtrInt(c((It + 2)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 3;
+              NumL += PtrInt(c((It + 3)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 4;
+              NumL += PtrInt(c((It + 4)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 5;
+              NumL += PtrInt(c((It + 5)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 6;
+              NumL += PtrInt(c((It + 6)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 7;
+              NumL += PtrInt(c((It + 7)^, Pivot) >= 0);
+              I += 8;
+              It += 8;
+            end;
+        end;
+      if NumR = 0 then
+        begin
+          StartR := 0;
+          It := Last;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsR + NumR)^ := I + 1;
+              NumR += PtrInt(c((It - 1)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 2;
+              NumR += PtrInt(c((It - 2)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 3;
+              NumR += PtrInt(c((It - 3)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 4;
+              NumR += PtrInt(c((It - 4)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 5;
+              NumR += PtrInt(c((It - 5)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 6;
+              NumR += PtrInt(c((It - 6)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 7;
+              NumR += PtrInt(c((It - 7)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 8;
+              NumR += PtrInt(c((It - 8)^, Pivot) < 0);
+              I += 8;
+              It -= 8;
+            end;
+        end;
+      Num := NumL;
+      if NumR < NumL then
+        Num := NumR;
+      SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+      NumL -= Num;
+      NumR -= Num;
+      StartL += Num;
+      StartR += Num;
+      if NumL = 0 then
+        First += BLOCK_SIZE;
+      if NumR = 0 then
+        Last -= BLOCK_SIZE;
+    end;
+  LSize := 0;
+  RSize := 0;
+  if (NumR or NumL) <> 0 then
+    UnknownLeft := (Last - First) - BLOCK_SIZE
+  else
+    UnknownLeft := Last - First;
+  if NumR <> 0 then
+    begin
+      LSize := UnknownLeft;
+      RSize := BLOCK_SIZE;
+    end
+  else
+    if NumL <> 0 then
+      begin
+        LSize := BLOCK_SIZE;
+        RSize := UnknownLeft;
+      end
+    else
+      begin
+        LSize := UnknownLeft div 2;
+        RSize := UnknownLeft - LSize;
+      end;
+  if (UnknownLeft <> 0) and (NumL = 0) then
+    begin
+      StartL := 0;
+      It := First;
+      I := 0;
+      while I < LSize do
+        begin
+          (OffsetsL + NumL)^ := I; Inc(I);
+          NumL += PtrInt(c(It^, Pivot) >= 0);
+          It += 1;
+        end;
+    end;
+  if (UnknownLeft <> 0) and (NumR = 0) then
+    begin
+      StartR := 0;
+      It := Last;
+      I := 0;
+      while I < RSize do
+        begin
+          Inc(I);
+          (OffsetsR + NumR)^ := I;
+          Dec(It);
+          NumR += PtrInt(c(It^, Pivot) < 0);
+        end;
+    end;
+  Num := NumL;
+  if NumR < NumL then
+    Num := NumR;
+  SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+  NumL -= Num;
+  NumR -= Num;
+  StartL += Num;
+  StartR += Num;
+  if NumL = 0 then
+    First += LSize;
+  if NumR = 0 then
+    Last -= RSize;
+  if NumL <> 0 then
+    begin
+      OffsetsL += StartL;
+      while NumL <> 0 do
+        begin
+          NumL -= 1;
+          Dec(Last);
+          v := TFake((First + (OffsetsL + NumL)^)^);
+          TFake((First + (OffsetsL + NumL)^)^) := TFake(Last^);
+          TFake(Last^) := v;
+        end;
+      First := Last;
+    end;
+  if NumR <> 0 then
+    begin
+      OffsetsR += StartR;
+      while NumR <> 0 do
+        begin
+          NumR -= 1;
+          v := TFake((Last - (OffsetsR + NumR)^)^);
+          TFake((Last - (OffsetsR + NumR)^)^) := TFake(First^);
+          TFake(First^) := v;
+          First += 1;
+        end;
+      Last := First;
+    end;
+  PivotPos := First - 1;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := TPart.Create(PivotPos, AlreadyPartitioned);
+end;
+
+procedure TGDelegatedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+  aLeftMost: Boolean; c: TOnCompare);
+var
+  PivotPos: PItem;
+  v: TFake;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
+  PartResult: TPart;
+  AlreadyPartitioned, HighlyUnbalanced: Boolean;
+begin
+  while True do
+    begin
+      Size := aFinish - aStart;
+      if Size < INSERTION_SORT_THRESHOLD then
+        begin
+          TGDelegatedArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c);
+          exit;
+        end;
+      S2 := Size div 2;
+      if Size > NINTHER_THRESHOLD then
+        begin
+          Sort3(aStart, aStart + S2, aFinish - 1, c);
+          Sort3(aStart + 1, aStart + (S2 - 1), aFinish - 2, c);
+          Sort3(aStart + 2, aStart + (S2 + 1), aFinish - 3, c);
+          Sort3(aStart + (S2 - 1), aStart + S2, aStart + (S2 + 1), c);
+          v := TFake(aStart^);
+          TFake(aStart^) := TFake((aStart + S2)^);
+          TFake((aStart + S2)^) := v;
+        end
+      else
+        Sort3(aStart + S2, aStart, aFinish - 1, c);
+      if (not aLeftMost) and (c((aStart - 1)^, aStart^) >= 0) then
+        begin
+          aStart := PartitionLeft(aStart, aFinish, c) + 1;
+          continue;
+        end;
+
+      PartResult := PartitionRight(aStart, aFinish, c);
+
+      PivotPos := PartResult.F1;
+      AlreadyPartitioned := PartResult.F2;
+      LSize := PivotPos - aStart;
+      RSize := aFinish - (PivotPos + 1);
+      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
+      if HighlyUnbalanced then
+        begin
+          Dec(aMaxDepth);
+          if aMaxDepth = 0 then
+            begin
+              TGDelegatedArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
+              exit;
+            end;
+          if LSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              LSizeDiv := LSize div 4;
+              v := TFake(aStart^);
+              TFake(aStart^) := TFake((aStart + LSizeDiv)^);
+              TFake((aStart + LSizeDiv)^) := v;
+              v := TFake((PivotPos - 1)^);
+              TFake((PivotPos - 1)^) := TFake((PivotPos - LSizeDiv)^);
+              TFake((PivotPos - LSizeDiv)^) := v;
+              if LSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((aStart + 1)^);
+                  TFake((aStart + 1)^) := TFake((aStart + (LSizeDiv + 1))^);
+                  TFake((aStart + (LSizeDiv + 1))^) := v;
+                  v := TFake((aStart + 2)^);
+                  TFake((aStart + 2)^) := TFake((aStart + (LSizeDiv + 2))^);
+                  TFake((aStart + (LSizeDiv + 2))^) := v;
+                  v := TFake((PivotPos - 2)^);
+                  TFake((PivotPos - 2)^) := TFake((PivotPos - (LSizeDiv + 1))^);
+                  TFake((PivotPos - (LSizeDiv + 1))^) := v;
+                  v := TFake((PivotPos - 3)^);
+                  TFake((PivotPos - 3)^) := TFake((PivotPos - (LSizeDiv + 2))^);
+                  TFake((PivotPos - (LSizeDiv + 2))^) := v;
+                end;
+            end;
+          if RSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              RSizeDiv := RSize div 4;
+              v := TFake((PivotPos + 1)^);
+              TFake((PivotPos + 1)^) := TFake((PivotPos + (1 + RSizeDiv))^);
+              TFake((PivotPos + (1 + RSizeDiv))^) := v;
+              v := TFake((aFinish - 1)^);
+              TFake((aFinish - 1)^) := TFake((aFinish - RSizeDiv)^);
+              TFake((aFinish - RSizeDiv)^) := v;
+              if RSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((PivotPos + 2)^);
+                  TFake((PivotPos + 2)^) := TFake((PivotPos + (2 + RSizeDiv))^);
+                  TFake((PivotPos + (2 + RSizeDiv))^) := v;
+                  v := TFake((PivotPos + 3)^);
+                  TFake((PivotPos + 3)^) := TFake((PivotPos + (3 + RSizeDiv))^);
+                  TFake((PivotPos + (3 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 2)^);
+                  TFake((aFinish - 2)^) := TFake((aFinish - (1 + RSizeDiv))^);
+                  TFake((aFinish - (1 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 3)^);
+                  TFake((aFinish - 3)^) := TFake((aFinish - (2 + RSizeDiv))^);
+                  TFake((aFinish - (2 + RSizeDiv))^) := v;
+                end;
+            end;
+        end
+      else
+        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
+           PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
+      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost, c);
+      aStart := PivotPos + 1;
+      aLeftMost := False;
+    end;
+end;
+
+class function TGDelegatedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
+  c: TOnCompare): Boolean;
+var
+  Limit: PtrUInt;
+  v: TFake;
+  Curr, Sift, Sift1: PItem;
+begin
+  if aStart = aFinish then exit(True);
+  Limit := 0;
+  Curr := aStart + 1;
+  while Curr <> aFinish do
+    begin
+      if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
+      Sift := Curr;
+      Sift1 := Curr - 1;
+      if c(Sift^, Sift1^) < 0 then
+        begin
+          v := TFake(Sift^);
+          repeat
+            TFake(Sift^) := TFake(Sift1^);
+            Dec(Sift);
+            Dec(Sift1);
+          until (Sift = aStart) or (c(T(v), Sift1^) >= 0);
+          TFake(Sift^) := v;
+          Limit += PtrUInt(Curr - Sift);
+        end;
+      Inc(Curr);
+    end;
+  Result := True;
+end;
+
+class function TGDelegatedArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem;
+  c: TOnCompare): PItem;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, PivotPos: PItem;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Dec(Last) until c(Last^, Pivot) >= 0;
+  if Last + 1 = aFinish then
+    while First < Last do
+      begin
+        Inc(First);
+        if c(Pivot, First^) < 0 then
+          break;
+      end
+  else
+    repeat Inc(First) until c(Pivot, First^) < 0;
+
+  while First < Last do
+    begin
+      v := TFake(First^);
+      TFake(First^) := TFake(Last^);
+      TFake(Last^) := v;
+      repeat Dec(Last) until c(Last^, Pivot) >= 0;
+      repeat Inc(First) until c(Pivot, First^) < 0;
+    end;
+  PivotPos := Last;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := PivotPos;
+end;
+
+class procedure TGDelegatedArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TOnCompare);
+var
+  Sorter: TPDQSort;
+begin
+  if aStart = aFinish then exit;
+  {%H-}Sorter.AlignStorage;
+  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+end;
+
 { TGDelegatedArrayHelper }
 
 class function TGDelegatedArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TOnCompare): SizeInt;
@@ -6692,8 +8526,10 @@ begin
     if Ttl > 0 then
       with QSplitMo9(A, R, c) do
         begin
-          DoIntroSort(A, Left, Pred(Ttl), c);
-          DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
+          if Left > 0 then
+            DoIntroSort(A, Left, Pred(Ttl), c);
+          if Right < R then
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
         end
     else
       DoHeapSort(A, R, c)
@@ -7187,7 +9023,7 @@ begin
   if R > 0 then
     if CountRun2Asc(@A[0], R, c) < R then
       begin
-        DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR, c);
+        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR, c);
         if o = soDesc then
           Reverse(A);
       end
@@ -7205,6 +9041,23 @@ begin
     if CountRun2Asc(@A[0], R, c) < R then
       begin
         DoDPQSort(@A[0], R, c);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+        Reverse(A);
+end;
+
+class procedure TGDelegatedArrayHelper.PDQSort(var A: array of T; c: TOnCompare; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
+        TPDQSort.Sort(@A[0], @A[R] + 1, c);
         if o = soDesc then
           Reverse(A);
       end
@@ -7734,6 +9587,418 @@ begin
     InsertSortD(A, R, Succ(CountRunDesc(A, R, c)), c);
 end;
 
+{ TGNestedArrayHelper.TPDQSort }
+
+class procedure TGNestedArrayHelper.TPDQSort.Sort3(A, B, D: PItem; c: TNestCompare);
+var
+  v: TFake;
+begin
+  if c(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+  if c(D^, B^) < 0 then
+    begin
+      v := TFake(B^);
+      TFake(B^) := TFake(D^);
+      TFake(D^) := v;
+    end;
+  if c(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+end;
+
+function TGNestedArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem; c: TNestCompare): TPart;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, It, PivotPos: PItem;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
+  OffsetsL, OffsetsR: PByte;
+  I: Byte;
+  AlreadyPartitioned: Boolean;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Inc(First) until c(First^, Pivot) >= 0;
+  if First - 1 = aStart then
+    while First < Last do
+      begin
+        Dec(Last);
+        if c(Last^, Pivot) < 0 then
+          break;
+      end
+  else
+    repeat Dec(Last) until c(Last^, Pivot) < 0;
+
+  AlreadyPartitioned := First >= Last;
+
+  if not AlreadyPartitioned then
+    begin
+      v := TFake(First^);
+      TFake(First^) :=  TFake(Last^);
+      TFake(Last^) := v;
+      Inc(First);
+    end;
+
+  OffsetsL := FOffsetsL;
+  OffsetsR := FOffsetsR;
+  NumL := 0;
+  NumR := 0;
+  StartL := 0;
+  StartR := 0;
+  while Last - First > 2 * BLOCK_SIZE do
+    begin
+      if NumL = 0 then
+        begin
+          StartL := 0;
+          It := First;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsL + NumL)^ := I;
+              NumL += PtrInt(c(It^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 1;
+              NumL += PtrInt(c((It + 1)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 2;
+              NumL += PtrInt(c((It + 2)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 3;
+              NumL += PtrInt(c((It + 3)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 4;
+              NumL += PtrInt(c((It + 4)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 5;
+              NumL += PtrInt(c((It + 5)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 6;
+              NumL += PtrInt(c((It + 6)^, Pivot) >= 0);
+              (OffsetsL + NumL)^ := I + 7;
+              NumL += PtrInt(c((It + 7)^, Pivot) >= 0);
+              I += 8;
+              It += 8;
+            end;
+        end;
+      if NumR = 0 then
+        begin
+          StartR := 0;
+          It := Last;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsR + NumR)^ := I + 1;
+              NumR += PtrInt(c((It - 1)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 2;
+              NumR += PtrInt(c((It - 2)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 3;
+              NumR += PtrInt(c((It - 3)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 4;
+              NumR += PtrInt(c((It - 4)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 5;
+              NumR += PtrInt(c((It - 5)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 6;
+              NumR += PtrInt(c((It - 6)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 7;
+              NumR += PtrInt(c((It - 7)^, Pivot) < 0);
+              (OffsetsR + NumR)^ := I + 8;
+              NumR += PtrInt(c((It - 8)^, Pivot) < 0);
+              I += 8;
+              It -= 8;
+            end;
+        end;
+      Num := NumL;
+      if NumR < NumL then
+        Num := NumR;
+      SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+      NumL -= Num;
+      NumR -= Num;
+      StartL += Num;
+      StartR += Num;
+      if NumL = 0 then
+        First += BLOCK_SIZE;
+      if NumR = 0 then
+        Last -= BLOCK_SIZE;
+    end;
+  LSize := 0;
+  RSize := 0;
+  if (NumR or NumL) <> 0 then
+    UnknownLeft := (Last - First) - BLOCK_SIZE
+  else
+    UnknownLeft := Last - First;
+  if NumR <> 0 then
+    begin
+      LSize := UnknownLeft;
+      RSize := BLOCK_SIZE;
+    end
+  else
+    if NumL <> 0 then
+      begin
+        LSize := BLOCK_SIZE;
+        RSize := UnknownLeft;
+      end
+    else
+      begin
+        LSize := UnknownLeft div 2;
+        RSize := UnknownLeft - LSize;
+      end;
+  if (UnknownLeft <> 0) and (NumL = 0) then
+    begin
+      StartL := 0;
+      It := First;
+      I := 0;
+      while I < LSize do
+        begin
+          (OffsetsL + NumL)^ := I; Inc(I);
+          NumL += PtrInt(c(It^, Pivot) >= 0);
+          It += 1;
+        end;
+    end;
+  if (UnknownLeft <> 0) and (NumR = 0) then
+    begin
+      StartR := 0;
+      It := Last;
+      I := 0;
+      while I < RSize do
+        begin
+          Inc(I);
+          (OffsetsR + NumR)^ := I;
+          Dec(It);
+          NumR += PtrInt(c(It^, Pivot) < 0);
+        end;
+    end;
+  Num := NumL;
+  if NumR < NumL then
+    Num := NumR;
+  SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+  NumL -= Num;
+  NumR -= Num;
+  StartL += Num;
+  StartR += Num;
+  if NumL = 0 then
+    First += LSize;
+  if NumR = 0 then
+    Last -= RSize;
+  if NumL <> 0 then
+    begin
+      OffsetsL += StartL;
+      while NumL <> 0 do
+        begin
+          NumL -= 1;
+          Dec(Last);
+          v := TFake((First + (OffsetsL + NumL)^)^);
+          TFake((First + (OffsetsL + NumL)^)^) := TFake(Last^);
+          TFake(Last^) := v;
+        end;
+      First := Last;
+    end;
+  if NumR <> 0 then
+    begin
+      OffsetsR += StartR;
+      while NumR <> 0 do
+        begin
+          NumR -= 1;
+          v := TFake((Last - (OffsetsR + NumR)^)^);
+          TFake((Last - (OffsetsR + NumR)^)^) := TFake(First^);
+          TFake(First^) := v;
+          First += 1;
+        end;
+      Last := First;
+    end;
+  PivotPos := First - 1;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := TPart.Create(PivotPos, AlreadyPartitioned);
+end;
+
+procedure TGNestedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+  aLeftMost: Boolean; c: TNestCompare);
+var
+  PivotPos: PItem;
+  v: TFake;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
+  PartResult: TPart;
+  AlreadyPartitioned, HighlyUnbalanced: Boolean;
+begin
+  while True do
+    begin
+      Size := aFinish - aStart;
+      if Size < INSERTION_SORT_THRESHOLD then
+        begin
+          TGNestedArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart), c);
+          exit;
+        end;
+      S2 := Size div 2;
+      if Size > NINTHER_THRESHOLD then
+        begin
+          Sort3(aStart, aStart + S2, aFinish - 1, c);
+          Sort3(aStart + 1, aStart + (S2 - 1), aFinish - 2, c);
+          Sort3(aStart + 2, aStart + (S2 + 1), aFinish - 3, c);
+          Sort3(aStart + (S2 - 1), aStart + S2, aStart + (S2 + 1), c);
+          v := TFake(aStart^);
+          TFake(aStart^) := TFake((aStart + S2)^);
+          TFake((aStart + S2)^) := v;
+        end
+      else
+        Sort3(aStart + S2, aStart, aFinish - 1, c);
+      if (not aLeftMost) and (c((aStart - 1)^, aStart^) >= 0) then
+        begin
+          aStart := PartitionLeft(aStart, aFinish, c) + 1;
+          continue;
+        end;
+
+      PartResult := PartitionRight(aStart, aFinish, c);
+
+      PivotPos := PartResult.F1;
+      AlreadyPartitioned := PartResult.F2;
+      LSize := PivotPos - aStart;
+      RSize := aFinish - (PivotPos + 1);
+      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
+      if HighlyUnbalanced then
+        begin
+          Dec(aMaxDepth);
+          if aMaxDepth = 0 then
+            begin
+              TGNestedArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
+              exit;
+            end;
+          if LSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              LSizeDiv := LSize div 4;
+              v := TFake(aStart^);
+              TFake(aStart^) := TFake((aStart + LSizeDiv)^);
+              TFake((aStart + LSizeDiv)^) := v;
+              v := TFake((PivotPos - 1)^);
+              TFake((PivotPos - 1)^) := TFake((PivotPos - LSizeDiv)^);
+              TFake((PivotPos - LSizeDiv)^) := v;
+              if LSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((aStart + 1)^);
+                  TFake((aStart + 1)^) := TFake((aStart + (LSizeDiv + 1))^);
+                  TFake((aStart + (LSizeDiv + 1))^) := v;
+                  v := TFake((aStart + 2)^);
+                  TFake((aStart + 2)^) := TFake((aStart + (LSizeDiv + 2))^);
+                  TFake((aStart + (LSizeDiv + 2))^) := v;
+                  v := TFake((PivotPos - 2)^);
+                  TFake((PivotPos - 2)^) := TFake((PivotPos - (LSizeDiv + 1))^);
+                  TFake((PivotPos - (LSizeDiv + 1))^) := v;
+                  v := TFake((PivotPos - 3)^);
+                  TFake((PivotPos - 3)^) := TFake((PivotPos - (LSizeDiv + 2))^);
+                  TFake((PivotPos - (LSizeDiv + 2))^) := v;
+                end;
+            end;
+          if RSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              RSizeDiv := RSize div 4;
+              v := TFake((PivotPos + 1)^);
+              TFake((PivotPos + 1)^) := TFake((PivotPos + (1 + RSizeDiv))^);
+              TFake((PivotPos + (1 + RSizeDiv))^) := v;
+              v := TFake((aFinish - 1)^);
+              TFake((aFinish - 1)^) := TFake((aFinish - RSizeDiv)^);
+              TFake((aFinish - RSizeDiv)^) := v;
+              if RSize > NINTHER_THRESHOLD then
+                begin
+                  v := TFake((PivotPos + 2)^);
+                  TFake((PivotPos + 2)^) := TFake((PivotPos + (2 + RSizeDiv))^);
+                  TFake((PivotPos + (2 + RSizeDiv))^) := v;
+                  v := TFake((PivotPos + 3)^);
+                  TFake((PivotPos + 3)^) := TFake((PivotPos + (3 + RSizeDiv))^);
+                  TFake((PivotPos + (3 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 2)^);
+                  TFake((aFinish - 2)^) := TFake((aFinish - (1 + RSizeDiv))^);
+                  TFake((aFinish - (1 + RSizeDiv))^) := v;
+                  v := TFake((aFinish - 3)^);
+                  TFake((aFinish - 3)^) := TFake((aFinish - (2 + RSizeDiv))^);
+                  TFake((aFinish - (2 + RSizeDiv))^) := v;
+                end;
+            end;
+        end
+      else
+        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
+           PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
+      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost, c);
+      aStart := PivotPos + 1;
+      aLeftMost := False;
+    end;
+end;
+
+class function TGNestedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
+  c: TNestCompare): Boolean;
+var
+  Limit: PtrUInt;
+  v: TFake;
+  Curr, Sift, Sift1: PItem;
+begin
+  if aStart = aFinish then exit(True);
+  Limit := 0;
+  Curr := aStart + 1;
+  while Curr <> aFinish do
+    begin
+      if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
+      Sift := Curr;
+      Sift1 := Curr - 1;
+      if c(Sift^, Sift1^) < 0 then
+        begin
+          v := TFake(Sift^);
+          repeat
+            TFake(Sift^) := TFake(Sift1^);
+            Dec(Sift);
+            Dec(Sift1);
+          until (Sift = aStart) or (c(T(v), Sift1^) >= 0);
+          TFake(Sift^) := v;
+          Limit += PtrUInt(Curr - Sift);
+        end;
+      Inc(Curr);
+    end;
+  Result := True;
+end;
+
+class function TGNestedArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem;
+  c: TNestCompare): PItem;
+var
+  Pivot: T;
+  v: TFake;
+  First, Last, PivotPos: PItem;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Dec(Last) until c(Last^, Pivot) >= 0;
+  if Last + 1 = aFinish then
+    while First < Last do
+      begin
+        Inc(First);
+        if c(Pivot, First^) < 0 then
+          break;
+      end
+  else
+    repeat Inc(First) until c(Pivot, First^) < 0;
+
+  while First < Last do
+    begin
+      v := TFake(First^);
+      TFake(First^) := TFake(Last^);
+      TFake(Last^) := v;
+      repeat Dec(Last) until c(Last^, Pivot) >= 0;
+      repeat Inc(First) until c(Pivot, First^) < 0;
+    end;
+  PivotPos := Last;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := PivotPos;
+end;
+
+class procedure TGNestedArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem; c: TNestCompare);
+var
+  Sorter: TPDQSort;
+begin
+  if aStart = aFinish then exit;
+  {%H-}Sorter.AlignStorage;
+  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True, c);
+end;
+
 { TGNestedArrayHelper }
 
 class function TGNestedArrayHelper.CountRun2Asc(A: PItem; R: SizeInt; c: TNestCompare): SizeInt;
@@ -8094,8 +10359,10 @@ begin
     if Ttl > 0 then
       with QSplitMo9(A, R, c) do
         begin
-          DoIntroSort(A, Left, Pred(Ttl), c);
-          DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
+          if Left > 0 then
+            DoIntroSort(A, Left, Pred(Ttl), c);
+          if Right < R then
+            DoIntroSort(@A[Right], R - Right, Pred(Ttl), c);
         end
     else
       DoHeapSort(A, R, c)
@@ -8589,7 +10856,7 @@ begin
   if R > 0 then
     if CountRun2Asc(@A[0], R, c) < R then
       begin
-        DoIntroSort(@A[0], R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR, c);
+        DoIntroSort(@A[0], R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR, c);
         if o = soDesc then
           Reverse(A);
       end
@@ -8607,6 +10874,23 @@ begin
     if CountRun2Asc(@A[0], R, c) < R then
       begin
         DoDPQSort(@A[0], R, c);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (c(A[0], A[R]) <> 0) then
+        Reverse(A);
+end;
+
+class procedure TGNestedArrayHelper.PDQSort(var A: array of T; c: TNestCompare; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(@A[0], R, c) < R then
+      begin
+        TPDQSort.Sort(@A[0], @A[R] + 1, c);
         if o = soDesc then
           Reverse(A);
       end
@@ -8656,6 +10940,446 @@ begin
         Result[I] := Result[J];
     end;
   System.SetLength(Result, Succ(I));
+end;
+
+{ TGSimpleArrayHelper.TPDQSort }
+
+class procedure TGSimpleArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
+var
+  v: T;
+begin
+  if B^ < A^ then
+    begin
+      v := A^;
+      A^ := B^;
+      B^ := v;
+    end;
+  if C^ < B^ then
+    begin
+      v := B^;
+      B^ := C^;
+      C^ := v;
+    end;
+  if B^ < A^ then
+    begin
+      v := A^;
+      A^ := B^;
+      B^ := v;
+    end;
+end;
+
+function TGSimpleArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem): TPart;
+var
+  Pivot, v: T;
+  First, Last, It, PivotPos: PItem;
+  Num, NumL, NumR, StartL, StartR, LSize, RSize, UnknownLeft: SizeInt;
+  OffsetsL, OffsetsR: PByte;
+  I: Byte;
+  AlreadyPartitioned: Boolean;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Inc(First) until First^ >= Pivot;
+  if First - 1 = aStart then
+    while First < Last do
+      begin
+        Dec(Last);
+        if Last^ < Pivot then
+          break;
+      end
+  else
+    repeat Dec(Last) until Last^ < Pivot;
+
+  AlreadyPartitioned := First >= Last;
+
+  if not AlreadyPartitioned then
+    begin
+      v := First^;
+      First^ :=  Last^;
+      Last^ := v;
+      Inc(First);
+    end;
+
+  OffsetsL := FOffsetsL;
+  OffsetsR := FOffsetsR;
+  NumL := 0;
+  NumR := 0;
+  StartL := 0;
+  StartR := 0;
+  while Last - First > 2 * BLOCK_SIZE do
+    begin
+      if NumL = 0 then
+        begin
+          StartL := 0;
+          It := First;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsL + NumL)^ := I;
+              NumL += PtrInt(It^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 1;
+              NumL += PtrInt((It + 1)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 2;
+              NumL += PtrInt((It + 2)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 3;
+              NumL += PtrInt((It + 3)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 4;
+              NumL += PtrInt((It + 4)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 5;
+              NumL += PtrInt((It + 5)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 6;
+              NumL += PtrInt((It + 6)^ >= Pivot);
+              (OffsetsL + NumL)^ := I + 7;
+              NumL += PtrInt((It + 7)^ >= Pivot);
+              I += 8;
+              It += 8;
+            end;
+        end;
+      if NumR = 0 then
+        begin
+          StartR := 0;
+          It := Last;
+          I := 0;
+          while I < BLOCK_SIZE do
+            begin
+              (OffsetsR + NumR)^ := I + 1;
+              NumR += PtrInt((It - 1)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 2;
+              NumR += PtrInt((It - 2)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 3;
+              NumR += PtrInt((It - 3)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 4;
+              NumR += PtrInt((It - 4)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 5;
+              NumR += PtrInt((It - 5)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 6;
+              NumR += PtrInt((It - 6)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 7;
+              NumR += PtrInt((It - 7)^ < Pivot);
+              (OffsetsR + NumR)^ := I + 8;
+              NumR += PtrInt((It - 8)^ < Pivot);
+              I += 8;
+              It -= 8;
+            end;
+        end;
+      Num := NumL;
+      if NumR < NumL then
+        Num := NumR;
+      SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+      NumL -= Num;
+      NumR -= Num;
+      StartL += Num;
+      StartR += Num;
+      if NumL = 0 then
+        First += BLOCK_SIZE;
+      if NumR = 0 then
+        Last -= BLOCK_SIZE;
+    end;
+  LSize := 0;
+  RSize := 0;
+  if (NumR or NumL) <> 0 then
+    UnknownLeft := (Last - First) - BLOCK_SIZE
+  else
+    UnknownLeft := Last - First;
+  if NumR <> 0 then
+    begin
+      LSize := UnknownLeft;
+      RSize := BLOCK_SIZE;
+    end
+  else
+    if NumL <> 0 then
+      begin
+        LSize := BLOCK_SIZE;
+        RSize := UnknownLeft;
+      end
+    else
+      begin
+        LSize := UnknownLeft div 2;
+        RSize := UnknownLeft - LSize;
+      end;
+  if (UnknownLeft <> 0) and (NumL = 0) then
+    begin
+      StartL := 0;
+      It := First;
+      I := 0;
+      while I < LSize do
+        begin
+          (OffsetsL + NumL)^ := I; Inc(I);
+          NumL += PtrInt(It^ >= Pivot);
+          It += 1;
+        end;
+    end;
+  if (UnknownLeft <> 0) and (NumR = 0) then
+    begin
+      StartR := 0;
+      It := Last;
+      I := 0;
+      while I < RSize do
+        begin
+          Inc(I);
+          (OffsetsR + NumR)^ := I;
+          Dec(It);
+          NumR += PtrInt(It^ < Pivot);
+        end;
+    end;
+  Num := NumL;
+  if NumR < NumL then
+    Num := NumR;
+  SwapOffsets(First, Last, OffsetsL + StartL, OffsetsR + StartR, Num, NumL = NumR);
+  NumL -= Num;
+  NumR -= Num;
+  StartL += Num;
+  StartR += Num;
+  if NumL = 0 then
+    First += LSize;
+  if NumR = 0 then
+    Last -= RSize;
+  if NumL <> 0 then
+    begin
+      OffsetsL += StartL;
+      while NumL <> 0 do
+        begin
+          NumL -= 1;
+          Dec(Last);
+          v := (First + (OffsetsL + NumL)^)^;
+          (First + (OffsetsL + NumL)^)^ := Last^;
+          Last^ := v;
+        end;
+      First := Last;
+    end;
+  if NumR <> 0 then
+    begin
+      OffsetsR += StartR;
+      while NumR <> 0 do
+        begin
+          NumR -= 1;
+          v := (Last - (OffsetsR + NumR)^)^;
+          (Last - (OffsetsR + NumR)^)^ := First^;
+          First^ := v;
+          First += 1;
+        end;
+      Last := First;
+    end;
+  PivotPos := First - 1;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := TPart.Create(PivotPos, AlreadyPartitioned);
+end;
+
+procedure TGSimpleArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+  aLeftMost: Boolean);
+var
+  PivotPos: PItem;
+  v: T;
+  Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
+  PartResult: TPart;
+  AlreadyPartitioned, HighlyUnbalanced: Boolean;
+begin
+  while True do
+    begin
+      Size := aFinish - aStart;
+      if Size < INSERTION_SORT_THRESHOLD then
+        begin
+          TGSimpleArrayHelper.InsertionSort(aStart^, 0, Pred(aFinish - aStart));
+          exit;
+        end;
+      S2 := Size div 2;
+      if Size > NINTHER_THRESHOLD then
+        begin
+          Sort3(aStart, aStart + S2, aFinish - 1);
+          Sort3(aStart + 1, aStart + (S2 - 1), aFinish - 2);
+          Sort3(aStart + 2, aStart + (S2 + 1), aFinish - 3);
+          Sort3(aStart + (S2 - 1), aStart + S2, aStart + (S2 + 1));
+          v := aStart^;
+          aStart^ := (aStart + S2)^;
+          (aStart + S2)^ := v;
+        end
+      else
+        Sort3(aStart + S2, aStart, aFinish - 1);
+      if (not aLeftMost) and ((aStart - 1)^ >= aStart^) then
+        begin
+          aStart := PartitionLeft(aStart, aFinish) + 1;
+          continue;
+        end;
+
+      PartResult := PartitionRight(aStart, aFinish);
+
+      PivotPos := PartResult.F1;
+      AlreadyPartitioned := PartResult.F2;
+      LSize := PivotPos - aStart;
+      RSize := aFinish - (PivotPos + 1);
+      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
+      if HighlyUnbalanced then
+        begin
+          Dec(aMaxDepth);
+          if aMaxDepth = 0 then
+            begin
+              TGSimpleArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
+              exit;
+            end;
+          if LSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              LSizeDiv := LSize div 4;
+              v := aStart^;
+              aStart^ := (aStart + LSizeDiv)^;
+              (aStart + LSizeDiv)^ := v;
+              v := (PivotPos - 1)^;
+              (PivotPos - 1)^ := (PivotPos - LSizeDiv)^;
+              (PivotPos - LSizeDiv)^ := v;
+              if LSize > NINTHER_THRESHOLD then
+                begin
+                  v := (aStart + 1)^;
+                  (aStart + 1)^ := (aStart + (LSizeDiv + 1))^;
+                  (aStart + (LSizeDiv + 1))^ := v;
+                  v := (aStart + 2)^;
+                  (aStart + 2)^ := (aStart + (LSizeDiv + 2))^;
+                  (aStart + (LSizeDiv + 2))^ := v;
+                  v := (PivotPos - 2)^;
+                  (PivotPos - 2)^ := (PivotPos - (LSizeDiv + 1))^;
+                  (PivotPos - (LSizeDiv + 1))^ := v;
+                  v := (PivotPos - 3)^;
+                  (PivotPos - 3)^ := (PivotPos - (LSizeDiv + 2))^;
+                  (PivotPos - (LSizeDiv + 2))^ := v;
+                end;
+            end;
+          if RSize >= INSERTION_SORT_THRESHOLD then
+            begin
+              RSizeDiv := RSize div 4;
+              v := (PivotPos + 1)^;
+              (PivotPos + 1)^ := (PivotPos + (1 + RSizeDiv))^;
+              (PivotPos + (1 + RSizeDiv))^ := v;
+              v := (aFinish - 1)^;
+              (aFinish - 1)^ := (aFinish - RSizeDiv)^;
+              (aFinish - RSizeDiv)^ := v;
+              if RSize > NINTHER_THRESHOLD then
+                begin
+                  v := (PivotPos + 2)^;
+                  (PivotPos + 2)^ := (PivotPos + (2 + RSizeDiv))^;
+                  (PivotPos + (2 + RSizeDiv))^ := v;
+                  v := (PivotPos + 3)^;
+                  (PivotPos + 3)^ := (PivotPos + (3 + RSizeDiv))^;
+                  (PivotPos + (3 + RSizeDiv))^ := v;
+                  v := (aFinish - 2)^;
+                  (aFinish - 2)^ := (aFinish - (1 + RSizeDiv))^;
+                  (aFinish - (1 + RSizeDiv))^ := v;
+                  v := (aFinish - 3)^;
+                  (aFinish - 3)^ := (aFinish - (2 + RSizeDiv))^;
+                  (aFinish - (2 + RSizeDiv))^ := v;
+                end;
+            end;
+        end
+      else
+        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos) and
+           PartialInsertionSort(PivotPos + 1, aFinish) then exit;
+      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
+      aStart := PivotPos + 1;
+      aLeftMost := False;
+    end;
+end;
+
+class function TGSimpleArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
+var
+  Limit: PtrUInt;
+  v: T;
+  Curr, Sift, Sift1: PItem;
+begin
+  if aStart = aFinish then exit(True);
+  Limit := 0;
+  Curr := aStart + 1;
+  while Curr <> aFinish do
+    begin
+      if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
+      Sift := Curr;
+      Sift1 := Curr - 1;
+      if Sift^ < Sift1^ then
+        begin
+          v := Sift^;
+          repeat
+            Sift^ := Sift1^;
+            Dec(Sift);
+            Dec(Sift1);
+          until (Sift = aStart) or (v >= Sift1^);
+          Sift^ := v;
+          Limit += PtrUInt(Curr - Sift);
+        end;
+      Inc(Curr);
+    end;
+  Result := True;
+end;
+
+class function TGSimpleArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
+var
+  Pivot, v: T;
+  First, Last, PivotPos: PItem;
+begin
+  Pivot := aStart^;
+  First := aStart;
+  Last := aFinish;
+  repeat Dec(Last) until Last^ >= Pivot;
+  if Last + 1 = aFinish then
+    while First < Last do
+      begin
+        Inc(First);
+        if Pivot < First^ then
+          break;
+      end
+  else
+    repeat Inc(First) until Pivot < First^;
+
+  while First < Last do
+    begin
+      v := First^;
+      First^ := Last^;
+      Last^ := v;
+      repeat Dec(Last) until Last^ >= Pivot;
+      repeat Inc(First) until Pivot < First^;
+    end;
+  PivotPos := Last;
+  aStart^ := PivotPos^;
+  PivotPos^ := Pivot;
+  Result := PivotPos;
+end;
+
+class procedure TGSimpleArrayHelper.TPDQSort.SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
+  aNum: SizeInt; aUseSwaps: Boolean);
+var
+  L, R: PItem;
+  I: SizeInt;
+  v: T;
+begin
+  if aUseSwaps then
+    for I := 0 to Pred(aNum) do
+      begin
+        v := (aFirst + aOffsetsL[I])^;
+        (aFirst + aOffsetsL[I])^ := (aLast - aOffsetsR[I])^;
+        (aLast - aOffsetsR[I])^ := v;
+      end
+  else
+    if aNum > 0 then
+      begin
+        L := aFirst + aOffsetsL[0];
+        R := aLast - aOffsetsR[0];
+        v := L^;
+        L^ := R^;
+        for I := 1 to Pred(aNum) do
+          begin
+            L := aFirst + aOffsetsL[I];
+            R^ := L^;
+            R := aLast - aOffsetsR[I];
+            L^ := R^;
+          end;
+        R^ := v;
+      end;
+end;
+
+class procedure TGSimpleArrayHelper.TPDQSort.Sort(aStart, aFinish: PItem);
+var
+  Sorter: TPDQSort;
+begin
+  if aStart = aFinish then exit;
+  {%H-}Sorter.AlignStorage;
+  Sorter.DoSort(aStart, aFinish, Succ(BSRQWord(aFinish - aStart)), True);
 end;
 
 { TGSimpleArrayHelper }
@@ -9594,7 +12318,7 @@ begin
   if R > 0 then
     if CountRun2Asc(A, 0, R) < R then
       begin
-        DoIntroSort(A, 0, R, Pred(LGUtils.NSB(R + 1)) * INTRO_LOG_FACTOR);
+        DoIntroSort(A, 0, R, LGUtils.NSB(R + 1) * INTRO_LOG_FACTOR);
         if o = soDesc then
           Reverse(A);
       end
@@ -9612,6 +12336,23 @@ begin
     if CountRun2Asc(A, 0, R) < R then
       begin
         DoDPQSort(A, 0, R);
+        if o = soDesc then
+          Reverse(A);
+      end
+    else
+      if (o = soDesc) and (A[0] <> A[R]) then
+        Reverse(A);
+end;
+
+class procedure TGSimpleArrayHelper.PDQSort(var A: array of T; o: TSortOrder);
+var
+  R: SizeInt;
+begin
+  R := System.High(A);
+  if R > 0 then
+    if CountRun2Asc(A, 0, R) < R then
+      begin
+        TPDQSort.Sort(@A[0], @A[R] + 1);
         if o = soDesc then
           Reverse(A);
       end
