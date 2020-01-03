@@ -2534,7 +2534,6 @@ var
   v: TFake;
   Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
-  AlreadyPartitioned, HighlyUnbalanced: Boolean;
 begin
   while True do
     begin
@@ -2566,11 +2565,9 @@ begin
       PartResult := PartitionRight(aStart, aFinish);
 
       PivotPos := PartResult.F1;
-      AlreadyPartitioned := PartResult.F2;
       LSize := PivotPos - aStart;
       RSize := aFinish - (PivotPos + 1);
-      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
-      if HighlyUnbalanced then
+      if (LSize < Size div 8) or (RSize < Size div 8) then
         begin
           Dec(aMaxDepth);
           if aMaxDepth = 0 then
@@ -2630,7 +2627,7 @@ begin
             end;
         end
       else
-        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos) and
+        if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
       DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
       aStart := PivotPos + 1;
@@ -4342,7 +4339,6 @@ var
   v: TFake;
   Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
-  AlreadyPartitioned, HighlyUnbalanced: Boolean;
 begin
   while True do
     begin
@@ -4374,11 +4370,9 @@ begin
       PartResult := PartitionRight(aStart, aFinish);
 
       PivotPos := PartResult.F1;
-      AlreadyPartitioned := PartResult.F2;
       LSize := PivotPos - aStart;
       RSize := aFinish - (PivotPos + 1);
-      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
-      if HighlyUnbalanced then
+      if (LSize < Size div 8) or (RSize < Size div 8) then
         begin
           Dec(aMaxDepth);
           if aMaxDepth = 0 then
@@ -4438,7 +4432,7 @@ begin
             end;
         end
       else
-        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos) and
+        if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
       DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
       aStart := PivotPos + 1;
@@ -11174,7 +11168,6 @@ var
   v: T;
   Size, S2, LSize, LSizeDiv, RSize, RSizeDiv: SizeInt;
   PartResult: TPart;
-  AlreadyPartitioned, HighlyUnbalanced: Boolean;
 begin
   while True do
     begin
@@ -11206,11 +11199,9 @@ begin
       PartResult := PartitionRight(aStart, aFinish);
 
       PivotPos := PartResult.F1;
-      AlreadyPartitioned := PartResult.F2;
       LSize := PivotPos - aStart;
       RSize := aFinish - (PivotPos + 1);
-      HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
-      if HighlyUnbalanced then
+      if (LSize < Size div 8) or (RSize < Size div 8) then
         begin
           Dec(aMaxDepth);
           if aMaxDepth = 0 then
@@ -11270,7 +11261,7 @@ begin
             end;
         end
       else
-        if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos) and
+        if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
       DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
       aStart := PivotPos + 1;
