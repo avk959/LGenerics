@@ -86,6 +86,7 @@
   - permutations
   - binary search
   - N-th order statistics
+  - inversion counting
   - distinct values selection
   - quicksort
   - introsort
@@ -93,6 +94,7 @@
   - mergesort
   - timsort(unit LGMiscUtils)
   - counting sort
+  - translation of Orson Peters' PDQSort algorithm
   - static segment tree
   - ...
 #### Other:
