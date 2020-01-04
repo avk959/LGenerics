@@ -234,7 +234,7 @@ type
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt); static;
-    class function  MedianOf3(constref v1, v2, v3: T): T; static; inline;
+    class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
@@ -365,7 +365,7 @@ type
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt); static;
-    class function  MedianOf3(constref v1, v2, v3: T): T; static; inline;
+    class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt); static;
     class function  DPQSplit(A: PItem; R: SizeInt): TSortSplit; static;
@@ -500,7 +500,7 @@ type
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TCompare); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TCompare): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt; c: TCompare); static;
-    class function  MedianOf3(constref v1, v2, v3: T; c: TCompare): T; static; inline;
+    class function  MedianOf3(p1, p2, p3: PItem; c: TCompare): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TCompare): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TCompare); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TCompare): TSortSplit; static;
@@ -637,7 +637,7 @@ type
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TOnCompare); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt; c: TOnCompare); static;
-    class function  MedianOf3(constref v1, v2, v3: T; c: TOnCompare): T; static; inline;
+    class function  MedianOf3(p1, p2, p3: PItem; c: TOnCompare): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TOnCompare); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TOnCompare): TSortSplit; static;
@@ -779,7 +779,7 @@ type
     class procedure DoHeapSort(A: PItem; R: SizeInt; c: TNestCompare); static;
     class function  QSplitR(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit; static;
     class procedure DoQSort(A: PItem; R: SizeInt; c: TNestCompare); static;
-    class function  MedianOf3(constref v1, v2, v3: T; c: TNestCompare): T; static; inline;
+    class function  MedianOf3(p1, p2, p3: PItem; c: TNestCompare): PItem; static; inline;
     class function  QSplitMo9(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit; static;
     class procedure DoIntroSort(A: PItem; R, Ttl: SizeInt; c: TNestCompare); static;
     class function  DPQSplit(A: PItem; R: SizeInt; c: TNestCompare): TSortSplit; static;
@@ -890,7 +890,7 @@ type
     class procedure DoHeapSort(A: PItem; R: SizeInt); static;
     class function  QSplitR(var A: array of T; L, R: SizeInt): TSortSplit; static;
     class procedure DoQSort(var A: array of T; L, R: SizeInt); static;
-    class function  MedianOf3(const v1, v2, v3: T): T; static; inline;
+    class function  MedianOf3(p1, p2, p3: PItem): PItem; static; inline;
     class function  GetMo9Pivot(constref A: array of T; L, R: SizeInt): T; static;
     class function  QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit; static;
     class procedure DoIntroSort(var A: array of T; L, R, Ttl: SizeInt); static;
@@ -3000,27 +3000,27 @@ begin
     InsertionSort(A, R);
 end;
 
-class function TGBaseArrayHelper.MedianOf3(constref v1, v2, v3: T): T;
+class function TGBaseArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
 begin
-  Result := v2;
-  if TCmpRel.Compare(v1, Result) < 0 then
+  Result := p2;
+  if TCmpRel.Compare(p1^, Result^) < 0 then
     begin
-      if TCmpRel.Compare(v3, Result) < 0 then
+      if TCmpRel.Compare(p3^, Result^) < 0 then
         begin
-          if TCmpRel.Compare(v1, v3) < 0 then
-            Result := v3
+          if TCmpRel.Compare(p1^, p3^) < 0 then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end
-  else { v1 >= Result }
+  else { p1^ >= Result^ }
     begin
-      if TCmpRel.Compare(v3, Result) > 0 then
+      if TCmpRel.Compare(p3^, Result^) > 0 then
         begin
-          if TCmpRel.Compare(v1, v3) > 0 then
-            Result := v3
+          if TCmpRel.Compare(p1^, p3^) > 0 then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end;
 end;
@@ -3033,17 +3033,17 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(A[0],
-                A[Succ(R) shr 3],
-                A[Succ(R) shr 2]),
-      MedianOf3(A[Succ(R) shr 1 - Succ(R) shr 3],
-                A[Succ(R) shr 1],
-                A[Succ(R) shr 1 + Succ(R) shr 3]),
-      MedianOf3(A[R - Succ(R) shr 2],
-                A[R - Succ(R) shr 3],
-                A[R]))
+      MedianOf3(@A[0],
+                @A[Succ(R) shr 3],
+                @A[Succ(R) shr 2]),
+      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
+                @A[Succ(R) shr 1],
+                @A[Succ(R) shr 1 + Succ(R) shr 3]),
+      MedianOf3(@A[R - Succ(R) shr 2],
+                @A[R - Succ(R) shr 3],
+                @A[R]))^
   else
-    Pivot := MedianOf3(A[0], A[Succ(R) shr 1], A[R]);
+    Pivot := MedianOf3(@A[0], @A[Succ(R) shr 1], @A[R])^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -4795,27 +4795,27 @@ begin
     InsertionSort(A, R);
 end;
 
-class function TGComparableArrayHelper.MedianOf3(constref v1, v2, v3: T): T;
+class function TGComparableArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
 begin
-  Result := v2;
-  if v1 < Result then
+  Result := p2;
+  if p1^ < Result^ then
     begin
-      if v3 < Result then
+      if p3^ < Result^ then
         begin
-          if v1 < v3 then
-            Result := v3
+          if p1^ < p3^ then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end
-  else { v1 >= Result }
+  else { p1^ >= Result^ }
     begin
-      if v3 > Result then
+      if p3^ > Result^ then
         begin
-          if v1 > v3 then
-            Result := v3
+          if p1^ > p3^ then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end;
 end;
@@ -4828,17 +4828,17 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(A[0],
-                A[Succ(R) shr 3],
-                A[Succ(R) shr 2]),
-      MedianOf3(A[Succ(R) shr 1 - Succ(R) shr 3],
-                A[Succ(R) shr 1],
-                A[Succ(R) shr 1 + Succ(R) shr 3]),
-      MedianOf3(A[R - Succ(R) shr 2],
-                A[R - Succ(R) shr 3],
-                A[R]))
+      MedianOf3(@A[0],
+                @A[Succ(R) shr 3],
+                @A[Succ(R) shr 2]),
+      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
+                @A[Succ(R) shr 1],
+                @A[Succ(R) shr 1 + Succ(R) shr 3]),
+      MedianOf3(@A[R - Succ(R) shr 2],
+                @A[R - Succ(R) shr 3],
+                @A[R]))^
   else
-    Pivot := MedianOf3(A[0], A[Succ(R) shr 1], A[R]);
+    Pivot := MedianOf3(@A[0],@ A[Succ(R) shr 1], @A[R])^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -6623,27 +6623,27 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGRegularArrayHelper.MedianOf3(constref v1, v2, v3: T; c: TCompare): T;
+class function TGRegularArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TCompare): PItem;
 begin
-  Result := v2;
-  if c(v1, Result) < 0 then
+  Result := p2;
+  if c(p1^, Result^) < 0 then
     begin
-      if c(v3, Result) < 0 then
+      if c(p3^, Result^) < 0 then
         begin
-          if c(v1, v3) < 0 then
-            Result := v3
+          if c(p1^, p3^) < 0 then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end
-  else { v1 >= Result }
+  else { p1^ >= Result^ }
     begin
-      if c(v3, Result) > 0 then
+      if c(p3^, Result^) > 0 then
         begin
-          if c(v1, v3) > 0 then
-            Result := v3
+          if c(p1^, p3^) > 0 then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end;
 end;
@@ -6656,17 +6656,17 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(A[0],
-                A[Succ(R) shr 3],
-                A[Succ(R) shr 2], c),
-      MedianOf3(A[Succ(R) shr 1 - Succ(R) shr 3],
-                A[Succ(R) shr 1],
-                A[Succ(R) shr 1 + Succ(R) shr 3], c),
-      MedianOf3(A[R - Succ(R) shr 2],
-                A[R - Succ(R) shr 3],
-                A[R], c), c)
+      MedianOf3(@A[0],
+                @A[Succ(R) shr 3],
+                @A[Succ(R) shr 2], c),
+      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
+                @A[Succ(R) shr 1],
+                @A[Succ(R) shr 1 + Succ(R) shr 3], c),
+      MedianOf3(@A[R - Succ(R) shr 2],
+                @A[R - Succ(R) shr 3],
+                @A[R], c), c)^
   else
-    Pivot := MedianOf3(A[0], A[Succ(R) shr 1], A[R], c);
+    Pivot := MedianOf3(@A[0], @A[Succ(R) shr 1], @A[R], c)^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -8456,27 +8456,27 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGDelegatedArrayHelper.MedianOf3(constref v1, v2, v3: T; c: TOnCompare): T;
+class function TGDelegatedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TOnCompare): PItem;
 begin
-  Result := v2;
-  if c(v1, Result) < 0 then
+  Result := p2;
+  if c(p1^, Result^) < 0 then
     begin
-      if c(v3, Result) < 0 then
+      if c(p3^, Result^) < 0 then
         begin
-          if c(v1, v3) < 0 then
-            Result := v3
+          if c(p1^, p3^) < 0 then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end
-  else { v1 >= Result }
+  else { p1^ >= Result^ }
     begin
-      if c(v3, Result) > 0 then
+      if c(p3^, Result^) > 0 then
         begin
-          if c(v1, v3) > 0 then
-            Result := v3
+          if c(p1^, p3^) > 0 then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end;
 end;
@@ -8489,17 +8489,17 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(A[0],
-                A[Succ(R) shr 3],
-                A[Succ(R) shr 2], c),
-      MedianOf3(A[Succ(R) shr 1 - Succ(R) shr 3],
-                A[Succ(R) shr 1],
-                A[Succ(R) shr 1 + Succ(R) shr 3], c),
-      MedianOf3(A[R - Succ(R) shr 2],
-                A[R - Succ(R) shr 3],
-                A[R], c), c)
+      MedianOf3(@A[0],
+                @A[Succ(R) shr 3],
+                @A[Succ(R) shr 2], c),
+      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
+                @A[Succ(R) shr 1],
+                @A[Succ(R) shr 1 + Succ(R) shr 3], c),
+      MedianOf3(@A[R - Succ(R) shr 2],
+                @A[R - Succ(R) shr 3],
+                @A[R], c), c)^
   else
-    Pivot := MedianOf3(A[0], A[Succ(R) shr 1], A[R], c);
+    Pivot := MedianOf3(@A[0], @A[Succ(R) shr 1], @A[R], c)^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -10290,27 +10290,27 @@ begin
     InsertionSort(A, R, c);
 end;
 
-class function TGNestedArrayHelper.MedianOf3(constref v1, v2, v3: T; c: TNestCompare): T;
+class function TGNestedArrayHelper.MedianOf3(p1, p2, p3: PItem; c: TNestCompare): PItem;
 begin
-  Result := v2;
-  if c(v1, Result) < 0 then
+  Result := p2;
+  if c(p1^, Result^) < 0 then
     begin
-      if c(v3, Result) < 0 then
+      if c(p3^, Result^) < 0 then
         begin
-          if c(v1, v3) < 0 then
-            Result := v3
+          if c(p1^, p3^) < 0 then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end
-  else { v1 >= Result }
+  else { p1^ >= Result^ }
     begin
-      if c(v3, Result) > 0 then
+      if c(p3^, Result^) > 0 then
         begin
-          if c(v1, v3) > 0 then
-            Result := v3
+          if c(p1^, p3^) > 0 then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end;
 end;
@@ -10323,16 +10323,17 @@ var
 begin
   if R > MEDIAN_OF9_CUTOFF then
     Pivot := MedianOf3(
-      MedianOf3(A[0],
-                A[Succ(R) shr 3],
-                A[Succ(R) shr 2], c),
-      MedianOf3(A[Succ(R) shr 1 - Succ(R) shr 3],
-                A[Succ(R) shr 1], A[Succ(R) shr 1 + Succ(R) shr 3], c),
-      MedianOf3(A[R - Succ(R) shr 2],
-                A[R - Succ(R) shr 3],
-                A[R], c), c)
+      MedianOf3(@A[0],
+                @A[Succ(R) shr 3],
+                @A[Succ(R) shr 2], c),
+      MedianOf3(@A[Succ(R) shr 1 - Succ(R) shr 3],
+                @A[Succ(R) shr 1],
+                @A[Succ(R) shr 1 + Succ(R) shr 3], c),
+      MedianOf3(@A[R - Succ(R) shr 2],
+                @A[R - Succ(R) shr 3],
+                @A[R], c), c)^
   else
-    Pivot := MedianOf3(A[0], A[Succ(R) shr 1], A[R], c);
+    Pivot := MedianOf3(@A[0], @A[Succ(R) shr 1], @A[R], c)^;
   pL := -1;
   pR := Succ(R);
   repeat
@@ -11656,27 +11657,27 @@ begin
     InsertionSort(A, L, R);
 end;
 
-class function TGSimpleArrayHelper.MedianOf3(const v1, v2, v3: T): T;
+class function TGSimpleArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
 begin
-  Result := v2;
-  if v1 < Result then
+  Result := p2;
+  if p1^ < Result^ then
     begin
-      if v3 < Result then
+      if p3^ < Result^ then
         begin
-          if v1 < v3 then
-            Result := v3
+          if p1^ < p3^ then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end
-  else { v1 >= Result }
+  else { p1^ >= Result^ }
     begin
-      if v3 > Result then
+      if p3^ > Result^ then
         begin
-          if v1 > v3 then
-            Result := v3
+          if p1^ > p3^ then
+            Result := p3
           else
-            Result := v1;
+            Result := p1;
         end;
     end;
 end;
@@ -11684,15 +11685,13 @@ end;
 class function TGSimpleArrayHelper.GetMo9Pivot(constref A: array of T; L, R: SizeInt): T;
 begin
   if R - L > MEDIAN_OF9_CUTOFF then
-    begin
-      Result := MedianOf3(
-      MedianOf3(A[L], A[L + Succ(R - L) shr 3], A[L + Succ(R - L) shr 2]),
-      MedianOf3(A[L + Succ(R - L) shr 1 - Succ(R - L) shr 3], A[L + Succ(R - L) shr 1],
-                A[L + Succ(R - L) shr 1 + Succ(R - L) shr 3]),
-      MedianOf3(A[R - Succ(R - L) shr 2], A[R - Succ(R - L) shr 3], A[R]));
-    end
+    Result := MedianOf3(
+        MedianOf3(@A[L], @A[L + Succ(R - L) shr 3], @A[L + Succ(R - L) shr 2]),
+        MedianOf3(@A[L + Succ(R - L) shr 1 - Succ(R - L) shr 3], @A[L + Succ(R - L) shr 1],
+                @A[L + Succ(R - L) shr 1 + Succ(R - L) shr 3]),
+        MedianOf3(@A[R - Succ(R - L) shr 2], @A[R - Succ(R - L) shr 3], @A[R]))^
   else
-    Result := MedianOf3(A[L], A[L + Succ(R - L) shr 1], A[R]);
+    Result := MedianOf3(@A[L], @A[L + Succ(R - L) shr 1], @A[R])^;
 end;
 
 class function TGSimpleArrayHelper.QSplitMo9(var A: array of T; L, R: SizeInt): TSortSplit;

@@ -9,7 +9,7 @@ interface
 
 uses
   SysUtils, TypInfo, math, LGArrayHelpers, LGMiscUtils, garrayutils, gutil,
-  Generics.Collections, Generics.Defaults, LGHelpers, PasPDQSort, epiktimer;
+  Generics.Collections, Generics.Defaults, {%H-}LGHelpers, PasPDQSort, epiktimer;
 
 type
 
