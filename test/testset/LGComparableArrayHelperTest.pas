@@ -398,6 +398,8 @@ type
     procedure MergeSortDescOfStatic877Stable;
     procedure MergeSortAscOfDyn877Stable;
     procedure MergeSortDescOfDyn877Stable;
+
+    procedure PDQSortTest;
   end;
 
 implementation
@@ -3452,6 +3454,33 @@ begin
     Dec(v);
     I := J;
   until v < 0;
+end;
+
+procedure TComparableArrayHelperTest.PDQSortTest;
+var
+  a, b: TIntArray;
+  I: Integer;
+const
+  TestSize = 1000;
+begin
+  TIntHelper.PDQSort(a{%H-});
+  AssertTrue(a = nil);
+  a := [9, 13, 13];
+  TIntHelper.PDQSort(a);
+  AssertTrue(TIntHelper.Same(a, [9, 13, 13]));
+  a := [13, 11, 5];
+  TIntHelper.PDQSort(a);
+  AssertTrue(TIntHelper.Same(a, [5, 11, 13]));
+  SetLength(b, TestSize);
+  for I := 0 to Pred(TestSize) do
+    b[I] := I;
+  a := TIntHelper.CreateRandomShuffle(b);
+  TIntHelper.PDQSort(a);
+  AssertTrue(TIntHelper.Same(a, b));
+  a := TIntHelper.CreateRandomShuffle(b);
+  TIntHelper.Reverse(b);
+  TIntHelper.PDQSort(a, soDesc);
+  AssertTrue(TIntHelper.Same(a, b));
 end;
 
 initialization
