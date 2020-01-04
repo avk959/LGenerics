@@ -2,24 +2,23 @@ object frmMain: TfrmMain
   Left = 489
   Height = 460
   Top = 250
-  Width = 1041
+  Width = 1152
   ActiveControl = btRunSelected
   Caption = 'frmMain'
   ClientHeight = 460
-  ClientWidth = 1041
+  ClientWidth = 1152
   DesignTimePPI = 115
   OnCreate = FormCreate
   Position = poScreenCenter
   ShowHint = True
-  LCLVersion = '2.0.5.0'
   object MainStatus: TStatusBar
     Left = 0
     Height = 28
     Top = 432
-    Width = 1041
+    Width = 1152
     Panels = <    
       item
-        Width = 250
+        Width = 300
       end    
       item
         Width = 220
@@ -36,22 +35,22 @@ object frmMain: TfrmMain
     Left = 0
     Height = 432
     Top = 0
-    Width = 1041
+    Width = 1152
     Align = alClient
     BevelOuter = bvNone
     ClientHeight = 432
-    ClientWidth = 1041
+    ClientWidth = 1152
     TabOrder = 1
     object pnRight: TPanel
-      Left = 888
+      Left = 992
       Height = 432
       Top = 0
-      Width = 153
+      Width = 160
       Align = alRight
       Anchors = []
       BevelOuter = bvNone
       ClientHeight = 432
-      ClientWidth = 153
+      ClientWidth = 160
       TabOrder = 0
       object Label1: TLabel
         Left = 8
@@ -65,19 +64,19 @@ object frmMain: TfrmMain
         Left = 4
         Height = 29
         Hint = '|Start single test for selected sample class'
-        Top = 325
-        Width = 144
+        Top = 324
+        Width = 152
         Anchors = [akBottom]
         Caption = 'Run selected'
         OnClick = btRunSelectedClick
         TabOrder = 4
       end
       object cbSampleSize: TComboBox
-        Left = 8
+        Left = 4
         Height = 27
         Hint = '|Select data array size'
         Top = 36
-        Width = 136
+        Width = 152
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         DropDownCount = 12
@@ -94,11 +93,11 @@ object frmMain: TfrmMain
         ParentColor = False
       end
       object cbSampleClass: TComboBox
-        Left = 8
+        Left = 4
         Height = 27
         Hint = '|Select data sample class'
         Top = 104
-        Width = 136
+        Width = 152
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         DropDownCount = 12
@@ -115,11 +114,11 @@ object frmMain: TfrmMain
         ParentColor = False
       end
       object seKValue: TSpinEdit
-        Left = 8
+        Left = 4
         Height = 27
         Hint = '|Set parameter K value'
         Top = 172
-        Width = 136
+        Width = 152
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         MaxValue = 1000000000
@@ -136,11 +135,11 @@ object frmMain: TfrmMain
         ParentColor = False
       end
       object seIterationCount: TSpinEdit
-        Left = 8
+        Left = 4
         Height = 27
         Hint = '|Set count of iterations'
         Top = 244
-        Width = 136
+        Width = 152
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         MaxValue = 10000
@@ -156,7 +155,7 @@ object frmMain: TfrmMain
         Height = 29
         Hint = 'Cancel running test'
         Top = 397
-        Width = 144
+        Width = 152
         Anchors = [akBottom]
         Caption = 'Cancel'
         Enabled = False
@@ -170,8 +169,8 @@ object frmMain: TfrmMain
         Left = 4
         Height = 29
         Hint = '|Start tests for all data classes with selected size and K'
-        Top = 357
-        Width = 144
+        Top = 356
+        Width = 152
         Anchors = [akBottom]
         Caption = 'Run all '
         OnClick = btRunAllClick
@@ -179,7 +178,7 @@ object frmMain: TfrmMain
       end
     end
     object Splitter1: TSplitter
-      Left = 883
+      Left = 987
       Height = 432
       Top = 0
       Width = 5
@@ -190,22 +189,22 @@ object frmMain: TfrmMain
       Left = 0
       Height = 432
       Top = 0
-      Width = 883
+      Width = 987
       Align = alClient
       Anchors = []
       BevelOuter = bvNone
       ClientHeight = 432
-      ClientWidth = 883
+      ClientWidth = 987
       TabOrder = 2
       object pnGrid: TPanel
         Left = 0
         Height = 432
         Top = 0
-        Width = 883
+        Width = 987
         Align = alClient
         BevelOuter = bvNone
         ClientHeight = 432
-        ClientWidth = 883
+        ClientWidth = 987
         TabOrder = 0
         object Label5: TLabel
           Left = 4
@@ -220,10 +219,11 @@ object frmMain: TfrmMain
           Left = 0
           Height = 409
           Top = 0
-          Width = 883
+          Width = 986
           AlternateColor = 14869218
           Anchors = [akTop, akLeft, akRight, akBottom]
           AutoEdit = False
+          ColCount = 4
           Flat = True
           Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goSmoothScroll, goFixedColSizing]
           TabOrder = 0
@@ -232,7 +232,6 @@ object frmMain: TfrmMain
             237
             237
             237
-            240
           )
         end
       end

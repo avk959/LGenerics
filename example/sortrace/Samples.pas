@@ -1,6 +1,7 @@
 unit Samples;
 
 {$mode objfpc}{$H+}
+{$inline on}
 {$modeswitch typehelpers}
 {$modeswitch advancedrecords}
 
@@ -12,12 +13,12 @@ uses
 
 type
 
-  TSortAlgo     = (saQuickSort, saIntroSort, saDualPivotQuickSort, saMergeSort, saTimSort,
+  TSortAlgo     = (saQuickSort, saIntroSort, saDualPivotQuickSort, saPDQSort, saMergeSort, saTimSort,
                    saFclSort,{ fcl-stl TOrderingArrayUtils.Sort }
                    saGCSort, { Generics.Collections TArrayHelper.Sort }
-                   saPDQSort { Akira1364's Pascal translation of PDQSort from
-                               https://github.com/Akira13641/PasPDQSort });
-  TSampleSize   = (ss1K, ss2K, ss5K, ss10K, ss20K, ss50K, ss01M, ss02M, ss05M, ss1M, ss2M, ss5M);
+                   saPasPDQSort { Akira1364's Pascal translation of PDQSort from
+                                  https://github.com/Akira13641/PasPDQSort });
+  TSampleSize   = (ss1K, ss2K, ss5K, ss10K, ss20K, ss50K, ss01M, ss02M, ss05M, ss1M, ss2M, ss5M, ss10M);
   TSampleClass  = (scRandomUInt, scRandomUInt64, scRandomSingle, scRandomDouble, scRandomStr8,
                    scRandomVec4, scKLimited, scKEqualTeeth, scKEvenTeeth, scKSharpTeeth, scKDistance,
                    scKExchange);
@@ -25,6 +26,7 @@ type
   TVec4 = record
     X, Y, Z, W: Double;
     class function CreateRandom(aRange: Integer): TVec4; static; inline;
+    class function Compare(const L, R: TVec4): Integer; static; inline;
   end;
 
   TUIntSample   = array of DWord;
@@ -124,6 +126,12 @@ begin
   end;
 end;
 
+class function TVec4.Compare(const L, R: TVec4): Integer;
+begin
+  Result := Ord(L.X + L.Y + L.Z + L.W > R.X + R.Y + R.Z + R.W) -
+            Ord(L.X + L.Y + L.Z + L.W < R.X + R.Y + R.Z + R.W);
+end;
+
 { TSortAlgoHelper }
 
 function TSortAlgoHelper.GetName: string;
@@ -148,28 +156,15 @@ begin
     ss05M: Result := 500000;
     ss1M:  Result := 1000000;
     ss2M:  Result := 2000000;
-  else //ss5M
-    Result := 5000000;
+    ss5M:  Result := 5000000;
+  else //ss10M
+    Result := 10000000;
   end;
 end;
 
 function TSampleSizeHelper.ToString: string;
 begin
-  case Self of
-    ss1K:  Result := '1000';
-    ss2K:  Result := '2000';
-    ss5K:  Result := '5000';
-    ss10K: Result := '10000';
-    ss20K: Result := '20000';
-    ss50K: Result := '50000';
-    ss01M: Result := '100000';
-    ss02M: Result := '200000';
-    ss05M: Result := '500000';
-    ss1M:  Result := '1000000';
-    ss2M:  Result := '2000000';
-  else //ss5M
-    Result := '5000000';
-  end;
+  Result := IntToStr(ToInt);
 end;
 
 { TSampleClassHelper }
@@ -421,11 +416,12 @@ begin
     saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
     saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
+    saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
-    saPDQSort:            TPDQSort.Sort(Data, @DwLess);
+    saPasPDQSort:         TPDQSort.Sort(Data, @DwLess);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -454,11 +450,12 @@ begin
     saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
     saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
+    saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
-    saPDQSort:            TPDQSort.Sort(Data, @SingleLess);
+    saPasPDQSort:         TPDQSort.Sort(Data, @SingleLess);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -487,11 +484,12 @@ begin
     saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
     saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
+    saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
-    saPDQSort:            TPDQSort.Sort(Data, @DblLess);
+    saPasPDQSort:         TPDQSort.Sort(Data, @DblLess);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -520,11 +518,12 @@ begin
     saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
     saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
+    saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data);
-    saPDQSort:            TPDQSort.Sort(Data, @QwLess);
+    saPasPDQSort:         TPDQSort.Sort(Data, @QwLess);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -564,11 +563,12 @@ begin
     saQuickSort:          THelper.QuickSort(Data);
     saIntroSort:          THelper.IntroSort(Data);
     saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
+    saPDQSort:            THelper.PDQSort(Data);
     saMergeSort:          THelper.MergeSort(Data);
     saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data, specialize TComparer<string>.Construct(@StrCmp));
-    saPDQSort:            TPDQSort.Sort(Data, @StrLess);
+    saPasPDQSort:         TPDQSort.Sort(Data, @StrLess);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
@@ -576,57 +576,35 @@ end;
 
 function Vec4Order(constref A, B: TVec4): Int32;
 var
-  ASum, BSum: Double;
+  sA, sB: Double;
 begin
   with A do
-    ASum := X + Y + Z + W;
+    sA := X + Y + Z + W;
   with B do
-    BSum := X + Y + Z + W;
-  if ASum > BSum then
-    Result := 1
-  else
-    if ASum < BSum then
-      Result := -1
-    else
-      Result := 0;
-end;
-
-function Vec4Order2(constref A, B: TVec4): SizeInt;
-begin
-  Result := Double.Compare(A.X + A.Y + A.Z + A.W, B.X + B.Y + B.Z +B.W);
+    sB := X + Y + Z + W;
+  Result := Ord(sA > sB) - Ord(sA < sB);
 end;
 
 function Vec4Less(constref A, B: TVec4): Boolean;
-var
-  ASum, BSum: Double;
 begin
-  with A do
-    ASum := X + Y + Z + W;
-  with B do
-    BSum := X + Y + Z + W;
-  Result := ASum < BSum;
+  Result := A.X + A.Y + A.Z + A.W < B.X + B.Y + B.Z + B.W;
 end;
 
 type
   TVec4Less = record
-    class function c(constref A, B: TVec4): Boolean; static;
+    class function c(const A, B: TVec4): Boolean; static;
   end;
 
-class function TVec4Less.c(constref A, B: TVec4): Boolean;
-var ASum, BSum: Double;
+class function TVec4Less.c(const A, B: TVec4): Boolean;
 begin
-  with A do
-    ASum := X + Y + Z + W;
-  with B do
-    BSum := X + Y + Z + W;
-  Result := ASum < BSum;
+  Result :=  A.X + A.Y + A.Z + A.W < B.X + B.Y + B.Z + B.W;
 end;
 
 
 function TSampleClassHelper.RunVec4Test(Algo: TSortAlgo; aSize: TSampleSize): Double;
 type
-  THelper    = specialize TGRegularArrayHelper<TVec4>;
-  TTimSort   = specialize TGRegularTimSort<TVec4>;
+  THelper    = specialize TGArrayHelper<TVec4>;
+  TTimSort   = specialize TGTimSort<TVec4>;
   TFclUtils  = specialize TOrderingArrayUtils<TVec4Sample, TVec4, TVec4Less>;
   TGcHelper  = specialize TArrayHelper<TVec4>;
   TPDQSort   = specialize TPDQSorter<TVec4>;
@@ -637,14 +615,15 @@ begin
   Timer.Clear;
   Timer.Start;
   case Algo of
-    saQuickSort:          THelper.QuickSort(Data, @Vec4Order2);
-    saIntroSort:          THelper.IntroSort(Data, @Vec4Order2);
-    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data, @Vec4Order2);
-    saMergeSort:          THelper.MergeSort(Data, @Vec4Order2);
-    saTimSort:            TTimSort.Sort(Data, @Vec4Order2);
+    saQuickSort:          THelper.QuickSort(Data);
+    saIntroSort:          THelper.IntroSort(Data);
+    saDualPivotQuickSort: THelper.DualPivotQuickSort(Data);
+    saPDQSort:            THelper.PDQSort(Data);
+    saMergeSort:          THelper.MergeSort(Data);
+    saTimSort:            TTimSort.Sort(Data);
     saFclSort:            TFclUtils.Sort(Data, System.Length(Data));
     saGCSort:             TGcHelper.Sort(Data, specialize TComparer<TVec4>.Construct(@Vec4Order));
-    saPDQSort:            TPDQSort.Sort(Data, @Vec4Less);
+    saPasPDQSort:         TPDQSort.Sort(Data, @Vec4Less);
   end;
   Timer.Stop;
   Result := Timer.Elapsed;
