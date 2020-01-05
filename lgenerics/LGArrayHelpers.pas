@@ -108,10 +108,10 @@ type
     private
     const
       PARTIAL_INSERTION_SORT_LIMIT = 8;
-      INSERTION_SORT_THRESHOLD = 32;
-      BLOCK_SIZE = 128;
-      CACHE_LINE_SIZE = 64;
-      NINTHER_THRESHOLD = 128;
+      INSERTION_SORT_THRESHOLD     = 32;
+      BLOCK_SIZE                   = 128;
+      CACHE_LINE_SIZE              = 64;
+      NINTHER_THRESHOLD            = 128;
     var
       FOffsetsLStorage, FOffsetsRStorage: array[0..Pred(BLOCK_SIZE + CACHE_LINE_SIZE)] of Byte;
       FOffsetsL, FOffsetsR: PByte;
@@ -216,7 +216,7 @@ type
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean);
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
       class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
     public
@@ -347,7 +347,7 @@ type
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean);
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
       class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
     public
@@ -481,7 +481,7 @@ type
     private
       class procedure Sort3(A, B, D: PItem; c: TCompare); static; inline;
       function  PartitionRight(aStart, aFinish: PItem; c: TCompare): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean; c: TCompare);
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TCompare);
       class function  PartialInsertionSort(aStart, aFinish: PItem; c: TCompare): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem; c: TCompare): PItem; static;
     public
@@ -618,7 +618,7 @@ type
     private
       class procedure Sort3(A, B, D: PItem; c: TOnCompare); static; inline;
       function  PartitionRight(aStart, aFinish: PItem; c: TOnCompare): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean; c: TOnCompare);
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TOnCompare);
       class function  PartialInsertionSort(aStart, aFinish: PItem; c: TOnCompare): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem; c: TOnCompare): PItem; static;
     public
@@ -755,7 +755,7 @@ type
     private
       class procedure Sort3(A, B, D: PItem; c: TNestCompare); static;{$ifndef CPU86}inline;{$endif}//todo: ???
       function  PartitionRight(aStart, aFinish: PItem; c: TNestCompare): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean; c: TNestCompare);
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean; c: TNestCompare);
       class function  PartialInsertionSort(aStart, aFinish: PItem; c: TNestCompare): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem; c: TNestCompare): PItem; static;
     public
@@ -870,7 +870,7 @@ type
     private
       class procedure Sort3(A, B, C: PItem); static; inline;
       function  PartitionRight(aStart, aFinish: PItem): TPart;
-      procedure DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean);
+      procedure DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
       class function  PartialInsertionSort(aStart, aFinish: PItem): Boolean; static;
       class function  PartitionLeft(aStart, aFinish: PItem): PItem; static;
       class procedure SwapOffsets(aFirst, aLast: PItem; aOffsetsL, aOffsetsR: PByte;
@@ -2528,7 +2528,7 @@ begin
     end;
 end;
 
-procedure TGBaseArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt; aLeftMost: Boolean);
+procedure TGBaseArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
 var
   PivotPos: PItem;
   v: TFake;
@@ -2569,8 +2569,8 @@ begin
       RSize := aFinish - (PivotPos + 1);
       if (LSize < Size div 8) or (RSize < Size div 8) then
         begin
-          Dec(aMaxDepth);
-          if aMaxDepth = 0 then
+          Dec(aBadAllowed);
+          if aBadAllowed = 0 then
             begin
               TGBaseArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
               exit;
@@ -2629,7 +2629,7 @@ begin
       else
         if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
-      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
+      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
@@ -4332,7 +4332,7 @@ begin
     end;
 end;
 
-procedure TGComparableArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+procedure TGComparableArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean);
 var
   PivotPos: PItem;
@@ -4374,8 +4374,8 @@ begin
       RSize := aFinish - (PivotPos + 1);
       if (LSize < Size div 8) or (RSize < Size div 8) then
         begin
-          Dec(aMaxDepth);
-          if aMaxDepth = 0 then
+          Dec(aBadAllowed);
+          if aBadAllowed = 0 then
             begin
               TGComparableArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
               exit;
@@ -4434,7 +4434,7 @@ begin
       else
         if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
-      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
+      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
@@ -6142,7 +6142,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGRegularArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+procedure TGRegularArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TCompare);
 var
   PivotPos: PItem;
@@ -6187,8 +6187,8 @@ begin
       HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
       if HighlyUnbalanced then
         begin
-          Dec(aMaxDepth);
-          if aMaxDepth = 0 then
+          Dec(aBadAllowed);
+          if aBadAllowed = 0 then
             begin
               TGRegularArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
               exit;
@@ -6247,7 +6247,7 @@ begin
       else
         if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
            PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
-      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost, c);
+      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
@@ -7973,7 +7973,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGDelegatedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+procedure TGDelegatedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TOnCompare);
 var
   PivotPos: PItem;
@@ -8018,8 +8018,8 @@ begin
       HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
       if HighlyUnbalanced then
         begin
-          Dec(aMaxDepth);
-          if aMaxDepth = 0 then
+          Dec(aBadAllowed);
+          if aBadAllowed = 0 then
             begin
               TGDelegatedArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
               exit;
@@ -8078,7 +8078,7 @@ begin
       else
         if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
            PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
-      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost, c);
+      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
@@ -9807,7 +9807,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGNestedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+procedure TGNestedArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean; c: TNestCompare);
 var
   PivotPos: PItem;
@@ -9852,8 +9852,8 @@ begin
       HighlyUnbalanced := (LSize < Size div 8) or (RSize < Size div 8);
       if HighlyUnbalanced then
         begin
-          Dec(aMaxDepth);
-          if aMaxDepth = 0 then
+          Dec(aBadAllowed);
+          if aBadAllowed = 0 then
             begin
               TGNestedArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart), c);
               exit;
@@ -9912,7 +9912,7 @@ begin
       else
         if AlreadyPartitioned and PartialInsertionSort(aStart, PivotPos, c) and
            PartialInsertionSort(PivotPos + 1, aFinish, c) then exit;
-      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost, c);
+      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost, c);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
@@ -11162,7 +11162,7 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-procedure TGSimpleArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aMaxDepth: SizeInt;
+procedure TGSimpleArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt;
   aLeftMost: Boolean);
 var
   PivotPos: PItem;
@@ -11204,8 +11204,8 @@ begin
       RSize := aFinish - (PivotPos + 1);
       if (LSize < Size div 8) or (RSize < Size div 8) then
         begin
-          Dec(aMaxDepth);
-          if aMaxDepth = 0 then
+          Dec(aBadAllowed);
+          if aBadAllowed = 0 then
             begin
               TGSimpleArrayHelper.DoHeapSort(aStart, Pred(aFinish - aStart));
               exit;
@@ -11264,7 +11264,7 @@ begin
       else
         if PartResult.F2 and PartialInsertionSort(aStart, PivotPos) and
            PartialInsertionSort(PivotPos + 1, aFinish) then exit;
-      DoSort(aStart, PivotPos, aMaxDepth, aLeftMost);
+      DoSort(aStart, PivotPos, aBadAllowed, aLeftMost);
       aStart := PivotPos + 1;
       aLeftMost := False;
     end;
