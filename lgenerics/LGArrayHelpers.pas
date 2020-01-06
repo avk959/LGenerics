@@ -2304,6 +2304,30 @@ end;
 
 { TGBaseArrayHelper.TPDQSort }
 
+class procedure TGBaseArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
+var
+  v: TFake;
+begin
+  if TCmpRel.Compare(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+  if TCmpRel.Compare(C^, B^) < 0 then
+    begin
+      v := TFake(B^);
+      TFake(B^) := TFake(C^);
+      TFake(C^) := v;
+    end;
+  if TCmpRel.Compare(B^, A^) < 0 then
+    begin
+      v := TFake(A^);
+      TFake(A^) := TFake(B^);
+      TFake(B^) := v;
+    end;
+end;
+
 function TGBaseArrayHelper.TPDQSort.PartitionRight(aStart, aFinish: PItem): TPart;
 var
   Pivot: T;
@@ -2504,30 +2528,6 @@ begin
   Result := TPart.Create(PivotPos, AlreadyPartitioned);
 end;
 
-class procedure TGBaseArrayHelper.TPDQSort.Sort3(A, B, C: PItem);
-var
-  v: TFake;
-begin
-  if TCmpRel.Compare(B^, A^) < 0 then
-    begin
-      v := TFake(A^);
-      TFake(A^) := TFake(B^);
-      TFake(B^) := v;
-    end;
-  if TCmpRel.Compare(C^, B^) < 0 then
-    begin
-      v := TFake(B^);
-      TFake(B^) := TFake(C^);
-      TFake(C^) := v;
-    end;
-  if TCmpRel.Compare(B^, A^) < 0 then
-    begin
-      v := TFake(A^);
-      TFake(A^) := TFake(B^);
-      TFake(B^) := v;
-    end;
-end;
-
 procedure TGBaseArrayHelper.TPDQSort.DoSort(aStart, aFinish: PItem; aBadAllowed: SizeInt; aLeftMost: Boolean);
 var
   PivotPos: PItem;
@@ -2556,7 +2556,7 @@ begin
         end
       else
         Sort3(aStart + S2, aStart, aFinish - 1);
-      if (not aLeftMost) and (TCmpRel.Compare((aStart - 1)^, aStart^) >= 0) then
+      if not aLeftMost and (TCmpRel.Compare((aStart - 1)^, aStart^) >= 0) then
         begin
           aStart := PartitionLeft(aStart, aFinish) + 1;
           continue;
@@ -2639,7 +2639,7 @@ class function TGBaseArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: 
 var
   Limit: PtrUInt;
   v: TFake;
-  Curr, Sift, Sift1: PItem;
+  Curr, Sift: PItem;
 begin
   if aStart = aFinish then exit(True);
   Limit := 0;
@@ -2648,15 +2648,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      Sift1 := Curr - 1;
-      if TCmpRel.Compare(Sift^, Sift1^) < 0 then
+      if TCmpRel.Compare(Sift^, (Sift - 1)^) < 0 then
         begin
           v := TFake(Sift^);
           repeat
-            TFake(Sift^) := TFake(Sift1^);
+            TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-            Dec(Sift1);
-          until (Sift = aStart) or (TCmpRel.Compare(T(v), Sift1^) >= 0);
+          until (Sift = aStart) or (TCmpRel.Compare(T(v), (Sift - 1)^) >= 0);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -2674,7 +2672,7 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until TCmpRel.Compare(Last^, Pivot) >= 0;
+  repeat Dec(Last) until TCmpRel.Compare(Pivot, Last^) >= 0;
   if Last + 1 = aFinish then
     while First < Last do
       begin
@@ -2690,7 +2688,7 @@ begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until TCmpRel.Compare(Last^, Pivot) >= 0;
+      repeat Dec(Last) until TCmpRel.Compare(Pivot, Last^) >= 0;
       repeat Inc(First) until TCmpRel.Compare(Pivot, First^) < 0;
     end;
   PivotPos := Last;
@@ -4442,9 +4440,9 @@ end;
 
 class function TGComparableArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
+  Curr, Sift: PItem;
   Limit: PtrUInt;
   v: TFake;
-  Curr, Sift, Sift1: PItem;
 begin
   if aStart = aFinish then exit(True);
   Limit := 0;
@@ -4453,15 +4451,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      Sift1 := Curr - 1;
-      if Sift^ < Sift1^ then
+      if Sift^ < (Sift - 1)^ then
         begin
           v := TFake(Sift^);
           repeat
-            TFake(Sift^) := TFake(Sift1^);
+            TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-            Dec(Sift1);
-          until (Sift = aStart) or (T(v) >= Sift1^);
+          until (Sift = aStart) or (T(v) >= (Sift - 1)^);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -4473,13 +4469,13 @@ end;
 class function TGComparableArrayHelper.TPDQSort.PartitionLeft(aStart, aFinish: PItem): PItem;
 var
   Pivot: T;
-  Tmp: TFake;
+  v: TFake;
   First, Last, PivotPos: PItem;
 begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until Last^ >= Pivot;
+  repeat Dec(Last) until Pivot >= Last^;
   if Last + 1 = aFinish then
     while First < Last do
       begin
@@ -4492,10 +4488,10 @@ begin
 
   while First < Last do
     begin
-      Tmp := TFake(First^);
+      v := TFake(First^);
       TFake(First^) := TFake(Last^);
-      TFake(Last^) := Tmp;
-      repeat Dec(Last) until Last^ >= Pivot;
+      TFake(Last^) := v;
+      repeat Dec(Last) until Pivot >= Last^;
       repeat Inc(First) until Pivot < First^;
     end;
   PivotPos := Last;
@@ -6293,7 +6289,7 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until c(Last^, Pivot) >= 0;
+  repeat Dec(Last) until c(Pivot, Last^) >= 0;
   if Last + 1 = aFinish then
     while First < Last do
       begin
@@ -6309,7 +6305,7 @@ begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until c(Last^, Pivot) >= 0;
+      repeat Dec(Last) until c(Pivot, Last^) >= 0;
       repeat Inc(First) until c(Pivot, First^) < 0;
     end;
   PivotPos := Last;
@@ -8125,7 +8121,7 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until c(Last^, Pivot) >= 0;
+  repeat Dec(Last) until c(Pivot, Last^) >= 0;
   if Last + 1 = aFinish then
     while First < Last do
       begin
@@ -8141,7 +8137,7 @@ begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until c(Last^, Pivot) >= 0;
+      repeat Dec(Last) until c(Pivot, Last^) >= 0;
       repeat Inc(First) until c(Pivot, First^) < 0;
     end;
   PivotPos := Last;
@@ -9959,7 +9955,7 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until c(Last^, Pivot) >= 0;
+  repeat Dec(Last) until c(Pivot, Last^) >= 0;
   if Last + 1 = aFinish then
     while First < Last do
       begin
@@ -9975,7 +9971,7 @@ begin
       v := TFake(First^);
       TFake(First^) := TFake(Last^);
       TFake(Last^) := v;
-      repeat Dec(Last) until c(Last^, Pivot) >= 0;
+      repeat Dec(Last) until c(Pivot, Last^) >= 0;
       repeat Inc(First) until c(Pivot, First^) < 0;
     end;
   PivotPos := Last;
@@ -11308,7 +11304,7 @@ begin
   Pivot := aStart^;
   First := aStart;
   Last := aFinish;
-  repeat Dec(Last) until Last^ >= Pivot;
+  repeat Dec(Last) until Pivot >= Last^;
   if Last + 1 = aFinish then
     while First < Last do
       begin
@@ -11324,7 +11320,7 @@ begin
       v := First^;
       First^ := Last^;
       Last^ := v;
-      repeat Dec(Last) until Last^ >= Pivot;
+      repeat Dec(Last) until Pivot >= Last^;
       repeat Inc(First) until Pivot < First^;
     end;
   PivotPos := Last;
