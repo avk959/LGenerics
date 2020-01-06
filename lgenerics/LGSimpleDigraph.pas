@@ -410,10 +410,10 @@ type
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGFlowChart<TVertex, TEqRel> = class(specialize TGSimpleDigraph<TVertex, TEmptyData, TEqRel>)
+  generic TGFlowChart<TVertex, TEqRel> = class(specialize TGSimpleDigraph<TVertex, TDummy, TEqRel>)
   private
-    procedure ReadData(aStream: TStream; out aValue: TEmptyData);
-    procedure WriteData(aStream: TStream; constref aValue: TEmptyData);
+    procedure ReadData(aStream: TStream; out aValue: TDummy);
+    procedure WriteData(aStream: TStream; constref aValue: TDummy);
   public
     function  Clone: TGFlowChart;
     function  Reverse: TGFlowChart;
@@ -457,7 +457,7 @@ type
     function  AddEdges(const aVertexList: array of Integer): Integer;
   end;
 
-  TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TEmptyData, Integer>)
+  TIntFlowChartDotWriter = class(specialize TGDigraphDotWriter<Integer, TDummy, Integer>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
@@ -481,7 +481,7 @@ type
     function  AddEdges(const aVertexList: array of string): Integer;
   end;
 
-  TStrFlowChartDotWriter = class(specialize TGDigraphDotWriter<string, TEmptyData, string>)
+  TStrFlowChartDotWriter = class(specialize TGDigraphDotWriter<string, TDummy, string>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
@@ -2911,12 +2911,12 @@ end;
 
 { TGFlowChart }
 
-procedure TGFlowChart.ReadData(aStream: TStream; out aValue: TEmptyData);
+procedure TGFlowChart.ReadData(aStream: TStream; out aValue: TDummy);
 begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
-procedure TGFlowChart.WriteData(aStream: TStream; constref aValue: TEmptyData);
+procedure TGFlowChart.WriteData(aStream: TStream; constref aValue: TDummy);
 begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;

@@ -546,10 +546,10 @@ type
       functor TEqRel must provide:
         class function HashCode([const[ref]] aValue: TVertex): SizeInt;
         class function Equal([const[ref]] L, R: TVertex): Boolean; }
-  generic TGChart<TVertex, TEqRel> = class(specialize TGSimpleGraph<TVertex, TEmptyData, TEqRel>)
+  generic TGChart<TVertex, TEqRel> = class(specialize TGSimpleGraph<TVertex, TDummy, TEqRel>)
   private
-    procedure ReadData(aStream: TStream; out aValue: TEmptyData);
-    procedure WriteData(aStream: TStream; constref aValue: TEmptyData);
+    procedure ReadData(aStream: TStream; out aValue: TDummy);
+    procedure WriteData(aStream: TStream; constref aValue: TDummy);
   public
     function  SeparateGraph(constref aVertex: TVertex): TGChart;
     function  SeparateGraphI(aIndex: SizeInt): TGChart;
@@ -602,7 +602,7 @@ type
     constructor Create;
   end;
 
-  TIntChartDotWriter = class(specialize TGraphDotWriter<Integer, TEmptyData, Integer>)
+  TIntChartDotWriter = class(specialize TGraphDotWriter<Integer, TDummy, Integer>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
@@ -630,7 +630,7 @@ type
     function AddEdges(const aVertexList: array of string): Integer;
   end;
 
-  TStrChartDotWriter = class(specialize TGraphDotWriter<string, TEmptyData, string>)
+  TStrChartDotWriter = class(specialize TGraphDotWriter<string, TDummy, string>)
   protected
     function DefaultWriteEdge(aGraph: TGraph; constref aEdge: TGraph.TEdge): string; override;
   end;
@@ -4870,12 +4870,12 @@ end;
 
 { TGChart }
 
-procedure TGChart.ReadData(aStream: TStream; out aValue: TEmptyData);
+procedure TGChart.ReadData(aStream: TStream; out aValue: TDummy);
 begin
   aStream.ReadBuffer(aValue{%H-}, SizeOf(aValue));
 end;
 
-procedure TGChart.WriteData(aStream: TStream; constref aValue: TEmptyData);
+procedure TGChart.WriteData(aStream: TStream; constref aValue: TDummy);
 begin
   aStream.WriteBuffer(aValue, SizeOf(aValue));
 end;

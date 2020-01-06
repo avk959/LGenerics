@@ -17,7 +17,7 @@ type
   TLiteRbTreeTest = class(TTestCase)
   private
   type
-    TIntTree = specialize TGLiteRbTree<Integer, TEmptyData, Integer>;
+    TIntTree = specialize TGLiteRbTree<Integer, TDummy, Integer>;
     THelper  = specialize TGOrdinalArrayHelper<Integer>;
   published
     procedure IsEmpty;
@@ -35,7 +35,7 @@ type
   TLiteComparableRbTreeTest = class(TTestCase)
   private
   type
-    TIntTree = specialize TGLiteComparableRbTree<Integer, TEmptyData>;
+    TIntTree = specialize TGLiteComparableRbTree<Integer, TDummy>;
     THelper  = specialize TGOrdinalArrayHelper<Integer>;
   published
     procedure IsEmpty;

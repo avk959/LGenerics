@@ -17,8 +17,8 @@ type
   TLiteTreapTest = class(TTestCase)
   private
   type
-    TIntTreap = specialize TGLiteTreap<Integer, TEmptyData, Integer>;
-    TStrTreap = specialize TGLiteTreap<string, TEmptyData, string>;
+    TIntTreap = specialize TGLiteTreap<Integer, TDummy, Integer>;
+    TStrTreap = specialize TGLiteTreap<string, TDummy, string>;
   published
     procedure IsEmpty;
     procedure Add;
@@ -41,8 +41,8 @@ type
   TLiteIdxTreapTest = class(TTestCase)
   private
   type
-    TIntTreap = specialize TGLiteIdxTreap<Integer, TEmptyData, Integer>;
-    TStrTreap = specialize TGLiteIdxTreap<string, TEmptyData, string>;
+    TIntTreap = specialize TGLiteIdxTreap<Integer, TDummy, Integer>;
+    TStrTreap = specialize TGLiteIdxTreap<string, TDummy, string>;
   published
     procedure IsEmpty;
     procedure Add;

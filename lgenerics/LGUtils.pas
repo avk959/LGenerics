@@ -39,6 +39,7 @@ type
   TRangeBound           = (rbLow, rbHigh);
   TTriLean              = (tlFalse, tlTrue, tlUnknown);
   TRangeBounds          = set of TRangeBound;
+  TDummy                = packed record end;
   TGArray<T>            = array of T;
   TGCompare<T>          = function(constref L, R: T): SizeInt;
   TGOnCompare<T>        = function(constref L, R: T): SizeInt of object;
@@ -67,7 +68,6 @@ type
   ELGListError          = class(Exception);
   ELGMapError           = class(Exception);
   ELGTableError         = class(Exception);
-  TEmptyData            = record end;
 
 const
   MAX_CONTAINER_SIZE         = Succ(High(SizeInt) shr 2);
