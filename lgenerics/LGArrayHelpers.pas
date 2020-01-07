@@ -107,7 +107,7 @@ type
       TPart = specialize TGTuple2<PItem, Boolean>;
     private
     const
-      PARTIAL_INSERTION_SORT_LIMIT = 8;
+      PARTIAL_INSERTION_SORT_LIMIT = 12;
       INSERTION_SORT_THRESHOLD     = 32;
       BLOCK_SIZE                   = 128;
       CACHE_LINE_SIZE              = 64;
@@ -356,6 +356,7 @@ type
 
     class function  CountRun2Asc(A: PItem; R: SizeInt): SizeInt; static;
     class procedure InsertionSort(A: PItem; R: SizeInt); static;
+    class procedure UnguardInsertionSort(A: PItem; R: SizeInt); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -881,6 +882,7 @@ type
 
     class function  CountRun2Asc(var A: array of T; L, R: SizeInt): SizeInt; static;
     class procedure InsertionSort(var A: array of T; L, R: SizeInt); static;
+    class procedure UnguardInsertionSort(var A: array of T; L, R: SizeInt); static;
     class function  BiSearchLeftA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  BiSearchLeftD(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
     class function  BiSearchRightA(A: PItem; R: SizeInt; constref aValue: T): SizeInt; static;
@@ -4343,7 +4345,10 @@ begin
       Size := aFinish - aStart;
       if Size < INSERTION_SORT_THRESHOLD then
         begin
-          TGComparableArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart));
+          if aLeftMost then
+            TGComparableArrayHelper.InsertionSort(aStart, Pred(aFinish - aStart))
+          else
+            TGComparableArrayHelper.UnguardInsertionSort(aStart, Pred(aFinish - aStart));
           exit;
         end;
       S2 := Size div 2;
@@ -4541,6 +4546,24 @@ begin
       v := TFake(A[I]);
       J := I - 1;
       while (J >= 0) and (T(v) < A[J]) do
+        begin
+          TFake(A[J + 1]) := TFake(A[J]);
+          Dec(J);
+        end;
+      TFake(A[J + 1]) := v;
+    end;
+end;
+
+class procedure TGComparableArrayHelper.UnguardInsertionSort(A: PItem; R: SizeInt);
+var
+  I, J: SizeInt;
+  v: TFake;
+begin
+  for I := 1 to R do
+    begin
+      v := TFake(A[I]);
+      J := I - 1;
+      while T(v) < A[J] do
         begin
           TFake(A[J + 1]) := TFake(A[J]);
           Dec(J);
@@ -11090,9 +11113,10 @@ begin
       I := 0;
       while I < LSize do
         begin
-          (OffsetsL + NumL)^ := I; Inc(I);
+          (OffsetsL + NumL)^ := I;
           NumL += PtrInt(It^ >= Pivot);
-          It += 1;
+          Inc(I);
+          Inc(It);
         end;
     end;
   if (UnknownLeft <> 0) and (NumR = 0) then
@@ -11165,7 +11189,10 @@ begin
       Size := aFinish - aStart;
       if Size < INSERTION_SORT_THRESHOLD then
         begin
-          TGSimpleArrayHelper.InsertionSort(aStart^, 0, Pred(aFinish - aStart));
+          if aLeftMost then
+            TGSimpleArrayHelper.InsertionSort(aStart^, 0, Pred(aFinish - aStart))
+          else
+            TGSimpleArrayHelper.UnguardInsertionSort(aStart^, 0, Pred(aFinish - aStart));
           exit;
         end;
       S2 := Size div 2;
@@ -11394,6 +11421,24 @@ begin
       v := A[I];
       J := I - 1;
       while (J >= 0) and (A[J] > v) do
+        begin
+          A[J + 1] := A[J];
+          Dec(J);
+        end;
+      A[J + 1] := v;
+    end;
+end;
+
+class procedure TGSimpleArrayHelper.UnguardInsertionSort(var A: array of T; L, R: SizeInt);
+var
+  I, J: SizeInt;
+  v: T;
+begin
+  for I := L + 1 to R do
+    begin
+      v := A[I];
+      J := I - 1;
+      while A[J] > v do
         begin
           A[J + 1] := A[J];
           Dec(J);
@@ -11642,7 +11687,10 @@ begin
           R := Left;
         end;
   if R - L > 0 then
-    InsertionSort(A, L, R);
+    if L > 0 then
+      UnguardInsertionSort(A, L, R)
+    else
+      InsertionSort(A, L, R);
 end;
 
 class function TGSimpleArrayHelper.MedianOf3(p1, p2, p3: PItem): PItem;
@@ -11719,7 +11767,10 @@ begin
       DoHeapSort(@A[L], R - L)
   else
     if R - L > 0 then
-      InsertionSort(A, L, R);
+      if L > 0 then
+        UnguardInsertionSort(A, L, R)
+      else
+        InsertionSort(A, L, R);
 end;
 
 class function TGSimpleArrayHelper.DPQSplit(var A: array of T; L, R: SizeInt): TSortSplit;
@@ -11805,7 +11856,10 @@ begin
       end
   else
     if R - L > 0 then
-      InsertionSort(A, L, R);
+      if L > 0 then
+        UnguardInsertionSort(A, L, R)
+      else
+        InsertionSort(A, L, R);
 end;
 
 class procedure TGSimpleArrayHelper.DoSwap(p: PItem; L, R: SizeInt);
