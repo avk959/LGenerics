@@ -6252,9 +6252,9 @@ end;
 class function TGRegularArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TCompare): Boolean;
 var
+  Curr, Sift: PItem;
   Limit: PtrUInt;
   v: TFake;
-  Curr, Sift, Sift1: PItem;
 begin
   if aStart = aFinish then exit(True);
   Limit := 0;
@@ -6263,15 +6263,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      Sift1 := Curr - 1;
-      if c(Sift^, Sift1^) < 0 then
+      if c(Sift^, (Sift - 1)^) < 0 then
         begin
           v := TFake(Sift^);
           repeat
-            TFake(Sift^) := TFake(Sift1^);
+            TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-            Dec(Sift1);
-          until (Sift = aStart) or (c(T(v), Sift1^) >= 0);
+          until (Sift = aStart) or (c(T(v), (Sift - 1)^) >= 0);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -8083,9 +8081,9 @@ end;
 class function TGDelegatedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TOnCompare): Boolean;
 var
+  Curr, Sift: PItem;
   Limit: PtrUInt;
   v: TFake;
-  Curr, Sift, Sift1: PItem;
 begin
   if aStart = aFinish then exit(True);
   Limit := 0;
@@ -8094,15 +8092,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      Sift1 := Curr - 1;
-      if c(Sift^, Sift1^) < 0 then
+      if c(Sift^, (Sift - 1)^) < 0 then
         begin
           v := TFake(Sift^);
           repeat
-            TFake(Sift^) := TFake(Sift1^);
+            TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-            Dec(Sift1);
-          until (Sift = aStart) or (c(T(v), Sift1^) >= 0);
+          until (Sift = aStart) or (c(T(v), (Sift - 1)^) >= 0);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -9917,9 +9913,9 @@ end;
 class function TGNestedArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem;
   c: TNestCompare): Boolean;
 var
+  Curr, Sift: PItem;
   Limit: PtrUInt;
   v: TFake;
-  Curr, Sift, Sift1: PItem;
 begin
   if aStart = aFinish then exit(True);
   Limit := 0;
@@ -9928,15 +9924,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      Sift1 := Curr - 1;
-      if c(Sift^, Sift1^) < 0 then
+      if c(Sift^, (Sift - 1)^) < 0 then
         begin
           v := TFake(Sift^);
           repeat
-            TFake(Sift^) := TFake(Sift1^);
+            TFake(Sift^) := TFake((Sift - 1)^);
             Dec(Sift);
-            Dec(Sift1);
-          until (Sift = aStart) or (c(T(v), Sift1^) >= 0);
+          until (Sift = aStart) or (c(T(v), (Sift - 1)^) >= 0);
           TFake(Sift^) := v;
           Limit += PtrUInt(Curr - Sift);
         end;
@@ -11268,9 +11262,9 @@ end;
 
 class function TGSimpleArrayHelper.TPDQSort.PartialInsertionSort(aStart, aFinish: PItem): Boolean;
 var
+  Curr, Sift: PItem;
   Limit: PtrUInt;
   v: T;
-  Curr, Sift, Sift1: PItem;
 begin
   if aStart = aFinish then exit(True);
   Limit := 0;
@@ -11279,15 +11273,13 @@ begin
     begin
       if Limit > PARTIAL_INSERTION_SORT_LIMIT then exit(False);
       Sift := Curr;
-      Sift1 := Curr - 1;
-      if Sift^ < Sift1^ then
+      if Sift^ < (Sift - 1)^ then
         begin
           v := Sift^;
           repeat
-            Sift^ := Sift1^;
+            Sift^ := (Sift - 1)^;
             Dec(Sift);
-            Dec(Sift1);
-          until (Sift = aStart) or (v >= Sift1^);
+          until (Sift = aStart) or (v >= (Sift - 1)^);
           Sift^ := v;
           Limit += PtrUInt(Curr - Sift);
         end;
